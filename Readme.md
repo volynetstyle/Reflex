@@ -1,112 +1,95 @@
-# R.E.A.C.T
+# Reflex
 
-Real Evolution of Adaptive Component Topology
+**Fine-Grained Reactive UI Library**
 
-> Next‑generation frontend library — fine‑grained reactivity, direct DOM updates, and adaptive component topology without Virtual DOM overhead.
+> Fine-grained reactivity, direct DOM updates, and adaptive component topology — without Virtual DOM overhead.
 
----
 
-## 🚀 Why R.E.A.C.T?
+## 🚀 Why Reflex?
 
-Modern frameworks like React, Vue, and Angular solved many problems—but at a cost. Virtual DOM diffing, excessive component re-renders, and complex state management often introduce inefficiencies that don’t scale well.
+Reflex represents a paradigm shift in UI development, emphasizing reactivity, efficiency, and extensibility. Key attributes include:
 
-R.E.A.C.T takes a different path:
+- **R — Reactive**: Instantaneous responses to data changes, ensuring updates occur without superfluous renderings.
+- **E — Efficient**: Optimized for maximum productivity through direct DOM modifications and minimized computational costs.
+- **F — Fine-Grained**: Updates are precisely targeted, affecting only the elements that have genuinely changed.
+- **L — Lightweight**: A minimalist core design, free from unnecessary abstractions and complexities.
+- **E — Extensible**: Enhanced through plugins and an adaptive topology within the reactive graph.
+- **X — eXecutable**: Direct oversight of effect executions and updates, eliminating intermediaries.
 
-* Signals over re-renders — reactive primitives that update only what changed.
-* Direct DOM access — skip diffing; touch only the relevant node.
-* Adaptive component topology — treat components as reactive graphs, not static trees.
-* Familiar syntax — nothing new to learn; you design, we enable.
+Traditional Virtual DOM methodologies depend on diffing algorithms and component re-renders, introducing overhead and complexity in large-scale applications. Reflex adopts signal-driven, precise updates, conceptualizing the UI as a dynamic reactive graph. This approach yields predictable performance and a more intuitive mental model.
 
----
+Reflex prioritizes:
+- **Signals Over Re-Renders**: Updates are confined to actual changes.
+- **Direct DOM Access**: Bypasses diffing, interacting solely with pertinent nodes.
+- **Adaptive Component Topology**: Components constitute a reactive graph rather than a rigid tree structure.
+- **Familiar API**: Empowers developers to design architectures with minimal library interference.
+
 
 ## ✨ Core Principles
 
-1) Fine‑grained reactivity
-   * Built‑in `signal` and `computed` for precise updates.
+1. **Fine-Grained Reactivity**  
+   Integrated `signal` and `computed` primitives facilitate precise, minimalistic updates.
 
-2) Direct DOM operations
-   * Eliminate the Virtual DOM layer; mutate the DOM in place.
+2. **Direct DOM Operations**  
+   Eliminates the Virtual DOM intermediary, enabling in-place mutations.
 
-3) Reactive effects instead of lifecycle hooks
-   * No `useEffect` to wire up. Effects run automatically when dependencies change.
+3. **Reactive Effects Instead of Lifecycle Hooks**  
+   Automates effect execution on dependency alterations, obviating manual configurations like `useEffect`.
 
-4) Streaming SSR + islands architecture
-   * Ship and hydrate only the parts of the UI that matter.
+4. **Streaming SSR + Islands Architecture**  
+   Delivers and hydrates only essential components at the appropriate moments.
 
-5) Graph‑level extensibility
-   * Plug‑in system at the reactive graph layer.
-
----
+5. **Graph-Level Extensibility**  
+   Supports a plugin ecosystem at the reactive graph foundation.
 
 ## 🔍 Comparison
 
-| Capability | Traditional React | R.E.A.C.T |
-| --- | --- | --- |
-| State | `useState`, `useReducer` | `signal`, `computed` |
-| Updates | Component re-renders | Direct node updates |
-| DOM rendering | Virtual DOM diffing | Direct DOM calls |
-| Reactivity | Render-driven | Fine‑grained signals |
-| SSR | Older APIs | Streaming + Resumption + Islands |
-| Lifecycle | `useEffect` | Reactive effects |
-| Extensibility | Hooks, HOCs | Graph‑level plug‑ins |
+| Capability          | Virtual DOM Approach       | Reflex                          |
+|---------------------|----------------------------|---------------------------------|
+| **State**           | Hook/reducer style         | `signal`, `computed`            |
+| **Updates**         | Component re-renders       | Direct node updates             |
+| **DOM Rendering**   | Virtual DOM diffing        | Direct DOM calls                |
+| **Reactivity**      | Render-driven              | Fine-grained signals            |
+| **SSR**             | Traditional APIs           | Streaming + Resumption + Islands|
+| **Lifecycle**       | Lifecycle hooks            | Reactive effects                |
+| **Extensibility**   | Hooks/HOCs                 | Graph-level plugins             |
 
----
 
-## 🧠 Why “Real Evolution”?
+## 🧠 Why the Name “Reflex”?
 
-R.E.A.C.T is more than a nod to React—it’s a tribute and a next step:
-
-* Real — concrete, non‑abstract DOM updates.
-* Evolution — a natural progression beyond Virtual DOM frameworks.
-* Adaptive Component Topology — structure UI as a dynamic, reactive graph.
-
-It was bound to happen sooner or later.
-
----
+The term "Reflex" encapsulates the library's essence of immediate, instinctual propagation of state changes. Local modifications trigger exacting updates throughout the reactive graph, underscoring a commitment to responsiveness, simplicity, and developer control. This nomenclature is independent of any external affiliations.
 
 ## 📦 Getting Started
 
-Install:
+**Installation**:
 
 ```bash
-npm install @react/core
+npm install @reflex/core
 ```
 
-Quick example:
+**Quick Example**:
 
-```ts
-import { signal, computed, effect } from "@react/core";
+```javascript
+import { signal, computed, effect } from "@reflex/core";
 
 const count = signal(0);
 const double = computed(() => count.value * 2);
 
 effect(() => {
-  document.getElementById("app").textContent = String(double.value);
+  const el = document.getElementById("app");
+  if (el) el.textContent = String(double.value);
 });
 
 count.value++;
 ```
 
----
-
-## 🔮 Roadmap
-
-* [ ] Signal‑based core runtime
-* [ ] Direct DOM binding system
-* [ ] Streaming SSR with partial hydration
-* [ ] Plug‑in API for reactive graph extensions
-* [ ] DevTools for graph inspection
-
----
-
-## 📚 Learn More
-
-* Fine‑grained reactivity explained — https://dev.to/ryansolid/a-hands-on-introduction-to-fine-grained-reactivity-3ndf
-* Signals vs. state subscribers — https://preactjs.com/blog/introducing-signals/
-* Islands architecture overview — https://jasonformat.com/islands-architecture/
-
----
-
 ## 🏁 License
 
 MIT License © 2025 Andrii Volynets
+
+
+## ⚖️ Notes
+
+- All product names, logos, and brands are property of their respective owners.
+- “React” and related marks are trademarks of Meta Platforms, Inc. This project is not affiliated with or endorsed by Meta or any other vendor.
+- Package name and branding are subject to change.
