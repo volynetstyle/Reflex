@@ -59,6 +59,10 @@ Reflex prioritizes:
 
 The term "Reflex" encapsulates the library's essence of immediate, instinctual propagation of state changes. Local modifications trigger exacting updates throughout the reactive graph, underscoring a commitment to responsiveness, simplicity, and developer control. This nomenclature is independent of any external affiliations.
 
+## 🎯 "Reflex" is not another framework, but a reactive core of a new generation.
+Forget about extra rerenders and extra complexity — Reflex manages data directly, instantly synchronizing it with any environment.
+Reflex is a reactivity that lives everywhere.
+
 ## 📦 Getting Started
 
 **Installation**:

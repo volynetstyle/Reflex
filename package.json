@@ -1,5 +1,5 @@
 {
-  "name": "r.e.a.c.t",
+  "name": "reflex",
   "private": true,
   "workspaces": [
     "packages/*"

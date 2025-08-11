@@ -234,3 +234,4 @@ const isSVGTag = (tag: string) => hasTag(tag, "svg");
 const isVoidTag = (tag: string) => hasTag(tag, "void");
 
 export { isHTMLTag, isSVGTag, isVoidTag, hasTag };
+
