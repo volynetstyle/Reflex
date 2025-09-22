@@ -1,0 +1,51 @@
+{
+  "name": "rigidify",
+  "version": "0.1.0",
+  "author": "Andrii Volynets <volynets.opensource@gmail.com>",
+  "license": "MIT",
+  "description": "Rigidify: high-performance immutable state management for JavaScript/TypeScript applications.",
+  "keywords": [
+    "immutable",
+    "state-management",
+    "javascript",
+    "typescript",
+    "path-copy",
+    "v8-optimized",
+    "metarhia",
+    "util"
+  ],
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "test": "node tests/run.js",
+    "lint": "eslint src --ext .ts",
+    "prepare": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/rigidify.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/rigidify/issues"
+  },
+  "homepage": "https://github.com/your-username/rigidify#readme",
+  "devDependencies": {
+    "rollup": "^4.50.2",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "typescript": "^5.9.2",
+    "eslint": "^8.50.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

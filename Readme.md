@@ -1,119 +1,137 @@
 # Reflex
 
-**Fine-Grained Reactive UI Library**
+**Fine-Grained Reactive UI Framework**
 
-> **"Instant Precision: Reactivity Redefined with Compile-Time Intelligence"**
+> **“Reactivity Without Re-Renders — a Compiler-Driven Approach to UI”**
 
-## 🚀 Why Reflex?
+---
 
-Reflex redefines UI development with a focus on **reactivity**, **efficiency**, and **extensibility**. By leveraging a reactive graph and a Rust-based compiler, Reflex eliminates the overhead of traditional Virtual DOM approaches, delivering predictable performance and a streamlined developer experience.
+## 🚀 Overview
 
-Key attributes include:
+Reflex is a next-generation UI library that eliminates the inefficiencies of Virtual DOM frameworks. Instead of relying on component re-renders and runtime diffing, Reflex builds UIs as **fine-grained reactive graphs**, optimized at **compile time** with a Rust-based compiler.
 
-- **R — Reactive**: Instantaneous, signal-driven updates with no unnecessary re-renders.
-- **E — Efficient**: Optimized through compile-time graph analysis and direct DOM mutations.
-- **F — Fine-Grained**: Precise updates target only changed elements, minimizing computational cost.
-- **L — Lightweight**: ~5–7 KB minified bundle, ideal for mobile and low-bandwidth environments.
-- **E — Extensible**: Plugin-driven reactive graph supports custom nodes and edges.
-- **X — eXecutable**: Direct control over effects and updates, bypassing intermediaries.
+The result: **instant updates, minimal runtime cost, and predictable scalability** across browsers, mobile, and beyond.
 
-Unlike Virtual DOM libraries like React, which rely on diffing and component re-renders, Reflex models the UI as a **dynamic reactive graph**. A Rust-based compiler analyzes dependencies at build time, reducing runtime overhead and enabling near-native performance. This approach ensures scalability for complex applications while maintaining simplicity for developers.
+---
 
-Reflex prioritizes:
-- **Signals Over Re-Renders**: Updates are confined to actual changes using `signal` and `computed`.
-- **Direct DOM Access**: Eliminates diffing, interacting only with affected nodes.
-- **Adaptive Graph Topology**: Components form a reactive graph, optimized at compile time.
-- **Familiar JSX API**: Seamless integration with JSX, compiled to efficient JavaScript.
+## ✨ Key Advantages
 
-## ✨ Core Principles
+* **Signals Instead of Re-Renders**
+  Updates are scoped to actual state changes (`signal`, `computed`, `effect`) without re-executing entire components.
 
-1. **Fine-Grained Reactivity**  
-   `signal` and `computed` primitives enable precise, dependency-tracked updates.
+* **Direct DOM Mutations**
+  Skip the Virtual DOM. Reflex applies updates directly to the real DOM with no intermediate diffing.
 
-2. **Direct DOM Operations**  
-   Bypasses Virtual DOM, performing in-place mutations for maximum efficiency.
+* **Async-Aware Reactivity**
+  Signals can represent `pending`, `fulfilled`, or `rejected` states natively — no hacks like Suspense.
 
-3. **Reactive Effects**  
-   Replaces lifecycle hooks with automated effects, triggered by dependency changes.
+* **Transactional Coarse Layer**
+  Root-level batching and snapshots ensure consistent updates, streaming SSR, and resumable hydration.
 
-4. **Streaming SSR + Islands Architecture**  
-   Hydrates only critical components, supporting resumable server-side rendering.
+* **Isolated Fine Trees**
+  Each component forms its own mini-graph, enabling efficient local recomputation rather than global invalidation.
 
-5. **Graph-Level Extensibility**  
-   Plugins extend the reactive graph, enabling custom nodes, edges, and behaviors.
+* **Orchestrated Side Effects**
+  A dedicated scheduler manages DOM patches, timers, network calls, and workers with priorities, deadlines, and cancellation.
 
-6. **Compile-Time Optimization**  
-   A Rust-based compiler analyzes the reactive graph, minimizing runtime computations using graph algebra.
+* **Rust Compiler Optimization**
+  Static dependency analysis, dead-edge elimination, cycle detection, and graph algebra produce minimal runtime overhead.
 
-## 🔍 Comparison
+* **Lightweight by Design**
+  Core size of \~5–7 KB minified, with performance 2–3× faster than Virtual DOM libraries in dynamic scenarios.
 
-| Capability          | Virtual DOM (e.g., React)  | Reflex                          |
-|---------------------|----------------------------|---------------------------------|
-| **State**           | Hooks/reducers             | `signal`, `computed`            |
-| **Updates**         | Component re-renders       | Direct node updates             |
-| **DOM Rendering**   | Virtual DOM diffing        | Direct DOM calls                |
-| **Reactivity**      | Render-driven              | Fine-grained signals            |
-| **SSR**             | Traditional APIs           | Streaming + Resumption + Islands|
-| **Lifecycle**       | Lifecycle hooks            | Reactive effects                |
-| **Extensibility**   | Hooks/HOCs                 | Graph-level plugins             |
-| **Bundle Size**     | ~40–45 KB (minified)       | ~5–7 KB (minified)              |
-| **Optimization**    | Runtime diffing            | Compile-time graph analysis     |
+---
 
-## 🧠 Why the Name “Reflex”?
+## 🧩 Architectural Layers
 
-"Reflex" reflects the library’s core philosophy: **immediate, instinctual responses** to state changes. Local updates propagate precisely through the reactive graph, optimized at compile time for responsiveness and simplicity. The name is independent of any external affiliations.
+Reflex organizes its runtime into **three distinct layers**:
 
-## 🛠️ The Rust Compiler Advantage
+1. **Coarse Layer (Tree & Transactions)**
 
-Reflex leverages a **Rust-based compiler** to analyze the reactive graph at build time, using **graph algebra** to optimize dependencies and minimize runtime computations. Key benefits include:
-- **Static Dependency Analysis**: Eliminates runtime dependency tracking, reducing overhead.
-- **Graph Optimization**: Applies topological sorting, dead code elimination, and edge merging.
-- **Cycle Detection**: Identifies and resolves cyclic dependencies at compile time.
-- **WebAssembly Integration**: Critical operations compiled to WebAssembly for near-native performance.
+   * Represents the component tree, props snapshots, and keyed hierarchy.
+   * Handles batching, mounting/unmounting, server streams, and SSR chunking.
+   * Acts as the **event and state ingress point** (store, router, server pushes).
 
-This approach makes Reflex up to **2–3x faster** than Virtual DOM libraries in dynamic UI scenarios, with a significantly smaller bundle size.
+2. **Fine Layer (Signals & Computations)**
 
-## 🎯 Reflex: A Reactive Core for the Next Generation
+   * Reactive primitives: `signal`, `computed`, selectors, and bindings.
+   * Maintains a dependency graph for **precise invalidation + recompute**.
+   * Local recomputation only — avoids the “global render storm” problem.
 
-Forget re-renders and complexity. Reflex synchronizes data instantly with any environment, from browsers to mobile apps, using a minimal, high-performance core. It’s not just another framework—it’s a **reactive foundation** for modern UI development.
+3. **Orchestration Layer (Effects & Scheduling)**
+
+   * Manages declarative side effects: DOM mutations, network, timers, workers.
+   * Provides **arbitration**: prioritization, deduplication, cancellation, deadlines.
+   * Decouples effects from reactivity to preserve purity in the fine graph.
+
+---
+
+## 🔍 Reflex vs. Virtual DOM
+
+| Capability        | Virtual DOM (React, etc.)  | Reflex                               |
+| ----------------- | -------------------------- | ------------------------------------ |
+| **State**         | Hooks, reducers            | Signals, computed, async-aware       |
+| **Updates**       | Component re-renders       | Localized graph recomputation        |
+| **DOM Handling**  | Diff & patch               | Direct DOM mutations                 |
+| **Reactivity**    | Render-driven              | Fine-grained signals                 |
+| **SSR**           | Blocking or streaming APIs | Streaming + resumable hydration      |
+| **Lifecycle**     | Hooks                      | Reactive effects                     |
+| **Extensibility** | Hooks/HOCs/context         | Graph-level plugins & custom nodes   |
+| **Performance**   | Runtime diffing            | Compile-time optimized graph algebra |
+| **Bundle Size**   | \~40–45 KB                 | \~5–7 KB                             |
+
+---
+
+## 🛠️ Rust Compiler Advantage
+
+Reflex uses a **Rust-based compiler** to pre-optimize the reactive graph:
+
+* **Static Dependency Resolution** — removes runtime bookkeeping.
+* **Graph Algebra** — merges edges, sorts topologies, eliminates dead nodes.
+* **Cycle Detection** — fails early instead of causing runtime bugs.
+* **WebAssembly Integration** — hot paths compiled to WASM for near-native speed.
+
+This allows Reflex to **outperform React by 2–3×** in highly dynamic UIs, while delivering a much smaller runtime footprint.
+
+---
 
 ## 📦 Getting Started
 
-**Installation**:
+**Install:**
 
 ```bash
 npm install @reflex/core
 ```
 
-**Quick Example** (JavaScript):
+**Basic Example:**
 
 ```javascript
 import { signal, computed, effect } from "@reflex/core";
 
 const count = signal(0);
-const double = computed(() => count.value * 2);
+const doubled = computed(() => count.value * 2);
 
 effect(() => {
-  const el = document.getElementById("app");
-  if (el) el.textContent = `Count: ${count.value}, Double: ${double.value}`;
+  document.getElementById("app").textContent =
+    `Count: ${count.value}, Double: ${doubled.value}`;
 });
 
-count.value++; // Updates DOM instantly
+count.value++; // DOM updates instantly
 ```
 
-**JSX Example**:
+**JSX Example:**
 
 ```jsx
 import { signal, computed, render } from "@reflex/core";
 
 function Counter() {
   const count = signal(0);
-  const double = computed(() => count.value * 2);
+  const doubled = computed(() => count.value * 2);
 
   return (
     <div>
       <p>Count: {count.value}</p>
-      <p>Double: {double.value}</p>
+      <p>Double: {doubled.value}</p>
       <button onClick={() => count.value++}>Increment</button>
     </div>
   );
@@ -122,20 +140,28 @@ function Counter() {
 render(<Counter />, document.getElementById("app"));
 ```
 
-The Rust compiler transforms JSX into optimized JavaScript, wiring signals and effects into the reactive graph for direct DOM updates.
+---
+
+## 🧠 Why the Name “Reflex”?
+
+A **reflex** is an immediate, instinctual response. That’s exactly what Reflex provides: **instantaneous, fine-grained propagation** of state changes, without waiting on re-renders or runtime diffing.
+
+---
 
 ## 📚 Resources
 
-- **Documentation**: [reflex.dev/docs](https://reflex.dev/docs) (coming soon)
-- **GitHub**: [github.com/reflex-ui/core](https://github.com/reflex-ui/core)
-- **Community**: Join discussions on [X](https://x.com/reflex_ui) or Discord
+* Documentation (coming soon): [reflex.dev/docs](https://reflex.dev/docs)
+* GitHub: [github.com/reflex-ui/core](https://github.com/reflex-ui/core)
+* Community: [X](https://x.com/reflex_ui) • Discord
+
+---
 
 ## 🏁 License
 
 MIT License © 2025 Andrii Volynets
 
-## ⚖️ Notes
+---
 
-- All product names, logos, and brands are property of their respective owners.
-- “React” and related marks are trademarks of Meta Platforms, Inc. Reflex is not affiliated with or endorsed by Meta or any other vendor.
-- Package name and branding are subject to change.
+This rewrite fully integrates the **Coarse/Fine/Orchestration model**, async-aware signals, transaction support, and effect arbitration — everything your architecture brings beyond React.
+
+Хочешь, я ещё сделаю **визуальную архитектурную схему** (Coarse → Fine → Orchestration), чтобы прямо в README вставить картинкой?
