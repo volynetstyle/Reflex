@@ -10,12 +10,18 @@ if (IS_DOM_AVAILABLE) {
   style = document.createElement("div").style;
 }
 
+type VendorPrefixedEvent =
+  | "animationend"
+  | "animationiteration"
+  | "animationstart"
+  | "transitionend";
+
 /**
  * A map of modern event names to their possible vendor-prefixed alternatives.
  * In 2025, only `Webkit` prefixes may still be relevant for some legacy WebKit-based browsers.
  * Other prefixes (e.g., `Moz`) are considered obsolete and are not included.
  */
-const vendorMap = {
+const vendorMap: Record<VendorPrefixedEvent, Record<string, string>> = {
   animationend: {
     animation: "animationend",
     WebkitAnimation: "webkitAnimationEnd",
@@ -46,11 +52,8 @@ const cache: Record<string, string> = {};
  * - In modern browsers (Chrome, Firefox, Edge, Safari), the unprefixed event name is sufficient.
  * - `Webkit` prefixes are retained only as a minimal fallback for legacy WebKit-based browsers.
  * - If the DOM is unavailable (e.g., server-side rendering), the original event name is returned.
- *
- * @param event - The standard event name, e.g., "transitionend" or "animationstart".
- * @returns The supported event name, possibly vendor-prefixed.
  */
-export function getVendorPrefixedEventName(event: string): string {
+export function getVendorPrefixedEventName(event: VendorPrefixedEvent): string {
   if (cache[event]) {
     return cache[event];
   }
@@ -70,3 +73,6 @@ export function getVendorPrefixedEventName(event: string): string {
   // Fallback: return the original event name if no supported property is detected
   return (cache[event] = event);
 }
+
+
+

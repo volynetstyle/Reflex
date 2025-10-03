@@ -18,3 +18,5 @@ coverage/
 *.swp
 *.swo
 drafts/
+*.draft.*
+*-lock.json

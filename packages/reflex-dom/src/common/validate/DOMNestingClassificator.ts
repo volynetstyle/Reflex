@@ -8,43 +8,50 @@ import {
 type LookupExistingFlag = 1 & { __brand: "LOOKUP_EXISTING_FLAG" };
 
 const LOOKUP_EXISTING_FLAG = 1 as LookupExistingFlag;
+const SPECIAL_RULES = {
+  RUBY: "__RUBY__", // Ruby annotations
+  DATALIST: "__DATALIST__", // Data list options
+  PHRASING_OR_HEADING: "__PHRASING_OR_HEADING__", // Phrasing or heading content
+} as const;
 
-// Local fast lookup builders (kept here to avoid exposing internal structures externally)
-function createLookup(
-  entries: Iterable<string>
+function makeLookup(
+  tokens: Iterable<string>
 ): Record<string, LookupExistingFlag> {
   const o = Object.create(null) as Record<string, LookupExistingFlag>;
-  for (const v of entries) {
-    o[v] = LOOKUP_EXISTING_FLAG;
+  for (const t of tokens) {
+    o[t] = LOOKUP_EXISTING_FLAG;
   }
-
   return o;
 }
 
-const PHRASING_LOOKUP = createLookup(PHRASING_ELEMENTS);
-const SCRIPT_SUPPORTING_LOOKUP = createLookup(SCRIPT_SUPPORTING);
-const IMPLIED_END_TAGS_LOOKUP = createLookup(IMPLIED_END_TAGS);
-const VOID_LOOKUP = createLookup(VOID_ELEMENTS);
+function toLookup(
+  entries: Iterable<string>
+): Record<string, LookupExistingFlag> {
+  return makeLookup(entries);
+}
+
+function strToLookup(
+  str: string | undefined
+): Record<string, LookupExistingFlag> | undefined {
+  if (str == null) return undefined;
+  if (str === "")
+    return Object.create(null) as Record<string, LookupExistingFlag>;
+  return makeLookup(str.split(/\s+/));
+}
+
+const PHRASING_LOOKUP = toLookup(PHRASING_ELEMENTS);
+const SCRIPT_SUPPORTING_LOOKUP = toLookup(SCRIPT_SUPPORTING);
+const IMPLIED_END_TAGS_LOOKUP = toLookup(IMPLIED_END_TAGS);
+const VOID_LOOKUP = toLookup(VOID_ELEMENTS);
 
 const enum AllowedKind {
   Any = 0,
   Phrasing = 1,
-  Transparent = 2,
-  Set = 3,
+  Set = 2,
 }
 
-// https://html.spec.whatwg.org/multipage/
-// Compact rules description to minimize bundle size & allocations.
-// Format tuple: [tag, allowedKind, allowedList?, forbiddenList?]
-// allowedKind: 0:any,1:phrasing,2:transparent,3:list (space separated in allowedList)
-// For tags that allow only text (no element children) we use kind=3 with empty string.
-// Void elements are excluded (handled by isVoid early-return) to avoid redundant entries.
-// [tag, allowedKind, allowedList?, forbiddenList?]
-// [0:any,1:phrasing,2:transparent,3:set]
-const RULE_DATA: Array<
-  [string, AllowedKind, string?, string?]
-> = [
-  // Document structure
+
+const RULE_DATA: Array<[string, AllowedKind, string?, string?]> = [
   ["html", AllowedKind.Set, "head body"],
   [
     "head",
@@ -52,7 +59,6 @@ const RULE_DATA: Array<
     "base link meta title style script noscript template",
   ],
   ["body", AllowedKind.Any],
-  // Sectioning / grouping
   ["article", AllowedKind.Any, undefined, "main"],
   ["section", AllowedKind.Any],
   ["nav", AllowedKind.Any, undefined, "main"],
@@ -66,14 +72,12 @@ const RULE_DATA: Array<
     "article aside header footer nav section h1 h2 h3 h4 h5 h6 address",
   ],
   ["search", AllowedKind.Any],
-  // Headings
   ["h1", AllowedKind.Phrasing],
   ["h2", AllowedKind.Phrasing],
   ["h3", AllowedKind.Phrasing],
   ["h4", AllowedKind.Phrasing],
   ["h5", AllowedKind.Phrasing],
   ["h6", AllowedKind.Phrasing],
-  // Grouping
   ["p", AllowedKind.Phrasing],
   ["div", AllowedKind.Any],
   ["main", AllowedKind.Any],
@@ -81,7 +85,6 @@ const RULE_DATA: Array<
   ["figure", AllowedKind.Any],
   ["figcaption", AllowedKind.Any],
   ["pre", AllowedKind.Phrasing],
-  // Lists
   ["ul", AllowedKind.Set, "li script template"],
   ["ol", AllowedKind.Set, "li script template"],
   ["menu", AllowedKind.Set, "li script template"],
@@ -94,14 +97,13 @@ const RULE_DATA: Array<
     "header footer article aside nav section h1 h2 h3 h4 h5 h6",
   ],
   ["dd", AllowedKind.Any],
-  // Tables
   [
     "table",
     AllowedKind.Set,
     "caption colgroup thead tbody tfoot tr script template",
   ],
   ["caption", AllowedKind.Any, undefined, "table"],
-  ["colgroup", AllowedKind.Set, "col template"],
+  ["colgroup", AllowedKind.Set, "col script template"],
   ["thead", AllowedKind.Set, "tr script template"],
   ["tbody", AllowedKind.Set, "tr script template"],
   ["tfoot", AllowedKind.Set, "tr script template"],
@@ -118,7 +120,6 @@ const RULE_DATA: Array<
     undefined,
     "header footer article aside nav section h1 h2 h3 h4 h5 h6",
   ],
-  // Forms
   ["form", AllowedKind.Any, undefined, "form"],
   ["fieldset", AllowedKind.Any],
   ["legend", AllowedKind.Set, "__PHRASING_OR_HEADING__"],
@@ -137,19 +138,16 @@ const RULE_DATA: Array<
   ["output", AllowedKind.Phrasing],
   ["progress", AllowedKind.Phrasing, undefined, "progress"],
   ["meter", AllowedKind.Phrasing, undefined, "meter"],
-  // Interactive
   ["details", AllowedKind.Any],
   ["summary", AllowedKind.Set, "__PHRASING_OR_HEADING__"],
   ["dialog", AllowedKind.Any],
-  // Embedded
   ["picture", AllowedKind.Set, "source img script template"],
-  ["video", AllowedKind.Set, undefined, "audio video"],
-  ["audio", AllowedKind.Set, undefined, "audio video"],
-  ["canvas", AllowedKind.Set],
-  ["map", AllowedKind.Set],
-  ["object", AllowedKind.Set],
+  ["video", AllowedKind.Set, "source track script template", "audio video"],
+  ["audio", AllowedKind.Set, "source track script template", "audio video"],
+  ["canvas", AllowedKind.Any],
+  ["map", AllowedKind.Any],
+  ["object", AllowedKind.Set, "param script template"],
   ["iframe", AllowedKind.Set, ""],
-  // Text-level semantics
   ["a", AllowedKind.Phrasing, undefined, "a"],
   ["em", AllowedKind.Phrasing],
   ["strong", AllowedKind.Phrasing],
@@ -159,7 +157,6 @@ const RULE_DATA: Array<
   ["q", AllowedKind.Phrasing],
   ["dfn", AllowedKind.Phrasing, undefined, "dfn"],
   ["abbr", AllowedKind.Phrasing],
-  // ruby: phrasing + rt rp -> handle specially later
   ["ruby", AllowedKind.Set, "__RUBY__"],
   ["rt", AllowedKind.Phrasing],
   ["rp", AllowedKind.Set, ""],
@@ -178,15 +175,12 @@ const RULE_DATA: Array<
   ["bdi", AllowedKind.Phrasing],
   ["bdo", AllowedKind.Phrasing],
   ["span", AllowedKind.Phrasing],
-  // Edits
-  ["ins", AllowedKind.Set],
-  ["del", AllowedKind.Set],
-  // Script-supporting
+  ["ins", AllowedKind.Any],
+  ["del", AllowedKind.Any],
   ["script", AllowedKind.Set, ""],
-  ["noscript", AllowedKind.Set, undefined, "noscript"],
-  ["template", AllowedKind.Set],
-  ["slot", AllowedKind.Set],
-  // Additional elements for completeness
+  ["noscript", AllowedKind.Any, undefined, "noscript"],
+  ["template", AllowedKind.Any],
+  ["slot", AllowedKind.Any],
   ["area", AllowedKind.Set, ""],
   ["base", AllowedKind.Set, ""],
   ["br", AllowedKind.Set, ""],
@@ -204,108 +198,60 @@ const RULE_DATA: Array<
   ["track", AllowedKind.Set, ""],
   ["wbr", AllowedKind.Set, ""],
   ["hgroup", AllowedKind.Set, "h1 h2 h3 h4 h5 h6 p script template"],
-  // Foreign elements (approximated as any)
-  ["math", AllowedKind.Set],
-  ["svg", AllowedKind.Set],
+  ["math", AllowedKind.Any],
+  ["svg", AllowedKind.Any],
 ];
 
 interface NormalizedRule {
   kind: AllowedKind;
-  allowedSet?: Record<string, LookupExistingFlag>; // only for kind === Set
+  allowedSet?: Record<string, LookupExistingFlag>;
   forbiddenSet?: Record<string, LookupExistingFlag>;
 }
 
-function strToLookup(
-  str: string | undefined
-): Record<string, LookupExistingFlag> | undefined {
-  if (!str && str !== "") {
-    return undefined;
-  }
-
-  if (str === "") {
-    return Object.create(null) as Record<string, LookupExistingFlag>;
-  }
-
-  const o = Object.create(null) as Record<string, LookupExistingFlag>;
-
-  for (const token of str.split(/\s+/)) {
-    if (token) {
-      o[token] = LOOKUP_EXISTING_FLAG;
-    }
-  }
-
-  return o;
-}
-
-const NORMALIZED_RULES: Record<string, NormalizedRule> = (() => {
+function normalizeRules(
+  data: typeof RULE_DATA
+): Record<string, NormalizedRule> {
   const out = Object.create(null) as Record<string, NormalizedRule>;
 
   for (const [tag, kindNum, allowedList, forbiddenList] of RULE_DATA) {
-    let kind = kindNum as AllowedKind;
     let allowedSet: Record<string, LookupExistingFlag> | undefined;
 
-    if (kind === AllowedKind.Set) {
-      if (allowedList === "__RUBY__") {
-        // ruby: phrasing + rt rp
-        const o = Object.create(null) as Record<string, LookupExistingFlag>;
-
-        for (const v of PHRASING_ELEMENTS) {
-          o[v] = LOOKUP_EXISTING_FLAG;
-        }
-
-        o.rt = LOOKUP_EXISTING_FLAG;
-        o.rp = LOOKUP_EXISTING_FLAG;
-
-        allowedSet = o;
-      } else if (allowedList === "__DATALIST__") {
-        // datalist: phrasing or (option + script-supporting)
-        const o = Object.create(null) as Record<string, LookupExistingFlag>;
-
-        for (const v of PHRASING_ELEMENTS) {
-          o[v] = LOOKUP_EXISTING_FLAG;
-        }
-
-        o.option = LOOKUP_EXISTING_FLAG;
-        o.script = LOOKUP_EXISTING_FLAG;
-        o.template = LOOKUP_EXISTING_FLAG;
-
-        allowedSet = o;
-      } else if (allowedList === "__PHRASING_OR_HEADING__") {
-        // For summary/legend: phrasing or heading content
-        const o = Object.create(null) as Record<string, LookupExistingFlag>;
-
-        for (const v of PHRASING_ELEMENTS) {
-          o[v] = LOOKUP_EXISTING_FLAG;
-        }
-
-        o.h1 = LOOKUP_EXISTING_FLAG;
-        o.h2 = LOOKUP_EXISTING_FLAG;
-        o.h3 = LOOKUP_EXISTING_FLAG;
-        o.h4 = LOOKUP_EXISTING_FLAG;
-        o.h5 = LOOKUP_EXISTING_FLAG;
-        o.h6 = LOOKUP_EXISTING_FLAG;
-
-        allowedSet = o;
+    if (kindNum === AllowedKind.Set) {
+      if (allowedList === SPECIAL_RULES.RUBY) {
+        allowedSet = toLookup([...PHRASING_ELEMENTS, "rt", "rp"]);
+      } else if (allowedList === SPECIAL_RULES.DATALIST) {
+        allowedSet = toLookup([
+          ...PHRASING_ELEMENTS,
+          "option",
+          "script",
+          "template",
+        ]);
+      } else if (allowedList === SPECIAL_RULES.PHRASING_OR_HEADING) {
+        allowedSet = toLookup([
+          ...PHRASING_ELEMENTS,
+          "h1",
+          "h2",
+          "h3",
+          "h4",
+          "h5",
+          "h6",
+        ]);
       } else {
         allowedSet = strToLookup(allowedList);
       }
     }
-
-    const forbiddenSet = strToLookup(forbiddenList);
-
-    out[tag] = { kind, allowedSet, forbiddenSet };
+    
+    out[tag] = {
+      kind: kindNum,
+      allowedSet,
+      forbiddenSet: strToLookup(forbiddenList),
+    };
   }
-  return out;
-})();
 
-// Freeze in dev to catch accidental mutation (noop in prod if minified tree-shaken)
-const __DEV__ = (() => {
-  if (typeof globalThis === "undefined") return false;
-  const g: any = globalThis as any;
-  const env = g && g.process && g.process.env && g.process.env.NODE_ENV;
-  return env !== "production";
-})();
-if (__DEV__) Object.freeze(NORMALIZED_RULES);
+  return out;
+}
+
+// if (__DEV__) Object.freeze(NORMALIZED_RULES);
 
 interface AncestorInfo {
   currentTag: string | null;
@@ -322,6 +268,8 @@ const isPhrasing = (tag: string): boolean =>
 const isVoid = (tag: string): boolean =>
   VOID_LOOKUP[tag] === LOOKUP_EXISTING_FLAG;
 
+const NORMALIZED_RULES = normalizeRules(RULE_DATA);
+
 function isValidChild(
   parentTag: string,
   childTag: string,
@@ -333,9 +281,7 @@ function isValidChild(
 
   const norm = NORMALIZED_RULES[parentTag];
 
-  if (!norm) {
-    return checkContextRestrictions(childTag, ancestorInfo);
-  }
+  if (!norm) return checkContextRestrictions(childTag, ancestorInfo);
 
   switch (norm.kind) {
     case AllowedKind.Any:
@@ -345,29 +291,20 @@ function isValidChild(
         return false;
       }
       break;
-    case AllowedKind.Transparent:
-      break;
-    case AllowedKind.Set: {
-      const allowedSet = norm.allowedSet!;
-
-      if (allowedSet[childTag] !== LOOKUP_EXISTING_FLAG) {
+    case AllowedKind.Set:
+      if (norm.allowedSet?.[childTag] !== LOOKUP_EXISTING_FLAG) {
         return false;
       }
       break;
-    }
   }
 
-  const forbidden = norm.forbiddenSet;
-
-  if (forbidden && forbidden[childTag] === LOOKUP_EXISTING_FLAG) {
+  if (norm.forbiddenSet?.[childTag] === LOOKUP_EXISTING_FLAG) {
     return false;
   }
 
   return checkContextRestrictions(childTag, ancestorInfo);
 }
 
-// Context-specific validation rules
-// Mapping restrictions -> ancestorInfo field (compressed logic)
 const CONTEXT_RESTRICTIONS: Record<string, keyof AncestorInfo> = Object.freeze({
   form: "formTag",
   a: "aTagInScope",
@@ -391,19 +328,13 @@ export function validateDOMNesting(
   parentTag: string | null,
   ancestorInfo: AncestorInfo
 ): boolean {
-  if (!parentTag) return true;
-
-  const valid = isValidChild(parentTag, childTag, ancestorInfo);
-  if (!valid && typeof console !== "undefined") {
-    // Keep error lazy & compact; message kept stable for external tooling (tests) if any
-    console.error(
-      `Invalid HTML nesting: <${childTag}> inside <${parentTag}>. See HTML specification for valid nesting rules.`
-    );
+  if (!parentTag) {
+    return true;
   }
-  return valid;
+
+  return isValidChild(parentTag, childTag, ancestorInfo);
 }
 
-// Hoist scopeUpdates map to avoid re-allocation per call.
 const SCOPE_UPDATES: Record<string, keyof AncestorInfo> = Object.freeze({
   form: "formTag",
   a: "aTagInScope",
@@ -429,18 +360,15 @@ export function updateAncestorInfo(
   };
 
   ancestorInfo.currentTag = tag;
-
   const scopeKey = SCOPE_UPDATES[tag];
 
   if (scopeKey) {
-    (ancestorInfo[scopeKey] as string | null) = tag;
+    ancestorInfo[scopeKey] = tag;
   }
 
   return ancestorInfo;
 }
 
-// Export constants for reuse in other modules
-// Re-export (proxy) for external compatibility if consumers imported from this file originally.
 export {
   PHRASING_ELEMENTS,
   SCRIPT_SUPPORTING,
@@ -448,17 +376,14 @@ export {
   IMPLIED_END_TAGS,
 };
 
-// Utility function to check if element is phrasing content
 export function isPhrasingContent(tagName: string): boolean {
-  return PHRASING_LOOKUP[tagName] === LOOKUP_EXISTING_FLAG;
+  return tagName in PHRASING_LOOKUP;
 }
 
-// Utility function to check if element is void
 export function isVoidElement(tagName: string): boolean {
-  return VOID_LOOKUP[tagName] === LOOKUP_EXISTING_FLAG;
+  return tagName in VOID_LOOKUP;
 }
 
-// (Optional) Expose internal lookups for advanced callers (tree-shakeable if unused)
 export const __INTERNAL_LOOKUPS__ = {
   PHRASING_LOOKUP,
   VOID_LOOKUP,

@@ -18,3 +18,5 @@ coverage/
 *.swp
 *.swo
 drafts/
+package-lock.json
+mails/
