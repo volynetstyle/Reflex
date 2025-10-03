@@ -6,7 +6,7 @@ export namespace ReflexObject {
     ): T[K] extends (...a: any[]) => infer R ? R : any;
   }
 
-  function universalCallSuper<T extends object>(
+  function __universalCallSuper<T extends object>(
     this: T & { __protoTarget?: object },
     key: keyof T,
     ...args: any[]
@@ -38,7 +38,7 @@ export namespace ReflexObject {
     obj.__protoTarget = proto ?? undefined;
 
     Object.defineProperty(obj, "callSuper", {
-      value: universalCallSuper,
+      value: __universalCallSuper,
       writable: false,
       enumerable: false,
       configurable: false,

@@ -13,8 +13,8 @@ describe("Ownership System - Core Functionality", () => {
   describe("Scope Management", () => {
     test("create() creates new owner and restores previous owner", () => {
       let capturedOwner: IOwnership | undefined;
-      
-      const result = scope.create(() => {
+
+      const result = scope.createScope(() => {
         capturedOwner = scope.owner;
         return 42;
       });
@@ -25,18 +25,17 @@ describe("Ownership System - Core Functionality", () => {
       expect(scope.owner).toBeUndefined();
     });
 
-    
     test("nested scope creation stress test", () => {
       const NESTING_LEVELS = 100;
       let deepestOwner: IOwnership | undefined;
 
-      scope.create(() => {
+      scope.createScope(() => {
         let currentLevel = 0;
         let currentParent = scope.owner;
-        
+
         const nest = () => {
           if (currentLevel++ < NESTING_LEVELS) {
-            scope.create(() => {
+            scope.createScope(() => {
               currentParent = scope.owner;
               nest();
             }, currentParent);
@@ -44,19 +43,19 @@ describe("Ownership System - Core Functionality", () => {
             deepestOwner = scope.owner;
           }
         };
-        
+
         nest();
       });
 
       expect(deepestOwner).toBeDefined();
-      
+
       let depth = 0;
       let current = deepestOwner;
       while (current) {
         depth++;
         current = current._parent;
       }
-      
+
       expect(depth).toBe(NESTING_LEVELS + 1);
     });
 
@@ -72,26 +71,64 @@ describe("Ownership System - Core Functionality", () => {
       expect(scope.owner).toBeUndefined();
     });
 
-    test("nested scopes maintain correct owner chain", () => {
+    test("nested scopes maintain correct owner chain with mixed parent assignment", () => {
+      const scope = new OwnershipScope();
       const owners: IOwnership[] = [];
 
-      scope.create(() => {
-        owners.push(scope.owner!);
-        
-        scope.create(() => {
-          owners.push(scope.owner!);
-          
-          scope.create(() => {
-            owners.push(scope.owner!);
+      // Level 0
+      scope.createScope(() => {
+        owners.push(scope.owner!); // owners[0]
+
+        // Level 1, auto parent (owners[0])
+        scope.createScope(() => {
+          owners.push(scope.owner!); // owners[1]
+
+          // Level 2, explicit parent = owners[1]
+          scope.createScope(() => {
+            owners.push(scope.owner!); // owners[2]
           }, owners[1]);
-        }, owners[0]);
+
+          // Level 2, auto parent (owners[1])
+          scope.createScope(() => {
+            owners.push(scope.owner!); // owners[3]
+
+            // Level 3, explicit parent = owners[3]
+            scope.createScope(() => {
+              owners.push(scope.owner!); // owners[4]
+            }, owners[3]);
+          });
+
+          // Level 2, explicit parent = owners[1]
+          scope.createScope(() => {
+            owners.push(scope.owner!); // owners[5]
+          }, owners[1]);
+        });
       });
 
-      expect(owners).toHaveLength(3);
+      // Проверяем количество
+      expect(owners).toHaveLength(6);
+
+      // Проверка цепочек
       expect(owners[0]._firstChild).toBe(owners[1]);
       expect(owners[1]._parent).toBe(owners[0]);
+
+      // owners[1] children: owners[2], owners[3], owners[5]
       expect(owners[1]._firstChild).toBe(owners[2]);
       expect(owners[2]._parent).toBe(owners[1]);
+      expect(owners[2]._nextSibling).toBe(owners[3]);
+      expect(owners[3]._prevSibling).toBe(owners[2]);
+      expect(owners[3]._nextSibling).toBe(owners[5]);
+      expect(owners[5]._prevSibling).toBe(owners[3]);
+      expect(owners[5]._parent).toBe(owners[1]);
+      expect(owners[1]._lastChild).toBe(owners[5]);
+
+      // owners[3] child: owners[4]
+      expect(owners[3]._firstChild).toBe(owners[4]);
+      expect(owners[4]._parent).toBe(owners[3]);
+      expect(owners[3]._lastChild).toBe(owners[4]);
+
+      // owners[0] last child
+      expect(owners[0]._lastChild).toBe(owners[1]);
     });
   });
 
@@ -126,9 +163,9 @@ describe("Ownership System - Core Functionality", () => {
     test("removeChild unlinks child correctly", () => {
       const parent = createOwner();
       const children = [createOwner(), createOwner(), createOwner()];
-      
-      children.forEach(c => parent.appendChild(c));
-      
+
+      children.forEach((c) => parent.appendChild(c));
+
       // Remove middle child
       parent.removeChild(children[1]);
 
@@ -143,8 +180,8 @@ describe("Ownership System - Core Functionality", () => {
     test("removeChild handles first and last child", () => {
       const parent = createOwner();
       const children = [createOwner(), createOwner(), createOwner()];
-      
-      children.forEach(c => parent.appendChild(c));
+
+      children.forEach((c) => parent.appendChild(c));
 
       // Remove first
       parent.removeChild(children[0]);
@@ -178,9 +215,9 @@ describe("Ownership System - Core Functionality", () => {
 
       parent.appendChild(child);
       const initialCount = parent._childCount;
-      
+
       parent.appendChild(child);
-      
+
       expect(parent._childCount).toBe(initialCount);
       expect(parent._firstChild).toBe(child);
       expect(parent._lastChild).toBe(child);
@@ -205,7 +242,9 @@ describe("Ownership System - Core Functionality", () => {
 
       expect(child._context).not.toBe(parent._context);
       expect(child._context!.foo).toBe("bar");
-      expect((child._context as { nested: { value: number } }).nested.value).toBe(42);
+      expect(
+        (child._context as { nested: { value: number } }).nested.value
+      ).toBe(42);
     });
 
     test("child context modifications don't affect parent", () => {
@@ -233,10 +272,10 @@ describe("Ownership System - Core Functionality", () => {
       const owner = createOwner();
       const callbacks = [jest.fn(), jest.fn(), jest.fn()];
 
-      callbacks.forEach(cb => owner.onScopeCleanup(cb));
+      callbacks.forEach((cb) => owner.onScopeCleanup(cb));
       owner.dispose();
 
-      callbacks.forEach(cb => expect(cb).toHaveBeenCalledTimes(1));
+      callbacks.forEach((cb) => expect(cb).toHaveBeenCalledTimes(1));
       expect(owner._disposal).toEqual([]);
       expect(owner._state).toBe(OwnershipStateFlags.DISPOSED);
     });
@@ -257,17 +296,21 @@ describe("Ownership System - Core Functionality", () => {
     test("deep tree disposal disposes all descendants", () => {
       const root = createOwner();
       const level1 = [createOwner(root), createOwner(root)];
-      const level2 = [createOwner(level1[0]), createOwner(level1[0]), createOwner(level1[1])];
-      
+      const level2 = [
+        createOwner(level1[0]),
+        createOwner(level1[0]),
+        createOwner(level1[1]),
+      ];
+
       const allNodes = [root, ...level1, ...level2];
       const callbacks = allNodes.map(() => jest.fn());
-      
+
       allNodes.forEach((node, i) => node.onScopeCleanup(callbacks[i]));
 
       root.dispose();
 
-      callbacks.forEach(cb => expect(cb).toHaveBeenCalledTimes(1));
-      allNodes.forEach(node => {
+      callbacks.forEach((cb) => expect(cb).toHaveBeenCalledTimes(1));
+      allNodes.forEach((node) => {
         expect(node._state).toBe(OwnershipStateFlags.DISPOSED);
         expect(node._firstChild).toBeUndefined();
         expect(node._lastChild).toBeUndefined();
@@ -280,7 +323,7 @@ describe("Ownership System - Core Functionality", () => {
       const callback = jest.fn();
 
       owner.onScopeCleanup(callback);
-      
+
       owner.dispose();
       owner.dispose();
       owner.dispose();
@@ -302,9 +345,9 @@ describe("Ownership System - Core Functionality", () => {
     //   callbacks.forEach(cb => owner.onScopeCleanup(cb));
 
     //   const consoleSpy = jest.spyOn(console, "error").mockImplementation();
-      
+
     //   owner.dispose();
-      
+
     //   consoleSpy.mockRestore();
 
     //   callbacks.forEach(cb => expect(cb).toHaveBeenCalledTimes(1));
@@ -330,10 +373,12 @@ describe("Ownership System - Core Functionality", () => {
     test("cannot append disposed child", () => {
       const parent = createOwner();
       const child = createOwner();
-      
+
       child.dispose();
 
-      expect(() => parent.appendChild(child)).toThrow("Cannot append a disposed child");
+      expect(() => parent.appendChild(child)).toThrow(
+        "Cannot append a disposed child"
+      );
     });
 
     test("cannot append child to disposing owner", () => {
@@ -345,7 +390,8 @@ describe("Ownership System - Core Functionality", () => {
         try {
           parent.appendChild(child);
         } catch (e: any) {
-          errorThrown = e.message === "Cannot append child to an owner that is disposing";
+          errorThrown =
+            e.message === "Cannot append child to an owner that is disposing";
         }
       });
 
@@ -364,7 +410,7 @@ describe("Ownership System - Core Functionality", () => {
     test("disposal clears all references", () => {
       const parent = createOwner();
       const child = createOwner(parent);
-      
+
       parent._context = { data: "test" };
       child.onScopeCleanup(() => {});
 
@@ -401,13 +447,13 @@ describe("Ownership System - Performance & Stress Tests", () => {
 
     test("pre-allocated disposal array reduces allocations", () => {
       const owner = createOwner();
-      
+
       expect(Array.isArray(owner._disposal)).toBe(true);
-      
+
       for (let i = 0; i < 10; i++) {
         owner.onScopeCleanup(() => {});
       }
-      
+
       expect(owner._disposal.length).toBe(10);
     });
   });
@@ -418,25 +464,25 @@ describe("Ownership System - Performance & Stress Tests", () => {
 
     function buildBalancedTree(depth: number, parent?: IOwnership): IOwnership {
       const node = createOwner(parent);
-      
+
       if (depth > 0) {
         for (let i = 0; i < BALANCED_CHILDREN; i++) {
           buildBalancedTree(depth - 1, node);
         }
       }
-      
+
       return node;
     }
 
     function countNodes(node: IOwnership): number {
       let count = 1;
       let child = node._firstChild;
-      
+
       while (child) {
         count += countNodes(child);
         child = child._nextSibling;
       }
-      
+
       return count;
     }
 
@@ -446,8 +492,10 @@ describe("Ownership System - Performance & Stress Tests", () => {
       const buildTime = performance.now() - start;
 
       const nodeCount = countNodes(root);
-      const expectedNodes = (Math.pow(BALANCED_CHILDREN, BALANCED_DEPTH + 1) - 1) / (BALANCED_CHILDREN - 1);
-      
+      const expectedNodes =
+        (Math.pow(BALANCED_CHILDREN, BALANCED_DEPTH + 1) - 1) /
+        (BALANCED_CHILDREN - 1);
+
       expect(nodeCount).toBe(expectedNodes);
 
       const disposeStart = performance.now();
@@ -456,7 +504,9 @@ describe("Ownership System - Performance & Stress Tests", () => {
 
       console.log(`Built ${nodeCount} nodes in ${buildTime.toFixed(2)}ms`);
       console.log(`Disposed ${nodeCount} nodes in ${disposeTime.toFixed(2)}ms`);
-      console.log(`Throughput: ${(nodeCount / disposeTime * 1000).toFixed(0)} nodes/sec`);
+      console.log(
+        `Throughput: ${((nodeCount / disposeTime) * 1000).toFixed(0)} nodes/sec`
+      );
 
       expect(root._state).toBe(OwnershipStateFlags.DISPOSED);
       expect(disposeTime).toBeLessThan(100);
@@ -478,8 +528,12 @@ describe("Ownership System - Performance & Stress Tests", () => {
       root.dispose();
       const disposeTime = performance.now() - disposeStart;
 
-      console.log(`Created ${SIBLING_COUNT} siblings in ${buildTime.toFixed(2)}ms`);
-      console.log(`Disposed ${SIBLING_COUNT} siblings in ${disposeTime.toFixed(2)}ms`);
+      console.log(
+        `Created ${SIBLING_COUNT} siblings in ${buildTime.toFixed(2)}ms`
+      );
+      console.log(
+        `Disposed ${SIBLING_COUNT} siblings in ${disposeTime.toFixed(2)}ms`
+      );
 
       expect(root._state).toBe(OwnershipStateFlags.DISPOSED);
       expect(disposeTime).toBeLessThan(50);
@@ -514,9 +568,15 @@ describe("Ownership System - Performance & Stress Tests", () => {
       const elapsed = performance.now() - start;
 
       expect(counter).toBe(CALLBACK_COUNT);
-      console.log(`Executed ${CALLBACK_COUNT} callbacks in ${elapsed.toFixed(2)}ms`);
-      console.log(`Throughput: ${(CALLBACK_COUNT / elapsed * 1000).toFixed(0)} callbacks/sec`);
-      
+      console.log(
+        `Executed ${CALLBACK_COUNT} callbacks in ${elapsed.toFixed(2)}ms`
+      );
+      console.log(
+        `Throughput: ${((CALLBACK_COUNT / elapsed) * 1000).toFixed(
+          0
+        )} callbacks/sec`
+      );
+
       expect(elapsed).toBeLessThan(50);
     });
 
@@ -532,7 +592,7 @@ describe("Ownership System - Performance & Stress Tests", () => {
 
       owner.dispose();
 
-      expect(state.values.every(v => v === 1)).toBe(true);
+      expect(state.values.every((v) => v === 1)).toBe(true);
     });
   });
 
@@ -547,13 +607,16 @@ describe("Ownership System - Performance & Stress Tests", () => {
         children.push(child);
 
         if (i % 3 === 0 && children.length > 1) {
-          const toRemove = children.splice(Math.floor(Math.random() * children.length), 1)[0];
+          const toRemove = children.splice(
+            Math.floor(Math.random() * children.length),
+            1
+          )[0];
           parent.removeChild(toRemove);
         }
       }
 
       expect(parent._childCount).toBe(children.length);
-      
+
       let count = 0;
       let current = parent._firstChild;
       while (current) {
@@ -567,32 +630,32 @@ describe("Ownership System - Performance & Stress Tests", () => {
   describe("Real-World Scenarios", () => {
     test("component tree simulation", () => {
       const app = createOwner();
-      
+
       const header = createOwner(app);
       createOwner(header);
       createOwner(header);
-      
+
       const main = createOwner(app);
-      
+
       for (let i = 0; i < 20; i++) {
         const item = createOwner(main);
         item.onScopeCleanup(() => {});
       }
-      
+
       const footer = createOwner(app);
-      
+
       expect(app._childCount).toBe(3);
       expect(main._childCount).toBe(20);
 
       app.dispose();
-      
+
       expect(app._state).toBe(OwnershipStateFlags.DISPOSED);
     });
 
     test("subscription cleanup pattern", () => {
       const owner = createOwner();
       const subscriptions: Set<() => void> = new Set();
-      
+
       for (let i = 0; i < 100; i++) {
         const unsubscribe = jest.fn();
         subscriptions.add(unsubscribe);
@@ -601,33 +664,46 @@ describe("Ownership System - Performance & Stress Tests", () => {
 
       owner.dispose();
 
-      subscriptions.forEach(unsub => {
+      subscriptions.forEach((unsub) => {
         expect(unsub).toHaveBeenCalledTimes(1);
       });
     });
 
     test("context-based dependency injection", () => {
       const root = createOwner();
-      root._context = { 
-        services: { 
+      root._context = {
+        services: {
           api: "https://api.example.com",
-          auth: { token: "secret" }
-        }
+          auth: { token: "secret" },
+        },
       };
 
       const child1 = createOwner(root);
       const child2 = createOwner(root);
 
-      type ContextType = { services: { api: string; auth?: { token: string } } };
+      type ContextType = {
+        services: { api: string; auth?: { token: string } };
+      };
 
-      expect((child1._context as ContextType).services.api).toBe("https://api.example.com");
-      expect((child2._context as ContextType).services.api).toBe("https://api.example.com");
+      expect((child1._context as ContextType).services.api).toBe(
+        "https://api.example.com"
+      );
+      expect((child2._context as ContextType).services.api).toBe(
+        "https://api.example.com"
+      );
 
-      (child1._context as ContextType).services = { ...(child1._context as ContextType).services, api: "override" };
-      
+      (child1._context as ContextType).services = {
+        ...(child1._context as ContextType).services,
+        api: "override",
+      };
+
       expect((child1._context as ContextType).services.api).toBe("override");
-      expect((root._context as ContextType).services.api).toBe("https://api.example.com");
-      expect((child2._context as ContextType).services.api).toBe("https://api.example.com");
+      expect((root._context as ContextType).services.api).toBe(
+        "https://api.example.com"
+      );
+      expect((child2._context as ContextType).services.api).toBe(
+        "https://api.example.com"
+      );
     });
   });
 });

@@ -22,9 +22,20 @@ export class OwnershipScope {
     }
   }
 
-  create<T>(fn: () => T, parent?: IOwnership): T {
+  createScope<T>(fn: () => T, parent?: IOwnership): T {
     const owner = createOwner(parent ?? this._owner);
 
     return this.run(owner, fn);
+  }
+
+  withOwner<T>(owner: IOwnership, fn: () => T): T {
+    const prev = this._owner;
+    this._owner = owner;
+
+    try {
+      return fn();
+    } finally {
+      this._owner = prev;
+    }
   }
 }
