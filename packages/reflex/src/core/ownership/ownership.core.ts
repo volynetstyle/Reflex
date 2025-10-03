@@ -4,6 +4,7 @@
  */
 
 import { ReflexObject } from "../object/inherit";
+import { batchDisposer, DisposalStrategy } from "./ownership.dispose";
 import OwnershipDisposeError from "./ownership.error";
 import {
   IOwnership,
@@ -11,12 +12,7 @@ import {
   OwnershipStateFlags,
 } from "./ownership.type";
 
-// Pre-allocate disposal array size to reduce allocations
 const DISPOSAL_INITIAL_CAPACITY = 4;
-
-// Bit flags for faster state checks
-const DISPOSED_OR_DISPOSING =
-  OwnershipStateFlags.DISPOSED | OwnershipStateFlags.DISPOSING;
 
 /**
  * Shared prototype for all Owner nodes.
@@ -58,7 +54,7 @@ const OwnershipPrototype: IOwnershipMethods = {
       child._context = ReflexObject.Inherit(this._context);
     }
 
-    this._childCount++;
+    ++this._childCount;
   },
 
   removeChild(this: IOwnership, child: IOwnership) {
@@ -77,94 +73,47 @@ const OwnershipPrototype: IOwnershipMethods = {
 
     // Clear child references
     child._parent = child._prevSibling = child._nextSibling = undefined;
-    this._childCount--;
+
+    --this._childCount;
   },
 
   onScopeMount: undefined,
 
   onScopeCleanup(this: IOwnership, fn: NoneToVoidFn) {
+    if (this._state & OwnershipStateFlags.DISPOSED) {
+      throw new OwnershipDisposeError(["Cannot add cleanup to disposed owner"]);
+    }
+
+    if (!this._disposal) {
+      this._disposal = new Array(2); // Smaller initial size
+      this._disposal.length = 0;
+    }
+
     this._disposal.push(fn);
   },
 
-  dispose(this: IOwnership) {
+  dispose(this: IOwnership, strategy?: DisposalStrategy) {
     if (this._state & OwnershipStateFlags.DISPOSED) return;
 
-    // Collect all nodes to dispose using iterative traversal
     const batch: IOwnership[] = [];
     const stack: IOwnership[] = [this];
 
-    while (stack.length > 0) {
-      const current = stack.pop()!;
+    while (stack.length) {
+      const node = stack.pop()!;
+      if (node._state & OwnershipStateFlags.DISPOSED) continue;
 
-      // Skip already disposed nodes
-      if (current._state & OwnershipStateFlags.DISPOSED) continue;
+      batch.push(node);
 
-      batch.push(current);
-
-      // Add all children to stack
-      let child = current._firstChild;
-
+      let child = node._firstChild;
       while (child) {
         stack.push(child);
         child = child._nextSibling;
       }
     }
 
-    // Dispose collected nodes
-    disposeBatch(batch);
+    batchDisposer(batch, strategy);
   },
 };
-
-/**
- * Optimized batch disposal with minimal allocations
- */
-function disposeBatch(nodes: IOwnership[]) {
-  let firstError: unknown = undefined;
-  let errorCount = 0;
-
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-
-    // Mark as disposing to prevent appendChild during cleanup
-    node._state |= OwnershipStateFlags.DISPOSING;
-
-    // Execute cleanups
-    const disposal = node._disposal;
-    const len = disposal.length;
-
-    for (let j = 0; j < len; j++) {
-      try {
-        disposal[j]();
-      } catch (err) {
-        if (!firstError) firstError = err;
-        errorCount++;
-      }
-    }
-
-    // Clear references in one go
-    node._disposal.length = 0;
-    node._firstChild = undefined;
-    node._lastChild = undefined;
-    node._nextSibling = undefined;
-    node._prevSibling = undefined;
-    node._parent = undefined;
-    node._context = undefined;
-    node._childCount = 0;
-    node._state = OwnershipStateFlags.DISPOSED;
-  }
-
-  // Report errors without allocating array if only one error
-  if (errorCount > 0) {
-    if (errorCount === 1) {
-      console.error("Error during ownership dispose:", firstError);
-    } else {
-      console.error(
-        `${errorCount} errors during ownership dispose. First error:`,
-        firstError
-      );
-    }
-  }
-}
 
 /**
  * Optimized owner creation with pre-sized disposal array
@@ -183,7 +132,7 @@ function createOwner(parent?: IOwnership): IOwnership {
   owner._disposal = new Array(DISPOSAL_INITIAL_CAPACITY); // Pre-allocate
   owner._disposal.length = 0; // But keep length at 0
   owner._context = undefined; // Will be set by appendChild if needed
-  owner._state = OwnershipStateFlags.CLEAN;
+  owner._state = OwnershipStateFlags.CLEAN | 0;
   owner._childCount = 0;
 
   // Attach to parent and inherit context

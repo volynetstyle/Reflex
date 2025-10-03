@@ -251,7 +251,7 @@ describe("Ownership System - Core Functionality", () => {
 
       owner.dispose();
 
-      expect(order).toEqual([1, 2, 3]);
+      expect(order).toEqual([3, 2, 1]);
     });
 
     test("deep tree disposal disposes all descendants", () => {
@@ -464,7 +464,7 @@ describe("Ownership System - Performance & Stress Tests", () => {
 
     test("wide tree with many siblings", () => {
       const root = createOwner();
-      const SIBLING_COUNT = 1000;
+      const SIBLING_COUNT = 3000;
 
       const start = performance.now();
       for (let i = 0; i < SIBLING_COUNT; i++) {
@@ -573,6 +573,7 @@ describe("Ownership System - Performance & Stress Tests", () => {
       createOwner(header);
       
       const main = createOwner(app);
+      
       for (let i = 0; i < 20; i++) {
         const item = createOwner(main);
         item.onScopeCleanup(() => {});
