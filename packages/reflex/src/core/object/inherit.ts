@@ -1,50 +1,48 @@
 export namespace ReflexObject {
   export interface SuperCaller<T extends object> {
-    /**
-     * Direct call to a prototype method, similar to `super`.
-     */
     callSuper<K extends keyof T>(
       key: K,
       ...args: T[K] extends (...a: infer P) => any ? P : any
     ): T[K] extends (...a: any[]) => infer R ? R : any;
   }
 
-  /**
-   * Creates an object inheriting from `proto` with minimal overhead
-   * and provides `callSuper` method.
-   */
+  function universalCallSuper<T extends object>(
+    this: T & { __protoTarget?: object },
+    key: keyof T,
+    ...args: any[]
+  ): any {
+    const proto = this.__protoTarget;
+
+    if (!proto) {
+      throw new Error("[ReflexObject]: No prototype to call super on");
+    }
+
+    const method = (proto as any)[key];
+    if (typeof method !== "function") {
+      throw new Error(
+        `[ReflexObject]: No method "${String(key)}" on prototype`
+      );
+    }
+
+    return method.apply(this, args);
+  }
+
   export function Inherit<T extends object>(
     proto: T | null = null
   ): T & SuperCaller<T> {
-    const obj = Object.create(proto) as T & SuperCaller<T>;
-
-    if (proto) {
-      // Directly bind prototype methods once, avoid per-call lookup
-      const callSuper = <K extends keyof T>(key: K, ...args: any[]) => {
-        const method = proto[key] as Function;
-        if (!method || typeof method !== "function")
-          throw new Error(
-            `[ReflexObject]: No method "${String(key)}" on prototype`
-          );
-        return method.apply(obj, args);
+    const obj = Object.create(proto) as T &
+      SuperCaller<T> & {
+        __protoTarget?: object;
       };
 
-      Object.defineProperty(obj, "callSuper", {
-        value: callSuper,
-        writable: false,
-        enumerable: false,
-        configurable: false,
-      });
-    } else {
-      Object.defineProperty(obj, "callSuper", {
-        value: () => {
-          throw new Error("[ReflexObject]: No prototype to call super on");
-        },
-        writable: false,
-        enumerable: false,
-        configurable: false,
-      });
-    }
+    obj.__protoTarget = proto ?? undefined;
+
+    Object.defineProperty(obj, "callSuper", {
+      value: universalCallSuper,
+      writable: false,
+      enumerable: false,
+      configurable: false,
+    });
 
     return obj;
   }
