@@ -76,7 +76,7 @@ interface IOwnershipMethods {
    *
    * @param scope - The mounted child owner.
    */
-  onScopeMount?(scope: IOwnership): void;
+  onScopeMount(scope: IOwnership): void;
 
   /**
    * Register a cleanup callback to be executed during disposal.
@@ -107,25 +107,25 @@ interface IOwnershipMethods {
  */
 interface IOwnership extends IOwnershipMethods {
   /** Parent node in the ownership tree. */
-  _parent?: IOwnership;
+  _parent: IOwnership | undefined;
 
   /** First child node in the linked list of children. */
-  _firstChild?: IOwnership;
+  _firstChild: IOwnership | undefined;
 
   /** Last child node, used for O(1) append. */
-  _lastChild?: IOwnership;
+  _lastChild: IOwnership | undefined;
 
   /** Next sibling node in the parent's child list. */
-  _nextSibling?: IOwnership;
+  _nextSibling: IOwnership | undefined;
 
   /** Prev sibling node in the parent's child list that makes list is linked and remove in O(1). */
-  _prevSibling?: IOwnership;
+  _prevSibling: IOwnership | undefined;
 
   /** Array of cleanup callbacks registered via `onScopeCleanup`. */
   _disposal: NoneToVoidFn[];
 
   /** Context object for scoped variables, prototypally inherited from parent. */
-  _context?: Record<string | symbol, unknown>;
+  _context: Record<string | symbol, unknown> | undefined;
 
   /** Bitwise state flags describing the node lifecycle. */
   _state: OwnershipStateFlags;

@@ -1,12 +1,21 @@
-# Reflex
+<p align="center">
+  <img src="./assets/reflex-dragon-red.png" width="250" alt="Reflex Logo" style="border-radius: 50%"/>
+</p>
 
-**Universal Reactive Runtime**
+<h1 align="center">Reflex</h1>
 
-> **“Reactivity beyond the DOM — one core, any surface”**
+<p align="center">
+  <em>Universal Reactive Runtime</em>
+</p>
+
+<p align="center">
+  <strong>“Reactivity beyond the DOM — one core, any surface.”</strong>
+</p>
 
 ---
 
 ## 🚀 Overview
+
 
 Reflex is not just another UI framework.
 It is a **general-purpose reactive runtime**: a lightweight ownership system, fine-grained signals, and a scheduler — independent of JSX or the DOM.

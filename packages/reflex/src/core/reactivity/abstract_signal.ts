@@ -17,3 +17,4 @@ abstract class AbstractSignal<T> implements SignalInterface<T> {
 }
 
 export default AbstractSignal;
+

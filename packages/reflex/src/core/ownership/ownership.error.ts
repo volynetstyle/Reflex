@@ -2,27 +2,29 @@ const OWNERSHIP_ERROR_NAME = "OwnershipDisposeError";
 const OWNERSHIP_ERROR_IDENTIFIER = "[Ownership dispose]";
 
 class OwnershipDisposeError extends Error {
-  public readonly errors: Error[];
+  readonly errors: Error[];
 
   constructor(errors: unknown[]) {
+    const normalized = errors.map((e) =>
+      e instanceof Error ? e : new Error(String(e))
+    );
     super(
-      `${OWNERSHIP_ERROR_IDENTIFIER} ${errors.length} error(s) during cleanup`
+      `${OWNERSHIP_ERROR_IDENTIFIER} ${normalized.length} error(s) during cleanup`
     );
     this.name = OWNERSHIP_ERROR_NAME;
-    this.errors = errors.map((err) =>
-      err instanceof Error ? err : new Error(String(err))
-    );
+    this.errors = normalized;
   }
 
-  toString() {
-    return (
-      `${this.message}\n` +
-      this.errors
-        .map((e, i) => `  [${i + 1}] ${e.stack ?? e.message}`)
-        .join("\n")
-    );
+  override toString(): string {
+    const details = this.errors
+      .map((e, i) => `  [${i + 1}] ${e.stack || e.message}`)
+      .join("\n");
+    return `${this.message}\n${details}`;
   }
 }
 
-export { OWNERSHIP_ERROR_IDENTIFIER, OWNERSHIP_ERROR_NAME };
-export default OwnershipDisposeError;
+export {
+  OWNERSHIP_ERROR_IDENTIFIER,
+  OWNERSHIP_ERROR_NAME,
+  OwnershipDisposeError as default,
+};

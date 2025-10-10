@@ -1,9 +1,10 @@
 /**
- * @file ownership.optimized.ts
- * Optimized Ownership System - Zero overhead hierarchical resource management
+ * @file ownership.core.ts
+ * Ownership System - Zero overhead hierarchical resource management
  */
 
 import { ReflexObject } from "../object/inherit";
+import { noop } from "../object/inline";
 import { batchDisposer, DisposalStrategy } from "./ownership.dispose";
 import OwnershipDisposeError from "./ownership.error";
 import {
@@ -19,25 +20,29 @@ const DISPOSAL_INITIAL_CAPACITY = 4;
  */
 const OwnershipPrototype: IOwnershipMethods = {
   appendChild(this: IOwnership, child: IOwnership) {
-    // Fast path: already attached
-    if (child._parent === this) return;
+    if (!child) {
+      return;
+    }
 
-    // Check child state
+    if (child === this) {
+      throw new Error("Cannot append owner to itself");
+    }
+
     if (child._state & OwnershipStateFlags.DISPOSED) {
       throw new Error("Cannot append a disposed child");
     }
-
-    // Check parent state
     if (this._state & OwnershipStateFlags.DISPOSING) {
       throw new Error("Cannot append child to an owner that is disposing");
     }
 
-    // Detach from previous parent if needed
-    if (child._parent) {
+    if (child._parent && child._parent !== this) {
       child._parent.removeChild(child);
     }
 
-    // Update pointers
+    if (child._parent === this) {
+      return;
+    }
+
     child._parent = this;
     child._prevSibling = this._lastChild;
     child._nextSibling = undefined;
@@ -49,7 +54,6 @@ const OwnershipPrototype: IOwnershipMethods = {
       this._firstChild = this._lastChild = child;
     }
 
-    // Inherit context only if parent has one (avoid unnecessary object creation)
     if (this._context !== undefined) {
       child._context = ReflexObject.Inherit(this._context);
     }
@@ -58,26 +62,37 @@ const OwnershipPrototype: IOwnershipMethods = {
   },
 
   removeChild(this: IOwnership, child: IOwnership) {
-    if (child._parent !== this) return;
+    if (child._parent !== this) {
+      return;
+    }
 
     const prev = child._prevSibling;
     const next = child._nextSibling;
 
-    // Update sibling links
-    if (prev) prev._nextSibling = next;
-    if (next) next._prevSibling = prev;
+    if (prev) {
+      prev._nextSibling = next;
+    }
 
-    // Update parent links
-    if (this._firstChild === child) this._firstChild = next;
-    if (this._lastChild === child) this._lastChild = prev;
+    if (next) {
+      next._prevSibling = prev;
+    }
 
-    // Clear child references
-    child._parent = child._prevSibling = child._nextSibling = undefined;
+    if (this._firstChild === child) {
+      this._firstChild = next;
+    }
+
+    if (this._lastChild === child) {
+      this._lastChild = prev;
+    }
+
+    child._parent = undefined;
+    child._prevSibling = undefined;
+    child._nextSibling = undefined;
 
     --this._childCount;
   },
 
-  onScopeMount: undefined,
+  onScopeMount: noop,
 
   onScopeCleanup(this: IOwnership, fn: NoneToVoidFn) {
     if (this._state & OwnershipStateFlags.DISPOSED) {
@@ -85,7 +100,7 @@ const OwnershipPrototype: IOwnershipMethods = {
     }
 
     if (!this._disposal) {
-      this._disposal = new Array(2); // Smaller initial size
+      this._disposal = new Array(DISPOSAL_INITIAL_CAPACITY);
       this._disposal.length = 0;
     }
 
@@ -104,15 +119,15 @@ const OwnershipPrototype: IOwnershipMethods = {
 
       batch.push(node);
 
-      let child = node._firstChild;
-      while (child) {
-        stack.push(child);
-        child = child._nextSibling;
+      for (let child = node._firstChild; child; child = child._nextSibling) {
+        if (!(child._state & OwnershipStateFlags.DISPOSED)) {
+          stack.push(child);
+        }
       }
     }
 
     batchDisposer(batch, strategy);
-  },
+  }
 };
 
 /**
@@ -123,7 +138,6 @@ function createOwner(parent?: IOwnership): IOwnership {
     OwnershipPrototype as IOwnership
   );
 
-  // Initialize with stable hidden class
   owner._parent = undefined;
   owner._firstChild = undefined;
   owner._lastChild = undefined;
@@ -135,14 +149,9 @@ function createOwner(parent?: IOwnership): IOwnership {
   owner._state = OwnershipStateFlags.CLEAN | 0;
   owner._childCount = 0;
 
-  // Attach to parent and inherit context
   if (parent) {
     parent.appendChild(owner);
-
-    // Inline mount callback check
-    if (parent.onScopeMount) {
-      parent.onScopeMount(owner);
-    }
+    parent.onScopeMount(owner);
   }
 
   return owner;
