@@ -1,5 +1,3 @@
-export const EMPTY_ARRAY = [];
-
 export const OWNERSHIP_BRAND: unique symbol = Symbol("ownership");
 export const COMPUTED_BRAND: unique symbol = Symbol("computed");
 export const WRITABLE_BRAND: unique symbol = Symbol("writable");

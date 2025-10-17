@@ -1,9 +1,9 @@
 {
-  "extends": "../tsconfig.base.json",
+  "extends": "environment/tsconfig.base.json",
+  "references": [{ "path": "../reflex" }],
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src"
   },
-  "include": ["src"],
-  "references": [{ "path": "../reflex" }]
+  "include": ["src"]
 }

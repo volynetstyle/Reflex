@@ -14,6 +14,7 @@
     "composite": true,
     "incremental": true,
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
       "@reflex/*": ["packages/reflex/src/*"],
       "@reflex-dom/*": ["packages/reflex-dom/src/*"]

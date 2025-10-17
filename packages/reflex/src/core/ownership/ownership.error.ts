@@ -5,9 +5,13 @@ class OwnershipDisposeError extends Error {
   readonly errors: Error[];
 
   constructor(errors: unknown[]) {
-    const normalized = errors.map((e) =>
-      e instanceof Error ? e : new Error(String(e))
-    );
+    const normalized: Error[] = new Array(errors.length);
+
+    for (let i = 0; i < errors.length; i++) {
+      const e = errors[i];
+      normalized[i] = e instanceof Error ? e : new Error(String(e));
+    }
+
     super(
       `${OWNERSHIP_ERROR_IDENTIFIER} ${normalized.length} error(s) during cleanup`
     );
@@ -16,10 +20,14 @@ class OwnershipDisposeError extends Error {
   }
 
   override toString(): string {
-    const details = this.errors
-      .map((e, i) => `  [${i + 1}] ${e.stack || e.message}`)
-      .join("\n");
-    return `${this.message}\n${details}`;
+    let result = this.message;
+
+    for (let i = 0; i < this.errors.length; i++) {
+      const e = this.errors[i];
+      result += `\n  [${i + 1}] ${e.stack || e.message}`;
+    }
+    
+    return result;
   }
 }
 

@@ -3,9 +3,9 @@
  * Ownership System - Zero overhead hierarchical resource management
  */
 
-import { ReflexObject } from "../object/inherit";
-import { noop } from "../object/inline";
-import { batchDisposer, DisposalStrategy } from "./ownership.dispose";
+import { ReflexObject } from "../object/object.inherit";
+import { noop } from "../object/object.inline";
+import { batchDisposer, DisposalStrategy } from "./ownership.disposal";
 import OwnershipDisposeError from "./ownership.error";
 import {
   IOwnership,
@@ -31,6 +31,7 @@ const OwnershipPrototype: IOwnershipMethods = {
     if (child._state & OwnershipStateFlags.DISPOSED) {
       throw new Error("Cannot append a disposed child");
     }
+
     if (this._state & OwnershipStateFlags.DISPOSING) {
       throw new Error("Cannot append child to an owner that is disposing");
     }
@@ -49,6 +50,7 @@ const OwnershipPrototype: IOwnershipMethods = {
 
     if (this._lastChild) {
       this._lastChild._nextSibling = child;
+      child._prevSibling = this._lastChild;
       this._lastChild = child;
     } else {
       this._firstChild = this._lastChild = child;
@@ -127,16 +129,14 @@ const OwnershipPrototype: IOwnershipMethods = {
     }
 
     batchDisposer(batch, strategy);
-  }
+  },
 };
 
 /**
  * Optimized owner creation with pre-sized disposal array
  */
 function createOwner(parent?: IOwnership): IOwnership {
-  const owner = ReflexObject.Inherit<IOwnership>(
-    OwnershipPrototype as IOwnership
-  );
+  const owner = ReflexObject.Inherit<IOwnership>(OwnershipPrototype);
 
   owner._parent = undefined;
   owner._firstChild = undefined;
