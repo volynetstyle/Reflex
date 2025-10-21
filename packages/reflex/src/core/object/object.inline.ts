@@ -1,3 +1,3 @@
-const noop = () => {};
+function noop(_?: unknown): void {}
 
 export { noop };

@@ -1,141 +1,80 @@
 /**
  * @file ownership.type.ts
- * Types, symbols, and flags for Ownership system.
- * Provides core building blocks for reactive ownership, context, and cleanup.
+ * Core types, symbols, and flags for Reflex Ownership System.
+ * Defines hierarchical scopes, context inheritance, and cleanup logic.
  */
 
-/** Unique identifier for general purpose internal ID. */
-const S_ID: unique symbol = Symbol.for("id");
-/** Internal reference to the owner of a reactive node. */
-const S_OWN: unique symbol = Symbol.for("ownership");
-/** Internal source nodes for memoization/tracking dependencies. */
-const S_SOURCES: unique symbol = Symbol.for("sources");
-/** Internal subscribers for reactive nodes. */
-const S_SUBS: unique symbol = Symbol.for("subscribers");
-/** Marks a node as dirty or needing update. */
-const S_DIRTY: unique symbol = Symbol.for("dirty");
-/** Stores the function for memo/effect computation. */
-const S_FN: unique symbol = Symbol.for("fn");
-/** Holds the current value of a signal/memo. */
-const S_VALUE: unique symbol = Symbol.for("value");
-/** Registered cleanup callbacks for disposal. */
-const S_DISPOSE: unique symbol = Symbol.for("disposeCallbacks");
+const S_ID = Symbol.for("id"); // Unique internal ID
+const S_OWN = Symbol.for("ownership"); // Parent Owner reference
+const S_SOURCES = Symbol.for("sources"); // Reactive dependencies
+const S_SUBS = Symbol.for("subscribers"); // Reactive dependents
+const S_DIRTY = Symbol.for("dirty"); // Marks node as dirty
+const S_FN = Symbol.for("fn"); // Computation function
+const S_VALUE = Symbol.for("value"); // Current value
+const S_DISPOSE = Symbol.for("disposeCallbacks"); // Cleanup list
 
-/** Type of the context object attached to an Owner. */
 type IOwnershipContextRecord = Record<string | symbol, unknown>;
 
-/**
- * Represents a context value that can be attached to an Owner.
- * Contexts support inheritance via prototype chains.
- *
- * @template T - Type of the context value.
- */
-type IOwnershipContext<T = any> = {
-  /** Unique identifier for this context. */
-  readonly id: symbol;
-  /** Default value to return if the context is missing in the owner. */
-  readonly defaultValue?: T;
+/** Defines a context entry with inheritance support. */
+type IOwnershipContext<T = unknown> = {
+  id: symbol;
+  defaultValue?: T;
 };
 
-/**
- * Bitwise flags representing the lifecycle state of an Ownership node.
- * Allows fast checks via bitwise operations.
- */
+/** Bitwise node state — used for fast lifecycle checks. */
 const enum OwnershipStateFlags {
-  /** Node is clean, no pending updates. */
   CLEAN = 0,
-  /** Node is scheduled for validation/check. */
   CHECK = 1 << 0,
-  /** Node has pending updates (dirty). */
   DIRTY = 1 << 1,
-  /** Node is in the process of disposal. */
   DISPOSING = 1 << 2,
-  /** Node has been disposed and should not be reused. */
   DISPOSED = 1 << 3,
 }
 
-/** Function type for cleanup callbacks or effect disposers. */
+/** Cleanup callback type. */
 type NoneToVoidFn = () => void;
 
-/**
- * Methods shared by all Owner nodes.
- * Placed on prototype for memory efficiency and stable hidden class layout.
- */
+/** Common API for all Ownership nodes. */
 interface IOwnershipMethods {
-  /**
-   * Append a child node to this owner.
-   * Updates `_firstChild`, `_lastChild`, `_nextSibling`, and `_childCount`.
-   * Initializes child context via prototype inheritance.
-   *
-   * @param child - Child owner to attach.
-   */
+  /** Attach a child to this owner (updates tree links & context). */
   appendChild(child: IOwnership): void;
 
-  /**
-   * Optional hook triggered when a scope is mounted.
-   *
-   * @param scope - The mounted child owner.
-   */
+  /** Triggered when a new child scope is mounted. */
   onScopeMount(scope: IOwnership): void;
 
-  /**
-   * Register a cleanup callback to be executed during disposal.
-   * Callbacks are executed in registration order. Errors are caught and logged.
-   *
-   * @param fn - Cleanup function.
-   */
+  /** Register a cleanup callback (runs on dispose). */
   onScopeCleanup(fn: NoneToVoidFn): void;
 
-  /**
-   * Remove a direct child from this owner.
-   *
-   * @param child - Child owner to remove.
-   */
+  /** Detach a direct child from this owner. */
   removeChild(child: IOwnership): void;
 
-  /**
-   * Dispose this node and all descendants.
-   * Iteratively traverses children to avoid recursion.
-   * Executes cleanup callbacks and clears references.
-   */
+  /** Get or create the current scope context. */
+  getContext(): IOwnershipContextRecord;
+
+  /** Provide a new key/value in this scope’s context. */
+  provide(key: symbol | string, value: unknown): void;
+
+  /** Retrieve a value from nearest context scope. */
+  inject<T>(key: symbol | string): T | undefined;
+
+  /** Dispose this owner and all descendants (iterative). */
   dispose(): void;
 }
 
-/**
- * Represents a single node in the Ownership tree.
- * Nodes track children, context, state, and disposal callbacks.
- */
+/** A single node in the Ownership tree. */
 interface IOwnership extends IOwnershipMethods {
-  /** Parent node in the ownership tree. */
-  _parent: IOwnership | undefined;
-
-  /** First child node in the linked list of children. */
-  _firstChild: IOwnership | undefined;
-
-  /** Last child node, used for O(1) append. */
-  _lastChild: IOwnership | undefined;
-
-  /** Next sibling node in the parent's child list. */
-  _nextSibling: IOwnership | undefined;
-
-  /** Prev sibling node in the parent's child list that makes list is linked and remove in O(1). */
-  _prevSibling: IOwnership | undefined;
-
-  /** Array of cleanup callbacks registered via `onScopeCleanup`. */
+  _parent?: IOwnership;
+  _firstChild?: IOwnership;
+  _lastChild?: IOwnership;
+  _nextSibling?: IOwnership;
+  _prevSibling?: IOwnership;
   _disposal: NoneToVoidFn[];
-
-  /** Context object for scoped variables, prototypally inherited from parent. */
-  _context: Record<string | symbol, unknown> | undefined;
-
-  /** Bitwise state flags describing the node lifecycle. */
+  _context?: IOwnershipContextRecord;
+  _queue?: any;
   _state: OwnershipStateFlags;
-
-  /** Number of immediate children attached to this node. */
   _childCount: number;
 }
 
 export {
-  OwnershipStateFlags,
   S_ID,
   S_OWN,
   S_SOURCES,
@@ -144,12 +83,13 @@ export {
   S_FN,
   S_VALUE,
   S_DISPOSE,
+  OwnershipStateFlags,
 };
 
 export type {
   IOwnership,
   IOwnershipMethods,
-  IOwnershipContextRecord,
   IOwnershipContext,
+  IOwnershipContextRecord,
   NoneToVoidFn,
 };

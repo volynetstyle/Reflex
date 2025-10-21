@@ -6,6 +6,7 @@
 import { createOwner, IOwnership } from "./ownership.core";
 import { OwnershipScope } from "./ownership.scope";
 import { OwnershipStateFlags } from "./ownership.type";
+
 function logPerf(name: string, duration: number, limit?: number) {
   const pass = limit === undefined || duration <= limit;
   const barLength = 50;

@@ -47,8 +47,8 @@
  * ──────────────────────────────────────────────────────────────
  *
  * Comparison with Node.js internal `FixedQueue`:
- * ┌────────────────────────────────────────────────────────────────────────┐
- * │ Feature              │ Node.js FixedQueue │ UnrolledQueue (this impl) │
+ * ┌───────────────────────────────────────────────────────────────────────┐
+ * │ Feature               │Node.js FixedQueue │ UnrolledQueue (this impl) │
  * ├───────────────────────┼───────────────────┼───────────────────────────┤
  * │ Storage model         │ One fixed ring    │ Linked list of rings      │
  * │ Growth strategy       │ None (fixed)      │ Dynamic unrolling         │
@@ -80,7 +80,7 @@ export interface IUnrolledQueue<T> extends Iterable<T> {
 }
 
 /** Default node size most stable for V8 (power of two) */
-const DEFAULT_NODE_SIZE = 2048;
+const DEFAULT_NODE_SIZE = 2048 as const;
 
 function assertPowerOfTwo(n: number): void {
   if (!Number.isInteger(n) || n <= 0 || (n & (n - 1)) !== 0) {
@@ -95,7 +95,7 @@ function assertPowerOfTwo(n: number): void {
  */
 class CircularQueueNode<T> {
   /** Shared pool for recycling detached nodes */
-  static pool: CircularQueueNode<unknown>[] = [];
+  private static pool: CircularQueueNode<unknown>[] = [];
 
   readonly size: number;
   readonly mask: number;

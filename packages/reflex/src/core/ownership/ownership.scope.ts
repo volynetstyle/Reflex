@@ -4,6 +4,17 @@ import { IOwnership } from "./ownership.type";
 /**
  * Lightweight ownership context manager.
  *
+ * RootScope
+ *  └─ owner: undefined
+ *      ↓ createScope()
+ *         ├─ createOwner(parent = undefined)
+ *         ├─ owner = [Owner#1]
+ *         └─ fn() → [run inside #1]
+ *             ↓ createScope()
+ *                ├─ createOwner(parent = #1)
+ *                ├─ owner = [Owner#2]
+ *                └─ fn() → [run inside #2]
+ *
  * Handles the current ownership scope in a stack-safe way.
  * Provides scoped creation and temporary owner replacement.
  */

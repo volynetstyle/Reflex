@@ -24,6 +24,10 @@ const OwnershipPrototype: IOwnershipMethods = {
       return;
     }
 
+    if (child._parent === this) {
+      return;
+    }
+
     if (child === this) {
       throw new Error("Cannot append owner to itself");
     }
@@ -38,10 +42,6 @@ const OwnershipPrototype: IOwnershipMethods = {
 
     if (child._parent && child._parent !== this) {
       child._parent.removeChild(child);
-    }
-
-    if (child._parent === this) {
-      return;
     }
 
     child._parent = this;
@@ -130,10 +130,39 @@ const OwnershipPrototype: IOwnershipMethods = {
 
     batchDisposer(batch, strategy);
   },
+
+  getContext(this: IOwnership) {
+    if (!this._context)
+      this._context = ReflexObject.Inherit(this._parent?._context ?? {});
+    return this._context;
+  },
+
+  provide(this: IOwnership, key: symbol | string, value: unknown) {
+    const ctx = this.getContext();
+    ctx[key] = value;
+  },
+
+  inject<T>(this: IOwnership, key: symbol | string): T | undefined {
+    let ctx: any = this._context;
+
+    while (ctx) {
+      if (key in ctx) return ctx[key];
+      ctx = Object.getPrototypeOf(ctx);
+    }
+
+    return undefined;
+  },
 };
 
 /**
  * Optimized owner creation with pre-sized disposal array
+ *
+ * Parent_1 Owner
+ * ├─ _context: { theme: "dark" }
+ * └─ _firstChild → [Owner#A]
+ *       ├─ _parent → Parent_1
+ *       ├─ _context → Object.create(Parent_1._context)
+ *       └─ _disposal → [ fn, fn, fn ]
  */
 function createOwner(parent?: IOwnership): IOwnership {
   const owner = ReflexObject.Inherit<IOwnership>(OwnershipPrototype);
@@ -146,7 +175,7 @@ function createOwner(parent?: IOwnership): IOwnership {
   owner._disposal = new Array(DISPOSAL_INITIAL_CAPACITY); // Pre-allocate
   owner._disposal.length = 0; // But keep length at 0
   owner._context = undefined; // Will be set by appendChild if needed
-  owner._state = OwnershipStateFlags.CLEAN | 0;
+  owner._state = OwnershipStateFlags.CLEAN;
   owner._childCount = 0;
 
   if (parent) {

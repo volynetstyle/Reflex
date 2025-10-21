@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsc --build",
     "test": "jest",
-    "test:bench": "node --expose-gc --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand"
+    "test:bench": "node --expose-gc --trace-gc --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand"
   },
   "sideEffects": false,
   "devDependencies": {
