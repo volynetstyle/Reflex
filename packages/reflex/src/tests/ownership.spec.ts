@@ -3,9 +3,11 @@
  * Comprehensive test suite for ownership system
  */
 
-import { createOwner, IOwnership } from "./ownership.core";
-import { OwnershipScope } from "./ownership.scope";
-import { OwnershipStateFlags } from "./ownership.type";
+import { createOwner } from "../core/ownership/ownership.core";
+import { OwnershipScope } from "../core/ownership/ownership.scope";
+import { OwnershipStateFlags, IOwnership } from "../core/ownership/ownership.type";
+
+
 
 function logPerf(name: string, duration: number, limit?: number) {
   const pass = limit === undefined || duration <= limit;

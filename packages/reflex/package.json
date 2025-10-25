@@ -8,13 +8,15 @@
   "scripts": {
     "build": "tsc --build",
     "test": "jest",
-    "test:bench": "node --expose-gc --trace-gc --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand"
+    "test:bench": "node  --expose-gc --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
+    "profile:bench": "node --expose-gc ./dist/experimental/graph.bench.js"
   },
   "sideEffects": false,
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "jest": "^30.1.3",
     "ts-jest": "^29.4.4",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.2"
   }
 }
