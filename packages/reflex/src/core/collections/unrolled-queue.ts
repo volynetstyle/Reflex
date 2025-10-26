@@ -74,9 +74,6 @@ export interface UnrolledQueueOptions {
  */
 export interface IUnrolledQueue<T> extends Iterable<T> {
   readonly length: number;
-  enqueue(item: T): void;
-  dequeue(): T | null;
-  clear(): void;
 }
 
 /** Default node size most stable for V8 (power of two) */
@@ -185,7 +182,7 @@ class CircularQueueNode<T> {
  * Thus, the queue “unrolls” and “collapses” dynamically
  * with constant-time operations and minimal GC.
  */
-export class UnrolledQueue<T> implements IUnrolledQueue<T> {
+export class UnrolledQueue<T> implements Queueable<T>, IUnrolledQueue<T> {
   #length = 0;
   #nodeSize: number;
   #head: CircularQueueNode<T>;
@@ -221,15 +218,15 @@ export class UnrolledQueue<T> implements IUnrolledQueue<T> {
   }
 
   /** @__INLINE__ Remove item from queue tail */
-  dequeue(): T | null {
+  dequeue(): T | undefined {
     if (this.#length === 0) {
-      return null;
+      return undefined;
     }
 
     const item = this.#tail.dequeue();
 
     if (item === null) {
-      return null;
+      return undefined;
     }
 
     this.#length--;
