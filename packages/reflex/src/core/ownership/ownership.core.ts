@@ -165,18 +165,18 @@ const OwnershipPrototype: IOwnershipMethods = {
  *       └─ _disposal → [ fn, fn, fn ]
  */
 function createOwner(parent?: IOwnership): IOwnership {
-  const owner = ReflexObject.Inherit<IOwnership>(OwnershipPrototype);
-
-  owner._parent = undefined;
-  owner._firstChild = undefined;
-  owner._lastChild = undefined;
-  owner._nextSibling = undefined;
-  owner._prevSibling = undefined;
-  owner._disposal = new Array(DISPOSAL_INITIAL_CAPACITY); // Pre-allocate
-  owner._disposal.length = 0; // But keep length at 0
-  owner._context = undefined; // Will be set by appendChild if needed
-  owner._state = OwnershipStateFlags.CLEAN;
-  owner._childCount = 0;
+  const owner: IOwnership = {
+    ...OwnershipPrototype,
+    _parent: undefined,
+    _firstChild: undefined,
+    _lastChild: undefined,
+    _nextSibling: undefined,
+    _prevSibling: undefined,
+    _disposal: undefined,
+    _context: undefined,
+    _state: OwnershipStateFlags.CLEAN,
+    _childCount: 0,
+  };
 
   if (parent) {
     parent.appendChild(owner);

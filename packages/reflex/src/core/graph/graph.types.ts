@@ -26,7 +26,7 @@ import { BitMask } from "../object/utils/bitwise";
  *  - `_flags`: bitmask representing node state (dirty, disposed, scheduled, etc.)
  *  - `_epoch`: version counter used for dependency resolution or cache invalidation
  */
-interface GraphNode {
+export interface IGraphNode {
   _flags: BitMask;
   _epoch: number;
   _value?: unknown;
@@ -42,7 +42,7 @@ export const enum NodeFlags {
 
 type EdgeDirection = "up" | "down";
 
-interface EdgeList<T, D extends EdgeDirection> extends Array<T> {
+interface IEdgeList<T, D extends EdgeDirection> extends Array<T> {
   readonly _traverse?: D;
 }
 
@@ -52,9 +52,9 @@ interface EdgeList<T, D extends EdgeDirection> extends Array<T> {
  *
  *  - `_observers`: list of dependent observer nodes (subscribers)
  */
-export interface Source extends GraphNode {
+export interface ISource extends IGraphNode {
   /** Downstream connections — observers subscribed to this source. */
-  _observers: EdgeList<Observer, "down"> | null;
+  _observers: IEdgeList<IObserver, "down"> | null;
 }
 
 /**
@@ -64,9 +64,9 @@ export interface Source extends GraphNode {
  *  - `_sources`: list of source nodes this observer depends on
  *    may queue or immediately propagate changes depending on runtime strategy
  */
-export interface Observer extends GraphNode {
+export interface IObserver extends IGraphNode {
   /** Upstream connections — sources this observer depends on. */
-  _sources: EdgeList<Source, "up"> | null;
+  _sources: IEdgeList<ISource, "up"> | null;
 }
 
 /**
@@ -76,7 +76,7 @@ export interface Observer extends GraphNode {
  * These methods define the lifecycle of connections,
  * traversal, and invalidation logic for nodes.
  */
-export interface GraphOperations<TVertex extends GraphNode> extends IDisposable {
+export interface GraphOperations<TVertex> extends IDisposable {
   /**
    * Connects the given vertex as a dependency (edge in).
    * Returns true if the connection was new, false if already linked.
@@ -143,6 +143,6 @@ export interface GraphOperations<TVertex extends GraphNode> extends IDisposable 
  *  - `commitTransition?(node)`: optional hook for transactional or batched updates
  */
 export interface RuntimeContext {
-  scheduleUpdate(node: GraphNode): void;
-  commitTransition?(node: GraphNode): void;
+  scheduleUpdate(node: IGraphNode): void;
+  commitTransition?(node: IGraphNode): void;
 }

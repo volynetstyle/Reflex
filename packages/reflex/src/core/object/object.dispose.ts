@@ -1,11 +1,11 @@
 interface IDisposable {
   dispose(): void;
-  [Symbol.dispose]: void;
+  [Symbol.dispose]?(): void;
 }
 
 interface IDisposableAsync {
   disposeAsync(): Async<void>;
-  [Symbol.asyncDispose]: void;
+  [Symbol.asyncDispose]?(): Async<void>;
 }
 
 export type { IDisposable, IDisposableAsync };

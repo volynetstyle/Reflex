@@ -45,7 +45,7 @@ describe("OwnershipCore", () => {
       expect(owner._prevSibling).toBeUndefined();
       expect(owner._childCount).toBe(0);
       expect(owner._state).toBe(OwnershipStateFlags.CLEAN);
-      expect(owner._disposal).toHaveLength(0);
+      expect(owner._disposal).toBe(undefined);
     });
 
     it("should attach to parent when provided", () => {

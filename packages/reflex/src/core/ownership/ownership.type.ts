@@ -67,7 +67,7 @@ interface IOwnership extends IOwnershipMethods {
   _lastChild?: IOwnership;
   _nextSibling?: IOwnership;
   _prevSibling?: IOwnership;
-  _disposal: NoneToVoidFn[];
+  _disposal?: NoneToVoidFn[];
   _context?: IOwnershipContextRecord;
   _queue?: any;
   _state: OwnershipStateFlags;
