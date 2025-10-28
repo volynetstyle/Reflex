@@ -56,6 +56,8 @@ interface IOwnershipMethods {
   /** Retrieve a value from nearest context scope. */
   inject<T>(key: symbol | string): T | undefined;
 
+  hasOwn(this: IOwnership, key: symbol | string): boolean;
+
   /** Dispose this owner and all descendants (iterative). */
   dispose(): void;
 }
@@ -70,6 +72,7 @@ interface IOwnership extends IOwnershipMethods {
   _disposal?: NoneToVoidFn[];
   _context?: IOwnershipContextRecord;
   _queue?: any;
+  _epoch: number;
   _state: OwnershipStateFlags;
   _childCount: number;
 }

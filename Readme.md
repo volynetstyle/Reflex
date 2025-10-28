@@ -1,21 +1,16 @@
-<p align="center">
-  <img src="./assets/reflex-dragon-red.png" width="250" alt="Reflex Logo" style="border-radius: 50%"/>
+<div style="background:linear-gradient(145deg,#0F0F0F,#1A1A1A);padding:40px;border-radius:12px;">
+
+<p align="center" style="background:linear-gradient(145deg,#0F0F0F,#1A1A1A);padding:40px 0;border-radius:12px;">
+  <img src="./assets/reflex-dragon-gold.png" width="220" alt="Reflex Logo" style="border-radius:50%;box-shadow:0 0 30px rgba(198,166,86,0.3)"/>
 </p>
 
-<h1 align="center">Reflex</h1>
-
-<p align="center">
-  <em>Universal Reactive Runtime</em>
-</p>
-
-<p align="center">
-  <strong>“Reactivity beyond the DOM — one core, any surface.”</strong>
-</p>
+<h1 align="center" style="color:#C6A656;">Reflex</h1>
+<p align="center" style="color:#C0B68A;"><em>Universal Reactive Runtime</em></p>
+<p align="center" style="color:#A8452E;"><strong>“Reactivity beyond the DOM — one core, any surface.”</strong></p>
 
 ---
 
 ## 🚀 Overview
-
 
 Reflex is not just another UI framework.
 It is a **general-purpose reactive runtime**: a lightweight ownership system, fine-grained signals, and a scheduler — independent of JSX or the DOM.
@@ -30,22 +25,16 @@ Unlike React, Solid, or Vue, Reflex is not locked to the browser. You can render
 
 - **Ownership as the Unit of Life**
   Every signal, effect, or component belongs to an owner. Dispose of a scope → everything inside cleans up automatically.
-
 - **Contextual Dependency Injection**
   Context flows naturally down the ownership tree via prototype inheritance. No prop drilling, no manual context management.
-
 - **Fine-Grained Signals**
   Reactive primitives (`signal`, `derived`, `effect`) update only what actually changes. No re-rendering unnecessary nodes.
-
 - **Coarse Transactions & Batching**
   Batched updates, snapshots, and async-safe consistency for SSR, hydration, and streaming pipelines.
-
 - **Universal Surfaces**
   DOM, Canvas, WebGL, server pipelines, native UI — the runtime is agnostic.
-
 - **Scheduler-Orchestrated Side Effects**
   Timers, I/O, DOM patches, or workers run through a unified priority-based queue for smooth interactivity.
-
 - **Lightweight & Fast**
   Core size ~6 KB. Predictable scaling from micro widgets to massive app trees.
 
@@ -69,7 +58,6 @@ Unlike React, Solid, or Vue, Reflex is not locked to the browser. You can render
    - Priorities, deadlines, cancellations.
 
 4. **Surface Layer (Optional)**
-
    - DOM, Canvas, WebGL, mobile, or custom renderers.
 
 ---
@@ -87,7 +75,7 @@ App Owner (macro)
    └─ Effect 3
 ```
 
-_Signals mark DAG nodes dirty, scheduler flushes only affected computations._
+_Signals mark DAG nodes dirty, scheduler flushes only affected computations._  
 _Dispose is iterative post-order: children first, then parent._
 
 **Dirty propagation:**
@@ -117,8 +105,6 @@ Memo2 → unchanged
 ---
 
 ## 📦 Getting Started
-
-**Install:**
 
 ```bash
 npm install @reflex/core
@@ -203,3 +189,5 @@ createScope(App)
 ## 🏁 License
 
 MIT License © 2025 Andrii Volynets
+
+</div>

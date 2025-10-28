@@ -1,6 +1,12 @@
 /**
  * @file ownership.core.ts
- * Ownership System - Zero overhead hierarchical resource management
+ * @description
+ * Reflex Ownership System — zero-overhead hierarchical resource manager.
+ *
+ * Provides deterministic parent-child ownership, scoped disposal, and
+ * contextual inheritance with minimal runtime cost. Each owner represents
+ * a self-contained lifetime scope that can attach children, propagate
+ * cleanup, and share contextual data down its hierarchy.
  */
 
 import { ReflexObject } from "../object/object.inherit";
@@ -9,37 +15,35 @@ import { batchDisposer, DisposalStrategy } from "./ownership.disposal";
 import OwnershipDisposeError from "./ownership.error";
 import {
   IOwnership,
+  IOwnershipContextRecord,
   IOwnershipMethods,
+  NoneToVoidFn,
   OwnershipStateFlags,
 } from "./ownership.type";
 
 const DISPOSAL_INITIAL_CAPACITY = 4;
 
 /**
- * Shared prototype for all Owner nodes.
+ * @constant OwnershipPrototype
+ *
+ * Shared method table for all `Owner` instances.
+ *
+ * Designed for flat inlining and stable hidden class shape in V8.
  */
 const OwnershipPrototype: IOwnershipMethods = {
+  /**
+   * Links a child owner under the current parent.
+   * Ensures deterministic parent-child hierarchy without duplicates.
+   */
   appendChild(this: IOwnership, child: IOwnership) {
-    if (!child) {
-      return;
-    }
-
-    if (child._parent === this) {
-      return;
-    }
-
-    if (child === this) {
-      throw new Error("Cannot append owner to itself");
-    }
-
-    if (child._state & OwnershipStateFlags.DISPOSED) {
+    if (!child || child._parent === this) return;
+    if (child === this) throw new Error("Cannot append owner to itself");
+    if (child._state & OwnershipStateFlags.DISPOSED)
       throw new Error("Cannot append a disposed child");
-    }
+    if (this._state & OwnershipStateFlags.DISPOSING)
+      throw new Error("Cannot append child to a disposing owner");
 
-    if (this._state & OwnershipStateFlags.DISPOSING) {
-      throw new Error("Cannot append child to an owner that is disposing");
-    }
-
+    // If child already attached elsewhere — detach first
     if (child._parent && child._parent !== this) {
       child._parent.removeChild(child);
     }
@@ -50,56 +54,48 @@ const OwnershipPrototype: IOwnershipMethods = {
 
     if (this._lastChild) {
       this._lastChild._nextSibling = child;
-      child._prevSibling = this._lastChild;
       this._lastChild = child;
     } else {
       this._firstChild = this._lastChild = child;
     }
 
-    if (this._context !== undefined) {
-      child._context = ReflexObject.Inherit(this._context);
+    const parentContext = this._context;
+    if (parentContext !== undefined) {
+      child._context = ReflexObject.Inherit(parentContext);
     }
 
     ++this._childCount;
   },
 
+  /**
+   * Detaches a child from the current owner without disposing it.
+   */
   removeChild(this: IOwnership, child: IOwnership) {
-    if (child._parent !== this) {
-      return;
-    }
+    if (child._parent !== this) return;
 
     const prev = child._prevSibling;
     const next = child._nextSibling;
 
-    if (prev) {
-      prev._nextSibling = next;
-    }
+    if (prev) prev._nextSibling = next;
+    if (next) next._prevSibling = prev;
 
-    if (next) {
-      next._prevSibling = prev;
-    }
+    if (this._firstChild === child) this._firstChild = next;
+    if (this._lastChild === child) this._lastChild = prev;
 
-    if (this._firstChild === child) {
-      this._firstChild = next;
-    }
-
-    if (this._lastChild === child) {
-      this._lastChild = prev;
-    }
-
-    child._parent = undefined;
-    child._prevSibling = undefined;
-    child._nextSibling = undefined;
-
+    child._parent = child._prevSibling = child._nextSibling = undefined;
     --this._childCount;
   },
 
+  /** Called when a scope is first attached (can be overridden). */
   onScopeMount: noop,
 
+  /**
+   * Registers a cleanup function to execute when this owner is disposed.
+   * Lazily allocates a disposal array on first call.
+   */
   onScopeCleanup(this: IOwnership, fn: NoneToVoidFn) {
-    if (this._state & OwnershipStateFlags.DISPOSED) {
+    if (this._state & OwnershipStateFlags.DISPOSED)
       throw new OwnershipDisposeError(["Cannot add cleanup to disposed owner"]);
-    }
 
     if (!this._disposal) {
       this._disposal = new Array(DISPOSAL_INITIAL_CAPACITY);
@@ -109,6 +105,10 @@ const OwnershipPrototype: IOwnershipMethods = {
     this._disposal.push(fn);
   },
 
+  /**
+   * Recursively disposes this owner and all its descendants.
+   * Performs iterative stack traversal to avoid recursion depth limits.
+   */
   dispose(this: IOwnership, strategy?: DisposalStrategy) {
     if (this._state & OwnershipStateFlags.DISPOSED) return;
 
@@ -122,47 +122,55 @@ const OwnershipPrototype: IOwnershipMethods = {
       batch.push(node);
 
       for (let child = node._firstChild; child; child = child._nextSibling) {
-        if (!(child._state & OwnershipStateFlags.DISPOSED)) {
-          stack.push(child);
-        }
+        if (!(child._state & OwnershipStateFlags.DISPOSED)) stack.push(child);
       }
     }
 
     batchDisposer(batch, strategy);
   },
 
-  getContext(this: IOwnership) {
-    if (!this._context)
-      this._context = ReflexObject.Inherit(this._parent?._context ?? {});
-    return this._context;
+  /**
+   * Returns current owner context, creating one if necessary.
+   * Contexts form a prototype chain inherited from parent scopes.
+   */
+  getContext(this: IOwnership): IOwnershipContextRecord {
+    return (this._context ||= ReflexObject.Inherit(
+      this._parent?._context ?? {}
+    ));
   },
 
+  /**
+   * Provides a value into the current owner’s context.
+   * Child scopes will inherit it via prototype chain.
+   */
   provide(this: IOwnership, key: symbol | string, value: unknown) {
     const ctx = this.getContext();
     ctx[key] = value;
   },
 
+  /**
+   * Resolves a context value from the current or any ancestor scope.
+   */
   inject<T>(this: IOwnership, key: symbol | string): T | undefined {
-    let ctx: any = this._context;
+    if (!this._context) return undefined;
 
-    while (ctx) {
-      if (key in ctx) return ctx[key];
-      ctx = Object.getPrototypeOf(ctx);
-    }
+    return this._context[key] as T;
+  },
 
-    return undefined;
+  hasOwn(this: IOwnership, key: symbol | string): boolean {
+    return this._context !== undefined && Object.hasOwn(this._context, key);
   },
 };
 
 /**
- * Optimized owner creation with pre-sized disposal array
+ * Creates a new ownership node.
+ * Lightweight factory with stable object shape for V8 optimization.
  *
- * Parent_1 Owner
- * ├─ _context: { theme: "dark" }
- * └─ _firstChild → [Owner#A]
- *       ├─ _parent → Parent_1
- *       ├─ _context → Object.create(Parent_1._context)
- *       └─ _disposal → [ fn, fn, fn ]
+ * @example
+ * const root = createOwner();
+ * const child = createOwner(root);
+ * child.onScopeCleanup(() => console.log("disposed"));
+ * root.dispose(); // → cleans up child and its resources
  */
 function createOwner(parent?: IOwnership): IOwnership {
   const owner: IOwnership = {

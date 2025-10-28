@@ -64,6 +64,8 @@
  *   - Stable memory footprint (≈5–20 MB depending on pool)
  */
 
+import { __assert } from "../object/utils/assert";
+
 export interface UnrolledQueueOptions {
   /** Node (segment) size, must be a power of two for bitmask optimization */
   nodeSize?: number;
@@ -80,9 +82,9 @@ export interface IUnrolledQueue<T> extends Iterable<T> {
 const DEFAULT_NODE_SIZE = 2048 as const;
 
 function assertPowerOfTwo(n: number): void {
-  if (!Number.isInteger(n) || n <= 0 || (n & (n - 1)) !== 0) {
-    throw new TypeError("nodeSize must be a positive power of two");
-  }
+  const cond = !Number.isInteger(n) || n <= 0 || (n & (n - 1)) !== 0;
+
+  __assert(cond, "nodeSize must be a positive power of two");
 }
 
 /**

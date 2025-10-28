@@ -15,7 +15,11 @@ export function batchDisposer(
   nodes: IOwnership[],
   strategy?: DisposalStrategy
 ): void {
-  if (!nodes.length) return;
+  const nodesCount = nodes.length;
+
+  if (!nodesCount) {
+    return;
+  }
 
   const { beforeDispose, afterDispose, onError } = strategy ?? {};
   beforeDispose?.(nodes);
@@ -23,15 +27,18 @@ export function batchDisposer(
   let firstError: unknown = undefined;
   let errorCount = 0;
 
-  for (let i = 0; i < nodes.length; i++) {
+  for (let i = 0; i < nodesCount; i++) {
     const node = nodes[i];
     const state = node._state;
 
-    if (Bitwise.has(state, OwnershipStateFlags.DISPOSED)) continue;
+    if (Bitwise.has(node._state, OwnershipStateFlags.DISPOSED)) {
+      continue;
+    }
 
     node._state = Bitwise.set(state, OwnershipStateFlags.DISPOSING);
 
     const disposal = node._disposal;
+
     if (!disposal || disposal.length === 0) {
       node._state = OwnershipStateFlags.DISPOSED;
       continue;
@@ -48,15 +55,16 @@ export function batchDisposer(
       }
     }
 
-    disposal.length = 0;
-
     // unlink and clear references for GC
-    node._firstChild = undefined;
-    node._lastChild = undefined;
-    node._nextSibling = undefined;
-    node._prevSibling = undefined;
-    node._parent = undefined;
-    node._context = undefined;
+    node._firstChild =
+      node._lastChild =
+      node._nextSibling =
+      node._prevSibling =
+      node._parent =
+      node._context =
+      node._disposal =
+        undefined;
+
     node._childCount = 0;
 
     node._state = OwnershipStateFlags.DISPOSED;

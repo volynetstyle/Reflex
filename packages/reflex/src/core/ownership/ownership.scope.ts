@@ -2,54 +2,37 @@ import { createOwner } from "./ownership.core";
 import { IOwnership } from "./ownership.type";
 
 /**
- * Lightweight ownership context manager.
+ * OwnershipScope — functional, zero-class manager
+ * for maintaining the current owner context.
  *
- * RootScope
- *  └─ owner: undefined
- *      ↓ createScope()
- *         ├─ createOwner(parent = undefined)
- *         ├─ owner = [Owner#1]
- *         └─ fn() → [run inside #1]
- *             ↓ createScope()
- *                ├─ createOwner(parent = #1)
- *                ├─ owner = [Owner#2]
- *                └─ fn() → [run inside #2]
+ * Provides:
+ *  - getOwner(): IOwnership | undefined
+ *  - withOwner(owner, fn): T
+ *  - createScope(fn, parent?): T
  *
- * Handles the current ownership scope in a stack-safe way.
- * Provides scoped creation and temporary owner replacement.
+ * Works like a stack-safe ownership context.
  */
-export class OwnershipScope {
-  private _owner?: IOwnership;
+export function createOwnershipScope() {
+  let currentOwner: IOwnership | undefined;
 
-  /**
-   * Returns the current owner in the scope.
-   * Note: if you get `undefined`, it's probably your root
-   */
-  get owner(): typeof this._owner {
-    return this._owner;
-  }
+  const getOwner = () => {
+    return currentOwner;
+  };
 
-  /**
-   * Creates a new ownership context under the current (or given) owner
-   * and executes the callback inside that scope.
-   */
-  createScope<T>(fn: () => T, parent = this.owner): T {
-    const owner = createOwner(parent);
-
-    return this.withOwner(owner, fn);
-  }
-
-  /**
-   * Temporarily replaces current owner during the callback execution.
-   */
-  withOwner<T>(owner: IOwnership, fn: () => T): T {
-    const prev = this._owner;
-    this._owner = owner;
-
+  const withOwner = <T>(owner: IOwnership, fn: () => T): T => {
+    const prev = currentOwner;
+    currentOwner = owner;
     try {
       return fn();
     } finally {
-      this._owner = prev;
+      currentOwner = prev;
     }
-  }
+  };
+
+  const createScope = <T>(fn: () => T, parent = currentOwner): T => {
+    const owner = createOwner(parent);
+    return withOwner(owner, fn);
+  };
+
+  return { getOwner, withOwner, createScope };
 }
