@@ -1,10 +1,20 @@
 {
-  "name": "@scope/reflex",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
+  "name": "@reflex/core",
+  "version": "0.7.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./*": {
+      "import": "./dist/*.js",
+      "types": "./dist/*.d.ts"
+    }
+  },
+  "imports": {
+    "#reflex/*": "./src/*"
+  },
   "scripts": {
     "build": "tsc --build",
     "test": "jest",

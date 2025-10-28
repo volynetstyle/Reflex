@@ -1,9 +1,24 @@
 {
-  "name": "@scope/reflex-dom",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": ["dist"],
+  "name": "@reflex/dom",
+  "version": "0.7.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "imports": {
+    "#reflex/*": "../reflex/src/*"
+  },
   "scripts": {
-    "build": "tsc --build"
+    "build": "tsc -b",
+    "clean": "rimraf dist .tsbuildinfo"
+  },
+  "dependencies": {
+    "@reflex/core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.0"
   }
 }

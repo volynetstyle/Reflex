@@ -1,9 +1,16 @@
 {
-  "extends": "environment/tsconfig.base.json",
-  "references": [{ "path": "../reflex" }],
+  "extends": "../../environment/tsconfig.base.json",
   "compilerOptions": {
+    "rootDir": "src",
     "outDir": "dist",
-    "rootDir": "src"
+    "types": ["node"],
+    "typeRoots": ["./types", "@packages/node_modules/@types"],
+    "declaration": true,
+    "declarationMap": true
   },
-  "include": ["src"]
+  "references": [
+    { "path": "../reflex" }
+  ],
+  "include": ["src"],
+  "exclude": ["dist", "**/*.test.ts"]
 }
