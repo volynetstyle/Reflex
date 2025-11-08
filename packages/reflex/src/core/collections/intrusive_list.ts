@@ -63,16 +63,12 @@ const IntrusiveListPrototype: IntrusiveList<any> = {
     this._size = 0;
   },
 
-  // Итерация по узлам (IntrusiveListNode)
   *nodes(): Generator<any> {
     for (let node = this._head; node; node = node._next) {
       yield node;
     }
   },
 
-  // Итерация по значениям (T)
-  // В вашем случае T extends IntrusiveListNode<T>
-  // поэтому node и есть значение
   *values(): Generator<any> {
     for (let node = this._head; node; node = node._next) {
       yield node;
