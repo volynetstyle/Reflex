@@ -4,7 +4,7 @@
     "rootDir": "src",
     "outDir": "dist",
     "types": ["node"],
-    "typeRoots": ["./types", "@packages/node_modules/@types"],
+    "typeRoots": ["../../node_modules/@types"],
     "declaration": true,
     "declarationMap": true
   },

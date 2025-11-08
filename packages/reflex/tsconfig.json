@@ -1,13 +1,17 @@
 {
-  "extends": "../../environment/tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
     "types": ["node", "jest"],
-    "typeRoots": ["./types", "./node_modules/@types"],
+    "esModuleInterop": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "isolatedModules": true,
+    "strict": true,
     "declaration": true,
     "declarationMap": true
   },
   "include": ["src"],
-  "exclude": ["dist", "**/*.test.ts"]
+  "exclude": ["dist"]
 }

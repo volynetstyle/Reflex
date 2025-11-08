@@ -1,5 +1,5 @@
-import { createOwner } from "./ownership.core";
-import { IOwnership } from "./ownership.type";
+import { createOwner } from "./ownership.core.js";
+import { IOwnership } from "./ownership.type.js";
 
 /**
  * OwnershipScope — functional, zero-class manager
@@ -12,7 +12,7 @@ import { IOwnership } from "./ownership.type";
  *
  * Works like a stack-safe ownership context.
  */
-export function createOwnershipScope() {
+export const createOwnershipScope = () => {
   let currentOwner: IOwnership | undefined;
 
   const getOwner = () => {
@@ -22,6 +22,7 @@ export function createOwnershipScope() {
   const withOwner = <T>(owner: IOwnership, fn: () => T): T => {
     const prev = currentOwner;
     currentOwner = owner;
+
     try {
       return fn();
     } finally {
@@ -35,4 +36,6 @@ export function createOwnershipScope() {
   };
 
   return { getOwner, withOwner, createScope };
-}
+};
+
+export type OwnershipScope = ReturnType<typeof createOwnershipScope>;

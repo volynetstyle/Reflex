@@ -64,11 +64,13 @@
  *   - Stable memory footprint (≈5–20 MB depending on pool)
  */
 
-import { __assert } from "../object/utils/assert";
+import { __assert } from "../object/utils/assert.js";
+
+type Nullable<T> = T | null;
 
 export interface UnrolledQueueOptions {
   /** Node (segment) size, must be a power of two for bitmask optimization */
-  nodeSize?: number;
+  nodeSize: number;
 }
 
 /**
@@ -78,6 +80,7 @@ export interface IUnrolledQueue<T> extends Iterable<T> {
   readonly length: number;
 }
 
+const NODE_POOL_MAX = 128;
 /** Default node size most stable for V8 (power of two) */
 const DEFAULT_NODE_SIZE = 2048 as const;
 
@@ -92,23 +95,28 @@ function assertPowerOfTwo(n: number): void {
  * full vs empty states. Internally uses bitmask indexing:
  * `(index + 1) & mask` for wrapping.
  */
-class CircularQueueNode<T> {
+class RefNode<T> {
   /** Shared pool for recycling detached nodes */
-  private static pool: CircularQueueNode<unknown>[] = [];
+  private static pool: RefNode<unknown>[] = [];
 
   readonly size: number;
   readonly mask: number;
 
-  buffer: (T | undefined)[];
+  buffer: Array<Nullable<T>>;
   readIndex = 0;
   writeIndex = 0;
-  next: CircularQueueNode<T> | null = null;
+  next: Nullable<RefNode<T>> = null;
 
   constructor(size: number) {
     assertPowerOfTwo(size);
     this.size = size;
     this.mask = size - 1;
-    this.buffer = new Array<T | undefined>(size).fill(undefined);
+    this.buffer = new Array<Nullable<T>>(size);
+    for (let i = 0; i < size; i++) this.buffer[i] = null;
+
+    this.readIndex = 0;
+    this.writeIndex = 0;
+    this.next = null;
   }
 
   /** Number of elements currently held */
@@ -117,17 +125,23 @@ class CircularQueueNode<T> {
   }
 
   /** Acquire node from pool or create new one */
-  static alloc<U>(size: number): CircularQueueNode<U> {
-    return (
-      (this.pool.pop() as CircularQueueNode<U> | undefined) ??
-      new CircularQueueNode<U>(size)
-    );
+  static alloc<U>(size: number): RefNode<U> {
+    const pool = this.pool as RefNode<U>[];
+    const node = pool.pop();
+
+    if (node) return node;
+
+    return new RefNode<U>(size);
   }
 
   /** Return node to pool, resetting state (max 128 kept) */
-  static free(node: CircularQueueNode<unknown>): void {
-    node.reset();
-    if (this.pool.length < 128) this.pool.push(node);
+  static free(node: RefNode<unknown>): void {
+    const b = node.buffer;
+    for (let i = 0; i < b.length; i++) b[i] = null;
+    node.readIndex = 0;
+    node.writeIndex = 0;
+    node.next = null;
+    if (this.pool.length < NODE_POOL_MAX) this.pool.push(node);
   }
 
   /** Reset node indices and link */
@@ -164,12 +178,16 @@ class CircularQueueNode<T> {
     if (this.isEmpty()) {
       return null;
     }
-
     const item = this.buffer[this.readIndex] as T;
-    this.buffer[this.readIndex] = undefined;
+    this.buffer[this.readIndex] = null;
     this.readIndex = (this.readIndex + 1) & this.mask;
 
     return item;
+  }
+
+  peek(): T | null {
+    if (this.isEmpty()) return null;
+    return this.buffer[this.readIndex] as T;
   }
 }
 
@@ -185,18 +203,20 @@ class CircularQueueNode<T> {
  * with constant-time operations and minimal GC.
  */
 export class UnrolledQueue<T> implements Queueable<T>, IUnrolledQueue<T> {
-  #length = 0;
   #nodeSize: number;
-  #head: CircularQueueNode<T>;
-  #tail: CircularQueueNode<T>;
+  #head: RefNode<T>;
+  #tail: RefNode<T>;
+  #length: number = 0;
 
-  constructor(options: UnrolledQueueOptions = {}) {
-    const size = options.nodeSize ?? DEFAULT_NODE_SIZE;
+  constructor(options: UnrolledQueueOptions = { nodeSize: DEFAULT_NODE_SIZE }) {
+    const size = options.nodeSize;
     assertPowerOfTwo(size);
 
-    const node = CircularQueueNode.alloc<T>(size);
+    const node = RefNode.alloc<T>(size);
     this.#nodeSize = size;
-    this.#head = this.#tail = node;
+    this.#head = node;
+    this.#tail = node;
+    this.#length = 0;
   }
 
   get length(): number {
@@ -208,7 +228,7 @@ export class UnrolledQueue<T> implements Queueable<T>, IUnrolledQueue<T> {
     const head = this.#head;
 
     if (!head.enqueue(item)) {
-      const newNode = CircularQueueNode.alloc<T>(this.#nodeSize);
+      const newNode = RefNode.alloc<T>(this.#nodeSize);
 
       head.next = newNode;
       this.#head = newNode;
@@ -221,15 +241,11 @@ export class UnrolledQueue<T> implements Queueable<T>, IUnrolledQueue<T> {
 
   /** @__INLINE__ Remove item from queue tail */
   dequeue(): T | undefined {
-    if (this.#length === 0) {
-      return undefined;
-    }
+    if (this.#length === 0) return undefined;
 
     const item = this.#tail.dequeue();
 
-    if (item === null) {
-      return undefined;
-    }
+    if (item === undefined) return undefined;
 
     this.#length--;
 
@@ -237,45 +253,63 @@ export class UnrolledQueue<T> implements Queueable<T>, IUnrolledQueue<T> {
     if (this.#tail.length === 0 && this.#tail.next) {
       const old = this.#tail;
       this.#tail = this.#tail.next;
-      CircularQueueNode.free(old);
+      RefNode.free(old);
     }
 
-    return item;
+    return item || undefined;
   }
 
   /** Clear queue and recycle all nodes */
   clear(): void {
-    let node: CircularQueueNode<T> | null = this.#tail;
+    let node: RefNode<T> | null = this.#tail;
 
     while (node) {
-      const next: CircularQueueNode<T> | null = node.next;
-      CircularQueueNode.free(node);
+      const next: Nullable<RefNode<T>> = node.next;
+      RefNode.free(node);
       node = next;
     }
 
-    const fresh = CircularQueueNode.alloc<T>(this.#nodeSize);
-
+    const fresh = RefNode.alloc<T>(this.#nodeSize);
     this.#head = this.#tail = fresh;
     this.#length = 0;
+  }
+
+  drain(callback: (v: T) => void): number {
+    let count = 0;
+    while (this.#length !== 0) {
+      const t = this.#tail;
+      while (t.length !== 0) {
+        const val = t.dequeue()!;
+        callback(val);
+        count++;
+        this.#length--;
+      }
+
+      if (t.next) {
+        const old = this.#tail;
+        this.#tail = t.next;
+        RefNode.free(old);
+      }
+    }
+    return count;
   }
 
   /** access current tail element without dequeuing */
   peek(): T | null {
     if (this.#length === 0) return null;
-    return this.#tail.buffer[this.#tail.readIndex] as T;
+    return this.#tail.peek();
+  }
+
+  estimateNodes(): number {
+    return 1 + ((this.#length / (this.#nodeSize - 1)) | 0);
   }
 
   /** Iterator: yields items from tail → head */
   *[Symbol.iterator](): Iterator<T> {
-    for (
-      let node: CircularQueueNode<T> | null = this.#tail;
-      node;
-      node = node.next
-    ) {
-      for (let i = 0, j = node.readIndex; i < node.length; i++) {
-        yield node.buffer[j] as T;
-
-        j = (j + 1) & node.mask;
+    for (let n: RefNode<T> | null = this.#tail; n; n = n.next) {
+      for (let i = 0, j = n.readIndex; i < n.length; i++) {
+        yield n.buffer[j] as T;
+        j = (j + 1) & n.mask;
       }
     }
   }

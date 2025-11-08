@@ -1,4 +1,4 @@
-import { IS_DOM_AVAILABLE } from "../isDomAvailable";
+import { IS_DOM_AVAILABLE } from "../isDomAvailable.js";
 
 /**
  * Style object used to detect supported CSS properties.
@@ -14,7 +14,7 @@ type VendorPrefixedEvent =
   | "animationend"
   | "animationiteration"
   | "animationstart"
-  | "transitionend";
+  | "transitionend.js";
 
 /**
  * A map of modern event names to their possible vendor-prefixed alternatives.

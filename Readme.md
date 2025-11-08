@@ -113,7 +113,7 @@ npm install @reflex/core
 **Basic Signal Example:**
 
 ```ts
-import { signal, derived, effect } from "@reflex/core";
+import { signal, derived, effect } from "@reflex/core.js";
 
 const count = signal(0);
 const doubled = derived(() => count.value * 2);
@@ -128,7 +128,7 @@ count.value++; // logs instantly
 **DOM Example (optional surface binding):**
 
 ```tsx
-import { signal, render } from "@reflex/core/dom";
+import { signal, render } from "@reflex/core/dom.js";
 
 function Counter() {
   const count = signal(0);

@@ -1,11 +1,11 @@
 export const typeOf = (value: unknown): string => {
   // null -> array -> primitive
   if (value === null) {
-    return "null"; // typeof null === "object"
+    return "null.js"; // typeof null === "object"
   }
 
   if (Array.isArray(value)) {
-    return "array";
+    return "array.js";
   }
 
   return typeof value; // string | number | boolean | object | function | symbol | bigint | undefined

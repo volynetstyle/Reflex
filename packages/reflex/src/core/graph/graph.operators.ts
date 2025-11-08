@@ -1,5 +1,5 @@
-import { BitMask } from "../object/utils/bitwise";
-import { GraphOperations, IObserver, ISource } from "./graph.types";
+import { BitMask } from "../object/utils/bitwise.js";
+import { GraphOperations, IObserver, ISource } from "./graph.types.js";
 
 interface IGraphVertex extends IObserver, ISource {}
 

@@ -3,7 +3,7 @@
  * Prevents code execution if a javascript: URL is accidentally visited.
  */
 const BLOCKED_JS_URL =
-  "javascript:throw new Error('Blocked javascript: URL for security.')";
+  "javascript:throw new Error('Blocked javascript: URL for security.').js";
 
 /**
  * Checks if a character is a C0 control character or space (U+0000 to U+001F, U+0020).
@@ -52,7 +52,7 @@ export function sanitizeURL<T>(url: T): T | string {
     i++;
   }
 
-  const proto = "javascript:";
+  const proto = "javascript:.js";
   const protoLength = proto.length;
   let j = 0;
 

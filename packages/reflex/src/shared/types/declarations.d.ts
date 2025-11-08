@@ -3,12 +3,11 @@ declare const API_PROTOCOL_VERSION: `${number}.${number}.${number}`;
 declare const APP_VERSION: string;
 declare const APP_REVISION: string;
 
-declare const BUILD_MODE: "development" | "production" | "test";
-declare const PLATFORM: "browser" | "node" | "worker";
+declare const BUILD_MODE: "development" | "production" | "test.js";
+declare const PLATFORM: "browser" | "node" | "worker.js";
 
-declare const process: NodeJS.Process;
 
-declare namespace globalThis {
+declare namespace ReflexGlobal {
   const __REFLEX_LIB__: Record<string, unknown>;
 
   const __REFLEX_INSPECTOR__: Record<string, unknown> | undefined;

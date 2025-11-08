@@ -4,42 +4,44 @@
  * Defines hierarchical scopes, context inheritance, and cleanup logic.
  */
 
-const S_ID = Symbol.for("id"); // Unique internal ID
-const S_OWN = Symbol.for("ownership"); // Parent Owner reference
-const S_SOURCES = Symbol.for("sources"); // Reactive dependencies
-const S_SUBS = Symbol.for("subscribers"); // Reactive dependents
-const S_DIRTY = Symbol.for("dirty"); // Marks node as dirty
-const S_FN = Symbol.for("fn"); // Computation function
-const S_VALUE = Symbol.for("value"); // Current value
-const S_DISPOSE = Symbol.for("disposeCallbacks"); // Cleanup list
+const S_OWN_BRAND= Symbol("OwnershipBrand");
+const S_ID = Symbol.for("ownership:id");
+const S_OWN = Symbol.for("ownership:parent");
+const S_SOURCES = Symbol.for("ownership:sources");
+const S_SUBS = Symbol.for("ownership:subscribers");
+const S_DIRTY = Symbol.for("ownership:dirty");
+const S_FN = Symbol.for("ownership:fn");
+const S_VALUE = Symbol.for("ownership:value");
+const S_DISPOSE = Symbol.for("ownership:dispose");
 
-type IOwnershipContextRecord = Record<string | symbol, unknown>;
 
-/** Defines a context entry with inheritance support. */
-type IOwnershipContext<T = unknown> = {
-  id: symbol;
-  defaultValue?: T;
-};
-
-/** Bitwise node state — used for fast lifecycle checks. */
-const enum OwnershipStateFlags {
-  CLEAN = 0,
-  CHECK = 1 << 0,
-  DIRTY = 1 << 1,
-  DISPOSING = 1 << 2,
-  DISPOSED = 1 << 3,
+interface IOwnershipContextRecord {
+  [key: string | symbol]: unknown;
 }
 
-/** Cleanup callback type. */
-type NoneToVoidFn = () => void;
+interface IOwnershipContext<T = unknown> {
+  readonly id: symbol;
+  readonly defaultValue?: T;
+}
 
-/** Common API for all Ownership nodes. */
+const OwnershipStateFlags = {
+  CLEAN: 0,
+  CHECK: 1 << 0,
+  DIRTY: 1 << 1,
+  DISPOSING: 1 << 2,
+  DISPOSED: 1 << 3,
+} as const;
+
+type OwnershipStateFlags =
+  (typeof OwnershipStateFlags)[keyof typeof OwnershipStateFlags];
+
+
 interface IOwnershipMethods {
   /** Attach a child to this owner (updates tree links & context). */
   appendChild(child: IOwnership): void;
 
   /** Triggered when a new child scope is mounted. */
-  onScopeMount(scope: IOwnership): void;
+  onScopeMount?(scope: IOwnership): void;
 
   /** Register a cleanup callback (runs on dispose). */
   onScopeCleanup(fn: NoneToVoidFn): void;
@@ -56,27 +58,40 @@ interface IOwnershipMethods {
   /** Retrieve a value from nearest context scope. */
   inject<T>(key: symbol | string): T | undefined;
 
-  hasOwn(this: IOwnership, key: symbol | string): boolean;
+  /** Check if a context value exists locally (not inherited). */
+  hasOwn(key: symbol | string): boolean;
+
+  children(): Iterable<IOwnership>;
+
+  descendants(): Iterable<IOwnership>;
 
   /** Dispose this owner and all descendants (iterative). */
   dispose(): void;
 }
 
-/** A single node in the Ownership tree. */
-interface IOwnership extends IOwnershipMethods {
-  _parent?: IOwnership;
-  _firstChild?: IOwnership;
-  _lastChild?: IOwnership;
-  _nextSibling?: IOwnership;
-  _prevSibling?: IOwnership;
-  _disposal?: NoneToVoidFn[];
-  _context?: IOwnershipContextRecord;
-  _queue?: any;
+interface IOwnershipInternal {
+  _parent: IOwnership | undefined;
+  _firstChild: IOwnership | undefined;
+  _lastChild: IOwnership | undefined;
+  _nextSibling: IOwnership | undefined;
+  _prevSibling: IOwnership | undefined;
+  _disposal: NoneToVoidFn[] | undefined;
+  _context: IOwnershipContextRecord | undefined;
+  _queue: unknown | undefined;
   _epoch: number;
   _state: OwnershipStateFlags;
   _childCount: number;
 }
 
+interface IOwnership extends IOwnershipInternal, IOwnershipMethods {
+  [S_OWN_BRAND]: true;
+}
+
+export interface DisposalStrategy {
+  onError?: (err: unknown, node: IOwnership) => void;
+  beforeDispose?: (nodes: IOwnership[]) => void;
+  afterDispose?: (nodes: IOwnership[], errors: number) => void;
+}
 export {
   S_ID,
   S_OWN,
@@ -86,13 +101,14 @@ export {
   S_FN,
   S_VALUE,
   S_DISPOSE,
+  S_OWN_BRAND,
   OwnershipStateFlags,
 };
 
 export type {
   IOwnership,
+  IOwnershipInternal,
   IOwnershipMethods,
   IOwnershipContext,
   IOwnershipContextRecord,
-  NoneToVoidFn,
 };

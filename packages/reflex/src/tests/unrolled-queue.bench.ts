@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
-import { performance } from "node:perf_hooks";
-import process from "node:process";
-import { UnrolledQueue } from "../core/collections/unrolled-queue";
+import { performance } from "perf_hooks";
+import process from "process";
+import { UnrolledQueue } from "../core/collections/unrolled-queue.js";
 
 const WARM_UP = 3;
 const ROUNDS = 10;

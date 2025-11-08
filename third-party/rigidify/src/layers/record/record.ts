@@ -1,4 +1,4 @@
-import { isTypeCompatible } from "../utils/type_check";
+import { isTypeCompatible } from "../utils/type_check.js";
 
 const IMMUTABLE = true;
 

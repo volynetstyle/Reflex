@@ -6,7 +6,7 @@
  */
 export function describeValue<T>(value: T): string {
   if (value == null) {
-    return value === null ? "`null`" : "`undefined`";
+    return value === null ? "`null`" : "`undefined`.js";
   }
 
   const type = typeof value;
@@ -15,7 +15,7 @@ export function describeValue<T>(value: T): string {
     const str = value as string;
 
     if (str.length === 0) {
-      return "`an empty string`";
+      return "`an empty string`.js";
     }
     if (str.length < 50) {
       return `"${str}"`;
@@ -25,7 +25,7 @@ export function describeValue<T>(value: T): string {
 
   if (type === "number") {
     if (Number.isNaN(value)) {
-      return "`NaN`";
+      return "`NaN`.js";
     }
     if (!Number.isFinite(value)) {
       return `\`${String(value)}\``;
@@ -44,7 +44,7 @@ export function describeValue<T>(value: T): string {
     if (value instanceof Date) {
       return `a Date object (${value.toISOString()})`;
     }
-    return "an object";
+    return "an object.js";
   }
 
   if (type === "function") {

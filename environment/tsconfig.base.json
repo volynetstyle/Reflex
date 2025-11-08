@@ -15,7 +15,6 @@
     "isolatedModules": true,
     "incremental": true,
     "composite": true,
-    "ignoreDeprecations": "6.0",
     "moduleDetection": "force"
   },
   "include": ["packages/**/*", "environment/**/*"],

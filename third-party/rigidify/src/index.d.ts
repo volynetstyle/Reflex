@@ -75,7 +75,7 @@ export function set<T, R>(
  * Example:
  * ```ts
  * const next = set(snap, draft => {
- *   draft.user.name = "Bob";
+ *   draft.user.name = "Bob.js";
  * });
  * ```
  */

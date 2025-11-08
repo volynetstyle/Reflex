@@ -44,7 +44,7 @@ interface Thenable<T> {
    * - `"fulfilled"` → The computation completed successfully.
    * - `"rejected"`  → The computation failed.
    */
-  readonly state?: "pending" | "fulfilled" | "rejected";
+  readonly state?: "pending" | "fulfilled" | "rejected.js";
 
   /**
    * The resolved value of the computation (if available).

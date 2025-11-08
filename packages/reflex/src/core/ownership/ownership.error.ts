@@ -1,5 +1,5 @@
-const OWNERSHIP_ERROR_NAME = "OwnershipDisposeError";
-const OWNERSHIP_ERROR_IDENTIFIER = "[Ownership dispose]";
+const OWNERSHIP_ERROR_NAME = "OwnershipDisposeError.js";
+const OWNERSHIP_ERROR_IDENTIFIER = "[Ownership dispose].js";
 
 class OwnershipDisposeError extends Error {
   readonly errors: Error[];
@@ -23,7 +23,7 @@ class OwnershipDisposeError extends Error {
     let result = this.message;
 
     for (let i = 0; i < this.errors.length; i++) {
-      const e = this.errors[i];
+      const e = this.errors[i]!;
       result += `\n  [${i + 1}] ${e.stack || e.message}`;
     }
     

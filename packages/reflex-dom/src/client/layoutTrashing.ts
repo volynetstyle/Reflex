@@ -1,9 +1,9 @@
-type LayoutCategory = "read" | "write" | "mixed";
+type LayoutCategory = "read" | "write" | "mixed.js";
 
 interface LayoutProperty {
   category: LayoutCategory;
   description?: string;
-  riskLevel: "high" | "medium" | "low";
+  riskLevel: "high" | "medium" | "low.js";
   alternative?: string;
 }
 
@@ -115,7 +115,7 @@ const layoutThrashingDatabase = {
   },
 } as const;
 
-type Category = "reads" | "writes" | "methods";
+type Category = "reads" | "writes" | "methods.js";
 
 /**
  * Get all properties/methods of a specific category

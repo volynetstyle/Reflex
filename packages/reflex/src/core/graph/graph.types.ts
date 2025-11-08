@@ -16,8 +16,8 @@
  * allowing structural sharing and time-travel debugging.
  */
 
-import { IDisposable } from "../object/object.dispose";
-import { BitMask } from "../object/utils/bitwise";
+import { IDisposable } from "../object/object.dispose.js";
+import { BitMask } from "../object/utils/bitwise.js";
 
 /**
  * Base interface for all reactive graph nodes.
