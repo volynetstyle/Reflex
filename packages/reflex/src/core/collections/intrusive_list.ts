@@ -15,74 +15,112 @@ interface IntrusiveList<T = unknown> {
   values(): Generator<T, void>;
 }
 
-const IntrusiveListPrototype: IntrusiveList<any> = {
-  _head: undefined,
-  _tail: undefined,
-  _size: 0,
-
-  push(node) {
-    if (node._list) return;
-
-    const tail = this._tail;
-    node._list = this;
-    node._prev = tail;
-    node._next = undefined;
-
-    if (tail) {
-      tail._next = node;
-      this._tail = node;
-    } else {
-      this._head = this._tail = node;
-    }
-    this._size++;
-  },
-
-  remove(node) {
-    if (node._list !== this) return;
-
-    const { _prev, _next } = node;
-
-    if (_prev) _prev._next = _next;
-    else this._head = _next;
-
-    if (_next) _next._prev = _prev;
-    else this._tail = _prev;
-
-    node._prev = node._next = node._list = undefined;
-    this._size--;
-  },
-
-  clear() {
-    let node = this._head;
-    while (node) {
-      const next = node._next;
-      node._prev = node._next = node._list = undefined;
-      node = next;
-    }
-    this._head = this._tail = undefined;
-    this._size = 0;
-  },
-
-  *nodes(): Generator<any> {
-    for (let node = this._head; node; node = node._next) {
-      yield node;
-    }
-  },
-
-  *values(): Generator<any> {
-    for (let node = this._head; node; node = node._next) {
-      yield node;
-    }
-  },
-};
-
-function newIntrusiveList<T>(): IntrusiveList<T> {
-  return Object.assign(Object.create(IntrusiveListPrototype), {
-    _head: undefined,
-    _tail: undefined,
-    _size: 0,
-  });
+// Optimized: Factory function for nodes with consistent shape
+// This ensures V8 can optimize all nodes to the same hidden class
+function newIntrusiveNode<T>(): IntrusiveListNode<T> {
+  return {
+    _prev: undefined,
+    _next: undefined,
+    _list: undefined,
+  };
 }
 
-export { newIntrusiveList };
+function newIntrusiveList<T>(): IntrusiveList<T> {
+  const list = {
+    _head: undefined as IntrusiveListNode<T> | undefined,
+    _tail: undefined as IntrusiveListNode<T> | undefined,
+    _size: 0,
+
+    push(node: IntrusiveListNode<T>): void {
+      if (node._list) return;
+
+      const tail = list._tail;
+
+      // Batch property assignments - better for CPU cache
+      node._list = list;
+      node._prev = tail;
+      node._next = undefined;
+
+      // Optimized: Simplified branching - fewer instructions
+      if (tail) {
+        tail._next = node;
+      } else {
+        list._head = node;
+      }
+
+      list._tail = node;
+      list._size++;
+    },
+
+    // Optimized: Monomorphic function signature
+    remove(node: IntrusiveListNode<T>): void {
+      // Early exit with guard
+      if (node._list !== list) return;
+
+      // Local variables - reduces repeated property access
+      const prev = node._prev;
+      const next = node._next;
+
+      // Update links - predictable branches
+      if (prev) {
+        prev._next = next;
+      } else {
+        list._head = next;
+      }
+
+      if (next) {
+        next._prev = prev;
+      } else {
+        list._tail = prev;
+      }
+
+      // Batch cleanup - better for cache
+      node._prev = undefined;
+      node._next = undefined;
+      node._list = undefined;
+      list._size--;
+    },
+
+    clear(): void {
+      // Optimized: Simple forward iteration with minimal branching
+      let node = list._head;
+      while (node) {
+        const next = node._next;
+        // Batch property cleanup
+        node._prev = undefined;
+        node._next = undefined;
+        node._list = undefined;
+        node = next;
+      }
+
+      list._head = undefined;
+      list._tail = undefined;
+      list._size = 0;
+    },
+
+    // Optimized: Generator for nodes - allocation efficient
+    *nodes(): Generator<IntrusiveListNode<T>, void> {
+      let node = list._head;
+      while (node) {
+        const next = node._next; // Cache next before yield (allows safe removal during iteration)
+        yield node;
+        node = next;
+      }
+    },
+
+    // Optimized: Generator for values - type-safe access
+    *values(): Generator<T, void> {
+      let node = list._head;
+      while (node) {
+        const next = node._next;
+        yield node as T;
+        node = next;
+      }
+    },
+  };
+
+  return list;
+}
+
+export { newIntrusiveList, newIntrusiveNode };
 export type { IntrusiveList, IntrusiveListNode };
