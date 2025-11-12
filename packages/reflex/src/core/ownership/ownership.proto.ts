@@ -13,6 +13,8 @@ const DISPOSAL_INITIAL_CAPACITY = 4 as const;
 
 const OwnershipPrototype = {
   appendChild(this: IOwnership, child: IOwnership) {
+
+
     if (!child || child._parent === this) return;
     if (child === this) throw new Error("Cannot append owner to itself");
     if (child._state & OwnershipStateFlags.DISPOSED)
@@ -141,39 +143,35 @@ const OwnershipPrototype = {
     }
   },
 
-  getContext(this: IOwnership): IOwnershipContextRecord {
-    if (!this._context) {
-      this._context = Object.create(null);
-    }
 
-    if (this._parent) {
-      const proto = Object.getPrototypeOf(this._context);
-      if (proto === null) {
-        this._context = ReflexObject.Inherit<IOwnershipContextRecord>(
-          this._parent.getContext()
-        );
-      }
-    }
-    return this._context!;
+  /** Retrieve or lazily initialize current context */
+  getContext(this: IOwnership): IOwnershipContextRecord {
+    if (this._context) return this._context;
+
+
+    const parentCtx = this._parent?._context;
+    const ctx = parentCtx
+      ? Object.create(parentCtx)
+      : Object.create(null);
+
+    this._context = ctx;
+    return ctx;
   },
 
-  provide(this: IOwnership, key: symbol | string, value: unknown) {
-    if (value === this) {
+  /** Provide new key/value pair */
+  provide(this: IOwnership, key: symbol | string, value: unknown): void {
+    if (value === this)
       throw new Error("Cannot provide owner itself in context");
-    }
-
     const ctx = this.getContext();
     ctx[key] = value;
   },
 
-
+  /** Lookup contextual value */
   inject<T>(this: IOwnership, key: symbol | string): T | undefined {
-    if (!this._context || Object.getPrototypeOf(this._context) === null) {
-      this.getContext();
-    }
-    return this._context![key] as T | undefined;
+    return this._context?.[key] as T | undefined;
   },
 
+  /** Check for local context key */
   hasOwn(this: IOwnership, key: symbol | string): boolean {
     return this._context !== undefined && Object.hasOwn(this._context, key);
   },

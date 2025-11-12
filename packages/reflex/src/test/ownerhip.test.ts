@@ -99,7 +99,7 @@ describe("OwnershipPrototype — Core Behavior", () => {
         //     owner2.appendChild(owner1);
 
         //     // owner1 should be detached from owner2 before becoming its child
-        //     expect(owner1._owner).toBe(owner2);
+        //     expect(owner1._parent).toBe(owner2);
         //     expect(owner2._children.has(owner1)).toBe(true);
         //     expect(owner1._children.has(owner2)).toBe(false);
         // });
@@ -512,7 +512,7 @@ describe("OwnershipScope — Context Management", () => {
 
             expect(childOwner).toBeDefined();
             expect(childOwner).not.toBe(parent);
-            expect(childOwner._owner).toBe(parent);
+            expect(childOwner._parent).toBe(parent);
         });
 
         it("should restore parent owner after scope", () => {
@@ -545,7 +545,7 @@ describe("OwnershipScope — Context Management", () => {
             });
 
             expect(rootOwner).toBeDefined();
-            expect(rootOwner._owner).toBeUndefined();
+            expect(rootOwner._parent).toBeUndefined();
         });
 
         it("should create nested scopes correctly", () => {
@@ -562,11 +562,11 @@ describe("OwnershipScope — Context Management", () => {
                     });
                 });
             });
-
+ 
             expect(owners).toHaveLength(3);
             expect(owners[0]).toBeDefined();
-            expect(owners[1]._owner).toBe(owners[0]);
-            expect(owners[2]._owner).toBe(owners[1]);
+            expect(owners[1]._parent).toBe(owners[0]);
+            expect(owners[2]._parent).toBe(owners[1]);
         });
 
         it("should handle errors and restore scope", () => {
