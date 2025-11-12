@@ -18,7 +18,7 @@
   "scripts": {
     "build": "tsc --build",
     "test": "node --import ts-node/register --test src/tests/ownership.test.ts --grep dispose:",
-    "bench": "node --loader ts-node/esm src/tests/ownership.bench.ts",
+    "bench": "vitest bench",
     "profile:bench": "node --expose-gc ./dist/experimental/graph.bench.js"
   },
   "sideEffects": false,
