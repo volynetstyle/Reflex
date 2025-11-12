@@ -61,12 +61,8 @@ interface IOwnershipMethods {
   /** Check if a context value exists locally (not inherited). */
   hasOwn(key: symbol | string): boolean;
 
-  children(): Iterable<IOwnership>;
-
-  descendants(): Iterable<IOwnership>;
-
   /** Dispose this owner and all descendants (iterative). */
-  dispose(): void;
+  dispose(strategy?: DisposalStrategy): void;
 }
 
 interface IOwnershipInternal {

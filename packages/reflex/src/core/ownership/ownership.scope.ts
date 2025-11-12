@@ -30,7 +30,8 @@ export const createOwnershipScope = () => {
     }
   };
 
-  const createScope = <T>(fn: () => T, parent = currentOwner): T => {
+  const createScope = <T>(fn: () => T): T => {
+    const parent = currentOwner;
     const owner = createOwner(parent);
     return withOwner(owner, fn);
   };
