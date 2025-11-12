@@ -17,12 +17,8 @@
   },
   "scripts": {
     "build": "tsc --build",
-    "test": "node --import ts-node/register --test src/tests/ownership.test.ts --grep dispose:",
-    "bench": "node --loader ts-node/esm src/tests/ownership.bench.ts",
-    "profile:bench": "node --expose-gc ./dist/experimental/graph.bench.js"
+    "test": "vitest",
+    "bench": "vitest bench"
   },
-  "sideEffects": false,
-  "devDependencies": {
-    "ts-node": "^10.9.2"
-  }
+  "sideEffects": false
 }

@@ -4,7 +4,9 @@
  * Defines hierarchical scopes, context inheritance, and cleanup logic.
  */
 
-const S_OWN_BRAND= Symbol("OwnershipBrand");
+import { IntrusiveList, IntrusiveListNode } from "../collections/intrusive_list.js";
+
+const S_OWN_BRAND = Symbol("OwnershipBrand");
 const S_ID = Symbol.for("ownership:id");
 const S_OWN = Symbol.for("ownership:parent");
 const S_SOURCES = Symbol.for("ownership:sources");
@@ -36,54 +38,34 @@ type OwnershipStateFlags =
   (typeof OwnershipStateFlags)[keyof typeof OwnershipStateFlags];
 
 
-interface IOwnershipMethods {
-  /** Attach a child to this owner (updates tree links & context). */
+/** Unified ownership node */
+interface IOwnership extends IntrusiveListNode<IOwnership> {
+  /** parent owner */
+  _owner?: IOwnership;
+  /** owned children (intrusive list) */
+  _children: IntrusiveList<IOwnership>;
+  /** cleanup callbacks */
+  _disposal?: NoneToVoidFn[];
+  /** contextual data */
+  _context?: IOwnershipContextRecord;
+  /** monotonic epoch counter */
+  _epoch: number;
+  /** bitflag state */
+  _state: OwnershipStateFlags;
+
+  // Methods:
   appendChild(child: IOwnership): void;
-
-  /** Triggered when a new child scope is mounted. */
-  onScopeMount?(scope: IOwnership): void;
-
-  /** Register a cleanup callback (runs on dispose). */
-  onScopeCleanup(fn: NoneToVoidFn): void;
-
-  /** Detach a direct child from this owner. */
   removeChild(child: IOwnership): void;
 
-  /** Get or create the current scope context. */
+  onScopeMount(child: IOwnership): void;
+  onScopeCleanup(fn: NoneToVoidFn): void;
+
   getContext(): IOwnershipContextRecord;
-
-  /** Provide a new key/value in this scope’s context. */
   provide(key: symbol | string, value: unknown): void;
-
-  /** Retrieve a value from nearest context scope. */
   inject<T>(key: symbol | string): T | undefined;
-
-  /** Check if a context value exists locally (not inherited). */
   hasOwn(key: symbol | string): boolean;
+  dispose(trategy?: DisposalStrategy): void;
 
-  children(): Iterable<IOwnership>;
-
-  descendants(): Iterable<IOwnership>;
-
-  /** Dispose this owner and all descendants (iterative). */
-  dispose(): void;
-}
-
-interface IOwnershipInternal {
-  _parent: IOwnership | undefined;
-  _firstChild: IOwnership | undefined;
-  _lastChild: IOwnership | undefined;
-  _nextSibling: IOwnership | undefined;
-  _prevSibling: IOwnership | undefined;
-  _disposal: NoneToVoidFn[] | undefined;
-  _context: IOwnershipContextRecord | undefined;
-  _queue: unknown | undefined;
-  _epoch: number;
-  _state: OwnershipStateFlags;
-  _childCount: number;
-}
-
-interface IOwnership extends IOwnershipInternal, IOwnershipMethods {
   [S_OWN_BRAND]: true;
 }
 
@@ -107,8 +89,6 @@ export {
 
 export type {
   IOwnership,
-  IOwnershipInternal,
-  IOwnershipMethods,
   IOwnershipContext,
   IOwnershipContextRecord,
 };

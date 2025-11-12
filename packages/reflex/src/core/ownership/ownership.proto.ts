@@ -1,123 +1,110 @@
+/**
+ * @module OwnershipPrototype
+ *
+ * High-performance ownership graph prototype.
+ * Each node represents an isolated ownership scope (like SolidJS “owner”),
+ * maintaining deterministic parent/child relationships and scoped context propagation.
+ *
+ * The design prioritizes:
+ *  - predictable memory layout,
+ *  - explicit cleanup via `dispose`,
+ *  - deterministic finalization order (DFS post-order),
+ *  - and minimized dynamic shape mutation for JIT friendliness.
+ */
+
 import { ReflexObject } from "../object/object.inherit.js";
 import { Bitwise } from "../object/utils/bitwise.js";
 import OwnershipDisposeError from "./ownership.error.js";
 import {
   IOwnership,
-  OwnershipStateFlags,
   IOwnershipContextRecord,
-  IOwnershipMethods,
+  OwnershipStateFlags,
   DisposalStrategy,
 } from "./ownership.type.js";
 
+/** Initial pre-allocated cleanup buffer size (minimizes first array resize). */
 const DISPOSAL_INITIAL_CAPACITY = 4 as const;
 
+/**
+ * Core ownership prototype — defines the behavioral layer for every ownership node.
+ *
+ * @implements {IOwnershipMethods}
+ */
 const OwnershipPrototype = {
-  appendChild(this: IOwnership, child: IOwnership) {
+  /** Attach child node and inherit context */
+  appendChild(this: IOwnership, child: IOwnership): void {
+    if (child === this) throw new Error("Cannot append owner to itself");
+    if (child._owner === this) return;
+    if (Bitwise.has(this._state, OwnershipStateFlags.DISPOSED))
+      throw new OwnershipDisposeError(["Cannot attach to disposed owner"]);
 
-    // if (!child || child._parent === this) return;
-    // if (child === this) throw new Error("Cannot append owner to itself");
-    // if (child._state & OwnershipStateFlags.DISPOSED)
-    //   throw new Error("Cannot append a disposed child");
-
-    // if (
-    //   this._state &
-    //   (OwnershipStateFlags.DISPOSING | OwnershipStateFlags.DISPOSED)
-    // )
-    //   throw new Error("Cannot append child to a disposing/disposed owner");
-
-    // if (child._parent && child._parent !== this) {
-    //   child._parent.removeChild(child);
-    // }
-
-    child._parent = this;
-    child._prevSibling = this._lastChild;
-    child._nextSibling = undefined;
-
-    if (this._lastChild !== undefined) {
-      this._lastChild._nextSibling = child;
-      this._lastChild = child;
-    } else {
-      this._firstChild = this._lastChild = child;
+    // Detach from previous owner if necessary
+    if (child._owner && child._owner !== this) {
+      child._owner.removeChild(child);
     }
 
-    const parentContext = this._context;
-    if (parentContext !== undefined) {
-      child._context =
-        ReflexObject.Inherit<IOwnershipContextRecord>(parentContext);
+    child._owner = this;
+    this._children.push(child);
+
+    if (this._context) {
+      child._context = ReflexObject.Inherit<IOwnershipContextRecord>(this._context);
     }
 
-    this._childCount++;
+    this.onScopeMount?.(child);
   },
 
-  removeChild(this: IOwnership, child: IOwnership) {
-    if (child._parent !== this) return;
-
-    const prev = child._prevSibling;
-    const next = child._nextSibling;
-
-    if (prev) prev._nextSibling = next;
-    if (next) next._prevSibling = prev;
-
-    if (this._firstChild === child) this._firstChild = next;
-    if (this._lastChild === child) this._lastChild = prev;
-
-    child._parent = child._prevSibling = child._nextSibling = undefined;
-    this._childCount--;
+  /** Detach a direct child */
+  removeChild(this: IOwnership, child: IOwnership): void {
+    if (child._owner !== this) return;
+    this._children.remove(child);
+    child._owner = undefined;
   },
 
-  *children(this: IOwnership): Iterable<IOwnership> {
-    for (let child = this._firstChild; child; child = child._nextSibling) {
-      yield child;
-    }
-  },
-
-  *descendants(this: IOwnership): Iterable<IOwnership> {
-    const stack = [this];
-    while (stack.length) {
-      const node = stack.pop()!;
-      yield node;
-      for (let child = node._lastChild; child; child = child._prevSibling) {
-        stack.push(child);
-      }
-    }
-  },
-
-  onScopeCleanup(this: IOwnership, fn: NoneToVoidFn) {
-    if (this._state & OwnershipStateFlags.DISPOSED)
+  /** Register cleanup callback */
+  onScopeCleanup(this: IOwnership, fn: () => void): void {
+    if (Bitwise.has(this._state, OwnershipStateFlags.DISPOSED)) {
       throw new OwnershipDisposeError(["Cannot add cleanup to disposed owner"]);
-
-    if (!this._disposal) {
-      this._disposal = new Array<NoneToVoidFn>(DISPOSAL_INITIAL_CAPACITY);
-      this._disposal.length = 0;
     }
-    this._disposal.push(fn);
+
+    const disposal = this._disposal ?? (this._disposal = []);
+    disposal.push(fn);
   },
 
-  dispose(this: IOwnership, strategy?: DisposalStrategy) {
+  /** Dispose ownership tree (DFS post-order) */
+  dispose(this: IOwnership, strategy?: DisposalStrategy): void {
     if (Bitwise.has(this._state, OwnershipStateFlags.DISPOSED)) return;
 
     const { beforeDispose, afterDispose, onError } = strategy ?? {};
-
     beforeDispose?.([this]);
 
     let errorCount = 0;
-    let firstError: unknown = undefined;
+    let firstError: unknown;
+    const stack: [IOwnership, boolean][] = [[this, false]];
+    const disposeList: IOwnership[] = [];
 
-    const stack: IOwnership[] = [this];
-
-    while (stack.length > 0) {
-      const node = stack.pop()!;
-
-      // push children first (DFS)
-      let child = node._firstChild;
-
-      while (child) {
-        if (!Bitwise.has(child._state, OwnershipStateFlags.DISPOSED)) {
-          stack.push(child);
-        }
-        child = child._nextSibling;
+    // --- Collect post-order (DFS) ---
+    while (stack.length) {
+      const [node, visited] = stack.pop()!;
+      if (visited) {
+        disposeList.push(node);
+        continue;
       }
+      stack.push([node, true]);
 
+      const children: IOwnership[] = [];
+      node._children?.forEach(c => children.push(c));
+      // reverse order so left-to-right DFS is preserved
+      for (let i = children.length - 1; i >= 0; i--) {
+        const child = children[i];
+        if (!Bitwise.has(child._state, OwnershipStateFlags.DISPOSED)) {
+          stack.push([child, false]);
+        }
+      }
+    }
+
+    // --- Dispose bottom-up (DFS post-order) ---
+    for (let i = 0; i < disposeList.length; i++) {
+      const node = disposeList[i]!;
       if (Bitwise.has(node._state, OwnershipStateFlags.DISPOSED)) continue;
 
       node._state = Bitwise.set(node._state, OwnershipStateFlags.DISPOSING);
@@ -130,23 +117,18 @@ const OwnershipPrototype = {
           } catch (err) {
             if (!firstError) firstError = err;
             errorCount++;
-            if (onError) onError(err, node);
+            onError?.(err, node);
           }
         }
       }
 
-      // unlink everything — no mercy
-      node._firstChild =
-        node._lastChild =
-        node._nextSibling =
-        node._prevSibling =
-        node._parent =
-        node._context =
-        node._disposal =
-          undefined;
-
-      node._childCount = 0;
+      node._disposal = undefined;
+      node._context = undefined;
       node._state = OwnershipStateFlags.DISPOSED;
+
+      if (node._children && node._children.size() > 0) {
+        node._children.clear();
+      }
     }
 
     afterDispose?.([this], errorCount);
@@ -161,32 +143,37 @@ const OwnershipPrototype = {
     }
   },
 
+  /** Retrieve or lazily initialize current context */
   getContext(this: IOwnership): IOwnershipContextRecord {
-    if (!this._context) {
-      this._context = ReflexObject.Inherit<IOwnershipContextRecord>(
-        this._parent?.getContext() ?? {}
-      );
-    }
+    if (this._context) return this._context;
 
-    return this._context;
+
+    const parentCtx = this._owner?._context;
+    const ctx = parentCtx
+      ? Object.create(parentCtx)
+      : Object.create(null);
+
+    this._context = ctx;
+    return ctx;
   },
 
-  provide(this: IOwnership, key: symbol | string, value: unknown) {
-    if (value === this) {
+  /** Provide new key/value pair */
+  provide(this: IOwnership, key: symbol | string, value: unknown): void {
+    if (value === this)
       throw new Error("Cannot provide owner itself in context");
-    }
-
     const ctx = this.getContext();
     ctx[key] = value;
   },
 
+  /** Lookup contextual value */
   inject<T>(this: IOwnership, key: symbol | string): T | undefined {
     return this._context?.[key] as T | undefined;
   },
 
+  /** Check for local context key */
   hasOwn(this: IOwnership, key: symbol | string): boolean {
     return this._context !== undefined && Object.hasOwn(this._context, key);
   },
-} satisfies IOwnershipMethods;
+};
 
 export default OwnershipPrototype;
