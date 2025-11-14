@@ -4,7 +4,7 @@
  * Defines hierarchical scopes, context inheritance, and cleanup logic.
  */
 
-const S_OWN_BRAND= Symbol("OwnershipBrand");
+const S_OWN_BRAND = Symbol("OwnershipBrand");
 const S_ID = Symbol.for("ownership:id");
 const S_OWN = Symbol.for("ownership:parent");
 const S_SOURCES = Symbol.for("ownership:sources");
@@ -14,9 +14,11 @@ const S_FN = Symbol.for("ownership:fn");
 const S_VALUE = Symbol.for("ownership:value");
 const S_DISPOSE = Symbol.for("ownership:dispose");
 
+// only one for dictionary mode in v8!
+type ContextKeyType = string;
 
 interface IOwnershipContextRecord {
-  [key: string | symbol]: unknown;
+  [key: ContextKeyType]: unknown;
 }
 
 interface IOwnershipContext<T = unknown> {
@@ -24,16 +26,12 @@ interface IOwnershipContext<T = unknown> {
   readonly defaultValue?: T;
 }
 
-const OwnershipStateFlags = {
-  CLEAN: 0,
-  CHECK: 1 << 0,
-  DIRTY: 1 << 1,
-  DISPOSING: 1 << 2,
-  DISPOSED: 1 << 3,
-} as const;
 
-type OwnershipStateFlags =
-  (typeof OwnershipStateFlags)[keyof typeof OwnershipStateFlags];
+const CLEAN = 0;
+const CHECK = 1 << 0;
+const DIRTY = 1 << 1;
+const DISPOSING = 1 << 2;
+const DISPOSED = 1 << 3;
 
 
 interface IOwnershipMethods {
@@ -75,7 +73,8 @@ interface IOwnershipInternal {
   _context: IOwnershipContextRecord | undefined;
   _queue: unknown | undefined;
   _epoch: number;
-  _state: OwnershipStateFlags;
+  _contextEpoch: number;
+  _state: number;
   _childCount: number;
 }
 
@@ -88,6 +87,7 @@ export interface DisposalStrategy {
   beforeDispose?: (nodes: IOwnership[]) => void;
   afterDispose?: (nodes: IOwnership[], errors: number) => void;
 }
+
 export {
   S_ID,
   S_OWN,
@@ -98,13 +98,18 @@ export {
   S_VALUE,
   S_DISPOSE,
   S_OWN_BRAND,
-  OwnershipStateFlags,
+  CLEAN,
+  CHECK,
+  DIRTY,
+  DISPOSING,
+  DISPOSED,
 };
 
 export type {
   IOwnership,
   IOwnershipInternal,
   IOwnershipMethods,
+  ContextKeyType,
   IOwnershipContext,
   IOwnershipContextRecord,
 };

@@ -1,148 +1,175 @@
 /**
  * @file ReactiveNode.ts
  *
- * Vertex = ReactiveNode.
+ * Runtime definitions for the Reflex reactive graph.
  *
- * Represents a node in a directed acyclic graph (DAG)
- * Each vertex is an immutable computation unit:
- * it holds the result of a function depending on other vertices.
+ * A ReactiveNode represents a vertex in a directed acyclic graph (DAG).
+ * Each vertex has:
+ *  - upstream sources   (edges that this node depends on)
+ *  - downstream observers (edges that depend on this node)
+ *  - execution function (observer) for recomputation
+ *  - cached value (valueRaw)
+ *  - fast runtime state (flags, counters, async epoch)
  *
- * Conceptually:
- *  - Inputs: upstream dependencies (edges in)
- *  - Outputs: downstream dependents (edges out)
- *  - Value: cached computation result
+ * The vertex identity is stable. Runtime state mutates in-place.
+ * Logical versions are tracked via Uint32Array counters, not by cloning nodes.
  *
- * Vertices are immutable; updates produce new versions,
- * allowing structural sharing and time-travel debugging.
+ * This provides:
+ *  - deterministic incremental updates
+ *  - O(1) graph mutations (intrusive lists)
+ *  - zero allocations on dependency tracking
+ *  - engine-friendly memory layout
  */
 
-import { IDisposable } from "../object/object.dispose.js";
 import { BitMask } from "../object/utils/bitwise.js";
 
-/**
- * Base interface for all reactive graph nodes.
- * Each node tracks its internal state through bit flags and epoch.
+
+/* ──────────────────────────────────────────────────────────────────────────────
+ * Node Categories
+ * ReactiveNodeKind marks the semantic role of a vertex.
+ * This does NOT affect graph topology, only execution semantics.
+ * ────────────────────────────────────────────────────────────────────────────── */
+
+export type ReactiveNodeKind =
+  | "source"       // Stores a raw value; no internal computation
+  | "computation"  // Computes derived values from upstream sources
+  | "effect";      // Executes side effects; valueRaw is unused
+
+
+
+/* ──────────────────────────────────────────────────────────────────────────────
+ * Observer function executed by computation/effect nodes.
+ * Must never mutate graph topology during its execution.
+ * (scheduler enforces this invariant)
+ * ────────────────────────────────────────────────────────────────────────────── */
+
+interface IObserverFn {
+  (): void;
+}
+
+
+
+/* ──────────────────────────────────────────────────────────────────────────────
+ * SourceLink: intrusive list element representing
+ * "node depends on source".
  *
- *  - `_flags`: bitmask representing node state (dirty, disposed, scheduled, etc.)
- *  - `_epoch`: version counter used for dependency resolution or cache invalidation
- */
-export interface IGraphNode {
+ * Stored in node._sources (observer → its upstream).
+ *
+ * Invariant:
+ *  - A node can depend on multiple sources.
+ *  - Each dependency is represented by a separate link object.
+ * ────────────────────────────────────────────────────────────────────────────── */
+
+interface ISourceLink {
+  _prev: ISourceLink | null;
+  _next: ISourceLink | null;
+
+  /** The upstream source node for this dependency edge. */
+  source: IReactiveNode;
+}
+
+
+
+/* ──────────────────────────────────────────────────────────────────────────────
+ * ObserverLink: intrusive list element representing
+ * "source notifies observer".
+ *
+ * Stored in node._observers (source → its downstream).
+ *
+ * Invariant:
+ *  - A source may have many observers.
+ *  - Each observer relationship uses its own link object.
+ * ────────────────────────────────────────────────────────────────────────────── */
+
+interface IObserverLink {
+  _prev: IObserverLink | null;
+  _next: IObserverLink | null;
+
+  /** The downstream observer that depends on this source. */
+  observer: IReactiveNode;
+}
+
+
+
+/* ──────────────────────────────────────────────────────────────────────────────
+ * IReactiveNode: primary vertex structure for the reactive graph.
+ *
+ * MUTABLE FIELDS:
+ *   _valueRaw   - cached value for signals and computations
+ *   _sources    - intrusive linked list of upstream edges
+ *   _observers  - intrusive linked list of downstream edges
+ *   _observer   - execution callback (computation/effect)
+ *   _counters   - [epoch, version, uversion]
+ *   _async      - [generation, token]
+ *   _flags      - dirty/clean/scheduled etc.
+ *   _kind       - semantic classification (source/computation/effect)
+ *
+ * Topological invariants:
+ *   1. Node participates in two lists: upstream and downstream.
+ *   2. Each edge is represented by a link object; nodes store list heads.
+ *   3. Add/remove edge must be O(1).
+ *   4. Never mutate upstream and downstream lists within same execution frame.
+ *   5. No cycles (DAG).
+ *   6. Node identity = pointer identity.
+ *   7. After unlink: link._prev/_next reset to null.
+ *   8. List heads are null OR a valid link, but NOT undefined.
+ *   9. Graph is not mutated while an observer callback is running.
+ * ────────────────────────────────────────────────────────────────────────────── */
+
+interface IReactiveNode {
+  /** Cached runtime value (raw JS value). */
+  _valueRaw: unknown;
+
+  /** Head of intrusive linked list of upstream dependencies. */
+  _sources: ISourceLink | null;
+
+  /** Head of intrusive linked list of downstream observers. */
+  _observers: IObserverLink | null;
+
+  /** Execution callback for computations/effects. Null for pure sources. */
+  _observer: IObserverFn | null;
+
+  /** Runtime version counters: [epoch, version, uversion]. */
+  _counters: Uint32Array;
+
+  /** Async tracking: [generation, token]. */
+  _async: Uint32Array;
+
+  /** Combined bitmask: dirty/scheduled/running/kind bits. */
   _flags: BitMask;
-  _epoch: number;
-  _value?: unknown;
+
+  /** Semantic role of this node. */
+  _kind: ReactiveNodeKind;
 }
 
-export const enum NodeFlags {
-  CLEAN = 0,
-  DIRTY = 1 << 0,
-  DISPOSED = 1 << 1,
-  SCHEDULED = 1 << 2,
-  RUNNING = 1 << 3,
-}
 
-type EdgeDirection = "up" | "down";
 
-interface IEdgeList<T, D extends EdgeDirection> extends Array<T> {
-  readonly _traverse?: D;
-}
-
-/**
- * A reactive source node — an origin of data or signal.
- * It can notify multiple observers when its value changes.
+/* ──────────────────────────────────────────────────────────────────────────────
+ * ReactiveValue<T>
  *
- *  - `_observers`: list of dependent observer nodes (subscribers)
- */
-export interface ISource extends IGraphNode {
-  /** Downstream connections — observers subscribed to this source. */
-  _observers: IEdgeList<IObserver, "down"> | null;
-}
-
-/**
- * A reactive observer node — a computation depending on one or more sources.
- * Observers track their upstream dependencies and react to their updates.
+ * Public-facing handle for user-level signals.
+ * It wraps an underlying IReactiveNode.
  *
- *  - `_sources`: list of source nodes this observer depends on
- *    may queue or immediately propagate changes depending on runtime strategy
- */
-export interface IObserver extends IGraphNode {
-  /** Upstream connections — sources this observer depends on. */
-  _sources: IEdgeList<ISource, "up"> | null;
-}
-
-/**
- * Core operations for managing vertices and edges
- * in a reactive dependency graph (DAG).
+ * Callable form:
+ *    value()                    → get current value
+ *    value(newValue)            → set
+ *    value(prev => next)        → functional update
  *
- * These methods define the lifecycle of connections,
- * traversal, and invalidation logic for nodes.
- */
-export interface GraphOperations<TVertex> extends IDisposable {
-  /**
-   * Connects the given vertex as a dependency (edge in).
-   * Returns true if the connection was new, false if already linked.
-   */
-  connect(target: TVertex): boolean;
+ * No additional state is stored here. Everything lives in _node.
+ * ────────────────────────────────────────────────────────────────────────────── */
 
-  /**
-   * Disconnects the given vertex (or all if undefined).
-   * Used during disposal or dependency re-evaluation.
-   */
-  disconnect(target?: TVertex): void;
+interface IReactiveValue<T = unknown> {
+  (): T;
+  (next: T | ((prev: T) => T)): void;
 
-  /**
-   * Marks this vertex and its dependents as dirty.
-   * Used when source data changes and caches must be invalidated.
-   */
-  markDirty(mask?: BitMask): void;
-
-  /**
-   * Propagates state changes to all downstream observers.
-   * Usually delegates to RuntimeContext.scheduleUpdate().
-   */
-  notifyObservers(mask?: BitMask): void;
-
-  /**
-   * Registers this vertex as an observer of another vertex (edge out).
-   */
-  addSource(source: TVertex): void;
-
-  /**
-   * Removes the given source vertex from dependency list (edge removal).
-   */
-  removeSource(source: TVertex): void;
-
-  /**
-   * Performs a depth-first traversal of dependents or dependencies.
-   * Useful for diagnostics or incremental updates.
-   */
-  traverse(direction: EdgeDirection, visitor: (v: TVertex) => void): void;
-
-  /**
-   * Returns true if this vertex has no active dependencies or dependents.
-   */
-  isIsolated(): boolean;
-
-  /**
-   * Clears internal state and breaks all edges.
-   * Called during disposal or garbage collection.
-   */
-  dispose(): void;
-
-  /**
-   * Optionally recomputes this vertex value if dirty.
-   * May trigger cascading updates depending on RuntimeContext.
-   */
-  updateDirtyValues(): void;
+  /** Reference to the backing graph node. */
+  readonly _node: IReactiveNode;
 }
 
-/**
- * RuntimeContext manages scheduling and execution of graph updates.
- * It defines how updates are propagated and committed.
- *
- *  - `scheduleUpdate(node)`: enqueue node updates for later processing
- *  - `commitTransition?(node)`: optional hook for transactional or batched updates
- */
-export interface RuntimeContext {
-  scheduleUpdate(node: IGraphNode): void;
-  commitTransition?(node: IGraphNode): void;
-}
+
+
+export type {
+  IObserverFn,
+  IReactiveNode,
+  IReactiveValue,
+};

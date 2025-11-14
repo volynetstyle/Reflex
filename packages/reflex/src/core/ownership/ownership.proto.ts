@@ -1,35 +1,36 @@
 import { ReflexObject } from "../object/object.inherit.js";
-import { Bitwise } from "../object/utils/bitwise.js";
 import OwnershipDisposeError from "./ownership.error.js";
 import {
   IOwnership,
-  OwnershipStateFlags,
   IOwnershipContextRecord,
   IOwnershipMethods,
+  type ContextKeyType,
   DisposalStrategy,
+  DISPOSED,
+  DISPOSING,
 } from "./ownership.type.js";
 
 const DISPOSAL_INITIAL_CAPACITY = 4 as const;
 
 const OwnershipPrototype = {
   appendChild(this: IOwnership, child: IOwnership) {
+    if (__DEV__) {
+      if (!child || child._parent === this) return;
+      if (child === this) throw new Error("Cannot append owner to itself");
+      if (child._state & DISPOSED)
+        throw new Error("Cannot append a disposed child");
 
+      if (
+        this._state &
+        (DISPOSING | DISPOSED)
+      )
+        throw new Error("Cannot append child to a disposing/disposed owner");
 
-    if (!child || child._parent === this) return;
-    if (child === this) throw new Error("Cannot append owner to itself");
-    if (child._state & OwnershipStateFlags.DISPOSED)
-      throw new Error("Cannot append a disposed child");
-
-    if (
-      this._state &
-      (OwnershipStateFlags.DISPOSING | OwnershipStateFlags.DISPOSED)
-    )
-      throw new Error("Cannot append child to a disposing/disposed owner");
-
-    if (child._parent && child._parent !== this) {
-      child._parent.removeChild(child);
+      if (child._parent && child._parent !== this) {
+        child._parent.removeChild(child);
+      }
     }
-
+    
     child._parent = this;
     child._prevSibling = this._lastChild;
     child._nextSibling = undefined;
@@ -47,7 +48,7 @@ const OwnershipPrototype = {
         ReflexObject.Inherit<IOwnershipContextRecord>(parentContext);
     }
 
-    this._childCount++;
+    ++this._childCount;
   },
 
   removeChild(this: IOwnership, child: IOwnership) {
@@ -63,11 +64,11 @@ const OwnershipPrototype = {
     if (this._lastChild === child) this._lastChild = prev;
 
     child._parent = child._prevSibling = child._nextSibling = undefined;
-    this._childCount--;
+    --this._childCount;
   },
 
   onScopeCleanup(this: IOwnership, fn: NoneToVoidFn) {
-    if (this._state & OwnershipStateFlags.DISPOSED)
+    if (this._state & DISPOSED)
       throw new OwnershipDisposeError(["Cannot add cleanup to disposed owner"]);
 
     if (!this._disposal) {
@@ -78,61 +79,77 @@ const OwnershipPrototype = {
   },
 
   dispose(this: IOwnership, strategy?: DisposalStrategy) {
-    if (Bitwise.has(this._state, OwnershipStateFlags.DISPOSED)) return;
     const { beforeDispose, afterDispose, onError } = strategy ?? {};
+
+    if (this._state & DISPOSED) return;
+
     beforeDispose?.([this]);
+
+    const stack: IOwnership[] = [this];
+    const out: IOwnership[] = [];
+
+    while (stack.length) {
+      const node = stack.pop()!;
+      if (!node || (node._state & DISPOSED)) continue;
+
+      out.push(node);
+
+      let child = node._firstChild;
+      while (child) {
+        if (!(child._state & DISPOSED)) stack.push(child);
+        child = child._nextSibling!;
+      }
+    }
 
     let errorCount = 0;
     let firstError: unknown;
 
-    const stack: Array<[IOwnership, boolean]> = [[this, false]];
+    for (let i = out.length - 1; i >= 0; i--) {
+      const node = out[i]!;
+      if (!node || (node._state & DISPOSED)) continue;
 
-    while (stack.length) {
-      const [node, visited] = stack.pop()!;
-
-      if (Bitwise.has(node._state, OwnershipStateFlags.DISPOSED)) continue;
-
-      if (!visited) {
-        stack.push([node, true]);
-        let child = node._lastChild;
-
-        while (child) {
-          if (!Bitwise.has(child._state, OwnershipStateFlags.DISPOSED)) {
-            stack.push([child, false]);
-          }
-          child = child._prevSibling;
-        }
-        continue;
-      }
-
-      node._state = Bitwise.set(node._state, OwnershipStateFlags.DISPOSING);
+      node._state |= DISPOSING;
 
       const disposal = node._disposal;
-      if (disposal) {
-        for (let j = disposal.length - 1; j >= 0; j--) {
-          try { disposal[j]!(); }
-          catch (err) {
-            if (!firstError) firstError = err;
-            errorCount++;
-            onError?.(err, node);
+      node._disposal = undefined;
+
+      try {
+        if (disposal) {
+          for (let j = disposal.length - 1; i-- > 0;) {
+            const fn = disposal[j];
+            if (!fn) continue;
+            try {
+              fn();
+            } catch (err) {
+              if (!firstError) firstError = err;
+              errorCount++;
+              onError?.(err, node);
+            }
           }
         }
+      } finally {
+        if (node._prevSibling) node._prevSibling._nextSibling = node._nextSibling;
+        if (node._nextSibling) node._nextSibling._prevSibling = node._prevSibling;
+
+        if (node._parent) {
+          if (node._parent._firstChild === node) node._parent._firstChild = node._nextSibling;
+          if (node._parent._lastChild === node) node._parent._lastChild = node._prevSibling;
+        }
+
+        node._firstChild =
+          node._lastChild =
+          node._nextSibling =
+          node._prevSibling =
+          node._parent =
+          node._context = undefined;
+
+        node._childCount = 0;
+        node._state = DISPOSED;
       }
-
-      node._firstChild =
-        node._lastChild =
-        node._nextSibling =
-        node._prevSibling =
-        node._parent =
-        node._context =
-        node._disposal =
-        undefined;
-
-      node._childCount = 0;
-      node._state = OwnershipStateFlags.DISPOSED;
     }
 
     afterDispose?.([this], errorCount);
+
     if (errorCount > 0 && !onError) {
       console.error(
         errorCount === 1
@@ -148,7 +165,6 @@ const OwnershipPrototype = {
   getContext(this: IOwnership): IOwnershipContextRecord {
     if (this._context) return this._context;
 
-
     const parentCtx = this._parent?._context;
     const ctx = parentCtx
       ? Object.create(parentCtx)
@@ -159,20 +175,19 @@ const OwnershipPrototype = {
   },
 
   /** Provide new key/value pair */
-  provide(this: IOwnership, key: symbol | string, value: unknown): void {
-    if (value === this)
-      throw new Error("Cannot provide owner itself in context");
+  provide(this: IOwnership, key: ContextKeyType, value: unknown): void {
+    if (value === this) return;
     const ctx = this.getContext();
     ctx[key] = value;
   },
 
   /** Lookup contextual value */
-  inject<T>(this: IOwnership, key: symbol | string): T | undefined {
+  inject<T>(this: IOwnership, key: ContextKeyType): T | undefined {
     return this._context?.[key] as T | undefined;
   },
 
   /** Check for local context key */
-  hasOwn(this: IOwnership, key: symbol | string): boolean {
+  hasOwn(this: IOwnership, key: ContextKeyType): boolean {
     return this._context !== undefined && Object.hasOwn(this._context, key);
   },
 } satisfies IOwnershipMethods;

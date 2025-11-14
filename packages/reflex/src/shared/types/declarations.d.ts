@@ -6,6 +6,7 @@ declare const APP_REVISION: string;
 declare const BUILD_MODE: "development" | "production" | "test.js";
 declare const PLATFORM: "browser" | "node" | "worker.js";
 
+declare const __DEV__: boolean;
 
 declare namespace ReflexGlobal {
   const __REFLEX_LIB__: Record<string, unknown>;

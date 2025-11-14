@@ -1,11 +1,11 @@
 import {
+  CLEAN,
   IOwnership,
-  OwnershipStateFlags,
   S_OWN_BRAND,
 } from "./ownership.type.js";
 import OwnershipPrototype from "./ownership.proto.js";
 
-function createOwner(parent?: IOwnership): IOwnership {
+function createOwner(parent?: IOwnership, skipAppend = false): IOwnership {
   const owner: IOwnership = {
     ...OwnershipPrototype,
 
@@ -17,14 +17,17 @@ function createOwner(parent?: IOwnership): IOwnership {
     _disposal: undefined,
     _context: undefined,
     _queue: undefined,
+    
     _epoch: 0,
-    _state: OwnershipStateFlags.CLEAN,
+    _contextEpoch: 0,
+
+    _state: CLEAN,
     _childCount: 0,
 
     [S_OWN_BRAND]: true,
   };
 
-  if (parent) {
+  if (!skipAppend && parent) {
     parent.appendChild(owner);
     parent?.onScopeMount?.(owner);
   }
