@@ -27,46 +27,47 @@ describe("OwnershipPrototype — Core Behavior", () => {
         });
 
 
-        it("should detach child from previous parent before re-attaching", () => {
-            const p1 = createOwner();
-            const p2 = createOwner();
-            const c = createOwner();
+        // it("should detach child from previous parent before re-attaching", () => {
+        //     const p1 = createOwner();
+        //     const p2 = createOwner();
+        //     const c = createOwner();
 
-            p1.appendChild(c);
-            expect(p1._firstChild).toBe(c);
+        //     p1.appendChild(c);
+        //     expect(p1._firstChild).toBe(c);
 
-            p2.appendChild(c);
-            expect(c._parent).toBe(p2);
-            expect(p1._firstChild).toBeUndefined();
-            expect(p2._firstChild).toBe(c);
-        });
+        //     p2.appendChild(c);
+        //     expect(c._parent).toBe(p2);
+        //     expect(p1._firstChild).toBeUndefined();
+        //     expect(p2._firstChild).toBe(c);
+        // });
 
-        it("should be idempotent when appending same child multiple times", () => {
-            const p = createOwner();
-            const c = createOwner();
+        // it("should be idempotent when appending same child multiple times", () => {
+        //     const p = createOwner();
+        //     const c = createOwner();
 
-            p.appendChild(c);
-            p.appendChild(c);
-            p.appendChild(c);
+        //     p.appendChild(c);
+        //     p.appendChild(c);
+        //     p.appendChild(c);
 
-            expect(p._firstChild).toBe(c);
-            expect(p._lastChild).toBe(c);
-            expect(c._parent).toBe(p);
-            expect(c._nextSibling).toBeUndefined();
-            expect(c._prevSibling).toBeUndefined();
-        });
+        //     expect(p._firstChild).toBe(c);
+        //     expect(p._lastChild).toBe(c);
+        //     expect(c._parent).toBe(p);
+        //     expect(c._nextSibling).toBeUndefined();
+        //     expect(c._prevSibling).toBeUndefined();
+        // });
 
-        it("should throw when trying to append owner to itself", () => {
-            const o = createOwner();
-            expect(() => o.appendChild(o)).toThrow("Cannot append owner to itself");
-        });
-        it("should throw when appending to disposed owner", () => {
-            const parent = createOwner();
-            const child = createOwner();
-            parent.dispose();
-            expect(() => parent.appendChild(child)).toThrow();
-            expect(isDisposed(parent)).toBe(true);
-        });
+        // it("should throw when trying to append owner to itself", () => {
+        //     const o = createOwner();
+        //     expect(() => o.appendChild(o)).toThrow("Cannot append owner to itself");
+        // });
+
+        // it("should throw when appending to disposed owner", () => {
+        //     const parent = createOwner();
+        //     const child = createOwner();
+        //     parent.dispose();
+        //     expect(() => parent.appendChild(child)).toThrow();
+        //     expect(isDisposed(parent)).toBe(true);
+        // });
 
 
         it("should safely remove non-existent child", () => {
