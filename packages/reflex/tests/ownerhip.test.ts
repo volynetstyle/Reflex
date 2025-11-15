@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { createOwner } from "#reflex/core/ownership/ownership.core.js";
-import { OwnershipStateFlags } from "#reflex/core/ownership/ownership.type.js";
-import { createOwnershipScope } from "#reflex/core/ownership/ownership.scope.js";
+import { createOwner } from "../src/core/ownership/ownership.core";
+import { createOwnershipScope } from "../src/core/ownership/ownership.scope";
+import { CLEAN, DISPOSED, DISPOSING } from "../src/core/ownership/ownership.type";
 
-const isClean = (o: any) => o._state === OwnershipStateFlags.CLEAN;
-const isDisposed = (o: any) => o._state === OwnershipStateFlags.DISPOSED;
-const isDisposing = (o: any) => o._state === OwnershipStateFlags.DISPOSING;
+const isClean = (o: any) => o._state === CLEAN;
+const isDisposed = (o: any) => o._state === DISPOSED;
+const isDisposing = (o: any) => o._state === DISPOSING;
 
 const collectChildren = (owner: any) => {
     const arr: any[] = [];
@@ -266,7 +266,7 @@ describe("OwnershipPrototype — Core Behavior", () => {
 
             owner.dispose();
 
-            expect(stateSnapshot).toBe(OwnershipStateFlags.DISPOSING);
+            expect(stateSnapshot).toBe(DISPOSING);
         });
 
         it("should be idempotent (multiple dispose calls safe)", () => {
@@ -562,7 +562,7 @@ describe("OwnershipScope — Context Management", () => {
                     });
                 });
             });
- 
+
             expect(owners).toHaveLength(3);
             expect(owners[0]).toBeDefined();
             expect(owners[1]._parent).toBe(owners[0]);

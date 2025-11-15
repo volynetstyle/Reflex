@@ -2,27 +2,49 @@
   "name": "@reflex/core",
   "version": "0.7.0",
   "type": "module",
+  "main": "dist/my-lib.cjs",
+  "module": "dist/my-lib.mjs",
+  "types": "dist/index.d.ts",
+  "license": "MIT",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
+      "import": "./dist/my-lib.mjs",
+      "require": "./dist/my-lib.cjs",
       "types": "./dist/index.d.ts"
-    },
-    "./*": {
-      "import": "./dist/*.js",
-      "types": "./dist/*.d.ts"
     }
   },
-  "imports": {
-    "#reflex/*": "./src/*"
-  },
   "scripts": {
+    "dev": "vite",
     "build": "tsc --build",
-    "test": "vitest",
+    "test": "vitest run",
     "bench": "vitest bench",
-    "profile:bench": "node --expose-gc ./dist/experimental/graph.bench.js"
+    "bench:flame": "0x -- node dist/tests/ownership.run.js",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build",
+    "release": "changeset version && pnpm install && changeset publish",
+    "prepare": "husky"
   },
-  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
   "devDependencies": {
-    "ts-node": "^10.9.2"
+    "@types/node": "^24.10.1"
   }
 }

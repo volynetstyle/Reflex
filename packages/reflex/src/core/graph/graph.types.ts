@@ -24,11 +24,11 @@
 import { BitMask } from "../object/utils/bitwise.js";
 
 
-/* ──────────────────────────────────────────────────────────────────────────────
+/* 
  * Node Categories
  * ReactiveNodeKind marks the semantic role of a vertex.
  * This does NOT affect graph topology, only execution semantics.
- * ────────────────────────────────────────────────────────────────────────────── */
+ *  */
 
 export type ReactiveNodeKind =
   | "source"       // Stores a raw value; no internal computation
@@ -37,11 +37,11 @@ export type ReactiveNodeKind =
 
 
 
-/* ──────────────────────────────────────────────────────────────────────────────
+/* 
  * Observer function executed by computation/effect nodes.
  * Must never mutate graph topology during its execution.
  * (scheduler enforces this invariant)
- * ────────────────────────────────────────────────────────────────────────────── */
+ *  */
 
 interface IObserverFn {
   (): void;
@@ -49,7 +49,7 @@ interface IObserverFn {
 
 
 
-/* ──────────────────────────────────────────────────────────────────────────────
+/* 
  * SourceLink: intrusive list element representing
  * "node depends on source".
  *
@@ -58,7 +58,7 @@ interface IObserverFn {
  * Invariant:
  *  - A node can depend on multiple sources.
  *  - Each dependency is represented by a separate link object.
- * ────────────────────────────────────────────────────────────────────────────── */
+ *  */
 
 interface ISourceLink {
   _prev: ISourceLink | null;
@@ -70,7 +70,7 @@ interface ISourceLink {
 
 
 
-/* ──────────────────────────────────────────────────────────────────────────────
+/* 
  * ObserverLink: intrusive list element representing
  * "source notifies observer".
  *
@@ -79,7 +79,7 @@ interface ISourceLink {
  * Invariant:
  *  - A source may have many observers.
  *  - Each observer relationship uses its own link object.
- * ────────────────────────────────────────────────────────────────────────────── */
+ *  */
 
 interface IObserverLink {
   _prev: IObserverLink | null;
@@ -90,8 +90,7 @@ interface IObserverLink {
 }
 
 
-
-/* ──────────────────────────────────────────────────────────────────────────────
+/** 
  * IReactiveNode: primary vertex structure for the reactive graph.
  *
  * MUTABLE FIELDS:
@@ -114,37 +113,28 @@ interface IObserverLink {
  *   7. After unlink: link._prev/_next reset to null.
  *   8. List heads are null OR a valid link, but NOT undefined.
  *   9. Graph is not mutated while an observer callback is running.
- * ────────────────────────────────────────────────────────────────────────────── */
-
+ */
 interface IReactiveNode {
   /** Cached runtime value (raw JS value). */
   _valueRaw: unknown;
-
   /** Head of intrusive linked list of upstream dependencies. */
   _sources: ISourceLink | null;
-
   /** Head of intrusive linked list of downstream observers. */
   _observers: IObserverLink | null;
-
   /** Execution callback for computations/effects. Null for pure sources. */
   _observer: IObserverFn | null;
-
   /** Runtime version counters: [epoch, version, uversion]. */
   _counters: Uint32Array;
-
   /** Async tracking: [generation, token]. */
   _async: Uint32Array;
-
   /** Combined bitmask: dirty/scheduled/running/kind bits. */
   _flags: BitMask;
-
   /** Semantic role of this node. */
   _kind: ReactiveNodeKind;
 }
 
 
-
-/* ──────────────────────────────────────────────────────────────────────────────
+/* 
  * ReactiveValue<T>
  *
  * Public-facing handle for user-level signals.
@@ -156,7 +146,7 @@ interface IReactiveNode {
  *    value(prev => next)        → functional update
  *
  * No additional state is stored here. Everything lives in _node.
- * ────────────────────────────────────────────────────────────────────────────── */
+ *  */
 
 interface IReactiveValue<T = unknown> {
   (): T;

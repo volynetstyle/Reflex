@@ -14,23 +14,7 @@ const DISPOSAL_INITIAL_CAPACITY = 4 as const;
 
 const OwnershipPrototype = {
   appendChild(this: IOwnership, child: IOwnership) {
-    if (__DEV__) {
-      if (!child || child._parent === this) return;
-      if (child === this) throw new Error("Cannot append owner to itself");
-      if (child._state & DISPOSED)
-        throw new Error("Cannot append a disposed child");
 
-      if (
-        this._state &
-        (DISPOSING | DISPOSED)
-      )
-        throw new Error("Cannot append child to a disposing/disposed owner");
-
-      if (child._parent && child._parent !== this) {
-        child._parent.removeChild(child);
-      }
-    }
-    
     child._parent = this;
     child._prevSibling = this._lastChild;
     child._nextSibling = undefined;
@@ -115,7 +99,7 @@ const OwnershipPrototype = {
 
       try {
         if (disposal) {
-          for (let j = disposal.length - 1; i-- > 0;) {
+          for (let j = disposal.length - 1; j >= 0; j--) {
             const fn = disposal[j];
             if (!fn) continue;
             try {
@@ -176,7 +160,9 @@ const OwnershipPrototype = {
 
   /** Provide new key/value pair */
   provide(this: IOwnership, key: ContextKeyType, value: unknown): void {
-    if (value === this) return;
+    if (value === this) {
+      throw new Error("Cannot provide owner itself into context");
+    }
     const ctx = this.getContext();
     ctx[key] = value;
   },

@@ -19,26 +19,20 @@ export const createOwnershipScope = () => {
     return currentOwner;
   };
 
-  function withOwner<T>(owner: IOwnership, fn: () => T): T {
+ const withOwner = <T>(owner: IOwnership, fn: () => T): T => {
     const prev = currentOwner;
     currentOwner = owner;
 
-    const out = fn();
+    try {
+      return fn();
+    } finally {
+      currentOwner = prev;
+    }
+  };
 
-    currentOwner = prev;
-    return out;
-  }
-
-  const createScope = <T>(fn: () => T, skipAppend = false): T => {
-    const owner = createOwner(currentOwner, skipAppend);
-
-    const prev = currentOwner;
-    currentOwner = owner;
-
-    const out = fn();
-
-    currentOwner = prev;
-    return out;
+  const createScope = <T>(fn: () => T, parent = currentOwner): T => {
+    const owner = createOwner(parent);
+    return withOwner(owner, fn);
   };
 
   return { getOwner, withOwner, createScope };

@@ -5,7 +5,7 @@ import {
 } from "./ownership.type.js";
 import OwnershipPrototype from "./ownership.proto.js";
 
-function createOwner(parent?: IOwnership, skipAppend = false): IOwnership {
+function createOwner(parent?: IOwnership): IOwnership {
   const owner: IOwnership = {
     ...OwnershipPrototype,
 
@@ -17,7 +17,7 @@ function createOwner(parent?: IOwnership, skipAppend = false): IOwnership {
     _disposal: undefined,
     _context: undefined,
     _queue: undefined,
-    
+
     _epoch: 0,
     _contextEpoch: 0,
 
@@ -27,7 +27,7 @@ function createOwner(parent?: IOwnership, skipAppend = false): IOwnership {
     [S_OWN_BRAND]: true,
   };
 
-  if (!skipAppend && parent) {
+  if (parent) {
     parent.appendChild(owner);
     parent?.onScopeMount?.(owner);
   }
