@@ -2,40 +2,46 @@ import { createOwner } from "./ownership.core.js";
 import { IOwnership } from "./ownership.type.js";
 
 /**
- * OwnershipScope — functional, zero-class manager
- * for maintaining the current owner context.
+ * OwnershipScope class: maintains the current owner context.
+ *
+ * Replaces functional createOwnershipScope with a stable class
+ * for better inlining and performance.
  *
  * Provides:
- *  - getOwner(): IOwnership | undefined
+ *  - getOwner(): IOwnership | null
  *  - withOwner(owner, fn): T
  *  - createScope(fn, parent?): T
- *
- * Works like a stack-safe ownership context.
  */
-export const createOwnershipScope = () => {
-  let currentOwner: IOwnership | undefined;
+export class OwnershipScope {
+  private _current: IOwnership | null = null;
 
-  const getOwner = () => {
-    return currentOwner;
-  };
+  getOwner(): IOwnership | null {
+    return this._current;
+  }
 
- const withOwner = <T>(owner: IOwnership, fn: () => T): T => {
-    const prev = currentOwner;
-    currentOwner = owner;
+  withOwner<T>(owner: IOwnership, fn: () => T): T {
+    const prev = this._current;
+    this._current = owner;
 
     try {
       return fn();
     } finally {
-      currentOwner = prev;
+      this._current = prev;
     }
-  };
+  }
 
-  const createScope = <T>(fn: () => T, parent = currentOwner): T => {
-    const owner = createOwner(parent);
-    return withOwner(owner, fn);
-  };
+  createScope<T>(fn: () => T, parent?: IOwnership | null): T {
+    const owner = createOwner(parent ?? (this._current ?? undefined));
+    return this.withOwner(owner, fn);
+  }
+}
 
-  return { getOwner, withOwner, createScope };
+/**
+ * Factory for creating a new OwnershipScope instance.
+ */
+export const createOwnershipScope = (): OwnershipScope => {
+  return new OwnershipScope();
 };
 
-export type OwnershipScope = ReturnType<typeof createOwnershipScope>;
+export type { OwnershipScope as OwnershipScopeType };
+

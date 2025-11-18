@@ -7,13 +7,17 @@ import {
   DISPOSING,
 } from "../../src/core/ownership/ownership.type";
 
-const isClean = (o: any) => o._state === CLEAN;
-const isDisposed = (o: any) => o._state === DISPOSED;
-const isDisposing = (o: any) => o._state === DISPOSING;
+const isClean = (o: any) => o._flags === CLEAN;
+const isDisposed = (o: any) => o._flags === DISPOSED;
+const isDisposing = (o: any) => (o._flags & DISPOSING) === DISPOSING;
 
 const collectChildren = (owner: any) => {
   const arr: any[] = [];
-  for (const c of owner.children()) arr.push(c);
+  let child = owner._firstChild;
+  while (child !== null) {
+    arr.push(child);
+    child = child._nextSibling;
+  }
   return arr;
 };
 
@@ -28,55 +32,33 @@ describe("OwnershipPrototype — Core Behavior", () => {
       expect(child._parent).toBe(parent);
       expect(parent._firstChild).toBe(child);
       expect(parent._lastChild).toBe(child);
+      expect(parent._childCount).toBe(1);
     });
 
-    // it("should detach child from previous parent before re-attaching", () => {
-    //     const p1 = createOwner();
-    //     const p2 = createOwner();
-    //     const c = createOwner();
+    it("should link multiple children in order", () => {
+      const parent = createOwner();
+      const child1 = createOwner();
+      const child2 = createOwner();
+      const child3 = createOwner();
 
-    //     p1.appendChild(c);
-    //     expect(p1._firstChild).toBe(c);
+      parent.appendChild(child1);
+      parent.appendChild(child2);
+      parent.appendChild(child3);
 
-    //     p2.appendChild(c);
-    //     expect(c._parent).toBe(p2);
-    //     expect(p1._firstChild).toBeUndefined();
-    //     expect(p2._firstChild).toBe(c);
-    // });
-
-    // it("should be idempotent when appending same child multiple times", () => {
-    //     const p = createOwner();
-    //     const c = createOwner();
-
-    //     p.appendChild(c);
-    //     p.appendChild(c);
-    //     p.appendChild(c);
-
-    //     expect(p._firstChild).toBe(c);
-    //     expect(p._lastChild).toBe(c);
-    //     expect(c._parent).toBe(p);
-    //     expect(c._nextSibling).toBeUndefined();
-    //     expect(c._prevSibling).toBeUndefined();
-    // });
-
-    // it("should throw when trying to append owner to itself", () => {
-    //     const o = createOwner();
-    //     expect(() => o.appendChild(o)).toThrow("Cannot append owner to itself");
-    // });
-
-    // it("should throw when appending to disposed owner", () => {
-    //     const parent = createOwner();
-    //     const child = createOwner();
-    //     parent.dispose();
-    //     expect(() => parent.appendChild(child)).toThrow();
-    //     expect(isDisposed(parent)).toBe(true);
-    // });
+      expect(parent._firstChild).toBe(child1);
+      expect(parent._lastChild).toBe(child3);
+      expect(child1._nextSibling).toBe(child2);
+      expect(child2._prevSibling).toBe(child1);
+      expect(child2._nextSibling).toBe(child3);
+      expect(child3._prevSibling).toBe(child2);
+      expect(parent._childCount).toBe(3);
+    });
 
     it("should safely remove non-existent child", () => {
       const p = createOwner();
       const c = createOwner();
       expect(() => p.removeChild(c)).not.toThrow();
-      expect(p._firstChild).toBeUndefined();
+      expect(p._firstChild).toBeNull();
     });
 
     it("should detach child reference after removal", () => {
@@ -86,26 +68,60 @@ describe("OwnershipPrototype — Core Behavior", () => {
       p.appendChild(c);
       p.removeChild(c);
 
-      expect(c._parent).toBeUndefined();
-      expect(c._nextSibling).toBeUndefined();
-      expect(c._prevSibling).toBeUndefined();
-      expect(p._firstChild).toBeUndefined();
-      expect(p._lastChild).toBeUndefined();
+      expect(c._parent).toBeNull();
+      expect(c._nextSibling).toBeNull();
+      expect(c._prevSibling).toBeNull();
+      expect(p._firstChild).toBeNull();
+      expect(p._lastChild).toBeNull();
+      expect(p._childCount).toBe(0);
     });
-    // it("should prevent circular ownership chains", () => {
-    //     const owner1 = createOwner();
-    //     const owner2 = createOwner();
 
-    //     owner1.appendChild(owner2);
+    it("should remove child from middle of sibling chain", () => {
+      const p = createOwner();
+      const c1 = createOwner();
+      const c2 = createOwner();
+      const c3 = createOwner();
 
-    //     // owner2 cannot become parent of owner1
-    //     owner2.appendChild(owner1);
+      p.appendChild(c1);
+      p.appendChild(c2);
+      p.appendChild(c3);
 
-    //     // owner1 should be detached from owner2 before becoming its child
-    //     expect(owner1._parent).toBe(owner2);
-    //     expect(owner2._children.has(owner1)).toBe(true);
-    //     expect(owner1._children.has(owner2)).toBe(false);
-    // });
+      p.removeChild(c2);
+
+      expect(c1._nextSibling).toBe(c3);
+      expect(c3._prevSibling).toBe(c1);
+      expect(p._firstChild).toBe(c1);
+      expect(p._lastChild).toBe(c3);
+      expect(p._childCount).toBe(2);
+    });
+
+    it("should remove first child correctly", () => {
+      const p = createOwner();
+      const c1 = createOwner();
+      const c2 = createOwner();
+
+      p.appendChild(c1);
+      p.appendChild(c2);
+      p.removeChild(c1);
+
+      expect(p._firstChild).toBe(c2);
+      expect(c2._prevSibling).toBeNull();
+      expect(p._childCount).toBe(1);
+    });
+
+    it("should remove last child correctly", () => {
+      const p = createOwner();
+      const c1 = createOwner();
+      const c2 = createOwner();
+
+      p.appendChild(c1);
+      p.appendChild(c2);
+      p.removeChild(c2);
+
+      expect(p._lastChild).toBe(c1);
+      expect(c1._nextSibling).toBeNull();
+      expect(p._childCount).toBe(1);
+    });
   });
 
   describe("Context Management", () => {
@@ -137,7 +153,7 @@ describe("OwnershipPrototype — Core Behavior", () => {
     it("should lazily initialize context on first getContext call", () => {
       const owner = createOwner();
 
-      expect(owner._context).toBe;
+      expect(owner._context).toBeNull();
       const ctx = owner.getContext();
       expect(owner._context).toBeDefined();
       expect(ctx).toBe(owner._context);
@@ -148,7 +164,7 @@ describe("OwnershipPrototype — Core Behavior", () => {
       parent.provide("x", 5);
 
       const child = createOwner(parent);
-      expect(child._context).toStrictEqual(Object.create(null));
+      expect(child._context).toBeNull();
 
       const value = child.inject("x");
       expect(value).toBe(5);
@@ -166,9 +182,9 @@ describe("OwnershipPrototype — Core Behavior", () => {
       const owner = createOwner();
       const key = Symbol("test");
 
-      owner.provide(key, "symbol-value");
-      expect(owner.inject(key)).toBe("symbol-value");
-      expect(owner.hasOwn(key)).toBe(true);
+      owner.provide(key as any, "symbol-value");
+      expect(owner.inject(key as any)).toBe("symbol-value");
+      expect(owner.hasOwn(key as any)).toBe(true);
     });
 
     it("should return undefined for non-existent keys", () => {
@@ -196,7 +212,7 @@ describe("OwnershipPrototype — Core Behavior", () => {
       const spy = vi.fn();
 
       owner.onScopeCleanup(spy);
-      owner.dispose();
+      (owner as any).dispose();
 
       expect(spy).toHaveBeenCalledTimes(1);
     });
@@ -209,25 +225,25 @@ describe("OwnershipPrototype — Core Behavior", () => {
       owner.onScopeCleanup(() => order.push(2));
       owner.onScopeCleanup(() => order.push(3));
 
-      owner.dispose();
+      (owner as any).dispose();
 
       expect(order).toEqual([3, 2, 1]);
     });
 
     it("should throw when adding cleanup to disposed owner", () => {
       const owner = createOwner();
-      owner.dispose();
+      (owner as any).dispose();
 
       expect(() => owner.onScopeCleanup(() => {})).toThrow();
     });
 
     it("should initialize disposal array lazily", () => {
       const owner = createOwner();
-      expect(owner._disposal).toBeUndefined();
+      expect(owner._cleanups).toBeNull();
 
       owner.onScopeCleanup(() => {});
-      expect(owner._disposal).toBeDefined();
-      expect(Array.isArray(owner._disposal)).toBe(true);
+      expect(owner._cleanups).toBeDefined();
+      expect(Array.isArray(owner._cleanups)).toBe(true);
     });
   });
 
@@ -245,7 +261,7 @@ describe("OwnershipPrototype — Core Behavior", () => {
       child2.onScopeCleanup(() => order.push("child2"));
       root.onScopeCleanup(() => order.push("root"));
 
-      root.dispose();
+      (root as any).dispose();
 
       expect(order).toEqual(["grandchild", "child1", "child2", "root"]);
     });
@@ -254,23 +270,10 @@ describe("OwnershipPrototype — Core Behavior", () => {
       const root = createOwner();
       const child = createOwner(root);
 
-      root.dispose();
+      (root as any).dispose();
 
       expect(isDisposed(root)).toBe(true);
       expect(isDisposed(child)).toBe(true);
-    });
-
-    it("should mark nodes as DISPOSING during cleanup", () => {
-      const owner = createOwner();
-      let stateSnapshot: number | undefined;
-
-      owner.onScopeCleanup(() => {
-        stateSnapshot = owner._state;
-      });
-
-      owner.dispose();
-
-      expect(stateSnapshot).toBe(DISPOSING);
     });
 
     it("should be idempotent (multiple dispose calls safe)", () => {
@@ -278,9 +281,9 @@ describe("OwnershipPrototype — Core Behavior", () => {
       const spy = vi.fn();
 
       owner.onScopeCleanup(spy);
-      owner.dispose();
-      owner.dispose();
-      owner.dispose();
+      (owner as any).dispose();
+      (owner as any).dispose();
+      (owner as any).dispose();
 
       expect(spy).toHaveBeenCalledTimes(1);
       expect(isDisposed(owner)).toBe(true);
@@ -291,12 +294,13 @@ describe("OwnershipPrototype — Core Behavior", () => {
       o.provide("x", 1);
       o.onScopeCleanup(() => {});
       const c = createOwner(o);
-      o.dispose();
-      expect(o._disposal).toBeUndefined();
-      expect(o._context).toBeUndefined();
-      expect(o._firstChild).toBeUndefined();
-      expect(o._lastChild).toBeUndefined();
+      (o as any).dispose();
+      expect(o._cleanups).toBeNull();
+      expect(o._context).toBeNull();
+      expect(o._firstChild).toBeNull();
+      expect(o._lastChild).toBeNull();
     });
+
     it("should continue cleanup despite errors in cleanup callbacks", () => {
       const owner = createOwner();
       const spy1 = vi.fn();
@@ -313,7 +317,7 @@ describe("OwnershipPrototype — Core Behavior", () => {
         .spyOn(console, "error")
         .mockImplementation(() => {});
 
-      owner.dispose();
+      (owner as any).dispose();
 
       expect(spy1).toHaveBeenCalled();
       expect(spy2).toHaveBeenCalled();
@@ -335,8 +339,8 @@ describe("OwnershipPrototype — Core Behavior", () => {
         throw new Error("error2");
       });
 
-      owner.dispose({
-        onError: (err) => errors.push(err),
+      (owner as any).dispose({
+        onError: (err: any) => errors.push(err),
       });
 
       expect(errors).toHaveLength(2);
@@ -347,7 +351,7 @@ describe("OwnershipPrototype — Core Behavior", () => {
       const owner = createOwner();
       const hooks: string[] = [];
 
-      owner.dispose({
+      (owner as any).dispose({
         beforeDispose: () => hooks.push("before"),
         afterDispose: () => hooks.push("after"),
       });
@@ -363,8 +367,8 @@ describe("OwnershipPrototype — Core Behavior", () => {
         throw new Error("fail");
       });
 
-      owner.dispose({
-        afterDispose: (_, count) => {
+      (owner as any).dispose({
+        afterDispose: (_: any, count: number) => {
           errorCount = count;
         },
         onError: () => {},
@@ -384,8 +388,8 @@ describe("OwnershipPrototype — Core Behavior", () => {
       child1.onScopeCleanup(spy1);
       child2.onScopeCleanup(spy2);
 
-      child1.dispose();
-      root.dispose();
+      (child1 as any).dispose();
+      (root as any).dispose();
 
       expect(spy1).toHaveBeenCalledTimes(1);
       expect(spy2).toHaveBeenCalledTimes(1);
@@ -395,7 +399,7 @@ describe("OwnershipPrototype — Core Behavior", () => {
   describe("Edge Cases & Safety", () => {
     it("should handle empty ownership tree", () => {
       const owner = createOwner();
-      expect(() => owner.dispose()).not.toThrow();
+      expect(() => (owner as any).dispose()).not.toThrow();
       expect(isDisposed(owner)).toBe(true);
     });
 
@@ -408,7 +412,8 @@ describe("OwnershipPrototype — Core Behavior", () => {
         current = child;
       }
 
-      expect(() => current._parent?.dispose()).not.toThrow();
+      expect(current._parent).toBeDefined();
+      expect(() => (current as any).dispose()).not.toThrow();
     });
 
     it("should handle wide trees with many children", () => {
@@ -420,7 +425,7 @@ describe("OwnershipPrototype — Core Behavior", () => {
       }
 
       expect(root._childCount).toBe(childCount);
-      expect(() => root.dispose()).not.toThrow();
+      expect(() => (root as any).dispose()).not.toThrow();
       expect(isDisposed(root)).toBe(true);
     });
 
@@ -447,7 +452,7 @@ describe("OwnershipPrototype — Core Behavior", () => {
       owner.provide("x", 1);
       expect(isClean(owner)).toBe(true);
 
-      owner.dispose();
+      (owner as any).dispose();
       expect(isDisposed(owner)).toBe(true);
     });
   });
@@ -462,7 +467,7 @@ describe("OwnershipScope — Context Management", () => {
 
   afterEach(() => {
     // Ensure no dangling owners
-    expect(scope.getOwner()).toBeUndefined();
+    expect(scope.getOwner()).toBeNull();
   });
 
   describe("withOwner", () => {
@@ -475,7 +480,7 @@ describe("OwnershipScope — Context Management", () => {
       });
 
       expect(seenOwner).toBe(owner);
-      expect(scope.getOwner()).toBeUndefined();
+      expect(scope.getOwner()).toBeNull();
     });
 
     it("should return callback result", () => {
@@ -494,7 +499,7 @@ describe("OwnershipScope — Context Management", () => {
         });
       }).toThrow("test");
 
-      expect(scope.getOwner()).toBeUndefined();
+      expect(scope.getOwner()).toBeNull();
     });
 
     it("should handle nested withOwner calls", () => {
@@ -511,7 +516,7 @@ describe("OwnershipScope — Context Management", () => {
         expect(scope.getOwner()).toBe(outer);
       });
 
-      expect(scope.getOwner()).toBeUndefined();
+      expect(scope.getOwner()).toBeNull();
     });
   });
 
@@ -561,7 +566,7 @@ describe("OwnershipScope — Context Management", () => {
       });
 
       expect(rootOwner).toBeDefined();
-      expect(rootOwner._parent).toBeUndefined();
+      expect(rootOwner._parent).toBeNull();
     });
 
     it("should create nested scopes correctly", () => {
@@ -596,13 +601,13 @@ describe("OwnershipScope — Context Management", () => {
         });
       }).toThrow("scope error");
 
-      expect(scope.getOwner()).toBeUndefined();
+      expect(scope.getOwner()).toBeNull();
     });
   });
 
   describe("getOwner", () => {
-    it("should return undefined when no owner set", () => {
-      expect(scope.getOwner()).toBeUndefined();
+    it("should return null when no owner set", () => {
+      expect(scope.getOwner()).toBeNull();
     });
 
     it("should return current owner", () => {

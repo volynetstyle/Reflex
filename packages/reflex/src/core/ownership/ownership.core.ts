@@ -1,32 +1,19 @@
-import { CLEAN, IOwnership, S_OWN_BRAND } from "./ownership.type.js";
-import OwnershipPrototype from "./ownership.proto.js";
+import { OwnershipNode } from "./ownership.node.js";
+import { IOwnership } from "./ownership.type.js";
 
+/**
+ * createOwner: Factory for creating ownership nodes.
+ *
+ * Creates a new OwnershipNode with all fields initialized.
+ * Methods are bound to OwnershipNode.prototype for monomorphic calls.
+ * If parent is provided, automatically appends to parent's child list.
+ */
 function createOwner(parent?: IOwnership): IOwnership {
-  const owner = Object.create(OwnershipPrototype) as IOwnership;
-
-  owner._parent = undefined;
-
-  owner._firstChild = undefined;
-  owner._lastChild = undefined;
-
-  owner._nextSibling = undefined;
-  owner._prevSibling = undefined;
-
-  owner._disposal = undefined;
-  owner._context = undefined;
-  owner._queue = undefined;
-
-  owner._epoch = 0;
-  owner._contextEpoch = 0;
-
-  owner._state = CLEAN;
-  owner._childCount = 0;
-
-  owner[S_OWN_BRAND] = true;
+  const owner = new OwnershipNode() as any as IOwnership;
 
   if (parent) {
-    parent.appendChild(owner);
-    parent.onScopeMount?.(owner);
+    (parent as any).appendChild(owner as any);
+    (parent as any).onScopeMount?.(owner as any);
   }
 
   return owner;
