@@ -14,7 +14,6 @@ const DISPOSAL_INITIAL_CAPACITY = 4 as const;
 
 const OwnershipPrototype = {
   appendChild(this: IOwnership, child: IOwnership) {
-
     child._parent = this;
     child._prevSibling = this._lastChild;
     child._nextSibling = undefined;
@@ -41,8 +40,8 @@ const OwnershipPrototype = {
     const prev = child._prevSibling;
     const next = child._nextSibling;
 
-    if (prev) prev._nextSibling = next;
-    if (next) next._prevSibling = prev;
+    if (prev !== undefined) prev._nextSibling = next;
+    if (next !== undefined) next._prevSibling = prev;
 
     if (this._firstChild === child) this._firstChild = next;
     if (this._lastChild === child) this._lastChild = prev;
@@ -56,9 +55,9 @@ const OwnershipPrototype = {
       throw new OwnershipDisposeError(["Cannot add cleanup to disposed owner"]);
 
     if (!this._disposal) {
-      this._disposal = new Array<NoneToVoidFn>(DISPOSAL_INITIAL_CAPACITY);
-      this._disposal.length = 0;
+      this._disposal = [];
     }
+
     this._disposal.push(fn);
   },
 
@@ -74,7 +73,7 @@ const OwnershipPrototype = {
 
     while (stack.length) {
       const node = stack.pop()!;
-      if (!node || (node._state & DISPOSED)) continue;
+      if (!node || node._state & DISPOSED) continue;
 
       out.push(node);
 
@@ -90,7 +89,7 @@ const OwnershipPrototype = {
 
     for (let i = out.length - 1; i >= 0; i--) {
       const node = out[i]!;
-      if (!node || (node._state & DISPOSED)) continue;
+      if (!node || node._state & DISPOSED) continue;
 
       node._state |= DISPOSING;
 
@@ -112,12 +111,16 @@ const OwnershipPrototype = {
           }
         }
       } finally {
-        if (node._prevSibling) node._prevSibling._nextSibling = node._nextSibling;
-        if (node._nextSibling) node._nextSibling._prevSibling = node._prevSibling;
+        if (node._prevSibling)
+          node._prevSibling._nextSibling = node._nextSibling;
+        if (node._nextSibling)
+          node._nextSibling._prevSibling = node._prevSibling;
 
         if (node._parent) {
-          if (node._parent._firstChild === node) node._parent._firstChild = node._nextSibling;
-          if (node._parent._lastChild === node) node._parent._lastChild = node._prevSibling;
+          if (node._parent._firstChild === node)
+            node._parent._firstChild = node._nextSibling;
+          if (node._parent._lastChild === node)
+            node._parent._lastChild = node._prevSibling;
         }
 
         node._firstChild =
@@ -125,7 +128,9 @@ const OwnershipPrototype = {
           node._nextSibling =
           node._prevSibling =
           node._parent =
-          node._context = undefined;
+          node._queue =
+          node._context =
+            undefined;
 
         node._childCount = 0;
         node._state = DISPOSED;
@@ -139,20 +144,17 @@ const OwnershipPrototype = {
         errorCount === 1
           ? "Error during ownership dispose:"
           : `${errorCount} errors during ownership dispose. First error:`,
-        firstError
+        firstError,
       );
     }
   },
-
 
   /** Retrieve or lazily initialize current context */
   getContext(this: IOwnership): IOwnershipContextRecord {
     if (this._context) return this._context;
 
     const parentCtx = this._parent?._context;
-    const ctx = parentCtx
-      ? Object.create(parentCtx)
-      : Object.create(null);
+    const ctx = parentCtx ? Object.create(parentCtx) : Object.create(null);
 
     this._context = ctx;
     return ctx;

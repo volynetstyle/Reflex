@@ -1,39 +1,36 @@
-import {
-  CLEAN,
-  IOwnership,
-  S_OWN_BRAND,
-} from "./ownership.type.js";
+import { CLEAN, IOwnership, S_OWN_BRAND } from "./ownership.type.js";
 import OwnershipPrototype from "./ownership.proto.js";
 
 function createOwner(parent?: IOwnership): IOwnership {
-  const owner: IOwnership = {
-    ...OwnershipPrototype,
+  const owner = Object.create(OwnershipPrototype) as IOwnership;
 
-    _parent: undefined,
-    _firstChild: undefined,
-    _lastChild: undefined,
-    _nextSibling: undefined,
-    _prevSibling: undefined,
-    _disposal: undefined,
-    _context: undefined,
-    _queue: undefined,
+  owner._parent = undefined;
 
-    _epoch: 0,
-    _contextEpoch: 0,
+  owner._firstChild = undefined;
+  owner._lastChild = undefined;
 
-    _state: CLEAN,
-    _childCount: 0,
+  owner._nextSibling = undefined;
+  owner._prevSibling = undefined;
 
-    [S_OWN_BRAND]: true,
-  };
+  owner._disposal = undefined;
+  owner._context = undefined;
+  owner._queue = undefined;
+
+  owner._epoch = 0;
+  owner._contextEpoch = 0;
+
+  owner._state = CLEAN;
+  owner._childCount = 0;
+
+  owner[S_OWN_BRAND] = true;
 
   if (parent) {
     parent.appendChild(owner);
-    parent?.onScopeMount?.(owner);
+    parent.onScopeMount?.(owner);
   }
 
   return owner;
 }
 
-export { OwnershipPrototype, createOwner };
+export { createOwner };
 export type { IOwnership };

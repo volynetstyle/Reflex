@@ -1,4 +1,3 @@
-
 import { type BitMask } from "../object/utils/bitwise.js";
 
 const CLEAN: BitMask = 0;
@@ -13,39 +12,41 @@ const KIND_EFFECT: BitMask = 1 << 7;
 
 /**
  * Number of cells in the internal Uint32Array structures.
- * 
+ *
  * - COUNTER_CELLS: [epoch, version, uversion]
  */
 const COUNTER_CELLS = {
-    epoch: 0,
-    version: 1,
-    uversion: 2,
-    length: 3 // automaticaly captures by array constructor
-} as const
+  epoch: 0,
+  version: 1,
+  uversion: 2,
+} as const;
+
+const COUNTER_CELLS_LENGTH = 3;
 
 /**
  * Number of cells in the async tracking Uint32Array structure.
- * 
+ *
  * - ASYNC_CELLS: [generation, token]
  */
 const ASYNC_CELLS = {
-    generation: 0,
-    token: 1,
-    length: 2
-} as const
+  generation: 0,
+  token: 1,
+} as const;
+
+const ASYNC_CELLS_LENGTH = 2;
 
 export {
-    COUNTER_CELLS,
-    ASYNC_CELLS,
-
-    CLEAN,
-    DIRTY,
-    DISPOSED,
-    SCHEDULED,
-    RUNNING,
-    ASYNC,
-
-    KIND_SOURCE,
-    KIND_COMPUTATION,
-    KIND_EFFECT
+  COUNTER_CELLS,
+  ASYNC_CELLS,
+  COUNTER_CELLS_LENGTH,
+  ASYNC_CELLS_LENGTH,
+  CLEAN,
+  DIRTY,
+  DISPOSED,
+  SCHEDULED,
+  RUNNING,
+  ASYNC,
+  KIND_SOURCE,
+  KIND_COMPUTATION,
+  KIND_EFFECT,
 };

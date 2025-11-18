@@ -5,7 +5,7 @@
 // или:
 // node --require ts-node/register/transpile-only tests/ownership.run.ts
 
-import { createOwner } from "../src/core/ownership/ownership.core.js";
+import { createOwner } from "../../src/core/ownership/ownership.core";
 
 // ===========================
 // helpers

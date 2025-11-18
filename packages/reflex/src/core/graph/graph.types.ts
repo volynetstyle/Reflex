@@ -20,36 +20,28 @@
  *  - zero allocations on dependency tracking
  *  - engine-friendly memory layout
  */
-
 import { BitMask } from "../object/utils/bitwise.js";
 
-
-/* 
+/*
  * Node Categories
  * ReactiveNodeKind marks the semantic role of a vertex.
  * This does NOT affect graph topology, only execution semantics.
  *  */
+type ReactiveNodeKind =
+  | "source" // Stores a raw value; no internal computation
+  | "computation" // Computes derived values from upstream sources
+  | "effect"; // Executes side effects; valueRaw is unused
 
-export type ReactiveNodeKind =
-  | "source"       // Stores a raw value; no internal computation
-  | "computation"  // Computes derived values from upstream sources
-  | "effect";      // Executes side effects; valueRaw is unused
-
-
-
-/* 
+/*
  * Observer function executed by computation/effect nodes.
  * Must never mutate graph topology during its execution.
  * (scheduler enforces this invariant)
  *  */
-
 interface IObserverFn {
   (): void;
 }
 
-
-
-/* 
+/*
  * SourceLink: intrusive list element representing
  * "node depends on source".
  *
@@ -59,18 +51,16 @@ interface IObserverFn {
  *  - A node can depend on multiple sources.
  *  - Each dependency is represented by a separate link object.
  *  */
-
 interface ISourceLink {
   _prev: ISourceLink | null;
   _next: ISourceLink | null;
+  _pair: IObserverLink;
 
   /** The upstream source node for this dependency edge. */
   source: IReactiveNode;
 }
 
-
-
-/* 
+/*
  * ObserverLink: intrusive list element representing
  * "source notifies observer".
  *
@@ -79,18 +69,17 @@ interface ISourceLink {
  * Invariant:
  *  - A source may have many observers.
  *  - Each observer relationship uses its own link object.
- *  */
-
+ * */
 interface IObserverLink {
   _prev: IObserverLink | null;
   _next: IObserverLink | null;
+  _pair: ISourceLink;
 
   /** The downstream observer that depends on this source. */
   observer: IReactiveNode;
 }
 
-
-/** 
+/**
  * IReactiveNode: primary vertex structure for the reactive graph.
  *
  * MUTABLE FIELDS:
@@ -133,8 +122,7 @@ interface IReactiveNode {
   _kind: ReactiveNodeKind;
 }
 
-
-/* 
+/*
  * ReactiveValue<T>
  *
  * Public-facing handle for user-level signals.
@@ -156,10 +144,11 @@ interface IReactiveValue<T = unknown> {
   readonly _node: IReactiveNode;
 }
 
-
-
 export type {
   IObserverFn,
   IReactiveNode,
   IReactiveValue,
+  ISourceLink,
+  IObserverLink,
+  ReactiveNodeKind,
 };
