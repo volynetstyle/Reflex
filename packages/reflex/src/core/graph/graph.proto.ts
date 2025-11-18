@@ -1,50 +1,68 @@
-import {
-  IReactiveNode,
-  ISourceLink,
-  IObserverLink,
-  IObserverFn,
-} from "./graph.types";
-import {
-  linkEdge,
-  unlinkSourceLink,
-  unlinkObserverLink,
-} from "./utils/graph_linker";
+/**
+ * @file graph.proto.ts
+ *
+ * Prototype methods for GraphNode (instance API).
+ *
+ * High-level interface for graph operations.
+ * These wrap the low-level linker functions.
+ *
+ * Note: In the new architecture, GraphNode is a regular class,
+ * so methods are defined directly, not via prototype.
+ * This file is kept for compatibility and documentation.
+ *
+ * Actual methods are defined on GraphNode in graph.types.ts.
+ * If needed, we can expose these as static helpers or extend the class.
+ */
+import { IReactiveNode } from "./graph.types.js";
+import { linkEdge, unlinkEdge } from "./utils/graph.linker.js";
 
-interface IGraphProto {
-  /** link this as observer of source */
-  addSource(this: IReactiveNode, source: IReactiveNode): ISourceLink;
+/**
+ * Convenience methods (static or instance) for graph operations.
+ *
+ * Usage:
+ *   observer.addSource(source)     -> links source as observer's upstream
+ *   observer.removeSource(source)  -> unlinks source
+ */
 
-  /** you must pass the link you got from addSource */
-  removeSource(this: IReactiveNode, link: ISourceLink): void;
-
-  addObserver(this: IReactiveNode, observer: IReactiveNode): IObserverLink;
-  removeObserver(this: IReactiveNode, link: IObserverLink): void;
-
-  addObserverFunction(this: IReactiveNode, fn: IObserverFn): void;
+/**
+ * Static helper: link source and observer (observer depends on source).
+ */
+export function addSourceToObserver(
+  observer: IReactiveNode,
+  source: IReactiveNode
+): void {
+  linkEdge(observer, source);
 }
 
-const GraphProto: IGraphProto = {
-  addSource(source) {
-    const link = linkEdge(this, source);
-    return link._source;
-  },
+/**
+ * Static helper: unlink source and observer.
+ */
+export function removeSourceFromObserver(
+  observer: IReactiveNode,
+  source: IReactiveNode
+): void {
+  unlinkEdge(observer, source);
+}
 
-  removeSource(link) {
-    unlinkSourceLink(link);
-  },
+/**
+ * Static helper: add observer to a source (observer depends on source).
+ * Alias for addSourceToObserver for semantic clarity.
+ */
+export function addObserverToSource(
+  observer: IReactiveNode,
+  source: IReactiveNode
+): void {
+  linkEdge(observer, source);
+}
 
-  addObserver(observer) {
-    const link = linkEdge(observer, this);
-    return link._observer;
-  },
+/**
+ * Static helper: remove observer from source.
+ * Alias for removeSourceFromObserver for semantic clarity.
+ */
+export function removeObserverFromSource(
+  observer: IReactiveNode,
+  source: IReactiveNode
+): void {
+  unlinkEdge(observer, source);
+}
 
-  removeObserver(link) {
-    unlinkObserverLink(link);
-  },
-
-  addObserverFunction(fn) {
-    this._observer = fn;
-  },
-};
-
-export { GraphProto };
