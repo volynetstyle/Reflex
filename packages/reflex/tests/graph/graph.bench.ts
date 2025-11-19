@@ -3,13 +3,8 @@ import {
   IReactiveNode,
   GraphNode,
 } from "../../src/core/graph/graph.types";
-import {
-  linkEdge,
-  unlinkEdge,
-  linkSourceToObserverUnsafe,
-  unlinkSourceFromObserverUnsafe,
-  unlinkAllObserversUnsafe,
-} from "../../src/core/graph/utils/graph.linker";
+import { linkSourceToObserverUnsafe, unlinkSourceFromObserverUnsafe, unlinkAllObserversUnsafe } from "../../src/core/graph/utils/graph.intrusive";
+import { linkEdge, unlinkEdge } from "../../src/core/graph/utils/graph.linker";
 
 function makeNode(): IReactiveNode {
   return new GraphNode();

@@ -9,9 +9,8 @@ import {
   unlinkEdge,
   linkSourceToObserverUnsafe,
   unlinkSourceFromObserverUnsafe,
-  unlinkAllObserversUnsafe,
-  unlinkAllSourcesUnsafe,
 } from "../../src/core/graph/utils/graph.linker";
+import { unlinkAllObserversUnsafe, unlinkAllSourcesUnsafe } from "../../src/core/graph/utils/graph.intrusive";
 
 function makeNode(kind: ReactiveNodeKind = "computation"): IReactiveNode {
   const node = new GraphNode();
