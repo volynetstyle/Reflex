@@ -13,9 +13,7 @@ import {
 import { unlinkAllObserversUnsafe, unlinkAllSourcesUnsafe } from "../../src/core/graph/utils/graph.intrusive";
 
 function makeNode(kind: ReactiveNodeKind = "computation"): IReactiveNode {
-  const node = new GraphNode();
-  node._kind = kind;
-  return node;
+  return GraphNode.create(kind);
 }
 
 const collectSourceChain = (head: IReactiveNode | null): IReactiveNode[] => {

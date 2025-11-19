@@ -7,7 +7,7 @@ import { linkSourceToObserverUnsafe, unlinkSourceFromObserverUnsafe, unlinkAllOb
 import { linkEdge, unlinkEdge } from "../../src/core/graph/utils/graph.linker";
 
 function makeNode(): IReactiveNode {
-  return new GraphNode();
+  return GraphNode.create("computation");
 }
 
 describe("DAG O(1) intrusive graph benchmarks", () => {
@@ -123,8 +123,8 @@ describe("DAG O(1) intrusive graph benchmarks", () => {
     let totalSources = 0;
     let totalObservers = 0;
     for (const node of nodes) {
-      totalSources += node._sourceCount;
-      totalObservers += node._observerCount;
+      totalSources += node._sourceCount!;
+      totalObservers += node._observerCount!;
     }
 
     if (totalSources !== totalObservers) {

@@ -1,136 +1,76 @@
-/**
- * @file intrusive-helpers.ts
- *
- * Low-level helpers for intrusive doubly-linked list operations.
- * Works directly with GraphNode fields (_first*, _last*, _next*, _prev*).
- *
- * These functions are UNSAFE:
- *  - No validation of graph invariants
- *  - No cycle detection
- *  - No duplicate edge checks
- * Use them only in hot paths or wrap with higher-level API for safety checks.
- */
-import { IReactiveNode } from "../graph.types.js";
+import { GraphNode, IReactiveNode } from "../graph.types";
+import { arena, NULL } from "../memory/graph.arena";
 
-/**
- * linkSourceToObserverUnsafe: Add a source node to an observer's sources list.
- *
- * This modifies TWO intrusive lists simultaneously:
- *  1. Adds source to observer._firstSource...lastSource chain
- *  2. Adds observer to source._firstObserver...lastObserver chain
- *
- * Operates directly on GraphNode pointers, no allocations.
- * O(1) amortized (always appends to tail).
- *
- * Prerequisites (not checked):
- *  - source and observer are distinct GraphNode instances
- *  - edge does not already exist (caller must ensure)
- *  - no cycles (caller must ensure DAG invariant)
- */
+function resolveId(node: GraphNode | number): number {
+  return typeof node === "number" ? node : (node as any).__id;
+}
+
 export function linkSourceToObserverUnsafe(
-  source: IReactiveNode,
-  observer: IReactiveNode
+  source: GraphNode | number,
+  observer: GraphNode | number
 ): void {
-  // Add source to observer's sources list (append to tail)
-  const lastSource = observer._lastSource;
+  const sId = resolveId(source);
+  const oId = resolveId(observer);
 
-  if (lastSource === null) {
-    // List was empty
-    observer._firstSource = source;
-    source._prevSource = null;
+  // Добавляем source в список sources observer-а
+  const lastSrc = arena.getLastSource(oId);
+  if (lastSrc === NULL) {
+    arena.setFirstSource(oId, sId);
   } else {
-    // Append to existing list
-    lastSource._nextSource = source;
-    source._prevSource = lastSource;
+    arena.setNextSource(lastSrc, sId);
+    arena.setPrevSource(sId, lastSrc);
   }
+  arena.setLastSource(oId, sId);
+  arena.setSourceCount(oId, arena.getSourceCount(oId) + 1);
 
-  observer._lastSource = source;
-  source._nextSource = null;
-  observer._sourceCount++;
-
-  // Add observer to source's observers list (append to tail)
-  const lastObserver = source._lastObserver;
-
-  if (lastObserver === null) {
-    // List was empty
-    source._firstObserver = observer;
-    observer._prevObserver = null;
+  // Добавляем observer в список observers source-а
+  const lastObs = arena.getLastObserver(sId);
+  if (lastObs === NULL) {
+    arena.setFirstObserver(sId, oId);
   } else {
-    // Append to existing list
-    lastObserver._nextObserver = observer;
-    observer._prevObserver = lastObserver;
+    arena.setNextObserver(lastObs, oId);
+    arena.setPrevObserver(oId, lastObs);
   }
-
-  source._lastObserver = observer;
-  observer._nextObserver = null;
-  source._observerCount++;
+  arena.setLastObserver(sId, oId);
+  arena.setObserverCount(sId, arena.getObserverCount(sId) + 1);
 }
 
-/**
- * unlinkSourceFromObserverUnsafe: Remove a source from an observer's sources list.
- *
- * This modifies TWO intrusive lists simultaneously:
- *  1. Removes source from observer's sources chain
- *  2. Removes observer from source's observers chain
- *
- * Prerequisites (not checked):
- *  - source and observer are linked (caller must ensure)
- *  - source._prevSource/nextSource are valid or null
- *  - observer._prevObserver/nextObserver are valid or null
- */
 export function unlinkSourceFromObserverUnsafe(
-  source: IReactiveNode,
-  observer: IReactiveNode
+  source: GraphNode | number,
+  observer: GraphNode | number
 ): void {
-  // Remove source from observer's sources list
-  const prevSource = source._prevSource;
-  const nextSource = source._nextSource;
+  const sId = resolveId(source);
+  const oId = resolveId(observer);
 
-  if (prevSource !== null) {
-    prevSource._nextSource = nextSource;
-  } else {
-    observer._firstSource = nextSource;
-  }
+  // Удаляем source из списка sources observer-а
+  const prevSrc = arena.getPrevSource(sId);
+  const nextSrc = arena.getNextSource(sId);
 
-  if (nextSource !== null) {
-    nextSource._prevSource = prevSource;
-  } else {
-    observer._lastSource = prevSource;
-  }
+  if (prevSrc !== NULL) arena.setNextSource(prevSrc, nextSrc);
+  else arena.setFirstSource(oId, nextSrc);
 
-  source._prevSource = null;
-  source._nextSource = null;
-  observer._sourceCount--;
+  if (nextSrc !== NULL) arena.setPrevSource(nextSrc, prevSrc);
+  else arena.setLastSource(oId, prevSrc);
 
-  // Remove observer from source's observers list
-  const prevObserver = observer._prevObserver;
-  const nextObserver = observer._nextObserver;
+  arena.setPrevSource(sId, NULL);
+  arena.setNextSource(sId, NULL);
+  arena.setSourceCount(oId, arena.getSourceCount(oId) - 1);
 
-  if (prevObserver !== null) {
-    prevObserver._nextObserver = nextObserver;
-  } else {
-    source._firstObserver = nextObserver;
-  }
+  // Удаляем observer из списка observers source-а
+  const prevObs = arena.getPrevObserver(oId);
+  const nextObs = arena.getNextObserver(oId);
 
-  if (nextObserver !== null) {
-    nextObserver._prevObserver = prevObserver;
-  } else {
-    source._lastObserver = prevObserver;
-  }
+  if (prevObs !== NULL) arena.setNextObserver(prevObs, nextObs);
+  else arena.setFirstObserver(sId, nextObs);
 
-  observer._prevObserver = null;
-  observer._nextObserver = null;
-  source._observerCount--;
+  if (nextObs !== NULL) arena.setPrevObserver(nextObs, prevObs);
+  else arena.setLastObserver(sId, prevObs);
+
+  arena.setPrevObserver(oId, NULL);
+  arena.setNextObserver(oId, NULL);
+  arena.setObserverCount(sId, arena.getObserverCount(sId) - 1);
 }
 
-/**
- * unlinkAllObserversUnsafe: Remove all observers from a source node.
- *
- * Iterates linearly through the observers list, unlinking each observer.
- * This is cache-friendly: linear traversal instead of random pointer chasing.
- *
- * Useful for cleanup or when a source node is being disposed.
- */
 export function unlinkAllObserversUnsafe(source: IReactiveNode): void {
   let observer = source._firstObserver;
 
@@ -141,12 +81,6 @@ export function unlinkAllObserversUnsafe(source: IReactiveNode): void {
   }
 }
 
-/**
- * unlinkAllSourcesUnsafe: Remove all sources from an observer node.
- *
- * Iterates linearly through the sources list, unlinking each source.
- * Cache-friendly alternative to random unlinks.
- */
 export function unlinkAllSourcesUnsafe(observer: IReactiveNode): void {
   let source = observer._firstSource;
 
@@ -156,4 +90,3 @@ export function unlinkAllSourcesUnsafe(observer: IReactiveNode): void {
     source = nextSource;
   }
 }
-

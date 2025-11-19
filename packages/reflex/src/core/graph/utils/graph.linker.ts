@@ -1,52 +1,34 @@
 /**
  * @file graph_linker.ts
  *
- * High-level graph linking API.
+ * High-level graph linking API (optimized, no wrapper overhead).
  *
- * Provides two tiers:
- *  1. Unsafe operations (linkSourceToObserverUnsafe, etc.)
- *     - O(1), no validation, for hot paths
- *  2. Safe operations (linkEdgeSafe, etc.)
- *     - With invariant checks (DAG, duplicates, etc.)
- *     - For external API and debug mode
- *
- * Current focus: unsafe operations (for benchmarking).
- * Safe checks can be layered on top or via WeakMap-based dev hooks.
+ * Directly exports unsafe operations for hot paths.
+ * These are O(1) operations with no validation overhead.
  */
-import { IReactiveNode } from "../graph.types.js";
 import {
   linkSourceToObserverUnsafe,
   unlinkSourceFromObserverUnsafe,
 } from "./graph.intrusive.js";
+import { GraphNode } from "../graph.types.js";
 
-/**
- * linkEdge: Safe linking of source and observer.
- *
- * Currently delegates to unsafe operation.
- * Future: Add DAG/cycle checks, duplicate detection here.
- *
- * Returns: void (operation always succeeds if graph invariants hold).
- */
+// linkEdge: (observer, source) -> linkSourceToObserverUnsafe(source, observer)
+// Меняет порядок аргументов для удобства использования
 export function linkEdge(
-  observer: IReactiveNode,
-  source: IReactiveNode
+  observer: GraphNode | number,
+  source: GraphNode | number
 ): void {
   linkSourceToObserverUnsafe(source, observer);
 }
 
-/**
- * unlinkEdge: Safe unlinking of source and observer.
- *
- * Requires both nodes to be provided (observer and source).
- * Precondition: they must be currently linked.
- */
+// unlinkEdge: (observer, source) -> unlinkSourceFromObserverUnsafe(source, observer)
 export function unlinkEdge(
-  observer: IReactiveNode,
-  source: IReactiveNode
+  observer: GraphNode | number,
+  source: GraphNode | number
 ): void {
   unlinkSourceFromObserverUnsafe(source, observer);
 }
 
-// Export unsafe operations for benchmarking and internal use
+// Экспортируем unsafe версии напрямую для внутреннего использования
 export { linkSourceToObserverUnsafe, unlinkSourceFromObserverUnsafe };
 

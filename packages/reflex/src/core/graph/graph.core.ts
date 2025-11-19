@@ -19,7 +19,7 @@ const isAsyncNode = (node: IReactiveNode): boolean => {
  */
 function createReactiveNode(): IReactiveNode {
   // New GraphNode() initializes all 18 fields in constructor.
-  return new GraphNode();
+  return GraphNode.create();
 }
 
 export { isObserverNode, isAsyncNode, createReactiveNode, GraphNode };
