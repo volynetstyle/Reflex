@@ -13,26 +13,26 @@ export function linkSourceToObserverUnsafe(
   const oId = resolveId(observer);
 
   // Добавляем source в список sources observer-а
-  const lastSrc = arena.getLastSource(oId);
+  const lastSrc = arena.lastSource[oId]!;
   if (lastSrc === NULL) {
-    arena.setFirstSource(oId, sId);
+    arena.firstSource[oId] = sId;
   } else {
-    arena.setNextSource(lastSrc, sId);
-    arena.setPrevSource(sId, lastSrc);
+    arena.nextSource[lastSrc] = sId;
+    arena.prevSource[sId] = lastSrc;
   }
-  arena.setLastSource(oId, sId);
-  arena.setSourceCount(oId, arena.getSourceCount(oId) + 1);
+  arena.lastSource[oId] = sId;
+  arena.sourceCount[oId]!++;
 
   // Добавляем observer в список observers source-а
-  const lastObs = arena.getLastObserver(sId);
+  const lastObs = arena.lastObserver[sId]!;
   if (lastObs === NULL) {
-    arena.setFirstObserver(sId, oId);
+    arena.firstObserver[sId] = oId;
   } else {
-    arena.setNextObserver(lastObs, oId);
-    arena.setPrevObserver(oId, lastObs);
+    arena.nextObserver[lastObs] = oId;
+    arena.prevObserver[oId] = lastObs;
   }
-  arena.setLastObserver(sId, oId);
-  arena.setObserverCount(sId, arena.getObserverCount(sId) + 1);
+  arena.lastObserver[sId] = oId;
+  arena.observerCount[sId]!++;
 }
 
 export function unlinkSourceFromObserverUnsafe(
@@ -43,32 +43,32 @@ export function unlinkSourceFromObserverUnsafe(
   const oId = resolveId(observer);
 
   // Удаляем source из списка sources observer-а
-  const prevSrc = arena.getPrevSource(sId);
-  const nextSrc = arena.getNextSource(sId);
+  const prevSrc = arena.prevSource[sId]!;
+  const nextSrc = arena.nextSource[sId]!;
 
-  if (prevSrc !== NULL) arena.setNextSource(prevSrc, nextSrc);
-  else arena.setFirstSource(oId, nextSrc);
+  if (prevSrc !== NULL) arena.nextSource[prevSrc] = nextSrc;
+  else arena.firstSource[oId] = nextSrc;
 
-  if (nextSrc !== NULL) arena.setPrevSource(nextSrc, prevSrc);
-  else arena.setLastSource(oId, prevSrc);
+  if (nextSrc !== NULL) arena.prevSource[nextSrc] = prevSrc;
+  else arena.lastSource[oId] = prevSrc;
 
-  arena.setPrevSource(sId, NULL);
-  arena.setNextSource(sId, NULL);
-  arena.setSourceCount(oId, arena.getSourceCount(oId) - 1);
+  arena.prevSource[sId] = NULL;
+  arena.nextSource[sId] = NULL;
+  arena.sourceCount[oId]!--;
 
   // Удаляем observer из списка observers source-а
-  const prevObs = arena.getPrevObserver(oId);
-  const nextObs = arena.getNextObserver(oId);
+  const prevObs = arena.prevObserver[oId]!;
+  const nextObs = arena.nextObserver[oId]!;
 
-  if (prevObs !== NULL) arena.setNextObserver(prevObs, nextObs);
-  else arena.setFirstObserver(sId, nextObs);
+  if (prevObs !== NULL) arena.nextObserver[prevObs] = nextObs;
+  else arena.firstObserver[sId] = nextObs;
 
-  if (nextObs !== NULL) arena.setPrevObserver(nextObs, prevObs);
-  else arena.setLastObserver(sId, prevObs);
+  if (nextObs !== NULL) arena.prevObserver[nextObs] = prevObs;
+  else arena.lastObserver[sId] = prevObs;
 
-  arena.setPrevObserver(oId, NULL);
-  arena.setNextObserver(oId, NULL);
-  arena.setObserverCount(sId, arena.getObserverCount(sId) - 1);
+  arena.prevObserver[oId] = NULL;
+  arena.nextObserver[oId] = NULL;
+  arena.observerCount[sId]!--;
 }
 
 export function unlinkAllObserversUnsafe(source: IReactiveNode): void {
