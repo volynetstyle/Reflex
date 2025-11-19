@@ -1,7 +1,6 @@
 import {
   ASYNC,
-  CLEAN,
-} from "./graph.constants.js";
+} from "./utils/graph.constants.js";
 import { GraphNode, IReactiveNode } from "./graph.types.js";
 
 const isObserverNode = (node: IReactiveNode): boolean => {

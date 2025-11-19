@@ -1,4 +1,8 @@
-import { IReactiveNode, IReactiveValue } from "../../core/graph/graph.types";
+import {
+  GraphNode,
+  IReactiveNode,
+  IReactiveValue,
+} from "../../core/graph/graph.types";
 import { IOwnership } from "../../core/ownership/ownership.type";
 
 class Signal<T> {
@@ -26,12 +30,24 @@ class Signal<T> {
 }
 
 export function createSignal<T>(
-  value: T,
   owner: IOwnership | null,
-  node: IReactiveNode,
+  value: T,
 ): IReactiveValue<T> {
-  const s = new Signal(value, owner, node);
-  const fn = s as unknown as IReactiveValue<T>;
+  const graphNode = new GraphNode();
+  const signal = new Signal(value, owner, graphNode);
+
+  const get = () => signal.get();
+  const set = signal.set;
+
+  const fn = get as IReactiveValue<T>;
+
+  fn.get = get;
+  fn.set = set;
 
   return fn;
 }
+
+const signal = createSignal(null, 10);
+
+signal();
+signal.set(20);

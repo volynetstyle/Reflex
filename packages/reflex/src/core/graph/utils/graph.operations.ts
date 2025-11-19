@@ -13,8 +13,9 @@
  * Actual methods are defined on GraphNode in graph.types.ts.
  * If needed, we can expose these as static helpers or extend the class.
  */
-import { IReactiveNode } from "./graph.types.js";
-import { linkEdge, unlinkEdge } from "./utils/graph.linker.js";
+
+import { IReactiveNode } from "../graph.types";
+import { linkEdge, unlinkEdge } from "./graph.linker";
 
 /**
  * Convenience methods (static or instance) for graph operations.

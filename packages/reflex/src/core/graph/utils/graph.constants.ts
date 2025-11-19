@@ -1,14 +1,16 @@
-import { type BitMask } from "../object/utils/bitwise.js";
+import { type BitMask } from "../../object/utils/bitwise.js";
 
 const CLEAN: BitMask = 0;
-const DIRTY: BitMask = 1 << 0;
-const DISPOSED: BitMask = 1 << 1;
-const SCHEDULED: BitMask = 1 << 2;
-const RUNNING: BitMask = 1 << 3;
-const ASYNC: BitMask = 1 << 4;
-const KIND_SOURCE: BitMask = 1 << 5;
-const KIND_COMPUTATION: BitMask = 1 << 6;
-const KIND_EFFECT: BitMask = 1 << 7;
+const CHECK = 1 << 0;
+const DIRTY: BitMask = 1 << 1;
+const DISPOSED: BitMask = 1 << 2;
+const DISPOSING: BitMask = 1 << 3;
+const SCHEDULED: BitMask = 1 << 4;
+const RUNNING: BitMask = 1 << 5;
+const ASYNC: BitMask = 1 << 6;
+const KIND_SOURCE: BitMask = 1 << 7;
+const KIND_COMPUTATION: BitMask = 1 << 8;
+const KIND_EFFECT: BitMask = 1 << 9;
 
 /**
  * Number of cells in the internal Uint32Array structures.

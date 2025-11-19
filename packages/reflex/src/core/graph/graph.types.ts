@@ -47,7 +47,7 @@ class GraphNode {
     this._flags = 0;
     this._version = 0;
     this._epoch = 0;
-    
+
     this._valueRaw = undefined;
     this._observer = null;
     this._kind = "source";
@@ -58,8 +58,8 @@ type IReactiveNode = GraphNode;
 
 interface IReactiveValue<T = unknown> {
   (): T;
-  (next: T | ((prev: T) => T)): void;
-  readonly _node: IReactiveNode;
+  get(): T;
+  set(next: T | ((prev: T) => T)): void;
 }
 
 export type { IObserverFn, IReactiveNode, IReactiveValue, ReactiveNodeKind };

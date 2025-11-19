@@ -17,7 +17,7 @@ import { IReactiveNode } from "../graph.types.js";
 import {
   linkSourceToObserverUnsafe,
   unlinkSourceFromObserverUnsafe,
-} from "./intrusive-helpers.js";
+} from "./graph.intrusive.js";
 
 /**
  * linkEdge: Safe linking of source and observer.
@@ -49,5 +49,4 @@ export function unlinkEdge(
 
 // Export unsafe operations for benchmarking and internal use
 export { linkSourceToObserverUnsafe, unlinkSourceFromObserverUnsafe };
-export { unlinkAllObserversUnsafe, unlinkAllSourcesUnsafe } from "./intrusive-helpers.js";
 
