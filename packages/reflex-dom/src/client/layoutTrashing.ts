@@ -1,9 +1,9 @@
-type LayoutCategory = "read" | "write" | "mixed.js";
+type LayoutCategory = "read" | "write" | "mixed";
 
 interface LayoutProperty {
   category: LayoutCategory;
   description?: string;
-  riskLevel: "high" | "medium" | "low.js";
+  riskLevel: "high" | "medium" | "low";
   alternative?: string;
 }
 

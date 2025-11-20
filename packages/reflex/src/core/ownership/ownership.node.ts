@@ -27,47 +27,31 @@ import {
 
 export class OwnershipNode {
   // Tree links
-  _parent: OwnershipNode | null;
-  _firstChild: OwnershipNode | null;
-  _lastChild: OwnershipNode | null;
-  _nextSibling: OwnershipNode | null;
-  _prevSibling: OwnershipNode | null;
+  _parent: OwnershipNode | null = null;
+  _firstChild: OwnershipNode | null = null;
+  _lastChild: OwnershipNode | null = null;
+  _nextSibling: OwnershipNode | null = null;
+  _prevSibling: OwnershipNode | null = null;
 
   // Context (lazy-initialized)
-  _context: Record<string, unknown> | null;
+  _context: Record<string, unknown> | null = null;
 
   // Cleanup handlers
-  _cleanups: (() => void)[] | null;
+  _cleanups: (() => void)[] | null = null;
 
   // Counters & state
-  _childCount: number;
-  _flags: number;
-  _epoch: number;
-  _contextEpoch: number;
-
-  constructor() {
-    this._parent = null;
-    this._firstChild = null;
-    this._lastChild = null;
-    this._nextSibling = null;
-    this._prevSibling = null;
-
-    this._context = null;
-    this._cleanups = null;
-
-    this._childCount = 0;
-    this._flags = 0;
-    this._epoch = 0;
-    this._contextEpoch = 0;
-  }
+  _childCount: number = 0;
+  _flags: number = 0;
+  _epoch: number = 0;
+  _contextEpoch: number = 0;
 
   /**
    * appendChild: Add child to this owner's children list.
    * O(1) operation, no context copying on link.
    */
   appendChild(this: IOwnership, child: IOwnership) {
-    const node = this as any as OwnershipNode;
-    const childNode = child as any as OwnershipNode;
+    const node = this;
+    const childNode = child;
 
     childNode._parent = node;
     childNode._nextSibling = null;
@@ -88,8 +72,8 @@ export class OwnershipNode {
    * O(1) operation.
    */
   removeChild(this: IOwnership, child: IOwnership) {
-    const node = this as any as OwnershipNode;
-    const childNode = child as any as OwnershipNode;
+    const node = this;
+    const childNode = child;
 
     if (childNode._parent !== node) return;
 
@@ -119,7 +103,7 @@ export class OwnershipNode {
    * Lazily allocates cleanups array on first call.
    */
   onScopeCleanup(this: IOwnership, fn: NoneToVoidFn) {
-    const node = this as any as OwnershipNode;
+    const node = this;
 
     if (node._flags & DISPOSED) {
       throw new OwnershipDisposeError(["Cannot add cleanup to disposed owner"]);
@@ -137,7 +121,7 @@ export class OwnershipNode {
    * Processes tree bottom-up, runs cleanups, clears links.
    */
   dispose(this: IOwnership, strategy?: DisposalStrategy) {
-    const node = this as any as OwnershipNode;
+    const node = this;
     const { beforeDispose, afterDispose, onError } = strategy ?? {};
 
     if (node._flags & DISPOSED) return;
@@ -146,7 +130,9 @@ export class OwnershipNode {
 
     // Collect all nodes in DFS post-order using explicit stack
     const toDispose: OwnershipNode[] = [];
-    const stack: Array<{ node: OwnershipNode; phase: number }> = [{ node, phase: 0 }];
+    const stack: Array<{ node: OwnershipNode; phase: number }> = [
+      { node, phase: 0 },
+    ];
 
     while (stack.length > 0) {
       const entry = stack[stack.length - 1]!;
@@ -236,7 +222,7 @@ export class OwnershipNode {
    * getContext: Retrieve or lazily initialize context.
    */
   getContext(this: IOwnership): IOwnershipContextRecord {
-    const node = this as any as OwnershipNode;
+    const node = this;
 
     if (node._context !== null) {
       return node._context;
@@ -264,7 +250,7 @@ export class OwnershipNode {
    * inject: Lookup context value (walks up parent chain).
    */
   inject<T>(this: IOwnership, key: ContextKeyType): T | undefined {
-    const node = this as any as OwnershipNode;
+    const node = this;
     let current: OwnershipNode | null = node;
 
     while (current !== null) {
@@ -281,7 +267,7 @@ export class OwnershipNode {
    * hasOwn: Check if key exists locally.
    */
   hasOwn(this: IOwnership, key: ContextKeyType): boolean {
-    const node = this as any as OwnershipNode;
+    const node = this;
     return node._context !== null && Object.hasOwn(node._context, key);
   }
 }

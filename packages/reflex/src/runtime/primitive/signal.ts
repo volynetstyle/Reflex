@@ -1,30 +1,27 @@
-import {
-  GraphNode,
-  IReactiveNode,
-  IReactiveValue,
-} from "../../core/graph/graph.types";
+import { IReactiveNode, GraphNode } from "../../core/graph/graph.node";
+import { IReactiveValue } from "../../core/graph/graph.types";
 import { IOwnership } from "../../core/ownership/ownership.type";
 
 class Signal<T> {
+  private value: T;
   private readonly owner: IOwnership | null;
   private readonly _node: IReactiveNode;
 
   constructor(value: T, owner: IOwnership | null, node: IReactiveNode) {
+    this.value = value;
     this.owner = owner;
-
-    node._valueRaw = value;
-    node._kind = "source";
-
     this._node = node;
   }
 
+  dispose(): void {
+    // cleanup logic here
+  }
+
   get(): T {
-    return this._node._valueRaw as T;
+    return this.value;
   }
 
   set(value: T): void {
-    this._node._valueRaw = value;
-
     // will started a loooong work here...
   }
 }
@@ -36,18 +33,17 @@ export function createSignal<T>(
   const graphNode = new GraphNode();
   const signal = new Signal(value, owner, graphNode);
 
-  const get = () => signal.get();
-  const set = signal.set;
+  const reactive: IReactiveValue<T> = ((newValue?: T): T | void => {
+    return arguments.length === 0 ? signal.get() : signal.set(newValue as T);
+  }) as IReactiveValue<T>;
 
-  const fn = get as IReactiveValue<T>;
+  reactive.get = () => signal.get();
+  reactive.set = (v: T) => signal.set(v);
 
-  fn.get = get;
-  fn.set = set;
+  owner?.onScopeCleanup(() => {
+    // signal.cleanup();
+    // graphNode.cleanup?.();
+  });
 
-  return fn;
+  return reactive;
 }
-
-const signal = createSignal(null, 10);
-
-signal();
-signal.set(20);

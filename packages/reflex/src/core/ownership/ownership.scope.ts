@@ -30,8 +30,8 @@ export class OwnershipScope {
     }
   }
 
-  createScope<T>(fn: () => T, parent?: IOwnership | null): T {
-    const owner = createOwner(parent ?? (this._current ?? undefined));
+  createScope<T>(fn: () => T, parent: IOwnership | null): T {
+    const owner = createOwner(parent ?? this._current);
     return this.withOwner(owner, fn);
   }
 }
@@ -44,4 +44,3 @@ export const createOwnershipScope = (): OwnershipScope => {
 };
 
 export type { OwnershipScope as OwnershipScopeType };
-

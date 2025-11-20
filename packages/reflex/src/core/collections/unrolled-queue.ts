@@ -245,18 +245,17 @@ export class UnrolledQueue<T> implements Queueable<T>, IUnrolledQueue<T> {
 
     const item = this.#tail.dequeue();
 
-    if (item === undefined) return undefined;
+    if (item === null || item === undefined) return undefined;
 
     this.#length--;
 
-    // If tail is empty and has a successor — advance and recycle old node
     if (this.#tail.length === 0 && this.#tail.next) {
       const old = this.#tail;
       this.#tail = this.#tail.next;
       RefNode.free(old);
     }
 
-    return item || undefined;
+    return item;
   }
 
   /** Clear queue and recycle all nodes */

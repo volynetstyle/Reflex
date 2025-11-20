@@ -13,7 +13,7 @@
  * Current focus: unsafe operations (for benchmarking).
  * Safe checks can be layered on top or via WeakMap-based dev hooks.
  */
-import { IReactiveNode } from "../graph.types.js";
+import { IReactiveNode } from "../graph.node.js";
 import {
   linkSourceToObserverUnsafe,
   unlinkSourceFromObserverUnsafe,
@@ -27,10 +27,7 @@ import {
  *
  * Returns: void (operation always succeeds if graph invariants hold).
  */
-export function linkEdge(
-  observer: IReactiveNode,
-  source: IReactiveNode
-): void {
+export function linkEdge(observer: IReactiveNode, source: IReactiveNode): void {
   linkSourceToObserverUnsafe(source, observer);
 }
 
@@ -42,11 +39,10 @@ export function linkEdge(
  */
 export function unlinkEdge(
   observer: IReactiveNode,
-  source: IReactiveNode
+  source: IReactiveNode,
 ): void {
   unlinkSourceFromObserverUnsafe(source, observer);
 }
 
 // Export unsafe operations for benchmarking and internal use
 export { linkSourceToObserverUnsafe, unlinkSourceFromObserverUnsafe };
-

@@ -8,12 +8,12 @@ import { IOwnership } from "./ownership.type.js";
  * Methods are bound to OwnershipNode.prototype for monomorphic calls.
  * If parent is provided, automatically appends to parent's child list.
  */
-function createOwner(parent?: IOwnership): IOwnership {
-  const owner = new OwnershipNode() as any as IOwnership;
+function createOwner(parent: IOwnership | null = null): IOwnership {
+  const owner = new OwnershipNode();
 
-  if (parent) {
-    (parent as any).appendChild(owner as any);
-    (parent as any).onScopeMount?.(owner as any);
+  if (parent !== null) {
+    parent.appendChild(owner);
+    parent.onScopeMount?.(owner);
   }
 
   return owner;

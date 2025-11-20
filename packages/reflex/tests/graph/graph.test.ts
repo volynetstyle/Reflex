@@ -1,20 +1,15 @@
 import { describe, it, expect } from "vitest";
 import {
-  IReactiveNode,
-  GraphNode,
-  ReactiveNodeKind,
-} from "../../src/core/graph/graph.types";
-import {
   linkEdge,
   unlinkEdge,
   linkSourceToObserverUnsafe,
   unlinkSourceFromObserverUnsafe,
 } from "../../src/core/graph/utils/graph.linker";
 import { unlinkAllObserversUnsafe, unlinkAllSourcesUnsafe } from "../../src/core/graph/utils/graph.intrusive";
+import { IReactiveNode, GraphNode } from "../../src/core/graph/graph.node";
 
-function makeNode(kind: ReactiveNodeKind = "computation"): IReactiveNode {
+function makeNode(): IReactiveNode {
   const node = new GraphNode();
-  node._kind = kind;
   return node;
 }
 
@@ -42,8 +37,8 @@ const collectObserverChain = (
 
 describe("graph_linker: linkEdge / unlinkSourceFromObserverUnsafe", () => {
   it("creates symmetric edge between observer and source", () => {
-    const observer = makeNode("computation");
-    const source = makeNode("source");
+    const observer = makeNode();
+    const source = makeNode();
 
     linkEdge(observer, source);
 
@@ -62,9 +57,9 @@ describe("graph_linker: linkEdge / unlinkSourceFromObserverUnsafe", () => {
 
   it("supports multiple different sources for one observer", () => {
     const observer = makeNode();
-    const s1 = makeNode("source");
-    const s2 = makeNode("source");
-    const s3 = makeNode("source");
+    const s1 = makeNode();
+    const s2 = makeNode();
+    const s3 = makeNode();
 
     linkEdge(observer, s1);
     linkEdge(observer, s2);
@@ -88,10 +83,10 @@ describe("graph_linker: linkEdge / unlinkSourceFromObserverUnsafe", () => {
   });
 
   it("supports multiple observers for one source", () => {
-    const source = makeNode("source");
-    const o1 = makeNode("computation");
-    const o2 = makeNode("computation");
-    const o3 = makeNode("computation");
+    const source = makeNode();
+    const o1 = makeNode();
+    const o2 = makeNode();
+    const o3 = makeNode();
 
     linkEdge(o1, source);
     linkEdge(o2, source);
@@ -116,7 +111,7 @@ describe("graph_linker: linkEdge / unlinkSourceFromObserverUnsafe", () => {
 
   it("unlinkSourceFromObserverUnsafe removes edge from both lists", () => {
     const observer = makeNode();
-    const source = makeNode("source");
+    const source = makeNode();
 
     linkEdge(observer, source);
     unlinkSourceFromObserverUnsafe(source, observer);
@@ -137,9 +132,9 @@ describe("graph_linker: linkEdge / unlinkSourceFromObserverUnsafe", () => {
 
   it("unlinkSourceFromObserverUnsafe removes middle of list", () => {
     const observer = makeNode();
-    const s1 = makeNode("source");
-    const s2 = makeNode("source");
-    const s3 = makeNode("source");
+    const s1 = makeNode();
+    const s2 = makeNode();
+    const s3 = makeNode();
 
     linkEdge(observer, s1);
     linkEdge(observer, s2);
@@ -159,7 +154,7 @@ describe("graph_linker: linkEdge / unlinkSourceFromObserverUnsafe", () => {
   });
 
   it("unlinkAllObserversUnsafe removes all observers", () => {
-    const source = makeNode("source");
+    const source = makeNode();
     const o1 = makeNode();
     const o2 = makeNode();
     const o3 = makeNode();
@@ -186,9 +181,9 @@ describe("graph_linker: linkEdge / unlinkSourceFromObserverUnsafe", () => {
 
   it("unlinkAllSourcesUnsafe removes all sources", () => {
     const observer = makeNode();
-    const s1 = makeNode("source");
-    const s2 = makeNode("source");
-    const s3 = makeNode("source");
+    const s1 = makeNode();
+    const s2 = makeNode();
+    const s3 = makeNode();
 
     linkEdge(observer, s1);
     linkEdge(observer, s2);
@@ -212,7 +207,7 @@ describe("graph_linker: linkEdge / unlinkSourceFromObserverUnsafe", () => {
 
   it("linkSourceToObserverUnsafe and unlinkEdge work together", () => {
     const observer = makeNode();
-    const source = makeNode("source");
+    const source = makeNode();
 
     linkSourceToObserverUnsafe(source, observer);
     expect(observer._sourceCount).toBe(1);

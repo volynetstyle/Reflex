@@ -66,4 +66,3 @@ export function removeObserverFromSource(
 ): void {
   unlinkEdge(observer, source);
 }
-

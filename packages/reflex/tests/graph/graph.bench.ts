@@ -1,10 +1,11 @@
 import { describe, bench } from "vitest";
 import {
-  IReactiveNode,
-  GraphNode,
-} from "../../src/core/graph/graph.types";
-import { linkSourceToObserverUnsafe, unlinkSourceFromObserverUnsafe, unlinkAllObserversUnsafe } from "../../src/core/graph/utils/graph.intrusive";
+  linkSourceToObserverUnsafe,
+  unlinkSourceFromObserverUnsafe,
+  unlinkAllObserversUnsafe,
+} from "../../src/core/graph/utils/graph.intrusive";
 import { linkEdge, unlinkEdge } from "../../src/core/graph/utils/graph.linker";
+import { IReactiveNode, GraphNode } from "../../src/core/graph/graph.node";
 
 function makeNode(): IReactiveNode {
   return new GraphNode();
@@ -21,15 +22,18 @@ describe("DAG O(1) intrusive graph benchmarks", () => {
     }
   });
 
-  bench("linkSourceToObserverUnsafe + unlinkSourceFromObserverUnsafe (1k ops)", () => {
-    const A = makeNode();
-    const B = makeNode();
+  bench(
+    "linkSourceToObserverUnsafe + unlinkSourceFromObserverUnsafe (1k ops)",
+    () => {
+      const A = makeNode();
+      const B = makeNode();
 
-    for (let i = 0; i < 1000; i++) {
-      linkSourceToObserverUnsafe(B, A);
-      unlinkSourceFromObserverUnsafe(B, A);
-    }
-  });
+      for (let i = 0; i < 1000; i++) {
+        linkSourceToObserverUnsafe(B, A);
+        unlinkSourceFromObserverUnsafe(B, A);
+      }
+    },
+  );
 
   bench("1000 mixed link/unlink operations", () => {
     const nodes = Array.from({ length: 50 }, makeNode);
@@ -68,18 +72,21 @@ describe("DAG O(1) intrusive graph benchmarks", () => {
     unlinkAllObserversUnsafe(center);
   });
 
-  bench("star unlink piecemeal: individual unlinkEdge for each observer", () => {
-    const center = makeNode();
-    const leaves = Array.from({ length: 1000 }, makeNode);
+  bench(
+    "star unlink piecemeal: individual unlinkEdge for each observer",
+    () => {
+      const center = makeNode();
+      const leaves = Array.from({ length: 1000 }, makeNode);
 
-    for (const leaf of leaves) {
-      linkEdge(leaf, center);
-    }
+      for (const leaf of leaves) {
+        linkEdge(leaf, center);
+      }
 
-    for (const leaf of leaves) {
-      unlinkEdge(leaf, center);
-    }
-  });
+      for (const leaf of leaves) {
+        unlinkEdge(leaf, center);
+      }
+    },
+  );
 
   bench("compare: naive array push/pop (1k ops)", () => {
     const arr: number[] = [];

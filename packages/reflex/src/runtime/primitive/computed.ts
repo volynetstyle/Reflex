@@ -14,7 +14,6 @@ class Computed<T> {
   ) {
     this.owner = owner;
     this._node = node;
-    this._node._kind = "computation";
     this.computeFn = computeFn;
     this.cachedValue = null;
   }
