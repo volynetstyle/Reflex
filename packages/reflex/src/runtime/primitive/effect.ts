@@ -1,20 +1,22 @@
 class Effect {
-  private effectFn: () => void;
-  private cleanupFn: (() => void) | null;
+  private _effectFn: () => void;
+  private _cleanupFn: (() => void) | null;
+  private _config: Record<string, unknown>;
 
-  constructor(effectFn: () => void) {
-    this.effectFn = effectFn;
-    this.cleanupFn = null;
+  constructor(effectFn: () => void, config = {}) {
+    this._effectFn = effectFn;
+    this._cleanupFn = null;
+    this._config = config;
   }
 
   run(): void {
-    if (this.cleanupFn) {
-      this.cleanupFn();
+    if (this._cleanupFn) {
+      this._cleanupFn();
     }
-    
-    const cleanup = this.effectFn();
+
+    const cleanup = this._effectFn();
     if (typeof cleanup === "function") {
-      this.cleanupFn = cleanup;
+      this._cleanupFn = cleanup;
     }
   }
 }

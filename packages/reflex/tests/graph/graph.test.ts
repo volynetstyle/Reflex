@@ -1,220 +1,181 @@
 import { describe, it, expect } from "vitest";
+import { GraphNode } from "../../src/core/graph/graph.node";
 import {
   linkEdge,
   unlinkEdge,
-  linkSourceToObserverUnsafe,
-  unlinkSourceFromObserverUnsafe,
-} from "../../src/core/graph/utils/graph.linker";
-import { unlinkAllObserversUnsafe, unlinkAllSourcesUnsafe } from "../../src/core/graph/utils/graph.intrusive";
-import { IReactiveNode, GraphNode } from "../../src/core/graph/graph.node";
+  unlinkAllObservers,
+  forEachObserver,
+  forEachSource,
+  unlinkAllSources,
+} from "../../src/core/graph/graph.operations";
+import { linkPool } from "../../src/core/graph/graph.pool";
 
-function makeNode(): IReactiveNode {
-  const node = new GraphNode();
-  return node;
+function makeNode() {
+  return new GraphNode();
 }
 
-const collectSourceChain = (head: IReactiveNode | null): IReactiveNode[] => {
-  const result: IReactiveNode[] = [];
-  let cur = head;
-  while (cur) {
-    result.push(cur);
-    cur = cur._nextSource;
-  }
+function collectObservers(node: GraphNode) {
+  const result: GraphNode[] = [];
+  forEachObserver(node, (n) => result.push(n));
   return result;
-};
+}
 
-const collectObserverChain = (
-  head: IReactiveNode | null
-): IReactiveNode[] => {
-  const result: IReactiveNode[] = [];
-  let cur = head;
-  while (cur) {
-    result.push(cur);
-    cur = cur._nextObserver;
-  }
+function collectSources(node: GraphNode) {
+  const result: GraphNode[] = [];
+  forEachSource(node, (n) => result.push(n));
   return result;
-};
+}
 
-describe("graph_linker: linkEdge / unlinkSourceFromObserverUnsafe", () => {
-  it("creates symmetric edge between observer and source", () => {
+describe("LinkPool", () => {
+  it("reuses released links", () => {
+    const a = makeNode();
+    const b = makeNode();
+
+    const link = linkEdge(a, b);
+    unlinkEdge(link);
+
+    const sizeBefore = linkPool.size; // = 1
+    const reused = linkEdge(a, b); // <-- size становится 0
+
+    expect(linkPool.size).toBe(sizeBefore - 1);
+    expect(reused).toBe(link);
+  });
+});
+
+describe("linkEdge / unlinkEdge", () => {
+  it("creates symmetric link", () => {
     const observer = makeNode();
     const source = makeNode();
 
     linkEdge(observer, source);
 
-    expect(observer._firstSource).toBe(source);
-    expect(observer._lastSource).toBe(source);
-    expect(source._prevSource).toBeNull();
-    expect(source._nextSource).toBeNull();
     expect(observer._sourceCount).toBe(1);
-
-    expect(source._firstObserver).toBe(observer);
-    expect(source._lastObserver).toBe(observer);
-    expect(observer._prevObserver).toBeNull();
-    expect(observer._nextObserver).toBeNull();
     expect(source._observerCount).toBe(1);
+
+    const sources = collectSources(observer);
+    const observers = collectObservers(source);
+
+    expect(sources[0]).toBe(source);
+    expect(observers[0]).toBe(observer);
   });
 
-  it("supports multiple different sources for one observer", () => {
-    const observer = makeNode();
+  it("supports multiple sources for one observer", () => {
+    const o = makeNode();
     const s1 = makeNode();
     const s2 = makeNode();
     const s3 = makeNode();
 
-    linkEdge(observer, s1);
-    linkEdge(observer, s2);
-    linkEdge(observer, s3);
+    linkEdge(o, s1);
+    linkEdge(o, s2);
+    linkEdge(o, s3);
 
-    const chain = collectSourceChain(observer._firstSource);
+    const sources = collectSources(o);
 
-    expect(chain.length).toBe(3);
-    expect(chain[0]).toBe(s1);
-    expect(chain[1]).toBe(s2);
-    expect(chain[2]).toBe(s3);
-
-    expect(chain[0]!._prevSource).toBeNull();
-    expect(chain[0]!._nextSource).toBe(chain[1]);
-    expect(chain[1]!._prevSource).toBe(chain[0]);
-    expect(chain[1]!._nextSource).toBe(chain[2]);
-    expect(chain[2]!._prevSource).toBe(chain[1]);
-    expect(chain[2]!._nextSource).toBeNull();
-
-    expect(observer._sourceCount).toBe(3);
+    expect(sources.length).toBe(3);
+    expect(sources).toContain(s1);
+    expect(sources).toContain(s2);
+    expect(sources).toContain(s3);
+    expect(o._sourceCount).toBe(3);
   });
 
   it("supports multiple observers for one source", () => {
-    const source = makeNode();
+    const s = makeNode();
     const o1 = makeNode();
     const o2 = makeNode();
     const o3 = makeNode();
 
-    linkEdge(o1, source);
-    linkEdge(o2, source);
-    linkEdge(o3, source);
+    linkEdge(o1, s);
+    linkEdge(o2, s);
+    linkEdge(o3, s);
 
-    const chain = collectObserverChain(source._firstObserver);
+    const observers = collectObservers(s);
 
-    expect(chain.length).toBe(3);
-    expect(chain[0]).toBe(o1);
-    expect(chain[1]).toBe(o2);
-    expect(chain[2]).toBe(o3);
-
-    expect(chain[0]!._prevObserver).toBeNull();
-    expect(chain[0]!._nextObserver).toBe(chain[1]);
-    expect(chain[1]!._prevObserver).toBe(chain[0]);
-    expect(chain[1]!._nextObserver).toBe(chain[2]);
-    expect(chain[2]!._prevObserver).toBe(chain[1]);
-    expect(chain[2]!._nextObserver).toBeNull();
-
-    expect(source._observerCount).toBe(3);
+    expect(observers.length).toBe(3);
+    expect(observers).toContain(o1);
+    expect(observers).toContain(o2);
+    expect(observers).toContain(o3);
+    expect(s._observerCount).toBe(3);
   });
 
-  it("unlinkSourceFromObserverUnsafe removes edge from both lists", () => {
-    const observer = makeNode();
-    const source = makeNode();
-
-    linkEdge(observer, source);
-    unlinkSourceFromObserverUnsafe(source, observer);
-
-    expect(observer._firstSource).toBeNull();
-    expect(observer._lastSource).toBeNull();
-    expect(observer._sourceCount).toBe(0);
-
-    expect(source._firstObserver).toBeNull();
-    expect(source._lastObserver).toBeNull();
-    expect(source._observerCount).toBe(0);
-
-    expect(source._prevSource).toBeNull();
-    expect(source._nextSource).toBeNull();
-    expect(observer._prevObserver).toBeNull();
-    expect(observer._nextObserver).toBeNull();
-  });
-
-  it("unlinkSourceFromObserverUnsafe removes middle of list", () => {
-    const observer = makeNode();
+  it("can unlink middle link", () => {
+    const o = makeNode();
     const s1 = makeNode();
     const s2 = makeNode();
     const s3 = makeNode();
 
-    linkEdge(observer, s1);
-    linkEdge(observer, s2);
-    linkEdge(observer, s3);
+    void linkEdge(o, s1);
+    const l2 = linkEdge(o, s2);
+    void linkEdge(o, s3);
 
-    unlinkSourceFromObserverUnsafe(s2, observer);
+    unlinkEdge(l2);
 
-    const chain = collectSourceChain(observer._firstSource);
-    expect(chain.length).toBe(2);
-    expect(chain[0]).toBe(s1);
-    expect(chain[1]).toBe(s3);
+    const sources = collectSources(o);
 
-    expect(chain[0]!._nextSource).toBe(chain[1]);
-    expect(chain[1]!._prevSource).toBe(chain[0]);
-
-    expect(observer._sourceCount).toBe(2);
+    expect(sources.length).toBe(2);
+    expect(sources).toContain(s1);
+    expect(sources).toContain(s3);
+    expect(sources).not.toContain(s2);
+    expect(o._sourceCount).toBe(2);
   });
 
-  it("unlinkAllObserversUnsafe removes all observers", () => {
-    const source = makeNode();
+  it("unlinks all sources", () => {
+    const o = makeNode();
+    const s1 = makeNode();
+    const s2 = makeNode();
+    const s3 = makeNode();
+
+    linkEdge(o, s1);
+    linkEdge(o, s2);
+    linkEdge(o, s3);
+
+    unlinkAllSources(o);
+
+    expect(o._sourceCount).toBe(0);
+    expect(collectSources(o).length).toBe(0);
+
+    expect(s1._observerCount).toBe(0);
+    expect(s2._observerCount).toBe(0);
+    expect(s3._observerCount).toBe(0);
+  });
+
+  it("unlinks all observers", () => {
+    const s = makeNode();
     const o1 = makeNode();
     const o2 = makeNode();
     const o3 = makeNode();
 
-    linkEdge(o1, source);
-    linkEdge(o2, source);
-    linkEdge(o3, source);
+    linkEdge(o1, s);
+    linkEdge(o2, s);
+    linkEdge(o3, s);
 
-    expect(source._observerCount).toBe(3);
+    unlinkAllObservers(s);
 
-    unlinkAllObserversUnsafe(source);
+    expect(s._observerCount).toBe(0);
+    expect(collectObservers(s).length).toBe(0);
 
-    expect(source._firstObserver).toBeNull();
-    expect(source._lastObserver).toBeNull();
-    expect(source._observerCount).toBe(0);
-
-    expect(o1._prevObserver).toBeNull();
-    expect(o1._nextObserver).toBeNull();
-    expect(o2._prevObserver).toBeNull();
-    expect(o2._nextObserver).toBeNull();
-    expect(o3._prevObserver).toBeNull();
-    expect(o3._nextObserver).toBeNull();
+    expect(o1._sourceCount).toBe(0);
+    expect(o2._sourceCount).toBe(0);
+    expect(o3._sourceCount).toBe(0);
   });
 
-  it("unlinkAllSourcesUnsafe removes all sources", () => {
-    const observer = makeNode();
-    const s1 = makeNode();
-    const s2 = makeNode();
-    const s3 = makeNode();
+  it("is safe to relink after unlink", () => {
+    const o = makeNode();
+    const s = makeNode();
 
-    linkEdge(observer, s1);
-    linkEdge(observer, s2);
-    linkEdge(observer, s3);
+    const l = linkEdge(o, s);
+    unlinkEdge(l);
 
-    expect(observer._sourceCount).toBe(3);
+    const l2 = linkEdge(o, s);
 
-    unlinkAllSourcesUnsafe(observer);
+    expect(o._sourceCount).toBe(1);
+    expect(s._observerCount).toBe(1);
 
-    expect(observer._firstSource).toBeNull();
-    expect(observer._lastSource).toBeNull();
-    expect(observer._sourceCount).toBe(0);
+    const sources = collectSources(o);
+    const observers = collectObservers(s);
 
-    expect(s1._prevSource).toBeNull();
-    expect(s1._nextSource).toBeNull();
-    expect(s2._prevSource).toBeNull();
-    expect(s2._nextSource).toBeNull();
-    expect(s3._prevSource).toBeNull();
-    expect(s3._nextSource).toBeNull();
-  });
+    expect(sources[0]).toBe(s);
+    expect(observers[0]).toBe(o);
 
-  it("linkSourceToObserverUnsafe and unlinkEdge work together", () => {
-    const observer = makeNode();
-    const source = makeNode();
-
-    linkSourceToObserverUnsafe(source, observer);
-    expect(observer._sourceCount).toBe(1);
-    expect(source._observerCount).toBe(1);
-
-    unlinkEdge(observer, source);
-    expect(observer._sourceCount).toBe(0);
-    expect(source._observerCount).toBe(0);
+    expect(l).toBe(l2);
   });
 });

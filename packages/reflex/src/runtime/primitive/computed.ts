@@ -1,43 +1,29 @@
-import { GraphNode, IReactiveNode } from "../../core/graph/graph.types";
-import { IOwnership } from "../../core/ownership/ownership.type";
+import { GraphNode } from "../../core/graph/graph.node"
+import { unlinkAllSources } from "../../core/graph/graph.operations"
+import { withObserver, track } from "../execution/context.stack"
 
-class Computed<T> {
-  private readonly owner: IOwnership | null;
-  private readonly _node: IReactiveNode;
-  private readonly computeFn: () => T;
-  private cachedValue: T | null;
+export class Computation<T> extends GraphNode {
+  _fn: () => T
+  _value!: T
 
-  constructor(
-    owner: IOwnership | null,
-    computeFn: () => T,
-    node: IReactiveNode,
-  ) {
-    this.owner = owner;
-    this._node = node;
-    this.computeFn = computeFn;
-    this.cachedValue = null;
+  constructor(fn: () => T) {
+    super()
+    this._flags |= (1 << 1) // KIND_COMPUTATION
+    this._fn = fn
+
+    this._recompute()
+  }
+
+  private _recompute() {
+    unlinkAllSources(this)
+
+    withObserver(this, () => {
+      this._value = this._fn()
+    })
   }
 
   get(): T {
-    if (this.cachedValue === null) {
-      return this.compute();
-    }
-
-    return this.cachedValue;
+    track(this)
+    return this._value
   }
-
-  compute(): T {
-    const newValue = this.computeFn();
-    this.cachedValue = newValue;
-    return newValue;
-  }
-}
-
-export function createComputed<T>(
-  owner: IOwnership | null,
-  computeFn: () => T,
-): () => T {
-  const graphNode = new GraphNode();
-  const computed = new Computed(owner, computeFn, graphNode);
-    return () => computed.get();
 }
