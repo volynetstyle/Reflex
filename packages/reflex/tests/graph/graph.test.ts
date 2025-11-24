@@ -5,12 +5,95 @@ import {
   linkSourceToObserverUnsafe,
   unlinkSourceFromObserverUnsafe,
 } from "../../src/core/graph/utils/graph.linker";
-import { unlinkAllObserversUnsafe, unlinkAllSourcesUnsafe } from "../../src/core/graph/utils/graph.intrusive";
+import {
+  unlinkAllObserversUnsafe,
+  unlinkAllSourcesUnsafe,
+} from "../../src/core/graph/utils/graph.intrusive";
 import { IReactiveNode, GraphNode } from "../../src/core/graph/graph.node";
 
 function makeNode(): IReactiveNode {
   const node = new GraphNode();
   return node;
+}
+
+function validateSourceChain(observer: IReactiveNode) {
+  let cur = observer._firstSource;
+  let prev: IReactiveNode | null = null;
+  let count = 0;
+  const visited = new Set<IReactiveNode>();
+
+  while (cur) {
+    count++;
+    if (visited.has(cur)) throw new Error("Cycle in source chain");
+    visited.add(cur);
+
+    // back-link
+    if (cur._prevSource !== prev) {
+      throw new Error("Broken _prevSource link");
+    }
+
+    // symmetry: this observer must be in source.observers
+    let obs = cur._firstObserver;
+    let found = false;
+    while (obs) {
+      if (obs === observer) {
+        found = true;
+        break;
+      }
+      obs = obs._nextObserver;
+    }
+
+    if (!found) {
+      throw new Error("Symmetry broken: source has no observer ref");
+    }
+
+    prev = cur;
+    cur = cur._nextSource;
+  }
+
+  if (prev !== observer._lastSource) throw new Error("LastSource mismatch");
+
+  if (count !== observer._sourceCount) throw new Error("SourceCount mismatch");
+}
+
+function validateObserverChain(source: IReactiveNode) {
+  let cur = source._firstObserver;
+  let prev: IReactiveNode | null = null;
+  let count = 0;
+  const visited = new Set<IReactiveNode>();
+
+  while (cur) {
+    count++;
+    if (visited.has(cur)) throw new Error("Cycle in observer chain");
+    visited.add(cur);
+
+    if (cur._prevObserver !== prev) {
+      throw new Error("Broken _prevObserver link");
+    }
+
+    // symmetry: this source must be in observer.sources
+    let src = cur._firstSource;
+    let found = false;
+    while (src) {
+      if (src === source) {
+        found = true;
+        break;
+      }
+      src = src._nextSource;
+    }
+
+    if (!found) {
+      throw new Error("Symmetry broken: observer has no source ref");
+    }
+
+    prev = cur;
+    cur = cur._nextObserver;
+  }
+
+  if (prev !== source._lastObserver) throw new Error("LastObserver mismatch");
+
+  if (count !== source._observerCount)
+    throw new Error("ObserverCount mismatch");
 }
 
 const collectSourceChain = (head: IReactiveNode | null): IReactiveNode[] => {
@@ -23,9 +106,7 @@ const collectSourceChain = (head: IReactiveNode | null): IReactiveNode[] => {
   return result;
 };
 
-const collectObserverChain = (
-  head: IReactiveNode | null
-): IReactiveNode[] => {
+const collectObserverChain = (head: IReactiveNode | null): IReactiveNode[] => {
   const result: IReactiveNode[] = [];
   let cur = head;
   while (cur) {
@@ -34,6 +115,35 @@ const collectObserverChain = (
   }
   return result;
 };
+
+describe("Invariant check", () => {
+  it("mass unlink does not leave ghosts", () => {
+  const center = makeNode();
+  const leafs = Array.from({ length: 25 }, makeNode);
+
+  // создаём: center -> leafs
+  for (const leaf of leafs) {
+    linkEdge(leaf, center); // 🔴 ОБРАТИЛ ВНИМАНИЕ НА ПОРЯДОК
+  }
+
+  expect(center._observerCount).toBe(25);
+  validateObserverChain(center);
+
+  unlinkAllObserversUnsafe(center);
+
+  expect(center._observerCount).toBe(0);
+  expect(center._firstObserver).toBeNull();
+  expect(center._lastObserver).toBeNull();
+
+  for (const leaf of leafs) {
+    expect(leaf._firstSource).toBeNull();
+    expect(leaf._lastSource).toBeNull();
+    expect(leaf._prevSource).toBeNull();
+    expect(leaf._nextSource).toBeNull();
+  }
+});
+
+});
 
 describe("graph_linker: linkEdge / unlinkSourceFromObserverUnsafe", () => {
   it("creates symmetric edge between observer and source", () => {

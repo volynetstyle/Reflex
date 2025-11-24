@@ -9,6 +9,11 @@
  *  - No cycle detection
  *  - No duplicate edge checks
  * Use them only in hot paths or wrap with higher-level API for safety checks.
+ * 
+ *  * Invariants preserved:
+ *  - Bi-directional symmetry (Source ⇄ Observer)
+ *  - Single-slot rule
+ *  - List consistency
  */
 
 import { IReactiveNode } from "../graph.node";
@@ -32,6 +37,15 @@ export function linkSourceToObserverUnsafe(
   source: IReactiveNode,
   observer: IReactiveNode,
 ): void {
+  // DEV ONLY //
+  // if (source._nextSource !== null || source._prevSource !== null) {
+  //   throw new Error("source is already in a sources list");
+  // }
+
+  // if (observer._nextObserver !== null || observer._prevObserver !== null) {
+  //   throw new Error("observer is already in an observers list");
+  // }
+
   const lastSource = observer._lastSource;
 
   if (lastSource === null) {
@@ -77,6 +91,14 @@ export function unlinkSourceFromObserverUnsafe(
   source: IReactiveNode,
   observer: IReactiveNode,
 ): void {
+  // DEV ONLY //
+  // if (
+  //   (source._prevSource && source._prevSource._nextSource !== source) ||
+  //   (source._nextSource && source._nextSource._prevSource !== source)
+  // ) {
+  //   throw new Error("Source pointers corrupted");
+  // }
+
   const prevSource = source._prevSource;
   const nextSource = source._nextSource;
 

@@ -30,7 +30,7 @@ export class OwnershipScope {
     }
   }
 
-  createScope<T>(fn: () => T, parent: IOwnership | null): T {
+  createScope<T>(fn: () => T, parent: IOwnership | null = null): T {
     const owner = createOwner(parent ?? this._current);
     return this.withOwner(owner, fn);
   }

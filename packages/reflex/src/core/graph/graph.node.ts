@@ -1,5 +1,5 @@
 import { BitMask } from "../object/utils/bitwise";
-import { CLEAN, COUNTER_CELLS_LENGTH, ASYNC_CELLS_LENGTH } from "./utils/graph.constants";
+import { CLEAN, COUNTER_CELLS_LENGTH } from "./utils/graph.constants";
 
 class GraphNode {
   _firstSource: GraphNode | null = null;
@@ -17,7 +17,6 @@ class GraphNode {
 
   _flags: BitMask = CLEAN;
   _counters: Uint32Array = new Uint32Array(COUNTER_CELLS_LENGTH);
-  _async: Uint32Array = new Uint32Array(ASYNC_CELLS_LENGTH);
 }
 type IReactiveNode = GraphNode;
 

@@ -21,27 +21,16 @@ const COUNTER_CELLS = {
   epoch: 0,
   version: 1,
   uversion: 2,
+  // async
+  generation: 3,
+  token: 4,
 } as const;
 
-const COUNTER_CELLS_LENGTH = 3;
-
-/**
- * Number of cells in the async tracking Uint32Array structure.
- *
- * - ASYNC_CELLS: [generation, token]
- */
-const ASYNC_CELLS = {
-  generation: 0,
-  token: 1,
-} as const;
-
-const ASYNC_CELLS_LENGTH = 2;
+const COUNTER_CELLS_LENGTH = 5;
 
 export {
   COUNTER_CELLS,
-  ASYNC_CELLS,
   COUNTER_CELLS_LENGTH,
-  ASYNC_CELLS_LENGTH,
   CLEAN,
   DIRTY,
   DISPOSED,
