@@ -1,8 +1,8 @@
 {
-  "name": "reflex-dom",
+  "name": "@reflex/runtime",
   "version": "0.1.0",
   "type": "module",
-  "description": "DOM renderer for Reflex",
+  "description": "Runtime / Universe / Laws for Reflex",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "sideEffects": false,
@@ -17,6 +17,7 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "reflex": "workspace:*"
+    "@reflex/core": "workspace:*",
+    "@reflex/contract": "workspace:*"
   }
 }

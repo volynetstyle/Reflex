@@ -1,50 +1,24 @@
 {
-  "name": "@reflex/core",
-  "version": "0.7.0",
+  "name": "reflex",
+  "version": "0.1.0",
   "type": "module",
-  "main": "dist/my-lib.cjs",
-  "module": "dist/my-lib.mjs",
-  "types": "dist/index.d.ts",
-  "license": "MIT",
+  "description": "Reactive runtime and core API",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
   "exports": {
     ".": {
-      "import": "./dist/my-lib.mjs",
-      "require": "./dist/my-lib.cjs",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
+  "files": ["dist"],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --build",
-    "test": "vitest run",
-    "bench": "vitest bench",
-    "bench:flame": "0x -- node dist/tests/ownership.run.js",
-    "test:watch": "vitest",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier --check .",
-    "format:fix": "prettier --write .",
-    "typecheck": "tsc --noEmit",
-    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build",
-    "release": "changeset version && pnpm install && changeset publish",
-    "prepare": "husky"
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -w -p tsconfig.build.json"
   },
-  "files": [
-    "dist"
-  ],
-  "engines": {
-    "node": ">=20.19.0"
-  },
-  "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{json,md,yml,yaml}": [
-      "prettier --write"
-    ]
-  },
-  "devDependencies": {
-    "@types/node": "^24.10.1"
+  "dependencies": {
+    "@reflex/core": "workspace:*",
+    "@reflex/runtime": "workspace:*"
   }
 }
