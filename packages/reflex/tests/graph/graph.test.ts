@@ -9,18 +9,18 @@ import {
   unlinkAllObserversUnsafe,
   unlinkAllSourcesUnsafe,
 } from "../../src/core/graph/utils/graph.intrusive";
-import { IReactiveNode, GraphNode } from "../../src/core/graph/graph.node";
+import { GraphNode } from "../../src/core/graph/graph.node"; 
 
-function makeNode(): IReactiveNode {
+function makeNode(): GraphNode {
   const node = new GraphNode();
   return node;
 }
 
-function validateSourceChain(observer: IReactiveNode) {
+function validateSourceChain(observer: GraphNode) {
   let cur = observer._firstSource;
-  let prev: IReactiveNode | null = null;
+  let prev: GraphNode | null = null;
   let count = 0;
-  const visited = new Set<IReactiveNode>();
+  const visited = new Set<GraphNode>();
 
   while (cur) {
     count++;
@@ -56,11 +56,11 @@ function validateSourceChain(observer: IReactiveNode) {
   if (count !== observer._sourceCount) throw new Error("SourceCount mismatch");
 }
 
-function validateObserverChain(source: IReactiveNode) {
+function validateObserverChain(source: GraphNode) {
   let cur = source._firstObserver;
-  let prev: IReactiveNode | null = null;
+  let prev: GraphNode | null = null;
   let count = 0;
-  const visited = new Set<IReactiveNode>();
+  const visited = new Set<GraphNode>();
 
   while (cur) {
     count++;
@@ -96,8 +96,8 @@ function validateObserverChain(source: IReactiveNode) {
     throw new Error("ObserverCount mismatch");
 }
 
-const collectSourceChain = (head: IReactiveNode | null): IReactiveNode[] => {
-  const result: IReactiveNode[] = [];
+const collectSourceChain = (head: GraphNode | null): GraphNode[] => {
+  const result: GraphNode[] = [];
   let cur = head;
   while (cur) {
     result.push(cur);
@@ -106,8 +106,8 @@ const collectSourceChain = (head: IReactiveNode | null): IReactiveNode[] => {
   return result;
 };
 
-const collectObserverChain = (head: IReactiveNode | null): IReactiveNode[] => {
-  const result: IReactiveNode[] = [];
+const collectObserverChain = (head: GraphNode | null): GraphNode[] => {
+  const result: GraphNode[] = [];
   let cur = head;
   while (cur) {
     result.push(cur);
@@ -118,31 +118,30 @@ const collectObserverChain = (head: IReactiveNode | null): IReactiveNode[] => {
 
 describe("Invariant check", () => {
   it("mass unlink does not leave ghosts", () => {
-  const center = makeNode();
-  const leafs = Array.from({ length: 25 }, makeNode);
+    const center = makeNode();
+    const leafs = Array.from({ length: 25 }, makeNode);
 
-  // создаём: center -> leafs
-  for (const leaf of leafs) {
-    linkEdge(leaf, center); // 🔴 ОБРАТИЛ ВНИМАНИЕ НА ПОРЯДОК
-  }
+    // создаём: center -> leafs
+    for (const leaf of leafs) {
+      linkEdge(leaf, center); // 🔴 ОБРАТИЛ ВНИМАНИЕ НА ПОРЯДОК
+    }
 
-  expect(center._observerCount).toBe(25);
-  validateObserverChain(center);
+    expect(center._observerCount).toBe(25);
+    validateObserverChain(center);
 
-  unlinkAllObserversUnsafe(center);
+    unlinkAllObserversUnsafe(center);
 
-  expect(center._observerCount).toBe(0);
-  expect(center._firstObserver).toBeNull();
-  expect(center._lastObserver).toBeNull();
+    expect(center._observerCount).toBe(0);
+    expect(center._firstObserver).toBeNull();
+    expect(center._lastObserver).toBeNull();
 
-  for (const leaf of leafs) {
-    expect(leaf._firstSource).toBeNull();
-    expect(leaf._lastSource).toBeNull();
-    expect(leaf._prevSource).toBeNull();
-    expect(leaf._nextSource).toBeNull();
-  }
-});
-
+    for (const leaf of leafs) {
+      expect(leaf._firstSource).toBeNull();
+      expect(leaf._lastSource).toBeNull();
+      expect(leaf._prevSource).toBeNull();
+      expect(leaf._nextSource).toBeNull();
+    }
+  });
 });
 
 describe("graph_linker: linkEdge / unlinkSourceFromObserverUnsafe", () => {

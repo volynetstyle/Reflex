@@ -3,7 +3,7 @@
 // Запускается через: 
 // pnpm exec 0x -- node --require ts-node/register/transpile-only tests/ownership.run.ts
 
-import { createOwner } from "../../src/core/ownership/ownership.core.js";
+import { createOwner } from "../../src/core/ownership/ownership.core"
 
 function build1m() {
   const root = createOwner();

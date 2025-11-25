@@ -3,7 +3,7 @@ import {
   SCRIPT_SUPPORTING,
   VOID_ELEMENTS,
   IMPLIED_END_TAGS,
-} from "../../client/nestingRule.js";
+} from "../../client/nestingRule"
 
 type LookupExistingFlag = 1 & { __brand: "LOOKUP_EXISTING_FLAG" };
 

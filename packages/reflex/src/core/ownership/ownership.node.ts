@@ -16,14 +16,14 @@
  * All methods bound to prototype for monomorphic call sites.
  */
 
-import OwnershipDisposeError from "./ownership.error.js";
+import OwnershipDisposeError from "./ownership.error";
 import {
   IOwnership,
   IOwnershipContextRecord,
   type ContextKeyType,
   DisposalStrategy,
   DISPOSED,
-} from "./ownership.type.js";
+} from "./ownership.type";
 
 export class OwnershipNode {
   // Tree links

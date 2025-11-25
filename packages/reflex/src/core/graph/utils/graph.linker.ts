@@ -13,11 +13,11 @@
  * Current focus: unsafe operations (for benchmarking).
  * Safe checks can be layered on top or via WeakMap-based dev hooks.
  */
-import { IReactiveNode } from "../graph.node.js";
+import { GraphNode } from "../graph.node"
 import {
   linkSourceToObserverUnsafe,
   unlinkSourceFromObserverUnsafe,
-} from "./graph.intrusive.js";
+} from "./graph.intrusive"
 
 /**
  * linkEdge: Safe linking of source and observer.
@@ -27,7 +27,7 @@ import {
  *
  * Returns: void (operation always succeeds if graph invariants hold).
  */
-export function linkEdge(observer: IReactiveNode, source: IReactiveNode): void {
+export function linkEdge(observer: GraphNode, source: GraphNode): void {
   linkSourceToObserverUnsafe(source, observer);
 }
 
@@ -38,8 +38,8 @@ export function linkEdge(observer: IReactiveNode, source: IReactiveNode): void {
  * Precondition: they must be currently linked.
  */
 export function unlinkEdge(
-  observer: IReactiveNode,
-  source: IReactiveNode,
+  observer: GraphNode,
+  source: GraphNode,
 ): void {
   unlinkSourceFromObserverUnsafe(source, observer);
 }

@@ -1,5 +1,5 @@
-const OWNERSHIP_ERROR_NAME = "OwnershipDisposeError.js";
-const OWNERSHIP_ERROR_IDENTIFIER = "[Ownership dispose].js";
+const OWNERSHIP_ERROR_NAME = "OwnershipDisposeError"
+const OWNERSHIP_ERROR_IDENTIFIER = "[Ownership dispose]"
 
 class OwnershipDisposeError extends Error {
   readonly errors: Error[];

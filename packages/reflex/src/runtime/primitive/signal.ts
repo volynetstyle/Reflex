@@ -1,13 +1,13 @@
-import { IReactiveNode, GraphNode } from "../../core/graph/graph.node";
+import { GraphNode } from "../../core/graph/graph.node";
 import { IReactiveValue } from "../../core/graph/graph.types";
 import { IOwnership } from "../../core/ownership/ownership.type";
 
 class Signal<T> {
   private value: T;
   private readonly owner: IOwnership | null;
-  private readonly _node: IReactiveNode;
+  private readonly _node: GraphNode;
 
-  constructor(value: T, owner: IOwnership | null, node: IReactiveNode) {
+  constructor(value: T, owner: IOwnership | null, node: GraphNode) {
     this.value = value;
     this.owner = owner;
     this._node = node;

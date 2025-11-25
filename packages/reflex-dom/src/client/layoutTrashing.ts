@@ -115,7 +115,7 @@ const layoutThrashingDatabase = {
   },
 } as const;
 
-type Category = "reads" | "writes" | "methods.js";
+type Category = "reads" | "writes" | "methods"
 
 /**
  * Get all properties/methods of a specific category

@@ -64,7 +64,7 @@
  *   - Stable memory footprint (≈5–20 MB depending on pool)
  */
 
-import { __assert } from "../object/utils/assert.js";
+import { __assert } from "../object/utils/assert"
 
 type Nullable<T> = T | null;
 

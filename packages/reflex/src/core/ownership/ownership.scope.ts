@@ -1,5 +1,5 @@
-import { createOwner } from "./ownership.core.js";
-import { IOwnership } from "./ownership.type.js";
+import { createOwner } from "./ownership.core"
+import { IOwnership } from "./ownership.type"
 
 /**
  * OwnershipScope class: maintains the current owner context.

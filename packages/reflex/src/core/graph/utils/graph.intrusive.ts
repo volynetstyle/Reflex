@@ -16,7 +16,7 @@
  *  - List consistency
  */
 
-import { IReactiveNode } from "../graph.node";
+import { GraphNode } from "../graph.node";
 
 /**
  * linkSourceToObserverUnsafe: Add a source node to an observer's sources list.
@@ -34,8 +34,8 @@ import { IReactiveNode } from "../graph.node";
  *  - no cycles (caller must ensure DAG invariant)
  */
 export function linkSourceToObserverUnsafe(
-  source: IReactiveNode,
-  observer: IReactiveNode,
+  source: GraphNode,
+  observer: GraphNode,
 ): void {
   // DEV ONLY //
   // if (source._nextSource !== null || source._prevSource !== null) {
@@ -88,8 +88,8 @@ export function linkSourceToObserverUnsafe(
  *  - observer._prevObserver/nextObserver are valid or null
  */
 export function unlinkSourceFromObserverUnsafe(
-  source: IReactiveNode,
-  observer: IReactiveNode,
+  source: GraphNode,
+  observer: GraphNode,
 ): void {
   // DEV ONLY //
   // if (
@@ -146,7 +146,7 @@ export function unlinkSourceFromObserverUnsafe(
  *
  * Useful for cleanup or when a source node is being disposed.
  */
-export function unlinkAllObserversUnsafe(source: IReactiveNode): void {
+export function unlinkAllObserversUnsafe(source: GraphNode): void {
   let observer = source._firstObserver;
 
   while (observer !== null) {
@@ -162,7 +162,7 @@ export function unlinkAllObserversUnsafe(source: IReactiveNode): void {
  * Iterates linearly through the sources list, unlinking each source.
  * Cache-friendly alternative to random unlinks.
  */
-export function unlinkAllSourcesUnsafe(observer: IReactiveNode): void {
+export function unlinkAllSourcesUnsafe(observer: GraphNode): void {
   let source = observer._firstSource;
 
   while (source !== null) {

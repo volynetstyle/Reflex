@@ -1,5 +1,5 @@
-import { OwnershipNode } from "./ownership.node.js";
-import { IOwnership } from "./ownership.type.js";
+import { OwnershipNode } from "./ownership.node"
+import { IOwnership } from "./ownership.type"
 
 /**
  * createOwner: Factory for creating ownership nodes.

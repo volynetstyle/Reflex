@@ -14,7 +14,7 @@
  * If needed, we can expose these as static helpers or extend the class.
  */
 
-import { IReactiveNode } from "../graph.types";
+import { GraphNode } from "../graph.node";
 import { linkEdge, unlinkEdge } from "./graph.linker";
 
 /**
@@ -29,8 +29,8 @@ import { linkEdge, unlinkEdge } from "./graph.linker";
  * Static helper: link source and observer (observer depends on source).
  */
 export function addSourceToObserver(
-  observer: IReactiveNode,
-  source: IReactiveNode
+  observer: GraphNode,
+  source: GraphNode
 ): void {
   linkEdge(observer, source);
 }
@@ -39,8 +39,8 @@ export function addSourceToObserver(
  * Static helper: unlink source and observer.
  */
 export function removeSourceFromObserver(
-  observer: IReactiveNode,
-  source: IReactiveNode
+  observer: GraphNode,
+  source: GraphNode
 ): void {
   unlinkEdge(observer, source);
 }
@@ -50,8 +50,8 @@ export function removeSourceFromObserver(
  * Alias for addSourceToObserver for semantic clarity.
  */
 export function addObserverToSource(
-  observer: IReactiveNode,
-  source: IReactiveNode
+  observer: GraphNode,
+  source: GraphNode
 ): void {
   linkEdge(observer, source);
 }
@@ -61,8 +61,8 @@ export function addObserverToSource(
  * Alias for removeSourceFromObserver for semantic clarity.
  */
 export function removeObserverFromSource(
-  observer: IReactiveNode,
-  source: IReactiveNode
+  observer: GraphNode,
+  source: GraphNode
 ): void {
   unlinkEdge(observer, source);
 }

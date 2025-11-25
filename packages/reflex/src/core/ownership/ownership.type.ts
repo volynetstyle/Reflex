@@ -2,7 +2,7 @@
  * @file ownership.type.ts
  * Core types and flags for Reflex Ownership System.
  */
-import { OwnershipNode } from "./ownership.node.js";
+import { OwnershipNode } from "./ownership.node"
 
 const S_OWN_BRAND = Symbol("OwnershipBrand");
 const S_ID = Symbol.for("ownership:id");
