@@ -42,7 +42,7 @@ export interface IGraph<N extends INode> {
 export interface IRuntime<N extends INode> {
   readonly scheduler: IScheduler | ITemporalScheduler;
   readonly allocator: IAllocator<N>;
-  readonly graph: IGraph<N>;
+  readonly topology: IGraph<N>;
 }
 
 export interface IRuntimeCallable<N extends INode> {

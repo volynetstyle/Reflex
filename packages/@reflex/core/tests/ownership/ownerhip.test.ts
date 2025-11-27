@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { createOwner } from "../../src/core/ownership/ownership.core";
-import { createOwnershipScope } from "../../src/core/ownership/ownership.scope";
+import { createOwner } from "./../../src/ownership/ownership.core";
+import { createOwnershipScope } from "./../../src/ownership/ownership.scope";
 import {
   CLEAN,
   DISPOSED,
   DISPOSING,
-} from "../../src/core/ownership/ownership.type";
+} from "./../../src/ownership/ownership.type";
 
 const isClean = (o: any) => o._flags === CLEAN;
 const isDisposed = (o: any) => o._flags === DISPOSED;

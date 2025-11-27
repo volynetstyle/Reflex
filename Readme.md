@@ -17,6 +17,7 @@
 Reflex is a **deterministic reactive computation engine** with ownership semantics, epoch-based time, and intrusive graph topology.
 
 It can drive:
+
 - UI frameworks (DOM / Canvas / WebGL / Native)
 - Simulation engines
 - Reactive servers
@@ -36,6 +37,7 @@ UI is just one possible **surface adapter** — not the core identity.
 Pure mathematical definitions. No logic. No runtime.
 
 Defines the **invariants** of the system:
+
 - `NodeKind`, `LifeState`, `Epoch`, `OwnerId`
 - `INode`, `ITemporalNode`, `IOwner`
 - `IScheduler`, `IAllocator`
@@ -46,6 +48,7 @@ This layer is **frozen by design**. It defines what reality means in Reflex.
 ### `@reflex/core`
 
 The actual engine:
+
 - Ownership model (Owner Tree)
 - Reactive DAG (signals → memos → effects)
 - Epoch system (deterministic local time)
@@ -63,6 +66,7 @@ Pure logic.
 ### `@reflex/runtime`
 
 Surface implementations:
+
 - DOM adapter
 - Scheduler bindings
 - Async bridges
@@ -103,6 +107,7 @@ Root Owner
 Every reactive node (signal, memo, effect, async callback) has an owner.
 
 Child owners inherit:
+
 - Context
 - Scheduling
 - Lifetime guarantees
@@ -136,12 +141,14 @@ Signals **do not notify**. They mark versions and propagate dirtiness. The sched
 Reflex doesn't rely on JavaScript time. It uses **local epochs**.
 
 Each node tracks:
+
 ```ts
-epoch: number
-version: number
+epoch: number;
+version: number;
 ```
 
 When an event arrives:
+
 ```ts
 { target: Node, payload }
 
@@ -164,6 +171,7 @@ This makes Reflex **asynchronous-safe by construction**. No race conditions. No 
 The scheduler is not a re-render loop.
 
 It's a **universal task orchestrator**:
+
 - Effects
 - Async callbacks
 - DOM patches
@@ -172,6 +180,7 @@ It's a **universal task orchestrator**:
 - Microtasks / macrotasks
 
 Designed for:
+
 - Priority queues
 - Frame-based batching
 - Deadline-aware scheduling
@@ -187,10 +196,11 @@ Closer to an **OS microkernel** than React Fiber.
 Contexts use **prototype inheritance**, not maps:
 
 ```ts
-ChildOwner.context = Object.create(ParentOwner.context)
+ChildOwner.context = Object.create(ParentOwner.context);
 ```
 
 Benefits:
+
 - O(1) lookup
 - Zero registration overhead
 - No provider boilerplate
@@ -230,17 +240,14 @@ import { signal, render } from "@reflex/runtime/dom";
 function Counter() {
   const count = signal(0);
 
-  return (
-    <button onClick={() => count.value++}>
-      Count: {count.value}
-    </button>
-  );
+  return <button onClick={() => count.value++}>Count: {count.value}</button>;
 }
 
 render(<Counter />, document.getElementById("app"));
 ```
 
 DOM is **one renderer** among many. Bind Reflex to:
+
 - Canvas / WebGL
 - Terminal (TTY)
 - Audio graph
@@ -253,12 +260,12 @@ DOM is **one renderer** among many. Bind Reflex to:
 
 ## Comparison
 
-| System | Core Identity |
-|--------|---------------|
-| React | UI renderer + state manager |
-| Solid | UI reactivity wrapper |
-| Vue | UI + templating runtime |
-| RxJS | Stream / event library |
+| System     | Core Identity                          |
+| ---------- | -------------------------------------- |
+| React      | UI renderer + state manager            |
+| Solid      | UI reactivity wrapper                  |
+| Vue        | UI + templating runtime                |
+| RxJS       | Stream / event library                 |
 | **Reflex** | **General-purpose computation engine** |
 
 React thinks in **components**.  
@@ -269,6 +276,7 @@ Reflex thinks in **causality graphs**.
 ## Why This Matters
 
 Reflex solves by construction:
+
 - Memory leaks
 - Async race corruption
 - Zombie updates
@@ -277,6 +285,7 @@ Reflex solves by construction:
 - Broken teardown in concurrency
 
 Because it's built on:
+
 - Ownership semantics
 - Epoch validation
 - Topological ordering
@@ -311,3 +320,5 @@ This is **physics and mathematics** applied to computation.
 ## License
 
 MIT © 2025 Andrii Volynets
+
+</div>

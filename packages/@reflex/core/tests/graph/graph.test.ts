@@ -4,12 +4,12 @@ import {
   unlinkEdge,
   linkSourceToObserverUnsafe,
   unlinkSourceFromObserverUnsafe,
-} from "../../src/core/graph/utils/graph.linker";
+} from "./../../src/graph/process/graph.linker";
 import {
   unlinkAllObserversUnsafe,
   unlinkAllSourcesUnsafe,
-} from "../../src/core/graph/utils/graph.intrusive";
-import { GraphNode } from "../../src/core/graph/graph.node"; 
+} from "./../../src/graph/process/graph.intrusive";
+import { GraphNode } from "./../../src/graph/graph.node";
 
 function makeNode(): GraphNode {
   const node = new GraphNode();

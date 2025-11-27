@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { UnrolledQueue } from "../../src/core/collections/unrolled-queue";
+import { UnrolledQueue } from "./../../src/collections/unrolled-queue";
 
 describe("UnrolledQueue — correctness", () => {
   it("enqueue/dequeue basic", () => {
