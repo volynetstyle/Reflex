@@ -64,7 +64,7 @@
  *   - Stable memory footprint (≈5–20 MB depending on pool)
  */
 
-import { __assert } from "../object/utils/assert"
+import { __assert } from "../object/utils/assert";
 
 type Nullable<T> = T | null;
 
@@ -277,6 +277,7 @@ export class UnrolledQueue<T> implements Queueable<T>, IUnrolledQueue<T> {
     let count = 0;
     while (this.#length !== 0) {
       const t = this.#tail;
+
       while (t.length !== 0) {
         const val = t.dequeue()!;
         callback(val);

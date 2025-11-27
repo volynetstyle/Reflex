@@ -1,5 +1,5 @@
 import { bench, describe } from "vitest";
-import { createOwner } from "../../src/core/ownership/ownership.core";
+import { createOwner } from "../../src/ownership/ownership.core";
 
 /**
  * Ownership System Microbenchmarks

@@ -22,7 +22,7 @@
 
 import { bench, describe } from "vitest";
 import { performance } from "node:perf_hooks";
-import { UnrolledQueue } from "../../src/core/collections/unrolled-queue";
+import { UnrolledQueue } from "../../src/collections/unrolled-queue";
 
 interface BenchOptions {
   ops: number;

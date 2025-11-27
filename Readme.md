@@ -6,188 +6,308 @@
 
 <h1 align="center" style="color:#C6A656;">Reflex</h1>
 <p align="center" style="color:#C0B68A;"><em>Universal Reactive Runtime</em></p>
-<p align="center" style="color:#A8452E;"><strong>“Reactivity beyond the DOM — one core, any surface.”</strong></p>
+<p align="center" style="color:#A8452E;"><strong>“One contract. One core. Any surface.”</strong></p>
 
 ---
 
-## 🚀 Overview
+## What Reflex Actually Is
 
-Reflex is not just another UI framework.
-It is a **general-purpose reactive runtime**: a lightweight ownership system, fine-grained signals, and a scheduler — independent of JSX or the DOM.
+**Reflex is not a UI framework.**
 
-Unlike React, Solid, or Vue, Reflex is not locked to the browser. You can render into **DOM, Canvas, WebGL, mobile bridges, or custom targets** — the runtime stays the same. UI is just one of many possible frontends.
+Reflex is a **deterministic reactive computation engine** with ownership semantics, epoch-based time, and intrusive graph topology.
 
-**Core idea:** One **Owner** per scope governs signals, effects, and components. Lifecycle, dependency tracking, and cleanup all go through it — no leaks, no zombie state.
+It can drive:
+- UI frameworks (DOM / Canvas / WebGL / Native)
+- Simulation engines
+- Reactive servers
+- Dataflow pipelines
+- Distributed systems
+- Game engines
+- Orchestration layers
 
----
-
-## ✨ Key Advantages
-
-- **Ownership as the Unit of Life**
-  Every signal, effect, or component belongs to an owner. Dispose of a scope → everything inside cleans up automatically.
-- **Contextual Dependency Injection**
-  Context flows naturally down the ownership tree via prototype inheritance. No prop drilling, no manual context management.
-- **Fine-Grained Signals**
-  Reactive primitives (`signal`, `derived`, `effect`) update only what actually changes. No re-rendering unnecessary nodes.
-- **Coarse Transactions & Batching**
-  Batched updates, snapshots, and async-safe consistency for SSR, hydration, and streaming pipelines.
-- **Universal Surfaces**
-  DOM, Canvas, WebGL, server pipelines, native UI — the runtime is agnostic.
-- **Scheduler-Orchestrated Side Effects**
-  Timers, I/O, DOM patches, or workers run through a unified priority-based queue for smooth interactivity.
-- **Lightweight & Fast**
-  Core size ~6 KB. Predictable scaling from micro widgets to massive app trees.
+UI is just one possible **surface adapter** — not the core identity.
 
 ---
 
-## 🧩 Architectural Layers
+## Architecture
 
-1. **Ownership Layer (Coarse)**
+### `@reflex/contract`
 
-   - Scopes, parent/child hierarchy, disposals.
-   - Lifecycle backbone: mount, unmount, cleanup.
+Pure mathematical definitions. No logic. No runtime.
 
-2. **Reactive Layer (Fine)**
+Defines the **invariants** of the system:
+- `NodeKind`, `LifeState`, `Epoch`, `OwnerId`
+- `INode`, `ITemporalNode`, `IOwner`
+- `IScheduler`, `IAllocator`
+- Reactive graph contracts
 
-   - Signals, computed values, DAG dependency graph.
-   - Minimal updates only where needed.
+This layer is **frozen by design**. It defines what reality means in Reflex.
 
-3. **Orchestration Layer**
+### `@reflex/core`
 
-   - Unified scheduler for effects, timers, I/O, and batching.
-   - Priorities, deadlines, cancellations.
+The actual engine:
+- Ownership model (Owner Tree)
+- Reactive DAG (signals → memos → effects)
+- Epoch system (deterministic local time)
+- Intrusive graph links (no adjacency arrays)
+- Allocation strategies / pooling
+- Dirty propagation
+- Disposal algorithms
+- Context prototype chain
+- Event validation (epoch + version + life state)
 
-4. **Surface Layer (Optional)**
-   - DOM, Canvas, WebGL, mobile, or custom renderers.
+**No DOM. No JSX. No rendering. No browser assumptions.**
+
+Pure logic.
+
+### `@reflex/runtime`
+
+Surface implementations:
+- DOM adapter
+- Scheduler bindings
+- Async bridges
+- Server integration
+- Worker / thread bridges
+- Experimental modules
+
+Uses **only contracts + core**. Swappable. Extensible.
 
 ---
 
-## 🔍 Ownership Flow
+## Core Model
 
-**Owner Tree Example:**
+Reflex operates on **4 fundamental invariants**:
+
+1. **Ownership is the unit of life** — nothing exists without an owner
+2. **Reactivity is a DAG, not a tree** — real topological ordering
+3. **Time is local (Epochs), not global** — deterministic causality
+4. **Nothing exists without a context** — no ambient globals
+
+When an owner dies → everything dies safely. No zombies. No leaks. No magical GC.
+
+---
+
+## Ownership Model
 
 ```
-App Owner (macro)
-├─ Main Owner
-│  ├─ Signal A → Memo 1 → Effect 1
-│  └─ Signal B → Memo 2 → Effect 2
-└─ Footer Owner
-   └─ Effect 3
+Root Owner
+└─ App Owner
+   ├─ Graph Owner
+   │  ├─ Signal A
+   │  ├─ Computation B
+   │  └─ Effect C
+   └─ Feature Owner
+      └─ Async Effect
 ```
 
-_Signals mark DAG nodes dirty, scheduler flushes only affected computations._  
-_Dispose is iterative post-order: children first, then parent._
+Every reactive node (signal, memo, effect, async callback) has an owner.
 
-**Dirty propagation:**
+Child owners inherit:
+- Context
+- Scheduling
+- Lifetime guarantees
 
-```
-Signal A.set(99)
-    ↓ markDirty
-Memo1 → dirty=true
-Effect1 → scheduled run
-Memo2 → unchanged
-```
+`dispose(owner)` guarantees **deterministic cleanup** of the entire subgraph.
 
 ---
 
-## 🔍 Reflex vs Existing Frameworks
+## Reactive Graph — Real DAG
 
-| Capability     | React / Solid             | Reflex                                    |
-| -------------- | ------------------------- | ----------------------------------------- |
-| **Core Model** | Component-centric         | Ownership-centric (scopes as first-class) |
-| **Reactivity** | Hooks / signals (UI only) | Signals for any domain, not tied to UI    |
-| **Lifecycle**  | Hooks / cleanup           | Hierarchical ownership + dispose batch    |
-| **Context**    | Context API               | Prototype inheritance per scope           |
-| **Rendering**  | DOM-bound                 | DOM, Canvas, WebGL, native, server        |
-| **Scheduling** | Fiber (UI only)           | General-purpose priority-based scheduler  |
-| **Philosophy** | UI framework              | Universal reactive runtime                |
+Reflex builds an **intrusive directed acyclic graph**:
+
+```
+signal → memo → memo → effect
+  │        ↘
+  └─────→ effect
+```
+
+- Intrusive links (no arrays)
+- O(1) relinking / unlinking
+- Deterministic execution order
+- Lazy evaluation support
+- Stable topology under concurrency
+
+Signals **do not notify**. They mark versions and propagate dirtiness. The scheduler decides when to execute.
 
 ---
 
-## 📦 Getting Started
+## Epoch System
 
-```bash
-npm install @reflex/core
+Reflex doesn't rely on JavaScript time. It uses **local epochs**.
+
+Each node tracks:
+```ts
+epoch: number
+version: number
 ```
 
-**Basic Signal Example:**
+When an event arrives:
+```ts
+{ target: Node, payload }
+
+1. Validate:
+   - LifeState alive?
+   - Owner exists?
+   - Local epoch valid?
+   - Version matches?
+   - Observers exist?
+
+2. Only then → apply mutation
+```
+
+This makes Reflex **asynchronous-safe by construction**. No race conditions. No stale updates.
+
+---
+
+## Scheduler Model
+
+The scheduler is not a re-render loop.
+
+It's a **universal task orchestrator**:
+- Effects
+- Async callbacks
+- DOM patches
+- Worker communication
+- IO operations
+- Microtasks / macrotasks
+
+Designed for:
+- Priority queues
+- Frame-based batching
+- Deadline-aware scheduling
+- Backpressure handling
+- Cooperative yielding
+
+Closer to an **OS microkernel** than React Fiber.
+
+---
+
+## Context System
+
+Contexts use **prototype inheritance**, not maps:
 
 ```ts
-import { signal, derived, effect } from "@reflex/core.js";
-
-const count = signal(0);
-const doubled = derived(() => count.value * 2);
-
-effect(() => {
-  console.log(`Count=${count.value}, Double=${doubled.value}`);
-});
-
-count.value++; // logs instantly
+ChildOwner.context = Object.create(ParentOwner.context)
 ```
 
-**DOM Example (optional surface binding):**
+Benefits:
+- O(1) lookup
+- Zero registration overhead
+- No provider boilerplate
+- Fully deterministic
+- Instant propagation
+
+Real lexical scoping — not React's simulated version.
+
+---
+
+## Example
+
+```ts
+import { signal, derived, effect, createScope } from "@reflex/core";
+
+createScope(() => {
+  const count = signal(0);
+  const double = derived(() => count.value * 2);
+
+  effect(() => {
+    console.log(count.value, double.value);
+  });
+
+  count.value = 5;
+});
+```
+
+When the scope ends → automatic cleanup. No manual teardown needed.
+
+---
+
+## Optional DOM Surface
 
 ```tsx
-import { signal, render } from "@reflex/core/dom.js";
+import { signal, render } from "@reflex/runtime/dom";
 
 function Counter() {
   const count = signal(0);
 
-  return <button onClick={() => count.value++}>Count: {count.value}</button>;
+  return (
+    <button onClick={() => count.value++}>
+      Count: {count.value}
+    </button>
+  );
 }
 
 render(<Counter />, document.getElementById("app"));
 ```
 
----
-
-## 🧠 Why Reflex?
-
-A **reflex** is an immediate response to a stimulus.
-Reflex delivers **instant, precise state propagation**, independent of UI layers, with lifecycle and scheduling baked in.
-
-**Owner mantra:**
-
-> _"Owner knows its children, marks dirty, and batch-cleans everything."_
+DOM is **one renderer** among many. Bind Reflex to:
+- Canvas / WebGL
+- Terminal (TTY)
+- Audio graph
+- Server nodes
+- Unreal / Unity
+- AI simulations
+- WASM / embedded systems
 
 ---
 
-## ⚡ Internal API Highlights
+## Comparison
 
-| User API            | Internal Owner API                      | Description                      |
-| ------------------- | --------------------------------------- | -------------------------------- |
-| `useState(initial)` | `createSignal(initial)`                 | Fine-grained reactive value      |
-| `useEffect(fn)`     | `createEffect(() => fn(), autoCleanup)` | Auto-tracked, runs on dirty      |
-| `useMemo(fn)`       | `createMemo(fn)`                        | Computed, lazy, dependency-aware |
-| `useContext(MyCtx)` | `owner._context?.MyCtx`                 | Prototype-inherited context      |
-| `onMount(fn)`       | `_onScopeMount(fn)`                     | Called after scope creation      |
-| `onUnmount(fn)`     | `_onCleanup(fn)`                        | Cleanup on dispose               |
+| System | Core Identity |
+|--------|---------------|
+| React | UI renderer + state manager |
+| Solid | UI reactivity wrapper |
+| Vue | UI + templating runtime |
+| RxJS | Stream / event library |
+| **Reflex** | **General-purpose computation engine** |
 
-**Lifecycle Flow:**
-
-```
-createScope(App)
-    ↓ currentOwner = App
-    createSignal(A)
-        ↓ _owner = App
-        A.set(val)
-            ↓ DAG runs
-    dispose App
-        ↓ iterative batch cleanup
-```
+React thinks in **components**.  
+Reflex thinks in **causality graphs**.
 
 ---
 
-## 📚 Resources
+## Why This Matters
 
-- Documentation (coming soon): [reflex.dev/docs](https://reflex.dev/docs)
-- GitHub: [github.com/reflex-ui/core](https://github.com/reflex-ui/core)
-- Community: [X](https://x.com/reflex_ui) • Discord
+Reflex solves by construction:
+- Memory leaks
+- Async race corruption
+- Zombie updates
+- Invalid state replay
+- Uncontrolled side effects
+- Broken teardown in concurrency
+
+Because it's built on:
+- Ownership semantics
+- Epoch validation
+- Topological ordering
+- Mathematical invariants
+
+This is **physics and mathematics** applied to computation.
 
 ---
 
-## 🏁 License
+## Roadmap
 
-MIT License © 2025 Andrii Volynets
+- ✅ Contract-core separation
+- ✅ Intrusive DAG
+- ✅ Epoch & validation
+- ✅ Ownership GC
+- ✅ Scheduler foundation
+- 🔄 Runtime adapters
+- 🔄 Devtools & visualizer
+- 🔄 Persistence layer
+- 🔄 Distributed graph support
+- 🔄 WASM / Rust kernel
 
-</div>
+---
+
+## Philosophy
+
+> "Do not re-render reality.  
+> Change only what actually changes."
+
+---
+
+## License
+
+MIT © 2025 Andrii Volynets

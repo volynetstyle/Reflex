@@ -3,9 +3,9 @@ import {
   linkSourceToObserverUnsafe,
   unlinkSourceFromObserverUnsafe,
   unlinkAllObserversUnsafe,
-} from "../../src/core/graph/utils/graph.intrusive";
-import { linkEdge, unlinkEdge } from "../../src/core/graph/utils/graph.linker";
-import { IReactiveNode, GraphNode } from "../../src/core/graph/graph.node";
+} from "../../src/graph/process/graph.intrusive";
+import { linkEdge, unlinkEdge } from "../../src/graph/process/graph.linker";
+import { IReactiveNode, GraphNode } from "../../src/graph/graph.node";
 
 function makeNode(): IReactiveNode {
   return new GraphNode();

@@ -1,5 +1,5 @@
 import { bench, describe } from "vitest";
-import { UnrolledQueue } from "../../src/core/collections/unrolled-queue";
+import { UnrolledQueue } from "../../src/collections/unrolled-queue";
 
 describe("UnrolledQueue — Microbench", () => {
   const N = 200_000;

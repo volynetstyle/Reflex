@@ -1,5 +1,5 @@
 import { BitMask } from "../object/utils/bitwise";
-import { CLEAN, COUNTER_CELLS_LENGTH, DIRTY } from "./utils/graph.constants";
+import { CLEAN, COUNTER_CELLS_LENGTH, DIRTY } from "./process/graph.constants";
 
 class GraphNode {
   _firstSource: GraphNode | null = null;
