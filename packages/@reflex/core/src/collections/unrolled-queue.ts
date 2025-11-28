@@ -1,6 +1,6 @@
 /**
  * @file unrolled-queue.ts
- * High-performance Unrolled Queue
+ * High-performance Unrolled Queue - Optimized Version
  *
  * Was inspired by: https://github.com/nodejs/node/blob/86bfdb552863f09d36cba7f1145134346eb2e640/lib/internal/fixed_queue.js
  *
@@ -10,7 +10,7 @@
  * form a singly-linked list — this allows dynamic growth
  * with O(1) amortized enqueue/dequeue cost.
  *
- * Differences from Node’s FixedQueue:
+ * Differences from Node's FixedQueue:
  * - Multiple circular nodes instead of a single fixed one.
  * - Node pooling to minimize GC churn.
  * - Fully iterable and clearable.
@@ -62,11 +62,18 @@
  *   - O(1) amortized enqueue/dequeue
  *   - ~4–5 ns per op on V8 12+
  *   - Stable memory footprint (≈5–20 MB depending on pool)
+ *
+ * Optimizations applied:
+ *   - Removed Nullable<T> type alias (direct T | null usage)
+ *   - Cached head.next lookup in enqueue
+ *   - Pre-computed isFull condition inline
+ *   - Eliminated redundant isEmpty checks
+ *   - Optimized drain() with direct buffer access
+ *   - Removed unnecessary null checks in dequeue
+ *   - Simplified node recycling logic
  */
 
 import { __assert } from "../object/utils/assert";
-
-type Nullable<T> = T | null;
 
 export interface UnrolledQueueOptions {
   /** Node (segment) size, must be a power of two for bitmask optimization */
@@ -86,7 +93,6 @@ const DEFAULT_NODE_SIZE = 2048 as const;
 
 function assertPowerOfTwo(n: number): void {
   const cond = !Number.isInteger(n) || n <= 0 || (n & (n - 1)) !== 0;
-
   __assert(cond, "nodeSize must be a positive power of two");
 }
 
@@ -102,21 +108,21 @@ class RefNode<T> {
   readonly size: number;
   readonly mask: number;
 
-  buffer: Array<Nullable<T>>;
+  buffer: Array<T | null>;
   readIndex = 0;
   writeIndex = 0;
-  next: Nullable<RefNode<T>> = null;
+  next: RefNode<T> | null = null;
 
   constructor(size: number) {
     assertPowerOfTwo(size);
     this.size = size;
     this.mask = size - 1;
-    this.buffer = new Array<Nullable<T>>(size);
-    for (let i = 0; i < size; i++) this.buffer[i] = null;
-
+    this.buffer = new Array<T | null>(size);
     this.readIndex = 0;
     this.writeIndex = 0;
     this.next = null;
+
+    for (let i = 0; i < size; i++) this.buffer[i] = null;
   }
 
   /** Number of elements currently held */
@@ -129,55 +135,49 @@ class RefNode<T> {
     const pool = this.pool as RefNode<U>[];
     const node = pool.pop();
 
-    if (node) return node;
+    if (node) {
+      node.readIndex = 0;
+      node.writeIndex = 0;
+      node.next = null;
+      return node;
+    }
 
     return new RefNode<U>(size);
   }
 
   /** Return node to pool, resetting state (max 128 kept) */
   static free(node: RefNode<unknown>): void {
-    const b = node.buffer;
-    for (let i = 0; i < b.length; i++) b[i] = null;
-    node.readIndex = 0;
-    node.writeIndex = 0;
-    node.next = null;
-    if (this.pool.length < NODE_POOL_MAX) this.pool.push(node);
-  }
-
-  /** Reset node indices and link */
-  reset(): void {
-    this.readIndex = 0;
-    this.writeIndex = 0;
-    this.next = null;
-  }
-
-  /** Check if buffer is full (one slot kept empty) */
-  private isFull(): boolean {
-    return ((this.writeIndex + 1) & this.mask) === this.readIndex;
-  }
-
-  /** Check if buffer is empty */
-  private isEmpty(): boolean {
-    return this.readIndex === this.writeIndex;
+    if (this.pool.length < NODE_POOL_MAX) {
+      const b = node.buffer;
+      const len = b.length;
+      for (let i = 0; i < len; i++) b[i] = null;
+      node.readIndex = 0;
+      node.writeIndex = 0;
+      node.next = null;
+      this.pool.push(node);
+    }
   }
 
   /** @__INLINE__ Push item into buffer (returns false if full) */
   enqueue(item: T): boolean {
-    if (this.isFull()) {
+    // Inline isFull check
+    const nextWrite = (this.writeIndex + 1) & this.mask;
+    if (nextWrite === this.readIndex) {
       return false;
     }
 
     this.buffer[this.writeIndex] = item;
-    this.writeIndex = (this.writeIndex + 1) & this.mask;
+    this.writeIndex = nextWrite;
 
     return true;
   }
 
   /** @__INLINE__ Pop item from buffer (returns null if empty) */
   dequeue(): T | null {
-    if (this.isEmpty()) {
+    if (this.readIndex === this.writeIndex) {
       return null;
     }
+
     const item = this.buffer[this.readIndex] as T;
     this.buffer[this.readIndex] = null;
     this.readIndex = (this.readIndex + 1) & this.mask;
@@ -186,7 +186,7 @@ class RefNode<T> {
   }
 
   peek(): T | null {
-    if (this.isEmpty()) return null;
+    if (this.readIndex === this.writeIndex) return null;
     return this.buffer[this.readIndex] as T;
   }
 }
@@ -199,7 +199,7 @@ class RefNode<T> {
  * If empty and next exists, the old node is freed
  * back into the pool.
  *
- * Thus, the queue “unrolls” and “collapses” dynamically
+ * Thus, the queue "unrolls" and "collapses" dynamically
  * with constant-time operations and minimal GC.
  */
 export class UnrolledQueue<T> implements Queueable<T>, IUnrolledQueue<T> {
@@ -229,10 +229,8 @@ export class UnrolledQueue<T> implements Queueable<T>, IUnrolledQueue<T> {
 
     if (!head.enqueue(item)) {
       const newNode = RefNode.alloc<T>(this.#nodeSize);
-
       head.next = newNode;
       this.#head = newNode;
-
       newNode.enqueue(item);
     }
 
@@ -243,16 +241,17 @@ export class UnrolledQueue<T> implements Queueable<T>, IUnrolledQueue<T> {
   dequeue(): T | undefined {
     if (this.#length === 0) return undefined;
 
-    const item = this.#tail.dequeue();
+    const tail = this.#tail;
+    const item = tail.dequeue();
 
-    if (item === null || item === undefined) return undefined;
+    if (item === null) return undefined;
 
     this.#length--;
 
-    if (this.#tail.length === 0 && this.#tail.next) {
-      const old = this.#tail;
-      this.#tail = this.#tail.next;
-      RefNode.free(old);
+    const next = tail.next;
+    if (tail.readIndex === tail.writeIndex && next) {
+      this.#tail = next;
+      RefNode.free(tail);
     }
 
     return item;
@@ -263,7 +262,7 @@ export class UnrolledQueue<T> implements Queueable<T>, IUnrolledQueue<T> {
     let node: RefNode<T> | null = this.#tail;
 
     while (node) {
-      const next: Nullable<RefNode<T>> = node.next;
+      const next: RefNode<T> | null = node.next;
       RefNode.free(node);
       node = next;
     }
@@ -275,22 +274,35 @@ export class UnrolledQueue<T> implements Queueable<T>, IUnrolledQueue<T> {
 
   drain(callback: (v: T) => void): number {
     let count = 0;
-    while (this.#length !== 0) {
-      const t = this.#tail;
+    let node = this.#tail;
 
-      while (t.length !== 0) {
-        const val = t.dequeue()!;
+    while (this.#length !== 0 && node) {
+      const buf = node.buffer;
+      const mask = node.mask;
+      let idx = node.readIndex;
+      const nodeLen = node.length;
+
+      for (let i = 0; i < nodeLen; i++) {
+        const val = buf[idx] as T;
+        buf[idx] = null;
         callback(val);
         count++;
-        this.#length--;
+        idx = (idx + 1) & mask;
       }
 
-      if (t.next) {
-        const old = this.#tail;
-        this.#tail = t.next;
-        RefNode.free(old);
+      node.readIndex = idx;
+      this.#length -= nodeLen;
+
+      const next = node.next;
+      if (next) {
+        RefNode.free(node);
+        this.#tail = next;
+        node = next;
+      } else {
+        break;
       }
     }
+
     return count;
   }
 
@@ -307,9 +319,14 @@ export class UnrolledQueue<T> implements Queueable<T>, IUnrolledQueue<T> {
   /** Iterator: yields items from tail → head */
   *[Symbol.iterator](): Iterator<T> {
     for (let n: RefNode<T> | null = this.#tail; n; n = n.next) {
-      for (let i = 0, j = n.readIndex; i < n.length; i++) {
-        yield n.buffer[j] as T;
-        j = (j + 1) & n.mask;
+      const buf = n.buffer;
+      const mask = n.mask;
+      const nodeLen = n.length;
+      let j = n.readIndex;
+
+      for (let i = 0; i < nodeLen; i++) {
+        yield buf[j] as T;
+        j = (j + 1) & mask;
       }
     }
   }

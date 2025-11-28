@@ -1,4 +1,4 @@
-import { type BitMask } from "../../object/utils/bitwise"
+import { type BitMask } from "../../object/utils/bitwise";
 
 const CLEAN: BitMask = 0;
 const CHECK = 1 << 0;

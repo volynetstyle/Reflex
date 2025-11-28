@@ -1,19 +1,24 @@
 {
   "name": "@reflex/contract",
   "version": "0.1.0",
+  "description": "Core type contracts for Reflex runtime",
   "type": "module",
-  "description": "Runtime contracts and invariants",
+
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "sideEffects": false,
+
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "default": "./dist/index.js"
     }
   },
+
   "files": ["dist"],
+
   "scripts": {
-    "build": "tsc -p tsconfig.build.json"
+    "build": "tsc -p tsconfig.build.json",
+    "watch": "tsc -p tsconfig.build.json --watch",
+    "clean": "rimraf dist"
   }
 }

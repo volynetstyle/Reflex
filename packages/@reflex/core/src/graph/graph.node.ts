@@ -1,7 +1,9 @@
 import { BitMask } from "../object/utils/bitwise";
-import { CLEAN, COUNTER_CELLS_LENGTH, DIRTY } from "./process/graph.constants";
+import { CLEAN, COUNTER_CELLS_LENGTH } from "./process/graph.constants";
 
 class GraphNode {
+  _id: number = -1;
+
   _firstSource: GraphNode | null = null;
   _lastSource: GraphNode | null = null;
   _nextSource: GraphNode | null = null;
@@ -16,7 +18,6 @@ class GraphNode {
   _observerCount: number = 0;
 
   _flags: BitMask = CLEAN;
-  _counters: Uint32Array = new Uint32Array(COUNTER_CELLS_LENGTH);
 }
 
 export { GraphNode };
