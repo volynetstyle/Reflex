@@ -18,9 +18,9 @@
     "isolatedModules": true,
     "composite": true
   },
-  "references": [
-    { "path": "../reflex" }
-  ],
+  // "references": [
+  //   { "path": "../ref"}
+  // ],
   "include": ["src"],
   "exclude": ["dist", "**/*.test.ts"]
 }

@@ -3,11 +3,11 @@ import {
   SCRIPT_SUPPORTING,
   VOID_ELEMENTS,
   IMPLIED_END_TAGS,
-} from "../../client/nestingRule"
+} from "../../client/nestingRule";
 
 type LookupExistingFlag = 1 & { __brand: "LOOKUP_EXISTING_FLAG" };
-
 const LOOKUP_EXISTING_FLAG = 1 as LookupExistingFlag;
+
 const SPECIAL_RULES = {
   RUBY: "__RUBY__", // Ruby annotations
   DATALIST: "__DATALIST__", // Data list options
@@ -15,7 +15,7 @@ const SPECIAL_RULES = {
 } as const;
 
 function makeLookup(
-  tokens: Iterable<string>
+  tokens: Iterable<string>,
 ): Record<string, LookupExistingFlag> {
   const o = Object.create(null) as Record<string, LookupExistingFlag>;
   for (const t of tokens) {
@@ -25,17 +25,18 @@ function makeLookup(
 }
 
 function toLookup(
-  entries: Iterable<string>
+  entries: Iterable<string>,
 ): Record<string, LookupExistingFlag> {
   return makeLookup(entries);
 }
 
 function strToLookup(
-  str: string | undefined
+  str: string | undefined,
 ): Record<string, LookupExistingFlag> | undefined {
   if (str == null) return undefined;
-  if (str === "")
+  if (str === "") {
     return Object.create(null) as Record<string, LookupExistingFlag>;
+  }
   return makeLookup(str.split(/\s+/));
 }
 
@@ -49,7 +50,6 @@ const enum AllowedKind {
   Phrasing = 1,
   Set = 2,
 }
-
 
 const RULE_DATA: Array<[string, AllowedKind, string?, string?]> = [
   ["html", AllowedKind.Set, "head body"],
@@ -209,11 +209,11 @@ interface NormalizedRule {
 }
 
 function normalizeRules(
-  data: typeof RULE_DATA
+  data: typeof RULE_DATA,
 ): Record<string, NormalizedRule> {
   const out = Object.create(null) as Record<string, NormalizedRule>;
 
-  for (const [tag, kindNum, allowedList, forbiddenList] of RULE_DATA) {
+  for (const [tag, kindNum, allowedList, forbiddenList] of data) {
     let allowedSet: Record<string, LookupExistingFlag> | undefined;
 
     if (kindNum === AllowedKind.Set) {
@@ -240,7 +240,7 @@ function normalizeRules(
         allowedSet = strToLookup(allowedList);
       }
     }
-    
+
     out[tag] = {
       kind: kindNum,
       allowedSet,
@@ -250,8 +250,6 @@ function normalizeRules(
 
   return out;
 }
-
-// if (__DEV__) Object.freeze(NORMALIZED_RULES);
 
 interface AncestorInfo {
   currentTag: string | null;
@@ -263,47 +261,14 @@ interface AncestorInfo {
   dlItemTagAutoclosing: string | null;
 }
 
+/** Горячие lookup-функции без лишних абстракций. */
 const isPhrasing = (tag: string): boolean =>
   PHRASING_LOOKUP[tag] === LOOKUP_EXISTING_FLAG;
+
 const isVoid = (tag: string): boolean =>
   VOID_LOOKUP[tag] === LOOKUP_EXISTING_FLAG;
 
 const NORMALIZED_RULES = normalizeRules(RULE_DATA);
-
-function isValidChild(
-  parentTag: string,
-  childTag: string,
-  ancestorInfo: AncestorInfo
-): boolean {
-  if (isVoid(parentTag)) {
-    return false;
-  }
-
-  const norm = NORMALIZED_RULES[parentTag];
-
-  if (!norm) return checkContextRestrictions(childTag, ancestorInfo);
-
-  switch (norm.kind) {
-    case AllowedKind.Any:
-      break;
-    case AllowedKind.Phrasing:
-      if (!isPhrasing(childTag)) {
-        return false;
-      }
-      break;
-    case AllowedKind.Set:
-      if (norm.allowedSet?.[childTag] !== LOOKUP_EXISTING_FLAG) {
-        return false;
-      }
-      break;
-  }
-
-  if (norm.forbiddenSet?.[childTag] === LOOKUP_EXISTING_FLAG) {
-    return false;
-  }
-
-  return checkContextRestrictions(childTag, ancestorInfo);
-}
 
 const CONTEXT_RESTRICTIONS: Record<string, keyof AncestorInfo> = Object.freeze({
   form: "formTag",
@@ -315,24 +280,56 @@ const CONTEXT_RESTRICTIONS: Record<string, keyof AncestorInfo> = Object.freeze({
   dt: "dlItemTagAutoclosing",
 });
 
-function checkContextRestrictions(
-  childTag: string,
-  ancestorInfo: AncestorInfo
-): boolean {
-  const k = CONTEXT_RESTRICTIONS[childTag];
-  return k ? ancestorInfo[k] == null : true;
-}
-
+/**
+ * Основной hot-path: одна функция, минимум вложенных вызовов.
+ */
 export function validateDOMNesting(
   childTag: string,
   parentTag: string | null,
-  ancestorInfo: AncestorInfo
+  ancestorInfo: AncestorInfo,
 ): boolean {
-  if (!parentTag) {
+  if (parentTag == null) {
     return true;
   }
 
-  return isValidChild(parentTag, childTag, ancestorInfo);
+  // void-элементы никогда не имеют детей
+  if (isVoid(parentTag)) {
+    return false;
+  }
+
+  const norm = NORMALIZED_RULES[parentTag];
+
+  if (norm) {
+    // 1) Проверка по типу разрешённого контента
+    switch (norm.kind) {
+      case AllowedKind.Any:
+        break;
+
+      case AllowedKind.Phrasing:
+        if (!isPhrasing(childTag)) {
+          return false;
+        }
+        break;
+
+      case AllowedKind.Set: {
+        const allowed = norm.allowedSet;
+        if (!allowed || allowed[childTag] !== LOOKUP_EXISTING_FLAG) {
+          return false;
+        }
+        break;
+      }
+    }
+
+    // 2) Запрещённый набор (если есть)
+    const forbidden = norm.forbiddenSet;
+    if (forbidden && forbidden[childTag] === LOOKUP_EXISTING_FLAG) {
+      return false;
+    }
+  }
+
+  // 3) Контекстные ограничения (формы, вложенные <a>, и т.д.)
+  const ctxKey = CONTEXT_RESTRICTIONS[childTag];
+  return ctxKey ? ancestorInfo[ctxKey] == null : true;
 }
 
 const SCOPE_UPDATES: Record<string, keyof AncestorInfo> = Object.freeze({
@@ -345,11 +342,15 @@ const SCOPE_UPDATES: Record<string, keyof AncestorInfo> = Object.freeze({
   dt: "dlItemTagAutoclosing",
 });
 
+/**
+ * Второй hot-path: обновление AncestorInfo максимально дёшево.
+ * Объект реиспользуется, без лишних аллокаций.
+ */
 export function updateAncestorInfo(
   info: AncestorInfo | null,
-  tag: string
+  tag: string,
 ): AncestorInfo {
-  const ancestorInfo: AncestorInfo = info || {
+  const ancestorInfo: AncestorInfo = info ?? {
     currentTag: null,
     formTag: null,
     aTagInScope: null,
@@ -360,8 +361,8 @@ export function updateAncestorInfo(
   };
 
   ancestorInfo.currentTag = tag;
-  const scopeKey = SCOPE_UPDATES[tag];
 
+  const scopeKey = SCOPE_UPDATES[tag];
   if (scopeKey) {
     ancestorInfo[scopeKey] = tag;
   }
@@ -376,12 +377,13 @@ export {
   IMPLIED_END_TAGS,
 };
 
+/** Внешние хелперы тоже переводим на прямой lookup, без `in`. */
 export function isPhrasingContent(tagName: string): boolean {
-  return tagName in PHRASING_LOOKUP;
+  return PHRASING_LOOKUP[tagName] === LOOKUP_EXISTING_FLAG;
 }
 
 export function isVoidElement(tagName: string): boolean {
-  return tagName in VOID_LOOKUP;
+  return VOID_LOOKUP[tagName] === LOOKUP_EXISTING_FLAG;
 }
 
 export const __INTERNAL_LOOKUPS__ = {

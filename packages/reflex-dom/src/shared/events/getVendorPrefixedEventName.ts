@@ -1,78 +1,88 @@
-import { IS_DOM_AVAILABLE } from "../isDomAvailable"
-
-/**
- * Style object used to detect supported CSS properties.
- * If the DOM is unavailable (SSR or test environment), `style` will be empty.
- */
-let style: CSSStyleDeclaration | {} = {};
-
-if (IS_DOM_AVAILABLE) {
-  style = document.createElement("div").style;
-}
+import { IS_DOM_AVAILABLE } from "../avaiblable";
 
 type VendorPrefixedEvent =
   | "animationend"
   | "animationiteration"
   | "animationstart"
-  | "transitionend"
+  | "transitionend";
 
 /**
- * A map of modern event names to their possible vendor-prefixed alternatives.
- * In 2025, only `Webkit` prefixes may still be relevant for some legacy WebKit-based browsers.
- * Other prefixes (e.g., `Moz`) are considered obsolete and are not included.
+ * Один раз создаём style и вычисляем, какие свойства вообще поддерживаются.
  */
-const vendorMap: Record<VendorPrefixedEvent, Record<string, string>> = {
-  animationend: {
-    animation: "animationend",
-    WebkitAnimation: "webkitAnimationEnd",
-  },
-  animationiteration: {
-    animation: "animationiteration",
-    WebkitAnimation: "webkitAnimationIteration",
-  },
-  animationstart: {
-    animation: "animationstart",
-    WebkitAnimation: "webkitAnimationStart",
-  },
-  transitionend: {
-    transition: "transitionend",
-    WebkitTransition: "webkitTransitionEnd",
-  },
-};
+const style: CSSStyleDeclaration | null = IS_DOM_AVAILABLE
+  ? document.createElement("div").style
+  : null;
+
+const supports =
+  style && IS_DOM_AVAILABLE
+    ? {
+        animation: "animation" in style,
+        WebkitAnimation: "WebkitAnimation" in style,
+        transition: "transition" in style,
+        WebkitTransition: "WebkitTransition" in style,
+      }
+    : null;
 
 /**
- * Simple cache to avoid repeatedly checking `style` for the same event name.
+ * Кэш по именам событий, чтобы не делать лишнюю логику после первого вызова.
  */
-const cache: Record<string, string> = {};
+const cache: Partial<Record<VendorPrefixedEvent, string>> = Object.create(null);
 
 /**
- * Returns the correct event name for the current environment, using vendor prefixes if necessary.
- *
- * Notes on fallback behavior:
- * - In modern browsers (Chrome, Firefox, Edge, Safari), the unprefixed event name is sufficient.
- * - `Webkit` prefixes are retained only as a minimal fallback for legacy WebKit-based browsers.
- * - If the DOM is unavailable (e.g., server-side rendering), the original event name is returned.
+ * Возвращает корректное имя события для текущего окружения.
  */
 export function getVendorPrefixedEventName(event: VendorPrefixedEvent): string {
-  if (cache[event]) {
-    return cache[event];
+  const cached = cache[event];
+  if (cached) {
+    return cached;
   }
 
-  const map = vendorMap[event];
-
-  if (!map) {
-    return (cache[event] = event);
+  // SSR / тесты / нет style — ничего не мудрим
+  if (!supports) {
+    cache[event] = event;
+    return event;
   }
 
-  for (const prop in map) {
-    if (prop in style) {
-      return (cache[event] = map[prop]);
-    }
+  let resolved: string;
+
+  switch (event) {
+    case "animationend":
+      resolved = supports.animation
+        ? "animationend"
+        : supports.WebkitAnimation
+        ? "webkitAnimationEnd"
+        : "animationend";
+      break;
+
+    case "animationiteration":
+      resolved = supports.animation
+        ? "animationiteration"
+        : supports.WebkitAnimation
+        ? "webkitAnimationIteration"
+        : "animationiteration";
+      break;
+
+    case "animationstart":
+      resolved = supports.animation
+        ? "animationstart"
+        : supports.WebkitAnimation
+        ? "webkitAnimationStart"
+        : "animationstart";
+      break;
+
+    case "transitionend":
+      resolved = supports.transition
+        ? "transitionend"
+        : supports.WebkitTransition
+        ? "webkitTransitionEnd"
+        : "transitionend";
+      break;
+
+    default:
+      // На случай расширения типів в будущем
+      resolved = event;
   }
 
-  // Fallback: return the original event name if no supported property is detected
-  return (cache[event] = event);
+  cache[event] = resolved;
+  return resolved;
 }
-
-
-

@@ -1,23 +1,35 @@
 import { BitMask } from "../object/utils/bitwise";
-import { CLEAN, COUNTER_CELLS_LENGTH } from "./process/graph.constants";
+import { CLEAN } from "./process/graph.constants";
 
-class GraphNode {
-  _id: number = -1;
+class GraphEdge {
+  from: GraphNode;
+  to: GraphNode;
 
-  _firstSource: GraphNode | null = null;
-  _lastSource: GraphNode | null = null;
-  _nextSource: GraphNode | null = null;
-  _prevSource: GraphNode | null = null;
+  prevOut: GraphEdge | null = null;
+  nextOut: GraphEdge | null = null;
 
-  _firstObserver: GraphNode | null = null;
-  _lastObserver: GraphNode | null = null;
-  _nextObserver: GraphNode | null = null;
-  _prevObserver: GraphNode | null = null;
+  prevIn: GraphEdge | null = null;
+  nextIn: GraphEdge | null = null;
 
-  _sourceCount: number = 0;
-  _observerCount: number = 0;
-
-  _flags: BitMask = CLEAN;
+  constructor(from: GraphNode, to: GraphNode) {
+    this.from = from;
+    this.to = to;
+  }
 }
 
-export { GraphNode };
+class GraphNode {
+  id: number = -1;
+
+  firstOut: GraphEdge | null = null;
+  lastOut: GraphEdge | null = null;
+
+  firstIn: GraphEdge | null = null;
+  lastIn: GraphEdge | null = null;
+
+  outCount: number = 0;
+  inCount: number = 0;
+
+  flags: BitMask = CLEAN;
+}
+
+export { GraphNode, GraphEdge };

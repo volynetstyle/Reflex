@@ -1,6 +1,3 @@
-import { GraphNode } from "../../core/graph/graph.node";
-import { IReactiveValue } from "../../core/graph/graph.types";
-import { IOwnership } from "../../core/ownership/ownership.type";
 
 class Signal<T> {
   private value: T;
@@ -26,24 +23,27 @@ class Signal<T> {
   }
 }
 
-export function createSignal<T>(
+class ReactiveValue<T> {
+  constructor(private signal: Signal<T>) {}
+
+  get() {
+    return this.signal.get();
+  }
+
+  set(v: T) {
+    return this.signal.set(v);
+  }
+}
+
+export const createSignal = <T>(
   owner: IOwnership | null,
   value: T,
-): IReactiveValue<T> {
-  const graphNode = new GraphNode();
-  const signal = new Signal(value, owner, graphNode);
-
-  const reactive: IReactiveValue<T> = ((newValue?: T): T | void => {
-    return arguments.length === 0 ? signal.get() : signal.set(newValue as T);
-  }) as IReactiveValue<T>;
-
-  reactive.get = () => signal.get();
-  reactive.set = (v: T) => signal.set(v);
-
-  owner?.onScopeCleanup(() => {
-    // signal.cleanup();
-    // graphNode.cleanup?.();
-  });
-
+): ReactiveValue<T> => {
+  const node = new GraphNode();
+  const signal = new Signal(value, owner, node);
+  const reactive = new ReactiveValue(signal);
+  // owner?.onScopeCleanup(signal.cleanup);
   return reactive;
-}
+};
+
+const s = createSignal({}, 1);

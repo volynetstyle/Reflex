@@ -1,17 +1,46 @@
 import { describe, bench } from "vitest";
+
 import {
   linkSourceToObserverUnsafe,
   unlinkSourceFromObserverUnsafe,
   unlinkAllObserversUnsafe,
 } from "../../src/graph/process/graph.intrusive";
-import { linkEdge, unlinkEdge } from "../../src/graph/process/graph.linker";
-import { IReactiveNode, GraphNode } from "../../src/graph/graph.node";
 
-function makeNode(): IReactiveNode {
+import { linkEdge, unlinkEdge } from "../../src/graph/process/graph.linker";
+import { GraphNode } from "../../src/graph/graph.node";
+
+/** Create node */
+function makeNode(): GraphNode {
   return new GraphNode();
 }
 
-describe("DAG O(1) intrusive graph benchmarks", () => {
+/** Collect OUT edges of a node (edges: node → observer) */
+function collectOutEdges(node: GraphNode) {
+  const arr = [];
+  let e = node.firstOut;
+  while (e) {
+    arr.push(e);
+    e = e.nextOut;
+  }
+  return arr;
+}
+
+/** Collect IN edges of a node (edges: source → node) */
+function collectInEdges(node: GraphNode) {
+  const arr = [];
+  let e = node.firstIn;
+  while (e) {
+    arr.push(e);
+    e = e.nextIn;
+  }
+  return arr;
+}
+
+describe("DAG O(1) intrusive graph benchmarks (edge-based)", () => {
+  // ──────────────────────────────────────────────────────────────
+  // 1. Basic 1k link/unlink cycles for both APIs
+  // ──────────────────────────────────────────────────────────────
+
   bench("linkEdge + unlinkEdge (1k ops)", () => {
     const A = makeNode();
     const B = makeNode();
@@ -22,120 +51,114 @@ describe("DAG O(1) intrusive graph benchmarks", () => {
     }
   });
 
-  bench(
-    "linkSourceToObserverUnsafe + unlinkSourceFromObserverUnsafe (1k ops)",
-    () => {
-      const A = makeNode();
-      const B = makeNode();
+  bench("linkSourceToObserverUnsafe + unlinkSourceFromObserverUnsafe (1k ops)", () => {
+    const A = makeNode();
+    const B = makeNode();
 
-      for (let i = 0; i < 1000; i++) {
-        linkSourceToObserverUnsafe(B, A);
-        unlinkSourceFromObserverUnsafe(B, A);
-      }
-    },
-  );
+    for (let i = 0; i < 1000; i++) {
+      linkSourceToObserverUnsafe(A, B);
+      unlinkSourceFromObserverUnsafe(A, B);
+    }
+  });
 
-  bench("1000 mixed link/unlink operations", () => {
+  // ──────────────────────────────────────────────────────────────
+  // 2. Mixed random link/unlink operations
+  // ──────────────────────────────────────────────────────────────
+
+  bench("1000 mixed link/unlink operations (random-ish)", () => {
     const nodes = Array.from({ length: 50 }, makeNode);
 
     for (let i = 0; i < 1000; i++) {
-      const A = nodes[(i * 7) % nodes.length];
-      const B = nodes[(i * 13) % nodes.length];
+      const a = nodes[(i * 5) % nodes.length]!;
+      const b = nodes[(i * 17) % nodes.length]!;
 
-      if (A && B && A !== B) {
-        linkEdge(A, B);
-
-        if (i % 2 === 0) {
-          unlinkEdge(A, B);
-        }
+      if (a !== b) {
+        linkEdge(a, b);
+        if (i % 2 === 0) unlinkEdge(a, b);
       }
     }
   });
 
-  bench("massive star graph: link 1 source to 1k observers", () => {
-    const center = makeNode();
-    const leaves = Array.from({ length: 1000 }, makeNode);
+  // ──────────────────────────────────────────────────────────────
+  // 3. Star linking
+  // ──────────────────────────────────────────────────────────────
 
-    for (const leaf of leaves) {
-      linkEdge(leaf, center);
-    }
+  bench("massive star graph: 1 source → 1k observers", () => {
+    const source = makeNode();
+    const observers = Array.from({ length: 1000 }, makeNode);
+
+    for (const obs of observers) linkEdge(source, obs);
   });
 
-  bench("massive star unlink: unlink all 1k observers from 1 source", () => {
-    const center = makeNode();
-    const leaves = Array.from({ length: 1000 }, makeNode);
+  // ──────────────────────────────────────────────────────────────
+  // 4. Star unlink (bulk)
+  // ──────────────────────────────────────────────────────────────
 
-    for (const leaf of leaves) {
-      linkEdge(leaf, center);
-    }
+  bench("massive star unlink: unlink all observers from 1 source (1k)", () => {
+    const source = makeNode();
+    const observers = Array.from({ length: 1000 }, makeNode);
 
-    unlinkAllObserversUnsafe(center);
+    for (const obs of observers) linkEdge(source, obs);
+    unlinkAllObserversUnsafe(source);
   });
 
-  bench(
-    "star unlink piecemeal: individual unlinkEdge for each observer",
-    () => {
-      const center = makeNode();
-      const leaves = Array.from({ length: 1000 }, makeNode);
+  // ──────────────────────────────────────────────────────────────
+  // 5. Star unlink piecewise (1k × unlinkEdge)
+  // ──────────────────────────────────────────────────────────────
 
-      for (const leaf of leaves) {
-        linkEdge(leaf, center);
-      }
+  bench("star unlink piecemeal: individual unlinkEdge for each observer", () => {
+    const source = makeNode();
+    const observers = Array.from({ length: 1000 }, makeNode);
 
-      for (const leaf of leaves) {
-        unlinkEdge(leaf, center);
-      }
-    },
-  );
+    for (const obs of observers) linkEdge(source, obs);
 
-  bench("compare: naive array push/pop (1k ops)", () => {
-    const arr: number[] = [];
-    for (let i = 0; i < 1000; i++) {
-      arr.push(i);
-      arr.pop();
-    }
+    for (const obs of observers) unlinkEdge(source, obs);
   });
+
+
+  // ──────────────────────────────────────────────────────────────
+  // 7. Random DAG simulation (10k edges)
+  // ──────────────────────────────────────────────────────────────
 
   bench("DAG simulation: 100 nodes, 10k random edges", () => {
     const nodes = Array.from({ length: 100 }, makeNode);
 
     for (let i = 0; i < 10000; i++) {
-      const sourceIdx = Math.floor(Math.random() * nodes.length);
-      const observerIdx = Math.floor(Math.random() * nodes.length);
-
-      if (sourceIdx !== observerIdx) {
-        const source = nodes[sourceIdx];
-        const observer = nodes[observerIdx];
-
-        if (source && observer) {
-          linkSourceToObserverUnsafe(source, observer);
-        }
-      }
+      const a = nodes[Math.floor(Math.random() * 100)]!;
+      const b = nodes[Math.floor(Math.random() * 100)]!;
+      if (a !== b) linkSourceToObserverUnsafe(a, b);
     }
   });
 
-  bench("counting observer/source degree: 1k nodes with varying degree", () => {
+  // ──────────────────────────────────────────────────────────────
+  // 8. Degree counting sanity test
+  // ──────────────────────────────────────────────────────────────
+
+  bench("counting observer/source degree: 1k nodes, sparse connections", () => {
     const nodes = Array.from({ length: 1000 }, makeNode);
 
+    // Sparse DAG formation
     for (let i = 0; i < 1000; i++) {
-      const src = nodes[i];
+      const src = nodes[i]!;
       for (let j = i + 1; j < Math.min(i + 5, nodes.length); j++) {
-        const obs = nodes[j];
-        if (src && obs) {
-          linkEdge(obs, src);
-        }
+        linkEdge(src, nodes[j]!);
       }
     }
 
-    let totalSources = 0;
-    let totalObservers = 0;
-    for (const node of nodes) {
-      totalSources += node._sourceCount;
-      totalObservers += node._observerCount;
+    // Count degrees
+    let sumOut = 0;
+    let sumIn = 0;
+
+    for (const n of nodes) {
+      sumOut += n.outCount;
+      sumIn += n.inCount;
     }
 
-    if (totalSources !== totalObservers) {
-      throw new Error("Sanity check failed: source/observer count mismatch");
+    if (sumOut !== sumIn) {
+      throw new Error(
+        `Degree mismatch: OUT=${sumOut}, IN=${sumIn} — graph invariant broken`,
+      );
     }
   });
+
 });

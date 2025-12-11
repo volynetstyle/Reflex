@@ -1,7 +1,26 @@
 /**
- * Optional: Precompiled regex for reuse in high-performance scenarios
+ * TABLE[c] = bitmask:
+ * bit0 (1) → valid as first char
+ * bit1 (2) → valid as subsequent char
  */
-export const SAFE_ATTRIBUTE_REGEX = /^[A-Za-z_:][A-Za-z0-9_:.-\u00B7]*$/;
+export const TABLE = new Uint8Array(256);
+
+(() => {
+  // First char: A–Z, a–z, _, :
+  for (let c = 65; c <= 90; c++) TABLE[c] = 3; // A-Z → 0b11
+  for (let c = 97; c <= 122; c++) TABLE[c] = 3; // a-z → 0b11
+  TABLE[95] = 3; // _
+  TABLE[58] = 3; // :
+
+  // Subsequent chars only: 0–9, -, ., ·
+  for (let c = 48; c <= 57; c++) TABLE[c] = 2; // 0-9 → 0b10
+  TABLE[45] = 2; // -
+  TABLE[46] = 2; // .
+  TABLE[183] = 2; // · (middle dot)
+})();
+
+// extend "both" (bitmask |= 2) for symbols allowed both first & next
+// Already done for A-Z, a-z, _, :
 
 /**
  * Validates whether an attribute name is safe according to the specified rules:
@@ -12,62 +31,27 @@ export const SAFE_ATTRIBUTE_REGEX = /^[A-Za-z_:][A-Za-z0-9_:.-\u00B7]*$/;
  * @param attributeName The attribute name to validate
  * @returns True if the attribute name is safe, false otherwise
  */
-export function isAttributeNameSafe(attributeName: string): boolean {
-  if (typeof attributeName !== "string" || !attributeName) {
-    return false;
-  }
-
-  if (256 < attributeName.length) {
-    return false; // Prevent excessively long attribute names
-  }
-
-  return SAFE_ATTRIBUTE_REGEX.test(attributeName);
-}
-
 /**
- * Alternative non-regex implementation for specific high-performance use cases
- * @param attributeName The attribute name to validate
- * @returns True if the attribute name is safe, false otherwise
+ * Lookup tables for ASCII characters.
+ * 1 = allowed, 0 = forbidden.
+ * Length is exactly 256.
  */
-export function isAttributeNameSafeNonRegex(attributeName: string): boolean {
-  const len = attributeName.length;
+/**
+ * Ultra-fast ASCII attribute validator using two lookup tables.
+ */
+export function isAttributeNameSafeBranchless(name: string): boolean {
+  const len = name.length;
+  if (len === 0 || len > 256) return false;
 
-  if (typeof attributeName !== "string" || !attributeName || 256 < len) {
-    return false;
-  }
+  // First char must satisfy (TABLE[c] & 1) !== 0
+  let c = name.charCodeAt(0);
+  if (c >= 256 || (TABLE[c]! & 1) === 0) return false;
 
-  const firstCharCode = attributeName.charCodeAt(0);
-  if (!isValidFirstChar(firstCharCode)) {
-    return false;
-  }
-
+  // Next chars: (TABLE[c] & 2) !== 0
   for (let i = 1; i < len; i++) {
-    if (!isValidSubsequentChar(attributeName.charCodeAt(i))) {
-      return false;
-    }
+    c = name.charCodeAt(i);
+    if (c >= 256 || (TABLE[c]! & 2) === 0) return false;
   }
 
   return true;
-}
-
-function isValidFirstChar(charCode: number): boolean {
-  return (
-    (charCode >= 65 && charCode <= 90) || // A-Z
-    (charCode >= 97 && charCode <= 122) || // a-z
-    charCode === 95 || // _
-    charCode === 58 // :
-  );
-}
-
-function isValidSubsequentChar(charCode: number): boolean {
-  return (
-    (charCode >= 65 && charCode <= 90) || // A-Z
-    (charCode >= 97 && charCode <= 122) || // a-z
-    (charCode >= 48 && charCode <= 57) || // 0-9
-    charCode === 95 || // _
-    charCode === 58 || // :
-    charCode === 45 || // -
-    charCode === 46 || // .
-    charCode === 183 // ·
-  );
 }
