@@ -4,14 +4,16 @@ import {
   linkSourceToObserverUnsafe,
   unlinkSourceFromObserverUnsafe,
   unlinkAllObserversUnsafe,
-} from "../../src/graph/process/graph.intrusive";
+} from "../../src/graph/process/graph.methods";
 
-import { linkEdge, unlinkEdge } from "../../src/graph/process/graph.linker";
-import { GraphNode } from "../../src/graph/graph.node";
+import { GraphNode } from "../../src/graph/process/graph.node";
+import { GraphService } from "../../src/graph/graph.contract";
+
+const r = new GraphService();
 
 /** Create node */
 function makeNode(): GraphNode {
-  return new GraphNode();
+  return new GraphNode(0);
 }
 
 /** Collect OUT edges of a node (edges: node → observer) */
@@ -41,17 +43,17 @@ describe("DAG O(1) intrusive graph benchmarks (edge-based)", () => {
   // 1. Basic 1k link/unlink cycles for both APIs
   // ──────────────────────────────────────────────────────────────
 
-  bench("linkEdge + unlinkEdge (1k ops)", () => {
+  bench("GraphService.addObserver/removeObserver (1k ops)", () => {
     const A = makeNode();
     const B = makeNode();
 
     for (let i = 0; i < 1000; i++) {
-      linkEdge(A, B);
-      unlinkEdge(A, B);
+      r.addObserver(A, B);
+      r.removeObserver(A, B);
     }
   });
 
-  bench("linkSourceToObserverUnsafe + unlinkSourceFromObserverUnsafe (1k ops)", () => {
+  bench("Unsafe link/unlink (1k ops)", () => {
     const A = makeNode();
     const B = makeNode();
 
@@ -73,8 +75,8 @@ describe("DAG O(1) intrusive graph benchmarks (edge-based)", () => {
       const b = nodes[(i * 17) % nodes.length]!;
 
       if (a !== b) {
-        linkEdge(a, b);
-        if (i % 2 === 0) unlinkEdge(a, b);
+        r.addObserver(a, b);
+        if (i % 2 === 0) r.removeObserver(a, b);
       }
     }
   });
@@ -87,7 +89,7 @@ describe("DAG O(1) intrusive graph benchmarks (edge-based)", () => {
     const source = makeNode();
     const observers = Array.from({ length: 1000 }, makeNode);
 
-    for (const obs of observers) linkEdge(source, obs);
+    for (const obs of observers) r.addObserver(source, obs);
   });
 
   // ──────────────────────────────────────────────────────────────
@@ -98,23 +100,23 @@ describe("DAG O(1) intrusive graph benchmarks (edge-based)", () => {
     const source = makeNode();
     const observers = Array.from({ length: 1000 }, makeNode);
 
-    for (const obs of observers) linkEdge(source, obs);
+    for (const obs of observers) r.addObserver(source, obs);
     unlinkAllObserversUnsafe(source);
   });
 
   // ──────────────────────────────────────────────────────────────
-  // 5. Star unlink piecewise (1k × unlinkEdge)
+  // 5. Star unlink piecewise (corrected)
   // ──────────────────────────────────────────────────────────────
 
-  bench("star unlink piecemeal: individual unlinkEdge for each observer", () => {
+  bench("star unlink piecemeal: remove each observer individually", () => {
     const source = makeNode();
     const observers = Array.from({ length: 1000 }, makeNode);
 
-    for (const obs of observers) linkEdge(source, obs);
+    for (const obs of observers) r.addObserver(source, obs);
 
-    for (const obs of observers) unlinkEdge(source, obs);
+    // Correct: removeObserver, not addObserver
+    for (const obs of observers) r.removeObserver(source, obs);
   });
-
 
   // ──────────────────────────────────────────────────────────────
   // 7. Random DAG simulation (10k edges)
@@ -137,15 +139,14 @@ describe("DAG O(1) intrusive graph benchmarks (edge-based)", () => {
   bench("counting observer/source degree: 1k nodes, sparse connections", () => {
     const nodes = Array.from({ length: 1000 }, makeNode);
 
-    // Sparse DAG formation
+    // Sparse layering: DAG i → (i+1..i+4)
     for (let i = 0; i < 1000; i++) {
       const src = nodes[i]!;
       for (let j = i + 1; j < Math.min(i + 5, nodes.length); j++) {
-        linkEdge(src, nodes[j]!);
+        r.addObserver(src, nodes[j]!);
       }
     }
 
-    // Count degrees
     let sumOut = 0;
     let sumIn = 0;
 

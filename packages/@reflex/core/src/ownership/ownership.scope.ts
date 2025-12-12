@@ -1,5 +1,4 @@
-import { createOwner } from "./ownership.core"
-import { IOwnership } from "./ownership.type"
+import { OwnershipNode } from "./ownership.node";
 
 /**
  * OwnershipScope class: maintains the current owner context.
@@ -13,13 +12,13 @@ import { IOwnership } from "./ownership.type"
  *  - createScope(fn, parent?): T
  */
 export class OwnershipScope {
-  private _current: IOwnership | null = null;
+  private _current: OwnershipNode | null = null;
 
-  getOwner(): IOwnership | null {
+  getOwner(): OwnershipNode | null {
     return this._current;
   }
 
-  withOwner<T>(owner: IOwnership, fn: () => T): T {
+  withOwner<T>(owner: OwnershipNode, fn: () => T): T {
     const prev = this._current;
     this._current = owner;
 
@@ -30,7 +29,7 @@ export class OwnershipScope {
     }
   }
 
-  createScope<T>(fn: () => T, parent: IOwnership | null = null): T {
+  createScope<T>(fn: () => T, parent: OwnershipNode | null = null): T {
     const owner = createOwner(parent ?? this._current);
     return this.withOwner(owner, fn);
   }

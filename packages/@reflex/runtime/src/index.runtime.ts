@@ -1,63 +1,18 @@
-export interface ReactiveContext<T> {
-  /** Текущая активная реакция */
-  current?: T;
-  /** Массив всех считанных реакций в текущем проходе */
-  gets: T[];
-  /** Индекс для трекинга обращений */
-  index: number;
+class Runtime {
+  readonly layout: ICausalLayout;
+  readonly graph: IGraph;
+  readonly scheduler: IScheduler;
+
+  constructor(layoutCapacity: number, graph: IGraph, scheduler: IScheduler) {
+    this.layout.alloc(layoutCapacity);
+    this.graph = graph;
+    this.scheduler = scheduler;
+  }
+
+  createGraphNode() {}
 }
 
-export interface ReactiveRuntime<T = unknown> {
-  /** Начать вычисление реактивной функции */
-  begin(reaction: T): void;
-  /** Завершить вычисление реактивной функции */
-  end(): void;
-  /** Вернуть глобальную эпоху */
-  getEpoch(): number;
-  /** Перейти к следующей глобальной эпохе */
-  nextEpoch(): number;
-  /** Текущий контекст выполнения */
-  readonly context: ReactiveContext<T> | null;
-  /** Очередь отложенных операций (если нужна) */
-  readonly queue: T[];
-}
-
-/**
- * Создаёт изолированный реактивный рантайм.
- * Можно иметь несколько независимых экземпляров (AppRuntime, WorkerRuntime и т.д.).
- */
-export function createReactiveRuntime<T = 1>(): ReactiveRuntime<T> {
-  let epoch = 0;
-  const queue: T[] = [];
-
-  let context: ReactiveContext<T> | null = null;
-
-  let first, second;
-
-  return {
-    begin(reaction = ((first = 1), (second = 1)) as T) {
-      context = { current: reaction, gets: [], index: 0 };
-    },
-
-    end() {
-      context = null;
-    },
-
-    getEpoch() {
-      return epoch;
-    },
-
-    nextEpoch() {
-      return ++epoch;
-    },
-
-    get context() {
-      return context;
-    },
-
-    queue,
-  };
-}
+export default Runtime;
 
 // const AppRuntime = createReactiveRuntime();
 // const WorkerRuntime = createReactiveRuntime();
@@ -69,5 +24,4 @@ export function createReactiveRuntime<T = 1>(): ReactiveRuntime<T> {
 // // worker работает независимо
 // WorkerRuntime.beginComputation(otherReaction);
 // WorkerRuntime.track(signalB);
-// WorkerRuntime.endComputation();
-
+// // WorkerRuntime.endComputation();

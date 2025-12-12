@@ -1,28 +1,30 @@
+// ownership.node.ts
+
 /**
  * @file ownership.node.ts
  *
- * Optimized OwnershipNode class with fixed layout and bound methods.
+ * Optimized OwnershipNode class with fixed layout and prototype methods.
  *
- * Replaces interface-based OwnershipNode with a concrete class
- * for stable hidden class and efficient V8 JIT compilation.
- *
- * Layout (10 fields):
- *   - parent, firstChild, lastChild, nextSibling, prevSibling (5 ptrs)
- *   - context (1 ptr, lazy-initialized)
- *   - cleanups (1 ptr, lazy-initialized)
- *   - childCount, flags, epoch, contextEpoch (4 numerics)
- *
- * All fields are initialized in constructor.
- * All methods bound to prototype for monomorphic call sites.
+ * Layout:
+ *   - tree links: _parent, _firstChild, _lastChild, _nextSibling, _prevSibling
+ *   - context:    _context (lazy, via prototype chain)
+ *   - cleanups:   _cleanups (lazy)
+ *   - counters:   _childCount, _flags, _epoch, _contextEpoch
  */
 
-import OwnershipDisposeError from "./ownership.error";
+import { DISPOSED } from "../graph/process/graph.constants";
+import { CausalCoords } from "../storage/config/CausalCoords";
 import {
-  type ContextKeyType,
-  DisposalStrategy,
-  DISPOSED,
+  createContextLayer,
+  contextProvide,
+  contextLookup,
+  contextHasOwn,
+} from "./ownership.context";
+import type {
+  ContextKeyType,
+  IOwnership,
   IOwnershipContextRecord,
-} from "./ownership.type";
+} from "./ownership.contract";
 
 export class OwnershipNode {
   // Tree links
@@ -32,38 +34,36 @@ export class OwnershipNode {
   _nextSibling: OwnershipNode | null = null;
   _prevSibling: OwnershipNode | null = null;
 
-  // Context (lazy-initialized)
-  _context: Record<string, unknown> | null = null;
+  // Context (lazy)
+  _context: IOwnershipContextRecord | null = null;
 
-  // Cleanup handlers
-  _cleanups: (() => void)[] | null = null;
+  // Cleanup handlers (lazy)
+  _cleanups: NoneToVoidFn[] | null = null;
 
   // Counters & state
-  _childCount: number = 0;
-  _flags: number = 0;
-  _epoch: number = 0;
-  _contextEpoch: number = 0;
+  _childCount = 0;
+  _flags = 0;
+
+  _causal: CausalCoords = {
+    t: 0,
+    v: 0,
+    g: 0,
+    s: 0,
+  };
 
   /**
-   * appendChild: Add child to this owner's children list.
-   * O(1) operation, no context copying on link.
-   *
-   * Invariants enforced:
-   * - child._parent always points to correct parent
-   * - doubly-linked sibling chain is consistent
-   * - _firstChild/_lastChild pointers are correct
-   * - _childCount reflects actual children count
+   * Append child to the end of this owner's children list.
+   * O(1), keeps doubly-linked sibling chain consistent.
    */
   appendChild(child: OwnershipNode): void {
-    // Early exit if already disposed
+    // disposed owners silently ignore structural changes
     if (this._flags & DISPOSED) return;
 
-    // Detach from previous parent if exists
+    // reparent if needed
     if (child._parent !== null) {
       child._parent.removeChild(child);
     }
 
-    // Link as last child
     child._parent = this;
     child._nextSibling = null;
     child._prevSibling = this._lastChild;
@@ -71,7 +71,6 @@ export class OwnershipNode {
     if (this._lastChild !== null) {
       this._lastChild._nextSibling = child;
     } else {
-      // Empty list case: child becomes first AND last
       this._firstChild = child;
     }
 
@@ -80,37 +79,21 @@ export class OwnershipNode {
   }
 
   /**
-   * removeChild: Remove child from this owner's children list.
-   * O(1) operation.
-   *
-   * Invariants enforced:
-   * - only removes if child._parent === this (ownership check)
-   * - maintains doubly-linked list consistency
-   * - updates _firstChild/_lastChild boundary pointers
-   * - decrements _childCount atomically with removal
+   * Remove child from this owner's children list.
+   * O(1), no recursion, no side effects on child subtree.
    */
   removeChild(child: OwnershipNode): void {
-    // Invariant check: child must belong to this parent
     if (child._parent !== this) return;
 
     const prev = child._prevSibling;
     const next = child._nextSibling;
 
-    // Update previous sibling or parent's _firstChild
-    if (prev !== null) {
-      prev._nextSibling = next;
-    } else {
-      this._firstChild = next;
-    }
+    if (prev !== null) prev._nextSibling = next;
+    else this._firstChild = next;
 
-    // Update next sibling or parent's _lastChild
-    if (next !== null) {
-      next._prevSibling = prev;
-    } else {
-      this._lastChild = prev;
-    }
+    if (next !== null) next._prevSibling = prev;
+    else this._lastChild = prev;
 
-    // Clear child's links (full detachment)
     child._parent = null;
     child._prevSibling = null;
     child._nextSibling = null;
@@ -118,21 +101,16 @@ export class OwnershipNode {
   }
 
   /**
-   * onScopeCleanup: Register a cleanup callback.
-   * Lazily allocates cleanups array on first call.
+   * Register a cleanup callback to be executed when this scope is disposed.
    *
-   * Invariants enforced:
-   * - cannot add cleanups to disposed nodes
-   * - cleanups array allocated only when needed
-   * - preserves registration order for LIFO execution
+   * - Allocates cleanup array lazily on first use.
+   * - Throws if the node is already disposed.
    */
   onScopeCleanup(fn: NoneToVoidFn): void {
-    // Strict invariant: disposed nodes cannot accept new cleanups
     if (this._flags & DISPOSED) {
-      throw new OwnershipDisposeError(["Cannot add cleanup to disposed owner"]);
+      return;
     }
 
-    // Lazy allocation pattern
     if (this._cleanups === null) {
       this._cleanups = [];
     }
@@ -141,27 +119,19 @@ export class OwnershipNode {
   }
 
   /**
-   * dispose: Iterative DFS traversal, no recursion.
-   * Processes tree bottom-up, runs cleanups, clears links.
+   * Dispose this owner and its entire subtree.
    *
-   * Invariants enforced:
-   * - idempotent: multiple dispose calls are safe
-   * - post-order traversal (children before parents)
-   * - cleanup execution in reverse registration order (LIFO)
-   * - all tree links cleared after disposal
-   * - _flags set to DISPOSED atomically
+   * - Non-recursive DFS (explicit stack)
+   * - Post-order: children before parents
+   * - Cleanups executed in LIFO order
+   * - Idempotent: repeated calls are safe
    */
-  dispose(strategy?: DisposalStrategy): void {
-    // Idempotency: early exit if already disposed
+  dispose(): void {
     if (this._flags & DISPOSED) return;
 
-    const { beforeDispose, afterDispose, onError } = strategy ?? {};
-
-    beforeDispose?.([this]);
-
-    // Phase 1: Collect all nodes in DFS post-order using explicit stack
+    // Phase 1: collect nodes in post-order
     const toDispose: OwnershipNode[] = [];
-    const stack: Array<{ node: OwnershipNode; phase: number }> = [
+    const stack: Array<{ node: OwnershipNode; phase: 0 | 1 }> = [
       { node: this, phase: 0 },
     ];
 
@@ -170,7 +140,6 @@ export class OwnershipNode {
       const current = entry.node;
 
       if (entry.phase === 0) {
-        // First visit: push children in reverse order for post-order traversal
         entry.phase = 1;
         let child = current._lastChild;
         while (child !== null) {
@@ -178,7 +147,6 @@ export class OwnershipNode {
           child = child._prevSibling;
         }
       } else {
-        // Second visit: process node (children already processed)
         stack.pop();
         if (!(current._flags & DISPOSED)) {
           toDispose.push(current);
@@ -186,37 +154,32 @@ export class OwnershipNode {
       }
     }
 
-    // Phase 2: Run cleanups in post-order (children → parents)
+    // Phase 2: run cleanups and detach nodes
     let errorCount = 0;
     let firstError: unknown;
 
     for (let i = 0; i < toDispose.length; i++) {
       const n = toDispose[i]!;
 
-      // Skip if somehow already disposed (shouldn't happen but defensive)
       if (n._flags & DISPOSED) continue;
 
       const cleanups = n._cleanups;
       n._cleanups = null;
 
-      // Execute cleanups in LIFO order (reverse of registration)
       if (cleanups !== null) {
         for (let j = cleanups.length - 1; j >= 0; j--) {
           const fn = cleanups[j];
-          if (fn === undefined) continue;
-
+          if (!fn) continue;
           try {
             fn();
           } catch (err) {
             if (firstError === undefined) firstError = err;
             errorCount++;
-            onError?.(err, this);
           }
         }
       }
 
-      // Critical section: atomically detach from tree and mark disposed
-      // Detach from sibling chain
+      // detach from parent/siblings
       if (n._prevSibling !== null) {
         n._prevSibling._nextSibling = n._nextSibling;
       } else if (n._parent !== null) {
@@ -229,12 +192,11 @@ export class OwnershipNode {
         n._parent._lastChild = n._prevSibling;
       }
 
-      // Decrement parent's child count
       if (n._parent !== null) {
         n._parent._childCount--;
       }
 
-      // Clear all references (enable GC)
+      // reset links and state
       n._firstChild = null;
       n._lastChild = null;
       n._nextSibling = null;
@@ -243,14 +205,10 @@ export class OwnershipNode {
       n._context = null;
       n._childCount = 0;
 
-      // Mark as disposed (final state transition)
       n._flags = DISPOSED;
     }
 
-    afterDispose?.([this], errorCount);
-
-    // Error reporting (only if no custom handler)
-    if (errorCount > 0 && onError === undefined) {
+    if (errorCount > 0) {
       console.error(
         errorCount === 1
           ? "Error during ownership dispose:"
@@ -261,77 +219,59 @@ export class OwnershipNode {
   }
 
   /**
-   * getContext: Retrieve or lazily initialize context.
-   *
-   * Invariants enforced:
-   * - context inherits from parent via prototype chain
-   * - lazy initialization on first access
-   * - null prototype for root contexts
+   * Return existing context or lazily create a new layer that
+   * inherits from parent context via prototype chain.
    */
   getContext(): IOwnershipContextRecord {
-    // Fast path: context already exists
-    if (this._context !== null) {
-      return this._context;
-    }
+    if (this._context !== null) return this._context;
 
-    // Lazy initialization with proper prototype chain
-    const parentCtx = this._parent?._context;
-    const ctx =
-      parentCtx !== null && parentCtx !== undefined
-        ? Object.create(parentCtx)
-        : Object.create(null);
-
+    const parentCtx = this._parent?._context ?? null;
+    const ctx = createContextLayer(parentCtx);
     this._context = ctx;
     return ctx;
   }
 
   /**
-   * provide: Set context key/value.
-   *
-   * Invariants enforced:
-   * - cannot provide owner itself (prevents circular references)
-   * - ensures context exists before setting
+   * Provide a value for a given context key in this node.
    */
   provide(key: ContextKeyType, value: unknown): void {
-    // Invariant: prevent self-reference in context
-    if (value === this) {
-      throw new Error("Cannot provide owner itself into context");
-    }
-
     const ctx = this.getContext();
-    ctx[key] = value;
+    contextProvide(ctx, key, value);
   }
 
   /**
-   * inject: Lookup context value (walks up parent chain).
-   *
-   * Invariants enforced:
-   * - searches own context first, then walks up parent chain
-   * - uses hasOwn to check only own properties (not inherited)
-   * - returns undefined for missing keys (no exceptions)
+   * Lookup a value in the context chain (this node → parents).
    */
   inject<T>(key: ContextKeyType): T | undefined {
-    let current: OwnershipNode | null = this;
-
-    while (current !== null) {
-      // Check only own properties (not inherited via prototype chain)
-      if (current._context !== null && key in current._context) {
-        return current._context[key] as T;
-      }
-      current = current._parent;
-    }
-
-    return undefined;
+    return contextLookup<T>(this, key);
   }
 
   /**
-   * hasOwn: Check if key exists locally (not in parent chain).
-   *
-   * Invariants enforced:
-   * - checks only this node's context, not parent chain
-   * - uses hasOwn for correct own-property detection
+   * Check if this node's own context has the given key (no parent lookup).
    */
   hasOwn(key: ContextKeyType): boolean {
-    return this._context !== null && Object.hasOwn(this._context, key);
+    return contextHasOwn(this._context, key);
   }
 }
+
+/**
+ * createOwner: Factory for creating ownership nodes.
+ *
+ * Creates a new OwnershipNode with all fields initialized.
+ * Methods are bound to OwnershipNode.prototype for monomorphic calls.
+ * If parent is provided, automatically appends to parent's child list.
+ */
+export function createOwner(
+  parent: OwnershipNode | null = null,
+): OwnershipNode {
+  const owner = new OwnershipNode();
+
+  if (parent !== null) {
+    parent.appendChild(owner);
+  }
+
+  return owner;
+}
+
+// If тебе нужно "публичный" тип IOwnership из этого файла:
+export type { IOwnership };

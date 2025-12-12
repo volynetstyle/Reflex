@@ -4,9 +4,8 @@ import {
   unlinkSourceFromObserverUnsafe,
   unlinkAllObserversUnsafe,
   unlinkAllSourcesUnsafe,
-} from "../../src/graph/process/graph.intrusive";
-
-import { GraphNode, GraphEdge } from "../../src/graph/graph.node";
+} from "../../src/graph/process/graph.methods";
+import { GraphNode, GraphEdge } from "../../src/graph/process/graph.node";
 
 // helpers
 function collectOutEdges(node: GraphNode): GraphEdge[] {
@@ -30,10 +29,9 @@ function collectInEdges(node: GraphNode): GraphEdge[] {
 }
 
 describe("Edge-based Intrusive Graph", () => {
-
   it("creates symmetric edge between source and observer", () => {
-    const source = new GraphNode();
-    const observer = new GraphNode();
+    const source = new GraphNode(0);
+    const observer = new GraphNode(0);
 
     const e = linkSourceToObserverUnsafe(source, observer);
 
@@ -53,10 +51,10 @@ describe("Edge-based Intrusive Graph", () => {
   });
 
   it("supports multiple observers for one source", () => {
-    const source = new GraphNode();
-    const o1 = new GraphNode();
-    const o2 = new GraphNode();
-    const o3 = new GraphNode();
+    const source = new GraphNode(0);
+    const o1 = new GraphNode(0);
+    const o2 = new GraphNode(0);
+    const o3 = new GraphNode(0);
 
     const e1 = linkSourceToObserverUnsafe(source, o1);
     const e2 = linkSourceToObserverUnsafe(source, o2);
@@ -78,10 +76,10 @@ describe("Edge-based Intrusive Graph", () => {
   });
 
   it("supports multiple sources for one observer", () => {
-    const observer = new GraphNode();
-    const s1 = new GraphNode();
-    const s2 = new GraphNode();
-    const s3 = new GraphNode();
+    const observer = new GraphNode(0);
+    const s1 = new GraphNode(0);
+    const s2 = new GraphNode(0);
+    const s3 = new GraphNode(0);
 
     const e1 = linkSourceToObserverUnsafe(s1, observer);
     const e2 = linkSourceToObserverUnsafe(s2, observer);
@@ -100,8 +98,8 @@ describe("Edge-based Intrusive Graph", () => {
   });
 
   it("unlinkSourceFromObserverUnsafe removes only matching edge", () => {
-    const observer = new GraphNode();
-    const source = new GraphNode();
+    const observer = new GraphNode(0);
+    const source = new GraphNode(0);
 
     linkSourceToObserverUnsafe(source, observer);
 
@@ -119,10 +117,10 @@ describe("Edge-based Intrusive Graph", () => {
   });
 
   it("unlinkSourceFromObserverUnsafe removes middle of out-list", () => {
-    const observer = new GraphNode();
-    const s1 = new GraphNode();
-    const s2 = new GraphNode();
-    const s3 = new GraphNode();
+    const observer = new GraphNode(0);
+    const s1 = new GraphNode(0);
+    const s2 = new GraphNode(0);
+    const s3 = new GraphNode(0);
 
     linkSourceToObserverUnsafe(s1, observer);
     linkSourceToObserverUnsafe(s2, observer);
@@ -138,10 +136,10 @@ describe("Edge-based Intrusive Graph", () => {
   });
 
   it("unlinkAllObserversUnsafe clears all out-edges", () => {
-    const source = new GraphNode();
-    const o1 = new GraphNode();
-    const o2 = new GraphNode();
-    const o3 = new GraphNode();
+    const source = new GraphNode(0);
+    const o1 = new GraphNode(0);
+    const o2 = new GraphNode(0);
+    const o3 = new GraphNode(0);
 
     linkSourceToObserverUnsafe(source, o1);
     linkSourceToObserverUnsafe(source, o2);
@@ -162,10 +160,10 @@ describe("Edge-based Intrusive Graph", () => {
   });
 
   it("unlinkAllSourcesUnsafe clears all in-edges", () => {
-    const observer = new GraphNode();
-    const s1 = new GraphNode();
-    const s2 = new GraphNode();
-    const s3 = new GraphNode();
+    const observer = new GraphNode(0);
+    const s1 = new GraphNode(0);
+    const s2 = new GraphNode(0);
+    const s3 = new GraphNode(0);
 
     linkSourceToObserverUnsafe(s1, observer);
     linkSourceToObserverUnsafe(s2, observer);
@@ -183,5 +181,4 @@ describe("Edge-based Intrusive Graph", () => {
     expect(s2.firstOut).toBeNull();
     expect(s3.firstOut).toBeNull();
   });
-
 });

@@ -82,12 +82,7 @@
  *   type Version = number & { readonly __tag: "Version" };
  *   ...
  */
-interface CausalCoords<
-  T extends number,
-  V extends number,
-  G extends number,
-  S extends number,
-> {
+interface CausalCoords<T = number, V = number, G = number, S = number> {
   /** t — causal epoch, t ∈ ℤ_{2^{T_BITS}} */
   t: T;
   /** v — value version, v ∈ ℤ_{2^{V_BITS}} */

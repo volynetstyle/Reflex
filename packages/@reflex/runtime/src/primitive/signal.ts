@@ -1,4 +1,3 @@
-
 class Signal<T> {
   private value: T;
   private readonly owner: IOwnership | null;
@@ -35,15 +34,21 @@ class ReactiveValue<T> {
   }
 }
 
-export const createSignal = <T>(
-  owner: IOwnership | null,
-  value: T,
-): ReactiveValue<T> => {
-  const node = new GraphNode();
-  const signal = new Signal(value, owner, node);
-  const reactive = new ReactiveValue(signal);
-  // owner?.onScopeCleanup(signal.cleanup);
-  return reactive;
-};
+export function createSignal<T>(initial: T): IReactiveValue<T> {
+  const { layout, graph, scheduler } = RUNTIME;
 
-const s = createSignal({}, 1);
+  const index = layout.alloc();
+  const node = graph.createNode(index);
+
+  const signal = new Signal(initial, node, layout, scheduler);
+
+  function read(): T {
+    return signal.get();
+  }
+  const reactive = read as IReactiveValue<T>;
+  reactive.set = (v: T) => signal.set(v);
+  reactive.node = node;
+
+  owner?.onScopeCleanup(() => signal.cleanup());
+  return reactive;
+}
