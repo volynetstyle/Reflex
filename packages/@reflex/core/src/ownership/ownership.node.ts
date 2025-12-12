@@ -22,256 +22,190 @@ import {
 } from "./ownership.context";
 import type {
   ContextKeyType,
-  IOwnership,
   IOwnershipContextRecord,
 } from "./ownership.contract";
 
 export class OwnershipNode {
-  // Tree links
   _parent: OwnershipNode | null = null;
   _firstChild: OwnershipNode | null = null;
   _lastChild: OwnershipNode | null = null;
   _nextSibling: OwnershipNode | null = null;
   _prevSibling: OwnershipNode | null = null;
 
-  // Context (lazy)
+  // payload
   _context: IOwnershipContextRecord | null = null;
-
-  // Cleanup handlers (lazy)
   _cleanups: NoneToVoidFn[] | null = null;
 
-  // Counters & state
+  // state
   _childCount = 0;
   _flags = 0;
 
+  // flat causal coords (even if unused yet)
   _causal: CausalCoords = {
     t: 0,
     v: 0,
     g: 0,
     s: 0,
   };
+}
 
-  /**
-   * Append child to the end of this owner's children list.
-   * O(1), keeps doubly-linked sibling chain consistent.
-   */
-  appendChild(child: OwnershipNode): void {
-    // disposed owners silently ignore structural changes
-    if (this._flags & DISPOSED) return;
+export class OwnershipService {
+  createOwner = (parent: OwnershipNode | null = null): OwnershipNode => {
+    const node = new OwnershipNode();
+    if (parent !== null) this.appendChild(parent, node);
+    return node;
+  };
 
-    // reparent if needed
-    if (child._parent !== null) {
-      child._parent.removeChild(child);
+  appendChild = (parent: OwnershipNode, child: OwnershipNode): void => {
+    if (parent._flags & DISPOSED) return;
+
+    // SAFE reparent
+    const oldParent = child._parent;
+    if (oldParent !== null) {
+      this.removeChild(oldParent, child);
     }
 
-    child._parent = this;
+    child._parent = parent;
+    child._prevSibling = parent._lastChild;
     child._nextSibling = null;
-    child._prevSibling = this._lastChild;
 
-    if (this._lastChild !== null) {
-      this._lastChild._nextSibling = child;
+    if (parent._lastChild !== null) {
+      parent._lastChild._nextSibling = child;
     } else {
-      this._firstChild = child;
+      parent._firstChild = child;
     }
 
-    this._lastChild = child;
-    this._childCount++;
-  }
+    parent._lastChild = child;
+    parent._childCount++;
+  };
 
-  /**
-   * Remove child from this owner's children list.
-   * O(1), no recursion, no side effects on child subtree.
-   */
-  removeChild(child: OwnershipNode): void {
-    if (child._parent !== this) return;
+  removeChild = (parent: OwnershipNode, child: OwnershipNode): void => {
+    if (child._parent !== parent) return;
+    if (parent._flags & DISPOSED) return;
 
     const prev = child._prevSibling;
     const next = child._nextSibling;
 
     if (prev !== null) prev._nextSibling = next;
-    else this._firstChild = next;
+    else parent._firstChild = next;
 
     if (next !== null) next._prevSibling = prev;
-    else this._lastChild = prev;
+    else parent._lastChild = prev;
 
     child._parent = null;
     child._prevSibling = null;
     child._nextSibling = null;
-    this._childCount--;
-  }
 
-  /**
-   * Register a cleanup callback to be executed when this scope is disposed.
-   *
-   * - Allocates cleanup array lazily on first use.
-   * - Throws if the node is already disposed.
-   */
-  onScopeCleanup(fn: NoneToVoidFn): void {
-    if (this._flags & DISPOSED) {
-      return;
-    }
+    parent._childCount--;
+  };
 
-    if (this._cleanups === null) {
-      this._cleanups = [];
-    }
+  dispose = (root: OwnershipNode): void => {
+    if (root._flags & DISPOSED) return;
 
-    this._cleanups.push(fn);
-  }
+    let node: OwnershipNode | null = root;
 
-  /**
-   * Dispose this owner and its entire subtree.
-   *
-   * - Non-recursive DFS (explicit stack)
-   * - Post-order: children before parents
-   * - Cleanups executed in LIFO order
-   * - Idempotent: repeated calls are safe
-   */
-  dispose(): void {
-    if (this._flags & DISPOSED) return;
+    while (node !== null) {
+      const last: OwnershipNode | null = node._lastChild;
 
-    // Phase 1: collect nodes in post-order
-    const toDispose: OwnershipNode[] = [];
-    const stack: Array<{ node: OwnershipNode; phase: 0 | 1 }> = [
-      { node: this, phase: 0 },
-    ];
-
-    while (stack.length > 0) {
-      const entry = stack[stack.length - 1]!;
-      const current = entry.node;
-
-      if (entry.phase === 0) {
-        entry.phase = 1;
-        let child = current._lastChild;
-        while (child !== null) {
-          stack.push({ node: child, phase: 0 });
-          child = child._prevSibling;
-        }
-      } else {
-        stack.pop();
-        if (!(current._flags & DISPOSED)) {
-          toDispose.push(current);
-        }
+      if (last !== null && !(last._flags & DISPOSED)) {
+        node = last;
+        continue;
       }
-    }
 
-    // Phase 2: run cleanups and detach nodes
-    let errorCount = 0;
-    let firstError: unknown;
+      const parent: OwnershipNode | null = node._parent;
 
-    for (let i = 0; i < toDispose.length; i++) {
-      const n = toDispose[i]!;
-
-      if (n._flags & DISPOSED) continue;
-
-      const cleanups = n._cleanups;
-      n._cleanups = null;
+      // run cleanups (LIFO)
+      const cleanups = node._cleanups;
+      node._cleanups = null;
 
       if (cleanups !== null) {
-        for (let j = cleanups.length - 1; j >= 0; j--) {
-          const fn = cleanups[j];
-          if (!fn) continue;
+        for (let i = cleanups.length - 1; i >= 0; i--) {
           try {
-            fn();
+            cleanups[i]?.();
           } catch (err) {
-            if (firstError === undefined) firstError = err;
-            errorCount++;
+            console.error("Error during ownership cleanup:", err);
           }
         }
       }
 
-      // detach from parent/siblings
-      if (n._prevSibling !== null) {
-        n._prevSibling._nextSibling = n._nextSibling;
-      } else if (n._parent !== null) {
-        n._parent._firstChild = n._nextSibling;
+      node._flags = DISPOSED;
+
+      if (parent !== null) {
+        const prev = node._prevSibling;
+        const next = node._nextSibling;
+
+        if (prev !== null) prev._nextSibling = next;
+        else parent._firstChild = next;
+
+        if (next !== null) next._prevSibling = prev;
+        else parent._lastChild = prev;
+
+        parent._childCount--;
       }
 
-      if (n._nextSibling !== null) {
-        n._nextSibling._prevSibling = n._prevSibling;
-      } else if (n._parent !== null) {
-        n._parent._lastChild = n._prevSibling;
-      }
+      // reset node
+      node._parent = null;
+      node._firstChild = null;
+      node._lastChild = null;
+      node._nextSibling = null;
+      node._prevSibling = null;
+      node._context = null;
+      node._childCount = 0;
 
-      if (n._parent !== null) {
-        n._parent._childCount--;
-      }
-
-      // reset links and state
-      n._firstChild = null;
-      n._lastChild = null;
-      n._nextSibling = null;
-      n._prevSibling = null;
-      n._parent = null;
-      n._context = null;
-      n._childCount = 0;
-
-      n._flags = DISPOSED;
+      node = parent;
     }
+  };
 
-    if (errorCount > 0) {
-      console.error(
-        errorCount === 1
-          ? "Error during ownership dispose:"
-          : `${errorCount} errors during ownership dispose. First error:`,
-        firstError,
-      );
-    }
-  }
+  /* ───────────── Context ───────────── */
 
-  /**
-   * Return existing context or lazily create a new layer that
-   * inherits from parent context via prototype chain.
-   */
-  getContext(): IOwnershipContextRecord {
-    if (this._context !== null) return this._context;
+  getContext = (node: OwnershipNode): IOwnershipContextRecord => {
+    let ctx = node._context;
+    if (ctx !== null) return ctx;
 
-    const parentCtx = this._parent?._context ?? null;
-    const ctx = createContextLayer(parentCtx);
-    this._context = ctx;
+    ctx = createContextLayer(node._parent?._context ?? null);
+    node._context = ctx;
     return ctx;
-  }
+  };
 
-  /**
-   * Provide a value for a given context key in this node.
-   */
-  provide(key: ContextKeyType, value: unknown): void {
-    const ctx = this.getContext();
-    contextProvide(ctx, key, value);
-  }
+  provide = (
+    node: OwnershipNode,
+    key: ContextKeyType,
+    value: unknown,
+  ): void => {
+    const FORBIDDEN_KEYS = new Set(["__proto__", "prototype", "constructor"]);
 
-  /**
-   * Lookup a value in the context chain (this node → parents).
-   */
-  inject<T>(key: ContextKeyType): T | undefined {
-    return contextLookup<T>(this, key);
-  }
+    if (value === node) {
+      throw new Error("Cannot provide owner itself");
+    }
 
-  /**
-   * Check if this node's own context has the given key (no parent lookup).
-   */
-  hasOwn(key: ContextKeyType): boolean {
-    return contextHasOwn(this._context, key);
-  }
+    if (typeof key === "string" && FORBIDDEN_KEYS.has(key)) {
+      throw new Error(`Forbidden context key: ${key}`);
+    }
+
+    contextProvide(this.getContext(node), key, value);
+  };
+
+  inject = <T>(node: OwnershipNode, key: ContextKeyType): T | undefined => {
+    return contextLookup<T>(node, key);
+  };
+
+  hasOwn = (node: OwnershipNode, key: ContextKeyType): boolean => {
+    const ctx = node._context;
+    return ctx !== null && contextHasOwn(ctx, key);
+  };
+
+  onScopeCleanup = (node: OwnershipNode, fn: NoneToVoidFn): void => {
+    if (node._flags & DISPOSED) return;
+
+    let arr = node._cleanups;
+    if (arr === null) {
+      arr = [];
+      node._cleanups = arr;
+    }
+    arr.push(fn);
+  };
 }
 
-/**
- * createOwner: Factory for creating ownership nodes.
- *
- * Creates a new OwnershipNode with all fields initialized.
- * Methods are bound to OwnershipNode.prototype for monomorphic calls.
- * If parent is provided, automatically appends to parent's child list.
- */
-export function createOwner(
-  parent: OwnershipNode | null = null,
-): OwnershipNode {
-  const owner = new OwnershipNode();
+type IOwnership = OwnershipService;
 
-  if (parent !== null) {
-    parent.appendChild(owner);
-  }
-
-  return owner;
-}
-
-// If тебе нужно "публичный" тип IOwnership из этого файла:
 export type { IOwnership };

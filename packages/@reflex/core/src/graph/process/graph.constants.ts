@@ -1,16 +1,15 @@
-import { type BitMask } from "../../object/utils/bitwise";
 
-const CLEAN: BitMask = 0;
+const CLEAN = 0;
 const CHECK = 1 << 0;
-const DIRTY: BitMask = 1 << 1;
-const DISPOSED: BitMask = 1 << 2;
-const DISPOSING: BitMask = 1 << 3;
-const SCHEDULED: BitMask = 1 << 4;
-const RUNNING: BitMask = 1 << 5;
-const ASYNC: BitMask = 1 << 6;
-const KIND_SOURCE: BitMask = 1 << 7;
-const KIND_COMPUTATION: BitMask = 1 << 8;
-const KIND_EFFECT: BitMask = 1 << 9;
+const DIRTY = 1 << 1;
+const DISPOSED = 1 << 2;
+const DISPOSING = 1 << 3;
+const SCHEDULED = 1 << 4;
+const RUNNING = 1 << 5;
+const ASYNC = 1 << 6;
+const KIND_SOURCE = 1 << 7;
+const KIND_COMPUTATION = 1 << 8;
+const KIND_EFFECT = 1 << 9;
 
 /**
  * Number of cells in the internal Uint32Array structures.

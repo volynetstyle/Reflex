@@ -31,31 +31,31 @@ export const linkSourceToObserverUnsafe = (
   source: GraphNode,
   observer: GraphNode,
 ): GraphEdge => {
-  const e = new GraphEdge(source, observer);
+  const edge = new GraphEdge(source, observer);
 
   // ----- OUT adjacency (source → observer)
   const lastOut = source.lastOut;
-  e.prevOut = lastOut;
-  e.nextOut = null;
+  edge.prevOut = lastOut;
+  edge.nextOut = null;
 
-  if (lastOut === null) source.firstOut = e;
-  else lastOut.nextOut = e;
+  if (lastOut === null) source.firstOut = edge;
+  else lastOut.nextOut = edge;
 
-  source.lastOut = e;
+  source.lastOut = edge;
   source.outCount++;
 
   // ----- IN adjacency (source → observer)
   const lastIn = observer.lastIn;
-  e.prevIn = lastIn;
-  e.nextIn = null;
+  edge.prevIn = lastIn;
+  edge.nextIn = null;
 
-  if (lastIn === null) observer.firstIn = e;
-  else lastIn.nextIn = e;
+  if (lastIn === null) observer.firstIn = edge;
+  else lastIn.nextIn = edge;
 
-  observer.lastIn = e;
+  observer.lastIn = edge;
   observer.inCount++;
 
-  return e;
+  return edge;
 };
 
 /**

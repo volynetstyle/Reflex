@@ -73,7 +73,6 @@
  *   - Simplified node recycling logic
  */
 
-import { __assert } from "../object/utils/assert";
 
 export interface UnrolledQueueOptions {
   /** Node (segment) size, must be a power of two for bitmask optimization */
@@ -90,11 +89,6 @@ export interface IUnrolledQueue<T> extends Iterable<T> {
 const NODE_POOL_MAX = 128;
 /** Default node size most stable for V8 (power of two) */
 const DEFAULT_NODE_SIZE = 2048 as const;
-
-function assertPowerOfTwo(n: number): void {
-  const cond = !Number.isInteger(n) || n <= 0 || (n & (n - 1)) !== 0;
-  __assert(cond, "nodeSize must be a positive power of two");
-}
 
 /**
  * Uses "one empty slot" semantics to differentiate
@@ -114,7 +108,6 @@ class RefNode<T> {
   next: RefNode<T> | null = null;
 
   constructor(size: number) {
-    assertPowerOfTwo(size);
     this.size = size;
     this.mask = size - 1;
     this.buffer = new Array<T | null>(size);
@@ -210,8 +203,6 @@ export class UnrolledQueue<T> implements Queueable<T>, IUnrolledQueue<T> {
 
   constructor(options: UnrolledQueueOptions = { nodeSize: DEFAULT_NODE_SIZE }) {
     const size = options.nodeSize;
-    assertPowerOfTwo(size);
-
     const node = RefNode.alloc<T>(size);
     this.#nodeSize = size;
     this.#head = node;

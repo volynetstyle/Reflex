@@ -1,3 +1,4 @@
+import { INITIAL_CAUSATION } from "../../storage/config/causal.phase";
 import { CausalCoords } from "../../storage/config/CausalCoords";
 import { CLEAN } from "./graph.constants";
 
@@ -35,19 +36,14 @@ const NON_EXIST: NodeIndex = -1;
 class GraphEdge {
   /** Source node of the edge */
   from: GraphNode;
-
   /** Target node of the edge */
   to: GraphNode;
-
   /** Previous edge in the outgoing list of `from` */
   prevOut: GraphEdge | null = null;
-
   /** Next edge in the outgoing list of `from` */
   nextOut: GraphEdge | null = null;
-
   /** Previous edge in the incoming list of `to` */
   prevIn: GraphEdge | null = null;
-
   /** Next edge in the incoming list of `to` */
   nextIn: GraphEdge | null = null;
 
@@ -103,36 +99,29 @@ class GraphEdge {
 class GraphNode {
   /** Index in the causal layout (t/v/g/s table), or NON_EXIST */
   id: NodeIndex = NON_EXIST;
-
   /** First outgoing dependency (this → observer) */
   firstOut: GraphEdge | null = null;
-
   /** Last outgoing dependency (this → observer) */
   lastOut: GraphEdge | null = null;
-
   /** First incoming dependency (source → this) */
   firstIn: GraphEdge | null = null;
-
   /** Last incoming dependency (source → this) */
   lastIn: GraphEdge | null = null;
-
   /** Number of outgoing edges */
   outCount: number = 0;
-
   /** Number of incoming edges */
   inCount: number = 0;
-
   /**
    * Bit-mask for node-level flags.
    * Initial state: CLEAN (defined in graph.constants).
    */
   flags: number = CLEAN;
 
-  _causal: CausalCoords = {
-    t: 0,
-    v: 0,
-    g: 0,
-    s: 0,
+  causal: CausalCoords = {
+    t: INITIAL_CAUSATION,
+    v: INITIAL_CAUSATION,
+    g: INITIAL_CAUSATION,
+    s: INITIAL_CAUSATION,
   };
 
   constructor(id: NodeIndex) {

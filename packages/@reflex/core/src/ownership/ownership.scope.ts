@@ -1,18 +1,23 @@
-import { OwnershipNode } from "./ownership.node";
+import { OwnershipNode, OwnershipService } from "./ownership.node";
 
 /**
- * OwnershipScope class: maintains the current owner context.
+ * OwnershipScope
  *
- * Replaces functional createOwnershipScope with a stable class
- * for better inlining and performance.
+ * Maintains the current ownership context (stack-like),
+ * without owning lifecycle or disposal responsibilities.
  *
- * Provides:
- *  - getOwner(): IOwnership | null
- *  - withOwner(owner, fn): T
- *  - createScope(fn, parent?): T
+ * Responsibilities:
+ *  - track current OwnershipNode
+ *  - provide safe withOwner switching
+ *  - create scoped owners via OwnershipService
  */
 export class OwnershipScope {
   private _current: OwnershipNode | null = null;
+  private readonly _service: OwnershipService;
+
+  constructor(service: OwnershipService) {
+    this._service = service;
+  }
 
   getOwner(): OwnershipNode | null {
     return this._current;
@@ -29,17 +34,32 @@ export class OwnershipScope {
     }
   }
 
-  createScope<T>(fn: () => T, parent: OwnershipNode | null = null): T {
-    const owner = createOwner(parent ?? this._current);
+  /**
+   * Create a new ownership scope.
+   *
+   * - Parent defaults to current owner
+   * - Does NOT auto-dispose the owner
+   *   (lifecycle is managed elsewhere)
+   */
+  createScope<T>(
+    fn: () => T,
+    parent: OwnershipNode | null = this._current,
+  ): T {
+    const owner = this._service.createOwner(parent);
     return this.withOwner(owner, fn);
   }
 }
 
 /**
  * Factory for creating a new OwnershipScope instance.
+ *
+ * OwnershipService is injected explicitly to avoid globals
+ * and enable deterministic ownership graphs.
  */
-export const createOwnershipScope = (): OwnershipScope => {
-  return new OwnershipScope();
-};
+export function createOwnershipScope(
+  service: OwnershipService,
+): OwnershipScope {
+  return new OwnershipScope(service);
+}
 
 export type { OwnershipScope as OwnershipScopeType };

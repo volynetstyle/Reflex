@@ -1,4 +1,4 @@
-import { NodeIndex, GraphNode } from "./process/graph.node";
+import { NodeIndex, GraphNode, GraphEdge } from "./process/graph.node";
 import {
   unlinkAllObserversBulkUnsafeForDisposal,
   unlinkAllSourcesChunkedUnsafe,
@@ -132,9 +132,8 @@ export class GraphService implements IGraph {
    *
    * No edges are implicitly created.
    */
-  createNode(layoutIndex: NodeIndex): GraphNode {
-    return new GraphNode(layoutIndex);
-  }
+  createNode = (layoutIndex: NodeIndex): GraphNode =>
+    new GraphNode(layoutIndex);
 
   /**
    * Destroys all structural connectivity of the given node:
@@ -145,26 +144,24 @@ export class GraphService implements IGraph {
    * After removal, the GraphNode becomes an isolated island.
    * Memory or layout cleanup must be handled elsewhere.
    */
-  removeNode(node: GraphNode): void {
-    unlinkAllObserversBulkUnsafeForDisposal(node);
-    unlinkAllSourcesChunkedUnsafe(node);
-  }
+  removeNode = (node: GraphNode): void => (
+    unlinkAllObserversBulkUnsafeForDisposal(node),
+    unlinkAllSourcesChunkedUnsafe(node)
+  );
 
   /**
    * Creates a directed edge source → observer.
    * Implementations must not check for duplicates or cycles.
    */
-  addObserver(source: GraphNode, observer: GraphNode): void {
+  addObserver = (source: GraphNode, observer: GraphNode): GraphEdge =>
     linkSourceToObserverUnsafe(source, observer);
-  }
 
   /**
    * Removes the directed edge source → observer, if it exists.
    * Otherwise a no-op.
    */
-  removeObserver(source: GraphNode, observer: GraphNode): void {
+  removeObserver = (source: GraphNode, observer: GraphNode): void =>
     unlinkSourceFromObserverUnsafe(source, observer);
-  }
 
   /**
    * Enumerates all observers of the given node.
@@ -172,13 +169,12 @@ export class GraphService implements IGraph {
    * Complexity: O(k), where k = out-degree.
    * No allocations.
    */
-  forEachObserver(node: GraphNode, fn: (observer: GraphNode) => void): void {
-    let edge = node.firstOut;
-    while (edge !== null) {
-      fn(edge.to);
-      edge = edge.nextOut;
-    }
-  }
+  forEachObserver = (
+    node: GraphNode,
+    fn: (observer: GraphNode) => void,
+  ): void => {
+    for (let e = node.firstOut; e !== null; e = e.nextOut) fn(e.to);
+  };
 
   /**
    * Enumerates all sources of the given node.
@@ -186,29 +182,23 @@ export class GraphService implements IGraph {
    * Complexity: O(k), where k = in-degree.
    * No allocations.
    */
-  forEachSource(node: GraphNode, fn: (source: GraphNode) => void): void {
-    let edge = node.firstIn;
-    while (edge !== null) {
-      fn(edge.from);
-      edge = edge.nextIn;
-    }
-  }
+  forEachSource = (node: GraphNode, fn: (source: GraphNode) => void): void => {
+    for (let e = node.firstIn; e !== null; e = e.nextIn) fn(e.from);
+  };
 
   /**
    * Returns true iff observer is present in the outgoing adjacency list
    * of the source node.
    */
-  hasObserver(source: GraphNode, observer: GraphNode): boolean {
-    return hasObserverUnsafe(source, observer);
-  }
+  hasObserver = (source: GraphNode, observer: GraphNode) =>
+    hasObserverUnsafe(source, observer);
 
   /**
    * Returns true iff source is present in the incoming adjacency list
    * of the observer node.
    */
-  hasSource(source: GraphNode, observer: GraphNode): boolean {
-    return hasSourceUnsafe(source, observer);
-  }
+  hasSource = (source: GraphNode, observer: GraphNode): boolean =>
+    hasSourceUnsafe(source, observer);
 
   /**
    * Re-binds the observer to a new source node.
@@ -220,11 +210,9 @@ export class GraphService implements IGraph {
    *
    * Must remain O(1) amortized.
    */
-  replaceSource(
+  replaceSource = (
     oldSource: GraphNode,
     newSource: GraphNode,
     observer: GraphNode,
-  ): void {
-    replaceSourceUnsafe(oldSource, newSource, observer);
-  }
+  ): void => replaceSourceUnsafe(oldSource, newSource, observer);
 }
