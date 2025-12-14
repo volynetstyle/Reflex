@@ -1,0 +1,53 @@
+{
+  "name": "@reflex/core",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Core reactive primitives",
+  "main": "./dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "license": "MIT",
+  "exports": {
+    ".": {      
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --build",
+    "test": "vitest run",
+    "bench": "vitest bench",
+    "bench:flame": "0x -- node dist/tests/ownership.run.js",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build",
+    "release": "changeset version && pnpm install && changeset publish",
+    "prepare": "husky"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@reflex/contract": "workspace:*",
+    "@types/node": "^24.10.1"
+  }
+}

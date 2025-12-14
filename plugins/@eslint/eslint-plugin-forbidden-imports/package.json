@@ -1,0 +1,19 @@
+{
+  "name": "@reflex/eslint-plugin-forbidden-imports",
+  "version": "0.1.0",
+  "description": "Prevents direct imports from @reflex/* in application code",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "peerDependencies": {
+    "eslint": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/estree": "^1.0.8"
+  }
+}

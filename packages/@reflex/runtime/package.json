@@ -1,0 +1,23 @@
+{
+  "name": "@reflex/runtime",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Runtime / Universe / Laws for Reflex",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@reflex/core": "workspace:*",
+    "@reflex/contract": "workspace:*"
+  }
+}

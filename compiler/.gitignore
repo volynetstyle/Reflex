@@ -1,0 +1,21 @@
+# Rust
+/target
+Cargo.lock
+
+# Logs and dumps
+*.log
+*.dmp
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage / benches
+*.profraw
+*.profdata
+/coverage

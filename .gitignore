@@ -1,20 +1,107 @@
-.DS_STORE
-node_modules
-.flowconfig
-*~
-*.pyc
-.grunt
-_SpecRunner.html
-__benchmarks__
+# -------------------------------------------------------
+# 🧠 CORE: Node / TypeScript / Reflex Monorepo
+# -------------------------------------------------------
+
+# Dependencies
+node_modules/
+.pnpm-store/
+.pnp.*
+.pnp.cjs
+.pnp.loader.mjs
+
+# Build outputs
+dist/
 build/
-remote-repo/
+lib/
+out/
+tsbuildinfo
+*.tsbuildinfo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Coverage and test output
 coverage/
-*.log*
+.nyc_output/
+__tests__/temp/
+__benchmarks__/
+*.lcov
+jest-cache/
+jest-test-results.json
+
+# -------------------------------------------------------
+# 🧩 IDE & System
+# -------------------------------------------------------
+.idea/
+.vscode/
+*.iml
 *.sublime-project
 *.sublime-workspace
-.idea
-*.iml
-.vscode
 *.swp
 *.swo
+*.tmp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# -------------------------------------------------------
+# 🧰 Tools / Build Systems
+# -------------------------------------------------------
+.grunt/
+gulpfile.js
+webpack.config.js
+rollup.config.js
+parcel-cache/
+.next/
+.nuxt/
+.cache/
+.eslintcache
+
+# -------------------------------------------------------
+# 🧪 Misc & drafts
+# -------------------------------------------------------
 drafts/
+remote-repo/
+*.pyc
+.flowconfig
+_SpecRunner.html
+*.tgz
+
+# -------------------------------------------------------
+# ⚙️ Environment
+# -------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.local
+*.secret
+
+# -------------------------------------------------------
+# 🧱 Monorepo specific
+# -------------------------------------------------------
+/packages/*/dist/
+/packages/*/.tsbuildinfo
+/packages/*/.turbo/
+/packages/*/.cache/
+/packages/*/node_modules/
+
+# -------------------------------------------------------
+# 🚀 Editor backups
+# -------------------------------------------------------
+*.bak
+*.orig
+*~
+*.rej
+
+# -------------------------------------------------------
+# 🪄 Custom project entries
+# -------------------------------------------------------
+drafts/
+logs/
+temp/
+tmp/
