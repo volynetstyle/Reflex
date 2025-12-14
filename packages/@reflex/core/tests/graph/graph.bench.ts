@@ -4,9 +4,9 @@ import {
   linkSourceToObserverUnsafe,
   unlinkSourceFromObserverUnsafe,
   unlinkAllObserversUnsafe,
-} from "../../src/graph/process/graph.methods";
+} from "../../src/graph/graph.methods";
 
-import { GraphNode } from "../../src/graph/process/graph.node";
+import { GraphNode } from "../../src/graph/graph.node";
 import { GraphService } from "../../src/graph/graph.contract";
 
 const r = new GraphService();

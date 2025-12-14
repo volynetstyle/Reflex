@@ -1,4 +1,4 @@
-import { NodeIndex, GraphNode, GraphEdge } from "./process/graph.node";
+import { NodeIndex, GraphNode, GraphEdge } from "./graph.node";
 import {
   unlinkAllObserversBulkUnsafeForDisposal,
   unlinkAllSourcesChunkedUnsafe,
@@ -7,7 +7,7 @@ import {
   hasObserverUnsafe,
   hasSourceUnsafe,
   replaceSourceUnsafe,
-} from "./process/graph.methods";
+} from "./graph.methods";
 
 /**
  *  IGraph

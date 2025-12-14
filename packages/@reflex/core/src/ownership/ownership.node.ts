@@ -12,7 +12,7 @@
  *   - counters:   _childCount, _flags, _epoch, _contextEpoch
  */
 
-import { DISPOSED } from "../graph/process/graph.constants";
+import { DISPOSED } from "../graph/graph.constants";
 import { CausalCoords } from "../storage/config/CausalCoords";
 import {
   createContextLayer,
@@ -48,6 +48,8 @@ export class OwnershipNode {
     s: 0,
   };
 }
+
+const FORBIDDEN_KEYS = new Set(["__proto__", "prototype", "constructor"]);
 
 export class OwnershipService {
   createOwner = (parent: OwnershipNode | null = null): OwnershipNode => {
@@ -156,8 +158,6 @@ export class OwnershipService {
     }
   };
 
-  /* ───────────── Context ───────────── */
-
   getContext = (node: OwnershipNode): IOwnershipContextRecord => {
     let ctx = node._context;
     if (ctx !== null) return ctx;
@@ -172,8 +172,6 @@ export class OwnershipService {
     key: ContextKeyType,
     value: unknown,
   ): void => {
-    const FORBIDDEN_KEYS = new Set(["__proto__", "prototype", "constructor"]);
-
     if (value === node) {
       throw new Error("Cannot provide owner itself");
     }
@@ -205,7 +203,3 @@ export class OwnershipService {
     arr.push(fn);
   };
 }
-
-type IOwnership = OwnershipService;
-
-export type { IOwnership };

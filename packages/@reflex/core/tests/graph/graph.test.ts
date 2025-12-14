@@ -4,8 +4,8 @@ import {
   unlinkSourceFromObserverUnsafe,
   unlinkAllObserversUnsafe,
   unlinkAllSourcesUnsafe,
-} from "../../src/graph/process/graph.methods";
-import { GraphNode, GraphEdge } from "../../src/graph/process/graph.node";
+} from "../../src/graph/graph.methods";
+import { GraphNode, GraphEdge } from "../../src/graph/graph.node";
 
 // helpers
 function collectOutEdges(node: GraphNode): GraphEdge[] {

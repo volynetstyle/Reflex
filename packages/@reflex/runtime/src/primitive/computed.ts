@@ -1,43 +1,63 @@
-import { GraphNode, IReactiveNode } from "../../core/graph/graph.types";
-import { IOwnership } from "../../core/ownership/ownership.type";
+import { IOwnership, GraphNode } from "@reflex/core";
+import { IReactiveValue } from "./types";
 
-class Computed<T> {
-  private readonly owner: IOwnership | null;
-  private readonly _node: IReactiveNode;
-  private readonly computeFn: () => T;
-  private cachedValue: T | null;
-
-  constructor(
-    owner: IOwnership | null,
-    computeFn: () => T,
-    node: IReactiveNode,
-  ) {
-    this.owner = owner;
-    this._node = node;
-    this.computeFn = computeFn;
-    this.cachedValue = null;
-  }
-
-  get(): T {
-    if (this.cachedValue === null) {
-      return this.compute();
-    }
-
-    return this.cachedValue;
-  }
-
-  compute(): T {
-    const newValue = this.computeFn();
-    this.cachedValue = newValue;
-    return newValue;
-  }
+interface ComputedState<T> {
+  value: T;
+  dirty: boolean;
+  computing: boolean;
+  node: GraphNode;
+  fn: () => T;
 }
 
-export function createComputed<T>(
-  owner: IOwnership | null,
-  computeFn: () => T,
-): () => T {
-  const graphNode = new GraphNode();
-  const computed = new Computed(owner, computeFn, graphNode);
-    return () => computed.get();
+export function createComputed<T>(fn: () => T): IReactiveValue<T> {
+  const { layout, graph, execStack } = RUNTIME;
+
+  const id = layout.alloc();
+  const node = graph.createNode(id);
+
+  const state: ComputedState<T> = {
+    value: undefined as any,
+    dirty: true,
+    computing: false,
+    node,
+    fn,
+  };
+
+  function read(): T {
+    // ===== EXECUTION → GRAPH boundary =====
+    execStack.enter(node.id);
+    try {
+      if (state.dirty) {
+        recompute();
+      }
+      return state.value;
+    } finally {
+      execStack.leave(node.id);
+    }
+  }
+
+  function recompute(): void {
+    if (state.computing) {
+      throw new Error("Cycle detected in computed");
+    }
+
+    state.computing = true;
+    state.dirty = false;
+
+    // clear old deps
+    graph.clearIncoming(node);
+
+    try {
+      state.value = state.fn();
+    } finally {
+      state.computing = false;
+    }
+  }
+
+  Object.defineProperty(read, "node", {
+    value: node,
+    enumerable: false,
+  });
+
+  return read as IReactiveValue<T>;
 }

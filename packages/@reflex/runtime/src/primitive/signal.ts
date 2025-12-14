@@ -1,54 +1,65 @@
-class Signal<T> {
-  private value: T;
-  private readonly owner: IOwnership | null;
-  private readonly _node: GraphNode;
+import { IOwnership, GraphNode } from "@reflex/core";
+import { IReactiveValue } from "./types";
 
-  constructor(value: T, owner: IOwnership | null, node: GraphNode) {
-    this.value = value;
-    this.owner = owner;
-    this._node = node;
-  }
-
-  dispose(): void {
-    // cleanup logic here
-  }
-
-  get(): T {
-    return this.value;
-  }
-
-  set(value: T): void {
-    // will started a loooong work here...
-  }
+interface SignalState<T> {
+  value: T;
+  node: GraphNode;
+  owner: IOwnership | null;
 }
 
-class ReactiveValue<T> {
-  constructor(private signal: Signal<T>) {}
-
-  get() {
-    return this.signal.get();
-  }
-
-  set(v: T) {
-    return this.signal.set(v);
-  }
-}
-
+/**
+ * SIGNAL DESIGN INVARIANT
+ *
+ * A signal is not a graph node.
+ * A signal owns a graph node.
+ *
+ * Graph manages causality.
+ * Signal manages value.
+ *
+ * API objects are lightweight façades over runtime state.
+ */
 export function createSignal<T>(initial: T): IReactiveValue<T> {
-  const { layout, graph, scheduler } = RUNTIME;
+  const { layout, graph } = RUNTIME;
 
-  const index = layout.alloc();
-  const node = graph.createNode(index);
+  // allocate graph node
+  const id = layout.alloc();
+  const node = graph.createNode(id);
 
-  const signal = new Signal(initial, node, layout, scheduler);
+  const state: SignalState<T> = {
+    value: initial,
+    node,
+    owner: null,
+  };
 
   function read(): T {
-    return signal.get();
+    // execution-stack / dependency tracking hook here
+    return state.value;
   }
-  const reactive = read as IReactiveValue<T>;
-  reactive.set = (v: T) => signal.set(v);
-  reactive.node = node;
 
-  owner?.onScopeCleanup(() => signal.cleanup());
-  return reactive;
+  read.set = (next: T): void => {
+    if (Object.is(state.value, next)) return;
+
+    state.value = next;
+
+    // notify graph / scheduler here
+    // graph.markDirty(node)
+  };
+
+  Object.defineProperty(read, "node", {
+    value: node,
+    enumerable: false,
+    writable: false,
+  });
+
+  // ownership / cleanup
+  const owner = getCurrentOwner?.();  
+  if (owner) {
+    state.owner = owner;
+    owner.onScopeCleanup(() => {
+      // unlink graph node, clear edges
+      graph.disposeNode(node);
+    });
+  }
+
+  return read as IReactiveValue<T>;
 }

@@ -1,5 +1,5 @@
-import { INITIAL_CAUSATION } from "../../storage/config/causal.phase";
-import { CausalCoords } from "../../storage/config/CausalCoords";
+import { INITIAL_CAUSATION } from "../storage/config/causal.phase";
+import { CausalCoords } from "../storage/config/CausalCoords";
 import { CLEAN } from "./graph.constants";
 
 type NodeIndex = number;
@@ -130,4 +130,4 @@ class GraphNode {
 }
 
 export { GraphNode, GraphEdge };
-export type { NodeIndex };
+export type { NodeIndex, GraphNode as IGraphNode };
