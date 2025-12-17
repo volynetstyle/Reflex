@@ -8,7 +8,6 @@ const NON_EXIST: NodeIndex = -1;
 
 /**
  *  GraphEdge
- * =
  *
  * Intrusive bi-directional edge connecting two GraphNodes:
  *
@@ -55,7 +54,6 @@ class GraphEdge {
 
 /**
  *  GraphNode
- * =
  *
  * A node in the reactive dependency graph.
  * This is a fully *intrusive* node: it stores all adjacency lists internally.
@@ -98,7 +96,7 @@ class GraphEdge {
  */
 class GraphNode {
   /** Index in the causal layout (t/v/g/s table), or NON_EXIST */
-  id: NodeIndex = NON_EXIST;
+  readonly id: NodeIndex = NON_EXIST;
   /** First outgoing dependency (this → observer) */
   firstOut: GraphEdge | null = null;
   /** Last outgoing dependency (this → observer) */
@@ -117,7 +115,7 @@ class GraphNode {
    */
   flags: number = CLEAN;
 
-  causal: CausalCoords = {
+  point: CausalCoords = {
     t: INITIAL_CAUSATION,
     v: INITIAL_CAUSATION,
     g: INITIAL_CAUSATION,

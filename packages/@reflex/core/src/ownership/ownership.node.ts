@@ -26,27 +26,18 @@ import type {
 } from "./ownership.contract";
 
 export class OwnershipNode {
-  _parent: OwnershipNode | null = null;
-  _firstChild: OwnershipNode | null = null;
-  _lastChild: OwnershipNode | null = null;
-  _nextSibling: OwnershipNode | null = null;
-  _prevSibling: OwnershipNode | null = null;
+  _parent: OwnershipNode | null = null; // invariant
+  _firstChild: OwnershipNode | null = null; // invariant
+  _lastChild: OwnershipNode | null = null; // optimization
+  _nextSibling: OwnershipNode | null = null; // forward-list only
 
-  // payload
   _context: IOwnershipContextRecord | null = null;
   _cleanups: NoneToVoidFn[] | null = null;
 
-  // state
   _childCount = 0;
   _flags = 0;
 
-  // flat causal coords (even if unused yet)
-  _causal: CausalCoords = {
-    t: 0,
-    v: 0,
-    g: 0,
-    s: 0,
-  };
+  _causal: CausalCoords = { t: 0, v: 0, g: 0, s: 0 };
 }
 
 const FORBIDDEN_KEYS = new Set(["__proto__", "prototype", "constructor"]);
@@ -58,17 +49,16 @@ export class OwnershipService {
     return node;
   };
 
-  appendChild = (parent: OwnershipNode, child: OwnershipNode): void => {
+  appendChild(parent: OwnershipNode, child: OwnershipNode): void {
     if (parent._flags & DISPOSED) return;
 
-    // SAFE reparent
+    // detach from old parent (O(n), допустимо)
     const oldParent = child._parent;
     if (oldParent !== null) {
       this.removeChild(oldParent, child);
     }
 
     child._parent = parent;
-    child._prevSibling = parent._lastChild;
     child._nextSibling = null;
 
     if (parent._lastChild !== null) {
@@ -79,46 +69,53 @@ export class OwnershipService {
 
     parent._lastChild = child;
     parent._childCount++;
-  };
+  }
 
   removeChild = (parent: OwnershipNode, child: OwnershipNode): void => {
-    if (child._parent !== parent) return;
-    if (parent._flags & DISPOSED) return;
+    let prev: OwnershipNode | null = null;
+    let cur = parent._firstChild;
 
-    const prev = child._prevSibling;
-    const next = child._nextSibling;
+    while (cur !== null) {
+      if (cur === child) {
+        const next = cur._nextSibling;
 
-    if (prev !== null) prev._nextSibling = next;
-    else parent._firstChild = next;
+        if (prev !== null) prev._nextSibling = next;
+        else parent._firstChild = next;
 
-    if (next !== null) next._prevSibling = prev;
-    else parent._lastChild = prev;
+        if (parent._lastChild === cur) {
+          parent._lastChild = prev;
+        }
 
-    child._parent = null;
-    child._prevSibling = null;
-    child._nextSibling = null;
+        cur._parent = null;
+        cur._nextSibling = null;
+        parent._childCount--;
+        return;
+      }
 
-    parent._childCount--;
+      prev = cur;
+      cur = cur._nextSibling;
+    }
   };
 
   dispose = (root: OwnershipNode): void => {
     if (root._flags & DISPOSED) return;
 
+    const stack: OwnershipNode[] = [];
     let node: OwnershipNode | null = root;
 
-    while (node !== null) {
-      const last: OwnershipNode | null = node._lastChild;
-
-      if (last !== null && !(last._flags & DISPOSED)) {
-        node = last;
-        continue;
+    while (node !== null || stack.length > 0) {
+      // спуск вниз
+      while (node !== null) {
+        stack.push(node);
+        node = node._firstChild;
       }
 
-      const parent: OwnershipNode | null = node._parent;
+      const current = stack.pop()!;
+      const parent = current._parent;
 
-      // run cleanups (LIFO)
-      const cleanups = node._cleanups;
-      node._cleanups = null;
+      // cleanups (LIFO per node)
+      const cleanups = current._cleanups;
+      current._cleanups = null;
 
       if (cleanups !== null) {
         for (let i = cleanups.length - 1; i >= 0; i--) {
@@ -130,31 +127,31 @@ export class OwnershipService {
         }
       }
 
-      node._flags = DISPOSED;
+      current._flags = DISPOSED;
 
+      // unlink from parent (O(n), допустимо)
       if (parent !== null) {
-        const prev = node._prevSibling;
-        const next = node._nextSibling;
-
-        if (prev !== null) prev._nextSibling = next;
-        else parent._firstChild = next;
-
-        if (next !== null) next._prevSibling = prev;
-        else parent._lastChild = prev;
-
-        parent._childCount--;
+        this.removeChild(parent, current);
       }
 
       // reset node
-      node._parent = null;
-      node._firstChild = null;
-      node._lastChild = null;
-      node._nextSibling = null;
-      node._prevSibling = null;
-      node._context = null;
-      node._childCount = 0;
+      current._parent = null;
+      current._firstChild = null;
+      current._lastChild = null;
+      current._nextSibling = null;
+      current._context = null;
+      current._childCount = 0;
 
-      node = parent;
+      // переход к sibling через стек
+      if (stack.length > 0) {
+        const top = stack[stack.length - 1]!;
+        node = top._firstChild;
+        while (node !== null && node._flags & DISPOSED) {
+          node = node._nextSibling;
+        }
+      } else {
+        node = null;
+      }
     }
   };
 
@@ -194,12 +191,6 @@ export class OwnershipService {
 
   onScopeCleanup = (node: OwnershipNode, fn: NoneToVoidFn): void => {
     if (node._flags & DISPOSED) return;
-
-    let arr = node._cleanups;
-    if (arr === null) {
-      arr = [];
-      node._cleanups = arr;
-    }
-    arr.push(fn);
+    (node._cleanups ??= []).push(fn);
   };
 }

@@ -6,10 +6,6 @@ import {
 } from "../../src/ownership/ownership.scope";
 import type { OwnershipNode } from "../../src/ownership/ownership.node";
 
-/* ──────────────────────────────────────────────────────────────
- * Test helpers (no `any`)
- * ────────────────────────────────────────────────────────────── */
-
 function collectChildren(parent: OwnershipNode): OwnershipNode[] {
   const out: OwnershipNode[] = [];
   let c = parent._firstChild;
@@ -43,11 +39,9 @@ function assertSiblingChain(parent: OwnershipNode): void {
     const prev = i === 0 ? null : kids[i - 1]!;
     const next = i === kids.length - 1 ? null : kids[i + 1]!;
 
-    expect(cur._prevSibling).toBe(prev);
     expect(cur._nextSibling).toBe(next);
 
     if (prev !== null) expect(prev._nextSibling).toBe(cur);
-    if (next !== null) expect(next._prevSibling).toBe(cur);
   }
 
   // count accuracy (white-box but meaningful)
@@ -56,7 +50,6 @@ function assertSiblingChain(parent: OwnershipNode): void {
 
 function assertDetached(node: OwnershipNode): void {
   expect(node._parent).toBeNull();
-  expect(node._prevSibling).toBeNull();
   expect(node._nextSibling).toBeNull();
 }
 

@@ -1,5 +1,5 @@
 import { IOwnership, GraphNode } from "@reflex/core";
-import { IReactiveValue } from "./types";
+import { Accessor, Setter, Signal } from "./types";
 
 interface SignalState<T> {
   value: T;
@@ -10,16 +10,13 @@ interface SignalState<T> {
 /**
  * SIGNAL DESIGN INVARIANT
  *
- * A signal is not a graph node.
- * A signal owns a graph node.
- *
- * Graph manages causality.
- * Signal manages value.
- *
- * API objects are lightweight façades over runtime state.
+ * - A signal owns a graph node.
+ * - Graph manages causality.
+ * - Signal manages value.
+ * - API objects are lightweight façades over runtime state.
  */
-export function createSignal<T>(initial: T): IReactiveValue<T> {
-  const { layout, graph } = RUNTIME;
+export function signal<T>(initial: T): Signal<T> {
+  const { layout, graph, getCurrentOwner } = RUNTIME;
 
   // allocate graph node
   const id = layout.alloc();
@@ -31,35 +28,44 @@ export function createSignal<T>(initial: T): IReactiveValue<T> {
     owner: null,
   };
 
-  function read(): T {
-    // execution-stack / dependency tracking hook here
-    return state.value;
-  }
+  // write function compatible with Setter<T>
+  const write: Setter<T> = <U extends T>(value: U | ((prev: T) => U)) => {
+    const next =
+      typeof value === "function"
+        ? (value as (prev: T) => U)(state.value)
+        : value;
 
-  read.set = (next: T): void => {
-    if (Object.is(state.value, next)) return;
+    if (!Object.is(state.value, next)) {
+      state.value = next;
+      graph.markDirty(node);
+    }
 
-    state.value = next;
-
-    // notify graph / scheduler here
-    // graph.markDirty(node)
+    return next;
   };
 
-  Object.defineProperty(read, "node", {
-    value: node,
-    enumerable: false,
-    writable: false,
-  });
+  const read = (() => state.value) as unknown as Accessor<T>;
+  read.set = write;
 
-  // ownership / cleanup
-  const owner = getCurrentOwner?.();  
-  if (owner) {
-    state.owner = owner;
-    owner.onScopeCleanup(() => {
-      // unlink graph node, clear edges
+  if ((state.owner = getCurrentOwner())) {
+    state.owner.onScopeCleanup(() => {
       graph.disposeNode(node);
     });
   }
 
-  return read as IReactiveValue<T>;
+  return [read, write];
 }
+
+// // possible uses
+
+// const [index, setValue] = signal(1);
+
+// index.value++;
+// index.value += 1;
+// index.value = ++index.value;
+// index.value = index.value + 1;
+
+// index.set(1);
+// index.set((prev) => prev + 1);
+
+// setValue(1);
+// setValue((prev) => prev + 1);

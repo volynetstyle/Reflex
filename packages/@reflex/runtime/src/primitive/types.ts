@@ -3,13 +3,18 @@
  *
  * Runtime definitions for the Reflex reactive graph.
  */
-type IObserverFn = () => void;
+export type IObserverFn = () => void;
 
-interface IReactiveValue<T = unknown> {
+export type Accessor<T> = {
   (): T;
-  (next: T | ((prev: T) => T)): void;
-  get(): T;
-  set(next: T | ((prev: T) => T)): void;
-}
+  value: T;
+  set: Setter<T>;
+};
 
-export type { IObserverFn, IReactiveValue };
+// Универсальный Setter: value или функция (prev => value)
+export type Setter<T = unknown> = <U extends T>(
+  value: U | ((prev: T) => U),
+) => U;
+
+// Signal — просто кортеж [get, set]
+export type Signal<T> = [value: Accessor<T>, setValue: Setter<T>];
