@@ -18,7 +18,6 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --build",
-    "test": "vitest run",
     "bench": "vitest bench",
     "bench:flame": "0x -- node dist/tests/ownership.run.js",
     "test:watch": "vitest",

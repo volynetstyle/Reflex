@@ -52,39 +52,40 @@
  */
 
 /** Discrete causal coordinates */
-export interface CausalCoords<T = number, V = number, P = number, S = number> {
+export interface CausalCoords {
   /** t — causal epoch (0..2^T_BITS-1) */
-  t: T;
+  t: number;
   /** v — value version (0..2^V_BITS-1) */
-  v: V;
+  v: number;
   /** p — async generation / layer (0..2^G_BITS-1) */
-  p: P;
+  p: number;
   /** s — structural / topology (0..2^S_BITS-1) */
-  s: S;
+  s: number;
 }
 
 /** Full 4D space T⁴ = (t,v,p,s) */
-export type T4<T = number, V = number, P = number, S = number> = CausalCoords<
-  T,
-  V,
-  P,
-  S
->;
+export type T4 = CausalCoords;
 
 /** 3D projection without structural component: T³ = (t,v,p) */
-export type T3<T = number, V = number, P = number> = Pick<
-  CausalCoords<T, V, P, never>,
-  "t" | "v" | "p"
->;
+export type T3 = {
+  t: number;
+  v: number;
+  p: number;
+};
 
 /** 2D projection: no async, static graph: T² = (t,v) */
-export type T2<T = number, V = number> = Pick<
-  CausalCoords<T, V, never, never>,
-  "t" | "v"
->;
+export type T2 = {
+  t: number;
+  v: number;
+};
 
 /** Pure value layer: T¹ = (v) */
-export type T1<V = number> = Pick<CausalCoords<never, V, never, never>, "v">;
+export type T1 = {
+  v: number;
+};
+
+/** Default 32-bit wrap mask */
+export const MASK_32 = 0xffff_ffff >>> 0;
 
 /**
  * Addition modulo 2^k
@@ -101,13 +102,4 @@ export type T1<V = number> = Pick<CausalCoords<never, V, never, never>, "v">;
  * Example:
  *   x = 0, delta = -1  ⇒  result = mask (wrap-around)
  */
-export function addWrap<A extends number>(
-  x: A,
-  delta: number = 1,
-  mask: number = WRAP_END,
-): A {
-  return ((x + delta) & mask) as A;
-}
-
-/** Default 32-bit wrap mask */
-export const WRAP_END = 0xffff_ffff >>> 0;
+export const inc32 = (x: number, delta = 1) => (x + delta) & MASK_32;

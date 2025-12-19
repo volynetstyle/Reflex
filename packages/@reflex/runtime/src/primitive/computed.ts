@@ -1,5 +1,4 @@
 import { IOwnership, GraphNode } from "@reflex/core";
-import { IReactiveValue } from "./types";
 
 interface ComputedState<T> {
   value: T;

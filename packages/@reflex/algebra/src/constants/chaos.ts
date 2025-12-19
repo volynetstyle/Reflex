@@ -1,4 +1,4 @@
-import { CausalCoords } from "./coords";
+import { CausalCoords, WRAP_END } from "./coords";
 
 type NodePoint = {
   point: CausalCoords;
@@ -8,7 +8,7 @@ type PotentialApprovalEvent = {
   id: number;
   value: unknown;
   target: unknown & NodePoint;
-  phase: CausalCoords;
+  point: CausalCoords;
 };
 
 /**
@@ -20,7 +20,12 @@ export class CausalPoint {
     public readonly v: number, // Version
     public readonly p: number, // Generation (async)
     public readonly s: number, // Structure
-  ) {}
+  ) {
+    this.t = 0;
+    this.v = 0;
+    this.p = 0;
+    this.s = 0;
+  }
 
   /**
    * Порівняння в циклічній групі (S¹)
@@ -38,8 +43,8 @@ export class CausalPoint {
    */
   isBefore(other: CausalPoint): boolean {
     // В Level 0 ми зазвичай перевіряємо t (час) та s (структуру)
-    const dt = CausalPoint.delta(this.t, other.t, 16);
-    const ds = CausalPoint.delta(this.s, other.s, 8);
+    const dt = CausalPoint.delta(this.t, other.t, WRAP_END);
+    const ds = CausalPoint.delta(this.s, other.s, WRAP_END);
 
     // Структурна епоха має бути ідентичною (або строго наступною)
     if (ds !== 0) return false;
