@@ -57,7 +57,7 @@ export function signal<T>(initial: T): Signal<T> {
 
 // // possible uses
 
-// const [index, setValue] = signal(1);
+const [index, setValue] = signal<unknown>(undefined);
 
 // index.value++;
 // index.value += 1;
@@ -67,5 +67,9 @@ export function signal<T>(initial: T): Signal<T> {
 // index.set(1);
 // index.set((prev) => prev + 1);
 
-// setValue(1);
+setValue({ name: "Ivan", stats: [10, 20] });
 // setValue((prev) => prev + 1);
+
+const i = () => {
+
+}
