@@ -48,6 +48,15 @@ importers:
         specifier: ^4.0.0
         version: 4.0.9(@types/node@24.10.1)(yaml@2.8.1)
 
+  packages/@reflex/algebra:
+    devDependencies:
+      '@reflex/contract':
+        specifier: workspace:*
+        version: link:../contract
+      '@types/node':
+        specifier: ^24.10.1
+        version: 24.10.1
+
   packages/@reflex/contract: {}
 
   packages/@reflex/core:

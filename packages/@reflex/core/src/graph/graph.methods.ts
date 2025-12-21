@@ -30,41 +30,44 @@ import { GraphEdge, GraphNode } from "./graph.node";
  *
  * Complexity: O(1) for duplicate detection hot path, O(1) for insertion
  */
+
 export const linkSourceToObserverUnsafe = (
   source: GraphNode,
   observer: GraphNode,
 ): GraphEdge => {
   const lastOut = source.lastOut;
 
-  // HOT PATH: ~90% of cases hit here (monomorphic)
-  // V8 inline cache will optimize this branch heavily
   if (lastOut !== null && lastOut.to === observer) {
     return lastOut;
   }
 
-  // COLD PATH: Create new edge
+  ++observer.inCount;
+  ++source.outCount;
+
   const lastIn = observer.lastIn;
 
-  // Pre-allocate with all fields for shape stability
-  const edge = new GraphEdge(source, observer, lastOut, null, lastIn, null);
+  const edge: GraphEdge = new GraphEdge(
+    source,
+    observer,
+    lastOut,
+    null,
+    lastIn,
+    null,
+  );
+  
+  observer.lastIn = source.lastOut = edge;
 
-  // Update OUT list (cache-friendly sequential writes)
   if (lastOut !== null) {
     lastOut.nextOut = edge;
   } else {
     source.firstOut = edge;
   }
-  source.lastOut = edge;
-  source.outCount++;
 
-  // Update IN list
   if (lastIn !== null) {
     lastIn.nextIn = edge;
   } else {
     observer.firstIn = edge;
   }
-  observer.lastIn = edge;
-  observer.inCount++;
 
   return edge;
 };
@@ -96,47 +99,33 @@ export const unlinkEdgeUnsafe = (edge: GraphEdge): void => {
   const from = edge.from;
   const to = edge.to;
 
-  // Destructure once for IC optimization
-  const prevOut = edge.prevOut;
-  const nextOut = edge.nextOut;
-  const prevIn = edge.prevIn;
-  const nextIn = edge.nextIn;
-
-  // OUT list mutations (cache-friendly grouping)
-  if (prevOut !== null) {
-    prevOut.nextOut = nextOut;
+  if (edge.prevOut) {
+    edge.prevOut.nextOut = edge.nextOut;
   } else {
-    from.firstOut = nextOut;
+    from.firstOut = edge.nextOut; // Was head
+  }
+  if (edge.nextOut) {
+    edge.nextOut.prevOut = edge.prevOut;
+  } else {
+    from.lastOut = edge.prevOut; // Was tail
   }
 
-  if (nextOut !== null) {
-    nextOut.prevOut = prevOut;
+  // Unlink from in-list
+  if (edge.prevIn) {
+    edge.prevIn.nextIn = edge.nextIn;
   } else {
-    from.lastOut = prevOut;
+    to.firstIn = edge.nextIn; // Was head
+  }
+  if (edge.nextIn) {
+    edge.nextIn.prevIn = edge.prevIn;
+  } else {
+    to.lastIn = edge.prevIn; // Was tail
   }
 
-  from.outCount--;
+  --to.inCount;
+  --from.outCount;
 
-  // IN list mutations
-  if (prevIn !== null) {
-    prevIn.nextIn = nextIn;
-  } else {
-    to.firstIn = nextIn;
-  }
-
-  if (nextIn !== null) {
-    nextIn.prevIn = prevIn;
-  } else {
-    to.lastIn = prevIn;
-  }
-
-  to.inCount--;
-
-  // Batch null assignments (better write coalescing)
-  edge.prevOut = null;
-  edge.nextOut = null;
-  edge.prevIn = null;
-  edge.nextIn = null;
+  edge.prevOut = edge.nextOut = edge.prevIn = edge.nextIn = null;
 };
 
 /**
@@ -238,7 +227,7 @@ export const linkSourceToObserversBatchUnsafe = (
  */
 export const unlinkAllObserversUnsafe = (source: GraphNode): void => {
   let edge = source.firstOut;
-  
+
   // Simple forward iteration
   while (edge !== null) {
     const next = edge.nextOut;
@@ -261,7 +250,7 @@ export const unlinkAllObserversUnsafe = (source: GraphNode): void => {
  */
 export const unlinkAllSourcesUnsafe = (observer: GraphNode): void => {
   let edge = observer.firstIn;
-  
+
   while (edge !== null) {
     const next = edge.nextIn;
     unlinkEdgeUnsafe(edge);
@@ -351,7 +340,7 @@ export const unlinkAllSourcesChunkedUnsafe = (observer: GraphNode): void => {
 
 /**
  * hasSourceUnsafe - V8 OPTIMIZED
- * 
+ *
  * OPTIMIZATIONS:
  * 1. Fast path check (lastOut)
  * 2. Early return for hit (reduces branch mispredicts)
@@ -371,11 +360,9 @@ export const hasSourceUnsafe = (
     if (edge.to === observer) return true;
     edge = edge.nextOut;
   }
-  
+
   return false;
 };
-
-
 
 /**
  *
@@ -394,11 +381,10 @@ export const unlinkAllObserversBulkUnsafeForDisposal = (
   unlinkAllObserversChunkedUnsafe(source);
 };
 
-
 /**
  *
  *  hasObserverUnsafe
- *  
+ *
  *
  * Returns true if an edge exists:
  *     source → observer
@@ -423,7 +409,7 @@ export const hasObserverUnsafe = (
     if (edge.from === source) return true;
     edge = edge.nextIn;
   }
-  
+
   return false;
 };
 

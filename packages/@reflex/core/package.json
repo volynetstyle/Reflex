@@ -1,6 +1,6 @@
 {
   "name": "@reflex/core",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "type": "module",
   "description": "Core reactive primitives",
   "main": "./dist/index.js",
@@ -10,8 +10,8 @@
   "license": "MIT",
   "exports": {
     ".": {      
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts",
       "require": "./dist/index.cjs"
     }
   },

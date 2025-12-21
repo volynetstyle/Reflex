@@ -1,12 +1,12 @@
 import { NodeIndex, GraphNode, GraphEdge } from "./graph.node";
 import {
-  unlinkAllObserversBulkUnsafeForDisposal,
   unlinkAllSourcesChunkedUnsafe,
   linkSourceToObserverUnsafe,
   unlinkSourceFromObserverUnsafe,
   hasObserverUnsafe,
   hasSourceUnsafe,
   replaceSourceUnsafe,
+  unlinkAllObserversChunkedUnsafe,
 } from "./graph.methods";
 
 /**
@@ -145,7 +145,7 @@ export class GraphService implements IGraph {
    * Memory or layout cleanup must be handled elsewhere.
    */
   removeNode = (node: GraphNode): void => (
-    unlinkAllObserversBulkUnsafeForDisposal(node),
+    unlinkAllObserversChunkedUnsafe(node),
     unlinkAllSourcesChunkedUnsafe(node)
   );
 

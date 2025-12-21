@@ -1,7 +1,6 @@
 import { CausalCoords } from "../storage/config/CausalCoords";
 
 type NodeIndex = number;
-const NON_EXIST: NodeIndex = -1;
 
 /**
  * @class GraphEdge
