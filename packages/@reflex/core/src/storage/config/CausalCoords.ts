@@ -6,12 +6,12 @@
  *
  *  t — epoch (causal time),
  *  v — version (value evolution),
- *  g — generation (async layer),
+ *  p — generation (async layer),
  *  s — synergy / structural (graph topology).
  *
  *  Дискретное представление:
  *
- *    (t, v, g, s) ∈ ℤ / 2^{T_BITS}ℤ × ℤ / 2^{V_BITS}ℤ × ℤ / 2^{G_BITS}ℤ × ℤ / 2^{S_BITS}ℤ
+ *    (t, v, p, s) ∈ ℤ / 2^{T_BITS}ℤ × ℤ / 2^{V_BITS}ℤ × ℤ / 2^{G_BITS}ℤ × ℤ / 2^{S_BITS}ℤ
  *
  *  То есть каждое измерение — циклическая группа ℤ_{2^k} с операцией
  *
@@ -31,14 +31,14 @@
  *    X₄ = S¹_t × S¹_v × S¹_g × S¹_s
  *            |      |      |      └─ s: structural / topology
  *            |      |      |      |
- *            |      |      └─────── g: async generation
+ *            |      |      └─────── p: async generation
  *            |      └────────────── v: version (value)
  *            └───────────────────── t: causal epoch
  *
  *  Level 1: No async (strictly synchronous runtime)
  *
  *    Constraint: execution order == causal order
- *    ⇒ g становится выводимым из t (нет независимого async-слоя)
+ *    ⇒ p становится выводимым из t (нет независимого async-слоя)
  *
  *    X₃(sync) = S¹_t × S¹_v × S¹_s
  *
@@ -58,7 +58,7 @@
  *
  *  Иерархия проекций (факторизация степени свободы):
  *
- *    T⁴(t, v, g, s)
+ *    T⁴(t, v, p, s)
  *      ──[no async]────────▶ T³(t, v, s)
  *         ──[static graph]─▶ T²(t, v)
  *            ──[pure]──────▶ T¹(v)
@@ -73,28 +73,28 @@
  * Дискретные каузальные координаты.
  *
  * Формально:
- *   (t, v, g, s) ∈ ℤ_{2^{T_BITS}} × ℤ_{2^{V_BITS}} × ℤ_{2^{G_BITS}} × ℤ_{2^{S_BITS}}
+ *   (t, v, p, s) ∈ ℤ_{2^{T_BITS}} × ℤ_{2^{V_BITS}} × ℤ_{2^{G_BITS}} × ℤ_{2^{S_BITS}}
  *
- * Параметры T, V, G, S оставлены обобщёнными, чтобы при желании
+ * Параметры T, V, P, S оставлены обобщёнными, чтобы при желании
  * можно было использовать branded-типы:
  *
  *   type Epoch = number & { readonly __tag: "Epoch" };
  *   type Version = number & { readonly __tag: "Version" };
  *   ...
  */
-interface CausalCoords<T = number, V = number, G = number, S = number> {
+interface CausalCoords<T = number, V = number, P = number, S = number> {
   /** t — causal epoch, t ∈ ℤ_{2^{T_BITS}} */
   t: T;
   /** v — value version, v ∈ ℤ_{2^{V_BITS}} */
   v: V;
-  /** g — async generation, g ∈ ℤ_{2^{G_BITS}} */
-  g: G;
+  /** p — async generation, p ∈ ℤ_{2^{G_BITS}} */
+  p: P;
   /** s — structural / topology, s ∈ ℤ_{2^{S_BITS}} */
   s: S;
 }
 
 /**
- * Полное пространство T⁴(t, v, g, s).
+ * Полное пространство T⁴(t, v, p, s).
  *
  * Математически:
  *   T⁴ ≅ ℤ_{2^{T_BITS}} × ℤ_{2^{V_BITS}} × ℤ_{2^{G_BITS}} × ℤ_{2^{S_BITS}}
@@ -102,19 +102,19 @@ interface CausalCoords<T = number, V = number, G = number, S = number> {
 type T4<
   T extends number,
   V extends number,
-  G extends number,
+  P extends number,
   S extends number,
-> = CausalCoords<T, V, G, S>;
+> = CausalCoords<T, V, P, S>;
 
 /**
- * T³(t, v, g) — проекция T⁴ без структурного измерения s.
+ * T³(t, v, p) — проекция T⁴ без структурного измерения s.
  *
  * Используется, когда топология фиксирована или вынесена за пределы
  * динамического состояния узла.
  */
-type T3<T extends number, V extends number, G extends number> = Pick<
-  CausalCoords<T, V, G, never>,
-  "t" | "v" | "g"
+type T3<T extends number, V extends number, P extends number> = Pick<
+  CausalCoords<T, V, P, never>,
+  "t" | "v" | "p"
 >;
 
 /**

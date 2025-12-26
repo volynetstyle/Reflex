@@ -2,6 +2,13 @@ import { CausalCoords } from "../storage/config/CausalCoords";
 
 type NodeIndex = number;
 
+class CausalRoot implements CausalCoords {
+  t = 0;
+  v = 0;
+  p = 0;
+  s = 0;
+}
+
 /**
  * @class GraphEdge
  * @description
@@ -89,8 +96,8 @@ class GraphEdge {
  * object tracking overhead, effectively bypassing JavaScript Garbage Collection.
  */
 class GraphNode {
-  // Primitives first (better packing)
   readonly id: NodeIndex;
+
   inCount: number;
   outCount: number;
 
@@ -101,9 +108,11 @@ class GraphNode {
   lastOut: GraphEdge | null;
 
   // Stable object shape (initialized inline)
-  point: CausalCoords;
 
-  constructor(id: NodeIndex) {
+  readonly root: CausalRoot;
+  readonly point: CausalCoords;
+
+  constructor(id: NodeIndex, causalRoot: CausalRoot = new CausalRoot()) {
     this.id = id;
     this.inCount = 0;
     this.outCount = 0;
@@ -112,7 +121,8 @@ class GraphNode {
     this.firstOut = null;
     this.lastOut = null;
     // Initialize with literal for shape stability
-    this.point = { t: 0, v: 0, g: 0, s: 0 };
+    this.root = causalRoot;
+    this.point = { t: 0, v: 0, p: 0, s: 0 };
   }
 }
 

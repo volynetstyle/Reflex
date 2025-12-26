@@ -63,26 +63,22 @@ export interface CausalCoords {
   s: number;
 }
 
-/** Full 4D space T⁴ = (t,v,p,s) */
+/** Full space */
 export type T4 = CausalCoords;
 
-/** 3D projection without structural component: T³ = (t,v,p) */
-export type T3 = {
-  t: number;
-  v: number;
-  p: number;
-};
+/** T³ = (t, v, p) */
+export type T3 = Pick<T4, "t" | "v" | "p">;
 
-/** 2D projection: no async, static graph: T² = (t,v) */
-export type T2 = {
-  t: number;
-  v: number;
-};
+/** T² = (t, v) */
+export type T2 = Pick<T4, "t" | "v">;
 
-/** Pure value layer: T¹ = (v) */
-export type T1 = {
-  v: number;
-};
+/** T¹ = (v) */
+export type T1 = Pick<T4, "v">;
+
+export type Fibration<High extends object, Low extends keyof High> = Pick<
+  High,
+  Low
+>;
 
 /** Default 32-bit wrap mask */
 export const MASK_32 = 0xffff_ffff >>> 0;
@@ -102,4 +98,11 @@ export const MASK_32 = 0xffff_ffff >>> 0;
  * Example:
  *   x = 0, delta = -1  ⇒  result = mask (wrap-around)
  */
-export const inc32 = (x: number, delta = 1) => (x + delta) & MASK_32;
+export const inc32 = (x: number, delta = 1): number => (x + delta) | 0;
+
+export const bumpCoords = (c: T4): T4 => ({
+  t: inc32(c.t),
+  v: inc32(c.v),
+  p: inc32(c.p),
+  s: inc32(c.s),
+});

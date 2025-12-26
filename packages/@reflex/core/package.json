@@ -1,20 +1,27 @@
 {
   "name": "@reflex/core",
-  "version": "0.0.0",
+  "version": "0.0.9",
   "type": "module",
   "description": "Core reactive primitives",
-  "main": "./dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "license": "MIT",
   "exports": {
-    ".": {      
-      "types": "./src/index.ts",
-      "default": "./src/index.ts",
-      "require": "./dist/index.cjs"
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "development": "./dist/dev/index.js",
+      "production": "./dist/esm/index.js",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.cjs"
+    },
+    "./internal/*": {
+      "types": "./dist/types/internal/*.d.ts",
+      "import": "./dist/esm/internal/*.js"
     }
   },
+  "types": "./dist/types/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc --build",
@@ -31,9 +38,6 @@
     "release": "changeset version && pnpm install && changeset publish",
     "prepare": "husky"
   },
-  "files": [
-    "dist"
-  ],
   "engines": {
     "node": ">=20.19.0"
   },

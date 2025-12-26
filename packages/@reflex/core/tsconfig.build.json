@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "build",
+    "declaration": true,
+    "emitDeclarationOnly": false,
+    "module": "ESNext",
+    "target": "ESNext",
+    "stripInternal": true
+  }
+}

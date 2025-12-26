@@ -129,20 +129,18 @@ export class OwnershipService {
 
       current._flags = DISPOSED;
 
-      // unlink from parent (O(n), допустимо)
       if (parent !== null) {
         this.removeChild(parent, current);
       }
 
-      // reset node
-      current._parent = null;
-      current._firstChild = null;
-      current._lastChild = null;
-      current._nextSibling = null;
-      current._context = null;
+      current._parent =
+        current._firstChild =
+        current._lastChild =
+        current._nextSibling =
+        current._context =
+          null;
       current._childCount = 0;
 
-      // переход к sibling через стек
       if (stack.length > 0) {
         const top = stack[stack.length - 1]!;
         node = top._firstChild;

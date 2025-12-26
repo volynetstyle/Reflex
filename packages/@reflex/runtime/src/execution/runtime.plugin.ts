@@ -1,10 +1,11 @@
-import { Environment, CapabilityIdentifier } from "./runtime.services";
+import { Environment } from "./runtime.services";
 
 export interface RuntimeExtension<
-  TEnv extends Environment = Environment,
-  TExtended extends Environment = Environment,
+  AddedEnv extends Environment,
+  RequiresEnv extends Environment = {},
 > {
-  readonly requires?: readonly CapabilityIdentifier[];
-  readonly provides?: readonly CapabilityIdentifier[];
-  install(runtime: TEnv): asserts runtime is TEnv & TExtended;
+  readonly requires?: (keyof RequiresEnv)[];
+  install(
+    env: RequiresEnv & AddedEnv,
+  ): asserts env is RequiresEnv & AddedEnv;
 }
