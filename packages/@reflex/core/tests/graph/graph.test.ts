@@ -48,7 +48,7 @@ function assertListIntegrity(node: GraphNode, direction: "out" | "in"): void {
   // Check count matches actual edges
   expect(edges.length).toBe(count);
 
-  // Check first/last pointers
+  // Check first/last frameers
   if (count === 0) {
     expect(first).toBeNull();
     expect(last).toBeNull();
@@ -182,7 +182,7 @@ describe("Graph Operations - Comprehensive Tests", () => {
       assertListIntegrity(observer, "in");
     });
 
-    it("correctly maintains tail pointers during append", () => {
+    it("correctly maintains tail frameers during append", () => {
       const { source, o1, o2 } = createTestGraph();
 
       const e1 = linkSourceToObserverUnsafe(source, o1);
@@ -677,7 +677,7 @@ describe("Graph Operations - Comprehensive Tests", () => {
       expect(node.lastIn).toBeNull();
       expect(node.firstOut).toBeNull();
       expect(node.lastOut).toBeNull();
-      expect(node.point).toEqual({ t: 0, v: 0, g: 0, s: 0 });
+      expect(node.frame).toEqual({ t: 0, v: 0, p: 0, s: 0 });
     });
 
     it("GraphEdge initialized with correct defaults", () => {

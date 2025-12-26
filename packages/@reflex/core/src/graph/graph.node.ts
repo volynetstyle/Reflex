@@ -18,7 +18,7 @@ class CausalRoot implements CausalCoords {
  * 1. Double Adjacency: Participates simultaneously in two doubly-linked lists:
  * - OUT-list (source node's dependencies)
  * - IN-list (target node's observers)
- * 2. Constant Time Complexity: All mutations (link/unlink) are O(1) and pointer-based.
+ * 2. Constant Time Complexity: All mutations (link/unlink) are O(1) and frameer-based.
  * 3. Minimal Overhead: Contains zero metadata by default, serving as a pure structural link.
  *
  * ------------------------------------------------------------------------------------
@@ -41,11 +41,11 @@ class GraphEdge {
   from: GraphNode;
   to: GraphNode;
 
-  // OUT-list pointers (source perspective)
+  // OUT-list frameers (source perspective)
   prevOut: GraphEdge | null;
   nextOut: GraphEdge | null;
 
-  // IN-list pointers (target perspective)
+  // IN-list frameers (target perspective)
   prevIn: GraphEdge | null;
   nextIn: GraphEdge | null;
 
@@ -88,9 +88,9 @@ class GraphEdge {
  *
  * 1. STABLE IDENTITY: The `id` (NodeIndex) acts as a permanent handle. Physical
  * memory relocation (e.g., compaction) does not invalidate the identity.
- * 2. FIELD SPLITTING (SoA): Adjacency pointers (firstIn/firstOut) are designed to be
+ * 2. FIELD SPLITTING (SoA): Adjacency frameers (firstIn/firstOut) are designed to be
  * split into separate Int32Arrays to optimize CPU prefetching during sorting.
- * 3. CAUSAL COORDINATION: The `point` object (CausalCoords) is targeted for
+ * 3. CAUSAL COORDINATION: The `frame` object (CausalCoords) is targeted for
  * flattening into Float32Array SIMD-lanes for vectorized geometric scheduling.
  * 4. ZERO-GC PRESSURE: By transitioning to typed arrays, the graph eliminates
  * object tracking overhead, effectively bypassing JavaScript Garbage Collection.
@@ -109,10 +109,11 @@ class GraphNode {
 
   // Stable object shape (initialized inline)
 
-  readonly root: CausalRoot;
-  readonly point: CausalCoords;
+  readonly rootFrame: CausalRoot;
+  readonly frame: CausalCoords;
 
-  constructor(id: NodeIndex, causalRoot: CausalRoot = new CausalRoot()) {
+  // currently rootFrame is noop
+  constructor(id: NodeIndex, rootFrame: CausalRoot = new CausalRoot()) {
     this.id = id;
     this.inCount = 0;
     this.outCount = 0;
@@ -121,8 +122,8 @@ class GraphNode {
     this.firstOut = null;
     this.lastOut = null;
     // Initialize with literal for shape stability
-    this.root = causalRoot;
-    this.point = { t: 0, v: 0, p: 0, s: 0 };
+    this.rootFrame = rootFrame;
+    this.frame = { t: 0, v: 0, p: 0, s: 0 };
   }
 }
 

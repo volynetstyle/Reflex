@@ -12,7 +12,6 @@
  *   - counters:   _childCount, _flags, _epoch, _contextEpoch
  */
 
-import { DISPOSED } from "../graph/graph.constants";
 import { CausalCoords } from "../storage/config/CausalCoords";
 import {
   createContextLayer,
@@ -24,6 +23,8 @@ import type {
   ContextKeyType,
   IOwnershipContextRecord,
 } from "./ownership.contract";
+
+const DISPOSED = 1;
 
 export class OwnershipNode {
   _parent: OwnershipNode | null = null; // invariant
@@ -37,7 +38,7 @@ export class OwnershipNode {
   _childCount = 0;
   _flags = 0;
 
-  _causal: CausalCoords = { t: 0, v: 0, g: 0, s: 0 };
+  _frame: CausalCoords = { t: 0, v: 0, p: 0, s: 0 };
 }
 
 const FORBIDDEN_KEYS = new Set(["__proto__", "prototype", "constructor"]);
