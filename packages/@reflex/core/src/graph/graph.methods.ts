@@ -30,7 +30,6 @@ import { GraphEdge, GraphNode } from "./graph.node";
  *
  * Complexity: O(1) for duplicate detection hot path, O(1) for insertion
  */
-
 export const linkSourceToObserverUnsafe = (
   source: GraphNode,
   observer: GraphNode,

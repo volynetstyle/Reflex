@@ -2,11 +2,18 @@ import { CausalCoords } from "../storage/config/CausalCoords";
 
 type NodeIndex = number;
 
-class CausalRoot implements CausalCoords {
-  t = 0;
-  v = 0;
-  p = 0;
-  s = 0;
+class CausalFrame implements CausalCoords {
+  t: number;
+  v: number;
+  p: number;
+  s: number;
+
+  constructor() {
+    this.t = 0;
+    this.v = 0;
+    this.p = 0;
+    this.s = 0;
+  }
 }
 
 /**
@@ -109,11 +116,11 @@ class GraphNode {
 
   // Stable object shape (initialized inline)
 
-  readonly rootFrame: CausalRoot;
+  readonly rootFrame: CausalFrame;
   readonly frame: CausalCoords;
 
   // currently rootFrame is noop
-  constructor(id: NodeIndex, rootFrame: CausalRoot = new CausalRoot()) {
+  constructor(id: NodeIndex, rootFrame: CausalFrame = new CausalFrame()) {
     this.id = id;
     this.inCount = 0;
     this.outCount = 0;
@@ -123,7 +130,7 @@ class GraphNode {
     this.lastOut = null;
     // Initialize with literal for shape stability
     this.rootFrame = rootFrame;
-    this.frame = { t: 0, v: 0, p: 0, s: 0 };
+    this.frame = new CausalFrame();
   }
 }
 
