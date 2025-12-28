@@ -4,11 +4,14 @@ export default defineConfig({
   define: {
     __DEV__: true,
     __TEST__: true,
-    __PROD__: false
+    __PROD__: false,
   },
   test: {
     globals: true,
     environment: "node",
-    isolate: true
-  }
+    isolate: true,
+    benchmark: {
+      reporters: ["default"],
+    },
+  },
 });

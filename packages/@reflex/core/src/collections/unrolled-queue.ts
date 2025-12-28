@@ -73,7 +73,6 @@
  *   - Simplified node recycling logic
  */
 
-
 export interface UnrolledQueueOptions {
   /** Node (segment) size, must be a power of two for bitmask optimization */
   nodeSize: number;
@@ -98,6 +97,7 @@ const DEFAULT_NODE_SIZE = 2048 as const;
 class RefNode<T> {
   /** Shared pool for recycling detached nodes */
   private static pool: RefNode<unknown>[] = [];
+  private static pool_length = 0;
 
   readonly size: number;
   readonly mask: number;
@@ -126,7 +126,7 @@ class RefNode<T> {
   /** Acquire node from pool or create new one */
   static alloc<U>(size: number): RefNode<U> {
     const pool = this.pool as RefNode<U>[];
-    const node = pool.pop();
+    const node = pool[this.pool_length-- - 1];
 
     if (node) {
       node.readIndex = 0;
@@ -148,6 +148,7 @@ class RefNode<T> {
       node.writeIndex = 0;
       node.next = null;
       this.pool.push(node);
+      this.pool_length++;
     }
   }
 
