@@ -2,53 +2,61 @@ import { CausalCoords } from "../storage/config/CausalCoords";
 
 type NodeIndex = number;
 
-class CausalRoot implements CausalCoords {
+/**
+ * Sentinel object used as a temporary default during node construction.
+ * Avoids allocating a new CausalRoot for every node when a custom one isn't provided.
+ */
+const TMP_SENTINEL = new (class CausalRoot implements CausalCoords {
   t = 0;
   v = 0;
   p = 0;
   s = 0;
-}
+})();
+
+const ROOT_SHAPE: CausalCoords = { t: 0, v: 0, p: 0, s: 0 };
 
 /**
- * @class GraphEdge
- * @description
- * An intrusive, bi-directional edge establishing a stable connection between two GraphNodes.
+ * GraphEdge represents a directed, intrusive, bi-directional connection between two GraphNodes.
  *
- * DESIGN PRINCIPLES:
- * 1. Double Adjacency: Participates simultaneously in two doubly-linked lists:
- * - OUT-list (source node's dependencies)
- * - IN-list (target node's observers)
- * 2. Constant Time Complexity: All mutations (link/unlink) are O(1) and frameer-based.
- * 3. Minimal Overhead: Contains zero metadata by default, serving as a pure structural link.
+ * It participates in two separate doubly-linked lists:
+ *   - OUT-list: chained from the source node's outgoing edges (dependencies → observers)
+ *   - IN-list:  chained from the observer node's incoming edges (dependents → source)
  *
- * ------------------------------------------------------------------------------------
- * @section FUTURE-PROOFING & COMPILATION PROPOSAL
- * ------------------------------------------------------------------------------------
- * The current JS implementation defines the interface for an optimized Data-Oriented
- * memory layout to be implemented via Rust/Wasm:
+ * All mutations (link/unlink) are O(1) and require no additional metadata.
  *
- * 1. PHYSICAL ABSTRACTION: In high-performance mode, this class transforms into a
- * Flyweight wrapper over a SharedArrayBuffer.
- * 2. POINTER COMPRESSION: 64-bit object references are targeted for replacement by
- * 32-bit (u32) offsets within a global Edge Pool, maximizing cache density.
- * 3. CACHE LOCALITY: Edge allocation is designed for contiguous memory placement,
- * drastically reducing L1/L2 cache misses during graph traversal.
- * 4. BINARY COMPATIBILITY: Layout is guaranteed to be #[repr(C)] compatible for
- * zero-copy interop with native system-level processing.
+ * Memory layout is carefully grouped for cache locality:
+ *   - Node references first (from/to)
+ *   - Then OUT pointers (prevOut/nextOut)
+ *   - Then IN pointers (prevIn/nextIn)
  */
 class GraphEdge {
-  // Group related fields for better cache locality
+  /** Source node (the node that has this edge in its OUT-list) */
   from: GraphNode;
+  /** Observer node (the node that has this edge in its IN-list) */
   to: GraphNode;
 
-  // OUT-list frameers (source perspective)
-  prevOut: GraphEdge | null;
-  nextOut: GraphEdge | null;
+  /** Previous edge in the source's OUT-list (or null if this is the first) */
+  prevOut: GraphEdge | null = null;
+  /** Next edge in the source's OUT-list (or null if this is the last) */
+  nextOut: GraphEdge | null = null;
 
-  // IN-list frameers (target perspective)
-  prevIn: GraphEdge | null;
-  nextIn: GraphEdge | null;
+  /** Previous edge in the observer's IN-list (or null if this is the first) */
+  prevIn: GraphEdge | null = null;
+  /** Next edge in the observer's IN-list (or null if this is the last) */
+  nextIn: GraphEdge | null = null;
 
+  /**
+   * Creates a new edge and inserts it at the end of both lists.
+   * This constructor is intentionally low-level and mirrors the manual linking
+   * performed in functions like `linkSourceToObserverUnsafe`.
+   *
+   * @param from     Source node
+   * @param to       Observer node
+   * @param prevOut  Previous OUT edge (typically source.lastOut before insertion)
+   * @param nextOut  Next OUT edge (always null for tail insertion)
+   * @param prevIn   Previous IN edge (typically observer.lastIn before insertion)
+   * @param nextIn   Next IN edge (always null for tail insertion)
+   */
   constructor(
     from: GraphNode,
     to: GraphNode,
@@ -57,7 +65,6 @@ class GraphEdge {
     prevIn: GraphEdge | null = null,
     nextIn: GraphEdge | null = null,
   ) {
-    // Initialize ALL fields in constructor for hidden class stability
     this.from = from;
     this.to = to;
     this.prevOut = prevOut;
@@ -68,62 +75,52 @@ class GraphEdge {
 }
 
 /**
- * @class GraphNode
- * @description
- * A fundamental unit of the topological graph. Fully intrusive architecture
- * that encapsulates its own adjacency metadata.
+ * GraphNode is the core unit of a topological dependency graph using fully intrusive adjacency.
  *
- * STRUCTURE:
- * - IN-BOUND:  `firstIn`  → ... → `lastIn`  (Incoming dependencies)
- * - OUT-BOUND: `firstOut` → ... → `lastOut` (Outgoing observers)
+ * Each node maintains:
+ *   - Incoming edges (IN-list): nodes that depend on this one
+ *   - Outgoing edges (OUT-list): nodes that this one observes/depend on
  *
- * INVARIANTS:
- * - Symmetry: If `firstOut` is null, `lastOut` must be null, and `outCount` must be 0.
- * - Integrity: Every edge in the lists must form a valid doubly-linked chain.
+ * All adjacency pointers are stored directly in GraphEdge instances — the node only holds
+ * pointers to the first and last edge in each direction, plus counts for fast size checks.
  *
- * ------------------------------------------------------------------------------------
- * @section IDENTITY-STABLE ACCESSORS (ISA) & DATA-ORIENTED DESIGN
- * ------------------------------------------------------------------------------------
- * This structure serves as a stable contract for a high-performance memory backend:
- *
- * 1. STABLE IDENTITY: The `id` (NodeIndex) acts as a permanent handle. Physical
- * memory relocation (e.g., compaction) does not invalidate the identity.
- * 2. FIELD SPLITTING (SoA): Adjacency frameers (firstIn/firstOut) are designed to be
- * split into separate Int32Arrays to optimize CPU prefetching during sorting.
- * 3. CAUSAL COORDINATION: The `frame` object (CausalCoords) is targeted for
- * flattening into Float32Array SIMD-lanes for vectorized geometric scheduling.
- * 4. ZERO-GC PRESSURE: By transitioning to typed arrays, the graph eliminates
- * object tracking overhead, effectively bypassing JavaScript Garbage Collection.
+ * Design goals:
+ *   - O(1) edge insertion/removal
+ *   - Minimal per-node memory overhead
+ *   - Cache-friendly layout for future SoA (Structure of Arrays) transformations
+ *   - Stable object shape for V8 hidden class optimization (all fields initialized via class fields)
  */
 class GraphNode {
+  /** Permanent identifier — stable even if the node is moved in memory (e.g., during compaction) */
   readonly id: NodeIndex;
 
-  inCount: number;
-  outCount: number;
+  /** Number of incoming edges (nodes depending on this one) */
+  inCount = 0;
+  /** Number of outgoing edges (nodes this one observes) */
+  outCount = 0;
 
-  // Object references grouped
-  firstIn: GraphEdge | null;
-  lastIn: GraphEdge | null;
-  firstOut: GraphEdge | null;
-  lastOut: GraphEdge | null;
+  /** First incoming edge (head of IN-list); null if no incoming edges */
+  firstIn: GraphEdge | null = null;
+  /** Last incoming edge (tail of IN-list); null if no incoming edges */
+  lastIn: GraphEdge | null = null;
 
-  // Stable object shape (initialized inline)
+  /** First outgoing edge (head of OUT-list); null if no outgoing edges */
+  firstOut: GraphEdge | null = null;
+  /** Last outgoing edge (tail of OUT-list); null if no outgoing edges */
+  lastOut: GraphEdge | null = null;
 
-  readonly rootFrame: CausalRoot;
-  readonly frame: CausalCoords;
+  /** Root causal coordinates — shared or sentinel; never modified after construction */
+  readonly rootFrame: typeof TMP_SENTINEL;
+  /** Per-node mutable causal coordinates — initialized to zero */
+  readonly frame: CausalCoords = { t: 0, v: 0, p: 0, s: 0 };
 
-  // currently rootFrame is noop
-  constructor(id: NodeIndex, rootFrame: CausalRoot = new CausalRoot()) {
+  /**
+   * @param id         Unique node identifier
+   * @param rootFrame  Optional shared root frame; defaults to internal sentinel if omitted
+   */
+  constructor(id: NodeIndex, rootFrame = TMP_SENTINEL) {
     this.id = id;
-    this.inCount = 0;
-    this.outCount = 0;
-    this.firstIn = null;
-    this.lastIn = null;
-    this.firstOut = null;
-    this.lastOut = null;
-    // Initialize with literal for shape stability
     this.rootFrame = rootFrame;
-    this.frame = new CausalRoot();
   }
 }
 
