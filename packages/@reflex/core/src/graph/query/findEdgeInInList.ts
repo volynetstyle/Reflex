@@ -1,4 +1,4 @@
-import { GraphNode, GraphEdge } from "../graph.node";
+import { GraphNode, GraphEdge } from "../core";
 
 /**
  * Finds an edge from source to observer by scanning the IN-list.

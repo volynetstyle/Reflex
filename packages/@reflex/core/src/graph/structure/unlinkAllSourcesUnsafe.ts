@@ -1,5 +1,5 @@
-import { GraphNode } from "../graph.node";
-import { unlinkEdgeUnsafe } from "./unlinkEdgeUnsafe";
+import { GraphNode } from "../core";
+import { unlinkEdgeUnsafe } from "../unlink/unlinkEdgeUnsafe";
 
 /**
  * Removes all incoming edges to the given node: source* → node

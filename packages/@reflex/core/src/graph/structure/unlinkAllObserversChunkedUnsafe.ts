@@ -1,6 +1,6 @@
-import { GraphNode } from "../graph.node";
+import { GraphNode } from "../core";
 import { collectEdges } from "../query/collectEdges";
-import { tryUnlinkFastPath } from "./tryUnlinkFastPath";
+import { tryUnlinkFastPath } from "../unlink/tryUnlinkFastPath";
 import { unlinkEdgesReverse } from "./unlinkEdgesReverse";
 
 /**

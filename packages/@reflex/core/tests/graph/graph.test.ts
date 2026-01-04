@@ -11,8 +11,9 @@ import {
   hasSourceUnsafe,
   hasObserverUnsafe,
   replaceSourceUnsafe,
-} from "../../src/graph/graph.methods";
-import { GraphNode, GraphEdge } from "../../src/graph/graph.node";
+  GraphNode,
+  GraphEdge,
+} from "../../src/graph";
 
 // ============================================================================
 // HELPERS

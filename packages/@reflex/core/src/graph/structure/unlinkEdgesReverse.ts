@@ -1,5 +1,5 @@
-import { GraphEdge } from "../graph.node";
-import { unlinkEdgeUnsafe } from "./unlinkEdgeUnsafe";
+import { GraphEdge } from "../core";
+import { unlinkEdgeUnsafe } from "../unlink/unlinkEdgeUnsafe";
 
 /**
  * Unlinks edges from a pre-collected array in reverse order.

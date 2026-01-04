@@ -1,4 +1,4 @@
-import { GraphNode } from "../graph.node";
+import { GraphNode } from "../core";
 import { findEdgeInOutList } from "./findEdgeInOutList";
 import { isLastOutEdgeTo } from "./isLastOutEdgeTo";
 

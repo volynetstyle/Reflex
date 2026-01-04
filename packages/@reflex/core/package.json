@@ -5,26 +5,31 @@
   "description": "Core reactive primitives",
   "sideEffects": false,
   "license": "MIT",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
-      "development": "./dist/dev/index.js",
-      "production": "./dist/esm/index.js",
       "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.cjs"
+      "require": "./dist/cjs/index.js"
     },
     "./internal/*": {
       "types": "./dist/types/internal/*.d.ts",
-      "import": "./dist/esm/internal/*.js"
+      "import": "./dist/esm/internal/*.js",
+      "require": "./dist/cjs/internal/*.js"
     }
   },
-  "types": "./dist/types/index.d.ts",
   "files": [
     "dist"
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc --build",
+    "build:ts": "tsc -p tsconfig.build.json",
+    "build:npm": "rollup -c rollup.config.ts",
+    "build:perf": "rollup -c rollup.perf.config.ts",
+    "build": "pnpm build:ts && pnpm build:npm",
+    "bench:core": "pnpm build:perf && node --expose-gc dist/perf.js",
     "test": "vitest run",
     "bench": "vitest bench",
     "bench:flame": "0x -- node dist/tests/ownership.run.js",
@@ -52,6 +57,8 @@
   },
   "devDependencies": {
     "@reflex/contract": "workspace:*",
-    "@types/node": "^24.10.1"
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@types/node": "^24.10.1",
+    "rollup": "^4.54.0"
   }
 }

@@ -1,4 +1,4 @@
-import { GraphEdge } from "../graph.node";
+import { GraphEdge } from "../core";
 import { unlinkEdgeUnsafe } from "./unlinkEdgeUnsafe";
 
 /**

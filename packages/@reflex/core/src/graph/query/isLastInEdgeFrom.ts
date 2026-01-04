@@ -1,4 +1,4 @@
-import { GraphNode } from "../graph.node";
+import { GraphNode } from "../core";
 
 /**
  * Checks if the most recent incoming edge comes from the target source.

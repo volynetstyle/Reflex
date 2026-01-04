@@ -1,4 +1,4 @@
-import { GraphNode, GraphEdge } from "../graph.node";
+import { GraphNode, GraphEdge } from "../core";
 import { linkSourceToObserverUnsafe } from "./linkSourceToObserverUnsafe";
 
 export const linkSourceToObserversBatchUnsafe = (

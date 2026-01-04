@@ -1,4 +1,4 @@
-import { GraphEdge } from "../graph.node";
+import { GraphEdge } from "../core";
 
 /**
  * Collects all edges from a linked list into a pre-sized array.

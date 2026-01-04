@@ -6,9 +6,17 @@ export default defineConfig({
     __TEST__: true,
     __PROD__: false,
   },
-  test: {
-    globals: true,
+  build: {
+    lib: false, 
+  },
+ test: {
     environment: "node",
-    isolate: true,
+    isolate: false,         
+    pool: "forks",          
+  },
+  esbuild: {
+    platform: "node",
+    format: "esm",
+    treeShaking: true,
   },
 });

@@ -1,4 +1,4 @@
-import { GraphNode } from "../graph.node";
+import { GraphNode } from "../core";
 import { linkSourceToObserverUnsafe } from "../link/linkSourceToObserverUnsafe";
 import { unlinkSourceFromObserverUnsafe } from "../unlink/unlinkSourceFromObserverUnsafe";
 
