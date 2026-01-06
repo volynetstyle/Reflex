@@ -9,7 +9,7 @@
   "sideEffects": false,
   "license": "MIT",
   "exports": {
-    ".": {      
+    ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
@@ -20,6 +20,7 @@
     "build": "tsc --build",
     "bench": "vitest bench",
     "bench:flame": "0x -- node dist/tests/ownership.run.js",
+    "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

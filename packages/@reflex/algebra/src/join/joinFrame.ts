@@ -189,12 +189,17 @@ export function createJoin<R>(
   join: (a: R, b: R) => R,
   rank: (v: R) => number,
 ): JoinFrame<R> {
+  const _arity = arity;
   let value = bottom;
   let arrived = 0;
   let done = false;
 
   return {
-    arity,
+    // this part is dev only, on real case we can use only property set
+    get arity() {
+      return _arity;
+    },
+    set arity(_) {},
 
     get value() {
       return value;
