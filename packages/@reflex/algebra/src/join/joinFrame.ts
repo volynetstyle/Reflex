@@ -193,14 +193,17 @@ export function createJoin<R>(
   let value = bottom;
   let arrived = 0;
   let done = false;
+  const _join = join;
+  const _rank = rank;
 
   return {
-    // this part is dev only, on real case we can use only property set
+    // this part is dev only, on real case we can use only property set like { arity }
     get arity() {
       return _arity;
     },
     set arity(_) {},
-
+    // end dev only part
+    
     get value() {
       return value;
     },
@@ -229,8 +232,8 @@ export function createJoin<R>(
      * V8 optimization: Will be inlined if call site is monomorphic.
      */
     step(x: R): void {
-      value = join(value, x); // Lattice join (A1, A2 guarantee order-independence)
-      arrived = rank(value); // Update progress (J2: monotonic via lattice)
+      value = _join(value, x); // Lattice join (A1, A2 guarantee order-independence)
+      arrived = _rank(value); // Update progress (J2: monotonic via lattice)
       done = arrived >= arity; // Check completion
     },
   } satisfies JoinFrame<R>;
