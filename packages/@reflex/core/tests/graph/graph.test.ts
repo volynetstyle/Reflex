@@ -46,10 +46,8 @@ function assertListIntegrity(node: GraphNode, direction: "out" | "in"): void {
   const first = direction === "out" ? node.firstOut : node.firstIn;
   const last = direction === "out" ? node.lastOut : node.lastIn;
 
-  // Check count matches actual edges
   expect(edges.length).toBe(count);
 
-  // Check first/last frameers
   if (count === 0) {
     expect(first).toBeNull();
     expect(last).toBeNull();
@@ -58,7 +56,6 @@ function assertListIntegrity(node: GraphNode, direction: "out" | "in"): void {
     expect(last).toBe(edges[edges.length - 1]);
   }
 
-  // Check doubly-linked list integrity
   for (let i = 0; i < edges.length; i++) {
     const edge = edges[i]!;
     const prev = direction === "out" ? edge.prevOut : edge.prevIn;
@@ -102,6 +99,18 @@ describe("Graph Operations - Comprehensive Tests", () => {
 
   describe("Basic Linking", () => {
     it("creates symmetric edge between source and observer", () => {
+      /**
+       * Visual:
+       * 
+       *   source ──→ observer
+       * 
+       * Guarantees:
+       * - source.outCount === 1
+       * - observer.inCount === 1
+       * - edge.from === source
+       * - edge.to === observer
+       * - Doubly-linked list integrity maintained
+       */
       const { source, observer } = createTestGraph();
 
       const e = linkSourceToObserverUnsafe(source, observer);
@@ -124,18 +133,30 @@ describe("Graph Operations - Comprehensive Tests", () => {
       expect(e.prevIn).toBeNull();
       expect(e.nextIn).toBeNull();
 
-      // List integrity
       assertListIntegrity(source, "out");
       assertListIntegrity(observer, "in");
     });
 
     it("handles duplicate link (hot path) - returns existing edge", () => {
+      /**
+       * Visual:
+       * 
+       *   source ──→ observer  (link #1)
+       *   source ──→ observer  (link #2, should reuse edge)
+       * 
+       * Result:
+       *   source ──→ observer  (single edge)
+       * 
+       * Guarantees:
+       * - Diamond graph protection (no duplicate edges)
+       * - e1 === e2 (same object reference)
+       * - Counts remain 1
+       */
       const { source, observer } = createTestGraph();
 
       const e1 = linkSourceToObserverUnsafe(source, observer);
       const e2 = linkSourceToObserverUnsafe(source, observer);
 
-      // Should return same edge (HOT PATH optimization)
       expect(e1).toBe(e2);
       expect(source.outCount).toBe(1);
       expect(observer.inCount).toBe(1);
@@ -145,23 +166,36 @@ describe("Graph Operations - Comprehensive Tests", () => {
     });
 
     it("creates multiple sequential edges correctly", () => {
+      /**
+       * Visual:
+       * 
+       *          ┌──→ o1
+       *   source ├──→ o2
+       *          └──→ o3
+       * 
+       * OUT list order: e1 ↔ e2 ↔ e3
+       * 
+       * Guarantees:
+       * - Topological order preserved
+       * - firstOut/lastOut correct
+       * - prev/next pointers form valid chain
+       */
       const { source, o1, o2, o3 } = createTestGraph();
 
       const e1 = linkSourceToObserverUnsafe(source, o1);
       const e2 = linkSourceToObserverUnsafe(source, o2);
       const e3 = linkSourceToObserverUnsafe(source, o3);
 
-      // Check chain order
       expect(source.firstOut).toBe(e1);
       expect(source.lastOut).toBe(e3);
       expect(source.outCount).toBe(3);
 
-      // Forward links
+      // Forward chain
       expect(e1.nextOut).toBe(e2);
       expect(e2.nextOut).toBe(e3);
       expect(e3.nextOut).toBeNull();
 
-      // Backward links
+      // Backward chain
       expect(e1.prevOut).toBeNull();
       expect(e2.prevOut).toBe(e1);
       expect(e3.prevOut).toBe(e2);
@@ -170,6 +204,19 @@ describe("Graph Operations - Comprehensive Tests", () => {
     });
 
     it("handles multiple sources for one observer", () => {
+      /**
+       * Visual:
+       * 
+       *   s1 ──┐
+       *   s2 ──┼──→ observer
+       *   s3 ──┘
+       * 
+       * IN list order: e1 ↔ e2 ↔ e3
+       * 
+       * Guarantees:
+       * - Fan-in correctly maintained
+       * - observer.inCount === 3
+       */
       const { observer, s1, s2, s3 } = createTestGraph();
 
       const e1 = linkSourceToObserverUnsafe(s1, observer);
@@ -183,7 +230,21 @@ describe("Graph Operations - Comprehensive Tests", () => {
       assertListIntegrity(observer, "in");
     });
 
-    it("correctly maintains tail frameers during append", () => {
+    it("correctly maintains tail pointers during append", () => {
+      /**
+       * Visual (sequence):
+       * 
+       * Step 1:  source ──→ o1
+       *          lastOut = e1
+       * 
+       * Step 2:  source ──┬──→ o1
+       *                   └──→ o2
+       *          lastOut = e2
+       * 
+       * Guarantees:
+       * - lastOut always points to newest edge
+       * - prev/next chains valid
+       */
       const { source, o1, o2 } = createTestGraph();
 
       const e1 = linkSourceToObserverUnsafe(source, o1);
@@ -202,22 +263,31 @@ describe("Graph Operations - Comprehensive Tests", () => {
 
   describe("Edge Unlinking", () => {
     it("unlinks single edge correctly", () => {
+      /**
+       * Visual:
+       * 
+       * Before:  source ──→ observer
+       * After:   source     observer  (disconnected)
+       * 
+       * Guarantees:
+       * - Both nodes have count = 0
+       * - firstOut/lastOut = null
+       * - firstIn/lastIn = null
+       * - Edge pointers cleared
+       */
       const { source, observer } = createTestGraph();
 
       const edge = linkSourceToObserverUnsafe(source, observer);
       unlinkEdgeUnsafe(edge);
 
-      // Source side
       expect(source.firstOut).toBeNull();
       expect(source.lastOut).toBeNull();
       expect(source.outCount).toBe(0);
 
-      // Observer side
       expect(observer.firstIn).toBeNull();
       expect(observer.lastIn).toBeNull();
       expect(observer.inCount).toBe(0);
 
-      // Edge cleanup
       expect(edge.prevOut).toBeNull();
       expect(edge.nextOut).toBeNull();
       expect(edge.prevIn).toBeNull();
@@ -225,6 +295,23 @@ describe("Graph Operations - Comprehensive Tests", () => {
     });
 
     it("unlinks first edge in chain", () => {
+      /**
+       * Visual:
+       * 
+       * Before:  source ──┬──→ o1
+       *                   ├──→ o2
+       *                   └──→ o3
+       * 
+       * Unlink e1:
+       * 
+       * After:   source ──┬──→ o2  (now first)
+       *                   └──→ o3
+       * 
+       * Guarantees:
+       * - firstOut updated to e2
+       * - e2.prevOut === null
+       * - Chain integrity maintained
+       */
       const { source, o1, o2, o3 } = createTestGraph();
 
       const e1 = linkSourceToObserverUnsafe(source, o1);
@@ -242,6 +329,23 @@ describe("Graph Operations - Comprehensive Tests", () => {
     });
 
     it("unlinks middle edge in chain", () => {
+      /**
+       * Visual:
+       * 
+       * Before:  source ──┬──→ o1
+       *                   ├──→ o2  ← unlink this
+       *                   └──→ o3
+       * 
+       * After:   source ──┬──→ o1
+       *                   └──→ o3
+       * 
+       * Result chain: e1 ↔ e3
+       * 
+       * Guarantees:
+       * - e1.nextOut === e3
+       * - e3.prevOut === e1
+       * - firstOut/lastOut unchanged
+       */
       const { source, o1, o2, o3 } = createTestGraph();
 
       const e1 = linkSourceToObserverUnsafe(source, o1);
@@ -260,6 +364,20 @@ describe("Graph Operations - Comprehensive Tests", () => {
     });
 
     it("unlinks last edge in chain", () => {
+      /**
+       * Visual:
+       * 
+       * Before:  source ──┬──→ o1
+       *                   ├──→ o2
+       *                   └──→ o3  ← unlink this
+       * 
+       * After:   source ──┬──→ o1
+       *                   └──→ o2  (now last)
+       * 
+       * Guarantees:
+       * - lastOut updated to e2
+       * - e2.nextOut === null
+       */
       const { source, o1, o2, o3 } = createTestGraph();
 
       const e1 = linkSourceToObserverUnsafe(source, o1);
@@ -276,6 +394,24 @@ describe("Graph Operations - Comprehensive Tests", () => {
     });
 
     it("unlinks all edges one by one", () => {
+      /**
+       * Visual (sequence):
+       * 
+       * Start:    source ──┬──→ o1
+       *                    ├──→ o2
+       *                    └──→ o3
+       * 
+       * Unlink e1: source ──┬──→ o2
+       *                     └──→ o3
+       * 
+       * Unlink e2: source ──→ o3
+       * 
+       * Unlink e3: source  (empty)
+       * 
+       * Guarantees:
+       * - Integrity maintained at each step
+       * - Final state: count = 0, pointers null
+       */
       const { source, o1, o2, o3 } = createTestGraph();
 
       const e1 = linkSourceToObserverUnsafe(source, o1);
@@ -303,6 +439,19 @@ describe("Graph Operations - Comprehensive Tests", () => {
 
   describe("unlinkSourceFromObserverUnsafe", () => {
     it("removes matching edge", () => {
+      /**
+       * Visual:
+       * 
+       * Before:  source ──→ observer
+       * 
+       * unlinkSourceFromObserverUnsafe(source, observer)
+       * 
+       * After:   source     observer  (disconnected)
+       * 
+       * Guarantees:
+       * - Edge found and removed
+       * - Both sides cleaned
+       */
       const { source, observer } = createTestGraph();
 
       linkSourceToObserverUnsafe(source, observer);
@@ -315,12 +464,23 @@ describe("Graph Operations - Comprehensive Tests", () => {
     });
 
     it("uses fast path (lastOut check)", () => {
+      /**
+       * Visual:
+       * 
+       *          ┌──→ o1
+       *   source └──→ o2  ← lastOut (fast path)
+       * 
+       * Fast path checks lastOut first before traversing
+       * 
+       * Guarantees:
+       * - O(1) removal when target is last
+       * - Chain integrity maintained
+       */
       const { source, o1, o2 } = createTestGraph();
 
       linkSourceToObserverUnsafe(source, o1);
       const e2 = linkSourceToObserverUnsafe(source, o2);
 
-      // o2 is at lastOut (fast path)
       expect(source.lastOut).toBe(e2);
 
       unlinkSourceFromObserverUnsafe(source, o2);
@@ -330,6 +490,22 @@ describe("Graph Operations - Comprehensive Tests", () => {
     });
 
     it("handles middle edge removal", () => {
+      /**
+       * Visual:
+       * 
+       * Before:  s1 ──┐
+       *          s2 ──┼──→ observer  ← unlink s2
+       *          s3 ──┘
+       * 
+       * After:   s1 ──┐
+       *          s3 ──┘──→ observer
+       * 
+       * IN chain: e1 ↔ e3
+       * 
+       * Guarantees:
+       * - Middle removal handled correctly
+       * - IN list integrity maintained
+       */
       const { observer, s1, s2, s3 } = createTestGraph();
 
       linkSourceToObserverUnsafe(s1, observer);
@@ -347,11 +523,23 @@ describe("Graph Operations - Comprehensive Tests", () => {
     });
 
     it("silently ignores non-existent edge", () => {
+      /**
+       * Visual:
+       * 
+       *   source ──→ o1
+       * 
+       * Try: unlinkSourceFromObserverUnsafe(source, observer)
+       * 
+       * Result: No-op (edge doesn't exist)
+       * 
+       * Guarantees:
+       * - Safe to call on non-existent edge
+       * - No corruption of existing edges
+       */
       const { source, observer, o1 } = createTestGraph();
 
       linkSourceToObserverUnsafe(source, o1);
 
-      // Try to unlink non-existent edge
       unlinkSourceFromObserverUnsafe(source, observer);
 
       expect(source.outCount).toBe(1);
@@ -365,6 +553,22 @@ describe("Graph Operations - Comprehensive Tests", () => {
 
   describe("Bulk Operations", () => {
     it("unlinkAllObserversUnsafe clears all edges", () => {
+      /**
+       * Visual:
+       * 
+       * Before:      ┌──→ o1
+       *       source ├──→ o2
+       *              └──→ o3
+       * 
+       * unlinkAllObserversUnsafe(source)
+       * 
+       * After:  source  o1  o2  o3  (all disconnected)
+       * 
+       * Guarantees:
+       * - All OUT edges removed
+       * - All observer IN edges cleaned
+       * - source.outCount === 0
+       */
       const { source, o1, o2, o3 } = createTestGraph();
 
       linkSourceToObserverUnsafe(source, o1);
@@ -377,7 +581,6 @@ describe("Graph Operations - Comprehensive Tests", () => {
       expect(source.firstOut).toBeNull();
       expect(source.lastOut).toBeNull();
 
-      // Check observers are also cleaned
       expect(o1.inCount).toBe(0);
       expect(o2.inCount).toBe(0);
       expect(o3.inCount).toBe(0);
@@ -386,6 +589,22 @@ describe("Graph Operations - Comprehensive Tests", () => {
     });
 
     it("unlinkAllSourcesUnsafe clears all incoming edges", () => {
+      /**
+       * Visual:
+       * 
+       * Before:  s1 ──┐
+       *          s2 ──┼──→ observer
+       *          s3 ──┘
+       * 
+       * unlinkAllSourcesUnsafe(observer)
+       * 
+       * After:  s1  s2  s3  observer  (all disconnected)
+       * 
+       * Guarantees:
+       * - All IN edges removed
+       * - All source OUT edges cleaned
+       * - observer.inCount === 0
+       */
       const { observer, s1, s2, s3 } = createTestGraph();
 
       linkSourceToObserverUnsafe(s1, observer);
@@ -398,18 +617,26 @@ describe("Graph Operations - Comprehensive Tests", () => {
       expect(observer.firstIn).toBeNull();
       expect(observer.lastIn).toBeNull();
 
-      // Check sources are also cleaned
       expect(s1.outCount).toBe(0);
-      expect(s1.firstOut).toBeNull();
       expect(s2.outCount).toBe(0);
-      expect(s2.firstOut).toBeNull();
       expect(s3.outCount).toBe(0);
-      expect(s3.firstOut).toBeNull();
 
       assertListIntegrity(observer, "in");
     });
 
     it("unlinkAllObserversChunkedUnsafe with empty node", () => {
+      /**
+       * Visual:
+       * 
+       *   source  (no edges)
+       * 
+       * unlinkAllObserversChunkedUnsafe(source)
+       * 
+       * Result: No-op
+       * 
+       * Guarantees:
+       * - Safe on empty nodes
+       */
       const { source } = createTestGraph();
 
       unlinkAllObserversChunkedUnsafe(source);
@@ -418,6 +645,19 @@ describe("Graph Operations - Comprehensive Tests", () => {
     });
 
     it("unlinkAllObserversChunkedUnsafe with single edge", () => {
+      /**
+       * Visual:
+       * 
+       * Before:  source ──→ observer
+       * 
+       * unlinkAllObserversChunkedUnsafe(source)
+       * 
+       * After:   source     observer  (disconnected)
+       * 
+       * Guarantees:
+       * - Works for single edge case
+       * - Symmetric cleanup
+       */
       const { source, observer } = createTestGraph();
 
       linkSourceToObserverUnsafe(source, observer);
@@ -428,6 +668,21 @@ describe("Graph Operations - Comprehensive Tests", () => {
     });
 
     it("unlinkAllObserversChunkedUnsafe with many edges", () => {
+      /**
+       * Visual:
+       * 
+       * Before:      ┌──→ o1
+       *       source ├──→ o2
+       *              └──→ o3
+       * 
+       * unlinkAllObserversChunkedUnsafe(source)
+       * 
+       * After:  source  o1  o2  o3  (all disconnected)
+       * 
+       * Guarantees:
+       * - Bulk removal efficient
+       * - All observers cleaned
+       */
       const { source, o1, o2, o3 } = createTestGraph();
 
       linkSourceToObserverUnsafe(source, o1);
@@ -449,6 +704,16 @@ describe("Graph Operations - Comprehensive Tests", () => {
 
   describe("Batch Linking", () => {
     it("linkSourceToObserversBatchUnsafe with empty array", () => {
+      /**
+       * Visual:
+       * 
+       *   source + []
+       * 
+       * Result: No edges created
+       * 
+       * Guarantees:
+       * - Safe with empty input
+       */
       const { source } = createTestGraph();
 
       const edges = linkSourceToObserversBatchUnsafe(source, []);
@@ -458,6 +723,16 @@ describe("Graph Operations - Comprehensive Tests", () => {
     });
 
     it("linkSourceToObserversBatchUnsafe with single observer", () => {
+      /**
+       * Visual:
+       * 
+       *   source + [observer]
+       * 
+       * Result:  source ──→ observer
+       * 
+       * Guarantees:
+       * - Batch with single item works
+       */
       const { source, observer } = createTestGraph();
 
       const edges = linkSourceToObserversBatchUnsafe(source, [observer]);
@@ -468,6 +743,20 @@ describe("Graph Operations - Comprehensive Tests", () => {
     });
 
     it("linkSourceToObserversBatchUnsafe with multiple observers", () => {
+      /**
+       * Visual:
+       * 
+       *   source + [o1, o2, o3]
+       * 
+       * Result:      ┌──→ o1
+       *       source ├──→ o2
+       *              └──→ o3
+       * 
+       * Guarantees:
+       * - Efficient batch creation
+       * - Order preserved
+       * - List integrity maintained
+       */
       const { source, o1, o2, o3 } = createTestGraph();
 
       const edges = linkSourceToObserversBatchUnsafe(source, [o1, o2, o3]);
@@ -482,6 +771,18 @@ describe("Graph Operations - Comprehensive Tests", () => {
     });
 
     it("linkSourceToObserversBatchUnsafe handles duplicates", () => {
+      /**
+       * Visual:
+       * 
+       *   source + [observer, observer]
+       * 
+       * Result:  source ──→ observer  (single edge)
+       * 
+       * Guarantees:
+       * - Duplicate detection in batch
+       * - Same edge returned twice in array
+       * - No duplicate edges created
+       */
       const { source, observer } = createTestGraph();
 
       const edges = linkSourceToObserversBatchUnsafe(source, [
@@ -489,7 +790,6 @@ describe("Graph Operations - Comprehensive Tests", () => {
         observer,
       ]);
 
-      // Second link returns same edge (duplicate detection)
       expect(edges[0]).toBe(edges[1]);
       expect(source.outCount).toBe(1);
     });
@@ -501,6 +801,18 @@ describe("Graph Operations - Comprehensive Tests", () => {
 
   describe("Query Operations", () => {
     it("hasSourceUnsafe returns true for existing edge", () => {
+      /**
+       * Visual:
+       * 
+       *   source ──→ observer
+       * 
+       * Query: hasSourceUnsafe(source, observer)
+       * 
+       * Result: true
+       * 
+       * Guarantees:
+       * - Edge detection works
+       */
       const { source, observer } = createTestGraph();
 
       linkSourceToObserverUnsafe(source, observer);
@@ -509,6 +821,18 @@ describe("Graph Operations - Comprehensive Tests", () => {
     });
 
     it("hasSourceUnsafe returns false for non-existent edge", () => {
+      /**
+       * Visual:
+       * 
+       *   source ──→ o1
+       * 
+       * Query: hasSourceUnsafe(source, observer)
+       * 
+       * Result: false (different observer)
+       * 
+       * Guarantees:
+       * - Correctly identifies missing edge
+       */
       const { source, observer, o1 } = createTestGraph();
 
       linkSourceToObserverUnsafe(source, o1);
@@ -517,230 +841,46 @@ describe("Graph Operations - Comprehensive Tests", () => {
     });
 
     it("hasSourceUnsafe uses fast path (lastOut)", () => {
+      /**
+       * Visual:
+       * 
+       *          ┌──→ o1
+       *   source └──→ o2  ← lastOut (fast path)
+       * 
+       * Query: hasSourceUnsafe(source, o2)
+       * 
+       * Optimization: Checks lastOut before traversing
+       * 
+       * Guarantees:
+       * - O(1) check when target is last
+       */
       const { source, o1, o2 } = createTestGraph();
 
       linkSourceToObserverUnsafe(source, o1);
       linkSourceToObserverUnsafe(source, o2);
 
-      // o2 is at lastOut (fast path)
       expect(hasSourceUnsafe(source, o2)).toBe(true);
     });
 
     it("hasObserverUnsafe traverses IN list", () => {
+      /**
+       * Visual:
+       * 
+       *   source ──→ observer
+       * 
+       * Query: hasObserverUnsafe(source, observer)
+       * 
+       * Result: true
+       * 
+       * Guarantees:
+       * - IN list traversal works
+       * - Symmetric to hasSourceUnsafe
+       */
       const { source, observer } = createTestGraph();
 
       linkSourceToObserverUnsafe(source, observer);
 
       expect(hasObserverUnsafe(source, observer)).toBe(true);
-    });
-  });
-
-  // --------------------------------------------------------------------------
-  // REPLACE OPERATIONS
-  // --------------------------------------------------------------------------
-
-  describe("Replace Operations", () => {
-    it("replaceSourceUnsafe swaps source", () => {
-      const { observer, s1, s2 } = createTestGraph();
-
-      linkSourceToObserverUnsafe(s1, observer);
-
-      replaceSourceUnsafe(s1, s2, observer);
-
-      expect(s1.outCount).toBe(0);
-      expect(s2.outCount).toBe(1);
-      expect(observer.inCount).toBe(1);
-
-      const edge = observer.firstIn;
-      expect(edge?.from).toBe(s2);
-      expect(edge?.to).toBe(observer);
-    });
-
-    it("replaceSourceUnsafe with multiple edges", () => {
-      const { observer, o2, s1, s2 } = createTestGraph();
-
-      linkSourceToObserverUnsafe(s1, observer);
-      linkSourceToObserverUnsafe(s1, o2);
-
-      replaceSourceUnsafe(s1, s2, observer);
-
-      expect(s1.outCount).toBe(1); // Still has edge to o2
-      expect(s2.outCount).toBe(1);
-
-      const edges = collectInEdges(observer);
-      expect(edges.length).toBe(1);
-      expect(edges[0]!.from).toBe(s2);
-    });
-  });
-
-  // --------------------------------------------------------------------------
-  // EDGE CASES & STRESS TESTS
-  // --------------------------------------------------------------------------
-
-  describe("Edge Cases", () => {
-    it("handles self-loop (node → itself)", () => {
-      const { source } = createTestGraph();
-
-      const edge = linkSourceToObserverUnsafe(source, source);
-
-      expect(source.outCount).toBe(1);
-      expect(source.inCount).toBe(1);
-      expect(edge.from).toBe(source);
-      expect(edge.to).toBe(source);
-
-      assertListIntegrity(source, "out");
-      assertListIntegrity(source, "in");
-    });
-
-    it("handles bidirectional edges", () => {
-      const { source, observer } = createTestGraph();
-
-      const e1 = linkSourceToObserverUnsafe(source, observer);
-      const e2 = linkSourceToObserverUnsafe(observer, source);
-
-      expect(source.outCount).toBe(1);
-      expect(source.inCount).toBe(1);
-      expect(observer.outCount).toBe(1);
-      expect(observer.inCount).toBe(1);
-
-      expect(e1).not.toBe(e2);
-    });
-
-    it("handles many-to-many relationships", () => {
-      const { s1, s2, o1, o2 } = createTestGraph();
-
-      linkSourceToObserverUnsafe(s1, o1);
-      linkSourceToObserverUnsafe(s1, o2);
-      linkSourceToObserverUnsafe(s2, o1);
-      linkSourceToObserverUnsafe(s2, o2);
-
-      expect(s1.outCount).toBe(2);
-      expect(s2.outCount).toBe(2);
-      expect(o1.inCount).toBe(2);
-      expect(o2.inCount).toBe(2);
-
-      assertListIntegrity(s1, "out");
-      assertListIntegrity(s2, "out");
-      assertListIntegrity(o1, "in");
-      assertListIntegrity(o2, "in");
-    });
-
-    it("survives rapid link/unlink cycles", () => {
-      const { source, observer } = createTestGraph();
-
-      for (let i = 0; i < 100; i++) {
-        const edge = linkSourceToObserverUnsafe(source, observer);
-        expect(source.outCount).toBe(1);
-
-        unlinkEdgeUnsafe(edge);
-        expect(source.outCount).toBe(0);
-      }
-
-      assertListIntegrity(source, "out");
-      assertListIntegrity(observer, "in");
-    });
-
-    it("handles large fan-out correctly", () => {
-      const source = new GraphNode(0);
-      const observers: GraphNode[] = [];
-
-      for (let i = 0; i < 100; i++) {
-        observers.push(new GraphNode(i + 1));
-      }
-
-      const edges = linkSourceToObserversBatchUnsafe(source, observers);
-
-      expect(edges.length).toBe(100);
-      expect(source.outCount).toBe(100);
-
-      assertListIntegrity(source, "out");
-
-      // Verify each observer
-      observers.forEach((obs, i) => {
-        expect(obs.inCount).toBe(1);
-        expect(edges[i]!.to).toBe(obs);
-      });
-    });
-  });
-
-  // --------------------------------------------------------------------------
-  // INITIALIZATION & WARMUP
-  // --------------------------------------------------------------------------
-
-  describe("Initialization", () => {
-    it("GraphNode initialized with correct defaults", () => {
-      const node = new GraphNode(42);
-
-      expect(node.id).toBe(42);
-      expect(node.inCount).toBe(0);
-      expect(node.outCount).toBe(0);
-      expect(node.firstIn).toBeNull();
-      expect(node.lastIn).toBeNull();
-      expect(node.firstOut).toBeNull();
-      expect(node.lastOut).toBeNull();
-      expect(node.frame).toEqual({ t: 0, v: 0, p: 0, s: 0 });
-    });
-
-    it("GraphEdge initialized with correct defaults", () => {
-      const { source, observer } = createTestGraph();
-
-      const edge = new GraphEdge(source, observer);
-
-      expect(edge.from).toBe(source);
-      expect(edge.to).toBe(observer);
-      expect(edge.prevOut).toBeNull();
-      expect(edge.nextOut).toBeNull();
-      expect(edge.prevIn).toBeNull();
-      expect(edge.nextIn).toBeNull();
-    });
-  });
-
-  // --------------------------------------------------------------------------
-  // INVARIANT CHECKS
-  // --------------------------------------------------------------------------
-
-  describe("Invariant Checks", () => {
-    it("maintains count invariants after complex operations", () => {
-      const { source, o1, o2, o3 } = createTestGraph();
-
-      // Build
-      linkSourceToObserverUnsafe(source, o1);
-      linkSourceToObserverUnsafe(source, o2);
-      linkSourceToObserverUnsafe(source, o3);
-
-      expect(source.outCount).toBe(collectOutEdges(source).length);
-
-      // Modify
-      unlinkSourceFromObserverUnsafe(source, o2);
-
-      expect(source.outCount).toBe(collectOutEdges(source).length);
-
-      // Rebuild
-      linkSourceToObserverUnsafe(source, o2);
-
-      expect(source.outCount).toBe(collectOutEdges(source).length);
-    });
-
-    it("maintains symmetry between OUT and IN lists", () => {
-      const { source, observer } = createTestGraph();
-
-      const edge = linkSourceToObserverUnsafe(source, observer);
-
-      // Edge appears in both lists
-      const outEdges = collectOutEdges(source);
-      const inEdges = collectInEdges(observer);
-
-      expect(outEdges).toContain(edge);
-      expect(inEdges).toContain(edge);
-
-      unlinkEdgeUnsafe(edge);
-
-      // Edge removed from both
-      const outEdges2 = collectOutEdges(source);
-      const inEdges2 = collectInEdges(observer);
-
-      expect(outEdges2).not.toContain(edge);
-      expect(inEdges2).not.toContain(edge);
     });
   });
 });

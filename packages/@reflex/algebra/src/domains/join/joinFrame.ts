@@ -2,9 +2,15 @@
  * JoinFrame — Zero-Allocation Join Coordination Primitive
  * ========================================================
  *
- * A lattice-based synchronization automaton for order-independent data aggregation.
- * Designed for hot-path monomorphic execution with minimal allocations.
+ * NOTE:
+ * The lattice defines value aggregation semantics only.
+ * JoinFrame itself is an operational coordination mechanism
+ * and is NOT part of the causal graph.
  *
+ * ONTOLOGICAL NOTE:
+ * JoinFrame does not represent an event.
+ * It coordinates events and, upon completion, may trigger
+ * the creation of a derived GraphNode elsewhere.
  *
  * INVARIANTS (J1-J6)
  * ------------------
@@ -168,31 +174,61 @@ export interface JoinFrame<R> {
 }
 
 /**
- * Creates a zero-allocation join frame with lattice semantics.
+ * Creates a zero-allocation join frame with join-semilattice semantics.
  *
- * @param arity - Number of events required to complete (J1: immutable)
- * @param bottom - Identity element for the lattice (⊥)
- * @param join - Lattice join operation (must satisfy A1, A2, optionally A3)
- * @param rank - Progress function mapping values to [0, arity] (J2)
+ * @param arity  - Number of required arrivals to complete (J1: immutable).
+ * @param bottom - Identity element ⊥ (neutral for join):  join(⊥, x) = x.
+ * @param join   - Join operator ⊔ used to aggregate arrivals.
+ *                 Algebraic requirements (A1..A3):
+ *                 A1: Associativity:  (a ⊔ b) ⊔ c = a ⊔ (b ⊔ c)
+ *                 A2: Commutativity:  a ⊔ b = b ⊔ a
+ *                 A3: Idempotence (recommended): a ⊔ a = a
+ *                 Note: A3 is optional, but without it duplicates may inflate progress (see rank).
+ * @param rank   - Progress measure r: V -> [0..arity] (J2).
+ *                 Must be monotone w.r.t. join:
+ *                 r(a ⊔ b) >= max(r(a), r(b)).
+ *                 Completion condition: r(value) >= arity.
  *
- * @returns Stateful join automaton (J5: no further allocations)
+ * @returns Stateful join automaton (J5: steady-state has no further allocations).
  *
- * OPTIMIZATION NOTES:
- * - Uses closure for minimal object shape (hidden class stability)
- * - Hoists `value` and `arrived` to closure for faster access
- * - Avoids `this` lookup overhead in hot path
- * - V8 will inline `step` if monomorphic
+ * PERFORMANCE / IMPLEMENTATION NOTES:
+ * - Closure-based storage keeps object shape stable (hidden class stability).
+ * - Hoists `value` and `arrived` into closure for fast access.
+ * - Avoids `this` and prototype lookups in hot path.
+ * - V8 can inline `step()` if callsite stays monomorphic.
+ *
+ * CONCEPTUAL MODEL:
+ * This is a join-semilattice aggregator:
+ *   - ⊥ is the initial state (bottom / identity)
+ *   - ⊔ merges partial information in an order-independent way
+ *   - rank provides an application-specific completion metric
+ *     (not necessarily a simple counter).
+ *
+ * COMMON LATTICE / SEMILATTICE INSTANCES SUITABLE FOR JoinFrame:
+ *
+ * | Structure                 | bottom (⊥)              | join (⊔)                         | rank example                     | Typical reactive use-cases                       | Idempotent |
+ * |--------------------------|-------------------------|----------------------------------|----------------------------------|--------------------------------------------------|-----------|
+ * | Max (latest-wins by max) | -Infinity / 0           | Math.max                         | v => v                           | “max-progress wins”, monotone checkpoints        | yes       |
+ * | Set union                | empty Set               | (A,B) => A ∪ B                   | s => s.size                      | Unique IDs/tags collection                       | yes       |
+ * | Vector-clock merge       | [0..0]                  | component-wise max               | vc => sum(vc) (or other)         | Causal merge / concurrency detection             | yes       |
+ * | G-Counter                | [0..0]                  | component-wise max               | gc => sum(gc)                    | CRDT distributed counters (monotone increments)  | yes       |
+ * | Sum accumulator          | 0                       | (a,b) => a + b                   | x => x / threshold (or clamp)    | Metrics batching, weighted aggregation           | no*       |
+ * | Tuple append / concat    | []                      | (a,b) => a.concat(b)             | xs => xs.length                  | Ordered event log / delivery sequence            | no        |
+ * | Last value (overwrite)   | undefined               | (_, b) => b                      | _ => 0 or 1                      | “last message wins” latch / simple replace       | yes       |
+ *
+ * * Sum is not idempotent; to recover idempotence sources must provide deltas,
+ *   or attach deduplication keys, or aggregate via a set/map then sum.
  */
-export function createJoin<R>(
+export const createJoin = <R>(
   arity: number,
   bottom: R,
   join: (a: R, b: R) => R,
   rank: (v: R) => number,
-): JoinFrame<R> {
+): JoinFrame<R> => {
   const _arity = arity;
-  let value = bottom;
-  let arrived = 0;
-  let done = false;
+  let value = bottom,
+    arrived = 0,
+    done = false;
   const _join = join;
   const _rank = rank;
 
@@ -203,7 +239,7 @@ export function createJoin<R>(
     },
     set arity(_) {},
     // end dev only part
-    
+
     get value() {
       return value;
     },
@@ -231,10 +267,10 @@ export function createJoin<R>(
      * Optimization: Direct closure access avoids property lookup.
      * V8 optimization: Will be inlined if call site is monomorphic.
      */
-    step(x: R): void {
+    step: (x: R): void => {
       value = _join(value, x); // Lattice join (A1, A2 guarantee order-independence)
       arrived = _rank(value); // Update progress (J2: monotonic via lattice)
       done = arrived >= arity; // Check completion
     },
   } satisfies JoinFrame<R>;
-}
+};

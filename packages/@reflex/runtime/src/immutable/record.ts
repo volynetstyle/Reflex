@@ -1,3 +1,14 @@
+/// That`s implementation under question therefore i`m not sure about real cause to use this in current implementation
+/// maybe there is exist another way and some different representation of object through math 
+
+// value = {
+//   literal_A: {
+//     some_a: 1,
+//     some_b: 2,
+//     some_c: [1, 2, 3]
+//   }
+// }
+
 "use strict";
 
 type Primitive = string | number | boolean | null;

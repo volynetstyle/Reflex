@@ -13,6 +13,21 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.mjs",
+      "require": "./dist/types.cjs"
+    },
+    "./laws": {
+      "types": "./dist/laws.d.ts",
+      "import": "./dist/laws.mjs",
+      "require": "./dist/laws.cjs"
+    },
+    "./testkit": {
+      "types": "./dist/testkit.d.ts",
+      "import": "./dist/testkit.mjs",
+      "require": "./dist/testkit.cjs"
     }
   },
   "scripts": {
