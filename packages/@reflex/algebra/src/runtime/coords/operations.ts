@@ -69,3 +69,4 @@ export const coordsLattice: Lattice<Coords> = {
   join: coordsJoin,
   meet: coordsMeet,
 }
+

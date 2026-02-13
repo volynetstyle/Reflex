@@ -17,6 +17,7 @@ export const unlinkEdgeUnsafe = (edge: GraphEdge): void => {
 
   if (nextOut) nextOut.prevOut = prevOut;
   else from.lastOut = prevOut;
+  --to.inCount;
 
   const prevIn = edge.prevIn;
   const nextIn = edge.nextIn;
@@ -26,9 +27,10 @@ export const unlinkEdgeUnsafe = (edge: GraphEdge): void => {
 
   if (nextIn) nextIn.prevIn = prevIn;
   else to.lastIn = prevIn;
-
-  --to.inCount;
   --from.outCount;
 
-  edge.prevOut = edge.nextOut = edge.prevIn = edge.nextIn = null;
+  edge.prevOut = null;
+  edge.nextOut = null;
+  edge.prevIn = null;
+  edge.nextIn = null;
 };

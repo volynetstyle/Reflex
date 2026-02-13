@@ -1,0 +1,64 @@
+{
+  "name": "@reflex/core",
+  "version": "0.0.9",
+  "type": "module",
+  "description": "Core reactive primitives",
+  "sideEffects": false,
+  "license": "MIT",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    },
+    "./internal/*": {
+      "types": "./dist/types/internal/*.d.ts",
+      "import": "./dist/esm/internal/*.js",
+      "require": "./dist/cjs/internal/*.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build:ts": "tsc -p tsconfig.build.json",
+    "build:npm": "rollup -c rollup.config.ts",
+    "build:perf": "rollup -c rollup.perf.config.ts",
+    "build": "pnpm build:ts && pnpm build:npm",
+    "bench:core": "pnpm build:perf && node --expose-gc dist/perf.js",
+    "test": "vitest",
+    "bench": "vitest bench",
+    "bench:flame": "0x -- node dist/tests/ownership.run.js",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build",
+    "release": "changeset version && pnpm install && changeset publish",
+    "prepare": "husky"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@reflex/contract": "workspace:*",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@types/node": "^24.10.1",
+    "rollup": "^4.54.0"
+  }
+}

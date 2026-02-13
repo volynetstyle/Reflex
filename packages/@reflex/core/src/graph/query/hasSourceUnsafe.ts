@@ -11,6 +11,8 @@ export const hasSourceUnsafe = (
   source: GraphNode,
   observer: GraphNode,
 ): boolean => {
-  if (isLastOutEdgeTo(source, observer)) return true;
-  return findEdgeInOutList(source, observer) !== null;
+  return (
+    isLastOutEdgeTo(source, observer) ||
+    findEdgeInOutList(source, observer) !== null
+  );
 };

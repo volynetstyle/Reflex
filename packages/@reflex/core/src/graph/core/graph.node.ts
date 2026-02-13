@@ -1,5 +1,4 @@
-import type { GraphEdge } from "./graph.edge";
-import type { CausalCoords } from "../../storage/config/CausalCoords";
+import { GraphEdge } from "./graph.edge";
 
 /**
  * GraphNode represents an **immutable causal event** in the runtime.
@@ -89,9 +88,6 @@ import type { CausalCoords } from "../../storage/config/CausalCoords";
  * All higher-level abstractions (signals, joins, effects) are defined on top of it.
  */
 class GraphNode {
-  /** Permanent identifier — stable even if the node is moved in memory */
-  readonly id: number;
-
   /** Number of incoming causal edges (causes of this event) */
   inCount = 0;
   /** Number of outgoing causal edges (events derived from this one) */
@@ -107,16 +103,7 @@ class GraphNode {
   /** Tail of outgoing causal edge list */
   lastOut: GraphEdge | null = null;
 
-  /** Shared root causal frame (never mutated) */
-  readonly rootFrame: CausalCoords;
-
-  /** Local mutable causal coordinates (do NOT encode causality itself) */
-  readonly frame: CausalCoords = { t: 0, v: 0, p: 0, s: 0 };
-
-  constructor(id: number, rootFrame = { t: 0, v: 0, p: 0, s: 0 }) {
-    this.id = id;
-    this.rootFrame = rootFrame;
-  }
+  constructor(id: number) {}
 }
 
 export { GraphNode };

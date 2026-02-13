@@ -1,15 +1,6 @@
-/// That`s implementation under question therefore i`m not sure about real cause to use this in current implementation
-/// maybe there is exist another way and some different representation of object through math 
-
-// value = {
-//   literal_A: {
-//     some_a: 1,
-//     some_b: 2,
-//     some_c: [1, 2, 3]
-//   }
-// }
-
-"use strict";
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
 
 type Primitive = string | number | boolean | null;
 
@@ -23,20 +14,241 @@ interface RecordClass {
 }
 
 type ValidValue = Primitive | RecordInstance;
-type FieldsOf<T> = ReadonlyArray<keyof T>;
 type ComputedFn<T, V> = (instance: T) => V;
 
-const ENABLE_FREEZE = false;
+type RecordOf<
+  T extends Record<string, ValidValue>,
+  C extends Record<string, unknown> = Record<string, never>,
+> = Readonly<T & C> & RecordInstance;
+
+interface RecordConstructor<
+  T extends Record<string, ValidValue>,
+  C extends Record<string, unknown> = Record<string, never>,
+> {
+  readonly fields: ReadonlyArray<keyof T>;
+  readonly defaults: Readonly<T>;
+  readonly typeId: number;
+  readonly __kind: symbol;
+
+  new (data: T): RecordOf<T, C>;
+  create(data?: Partial<T>): RecordOf<T, C>;
+  equals(a: unknown, b: unknown): boolean;
+}
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+const ENABLE_FREEZE = true;
+const TYPE_MARK = Symbol("RecordType");
+
+// ============================================================================
+// HASHING MODULE - Pure functions for V8 optimization
+// ============================================================================
+
+class HashingModule {
+  // FNV-1a для строк - fast, good distribution
+  static hashString(str: string): number {
+    let hash = 2166136261;
+    const len = str.length;
+    for (let i = 0; i < len; i++) {
+      hash ^= str.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return hash | 0;
+  }
+
+  static hashNumber(n: number): number {
+    return Object.is(n, -0) ? 0 : n | 0;
+  }
+
+  static hashBoolean(b: boolean): number {
+    return b ? 1 : 2;
+  }
+
+  static hashRecord(record: RecordInstance): number {
+    return record.hashCode;
+  }
+
+  // Мономорфная версия - V8 может заинлайнить
+  static hashValue(value: ValidValue): number {
+    if (value === null) return 0;
+
+    const type = typeof value;
+
+    if (type === "number") return HashingModule.hashNumber(value as number);
+    if (type === "string") return HashingModule.hashString(value as string);
+    if (type === "boolean") return HashingModule.hashBoolean(value as boolean);
+
+    // Record instance
+    if (type === "object") {
+      const ctor = (value as RecordInstance).constructor;
+      if (
+        typeof ctor === "function" &&
+        "__kind" in ctor &&
+        ctor.__kind === TYPE_MARK
+      ) {
+        return HashingModule.hashRecord(value as RecordInstance);
+      }
+    }
+
+    throw new TypeError("Invalid value inside Record");
+  }
+
+  // Комбинирование хешей
+  static combineHash(current: number, next: number): number {
+    return (Math.imul(31, current) + next) | 0;
+  }
+}
+
+// ============================================================================
+// VALIDATION MODULE - Type checking
+// ============================================================================
+
+class ValidationModule {
+  static isValidPrimitive(base: Primitive, value: ValidValue): boolean {
+    if (base === null) return value === null;
+    return typeof base === typeof value;
+  }
+
+  static isValidRecord(base: RecordInstance, value: ValidValue): boolean {
+    return (
+      typeof value === "object" &&
+      value !== null &&
+      value.constructor === base.constructor
+    );
+  }
+
+  static validate(base: ValidValue, value: ValidValue): boolean {
+    if (base === null || typeof base !== "object") {
+      return ValidationModule.isValidPrimitive(base as Primitive, value);
+    }
+
+    const ctor = base.constructor;
+    if (
+      typeof ctor === "function" &&
+      "__kind" in ctor &&
+      ctor.__kind === TYPE_MARK
+    ) {
+      return ValidationModule.isValidRecord(base, value);
+    }
+
+    return typeof base === typeof value;
+  }
+}
+
+// ============================================================================
+// FIELD DESCRIPTOR - Metadata для каждого типа записи
+// ============================================================================
+
+class FieldDescriptor<T extends Record<string, ValidValue>> {
+  readonly fields: ReadonlyArray<keyof T>;
+  readonly fieldCount: number;
+  readonly fieldIndex: Map<string, number>;
+  readonly defaults: Readonly<T>;
+
+  constructor(defaults: T) {
+    // Сразу freeze для V8 optimization (stable hidden class)
+    this.fields = Object.freeze(Object.keys(defaults)) as ReadonlyArray<
+      keyof T
+    >;
+    this.fieldCount = this.fields.length;
+
+    // Pre-compute field index для O(1) lookup
+    this.fieldIndex = new Map<string, number>();
+    for (let i = 0; i < this.fieldCount; i++) {
+      this.fieldIndex.set(this.fields[i] as string, i);
+    }
+
+    // Копируем defaults для иммутабельности
+    const frozenDefaults = {} as T;
+    for (let i = 0; i < this.fieldCount; i++) {
+      frozenDefaults[this.fields[i]] = defaults[this.fields[i]];
+    }
+    this.defaults = Object.freeze(frozenDefaults);
+  }
+
+  // Создание data object - монomorphic для V8
+  createDataObject(): T {
+    const data = {} as T;
+    for (let i = 0; i < this.fieldCount; i++) {
+      data[this.fields[i]] = this.defaults[this.fields[i]];
+    }
+    return data;
+  }
+
+  // Merge с validation
+  mergeData(target: T, source: Partial<T>): void {
+    const keys = Object.keys(source) as Array<keyof T>;
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      const value = source[key]!;
+
+      if (!ValidationModule.validate(this.defaults[key], value)) {
+        throw new TypeError(`Invalid value for field "${String(key)}"`);
+      }
+
+      target[key] = value;
+    }
+  }
+
+  // Копирование из instance
+  copyFromInstance<C extends Record<string, unknown>>(
+    instance: RecordOf<T, C>,
+    target: T,
+  ): void {
+    for (let i = 0; i < this.fieldCount; i++) {
+      const key = this.fields[i];
+      target[key] = instance[key as string];
+    }
+  }
+}
+
+// ============================================================================
+// COMPUTED PROPERTIES MANAGER
+// ============================================================================
+
+class ComputedPropertiesManager<
+  T extends Record<string, ValidValue>,
+  C extends Record<string, unknown>,
+> {
+  private readonly keys: ReadonlyArray<keyof C>;
+  private readonly functions: { [K in keyof C]: ComputedFn<Readonly<T>, C[K]> };
+
+  constructor(computed: { [K in keyof C]: ComputedFn<Readonly<T>, C[K]> }) {
+    this.keys = Object.freeze(Object.keys(computed)) as ReadonlyArray<keyof C>;
+    this.functions = computed;
+  }
+
+  defineProperties(instance: object, cache: Partial<C>): void {
+    for (let i = 0; i < this.keys.length; i++) {
+      const key = this.keys[i];
+      const compute = this.functions[key];
+
+      Object.defineProperty(instance, key, {
+        enumerable: true,
+        configurable: false,
+        get(): C[typeof key] {
+          if (key in cache) return cache[key]!;
+          const value = compute(instance as Readonly<T>);
+          cache[key] = value;
+          return value;
+        },
+      });
+    }
+  }
+
+  get isEmpty(): boolean {
+    return this.keys.length === 0;
+  }
+}
+
+// ============================================================================
+// RECORD FACTORY - Main API
+// ============================================================================
 
 export class RecordFactory {
-  private static readonly TYPE_MARK = Symbol("RecordType");
   private static nextTypeId = 1;
-
-  // Кеш для Object.keys() щоб не викликати багато разів
-  private static readonly keysCache = new WeakMap<
-    object,
-    ReadonlyArray<string>
-  >();
 
   static define<T extends Record<string, ValidValue>>(
     defaults: T,
@@ -57,152 +269,134 @@ export class RecordFactory {
     defaults: T,
     computed?: { [K in keyof C]: ComputedFn<Readonly<T>, C[K]> },
   ): RecordConstructor<T, C> {
-    return RecordFactory.build(defaults, computed ?? ({} as never));
+    const descriptor = new FieldDescriptor(defaults);
+    const computedManager = computed
+      ? new ComputedPropertiesManager(computed)
+      : null;
+    const typeId = RecordFactory.nextTypeId++;
+
+    return RecordFactory.buildConstructor(descriptor, computedManager, typeId);
   }
 
-  private static build<
+  private static buildConstructor<
     T extends Record<string, ValidValue>,
     C extends Record<string, unknown>,
   >(
-    defaults: T,
-    computed: { [K in keyof C]: ComputedFn<Readonly<T>, C[K]> },
+    descriptor: FieldDescriptor<T>,
+    computedManager: ComputedPropertiesManager<T, C> | null,
+    typeId: number,
   ): RecordConstructor<T, C> {
-    const fields = RecordFactory.getCachedKeys(defaults);
-    const computedKeys = RecordFactory.getCachedKeys(computed);
-
-    const defaultValues: T = Object.create(null);
-    for (const k of fields) {
-      defaultValues[k] = defaults[k];
-    }
-
-    const TYPE_ID = RecordFactory.nextTypeId++;
+    const { fields, fieldCount } = descriptor;
 
     class Struct {
       static readonly fields = fields;
-      static readonly defaults = defaultValues;
-      static readonly typeId = TYPE_ID;
-      static readonly __kind = RecordFactory.TYPE_MARK;
+      static readonly defaults = descriptor.defaults;
+      static readonly typeId = typeId;
+      static readonly __kind = TYPE_MARK;
+      static readonly fieldIndex = descriptor.fieldIndex;
+      static readonly descriptor = descriptor;
 
       #hash: number | undefined;
-      #cache: Partial<C> = Object.create(null);
+      #cache: Partial<C> | null;
+      #fieldHashes: Int32Array | null;
 
       constructor(data: T) {
-        for (const key of fields) {
+        // Копируем поля - V8 создаст stable shape
+        for (let i = 0; i < fieldCount; i++) {
+          const key = fields[i];
           (this as Record<string, unknown>)[key as string] = data[key];
         }
 
-        for (const key of computedKeys) {
-          Object.defineProperty(this, key, {
-            enumerable: true,
-            configurable: false,
-            get: (): C[typeof key] => {
-              if (key in this.#cache) {
-                return this.#cache[key]!;
-              }
-              const value = computed[key](this as unknown as Readonly<T>);
-              this.#cache[key] = value;
-              return value;
-            },
-          });
+        // Computed properties
+        if (computedManager) {
+          this.#cache = {};
+          computedManager.defineProperties(this, this.#cache);
+        } else {
+          this.#cache = null;
         }
 
-        // Freeze тільки в development для безпеки
+        this.#hash = undefined;
+        this.#fieldHashes = null;
+
         if (ENABLE_FREEZE) {
           Object.freeze(this);
         } else {
-          Object.seal(this); // Легший варіант для production
+          Object.seal(this);
         }
       }
 
       get hashCode(): number {
         if (this.#hash !== undefined) return this.#hash;
 
-        let h = TYPE_ID | 0;
+        let hash = typeId | 0;
+        const instance = this as Record<string, unknown>;
 
-        for (const key of fields) {
-          const value = (this as Record<string, unknown>)[key as string];
-          h =
-            (Math.imul(31, h) + RecordFactory.hashValue(value as ValidValue)) |
-            0;
+        for (let i = 0; i < fieldCount; i++) {
+          const value = instance[fields[i] as string] as ValidValue;
+          const valueHash = HashingModule.hashValue(value);
+          hash = HashingModule.combineHash(hash, valueHash);
         }
 
-        return (this.#hash = h);
+        return (this.#hash = hash);
       }
 
-      static create(data?: Partial<T>): Readonly<T & C> & RecordInstance {
-        // Fast path: якщо немає даних або порожній об'єкт, використовуємо defaults
-        if (!data) {
-          return new Struct(defaultValues) as unknown as Readonly<T & C> &
-            RecordInstance;
-        }
+      // Для diff operations - lazy computation
+      getFieldHash(index: number): number {
+        if (!this.#fieldHashes) {
+          this.#fieldHashes = new Int32Array(fieldCount);
+          const instance = this as Record<string, unknown>;
 
-        const keys = Object.keys(data);
-        if (keys.length === 0) {
-          return new Struct(defaultValues) as unknown as Readonly<T & C> &
-            RecordInstance;
-        }
-
-        const prepared: T = Object.create(null);
-
-        // Спочатку копіюємо всі defaults
-        for (const key of fields) {
-          prepared[key] = defaultValues[key];
-        }
-
-        // Потім перезаписуємо тільки змінені поля + валідація
-        for (const key of keys as Array<keyof T>) {
-          const value = data[key]!;
-
-          if (!RecordFactory.validate(defaultValues[key], value)) {
-            throw new TypeError(`Invalid value for field "${String(key)}"`);
+          for (let i = 0; i < fieldCount; i++) {
+            const value = instance[fields[i] as string] as ValidValue;
+            this.#fieldHashes[i] = HashingModule.hashValue(value);
           }
+        }
+        return this.#fieldHashes[index];
+      }
 
-          prepared[key] = value;
+      static create(data?: Partial<T>): RecordOf<T, C> {
+        if (!data || Object.keys(data).length === 0) {
+          return new Struct(descriptor.defaults) as unknown as RecordOf<T, C>;
         }
 
-        return new Struct(prepared) as unknown as Readonly<T & C> &
-          RecordInstance;
+        const prepared = descriptor.createDataObject();
+        descriptor.mergeData(prepared, data);
+
+        return new Struct(prepared) as unknown as RecordOf<T, C>;
       }
 
       static equals(a: unknown, b: unknown): boolean {
-        // Fast paths
         if (a === b) return true;
         if (!a || !b) return false;
         if (typeof a !== "object" || typeof b !== "object") return false;
 
-        const recA = a as Record<string, unknown> & RecordInstance;
-        const recB = b as Record<string, unknown> & RecordInstance;
+        const recA = a as RecordOf<T, C>;
+        const recB = b as RecordOf<T, C>;
 
         if (recA.constructor !== recB.constructor) return false;
+        if (recA.hashCode !== recB.hashCode) return false;
 
-        const hashA = recA.hashCode;
-        const hashB = recB.hashCode;
-
-        if (hashA !== hashB) return false;
-
-        // Перевіряємо всі поля (потрібно через можливі колізії хешів)
-        for (const key of fields) {
-          const va = recA[key as string];
-          const vb = recB[key as string];
+        // Детальное сравнение
+        for (let i = 0; i < fieldCount; i++) {
+          const key = fields[i] as string;
+          const va = recA[key];
+          const vb = recB[key];
 
           if (va === vb) continue;
 
-          // Fast path для примітивів
           const typeA = typeof va;
           const typeB = typeof vb;
 
-          if (typeA !== "object" || typeB !== "object") {
-            return false;
-          }
+          if (typeA !== "object" || typeB !== "object") return false;
 
-          // Перевіряємо вкладені Records
+          // Nested record
           if (
             va !== null &&
             typeof va === "object" &&
-            "constructor" in (va as object) &&
-            typeof (va as any).constructor === "function"
+            "constructor" in (va as object)
           ) {
-            const ctor = (va as any).constructor as unknown as RecordClass;
+            const ctor = (va as RecordInstance)
+              .constructor as unknown as RecordClass;
             if ("equals" in ctor && typeof ctor.equals === "function") {
               if (!ctor.equals(va, vb)) return false;
               continue;
@@ -219,132 +413,107 @@ export class RecordFactory {
     return Struct as unknown as RecordConstructor<T, C>;
   }
 
-  /* ───────────── helpers ───────────── */
+  // ============================================================================
+  // MUTATION OPERATIONS
+  // ============================================================================
 
-  private static getCachedKeys<T>(obj: T): ReadonlyArray<keyof T> {
-    let keys = RecordFactory.keysCache.get(obj as object);
-    if (!keys) {
-      keys = Object.freeze(Object.keys(obj as object));
-      RecordFactory.keysCache.set(obj as object, keys);
-    }
-    return keys as ReadonlyArray<keyof T>;
-  }
-
-  // FNV-1a hash - краще розподіл, менше колізій
-  private static hashValue(v: ValidValue): number {
-    if (v === null) return 0;
-
-    if (typeof v === "object" && "hashCode" in v) {
-      const ctor = v.constructor;
-      if (
-        typeof ctor === "function" &&
-        "__kind" in ctor &&
-        ctor.__kind === RecordFactory.TYPE_MARK
-      ) {
-        return v.hashCode;
-      }
-    }
-
-    switch (typeof v) {
-      case "number":
-        return Object.is(v, -0) ? 0 : v | 0;
-
-      case "string": {
-        // FNV-1a hash algorithm (набагато краще розподіл)
-        let h = 2166136261; // FNV offset basis
-        for (let i = 0; i < v.length; i++) {
-          h ^= v.charCodeAt(i);
-          h = Math.imul(h, 16777619); // FNV prime
-        }
-        return h | 0;
-      }
-
-      case "boolean":
-        return v ? 1 : 2;
-
-      default:
-        throw new TypeError("Invalid value inside Record");
-    }
-  }
-
-  private static validate(base: ValidValue, value: ValidValue): boolean {
-    if (base === null) return value === null;
-
-    if (typeof base === "object" && "constructor" in base) {
-      const baseCtor = base.constructor;
-      if (
-        typeof baseCtor === "function" &&
-        "__kind" in baseCtor &&
-        baseCtor.__kind === RecordFactory.TYPE_MARK
-      ) {
-        return (
-          typeof value === "object" &&
-          value !== null &&
-          value.constructor === base.constructor
-        );
-      }
-    }
-
-    return typeof base === typeof value;
-  }
-
-  /* ───────────── persistent update ───────────── */
-
-  static fork<T extends Record<string, ValidValue>>(
-    instance: RecordInstance & Record<string, unknown>,
-    updates: Partial<T>,
-  ): RecordInstance & Record<string, unknown> {
-    // Fast path: якщо немає оновлень, повертаємо той самий об'єкт
-    if (!updates) {
-      return instance;
-    }
+  static fork<
+    T extends Record<string, ValidValue>,
+    C extends Record<string, unknown> = Record<string, never>,
+  >(instance: RecordOf<T, C>, updates: Partial<T>): RecordOf<T, C> {
+    if (!updates) return instance;
 
     const updateKeys = Object.keys(updates);
-    if (updateKeys.length === 0) {
-      return instance;
-    }
+    if (updateKeys.length === 0) return instance;
 
-    // Перевіряємо чи є реальні зміни
+    const ctor = instance.constructor as unknown as RecordConstructor<T, C> & {
+      descriptor: FieldDescriptor<T>;
+    };
+    const descriptor = ctor.descriptor;
+
+    const data = descriptor.createDataObject();
+    descriptor.copyFromInstance(instance, data);
+
+    // Применяем изменения
     let hasChanges = false;
-    for (const key of updateKeys) {
-      if (instance[key] !== updates[key as keyof T]) {
+    for (let i = 0; i < updateKeys.length; i++) {
+      const key = updateKeys[i] as keyof T;
+      const newValue = updates[key]!;
+
+      if (data[key] !== newValue) {
         hasChanges = true;
-        break;
+        data[key] = newValue;
       }
     }
 
-    // Якщо всі значення однакові, повертаємо original
-    if (!hasChanges) {
-      return instance;
-    }
-
-    const ctor = instance.constructor as unknown as RecordConstructor<
-      T,
-      Record<string, never>
-    >;
-    const data: Partial<T> = Object.create(null);
-
-    for (const key of ctor.fields) {
-      data[key] = (
-        key in updates ? updates[key] : instance[key as string]
-      ) as T[typeof key];
-    }
-
-    return ctor.create(data);
+    return hasChanges ? ctor.create(data) : instance;
   }
-}
 
-interface RecordConstructor<
-  T extends Record<string, ValidValue>,
-  C extends Record<string, unknown> = Record<string, never>,
-> {
-  readonly fields: FieldsOf<T>;
-  readonly defaults: Readonly<T>;
-  readonly typeId: number;
-  readonly __kind: symbol;
+  static forkWithDiff<
+    T extends Record<string, ValidValue>,
+    C extends Record<string, unknown> = Record<string, never>,
+  >(
+    instance: RecordOf<T, C>,
+    updates: Partial<T>,
+  ): readonly [RecordOf<T, C>, Int32Array] {
+    if (!updates) return [instance, new Int32Array(0)];
 
-  new (data: T): Readonly<T & C> & RecordInstance;
+    const updateKeys = Object.keys(updates);
+    if (updateKeys.length === 0) return [instance, new Int32Array(0)];
 
-  create(data?: Partial<T>): Readonly<T & C> & RecordInstance;
-  equals(a: unknown, b: unknown): boolean;
+    const ctor = instance.constructor as unknown as RecordConstructor<T, C> & {
+      descriptor: FieldDescriptor<T>;
+      fieldIndex: Map<string, number>;
+    };
+    const descriptor = ctor.descriptor;
+
+    const data = descriptor.createDataObject();
+    descriptor.copyFromInstance(instance, data);
+
+    // Pre-allocate worst case
+    const changedIndices: number[] = [];
+
+    for (let i = 0; i < updateKeys.length; i++) {
+      const key = updateKeys[i] as keyof T;
+      const newValue = updates[key]!;
+
+      if (data[key] !== newValue) {
+        const idx = ctor.fieldIndex.get(key as string);
+        if (idx !== undefined) {
+          changedIndices.push(idx);
+        }
+        data[key] = newValue;
+      }
+    }
+
+    if (changedIndices.length === 0) {
+      return [instance, new Int32Array(0)];
+    }
+
+    return [ctor.create(data), new Int32Array(changedIndices)] as const;
+  }
+
+  static diff<
+    T extends Record<string, ValidValue>,
+    C extends Record<string, unknown> = Record<string, never>,
+  >(prev: RecordOf<T, C>, next: RecordOf<T, C>): Int32Array {
+    if (prev === next) return new Int32Array(0);
+    if (prev.constructor !== next.constructor) {
+      throw new TypeError("Cannot diff different record types");
+    }
+
+    const ctor = prev.constructor as unknown as RecordConstructor<T, C>;
+    const fields = ctor.fields;
+    const fieldCount = fields.length;
+    const changed: number[] = [];
+
+    for (let i = 0; i < fieldCount; i++) {
+      const key = fields[i] as string;
+      if (prev[key] !== next[key]) {
+        changed.push(i);
+      }
+    }
+
+    return new Int32Array(changed);
+  }
 }

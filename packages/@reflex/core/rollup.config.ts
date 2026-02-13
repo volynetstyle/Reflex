@@ -9,9 +9,41 @@ interface BuildConfig {
   format: ModuleFormat;
 }
 
-const build = (cfg: BuildConfig) => {
-  const { outDir, dev, format } = cfg;
+const resolvers = resolve({
+  extensions: [".js"],
+  exportConditions: ["import", "default"],
+});
 
+const replacers = (dev: boolean) =>
+  replace({
+    preventAssignment: true,
+    values: {
+      __DEV__: JSON.stringify(dev),
+    },
+  });
+
+const testers = (dev: boolean) =>
+  !dev &&
+  terser({
+    compress: {
+      dead_code: true,
+      conditionals: true,
+      booleans: true,
+      unused: true,
+      if_return: true,
+      sequences: true,
+    },
+    mangle: {
+      toplevel: true,
+      keep_fnames: false,
+      keep_classnames: true,
+    },
+    format: {
+      comments: false,
+    },
+  });
+
+function build({ outDir, dev, format }: BuildConfig) {
   return {
     input: "build/esm/index.js",
     treeshake: {
@@ -27,42 +59,12 @@ const build = (cfg: BuildConfig) => {
       exports: format === "cjs" ? "named" : undefined,
       sourcemap: dev,
     },
-    plugins: [
-      resolve({
-        extensions: [".js"],
-        exportConditions: ["import", "default"],
-      }),
-      replace({
-        preventAssignment: true,
-        values: {
-          __DEV__: JSON.stringify(dev),
-        },
-      }),
-      !dev &&
-        terser({
-          compress: {
-            dead_code: true,
-            conditionals: true,
-            booleans: true,
-            unused: true,
-            if_return: true,
-            sequences: true,
-          },
-          mangle: {
-            keep_classnames: true,
-            keep_fnames: true,
-            properties: { regex: /^_/ },
-          },
-          format: {
-            comments: false,
-          },
-        }),
-    ],
+    plugins: [resolvers, replacers(dev), testers(dev)],
   } satisfies RollupOptions;
-};
+}
 
 export default [
   build({ outDir: "esm", dev: false, format: "esm" }),
   build({ outDir: "dev", dev: true, format: "esm" }),
   build({ outDir: "cjs", dev: false, format: "cjs" }),
-] satisfies RollupOptions[];
+];

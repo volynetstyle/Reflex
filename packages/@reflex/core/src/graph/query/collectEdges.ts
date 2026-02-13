@@ -10,13 +10,10 @@ export const collectEdges = (
   getNext: (edge: GraphEdge) => GraphEdge | null,
 ): GraphEdge[] => {
   const edges = new Array<GraphEdge>(count);
-  let idx = 0;
-  let edge = firstEdge;
 
-  while (edge !== null) {
+  for (let idx = 0, edge = firstEdge; edge !== null; edge = getNext(edge)) {
     edges[idx++] = edge;
-    edge = getNext(edge);
   }
 
-  return edges;
+  return edges.slice();
 };

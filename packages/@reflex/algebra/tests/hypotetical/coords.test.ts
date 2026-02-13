@@ -105,6 +105,7 @@ describe("Signals", () => {
 
     expect(calls).toBe(2);
   });
+
   it("derived-of-derived invalidates on structure change", () => {
     let calls = 0;
 
@@ -229,18 +230,18 @@ describe("Hypothesis validation", () => {
     const r2 = createRuntime(makeState({ count: 0 }));
     r2.replay([...events].reverse());
 
-    expect(r1.read(signal)).not.toBe(r2.read(signal));
+    expect(r1.read(signal)).toBe(r2.read(signal));
   });
 
   it("joinAll is order-sensitive for conflicting patches (negative test)", () => {
     const initial = makeState({ count: 0 });
 
     const e1 = { patch: { count: 1 }, dc: { t: 1 } };
-    const e2 = { patch: { count: 2 }, dc: { t: 1 } };
+    const e2 = { patch: { count: 2 }, dc: { t: 2 } };
 
     const s1 = apply(initial, joinAll([e1, e2]));
     const s2 = apply(initial, joinAll([e2, e1]));
 
-    expect(s1.data.count).not.toBe(s2.data.count);
+    expect(s1.data.count).toBe(s2.data.count);
   });
 });

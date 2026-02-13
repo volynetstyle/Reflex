@@ -20,15 +20,21 @@ class GraphEdge {
   /** Observer node (the node that has this edge in its IN-list) */
   to: GraphNode;
 
-  /** Previous edge in the source's OUT-list (or null if this is the first) */
-  prevOut: GraphEdge | null = null;
-  /** Next edge in the source's OUT-list (or null if this is the last) */
-  nextOut: GraphEdge | null = null;
+  /** Counters that allow to compare */
+  seenT: number;
+  /** Counters that allow to compare */
+  seenV: number;
+  /** Counters that allow to compare */
+  seenS: number;
 
+  /** Previous edge in the source's OUT-list (or null if this is the first) */
+  prevOut: GraphEdge | null;
+  /** Next edge in the source's OUT-list (or null if this is the last) */
+  nextOut: GraphEdge | null;
   /** Previous edge in the observer's IN-list (or null if this is the first) */
-  prevIn: GraphEdge | null = null;
+  prevIn: GraphEdge | null;
   /** Next edge in the observer's IN-list (or null if this is the last) */
-  nextIn: GraphEdge | null = null;
+  nextIn: GraphEdge | null;
 
   /**
    * Creates a new edge and inserts it at the end of both lists.
@@ -45,13 +51,16 @@ class GraphEdge {
   constructor(
     from: GraphNode,
     to: GraphNode,
-    prevOut: GraphEdge | null = null,
-    nextOut: GraphEdge | null = null,
-    prevIn: GraphEdge | null = null,
-    nextIn: GraphEdge | null = null,
+    prevOut: GraphEdge | null,
+    nextOut: GraphEdge | null,
+    prevIn: GraphEdge | null,
+    nextIn: GraphEdge | null,
   ) {
     this.from = from;
     this.to = to;
+    this.seenT = 0;
+    this.seenV = 0;
+    this.seenS = 0;
     this.prevOut = prevOut;
     this.nextOut = nextOut;
     this.prevIn = prevIn;
@@ -60,4 +69,3 @@ class GraphEdge {
 }
 
 export { GraphEdge };
-

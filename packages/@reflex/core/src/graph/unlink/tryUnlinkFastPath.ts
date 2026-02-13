@@ -10,11 +10,6 @@ export const tryUnlinkFastPath = (
   count: number,
 ): boolean => {
   if (count === 0) return true;
-
-  if (count === 1) {
-    unlinkEdgeUnsafe(firstEdge!);
-    return true;
-  }
-
+  if (count === 1) return (unlinkEdgeUnsafe(firstEdge!), true);
   return false;
 };

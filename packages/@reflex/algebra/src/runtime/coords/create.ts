@@ -1,4 +1,4 @@
-import type { Coords } from "../../domains/coords/coords"
+import type { Coords } from "../../domains/coords/coords";
 
 /**
  * createCoords
@@ -11,13 +11,13 @@ export function createCoords(
   p: number = 0,
   s: number = 0,
 ): Coords {
-  return { t, v, p, s }
+  return { t, v, p, s } as const;
 }
 
 /**
  * Zero coordinates
  */
-export const COORDS_ZERO = createCoords(0, 0, 0, 0)
+export const COORDS_ZERO = createCoords(0, 0, 0, 0);
 
 /**
  * Infinity coordinates (useful for lattice bounds)
@@ -27,4 +27,4 @@ export const COORDS_INFINITY = createCoords(
   Infinity,
   Infinity,
   Infinity,
-)
+);

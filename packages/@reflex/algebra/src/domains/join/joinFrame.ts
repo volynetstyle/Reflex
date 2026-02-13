@@ -57,7 +57,6 @@
  *
  * CONSEQUENCE: No scheduler required. Any delivery order is semantically correct.
  *
- *
  * EXAMPLE LATTICES
  * ----------------
  *
@@ -226,19 +225,20 @@ export const createJoin = <R>(
   rank: (v: R) => number,
 ): JoinFrame<R> => {
   const _arity = arity;
-  let value = bottom,
-    arrived = 0,
-    done = false;
+  let value = bottom;
+  let arrived = 0;
+  let done = false;
   const _join = join;
   const _rank = rank;
 
   return {
+    // #region dev
     // this part is dev only, on real case we can use only property set like { arity }
     get arity() {
       return _arity;
     },
     set arity(_) {},
-    // end dev only part
+    // #end region
 
     get value() {
       return value;

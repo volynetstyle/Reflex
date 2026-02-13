@@ -11,6 +11,8 @@ export const hasObserverUnsafe = (
   source: GraphNode,
   observer: GraphNode,
 ): boolean => {
-  if (isLastInEdgeFrom(observer, source)) return true;
-  return findEdgeInInList(observer, source) !== null;
+  return (
+    isLastInEdgeFrom(observer, source) ||
+    findEdgeInInList(observer, source) !== null
+  );
 };
