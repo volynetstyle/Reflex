@@ -1,10 +1,7 @@
-import recompute from "../reactivity/consumer/recompute";
-import { CLEAR_VISITED, INVALID, ReactiveNodeState } from "../reactivity/shape";
+import { INVALID } from "../reactivity/shape";
 import { establish_dependencies_add } from "../reactivity/shape/methods/connect";
 import ReactiveNode from "../reactivity/shape/ReactiveNode";
-import {
-  pullAndRecompute,
-} from "../reactivity/walkers/propagateFrontier";
+import { pullAndRecompute } from "../reactivity/walkers/pullAndRecompute";
 
 /**
  * That`s for signal
@@ -18,8 +15,6 @@ export function readProducer(node: ReactiveNode) {
 
   return node.payload;
 }
-
-const STALE = ReactiveNodeState.Invalid | ReactiveNodeState.Obsolete;
 
 /**
  * Pull-lazy read for computed nodes.
@@ -35,7 +30,7 @@ const STALE = ReactiveNodeState.Invalid | ReactiveNodeState.Obsolete;
 export function readConsumer(node: ReactiveNode): unknown {
   establish_dependencies_add(node);
 
-  if (!(node.runtime & STALE)) return node.payload; // fast path
+  if (!(node.runtime & INVALID)) return node.payload; // fast path
 
   pullAndRecompute(node); // фаза 1 + фаза 2 вместо recuperate + recompute
 

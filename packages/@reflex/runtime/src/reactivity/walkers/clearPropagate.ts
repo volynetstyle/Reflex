@@ -1,6 +1,4 @@
-import { ReactiveNode, ReactiveNodeState } from "../shape";
-
-const STALE = ReactiveNodeState.Invalid | ReactiveNodeState.Obsolete;
+import { INVALID, ReactiveNode, ReactiveNodeState } from "../shape";
 
 // ─── clearPropagate ───────────────────────────────────────────────────────────
 //
@@ -25,7 +23,7 @@ export function clearPropagate(node: ReactiveNode): void {
       const child = e.to;
       const s = child.runtime;
 
-      if (!(s & STALE)) continue; // already clean
+      if (!(s & INVALID)) continue; // already clean
       if (s & ReactiveNodeState.Obsolete) continue; // dirty from another source — don't touch
 
       // FIX #3: clear only Invalid, leave Obsolete untouched

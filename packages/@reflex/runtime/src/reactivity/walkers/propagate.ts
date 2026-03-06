@@ -1,10 +1,11 @@
 import { ReactiveNode, ReactiveNodeState } from "../shape";
 
-export function propagate(node: ReactiveNode, obsolete = false): void {
+export function propagate(
+  node: ReactiveNode,
+  flag: ReactiveNodeState = ReactiveNodeState.Invalid,
+): void {
   const stack: ReactiveNode[] = [node];
-  let nextBit = obsolete
-    ? ReactiveNodeState.Obsolete
-    : ReactiveNodeState.Invalid;
+  let nextBit = flag;
 
   while (stack.length) {
     const n = stack.pop()!;
@@ -13,23 +14,15 @@ export function propagate(node: ReactiveNode, obsolete = false): void {
       const child = e.to;
       const s = child.runtime;
 
-      if (s & ReactiveNodeState.Obsolete) {
-        continue; // already maximally dirty
-      }
-
-      if (s & ReactiveNodeState.Queued) {
-        child.runtime = s | nextBit;
-        continue;
-      }
-
-      if (s & nextBit) {
-        continue; // bit already set
-      }
+      if (s & (ReactiveNodeState.Obsolete | nextBit)) continue;
 
       child.runtime = s | nextBit;
-      stack.push(child);
+
+      if (!(s & ReactiveNodeState.Queued)) {
+        stack.push(child);
+      }
     }
 
-    nextBit = ReactiveNodeState.Invalid; // only the first level gets Obsolete
+    nextBit = ReactiveNodeState.Invalid;
   }
 }

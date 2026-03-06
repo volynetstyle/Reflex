@@ -26,11 +26,9 @@
 //   Fix: increment at the top of pullAndRecompute.
 
 import recompute from "../consumer/recompute";
-import { ReactiveNode, ReactiveNodeState } from "../shape";
+import { INVALID, ReactiveNode, ReactiveNodeState } from "../shape";
+import { clearPropagate } from "./clearPropagate";
 import { propagate } from "./propagate";
-import { clearPropagate } from "./propagateFrontier";
-
-const STALE = ReactiveNodeState.Invalid | ReactiveNodeState.Obsolete;
 
 export function pullAndRecompute(node: ReactiveNode): void {
   // FIX #1: track every node touched in phase 1 so we can clear Visited later
@@ -47,13 +45,13 @@ export function pullAndRecompute(node: ReactiveNode): void {
     if (s & ReactiveNodeState.Visited) {
       continue;
     }
-    
+
     n.runtime = s | ReactiveNodeState.Visited;
 
     // FIX #1: record every visited node, not just those in toRecompute
     visited.push(n);
 
-    if (!(s & STALE)) {
+    if (!(s & INVALID)) {
       continue;
     } // Valid — stop, ancestors are also clean
 
@@ -78,12 +76,12 @@ export function pullAndRecompute(node: ReactiveNode): void {
     const n = toRecompute[i]!;
 
     // If a dependency above already cleaned this node via clearPropagate — skip
-    if (!(n.runtime & STALE)) {
+    if (!(n.runtime & INVALID)) {
       continue;
     }
 
     if (recompute(n)) {
-      propagate(n, true); // value changed → mark children Obsolete
+      propagate(n, ReactiveNodeState.Obsolete); // value changed → mark children Obsolete
     } else {
       clearPropagate(n); // same value → clear STALE downward
     }

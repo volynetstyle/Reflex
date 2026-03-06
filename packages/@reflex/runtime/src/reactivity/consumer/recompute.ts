@@ -7,7 +7,7 @@ export function recompute(consumer: ReactiveNode): boolean {
 
   beginComputation(consumer);
 
-  let changed: boolean;
+  let changed: boolean = false;
 
   try {
     changed = commitConsumer(consumer, compute());
@@ -17,7 +17,7 @@ export function recompute(consumer: ReactiveNode): boolean {
     endComputation();
   }
 
-  return changed!;
+  return changed;
 }
 
 export default recompute;

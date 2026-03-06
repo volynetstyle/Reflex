@@ -2,6 +2,7 @@ import type { RollupOptions, ModuleFormat, Plugin } from "rollup";
 import replace from "@rollup/plugin-replace";
 import terser from "@rollup/plugin-terser";
 import resolve from "@rollup/plugin-node-resolve";
+import constEnum from "rollup-plugin-const-enum";
 
 type BuildFormat = "esm" | "cjs";
 
@@ -96,6 +97,7 @@ function pipeline(ctx: BuildContext): Plugin[] {
     resolverStage(),
     replaceStage(ctx),
     minifyStage(ctx),
+    constEnum(),
   ];
 
   return stages.filter(Boolean) as Plugin[];

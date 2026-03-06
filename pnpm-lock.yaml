@@ -45,6 +45,9 @@ importers:
       prettier:
         specifier: ^3.3.0
         version: 3.6.2
+      rollup-plugin-const-enum:
+        specifier: ^1.1.5
+        version: 1.1.5
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@24.10.1)(typescript@5.9.3)
@@ -61,17 +64,7 @@ importers:
         specifier: ^4.0.0
         version: 4.0.9(@types/node@24.10.1)(terser@5.44.1)(yaml@2.8.1)
 
-  packages/@reflex/core:
-    devDependencies:
-      '@rollup/plugin-node-resolve':
-        specifier: ^16.0.3
-        version: 16.0.3(rollup@4.54.0)
-      '@types/node':
-        specifier: ^24.10.1
-        version: 24.10.1
-      rollup:
-        specifier: ^4.54.0
-        version: 4.54.0
+  packages/@reflex/core: {}
 
   packages/@reflex/memory:
     dependencies:
@@ -2047,6 +2040,9 @@ packages:
   ripemd160@2.0.3:
     resolution: {integrity: sha512-5Di9UC0+8h1L6ZD2d7awM7E/T4uA1fJRlx6zk/NvdCCVEoAnFqvHmCuNeIKoCeIixBX/q8uM+6ycDvF8woqosA==}
     engines: {node: '>= 0.8'}
+
+  rollup-plugin-const-enum@1.1.5:
+    resolution: {integrity: sha512-HeYgvpBUXka6AVz0OzuvZZRvnwm5YB3aI1/04XKWpP/HrqND7eQi11J9WZ4/9K+925CrI/I0Fggm3mMv2VjxxA==}
 
   rollup@4.54.0:
     resolution: {integrity: sha512-3nk8Y3a9Ea8szgKhinMlGMhGMw89mqule3KWczxhIzqudyHdCIOHw8WJlj/r329fACjKLEh13ZSk7oE22kyeIw==}
@@ -4676,6 +4672,8 @@ snapshots:
     dependencies:
       hash-base: 3.1.2
       inherits: 2.0.4
+
+  rollup-plugin-const-enum@1.1.5: {}
 
   rollup@4.54.0:
     dependencies:

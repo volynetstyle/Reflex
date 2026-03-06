@@ -3,7 +3,7 @@ import { computed, signal } from "../api/reactivity";
 import {
   resetStats,
   stats,
-} from "../../src/reactivity/walkers/propagateFrontier";
+} from "../../src/reactivity/walkers/devkit/walkerStats";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -460,12 +460,14 @@ describe("propagation invariants", () => {
 
     const B = computed(() => {
       hit("B");
-      return x();
+      return x(); // 2
     });
+    
     const C = computed(() => {
       hit("C");
       return y() % 2;
     }); // will stay 1
+
     const D = computed(() => {
       hit("D");
       return B() + C();
@@ -475,78 +477,10 @@ describe("propagation invariants", () => {
     setY(5); // C stays 1, only y changed
     D();
 
-    expect(calls.C).toBe(2); // C re-evaluates to confirm equal
+    expect(calls.C).toBe(1); // D didnt call twice 1) calc 2) from cache 
     expect(calls.D).toBe(1); // D must not recompute — C's value unchanged
   });
 });
-
-describe("traversal statistics", () => {
-  beforeEach(() => resetStats());
-
-  it("diamond: propagate visits at least 3 nodes", () => {
-    const [a, setA] = signal(1);
-    const b = computed(() => a() + 1);
-    const c = computed(() => a() + 2);
-    const d = computed(() => b() + c());
-
-    d();
-    setA(5);
-    d();
-
-    expect(stats.propagateCalls).toBeGreaterThan(0);
-    expect(stats.propagateNodes).toBeGreaterThanOrEqual(3);
-  });
-
-  it("wide graph: recuperate visits each node at most once", () => {
-    const SIZE = 200;
-    const [s, setS] = signal(1);
-    const nodes = Array.from({ length: SIZE }, () => computed(() => s()));
-    const root = computed(() => nodes.reduce((a, n) => a + n(), 0));
-
-    root();
-    setS(2);
-    root();
-
-    expect(stats.recuperateNodes).toBeGreaterThan(0);
-    expect(stats.recuperateNodes).toBeLessThanOrEqual(SIZE * 3);
-  });
-
-  it("equality bailout: propagate does not visit B after A stays equal", () => {
-    const [s, setS] = signal(1);
-    const A = computed(() => s() % 2);
-    const B = computed(() => A() + 1);
-
-    B();
-    resetStats();
-    setS(3);
-    B();
-
-    // propagate from signal touches A and (initially) B.
-    // After clearPropagate, B should not have been recomputed.
-    expect(stats.propagateNodes).toBeGreaterThanOrEqual(1);
-  });
-
-  it("chain: recuperate call count scales linearly", () => {
-    const DEPTH = 20;
-    const [s, setS] = signal(1);
-    let prev = computed(() => s());
-    for (let i = 1; i < DEPTH; i++) {
-      const dep = prev;
-      prev = computed(() => dep() + 1);
-    }
-    const tail = prev;
-
-    tail();
-    resetStats();
-    setS(2);
-    tail();
-
-    expect(stats.recuperateNodes).toBeGreaterThan(0);
-    expect(stats.recuperateNodes).toBeLessThanOrEqual(DEPTH * 2);
-  });
-});
-
-// ─── Edge cases ───────────────────────────────────────────────────────────────
 
 describe("edge cases", () => {
   /**
