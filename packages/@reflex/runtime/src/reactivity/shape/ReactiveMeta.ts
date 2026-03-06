@@ -1,56 +1,41 @@
-export const enum NodeKind {
-  Signal = 0x0,
-  Computed = 0x1,
-  Effect = 0x2,
-  Root = 0x3,
-  Resource = 0x4,
-  Firewall = 0x5,
-  Envelope = 0x6,
+export type Byte32Int = number;
+
+export const enum ReactiveNodeKind {
+  Producer = 1 << 0,
+  Consumer = 1 << 1,
+  Recycler = 1 << 2,
+  Root = 1 << 3,
+  Resource = 1 << 4,
+  Firewall = 1 << 5,
+  Envelope = 1 << 6,
 }
 
-export const enum NodeRuntime {
-  Dirty = 1 << 4, // cache invalid
-  Computing = 1 << 5, // recursion guard
-  Scheduled = 1 << 6, // enqueued for execution
-  HasError = 1 << 7, // error boundary active
+/**
+ * Clean -> Dirty,
+ * Dirty -> Computing,
+ * Computing -> Clean.
+ *
+ * Valid      — значение консистентно
+ * Invalid    — возможно устарело
+ * Obsolete   — точно устарело
+ * Visited    — используется в pull traversal
+ * Queued     — в scheduler
+ * Failed     — ошибка вычисления
+ */
+export const enum ReactiveNodeState {
+  Valid = 0,
+
+  Invalid = 1 << 0, // dependency changed
+  Obsolete = 1 << 1, // definitely stale
+
+  Visited = 1 << 2,
+  Queued = 1 << 3,
+  Failed = 1 << 4,
 }
 
-export const enum NodeStructure {
-  DynamicDeps = 1 << 8, // deps may change
-  TopoBarrier = 1 << 9, // stop traversal skipping
-  OwnedByParent = 1 << 10, // lifecycle ownership
-  HasCleanup = 1 << 11, // disposer exists
-}
-
-export const enum NodeCausal {
-  AsyncBoundary = 1 << 12, // async splits logical time
-  Versioned = 1 << 13, // semantic versioning enabled
-  TimeLocked = 1 << 14, // cannot recompute in same tick
-  Structural = 1 << 15, // propagates structure changes
-
-  // зарезервировано под будущее
-  // 1 << 16
-  // 1 << 17
-  // 1 << 18
-  // 1 << 19
-  // 1 << 20
-  // 1 << 21
-  // 1 << 22
-  // 1 << 23
-}
-
-// runtime flags MUST NOT affect causality
-export const RUNTIME_MASK =
-  NodeRuntime.Dirty |
-  NodeRuntime.Computing |
-  NodeRuntime.Scheduled |
-  NodeRuntime.HasError;
-
-// @__INLINE__
-export const addFlags = (s: number, f: number) => s | f;
-
-// @__INLINE__
-export const dropFlags = (s: number, f: number) => s & ~f;
-
-// @__INLINE__
-export const hasFlags = (s: number, f: number) => (s & f) !== 0;
+/** Node needs recomputation (either possibly or definitely stale) */
+export const INVALID = ReactiveNodeState.Invalid | ReactiveNodeState.Obsolete;
+/** Clear both staleness bits */
+export const CLEAR_INVALID = ~INVALID;
+/** Clear visited bit after pull traversal */
+export const CLEAR_VISITED = ~ReactiveNodeState.Visited;

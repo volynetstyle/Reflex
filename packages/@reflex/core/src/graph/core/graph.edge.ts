@@ -20,13 +20,6 @@ class GraphEdge {
   /** Observer node (the node that has this edge in its IN-list) */
   to: GraphNode;
 
-  /** Counters that allow to compare */
-  seenT: number;
-  /** Counters that allow to compare */
-  seenV: number;
-  /** Counters that allow to compare */
-  seenS: number;
-
   /** Previous edge in the source's OUT-list (or null if this is the first) */
   prevOut: GraphEdge | null;
   /** Next edge in the source's OUT-list (or null if this is the last) */
@@ -58,9 +51,6 @@ class GraphEdge {
   ) {
     this.from = from;
     this.to = to;
-    this.seenT = 0;
-    this.seenV = 0;
-    this.seenS = 0;
     this.prevOut = prevOut;
     this.nextOut = nextOut;
     this.prevIn = prevIn;

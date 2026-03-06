@@ -11,13 +11,8 @@
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
-      "import": "./build/esm/index.js",
+      "import": "./dist/esm/index.js",
       "require": "./dist/cjs/index.js"
-    },
-    "./internal/*": {
-      "types": "./dist/types/internal/*.d.ts",
-      "import": "./dist/esm/internal/*.js",
-      "require": "./dist/cjs/internal/*.js"
     }
   },
   "files": [
@@ -54,11 +49,5 @@
     "*.{json,md,yml,yaml}": [
       "prettier --write"
     ]
-  },
-  "devDependencies": {
-    "@reflex/contract": "workspace:*",
-    "@rollup/plugin-node-resolve": "^16.0.3",
-    "@types/node": "^24.10.1",
-    "rollup": "^4.54.0"
   }
 }

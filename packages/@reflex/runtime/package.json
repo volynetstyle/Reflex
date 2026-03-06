@@ -12,10 +12,16 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
-   "scripts": {
+  "files": [
+    "dist"
+  ],
+  "scripts": {
     "dev": "vite",
-    "build": "tsc --build",
+    "build:ts": "tsc -p tsconfig.build.json",
+    "build:npm": "rollup -c rollup.config.ts",
+    "build:perf": "rollup -c rollup.perf.config.ts",
+    "build": "pnpm build:ts && pnpm build:npm",
+    "bench:core": "pnpm build:perf && node --expose-gc dist/perf.js",
     "test": "vitest run",
     "bench": "vitest bench",
     "bench:flame": "0x -- node dist/tests/ownership.run.js",
@@ -30,7 +36,6 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@reflex/core": "workspace:*",
-    "@reflex/contract": "workspace:*"
+    "@reflex/core": "workspace:*"
   }
 }

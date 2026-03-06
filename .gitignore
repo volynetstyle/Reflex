@@ -2,6 +2,8 @@
 # 🧠 CORE: Node / TypeScript / Reflex Monorepo
 # -------------------------------------------------------
 
+memory
+
 # Dependencies
 node_modules/
 .pnpm-store/

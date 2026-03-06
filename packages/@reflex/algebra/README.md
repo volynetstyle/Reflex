@@ -1,1 +1,0 @@
-Causal Algebra defines the group structure, update operation, and normalization rules for reflex nodes. All higher-level semantics are built on top of this algebra.

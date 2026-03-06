@@ -1,70 +1,163 @@
-import type { RollupOptions, ModuleFormat } from "rollup";
+import type { RollupOptions, ModuleFormat, Plugin } from "rollup";
 import replace from "@rollup/plugin-replace";
 import terser from "@rollup/plugin-terser";
 import resolve from "@rollup/plugin-node-resolve";
 
-interface BuildConfig {
+type BuildFormat = "esm" | "cjs";
+
+interface BuildTarget {
+  name: string;
   outDir: string;
+  format: BuildFormat;
   dev: boolean;
-  format: ModuleFormat;
 }
 
-const resolvers = resolve({
-  extensions: [".js"],
-  exportConditions: ["import", "default"],
-});
+interface BuildContext {
+  target: BuildTarget;
+}
 
-const replacers = (dev: boolean) =>
-  replace({
+function loggerStage(ctx: BuildContext): Plugin {
+  const name = ctx.target.name;
+
+  return {
+    name: "pipeline-logger",
+
+    buildStart() {
+      console.log(`\n🚀 start build → ${name}`);
+    },
+
+    generateBundle(_, bundle) {
+      const modules = Object.keys(bundle).length;
+      console.log(`📦 ${name} modules: ${modules}`);
+    },
+
+    writeBundle(_, bundle) {
+      const size = Object.values(bundle)
+        .map((b: any) => b.code?.length ?? 0)
+        .reduce((a, b) => a + b, 0);
+
+      console.log(`📊 ${name} size ${(size / 1024).toFixed(2)} KB`);
+      console.log(`✔ done → ${name}\n`);
+    },
+  };
+}
+
+function resolverStage(): Plugin {
+  return resolve({
+    extensions: [".js"],
+    exportConditions: ["import", "default"],
+  });
+}
+
+function replaceStage(ctx: BuildContext): Plugin {
+  return replace({
     preventAssignment: true,
     values: {
-      __DEV__: JSON.stringify(dev),
+      __DEV__: JSON.stringify(ctx.target.dev),
     },
   });
+}
 
-const testers = (dev: boolean) =>
-  !dev &&
-  terser({
+function minifyStage(ctx: BuildContext): Plugin | null {
+  if (ctx.target.dev) return null;
+
+  return terser({
     compress: {
+      passes: 3,
+      inline: 3,
       dead_code: true,
+      drop_console: true,
+      drop_debugger: true,
+      reduce_vars: true,
+      reduce_funcs: true,
       conditionals: true,
+      comparisons: true,
       booleans: true,
       unused: true,
       if_return: true,
       sequences: true,
+      pure_getters: true,
+      unsafe: true,
+      evaluate: true,
     },
     mangle: {
       toplevel: true,
-      keep_fnames: false,
       keep_classnames: true,
     },
     format: {
       comments: false,
     },
   });
+}
 
-function build({ outDir, dev, format }: BuildConfig) {
+function pipeline(ctx: BuildContext): Plugin[] {
+  const stages = [
+    loggerStage(ctx),
+    resolverStage(),
+    replaceStage(ctx),
+    minifyStage(ctx),
+  ];
+
+  return stages.filter(Boolean) as Plugin[];
+}
+
+function createConfig(target: BuildTarget): RollupOptions {
+  const ctx: BuildContext = { target };
+
   return {
-    input: "build/esm/index.js",
+    input: {
+      index: "build/esm/index.js",
+      bucket: "build/esm/bucket/index.js",
+      graph: "build/esm/graph/index.js",
+      ownership: "build/esm/ownership/index.js",
+    },
+
     treeshake: {
       moduleSideEffects: false,
       propertyReadSideEffects: false,
       tryCatchDeoptimization: false,
+      correctVarValueBeforeDeclaration: false,
     },
     output: {
-      dir: `dist/${outDir}`,
-      format,
-      preserveModules: true,
-      preserveModulesRoot: "build/esm",
-      exports: format === "cjs" ? "named" : undefined,
-      sourcemap: dev,
+      dir: `dist/${target.outDir}`,
+      format: target.format,
+
+      entryFileNames: "[name].js",
+
+      exports: target.format === "cjs" ? "named" : undefined,
+      sourcemap: target.dev,
+
+      generatedCode: {
+        constBindings: true,
+        arrowFunctions: true,
+      },
     },
-    plugins: [resolvers, replacers(dev), testers(dev)],
-  } satisfies RollupOptions;
+
+    plugins: pipeline(ctx),
+
+    external: ["vitest", "expect-type"],
+  };
 }
 
-export default [
-  build({ outDir: "esm", dev: false, format: "esm" }),
-  build({ outDir: "dev", dev: true, format: "esm" }),
-  build({ outDir: "cjs", dev: false, format: "cjs" }),
+const targets: BuildTarget[] = [
+  {
+    name: "esm",
+    outDir: "esm",
+    format: "esm",
+    dev: false,
+  },
+  {
+    name: "esm-dev",
+    outDir: "dev",
+    format: "esm",
+    dev: true,
+  },
+  {
+    name: "cjs",
+    outDir: "cjs",
+    format: "cjs",
+    dev: false,
+  },
 ];
+
+export default targets.map(createConfig);

@@ -1,6 +1,8 @@
 import { OwnershipNode } from "./ownership.node";
 
+// @__INLINE__
 const CHILD_MASK = 0x00ffffff;
+// @__INLINE__
 const FLAG_SHIFT = 24;
 
 export const enum OwnershipFlags {

@@ -45,3 +45,4 @@ export function detach(node: OwnershipNode): void {
 
   decChildCount(parent);
 }
+
