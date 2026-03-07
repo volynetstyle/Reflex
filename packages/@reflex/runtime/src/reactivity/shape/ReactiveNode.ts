@@ -2,7 +2,6 @@ import {
   INVALID_RANK,
   type GraphNode,
   type OwnershipNode,
-  type RankNode,
 } from "@reflex/core";
 import { Reactivable } from "./Reactivable";
 import { ReactiveEdge } from "./ReactiveEdge";
@@ -65,7 +64,7 @@ type ComputeFn<T> = ((previous?: T) => T) | null;
  *
  *   No getters/setters are used to avoid deoptimization.
  */
-class ReactiveNode<T = unknown> implements Reactivable, GraphNode, RankNode<T> {
+class ReactiveNode<T = unknown> implements Reactivable, GraphNode {
   /**
    * Temporal marker (scheduler-dependent meaning).
    * Cyclic Z₂³².
@@ -89,7 +88,7 @@ class ReactiveNode<T = unknown> implements Reactivable, GraphNode, RankNode<T> {
   /**
    * Runtime identifier or scheduler slot.
    */
-  runtime: Byte32Int  = ReactiveNodeState.Obsolete;
+  runtime: Byte32Int = ReactiveNodeState.Obsolete;
 
   /**
    * Bitmask metadata.
@@ -108,9 +107,6 @@ class ReactiveNode<T = unknown> implements Reactivable, GraphNode, RankNode<T> {
    * Means topological rank and -1 is out of topology order.
    */
   rank: number = INVALID_RANK;
-
-  nextPeer: ReactiveNode | null = null;
-  prevPeer: ReactiveNode | null = null;
 
   /**
    * Incoming dependency edges.

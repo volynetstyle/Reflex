@@ -107,9 +107,6 @@ function createConfig(target: BuildTarget): RollupOptions {
   return {
     input: {
       index: "build/esm/index.js",
-      bucket: "build/esm/bucket/index.js",
-      graph: "build/esm/graph/index.js",
-      ownership: "build/esm/ownership/index.js",
     },
 
     treeshake: {

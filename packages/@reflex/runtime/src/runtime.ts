@@ -1,44 +1,88 @@
-import { RankedQueue } from "@reflex/core";
+import { QuaternaryHeap, RankedQueue } from "@reflex/core";
 import { ReactiveNode, ReactiveNodeKind } from "./reactivity/shape";
 import { AppendQueue } from "./scheduler/AppendQueue";
-import { REACTIVE_BUDGET } from "./setup";
+
+const PROPAGATION_STACK_CAPACITY = 256;
+const PULL_STACK_CAPACITY = 64;
 
 class ReactiveRuntime {
-  id: string;
+  readonly id: string;
+
+  // Computation context: stack for nested tracking support
   currentComputation: ReactiveNode | null;
-  computationQueue: RankedQueue<ReactiveNode>;
-  effectQueue: AppendQueue<ReactiveNode>;
+
+  // Propagation stack: pre-allocated, manual top pointer
+  private readonly _propagationStack: ReactiveNode[];
+  private _propagationTop: number;
+
+  // Pull stack: same pattern
+  private readonly _pullStack: ReactiveNode[];
+  private _pullTop: number;
+
+  // Queues
+  readonly computationQueue: QuaternaryHeap<ReactiveNode>;
+  readonly effectQueue: AppendQueue<ReactiveNode>;
 
   constructor(id: string) {
     this.id = id;
     this.currentComputation = null;
-    this.computationQueue = new RankedQueue<ReactiveNode>();
+    this._propagationStack = new Array(PROPAGATION_STACK_CAPACITY);
+    this._propagationTop = 0;
+    this._pullStack = new Array(PULL_STACK_CAPACITY);
+    this._pullTop = 0;
+    this.computationQueue = new QuaternaryHeap<ReactiveNode>(2048);
     this.effectQueue = new AppendQueue();
   }
 
-  computation() {
-    return this.currentComputation;
-  }
-
-  beginComputation(node: ReactiveNode) {
+  beginComputation(node: ReactiveNode): ReactiveNode | null {
+    const prev = this.currentComputation;
     this.currentComputation = node;
+    return prev;
   }
 
-  endComputation() {
-    this.currentComputation = null;
+  endComputation(prev: ReactiveNode | null): void {
+    this.currentComputation = prev;
   }
 
-  enqueue(node: ReactiveNode, rank: number) {
-    const type = node.meta;
+  propagatePush(node: ReactiveNode): void {
+    this._propagationStack[this._propagationTop++] = node;
+  }
 
-    if (type & ReactiveNodeKind.Consumer) {
-      this.computationQueue.insert(node, rank);
-      return;
-    }
+  propagatePop(): ReactiveNode {
+    return this._propagationStack[--this._propagationTop]!;
+  }
 
-    if (type & ReactiveNodeKind.Recycler) {
-      this.effectQueue.push(node);
-      return;
+  get propagating(): boolean {
+    return 0 < this._propagationTop;
+  }
+
+  pullPush(node: ReactiveNode): void {
+    this._pullStack[this._pullTop++] = node;
+  }
+
+  pullPop(): ReactiveNode {
+    return this._pullStack[--this._pullTop]!;
+  }
+
+  get pulling(): boolean {
+    return this._pullTop > 0;
+  }
+
+  enqueue(node: ReactiveNode): boolean {
+    const kind =
+      node.meta & (ReactiveNodeKind.Consumer | ReactiveNodeKind.Recycler);
+
+    switch (kind) {
+      case ReactiveNodeKind.Consumer:
+        this.computationQueue.insert(node, node.rank);
+        return true;
+
+      case ReactiveNodeKind.Recycler:
+        this.effectQueue.push(node);
+        return true;
+
+      default:
+        return false;
     }
   }
 }

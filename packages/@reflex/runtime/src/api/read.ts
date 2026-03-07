@@ -10,10 +10,10 @@ import { pullAndRecompute } from "../reactivity/walkers/pullAndRecompute";
  * @returns
  */
 // @__INLINE__
-export function readProducer(node: ReactiveNode) {
+export function readProducer<T>(node: ReactiveNode<unknown>): T {
   establish_dependencies_add(node);
 
-  return node.payload;
+  return <T>node.payload;
 }
 
 /**
@@ -27,12 +27,14 @@ export function readProducer(node: ReactiveNode) {
  *            we skip propagate — no downstream invalidation needed.
  */
 // @__INLINE__
-export function readConsumer(node: ReactiveNode): unknown {
+export function readConsumer<T>(node: ReactiveNode<unknown>): T {
   establish_dependencies_add(node);
 
-  if (!(node.runtime & INVALID)) return node.payload; // fast path
+  if (!(node.runtime & INVALID)) {
+    return <T>node.payload;
+  } // fast path
 
   pullAndRecompute(node); // фаза 1 + фаза 2 вместо recuperate + recompute
 
-  return node.payload;
+  return <T>node.payload;
 }

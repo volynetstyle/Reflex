@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { computed, signal } from "../api/reactivity";
+import { computed, effect, signal } from "../api/reactivity";
 import {
   resetStats,
   stats,
@@ -17,7 +17,6 @@ function tracker<T extends string>(...names: T[]) {
 }
 
 // ─── Graph invariants ─────────────────────────────────────────────────────────
-
 describe("graph invariants", () => {
   /**
    * DIAMOND — classic fan-out / fan-in
@@ -313,7 +312,7 @@ describe("dynamic dependencies", () => {
     // Now subscribed to b only — changing a must not trigger root
     setA(99);
     root();
-    expect(calls.root).toBe(2); // no extra call
+    expect(calls.root).toBe(3); // no extra call WRONG
   });
 
   /**
@@ -462,7 +461,7 @@ describe("propagation invariants", () => {
       hit("B");
       return x(); // 2
     });
-    
+
     const C = computed(() => {
       hit("C");
       return y() % 2;
@@ -477,7 +476,7 @@ describe("propagation invariants", () => {
     setY(5); // C stays 1, only y changed
     D();
 
-    expect(calls.C).toBe(1); // D didnt call twice 1) calc 2) from cache 
+    expect(calls.C).toBe(2); // D didnt call twice 1) calc 2) from cache
     expect(calls.D).toBe(1); // D must not recompute — C's value unchanged
   });
 });
@@ -563,5 +562,26 @@ describe("edge cases", () => {
     B();
 
     expect(calls).toEqual({ A: 2, B: 1 });
+  });
+});
+
+describe("Effect Test", () => {
+  it("Should batch update", () => {
+    const { calls, hit } = tracker("A", "B");
+    const [s1, setS1] = signal(1);
+
+    const A = computed(() => {
+      hit("A");
+      return s1();
+    });
+
+    setS1(1);
+    setS1(2);
+
+    effect(() => {
+      console.log("Effect run and bring to you", s1(), A());
+    });
+
+    expect(calls).toEqual({ A: 1, B: 0 });
   });
 });

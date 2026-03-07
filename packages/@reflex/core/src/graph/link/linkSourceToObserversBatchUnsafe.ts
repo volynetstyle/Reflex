@@ -4,7 +4,7 @@ import { linkSourceToObserverUnsafe } from "./linkSourceToObserverUnsafe";
 export const linkSourceToObserversBatchUnsafe = (
   source: GraphNode,
   observers: readonly GraphNode[],
-  Constructor: typeof GraphEdge = GraphEdge,
+  Constructor: typeof GraphEdge,
 ): GraphEdge[] => {
   const n = observers.length;
 

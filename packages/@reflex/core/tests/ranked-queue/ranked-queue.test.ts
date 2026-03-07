@@ -13,7 +13,7 @@ class TestNode<T> implements RankNode<T> {
 }
 
 describe("RankedQueue (strict)", () => {
-  let queue: RankedQueue<string, TestNode<string>>;
+  let queue: RankedQueue<TestNode<string>>;
 
   beforeEach(() => {
     queue = new RankedQueue();
@@ -92,4 +92,9 @@ describe("RankedQueue (strict)", () => {
     expect(queue.popMin()).toBe(min);
     expect(queue.popMin()).toBe(max);
   });
+
+
+  
 });
+
+

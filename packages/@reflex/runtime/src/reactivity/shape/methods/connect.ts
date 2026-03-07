@@ -5,7 +5,7 @@ import {
 } from "@reflex/core";
 import ReactiveNode from "../ReactiveNode";
 import { ReactiveEdge } from "../ReactiveEdge";
-import { currentComputation } from "../../../execution";
+import runtime from "../../../runtime";
 
 export function connect(producer: ReactiveNode, consumer: ReactiveNode) {
   return linkSourceToObserverUnsafe(producer, consumer, ReactiveEdge);
@@ -25,7 +25,7 @@ export function clearDependencies(consumer: ReactiveNode) {
  * @returns void
  */
 export function establish_dependencies_add(producer: ReactiveNode): void {
-  const consumer = currentComputation();
+  const consumer = runtime.currentComputation;
 
   if (!consumer || producer === consumer) return;
 
@@ -33,7 +33,7 @@ export function establish_dependencies_add(producer: ReactiveNode): void {
 }
 
 export function establish_subscribers_remove() {
-  const consumer = currentComputation();
+  const consumer = runtime.currentComputation;
 
   if (!consumer) {
     return;
@@ -43,7 +43,7 @@ export function establish_subscribers_remove() {
 }
 
 export function establish_dependencies_remove() {
-  const consumer = currentComputation();
+  const consumer = runtime.currentComputation;
 
   if (!consumer) {
     return;

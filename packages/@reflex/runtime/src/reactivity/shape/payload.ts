@@ -1,12 +1,12 @@
-import { CLEAR_INVALID, ReactiveNode, ReactiveNodeState } from ".";
-import { CyclicOrder32Int } from "../../execution/execution.version";
+import { ReactiveNode } from ".";
+import { CyclicRing32 } from "../../execution/execution.version";
 
 /**
  * @invariant
  * Node.version may mutate only through changePayload.
  * This local alias ensures no external module increments versions directly.
  */
-const next_version = CyclicOrder32Int.next;
+const next_version = CyclicRing32.inc;
 
 /**
  * @invariant
@@ -27,7 +27,8 @@ const next_version = CyclicOrder32Int.next;
  * - node.runtime := valid
  */
 export function changePayload<T>(node: ReactiveNode<T>, next: T) {
+  const currentV = node.v;
+
   node.payload = next;
-  node.v = next_version(node.v);
-  node.runtime &= CLEAR_INVALID;
+  node.v = next_version(currentV);
 }

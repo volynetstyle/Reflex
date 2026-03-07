@@ -23,10 +23,9 @@ export function clearPropagate(node: ReactiveNode): void {
       const child = e.to;
       const s = child.runtime;
 
-      if (!(s & INVALID)) continue; // already clean
-      if (s & ReactiveNodeState.Obsolete) continue; // dirty from another source — don't touch
+      if (!(s & ReactiveNodeState.Invalid)) continue;
+      if (s & ReactiveNodeState.Obsolete) continue;
 
-      // FIX #3: clear only Invalid, leave Obsolete untouched
       child.runtime = s & ~ReactiveNodeState.Invalid;
       stack.push(child);
     }

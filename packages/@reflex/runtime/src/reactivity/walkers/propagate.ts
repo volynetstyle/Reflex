@@ -1,25 +1,32 @@
+import runtime from "../../runtime";
 import { ReactiveNode, ReactiveNodeState } from "../shape";
 
 export function propagate(
   node: ReactiveNode,
   flag: ReactiveNodeState = ReactiveNodeState.Invalid,
 ): void {
-  const stack: ReactiveNode[] = [node];
   let nextBit = flag;
 
-  while (stack.length) {
-    const n = stack.pop()!;
+  runtime.propagatePush(node);
+
+  while (runtime.propagating) {
+    const n = runtime.propagatePop()!;
 
     for (let e = n.firstOut; e; e = e.nextOut) {
       const child = e.to;
       const s = child.runtime;
+      const queued = s & ReactiveNodeState.Queued;
 
-      if (s & (ReactiveNodeState.Obsolete | nextBit)) continue;
+      // Already at maximum dirtiness for this bit — skip
+      if (s & (ReactiveNodeState.Obsolete | nextBit)) {
+        continue;
+      }
 
-      child.runtime = s | nextBit;
+      child.runtime = s | nextBit | ReactiveNodeState.Queued;
 
-      if (!(s & ReactiveNodeState.Queued)) {
-        stack.push(child);
+      // Pure computed — push to propagation stack if not already queued
+      if (!queued) {
+        runtime.propagatePush(child);
       }
     }
 

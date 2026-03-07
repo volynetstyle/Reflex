@@ -64,8 +64,10 @@ function minifyStage(ctx: BuildContext): Plugin | null {
 
   return terser({
     compress: {
-      passes: 3,
+      passes: 4,
       inline: 3,
+      hoist_props: true,
+      collapse_vars: true,
       dead_code: true,
       drop_console: true,
       drop_debugger: true,
@@ -79,12 +81,24 @@ function minifyStage(ctx: BuildContext): Plugin | null {
       sequences: true,
       pure_getters: true,
       unsafe: true,
+      unsafe_arrows: true,
+      unsafe_methods: true,
+      unsafe_math: true,
+      unsafe_comps: true,
       evaluate: true,
+      pure_funcs: ["Object.freeze", "Object.defineProperty"],
+      top_retain: [],
     },
+
     mangle: {
       toplevel: true,
       keep_classnames: true,
+      properties: {
+        regex: /.*/,
+        reserved: ["payload", "compute", "meta", "runtime"],
+      },
     },
+
     format: {
       comments: false,
     },
@@ -116,10 +130,14 @@ function createConfig(target: BuildTarget): RollupOptions {
       propertyReadSideEffects: false,
       tryCatchDeoptimization: false,
       correctVarValueBeforeDeclaration: false,
+      unknownGlobalSideEffects: false,
     },
+
     output: {
       dir: `dist/${target.outDir}`,
       format: target.format,
+
+      inlineDynamicImports: true,
 
       entryFileNames: "[name].js",
 

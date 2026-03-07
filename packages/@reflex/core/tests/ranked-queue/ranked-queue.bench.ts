@@ -13,13 +13,14 @@ class TestNode<T> implements RankNode<T> {
 }
 
 const N = 2048;
+const WIDTH = 2048;
 
 describe("RankedQueue Benchmarks", () => {
   // =========================================================
   // INSERT
   // =========================================================
   bench("insert 2048 random ranks", () => {
-    const queue = new RankedQueue<string, TestNode<string>>();
+    const queue = new RankedQueue<TestNode<string>>();
 
     for (let i = 0; i < N; i++) {
       const node = new TestNode(`n${i}`);
@@ -31,7 +32,7 @@ describe("RankedQueue Benchmarks", () => {
   // POP MIN
   // =========================================================
   bench("popMin 2048", () => {
-    const queue = new RankedQueue<string, TestNode<string>>();
+    const queue = new RankedQueue<TestNode<string>>();
 
     for (let i = 0; i < N; i++) {
       queue.insert(new TestNode(`n${i}`), (Math.random() * 1024) | 0);
@@ -43,7 +44,7 @@ describe("RankedQueue Benchmarks", () => {
   });
 
   bench("insert + remove half", () => {
-    const queue = new RankedQueue<string, TestNode<string>>();
+    const queue = new RankedQueue<TestNode<string>>();
     const nodes: TestNode<string>[] = [];
 
     for (let i = 0; i < N; i++) {
@@ -58,7 +59,7 @@ describe("RankedQueue Benchmarks", () => {
   });
 
   bench("2048 same-rank nodes (worst bucket density)", () => {
-    const queue = new RankedQueue<string, TestNode<string>>();
+    const queue = new RankedQueue<TestNode<string>>();
 
     for (let i = 0; i < N; i++) {
       queue.insert(new TestNode(`n${i}`), 500);
@@ -70,7 +71,7 @@ describe("RankedQueue Benchmarks", () => {
   });
 
   bench("mixed workload (insert/pop/remove)", () => {
-    const queue = new RankedQueue<string, TestNode<string>>();
+    const queue = new RankedQueue<TestNode<string>>();
     const nodes: TestNode<string>[] = [];
 
     for (let i = 0; i < N; i++) {
@@ -86,5 +87,40 @@ describe("RankedQueue Benchmarks", () => {
     for (let i = 0; i < N / 3; i++) {
       queue.remove(nodes[i]!);
     }
+  });
+
+  describe("RankedQueue Breadth Benchmarks", () => {
+    bench("breadth insert (2048 nodes same rank)", () => {
+      const queue = new RankedQueue<TestNode<string>>();
+
+      for (let i = 0; i < WIDTH; i++) {
+        queue.insert(new TestNode(`n${i}`), 1);
+      }
+    });
+
+    bench("breadth pop (2048 nodes same rank)", () => {
+      const queue = new RankedQueue<TestNode<string>>();
+
+      for (let i = 0; i < WIDTH; i++) {
+        queue.insert(new TestNode(`n${i}`), 1);
+      }
+
+      while (!queue.isEmpty()) {
+        queue.popMin();
+      }
+    });
+
+    bench("breadth storm (insert → pop → insert)", () => {
+      const queue = new RankedQueue<TestNode<string>>();
+
+      for (let i = 0; i < WIDTH; i++) {
+        queue.insert(new TestNode(`n${i}`), 1);
+      }
+
+      for (let i = 0; i < WIDTH; i++) {
+        queue.popMin();
+        queue.insert(new TestNode(`x${i}`), 1);
+      }
+    });
   });
 });

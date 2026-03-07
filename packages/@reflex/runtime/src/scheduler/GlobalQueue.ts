@@ -6,4 +6,7 @@ class GlobalQueue {
 
     this.active = false;
   }
+
+
+  
 }

@@ -1,108 +1,149 @@
 export class FourAryHeap<T> {
-  private keys: number[] = [];
-  private values: T[] = [];
+  private keys: Float64Array;
+  private values: T[];
+  private _size: number = 0;
+  private capacity: number;
+
+  constructor(initialCapacity = 64) {
+    this.capacity = initialCapacity;
+    this.keys = new Float64Array(initialCapacity);
+    this.values = new Array(initialCapacity);
+  }
 
   size(): number {
-    return this.keys.length;
+    return this._size;
   }
 
   isEmpty(): boolean {
-    return this.keys.length === 0;
+    return this._size === 0;
   }
 
   peek(): T | undefined {
-    return this.values[0];
+    return this._size > 0 ? this.values[0] : undefined;
   }
 
   insert(value: T, priority: number): void {
-    const i = this.keys.length;
+    if (this._size === this.capacity) this.grow();
 
-    this.keys.push(priority);
-    this.values.push(value);
+    const keys = this.keys;
+    const values = this.values;
+    let i = this._size++;
 
-    this.siftUp(i);
+    // siftUp inlined
+    while (i > 0) {
+      const parent = (i - 1) >> 2;
+      const pk = keys[parent]!;
+      if (priority >= pk) break;
+      keys[i] = pk;
+      values[i] = values[parent]!;
+      i = parent;
+    }
+
+    keys[i] = priority;
+    values[i] = value;
   }
 
   popMin(): T | undefined {
-    const n = this.keys.length;
-    if (n === 0) return undefined;
+    if (this._size === 0) return undefined;
 
     const minValue = this.values[0];
+    const last = --this._size;
 
-    const lastKey = this.keys.pop()!;
-    const lastValue = this.values.pop()!;
+    if (last > 0) {
+      this.keys[0] = this.keys[last]!;
+      this.values[0] = this.values[last]!;
 
-    if (n > 1) {
-      this.keys[0] = lastKey;
-      this.values[0] = lastValue;
-      this.siftDown(0);
+      let i = 0;
+
+      const keys = this.keys;
+      const values = this.values;
+      const n = this._size;
+
+      const key = keys[i]!;
+      const value = values[i]!;
+
+      // Быстрый путь: пока все 4 ребёнка гарантированно существуют
+      // последний узел с 4 детьми: base+3 < n  →  i < (n - 2) >> 2
+      const limit = (n - 2) >> 2;
+
+      while (i < limit) {
+        const base = (i << 2) + 1;
+
+        let minChild = base;
+        let minKey = keys[base]!;
+        let ck: number;
+
+        if ((ck = keys[base + 1]!) < minKey) {
+          minKey = ck;
+          minChild = base + 1;
+        }
+        if ((ck = keys[base + 2]!) < minKey) {
+          minKey = ck;
+          minChild = base + 2;
+        }
+        if ((ck = keys[base + 3]!) < minKey) {
+          minKey = ck;
+          minChild = base + 3;
+        }
+
+        if (minKey >= key) break;
+
+        keys[i] = minKey;
+        values[i] = values[minChild]!;
+        i = minChild;
+      }
+
+      while (true) {
+        const base = (i << 2) + 1;
+        if (base >= n) break;
+
+        let minChild = base;
+        let minKey = keys[base]!;
+        let c = base + 1;
+        let ck: number;
+
+        if (c < n && (ck = keys[c]!) < minKey) {
+          minKey = ck;
+          minChild = c;
+        }
+        if (++c < n && (ck = keys[c]!) < minKey) {
+          minKey = ck;
+          minChild = c;
+        }
+        if (++c < n && (ck = keys[c]!) < minKey) {
+          minKey = ck;
+          minChild = c;
+        }
+
+        if (minKey >= key) break;
+
+        keys[i] = minKey;
+        values[i] = values[minChild]!;
+        i = minChild;
+      }
+
+      keys[i] = key;
+      values[i] = value;
     }
+
+    // Help GC — don't hold reference in unused slot
+    this.values[last] = <T>undefined;
 
     return minValue;
   }
 
   clear(): void {
-    this.keys.length = 0;
-    this.values.length = 0;
+    const n = this._size;
+    this._size = 0;
+    this.values.fill(<T>undefined, 0, n); // было: 0, this._size (баг!)
   }
 
-  private siftUp(i: number): void {
-    const keys = this.keys;
-    const values = this.values;
-
-    const key = keys[i]!;
-    const value = values[i]!;
-
-    while (i > 0) {
-      const parent = ((i - 1) / 4) | 0;
-
-      if (key >= keys[parent]!) break;
-
-      keys[i] = keys[parent]!;
-      values[i] = values[parent]!;
-
-      i = parent;
-    }
-
-    keys[i] = key;
-    values[i] = value;
-  }
-
-  private siftDown(i: number): void {
-    const keys = this.keys;
-    const values = this.values;
-    const n = keys.length;
-
-    const key = keys[i]!;
-    const value = values[i]!;
-
-    while (true) {
-      const base = 4 * i + 1;
-      if (base >= n) break;
-
-      let minChild = base;
-      let minKey = keys[base]!;
-
-      for (let k = 1; k < 4; k++) {
-        const child = base + k;
-        if (child >= n) break;
-
-        const childKey = keys[child]!;
-        if (childKey < minKey) {
-          minKey = childKey;
-          minChild = child;
-        }
-      }
-
-      if (minKey >= key) break;
-
-      keys[i] = minKey;
-      values[i] = values[minChild]!;
-
-      i = minChild;
-    }
-
-    keys[i] = key;
-    values[i] = value;
+  private grow(): void {
+    const newCapacity = this.capacity * 2;
+    const newKeys = new Float64Array(newCapacity);
+    newKeys.set(this.keys);
+    this.keys = newKeys;
+    this.values.length = newCapacity;
+    this.capacity = newCapacity;
   }
 }

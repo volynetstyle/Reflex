@@ -1,7 +1,7 @@
 import { commitProducer } from "../reactivity/producer/commitProducer";
 import { ReactiveNodeState } from "../reactivity/shape";
 import ReactiveNode from "../reactivity/shape/ReactiveNode";
-import { propagate } from "../reactivity/walkers/propagate";
+import {  propagate } from "../reactivity/walkers/propagate";
 
 // @__INLINE__
 export function writeProducer<T>(producer: ReactiveNode, value: T): void {

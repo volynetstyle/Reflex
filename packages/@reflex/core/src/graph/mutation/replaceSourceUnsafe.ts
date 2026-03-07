@@ -1,4 +1,4 @@
-import { GraphNode } from "../core";
+import { GraphEdge, GraphNode } from "../core";
 import { linkSourceToObserverUnsafe } from "../link/linkSourceToObserverUnsafe";
 import { unlinkSourceFromObserverUnsafe } from "../unlink/unlinkSourceFromObserverUnsafe";
 
@@ -13,5 +13,5 @@ export const replaceSourceUnsafe = (
   observer: GraphNode,
 ): void => {
   unlinkSourceFromObserverUnsafe(oldSource, observer);
-  linkSourceToObserverUnsafe(newSource, observer);
+  linkSourceToObserverUnsafe(newSource, observer, GraphEdge);
 };

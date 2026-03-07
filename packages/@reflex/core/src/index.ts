@@ -1,3 +1,4 @@
+export * from "./heap";
 export * from "./ownership";
 export * from "./graph";
 export * from "./bucket";

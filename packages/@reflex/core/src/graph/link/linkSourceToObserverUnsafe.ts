@@ -1,4 +1,4 @@
-import { type GraphNode, GraphEdge } from "../core";
+import type { GraphNode, GraphEdge } from "../core";
 import { isLastOutEdgeTo } from "../query/isLastOutEdgeTo";
 
 type EdgeClass = typeof GraphEdge;
@@ -9,7 +9,7 @@ type EdgeClass = typeof GraphEdge;
 export const linkSourceToObserverUnsafe = (
   source: GraphNode,
   observer: GraphNode,
-  EdgeConstructor: EdgeClass = GraphEdge,
+  EdgeConstructor: EdgeClass,
 ): GraphEdge => {
   // Invariant: at most one edge from source to observer
   if (isLastOutEdgeTo(source, observer)) {
