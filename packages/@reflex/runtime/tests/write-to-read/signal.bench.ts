@@ -36,7 +36,7 @@ describe("reactive benchmarks", () => {
   const d = computed(() => b() + c());
 
   bench("diamond", () => {
-    for (let i = 0; i < 1; i++) {
+    for (let i = 0; i < 100000; i++) {
       setA(i);
       d();
     }

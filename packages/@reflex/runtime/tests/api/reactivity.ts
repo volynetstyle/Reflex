@@ -15,7 +15,6 @@ class Signal<T> {
 
   constructor(initialValue: T) {
     this.node = new ReactiveNode(ReactiveNodeKind.Producer, initialValue);
-    this.node.changedAt = PackedClock.pack(GlobalClock.tick(), false, false);
   }
 
   get = () => readProducer(this.node);

@@ -2,47 +2,78 @@
 import { Traversal } from "../../runtime";
 import recompute from "../consumer/recompute";
 import { ReactiveNode } from "../shape";
-import { isObsolete, isStaleTransitive, isVisited, markVisited } from "../shape/ReactiveVersion";
+import { PackedClock } from "../shape/methods/pack";
 
 export function pullAndRecompute(node: ReactiveNode): void {
   Traversal.next();
+  const t = Traversal.current;
 
-  const stack: ReactiveNode[] = [node];
-  const exitStack: boolean[] = [false];
-  const toRecompute: ReactiveNode[] = [];
+  // Два стека: узлы + флаг (false=enter, true=exit)
+  const nodes: ReactiveNode[] = [node];
+  const phase: boolean[] = [false];
 
-  while (stack.length) {
-    const n = stack.pop()!;
-    const isExit = exitStack.pop()!;
+  while (nodes.length > 0) {
+    const n = nodes[nodes.length - 1]!;
+    const isExit = phase[phase.length - 1]!;
+
+    nodes.pop();
+    phase.pop();
 
     if (!isExit) {
-      if (isVisited(n)) continue;
-      markVisited(n);
+      // ── ENTER ────────────────────────────────────────────────────────────
 
-      if (!isStaleTransitive(n)) continue; // ← транзитивная проверка
+      // Уже обработан в этом traversal — пропускаем
+      if (n.verifiedAt === t) continue;
 
-      stack.push(n);
-      exitStack.push(true);
+      // Сигнал: не пересчитываем, просто помечаем посещённым
+      if (!n.compute) {
+        n.verifiedAt = t;
+        continue;
+      }
 
-      if (!isObsolete(n)) {
-        for (let e = n.firstIn; e; e = e.nextIn) {
-          if (!isVisited(e.from)) {
-            stack.push(e.from);
-            exitStack.push(false);
-          }
+      // Никогда не вычислялся — сразу в exit без обхода deps
+      if (n.computedAt === 0) {
+        nodes.push(n);
+        phase.push(true);
+        continue;
+      }
+
+      // Планируем exit
+      nodes.push(n);
+      phase.push(true);
+
+      // Пушим deps для обхода (только непосещённые)
+      for (let e = n.firstIn; e; e = e.nextIn) {
+        if (e.from.verifiedAt !== t) {
+          nodes.push(e.from);
+          phase.push(false);
         }
       }
     } else {
-      if (n.compute && isStaleTransitive(n)) {
-        toRecompute.push(n);
+      // ── EXIT ─────────────────────────────────────────────────────────────
+      // Все deps уже обработаны — проверяем нужен ли пересчёт
+
+      // Первый вызов (computedAt === 0) — пересчитываем безусловно
+      if (n.computedAt === 0) {
+        recompute(n);
+        n.verifiedAt = t;
+        continue;
       }
+
+      // Проверяем изменился ли хоть один dep
+      let depChanged = false;
+      for (let e = n.firstIn; e; e = e.nextIn) {
+        if (PackedClock.version(e.from.changedAt) > n.computedAt) {
+          depChanged = true;
+          break;
+        }
+      }
+
+      if (depChanged) {
+        recompute(n);
+      }
+
+      n.verifiedAt = t;
     }
-  }
-
-  for (let i = toRecompute.length - 1; i >= 0; i--) {
-    const n = toRecompute[i]!;
-    if (!isStaleTransitive(n)) continue;
-
-    recompute(n)
   }
 }

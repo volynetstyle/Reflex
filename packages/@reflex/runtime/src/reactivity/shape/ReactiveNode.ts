@@ -64,12 +64,7 @@ class ReactiveNode<T = any> implements Reactivable, GraphNode {
   // changedAt: version в младших битах
   // Failed + Queued в старших — они семантически связаны с "состоянием источника"
   changedAt: number = 0; // pack(FLAG_FAILED | FLAG_QUEUED, clock)
-
-  // computedAt: чистая версия, флаги не нужны
   computedAt: number = 0;
-
-  // verifiedAt: Visited = verifiedAt === currentTraversal
-  // флаги тут не нужны — traversalId и так уникален
   verifiedAt: number = 0; // visited в pull traversal
   checkedAt: number = 0;
   /**

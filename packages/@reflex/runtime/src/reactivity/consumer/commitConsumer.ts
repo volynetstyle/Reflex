@@ -1,5 +1,6 @@
 import { GlobalClock } from "../../runtime";
 import { ReactiveNode } from "../shape";
+import { PackedClock } from "../shape/methods/pack";
 import { changePayload, markFailed } from "../shape/ReactivePayload";
 
 /**
@@ -15,19 +16,23 @@ export function commitConsumer(
   next: unknown,
   error?: unknown,
 ): boolean {
-  // Фиксируем момент вычисления в любом случае
-  consumer.computedAt = GlobalClock.current;
 
   if (error !== undefined) {
     markFailed(consumer, error);
-    return true; // ошибка всегда propagate
+    // computedAt не выставляем — узел не вычислен успешно
+    return true;
   }
 
   if (consumer.payload === next) {
-    // Мемоизация: значение не изменилось, changedAt не трогаем
+    // Мемоизация — фиксируем что проверили, значение то же
+    consumer.computedAt = GlobalClock.current;
     return false;
   }
 
+  // Сначала меняем payload (tick внутри changePayload)
   changePayload(consumer, next);
+  // computedAt = версия ЭТОГО изменения, чтобы downstream видел:
+  // dep.changedAt.version === node.computedAt → "я пересчитан до этого dep"
+  consumer.computedAt = PackedClock.version(consumer.changedAt);
   return true;
 }

@@ -1,8 +1,7 @@
 import { establish_dependencies_add } from "../reactivity/shape/methods/connect";
 import ReactiveNode from "../reactivity/shape/ReactiveNode";
-import { isStaleTransitive } from "../reactivity/shape/ReactiveVersion";
 import { pullAndRecompute } from "../reactivity/walkers/pullAndRecompute";
-import runtime, { Traversal } from "../runtime";
+import  { Traversal } from "../runtime";
 
 /**
  * That`s for signal
@@ -20,15 +19,13 @@ export function readProducer<T>(node: ReactiveNode<T>): T {
 export function readConsumer<T>(node: ReactiveNode<T>): T {
   establish_dependencies_add(node);
 
+  // Fast path: верифицирован в этом traversal
   if (node.verifiedAt !== 0 && node.verifiedAt === Traversal.current) {
     return node.payload;
   }
 
-  // Используем транзитивную проверку
-  if (!isStaleTransitive(node)) {
-    return node.payload;
-  }
-
+  // Один обход — pull сам решает что пересчитывать
   pullAndRecompute(node);
+
   return node.payload as T;
 }
