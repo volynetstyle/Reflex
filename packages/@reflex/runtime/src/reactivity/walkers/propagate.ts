@@ -14,17 +14,18 @@ export function propagate(
 
     for (let e = n.firstOut; e; e = e.nextOut) {
       const child = e.to;
+
       const s = child.runtime;
       const queued = s & ReactiveNodeState.Queued;
 
-      // Already at maximum dirtiness for this bit — skip
       if (s & (ReactiveNodeState.Obsolete | nextBit)) {
         continue;
       }
 
       child.runtime = s | nextBit | ReactiveNodeState.Queued;
 
-      // Pure computed — push to propagation stack if not already queued
+      runtime.enqueue(n, child);
+
       if (!queued) {
         runtime.propagatePush(child);
       }

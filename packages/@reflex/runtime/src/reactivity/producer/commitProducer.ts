@@ -1,5 +1,5 @@
 import { ReactiveNode } from "../shape";
-import { changePayload } from "../shape/payload";
+import { changePayload } from "../shape/ReactivePayload";
 
 // commit = state transition
 // validation = strategy

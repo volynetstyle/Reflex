@@ -29,8 +29,9 @@ export const enum ReactiveNodeState {
   Obsolete = 1 << 1, // definitely stale
 
   Visited = 1 << 2,
-  Queued = 1 << 3,
-  Failed = 1 << 4,
+
+  Queued = 1 << 4,
+  Failed = 1 << 5,
 }
 
 /** Node needs recomputation (either possibly or definitely stale) */

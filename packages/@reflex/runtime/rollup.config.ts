@@ -94,7 +94,7 @@ function minifyStage(ctx: BuildContext): Plugin | null {
       toplevel: true,
       keep_classnames: true,
       properties: {
-        regex: /.*/,
+        regex: /.^/,
         reserved: ["payload", "compute", "meta", "runtime"],
       },
     },

@@ -1,20 +1,20 @@
 import { bench, describe } from "vitest";
-import { FourAryHeap } from "./compare/FourAryHeap";
+import { QuaternaryHeap } from "../../src/heap";
 
 const N = 2048;
 
 const WIDTH = 2048;
 
-describe("FourAryHeap Benchmarks", () => {
+describe(" QuaternaryHeap Benchmarks", () => {
   bench("heap insert 2048 random", () => {
-    const heap = new FourAryHeap<string>();
+    const heap = new  QuaternaryHeap<string>();
     for (let i = 0; i < N; i++) {
       heap.insert(`item${i}`, i);
     }
   });
 
   bench("heap popMin 2048", () => {
-    const heap = new FourAryHeap<string>();
+    const heap = new  QuaternaryHeap<string>();
 
     for (let i = 0; i < N; i++) {
       heap.insert(`item${i}`, i);
@@ -26,7 +26,7 @@ describe("FourAryHeap Benchmarks", () => {
   });
 
   bench("heap mixed insert + pop", () => {
-    const heap = new FourAryHeap<string>();
+    const heap = new  QuaternaryHeap<string>();
 
     for (let i = 0; i < N; i++) {
       heap.insert(`item${i}`, i);
@@ -40,9 +40,9 @@ describe("FourAryHeap Benchmarks", () => {
 });
 
 
-  describe("FourAryHeap Breadth Benchmarks", () => {
+  describe(" QuaternaryHeap Breadth Benchmarks", () => {
     bench("heap breadth insert (same priority)", () => {
-      const heap = new FourAryHeap<string>();
+      const heap = new  QuaternaryHeap<string>();
 
       for (let i = 0; i < WIDTH; i++) {
         heap.insert(`item${i}`, 1);
@@ -50,7 +50,7 @@ describe("FourAryHeap Benchmarks", () => {
     });
 
     bench("heap breadth pop", () => {
-      const heap = new FourAryHeap<string>();
+      const heap = new  QuaternaryHeap<string>();
 
       for (let i = 0; i < WIDTH; i++) {
         heap.insert(`item${i}`, 1);
@@ -62,7 +62,7 @@ describe("FourAryHeap Benchmarks", () => {
     });
 
     bench("heap breadth storm", () => {
-      const heap = new FourAryHeap<string>();
+      const heap = new  QuaternaryHeap<string>();
 
       for (let i = 0; i < WIDTH; i++) {
         heap.insert(`item${i}`, 1);

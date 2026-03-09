@@ -31,64 +31,61 @@ import { clearPropagate } from "./clearPropagate";
 import { propagate } from "./propagate";
 
 export function pullAndRecompute(node: ReactiveNode): void {
-  // FIX #1: track every node touched in phase 1 so we can clear Visited later
-  const visited: ReactiveNode[] = [];
-
-  // Phase 1: upward traversal, collecting in topological order
-  const toRecompute: ReactiveNode[] = [];
   const stack: ReactiveNode[] = [node];
+  const exit: number[] = [0]; // 0 = enter, 1 = exit
+
+  // stack.length === exit.lenght
 
   while (stack.length) {
     const n = stack.pop()!;
+    const state = exit.pop()!;
+
     const s = n.runtime;
 
-    if (s & ReactiveNodeState.Visited) {
-      continue;
-    }
+    if (!state) {
+      if (s & ReactiveNodeState.Visited) continue;
 
-    n.runtime = s | ReactiveNodeState.Visited;
+      n.runtime = s | ReactiveNodeState.Visited;
 
-    // FIX #1: record every visited node, not just those in toRecompute
-    visited.push(n);
-
-    if (!(s & INVALID)) {
-      continue;
-    } // Valid — stop, ancestors are also clean
-
-    if (n.compute) {
-      toRecompute.push(n);
-    } // only recompute computed nodes
-
-    if (s & ReactiveNodeState.Obsolete) {
-      continue;
-    } // definitely dirty — no need to go further up
-
-    // Invalid — go up to check sources
-    for (let e = n.firstIn; e; e = e.nextIn) {
-      if (!(e.from.runtime & ReactiveNodeState.Visited)) {
-        stack.push(e.from);
+      if (!(s & INVALID)) {
+        n.runtime &= ~ReactiveNodeState.Visited;
+        continue;
       }
-    }
-  }
 
-  // Phase 2: recompute in reverse topological order (leaves first)
-  for (let i = toRecompute.length - 1; i >= 0; i--) {
-    const n = toRecompute[i]!;
+      // schedule exit
+      stack.push(n);
+      exit.push(1);
 
-    // If a dependency above already cleaned this node via clearPropagate — skip
-    if (!(n.runtime & INVALID)) {
-      continue;
-    }
-
-    if (recompute(n)) {
-      propagate(n, ReactiveNodeState.Obsolete); // value changed → mark children Obsolete
+      if (!(s & ReactiveNodeState.Obsolete)) {
+        for (let e = n.firstIn; e; e = e.nextIn) {
+          const parent = e.from;
+          if (!(parent.runtime & ReactiveNodeState.Visited)) {
+            stack.push(parent);
+            exit.push(0);
+          }
+        }
+      }
     } else {
-      clearPropagate(n); // same value → clear STALE downward
-    }
-  }
+      // exit phase → parents already processed
 
-  // FIX #1: clear Visited on ALL nodes touched during phase 1, not just toRecompute
-  for (const n of visited) {
-    n.runtime &= ~ReactiveNodeState.Visited;
+      if (n.compute && n.runtime & INVALID) {
+        if (recompute(n)) {
+          propagate(n, ReactiveNodeState.Obsolete);
+        } else {
+          let canClear = true;
+
+          for (let e = node.firstIn; e; e = e.nextIn) {
+            if (e.from.runtime & INVALID) {
+              canClear = false;
+              break;
+            }
+          }
+
+          if (canClear) clearPropagate(n);
+        }
+      }
+
+      n.runtime &= ~ReactiveNodeState.Visited;
+    }
   }
 }

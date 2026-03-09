@@ -28,38 +28,42 @@ export type UnsafeCallableSignal<T> = {
 };
 
 /**
- * Intentionally untyped prototype.
- * Assumes `this._value` exists and is valid.
- */
-const UNSAFE_SIGNAL_PROTO: any = {
-  get value() {
-    return this._value;
-  },
-  set(next: any) {
-    throw Error("None set setter in Signal Proto!");
-  },
-};
-
-// in future initialize once and forget
-UNSAFE_SIGNAL_PROTO.set = () => {};
-
-/**
  * Creates a callable signal.
  *
  * ⚠️ `_value` is initialized as `undefined`.
- * Caller MUST set initial value manually.
  */
 export function createUnsafeCallableSignal<T>(): UnsafeCallableSignal<T> {
-  const s = function () {
+  const s: any = function () {
     return s._value;
-  } as UnsafeCallableSignal<T>;
+  };
 
-  Object.setPrototypeOf(s, UNSAFE_SIGNAL_PROTO);
+  s._value = undefined;
 
-  // Deliberately uninitialized
-  s._value = void 0 as any;
+  s.set = function (next: any) {
+    if (typeof next === "function") {
+      s.set = update;
+      update.call(s, next);
+    } else {
+      s.set = set;
+      set.call(s, next);
+    }
+  };
+
+  Object.defineProperty(s, "value", {
+    get() {
+      return s._value;
+    },
+  });
 
   return s;
+}
+
+function set(this: any, v: any) {
+  this._value = v;
+}
+
+function update(this: any, fn: any) {
+  this._value = fn(this._value);
 }
 
 //

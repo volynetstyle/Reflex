@@ -1,8 +1,4 @@
-import {
-  INVALID_RANK,
-  type GraphNode,
-  type OwnershipNode,
-} from "@reflex/core";
+import { INVALID_RANK, type GraphNode, type OwnershipNode } from "@reflex/core";
 import { Reactivable } from "./Reactivable";
 import { ReactiveEdge } from "./ReactiveEdge";
 import { Cyclic32Int } from "../../execution/execution.version";
@@ -64,7 +60,7 @@ type ComputeFn<T> = ((previous?: T) => T) | null;
  *
  *   No getters/setters are used to avoid deoptimization.
  */
-class ReactiveNode<T = unknown> implements Reactivable, GraphNode {
+class ReactiveNode<T = any> implements Reactivable, GraphNode {
   /**
    * Temporal marker (scheduler-dependent meaning).
    * Cyclic Z₂³².

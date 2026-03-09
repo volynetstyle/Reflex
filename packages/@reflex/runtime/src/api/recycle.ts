@@ -3,7 +3,7 @@ import { ReactiveNode } from "../reactivity/shape";
 
 type CleanupReturn = void | (() => void);
 
-export const recycling = (node: ReactiveNode<CleanupReturn>) => {
+export const recycling = (node: ReactiveNode) => {
   const scope = node.lifecycle;
 
   if (!scope) {

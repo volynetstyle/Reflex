@@ -1,9 +1,13 @@
-import { QuaternaryHeap, RankedQueue } from "@reflex/core";
-import { ReactiveNode, ReactiveNodeKind } from "./reactivity/shape";
+import { QuaternaryHeap } from "@reflex/core";
+import {
+  ReactiveNode,
+  ReactiveNodeKind,
+  ReactiveNodeState,
+} from "./reactivity/shape";
 import { AppendQueue } from "./scheduler/AppendQueue";
 
 const PROPAGATION_STACK_CAPACITY = 256;
-const PULL_STACK_CAPACITY = 64;
+const PULL_STACK_CAPACITY = 256;
 
 class ReactiveRuntime {
   readonly id: string;
@@ -30,7 +34,9 @@ class ReactiveRuntime {
     this._propagationTop = 0;
     this._pullStack = new Array(PULL_STACK_CAPACITY);
     this._pullTop = 0;
-    this.computationQueue = new QuaternaryHeap<ReactiveNode>(2048);
+    this.computationQueue = new QuaternaryHeap<ReactiveNode>(
+      PROPAGATION_STACK_CAPACITY,
+    );
     this.effectQueue = new AppendQueue();
   }
 
@@ -56,6 +62,10 @@ class ReactiveRuntime {
     return 0 < this._propagationTop;
   }
 
+  beginPull(): void {
+    this._pullTop = 0;
+  }
+
   pullPush(node: ReactiveNode): void {
     this._pullStack[this._pullTop++] = node;
   }
@@ -65,25 +75,40 @@ class ReactiveRuntime {
   }
 
   get pulling(): boolean {
-    return this._pullTop > 0;
+    return 0 < this._pullTop;
   }
 
-  enqueue(node: ReactiveNode): boolean {
+  enqueue(parent: ReactiveNode, node: ReactiveNode): boolean {
+    const pr = parent.rank;
+    let nr = node.rank;
+
+    if (((pr - nr) | 0) >= 0) {
+      nr = (pr + 1) >>> 0;
+      node.rank = nr;
+    }
+
+    const s = node.runtime;
+
+    if (s & ReactiveNodeState.Queued) {
+      return false;
+    }
+
+    node.runtime = s | ReactiveNodeState.Queued;
+
     const kind =
       node.meta & (ReactiveNodeKind.Consumer | ReactiveNodeKind.Recycler);
 
     switch (kind) {
       case ReactiveNodeKind.Consumer:
-        this.computationQueue.insert(node, node.rank);
+        this.computationQueue.insert(node, nr);
         return true;
 
       case ReactiveNodeKind.Recycler:
         this.effectQueue.push(node);
         return true;
-
-      default:
-        return false;
     }
+
+    return false;
   }
 }
 

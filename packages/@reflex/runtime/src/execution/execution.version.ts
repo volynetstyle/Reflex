@@ -1,3 +1,5 @@
+import { ReactiveNode } from "../reactivity/shape";
+
 /**
  * Cyclic arithmetic over the 32-bit unsigned integer ring Z₂³².
  *
@@ -169,3 +171,32 @@ export const CyclicInterval32 = {
     );
   },
 };
+
+// @__INLINE__
+const RANK_GAP = 32;
+
+export function repairRank(parent: ReactiveNode, child: ReactiveNode) {
+  const pr = parent.rank;
+  const cr = child.rank;
+
+  if (((pr - cr) | 0) >= 0) {
+    child.rank = (pr + RANK_GAP) >>> 0;
+  }
+}
+
+function execute(node: ReactiveNode) {
+  let maxParentRank = 0;
+
+  for (let e = node.firstIn; e; e = e.nextIn) {
+    const pr = e.from.rank;
+    if (((pr - maxParentRank) | 0) > 0) {
+      maxParentRank = pr;
+    }
+  }
+
+  if (((maxParentRank - node.rank) | 0) >= 0) {
+    node.rank = (maxParentRank + RANK_GAP) >>> 0;
+  }
+
+  ///recompute(node);
+}

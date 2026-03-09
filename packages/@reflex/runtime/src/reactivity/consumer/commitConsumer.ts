@@ -1,5 +1,5 @@
 import { CLEAR_INVALID, ReactiveNode, ReactiveNodeState } from "../shape";
-import { changePayload } from "../shape/payload";
+import { changePayload } from "../shape/ReactivePayload";
 
 // commit = state transition
 // validation = strategy
@@ -19,7 +19,7 @@ export function commitConsumer(
   error?: unknown,
 ): boolean {
   consumer.runtime &= CLEAR_INVALID;
-
+  
   if (consumer.payload === next) {
     // Value did not change — memoisation hit, no propagation needed.
     return false;

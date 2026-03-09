@@ -1,10 +1,13 @@
 import runtime from "../../runtime";
 import { CLEAR_INVALID, ReactiveNode } from "../shape";
+import { clearDependencies } from "../shape/methods/connect";
 import { commitConsumer } from "./commitConsumer";
 
 export function recompute(consumer: ReactiveNode): boolean {
+  clearDependencies(consumer);
+
   let changed: boolean = false;
-  
+
   const compute = consumer.compute!;
   const current = runtime.beginComputation(consumer);
 
@@ -17,6 +20,10 @@ export function recompute(consumer: ReactiveNode): boolean {
     runtime.endComputation(current);
   }
 
+  if(changed) {
+    console.log("Recomputed")
+  }
+  
   return changed;
 }
 
