@@ -9,6 +9,32 @@ import { AppendQueue } from "./scheduler/AppendQueue";
 const PROPAGATION_STACK_CAPACITY = 256;
 const PULL_STACK_CAPACITY = 256;
 
+/** Глобальный монотонный счётчик изменений */
+let _globalClock = 0;
+
+export const GlobalClock = {
+  get current() {
+    return _globalClock;
+  },
+  tick() {
+    return ++_globalClock;
+  },
+} as const;
+
+export const TRAVERSAL_NONE = 0; // "не верифицирован"
+
+let _currentTraversal = 1;
+
+export const Traversal = {
+  get current() {
+    return _currentTraversal;
+  },
+  /** Каждый pullAndRecompute начинает новый обход */
+  next() {
+    return ++_currentTraversal;
+  },
+} as const;
+
 class ReactiveRuntime {
   readonly id: string;
 

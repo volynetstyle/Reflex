@@ -61,30 +61,21 @@ type ComputeFn<T> = ((previous?: T) => T) | null;
  *   No getters/setters are used to avoid deoptimization.
  */
 class ReactiveNode<T = any> implements Reactivable, GraphNode {
-  /**
-   * Temporal marker (scheduler-dependent meaning).
-   * Cyclic Z₂³².
-   */
-  t: Cyclic32Int = 0;
+  // changedAt: version в младших битах
+  // Failed + Queued в старших — они семантически связаны с "состоянием источника"
+  changedAt: number = 0; // pack(FLAG_FAILED | FLAG_QUEUED, clock)
 
-  /**
-   * Logical version.
-   * Cyclic Z₂³², half-range ordered.
-   */
-  v: Cyclic32Int = 0;
+  // computedAt: чистая версия, флаги не нужны
+  computedAt: number = 0;
 
-  /**
-   * Propagation stamp.
-   * Cyclic Z₂³².
-   */
-  p: Cyclic32Int = 0;
-
-  frontier: Cyclic32Int = 0;
-
+  // verifiedAt: Visited = verifiedAt === currentTraversal
+  // флаги тут не нужны — traversalId и так уникален
+  verifiedAt: number = 0; // visited в pull traversal
+  checkedAt: number = 0;
   /**
    * Runtime identifier or scheduler slot.
    */
-  runtime: Byte32Int = ReactiveNodeState.Obsolete;
+  runtime: Byte32Int = ReactiveNodeState.Valid;
 
   /**
    * Bitmask metadata.

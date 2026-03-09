@@ -1,30 +1,33 @@
-import { CLEAR_INVALID, ReactiveNode, ReactiveNodeState } from "../shape";
-import { changePayload } from "../shape/ReactivePayload";
-
-// commit = state transition
-// validation = strategy
+import { GlobalClock } from "../../runtime";
+import { ReactiveNode } from "../shape";
+import { changePayload, markFailed } from "../shape/ReactivePayload";
 
 /**
- * Store the new value and decide whether downstream nodes must be invalidated.
+ * Фиксирует результат compute():
+ *   - обновляет computedAt (версия последнего успешного вычисления)
+ *   - если значение изменилось — мутирует changedAt через changePayload
+ *   - возвращает true если downstream нужно инвалидировать
  *
- * Returns true  → value changed, caller should propagate.
- * Returns false → same value, skip propagate (memoisation hit).
- *
- * Also clears INVALID / OBSOLETE bits and handles FAILED state transitions.
+ * Заменяет старый commitConsumer + ручной CLEAR_INVALID.
  */
-// @__INLINE__
 export function commitConsumer(
   consumer: ReactiveNode,
   next: unknown,
   error?: unknown,
 ): boolean {
-  consumer.runtime &= CLEAR_INVALID;
-  
+  // Фиксируем момент вычисления в любом случае
+  consumer.computedAt = GlobalClock.current;
+
+  if (error !== undefined) {
+    markFailed(consumer, error);
+    return true; // ошибка всегда propagate
+  }
+
   if (consumer.payload === next) {
-    // Value did not change — memoisation hit, no propagation needed.
+    // Мемоизация: значение не изменилось, changedAt не трогаем
     return false;
   }
 
   changePayload(consumer, next);
-  return true; // Changed → caller must propagate
+  return true;
 }

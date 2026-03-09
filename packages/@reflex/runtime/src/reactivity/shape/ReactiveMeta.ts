@@ -23,20 +23,12 @@ export const enum ReactiveNodeKind {
  * Failed     — ошибка вычисления
  */
 export const enum ReactiveNodeState {
-  Valid = 0,
-
-  Invalid = 1 << 0, // dependency changed
-  Obsolete = 1 << 1, // definitely stale
-
-  Visited = 1 << 2,
-
-  Queued = 1 << 4,
-  Failed = 1 << 5,
+  Valid   = 0,
+  Queued  = 1 << 0,
+  Failed  = 1 << 1,
+  // Invalid/Obsolete/Visited убраны — выводятся из версий
 }
 
-/** Node needs recomputation (either possibly or definitely stale) */
-export const INVALID = ReactiveNodeState.Invalid | ReactiveNodeState.Obsolete;
-/** Clear both staleness bits */
-export const CLEAR_INVALID = ~INVALID;
-/** Clear visited bit after pull traversal */
-export const CLEAR_VISITED = ~ReactiveNodeState.Visited;
+export const FLAG_QUEUED  = ReactiveNodeState.Queued;
+export const FLAG_FAILED  = ReactiveNodeState.Failed;
+export const CLEAR_FLAGS  = ~(FLAG_QUEUED | FLAG_FAILED);

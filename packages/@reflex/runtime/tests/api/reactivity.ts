@@ -7,12 +7,15 @@ import {
 } from "../../src";
 import ReactiveNode from "../../src/reactivity/shape/ReactiveNode";
 import { ReactiveNodeKind } from "../../src/reactivity/shape";
+import { PackedClock } from "../../src/reactivity/shape/methods/pack";
+import { GlobalClock } from "../../src/runtime";
 
 class Signal<T> {
   node: ReactiveNode<T>;
 
   constructor(initialValue: T) {
     this.node = new ReactiveNode(ReactiveNodeKind.Producer, initialValue);
+    this.node.changedAt = PackedClock.pack(GlobalClock.tick(), false, false);
   }
 
   get = () => readProducer(this.node);

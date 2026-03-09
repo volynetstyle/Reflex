@@ -55,7 +55,6 @@ describe("graph invariants", () => {
     // update
     setA(2);
 
-    C();
     expect(D()).toBe(3);
 
     expect({
