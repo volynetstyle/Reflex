@@ -1,5 +1,5 @@
 import { ReactiveNode } from ".";
-import { CyclicRing32 } from "../../execution/execution.version";
+import { CyclicRing32 } from "../../execution/algebra";
 
 /**
  * @invariant

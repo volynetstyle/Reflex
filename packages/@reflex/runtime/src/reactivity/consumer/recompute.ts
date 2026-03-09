@@ -20,10 +20,6 @@ export function recompute(consumer: ReactiveNode): boolean {
     runtime.endComputation(current);
   }
 
-  if(changed) {
-    console.log("Recomputed")
-  }
-  
   return changed;
 }
 

@@ -74,7 +74,7 @@ export function pullAndRecompute(node: ReactiveNode): void {
         } else {
           let canClear = true;
 
-          for (let e = node.firstIn; e; e = e.nextIn) {
+          for (let e = n.firstIn; e; e = e.nextIn) {
             if (e.from.runtime & INVALID) {
               canClear = false;
               break;

@@ -1,7 +1,7 @@
 import { INVALID_RANK, type GraphNode, type OwnershipNode } from "@reflex/core";
 import { Reactivable } from "./Reactivable";
 import { ReactiveEdge } from "./ReactiveEdge";
-import { Cyclic32Int } from "../../execution/execution.version";
+import { Cyclic32Int } from "../../execution/algebra";
 import { Byte32Int, ReactiveNodeState } from "./ReactiveMeta";
 
 type ComputeFn<T> = ((previous?: T) => T) | null;
