@@ -12,26 +12,40 @@ import { INVALID, ReactiveNode, ReactiveNodeState } from "../shape";
 //
 // The existing `if (s & Obsolete) continue` guard was correct but insufficient on its
 // own — we also must not touch the Obsolete bit on nodes we *do* descend into.
-
 export function clearPropagate(node: ReactiveNode): void {
   const stack: ReactiveNode[] = [node];
+  let clean = true;
+
+  for (let e = node.firstIn; e; e = e.nextIn) {
+    if (e.from.runtime & INVALID) {
+      clean = false;
+      break;
+    }
+  }
+
+  if (!clean) {
+    return;
+  }
 
   while (stack.length) {
     const n = stack.pop()!;
 
     for (let e = n.firstOut; e; e = e.nextOut) {
       const child = e.to;
-      const s = child.runtime;
 
-      // all parents clear it`s valid
+      let s = child.runtime;
+
+      // clear Invalid
       if (s & ReactiveNodeState.Invalid) {
-        child.runtime = s & ~ReactiveNodeState.Invalid;
-      }
-
-      // needs to recompute. Skip.
-      if (s & ReactiveNodeState.Obsolete) {
+        s &= ~ReactiveNodeState.Invalid;
+        child.runtime = s;
+      } else {
+        // если Invalid не было — дальше идти нет смысла
         continue;
       }
+
+      // если точно устарел — не продолжаем
+      if (s & ReactiveNodeState.Obsolete) continue;
 
       stack.push(child);
     }

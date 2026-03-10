@@ -12,6 +12,16 @@ const PULL_STACK_CAPACITY = 256;
 class ReactiveRuntime {
   readonly id: string;
 
+  epoch = 0;
+
+  currentEpoch() {
+    return this.epoch;
+  }
+
+  nextEpoch() {
+    return ++this.epoch;
+  }
+
   // Computation context: stack for nested tracking support
   currentComputation: ReactiveNode | null;
 
@@ -72,6 +82,10 @@ class ReactiveRuntime {
 
   pullPop(): ReactiveNode {
     return this._pullStack[--this._pullTop]!;
+  }
+
+  pullPeek(): ReactiveNode {
+    return this._pullStack[this._pullTop - 1]!;
   }
 
   get pulling(): boolean {

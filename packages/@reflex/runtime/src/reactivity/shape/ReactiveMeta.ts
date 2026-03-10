@@ -24,14 +24,11 @@ export const enum ReactiveNodeKind {
  */
 export const enum ReactiveNodeState {
   Valid = 0,
-
   Invalid = 1 << 0, // dependency changed
   Obsolete = 1 << 1, // definitely stale
-
   Visited = 1 << 2,
-
-  Queued = 1 << 4,
-  Failed = 1 << 5,
+  Queued = 1 << 3,
+  OnStack = 1 << 4,
 }
 
 /** Node needs recomputation (either possibly or definitely stale) */

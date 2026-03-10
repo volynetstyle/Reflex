@@ -61,25 +61,7 @@ type ComputeFn<T> = ((previous?: T) => T) | null;
  *   No getters/setters are used to avoid deoptimization.
  */
 class ReactiveNode<T = any> implements Reactivable, GraphNode {
-  /**
-   * Temporal marker (scheduler-dependent meaning).
-   * Cyclic Z₂³².
-   */
-  t: Cyclic32Int = 0;
-
-  /**
-   * Logical version.
-   * Cyclic Z₂³², half-range ordered.
-   */
-  v: Cyclic32Int = 0;
-
-  /**
-   * Propagation stamp.
-   * Cyclic Z₂³².
-   */
-  p: Cyclic32Int = 0;
-
-  frontier: Cyclic32Int = 0;
+  changedAt: number = 0;
 
   /**
    * Runtime identifier or scheduler slot.

@@ -1,5 +1,6 @@
 import { ReactiveNode } from ".";
 import { CyclicRing32 } from "../../execution/algebra";
+import runtime from "../../runtime";
 
 /**
  * @invariant
@@ -27,8 +28,6 @@ const next_version = CyclicRing32.inc;
  * - node.runtime := valid
  */
 export function changePayload<T>(node: ReactiveNode<T>, next: T) {
-  const currentV = node.v;
-
+  node.changedAt = runtime.nextEpoch();
   node.payload = next;
-  node.v = next_version(currentV);
 }
