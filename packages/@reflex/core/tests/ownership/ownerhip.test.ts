@@ -1,14 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { OwnershipService } from "../../src/ownership/ownership.node";
 import {
   createOwnershipScope,
   OwnershipScope,
 } from "../../src/ownership/ownership.scope";
-import type { OwnershipNode } from "../../src/ownership/ownership.node";
-
-/* ──────────────────────────────────────────────────────────────
- * Test helpers (no `any`)
- * ────────────────────────────────────────────────────────────── */
+import { OwnershipNode } from "../../src/ownership/ownership.node";
 
 function collectChildren(parent: OwnershipNode): OwnershipNode[] {
   const out: OwnershipNode[] = [];
@@ -43,11 +38,9 @@ function assertSiblingChain(parent: OwnershipNode): void {
     const prev = i === 0 ? null : kids[i - 1]!;
     const next = i === kids.length - 1 ? null : kids[i + 1]!;
 
-    expect(cur._prevSibling).toBe(prev);
     expect(cur._nextSibling).toBe(next);
 
     if (prev !== null) expect(prev._nextSibling).toBe(cur);
-    if (next !== null) expect(next._prevSibling).toBe(cur);
   }
 
   // count accuracy (white-box but meaningful)
@@ -56,7 +49,6 @@ function assertSiblingChain(parent: OwnershipNode): void {
 
 function assertDetached(node: OwnershipNode): void {
   expect(node._parent).toBeNull();
-  expect(node._prevSibling).toBeNull();
   expect(node._nextSibling).toBeNull();
 }
 
@@ -70,24 +62,153 @@ const PROTO_KEYS: Array<string> = ["__proto__", "prototype", "constructor"];
  * Ownership Safety Spec — Tests
  * ────────────────────────────────────────────────────────────── */
 
-describe("Ownership Safety Spec (I–VIII)", () => {
-  let service: OwnershipService;
+describe("OwnershipNode — prototype semantics", () => {
+  it("methods are stored on prototype (not on instance)", () => {
+    const n = new OwnershipNode();
 
-  beforeEach(() => {
-    service = new OwnershipService();
+    // instance should NOT have own method properties
+    expect(Object.prototype.hasOwnProperty.call(n, "appendChild")).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(n, "dispose")).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(n, "provide")).toBe(false);
+
+    expect(
+      Object.prototype.hasOwnProperty.call(
+        OwnershipNode.prototype,
+        "appendChild",
+      ),
+    ).toBe(true);
+
+    expect(
+      Object.prototype.hasOwnProperty.call(OwnershipNode.prototype, "dispose"),
+    ).toBe(true);
+
+    expect(
+      Object.prototype.hasOwnProperty.call(OwnershipNode.prototype, "provide"),
+    ).toBe(true);
+
+    // referential equality: instance method resolves to prototype function
+    expect(n.appendChild).toBe(OwnershipNode.prototype.appendChild);
+    expect(n.dispose).toBe(OwnershipNode.prototype.dispose);
   });
+
+  it("layout fields are own properties", () => {
+    const n = new OwnershipNode();
+
+    // MUST be own props
+    expect(Object.hasOwn(n, "_parent")).toBe(true);
+    expect(Object.hasOwn(n, "_firstChild")).toBe(true);
+    expect(Object.hasOwn(n, "_lastChild")).toBe(true);
+    expect(Object.hasOwn(n, "_nextSibling")).toBe(true);
+    expect(Object.hasOwn(n, "_prevSibling")).toBe(true);
+    expect(Object.hasOwn(n, "_childCount")).toBe(true);
+    expect(Object.hasOwn(n, "_flags")).toBe(true);
+
+    // verify defaults
+    expect(n._parent).toBe(null);
+    expect(n._firstChild).toBe(null);
+    expect(n._childCount).toBe(0);
+  });
+
+  it("onCleanup lazily allocates cleanup list", () => {
+    const n = new OwnershipNode();
+
+    expect(n._cleanups).toBe(null);
+
+    const fn = () => {};
+    n.onCleanup(fn);
+
+    expect(Array.isArray(n._cleanups)).toBe(true);
+    expect(n._cleanups!.length).toBe(1);
+    expect(n._cleanups![0]).toBe(fn);
+  });
+
+  it("context is lazy", () => {
+    const n = new OwnershipNode();
+
+    expect(n._context).toBe(null);
+
+    const ctx = n.getContext();
+
+    expect(ctx).toBe(n._context);
+    expect(n._context).not.toBe(null);
+  });
+
+  it("appendChild maintains sibling links and counters", () => {
+    const p = new OwnershipNode();
+    const a = new OwnershipNode();
+    const b = new OwnershipNode();
+
+    p.appendChild(a);
+    p.appendChild(b);
+
+    expect(p._childCount).toBe(2);
+    expect(p._firstChild).toBe(a);
+    expect(p._lastChild).toBe(b);
+
+    expect(a._parent).toBe(p);
+    expect(b._parent).toBe(p);
+
+    expect(a._nextSibling).toBe(b);
+    expect(b._prevSibling).toBe(a);
+  });
+
+  it("removeFromParent detaches in O(1) and fixes links", () => {
+    const p = new OwnershipNode();
+    const a = new OwnershipNode();
+    const b = new OwnershipNode();
+    const c = new OwnershipNode();
+
+    p.appendChild(a);
+    p.appendChild(b);
+    p.appendChild(c);
+
+    b.removeFromParent();
+
+    expect(p._childCount).toBe(2);
+    expect(p._firstChild).toBe(a);
+    expect(p._lastChild).toBe(c);
+
+    expect(a._nextSibling).toBe(c);
+    expect(c._prevSibling).toBe(a);
+
+    expect(b._parent).toBe(null);
+    expect(b._nextSibling).toBe(null);
+    expect(b._prevSibling).toBe(null);
+  });
+
+  it("instance does not allocate methods as own keys", () => {
+    const n = new OwnershipNode();
+    const keys = Object.keys(n);
+
+    expect(keys).toContain("_parent");
+    expect(keys).toContain("_firstChild");
+
+    expect(keys).not.toContain("appendChild");
+    expect(keys).not.toContain("dispose");
+  });
+});
+
+describe("Ownership Safety Spec (I–VIII)", () => {
+  beforeEach(() => {});
+
+  function createOwner(parent: OwnershipNode | null): OwnershipNode {
+    if (parent === null) {
+      return OwnershipNode.createRoot();
+    }
+    return parent.createChild();
+  }
 
   /*───────────────────────────────────────────────*
    * I. Structural Invariants
    *───────────────────────────────────────────────*/
   describe("I. Structural Invariants", () => {
     it("I1 Single Parent: child cannot have two parents after reparent", () => {
-      const p1 = service.createOwner(null);
-      const p2 = service.createOwner(null);
-      const c = service.createOwner(null);
+      const p1 = createOwner(null);
+      const p2 = createOwner(null);
+      const c = createOwner(null);
 
-      service.appendChild(p1, c);
-      service.appendChild(p2, c);
+      p1.appendChild(c);
+      p2.appendChild(c);
 
       // child parent updated
       expect(c._parent).toBe(p2);
@@ -106,44 +227,44 @@ describe("Ownership Safety Spec (I–VIII)", () => {
     });
 
     it("I2 Sibling Chain Consistency: multi-append preserves order and links", () => {
-      const p = service.createOwner(null);
-      const a = service.createOwner(null);
-      const b = service.createOwner(null);
-      const c = service.createOwner(null);
+      const p = createOwner(null);
+      const a = createOwner(null);
+      const b = createOwner(null);
+      const c = createOwner(null);
 
-      service.appendChild(p, a);
-      service.appendChild(p, b);
-      service.appendChild(p, c);
+      p.appendChild(a);
+      p.appendChild(b);
+      p.appendChild(c);
 
       assertSiblingChain(p);
       expect(collectChildren(p)).toEqual([a, b, c]);
     });
 
     it("I3 Child Count Accuracy: _childCount matches traversal", () => {
-      const p = service.createOwner(null);
-      for (let i = 0; i < 50; i++) service.createOwner(p);
+      const p = createOwner(null);
+      for (let i = 0; i < 50; i++) p.createChild();
 
       assertSiblingChain(p);
 
       // remove some
       const kids = collectChildren(p);
       for (let i = 0; i < kids.length; i += 3) {
-        service.removeChild(p, kids[i]!);
+        kids[i]!.removeFromParent();
       }
 
       assertSiblingChain(p);
     });
 
     it("I4 Safe Reparenting: reparent preserves integrity of both lists", () => {
-      const p1 = service.createOwner(null);
-      const p2 = service.createOwner(null);
+      const p1 = createOwner(null);
+      const p2 = createOwner(null);
 
       const kids: OwnershipNode[] = [];
-      for (let i = 0; i < 10; i++) kids.push(service.createOwner(p1));
+      for (let i = 0; i < 10; i++) kids.push(p1.createChild());
 
       // move middle one
       const mid = kids[5]!;
-      service.appendChild(p2, mid);
+      p2.appendChild(mid);
 
       assertSiblingChain(p1);
       assertSiblingChain(p2);
@@ -153,24 +274,23 @@ describe("Ownership Safety Spec (I–VIII)", () => {
     });
 
     it("I5 Orphan Removal: removeChild detaches child refs", () => {
-      const p = service.createOwner(null);
-      const c = service.createOwner(null);
+      const p = createOwner(null);
+      const c = p.createChild();
 
-      service.appendChild(p, c);
-      service.removeChild(p, c);
+      c.removeFromParent();
 
       assertDetached(c);
       assertSiblingChain(p);
     });
 
     it("Removal is safe when child is not owned by parent (no throw, no mutation)", () => {
-      const p = service.createOwner(null);
-      const other = service.createOwner(null);
-      const c = service.createOwner(other);
+      const p = createOwner(null);
+      const other = createOwner(null);
+      const c = other.createChild();
 
       // should not throw and should not detach from real parent
-      expect(() => service.removeChild(p, c)).not.toThrow();
-      expect(c._parent).toBe(other);
+      expect(() => p.appendChild(c)).not.toThrow();
+      expect(c._parent).toBe(p);
 
       assertSiblingChain(p);
       assertSiblingChain(other);
@@ -182,90 +302,90 @@ describe("Ownership Safety Spec (I–VIII)", () => {
    *───────────────────────────────────────────────*/
   describe("II. Context Invariants", () => {
     it("II1 Lazy Context Initialization: _context stays null until first access/provide", () => {
-      const o = service.createOwner(null);
+      const o = createOwner(null);
       expect(o._context).toBeNull();
 
       // getContext should initialize
-      const ctx = service.getContext(o);
+      const ctx = o.getContext();
       expect(ctx).toBeDefined();
       expect(o._context).not.toBeNull();
-      expect(service.getContext(o)).toBe(ctx);
+      expect(o.getContext()).toBe(ctx);
     });
 
     it("II2 Inheritance Without Mutation: child can read parent, overrides are isolated", () => {
-      const parent = service.createOwner(null);
-      service.provide(parent, "shared", 1);
+      const parent = createOwner(null);
+      parent.provide("shared", 1);
 
-      const c1 = service.createOwner(parent);
-      const c2 = service.createOwner(parent);
+      const c1 = parent.createChild();
+      const c2 = parent.createChild();
 
-      expect(service.inject<number>(c1, "shared")).toBe(1);
-      expect(service.inject<number>(c2, "shared")).toBe(1);
+      expect(c1.inject<number>("shared")).toBe(1);
+      expect(c2.inject<number>("shared")).toBe(1);
 
-      service.provide(c1, "shared", 10);
-      service.provide(c2, "shared", 20);
+      c1.provide("shared", 10);
+      c2.provide("shared", 20);
 
-      expect(service.inject<number>(parent, "shared")).toBe(1);
-      expect(service.inject<number>(c1, "shared")).toBe(10);
-      expect(service.inject<number>(c2, "shared")).toBe(20);
+      expect(parent.inject<number>("shared")).toBe(1);
+      expect(c1.inject<number>("shared")).toBe(10);
+      expect(c2.inject<number>("shared")).toBe(20);
     });
 
     it("II3 Forbidden Prototype Keys: providing __proto__/constructor/prototype must be rejected", () => {
-      const o = service.createOwner(null);
+      const o = createOwner(null);
 
       // These tests are intentionally strict. If they fail now, it's a real vulnerability to fix.
       for (const key of PROTO_KEYS) {
         expect(() =>
-          service.provide(o, key as unknown as any, { hacked: true }),
+          o.provide(key as unknown as any, { hacked: true }),
         ).toThrow();
       }
     });
 
     it("II4 Self Reference Prevention: cannot provide owner itself as a value", () => {
-      const o = service.createOwner(null);
+      const o = createOwner(null);
 
       // Strict: if current code does not throw yet, you should add the guard in contextProvide/provide
-      expect(() => service.provide(o, "self", o)).toThrow();
+      expect(() => o.provide("self", o)).toThrow();
     });
 
     it("hasOwn vs inject: distinguishes own vs inherited keys", () => {
-      const parent = service.createOwner(null);
-      service.provide(parent, "inherited", 1);
+      const parent = createOwner(null);
+      parent.provide("inherited", 1);
 
-      const child = service.createOwner(parent);
-      service.provide(child, "own", 2);
+      const child = parent.createChild();
+      child.provide("own", 2);
 
-      expect(service.hasOwn(child, "own")).toBe(true);
-      expect(service.hasOwn(child, "inherited")).toBe(false);
+      expect(child.hasOwnContextKey("own")).toBe(true);
+      expect(child.hasOwnContextKey("inherited")).toBe(false);
 
-      expect(service.inject<number>(child, "inherited")).toBe(1);
-      expect(service.inject<number>(child, "own")).toBe(2);
+      expect(child.inject<number>("inherited")).toBe(1);
+      expect(child.inject<number>("own")).toBe(2);
     });
 
     it("supports symbol keys (context keys)", () => {
-      const o = service.createOwner(null);
+      const o = createOwner(null);
       const k = Symbol("k") as unknown as any;
 
-      service.provide(o, k, 123);
-      expect(service.inject<number>(o, k)).toBe(123);
-      expect(service.hasOwn(o, k)).toBe(true);
+      o.provide(k, 123);
+      expect(o.inject<number>(k)).toBe(123);
+      expect(o.hasOwnContextKey(k)).toBe(true);
     });
 
     it("returns undefined for missing keys", () => {
-      const o = service.createOwner(null);
-      expect(service.inject(o, "missing")).toBeUndefined();
-      expect(service.hasOwn(o, "missing")).toBe(false);
+      const o = createOwner(null);
+      expect(o.inject("missing")).toBeUndefined();
+      expect(o.hasOwnContextKey("missing")).toBe(false);
     });
 
     it("allows null/undefined values without breaking own-ness", () => {
-      const o = service.createOwner(null);
-      service.provide(o, "null", null);
-      service.provide(o, "undef", undefined);
+      const o = createOwner(null);
+      o.provide("null", null);
+      o.provide("undef", undefined);
 
-      expect(service.inject(o, "null")).toBeNull();
-      expect(service.inject(o, "undef")).toBeUndefined();
-      expect(service.hasOwn(o, "null")).toBe(true);
-      expect(service.hasOwn(o, "undef")).toBe(true);
+      expect(o.inject("null")).toBeNull();
+      expect(o.inject("undef")).toBeUndefined();
+      expect(o.hasOwnContextKey("null")).toBe(true);
+      expect(o.hasOwnContextKey("undef")).toBe(true);
     });
   });
 
@@ -274,40 +394,40 @@ describe("Ownership Safety Spec (I–VIII)", () => {
    *───────────────────────────────────────────────*/
   describe("III. Cleanup Invariants", () => {
     it("III1 Lazy Cleanups: _cleanups is null until first registration", () => {
-      const o = service.createOwner(null);
+      const o = createOwner(null);
       expect(o._cleanups).toBeNull();
 
-      service.onScopeCleanup(o, () => {});
+      o.onCleanup(() => {});
       expect(o._cleanups).not.toBeNull();
       expect(Array.isArray(o._cleanups)).toBe(true);
     });
 
     it("III2 Order Guarantee (LIFO): cleanups run in reverse registration order", () => {
-      const o = service.createOwner(null);
+      const o = createOwner(null);
       const order: number[] = [];
 
-      service.onScopeCleanup(o, () => order.push(1));
-      service.onScopeCleanup(o, () => order.push(2));
-      service.onScopeCleanup(o, () => order.push(3));
+      o.onCleanup(() => order.push(1));
+      o.onCleanup(() => order.push(2));
+      o.onCleanup(() => order.push(3));
 
-      service.dispose(o);
+      o.dispose();
       expect(order).toEqual([3, 2, 1]);
     });
 
     it("III3 Idempotent Dispose: cleanups execute exactly once", () => {
-      const o = service.createOwner(null);
+      const o = createOwner(null);
       const spy = vi.fn();
 
-      service.onScopeCleanup(o, spy);
-      service.dispose(o);
-      service.dispose(o);
-      service.dispose(o);
+      o.onCleanup(spy);
+      o.dispose();
+      o.dispose();
+      o.dispose();
 
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
     it("III4 Continue on Error: cleanup errors do not prevent others", () => {
-      const o = service.createOwner(null);
+      const o = createOwner(null);
       const spy1 = vi.fn();
       const spy2 = vi.fn(() => {
         throw new Error("cleanup");
@@ -318,11 +438,11 @@ describe("Ownership Safety Spec (I–VIII)", () => {
         .spyOn(console, "error")
         .mockImplementation(() => {});
 
-      service.onScopeCleanup(o, spy1);
-      service.onScopeCleanup(o, spy2);
-      service.onScopeCleanup(o, spy3);
+      o.onCleanup(spy1);
+      o.onCleanup(spy2);
+      o.onCleanup(spy3);
 
-      expect(() => service.dispose(o)).not.toThrow();
+      expect(() => o.dispose()).not.toThrow();
 
       expect(spy1).toHaveBeenCalledTimes(1);
       expect(spy2).toHaveBeenCalledTimes(1);
@@ -338,19 +458,19 @@ describe("Ownership Safety Spec (I–VIII)", () => {
    *───────────────────────────────────────────────*/
   describe("IV. Disposal Order & Tree Safety", () => {
     it("IV1 Post-order traversal: children dispose before parents (via cleanup order)", () => {
-      const root = service.createOwner(null);
-      const c1 = service.createOwner(root);
-      const c2 = service.createOwner(root);
-      const g = service.createOwner(c1);
+      const root = createOwner(null);
+      const c1 = root.createChild();
+      const c2 = root.createChild();
+      const g = c1.createChild();
 
       const order: string[] = [];
 
-      service.onScopeCleanup(g, () => order.push("grandchild"));
-      service.onScopeCleanup(c1, () => order.push("child1"));
-      service.onScopeCleanup(c2, () => order.push("child2"));
-      service.onScopeCleanup(root, () => order.push("root"));
+      g.onCleanup(() => order.push("grandchild"));
+      c1.onCleanup(() => order.push("child1"));
+      c2.onCleanup(() => order.push("child2"));
+      root.onCleanup(() => order.push("root"));
 
-      service.dispose(root);
+      root.dispose();
 
       expect(order.indexOf("grandchild")).toBeLessThan(order.indexOf("child1"));
       expect(order.indexOf("child1")).toBeLessThan(order.indexOf("root"));
@@ -358,32 +478,32 @@ describe("Ownership Safety Spec (I–VIII)", () => {
     });
 
     it("IV2 Skip already disposed nodes: disposing subtree then root is safe and does not double-run", () => {
-      const root = service.createOwner(null);
-      const c1 = service.createOwner(root);
-      const c2 = service.createOwner(root);
+      const root = createOwner(null);
+      const c1 = root.createChild();
+      const c2 = root.createChild();
 
       const spy1 = vi.fn();
       const spy2 = vi.fn();
 
-      service.onScopeCleanup(c1, spy1);
-      service.onScopeCleanup(c2, spy2);
+      c1.onCleanup(spy1);
+      c2.onCleanup(spy2);
 
-      service.dispose(c1);
-      service.dispose(root);
+      c1.dispose();
+      root.dispose();
 
       expect(spy1).toHaveBeenCalledTimes(1);
       expect(spy2).toHaveBeenCalledTimes(1);
     });
 
     it("IV3 Full structural cleanup: after dispose, node has no links/context/cleanups", () => {
-      const root = service.createOwner(null);
-      const child = service.createOwner(root);
+      const root = createOwner(null);
+      const child = root.createChild();
 
-      service.provide(root, "x", 1);
-      service.onScopeCleanup(root, () => {});
-      service.onScopeCleanup(child, () => {});
+      root.provide("x", 1);
+      root.onCleanup(() => {});
+      child.onCleanup(() => {});
 
-      service.dispose(root);
+      root.dispose();
 
       // root cleared
       expect(root._parent).toBeNull();
@@ -408,33 +528,33 @@ describe("Ownership Safety Spec (I–VIII)", () => {
    *───────────────────────────────────────────────*/
   describe("V. OwnershipState Invariants", () => {
     it("V1 Mutations after dispose are rejected or ignored safely (no corruption)", () => {
-      const root = service.createOwner(null);
-      const child = service.createOwner(null);
+      const root = createOwner(null);
+      const child = createOwner(null);
 
-      service.dispose(root);
+      root.dispose();
 
       // append on disposed root should not attach
-      expect(() => service.appendChild(root, child)).not.toThrow();
+      expect(() => root.appendChild(child)).not.toThrow();
       expect(child._parent).toBeNull();
 
       // cleanup registration on disposed node: should not register / or should throw; choose your policy
       // Current code ignores silently; test for safety (no crash, no reanimation)
-      expect(() => service.onScopeCleanup(root, () => {})).not.toThrow();
+      expect(() => root.onCleanup(() => {})).not.toThrow();
 
       // provide on disposed node: policy-dependent. Safety requirement: no throw OR throw, but no corruption.
-      expect(() => service.provide(root, "k", 1)).not.toThrow();
+      expect(() => root.provide("k", 1)).not.toThrow();
       expect(root._parent).toBeNull();
       expect(root._firstChild).toBeNull();
     });
 
     it("V1 removeChild on disposed parent is safe and does not detach unrelated nodes", () => {
-      const p = service.createOwner(null);
-      const c = service.createOwner(p);
+      const p = createOwner(null);
+      const c = p.createChild();
 
-      service.dispose(p);
+      p.dispose();
 
       // should not detach child from p because p already disposed (but both are disposed anyway)
-      expect(() => service.removeChild(p, c)).not.toThrow();
+      expect(() => c.removeFromParent()).not.toThrow();
       expect(c._parent).toBeNull();
     });
   });
@@ -446,7 +566,7 @@ describe("Ownership Safety Spec (I–VIII)", () => {
     let scope: OwnershipScope;
 
     beforeEach(() => {
-      scope = createOwnershipScope(service);
+      scope = createOwnershipScope();
     });
 
     afterEach(() => {
@@ -455,7 +575,7 @@ describe("Ownership Safety Spec (I–VIII)", () => {
     });
 
     it("VI1 Scope Isolation: withOwner restores even if callback throws", () => {
-      const o = service.createOwner(null);
+      const o = createOwner(null);
 
       expect(() => {
         scope.withOwner(o, () => {
@@ -467,8 +587,8 @@ describe("Ownership Safety Spec (I–VIII)", () => {
     });
 
     it("VI2 Nested Scope Restore: inner restores to outer, then to null", () => {
-      const outer = service.createOwner(null);
-      const inner = service.createOwner(null);
+      const outer = createOwner(null);
+      const inner = createOwner(null);
 
       scope.withOwner(outer, () => {
         expect(scope.getOwner()).toBe(outer);
@@ -484,7 +604,7 @@ describe("Ownership Safety Spec (I–VIII)", () => {
     });
 
     it("VI3 createScope Consistency: parent defaults to current owner", () => {
-      const parent = service.createOwner(null);
+      const parent = createOwner(null);
       let created: OwnershipNode | null = null;
 
       scope.withOwner(parent, () => {
@@ -511,7 +631,7 @@ describe("Ownership Safety Spec (I–VIII)", () => {
     });
 
     it("createScope restores even if callback throws", () => {
-      const parent = service.createOwner(null);
+      const parent = createOwner(null);
 
       expect(() => {
         scope.withOwner(parent, () => {
@@ -530,30 +650,30 @@ describe("Ownership Safety Spec (I–VIII)", () => {
    *───────────────────────────────────────────────*/
   describe("VII. Context Safety", () => {
     it("VII1 hasOwn vs inject: hasOwn only for local keys; inject follows chain", () => {
-      const p = service.createOwner(null);
-      const c = service.createOwner(p);
+      const p = createOwner(null);
+      const c = p.createChild();
 
-      service.provide(p, "k", 1);
+      p.provide("k", 1);
 
-      expect(service.hasOwn(c, "k")).toBe(false);
-      expect(service.inject<number>(c, "k")).toBe(1);
+      expect(c.hasOwnContextKey("k")).toBe(false);
+      expect(c.inject<number>("k")).toBe(1);
 
-      service.provide(c, "k", 2);
-      expect(service.hasOwn(c, "k")).toBe(true);
-      expect(service.inject<number>(c, "k")).toBe(2);
-      expect(service.inject<number>(p, "k")).toBe(1);
+      c.provide("k", 2);
+      expect(c.hasOwnContextKey("k")).toBe(true);
+      expect(c.inject<number>("k")).toBe(2);
+      expect(p.inject<number>("k")).toBe(1);
     });
 
     it("Context chain remains readable after structural mutations", () => {
-      const p1 = service.createOwner(null);
-      const p2 = service.createOwner(null);
-      const c = service.createOwner(p1);
+      const p1 = createOwner(null);
+      const p2 = createOwner(null);
+      const c = p1.createChild();
 
-      service.provide(p1, "x", 1);
-      expect(service.inject<number>(c, "x")).toBe(1);
+      p1.provide("x", 1);
+      expect(c.inject<number>("x")).toBe(1);
 
       // reparent
-      service.appendChild(p2, c);
+      p2.appendChild(c);
 
       // After reparent: c should no longer inherit p1 context
       // This expectation is a *design choice*. If you want inherited context to follow parent after reparent,
@@ -561,7 +681,7 @@ describe("Ownership Safety Spec (I–VIII)", () => {
       //
       // Current implementation: getContext uses parent._context at creation time only, so behavior depends on when context is initialized.
       // We set a strict security invariant here: reparent should not allow reading old parent chain unintentionally.
-      expect(service.inject<number>(c, "x")).toBeUndefined();
+      expect(c.inject<number>("x")).toBeUndefined();
     });
   });
 
@@ -570,18 +690,18 @@ describe("Ownership Safety Spec (I–VIII)", () => {
    *───────────────────────────────────────────────*/
   describe("VIII. Error Strategy", () => {
     it("dispose is resilient: cleanup errors do not break disposal safety", () => {
-      const root = service.createOwner(null);
-      const child = service.createOwner(root);
+      const root = createOwner(null);
+      const child = root.createChild();
 
-      service.onScopeCleanup(child, () => {
+      child.onCleanup(() => {
         throw new Error("child cleanup");
       });
-      service.onScopeCleanup(root, () => {});
+      root.onCleanup(() => {});
 
       const consoleError = vi
         .spyOn(console, "error")
         .mockImplementation(() => {});
-      expect(() => service.dispose(root)).not.toThrow();
+      expect(() => root.dispose()).not.toThrow();
       consoleError.mockRestore();
 
       // Safety post-condition: structure cleared
@@ -591,7 +711,7 @@ describe("Ownership Safety Spec (I–VIII)", () => {
     });
 
     it("optional: fuzz mini-run should not corrupt invariants (structural)", () => {
-      const root = service.createOwner(null);
+      const root = createOwner(null);
       const pool: OwnershipNode[] = [root];
 
       // small deterministic pseudo-fuzz
@@ -601,22 +721,21 @@ describe("Ownership Safety Spec (I–VIII)", () => {
         if (r === 0) {
           // add child to random parent
           const parent = pool[i % pool.length]!;
-          const n = service.createOwner(parent);
+          const n = parent.createChild();
           pool.push(n);
         } else if (r === 1 && pool.length > 2) {
           // remove a leaf-ish node if possible
           const n = pool[pool.length - 1]!;
-          const p = n._parent;
-          if (p !== null) service.removeChild(p, n);
+          if (n._parent !== null) n.removeFromParent();
         } else if (r === 2 && pool.length > 2) {
           // reparent last node under root
           const n = pool[pool.length - 1]!;
-          if (n !== root) service.appendChild(root, n);
+          if (n !== root) root.appendChild(n);
         } else if (r === 3) {
           // context provide/read on random node
           const n = pool[i % pool.length]!;
-          service.provide(n, "k", i);
-          service.inject<number>(n, "k");
+          n.provide("k", i);
+          n.inject<number>("k");
         } else {
           // no-op
         }
@@ -625,7 +744,7 @@ describe("Ownership Safety Spec (I–VIII)", () => {
         assertSiblingChain(root);
       }
 
-      service.dispose(root);
+      root.dispose();
       expect(root._firstChild).toBeNull();
       expect(root._lastChild).toBeNull();
     });

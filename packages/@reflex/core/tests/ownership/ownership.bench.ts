@@ -1,8 +1,6 @@
 import { bench, describe } from "vitest";
-import { OwnershipService } from "../../src/ownership/ownership.node";
-import type { OwnershipNode } from "../../src/ownership/ownership.node";
-
-const service = new OwnershipService();
+import { OwnershipNode } from "../../src/ownership/ownership.node";
+import type { OwnershipNode as IOwnershipNode } from "../../src/ownership/ownership.node";
 
 /**
  * Ownership System Microbenchmarks
@@ -16,143 +14,143 @@ const service = new OwnershipService();
 
 describe("Ownership — Microbench", () => {
   bench("create 100 children and dispose", () => {
-    const root = service.createOwner(null);
+    const root = OwnershipNode.createRoot();
     for (let i = 0; i < 100; i++) {
-      service.createOwner(root);
+      root.createChild();
     }
-    service.dispose(root);
+    root.dispose();
   });
 
   bench("register 100 cleanups", () => {
-    const owner = service.createOwner(null);
+    const owner = OwnershipNode.createRoot();
     for (let i = 0; i < 100; i++) {
-      service.onScopeCleanup(owner, () => {});
+      owner.onCleanup(() => {});
     }
-    service.dispose(owner);
+    owner.dispose();
   });
 
   bench("register 10k cleanups and dispose", () => {
-    const owner = service.createOwner(null);
+    const owner = OwnershipNode.createRoot();
     for (let i = 0; i < 10_000; i++) {
-      service.onScopeCleanup(owner, () => {});
+      owner.onCleanup(() => {});
     }
-    service.dispose(owner);
+    owner.dispose();
   });
 
   bench("build balanced tree (depth 6 × width 3)", () => {
-    const root = service.createOwner(null);
-    let layer: OwnershipNode[] = [root];
+    const root = OwnershipNode.createRoot();
+    let layer: IOwnershipNode[] = [root];
 
     for (let d = 0; d < 6; d++) {
-      const next: OwnershipNode[] = [];
+      const next: IOwnershipNode[] = [];
       for (const parent of layer) {
         for (let i = 0; i < 3; i++) {
-          next.push(service.createOwner(parent));
+          next.push(parent.createChild());
         }
       }
       layer = next;
     }
 
-    service.dispose(root);
+    root.dispose();
   });
 
   bench("build wide tree (3000 siblings)", () => {
-    const root = service.createOwner(null);
+    const root = OwnershipNode.createRoot();
     for (let i = 0; i < 3000; i++) {
-      service.createOwner(root);
+      root.createChild();
     }
-    service.dispose(root);
+    root.dispose();
   });
 
   bench("build linear chain (depth 10k)", () => {
-    let node = service.createOwner(null);
+    let node = OwnershipNode.createRoot();
     const root = node;
 
     for (let i = 0; i < 10_000; i++) {
-      node = service.createOwner(node);
+      node = node.createChild();
     }
 
-    service.dispose(root);
+    root.dispose();
   });
 
   bench("context propagation (1000 depth, 100 reads)", () => {
-    let node = service.createOwner(null);
+    let node = OwnershipNode.createRoot();
     const root = node;
 
     for (let i = 0; i < 1000; i++) {
-      node = service.createOwner(node);
+      node = node.createChild();
     }
 
-    service.provide(node, "value", 42);
+    node.provide("value", 42);
 
     for (let i = 0; i < 100; i++) {
-      service.inject(node, "value");
+      node.inject("value");
     }
 
-    service.dispose(root);
+    root.dispose();
   });
 
   bench("context override isolation (100 children)", () => {
-    const root = service.createOwner(null);
-    service.provide(root, "key", 0);
+    const root = OwnershipNode.createRoot();
+    root.provide("key", 0);
 
     for (let i = 0; i < 100; i++) {
-      const child = service.createOwner(root);
-      service.provide(child, "key", i);
-      service.inject(child, "key");
-      service.inject(root, "key");
+      const child = root.createChild();
+      child.provide("key", i);
+      child.inject("key");
+      root.inject("key");
     }
 
-    service.dispose(root);
+    root.dispose();
   });
 
   bench("interleaved append/remove (1000 ops)", () => {
-    const root = service.createOwner(null);
-    const list: OwnershipNode[] = [];
+    const root = OwnershipNode.createRoot();
+    const list: IOwnershipNode[] = [];
 
     for (let i = 0; i < 1000; i++) {
-      const child = service.createOwner(root);
+      const child = root.createChild();
       list.push(child);
 
       if (i % 5 === 0 && list.length > 1) {
         const toRemove = list.shift()!;
-        service.removeChild(root, toRemove);
+        toRemove.removeFromParent();
       }
     }
 
-    service.dispose(root);
+    root.dispose();
   });
 
   bench("simulate UI component tree", () => {
-    const root = service.createOwner(null);
+    const root = OwnershipNode.createRoot();
 
     // Header
-    const header = service.createOwner(root);
-    for (let i = 0; i < 50; i++) service.createOwner(header);
+    const header = root.createChild();
+    for (let i = 0; i < 50; i++) header.createChild();
 
     // Main
-    const main = service.createOwner(root);
+    const main = root.createChild();
     for (let s = 0; s < 10; s++) {
-      const section = service.createOwner(main);
+      const section = main.createChild();
       for (let i = 0; i < 20; i++) {
-        service.createOwner(section);
+        section.createChild();
       }
     }
 
     // Footer
-    const footer = service.createOwner(root);
-    for (let i = 0; i < 30; i++) service.createOwner(footer);
+    const footer = root.createChild();
+    for (let i = 0; i < 30; i++) footer.createChild();
 
-    service.dispose(root);
+    root.dispose();
   });
 
   bench("subscription cleanup pattern (100 cleanups)", () => {
-    const owner = service.createOwner(null);
+    const owner = OwnershipNode.createRoot();
 
     for (let i = 0; i < 100; i++) {
-      service.onScopeCleanup(owner, () => {});
+      owner.onCleanup(() => {});
     }
 
-    service.dispose(owner);
+    owner.dispose();
   });
 });

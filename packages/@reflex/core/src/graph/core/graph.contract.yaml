@@ -1,0 +1,37 @@
+graph_core:
+  scope: intrusive_directed_graph
+  layer: reflex_core
+
+  guarantees:
+    structural_integrity: true
+
+    complexity:
+      link:
+        time: O(1)
+        allocation: GraphEdge
+      unlink:
+        time: O(1)
+        allocation: none
+
+    memory:
+      allowed_allocations:
+        - GraphEdge
+      forbidden_allocations:
+        - arrays
+        - iterators
+
+  caller_requirements:
+    single_threaded_mutation: true
+    duplicate_edges: forbidden
+    cycle_detection: compiler
+
+  undefined_behavior:
+    - concurrent_mutation
+    - unlink_nonexistent_edge
+    - unlink_foreign_edge
+
+  non_goals:
+    - scheduling
+    - propagation
+    - dirty_state
+    - causal_time

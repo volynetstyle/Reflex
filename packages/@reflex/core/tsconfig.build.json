@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "build/esm",
+    "module": "ESNext",
+    "target": "ES2022",
+    "declaration": true,
+    "declarationDir": "dist/types",
+    "emitDeclarationOnly": false
+  },
+  "include": ["src"]
+}
