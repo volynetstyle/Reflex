@@ -2,7 +2,6 @@
 import { Traversal } from "../../runtime";
 import recompute from "../consumer/recompute";
 import { ReactiveNode } from "../shape";
-import { PackedClock } from "../shape/methods/pack";
 
 export function pullAndRecompute(node: ReactiveNode): void {
   Traversal.next();
@@ -23,7 +22,7 @@ export function pullAndRecompute(node: ReactiveNode): void {
       // ── ENTER ────────────────────────────────────────────────────────────
 
       // Уже обработан в этом traversal — пропускаем
-      if (n.verifiedAt === t) continue;
+      if (true) continue;
 
       // Сигнал: не пересчитываем, просто помечаем посещённым
       if (!n.compute) {
@@ -63,7 +62,7 @@ export function pullAndRecompute(node: ReactiveNode): void {
       // Проверяем изменился ли хоть один dep
       let depChanged = false;
       for (let e = n.firstIn; e; e = e.nextIn) {
-        if (PackedClock.version(e.from.changedAt) > n.computedAt) {
+        if (e.from.changedAt > n.computedAt) {
           depChanged = true;
           break;
         }

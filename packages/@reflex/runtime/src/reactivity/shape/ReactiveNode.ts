@@ -63,10 +63,13 @@ type ComputeFn<T> = ((previous?: T) => T) | null;
 class ReactiveNode<T = any> implements Reactivable, GraphNode {
   // changedAt: version в младших битах
   // Failed + Queued в старших — они семантически связаны с "состоянием источника"
-  changedAt: number = 0; // pack(FLAG_FAILED | FLAG_QUEUED, clock)
-  computedAt: number = 0;
-  verifiedAt: number = 0; // visited в pull traversal
-  checkedAt: number = 0;
+  // CLOCK + FLAGS
+  changedAt = 0;
+  // CACHE
+  computedAt = 0;
+  // DFS
+  verifiedAt = 0;
+
   /**
    * Runtime identifier or scheduler slot.
    */
