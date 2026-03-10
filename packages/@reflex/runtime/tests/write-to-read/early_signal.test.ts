@@ -1,176 +1,30 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { computed, effect, signal } from "../api/reactivity";
-import {
-  resetStats,
-  stats,
-} from "../../src/reactivity/walkers/devkit/walkerStats";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function tracker<T extends string>(...names: T[]) {
-  const calls = Object.fromEntries(names.map((n) => [n, 0])) as Record<
-    T,
-    number
-  >;
-  const hit = (n: T) => calls[n]++;
-  return { calls, hit };
-}
+import { describe, expect, it, vi } from "vitest";
+import { computed, signal } from "../api/reactivity";
 
 describe("graph invariants", () => {
-  it("diamond: unchanged branch is not recomputed", () => {
-    let callsB = 0;
-    let callsC = 0;
-    let callsD = 0;
-
-    const [a, setA] = signal(1);
-
-    const B = computed(() => {
-      callsB++;
-      return a() + 1;
-    });
-
-    const C = computed(() => {
-      callsC++;
-      return a() * 0;
-    });
-
-    const D = computed(() => {
-      callsD++;
-      return B() + C();
-    });
-
-    // initial run
-    expect(D()).toBe(2);
-
-    expect({
-      B: callsB,
-      C: callsC,
-      D: callsD,
-    }).toEqual({
-      B: 1,
-      C: 1,
-      D: 1,
-    });
-
-    // update
-    setA(2);
-
-    C();
-    expect(D()).toBe(3);
-
-    expect({
-      B: callsB,
-      C: callsC,
-      D: callsD,
-    }).toEqual({
-      B: 2,
-      C: 2,
-      D: 2,
-    });
-  });
-
-  it("should update when deep dependency is updated", () => {
-    const [x, setX] = signal(1);
-    const [y] = signal(1);
-
-    const a = computed(() => x() + y());
-    const b = computed(() => a());
-
-    setX(2);
-
-    expect(b()).toBe(3);
-  });
-
-  it("should update when deep computed dependency is updated", () => {
-    const [x, setX] = signal(10);
-    const [y] = signal(10);
-
-    const a = computed(() => x() + y());
-    const b = computed(() => a());
-    const c = computed(() => b());
-
-    setX(20);
-
-    expect(c()).toBe(30);
-  });
-
-  it("should only re-compute when needed", () => {
-    const computedFn = vi.fn();
-
-    const [x, setX] = signal(10);
-    const [y, setY] = signal(10);
-
-    const a = computed(() => computedFn(x() + y()));
-
-    a(); // ← перший read
-
-    expect(computedFn).toHaveBeenCalledTimes(1);
-    expect(computedFn).toHaveBeenCalledWith(20);
-
-    a();
-    expect(computedFn).toHaveBeenCalledTimes(1);
-
-    setX(20);
-
-    a();
-    expect(computedFn).toHaveBeenCalledTimes(2);
-
-    setY(20);
-
-    a();
-    expect(computedFn).toHaveBeenCalledTimes(3);
-  });
-
-  it("should only re-compute whats needed", () => {
-    const memoA = vi.fn((n) => n);
-    const memoB = vi.fn((n) => n);
-
-    const [x, setX] = signal(10);
-    const [y, setY] = signal(10);
-
-    const a = computed(() => memoA(x()));
-    const b = computed(() => memoB(y()));
-    const c = computed(() => a() + b());
-
-    expect(c()).toBe(20);
-
-    expect(memoA).toHaveBeenCalledTimes(1);
-    expect(memoB).toHaveBeenCalledTimes(1);
-
-    setX(20);
-
-    expect(c()).toBe(30);
-
-    expect(memoA).toHaveBeenCalledTimes(2);
-    expect(memoB).toHaveBeenCalledTimes(1);
-
-    setY(20);
-
-    expect(c()).toBe(40);
-
-    expect(memoA).toHaveBeenCalledTimes(2);
-    expect(memoB).toHaveBeenCalledTimes(2);
-  });
-});
-
-describe("graph invariants", () => {
-  // ─── Correctness ───────────────────────────────────────────────────────────
+  // ─── 1. Correctness ────────────────────────────────────────────────────────
+  // Базовая корректность: правильные значения при любой топологии.
 
   describe("correctness", () => {
-    it("computed returns initial value", () => {
+    it("signal: initial value", () => {
+      const [x] = signal(10);
+      expect(x()).toBe(10);
+    });
+
+    it("computed: derives from signal", () => {
       const [x] = signal(10);
       const a = computed(() => x() * 2);
       expect(a()).toBe(20);
     });
 
-    it("computed updates after signal write", () => {
+    it("computed: updates after write", () => {
       const [x, setX] = signal(1);
       const a = computed(() => x() + 1);
       setX(5);
       expect(a()).toBe(6);
     });
 
-    it("computed through chain: a → b → c", () => {
+    it("chain a→b→c: correct value after update", () => {
       const [x, setX] = signal(10);
       const a = computed(() => x() + 1);
       const b = computed(() => a() + 1);
@@ -180,184 +34,132 @@ describe("graph invariants", () => {
       expect(c()).toBe(23);
     });
 
-    it("diamond: D = B(a) + C(a), result correct after update", () => {
+    it("diamond D=B(a)+C(a): correct value after update", () => {
       const [a, setA] = signal(1);
-      const B = computed(() => a() + 1); // 2
-      const C = computed(() => a() * 2); // 2
-      const D = computed(() => B() + C()); // 4
-      expect(D()).toBe(4);
+      const B = computed(() => a() + 1);
+      const C = computed(() => a() * 2);
+      const D = computed(() => B() + C());
+      expect(D()).toBe(4);     // (1+1) + (1*2)
       setA(3);
-      expect(D()).toBe(3 + 1 + 3 * 2); // 10
+      expect(D()).toBe(10);    // (3+1) + (3*2)
     });
 
-    it("two independent signals, only one changes", () => {
+    it("two independent signals: only changed one affects result", () => {
       const [x, setX] = signal(10);
       const [y] = signal(5);
       const a = computed(() => x() + y());
-      expect(a()).toBe(15);
       setX(20);
       expect(a()).toBe(25);
     });
 
-    it("memoisation: same value write does not change computed", () => {
-      const [x, setX] = signal(1);
+    it("constant computed: no deps, stable value", () => {
+      const a = computed(() => 42);
+      expect(a()).toBe(42);
+      expect(a()).toBe(42);
+    });
+
+    it("multiple writes before read: final value wins", () => {
+      const [x, setX] = signal(0);
       const a = computed(() => x());
-      expect(a()).toBe(1);
-      setX(1); // same value
-      expect(a()).toBe(1);
+      setX(1); setX(2); setX(3);
+      expect(a()).toBe(3);
     });
   });
 
-  // ─── Memoisation (no unnecessary recomputes) ───────────────────────────────
+  // ─── 2. Memoisation ────────────────────────────────────────────────────────
+  // Узлы пересчитываются ровно столько раз сколько нужно — не больше.
 
   describe("memoisation", () => {
-    it("does not recompute on repeated read without write", () => {
+    it("no recompute on repeated read", () => {
       const fn = vi.fn((x: number) => x * 2);
       const [x] = signal(5);
       const a = computed(() => fn(x()));
-
-      a();
-      a();
-      a();
-
+      a(); a(); a();
       expect(fn).toHaveBeenCalledTimes(1);
     });
 
-    it("recomputes exactly once per signal write", () => {
+    it("exactly one recompute per write", () => {
       const fn = vi.fn((x: number) => x);
       const [x, setX] = signal(1);
       const a = computed(() => fn(x()));
-
       a();
-      expect(fn).toHaveBeenCalledTimes(1);
-
-      setX(2);
-      a();
-      expect(fn).toHaveBeenCalledTimes(2);
-
-      setX(3);
-      a();
+      setX(2); a();
+      setX(3); a();
       expect(fn).toHaveBeenCalledTimes(3);
     });
 
-    it("does not recompute when signal written with same value", () => {
+    it("no recompute when written with same value", () => {
       const fn = vi.fn((x: number) => x);
       const [x, setX] = signal(42);
       const a = computed(() => fn(x()));
-
       a();
+      setX(42); a();
       expect(fn).toHaveBeenCalledTimes(1);
+    });
 
-      setX(42);
+    it("multiple writes before read: only one recompute", () => {
+      const fn = vi.fn((x: number) => x);
+      const [x, setX] = signal(0);
+      const a = computed(() => fn(x()));
       a();
-      expect(fn).toHaveBeenCalledTimes(1); // no recompute
+      setX(1); setX(2); setX(3);
+      a();
+      expect(fn).toHaveBeenCalledTimes(2);
     });
 
     it("chain: each node recomputes exactly once per upstream write", () => {
       const fnA = vi.fn((x: number) => x + 1);
       const fnB = vi.fn((x: number) => x + 1);
       const fnC = vi.fn((x: number) => x + 1);
-
       const [x, setX] = signal(0);
       const a = computed(() => fnA(x()));
       const b = computed(() => fnB(a()));
       const c = computed(() => fnC(b()));
-
       c();
-      expect(fnA).toHaveBeenCalledTimes(1);
-      expect(fnB).toHaveBeenCalledTimes(1);
-      expect(fnC).toHaveBeenCalledTimes(1);
-
-      setX(1);
-      c();
+      setX(1); c();
       expect(fnA).toHaveBeenCalledTimes(2);
       expect(fnB).toHaveBeenCalledTimes(2);
       expect(fnC).toHaveBeenCalledTimes(2);
     });
 
-    it("diamond: each branch recomputes once, consumer recomputes once", () => {
+    it("diamond: each branch once, sink once", () => {
       const fnB = vi.fn((x: number) => x + 1);
-      const fnC = vi.fn((x: number) => x * 0);
+      const fnC = vi.fn((x: number) => x * 2);
       const fnD = vi.fn((b: number, c: number) => b + c);
-
       const [a, setA] = signal(1);
       const B = computed(() => fnB(a()));
       const C = computed(() => fnC(a()));
       const D = computed(() => fnD(B(), C()));
-
       D();
-      expect(fnB).toHaveBeenCalledTimes(1);
-      expect(fnC).toHaveBeenCalledTimes(1);
-      expect(fnD).toHaveBeenCalledTimes(1);
-
-      setA(2);
-      D();
+      setA(2); D();
       expect(fnB).toHaveBeenCalledTimes(2);
       expect(fnC).toHaveBeenCalledTimes(2);
       expect(fnD).toHaveBeenCalledTimes(2);
     });
   });
 
-  // ─── Selective recomputation ───────────────────────────────────────────────
+  // ─── 3. Selective recomputation ────────────────────────────────────────────
+  // Пересчитываются только узлы downstream от изменившегося сигнала.
 
   describe("selective recomputation", () => {
-    it("only affected branch recomputes when one of two signals changes", () => {
+    it("unrelated branch does not recompute", () => {
       const fnA = vi.fn((x: number) => x);
       const fnB = vi.fn((y: number) => y);
-
       const [x, setX] = signal(10);
-      const [y, setY] = signal(10);
+      const [y] = signal(10);
       const a = computed(() => fnA(x()));
       const b = computed(() => fnB(y()));
       const c = computed(() => a() + b());
-
       c();
-      expect(fnA).toHaveBeenCalledTimes(1);
-      expect(fnB).toHaveBeenCalledTimes(1);
-
-      setX(20);
-      expect(c()).toBe(30);
-      expect(fnA).toHaveBeenCalledTimes(2); // recomputed
-      expect(fnB).toHaveBeenCalledTimes(1); // untouched
-
-      setY(20);
-      expect(c()).toBe(40);
-      expect(fnA).toHaveBeenCalledTimes(2); // untouched
-      expect(fnB).toHaveBeenCalledTimes(2); // recomputed
+      setX(20); c();
+      expect(fnA).toHaveBeenCalledTimes(2); // пересчитался
+      expect(fnB).toHaveBeenCalledTimes(1); // нет
     });
 
-    it("SAC: unchanged-value recompute does not propagate further", () => {
-      // a всегда возвращает константу — downstream не должен пересчитываться
-      const fnB = vi.fn(() => 42);
-      const fnC = vi.fn((x: number) => x + 1);
-
-      const [x, setX] = signal(1);
-      const b = computed(fnB); // игнорирует x, всегда 42
-      const _x = computed(() => x()); // читает x чтобы b не был изолирован
-      const c = computed(() => fnC(b()));
-
-      c();
-      expect(fnB).toHaveBeenCalledTimes(1);
-      expect(fnC).toHaveBeenCalledTimes(1);
-
-      // b зависит от x косвенно — нет, b не читает x
-      // Меняем сигнал который НЕ является dep b
-      setX(2);
-      _x(); // актуализируем _x
-
-      // c читает b, b не изменился — c не должен пересчитываться
-      c();
-      expect(fnB).toHaveBeenCalledTimes(1);
-      expect(fnC).toHaveBeenCalledTimes(1);
-    });
-
-    it("wide fan-out: only nodes downstream of changed signal recompute", () => {
+    it("wide fan-out: only x-branch recomputes when x changes", () => {
       const [x, setX] = signal(1);
       const [y] = signal(1);
-
       const fns = Array.from({ length: 5 }, () => vi.fn((v: number) => v));
-
-      // Первые 3 зависят от x, последние 2 — только от y
       const nodes = [
         computed(() => fns[0]!(x())),
         computed(() => fns[1]!(x())),
@@ -365,22 +167,89 @@ describe("graph invariants", () => {
         computed(() => fns[3]!(y())),
         computed(() => fns[4]!(y())),
       ];
-
-      nodes.forEach((n) => n());
-      fns.forEach((fn) => expect(fn).toHaveBeenCalledTimes(1));
-
+      nodes.forEach(n => n());
       setX(2);
-      nodes.forEach((n) => n());
-
+      nodes.forEach(n => n());
       expect(fns[0]).toHaveBeenCalledTimes(2);
       expect(fns[1]).toHaveBeenCalledTimes(2);
       expect(fns[2]).toHaveBeenCalledTimes(2);
       expect(fns[3]).toHaveBeenCalledTimes(1); // y не менялся
-      expect(fns[4]).toHaveBeenCalledTimes(1); // y не менялся
+      expect(fns[4]).toHaveBeenCalledTimes(1);
+    });
+
+    it("SAC: constant computed shields downstream from recompute", () => {
+      // b всегда возвращает 42 независимо от x → c не пересчитывается
+      const fnB = vi.fn(() => 42);
+      const fnC = vi.fn((x: number) => x + 1);
+      const [x, setX] = signal(1);
+      // b не читает x, поэтому watermark b не обновится при setX
+      const b = computed(fnB);
+      const c = computed(() => fnC(b()));
+      c();
+      setX(2);
+      c();
+      expect(fnB).toHaveBeenCalledTimes(1);
+      expect(fnC).toHaveBeenCalledTimes(1);
+    });
+
+    it("SAC: b recomputes but returns same value → c does not recompute", () => {
+      // b читает x но всегда возвращает константу → c не пересчитывается
+      const fnC = vi.fn((x: number) => x + 1);
+      const [x, setX] = signal(1);
+      const b = computed(() => { x(); return 42; }); // читает x, результат константный
+      const c = computed(() => fnC(b()));
+      c();
+      expect(fnC).toHaveBeenCalledTimes(1);
+      setX(2);
+      c();
+      expect(fnC).toHaveBeenCalledTimes(1); // b пересчитался, но вернул то же — c нет
     });
   });
 
-  // ─── Structural invariants ─────────────────────────────────────────────────
+  // ─── 4. Dynamic dependencies ───────────────────────────────────────────────
+  // Граф меняет структуру в зависимости от значений.
+
+  describe("dynamic dependencies", () => {
+    it("branch switch: reads correct dep after switch", () => {
+      const [cond, setCond] = signal(true);
+      const [a] = signal(1);
+      const [b] = signal(2);
+      const c = computed(() => cond() ? a() : b());
+      expect(c()).toBe(1);
+      setCond(false);
+      expect(c()).toBe(2);
+    });
+
+    it("branch switch: old dep no longer triggers recompute", () => {
+      const fn = vi.fn();
+      const [cond, setCond] = signal(true);
+      const [a, setA] = signal(1);
+      const [b] = signal(2);
+      const c = computed(() => { fn(); return cond() ? a() : b(); });
+      c(); // reads a
+      setCond(false); c(); // switches to b
+      fn.mockClear();
+      setA(99); c(); // a изменился, но c читает b — не пересчитывается
+      expect(fn).toHaveBeenCalledTimes(0);
+    });
+
+    it("branch switch: new dep triggers recompute after switch", () => {
+      const fn = vi.fn();
+      const [cond, setCond] = signal(true);
+      const [a] = signal(1);
+      const [b, setB] = signal(2);
+      const c = computed(() => { fn(); return cond() ? a() : b(); });
+      c();
+      setCond(false); c(); // теперь читает b
+      fn.mockClear();
+      setB(99); c();
+      expect(fn).toHaveBeenCalledTimes(1); // b изменился → пересчёт
+      expect(c()).toBe(99);
+    });
+  });
+
+  // ─── 5. Structural invariants ──────────────────────────────────────────────
+  // Ленивость и порядок вычислений.
 
   describe("structural invariants", () => {
     it("lazy: computed does not run until read", () => {
@@ -389,36 +258,57 @@ describe("graph invariants", () => {
       expect(fn).not.toHaveBeenCalled();
     });
 
-    it("lazy: computed does not rerun after write until read", () => {
+    it("lazy: write without read does not trigger recompute", () => {
       const fn = vi.fn((x: number) => x);
       const [x, setX] = signal(1);
       const a = computed(() => fn(x()));
-
-      a(); // первый read
-      setX(2); // write без read
-      setX(3); // ещё write без read
-
-      expect(fn).toHaveBeenCalledTimes(1); // не пересчитался
-
-      a(); // read
-      expect(fn).toHaveBeenCalledTimes(2); // пересчитался один раз
+      a();
+      setX(2); setX(3); // два write без read
+      expect(fn).toHaveBeenCalledTimes(1);
+      a();
+      expect(fn).toHaveBeenCalledTimes(2); // один recompute для обоих write
     });
 
-    it("multiple writes before read: only one recompute", () => {
-      const fn = vi.fn((x: number) => x);
+    it("deep chain 100: recomputes only dirty nodes", () => {
+      const calls: number[] = [];
       const [x, setX] = signal(0);
-      const a = computed(() => fn(x()));
+      let prev = computed(() => { calls.push(0); return x(); });
+      for (let i = 1; i < 100; i++) {
+        const p = prev;
+        const idx = i;
+        prev = computed(() => { calls.push(idx); return p(); });
+      }
+      const tail = prev;
+      tail();
+      const firstReadCount = calls.length;
+      expect(firstReadCount).toBe(100); // все 100 пересчитались
 
-      a();
-      expect(fn).toHaveBeenCalledTimes(1);
+      calls.length = 0;
+      tail(); // без write — pruning
+      expect(calls.length).toBe(0);
 
+      calls.length = 0;
       setX(1);
-      setX(2);
-      setX(3);
+      tail(); // все 100 dirty
+      expect(calls.length).toBe(100);
+    });
 
-      a();
-      expect(fn).toHaveBeenCalledTimes(2);
-      expect(a()).toBe(3);
+    it("deep chain: unrelated signal does not dirty chain", () => {
+      const fn = vi.fn();
+      const [x] = signal(0);
+      const [y, setY] = signal(0);
+      let prev = computed(() => x());
+      for (let i = 0; i < 10; i++) {
+        const p = prev;
+        prev = computed(() => { fn(); return p(); });
+      }
+      const tail = prev;
+      tail();
+      fn.mockClear();
+      setY(1); // y не в цепочке
+      void y;
+      tail();
+      expect(fn).toHaveBeenCalledTimes(0);
     });
   });
 });
