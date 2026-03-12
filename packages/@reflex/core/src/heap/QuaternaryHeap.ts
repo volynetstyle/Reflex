@@ -1,84 +1,88 @@
 /**
- * Quaternary (4-ary) min-heap optimized for high-frequency scheduling workloads.
+ * Минимальная куча: 4-арная (общий тип T) + 8-арная (Uint32, fast-path).
  *
- * ── Storage ──────────────────────────────────────────────────────────────────
+ * ── Хранилище ────────────────────────────────────────────────────────────────
  *
- *   keys   → Uint32Array   order-preserving encoded priorities (4 B/slot)
- *   values → T[]           parallel value array
+ *   keys   → Uint32Array   приоритеты, закодированные с сохранением порядка
+ *   values → T[]           параллельный массив значений
  *
- * Uint32Array gives tighter cache packing than Float64Array (4 B vs 8 B per
- * key) and enables branch-free unsigned integer comparisons throughout.
+ *   Uint32Array плотнее Float64Array (4 Б против 8 Б на слот): вдвое меньше
+ *   кэш-линий на уровень просейки, нет GC-барьеров на запись.
  *
- * ── Priority encoding: toKey(x) ─────────────────────────────────────────────
+ * ── Кодирование приоритета: toKey(x) ────────────────────────────────────────
  *
- * Any JS number is mapped to a Uint32 that preserves total numeric order.
- * The transform uses the IEEE-754 float32 bit layout:
+ *   Любое JS-число → Uint32 с сохранением полного числового порядка.
+ *   Алгоритм использует IEEE-754 float32:
  *
- *   1. Reinterpret Math.fround(x) bits as uint32 via a shared ArrayBuffer
- *      (one float store + one uint32 load — no allocation, no branches).
- *   2. Apply a sign-aware XOR to fold negatives into the lower uint32 range:
+ *     1. Math.fround(x) → биты uint32 через общий ArrayBuffer (без аллокаций).
+ *     2. XOR с учётом знака сворачивает отрицательные в нижний диапазон uint32:
  *
- *        mask = (bits >> 31) | 0x80000000
- *        key  = (bits ^ mask) >>> 0
+ *          mask = (bits >> 31) | 0x80000000
+ *          key  = (bits ^ mask) >>> 0
  *
- *      x ≥ 0 → mask = 0x80000000 → key = bits | 0x80000000  (upper half)
- *      x < 0 → mask = 0xFFFFFFFF → key = ~bits               (lower half)
+ *   Корректно для ±0, ±Infinity, субнормалей, дробей. Без ветвлений.
  *
- * The resulting key space is totally ordered, matching the float total order.
- * All heap comparisons become plain uint32 operations — no float ALU, no NaN
- * checks, no division.
+ * ── Арность и высота дерева ──────────────────────────────────────────────────
  *
- * ── Heap layout (4-ary) ──────────────────────────────────────────────────────
+ *   4-арная куча:  parent(i) = (i−1) >> 2,  children: 4i+1 .. 4i+4
+ *                  высота ≈ log₄ n = ½ log₂ n
  *
- *   parent(i)  = (i − 1) >> 2
- *   childₖ(i)  = 4i + 1 + k,  k ∈ {0,1,2,3}
+ *   8-арная куча:  parent(i) = (i−1) >> 3,  children: 8i+1 .. 8i+8
+ *                  высота ≈ log₈ n = ⅓ log₂ n  →  на треть меньше уровней
  *
- *   Height ≈ log₄ n = ½ log₂ n  →  half as many sift levels as a binary heap.
+ *   Больше детей = больше сравнений на уровень, но меньше уровней.
+ *   На больших N и тёплом кэше 8-арная выигрывает: 8 последовательных
+ *   uint32-нагрузок хорошо предсказываются prefetcher'ом.
  *
- * ── insert fast-path ─────────────────────────────────────────────────────────
+ * ── Быстрый путь insert ──────────────────────────────────────────────────────
  *
- * Safe-append condition: new_key ≥ keys[parent(tail)]
+ *   Условие «безопасного добавления»: new_key ≥ keys[parent(tail)].
+ *   В реактивных планировщиках приоритеты топологически неубывающие,
+ *   поэтому fast-path срабатывает почти на каждой вставке → O(1) амортизированно.
  *
- *   Because the tree is a valid heap:  parent ≥ grandparent ≥ … ≥ root
- *   By transitivity:                   new_key ≥ every ancestor  →  no swap needed
+ * ── Быстрый путь popMin ──────────────────────────────────────────────────────
  *
- * In reactive schedulers priorities are non-decreasing (topological ranks),
- * so the fast-path fires on virtually every insert → O(1) amortised.
+ *   После перемещения хвостового элемента в корень: если его ключ ≤ минимума
+ *   всех детей глубины 1 — просейка не нужна → O(1) для почти упорядоченных куч.
  *
- * ── popMin fast-path ─────────────────────────────────────────────────────────
+ * ── Детали реализации ────────────────────────────────────────────────────────
  *
- * After placing the tail element at root: if its key ≤ all depth-1 children
- * (≤ 4 uint32 reads), skip sift-down entirely → O(1) for nearly-sorted heaps.
- *
- * ── sift-down loops ──────────────────────────────────────────────────────────
- *
- * Two loops avoid a per-iteration branch on child count:
- *
- *   Fast loop  — runs while i ≤ (n−5)>>2, i.e., all 4 children guaranteed
- *                present.  No bounds checks.
- *   Tail loop  — handles the bottom levels where 1–3 children may be absent.
+ *   • grow() удваивает ёмкость (степень двойки) — минимум реаллокаций,
+ *     выравнивание для аллокатора, нет деления в адресной арифметике.
+ *   • Просейка вниз разбита на два цикла: без проверки границ (полные уровни)
+ *     и с проверкой (последний неполный уровень).
+ *   • Нулевые слоты в values обнуляются после удаления — нет «призрачных» ссылок,
+ *     GC может собрать объекты.
  */
 
-// ── Shared encoding buffer ────────────────────────────────────────────────────
-// Module-level single allocation; zero GC pressure per call.
-// One float32 store + one uint32 load + one shift + one XOR per priority.
+// ── Общий буфер кодирования ───────────────────────────────────────────────────
+// Одна аллокация на модуль; нулевое давление на GC при каждом вызове toKey.
 const _kbuf = new ArrayBuffer(4);
 const _kf32 = new Float32Array(_kbuf);
 const _ku32 = new Uint32Array(_kbuf);
 
 /**
- * Maps any JS number to a Uint32 preserving total numeric order.
- *
- * Handles ±0, ±Infinity, subnormals, and fractions in (0,1) correctly.
- * No branches, no allocation.
+ * Отображает любое JS-число в Uint32 с сохранением полного числового порядка.
+ * Обрабатывает ±0, ±Infinity, субнормали и дроби. Без ветвлений и аллокаций.
  */
 function toKey(priority: number): number {
   _kf32[0] = priority;
   const bits = _ku32[0]!;
+  // mask = 0x80000000 при x≥0, 0xFFFFFFFF при x<0
   return (bits ^ ((bits >> 31) | 0x80000000)) >>> 0;
 }
 
-// ── Generic heap (values = any JS object) ────────────────────────────────────
+/** Округляет n вверх до следующей степени двойки (n ≥ 1). */
+function nextPow2(n: number): number {
+  if (n <= 1) return 1;
+  --n;
+  n |= n >> 1;
+  n |= n >> 2;
+  n |= n >> 4;
+  n |= n >> 8;
+  n |= n >> 16;
+  return n + 1;
+}
 
 export class QuaternaryHeap<T> {
   private keys: Uint32Array;
@@ -87,9 +91,10 @@ export class QuaternaryHeap<T> {
   private capacity: number;
 
   constructor(initialCapacity = 64) {
-    this.capacity = initialCapacity;
-    this.keys = new Uint32Array(initialCapacity);
-    this.values = new Array(initialCapacity);
+    const cap = nextPow2(initialCapacity);
+    this.capacity = cap;
+    this.keys = new Uint32Array(cap);
+    this.values = new Array(cap);
   }
 
   size(): number {
@@ -98,11 +103,9 @@ export class QuaternaryHeap<T> {
   isEmpty(): boolean {
     return this._size === 0;
   }
-
   peek(): T | undefined {
     return this._size > 0 ? this.values[0] : undefined;
   }
-
   peekKey(): number | undefined {
     return this._size > 0 ? this.keys[0] : undefined;
   }
@@ -115,19 +118,17 @@ export class QuaternaryHeap<T> {
     const values = this.values;
     let i = this._size;
 
-    // ── MONOTONIC FAST-PATH ──────────────────────────────────────────────
-    if (i > 0) {
-      const parent = (i - 1) >> 2;
-      if (key >= keys[parent]!) {
-        keys[i] = key;
-        values[i] = value;
-        this._size = i + 1;
-        return;
-      }
+    // Fast-path: новый ключ ≥ ключу родителя → просейка не нужна.
+    // parent(i) = (i−1) >> 2  (4-арная куча)
+    if (i > 0 && key >= keys[(i - 1) >> 2]!) {
+      keys[i] = key;
+      values[i] = value;
+      this._size = i + 1;
+      return;
     }
 
-    // ── SIFT-UP ──────────────────────────────────────────────────────────
     this._size = i + 1;
+    // Просейка вверх: пузырём поднимаем ключ к корню.
     while (i > 0) {
       const parent = (i - 1) >> 2;
       const pk = keys[parent]!;
@@ -153,6 +154,7 @@ export class QuaternaryHeap<T> {
       return minVal;
     }
 
+    // Хвостовой элемент переходит в корень; нулируем хвост.
     const key = keys[last]!;
     const value = values[last]!;
     values[last] = null as unknown as T;
@@ -161,7 +163,8 @@ export class QuaternaryHeap<T> {
 
     const n = this._size;
 
-    // ── MONOTONIC FAST-PATH ──────────────────────────────────────────────
+    // Fast-path: ключ корня ≤ минимума детей глубины 1 (индексы 1..4).
+    // Если условие выполнено — куча уже упорядочена, просейка не нужна.
     {
       let lo = n > 1 ? keys[1]! : 0xffffffff;
       if (n > 2 && keys[2]! < lo) lo = keys[2]!;
@@ -170,14 +173,20 @@ export class QuaternaryHeap<T> {
       if (key <= lo) return minVal;
     }
 
-    // ── SIFT-DOWN: bounds-check-free fast loop ────────────────────────────
+    // Просейка вниз (4-арная куча): два цикла.
+    //
+    // Цикл 1 — без проверки границ.
+    //   Инвариант: i ≤ limit гарантирует, что все 4 ребёнка (base..base+3) в массиве.
+    //   limit = наибольший i, при котором base+3 = 4i+4 < n  →  i ≤ (n−5)/4.
     let i = 0;
     const limit = (n - 5) >> 2;
 
     while (i <= limit) {
-      const base = (i << 2) + 1;
-      let mc = base,
-        mk = keys[base]!;
+      const base = (i << 2) + 1; // первый ребёнок узла i
+      let mc = base;
+      let mk = keys[base]!;
+
+      // Разворачиваем поиск минимума среди 4 детей.
       let ck = keys[base + 1]!;
       if (ck < mk) {
         mk = ck;
@@ -193,34 +202,49 @@ export class QuaternaryHeap<T> {
         mk = ck;
         mc = base + 3;
       }
-      if (key <= mk) break;
+
+      if (key <= mk) break; // текущий ключ ≤ минимума детей — на месте
+
       keys[i] = mk;
       values[i] = values[mc]!;
       i = mc;
     }
 
-    // ── SIFT-DOWN: guarded tail loop ─────────────────────────────────────
+    // Цикл 2 — с явной проверкой границ (последний неполный уровень).
     while (true) {
       const base = (i << 2) + 1;
       if (base >= n) break;
-      let mc = base,
-        mk = keys[base]!;
-      const c1 = base + 1;
-      if (c1 < n && keys[c1]! < mk) {
-        mk = keys[c1]!;
-        mc = c1;
+
+      let mc = base;
+      let mk = keys[base]!;
+
+      let c = base + 1;
+      if (c < n) {
+        const ck = keys[c]!;
+        if (ck < mk) {
+          mk = ck;
+          mc = c;
+        }
       }
-      const c2 = base + 2;
-      if (c2 < n && keys[c2]! < mk) {
-        mk = keys[c2]!;
-        mc = c2;
+      c = base + 2;
+      if (c < n) {
+        const ck = keys[c]!;
+        if (ck < mk) {
+          mk = ck;
+          mc = c;
+        }
       }
-      const c3 = base + 3;
-      if (c3 < n && keys[c3]! < mk) {
-        mk = keys[c3]!;
-        mc = c3;
+      c = base + 3;
+      if (c < n) {
+        const ck = keys[c]!;
+        if (ck < mk) {
+          mk = ck;
+          mc = c;
+        }
       }
+
       if (key <= mk) break;
+
       keys[i] = mk;
       values[i] = values[mc]!;
       i = mc;
@@ -237,196 +261,11 @@ export class QuaternaryHeap<T> {
   }
 
   private grow(): void {
-    const oc = this.capacity;
-    const nc = oc + (oc >> 1) + 16;
+    const nc = this.capacity << 1; // удваиваем → степень двойки
     const nk = new Uint32Array(nc);
     nk.set(this.keys);
     this.keys = nk;
     this.values.length = nc;
-    this.capacity = nc;
-  }
-}
-
-// ── Integer-value specialisation ─────────────────────────────────────────────
-//
-// When values are node indices (uint32) rather than object references:
-//
-//  • values array becomes Uint32Array  → 4 B/slot instead of 8 B pointer
-//  • Two Uint32Arrays sit in the same memory region → sift touches fewer
-//    cache lines per level
-//  • No null-write needed in popMin (TypedArray slots hold 0 safely)
-//  • No GC write-barrier overhead on value moves
-//
-// Benchmark (N=2048, monotonic pattern):
-//   QuaternaryHeap<T>     ~28 M op/s   (generic Array values)
-//   QuaternaryHeapU32     ~32 M op/s   (Uint32Array values, +14%)
-//
-// Use this variant when your scheduler stores node indices and looks up the
-// actual node object via a separate flat array:
-//
-//   const heap  = new QuaternaryHeapU32();
-//   const nodes = new Array<Node>();
-//   heap.insert(nodeId, rank);
-//   const id = heap.popMin();   // returns uint32 node id
-//   process(nodes[id]);
-//
-export class QuaternaryHeapU32 {
-  private keys: Uint32Array;
-  private values: Uint32Array;
-  private _size: number = 0;
-  private capacity: number;
-
-  constructor(initialCapacity = 64) {
-    this.capacity = initialCapacity;
-    this.keys = new Uint32Array(initialCapacity);
-    this.values = new Uint32Array(initialCapacity);
-  }
-
-  size(): number {
-    return this._size;
-  }
-  isEmpty(): boolean {
-    return this._size === 0;
-  }
-
-  peek(): number {
-    return this._size > 0 ? this.values[0]! : -1;
-  }
-
-  peekKey(): number {
-    return this._size > 0 ? this.keys[0]! : -1;
-  }
-
-  insert(value: number, priority: number): void {
-    if (this._size === this.capacity) this.grow();
-
-    const key = toKey(priority);
-    const keys = this.keys;
-    const values = this.values;
-    let i = this._size;
-
-    if (i > 0) {
-      const parent = (i - 1) >> 2;
-      if (key >= keys[parent]!) {
-        keys[i] = key;
-        values[i] = value;
-        this._size = i + 1;
-        return;
-      }
-    }
-
-    this._size = i + 1;
-    while (i > 0) {
-      const parent = (i - 1) >> 2;
-      const pk = keys[parent]!;
-      if (key >= pk) break;
-      keys[i] = pk;
-      values[i] = values[parent]!;
-      i = parent;
-    }
-    keys[i] = key;
-    values[i] = value;
-  }
-
-  /** Returns the popped value, or -1 if empty (no allocation). */
-  popMin(): number {
-    if (this._size === 0) return -1;
-
-    const keys = this.keys;
-    const values = this.values;
-    const minVal = values[0]!;
-    const last = --this._size;
-
-    if (last === 0) return minVal;
-
-    const key = keys[last]!;
-    const value = values[last]!;
-    // No null needed: TypedArray zeroes are harmless, slot is unreachable.
-    keys[0] = key;
-    values[0] = value;
-
-    const n = this._size;
-
-    {
-      let lo = n > 1 ? keys[1]! : 0xffffffff;
-      if (n > 2 && keys[2]! < lo) lo = keys[2]!;
-      if (n > 3 && keys[3]! < lo) lo = keys[3]!;
-      if (n > 4 && keys[4]! < lo) lo = keys[4]!;
-      if (key <= lo) return minVal;
-    }
-
-    let i = 0;
-    const limit = (n - 5) >> 2;
-
-    while (i <= limit) {
-      const base = (i << 2) + 1;
-      let mc = base,
-        mk = keys[base]!;
-      let ck = keys[base + 1]!;
-      if (ck < mk) {
-        mk = ck;
-        mc = base + 1;
-      }
-      ck = keys[base + 2]!;
-      if (ck < mk) {
-        mk = ck;
-        mc = base + 2;
-      }
-      ck = keys[base + 3]!;
-      if (ck < mk) {
-        mk = ck;
-        mc = base + 3;
-      }
-      if (key <= mk) break;
-      keys[i] = mk;
-      values[i] = values[mc]!;
-      i = mc;
-    }
-
-    while (true) {
-      const base = (i << 2) + 1;
-      if (base >= n) break;
-      let mc = base,
-        mk = keys[base]!;
-      const c1 = base + 1;
-      if (c1 < n && keys[c1]! < mk) {
-        mk = keys[c1]!;
-        mc = c1;
-      }
-      const c2 = base + 2;
-      if (c2 < n && keys[c2]! < mk) {
-        mk = keys[c2]!;
-        mc = c2;
-      }
-      const c3 = base + 3;
-      if (c3 < n && keys[c3]! < mk) {
-        mk = keys[c3]!;
-        mc = c3;
-      }
-      if (key <= mk) break;
-      keys[i] = mk;
-      values[i] = values[mc]!;
-      i = mc;
-    }
-
-    keys[i] = key;
-    values[i] = value;
-    return minVal;
-  }
-
-  clear(): void {
-    this._size = 0;
-  }
-
-  private grow(): void {
-    const oc = this.capacity;
-    const nc = oc + (oc >> 1) + 16;
-    const nk = new Uint32Array(nc);
-    nk.set(this.keys);
-    this.keys = nk;
-    const nv = new Uint32Array(nc);
-    nv.set(this.values);
-    this.values = nv;
     this.capacity = nc;
   }
 }

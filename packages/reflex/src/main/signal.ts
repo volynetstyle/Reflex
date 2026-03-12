@@ -81,7 +81,12 @@ export const signal = <T>(initialValue: T): Signal<T> => {
   return undefined as any;
 };
 
-export const realtime = <T>(value: T): Realtime<T> => {
+type RealtimeSet<T> = any;
+type RealtimeMap<K, V> = any;
+
+export const realtime = <T, K>(
+  value: T,
+): RealtimeSet<T> | RealtimeMap<T, K> => {
   return undefined as any;
 };
 

@@ -45,7 +45,7 @@ describe(" QuaternaryHeap Benchmarks", () => {
       const heap = new  QuaternaryHeap<string>();
 
       for (let i = 0; i < WIDTH; i++) {
-        heap.insert(`item${i}`, 1);
+        heap.insert(`item${i}`, i % 2047);
       }
     });
 
@@ -53,7 +53,7 @@ describe(" QuaternaryHeap Benchmarks", () => {
       const heap = new  QuaternaryHeap<string>();
 
       for (let i = 0; i < WIDTH; i++) {
-        heap.insert(`item${i}`, 1);
+        heap.insert(`item${i}`, i % 2047);
       }
 
       while (!heap.isEmpty()) {
@@ -65,12 +65,12 @@ describe(" QuaternaryHeap Benchmarks", () => {
       const heap = new  QuaternaryHeap<string>();
 
       for (let i = 0; i < WIDTH; i++) {
-        heap.insert(`item${i}`, 1);
+        heap.insert(`item${i}`, 2046);
       }
 
       for (let i = 0; i < WIDTH; i++) {
         heap.popMin();
-        heap.insert(`x${i}`, 1);
+        heap.insert(`x${i}`, 1038);
       }
     });
   });

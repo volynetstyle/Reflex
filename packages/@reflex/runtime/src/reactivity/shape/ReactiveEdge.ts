@@ -10,7 +10,9 @@ class ReactiveEdge implements GraphEdge {
   from: ReactiveNode;
   /** Observer node (the node that has this edge in its IN-list) */
   to: ReactiveNode;
-  
+
+  v: number;
+
   /** Previous edge in the source's OUT-list (or null if this is the first) */
   prevOut: ReactiveEdge | null;
   /** Next edge in the source's OUT-list (or null if this is the last) */
@@ -42,6 +44,7 @@ class ReactiveEdge implements GraphEdge {
   ) {
     this.from = from;
     this.to = to;
+    this.v = 0;
     this.prevOut = prevOut;
     this.nextOut = nextOut;
     this.prevIn = prevIn;

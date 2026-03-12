@@ -61,8 +61,7 @@ type ComputeFn<T> = ((previous?: T) => T) | null;
  *   No getters/setters are used to avoid deoptimization.
  */
 class ReactiveNode<T = any> implements Reactivable, GraphNode {
-  changedAt: number = 0;
-
+  v = 0;
   /**
    * Runtime identifier or scheduler slot.
    */
@@ -85,6 +84,7 @@ class ReactiveNode<T = any> implements Reactivable, GraphNode {
    * Means topological rank and -1 is out of topology order.
    */
   rank: number = INVALID_RANK;
+  dynamicRank: number = INVALID_RANK;
 
   /**
    * Incoming dependency edges.
@@ -122,6 +122,33 @@ class ReactiveNode<T = any> implements Reactivable, GraphNode {
     this.compute = compute;
     this.lifecycle = lifecycle;
   }
+}
+
+interface ConditionalNode<T> {
+  v: number;
+  payload: T;
+  condition: ReactiveNode;
+  thenBranch: ReactiveNode; // всегда отслеживается
+  elseBranch: ReactiveNode; // всегда отслеживается
+  active: "then" | "else";
+}
+
+function recomputeConditional<T>(node: ConditionalNode<T>): boolean {
+  const cond = node.condition.payload as boolean;
+  const newActive = cond ? "then" : "else";
+
+  if (newActive === node.active) {
+    // Ветка не изменилась — применяем derivative к активной ветке
+    const branch = cond ? node.thenBranch : node.elseBranch;
+    if (branch.v === node.v) return false;
+    node.payload = branch.payload;
+    node.v = branch.v;
+    return true; // O(1) — DCG не перестраивается
+  }
+  // Смена ветки — O(1) pointer swap
+  node.active = newActive;
+  node.payload = (cond ? node.thenBranch : node.elseBranch).payload;
+  return true;
 }
 
 export type { Reactivable, ReactiveNode };

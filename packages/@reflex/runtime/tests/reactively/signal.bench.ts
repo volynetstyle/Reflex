@@ -1,8 +1,4 @@
 import { bench, describe, expect } from "vitest";
-import { readConsumer, readProducer, writeProducer } from "../../dist/esm";
-import ReactiveNode from "../../src/reactivity/shape/ReactiveNode";
-import { ReactiveNodeKind } from "../../src/reactivity/shape";
-
 
 // ─── core (без изменений) ─────────────────────────────────────────────────────
 
@@ -252,7 +248,7 @@ function validate(label: string, actual: unknown, expected: number): void {
     throw new Error(
       `[VALIDATION FAILED] ${label}\n` +
         `  node returned ${actual} — это не должно случиться если узел был прочитан до validate.\n` +
-        `  Проверь что fn() вызывается до передачи значения в validate.`
+        `  Проверь что fn() вызывается до передачи значения в validate.`,
     );
   }
   if (actual !== expected) {
@@ -260,7 +256,7 @@ function validate(label: string, actual: unknown, expected: number): void {
       `[VALIDATION FAILED] ${label}\n` +
         `  expected : ${expected}\n` +
         `  actual   : ${actual}\n` +
-        `  diff     : ${(actual as number) - expected}`
+        `  diff     : ${(actual as number) - expected}`,
     );
   }
 }
@@ -345,7 +341,10 @@ describe("Wide graphs", () => {
     for (const n of nodes) n();
 
     // ── Validation ────────────────────────────────────────────────────────
-    const primes25 = [2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97];
+    const primes25 = [
+      2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67,
+      71, 73, 79, 83, 89, 97,
+    ];
     for (let i = 0; i < SOURCES; i++) sources[i][1](primes25[i]);
     const results25 = nodes.map((n) => n()); // материализуем + собираем
     for (let i = 0; i < NODES; i++) {
@@ -469,7 +468,7 @@ describe("Square Graph", () => {
     const readerResults = readers.map((r) => r()); // материализуем + собираем
 
     const layer0Sum = Array.from({ length: WIDTH }, (_, i) =>
-      i % SOURCES === 0 ? SRC_A : SRC_B
+      i % SOURCES === 0 ? SRC_A : SRC_B,
     ).reduce((a, b) => a + b, 0);
     const expectedFinalNode = layer0Sum * Math.pow(WIDTH, LAYERS - 2);
 
@@ -554,7 +553,11 @@ describe("Dynamic Graphs", () => {
     for (let i = 0; i < SOURCES; i++) sources[i][1](testValsEven[i]);
     const resultsEven = readers.map((r) => r()); // материализуем + собираем
     for (let ri = 0; ri < readCount; ri++) {
-      validate(`Dyn/20% reader[${ri}] even`, resultsEven[ri], expectedForNode(testValsEven, ri));
+      validate(
+        `Dyn/20% reader[${ri}] even`,
+        resultsEven[ri],
+        expectedForNode(testValsEven, ri),
+      );
     }
 
     // Odd branch (source[0] нечётный) — проверяем что динамические deps меняются
@@ -562,13 +565,19 @@ describe("Dynamic Graphs", () => {
     for (let i = 0; i < SOURCES; i++) sources[i][1](testValsOdd[i]);
     const resultsOdd = readers.map((r) => r()); // материализуем + собираем
     for (let ri = 0; ri < readCount; ri++) {
-      validate(`Dyn/20% reader[${ri}] odd`, resultsOdd[ri], expectedForNode(testValsOdd, ri));
+      validate(
+        `Dyn/20% reader[${ri}] odd`,
+        resultsOdd[ri],
+        expectedForNode(testValsOdd, ri),
+      );
     }
 
     // Restore
     for (const s of sources) s[1](0);
     for (const r of readers) r();
-    console.log("✓ 25% Dynamic 100x15, 6 sources, read 20% — validation passed (both branches)");
+    console.log(
+      "✓ 25% Dynamic 100x15, 6 sources, read 20% — validation passed (both branches)",
+    );
 
     let tick = 0;
     bench("25% Dynamic 100x15, 6 sources, read 20%", () => {
@@ -637,7 +646,9 @@ describe("Dynamic Graphs", () => {
     // Restore
     for (const s of sources) s[1](0);
     for (const n of nodes) n();
-    console.log("✓ 25% Dynamic 100x15, 6 sources (read 100%) — validation passed");
+    console.log(
+      "✓ 25% Dynamic 100x15, 6 sources (read 100%) — validation passed",
+    );
 
     let tick = 0;
     bench("25% Dynamic 100x15, 6 sources", () => {

@@ -12,15 +12,7 @@ const PULL_STACK_CAPACITY = 256;
 class ReactiveRuntime {
   readonly id: string;
 
-  epoch = 0;
-
-  currentEpoch() {
-    return this.epoch;
-  }
-
-  nextEpoch() {
-    return ++this.epoch;
-  }
+  epoch: number = 0;
 
   // Computation context: stack for nested tracking support
   currentComputation: ReactiveNode | null;
@@ -48,6 +40,14 @@ class ReactiveRuntime {
       PROPAGATION_STACK_CAPACITY,
     );
     this.effectQueue = new AppendQueue();
+  }
+
+  currentEpoch() {
+    return this.epoch;
+  }
+
+  nextEpoch() {
+    return ++this.epoch;
   }
 
   beginComputation(node: ReactiveNode): ReactiveNode | null {

@@ -24,6 +24,10 @@ export const signal = <T>(initialValue: T) => {
   return [s.get, s.set] as const;
 };
 
+export const computed = <T>(fn: () => T) => {
+  const c = new Computed<T>(fn);
+  return c.get;
+};
 class Computed<T> {
   node: ReactiveNode<T>;
 
@@ -34,10 +38,6 @@ class Computed<T> {
   get = () => readConsumer(this.node);
 }
 
-export const computed = <T>(fn: () => T) => {
-  const c = new Computed<T>(fn);
-  return c.get;
-};
 
 type CleanupReturn = () => void;
 type EffectFn = () => void | CleanupReturn;
