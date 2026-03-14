@@ -28,6 +28,6 @@ const next_version = CyclicRing32.inc;
  * - node.runtime := valid
  */
 export function changePayload<T>(node: ReactiveNode<T>, next: T) {
-  node.changedAt = runtime.nextEpoch();
   node.payload = next;
+  node.v = next_version(node.v);
 }

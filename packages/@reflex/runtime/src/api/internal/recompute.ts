@@ -1,10 +1,14 @@
+import { ReactiveNode, CLEAR_INVALID } from "../../reactivity/shape";
+import { clearDependencies } from "../../reactivity/shape/methods/connect";
 import runtime from "../../runtime";
-import { CLEAR_INVALID, ReactiveNode } from "../shape";
-import { clearDependencies } from "../shape/methods/connect";
 import { commitConsumer } from "./commitConsumer";
 
-export function recompute(consumer: ReactiveNode): boolean {
+function reconcileDependencies(consumer: ReactiveNode) {
   clearDependencies(consumer);
+}
+
+export function recompute(consumer: ReactiveNode): boolean {
+  reconcileDependencies(consumer);
 
   let changed: boolean = false;
 
@@ -12,7 +16,9 @@ export function recompute(consumer: ReactiveNode): boolean {
   const current = runtime.beginComputation(consumer);
 
   try {
-    changed = commitConsumer(consumer, compute());
+    const computedValue = compute();
+
+    changed = commitConsumer(consumer, computedValue);
   } catch (err) {
     changed = commitConsumer(consumer, undefined, err);
   } finally {

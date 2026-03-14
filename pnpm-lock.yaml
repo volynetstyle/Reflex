@@ -7,19 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      '@rollup/plugin-node-resolve':
-        specifier: ^16.0.3
-        version: 16.0.3(rollup@4.54.0)
-      '@rollup/plugin-replace':
-        specifier: ^6.0.3
-        version: 6.0.3(rollup@4.54.0)
-      '@rollup/plugin-terser':
-        specifier: ^0.4.4
-        version: 0.4.4(rollup@4.54.0)
-      rollup:
-        specifier: ^4.54.0
-        version: 4.54.0
     devDependencies:
       0x:
         specifier: ^6.0.0
@@ -30,6 +17,15 @@ importers:
       '@eslint/js':
         specifier: ^9.0.0
         version: 9.39.1
+      '@rollup/plugin-node-resolve':
+        specifier: ^16.0.3
+        version: 16.0.3(rollup@4.54.0)
+      '@rollup/plugin-replace':
+        specifier: ^6.0.3
+        version: 6.0.3(rollup@4.54.0)
+      '@rollup/plugin-terser':
+        specifier: ^0.4.4
+        version: 0.4.4(rollup@4.54.0)
       eslint:
         specifier: ^9.0.0
         version: 9.39.1
@@ -45,6 +41,9 @@ importers:
       prettier:
         specifier: ^3.3.0
         version: 3.6.2
+      rollup:
+        specifier: ^4.54.0
+        version: 4.54.0
       rollup-plugin-const-enum:
         specifier: ^1.1.5
         version: 1.1.5
@@ -77,6 +76,9 @@ importers:
       '@reflex/core':
         specifier: workspace:*
         version: link:../core
+      '@solidjs/signals':
+        specifier: ^0.12.0
+        version: 0.12.0
 
   packages/reflex:
     dependencies:
@@ -564,6 +566,9 @@ packages:
     resolution: {integrity: sha512-hYT5d3YNdSh3mbCU1gwQyPgQd3T2ne0A3KG8KSBdav5TiBg6eInVmV+TeR5uHufiIgSFg0XsOWGW5/RhNcSvPg==}
     cpu: [x64]
     os: [win32]
+
+  '@solidjs/signals@0.12.0':
+    resolution: {integrity: sha512-4yeBvMCTCCPZZ1G/x0XUVg82tgC/gLikPhl91cSdGvZXMLQUEHO9Ugbca0MfICcHHJXySieFyZrMNlQ5rWcGyQ==}
 
   '@standard-schema/spec@1.0.0':
     resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}
@@ -2998,6 +3003,8 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.54.0':
     optional: true
+
+  '@solidjs/signals@0.12.0': {}
 
   '@standard-schema/spec@1.0.0': {}
 

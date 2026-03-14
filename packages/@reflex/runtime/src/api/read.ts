@@ -13,11 +13,16 @@ import { pullAndRecompute } from "../reactivity/walkers/pullAndRecompute";
 export function readProducer<T>(node: ReactiveNode<T>): T {
   establish_dependencies_add(node);
 
-  return <T>node.payload;
+  return node.payload;
+}
+
+const enum ConsumerMode {
+  LAZY = 1 << 0,
+  EAGER = 1 << 2,
 }
 
 /**
- * Pull-lazy read for computed nodes.
+ * Pull-lazy or eager read for computed nodes.
  *
  * Phase 1 — fast path: node is already Valid → return cached payload.
  * Phase 2 — pull traversal: walk up the graph marking ancestors VISITED,
@@ -27,14 +32,25 @@ export function readProducer<T>(node: ReactiveNode<T>): T {
  *            we skip propagate — no downstream invalidation needed.
  */
 // @__INLINE__
-export function readConsumer<T>(node: ReactiveNode<T>): T {
-  establish_dependencies_add(node);
-
+export function readConsumer<T>(
+  node: ReactiveNode<T>,
+  mode: ConsumerMode = ConsumerMode.LAZY,
+): T {
   if (!(node.runtime & INVALID)) {
-    return <T>node.payload;
+    return node.payload;
   } // fast path
+
+  establish_dependencies_add(node);
 
   pullAndRecompute(node); // фаза 1 + фаза 2 вместо recuperate + recompute
 
-  return <T>node.payload;
+  return node.payload;
 }
+
+export const readRecycer = (node: ReactiveNode) => {
+  const scope = node.lifecycle;
+
+  if (!scope) {
+    throw new Error("Effect must exist on scope or create own");
+  }
+};

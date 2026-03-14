@@ -1,18 +1,30 @@
 import {
   linkSourceToObserverUnsafe,
-  unlinkAllObserversUnsafe,
   unlinkAllSourcesUnsafe,
+  unlinkEdgeUnsafe,
 } from "@reflex/core";
 import ReactiveNode from "../ReactiveNode";
 import { ReactiveEdge } from "../ReactiveEdge";
 import runtime from "../../../runtime";
+import { insertPeer, removePeer } from "../../walkers/order_maintenance";
 
 export function connect(producer: ReactiveNode, consumer: ReactiveNode) {
+  insertPeer(producer, consumer);
+
   return linkSourceToObserverUnsafe(producer, consumer, ReactiveEdge);
 }
 
 export function clearSubscribers(producer: ReactiveNode) {
-  unlinkAllObserversUnsafe(producer);
+  let edge = producer.firstOut;
+
+  while (edge !== null) {
+    const next = edge.nextOut;
+
+    removePeer(edge.to);
+    unlinkEdgeUnsafe(edge);
+
+    edge = next;
+  }
 }
 
 export function clearDependencies(consumer: ReactiveNode) {

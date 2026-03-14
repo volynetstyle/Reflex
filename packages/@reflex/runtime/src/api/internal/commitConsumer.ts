@@ -1,8 +1,9 @@
-import { CLEAR_INVALID, ReactiveNode, ReactiveNodeState } from "../shape";
-import { changePayload } from "../shape/ReactivePayload";
 
 // commit = state transition
 // validation = strategy
+
+import { ReactiveNode, CLEAR_INVALID } from "../../reactivity/shape";
+import { changePayload } from "../../reactivity/shape/ReactivePayload";
 
 /**
  * Store the new value and decide whether downstream nodes must be invalidated.

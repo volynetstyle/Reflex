@@ -15,25 +15,19 @@ export const enum ReactiveNodeKind {
  * Dirty -> Computing,
  * Computing -> Clean.
  *
- * Valid      — значение консистентно
- * Invalid    — возможно устарело
- * Obsolete   — точно устарело
- * Visited    — используется в pull traversal
- * Queued     — в scheduler
- * Failed     — ошибка вычисления
+ *Invalid (1<<0) — джерело повідомило про зміну через push, але власне значення ще не перевірялось
+ *Obsolete (1<<1) — pull-перевірка підтвердила: max(src.version) > maxSrcVer, recompute обов'язковий
+ *Ordered (1<<2) — вузол стоїть у topo list і його order label актуальний після останнього repair
+ *Invalid | Obsolete = 0b011 — обидва встановлені після forceful invalidation (напр. динамічний connect)
  */
 export const enum ReactiveNodeState {
-  Valid = 0,
   Invalid = 1 << 0, // dependency changed
   Obsolete = 1 << 1, // definitely stale
-  Visited = 1 << 2,
-  Queued = 1 << 3,
-  OnStack = 1 << 4,
+  Ordered = 1 << 2,
 }
 
+export const INITIAL = ReactiveNodeState.Invalid | ~ReactiveNodeState.Ordered;
 /** Node needs recomputation (either possibly or definitely stale) */
 export const INVALID = ReactiveNodeState.Invalid | ReactiveNodeState.Obsolete;
 /** Clear both staleness bits */
 export const CLEAR_INVALID = ~INVALID;
-/** Clear visited bit after pull traversal */
-export const CLEAR_VISITED = ~ReactiveNodeState.Visited;

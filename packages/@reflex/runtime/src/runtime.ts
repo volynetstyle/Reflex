@@ -17,6 +17,8 @@ class ReactiveRuntime {
   // Computation context: stack for nested tracking support
   currentComputation: ReactiveNode | null;
 
+  startPropagation: ReactiveNode | null = null;
+
   // Propagation stack: pre-allocated, manual top pointer
   private readonly _propagationStack: ReactiveNode[];
   private _propagationTop: number;
@@ -92,29 +94,13 @@ class ReactiveRuntime {
     return 0 < this._pullTop;
   }
 
-  enqueue(parent: ReactiveNode, node: ReactiveNode): boolean {
-    const pr = parent.rank;
-    let nr = node.rank;
-
-    if (((pr - nr) | 0) >= 0) {
-      nr = (pr + 1) >>> 0;
-      node.rank = nr;
-    }
-
-    const s = node.runtime;
-
-    if (s & ReactiveNodeState.Queued) {
-      return false;
-    }
-
-    node.runtime = s | ReactiveNodeState.Queued;
-
+  enqueue(node: ReactiveNode): boolean {
     const kind =
       node.meta & (ReactiveNodeKind.Consumer | ReactiveNodeKind.Recycler);
 
     switch (kind) {
       case ReactiveNodeKind.Consumer:
-        this.computationQueue.insert(node, nr);
+        this.computationQueue.insert(node, 1);
         return true;
 
       case ReactiveNodeKind.Recycler:

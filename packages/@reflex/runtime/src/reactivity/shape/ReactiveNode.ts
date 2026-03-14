@@ -1,10 +1,10 @@
 import { INVALID_RANK, type GraphNode, type OwnershipNode } from "@reflex/core";
 import { Reactivable } from "./Reactivable";
 import { ReactiveEdge } from "./ReactiveEdge";
-import { Cyclic32Int } from "../../execution/algebra";
-import { Byte32Int, ReactiveNodeState } from "./ReactiveMeta";
+import { Byte32Int, INITIAL } from "./ReactiveMeta";
+import { Int64 } from "./methods/integer";
 
-type ComputeFn<T> = ((previous?: T) => T) | null;
+type ComputeFn<T> = ((previous?: T) => T) | (() => T) | null;
 
 /**
  * ReactiveNode
@@ -61,11 +61,12 @@ type ComputeFn<T> = ((previous?: T) => T) | null;
  *   No getters/setters are used to avoid deoptimization.
  */
 class ReactiveNode<T = any> implements Reactivable, GraphNode {
-  v = 0;
+  v: number = 0;
   /**
    * Runtime identifier or scheduler slot.
+   * By default need to check but not exactly goes to borders and stops early
    */
-  runtime: Byte32Int = ReactiveNodeState.Obsolete;
+  runtime: Byte32Int = INITIAL;
 
   /**
    * Bitmask metadata.
@@ -83,8 +84,9 @@ class ReactiveNode<T = any> implements Reactivable, GraphNode {
   /**
    * Means topological rank and -1 is out of topology order.
    */
-  rank: number = INVALID_RANK;
-  dynamicRank: number = INVALID_RANK;
+  rank: Int64 = INVALID_RANK;
+  nextPeer: ReactiveNode | null = null;
+  prevPeer: ReactiveNode | null = null;
 
   /**
    * Incoming dependency edges.
@@ -122,33 +124,6 @@ class ReactiveNode<T = any> implements Reactivable, GraphNode {
     this.compute = compute;
     this.lifecycle = lifecycle;
   }
-}
-
-interface ConditionalNode<T> {
-  v: number;
-  payload: T;
-  condition: ReactiveNode;
-  thenBranch: ReactiveNode; // всегда отслеживается
-  elseBranch: ReactiveNode; // всегда отслеживается
-  active: "then" | "else";
-}
-
-function recomputeConditional<T>(node: ConditionalNode<T>): boolean {
-  const cond = node.condition.payload as boolean;
-  const newActive = cond ? "then" : "else";
-
-  if (newActive === node.active) {
-    // Ветка не изменилась — применяем derivative к активной ветке
-    const branch = cond ? node.thenBranch : node.elseBranch;
-    if (branch.v === node.v) return false;
-    node.payload = branch.payload;
-    node.v = branch.v;
-    return true; // O(1) — DCG не перестраивается
-  }
-  // Смена ветки — O(1) pointer swap
-  node.active = newActive;
-  node.payload = (cond ? node.thenBranch : node.elseBranch).payload;
-  return true;
 }
 
 export type { Reactivable, ReactiveNode };

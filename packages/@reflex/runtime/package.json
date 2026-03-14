@@ -36,6 +36,7 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@reflex/core": "workspace:*"
+    "@reflex/core": "workspace:*",
+    "@solidjs/signals": "^0.12.0"
   }
 }
