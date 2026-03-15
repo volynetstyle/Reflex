@@ -19,8 +19,13 @@ export class ReactiveNode {
   changedAt: number = 0;
   computedAt: number = 0;
   state: number = ReactiveNodeState.Ordered;
+  
   prev: ReactiveNode | null = null;
   next: ReactiveNode | null = null;
+
+  dirtyPrev: ReactiveNode | null = null;
+  dirtyNext: ReactiveNode| null = null;
+ 
   order: number = 0;
   firstOut: ReactiveEdge | null = null;
   firstIn: ReactiveEdge | null = null;

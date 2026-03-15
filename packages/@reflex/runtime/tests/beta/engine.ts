@@ -144,7 +144,8 @@ export function ensureFresh(
     if (e.from.isDirty) ensureFresh(ctx, e.from, list);
   }
 
-  // Pull-перевірка: якщо джерела справді змінились — recompute
+  // Pull-перевірка: якщо джерела справд
+  // ь — recompute
   if (needsUpdate(node)) {
     recompute(ctx, node, list);
   } else {

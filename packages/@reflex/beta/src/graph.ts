@@ -1,5 +1,5 @@
 import { ReactiveNode, ReactiveEdge, ReactiveNodeState } from "./core.js";
-import { OrderList } from "./order.js";
+//import { OrderList } from "./order.js";
 
 // ─── link / unlink ────────────────────────────────────────────────────────────
 
@@ -43,7 +43,7 @@ export function unlinkEdge(edge: ReactiveEdge): void {
 export function connect(
   parent: ReactiveNode,
   child: ReactiveNode,
-  list: OrderList,
+  //list: OrderList,
 ): ReactiveEdge {
   // перевірити чи ребро вже є
   for (let e = child.firstIn; e; e = e.nextIn) {
@@ -52,9 +52,9 @@ export function connect(
 
   const edge = linkEdge(parent, child);
 
-  if (!list.before(parent, child)) {
-    repairTopology(parent, child, list);
-  }
+  // if (!list.before(parent, child)) {
+  //   repairTopology(parent, child, list);
+  // }
 
   return edge;
 }
@@ -68,26 +68,26 @@ export function disconnect(parent: ReactiveNode, child: ReactiveNode): void {
   }
 }
 
-// ─── topology repair (forward scan, без DFS) ─────────────────────────────────
-// O(span) де span = відстань між child і parent у topo list
+// // ─── topology repair (forward scan, без DFS) ─────────────────────────────────
+// // O(span) де span = відстань між child і parent у topo list
 
-export function repairTopology(
-  parent: ReactiveNode,
-  child: ReactiveNode,
-  list: OrderList,
-): void {
-  const threshold = parent.order;
-  const toMove: ReactiveNode[] = [];
+// export function repairTopology(
+//   parent: ReactiveNode,
+//   child: ReactiveNode,
+//   list: OrderList,
+// ): void {
+//   const threshold = parent.order;
+//   const toMove: ReactiveNode[] = [];
 
-  let cur: ReactiveNode | null = child;
-  while (cur && cur.order <= threshold) {
-    toMove.push(cur);
-    cur = cur.next;
-  }
+//   let cur: ReactiveNode | null = child;
+//   while (cur && cur.order <= threshold) {
+//     toMove.push(cur);
+//     cur = cur.next;
+//   }
 
-  let insertAfter = parent;
-  for (const node of toMove) {
-    list.moveAfter(node, insertAfter);
-    insertAfter = node;
-  }
-}
+//   let insertAfter = parent;
+//   for (const node of toMove) {
+//     list.moveAfter(node, insertAfter);
+//     insertAfter = node;
+//   }
+// }
