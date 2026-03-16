@@ -6,12 +6,13 @@ import {
   CLEANUP_STATE,
   hasState,
   isDirtyState,
+  isDisposedState,
   isEffectKind,
   isSignalKind,
   isTrackingState,
 } from "./core.js";
 //import { OrderList } from "./order.js";
-import { unlinkFromSource } from "./graph.js";
+import { unlinkAllSources, unlinkFromSource } from "./graph.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // trackingStable: пропускаємо Set ops коли граф стабільний.
@@ -26,6 +27,7 @@ import { unlinkFromSource } from "./graph.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function markInvalid(ctx: EngineContext, node: ReactiveNode): void {
+  if (isDisposedState(node.state)) return;
   if (hasState(node.state, ReactiveNodeState.Invalid)) return;
 
   const stack = ctx.trawelList;
@@ -37,6 +39,7 @@ export function markInvalid(ctx: EngineContext, node: ReactiveNode): void {
   while (top) {
     const n = stack[--top]!;
 
+    if (isDisposedState(n.state)) continue;
     if (hasState(n.state, ReactiveNodeState.Invalid)) continue;
 
     n.state |= ReactiveNodeState.Invalid;
@@ -146,6 +149,44 @@ export function recompute(ctx: EngineContext, node: ReactiveNode): boolean {
   }
 
   return commitComputedValue(ctx, node, prevValue, newValue);
+}
+
+export function runEffect(ctx: EngineContext, node: ReactiveNode): void {
+  const compute = node.compute;
+  if (!compute || isDisposedState(node.state)) return;
+
+  const prevCleanup = node.cleanup;
+  node.cleanup = null;
+
+  prevCleanup?.();
+
+  const stable = isTrackingState(node.state);
+  ++node.s;
+
+  const result = invokeCompute(ctx, node, compute);
+
+  if (!stable || !isTrackingState(node.state)) {
+    cleanupStaleSources(node);
+  }
+
+  node.v = ctx.getEpoch();
+  node.state &= CLEANUP_STATE;
+
+  if (typeof result === "function") {
+    node.cleanup = result as () => void;
+  }
+}
+
+export function disposeEffect(node: ReactiveNode): void {
+  if (isDisposedState(node.state)) return;
+
+  node.state |= ReactiveNodeState.Disposed;
+
+  const cleanup = node.cleanup;
+  node.cleanup = null;
+  cleanup?.();
+
+  unlinkAllSources(node);
 }
 
 export function ensureFresh(ctx: EngineContext, node: ReactiveNode): void {

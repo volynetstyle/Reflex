@@ -4,9 +4,10 @@ import {
   ReactiveNodeKind,
   EngineContext,
   isDirtyState,
+  isDisposedState,
   type EngineHooks,
 } from "./core.js";
-import { ensureFresh, markInvalid } from "./engine.js";
+import { disposeEffect, ensureFresh, markInvalid, runEffect } from "./engine.js";
 import { trackRead } from "./tracking.js";
 
 export interface Signal<T> {
@@ -39,6 +40,8 @@ export interface Runtime {
   // Returns a pure lazy derived value. It is not an owner and does not need disposal.
   computed<T>(fn: () => T): Computed<T>;
   memo<T>(fn: () => T): Computed<T>;
+  effect(fn: () => void | (() => void)): EffectScope;
+  flush(): void;
   batchWrite(writes: ReadonlyArray<BatchWriteEntry>): void;
   readonly ctx: EngineContext;
 }
@@ -80,9 +83,19 @@ class SignalImpl<T> implements Signal<T> {
 class RuntimeImpl implements Runtime {
   readonly ctx: EngineContext;
   private readonly nodeWrites: Array<[ReactiveNode, unknown]> = [];
+  private readonly pendingEffects: ReactiveNode[] = [];
+  private readonly queuedEffects = new Set<ReactiveNode>();
 
   constructor(options?: RuntimeOptions) {
-    this.ctx = new EngineContext(options?.hooks);
+    const userHooks = options?.hooks;
+
+    this.ctx = new EngineContext({
+      ...userHooks,
+      onEffectInvalidated: (node) => {
+        this.enqueueEffect(node);
+        userHooks?.onEffectInvalidated?.(node);
+      },
+    });
   }
 
   signal<T>(initialValue: T): Signal<T> {
@@ -124,6 +137,40 @@ class RuntimeImpl implements Runtime {
     return computedNode;
   }
 
+  effect(fn: () => void | (() => void)): EffectScope {
+    const node = new ReactiveNode(
+      undefined,
+      fn,
+      ReactiveNodeState.Invalid,
+      ReactiveNodeKind.Effect,
+    );
+
+    runEffect(this.ctx, node);
+
+    return {
+      node,
+      dispose: () => {
+        this.queuedEffects.delete(node);
+        disposeEffect(node);
+      },
+    };
+  }
+
+  flush(): void {
+    const { pendingEffects, queuedEffects, ctx } = this;
+
+    while (pendingEffects.length > 0) {
+      const node = pendingEffects.shift()!;
+      queuedEffects.delete(node);
+
+      if (isDisposedState(node.state) || isDirtyState(node.state) === false) {
+        continue;
+      }
+
+      runEffect(ctx, node);
+    }
+  }
+
   batchWrite(writes: ReadonlyArray<BatchWriteEntry>): void {
     const count = writes.length;
     const nodeWrites = this.nodeWrites;
@@ -154,6 +201,13 @@ class RuntimeImpl implements Runtime {
         markInvalid(this.ctx, e.to);
       }
     }
+  }
+
+  private enqueueEffect(node: ReactiveNode): void {
+    if (this.queuedEffects.has(node) || isDisposedState(node.state)) return;
+
+    this.queuedEffects.add(node);
+    this.pendingEffects.push(node);
   }
 }
 

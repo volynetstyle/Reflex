@@ -18,6 +18,8 @@ export const enum ReactiveNodeState {
   Ordered = 4,
   // The last tracking pass reused all current dependencies without churn.
   Tracking = 8,
+  // Node was explicitly disposed and must not participate in updates.
+  Disposed = 16,
 }
 
 export const DIRTY_STATE =
@@ -49,6 +51,10 @@ export function isDirtyState(state: number): boolean {
 
 export function isTrackingState(state: number): boolean {
   return hasState(state, TRACKING_STATE);
+}
+
+export function isDisposedState(state: number): boolean {
+  return hasState(state, ReactiveNodeState.Disposed);
 }
 
 export function isSignalKind(kind: ReactiveNodeKind): boolean {
@@ -85,19 +91,21 @@ export class ReactiveNode {
   t: number;
   // Epoch when this node was last recomputed or confirmed fresh.
   v: number;
-  // Tracking epoch for dependency retention during recompute.
-  s: number;
-
-  // Current cached value for this node.
-  value: unknown;
-  // Derivation function for computeds/effects. Null for plain signals.
-  compute: (() => unknown) | null;
-  // Reserved for owner cleanup. Only meaningful for effect-like nodes.
-  cleanup: (() => void) | null;
-  readonly kind: ReactiveNodeKind;
 
   // Bitset of ReactiveNodeState flags.
   state: number;
+
+  // Derivation function for computeds/effects. Null for plain signals.
+  compute: (() => unknown) | null;
+  // Current cached value for this node.
+  value: unknown;
+
+  // Tracking epoch for dependency retention during recompute.
+  s: number;
+
+  // Reserved for owner cleanup. Only meaningful for effect-like nodes.
+  cleanup: (() => void) | null;
+  readonly kind: ReactiveNodeKind;
 
   // Outbound dependents: nodes that read from this node.
   firstOut: ReactiveEdge | null;

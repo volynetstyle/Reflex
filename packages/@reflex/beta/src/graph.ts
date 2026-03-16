@@ -52,6 +52,19 @@ export function unlinkFromSource(edge: ReactiveEdge): void {
   }
 }
 
+export function unlinkAllSources(node: ReactiveNode): void {
+  let edge = node.firstIn;
+  node.firstIn = null;
+
+  while (edge) {
+    const next = edge.nextIn;
+    unlinkFromSource(edge);
+    edge.nextIn = null;
+    edge.nextOut = null;
+    edge = next;
+  }
+}
+
 // ─── connect з topo repair ────────────────────────────────────────────────────
 
 export function connect(

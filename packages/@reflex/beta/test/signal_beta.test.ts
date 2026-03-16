@@ -383,6 +383,131 @@ describe("Reactive system — core invariants & behaviors", () => {
     });
   });
 
+  describe("Effects", () => {
+    it("initial run", () => {
+      const rt = createRuntime();
+      const source = rt.signal(1);
+      const spy = vi.fn(() => {
+        source.read();
+      });
+
+      const effect = rt.effect(spy);
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(effect.node.kind).toBe(ReactiveNodeKind.Effect);
+      expect(effect.node.state & ReactiveNodeState.Invalid).toBeFalsy();
+      expect(countIncoming(effect.node)).toBe(1);
+    });
+
+    it("re-run after signal write", () => {
+      const rt = createRuntime();
+      const source = rt.signal(1);
+      const spy = vi.fn(() => {
+        source.read();
+      });
+
+      rt.effect(spy);
+      expect(spy).toHaveBeenCalledTimes(1);
+
+      source.write(2);
+      expect(spy).toHaveBeenCalledTimes(1);
+
+      rt.flush();
+      expect(spy).toHaveBeenCalledTimes(2);
+    });
+
+    it("dedupe before flush", () => {
+      const rt = createRuntime();
+      const source = rt.signal(1);
+      const spy = vi.fn(() => {
+        source.read();
+      });
+
+      rt.effect(spy);
+      spy.mockClear();
+
+      source.write(2);
+      source.write(3);
+      source.write(4);
+
+      rt.flush();
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(source.read()).toBe(4);
+    });
+
+    it("cleanup before rerun", () => {
+      const rt = createRuntime();
+      const source = rt.signal(1);
+      const cleanup = vi.fn();
+      const spy = vi.fn(() => {
+        source.read();
+        return cleanup;
+      });
+
+      rt.effect(spy);
+      expect(cleanup).not.toHaveBeenCalled();
+
+      source.write(2);
+      rt.flush();
+
+      expect(cleanup).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2);
+    });
+
+    it("cleanup on dispose", () => {
+      const rt = createRuntime();
+      const source = rt.signal(1);
+      const cleanup = vi.fn();
+      const spy = vi.fn(() => {
+        source.read();
+        return cleanup;
+      });
+
+      const effect = rt.effect(spy);
+
+      effect.dispose();
+      expect(cleanup).toHaveBeenCalledTimes(1);
+      expect(effect.node.state & ReactiveNodeState.Disposed).toBeTruthy();
+      expect(countIncoming(effect.node)).toBe(0);
+
+      source.write(2);
+      rt.flush();
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it("dynamic dependency switch", () => {
+      const rt = createRuntime();
+      const flag = rt.signal(true);
+      const a = rt.signal(1);
+      const b = rt.signal(10);
+      const spy = vi.fn(() => {
+        if (flag.read()) {
+          a.read();
+        } else {
+          b.read();
+        }
+      });
+
+      const effect = rt.effect(spy);
+
+      expect(countIncoming(effect.node)).toBe(2);
+
+      flag.write(false);
+      rt.flush();
+      expect(spy).toHaveBeenCalledTimes(2);
+      expect(countIncoming(effect.node)).toBe(2);
+
+      spy.mockClear();
+      a.write(2);
+      rt.flush();
+      expect(spy).not.toHaveBeenCalled();
+
+      b.write(20);
+      rt.flush();
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("Safety & robustness", () => {
     it("restores active consumer after thrown compute", () => {
       const rt = createRuntime();
