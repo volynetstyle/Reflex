@@ -5,7 +5,7 @@ import {
   CLEANUP_STATE,
 } from "./core.js";
 //import { OrderList } from "./order.js";
-import { unlinkEdge, connect } from "./graph.js";
+import { beginTracking, finishTracking } from "./tracking.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // trackingStable: пропускаємо Set ops коли граф стабільний.
@@ -25,7 +25,8 @@ export function markInvalid(ctx: EngineContext, node: ReactiveNode): void {
   const stack = ctx.trawelList;
   let top = 0;
 
-  stack[top++] = node;
+  stack[top] = node;
+  ++top;
 
   while (top) {
     const n = stack[--top]!;
@@ -41,154 +42,121 @@ export function markInvalid(ctx: EngineContext, node: ReactiveNode): void {
       const to = e.to;
 
       if (!(to.state & ReactiveNodeState.Invalid)) {
-        stack[top++] = to;
+        stack[top] = to;
+        ++top;
       }
     }
   }
 }
 
-export function trackRead(
-  ctx: EngineContext,
-  source: ReactiveNode,
-  //list: OrderList,
-): void {
-  const consumer = ctx.activeComputed!;
-
-  for (let e = consumer.firstIn; e; e = e.nextIn) {
-    if (e.from === source) {
-      // Ребро вже є — видаляємо з prevEdges якщо там є (при !stable)
-      if (!(consumer.state & ReactiveNodeState.Tracking))
-        consumer.prevEdges!.delete(e);
-      return;
-    }
-  }
-
-  // Нове ребро знайдено під час compute.
-  if (consumer.state & ReactiveNodeState.Tracking) {
-    // Були у stable режимі — beginTracking не викликався.
-    // Retroactive fill: заповнити prevEdges всіма ПОТОЧНИМИ ребрами
-    // (до додавання нового). Нове ребро туди не потрапить → finishTracking
-    // видалить тільки ребра що не були прочитані у цьому compute.
-    consumer.prevEdges?.clear();
-    for (let e = consumer.firstIn; e; e = e.nextIn) consumer.prevEdges!.add(e);
-    consumer.state &= ~ReactiveNodeState.Tracking;
-  }
-
-  // Підключити нову залежність
-  connect(source, consumer);
-  // Нове ребро НЕ потрапляє в prevEdges → finishTracking не видалить його
+function isNeverComputed(node: ReactiveNode): boolean {
+  return node.computedAt === 0;
 }
 
-export function beginTracking(consumer: ReactiveNode): void {
-  consumer.prevEdges = new Set();
-  for (let e = consumer.firstIn; e; e = e.nextIn) consumer.prevEdges.add(e);
+function isKnownObsolete(node: ReactiveNode): boolean {
+  return !!(node.state & ReactiveNodeState.Obsolete);
 }
 
-export function finishTracking(consumer: ReactiveNode): void {
-  if (consumer.prevEdges!.size === 0) {
-    // Жодне ребро не стало stale → граф стабільний наступного разу
-    consumer.state |= ReactiveNodeState.Tracking;
-  } else {
-    for (const stale of consumer.prevEdges!) unlinkEdge(stale);
-    consumer.prevEdges!.clear();
-    // stable залишається false: граф щойно змінився, наступний recompute теж з tracking
-  }
-}
-
-export function needsUpdate(node: ReactiveNode): boolean {
-  const computed = node.computedAt;
-
-  if (computed === 0) return true;
-  if (node.state & ReactiveNodeState.Obsolete) return true;
-
+function hasStaleParent(node: ReactiveNode): boolean {
   for (let e = node.firstIn; e; e = e.nextIn) {
-    if (e.from.changedAt > computed) {
+    if (e.from.changedAt > node.computedAt) {
       node.state |= ReactiveNodeState.Obsolete;
       return true;
     }
   }
-
   return false;
 }
-export function recompute(
-  ctx: EngineContext,
-  node: ReactiveNode,
-  //list: OrderList,
-): boolean {
+
+export function needsUpdate(node: ReactiveNode): boolean {
+  return isNeverComputed(node) || isKnownObsolete(node) || hasStaleParent(node);
+}
+
+export function recompute(ctx: EngineContext, node: ReactiveNode): boolean {
   const compute = node.compute;
   if (!compute) return false;
 
-  if (!(node.state & ReactiveNodeState.Tracking)) beginTracking(node);
+  const tracking = !!(node.state & ReactiveNodeState.Tracking);
+  if (!tracking) beginTracking(node);
 
-  const prev = node.value;
+  const prevValue = node.value;
   const prevActive = ctx.activeComputed;
-  ctx.activeComputed = node;
 
-  let next;
+  ctx.activeComputed = node;
+  let newValue: unknown;
+
   try {
-    next = compute();
+    newValue = compute();
   } finally {
     ctx.activeComputed = prevActive;
   }
 
-  node.value = next;
-
-  if (!(node.state & ReactiveNodeState.Tracking)) finishTracking(node);
-
-  const epoch = ctx.getEpoch();
-
-  node.computedAt = epoch;
+  node.value = newValue;
+  node.computedAt = ctx.getEpoch();
   node.state &= CLEANUP_STATE;
 
-  if (!Object.is(prev, next)) {
-    node.changedAt = epoch;
-    return true;
+  if (!tracking) finishTracking(node);
+
+  const changed = !Object.is(prevValue, newValue);
+  if (changed) {
+    node.changedAt = node.computedAt; // той самий epoch
   }
 
-  return false;
+  return changed;
 }
 
-export function ensureFresh(
-  ctx: EngineContext,
-  node: ReactiveNode,
-  //list: OrderList,
-): void {
-  if (!node.isDirty && node.computedAt !== 0) return;
+export function ensureFresh(ctx: EngineContext, node: ReactiveNode): void {
+  if (!node.isDirty && !isNeverComputed(node)) return;
 
-  const stack = ctx.worklist;
+  const { worklist: stack } = ctx;
   let top = 0;
-  stack[top++] = node;
+  stack[top] = node;
+  ++top;
 
-  while (top) {
-    const n = stack[--top]!;
+  while (top > 0) {
+    const current = stack[--top]!;
 
-    if (!n.isDirty || n.isSignal) continue;
+    if (!current.isDirty || current.isSignal) continue;
 
-    if (n.computedAt === 0) {
-      recompute(ctx, n);
+    if (isNeverComputed(current)) {
+      recompute(ctx, current);
       continue;
     }
 
-    let clean = true;
+    // Перевіряємо, чи всі залежності вже чисті
+    const needsDependencyResolution = hasDirtyDependency(current);
 
-    for (let e = n.firstIn; e; e = e.nextIn) {
-      const src = e.from;
-      if (src.isDirty) {
-        stack[top++] = n;
-        stack[top++] = src;
-        clean = false;
-        break;
-      }
+    if (needsDependencyResolution) {
+      // Відкладаємо себе, спочатку обробимо залежність
+      stack[top] = current;
+      ++top;
+      stack[top] = getFirstDirtyDependency(current)!;
+      ++top;
+
+      continue;
     }
 
-    if (!clean) continue;
-
-    if (needsUpdate(n)) {
-      recompute(ctx, n);
+    // Усі залежності чисті — можна вирішувати свою свіжість
+    if (needsUpdate(current)) {
+      recompute(ctx, current);
     } else {
-      n.state &= CLEANUP_STATE;
+      current.state &= CLEANUP_STATE;
     }
   }
+}
+
+// Допоміжні функції
+function hasDirtyDependency(node: ReactiveNode): boolean {
+  for (let e = node.firstIn; e; e = e.nextIn) {
+    if (e.from.isDirty) return true;
+  }
+  return false;
+}
+
+function getFirstDirtyDependency(node: ReactiveNode): ReactiveNode | undefined {
+  for (let e = node.firstIn; e; e = e.nextIn) {
+    if (e.from.isDirty) return e.from;
+  }
+  return undefined;
 }
 
 // export function run(ctx: EngineContext, list: OrderList): number {

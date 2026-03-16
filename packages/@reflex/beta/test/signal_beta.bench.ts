@@ -1,4 +1,4 @@
-import { describe, bench, expect } from "vitest";
+import { describe, bench } from "vitest";
 import { createSignal, createMemo, flush } from "@solidjs/signals";
 import { createRuntime } from "../dist/esm";
 
@@ -15,9 +15,10 @@ function blackhole(n: number) {
 function makeOurs() {
   const rt = createRuntime();
   return {
+    batchWrite: rt.batchWrite.bind(rt),
     signal: <T>(v: T) => {
       const s = rt.signal(v);
-      return [() => s.read(), (val: T) => s.write(val)] as const;
+      return [() => s.read(), (val: T) => s.write(val), s] as const;
     },
     computed: <T>(fn: () => T) => {
       const c = rt.computed(fn);
@@ -209,12 +210,9 @@ describe("Deep chains (8 × 400 depth)", () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DIAMOND / FAN-OUT → FAN-IN (200 шляхів сходження в один final)
-// Pull виграє СИЛЬНО, бо:
-// • при зміні 1 джерела тільки 1 шлях стає dirty
-// • ensureFresh(final) робить 200 швидких timestamp-перевірок
-//   (199 — skip, 1 — рекурсія глибиною 5)
-// • Solid flush() має overhead на сповіщення + scheduler
-//   навіть якщо реально оновлює тільки 1 шлях
+// Це high fan-in сценарій для lazy pull:
+// • при читанні final все одно треба пройти fan-in фінального вузла
+// • eager системи можуть вигравати, якщо flush уже підготував cached final
 // ─────────────────────────────────────────────────────────────────────────────
 describe("Diamond / Fan-out → Fan-in (200 paths converge)", () => {
   const PATHS = 200;
@@ -273,7 +271,7 @@ describe("Diamond / Fan-out → Fan-in (200 paths converge)", () => {
   })();
 
   bench(
-    "ours — change 1 source → read final (diamond pull win)",
+    "ours — change 1 source → read final",
     () => {
       const idx = Math.floor(Math.random() * PATHS);
       oursDiamond.sources[idx][1](Math.random() * 100);
@@ -390,7 +388,12 @@ describe("Large batch write (20% sources) + full read", () => {
     sources.forEach(([, s]) => s(0));
     memos.forEach((m) => blackhole(m()));
 
-    return { sources, memos };
+    const batchWrites = Array.from(
+      { length: Math.floor(SOURCES * BATCH_PCT) },
+      (_, i) => [sources[i][2], 0] as [unknown, unknown],
+    );
+
+    return { sources, memos, batchWrite: ours.batchWrite, batchWrites };
   }
 
   const oursBatch = buildBatch();
@@ -412,10 +415,10 @@ describe("Large batch write (20% sources) + full read", () => {
   bench(
     "ours — batch 20% sources + read all",
     () => {
-      const batchSize = Math.floor(SOURCES * BATCH_PCT);
-      for (let i = 0; i < batchSize; i++) {
-        oursBatch.sources[i][1](Math.random() * 100);
+      for (let i = 0; i < oursBatch.batchWrites.length; i++) {
+        oursBatch.batchWrites[i]![1] = Math.random() * 100;
       }
+      oursBatch.batchWrite(oursBatch.batchWrites as any);
       oursBatch.memos.forEach((m) => blackhole(m()));
     },
     { iterations: 180, warmupIterations: 40 },

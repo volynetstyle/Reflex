@@ -6,9 +6,8 @@ import {
   batchWrite,
   //run,
   ensureFresh,
-  trackRead,
-  recompute,
 } from "./engine.js";
+import { trackRead } from "./tracking.js";
 
 export interface Signal<T> {
   readonly node: ReactiveNode;
@@ -98,7 +97,7 @@ export function createRuntime(): Runtime {
   }
 
   function computed<T>(fn: () => T, options?: ConputedOptions): Computed<T> {
-    const node = new ReactiveNode(undefined, fn, ReactiveNodeState.Obsolete);
+    const node = new ReactiveNode(undefined, fn, ReactiveNodeState.Invalid);
 
     return new ComputedImpl<T>(node, ctx) as unknown as Computed<T>;
   }
