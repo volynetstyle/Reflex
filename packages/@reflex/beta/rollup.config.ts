@@ -72,9 +72,7 @@ function stripInternalEnumRuntimeStage(): Plugin {
       let nextCode = code;
       for (const block of enumBlocks) {
         nextCode = nextCode.replace(block, (match) =>
-          match.includes("ComputedMode")
-            ? "var ComputedMode;"
-            : "",
+          match.includes("ComputedMode") ? "var ComputedMode;" : "",
         );
       }
 
@@ -111,8 +109,10 @@ function minifyStage(ctx: BuildContext): Plugin | null {
       ecma: 2020,
       module: isEsm,
       toplevel: true,
-      passes: 3,
-      inline: 2,
+      // Push function inlining hard, but stay within Terser's safe transforms.
+      passes: 4,
+      inline: 3,
+      collapse_vars: true,
       reduce_funcs: true,
       reduce_vars: true,
       dead_code: true,
@@ -123,7 +123,12 @@ function minifyStage(ctx: BuildContext): Plugin | null {
       booleans: true,
       unused: true,
       if_return: true,
+      join_vars: true,
+      hoist_props: true,
       sequences: true,
+      side_effects: true,
+      switches: true,
+      typeofs: true,
       pure_getters: "strict",
       evaluate: true,
       defaults: true,
@@ -131,7 +136,7 @@ function minifyStage(ctx: BuildContext): Plugin | null {
     mangle: false,
     format: {
       comments: false,
-      ecma: 2022,
+      ecma: 2020,
     },
   });
 }

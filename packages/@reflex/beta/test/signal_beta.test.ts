@@ -19,6 +19,14 @@ function setup() {
   return { signal, computed, rt };
 }
 
+function countIncoming(node: { firstIn: { nextIn: unknown } | null }) {
+  let count = 0;
+  for (let edge = node.firstIn; edge; edge = edge.nextIn as typeof edge) {
+    count++;
+  }
+  return count;
+}
+
 describe("Reactive system — core invariants & behaviors", () => {
   let signal: ReturnType<typeof setup>["signal"];
   let computed: ReturnType<typeof setup>["computed"];
@@ -66,9 +74,9 @@ describe("Reactive system — core invariants & behaviors", () => {
 
       expect(s.node.kind).toBe(ReactiveNodeKind.Signal);
       expect(c.node.kind).toBe(ReactiveNodeKind.Computed);
-      expect(s.node.isSignal).toBe(true);
-      expect(c.node.isComputed).toBe(true);
-      expect(c.node.isEffect).toBe(false);
+      expect(s.node.kind === ReactiveNodeKind.Signal).toBe(true);
+      expect(c.node.kind === ReactiveNodeKind.Computed).toBe(true);
+      expect(c.node.kind === ReactiveNodeKind.Effect).toBe(false);
     });
 
     it("memo computes immediately on creation", () => {
@@ -79,7 +87,7 @@ describe("Reactive system — core invariants & behaviors", () => {
       const m = rt.memo(spy);
 
       expect(spy).toHaveBeenCalledTimes(1);
-      expect(m.node.computedAt).toBeGreaterThan(0);
+      expect(m.node.v).toBeGreaterThan(0);
       expect(m()).toBe(6);
     });
   });
@@ -208,19 +216,19 @@ describe("Reactive system — core invariants & behaviors", () => {
       expect(spyB).toHaveBeenCalledTimes(1);
     });
 
-    it("recompute updates computedAt every time but changedAt only on value change", () => {
-      const rt = createRuntime();
+    it("recompute updates v every time but t only on value change", () => {
+      const rt = createRuntime(); 
       const x = rt.signal(1);
       const c = rt.computed(() => x.read() % 2);
 
       expect(c()).toBe(1);
-      const firstComputedAt = c.node.computedAt;
-      const firstChangedAt = c.node.changedAt;
+      const firstComputedAt = c.node.v;
+      const firstChangedAt = c.node.t;
 
       x.write(3);
       expect(c()).toBe(1);
-      expect(c.node.computedAt).toBeGreaterThan(firstComputedAt);
-      expect(c.node.changedAt).toBe(firstChangedAt);
+      expect(c.node.v).toBeGreaterThan(firstComputedAt);
+      expect(c.node.t).toBe(firstChangedAt);
     });
   });
 
@@ -327,10 +335,14 @@ describe("Reactive system — core invariants & behaviors", () => {
       const c = rt.computed(() => x.read() * 2);
 
       x.write(2);
-      expect(c.node.isDirty).toBeTruthy();
+      expect(
+        c.node.state & (ReactiveNodeState.Invalid | ReactiveNodeState.Obsolete),
+      ).toBeTruthy();
 
       expect(c()).toBe(4);
-      expect(c.node.isDirty).toBeFalsy();
+      expect(
+        c.node.state & (ReactiveNodeState.Invalid | ReactiveNodeState.Obsolete),
+      ).toBeFalsy();
     });
 
     it("stable recompute keeps tracking flag and advances tracking epoch", () => {
@@ -340,12 +352,12 @@ describe("Reactive system — core invariants & behaviors", () => {
 
       expect(c()).toBe(2);
       expect(c.node.state & ReactiveNodeState.Tracking).toBeTruthy();
-      const firstTrackEpoch = c.node.trackEpoch;
+      const firstTrackEpoch = c.node.s;
 
       x.write(5);
       expect(c()).toBe(10);
       expect(c.node.state & ReactiveNodeState.Tracking).toBeTruthy();
-      expect(c.node.trackEpoch).toBe(firstTrackEpoch + 1);
+      expect(c.node.s).toBe(firstTrackEpoch + 1);
     });
 
     it("new dependency found during stable pass re-enables tracking", () => {
@@ -358,16 +370,81 @@ describe("Reactive system — core invariants & behaviors", () => {
 
       expect(c()).toBe(1);
       expect(c.node.state & ReactiveNodeState.Tracking).toBeTruthy();
-      const stableTrackEpoch = c.node.trackEpoch;
+      const stableTrackEpoch = c.node.s;
 
       flag.write(false);
       expect(c()).toBe(2);
-      expect(c.node.trackEpoch).toBe(stableTrackEpoch + 1);
+      expect(c.node.s).toBe(stableTrackEpoch + 1);
       expect(c.node.state & ReactiveNodeState.Tracking).toBe(0);
 
       b.write(3);
       expect(c()).toBe(3);
       expect(c.node.state & ReactiveNodeState.Tracking).toBeTruthy();
+    });
+  });
+
+  describe("Safety & robustness", () => {
+    it("restores active consumer after thrown compute", () => {
+      const rt = createRuntime();
+      const source = rt.signal(1);
+      const boom = rt.computed(() => {
+        source.read();
+        throw new Error("boom");
+      });
+      const stable = rt.computed(() => source.read() + 1);
+
+      expect(() => boom()).toThrow("boom");
+      expect(rt.ctx.activeComputed).toBe(null);
+      expect(stable()).toBe(2);
+      expect(rt.ctx.activeComputed).toBe(null);
+    });
+
+    it("repeated reads do not duplicate dependency edges", () => {
+      const rt = createRuntime();
+      const source = rt.signal(1);
+      const derived = rt.computed(() => source.read() * 2);
+
+      expect(derived()).toBe(2);
+      expect(derived()).toBe(2);
+      expect(derived()).toBe(2);
+
+      expect(countIncoming(derived.node)).toBe(1);
+      expect(countIncoming(source.node)).toBe(0);
+    });
+
+    it("batchWrite applies duplicate writes in order and keeps the last value", () => {
+      const rt = createRuntime();
+      const source = rt.signal(1);
+      const derived = rt.computed(() => source.read() * 10);
+
+      expect(derived()).toBe(10);
+
+      rt.batchWrite([
+        [source, 2],
+        [source, 7],
+        [source, 9],
+      ]);
+
+      expect(source.read()).toBe(9);
+      expect(derived()).toBe(90);
+    });
+
+    it("failed recompute keeps previous cached value", () => {
+      const rt = createRuntime();
+      const source = rt.signal(1);
+      let shouldThrow = false;
+      const derived = rt.computed(() => {
+        const value = source.read() * 2;
+        if (shouldThrow) throw new Error("unstable");
+        return value;
+      });
+
+      expect(derived()).toBe(2);
+
+      shouldThrow = true;
+      source.write(2);
+      expect(() => derived()).toThrow("unstable");
+      expect(derived.node.value).toBe(2);
     });
   });
 });

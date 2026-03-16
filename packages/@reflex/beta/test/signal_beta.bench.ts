@@ -20,15 +20,15 @@ function makeOurs() {
       const s = rt.signal(v);
       return [() => s.read(), (val: T) => s.write(val), s] as const;
     },
-    computed: <T>(fn: () => T) => {
-      const c = rt.computed(fn);
+    memo: <T>(fn: () => T) => {
+      const c = rt.memo(fn);
       return () => c();
     },
   };
 }
 
 // // ─────────────────────────────────────────────────────────────────────────────
-// // Wide static: 1000 computed × 5 deps, read ~10–20%
+// // Wide static: 1000 memo × 5 deps, read ~10–20%
 // // ─────────────────────────────────────────────────────────────────────────────
 
 describe("Wide static graph (1000 memos × 5 deps)", () => {
@@ -42,7 +42,7 @@ describe("Wide static graph (1000 memos × 5 deps)", () => {
     );
 
     const memos = Array.from({ length: N }, (_, i) =>
-      ours.computed(() => {
+      ours.memo(() => {
         let sum = 0;
         for (let d = 0; d < DEPS; d++) {
           sum += sources[(i + d * 3) % sourcesCount][0]();
@@ -159,7 +159,7 @@ describe("Deep chains (8 × 400 depth)", () => {
       let prev = sources[chain % 4][0];
       for (let depth = 0; depth < 400; depth++) {
         const p = prev;
-        prev = ours.computed(() => p());
+        prev = ours.memo(() => p());
       }
       ends.push(prev);
     }
@@ -228,13 +228,13 @@ describe("Diamond / Fan-out → Fan-in (200 paths converge)", () => {
       let prev = sources[p][0];
       for (let d = 0; d < DEPTH; d++) {
         const pFn = prev;
-        prev = ours.computed(() => pFn() * 1.0001 + d); // невелике обчислення
+        prev = ours.memo(() => pFn() * 1.0001 + d); // невелике обчислення
       }
       pathEnds.push(prev);
     }
 
-    // фінальний computed — fan-in
-    const final = ours.computed(() => {
+    // фінальний memo — fan-in
+    const final = ours.memo(() => {
       let sum = 0;
       for (const e of pathEnds) sum += e();
       return sum;
@@ -306,7 +306,7 @@ describe("Dynamic deps + frequent flip (tracking invalidation)", () => {
     const sources = Array.from({ length: 12 }, () => ours.signal(0));
 
     const memos = Array.from({ length: N }, (_, i) =>
-      ours.computed(() => {
+      ours.memo(() => {
         let sum = 0;
         const flip = sources[0][0]() % 3; // 0,1,2 — різні набори залежностей
         for (let d = 0; d < DEPS; d++) {
@@ -378,7 +378,7 @@ describe("Large batch write (20% sources) + full read", () => {
     const ours = makeOurs();
     const sources = Array.from({ length: SOURCES }, () => ours.signal(0));
     const memos = Array.from({ length: N }, (_, i) =>
-      ours.computed(() => {
+      ours.memo(() => {
         let sum = 0;
         for (let d = 0; d < 6; d++) sum += sources[(i + d) % SOURCES][0]();
         return sum;
@@ -456,7 +456,7 @@ describe("Realistic UI: Virtualized table 4000 rows × 6 cols, partial update", 
 
     const cells = Array.from({ length: ROWS }, (_, rowIdx) =>
       Array.from({ length: COLS }, (_, colIdx) =>
-        ours.computed(() => {
+        ours.memo(() => {
           const base = rowSources[rowIdx][0][0]();
           if (colIdx === 0) return base;
           return Math.round(
@@ -467,7 +467,7 @@ describe("Realistic UI: Virtualized table 4000 rows × 6 cols, partial update", 
     );
 
     const rowSums = Array.from({ length: ROWS }, (_, rowIdx) =>
-      ours.computed(() => {
+      ours.memo(() => {
         let sum = 0;
         for (let c = 0; c < COLS; c++) sum += cells[rowIdx][c]();
         return sum;

@@ -1,11 +1,17 @@
 import {
   ReactiveNode,
+  ReactiveEdge,
   ReactiveNodeState,
   EngineContext,
   CLEANUP_STATE,
+  hasState,
+  isDirtyState,
+  isEffectKind,
+  isSignalKind,
+  isTrackingState,
 } from "./core.js";
 //import { OrderList } from "./order.js";
-import { beginTracking, finishTracking } from "./tracking.js";
+import { unlinkFromSource } from "./graph.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // trackingStable: пропускаємо Set ops коли граф стабільний.
@@ -20,7 +26,7 @@ import { beginTracking, finishTracking } from "./tracking.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function markInvalid(ctx: EngineContext, node: ReactiveNode): void {
-  if (node.state & ReactiveNodeState.Invalid) return;
+  if (hasState(node.state, ReactiveNodeState.Invalid)) return;
 
   const stack = ctx.trawelList;
   let top = 0;
@@ -31,10 +37,10 @@ export function markInvalid(ctx: EngineContext, node: ReactiveNode): void {
   while (top) {
     const n = stack[--top]!;
 
-    if (n.state & ReactiveNodeState.Invalid) continue;
+    if (hasState(n.state, ReactiveNodeState.Invalid)) continue;
 
     n.state |= ReactiveNodeState.Invalid;
-    if (n.isEffect) ctx.notifyEffectInvalidated(n);
+    if (isEffectKind(n.kind)) ctx.notifyEffectInvalidated(n);
 
     // const first = ctx.firstDirty;
     // if (!first /* || n.order < first.order */) ctx.firstDirty = n;
@@ -42,7 +48,7 @@ export function markInvalid(ctx: EngineContext, node: ReactiveNode): void {
     for (let e = n.firstOut; e; e = e.nextOut) {
       const to = e.to;
 
-      if (!(to.state & ReactiveNodeState.Invalid)) {
+      if (!hasState(to.state, ReactiveNodeState.Invalid)) {
         stack[top] = to;
         ++top;
       }
@@ -50,63 +56,100 @@ export function markInvalid(ctx: EngineContext, node: ReactiveNode): void {
   }
 }
 
-function isNeverComputed(node: ReactiveNode): boolean {
-  return node.computedAt === 0;
-}
+export function needsUpdate(node: ReactiveNode): boolean {
+  if (node.v === 0) return true;
+  if (hasState(node.state, ReactiveNodeState.Obsolete)) return true;
 
-function isKnownObsolete(node: ReactiveNode): boolean {
-  return !!(node.state & ReactiveNodeState.Obsolete);
-}
-
-function hasStaleParent(node: ReactiveNode): boolean {
   for (let e = node.firstIn; e; e = e.nextIn) {
-    if (e.from.changedAt > node.computedAt) {
+    if (e.from.t > node.v) {
       node.state |= ReactiveNodeState.Obsolete;
       return true;
     }
   }
+
   return false;
 }
 
-export function needsUpdate(node: ReactiveNode): boolean {
-  return isNeverComputed(node) || isKnownObsolete(node) || hasStaleParent(node);
+function invokeCompute(
+  ctx: EngineContext,
+  node: ReactiveNode,
+  compute: () => unknown,
+): unknown {
+  const prevActive = ctx.activeComputed;
+
+  ctx.activeComputed = node;
+  try {
+    return compute();
+  } finally {
+    ctx.activeComputed = prevActive;
+  }
+}
+
+function cleanupStaleSources(node: ReactiveNode): void {
+  const epoch = node.s;
+  let hasStale = false;
+  let prevIn: ReactiveEdge | null = null;
+  let e = node.firstIn;
+
+  while (e) {
+    const next = e.nextIn;
+
+    if (e.s !== epoch) {
+      if (prevIn) prevIn.nextIn = next;
+      else node.firstIn = next;
+
+      unlinkFromSource(e);
+      hasStale = true;
+    } else {
+      prevIn = e;
+    }
+
+    e = next;
+  }
+
+  if (!hasStale) {
+    node.state |= ReactiveNodeState.Tracking;
+  }
+}
+
+function commitComputedValue(
+  ctx: EngineContext,
+  node: ReactiveNode,
+  prevValue: unknown,
+  newValue: unknown,
+): boolean {
+  node.value = newValue;
+  node.v = ctx.getEpoch();
+  node.state &= CLEANUP_STATE;
+
+  const changed = !Object.is(prevValue, newValue);
+
+  if (changed) {
+    node.t = node.v;
+  }
+
+  return changed;
 }
 
 export function recompute(ctx: EngineContext, node: ReactiveNode): boolean {
   const compute = node.compute;
   if (!compute) return false;
 
-  const stable = !!(node.state & ReactiveNodeState.Tracking);
-  beginTracking(node);
+  const stable = isTrackingState(node.state);
+  ++node.s;
 
   const prevValue = node.value;
-  const prevActive = ctx.activeComputed;
+  const newValue = invokeCompute(ctx, node, compute);
 
-  ctx.activeComputed = node;
-  let newValue: unknown;
-
-  try {
-    newValue = compute();
-  } finally {
-    ctx.activeComputed = prevActive;
+  if (!stable || !isTrackingState(node.state)) {
+    cleanupStaleSources(node);
   }
 
-  node.value = newValue;
-  node.computedAt = ctx.getEpoch();
-  node.state &= CLEANUP_STATE;
-
-  if (!stable || !(node.state & ReactiveNodeState.Tracking)) finishTracking(node);
-
-  const changed = !Object.is(prevValue, newValue);
-  if (changed) {
-    node.changedAt = node.computedAt; // той самий epoch
-  }
-
-  return changed;
+  return commitComputedValue(ctx, node, prevValue, newValue);
 }
 
 export function ensureFresh(ctx: EngineContext, node: ReactiveNode): void {
-  if (!node.isDirty && !isNeverComputed(node)) return;
+  if (!isDirtyState(node.state) && node.v !== 0) return;
 
   const { worklist: stack } = ctx;
   let top = 0;
@@ -116,9 +159,9 @@ export function ensureFresh(ctx: EngineContext, node: ReactiveNode): void {
   while (top > 0) {
     const current = stack[--top]!;
 
-    if (!current.isDirty || current.isSignal) continue;
+    if (!isDirtyState(current.state) || isSignalKind(current.kind)) continue;
 
-    if (isNeverComputed(current)) {
+    if (current.v === 0) {
       recompute(ctx, current);
       continue;
     }
@@ -145,14 +188,14 @@ export function ensureFresh(ctx: EngineContext, node: ReactiveNode): void {
 // Допоміжні функції
 function hasDirtyDependency(node: ReactiveNode): boolean {
   for (let e = node.firstIn; e; e = e.nextIn) {
-    if (e.from.isDirty) return true;
+    if (isDirtyState(e.from.state)) return true;
   }
   return false;
 }
 
 function getFirstDirtyDependency(node: ReactiveNode): ReactiveNode | undefined {
   for (let e = node.firstIn; e; e = e.nextIn) {
-    if (e.from.isDirty) return e.from;
+    if (isDirtyState(e.from.state)) return e.from;
   }
   return undefined;
 }
@@ -186,7 +229,7 @@ export function writeSignal(
 ): void {
   if (Object.is(node.value, value)) return;
   node.value = value;
-  node.changedAt = ctx.bumpEpoch();
+  node.t = ctx.bumpEpoch();
   for (let e = node.firstOut; e; e = e.nextOut) markInvalid(ctx, e.to);
 }
 
@@ -198,7 +241,7 @@ export function batchWrite(
   for (const [node, value] of writes) {
     if (Object.is(node.value, value)) continue;
     node.value = value;
-    node.changedAt = ctx.getEpoch();
+    node.t = ctx.getEpoch();
     for (let e = node.firstOut; e; e = e.nextOut) markInvalid(ctx, e.to);
   }
 }

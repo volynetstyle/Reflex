@@ -2,9 +2,9 @@ import {
   EngineContext,
   ReactiveEdge,
   ReactiveNode,
-  ReactiveNodeState,
+  isTrackingState,
+  TRACKING_STATE,
 } from "./core";
-import { connect, unlinkEdge, unlinkFromSource } from "./graph";
 
 export function trackRead(
   ctx: EngineContext,
@@ -15,46 +15,19 @@ export function trackRead(
 
   for (let e = consumer.firstIn; e; e = e.nextIn) {
     if (e.from === source) {
-      e.seenEpoch = consumer.trackEpoch;
+      e.s = consumer.s;
       return;
     }
   }
 
-  if (consumer.state & ReactiveNodeState.Tracking) {
-    consumer.state &= ~ReactiveNodeState.Tracking;
+  if (isTrackingState(consumer.state)) {
+    consumer.state &= ~TRACKING_STATE;
   }
 
-  const edge = connect(source, consumer);
-  edge.seenEpoch = consumer.trackEpoch;
-}
-
-export function beginTracking(consumer: ReactiveNode): void {
-  consumer.trackEpoch++;
-}
-
-export function finishTracking(consumer: ReactiveNode): void {
-  const epoch = consumer.trackEpoch;
-  let hasStale = false;
-  let prevIn: ReactiveEdge | null = null;
-  let e = consumer.firstIn;
-
-  while (e) {
-    const next = e.nextIn;
-
-    if (e.seenEpoch !== epoch) {
-      if (prevIn) prevIn.nextIn = next;
-      else consumer.firstIn = next;
-
-      unlinkFromSource(e);
-      hasStale = true;
-    } else {
-      prevIn = e;
-    }
-
-    e = next;
-  }
-
-  if (!hasStale) {
-    consumer.state |= ReactiveNodeState.Tracking;
-  }
+  const edge = new ReactiveEdge(source, consumer);
+  edge.nextOut = source.firstOut;
+  source.firstOut = edge;
+  edge.nextIn = consumer.firstIn;
+  consumer.firstIn = edge;
+  edge.s = consumer.s;
 }
