@@ -202,7 +202,7 @@ export function ensureFresh(ctx: EngineContext, node: ReactiveNode): void {
 
     if (!isDirtyState(current.state) || isSignalKind(current.kind)) continue;
 
-    if (current.v === 0) {
+    if (!current.v) {
       recompute(ctx, current);
       continue;
     }
