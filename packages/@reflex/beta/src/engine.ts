@@ -34,6 +34,7 @@ export function markInvalid(ctx: EngineContext, node: ReactiveNode): void {
     if (n.state & ReactiveNodeState.Invalid) continue;
 
     n.state |= ReactiveNodeState.Invalid;
+    if (n.isEffect) ctx.notifyEffectInvalidated(n);
 
     // const first = ctx.firstDirty;
     // if (!first /* || n.order < first.order */) ctx.firstDirty = n;
@@ -75,8 +76,8 @@ export function recompute(ctx: EngineContext, node: ReactiveNode): boolean {
   const compute = node.compute;
   if (!compute) return false;
 
-  const tracking = !!(node.state & ReactiveNodeState.Tracking);
-  if (!tracking) beginTracking(node);
+  const stable = !!(node.state & ReactiveNodeState.Tracking);
+  beginTracking(node);
 
   const prevValue = node.value;
   const prevActive = ctx.activeComputed;
@@ -94,7 +95,7 @@ export function recompute(ctx: EngineContext, node: ReactiveNode): boolean {
   node.computedAt = ctx.getEpoch();
   node.state &= CLEANUP_STATE;
 
-  if (!tracking) finishTracking(node);
+  if (!stable || !(node.state & ReactiveNodeState.Tracking)) finishTracking(node);
 
   const changed = !Object.is(prevValue, newValue);
   if (changed) {
@@ -122,11 +123,9 @@ export function ensureFresh(ctx: EngineContext, node: ReactiveNode): void {
       continue;
     }
 
-    // Перевіряємо, чи всі залежності вже чисті
     const needsDependencyResolution = hasDirtyDependency(current);
 
     if (needsDependencyResolution) {
-      // Відкладаємо себе, спочатку обробимо залежність
       stack[top] = current;
       ++top;
       stack[top] = getFirstDirtyDependency(current)!;
@@ -135,7 +134,6 @@ export function ensureFresh(ctx: EngineContext, node: ReactiveNode): void {
       continue;
     }
 
-    // Усі залежності чисті — можна вирішувати свою свіжість
     if (needsUpdate(current)) {
       recompute(ctx, current);
     } else {

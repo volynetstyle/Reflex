@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { createRuntime } from "../src";
+import { ReactiveNodeKind, ReactiveNodeState } from "../src/core";
 
 function setup() {
   const rt = createRuntime();
@@ -56,6 +57,30 @@ describe("Reactive system — core invariants & behaviors", () => {
       set(3);
       set(8);
       expect(view()).toBe(8);
+    });
+
+    it("runtime creates signal/computed nodes with explicit kinds", () => {
+      const rt = createRuntime();
+      const s = rt.signal(1);
+      const c = rt.computed(() => s.read() * 2);
+
+      expect(s.node.kind).toBe(ReactiveNodeKind.Signal);
+      expect(c.node.kind).toBe(ReactiveNodeKind.Computed);
+      expect(s.node.isSignal).toBe(true);
+      expect(c.node.isComputed).toBe(true);
+      expect(c.node.isEffect).toBe(false);
+    });
+
+    it("memo computes immediately on creation", () => {
+      const rt = createRuntime();
+      const s = rt.signal(2);
+      const spy = vi.fn(() => s.read() * 3);
+
+      const m = rt.memo(spy);
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(m.node.computedAt).toBeGreaterThan(0);
+      expect(m()).toBe(6);
     });
   });
 
@@ -182,6 +207,21 @@ describe("Reactive system — core invariants & behaviors", () => {
       expect(spyA).toHaveBeenCalledTimes(2);
       expect(spyB).toHaveBeenCalledTimes(1);
     });
+
+    it("recompute updates computedAt every time but changedAt only on value change", () => {
+      const rt = createRuntime();
+      const x = rt.signal(1);
+      const c = rt.computed(() => x.read() % 2);
+
+      expect(c()).toBe(1);
+      const firstComputedAt = c.node.computedAt;
+      const firstChangedAt = c.node.changedAt;
+
+      x.write(3);
+      expect(c()).toBe(1);
+      expect(c.node.computedAt).toBeGreaterThan(firstComputedAt);
+      expect(c.node.changedAt).toBe(firstChangedAt);
+    });
   });
 
   // ────────────────────────────────────────────────────────────────
@@ -210,6 +250,31 @@ describe("Reactive system — core invariants & behaviors", () => {
       expect(spy).toHaveBeenCalledTimes(1);
       expect(c()).toBe(999);
     });
+
+    it("branch switch removes old dependency after stable recompute", () => {
+      const rt = createRuntime();
+      const flag = rt.signal(true);
+      const a = rt.signal(1);
+      const b = rt.signal(10);
+
+      const spy = vi.fn(() => (flag.read() ? a.read() : b.read()));
+      const c = rt.computed(spy);
+
+      expect(c()).toBe(1);
+      expect(c.node.state & ReactiveNodeState.Tracking).toBeTruthy();
+
+      flag.write(false);
+      expect(c()).toBe(10);
+
+      spy.mockClear();
+      a.write(2);
+      expect(c()).toBe(10);
+      expect(spy).not.toHaveBeenCalled();
+
+      b.write(20);
+      expect(c()).toBe(20);
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
   });
 
   // ────────────────────────────────────────────────────────────────
@@ -222,6 +287,16 @@ describe("Reactive system — core invariants & behaviors", () => {
       expect(spy).not.toHaveBeenCalled();
     });
 
+    it("memo first read reuses eager value", () => {
+      const rt = createRuntime();
+      const x = rt.signal(5);
+      const spy = vi.fn(() => x.read() * 2);
+      const m = rt.memo(spy);
+
+      expect(m()).toBe(10);
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
     it("write without read → no computation", () => {
       const spy = vi.fn((n) => n * 2);
       const [x, setX] = signal(1);
@@ -230,6 +305,69 @@ describe("Reactive system — core invariants & behaviors", () => {
       setX(20);
       setX(30);
       expect(spy).not.toHaveBeenCalled();
+    });
+
+    it("write marks downstream invalid but does not recompute eagerly", () => {
+      const rt = createRuntime();
+      const x = rt.signal(1);
+      const spy = vi.fn(() => x.read() * 2);
+      const c = rt.computed(spy);
+
+      expect(c()).toBe(2);
+      spy.mockClear();
+
+      x.write(2);
+      expect(c.node.state & ReactiveNodeState.Invalid).toBeTruthy();
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it("clean read after settlement clears dirty flags", () => {
+      const rt = createRuntime();
+      const x = rt.signal(1);
+      const c = rt.computed(() => x.read() * 2);
+
+      x.write(2);
+      expect(c.node.isDirty).toBeTruthy();
+
+      expect(c()).toBe(4);
+      expect(c.node.isDirty).toBeFalsy();
+    });
+
+    it("stable recompute keeps tracking flag and advances tracking epoch", () => {
+      const rt = createRuntime();
+      const x = rt.signal(1);
+      const c = rt.computed(() => x.read() * 2);
+
+      expect(c()).toBe(2);
+      expect(c.node.state & ReactiveNodeState.Tracking).toBeTruthy();
+      const firstTrackEpoch = c.node.trackEpoch;
+
+      x.write(5);
+      expect(c()).toBe(10);
+      expect(c.node.state & ReactiveNodeState.Tracking).toBeTruthy();
+      expect(c.node.trackEpoch).toBe(firstTrackEpoch + 1);
+    });
+
+    it("new dependency found during stable pass re-enables tracking", () => {
+      const rt = createRuntime();
+      const flag = rt.signal(true);
+      const a = rt.signal(1);
+      const b = rt.signal(2);
+
+      const c = rt.computed(() => (flag.read() ? a.read() : b.read()));
+
+      expect(c()).toBe(1);
+      expect(c.node.state & ReactiveNodeState.Tracking).toBeTruthy();
+      const stableTrackEpoch = c.node.trackEpoch;
+
+      flag.write(false);
+      expect(c()).toBe(2);
+      expect(c.node.trackEpoch).toBe(stableTrackEpoch + 1);
+      expect(c.node.state & ReactiveNodeState.Tracking).toBe(0);
+
+      b.write(3);
+      expect(c()).toBe(3);
+      expect(c.node.state & ReactiveNodeState.Tracking).toBeTruthy();
     });
   });
 });

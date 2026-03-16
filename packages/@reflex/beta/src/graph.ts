@@ -38,6 +38,20 @@ export function unlinkEdge(edge: ReactiveEdge): void {
   }
 }
 
+export function unlinkFromSource(edge: ReactiveEdge): void {
+  const from = edge.from;
+
+  let prevOut: ReactiveEdge | null = null;
+  for (let e = from.firstOut; e; e = e.nextOut) {
+    if (e === edge) {
+      if (prevOut) prevOut.nextOut = e.nextOut;
+      else from.firstOut = e.nextOut;
+      return;
+    }
+    prevOut = e;
+  }
+}
+
 // ─── connect з topo repair ────────────────────────────────────────────────────
 
 export function connect(

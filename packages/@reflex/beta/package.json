@@ -1,6 +1,6 @@
 {
   "name": "@reflex/beta",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "description": "Core reactive primitives",
   "sideEffects": false,

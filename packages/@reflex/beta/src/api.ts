@@ -1,12 +1,11 @@
-import { ReactiveNode, ReactiveNodeState, EngineContext } from "./core.js";
-//import { OrderList } from "./order.js";
-//import { connect } from "./graph.js";
 import {
-  writeSignal,
-  batchWrite,
-  //run,
-  ensureFresh,
-} from "./engine.js";
+  ReactiveNode,
+  ReactiveNodeState,
+  ReactiveNodeKind,
+  EngineContext,
+  type EngineHooks,
+} from "./core.js";
+import { writeSignal, batchWrite, ensureFresh } from "./engine.js";
 import { trackRead } from "./tracking.js";
 
 export interface Signal<T> {
@@ -16,25 +15,21 @@ export interface Signal<T> {
 }
 
 export interface Computed<T> {
-  node: ReactiveNode;
+  readonly node: ReactiveNode;
   (): T;
 }
 
-export const enum ComputedMode {
-  Lazy = 0,
-  Eager = 1,
-}
+export type BatchWriteEntry = readonly [Signal<unknown>, unknown];
 
-export type ConputedOptions = {
-  mode: ComputedMode;
-};
+export interface RuntimeOptions {
+  hooks?: EngineHooks;
+}
 
 export interface Runtime {
   signal<T>(value: T): Signal<T>;
   computed<T>(fn: () => T): Computed<T>;
-  //run(): number;
-  batchWrite(writes: Array<[Signal<unknown>, unknown]>): void;
-  //readonly list: OrderList;
+  memo<T>(fn: () => T): Computed<T>;
+  batchWrite(writes: ReadonlyArray<BatchWriteEntry>): void;
   readonly ctx: EngineContext;
 }
 
@@ -55,63 +50,85 @@ class SignalImpl<T> implements Signal<T> {
   }
 }
 
-class ComputedImpl<T> {
-  constructor(
-    public node: ReactiveNode,
-    private ctx: EngineContext,
-  ) {
-    const self = this;
+function createComputed<T>(node: ReactiveNode, ctx: EngineContext): Computed<T> {
+  const computed = function () {
+    if (ctx.activeComputed) trackRead(ctx, node);
 
-    const fn = function () {
-      return self.read();
-    } as Computed<T>;
-
-    fn.node = node;
-
-    return fn as unknown as this & Computed<T>;
-  }
-
-  read(): T {
-    const node = this.node;
-
-    if (this.ctx.activeComputed) trackRead(this.ctx, node);
-
-    if (node.isDirty || node.computedAt === 0) ensureFresh(this.ctx, node);
+    if (node.isDirty || node.computedAt === 0) ensureFresh(ctx, node);
 
     return node.value as T;
-  }
+  } as Computed<T>;
+
+  Object.defineProperty(computed, "node", {
+    value: node,
+    enumerable: true,
+  });
+
+  return computed;
 }
 
-export function createRuntime(): Runtime {
-  //const list = new OrderList();
-  const ctx = new EngineContext();
+function createBatchWrite(
+  ctx: EngineContext,
+): (writes: ReadonlyArray<BatchWriteEntry>) => void {
+  const nodeWrites: Array<[ReactiveNode, unknown]> = [];
+
+  return (writes) => {
+    const count = writes.length;
+    nodeWrites.length = count;
+
+    for (let i = 0; i < count; i++) {
+      const [signal, value] = writes[i]!;
+      const entry = nodeWrites[i];
+
+      if (entry) {
+        entry[0] = signal.node;
+        entry[1] = value;
+      } else {
+        nodeWrites[i] = [signal.node, value];
+      }
+    }
+
+    batchWrite(ctx, nodeWrites);
+  };
+}
+
+export function createRuntime(options?: RuntimeOptions): Runtime {
+  const ctx = new EngineContext(options?.hooks);
+  const writeBatch = createBatchWrite(ctx);
 
   function signal<T>(initialValue: T): Signal<T> {
     const node = new ReactiveNode(
       initialValue,
       null,
       ReactiveNodeState.Ordered,
+      ReactiveNodeKind.Signal,
     );
 
     return new SignalImpl(node, ctx);
   }
 
-  function computed<T>(fn: () => T, options?: ConputedOptions): Computed<T> {
-    const node = new ReactiveNode(undefined, fn, ReactiveNodeState.Invalid);
+  function computed<T>(fn: () => T): Computed<T> {
+    const node = new ReactiveNode(
+      undefined,
+      fn,
+      ReactiveNodeState.Invalid,
+      ReactiveNodeKind.Computed,
+    );
 
-    return new ComputedImpl<T>(node, ctx) as unknown as Computed<T>;
+    return createComputed<T>(node, ctx);
+  }
+
+  function memo<T>(fn: () => T): Computed<T> {
+    const computedNode = computed(fn);
+    computedNode();
+    return computedNode;
   }
 
   return {
     signal,
     computed,
-    //run: () => run(ctx, list),
-    batchWrite: (writes) =>
-      batchWrite(
-        ctx,
-        writes.map(([s, v]) => [s.node, v]),
-      ),
-    //list,
+    memo,
+    batchWrite: writeBatch,
     ctx,
   };
 }
