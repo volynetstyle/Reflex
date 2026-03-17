@@ -14,18 +14,6 @@ import {
 //import { OrderList } from "./order.js";
 import { unlinkAllSources, unlinkFromSource } from "./graph.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// trackingStable: пропускаємо Set ops коли граф стабільний.
-//
-// Ключовий інсайт для коректності при conditional branches:
-// Якщо під час compute(stable=true) trackRead знаходить НОВЕ ребро →
-// beginTracking не був викликаний → треба retroactively заповнити prevEdges.
-// Це "lazy beginTracking": відбувається тільки якщо граф справді змінився.
-//
-// Амортизовано: у стабільному графі (99% випадків) — нуль Set ops.
-// При branch switch — один retroactive fill + звичайний finishTracking.
-// ─────────────────────────────────────────────────────────────────────────────
-
 export function markInvalid(ctx: EngineContext, node: ReactiveNode): void {
   if (isDisposedState(node.state)) return;
   if (hasState(node.state, ReactiveNodeState.Invalid)) return;
@@ -57,6 +45,8 @@ export function markInvalid(ctx: EngineContext, node: ReactiveNode): void {
       }
     }
   }
+
+  stack.length = 0;
 }
 
 export function needsUpdate(node: ReactiveNode): boolean {
@@ -193,7 +183,9 @@ export function ensureFresh(ctx: EngineContext, node: ReactiveNode): void {
   if (!isDirtyState(node.state) && node.v !== 0) return;
 
   const { worklist: stack } = ctx;
-  let top = 0;
+  let top = 0,
+    tmp = undefined;
+
   stack[top] = node;
   ++top;
 
@@ -202,17 +194,10 @@ export function ensureFresh(ctx: EngineContext, node: ReactiveNode): void {
 
     if (!isDirtyState(current.state) || isSignalKind(current.kind)) continue;
 
-    if (!current.v) {
-      recompute(ctx, current);
-      continue;
-    }
-
-    const needsDependencyResolution = hasDirtyDependency(current);
-
-    if (needsDependencyResolution) {
+    if ((tmp = getFirstDirtyDependency(current))) {
       stack[top] = current;
       ++top;
-      stack[top] = getFirstDirtyDependency(current)!;
+      stack[top] = tmp;
       ++top;
 
       continue;
@@ -224,14 +209,8 @@ export function ensureFresh(ctx: EngineContext, node: ReactiveNode): void {
       current.state &= CLEANUP_STATE;
     }
   }
-}
 
-// Допоміжні функції
-function hasDirtyDependency(node: ReactiveNode): boolean {
-  for (let e = node.firstIn; e; e = e.nextIn) {
-    if (isDirtyState(e.from.state)) return true;
-  }
-  return false;
+  stack.length = 0;
 }
 
 function getFirstDirtyDependency(node: ReactiveNode): ReactiveNode | undefined {

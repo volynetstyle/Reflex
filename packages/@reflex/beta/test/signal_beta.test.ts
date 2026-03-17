@@ -16,7 +16,7 @@ function setup() {
     return c;
   };
 
-  return { signal, computed, rt };
+  return { signal, computed, effect: rt.effect, rt };
 }
 
 function countIncoming(node: { firstIn: { nextIn: unknown } | null }) {
@@ -30,15 +30,62 @@ function countIncoming(node: { firstIn: { nextIn: unknown } | null }) {
 describe("Reactive system — core invariants & behaviors", () => {
   let signal: ReturnType<typeof setup>["signal"];
   let computed: ReturnType<typeof setup>["computed"];
+  let effect: ReturnType<typeof setup>["effect"];
 
   beforeEach(() => {
-    ({ signal, computed } = setup());
+    ({ signal, computed, effect } = setup());
   });
 
   // ────────────────────────────────────────────────────────────────
   // 1. Базова коректність
   // ────────────────────────────────────────────────────────────────
   describe("Basic correctness", () => {
+    it("no glitch: diamond always consistent", () => {
+      const [x, setX] = signal(1);
+
+      const b = computed(() => x() * 2);
+      const c = computed(() => x() * 3);
+      const d = computed(() => b() + c());
+
+      setX(2);
+
+      expect(d()).toBe(10); // не 2*1 + 3*2 и прочий кошмар
+    });
+
+    it("SAC chain: upstream recompute with same value must not cascade", () => {
+      const fnB = vi.fn(() => {
+        x();
+        return 1; // всегда одно и то же
+      });
+
+      const fnC = vi.fn((v: number) => v + 1);
+      const fnD = vi.fn((v: number) => v + 1);
+
+      const [x, setX] = signal(0);
+
+      const b = computed(fnB);
+      const c = computed(() => fnC(b()));
+      const d = computed(() => fnD(c()));
+
+      // initial
+      expect(d()).toBe(3);
+
+      expect(fnB).toHaveBeenCalledTimes(1);
+      expect(fnC).toHaveBeenCalledTimes(1);
+      expect(fnD).toHaveBeenCalledTimes(1);
+
+      // update: значение b не меняется
+      setX(1);
+      expect(d()).toBe(3);
+
+      // B пересчитался (читает x)
+      expect(fnB).toHaveBeenCalledTimes(2);
+
+      // C и D НЕ должны пересчитываться
+      expect(fnC).toHaveBeenCalledTimes(1);
+      expect(fnD).toHaveBeenCalledTimes(1);
+    });
+
     it("signal returns initial value", () => {
       const [x] = signal(42);
       expect(x()).toBe(42);
@@ -217,7 +264,7 @@ describe("Reactive system — core invariants & behaviors", () => {
     });
 
     it("recompute updates v every time but t only on value change", () => {
-      const rt = createRuntime(); 
+      const rt = createRuntime();
       const x = rt.signal(1);
       const c = rt.computed(() => x.read() % 2);
 
