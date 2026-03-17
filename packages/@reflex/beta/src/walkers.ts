@@ -133,6 +133,7 @@ export function ensureFresh(ctx: EngineContext, node: ReactiveNode): void {
 
     let maxSourceEpoch = 0;
     let blockedByDirtySource: ReactiveNode | null = null;
+    
     for (let e = current.firstIn; e; e = e.nextIn) {
       const source = e.from;
 

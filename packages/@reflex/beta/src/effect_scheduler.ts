@@ -53,7 +53,7 @@ export class EffectScheduler {
     try {
       while (this.head < this.queue.length) {
         const node = this.queue[this.head]!;
-        this.head++;
+        ++this.head;
         clearNodeScheduled(node);
 
         if (isDisposedState(node.state) || !isDirtyState(node.state)) {
