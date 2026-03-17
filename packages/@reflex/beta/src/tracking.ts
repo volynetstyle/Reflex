@@ -4,7 +4,9 @@ import {
   ReactiveNode,
   isTrackingState,
   TRACKING_STATE,
+  ReactiveNodeState,
 } from "./core";
+import { unlinkFromSource } from "./graph";
 
 export function trackRead(
   ctx: EngineContext,
@@ -30,4 +32,32 @@ export function trackRead(
   edge.nextIn = consumer.firstIn;
   consumer.firstIn = edge;
   edge.s = consumer.s;
+}
+
+
+export function cleanupStaleSources(node: ReactiveNode): void {
+  const epoch = node.s;
+  let hasStale = false;
+  let prevIn: ReactiveEdge | null = null;
+  let e = node.firstIn;
+
+  while (e) {
+    const next = e.nextIn;
+
+    if (e.s !== epoch) {
+      if (prevIn) prevIn.nextIn = next;
+      else node.firstIn = next;
+
+      unlinkFromSource(e);
+      hasStale = true;
+    } else {
+      prevIn = e;
+    }
+
+    e = next;
+  }
+
+  if (!hasStale) {
+    node.state |= ReactiveNodeState.Tracking;
+  }
 }

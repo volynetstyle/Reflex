@@ -7,8 +7,10 @@ import {
   isDisposedState,
   type EngineHooks,
 } from "./core.js";
-import { disposeEffect, ensureFresh, markInvalid, runEffect } from "./engine.js";
+import { writeSignal } from "./engine.js";
+import { runEffect, disposeEffect } from "./engine/effect.js";
 import { trackRead } from "./tracking.js";
+import { ensureFresh, markInvalid } from "./walkers.js";
 
 export interface Signal<T> {
   readonly node: ReactiveNode;
@@ -69,14 +71,7 @@ class SignalImpl<T> implements Signal<T> {
   }
 
   write(value: T) {
-    if (Object.is(this.node.value, value)) return;
-
-    this.node.value = value;
-    this.node.t = this.ctx.bumpEpoch();
-
-    for (let e = this.node.firstOut; e; e = e.nextOut) {
-      markInvalid(this.ctx, e.to);
-    }
+    writeSignal(this.ctx, this.node, value);
   }
 }
 

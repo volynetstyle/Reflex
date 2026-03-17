@@ -57,6 +57,10 @@ export function isDisposedState(state: number): boolean {
   return hasState(state, ReactiveNodeState.Disposed);
 }
 
+export function isCleanOrSignal(state: number, kind: number) {
+  return !hasState(state, DIRTY_STATE) && kind === ReactiveNodeKind.Signal;
+}
+
 export function isSignalKind(kind: ReactiveNodeKind): boolean {
   return kind === ReactiveNodeKind.Signal;
 }
@@ -103,8 +107,6 @@ export class ReactiveNode {
   // Tracking epoch for dependency retention during recompute.
   s: number;
 
-  // Reserved for owner cleanup. Only meaningful for effect-like nodes.
-  cleanup: (() => void) | null;
   readonly kind: ReactiveNodeKind;
 
   // Outbound dependents: nodes that read from this node.
@@ -120,7 +122,6 @@ export class ReactiveNode {
   ) {
     this.value = value;
     this.compute = compute;
-    this.cleanup = null;
     this.kind = kind;
 
     this.t = 0;

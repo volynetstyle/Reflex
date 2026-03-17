@@ -2,7 +2,6 @@ import type { RollupOptions, ModuleFormat, Plugin } from "rollup";
 import replace from "@rollup/plugin-replace";
 import terser from "@rollup/plugin-terser";
 import resolve from "@rollup/plugin-node-resolve";
-import constEnum from "rollup-plugin-const-enum";
 
 type BuildFormat = "esm" | "cjs";
 
@@ -47,43 +46,7 @@ function resolverStage(): Plugin {
   return resolve({
     extensions: [".js"],
     exportConditions: ["import", "default"],
-    preferBuiltins: true,
   });
-}
-
-function constEnumStage(): Plugin {
-  return constEnum({
-    files: ["src/core.ts", "src/api.ts"],
-  });
-}
-
-function stripInternalEnumRuntimeStage(): Plugin {
-  const enumBlocks = [
-    /var ReactiveNodeState,ReactiveNodeKind,ComputedMode;!function\(ReactiveNodeState\)\{[\s\S]*?\}\(ReactiveNodeKind\|\|\(ReactiveNodeKind=\{\}\)\);/g,
-    /var ReactiveNodeState,ReactiveNodeKind;!function\(ReactiveNodeState\)\{[\s\S]*?\}\(ReactiveNodeKind\|\|\(ReactiveNodeKind=\{\}\)\);/g,
-    /var ReactiveNodeState, ReactiveNodeKind, ComputedMode;\s*\(function \(ReactiveNodeState\) \{[\s\S]*?\}\)\(ReactiveNodeKind \|\| \(ReactiveNodeKind = \{\}\)\);\s*/g,
-    /var ReactiveNodeState, ReactiveNodeKind;\s*\(function \(ReactiveNodeState\) \{[\s\S]*?\}\)\(ReactiveNodeKind \|\| \(ReactiveNodeKind = \{\}\)\);\s*/g,
-  ];
-
-  return {
-    name: "strip-internal-enum-runtime",
-
-    renderChunk(code) {
-      let nextCode = code;
-      for (const block of enumBlocks) {
-        nextCode = nextCode.replace(block, (match) =>
-          match.includes("ComputedMode") ? "var ComputedMode;" : "",
-        );
-      }
-
-      if (nextCode === code) return null;
-
-      return {
-        code: nextCode,
-        map: null,
-      };
-    },
-  };
 }
 
 function replaceStage(ctx: BuildContext): Plugin {
@@ -98,45 +61,31 @@ function replaceStage(ctx: BuildContext): Plugin {
 function minifyStage(ctx: BuildContext): Plugin | null {
   if (ctx.target.dev) return null;
 
-  const isEsm = ctx.target.format === "esm";
-
   return terser({
-    ecma: 2020,
-    module: isEsm,
-    keep_classnames: true,
-    keep_fnames: true,
     compress: {
-      ecma: 2020,
-      module: isEsm,
-      toplevel: true,
-      // Push function inlining hard, but stay within Terser's safe transforms.
-      passes: 4,
+      passes: 3,
       inline: 3,
-      collapse_vars: true,
-      reduce_funcs: true,
-      reduce_vars: true,
       dead_code: true,
       drop_console: true,
       drop_debugger: true,
+      reduce_vars: true,
+      reduce_funcs: true,
       conditionals: true,
       comparisons: true,
       booleans: true,
       unused: true,
       if_return: true,
-      join_vars: true,
-      hoist_props: true,
       sequences: true,
-      side_effects: true,
-      switches: true,
-      typeofs: true,
-      pure_getters: "strict",
+      pure_getters: true,
+      unsafe: true,
       evaluate: true,
-      defaults: true,
     },
-    mangle: false,
+    mangle: {
+      toplevel: true,
+      keep_classnames: true,
+    },
     format: {
       comments: false,
-      ecma: 2020,
     },
   });
 }
@@ -144,11 +93,9 @@ function minifyStage(ctx: BuildContext): Plugin | null {
 function pipeline(ctx: BuildContext): Plugin[] {
   const stages = [
     loggerStage(ctx),
-    constEnumStage(),
     resolverStage(),
     replaceStage(ctx),
     minifyStage(ctx),
-    stripInternalEnumRuntimeStage(),
   ];
 
   return stages.filter(Boolean) as Plugin[];
@@ -161,16 +108,12 @@ function createConfig(target: BuildTarget): RollupOptions {
     input: {
       index: "build/esm/index.js",
     },
-    preserveEntrySignatures: "exports-only",
 
     treeshake: {
-      preset: "recommended",
       moduleSideEffects: false,
       propertyReadSideEffects: false,
       tryCatchDeoptimization: false,
       correctVarValueBeforeDeclaration: false,
-      unknownGlobalSideEffects: false,
-      annotations: true,
     },
     output: {
       dir: `dist/${target.outDir}`,
@@ -180,15 +123,10 @@ function createConfig(target: BuildTarget): RollupOptions {
 
       exports: target.format === "cjs" ? "named" : undefined,
       sourcemap: target.dev,
-      interop: "auto",
-      freeze: false,
-      esModule: target.format === "cjs",
 
       generatedCode: {
         constBindings: true,
         arrowFunctions: true,
-        objectShorthand: true,
-        symbols: true,
       },
     },
 
