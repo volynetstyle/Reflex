@@ -68,12 +68,12 @@ function update(this: any, fn: any) {
 
 //
 //  expexted result
-//  1) s.value - get
+//  1) s.payload - get
 //  2) s() - get
 //  3) s.set(value => value)
 //
 //  expexted result
-//  1) s.value - get
+//  1) s.payload - get
 //  2) s() - get
 //  3) s.set(value => value)
 

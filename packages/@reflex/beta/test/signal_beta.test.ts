@@ -27,6 +27,18 @@ function countIncoming(node: { firstIn: { nextIn: unknown } | null }) {
   return count;
 }
 
+function maxSourceEpoch(node: {
+  firstIn: { from: { t: number }; nextIn: unknown } | null;
+}) {
+  let max = 0;
+  for (let edge = node.firstIn; edge; edge = edge.nextIn as typeof edge) {
+    if (edge.from.t > max) {
+      max = edge.from.t;
+    }
+  }
+  return max;
+}
+
 describe("Reactive system — core invariants & behaviors", () => {
   let signal: ReturnType<typeof setup>["signal"];
   let computed: ReturnType<typeof setup>["computed"];
@@ -200,6 +212,22 @@ describe("Reactive system — core invariants & behaviors", () => {
       expect(cSpy).toHaveBeenCalledTimes(2);
       expect(dSpy).toHaveBeenCalledTimes(2);
     });
+
+    it("single refresh dedupes repeated reads of the same dirty dependency", () => {
+      const midSpy = vi.fn((n: number) => n * 2);
+      const sinkSpy = vi.fn((left: number, right: number) => left + right);
+
+      const [x, setX] = signal(1);
+      const mid = computed(() => midSpy(x()));
+      const sink = computed(() => sinkSpy(mid(), mid()));
+
+      expect(sink()).toBe(4);
+      setX(5);
+      expect(sink()).toBe(20);
+
+      expect(midSpy).toHaveBeenCalledTimes(2);
+      expect(sinkSpy).toHaveBeenCalledTimes(2);
+    });
   });
 
   // ────────────────────────────────────────────────────────────────
@@ -330,6 +358,25 @@ describe("Reactive system — core invariants & behaviors", () => {
       expect(c()).toBe(20);
       expect(spy).toHaveBeenCalledTimes(1);
     });
+
+    it("branch switch preserves freshness invariant after dependency cleanup", () => {
+      const rt = createRuntime();
+      const flag = rt.signal(true);
+      const a = rt.signal(1);
+      const b = rt.signal(10);
+      const c = rt.computed(() => (flag.read() ? a.read() : b.read()));
+
+      expect(c()).toBe(1);
+      flag.write(false);
+      expect(c()).toBe(10);
+
+      expect(countIncoming(c.node)).toBe(2);
+      expect(c.node.v).toBeGreaterThanOrEqual(maxSourceEpoch(c.node));
+
+      a.write(2);
+      expect(c()).toBe(10);
+      expect(c.node.v).toBeGreaterThanOrEqual(maxSourceEpoch(c.node));
+    });
   });
 
   // ────────────────────────────────────────────────────────────────
@@ -442,6 +489,9 @@ describe("Reactive system — core invariants & behaviors", () => {
 
       expect(spy).toHaveBeenCalledTimes(1);
       expect(effect.node.kind).toBe(ReactiveNodeKind.Effect);
+      expect(effect.node.state).toBe(
+        ReactiveNodeState.Tracking | ReactiveNodeState.SideEffect,
+      );
       expect(effect.node.state & ReactiveNodeState.Invalid).toBeFalsy();
       expect(countIncoming(effect.node)).toBe(1);
     });
@@ -460,6 +510,20 @@ describe("Reactive system — core invariants & behaviors", () => {
       expect(spy).toHaveBeenCalledTimes(1);
 
       rt.flush();
+      expect(spy).toHaveBeenCalledTimes(2);
+    });
+
+    it("eager effect strategy re-runs without explicit flush", () => {
+      const rt = createRuntime({ effectStrategy: "eager" });
+      const source = rt.signal(1);
+      const spy = vi.fn(() => {
+        source.read();
+      });
+
+      rt.effect(spy);
+      expect(spy).toHaveBeenCalledTimes(1);
+
+      source.write(2);
       expect(spy).toHaveBeenCalledTimes(2);
     });
 
@@ -616,7 +680,18 @@ describe("Reactive system — core invariants & behaviors", () => {
       shouldThrow = true;
       source.write(2);
       expect(() => derived()).toThrow("unstable");
-      expect(derived.node.value).toBe(2);
+      expect(derived.node.payload).toBe(2);
+    });
+
+    it("throws on cycles instead of looping forever", () => {
+      const rt = createRuntime();
+      let a!: ReturnType<typeof rt.computed<number>>;
+      let b!: ReturnType<typeof rt.computed<number>>;
+
+      a = rt.computed(() => b() + 1);
+      b = rt.computed(() => a() + 1);
+
+      expect(() => a()).toThrow(/Cycle detected/);
     });
   });
 });

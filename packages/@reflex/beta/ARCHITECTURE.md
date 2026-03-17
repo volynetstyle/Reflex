@@ -27,8 +27,10 @@ Each node participates in a directed dependency graph:
 The core now also exposes light extension points for future effects:
 
 - `ReactiveNodeKind` to distinguish signal/computed/effect roles
-- `ReactiveNode.cleanup` reserved for future disposer support
-- `EngineHooks.onEffectInvalidated` for external scheduling layers
+- explicit node factories so new roles do not leak constructor details
+- a shared computation pipeline for computed/effect execution
+- a dedicated effect scheduler layer with cheap queueing and optional eager flush
+- `EngineHooks.onEffectInvalidated` as the boundary between invalidation and scheduling
 
 These hooks are architectural preparation only. They should not change current signal/computed behavior.
 
@@ -164,6 +166,11 @@ This runtime is intentionally biased toward:
 - deep chains
 - partial reads of larger graphs
 - dynamic dependencies without heavy allocation
+
+Production builds also assume:
+
+- dev-only safety checks are guarded by compile-time `__DEV__`
+- rollup/terser should erase those branches entirely from prod bundles
 
 It is weaker in eager-friendly workloads such as:
 

@@ -98,12 +98,12 @@ export function recompute(
 
   beginTracking(node);
 
-  const prev = node.value;
+  const prev = node.payload;
   const prevActive = ctx.activeComputed;
   ctx.activeComputed = node;
 
   try {
-    node.value = node.compute();
+    node.payload = node.compute();
   } finally {
     ctx.activeComputed = prevActive;
   }
@@ -113,7 +113,7 @@ export function recompute(
   node.computedAt = ctx.getEpoch();
   node.state &= ~(ReactiveNodeState.Invalid | ReactiveNodeState.Obsolete);
 
-  const changed = !Object.is(prev, node.value);
+  const changed = !Object.is(prev, node.payload);
   if (changed) node.changedAt = ctx.getEpoch();
 
   return changed;
@@ -186,8 +186,8 @@ export function writeSignal(
   node: ReactiveNode,
   value: unknown,
 ): void {
-  if (Object.is(node.value, value)) return;
-  node.value = value;
+  if (Object.is(node.payload, value)) return;
+  node.payload = value;
   node.changedAt = ctx.bumpEpoch();
   for (let e = node.firstOut; e; e = e.nextOut) {
     markInvalid(ctx, e.to);
@@ -202,8 +202,8 @@ export function batchWrite(
 ): void {
   ctx.bumpEpoch();
   for (const [node, value] of writes) {
-    if (Object.is(node.value, value)) continue;
-    node.value = value;
+    if (Object.is(node.payload, value)) continue;
+    node.payload = value;
     node.changedAt = ctx.getEpoch();
     for (let e = node.firstOut; e; e = e.nextOut) {
       markInvalid(ctx, e.to);

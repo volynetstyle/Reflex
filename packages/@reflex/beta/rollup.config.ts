@@ -54,6 +54,8 @@ function replaceStage(ctx: BuildContext): Plugin {
     preventAssignment: true,
     values: {
       __DEV__: JSON.stringify(ctx.target.dev),
+      __PROD__: JSON.stringify(!ctx.target.dev),
+      __TEST__: "false",
     },
   });
 }

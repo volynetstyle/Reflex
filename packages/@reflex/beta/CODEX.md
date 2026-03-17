@@ -52,6 +52,19 @@ For `engine.ts`:
 - keep `ensureFresh()` simple
 - prefer small constant-factor wins over clever multi-phase traversals
 - avoid extra allocations in hot paths
+- prefer shared execution helpers over duplicating computed/effect pipelines
+
+For effect scheduling:
+
+- keep queueing separate from invalidation
+- prefer state-bit dedupe over `Set`-heavy bookkeeping on the hot path
+- treat eager scheduling as an optional layer over the lazy core, not a rewrite
+- keep `flush()` viable as the default manual strategy
+
+For dev safety:
+
+- guard debug-only checks with compile-time `__DEV__`
+- prod bundles should not retain dev assertions or cycle-guard branches
 
 For `tracking.ts`:
 

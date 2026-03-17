@@ -5,38 +5,36 @@ import {
   hasState,
   ReactiveNodeState,
   isEffectKind,
-  isCleanOrSignal,
-  CLEANUP_STATE,
+  clearDirtyState,
+  isComputingState,
   isDirtyState,
+  isSignalKind,
 } from "./core";
 import { recompute } from "./engine/compute";
 
-export function needsUpdate(node: ReactiveNode): boolean {
-  // first reason - never compute
-  if (node.v === 0) return true;
+function assertFreshNode(node: ReactiveNode): void {
+  if (isSignalKind(node)) return;
 
-  // next reason - stale
-  if (hasState(node.state, ReactiveNodeState.Obsolete)) return true;
-
-  // but if not outdated, let's make sure it is
+  let maxSourceEpoch = 0;
   for (let e = node.firstIn; e; e = e.nextIn) {
-    if (e.from.t > node.v) {
-      node.state |= ReactiveNodeState.Obsolete;
-      return true;
+    if (e.from.t > maxSourceEpoch) {
+      maxSourceEpoch = e.from.t;
     }
+
+    console.assert(
+      e.from.t <= node.v,
+      "stale node detected: dependency newer than node validation epoch",
+    );
   }
 
-  // otherway - clean, full cycle
-  return false;
-}
-
-export function getFirstDirtyDependency(
-  node: ReactiveNode,
-): ReactiveNode | undefined {
-  for (let e = node.firstIn; e; e = e.nextIn) {
-    if (isDirtyState(e.from.state)) return e.from;
-  }
-  return undefined;
+  console.assert(
+    node.v >= maxSourceEpoch,
+    "freshness invariant violated: node.v must cover all dependency epochs",
+  );
+  console.assert(
+    !isDirtyState(node.state),
+    "recompute invariant violated: fresh node must not stay dirty",
+  );
 }
 
 export function markInvalid(ctx: EngineContext, node: ReactiveNode): void {
@@ -56,7 +54,7 @@ export function markInvalid(ctx: EngineContext, node: ReactiveNode): void {
     if (hasState(n.state, ReactiveNodeState.Invalid)) continue;
 
     n.state |= ReactiveNodeState.Invalid;
-    if (isEffectKind(n.kind)) ctx.notifyEffectInvalidated(n);
+    if (isEffectKind(n)) ctx.notifyEffectInvalidated(n);
 
     // const first = ctx.firstDirty;
     // if (!first /* || n.order < first.order */) ctx.firstDirty = n;
@@ -72,14 +70,50 @@ export function markInvalid(ctx: EngineContext, node: ReactiveNode): void {
   }
 }
 
+export function needsUpdate(node: ReactiveNode): boolean {
+  return needsUpdateFromSourceT(node, -1);
+}
+
+function needsUpdateFromSourceT(
+  node: ReactiveNode,
+  maxSourceEpoch: number,
+): boolean {
+  // first reason - never compute
+  if (node.v === 0) return true;
+
+  // next reason - stale
+  if (hasState(node.state, ReactiveNodeState.Obsolete)) return true;
+
+  // but if not outdated, let's make sure it is
+  if (maxSourceEpoch < 0) {
+    for (let e = node.firstIn; e; e = e.nextIn) {
+      if (e.from.t > node.v) {
+        node.state |= ReactiveNodeState.Obsolete;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  if (maxSourceEpoch > node.v) {
+    node.state |= ReactiveNodeState.Obsolete;
+    return true;
+  }
+
+  return false;
+}
+
 export function ensureFresh(ctx: EngineContext, node: ReactiveNode): void {
-  if (isCleanOrSignal(node.state, node.kind) && node.v !== 0) return;
+  if (!isDirtyState(node.state) && isSignalKind(node) && node.v !== 0) return;
 
   const { worklist: stack } = ctx;
-  let top = 0,
-    tmp = undefined;
+  let top = 0;
+  const workEpoch = ++ctx.workEpoch;
 
   const next = (n: ReactiveNode) => {
+    if (n.w === workEpoch) return;
+    n.w = workEpoch;
     stack[top] = n;
     ++top;
   };
@@ -88,21 +122,48 @@ export function ensureFresh(ctx: EngineContext, node: ReactiveNode): void {
 
   while (top) {
     const current = stack[--top]!;
+    current.w = -workEpoch;
 
-    if (isCleanOrSignal(current.state, current.kind)) {
+    if (!isDirtyState(current.state)) {
+      if (__DEV__) {
+        assertFreshNode(current);
+      }
       continue;
     }
 
-    if ((tmp = getFirstDirtyDependency(current))) {
+    let maxSourceEpoch = 0;
+    let blockedByDirtySource: ReactiveNode | null = null;
+    for (let e = current.firstIn; e; e = e.nextIn) {
+      const source = e.from;
+
+      if (__DEV__ && isComputingState(source.state)) {
+        throw new Error("Cycle detected while refreshing reactive graph");
+      }
+
+      if (isDirtyState(source.state)) {
+        blockedByDirtySource = source;
+        break;
+      }
+
+      if (source.t > maxSourceEpoch) {
+        maxSourceEpoch = source.t;
+      }
+    }
+
+    if (blockedByDirtySource) {
       next(current);
-      next(tmp);
+      next(blockedByDirtySource);
       continue;
     }
 
-    if (needsUpdate(current)) {
+    if (needsUpdateFromSourceT(current, maxSourceEpoch)) {
       recompute(ctx, current);
     } else {
-      current.state &= CLEANUP_STATE;
+      clearDirtyState(current);
+    }
+
+    if (__DEV__) {
+      assertFreshNode(current);
     }
   }
 }

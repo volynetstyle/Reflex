@@ -1,29 +1,6 @@
-import {
-  ReactiveNode,
-  ReactiveNodeState,
-  EngineContext,
-  hasState,
-  isDirtyState,
-} from "./core.js";
+import { ReactiveNode, EngineContext } from "./core.js";
 //import { OrderList } from "./order.js";
 import { markInvalid } from "./walkers.js";
-
-
-
-export function invokeCompute(
-  ctx: EngineContext,
-  node: ReactiveNode,
-  compute: () => unknown,
-): unknown {
-  const prevActive = ctx.activeComputed;
-
-  ctx.activeComputed = node;
-  try {
-    return compute();
-  } finally {
-    ctx.activeComputed = prevActive;
-  }
-}
 
 // export function run(ctx: EngineContext, list: OrderList): number {
 //   let node = ctx.firstDirty;
@@ -52,21 +29,32 @@ export function writeSignal(
   node: ReactiveNode,
   value: unknown,
 ): void {
-  if (Object.is(node.value, value)) return;
-  node.value = value;
-  node.t = ctx.bumpEpoch();
-  for (let e = node.firstOut; e; e = e.nextOut) markInvalid(ctx, e.to);
+  applySignalWrite(ctx, node, value, ctx.bumpEpoch());
 }
 
 export function batchWrite(
   ctx: EngineContext,
   writes: Array<[ReactiveNode, unknown]>,
 ): void {
-  ctx.bumpEpoch();
+  const epoch = ctx.bumpEpoch();
+
   for (const [node, value] of writes) {
-    if (Object.is(node.value, value)) continue;
-    node.value = value;
-    node.t = ctx.getEpoch();
-    for (let e = node.firstOut; e; e = e.nextOut) markInvalid(ctx, e.to);
+    applySignalWrite(ctx, node, value, epoch);
+  }
+}
+
+function applySignalWrite(
+  ctx: EngineContext,
+  node: ReactiveNode,
+  value: unknown,
+  epoch: number,
+): void {
+  if (Object.is(node.payload, value)) return;
+
+  node.payload = value;
+  node.t = epoch;
+
+  for (let e = node.firstOut; e; e = e.nextOut) {
+    markInvalid(ctx, e.to);
   }
 }

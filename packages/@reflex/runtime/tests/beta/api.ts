@@ -46,7 +46,7 @@ export function createRuntime(): Runtime {
   // ── signal ──────────────────────────────────────────────────
   function signal<T>(initialValue: T): Signal<T> {
     const node = new ReactiveNode();
-    node.value = initialValue;
+    node.payload = initialValue;
     node.compute = null;
     node.changedAt = 0;
     node.computedAt = 0;
@@ -58,7 +58,7 @@ export function createRuntime(): Runtime {
       if (ctx.activeComputed) {
         trackRead(ctx, node, list);
       }
-      return node.value as T;
+      return node.payload as T;
     }
 
     return {
@@ -74,7 +74,7 @@ export function createRuntime(): Runtime {
   function computed<T>(fn: () => T): Computed<T> {
     const node = new ReactiveNode();
     node.compute = fn as () => unknown;
-    node.value = undefined;
+    node.payload = undefined;
     node.changedAt = 0;
     node.computedAt = 0;
     // Починаємо як Invalid — щоб перше read() тригернуло recompute
@@ -94,7 +94,7 @@ export function createRuntime(): Runtime {
         ensureFresh(ctx, node, list);
       }
 
-      return node.value as T;
+      return node.payload as T;
     }
 
     // computed повертає функцію що також є об'єктом з .node

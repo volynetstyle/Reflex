@@ -6,7 +6,7 @@ import {
   TRACKING_STATE,
   ReactiveNodeState,
 } from "./core";
-import { unlinkFromSource } from "./graph";
+import { linkEdge, unlinkFromSource } from "./graph";
 
 export function trackRead(
   ctx: EngineContext,
@@ -26,14 +26,9 @@ export function trackRead(
     consumer.state &= ~TRACKING_STATE;
   }
 
-  const edge = new ReactiveEdge(source, consumer);
-  edge.nextOut = source.firstOut;
-  source.firstOut = edge;
-  edge.nextIn = consumer.firstIn;
-  consumer.firstIn = edge;
+  const edge = linkEdge(source, consumer);
   edge.s = consumer.s;
 }
-
 
 export function cleanupStaleSources(node: ReactiveNode): void {
   const epoch = node.s;

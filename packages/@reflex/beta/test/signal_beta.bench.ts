@@ -1,636 +1,650 @@
-import { describe, bench } from "vitest";
-import { createSignal, createMemo, flush } from "@solidjs/signals";
-import { createRuntime } from "../dist/esm";
+import { bench, describe } from "vitest";
+import { createMemo, createSignal, flush } from "@solidjs/signals";
+import { createRuntime, type BatchWriteEntry, type Signal } from "../dist/esm/index.js";
 
-// Anti-JIT sink (щоб V8 не викинув обчислення)
+type Read<T> = () => T;
+type Write<T> = (value: T) => void;
+type OursSignal<T> = readonly [Read<T>, Write<T>, Signal<T>];
+type SolidSignal<T> = readonly [Read<T>, Write<T>];
+
 let sinkAcc = 0;
-function blackhole(n: number) {
-  sinkAcc = (sinkAcc * 100019 + (n | 0)) | 0;
+
+function blackhole(value: number): void {
+  sinkAcc = (sinkAcc * 100_019 + (value | 0)) | 0;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
+function at<T>(items: readonly T[], index: number): T {
+  const item = items[index];
+  if (item === undefined) {
+    throw new Error(`Missing item at index ${index}`);
+  }
+  return item;
+}
 
-function makeOurs() {
-  const rt = createRuntime();
+function createRng(seed: number) {
+  let state = seed | 0;
+
   return {
-    batchWrite: rt.batchWrite.bind(rt),
-    signal: <T>(v: T) => {
-      const s = rt.signal(v);
-      return [() => s.read(), (val: T) => s.write(val), s] as const;
+    next(): number {
+      state = (state + 0x6d2b79f5) | 0;
+      let t = Math.imul(state ^ (state >>> 15), 1 | state);
+      t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     },
-    memo: <T>(fn: () => T) => {
-      const c = rt.memo(fn);
-      return () => c();
+    int(maxExclusive: number): number {
+      return Math.floor(this.next() * maxExclusive);
+    },
+    centered(span: number): number {
+      return this.next() * span * 2 - span;
     },
   };
 }
 
-// // ─────────────────────────────────────────────────────────────────────────────
-// // Wide static: 1000 memo × 5 deps, read ~10–20%
-// // ─────────────────────────────────────────────────────────────────────────────
+function primeReads(reads: readonly Read<number>[]): void {
+  for (const read of reads) {
+    blackhole(read());
+  }
+}
 
-describe("Wide static graph (1000 memos × 5 deps)", () => {
-  const N = 1000;
-  const DEPS = 5;
+function createOursHarness() {
+  const runtime = createRuntime();
 
-  function buildWide(sourcesCount: number) {
-    const ours = makeOurs();
-    const sources = Array.from({ length: sourcesCount }, (_, i) =>
-      ours.signal(i),
+  return {
+    batchWrite(writes: ReadonlyArray<BatchWriteEntry>) {
+      runtime.batchWrite(writes);
+    },
+    signal<T>(initial: T): OursSignal<T> {
+      const signal = runtime.signal(initial);
+      return [() => signal.read(), (value: T) => signal.write(value), signal];
+    },
+    memo<T>(compute: () => T): Read<T> {
+      const memo = runtime.memo(compute);
+      return () => memo();
+    },
+  };
+}
+
+describe("Wide static graph (1000 memos x 5 deps)", () => {
+  const memoCount = 1000;
+  const depCount = 5;
+  const readEvery10 = 10;
+  const readEvery9 = 9;
+
+  function buildOurs(sourceCount: number) {
+    const ours = createOursHarness();
+    const sources = Array.from({ length: sourceCount }, (_, index) =>
+      ours.signal(index),
     );
-
-    const memos = Array.from({ length: N }, (_, i) =>
+    const memos = Array.from({ length: memoCount }, (_, memoIndex) =>
       ours.memo(() => {
         let sum = 0;
-        for (let d = 0; d < DEPS; d++) {
-          sum += sources[(i + d * 3) % sourcesCount][0]();
+        for (let depIndex = 0; depIndex < depCount; depIndex++) {
+          sum += at(sources, (memoIndex + depIndex * 3) % sourceCount)[0]();
         }
         return sum;
       }),
     );
 
-    // initial settle
-    sources.forEach(([, set]) => set(0));
-    memos.forEach((m) => blackhole(m()));
+    for (const [, write] of sources) {
+      write(0);
+    }
+    primeReads(memos);
 
     return { sources, memos };
   }
 
-  const ours2 = buildWide(2);
-  const solid2 = (() => {
-    const srcs = Array.from({ length: 2 }, () => createSignal(0));
-    const memos = Array.from({ length: N }, (_, i) =>
+  function buildSolid(sourceCount: number) {
+    const sources = Array.from({ length: sourceCount }, () => createSignal(0));
+    const memos = Array.from({ length: memoCount }, (_, memoIndex) =>
       createMemo(() => {
         let sum = 0;
-        for (let d = 0; d < DEPS; d++) {
-          sum += srcs[(i + d * 3) % 2][0]();
+        for (let depIndex = 0; depIndex < depCount; depIndex++) {
+          sum += at(sources, (memoIndex + depIndex * 3) % sourceCount)[0]();
         }
         return sum;
       }),
     );
-    srcs.forEach(([, s]) => s(0));
+
+    for (const [, write] of sources) {
+      write(0);
+    }
     flush();
-    memos.forEach((m) => blackhole(m()));
-    return { sources: srcs, memos };
-  })();
+    primeReads(memos);
 
-  const ours25 = buildWide(25);
-  const solid25 = (() => {
-    const srcs = Array.from({ length: 25 }, () => createSignal(0));
-    const memos = Array.from({ length: N }, (_, i) =>
-      createMemo(() => {
-        let sum = 0;
-        for (let d = 0; d < DEPS; d++) {
-          sum += srcs[(i + d * 3) % 25][0]();
-        }
-        return sum;
-      }),
-    );
-    srcs.forEach(([, s]) => s(0));
+    return { sources, memos };
+  }
+
+  const ours2 = buildOurs(2);
+  const solid2 = buildSolid(2);
+  const ours25 = buildOurs(25);
+  const solid25 = buildSolid(25);
+  const rngOurs2 = createRng(0x201);
+  const rngSolid2 = createRng(0x202);
+  const rngOurs25 = createRng(0x251);
+  const rngSolid25 = createRng(0x252);
+
+  bench("beta build - 2 sources, change 1, read ~10%", () => {
+    at(ours2.sources, rngOurs2.int(2))[1](rngOurs2.next() * 1000);
+    for (let index = 0; index < memoCount; index += readEvery10) {
+      blackhole(at(ours2.memos, index)());
+    }
+  }, { iterations: 150, warmupIterations: 30 });
+
+  bench("solid signals - 2 sources, change 1, flush, read ~10%", () => {
+    at(solid2.sources, rngSolid2.int(2))[1](rngSolid2.next() * 1000);
     flush();
-    memos.forEach((m) => blackhole(m()));
-    return { sources: srcs, memos };
-  })();
+    for (let index = 0; index < memoCount; index += readEvery10) {
+      blackhole(at(solid2.memos, index)());
+    }
+  }, { iterations: 150, warmupIterations: 30 });
 
-  bench(
-    "ours — 2 sources, change 1, read ~10%",
-    () => {
-      const idx = Math.floor(Math.random() * 2);
-      ours2.sources[idx][1](Math.random() * 1000);
-      for (let i = 0; i < N; i += 10) {
-        blackhole(ours2.memos[i]());
-      }
-    },
-    { iterations: 150, warmupIterations: 30 },
-  );
+  bench("beta build - 25 sources, change 1, read ~10%", () => {
+    at(ours25.sources, rngOurs25.int(25))[1](rngOurs25.next() * 1000);
+    for (let index = 0; index < memoCount; index += readEvery9) {
+      blackhole(at(ours25.memos, index)());
+    }
+  }, { iterations: 120, warmupIterations: 25 });
 
-  bench(
-    "solid — 2 sources, change 1, flush + read ~10%",
-    () => {
-      const idx = Math.floor(Math.random() * 2);
-      solid2.sources[idx][1](Math.random() * 1000);
-      flush();
-      for (let i = 0; i < N; i += 10) {
-        blackhole(solid2.memos[i]());
-      }
-    },
-    { iterations: 150, warmupIterations: 30 },
-  );
-
-  bench(
-    "ours — 25 sources, change 1, read ~10%",
-    () => {
-      const idx = Math.floor(Math.random() * 25);
-      ours25.sources[idx][1](Math.random() * 1000);
-      for (let i = 0; i < N; i += 9) {
-        blackhole(ours25.memos[i]());
-      }
-    },
-    { iterations: 120, warmupIterations: 25 },
-  );
-
-  bench(
-    "solid — 25 sources, change 1, flush + read ~10%",
-    () => {
-      const idx = Math.floor(Math.random() * 25);
-      solid25.sources[idx][1](Math.random() * 1000);
-      flush();
-      for (let i = 0; i < N; i += 9) {
-        blackhole(solid25.memos[i]());
-      }
-    },
-    { iterations: 120, warmupIterations: 25 },
-  );
+  bench("solid signals - 25 sources, change 1, flush, read ~10%", () => {
+    at(solid25.sources, rngSolid25.int(25))[1](rngSolid25.next() * 1000);
+    flush();
+    for (let index = 0; index < memoCount; index += readEvery9) {
+      blackhole(at(solid25.memos, index)());
+    }
+  }, { iterations: 120, warmupIterations: 25 });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Deep chains: 8 ланцюгів × 400 вузлів
-// ─────────────────────────────────────────────────────────────────────────────
+describe("Deep chains (8 x 400 depth)", () => {
+  const sourceCount = 4;
+  const chainCount = 8;
+  const depth = 400;
 
-describe("Deep chains (8 × 400 depth)", () => {
-  function buildDeep() {
-    const ours = makeOurs();
-    const sources = Array.from({ length: 4 }, () => ours.signal(0));
-    const ends: Array<() => number> = [];
+  function buildOurs() {
+    const ours = createOursHarness();
+    const sources = Array.from({ length: sourceCount }, () => ours.signal(0));
+    const ends: Array<Read<number>> = [];
 
-    for (let chain = 0; chain < 8; chain++) {
-      let prev = sources[chain % 4][0];
-      for (let depth = 0; depth < 400; depth++) {
-        const p = prev;
-        prev = ours.memo(() => p());
+    for (let chainIndex = 0; chainIndex < chainCount; chainIndex++) {
+      let prev = at(sources, chainIndex % sourceCount)[0];
+      for (let level = 0; level < depth; level++) {
+        const readPrev = prev;
+        prev = ours.memo(() => readPrev());
       }
       ends.push(prev);
     }
 
-    sources.forEach(([, s]) => s(0));
-    ends.forEach((e) => blackhole(e()));
+    for (const [, write] of sources) {
+      write(0);
+    }
+    primeReads(ends);
 
     return { sources, ends };
   }
 
-  const ours1 = buildDeep();
-  const solid1 = (() => {
-    const srcs = Array.from({ length: 4 }, () => createSignal(0));
-    const ends: Array<() => number> = [];
-    for (let chain = 0; chain < 8; chain++) {
-      let prev = srcs[chain % 4][0];
-      for (let d = 0; d < 400; d++) {
-        const p = prev;
-        prev = createMemo(() => p());
+  function buildSolid() {
+    const sources = Array.from({ length: sourceCount }, () => createSignal(0));
+    const ends: Array<Read<number>> = [];
+
+    for (let chainIndex = 0; chainIndex < chainCount; chainIndex++) {
+      let prev = at(sources, chainIndex % sourceCount)[0];
+      for (let level = 0; level < depth; level++) {
+        const readPrev = prev;
+        prev = createMemo(() => readPrev());
       }
-      ends.push(prev as any);
+      ends.push(prev);
     }
-    srcs.forEach(([, s]) => s(0));
+
+    for (const [, write] of sources) {
+      write(0);
+    }
     flush();
-    ends.forEach((e) => blackhole(e()));
-    return { sources: srcs, ends };
-  })();
+    primeReads(ends);
 
-  bench(
-    "ours — change 1 source → read 8 ends",
-    () => {
-      ours1.sources[1][1](Math.random() * 200);
-      ours1.ends.forEach((e) => blackhole(e()));
-    },
-    { iterations: 400, warmupIterations: 50 },
-  );
+    return { sources, ends };
+  }
 
-  bench(
-    "solid — change 1 source → flush → read 8 ends",
-    () => {
-      solid1.sources[1][1](Math.random() * 200);
-      flush();
-      solid1.ends.forEach((e) => blackhole(e()));
-    },
-    { iterations: 400, warmupIterations: 50 },
-  );
+  const ours = buildOurs();
+  const solid = buildSolid();
+  const rngOurs = createRng(0x401);
+  const rngSolid = createRng(0x402);
+
+  bench("beta build - change 1 source, read 8 ends", () => {
+    at(ours.sources, 1)[1](rngOurs.next() * 200);
+    for (const read of ours.ends) {
+      blackhole(read());
+    }
+  }, { iterations: 400, warmupIterations: 50 });
+
+  bench("solid signals - change 1 source, flush, read 8 ends", () => {
+    at(solid.sources, 1)[1](rngSolid.next() * 200);
+    flush();
+    for (const read of solid.ends) {
+      blackhole(read());
+    }
+  }, { iterations: 400, warmupIterations: 50 });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DIAMOND / FAN-OUT → FAN-IN (200 шляхів сходження в один final)
-// Це high fan-in сценарій для lazy pull:
-// • при читанні final все одно треба пройти fan-in фінального вузла
-// • eager системи можуть вигравати, якщо flush уже підготував cached final
-// ─────────────────────────────────────────────────────────────────────────────
-describe("Diamond / Fan-out → Fan-in (200 paths converge)", () => {
-  const PATHS = 200;
-  const DEPTH = 5;
+describe("Diamond / Fan-out -> Fan-in (200 paths converge)", () => {
+  const pathCount = 200;
+  const depth = 5;
 
-  function buildDiamond() {
-    const ours = makeOurs();
-    const sources = Array.from({ length: PATHS }, () => ours.signal(0));
+  function buildOurs() {
+    const ours = createOursHarness();
+    const sources = Array.from({ length: pathCount }, () => ours.signal(0));
+    const pathEnds: Array<Read<number>> = [];
 
-    // для кожного шляху — приватний ланцюжок глибиною DEPTH
-    const pathEnds: Array<() => number> = [];
-    for (let p = 0; p < PATHS; p++) {
-      let prev = sources[p][0];
-      for (let d = 0; d < DEPTH; d++) {
-        const pFn = prev;
-        prev = ours.memo(() => pFn() * 1.0001 + d); // невелике обчислення
+    for (let pathIndex = 0; pathIndex < pathCount; pathIndex++) {
+      let prev = at(sources, pathIndex)[0];
+      for (let level = 0; level < depth; level++) {
+        const readPrev = prev;
+        prev = ours.memo(() => readPrev() * 1.0001 + level);
       }
       pathEnds.push(prev);
     }
 
-    // фінальний memo — fan-in
     const final = ours.memo(() => {
       let sum = 0;
-      for (const e of pathEnds) sum += e();
+      for (const read of pathEnds) {
+        sum += read();
+      }
       return sum;
     });
 
-    // initial settle
-    sources.forEach(([, set]) => set(0));
+    for (const [, write] of sources) {
+      write(0);
+    }
     blackhole(final());
 
     return { sources, final };
   }
 
-  const oursDiamond = buildDiamond();
-  const solidDiamond = (() => {
-    const srcs = Array.from({ length: PATHS }, () => createSignal(0));
-    const pathEnds: Array<() => number> = [];
-    for (let p = 0; p < PATHS; p++) {
-      let prev = srcs[p][0];
-      for (let d = 0; d < DEPTH; d++) {
-        const pFn = prev;
-        prev = createMemo(() => pFn() * 1.0001 + d);
+  function buildSolid() {
+    const sources = Array.from({ length: pathCount }, () => createSignal(0));
+    const pathEnds: Array<Read<number>> = [];
+
+    for (let pathIndex = 0; pathIndex < pathCount; pathIndex++) {
+      let prev = at(sources, pathIndex)[0];
+      for (let level = 0; level < depth; level++) {
+        const readPrev = prev;
+        prev = createMemo(() => readPrev() * 1.0001 + level);
       }
-      pathEnds.push(prev as any);
+      pathEnds.push(prev);
     }
+
     const final = createMemo(() => {
       let sum = 0;
-      for (const e of pathEnds) sum += e();
+      for (const read of pathEnds) {
+        sum += read();
+      }
       return sum;
     });
-    srcs.forEach(([, s]) => s(0));
+
+    for (const [, write] of sources) {
+      write(0);
+    }
     flush();
     blackhole(final());
-    return { sources: srcs, final };
-  })();
 
-  bench(
-    "ours — change 1 source → read final",
-    () => {
-      const idx = Math.floor(Math.random() * PATHS);
-      oursDiamond.sources[idx][1](Math.random() * 100);
-      blackhole(oursDiamond.final());
-    },
-    { iterations: 800, warmupIterations: 100 },
-  );
+    return { sources, final };
+  }
 
-  bench(
-    "solid — change 1 source → flush → read final",
-    () => {
-      const idx = Math.floor(Math.random() * PATHS);
-      solidDiamond.sources[idx][1](Math.random() * 100);
-      flush();
-      blackhole(solidDiamond.final());
-    },
-    { iterations: 800, warmupIterations: 100 },
-  );
+  const ours = buildOurs();
+  const solid = buildSolid();
+  const rngOurs = createRng(0x501);
+  const rngSolid = createRng(0x502);
+
+  bench("beta build - change 1 source, read final", () => {
+    at(ours.sources, rngOurs.int(pathCount))[1](rngOurs.next() * 100);
+    blackhole(ours.final());
+  }, { iterations: 800, warmupIterations: 100 });
+
+  bench("solid signals - change 1 source, flush, read final", () => {
+    at(solid.sources, rngSolid.int(pathCount))[1](rngSolid.next() * 100);
+    flush();
+    blackhole(solid.final());
+  }, { iterations: 800, warmupIterations: 100 });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DYNAMIC DEPS + FREQUENT TRACKING INVALIDATION
-// Solid платить за повну перебудову залежностей при кожному flush()
-// Наш runtime — тільки якщо дійсно читаємо і trackingScope змінився
-// ─────────────────────────────────────────────────────────────────────────────
 describe("Dynamic deps + frequent flip (tracking invalidation)", () => {
-  const N = 150;
-  const DEPS = 12;
+  const memoCount = 150;
+  const sourceCount = 12;
+  const depCount = 12;
 
-  function buildDynamic() {
-    const ours = makeOurs();
-    const sources = Array.from({ length: 12 }, () => ours.signal(0));
-
-    const memos = Array.from({ length: N }, (_, i) =>
+  function buildOurs() {
+    const ours = createOursHarness();
+    const sources = Array.from({ length: sourceCount }, () => ours.signal(0));
+    const memos = Array.from({ length: memoCount }, (_, memoIndex) =>
       ours.memo(() => {
         let sum = 0;
-        const flip = sources[0][0]() % 3; // 0,1,2 — різні набори залежностей
-        for (let d = 0; d < DEPS; d++) {
-          const srcIdx = (i + d + flip * 7) % sources.length;
-          sum += sources[srcIdx][0]();
+        const flip = at(sources, 0)[0]() % 3;
+        for (let depIndex = 0; depIndex < depCount; depIndex++) {
+          const sourceIndex = (memoIndex + depIndex + flip * 7) % sourceCount;
+          sum += at(sources, sourceIndex)[0]();
         }
         return sum;
       }),
     );
 
-    sources.forEach(([, s]) => s(0));
-    memos.forEach((m) => blackhole(m()));
+    for (const [, write] of sources) {
+      write(0);
+    }
+    primeReads(memos);
 
     return { sources, memos };
   }
 
-  const oursDyn = buildDynamic();
-  const solidDyn = (() => {
-    const srcs = Array.from({ length: 12 }, () => createSignal(0));
-    const memos = Array.from({ length: N }, (_, i) =>
+  function buildSolid() {
+    const sources = Array.from({ length: sourceCount }, () => createSignal(0));
+    const memos = Array.from({ length: memoCount }, (_, memoIndex) =>
       createMemo(() => {
         let sum = 0;
-        const flip = srcs[0][0]() % 3;
-        for (let d = 0; d < DEPS; d++) {
-          const srcIdx = (i + d + flip * 7) % srcs.length;
-          sum += srcs[srcIdx][0]();
+        const flip = at(sources, 0)[0]() % 3;
+        for (let depIndex = 0; depIndex < depCount; depIndex++) {
+          const sourceIndex = (memoIndex + depIndex + flip * 7) % sourceCount;
+          sum += at(sources, sourceIndex)[0]();
         }
         return sum;
       }),
     );
-    srcs.forEach(([, s]) => s(0));
+
+    for (const [, write] of sources) {
+      write(0);
+    }
     flush();
-    memos.forEach((m) => blackhole(m()));
-    return { sources: srcs, memos };
-  })();
+    primeReads(memos);
 
-  bench(
-    "ours — flip deps every tick + read 100%",
-    () => {
-      oursDyn.sources[0][1]((Math.random() * 1000) | 0);
-      oursDyn.memos.forEach((m) => blackhole(m()));
-    },
-    { iterations: 300, warmupIterations: 50 },
-  );
-
-  bench(
-    "solid — flip deps every tick + flush + read 100%",
-    () => {
-      solidDyn.sources[0][1]((Math.random() * 1000) | 0);
-      flush();
-      solidDyn.memos.forEach((m) => blackhole(m()));
-    },
-    { iterations: 300, warmupIterations: 50 },
-  );
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// LARGE BATCH WRITE (20% sources одночасно) + повне читання
-// Тут Solid може наздогнати або навіть обійти — бо flush() обробляє
-// всі dirty вузли за один прохід з оптимальним порядком.
-// Pull має перевіряти кожен read() окремо.
-// ─────────────────────────────────────────────────────────────────────────────
-describe("Large batch write (20% sources) + full read", () => {
-  const N = 800;
-  const SOURCES = 80;
-  const BATCH_PCT = 0.2;
-
-  function buildBatch() {
-    const ours = makeOurs();
-    const sources = Array.from({ length: SOURCES }, () => ours.signal(0));
-    const memos = Array.from({ length: N }, (_, i) =>
-      ours.memo(() => {
-        let sum = 0;
-        for (let d = 0; d < 6; d++) sum += sources[(i + d) % SOURCES][0]();
-        return sum;
-      }),
-    );
-
-    sources.forEach(([, s]) => s(0));
-    memos.forEach((m) => blackhole(m()));
-
-    const batchWrites = Array.from(
-      { length: Math.floor(SOURCES * BATCH_PCT) },
-      (_, i) => [sources[i][2], 0] as [unknown, unknown],
-    );
-
-    return { sources, memos, batchWrite: ours.batchWrite, batchWrites };
+    return { sources, memos };
   }
 
-  const oursBatch = buildBatch();
-  const solidBatch = (() => {
-    const srcs = Array.from({ length: SOURCES }, () => createSignal(0));
-    const memos = Array.from({ length: N }, (_, i) =>
-      createMemo(() => {
+  const ours = buildOurs();
+  const solid = buildSolid();
+  const rngOurs = createRng(0x601);
+  const rngSolid = createRng(0x602);
+
+  bench("beta build - flip deps every tick, read 100%", () => {
+    at(ours.sources, 0)[1](rngOurs.int(1000));
+    for (const read of ours.memos) {
+      blackhole(read());
+    }
+  }, { iterations: 300, warmupIterations: 50 });
+
+  bench("solid signals - flip deps every tick, flush, read 100%", () => {
+    at(solid.sources, 0)[1](rngSolid.int(1000));
+    flush();
+    for (const read of solid.memos) {
+      blackhole(read());
+    }
+  }, { iterations: 300, warmupIterations: 50 });
+});
+
+describe("Large batch write (20% sources) + full read", () => {
+  const memoCount = 800;
+  const sourceCount = 80;
+  const batchSize = Math.floor(sourceCount * 0.2);
+
+  function buildOurs() {
+    const ours = createOursHarness();
+    const sources = Array.from({ length: sourceCount }, () => ours.signal(0));
+    const memos = Array.from({ length: memoCount }, (_, memoIndex) =>
+      ours.memo(() => {
         let sum = 0;
-        for (let d = 0; d < 6; d++) sum += srcs[(i + d) % SOURCES][0]();
+        for (let depIndex = 0; depIndex < 6; depIndex++) {
+          sum += at(sources, (memoIndex + depIndex) % sourceCount)[0]();
+        }
         return sum;
       }),
     );
-    srcs.forEach(([, s]) => s(0));
+
+    for (const [, write] of sources) {
+      write(0);
+    }
+    primeReads(memos);
+
+    const batchWrites: Array<[Signal<unknown>, unknown]> = Array.from(
+      { length: batchSize },
+      (_, index) => [at(sources, index)[2], 0],
+    );
+
+    return { memos, batchWrites, batchWrite: ours.batchWrite };
+  }
+
+  function buildSolid() {
+    const sources = Array.from({ length: sourceCount }, () => createSignal(0));
+    const memos = Array.from({ length: memoCount }, (_, memoIndex) =>
+      createMemo(() => {
+        let sum = 0;
+        for (let depIndex = 0; depIndex < 6; depIndex++) {
+          sum += at(sources, (memoIndex + depIndex) % sourceCount)[0]();
+        }
+        return sum;
+      }),
+    );
+
+    for (const [, write] of sources) {
+      write(0);
+    }
     flush();
-    memos.forEach((m) => blackhole(m()));
-    return { sources: srcs, memos };
-  })();
+    primeReads(memos);
 
-  bench(
-    "ours — batch 20% sources + read all",
-    () => {
-      for (let i = 0; i < oursBatch.batchWrites.length; i++) {
-        oursBatch.batchWrites[i]![1] = Math.random() * 100;
-      }
-      oursBatch.batchWrite(oursBatch.batchWrites as any);
-      oursBatch.memos.forEach((m) => blackhole(m()));
-    },
-    { iterations: 180, warmupIterations: 40 },
-  );
+    return { sources, memos };
+  }
 
-  bench(
-    "solid — batch 20% sources + flush + read all",
-    () => {
-      const batchSize = Math.floor(SOURCES * BATCH_PCT);
-      for (let i = 0; i < batchSize; i++) {
-        solidBatch.sources[i][1](Math.random() * 100);
-      }
-      flush();
-      solidBatch.memos.forEach((m) => blackhole(m()));
-    },
-    { iterations: 180, warmupIterations: 40 },
-  );
+  const ours = buildOurs();
+  const solid = buildSolid();
+  const rngOurs = createRng(0x701);
+  const rngSolid = createRng(0x702);
+
+  bench("beta build - batch 20% sources, read all", () => {
+    for (let index = 0; index < ours.batchWrites.length; index++) {
+      at(ours.batchWrites, index)[1] = rngOurs.next() * 100;
+    }
+    ours.batchWrite(ours.batchWrites as ReadonlyArray<BatchWriteEntry>);
+    for (const read of ours.memos) {
+      blackhole(read());
+    }
+  }, { iterations: 180, warmupIterations: 40 });
+
+  bench("solid signals - batch 20% sources, flush, read all", () => {
+    for (let index = 0; index < batchSize; index++) {
+      at(solid.sources, index)[1](rngSolid.next() * 100);
+    }
+    flush();
+    for (const read of solid.memos) {
+      blackhole(read());
+    }
+  }, { iterations: 180, warmupIterations: 40 });
 });
 
-describe("Realistic UI: Virtualized table 4000 rows × 6 cols, partial update", () => {
-  const ROWS = 4000;
-  const COLS = 6;
-  const VISIBLE_ROWS = 400;          // збільшено для стабільного вимірювання
-  const CHANGED_PCT = 0.02;          // ~80 рядків змінюється
-  // const LIVE_COL = true;          // не використовується напряму
+describe("Realistic UI: virtualized table 4000 rows x 6 cols", () => {
+  const rows = 4000;
+  const cols = 6;
+  const visibleRows = 400;
+  const changedPct = 0.02;
 
-  function buildTable() {
-    const ours = makeOurs();
-
-    const rowSources = Array.from({ length: ROWS }, () =>
-      Array.from({ length: COLS }, (_, c) =>
-        ours.signal(c === 0 ? 100 + Math.random() * 900 : 0)
-      )
+  function buildOurs() {
+    const ours = createOursHarness();
+    const rowSources = Array.from({ length: rows }, () =>
+      Array.from({ length: cols }, (_, column) =>
+        ours.signal(column === 0 ? 100 : 0),
+      ),
     );
 
-    const cells = Array.from({ length: ROWS }, (_, rowIdx) =>
-      Array.from({ length: COLS }, (_, colIdx) =>
+    const cells = Array.from({ length: rows }, (_, rowIndex) =>
+      Array.from({ length: cols }, (_, columnIndex) =>
         ours.memo(() => {
-          const base = rowSources[rowIdx][0][0]();
-          if (colIdx === 0) return base;
+          const base = at(at(rowSources, rowIndex), 0)[0]();
+          if (columnIndex === 0) return base;
           return Math.round(
-            base * (1 + colIdx * 0.1) + rowSources[rowIdx][colIdx][0]()
+            base * (1 + columnIndex * 0.1) +
+              at(at(rowSources, rowIndex), columnIndex)[0](),
           );
-        })
-      )
+        }),
+      ),
     );
 
-    const rowSums = Array.from({ length: ROWS }, (_, rowIdx) =>
+    const rowSums = Array.from({ length: rows }, (_, rowIndex) =>
       ours.memo(() => {
         let sum = 0;
-        for (let c = 0; c < COLS; c++) sum += cells[rowIdx][c]();
+        for (let columnIndex = 0; columnIndex < cols; columnIndex++) {
+          sum += at(at(cells, rowIndex), columnIndex)();
+        }
         return sum;
-      })
+      }),
     );
 
-    // initial write + settle
-    rowSources.forEach((row) =>
-      row.forEach(([, set], c) => set(c === 0 ? 100 + Math.random() * 900 : 0))
-    );
+    for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
+      for (let columnIndex = 0; columnIndex < cols; columnIndex++) {
+        at(at(rowSources, rowIndex), columnIndex)[1](
+          columnIndex === 0 ? 100 + ((rowIndex * 17 + 13) % 900) : 0,
+        );
+      }
+    }
 
-    // warmup: читаємо розкидані рядки кілька разів
     for (let pass = 0; pass < 4; pass++) {
-      for (let r = 0; r < ROWS; r += 150) {
-        cells[r][0]();
-        cells[r][1]();
-        cells[r][2]();
-        cells[r][3]();
-        rowSums[r]();
+      for (let rowIndex = 0; rowIndex < rows; rowIndex += 150) {
+        blackhole(at(at(cells, rowIndex), 0)());
+        blackhole(at(at(cells, rowIndex), 1)());
+        blackhole(at(at(cells, rowIndex), 2)());
+        blackhole(at(at(cells, rowIndex), 3)());
+        blackhole(at(rowSums, rowIndex)());
       }
     }
 
     return { rowSources, cells, rowSums };
   }
 
-  const oursTable = buildTable();
-
-  const solidTable = (() => {
-    const srcs = Array.from({ length: ROWS }, () =>
-      Array.from({ length: COLS }, (_, c) => createSignal(c === 0 ? 100 + Math.random() * 900 : 0))
+  function buildSolid() {
+    const rowSources = Array.from({ length: rows }, () =>
+      Array.from({ length: cols }, (_, column) =>
+        createSignal(column === 0 ? 100 : 0),
+      ),
     );
 
-    const cells = Array.from({ length: ROWS }, (_, rowIdx) =>
-      Array.from({ length: COLS }, (_, colIdx) =>
+    const cells = Array.from({ length: rows }, (_, rowIndex) =>
+      Array.from({ length: cols }, (_, columnIndex) =>
         createMemo(() => {
-          const base = srcs[rowIdx][0][0]();
-          if (colIdx === 0) return base;
-          const extra = srcs[rowIdx][colIdx][0]();
-          return Math.round(base * (1 + colIdx * 0.1) + extra);
-        })
-      )
+          const base = at(at(rowSources, rowIndex), 0)[0]();
+          if (columnIndex === 0) return base;
+          return Math.round(
+            base * (1 + columnIndex * 0.1) +
+              at(at(rowSources, rowIndex), columnIndex)[0](),
+          );
+        }),
+      ),
     );
 
-    const rowSums = Array.from({ length: ROWS }, (_, rowIdx) =>
+    const rowSums = Array.from({ length: rows }, (_, rowIndex) =>
       createMemo(() => {
         let sum = 0;
-        for (let c = 0; c < COLS; c++) sum += cells[rowIdx][c]();
+        for (let columnIndex = 0; columnIndex < cols; columnIndex++) {
+          sum += at(at(cells, rowIndex), columnIndex)();
+        }
         return sum;
-      })
+      }),
     );
 
-    srcs.forEach((row) =>
-      row.forEach(([, setter], colIdx) =>
-        setter(colIdx === 0 ? 100 + Math.random() * 900 : 0)
-      )
-    );
+    for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
+      for (let columnIndex = 0; columnIndex < cols; columnIndex++) {
+        at(at(rowSources, rowIndex), columnIndex)[1](
+          columnIndex === 0 ? 100 + ((rowIndex * 17 + 13) % 900) : 0,
+        );
+      }
+    }
     flush();
 
-    // warmup
     for (let pass = 0; pass < 4; pass++) {
-      for (let r = 0; r < ROWS; r += 150) {
-        cells[r][0]();
-        cells[r][1]();
-        cells[r][2]();
-        cells[r][3]();
-        rowSums[r]();
+      for (let rowIndex = 0; rowIndex < rows; rowIndex += 150) {
+        blackhole(at(at(cells, rowIndex), 0)());
+        blackhole(at(at(cells, rowIndex), 1)());
+        blackhole(at(at(cells, rowIndex), 2)());
+        blackhole(at(at(cells, rowIndex), 3)());
+        blackhole(at(rowSums, rowIndex)());
       }
     }
 
-    return { rowSources: srcs, cells, rowSums };
-  })();
+    return { rowSources, cells, rowSums };
+  }
 
-  // ── Partial update: ~2% рядків (80 шт) ─────────────────────────────────────
-  bench(
-    "ours — partial update ~2% rows → render 400 visible rows",
-    () => {
-      const changedCount = Math.floor(ROWS * CHANGED_PCT);
-      const indices = new Set<number>();
-      while (indices.size < changedCount) {
-        indices.add(Math.floor(Math.random() * ROWS));
+  const ours = buildOurs();
+  const solid = buildSolid();
+  const rngOursPartial = createRng(0x801);
+  const rngSolidPartial = createRng(0x802);
+  const rngOursLive = createRng(0x803);
+  const rngSolidLive = createRng(0x804);
+
+  bench("beta build - partial update ~2% rows, render 400 visible", () => {
+    const changedCount = Math.floor(rows * changedPct);
+    const changedRows = new Set<number>();
+    while (changedRows.size < changedCount) {
+      changedRows.add(rngOursPartial.int(rows));
+    }
+
+    for (const rowIndex of changedRows) {
+      const baseSignal = at(at(ours.rowSources, rowIndex), 0);
+      const current = baseSignal[0]();
+      baseSignal[1](current + rngOursPartial.centered(25));
+    }
+
+    const start = rngOursPartial.int(rows - visibleRows);
+    for (let rowIndex = start; rowIndex < start + visibleRows; rowIndex++) {
+      blackhole(at(ours.rowSums, rowIndex)());
+      for (let columnIndex = 0; columnIndex < cols; columnIndex++) {
+        blackhole(at(at(ours.cells, rowIndex), columnIndex)());
       }
+    }
+  }, { iterations: 80, warmupIterations: 20 });
 
-      for (const rowIdx of indices) {
-        const delta = Math.random() * 50 - 25;
-        const current = oursTable.rowSources[rowIdx][0][0]();
-        oursTable.rowSources[rowIdx][0][1](current + delta);
+  bench("solid signals - partial update ~2% rows, flush, render 400 visible", () => {
+    const changedCount = Math.floor(rows * changedPct);
+    const changedRows = new Set<number>();
+    while (changedRows.size < changedCount) {
+      changedRows.add(rngSolidPartial.int(rows));
+    }
+
+    for (const rowIndex of changedRows) {
+      const baseSignal = at(at(solid.rowSources, rowIndex), 0);
+      const current = baseSignal[0]();
+      baseSignal[1](current + rngSolidPartial.centered(25));
+    }
+
+    flush();
+
+    const start = rngSolidPartial.int(rows - visibleRows);
+    for (let rowIndex = start; rowIndex < start + visibleRows; rowIndex++) {
+      blackhole(at(solid.rowSums, rowIndex)());
+      for (let columnIndex = 0; columnIndex < cols; columnIndex++) {
+        blackhole(at(at(solid.cells, rowIndex), columnIndex)());
       }
+    }
+  }, { iterations: 80, warmupIterations: 20 });
 
-      const start = Math.floor(Math.random() * (ROWS - VISIBLE_ROWS));
-      for (let r = start; r < start + VISIBLE_ROWS; r++) {
-        blackhole(oursTable.rowSums[r]());
-        for (let c = 0; c < COLS; c++) {
-          blackhole(oursTable.cells[r][c]());
-        }
-      }
-    },
-    { iterations: 80, warmupIterations: 20 }   // менше ітерацій, бо повільніше
-  );
+  bench("beta build - live column 2 update all rows, render 400 visible", () => {
+    const delta = rngOursLive.centered(5);
+    for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
+      const signal = at(at(ours.rowSources, rowIndex), 2);
+      signal[1](signal[0]() + delta);
+    }
 
-  bench(
-    "solid — partial update ~2% rows → flush → render 400 visible rows",
-    () => {
-      const changedCount = Math.floor(ROWS * CHANGED_PCT);
-      const indices = new Set<number>();
-      while (indices.size < changedCount) {
-        indices.add(Math.floor(Math.random() * ROWS));
-      }
+    const start = rngOursLive.int(rows - visibleRows);
+    for (let rowIndex = start; rowIndex < start + visibleRows; rowIndex++) {
+      blackhole(at(at(ours.cells, rowIndex), 2)());
+      blackhole(at(ours.rowSums, rowIndex)());
+    }
+  }, { iterations: 100, warmupIterations: 30 });
 
-      for (const rowIdx of indices) {
-        const delta = Math.random() * 50 - 25;
-        const current = solidTable.rowSources[rowIdx][0][0]();
-        solidTable.rowSources[rowIdx][0][1](current + delta);
-      }
+  bench("solid signals - live column 2 update all rows, flush, render 400 visible", () => {
+    const delta = rngSolidLive.centered(5);
+    for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
+      const signal = at(at(solid.rowSources, rowIndex), 2);
+      signal[1](signal[0]() + delta);
+    }
 
-      flush();
+    flush();
 
-      const start = Math.floor(Math.random() * (ROWS - VISIBLE_ROWS));
-      for (let r = start; r < start + VISIBLE_ROWS; r++) {
-        blackhole(solidTable.rowSums[r]());
-        for (let c = 0; c < COLS; c++) {
-          blackhole(solidTable.cells[r][c]());
-        }
-      }
-    },
-    { iterations: 80, warmupIterations: 20 }
-  );
-
-  // ── Live column update: змінюємо одну колонку в усіх 4000 рядках ────────────
-  bench(
-    "ours — live column (col 2) update all rows → render 400 visible",
-    () => {
-      const delta = Math.random() * 10 - 5;
-      for (let r = 0; r < ROWS; r++) {
-        const current = oursTable.rowSources[r][2][0]();
-        oursTable.rowSources[r][2][1](current + delta);
-      }
-
-      const start = Math.floor(Math.random() * (ROWS - VISIBLE_ROWS));
-      for (let r = start; r < start + VISIBLE_ROWS; r++) {
-        blackhole(oursTable.cells[r][2]());   // змінена колонка
-        blackhole(oursTable.rowSums[r]());     // бо сума залежить від неї
-      }
-    },
-    { iterations: 100, warmupIterations: 30 }
-  );
-
-  bench(
-    "solid — live column (col 2) update all rows → flush → render 400 visible",
-    () => {
-      const delta = Math.random() * 10 - 5;
-      for (let r = 0; r < ROWS; r++) {
-        const current = solidTable.rowSources[r][2][0]();
-        solidTable.rowSources[r][2][1](current + delta);
-      }
-
-      flush();
-
-      const start = Math.floor(Math.random() * (ROWS - VISIBLE_ROWS));
-      for (let r = start; r < start + VISIBLE_ROWS; r++) {
-        blackhole(solidTable.cells[r][2]());
-        blackhole(solidTable.rowSums[r]());
-      }
-    },
-    { iterations: 100, warmupIterations: 30 }
-  );
+    const start = rngSolidLive.int(rows - visibleRows);
+    for (let rowIndex = start; rowIndex < start + visibleRows; rowIndex++) {
+      blackhole(at(at(solid.cells, rowIndex), 2)());
+      blackhole(at(solid.rowSums, rowIndex)());
+    }
+  }, { iterations: 100, warmupIterations: 30 });
 });

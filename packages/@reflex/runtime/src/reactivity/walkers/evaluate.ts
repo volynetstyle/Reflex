@@ -27,8 +27,8 @@ function evaluate(node: ReactiveNode): void {
     queue.push(node);
     return; // результат отбрасывается
   }
-  const changed = !Object.is(newValue, node.value);
-  node.value = newValue;
+  const changed = !Object.is(newValue, node.payload);
+  node.payload = newValue;
   node.flags = NodeFlags.CLEAN;
   if (changed) {
     node.version++;

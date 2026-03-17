@@ -1,16 +1,21 @@
 import {
+  createComputedNode,
+  createEffectNode,
+  createSignalNode,
   ReactiveNode,
-  ReactiveNodeState,
-  ReactiveNodeKind,
   EngineContext,
   isDirtyState,
-  isDisposedState,
   type EngineHooks,
 } from "./core.js";
-import { writeSignal } from "./engine.js";
+import { batchWrite as applyBatchWrite, writeSignal } from "./engine.js";
 import { runEffect, disposeEffect } from "./engine/effect.js";
+import {
+  EffectScheduler,
+  resolveEffectSchedulerMode,
+  type EffectStrategy,
+} from "./effect_scheduler.js";
 import { trackRead } from "./tracking.js";
-import { ensureFresh, markInvalid } from "./walkers.js";
+import { ensureFresh } from "./walkers.js";
 
 export interface Signal<T> {
   readonly node: ReactiveNode;
@@ -35,6 +40,7 @@ export type BatchWriteEntry = readonly [Signal<unknown>, unknown];
 
 export interface RuntimeOptions {
   hooks?: EngineHooks;
+  effectStrategy?: EffectStrategy;
 }
 
 export interface Runtime {
@@ -50,12 +56,29 @@ export interface Runtime {
 
 function readComputedValue<T>(ctx: EngineContext, node: ReactiveNode): T {
   if (ctx.activeComputed) trackRead(ctx, node);
-  return node.value as T;
+  return node.payload as T;
 }
 
 function refreshComputedValue<T>(ctx: EngineContext, node: ReactiveNode): T {
   ensureFresh(ctx, node);
   return readComputedValue<T>(ctx, node);
+}
+
+function createComputedAccessor<T>(
+  ctx: EngineContext,
+  node: ReactiveNode,
+): Computed<T> {
+  const computed = function () {
+    if (!isDirtyState(node.state) && node.v !== 0) {
+      return readComputedValue<T>(ctx, node);
+    }
+
+    return refreshComputedValue<T>(ctx, node);
+  } as Computed<T>;
+
+  (computed as { node: ReactiveNode }).node = node;
+
+  return computed;
 }
 
 class SignalImpl<T> implements Signal<T> {
@@ -67,7 +90,7 @@ class SignalImpl<T> implements Signal<T> {
   read(): T {
     if (this.ctx.activeComputed) trackRead(this.ctx, this.node);
 
-    return this.node.value as T;
+    return this.node.payload as T;
   }
 
   write(value: T) {
@@ -77,53 +100,29 @@ class SignalImpl<T> implements Signal<T> {
 
 class RuntimeImpl implements Runtime {
   readonly ctx: EngineContext;
+  private readonly effectScheduler: EffectScheduler;
   private readonly nodeWrites: Array<[ReactiveNode, unknown]> = [];
-  private readonly pendingEffects: ReactiveNode[] = [];
-  private readonly queuedEffects = new Set<ReactiveNode>();
 
   constructor(options?: RuntimeOptions) {
     const userHooks = options?.hooks;
+    const effectStrategy = resolveEffectSchedulerMode(options?.effectStrategy);
 
     this.ctx = new EngineContext({
       ...userHooks,
       onEffectInvalidated: (node) => {
-        this.enqueueEffect(node);
+        this.effectScheduler.enqueue(node);
         userHooks?.onEffectInvalidated?.(node);
       },
     });
+    this.effectScheduler = new EffectScheduler(this.ctx, effectStrategy);
   }
 
   signal<T>(initialValue: T): Signal<T> {
-    const node = new ReactiveNode(
-      initialValue,
-      null,
-      ReactiveNodeState.Ordered,
-      ReactiveNodeKind.Signal,
-    );
-
-    return new SignalImpl(node, this.ctx);
+    return new SignalImpl(createSignalNode(initialValue), this.ctx);
   }
 
   computed<T>(fn: () => T): Computed<T> {
-    const node = new ReactiveNode(
-      undefined,
-      fn,
-      ReactiveNodeState.Invalid,
-      ReactiveNodeKind.Computed,
-    );
-
-    const ctx = this.ctx;
-    const computed = function () {
-      if (!isDirtyState(node.state) && node.v !== 0) {
-        return readComputedValue<T>(ctx, node);
-      }
-
-      return refreshComputedValue<T>(ctx, node);
-    } as Computed<T>;
-
-    (computed as { node: ReactiveNode }).node = node;
-
-    return computed;
+    return createComputedAccessor(this.ctx, createComputedNode(fn));
   }
 
   memo<T>(fn: () => T): Computed<T> {
@@ -133,37 +132,21 @@ class RuntimeImpl implements Runtime {
   }
 
   effect(fn: () => void | (() => void)): EffectScope {
-    const node = new ReactiveNode(
-      undefined,
-      fn,
-      ReactiveNodeState.Invalid,
-      ReactiveNodeKind.Effect,
-    );
+    const node = createEffectNode(fn);
 
     runEffect(this.ctx, node);
 
     return {
       node,
       dispose: () => {
-        this.queuedEffects.delete(node);
+        this.effectScheduler.clear(node);
         disposeEffect(node);
       },
     };
   }
 
   flush(): void {
-    const { pendingEffects, queuedEffects, ctx } = this;
-
-    while (pendingEffects.length > 0) {
-      const node = pendingEffects.shift()!;
-      queuedEffects.delete(node);
-
-      if (isDisposedState(node.state) || isDirtyState(node.state) === false) {
-        continue;
-      }
-
-      runEffect(ctx, node);
-    }
+    this.effectScheduler.flush();
   }
 
   batchWrite(writes: ReadonlyArray<BatchWriteEntry>): void {
@@ -184,25 +167,7 @@ class RuntimeImpl implements Runtime {
       }
     }
 
-    this.ctx.bumpEpoch();
-
-    for (const [node, value] of nodeWrites) {
-      if (Object.is(node.value, value)) continue;
-
-      node.value = value;
-      node.t = this.ctx.getEpoch();
-
-      for (let e = node.firstOut; e; e = e.nextOut) {
-        markInvalid(this.ctx, e.to);
-      }
-    }
-  }
-
-  private enqueueEffect(node: ReactiveNode): void {
-    if (this.queuedEffects.has(node) || isDisposedState(node.state)) return;
-
-    this.queuedEffects.add(node);
-    this.pendingEffects.push(node);
+    applyBatchWrite(this.ctx, nodeWrites);
   }
 }
 

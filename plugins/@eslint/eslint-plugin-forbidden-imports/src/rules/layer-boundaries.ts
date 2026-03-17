@@ -23,7 +23,7 @@ const rule: Rule.RuleModule = {
 
     return {
       ImportDeclaration(node) {
-        const source = (node as ImportDeclaration).source.value;
+        const source = (node as ImportDeclaration).source.payload;
         if (typeof source !== "string") return;
 
         // apps can only import reflex / reflex-dom
