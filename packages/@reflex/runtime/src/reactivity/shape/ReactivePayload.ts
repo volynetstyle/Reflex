@@ -1,13 +1,4 @@
 import { ReactiveNode } from ".";
-import { CyclicRing32 } from "../../execution/algebra";
-import runtime from "../../runtime";
-
-/**
- * @invariant
- * Node.version may mutate only through changePayload.
- * This local alias ensures no external module increments versions directly.
- */
-const next_version = CyclicRing32.inc;
 
 /**
  * @invariant
@@ -29,5 +20,5 @@ const next_version = CyclicRing32.inc;
  */
 export function changePayload<T>(node: ReactiveNode<T>, next: T) {
   node.payload = next;
-  node.v = next_version(node.v);
+  node.v += 1;
 }

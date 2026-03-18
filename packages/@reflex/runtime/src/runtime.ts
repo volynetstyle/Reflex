@@ -1,118 +1,47 @@
-import { QuaternaryHeap } from "@reflex/core";
-import {
-  ReactiveNode,
-  ReactiveNodeKind,
-  ReactiveNodeState,
-} from "./reactivity/shape";
-import { AppendQueue } from "./scheduler/AppendQueue";
+import type ReactiveNode from "./reactivity/shape/ReactiveNode";
 
-const PROPAGATION_STACK_CAPACITY = 256;
-const PULL_STACK_CAPACITY = 256;
+export interface EngineHooks {
+  onEffectInvalidated?(node: ReactiveNode): void;
+}
 
-class ReactiveRuntime {
-  readonly id: string;
+class EngineContext {
+  firstDirty: ReactiveNode | null = null;
+  epoch = 1;
+  activeComputed: ReactiveNode | null = null;
+  readonly trawelList: ReactiveNode[] = [];
+  readonly worklist: ReactiveNode[] = [];
+  workEpoch = 0;
+  readonly hooks: EngineHooks;
 
-  epoch: number = 0;
-
-  // Computation context: stack for nested tracking support
-  currentComputation: ReactiveNode | null;
-
-  startPropagation: ReactiveNode | null = null;
-
-  // Propagation stack: pre-allocated, manual top pointer
-  private readonly _propagationStack: ReactiveNode[];
-  private _propagationTop: number;
-
-  // Pull stack: same pattern
-  private readonly _pullStack: ReactiveNode[];
-  private _pullTop: number;
-
-  // Queues
-  readonly computationQueue: QuaternaryHeap<ReactiveNode>;
-  readonly effectQueue: AppendQueue<ReactiveNode>;
-
-  constructor(id: string) {
-    this.id = id;
-    this.currentComputation = null;
-    this._propagationStack = new Array(PROPAGATION_STACK_CAPACITY);
-    this._propagationTop = 0;
-    this._pullStack = new Array(PULL_STACK_CAPACITY);
-    this._pullTop = 0;
-    this.computationQueue = new QuaternaryHeap<ReactiveNode>(
-      PROPAGATION_STACK_CAPACITY,
-    );
-    this.effectQueue = new AppendQueue();
+  constructor(hooks: EngineHooks = {}) {
+    this.hooks = hooks;
   }
 
-  currentEpoch() {
-    return this.epoch;
-  }
-
-  nextEpoch() {
+  bumpEpoch(): number {
     return ++this.epoch;
   }
 
-  beginComputation(node: ReactiveNode): ReactiveNode | null {
-    const prev = this.currentComputation;
-    this.currentComputation = node;
-    return prev;
+  getEpoch(): number {
+    return this.epoch;
   }
 
-  endComputation(prev: ReactiveNode | null): void {
-    this.currentComputation = prev;
+  notifyEffectInvalidated(node: ReactiveNode): void {
+    this.hooks.onEffectInvalidated?.(node);
   }
 
-  propagatePush(node: ReactiveNode): void {
-    this._propagationStack[this._propagationTop++] = node;
-  }
-
-  propagatePop(): ReactiveNode {
-    return this._propagationStack[--this._propagationTop]!;
-  }
-
-  get propagating(): boolean {
-    return 0 < this._propagationTop;
-  }
-
-  beginPull(): void {
-    this._pullTop = 0;
-  }
-
-  pullPush(node: ReactiveNode): void {
-    this._pullStack[this._pullTop++] = node;
-  }
-
-  pullPop(): ReactiveNode {
-    return this._pullStack[--this._pullTop]!;
-  }
-
-  pullPeek(): ReactiveNode {
-    return this._pullStack[this._pullTop - 1]!;
-  }
-
-  get pulling(): boolean {
-    return 0 < this._pullTop;
-  }
-
-  enqueue(node: ReactiveNode): boolean {
-    const kind =
-      node.meta & (ReactiveNodeKind.Consumer | ReactiveNodeKind.Recycler);
-
-    switch (kind) {
-      case ReactiveNodeKind.Consumer:
-        this.computationQueue.insert(node, 1);
-        return true;
-
-      case ReactiveNodeKind.Recycler:
-        this.effectQueue.push(node);
-        return true;
-    }
-
-    return false;
+  reset(hooks: EngineHooks = {}): void {
+    this.firstDirty = null;
+    this.epoch = 1;
+    this.activeComputed = null;
+    this.trawelList.length = 0;
+    this.worklist.length = 0;
+    this.workEpoch = 0;
+    delete this.hooks.onEffectInvalidated;
+    Object.assign(this.hooks, hooks);
   }
 }
 
-const runtime = new ReactiveRuntime("main");
+const runtime = new EngineContext();
 
+export { EngineContext };
 export default runtime;
-export { ReactiveRuntime };

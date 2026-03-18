@@ -1,8 +1,9 @@
 {
-  "name": "reflex",
-  "version": "0.1.0",
+  "name": "@volynetstyle/reflex",
+  "version": "1.0.0",
   "type": "module",
-  "description": "Reactive libriary for purpouses js",
+  "description": "Public Reflex facade with a connected runtime",
+  "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "sideEffects": false,
@@ -10,12 +11,25 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./setup": {
+      "types": "./dist/setup.d.ts",
+      "import": "./dist/setup.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "dev": "tsc -w -p tsconfig.build.json"
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
+    "build:clean": "pnpm clean && pnpm build",
+    "dev": "node ../../node_modules/typescript/bin/tsc -w -p tsconfig.build.json",
+    "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.json",
+    "prepublishOnly": "pnpm typecheck && pnpm build:clean"
   },
   "dependencies": {
     "@reflex/core": "workspace:*",

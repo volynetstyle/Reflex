@@ -1,50 +1,45 @@
-// Main public API
-// and never out the alternatives its bit different
+import { runtime } from "./setup";
+
 export {
-  // Anomalies exist and do not cause any errors except errors.
-  // This is a significant difference, because in our execution conditions, errors are unnatural.
-  // There is no point in denying them, you can only learn to coexist with them.
-  DependencyCycleAnomaly,
-  IllegalWriteDuringComputeAnomaly,
-  StaleVersionCommitAnomaly,
-  ReentrantExecutionAnomaly,
-  DisposedNodeAccessAnomaly,
-  SelectorKeyInstabilityAnomaly,
-  PriorityInversionAnomaly,
-  ScopeLeakAnomaly,
-  
-  // ownership
-  createScope,
-  // 1 primitives
-  signal,
-  realtime,
-  stream,
-  resource,
-  suspense,
-
-  // 2 derived of signal
-  memo,
-  computed,
-  derived,
-
-  // 3 other
-  effect,
-  selector,
-  projection,
-
-  clutch 
-} from "./main";
-
+  createRuntime,
+  recycling,
+} from "@reflex/runtime";
 export type {
-  Ownership,
-  OwnerContext,
-  Owner,
-  SignalConfig,
-  SignalContext,
-  Signal,
+  BatchWriteEntry,
   Computed,
-  EffectFn,
-  Accessor,
-  Setter,
-} from "./main";
+  EffectScope,
+  Runtime,
+  RuntimeOptions,
+  Signal,
+} from "@reflex/runtime";
+
+export * from "@reflex/core";
+
+export function signal<T>(value: T) {
+  return runtime.signal(value);
+}
+
+export function computed<T>(fn: () => T) {
+  return runtime.computed(fn);
+}
+
+export function memo<T>(fn: () => T) {
+  return runtime.memo(fn);
+}
+
+export function effect(fn: () => void | (() => void)) {
+  return runtime.effect(fn);
+}
+
+export function flush() {
+  runtime.flush();
+}
+
+export function batchWrite(
+  writes: ReadonlyArray<readonly [import("@reflex/runtime").Signal<unknown>, unknown]>,
+) {
+  runtime.batchWrite(writes);
+}
+
+export { runtime };
 

@@ -1,29 +1,36 @@
 {
   "name": "@reflex/runtime",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "Runtime / Universe / Laws for Reflex",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "license": "MIT",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
   "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
     }
   },
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "dev": "vite",
     "build:ts": "tsc -p tsconfig.build.json",
     "build:npm": "rollup -c rollup.config.ts",
     "build:perf": "rollup -c rollup.perf.config.ts",
-    "build": "pnpm build:ts && pnpm build:npm",
+    "build": "pnpm clean && pnpm build:ts && pnpm build:npm",
     "bench:core": "pnpm build:perf && node --expose-gc dist/perf.js",
     "test": "vitest run",
-    "bench": "vitest bench",
+    "bench": "pnpm build && vitest bench test/signal_beta.bench.ts",
     "bench:flame": "0x -- node dist/tests/ownership.run.js",
     "test:watch": "vitest",
     "lint": "eslint .",
@@ -34,9 +41,5 @@
     "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build",
     "release": "changeset version && pnpm install && changeset publish",
     "prepare": "husky"
-  },
-  "dependencies": {
-    "@reflex/core": "workspace:*",
-    "@solidjs/signals": "^0.12.0"
   }
 }
