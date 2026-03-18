@@ -16,13 +16,16 @@ function assertFreshNode(node: ReactiveNode): void {
   if (isSignalKind(node)) return;
 
   let maxSourceEpoch = 0;
-  for (let e = node.firstIn; e; e = e.nextIn) {
-    if (e.from.t > maxSourceEpoch) {
-      maxSourceEpoch = e.from.t;
+  const incoming = node.incoming;
+
+  for (let i = 0; i < incoming.length; ++i) {
+    const edge = incoming[i]!;
+    if (edge.from.t > maxSourceEpoch) {
+      maxSourceEpoch = edge.from.t;
     }
 
     console.assert(
-      e.from.t <= node.v,
+      edge.from.t <= node.v,
       "stale node detected: dependency newer than node validation epoch",
     );
   }
@@ -48,19 +51,21 @@ export function markInvalid(ctx: EngineContext, node: ReactiveNode): void {
   ++top;
 
   while (top) {
-    const n = stack[--top]!;
+    const current = stack[--top]!;
 
-    if (isDisposedState(n.state)) continue;
-    if (hasState(n.state, ReactiveNodeState.Invalid)) continue;
+    if (isDisposedState(current.state)) continue;
+    if (hasState(current.state, ReactiveNodeState.Invalid)) continue;
 
-    n.state |= ReactiveNodeState.Invalid;
-    if (isEffectKind(n)) ctx.notifyEffectInvalidated(n);
+    current.state |= ReactiveNodeState.Invalid;
+    if (isEffectKind(current)) ctx.notifyEffectInvalidated(current);
 
     // const first = ctx.firstDirty;
-    // if (!first /* || n.order < first.order */) ctx.firstDirty = n;
+    // if (!first /* || current.order < first.order */) ctx.firstDirty = current;
 
-    for (let e = n.firstOut; e; e = e.nextOut) {
-      const to = e.to;
+    const outgoing = current.outgoing;
+    for (let i = 0; i < outgoing.length; ++i) {
+      const edge = outgoing[i]!;
+      const to = edge.to;
 
       if (!hasState(to.state, ReactiveNodeState.Invalid)) {
         stack[top] = to;
@@ -78,16 +83,14 @@ function needsUpdateFromSourceT(
   node: ReactiveNode,
   maxSourceEpoch: number,
 ): boolean {
-  // first reason - never compute
   if (node.v === 0) return true;
-
-  // next reason - stale
   if (hasState(node.state, ReactiveNodeState.Obsolete)) return true;
 
-  // but if not outdated, let's make sure it is
   if (maxSourceEpoch < 0) {
-    for (let e = node.firstIn; e; e = e.nextIn) {
-      if (e.from.t > node.v) {
+    const incoming = node.incoming;
+    for (let i = 0; i < incoming.length; ++i) {
+      const edge = incoming[i]!;
+      if (edge.from.t > node.v) {
         node.state |= ReactiveNodeState.Obsolete;
         return true;
       }
@@ -111,10 +114,10 @@ export function ensureFresh(ctx: EngineContext, node: ReactiveNode): void {
   let top = 0;
   const workEpoch = ++ctx.workEpoch;
 
-  const next = (n: ReactiveNode) => {
-    if (n.w === workEpoch) return;
-    n.w = workEpoch;
-    stack[top] = n;
+  const next = (current: ReactiveNode) => {
+    if (current.w === workEpoch) return;
+    current.w = workEpoch;
+    stack[top] = current;
     ++top;
   };
 
@@ -133,9 +136,11 @@ export function ensureFresh(ctx: EngineContext, node: ReactiveNode): void {
 
     let maxSourceEpoch = 0;
     let blockedByDirtySource: ReactiveNode | null = null;
-    
-    for (let e = current.firstIn; e; e = e.nextIn) {
-      const source = e.from;
+    const incoming = current.incoming;
+
+    for (let i = 0; i < incoming.length; ++i) {
+      const edge = incoming[i]!;
+      const source = edge.from;
 
       if (__DEV__ && isComputingState(source.state)) {
         throw new Error("Cycle detected while refreshing reactive graph");

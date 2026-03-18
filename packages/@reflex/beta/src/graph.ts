@@ -1,80 +1,84 @@
-import { ReactiveNode, ReactiveEdge, ReactiveNodeState } from "./core.js";
+import { ReactiveNode, ReactiveEdge } from "./core.js";
 //import { OrderList } from "./order.js";
-
-// ─── link / unlink ────────────────────────────────────────────────────────────
 
 export function linkEdge(from: ReactiveNode, to: ReactiveNode): ReactiveEdge {
   const edge = new ReactiveEdge(from, to);
-  edge.nextOut = from.firstOut;
-  from.firstOut = edge;
-  edge.nextIn = to.firstIn;
-  to.firstIn = edge;
+  edge.outIndex = from.outgoing.length;
+  from.outgoing.push(edge);
+  edge.inIndex = to.incoming.length;
+  to.incoming.push(edge);
   return edge;
 }
 
 export function unlinkEdge(edge: ReactiveEdge): void {
-  const { from, to } = edge;
-
-  // видалити зі списку out-edges from
-  let prevE: ReactiveEdge | null = null;
-  for (let e = from.firstOut; e; e = e.nextOut) {
-    if (e === edge) {
-      if (prevE) prevE.nextOut = e.nextOut;
-      else from.firstOut = e.nextOut;
-      break;
-    }
-    prevE = e;
-  }
-
-  // видалити зі списку in-edges to
-  prevE = null;
-  for (let e = to.firstIn; e; e = e.nextIn) {
-    if (e === edge) {
-      if (prevE) prevE.nextIn = e.nextIn;
-      else to.firstIn = e.nextIn;
-      break;
-    }
-    prevE = e;
-  }
+  unlinkFromSource(edge);
+  unlinkFromTarget(edge);
 }
 
 export function unlinkFromSource(edge: ReactiveEdge): void {
   const from = edge.from;
+  const outgoing = from.outgoing;
+  const index = edge.outIndex;
 
-  let prevOut: ReactiveEdge | null = null;
-  for (let e = from.firstOut; e; e = e.nextOut) {
-    if (e === edge) {
-      if (prevOut) prevOut.nextOut = e.nextOut;
-      else from.firstOut = e.nextOut;
-      return;
-    }
-    prevOut = e;
+  if (index < 0) return;
+
+  const lastIndex = outgoing.length - 1;
+  const last = outgoing[lastIndex]!;
+
+  if (index !== lastIndex) {
+    outgoing[index] = last;
+    last.outIndex = index;
+  }
+
+  outgoing.pop();
+  edge.outIndex = -1;
+}
+
+function unlinkFromTarget(edge: ReactiveEdge): void {
+  const to = edge.to;
+  const incoming = to.incoming;
+  const index = edge.inIndex;
+
+  if (index < 0) return;
+
+  const lastIndex = incoming.length - 1;
+  const last = incoming[lastIndex]!;
+
+  if (index !== lastIndex) {
+    incoming[index] = last;
+    last.inIndex = index;
+  }
+
+  incoming.pop();
+  edge.inIndex = -1;
+
+  if (to.lastTrackedEdge === edge) {
+    to.lastTrackedEdge = null;
   }
 }
 
 export function unlinkAllSources(node: ReactiveNode): void {
-  let edge = node.firstIn;
-  node.firstIn = null;
+  const incoming = node.incoming;
 
-  while (edge) {
-    const next = edge.nextIn;
+  for (let i = incoming.length - 1; i >= 0; --i) {
+    const edge = incoming[i]!;
     unlinkFromSource(edge);
-    edge.nextIn = null;
-    edge.nextOut = null;
-    edge = next;
+    edge.inIndex = -1;
   }
-}
 
-// ─── connect з topo repair ────────────────────────────────────────────────────
+  incoming.length = 0;
+  node.lastTrackedEdge = null;
+}
 
 export function connect(
   parent: ReactiveNode,
   child: ReactiveNode,
   //list: OrderList,
 ): ReactiveEdge {
-  // перевірити чи ребро вже є
-  for (let e = child.firstIn; e; e = e.nextIn) {
-    if (e.from === parent) return e;
+  const incoming = child.incoming;
+  for (let i = 0; i < incoming.length; ++i) {
+    const edge = incoming[i]!;
+    if (edge.from === parent) return edge;
   }
 
   const edge = linkEdge(parent, child);
@@ -87,16 +91,15 @@ export function connect(
 }
 
 export function disconnect(parent: ReactiveNode, child: ReactiveNode): void {
-  for (let e = child.firstIn; e; e = e.nextIn) {
-    if (e.from === parent) {
-      unlinkEdge(e);
+  const incoming = child.incoming;
+  for (let i = 0; i < incoming.length; ++i) {
+    const edge = incoming[i]!;
+    if (edge.from === parent) {
+      unlinkEdge(edge);
       return;
     }
   }
 }
-
-// // ─── topology repair (forward scan, без DFS) ─────────────────────────────────
-// // O(span) де span = відстань між child і parent у topo list
 
 // export function repairTopology(
 //   parent: ReactiveNode,
@@ -105,13 +108,13 @@ export function disconnect(parent: ReactiveNode, child: ReactiveNode): void {
 // ): void {
 //   const threshold = parent.order;
 //   const toMove: ReactiveNode[] = [];
-
+//
 //   let cur: ReactiveNode | null = child;
 //   while (cur && cur.order <= threshold) {
 //     toMove.push(cur);
 //     cur = cur.next;
 //   }
-
+//
 //   let insertAfter = parent;
 //   for (const node of toMove) {
 //     list.moveAfter(node, insertAfter);

@@ -111,13 +111,13 @@ export function clearNodeScheduled(node: ReactiveNode): void {
 
 // A graph edge means "to depends on from".
 //
-// `nextOut` threads the producer's fan-out list.
-// `nextIn` threads the consumer's dependency list.
+// Edges live in array-backed adjacency lists on both endpoints.
+// `outIndex` and `inIndex` let us unlink in O(1) via swap-remove.
 // `s` is updated during dependency tracking to keep live edges.
 export class ReactiveEdge {
-  nextOut: ReactiveEdge | null = null;
-  nextIn: ReactiveEdge | null = null;
   s: number = 0;
+  outIndex: number = -1;
+  inIndex: number = -1;
 
   constructor(
     public from: ReactiveNode,
@@ -150,9 +150,11 @@ export class ReactiveNode {
   // means already popped once during this pass.
   w: number;
   // Outbound dependents: nodes that read from this node.
-  firstOut: ReactiveEdge | null;
+  readonly outgoing: ReactiveEdge[];
   // Inbound dependencies: nodes this node currently reads from.
-  firstIn: ReactiveEdge | null;
+  readonly incoming: ReactiveEdge[];
+  // Fast path for repeated reads of the same source during tracking.
+  lastTrackedEdge: ReactiveEdge | null;
 
   constructor(
     payload: unknown,
@@ -168,8 +170,9 @@ export class ReactiveNode {
     this.payload = payload;
     this.s = 0;
     this.w = 0;
-    this.firstOut = null;
-    this.firstIn = null;
+    this.outgoing = [];
+    this.incoming = [];
+    this.lastTrackedEdge = null;
   }
 }
 

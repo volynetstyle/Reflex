@@ -14,19 +14,16 @@ export function setup() {
   return { signal, computed, effect: rt.effect, rt };
 }
 
-export function countIncoming(node: Pick<ReactiveNode, "firstIn">) {
-  let count = 0;
-  for (let edge = node.firstIn; edge; edge = edge.nextIn) {
-    count++;
-  }
-  return count;
+export function countIncoming(node: Pick<ReactiveNode, "incoming">) {
+  return node.incoming.length;
 }
 
 export function maxSourceEpoch(
-  node: Pick<ReactiveNode, "firstIn">,
+  node: Pick<ReactiveNode, "incoming">,
 ) {
   let max = 0;
-  for (let edge = node.firstIn; edge; edge = edge.nextIn) {
+  for (let i = 0; i < node.incoming.length; ++i) {
+    const edge = node.incoming[i]!;
     if (edge.from.t > max) {
       max = edge.from.t;
     }

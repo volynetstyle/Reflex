@@ -1,6 +1,5 @@
 import {
   EngineContext,
-  ReactiveEdge,
   ReactiveNode,
   isTrackingState,
   TRACKING_STATE,
@@ -14,10 +13,24 @@ export function trackRead(
   //list: OrderList,
 ): void {
   const consumer = ctx.activeComputed!;
+  const cachedEdge = consumer.lastTrackedEdge;
 
-  for (let e = consumer.firstIn; e; e = e.nextIn) {
-    if (e.from === source) {
-      e.s = consumer.s;
+  if (
+    cachedEdge &&
+    cachedEdge.from === source &&
+    cachedEdge.to === consumer &&
+    consumer.incoming[cachedEdge.inIndex] === cachedEdge
+  ) {
+    cachedEdge.s = consumer.s;
+    return;
+  }
+
+  const incoming = consumer.incoming;
+  for (let i = 0; i < incoming.length; ++i) {
+    const edge = incoming[i]!;
+    if (edge.from === source) {
+      edge.s = consumer.s;
+      consumer.lastTrackedEdge = edge;
       return;
     }
   }
@@ -28,31 +41,44 @@ export function trackRead(
 
   const edge = linkEdge(source, consumer);
   edge.s = consumer.s;
+  consumer.lastTrackedEdge = edge;
 }
 
 export function cleanupStaleSources(node: ReactiveNode): void {
   const epoch = node.s;
+  const incoming = node.incoming;
   let hasStale = false;
-  let prevIn: ReactiveEdge | null = null;
-  let e = node.firstIn;
+  let nextIncomingIndex = 0;
 
-  while (e) {
-    const next = e.nextIn;
+  node.state &= ~TRACKING_STATE;
 
-    if (e.s !== epoch) {
-      if (prevIn) prevIn.nextIn = next;
-      else node.firstIn = next;
+  for (let i = 0; i < incoming.length; ++i) {
+    const edge = incoming[i]!;
 
-      unlinkFromSource(e);
+    if (edge.s !== epoch) {
+      unlinkFromSource(edge);
+      edge.inIndex = -1;
       hasStale = true;
-    } else {
-      prevIn = e;
+      continue;
     }
 
-    e = next;
+    if (nextIncomingIndex !== i) {
+      incoming[nextIncomingIndex] = edge;
+    }
+    edge.inIndex = nextIncomingIndex;
+    ++nextIncomingIndex;
   }
+
+  incoming.length = nextIncomingIndex;
 
   if (!hasStale) {
     node.state |= ReactiveNodeState.Tracking;
+  }
+
+  if (
+    node.lastTrackedEdge !== null &&
+    node.incoming[node.lastTrackedEdge.inIndex] !== node.lastTrackedEdge
+  ) {
+    node.lastTrackedEdge = null;
   }
 }

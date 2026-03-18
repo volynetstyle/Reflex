@@ -11,9 +11,9 @@ import { markInvalid } from "./walkers.js";
 //         const changed = recompute(ctx, node, list);
 //         count++;
 //         if (changed) {
-//           for (let e = node.firstOut; e; e = e.nextOut) {
-//             if (!(e.to.state & ReactiveNodeState.Invalid))
-//               e.to.state |= ReactiveNodeState.Invalid;
+//           for (const edge of node.outgoing) {
+//             if (!(edge.to.state & ReactiveNodeState.Invalid))
+//               edge.to.state |= ReactiveNodeState.Invalid;
 //           }
 //         }
 //       } else node.state &= CLEANUP_STATE;
@@ -54,7 +54,9 @@ function applySignalWrite(
   node.payload = value;
   node.t = epoch;
 
-  for (let e = node.firstOut; e; e = e.nextOut) {
-    markInvalid(ctx, e.to);
+  const outgoing = node.outgoing;
+  for (let i = 0; i < outgoing.length; ++i) {
+    const edge = outgoing[i]!;
+    markInvalid(ctx, edge.to);
   }
 }

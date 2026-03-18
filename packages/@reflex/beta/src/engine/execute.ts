@@ -8,6 +8,16 @@ import {
 } from "../core.js";
 import { cleanupStaleSources } from "../tracking.js";
 
+function didTrackAllSources(node: ReactiveNode): boolean {
+  const incoming = node.incoming;
+  for (let i = 0; i < incoming.length; ++i) {
+    if (incoming[i]!.s !== node.s) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function invokeCompute(
   ctx: EngineContext,
   node: ReactiveNode,
@@ -42,7 +52,7 @@ export function executeNodeComputation<T>(
   try {
     const result = invokeCompute(ctx, node, compute!);
 
-    if (!stable || !isTrackingState(node.state)) {
+    if (!stable || !isTrackingState(node.state) || !didTrackAllSources(node)) {
       cleanupStaleSources(node);
     }
 
