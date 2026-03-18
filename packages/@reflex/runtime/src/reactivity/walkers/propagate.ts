@@ -1,29 +1,43 @@
-import runtime from "../../runtime";
-import { ReactiveNode, ReactiveNodeState } from "../shape";
+import {
+  ReactiveNode,
+  getNodeContext,
+  hasState,
+  isDisposedState,
+  isEffectKind,
+  ReactiveNodeState,
+} from "../shape";
 
-export function propagate(
-  node: ReactiveNode,
-  flag: ReactiveNodeState = ReactiveNodeState.Invalid,
-): void {
-  let nextBit = flag;
-  runtime.propagatePush(node);
+export function markInvalid(node: ReactiveNode): void {
+  const ctx = getNodeContext(node);
 
-  while (runtime.propagating) {
-    const n = runtime.propagatePop()!;
+  if (isDisposedState(node.state)) return;
+  if (hasState(node.state, ReactiveNodeState.Invalid)) return;
 
-    for (let e = n.firstOut; e; e = e.nextOut) {
-      const child = e.to;
-      const s = child.runtime;
+  const stack = ctx.trawelList;
+  let top = 0;
 
-      if (s & (ReactiveNodeState.Obsolete | nextBit)) {
-        continue;
-      }
+  stack[top] = node;
+  ++top;
 
-      child.runtime = s | nextBit;
+  while (top) {
+    const current = stack[--top]!;
 
-      runtime.propagatePush(child);
+    if (isDisposedState(current.state)) continue;
+    if (hasState(current.state, ReactiveNodeState.Invalid)) continue;
+
+    current.state |= ReactiveNodeState.Invalid;
+
+    if (isEffectKind(current)) {
+      ctx.notifyEffectInvalidated(current);
     }
 
-    nextBit = ReactiveNodeState.Invalid;
+    for (let e = current.firstOut; e; e = e.nextOut) {
+      const next = e.to;
+
+      if (!hasState(next.state, ReactiveNodeState.Invalid)) {
+        stack[top] = next;
+        ++top;
+      }
+    }
   }
 }

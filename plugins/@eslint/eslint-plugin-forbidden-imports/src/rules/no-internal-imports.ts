@@ -18,7 +18,7 @@ const rule: Rule.RuleModule = {
   create(context) {
     return {
       ImportDeclaration(node) {
-        const source = (node as ImportDeclaration).source.value;
+        const source = (node as ImportDeclaration).source.payload;
 
         if (typeof source !== "string") return;
 

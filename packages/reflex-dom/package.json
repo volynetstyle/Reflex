@@ -17,6 +17,6 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "reflex": "workspace:*"
+    "@reflex/reactive": "workspace:*"
   }
 }

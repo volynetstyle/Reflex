@@ -68,12 +68,12 @@ function update(this: any, fn: any) {
 
 //
 //  expexted result
-//  1) s.value - get
+//  1) s.payload - get
 //  2) s() - get
 //  3) s.set(value => value)
 //
 //  expexted result
-//  1) s.value - get
+//  1) s.payload - get
 //  2) s() - get
 //  3) s.set(value => value)
 
@@ -81,7 +81,12 @@ export const signal = <T>(initialValue: T): Signal<T> => {
   return undefined as any;
 };
 
-export const realtime = <T>(value: T): Realtime<T> => {
+type RealtimeSet<T> = any;
+type RealtimeMap<K, V> = any;
+
+export const realtime = <T, K>(
+  value: T,
+): RealtimeSet<T> | RealtimeMap<T, K> => {
   return undefined as any;
 };
 

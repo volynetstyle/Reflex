@@ -1,15 +1,24 @@
-import { ReactiveNodeState } from "../reactivity/shape";
 import ReactiveNode from "../reactivity/shape/ReactiveNode";
-import { changePayload } from "../reactivity/shape/ReactivePayload";
-import { propagate } from "../reactivity/walkers/propagate";
+import { markInvalid } from "../reactivity/walkers/propagate";
+import { getNodeContext } from "../reactivity/shape/ReactiveMeta";
 
-// @__INLINE__
-export function writeProducer<T>(producer: ReactiveNode, value: T): void {
-  if (producer.payload === value) return;
+export function writeProducer<T>(node: ReactiveNode<T>, value: T): void {
+  if (Object.is(node.payload, value)) return;
 
-  changePayload(producer, value);
-
-  propagate(producer, ReactiveNodeState.Obsolete);
+  applyProducerWrite(node, value, getNodeContext(node).bumpEpoch());
 }
 
-// we newer write into consumer
+export function applyProducerWrite<T>(
+  node: ReactiveNode<T>,
+  value: T,
+  epoch: number,
+): void {
+  if (Object.is(node.payload, value)) return;
+
+  node.payload = value;
+  node.t = epoch;
+
+  for (let e = node.firstOut; e; e = e.nextOut) {
+    markInvalid(e.to);
+  }
+}

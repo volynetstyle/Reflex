@@ -20,6 +20,6 @@
     "isolatedModules": false,
     "composite": true
   },
-  "include": ["src", "tests", "test"],
-  "exclude": ["dist", "**/*.test.ts"]
+  "include": ["src"],
+  "exclude": ["dist"]
 }

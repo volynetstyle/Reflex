@@ -10,7 +10,7 @@ const coords = signal({ x: 0, y: 0 });
 
 effect(() => {
   // but that not cause of values are untracked
-  if (boolean.value) {
+  if (boolean.payload) {
     // thats calls effect runs cause in read we`re define track
     const readAndTrack = coords();
   }

@@ -1,73 +1,135 @@
-import runtime from "../../runtime";
-import recompute from "../consumer/recompute";
-import { INVALID, ReactiveNode, ReactiveNodeState } from "../shape";
-import { clearPropagate } from "./clearPropagate";
-import { propagate } from "./propagate";
+import { recompute } from "../engine/compute";
+import {
+  ReactiveNode,
+  clearDirtyState,
+  getNodeContext,
+  hasState,
+  isComputingState,
+  isDirtyState,
+  isSignalKind,
+  ReactiveNodeState,
+} from "../shape";
 
-export function pullAndRecompute(node: ReactiveNode): void {
-  runtime.pullPush(node);
+function assertFreshNode(node: ReactiveNode): void {
+  if (isSignalKind(node)) return;
 
-  while (runtime.pulling) {
-    const n = runtime.pullPeek();
-    let s = n.runtime;
+  let maxSourceEpoch = 0;
+  for (let e = node.firstIn; e; e = e.nextIn) {
+    if (e.from.t > maxSourceEpoch) {
+      maxSourceEpoch = e.from.t;
+    }
 
-    // ───────────────── EXIT PHASE ─────────────────
-    if (s & ReactiveNodeState.OnStack) {
-      runtime.pullPop();
+    console.assert(
+      e.from.t <= node.v,
+      "stale node detected: dependency newer than node validation epoch",
+    );
+  }
 
-      n.runtime = s &= ~(ReactiveNodeState.OnStack | ReactiveNodeState.Visited);
+  console.assert(
+    node.v >= maxSourceEpoch,
+    "freshness invariant violated: node.v must cover all dependency epochs",
+  );
+  console.assert(
+    !isDirtyState(node.state),
+    "recompute invariant violated: fresh node must not stay dirty",
+  );
+}
 
-      if (n.compute && s & INVALID) {
-        if (recompute(n)) {
-          propagate(n, ReactiveNodeState.Obsolete);
-        } else {
-          let clean = true;
+function needsUpdateFromSourceT(
+  node: ReactiveNode,
+  maxSourceEpoch: number,
+): boolean {
+  if (node.v === 0) return true;
 
-          for (let e = n.firstIn; e; e = e.nextIn) {
-            if (e.from.runtime & INVALID) {
-              clean = false;
-              break;
-            }
-          }
+  if (hasState(node.state, ReactiveNodeState.Obsolete)) return true;
 
-          if (clean) clearPropagate(n);
-        }
+  if (maxSourceEpoch < 0) {
+    for (let e = node.firstIn; e; e = e.nextIn) {
+      if (e.from.t > node.v) {
+        node.state |= ReactiveNodeState.Obsolete;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  if (maxSourceEpoch > node.v) {
+    node.state |= ReactiveNodeState.Obsolete;
+    return true;
+  }
+
+  return false;
+}
+
+export function ensureFresh(node: ReactiveNode): void {
+  const ctx = getNodeContext(node);
+
+  if (!isDirtyState(node.state) && !isSignalKind(node)) return;
+  if (isSignalKind(node)) return;
+
+  const { worklist: stack } = ctx;
+  let top = 0;
+  const workEpoch = ++ctx.workEpoch;
+
+  const next = (current: ReactiveNode) => {
+    if (current.w === workEpoch) return;
+    current.w = workEpoch;
+    stack[top] = current;
+    ++top;
+  };
+
+  next(node);
+
+  while (top) {
+    const current = stack[--top]!;
+    current.w = -workEpoch;
+
+    if (!isDirtyState(current.state)) {
+      if (__DEV__) {
+        assertFreshNode(current);
+      }
+      continue;
+    }
+
+    let maxSourceEpoch = 0;
+    let blockedByDirtySource: ReactiveNode | null = null;
+
+    for (let e = current.firstIn; e; e = e.nextIn) {
+      const source = e.from;
+
+      if (isComputingState(source.state)) {
+        throw new Error("Cycle detected while refreshing reactive graph");
       }
 
-      continue;
-    }
-
-    // ───────────────── ENTER PHASE ─────────────────
-
-    // уже посещали
-    if (s & ReactiveNodeState.Visited) {
-      runtime.pullPop();
-      continue;
-    }
-
-    // mark visited
-    n.runtime = s |= ReactiveNodeState.Visited;
-
-    // hot path: node already clean
-    if (!(s & INVALID)) {
-      runtime.pullPop();
-      n.runtime = s & ~ReactiveNodeState.Visited;
-      continue;
-    }
-
-    // mark for exit
-    n.runtime = s |= ReactiveNodeState.OnStack;
-
-    // obsolete → deps не нужны
-    if (s & ReactiveNodeState.Obsolete) continue;
-
-    // traverse deps
-    for (let e = n.firstIn; e; e = e.nextIn) {
-      const p = e.from;
-
-      if (!(p.runtime & ReactiveNodeState.Visited)) {
-        runtime.pullPush(p);
+      if (isDirtyState(source.state)) {
+        blockedByDirtySource = source;
+        break;
       }
+
+      if (source.t > maxSourceEpoch) {
+        maxSourceEpoch = source.t;
+      }
+    }
+
+    if (blockedByDirtySource) {
+      next(current);
+      next(blockedByDirtySource);
+      continue;
+    }
+
+    if (needsUpdateFromSourceT(current, maxSourceEpoch)) {
+      recompute(current);
+    } else {
+      clearDirtyState(current);
+    }
+
+    if (__DEV__) {
+      assertFreshNode(current);
     }
   }
+}
+
+export function pullAndRecompute(node: ReactiveNode): void {
+  ensureFresh(node);
 }
