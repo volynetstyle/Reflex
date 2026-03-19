@@ -3,8 +3,8 @@
   "compilerOptions": {
     "composite": false,
     "rootDir": "src",
-    "outDir": "dist",
-    "emitDeclarationOnly": false,
-    "tsBuildInfoFile": "build/tsconfig.build.tsbuildinfo"
+    "outDir": "build/esm",
+    "declarationDir": "dist",
+    "emitDeclarationOnly": false
   }
 }

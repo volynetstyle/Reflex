@@ -1,12 +1,12 @@
 import { createRuntime } from "../src";
-import type { ReactiveNode } from "../src/core";
+import type { ReactiveNode } from "../src/reactivity/shape";
 
 export function setup() {
   const rt = createRuntime();
 
   const signal = <T>(initial: T) => {
     const s = rt.signal(initial);
-    return [s.read.bind(s), s.write.bind(s), s] as const;
+    return [s, s.write, s] as const;
   };
 
   const computed = <T>(fn: () => T) => rt.computed(fn);

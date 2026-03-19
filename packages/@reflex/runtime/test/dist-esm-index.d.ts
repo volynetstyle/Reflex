@@ -1,3 +1,4 @@
-declare module "../dist/esm/index.js" {
+declare module "reflex-ecm" {
   export * from "../src/index.js";
+  export * from "@reflex/runtime";
 }

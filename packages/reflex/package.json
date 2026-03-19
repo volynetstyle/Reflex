@@ -1,6 +1,6 @@
 {
   "name": "@volynetstyle/reflex",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "description": "Public Reflex facade with a connected runtime",
   "license": "MIT",
@@ -24,15 +24,13 @@
     "access": "public"
   },
   "scripts": {
-    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
-    "build": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
+    "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "pnpm build:ts && pnpm build:npm",
+    "build:ts": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
+    "build:npm": "rollup -c rollup.config.ts",
     "build:clean": "pnpm clean && pnpm build",
     "dev": "node ../../node_modules/typescript/bin/tsc -w -p tsconfig.build.json",
     "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.json",
     "prepublishOnly": "pnpm typecheck && pnpm build:clean"
-  },
-  "dependencies": {
-    "@reflex/core": "workspace:*",
-    "@reflex/runtime": "workspace:*"
   }
 }

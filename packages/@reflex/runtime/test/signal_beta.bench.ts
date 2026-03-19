@@ -1,6 +1,6 @@
 import { bench, describe } from "vitest";
 import { createMemo, createSignal, flush } from "@solidjs/signals";
-import { createRuntime, type BatchWriteEntry, type Signal } from "../dist/esm/index.js";
+import { createRuntime, type BatchWriteEntry, type Signal } from "reflex-ecm";
 
 type Read<T> = () => T;
 type Write<T> = (value: T) => void;

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createRuntime } from "../src";
-import { ReactiveNodeState } from "../src/core";
+import { ReactiveNodeState } from "../src/reactivity/shape";
 import {
   countIncoming,
   maxSourceEpoch,

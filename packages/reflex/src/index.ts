@@ -1,9 +1,14 @@
 import { runtime } from "./setup";
+import { createRuntime as createRuntimeImpl } from "@reflex/runtime";
+import type {
+  BatchWriteEntry,
+  Computed,
+  EffectScope,
+  Runtime,
+  RuntimeOptions,
+  Signal,
+} from "./public-types";
 
-export {
-  createRuntime,
-  recycling,
-} from "@reflex/runtime";
 export type {
   BatchWriteEntry,
   Computed,
@@ -11,9 +16,11 @@ export type {
   Runtime,
   RuntimeOptions,
   Signal,
-} from "@reflex/runtime";
+} from "./public-types";
 
-export * from "@reflex/core";
+export function createRuntime(options?: RuntimeOptions): Runtime {
+  return createRuntimeImpl(options as never) as Runtime;
+}
 
 export function signal<T>(value: T) {
   return runtime.signal(value);
@@ -35,9 +42,7 @@ export function flush() {
   runtime.flush();
 }
 
-export function batchWrite(
-  writes: ReadonlyArray<readonly [import("@reflex/runtime").Signal<unknown>, unknown]>,
-) {
+export function batchWrite(writes: ReadonlyArray<BatchWriteEntry>) {
   runtime.batchWrite(writes);
 }
 

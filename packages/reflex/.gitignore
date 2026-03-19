@@ -25,4 +25,4 @@ src/**/*.d.ts.map
 drafts/
 *.draft.*
 *-lock.json
-.npm-cache
+.npm*
