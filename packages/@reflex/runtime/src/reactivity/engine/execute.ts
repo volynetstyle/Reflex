@@ -1,4 +1,6 @@
 import {
+  DEPENDENCY_TRACKING_STATE,
+  PROPAGATION_VISITED_STATE,
   ReactiveNode,
   clearNodeComputing,
   getNodeContext,
@@ -25,17 +27,22 @@ export function executeNodeComputation<T>(
 ): T {
   const compute = node.compute;
 
-  if (!compute) {
-    throw new Error(
-      "Cannot execute a reactive node without a compute function",
-    );
-  }
+  if (__DEV__) {
+    if (!compute) {
+      throw new Error(
+        "Cannot execute a reactive node without a compute function",
+      );
+    }
 
-  if (isComputingState(node.state)) {
-    throw new Error("Cycle detected while recomputing reactive node");
+    if (isComputingState(node.state)) {
+      throw new Error("Cycle detected while recomputing reactive node");
+    }
   }
 
   ++node.s;
+  node.depsTail = null;
+  node.state &= ~PROPAGATION_VISITED_STATE;
+  node.state |= DEPENDENCY_TRACKING_STATE;
   markNodeComputing(node);
 
   try {
@@ -44,6 +51,7 @@ export function executeNodeComputation<T>(
 
     return commit(result);
   } finally {
+    node.state &= ~DEPENDENCY_TRACKING_STATE;
     clearNodeComputing(node);
   }
 }

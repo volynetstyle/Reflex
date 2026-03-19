@@ -1,9 +1,8 @@
 import runtime, { EngineContext, type EngineHooks } from "../runtime";
 
-import { ensureFresh } from "../reactivity/walkers/pullAndRecompute";
-import { trackRead } from "../reactivity/tracking";
 import { runEffect, disposeEffect } from "../reactivity/engine/effect";
 import { applyProducerWrite, writeProducer } from "./write";
+import { readConsumer, readProducer } from "./read";
 import {
   EffectScheduler,
   resolveEffectSchedulerMode,
@@ -11,7 +10,6 @@ import {
 } from "../scheduler/effect_scheduler";
 import {
   ReactiveNode,
-  isDirtyState,
   createSignalNode,
   createComputedNode,
   createEffectNode,
@@ -60,30 +58,18 @@ export interface Runtime {
   readonly ctx: EngineContext;
 }
 
-function readTrackedValue<T>(node: ReactiveNode): T {
-  if (runtime.activeComputed) {
-    trackRead(node);
-  }
-  return node.payload as T;
-}
-
-function createComputedAccessor<T>(node: ReactiveNode): Computed<T> {
-  const fn = (() => {
-    if (isDirtyState(node.state) || node.v === 0) {
-      ensureFresh(node);
-    }
-    return readTrackedValue<T>(node);
-  }) as MutableComputed<T>;
+function createComputedAccessor<T>(node: ReactiveNode<T>): Computed<T> {
+  const fn = (() => readConsumer<T>(node)) as MutableComputed<T>;
 
   fn.node = node;
   fn.read = fn;
   return fn;
 }
 
-function createSignalAccessor<T>(node: ReactiveNode): Signal<T> {
+function createSignalAccessor<T>(node: ReactiveNode<T>): Signal<T> {
   const signal = ((value: T | typeof NO_WRITE = NO_WRITE) => {
     if (value === NO_WRITE) {
-      return readTrackedValue<T>(node);
+      return readProducer<T>(node);
     }
 
     writeProducer(node, value);
@@ -147,7 +133,7 @@ export function createRuntime(options?: RuntimeOptions): Runtime {
     },
 
     flush: () => scheduler.flush(),
-    
+
     batchWrite(writes: ReadonlyArray<BatchWriteEntry>): void {
       const epoch = runtime.bumpEpoch();
 

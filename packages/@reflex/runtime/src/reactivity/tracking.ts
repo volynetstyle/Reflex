@@ -5,18 +5,54 @@ import {
   isTrackingState,
   TRACKING_STATE,
 } from "./shape/ReactiveMeta";
-import { linkEdge, unlinkFromSource } from "./shape/methods/connect";
+import {
+  linkEdge,
+  moveIncomingEdgeAfter,
+  unlinkEdge,
+} from "./shape/methods/connect";
 import type { ReactiveEdge } from "./shape/ReactiveEdge";
 
+function markEdgeTracked(edge: ReactiveEdge, consumer: ReactiveNode): void {
+  edge.s = consumer.s;
+  consumer.depsTail = edge;
+  consumer.lastTrackedEdge = edge;
+}
+
+/**
+ * Cursor-guided incoming-edge walk used during dependency collection.
+ * It first probes the hot cache and expected next edge, then falls back to a
+ * linear scan that reorders the found edge into the reused dependency prefix.
+ */
 export function trackRead(source: ReactiveNode): void {
   const consumer = getNodeContext(source).activeComputed;
 
   if (!consumer) return;
 
-  for (let e = consumer.firstIn; e; e = e.nextIn) {
+  const cachedEdge = consumer.lastTrackedEdge;
+  if (cachedEdge?.from === source) {
+    markEdgeTracked(cachedEdge, consumer);
+    return;
+  }
+
+  const prevEdge = consumer.depsTail;
+  if (prevEdge?.from === source) {
+    markEdgeTracked(prevEdge, consumer);
+    return;
+  }
+
+  const nextExpected = prevEdge ? prevEdge.nextIn : consumer.firstIn;
+  if (nextExpected?.from === source) {
+    markEdgeTracked(nextExpected, consumer);
+    return;
+  }
+
+  for (let e = nextExpected ? nextExpected.nextIn : consumer.firstIn; e; e = e.nextIn) {
     if (e.from === source) {
-      e.s = consumer.s;
-      consumer.lastTrackedEdge = e;
+      moveIncomingEdgeAfter(e, consumer, prevEdge);
+      if (isTrackingState(consumer.state)) {
+        consumer.state &= ~TRACKING_STATE;
+      }
+      markEdgeTracked(e, consumer);
       return;
     }
   }
@@ -25,36 +61,24 @@ export function trackRead(source: ReactiveNode): void {
     consumer.state &= ~TRACKING_STATE;
   }
 
-  const edge = linkEdge(source, consumer);
-  edge.s = consumer.s;
-  consumer.lastTrackedEdge = edge;
+  const edge = linkEdge(source, consumer, prevEdge);
+  markEdgeTracked(edge, consumer);
 }
 
+/**
+ * Suffix cleanup over the consumer's incoming edges after recompute.
+ * Everything after depsTail belongs to the old dependency list and is unlinked.
+ */
 export function cleanupStaleSources(node: ReactiveNode): void {
-  const epoch = node.s;
-  let hasStale = false;
-  let prevIn: ReactiveEdge | null = null;
-  let e = node.firstIn;
-
   node.state &= ~TRACKING_STATE;
+  const tail = node.depsTail;
+  let edge = tail ? tail.nextIn : node.firstIn;
+  const hasStale = edge !== null;
 
-  while (e) {
-    const next = e.nextIn;
-
-    if (e.s !== epoch) {
-      if (node.lastTrackedEdge === e) {
-        node.lastTrackedEdge = null;
-      }
-      if (prevIn) prevIn.nextIn = next;
-      else node.firstIn = next;
-
-      unlinkFromSource(e);
-      hasStale = true;
-    } else {
-      prevIn = e;
-    }
-
-    e = next;
+  while (edge) {
+    const next = edge.nextIn;
+    unlinkEdge(edge);
+    edge = next;
   }
 
   if (!hasStale) {

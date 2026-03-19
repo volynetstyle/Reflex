@@ -84,4 +84,26 @@ describe("Reactive system - memoization", () => {
     expect(midSpy).toHaveBeenCalledTimes(2);
     expect(sinkSpy).toHaveBeenCalledTimes(2);
   });
+
+  it("refreshes only the demanded dirty branch on read", () => {
+    const leftSpy = vi.fn((n: number) => n + 1);
+    const rightSpy = vi.fn((n: number) => n + 10);
+    const sinkSpy = vi.fn((n: number) => n * 2);
+
+    const [leftSource, setLeft] = signal(1);
+    const [rightSource, setRight] = signal(5);
+    const left = computed(() => leftSpy(leftSource()));
+    const right = computed(() => rightSpy(rightSource()));
+    const sink = computed(() => sinkSpy(left()));
+
+    expect(sink()).toBe(4);
+
+    setLeft(2);
+    setRight(6);
+
+    expect(sink()).toBe(6);
+    expect(leftSpy).toHaveBeenCalledTimes(2);
+    expect(rightSpy).not.toHaveBeenCalled();
+    expect(sinkSpy).toHaveBeenCalledTimes(2);
+  });
 });

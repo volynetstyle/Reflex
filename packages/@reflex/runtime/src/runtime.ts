@@ -1,4 +1,5 @@
 import type ReactiveNode from "./reactivity/shape/ReactiveNode";
+import type { ReactiveEdge } from "./reactivity/shape/ReactiveEdge";
 
 export interface EngineHooks {
   onEffectInvalidated?(node: ReactiveNode): void;
@@ -12,6 +13,7 @@ class EngineContext {
 
   activeComputed: ReactiveNode | null = null;
   readonly trawelList: ReactiveNode[] = [];
+  readonly edgeStack: (ReactiveEdge | null)[] = [];
   readonly worklist: ReactiveNode[] = [];
 
   readonly hooks: EngineHooks;
@@ -37,6 +39,7 @@ class EngineContext {
     this.epoch = 1;
     this.activeComputed = null;
     this.trawelList.length = 0;
+    this.edgeStack.length = 0;
     this.worklist.length = 0;
     this.workEpoch = 0;
     delete this.hooks.onEffectInvalidated;

@@ -1,5 +1,5 @@
 import ReactiveNode from "../reactivity/shape/ReactiveNode";
-import { markInvalid } from "../reactivity/walkers/propagate";
+import { propagate } from "../reactivity/walkers/propagate";
 import { getNodeContext } from "../reactivity/shape/ReactiveMeta";
 
 export function writeProducer<T>(node: ReactiveNode<T>, value: T): void {
@@ -19,6 +19,6 @@ export function applyProducerWrite<T>(
   node.t = epoch;
 
   for (let e = node.firstOut; e; e = e.nextOut) {
-    markInvalid(e.to);
+    propagate(e);
   }
 }

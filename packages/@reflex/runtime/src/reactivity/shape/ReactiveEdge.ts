@@ -5,7 +5,9 @@ import ReactiveNode from "./ReactiveNode";
  * ReactiveEdge represents a directed, intrusive, bi-directional connection between two ReactiveNodes.
  */
 class ReactiveEdge {
+  prevOut: ReactiveEdge | null = null;
   nextOut: ReactiveEdge | null = null;
+  prevIn: ReactiveEdge | null = null;
   nextIn: ReactiveEdge | null = null;
   s: number = 0;
 
