@@ -25,7 +25,7 @@ const choice = computed(() => flag.read() ? a.read() : b.read());
 
 Це призводить або до зайвої роботи, або до багів.
 
-## 2. Як beta розв'язує задачу
+## 2. Як reflex розв'язує задачу
 
 Через tracking epoch.
 
@@ -118,7 +118,7 @@ const selected = computed(() => {
 - можна зруйнувати graph прямо в процесі обчислення
 - ускладнити читання й invariants
 
-У beta це строго розділено:
+У reflex це строго розділено:
 
 - під час compute - лише tracking reads
 - після compute - cleanup stale edges
@@ -167,7 +167,7 @@ const selected = computed(() => {
 - snapshots
 - cloned lists
 
-beta намагається цього уникати:
+reflex намагається цього уникати:
 
 - tracking через epoch
 - linked edges
@@ -185,4 +185,4 @@ beta намагається цього уникати:
 - repeated reads починають плодити graph-сміття
 - тест на switch branch неочікувано викликає зайвий recompute
 
-Тому branch-switch tests у beta - не "опціональна параноя", а обов'язковий захист архітектури.
+Тому branch-switch tests у reflex - не "опціональна параноя", а обов'язковий захист архітектури.

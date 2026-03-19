@@ -32,7 +32,7 @@ rt.effect(() => {
 
 Якщо змішати все це з semantics `computed`, ядро швидко розпухне.
 
-Тому beta робить так:
+Тому reflex робить так:
 
 - graph і execution pipeline максимально спільні
 - scheduling effects винесений в окремий шар
@@ -84,7 +84,7 @@ rt.effect(() => {
 - eager/flush mode виходить брудним
 - invalidation path тягне на собі зайву відповідальність
 
-У beta це розділено через boundary:
+У reflex це розділено через boundary:
 
 - graph invalidation викликає hook
 - scheduler вирішує, що робити далі
@@ -165,7 +165,7 @@ if (isScheduledState(node.state)) return;
 
 Це вже крок у бік eager execution, але не переписування ядра.
 
-І це дуже важливий архітектурний принцип beta:
+І це дуже важливий архітектурний принцип reflex:
 
 eager mode має бути шаром поверх lazy core, а не заміною lazy core.
 

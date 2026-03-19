@@ -1,4 +1,4 @@
-# 02. Публічний API: як beta виглядає зовні
+# 02. Публічний API: як reflex виглядає зовні
 
 Головний вхід - `createRuntime()`.
 
@@ -62,7 +62,7 @@ count.write(10);
 const double = rt.computed(() => count.read() * 2);
 ```
 
-`computed` у beta викликається як функція:
+`computed` у reflex викликається як функція:
 
 ```ts
 double();
@@ -204,7 +204,7 @@ console.log(sum()); // 12
 
 "якщо dependency змінилася, значить весь downstream зобов'язаний негайно recompute"
 
-Для beta це неправильно.
+Для reflex це неправильно.
 
 Правильно так:
 

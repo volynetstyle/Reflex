@@ -74,7 +74,7 @@ const total = computed(() => price() + tax());
 
 `reflex` обирає lazy pull.
 
-## 4. Що означає lazy pull у beta
+## 4. Що означає lazy pull у reflex
 
 Коли ви робите:
 
@@ -82,7 +82,7 @@ const total = computed(() => price() + tax());
 setCount(10);
 ```
 
-beta не йде миттєво перераховувати всі `computed`.
+reflex не йде миттєво перераховувати всі `computed`.
 
 Вона робить лише:
 
@@ -125,7 +125,7 @@ a -> b -> c
 - `b` залежить від `a`
 - `c` залежить від `b`
 
-У beta ребро читається так:
+У reflex ребро читається так:
 
 `to depends on from`
 
@@ -140,9 +140,9 @@ a -> b -> c
 - не забувати старі/нові залежності під час branch switching
 - не ламати кеш після same-value результату
 
-Для beta це виражається через версії, dirty hints і tracking epochs.
+Для reflex це виражається через версії, dirty hints і tracking epochs.
 
-## 7. Чим beta відрізняється за характером
+## 7. Чим reflex відрізняється за характером
 
 Це не "UI framework runtime".
 Це маленьке ядро reactive graph.
@@ -174,4 +174,4 @@ a -> b -> c
 - write робить graph dirty
 - read робить graph fresh
 
-Це і є фундамент beta.
+Це і є фундамент reflex.

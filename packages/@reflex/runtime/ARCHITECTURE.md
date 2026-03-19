@@ -1,10 +1,10 @@
-# Runtime Architecture For Beta Port
+# Runtime Architecture For reflex Port
 
 ## Goal
 
 Port the semantic core of `reflex` into `@reflex/runtime` without dragging over accidental file layout or outdated execution policy.
 
-The target runtime should preserve the beta contract:
+The target runtime should preserve the reflex contract:
 
 - lazy pull validation on read
 - cheap push invalidation on write
@@ -199,7 +199,7 @@ If a full move is too disruptive, keep the current folders temporarily, but pres
 
 ## Canonical Data Model
 
-The beta shape should become the canonical runtime model.
+The reflex shape should become the canonical runtime model.
 
 ### `ReactiveNode`
 
@@ -232,7 +232,7 @@ If `@reflex/core` intrusive graph helpers are reused later, keep the same semant
 
 ### `ReactiveNodeState`
 
-The beta state model should drive the port:
+The reflex state model should drive the port:
 
 - `Invalid`
 - `Obsolete`
@@ -316,31 +316,31 @@ The scheduler must not:
 
 This keeps eager mode as an optional layer over the same lazy core.
 
-## Mapping Beta To Runtime
+## Mapping reflex To Runtime
 
 This is the clean semantic mapping for the port:
 
-- `beta/src/core.ts` -> `runtime/src/core/*`
-- `beta/src/graph.ts` -> `runtime/src/graph/*`
-- `beta/src/tracking.ts` -> `runtime/src/tracking/*`
-- `beta/src/walkers.ts` -> `runtime/src/walkers/*`
-- `beta/src/engine.ts` and `beta/src/engine/*` -> `runtime/src/engine/*`
-- `beta/src/effect_scheduler.ts` -> `runtime/src/scheduler/EffectScheduler.ts`
-- `beta/src/api.ts` -> `runtime/src/api/*`
+- `reflex/src/core.ts` -> `runtime/src/core/*`
+- `reflex/src/graph.ts` -> `runtime/src/graph/*`
+- `reflex/src/tracking.ts` -> `runtime/src/tracking/*`
+- `reflex/src/walkers.ts` -> `runtime/src/walkers/*`
+- `reflex/src/engine.ts` and `reflex/src/engine/*` -> `runtime/src/engine/*`
+- `reflex/src/effect_scheduler.ts` -> `runtime/src/scheduler/EffectScheduler.ts`
+- `reflex/src/api.ts` -> `runtime/src/api/*`
 
 What should *not* be ported mechanically:
 
 - exact filenames if they obscure boundaries
 - temporary comments or study-only wording
-- beta-specific public API quirks if runtime already has a better wrapper surface
+- reflex-specific public API quirks if runtime already has a better wrapper surface
 
 ## Architecture Risks In Current `@reflex/runtime`
 
-The current runtime tree has the right intuition, but there are several mismatches with the beta contract:
+The current runtime tree has the right intuition, but there are several mismatches with the reflex contract:
 
 ### 1. Node model is semantically split
 
-Current runtime still models roles as `Producer/Consumer/Recycler`, while the beta core is centered on `Signal/Computed/Effect` plus explicit state flags and epochs.
+Current runtime still models roles as `Producer/Consumer/Recycler`, while the reflex core is centered on `Signal/Computed/Effect` plus explicit state flags and epochs.
 
 Risk:
 
@@ -349,7 +349,7 @@ Risk:
 
 ### 2. Freshness contract is not canonical
 
-The current runtime has older invalidation/recompute paths and partial bit usage. It should converge on the beta `t/v/s/w` model as the single source of truth.
+The current runtime has older invalidation/recompute paths and partial bit usage. It should converge on the reflex `t/v/s/w` model as the single source of truth.
 
 Risk:
 
@@ -367,7 +367,7 @@ Risk:
 
 ### 4. Legacy shape folders can hide semantics
 
-`reactivity/shape/methods` is a useful implementation location, but architecturally it mixes data model and behaviour too closely for a clean beta port.
+`reactivity/shape/methods` is a useful implementation location, but architecturally it mixes data model and behaviour too closely for a clean reflex port.
 
 Risk:
 
@@ -380,14 +380,14 @@ Risk:
 
 Before broad edits:
 
-- adopt the beta node/state/epoch model as the runtime contract
+- adopt the reflex node/state/epoch model as the runtime contract
 - treat this document as the architectural source of truth
 
 ### Phase 2. Normalize core types
 
 Refactor runtime internals so that:
 
-- `ReactiveNode` matches beta semantics
+- `ReactiveNode` matches reflex semantics
 - `ReactiveEdge` carries tracking epoch
 - `EngineContext` owns `epoch`, `activeComputed`, traversal stacks, and hooks
 
@@ -430,7 +430,7 @@ After parity tests pass:
 
 ## Testing Strategy For The Port
 
-Migration should be locked by the beta semantic suite, especially:
+Migration should be locked by the reflex semantic suite, especially:
 
 - basic signal/computed behaviour
 - memoization and SAC
@@ -441,7 +441,7 @@ Migration should be locked by the beta semantic suite, especially:
 Recommended approach:
 
 1. Port core invariants first
-2. Reuse beta tests against runtime internals or public API adapters
+2. Reuse reflex tests against runtime internals or public API adapters
 3. Only then clean up folder structure
 
 ## Non-Goals
@@ -459,7 +459,7 @@ Treat `reflex` as the semantic reference implementation and `@reflex/runtime` as
 
 The right move is:
 
-- port the beta model
+- port the reflex model
 - preserve the runtime package boundary
 - restructure around semantic layers
 - keep host scheduling as an explicit outer layer

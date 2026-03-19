@@ -1,6 +1,6 @@
 # 04. Шляхи запису та читання: як граф стає брудним і свіжим
 
-Цей розділ - серце beta.
+Цей розділ - серце reflex.
 
 Треба зрозуміти два шляхи:
 
@@ -22,7 +22,7 @@ mark downstream Invalid;
 
 ## 2. Чому write path такий короткий
 
-Тому що beta спеціально робить запис дешевим.
+Тому що reflex спеціально робить запис дешевим.
 
 Якби write path одразу:
 
@@ -32,7 +32,7 @@ mark downstream Invalid;
 
 то запис став би дорогим і погано передбачуваним.
 
-У beta write path - це інвалідатор, а не обчислювач.
+У reflex write path - це інвалідатор, а не обчислювач.
 
 ## 3. `markInvalid`
 
@@ -178,7 +178,7 @@ const c = computed(() => b() + 1);
 
 Тоді `c` може не recompute.
 
-Саме це робить beta помітно ефективнішим у низці lazy workload.
+Саме це робить reflex помітно ефективнішим у низці lazy workload.
 
 ## 12. `batchWrite`
 
@@ -192,7 +192,7 @@ const c = computed(() => b() + 1);
 
 Але важливо:
 
-`batchWrite` не перетворює beta на eager runtime.
+`batchWrite` не перетворює reflex на eager runtime.
 
 Він лише групує writes.
 
