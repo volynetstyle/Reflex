@@ -2,7 +2,7 @@
 
 ## Goal
 
-Port the semantic core of `@reflex/beta` into `@reflex/runtime` without dragging over accidental file layout or outdated execution policy.
+Port the semantic core of `reflex` into `@reflex/runtime` without dragging over accidental file layout or outdated execution policy.
 
 The target runtime should preserve the beta contract:
 
@@ -455,7 +455,7 @@ This port should not try to solve all future architecture at once:
 
 ## Practical Recommendation
 
-Treat `@reflex/beta` as the semantic reference implementation and `@reflex/runtime` as the package that should absorb it in a cleaner layered form.
+Treat `reflex` as the semantic reference implementation and `@reflex/runtime` as the package that should absorb it in a cleaner layered form.
 
 The right move is:
 

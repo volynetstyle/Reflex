@@ -6,11 +6,14 @@ export interface EngineHooks {
 
 class EngineContext {
   firstDirty: ReactiveNode | null = null;
+
   epoch = 1;
+  workEpoch = 0;
+
   activeComputed: ReactiveNode | null = null;
   readonly trawelList: ReactiveNode[] = [];
   readonly worklist: ReactiveNode[] = [];
-  workEpoch = 0;
+
   readonly hooks: EngineHooks;
 
   constructor(hooks: EngineHooks = {}) {

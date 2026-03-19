@@ -5,7 +5,7 @@
 ## 1. Створення runtime
 
 ```ts
-import { createRuntime } from "@reflex/beta";
+import { createRuntime } from "reflex";
 
 const rt = createRuntime();
 ```

@@ -25,7 +25,7 @@ const total = computed(() => price() + tax());
 
 ## 2. Три базові ролі
 
-У `@reflex/beta` є три ролі:
+У `reflex` є три ролі:
 
 - `signal`: зберігає вихідне значення
 - `computed`: обчислює похідне значення
@@ -72,7 +72,7 @@ const total = computed(() => price() + tax());
 - фінальне читання може саме потягнути велику перевірку графа
 - high fan-in сценарії можуть бути слабшими за eager runtime
 
-`@reflex/beta` обирає lazy pull.
+`reflex` обирає lazy pull.
 
 ## 4. Що означає lazy pull у beta
 

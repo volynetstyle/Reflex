@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createRuntime } from "../src";
-import { ReactiveNodeKind, ReactiveNodeState } from "../src/core";
+import { ReactiveNodeKind, ReactiveNodeState } from "../src/reactivity/shape";
 import { countIncoming } from "./signal_beta.test_utils";
 
 describe("Reactive system - effects", () => {
@@ -102,6 +102,25 @@ describe("Reactive system - effects", () => {
     expect(countIncoming(effect.node)).toBe(0);
 
     source.write(2);
+    rt.flush();
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns a callable disposer", () => {
+    const rt = createRuntime();
+    const source = rt.signal(1);
+    const cleanup = vi.fn();
+    const spy = vi.fn(() => {
+      source();
+      return cleanup;
+    });
+
+    const effect = rt.effect(spy);
+
+    effect();
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(effect.node.state & ReactiveNodeState.Disposed).toBeTruthy();
+    source(2);
     rt.flush();
     expect(spy).toHaveBeenCalledTimes(1);
   });

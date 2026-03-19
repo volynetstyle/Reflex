@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createRuntime } from "../src";
-import { ReactiveNodeKind } from "../src/core";
+import { ReactiveNodeKind } from "../src/reactivity/shape";
 import { countIncoming, setup } from "./signal_beta.test_utils";
 
 describe("Reactive system - basic correctness", () => {
@@ -90,7 +90,7 @@ describe("Reactive system - basic correctness", () => {
   it("creates runtime nodes with explicit kinds", () => {
     const rt = createRuntime();
     const s = rt.signal(1);
-    const c = rt.computed(() => s.read() * 2);
+    const c = rt.computed(() => s() * 2);
 
     expect(s.node.kind).toBe(ReactiveNodeKind.Signal);
     expect(c.node.kind).toBe(ReactiveNodeKind.Computed);
@@ -100,7 +100,7 @@ describe("Reactive system - basic correctness", () => {
   it("computes memos eagerly and caches the first value", () => {
     const rt = createRuntime();
     const s = rt.signal(2);
-    const spy = vi.fn(() => s.read() * 3);
+    const spy = vi.fn(() => s() * 3);
 
     const m = rt.memo(spy);
 
@@ -108,5 +108,16 @@ describe("Reactive system - basic correctness", () => {
     expect(m.node.v).toBeGreaterThan(0);
     expect(m()).toBe(6);
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it("supports callable signals for both reads and writes", () => {
+    const rt = createRuntime();
+    const s = rt.signal(1);
+    const c = rt.computed(() => s() * 2);
+
+    expect(s()).toBe(1);
+    s(5);
+    expect(s()).toBe(5);
+    expect(c()).toBe(10);
   });
 });

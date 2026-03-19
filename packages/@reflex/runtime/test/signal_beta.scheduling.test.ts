@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createRuntime } from "../src";
-import { ReactiveNodeState } from "../src/core";
+import { ReactiveNodeState } from "../src/reactivity/shape";
 import { setup } from "./signal_beta.test_utils";
 
 describe("Reactive system - smart recomputation and laziness", () => {

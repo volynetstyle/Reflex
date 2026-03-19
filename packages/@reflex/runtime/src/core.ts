@@ -1,1 +1,1 @@
-export * from "./reactivity/core";
+export * from "./reactivity/shape";

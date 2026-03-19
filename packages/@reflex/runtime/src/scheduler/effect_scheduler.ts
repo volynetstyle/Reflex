@@ -1,12 +1,12 @@
+import { runEffect } from "../reactivity/engine/effect";
 import {
   ReactiveNode,
-  clearNodeScheduled,
-  isDirtyState,
   isDisposedState,
   isScheduledState,
   markNodeScheduled,
-} from "../core";
-import { runEffect } from "../reactivity/engine/effect";
+  clearNodeScheduled,
+  isDirtyState,
+} from "../reactivity/shape";
 
 export const enum EffectSchedulerMode {
   Flush = 0,

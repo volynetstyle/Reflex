@@ -20,7 +20,8 @@
   },
   "include": [
     "src/index.ts",
-    "src/setup.ts"
+    "src/setup.ts",
+    "src/public-types.ts"
   ],
   "exclude": [
     "dist"
