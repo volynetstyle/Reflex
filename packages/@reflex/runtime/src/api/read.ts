@@ -1,23 +1,23 @@
-import ReactiveNode from "../reactivity/shape/ReactiveNode";
 import {
-  CHANGED_STATE,
-  DIRTY_STATE,
+  ReactiveNode,
   ReactiveNodeKind,
+  CHANGED_STATE,
+  changePayload,
+  trackRead,
+  DIRTY_STATE,
   ReactiveNodeState,
+  shouldRecompute,
+  recompute,
+  propagateOnce,
   clearDirtyState,
-} from "../reactivity/shape/ReactiveMeta";
-import { recompute } from "../reactivity/engine/compute";
-import { updateSignal } from "../reactivity/engine/updateSignal";
-import { propagateOnce } from "../reactivity/walkers/propagate";
-import { trackRead } from "../reactivity/tracking";
-import { shouldRecompute } from "../reactivity/walkers/shouldRecompute";
+} from "../reactivity";
 
 export function readProducer<T>(node: ReactiveNode<T>): T {
   if (
     node.kind === ReactiveNodeKind.Signal &&
     (node.state & CHANGED_STATE) !== 0
   ) {
-    updateSignal(node);
+    changePayload(node);
   }
 
   trackRead(node);
@@ -28,14 +28,18 @@ export function readConsumer<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
   if (state & DIRTY_STATE) {
-    if ((state & ReactiveNodeState.Computing) !== 0) {
-      throw new Error("Cycle detected while refreshing reactive graph");
+    if (__DEV__) {
+      if ((state & ReactiveNodeState.Computing) !== 0) {
+        throw new Error("Cycle detected while refreshing reactive graph");
+      }
     }
 
-    const changed = shouldRecompute(node);
+    let changed = shouldRecompute(node);
 
     if (state & CHANGED_STATE || changed) {
-      if (recompute(node)) {
+      changed = recompute(node);
+
+      if (changed) {
         propagateOnce(node);
       }
     } else {

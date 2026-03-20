@@ -1,11 +1,11 @@
-import runtime from "../../runtime";
+import runtime from "../context";
 import {
   ReactiveNode,
   ReactiveNodeState,
   clearNodeComputing,
   markNodeComputing,
 } from "../shape";
-import { cleanupStaleSources } from "../tracking";
+import { cleanupStaleSources } from "./tracking";
 
 export function invokeCompute(
   node: ReactiveNode,

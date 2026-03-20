@@ -1,6 +1,6 @@
-import runtime from "../../runtime";
+import runtime from "../context";
 import { recompute } from "../engine/compute";
-import { updateSignal } from "../engine/updateSignal";
+import { changePayload } from "../engine/changePayload";
 import {
   CHANGED_STATE,
   DIRTY_STATE,
@@ -18,7 +18,7 @@ function settleDirtySource(
   const isSignal = node.kind === ReactiveNodeKind.Signal;
   let changed = false;
 
-  if (isSignal) changed = updateSignal(node);
+  if (isSignal) changed = changePayload(node);
   else changed = recompute(node);
 
   if (!changed) {
@@ -53,9 +53,8 @@ export function shouldRecompute(node: ReactiveNode): boolean {
     return false;
   }
 
-  const stack = runtime.edgeStack;
-  const stackBase = stack.length;
-  let sp = stackBase;
+  const stack = new Array<ReactiveEdge | null>();
+  let sp = stack.length;
   let link: ReactiveEdge = firstLink;
   let sub = node;
   let checkDepth = 0;
@@ -129,6 +128,6 @@ export function shouldRecompute(node: ReactiveNode): boolean {
       }
     }
 
-    return ((stack.length = stackBase), needRecompute);
+    return needRecompute;
   } while (true);
 }

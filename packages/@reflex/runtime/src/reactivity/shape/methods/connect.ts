@@ -1,49 +1,51 @@
 import { ReactiveEdge } from "../ReactiveEdge";
 import ReactiveNode from "../ReactiveNode";
 
+// ─── Internal helpers ────────────────────────────────────────────────────────
+
 function attachOutEdge(from: ReactiveNode, edge: ReactiveEdge): void {
   edge.prevOut = from.lastOut;
   edge.nextOut = null;
-
-  if (from.lastOut) {
-    from.lastOut.nextOut = edge;
-  } else {
-    from.firstOut = edge;
-  }
-
+  from.lastOut ? (from.lastOut.nextOut = edge) : (from.firstOut = edge);
   from.lastOut = edge;
 }
 
+/** Insert `edge` into `to`'s incoming list right after `after` (or at head). */
 function attachInEdge(
   to: ReactiveNode,
   edge: ReactiveEdge,
   after: ReactiveEdge | null,
 ): void {
-  if (after) {
-    edge.prevIn = after;
-    edge.nextIn = after.nextIn;
+  const next = after ? after.nextIn : to.firstIn;
 
-    if (after.nextIn) {
-      after.nextIn.prevIn = edge;
-    } else {
-      to.lastIn = edge;
-    }
+  edge.prevIn = after;
+  edge.nextIn = next;
 
-    after.nextIn = edge;
-    return;
-  }
-
-  edge.prevIn = null;
-  edge.nextIn = to.firstIn;
-
-  if (to.firstIn) {
-    to.firstIn.prevIn = edge;
-  } else {
-    to.lastIn = edge;
-  }
-
-  to.firstIn = edge;
+  if (next) next.prevIn = edge;
+  else to.lastIn = edge;
+  if (after) after.nextIn = edge;
+  else to.firstIn = edge;
 }
+
+/** Splice `edge` out of `to`'s incoming list (does NOT touch the out-list). */
+function detachInEdge(to: ReactiveNode, edge: ReactiveEdge): void {
+  const { prevIn, nextIn } = edge;
+  if (prevIn) prevIn.nextIn = nextIn;
+  else to.firstIn = nextIn;
+  if (nextIn) nextIn.prevIn = prevIn;
+  else to.lastIn = prevIn;
+}
+
+/** Splice `edge` out of `from`'s outgoing list (does NOT touch the in-list). */
+function detachOutEdge(from: ReactiveNode, edge: ReactiveEdge): void {
+  const { prevOut, nextOut } = edge;
+  if (prevOut) prevOut.nextOut = nextOut;
+  else from.firstOut = nextOut;
+  if (nextOut) nextOut.prevOut = prevOut;
+  else from.lastOut = prevOut;
+}
+
+// ─── Public API ──────────────────────────────────────────────────────────────
 
 export function linkEdge(
   from: ReactiveNode,
@@ -56,45 +58,42 @@ export function linkEdge(
   return edge;
 }
 
+export function unlinkEdge(edge: ReactiveEdge): void {
+  const { from, to } = edge;
+
+  if (to.depsTail === edge) to.depsTail = edge.prevIn;
+
+  detachOutEdge(from, edge);
+  detachInEdge(to, edge);
+
+  edge.prevOut = edge.nextOut = edge.prevIn = edge.nextIn = null;
+}
+
+/**
+ * Reuses an existing edge from `from → to` if possible, repositioning it
+ * after `prev` when needed. Falls back to creating a new edge.
+ */
 export function reuseOrCreateIncomingEdge(
   from: ReactiveNode,
   to: ReactiveNode,
   prev: ReactiveEdge | null,
   nextExpected: ReactiveEdge | null,
 ): ReactiveEdge {
-  if (prev?.from === from) {
-    return prev;
-  }
+  // Fast path: the edge we already hold is the right one.
+  if (prev?.from === from) return prev;
+  if (nextExpected?.from === from) return nextExpected;
 
-  if (nextExpected?.from === from) {
-    return nextExpected;
-  }
-
+  // Scan the rest of the incoming list for a reusable edge.
   for (
-    let edge = nextExpected !== null ? nextExpected.nextIn : to.firstIn;
+    let edge = nextExpected ? nextExpected.nextIn : to.firstIn;
     edge !== null;
     edge = edge.nextIn
   ) {
-    if (edge.from !== from) {
-      continue;
-    }
+    if (edge.from !== from) continue;
 
+    // Found one — reposition it if it's out of order.
     if (edge.prevIn !== prev) {
-      const prevIn = edge.prevIn;
-      const nextIn = edge.nextIn;
-
-      if (prevIn !== null) {
-        prevIn.nextIn = nextIn;
-      } else {
-        to.firstIn = nextIn;
-      }
-
-      if (nextIn !== null) {
-        nextIn.prevIn = prevIn;
-      } else {
-        to.lastIn = prevIn;
-      }
-
+      detachInEdge(to, edge);
       attachInEdge(to, edge, prev);
     }
 
@@ -104,60 +103,21 @@ export function reuseOrCreateIncomingEdge(
   return linkEdge(from, to, prev);
 }
 
-export function unlinkEdge(edge: ReactiveEdge): void {
-  const { from, to } = edge;
-  const { prevOut, nextOut, prevIn, nextIn } = edge;
-
-  if (to.depsTail === edge) {
-    to.depsTail = prevIn;
-  }
-
-  if (prevOut) {
-    prevOut.nextOut = nextOut;
-  } else {
-    from.firstOut = nextOut;
-  }
-  if (nextOut) {
-    nextOut.prevOut = prevOut;
-  } else {
-    from.lastOut = prevOut;
-  }
-
-  if (prevIn) {
-    prevIn.nextIn = nextIn;
-  } else {
-    to.firstIn = nextIn;
-  }
-  if (nextIn) {
-    nextIn.prevIn = prevIn;
-  } else {
-    to.lastIn = prevIn;
-  }
-
-  edge.prevOut = null;
-  edge.nextOut = null;
-  edge.prevIn = null;
-  edge.nextIn = null;
-}
-
-export function unlinkFromSource(edge: ReactiveEdge): void {
-  unlinkEdge(edge);
-}
-
 /**
  * Full incoming-edge sweep used by disposal paths.
- * This is intentionally a cold-path traversal that tears down every source
- * connection regardless of dependency order or reuse information.
+ * Cold-path traversal that tears down every source connection.
  */
 export function unlinkAllSources(node: ReactiveNode): void {
   let edge = node.firstIn;
-  node.firstIn = null;
-  node.lastIn = null;
-  node.depsTail = null;
+
+  // Clear node's bookkeeping up-front so unlinkEdge's detachInEdge calls
+  // operate on a clean slate (each will become a no-op on the in-list).
+  node.firstIn = node.lastIn = node.depsTail = null;
 
   while (edge) {
     const next = edge.nextIn;
-    unlinkEdge(edge);
+    detachOutEdge(edge.from, edge);
+    edge.prevOut = edge.nextOut = edge.prevIn = edge.nextIn = null;
     edge = next;
   }
 }
@@ -170,40 +130,23 @@ export function moveIncomingEdgeAfter(
   if (edge.prevIn === after) return;
   if (after === null && to.firstIn === edge) return;
 
-  const prevIn = edge.prevIn;
-  const nextIn = edge.nextIn;
-
-  if (prevIn) {
-    prevIn.nextIn = nextIn;
-  } else {
-    to.firstIn = nextIn;
-  }
-
-  if (nextIn) {
-    nextIn.prevIn = prevIn;
-  } else {
-    to.lastIn = prevIn;
-  }
-
+  detachInEdge(to, edge);
   attachInEdge(to, edge, after);
 }
 
+/** Cold-path: links `parent → child` only if not already connected. */
 export function connect(
   parent: ReactiveNode,
   child: ReactiveNode,
 ): ReactiveEdge {
-  // Imperative connect is a cold path, so we pay one linear incoming-edge scan
-  // to preserve the invariant that a parent-child pair is represented once.
   for (let e = child.firstIn; e; e = e.nextIn) {
     if (e.from === parent) return e;
   }
-
   return linkEdge(parent, child);
 }
 
+/** Cold-path: removes the first `parent → child` edge if it exists. */
 export function disconnect(parent: ReactiveNode, child: ReactiveNode): void {
-  // Disconnect mirrors connect: scan the child's incoming list until the
-  // matching parent edge is found, then unlink it in O(1).
   for (let e = child.firstIn; e; e = e.nextIn) {
     if (e.from === parent) {
       unlinkEdge(e);

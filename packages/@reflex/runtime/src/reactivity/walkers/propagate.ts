@@ -1,4 +1,4 @@
-import runtime from "../../runtime";
+import runtime from "../context";
 import {
   CHANGED_STATE,
   DIRTY_STATE,
@@ -83,10 +83,9 @@ export function propagateOnce(node: ReactiveNode): void {
  * subscribers, keeping the traversal iterative for predictable hot-path cost.
  */
 export function propagate(startEdge: ReactiveEdge): void {
-  const ctx = runtime;
-  const stack = ctx.edgeStack;
+  const stack = new Array<ReactiveEdge | null>();
   const base = stack.length;
-  let sp = base;
+  let sp = stack.length;
   let edge: ReactiveEdge = startEdge;
   let next: ReactiveEdge | null = startEdge.nextOut;
 
@@ -112,7 +111,7 @@ export function propagate(startEdge: ReactiveEdge): void {
     }
 
     if (sub.kind === ReactiveNodeKind.Effect) {
-      ctx.notifyEffectInvalidated(sub);
+      runtime.notifyEffectInvalidated(sub);
     } else {
       const child = sub.firstOut;
 
@@ -140,6 +139,4 @@ export function propagate(startEdge: ReactiveEdge): void {
     edge = stack[--sp]!;
     next = edge.nextOut;
   }
-
-  stack.length = base;
 }

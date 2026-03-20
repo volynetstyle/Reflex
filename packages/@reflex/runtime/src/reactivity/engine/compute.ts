@@ -1,4 +1,4 @@
-import { ReactiveNode, clearDirtyState } from "../shape";
+import { DIRTY_STATE, ReactiveNode, clearDirtyState } from "../shape";
 import { executeNodeComputation } from "./execute";
 
 function commitComputedValue(
@@ -9,16 +9,14 @@ function commitComputedValue(
   const changed = !Object.is(prevValue, newValue);
 
   node.payload = newValue;
-  clearDirtyState(node);
+  node.state &= ~DIRTY_STATE;
 
   return changed;
 }
 
 export function recompute(node: ReactiveNode): boolean {
-  if (!node.compute) return false;
+  const commit = (result: unknown) =>
+    commitComputedValue(node, node.payload, result);
 
-  const prevValue = node.payload;
-  return executeNodeComputation(node, (result) =>
-    commitComputedValue(node, prevValue, result),
-  );
+  return executeNodeComputation(node, commit);
 }

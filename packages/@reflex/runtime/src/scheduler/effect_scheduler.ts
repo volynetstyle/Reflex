@@ -1,12 +1,5 @@
 import { runEffect } from "../reactivity/engine/effect";
-import {
-  ReactiveNode,
-  isDisposedState,
-  isScheduledState,
-  markNodeScheduled,
-  clearNodeScheduled,
-  isDirtyState,
-} from "../reactivity/shape";
+import { DIRTY_STATE, ReactiveNode, ReactiveNodeState } from "../reactivity/shape";
 
 export const enum EffectSchedulerMode {
   Flush = 0,
@@ -31,9 +24,13 @@ export class EffectScheduler {
   constructor(private readonly mode: EffectSchedulerMode) {}
 
   enqueue(node: ReactiveNode): void {
-    if (isDisposedState(node.state) || isScheduledState(node.state)) return;
+    if (
+      (node.state & ReactiveNodeState.Disposed) !== 0 ||
+      (node.state & ReactiveNodeState.Scheduled) !== 0
+    )
+      return;
 
-    markNodeScheduled(node);
+    node.state |= ReactiveNodeState.Scheduled;
     this.queue.push(node);
 
     if (this.mode === EffectSchedulerMode.Eager && !this.flushing) {
@@ -50,9 +47,12 @@ export class EffectScheduler {
       while (this.head < this.queue.length) {
         const node = this.queue[this.head]!;
         ++this.head;
-        clearNodeScheduled(node);
+        node.state &= ~ReactiveNodeState.Scheduled;
 
-        if (isDisposedState(node.state) || !isDirtyState(node.state)) {
+        if (
+          (node.state & ReactiveNodeState.Disposed) !== 0 ||
+          (node.state & DIRTY_STATE) === 0
+        ) {
           continue;
         }
 
@@ -66,7 +66,7 @@ export class EffectScheduler {
   }
 
   clear(node: ReactiveNode): void {
-    clearNodeScheduled(node);
+    node.state &= ~ReactiveNodeState.Scheduled;
   }
 
   reset(): void {

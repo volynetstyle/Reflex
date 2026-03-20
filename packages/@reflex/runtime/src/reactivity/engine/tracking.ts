@@ -1,7 +1,7 @@
-import runtime from "../runtime";
-import type ReactiveNode from "./shape/ReactiveNode";
-import type { ReactiveEdge } from "./shape/ReactiveEdge";
-import { reuseOrCreateIncomingEdge, unlinkEdge } from "./shape/methods/connect";
+import runtime from "../context";
+import type ReactiveNode from "../shape/ReactiveNode";
+import type { ReactiveEdge } from "../shape/ReactiveEdge";
+import { reuseOrCreateIncomingEdge, unlinkEdge } from "../shape/methods/connect";
 
 /**
  * Cursor-guided incoming-edge walk used during dependency collection.

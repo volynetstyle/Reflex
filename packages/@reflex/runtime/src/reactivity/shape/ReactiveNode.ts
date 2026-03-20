@@ -6,16 +6,16 @@ type ComputeFn<T> = ((previous?: T) => T) | (() => T) | null;
 const UNINITIALIZED = Symbol("UNINITIALIZED");
 
 class ReactiveNode<T = unknown> implements Reactivable {
-  firstOut: ReactiveEdge | null;
-  lastOut: ReactiveEdge | null;
-  firstIn: ReactiveEdge | null;
-  lastIn: ReactiveEdge | null;
   state: number;
   kind: ReactiveNodeKind;
   compute: ComputeFn<T>;
+  firstOut: ReactiveEdge | null;
+  firstIn: ReactiveEdge | null;
+  lastOut: ReactiveEdge | null;
+  lastIn: ReactiveEdge | null;
+  depsTail: ReactiveEdge | null;
   payload: T;
   pendingPayload: T;
-  depsTail: ReactiveEdge | null = null;
 
   constructor(
     payload: T | undefined,
@@ -23,13 +23,14 @@ class ReactiveNode<T = unknown> implements Reactivable {
     state: number,
     kind: ReactiveNodeKind,
   ) {
-    this.firstOut = null;
-    this.lastOut = null;
-    this.firstIn = null;
-    this.lastIn = null;
     this.state = state;
     this.kind = kind;
     this.compute = compute;
+    this.firstOut = null;
+    this.firstIn = null;
+    this.lastOut = null;
+    this.lastIn = null;
+    this.depsTail = null;
     this.payload = payload as T;
     this.pendingPayload = payload as T;
   }

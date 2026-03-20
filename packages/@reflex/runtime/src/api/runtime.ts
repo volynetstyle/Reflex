@@ -1,26 +1,29 @@
-import runtime, { EngineContext, type EngineHooks } from "../runtime";
-
-import { runEffect, disposeEffect } from "../reactivity/engine/effect";
-import { writeProducer } from "./write";
-import { readConsumer, readProducer } from "./read";
 import {
+  ReactiveNode,
+  EngineHooks,
+  EngineContext,
+  disposeEffect,
+  ReactiveNodeKind,
+  UNINITIALIZED,
+  CHANGED_STATE,
+  ReactiveNodeState,
+  runEffect,
+} from "../reactivity";
+import runtime from "../reactivity/context";
+import {
+  EffectStrategy,
   EffectScheduler,
   resolveEffectSchedulerMode,
-  type EffectStrategy,
 } from "../scheduler/effect_scheduler";
-import {
-  CHANGED_STATE,
-  ReactiveNode,
-  ReactiveNodeKind,
-  ReactiveNodeState,
-  UNINITIALIZED,
-} from "../reactivity/shape";
+import { readConsumer, readProducer } from "./read";
+import { writeProducer } from "./write";
 
 const NO_WRITE: unique symbol = Symbol("NO_WRITE");
 
 export interface Signal<T> {
   (): T;
   (value: T): void;
+  untracked(): T;
   readonly node: ReactiveNode;
   read(): T;
   write(value: T): void;
@@ -29,6 +32,7 @@ export interface Signal<T> {
 export interface Computed<T> {
   (): T;
   read(): T;
+  untracked(): T;
   readonly node: ReactiveNode;
 }
 
@@ -61,6 +65,7 @@ function attachNode<T extends Function, N>(fn: T, node: N): T & { node: N } {
 
 function createComputedAccessor<T>(node: ReactiveNode<T>): Computed<T> {
   const accessor = attachNode((() => readConsumer(node)) as Computed<T>, node);
+    accessor.untracked = () => node.payload;
   accessor.read = accessor;
   return accessor;
 }
@@ -74,6 +79,7 @@ function createSignalAccessor<T>(node: ReactiveNode<T>): Signal<T> {
     node,
   );
 
+  accessor.untracked = () => node.payload;
   accessor.read = () => readProducer(node);
   accessor.write = (value: T) => writeProducer(node, value);
 

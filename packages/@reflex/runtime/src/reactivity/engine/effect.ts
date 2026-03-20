@@ -1,21 +1,21 @@
 import {
+  DIRTY_STATE,
   MAYBE_CHANGE_STATE,
   ReactiveNode,
   ReactiveNodeState,
   clearDirtyState,
-  isChangedState,
-  isDisposedState,
 } from "../shape";
 import { unlinkAllSources } from "../shape/methods/connect";
 import { executeNodeComputation } from "./execute";
 import { shouldRecompute } from "../walkers/shouldRecompute";
 
 export function runEffect(node: ReactiveNode): void {
-  const compute = node.compute;
-  if (!compute || isDisposedState(node.state)) return;
+  const state = node.state;
 
-  const shouldRun = isChangedState(node.state)
-    || (node.state & MAYBE_CHANGE_STATE) !== 0 && shouldRecompute(node);
+  const compute = node.compute;
+  if (!compute || (state & ReactiveNodeState.Disposed) !== 0) return;
+
+  const shouldRun = (state & DIRTY_STATE) !== 0 && shouldRecompute(node);
 
   if (!shouldRun) {
     clearDirtyState(node);
@@ -26,18 +26,20 @@ export function runEffect(node: ReactiveNode): void {
   node.payload = null;
   prevCleanup?.();
 
-  executeNodeComputation(node, (result) => {
+  const commit = (result: unknown) => {
     clearDirtyState(node);
-    node.state &= ~ReactiveNodeState.Visited;
+    node.state &= ~(ReactiveNodeState.Visited | DIRTY_STATE);
 
     if (typeof result === "function") {
       node.payload = result as () => void;
     }
-  });
+  };
+
+  executeNodeComputation(node, commit);
 }
 
 export function disposeEffect(node: ReactiveNode): void {
-  if (isDisposedState(node.state)) return;
+  if ((node.state & ReactiveNodeState.Disposed) !== 0) return;
 
   node.state |= ReactiveNodeState.Disposed;
 
