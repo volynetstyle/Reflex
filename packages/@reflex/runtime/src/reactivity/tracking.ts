@@ -1,20 +1,14 @@
+import runtime from "../runtime";
 import type ReactiveNode from "./shape/ReactiveNode";
+import type { ReactiveEdge } from "./shape/ReactiveEdge";
 import {
   ReactiveNodeState,
-  getNodeContext,
-  isTrackingState,
   TRACKING_STATE,
 } from "./shape/ReactiveMeta";
 import {
-  linkEdge,
-  moveIncomingEdgeAfter,
+  reuseOrCreateIncomingEdge,
   unlinkEdge,
 } from "./shape/methods/connect";
-import type { ReactiveEdge } from "./shape/ReactiveEdge";
-
-function markEdgeTracked(edge: ReactiveEdge, consumer: ReactiveNode): void {
-  consumer.depsTail = edge;
-}
 
 /**
  * Cursor-guided incoming-edge walk used during dependency collection.
@@ -22,39 +16,24 @@ function markEdgeTracked(edge: ReactiveEdge, consumer: ReactiveNode): void {
  * linear scan that reorders the found edge into the reused dependency prefix.
  */
 export function trackRead(source: ReactiveNode): void {
-  const consumer = getNodeContext(source).activeComputed;
+  const consumer = runtime.activeComputed;
 
   if (!consumer) return;
 
   const prevEdge = consumer.depsTail;
-  if (prevEdge?.from === source) {
-    markEdgeTracked(prevEdge, consumer);
-    return;
-  }
+  const nextExpected = prevEdge !== null ? prevEdge.nextIn : consumer.firstIn;
+  const edge = reuseOrCreateIncomingEdge(
+    source,
+    consumer,
+    prevEdge,
+    nextExpected,
+  );
 
-  const nextExpected = prevEdge ? prevEdge.nextIn : consumer.firstIn;
-  if (nextExpected?.from === source) {
-    markEdgeTracked(nextExpected, consumer);
-    return;
-  }
-
-  for (let e = nextExpected ? nextExpected.nextIn : consumer.firstIn; e; e = e.nextIn) {
-    if (e.from === source) {
-      moveIncomingEdgeAfter(e, consumer, prevEdge);
-      if (isTrackingState(consumer.state)) {
-        consumer.state &= ~TRACKING_STATE;
-      }
-      markEdgeTracked(e, consumer);
-      return;
-    }
-  }
-
-  if (isTrackingState(consumer.state)) {
+  if (edge !== prevEdge && edge !== nextExpected) {
     consumer.state &= ~TRACKING_STATE;
   }
 
-  const edge = linkEdge(source, consumer, prevEdge);
-  markEdgeTracked(edge, consumer);
+  consumer.depsTail = edge;
 }
 
 /**
@@ -62,18 +41,19 @@ export function trackRead(source: ReactiveNode): void {
  * Everything after depsTail belongs to the old dependency list and is unlinked.
  */
 export function cleanupStaleSources(node: ReactiveNode): void {
-  node.state &= ~TRACKING_STATE;
   const tail = node.depsTail;
-  let edge = tail ? tail.nextIn : node.firstIn;
-  const hasStale = edge !== null;
+  let edge: ReactiveEdge | null = tail !== null ? tail.nextIn : node.firstIn;
 
-  while (edge) {
-    const next = edge.nextIn;
-    unlinkEdge(edge);
-    edge = next;
+  if (edge === null) {
+    node.state |= ReactiveNodeState.Tracking;
+    return;
   }
 
-  if (!hasStale) {
-    node.state |= ReactiveNodeState.Tracking;
+  node.state &= ~TRACKING_STATE;
+
+  while (edge) {
+    const next: ReactiveEdge | null = edge.nextIn;
+    unlinkEdge(edge);
+    edge = next;
   }
 }

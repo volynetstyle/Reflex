@@ -39,7 +39,8 @@ export interface EffectScope {
 
 type MutableSignal<T> = Signal<T> & { node: ReactiveNode };
 type MutableComputed<T> = Computed<T> & { node: ReactiveNode };
-type MutableEffectScope = EffectScope & { node: ReactiveNode };
+type EffectScopeBinding = { node: ReactiveNode; scheduler: EffectScheduler };
+type MutableEffectScope = EffectScope & EffectScopeBinding;
 
 export type BatchWriteEntry = readonly [Signal<unknown>, unknown];
 
@@ -58,8 +59,28 @@ export interface Runtime {
   readonly ctx: EngineContext;
 }
 
+function computedOper<T>(this: ReactiveNode<T>): T {
+  return readConsumer(this);
+}
+
+function signalOper<T>(
+  this: ReactiveNode<T>,
+  value: T | typeof NO_WRITE = NO_WRITE,
+): T | void {
+  if (value === NO_WRITE) {
+    return readProducer(this);
+  }
+
+  writeProducer(this, value);
+}
+
+function disposeEffectScope(this: EffectScopeBinding): void {
+  this.scheduler.clear(this.node);
+  disposeEffect(this.node);
+}
+
 function createComputedAccessor<T>(node: ReactiveNode<T>): Computed<T> {
-  const fn = (() => readConsumer<T>(node)) as MutableComputed<T>;
+  const fn = computedOper.bind(node) as MutableComputed<T>;
 
   fn.node = node;
   fn.read = fn;
@@ -67,30 +88,23 @@ function createComputedAccessor<T>(node: ReactiveNode<T>): Computed<T> {
 }
 
 function createSignalAccessor<T>(node: ReactiveNode<T>): Signal<T> {
-  const signal = ((value: T | typeof NO_WRITE = NO_WRITE) => {
-    if (value === NO_WRITE) {
-      return readProducer<T>(node);
-    }
-
-    writeProducer(node, value);
-  }) as MutableSignal<T>;
+  const signal = signalOper.bind(node) as MutableSignal<T>;
 
   signal.node = node;
-  signal.read = () => signal();
-  signal.write = (value: T) => {
-    signal(value);
-  };
+  signal.read = signal as () => T;
+  signal.write = signal as (value: T) => void;
 
   return signal;
 }
 
 function createEffectScope(node: ReactiveNode, scheduler: EffectScheduler): EffectScope {
-  const dispose = (() => {
-    scheduler.clear(node);
-    disposeEffect(node);
+  const dispose = disposeEffectScope.bind({
+    node,
+    scheduler,
   }) as MutableEffectScope;
 
   dispose.node = node;
+  dispose.scheduler = scheduler;
   dispose.dispose = dispose;
 
   return dispose;

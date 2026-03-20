@@ -1,13 +1,12 @@
 import ReactiveNode from "../reactivity/shape/ReactiveNode";
 import {
-  clearDirtyState,
   isChangedState,
   isComputingState,
   isDirtyState,
   isSignalKind,
 } from "../reactivity/shape/ReactiveMeta";
+import { updateSignal } from "../reactivity/engine/updateSignal";
 import { trackRead } from "../reactivity/tracking";
-import { shallowPropagate } from "../reactivity/walkers/propagate";
 import { ensureFresh } from "../reactivity/walkers/ensureFresh";
 
 function settleProducer<T>(node: ReactiveNode<T>): void {
@@ -15,13 +14,7 @@ function settleProducer<T>(node: ReactiveNode<T>): void {
     return;
   }
 
-  const changed = !Object.is(node.payload, node.pendingPayload);
-  node.payload = node.pendingPayload;
-  clearDirtyState(node);
-
-  if (changed) {
-    shallowPropagate(node);
-  }
+  updateSignal(node);
 }
 
 export function readProducer<T>(node: ReactiveNode<T>): T {

@@ -56,6 +56,57 @@ export function linkEdge(
   return edge;
 }
 
+export function reuseOrCreateIncomingEdge(
+  from: ReactiveNode,
+  to: ReactiveNode,
+  prev: ReactiveEdge | null,
+  nextExpected: ReactiveEdge | null,
+): ReactiveEdge {
+  if (prev?.from === from) {
+    return prev;
+  }
+
+  if (nextExpected?.from === from) {
+    return nextExpected;
+  }
+
+  for (
+    let edge = nextExpected !== null ? nextExpected.nextIn : to.firstIn;
+    edge !== null;
+    edge = edge.nextIn
+  ) {
+    if (edge.from !== from) {
+      continue;
+    }
+
+    if (edge.prevIn !== prev) {
+      const prevIn = edge.prevIn;
+      const nextIn = edge.nextIn;
+
+      if (prevIn !== null) {
+        prevIn.nextIn = nextIn;
+      } else {
+        to.firstIn = nextIn;
+      }
+
+      if (nextIn !== null) {
+        nextIn.prevIn = prevIn;
+      } else {
+        to.lastIn = prevIn;
+      }
+
+      attachInEdge(to, edge, prev);
+    }
+
+    return edge;
+  }
+
+  const edge = new ReactiveEdge(from, to);
+  attachOutEdge(from, edge);
+  attachInEdge(to, edge, prev);
+  return edge;
+}
+
 export function unlinkEdge(edge: ReactiveEdge): void {
   const { from, to } = edge;
   const { prevOut, nextOut, prevIn, nextIn } = edge;
