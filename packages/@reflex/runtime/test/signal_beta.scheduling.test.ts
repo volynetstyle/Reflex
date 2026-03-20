@@ -159,20 +159,20 @@ describe("Reactive system - smart recomputation and laziness", () => {
     ).toBeFalsy();
   });
 
-  it("keeps tracking through stable recomputes", () => {
+  it("keeps dependency shape stable through stable recomputes", () => {
     const rt = createRuntime();
     const x = rt.signal(1);
     const c = rt.computed(() => x.read() * 2);
 
     expect(c()).toBe(2);
-    expect(c.node.state & ReactiveNodeState.Tracking).toBeTruthy();
+    expect(c.node.depsTail?.from).toBe(x.node);
 
     x.write(5);
     expect(c()).toBe(10);
-    expect(c.node.state & ReactiveNodeState.Tracking).toBeTruthy();
+    expect(c.node.depsTail?.from).toBe(x.node);
   });
 
-  it("re-enables tracking after discovering a new dependency", () => {
+  it("reconciles dependencies after discovering a new dependency", () => {
     const rt = createRuntime();
     const flag = rt.signal(true);
     const a = rt.signal(1);
@@ -181,14 +181,14 @@ describe("Reactive system - smart recomputation and laziness", () => {
     const c = rt.computed(() => (flag.read() ? a.read() : b.read()));
 
     expect(c()).toBe(1);
-    expect(c.node.state & ReactiveNodeState.Tracking).toBeTruthy();
+    expect(c.node.depsTail?.from).toBe(a.node);
 
     flag.write(false);
     expect(c()).toBe(2);
-    expect(c.node.state & ReactiveNodeState.Tracking).toBe(0);
+    expect(c.node.depsTail?.from).toBe(b.node);
 
     b.write(3);
     expect(c()).toBe(3);
-    expect(c.node.state & ReactiveNodeState.Tracking).toBeTruthy();
+    expect(c.node.depsTail?.from).toBe(b.node);
   });
 });

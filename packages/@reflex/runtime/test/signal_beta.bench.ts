@@ -4,13 +4,15 @@ import {
   computed as createAlienComputed,
   signal as createAlienSignal,
 } from "alien-signals";
-import { createRuntime, type BatchWriteEntry, type Signal } from "../";
+import { createRuntime } from "../dist/esm/index";
+
+type BatchWriteEntry = any;
+type Signal<T> = any;
 
 type Read<T> = () => T;
 type Write<T> = (value: T) => void;
 type SignalPair<T> = readonly [Read<T>, Write<T>];
 type OursSignal<T> = readonly [Read<T>, Write<T>, Signal<T>];
-type SolidSignal<T> = readonly [Read<T>, Write<T>];
 type AlienSignal<T> = readonly [Read<T>, Write<T>];
 
 let sinkAcc = 0;
@@ -241,49 +243,73 @@ describe("Wide static graph (1000 memos x 5 deps)", () => {
   const rngSolid25 = createRng(0x252);
   const rngAlien25 = createRng(0x253);
 
-  bench("beta build - 2 sources, change 1, read ~10%", () => {
-    at(ours2.sources, rngOurs2.int(2))[1](rngOurs2.next() * 1000);
-    for (let index = 0; index < memoCount; index += readEvery10) {
-      blackhole(at(ours2.memos, index)());
-    }
-  }, { iterations: 150, warmupIterations: 30 });
+  bench(
+    "beta build - 2 sources, change 1, read ~10%",
+    () => {
+      at(ours2.sources, rngOurs2.int(2))[1](rngOurs2.next() * 1000);
+      for (let index = 0; index < memoCount; index += readEvery10) {
+        blackhole(at(ours2.memos, index)());
+      }
+    },
+    { iterations: 150, warmupIterations: 30 },
+  );
 
-  bench("solid signals - 2 sources, change 1, flush, read ~10%", () => {
-    at(solid2.sources, rngSolid2.int(2))[1](rngSolid2.next() * 1000);
-    flush();
-    for (let index = 0; index < memoCount; index += readEvery10) {
-      blackhole(at(solid2.memos, index)());
-    }
-  }, { iterations: 150, warmupIterations: 30 });
+  bench(
+    "solid signals - 2 sources, change 1, flush, read ~10%",
+    () => {
+      at(solid2.sources, rngSolid2.int(2))[1](rngSolid2.next() * 1000);
+      flush();
+      for (let index = 0; index < memoCount; index += readEvery10) {
+        blackhole(at(solid2.memos, index)());
+      }
+    },
+    { iterations: 150, warmupIterations: 30 },
+  );
 
-  bench("alien-signals - 2 sources, change 1, read ~10%", () => {
-    at(alien2.sources, rngAlien2.int(2))[1](rngAlien2.next() * 1000);
-    for (let index = 0; index < memoCount; index += readEvery10) {
-      blackhole(at(alien2.memos, index)());
-    }
-  }, { iterations: 150, warmupIterations: 30 });
+  bench(
+    "alien-signals - 2 sources, change 1, read ~10%",
+    () => {
+      at(alien2.sources, rngAlien2.int(2))[1](rngAlien2.next() * 1000);
+      for (let index = 0; index < memoCount; index += readEvery10) {
+        blackhole(at(alien2.memos, index)());
+      }
+    },
+    { iterations: 150, warmupIterations: 30 },
+  );
 
-  bench("beta build - 25 sources, change 1, read ~10%", () => {
-    at(ours25.sources, rngOurs25.int(25))[1](rngOurs25.next() * 1000);
-    for (let index = 0; index < memoCount; index += readEvery9) {
-      blackhole(at(ours25.memos, index)());
-    }
-  }, { iterations: 120, warmupIterations: 25 });
+  bench(
+    "beta build - 25 sources, change 1, read ~10%",
+    () => {
+      at(ours25.sources, rngOurs25.int(25))[1](rngOurs25.next() * 1000);
+      for (let index = 0; index < memoCount; index += readEvery9) {
+        blackhole(at(ours25.memos, index)());
+      }
+    },
+    { iterations: 120, warmupIterations: 25 },
+  );
 
-  bench("solid signals - 25 sources, change 1, flush, read ~10%", () => {
-    at(solid25.sources, rngSolid25.int(25))[1](rngSolid25.next() * 1000);
-    flush();
-    for (let index = 0; index < memoCount; index += readEvery9) {
-      blackhole(at(solid25.memos, index)());
-    }
-  }, { iterations: 120, warmupIterations: 25 });
+  bench(
+    "solid signals - 25 sources, change 1, flush, read ~10%",
+    () => {
+      at(solid25.sources, rngSolid25.int(25))[1](rngSolid25.next() * 1000);
+      flush();
+      for (let index = 0; index < memoCount; index += readEvery9) {
+        blackhole(at(solid25.memos, index)());
+      }
+    },
+    { iterations: 120, warmupIterations: 25 },
+  );
 
-  bench("alien-signals - 25 sources, change 1, read ~10%", () => {
-    at(alien25.sources, rngAlien25.int(25))[1](rngAlien25.next() * 1000);
-    for (let index = 0; index < memoCount; index += readEvery9) {
-      blackhole(at(alien25.memos, index)());
-    }
-  }, { iterations: 120, warmupIterations: 25 });
+  bench(
+    "alien-signals - 25 sources, change 1, read ~10%",
+    () => {
+      at(alien25.sources, rngAlien25.int(25))[1](rngAlien25.next() * 1000);
+      for (let index = 0; index < memoCount; index += readEvery9) {
+        blackhole(at(alien25.memos, index)());
+      }
+    },
+    { iterations: 120, warmupIterations: 25 },
+  );
 });
 
 describe("Deep chains (8 x 400 depth)", () => {
@@ -364,27 +390,39 @@ describe("Deep chains (8 x 400 depth)", () => {
   const rngSolid = createRng(0x402);
   const rngAlien = createRng(0x403);
 
-  bench("beta build - change 1 source, read 8 ends", () => {
-    at(ours.sources, 1)[1](rngOurs.next() * 200);
-    for (const read of ours.ends) {
-      blackhole(read());
-    }
-  }, { iterations: 400, warmupIterations: 50 });
+  bench(
+    "beta build - change 1 source, read 8 ends",
+    () => {
+      at(ours.sources, 1)[1](rngOurs.next() * 200);
+      for (const read of ours.ends) {
+        blackhole(read());
+      }
+    },
+    { iterations: 400, warmupIterations: 50 },
+  );
 
-  bench("solid signals - change 1 source, flush, read 8 ends", () => {
-    at(solid.sources, 1)[1](rngSolid.next() * 200);
-    flush();
-    for (const read of solid.ends) {
-      blackhole(read());
-    }
-  }, { iterations: 400, warmupIterations: 50 });
+  bench(
+    "solid signals - change 1 source, flush, read 8 ends",
+    () => {
+      at(solid.sources, 1)[1](rngSolid.next() * 200);
+      flush();
+      for (const read of solid.ends) {
+        blackhole(read());
+      }
+    },
+    { iterations: 400, warmupIterations: 50 },
+  );
 
-  bench("alien-signals - change 1 source, read 8 ends", () => {
-    at(alien.sources, 1)[1](rngAlien.next() * 200);
-    for (const read of alien.ends) {
-      blackhole(read());
-    }
-  }, { iterations: 400, warmupIterations: 50 });
+  bench(
+    "alien-signals - change 1 source, read 8 ends",
+    () => {
+      at(alien.sources, 1)[1](rngAlien.next() * 200);
+      for (const read of alien.ends) {
+        blackhole(read());
+      }
+    },
+    { iterations: 400, warmupIterations: 50 },
+  );
 });
 
 describe("Diamond / Fan-out -> Fan-in (200 paths converge)", () => {
@@ -488,21 +526,33 @@ describe("Diamond / Fan-out -> Fan-in (200 paths converge)", () => {
   const rngSolid = createRng(0x502);
   const rngAlien = createRng(0x503);
 
-  bench("beta build - change 1 source, read final", () => {
-    at(ours.sources, rngOurs.int(pathCount))[1](rngOurs.next() * 100);
-    blackhole(ours.final());
-  }, { iterations: 800, warmupIterations: 100 });
+  bench(
+    "beta build - change 1 source, read final",
+    () => {
+      at(ours.sources, rngOurs.int(pathCount))[1](rngOurs.next() * 100);
+      blackhole(ours.final());
+    },
+    { iterations: 800, warmupIterations: 100 },
+  );
 
-  bench("solid signals - change 1 source, flush, read final", () => {
-    at(solid.sources, rngSolid.int(pathCount))[1](rngSolid.next() * 100);
-    flush();
-    blackhole(solid.final());
-  }, { iterations: 800, warmupIterations: 100 });
+  bench(
+    "solid signals - change 1 source, flush, read final",
+    () => {
+      at(solid.sources, rngSolid.int(pathCount))[1](rngSolid.next() * 100);
+      flush();
+      blackhole(solid.final());
+    },
+    { iterations: 800, warmupIterations: 100 },
+  );
 
-  bench("alien-signals - change 1 source, read final", () => {
-    at(alien.sources, rngAlien.int(pathCount))[1](rngAlien.next() * 100);
-    blackhole(alien.final());
-  }, { iterations: 800, warmupIterations: 100 });
+  bench(
+    "alien-signals - change 1 source, read final",
+    () => {
+      at(alien.sources, rngAlien.int(pathCount))[1](rngAlien.next() * 100);
+      blackhole(alien.final());
+    },
+    { iterations: 800, warmupIterations: 100 },
+  );
 });
 
 describe("Dynamic deps + frequent flip (tracking invalidation)", () => {
@@ -586,27 +636,39 @@ describe("Dynamic deps + frequent flip (tracking invalidation)", () => {
   const rngSolid = createRng(0x602);
   const rngAlien = createRng(0x603);
 
-  bench("beta build - flip deps every tick, read 100%", () => {
-    at(ours.sources, 0)[1](rngOurs.int(1000));
-    for (const read of ours.memos) {
-      blackhole(read());
-    }
-  }, { iterations: 300, warmupIterations: 50 });
+  bench(
+    "beta build - flip deps every tick, read 100%",
+    () => {
+      at(ours.sources, 0)[1](rngOurs.int(1000));
+      for (const read of ours.memos) {
+        blackhole(read());
+      }
+    },
+    { iterations: 300, warmupIterations: 50 },
+  );
 
-  bench("solid signals - flip deps every tick, flush, read 100%", () => {
-    at(solid.sources, 0)[1](rngSolid.int(1000));
-    flush();
-    for (const read of solid.memos) {
-      blackhole(read());
-    }
-  }, { iterations: 300, warmupIterations: 50 });
+  bench(
+    "solid signals - flip deps every tick, flush, read 100%",
+    () => {
+      at(solid.sources, 0)[1](rngSolid.int(1000));
+      flush();
+      for (const read of solid.memos) {
+        blackhole(read());
+      }
+    },
+    { iterations: 300, warmupIterations: 50 },
+  );
 
-  bench("alien-signals - flip deps every tick, read 100%", () => {
-    at(alien.sources, 0)[1](rngAlien.int(1000));
-    for (const read of alien.memos) {
-      blackhole(read());
-    }
-  }, { iterations: 300, warmupIterations: 50 });
+  bench(
+    "alien-signals - flip deps every tick, read 100%",
+    () => {
+      at(alien.sources, 0)[1](rngAlien.int(1000));
+      for (const read of alien.memos) {
+        blackhole(read());
+      }
+    },
+    { iterations: 300, warmupIterations: 50 },
+  );
 });
 
 describe("Large batch write (20% sources) + full read", () => {
@@ -689,34 +751,46 @@ describe("Large batch write (20% sources) + full read", () => {
   const rngSolid = createRng(0x702);
   const rngAlien = createRng(0x703);
 
-  bench("beta build - batch 20% sources, read all", () => {
-    for (let index = 0; index < ours.batchWrites.length; index++) {
-      at(ours.batchWrites, index)[1] = rngOurs.next() * 100;
-    }
-    ours.batchWrite(ours.batchWrites as ReadonlyArray<BatchWriteEntry>);
-    for (const read of ours.memos) {
-      blackhole(read());
-    }
-  }, { iterations: 180, warmupIterations: 40 });
+  bench(
+    "beta build - batch 20% sources, read all",
+    () => {
+      for (let index = 0; index < ours.batchWrites.length; index++) {
+        at(ours.batchWrites, index)[1] = rngOurs.next() * 100;
+      }
+      ours.batchWrite(ours.batchWrites as ReadonlyArray<BatchWriteEntry>);
+      for (const read of ours.memos) {
+        blackhole(read());
+      }
+    },
+    { iterations: 180, warmupIterations: 40 },
+  );
 
-  bench("solid signals - batch 20% sources, flush, read all", () => {
-    for (let index = 0; index < batchSize; index++) {
-      solid.sources[index]![1](rngSolid.next() * 100);
-    }
-    flush();
-    for (const read of solid.memos) {
-      blackhole(read());
-    }
-  }, { iterations: 180, warmupIterations: 40 });
+  bench(
+    "solid signals - batch 20% sources, flush, read all",
+    () => {
+      for (let index = 0; index < batchSize; index++) {
+        solid.sources[index]![1](rngSolid.next() * 100);
+      }
+      flush();
+      for (const read of solid.memos) {
+        blackhole(read());
+      }
+    },
+    { iterations: 180, warmupIterations: 40 },
+  );
 
-  bench("alien-signals - write 20% sources, read all", () => {
-    for (let index = 0; index < batchSize; index++) {
-      alien.sources[index]![1](rngAlien.next() * 100);
-    }
-    for (const read of alien.memos) {
-      blackhole(read());
-    }
-  }, { iterations: 180, warmupIterations: 40 });
+  bench(
+    "alien-signals - write 20% sources, read all",
+    () => {
+      for (let index = 0; index < batchSize; index++) {
+        alien.sources[index]![1](rngAlien.next() * 100);
+      }
+      for (const read of alien.memos) {
+        blackhole(read());
+      }
+    },
+    { iterations: 180, warmupIterations: 40 },
+  );
 });
 
 describe("Realistic UI: virtualized table 4000 rows x 6 cols", () => {
@@ -741,8 +815,7 @@ describe("Realistic UI: virtualized table 4000 rows x 6 cols", () => {
           const base = row[0]![0]();
           if (columnIndex === 0) return base;
           return Math.round(
-            base * (1 + columnIndex * 0.1) +
-              row[columnIndex]![0](),
+            base * (1 + columnIndex * 0.1) + row[columnIndex]![0](),
           );
         }),
       ),
@@ -787,8 +860,7 @@ describe("Realistic UI: virtualized table 4000 rows x 6 cols", () => {
           const base = row[0]![0]();
           if (columnIndex === 0) return base;
           return Math.round(
-            base * (1 + columnIndex * 0.1) +
-              row[columnIndex]![0](),
+            base * (1 + columnIndex * 0.1) + row[columnIndex]![0](),
           );
         }),
       ),
@@ -835,8 +907,7 @@ describe("Realistic UI: virtualized table 4000 rows x 6 cols", () => {
           const base = row[0]![0]();
           if (columnIndex === 0) return base;
           return Math.round(
-            base * (1 + columnIndex * 0.1) +
-              row[columnIndex]![0](),
+            base * (1 + columnIndex * 0.1) + row[columnIndex]![0](),
           );
         }),
       ),
@@ -883,82 +954,106 @@ describe("Realistic UI: virtualized table 4000 rows x 6 cols", () => {
   const solidChangedRows: number[] = [];
   const alienChangedRows: number[] = [];
 
-  bench("beta build - partial update ~2% rows, render 400 visible", () => {
-    updateRowBases(
-      ours.rowSources,
-      sampleOursChangedRows(changedCount, rngOursPartial, oursChangedRows),
-      rngOursPartial,
-    );
+  bench(
+    "beta build - partial update ~2% rows, render 400 visible",
+    () => {
+      updateRowBases(
+        ours.rowSources,
+        sampleOursChangedRows(changedCount, rngOursPartial, oursChangedRows),
+        rngOursPartial,
+      );
 
-    const start = rngOursPartial.int(rows - visibleRows);
-    renderVisibleRows(ours.cells, ours.rowSums, start, visibleRows, cols);
-  }, { iterations: 80, warmupIterations: 20 });
+      const start = rngOursPartial.int(rows - visibleRows);
+      renderVisibleRows(ours.cells, ours.rowSums, start, visibleRows, cols);
+    },
+    { iterations: 80, warmupIterations: 20 },
+  );
 
-  bench("solid signals - partial update ~2% rows, flush, render 400 visible", () => {
-    updateRowBases(
-      solid.rowSources,
-      sampleSolidChangedRows(changedCount, rngSolidPartial, solidChangedRows),
-      rngSolidPartial,
-    );
+  bench(
+    "solid signals - partial update ~2% rows, flush, render 400 visible",
+    () => {
+      updateRowBases(
+        solid.rowSources,
+        sampleSolidChangedRows(changedCount, rngSolidPartial, solidChangedRows),
+        rngSolidPartial,
+      );
 
-    flush();
+      flush();
 
-    const start = rngSolidPartial.int(rows - visibleRows);
-    renderVisibleRows(solid.cells, solid.rowSums, start, visibleRows, cols);
-  }, { iterations: 80, warmupIterations: 20 });
+      const start = rngSolidPartial.int(rows - visibleRows);
+      renderVisibleRows(solid.cells, solid.rowSums, start, visibleRows, cols);
+    },
+    { iterations: 80, warmupIterations: 20 },
+  );
 
-  bench("alien-signals - partial update ~2% rows, render 400 visible", () => {
-    updateRowBases(
-      alien.rowSources,
-      sampleAlienChangedRows(changedCount, rngAlienPartial, alienChangedRows),
-      rngAlienPartial,
-    );
+  bench(
+    "alien-signals - partial update ~2% rows, render 400 visible",
+    () => {
+      updateRowBases(
+        alien.rowSources,
+        sampleAlienChangedRows(changedCount, rngAlienPartial, alienChangedRows),
+        rngAlienPartial,
+      );
 
-    const start = rngAlienPartial.int(rows - visibleRows);
-    renderVisibleRows(alien.cells, alien.rowSums, start, visibleRows, cols);
-  }, { iterations: 80, warmupIterations: 20 });
+      const start = rngAlienPartial.int(rows - visibleRows);
+      renderVisibleRows(alien.cells, alien.rowSums, start, visibleRows, cols);
+    },
+    { iterations: 80, warmupIterations: 20 },
+  );
 
-  bench("beta build - live column 2 update all rows, render 400 visible", () => {
-    const delta = rngOursLive.centered(5);
-    for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
-      const signal = ours.rowSources[rowIndex]![2]!;
-      signal[1](signal[0]() + delta);
-    }
+  bench(
+    "beta build - live column 2 update all rows, render 400 visible",
+    () => {
+      const delta = rngOursLive.centered(5);
+      for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
+        const signal = ours.rowSources[rowIndex]![2]!;
+        signal[1](signal[0]() + delta);
+      }
 
-    const start = rngOursLive.int(rows - visibleRows);
-    for (let rowIndex = start; rowIndex < start + visibleRows; rowIndex++) {
-      blackhole(ours.cells[rowIndex]![2]!());
-      blackhole(ours.rowSums[rowIndex]!());
-    }
-  }, { iterations: 100, warmupIterations: 30 });
+      const start = rngOursLive.int(rows - visibleRows);
+      for (let rowIndex = start; rowIndex < start + visibleRows; rowIndex++) {
+        blackhole(ours.cells[rowIndex]![2]!());
+        blackhole(ours.rowSums[rowIndex]!());
+      }
+    },
+    { iterations: 100, warmupIterations: 30 },
+  );
 
-  bench("solid signals - live column 2 update all rows, flush, render 400 visible", () => {
-    const delta = rngSolidLive.centered(5);
-    for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
-      const signal = solid.rowSources[rowIndex]![2]!;
-      signal[1](signal[0]() + delta);
-    }
+  bench(
+    "solid signals - live column 2 update all rows, flush, render 400 visible",
+    () => {
+      const delta = rngSolidLive.centered(5);
+      for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
+        const signal = solid.rowSources[rowIndex]![2]!;
+        signal[1](signal[0]() + delta);
+      }
 
-    flush();
+      flush();
 
-    const start = rngSolidLive.int(rows - visibleRows);
-    for (let rowIndex = start; rowIndex < start + visibleRows; rowIndex++) {
-      blackhole(solid.cells[rowIndex]![2]!());
-      blackhole(solid.rowSums[rowIndex]!());
-    }
-  }, { iterations: 100, warmupIterations: 30 });
+      const start = rngSolidLive.int(rows - visibleRows);
+      for (let rowIndex = start; rowIndex < start + visibleRows; rowIndex++) {
+        blackhole(solid.cells[rowIndex]![2]!());
+        blackhole(solid.rowSums[rowIndex]!());
+      }
+    },
+    { iterations: 100, warmupIterations: 30 },
+  );
 
-  bench("alien-signals - live column 2 update all rows, render 400 visible", () => {
-    const delta = rngAlienLive.centered(5);
-    for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
-      const signal = alien.rowSources[rowIndex]![2]!;
-      signal[1](signal[0]() + delta);
-    }
+  bench(
+    "alien-signals - live column 2 update all rows, render 400 visible",
+    () => {
+      const delta = rngAlienLive.centered(5);
+      for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
+        const signal = alien.rowSources[rowIndex]![2]!;
+        signal[1](signal[0]() + delta);
+      }
 
-    const start = rngAlienLive.int(rows - visibleRows);
-    for (let rowIndex = start; rowIndex < start + visibleRows; rowIndex++) {
-      blackhole(alien.cells[rowIndex]![2]!());
-      blackhole(alien.rowSums[rowIndex]!());
-    }
-  }, { iterations: 100, warmupIterations: 30 });
+      const start = rngAlienLive.int(rows - visibleRows);
+      for (let rowIndex = start; rowIndex < start + visibleRows; rowIndex++) {
+        blackhole(alien.cells[rowIndex]![2]!());
+        blackhole(alien.rowSums[rowIndex]!());
+      }
+    },
+    { iterations: 100, warmupIterations: 30 },
+  );
 });

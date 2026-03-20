@@ -44,7 +44,6 @@ describe("Reactive system - dynamic dependencies", () => {
     const c = rt.computed(spy);
 
     expect(c()).toBe(1);
-    expect(c.node.state & ReactiveNodeState.Tracking).toBeTruthy();
 
     flag.write(false);
     expect(c()).toBe(10);
@@ -82,18 +81,18 @@ describe("Reactive system - dynamic dependencies", () => {
     ).toBe(0);
   });
 
-  it("drops Tracking when a dependency disappears without a replacement", () => {
+  it("removes a dependency when it disappears without a replacement", () => {
     const rt = createRuntime();
     const flag = rt.signal(true);
     const a = rt.signal(1);
     const c = rt.computed(() => (flag.read() ? a.read() : 0));
 
     expect(c()).toBe(1);
-    expect(c.node.state & ReactiveNodeState.Tracking).toBeTruthy();
+    expect(countIncoming(c.node)).toBe(2);
 
     flag.write(false);
     expect(c()).toBe(0);
-    expect(c.node.state & ReactiveNodeState.Tracking).toBeFalsy();
+    expect(countIncoming(c.node)).toBe(1);
   });
 
   it("reuses the tracked edge for repeated reads of the same source", () => {

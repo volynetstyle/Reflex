@@ -3,6 +3,7 @@ import { ReactiveEdge } from "./ReactiveEdge";
 import { ReactiveNodeKind } from "./ReactiveMeta";
 
 type ComputeFn<T> = ((previous?: T) => T) | (() => T) | null;
+const UNINITIALIZED = Symbol("UNINITIALIZED");
 
 class ReactiveNode<T = unknown> implements Reactivable {
   firstOut: ReactiveEdge | null;
@@ -34,5 +35,6 @@ class ReactiveNode<T = unknown> implements Reactivable {
   }
 }
 
-export type { Reactivable, ReactiveNode };
+export { UNINITIALIZED };
+export type { Reactivable, ReactiveNode, ComputeFn };
 export default ReactiveNode;

@@ -1,12 +1,11 @@
 import ReactiveNode from "../reactivity/shape/ReactiveNode";
 import { propagate } from "../reactivity/walkers/propagate";
-import { CHANGED_STATE, MAYBE_CHANGE_STATE } from "../reactivity/shape/ReactiveMeta";
+import {
+  CHANGED_STATE,
+  MAYBE_CHANGE_STATE,
+} from "../reactivity/shape/ReactiveMeta";
 
 export function writeProducer<T>(node: ReactiveNode<T>, value: T): void {
-  applyProducerWrite(node, value);
-}
-
-export function applyProducerWrite<T>(node: ReactiveNode<T>, value: T): void {
   if (Object.is(node.pendingPayload, value)) return;
 
   node.pendingPayload = value;

@@ -1,31 +1,21 @@
-import ReactiveNode from "./ReactiveNode";
-import runtime, { type EngineContext } from "../../runtime";
+import type ReactiveNode from "./ReactiveNode";
 
 export type Byte32Int = number;
 
 export const enum ReactiveNodeState {
   Invalid = 1 << 0,
   Changed = 1 << 1,
-  Tracking = 1 << 2,
   SideEffect = 1 << 3,
-  Recursed = 1 << 4,
+  Visited = 1 << 4,
   Disposed = 1 << 5,
   Computing = 1 << 6,
   Scheduled = 1 << 7,
-  DependencyTracking = 1 << 8,
+  Tracking = 1 << 8,
 }
 
 export const MAYBE_CHANGE_STATE = ReactiveNodeState.Invalid;
 export const CHANGED_STATE = ReactiveNodeState.Changed;
 export const DIRTY_STATE = MAYBE_CHANGE_STATE | CHANGED_STATE;
-export const TRACKING_STATE = ReactiveNodeState.Tracking;
-export const PROPAGATION_VISITED_STATE = ReactiveNodeState.Recursed;
-export const DEPENDENCY_TRACKING_STATE = ReactiveNodeState.DependencyTracking;
-export const ACTIVE_PROPAGATION_STATE =
-  DIRTY_STATE | PROPAGATION_VISITED_STATE | DEPENDENCY_TRACKING_STATE;
-export const PROPAGATION_REVISIT_STATE =
-  PROPAGATION_VISITED_STATE | DEPENDENCY_TRACKING_STATE;
-export const PROPAGATION_CURSOR_STATE = PROPAGATION_REVISIT_STATE;
 
 export const enum ReactiveNodeKind {
   Signal = 0,
@@ -44,35 +34,39 @@ export function hasState(
 }
 
 export function isDirtyState(state: number): boolean {
-  return hasState(state, DIRTY_STATE);
+  return (state & DIRTY_STATE) !== 0;
 }
 
 export function isPendingState(state: number): boolean {
-  return hasState(state, MAYBE_CHANGE_STATE);
+  return (state & MAYBE_CHANGE_STATE) !== 0;
 }
 
 export function isChangedState(state: number): boolean {
-  return hasState(state, CHANGED_STATE);
+  return (state & CHANGED_STATE) !== 0;
 }
 
 export function isObsoleteState(state: number): boolean {
-  return isChangedState(state);
-}
-
-export function isTrackingState(state: number): boolean {
-  return hasState(state, TRACKING_STATE);
+  return (state & CHANGED_STATE) !== 0;
 }
 
 export function isDisposedState(state: number): boolean {
-  return hasState(state, ReactiveNodeState.Disposed);
+  return (state & ReactiveNodeState.Disposed) !== 0;
+}
+
+export function isVisitedState(state: number): boolean {
+  return (state & ReactiveNodeState.Visited) !== 0;
 }
 
 export function isComputingState(state: number): boolean {
-  return hasState(state, ReactiveNodeState.Computing);
+  return (state & ReactiveNodeState.Computing) !== 0;
 }
 
 export function isScheduledState(state: number): boolean {
-  return hasState(state, ReactiveNodeState.Scheduled);
+  return (state & ReactiveNodeState.Scheduled) !== 0;
+}
+
+export function isTrackingState(state: number): boolean {
+  return (state & ReactiveNodeState.Tracking) !== 0;
 }
 
 export function isSignalKind(node: ReactiveNode): boolean {
@@ -101,33 +95,4 @@ export function markNodeScheduled(node: ReactiveNode): void {
 
 export function clearNodeScheduled(node: ReactiveNode): void {
   node.state &= ~ReactiveNodeState.Scheduled;
-}
-
-export function getNodeContext(node: ReactiveNode): EngineContext {
-  void node;
-  return runtime;
-}
-
-export function createSignalNode<T>(payload: T): ReactiveNode<T> {
-  return new ReactiveNode(payload, null, 0, ReactiveNodeKind.Signal);
-}
-
-export function createComputedNode<T>(compute: () => T): ReactiveNode<T> {
-  return new ReactiveNode(
-    undefined,
-    compute,
-    CHANGED_STATE,
-    ReactiveNodeKind.Computed,
-  );
-}
-
-export function createEffectNode(
-  compute: () => void | (() => void),
-): ReactiveNode<void | (() => void)> {
-  return new ReactiveNode(
-    undefined,
-    compute,
-    CHANGED_STATE | ReactiveNodeState.SideEffect,
-    ReactiveNodeKind.Effect,
-  );
 }

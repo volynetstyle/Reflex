@@ -1,14 +1,7 @@
 import runtime from "../runtime";
 import type ReactiveNode from "./shape/ReactiveNode";
 import type { ReactiveEdge } from "./shape/ReactiveEdge";
-import {
-  ReactiveNodeState,
-  TRACKING_STATE,
-} from "./shape/ReactiveMeta";
-import {
-  reuseOrCreateIncomingEdge,
-  unlinkEdge,
-} from "./shape/methods/connect";
+import { reuseOrCreateIncomingEdge, unlinkEdge } from "./shape/methods/connect";
 
 /**
  * Cursor-guided incoming-edge walk used during dependency collection.
@@ -29,10 +22,6 @@ export function trackRead(source: ReactiveNode): void {
     nextExpected,
   );
 
-  if (edge !== prevEdge && edge !== nextExpected) {
-    consumer.state &= ~TRACKING_STATE;
-  }
-
   consumer.depsTail = edge;
 }
 
@@ -43,13 +32,6 @@ export function trackRead(source: ReactiveNode): void {
 export function cleanupStaleSources(node: ReactiveNode): void {
   const tail = node.depsTail;
   let edge: ReactiveEdge | null = tail !== null ? tail.nextIn : node.firstIn;
-
-  if (edge === null) {
-    node.state |= ReactiveNodeState.Tracking;
-    return;
-  }
-
-  node.state &= ~TRACKING_STATE;
 
   while (edge) {
     const next: ReactiveEdge | null = edge.nextIn;

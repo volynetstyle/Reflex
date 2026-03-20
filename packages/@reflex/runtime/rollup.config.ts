@@ -104,8 +104,8 @@ function minifyStage(ctx: BuildContext): Plugin | null {
 
   return terser({
     compress: {
-      passes: 5,          // +1 проход для раскрытия цепочек после SWC
-      inline: 3,          // 3 = инлайн функций с аргументами
+      passes: 5, // +1 проход для раскрытия цепочек после SWC
+      inline: 3, // 3 = инлайн функций с аргументами
       hoist_props: true,
       collapse_vars: true,
       dead_code: true,
@@ -126,31 +126,41 @@ function minifyStage(ctx: BuildContext): Plugin | null {
       unsafe_math: true,
       unsafe_comps: true,
       evaluate: true,
+
       // Критично для инлайна однострочников: разрешаем
       // terser считать вызовы чистых функций побочно-эффектными
       pure_funcs: [
         "Object.freeze",
         "Object.defineProperty",
-        // Маркируем битовые хелперы явно чистыми — terser их заинлайнит
         "hasState",
         "isDirtyState",
         "isPendingState",
         "isChangedState",
         "isObsoleteState",
         "isTrackingState",
+        "isVisitedState",
+        "isDisposedState",
+        "isComputingState",
+        "isScheduledState",
+        "isSignalKind",
+        "isEffectKind",
+        "isDirtyState",
+        "isPendingState",
+        "isChangedState",
+        "isObsoleteState",
         "isDisposedState",
         "isComputingState",
         "isScheduledState",
         "isSignalKind",
         "isEffectKind",
       ],
-      toplevel: true,     // обязательно для инлайна модульных функций
-      module: true,       // ESM: нет неявных глобальных замыканий
+      toplevel: true, // обязательно для инлайна модульных функций
+      module: true, // ESM: нет неявных глобальных замыканий
     },
 
     mangle: {
       toplevel: true,
-      module: true,       // важно: без этого toplevel mangle не работает в ESM
+      module: true, // важно: без этого toplevel mangle не работает в ESM
       keep_classnames: true,
       properties: {
         regex: /^\$\$/,
@@ -165,7 +175,7 @@ function minifyStage(ctx: BuildContext): Plugin | null {
 
     // Говорим terser, что ESM модуль — строгий режим,
     // нет утечки в глобальный скоп
-    ecma: 2022,
+    ecma: 2020,
     module: true,
   });
 }
@@ -175,7 +185,7 @@ function pipeline(ctx: BuildContext): Plugin[] {
     loggerStage(ctx),
     resolverStage(),
     replaceStage(ctx),
-    swcStage(ctx),        // пре-инлайн до Rollup bundle phase
+    swcStage(ctx), // пре-инлайн до Rollup bundle phase
     minifyStage(ctx),
     constEnum(),
   ].filter(Boolean) as Plugin[];
@@ -219,9 +229,9 @@ function createConfig(target: BuildTarget): RollupOptions {
 }
 
 const targets: BuildTarget[] = [
-  { name: "esm",     outDir: "esm", format: "esm", dev: false },
-  { name: "esm-dev", outDir: "dev", format: "esm", dev: true  },
-  { name: "cjs",     outDir: "cjs", format: "cjs", dev: false },
+  { name: "esm", outDir: "esm", format: "esm", dev: false },
+  { name: "esm-dev", outDir: "dev", format: "esm", dev: true },
+  { name: "cjs", outDir: "cjs", format: "cjs", dev: false },
 ];
 
 export default targets.map(createConfig);

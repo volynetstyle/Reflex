@@ -1,5 +1,5 @@
 import { ReactiveNode, clearDirtyState } from "../shape";
-import { shallowPropagate } from "../walkers/propagate";
+import { propagateOnce } from "../walkers/propagate";
 
 export function updateSignal<T>(node: ReactiveNode<T>): boolean {
   const changed = !Object.is(node.payload, node.pendingPayload);
@@ -7,7 +7,7 @@ export function updateSignal<T>(node: ReactiveNode<T>): boolean {
   clearDirtyState(node);
 
   if (changed) {
-    shallowPropagate(node);
+    propagateOnce(node);
   }
 
   return changed;

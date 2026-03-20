@@ -1,7 +1,7 @@
 import runtime, { EngineContext, type EngineHooks } from "../runtime";
 
 import { runEffect, disposeEffect } from "../reactivity/engine/effect";
-import { applyProducerWrite, writeProducer } from "./write";
+import { writeProducer } from "./write";
 import { readConsumer, readProducer } from "./read";
 import {
   EffectScheduler,
@@ -9,10 +9,11 @@ import {
   type EffectStrategy,
 } from "../scheduler/effect_scheduler";
 import {
+  CHANGED_STATE,
   ReactiveNode,
-  createSignalNode,
-  createComputedNode,
-  createEffectNode,
+  ReactiveNodeKind,
+  ReactiveNodeState,
+  UNINITIALIZED,
 } from "../reactivity/shape";
 
 const NO_WRITE: unique symbol = Symbol("NO_WRITE");
@@ -26,21 +27,16 @@ export interface Signal<T> {
 }
 
 export interface Computed<T> {
+  (): T;
   read(): T;
   readonly node: ReactiveNode;
-  (): T;
 }
 
 export interface EffectScope {
   (): void;
-  readonly node: ReactiveNode;
   dispose(): void;
+  readonly node: ReactiveNode;
 }
-
-type MutableSignal<T> = Signal<T> & { node: ReactiveNode };
-type MutableComputed<T> = Computed<T> & { node: ReactiveNode };
-type EffectScopeBinding = { node: ReactiveNode; scheduler: EffectScheduler };
-type MutableEffectScope = EffectScope & EffectScopeBinding;
 
 export type BatchWriteEntry = readonly [Signal<unknown>, unknown];
 
@@ -59,60 +55,74 @@ export interface Runtime {
   readonly ctx: EngineContext;
 }
 
-function computedOper<T>(this: ReactiveNode<T>): T {
-  return readConsumer(this);
-}
-
-function signalOper<T>(
-  this: ReactiveNode<T>,
-  value: T | typeof NO_WRITE = NO_WRITE,
-): T | void {
-  if (value === NO_WRITE) {
-    return readProducer(this);
-  }
-
-  writeProducer(this, value);
-}
-
-function disposeEffectScope(this: EffectScopeBinding): void {
-  this.scheduler.clear(this.node);
-  disposeEffect(this.node);
+function attachNode<T extends Function, N>(fn: T, node: N): T & { node: N } {
+  return Object.assign(fn, { node });
 }
 
 function createComputedAccessor<T>(node: ReactiveNode<T>): Computed<T> {
-  const fn = computedOper.bind(node) as MutableComputed<T>;
-
-  fn.node = node;
-  fn.read = fn;
-  return fn;
+  const accessor = attachNode((() => readConsumer(node)) as Computed<T>, node);
+  accessor.read = accessor;
+  return accessor;
 }
 
 function createSignalAccessor<T>(node: ReactiveNode<T>): Signal<T> {
-  const signal = signalOper.bind(node) as MutableSignal<T>;
+  const accessor = attachNode(
+    ((value: T | typeof NO_WRITE = NO_WRITE) => {
+      if (value === NO_WRITE) return readProducer(node);
+      writeProducer(node, value);
+    }) as Signal<T>,
+    node,
+  );
 
-  signal.node = node;
-  signal.read = signal as () => T;
-  signal.write = signal as (value: T) => void;
+  accessor.read = () => readProducer(node);
+  accessor.write = (value: T) => writeProducer(node, value);
 
-  return signal;
+  return accessor;
 }
 
-function createEffectScope(node: ReactiveNode, scheduler: EffectScheduler): EffectScope {
-  const dispose = disposeEffectScope.bind({
+function createEffectScope(
+  node: ReactiveNode,
+  scheduler: EffectScheduler,
+): EffectScope {
+  const dispose = attachNode(
+    (() => {
+      scheduler.clear(node);
+      disposeEffect(node);
+    }) as EffectScope,
     node,
-    scheduler,
-  }) as MutableEffectScope;
+  );
 
-  dispose.node = node;
-  dispose.scheduler = scheduler;
   dispose.dispose = dispose;
 
   return dispose;
 }
 
+export function createSignalNode<T>(payload: T): ReactiveNode<T> {
+  return new ReactiveNode(payload, null, 0, ReactiveNodeKind.Signal);
+}
+
+export function createComputedNode<T>(compute: () => T): ReactiveNode<T> {
+  return new ReactiveNode(
+    UNINITIALIZED as T,
+    compute,
+    CHANGED_STATE,
+    ReactiveNodeKind.Computed,
+  );
+}
+
+export function createEffectNode(
+  compute: () => void | (() => void),
+): ReactiveNode<void | (() => void)> {
+  return new ReactiveNode(
+    undefined,
+    compute,
+    CHANGED_STATE | ReactiveNodeState.SideEffect,
+    ReactiveNodeKind.Effect,
+  );
+}
+
 export function createRuntime(options?: RuntimeOptions): Runtime {
   const hooks = options?.hooks;
-
   const scheduler = new EffectScheduler(
     resolveEffectSchedulerMode(options?.effectStrategy),
   );
@@ -125,22 +135,21 @@ export function createRuntime(options?: RuntimeOptions): Runtime {
     },
   });
 
+  const computed = <T>(fn: () => T): Computed<T> =>
+    createComputedAccessor(createComputedNode(fn));
+
   return {
-    signal<T>(value: T): Signal<T> {
-      return createSignalAccessor(createSignalNode(value));
-    },
+    signal: <T>(value: T) => createSignalAccessor(createSignalNode(value)),
 
-    computed<T>(fn: () => T): Computed<T> {
-      return createComputedAccessor(createComputedNode(fn));
-    },
+    computed,
 
-    memo<T>(fn: () => T): Computed<T> {
-      const c = createComputedAccessor<T>(createComputedNode(fn));
-      c(); // eager
+    memo: <T>(fn: () => T) => {
+      const c = computed(fn);
+      c();
       return c;
     },
 
-    effect(fn: () => void | (() => void)): EffectScope {
+    effect: (fn) => {
       const node = createEffectNode(fn);
       runEffect(node);
       return createEffectScope(node, scheduler);
@@ -148,9 +157,9 @@ export function createRuntime(options?: RuntimeOptions): Runtime {
 
     flush: () => scheduler.flush(),
 
-    batchWrite(writes: ReadonlyArray<BatchWriteEntry>): void {
+    batchWrite: (writes) => {
       for (const [signal, value] of writes) {
-        applyProducerWrite(signal.node, value);
+        writeProducer(signal.node, value);
       }
     },
 

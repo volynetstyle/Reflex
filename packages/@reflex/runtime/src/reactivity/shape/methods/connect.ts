@@ -101,10 +101,7 @@ export function reuseOrCreateIncomingEdge(
     return edge;
   }
 
-  const edge = new ReactiveEdge(from, to);
-  attachOutEdge(from, edge);
-  attachInEdge(to, edge, prev);
-  return edge;
+  return linkEdge(from, to, prev);
 }
 
 export function unlinkEdge(edge: ReactiveEdge): void {
@@ -191,7 +188,10 @@ export function moveIncomingEdgeAfter(
   attachInEdge(to, edge, after);
 }
 
-export function connect(parent: ReactiveNode, child: ReactiveNode): ReactiveEdge {
+export function connect(
+  parent: ReactiveNode,
+  child: ReactiveNode,
+): ReactiveEdge {
   // Imperative connect is a cold path, so we pay one linear incoming-edge scan
   // to preserve the invariant that a parent-child pair is represented once.
   for (let e = child.firstIn; e; e = e.nextIn) {

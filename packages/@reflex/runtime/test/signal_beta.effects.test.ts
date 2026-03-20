@@ -15,9 +15,7 @@ describe("Reactive system - effects", () => {
 
     expect(spy).toHaveBeenCalledTimes(1);
     expect(effect.node.kind).toBe(ReactiveNodeKind.Effect);
-    expect(effect.node.state).toBe(
-      ReactiveNodeState.Tracking | ReactiveNodeState.SideEffect,
-    );
+    expect(effect.node.state).toBe(ReactiveNodeState.SideEffect);
     expect(effect.node.state & ReactiveNodeState.Invalid).toBeFalsy();
     expect(countIncoming(effect.node)).toBe(1);
   });

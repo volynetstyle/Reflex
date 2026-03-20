@@ -1,16 +1,17 @@
+import runtime from "../../runtime";
 import {
-  DEPENDENCY_TRACKING_STATE,
-  PROPAGATION_VISITED_STATE,
   ReactiveNode,
+  ReactiveNodeState,
   clearNodeComputing,
-  getNodeContext,
-  isComputingState,
   markNodeComputing,
 } from "../shape";
 import { cleanupStaleSources } from "../tracking";
 
-function invokeCompute(node: ReactiveNode, compute: () => unknown): unknown {
-  const ctx = getNodeContext(node);
+export function invokeCompute(
+  node: ReactiveNode,
+  compute: NonNullable<ReactiveNode["compute"]>,
+): unknown {
+  const ctx = runtime;
   const prevActive = ctx.activeComputed;
   ctx.activeComputed = node;
 
@@ -25,7 +26,7 @@ export function executeNodeComputation<T>(
   node: ReactiveNode,
   commit: (result: unknown) => T,
 ): T {
-  const compute = node.compute;
+  const compute = node.compute!;
 
   if (__DEV__) {
     if (!compute) {
@@ -34,23 +35,23 @@ export function executeNodeComputation<T>(
       );
     }
 
-    if (isComputingState(node.state)) {
+    if ((node.state & ReactiveNodeState.Computing) !== 0) {
       throw new Error("Cycle detected while recomputing reactive node");
     }
   }
 
   node.depsTail = null;
-  node.state &= ~PROPAGATION_VISITED_STATE;
-  node.state |= DEPENDENCY_TRACKING_STATE;
+  node.state &= ~ReactiveNodeState.Visited;
+  node.state |= ReactiveNodeState.Tracking;
   markNodeComputing(node);
 
   try {
-    const result = invokeCompute(node, compute!);
+    const result = invokeCompute(node, compute);
     cleanupStaleSources(node);
 
     return commit(result);
   } finally {
-    node.state &= ~DEPENDENCY_TRACKING_STATE;
+    node.state &= ~ReactiveNodeState.Tracking;
     clearNodeComputing(node);
   }
 }

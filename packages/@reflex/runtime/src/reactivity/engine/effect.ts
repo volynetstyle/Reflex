@@ -1,6 +1,5 @@
 import {
   MAYBE_CHANGE_STATE,
-  PROPAGATION_VISITED_STATE,
   ReactiveNode,
   ReactiveNodeState,
   clearDirtyState,
@@ -9,14 +8,14 @@ import {
 } from "../shape";
 import { unlinkAllSources } from "../shape/methods/connect";
 import { executeNodeComputation } from "./execute";
-import { checkDirty } from "../walkers/checkDirty";
+import { shouldRecompute } from "../walkers/shouldRecompute";
 
 export function runEffect(node: ReactiveNode): void {
   const compute = node.compute;
   if (!compute || isDisposedState(node.state)) return;
 
   const shouldRun = isChangedState(node.state)
-    || (node.state & MAYBE_CHANGE_STATE) !== 0 && checkDirty(node);
+    || (node.state & MAYBE_CHANGE_STATE) !== 0 && shouldRecompute(node);
 
   if (!shouldRun) {
     clearDirtyState(node);
@@ -29,7 +28,7 @@ export function runEffect(node: ReactiveNode): void {
 
   executeNodeComputation(node, (result) => {
     clearDirtyState(node);
-    node.state &= ~PROPAGATION_VISITED_STATE;
+    node.state &= ~ReactiveNodeState.Visited;
 
     if (typeof result === "function") {
       node.payload = result as () => void;

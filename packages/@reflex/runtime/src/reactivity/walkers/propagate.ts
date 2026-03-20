@@ -1,47 +1,71 @@
 import runtime from "../../runtime";
 import {
-  ACTIVE_PROPAGATION_STATE,
   CHANGED_STATE,
-  DEPENDENCY_TRACKING_STATE,
   DIRTY_STATE,
   MAYBE_CHANGE_STATE,
-  PROPAGATION_REVISIT_STATE,
-  PROPAGATION_VISITED_STATE,
   type ReactiveEdge,
   ReactiveNode,
   ReactiveNodeKind,
   ReactiveNodeState,
 } from "../shape";
 
-const PROMOTABLE_MAYBE_CHANGE_STATE = MAYBE_CHANGE_STATE | CHANGED_STATE;
-
 /**
- * Walk the reused dependency prefix backwards from depsTail to confirm that the
- * currently visited outgoing edge still belongs to the consumer's active graph.
+ * Walk the active dependency prefix backwards from depsTail to confirm that the
+ * currently visited outgoing edge still belongs to the consumer's graph.
  */
 function isTrackedEdge(checkEdge: ReactiveEdge, sub: ReactiveNode): boolean {
-  const tail = sub.depsTail;
-  for (let edge = sub.firstIn; edge !== null; edge = edge.nextIn) {
+  for (let edge = sub.depsTail; edge !== null; edge = edge.prevIn) {
     if (edge === checkEdge) {
       return true;
-    }
-
-    if (edge === tail) {
-      break;
     }
   }
 
   return false;
 }
 
-export function shallowPropagate(node: ReactiveNode): void {
+function markSubscriber(edge: ReactiveEdge, sub: ReactiveNode): boolean {
+  const state = sub.state;
+  const dirty = (state & DIRTY_STATE) !== 0;
+  const visited = (state & ReactiveNodeState.Visited) !== 0;
+  const tracking = (state & ReactiveNodeState.Tracking) !== 0;
+
+  if (!dirty && !visited && !tracking) {
+    sub.state = state | MAYBE_CHANGE_STATE;
+    return true;
+  }
+
+  if (dirty || (state & ReactiveNodeState.Disposed) !== 0) {
+    return false;
+  }
+
+  if (!visited && !tracking) {
+    return false;
+  }
+
+  // Mirror the alien runtime cases explicitly:
+  // - visited without tracking => clear the traversal mark and keep maybe-change
+  // - tracking => revisit only if the outgoing edge is still in the active deps prefix
+  if (!tracking) {
+    sub.state = (state & ~ReactiveNodeState.Visited) | MAYBE_CHANGE_STATE;
+    return true;
+  }
+
+  if (!isTrackedEdge(edge, sub)) {
+    return false;
+  }
+
+  sub.state = state | MAYBE_CHANGE_STATE | ReactiveNodeState.Visited;
+  return true;
+}
+
+export function propagateOnce(node: ReactiveNode): void {
   const ctx = runtime;
 
   for (let edge = node.firstOut; edge !== null; edge = edge.nextOut) {
     const sub = edge.to;
     const subState = sub.state;
 
-    if ((subState & PROMOTABLE_MAYBE_CHANGE_STATE) !== MAYBE_CHANGE_STATE) {
+    if ((subState & DIRTY_STATE) !== MAYBE_CHANGE_STATE) {
       continue;
     }
 
@@ -63,78 +87,59 @@ export function propagate(startEdge: ReactiveEdge): void {
   const stack = ctx.edgeStack;
   const base = stack.length;
   let sp = base;
-  let edge: ReactiveEdge | null = startEdge;
+  let edge: ReactiveEdge = startEdge;
   let next: ReactiveEdge | null = startEdge.nextOut;
 
-  top: do {
-    const current: ReactiveEdge = edge!;
-    const sub: ReactiveNode = current.to;
-    const state = sub.state;
+  while (true) {
+    const sub: ReactiveNode = edge.to;
 
-    if ((state & ACTIVE_PROPAGATION_STATE) === 0) {
-      sub.state = state | MAYBE_CHANGE_STATE;
-    } else if (
-      (state & ReactiveNodeState.Disposed) !== 0 ||
-      (state & PROPAGATION_REVISIT_STATE) === 0
-    ) {
-      if ((edge = next) !== null) {
+    const marked = markSubscriber(edge, sub);
+
+    if (!marked) {
+      if (next !== null) {
+        edge = next;
         next = edge.nextOut;
         continue;
       }
 
-      while (sp > base) {
-        edge = stack[--sp]!;
-        next = edge.nextOut;
-        continue top;
+      if (sp === base) {
+        break;
       }
 
-      break;
-    } else if ((state & DEPENDENCY_TRACKING_STATE) === 0) {
-      sub.state = (state & ~PROPAGATION_VISITED_STATE) | MAYBE_CHANGE_STATE;
-    } else if ((state & DIRTY_STATE) === 0 && isTrackedEdge(current, sub)) {
-      sub.state = state | PROPAGATION_VISITED_STATE | MAYBE_CHANGE_STATE;
-    } else {
-      if ((edge = next) !== null) {
-        next = edge.nextOut;
-        continue;
-      }
-
-      while (sp > base) {
-        edge = stack[--sp]!;
-        next = edge.nextOut;
-        continue top;
-      }
-
-      break;
+      edge = stack[--sp]!;
+      next = edge.nextOut;
+      continue;
     }
 
     if (sub.kind === ReactiveNodeKind.Effect) {
       ctx.notifyEffectInvalidated(sub);
     } else {
-      const child: ReactiveEdge | null = sub.firstOut;
+      const child = sub.firstOut;
+
       if (child !== null) {
         if (next !== null) {
           stack[sp++] = next;
         }
+
         edge = child;
         next = child.nextOut;
         continue;
       }
     }
 
-    if ((edge = next) !== null) {
+    if (next !== null) {
+      edge = next;
       next = edge.nextOut;
       continue;
     }
 
-    while (sp > base) {
-      edge = stack[--sp]!;
-      next = edge.nextOut;
-      continue top;
+    if (sp === base) {
+      break;
     }
 
-    break;
-  } while (true);
+    edge = stack[--sp]!;
+    next = edge.nextOut;
+  }
 
   stack.length = base;
 }
