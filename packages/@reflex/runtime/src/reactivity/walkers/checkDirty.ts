@@ -9,12 +9,6 @@ import {
 } from "../shape";
 import { shallowPropagate } from "./propagate";
 
-const enum DirtySourceTransition {
-  CompareVersion = 0,
-  RefreshChanged = 1,
-  RefreshPending = 2,
-}
-
 /**
  * Pull-side depth-first walk over incoming dependencies.
  * The walk refreshes only the branches that are already marked pending/changed
@@ -34,38 +28,32 @@ export function checkDirty(node: ReactiveNode): boolean {
   for (let edge = node.firstIn; edge; edge = edge.nextIn) {
     const source = edge.from;
     const sourceState = source.state;
-    const sourceDirtyState = sourceState & DIRTY_STATE;
-    let transition = DirtySourceTransition.CompareVersion;
 
     if ((sourceState & ReactiveNodeState.Computing) !== 0) {
       throw new Error("Cycle detected while refreshing reactive graph");
     }
 
-    if (source.kind !== ReactiveNodeKind.Signal) {
-      if ((sourceDirtyState & CHANGED_STATE) !== 0) {
-        transition = DirtySourceTransition.RefreshChanged;
-      } else if (sourceDirtyState !== 0 || source.v === 0) {
-        transition = DirtySourceTransition.RefreshPending;
+    if (source.kind === ReactiveNodeKind.Signal) {
+      if (source.t > nodeVersion) {
+        node.state |= CHANGED_STATE;
+        return true;
       }
+
+      continue;
     }
 
-    switch (transition) {
-      case DirtySourceTransition.RefreshChanged:
-        if (recompute(source)) {
-          shallowPropagate(source);
-        }
-        break;
-      case DirtySourceTransition.RefreshPending:
-        if (checkDirty(source)) {
-          if (recompute(source)) {
-            shallowPropagate(source);
-          }
-        } else {
-          source.state &= ~DIRTY_STATE;
-        }
-        break;
-      default:
-        break;
+    const sourceDirtyState = sourceState & DIRTY_STATE;
+
+    if ((sourceDirtyState & CHANGED_STATE) !== 0) {
+      if (recompute(source)) {
+        shallowPropagate(source);
+      }
+    } else if (sourceDirtyState !== 0 || source.v === 0) {
+      if (checkDirty(source) && recompute(source)) {
+        shallowPropagate(source);
+      } else {
+        source.state &= ~DIRTY_STATE;
+      }
     }
 
     if (source.t > nodeVersion) {

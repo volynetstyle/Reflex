@@ -16,9 +16,7 @@ class ReactiveNode<T = unknown> implements Reactivable {
   lastOut: ReactiveEdge | null;
   firstIn: ReactiveEdge | null;
   lastIn: ReactiveEdge | null;
-  w: number;
   depsTail: ReactiveEdge | null = null;
-  lastTrackedEdge: ReactiveEdge | null = null;
 
   constructor(
     payload: T | undefined,
@@ -37,7 +35,6 @@ class ReactiveNode<T = unknown> implements Reactivable {
     this.lastOut = null;
     this.firstIn = null;
     this.lastIn = null;
-    this.w = 0;
   }
 }
 

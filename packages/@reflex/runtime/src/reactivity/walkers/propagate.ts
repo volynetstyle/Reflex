@@ -10,15 +10,8 @@ import {
   ReactiveNode,
   ReactiveNodeKind,
   getNodeContext,
-  isDisposedState,
+  ReactiveNodeState,
 } from "../shape";
-
-const enum PropagationFlagTransition {
-  Skip = 0,
-  MarkPending = 1,
-  ResetPending = 2,
-  MarkTrackedPending = 3,
-}
 
 const PROMOTABLE_PENDING_STATE = PENDING_STATE | CHANGED_STATE;
 
@@ -40,63 +33,18 @@ function isTrackedEdge(checkEdge: ReactiveEdge, sub: ReactiveNode): boolean {
   return false;
 }
 
-/**
- * One-hop subscriber sweep used after recompute has already proven that a node
- * changed. It upgrades direct pending subscribers to changed without descending.
- */
-function promotePendingSubscriber(sub: ReactiveNode): boolean {
-  const subState = sub.state;
-
-  if ((subState & PROMOTABLE_PENDING_STATE) !== PENDING_STATE) {
-    return false;
-  }
-
-  sub.state = (subState & ~PENDING_STATE) | CHANGED_STATE;
-  return true;
-}
-
-/**
- * Flag state machine for the push phase.
- * It decides whether a subscriber should become pending, be revisited through
- * the tracked-dependency cursor, or be skipped entirely.
- */
-function resolvePropagationTransition(
-  subState: number,
-  edge: ReactiveEdge,
-  sub: ReactiveNode,
-): PropagationFlagTransition {
-  if (isDisposedState(subState)) {
-    return PropagationFlagTransition.Skip;
-  }
-
-  if ((subState & ACTIVE_PROPAGATION_STATE) === 0) {
-    return PropagationFlagTransition.MarkPending;
-  }
-
-  if ((subState & PROPAGATION_REVISIT_STATE) === 0) {
-    return PropagationFlagTransition.Skip;
-  }
-
-  if ((subState & DEPENDENCY_TRACKING_STATE) === 0) {
-    return PropagationFlagTransition.ResetPending;
-  }
-
-  if ((subState & DIRTY_STATE) !== 0 || !isTrackedEdge(edge, sub)) {
-    return PropagationFlagTransition.Skip;
-  }
-
-  return PropagationFlagTransition.MarkTrackedPending;
-}
-
 export function shallowPropagate(node: ReactiveNode): void {
   const ctx = getNodeContext(node);
 
   for (let edge = node.firstOut; edge; edge = edge.nextOut) {
     const sub = edge.to;
+    const subState = sub.state;
 
-    if (!promotePendingSubscriber(sub)) {
+    if ((subState & PROMOTABLE_PENDING_STATE) !== PENDING_STATE) {
       continue;
     }
+
+    sub.state = (subState & ~PENDING_STATE) | CHANGED_STATE;
 
     if (sub.kind === ReactiveNodeKind.Effect) {
       ctx.notifyEffectInvalidated(sub);
@@ -120,31 +68,69 @@ export function propagate(startEdge: ReactiveEdge): void {
   while (edge) {
     const sub: ReactiveNode = edge.to;
     const subState = sub.state;
-    const transition = resolvePropagationTransition(subState, edge, sub);
 
-    if (transition !== PropagationFlagTransition.Skip) {
-      if (transition === PropagationFlagTransition.MarkPending) {
-        sub.state = subState | PENDING_STATE;
-      } else if (transition === PropagationFlagTransition.ResetPending) {
-        sub.state = (subState & ~PROPAGATION_VISITED_STATE) | PENDING_STATE;
-      } else {
-        sub.state = subState | PROPAGATION_VISITED_STATE | PENDING_STATE;
-      }
-
-      if (sub.kind === ReactiveNodeKind.Effect) {
-        ctx.notifyEffectInvalidated(sub);
-      } else {
-        const firstSubscriberEdge: ReactiveEdge | null = sub.firstOut;
-        if (firstSubscriberEdge) {
-          edge = firstSubscriberEdge;
-          if (firstSubscriberEdge.nextOut) {
-            stack[stackSize++] = next;
-            next = firstSubscriberEdge.nextOut;
-          } else {
-            next = null;
-          }
+    if ((subState & ACTIVE_PROPAGATION_STATE) === 0) {
+      sub.state = subState | PENDING_STATE;
+    } else {
+      if (
+        (subState & ReactiveNodeState.Disposed) !== 0 ||
+        (subState & PROPAGATION_REVISIT_STATE) === 0
+      ) {
+        if ((edge = next) !== null) {
+          next = edge.nextOut;
           continue;
         }
+
+        while (stackSize) {
+          edge = stack[--stackSize]!;
+          stack[stackSize] = null;
+          next = edge.nextOut;
+          break;
+        }
+
+        if (edge === null) {
+          break;
+        }
+
+        continue;
+      }
+
+      if ((subState & DEPENDENCY_TRACKING_STATE) === 0) {
+        sub.state = (subState & ~PROPAGATION_VISITED_STATE) | PENDING_STATE;
+      } else if ((subState & DIRTY_STATE) === 0 && isTrackedEdge(edge, sub)) {
+        sub.state = subState | PROPAGATION_VISITED_STATE | PENDING_STATE;
+      } else {
+        if ((edge = next) !== null) {
+          next = edge.nextOut;
+          continue;
+        }
+
+        while (stackSize) {
+          edge = stack[--stackSize]!;
+          stack[stackSize] = null;
+          next = edge.nextOut;
+          break;
+        }
+
+        if (edge === null) {
+          break;
+        }
+
+        continue;
+      }
+    }
+
+    if (sub.kind === ReactiveNodeKind.Effect) {
+      ctx.notifyEffectInvalidated(sub);
+    } else {
+      const firstSubscriberEdge: ReactiveEdge | null = sub.firstOut;
+      if (firstSubscriberEdge) {
+        if (next !== null) {
+          stack[stackSize++] = next;
+        }
+        edge = firstSubscriberEdge;
+        next = firstSubscriberEdge.nextOut;
+        continue;
       }
     }
 
@@ -154,7 +140,7 @@ export function propagate(startEdge: ReactiveEdge): void {
     }
 
     while (stackSize) {
-      edge = stack[--stackSize] ?? null;
+      edge = stack[--stackSize]!;
       stack[stackSize] = null;
 
       if (edge) {

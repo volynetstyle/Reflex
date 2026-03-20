@@ -18,7 +18,8 @@ export function applyProducerWrite<T>(
   node.payload = value;
   node.t = epoch;
 
-  for (let e = node.firstOut; e; e = e.nextOut) {
-    propagate(e);
+  const firstSubscriberEdge = node.firstOut;
+  if (firstSubscriberEdge) {
+    propagate(firstSubscriberEdge);
   }
 }

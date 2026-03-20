@@ -93,7 +93,7 @@ describe("Reactive system - dynamic dependencies", () => {
     expect(c.node.state & ReactiveNodeState.Tracking).toBeFalsy();
   });
 
-  it("reuses the last tracked edge for repeated reads of the same source", () => {
+  it("reuses the tracked edge for repeated reads of the same source", () => {
     const rt = createRuntime();
     const a = rt.signal(2);
     const c = rt.computed(() => a.read() + a.read() + a.read());
@@ -101,13 +101,13 @@ describe("Reactive system - dynamic dependencies", () => {
     expect(c()).toBe(6);
     expect(countIncoming(c.node)).toBe(1);
 
-    const cachedEdge = c.node.lastTrackedEdge;
-    expect(cachedEdge).toBeTruthy();
-    expect(cachedEdge?.from).toBe(a.node);
+    const trackedEdge = c.node.depsTail;
+    expect(trackedEdge).toBeTruthy();
+    expect(trackedEdge?.from).toBe(a.node);
 
     a.write(3);
     expect(c()).toBe(9);
     expect(countIncoming(c.node)).toBe(1);
-    expect(c.node.lastTrackedEdge).toBe(cachedEdge);
+    expect(c.node.depsTail?.from).toBe(a.node);
   });
 });

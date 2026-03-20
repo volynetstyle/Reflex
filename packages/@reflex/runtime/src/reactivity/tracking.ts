@@ -15,7 +15,6 @@ import type { ReactiveEdge } from "./shape/ReactiveEdge";
 function markEdgeTracked(edge: ReactiveEdge, consumer: ReactiveNode): void {
   edge.s = consumer.s;
   consumer.depsTail = edge;
-  consumer.lastTrackedEdge = edge;
 }
 
 /**
@@ -27,12 +26,6 @@ export function trackRead(source: ReactiveNode): void {
   const consumer = getNodeContext(source).activeComputed;
 
   if (!consumer) return;
-
-  const cachedEdge = consumer.lastTrackedEdge;
-  if (cachedEdge?.from === source) {
-    markEdgeTracked(cachedEdge, consumer);
-    return;
-  }
 
   const prevEdge = consumer.depsTail;
   if (prevEdge?.from === source) {

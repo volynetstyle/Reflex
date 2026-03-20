@@ -60,9 +60,6 @@ export function unlinkEdge(edge: ReactiveEdge): void {
   const { from, to } = edge;
   const { prevOut, nextOut, prevIn, nextIn } = edge;
 
-  if (to.lastTrackedEdge === edge) {
-    to.lastTrackedEdge = null;
-  }
   if (to.depsTail === edge) {
     to.depsTail = prevIn;
   }
@@ -109,7 +106,6 @@ export function unlinkAllSources(node: ReactiveNode): void {
   node.firstIn = null;
   node.lastIn = null;
   node.depsTail = null;
-  node.lastTrackedEdge = null;
 
   while (edge) {
     const next = edge.nextIn;
