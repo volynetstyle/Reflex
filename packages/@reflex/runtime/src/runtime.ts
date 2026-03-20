@@ -7,8 +7,6 @@ export interface EngineHooks {
 
 class EngineContext {
   firstDirty: ReactiveNode | null = null;
-
-  epoch = 1;
   workEpoch = 0;
 
   activeComputed: ReactiveNode | null = null;
@@ -22,21 +20,12 @@ class EngineContext {
     this.hooks = hooks;
   }
 
-  bumpEpoch(): number {
-    return ++this.epoch;
-  }
-
-  getEpoch(): number {
-    return this.epoch;
-  }
-
   notifyEffectInvalidated(node: ReactiveNode): void {
     this.hooks.onEffectInvalidated?.(node);
   }
 
   reset(hooks: EngineHooks = {}): void {
     this.firstDirty = null;
-    this.epoch = 1;
     this.activeComputed = null;
     this.trawelList.length = 0;
     this.edgeStack.length = 0;

@@ -3,7 +3,6 @@ import { createRuntime } from "../src";
 import { ReactiveNodeState } from "../src/reactivity/shape";
 import {
   countIncoming,
-  maxSourceEpoch,
   setup,
 } from "./signal_beta.test_utils";
 
@@ -72,11 +71,15 @@ describe("Reactive system - dynamic dependencies", () => {
     expect(c()).toBe(10);
 
     expect(countIncoming(c.node)).toBe(2);
-    expect(c.node.v).toBeGreaterThanOrEqual(maxSourceEpoch(c.node));
+    expect(
+      c.node.state & (ReactiveNodeState.Invalid | ReactiveNodeState.Changed),
+    ).toBe(0);
 
     a.write(2);
     expect(c()).toBe(10);
-    expect(c.node.v).toBeGreaterThanOrEqual(maxSourceEpoch(c.node));
+    expect(
+      c.node.state & (ReactiveNodeState.Invalid | ReactiveNodeState.Changed),
+    ).toBe(0);
   });
 
   it("drops Tracking when a dependency disappears without a replacement", () => {

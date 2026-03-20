@@ -21,15 +21,3 @@ export function countIncoming(node: Pick<ReactiveNode, "firstIn">) {
   }
   return count;
 }
-
-export function maxSourceEpoch(
-  node: Pick<ReactiveNode, "firstIn">,
-) {
-  let max = 0;
-  for (let edge = node.firstIn; edge; edge = edge.nextIn) {
-    if (edge.from.t > max) {
-      max = edge.from.t;
-    }
-  }
-  return max;
-}

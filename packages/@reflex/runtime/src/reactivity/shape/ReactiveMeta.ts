@@ -4,35 +4,27 @@ import runtime, { type EngineContext } from "../../runtime";
 export type Byte32Int = number;
 
 export const enum ReactiveNodeState {
-  Pending = 1 << 0,
-  Invalid = Pending,
+  Invalid = 1 << 0,
   Changed = 1 << 1,
-  Obsolete = Changed,
   Tracking = 1 << 2,
   SideEffect = 1 << 3,
-  PropagationVisited = 1 << 4,
-  Recursed = PropagationVisited,
+  Recursed = 1 << 4,
   Disposed = 1 << 5,
   Computing = 1 << 6,
   Scheduled = 1 << 7,
   DependencyTracking = 1 << 8,
-  RecursedCheck = DependencyTracking,
-  Queued = Scheduled,
 }
 
-export const PENDING_STATE = ReactiveNodeState.Pending;
+export const MAYBE_CHANGE_STATE = ReactiveNodeState.Invalid;
 export const CHANGED_STATE = ReactiveNodeState.Changed;
-export const DIRTY_STATE = PENDING_STATE | CHANGED_STATE;
+export const DIRTY_STATE = MAYBE_CHANGE_STATE | CHANGED_STATE;
 export const TRACKING_STATE = ReactiveNodeState.Tracking;
-export const PROPAGATION_VISITED_STATE = ReactiveNodeState.PropagationVisited;
+export const PROPAGATION_VISITED_STATE = ReactiveNodeState.Recursed;
 export const DEPENDENCY_TRACKING_STATE = ReactiveNodeState.DependencyTracking;
 export const ACTIVE_PROPAGATION_STATE =
-  DIRTY_STATE |
-  PROPAGATION_VISITED_STATE |
-  DEPENDENCY_TRACKING_STATE;
+  DIRTY_STATE | PROPAGATION_VISITED_STATE | DEPENDENCY_TRACKING_STATE;
 export const PROPAGATION_REVISIT_STATE =
-  PROPAGATION_VISITED_STATE |
-  DEPENDENCY_TRACKING_STATE;
+  PROPAGATION_VISITED_STATE | DEPENDENCY_TRACKING_STATE;
 export const PROPAGATION_CURSOR_STATE = PROPAGATION_REVISIT_STATE;
 
 export const enum ReactiveNodeKind {
@@ -56,7 +48,7 @@ export function isDirtyState(state: number): boolean {
 }
 
 export function isPendingState(state: number): boolean {
-  return hasState(state, PENDING_STATE);
+  return hasState(state, MAYBE_CHANGE_STATE);
 }
 
 export function isChangedState(state: number): boolean {
@@ -116,19 +108,15 @@ export function getNodeContext(node: ReactiveNode): EngineContext {
   return runtime;
 }
 
-export function createSignalNode<T>(
-  payload: T,
-): ReactiveNode<T> {
+export function createSignalNode<T>(payload: T): ReactiveNode<T> {
   return new ReactiveNode(payload, null, 0, ReactiveNodeKind.Signal);
 }
 
-export function createComputedNode<T>(
-  compute: () => T,
-): ReactiveNode<T> {
+export function createComputedNode<T>(compute: () => T): ReactiveNode<T> {
   return new ReactiveNode(
     undefined,
     compute,
-    PENDING_STATE,
+    CHANGED_STATE,
     ReactiveNodeKind.Computed,
   );
 }
@@ -139,7 +127,7 @@ export function createEffectNode(
   return new ReactiveNode(
     undefined,
     compute,
-    PENDING_STATE | ReactiveNodeState.SideEffect,
+    CHANGED_STATE | ReactiveNodeState.SideEffect,
     ReactiveNodeKind.Effect,
   );
 }

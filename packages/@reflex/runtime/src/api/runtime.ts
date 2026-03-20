@@ -135,10 +135,8 @@ export function createRuntime(options?: RuntimeOptions): Runtime {
     flush: () => scheduler.flush(),
 
     batchWrite(writes: ReadonlyArray<BatchWriteEntry>): void {
-      const epoch = runtime.bumpEpoch();
-
       for (const [signal, value] of writes) {
-        applyProducerWrite(signal.node, value, epoch);
+        applyProducerWrite(signal.node, value);
       }
     },
 

@@ -39,7 +39,6 @@ export function executeNodeComputation<T>(
     }
   }
 
-  ++node.s;
   node.depsTail = null;
   node.state &= ~PROPAGATION_VISITED_STATE;
   node.state |= DEPENDENCY_TRACKING_STATE;

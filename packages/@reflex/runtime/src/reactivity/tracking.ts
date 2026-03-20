@@ -13,7 +13,6 @@ import {
 import type { ReactiveEdge } from "./shape/ReactiveEdge";
 
 function markEdgeTracked(edge: ReactiveEdge, consumer: ReactiveNode): void {
-  edge.s = consumer.s;
   consumer.depsTail = edge;
 }
 

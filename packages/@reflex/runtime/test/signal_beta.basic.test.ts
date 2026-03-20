@@ -105,7 +105,6 @@ describe("Reactive system - basic correctness", () => {
     const m = rt.memo(spy);
 
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(m.node.v).toBeGreaterThan(0);
     expect(m()).toBe(6);
     expect(spy).toHaveBeenCalledTimes(1);
   });

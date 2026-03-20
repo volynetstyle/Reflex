@@ -64,19 +64,18 @@ describe("Reactive system - smart recomputation and laziness", () => {
     expect(spyB).toHaveBeenCalledTimes(1);
   });
 
-  it("advances validation epoch on stable recompute but keeps change epoch", () => {
+  it("clears dirty state after a stable recompute", () => {
     const rt = createRuntime();
     const x = rt.signal(1);
     const c = rt.computed(() => x.read() % 2);
 
     expect(c()).toBe(1);
-    const firstComputedAt = c.node.v;
-    const firstChangedAt = c.node.t;
 
     x.write(3);
     expect(c()).toBe(1);
-    expect(c.node.v).toBeGreaterThan(firstComputedAt);
-    expect(c.node.t).toBe(firstChangedAt);
+    expect(
+      c.node.state & (ReactiveNodeState.Invalid | ReactiveNodeState.Changed),
+    ).toBe(0);
   });
 
   it("keeps computeds lazy until their first read", () => {
@@ -128,28 +127,26 @@ describe("Reactive system - smart recomputation and laziness", () => {
 
     x.write(2);
     expect(
-      c.node.state & (ReactiveNodeState.Invalid | ReactiveNodeState.Obsolete),
+      c.node.state & (ReactiveNodeState.Invalid | ReactiveNodeState.Changed),
     ).toBeTruthy();
 
     expect(c()).toBe(4);
     expect(
-      c.node.state & (ReactiveNodeState.Invalid | ReactiveNodeState.Obsolete),
+      c.node.state & (ReactiveNodeState.Invalid | ReactiveNodeState.Changed),
     ).toBeFalsy();
   });
 
-  it("keeps tracking through stable recomputes and advances tracking epoch", () => {
+  it("keeps tracking through stable recomputes", () => {
     const rt = createRuntime();
     const x = rt.signal(1);
     const c = rt.computed(() => x.read() * 2);
 
     expect(c()).toBe(2);
     expect(c.node.state & ReactiveNodeState.Tracking).toBeTruthy();
-    const firstTrackEpoch = c.node.s;
 
     x.write(5);
     expect(c()).toBe(10);
     expect(c.node.state & ReactiveNodeState.Tracking).toBeTruthy();
-    expect(c.node.s).toBe(firstTrackEpoch + 1);
   });
 
   it("re-enables tracking after discovering a new dependency", () => {
@@ -162,11 +159,9 @@ describe("Reactive system - smart recomputation and laziness", () => {
 
     expect(c()).toBe(1);
     expect(c.node.state & ReactiveNodeState.Tracking).toBeTruthy();
-    const stableTrackEpoch = c.node.s;
 
     flag.write(false);
     expect(c()).toBe(2);
-    expect(c.node.s).toBe(stableTrackEpoch + 1);
     expect(c.node.state & ReactiveNodeState.Tracking).toBe(0);
 
     b.write(3);

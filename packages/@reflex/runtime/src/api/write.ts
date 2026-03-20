@@ -1,22 +1,16 @@
 import ReactiveNode from "../reactivity/shape/ReactiveNode";
 import { propagate } from "../reactivity/walkers/propagate";
-import { getNodeContext } from "../reactivity/shape/ReactiveMeta";
+import { CHANGED_STATE, MAYBE_CHANGE_STATE } from "../reactivity/shape/ReactiveMeta";
 
 export function writeProducer<T>(node: ReactiveNode<T>, value: T): void {
-  if (Object.is(node.payload, value)) return;
-
-  applyProducerWrite(node, value, getNodeContext(node).bumpEpoch());
+  applyProducerWrite(node, value);
 }
 
-export function applyProducerWrite<T>(
-  node: ReactiveNode<T>,
-  value: T,
-  epoch: number,
-): void {
-  if (Object.is(node.payload, value)) return;
+export function applyProducerWrite<T>(node: ReactiveNode<T>, value: T): void {
+  if (Object.is(node.pendingPayload, value)) return;
 
-  node.payload = value;
-  node.t = epoch;
+  node.pendingPayload = value;
+  node.state = (node.state & ~MAYBE_CHANGE_STATE) | CHANGED_STATE;
 
   const firstSubscriberEdge = node.firstOut;
   if (firstSubscriberEdge) {

@@ -2,12 +2,24 @@ import { recompute } from "../engine/compute";
 import {
   CHANGED_STATE,
   DIRTY_STATE,
-  PENDING_STATE,
+  MAYBE_CHANGE_STATE,
+  getNodeContext,
   ReactiveNode,
   ReactiveNodeKind,
   ReactiveNodeState,
 } from "../shape";
 import { shallowPropagate } from "./propagate";
+
+function updateDirtySource(node: ReactiveNode): boolean {
+  if (node.kind === ReactiveNodeKind.Signal) {
+    const changed = !Object.is(node.payload, node.pendingPayload);
+    node.payload = node.pendingPayload;
+    node.state &= ~DIRTY_STATE;
+    return changed;
+  }
+
+  return recompute(node);
+}
 
 /**
  * Pull-side depth-first walk over incoming dependencies.
@@ -19,13 +31,57 @@ export function checkDirty(node: ReactiveNode): boolean {
     return false;
   }
 
-  const nodeVersion = node.v;
-  if (nodeVersion === 0 || (node.state & CHANGED_STATE) !== 0) {
-    node.state |= CHANGED_STATE;
-    return true;
-  }
+  const ctx = getNodeContext(node);
+  const nodeStack = ctx.trawelList;
+  const edgeStack = ctx.edgeStack;
+  const baseStackSize = nodeStack.length;
 
-  for (let edge = node.firstIn; edge; edge = edge.nextIn) {
+  nodeStack[baseStackSize] = node;
+  edgeStack[baseStackSize] = node.firstIn;
+
+  let stackSize = baseStackSize + 1;
+
+  while (stackSize > baseStackSize) {
+    const frameIndex = stackSize - 1;
+    const current = nodeStack[frameIndex]!;
+    let edge = edgeStack[frameIndex];
+
+    if ((current.state & CHANGED_STATE) !== 0) {
+      --stackSize;
+
+      if (stackSize === baseStackSize) {
+        return true;
+      }
+
+      const parentIndex = stackSize - 1;
+      if (updateDirtySource(current)) {
+        const firstSubscriberEdge = current.firstOut;
+        if (firstSubscriberEdge?.nextOut) {
+          shallowPropagate(current);
+        }
+
+        nodeStack[parentIndex]!.state |= CHANGED_STATE;
+        edgeStack[parentIndex] = null;
+      } else {
+        current.state &= ~DIRTY_STATE;
+      }
+
+      continue;
+    }
+
+    if (edge == null) {
+      current.state &= ~MAYBE_CHANGE_STATE;
+      --stackSize;
+
+      if (stackSize === baseStackSize) {
+        return false;
+      }
+
+      continue;
+    }
+
+    edgeStack[frameIndex] = edge.nextIn;
+
     const source = edge.from;
     const sourceState = source.state;
 
@@ -33,35 +89,33 @@ export function checkDirty(node: ReactiveNode): boolean {
       throw new Error("Cycle detected while refreshing reactive graph");
     }
 
-    if (source.kind === ReactiveNodeKind.Signal) {
-      if (source.t > nodeVersion) {
-        node.state |= CHANGED_STATE;
-        return true;
+    const sourceDirtyState = sourceState & DIRTY_STATE;
+    if (sourceDirtyState === 0) {
+      continue;
+    }
+
+    if ((sourceDirtyState & CHANGED_STATE) !== 0) {
+      if (updateDirtySource(source)) {
+        const firstSubscriberEdge = source.firstOut;
+        if (firstSubscriberEdge?.nextOut) {
+          shallowPropagate(source);
+        }
+
+        current.state |= CHANGED_STATE;
+        edgeStack[frameIndex] = null;
+      } else {
+        source.state &= ~DIRTY_STATE;
       }
 
       continue;
     }
 
-    const sourceDirtyState = sourceState & DIRTY_STATE;
-
-    if ((sourceDirtyState & CHANGED_STATE) !== 0) {
-      if (recompute(source)) {
-        shallowPropagate(source);
-      }
-    } else if (sourceDirtyState !== 0 || source.v === 0) {
-      if (checkDirty(source) && recompute(source)) {
-        shallowPropagate(source);
-      } else {
-        source.state &= ~DIRTY_STATE;
-      }
-    }
-
-    if (source.t > nodeVersion) {
-      node.state |= CHANGED_STATE;
-      return true;
+    if (source.kind !== ReactiveNodeKind.Signal) {
+      nodeStack[stackSize] = source;
+      edgeStack[stackSize] = source.firstIn;
+      ++stackSize;
     }
   }
 
-  node.state &= ~PENDING_STATE;
   return false;
 }

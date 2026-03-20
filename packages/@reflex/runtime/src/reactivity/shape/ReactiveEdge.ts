@@ -9,7 +9,6 @@ class ReactiveEdge {
   nextOut: ReactiveEdge | null = null;
   prevIn: ReactiveEdge | null = null;
   nextIn: ReactiveEdge | null = null;
-  s: number = 0;
 
   constructor(
     public from: ReactiveNode,

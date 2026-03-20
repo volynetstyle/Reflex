@@ -1,4 +1,4 @@
-import { ReactiveNode, clearDirtyState, getNodeContext } from "../shape";
+import { ReactiveNode, clearDirtyState } from "../shape";
 import { executeNodeComputation } from "./execute";
 
 function commitComputedValue(
@@ -7,15 +7,9 @@ function commitComputedValue(
   newValue: unknown,
 ): boolean {
   const changed = !Object.is(prevValue, newValue);
-  const ctx = getNodeContext(node);
 
   node.payload = newValue;
-  node.v = ctx.getEpoch();
   clearDirtyState(node);
-
-  if (changed) {
-    node.t = node.v;
-  }
 
   return changed;
 }

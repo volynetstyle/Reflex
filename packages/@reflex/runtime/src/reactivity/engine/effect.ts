@@ -1,10 +1,9 @@
 import {
-  PENDING_STATE,
+  MAYBE_CHANGE_STATE,
   PROPAGATION_VISITED_STATE,
   ReactiveNode,
   ReactiveNodeState,
   clearDirtyState,
-  getNodeContext,
   isChangedState,
   isDisposedState,
 } from "../shape";
@@ -16,9 +15,8 @@ export function runEffect(node: ReactiveNode): void {
   const compute = node.compute;
   if (!compute || isDisposedState(node.state)) return;
 
-  const shouldRun = node.v === 0
-    || isChangedState(node.state)
-    || (node.state & PENDING_STATE) !== 0 && checkDirty(node);
+  const shouldRun = isChangedState(node.state)
+    || (node.state & MAYBE_CHANGE_STATE) !== 0 && checkDirty(node);
 
   if (!shouldRun) {
     clearDirtyState(node);
@@ -30,7 +28,6 @@ export function runEffect(node: ReactiveNode): void {
   prevCleanup?.();
 
   executeNodeComputation(node, (result) => {
-    node.v = getNodeContext(node).getEpoch();
     clearDirtyState(node);
     node.state &= ~PROPAGATION_VISITED_STATE;
 
