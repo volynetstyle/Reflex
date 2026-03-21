@@ -48,6 +48,37 @@ function markSubscriber(edge: ReactiveEdge, sub: ReactiveNode): boolean {
   return true;
 }
 
+function propagateSingleSubscriber(startEdge: ReactiveEdge): void {
+  const ctx = runtime;
+  let edge = startEdge;
+
+  while (true) {
+    const sub = edge.to;
+
+    if (!markSubscriber(edge, sub)) {
+      return;
+    }
+
+    const subKind = sub.kind;
+    if (subKind === ReactiveNodeKind.Effect) {
+      ctx.notifyEffectInvalidated(sub);
+      return;
+    }
+
+    const firstOut = sub.firstOut;
+    if (firstOut === null) {
+      return;
+    }
+
+    if (firstOut.nextOut !== null) {
+      propagate(firstOut);
+      return;
+    }
+
+    edge = firstOut;
+  }
+}
+
 export function propagateOnce(node: ReactiveNode): void {
   const ctx = runtime;
 
@@ -73,34 +104,53 @@ export function propagateOnce(node: ReactiveNode): void {
  * subscribers, keeping the traversal iterative for predictable hot-path cost.
  */
 export function propagate(startEdge: ReactiveEdge): void {
-  const stack: ReactiveEdge[] = [];
+  if (startEdge.nextOut === null) {
+    propagateSingleSubscriber(startEdge);
+    return;
+  }
+
+  const ctx = runtime;
+  const stack = ctx.propagateStack;
+  const base = stack.length;
   let edge = startEdge;
   let next: ReactiveEdge | null = startEdge.nextOut;
 
-  top: do {
-    const sub = edge.to;
+  try {
+    top: do {
+      const sub = edge.to;
 
-    if (markSubscriber(edge, sub)) {
-      if (sub.kind === ReactiveNodeKind.Effect) {
-        runtime.notifyEffectInvalidated(sub);
-      } else if (sub.firstOut !== null) {
-        if (next !== null) stack.push(next);
-        next = (edge = sub.firstOut).nextOut;
+      if (markSubscriber(edge, sub)) {
+        const subKind = sub.kind;
+
+        if (subKind === ReactiveNodeKind.Effect) {
+          ctx.notifyEffectInvalidated(sub);
+        } else {
+          const firstOut = sub.firstOut;
+
+          if (firstOut !== null) {
+            if (next !== null) stack.push(next);
+            edge = firstOut;
+            next = firstOut.nextOut;
+            continue;
+          }
+        }
+      }
+
+      if (next !== null) {
+        edge = next;
+        next = edge.nextOut;
         continue;
       }
-    }
 
-    if (next !== null) {
-      edge = next;
-      next = edge.nextOut;
-      continue;
-    }
+      while (stack.length > base) {
+        edge = stack.pop()!;
+        next = edge.nextOut;
+        continue top;
+      }
 
-    while (stack.length > 0) {
-      next = (edge = stack.pop()!).nextOut;
-      continue top;
-    }
-
-    return;
-  } while (true);
+      return;
+    } while (true);
+  } finally {
+    stack.length = base;
+  }
 }

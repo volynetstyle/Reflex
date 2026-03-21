@@ -19,22 +19,21 @@ import {
 import { readConsumer, readProducer } from "./read";
 import { writeProducer } from "./write";
 
-const NO_WRITE: unique symbol = Symbol("NO_WRITE");
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface Signal<T> {
   (): T;
   (value: T): void;
+  /** Read without tracking. */
   untracked(): T;
-  readonly node: ReactiveNode;
-  read(): T;
-  write(value: T): void;
+  readonly node: ReactiveNode<T>;
 }
 
 export interface Computed<T> {
   (): T;
-  read(): T;
+  /** Read without tracking. */
   untracked(): T;
-  readonly node: ReactiveNode;
+  readonly node: ReactiveNode<T>;
 }
 
 export interface EffectScope {
@@ -51,58 +50,13 @@ export interface RuntimeOptions {
 }
 
 export interface Runtime {
-  signal<T>(value: T): Signal<T>;
-  computed<T>(fn: () => T): Computed<T>;
-  memo<T>(fn: () => T): Computed<T>;
   effect(fn: () => void | (() => void)): EffectScope;
   flush(): void;
   batchWrite(writes: ReadonlyArray<BatchWriteEntry>): void;
   readonly ctx: EngineContext;
 }
 
-function attachNode<T extends Function, N>(fn: T, node: N): T & { node: N } {
-  return Object.assign(fn, { node });
-}
-
-function createComputedAccessor<T>(node: ReactiveNode<T>): Computed<T> {
-  const accessor = attachNode((() => readConsumer(node)) as Computed<T>, node);
-    accessor.untracked = () => node.payload;
-  accessor.read = accessor;
-  return accessor;
-}
-
-function createSignalAccessor<T>(node: ReactiveNode<T>): Signal<T> {
-  const accessor = attachNode(
-    ((value: T | typeof NO_WRITE = NO_WRITE) => {
-      if (value === NO_WRITE) return readProducer(node);
-      writeProducer(node, value);
-    }) as Signal<T>,
-    node,
-  );
-
-  accessor.untracked = () => node.payload;
-  accessor.read = () => readProducer(node);
-  accessor.write = (value: T) => writeProducer(node, value);
-
-  return accessor;
-}
-
-function createEffectScope(
-  node: ReactiveNode,
-  scheduler: EffectScheduler,
-): EffectScope {
-  const dispose = attachNode(
-    (() => {
-      scheduler.clear(node);
-      disposeEffect(node);
-    }) as EffectScope,
-    node,
-  );
-
-  dispose.dispose = dispose;
-
-  return dispose;
-}
+// ─── Node factories ───────────────────────────────────────────────────────────
 
 export function createSignalNode<T>(payload: T): ReactiveNode<T> {
   return new ReactiveNode(payload, null, 0, ReactiveNodeKind.Signal);
@@ -128,6 +82,45 @@ export function createEffectNode(
   );
 }
 
+// ─── Standalone signal / computed ────────────────────────────────────────────
+// Не требуют Runtime — работают напрямую через node.
+
+export function signal<T>(value: T): Signal<T> {
+  const node = createSignalNode(value);
+
+  function accessor(v?: T) {
+    if (v === undefined && arguments.length === 0) return readProducer(node);
+    writeProducer(node, v as T);
+  }
+
+  accessor.untracked = () => node.payload;
+  accessor.node = node;
+
+  return accessor as Signal<T>;
+}
+
+export function computed<T>(fn: () => T): Computed<T> {
+  const node = createComputedNode(fn);
+
+  function accessor() {
+    return readConsumer(node);
+  }
+
+  accessor.untracked = () => node.payload;
+  accessor.node = node;
+
+  return accessor as Computed<T>;
+}
+
+/** Computed, вычисленный немедленно. */
+export function memo<T>(fn: () => T): Computed<T> {
+  const c = computed(fn);
+  c();
+  return c;
+}
+
+// ─── Runtime (только эффекты + flush) ────────────────────────────────────────
+
 export function createRuntime(options?: RuntimeOptions): Runtime {
   const hooks = options?.hooks;
   const scheduler = new EffectScheduler(
@@ -142,32 +135,31 @@ export function createRuntime(options?: RuntimeOptions): Runtime {
     },
   });
 
-  const computed = <T>(fn: () => T): Computed<T> =>
-    createComputedAccessor(createComputedNode(fn));
-
   return {
-    signal: <T>(value: T) => createSignalAccessor(createSignalNode(value)),
-
-    computed,
-
-    memo: <T>(fn: () => T) => {
-      const c = computed(fn);
-      c();
-      return c;
-    },
-
-    effect: (fn) => {
+    effect(fn) {
       const node = createEffectNode(fn);
       runEffect(node);
-      return createEffectScope(node, scheduler);
+
+      const dispose = Object.assign(
+        () => {
+          scheduler.clear(node);
+          disposeEffect(node);
+        },
+        {
+          node,
+          dispose() {
+            dispose();
+          },
+        },
+      ) as EffectScope;
+
+      return dispose;
     },
 
     flush: () => scheduler.flush(),
 
-    batchWrite: (writes) => {
-      for (const [signal, value] of writes) {
-        writeProducer(signal.node, value);
-      }
+    batchWrite(writes) {
+      for (const [sig, value] of writes) writeProducer(sig.node, value);
     },
 
     get ctx() {

@@ -4,7 +4,7 @@ import {
   computed as createAlienComputed,
   signal as createAlienSignal,
 } from "alien-signals";
-import { createRuntime } from "../dist/esm/index";
+import { createRuntime, signal, memo } from "../dist/esm/index";
 
 type BatchWriteEntry = any;
 type Signal<T> = any;
@@ -136,12 +136,12 @@ function createOursHarness() {
       runtime.batchWrite(writes);
     },
     signal<T>(initial: T): OursSignal<T> {
-      const signal = runtime.signal(initial);
-      return [() => signal.read(), (value: T) => signal.write(value), signal];
+      const s = signal(initial);
+      return [() => s(), (value: T) => s(value), s];
     },
     memo<T>(compute: () => T): Read<T> {
-      const memo = runtime.memo(compute);
-      return () => memo();
+      const m = memo(compute);
+      return () => m();
     },
   };
 }
