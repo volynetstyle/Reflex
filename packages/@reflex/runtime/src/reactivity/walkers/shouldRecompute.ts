@@ -1,6 +1,5 @@
-import runtime from "../context";
+import { changePayload } from "../engine";
 import { recompute } from "../engine/compute";
-import { changePayload } from "../engine/changePayload";
 import {
   CHANGED_STATE,
   DIRTY_STATE,
@@ -11,22 +10,16 @@ import {
 } from "../shape";
 import { propagateOnce } from "./propagate";
 
-function settleDirtySource(
-  node: ReactiveNode,
-  hasSiblingSubscribers: boolean,
-): boolean {
+function settleDirtySource(node: ReactiveNode, link: ReactiveEdge): boolean {
   const isSignal = node.kind === ReactiveNodeKind.Signal;
-  let changed = false;
-
-  if (isSignal) changed = changePayload(node);
-  else changed = recompute(node);
+  const changed = isSignal ? changePayload(node) : recompute(node);
 
   if (!changed) {
     node.state &= ~DIRTY_STATE;
     return false;
   }
 
-  if (hasSiblingSubscribers && !isSignal) {
+  if (!isSignal && (link.prevOut !== null || link.nextOut !== null)) {
     propagateOnce(node);
   }
 
@@ -35,17 +28,11 @@ function settleDirtySource(
 
 /**
  * Pull-side depth-first walk over incoming dependencies.
- * The walk refreshes only the branches that are already marked pending/changed
- * and exits early as soon as one source proves the current node stale.
+ * Refreshes only pending/changed branches; exits early on first stale source.
  */
 export function shouldRecompute(node: ReactiveNode): boolean {
-  if (node.kind === ReactiveNodeKind.Signal) {
-    return false;
-  }
-
-  if ((node.state & CHANGED_STATE) !== 0) {
-    return true;
-  }
+  if (node.kind === ReactiveNodeKind.Signal) return false;
+  if ((node.state & CHANGED_STATE) !== 0) return true;
 
   const firstLink = node.firstIn;
   if (firstLink === null) {
@@ -53,77 +40,50 @@ export function shouldRecompute(node: ReactiveNode): boolean {
     return false;
   }
 
-  const stack = new Array<ReactiveEdge | null>();
-  let sp = stack.length;
-  let link: ReactiveEdge = firstLink;
+  const stack: ReactiveEdge[] = [];
+  let link = firstLink;
   let sub = node;
-  let checkDepth = 0;
   let needRecompute = false;
 
   top: do {
     const dep = link.from;
-    const subState = sub.state;
+    const depState = dep.state;
 
-    if ((subState & CHANGED_STATE) !== 0) {
+    if ((sub.state & CHANGED_STATE) !== 0) {
       needRecompute = true;
-    } else {
-      const depState = dep.state;
-
-      if ((depState & DIRTY_STATE) !== 0) {
-        const depKind = dep.kind;
-
-        if ((depState & CHANGED_STATE) !== 0) {
-          if (
-            settleDirtySource(
-              dep,
-              depKind !== ReactiveNodeKind.Signal &&
-                (link.prevOut !== null || link.nextOut !== null),
-            )
-          ) {
-            needRecompute = true;
-          }
-        } else if (depKind !== ReactiveNodeKind.Signal) {
-          if (link.prevOut !== null || link.nextOut !== null) {
-            stack[sp++] = link;
-          }
-
-          link = dep.firstIn!;
-          sub = dep;
-          ++checkDepth;
-          continue;
-        }
-      }
+    } else if ((depState & CHANGED_STATE) !== 0) {
+      if (settleDirtySource(dep, link)) needRecompute = true;
+    } else if (
+      (depState & DIRTY_STATE) !== 0 &&
+      dep.kind !== ReactiveNodeKind.Signal
+    ) {
+      stack.push(link);
+      link = dep.firstIn!;
+      sub = dep;
+      continue;
     }
 
     if (!needRecompute) {
-      const nextDep = link.nextIn;
-      if (nextDep !== null) {
-        link = nextDep;
+      if (link.nextIn !== null) {
+        link = link.nextIn;
         continue;
       }
     }
 
-    while (checkDepth) {
-      --checkDepth;
-
-      const firstSub = sub.firstOut!;
-      const hasSiblingSubscribers = firstSub.nextOut !== null;
-      link = hasSiblingSubscribers ? stack[--sp]! : firstSub;
+    while (stack.length > 0) {
+      const parentLink = stack.pop()!;
 
       if (needRecompute) {
-        needRecompute = settleDirtySource(sub, hasSiblingSubscribers);
+        needRecompute = settleDirtySource(sub, parentLink);
       } else {
         sub.state &= ~MAYBE_CHANGE_STATE;
       }
 
-      sub = link.to;
-      if (needRecompute) {
-        continue;
-      }
+      sub = parentLink.to;
+      link = parentLink;
 
-      const nextDep = link.nextIn;
-      if (nextDep !== null) {
-        link = nextDep;
+      if (!needRecompute && link.nextIn !== null) {
+        link = link.nextIn;
         continue top;
       }
     }

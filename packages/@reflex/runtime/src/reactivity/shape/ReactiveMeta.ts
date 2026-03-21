@@ -22,6 +22,8 @@ export const enum ReactiveNodeState {
   Tracking = 1 << 8,
 }
 
+export const WALKER_STATE =
+  ReactiveNodeState.Visited | ReactiveNodeState.Tracking;
 export const MAYBE_CHANGE_STATE = ReactiveNodeState.Invalid;
 export const CHANGED_STATE = ReactiveNodeState.Changed;
 export const DIRTY_STATE = MAYBE_CHANGE_STATE | CHANGED_STATE;

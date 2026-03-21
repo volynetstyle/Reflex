@@ -1,6 +1,5 @@
 import {
   DIRTY_STATE,
-  MAYBE_CHANGE_STATE,
   ReactiveNode,
   ReactiveNodeState,
   clearDirtyState,
@@ -12,12 +11,8 @@ import { shouldRecompute } from "../walkers/shouldRecompute";
 export function runEffect(node: ReactiveNode): void {
   const state = node.state;
 
-  const compute = node.compute;
-  if (!compute || (state & ReactiveNodeState.Disposed) !== 0) return;
-
-  const shouldRun = (state & DIRTY_STATE) !== 0 && shouldRecompute(node);
-
-  if (!shouldRun) {
+  if (!node.compute || (state & ReactiveNodeState.Disposed) !== 0) return;
+  if ((state & DIRTY_STATE) === 0 || !shouldRecompute(node)) {
     clearDirtyState(node);
     return;
   }
@@ -26,30 +21,19 @@ export function runEffect(node: ReactiveNode): void {
   node.payload = null;
   prevCleanup?.();
 
-  const commit = (result: unknown) => {
-    clearDirtyState(node);
+  executeNodeComputation(node, (result) => {
     node.state &= ~(ReactiveNodeState.Visited | DIRTY_STATE);
-
-    if (typeof result === "function") {
-      node.payload = result as () => void;
-    }
-  };
-
-  executeNodeComputation(node, commit);
+    if (typeof result === "function") node.payload = result as () => void;
+  });
 }
 
 export function disposeEffect(node: ReactiveNode): void {
   if ((node.state & ReactiveNodeState.Disposed) !== 0) return;
 
   node.state |= ReactiveNodeState.Disposed;
-
-  const cleanup = node.payload as (() => void) | null;
+  (node.payload as (() => void) | null)?.();
   node.payload = null;
-  cleanup?.();
-
   unlinkAllSources(node);
 }
 
-export function recycling(node: ReactiveNode): void {
-  runEffect(node);
-}
+export const recycling = runEffect;

@@ -143,6 +143,33 @@ describe("Reactive system - smart recomputation and laziness", () => {
     expect(rightSpy).toHaveBeenCalledTimes(1);
   });
 
+  it("settles a dirty computed and shallow-propagates confirmed change to sibling subscribers", () => {
+    const rt = createRuntime();
+    const x = rt.signal(1);
+    const midSpy = vi.fn(() => x.read() * 2);
+    const mid = rt.computed(midSpy);
+    const left = rt.computed(() => mid.read() + 1);
+    const rightSpy = vi.fn(() => mid.read() * 10);
+    const right = rt.computed(rightSpy);
+
+    expect(left()).toBe(3);
+    expect(right()).toBe(20);
+    midSpy.mockClear();
+    rightSpy.mockClear();
+
+    x.write(2);
+    expect(right.node.state & ReactiveNodeState.Invalid).toBeTruthy();
+    expect(right.node.state & ReactiveNodeState.Changed).toBeFalsy();
+
+    expect(left()).toBe(5);
+    expect(midSpy).toHaveBeenCalledTimes(1);
+    expect(right.node.state & ReactiveNodeState.Changed).toBeTruthy();
+    expect(rightSpy).not.toHaveBeenCalled();
+
+    expect(right()).toBe(40);
+    expect(rightSpy).toHaveBeenCalledTimes(1);
+  });
+
   it("clears dirty flags after a settling read", () => {
     const rt = createRuntime();
     const x = rt.signal(1);

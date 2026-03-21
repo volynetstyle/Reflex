@@ -56,7 +56,9 @@ function guardAsync<T>(src: AsyncSource<T>, ctx: PhaseContext): AsyncSource<T> {
         },
 
         onComplete() {
-          if (token.alive && ctx.current === phase) k.onComplete();
+          if (!valid(token, ctx, phase)) return;
+          token.cancel();
+          k.onComplete();
         },
       };
 

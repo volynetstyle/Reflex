@@ -1,18 +1,15 @@
 import runtime from "../context";
 import {
+  type ReactiveEdge,
+  MAYBE_CHANGE_STATE,
   CHANGED_STATE,
   DIRTY_STATE,
-  MAYBE_CHANGE_STATE,
-  type ReactiveEdge,
+  WALKER_STATE,
   ReactiveNode,
   ReactiveNodeKind,
   ReactiveNodeState,
 } from "../shape";
 
-/**
- * Walk the active dependency prefix backwards from depsTail to confirm that the
- * currently visited outgoing edge still belongs to the consumer's graph.
- */
 function isTrackedEdge(checkEdge: ReactiveEdge, sub: ReactiveNode): boolean {
   for (let edge = sub.depsTail; edge !== null; edge = edge.prevIn) {
     if (edge === checkEdge) {
@@ -25,27 +22,20 @@ function isTrackedEdge(checkEdge: ReactiveEdge, sub: ReactiveNode): boolean {
 
 function markSubscriber(edge: ReactiveEdge, sub: ReactiveNode): boolean {
   const state = sub.state;
-  const dirty = (state & DIRTY_STATE) !== 0;
-  const visited = (state & ReactiveNodeState.Visited) !== 0;
-  const tracking = (state & ReactiveNodeState.Tracking) !== 0;
 
-  if (!dirty && !visited && !tracking) {
+  if (
+    (state & DIRTY_STATE) !== 0 ||
+    (state & ReactiveNodeState.Disposed) !== 0
+  ) {
+    return false;
+  }
+
+  if ((state & WALKER_STATE) === 0) {
     sub.state = state | MAYBE_CHANGE_STATE;
     return true;
   }
 
-  if (dirty || (state & ReactiveNodeState.Disposed) !== 0) {
-    return false;
-  }
-
-  if (!visited && !tracking) {
-    return false;
-  }
-
-  // Mirror the alien runtime cases explicitly:
-  // - visited without tracking => clear the traversal mark and keep maybe-change
-  // - tracking => revisit only if the outgoing edge is still in the active deps prefix
-  if (!tracking) {
+  if ((state & ReactiveNodeState.Tracking) === 0) {
     sub.state = (state & ~ReactiveNodeState.Visited) | MAYBE_CHANGE_STATE;
     return true;
   }
@@ -54,7 +44,7 @@ function markSubscriber(edge: ReactiveEdge, sub: ReactiveNode): boolean {
     return false;
   }
 
-  sub.state = state | MAYBE_CHANGE_STATE | ReactiveNodeState.Visited;
+  sub.state = state | ReactiveNodeState.Visited | MAYBE_CHANGE_STATE;
   return true;
 }
 
@@ -83,45 +73,19 @@ export function propagateOnce(node: ReactiveNode): void {
  * subscribers, keeping the traversal iterative for predictable hot-path cost.
  */
 export function propagate(startEdge: ReactiveEdge): void {
-  const stack = new Array<ReactiveEdge | null>();
-  const base = stack.length;
-  let sp = stack.length;
-  let edge: ReactiveEdge = startEdge;
+  const stack: ReactiveEdge[] = [];
+  let edge = startEdge;
   let next: ReactiveEdge | null = startEdge.nextOut;
 
-  while (true) {
-    const sub: ReactiveNode = edge.to;
+  top: do {
+    const sub = edge.to;
 
-    const marked = markSubscriber(edge, sub);
-
-    if (!marked) {
-      if (next !== null) {
-        edge = next;
-        next = edge.nextOut;
-        continue;
-      }
-
-      if (sp === base) {
-        break;
-      }
-
-      edge = stack[--sp]!;
-      next = edge.nextOut;
-      continue;
-    }
-
-    if (sub.kind === ReactiveNodeKind.Effect) {
-      runtime.notifyEffectInvalidated(sub);
-    } else {
-      const child = sub.firstOut;
-
-      if (child !== null) {
-        if (next !== null) {
-          stack[sp++] = next;
-        }
-
-        edge = child;
-        next = child.nextOut;
+    if (markSubscriber(edge, sub)) {
+      if (sub.kind === ReactiveNodeKind.Effect) {
+        runtime.notifyEffectInvalidated(sub);
+      } else if (sub.firstOut !== null) {
+        if (next !== null) stack.push(next);
+        next = (edge = sub.firstOut).nextOut;
         continue;
       }
     }
@@ -132,11 +96,11 @@ export function propagate(startEdge: ReactiveEdge): void {
       continue;
     }
 
-    if (sp === base) {
-      break;
+    while (stack.length > 0) {
+      next = (edge = stack.pop()!).nextOut;
+      continue top;
     }
 
-    edge = stack[--sp]!;
-    next = edge.nextOut;
-  }
+    return;
+  } while (true);
 }

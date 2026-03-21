@@ -8,6 +8,7 @@ import {
   CHANGED_STATE,
   ReactiveNodeState,
   runEffect,
+  DIRTY_STATE,
 } from "../reactivity";
 import runtime from "../reactivity/context";
 import {
@@ -111,7 +112,7 @@ export function createComputedNode<T>(compute: () => T): ReactiveNode<T> {
   return new ReactiveNode(
     UNINITIALIZED as T,
     compute,
-    CHANGED_STATE,
+    DIRTY_STATE,
     ReactiveNodeKind.Computed,
   );
 }
