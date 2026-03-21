@@ -1,5 +1,5 @@
 import { Reactivable } from "./Reactivable";
-import { ReactiveEdge } from "./ReactiveEdge";
+import type { ReactiveEdge } from "./ReactiveEdge";
 import { ReactiveNodeKind } from "./ReactiveMeta";
 
 type ComputeFn<T> = ((previous?: T) => T) | (() => T) | null;
@@ -23,6 +23,39 @@ class ReactiveNode<T = unknown> implements Reactivable {
     state: number,
     kind: ReactiveNodeKind,
   ) {
+    this.state = state;
+    this.kind = kind;
+    this.compute = compute;
+    this.firstOut = null;
+    this.firstIn = null;
+    this.lastOut = null;
+    this.lastIn = null;
+    this.depsTail = null;
+    this.payload = payload as T;
+    this.pendingPayload = payload as T;
+  }
+}
+
+class ReactiveNodeAsync<T, E> implements ReactiveNode {
+  phase: number;
+  state: number;
+  kind: ReactiveNodeKind;
+  compute: ComputeFn<unknown>;
+  firstOut: ReactiveEdge | null;
+  firstIn: ReactiveEdge | null;
+  lastOut: ReactiveEdge | null;
+  lastIn: ReactiveEdge | null;
+  depsTail: ReactiveEdge | null;
+  payload: unknown;
+  pendingPayload: unknown;
+
+  constructor(
+    payload: T | undefined,
+    compute: ComputeFn<T>,
+    state: number,
+    kind: ReactiveNodeKind,
+  ) {
+    this.phase = 0;
     this.state = state;
     this.kind = kind;
     this.compute = compute;

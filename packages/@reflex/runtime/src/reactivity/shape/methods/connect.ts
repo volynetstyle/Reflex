@@ -1,14 +1,11 @@
-import { ReactiveEdge } from "../ReactiveEdge";
+import {
+  clearReactiveEdgeLinks,
+  createReactiveEdge,
+  type ReactiveEdge,
+} from "../ReactiveEdge";
 import ReactiveNode from "../ReactiveNode";
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
-
-function attachOutEdge(from: ReactiveNode, edge: ReactiveEdge): void {
-  edge.prevOut = from.lastOut;
-  edge.nextOut = null;
-  from.lastOut ? (from.lastOut.nextOut = edge) : (from.firstOut = edge);
-  from.lastOut = edge;
-}
 
 /** Insert `edge` into `to`'s incoming list right after `after` (or at head). */
 function attachInEdge(
@@ -52,9 +49,19 @@ export function linkEdge(
   to: ReactiveNode,
   after: ReactiveEdge | null = to.lastIn,
 ): ReactiveEdge {
-  const edge = new ReactiveEdge(from, to);
-  attachOutEdge(from, edge);
-  attachInEdge(to, edge, after);
+  const prevOut = from.lastOut;
+  const nextIn = after ? after.nextIn : to.firstIn;
+  const edge = createReactiveEdge(from, to, prevOut, after, nextIn);
+
+  if (prevOut) prevOut.nextOut = edge;
+  else from.firstOut = edge;
+  from.lastOut = edge;
+
+  if (nextIn) nextIn.prevIn = edge;
+  else to.lastIn = edge;
+  if (after) after.nextIn = edge;
+  else to.firstIn = edge;
+
   return edge;
 }
 
@@ -66,7 +73,7 @@ export function unlinkEdge(edge: ReactiveEdge): void {
   detachOutEdge(from, edge);
   detachInEdge(to, edge);
 
-  edge.prevOut = edge.nextOut = edge.prevIn = edge.nextIn = null;
+  clearReactiveEdgeLinks(edge);
 }
 
 /**
@@ -117,7 +124,7 @@ export function unlinkAllSources(node: ReactiveNode): void {
   while (edge) {
     const next = edge.nextIn;
     detachOutEdge(edge.from, edge);
-    edge.prevOut = edge.nextOut = edge.prevIn = edge.nextIn = null;
+    clearReactiveEdgeLinks(edge);
     edge = next;
   }
 }

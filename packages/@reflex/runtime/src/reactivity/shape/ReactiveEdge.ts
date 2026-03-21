@@ -1,19 +1,41 @@
-import ReactiveNode from "./ReactiveNode";
+import type ReactiveNode from "./ReactiveNode";
 
 /**
- * MUST BE valid with respect to GraphEdge and contain the same field as the inherited one.
- * ReactiveEdge represents a directed, intrusive, bi-directional connection between two ReactiveNodes.
+ * Plain-object edge shaped after alien-signals' Link.
+ * A single edge lives in both the source's outgoing list and the target's
+ * incoming list, so pointer rewrites must keep both views in sync.
  */
-class ReactiveEdge {
-  prevOut: ReactiveEdge | null = null;
-  nextOut: ReactiveEdge | null = null;
-  prevIn: ReactiveEdge | null = null;
-  nextIn: ReactiveEdge | null = null;
-
-  constructor(
-    public from: ReactiveNode,
-    public to: ReactiveNode,
-  ) {}
+interface ReactiveEdge {
+  from: ReactiveNode;
+  to: ReactiveNode;
+  prevOut: ReactiveEdge | null;
+  nextOut: ReactiveEdge | null;
+  prevIn: ReactiveEdge | null;
+  nextIn: ReactiveEdge | null;
 }
 
-export { ReactiveEdge };
+export function createReactiveEdge(
+  from: ReactiveNode,
+  to: ReactiveNode,
+  prevOut: ReactiveEdge | null,
+  prevIn: ReactiveEdge | null,
+  nextIn: ReactiveEdge | null,
+): ReactiveEdge {
+  return {
+    from,
+    to,
+    prevOut,
+    nextOut: null,
+    prevIn,
+    nextIn,
+  };
+}
+
+export function clearReactiveEdgeLinks(edge: ReactiveEdge): void {
+  edge.prevOut = null;
+  edge.nextOut = null;
+  edge.prevIn = null;
+  edge.nextIn = null;
+}
+
+export type { ReactiveEdge };
