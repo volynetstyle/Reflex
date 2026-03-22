@@ -1,17 +1,17 @@
-import { createRuntime } from "../src";
+import { computed, createRuntime, signal } from "../src";
 import type { ReactiveNode } from "../src/reactivity/shape";
 
 export function setup() {
   const rt = createRuntime();
 
-  const signal = <T>(initial: T) => {
-    const s = rt.signal(initial);
-    return [s, s.write, s] as const;
+  const makeSignal = <T>(initial: T) => {
+    const s = signal(initial);
+    return [s, (value: T) => s(value), s] as const;
   };
 
-  const computed = <T>(fn: () => T) => rt.computed(fn);
+  const makeComputed = <T>(fn: () => T) => computed(fn);
 
-  return { signal, computed, effect: rt.effect, rt };
+  return { signal: makeSignal, computed: makeComputed, effect: rt.effect, rt };
 }
 
 export function countIncoming(node: Pick<ReactiveNode, "firstIn">) {

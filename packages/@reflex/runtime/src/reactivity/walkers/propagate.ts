@@ -1,12 +1,9 @@
 import runtime from "../context";
 import {
   type ReactiveEdge,
-  MAYBE_CHANGE_STATE,
-  CHANGED_STATE,
   DIRTY_STATE,
   WALKER_STATE,
   ReactiveNode,
-  ReactiveNodeKind,
   ReactiveNodeState,
 } from "../shape";
 
@@ -31,12 +28,13 @@ function markSubscriber(edge: ReactiveEdge, sub: ReactiveNode): boolean {
   }
 
   if ((state & WALKER_STATE) === 0) {
-    sub.state = state | MAYBE_CHANGE_STATE;
+    sub.state = state | ReactiveNodeState.Invalid;
     return true;
   }
 
   if ((state & ReactiveNodeState.Tracking) === 0) {
-    sub.state = (state & ~ReactiveNodeState.Visited) | MAYBE_CHANGE_STATE;
+    sub.state =
+      (state & ~ReactiveNodeState.Visited) | ReactiveNodeState.Invalid;
     return true;
   }
 
@@ -44,7 +42,7 @@ function markSubscriber(edge: ReactiveEdge, sub: ReactiveNode): boolean {
     return false;
   }
 
-  sub.state = state | ReactiveNodeState.Visited | MAYBE_CHANGE_STATE;
+  sub.state = state | ReactiveNodeState.Visited | ReactiveNodeState.Invalid;
   return true;
 }
 
@@ -59,8 +57,7 @@ function propagateSingleSubscriber(startEdge: ReactiveEdge): void {
       return;
     }
 
-    const subKind = sub.kind;
-    if (subKind === ReactiveNodeKind.Effect) {
+    if (sub.state & ReactiveNodeState.Recycler) {
       ctx.notifyEffectInvalidated(sub);
       return;
     }
@@ -86,13 +83,14 @@ export function propagateOnce(node: ReactiveNode): void {
     const sub = edge.to;
     const subState = sub.state;
 
-    if ((subState & DIRTY_STATE) !== MAYBE_CHANGE_STATE) {
+    if ((subState & DIRTY_STATE) !== ReactiveNodeState.Invalid) {
       continue;
     }
 
-    sub.state = (subState ^ MAYBE_CHANGE_STATE) | CHANGED_STATE;
+    sub.state =
+      (subState & ~ReactiveNodeState.Invalid) | ReactiveNodeState.Changed;
 
-    if (sub.kind === ReactiveNodeKind.Effect) {
+    if (sub.state & ReactiveNodeState.Recycler) {
       ctx.notifyEffectInvalidated(sub);
     }
   }
@@ -115,42 +113,38 @@ export function propagate(startEdge: ReactiveEdge): void {
   let edge = startEdge;
   let next: ReactiveEdge | null = startEdge.nextOut;
 
-  try {
-    top: do {
-      const sub = edge.to;
+  top: do {
+    const sub = edge.to;
 
-      if (markSubscriber(edge, sub)) {
-        const subKind = sub.kind;
+    if (markSubscriber(edge, sub)) {
+      if (sub.state & ReactiveNodeState.Recycler) {
+        ctx.notifyEffectInvalidated(sub);
+      } else {
+        const firstOut = sub.firstOut;
 
-        if (subKind === ReactiveNodeKind.Effect) {
-          ctx.notifyEffectInvalidated(sub);
-        } else {
-          const firstOut = sub.firstOut;
-
-          if (firstOut !== null) {
-            if (next !== null) stack.push(next);
-            edge = firstOut;
-            next = firstOut.nextOut;
-            continue;
-          }
+        if (firstOut !== null) {
+          if (next !== null) stack.push(next);
+          edge = firstOut;
+          next = firstOut.nextOut;
+          continue;
         }
       }
+    }
 
-      if (next !== null) {
-        edge = next;
-        next = edge.nextOut;
-        continue;
-      }
+    if (next !== null) {
+      edge = next;
+      next = edge.nextOut;
+      continue;
+    }
 
-      while (stack.length > base) {
-        edge = stack.pop()!;
-        next = edge.nextOut;
-        continue top;
-      }
+    while (stack.length > base) {
+      edge = stack.pop()!;
+      next = edge.nextOut;
+      continue top;
+    }
 
-      return;
-    } while (true);
-  } finally {
-    stack.length = base;
-  }
+    break;
+  } while (true);
+
+  stack.length = base;
 }

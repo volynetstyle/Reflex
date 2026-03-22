@@ -1,34 +1,34 @@
 import { describe, expect, it, vi } from "vitest";
-import { createRuntime } from "../src";
-import { ReactiveNodeKind, ReactiveNodeState } from "../src/reactivity/shape";
+import { createRuntime, signal } from "../src";
+import { ReactiveNodeState } from "../src/reactivity/shape";
 import { countIncoming } from "./signal_beta.test_utils";
 
 describe("Reactive system - effects", () => {
   it("runs once initially with effect semantics", () => {
     const rt = createRuntime();
-    const source = rt.signal(1);
+    const source = signal(1);
     const spy = vi.fn(() => {
-      source.read();
+      source();
     });
 
     const effect = rt.effect(spy);
 
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(effect.node.kind).toBe(ReactiveNodeKind.Effect);
-    expect(effect.node.state).toBe(ReactiveNodeState.SideEffect);
+    expect(effect.node.state & ReactiveNodeState.Recycler).toBeTruthy();
     expect(effect.node.state & ReactiveNodeState.Invalid).toBeFalsy();
+    expect(effect.node.state & ReactiveNodeState.Changed).toBeFalsy();
     expect(countIncoming(effect.node)).toBe(1);
   });
 
   it("re-runs only after flush in queued mode", () => {
     const rt = createRuntime();
-    const source = rt.signal(1);
+    const source = signal(1);
     const spy = vi.fn(() => {
-      source.read();
+      source();
     });
 
     rt.effect(spy);
-    source.write(2);
+    source(2);
 
     expect(spy).toHaveBeenCalledTimes(1);
     rt.flush();
@@ -37,46 +37,46 @@ describe("Reactive system - effects", () => {
 
   it("re-runs immediately in eager mode", () => {
     const rt = createRuntime({ effectStrategy: "eager" });
-    const source = rt.signal(1);
+    const source = signal(1);
     const spy = vi.fn(() => {
-      source.read();
+      source();
     });
 
     rt.effect(spy);
-    source.write(2);
+    source(2);
     expect(spy).toHaveBeenCalledTimes(2);
   });
 
   it("dedupes multiple writes before flush", () => {
     const rt = createRuntime();
-    const source = rt.signal(1);
+    const source = signal(1);
     const spy = vi.fn(() => {
-      source.read();
+      source();
     });
 
     rt.effect(spy);
     spy.mockClear();
 
-    source.write(2);
-    source.write(3);
-    source.write(4);
+    source(2);
+    source(3);
+    source(4);
 
     rt.flush();
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(source.read()).toBe(4);
+    expect(source()).toBe(4);
   });
 
   it("runs cleanup before rerun", () => {
     const rt = createRuntime();
-    const source = rt.signal(1);
+    const source = signal(1);
     const cleanup = vi.fn();
     const spy = vi.fn(() => {
-      source.read();
+      source();
       return cleanup;
     });
 
     rt.effect(spy);
-    source.write(2);
+    source(2);
     rt.flush();
 
     expect(cleanup).toHaveBeenCalledTimes(1);
@@ -85,10 +85,10 @@ describe("Reactive system - effects", () => {
 
   it("runs cleanup and disconnects on dispose", () => {
     const rt = createRuntime();
-    const source = rt.signal(1);
+    const source = signal(1);
     const cleanup = vi.fn();
     const spy = vi.fn(() => {
-      source.read();
+      source();
       return cleanup;
     });
 
@@ -99,14 +99,14 @@ describe("Reactive system - effects", () => {
     expect(effect.node.state & ReactiveNodeState.Disposed).toBeTruthy();
     expect(countIncoming(effect.node)).toBe(0);
 
-    source.write(2);
+    source(2);
     rt.flush();
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it("returns a callable disposer", () => {
     const rt = createRuntime();
-    const source = rt.signal(1);
+    const source = signal(1);
     const cleanup = vi.fn();
     const spy = vi.fn(() => {
       source();
@@ -125,14 +125,14 @@ describe("Reactive system - effects", () => {
 
   it("switches dynamic dependencies for effects", () => {
     const rt = createRuntime();
-    const flag = rt.signal(true);
-    const a = rt.signal(1);
-    const b = rt.signal(10);
+    const flag = signal(true);
+    const a = signal(1);
+    const b = signal(10);
     const spy = vi.fn(() => {
-      if (flag.read()) {
-        a.read();
+      if (flag()) {
+        a();
       } else {
-        b.read();
+        b();
       }
     });
 
@@ -140,17 +140,17 @@ describe("Reactive system - effects", () => {
 
     expect(countIncoming(effect.node)).toBe(2);
 
-    flag.write(false);
+    flag(false);
     rt.flush();
     expect(spy).toHaveBeenCalledTimes(2);
     expect(countIncoming(effect.node)).toBe(2);
 
     spy.mockClear();
-    a.write(2);
+    a(2);
     rt.flush();
     expect(spy).not.toHaveBeenCalled();
 
-    b.write(20);
+    b(20);
     rt.flush();
     expect(spy).toHaveBeenCalledTimes(1);
   });

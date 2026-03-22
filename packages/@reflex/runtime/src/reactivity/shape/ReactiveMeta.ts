@@ -1,32 +1,42 @@
-import type ReactiveNode from "./ReactiveNode";
+import ReactiveNode from "./ReactiveNode";
 
 export type Byte32Int = number;
 
-export const enum ReactiveNodeKind {
-  Signal = 0,
-  Computed = 1,
-  Effect = 2,
-  Producer = Signal,
-  Consumer = Computed,
-  Recycler = Effect,
+export const enum ReactiveNodeState {
+  Producer = 1 << 0,
+  Consumer = 1 << 1,
+  Recycler = 1 << 2,
+  
+  Invalid = 1 << 3,
+  Changed = 1 << 4,
+  Visited = 1 << 5,
+  Disposed = 1 << 6,
+  Computing = 1 << 7,
+  Scheduled = 1 << 8,
+  Tracking = 1 << 9,
 }
 
-export const enum ReactiveNodeState {
-  Invalid = 1 << 0,
-  Changed = 1 << 1,
-  SideEffect = 1 << 3,
-  Visited = 1 << 4,
-  Disposed = 1 << 5,
-  Computing = 1 << 6,
-  Scheduled = 1 << 7,
-  Tracking = 1 << 8,
-}
+// export const MAYBE_CHANGE_STATE = ReactiveNodeState.Invalid;
+// export const CHANGED_STATE = ReactiveNodeState.Changed;
+
+export const DIRTY_STATE =
+  ReactiveNodeState.Invalid | ReactiveNodeState.Changed;
+
+export const PRODUCER_CHANGED =
+  ReactiveNodeState.Producer | ReactiveNodeState.Changed;
+
+export const PRODUCER_DIRTY = ReactiveNodeState.Producer | DIRTY_STATE;
+
+export const CONSUMER_CHANGED =
+  ReactiveNodeState.Invalid |
+  ReactiveNodeState.Changed |
+  ReactiveNodeState.Consumer;
+
+export const RECYCLER_CHANGED =
+  ReactiveNodeState.Changed | ReactiveNodeState.Recycler;
 
 export const WALKER_STATE =
   ReactiveNodeState.Visited | ReactiveNodeState.Tracking;
-export const MAYBE_CHANGE_STATE = ReactiveNodeState.Invalid;
-export const CHANGED_STATE = ReactiveNodeState.Changed;
-export const DIRTY_STATE = MAYBE_CHANGE_STATE | CHANGED_STATE;
 
 export function markNodeComputing(node: ReactiveNode): void {
   node.state |= ReactiveNodeState.Computing;

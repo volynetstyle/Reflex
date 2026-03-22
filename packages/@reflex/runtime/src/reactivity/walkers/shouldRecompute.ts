@@ -2,17 +2,15 @@ import { changePayload } from "../engine";
 import { recompute } from "../engine/compute";
 import runtime from "../context";
 import {
-  CHANGED_STATE,
   DIRTY_STATE,
-  MAYBE_CHANGE_STATE,
   type ReactiveEdge,
   ReactiveNode,
-  ReactiveNodeKind,
+  ReactiveNodeState,
 } from "../shape";
 import { propagateOnce } from "./propagate";
 
 function settleDirtySource(node: ReactiveNode, link: ReactiveEdge): boolean {
-  const isSignal = node.kind === ReactiveNodeKind.Signal;
+  const isSignal = (node.state & ReactiveNodeState.Producer) !== 0;
   const changed = isSignal ? changePayload(node) : recompute(node);
 
   if (!changed) {
@@ -39,7 +37,7 @@ function unwindDirtyStack(
     if (needRecompute) {
       needRecompute = settleDirtySource(sub, parentLink);
     } else {
-      sub.state &= ~MAYBE_CHANGE_STATE;
+      sub.state &= ~ReactiveNodeState.Invalid;
     }
 
     sub = parentLink.to;
@@ -59,13 +57,13 @@ function shouldRecomputeBranching(
     const dep = link.from;
     const depState = dep.state;
 
-    if ((sub.state & CHANGED_STATE) !== 0) {
+    if (sub.state & ReactiveNodeState.Changed) {
       needRecompute = true;
-    } else if ((depState & CHANGED_STATE) !== 0) {
+    } else if (depState & ReactiveNodeState.Changed) {
       needRecompute = settleDirtySource(dep, link) || needRecompute;
     } else if (
-      (depState & DIRTY_STATE) !== 0 &&
-      dep.kind !== ReactiveNodeKind.Signal
+      (depState & ReactiveNodeState.Producer) === 0 &&
+      (depState & DIRTY_STATE) !== 0
     ) {
       stack.push(link);
       link = dep.firstIn!;
@@ -88,7 +86,7 @@ function shouldRecomputeBranching(
       if (needRecompute) {
         needRecompute = settleDirtySource(sub, parentLink);
       } else {
-        sub.state &= ~MAYBE_CHANGE_STATE;
+        sub.state &= ~ReactiveNodeState.Invalid;
       }
 
       sub = parentLink.to;
@@ -122,22 +120,31 @@ function shouldRecomputeSingleDependency(
     const dep = link.from;
     const depState = dep.state;
 
-    if ((sub.state & CHANGED_STATE) !== 0) {
+    if (sub.state & ReactiveNodeState.Changed) {
       needRecompute = true;
       break;
     }
 
-    if ((depState & CHANGED_STATE) !== 0) {
+    if (depState & ReactiveNodeState.Changed) {
       needRecompute = settleDirtySource(dep, link);
       break;
     }
 
-    if ((depState & DIRTY_STATE) !== 0 && dep.kind !== ReactiveNodeKind.Signal) {
+    if (
+      (depState & ReactiveNodeState.Producer) === 0 &&
+      (depState & DIRTY_STATE) !== 0
+    ) {
       const depFirstIn = dep.firstIn!;
 
       if (depFirstIn.nextIn !== null) {
         stack.push(link);
-        return shouldRecomputeBranching(depFirstIn, dep, needRecompute, stack, base);
+        return shouldRecomputeBranching(
+          depFirstIn,
+          dep,
+          needRecompute,
+          stack,
+          base,
+        );
       }
 
       stack.push(link);
@@ -146,7 +153,7 @@ function shouldRecomputeSingleDependency(
       continue;
     }
 
-    sub.state &= ~MAYBE_CHANGE_STATE;
+    sub.state &= ~ReactiveNodeState.Invalid;
     break;
   }
 
@@ -158,25 +165,26 @@ function shouldRecomputeSingleDependency(
  * Refreshes only pending/changed branches; exits early on first stale source.
  */
 export function shouldRecompute(node: ReactiveNode): boolean {
-  if (node.kind === ReactiveNodeKind.Signal) return false;
-  if ((node.state & CHANGED_STATE) !== 0) return true;
+  const state = node.state;
 
-  const firstLink = node.firstIn;
-  if (firstLink === null) {
-    node.state &= ~MAYBE_CHANGE_STATE;
+  if ((state & ReactiveNodeState.Producer) !== 0) return false;
+  if ((state & ReactiveNodeState.Changed) !== 0) return true;
+
+  const firstIn = node.firstIn;
+  if (firstIn === null) {
+    node.state = state & ~ReactiveNodeState.Invalid;
     return false;
   }
 
   const stack = runtime.dirtyCheckStack;
   const base = stack.length;
 
-  try {
-    if (firstLink.nextIn === null) {
-      return shouldRecomputeSingleDependency(node, firstLink, stack, base);
-    }
+  const result =
+    firstIn.nextIn === null
+      ? shouldRecomputeSingleDependency(node, firstIn, stack, base)
+      : shouldRecomputeBranching(firstIn, node, false, stack, base);
 
-    return shouldRecomputeBranching(firstLink, node, false, stack, base);
-  } finally {
-    stack.length = base;
-  }
+  stack.length = base;
+
+  return result;
 }

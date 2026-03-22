@@ -1,22 +1,18 @@
 import {
   ReactiveNode,
-  ReactiveNodeKind,
-  CHANGED_STATE,
+  ReactiveNodeState,
   changePayload,
   trackRead,
   DIRTY_STATE,
-  ReactiveNodeState,
   shouldRecompute,
   recompute,
   propagateOnce,
   clearDirtyState,
+  PRODUCER_CHANGED,
 } from "../reactivity";
 
 export function readProducer<T>(node: ReactiveNode<T>): T {
-  if (
-    node.kind === ReactiveNodeKind.Signal &&
-    (node.state & CHANGED_STATE) !== 0
-  ) {
+  if ((node.state & PRODUCER_CHANGED)) {
     changePayload(node);
   }
 
@@ -27,24 +23,23 @@ export function readProducer<T>(node: ReactiveNode<T>): T {
 export function readConsumer<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
-  if (state & DIRTY_STATE) {
-    if (__DEV__) {
-      if ((state & ReactiveNodeState.Computing) !== 0) {
-        throw new Error("Cycle detected while refreshing reactive graph");
-      }
-    }
+  if (__DEV__ && (state & ReactiveNodeState.Computing)) {
+    throw new Error("Cycle detected while refreshing reactive graph");
+  }
 
-    let changed = shouldRecompute(node);
+  if ((state & DIRTY_STATE) === 0) {
+    trackRead(node);
+    return node.payload as T;
+  }
 
-    if (state & CHANGED_STATE || changed) {
-      changed = recompute(node);
+  const needs =
+    (state & ReactiveNodeState.Changed) ||
+    shouldRecompute(node);
 
-      if (changed) {
-        propagateOnce(node);
-      }
-    } else {
-      clearDirtyState(node);
-    }
+  if (needs) {
+    if (recompute(node)) propagateOnce(node);
+  } else {
+    clearDirtyState(node);
   }
 
   trackRead(node);

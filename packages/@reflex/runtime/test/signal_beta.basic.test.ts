@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createRuntime } from "../src";
-import { ReactiveNodeKind } from "../src/reactivity/shape";
+import {
+  computed as createComputed,
+  createRuntime,
+  memo as createMemo,
+  signal as createSignal,
+} from "../src";
+import { ReactiveNodeState } from "../src/reactivity/shape";
 import { countIncoming, setup } from "./signal_beta.test_utils";
 
 describe("Reactive system - basic correctness", () => {
@@ -88,21 +93,21 @@ describe("Reactive system - basic correctness", () => {
   });
 
   it("creates runtime nodes with explicit kinds", () => {
-    const rt = createRuntime();
-    const s = rt.signal(1);
-    const c = rt.computed(() => s() * 2);
+    createRuntime();
+    const s = createSignal(1);
+    const c = createComputed(() => s() * 2);
 
-    expect(s.node.kind).toBe(ReactiveNodeKind.Signal);
-    expect(c.node.kind).toBe(ReactiveNodeKind.Computed);
-    expect(c.node.kind === ReactiveNodeKind.Effect).toBe(false);
+    expect(s.node.state & ReactiveNodeState.Producer).toBeTruthy();
+    expect(c.node.state & ReactiveNodeState.Consumer).toBeTruthy();
+    expect(c.node.state & ReactiveNodeState.Recycler).toBeFalsy();
   });
 
   it("computes memos eagerly and caches the first value", () => {
-    const rt = createRuntime();
-    const s = rt.signal(2);
+    createRuntime();
+    const s = createSignal(2);
     const spy = vi.fn(() => s() * 3);
 
-    const m = rt.memo(spy);
+    const m = createMemo(spy);
 
     expect(spy).toHaveBeenCalledTimes(1);
     expect(m()).toBe(6);
@@ -110,9 +115,9 @@ describe("Reactive system - basic correctness", () => {
   });
 
   it("supports callable signals for both reads and writes", () => {
-    const rt = createRuntime();
-    const s = rt.signal(1);
-    const c = rt.computed(() => s() * 2);
+    createRuntime();
+    const s = createSignal(1);
+    const c = createComputed(() => s() * 2);
 
     expect(s()).toBe(1);
     s(5);

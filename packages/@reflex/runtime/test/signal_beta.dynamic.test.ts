@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createRuntime } from "../src";
+import { computed, createRuntime, signal } from "../src";
 import { ReactiveNodeState } from "../src/reactivity/shape";
 import {
   countIncoming,
@@ -36,37 +36,37 @@ describe("Reactive system - dynamic dependencies", () => {
 
   it("removes old dependencies after a stable branch switch", () => {
     const rt = createRuntime();
-    const flag = rt.signal(true);
-    const a = rt.signal(1);
-    const b = rt.signal(10);
+    const flag = signal(true);
+    const a = signal(1);
+    const b = signal(10);
 
-    const spy = vi.fn(() => (flag.read() ? a.read() : b.read()));
-    const c = rt.computed(spy);
+    const spy = vi.fn(() => (flag() ? a() : b()));
+    const c = computed(spy);
 
     expect(c()).toBe(1);
 
-    flag.write(false);
+    flag(false);
     expect(c()).toBe(10);
 
     spy.mockClear();
-    a.write(2);
+    a(2);
     expect(c()).toBe(10);
     expect(spy).not.toHaveBeenCalled();
 
-    b.write(20);
+    b(20);
     expect(c()).toBe(20);
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it("preserves freshness after dependency cleanup", () => {
     const rt = createRuntime();
-    const flag = rt.signal(true);
-    const a = rt.signal(1);
-    const b = rt.signal(10);
-    const c = rt.computed(() => (flag.read() ? a.read() : b.read()));
+    const flag = signal(true);
+    const a = signal(1);
+    const b = signal(10);
+    const c = computed(() => (flag() ? a() : b()));
 
     expect(c()).toBe(1);
-    flag.write(false);
+    flag(false);
     expect(c()).toBe(10);
 
     expect(countIncoming(c.node)).toBe(2);
@@ -74,7 +74,7 @@ describe("Reactive system - dynamic dependencies", () => {
       c.node.state & (ReactiveNodeState.Invalid | ReactiveNodeState.Changed),
     ).toBe(0);
 
-    a.write(2);
+    a(2);
     expect(c()).toBe(10);
     expect(
       c.node.state & (ReactiveNodeState.Invalid | ReactiveNodeState.Changed),
@@ -83,22 +83,22 @@ describe("Reactive system - dynamic dependencies", () => {
 
   it("removes a dependency when it disappears without a replacement", () => {
     const rt = createRuntime();
-    const flag = rt.signal(true);
-    const a = rt.signal(1);
-    const c = rt.computed(() => (flag.read() ? a.read() : 0));
+    const flag = signal(true);
+    const a = signal(1);
+    const c = computed(() => (flag() ? a() : 0));
 
     expect(c()).toBe(1);
     expect(countIncoming(c.node)).toBe(2);
 
-    flag.write(false);
+    flag(false);
     expect(c()).toBe(0);
     expect(countIncoming(c.node)).toBe(1);
   });
 
   it("reuses the tracked edge for repeated reads of the same source", () => {
     const rt = createRuntime();
-    const a = rt.signal(2);
-    const c = rt.computed(() => a.read() + a.read() + a.read());
+    const a = signal(2);
+    const c = computed(() => a() + a() + a());
 
     expect(c()).toBe(6);
     expect(countIncoming(c.node)).toBe(1);
@@ -107,7 +107,7 @@ describe("Reactive system - dynamic dependencies", () => {
     expect(trackedEdge).toBeTruthy();
     expect(trackedEdge?.from).toBe(a.node);
 
-    a.write(3);
+    a(3);
     expect(c()).toBe(9);
     expect(countIncoming(c.node)).toBe(1);
     expect(c.node.depsTail?.from).toBe(a.node);

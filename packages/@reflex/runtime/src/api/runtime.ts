@@ -3,12 +3,12 @@ import {
   EngineHooks,
   EngineContext,
   disposeEffect,
-  ReactiveNodeKind,
   UNINITIALIZED,
-  CHANGED_STATE,
   ReactiveNodeState,
   runEffect,
-  DIRTY_STATE,
+  PRODUCER_CHANGED as PRODUCER_INITIAL_STATE,
+  CONSUMER_CHANGED as CONSUMER_INITIAL_STATE,
+  RECYCLER_CHANGED as RECYCLER_INITIAL_STATE,
 } from "../reactivity";
 import runtime from "../reactivity/context";
 import {
@@ -59,27 +59,17 @@ export interface Runtime {
 // ─── Node factories ───────────────────────────────────────────────────────────
 
 export function createSignalNode<T>(payload: T): ReactiveNode<T> {
-  return new ReactiveNode(payload, null, 0, ReactiveNodeKind.Signal);
+  return new ReactiveNode(payload, null, PRODUCER_INITIAL_STATE);
 }
 
 export function createComputedNode<T>(compute: () => T): ReactiveNode<T> {
-  return new ReactiveNode(
-    UNINITIALIZED as T,
-    compute,
-    DIRTY_STATE,
-    ReactiveNodeKind.Computed,
-  );
+  return new ReactiveNode(UNINITIALIZED as T, compute, CONSUMER_INITIAL_STATE);
 }
 
 export function createEffectNode(
   compute: () => void | (() => void),
 ): ReactiveNode<void | (() => void)> {
-  return new ReactiveNode(
-    undefined,
-    compute,
-    CHANGED_STATE | ReactiveNodeState.SideEffect,
-    ReactiveNodeKind.Effect,
-  );
+  return new ReactiveNode(undefined, compute, RECYCLER_INITIAL_STATE);
 }
 
 // ─── Standalone signal / computed ────────────────────────────────────────────

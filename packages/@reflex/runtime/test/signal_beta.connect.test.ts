@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
 import ReactiveNode from "../src/reactivity/shape/ReactiveNode";
-import { ReactiveNodeKind } from "../src/reactivity/shape/ReactiveMeta";
+import { ReactiveNodeState } from "../src/reactivity/shape/ReactiveMeta";
 import {
   linkEdge,
   reuseOrCreateIncomingEdge,
   unlinkEdge,
 } from "../src/reactivity/shape/methods/connect";
 
-function createNode(kind: ReactiveNodeKind = ReactiveNodeKind.Signal) {
-  return new ReactiveNode(undefined, null, 0, kind);
+function createNode(kind: ReactiveNodeState = ReactiveNodeState.Producer) {
+  return new ReactiveNode(undefined, null, kind);
 }
 
 describe("Reactive graph - edge wiring", () => {
   it("creates plain-object edges and wires both intrusive lists", () => {
-    const source = createNode(ReactiveNodeKind.Signal);
-    const target = createNode(ReactiveNodeKind.Computed);
+    const source = createNode(ReactiveNodeState.Producer);
+    const target = createNode(ReactiveNodeState.Consumer);
 
     const edge = linkEdge(source, target);
 
@@ -28,10 +28,10 @@ describe("Reactive graph - edge wiring", () => {
   });
 
   it("keeps depsTail separate from the physical incoming tail when unlinking", () => {
-    const a = createNode(ReactiveNodeKind.Signal);
-    const b = createNode(ReactiveNodeKind.Signal);
-    const c = createNode(ReactiveNodeKind.Signal);
-    const target = createNode(ReactiveNodeKind.Computed);
+    const a = createNode(ReactiveNodeState.Producer);
+    const b = createNode(ReactiveNodeState.Producer);
+    const c = createNode(ReactiveNodeState.Producer);
+    const target = createNode(ReactiveNodeState.Consumer);
 
     const ab = linkEdge(a, target);
     const bb = linkEdge(b, target);
@@ -49,10 +49,10 @@ describe("Reactive graph - edge wiring", () => {
   });
 
   it("repositions a reused incoming edge without corrupting the true tail", () => {
-    const a = createNode(ReactiveNodeKind.Signal);
-    const b = createNode(ReactiveNodeKind.Signal);
-    const c = createNode(ReactiveNodeKind.Signal);
-    const target = createNode(ReactiveNodeKind.Computed);
+    const a = createNode(ReactiveNodeState.Producer);
+    const b = createNode(ReactiveNodeState.Producer);
+    const c = createNode(ReactiveNodeState.Producer);
+    const target = createNode(ReactiveNodeState.Consumer);
 
     const ab = linkEdge(a, target);
     const bb = linkEdge(b, target);

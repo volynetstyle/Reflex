@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createRuntime } from "../src";
+import {
+  computed as createComputed,
+  createRuntime,
+  memo as createMemo,
+  signal as createSignal,
+} from "../src";
 import { ReactiveNodeState } from "../src/reactivity/shape";
 import { setup } from "./signal_beta.test_utils";
 
@@ -65,13 +70,13 @@ describe("Reactive system - smart recomputation and laziness", () => {
   });
 
   it("clears dirty state after a stable recompute", () => {
-    const rt = createRuntime();
-    const x = rt.signal(1);
-    const c = rt.computed(() => x.read() % 2);
+    createRuntime();
+    const x = createSignal(1);
+    const c = createComputed(() => x() % 2);
 
     expect(c()).toBe(1);
 
-    x.write(3);
+    x(3);
     expect(c()).toBe(1);
     expect(
       c.node.state & (ReactiveNodeState.Invalid | ReactiveNodeState.Changed),
@@ -85,10 +90,10 @@ describe("Reactive system - smart recomputation and laziness", () => {
   });
 
   it("reuses eager memo value on the first explicit read", () => {
-    const rt = createRuntime();
-    const x = rt.signal(5);
-    const spy = vi.fn(() => x.read() * 2);
-    const m = rt.memo(spy);
+    createRuntime();
+    const x = createSignal(5);
+    const spy = vi.fn(() => x() * 2);
+    const m = createMemo(spy);
 
     expect(m()).toBe(10);
     expect(m()).toBe(10);
@@ -107,31 +112,31 @@ describe("Reactive system - smart recomputation and laziness", () => {
   });
 
   it("marks downstream invalid without recomputing eagerly", () => {
-    const rt = createRuntime();
-    const x = rt.signal(1);
-    const spy = vi.fn(() => x.read() * 2);
-    const c = rt.computed(spy);
+    createRuntime();
+    const x = createSignal(1);
+    const spy = vi.fn(() => x() * 2);
+    const c = createComputed(spy);
 
     expect(c()).toBe(2);
     spy.mockClear();
 
-    x.write(2);
+    x(2);
     expect(c.node.state & ReactiveNodeState.Invalid).toBeTruthy();
     expect(spy).not.toHaveBeenCalled();
   });
 
   it("settles a dirty signal and shallow-propagates confirmed change to sibling subscribers", () => {
-    const rt = createRuntime();
-    const x = rt.signal(1);
-    const left = rt.computed(() => x.read() + 1);
-    const rightSpy = vi.fn(() => x.read() * 10);
-    const right = rt.computed(rightSpy);
+    createRuntime();
+    const x = createSignal(1);
+    const left = createComputed(() => x() + 1);
+    const rightSpy = vi.fn(() => x() * 10);
+    const right = createComputed(rightSpy);
 
     expect(left()).toBe(2);
     expect(right()).toBe(10);
     rightSpy.mockClear();
 
-    x.write(2);
+    x(2);
     expect(right.node.state & ReactiveNodeState.Invalid).toBeTruthy();
     expect(right.node.state & ReactiveNodeState.Changed).toBeFalsy();
 
@@ -144,20 +149,20 @@ describe("Reactive system - smart recomputation and laziness", () => {
   });
 
   it("settles a dirty computed and shallow-propagates confirmed change to sibling subscribers", () => {
-    const rt = createRuntime();
-    const x = rt.signal(1);
-    const midSpy = vi.fn(() => x.read() * 2);
-    const mid = rt.computed(midSpy);
-    const left = rt.computed(() => mid.read() + 1);
-    const rightSpy = vi.fn(() => mid.read() * 10);
-    const right = rt.computed(rightSpy);
+    createRuntime();
+    const x = createSignal(1);
+    const midSpy = vi.fn(() => x() * 2);
+    const mid = createComputed(midSpy);
+    const left = createComputed(() => mid() + 1);
+    const rightSpy = vi.fn(() => mid() * 10);
+    const right = createComputed(rightSpy);
 
     expect(left()).toBe(3);
     expect(right()).toBe(20);
     midSpy.mockClear();
     rightSpy.mockClear();
 
-    x.write(2);
+    x(2);
     expect(right.node.state & ReactiveNodeState.Invalid).toBeTruthy();
     expect(right.node.state & ReactiveNodeState.Changed).toBeFalsy();
 
@@ -171,11 +176,11 @@ describe("Reactive system - smart recomputation and laziness", () => {
   });
 
   it("clears dirty flags after a settling read", () => {
-    const rt = createRuntime();
-    const x = rt.signal(1);
-    const c = rt.computed(() => x.read() * 2);
+    createRuntime();
+    const x = createSignal(1);
+    const c = createComputed(() => x() * 2);
 
-    x.write(2);
+    x(2);
     expect(
       c.node.state & (ReactiveNodeState.Invalid | ReactiveNodeState.Changed),
     ).toBeTruthy();
@@ -187,34 +192,34 @@ describe("Reactive system - smart recomputation and laziness", () => {
   });
 
   it("keeps dependency shape stable through stable recomputes", () => {
-    const rt = createRuntime();
-    const x = rt.signal(1);
-    const c = rt.computed(() => x.read() * 2);
+    createRuntime();
+    const x = createSignal(1);
+    const c = createComputed(() => x() * 2);
 
     expect(c()).toBe(2);
     expect(c.node.depsTail?.from).toBe(x.node);
 
-    x.write(5);
+    x(5);
     expect(c()).toBe(10);
     expect(c.node.depsTail?.from).toBe(x.node);
   });
 
   it("reconciles dependencies after discovering a new dependency", () => {
-    const rt = createRuntime();
-    const flag = rt.signal(true);
-    const a = rt.signal(1);
-    const b = rt.signal(2);
+    createRuntime();
+    const flag = createSignal(true);
+    const a = createSignal(1);
+    const b = createSignal(2);
 
-    const c = rt.computed(() => (flag.read() ? a.read() : b.read()));
+    const c = createComputed(() => (flag() ? a() : b()));
 
     expect(c()).toBe(1);
     expect(c.node.depsTail?.from).toBe(a.node);
 
-    flag.write(false);
+    flag(false);
     expect(c()).toBe(2);
     expect(c.node.depsTail?.from).toBe(b.node);
 
-    b.write(3);
+    b(3);
     expect(c()).toBe(3);
     expect(c.node.depsTail?.from).toBe(b.node);
   });

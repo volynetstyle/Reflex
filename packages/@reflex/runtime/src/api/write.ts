@@ -1,15 +1,11 @@
-import {
-  ReactiveNode,
-  MAYBE_CHANGE_STATE,
-  CHANGED_STATE,
-  propagate,
-} from "../reactivity";
+import { ReactiveNode, ReactiveNodeState, propagate } from "../reactivity";
 
 export function writeProducer<T>(node: ReactiveNode<T>, value: T): void {
   if (Object.is(node.pendingPayload, value)) return;
 
   node.pendingPayload = value;
-  node.state = (node.state & ~MAYBE_CHANGE_STATE) | CHANGED_STATE;
+  node.state =
+    (node.state & ~ReactiveNodeState.Invalid) | ReactiveNodeState.Changed;
 
   const firstSubscriberEdge = node.firstOut;
 
