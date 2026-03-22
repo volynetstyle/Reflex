@@ -1,15 +1,10 @@
-import ReactiveNode, {
-  ReactiveRoot,
-} from "../../../@reflex/runtime/src/reactivity/shape/Reactive";
-import { KIND_SIGNAL } from "../../../@reflex/runtime/src/reactivity/shape/ReactiveMeta";
 import {
-  Signal,
-  Realtime,
-  Stream,
-  Resource,
-  Suspense,
-  SignalCore,
-} from "../typelevel/test";
+  createSignalNode,
+  readProducer,
+  writeProducer,
+} from "../../../@reflex/runtime/dist/esm";
+import { Setter } from "../typelevel/main";
+import { Stream, Resource, Suspense } from "../typelevel/test";
 
 /**
  * ⚠️ UNSAFE CALLABLE SIGNAL
@@ -19,67 +14,41 @@ import {
  * - Prototype-based sharing
  * - Caller is responsible for correctness
  */
-
 export type UnsafeCallableSignal<T> = {
   (): T;
-  _value: T;
-  readonly value: T;
+  readonly payload: T;
   set(next: T | ((prev: T) => T)): void;
+  untracked(): T;
 };
 
-/**
- * Creates a callable signal.
- *
- * ⚠️ `_value` is initialized as `undefined`.
- */
-export function createUnsafeCallableSignal<T>(): UnsafeCallableSignal<T> {
-  const s: any = function () {
-    return s._value;
+//
+//  expexted result
+//  2) s() - get
+//  3) s.set(value => value)
+//
+//  expexted result
+//  2) s() - get
+//  3) s.set(value => value)
+export function signal<T>(initialValue: T) {
+  const node = createSignalNode(initialValue);
+
+  const s = function (): T {
+    return readProducer(node);
   };
 
-  s._value = undefined;
+  s.set = function (next: T | Setter<T>): void {
+    const prev = node.payload,
+      setted = typeof next !== "function" ? next : (next as Setter<T>)(prev);
 
-  s.set = function (next: any) {
-    if (typeof next === "function") {
-      s.set = update;
-      update.call(s, next);
-    } else {
-      s.set = set;
-      set.call(s, next);
-    }
+    writeProducer(node, setted);
   };
 
-  Object.defineProperty(s, "value", {
-    get() {
-      return s._value;
-    },
-  });
+  s.untracked = function (): T {
+    return node.payload;
+  };
 
   return s;
 }
-
-function set(this: any, v: any) {
-  this._value = v;
-}
-
-function update(this: any, fn: any) {
-  this._value = fn(this._value);
-}
-
-//
-//  expexted result
-//  1) s.payload - get
-//  2) s() - get
-//  3) s.set(value => value)
-//
-//  expexted result
-//  1) s.payload - get
-//  2) s() - get
-//  3) s.set(value => value)
-
-export const signal = <T>(initialValue: T): Signal<T> => {
-  return undefined as any;
-};
 
 type RealtimeSet<T> = any;
 type RealtimeMap<K, V> = any;

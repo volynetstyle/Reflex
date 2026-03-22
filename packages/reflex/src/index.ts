@@ -1,4 +1,3 @@
-import { runtime } from "./setup";
 import { createRuntime as createRuntimeImpl } from "@reflex/runtime";
 import type {
   BatchWriteEntry,
@@ -18,33 +17,37 @@ export type {
   Signal,
 } from "./public-types";
 
-export function createRuntime(options?: RuntimeOptions): Runtime {
-  return createRuntimeImpl(options as never) as Runtime;
+
+export function signal<T>(value: T): Signal<T> {
+  const node = createSignalNode(value);
+
+  function accessor(v?: T) {
+    if (v === undefined && arguments.length === 0) return readProducer(node);
+    writeProducer(node, v as T);
+  }
+
+  accessor.untracked = () => node.payload;
+  accessor.node = node;
+
+  return accessor as Signal<T>;
 }
 
-export function signal<T>(value: T) {
-  return runtime.signal(value);
+export function computed<T>(fn: () => T): Computed<T> {
+  const node = createComputedNode(fn);
+
+  function accessor() {
+    return readConsumer(node);
+  }
+
+  accessor.untracked = () => node.payload;
+  accessor.node = node;
+
+  return accessor as Computed<T>;
 }
 
-export function computed<T>(fn: () => T) {
-  return runtime.computed(fn);
+/** Computed, вычисленный немедленно. */
+export function memo<T>(fn: () => T): Computed<T> {
+  const c = computed(fn);
+  c();
+  return c;
 }
-
-export function memo<T>(fn: () => T) {
-  return runtime.memo(fn);
-}
-
-export function effect(fn: () => void | (() => void)) {
-  return runtime.effect(fn);
-}
-
-export function flush() {
-  runtime.flush();
-}
-
-export function batchWrite(writes: ReadonlyArray<BatchWriteEntry>) {
-  runtime.batchWrite(writes);
-}
-
-export { runtime };
-

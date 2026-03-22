@@ -958,7 +958,7 @@ describe("Realistic UI: virtualized table 4000 rows x 6 cols", () => {
     "beta build - partial update ~2% rows, render 400 visible",
     () => {
       updateRowBases(
-        ours.rowSources,
+        ours.rowSources as any,
         sampleOursChangedRows(changedCount, rngOursPartial, oursChangedRows),
         rngOursPartial,
       );
