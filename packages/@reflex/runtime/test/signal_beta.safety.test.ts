@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { computed, createRuntime, signal } from "../src";
+import { ReactiveNodeState } from "../src/reactivity/shape";
 import { countIncoming } from "./signal_beta.test_utils";
 
 describe("Reactive system - safety and robustness", () => {
@@ -64,6 +65,55 @@ describe("Reactive system - safety and robustness", () => {
     source(2);
     expect(() => derived()).toThrow("unstable");
     expect(derived.node.payload).toBe(2);
+  });
+
+  it("restores dirty-check stack after a thrown nested recompute", () => {
+    const rt = createRuntime();
+    const source = signal(1);
+    let shouldThrow = false;
+    const middle = computed(() => {
+      const value = source() * 2;
+      if (shouldThrow) throw new Error("boom");
+      return value;
+    });
+    const outer = computed(() => middle() + 1);
+
+    expect(outer()).toBe(3);
+
+    shouldThrow = true;
+    source(2);
+    expect(() => outer()).toThrow("boom");
+    expect(rt.ctx.dirtyCheckStack).toHaveLength(0);
+
+    shouldThrow = false;
+    expect(outer()).toBe(5);
+    expect(rt.ctx.dirtyCheckStack).toHaveLength(0);
+  });
+
+  it("finishes invalidating sibling effects before rethrowing hook errors", () => {
+    let invalidations = 0;
+    const rt = createRuntime({
+      hooks: {
+        onEffectInvalidated() {
+          invalidations += 1;
+          throw new Error("boom");
+        },
+      },
+    });
+    const source = signal(1);
+
+    const left = rt.effect(() => {
+      source();
+    });
+    const right = rt.effect(() => {
+      source();
+    });
+
+    expect(() => source(2)).toThrow("boom");
+    expect(invalidations).toBe(2);
+    expect(left.node.state & ReactiveNodeState.Invalid).toBeTruthy();
+    expect(right.node.state & ReactiveNodeState.Invalid).toBeTruthy();
+    expect(rt.ctx.propagateStack).toHaveLength(0);
   });
 
   // it("throws on cycles instead of looping forever", () => {

@@ -9,14 +9,15 @@ import {
 } from "../shape";
 import { propagateOnce } from "./propagate";
 
+// Stores parent links for returning to a consumer after finishing a dependency.
+// This differs from propagate's resume-edge stack and must not be shared.
+let dirtyCheckStackTop = -1;
+
 function settleDirtySource(node: ReactiveNode, link: ReactiveEdge): boolean {
   const isSignal = (node.state & ReactiveNodeState.Producer) !== 0;
   const changed = isSignal ? changePayload(node) : recompute(node);
 
-  if (!changed) {
-    node.state &= ~DIRTY_STATE;
-    return false;
-  }
+  if (!changed) return false;
 
   if (!isSignal && (link.prevOut !== null || link.nextOut !== null)) {
     propagateOnce(node);
@@ -29,10 +30,10 @@ function unwindDirtyStack(
   sub: ReactiveNode,
   needRecompute: boolean,
   stack: ReactiveEdge[],
-  base: number,
+  baseTop: number,
 ): boolean {
-  while (stack.length > base) {
-    const parentLink = stack.pop()!;
+  while (dirtyCheckStackTop > baseTop) {
+    const parentLink = stack[dirtyCheckStackTop--]!;
 
     if (needRecompute) {
       needRecompute = settleDirtySource(sub, parentLink);
@@ -51,7 +52,7 @@ function shouldRecomputeBranching(
   sub: ReactiveNode,
   needRecompute: boolean,
   stack: ReactiveEdge[],
-  base: number,
+  baseTop: number,
 ): boolean {
   top: do {
     const dep = link.from;
@@ -65,7 +66,7 @@ function shouldRecomputeBranching(
       (depState & ReactiveNodeState.Producer) === 0 &&
       (depState & DIRTY_STATE) !== 0
     ) {
-      stack.push(link);
+      stack[++dirtyCheckStackTop] = link;
       link = dep.firstIn!;
       sub = dep;
       continue;
@@ -80,8 +81,8 @@ function shouldRecomputeBranching(
       }
     }
 
-    while (stack.length > base) {
-      const parentLink = stack.pop()!;
+    while (dirtyCheckStackTop > baseTop) {
+      const parentLink = stack[dirtyCheckStackTop--]!;
 
       if (needRecompute) {
         needRecompute = settleDirtySource(sub, parentLink);
@@ -110,7 +111,7 @@ function shouldRecomputeSingleDependency(
   node: ReactiveNode,
   firstLink: ReactiveEdge,
   stack: ReactiveEdge[],
-  base: number,
+  baseTop: number,
 ): boolean {
   let link = firstLink;
   let sub = node;
@@ -137,17 +138,17 @@ function shouldRecomputeSingleDependency(
       const depFirstIn = dep.firstIn!;
 
       if (depFirstIn.nextIn !== null) {
-        stack.push(link);
+        stack[++dirtyCheckStackTop] = link;
         return shouldRecomputeBranching(
           depFirstIn,
           dep,
           needRecompute,
           stack,
-          base,
+          baseTop,
         );
       }
 
-      stack.push(link);
+      stack[++dirtyCheckStackTop] = link;
       link = depFirstIn;
       sub = dep;
       continue;
@@ -157,7 +158,7 @@ function shouldRecomputeSingleDependency(
     break;
   }
 
-  return unwindDirtyStack(sub, needRecompute, stack, base);
+  return unwindDirtyStack(sub, needRecompute, stack, baseTop);
 }
 
 /**
@@ -177,14 +178,14 @@ export function shouldRecompute(node: ReactiveNode): boolean {
   }
 
   const stack = runtime.dirtyCheckStack;
-  const base = stack.length;
+  const baseTop = dirtyCheckStackTop;
 
-  const result =
-    firstIn.nextIn === null
-      ? shouldRecomputeSingleDependency(node, firstIn, stack, base)
-      : shouldRecomputeBranching(firstIn, node, false, stack, base);
-
-  stack.length = base;
-
-  return result;
+  try {
+    return firstIn.nextIn === null
+      ? shouldRecomputeSingleDependency(node, firstIn, stack, baseTop)
+      : shouldRecomputeBranching(firstIn, node, false, stack, baseTop);
+  } finally {
+    dirtyCheckStackTop = baseTop;
+    stack.length = baseTop + 1;
+  }
 }

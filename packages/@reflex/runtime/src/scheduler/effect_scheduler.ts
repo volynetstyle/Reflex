@@ -20,6 +20,7 @@ export class EffectScheduler {
   private readonly queue: ReactiveNode[] = [];
   private head = 0;
   private flushing = false;
+  private boundaryDepth = 0;
 
   constructor(private readonly mode: EffectSchedulerMode) {}
 
@@ -33,8 +34,31 @@ export class EffectScheduler {
     node.state |= ReactiveNodeState.Scheduled;
     this.queue.push(node);
 
-    if (this.mode === EffectSchedulerMode.Eager && !this.flushing) {
+    if (
+      this.mode === EffectSchedulerMode.Eager &&
+      !this.flushing &&
+      this.boundaryDepth === 0
+    ) {
       this.flush();
+    }
+  }
+
+  batch<T>(fn: () => T): T {
+    ++this.boundaryDepth;
+
+    try {
+      return fn();
+    } finally {
+      --this.boundaryDepth;
+
+      if (
+        this.boundaryDepth === 0 &&
+        this.mode === EffectSchedulerMode.Eager &&
+        !this.flushing &&
+        this.head < this.queue.length
+      ) {
+        this.flush();
+      }
     }
   }
 
@@ -73,5 +97,6 @@ export class EffectScheduler {
     this.queue.length = 0;
     this.head = 0;
     this.flushing = false;
+    this.boundaryDepth = 0;
   }
 }

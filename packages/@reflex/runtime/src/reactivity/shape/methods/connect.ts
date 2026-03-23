@@ -141,6 +141,24 @@ export function moveIncomingEdgeAfter(
   attachInEdge(to, edge, after);
 }
 
+/**
+ * Full outgoing-edge sweep used by producer disposal paths.
+ * Cold-path traversal that tears down every subscriber connection.
+ */
+export function unlinkAllSubscribers(node: ReactiveNode): void {
+  let edge = node.firstOut;
+
+  node.firstOut = node.lastOut = null;
+
+  while (edge) {
+    const next = edge.nextOut;
+
+    if (edge.to.depsTail === edge) edge.to.depsTail = edge.prevIn;
+    detachInEdge(edge.to, edge);
+    edge = next;
+  }
+}
+
 /** Cold-path: links `parent → child` only if not already connected. */
 export function connect(
   parent: ReactiveNode,

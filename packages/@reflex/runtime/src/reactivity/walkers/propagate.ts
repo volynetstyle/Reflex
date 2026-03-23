@@ -7,6 +7,10 @@ import {
   ReactiveNodeState,
 } from "../shape";
 
+// Stores resume edges for sibling continuation. This stack must stay separate
+// from dirty-check's parent-link stack because the traversal semantics differ.
+let propagateStackTop = -1;
+
 function isTrackedEdge(checkEdge: ReactiveEdge, sub: ReactiveNode): boolean {
   for (let edge = sub.depsTail; edge !== null; edge = edge.prevIn) {
     if (edge === checkEdge) {
@@ -78,6 +82,7 @@ function propagateSingleSubscriber(startEdge: ReactiveEdge): void {
 
 export function propagateOnce(node: ReactiveNode): void {
   const ctx = runtime;
+  let thrown: unknown = null;
 
   for (let edge = node.firstOut; edge !== null; edge = edge.nextOut) {
     const sub = edge.to;
@@ -91,9 +96,15 @@ export function propagateOnce(node: ReactiveNode): void {
       (subState & ~ReactiveNodeState.Invalid) | ReactiveNodeState.Changed;
 
     if (sub.state & ReactiveNodeState.Recycler) {
-      ctx.notifyEffectInvalidated(sub);
+      try {
+        ctx.notifyEffectInvalidated(sub);
+      } catch (error) {
+        thrown ??= error;
+      }
     }
   }
+
+  if (thrown !== null) throw thrown;
 }
 
 /**
@@ -109,42 +120,54 @@ export function propagate(startEdge: ReactiveEdge): void {
 
   const ctx = runtime;
   const stack = ctx.propagateStack;
-  const base = stack.length;
+  const baseTop = propagateStackTop;
   let edge = startEdge;
-  let next: ReactiveEdge | null = startEdge.nextOut;
+  let resumeEdge: ReactiveEdge | null = startEdge.nextOut;
+  let thrown: unknown = null;
 
-  top: do {
-    const sub = edge.to;
+  try {
+    top: do {
+      const sub = edge.to;
 
-    if (markSubscriber(edge, sub)) {
-      if (sub.state & ReactiveNodeState.Recycler) {
-        ctx.notifyEffectInvalidated(sub);
-      } else {
-        const firstOut = sub.firstOut;
+      if (markSubscriber(edge, sub)) {
+        if (sub.state & ReactiveNodeState.Recycler) {
+          try {
+            ctx.notifyEffectInvalidated(sub);
+          } catch (error) {
+            thrown ??= error;
+          }
+        } else {
+          const firstOut = sub.firstOut;
 
-        if (firstOut !== null) {
-          if (next !== null) stack.push(next);
-          edge = firstOut;
-          next = firstOut.nextOut;
-          continue;
+          if (firstOut !== null) {
+            if (resumeEdge !== null) {
+              stack[++propagateStackTop] = resumeEdge;
+            }
+            edge = firstOut;
+            resumeEdge = firstOut.nextOut;
+            continue;
+          }
         }
       }
-    }
 
-    if (next !== null) {
-      edge = next;
-      next = edge.nextOut;
-      continue;
-    }
+      if (resumeEdge !== null) {
+        edge = resumeEdge;
+        resumeEdge = edge.nextOut;
+        continue;
+      }
 
-    while (stack.length > base) {
-      edge = stack.pop()!;
-      next = edge.nextOut;
-      continue top;
-    }
+      while (propagateStackTop > baseTop) {
+        edge = stack[propagateStackTop--]!;
+        resumeEdge = edge.nextOut;
+        continue top;
+      }
 
-    break;
-  } while (true);
+      break;
+    } while (true);
+  } finally {
+    propagateStackTop = baseTop;
+    stack.length = baseTop + 1;
+  }
 
-  stack.length = base;
+  if (thrown !== null) throw thrown;
 }
