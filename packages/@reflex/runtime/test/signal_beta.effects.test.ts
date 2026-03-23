@@ -14,7 +14,7 @@ describe("Reactive system - effects", () => {
     const effect = rt.effect(spy);
 
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(effect.node.state & ReactiveNodeState.Recycler).toBeTruthy();
+    expect(effect.node.state & ReactiveNodeState.Watcher).toBeTruthy();
     expect(effect.node.state & ReactiveNodeState.Invalid).toBeFalsy();
     expect(effect.node.state & ReactiveNodeState.Changed).toBeFalsy();
     expect(countIncoming(effect.node)).toBe(1);

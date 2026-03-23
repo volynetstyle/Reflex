@@ -1,9 +1,19 @@
 import { runEffect } from "../reactivity/engine/effect";
-import { DIRTY_STATE, ReactiveNode, ReactiveNodeState } from "../reactivity/shape";
+import {
+  DIRTY_STATE,
+  ReactiveNode,
+  ReactiveNodeState,
+} from "../reactivity/shape";
 
 export const enum EffectSchedulerMode {
   Flush = 0,
   Eager = 1,
+}
+
+export const enum SchedulerPhase {
+  Idle = 0,
+  Batching = 1,
+  Flushing = 2,
 }
 
 export type EffectStrategy = "flush" | "eager";
@@ -19,73 +29,56 @@ export function resolveEffectSchedulerMode(
 export class EffectScheduler {
   private readonly queue: ReactiveNode[] = [];
   private head = 0;
-  private flushing = false;
-  private boundaryDepth = 0;
+  private batchDepth = 0;
+  private phase = SchedulerPhase.Idle;
 
   constructor(private readonly mode: EffectSchedulerMode) {}
 
   enqueue(node: ReactiveNode): void {
-    if (
-      (node.state & ReactiveNodeState.Disposed) !== 0 ||
-      (node.state & ReactiveNodeState.Scheduled) !== 0
-    )
-      return;
+    if (this.isNodeIgnored(node)) return;
 
     node.state |= ReactiveNodeState.Scheduled;
     this.queue.push(node);
 
-    if (
-      this.mode === EffectSchedulerMode.Eager &&
-      !this.flushing &&
-      this.boundaryDepth === 0
-    ) {
+    if (this.shouldAutoFlush()) {
       this.flush();
     }
   }
 
   batch<T>(fn: () => T): T {
-    ++this.boundaryDepth;
+    this.enterBatch();
 
     try {
       return fn();
     } finally {
-      --this.boundaryDepth;
-
-      if (
-        this.boundaryDepth === 0 &&
-        this.mode === EffectSchedulerMode.Eager &&
-        !this.flushing &&
-        this.head < this.queue.length
-      ) {
-        this.flush();
-      }
+      this.leaveBatch();
     }
   }
 
   flush(): void {
-    if (this.flushing) return;
+    if (this.phase & SchedulerPhase.Flushing) return;
+    if (!this.hasPending()) return;
 
-    this.flushing = true;
+    this.phase = SchedulerPhase.Flushing;
 
     try {
       while (this.head < this.queue.length) {
-        const node = this.queue[this.head]!;
-        ++this.head;
+        const node = this.queue[this.head++]!;
         node.state &= ~ReactiveNodeState.Scheduled;
 
-        if (
-          (node.state & ReactiveNodeState.Disposed) !== 0 ||
-          (node.state & DIRTY_STATE) === 0
-        ) {
-          continue;
-        }
+        if (this.shouldSkipNode(node)) continue;
 
         runEffect(node);
       }
     } finally {
       this.queue.length = 0;
       this.head = 0;
-      this.flushing = false;
+      this.phase =
+        this.batchDepth > 0 ? SchedulerPhase.Batching : SchedulerPhase.Idle;
+
+      if (this.phase === SchedulerPhase.Idle && this.shouldAutoFlush()) {
+        this.flush();
+      }
     }
   }
 
@@ -96,7 +89,53 @@ export class EffectScheduler {
   reset(): void {
     this.queue.length = 0;
     this.head = 0;
-    this.flushing = false;
-    this.boundaryDepth = 0;
+    this.batchDepth = 0;
+    this.phase = SchedulerPhase.Idle;
+  }
+
+  private hasPending(): boolean {
+    return this.head < this.queue.length;
+  }
+
+  private isNodeIgnored(node: ReactiveNode): boolean {
+    return (
+      (node.state & ReactiveNodeState.Disposed) !== 0 ||
+      (node.state & ReactiveNodeState.Scheduled) !== 0
+    );
+  }
+
+  private shouldSkipNode(node: ReactiveNode): boolean {
+    return (
+      (node.state & ReactiveNodeState.Disposed) !== 0 ||
+      (node.state & DIRTY_STATE) === 0
+    );
+  }
+
+  private shouldAutoFlush(): boolean {
+    return (
+      this.mode === EffectSchedulerMode.Eager &&
+      this.phase === SchedulerPhase.Idle &&
+      this.hasPending()
+    );
+  }
+
+  private enterBatch(): void {
+    ++this.batchDepth;
+    if (this.phase !== SchedulerPhase.Flushing) {
+      this.phase = SchedulerPhase.Batching;
+    }
+  }
+
+  private leaveBatch(): void {
+    --this.batchDepth;
+
+    if (this.batchDepth !== 0) return;
+    if (this.phase === SchedulerPhase.Flushing) return;
+
+    this.phase = SchedulerPhase.Idle;
+
+    if (this.shouldAutoFlush()) {
+      this.flush();
+    }
   }
 }

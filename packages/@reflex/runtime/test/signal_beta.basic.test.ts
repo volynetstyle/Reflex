@@ -99,7 +99,7 @@ describe("Reactive system - basic correctness", () => {
 
     expect(s.node.state & ReactiveNodeState.Producer).toBeTruthy();
     expect(c.node.state & ReactiveNodeState.Consumer).toBeTruthy();
-    expect(c.node.state & ReactiveNodeState.Recycler).toBeFalsy();
+    expect(c.node.state & ReactiveNodeState.Watcher).toBeFalsy();
   });
 
   it("computes memos eagerly and caches the first value", () => {

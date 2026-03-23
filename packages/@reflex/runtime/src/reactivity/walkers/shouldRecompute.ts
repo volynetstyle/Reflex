@@ -26,27 +26,6 @@ function settleDirtySource(node: ReactiveNode, link: ReactiveEdge): boolean {
   return true;
 }
 
-function unwindDirtyStack(
-  sub: ReactiveNode,
-  needRecompute: boolean,
-  stack: ReactiveEdge[],
-  baseTop: number,
-): boolean {
-  while (dirtyCheckStackTop > baseTop) {
-    const parentLink = stack[dirtyCheckStackTop--]!;
-
-    if (needRecompute) {
-      needRecompute = settleDirtySource(sub, parentLink);
-    } else {
-      sub.state &= ~ReactiveNodeState.Invalid;
-    }
-
-    sub = parentLink.to;
-  }
-
-  return needRecompute;
-}
-
 function shouldRecomputeBranching(
   link: ReactiveEdge,
   sub: ReactiveNode,
@@ -158,7 +137,19 @@ function shouldRecomputeSingleDependency(
     break;
   }
 
-  return unwindDirtyStack(sub, needRecompute, stack, baseTop);
+  while (dirtyCheckStackTop > baseTop) {
+    const parentLink = stack[dirtyCheckStackTop--]!;
+
+    if (needRecompute) {
+      needRecompute = settleDirtySource(sub, parentLink);
+    } else {
+      sub.state &= ~ReactiveNodeState.Invalid;
+    }
+
+    sub = parentLink.to;
+  }
+
+  return needRecompute;
 }
 
 /**

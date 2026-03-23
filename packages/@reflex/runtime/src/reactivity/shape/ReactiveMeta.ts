@@ -5,7 +5,7 @@ export type Byte32Int = number;
 export const enum ReactiveNodeState {
   Producer = 1 << 0,
   Consumer = 1 << 1,
-  Recycler = 1 << 2,
+  Watcher = 1 << 2,
   
   Invalid = 1 << 3,
   Changed = 1 << 4,
@@ -33,7 +33,7 @@ export const CONSUMER_CHANGED =
   ReactiveNodeState.Consumer;
 
 export const RECYCLER_CHANGED =
-  ReactiveNodeState.Changed | ReactiveNodeState.Recycler;
+  ReactiveNodeState.Changed | ReactiveNodeState.Watcher;
 
 export const WALKER_STATE =
   ReactiveNodeState.Visited | ReactiveNodeState.Tracking;

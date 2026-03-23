@@ -50,8 +50,43 @@ function markSubscriber(edge: ReactiveEdge, sub: ReactiveNode): boolean {
   return true;
 }
 
+export function propagateDirectEdge(edge: ReactiveEdge): void {
+  const sub = edge.to;
+
+  if (!markSubscriber(edge, sub)) {
+    return;
+  }
+
+  const state = sub.state;
+  if ((state & ReactiveNodeState.Invalid) !== 0) {
+    sub.state =
+      (state & ~ReactiveNodeState.Invalid) | ReactiveNodeState.Changed;
+  }
+
+  if ((sub.state & ReactiveNodeState.Watcher) !== 0) {
+    runtime.dispatchWatcherEvent(sub);
+  }
+}
+
+export function propagateOnceMany(startEdge: ReactiveEdge): void {
+  let thrown: unknown = null;
+
+  for (
+    let edge: ReactiveEdge | null = startEdge;
+    edge !== null;
+    edge = edge.nextOut
+  ) {
+    try {
+      propagateDirectEdge(edge);
+    } catch (error) {
+      thrown ??= error;
+    }
+  }
+
+  if (thrown !== null) throw thrown;
+}
+
 function propagateSingleSubscriber(startEdge: ReactiveEdge): void {
-  const ctx = runtime;
   let edge = startEdge;
 
   while (true) {
@@ -61,8 +96,8 @@ function propagateSingleSubscriber(startEdge: ReactiveEdge): void {
       return;
     }
 
-    if (sub.state & ReactiveNodeState.Recycler) {
-      ctx.notifyEffectInvalidated(sub);
+    if (sub.state & ReactiveNodeState.Watcher) {
+      runtime.dispatchWatcherEvent(sub);
       return;
     }
 
@@ -81,7 +116,6 @@ function propagateSingleSubscriber(startEdge: ReactiveEdge): void {
 }
 
 export function propagateOnce(node: ReactiveNode): void {
-  const ctx = runtime;
   let thrown: unknown = null;
 
   for (let edge = node.firstOut; edge !== null; edge = edge.nextOut) {
@@ -95,9 +129,9 @@ export function propagateOnce(node: ReactiveNode): void {
     sub.state =
       (subState & ~ReactiveNodeState.Invalid) | ReactiveNodeState.Changed;
 
-    if (sub.state & ReactiveNodeState.Recycler) {
+    if (sub.state & ReactiveNodeState.Watcher) {
       try {
-        ctx.notifyEffectInvalidated(sub);
+        runtime.dispatchWatcherEvent(sub);
       } catch (error) {
         thrown ??= error;
       }
@@ -118,8 +152,7 @@ export function propagate(startEdge: ReactiveEdge): void {
     return;
   }
 
-  const ctx = runtime;
-  const stack = ctx.propagateStack;
+  const stack = runtime.propagateStack;
   const baseTop = propagateStackTop;
   let edge = startEdge;
   let resumeEdge: ReactiveEdge | null = startEdge.nextOut;
@@ -130,9 +163,9 @@ export function propagate(startEdge: ReactiveEdge): void {
       const sub = edge.to;
 
       if (markSubscriber(edge, sub)) {
-        if (sub.state & ReactiveNodeState.Recycler) {
+        if (sub.state & ReactiveNodeState.Watcher) {
           try {
-            ctx.notifyEffectInvalidated(sub);
+            runtime.dispatchWatcherEvent(sub);
           } catch (error) {
             thrown ??= error;
           }

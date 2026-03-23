@@ -10,9 +10,10 @@ import {
   clearDirtyState,
   PRODUCER_CHANGED,
 } from "../reactivity";
+import runtime from "../reactivity/context";
 
 export function readProducer<T>(node: ReactiveNode<T>): T {
-  if ((node.state & PRODUCER_CHANGED)) {
+  if (node.state & PRODUCER_CHANGED) {
     changePayload(node);
   }
 
@@ -23,7 +24,7 @@ export function readProducer<T>(node: ReactiveNode<T>): T {
 export function readConsumer<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
-  if (__DEV__ && (state & ReactiveNodeState.Computing)) {
+  if (__DEV__ && state & ReactiveNodeState.Computing) {
     throw new Error("Cycle detected while refreshing reactive graph");
   }
 
@@ -32,9 +33,8 @@ export function readConsumer<T>(node: ReactiveNode<T>): T {
     return node.payload as T;
   }
 
-  const needs =
-    (state & ReactiveNodeState.Changed) ||
-    shouldRecompute(node);
+  // if clean - even dont need request for recomputation
+  const needs = state & ReactiveNodeState.Changed || shouldRecompute(node);
 
   if (needs) {
     if (recompute(node)) propagateOnce(node);
@@ -44,4 +44,15 @@ export function readConsumer<T>(node: ReactiveNode<T>): T {
 
   trackRead(node);
   return node.payload as T;
+}
+
+export function untracked<T>(fn: () => T): T {
+  const prev = runtime.activeComputed;
+  runtime.activeComputed = null;
+
+  try {
+    return fn();
+  } finally {
+    runtime.activeComputed = prev;
+  }
 }

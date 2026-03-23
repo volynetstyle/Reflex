@@ -12,12 +12,12 @@ import {
   unlinkAllSubscribers,
 } from "../reactivity";
 import runtime from "../reactivity/context";
-import { EventDispatcher } from "../reactivity/shape/ReactiveEvent";
 import {
   EffectStrategy,
   EffectScheduler,
   resolveEffectSchedulerMode,
 } from "../scheduler/effect_scheduler";
+import { EventDispatcher } from "../scheduler/event_dispatcher";
 import { readConsumer, readProducer } from "./read";
 import { writeProducer } from "./write";
 
@@ -123,7 +123,6 @@ export function computed<T>(fn: () => T): Computed<T> {
   return accessor as Computed<T>;
 }
 
-/** Computed, вычисленный немедленно. */
 export function memo<T>(fn: () => T): Computed<T> {
   const c = computed(fn);
   c();
@@ -138,8 +137,10 @@ export function scan<T, A>(
   return createScan(source, seed, reducer);
 }
 
+const self = <Acc, T>(_: Acc, value: T) => value;
+
 export function hold<T>(source: Event<T>, initial: T) {
-  return createScan(source, initial, (_, value) => value);
+  return createScan(source, initial, self);
 }
 
 function createEventSource<T>(dispatcher: EventDispatcher): EventSource<T> {
@@ -197,50 +198,83 @@ function createScan<T, A>(
   return accessor;
 }
 
-export function createRuntime(options?: RuntimeOptions): Runtime {
+function createRuntimeInfrastructure(options?: RuntimeOptions) {
   const hooks = options?.hooks;
   const scheduler = new EffectScheduler(
     resolveEffectSchedulerMode(options?.effectStrategy),
   );
-  const eventDispatcher = new EventDispatcher((fn) => scheduler.batch(fn));
 
-  runtime.reset({
-    ...hooks,
-    onEffectInvalidated: (node) => {
-      scheduler.enqueue(node);
-      hooks?.onEffectInvalidated?.(node);
+  const dispatcher = new EventDispatcher((fn) => scheduler.batch(fn));
+
+  return {
+    scheduler,
+    dispatcher,
+    runtimeHooks: {
+      ...hooks,
+      onEffectInvalidated(node: ReactiveNode) {
+        scheduler.enqueue(node);
+        hooks?.onEffectInvalidated?.(node);
+      },
     },
+  };
+}
+
+function createEffectScope(
+  scheduler: EffectScheduler,
+  fn: () => void,
+): EffectScope {
+  const node = createEffectNode(fn);
+  runEffect(node);
+
+  const scope = Object.assign(
+    () => {
+      scheduler.clear(node);
+      disposeEffect(node);
+    },
+    {
+      node,
+      dispose() {
+        scope();
+      },
+    },
+  ) as EffectScope;
+
+  return scope;
+}
+
+function applyBatchWrites(
+  scheduler: EffectScheduler,
+  writes: readonly (readonly [Signal<any>, any])[],
+): void {
+  scheduler.batch(() => {
+    for (const [sig, value] of writes) {
+      writeProducer(sig.node, value);
+    }
   });
+}
+
+export function createRuntime(options?: RuntimeOptions): Runtime {
+  const { scheduler, dispatcher, runtimeHooks } =
+    createRuntimeInfrastructure(options);
+
+  runtime.resetState();
+  runtime.setHooks(runtimeHooks);
 
   return {
     event<T>() {
-      return createEventSource<T>(eventDispatcher);
+      return createEventSource<T>(dispatcher);
     },
 
     effect(fn) {
-      const node = createEffectNode(fn);
-      runEffect(node);
-
-      const dispose = Object.assign(
-        () => {
-          scheduler.clear(node);
-          disposeEffect(node);
-        },
-        {
-          node,
-          dispose() {
-            dispose();
-          },
-        },
-      ) as EffectScope;
-
-      return dispose;
+      return createEffectScope(scheduler, fn);
     },
 
-    flush: () => scheduler.flush(),
+    flush() {
+      scheduler.flush();
+    },
 
     batchWrite(writes) {
-      for (const [sig, value] of writes) writeProducer(sig.node, value);
+      applyBatchWrites(scheduler, writes);
     },
 
     get ctx() {

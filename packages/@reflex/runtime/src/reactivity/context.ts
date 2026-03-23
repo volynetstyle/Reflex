@@ -14,14 +14,17 @@ class EngineContext {
     this.hooks = hooks;
   }
 
-  notifyEffectInvalidated(node: ReactiveNode): void {
+  dispatchWatcherEvent(node: ReactiveNode): void {
     this.hooks.onEffectInvalidated?.(node);
   }
 
-  reset(hooks: EngineHooks = {}): void {
+  resetState(): void {
     this.activeComputed = null;
     this.propagateStack.length = 0;
     this.dirtyCheckStack.length = 0;
+  }
+
+  setHooks(hooks: EngineHooks = {}): void {
     delete this.hooks.onEffectInvalidated;
     Object.assign(this.hooks, hooks);
   }
