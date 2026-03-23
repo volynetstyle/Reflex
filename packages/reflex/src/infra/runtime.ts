@@ -1,0 +1,85 @@
+import {
+  EngineContext,
+  EngineHooks,
+  ReactiveEvent,
+  ReactiveNode,
+  runtime,
+} from "@reflex/runtime";
+import {
+  resolveEffectSchedulerMode,
+  EffectScheduler,
+  EventDispatcher,
+  EffectStrategy,
+  createSource,
+  subscribe,
+} from "../policy";
+
+interface RuntimeOptions {
+  hooks?: EngineHooks;
+  effectStrategy?: EffectStrategy;
+}
+
+function createRuntimeInfrastructure(options?: RuntimeOptions) {
+  const hooks = options?.hooks;
+  const scheduler = new EffectScheduler(
+    resolveEffectSchedulerMode(options?.effectStrategy),
+  );
+  const dispatcher = new EventDispatcher((fn) => scheduler.batch(fn));
+
+  return {
+    scheduler,
+    dispatcher,
+    runtimeHooks: {
+      ...hooks,
+      onEffectInvalidated(node: ReactiveNode) {
+        scheduler.enqueue(node);
+        hooks?.onEffectInvalidated?.(node);
+      },
+    },
+  };
+}
+
+export interface Event<T> {
+  subscribe(fn: (value: T) => void): Destructor;
+}
+
+export interface EventSource<T> extends Event<T> {
+  emit(value: T): void;
+}
+
+export interface Runtime {
+  event<T>(): EventSource<T>;
+  flush(): void;
+  readonly ctx: EngineContext;
+}
+
+export function createRuntime(options?: RuntimeOptions): Runtime {
+  const { scheduler, dispatcher, runtimeHooks } =
+    createRuntimeInfrastructure(options);
+
+  runtime.resetState();
+  runtime.setHooks(runtimeHooks);
+
+  return {
+    get ctx() {
+      return runtime;
+    },
+
+    event<T>() {
+      const source = createSource<T>();
+
+      return {
+        subscribe(fn: (value: T) => void) {
+          return subscribe(source, fn);
+        },
+        emit(value: T) {
+          dispatcher.emit(source, value);
+        },
+      };
+    },
+
+    flush() {
+      scheduler.flush();
+    },
+  };
+}

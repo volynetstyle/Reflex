@@ -1,9 +1,10 @@
-import { runEffect } from "../reactivity/engine/effect";
 import {
   DIRTY_STATE,
   ReactiveNode,
-  ReactiveNodeState,
-} from "../reactivity/shape";
+  runWatcher,
+} from "@reflex/runtime";
+import { ReactiveNodeState } from "../../../@reflex/runtime/src/reactivity/shape/ReactiveMeta";
+import { effectScheduled, effectUnscheduled } from "../api/effect";
 
 export const enum EffectSchedulerMode {
   Flush = 0,
@@ -37,7 +38,7 @@ export class EffectScheduler {
   enqueue(node: ReactiveNode): void {
     if (this.isNodeIgnored(node)) return;
 
-    node.state |= ReactiveNodeState.Scheduled;
+    effectScheduled(node);
     this.queue.push(node);
 
     if (this.shouldAutoFlush()) {
@@ -64,11 +65,11 @@ export class EffectScheduler {
     try {
       while (this.head < this.queue.length) {
         const node = this.queue[this.head++]!;
-        node.state &= ~ReactiveNodeState.Scheduled;
+        effectUnscheduled(node);
 
         if (this.shouldSkipNode(node)) continue;
 
-        runEffect(node);
+        runWatcher(node);
       }
     } finally {
       this.queue.length = 0;
@@ -76,14 +77,12 @@ export class EffectScheduler {
       this.phase =
         this.batchDepth > 0 ? SchedulerPhase.Batching : SchedulerPhase.Idle;
 
+      /* c8 ignore start -- the queue is fully drained before reaching this branch */
       if (this.phase === SchedulerPhase.Idle && this.shouldAutoFlush()) {
         this.flush();
       }
+      /* c8 ignore stop */
     }
-  }
-
-  clear(node: ReactiveNode): void {
-    node.state &= ~ReactiveNodeState.Scheduled;
   }
 
   reset(): void {
@@ -121,6 +120,7 @@ export class EffectScheduler {
 
   private enterBatch(): void {
     ++this.batchDepth;
+
     if (this.phase !== SchedulerPhase.Flushing) {
       this.phase = SchedulerPhase.Batching;
     }

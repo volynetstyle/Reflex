@@ -2,23 +2,24 @@ import {
   DIRTY_STATE,
   ReactiveNode,
   ReactiveNodeState,
+  UNINITIALIZED,
   clearDirtyState,
-} from "../shape";
-import { unlinkAllSources } from "../shape/methods/connect";
-import { executeNodeComputation } from "./execute";
-import { shouldRecompute } from "../walkers/shouldRecompute";
+} from "../reactivity/shape";
+import { unlinkAllSources } from "../reactivity/shape/methods/connect";
+import { executeNodeComputation } from "../reactivity/engine/execute";
+import { shouldRecompute } from "../reactivity/walkers/shouldRecompute";
 
-export function runEffect(node: ReactiveNode): void {
+export function runWatcher(node: ReactiveNode): void {
   const state = node.state;
 
-  if (!node.compute || (state & ReactiveNodeState.Disposed) !== 0) return;
+  if ((state & ReactiveNodeState.Disposed) !== 0) return;
   if ((state & DIRTY_STATE) === 0 || !shouldRecompute(node)) {
     clearDirtyState(node);
     return;
   }
 
   const prevCleanup = node.payload as (() => void) | null;
-  node.payload = null;
+  node.payload = UNINITIALIZED;
   prevCleanup?.();
 
   executeNodeComputation(node, (result) => {
@@ -27,13 +28,13 @@ export function runEffect(node: ReactiveNode): void {
   });
 }
 
-export function disposeEffect(node: ReactiveNode): void {
+export function disposeWatcher(node: ReactiveNode): void {
   if ((node.state & ReactiveNodeState.Disposed) !== 0) return;
 
   node.state |= ReactiveNodeState.Disposed;
   (node.payload as (() => void) | null)?.();
-  node.payload = null;
+  node.payload = UNINITIALIZED;
   unlinkAllSources(node);
 }
 
-export const recycling = runEffect;
+export const recycling = runWatcher;

@@ -32,5 +32,8 @@
     "dev": "node ../../node_modules/typescript/bin/tsc -w -p tsconfig.build.json",
     "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.json",
     "prepublishOnly": "pnpm typecheck && pnpm build:clean"
+  },
+  "dependencies": {
+    "@reflex/runtime": "workspace:*"
   }
 }

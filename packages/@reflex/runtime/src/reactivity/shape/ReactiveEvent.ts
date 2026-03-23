@@ -5,9 +5,9 @@ export interface ReactiveEvent<T> {
   active: boolean;
 }
 
-export interface EventSourceNode<T> {
+export interface ReactiveEventSourceNode<T> {
   head: ReactiveEvent<T> | null;
   tail: ReactiveEvent<T> | null;
 }
 
-export type Boundary = <T>(fn: () => T) => T;
+export type ReactiveEventBoundary = <T>(fn: () => T) => T;

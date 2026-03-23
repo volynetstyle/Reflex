@@ -7,6 +7,7 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "useUnknownInCatchVariables": true,
+    "useDefineForClassFields": true,
     "skipLibCheck": true,
     "declaration": true,
     "declarationMap": true,
@@ -15,15 +16,10 @@
     "allowImportingTsExtensions": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "isolatedModules": true,
+    "preserveConstEnums": false,
+    "isolatedModules": false,
     "composite": true
   },
-  "include": [
-    "src/index.ts",
-    "src/setup.ts",
-    "src/public-types.ts"
-  ],
-  "exclude": [
-    "dist"
-  ]
+  "include": ["src"],
+  "exclude": ["dist"]
 }

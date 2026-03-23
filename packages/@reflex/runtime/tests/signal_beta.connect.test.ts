@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
-import ReactiveNode from "../src/reactivity/shape/ReactiveNode";
-import { ReactiveNodeState } from "../src/reactivity/shape/ReactiveMeta";
-import {
-  linkEdge,
-  reuseOrCreateIncomingEdge,
-  unlinkEdge,
-} from "../src/reactivity/shape/methods/connect";
+import { ReactiveNodeState, ReactiveNode } from "../src";
+import { linkEdge, unlinkEdge, reuseOrCreateIncomingEdge } from "../src/reactivity";
+
 
 function createNode(kind: ReactiveNodeState = ReactiveNodeState.Producer) {
   return new ReactiveNode(undefined, null, kind);

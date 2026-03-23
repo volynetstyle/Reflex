@@ -1,12 +1,10 @@
 import ReactiveNode from "./ReactiveNode";
 
-export type Byte32Int = number;
-
 export const enum ReactiveNodeState {
   Producer = 1 << 0,
   Consumer = 1 << 1,
   Watcher = 1 << 2,
-  
+
   Invalid = 1 << 3,
   Changed = 1 << 4,
   Visited = 1 << 5,
@@ -28,11 +26,11 @@ export const PRODUCER_CHANGED =
 export const PRODUCER_DIRTY = ReactiveNodeState.Producer | DIRTY_STATE;
 
 export const CONSUMER_CHANGED =
-  ReactiveNodeState.Invalid |
-  ReactiveNodeState.Changed |
-  ReactiveNodeState.Consumer;
+  ReactiveNodeState.Changed | ReactiveNodeState.Consumer;
 
-export const RECYCLER_CHANGED =
+export const CONSUMER_DIRTY = ReactiveNodeState.Consumer | DIRTY_STATE;
+
+export const WATCHER_CHANGED =
   ReactiveNodeState.Changed | ReactiveNodeState.Watcher;
 
 export const WALKER_STATE =

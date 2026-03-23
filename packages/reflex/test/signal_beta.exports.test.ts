@@ -1,0 +1,25 @@
+import { describe, expect, it } from "vitest";
+import * as reflex from "../src";
+import * as api from "../src/api";
+import * as infra from "../src/infra";
+import * as policy from "../src/policy";
+
+describe("Reactive system - exports", () => {
+  it("re-exports the public API from the top-level barrel", () => {
+    expect(reflex.signal).toBe(api.signal);
+    expect(reflex.computed).toBe(api.computed);
+    expect(reflex.memo).toBe(api.memo);
+    expect(reflex.effect).toBe(api.effect);
+    expect(reflex.scan).toBe(api.scan);
+    expect(reflex.hold).toBe(api.hold);
+    expect(reflex.createRuntime).toBe(infra.createRuntime);
+  });
+
+  it("re-exports policy helpers from the policy barrel", () => {
+    expect(typeof policy.EffectScheduler).toBe("function");
+    expect(typeof policy.EventDispatcher).toBe("function");
+    expect(typeof policy.resolveEffectSchedulerMode).toBe("function");
+    expect(typeof policy.createSource).toBe("function");
+    expect(typeof policy.subscribe).toBe("function");
+  });
+});
