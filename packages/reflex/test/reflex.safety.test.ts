@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computed, createRuntime, signal } from "./signal_beta.test_utils";
+import { computed, createRuntime, signal } from "./reflex.test_utils";
 
 describe("Reactive system - safety and robustness", () => {
   it("restores the active consumer after a thrown compute", () => {

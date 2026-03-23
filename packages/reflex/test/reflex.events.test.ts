@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { computed } from "../src/api/derived";
 import { hold, scan } from "../src/api/event";
-import { createRuntime } from "./signal_beta.test_utils";
+import { createRuntime } from "./reflex.test_utils";
 
 describe("Reactive system - events", () => {
   it("delivers emitted values to subscribers in order", () => {

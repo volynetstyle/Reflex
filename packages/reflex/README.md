@@ -2,10 +2,10 @@
 
 Public reactive facade for Reflex.
 
-This package gives you a small, ready-to-use API on top of:
+This package provides a small API built on top of:
 
-- `@reflex/runtime` for runtime behavior
-- `@reflex/core` for low-level primitives
+- `@reflex/runtime` for reactive execution
+- `@reflex/core` for lower-level primitives
 
 ## Install
 
@@ -16,17 +16,37 @@ npm install @volynetstyle/reflex
 ## Usage
 
 ```ts
-import { signal, computed, effect, flush } from "@volynetstyle/reflex";
+import { computed, createRuntime, effect, signal } from "@volynetstyle/reflex";
 
-const count = signal(1);
-const doubled = computed(() => count.read() * 2);
+const rt = createRuntime();
+
+const [count, setCount] = signal(1);
+const doubled = computed(() => count() * 2);
 
 effect(() => {
   console.log(doubled());
 });
 
-count.write(2);
-flush();
+setCount(2);
+rt.flush();
+```
+
+## Events
+
+```ts
+import { createRuntime, hold, scan } from "@volynetstyle/reflex";
+
+const rt = createRuntime();
+const updates = rt.event<number>();
+
+const [total] = scan(updates, 0, (acc, value) => acc + value);
+const [latest] = hold(updates, 0);
+
+updates.emit(1);
+updates.emit(2);
+
+console.log(total()); // 3
+console.log(latest()); // 2
 ```
 
 ## Exports
@@ -35,10 +55,17 @@ flush();
 - `computed`
 - `memo`
 - `effect`
-- `flush`
-- `batchWrite`
+- `scan`
+- `hold`
 - `createRuntime`
-- `runtime`
+
+## Runtime API
+
+`createRuntime()` returns an object with:
+
+- `event()`
+- `flush()`
+- `ctx`
 
 ## License
 

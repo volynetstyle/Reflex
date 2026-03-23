@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ReactiveNodeState } from "../../@reflex/runtime/src/reactivity/shape/ReactiveMeta";
 import { effect, effectScheduled, effectUnscheduled } from "../src/api/effect";
 import { createEffectNode } from "../src/infra/factory";
-import { createRuntime, signal } from "./signal_beta.test_utils";
+import { createRuntime, signal } from "./reflex.test_utils";
 
 describe("Reactive system - effects", () => {
   it("runs once immediately and reruns after flush", () => {

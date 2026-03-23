@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { setup } from "./signal_beta.test_utils";
+import { setup } from "./reflex.test_utils";
 
 describe("Reactive system - memoization", () => {
   let signal: ReturnType<typeof setup>["signal"];

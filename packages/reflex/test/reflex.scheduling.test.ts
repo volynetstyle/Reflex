@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { computed, createRuntime, memo, signal } from "./signal_beta.test_utils";
+import { computed, createRuntime, memo, signal } from "./reflex.test_utils";
 
 describe("Reactive system - laziness and runtime coordination", () => {
   it("keeps computeds lazy until their first read", () => {
