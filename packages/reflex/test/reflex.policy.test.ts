@@ -1,28 +1,25 @@
 import { describe, expect, it, vi } from "vitest";
-import { ReactiveNodeState } from "../../@reflex/runtime/src/reactivity/shape/ReactiveMeta";
 import { createEffectNode } from "../src/infra/factory";
 import {
   EffectScheduler,
   EffectSchedulerMode,
   resolveEffectSchedulerMode,
 } from "../src/policy/effect_scheduler";
+import { EventDispatcher } from "../src/policy/event_dispatcher";
 import {
-  EventDispatcher,
-  createSource,
-  subscribe,
-} from "../src/policy/event_dispatcher";
+  subscribeEvent,
+  ReactiveNodeState,
+  EventSource,
+  EventBoundary,
+} from "@reflex/runtime";
 
 describe("Reactive system - policy helpers", () => {
   it("resolves effect strategy modes", () => {
     expect(resolveEffectSchedulerMode(undefined)).toBe(
       EffectSchedulerMode.Flush,
     );
-    expect(resolveEffectSchedulerMode("flush")).toBe(
-      EffectSchedulerMode.Flush,
-    );
-    expect(resolveEffectSchedulerMode("eager")).toBe(
-      EffectSchedulerMode.Eager,
-    );
+    expect(resolveEffectSchedulerMode("flush")).toBe(EffectSchedulerMode.Flush);
+    expect(resolveEffectSchedulerMode("eager")).toBe(EffectSchedulerMode.Eager);
   });
 
   it("flush scheduler dedupes enqueues and skips clean reruns", () => {
@@ -116,11 +113,11 @@ describe("Reactive system - policy helpers", () => {
   });
 
   it("subscribes, unsubscribes, and keeps double unsubscribe safe", () => {
-    const source = createSource<number>();
+    const source = new EventSource<number>();
     const first = vi.fn();
     const second = vi.fn();
-    const unsubscribeFirst = subscribe(source, first);
-    const unsubscribeSecond = subscribe(source, second);
+    const unsubscribeFirst = subscribeEvent(source, first);
+    const unsubscribeSecond = subscribeEvent(source, second);
 
     expect(source.head).toBeTruthy();
     expect(source.tail).toBeTruthy();
@@ -134,12 +131,12 @@ describe("Reactive system - policy helpers", () => {
   });
 
   it("dispatches through the boundary once and supports nested emits", () => {
-    const source = createSource<number>();
+    const source = new EventSource<number>();
     const seen: number[] = [];
-    const boundary = vi.fn((flush: () => void) => flush());
+    const boundary: any = vi.fn((flush: () => void) => flush());
     const dispatcher = new EventDispatcher(boundary);
 
-    subscribe(source, (value) => {
+    subscribeEvent(source, (value) => {
       seen.push(value);
       if (value === 1) {
         dispatcher.emit(source, 2);
@@ -153,42 +150,42 @@ describe("Reactive system - policy helpers", () => {
   });
 
   it("skips unsubscribed listeners and tolerates empty sources", () => {
-    const source = createSource<number>();
+    const source = new EventSource<number>();
     const dispatcher = new EventDispatcher();
     const seen: string[] = [];
 
     let unsubscribeSecond = () => {};
-    subscribe(source, (value) => {
+    subscribeEvent(source, (value) => {
       seen.push(`first:${value}`);
       unsubscribeSecond();
     });
-    unsubscribeSecond = subscribe(source, (value) => {
+    unsubscribeSecond = subscribeEvent(source, (value) => {
       seen.push(`second:${value}`);
     });
 
     dispatcher.emit(source, 1);
-    dispatcher.emit(createSource<number>(), 123);
+    dispatcher.emit(new EventSource<number>(), 123);
 
     expect(seen).toEqual(["first:1"]);
   });
 
   it("skips inactive middle listeners and guards against boundary reentry", () => {
-    const source = createSource<number>();
+    const source = new EventSource<number>();
     const seen: string[] = [];
     let unsubscribeMiddle = () => {};
-    const dispatcher = new EventDispatcher((flush) => {
+    const dispatcher = new EventDispatcher((flush): any => {
       flush();
       flush();
     });
 
-    subscribe(source, (value) => {
+    subscribeEvent(source, (value) => {
       seen.push(`first:${value}`);
       unsubscribeMiddle();
     });
-    unsubscribeMiddle = subscribe(source, (value) => {
+    unsubscribeMiddle = subscribeEvent(source, (value) => {
       seen.push(`middle:${value}`);
     });
-    subscribe(source, (value) => {
+    subscribeEvent(source, (value) => {
       seen.push(`last:${value}`);
     });
 

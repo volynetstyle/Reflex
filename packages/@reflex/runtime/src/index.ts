@@ -2,6 +2,7 @@ export {
   readProducer,
   writeProducer,
   readConsumer,
+  runAndReadConsumer,
   runWatcher,
   disposeWatcher,
 } from "./api";
@@ -24,18 +25,23 @@ export {
   CONSUMER_CHANGED,
   CONSUMER_DIRTY,
   //
-  WATCHER_CHANGED as RECYCLER_INITIAL_STATE,
+  WATCHER_CHANGED as WATCHER_INITIAL_STATE,
   WATCHER_CHANGED,
   //
   WALKER_STATE,
   //
   ReactiveNode,
   ReactiveNodeState,
-} from "./reactivity";
-
-export type {
-  // types
-  ReactiveEvent,
-  ReactiveEventSourceNode,
-  ReactiveEventBoundary,
+  isDisposedNode,
+  disposeNode,
+  disposeNodeEvent,
+  //
+  EventSubscriber,
+  EventSource,
+  EventBoundary,
+  identityBoundary,
+  appendSubscriber,
+  removeSubscriber,
+  subscribeEvent,
+  emitEvent,
 } from "./reactivity";

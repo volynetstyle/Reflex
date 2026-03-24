@@ -1,6 +1,6 @@
 import ReactiveNode from "./ReactiveNode";
 
-export const enum ReactiveNodeState {
+export enum ReactiveNodeState {
   Producer = 1 << 0,
   Consumer = 1 << 1,
   Watcher = 1 << 2,
@@ -46,4 +46,8 @@ export function clearNodeComputing(node: ReactiveNode): void {
 
 export function clearDirtyState(node: ReactiveNode): void {
   node.state &= ~DIRTY_STATE;
+}
+
+export function isDisposedNode(node: ReactiveNode): boolean {
+  return (node.state & ReactiveNodeState.Disposed) !== 0;
 }

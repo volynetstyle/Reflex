@@ -1,7 +1,7 @@
 import {
   CONSUMER_INITIAL_STATE,
   PRODUCER_INITIAL_STATE,
-  RECYCLER_INITIAL_STATE,
+  WATCHER_INITIAL_STATE,
 } from "@reflex/runtime";
 import { describe, expect, it } from "vitest";
 import { ReactiveNodeState } from "../../@reflex/runtime/src/reactivity/shape/ReactiveMeta";
@@ -9,7 +9,7 @@ import {
   UNINITIALIZED,
   createComputedNode,
   createEffectNode,
-  createScanNode,
+  createAccumulator,
   createSignalNode,
   createSource,
 } from "../src/infra/factory";
@@ -17,7 +17,7 @@ import {
 describe("Reactive system - factory helpers", () => {
   it("creates producer nodes for signals and scans", () => {
     const signalNode = createSignalNode(1);
-    const scanNode = createScanNode(2);
+    const scanNode = createAccumulator(2);
 
     expect(signalNode.payload).toBe(1);
     expect(signalNode.pendingPayload).toBe(1);
@@ -43,7 +43,7 @@ describe("Reactive system - factory helpers", () => {
     const node = createEffectNode(compute);
 
     expect(node.compute).toBe(compute);
-    expect(node.state).toBe(RECYCLER_INITIAL_STATE);
+    expect(node.state).toBe(WATCHER_INITIAL_STATE);
     expect(node.state & ReactiveNodeState.Watcher).toBeTruthy();
     expect(node.payload).toBeNull();
   });

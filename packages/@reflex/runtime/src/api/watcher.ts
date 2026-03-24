@@ -5,7 +5,10 @@ import {
   UNINITIALIZED,
   clearDirtyState,
 } from "../reactivity/shape";
-import { unlinkAllSources } from "../reactivity/shape/methods/connect";
+import {
+  disposeNode,
+  unlinkAllSources,
+} from "../reactivity/shape/methods/connect";
 import { executeNodeComputation } from "../reactivity/engine/execute";
 import { shouldRecompute } from "../reactivity/walkers/shouldRecompute";
 
@@ -18,7 +21,8 @@ export function runWatcher(node: ReactiveNode): void {
     return;
   }
 
-  const prevCleanup = node.payload as (() => void) | null;
+  const prevCleanup =
+    typeof node.payload === "function" ? (node.payload as () => void) : null;
   node.payload = UNINITIALIZED;
   prevCleanup?.();
 
@@ -29,12 +33,12 @@ export function runWatcher(node: ReactiveNode): void {
 }
 
 export function disposeWatcher(node: ReactiveNode): void {
-  if ((node.state & ReactiveNodeState.Disposed) !== 0) return;
+  disposeNode(node);
 
-  node.state |= ReactiveNodeState.Disposed;
-  (node.payload as (() => void) | null)?.();
+  const cleanup =
+    typeof node.payload === "function" ? (node.payload as () => void) : null;
+  cleanup?.();
   node.payload = UNINITIALIZED;
-  unlinkAllSources(node);
 }
 
 export const recycling = runWatcher;

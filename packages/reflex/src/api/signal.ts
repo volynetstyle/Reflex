@@ -36,7 +36,7 @@ export function signal<T>(
       typeof input !== "function" ? input : (<Updater<T>>input)(previous);
 
     writeProducer(node, next);
-    return next;
+    return next as T;
   } as Setter<T>;
 
   return [value, setValue] as const;

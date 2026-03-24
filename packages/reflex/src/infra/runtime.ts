@@ -1,18 +1,17 @@
 import {
   EngineContext,
   EngineHooks,
-  ReactiveEvent,
   ReactiveNode,
   runtime,
+  subscribeEvent,
 } from "@reflex/runtime";
 import {
   resolveEffectSchedulerMode,
   EffectScheduler,
   EventDispatcher,
   EffectStrategy,
-  createSource,
-  subscribe,
 } from "../policy";
+import { createAccumulator, createSource } from "./factory";
 
 interface RuntimeOptions {
   hooks?: EngineHooks;
@@ -66,11 +65,11 @@ export function createRuntime(options?: RuntimeOptions): Runtime {
     },
 
     event<T>() {
-      const source = createSource<T>();
+      const source = createSource();
 
       return {
         subscribe(fn: (value: T) => void) {
-          return subscribe(source, fn);
+          return subscribeEvent(source, fn);
         },
         emit(value: T) {
           dispatcher.emit(source, value);

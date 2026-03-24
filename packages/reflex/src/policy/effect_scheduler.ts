@@ -1,10 +1,7 @@
-import {
-  DIRTY_STATE,
-  ReactiveNode,
-  runWatcher,
-} from "@reflex/runtime";
+import { DIRTY_STATE, ReactiveNode, runWatcher } from "@reflex/runtime";
 import { ReactiveNodeState } from "../../../@reflex/runtime/src/reactivity/shape/ReactiveMeta";
 import { effectScheduled, effectUnscheduled } from "../api/effect";
+import { UNINITIALIZED } from "../infra";
 
 export const enum EffectSchedulerMode {
   Flush = 0,
@@ -28,7 +25,8 @@ export function resolveEffectSchedulerMode(
 }
 
 export class EffectScheduler {
-  private readonly queue: ReactiveNode[] = [];
+  private readonly queue: ReactiveNode<typeof UNINITIALIZED | Destructor>[] =
+    [];
   private head = 0;
   private batchDepth = 0;
   private phase = SchedulerPhase.Idle;

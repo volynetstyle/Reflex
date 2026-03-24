@@ -19,7 +19,5 @@ describe("Reactive system - exports", () => {
     expect(typeof policy.EffectScheduler).toBe("function");
     expect(typeof policy.EventDispatcher).toBe("function");
     expect(typeof policy.resolveEffectSchedulerMode).toBe("function");
-    expect(typeof policy.createSource).toBe("function");
-    expect(typeof policy.subscribe).toBe("function");
   });
 });

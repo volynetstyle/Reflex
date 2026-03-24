@@ -1,35 +1,25 @@
-import {
-  runWatcher,
-  disposeWatcher,
-  ReactiveNode,
-} from "@reflex/runtime";
-import { ReactiveNodeState } from "../../../@reflex/runtime/src/reactivity/shape/ReactiveMeta";
-import { createEffectNode } from "../infra";
+import { runWatcher, disposeWatcher, ReactiveNode, ReactiveNodeState } from "@reflex/runtime";
+import { createEffectNode, UNINITIALIZED } from "../infra";
 
 export function effectScheduled(
-  node: ReactiveNode<Destructor | null>,
+  node: ReactiveNode<typeof UNINITIALIZED | Destructor>,
 ) {
   node.state |= ReactiveNodeState.Scheduled;
 }
 
 export function effectUnscheduled(
-  node: ReactiveNode<Destructor | null>,
+  node: ReactiveNode<typeof UNINITIALIZED | Destructor>,
 ) {
   node.state &= ~ReactiveNodeState.Scheduled;
 }
 
-export interface EffectScope {
-  (): void;
-  dispose(): void;
-}
-
-export function effect(fn: EffectFn): EffectScope {
+export function effect(fn: EffectFn): Effect<void> {
   const node = createEffectNode(fn);
   runWatcher(node);
 
   const scope = function (): void {
     disposeWatcher(node);
-  } as EffectScope;
+  } as Effect<void>;
 
   scope.dispose = scope;
 

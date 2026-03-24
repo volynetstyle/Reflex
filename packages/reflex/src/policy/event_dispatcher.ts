@@ -1,94 +1,20 @@
 import {
-  ReactiveEventSourceNode,
-  ReactiveEvent,
-  ReactiveEventBoundary,
+  EventSource,
+  EventBoundary,
+  emitEvent,
+  identityBoundary,
 } from "@reflex/runtime";
 
-function runWithoutBoundary<T>(fn: () => T): T {
-  return fn();
-}
-
-function detachSubscriber<T>(
-  source: ReactiveEventSourceNode<T>,
-  subscriber: ReactiveEvent<T>,
-): void {
-  const prev = subscriber.prev;
-  const next = subscriber.next;
-
-  if (prev !== null) prev.next = next;
-  else source.head = next;
-
-  if (next !== null) next.prev = prev;
-  else source.tail = prev;
-
-  subscriber.active = false;
-}
-
-export function createSource<T>(): ReactiveEventSourceNode<T> {
-  return {
-    head: null,
-    tail: null,
-  };
-}
-
-export function subscribe<T>(
-  source: ReactiveEventSourceNode<T>,
-  fn: (value: T) => void,
-): () => void {
-  const subscriber: ReactiveEvent<T> = {
-    fn,
-    next: null,
-    prev: source.tail,
-    active: true,
-  };
-
-  const tail = source.tail;
-  if (tail !== null) {
-    tail.next = subscriber;
-  } else {
-    source.head = subscriber;
-  }
-
-  source.tail = subscriber;
-
-  return () => {
-    if (!subscriber.active) return;
-    detachSubscriber(source, subscriber);
-  };
-}
-
-function deliver(
-  source: ReactiveEventSourceNode<unknown>,
-  value: unknown,
-): void {
-  const end = source.tail;
-  let current = source.head!;
-
-  if (current === null || end === null) return;
-
-  while (current !== end) {
-    const next = current.next;
-    if (current.active) current.fn(value);
-    current = next!;
-  }
-
-  if (end.active) {
-    end.fn(value);
-  }
-}
-
 export class EventDispatcher {
-  private readonly sources: ReactiveEventSourceNode<unknown>[] = [];
+  private readonly sources: EventSource<unknown>[] = [];
   private readonly values: unknown[] = [];
   private head = 0;
   private flushing = false;
 
-  constructor(
-    private readonly runBoundary: ReactiveEventBoundary = runWithoutBoundary,
-  ) {}
+  constructor(private readonly runBoundary: EventBoundary = identityBoundary) {}
 
-  emit<T>(source: ReactiveEventSourceNode<T>, value: T): void {
-    this.sources.push(source as ReactiveEventSourceNode<unknown>);
+  emit<T>(source: EventSource<T>, value: T): void {
+    this.sources.push(source as EventSource<unknown>);
     this.values.push(value);
 
     if (!this.flushing) {
@@ -109,7 +35,7 @@ export class EventDispatcher {
 
       while (this.head < sources.length) {
         const index = this.head++;
-        deliver(sources[index]!, values[index]);
+        emitEvent(sources[index]!, values[index]);
       }
     } finally {
       this.sources.length = 0;

@@ -9,6 +9,7 @@ import {
   propagateOnce,
   clearDirtyState,
   PRODUCER_CHANGED,
+  UNINITIALIZED,
 } from "../reactivity";
 import runtime from "../reactivity/context";
 
@@ -44,6 +45,15 @@ export function readConsumer<T>(node: ReactiveNode<T>): T {
 
   trackRead(node);
   return node.payload as T;
+}
+
+export function runAndReadConsumer<T>(node: ReactiveNode<T>): T {
+  if (node.payload === UNINITIALIZED) {
+    trackRead(node);
+    return node.payload;
+  }
+
+  return readConsumer(node);
 }
 
 export function untracked<T>(fn: () => T): T {
