@@ -28,8 +28,7 @@ export function appendSubscriber<T>(
   }
 
   subscriber.prev = tail;
-  tail.next = subscriber;
-  source.tail = subscriber;
+  tail.next = source.tail = subscriber;
 }
 
 export function removeSubscriber<T>(

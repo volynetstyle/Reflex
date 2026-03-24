@@ -2,7 +2,7 @@ import { Reactivable } from "./Reactivable";
 import type { ReactiveEdge } from "./ReactiveEdge";
 import { ReactiveNodeState } from "./ReactiveMeta";
 
-type ComputeFn<T> = ((previous?: T) => T) | (() => T) | null;
+type ComputeFn<T> = (() => T) | null;
 const UNINITIALIZED = Symbol("UNINITIALIZED");
 
 class ReactiveNode<T = unknown> implements Reactivable {
