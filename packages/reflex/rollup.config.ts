@@ -25,7 +25,4 @@ function createConfig(input: string, output: string): RollupOptions {
   };
 }
 
-export default [
-  createConfig("build/esm/index.js", "dist/index.js"),
-  createConfig("build/esm/setup.js", "dist/setup.js"),
-];
+export default [createConfig("build/esm/index.js", "dist/index.js")];

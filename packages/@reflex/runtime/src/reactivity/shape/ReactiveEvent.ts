@@ -1,7 +1,3 @@
-import { unlinkAllSubscribers } from "./methods";
-import { ReactiveNodeState } from "./ReactiveMeta";
-import ReactiveNode from "./ReactiveNode";
-
 export interface EventSubscriber<T> {
   fn: (value: T) => void;
   next: EventSubscriber<T> | null;
@@ -10,13 +6,8 @@ export interface EventSubscriber<T> {
 }
 
 export class EventSource<T> {
-  head: EventSubscriber<T> | null;
-  tail: EventSubscriber<T> | null;
-
-  constructor() {
-    this.head = null;
-    this.tail = null;
-  }
+  head: EventSubscriber<T> | null = null;
+  tail: EventSubscriber<T> | null = null;
 }
 
 export type EventBoundary = <T>(fn: () => T) => T;
@@ -32,8 +23,7 @@ export function appendSubscriber<T>(
   const tail = source.tail;
 
   if (tail === null) {
-    source.head = subscriber;
-    source.tail = subscriber;
+    source.head = source.tail = subscriber;
     return;
   }
 
@@ -46,13 +36,14 @@ export function removeSubscriber<T>(
   source: EventSource<T>,
   subscriber: EventSubscriber<T>,
 ): void {
-  const { prev, next } = subscriber;
+  const prev = subscriber.prev;
+  const next = subscriber.next;
 
-  if (prev !== null) prev.next = next;
-  else source.head = next;
+  if (prev === null) source.head = next;
+  else prev.next = next;
 
-  if (next !== null) next.prev = prev;
-  else source.tail = prev;
+  if (next === null) source.tail = prev;
+  else next.prev = prev;
 
   subscriber.prev = null;
   subscriber.next = null;
@@ -73,8 +64,9 @@ export function subscribeEvent<T>(
   appendSubscriber(source, subscriber);
 
   return () => {
-    if (!subscriber.active) return;
-    removeSubscriber(source, subscriber);
+    if (subscriber.active) {
+      removeSubscriber(source, subscriber);
+    }
   };
 }
 
@@ -87,17 +79,18 @@ export function emitEvent<T>(
     const last = source.tail;
     if (last === null) return;
 
-    const subscribers: EventSubscriber<T>[] = [];
+    const snapshot: EventSubscriber<T>[] = [];
 
-    for (let current = source.head; current !== null; current = current.next) {
-      subscribers.push(current);
-      if (current === last) break;
+    for (let node = source.head; node !== null; node = node.next) {
+      snapshot.push(node);
+      if (node === last) break;
     }
 
-    for (const current of subscribers) {
-      if (!current.active) continue;
-
-      current.fn(value);
+    for (let i = 0; i < snapshot.length; i++) {
+      const node = snapshot[i]!;
+      if (node.active) {
+        node.fn(value);
+      }
     }
   });
 }
