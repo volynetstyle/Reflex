@@ -9,7 +9,6 @@ import {
   writeProducer,
 } from "../src";
 import { linkEdge } from "../src/reactivity/shape/methods/connect";
-import { propagateDirectEdge } from "../src/reactivity/walkers/propagate";
 import {
   createConsumer,
   createProducer,
@@ -151,15 +150,15 @@ describe("Reactive runtime - traversal invariants", () => {
     target.state = ReactiveNodeState.Consumer | ReactiveNodeState.Tracking;
     target.depsTail = trackedEdge;
 
-    propagateDirectEdge(staleEdge);
+    writeProducer(stale, 3);
     expect(target.state).toBe(
       ReactiveNodeState.Consumer | ReactiveNodeState.Tracking,
     );
 
-    propagateDirectEdge(trackedEdge);
+    writeProducer(tracked, 2);
     expect(target.state & ReactiveNodeState.Tracking).toBeTruthy();
     expect(target.state & ReactiveNodeState.Visited).toBeTruthy();
-    expect(target.state & ReactiveNodeState.Changed).toBeTruthy();
-    expect(target.state & ReactiveNodeState.Invalid).toBeFalsy();
+    expect(target.state & ReactiveNodeState.Changed).toBeFalsy();
+    expect(target.state & ReactiveNodeState.Invalid).toBeTruthy();
   });
 });

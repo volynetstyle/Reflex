@@ -13,148 +13,11 @@ import { propagateOnce } from "./propagate";
 // This differs from propagate's resume-edge stack and must not be shared.
 let dirtyCheckStackTop = -1;
 
-function settleDirtySource(node: ReactiveNode, link: ReactiveEdge): boolean {
-  const isSignal = (node.state & ReactiveNodeState.Producer) !== 0;
-  const changed = isSignal ? changePayload(node) : recompute(node);
-
-  if (!changed) return false;
-
-  if (!isSignal && (link.prevOut !== null || link.nextOut !== null)) {
-    propagateOnce(node);
-  }
-
-  return true;
-}
-
-function shouldRecomputeBranching(
-  link: ReactiveEdge,
-  sub: ReactiveNode,
-  needRecompute: boolean,
-  stack: ReactiveEdge[],
-  baseTop: number,
-): boolean {
-  top: do {
-    const dep = link.from;
-    const depState = dep.state;
-
-    if (sub.state & ReactiveNodeState.Changed) {
-      needRecompute = true;
-    } else if (depState & ReactiveNodeState.Changed) {
-      needRecompute = settleDirtySource(dep, link) || needRecompute;
-    } else if (
-      (depState & ReactiveNodeState.Producer) === 0 &&
-      (depState & DIRTY_STATE) !== 0
-    ) {
-      stack[++dirtyCheckStackTop] = link;
-      link = dep.firstIn!;
-      sub = dep;
-      continue;
-    }
-
-    if (!needRecompute) {
-      const nextLink = link.nextIn;
-
-      if (nextLink !== null) {
-        link = nextLink;
-        continue;
-      }
-    }
-
-    while (dirtyCheckStackTop > baseTop) {
-      const parentLink = stack[dirtyCheckStackTop--]!;
-
-      if (needRecompute) {
-        needRecompute = settleDirtySource(sub, parentLink);
-      } else {
-        sub.state &= ~ReactiveNodeState.Invalid;
-      }
-
-      sub = parentLink.to;
-      link = parentLink;
-
-      if (!needRecompute) {
-        const nextLink = link.nextIn;
-
-        if (nextLink !== null) {
-          link = nextLink;
-          continue top;
-        }
-      }
-    }
-
-    return needRecompute;
-  } while (true);
-}
-
-function shouldRecomputeSingleDependency(
-  node: ReactiveNode,
-  firstLink: ReactiveEdge,
-  stack: ReactiveEdge[],
-  baseTop: number,
-): boolean {
-  let link = firstLink;
-  let sub = node;
-  let needRecompute = false;
-
-  while (true) {
-    const dep = link.from;
-    const depState = dep.state;
-
-    if (sub.state & ReactiveNodeState.Changed) {
-      needRecompute = true;
-      break;
-    }
-
-    if (depState & ReactiveNodeState.Changed) {
-      needRecompute = settleDirtySource(dep, link);
-      break;
-    }
-
-    if (
-      (depState & ReactiveNodeState.Producer) === 0 &&
-      (depState & DIRTY_STATE) !== 0
-    ) {
-      const depFirstIn = dep.firstIn!;
-
-      if (depFirstIn.nextIn !== null) {
-        stack[++dirtyCheckStackTop] = link;
-        return shouldRecomputeBranching(
-          depFirstIn,
-          dep,
-          needRecompute,
-          stack,
-          baseTop,
-        );
-      }
-
-      stack[++dirtyCheckStackTop] = link;
-      link = depFirstIn;
-      sub = dep;
-      continue;
-    }
-
-    sub.state &= ~ReactiveNodeState.Invalid;
-    break;
-  }
-
-  while (dirtyCheckStackTop > baseTop) {
-    const parentLink = stack[dirtyCheckStackTop--]!;
-
-    if (needRecompute) {
-      needRecompute = settleDirtySource(sub, parentLink);
-    } else {
-      sub.state &= ~ReactiveNodeState.Invalid;
-    }
-
-    sub = parentLink.to;
-  }
-
-  return needRecompute;
-}
-
 /**
  * Pull-side depth-first walk over incoming dependencies.
- * Refreshes only pending/changed branches; exits early on first stale source.
+ * It starts at the current incoming edge, stays on the cheap single-link path
+ * while there are no sibling deps to inspect, and only escalates into stack-
+ * backed branch traversal when a dirty dependency must be descended into.
  */
 export function shouldRecompute(node: ReactiveNode): boolean {
   const state = node.state;
@@ -170,11 +33,82 @@ export function shouldRecompute(node: ReactiveNode): boolean {
 
   const stack = runtime.dirtyCheckStack;
   const baseTop = dirtyCheckStackTop;
+  let link = firstIn;
+  let sub = node;
+  let needRecompute = false;
 
   try {
-    return firstIn.nextIn === null
-      ? shouldRecomputeSingleDependency(node, firstIn, stack, baseTop)
-      : shouldRecomputeBranching(firstIn, node, false, stack, baseTop);
+    top: do {
+      const dep = link.from;
+      const depState = dep.state;
+
+      if ((sub.state & ReactiveNodeState.Changed) !== 0) {
+        needRecompute = true;
+      } else if ((depState & ReactiveNodeState.Changed) !== 0) {
+        const isSignal = (depState & ReactiveNodeState.Producer) !== 0;
+        const changed = isSignal ? changePayload(dep) : recompute(dep);
+
+        if (changed && !isSignal && (link.prevOut !== null || link.nextOut !== null)) {
+          propagateOnce(dep);
+        }
+
+        needRecompute = changed || needRecompute;
+      } else if (
+        (depState & ReactiveNodeState.Producer) === 0 &&
+        (depState & DIRTY_STATE) !== 0
+      ) {
+        stack[++dirtyCheckStackTop] = link;
+        link = dep.firstIn!;
+        sub = dep;
+        continue;
+      }
+
+      if (!needRecompute) {
+        const nextLink = link.nextIn;
+
+        if (nextLink !== null) {
+          link = nextLink;
+          continue;
+        }
+
+        sub.state &= ~ReactiveNodeState.Invalid;
+      }
+
+      while (dirtyCheckStackTop > baseTop) {
+        const parentLink = stack[dirtyCheckStackTop--]!;
+        const isSignal = (sub.state & ReactiveNodeState.Producer) !== 0;
+
+        if (needRecompute) {
+          const changed = isSignal ? changePayload(sub) : recompute(sub);
+
+          if (
+            changed &&
+            !isSignal &&
+            (parentLink.prevOut !== null || parentLink.nextOut !== null)
+          ) {
+            propagateOnce(sub);
+          }
+
+          needRecompute = changed;
+        } else {
+          sub.state &= ~ReactiveNodeState.Invalid;
+        }
+
+        sub = parentLink.to;
+        link = parentLink;
+
+        if (!needRecompute) {
+          const nextLink = link.nextIn;
+
+          if (nextLink !== null) {
+            link = nextLink;
+            continue top;
+          }
+        }
+      }
+
+      return needRecompute;
+    } while (true);
   } finally {
     dirtyCheckStackTop = baseTop;
     stack.length = baseTop + 1;

@@ -11,110 +11,6 @@ import {
 // from dirty-check's parent-link stack because the traversal semantics differ.
 let propagateStackTop = -1;
 
-function isTrackedEdge(checkEdge: ReactiveEdge, sub: ReactiveNode): boolean {
-  for (let edge = sub.depsTail; edge !== null; edge = edge.prevIn) {
-    if (edge === checkEdge) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function markSubscriber(edge: ReactiveEdge, sub: ReactiveNode): boolean {
-  const state = sub.state;
-
-  if (
-    (state & DIRTY_STATE) !== 0 ||
-    (state & ReactiveNodeState.Disposed) !== 0
-  ) {
-    return false;
-  }
-
-  if ((state & WALKER_STATE) === 0) {
-    sub.state = state | ReactiveNodeState.Invalid;
-    return true;
-  }
-
-  if ((state & ReactiveNodeState.Tracking) === 0) {
-    sub.state =
-      (state & ~ReactiveNodeState.Visited) | ReactiveNodeState.Invalid;
-    return true;
-  }
-
-  if (!isTrackedEdge(edge, sub)) {
-    return false;
-  }
-
-  sub.state = state | ReactiveNodeState.Visited | ReactiveNodeState.Invalid;
-  return true;
-}
-
-export function propagateDirectEdge(edge: ReactiveEdge): void {
-  const sub = edge.to;
-
-  if (!markSubscriber(edge, sub)) {
-    return;
-  }
-
-  const state = sub.state;
-  if ((state & ReactiveNodeState.Invalid) !== 0) {
-    sub.state =
-      (state & ~ReactiveNodeState.Invalid) | ReactiveNodeState.Changed;
-  }
-
-  if ((sub.state & ReactiveNodeState.Watcher) !== 0) {
-    runtime.dispatchWatcherEvent(sub);
-  }
-}
-
-export function propagateOnceMany(startEdge: ReactiveEdge): void {
-  let thrown: unknown = null;
-
-  for (
-    let edge: ReactiveEdge | null = startEdge;
-    edge !== null;
-    edge = edge.nextOut
-  ) {
-    try {
-      propagateDirectEdge(edge);
-    } catch (error) {
-      thrown ??= error;
-    }
-  }
-
-  if (thrown !== null) throw thrown;
-}
-
-function propagateSingleSubscriber(startEdge: ReactiveEdge): void {
-  let edge = startEdge;
-
-  while (true) {
-    const sub = edge.to;
-
-    if (!markSubscriber(edge, sub)) {
-      return;
-    }
-
-    if (sub.state & ReactiveNodeState.Watcher) {
-      runtime.dispatchWatcherEvent(sub);
-      return;
-    }
-
-    const firstOut = sub.firstOut;
-    if (firstOut === null) {
-      return;
-    }
-
-    if (firstOut.nextOut !== null) {
-      propagate(firstOut);
-      return;
-    }
-
-    edge = firstOut;
-  }
-}
-
 export function propagateOnce(node: ReactiveNode): void {
   let thrown: unknown = null;
 
@@ -143,15 +39,11 @@ export function propagateOnce(node: ReactiveNode): void {
 
 /**
  * Push-side non-recursive DFS over outgoing subscriber edges.
- * It marks downstream nodes pending and only descends into activated computed
- * subscribers, keeping the traversal iterative for predictable hot-path cost.
+ * It starts in the cheapest mode possible:
+ * mark one subscriber, keep walking a single chain if there is only one edge,
+ * and escalate to sibling-resume DFS only when branching actually appears.
  */
 export function propagate(startEdge: ReactiveEdge): void {
-  if (startEdge.nextOut === null) {
-    propagateSingleSubscriber(startEdge);
-    return;
-  }
-
   const stack = runtime.propagateStack;
   const baseTop = propagateStackTop;
   let edge = startEdge;
@@ -161,8 +53,36 @@ export function propagate(startEdge: ReactiveEdge): void {
   try {
     top: do {
       const sub = edge.to;
+      const state = sub.state;
+      let marked = false;
 
-      if (markSubscriber(edge, sub)) {
+      if (
+        (state & DIRTY_STATE) === 0 &&
+        (state & ReactiveNodeState.Disposed) === 0
+      ) {
+        if ((state & WALKER_STATE) === 0) {
+          sub.state = state | ReactiveNodeState.Invalid;
+          marked = true;
+        } else if ((state & ReactiveNodeState.Tracking) === 0) {
+          sub.state =
+            (state & ~ReactiveNodeState.Visited) | ReactiveNodeState.Invalid;
+          marked = true;
+        } else {
+          for (
+            let trackedEdge = sub.depsTail;
+            trackedEdge !== null;
+            trackedEdge = trackedEdge.prevIn
+          ) {
+            if (trackedEdge !== edge) continue;
+            sub.state =
+              state | ReactiveNodeState.Visited | ReactiveNodeState.Invalid;
+            marked = true;
+            break;
+          }
+        }
+      }
+
+      if (marked) {
         if (sub.state & ReactiveNodeState.Watcher) {
           try {
             runtime.dispatchWatcherEvent(sub);
@@ -176,6 +96,7 @@ export function propagate(startEdge: ReactiveEdge): void {
             if (resumeEdge !== null) {
               stack[++propagateStackTop] = resumeEdge;
             }
+
             edge = firstOut;
             resumeEdge = firstOut.nextOut;
             continue;
