@@ -1,7 +1,4 @@
 import {
-  EngineContext,
-  EngineHooks,
-  ReactiveNode,
   runtime,
   subscribeEvent,
 } from "@reflex/runtime";
@@ -12,6 +9,11 @@ import {
   EffectStrategy,
 } from "../policy";
 import { createAccumulator, createSource } from "./factory";
+import type {
+  EngineContext,
+  EngineHooks,
+  ReactiveNode,
+} from "../runtime-types";
 
 interface RuntimeOptions {
   hooks?: EngineHooks;

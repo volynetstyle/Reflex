@@ -4,37 +4,37 @@
   "type": "module",
   "description": "Public Reflex facade with a connected runtime",
   "license": "MIT",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
   "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./setup": {
-      "types": "./dist/setup.d.ts",
-      "import": "./dist/setup.js"
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.cjs"
     }
   },
   "files": [
-    "dist"
+    "dist/cjs",
+    "dist/esm",
+    "dist/types"
   ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
-    "build": "pnpm build:ts && pnpm build:npm",
+    "build": "pnpm clean && pnpm build:ts && pnpm build:npm",
     "build:ts": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
     "build:npm": "rollup -c rollup.config.ts",
-    "build:clean": "pnpm clean && pnpm build",
+    "build:clean": "pnpm build",
     "test": "vitest run",
     "dev": "node ../../node_modules/typescript/bin/tsc -w -p tsconfig.build.json",
     "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.json",
     "prepublishOnly": "pnpm typecheck && pnpm build:clean"
   },
-  "dependencies": {
+  "devDependencies": {
     "@reflex/runtime": "workspace:*"
   }
 }

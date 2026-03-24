@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Runtime / Universe / Laws for Reflex",
   "license": "MIT",
-  "main": "./dist/cjs/index.js",
+  "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/index.js",
   "types": "./dist/types/index.d.ts",
   "sideEffects": false,
@@ -12,11 +12,13 @@
     ".": {
       "types": "./dist/types/index.d.ts",
       "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js"
+      "require": "./dist/cjs/index.cjs"
     }
   },
   "files": [
-    "dist"
+    "dist/cjs",
+    "dist/esm",
+    "dist/types"
   ],
   "publishConfig": {
     "access": "restricted"

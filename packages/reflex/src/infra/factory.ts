@@ -1,29 +1,34 @@
 import {
-  ReactiveNode,
-  EventSource,
+  ReactiveNode as RuntimeReactiveNode,
+  EventSource as RuntimeEventSource,
   PRODUCER_INITIAL_STATE,
   CONSUMER_INITIAL_STATE,
   WATCHER_INITIAL_STATE,
 } from "@reflex/runtime";
+import type { EventSource, ReactiveNode } from "../runtime-types";
 
 export const UNINITIALIZED = Symbol("UNINITIALIZED") as unknown;
 
 export function createSignalNode<T>(payload: T): ReactiveNode<T> {
-  return new ReactiveNode(payload, null, PRODUCER_INITIAL_STATE);
+  return new RuntimeReactiveNode(payload, null, PRODUCER_INITIAL_STATE);
 }
 
 export function createSource<T>(): EventSource<T> {
-  return new EventSource<T>();
+  return new RuntimeEventSource<T>();
 }
 
 export function createAccumulator<T>(payload: T): ReactiveNode<T> {
-  return new ReactiveNode(payload, null, PRODUCER_INITIAL_STATE);
+  return new RuntimeReactiveNode(payload, null, PRODUCER_INITIAL_STATE);
 }
 
 export function createComputedNode<T>(compute: () => T): ReactiveNode<T> {
-  return new ReactiveNode(UNINITIALIZED as T, compute, CONSUMER_INITIAL_STATE);
+  return new RuntimeReactiveNode(
+    UNINITIALIZED as T,
+    compute,
+    CONSUMER_INITIAL_STATE,
+  );
 }
 
 export function createEffectNode(compute: EffectFn): ReactiveNode {
-  return new ReactiveNode(null, compute, WATCHER_INITIAL_STATE);
+  return new RuntimeReactiveNode(null, compute, WATCHER_INITIAL_STATE);
 }

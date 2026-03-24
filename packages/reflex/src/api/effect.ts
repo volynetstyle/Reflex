@@ -1,5 +1,6 @@
-import { runWatcher, disposeWatcher, ReactiveNode, ReactiveNodeState } from "@reflex/runtime";
-import { createEffectNode, UNINITIALIZED } from "../infra";
+import { runWatcher, disposeWatcher, ReactiveNodeState } from "@reflex/runtime";
+import { createEffectNode, UNINITIALIZED } from "../infra/factory";
+import type { ReactiveNode } from "../runtime-types";
 
 export function effectScheduled(
   node: ReactiveNode<typeof UNINITIALIZED | Destructor>,

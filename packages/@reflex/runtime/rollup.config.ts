@@ -1,9 +1,9 @@
-import type { RollupOptions, ModuleFormat, Plugin } from "rollup";
+import type { Plugin, RollupOptions } from "rollup";
 import replace from "@rollup/plugin-replace";
 import terser from "@rollup/plugin-terser";
 import resolve from "@rollup/plugin-node-resolve";
-import constEnum from "rollup-plugin-const-enum";
 import swc from "@rollup/plugin-swc";
+import constEnum from "rollup-plugin-const-enum";
 
 type BuildFormat = "esm" | "cjs";
 
@@ -14,12 +14,38 @@ interface BuildTarget {
   dev: boolean;
 }
 
-interface BuildContext {
-  target: BuildTarget;
+const EXTERNALS = ["vitest", "expect-type"] as const;
+
+const PURE_FUNCS = [
+  "Object.freeze",
+  "Object.defineProperty",
+  "hasState",
+  "isDirtyState",
+  "isPendingState",
+  "isChangedState",
+  "isObsoleteState",
+  "isTrackingState",
+  "isVisitedState",
+  "isDisposedState",
+  "isComputingState",
+  "isScheduledState",
+  "isSignalKind",
+  "isEffectKind",
+] as const;
+
+const TARGETS: BuildTarget[] = [
+  { name: "esm", outDir: "esm", format: "esm", dev: false },
+  { name: "esm-dev", outDir: "dev", format: "esm", dev: true },
+  { name: "cjs", outDir: "cjs", format: "cjs", dev: false },
+];
+
+function compactPlugins(plugins: Array<Plugin | undefined | false>): Plugin[] {
+  return plugins.filter((plugin): plugin is Plugin => Boolean(plugin));
 }
 
-function loggerStage(ctx: BuildContext): Plugin {
-  const name = ctx.target.name;
+function loggerPlugin(target: BuildTarget): Plugin {
+  const { name } = target;
+
   return {
     name: "pipeline-logger",
     buildStart() {
@@ -29,39 +55,34 @@ function loggerStage(ctx: BuildContext): Plugin {
       console.log(`📦 ${name} modules: ${Object.keys(bundle).length}`);
     },
     writeBundle(_, bundle) {
-      const size = Object.values(bundle)
-        .map((b: any) => b.code?.length ?? 0)
-        .reduce((a, b) => a + b, 0);
+      const size = Object.values(bundle).reduce((total, chunk) => {
+        return total + ("code" in chunk ? chunk.code.length : 0);
+      }, 0);
+
       console.log(`📊 ${name} size ${(size / 1024).toFixed(2)} KB`);
       console.log(`✔ done → ${name}\n`);
     },
   };
 }
 
-function resolverStage(): Plugin {
+function resolvePlugin(): Plugin {
   return resolve({
     extensions: [".js"],
     exportConditions: ["import", "default"],
   });
 }
 
-function replaceStage(ctx: BuildContext): Plugin {
+function replacePlugin(target: BuildTarget): Plugin {
   return replace({
     preventAssignment: true,
     values: {
-      __DEV__: JSON.stringify(ctx.target.dev),
+      __DEV__: JSON.stringify(target.dev),
     },
   });
 }
 
-/**
- * SWC делает первый проход инлайнинга до того, как Rollup
- * свяжет модули. Это позволяет раскрыть простые обёртки
- * вроде `function h(n) { return s(n, 3) }` ещё на уровне AST,
- * до того как terser увидит связанный bundle.
- */
-function swcStage(ctx: BuildContext): Plugin {
-  if (ctx.target.dev) return null as any;
+function swcPlugin(target: BuildTarget): Plugin | undefined {
+  if (target.dev) return undefined;
 
   return swc({
     swc: {
@@ -71,41 +92,25 @@ function swcStage(ctx: BuildContext): Plugin {
         transform: {
           optimizer: {
             simplify: true,
-            // Инлайним константы и чистые функции-обёртки
             globals: {
               vars: {
-                __DEV__: JSON.stringify(ctx.target.dev),
+                __DEV__: JSON.stringify(target.dev),
               },
             },
           },
-        },
-        minify: {
-          // Первый лёгкий проход — только инлайн и свёртка констант,
-          // без переименований (terser сделает это позже агрессивнее)
-          compress: {
-            inline: 3,
-            reduce_vars: true,
-            reduce_funcs: true,
-            collapse_vars: true,
-            pure_getters: true,
-            // Не трогаем имена — оставим terser
-            unused: false,
-          },
-          mangle: false,
         },
       },
       module: { type: "es6" },
     },
   });
 }
-
-function minifyStage(ctx: BuildContext): Plugin | null {
-  if (ctx.target.dev) return null;
+function terserPlugin(target: BuildTarget): Plugin | undefined {
+  if (target.dev) return undefined;
 
   return terser({
     compress: {
-      passes: 5, // +1 проход для раскрытия цепочек после SWC
-      inline: 3, // 3 = инлайн функций с аргументами
+      passes: 4,
+      inline: 3,
       hoist_props: true,
       collapse_vars: true,
       dead_code: true,
@@ -120,47 +125,21 @@ function minifyStage(ctx: BuildContext): Plugin | null {
       if_return: true,
       sequences: true,
       pure_getters: true,
+      evaluate: true,
+      pure_funcs: [...PURE_FUNCS],
+      toplevel: true,
+      module: true,
+
+      // Осторожно: unsafe-флаги полезны не всегда.
       unsafe: true,
       unsafe_arrows: true,
       unsafe_methods: true,
       unsafe_math: true,
       unsafe_comps: true,
-      evaluate: true,
-
-      // Критично для инлайна однострочников: разрешаем
-      // terser считать вызовы чистых функций побочно-эффектными
-      pure_funcs: [
-        "Object.freeze",
-        "Object.defineProperty",
-        "hasState",
-        "isDirtyState",
-        "isPendingState",
-        "isChangedState",
-        "isObsoleteState",
-        "isTrackingState",
-        "isVisitedState",
-        "isDisposedState",
-        "isComputingState",
-        "isScheduledState",
-        "isSignalKind",
-        "isEffectKind",
-        "isDirtyState",
-        "isPendingState",
-        "isChangedState",
-        "isObsoleteState",
-        "isDisposedState",
-        "isComputingState",
-        "isScheduledState",
-        "isSignalKind",
-        "isEffectKind",
-      ],
-      toplevel: true, // обязательно для инлайна модульных функций
-      module: true, // ESM: нет неявных глобальных замыканий
     },
-
     mangle: {
       toplevel: true,
-      module: true, // важно: без этого toplevel mangle не работает в ESM
+      module: true,
       keep_classnames: true,
       properties: {
         regex: /^\$\$/,
@@ -168,53 +147,45 @@ function minifyStage(ctx: BuildContext): Plugin | null {
         reserved: ["payload", "compute", "meta", "runtime"],
       },
     },
-
     format: {
       comments: false,
     },
-
-    // Говорим terser, что ESM модуль — строгий режим,
-    // нет утечки в глобальный скоп
     ecma: 2020,
     module: true,
   });
 }
 
-function pipeline(ctx: BuildContext): Plugin[] {
-  return [
-    loggerStage(ctx),
-    resolverStage(),
-    replaceStage(ctx),
-    swcStage(ctx), // пре-инлайн до Rollup bundle phase
-    minifyStage(ctx),
+function createPlugins(target: BuildTarget): Plugin[] {
+  return compactPlugins([
+    loggerPlugin(target),
+    resolvePlugin(),
+    replacePlugin(target),
+    swcPlugin(target),
+    terserPlugin(target),
     constEnum(),
-  ].filter(Boolean) as Plugin[];
+  ]);
 }
 
 function createConfig(target: BuildTarget): RollupOptions {
-  const ctx: BuildContext = { target };
-
   return {
     input: {
       index: "build/esm/index.js",
     },
 
     treeshake: {
+      preset: "recommended",
       moduleSideEffects: false,
       propertyReadSideEffects: false,
       tryCatchDeoptimization: false,
       correctVarValueBeforeDeclaration: false,
       unknownGlobalSideEffects: false,
-      // Добавляем: Rollup сам попробует раскрыть
-      // pure-функции при tree-shaking
-      preset: "recommended",
     },
 
     output: {
       dir: `dist/${target.outDir}`,
       format: target.format,
       inlineDynamicImports: true,
-      entryFileNames: "[name].js",
+      entryFileNames: target.format === "cjs" ? "[name].cjs" : "[name].js",
       exports: target.format === "cjs" ? "named" : undefined,
       sourcemap: target.dev,
       generatedCode: {
@@ -223,15 +194,9 @@ function createConfig(target: BuildTarget): RollupOptions {
       },
     },
 
-    plugins: pipeline(ctx),
-    external: ["vitest", "expect-type"],
+    plugins: createPlugins(target),
+    external: [...EXTERNALS],
   };
 }
 
-const targets: BuildTarget[] = [
-  { name: "esm", outDir: "esm", format: "esm", dev: false },
-  { name: "esm-dev", outDir: "dev", format: "esm", dev: true },
-  { name: "cjs", outDir: "cjs", format: "cjs", dev: false },
-];
-
-export default targets.map(createConfig);
+export default TARGETS.map(createConfig);

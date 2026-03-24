@@ -1,9 +1,8 @@
 import {
-  EventSource,
-  EventBoundary,
   emitEvent,
   identityBoundary,
 } from "@reflex/runtime";
+import type { EventBoundary, EventSource } from "../runtime-types";
 
 export class EventDispatcher {
   private readonly queue: unknown[] = [];

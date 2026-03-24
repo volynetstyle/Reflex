@@ -1,7 +1,11 @@
-import { DIRTY_STATE, ReactiveNode, runWatcher } from "@reflex/runtime";
-import { ReactiveNodeState } from "../../../@reflex/runtime/src/reactivity/shape/ReactiveMeta";
+import {
+  DIRTY_STATE,
+  ReactiveNodeState,
+  runWatcher,
+} from "@reflex/runtime";
 import { effectScheduled, effectUnscheduled } from "../api/effect";
-import { UNINITIALIZED } from "../infra";
+import { UNINITIALIZED } from "../infra/factory";
+import type { ReactiveNode } from "../runtime-types";
 
 export const enum EffectSchedulerMode {
   Flush = 0,
