@@ -19,7 +19,7 @@ describe("Reactive runtime - semantic correctness", () => {
     resetRuntime();
   });
 
-  it("keeps push invalidation lazy until a consumer is actually read", () => {
+  it("commits producer writes eagerly but defers recomputation until read", () => {
     const source = createProducer(1);
     const spy = vi.fn(() => readProducer(source) * 2);
     const derived = createConsumer(spy);
@@ -30,9 +30,9 @@ describe("Reactive runtime - semantic correctness", () => {
     writeProducer(source, 2);
 
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(source.state & ReactiveNodeState.Changed).toBeTruthy();
-    expect(derived.state & ReactiveNodeState.Invalid).toBeTruthy();
-    expect(derived.state & ReactiveNodeState.Changed).toBeFalsy();
+    expect(source.state & DIRTY_STATE).toBe(0);
+    expect(derived.state & ReactiveNodeState.Changed).toBeTruthy();
+    expect(derived.state & ReactiveNodeState.Invalid).toBeFalsy();
 
     expect(readConsumer(derived)).toBe(4);
     expect(spy).toHaveBeenCalledTimes(2);

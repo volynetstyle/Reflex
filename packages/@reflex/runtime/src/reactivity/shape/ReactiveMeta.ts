@@ -20,6 +20,8 @@ export enum ReactiveNodeState {
 export const DIRTY_STATE =
   ReactiveNodeState.Invalid | ReactiveNodeState.Changed;
 
+export const PRODUCER_INITIAL_STATE = ReactiveNodeState.Producer;
+
 export const PRODUCER_CHANGED =
   ReactiveNodeState.Producer | ReactiveNodeState.Changed;
 

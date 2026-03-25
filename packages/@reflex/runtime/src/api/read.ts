@@ -1,23 +1,17 @@
 import {
   ReactiveNode,
   ReactiveNodeState,
-  changePayload,
   trackRead,
   DIRTY_STATE,
   shouldRecompute,
   recompute,
   propagateOnce,
   clearDirtyState,
-  PRODUCER_CHANGED,
   UNINITIALIZED,
 } from "../reactivity";
 import runtime from "../reactivity/context";
 
 export function readProducer<T>(node: ReactiveNode<T>): T {
-  if (node.state & PRODUCER_CHANGED) {
-    changePayload(node);
-  }
-
   trackRead(node);
   return node.payload as T;
 }

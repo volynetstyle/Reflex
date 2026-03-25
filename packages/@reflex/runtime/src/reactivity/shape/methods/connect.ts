@@ -165,9 +165,16 @@ export function connect(
   parent: ReactiveNode,
   child: ReactiveNode,
 ): ReactiveEdge {
-  for (let e = child.firstIn; e; e = e.nextIn) {
-    if (e.from === parent) return e;
+  const depsTail = child.lastIn;
+
+  if (depsTail?.from === parent) {
+    return depsTail;
+  } else {
+    for (let e = depsTail; e; e = e.prevIn) {
+      if (e.from === parent) return e;
+    }
   }
+
   return linkEdge(parent, child);
 }
 

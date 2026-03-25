@@ -85,7 +85,7 @@ describe("Reactive system - effects", () => {
     expect(invalidations).toBe(1);
 
     rt.flush();
-    expect(invalidations).toBe(2);
+    expect(invalidations).toBe(1);
   });
 
   it("toggles the scheduled flag helpers", () => {

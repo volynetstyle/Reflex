@@ -138,9 +138,7 @@ function createScan<T, A>(
     /* c8 ignore start -- disposal unsubscribes before a queued delivery can reach this callback */
     if (isDisposedNode(node)) return;
     /* c8 ignore stop */
-
-    const next = reducer(node.pendingPayload, value);
-    writeProducer(node, next);
+    writeProducer(node, reducer(node.payload, value));
   });
 
   function dispose(): void {

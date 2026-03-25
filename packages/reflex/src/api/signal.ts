@@ -31,7 +31,7 @@ export function signal<T>(
     }
     /* c8 ignore stop */
 
-    const previous = node.pendingPayload;
+    const previous = node.payload;
     const next =
       typeof input !== "function" ? input : (<Updater<T>>input)(previous);
 

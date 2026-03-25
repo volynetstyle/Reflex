@@ -20,11 +20,9 @@ describe("Reactive system - factory helpers", () => {
     const scanNode = createAccumulator(2);
 
     expect(signalNode.payload).toBe(1);
-    expect(signalNode.pendingPayload).toBe(1);
     expect(signalNode.state).toBe(PRODUCER_INITIAL_STATE);
 
     expect(scanNode.payload).toBe(2);
-    expect(scanNode.pendingPayload).toBe(2);
     expect(scanNode.state).toBe(PRODUCER_INITIAL_STATE);
   });
 
@@ -35,7 +33,6 @@ describe("Reactive system - factory helpers", () => {
     expect(node.compute).toBe(compute);
     expect(node.state).toBe(CONSUMER_INITIAL_STATE);
     expect(node.payload).toBe(UNINITIALIZED);
-    expect(node.pendingPayload).toBe(UNINITIALIZED);
   });
 
   it("creates effect nodes with watcher state", () => {

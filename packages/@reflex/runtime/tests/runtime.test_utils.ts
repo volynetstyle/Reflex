@@ -4,7 +4,6 @@ import {
   ReactiveNode,
   type EngineHooks,
   WATCHER_INITIAL_STATE,
-  readProducer,
 } from "../src";
 import runtime from "../src/reactivity/context";
 import { UNINITIALIZED } from "../src/reactivity/shape/ReactiveNode";
@@ -15,11 +14,7 @@ export function resetRuntime(hooks: EngineHooks = {}): void {
 }
 
 export function createProducer<T>(value: T): ReactiveNode<T> {
-  const node = new ReactiveNode(value, null, PRODUCER_INITIAL_STATE);
-
-  // Producers start in a changed state so the first read can commit payload.
-  readProducer(node);
-  return node;
+  return new ReactiveNode(value, null, PRODUCER_INITIAL_STATE);
 }
 
 export function createConsumer<T>(compute: () => T): ReactiveNode<T> {

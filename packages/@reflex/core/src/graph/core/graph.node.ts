@@ -1,7 +1,7 @@
 import { GraphEdge } from "./graph.edge";
 
 /**
- * GraphNode represents an **immutable causal event** in the runtime.
+ * GraphNode represents an **immutable causal event** in the getContext().
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * ONTOLOGY
@@ -84,7 +84,7 @@ import { GraphEdge } from "./graph.edge";
  *   - Stable object shape for V8 hidden-class optimization
  *   - Cache-friendly layout, compatible with future SoA transformations
  *
- * This type is the semantic foundation of the runtime.
+ * This type is the semantic foundation of the getContext().
  * All higher-level abstractions (signals, joins, effects) are defined on top of it.
  */
 class GraphNode {

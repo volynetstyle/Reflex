@@ -5,7 +5,7 @@
  * Architectural role:
  *   - Defines the common root type for nodes, signals,
  *     computations, effects, and other reactive primitives.
- *   - Enables structural polymorphism across the runtime.
+ *   - Enables structural polymorphism across the runtime graph.
  *
  * Semantics:
  *   - This interface intentionally declares no members.

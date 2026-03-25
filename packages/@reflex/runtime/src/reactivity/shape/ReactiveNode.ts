@@ -3,7 +3,7 @@ import type { ReactiveEdge } from "./ReactiveEdge";
 import { ReactiveNodeState } from "./ReactiveMeta";
 
 type ComputeFn<T> = (() => T) | null;
-const UNINITIALIZED = Symbol("UNINITIALIZED");
+const UNINITIALIZED: unique symbol = Symbol.for("UNINITIALIZED");
 
 class ReactiveNode<T = unknown> implements Reactivable {
   state: number;
@@ -14,13 +14,8 @@ class ReactiveNode<T = unknown> implements Reactivable {
   lastIn: ReactiveEdge | null;
   depsTail: ReactiveEdge | null;
   payload: T;
-  pendingPayload: T;
 
-  constructor(
-    payload: T | undefined,
-    compute: ComputeFn<T>,
-    state: number,
-  ) {
+  constructor(payload: T | undefined, compute: ComputeFn<T>, state: number) {
     this.state = state;
     this.compute = compute;
     this.firstOut = null;
@@ -29,32 +24,28 @@ class ReactiveNode<T = unknown> implements Reactivable {
     this.lastIn = null;
     this.depsTail = null;
     this.payload = payload as T;
-    this.pendingPayload = payload as T;
   }
 }
 
 class ReactiveNodeAsync<T, E> implements ReactiveNode {
   phase: number;
+
   state: number;
-  kind: ReactiveNodeState;
-  compute: ComputeFn<unknown>;
+  compute: ComputeFn<T>;
   firstOut: ReactiveEdge | null;
   firstIn: ReactiveEdge | null;
   lastOut: ReactiveEdge | null;
   lastIn: ReactiveEdge | null;
   depsTail: ReactiveEdge | null;
-  payload: unknown;
-  pendingPayload: unknown;
+  payload: T | E;
 
   constructor(
     payload: T | undefined,
     compute: ComputeFn<T>,
     state: number,
-    kind: ReactiveNodeState,
   ) {
     this.phase = 0;
     this.state = state;
-    this.kind = kind;
     this.compute = compute;
     this.firstOut = null;
     this.firstIn = null;
@@ -62,7 +53,6 @@ class ReactiveNodeAsync<T, E> implements ReactiveNode {
     this.lastIn = null;
     this.depsTail = null;
     this.payload = payload as T;
-    this.pendingPayload = payload as T;
   }
 }
 

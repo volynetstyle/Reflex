@@ -2,13 +2,20 @@ export interface EventSubscriber<T> {
   fn: (value: T) => void;
   next: EventSubscriber<T> | null;
   prev: EventSubscriber<T> | null;
-  active: boolean;
+  state: number;
+
+  unlinkNext: EventSubscriber<T> | null;
 }
 
-export interface EventSource<T> {
-  head: EventSubscriber<T> | null;
-  tail: EventSubscriber<T> | null;
+export class EventSource<T> {
+  dispatchDepth = 0;
+
+  head: EventSubscriber<T> | null = null;
+  tail: EventSubscriber<T> | null = null;
+
+  pendingHead: EventSubscriber<T> | null = null;
 }
+
 
 export type EventBoundary = <T>(fn: () => T) => T;
 
@@ -32,7 +39,6 @@ export interface ReactiveNode<T = unknown> {
   lastIn: ReactiveEdge | null;
   depsTail: ReactiveEdge | null;
   payload: T;
-  pendingPayload: T;
 }
 
 export interface EngineHooks {
@@ -41,8 +47,6 @@ export interface EngineHooks {
 
 export interface EngineContext {
   activeComputed: ReactiveNode | null;
-  readonly propagateStack: ReactiveEdge[];
-  readonly dirtyCheckStack: ReactiveEdge[];
   readonly hooks: EngineHooks;
   dispatchWatcherEvent(node: ReactiveNode): void;
   resetState(): void;

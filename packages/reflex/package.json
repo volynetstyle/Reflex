@@ -1,6 +1,6 @@
 {
   "name": "@volynetstyle/reflex",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "type": "module",
   "description": "Public Reflex facade with a connected runtime",
   "license": "MIT",
@@ -30,6 +30,7 @@
     "build:npm": "rollup -c rollup.config.ts",
     "build:clean": "pnpm build",
     "test": "vitest run",
+    "bench": "vitest bench",
     "dev": "node ../../node_modules/typescript/bin/tsc -w -p tsconfig.build.json",
     "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.json",
     "prepublishOnly": "pnpm typecheck && pnpm build:clean"

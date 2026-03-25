@@ -14,13 +14,13 @@ export function effectUnscheduled(
   node.state &= ~ReactiveNodeState.Scheduled;
 }
 
-export function effect(fn: EffectFn): Effect<void> {
+export function effect(fn: EffectFn): Disposable {
   const node = createEffectNode(fn);
   runWatcher(node);
 
   const scope = function (): void {
     disposeWatcher(node);
-  } as Effect<void>;
+  };
 
   scope.dispose = scope;
 

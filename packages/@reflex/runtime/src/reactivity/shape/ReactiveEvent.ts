@@ -1,13 +1,21 @@
+export const enum EventSubscriberState {
+  Active = 1 << 0,
+  Disposed = 1 << 1,
+}
+
+export class EventSource<T> {
+  dispatchDepth = 0;
+  head: EventSubscriber<T> | null = null;
+  tail: EventSubscriber<T> | null = null;
+  pendingHead: EventSubscriber<T> | null = null;
+}
+
 export interface EventSubscriber<T> {
   fn: (value: T) => void;
   next: EventSubscriber<T> | null;
   prev: EventSubscriber<T> | null;
-  active: boolean;
-}
-
-export class EventSource<T> {
-  head: EventSubscriber<T> | null = null;
-  tail: EventSubscriber<T> | null = null;
+  state: number;
+  unlinkNext: EventSubscriber<T> | null;
 }
 
 export type EventBoundary = <T>(fn: () => T) => T;
@@ -28,10 +36,11 @@ export function appendSubscriber<T>(
   }
 
   subscriber.prev = tail;
-  tail.next = source.tail = subscriber;
+  tail.next = subscriber;
+  source.tail = subscriber;
 }
 
-export function removeSubscriber<T>(
+function unlinkSubscriber<T>(
   source: EventSource<T>,
   subscriber: EventSubscriber<T>,
 ): void {
@@ -46,7 +55,48 @@ export function removeSubscriber<T>(
 
   subscriber.prev = null;
   subscriber.next = null;
-  subscriber.active = false;
+  subscriber.unlinkNext = null;
+}
+
+function enqueuePendingRemoval<T>(
+  source: EventSource<T>,
+  subscriber: EventSubscriber<T>,
+): void {
+  if ((subscriber.state & EventSubscriberState.Disposed) !== 0) return;
+
+  subscriber.state |= EventSubscriberState.Disposed;
+  subscriber.unlinkNext = source.pendingHead;
+  source.pendingHead = subscriber;
+}
+
+function flushPendingRemovals<T>(source: EventSource<T>): void {
+  let node = source.pendingHead;
+  source.pendingHead = null;
+
+  while (node !== null) {
+    const next = node.unlinkNext;
+    node.unlinkNext = null;
+
+    unlinkSubscriber(source, node);
+    node = next;
+  }
+}
+
+export function removeSubscriber<T>(
+  source: EventSource<T>,
+  subscriber: EventSubscriber<T>,
+): void {
+  if ((subscriber.state & EventSubscriberState.Active) === 0) return;
+
+  subscriber.state &= ~EventSubscriberState.Active;
+
+  if (source.dispatchDepth !== 0) {
+    enqueuePendingRemoval(source, subscriber);
+    return;
+  }
+
+  subscriber.state |= EventSubscriberState.Disposed;
+  unlinkSubscriber(source, subscriber);
 }
 
 export function subscribeEvent<T>(
@@ -57,15 +107,14 @@ export function subscribeEvent<T>(
     fn,
     next: null,
     prev: null,
-    active: true,
+    state: EventSubscriberState.Active,
+    unlinkNext: null,
   };
 
   appendSubscriber(source, subscriber);
 
   return () => {
-    if (subscriber.active) {
-      removeSubscriber(source, subscriber);
-    }
+    removeSubscriber(source, subscriber);
   };
 }
 
@@ -75,20 +124,29 @@ export function emitEvent<T>(
   boundary: EventBoundary = identityBoundary,
 ): void {
   boundary(() => {
-    const last = source.tail;
-    if (last === null) return;
+    const end = source.tail;
+    if (end === null) return;
 
-    const snapshot: EventSubscriber<T>[] = [];
+    ++source.dispatchDepth;
 
-    for (let node = source.head; node !== null; node = node.next) {
-      snapshot.push(node);
-      if (node === last) break;
-    }
+    try {
+      let node = source.head;
 
-    for (let i = 0; i < snapshot.length; i++) {
-      const node = snapshot[i]!;
-      if (node.active) {
-        node.fn(value);
+      while (node !== null) {
+        const current = node;
+        const next = current === end ? null : current.next;
+
+        if ((current.state & EventSubscriberState.Active) !== 0) {
+          current.fn(value);
+        }
+
+        node = next;
+      }
+    } finally {
+      --source.dispatchDepth;
+
+      if (source.dispatchDepth === 0 && source.pendingHead !== null) {
+        flushPendingRemovals(source);
       }
     }
   });

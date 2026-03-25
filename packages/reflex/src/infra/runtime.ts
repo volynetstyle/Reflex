@@ -8,7 +8,7 @@ import {
   EventDispatcher,
   EffectStrategy,
 } from "../policy";
-import { createAccumulator, createSource } from "./factory";
+import { createSource } from "./factory";
 import type {
   EngineContext,
   EngineHooks,

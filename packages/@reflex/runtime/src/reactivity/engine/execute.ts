@@ -28,17 +28,20 @@ export function executeNodeComputation<T>(
     (node.state & ~ReactiveNodeState.Visited) | ReactiveNodeState.Tracking;
   markNodeComputing(node);
 
-  const ctx = runtime;
-  const prevActive = ctx.activeComputed;
-  ctx.activeComputed = node;
+  const prevActive = runtime.activeComputed;
+  runtime.activeComputed = node;
+  let result: unknown;
 
   try {
-    const result = compute();
-    ctx.activeComputed = prevActive;
+    try {
+      result = compute();
+    } finally {
+      runtime.activeComputed = prevActive;
+    }
+
     cleanupStaleSources(node);
     return commit(result);
   } finally {
-    ctx.activeComputed = prevActive;
     node.state &= ~ReactiveNodeState.Tracking;
     clearNodeComputing(node);
   }
