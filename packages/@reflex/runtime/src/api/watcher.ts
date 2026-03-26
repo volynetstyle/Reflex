@@ -24,10 +24,11 @@ export function runWatcher(node: ReactiveNode): void {
   const prevCleanup =
     typeof node.payload === "function" ? (node.payload as () => void) : null;
   node.payload = UNINITIALIZED;
+  node.state &= ~(ReactiveNodeState.Visited | DIRTY_STATE);
   prevCleanup?.();
 
   executeNodeComputation(node, (result) => {
-    node.state &= ~(ReactiveNodeState.Visited | DIRTY_STATE);
+    node.state &= ~ReactiveNodeState.Visited;
     if (typeof result === "function") node.payload = result as () => void;
   });
 }

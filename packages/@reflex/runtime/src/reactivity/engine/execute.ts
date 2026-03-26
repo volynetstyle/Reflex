@@ -44,5 +44,6 @@ export function executeNodeComputation<T>(
   } finally {
     node.state &= ~ReactiveNodeState.Tracking;
     clearNodeComputing(node);
+    runtime.maybeNotifySettled();
   }
 }

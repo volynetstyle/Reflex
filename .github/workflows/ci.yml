@@ -38,3 +38,6 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Runtime E2E
+        run: pnpm test:e2e:runtime

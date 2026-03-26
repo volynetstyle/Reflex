@@ -36,6 +36,10 @@ function createRuntimeInfrastructure(options?: RuntimeOptions) {
         scheduler.enqueue(node);
         hooks?.onEffectInvalidated?.(node);
       },
+      onReactiveSettled() {
+        scheduler.notifySettled();
+        hooks?.onReactiveSettled?.();
+      },
     },
   };
 }

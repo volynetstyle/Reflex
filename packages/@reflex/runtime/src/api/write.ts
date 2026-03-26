@@ -1,5 +1,6 @@
 import { compare } from "./compare";
 import { DIRTY_STATE, ReactiveNode, propagate } from "../reactivity";
+import runtime from "../reactivity/context";
 
 export function writeProducer<T>(node: ReactiveNode<T>, value: T): void {
   if (compare(node.payload, value)) return;
@@ -11,5 +12,11 @@ export function writeProducer<T>(node: ReactiveNode<T>, value: T): void {
 
   if (firstSubscriberEdge === null) return;
 
-  propagate(firstSubscriberEdge, true);
+  runtime.enterPropagation();
+
+  try {
+    propagate(firstSubscriberEdge, true);
+  } finally {
+    runtime.leavePropagation();
+  }
 }

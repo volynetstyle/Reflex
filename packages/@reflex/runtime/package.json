@@ -36,6 +36,8 @@
     "build": "pnpm clean && pnpm build:ts && pnpm build:npm",
     "bench:core": "pnpm build:perf && node --expose-gc dist/perf.js",
     "test": "vitest run",
+    "pretest:e2e": "pnpm build",
+    "test:e2e": "node tests/runtime.e2e.mjs",
     "bench": "pnpm build && vitest bench test/signal_beta.bench.ts",
     "bench:flame": "0x -- node dist/tests/ownership.run.js",
     "test:watch": "vitest",

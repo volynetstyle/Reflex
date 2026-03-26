@@ -128,24 +128,33 @@ function getInvalidatedSubscriberState(
   const sub = edge.to;
   const state = sub.state;
 
-  if ((state & DIRTY_STATE) !== 0 || (state & ReactiveNodeState.Disposed) !== 0)
+  if ((state & (DIRTY_STATE | ReactiveNodeState.Disposed)) !== 0) {
     return 0;
-
-  const inWalker = (state & WALKER_STATE) !== 0;
-  const isTracking = (state & ReactiveNodeState.Tracking) !== 0;
-
-  if (promoteImmediate && !isTracking) {
-    return inWalker
-      ? (state & ~ReactiveNodeState.Visited) | ReactiveNodeState.Changed
-      : state | ReactiveNodeState.Changed;
   }
 
-  if (!inWalker) return state | ReactiveNodeState.Invalid;
+  const isTracking = (state & ReactiveNodeState.Tracking) !== 0;
+  const inWalker = (state & WALKER_STATE) !== 0;
 
-  if (!isTracking)
-    return (state & ~ReactiveNodeState.Visited) | ReactiveNodeState.Invalid;
+  if (!inWalker) {
+    return (
+      state |
+      (promoteImmediate && !isTracking
+        ? ReactiveNodeState.Changed
+        : ReactiveNodeState.Invalid)
+    );
+  }
 
-  if (!isTrackedPrefixEdge(edge, sub.depsTail)) return 0;
+  if (!isTracking) {
+    const cleared = state & ~ReactiveNodeState.Visited;
+    return (
+      cleared |
+      (promoteImmediate ? ReactiveNodeState.Changed : ReactiveNodeState.Invalid)
+    );
+  }
+
+  if (!isTrackedPrefixEdge(edge, sub.depsTail)) {
+    return 0;
+  }
 
   return state | ReactiveNodeState.Visited | ReactiveNodeState.Invalid;
 }

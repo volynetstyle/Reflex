@@ -2,6 +2,7 @@ import {
   DIRTY_STATE,
   ReactiveNodeState,
   runWatcher,
+  runtime,
 } from "@reflex/runtime";
 import { effectScheduled, effectUnscheduled } from "../api/effect";
 import { UNINITIALIZED } from "../infra/factory";
@@ -94,6 +95,12 @@ export class EffectScheduler {
     this.phase = SchedulerPhase.Idle;
   }
 
+  notifySettled(): void {
+    if (this.shouldAutoFlush()) {
+      this.flush();
+    }
+  }
+
   private hasPending(): boolean {
     return this.head < this.queue.length;
   }
@@ -116,6 +123,8 @@ export class EffectScheduler {
     return (
       this.mode === EffectSchedulerMode.Eager &&
       this.phase === SchedulerPhase.Idle &&
+      runtime.propagationDepth === 0 &&
+      runtime.activeComputed === null &&
       this.hasPending()
     );
   }

@@ -30,6 +30,18 @@ export type Component<P = Record<string, unknown>> = (
   props: P,
 ) => JSXRenderable;
 
+export interface ComponentRenderable<P = Record<string, unknown>> {
+  readonly kind: symbol;
+  readonly type: Component<P>;
+  readonly props: P;
+}
+
+export interface ElementRenderable {
+  readonly kind: symbol;
+  readonly tag: string;
+  readonly props: DOMProps;
+}
+
 export interface DOMProps<T extends Element = Element> {
   children?: JSXRenderable;
   ref?: Ref<T>;

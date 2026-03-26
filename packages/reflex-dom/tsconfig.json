@@ -30,6 +30,8 @@
     "src/render.ts",
     "src/vite.ts",
     "src/types.ts",
+    "src/component.ts",
+    "src/element.ts",
     "src/ownership.ts",
     "src/host/**/*.ts",
     "src/bindings/**/*.ts",

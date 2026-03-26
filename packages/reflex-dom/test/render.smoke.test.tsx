@@ -1,7 +1,7 @@
 /** @jsxImportSource ../src */
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { signal } from "@volynetstyle/reflex";
+import { computed, effect, memo, signal } from "@volynetstyle/reflex";
 import { createDOMRuntime, render, Fragment } from "../src";
 
 describe("render", () => {
@@ -210,6 +210,22 @@ describe("render", () => {
     expect(container.querySelector("p")?.textContent).toBe("hello world");
   });
 
+  it("renders nested arrays with static, node, and reactive children", () => {
+    const container = document.createElement("div");
+    const [label, setLabel] = signal("live");
+    const strong = document.createElement("strong");
+    strong.textContent = "node";
+
+    render(
+      <div>{["a", [strong, () => label(), "z"]]}</div>,
+      container,
+    );
+
+    expect(container.querySelector("div")?.textContent).toBe("anodelivez");
+    setLabel("updated");
+    expect(container.querySelector("div")?.textContent).toBe("anodeupdatedz");
+  });
+
   it("conditionally renders child via accessor", () => {
     const container = document.createElement("div");
     const [show, setShow] = signal(true);
@@ -247,6 +263,106 @@ describe("render", () => {
     const Greeting = ({ name }: { name: string }) => <p>Hi, {name}!</p>;
     render(<Greeting name="World" />, container);
     expect(container.querySelector("p")?.textContent).toBe("Hi, World!");
+  });
+
+  it("passes children into components", () => {
+    const container = document.createElement("div");
+    const Frame = ({ children }: { children?: unknown }) => (
+      <section data-kind="frame">{children as any}</section>
+    );
+
+    render(
+      <Frame>
+        <span>inside</span>
+      </Frame>,
+      container,
+    );
+
+    expect(container.querySelector("section")?.getAttribute("data-kind")).toBe("frame");
+    expect(container.querySelector("span")?.textContent).toBe("inside");
+  });
+
+  it("renders nested components with reactive children", () => {
+    const container = document.createElement("div");
+    const [name, setName] = signal("Alice");
+    const Name = ({ value }: { value: () => string }) => <strong>{value}</strong>;
+    const Greeting = ({ value }: { value: () => string }) => (
+      <p>Hello, <Name value={value} /></p>
+    );
+
+    render(<Greeting value={name} />, container);
+    expect(container.querySelector("p")?.textContent).toBe("Hello, Alice");
+
+    setName("Bob");
+    expect(container.querySelector("p")?.textContent).toBe("Hello, Bob");
+  });
+
+  it("renders a rich component with signal, computed, memo, and effect", () => {
+    const container = document.createElement("div");
+    const effectLog: string[] = [];
+
+    function Dashboard() {
+      const [count, setCount] = signal(1);
+      const [label] = signal("alpha");
+      const doubled = computed(() => count() * 2);
+      const badge = memo(() => `badge:${label()}`);
+
+      effect(() => {
+        const snapshot = `${count()}->${doubled()}`;
+        effectLog.push(`effect:${snapshot}`);
+        return () => {
+          effectLog.push(`cleanup:${snapshot}`);
+        };
+      });
+
+      return (
+        <section
+          data-count={() => String(count())}
+          class={() => (count() % 2 === 0 ? "even" : "odd")}
+        >
+          <h2>{() => `Dashboard ${label()}`}</h2>
+          <p>{() => `count=${count()} doubled=${doubled()}`}</p>
+          <output>{badge}</output>
+          <strong>{() => (count() > 2 ? "hot" : "warm")}</strong>
+          <button id="inc" type="button" onClick={() => setCount((value) => value + 1)}>
+            increment
+          </button>
+        </section>
+      );
+    }
+
+    const dispose = render(<Dashboard />, container);
+    const section = container.querySelector("section");
+    const text = () => section?.textContent?.replace(/\s+/g, " ").trim();
+
+    expect(section?.getAttribute("data-count")).toBe("1");
+    expect(section?.getAttribute("class")).toBe("odd");
+    expect(text()).toContain("Dashboard alpha");
+    expect(text()).toContain("count=1 doubled=2");
+    expect(text()).toContain("badge:alpha");
+    expect(text()).toContain("warm");
+    expect(effectLog).toEqual(["effect:1->2"]);
+
+    (container.querySelector("#inc") as HTMLButtonElement).click();
+    expect(section?.getAttribute("data-count")).toBe("2");
+    expect(section?.getAttribute("class")).toBe("even");
+    expect(text()).toContain("count=2 doubled=4");
+    expect(text()).toContain("badge:alpha");
+    expect(effectLog[0]).toBe("effect:1->2");
+    expect(effectLog).toContain("cleanup:1->2");
+    expect(effectLog.at(-1)).toBe("effect:2->4");
+
+    (container.querySelector("#inc") as HTMLButtonElement).click();
+    expect(section?.getAttribute("data-count")).toBe("3");
+    expect(text()).toContain("count=3 doubled=6");
+    expect(text()).toContain("badge:alpha");
+    expect(text()).toContain("hot");
+    expect(effectLog).toContain("effect:2->4");
+    expect(effectLog.at(-1)).toBe("effect:3->6");
+
+    dispose();
+    expect(container.innerHTML).toBe("");
+    expect(effectLog).toContain("effect:3->6");
   });
 
   it("renders component returning Fragment", () => {

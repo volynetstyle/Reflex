@@ -1,8 +1,9 @@
 import { createRuntime } from "@volynetstyle/reflex";
 import type { Scope, OwnerContext } from "./ownership";
 import { createOwnerContext } from "./ownership";
+import { createComponentRenderable } from "./component";
+import { createElementRenderable } from "./element";
 import { Fragment, type JSXTag } from "./host/namespace";
-import { createElement } from "./tree/create-element";
 import { renderWithRenderer } from "./render";
 import type {
   Cleanup,
@@ -83,10 +84,10 @@ export function jsx(
   }
 
   if (typeof type === "function") {
-    return (type as Component<any>)(p);
+    return createComponentRenderable(type as Component<any>, p);
   }
 
-  return createElement(ensureRenderer(), type, p, "html");
+  return createElementRenderable(type, p);
 }
 
 export const jsxs = jsx;

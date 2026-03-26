@@ -1,5 +1,5 @@
 import { effect } from "@volynetstyle/reflex";
-import type { Accessor, Cleanup } from "../types";
+import type { Accessor } from "../types";
 import type { Namespace } from "../host/namespace";
 import type { DOMRenderer } from "../runtime";
 import { clearBetween } from "../host/mutations";
@@ -43,31 +43,28 @@ export function createDynamicRange(
   mountRangeValue(renderer, initialFragment, childScope, acc(), ns);
   initialFragment.appendChild(end);
 
-  registerCleanup(
-    renderer.owner,
-    effect(() => {
-      const nextValue = acc();
+  effect(() => {
+    const nextValue = acc();
 
-      if (!initialized) {
-        initialized = true;
-        return;
-      }
+    if (!initialized) {
+      initialized = true;
+      return;
+    }
 
-      const parent = end.parentNode;
-      if (parent === null) {
-        return;
-      }
+    const parent = end.parentNode;
+    if (parent === null) {
+      return;
+    }
 
-      disposeScope(childScope);
-      clearBetween(start, end);
+    disposeScope(childScope);
+    clearBetween(start, end);
 
-      childScope = createScope();
+    childScope = createScope();
 
-      const fragment = parent.ownerDocument!.createDocumentFragment();
-      mountRangeValue(renderer, fragment, childScope, nextValue, ns);
-      parent.insertBefore(fragment, end);
-    }) as Cleanup,
-  );
+    const fragment = parent.ownerDocument!.createDocumentFragment();
+    mountRangeValue(renderer, fragment, childScope, nextValue, ns);
+    parent.insertBefore(fragment, end);
+  });
 
   registerCleanup(renderer.owner, () => {
     disposeScope(childScope);
