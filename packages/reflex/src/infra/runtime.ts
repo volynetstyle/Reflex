@@ -2,6 +2,11 @@ import {
   runtime,
   subscribeEvent,
 } from "@reflex/runtime";
+import type {
+  EngineContext,
+  EngineHooks,
+  ReactiveNode,
+} from "@reflex/runtime";
 import {
   resolveEffectSchedulerMode,
   EffectScheduler,
@@ -9,11 +14,6 @@ import {
   EffectStrategy,
 } from "../policy";
 import { createSource } from "./factory";
-import type {
-  EngineContext,
-  EngineHooks,
-  ReactiveNode,
-} from "../runtime-types";
 
 interface RuntimeOptions {
   hooks?: EngineHooks;

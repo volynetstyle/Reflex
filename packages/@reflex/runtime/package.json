@@ -6,11 +6,11 @@
   "license": "MIT",
   "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/index.js",
-  "types": "./dist/types/index.d.ts",
+  "types": "./dist/globals.d.ts",
   "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./dist/types/index.d.ts",
+      "types": "./dist/globals.d.ts",
       "import": "./dist/esm/index.js",
       "require": "./dist/cjs/index.cjs"
     }
@@ -18,7 +18,7 @@
   "files": [
     "dist/cjs",
     "dist/esm",
-    "dist/types"
+    "dist/globals.d.ts"
   ],
   "publishConfig": {
     "access": "restricted"
@@ -30,7 +30,7 @@
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "dev": "vite",
-    "build:ts": "tsc -p tsconfig.build.json",
+    "build:ts": "tsc -p tsconfig.build.json && node ../../../scripts/write-globals-dts.mjs .",
     "build:npm": "rollup -c rollup.config.ts",
     "build:perf": "rollup -c rollup.perf.config.ts",
     "build": "pnpm clean && pnpm build:ts && pnpm build:npm",

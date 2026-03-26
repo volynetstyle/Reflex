@@ -1,6 +1,6 @@
 import { runWatcher, disposeWatcher, ReactiveNodeState } from "@reflex/runtime";
 import { createEffectNode, UNINITIALIZED } from "../infra/factory";
-import type { ReactiveNode } from "../runtime-types";
+import type { ReactiveNode } from "@reflex/runtime";
 
 export function effectScheduled(
   node: ReactiveNode<typeof UNINITIALIZED | Destructor>,
@@ -14,15 +14,9 @@ export function effectUnscheduled(
   node.state &= ~ReactiveNodeState.Scheduled;
 }
 
-export function effect(fn: EffectFn): Disposable {
+export function effect(fn: EffectFn):  Destructor {
   const node = createEffectNode(fn);
   runWatcher(node);
 
-  const scope = function (): void {
-    disposeWatcher(node);
-  };
-
-  scope.dispose = scope;
-
-  return scope;
+  return () => disposeWatcher(node);
 }

@@ -1,34 +1,23 @@
-// @ts-ignore
+/** @jsxImportSource reflex-dom */
 
-type FC<P> = (p: P) => unknown;
+import { signal } from "@volynetstyle/reflex";
+import { render } from "reflex-dom";
 
-const ArrowComponent: FC<{}> = ({ }) => {
-    const [value, setValue] = createSignal(0);
+const [count, setCount] = signal(0);
 
-    createEffect(() => {
-        console.log(value())
-    })
-
-    return (
-        <div data-value={value} onClick={setValue((prev) => prev + 1)}>
-            {value}
-        </div>
-    );
+function Counter() {
+  return (
+    <button
+      type="button"
+      onClick={() => setCount((value) => value + 1)}
+    >
+      count: {count}
+    </button>
+  );
 }
 
-function FucntionComponent({ id, someValue }: { types }) {
-    const [value, setValue] = createSignal(0);
+const root = document.getElementById("app");
 
-    createEffect(() => {
-        console.log(value())
-    })
-
-    return (
-        <section {id} {someValue} or id={id}>
-            <div data-value={value} onClick={setValue((prev) => prev + 1)}>
-                {value}
-            </div>
-            <ArrowComponent />
-        </section>
-    );
+if (root) {
+  render(<Counter />, root);
 }

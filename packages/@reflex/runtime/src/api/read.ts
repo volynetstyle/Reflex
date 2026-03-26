@@ -7,47 +7,52 @@ import {
   recompute,
   propagateOnce,
   clearDirtyState,
-  UNINITIALIZED,
 } from "../reactivity";
 import runtime from "../reactivity/context";
+
+export type ConsumerReadMode = "lazy" | "eager";
 
 export function readProducer<T>(node: ReactiveNode<T>): T {
   trackRead(node);
   return node.payload as T;
 }
 
-export function readConsumer<T>(node: ReactiveNode<T>): T {
+function stabilizeConsumer<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
   if (__DEV__ && state & ReactiveNodeState.Computing) {
     throw new Error("Cycle detected while refreshing reactive graph");
   }
 
-  if ((state & DIRTY_STATE) === 0) {
-    trackRead(node);
-    return node.payload as T;
+  if ((state & DIRTY_STATE) !== 0) {
+    const needs =
+      (state & ReactiveNodeState.Changed) !== 0 || shouldRecompute(node);
+
+    if (needs) {
+      if (recompute(node)) propagateOnce(node);
+    } else {
+      clearDirtyState(node);
+    }
   }
 
-  // if clean - even dont need request for recomputation
-  const needs = state & ReactiveNodeState.Changed || shouldRecompute(node);
-
-  if (needs) {
-    if (recompute(node)) propagateOnce(node);
-  } else {
-    clearDirtyState(node);
-  }
-
-  trackRead(node);
   return node.payload as T;
 }
 
-export function runAndReadConsumer<T>(node: ReactiveNode<T>): T {
-  if (node.payload === UNINITIALIZED) {
-    trackRead(node);
-    return node.payload;
+export function readConsumer<T>(
+  node: ReactiveNode<T>,
+  mode: ConsumerReadMode = "lazy",
+): T {
+  if (mode === "eager") {
+    return untracked(() => stabilizeConsumer(node));
   }
 
-  return readConsumer(node);
+  const value = stabilizeConsumer(node);
+  trackRead(node);
+  return value;
+}
+
+export function runAndReadConsumer<T>(node: ReactiveNode<T>): T {
+  return readConsumer(node, "eager");
 }
 
 export function untracked<T>(fn: () => T): T {

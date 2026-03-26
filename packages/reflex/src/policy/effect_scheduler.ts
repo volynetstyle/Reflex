@@ -5,7 +5,7 @@ import {
 } from "@reflex/runtime";
 import { effectScheduled, effectUnscheduled } from "../api/effect";
 import { UNINITIALIZED } from "../infra/factory";
-import type { ReactiveNode } from "../runtime-types";
+import type { ReactiveNode } from "@reflex/runtime";
 
 export const enum EffectSchedulerMode {
   Flush = 0,

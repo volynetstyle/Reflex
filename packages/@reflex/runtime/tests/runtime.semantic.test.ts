@@ -19,6 +19,20 @@ describe("Reactive runtime - semantic correctness", () => {
     resetRuntime();
   });
 
+  it("keeps consumers lazy by default and can initialize them eagerly", () => {
+    const source = createProducer(1);
+    const spy = vi.fn(() => readProducer(source) * 2);
+    const derived = createConsumer(spy);
+
+    expect(spy).not.toHaveBeenCalled();
+
+    expect(readConsumer(derived, "eager")).toBe(2);
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    expect(readConsumer(derived)).toBe(2);
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
   it("commits producer writes eagerly but defers recomputation until read", () => {
     const source = createProducer(1);
     const spy = vi.fn(() => readProducer(source) * 2);
@@ -63,6 +77,30 @@ describe("Reactive runtime - semantic correctness", () => {
     expect(readConsumer(leaf)).toBe(11);
     expect(stableSpy).toHaveBeenCalledTimes(2);
     expect(leafSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("can eagerly initialize a consumer without subscribing the current consumer", () => {
+    const source = createProducer(1);
+    const derivedSpy = vi.fn(() => readProducer(source) * 2);
+    const derived = createConsumer(derivedSpy);
+    const outerSpy = vi.fn(() => {
+      readConsumer(derived, "eager");
+      return 0;
+    });
+    const outer = createConsumer(outerSpy);
+
+    expect(readConsumer(outer)).toBe(0);
+    expect(derivedSpy).toHaveBeenCalledTimes(1);
+    expect(outerSpy).toHaveBeenCalledTimes(1);
+    expect(incomingSources(outer)).toEqual([]);
+    expect(hasSubscriber(derived, outer)).toBe(false);
+
+    writeProducer(source, 2);
+
+    expect(outer.state & DIRTY_STATE).toBe(0);
+    expect(readConsumer(derived)).toBe(4);
+    expect(derivedSpy).toHaveBeenCalledTimes(2);
+    expect(outerSpy).toHaveBeenCalledTimes(1);
   });
 
   it("prunes stale branch edges after recompute and ignores later writes from that branch", () => {

@@ -25,7 +25,7 @@ describe("Reactive system - effects", () => {
     expect(cleanup).toHaveBeenCalledTimes(1);
     expect(spy).toHaveBeenCalledTimes(2);
 
-    scope.dispose();
+    scope();
     expect(cleanup).toHaveBeenCalledTimes(2);
 
     setSource(3);

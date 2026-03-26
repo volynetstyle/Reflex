@@ -1,5 +1,5 @@
 {
- "compilerOptions": {
+  "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
@@ -12,15 +12,32 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "./dist",
+    "baseUrl": ".",
+    "paths": {
+      "@volynetstyle/reflex": ["../reflex/dist/esm/index.d.ts"]
+    },
     "allowImportingTsExtensions": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "composite": true
   },
-  // "references": [
-  //   { "path": "../ref"}
-  // ],
-  "include": ["src"],
+  "include": [
+    "src/index.ts",
+    "src/jsx-runtime.ts",
+    "src/jsx-dev-runtime.ts",
+    "src/runtime.ts",
+    "src/render.ts",
+    "src/vite.ts",
+    "src/types.ts",
+    "src/ownership.ts",
+    "src/host/**/*.ts",
+    "src/bindings/**/*.ts",
+    "src/structure/**/*.ts",
+    "src/tree/**/*.ts",
+    "src/drafts/client/aliases.ts",
+    "src/drafts/client/sanitize.ts",
+    "src/drafts/client/tags.ts"
+  ],
   "exclude": ["dist", "**/*.test.ts"]
 }

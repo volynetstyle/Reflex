@@ -6,7 +6,7 @@
     "module": "ESNext",
     "target": "ES2022",
     "declaration": true,
-    "declarationDir": "dist/types",
+    "declarationDir": "dist/esm",
     "emitDeclarationOnly": false,
     "tsBuildInfoFile": "build/tsconfig.build.tsbuildinfo"
   },

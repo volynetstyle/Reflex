@@ -79,7 +79,7 @@ interface Writable<T> {
 }
 
 interface Disposable {
-  dispose(): void;
+  (): void;
 }
 
 /**

@@ -5,7 +5,7 @@ import {
   CONSUMER_INITIAL_STATE,
   WATCHER_INITIAL_STATE,
 } from "@reflex/runtime";
-import type { EventSource, ReactiveNode } from "../runtime-types";
+import type { EventSource, ReactiveNode } from "@reflex/runtime";
 
 export const UNINITIALIZED = Symbol("UNINITIALIZED") as unknown;
 

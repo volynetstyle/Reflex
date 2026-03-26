@@ -10,12 +10,33 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "import": "./dist/vite.js"
+    },
+    "./jsx-runtime": {
+      "types": "./dist/jsx-runtime.d.ts",
+      "import": "./dist/jsx-runtime.js"
+    },
+    "./jsx-dev-runtime": {
+      "types": "./dist/jsx-dev-runtime.d.ts",
+      "import": "./dist/jsx-dev-runtime.js"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json"
+    "build": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
+    "test": "pnpm exec vitest run --config vite.config.ts",
+    "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@swc/core": "^1.15.18",
+    "@volynetstyle/reflex": "workspace:*"
+  },
+  "peerDependencies": {
+    "vite": "^6.0.0"
   }
 }
