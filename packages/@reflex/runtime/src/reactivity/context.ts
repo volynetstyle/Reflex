@@ -43,6 +43,7 @@ class EngineContext {
 
   setHooks(hooks: EngineHooks = {}): void {
     delete this.hooks.onEffectInvalidated;
+    delete this.hooks.onReactiveSettled;
     Object.assign(this.hooks, hooks);
   }
 }
