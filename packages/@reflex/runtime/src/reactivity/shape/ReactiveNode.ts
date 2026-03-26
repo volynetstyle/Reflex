@@ -1,6 +1,5 @@
-import { Reactivable } from "./Reactivable";
+import type { Reactivable } from "./Reactivable";
 import type { ReactiveEdge } from "./ReactiveEdge";
-import { ReactiveNodeState } from "./ReactiveMeta";
 
 type ComputeFn<T> = (() => T) | null;
 const UNINITIALIZED: unique symbol = Symbol.for("UNINITIALIZED");
@@ -27,7 +26,7 @@ class ReactiveNode<T = unknown> implements Reactivable {
   }
 }
 
-class ReactiveNodeAsync<T, E> implements ReactiveNode {
+class _ReactiveNodeAsync<T, E> implements ReactiveNode {
   phase: number;
 
   state: number;

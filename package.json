@@ -8,7 +8,8 @@
     "test": "pnpm -r test",
     "test:e2e:runtime": "pnpm --filter @reflex/runtime test:e2e",
     "bench": "pnpm -r bench",
-    "lint": "pnpm -r lint",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "typecheck": "pnpm -r typecheck",
     "release": "changeset version && pnpm install && changeset publish",
     "prepare": "husky"

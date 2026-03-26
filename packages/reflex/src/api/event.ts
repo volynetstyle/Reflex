@@ -20,7 +20,6 @@
  * ```
  */
 import {
-  disposeNode,
   disposeNodeEvent,
   isDisposedNode,
   readProducer,

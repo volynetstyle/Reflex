@@ -29,11 +29,13 @@
     "build:ts": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/write-globals-dts.mjs .",
     "build:npm": "rollup -c rollup.config.ts",
     "build:clean": "pnpm build",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "bench": "vitest bench",
     "dev": "node ../../node_modules/typescript/bin/tsc -w -p tsconfig.build.json",
-    "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.json",
-    "prepublishOnly": "pnpm typecheck && pnpm build:clean"
+    "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
+    "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm build:clean"
   },
   "devDependencies": {
     "@reflex/runtime": "workspace:*"

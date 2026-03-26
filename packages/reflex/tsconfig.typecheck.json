@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "paths": {
+      "@reflex/runtime": [
+        "../@reflex/runtime/dist/globals.d.ts",
+        "../@reflex/runtime/src/index.ts"
+      ]
+    }
+  }
+}

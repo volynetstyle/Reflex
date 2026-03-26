@@ -103,7 +103,7 @@ class GraphNode {
   /** Tail of outgoing causal edge list */
   lastOut: GraphEdge | null = null;
 
-  constructor(id: number) {}
+  constructor(_id: number) {}
 }
 
 export { GraphNode };

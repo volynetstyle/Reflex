@@ -41,7 +41,7 @@ class CancelToken implements Cancellation {
   }
 }
 
-function guardAsync<T>(src: AsyncSource<T>, ctx: PhaseContext): AsyncSource<T> {
+function _guardAsync<T>(src: AsyncSource<T>, ctx: PhaseContext): AsyncSource<T> {
   return {
     subscribe(k, phase) {
       const token = new CancelToken();

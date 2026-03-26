@@ -7,7 +7,6 @@ import {
 } from "../reactivity/shape";
 import {
   disposeNode,
-  unlinkAllSources,
 } from "../reactivity/shape/methods/connect";
 import { executeNodeComputation } from "../reactivity/engine/execute";
 import { shouldRecompute } from "../reactivity/walkers/shouldRecompute";
