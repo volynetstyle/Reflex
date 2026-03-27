@@ -10,13 +10,13 @@ type ContentState =
     }
   | {
       kind: "text";
-      scope: Scope;
+      scope: null;
       node: Text;
       value: string;
     }
   | {
       kind: "node";
-      scope: Scope;
+      scope: null;
       node: Node;
     }
   | {
@@ -79,7 +79,7 @@ export function createContentSlot(
       parent.appendChild(node);
       state = {
         kind: "text",
-        scope: createScope(),
+        scope: null,
         node,
         value: node.data,
       };
@@ -90,7 +90,7 @@ export function createContentSlot(
       parent.appendChild(value);
       state = {
         kind: "node",
-        scope: createScope(),
+        scope: null,
         node: value,
       };
       return;
@@ -138,7 +138,7 @@ export function createContentSlot(
     parent.insertBefore(node, end);
     state = {
       kind: "text",
-      scope: createScope(),
+      scope: null,
       node,
       value,
     };
@@ -153,7 +153,7 @@ export function createContentSlot(
     parent.insertBefore(value, end);
     state = {
       kind: "node",
-      scope: createScope(),
+      scope: null,
       node: value,
     };
   }

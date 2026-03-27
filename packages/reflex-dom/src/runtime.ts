@@ -18,10 +18,36 @@ import type {
 
 export type DOMRuntimeOptions = Parameters<typeof createRuntime>[0];
 
+const mountedScopeKey = Symbol("reflex-dom.mounted-scope");
+
+type MountedContainer = (ParentNode & Node) & {
+  [mountedScopeKey]?: Scope | undefined;
+};
+
+export interface MountedScopeStore {
+  get(container: ParentNode & Node): Scope | undefined;
+  set(container: ParentNode & Node, scope: Scope): void;
+  delete(container: ParentNode & Node): void;
+}
+
+function createMountedScopeStore(): MountedScopeStore {
+  return {
+    get(container) {
+      return (container as MountedContainer)[mountedScopeKey];
+    },
+    set(container, scope) {
+      (container as MountedContainer)[mountedScopeKey] = scope;
+    },
+    delete(container) {
+      delete (container as MountedContainer)[mountedScopeKey];
+    },
+  };
+}
+
 export interface DOMRenderer {
   runtime: ReturnType<typeof createRuntime> | null;
   owner: OwnerContext;
-  mountedScopes: WeakMap<ParentNode & Node, Scope>;
+  mountedScopes: MountedScopeStore;
   ensureRuntime(): ReturnType<typeof createRuntime>;
   render(input: JSXRenderable, container: ParentNode & Node): Cleanup;
   mount(input: JSXRenderable, container: ParentNode & Node): Cleanup;
@@ -38,7 +64,7 @@ export function createDOMRenderer(options?: DOMRuntimeOptions): DOMRenderer {
   const renderer: DOMRenderer = {
     runtime: null,
     owner: createOwnerContext(),
-    mountedScopes: new WeakMap(),
+    mountedScopes: createMountedScopeStore(),
     ensureRuntime() {
       return (renderer.runtime ??= createRendererRuntime(options));
     },

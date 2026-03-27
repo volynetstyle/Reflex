@@ -2,7 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, effect, memo, signal } from "@volynetstyle/reflex";
-import { createDOMRuntime, render } from "../src";
+import { createDOMRenderer, createDOMRuntime, render } from "../src";
 
 describe("render lifecycle and reactive bindings", () => {
   beforeEach(() => {
@@ -180,5 +180,37 @@ describe("render lifecycle and reactive bindings", () => {
 
     dispose();
     expect(log).toEqual(["inner", "outer"]);
+  });
+
+  it("cleans up the previous tree when another renderer mounts into the same container", () => {
+    const container = document.createElement("div");
+    const [source, setSource] = signal("a");
+    const log: string[] = [];
+
+    function Child() {
+      effect(() => {
+        const value = source();
+        log.push(`run:${value}`);
+
+        return () => {
+          log.push(`cleanup:${value}`);
+        };
+      });
+
+      return <span>{source}</span>;
+    }
+
+    const firstRenderer = createDOMRenderer();
+    const secondRenderer = createDOMRenderer();
+
+    firstRenderer.render(<Child />, container);
+    expect(log).toEqual(["run:a"]);
+
+    secondRenderer.render(<p>next</p>, container);
+    expect(container.textContent).toBe("next");
+    expect(log).toEqual(["run:a", "cleanup:a"]);
+
+    setSource("b");
+    expect(log).toEqual(["run:a", "cleanup:a"]);
   });
 });

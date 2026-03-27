@@ -1,8 +1,6 @@
 import type { Namespace } from "../host/namespace";
 import {
   createScope,
-  registerCleanup,
-  disposeScope,
   runWithScope,
 } from "../ownership";
 import type { DOMRenderer } from "../runtime";
@@ -16,10 +14,6 @@ export function mountComponent(
   ns: Namespace,
 ): void {
   const scope = createScope();
-
-  registerCleanup(renderer.owner, () => {
-    disposeScope(scope);
-  });
 
   runWithScope(renderer.owner, scope, () => {
     appendRenderableNodes(

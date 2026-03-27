@@ -62,6 +62,15 @@ The repository is currently organized around three active layers:
 
 There is also a DOM adapter in the repository as `reflex-dom`.
 
+### `reflex-dom`
+
+`reflex-dom` is the deterministic DOM renderer built on top of the Reflex
+runtime. Its architecture, render pipeline, ownership model, and lifecycle are
+documented here:
+
+- `packages/reflex-dom/README.md`
+- `packages/reflex-dom/src/ownership/Readme.md`
+
 ## Philosophy
 
 - explicit runtime behavior over hidden scheduling
