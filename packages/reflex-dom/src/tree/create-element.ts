@@ -1,5 +1,4 @@
 import type {
-  DOMProps,
   ElementInstance,
   ElementProps,
   ElementTag,

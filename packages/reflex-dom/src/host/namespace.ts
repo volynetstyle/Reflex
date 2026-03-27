@@ -1,8 +1,11 @@
-import type { Component, ElementTag } from "../types";
+import type { ElementTag, JSXRenderable } from "../types";
 import { isSVGTag } from "../drafts/client/tags";
 
 export type Namespace = "html" | "svg";
-export type JSXTag = ElementTag | typeof Fragment | Component<any>;
+export type JSXTag =
+  | ElementTag
+  | typeof Fragment
+  | ((props: unknown) => JSXRenderable);
 
 export const SVG_NS = "http://www.w3.org/2000/svg";
 export const XLINK_NS = "http://www.w3.org/1999/xlink";

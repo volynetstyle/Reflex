@@ -80,6 +80,8 @@ type FragmentProps = {
   children?: JSXRenderable;
 };
 
+type RuntimeComponent = (props: unknown) => JSXRenderable;
+
 export function jsx(
   type: typeof Fragment,
   props: FragmentProps | null,
@@ -107,7 +109,7 @@ export function jsx(
   }
 
   if (typeof type === "function") {
-    return createComponentRenderable(type as Component<any>, p);
+    return createComponentRenderable(type as RuntimeComponent, p);
   }
 
   return createElementRenderable(type as ElementTag, p as ElementProps<ElementTag>);
@@ -118,7 +120,7 @@ export const jsxDEV: typeof jsx = (
   type: JSXTag,
   props: DOMProps | Record<string, unknown> | FragmentProps | null,
   key?: unknown,
-) => jsx(type as any, props as any, key as AttributeKey | undefined);
+) => jsx(type as never, props as never, key as AttributeKey | undefined);
 
 export function useDOMRenderer(renderer: DOMRenderer | null) {
   activeRenderer = renderer;

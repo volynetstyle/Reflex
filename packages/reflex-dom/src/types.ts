@@ -6,10 +6,13 @@ export type MaybeAccessor<T> = T | Accessor<T>;
 type CSSPropertyValue = string | number | null | undefined;
 type CSSWritableKey = Exclude<
   {
-    [K in keyof CSSStyleDeclaration]:
-      CSSStyleDeclaration[K] extends string | number | null | undefined
-        ? K
-        : never;
+    [K in keyof CSSStyleDeclaration]: CSSStyleDeclaration[K] extends
+      | string
+      | number
+      | null
+      | undefined
+      ? K
+      : never;
   }[keyof CSSStyleDeclaration],
   number | "length" | "parentRule" | "cssText"
 >;
@@ -72,7 +75,7 @@ export interface ElementRenderable<
   readonly props: Props;
 }
 
-type AnyFn = (...args: any[]) => unknown;
+type AnyFn = (...args: unknown[]) => unknown;
 type DOMAttributeValue = string | number | bigint | boolean | null | undefined;
 type DOMPropertyValue = string | number | boolean | null | undefined;
 type AliasAttributeName = keyof typeof attributeAliases;
@@ -141,11 +144,10 @@ type SVGCoreAttributeName =
   | "y1"
   | "y2";
 
-type IfEquals<X, Y, OnEqual = X, OnMismatch = never> = (<T>() => T extends X
-  ? 1
-  : 2) extends <T>() => T extends Y ? 1 : 2
-  ? OnEqual
-  : OnMismatch;
+type IfEquals<X, Y, OnEqual = X, OnMismatch = never> =
+  (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2
+    ? OnEqual
+    : OnMismatch;
 
 type WritableKeys<T> = {
   [K in keyof T]-?: IfEquals<
@@ -158,12 +160,11 @@ type WritableKeys<T> = {
 
 type WritablePrimitiveKeys<T> = Exclude<
   {
-    [K in WritableKeys<T>]:
-      T[K] extends AnyFn
-        ? never
-        : Exclude<T[K], undefined> extends DOMPropertyValue
-          ? K
-          : never;
+    [K in WritableKeys<T>]: T[K] extends AnyFn
+      ? never
+      : Exclude<T[K], undefined> extends DOMPropertyValue
+        ? K
+        : never;
   }[WritableKeys<T>],
   "children" | "className" | "ref" | "style"
 >;
@@ -203,10 +204,7 @@ type DOMEventProps<T extends Element, Events extends object> = {
     T,
     ResolveEvent<Events, "animationcancel">
   >;
-  onAnimationEnd?: DOMEventHandlerProp<
-    T,
-    ResolveEvent<Events, "animationend">
-  >;
+  onAnimationEnd?: DOMEventHandlerProp<T, ResolveEvent<Events, "animationend">>;
   onAnimationIteration?: DOMEventHandlerProp<
     T,
     ResolveEvent<Events, "animationiteration">
@@ -295,7 +293,10 @@ type DOMEventProps<T extends Element, Events extends object> = {
   onPause?: DOMEventHandlerProp<T, ResolveEvent<Events, "pause">>;
   onPlay?: DOMEventHandlerProp<T, ResolveEvent<Events, "play">>;
   onPlaying?: DOMEventHandlerProp<T, ResolveEvent<Events, "playing">>;
-  onPointerCancel?: DOMEventHandlerProp<T, ResolveEvent<Events, "pointercancel">>;
+  onPointerCancel?: DOMEventHandlerProp<
+    T,
+    ResolveEvent<Events, "pointercancel">
+  >;
   onPointerDown?: DOMEventHandlerProp<T, ResolveEvent<Events, "pointerdown">>;
   onPointerEnter?: DOMEventHandlerProp<T, ResolveEvent<Events, "pointerenter">>;
   onPointerLeave?: DOMEventHandlerProp<T, ResolveEvent<Events, "pointerleave">>;
@@ -445,8 +446,5 @@ export type ElementInstance<Tag extends ElementTag> =
   IntrinsicElements[Tag] extends DOMProps<infer Instance extends Element>
     ? Instance
     : Element;
-export type ComponentProps<T extends Component<any>> = T extends Component<
-  infer Props
->
-  ? Props
-  : never;
+export type ComponentProps<T> =
+  T extends Component<infer Props> ? Props : never;

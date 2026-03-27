@@ -5,6 +5,7 @@
     "composite": false,
     "declaration": false,
     "declarationMap": false,
+    "jsx": "react-jsx",
     "paths": {
       "@volynetstyle/reflex": [
         "../reflex/dist/esm/index.d.ts",
