@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  ConsumerReadMode,
   DIRTY_STATE,
   ReactiveNodeState,
   readConsumer,
@@ -26,7 +27,7 @@ describe("Reactive runtime - semantic correctness", () => {
 
     expect(spy).not.toHaveBeenCalled();
 
-    expect(readConsumer(derived, "eager")).toBe(2);
+    expect(readConsumer(derived, ConsumerReadMode.eager)).toBe(2);
     expect(spy).toHaveBeenCalledTimes(1);
 
     expect(readConsumer(derived)).toBe(2);
@@ -84,7 +85,7 @@ describe("Reactive runtime - semantic correctness", () => {
     const derivedSpy = vi.fn(() => readProducer(source) * 2);
     const derived = createConsumer(derivedSpy);
     const outerSpy = vi.fn(() => {
-      readConsumer(derived, "eager");
+      readConsumer(derived, ConsumerReadMode.eager);
       return 0;
     });
     const outer = createConsumer(outerSpy);

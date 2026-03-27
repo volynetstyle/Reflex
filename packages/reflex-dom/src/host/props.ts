@@ -1,6 +1,6 @@
+import type { Namespace } from "./namespace";
 import type { StyleValue } from "../types";
 import { setAttr } from "./attr";
-import { Namespace } from "./namespace";
 import { applyStyle } from "./styles";
 import { normalizeAttr } from "../drafts/client/aliases";
 

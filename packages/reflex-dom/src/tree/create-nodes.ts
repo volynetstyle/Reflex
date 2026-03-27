@@ -1,41 +1,47 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { COMPONENT_RENDERABLE } from "../component";
 import { ELEMENT_RENDERABLE } from "../element";
+import {
+  FOR_RENDERABLE,
+  SHOW_RENDERABLE,
+  SWITCH_RENDERABLE,
+  type ForRenderable,
+  type ShowRenderable,
+  type SwitchRenderable,
+} from "../operators";
 import type {
   ComponentRenderable,
+  ElementProps,
   ElementRenderable,
+  ElementTag,
   JSXRenderable,
 } from "../types";
 import type { Namespace } from "../host/namespace";
 import type { DOMRenderer } from "../runtime";
-import {
-  createScope,
-  disposeScope,
-  registerCleanup,
-  runWithScope,
-} from "../ownership";
 import { createDynamicRange } from "../structure/range";
 import { createElement } from "./create-element";
+import { mountFor } from "./for";
+import { mountShow } from "./show";
+import { createMountedSlot } from "./slot";
+import { mountSwitch } from "./switch";
+import { mountComponent } from "./component";
 
 function isAccessor(value: unknown): value is () => unknown {
   return typeof value === "function";
 }
 
-function isComponentRenderable(value: unknown): value is ComponentRenderable<any> {
+function isIterable(value: unknown): value is Iterable<unknown> {
   return (
     typeof value === "object" &&
     value !== null &&
-    "kind" in value &&
-    (value as { kind?: unknown }).kind === COMPONENT_RENDERABLE
+    Symbol.iterator in value
   );
 }
 
-function isElementRenderable(value: unknown): value is ElementRenderable {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "kind" in value &&
-    (value as { kind?: unknown }).kind === ELEMENT_RENDERABLE
-  );
+function getRenderableKind(value: unknown): unknown {
+  return typeof value === "object" && value !== null
+    ? (value as { kind?: unknown }).kind
+    : undefined;
 }
 
 export function appendRenderableNodes(
@@ -60,10 +66,12 @@ export function appendRenderableNodes(
       continue;
     }
 
-    if (Array.isArray(current)) {
-      // Push in reverse order to preserve original order
-      for (let i = current.length - 1; i >= 0; --i) {
-        stack[top++] = current[i];
+    if (Array.isArray(current) || isIterable(current)) {
+      const items = Array.isArray(current) ? current : Array.from(current);
+
+      // Push in reverse order to preserve original order.
+      for (let i = items.length - 1; i >= 0; --i) {
+        stack[top++] = items[i];
       }
 
       continue;
@@ -74,30 +82,62 @@ export function appendRenderableNodes(
       continue;
     }
 
-    if (isElementRenderable(current)) {
-      parent.appendChild(
-        createElement(renderer, current.tag, current.props, ns),
-      );
-      continue;
-    }
-
     if (isAccessor(current)) {
       const nodeRange = createDynamicRange(renderer, current, ns);
       parent.appendChild(nodeRange);
       continue;
     }
 
-    if (isComponentRenderable(current)) {
-      const scope = createScope();
+    switch (getRenderableKind(current)) {
+      case ELEMENT_RENDERABLE:
+        {
+          const element = current as ElementRenderable<
+            ElementTag,
+            ElementProps<ElementTag>
+          >;
 
-      registerCleanup(renderer.owner, () => {
-        disposeScope(scope);
-      });
+        parent.appendChild(
+          createElement(
+            renderer,
+            element.tag,
+            element.props,
+            ns,
+          ),
+        );
+        continue;
+        }
 
-      runWithScope(renderer.owner, scope, () => {
-        appendRenderableNodes(renderer, parent, current.type(current.props), ns);
-      });
-      continue;
+      case SHOW_RENDERABLE:
+        parent.appendChild(
+          mountShow(renderer, current as ShowRenderable<any>, ns),
+        );
+        continue;
+
+      case SWITCH_RENDERABLE:
+        parent.appendChild(
+          mountSwitch(renderer, current as SwitchRenderable<any>, ns),
+        );
+        continue;
+
+      case FOR_RENDERABLE:
+        parent.appendChild(
+          mountFor(
+            renderer,
+            current as ForRenderable<any>,
+            ns,
+            createMountedSlot,
+          ),
+        );
+        continue;
+
+      case COMPONENT_RENDERABLE:
+        mountComponent(
+          renderer,
+          parent,
+          current as ComponentRenderable<any>,
+          ns,
+        );
+        continue;
     }
 
     parent.appendChild(doc.createTextNode(String(current)));

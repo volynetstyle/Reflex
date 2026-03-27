@@ -1,8 +1,8 @@
-import { effect } from "@volynetstyle/reflex";
 import type { Accessor } from "../types";
 import type { Namespace } from "../host/namespace";
 import type { DOMRenderer } from "../runtime";
 import { applyProp } from "../host/props";
+import { onEffectStart, ownedEffect } from "../ownership";
 
 export function bindReactiveProp(
   renderer: DOMRenderer,
@@ -14,16 +14,12 @@ export function bindReactiveProp(
   renderer.ensureRuntime();
 
   let previousValue = applyProp(el, name, acc(), ns, undefined);
-  let isInitialized = false;
 
-  effect(() => {
+  ownedEffect(renderer.owner, () => {
     const nextValue = acc();
 
-    if (!isInitialized) {
-      isInitialized = true;
-      return;
-    }
-
-    previousValue = applyProp(el, name, nextValue, ns, previousValue);
+    onEffectStart(() => {
+      previousValue = applyProp(el, name, nextValue, ns, previousValue);
+    });
   });
 }

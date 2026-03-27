@@ -5,10 +5,17 @@
     "outDir": "build/esm",
     "module": "ESNext",
     "target": "ES2022",
+    "baseUrl": ".",
     "declaration": true,
     "declarationDir": "dist/esm",
     "emitDeclarationOnly": false,
-    "tsBuildInfoFile": "build/tsconfig.build.tsbuildinfo"
+    "tsBuildInfoFile": "build/tsconfig.build.tsbuildinfo",
+    "paths": {
+      "@reflex/runtime": [
+        "../@reflex/runtime/dist/globals.d.ts",
+        "../@reflex/runtime/src/index.ts"
+      ]
+    }
   },
   "include": ["src"]
 }

@@ -1,4 +1,5 @@
-import { ReactiveNode, ReactiveNodeState } from "../reactivity";
+import type { ReactiveNode} from "../reactivity";
+import { ReactiveNodeState } from "../reactivity";
 import runtime from "../reactivity/context";
 
 export function getCurrentComputedInternal(): ReactiveNode | undefined {

@@ -1,6 +1,7 @@
 import runtime from "../context";
+import type {
+  ReactiveNode} from "../shape";
 import {
-  ReactiveNode,
   ReactiveNodeState,
   clearNodeComputing,
   markNodeComputing,

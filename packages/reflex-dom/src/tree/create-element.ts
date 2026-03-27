@@ -1,4 +1,10 @@
-import type { DOMProps, Ref } from "../types";
+import type {
+  DOMProps,
+  ElementInstance,
+  ElementProps,
+  ElementTag,
+  Ref,
+} from "../types";
 import type { DOMRenderer } from "../runtime";
 import { bindReactiveProp } from "../bindings/reactive-prop";
 import { isEventProp, attachEventListener } from "../host/events";
@@ -80,7 +86,7 @@ function mountProp(
 function mountProps(
   renderer: DOMRenderer,
   el: Element,
-  props: DOMProps,
+  props: Record<string, unknown>,
   ns: Namespace,
 ): void {
   for (const name in props) {
@@ -97,29 +103,29 @@ function mountChildren(
   appendRenderableNodes(renderer, el, children, ns);
 }
 
-function mountRef(
+function mountRef<T extends Element>(
   renderer: DOMRenderer,
-  el: Element,
-  ref: Ref<Element> | undefined,
+  el: T,
+  ref: Ref<T> | undefined,
 ): void {
   if (ref !== undefined) {
     registerCleanup(renderer.owner, attachRef(el, ref));
   }
 }
 
-export function createElement(
+export function createElement<Tag extends ElementTag>(
   renderer: DOMRenderer,
-  tag: string,
-  props: DOMProps,
+  tag: Tag,
+  props: ElementProps<Tag>,
   parentNamespace: Namespace,
-): Element {
+): ElementInstance<Tag> {
   const ns = resolveNamespace(tag, parentNamespace);
   const doc = document;
-  const el = createHostElement(tag, ns, doc);
+  const el = createHostElement(tag, ns, doc) as ElementInstance<Tag>;
 
-  mountProps(renderer, el, props, ns);
+  mountProps(renderer, el, props as Record<string, unknown>, ns);
   mountChildren(renderer, el, props.children ?? null, ns);
-  mountRef(renderer, el, props.ref as Ref<Element> | undefined);
+  mountRef(renderer, el, props.ref as Ref<ElementInstance<Tag>> | undefined);
 
   return el;
 }

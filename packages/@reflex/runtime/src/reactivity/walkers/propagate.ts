@@ -1,9 +1,9 @@
 import runtime from "../context";
+import type { ReactiveNode } from "../shape";
 import {
   type ReactiveEdge,
   DIRTY_STATE,
   WALKER_STATE,
-  ReactiveNode,
   ReactiveNodeState,
 } from "../shape";
 

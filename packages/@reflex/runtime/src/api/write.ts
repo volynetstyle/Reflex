@@ -1,5 +1,6 @@
 import { compare } from "./compare";
-import { DIRTY_STATE, ReactiveNode, propagate } from "../reactivity";
+import type { ReactiveNode} from "../reactivity";
+import { DIRTY_STATE, propagate } from "../reactivity";
 import runtime from "../reactivity/context";
 
 export function writeProducer<T>(node: ReactiveNode<T>, value: T): void {

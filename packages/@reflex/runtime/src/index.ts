@@ -2,7 +2,7 @@ export {
   readProducer,
   writeProducer,
   readConsumer,
-  runAndReadConsumer,
+  ConsumerReadMode,
   runWatcher,
   disposeWatcher,
 } from "./api";
@@ -12,6 +12,7 @@ export {
   default as runtime,
   type EngineContext,
   type EngineHooks,
+  type CleanupRegistrar,
 } from "./reactivity/context";
 
 export {

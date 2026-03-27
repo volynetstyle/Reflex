@@ -1,4 +1,5 @@
-import { Namespace, XLINK_NS, URL_ATTRS } from "./namespace";
+import type { Namespace} from "./namespace";
+import { XLINK_NS, URL_ATTRS } from "./namespace";
 import { sanitizeURL } from "../drafts/client/sanitize";
 
 const enum AttrKind {

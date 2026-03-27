@@ -22,6 +22,41 @@ export function insertBefore(anchor: Node, nodes: readonly Node[]): void {
   parent.insertBefore(frag, anchor);
 }
 
+export function moveRangeBefore(start: Node, end: Node, anchor: Node): void {
+  const parent = start.parentNode;
+
+  if (
+    parent === null ||
+    end.parentNode !== parent ||
+    anchor.parentNode !== parent
+  ) {
+    return;
+  }
+
+  if (end.nextSibling === anchor) {
+    return;
+  }
+
+  const doc = anchor.ownerDocument;
+  if (!doc) return;
+
+  const frag = doc.createDocumentFragment();
+  let node: Node | null = start;
+
+  while (node !== null) {
+    const next: Node | null = node === end ? null : node.nextSibling;
+    frag.appendChild(node);
+
+    if (node === end) {
+      break;
+    }
+
+    node = next;
+  }
+
+  parent.insertBefore(frag, anchor);
+}
+
 export function clearBetween(start: Node, end: Node): void {
   let node = start.nextSibling;
 

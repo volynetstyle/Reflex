@@ -1,9 +1,8 @@
 import { recompute } from "../engine/compute";
+import type { ReactiveNode } from "../shape";
 import {
   DIRTY_STATE,
-  clearDirtyState,
   type ReactiveEdge,
-  ReactiveNode,
   ReactiveNodeState,
 } from "../shape";
 import { propagateOnce } from "./propagate";
@@ -42,13 +41,15 @@ function hasFanout(link: ReactiveEdge): boolean {
 //     If D and E both depend on C → hasFanout=true → propagateOnce(C)
 //     marks D and E invalid immediately (push side) so they don't pull stale.
 function refreshDependency(link: ReactiveEdge, node: ReactiveNode): boolean {
+  let changed;
+
   if ((node.state & ReactiveNodeState.Producer) !== 0) {
-    const changed = (node.state & ReactiveNodeState.Changed) !== 0;
-    clearDirtyState(node);
+    changed = (node.state & ReactiveNodeState.Changed) !== 0;
+    node.state = node.state & ~DIRTY_STATE;
     return changed;
   }
 
-  const changed = recompute(node);
+  changed = recompute(node);
   if (changed && hasFanout(link)) propagateOnce(node);
   return changed;
 }
@@ -90,6 +91,15 @@ export function shouldRecompute(node: ReactiveNode): boolean {
 
   // Already confirmed changed upstream (e.g. by push-side propagate) — no walk needed.
   if ((state & ReactiveNodeState.Changed) !== 0) return true;
+  // If a tracked dependency invalidated this node while it was computing,
+  // propagate() leaves Visited|Invalid behind as the re-entrancy marker.
+  // That means the current execution observed a stale prefix and must rerun.
+  if (
+    (state & ReactiveNodeState.Invalid) !== 0 &&
+    (state & ReactiveNodeState.Visited) !== 0
+  ) {
+    return true;
+  }
 
   const firstIn = node.firstIn;
   if (firstIn === null) {
@@ -110,8 +120,8 @@ export function shouldRecompute(node: ReactiveNode): boolean {
   let stackTop = -1;
 
   let link = firstIn; // current edge being inspected
-  let sub = node;     // consumer whose incoming edges we are walking
-  let dirty = false;  // true once any upstream change is confirmed
+  let sub = node; // consumer whose incoming edges we are walking
+  let dirty = false; // true once any upstream change is confirmed
 
   outer: while (true) {
     const dep = link.from;
@@ -129,11 +139,10 @@ export function shouldRecompute(node: ReactiveNode): boolean {
       //
       // Example: signal A was set to a new value → A.Changed=true
       //   refreshDependency returns true → dirty=true → unwind and return true.
-      dirty = refreshDependency(link, dep) || dirty;
+      dirty = dirty || refreshDependency(link, dep);
     } else if (
       (depState & ReactiveNodeState.Producer) === 0 &&
-      (depState & DIRTY_STATE) !== 0 &&
-      dep.firstIn !== null
+      (depState & DIRTY_STATE) !== 0
     ) {
       // dep is a dirty computed node with its own dependencies.
       // We can't know if it truly changed without inspecting its subtree first.
@@ -142,23 +151,16 @@ export function shouldRecompute(node: ReactiveNode): boolean {
       // Example: B depends on C (computed, Invalid), C depends on A (signal).
       //   We don't know if C changed until we check A.
       //   Push edge(B→C), set link=C.firstIn, sub=C, then loop again.
-      stack[++stackTop] = link;
-      link = dep.firstIn;
-      sub = dep;
-      continue;
-    } else if (
-      (depState & ReactiveNodeState.Producer) === 0 &&
-      (depState & DIRTY_STATE) !== 0
-      // dep.firstIn === null implied here (previous branch took dep.firstIn !== null)
-    ) {
-      // dep is a dirty computed node with no current dependencies.
-      // It lost all its deps (e.g. conditional branch stopped tracking them).
-      // Must rerun once to refresh its value even though there's nothing to descend into.
-      dirty = refreshDependency(link, dep) || dirty;
-    }
-    // else: dep is clean (not dirty, not changed) — nothing to do, keep walking siblings.
+      const statusbar = dep.firstIn;
+      if (statusbar !== null) {
+        stack[++stackTop] = link;
+        link = statusbar;
+        sub = dep;
+        continue;
+      }
 
-    // ── Advance or begin unwinding ────────────────────────────────────────────
+      dirty = dirty || refreshDependency(link, dep);
+    }
 
     if (!dirty) {
       // Still no confirmed change. Try next sibling dep of the current consumer.
@@ -171,7 +173,7 @@ export function shouldRecompute(node: ReactiveNode): boolean {
       }
 
       // All deps of sub checked out clean → sub is no longer invalid.
-      sub.state &= ~ReactiveNodeState.Invalid;
+      sub.state = sub.state & ~ReactiveNodeState.Invalid;
     }
 
     // ── Unwind DFS stack ──────────────────────────────────────────────────────
@@ -195,9 +197,11 @@ export function shouldRecompute(node: ReactiveNode): boolean {
     while (stackTop >= 0) {
       const parentLink = stack[stackTop--]!;
 
-      dirty = dirty
-        ? refreshDependency(parentLink, sub)
-        : (sub.state &= ~ReactiveNodeState.Invalid, false);
+      if (dirty) {
+        dirty = refreshDependency(parentLink, sub);
+      } else {
+        sub.state = sub.state & ~ReactiveNodeState.Invalid;
+      }
 
       sub = parentLink.to;
       link = parentLink;

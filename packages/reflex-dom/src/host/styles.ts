@@ -1,5 +1,11 @@
 import type { StyleObject, StyleValue } from "../types";
 
+type StyleRecord = Record<string, string | number | null | undefined>;
+
+function toStyleRecord(value: StyleObject): StyleRecord {
+  return value as StyleRecord;
+}
+
 function isCustomProp(key: string): boolean {
   return key.charCodeAt(0) === 45 && key.charCodeAt(1) === 45;
 }
@@ -47,9 +53,12 @@ function patchStyleObject(
   next: StyleObject,
   prev: StyleObject,
 ): void {
+  const nextRecord = toStyleRecord(next);
+  const prevRecord = toStyleRecord(prev);
+
   // remove stale keys
-  for (const key in prev) {
-    if (!(key in next)) {
+  for (const key in prevRecord) {
+    if (!(key in nextRecord)) {
       if (isCustomProp(key)) {
         style.removeProperty(key);
       } else {
@@ -59,9 +68,9 @@ function patchStyleObject(
   }
 
   // apply only changed keys
-  for (const key in next) {
-    const nextValue = next[key];
-    if (prev[key] !== nextValue) {
+  for (const key in nextRecord) {
+    const nextValue = nextRecord[key];
+    if (prevRecord[key] !== nextValue) {
       setStyleValue(style, key, nextValue);
     }
   }
@@ -102,16 +111,20 @@ export function applyStyle(
   }
 
   if (prev == null) {
-    for (const key in next) {
-      setStyleValue(style, key, next[key]);
+    const nextRecord = toStyleRecord(next);
+
+    for (const key in nextRecord) {
+      setStyleValue(style, key, nextRecord[key]);
     }
     return next;
   }
 
   if (typeof prev === "string") {
     clearStyleString(style);
-    for (const key in next) {
-      setStyleValue(style, key, next[key]);
+    const nextRecord = toStyleRecord(next);
+
+    for (const key in nextRecord) {
+      setStyleValue(style, key, nextRecord[key]);
     }
     return next;
   }

@@ -1,13 +1,11 @@
+import type { ReactiveNode } from "../reactivity/shape";
 import {
   DIRTY_STATE,
-  ReactiveNode,
   ReactiveNodeState,
   UNINITIALIZED,
   clearDirtyState,
 } from "../reactivity/shape";
-import {
-  disposeNode,
-} from "../reactivity/shape/methods/connect";
+import { disposeNode } from "../reactivity/shape/methods/connect";
 import { executeNodeComputation } from "../reactivity/engine/execute";
 import { shouldRecompute } from "../reactivity/walkers/shouldRecompute";
 
@@ -27,7 +25,9 @@ export function runWatcher(node: ReactiveNode): void {
   prevCleanup?.();
 
   executeNodeComputation(node, (result) => {
-    node.state &= ~ReactiveNodeState.Visited;
+    if ((node.state & DIRTY_STATE) === 0) {
+      node.state &= ~ReactiveNodeState.Visited;
+    }
     if (typeof result === "function") node.payload = result as () => void;
   });
 }

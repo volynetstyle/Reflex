@@ -1,6 +1,12 @@
+import { effect, withEffectCleanupRegistrar } from "@volynetstyle/reflex";
 import type { Cleanup } from "./types";
 
-const EFFECT_CLEANUP_REGISTRAR = Symbol.for("reflex.effect.cleanup.register");
+type OwnedEffectFn = () => void | (() => void);
+interface OwnedEffectState {
+  skipStartCallbacks: boolean;
+}
+
+let currentOwnedEffectState: OwnedEffectState | null = null;
 
 export interface Scope {
   cleanups: Cleanup[];
@@ -24,25 +30,56 @@ export function runWithScope<T>(
   fn: () => T,
 ): T {
   const previousScope = owner.currentScope;
-  const host = globalThis as typeof globalThis & {
-    [EFFECT_CLEANUP_REGISTRAR]?: (cleanup: Cleanup) => void;
-  };
-  const previousRegistrar = host[EFFECT_CLEANUP_REGISTRAR];
   owner.currentScope = scope;
-  host[EFFECT_CLEANUP_REGISTRAR] = (cleanup) => {
-    owner.currentScope?.cleanups.push(cleanup);
-  };
 
   try {
-    return fn();
+    return withEffectCleanupRegistrar((cleanup) => {
+      owner.currentScope?.cleanups.push(cleanup as Cleanup);
+    }, fn);
   } finally {
     owner.currentScope = previousScope;
-    host[EFFECT_CLEANUP_REGISTRAR] = previousRegistrar;
   }
 }
 
 export function registerCleanup(owner: OwnerContext, fn: Cleanup) {
   owner.currentScope?.cleanups.push(fn);
+}
+
+export function onEffectStart(fn: () => void) {
+  if (currentOwnedEffectState === null) {
+    fn();
+    return;
+  }
+
+  if (!currentOwnedEffectState.skipStartCallbacks) {
+    fn();
+  }
+}
+
+export function ownedEffect(
+  owner: OwnerContext,
+  fn: OwnedEffectFn,
+): () => void {
+  return withEffectCleanupRegistrar(null, () => {
+    const state: OwnedEffectState = {
+      skipStartCallbacks: true,
+    };
+
+    const dispose = effect(() => {
+      const previousState = currentOwnedEffectState;
+      currentOwnedEffectState = state;
+
+      try {
+        return fn();
+      } finally {
+        currentOwnedEffectState = previousState;
+        state.skipStartCallbacks = false;
+      }
+    });
+
+    registerCleanup(owner, dispose as Cleanup);
+    return dispose;
+  });
 }
 
 export function disposeScope(scope: Scope) {

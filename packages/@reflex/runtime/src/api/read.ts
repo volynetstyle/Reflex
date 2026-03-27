@@ -10,7 +10,10 @@ import {
 } from "../reactivity";
 import runtime from "../reactivity/context";
 
-export type ConsumerReadMode = "lazy" | "eager";
+export  enum ConsumerReadMode {
+  lazy = 1 << 0,
+  eager = 1 << 1,
+}
 
 export function readProducer<T>(node: ReactiveNode<T>): T {
   trackRead(node);
@@ -40,19 +43,15 @@ function stabilizeConsumer<T>(node: ReactiveNode<T>): T {
 
 export function readConsumer<T>(
   node: ReactiveNode<T>,
-  mode: ConsumerReadMode = "lazy",
+  mode: ConsumerReadMode = ConsumerReadMode.lazy,
 ): T {
-  if (mode === "eager") {
+  if (mode === ConsumerReadMode.eager) {
     return untracked(() => stabilizeConsumer(node));
   }
 
   const value = stabilizeConsumer(node);
   trackRead(node);
   return value;
-}
-
-export function runAndReadConsumer<T>(node: ReactiveNode<T>): T {
-  return readConsumer(node, "eager");
 }
 
 export function untracked<T>(fn: () => T): T {

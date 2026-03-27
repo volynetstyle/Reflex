@@ -264,6 +264,32 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(root.state & DIRTY_STATE).toBe(0);
   });
 
+  it("reruns a watcher after a tracked-prefix invalidation during its own execution", () => {
+    const source = createProducer(0);
+    const seen: number[] = [];
+    const watcher = createWatcher(() => {
+      const value = readProducer(source);
+      seen.push(value);
+
+      if (value < 2) {
+        writeProducer(source, value + 1);
+      }
+    });
+
+    runWatcher(watcher);
+    expect(seen).toEqual([0]);
+    expect(watcher.state & ReactiveNodeState.Invalid).toBeTruthy();
+    expect(watcher.state & ReactiveNodeState.Visited).toBeTruthy();
+
+    runWatcher(watcher);
+    expect(seen).toEqual([0, 1]);
+    expect(watcher.state & ReactiveNodeState.Invalid).toBeTruthy();
+
+    runWatcher(watcher);
+    expect(seen).toEqual([0, 1, 2]);
+    expect(watcher.state & DIRTY_STATE).toBe(0);
+  });
+
   it("recomputes invalid consumers even when their dependency list is empty", () => {
     const depSpy = vi.fn(() => 1);
     const dep = createConsumer(depSpy);

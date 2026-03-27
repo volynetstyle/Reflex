@@ -25,7 +25,8 @@ import {
   readProducer,
   writeProducer,
 } from "@reflex/runtime";
-import { createAccumulator, Event } from "../infra";
+import type { Event } from "../infra";
+import { createAccumulator } from "../infra";
 
 /**
  * Creates an accumulator derived from an event stream.

@@ -1,15 +1,14 @@
-import { effect } from "@volynetstyle/reflex";
 import type { Accessor } from "../types";
 import type { Namespace } from "../host/namespace";
 import type { DOMRenderer } from "../runtime";
-import { clearBetween } from "../host/mutations";
+import type { Scope } from "../ownership";
 import {
-  createScope,
-  disposeScope,
+  onEffectStart,
+  ownedEffect,
   registerCleanup,
   runWithScope,
-  Scope,
 } from "../ownership";
+import { createContentSlot } from "./content-slot";
 import { appendRenderableNodes } from "../tree/create-nodes";
 
 function mountRangeValue(
@@ -32,43 +31,23 @@ export function createDynamicRange(
   renderer.ensureRuntime();
 
   const doc = document;
-  const start = doc.createComment("");
-  const end = doc.createComment("");
+  const slot = createContentSlot(
+    doc,
+    (parent, scope, value) => mountRangeValue(renderer, parent, scope, value, ns),
+    acc(),
+  );
 
-  let childScope = createScope();
-  let initialized = false;
-
-  const initialFragment = doc.createDocumentFragment();
-  initialFragment.appendChild(start);
-  mountRangeValue(renderer, initialFragment, childScope, acc(), ns);
-  initialFragment.appendChild(end);
-
-  effect(() => {
+  ownedEffect(renderer.owner, () => {
     const nextValue = acc();
 
-    if (!initialized) {
-      initialized = true;
-      return;
-    }
-
-    const parent = end.parentNode;
-    if (parent === null) {
-      return;
-    }
-
-    disposeScope(childScope);
-    clearBetween(start, end);
-
-    childScope = createScope();
-
-    const fragment = parent.ownerDocument!.createDocumentFragment();
-    mountRangeValue(renderer, fragment, childScope, nextValue, ns);
-    parent.insertBefore(fragment, end);
+    onEffectStart(() => {
+      slot.update(nextValue);
+    });
   });
 
   registerCleanup(renderer.owner, () => {
-    disposeScope(childScope);
+    slot.destroy();
   });
 
-  return initialFragment;
+  return slot.fragment;
 }

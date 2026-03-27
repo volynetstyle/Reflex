@@ -11,5 +11,6 @@
         "../reflex/src/index.ts"
       ]
     }
-  }
+  },
+  "include": ["src/**/*.ts", "test/**/*.typecheck.tsx"]
 }

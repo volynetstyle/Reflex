@@ -5,9 +5,12 @@ export interface EngineHooks {
   onReactiveSettled?(): void;
 }
 
+export type CleanupRegistrar = (cleanup: () => void) => void;
+
 class EngineContext {
   activeComputed: ReactiveNode | null = null;
   propagationDepth = 0;
+  cleanupRegistrar: CleanupRegistrar | null = null;
   readonly hooks: EngineHooks;
 
   constructor(hooks: EngineHooks = {}) {
@@ -39,12 +42,31 @@ class EngineContext {
   resetState(): void {
     this.activeComputed = null;
     this.propagationDepth = 0;
+    this.cleanupRegistrar = null;
   }
 
   setHooks(hooks: EngineHooks = {}): void {
     delete this.hooks.onEffectInvalidated;
     delete this.hooks.onReactiveSettled;
     Object.assign(this.hooks, hooks);
+  }
+
+  registerEffectCleanup(cleanup: () => void): void {
+    this.cleanupRegistrar?.(cleanup);
+  }
+
+  withCleanupRegistrar<T>(
+    registrar: CleanupRegistrar | null,
+    fn: () => T,
+  ): T {
+    const previousRegistrar = this.cleanupRegistrar;
+    this.cleanupRegistrar = registrar;
+
+    try {
+      return fn();
+    } finally {
+      this.cleanupRegistrar = previousRegistrar;
+    }
   }
 }
 

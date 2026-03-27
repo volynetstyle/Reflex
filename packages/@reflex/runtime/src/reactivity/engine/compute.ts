@@ -1,5 +1,6 @@
 import { compare } from "../../api/compare";
-import { DIRTY_STATE, ReactiveNode } from "../shape";
+import type { ReactiveNode } from "../shape";
+import { DIRTY_STATE } from "../shape";
 import { executeNodeComputation } from "./execute";
 
 export function recompute(node: ReactiveNode): boolean {
