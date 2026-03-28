@@ -1,6 +1,6 @@
 {
   "name": "@volynetstyle/reflex",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "type": "module",
   "description": "Public Reflex facade with a connected runtime",
   "license": "MIT",
