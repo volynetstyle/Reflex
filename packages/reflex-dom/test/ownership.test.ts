@@ -3,6 +3,7 @@ import {
   createOwnerContext,
   createScope,
   disposeScope,
+  getChildCount,
   registerCleanup,
   runWithScope,
 } from "../src/ownership";
@@ -116,6 +117,96 @@ describe("ownership lifecycle", () => {
         "Ownership cleanup error:",
         firstError,
       );
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it("detaches a disposed subtree from a live root and clears sibling links", () => {
+    const owner = createOwnerContext();
+    const root = createScope();
+    let left: ReturnType<typeof createScope>;
+    let branch: ReturnType<typeof createScope>;
+    let right: ReturnType<typeof createScope>;
+    let grandChild: ReturnType<typeof createScope>;
+
+    runWithScope(owner, root, () => {
+      left = createScope();
+      runWithScope(owner, left, () => {});
+
+      branch = createScope();
+      runWithScope(owner, branch, () => {
+        grandChild = createScope();
+        runWithScope(owner, grandChild, () => {});
+      });
+
+      right = createScope();
+      runWithScope(owner, right, () => {});
+    });
+
+    disposeScope(branch!);
+
+    expect(root.firstChild).toBe(left!);
+    expect(root.lastChild).toBe(right!);
+    expect(left!.nextSibling).toBe(right!);
+    expect(right!.prevSibling).toBe(left!);
+    expect(getChildCount(root)).toBe(2);
+
+    expect(branch!.parent).toBeNull();
+    expect(branch!.prevSibling).toBeNull();
+    expect(branch!.nextSibling).toBeNull();
+    expect(branch!.firstChild).toBeNull();
+    expect(branch!.lastChild).toBeNull();
+
+    expect(grandChild!.parent).toBeNull();
+    expect(grandChild!.prevSibling).toBeNull();
+    expect(grandChild!.nextSibling).toBeNull();
+  });
+
+  it("keeps the live root consistent when subtree cleanup throws", () => {
+    const owner = createOwnerContext();
+    const root = createScope();
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const cleanupError = new Error("branch cleanup failed");
+    let left: ReturnType<typeof createScope>;
+    let branch: ReturnType<typeof createScope>;
+    let right: ReturnType<typeof createScope>;
+
+    try {
+      runWithScope(owner, root, () => {
+        left = createScope();
+        runWithScope(owner, left, () => {});
+
+        branch = createScope();
+        runWithScope(owner, branch, () => {
+          registerCleanup(owner, () => {
+            throw cleanupError;
+          });
+        });
+
+        right = createScope();
+        runWithScope(owner, right, () => {});
+      });
+
+      expect(() => disposeScope(branch!)).not.toThrow();
+
+      expect(consoleError).toHaveBeenCalledTimes(1);
+      expect(consoleError).toHaveBeenCalledWith(
+        "Ownership cleanup error:",
+        cleanupError,
+      );
+
+      expect(root.firstChild).toBe(left!);
+      expect(root.lastChild).toBe(right!);
+      expect(left!.nextSibling).toBe(right!);
+      expect(right!.prevSibling).toBe(left!);
+      expect(getChildCount(root)).toBe(2);
+
+      expect(branch!.parent).toBeNull();
+      expect(branch!.prevSibling).toBeNull();
+      expect(branch!.nextSibling).toBeNull();
     } finally {
       consoleError.mockRestore();
     }

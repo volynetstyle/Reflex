@@ -1,10 +1,6 @@
 import { recompute } from "../engine/compute";
 import type { ReactiveNode } from "../shape";
-import {
-  DIRTY_STATE,
-  type ReactiveEdge,
-  ReactiveNodeState,
-} from "../shape";
+import { DIRTY_STATE, type ReactiveEdge, ReactiveNodeState } from "../shape";
 import { propagateOnce } from "./propagate";
 
 // Fanout matters only when the dependency has multiple subscribers. In that
@@ -40,17 +36,172 @@ function hasFanout(link: ReactiveEdge): boolean {
 //     Only A changed → recompute(C) runs → new value differs → changed=true.
 //     If D and E both depend on C → hasFanout=true → propagateOnce(C)
 //     marks D and E invalid immediately (push side) so they don't pull stale.
-function refreshDependency(link: ReactiveEdge, node: ReactiveNode): boolean {
-  let changed;
-
-  if ((node.state & ReactiveNodeState.Producer) !== 0) {
-    changed = (node.state & ReactiveNodeState.Changed) !== 0;
-    node.state = node.state & ~DIRTY_STATE;
-    return changed;
+function refreshDependencyNoFanout(node: ReactiveNode, state: number): boolean {
+  if ((state & ReactiveNodeState.Producer) !== 0) {
+    node.state = state & ~DIRTY_STATE;
+    return (state & ReactiveNodeState.Changed) !== 0;
   }
 
-  changed = recompute(node);
+  return recompute(node);
+}
+
+function refreshDependency(
+  link: ReactiveEdge,
+  node: ReactiveNode,
+  state = node.state,
+): boolean {
+  const changed = refreshDependencyNoFanout(node, state);
   if (changed && hasFanout(link)) propagateOnce(node);
+  return changed;
+}
+
+function clearInvalid(node: ReactiveNode): void {
+  node.state &= ~ReactiveNodeState.Invalid;
+}
+
+function shouldRecomputeBranching(
+  link: ReactiveEdge,
+  consumer: ReactiveNode,
+  stack: ReactiveEdge[],
+  stackTop: number,
+): boolean {
+  let changed = false;
+
+  // Stack entries remember which parent edge should be refreshed after the
+  // current dependency subtree finishes resolving.
+  outer: while (true) {
+    const dep = link.from;
+    const depState = dep.state;
+
+    if ((consumer.state & ReactiveNodeState.Changed) !== 0) {
+      changed = true;
+    } else if ((depState & ReactiveNodeState.Changed) !== 0) {
+      changed = refreshDependency(link, dep, depState);
+    } else if (
+      (depState & ReactiveNodeState.Producer) === 0 &&
+      (depState & DIRTY_STATE) !== 0
+    ) {
+      const deps = dep.firstIn;
+      if (deps !== null) {
+        stackTop += 1;
+        stack[stackTop] = link;
+        link = deps;
+        consumer = dep;
+        continue;
+      }
+
+      changed = refreshDependency(link, dep, depState);
+    }
+
+    if (!changed) {
+      const next = link.nextIn;
+      if (next !== null) {
+        link = next;
+        continue;
+      }
+
+      clearInvalid(consumer);
+    }
+
+    while (stackTop >= 0) {
+      const parentLink = stack[stackTop]!;
+      stackTop -= 1;
+
+      if (changed) {
+        changed = refreshDependency(parentLink, consumer);
+      } else {
+        clearInvalid(consumer);
+      }
+
+      consumer = parentLink.to;
+
+      if (!changed) {
+        const next = parentLink.nextIn;
+        if (next !== null) {
+          link = next;
+          continue outer;
+        }
+      }
+    }
+
+    return changed;
+  }
+}
+
+function shouldRecomputeLinear(
+  node: ReactiveNode,
+  firstIn: ReactiveEdge,
+): boolean {
+  const stack: ReactiveEdge[] = [];
+  let stackTop = -1;
+  let link = firstIn;
+  let consumer = node;
+  let changed = false;
+
+  while (true) {
+    if (link.nextIn !== null) {
+      return shouldRecomputeBranching(link, consumer, stack, stackTop);
+    }
+
+    if ((consumer.state & ReactiveNodeState.Changed) !== 0) {
+      changed = true;
+      break;
+    }
+
+    const dep = link.from;
+    const depState = dep.state;
+
+    if ((depState & ReactiveNodeState.Changed) !== 0) {
+      changed = refreshDependency(link, dep, depState);
+      break;
+    }
+
+    if (
+      (depState & ReactiveNodeState.Producer) === 0 &&
+      (depState & DIRTY_STATE) !== 0
+    ) {
+      const deps = dep.firstIn;
+      if (deps !== null) {
+        if (deps.nextIn !== null) {
+          stackTop += 1;
+          stack[stackTop] = link;
+          return shouldRecomputeBranching(deps, dep, stack, stackTop);
+        }
+
+        stackTop += 1;
+        stack[stackTop] = link;
+        link = deps;
+        consumer = dep;
+        continue;
+      }
+
+      changed = refreshDependency(link, dep, depState);
+      break;
+    }
+
+    clearInvalid(consumer);
+
+    if (stackTop < 0) return false;
+
+    link = stack[stackTop]!;
+    stackTop -= 1;
+    consumer = link.to;
+  }
+
+  while (stackTop >= 0) {
+    const parentLink = stack[stackTop]!;
+    stackTop -= 1;
+
+    if (changed) {
+      changed = refreshDependency(parentLink, consumer);
+    } else {
+      clearInvalid(consumer);
+    }
+
+    consumer = parentLink.to;
+  }
+
+  if (!changed) clearInvalid(consumer);
   return changed;
 }
 
@@ -109,113 +260,5 @@ export function shouldRecompute(node: ReactiveNode): boolean {
     return false;
   }
 
-  // Stack stores return points for the DFS.
-  // Each entry is the edge we descended through; on the way back up
-  // we use it to resume the parent consumer's remaining siblings.
-  //
-  // Example — descending into C (dep of B):
-  //   stack: [ edge(B→C) ]
-  //   After C's subtree resolves, pop → resume B's next dep (B→D).
-  const stack: ReactiveEdge[] = [];
-  let stackTop = -1;
-
-  let link = firstIn; // current edge being inspected
-  let sub = node; // consumer whose incoming edges we are walking
-  let dirty = false; // true once any upstream change is confirmed
-
-  outer: while (true) {
-    const dep = link.from;
-    const depState = dep.state;
-
-    if ((sub.state & ReactiveNodeState.Changed) !== 0) {
-      // sub itself was confirmed changed while we were descending into it
-      // (e.g. propagateOnce ran concurrently from a fanout sibling).
-      // No need to inspect further deps of sub — just mark dirty and unwind.
-      dirty = true;
-    } else if ((depState & ReactiveNodeState.Changed) !== 0) {
-      // dep is already confirmed changed (producer or previously refreshed computed).
-      // Refresh it (clears dirty bits, may propagate to fanout siblings)
-      // and record whether its value actually differs.
-      //
-      // Example: signal A was set to a new value → A.Changed=true
-      //   refreshDependency returns true → dirty=true → unwind and return true.
-      dirty = dirty || refreshDependency(link, dep);
-    } else if (
-      (depState & ReactiveNodeState.Producer) === 0 &&
-      (depState & DIRTY_STATE) !== 0
-    ) {
-      // dep is a dirty computed node with its own dependencies.
-      // We can't know if it truly changed without inspecting its subtree first.
-      // Descend: push current position as a return point and move into dep.
-      //
-      // Example: B depends on C (computed, Invalid), C depends on A (signal).
-      //   We don't know if C changed until we check A.
-      //   Push edge(B→C), set link=C.firstIn, sub=C, then loop again.
-      const statusbar = dep.firstIn;
-      if (statusbar !== null) {
-        stack[++stackTop] = link;
-        link = statusbar;
-        sub = dep;
-        continue;
-      }
-
-      dirty = dirty || refreshDependency(link, dep);
-    }
-
-    if (!dirty) {
-      // Still no confirmed change. Try next sibling dep of the current consumer.
-      //
-      // Example: sub=B, checked dep C (clean), now check dep D.
-      //   link = link.nextIn → edge(B→D), continue outer loop.
-      if (link.nextIn !== null) {
-        link = link.nextIn;
-        continue;
-      }
-
-      // All deps of sub checked out clean → sub is no longer invalid.
-      sub.state = sub.state & ~ReactiveNodeState.Invalid;
-    }
-
-    // ── Unwind DFS stack ──────────────────────────────────────────────────────
-    //
-    // Either dirty=true (change confirmed, propagate up) or we exhausted sub's
-    // deps cleanly and need to return to the parent consumer.
-    //
-    // Example unwind (dirty=true):
-    //   stack: [ edge(B→C) ]  sub=C  dirty=true
-    //   Pop edge(B→C): refreshDependency(edge(B→C), C)
-    //     → reruns C, returns whether C's value changed
-    //     → dirty = that result (C might have re-computed to same value → false)
-    //   sub = B, link = edge(B→C)
-    //   dirty=false now? check B's next dep (B→D) before returning.
-    //
-    // Example unwind (dirty=false):
-    //   stack: [ edge(B→C) ]  sub=C  dirty=false
-    //   Pop edge(B→C): clear C's Invalid flag, keep dirty=false.
-    //   sub = B, link = edge(B→C)
-    //   Check B's next dep (B→D).
-    while (stackTop >= 0) {
-      const parentLink = stack[stackTop--]!;
-
-      if (dirty) {
-        dirty = refreshDependency(parentLink, sub);
-      } else {
-        sub.state = sub.state & ~ReactiveNodeState.Invalid;
-      }
-
-      sub = parentLink.to;
-      link = parentLink;
-
-      if (!dirty && link.nextIn !== null) {
-        // Parent is still clean and has more deps to inspect.
-        // Resume the outer loop at the next sibling rather than unwinding further.
-        link = link.nextIn;
-        continue outer;
-      }
-    }
-
-    // Stack fully unwound. dirty reflects whether the original node's
-    // dependency subtree contained any real change.
-    return dirty;
-  }
+  return shouldRecomputeLinear(node, firstIn);
 }
