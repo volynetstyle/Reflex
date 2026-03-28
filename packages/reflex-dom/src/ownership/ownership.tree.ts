@@ -1,5 +1,5 @@
 import { decChildCount, incChildCount, isDisposed } from "./ownership.meta";
-import { OwnershipNode } from "./ownership.node";
+import type { OwnershipNode } from "./ownership.node";
 
 export function appendChild(parent: OwnershipNode, child: OwnershipNode): void {
   if (isDisposed(parent) || isDisposed(child)) return;

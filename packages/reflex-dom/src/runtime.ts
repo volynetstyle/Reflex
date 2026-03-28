@@ -138,7 +138,10 @@ export function jsx(
     return createComponentRenderable(type as RuntimeComponent, p);
   }
 
-  return createElementRenderable(type as ElementTag, p as ElementProps<ElementTag>);
+  return createElementRenderable(
+    type as ElementTag,
+    p as ElementProps<ElementTag>,
+  );
 }
 
 export const jsxs = jsx;

@@ -11,9 +11,9 @@ export interface OwnerContext {
 }
 
 export function createOwnerContext(): OwnerContext {
-  return {
+  return Object.preventExtensions({
     currentOwner: null,
-  };
+  });
 }
 
 export function createScope(): Scope {

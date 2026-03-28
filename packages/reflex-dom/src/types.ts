@@ -1,4 +1,4 @@
-import type { attributeAliases } from "./drafts/client/aliases";
+import type { attributeAliases } from "./host/aliases";
 
 export type Accessor<T> = () => T;
 export type MaybeAccessor<T> = T | Accessor<T>;

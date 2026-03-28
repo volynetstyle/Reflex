@@ -2,7 +2,7 @@ import type { Namespace } from "./namespace";
 import type { StyleValue } from "../types";
 import { setAttr } from "./attr";
 import { applyStyle } from "./styles";
-import { normalizeAttr } from "../drafts/client/aliases";
+import { normalizeAttr } from "./aliases";
 
 function isIgnoredProp(name: string): boolean {
   return name === "children" || name === "key";

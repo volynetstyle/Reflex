@@ -33,13 +33,13 @@
     "src/operators.ts",
     "src/component.ts",
     "src/element.ts",
-    "src/ownership.ts",
+    "src/ownership/**/*.ts",
     "src/host/**/*.ts",
     "src/bindings/**/*.ts",
     "src/structure/**/*.ts",
     "src/tree/**/*.ts",
-    "src/drafts/client/aliases.ts",
-    "src/drafts/client/sanitize.ts",
+    "src/host/aliases.ts",
+    "src/host/sanitize.ts",
     "src/drafts/client/tags.ts"
   ],
   "exclude": ["dist", "**/*.test.ts"]

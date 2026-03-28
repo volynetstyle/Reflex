@@ -1,5 +1,5 @@
 import type { ElementTag, JSXRenderable } from "../types";
-import { isSVGTag } from "../drafts/client/tags";
+import { isSVGTag } from "./tags";
 
 export type Namespace = "html" | "svg";
 export type JSXTag =

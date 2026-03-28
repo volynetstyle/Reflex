@@ -1,4 +1,4 @@
-import { OwnershipNode } from "./ownership.node";
+import type { OwnershipNode } from "./ownership.node";
 
 const CHILD_MASK = 0x00ffffff;
 const FLAG_SHIFT = 24;
