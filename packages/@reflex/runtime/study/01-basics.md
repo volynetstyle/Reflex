@@ -1,177 +1,150 @@
-# 01. База: що взагалі таке reactive runtime
+# 01. База: що таке цей reactive runtime
 
-## 1. Що таке реактивність
+## 1. Що саме тут є
 
-Реактивність - це спосіб автоматично підтримувати залежності між значеннями.
+Поточний `@reflex/runtime` працює з трьома ролями вузлів:
 
-Простий приклад:
+- `Producer` - зберігає значення
+- `Consumer` - кешує похідне значення
+- `Watcher` - виконує побічний код і може повертати cleanup
 
-```ts
-const price = signal(100);
-const tax = signal(20);
-const total = computed(() => price() + tax());
-```
+Усе це один shape:
 
-Тут:
+- `ReactiveNode`
 
-- `price` і `tax` - джерела
-- `total` - похідне значення
+Різниця між ролями задається не окремими класами, а state bits і наявністю `compute`.
 
-Якщо змінюється `price`, значення `total` має стати новим.
+## 2. Producer, consumer, watcher
 
-Головне питання будь-якого runtime:
+### Producer
 
-коли саме перераховувати `total`?
+Producer:
 
-## 2. Три базові ролі
+- має `payload`
+- не має `compute`
+- оновлюється через `writeProducer()`
 
-У `reflex` є три ролі:
+### Consumer
 
-- `signal`: зберігає вихідне значення
-- `computed`: обчислює похідне значення
-- `effect`: запускає побічний код, що залежить від reactive graph
+Consumer:
 
-Важливо:
+- має `compute`
+- кешує останній `payload`
+- читається через `readConsumer()`
 
-- `signal` - це джерело істини
-- `computed` - це кешована функція
-- `effect` - це не значення, а реакція
+### Watcher
 
-## 3. Push vs Pull
+Watcher:
 
-Є два класичні підходи.
+- теж має `compute`
+- не повертає корисне значення для downstream
+- виконується через `runWatcher()`
+- може зберігати cleanup у `payload`
 
-### Push
+## 3. Push і pull у поточній моделі
 
-Коли source змінюється, runtime одразу проштовхує оновлення графом вниз.
+Runtime комбінує два режими:
 
-Плюси:
+- push invalidation на write
+- pull stabilization на read
 
-- downstream часто вже готовий до читання
-- зручно для eager-моделей
+Тобто:
 
-Мінуси:
+- `writeProducer()` не перераховує весь граф
+- він лише оновлює producer і запускає `propagate()`
+- `readConsumer()` уже на demand вирішує, чи потрібен реальний recompute
 
-- запис стає дорогим
-- легко перерахувати багато зайвого
+Саме це дає cheap write path і selective read path.
 
-### Pull
+## 4. Що означає "граф"
 
-Коли source змінюється, runtime не перераховує все одразу.
-Він лише позначає downstream як підозрілий.
-А реальний перерахунок відбувається тоді, коли хтось читає значення.
-
-Плюси:
-
-- запис дешевий
-- часткові читання вигідні
-- глибокі ланцюжки читаються ефективно
-
-Мінуси:
-
-- фінальне читання може саме потягнути велику перевірку графа
-- high fan-in сценарії можуть бути слабшими за eager runtime
-
-`reflex` обирає lazy pull.
-
-## 4. Що означає lazy pull у reflex
-
-Коли ви робите:
-
-```ts
-setCount(10);
-```
-
-reflex не йде миттєво перераховувати всі `computed`.
-
-Вона робить лише:
-
-1. змінює payload source
-2. зсуває epoch зміни
-3. маркує downstream як `Invalid`
-
-А далі:
-
-```ts
-view();
-```
-
-і лише в цей момент runtime перевіряє:
-
-- чи справді dependency змінилися по суті
-- чи треба реально перераховувати поточний вузол
-- чи можна пропустити recompute
-
-## 5. Що таке graph
-
-Усередині runtime все зберігається як граф залежностей.
-
-Якщо:
-
-```ts
-const a = signal(1);
-const b = computed(() => a() + 1);
-const c = computed(() => b() * 2);
-```
-
-то залежності такі:
+Граф зберігається як ребра між вузлами:
 
 ```text
-a -> b -> c
+producer -> consumer -> watcher
 ```
 
-Це означає:
+Ребро читається так:
 
-- `b` залежить від `a`
-- `c` залежить від `b`
+- `to` залежить від `from`
 
-У reflex ребро читається так:
+Тобто якщо є edge `from = a`, `to = b`, це означає, що `b` читає `a`.
 
-`to depends on from`
+## 5. Які стани важливі насамперед
 
-Тобто якщо є edge `from=a`, `to=b`, значить `b` читає `a`.
+У базовому розумінні вистачає таких bits:
 
-## 6. Що runtime має гарантувати
+- `Invalid` - вузол треба перевірити
+- `Changed` - зміна вже підтверджена
+- `Tracking` - вузол зараз перебудовує dependency prefix
+- `Visited` - walker marker для спеціальних re-entrancy випадків
+- `Computing` - вузол зараз виконує `compute`
+- `Disposed` - вузол більше не бере участі в графі
 
-Будь-який пристойний reactive runtime має робити хоча б це:
+Ключова маска:
 
-- не допускати "глітчів" під час читання
-- не перераховувати без причини
-- не забувати старі/нові залежності під час branch switching
-- не ламати кеш після same-value результату
+```ts
+DIRTY_STATE = Invalid | Changed
+```
 
-Для reflex це виражається через версії, dirty hints і tracking epochs.
-
-## 7. Чим reflex відрізняється за характером
-
-Це не "UI framework runtime".
-Це маленьке ядро reactive graph.
-
-Його пріоритети:
-
-- прості інваріанти
-- хороша продуктивність у lazy workload
-- мінімалізм
-- можливість розширити поверх ядра eager/flush шар
-
-Не його мета:
-
-- одразу розв'язувати всі сценарії
-- бути максимально feature-rich
-- приховувати архітектурні компроміси
-
-## 8. Найкорисніша mental model
+## 6. Найважливіша mental model
 
 Думайте так:
 
-- `signal` - комірка з даними
-- `computed` - кеш функції + список прочитаних dependencies
-- `effect` - обчислення, значення якого не потрібне, але важливо виконати код
-- graph - це карта "хто кого читав"
+- producer комітить значення одразу
+- consumer не поспішає recompute-итися на кожен write
+- watcher узагалі не є "значенням", це host-side execution point
+- ребра кажуть лише "хто кого читав"
 
-І ще:
+І ще коротше:
 
-- write робить graph dirty
-- read робить graph fresh
+- write робить вузли підозрілими
+- read доводить, чи треба recompute
+- tracking підтримує правильну форму залежностей
 
-Це і є фундамент reflex.
+## 7. Мінімальний приклад
+
+```ts
+import {
+  CONSUMER_INITIAL_STATE,
+  PRODUCER_INITIAL_STATE,
+  ReactiveNode,
+  readConsumer,
+  readProducer,
+  writeProducer,
+} from "@reflex/runtime";
+
+const count = new ReactiveNode(1, null, PRODUCER_INITIAL_STATE);
+const double = new ReactiveNode(
+  undefined,
+  () => readProducer(count) * 2,
+  CONSUMER_INITIAL_STATE,
+);
+
+console.log(readConsumer(double)); // 2
+writeProducer(count, 5);
+console.log(readConsumer(double)); // 10
+```
+
+Що тут сталося:
+
+1. перший `readConsumer(double)` виконав `compute` і побудував edge `count -> double`
+2. `writeProducer(count, 5)` інвалідував downstream
+3. другий `readConsumer(double)` стабілізував `double` і recompute-нув його лише тоді
+
+## 8. Чому це low-level runtime
+
+Цей пакет навмисно не приховує механіку за великим ergonomics-шаром.
+
+Він дає примітиви:
+
+- вузли
+- ребра
+- walkers
+- tracking
+- hooks
+
+А policy layer поверх цього може бути різним.
+
+Саме тому далі в `study` мова піде не про "магічні сигнали",
+а про конкретні структури даних і конкретні переходи стану.

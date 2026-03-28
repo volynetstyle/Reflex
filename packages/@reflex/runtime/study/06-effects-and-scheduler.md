@@ -1,219 +1,163 @@
-# 06. Effects і scheduler: як побічні реакції винесені поверх ядра
+# 06. Watchers і host hooks: як побічні реакції винесені поверх ядра
 
-`computed` і `effect` схожі тим, що обидва запускають `compute`.
+Назва файлу історична, але в поточному runtime головний термін тут:
 
-Але семантично це різні речі.
+- `Watcher`
 
-## 1. Чим effect відрізняється від computed
+У пакеті немає вбудованого scheduler policy рівня "flush/eager mode".
+Є watcher-вузли і hooks, через які host сам керує execution policy.
 
-`computed` потрібен, щоб повернути значення.
+## 1. Чим watcher відрізняється від consumer
 
-`effect` потрібен, щоб виконати код.
+Consumer:
 
-Приклад:
+- повертає значення
+- читається через `readConsumer()`
+- downstream може залежати від його `payload`
+
+Watcher:
+
+- виконує код
+- запускається через `runWatcher()`
+- може повертати cleanup
+- сам по собі не є значенням для downstream
+
+## 2. Як watcher інвалідовується
+
+Push-side `propagate()` і `propagateOnce()` доходять до watcher-вузла й не спускаються в нього далі.
+
+Замість цього вони викликають:
 
 ```ts
-rt.effect(() => {
-  console.log(count.read());
+runtime.dispatchWatcherEvent(node)
+```
+
+А `EngineContext` уже проксить це в:
+
+```ts
+hooks.onEffectInvalidated?.(node)
+```
+
+Тобто ядро лише сигналить:
+
+- "цей watcher треба обробити"
+
+А що саме робити далі, вирішує host.
+
+## 3. Найпростіша host policy
+
+Наприклад, host може тримати свою чергу:
+
+```ts
+const pending: ReactiveNode[] = [];
+
+runtime.setHooks({
+  onEffectInvalidated(node) {
+    pending.push(node);
+  },
+});
+
+while (pending.length) {
+  runWatcher(pending.shift()!);
+}
+```
+
+Це і є поточний scheduler seam.
+
+## 4. `runWatcher()`
+
+`runWatcher(node)` робить:
+
+1. пропускає `Disposed`
+2. якщо вузол не dirty або `shouldRecompute(node) === false`, просто чистить dirty state
+3. інакше дістає попередній cleanup
+4. скидає `payload` у `UNINITIALIZED`
+5. знімає `Visited | DIRTY_STATE`
+6. викликає попередній cleanup
+7. запускає `executeNodeComputation()`
+8. якщо watcher повернув функцію, зберігає її як новий cleanup
+
+Тобто watcher має свій commit protocol поверх shared executor.
+
+## 5. Чому watcher не просто "ще один consumer"
+
+У watcher-а окрема семантика:
+
+- cleanup before rerun
+- cleanup on dispose
+- host-driven scheduling
+- відсутність downstream value contract
+
+Якщо змішати це з consumer semantics, ядро швидко стане важчим і менш прозорим.
+
+## 6. `disposeWatcher()`
+
+`disposeWatcher()` робить:
+
+- `disposeNode(node)`
+- виклик cleanup, якщо він є
+- очищення `payload`
+
+Після цього watcher:
+
+- від'єднаний від джерел
+- більше не повинен інвалідовуватися
+
+## 7. `onReactiveSettled`
+
+Другий важливий hook:
+
+```ts
+runtime.setHooks({
+  onReactiveSettled() {
+    // host signal: reactive burst is done
+  },
 });
 ```
 
-Тут значення `effect` нікому не потрібне.
-Потрібен сам побічний результат.
+Він викликається лише коли:
 
-## 2. Чому effect не можна просто зробити "ще одним computed"
+- `propagationDepth === 0`
+- `activeComputed === null`
 
-Тому що у effect є окремі вимоги:
+Тобто не в середині cascade, а після зовнішнього завершення поточної реактивної роботи.
 
-- cleanup
-- scheduling
-- dispose
-- можливий eager/manual flush режим
+## 8. Що тут shared, а що policy
 
-Якщо змішати все це з semantics `computed`, ядро швидко розпухне.
+### Shared kernel logic
 
-Тому reflex робить так:
+- `executeNodeComputation()`
+- `trackRead()`
+- `cleanupStaleSources()`
+- cycle guards
+- dirty / tracking protocol
 
-- graph і execution pipeline максимально спільні
-- scheduling effects винесений в окремий шар
+### Host policy
 
-## 3. Lifecycle effect
+- негайний запуск watcher-а
+- запуск через чергу
+- batched flush
+- логування / telemetry / devtools
 
-Під час створення effect:
+Саме тому current runtime лишається маленьким:
+kernel не тягне на собі всі execution стратегії.
 
-1. створюється effect node
-2. effect запускається одразу
-3. під час виконання трекає залежності
-4. може повернути cleanup
+## 9. Що важливо не зламати
 
-Під час invalidation:
+Під час refactor watcher path має зберігати:
 
-1. node отримує `Invalid`
-2. runtime бачить, що це `Effect`
-3. effect передається scheduler
+- cleanup рівно один раз перед rerun
+- cleanup рівно один раз на dispose
+- коректне відновлення `activeComputed`
+- коректне зняття `Tracking` і `Computing` навіть якщо compute кинув помилку
+- `onReactiveSettled` тільки після outermost completion
 
-Під час flush/eager execution:
+## 10. Чому це хороший seam
 
-1. scheduler дістає effect
-2. якщо effect ще dirty і не disposed, він запускається
-3. попередній cleanup викликається перед новим run
+Це дає просту архітектуру:
 
-## 4. Чому scheduler винесений окремо
+- producer/consumer core залишається focused на graph correctness
+- watcher execution policy можна міняти окремо
+- instrumentation можна тримати в hooks, а не в hot path walkers
 
-Це важливо архітектурно.
-
-Є дві різні задачі:
-
-### Invalidation
-
-Сказати:
-
-"цей effect треба потім виконати"
-
-### Scheduling
-
-Вирішити:
-
-- коли саме його запускати
-- одразу чи потім
-- як dedupe чергу
-
-Якщо ці задачі живуть в одному місці:
-
-- runtime важче розширювати
-- eager/flush mode виходить брудним
-- invalidation path тягне на собі зайву відповідальність
-
-У reflex це розділено через boundary:
-
-- graph invalidation викликає hook
-- scheduler вирішує, що робити далі
-
-## 5. `EffectScheduler`
-
-Поточний scheduler deliberately маленький.
-
-Він зберігає:
-
-- `queue: ReactiveNode[]`
-- `head`
-- `flushing`
-- `mode`
-
-### Чому не `shift()`
-
-Тому що `shift()` зсуває масив і гірше підходить для hot path.
-
-Замість цього:
-
-- елементи кладуться в масив
-- читання йде через `head`
-- після flush черга скидається цілком
-
-Це дешевше й простіше.
-
-### Чому не `Set`
-
-Тому що dedupe зроблено через state bit `Scheduled`.
-
-Це означає:
-
-- менше структури
-- менше hash/bookkeeping
-- дешевший enqueue path
-
-## 6. `Scheduled` bit
-
-Коли effect ставиться в чергу:
-
-- виставляється `Scheduled`
-
-Коли scheduler знімає його з черги:
-
-- `Scheduled` очищається
-
-Це робить dedupe простим:
-
-```ts
-if (isScheduledState(node.state)) return;
-```
-
-Без `Set`, без lookup по об'єкту в окремій структурі.
-
-## 7. Стратегії: `flush` і `eager`
-
-### `flush`
-
-Це дефолт.
-
-Поведінка:
-
-- writes лише enqueue effect
-- реальний запуск - через `rt.flush()`
-
-Підходить коли:
-
-- треба контролювати момент side effects
-- хочеться відділити mutation phase від effect phase
-
-### `eager`
-
-Поведінка:
-
-- enqueue effect
-- scheduler намагається flush одразу
-
-Це вже крок у бік eager execution, але не переписування ядра.
-
-І це дуже важливий архітектурний принцип reflex:
-
-eager mode має бути шаром поверх lazy core, а не заміною lazy core.
-
-## 8. Cleanup
-
-Effect може повернути cleanup:
-
-```ts
-rt.effect(() => {
-  subscribe();
-  return () => unsubscribe();
-});
-```
-
-Під час повторного запуску:
-
-1. старий cleanup викликається
-2. payload очищається
-3. effect compute запускається знову
-4. новий cleanup зберігається
-
-Під час dispose:
-
-1. ставиться `Disposed`
-2. cleanup викликається
-3. inbound sources unlink
-
-## 9. Чому scheduler не чіпає computed
-
-Тому що `computed` залишаються pure lazy вузлами.
-
-Це принципово:
-
-- scheduler відповідає лише за effect execution policy
-- freshness `computed` як і раніше визначається read path
-
-Саме так можна розширювати runtime без втрати мінімалізму.
-
-## 10. Що можна додати в майбутньому
-
-На базі цього шару відносно природно будуються:
-
-- microtask scheduler
-- custom host scheduler
-- priority queues
-- separate eager flush API
-- topo-based effect execution
-
-Але важливо:
-
-кожне таке розширення має залишати lazy core незмінним по суті.
+Для low-level runtime це значно цінніше, ніж красивий, але жорстко вбудований scheduler.

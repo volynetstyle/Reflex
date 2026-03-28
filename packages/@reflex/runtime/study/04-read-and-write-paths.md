@@ -1,207 +1,227 @@
-# 04. Шляхи запису та читання: як граф стає брудним і свіжим
+# 04. Шляхи запису і читання: як працює current runtime
 
-Цей розділ - серце reflex.
+У поточному дизайні є два ключові шляхи:
 
-Треба зрозуміти два шляхи:
+- `writeProducer()` для push invalidation
+- `readConsumer()` для lazy stabilization
 
-- write path
-- read path
-
-## 1. Write path: що відбувається на `signal.write()`
+## 1. Write path: `writeProducer()`
 
 Псевдологіка:
 
 ```ts
-if (Object.is(oldValue, newValue)) return;
-payload = newValue;
-t = bumpEpoch();
-mark downstream Invalid;
+if (compare(oldValue, nextValue)) return;
+
+node.payload = nextValue;
+node.state &= ~DIRTY_STATE;
+
+if (node.firstOut !== null) {
+  runtime.enterPropagation();
+  try {
+    propagate(node.firstOut, true);
+  } finally {
+    runtime.leavePropagation();
+  }
+}
 ```
 
-І це все.
+Ключові властивості:
 
-## 2. Чому write path такий короткий
+- no-op write відсікається відразу
+- producer комітить значення одразу
+- downstream не recompute-иться на write path
 
-Тому що reflex спеціально робить запис дешевим.
+## 2. Навіщо `propagate(..., true)`
 
-Якби write path одразу:
+Другий аргумент означає:
 
-- йшов у recompute
-- топологічно сортував graph
-- виконував effects
+- direct subscribers producer-а можна одразу промоутити до `Changed`
 
-то запис став би дорогим і погано передбачуваним.
+Це важливо, бо producer already committed.
+Downstream не треба заново доводити зміну через pull-side walk.
 
-У reflex write path - це інвалідатор, а не обчислювач.
+## 3. `propagate()`
 
-## 3. `markInvalid`
+Push-side walker іде по outgoing edges.
 
-Це обхід по `firstOut`.
+У поточному коді він розщеплений на:
 
-Він іде вниз по downstream і робить:
+- `propagateLinear()`
+- `propagateBranching()`
 
-- пропуск disposed nodes
-- пропуск уже invalid nodes
-- виставлення `Invalid`
-- enqueue effect nodes через hook boundary
+### `propagateLinear()`
 
-Ідея:
+Швидкий шлях для:
 
-runtime швидко повідомляє графу:
+- лінійного ланцюжка
+- випадку без sibling-resume stack
 
-"вам, можливо, треба буде перевіритися пізніше"
+### `propagateBranching()`
 
-## 4. Чому `Invalid` не дорівнює "треба перерахувати"
+Вмикається, коли з'являється реальний fanout і потрібен stack для resume.
 
-Припустимо:
+### Що walker робить з subscriber-ом
+
+Він:
+
+- пропускає вже dirty або disposed вузли
+- ставить `Changed` або `Invalid`
+- окремо обробляє tracking case
+- повідомляє watcher invalidation через hook
+
+## 4. `Invalid` проти `Changed`
+
+Це один із головних семантичних поділів runtime.
+
+### `Invalid`
+
+Означає:
+
+- вузол треба перевірити
+
+### `Changed`
+
+Означає:
+
+- зміна вже підтверджена
+- `shouldRecompute()` можна не робити
+
+Саме на цьому стоїть cheap push + lazy pull модель.
+
+## 5. Read path: `readProducer()`
+
+`readProducer()`:
+
+- трекає залежність, якщо є `activeComputed`
+- повертає `payload`
+
+Producer не стабілізується на read,
+бо його payload уже committed на write.
+
+## 6. Read path: `readConsumer()`
+
+`readConsumer()` спочатку викликає `stabilizeConsumer(node)`.
+
+Псевдологіка:
 
 ```ts
-const b = computed(() => x() > 0 ? 1 : 1);
+if ((state & DIRTY_STATE) !== 0) {
+  const needs =
+    (state & Changed) !== 0 || shouldRecompute(node);
+
+  if (needs) {
+    if (recompute(node)) propagateOnce(node);
+  } else {
+    clearDirtyState(node);
+  }
+}
 ```
 
-`x` може змінитися.
-Але значення `b` не змінюється.
+Потім:
 
-Якщо downstream автоматично вважати stale лише тому, що upstream invalid:
+- у lazy mode ще викликається `trackRead(node)`
+- у eager mode стабілізація йде в `untracked()`
 
-- буде багато зайвих recompute
-- зникне SAC-оптимізація
+## 7. Навіщо `shouldRecompute()`
 
-Тому `Invalid` - це лише привід перевірити.
+`Invalid` саме по собі не доводить, що consumer треба recompute-ити.
 
-## 5. Read path: навіщо потрібен `ensureFresh`
+Можливий сценарій:
 
-Коли викликається `computed()`, runtime вирішує:
+- producer інваліднув consumer
+- але upstream recompute у підсумку виявився same-as-current
 
-- чи можна одразу повернути кеш
-- чи треба пройти шлях refresh
+Тому `shouldRecompute()`:
 
-Якщо node dirty, викликається `ensureFresh(ctx, node)`.
+- проходить по incoming dependencies
+- refresh-ить dirty upstream вузли в правильному порядку
+- повертає `true` лише якщо реальна зміна підтвердилась
 
-Це основний алгоритм lazy refresh.
+## 8. `shouldRecompute()` у поточному коді
 
-## 6. Як працює `ensureFresh`
+Pull-side walker теж розщеплений на:
 
-Дуже грубо:
+- `shouldRecomputeLinear()`
+- `shouldRecomputeBranching()`
 
-1. покласти target node у worklist
-2. поки є робота:
-3. взяти current node
-4. якщо current clean, пропустити
-5. якщо є dirty dependency, спочатку обробити її
-6. якщо dirty dependencies уже свіжі, перевірити version mismatch
-7. recompute лише якщо він справді потрібен
+Він:
 
-Тобто алгоритм робить:
+- іде по `firstIn`
+- тримається на дешевому linear path, поки немає branching
+- при потребі спускається в dirty subtrees
+- refresh-ить dependency через `refreshDependency()`
 
-- depth-first refresh dirty subgraph
-- але лише по тих частинах, які справді потрібні поточному read
+Особливий fast path:
 
-## 7. Чому спочатку dependencies, потім current
+- якщо dependency вже `Changed`, додаткова pull-side перевірка не потрібна
 
-Тому що freshness current визначається через upstream versions.
+## 9. `recompute()`
 
-Не можна коректно вирішити, stale current чи ні, якщо upstream ще не приведені
-до свіжого стану.
+`recompute(node)` не містить усю compute-механіку всередині себе.
 
-Це інваріант topological correctness:
+Він:
 
-dependent recompute лише після upstream refresh.
+- бере попередній `payload`
+- викликає `executeNodeComputation()`
+- у commit closure вирішує, чи результат реально змінився
+- оновлює `payload`
+- очищає `DIRTY_STATE`
 
-## 8. `needsUpdateFromSourceT`
+Повертає:
 
-Це функція, яка відповідає на запитання:
+- `true`, якщо результат змінився
+- `false`, якщо recompute був same-as-current
 
-"чи справді current stale?"
+## 10. `executeNodeComputation()`
 
-Вона дивиться на:
+Це shared executor для consumer-ів і watcher-ів.
 
-- `v === 0`
-- `Obsolete`
-- `max(source.t) > node.v`
+Він:
 
-Якщо жодна умова не спрацювала:
+1. перевіряє cycle / відсутність `compute` у dev
+2. скидає `depsTail = null`
+3. виставляє `Tracking`
+4. виставляє `Computing`
+5. перемикає `runtime.activeComputed`
+6. запускає `compute`
+7. викликає `cleanupStaleSources(node)`
+8. робить commit
+9. знімає `Tracking` і `Computing`
+10. викликає `runtime.maybeNotifySettled()`
 
-- node можна просто очистити від dirty flags
-- recompute не потрібен
+## 11. Навіщо `propagateOnce()`
 
-## 9. Чому `max(source.t)` - головний критерій freshness
+Коли `recompute(node)` повертає `true`, треба ще промоутити sibling subscribers.
 
-Формально:
+Саме це робить `propagateOnce(node)`:
 
-node is fresh iff node.v >= max(source.t)
+- проходить лише прямий `firstOut`
+- промоутить `Invalid -> Changed`
+- повідомляє watcher-ів
 
-Це дуже потужна ідея, тому що вона:
+Важливий момент:
 
-- проста
-- дешева
-- добре працює з SAC
+- це не повний recursive push
+- це shallow sideways propagation після confirmed change
 
-Якщо всі parents мають `t <= node.v`, значить node бачив усі реальні value changes upstream.
+## 12. Eager consumer read
 
-## 10. Recompute path
+`ConsumerReadMode.eager` не робить runtime eager globally.
 
-Якщо node справді stale:
+Він лише:
 
-1. runtime запускає compute
-2. під час compute трекає читання
-3. після compute чистить stale dependencies, якщо потрібно
-4. оновлює `v`
-5. оновлює `t` лише якщо value справді змінився
-6. чистить dirty state
+- стабілізує конкретний consumer без побудови outer dependency
 
-Це ключовий момент:
+Це точковий інструмент, а не інша архітектура.
 
-- `v` оновлюється завжди після успішного recompute
-- `t` оновлюється лише при реальному value change
+## 13. Головна mental model
 
-## 11. Що дає SAC
+У current runtime шари розділені так:
 
-SAC = same as current
+- `writeProducer()` каже "щось змінилося"
+- `propagate()` каже "кого це потенційно зачепило"
+- `shouldRecompute()` каже "чи є реальна причина recompute"
+- `recompute()` каже "онови payload"
+- `trackRead()` і `cleanupStaleSources()` кажуть "які dependency edges тепер справжні"
 
-Приклад:
-
-```ts
-const a = signal(1);
-const b = computed(() => {
-  a.read();
-  return 100;
-});
-const c = computed(() => b() + 1);
-```
-
-Якщо `a` змінюється:
-
-- `b` recompute
-- `b.v` оновлюється
-- `b.t` не оновлюється
-
-Тоді `c` може не recompute.
-
-Саме це робить reflex помітно ефективнішим у низці lazy workload.
-
-## 12. `batchWrite`
-
-`batchWrite` потрібен, щоб кілька source update отримали один epoch.
-
-Це корисно, тому що:
-
-- логічно це один write-batch
-- downstream бачить узгоджений часовий зріз
-- runtime не плодить зайві epoch increments
-
-Але важливо:
-
-`batchWrite` не перетворює reflex на eager runtime.
-
-Він лише групує writes.
-
-## 13. Mental model для читання коду
-
-Коли читаєте `walkers.ts`, тримайте в голові:
-
-- invalidation відповідає за "може бути брудно"
-- ensureFresh відповідає за "зроби актуальним, якщо це справді потрібно"
-- version check відповідає за "чи брудно по суті"
-
-Це три різні шари, і їх не можна змішувати.
+Якщо ці шари не змішувати, код залишається і коректним, і читабельним.

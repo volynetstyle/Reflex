@@ -1,290 +1,240 @@
-# 03. Модель ядра: вузли, ребра, прапори, епохи
-
-Якщо хочете глибоко розуміти reflex, треба зрозуміти структуру даних.
+# 03. Модель ядра: вузли, ребра, стан і runtime context
 
 ## 1. `ReactiveNode`
 
-Це головний об'єкт runtime.
-
-Вузол зберігає:
-
-- роль вузла
-- поточне значення
-- compute-функцію
-- прапори стану
-- версії
-- зв'язки з graph
-
-У поточній реалізації ключові поля такі:
-
-- `kind`
-- `t`
-- `v`
-- `state`
-- `compute`
-- `payload`
-- `s`
-- `w`
-- `firstOut`
-- `firstIn`
-
-## 2. `kind`
-
-`kind` - це явна семантична роль вузла:
-
-- `Signal`
-- `Computed`
-- `Effect`
-
-Навіщо це потрібно, якщо вже є `compute` і state bits:
-
-- семантика вузла стає явною
-- розширення не зав'язані на непрямі ознаки
-- scheduler і graph logic можуть ухвалювати рішення дешевше та зрозуміліше
-
-Це архітектурний seam.
-
-## 3. `payload`
-
-`payload` - це те, що зараз зберігає вузол.
-
-Для різних вузлів сенс відрізняється:
-
-- у `signal` це поточне значення source
-- у `computed` це кеш обчисленого значення
-- у `effect` це cleanup-функція або `null`
-
-Це важливий приклад мінімалізму:
-
-замість трьох різних shapes runtime використовує один спільний vertex shape.
-
-## 4. `compute`
-
-`compute` - функція перерахунку.
-
-- у `signal` вона `null`
-- у `computed` це derivation
-- у `effect` це body effect
-
-## 5. Епохи: `t`, `v`, `s`, `w`
-
-### `t`
-
-Epoch зміни значення.
-
-Якщо observable value справді змінився, рухається `t`.
-
-### `v`
-
-Epoch останньої успішної валідації/перерахунку.
-
-Якщо вузол перерахувався й став свіжим, оновлюється `v`.
-
-### `s`
-
-Tracking epoch для поточного recompute pass.
-
-Він потрібен, щоб після recompute зрозуміти:
-
-- які inbound edges були справді прочитані
-- які стали stale
-
-### `w`
-
-Маркер поточного work pass у `ensureFresh`.
-
-Він потрібен для dedupe під час обходу dirty graph без зайвих `Set`.
-
-## 6. Чому `t` і `v` розділені
-
-Це одна з центральних ідей reflex.
-
-Якби був лише один version counter, runtime не міг би добре підтримувати SAC:
-
-same as current
-
-Приклад:
+Поточний runtime тримається на одному базовому shape:
 
 ```ts
-const b = computed(() => {
-  x();
-  return 42;
-});
-
-const c = computed(() => b() + 1);
+class ReactiveNode<T = unknown> {
+  state: number;
+  compute: (() => T) | null;
+  firstOut: ReactiveEdge | null;
+  firstIn: ReactiveEdge | null;
+  lastOut: ReactiveEdge | null;
+  lastIn: ReactiveEdge | null;
+  depsTail: ReactiveEdge | null;
+  payload: T;
+}
 ```
 
-Якщо `x` змінився, `b` справді recompute.
-Але його значення залишилося `42`.
+Тут немає окремих класів для signal/computed/watcher.
+Роль вузла визначається комбінацією:
 
-Що потрібно:
+- `state`
+- `compute`
+- семантики `payload`
 
-- `b.v` має оновитися, бо `b` перерахований
-- `b.t` не має оновитися, бо observable value не змінився
+## 2. `payload`
 
-Тоді `c` побачить:
+Сенс `payload` залежить від ролі вузла.
 
-- upstream був перевірений
-- але його значення не змінювалося
+### Producer
 
-і зможе не recompute.
+- поточне значення джерела
 
-Це і є selective recomputation.
+### Consumer
 
-## 7. `ReactiveEdge`
+- кешоване обчислене значення
 
-Ребро зберігає зв'язок:
+### Watcher
 
-- `from`
-- `to`
-- `nextOut`
-- `nextIn`
-- `s`
+- `cleanup` функція або `UNINITIALIZED` / `null`
 
-Чому linked lists, а не arrays:
+Це важлива частина мінімалістичного дизайну:
+один shape, різна семантика поверх нього.
 
-- простіше дешеве додавання без realloc
-- зручно обходити `firstOut` і `firstIn`
-- менше зайвої структури в мінімалістичному ядрі
+## 3. `compute`
 
-Мінус:
+### Producer
 
-- локальність пам'яті гірша, ніж у щільних масивів
+- `compute === null`
 
-Але для поточного профілю reflex це припустимий компроміс.
+### Consumer
 
-## 8. Outbound і inbound списки
+- функція derivation
 
-У кожного node є два напрямки.
+### Watcher
 
-### `firstOut`
+- функція side effect body
 
-Список consumers цього вузла.
+`executeNodeComputation()` працює однаково для consumer-ів і watcher-ів.
+Різниця з'являється вже на етапі commit policy.
 
-Потрібен для:
+## 4. `ReactiveEdge`
 
-- invalidation downstream
-- обходу від source до залежних вузлів
+Кожне ребро живе одночасно у двох списках:
 
-### `firstIn`
+- у source як outgoing edge
+- у target як incoming edge
 
-Список dependencies цього вузла.
+Shape:
 
-Потрібен для:
+```ts
+interface ReactiveEdge {
+  from: ReactiveNode;
+  to: ReactiveNode;
+  prevOut: ReactiveEdge | null;
+  nextOut: ReactiveEdge | null;
+  prevIn: ReactiveEdge | null;
+  nextIn: ReactiveEdge | null;
+}
+```
 
-- freshness checks
-- recompute logic
-- stale edge cleanup
+Це означає:
 
-## 9. `EngineContext`
+- `propagate()` іде по `firstOut`
+- `shouldRecompute()` іде по `firstIn`
+- `trackRead()` і `cleanupStaleSources()` перебудовують саме incoming список consumer-а
 
-Це shared mutable context runtime.
+## 5. Навіщо `depsTail`
 
-Він зберігає:
+`depsTail` - це cursor у списку `firstIn ... lastIn`.
 
-- `epoch`
-- `activeComputed`
-- traversal stacks
-- hooks
+Під час активного compute він означає:
 
-### Чому context важливий
+- "ось до цього місця dependency prefix уже підтверджений новим проходом"
 
-Якби runtime створював нові тимчасові структури на кожному read/write:
+Саме навколо цього курсора працюють:
 
-- було б більше алокацій
-- зростало б навантаження на GC
-- hot path став би шумнішим
+- fast hit у `trackRead()`
+- reorder у `reuseOrCreateIncomingEdge()`
+- suffix cleanup у `cleanupStaleSources()`
 
-Тому stacks і epoch живуть у context.
+Для статичного графа це дуже важливо:
 
-## 10. State bits
+- повторні читання можуть коштувати константно на один read
 
-У поточній реалізації використовуються:
+## 6. State bits
+
+Поточний runtime використовує такі основні bits:
+
+- `Producer`
+- `Consumer`
+- `Watcher`
+- `Invalid`
+- `Changed`
+- `Visited`
+- `Disposed`
+- `Computing`
+- `Scheduled`
+- `Tracking`
+
+### Рольові bits
+
+- `Producer`
+- `Consumer`
+- `Watcher`
+
+Вони кажуть, що це за вузол.
+
+### Dirty bits
 
 - `Invalid`
-- `Obsolete`
+- `Changed`
+
+Ключова маска:
+
+```ts
+DIRTY_STATE = Invalid | Changed
+```
+
+`Invalid` означає "перевір".
+`Changed` означає "зміна вже підтверджена".
+
+### Walker bits
+
+- `Visited`
 - `Tracking`
-- `SideEffect`
+
+Ключова маска:
+
+```ts
+WALKER_STATE = Visited | Tracking
+```
+
+Вони використовуються push/pull walker-ами і dependency tracking.
+
+### Lifecycle bits
+
 - `Disposed`
 - `Computing`
 - `Scheduled`
 
-### `Invalid`
+Вони потрібні для:
 
-Слабкий dirty hint.
+- захисту від циклів
+- watcher queue dedupe
+- відсікання мертвих вузлів
 
-Означає:
+## 7. `ReactiveMeta` helpers
 
-- "щось upstream могло змінитися"
+Пакет тримає короткі helpers поверх state bits:
 
-Не означає:
+- `markNodeComputing()`
+- `clearNodeComputing()`
+- `clearDirtyState()`
+- `isDisposedNode()`
 
-- "вузол точно треба recompute"
+Ідея проста:
 
-### `Obsolete`
+- runtime не дублює стан окремими булевими полями
+- у hot path читаються й пишуться конкретні bits
 
-Підтверджена несвіжість через version check.
+## 8. `EngineContext`
 
-Означає:
+Shared mutable context:
 
-- recompute справді потрібен
+```ts
+class EngineContext {
+  activeComputed: ReactiveNode | null;
+  propagationDepth: number;
+  cleanupRegistrar: CleanupRegistrar | null;
+  hooks: EngineHooks;
+}
+```
 
-### `Tracking`
+### `activeComputed`
 
-Прапор стабільності dependency set.
+Вузол, який зараз виконує `compute`.
 
-Він каже:
+Його читає `trackRead()`, щоб знати, куди прикріплювати dependency edges.
 
-- минулий recompute не виявив shape churn
+### `propagationDepth`
 
-Він не каже:
-
-- вузол свіжий
-
-### `SideEffect`
-
-Позначка effect node.
-
-Потрібна, щоб invalidation path знав:
-
-- цей вузол треба не лише позначити dirty
-- його ще треба передати scheduler
-
-### `Disposed`
-
-Вузол більше не повинен брати участі в оновленнях.
-
-### `Computing`
-
-Тимчасовий guard від циклів / re-entrant recompute.
-
-У dev mode цей прапор бере участь у safety checks.
-
-### `Scheduled`
-
-Ефект уже в черзі scheduler.
+Лічильник вкладеного push invalidation.
 
 Потрібен для:
 
-- dedupe без `Set`
-- дешевого enqueue path
+- коректного `onReactiveSettled`
+- host hooks без фальшивих settled-сигналів у середині propagation cascade
 
-## 11. Node factories
+### `cleanupRegistrar`
 
-У reflex є factories:
+Службовий seam для cleanup registration.
+Це не частина walkers/tracking протоколу.
 
-- `createSignalNode`
-- `createComputedNode`
-- `createEffectNode`
+### `hooks`
 
-Вони корисні не лише заради краси.
+Поточні host hooks:
 
-Вони:
+- `onEffectInvalidated`
+- `onReactiveSettled`
 
-- централізують creation semantics
-- не дають constructor details витекти по проєкту
-- спрощують майбутні розширення
+## 9. Чому модель така компактна
 
-Це важливий архітектурний прийом:
+Ця модель хороша тим, що всі гарячі шляхи працюють з невеликим набором полів:
 
-якщо ядро мінімалістичне, точки створення особливо важливо тримати під контролем.
+- `payload`
+- `state`
+- `firstOut`
+- `firstIn`
+- `depsTail`
+
+А складніший policy layer залишається зовні.
+
+Тому в подальших главах ми будемо дивитися на runtime не через "великі абстракції",
+а через прямі переходи:
+
+- write -> propagate
+- read -> shouldRecompute -> recompute
+- compute -> trackRead -> cleanupStaleSources

@@ -3,21 +3,21 @@ import {
   ConsumerReadMode,
   readConsumer,
   readProducer,
-} from "../build/esm/api/read.js";
-import { writeProducer } from "../build/esm/api/write.js";
-import runtime from "../build/esm/reactivity/context.js";
-import { recompute } from "../build/esm/reactivity/engine/compute.js";
-import { executeNodeComputation } from "../build/esm/reactivity/engine/execute.js";
+} from "../../build/esm/api/read.js";
+import { writeProducer } from "../../build/esm/api/write.js";
+import runtime from "../../build/esm/reactivity/context.js";
+import { recompute } from "../../build/esm/reactivity/engine/compute.js";
+import { executeNodeComputation } from "../../build/esm/reactivity/engine/execute.js";
 import {
   CONSUMER_CHANGED,
   PRODUCER_INITIAL_STATE,
   ReactiveNodeState,
-} from "../build/esm/reactivity/shape/ReactiveMeta.js";
-import { UNINITIALIZED } from "../build/esm/reactivity/shape/ReactiveNode.js";
-import ReactiveNode from "../build/esm/reactivity/shape/ReactiveNode.js";
-import { linkEdge } from "../build/esm/reactivity/shape/methods/connect.js";
-import { propagate } from "../build/esm/reactivity/walkers/propagate.js";
-import { shouldRecompute } from "../build/esm/reactivity/walkers/shouldRecompute.js";
+} from "../../build/esm/reactivity/shape/ReactiveMeta.js";
+import { UNINITIALIZED } from "../../build/esm/reactivity/shape/ReactiveNode.js";
+import ReactiveNode from "../../build/esm/reactivity/shape/ReactiveNode.js";
+import { linkEdge } from "../../build/esm/reactivity/shape/methods/connect.js";
+import { propagate } from "../../build/esm/reactivity/walkers/propagate.js";
+import { shouldRecompute } from "../../build/esm/reactivity/walkers/shouldRecompute.js";
 
 const DIRTY_OR_WALKER =
   ReactiveNodeState.Invalid |

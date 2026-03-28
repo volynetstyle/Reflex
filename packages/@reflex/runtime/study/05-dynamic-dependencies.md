@@ -1,188 +1,207 @@
-# 05. Динамічні залежності: найнеприємніша частина реактивності
+# 05. Динамічні залежності: як current runtime підтримує branch switching
 
-Якщо у `computed` завжди один і той самий набір dependencies, reactive runtime будувати легше.
-
-Але в реальному житті залежності часто змінюються.
+Найскладніша частина реактивності тут не value change, а shape change.
 
 Приклад:
 
 ```ts
-const choice = computed(() => flag.read() ? a.read() : b.read());
+const selected = new ReactiveNode(
+  undefined,
+  () => readProducer(flag) ? readProducer(left) : readProducer(right),
+  CONSUMER_INITIAL_STATE,
+);
 ```
 
-Поки `flag === true`, вузол залежить від `a`.
-Коли `flag === false`, він уже залежить від `b`.
+Поки `flag === true`, вузол читає `left`.
+Коли `flag === false`, він уже повинен читати `right`.
 
-Старий зв'язок треба видалити.
+Старий edge до `left` має зникнути.
 
-## 1. Чому це складно
+## 1. Що тут може піти не так
 
-Якщо не видалити стару dependency:
+Якщо старий edge лишився:
 
-- `a` залишиться phantom dependency
-- future writes у `a` даремно invalidating `choice`
-- graph почне брехати про реальні зв'язки
+- `left` стане phantom dependency
+- future writes у `left` даремно інвалідовуватимуть `selected`
+- граф почне брехати про актуальну форму залежностей
 
-Це призводить або до зайвої роботи, або до багів.
+## 2. Підхід поточного runtime
 
-## 2. Як reflex розв'язує задачу
+Поточний runtime не використовує tracking epochs.
 
-Через tracking epoch.
+Він тримає shape через:
 
-Є:
+- порядок incoming edges
+- cursor `depsTail`
+- suffix cleanup після compute
 
-- `node.s`
-- `edge.s`
+Ідея така:
 
-Під час recompute:
+- новий compute rebuild-ить "живий" prefix списку `firstIn`
+- усе, що лишилося після `depsTail`, вважається stale suffix
 
-1. node отримує новий tracking epoch
-2. кожна справді прочитана dependency позначає своє edge цим epoch
+## 3. `trackRead()`
 
-Після recompute:
+`trackRead(source)` працює лише коли є `runtime.activeComputed`.
 
-- будь-який inbound edge з іншим `s` вважається stale
-- stale edge видаляється
+Його fast path:
 
-## 3. `trackRead`
+1. якщо `depsTail.from === source`, це прямий hit
+2. якщо `depsTail.nextIn.from === source`, це expected-next hit
+3. лише інакше він іде в slow path
 
-Коли active computed читає source/computed:
+Це дає дуже дешевий stable-state сценарій:
 
-1. runtime перевіряє, чи вже є edge
-2. якщо edge уже є, оновлює `edge.s`
-3. якщо edge новий, додає його в graph
+- статичний граф не сканується заново на кожному read
 
-Це означає:
+## 4. Slow path: `reuseOrCreateIncomingEdge()`
 
-- повторні reads не створюють дублікатів
-- справді використані edges позначаються "живими"
+Коли fast path не спрацював, runtime:
 
-## 4. `Tracking` bit
+- шукає edge далі в incoming списку
+- якщо знаходить, reposition-ить його після `prev`
+- якщо не знаходить, створює новий edge
 
-Це не freshness flag.
+Тобто slow path покриває:
 
-Він означає:
+- reorder
+- branch switching
+- появу нової dependency
 
-- на минулому recompute dependency shape виглядав стабільним
+## 5. `depsTail` як протокол
 
-Якщо під час recompute з'являється нова dependency:
+Під час compute:
 
-- `Tracking` знімається
-- після compute запускається cleanup stale edges
+- `depsTail` рухається зліва направо по новому dependency prefix
 
-Якщо shape не змінювався:
+Уявна картина:
 
-- cleanup можна частково скоротити
+```text
+firstIn -> [confirmed prefix ... depsTail] [stale suffix ... lastIn]
+```
 
-## 5. Навіщо потрібен stable fast path
+Після завершення compute:
 
-Тому що в багатьох реальних обчисленнях dependencies:
+- префікс лишається
+- suffix відрізається
 
-- динамічні в теорії
-- але на практиці змінюються рідко
+## 6. `cleanupStaleSources()`
 
-Тоді корисно мати дешевий шлях:
-
-- не виконувати зайву graph cleanup роботу
-- якщо shape залишився таким самим
-
-## 6. Приклад branch switching
+Після compute runtime викликає:
 
 ```ts
-const selected = computed(() => {
-  return useA.read() ? a.read() : b.read();
-});
+cleanupStaleSources(node)
 ```
+
+Вона:
+
+- бере `tail = node.depsTail`
+- визначає `staleHead = tail?.nextIn ?? node.firstIn`
+- bulk-відрізає stale suffix від incoming списку
+- передає відірвану послідовність у `unlinkDetachedIncomingEdgeSequence()`
+
+Це важливо:
+
+- cleanup не робиться read-by-read
+- cleanup робиться один раз після завершення compute
+
+## 7. Навіщо `Tracking`
+
+Під час `executeNodeComputation()` вузол отримує `Tracking`.
+
+У current runtime це означає:
+
+- вузол зараз перебудовує dependency prefix
+- не всі старі edges ще можна вважати валідними для invalidation
+
+Тому push-side walker має спеціальне правило:
+
+- tracking consumer можна інвалідувати лише через edge з already-confirmed prefix
+
+Саме для цього існує `isTrackedPrefixEdge()`.
+
+## 8. Навіщо `Visited` у tracking сценарії
+
+Якщо під час compute в already-confirmed dependency прилітає invalidation,
+`propagate()` залишає на вузлі:
+
+- `Visited | Invalid`
+
+Для pull-side це означає:
+
+- поточне виконання побачило stale prefix
+- вузол треба rerun-ити
+
+## 9. Static shape fast path
+
+На статичному графі maintenance overhead повинен бути константним на один read.
+
+Саме для цього в коді є:
+
+- hit по `depsTail`
+- hit по `nextExpected`
+- ранній return у `cleanupStaleSources()`, якщо `tail.nextIn === null`
+
+Тобто steady-state граф платить за:
+
+- курсор
+- кілька pointer comparisons
+
+а не за повний scan incoming list.
+
+## 10. Branch switching приклад
 
 Сценарій:
 
-1. спочатку `useA = true`
-2. node читає `useA` і `a`
-3. пізніше `useA = false`
-4. node читає `useA` і `b`
-5. зв'язок з `a` має зникнути
+1. `flag = true`, вузол читає `flag` і `left`
+2. incoming список містить edges до `flag` і `left`
+3. `flag` змінюється на `false`
+4. новий compute читає `flag` і `right`
+5. `trackRead(right)` або перевикористовує edge, або створює новий
+6. `cleanupStaleSources()` відрізає старий edge до `left`
 
 Після цього:
 
-- write у `a` більше не повинен тривожити `selected`
-- write у `b` має продовжувати працювати
+- writes у `left` більше не повинні тривожити вузол
+- writes у `right` повинні працювати далі
 
-## 7. Чому cleanup робиться після recompute
+## 11. Не змішуйте shape logic з value logic
 
-Тому що лише після recompute відомо:
+### Value logic
 
-- які залежності справді використовувалися в новому проході
+Питає:
 
-Якщо почати unlink раніше:
-
-- можна зруйнувати graph прямо в процесі обчислення
-- ускладнити читання й invariants
-
-У reflex це строго розділено:
-
-- під час compute - лише tracking reads
-- після compute - cleanup stale edges
-
-## 8. Часта помилка під час рефакторингу
-
-Дуже легко випадково змішати:
-
-- stale-value logic
-- graph-shape logic
-
-Але це різні речі.
-
-### Stale-value logic
-
-Відповідає на запитання:
-
-"чи потрібно заново обчислити значення?"
+- "чи змінився результат?"
 
 Дивиться на:
 
 - `Invalid`
-- `Obsolete`
-- `t`
-- `v`
+- `Changed`
+- `shouldRecompute()`
+- `recompute()`
 
-### Graph-shape logic
+### Shape logic
 
-Відповідає на запитання:
+Питає:
 
-"які залежності у вузла зараз реальні?"
+- "які edges досі справжні?"
 
 Дивиться на:
 
-- `node.s`
-- `edge.s`
-- cleanup stale inbound edges
+- `depsTail`
+- `trackRead()`
+- `reuseOrCreateIncomingEdge()`
+- `cleanupStaleSources()`
 
-Якщо змішати їх в один клубок, runtime швидко стане крихким.
+Коли ці два шари змішують, runtime швидко стає крихким.
 
-## 9. Чому це важливо для продуктивності
+## 12. Практичний тест на здоров'я dynamic deps
 
-Динамічні залежності часто стають джерелом зайвих алокацій:
+Після branch switch перевіряйте:
 
-- тимчасові `Set`
-- snapshots
-- cloned lists
+- stale source більше не інвалідовує вузол
+- new source інвалідовує вузол
+- кількість incoming edges не росте безконтрольно
+- repeated reads на статичному графі не платять за повний scan
 
-reflex намагається цього уникати:
-
-- tracking через epoch
-- linked edges
-- cleanup через односканові проходи
-
-Це не магія.
-Це просто data-oriented design.
-
-## 10. Як зрозуміти, що ви зламали dynamic deps
-
-Типові симптоми:
-
-- після branch switch старий source усе ще invalidates node
-- кількість inbound edges тільки зростає
-- repeated reads починають плодити graph-сміття
-- тест на switch branch неочікувано викликає зайвий recompute
-
-Тому branch-switch tests у reflex - не "опціональна параноя", а обов'язковий захист архітектури.
+Саме ці речі і захищають current tests та JIT harness.

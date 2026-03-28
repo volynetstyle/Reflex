@@ -1,5 +1,5 @@
+import type { ReactiveNode } from "../reactivity";
 import {
-  ReactiveNode,
   ReactiveNodeState,
   trackRead,
   DIRTY_STATE,
@@ -10,7 +10,7 @@ import {
 } from "../reactivity";
 import runtime from "../reactivity/context";
 
-export  enum ConsumerReadMode {
+export enum ConsumerReadMode {
   lazy = 1 << 0,
   eager = 1 << 1,
 }

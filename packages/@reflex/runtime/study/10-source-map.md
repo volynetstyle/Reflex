@@ -1,320 +1,305 @@
-# Карта вихідних файлів
+# 10. Карта вихідних файлів
 
-Цей розділ потрібен для дуже практичної речі:
-щоб нова людина не відкривала `src/` навмання.
-
-Нижче - рекомендований порядок читання і коротка роль кожного файла.
+Це актуальна карта current runtime.
+Вона навмисно орієнтована на поточну структуру `src/`, а не на старі файли, яких уже немає.
 
 ## Рекомендований порядок читання
 
-Якщо ви вивчаєте reflex вперше, ідіть так:
+Якщо ви заходите в код уперше, ідіть так:
 
-1. `src/api.ts`
-2. `src/core.ts`
-3. `src/engine.ts`
-4. `src/walkers.ts`
-5. `src/tracking.ts`
-6. `src/graph.ts`
-7. `src/engine/execute.ts`
-8. `src/engine/compute.ts`
-9. `src/engine/effect.ts`
-10. `src/effect_scheduler.ts`
-11. `test/signal_beta.test.ts`
-12. `test/signal_beta.bench.ts`
+1. `src/index.ts`
+2. `src/api/read.ts`
+3. `src/api/write.ts`
+4. `src/api/watcher.ts`
+5. `src/reactivity/context.ts`
+6. `src/reactivity/shape/ReactiveMeta.ts`
+7. `src/reactivity/shape/ReactiveNode.ts`
+8. `src/reactivity/shape/ReactiveEdge.ts`
+9. `src/reactivity/shape/methods/connect.ts`
+10. `src/reactivity/engine/execute.ts`
+11. `src/reactivity/engine/tracking.ts`
+12. `src/reactivity/engine/compute.ts`
+13. `src/reactivity/walkers/propagate.ts`
+14. `src/reactivity/walkers/shouldRecompute.ts`
+15. `tests/runtime.semantic.test.ts`
+16. `tests/runtime.traversal.test.ts`
+17. `tests/runtime.hooks.test.ts`
+18. `tests/perf/walkers.jit.mjs`
+19. `tests/perf/tracking-connect.jit.mjs`
 
 Чому саме так:
 
-- спочатку бачите зовнішній контракт
-- потім модель даних
-- потім write/read pipeline
-- потім деталі tracking і execution
-- і лише після цього тести та perf-профіль
+- спочатку зовнішні операції
+- потім context і shape
+- потім низькорівнева graph mechanics
+- потім execution і tracking
+- потім walkers
+- і вже після цього тести та perf harness
 
-## `src/api.ts`
+## `src/index.ts`
 
-Це публічна поверхня runtime.
+Це вхідна точка пакета.
 
-Тут ви побачите:
+Тут видно:
 
-- `createRuntime`
-- `signal`
-- `computed`
-- `memo`
-- `effect`
-- `flush`
-- `batchWrite`
+- що пакет реально експортує
+- які речі вважаються public low-level surface
 
-Що важливо зрозуміти в цьому файлі:
+Починати звідси корисно, щоб не будувати mental model по внутрішніх файлах, яких узагалі немає в public surface.
 
-- яким API користується зовнішній код
-- як runtime збирається з внутрішніх частин
-- де підключається effect scheduler
-- як signal/computed/effect перетворюються на реальні `ReactiveNode`
+## `src/api/read.ts`
 
-Якщо вам треба швидко зрозуміти "як цим узагалі користуватися",
-починайте звідси.
+Це головний read seam.
 
-## `src/core.ts`
+Тут живуть:
 
-Це серце моделі.
+- `readProducer()`
+- `readConsumer()`
+- `ConsumerReadMode`
 
-Тут знаходяться:
+Що читати:
 
-- `ReactiveNode`
-- `ReactiveEdge`
+- як consumer стабілізується
+- коли викликається `shouldRecompute()`
+- коли викликається `recompute()`
+- коли consumer read іде в `untracked`
+
+## `src/api/write.ts`
+
+Це головний write seam.
+
+Тут живе:
+
+- `writeProducer()`
+
+Що читати:
+
+- no-op write fast path
+- producer commit
+- entry у `propagate()`
+- `runtime.enterPropagation()` / `leavePropagation()`
+
+## `src/api/watcher.ts`
+
+Це watcher lifecycle.
+
+Тут живуть:
+
+- `runWatcher()`
+- `disposeWatcher()`
+
+Що читати:
+
+- як watcher вирішує, чи потрібен rerun
+- як cleanup знімається і ставиться знову
+- як watcher використовує `executeNodeComputation()`
+
+## `src/reactivity/context.ts`
+
+Тут shared runtime context.
+
+Ключові поля:
+
+- `activeComputed`
+- `propagationDepth`
+- `cleanupRegistrar`
+- `hooks`
+
+Саме цей файл пояснює, як tracking і host hooks взагалі стикуються з ядром.
+
+## `src/reactivity/shape/ReactiveMeta.ts`
+
+Тут state bits і маски.
+
+Почитайте насамперед:
+
 - `ReactiveNodeState`
-- `ReactiveNodeKind`
-- helpers для state-bitset
-- `EngineContext`
-- node factories
+- `DIRTY_STATE`
+- `WALKER_STATE`
 
-Що важливо зрозуміти:
+Це словник термінів для всього runtime.
 
-- сенс `t`, `v`, `s`, `w`
-- чому `Dirty` - це маска, а не окремий біт
-- чим відрізняються `Signal`, `Computed`, `Effect`
-- які структури даних існують у графа
+## `src/reactivity/shape/ReactiveNode.ts`
 
-Якщо ви не зрозуміли `core.ts`, далі все здаватиметься магією.
+Тут shape вузла.
 
-## `src/engine.ts`
+Дивіться на:
 
-Це write-path.
+- `payload`
+- `compute`
+- `firstIn/firstOut`
+- `lastIn/lastOut`
+- `depsTail`
 
-Головні функції:
+Саме після цього файла починає бути зрозуміло, як runtime живе без окремих "signal/computed/effect objects".
 
-- `writeSignal`
-- `batchWrite`
+## `src/reactivity/shape/ReactiveEdge.ts`
 
-Що важливо зрозуміти:
+Тут shape ребра.
 
-- запис не перераховує граф
-- no-op write відсікається через `Object.is`
-- оновлюється `t`
-- downstream лише invalidation-иться
+Це короткий файл, але дуже важливий:
 
-Цей файл добре показує філософію reflex:
+- один edge живе в двох списках
+- будь-який pointer rewrite має зберігати обидва представлення графа узгодженими
 
-"роботу краще відкласти до читання, ніж робити її під час запису"
+## `src/reactivity/shape/methods/connect.ts`
 
-## `src/walkers.ts`
+Це низькорівнева graph surgery.
 
-Це read/refresh path і один із найважливіших файлів у всьому runtime.
+Головні речі:
 
-Тут знаходяться:
+- `linkEdge()`
+- `unlinkEdge()`
+- `reuseOrCreateIncomingEdge()`
+- `unlinkDetachedIncomingEdgeSequence()`
+- `unlinkAllSources()`
 
-- `markInvalid`
-- `needsUpdate`
-- `ensureFresh`
+Цей файл треба читати, якщо вас цікавлять:
 
-Що важливо зрозуміти:
+- dynamic deps
+- disposal
+- pointer-level hot path
 
-- як `Invalid` проштовхується вниз
-- як доводиться `Obsolete`
-- як runtime досягає локально правильного topo-order
-- як забезпечується single-pass recompute
+## `src/reactivity/engine/execute.ts`
 
-Якщо ви хочете зрозуміти, як reflex реально оновлює граф, це ваш головний файл.
+Shared executor для вузлів із `compute`.
 
-## `src/tracking.ts`
+Що читати:
+
+- встановлення `Tracking`
+- встановлення `Computing`
+- перемикання `activeComputed`
+- виклик `cleanupStaleSources()`
+- `runtime.maybeNotifySettled()`
+
+## `src/reactivity/engine/tracking.ts`
 
 Це dependency tracking шар.
 
-Тут знаходяться:
+Тут живуть:
+
+- `trackRead()`
+- `cleanupStaleSources()`
+
+Що важливо:
+
+- fast path для статичного графа
+- `depsTail` протокол
+- suffix cleanup після compute
+
+## `src/reactivity/engine/compute.ts`
+
+Тут commit логіка consumer recompute.
+
+Короткий, але важливий файл:
+
+- бере попередній `payload`
+- робить execute
+- визначає `changed`
+- чистить `DIRTY_STATE`
+
+## `src/reactivity/walkers/propagate.ts`
+
+Push-side walker.
+
+Тут дивіться:
+
+- `propagateLinear()`
+- `propagateBranching()`
+- `propagateOnce()`
+- tracking-aware invalidation
+
+Якщо цікаво, як write іде вниз по графу, це ваш файл.
+
+## `src/reactivity/walkers/shouldRecompute.ts`
+
+Pull-side walker.
+
+Тут дивіться:
+
+- `shouldRecomputeLinear()`
+- `shouldRecomputeBranching()`
+- `refreshDependency()`
+
+Це файл про:
+
+- upstream stabilization
+- branching DFS
+- рішення "чи потрібен recompute зараз"
+
+## Тести
+
+### `tests/runtime.semantic.test.ts`
+
+Тут хороші приклади:
+
+- same-as-current
+- eager read mode
+- dynamic deps
+
+### `tests/runtime.traversal.test.ts`
+
+Тут хороші приклади:
+
+- diamond graph
+- watcher invalidation
+- tracked prefix behavior
+
+### `tests/runtime.hooks.test.ts`
+
+Тут видно:
+
+- `onEffectInvalidated`
+- `onReactiveSettled`
+- nested propagation через hooks
+
+## Perf harness
+
+### `tests/perf/walkers.jit.mjs`
+
+Корисний для:
+
+- `propagate`
+- `shouldRecompute`
+- `executeNodeComputation`
+- API level scenarios
+
+### `tests/perf/tracking-connect.jit.mjs`
+
+Корисний для:
 
 - `trackRead`
+- `reuseOrCreateIncomingEdge`
 - `cleanupStaleSources`
+- static vs reorder scenarios
 
-Що важливо зрозуміти:
+## Якщо ви прийшли міняти runtime
 
-- як читання source/computed додає ребро в граф
-- як перевикористовуються старі залежності
-- як видаляються stale dependencies після branch switching
-- навіщо потрібен tracking epoch `node.s`
+Найкорисніший короткий маршрут:
 
-Цей файл особливо важливий для розуміння dynamic deps.
+1. `src/reactivity/shape/ReactiveMeta.ts`
+2. `src/reactivity/shape/ReactiveNode.ts`
+3. `src/reactivity/engine/execute.ts`
+4. `src/reactivity/engine/tracking.ts`
+5. `src/reactivity/walkers/propagate.ts`
+6. `src/reactivity/walkers/shouldRecompute.ts`
 
-## `src/graph.ts`
-
-Це низькорівнева механіка ребер.
-
-Тут знаходяться:
-
-- `linkEdge`
-- `unlinkEdge`
-- `unlinkFromSource`
-- `unlinkAllSources`
-
-Що важливо зрозуміти:
-
-- граф зберігається як двозв'язок списків `firstOut/firstIn` на одному edge-об'єкті
-- cleanup stale deps - не магія, а звичайна операція unlink
-- disposal effect теж працює через видалення inbound-джерел
-
-Це інфраструктурний файл.
-Зазвичай його читають після розуміння `tracking.ts`.
-
-## `src/engine/execute.ts`
-
-Це спільний pipeline виконання для вузлів із compute-функцією.
-
-Що тут відбувається:
-
-- перемикання `activeComputed`
-- встановлення `Computing`
-- виклик користувацької compute-функції
-- cleanup stale sources
-- зняття `Computing`
-
-Чому файл важливий:
-
-- він показує, що `computed` і `effect` ділять ту саму базову механіку
-- він є хорошим seam для розширення без дублювання протоколу
-
-## `src/engine/compute.ts`
-
-Це commit-логіка для `computed`.
-
-Що важливо зрозуміти:
-
-- `payload` оновлюється новим значенням
-- `v` ставиться в поточний epoch
-- dirty-state очищається
-- `t` оновлюється лише при реальній зміні результату
-
-Якщо ви намагаєтеся відлагодити "чому memo поводиться дивно",
-цей файл обов'язковий до читання.
-
-## `src/engine/effect.ts`
-
-Це commit-логіка і lifecycle для `effect`.
-
-Тут знаходяться:
-
-- `runEffect`
-- `disposeEffect`
-
-Що важливо зрозуміти:
-
-- effect зберігає cleanup у `payload`
-- старий cleanup викликається перед новим прогоном
-- dispose від'єднує effect від його поточних джерел
-- effect відрізняється від computed саме своєю owner/cleanup семантикою
-
-## `src/effect_scheduler.ts`
-
-Це окремий policy-layer для запуску effects.
-
-Тут ви побачите:
-
-- чергу ефектів
-- dedupe через `Scheduled`
-- стратегії `flush` і `eager`
-
-Чому цей файл важливий архітектурно:
-
-- scheduler винесений із lazy-core
-- різні flush-режими можна розвивати окремо
-- semantics graph-refresh не змішується з execution policy effects
-
-Якщо ви хочете додати новий режим запуску effects, ідіть сюди насамперед.
-
-## `test/signal_beta.test.ts`
-
-Це основний файл коректності.
-
-Його завдання - довести, що runtime:
-
-- правильно працює на базових сигналах
-- не робить зайвих recompute
-- коректно переживає diamond/shared subtree
-- уміє branch switching
-- захищений від циклів або хоча б детектить їх
-
-Якщо код здається зрозумілим, а поведінка все ще неясна,
-тести часто пояснюють краще за коментарі.
-
-## `test/signal_beta.bench.ts`
-
-Це не "доведення істини", а карта perf-профілю.
-
-Він показує, як reflex поводиться в сценаріях:
-
-- wide static graph
-- deep chain
-- diamond/fan-in
-- dynamic deps
-- batch update
-- realistic UI workload
-
-Його корисно читати не заради цифр, а заради питань:
-
-- де lazy design економить роботу
-- де eager runtime може бути вигіднішим
-
-## Як читати код без болю
-
-Є зручна стратегія.
-
-### Перший прохід
-
-Дивіться лише на ролі файлів і функції верхнього рівня.
-Не намагайтеся одразу зрозуміти кожен біт.
-
-### Другий прохід
-
-Простежте один конкретний сценарій:
-
-1. створити `signal`
-2. створити `computed`
-3. прочитати `computed`
-4. зробити `write`
-5. знову прочитати `computed`
-
-### Третій прохід
-
-Візьміть dynamic deps:
-
-```ts
-computed(() => cond() ? a() : b())
-```
-
-І руками простежте:
-
-- де додалося нове ребро
-- де старе ребро стало stale
-- де воно видалилося
-
-Після цього архітектура зазвичай "клацає" в голові.
-
-## Якщо ви прийшли змінювати runtime
-
-Корисний маршрут читання буде таким:
-
-1. `src/core.ts`
-2. `src/walkers.ts`
-3. `src/tracking.ts`
-4. `src/engine/execute.ts`
-5. потім уже конкретний шар, який хочете змінювати
-
-Причина проста:
-
-саме ці файли задають основні інваріанти.
+Після цього вже йдіть у конкретний шар, який чіпає ваша задача.
 
 ## Короткий висновок
 
-`reflex` маленький, але не примітивний.
-Його легше зрозуміти, якщо читати не "по папці", а за шарами відповідальності:
+Поточний runtime найкраще читати не як "один великий engine",
+а як набір коротких, дуже конкретних шарів:
 
 - API
-- core model
-- write path
-- refresh path
+- context
+- shape
+- connect
+- execute
 - tracking
-- execution
-- scheduler
+- push walker
+- pull walker
 - tests
-- benchmarks
+- perf harness
 
-Такий порядок різко зменшує відчуття, що всередині якась реактивна магія.
-Насправді там доволі компактна й інженерно зрозуміла система.
+Такий порядок значно краще відповідає реальному коду, ніж стара карта з `core.ts`, `walkers.ts` і `tracking.ts`.

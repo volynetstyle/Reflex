@@ -1,10 +1,10 @@
 import replace from "@rollup/plugin-replace";
 import resolve from "@rollup/plugin-node-resolve";
 
-export default {
-  input: "build/esm/index.js",
+const createPerfDomain = (input: string, file: string) => ({
+  input,
   output: {
-    file: "dist/perf.js",
+    file,
     format: "esm",
 
     sourcemap: false,
@@ -24,4 +24,10 @@ export default {
       },
     }),
   ],
-};
+});
+
+export default [
+  createPerfDomain("build/esm/index.js", "dist/perf.js"),
+  createPerfDomain("tests/tracking-connect.jit.mjs", "dist/tracking-connect.jit.js"),
+  createPerfDomain("tests/walkers.jit.mjs", "dist/walkers.jit.js"),
+];

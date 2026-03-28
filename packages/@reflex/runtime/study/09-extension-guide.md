@@ -1,319 +1,248 @@
-# Як розширювати reflex без втрати ядра
+# 09. Як розширювати current runtime без втрати форми
 
-Цей розділ для людини, яка хоче не просто користуватися runtime,
-а змінювати його.
+У цього пакета маленьке ядро.
+Його головна сила не в "універсальності", а в коротких і передбачуваних hot path-ах.
 
-Мета не в тому, щоб зробити reflex "більшою".
-Мета в тому, щоб зробити її розширюваною без розповзання архітектури.
+Тому хороший extension strategy тут така:
 
-Це дуже важлива різниця.
+- додавати поведінку по seams
+- не розмазувати семантику по всьому ядру
 
-## Головний принцип
+## 1. Хороші seams
 
-Якщо коротко:
+### `src/api/read.ts`
 
-розширюємо поведінку по швах, а не розмиваємо ядро спільними абстракціями
+Тут живе policy читання:
 
-У reflex є мінімалістичне SAC-ядро:
+- `readProducer()`
+- `readConsumer()`
+- `ConsumerReadMode`
 
-- source epoch `t`
-- validation epoch `v`
-- dependency tracking через edges
-- lazy `ensureFresh`
-- дешевий invalidation на write
+Це правильне місце для:
 
-Ось це і є найцінніше.
-Розширення не повинно перетворювати цю модель на "універсальний фреймворк усього".
+- нових read режимів
+- untracked / eager варіацій
+- host-level read semantics
 
-## Хороші точки розширення
+### `src/api/write.ts`
 
-### 1. `ReactiveNodeKind`
+Тут живе producer commit + entry у push invalidation:
 
-Це головний архітектурний seam на рівні моделі вузла.
+- `writeProducer()`
 
-Зараз є:
+Це seam для:
 
-- `Signal`
-- `Computed`
-- `Effect`
+- альтернативного compare policy
+- host wrappers навколо producer writes
 
-Якщо колись знадобляться нові ролі вузлів, мислити треба спочатку через:
+Але не місце для eager recompute графа.
 
-- чи змінюється саме семантика node-kind
-- чи це просто інший режим виконання вже існуючого kind
+### `src/api/watcher.ts`
 
-Новий kind виправданий лише якщо в нього справді нова життєва модель.
+Тут живе watcher lifecycle:
 
-### 2. Node factories
+- `runWatcher()`
+- `disposeWatcher()`
 
-Фабрики в `src/core.ts`:
+Це правильна зона для:
 
-- `createSignalNode`
-- `createComputedNode`
-- `createEffectNode`
+- watcher cleanup policy
+- host-facing watcher helpers
 
-Це хороше місце, щоб централізувати стартовий стан вузла.
+### `src/reactivity/context.ts`
 
-Якщо потрібен новий варіант поведінки, частіше безпечніше:
-
-- додати нову фабрику
-- ніж розкидати ініціалізацію node-state по runtime
-
-### 3. Shared execution pipeline
-
-`src/engine/execute.ts` - це один із найкорисніших seams.
-
-Він уже об'єднує спільну механіку:
+Тут живуть:
 
 - `activeComputed`
-- `Computing`
-- dependency tracking
-- cleanup stale deps
+- `propagationDepth`
+- `onEffectInvalidated`
+- `onReactiveSettled`
 
-Якщо ви додаєте новий виконуваний тип вузла, майже напевно варто
-використовувати саме цей pipeline, а не писати новий протокол обчислення з нуля.
-
-### 4. Effect scheduler
-
-`src/effect_scheduler.ts` уже винесений окремо спеціально для того,
-щоб різні flush-стратегії не забруднювали lazy core.
-
-Це ідеальна зона для таких речей:
-
-- `flush`
-- `eager`
-- у майбутньому: `microtask`, `manual`, `custom host flush`
-
-Але ключове правило:
-
-scheduler керує лише execution strategy effects, а не коректністю графа
-
-### 5. Engine hooks
-
-У `EngineContext` є hooks.
-Це хороший, легкий seam для спостереження за runtime без вбудовування важкої
-інструментації прямо в ядро.
-
-Підходить для:
+Це природний seam для:
 
 - devtools
-- counters
-- debug tracing
+- tracing
+- host queues
 - telemetry
 
-Не підходить для:
+### `src/reactivity/engine/execute.ts`
 
-- переписування базової семантики refresh
-- ін'єкцій, які змінюють коректність графа
+Shared executor для вузлів із `compute`.
 
-## Погані способи розширення
+Гарне місце для:
 
-### 1. Додати "спільний інтерфейс на все"
+- протоколу виконання
+- cycle safety
+- спільного enter/leave execution
 
-Наприклад:
+### `src/reactivity/engine/tracking.ts`
 
-- універсальний executor з купою callback-ів
-- спільний scheduler і для computed, і для effects, і ще для чогось
-- plugin-system заради пари спеціальних випадків
+Тут живе dynamic dependency maintenance:
 
-У маленькому runtime це зазвичай означає:
+- `trackRead()`
+- `cleanupStaleSources()`
 
-- більше непрямості
-- більше розгалужень
-- більше динаміки JS
-- гіршу читабельність hot path
+Сюди варто йти, якщо задача пов'язана з:
 
-### 2. Змішати lazy core і policy layer
+- статичним fast path на read
+- branch switching
+- stale suffix cleanup
 
-Якщо effect scheduling, dev assertions, owner-model, topo-experiments
-і business-specific hooks почнуть жити в одному місці,
-ядро швидко втратить форму.
+### `src/reactivity/shape/methods/connect.ts`
 
-### 3. Ховати важливу семантику в "зручні" булеві поля
+Тут живе low-level graph surgery:
 
-Наприклад:
+- `linkEdge()`
+- `unlinkEdge()`
+- `reuseOrCreateIncomingEdge()`
+- `unlinkAllSources()`
+
+Це місце для pointer-level роботи.
+
+### `src/reactivity/walkers/*.ts`
+
+Тут живуть обидва walker-и:
+
+- push side в `propagate.ts`
+- pull side в `shouldRecompute.ts`
+
+Саме тут не можна бездумно тягнути "красиві" абстракції в hot path.
+
+## 2. Що не треба робити
+
+### Не додавайте тіньовий стан
+
+На кшталт:
 
 - `node.isDirty`
-- `node.isMemo`
-- `node.needsFlush`
+- `node.kind`
+- окремий dependency cache поза edge-списком
 
-Коли такі поля починають дублювати реальні інваріанти,
-архітектура стає крихкою.
+Якщо семантика вже виражена через:
 
-Краще тримати семантику там, де вона вже формально описана:
-
-- `kind`
 - `state`
-- `t`
-- `v`
-- graph edges
+- `compute`
+- `payload`
+- `depsTail`
+- edge lists
 
-## Що ламати не можна ні за яких обставин
+то дубль майже завжди погіршує архітектуру.
 
-Ось список базових законів reflex.
-Якщо ви змінюєте архітектуру, вони мають залишатися істинними.
+### Не зливайте push і pull семантику
 
-### Закон 1. `write()` не перераховує граф
+`propagate()` і `shouldRecompute()` відповідають на різні питання.
 
-Write-path може:
+Не треба:
 
-- оновити значення source
-- підняти epoch
-- позначити downstream як invalid
+- робити write path "розумним recompute-пайплайном"
+- або навпаки тягнути push-side policy у pull walker
 
-Але він не повинен ставати eager recompute pipeline для memo-графа.
+### Не ховайте hot path за зайвими універсальними helper-ами
 
-### Закон 2. `t` рухається лише при реальній зміні значення
+Особливо чутливі місця:
 
-Для signal:
+- `propagateLinear()`
+- `propagateBranching()`
+- `shouldRecomputeLinear()`
+- `trackRead()`
 
-- `Object.is(old, next) === true` -> нічого не відбувається
+Тут форма коду для JIT важлива не менше за читабельність.
 
-Для computed:
+## 3. Що ламати не можна
 
-- recompute без зміни результату не повинен оновлювати `t`
+Під час будь-якого розширення мають зберігатися такі закони.
 
-Інакше version-based freshness втрачає сенс.
+### Закон 1. `writeProducer()` не recompute-ить downstream
 
-### Закон 3. `v` оновлюється після успішної валідації або recompute
+Він:
 
-`v` - це момент, коли вузол був підтверджений як актуальний.
-Він не повинен означати щось інше.
+- комітить producer
+- запускає push invalidation
 
-### Закон 4. Після recompute брудні прапори зняті
+І тільки.
 
-Якщо вузол перерахований успішно, у нього не повинно залишатися `Invalid/Obsolete`.
+### Закон 2. `Invalid` і `Changed` не зливаються
 
-### Закон 5. Старі dynamic deps мають видалятися
+`Invalid`:
 
-Якщо computed у новому проході перестав читати старий source,
-старе ребро має зникнути.
+- maybe stale
 
-### Закон 6. Один `ensureFresh()` не робить подвійний recompute того самого вузла
+`Changed`:
 
-Інакше diamond/shared subtree одразу почнуть поводитися погано.
+- confirmed change
 
-### Закон 7. Effects не повинні забруднювати semantics computeds
+### Закон 3. `depsTail` лишається єдиним протоколом dynamic deps
 
-`effect` - це owner-side-effect scope.
-`computed` - це pure lazy derivation.
+Не можна тихо обійти його додатковим side cache.
 
-Не треба змішувати ці ролі заради "зручності".
+### Закон 4. `cleanupStaleSources()` лишається post-compute операцією
 
-## Як думати про нові можливості
+Не можна рвати incoming links посеред compute.
 
-Замість питання:
+### Закон 5. Watcher execution policy лишається зовні
 
-"Як вбудувати нову фічу прямо в ядро?"
+Kernel тільки:
 
-краще ставити питання:
+- повідомляє invalidation
+- дає `runWatcher()`
 
-"Це зміна core-semantics чи policy layer поверх уже наявного ядра?"
+Host policy вирішує, коли його викликати.
 
-### Хороший приклад: eager flush strategy для effects
+## 4. Як думати про нову можливість
 
-Це policy layer.
+Питайте себе так:
 
-Чому:
+1. Це зміна graph semantics?
+2. Це зміна read/write policy?
+3. Це watcher host policy?
+4. Це лише dev tooling?
 
-- не змінює freshness-логіку computeds
-- не змінює `t/v`
-- не змінює dependency graph model
-- змінює лише те, коли запускаються invalidated effects
+Приклади:
 
-Значить місце цьому в scheduler.
+- новий queue policy для watcher-ів -> hooks / host layer
+- новий compare mode для producer write -> `api/write.ts`
+- новий tracking fast path -> `engine/tracking.ts` + `shape/methods/connect.ts`
+- зміна pull-side refresh protocol -> `walkers/shouldRecompute.ts`
 
-### Хороший приклад: новий debug hook
+## 5. Практичний порядок роботи
 
-Це теж policy/tooling layer.
+Якщо ви змінюєте runtime:
 
-### Обережний приклад: новий kind вузла
+1. Спочатку визначте, який саме seam чіпаєте.
+2. Випишіть інваріанти, які мають лишитися істинними.
+3. Змініть код у найвужчому можливому місці.
+4. Перевірте semantic tests.
+5. Окремо перевірте perf на static і churn сценаріях.
 
-Це вже core-level change.
-Тут треба дуже уважно перевірити, чи не є задача просто
-варіацією `computed` або `effect`.
-
-## Якщо потрібен eager/topological режим
-
-Такий напрямок можливий, але його не можна вносити грубо.
-
-Правильний шлях мислення:
-
-1. Lazy SAC-core залишається окремим.
-2. Нова стратегія живе як окремий execution/policy layer.
-3. Спільна модель node/edge/state за можливості не роздувається.
-4. Спільні інваріанти `t/v/dirty/tracking` не ламаються.
-
-Якщо eager-mode вимагатиме переписати все ядро, значить seam обраний неправильно.
-
-## Як додавати нову можливість безпечно
-
-Практичний алгоритм:
-
-1. Спочатку сформулюйте, це core-semantics чи policy.
-2. Випишіть інваріанти, які не повинні змінитися.
-3. Знайдіть мінімальний seam для впровадження.
-4. Не тягніть нову абстракцію в hot path без причини.
-5. Додайте тест на коректність, а не лише на happy-path.
-6. Лише потім дивіться на benchmark.
-
-## Мінімальна checklist перед merge
-
-Перед merge змін у reflex корисно пройтися цим списком.
+## 6. Мінімальний checklist перед merge
 
 ### Коректність
 
-- чи є тест на diamond/shared subtree
-- чи є тест на branch switching
-- чи є тест на no-op update
-- чи є тест на cycle або заборонений цикл
+- `tests/runtime.semantic.test.ts`
+- `tests/runtime.traversal.test.ts`
+- `tests/runtime.hooks.test.ts`
+- `tests/runtime.lifecycle.test.ts`
 
-### Інваріанти
+### Perf
 
-- `t` і `v` не втратили сенс
-- `Dirty` усе ще похідний від `Invalid | Obsolete`
-- stale deps очищаються
-- немає подвійного recompute в одному pass
+- static graph не просів
+- reorder / branch switching не зламався
+- write path не став товстішим
 
 ### Архітектура
 
+- не з'явився дублюючий стан
 - не з'явився новий важкий універсальний шар
-- не змішалися effect policy і computed core
-- нова логіка стоїть на одному зрозумілому seam
+- host policy не протекла в walkers/trackers
 
-### Production quality
+## 7. Короткий висновок
 
-- dev-only guards справді під `__DEV__`
-- production bundle не тягне зайві assert-гілки
-- benchmark не показує деградацію сильних кейсів reflex
+Розширювати цей runtime безпечно, якщо тримати в голові просте правило:
 
-## Хороша mental model
+- shape logic у `tracking` / `connect`
+- push logic у `propagate`
+- pull logic у `shouldRecompute`
+- execution protocol у `execute`
+- host policy у hooks і watcher layer
 
-Уявіть reflex як маленький двигун.
-
-Можна:
-
-- поміняти карбюратор
-- додати датчик
-- винести керування запалюванням в окремий блок
-
-Але якщо для цього ви розпиляли блок циліндрів, то покращення сумнівне.
-
-У термінах runtime:
-
-- scheduler, hooks, mode-selection - це зовнішні шари
-- `t/v/state/edges/ensureFresh` - це блок циліндрів
-
-## Короткий висновок
-
-Розширювати reflex треба дуже дисципліновано:
-
-- тримати ядро маленьким
-- посилювати вже наявні seams
-- не плодити зайву динаміку JS
-- виносити policy назовні
-- не жертвувати partial-read профілем заради абстрактної універсальності
-
-Хороший рефакторинг reflex робить систему простішою для пояснення і швидшою.
-Якщо після зміни runtime став "більш загальним", але гірше читається і гірше міряється,
-найімовірніше, це був неправильний шлях.
+Як тільки ці межі розмиваються, система стає одночасно і повільнішою, і важчою для пояснення.
