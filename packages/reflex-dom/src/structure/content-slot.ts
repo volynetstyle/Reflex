@@ -4,25 +4,10 @@ import { createScope, disposeScope, type Scope } from "../ownership";
 export type MountUnknown = (parent: Node, scope: Scope, value: unknown) => void;
 
 type ContentState =
-  | {
-      kind: "empty";
-      scope: null;
-    }
-  | {
-      kind: "text";
-      scope: null;
-      node: Text;
-      value: string;
-    }
-  | {
-      kind: "node";
-      scope: null;
-      node: Node;
-    }
-  | {
-      kind: "fallback";
-      scope: Scope;
-    };
+  | { kind: "empty" }
+  | { kind: "text"; node: Text; value: string }
+  | { kind: "node"; node: Node }
+  | { kind: "fallback"; scope: Scope };
 
 export interface ContentSlot {
   fragment: DocumentFragment;
@@ -51,165 +36,132 @@ function isSingleNodeValue(value: unknown): value is Node {
   );
 }
 
-function disposeState(state: ContentState): void {
-  if (state.scope !== null) {
-    disposeScope(state.scope);
-  }
-}
-
 export function createContentSlot(
   doc: Document,
   mountUnknown: MountUnknown,
   initialValue: unknown,
 ): ContentSlot {
+  const fragment = doc.createDocumentFragment();
   const start = doc.createComment("");
   const end = doc.createComment("");
-  const fragment = doc.createDocumentFragment();
 
   let destroyed = false;
-  let state: ContentState = { kind: "empty", scope: null };
-  function mountIntoParent(parent: Node, value: unknown): void {
-    if (isEmptyValue(value)) {
-      state = { kind: "empty", scope: null };
-      return;
+  let state: ContentState = { kind: "empty" };
+
+  function unmountCurrent(): void {
+    if (state.kind === "fallback") {
+      disposeScope(state.scope);
     }
-
-    if (isTextValue(value)) {
-      const node = doc.createTextNode(String(value));
-      parent.appendChild(node);
-      state = {
-        kind: "text",
-        scope: null,
-        node,
-        value: node.data,
-      };
-      return;
-    }
-
-    if (isSingleNodeValue(value)) {
-      parent.appendChild(value);
-      state = {
-        kind: "node",
-        scope: null,
-        node: value,
-      };
-      return;
-    }
-
-    const scope = createScope();
-    mountUnknown(parent, scope, value);
-    state = {
-      kind: "fallback",
-      scope,
-    };
-  }
-
-  function mountInitialState(parent: Node, value: unknown): void {
-    parent.appendChild(start);
-    mountIntoParent(parent, value);
-    parent.appendChild(end);
-  }
-
-  mountInitialState(fragment, initialValue);
-
-  function clearMountedContent(): void {
-    disposeState(state);
 
     const parent = start.parentNode;
     if (parent !== null && end.parentNode === parent) {
       clearBetween(start, end);
     }
 
-    state = { kind: "empty", scope: null };
+    state = { kind: "empty" };
   }
 
-  function updateText(parent: Node, value: string): void {
-    if (state.kind === "text") {
-      if (state.value !== value) {
-        state.node.data = value;
-        state.value = value;
-      }
+  function mount(parent: Node, value: unknown): void {
+    if (isEmptyValue(value)) {
+      state = { kind: "empty" };
       return;
     }
 
-    clearMountedContent();
-
-    const node = doc.createTextNode(value);
-    parent.insertBefore(node, end);
-    state = {
-      kind: "text",
-      scope: null,
-      node,
-      value,
-    };
-  }
-
-  function updateNode(parent: Node, value: Node): void {
-    if (state.kind === "node" && state.node === value) {
+    if (isTextValue(value)) {
+      const text = doc.createTextNode(value + "");
+      parent.insertBefore(text, end);
+      state = {
+        kind: "text",
+        node: text,
+        value: text.data,
+      };
       return;
     }
 
-    clearMountedContent();
-    parent.insertBefore(value, end);
-    state = {
-      kind: "node",
-      scope: null,
-      node: value,
-    };
-  }
+    if (isSingleNodeValue(value)) {
+      parent.insertBefore(value, end);
+      state = {
+        kind: "node",
+        node: value,
+      };
+      return;
+    }
 
-  function updateFallback(parent: Node, value: unknown): void {
-    clearMountedContent();
-
-    const nextScope = createScope();
-    const nextFragment = doc.createDocumentFragment();
-    mountUnknown(nextFragment, nextScope, value);
-    parent.insertBefore(nextFragment, end);
+    const scope = createScope();
+    const content = doc.createDocumentFragment();
+    mountUnknown(content, scope, value);
+    parent.insertBefore(content, end);
     state = {
       kind: "fallback",
-      scope: nextScope,
+      scope,
     };
   }
+
+  fragment.appendChild(start);
+  fragment.appendChild(end);
+  mount(fragment, initialValue);
 
   return {
     fragment,
     start,
     end,
-    update(value) {
+
+    update(value: unknown): void {
       if (destroyed) return;
 
       const parent = end.parentNode;
       if (parent === null) return;
 
       if (isEmptyValue(value)) {
-        clearMountedContent();
+        if (state.kind !== "empty") {
+          unmountCurrent();
+        }
         return;
       }
 
       if (isTextValue(value)) {
-        updateText(parent, String(value));
+        const next = value + "";
+
+        if (state.kind === "text") {
+          if (state.value !== next) {
+            state.node.data = next;
+            state.value = next;
+          }
+          return;
+        }
+
+        unmountCurrent();
+        mount(parent, next);
         return;
       }
 
       if (isSingleNodeValue(value)) {
-        updateNode(parent, value);
+        if (state.kind === "node" && state.node === value) {
+          return;
+        }
+
+        unmountCurrent();
+        mount(parent, value);
         return;
       }
 
-      updateFallback(parent, value);
+      unmountCurrent();
+      mount(parent, value);
     },
 
-    dispose() {
+    dispose(): void {
       if (destroyed) return;
-      clearMountedContent();
+      if (state.kind !== "empty") {
+        unmountCurrent();
+      }
     },
-    
-    destroy() {
+
+    destroy(): void {
       if (destroyed) return;
 
-      clearMountedContent();
-      start.parentNode?.removeChild(start);
-      end.parentNode?.removeChild(end);
+      unmountCurrent();
+      start.remove();
+      end.remove();
       destroyed = true;
     },
   };

@@ -3,7 +3,7 @@ import type ReactiveNode from "../shape/ReactiveNode";
 import type { ReactiveEdge } from "../shape/ReactiveEdge";
 import {
   reuseOrCreateIncomingEdge,
-  unlinkEdge,
+  unlinkDetachedIncomingEdgeSequence,
 } from "../shape/methods/connect";
 
 /**
@@ -17,15 +17,36 @@ export function trackRead(source: ReactiveNode): void {
   if (!consumer) return;
 
   const prevEdge = consumer.depsTail;
-  const nextExpected = prevEdge !== null ? prevEdge.nextIn : consumer.firstIn;
-  const edge = reuseOrCreateIncomingEdge(
+  if (prevEdge !== null) {
+    if (prevEdge.from === source) return;
+
+    const nextExpected = prevEdge.nextIn;
+    if (nextExpected !== null && nextExpected.from === source) {
+      consumer.depsTail = nextExpected;
+      return;
+    }
+
+    consumer.depsTail = reuseOrCreateIncomingEdge(
+      source,
+      consumer,
+      prevEdge,
+      nextExpected,
+    );
+    return;
+  }
+
+  const firstIn = consumer.firstIn;
+  if (firstIn !== null && firstIn.from === source) {
+    consumer.depsTail = firstIn;
+    return;
+  }
+
+  consumer.depsTail = reuseOrCreateIncomingEdge(
     source,
     consumer,
-    prevEdge,
-    nextExpected,
+    null,
+    firstIn,
   );
-
-  consumer.depsTail = edge;
 }
 
 /**
@@ -34,11 +55,21 @@ export function trackRead(source: ReactiveNode): void {
  */
 export function cleanupStaleSources(node: ReactiveNode): void {
   const tail = node.depsTail;
-  let edge: ReactiveEdge | null = tail !== null ? tail.nextIn : node.firstIn;
+  let staleHead: ReactiveEdge | null;
 
-  while (edge) {
-    const next: ReactiveEdge | null = edge.nextIn;
-    unlinkEdge(edge);
-    edge = next;
+  if (tail !== null) {
+    staleHead = tail.nextIn;
+    if (staleHead === null) return;
+
+    tail.nextIn = null;
+    node.lastIn = tail;
+  } else {
+    staleHead = node.firstIn;
+    if (staleHead === null) return;
+
+    node.firstIn = null;
+    node.lastIn = null;
   }
+
+  unlinkDetachedIncomingEdgeSequence(staleHead);
 }

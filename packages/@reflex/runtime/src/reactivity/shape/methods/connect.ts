@@ -4,7 +4,7 @@ import {
   type ReactiveEdge,
 } from "../ReactiveEdge";
 import { isDisposedNode, ReactiveNodeState } from "../ReactiveMeta";
-import ReactiveNode from "../ReactiveNode";
+import type ReactiveNode from "../ReactiveNode";
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
 
@@ -87,10 +87,6 @@ export function reuseOrCreateIncomingEdge(
   prev: ReactiveEdge | null,
   nextExpected: ReactiveEdge | null,
 ): ReactiveEdge {
-  // Fast path: the edge we already hold is the right one.
-  if (prev?.from === from) return prev;
-  if (nextExpected?.from === from) return nextExpected;
-
   // Scan the rest of the incoming list for a reusable edge.
   for (
     let edge = nextExpected ? nextExpected.nextIn : to.firstIn;
@@ -109,6 +105,17 @@ export function reuseOrCreateIncomingEdge(
   }
 
   return linkEdge(from, to, prev);
+}
+
+export function unlinkDetachedIncomingEdgeSequence(
+  edge: ReactiveEdge | null,
+): void {
+  while (edge) {
+    const next = edge.nextIn;
+    detachOutEdge(edge.from, edge);
+    clearReactiveEdgeLinks(edge);
+    edge = next;
+  }
 }
 
 /**

@@ -1,4 +1,4 @@
-import ReactiveNode from "./ReactiveNode";
+import type ReactiveNode from "./ReactiveNode";
 
 export enum ReactiveNodeState {
   Producer = 1 << 0,

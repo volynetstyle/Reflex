@@ -7,11 +7,12 @@ import type {
   EngineHooks,
   ReactiveNode,
 } from "@reflex/runtime";
+import type {
+  EffectStrategy} from "../policy";
 import {
   resolveEffectSchedulerMode,
   EffectScheduler,
-  EventDispatcher,
-  EffectStrategy,
+  EventDispatcher
 } from "../policy";
 import { createSource } from "./factory";
 
