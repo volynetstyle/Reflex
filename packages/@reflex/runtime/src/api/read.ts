@@ -1,4 +1,5 @@
 import type { ReactiveNode } from "../reactivity";
+import type { ExecutionContext } from "../reactivity/context";
 import {
   ReactiveNodeState,
   trackRead,
@@ -8,19 +9,37 @@ import {
   propagateOnce,
   clearDirtyState,
 } from "../reactivity";
-import runtime from "../reactivity/context";
+import { recordDebugEvent } from "../debug";
+import { getDefaultContext } from "../reactivity/context";
 
 export enum ConsumerReadMode {
   lazy = 1 << 0,
   eager = 1 << 1,
 }
 
-export function readProducer<T>(node: ReactiveNode<T>): T {
-  trackRead(node);
+export function readProducer<T>(
+  node: ReactiveNode<T>,
+  context: ExecutionContext = getDefaultContext(),
+): T {
+  trackRead(node, context);
+
+  if (__DEV__) {
+    recordDebugEvent(context, "read:producer", {
+      consumer: context.activeComputed ?? undefined,
+      node,
+      detail: {
+        value: node.payload,
+      },
+    });
+  }
+
   return node.payload as T;
 }
 
-function stabilizeConsumer<T>(node: ReactiveNode<T>): T {
+function stabilizeConsumer<T>(
+  node: ReactiveNode<T>,
+  context: ExecutionContext,
+): T {
   const state = node.state;
 
   if (__DEV__ && state & ReactiveNodeState.Computing) {
@@ -32,7 +51,7 @@ function stabilizeConsumer<T>(node: ReactiveNode<T>): T {
       (state & ReactiveNodeState.Changed) !== 0 || shouldRecompute(node);
 
     if (needs) {
-      if (recompute(node)) propagateOnce(node);
+      if (recompute(node, context)) propagateOnce(node, context);
     } else {
       clearDirtyState(node);
     }
@@ -44,23 +63,51 @@ function stabilizeConsumer<T>(node: ReactiveNode<T>): T {
 export function readConsumer<T>(
   node: ReactiveNode<T>,
   mode: ConsumerReadMode = ConsumerReadMode.lazy,
+  context: ExecutionContext = getDefaultContext(),
 ): T {
   if (mode === ConsumerReadMode.eager) {
-    return untracked(() => stabilizeConsumer(node));
+    const value = untracked(() => stabilizeConsumer(node, context), context);
+
+    if (__DEV__) {
+      recordDebugEvent(context, "read:consumer", {
+        node,
+        detail: {
+          mode: "eager",
+          value,
+        },
+      });
+    }
+
+    return value;
   }
 
-  const value = stabilizeConsumer(node);
-  trackRead(node);
+  const value = stabilizeConsumer(node, context);
+  trackRead(node, context);
+
+  if (__DEV__) {
+    recordDebugEvent(context, "read:consumer", {
+      consumer: context.activeComputed ?? undefined,
+      node,
+      detail: {
+        mode: "lazy",
+        value,
+      },
+    });
+  }
+
   return value;
 }
 
-export function untracked<T>(fn: () => T): T {
-  const prev = runtime.activeComputed;
-  runtime.activeComputed = null;
+export function untracked<T>(
+  fn: () => T,
+  context: ExecutionContext = getDefaultContext(),
+): T {
+  const prev = context.activeComputed;
+  context.activeComputed = null;
 
   try {
     return fn();
   } finally {
-    runtime.activeComputed = prev;
+    context.activeComputed = prev;
   }
 }

@@ -99,7 +99,7 @@ Created in `render.ts` for each root mount.
 
 ### Component scope
 
-Created in `tree/component.ts` before mounting the component output. The scope
+Created in `mount/component.ts` before mounting the component output. The scope
 is automatically attached to the current owner by `runWithScope()`.
 
 ### Dynamic branch scope

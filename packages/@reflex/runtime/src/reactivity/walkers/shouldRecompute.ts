@@ -1,4 +1,5 @@
 import { recompute } from "../engine/compute";
+import { getDefaultContext } from "../context";
 import type { ReactiveNode } from "../shape";
 import { DIRTY_STATE, type ReactiveEdge, ReactiveNodeState } from "../shape";
 import { propagateOnce } from "./propagate";
@@ -42,7 +43,7 @@ function refreshDependencyNoFanout(node: ReactiveNode, state: number): boolean {
     return (state & ReactiveNodeState.Changed) !== 0;
   }
 
-  return recompute(node);
+  return recompute(node, getDefaultContext());
 }
 
 function refreshDependency(
@@ -51,7 +52,7 @@ function refreshDependency(
   state = node.state,
 ): boolean {
   const changed = refreshDependencyNoFanout(node, state);
-  if (changed && hasFanout(link)) propagateOnce(node);
+  if (changed && hasFanout(link)) propagateOnce(node, getDefaultContext());
   return changed;
 }
 

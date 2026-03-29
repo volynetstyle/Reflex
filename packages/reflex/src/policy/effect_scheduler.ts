@@ -2,8 +2,9 @@ import {
   DIRTY_STATE,
   ReactiveNodeState,
   runWatcher,
-  runtime,
+  getDefaultContext,
 } from "@reflex/runtime";
+import type { ExecutionContext } from "@reflex/runtime";
 import { effectScheduled, effectUnscheduled } from "../api/effect";
 import type { UNINITIALIZED } from "../infra/factory";
 import type { ReactiveNode } from "@reflex/runtime";
@@ -36,7 +37,14 @@ export class EffectScheduler {
   private batchDepth = 0;
   private phase = SchedulerPhase.Idle;
 
-  constructor(private readonly mode: EffectSchedulerMode) {}
+  constructor(
+    private readonly mode: EffectSchedulerMode,
+    private readonly context?: ExecutionContext,
+  ) {}
+
+  private getContext(): ExecutionContext {
+    return this.context ?? getDefaultContext();
+  }
 
   enqueue(node: ReactiveNode): void {
     if (this.isNodeIgnored(node)) return;
@@ -64,6 +72,7 @@ export class EffectScheduler {
     if (!this.hasPending()) return;
 
     this.phase = SchedulerPhase.Flushing;
+    const ctx = this.getContext();
 
     try {
       while (this.head < this.queue.length) {
@@ -72,7 +81,7 @@ export class EffectScheduler {
 
         if (this.shouldSkipNode(node)) continue;
 
-        runWatcher(node);
+        runWatcher(node, ctx);
       }
     } finally {
       this.queue.length = 0;
@@ -120,11 +129,12 @@ export class EffectScheduler {
   }
 
   private shouldAutoFlush(): boolean {
+    const ctx = this.getContext();
     return (
       this.mode === EffectSchedulerMode.Eager &&
       this.phase === SchedulerPhase.Idle &&
-      runtime.propagationDepth === 0 &&
-      runtime.activeComputed === null &&
+      ctx.propagationDepth === 0 &&
+      ctx.activeComputed === null &&
       this.hasPending()
     );
   }

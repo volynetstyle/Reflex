@@ -1,9 +1,11 @@
-import type { ReactiveNode} from "../reactivity";
+import type { ReactiveNode } from "../reactivity";
 import { ReactiveNodeState } from "../reactivity";
-import runtime from "../reactivity/context";
+import type { ExecutionContext } from "../reactivity/context";
 
-export function getCurrentComputedInternal(): ReactiveNode | undefined {
-  const node = runtime.activeComputed;
+export function getCurrentComputedInternal(
+  context: ExecutionContext,
+): ReactiveNode | undefined {
+  const node = context.activeComputed;
 
   return node
     ? !(node.state & ReactiveNodeState.Consumer)

@@ -1,9 +1,10 @@
 import {
-  runtime,
   subscribeEvent,
+  createExecutionContext,
+  setDefaultContext,
 } from "@reflex/runtime";
 import type {
-  EngineContext,
+  ExecutionContext,
   EngineHooks,
   ReactiveNode,
 } from "@reflex/runtime";
@@ -23,25 +24,33 @@ interface RuntimeOptions {
 
 function createRuntimeInfrastructure(options?: RuntimeOptions) {
   const hooks = options?.hooks;
+  
+  // Create empty context first
+  const executionContext = createExecutionContext();
+
   const scheduler = new EffectScheduler(
     resolveEffectSchedulerMode(options?.effectStrategy),
+    executionContext,
   );
   const dispatcher = new EventDispatcher((fn) => scheduler.batch(fn));
+
+  // Set hooks with scheduler integration
+  executionContext.setHooks({
+    ...hooks,
+    onEffectInvalidated(node: ReactiveNode) {
+      scheduler.enqueue(node);
+      hooks?.onEffectInvalidated?.(node);
+    },
+    onReactiveSettled() {
+      scheduler.notifySettled();
+      hooks?.onReactiveSettled?.();
+    },
+  });
 
   return {
     scheduler,
     dispatcher,
-    runtimeHooks: {
-      ...hooks,
-      onEffectInvalidated(node: ReactiveNode) {
-        scheduler.enqueue(node);
-        hooks?.onEffectInvalidated?.(node);
-      },
-      onReactiveSettled() {
-        scheduler.notifySettled();
-        hooks?.onReactiveSettled?.();
-      },
-    },
+    executionContext,
   };
 }
 
@@ -56,19 +65,19 @@ export interface EventSource<T> extends Event<T> {
 export interface Runtime {
   event<T>(): EventSource<T>;
   flush(): void;
-  readonly ctx: EngineContext;
+  readonly ctx: ExecutionContext;
 }
 
 export function createRuntime(options?: RuntimeOptions): Runtime {
-  const { scheduler, dispatcher, runtimeHooks } =
+  const { scheduler, dispatcher, executionContext } =
     createRuntimeInfrastructure(options);
 
-  runtime.resetState();
-  runtime.setHooks(runtimeHooks);
+  executionContext.resetState();
+  setDefaultContext(executionContext);
 
   return {
     get ctx() {
-      return runtime;
+      return executionContext;
     },
 
     event<T>() {

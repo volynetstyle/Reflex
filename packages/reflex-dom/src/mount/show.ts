@@ -2,7 +2,7 @@ import type { Namespace } from "../host/namespace";
 import type { ShowRenderable } from "../operators";
 import { resolveShowValue } from "../operators";
 import type { DOMRenderer } from "../runtime";
-import { mountReactiveSlot } from "./slot";
+import { mountReactiveSlot } from "./reactive-slot";
 
 export function mountShow(
   renderer: DOMRenderer,

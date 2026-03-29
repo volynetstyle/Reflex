@@ -5,7 +5,7 @@ import {
 } from "../ownership";
 import type { DOMRenderer } from "../runtime";
 import type { ComponentRenderable } from "../types";
-import { appendRenderableNodes } from "./create-nodes";
+import { appendRenderableNodes } from "./append";
 
 export function mountComponent(
   renderer: DOMRenderer,

@@ -7,10 +7,13 @@ export {
   disposeWatcher,
 } from "./api";
 
-// TMP context
+// Execution context management
 export {
-  default as runtime,
-  type EngineContext,
+  createExecutionContext,
+  getDefaultContext,
+  setDefaultContext,
+  resetDefaultContext,
+  type ExecutionContext,
   type EngineHooks,
   type CleanupRegistrar,
 } from "./reactivity/context";
@@ -46,3 +49,13 @@ export {
   subscribeEvent,
   emitEvent,
 } from "./reactivity";
+
+export {
+  subtle,
+  type RuntimeDebugContextSnapshot,
+  type RuntimeDebugEvent,
+  type RuntimeDebugListener,
+  type RuntimeDebugNodeSnapshot,
+  type RuntimeDebugOptions,
+  type RuntimeSubtle,
+} from "./subtle";

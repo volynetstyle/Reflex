@@ -2,7 +2,7 @@ import {
   runWatcher,
   disposeWatcher,
   ReactiveNodeState,
-  runtime,
+  getDefaultContext,
 } from "@reflex/runtime";
 import type { UNINITIALIZED } from "../infra/factory";
 import { createEffectNode } from "../infra/factory";
@@ -26,14 +26,16 @@ export function withEffectCleanupRegistrar<T>(
   registrar: EffectCleanupRegistrar | null,
   fn: () => T,
 ): T {
-  return runtime.withCleanupRegistrar(registrar, fn);
+  const context = getDefaultContext();
+  return context.withCleanupRegistrar(registrar, fn);
 }
 
 export function effect(fn: EffectFn): Destructor {
   const node = createEffectNode(fn);
-  runWatcher(node);
+  const context = getDefaultContext();
+  runWatcher(node, context);
 
   const dispose = () => disposeWatcher(node);
-  runtime.registerEffectCleanup(dispose);
+  context.registerEffectCleanup(dispose);
   return dispose;
 }

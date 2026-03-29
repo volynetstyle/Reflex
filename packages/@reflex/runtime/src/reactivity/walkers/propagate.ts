@@ -1,11 +1,15 @@
-import runtime from "../context";
+import type { ExecutionContext } from "../context";
 import type { ReactiveNode } from "../shape";
+import { recordDebugEvent } from "../../debug";
 import {
   type ReactiveEdge,
   DIRTY_STATE,
   WALKER_STATE,
   ReactiveNodeState,
 } from "../shape";
+
+export const NON_IMMEDIATE = 0;
+export const IMMEDIATE = 1;
 
 const INVALIDATION_SLOW_PATH_MASK =
   DIRTY_STATE | ReactiveNodeState.Disposed | WALKER_STATE;
@@ -27,14 +31,33 @@ function isTrackedPrefixEdge(
 function notifyWatcherInvalidation(
   node: ReactiveNode,
   thrown: unknown,
+  context: ExecutionContext,
 ): unknown {
   try {
-    runtime.dispatchWatcherEvent(node);
+    context.dispatchWatcherEvent(node);
   } catch (error) {
     return thrown ?? error;
   }
 
   return thrown;
+}
+
+function recordPropagation(
+  edge: ReactiveEdge,
+  nextState: number,
+  promote: number,
+  context: ExecutionContext,
+): void {
+  if (!__DEV__) return;
+
+  recordDebugEvent(context, "propagate", {
+    detail: {
+      immediate: promote !== 0,
+      nextState,
+    },
+    source: edge.from,
+    target: edge.to,
+  });
 }
 
 function promoteInvalidSubscriber(node: ReactiveNode): boolean {
@@ -49,7 +72,7 @@ function promoteInvalidSubscriber(node: ReactiveNode): boolean {
 function getSlowInvalidatedSubscriberState(
   edge: ReactiveEdge,
   state: number,
-  promoteImmediate: boolean,
+  promoteImmediate: number,
 ): number {
   const sub = edge.to;
 
@@ -68,15 +91,20 @@ function getSlowInvalidatedSubscriberState(
     : 0;
 }
 
-export function propagateOnce(node: ReactiveNode): void {
+export function propagateOnce(
+  node: ReactiveNode,
+  context: ExecutionContext,
+): void {
   let thrown: unknown = null;
 
   for (let edge = node.firstOut; edge !== null; edge = edge.nextOut) {
     const sub = edge.to;
     if (!promoteInvalidSubscriber(sub)) continue;
 
+    recordPropagation(edge, sub.state, IMMEDIATE, context);
+
     if ((sub.state & ReactiveNodeState.Watcher) !== 0) {
-      thrown = notifyWatcherInvalidation(sub, thrown);
+      thrown = notifyWatcherInvalidation(sub, thrown, context);
     }
   }
 
@@ -85,13 +113,14 @@ export function propagateOnce(node: ReactiveNode): void {
 
 function propagateBranching(
   edge: ReactiveEdge,
-  promote: boolean,
+  promote: number,
   resume: ReactiveEdge | null,
-  resumePromote: boolean,
+  resumePromote: number,
   thrown: unknown,
+  context: ExecutionContext,
 ): unknown {
   const edgeStack: ReactiveEdge[] = [];
-  const promoteStack: boolean[] = [];
+  const promoteStack: number[] = [];
   let stackTop = -1;
 
   // The fast invalidation branch stays duplicated here and in propagateLinear.
@@ -108,9 +137,10 @@ function propagateBranching(
 
     if (nextState !== 0) {
       sub.state = nextState;
+      recordPropagation(edge, nextState, promote, context);
 
       if ((nextState & ReactiveNodeState.Watcher) !== 0) {
-        thrown = notifyWatcherInvalidation(sub, thrown);
+        thrown = notifyWatcherInvalidation(sub, thrown, context);
       } else {
         const firstOut = sub.firstOut;
         if (firstOut !== null) {
@@ -122,7 +152,7 @@ function propagateBranching(
 
           edge = firstOut;
           resume = edge.nextOut;
-          promote = resumePromote = false;
+          promote = resumePromote = NON_IMMEDIATE;
           continue;
         }
       }
@@ -135,7 +165,7 @@ function propagateBranching(
     } else if (stackTop >= 0) {
       edge = edgeStack[stackTop]!;
       promote = resumePromote = promoteStack[stackTop]!;
-      stackTop -= 1;
+      --stackTop;
       resume = edge.nextOut;
     } else {
       return thrown;
@@ -145,8 +175,9 @@ function propagateBranching(
 
 function propagateLinear(
   edge: ReactiveEdge,
-  promote: boolean,
+  promote: number,
   thrown: unknown,
+  context: ExecutionContext,
 ): unknown {
   while (true) {
     const sub = edge.to;
@@ -160,19 +191,27 @@ function propagateLinear(
 
     if (nextState !== 0) {
       sub.state = nextState;
+      recordPropagation(edge, nextState, promote, context);
 
       if ((nextState & ReactiveNodeState.Watcher) !== 0) {
-        thrown = notifyWatcherInvalidation(sub, thrown);
+        thrown = notifyWatcherInvalidation(sub, thrown, context);
       } else {
         const firstOut = sub.firstOut;
         if (firstOut !== null) {
           edge = firstOut;
 
           if (next !== null) {
-            return propagateBranching(edge, false, next, promote, thrown);
+            return propagateBranching(
+              edge,
+              NON_IMMEDIATE,
+              next,
+              promote,
+              thrown,
+              context,
+            );
           }
 
-          promote = false;
+          promote = NON_IMMEDIATE;
           continue;
         }
       }
@@ -185,9 +224,10 @@ function propagateLinear(
 
 export function propagate(
   startEdge: ReactiveEdge,
-  promoteImmediate = false,
+  promoteImmediate = 0,
+  context: ExecutionContext,
 ): void {
-  const thrown = propagateLinear(startEdge, promoteImmediate, null);
+  const thrown = propagateLinear(startEdge, promoteImmediate, null, context);
 
   if (thrown !== null) throw thrown;
 }

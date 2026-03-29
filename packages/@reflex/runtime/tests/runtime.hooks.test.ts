@@ -3,10 +3,10 @@ import {
   DIRTY_STATE,
   ReactiveNodeState,
   disposeWatcher,
+  getDefaultContext,
   readConsumer,
   readProducer,
   runWatcher,
-  runtime,
   writeProducer,
 } from "../src";
 import {
@@ -16,7 +16,7 @@ import {
   resetRuntime,
 } from "./runtime.test_utils";
 
-describe("Reactive runtime - hooks and resilience", () => {
+describe("ReactivegetDefaultContext() - hooks and resilience", () => {
   beforeEach(() => {
     resetRuntime();
   });
@@ -25,12 +25,12 @@ describe("Reactive runtime - hooks and resilience", () => {
     const settled = vi.fn();
 
     resetRuntime({ onReactiveSettled: settled });
-    runtime.maybeNotifySettled();
+   getDefaultContext().maybeNotifySettled();
 
     expect(settled).toHaveBeenCalledTimes(1);
 
     resetRuntime();
-    runtime.maybeNotifySettled();
+   getDefaultContext().maybeNotifySettled();
 
     expect(settled).toHaveBeenCalledTimes(1);
   });
@@ -135,7 +135,7 @@ describe("Reactive runtime - hooks and resilience", () => {
     expect(settled).toHaveBeenCalledTimes(1);
   });
 
-  it("restores runtime bookkeeping when watcher computation throws", () => {
+  it("restoresgetDefaultContext() bookkeeping when watcher computation throws", () => {
     const settled = vi.fn();
     const error = new Error("watcher failed");
 
@@ -150,7 +150,7 @@ describe("Reactive runtime - hooks and resilience", () => {
     });
 
     expect(() => runWatcher(watcher)).toThrow(error);
-    expect(runtime.activeComputed).toBeNull();
+    expect(getDefaultContext().activeComputed).toBeNull();
     expect(watcher.state & ReactiveNodeState.Tracking).toBe(0);
     expect(watcher.state & ReactiveNodeState.Computing).toBe(0);
     expect(settled).toHaveBeenCalledTimes(1);

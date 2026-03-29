@@ -20,6 +20,25 @@ export interface EventSubscriber<T> {
 
 export type EventBoundary = <T>(fn: () => T) => T;
 
+const EVENT_SUBSCRIBER_OWNER = Symbol("EventSubscriber.owner");
+
+type OwnedEventSubscriber<T> = EventSubscriber<T> & {
+  [EVENT_SUBSCRIBER_OWNER]?: EventSource<T> | null;
+};
+
+function getSubscriberOwner<T>(
+  subscriber: EventSubscriber<T>,
+): EventSource<T> | null | undefined {
+  return (subscriber as OwnedEventSubscriber<T>)[EVENT_SUBSCRIBER_OWNER];
+}
+
+function setSubscriberOwner<T>(
+  subscriber: EventSubscriber<T>,
+  source: EventSource<T> | null,
+): void {
+  (subscriber as OwnedEventSubscriber<T>)[EVENT_SUBSCRIBER_OWNER] = source;
+}
+
 export function identityBoundary<T>(fn: () => T): T {
   return fn();
 }
@@ -28,14 +47,22 @@ export function appendSubscriber<T>(
   source: EventSource<T>,
   subscriber: EventSubscriber<T>,
 ): void {
+  if ((subscriber.state & EventSubscriberState.Active) === 0) return;
+
+  const owner = getSubscriberOwner(subscriber);
+  if (owner !== undefined && owner !== null) return;
+
   const tail = source.tail;
+  subscriber.prev = tail;
+  subscriber.next = null;
+  subscriber.unlinkNext = null;
+  setSubscriberOwner(subscriber, source);
 
   if (tail === null) {
     source.head = source.tail = subscriber;
     return;
   }
 
-  subscriber.prev = tail;
   tail.next = subscriber;
   source.tail = subscriber;
 }
@@ -56,6 +83,7 @@ function unlinkSubscriber<T>(
   subscriber.prev = null;
   subscriber.next = null;
   subscriber.unlinkNext = null;
+  setSubscriberOwner(subscriber, null);
 }
 
 function enqueuePendingRemoval<T>(
@@ -86,6 +114,7 @@ export function removeSubscriber<T>(
   source: EventSource<T>,
   subscriber: EventSubscriber<T>,
 ): void {
+  if (getSubscriberOwner(subscriber) !== source) return;
   if ((subscriber.state & EventSubscriberState.Active) === 0) return;
 
   subscriber.state &= ~EventSubscriberState.Active;

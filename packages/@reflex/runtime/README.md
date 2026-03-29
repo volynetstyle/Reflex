@@ -152,6 +152,23 @@ console.log(readConsumer(b)); // 4
 
 ---
 
+## Debug Introspection Example
+
+Run:
+
+```bash
+pnpm --filter @reflex/runtime example:introspection
+```
+
+The script uses `@reflex/runtime/debug` and prints:
+
+- execution phases
+- invalidation / recompute events
+- graph snapshots for key nodes
+- current queue and context state
+
+---
+
 ## Recycler Example
 
 ```ts

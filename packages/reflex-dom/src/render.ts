@@ -2,7 +2,7 @@
 import type { Cleanup, JSXRenderable } from "./types";
 import type { DOMRenderer } from "./runtime";
 import { createScope, disposeScope, runWithScope } from "./ownership";
-import { appendRenderableNodes } from "./tree/create-nodes";
+import { appendRenderableNodes } from "./mount/append";
 
 export function renderWithRenderer(
   renderer: DOMRenderer,

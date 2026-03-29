@@ -1,23 +1,56 @@
 import { compare } from "./compare";
-import type { ReactiveNode} from "../reactivity";
-import { DIRTY_STATE, propagate } from "../reactivity";
-import runtime from "../reactivity/context";
+import type { ReactiveNode } from "../reactivity";
+import type { ExecutionContext } from "../reactivity/context";
+import { DIRTY_STATE, IMMEDIATE, propagate } from "../reactivity";
+import { recordDebugEvent } from "../debug";
+import { getDefaultContext } from "../reactivity/context";
 
-export function writeProducer<T>(node: ReactiveNode<T>, value: T): void {
-  if (compare(node.payload, value)) return;
+export function writeProducer<T>(
+  node: ReactiveNode<T>,
+  value: T,
+  context: ExecutionContext = getDefaultContext(),
+): void {
+  const previous = node.payload;
+
+  if (compare(previous, value)) {
+    if (__DEV__) {
+      recordDebugEvent(context, "write:producer", {
+        node,
+        detail: {
+          changed: false,
+          next: value,
+          previous,
+        },
+      });
+    }
+
+    return;
+  }
 
   node.payload = value;
   node.state &= ~DIRTY_STATE;
 
   const firstSubscriberEdge = node.firstOut;
 
+  if (__DEV__) {
+    recordDebugEvent(context, "write:producer", {
+      node,
+      detail: {
+        changed: true,
+        next: value,
+        previous,
+        hasSubscribers: firstSubscriberEdge !== null,
+      },
+    });
+  }
+
   if (firstSubscriberEdge === null) return;
 
-  runtime.enterPropagation();
+  context.enterPropagation();
 
   try {
-    propagate(firstSubscriberEdge, true);
+    propagate(firstSubscriberEdge, IMMEDIATE, context);
   } finally {
-    runtime.leavePropagation();
+    context.leavePropagation();
   }
 }

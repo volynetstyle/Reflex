@@ -115,15 +115,6 @@ const layoutThrashingDatabase = {
   },
 } as const;
 
-type Category = "reads" | "writes" | "methods"
-
-/**
- * Get all properties/methods of a specific category
- */
-function getAllLayoutOperations(category: Category) {
-  return layoutThrashingDatabase[category];
-}
-
 /**
  * Check if an operation is potentially problematic
  */

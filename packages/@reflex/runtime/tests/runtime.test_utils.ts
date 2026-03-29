@@ -3,14 +3,19 @@ import {
   PRODUCER_INITIAL_STATE,
   ReactiveNode,
   type EngineHooks,
+  type ExecutionContext,
   WATCHER_INITIAL_STATE,
+  createExecutionContext,
+  resetDefaultContext,
 } from "../src";
-import runtime from "../src/reactivity/context";
 import { UNINITIALIZED } from "../src/reactivity/shape/ReactiveNode";
 
-export function resetRuntime(hooks: EngineHooks = {}): void {
-  runtime.resetState();
-  runtime.setHooks(hooks);
+/**
+ * Reset the default context to a fresh instance with optional hooks.
+ * Recommended for test isolation.
+ */
+export function resetRuntime(hooks: EngineHooks = {}): ExecutionContext {
+  return resetDefaultContext(hooks);
 }
 
 export function createProducer<T>(value: T): ReactiveNode<T> {
@@ -43,4 +48,8 @@ export function hasSubscriber(from: ReactiveNode, to: ReactiveNode): boolean {
   }
 
   return false;
+}
+
+export function createTestContext(hooks: EngineHooks = {}): ExecutionContext {
+  return createExecutionContext(hooks);
 }

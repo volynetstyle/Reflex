@@ -12,10 +12,13 @@ scopes, so mount, update, replace, and dispose stay deterministic.
 | Area | Files | Responsibility |
 | --- | --- | --- |
 | Public runtime API | `src/runtime.ts`, `src/render.ts` | Create renderers, mount roots, replace previous roots, expose `render()` / `mount()` / JSX runtime |
-| Render dispatch | `src/tree/create-nodes.ts` | Walk renderable values and route them to element, component, operator, or text mounting |
+| Render dispatch | `src/mount/append.ts` | Walk renderable values and route them to element, component, operator, or text mounting |
+| Mount architecture | `src/mount/*` | Keep element binding, renderable classification, and slot primitives as explicit seams instead of burying them inside tree walkers |
 | DOM host writes | `src/host/*`, `src/bindings/*` | Apply props, styles, events, refs, namespaces, and reactive prop bindings |
-| Dynamic regions | `src/structure/*`, `src/tree/slot.ts` | Keep ranges and slots replaceable without leaking nested effects |
-| Structural operators | `src/tree/show.ts`, `src/tree/switch.ts`, `src/tree/for.ts` | Mount conditional and keyed-list branches |
+| Dynamic regions | `src/structure/content-slot.ts`, `src/mount/reactive-slot.ts` | Keep slots replaceable without leaking nested effects |
+| Structural operators | `src/mount/show.ts`, `src/mount/switch.ts`, `src/mount/for.ts` | Mount conditional and keyed-list branches |
+| List reconciliation | `src/reconcile/*` | Hold keyed and unkeyed diff logic outside operator mounting so list behavior is easier to reason about and extend |
+| Execution policies | `src/runtime/policies.ts` | Describe renderer scheduling intent and map it onto the current Reflex runtime options |
 | Ownership and cleanup | `src/ownership/*` | Track who owns which subtree and dispose it in a predictable order |
 
 ## Mental Model
@@ -58,11 +61,12 @@ render.ts
 runWithScope(root)
         |
         v
-tree/create-nodes.ts
-  |- element -> tree/create-element.ts -> host/*
-  |- component -> tree/component.ts
-  |- accessor -> structure/range.ts
-  |- Show/Switch/For -> tree/show.ts / switch.ts / for.ts
+mount/append.ts
+  |- element -> mount/element.ts -> mount/element-binder.ts -> host/*
+  |- component -> mount/component.ts
+  |- accessor -> mount/reactive-slot.ts
+  |- Show/Switch/For -> mount/show.ts / switch.ts / for.ts
+  |                    \-> reconcile/keyed.ts
   \- primitives -> text nodes
         |
         v
@@ -94,7 +98,7 @@ This makes every root render a clean ownership boundary.
 
 ### 2. Mounting a subtree
 
-Inside the root scope, `create-nodes.ts` dispatches by value shape:
+Inside the root scope, `mount/append.ts` dispatches by value shape:
 
 - Element renderables create real DOM elements and bind props/children.
 - Component renderables allocate a child ownership scope and mount the component
@@ -251,6 +255,20 @@ If the answer is no:
 
 That is why `content-slot` allocates scopes for fallback subtrees, but not for
 plain text or borrowed DOM nodes.
+
+## Recent Architecture Lift
+
+The experimental `dom/` folder introduced a more explicit layered design. The
+working `src/` implementation now carries the portable parts of that design:
+
+- `src/mount/renderable.ts` centralizes renderable classification.
+- `src/mount/element-binder.ts` separates element setup from child mounting.
+- `src/reconcile/keyed.ts` owns keyed list diffing instead of keeping it inside `For`.
+- `src/runtime/policies.ts` gives renderer scheduling a named policy surface.
+
+That keeps the stable renderer behavior intact while making future features
+like alternate hosts, richer list strategies, or batched scheduling easier to
+add in one place.
 
 ## Status
 

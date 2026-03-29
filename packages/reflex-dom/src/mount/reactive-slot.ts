@@ -1,5 +1,5 @@
 import type { Namespace } from "../host/namespace";
-import type { createScope } from "../ownership";
+import type { Scope } from "../ownership";
 import {
   onEffectStart,
   ownedEffect,
@@ -7,14 +7,15 @@ import {
   runWithScope,
 } from "../ownership";
 import type { DOMRenderer } from "../runtime";
+import type { Accessor } from "../types";
 import type { ContentSlot } from "../structure/content-slot";
 import { createContentSlot } from "../structure/content-slot";
-import { appendRenderableNodes } from "./create-nodes";
+import { appendRenderableNodes } from "./append";
 
 function mountNestedValue(
   renderer: DOMRenderer,
   parent: Node,
-  scope: ReturnType<typeof createScope>,
+  scope: Scope,
   value: unknown,
   ns: Namespace,
 ): void {
@@ -58,4 +59,13 @@ export function mountReactiveSlot<T>(
   });
 
   return slot.fragment;
+}
+
+export function mountDynamic(
+  renderer: DOMRenderer,
+  acc: Accessor<unknown>,
+  ns: Namespace,
+): Node {
+  renderer.ensureRuntime();
+  return mountReactiveSlot(renderer, acc, (value) => value, ns);
 }
