@@ -5,7 +5,7 @@ import {
   readProducer,
 } from "../../build/esm/api/read.js";
 import { writeProducer } from "../../build/esm/api/write.js";
-import runtime from "../../build/esm/reactivity/context.js";
+import { getDefaultContext } from "../../build/esm/reactivity/context.js";
 import { recompute } from "../../build/esm/reactivity/engine/compute.js";
 import { executeNodeComputation } from "../../build/esm/reactivity/engine/execute.js";
 import {
@@ -18,6 +18,8 @@ import ReactiveNode from "../../build/esm/reactivity/shape/ReactiveNode.js";
 import { linkEdge } from "../../build/esm/reactivity/shape/methods/connect.js";
 import { propagate } from "../../build/esm/reactivity/walkers/propagate.js";
 import { shouldRecompute } from "../../build/esm/reactivity/walkers/shouldRecompute.js";
+
+const runtime = getDefaultContext();
 
 const DIRTY_OR_WALKER =
   ReactiveNodeState.Invalid |

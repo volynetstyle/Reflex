@@ -12,10 +12,7 @@ import type {
   JSXRenderable,
 } from "../types";
 import type { Namespace } from "../host/namespace";
-import {
-  RenderableKind,
-  classifyRenderable,
-} from "./renderable";
+import { RenderableKind, classifyRenderable } from "./renderable";
 import type { DOMRenderer } from "../runtime";
 import { mountComponent } from "./component";
 import { mountDynamic } from "./reactive-slot";
@@ -46,18 +43,17 @@ export function appendRenderableNodes(
       case RenderableKind.Empty:
         continue;
 
-      case RenderableKind.Array:
-        {
-          const items = Array.isArray(current)
-            ? current
-            : Array.from(current as Iterable<unknown>);
+      case RenderableKind.Array: {
+        const items = Array.isArray(current)
+          ? current
+          : Array.from(current as Iterable<unknown>);
 
-          for (let i = items.length - 1; i >= 0; --i) {
-            stack[top++] = items[i];
-          }
-
-          continue;
+        for (let i = items.length - 1; i >= 0; ++top, --i) {
+          stack[top] = items[i];
         }
+
+        continue;
+      }
 
       case RenderableKind.Node:
         parent.appendChild(current as Node);
@@ -69,23 +65,17 @@ export function appendRenderableNodes(
         );
         continue;
 
-      case RenderableKind.Element:
-        {
-          const element = current as ElementRenderable<
-            ElementTag,
-            ElementProps<ElementTag>
-          >;
+      case RenderableKind.Element: {
+        const element = current as ElementRenderable<
+          ElementTag,
+          ElementProps<ElementTag>
+        >;
 
-          parent.appendChild(
-            mountElement(
-              renderer,
-              element.tag,
-              element.props,
-              ns,
-            ),
-          );
-          continue;
-        }
+        parent.appendChild(
+          mountElement(renderer, element.tag, element.props, ns),
+        );
+        continue;
+      }
 
       case RenderableKind.Show:
         parent.appendChild(
@@ -101,11 +91,7 @@ export function appendRenderableNodes(
 
       case RenderableKind.For:
         parent.appendChild(
-          mountFor(
-            renderer,
-            current as ForRenderable<any>,
-            ns,
-          ),
+          mountFor(renderer, current as ForRenderable<any>, ns),
         );
         continue;
 

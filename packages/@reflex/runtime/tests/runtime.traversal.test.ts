@@ -305,4 +305,55 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(depSpy).toHaveBeenCalledTimes(2);
     expect(dep.state & ReactiveNodeState.Invalid).toBeFalsy();
   });
+
+  it("keeps eager stale-source unlink as the default behavior", () => {
+    const toggle = createProducer(true);
+    const left = createProducer(1);
+    const right = createProducer(2);
+    const target = createConsumer(() =>
+      readProducer(toggle) ? readProducer(left) : readProducer(right),
+    );
+
+    expect(readConsumer(target)).toBe(1);
+    expect(hasSubscriber(left, target)).toBe(true);
+    expect(hasSubscriber(right, target)).toBe(false);
+
+    writeProducer(toggle, false);
+
+    expect(readConsumer(target)).toBe(2);
+    expect(hasSubscriber(left, target)).toBe(false);
+    expect(hasSubscriber(right, target)).toBe(true);
+  });
+
+  it("retains stale edges behind versionedCleanupSkip without letting them invalidate reads", () => {
+    const context = resetRuntime({}, { versionedCleanupSkip: true });
+    const toggle = createProducer(true);
+    const left = createProducer(1);
+    const right = createProducer(2);
+    const targetSpy = vi.fn(() =>
+      readProducer(toggle, context)
+        ? readProducer(left, context)
+        : readProducer(right, context),
+    );
+    const target = createConsumer(targetSpy);
+
+    expect(readConsumer(target, context)).toBe(1);
+    expect(hasSubscriber(left, target)).toBe(true);
+    expect(hasSubscriber(right, target)).toBe(false);
+
+    writeProducer(toggle, false, context);
+
+    expect(readConsumer(target, context)).toBe(2);
+    expect(hasSubscriber(left, target)).toBe(true);
+    expect(hasSubscriber(right, target)).toBe(true);
+
+    writeProducer(left, 10, context);
+    expect(target.state & DIRTY_STATE).toBe(0);
+    expect(readConsumer(target, context)).toBe(2);
+    expect(targetSpy).toHaveBeenCalledTimes(2);
+
+    writeProducer(toggle, true, context);
+    expect(readConsumer(target, context)).toBe(10);
+    expect(targetSpy).toHaveBeenCalledTimes(3);
+  });
 });

@@ -82,7 +82,7 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     expect(target.state & ReactiveNodeState.Computing).toBeFalsy();
   });
 
-  it("characterization: execute clears a stale Visited bit before recompute", () => {
+  it("characterization: recompute clears a stale Visited bit before compute", () => {
     const source = createProducer(1);
     let target!: ReturnType<typeof createConsumer<number>>;
     let seenInside = 0;

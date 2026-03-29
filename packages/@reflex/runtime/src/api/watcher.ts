@@ -2,6 +2,9 @@ import type { ReactiveNode } from "../reactivity/shape";
 import type { ExecutionContext } from "../reactivity/context";
 import { recordDebugEvent } from "../debug";
 import {
+  beginNodeTracking,
+  clearNodeTracking,
+  clearNodeVisited,
   DIRTY_STATE,
   ReactiveNodeState,
   UNINITIALIZED,
@@ -62,7 +65,8 @@ export function runWatcher(
   }
 
   node.payload = UNINITIALIZED;
-  node.state &= ~(ReactiveNodeState.Visited | DIRTY_STATE);
+  clearNodeVisited(node);
+  clearDirtyState(node);
   prevCleanup?.();
 
   if (__DEV__ && prevCleanup !== null) {
@@ -74,16 +78,17 @@ export function runWatcher(
   let finalResult: unknown = UNINITIALIZED;
   let hasCleanup = false;
 
-  executeNodeComputation(node, (result) => {
-    finalResult = result;
+  beginNodeTracking(node);
 
-    if ((node.state & DIRTY_STATE) === 0) {
-      node.state &= ~ReactiveNodeState.Visited;
-    }
-
-    hasCleanup = typeof result === "function";
-    if (hasCleanup) node.payload = result as () => void;
-  }, context);
+  try {
+    executeNodeComputation(node, (result) => {
+      finalResult = result;
+      hasCleanup = typeof result === "function";
+      if (hasCleanup) node.payload = result as () => void;
+    }, context);
+  } finally {
+    clearNodeTracking(node);
+  }
 
   if (__DEV__) {
     recordDebugEvent(context, "watcher:run:finish", {

@@ -11,6 +11,7 @@ export type RuntimeDebugEventType =
   | "compute:start"
   | "context:enter-propagation"
   | "context:hooks"
+  | "context:optimizations"
   | "context:leave-propagation"
   | "context:settled"
   | "propagate"

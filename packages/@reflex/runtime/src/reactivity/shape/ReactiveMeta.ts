@@ -38,6 +38,19 @@ export const WATCHER_CHANGED =
 export const WALKER_STATE =
   ReactiveNodeState.Visited | ReactiveNodeState.Tracking;
 
+export function clearNodeVisited(node: ReactiveNode): void {
+  node.state &= ~ReactiveNodeState.Visited;
+}
+
+export function beginNodeTracking(node: ReactiveNode): void {
+  node.state =
+    (node.state & ~ReactiveNodeState.Visited) | ReactiveNodeState.Tracking;
+}
+
+export function clearNodeTracking(node: ReactiveNode): void {
+  node.state &= ~ReactiveNodeState.Tracking;
+}
+
 export function markNodeComputing(node: ReactiveNode): void {
   node.state |= ReactiveNodeState.Computing;
 }
