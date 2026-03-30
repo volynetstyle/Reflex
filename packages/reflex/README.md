@@ -5,6 +5,11 @@
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/volynetstyle/Reflex/blob/main/packages/reflex/LICENSE)
 [![typed with TypeScript](https://img.shields.io/badge/typed-TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![runtime: Reflex](https://img.shields.io/badge/runtime-Reflex-111827)](https://github.com/volynetstyle/Reflex)
+[![CI](https://img.shields.io/github/actions/workflow/status/volynetstyle/Reflex/ci.yml?branch=main&label=CI&logo=githubactions)](https://github.com/volynetstyle/Reflex/actions/workflows/ci.yml)
+[![bundle size](https://img.shields.io/bundlephobia/minzip/%40volynetstyle%2Freflex?label=minzip&logo=webpack)](https://bundlephobia.com/package/@volynetstyle/reflex)
+[![tested with Vitest](https://img.shields.io/badge/tested%20with-Vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
+[![module formats: ESM+CJS](https://img.shields.io/badge/modules-ESM%20%2B%20CJS-0f172a)](https://github.com/volynetstyle/Reflex/blob/main/packages/reflex/package.json)
+[![scheduler: explicit](https://img.shields.io/badge/scheduler-explicit-7c3aed)](https://github.com/volynetstyle/Reflex/tree/main/packages/reflex)
 
 Small signal-style reactivity on top of the Reflex runtime.
 
