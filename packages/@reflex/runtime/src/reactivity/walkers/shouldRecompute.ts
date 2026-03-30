@@ -1,34 +1,8 @@
+import { getDefaultContext, type ExecutionContext } from "../context";
 import { recompute } from "../engine/compute";
-import { getDefaultContext } from "../context";
 import type { ReactiveNode } from "../shape";
 import { DIRTY_STATE, type ReactiveEdge, ReactiveNodeState } from "../shape";
 import { propagateOnce } from "./propagate";
-
-/**
- * Check if a dependency edge has multiple subscribers.
- *
- * When a computed node has multiple subscribers, and its result changes due to
- * a dependency changing, we need to notify sibling subscribers of the change
- * immediately via propagateOnce(). This prevents siblings from missing the change
- * if they're read before the dependency node.
- *
- * A dependency has fanout if it appears in a list with siblings (prevOut or nextOut).
- *
- * Example without fanout:
- *   A ──→ B   (B is only subscriber of A, no fanout)
- *
- * Example with fanout:
- *   A ──→ B   (A has two subscribers)
- *   A ──→ C   (B and C are siblings, both have fanout)
- *
- * @param {ReactiveEdge} link - The edge to check
- * @returns {boolean} True if edge has siblings (fanout), false if single child
- *
- * @cost O(1)
- */
-function hasFanout(link: ReactiveEdge): boolean {
-  return link.prevOut !== null || link.nextOut !== null;
-}
 
 // Refresh a single dependency node and return whether its value changed.
 //
@@ -73,56 +47,29 @@ function hasFanout(link: ReactiveEdge): boolean {
  *
  * @cost O(1) for producers, O(compute) for computed nodes
  */
-function refreshDependencyNoFanout(node: ReactiveNode, state: number): boolean {
-  if ((state & ReactiveNodeState.Producer) !== 0) {
-    // Producer: just read the change status, clear dirty
-    node.state = state & ~DIRTY_STATE;
-    return (state & ReactiveNodeState.Changed) !== 0;
-  }
-
-  // Computed: re-execute to get new value
-  return recompute(node, getDefaultContext());
-}
-
-/**
- * Update a dependency node and notify siblings if it changed.
- *
- * Wrapper around refreshDependencyNoFanout that additionally handles fanout:
- * if the dependency changed AND has multiple subscribers, immediately promote
- * the sibling subscribers via propagateOnce() to prevent them from reading stale.
- *
- * @param {ReactiveEdge} link - The edge from dependency to consumer (used for fanout check)
- * @param {ReactiveNode} node - The dependency node to refresh
- * @param {number} state - Current state (optimization)
- * @returns {boolean} Whether the dependency's value changed
- *
- * @cost O(1) + refreshDependencyNoFanout cost
- */
 function refreshDependency(
   link: ReactiveEdge,
   node: ReactiveNode,
+  context: ExecutionContext,
   state = node.state,
 ): boolean {
-  // Refresh the dependency, get change status
-  const changed = refreshDependencyNoFanout(node, state);
-  // If changed and has fanout (multiple subscribers), notify siblings
-  if (changed && hasFanout(link)) propagateOnce(node, getDefaultContext());
-  return changed;
-}
+  let changed = false;
 
-/**
- * Clear the Invalid flag from a node's state.
- *
- * Used when a consumer's dependencies are verified to be unchanged, so we
- * can mark the consumer clean (no further verification needed).
- *
- * @param {ReactiveNode} node - The node to mark clean
- *
- * @modifies node.state - Clears Invalid bit
- * @cost O(1)
- */
-function clearInvalid(node: ReactiveNode): void {
-  node.state &= ~ReactiveNodeState.Invalid;
+  if ((state & ReactiveNodeState.Producer) !== 0) {
+    // Producer: just read the change status, clear dirty.
+    node.state = state & ~DIRTY_STATE;
+    changed = (state & ReactiveNodeState.Changed) !== 0;
+  } else {
+    // Computed: re-execute to get the next value.
+    changed = recompute(node, context);
+  }
+
+  // If changed and has fanout (multiple subscribers), notify siblings
+  if (changed && (link.prevOut !== null || link.nextOut !== null)) {
+    propagateOnce(node, context);
+  }
+
+  return changed;
 }
 
 /**
@@ -143,6 +90,7 @@ function clearInvalid(node: ReactiveNode): void {
 function shouldRecomputeBranching(
   link: ReactiveEdge,
   consumer: ReactiveNode,
+  context: ExecutionContext,
   stack: ReactiveEdge[],
   stackTop: number,
 ): boolean {
@@ -160,7 +108,7 @@ function shouldRecomputeBranching(
     }
     // Check if this dependency definitely changed
     else if ((depState & ReactiveNodeState.Changed) !== 0) {
-      changed = refreshDependency(link, dep, depState);
+      changed = refreshDependency(link, dep, context, depState);
     }
     // Check if dependency is dirty and needs verification
     else if (
@@ -179,7 +127,7 @@ function shouldRecomputeBranching(
       }
 
       // No dependencies, just refresh and determine if changed
-      changed = refreshDependency(link, dep, depState);
+      changed = refreshDependency(link, dep, context, depState);
     }
 
     // Process next dependency or backtrack
@@ -192,7 +140,7 @@ function shouldRecomputeBranching(
       }
 
       // No more siblings at this level, mark clean
-      clearInvalid(consumer);
+      consumer.state &= ~ReactiveNodeState.Invalid;
     }
 
     // Backtrack through stack to parent level
@@ -202,10 +150,10 @@ function shouldRecomputeBranching(
 
       if (changed) {
         // Upstream changed, refresh parent
-        changed = refreshDependency(parentLink, consumer);
+        changed = refreshDependency(parentLink, consumer, context);
       } else {
         // Still clean, mark parent clean
-        clearInvalid(consumer);
+        consumer.state &= ~ReactiveNodeState.Invalid;
       }
 
       consumer = parentLink.to;
@@ -268,6 +216,7 @@ function shouldRecomputeBranching(
 function shouldRecomputeLinear(
   node: ReactiveNode,
   firstIn: ReactiveEdge,
+  context: ExecutionContext,
 ): boolean {
   // Explicit stack for DFS when branching is needed
   const stack: ReactiveEdge[] = [];
@@ -282,7 +231,7 @@ function shouldRecomputeLinear(
   while (true) {
     if (link.nextIn !== null) {
       // Multiple dependencies: switch to branching for efficiency
-      return shouldRecomputeBranching(link, consumer, stack, stackTop);
+      return shouldRecomputeBranching(link, consumer, context, stack, stackTop);
     }
 
     // Single dependency: stay on linear path
@@ -299,7 +248,7 @@ function shouldRecomputeLinear(
 
     // Case 1: Dependency is already Changed (confirmed by propagate)
     if ((depState & ReactiveNodeState.Changed) !== 0) {
-      changed = refreshDependency(link, dep, depState);
+      changed = refreshDependency(link, dep, context, depState);
       break;
     }
 
@@ -316,7 +265,7 @@ function shouldRecomputeLinear(
           // Multiple deps of current dep: switch to branching
           stackTop += 1;
           stack[stackTop] = link;
-          return shouldRecomputeBranching(deps, dep, stack, stackTop);
+          return shouldRecomputeBranching(deps, dep, context, stack, stackTop);
         }
 
         // Single dep: continue down linear path
@@ -328,13 +277,13 @@ function shouldRecomputeLinear(
       }
 
       // No dependencies, must recompute to know if changed
-      changed = refreshDependency(link, dep, depState);
+      changed = refreshDependency(link, dep, context, depState);
       break;
     }
 
     // Case 3: Dependency is clean or is a Producer
     // No change, mark consumer clean and move to next dependency
-    clearInvalid(consumer);
+    consumer.state &= ~ReactiveNodeState.Invalid;
 
     // Backtrack or move to next dependency
     if (stackTop < 0) return false;
@@ -351,17 +300,17 @@ function shouldRecomputeLinear(
 
     if (changed) {
       // If any descendant changed, refresh parent too
-      changed = refreshDependency(parentLink, consumer);
+      changed = refreshDependency(parentLink, consumer, context);
     } else {
       // All descendants clean, mark parent clean
-      clearInvalid(consumer);
+      consumer.state &= ~ReactiveNodeState.Invalid;
     }
 
     consumer = parentLink.to;
   }
 
   // Final clean-up if no change found
-  if (!changed) clearInvalid(consumer);
+  if (!changed) consumer.state &= ~ReactiveNodeState.Invalid;
   return changed;
 }
 
@@ -415,6 +364,8 @@ export function shouldRecompute(node: ReactiveNode): boolean {
     return true;
   }
 
+  const context = getDefaultContext();
+
   // Check if this node has any dependencies to walk
   const firstIn = node.firstIn;
   if (firstIn === null) {
@@ -425,5 +376,5 @@ export function shouldRecompute(node: ReactiveNode): boolean {
   }
 
   // Walk dependency tree to verify actual changes
-  return shouldRecomputeLinear(node, firstIn);
+  return shouldRecomputeLinear(node, firstIn, context);
 }

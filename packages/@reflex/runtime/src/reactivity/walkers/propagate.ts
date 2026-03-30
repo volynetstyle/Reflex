@@ -150,33 +150,6 @@ function recordPropagation(
 }
 
 /**
- * Attempt to promote a subscriber's dirty state from Invalid to Changed.
- *
- * When a producer with multiple subscribers changes, we want to promote
- * transitive subscribers from "maybe changed" (Invalid) to "definitely changed"
- * (Changed) to skip verification when they're read.
- *
- * However, this promotion only works for subscribers currently in Invalid state.
- * Subscribers that are already Changed or Clean are not modified (already correct).
- *
- * @param {ReactiveNode} node - The subscriber to potentially promote
- * @returns {boolean} True if node was promoted, false if already Changed or Clean
- *
- * @modifies node.state - Clears Invalid, sets Changed (if was Invalid)
- * @invariant Only changes state if currently Invalid
- */
-function promoteInvalidSubscriber(node: ReactiveNode): boolean {
-  const state = node.state;
-
-  // Only promote if currently Invalid (not Changed, not Clean)
-  if ((state & DIRTY_STATE) !== ReactiveNodeState.Invalid) return false;
-
-  // Promote: clear Invalid, set Changed
-  node.state = (state & ~ReactiveNodeState.Invalid) | ReactiveNodeState.Changed;
-  return true;
-}
-
-/**
  * Compute the next state for a subscriber in the slow path.
  *
  * The slow path handles edge cases that can't use simple state transitions:
@@ -274,13 +247,20 @@ export function propagateOnce(
   // Loop through all direct subscribers (outgoing edges)
   for (let edge = node.firstOut; edge !== null; edge = edge.nextOut) {
     const sub = edge.to;
-    // Try to promote Invalid → Changed for this subscriber
-    if (!promoteInvalidSubscriber(sub)) continue;
+    const state = sub.state;
+    // Only pure Invalid subscribers can be promoted here.
+    if ((state & DIRTY_STATE) !== ReactiveNodeState.Invalid) continue;
 
-    recordPropagation(edge, sub.state, IMMEDIATE, context);
+    const nextState =
+      (state & ~ReactiveNodeState.Invalid) | ReactiveNodeState.Changed;
+    sub.state = nextState;
+
+    if (__DEV__) {
+      recordPropagation(edge, nextState, IMMEDIATE, context);
+    }
 
     // If this subscriber is a watcher, notify it
-    if ((sub.state & ReactiveNodeState.Watcher) !== 0) {
+    if ((nextState & ReactiveNodeState.Watcher) !== 0) {
       thrown = notifyWatcherInvalidation(sub, thrown, context);
     }
   }
@@ -318,7 +298,9 @@ function propagateBranching(
     if (nextState !== 0) {
       // Non-zero means: update this subscriber's state
       sub.state = nextState;
-      recordPropagation(edge, nextState, promote, context);
+      if (__DEV__) {
+        recordPropagation(edge, nextState, promote, context);
+      }
 
       if ((nextState & ReactiveNodeState.Watcher) !== 0) {
         // This subscriber is a watcher, notify it
@@ -388,7 +370,9 @@ function propagateLinear(
     if (nextState !== 0) {
       // Update subscriber state
       sub.state = nextState;
-      recordPropagation(edge, nextState, promote, context);
+      if (__DEV__) {
+        recordPropagation(edge, nextState, promote, context);
+      }
 
       if ((nextState & ReactiveNodeState.Watcher) !== 0) {
         // Watcher found, notify it

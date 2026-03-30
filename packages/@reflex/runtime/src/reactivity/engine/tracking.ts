@@ -1,11 +1,8 @@
 import type { ExecutionContext } from "../context";
 import type ReactiveNode from "../shape/ReactiveNode";
-import type { ReactiveEdge } from "../shape/ReactiveEdge";
+import { collectDebugNodeRefs, recordDebugEvent } from "../../debug";
 import {
-  collectDebugNodeRefs,
-  recordDebugEvent,
-} from "../../debug";
-import {
+  linkEdge,
   reuseOrCreateIncomingEdge,
   unlinkDetachedIncomingEdgeSequence,
 } from "../shape/methods/connect";
@@ -32,35 +29,40 @@ export function trackRead(
   }
 
   const prevEdge = consumer.depsTail;
-  if (prevEdge !== null) {
-    if (prevEdge.from === source) return;
+  if (prevEdge === null) {
+    const firstIn = consumer.firstIn;
+    if (firstIn === null) {
+      consumer.depsTail = linkEdge(source, consumer, null);
+      return;
+    }
 
-    const nextExpected = prevEdge.nextIn;
-    if (nextExpected !== null && nextExpected.from === source) {
-      consumer.depsTail = nextExpected;
+    if (firstIn.from === source) {
+      consumer.depsTail = firstIn;
       return;
     }
 
     consumer.depsTail = reuseOrCreateIncomingEdge(
       source,
       consumer,
-      prevEdge,
-      nextExpected,
+      null,
+      firstIn,
     );
     return;
   }
 
-  const firstIn = consumer.firstIn;
-  if (firstIn !== null && firstIn.from === source) {
-    consumer.depsTail = firstIn;
+  if (prevEdge.from === source) return;
+
+  const nextExpected = prevEdge.nextIn;
+  if (nextExpected !== null && nextExpected.from === source) {
+    consumer.depsTail = nextExpected;
     return;
   }
 
   consumer.depsTail = reuseOrCreateIncomingEdge(
     source,
     consumer,
-    null,
-    firstIn,
+    prevEdge,
+    nextExpected,
   );
 }
 
@@ -73,20 +75,15 @@ export function cleanupStaleSources(
   _context: ExecutionContext = getDefaultContext(),
 ): void {
   const tail = node.depsTail;
-  let staleHead: ReactiveEdge | null;
+  const staleHead = tail === null ? node.firstIn : tail.nextIn;
+  if (staleHead === null) return;
 
-  if (tail !== null) {
-    staleHead = tail.nextIn;
-    if (staleHead === null) return;
-
-    tail.nextIn = null;
-    node.lastIn = tail;
-  } else {
-    staleHead = node.firstIn;
-    if (staleHead === null) return;
-
+  if (tail === null) {
     node.firstIn = null;
     node.lastIn = null;
+  } else {
+    tail.nextIn = null;
+    node.lastIn = tail;
   }
 
   if (__DEV__) {
