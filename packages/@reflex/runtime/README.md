@@ -15,6 +15,7 @@ This project provides a minimal reactive execution engine based on explicit node
 - Example
 - Scheduler
 - Invariants
+- Disposal Protocol
 - How It Differs From Typical Signals Libraries
 - When To Use
 - When Not To Use
@@ -221,6 +222,9 @@ If these invariants hold, they should be documented clearly:
 - Propagation order is topologically consistent.
 - Cleanup runs before next execution of the same recycler.
 - Derived values are stable between flush cycles.
+
+The disposal-specific contract is documented separately in
+[`DISPOSAL_PROTOCOL.md`](./DISPOSAL_PROTOCOL.md).
 
 These invariants define the semantic contract of the runtime.
 

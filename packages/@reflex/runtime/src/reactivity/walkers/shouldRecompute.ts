@@ -1,7 +1,13 @@
 import { getDefaultContext, type ExecutionContext } from "../context";
+import { devAssertShouldRecomputeAlive } from "../dev";
 import { recompute } from "../engine/compute";
 import type { ReactiveNode } from "../shape";
-import { DIRTY_STATE, type ReactiveEdge, ReactiveNodeState } from "../shape";
+import {
+  DIRTY_STATE,
+  type ReactiveEdge,
+  ReactiveNodeState,
+  isDisposedNode,
+} from "../shape";
 import { propagateOnce } from "./propagate";
 
 // Refresh a single dependency node and return whether its value changed.
@@ -53,6 +59,8 @@ function refreshDependency(
   context: ExecutionContext,
   state = node.state,
 ): boolean {
+  if (isDisposedNode(node)) return false;
+
   let changed = false;
 
   if ((state & ReactiveNodeState.Producer) !== 0) {
@@ -347,6 +355,11 @@ function shouldRecomputeLinear(
  */
 export function shouldRecompute(node: ReactiveNode): boolean {
   const state = node.state;
+
+  if ((state & ReactiveNodeState.Disposed) !== 0) {
+    devAssertShouldRecomputeAlive();
+    return false;
+  }
 
   // Producers commit eagerly on write; pull-side walk is never needed for them.
   if ((state & ReactiveNodeState.Producer) !== 0) return false;

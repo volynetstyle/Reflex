@@ -1,8 +1,16 @@
 import { compare } from "./compare";
 import type { ReactiveNode } from "../reactivity";
 import type { ExecutionContext } from "../reactivity/context";
-import { DIRTY_STATE, IMMEDIATE, propagate } from "../reactivity";
-import { recordDebugEvent } from "../debug";
+import {
+  devAssertWriteAlive,
+  devRecordWriteProducer,
+} from "../reactivity/dev";
+import {
+  DIRTY_STATE,
+  IMMEDIATE,
+  isDisposedNode,
+  propagate,
+} from "../reactivity";
 import { getDefaultContext } from "../reactivity/context";
 
 /**
@@ -65,21 +73,17 @@ export function writeProducer<T>(
   value: T,
   context: ExecutionContext = getDefaultContext(),
 ): void {
+  if (isDisposedNode(node)) {
+    devAssertWriteAlive();
+    return;
+  }
+
   const previous = node.payload;
 
   // Check if the value actually changed using stable comparison
   // This prevents false invalidation when setting to the same value
   if (compare(previous, value)) {
-    if (__DEV__) {
-      recordDebugEvent(context, "write:producer", {
-        node,
-        detail: {
-          changed: false,
-          next: value,
-          previous,
-        },
-      });
-    }
+    devRecordWriteProducer(node, false, value, previous, undefined, context);
 
     // Value didn't change, skip propagation
     return;
@@ -93,17 +97,14 @@ export function writeProducer<T>(
   // Get the first subscriber edge (if any)
   const firstSubscriberEdge = node.firstOut;
 
-  if (__DEV__) {
-    recordDebugEvent(context, "write:producer", {
-      node,
-      detail: {
-        changed: true,
-        next: value,
-        previous,
-        hasSubscribers: firstSubscriberEdge !== null,
-      },
-    });
-  }
+  devRecordWriteProducer(
+    node,
+    true,
+    value,
+    previous,
+    firstSubscriberEdge !== null,
+    context,
+  );
 
   // If no subscribers, propagation is unnecessary
   if (firstSubscriberEdge === null) return;

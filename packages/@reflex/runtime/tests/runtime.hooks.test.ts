@@ -173,4 +173,63 @@ describe("ReactivegetDefaultContext() - hooks and resilience", () => {
     expect(cleanup).toHaveBeenCalledTimes(2);
     expect(watcher.state & ReactiveNodeState.Disposed).toBeTruthy();
   });
+
+  it("keeps watcher disposal reentrancy-safe when cleanup disposes the same watcher", () => {
+    const source = createProducer(1);
+    const runs: number[] = [];
+    let watcher!: ReturnType<typeof createWatcher>;
+
+    watcher = createWatcher(() => {
+      const value = readProducer(source);
+      runs.push(value);
+
+      return () => {
+        if (value === 1) {
+          disposeWatcher(watcher);
+        }
+      };
+    });
+
+    runWatcher(watcher);
+    writeProducer(source, 2);
+
+    expect(() => runWatcher(watcher)).not.toThrow();
+    expect(runs).toEqual([1]);
+    expect(watcher.state & ReactiveNodeState.Disposed).toBeTruthy();
+  });
+
+  it("tolerates nodes becoming dead in the middle of propagation", () => {
+    const invalidated: string[] = [];
+    let left!: ReturnType<typeof createWatcher>;
+    let right!: ReturnType<typeof createWatcher>;
+
+    resetRuntime({
+      onEffectInvalidated(node) {
+        if (node === left) {
+          invalidated.push("left");
+          disposeWatcher(right);
+          return;
+        }
+
+        if (node === right) {
+          invalidated.push("right");
+        }
+      },
+    });
+
+    const source = createProducer(1);
+    left = createWatcher(() => {
+      readProducer(source);
+    });
+    right = createWatcher(() => {
+      readProducer(source);
+    });
+
+    runWatcher(left);
+    runWatcher(right);
+
+    expect(() => writeProducer(source, 2)).not.toThrow();
+    expect(invalidated).toEqual(["left"]);
+    expect(right.state & ReactiveNodeState.Disposed).toBeTruthy();
+  });
 });

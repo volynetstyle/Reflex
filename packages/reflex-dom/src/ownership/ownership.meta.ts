@@ -4,7 +4,8 @@ const CHILD_MASK = 0x00ffffff;
 const FLAG_SHIFT = 24;
 
 export const enum OwnershipFlags {
-  DISPOSED = 1,
+  CLOSING = 1,
+  DISPOSED = 1 << 1,
 }
 
 export function getChildCount(node: OwnershipNode): number {
@@ -27,6 +28,19 @@ export function isDisposed(node: OwnershipNode): boolean {
   return !!(((node.meta >>> FLAG_SHIFT) & OwnershipFlags.DISPOSED) !== 0);
 }
 
+export function isClosing(node: OwnershipNode): boolean {
+  return !!(((node.meta >>> FLAG_SHIFT) & OwnershipFlags.CLOSING) !== 0);
+}
+
+export function isShuttingDown(node: OwnershipNode): boolean {
+  return isClosing(node) || isDisposed(node);
+}
+
+export function markClosing(node: OwnershipNode): void {
+  node.meta |= OwnershipFlags.CLOSING << FLAG_SHIFT;
+}
+
 export function markDisposed(node: OwnershipNode): void {
-  node.meta |= OwnershipFlags.DISPOSED << FLAG_SHIFT;
+  node.meta =
+    (node.meta & CHILD_MASK) | (OwnershipFlags.DISPOSED << FLAG_SHIFT);
 }

@@ -1,6 +1,13 @@
 import type { ReactiveNode } from "../reactivity";
 import type { ExecutionContext } from "../reactivity/context";
 import {
+  devAssertConsumerCanStabilize,
+  devAssertReadDeadConsumer,
+  devAssertReadDeadProducer,
+  devRecordReadConsumer,
+  devRecordReadProducer,
+} from "../reactivity/dev";
+import {
   ReactiveNodeState,
   trackRead,
   DIRTY_STATE,
@@ -8,8 +15,8 @@ import {
   recompute,
   propagateOnce,
   clearDirtyState,
+  isDisposedNode,
 } from "../reactivity";
-import { recordDebugEvent } from "../debug";
 import { getDefaultContext } from "../reactivity/context";
 
 /**
@@ -65,18 +72,15 @@ export function readProducer<T>(
   node: ReactiveNode<T>,
   context: ExecutionContext = getDefaultContext(),
 ): T {
+  if (isDisposedNode(node)) {
+    devAssertReadDeadProducer();
+    return node.payload as T;
+  }
+
   // Register this read as a dependency if there's an active computation
   trackRead(node, context);
 
-  if (__DEV__) {
-    recordDebugEvent(context, "read:producer", {
-      consumer: context.activeComputed ?? undefined,
-      node,
-      detail: {
-        value: node.payload,
-      },
-    });
-  }
+  devRecordReadProducer(node, node.payload, context);
 
   return node.payload as T;
 }
@@ -123,10 +127,12 @@ function stabilizeConsumer<T>(
 ): T {
   const state = node.state;
 
-  // Cycle detection: prevent read-while-computing
-  if (__DEV__ && state & ReactiveNodeState.Computing) {
-    throw new Error("Cycle detected while refreshing reactive graph");
+  if ((state & ReactiveNodeState.Disposed) !== 0) {
+    devAssertReadDeadConsumer();
+    return node.payload as T;
   }
+
+  devAssertConsumerCanStabilize(state);
 
   // Only proceed if node is marked dirty (has changes to verify)
   if ((state & DIRTY_STATE) !== 0) {
@@ -202,34 +208,26 @@ export function readConsumer<T>(
     // Eager mode: stabilize without registering dependency
     const value = untracked(() => stabilizeConsumer(node, context), context);
 
-    if (__DEV__) {
-      recordDebugEvent(context, "read:consumer", {
-        node,
-        detail: {
-          mode: "eager",
-          value,
-        },
-      });
-    }
+    devRecordReadConsumer(node, "eager", value, context);
 
     return value;
   }
 
   // Lazy mode (default): stabilize in current context, then register dependency
   const value = stabilizeConsumer(node, context);
+  if (isDisposedNode(node)) {
+    return value;
+  }
   // Register this read as a dependency if there's an active computation
   trackRead(node, context);
 
-  if (__DEV__) {
-    recordDebugEvent(context, "read:consumer", {
-      consumer: context.activeComputed ?? undefined,
-      node,
-      detail: {
-        mode: "lazy",
-        value,
-      },
-    });
-  }
+  devRecordReadConsumer(
+    node,
+    "lazy",
+    value,
+    context,
+    context.activeComputed ?? undefined,
+  );
 
   return value;
 }

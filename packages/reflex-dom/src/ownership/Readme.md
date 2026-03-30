@@ -257,6 +257,7 @@ while node exists:
     descend to first child
   else:
     capture next sibling or parent
+    scope is already in closing state
     run cleanups in reverse order
     mark disposed
     detach node
@@ -323,7 +324,7 @@ handoff.
 These invariants should stay true:
 
 1. A scope may be disposed multiple times without throwing.
-2. A disposed scope does not accept new children or cleanups.
+2. A closing or disposed scope does not accept new children, cleanups, or owned effects.
 3. If a subtree is independently replaceable, it must have its own scope.
 4. If a value does not allocate cleanup-bearing resources, it should not create
    a scope.

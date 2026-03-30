@@ -6,6 +6,7 @@ import {
   clearNodeTracking,
   clearNodeVisited,
   DIRTY_STATE,
+  isDisposedNode,
   ReactiveNodeState,
   UNINITIALIZED,
   clearDirtyState,
@@ -75,6 +76,10 @@ export function runWatcher(
     });
   }
 
+  if (isDisposedNode(node)) {
+    return;
+  }
+
   let finalResult: unknown = UNINITIALIZED;
   let hasCleanup = false;
 
@@ -82,6 +87,8 @@ export function runWatcher(
 
   try {
     executeNodeComputation(node, (result) => {
+      if (isDisposedNode(node)) return undefined;
+
       finalResult = result;
       hasCleanup = typeof result === "function";
       if (hasCleanup) node.payload = result as () => void;

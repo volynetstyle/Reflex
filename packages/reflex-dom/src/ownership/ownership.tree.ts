@@ -1,8 +1,12 @@
-import { decChildCount, incChildCount, isDisposed } from "./ownership.meta";
+import {
+  decChildCount,
+  incChildCount,
+  isShuttingDown,
+} from "./ownership.meta";
 import type { OwnershipNode } from "./ownership.node";
 
 export function appendChild(parent: OwnershipNode, child: OwnershipNode): void {
-  if (isDisposed(parent) || isDisposed(child)) return;
+  if (isShuttingDown(parent) || isShuttingDown(child)) return;
   if (child === parent) {
     throw new Error("Cannot append node to itself");
   }

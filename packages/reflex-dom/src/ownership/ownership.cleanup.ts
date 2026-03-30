@@ -1,10 +1,14 @@
 import type { Cleanup } from "src/types";
-import { isDisposed, markDisposed } from "./ownership.meta";
+import {
+  isShuttingDown,
+  markClosing,
+  markDisposed,
+} from "./ownership.meta";
 import type { OwnershipNode } from "./ownership.node";
 import { detach } from "./ownership.tree";
 
 export function addCleanup(node: OwnershipNode, fn: Cleanup): void {
-  if (isDisposed(node)) return;
+  if (isShuttingDown(node)) return;
 
   const cleanups = node.cleanups;
 
@@ -46,7 +50,9 @@ function runCleanups(node: OwnershipNode): void {
 }
 
 export function dispose(root: OwnershipNode): void {
-  if (isDisposed(root)) return;
+  if (isShuttingDown(root)) return;
+
+  markSubtreeClosing(root);
 
   let node: OwnershipNode | null = root;
 
@@ -69,5 +75,31 @@ export function dispose(root: OwnershipNode): void {
     node.context = null;
 
     node = next;
+  }
+}
+
+function markSubtreeClosing(root: OwnershipNode): void {
+  let node: OwnershipNode | null = root;
+
+  while (node !== null) {
+    markClosing(node);
+
+    const child: OwnershipNode | null = node.firstChild;
+    if (child !== null) {
+      node = child;
+      continue;
+    }
+
+    let current: OwnershipNode = node;
+
+    while (current !== root && current.nextSibling === null) {
+      current = current.parent!;
+    }
+
+    if (current === root) {
+      return;
+    }
+
+    node = current.nextSibling;
   }
 }

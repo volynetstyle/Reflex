@@ -3,7 +3,10 @@ import {
   createReactiveEdge,
   type ReactiveEdge,
 } from "../ReactiveEdge";
-import { isDisposedNode, ReactiveNodeState } from "../ReactiveMeta";
+import {
+  isDisposedNode,
+  markDisposedNode,
+} from "../ReactiveMeta";
 import type ReactiveNode from "../ReactiveNode";
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
@@ -163,6 +166,7 @@ export function unlinkAllSubscribers(node: ReactiveNode): void {
 
     if (edge.to.depsTail === edge) edge.to.depsTail = edge.prevIn;
     detachInEdge(edge.to, edge);
+    clearReactiveEdgeLinks(edge);
     edge = next;
   }
 }
@@ -197,12 +201,13 @@ export function disconnect(parent: ReactiveNode, child: ReactiveNode): void {
 
 export function disposeNode(node: ReactiveNode): void {
   if (isDisposedNode(node)) return;
-  node.state |= ReactiveNodeState.Disposed;
+  markDisposedNode(node);
+  node.depsTail = null;
   unlinkAllSources(node);
+  unlinkAllSubscribers(node);
+  node.compute = null;
 }
 
 export function disposeNodeEvent(node: ReactiveNode): void {
-  if (isDisposedNode(node)) return;
-  node.state |= ReactiveNodeState.Disposed;
-  unlinkAllSubscribers(node);
+  disposeNode(node);
 }

@@ -1,6 +1,11 @@
 import type { ExecutionContext } from "../context";
 import type ReactiveNode from "../shape/ReactiveNode";
-import { collectDebugNodeRefs, recordDebugEvent } from "../../debug";
+import { isDisposedNode } from "../shape";
+import {
+  devAssertTrackReadAlive,
+  devRecordCleanupStaleSources,
+  devRecordTrackRead,
+} from "../dev";
 import {
   linkEdge,
   reuseOrCreateIncomingEdge,
@@ -20,13 +25,15 @@ export function trackRead(
   const consumer = context.activeComputed;
 
   if (!consumer) return;
+  const sourceDead = isDisposedNode(source);
+  const consumerDead = isDisposedNode(consumer);
+  if (sourceDead || consumerDead) {
+    devAssertTrackReadAlive(sourceDead, consumerDead);
 
-  if (__DEV__) {
-    recordDebugEvent(context, "track:read", {
-      consumer,
-      source,
-    });
+    return;
   }
+
+  devRecordTrackRead(context, consumer, source);
 
   const prevEdge = consumer.depsTail;
   if (prevEdge === null) {
@@ -86,21 +93,7 @@ export function cleanupStaleSources(
     node.lastIn = tail;
   }
 
-  if (__DEV__) {
-    const removedSources = collectDebugNodeRefs(
-      staleHead,
-      (edge) => edge.from,
-      (edge) => edge.nextIn,
-    );
-
-    recordDebugEvent(_context, "cleanup:stale-sources", {
-      node,
-      detail: {
-        removedCount: removedSources.length,
-        removedSources,
-      },
-    });
-  }
+  devRecordCleanupStaleSources(node, staleHead, _context);
 
   unlinkDetachedIncomingEdgeSequence(staleHead);
 }

@@ -1,5 +1,6 @@
 import { effect, withEffectCleanupRegistrar } from "@volynetstyle/reflex";
 import { addCleanup } from "./ownership.cleanup";
+import { isShuttingDown } from "./ownership.meta";
 import type { OwnerContext } from "./ownership.scope";
 import { runWithOwner } from "./ownership.scope";
 
@@ -27,6 +28,14 @@ export function ownedEffect(
   fn: OwnedEffectFn,
 ): () => void {
   const scope = owner.currentOwner;
+
+  if (scope !== null && isShuttingDown(scope)) {
+    if (__DEV__) {
+      throw new Error("ownedEffect in disposed scope");
+    }
+
+    return () => {};
+  }
 
   return withEffectCleanupRegistrar(null, () => {
     const state: OwnedEffectState = {

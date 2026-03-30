@@ -1,10 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
+import { createRuntime, signal } from "@volynetstyle/reflex";
 import {
+  addCleanup,
+  appendChild,
   createOwnerContext,
   createScope,
   disposeScope,
   getChildCount,
+  ownedEffect,
   registerCleanup,
+  runWithOwner,
   runWithScope,
 } from "../src/ownership";
 
@@ -210,5 +215,80 @@ describe("ownership lifecycle", () => {
     } finally {
       consoleError.mockRestore();
     }
+  });
+
+  it("marks scopes shutting down before cleanup so late registrations are ignored", () => {
+    const owner = createOwnerContext();
+    const root = createScope();
+    const log: string[] = [];
+    let branch!: ReturnType<typeof createScope>;
+    let lateChild!: ReturnType<typeof createScope>;
+
+    runWithScope(owner, root, () => {
+      branch = createScope();
+      runWithScope(owner, branch, () => {
+        registerCleanup(owner, () => {
+          log.push("branch");
+          addCleanup(branch, () => {
+            log.push("late-cleanup");
+          });
+
+          lateChild = createScope();
+          appendChild(branch, lateChild);
+        });
+      });
+    });
+
+    disposeScope(root);
+    disposeScope(root);
+
+    expect(log).toEqual(["branch"]);
+    expect(lateChild.parent).toBeNull();
+    expect(lateChild.prevSibling).toBeNull();
+    expect(lateChild.nextSibling).toBeNull();
+  });
+
+  it("does not start owned effects while scope disposal is in progress", () => {
+    const rt = createRuntime();
+    const [source, setSource] = signal(1);
+    const owner = createOwnerContext();
+    const root = createScope();
+    const spy = vi.fn(() => {
+      source();
+    });
+
+    runWithScope(owner, root, () => {
+      registerCleanup(owner, () => {
+        runWithOwner(owner, root, () => {
+          ownedEffect(owner, spy);
+        });
+      });
+    });
+
+    disposeScope(root);
+    rt.flush();
+
+    expect(spy).not.toHaveBeenCalled();
+
+    setSource(2);
+    rt.flush();
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("keeps scope disposal reentrancy-safe when cleanup disposes the same scope", () => {
+    const owner = createOwnerContext();
+    const root = createScope();
+    const log: string[] = [];
+
+    runWithScope(owner, root, () => {
+      registerCleanup(owner, () => {
+        log.push("cleanup");
+        expect(() => disposeScope(root)).not.toThrow();
+      });
+    });
+
+    expect(() => disposeScope(root)).not.toThrow();
+    expect(log).toEqual(["cleanup"]);
   });
 });

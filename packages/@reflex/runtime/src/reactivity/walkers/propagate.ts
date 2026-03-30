@@ -1,10 +1,12 @@
 import type { ExecutionContext } from "../context";
 import type { ReactiveNode } from "../shape";
+import { devAssertPropagateAlive } from "../dev";
 import { recordDebugEvent } from "../../debug";
 import {
   type ReactiveEdge,
   DIRTY_STATE,
   WALKER_STATE,
+  isDisposedNode,
   ReactiveNodeState,
 } from "../shape";
 
@@ -242,6 +244,11 @@ export function propagateOnce(
   node: ReactiveNode,
   context: ExecutionContext,
 ): void {
+  if (isDisposedNode(node)) {
+    devAssertPropagateAlive();
+    return;
+  }
+
   let thrown: unknown = null;
 
   // Loop through all direct subscribers (outgoing edges)
@@ -467,6 +474,11 @@ export function propagate(
   promoteImmediate = 0,
   context: ExecutionContext,
 ): void {
+  if (isDisposedNode(startEdge.from)) {
+    devAssertPropagateAlive();
+    return;
+  }
+
   // Start propagation from the first edge, collecting thrown errors
   const thrown = propagateLinear(startEdge, promoteImmediate, null, context);
 

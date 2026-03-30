@@ -14,6 +14,11 @@ export enum ReactiveNodeState {
   Tracking = 1 << 9,
 }
 
+export const NODE_KIND_STATE =
+  ReactiveNodeState.Producer |
+  ReactiveNodeState.Consumer |
+  ReactiveNodeState.Watcher;
+
 // export const MAYBE_CHANGE_STATE = ReactiveNodeState.Invalid;
 // export const CHANGED_STATE = ReactiveNodeState.Changed;
 
@@ -65,4 +70,8 @@ export function clearDirtyState(node: ReactiveNode): void {
 
 export function isDisposedNode(node: ReactiveNode): boolean {
   return (node.state & ReactiveNodeState.Disposed) !== 0;
+}
+
+export function markDisposedNode(node: ReactiveNode): void {
+  node.state = (node.state & NODE_KIND_STATE) | ReactiveNodeState.Disposed;
 }

@@ -1,6 +1,6 @@
 import { withEffectCleanupRegistrar } from "@volynetstyle/reflex";
 import { addCleanup, dispose } from "./ownership.cleanup";
-import { isDisposed } from "./ownership.meta";
+import { isShuttingDown } from "./ownership.meta";
 import { OwnershipNode } from "./ownership.node";
 import { appendChild } from "./ownership.tree";
 
@@ -44,8 +44,8 @@ function attachScope(parent: Scope | null, scope: Scope): void {
     parent === null ||
     parent === scope ||
     scope.parent === parent ||
-    isDisposed(parent) ||
-    isDisposed(scope)
+    isShuttingDown(parent) ||
+    isShuttingDown(scope)
   ) {
     return;
   }
@@ -58,6 +58,14 @@ export function runWithScope<T>(
   scope: Scope,
   fn: () => T,
 ): T {
+  if (isShuttingDown(scope)) {
+    if (__DEV__) {
+      throw new Error("runWithScope on disposed scope");
+    }
+
+    return undefined as T;
+  }
+
   attachScope(owner.currentOwner, scope);
 
   return runWithOwner(owner, scope, () =>
@@ -69,6 +77,10 @@ export function registerCleanup(owner: OwnerContext, fn: () => void): void {
   const scope = owner.currentOwner;
 
   if (scope !== null) {
+    if (__DEV__ && isShuttingDown(scope)) {
+      throw new Error("register cleanup into disposed scope");
+    }
+
     addCleanup(scope, fn);
   }
 }
