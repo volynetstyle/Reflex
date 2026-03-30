@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createEffectNode } from "../src/infra/factory";
+import { createWatcherNode } from "../src/infra/factory";
 import {
   EffectScheduler,
   EffectSchedulerMode,
@@ -25,7 +25,7 @@ describe("Reactive system - policy helpers", () => {
   it("flush scheduler dedupes enqueues and skips clean reruns", () => {
     const scheduler = new EffectScheduler(EffectSchedulerMode.Flush);
     const spy = vi.fn(() => {});
-    const node = createEffectNode(spy);
+    const node = createWatcherNode(spy);
 
     scheduler.enqueue(node);
     scheduler.enqueue(node);
@@ -42,7 +42,7 @@ describe("Reactive system - policy helpers", () => {
   it("eager scheduler flushes after batch exits and reset clears queued work", () => {
     const scheduler = new EffectScheduler(EffectSchedulerMode.Eager);
     const spy = vi.fn(() => {});
-    const node = createEffectNode(spy);
+    const node = createWatcherNode(spy);
 
     scheduler.batch(() => {
       scheduler.enqueue(node);
@@ -62,7 +62,7 @@ describe("Reactive system - policy helpers", () => {
   it("ignores disposed effect nodes", () => {
     const scheduler = new EffectScheduler(EffectSchedulerMode.Flush);
     const spy = vi.fn(() => {});
-    const node = createEffectNode(spy);
+    const node = createWatcherNode(spy);
     node.state |= ReactiveNodeState.Disposed;
 
     scheduler.enqueue(node);
@@ -74,7 +74,7 @@ describe("Reactive system - policy helpers", () => {
   it("handles nested flush and batch calls during an active flush", () => {
     const scheduler = new EffectScheduler(EffectSchedulerMode.Flush);
     const nested = vi.fn(() => {});
-    const node = createEffectNode(() => {
+    const node = createWatcherNode(() => {
       scheduler.flush();
       scheduler.batch(() => {
         nested();
@@ -90,7 +90,7 @@ describe("Reactive system - policy helpers", () => {
   it("restores batching phase after flushing inside an outer batch", () => {
     const scheduler = new EffectScheduler(EffectSchedulerMode.Flush);
     const spy = vi.fn(() => {});
-    const node = createEffectNode(spy);
+    const node = createWatcherNode(spy);
 
     scheduler.batch(() => {
       scheduler.enqueue(node);
@@ -103,7 +103,7 @@ describe("Reactive system - policy helpers", () => {
   it("can take the guarded auto-flush branch in finally when forced", () => {
     const scheduler = new EffectScheduler(EffectSchedulerMode.Flush) as any;
     const spy = vi.fn(() => {});
-    const node = createEffectNode(spy);
+    const node = createWatcherNode(spy);
 
     scheduler.shouldAutoFlush = () => true;
     scheduler.enqueue(node);

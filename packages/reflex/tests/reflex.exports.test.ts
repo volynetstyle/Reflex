@@ -3,6 +3,8 @@ import * as reflex from "../src";
 import * as api from "../src/api";
 import * as infra from "../src/infra";
 import * as policy from "../src/policy";
+import * as unstable from "../src/unstable";
+import { resource } from "../src/unstable/resource";
 
 describe("Reactive system - exports", () => {
   it("re-exports the public API from the top-level barrel", () => {
@@ -13,11 +15,16 @@ describe("Reactive system - exports", () => {
     expect(reflex.scan).toBe(api.scan);
     expect(reflex.hold).toBe(api.hold);
     expect(reflex.createRuntime).toBe(infra.createRuntime);
+    expect("resource" in reflex).toBe(false);
   });
 
   it("re-exports policy helpers from the policy barrel", () => {
     expect(typeof policy.EffectScheduler).toBe("function");
     expect(typeof policy.EventDispatcher).toBe("function");
     expect(typeof policy.resolveEffectSchedulerMode).toBe("function");
+  });
+
+  it("keeps unstable exports behind the unstable barrel", () => {
+    expect(unstable.resource).toBe(resource);
   });
 });

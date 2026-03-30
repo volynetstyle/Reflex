@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ReactiveNodeState } from "../../@reflex/runtime/src/reactivity/shape/ReactiveMeta";
 import { effect, effectScheduled, effectUnscheduled } from "../src/api/effect";
-import { createEffectNode } from "../src/infra/factory";
+import { createWatcherNode } from "../src/infra/factory";
 import { createRuntime, signal } from "./reflex.test_utils";
 
 describe("Reactive system - effects", () => {
@@ -89,7 +89,7 @@ describe("Reactive system - effects", () => {
   });
 
   it("toggles the scheduled flag helpers", () => {
-    const node = createEffectNode(() => {});
+    const node = createWatcherNode(() => {});
 
     effectScheduled(node);
     expect(node.state & ReactiveNodeState.Scheduled).toBeTruthy();

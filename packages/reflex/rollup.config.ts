@@ -14,6 +14,11 @@ interface BuildTarget {
   dev: boolean;
 }
 
+interface BuildEntry {
+  input: string;
+  outputPath: string;
+}
+
 const EXTERNALS = ["vitest", "expect-type"] as const;
 
 const PURE_FUNCS = [
@@ -39,12 +44,23 @@ const TARGETS: BuildTarget[] = [
   { name: "cjs", outDir: "cjs", format: "cjs", dev: false },
 ];
 
+const ENTRIES: ReadonlyArray<BuildEntry> = [
+  {
+    input: "build/esm/index.js",
+    outputPath: "index",
+  },
+  {
+    input: "build/esm/unstable/index.js",
+    outputPath: "unstable/index",
+  },
+];
+
 function compactPlugins(plugins: Array<Plugin | undefined | false>): Plugin[] {
   return plugins.filter((plugin): plugin is Plugin => Boolean(plugin));
 }
 
-function loggerPlugin(target: BuildTarget): Plugin {
-  const { name } = target;
+function loggerPlugin(target: BuildTarget, entry: BuildEntry): Plugin {
+  const name = `${target.name}:${entry.outputPath}`;
 
   return {
     name: "pipeline-logger",
@@ -155,9 +171,9 @@ function terserPlugin(target: BuildTarget): Plugin | undefined {
   });
 }
 
-function createPlugins(target: BuildTarget): Plugin[] {
+function createPlugins(target: BuildTarget, entry: BuildEntry): Plugin[] {
   return compactPlugins([
-    loggerPlugin(target),
+    loggerPlugin(target, entry),
     resolvePlugin(),
     replacePlugin(target),
     swcPlugin(target),
@@ -166,11 +182,11 @@ function createPlugins(target: BuildTarget): Plugin[] {
   ]);
 }
 
-function createConfig(target: BuildTarget): RollupOptions {
+function createConfig(target: BuildTarget, entry: BuildEntry): RollupOptions {
+  const extension = target.format === "cjs" ? "cjs" : "js";
+
   return {
-    input: {
-      index: "build/esm/index.js",
-    },
+    input: entry.input,
 
     treeshake: {
       preset: "recommended",
@@ -182,10 +198,8 @@ function createConfig(target: BuildTarget): RollupOptions {
     },
 
     output: {
-      dir: `dist/${target.outDir}`,
+      file: `dist/${target.outDir}/${entry.outputPath}.${extension}`,
       format: target.format,
-      inlineDynamicImports: true,
-      entryFileNames: target.format === "cjs" ? "[name].cjs" : "[name].js",
       exports: target.format === "cjs" ? "named" : undefined,
       sourcemap: target.dev,
       generatedCode: {
@@ -194,9 +208,9 @@ function createConfig(target: BuildTarget): RollupOptions {
       },
     },
 
-    plugins: createPlugins(target),
+    plugins: createPlugins(target, entry),
     external: [...EXTERNALS],
   };
 }
 
-export default TARGETS.map(createConfig);
+export default TARGETS.flatMap((target) => ENTRIES.map((entry) => createConfig(target, entry)));

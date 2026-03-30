@@ -8,7 +8,7 @@ import { ReactiveNodeState } from "../../@reflex/runtime/src/reactivity/shape/Re
 import {
   UNINITIALIZED,
   createComputedNode,
-  createEffectNode,
+  createWatcherNode,
   createAccumulator,
   createSignalNode,
   createSource,
@@ -37,7 +37,7 @@ describe("Reactive system - factory helpers", () => {
 
   it("creates effect nodes with watcher state", () => {
     const compute = () => {};
-    const node = createEffectNode(compute);
+    const node = createWatcherNode(compute);
 
     expect(node.compute).toBe(compute);
     expect(node.state).toBe(WATCHER_INITIAL_STATE);

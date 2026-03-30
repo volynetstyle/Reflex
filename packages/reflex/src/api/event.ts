@@ -132,7 +132,8 @@ function createScan<T, A>(
   reducer: (acc: A, value: T) => A,
 ): [read: Accessor<A>, dispose: Destructor] {
   const node = createAccumulator(seed);
-  const accessor = () => readProducer(node);
+  const accessor = () =>
+    isDisposedNode(node) ? (node.payload as A) : readProducer(node);
 
   let unsubscribe: Destructor | undefined = source.subscribe((value: T) => {
     /* c8 ignore start -- disposal unsubscribes before a queued delivery can reach this callback */

@@ -5,7 +5,7 @@ import {
   getDefaultContext,
 } from "@reflex/runtime";
 import type { UNINITIALIZED } from "../infra/factory";
-import { createEffectNode } from "../infra/factory";
+import { createWatcherNode } from "../infra/factory";
 import type { ReactiveNode } from "@reflex/runtime";
 
 export function effectScheduled(
@@ -31,7 +31,7 @@ export function withEffectCleanupRegistrar<T>(
 }
 
 export function effect(fn: EffectFn): Destructor {
-  const node = createEffectNode(fn);
+  const node = createWatcherNode(fn);
   const context = getDefaultContext();
   runWatcher(node, context);
 
