@@ -55,6 +55,30 @@ function cleanupTempRoots() {
   }
 }
 
+function parseJsonOutput(output) {
+  const trimmed = output.trim();
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const arrayMatch = trimmed.match(/(\[[\s\S]*\])\s*$/u);
+
+    if (arrayMatch) {
+      return JSON.parse(arrayMatch[1]);
+    }
+
+    const objectMatch = trimmed.match(/(\{[\s\S]*\})\s*$/u);
+
+    if (objectMatch) {
+      return JSON.parse(objectMatch[1]);
+    }
+  }
+
+  throw new SyntaxError(
+    `Unable to parse JSON from command output: ${trimmed.slice(0, 200)}`,
+  );
+}
+
 function packRuntime(tempRoot) {
   const cacheDir = join(tempRoot, ".npm-cache");
   const output = runCommand(
@@ -69,7 +93,7 @@ function packRuntime(tempRoot) {
     packageDir,
     cacheDir,
   );
-  const [{ filename }] = JSON.parse(output);
+  const [{ filename }] = parseJsonOutput(output);
 
   return join(tempRoot, filename);
 }
@@ -209,7 +233,7 @@ function runScenario(appDir, filename, importBlock) {
 
   const output = runCommand(process.execPath, [filename], appDir, cacheDir);
 
-  return JSON.parse(output);
+  return parseJsonOutput(output);
 }
 
 try {
