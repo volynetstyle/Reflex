@@ -1,20 +1,24 @@
 import { describe, expect, it } from "vitest";
 import { ReactiveNodeState, ReactiveNode } from "../src";
-import { linkEdge, unlinkEdge, reuseOrCreateIncomingEdge } from "../src/reactivity";
-
+import {
+  linkEdge,
+  ReactiveEdge,
+  unlinkEdge,
+  reuseOrCreateIncomingEdge,
+} from "../src/reactivity";
 
 function createNode(kind: ReactiveNodeState = ReactiveNodeState.Producer) {
   return new ReactiveNode(undefined, null, kind);
 }
 
 describe("Reactive graph - edge wiring", () => {
-  it("creates plain-object edges and wires both intrusive lists", () => {
+  it("creates reactive edges and wires both intrusive lists", () => {
     const source = createNode(ReactiveNodeState.Producer);
     const target = createNode(ReactiveNodeState.Consumer);
 
     const edge = linkEdge(source, target);
 
-    expect(Object.getPrototypeOf(edge)).toBe(Object.prototype);
+    expect(edge).toBeInstanceOf(ReactiveEdge);
     expect(edge.from).toBe(source);
     expect(edge.to).toBe(target);
     expect(source.firstOut).toBe(edge);

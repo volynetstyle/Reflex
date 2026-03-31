@@ -215,8 +215,6 @@ function createScenario(config, versionedCleanupSkip) {
 
   readConsumer(root, ConsumerReadMode.lazy, context);
 
-  let warmupPass = 0;
-  let measurePass = 0;
   let nextDriverValue = 1;
   let totalMeasuredReads = 0;
 
@@ -230,12 +228,10 @@ function createScenario(config, versionedCleanupSkip) {
     warmup: config.warmup,
     runWarmup() {
       writeProducer(driver, nextDriverValue++, context);
-      warmupPass += 1;
       return readConsumer(root, ConsumerReadMode.lazy, context);
     },
     runMeasure() {
       writeProducer(driver, nextDriverValue++, context);
-      measurePass += 1;
       return readConsumer(root, ConsumerReadMode.lazy, context);
     },
   };

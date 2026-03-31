@@ -9,13 +9,7 @@
     "declaration": true,
     "declarationDir": "build/types",
     "emitDeclarationOnly": false,
-    "tsBuildInfoFile": "build/tsconfig.build.tsbuildinfo",
-    "paths": {
-      "@reflex/runtime": [
-        "../@reflex/runtime/dist/globals.d.ts",
-        "../@reflex/runtime/src/index.ts"
-      ]
-    }
+    "tsBuildInfoFile": "build/tsconfig.build.tsbuildinfo"
   },
   "include": ["src"]
 }

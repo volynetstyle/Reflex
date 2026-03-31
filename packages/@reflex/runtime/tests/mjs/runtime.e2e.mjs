@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const testDir = fileURLToPath(new URL(".", import.meta.url));
-const packageDir = resolve(testDir, "..");
+const packageDir = resolve(testDir, "..", "..");
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const tempRoots = [];
 
@@ -104,6 +104,9 @@ function installPackedRuntime(tempRoot, tarballPath) {
 
 function createScenarioSource(importBlock) {
   return `${importBlock}
+
+const runtime = createExecutionContext();
+setDefaultContext(runtime);
 
 function createProducer(value) {
   return new ReactiveNode(value, null, PRODUCER_INITIAL_STATE);
@@ -217,12 +220,12 @@ try {
   const esm = runScenario(
     appDir,
     "scenario.mjs",
-    'import { CONSUMER_INITIAL_STATE, PRODUCER_INITIAL_STATE, ReactiveNode, ReactiveNodeState, WATCHER_INITIAL_STATE, disposeWatcher, readConsumer, readProducer, runWatcher, runtime, writeProducer } from "@reflex/runtime";',
+    'import { CONSUMER_INITIAL_STATE, PRODUCER_INITIAL_STATE, ReactiveNode, ReactiveNodeState, WATCHER_INITIAL_STATE, createExecutionContext, disposeWatcher, readConsumer, readProducer, runWatcher, setDefaultContext, writeProducer } from "@reflex/runtime";',
   );
   const cjs = runScenario(
     appDir,
     "scenario.cjs",
-    'const { CONSUMER_INITIAL_STATE, PRODUCER_INITIAL_STATE, ReactiveNode, ReactiveNodeState, WATCHER_INITIAL_STATE, disposeWatcher, readConsumer, readProducer, runWatcher, runtime, writeProducer } = require("@reflex/runtime");',
+    'const { CONSUMER_INITIAL_STATE, PRODUCER_INITIAL_STATE, ReactiveNode, ReactiveNodeState, WATCHER_INITIAL_STATE, createExecutionContext, disposeWatcher, readConsumer, readProducer, runWatcher, setDefaultContext, writeProducer } = require("@reflex/runtime");',
   );
 
   const expected = {

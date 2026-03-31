@@ -4,7 +4,25 @@ on:
   push:
     branches:
       - main
+    paths:
+      - .github/workflows/ci.yml
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - eslint.config.mjs
+      - scripts/**
+      - packages/@reflex/runtime/**
+      - packages/reflex/**
   pull_request:
+    paths:
+      - .github/workflows/ci.yml
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - eslint.config.mjs
+      - scripts/**
+      - packages/@reflex/runtime/**
+      - packages/reflex/**
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -12,6 +30,7 @@ concurrency:
 
 jobs:
   ci:
+    name: runtime + reflex
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -31,17 +50,29 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint
-        run: pnpm lint
+      - name: Runtime lint
+        run: pnpm --filter @reflex/runtime lint
 
-      - name: Typecheck
-        run: pnpm typecheck
+      - name: Runtime typecheck
+        run: pnpm --filter @reflex/runtime typecheck
 
-      - name: Test
-        run: pnpm test -- --runInBand
+      - name: Runtime test
+        run: pnpm --filter @reflex/runtime test
 
-      - name: Build
-        run: pnpm build
+      - name: Runtime build
+        run: pnpm --filter @reflex/runtime build
 
       - name: Runtime E2E
-        run: pnpm test:e2e:runtime
+        run: pnpm --filter @reflex/runtime test:e2e
+
+      - name: Reflex lint
+        run: pnpm --filter @volynetstyle/reflex lint
+
+      - name: Reflex typecheck
+        run: pnpm --filter @volynetstyle/reflex typecheck
+
+      - name: Reflex test
+        run: pnpm --filter @volynetstyle/reflex test
+
+      - name: Reflex build
+        run: pnpm --filter @volynetstyle/reflex build

@@ -9,8 +9,25 @@ import { EventDispatcher } from "../src/policy/event_dispatcher";
 import {
   ReactiveNodeState,
 } from "@reflex/runtime";
-import type { EventBoundary } from "../src/infra/event";
-import { EventSource, subscribeEvent } from "../src/infra/event";
+import type { EventBoundary, EventSubscriber } from "../src/infra/event";
+import {
+  appendSubscriber,
+  emitEvent,
+  EventSource,
+  EventSubscriberState,
+  removeSubscriber,
+  subscribeEvent,
+} from "../src/infra/event";
+
+function createSubscriber<T>(fn: (value: T) => void): EventSubscriber<T> {
+  return {
+    fn,
+    next: null,
+    prev: null,
+    state: EventSubscriberState.Active,
+    unlinkNext: null,
+  };
+}
 
 describe("Reactive system - policy helpers", () => {
   it("resolves effect strategy modes", () => {
@@ -100,7 +117,10 @@ describe("Reactive system - policy helpers", () => {
   });
 
   it("can take the guarded auto-flush branch in finally when forced", () => {
-    const scheduler = new EffectScheduler(EffectSchedulerMode.Flush) as any;
+    const scheduler = new EffectScheduler(EffectSchedulerMode.Flush) as
+      EffectScheduler & {
+        shouldAutoFlush(): boolean;
+      };
     const spy = vi.fn(() => {});
     const node = createWatcherNode(spy);
 
@@ -132,7 +152,7 @@ describe("Reactive system - policy helpers", () => {
   it("dispatches through the boundary once and supports nested emits", () => {
     const source = new EventSource<number>();
     const seen: number[] = [];
-    const boundary: any = vi.fn((flush: () => void) => flush());
+    const boundary = vi.fn((flush: () => void) => flush());
     const dispatcher = new EventDispatcher(boundary);
 
     subscribeEvent(source, (value) => {
@@ -172,7 +192,7 @@ describe("Reactive system - policy helpers", () => {
     const source = new EventSource<number>();
     const seen: string[] = [];
     let unsubscribeMiddle = () => {};
-    const dispatcher = new EventDispatcher((flush): any => {
+    const dispatcher = new EventDispatcher((flush: () => void) => {
       flush();
       flush();
     });
@@ -191,5 +211,51 @@ describe("Reactive system - policy helpers", () => {
     dispatcher.emit(source, 1);
 
     expect(seen).toEqual(["first:1", "last:1"]);
+  });
+
+  it("ignores removal attempts for subscribers owned by another source", () => {
+    const source = new EventSource<number>();
+    const foreignSource = new EventSource<number>();
+    const calls: string[] = [];
+    const a = createSubscriber<number>(() => calls.push("a"));
+    const b = createSubscriber<number>(() => calls.push("b"));
+    const foreign = createSubscriber<number>(() => calls.push("foreign"));
+
+    appendSubscriber(source, a);
+    appendSubscriber(source, b);
+    appendSubscriber(foreignSource, foreign);
+
+    removeSubscriber(source, foreign);
+
+    emitEvent(source, 1);
+    emitEvent(foreignSource, 2);
+
+    expect(calls).toEqual(["a", "b", "foreign"]);
+    expect(source.head).toBe(a);
+    expect(source.tail).toBe(b);
+    expect(foreignSource.head).toBe(foreign);
+    expect(foreignSource.tail).toBe(foreign);
+    expect((foreign.state & EventSubscriberState.Active) !== 0).toBe(true);
+  });
+
+  it("does not register the same subscriber in multiple sources", () => {
+    const primary = new EventSource<number>();
+    const secondary = new EventSource<number>();
+    const calls: number[] = [];
+    const shared = createSubscriber<number>((value) => calls.push(value));
+
+    appendSubscriber(primary, shared);
+    appendSubscriber(secondary, shared);
+
+    emitEvent(primary, 1);
+    emitEvent(secondary, 2);
+
+    expect(calls).toEqual([1]);
+    expect(primary.head).toBe(shared);
+    expect(primary.tail).toBe(shared);
+    expect(secondary.head).toBeNull();
+    expect(secondary.tail).toBeNull();
+    expect(shared.prev).toBeNull();
+    expect(shared.next).toBeNull();
   });
 });
