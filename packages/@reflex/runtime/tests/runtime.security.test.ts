@@ -43,6 +43,6 @@ describe("Reactive runtime - security regressions", () => {
 
     expect(previous).not.toHaveBeenCalled();
     expect(inherited).not.toHaveBeenCalled();
-    expect(Object.hasOwn(context.hooks, "onReactiveSettled")).toBe(false);
+    expect(context.hooks.onReactiveSettled).toBe(undefined);
   });
 });
