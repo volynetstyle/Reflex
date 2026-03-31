@@ -1,24 +1,3 @@
-/**
- * @remarks
- * `reducer` must be a pure event reducer.
- *
- * It should only derive the next accumulator state from:
- * - the previous accumulated state
- * - the current event value
- *
- * Do not read signals, computeds, or other reactive values inside `reducer`.
- * `scan` is driven exclusively by event deliveries and does not track reactive
- * dependencies read during reduction.
- *
- * If you need to combine event-driven state with reactive state, first derive
- * the event accumulator with `scan`, then combine it outside via `computed`.
- *
- * @example
- * ```ts
- * const [count] = scan(clicks, 0, (acc) => acc + 1);
- * const doubled = computed(() => count() * multiplier());
- * ```
- */
 import {
   disposeNodeEvent,
   isDisposedNode,
@@ -27,6 +6,122 @@ import {
 } from "@reflex/runtime";
 import type { Event } from "../infra";
 import { createAccumulator } from "../infra";
+
+type EventValue<E extends Event<unknown>> =
+  E extends Event<infer T> ? T : never;
+
+function createEvent<T>(
+  subscribe: (fn: (value: T) => void) => Destructor,
+): Event<T> {
+  return { subscribe };
+}
+
+/**
+ * Subscribes to the first value from `source`, then unsubscribes automatically.
+ *
+ * The subscription is disposed before `fn` runs, so nested emits triggered from
+ * inside `fn` will not deliver a second time to the same callback.
+ */
+export function subscribeOnce<T>(
+  source: Event<T>,
+  fn: (value: T) => void,
+): Destructor {
+  let active = true;
+  let unsubscribe: Destructor | undefined;
+  let unsubscribePending = false;
+
+  const dispose = () => {
+    if (!active) return;
+
+    active = false;
+
+    const stop = unsubscribe;
+    if (stop === undefined) {
+      unsubscribePending = true;
+      return;
+    }
+
+    unsubscribe = undefined;
+    stop();
+  };
+
+  unsubscribe = source.subscribe((value) => {
+    if (!active) return;
+
+    dispose();
+    fn(value);
+  });
+
+  if (unsubscribePending) {
+    const stop = unsubscribe;
+    unsubscribe = undefined;
+    stop?.();
+  }
+
+  return dispose;
+}
+
+/**
+ * Projects each event value from `source` into a new event stream.
+ */
+export function map<T, U>(
+  source: Event<T>,
+  project: (value: T) => U,
+): Event<U> {
+  return createEvent((fn) =>
+    source.subscribe((value) => {
+      fn(project(value));
+    }),
+  );
+}
+
+/**
+ * Forwards only the values from `source` that satisfy `predicate`.
+ */
+export function filter<T, S extends T>(
+  source: Event<T>,
+  predicate: (value: T) => value is S,
+): Event<S>;
+export function filter<T>(
+  source: Event<T>,
+  predicate: (value: T) => boolean,
+): Event<T>;
+export function filter<T>(
+  source: Event<T>,
+  predicate: (value: T) => boolean,
+): Event<T> {
+  return createEvent((fn) =>
+    source.subscribe((value) => {
+      if (predicate(value)) {
+        fn(value);
+      }
+    }),
+  );
+}
+
+/**
+ * Merges multiple event sources into one event stream.
+ *
+ * The resulting event preserves the delivery order defined by the upstream
+ * sources and their runtime dispatcher.
+ */
+export function merge<const Sources extends readonly Event<unknown>[]>(
+  ...sources: Sources
+): Event<EventValue<Sources[number]>> {
+  return createEvent((fn) => {
+    const unsubscribers = sources.map((source) =>
+      source.subscribe((value) => {
+        fn(value as EventValue<Sources[number]>);
+      }),
+    );
+
+    return () => {
+      for (const unsubscribe of unsubscribers) {
+        unsubscribe();
+      }
+    };
+  });
+}
 
 /**
  * Creates an accumulator derived from an event stream.
@@ -66,7 +161,14 @@ import { createAccumulator } from "../infra";
  * @remarks
  * - `seed` is used as the initial state until the first event is delivered.
  * - `reducer` should be pure and synchronous.
+ * - `reducer` should derive the next state only from the previous accumulated
+ *   state and the current event value.
  * - The accumulated value is updated only in response to `source` events.
+ * - Do not read signals, computeds, or other reactive values inside
+ *   `reducer`. `scan` does not track reactive dependencies read there.
+ * - If you need to combine event-driven state with reactive state, first
+ *   derive the accumulator with `scan`, then combine it outside via
+ *   `computed()`.
  * - To stop receiving updates and release subscriptions, call `dispose`.
  *
  * @see hold

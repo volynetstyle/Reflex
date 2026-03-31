@@ -5,30 +5,29 @@ import type ReactiveNode from "./ReactiveNode";
  * A single edge lives in both the source's outgoing list and the target's
  * incoming list, so pointer rewrites must keep both views in sync.
  */
-interface ReactiveEdge {
+class ReactiveEdge {
   from: ReactiveNode;
   to: ReactiveNode;
   prevOut: ReactiveEdge | null;
   nextOut: ReactiveEdge | null;
   prevIn: ReactiveEdge | null;
   nextIn: ReactiveEdge | null;
-}
 
-export function createReactiveEdge(
-  from: ReactiveNode,
-  to: ReactiveNode,
-  prevOut: ReactiveEdge | null,
-  prevIn: ReactiveEdge | null,
-  nextIn: ReactiveEdge | null,
-): ReactiveEdge {
-  return {
-    from,
-    to,
-    prevOut,
-    nextOut: null,
-    prevIn,
-    nextIn,
-  };
+  constructor(
+    from: ReactiveNode,
+    to: ReactiveNode,
+    prevOut: ReactiveEdge | null,
+    nextOut: ReactiveEdge | null,
+    prevIn: ReactiveEdge | null,
+    nextIn: ReactiveEdge | null,
+  ) {
+    this.from = from;
+    this.to = to;
+    this.prevOut = prevOut;
+    this.nextOut = nextOut;
+    this.prevIn = prevIn;
+    this.nextIn = nextIn;
+  }
 }
 
 export function clearReactiveEdgeLinks(edge: ReactiveEdge): void {
@@ -38,4 +37,4 @@ export function clearReactiveEdgeLinks(edge: ReactiveEdge): void {
   edge.nextIn = null;
 }
 
-export type { ReactiveEdge };
+export { ReactiveEdge };

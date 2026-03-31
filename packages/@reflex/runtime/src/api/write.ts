@@ -1,10 +1,8 @@
-import { compare } from "./compare";
+import type { ProducerComparator } from "./compare";
 import type { ReactiveNode } from "../reactivity";
 import type { ExecutionContext } from "../reactivity/context";
-import {
-  devAssertWriteAlive,
-  devRecordWriteProducer,
-} from "../reactivity/dev";
+import { compare as defaultComparator } from "./compare";
+import { devAssertWriteAlive, devRecordWriteProducer } from "../reactivity/dev";
 import {
   DIRTY_STATE,
   IMMEDIATE,
@@ -71,6 +69,7 @@ import { getDefaultContext } from "../reactivity/context";
 export function writeProducer<T>(
   node: ReactiveNode<T>,
   value: T,
+  compare: ProducerComparator<T> = defaultComparator,
   context: ExecutionContext = getDefaultContext(),
 ): void {
   if (isDisposedNode(node)) {

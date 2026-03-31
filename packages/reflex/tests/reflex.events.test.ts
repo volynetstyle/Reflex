@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { computed } from "../src/api/derived";
-import { hold, scan } from "../src/api/event";
+import {
+  filter,
+  hold,
+  map,
+  merge,
+  scan,
+  subscribeOnce,
+} from "../src/api/event";
 import { createRuntime } from "./reflex.test_utils";
 
 function createEvent<T>() {
@@ -190,6 +197,125 @@ describe("Reactive system - events", () => {
     source.emit(2);
 
     expect(seen).toEqual([2]);
+  });
+
+  it("subscribeOnce unsubscribes before nested emits run", () => {
+    const source = createEvent<number>();
+    const seen: number[] = [];
+
+    subscribeOnce(source, (value) => {
+      seen.push(value);
+      source.emit(value + 1);
+    });
+
+    source.emit(1);
+    source.emit(10);
+
+    expect(seen).toEqual([1]);
+  });
+
+  it("subscribeOnce handles synchronous delivery during subscription", () => {
+    const seen: number[] = [];
+    let unsubscribeCount = 0;
+
+    const source = {
+      subscribe(fn: (value: number) => void) {
+        fn(1);
+
+        return () => {
+          unsubscribeCount++;
+        };
+      },
+    };
+
+    const dispose = subscribeOnce(source, (value) => {
+      seen.push(value);
+    });
+
+    expect(seen).toEqual([1]);
+    expect(unsubscribeCount).toBe(1);
+
+    dispose();
+
+    expect(unsubscribeCount).toBe(1);
+  });
+
+  it("map subscribes lazily and disposes its upstream subscription", () => {
+    let listener: ((value: number) => void) | undefined;
+    let subscribeCount = 0;
+    let unsubscribeCount = 0;
+
+    const source = {
+      subscribe(fn: (value: number) => void) {
+        subscribeCount++;
+        listener = fn;
+
+        return () => {
+          unsubscribeCount++;
+          listener = undefined;
+        };
+      },
+    };
+
+    const doubled = map(source, (value) => value * 2);
+
+    expect(subscribeCount).toBe(0);
+
+    const seen: number[] = [];
+    const dispose = doubled.subscribe((value) => {
+      seen.push(value);
+    });
+
+    expect(subscribeCount).toBe(1);
+
+    listener?.(2);
+    listener?.(4);
+
+    expect(seen).toEqual([4, 8]);
+
+    dispose();
+
+    expect(unsubscribeCount).toBe(1);
+    expect(listener).toBeUndefined();
+  });
+
+  it("filter forwards only matching values", () => {
+    const source = createEvent<number>();
+    const evens = filter(source, (value) => value % 2 === 0);
+    const seen: number[] = [];
+
+    evens.subscribe((value) => {
+      seen.push(value);
+    });
+
+    source.emit(1);
+    source.emit(2);
+    source.emit(3);
+    source.emit(4);
+
+    expect(seen).toEqual([2, 4]);
+  });
+
+  it("merge forwards values from multiple sources in delivery order", () => {
+    const rt = createRuntime();
+    const sourceA = rt.event<number>();
+    const sourceB = rt.event<string>();
+    const combined = merge(
+      map(sourceA, (value) => `a${value}`),
+      map(sourceB, (value) => `b${value}`),
+    );
+    const seen: string[] = [];
+
+    combined.subscribe((value) => {
+      seen.push(value);
+    });
+
+    sourceA.emit(1);
+    sourceB.emit("x");
+    sourceA.emit(2);
+    sourceB.emit("y");
+
+    expect(seen).toEqual(["a1", "bx", "a2", "by"]);
   });
 
   it("scan accumulates values and can feed a computed", () => {

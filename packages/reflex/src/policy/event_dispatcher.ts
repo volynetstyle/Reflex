@@ -1,17 +1,12 @@
-import {
-  emitEvent,
-  identityBoundary,
-} from "@reflex/runtime";
-import type { EventBoundary, EventSource } from "@reflex/runtime";
+import type { EventBoundary, EventSource } from "../infra/event";
+import { identityBoundary, emitEvent } from "../infra/event";
 
 export class EventDispatcher {
   private readonly queue: unknown[] = [];
   private head = 0;
   private flushing = false;
 
-  constructor(
-    private readonly runBoundary: EventBoundary = identityBoundary,
-  ) {}
+  constructor(private readonly runBoundary: EventBoundary = identityBoundary) {}
 
   emit<T>(source: EventSource<T>, value: T): void {
     this.queue.push(source, value);

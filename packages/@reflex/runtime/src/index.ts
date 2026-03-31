@@ -2,9 +2,11 @@ export {
   readProducer,
   writeProducer,
   readConsumer,
-  ConsumerReadMode,
   runWatcher,
   disposeWatcher,
+  ProducerComparator,
+  ConsumerReadMode,
+  untracked,
 } from "./api";
 
 // Execution context management
@@ -39,15 +41,6 @@ export {
   isDisposedNode,
   disposeNode,
   disposeNodeEvent,
-  //
-  EventSubscriber,
-  EventSource,
-  EventBoundary,
-  identityBoundary,
-  appendSubscriber,
-  removeSubscriber,
-  subscribeEvent,
-  emitEvent,
 } from "./reactivity";
 
 export {

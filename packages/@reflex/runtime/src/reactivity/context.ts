@@ -146,7 +146,7 @@ export class ExecutionContext {
  * in multi-context scenarios.
  * 
  */
-let defaultContext = new ExecutionContext();
+let defaultContext = createExecutionContext(undefined);
 
 export function createExecutionContext(
   hooks: EngineHooks = {},

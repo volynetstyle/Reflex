@@ -12,6 +12,10 @@ describe("Reactive system - exports", () => {
     expect(reflex.computed).toBe(api.computed);
     expect(reflex.memo).toBe(api.memo);
     expect(reflex.effect).toBe(api.effect);
+    expect(reflex.subscribeOnce).toBe(api.subscribeOnce);
+    expect(reflex.map).toBe(api.map);
+    expect(reflex.filter).toBe(api.filter);
+    expect(reflex.merge).toBe(api.merge);
     expect(reflex.scan).toBe(api.scan);
     expect(reflex.hold).toBe(api.hold);
     expect(reflex.createRuntime).toBe(infra.createRuntime);

@@ -38,6 +38,7 @@ export function trackRead(
   const prevEdge = consumer.depsTail;
   if (prevEdge === null) {
     const firstIn = consumer.firstIn;
+    
     if (firstIn === null) {
       consumer.depsTail = linkEdge(source, consumer, null);
       return;

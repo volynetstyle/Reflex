@@ -1,12 +1,8 @@
 import {
   clearReactiveEdgeLinks,
-  createReactiveEdge,
-  type ReactiveEdge,
+  ReactiveEdge,
 } from "../ReactiveEdge";
-import {
-  isDisposedNode,
-  markDisposedNode,
-} from "../ReactiveMeta";
+import { isDisposedNode, markDisposedNode } from "../ReactiveMeta";
 import type ReactiveNode from "../ReactiveNode";
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
@@ -55,7 +51,7 @@ export function linkEdge(
 ): ReactiveEdge {
   const prevOut = from.lastOut;
   const nextIn = after ? after.nextIn : to.firstIn;
-  const edge = createReactiveEdge(from, to, prevOut, after, nextIn);
+  const edge = new ReactiveEdge(from, to, prevOut, null, after, nextIn);
 
   if (prevOut) prevOut.nextOut = edge;
   else from.firstOut = edge;

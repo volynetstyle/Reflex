@@ -1,5 +1,4 @@
 import {
-  subscribeEvent,
   createExecutionContext,
   setDefaultContext,
 } from "@reflex/runtime";
@@ -15,6 +14,7 @@ import {
   EffectScheduler,
   EventDispatcher
 } from "../policy";
+import { subscribeEvent } from "./event";
 import { createSource } from "./factory";
 
 interface RuntimeOptions {

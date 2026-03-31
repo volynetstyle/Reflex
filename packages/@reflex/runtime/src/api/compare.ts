@@ -1,3 +1,3 @@
-export type Comparator<T> = (a: T, b: T) => boolean;
+export type ProducerComparator<T> = (a: T, b: T) => boolean;
 
-export const compare: Comparator<unknown> = Object.is;
+export const compare: ProducerComparator<unknown> = Object.is;

@@ -57,7 +57,7 @@ function refreshDependency(
   link: ReactiveEdge,
   node: ReactiveNode,
   context: ExecutionContext,
-  state = node.state,
+  state: number = node.state,
 ): boolean {
   if (isDisposedNode(node)) return false;
 

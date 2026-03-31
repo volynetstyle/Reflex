@@ -92,7 +92,7 @@ class ResourceCore<T, E = unknown> {
   }
 
   bump(): void {
-    writeProducer(this.stateNode, this.stateNode.payload + 1, this.context);
+    writeProducer(this.stateNode, this.stateNode.payload + 1);
   }
 
   isAlive(token: number): boolean {
@@ -209,7 +209,7 @@ class ResourceCore<T, E = unknown> {
   refetch(): void {
     if (this.disposed || this.refetchNode === null) return;
 
-    writeProducer(this.refetchNode, this.refetchNode.payload + 1, this.context);
+    writeProducer(this.refetchNode, this.refetchNode.payload + 1);
   }
 }
 

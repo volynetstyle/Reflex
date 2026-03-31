@@ -7,11 +7,10 @@ import {
 } from "../src/policy/effect_scheduler";
 import { EventDispatcher } from "../src/policy/event_dispatcher";
 import {
-  subscribeEvent,
   ReactiveNodeState,
-  EventSource,
-  EventBoundary,
 } from "@reflex/runtime";
+import type { EventBoundary } from "../src/infra/event";
+import { EventSource, subscribeEvent } from "../src/infra/event";
 
 describe("Reactive system - policy helpers", () => {
   it("resolves effect strategy modes", () => {
