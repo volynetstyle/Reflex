@@ -2,8 +2,6 @@ import type { ReactiveNode } from "../reactivity/shape";
 import type { ExecutionContext } from "../reactivity/context";
 import { recordDebugEvent } from "../debug";
 import {
-  beginNodeTracking,
-  clearNodeTracking,
   clearNodeVisited,
   DIRTY_STATE,
   isDisposedNode,
@@ -36,7 +34,9 @@ export function runWatcher(
   }
 
   const dirty = (state & DIRTY_STATE) !== 0;
-  const needsRun = dirty && shouldRecompute(node);
+  const needsRun =
+    dirty &&
+    ((state & ReactiveNodeState.Changed) !== 0 || shouldRecompute(node));
 
   if (!needsRun) {
     clearDirtyState(node);
@@ -82,20 +82,13 @@ export function runWatcher(
 
   let finalResult: unknown = UNINITIALIZED;
   let hasCleanup = false;
+  executeNodeComputation(node, (result: unknown) => {
+    if (isDisposedNode(node)) return undefined;
 
-  beginNodeTracking(node);
-
-  try {
-    executeNodeComputation(node, (result) => {
-      if (isDisposedNode(node)) return undefined;
-
-      finalResult = result;
-      hasCleanup = typeof result === "function";
-      if (hasCleanup) node.payload = result as () => void;
-    }, context);
-  } finally {
-    clearNodeTracking(node);
-  }
+    finalResult = result;
+    hasCleanup = typeof result === "function";
+    if (hasCleanup) node.payload = result as () => void;
+  }, context);
 
   if (__DEV__) {
     recordDebugEvent(context, "watcher:run:finish", {

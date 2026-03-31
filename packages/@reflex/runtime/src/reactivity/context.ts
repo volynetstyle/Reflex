@@ -97,13 +97,13 @@ export class ExecutionContext {
     if (typeof onEffectInvalidated === "function") {
       this.hooks.onEffectInvalidated = onEffectInvalidated;
     } else {
-      delete this.hooks.onEffectInvalidated;
+      this.hooks.onEffectInvalidated = undefined;
     }
 
     if (typeof onReactiveSettled === "function") {
       this.hooks.onReactiveSettled = onReactiveSettled;
     } else {
-      delete this.hooks.onReactiveSettled;
+      this.hooks.onReactiveSettled = undefined;
     }
 
     if (__DEV__) {

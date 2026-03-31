@@ -28,12 +28,16 @@ export function trackRead(
   const sourceDead = isDisposedNode(source);
   const consumerDead = isDisposedNode(consumer);
   if (sourceDead || consumerDead) {
-    devAssertTrackReadAlive(sourceDead, consumerDead);
+    if (__DEV__) {
+      devAssertTrackReadAlive(sourceDead, consumerDead);
+    }
 
     return;
   }
 
-  devRecordTrackRead(context, consumer, source);
+  if (__DEV__) {
+    devRecordTrackRead(context, consumer, source);
+  }
 
   const prevEdge = consumer.depsTail;
   if (prevEdge === null) {
@@ -94,7 +98,9 @@ export function cleanupStaleSources(
     node.lastIn = tail;
   }
 
-  devRecordCleanupStaleSources(node, staleHead, _context);
+  if (__DEV__) {
+    devRecordCleanupStaleSources(node, staleHead, _context);
+  }
 
   unlinkDetachedIncomingEdgeSequence(staleHead);
 }

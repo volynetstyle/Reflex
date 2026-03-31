@@ -10,6 +10,8 @@ import {
 } from "../shape";
 import { propagateOnce } from "./propagate";
 
+const shouldRecomputeStack: ReactiveEdge[] = [];
+
 // Refresh a single dependency node and return whether its value changed.
 //
 // Two cases:
@@ -101,6 +103,7 @@ function shouldRecomputeBranching(
   context: ExecutionContext,
   stack: ReactiveEdge[],
   stackTop: number,
+  stackBase: number,
 ): boolean {
   let changed = false;
 
@@ -127,8 +130,8 @@ function shouldRecomputeBranching(
       const deps = dep.firstIn;
       if (deps !== null) {
         // Push current edge to stack, descend into dependency's dependencies
-        stackTop += 1;
         stack[stackTop] = link;
+        stackTop += 1;
         link = deps;
         consumer = dep;
         continue;
@@ -152,9 +155,9 @@ function shouldRecomputeBranching(
     }
 
     // Backtrack through stack to parent level
-    while (stackTop >= 0) {
-      const parentLink = stack[stackTop]!;
+    while (stackTop > stackBase) {
       stackTop -= 1;
+      const parentLink = stack[stackTop]!;
 
       if (changed) {
         // Upstream changed, refresh parent
@@ -226,9 +229,9 @@ function shouldRecomputeLinear(
   firstIn: ReactiveEdge,
   context: ExecutionContext,
 ): boolean {
-  // Explicit stack for DFS when branching is needed
-  const stack: ReactiveEdge[] = [];
-  let stackTop = -1;
+  const stack = shouldRecomputeStack;
+  const stackBase = stack.length;
+  let stackTop = stackBase;
   // Current edge being processed
   let link = firstIn;
   // Current node whose dependencies are being checked
@@ -236,90 +239,108 @@ function shouldRecomputeLinear(
   // Has any upstream change been confirmed?
   let changed = false;
 
-  while (true) {
-    if (link.nextIn !== null) {
-      // Multiple dependencies: switch to branching for efficiency
-      return shouldRecomputeBranching(link, consumer, context, stack, stackTop);
-    }
-
-    // Single dependency: stay on linear path
-
-    // Check if consumer already marked Changed (confirmed change from propagate)
-    if ((consumer.state & ReactiveNodeState.Changed) !== 0) {
-      changed = true;
-      break;
-    }
-
-    // Check the dependency
-    const dep = link.from;
-    const depState = dep.state;
-
-    // Case 1: Dependency is already Changed (confirmed by propagate)
-    if ((depState & ReactiveNodeState.Changed) !== 0) {
-      changed = refreshDependency(link, dep, context, depState);
-      break;
-    }
-
-    // Case 2: Dependency is dirty but not Producer
-    // (computed nodes need verification, producers are already verified)
-    if (
-      (depState & ReactiveNodeState.Producer) === 0 &&
-      (depState & DIRTY_STATE) !== 0
-    ) {
-      // Check if dependency has its own dependencies to walk
-      const deps = dep.firstIn;
-      if (deps !== null) {
-        if (deps.nextIn !== null) {
-          // Multiple deps of current dep: switch to branching
-          stackTop += 1;
-          stack[stackTop] = link;
-          return shouldRecomputeBranching(deps, dep, context, stack, stackTop);
-        }
-
-        // Single dep: continue down linear path
-        stackTop += 1;
-        stack[stackTop] = link;
-        link = deps;
-        consumer = dep;
-        continue;
+  try {
+    while (true) {
+      if (link.nextIn !== null) {
+        // Multiple dependencies: switch to branching for efficiency
+        return shouldRecomputeBranching(
+          link,
+          consumer,
+          context,
+          stack,
+          stackTop,
+          stackBase,
+        );
       }
 
-      // No dependencies, must recompute to know if changed
-      changed = refreshDependency(link, dep, context, depState);
-      break;
-    }
+      // Single dependency: stay on linear path
 
-    // Case 3: Dependency is clean or is a Producer
-    // No change, mark consumer clean and move to next dependency
-    consumer.state &= ~ReactiveNodeState.Invalid;
+      // Check if consumer already marked Changed (confirmed change from propagate)
+      if ((consumer.state & ReactiveNodeState.Changed) !== 0) {
+        changed = true;
+        break;
+      }
 
-    // Backtrack or move to next dependency
-    if (stackTop < 0) return false;
+      // Check the dependency
+      const dep = link.from;
+      const depState = dep.state;
 
-    link = stack[stackTop]!;
-    stackTop -= 1;
-    consumer = link.to;
-  }
+      // Case 1: Dependency is already Changed (confirmed by propagate)
+      if ((depState & ReactiveNodeState.Changed) !== 0) {
+        changed = refreshDependency(link, dep, context, depState);
+        break;
+      }
 
-  // Backtrack through stack, propagating change status upward
-  while (stackTop >= 0) {
-    const parentLink = stack[stackTop]!;
-    stackTop -= 1;
+      // Case 2: Dependency is dirty but not Producer
+      // (computed nodes need verification, producers are already verified)
+      if (
+        (depState & ReactiveNodeState.Producer) === 0 &&
+        (depState & DIRTY_STATE) !== 0
+      ) {
+        // Check if dependency has its own dependencies to walk
+        const deps = dep.firstIn;
+        if (deps !== null) {
+          if (deps.nextIn !== null) {
+            // Multiple deps of current dep: switch to branching
+            stack[stackTop] = link;
+            stackTop += 1;
+            return shouldRecomputeBranching(
+              deps,
+              dep,
+              context,
+              stack,
+              stackTop,
+              stackBase,
+            );
+          }
 
-    if (changed) {
-      // If any descendant changed, refresh parent too
-      changed = refreshDependency(parentLink, consumer, context);
-    } else {
-      // All descendants clean, mark parent clean
+          // Single dep: continue down linear path
+          stack[stackTop] = link;
+          stackTop += 1;
+          link = deps;
+          consumer = dep;
+          continue;
+        }
+
+        // No dependencies, must recompute to know if changed
+        changed = refreshDependency(link, dep, context, depState);
+        break;
+      }
+
+      // Case 3: Dependency is clean or is a Producer
+      // No change, mark consumer clean and move to next dependency
       consumer.state &= ~ReactiveNodeState.Invalid;
+
+      // Backtrack or move to next dependency
+      if (stackTop === stackBase) return false;
+
+      stackTop -= 1;
+      link = stack[stackTop]!;
+      consumer = link.to;
     }
 
-    consumer = parentLink.to;
-  }
+    // Backtrack through stack, propagating change status upward
+    while (stackTop > stackBase) {
+      stackTop -= 1;
+      const parentLink = stack[stackTop]!;
 
-  // Final clean-up if no change found
-  if (!changed) consumer.state &= ~ReactiveNodeState.Invalid;
-  return changed;
+      if (changed) {
+        // If any descendant changed, refresh parent too
+        changed = refreshDependency(parentLink, consumer, context);
+      } else {
+        // All descendants clean, mark parent clean
+        consumer.state &= ~ReactiveNodeState.Invalid;
+      }
+
+      consumer = parentLink.to;
+    }
+
+    // Final clean-up if no change found
+    if (!changed) consumer.state &= ~ReactiveNodeState.Invalid;
+    return changed;
+  } finally {
+    stack.length = stackBase;
+  }
 }
 
 /**
@@ -357,7 +378,9 @@ export function shouldRecompute(node: ReactiveNode): boolean {
   const state = node.state;
 
   if ((state & ReactiveNodeState.Disposed) !== 0) {
-    devAssertShouldRecomputeAlive();
+    if (__DEV__) {
+      devAssertShouldRecomputeAlive();
+    }
     return false;
   }
 

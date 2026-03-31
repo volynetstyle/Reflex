@@ -9,10 +9,6 @@ __benchmarks__
 build/
 remote-repo/
 coverage/
-src/**/*.js
-src/**/*.js.map
-src/**/*.d.ts
-src/**/*.d.ts.map
 !src/globals.d.ts
 *.log*
 *.sublime-project

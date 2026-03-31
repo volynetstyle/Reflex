@@ -13,6 +13,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "./dist",
+    "noEmit": true,
     "allowImportingTsExtensions": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,

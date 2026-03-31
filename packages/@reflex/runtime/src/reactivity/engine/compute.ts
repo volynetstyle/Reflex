@@ -6,12 +6,10 @@ import {
   devRecordRecompute,
 } from "../dev";
 import {
-  beginNodeTracking,
   clearDirtyState,
-  clearNodeTracking,
   isDisposedNode,
 } from "../shape";
-import { executeNodeComputation } from "./execute";
+import { executeNodeComputationRaw } from "./execute";
 import { getDefaultContext } from "../context";
 
 export function recompute(
@@ -19,34 +17,27 @@ export function recompute(
   context: ExecutionContext = getDefaultContext(),
 ): boolean {
   if (isDisposedNode(node)) {
-    devAssertRecomputeAlive();
+    if (__DEV__) {
+      devAssertRecomputeAlive();
+    }
     return false;
   }
 
   const prev = node.payload;
   let next: unknown = prev;
   let hasChanged = false;
-
-  beginNodeTracking(node);
-
-  try {
-    hasChanged = executeNodeComputation(node, (result) => {
-      if (isDisposedNode(node)) return false;
-
-      next = result;
-      const changed = !compare(prev, result);
-      hasChanged = changed;
-      node.payload = result;
-
-      return changed;
-    }, context);
-  } finally {
-    clearNodeTracking(node);
+  next = executeNodeComputationRaw(node, context);
+  if (!isDisposedNode(node)) {
+    const changed = !compare(prev, next);
+    hasChanged = changed;
+    node.payload = next;
   }
 
   clearDirtyState(node);
 
-  devRecordRecompute(node, hasChanged, next, prev, context);
+  if (__DEV__) {
+    devRecordRecompute(node, hasChanged, next, prev, context);
+  }
 
   return hasChanged;
 }

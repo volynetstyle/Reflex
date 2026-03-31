@@ -205,8 +205,16 @@ export function readConsumer<T>(
   context: ExecutionContext = getDefaultContext(),
 ): T {
   if (mode === ConsumerReadMode.eager) {
-    // Eager mode: stabilize without registering dependency
-    const value = untracked(() => stabilizeConsumer(node, context), context);
+    const previous = context.activeComputed;
+    context.activeComputed = null;
+
+    let value: T;
+    try {
+      // Eager mode: stabilize without registering dependency
+      value = stabilizeConsumer(node, context);
+    } finally {
+      context.activeComputed = previous;
+    }
 
     devRecordReadConsumer(node, "eager", value, context);
 

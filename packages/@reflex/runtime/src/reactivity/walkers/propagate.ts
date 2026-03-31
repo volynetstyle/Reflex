@@ -2,26 +2,26 @@ import type { ExecutionContext } from "../context";
 import type { ReactiveNode } from "../shape";
 import { devAssertPropagateAlive } from "../dev";
 import { recordDebugEvent } from "../../debug";
+import { getDefaultContext } from "../context";
 import {
   type ReactiveEdge,
   DIRTY_STATE,
   WALKER_STATE,
-  isDisposedNode,
   ReactiveNodeState,
 } from "../shape";
 
 /**
- * Propagation modes for change notification.
- *
  * @constant {0} NON_IMMEDIATE - Mark subscribers as Invalid (might have changed).
  *   Used for transitive subscribers (not direct children of the changed node).
  *   These nodes will need verification via shouldRecompute() before re-executing.
- *
+ */
+export const NON_IMMEDIATE = 0;
+
+/**
  * @constant {1} IMMEDIATE - Promote Invalid subscribers to Changed (definitely changed).
  *   Used for direct subscribers of a changed node.
  *   These nodes will recompute immediately when read, skipping verification.
  */
-export const NON_IMMEDIATE = 0;
 export const IMMEDIATE = 1;
 
 /**
@@ -38,6 +38,8 @@ export const IMMEDIATE = 1;
  */
 const INVALIDATION_SLOW_PATH_MASK =
   DIRTY_STATE | ReactiveNodeState.Disposed | WALKER_STATE;
+const propagateEdgeStack: ReactiveEdge[] = [];
+const propagatePromoteStack: number[] = [];
 
 /**
  * Check if an edge is part of the actively-tracked dependency prefix.
@@ -110,9 +112,20 @@ function notifyWatcherInvalidation(
   thrown: unknown,
   context: ExecutionContext,
 ): unknown {
+  const onEffectInvalidated = context.hooks.onEffectInvalidated;
+
+  if (__DEV__) {
+    recordDebugEvent(context, "watcher:invalidated", {
+      node,
+    });
+  }
+
+  if (onEffectInvalidated === undefined) {
+    return thrown;
+  }
+
   try {
-    // Call the host's watcher notification hook
-    context.dispatchWatcherEvent(node);
+    onEffectInvalidated(node);
   } catch (error) {
     // Collect this error; we'll re-throw after all watchers
     return thrown ?? error;
@@ -242,10 +255,12 @@ function getSlowInvalidatedSubscriberState(
  */
 export function propagateOnce(
   node: ReactiveNode,
-  context: ExecutionContext,
+  context: ExecutionContext = getDefaultContext(),
 ): void {
-  if (isDisposedNode(node)) {
-    devAssertPropagateAlive();
+  if ((node.state & ReactiveNodeState.Disposed) !== 0) {
+    if (__DEV__) {
+      devAssertPropagateAlive();
+    }
     return;
   }
 
@@ -284,73 +299,78 @@ function propagateBranching(
   thrown: unknown,
   context: ExecutionContext,
 ): unknown {
-  // Explicit stack for depth-first traversal when fanout is encountered
-  const edgeStack: ReactiveEdge[] = [];
-  const promoteStack: number[] = [];
-  let stackTop = -1;
+  const edgeStack = propagateEdgeStack;
+  const promoteStack = propagatePromoteStack;
+  const stackBase = edgeStack.length;
+  let stackTop = stackBase;
 
   // The fast invalidation branch is duplicated here and in propagateLinear.
   // This keeps the hot loop flatter and benchmarks better than routing through
   // a shared helper (function call overhead).
-  while (true) {
-    const sub = edge.to;
-    const state = sub.state;
-    // Check if fast path applies, else use slow path logic
-    const nextState =
-      (state & INVALIDATION_SLOW_PATH_MASK) === 0
-        ? state |
-          (promote ? ReactiveNodeState.Changed : ReactiveNodeState.Invalid)
-        : getSlowInvalidatedSubscriberState(edge, state, promote);
+  try {
+    while (true) {
+      const sub = edge.to;
+      const state = sub.state;
+      // Check if fast path applies, else use slow path logic
+      const nextState =
+        (state & INVALIDATION_SLOW_PATH_MASK) === 0
+          ? state |
+            (promote ? ReactiveNodeState.Changed : ReactiveNodeState.Invalid)
+          : getSlowInvalidatedSubscriberState(edge, state, promote);
 
-    if (nextState !== 0) {
-      // Non-zero means: update this subscriber's state
-      sub.state = nextState;
-      if (__DEV__) {
-        recordPropagation(edge, nextState, promote, context);
-      }
+      if (nextState !== 0) {
+        // Non-zero means: update this subscriber's state
+        sub.state = nextState;
+        if (__DEV__) {
+          recordPropagation(edge, nextState, promote, context);
+        }
 
-      if ((nextState & ReactiveNodeState.Watcher) !== 0) {
-        // This subscriber is a watcher, notify it
-        thrown = notifyWatcherInvalidation(sub, thrown, context);
-      } else {
-        // Not a watcher, might have subscribers of its own
-        const firstOut = sub.firstOut;
-        if (firstOut !== null) {
-          // Fanout: descend into this subscriber's subscribers
-          if (resume !== null) {
-            // Save the sibling edge for later processing
-            stackTop += 1;
-            edgeStack[stackTop] = resume;
-            promoteStack[stackTop] = resumePromote;
+        if ((nextState & ReactiveNodeState.Watcher) !== 0) {
+          // This subscriber is a watcher, notify it
+          thrown = notifyWatcherInvalidation(sub, thrown, context);
+        } else {
+          // Not a watcher, might have subscribers of its own
+          const firstOut = sub.firstOut;
+          if (firstOut !== null) {
+            // Fanout: descend into this subscriber's subscribers
+            if (resume !== null) {
+              // Save the sibling edge for later processing
+              edgeStack[stackTop] = resume;
+              promoteStack[stackTop] = resumePromote;
+              stackTop += 1;
+            }
+
+            // Process the first subscriber of sub
+            edge = firstOut;
+            // The next sibling of firstOut is the other branch
+            resume = edge.nextOut;
+            // Transitive subscribers: NON_IMMEDIATE (might change)
+            promote = resumePromote = NON_IMMEDIATE;
+            continue;
           }
-
-          // Process the first subscriber of sub
-          edge = firstOut;
-          // The next sibling of firstOut is the other branch
-          resume = edge.nextOut;
-          // Transitive subscribers: NON_IMMEDIATE (might change)
-          promote = resumePromote = NON_IMMEDIATE;
-          continue;
         }
       }
-    }
 
-    // Move to next edge in current level, or pop stack
-    if (resume !== null) {
-      // Process the sibling edge
-      edge = resume;
-      promote = resumePromote;
-      resume = edge.nextOut;
-    } else if (stackTop >= 0) {
-      // Pop stack: resume a previously saved branch
-      edge = edgeStack[stackTop]!;
-      promote = resumePromote = promoteStack[stackTop]!;
-      --stackTop;
-      resume = edge.nextOut;
-    } else {
-      // All branches processed
-      return thrown;
+      // Move to next edge in current level, or pop stack
+      if (resume !== null) {
+        // Process the sibling edge
+        edge = resume;
+        promote = resumePromote;
+        resume = edge.nextOut;
+      } else if (stackTop > stackBase) {
+        // Pop stack: resume a previously saved branch
+        stackTop -= 1;
+        edge = edgeStack[stackTop]!;
+        promote = resumePromote = promoteStack[stackTop]!;
+        resume = edge.nextOut;
+      } else {
+        // All branches processed
+        return thrown;
+      }
     }
+  } finally {
+    edgeStack.length = stackBase;
+    promoteStack.length = stackBase;
   }
 }
 
@@ -472,10 +492,12 @@ function propagateLinear(
 export function propagate(
   startEdge: ReactiveEdge,
   promoteImmediate = 0,
-  context: ExecutionContext,
+  context: ExecutionContext = getDefaultContext(),
 ): void {
-  if (isDisposedNode(startEdge.from)) {
-    devAssertPropagateAlive();
+  if ((startEdge.from.state & ReactiveNodeState.Disposed) !== 0) {
+    if (__DEV__) {
+      devAssertPropagateAlive();
+    }
     return;
   }
 
