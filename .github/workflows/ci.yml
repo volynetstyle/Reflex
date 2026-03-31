@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -24,13 +25,20 @@ on:
       - packages/@reflex/runtime/**
       - packages/reflex/**
 
+permissions:
+  contents: read
+
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   ci:
-    name: runtime + reflex
+    name: fast checks
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -40,12 +48,15 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -62,9 +73,6 @@ jobs:
       - name: Runtime build
         run: pnpm --filter @reflex/runtime build
 
-      - name: Runtime E2E
-        run: pnpm --filter @reflex/runtime test:e2e
-
       - name: Reflex lint
         run: pnpm --filter @volynetstyle/reflex lint
 
@@ -76,3 +84,31 @@ jobs:
 
       - name: Reflex build
         run: pnpm --filter @volynetstyle/reflex build
+
+  runtime-e2e:
+    name: runtime e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: ci
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Runtime E2E
+        run: pnpm --filter @reflex/runtime test:e2e
