@@ -13,7 +13,7 @@ import { IMMEDIATE } from "./propagate.constants";
 import {
   recordPropagation,
   notifyWatcherInvalidation,
-} from "./propagationWatchers";
+} from "./propagation.watchers";
 
 export function propagateOnce(
   node: ReactiveNode,
@@ -27,8 +27,8 @@ export function propagateOnce(
   let thrown: unknown = null;
 
   for (let edge = node.firstOut; edge !== null; edge = edge.nextOut) {
-    const sub = edge.to,
-      state = sub.state;
+    const sub = edge.to;
+    const state = sub.state;
 
     if ((state & DIRTY_STATE) !== ReactiveNodeState.Invalid) continue;
 

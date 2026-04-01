@@ -1,13 +1,16 @@
 import type { ExecutionContext } from "../context";
 import type { ReactiveEdge } from "../shape";
 import { ReactiveNodeState } from "../shape";
-import { INVALIDATION_SLOW_PATH_MASK, NON_IMMEDIATE } from "./propagate.constants";
-import { propagateBranching } from "./propagate.branching"
+import {
+  INVALIDATION_SLOW_PATH_MASK,
+  NON_IMMEDIATE,
+} from "./propagate.constants";
+import { propagateBranching } from "./propagate.branching";
 import { getSlowInvalidatedSubscriberState } from "./propagate.utils";
 import {
   recordPropagation,
   notifyWatcherInvalidation,
-} from "./propagationWatchers";
+} from "./propagation.watchers";
 
 // ─── propagateBranch ──────────────────────────────────────────────────────────
 //
@@ -42,18 +45,18 @@ export function propagateBranch(
       } else {
         const firstOut = sub.firstOut;
         if (firstOut !== null) {
-          edge = firstOut;
           if (next !== null) {
-            // Fanout: escalate. `next` is a sibling at the current promote level.
             return propagateBranching(
-              edge,
-              NON_IMMEDIATE, // child level always starts non-immediate
+              firstOut,
+              NON_IMMEDIATE,
               next,
-              promote, // fix: siblings inherit current promote, not NON_IMMEDIATE
+              promote,
               thrown,
               context,
             );
           }
+
+          edge = firstOut;
           promote = NON_IMMEDIATE;
           continue;
         }

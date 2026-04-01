@@ -5,7 +5,7 @@ import { NON_IMMEDIATE } from "./propagate.constants";
 import {
   recordPropagation,
   notifyWatcherInvalidation,
-} from "./propagationWatchers";
+} from "./propagation.watchers";
 
 const INVALIDATION_SLOW_PATH_MASK =
   DIRTY_STATE | ReactiveNodeState.Disposed | WALKER_STATE;
@@ -18,10 +18,15 @@ function isTrackedPrefixEdge(
   depsTail: ReactiveEdge | null,
 ): boolean {
   if (depsTail === null) return false;
-  if (edge === depsTail) return true;
-  for (let cursor = edge.prevIn; cursor !== null; cursor = cursor.prevIn) {
+
+  for (
+    let cursor: ReactiveEdge | null = edge.prevIn;
+    cursor !== null;
+    cursor = cursor.prevIn
+  ) {
     if (cursor === depsTail) return false;
   }
+
   return true;
 }
 
@@ -32,7 +37,6 @@ function isTrackedPrefixEdge(
 //
 // Inlining budget: ~20 AST nodes — will be inlined by all three JITs since
 // both call sites are monomorphic (same edge/state shapes every time).
-
 function getSlowInvalidatedSubscriberState(
   edge: ReactiveEdge,
   state: number,
@@ -109,8 +113,9 @@ export function propagateBranching(
               edgeStack[stackTop] = resume;
               promoteStack[stackTop++] = resumePromote;
             }
+
             edge = firstOut;
-            resume = edge.nextOut;
+            resume = firstOut.nextOut;
             promote = resumePromote = NON_IMMEDIATE;
             continue;
           }
@@ -120,18 +125,16 @@ export function propagateBranching(
       if (resume !== null) {
         edge = resume;
         promote = resumePromote;
-        resume = edge.nextOut;
       } else if (stackTop > stackBase) {
-        --stackTop;
-        edge = edgeStack[stackTop]!;
+        edge = edgeStack[--stackTop]!;
         promote = resumePromote = promoteStack[stackTop]!;
-        resume = edge.nextOut;
       } else {
         return thrown;
       }
+
+      resume = edge.nextOut;
     }
   } finally {
-    edgeStack.length = stackBase;
-    promoteStack.length = stackBase;
+    edgeStack.length = promoteStack.length = stackBase;
   }
 }

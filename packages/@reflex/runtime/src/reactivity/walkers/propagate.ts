@@ -3,10 +3,11 @@ import { devAssertPropagateAlive } from "../dev";
 import { getDefaultContext } from "../context";
 import { type ReactiveEdge, ReactiveNodeState } from "../shape";
 import { propagateBranch } from "./propagate.branch";
+import { NON_IMMEDIATE } from "./propagate.constants";
 
 export function propagate(
   startEdge: ReactiveEdge,
-  promoteImmediate: number = 0,
+  promoteImmediate: number = NON_IMMEDIATE,
   context: ExecutionContext = getDefaultContext(),
 ): void {
   if ((startEdge.from.state & ReactiveNodeState.Disposed) !== 0) {
