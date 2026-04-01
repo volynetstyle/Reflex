@@ -11,7 +11,7 @@ import {
 } from "../reactivity/shape";
 import { disposeNode } from "../reactivity/shape/methods/connect";
 import { executeNodeComputation } from "../reactivity/engine/execute";
-import { shouldRecompute } from "../reactivity/walkers/shouldRecompute";
+import { shouldRecompute } from "../reactivity";
 import { getDefaultContext } from "../reactivity/context";
 
 export function runWatcher(

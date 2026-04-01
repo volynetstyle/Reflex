@@ -36,6 +36,6 @@ export function effect(fn: EffectFn): Destructor {
   runWatcher(node, context);
 
   const dispose = () => disposeWatcher(node);
-  context.registerEffectCleanup(dispose);
+  context.registerWatcherCleanup(dispose);
   return dispose;
 }

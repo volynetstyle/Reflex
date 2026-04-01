@@ -8,6 +8,22 @@ export interface EngineHooks {
 
 export type CleanupRegistrar = (cleanup: () => void) => void;
 
+type OnEffectInvalidatedHook = EngineHooks["onEffectInvalidated"];
+type OnReactiveSettledHook = EngineHooks["onReactiveSettled"];
+
+const EFFECT_INVALIDATED_HOOK = 1;
+const REACTIVE_SETTLED_HOOK = 1 << 1;
+
+function normalizeOwnHook<T extends keyof EngineHooks>(
+  hooks: EngineHooks,
+  key: T,
+): EngineHooks[T] | undefined {
+  if (!Object.hasOwn(hooks, key)) return undefined;
+
+  const hook = hooks[key];
+  return typeof hook === "function" ? hook : undefined;
+}
+
 /**
  * ExecutionContext управляет состоянием вычисления и уведомлениями host'у.
  * 
@@ -26,30 +42,57 @@ export class ExecutionContext {
   propagationDepth = 0;
   cleanupRegistrar: CleanupRegistrar | null = null;
   readonly hooks: EngineHooks;
+  onEffectInvalidatedHook: OnEffectInvalidatedHook = undefined;
+  onReactiveSettledHook: OnReactiveSettledHook = undefined;
+  private hookMask = 0;
 
   constructor(hooks: EngineHooks = {}) {
     this.hooks = {};
+    // Keep the public hook snapshot and the hot-path caches synchronized.
+    Object.defineProperties(this.hooks, {
+      onEffectInvalidated: {
+        enumerable: true,
+        get: () => this.onEffectInvalidatedHook,
+        set: (hook: OnEffectInvalidatedHook) => {
+          this.setOnEffectInvalidatedHook(hook);
+        },
+      },
+      onReactiveSettled: {
+        enumerable: true,
+        get: () => this.onReactiveSettledHook,
+        set: (hook: OnReactiveSettledHook) => {
+          this.setOnReactiveSettledHook(hook);
+        },
+      },
+    });
     this.setHooks(hooks);
   }
 
   dispatchWatcherEvent(node: ReactiveNode): void {
+    const hook = this.onEffectInvalidatedHook;
+
     if (__DEV__) {
       recordDebugEvent(this, "watcher:invalidated", {
         node,
       });
+    } else if (hook === undefined) {
+      return;
     }
 
-    this.hooks.onEffectInvalidated?.(node);
+    hook?.(node);
   }
 
   maybeNotifySettled(): void {
-    if (this.propagationDepth === 0 && this.activeComputed === null) {
-      if (__DEV__) {
-        recordDebugEvent(this, "context:settled");
-      }
+    if (!__DEV__ && (this.hookMask & REACTIVE_SETTLED_HOOK) === 0) return;
+    if (this.propagationDepth !== 0 || this.activeComputed !== null) return;
 
-      this.hooks.onReactiveSettled?.();
+    const hook = this.onReactiveSettledHook;
+
+    if (__DEV__) {
+      recordDebugEvent(this, "context:settled");
     }
+
+    hook?.();
   }
 
   enterPropagation(): void {
@@ -87,38 +130,23 @@ export class ExecutionContext {
   }
 
   setHooks(hooks: EngineHooks = {}): void {
-    const onEffectInvalidated = Object.hasOwn(hooks, "onEffectInvalidated")
-      ? hooks.onEffectInvalidated
-      : undefined;
-    const onReactiveSettled = Object.hasOwn(hooks, "onReactiveSettled")
-      ? hooks.onReactiveSettled
-      : undefined;
+    const onEffectInvalidated = normalizeOwnHook(hooks, "onEffectInvalidated");
+    const onReactiveSettled = normalizeOwnHook(hooks, "onReactiveSettled");
 
-    if (typeof onEffectInvalidated === "function") {
-      this.hooks.onEffectInvalidated = onEffectInvalidated;
-    } else {
-      this.hooks.onEffectInvalidated = undefined;
-    }
-
-    if (typeof onReactiveSettled === "function") {
-      this.hooks.onReactiveSettled = onReactiveSettled;
-    } else {
-      this.hooks.onReactiveSettled = undefined;
-    }
+    this.hooks.onEffectInvalidated = onEffectInvalidated;
+    this.hooks.onReactiveSettled = onReactiveSettled;
 
     if (__DEV__) {
       recordDebugEvent(this, "context:hooks", {
         detail: {
-          hasOnEffectInvalidated:
-            typeof this.hooks.onEffectInvalidated === "function",
-          hasOnReactiveSettled:
-            typeof this.hooks.onReactiveSettled === "function",
+          hasOnEffectInvalidated: this.onEffectInvalidatedHook !== undefined,
+          hasOnReactiveSettled: this.onReactiveSettledHook !== undefined,
         },
       });
     }
   }
 
-  registerEffectCleanup(cleanup: () => void): void {
+  registerWatcherCleanup(cleanup: () => void): void {
     this.cleanupRegistrar?.(cleanup);
   }
 
@@ -134,6 +162,28 @@ export class ExecutionContext {
     } finally {
       this.cleanupRegistrar = previousRegistrar;
     }
+  }
+
+  private setOnEffectInvalidatedHook(hook: OnEffectInvalidatedHook): void {
+    this.onEffectInvalidatedHook =
+      typeof hook === "function" ? hook : undefined;
+    this.updateHookMask(
+      EFFECT_INVALIDATED_HOOK,
+      this.onEffectInvalidatedHook !== undefined,
+    );
+  }
+
+  private setOnReactiveSettledHook(hook: OnReactiveSettledHook): void {
+    this.onReactiveSettledHook =
+      typeof hook === "function" ? hook : undefined;
+    this.updateHookMask(
+      REACTIVE_SETTLED_HOOK,
+      this.onReactiveSettledHook !== undefined,
+    );
+  }
+
+  private updateHookMask(bit: number, enabled: boolean): void {
+    this.hookMask = enabled ? this.hookMask | bit : this.hookMask & ~bit;
   }
 }
 

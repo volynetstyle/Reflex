@@ -45,4 +45,21 @@ describe("Reactive runtime - security regressions", () => {
     expect(inherited).not.toHaveBeenCalled();
     expect(context.hooks.onReactiveSettled).toBe(undefined);
   });
+
+  it("keeps direct hook assignments synchronized with cached callbacks", () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const context = createExecutionContext();
+
+    context.hooks.onReactiveSettled = first;
+    context.maybeNotifySettled();
+    context.hooks.onReactiveSettled = second;
+    context.maybeNotifySettled();
+    context.hooks.onReactiveSettled = undefined;
+    context.maybeNotifySettled();
+
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(context.hooks.onReactiveSettled).toBe(undefined);
+  });
 });

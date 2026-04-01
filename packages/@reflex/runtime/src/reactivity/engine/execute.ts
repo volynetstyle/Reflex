@@ -1,7 +1,6 @@
 import type { ExecutionContext } from "../context";
 import { recordDebugEvent } from "../../debug";
-import type {
-  ReactiveNode} from "../shape";
+import type { ReactiveNode } from "../shape";
 import {
   ReactiveNodeState,
   clearNodeComputing,
@@ -11,6 +10,32 @@ import { cleanupStaleSources } from "./tracking";
 import { getDefaultContext } from "../context";
 
 type CommitComputation<T> = (result: unknown) => T;
+
+function prepareNodeExecution(
+  node: ReactiveNode,
+  context: ExecutionContext,
+): () => void {
+  node.depsTail = null;
+  node.state =
+    (node.state & ~ReactiveNodeState.Visited) | ReactiveNodeState.Tracking;
+  markNodeComputing(node);
+
+  const prevActive = context.activeComputed;
+  context.activeComputed = node;
+  let restored = false;
+
+  if (__DEV__) {
+    recordDebugEvent(context, "compute:start", {
+      node,
+    });
+  }
+
+  return () => {
+    if (restored) return;
+    restored = true;
+    context.activeComputed = prevActive;
+  };
+}
 
 export function executeNodeComputationRaw(
   node: ReactiveNode,
@@ -28,28 +53,12 @@ export function executeNodeComputationRaw(
   }
 
   const compute = node.compute!;
-  node.depsTail = null;
-  node.state =
-    (node.state & ~ReactiveNodeState.Visited) | ReactiveNodeState.Tracking;
-  markNodeComputing(node);
-
-  const prevActive = context.activeComputed;
-  context.activeComputed = node;
+  const restoreActive = prepareNodeExecution(node, context);
   let result: unknown;
 
-  if (__DEV__) {
-    recordDebugEvent(context, "compute:start", {
-      node,
-    });
-  }
-
   try {
-    try {
-      result = compute();
-    } finally {
-      context.activeComputed = prevActive;
-    }
-
+    result = compute();
+    restoreActive();
     cleanupStaleSources(node, context);
 
     if (__DEV__) {
@@ -63,6 +72,8 @@ export function executeNodeComputationRaw(
 
     return result;
   } catch (error) {
+    restoreActive();
+
     if (__DEV__) {
       recordDebugEvent(context, "compute:error", {
         node,
@@ -97,28 +108,12 @@ export function executeNodeComputation<T>(
   }
 
   const compute = node.compute!;
-  node.depsTail = null;
-  node.state =
-    (node.state & ~ReactiveNodeState.Visited) | ReactiveNodeState.Tracking;
-  markNodeComputing(node);
-
-  const prevActive = context.activeComputed;
-  context.activeComputed = node;
+  const restoreActive = prepareNodeExecution(node, context);
   let result: unknown;
 
-  if (__DEV__) {
-    recordDebugEvent(context, "compute:start", {
-      node,
-    });
-  }
-
   try {
-    try {
-      result = compute();
-    } finally {
-      context.activeComputed = prevActive;
-    }
-
+    result = compute();
+    restoreActive();
     cleanupStaleSources(node, context);
     const committed = commit(result);
 
@@ -133,6 +128,8 @@ export function executeNodeComputation<T>(
 
     return committed;
   } catch (error) {
+    restoreActive();
+
     if (__DEV__) {
       recordDebugEvent(context, "compute:error", {
         node,

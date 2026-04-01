@@ -284,7 +284,7 @@ export function resource<S, T, E = unknown>(
     }
 
     runWatcher(core.watcher, core.context);
-    core.context.registerEffectCleanup(() => {
+    core.context.registerWatcherCleanup(() => {
       core.dispose();
     });
 
@@ -296,7 +296,7 @@ export function resource<S, T, E = unknown>(
     };
   }
 
-  core.context.registerEffectCleanup(() => {
+  core.context.registerWatcherCleanup(() => {
     core.dispose();
   });
 

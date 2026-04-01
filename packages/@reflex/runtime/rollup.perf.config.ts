@@ -33,5 +33,6 @@ export default [
   createPerfDomain("tests/perf/tracking-connect.jit.mjs", "dist/tracking-connect.jit.js"),
   createPerfDomain("tests/perf/tracking-lifecycle.jit.mjs", "dist/tracking-lifecycle.jit.js"),
   createPerfDomain("tests/perf/tracking-policies.jit.mjs", "dist/tracking-policies.jit.js"),
+  createPerfDomain("tests/perf/propagate-stack-compare.jit.mjs", "dist/propagate-stack-compare.jit.js"),
   createPerfDomain("tests/perf/walkers.jit.mjs", "dist/walkers.jit.js"),
 ];
