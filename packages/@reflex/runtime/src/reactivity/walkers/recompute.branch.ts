@@ -17,8 +17,7 @@ import type { ExecutionContext } from "../context";
 import type { ReactiveNode, ReactiveEdge } from "../shape";
 import { ReactiveNodeState, DIRTY_STATE } from "../shape";
 import { shouldRecomputeBranching } from "./recompute.branching";
-import { refreshProducer, refreshRecompute } from "./recompute.refresh";
-
+import { refreshRecompute } from "./recompute.refresh";
 
 // Shared stack — reused across calls to avoid allocation.
 // stackBase tracks the logical bottom per call so recursive entries
@@ -61,17 +60,12 @@ export function shouldRecomputeLinear(
     const depState = dep.state;
 
     if ((depState & ReactiveNodeState.Changed) !== 0) {
-      changed =
-        (depState & ReactiveNodeState.Producer) !== 0
-          ? refreshProducer(dep, depState)
-          : refreshRecompute(link, dep, context);
-      break;
+      changed = refreshRecompute(link, dep, context);
+
+      if (changed || link.nextIn === null) break;
     }
 
-    if (
-      (depState & ReactiveNodeState.Producer) === 0 &&
-      (depState & DIRTY_STATE) !== 0
-    ) {
+    if ((depState & DIRTY_STATE) !== 0) {
       const deps = dep.firstIn;
       if (deps !== null) {
         if (deps.nextIn !== null) {
@@ -103,11 +97,11 @@ export function shouldRecomputeLinear(
       break;
     }
 
-    // dep is clean or Producer with no change flag: mark consumer clean.
+    // dep is clean: mark consumer clean too.
     consumer.state &= ~ReactiveNodeState.Invalid;
 
     if (stackTop === stackBase) {
-      // Stack empty: nothing changed anywhere.
+      // Stack empty: nothing changed anymore.
       return false;
     }
 
@@ -120,10 +114,7 @@ export function shouldRecomputeLinear(
     const parentLink = stack[--stackTop]!;
 
     if (changed) {
-      changed =
-        (consumer.state & ReactiveNodeState.Producer) !== 0
-          ? refreshProducer(consumer, consumer.state)
-          : refreshRecompute(parentLink, consumer, context);
+      changed = refreshRecompute(parentLink, consumer, context);
     } else {
       consumer.state &= ~ReactiveNodeState.Invalid;
     }

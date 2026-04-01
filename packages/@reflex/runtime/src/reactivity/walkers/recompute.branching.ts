@@ -16,7 +16,7 @@ import {
   ReactiveNodeState,
   DIRTY_STATE,
 } from "../shape";
-import { refreshProducer, refreshRecompute } from "./recompute.refresh";
+import { refreshRecompute } from "./recompute.refresh";
 
 export function shouldRecomputeBranching(
   link: ReactiveEdge,
@@ -35,15 +35,9 @@ export function shouldRecomputeBranching(
     if ((consumer.state & ReactiveNodeState.Changed) !== 0) {
       changed = true;
     } else if ((depState & ReactiveNodeState.Changed) !== 0) {
-      // Producer or already-confirmed computed: pick the cheap path.
-      changed =
-        (depState & ReactiveNodeState.Producer) !== 0
-          ? refreshProducer(dep, depState)
-          : refreshRecompute(link, dep, context);
-    } else if (
-      (depState & ReactiveNodeState.Producer) === 0 &&
-      (depState & DIRTY_STATE) !== 0
-    ) {
+      // Already-confirmed computed dependency: refresh and stop searching.
+      changed = refreshRecompute(link, dep, context);
+    } else if ((depState & DIRTY_STATE) !== 0) {
       const deps = dep.firstIn;
       if (deps !== null) {
         stack[stackTop++] = link;
@@ -67,10 +61,7 @@ export function shouldRecomputeBranching(
       const parentLink = stack[--stackTop]!;
 
       if (changed) {
-        changed =
-          (consumer.state & ReactiveNodeState.Producer) !== 0
-            ? refreshProducer(consumer, consumer.state)
-            : refreshRecompute(parentLink, consumer, context);
+        changed = refreshRecompute(parentLink, consumer, context);
       } else {
         consumer.state &= ~ReactiveNodeState.Invalid;
       }
