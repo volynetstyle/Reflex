@@ -1,7 +1,7 @@
-# `@volynetstyle/reflex`
+# `@volynets/reflex`
 
-[![npm version](https://img.shields.io/npm/v/%40volynetstyle%2Freflex?logo=npm)](https://www.npmjs.com/package/@volynetstyle/reflex)
-[![npm downloads](https://img.shields.io/npm/dm/%40volynetstyle%2Freflex?logo=npm)](https://www.npmjs.com/package/@volynetstyle/reflex)
+[![npm version](https://img.shields.io/npm/v/%40volynets%2Freflex?logo=npm)](https://www.npmjs.com/package/@volynets/reflex)
+[![npm downloads](https://img.shields.io/npm/dm/%40volynets%2Freflex?logo=npm)](https://www.npmjs.com/package/@volynets/reflex)
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/volynetstyle/Reflex/blob/main/packages/reflex/LICENSE)
 [![typed with TypeScript](https://img.shields.io/badge/typed-TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![runtime: Reflex](https://img.shields.io/badge/runtime-Reflex-111827)](https://github.com/volynetstyle/Reflex)
@@ -12,7 +12,7 @@
 
 Small signal-style reactivity on top of the Reflex runtime.
 
-`@volynetstyle/reflex` is the product-facing API for building reactive state, derived values, effects, and event-driven state without dropping down to the lower-level runtime primitives.
+`@volynets/reflex` is the product-facing API for building reactive state, derived values, effects, and event-driven state without dropping down to the lower-level runtime primitives.
 
 It gives you:
 
@@ -24,18 +24,17 @@ It gives you:
 Under the hood it is built on:
 
 - [`@reflex/runtime`](https://github.com/volynetstyle/Reflex/tree/main/packages/%40reflex/runtime) for reactive execution
-- [`@reflex/core`](https://github.com/volynetstyle/Reflex/tree/main/packages/%40reflex/core) for lower-level infrastructure
 
 ## Install
 
 ```bash
-npm install @volynetstyle/reflex
+npm install @volynets/reflex
 ```
 
 ## Quick Start
 
 ```ts
-import { computed, createRuntime, effect, signal } from "@volynetstyle/reflex";
+import { computed, createRuntime, effect, signal } from "@volynets/reflex";
 
 const rt = createRuntime();
 
@@ -83,7 +82,7 @@ The top-level primitives are not methods on `rt`, but they are still runtime-bac
 ### Signals and derived values
 
 ```ts
-import { computed, createRuntime, memo, signal } from "@volynetstyle/reflex";
+import { computed, createRuntime, memo, signal } from "@volynets/reflex";
 
 createRuntime();
 
@@ -106,7 +105,7 @@ console.log(warmed()); // 290
 ### Events and accumulated state
 
 ```ts
-import { computed, createRuntime, effect, hold, scan } from "@volynetstyle/reflex";
+import { computed, createRuntime, effect, hold, scan } from "@volynets/reflex";
 
 const rt = createRuntime();
 const updates = rt.event<number>();
@@ -141,7 +140,7 @@ import {
   map,
   merge,
   subscribeOnce,
-} from "@volynetstyle/reflex";
+} from "@volynets/reflex";
 
 const rt = createRuntime();
 const clicks = rt.event<number>();
