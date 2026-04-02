@@ -22,7 +22,7 @@ Runtime layer built on top of `@reflex/core`.
 - reactive execution helpers
 - scheduler-oriented runtime APIs
 
-### `@reflex/reactive`
+### `@volynets/reflex`
 
 Public application-facing facade.
 
@@ -30,26 +30,28 @@ Public application-facing facade.
 - `computed`
 - `memo`
 - `effect`
-- `flush`
-- `batchWrite`
 - `createRuntime`
+- `map` / `filter` / `merge`
+- `scan` / `hold` / `subscribeOnce`
 
 ## Recommended Entry Point
 
-For application code, start with `@reflex/reactive`.
+For application code, start with `@volynets/reflex`.
 
 ```ts
-import { signal, computed, effect, flush } from "@reflex/reactive";
+import { signal, computed, effect, createRuntime } from "@volynets/reflex";
 
-const count = signal(0);
-const double = computed(() => count.read() * 2);
+const rt = createRuntime();
+
+const [count, setCount] = signal(0);
+const double = computed(() => count() * 2);
 
 effect(() => {
-  console.log(count.read(), double());
+  console.log(count(), double());
 });
 
-count.write(5);
-flush();
+setCount(5);
+rt.flush();
 ```
 
 ## Architecture
@@ -58,7 +60,7 @@ The repository is currently organized around three active layers:
 
 1. `@reflex/core`
 2. `@reflex/runtime`
-3. `@reflex/reactive`
+3. `@volynets/reflex`
 
 There is also a DOM adapter in the repository as `reflex-dom`.
 

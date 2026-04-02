@@ -4,7 +4,6 @@ import type { ExecutionContext } from "../reactivity/context";
 import { compare as defaultComparator } from "./compare";
 import { devAssertWriteAlive, devRecordWriteProducer } from "../reactivity/dev";
 import {
-  DIRTY_STATE,
   IMMEDIATE,
   isDisposedNode,
   propagate,
@@ -90,8 +89,6 @@ export function writeProducer<T>(
 
   // Update the payload to the new value
   node.payload = value;
-  // Clear any stale dirty bits from before (node is now clean with new value)
-  node.state &= ~DIRTY_STATE;
 
   // Get the first subscriber edge (if any)
   const firstSubscriberEdge = node.firstOut;

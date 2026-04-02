@@ -58,6 +58,36 @@ describe("Reactive runtime - walker invariants", () => {
     );
   });
 
+  it("can mark the whole reachable graph Changed when every subscriber is direct", () => {
+    const source = createNode(ReactiveNodeState.Producer);
+    const left = createNode(ReactiveNodeState.Consumer);
+    const right = createNode(ReactiveNodeState.Consumer);
+    const watcher = createNode(ReactiveNodeState.Watcher);
+    const invalidated: ReactiveNode[] = [];
+    const context = createTestContext({
+      onEffectInvalidated(node) {
+        invalidated.push(node);
+      },
+    });
+
+    linkEdge(source, left);
+    linkEdge(source, right);
+    linkEdge(source, watcher);
+
+    propagate(source.firstOut!, IMMEDIATE, context);
+
+    expect(left.state).toBe(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Changed,
+    );
+    expect(right.state).toBe(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Changed,
+    );
+    expect(watcher.state).toBe(
+      ReactiveNodeState.Watcher | ReactiveNodeState.Changed,
+    );
+    expect(invalidated).toEqual([watcher]);
+  });
+
   it("propagate skips disposed subtrees without aborting sibling traversal", () => {
     const source = createNode(ReactiveNodeState.Producer);
     const disposed = createNode(
@@ -101,6 +131,26 @@ describe("Reactive runtime - walker invariants", () => {
     );
     expect(sibling.state).toBe(
       ReactiveNodeState.Consumer | ReactiveNodeState.Changed,
+    );
+  });
+
+  it("keeps transitive slow-path subscribers Invalid when only Visited is set", () => {
+    const source = createNode(ReactiveNodeState.Producer);
+    const middle = createNode(ReactiveNodeState.Consumer);
+    const leaf = createNode(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Visited,
+    );
+
+    linkEdge(source, middle);
+    linkEdge(middle, leaf);
+
+    propagate(source.firstOut!, IMMEDIATE, createTestContext());
+
+    expect(middle.state).toBe(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Changed,
+    );
+    expect(leaf.state).toBe(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Invalid,
     );
   });
 

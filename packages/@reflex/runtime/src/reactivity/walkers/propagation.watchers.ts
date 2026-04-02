@@ -1,6 +1,7 @@
 import { recordDebugEvent } from "../../debug";
 import type { ExecutionContext } from "../context";
 import type { ReactiveEdge, ReactiveNode } from "../shape";
+import { IMMEDIATE } from "./propagate.constants";
 
 // ─── recordPropagation ────────────────────────────────────────────────────────
 //
@@ -10,11 +11,11 @@ import type { ReactiveEdge, ReactiveNode } from "../shape";
 export function recordPropagation(
   edge: ReactiveEdge,
   nextState: number,
-  promote: number,
+  promoteBit: number,
   context: ExecutionContext,
 ): void {
   recordDebugEvent(context, "propagate", {
-    detail: { immediate: promote !== 0, nextState },
+    detail: { immediate: promoteBit === IMMEDIATE, nextState },
     source: edge.from,
     target: edge.to,
   });

@@ -24,15 +24,12 @@ export function isTrackedPrefixEdge(
 export function getSlowInvalidatedSubscriberState(
   edge: ReactiveEdge,
   state: number,
-  promoteImmediate: number,
+  promoteBit: number,
 ): number {
   if ((state & (DIRTY_STATE | ReactiveNodeState.Disposed)) !== 0) return 0;
 
   if ((state & ReactiveNodeState.Tracking) === 0) {
-    return (
-      (state & ~ReactiveNodeState.Visited) |
-      (promoteImmediate ? ReactiveNodeState.Changed : ReactiveNodeState.Invalid)
-    );
+    return (state & ~ReactiveNodeState.Visited) | promoteBit;
   }
 
   return isTrackedPrefixEdge(edge, edge.to.depsTail)
