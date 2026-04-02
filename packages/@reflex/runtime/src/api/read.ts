@@ -30,8 +30,8 @@ import { getDefaultContext } from "../reactivity/context";
  *   If no computation is active, the read is not tracked.
  *
  * @property {2} eager - Stabilize immediately without dependency registration.
- *   The node is synchronized by reading it in an untracked context. Useful
- *   for force-refreshing a value without creating a dependency relationship.
+ *   The node is synchronized without the final dependency `trackRead()` step.
+ *   Useful for force-refreshing a value without creating a dependency relationship.
  */
 export enum ConsumerReadMode {
   lazy = 1 << 0,
@@ -171,8 +171,8 @@ function stabilizeConsumer<T>(
  * Two modes are available:
  * - **Lazy** (default): Stabilization happens in the current context, preserving
  *   dependency tracking. Use when the computed value is a real dependency.
- * - **Eager**: Stabilization happens in an untracked context. Use for probing
- *   the value without creating a dependency edge.
+ * - **Eager**: Stabilization happens without the final dependency registration.
+ *   Use for probing the value without creating a dependency edge.
  *
  * @template T - The type of value stored in the node
  *
@@ -204,39 +204,32 @@ export function readConsumer<T>(
   mode: ConsumerReadMode = ConsumerReadMode.lazy,
   context: ExecutionContext = getDefaultContext(),
 ): T {
+  const value = stabilizeConsumer(node, context);
+
   if (mode === ConsumerReadMode.eager) {
-    const previous = context.activeComputed;
-    context.activeComputed = null;
-
-    let value: T;
-    try {
-      // Eager mode: stabilize without registering dependency
-      value = stabilizeConsumer(node, context);
-    } finally {
-      context.activeComputed = previous;
-    }
-
-    devRecordReadConsumer(node, "eager", value, context);
-
+    if (__DEV__) devRecordReadConsumer(node, "eager", value, context);
     return value;
   }
 
-  // Lazy mode (default): stabilize in current context, then register dependency
-  const value = stabilizeConsumer(node, context);
   if (isDisposedNode(node)) {
     return value;
   }
-  // Register this read as a dependency if there's an active computation
-  trackRead(node, context);
 
-  devRecordReadConsumer(
-    node,
-    "lazy",
-    value,
-    context,
-    context.activeComputed ?? undefined,
-  );
+  const activeComputed = context.activeComputed;
 
+  if (activeComputed !== null) {
+    trackRead(node, context);
+  }
+
+  if (__DEV__) {
+    devRecordReadConsumer(
+      node,
+      "lazy",
+      value,
+      context,
+      activeComputed ?? undefined,
+    );
+  }
   return value;
 }
 

@@ -128,3 +128,4 @@ export function shouldRecomputeLinear(
   stack.length = stackBase;
   return changed;
 }
+

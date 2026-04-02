@@ -4,6 +4,7 @@ import type { ReactiveNode } from "../shape";
 import {
   ReactiveNodeState,
   clearNodeComputing,
+  isDisposedNode,
   markNodeComputing,
 } from "../shape";
 import { cleanupStaleSources } from "./tracking";
@@ -96,6 +97,8 @@ export function executeNodeComputation<T>(
   commit: CommitComputation<T>,
   context: ExecutionContext = getDefaultContext(),
 ): T {
+  if (isDisposedNode(node)) return undefined as T;
+
   if (__DEV__) {
     if (!node.compute) {
       throw new Error(
