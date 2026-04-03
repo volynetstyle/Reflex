@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type {
   ForRenderable,
+  PortalRenderable,
   ShowRenderable,
   SwitchRenderable,
 } from "../operators";
@@ -18,6 +19,7 @@ import { mountComponent } from "./component";
 import { identity, mountReactiveSlot } from "./reactive-slot";
 import { mountElement } from "./element";
 import { mountFor } from "./for";
+import { mountPortal } from "./portal";
 import { mountShow } from "./show";
 import { mountSwitch } from "./switch";
 
@@ -91,6 +93,12 @@ export function appendRenderableNodes(
       case RenderableKind.For:
         parent.appendChild(
           mountFor(renderer, current as ForRenderable<any>, ns),
+        );
+        continue;
+
+      case RenderableKind.Portal:
+        parent.appendChild(
+          mountPortal(renderer, current as PortalRenderable),
         );
         continue;
 

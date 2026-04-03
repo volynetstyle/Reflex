@@ -1,6 +1,6 @@
 /** @jsxImportSource ../src */
 
-import { For, Show } from "../src";
+import { For, Portal, Show } from "../src";
 // @ts-expect-error reflex-dom should not re-export framework context api
 import { createContext } from "../src";
 // @ts-expect-error reflex-dom should not re-export framework hooks
@@ -107,6 +107,12 @@ const styleSheet = {} as CSSStyleSheet;
 <For each={[{ id: "a", label: "A" }]} by={(item) => item.id}>
   {(item, index) => <li data-index={index}>{item.label}</li>}
 </For>;
+
+const portalTarget = document.createElement("div");
+
+<Portal to={portalTarget}>
+  <span>inside portal</span>
+</Portal>;
 
 const wrongRef = { current: null as HTMLDivElement | null };
 

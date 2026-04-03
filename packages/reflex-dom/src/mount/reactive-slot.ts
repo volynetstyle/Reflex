@@ -7,7 +7,7 @@ import {
 } from "reflex-framework/ownership/reflex";
 import type { DOMRenderer } from "../runtime";
 import type { ContentSlot } from "../structure/content-slot";
-import { createContentSlot } from "../structure/content-slot";
+import { adoptContentSlot, createContentSlot } from "../structure/content-slot";
 import { appendRenderableNodes } from "./append";
 
 function identity<T>(value: T): T {
@@ -27,6 +27,24 @@ export function createMountedSlot(
       });
     },
     value,
+  );
+}
+
+export function createHydratedSlot(
+  renderer: DOMRenderer,
+  start: Comment,
+  end: Comment,
+  ns: Namespace,
+): ContentSlot {
+  return adoptContentSlot(
+    document,
+    (parent, scope, nextValue) => {
+      runInOwnershipScope(renderer.owner, scope, () => {
+        appendRenderableNodes(renderer, parent, nextValue, ns);
+      });
+    },
+    start,
+    end,
   );
 }
 
@@ -51,6 +69,29 @@ export function mountReactiveSlot<T>(
   });
 
   return slot.fragment;
+}
+
+export function hydrateReactiveSlot<T>(
+  renderer: DOMRenderer,
+  readValue: () => T,
+  resolveValue: (value: T) => unknown,
+  start: Comment,
+  end: Comment,
+  ns: Namespace,
+): void {
+  const slot = createHydratedSlot(renderer, start, end, ns);
+
+  useEffect(renderer.owner, () => {
+    const nextValue = readValue();
+
+    onEffectStart(() => {
+      slot.update(resolveValue(nextValue));
+    });
+  });
+
+  registerCleanup(renderer.owner, () => {
+    slot.destroy();
+  });
 }
 
 export { identity };

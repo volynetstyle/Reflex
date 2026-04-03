@@ -22,6 +22,8 @@ export interface ContentSlot {
   destroy(): void;
 }
 
+const NO_INITIAL_VALUE = Symbol("no-initial-value");
+
 function isEmptyValue(value: unknown): boolean {
   return value == null || typeof value === "boolean";
 }
@@ -40,17 +42,17 @@ function isSingleNodeValue(value: unknown): value is Node {
   );
 }
 
-export function createContentSlot(
+function createSlotController(
   doc: Document,
   mountUnknown: MountUnknown,
-  initialValue: unknown,
+  start: Comment,
+  end: Comment,
+  initialState: ContentState,
+  initialValue: unknown | typeof NO_INITIAL_VALUE,
+  fragment: DocumentFragment,
 ): ContentSlot {
-  const fragment = doc.createDocumentFragment();
-  const start = doc.createComment("");
-  const end = doc.createComment("");
-
   let destroyed = false;
-  let state: ContentState = { kind: "empty" };
+  let state: ContentState = initialState;
 
   function unmountCurrent(): void {
     if (state.kind === "fallback") {
@@ -101,9 +103,9 @@ export function createContentSlot(
     };
   }
 
-  fragment.appendChild(start);
-  fragment.appendChild(end);
-  mount(fragment, initialValue);
+  if (initialValue !== NO_INITIAL_VALUE) {
+    mount(fragment, initialValue);
+  }
 
   return {
     fragment,
@@ -169,4 +171,50 @@ export function createContentSlot(
       destroyed = true;
     },
   };
+}
+
+export function createContentSlot(
+  doc: Document,
+  mountUnknown: MountUnknown,
+  initialValue: unknown,
+): ContentSlot {
+  const fragment = doc.createDocumentFragment();
+  const start = doc.createComment("");
+  const end = doc.createComment("");
+
+  fragment.appendChild(start);
+  fragment.appendChild(end);
+
+  return createSlotController(
+    doc,
+    mountUnknown,
+    start,
+    end,
+    { kind: "empty" },
+    initialValue,
+    fragment,
+  );
+}
+
+export function adoptContentSlot(
+  doc: Document,
+  mountUnknown: MountUnknown,
+  start: Comment,
+  end: Comment,
+): ContentSlot {
+  const fragment = doc.createDocumentFragment();
+  const initialState: ContentState =
+    start.nextSibling === end
+      ? { kind: "empty" }
+      : { kind: "fallback", scope: createScope() };
+
+  return createSlotController(
+    doc,
+    mountUnknown,
+    start,
+    end,
+    initialState,
+    NO_INITIAL_VALUE,
+    fragment,
+  );
 }

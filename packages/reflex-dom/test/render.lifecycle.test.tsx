@@ -213,4 +213,22 @@ describe("render lifecycle and reactive bindings", () => {
     setSource("b");
     expect(log).toEqual(["run:a", "cleanup:a"]);
   });
+
+  it("preserves foreign container DOM when rendering and disposing a managed root", () => {
+    const container = document.createElement("div");
+    const preservedHeader = document.createElement("header");
+    preservedHeader.textContent = "keep me";
+    container.appendChild(preservedHeader);
+
+    const dispose = render(<main>managed</main>, container);
+
+    expect(container.querySelector("header")).toBe(preservedHeader);
+    expect(container.querySelector("main")?.textContent).toBe("managed");
+
+    dispose();
+
+    expect(container.querySelector("header")).toBe(preservedHeader);
+    expect(container.querySelector("main")).toBeNull();
+    expect(container.textContent).toBe("keep me");
+  });
 });

@@ -1,41 +1,67 @@
 import type { Cleanup, JSXRenderable } from "./types";
 import type { DOMRenderer } from "./runtime";
-import { createScope, disposeScope } from "reflex-framework/ownership";
-import { runInOwnershipScope } from "reflex-framework/ownership/reflex";
-import { appendRenderableNodes } from "./mount/append";
+import {
+  createRenderRangeAnchors,
+  mountRenderRange,
+  type MountedRenderRange,
+  type RenderRangeAnchors,
+} from "./structure/render-range";
+
+function resolveContainerRangeAnchors(
+  renderer: DOMRenderer,
+  container: ParentNode & Node,
+): RenderRangeAnchors {
+  const previousRoot = renderer.mountedRoots.get(container);
+
+  if (previousRoot === undefined) {
+    return createRenderRangeAnchors(container);
+  }
+
+  previousRoot.clear();
+  return previousRoot;
+}
+
+function mountRenderableIntoContainerRange(
+  renderer: DOMRenderer,
+  renderable: JSXRenderable,
+  container: ParentNode & Node,
+): MountedRenderRange {
+  const rangeAnchors = resolveContainerRangeAnchors(renderer, container);
+  const rootMount = mountRenderRange(
+    renderer,
+    container,
+    renderable,
+    "html",
+    rangeAnchors,
+  );
+
+  renderer.mountedRoots.set(container, rootMount);
+  return rootMount;
+}
 
 export function renderWithRenderer(
   renderer: DOMRenderer,
-  input: JSXRenderable,
+  renderable: JSXRenderable,
   container: ParentNode & Node,
 ): Cleanup {
   renderer.ensureRuntime();
+  const rootMount = mountRenderableIntoContainerRange(
+    renderer,
+    renderable,
+    container,
+  );
 
-  const previousScope = renderer.mountedScopes.get(container);
-  if (previousScope !== undefined) {
-    disposeScope(previousScope);
-    renderer.mountedScopes.delete(container);
-  }
+  const disposeRenderMount = (() => {
+    rootMount.clear();
 
-  const scope = createScope();
-
-  container.replaceChildren();
-
-  runInOwnershipScope(renderer.owner, scope, () => {
-    appendRenderableNodes(renderer, container, input, "html");
-  });
-
-  renderer.mountedScopes.set(container, scope);
-
-  const dispose = (() => {
-    disposeScope(scope);
-
-    if (renderer.mountedScopes.get(container) === scope) {
-      renderer.mountedScopes.delete(container);
-      container.replaceChildren();
+    if (renderer.mountedRoots.get(container) !== rootMount) {
+      return;
     }
+
+    renderer.mountedRoots.delete(container);
+    rootMount.destroy();
   }) as Cleanup;
 
-  dispose.dispose = dispose;
-  return dispose;
+  disposeRenderMount.dispose = disposeRenderMount;
+  return disposeRenderMount;
 }

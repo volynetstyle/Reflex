@@ -7,7 +7,7 @@ import { registerCleanup } from "reflex-framework/ownership";
 import type { DOMRenderer } from "../runtime";
 import type { Ref } from "../types";
 
-type BindingPhase = "initial" | "deferred";
+type ElementBindingPhase = "initial" | "deferred";
 
 function isPlatformManagedProp(name: string): boolean {
   return (
@@ -19,22 +19,26 @@ function isPlatformManagedProp(name: string): boolean {
   );
 }
 
-function shouldDeferElementProp(element: Element, name: string): boolean {
+function shouldBindPropAfterChildren(element: Element, name: string): boolean {
   return (
     element instanceof HTMLSelectElement &&
     (name === "value" || name === "selectedIndex")
   );
 }
 
-export function bindElementProp(
+function isSkippedElementProp(name: string, value: unknown): boolean {
+  return name === "children" || name === "key" || value === undefined;
+}
+
+export function bindElementProperty(
   renderer: DOMRenderer,
   element: Element,
   name: string,
   value: unknown,
   namespace: Namespace,
-  phase: BindingPhase = "initial",
+  bindingPhase: ElementBindingPhase = "initial",
 ): void {
-  if (name === "children" || name === "key" || value === undefined) {
+  if (isSkippedElementProp(name, value)) {
     return;
   }
 
@@ -42,8 +46,8 @@ export function bindElementProp(
     return;
   }
 
-  const deferred = shouldDeferElementProp(element, name);
-  if ((phase === "deferred") !== deferred) {
+  const bindAfterChildren = shouldBindPropAfterChildren(element, name);
+  if ((bindingPhase === "deferred") !== bindAfterChildren) {
     return;
   }
 
@@ -80,9 +84,16 @@ export function bindElementProps(
   element: Element,
   props: Record<string, unknown>,
   namespace: Namespace,
-  phase: BindingPhase = "initial",
+  bindingPhase: ElementBindingPhase = "initial",
 ): void {
   for (const name in props) {
-    bindElementProp(renderer, element, name, props[name], namespace, phase);
+    bindElementProperty(
+      renderer,
+      element,
+      name,
+      props[name],
+      namespace,
+      bindingPhase,
+    );
   }
 }

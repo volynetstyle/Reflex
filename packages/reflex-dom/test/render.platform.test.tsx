@@ -22,6 +22,25 @@ describe("render platform integrations", () => {
     expect(root.querySelectorAll("span")).toHaveLength(1);
   });
 
+  it("preserves foreign ShadowRoot nodes when a managed render is disposed", () => {
+    const host = document.createElement("div");
+    const root = host.attachShadow({ mode: "open" });
+    const preservedStyle = document.createElement("style");
+    preservedStyle.textContent = ":host { display: block; }";
+    root.appendChild(preservedStyle);
+
+    const dispose = render(<span>managed</span>, root);
+
+    expect(root.querySelector("style")).toBe(preservedStyle);
+    expect(root.querySelector("span")?.textContent).toBe("managed");
+
+    dispose();
+
+    expect(root.querySelector("style")).toBe(preservedStyle);
+    expect(root.querySelector("span")).toBeNull();
+    expect(root.textContent).toContain("display: block");
+  });
+
   it("supports custom elements with attached shadow content and adopted stylesheets", () => {
     if (!("adoptedStyleSheets" in ShadowRoot.prototype)) {
       Object.defineProperty(ShadowRoot.prototype, "adoptedStyleSheets", {

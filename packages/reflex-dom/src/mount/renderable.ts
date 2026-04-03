@@ -2,6 +2,7 @@ import { COMPONENT_RENDERABLE } from "../operators/component";
 import { ELEMENT_RENDERABLE } from "../operators/element";
 import {
   FOR_RENDERABLE,
+  PORTAL_RENDERABLE,
   SHOW_RENDERABLE,
   SWITCH_RENDERABLE,
 } from "../operators";
@@ -17,7 +18,8 @@ export const enum RenderableKind {
   Show = 6,
   Switch = 7,
   For = 8,
-  Text = 9,
+  Portal = 9,
+  Text = 10,
 }
 
 export type Renderable = JSXRenderable | unknown;
@@ -39,7 +41,7 @@ export function isTextValue(
 }
 
 export function isNodeValue(value: unknown): value is Node {
-  return value instanceof Node;
+  return typeof Node !== "undefined" && value instanceof Node;
 }
 
 export function isArrayValue(value: unknown): value is Iterable<unknown> {
@@ -89,6 +91,8 @@ export function classifyRenderable(value: unknown): RenderableKind {
       return RenderableKind.Switch;
     case FOR_RENDERABLE:
       return RenderableKind.For;
+    case PORTAL_RENDERABLE:
+      return RenderableKind.Portal;
     default:
       return RenderableKind.Text;
   }

@@ -1,27 +1,27 @@
-import type { Scope } from "reflex-framework/ownership";
+import type { MountedRenderRange } from "../structure/render-range";
 
-const mountedScopeKey = Symbol("reflex-dom.mounted-scope");
+const mountedRootKey = Symbol("reflex-dom.mounted-root");
 
 type MountedContainer = (ParentNode & Node) & {
-  [mountedScopeKey]?: Scope | undefined;
+  [mountedRootKey]?: MountedRenderRange | undefined;
 };
 
-export interface MountedScopeStore {
-  get(container: MountedContainer): Scope | undefined;
-  set(container: MountedContainer, scope: Scope): void;
+export interface MountedRootStore {
+  get(container: MountedContainer): MountedRenderRange | undefined;
+  set(container: MountedContainer, root: MountedRenderRange): void;
   delete(container: MountedContainer): void;
 }
 
-export function createMountedScopeStore(): MountedScopeStore {
+export function createMountedRootStore(): MountedRootStore {
   return {
     get(container) {
-      return container[mountedScopeKey];
+      return container[mountedRootKey];
     },
-    set(container, scope) {
-      container[mountedScopeKey] = scope;
+    set(container, root) {
+      container[mountedRootKey] = root;
     },
     delete(container) {
-      container[mountedScopeKey] = undefined;
+      container[mountedRootKey] = undefined;
     },
   };
 }

@@ -13,17 +13,30 @@ import {
   type Namespace,
 } from "../host/namespace";
 import {
-  createScope,
-  disposeScope,
   registerCleanup,
 } from "reflex-framework/ownership";
 import {
   onEffectStart,
-  runInOwnershipScope,
   useEffect,
 } from "reflex-framework/ownership/reflex";
+import { mountRenderRange } from "../structure/render-range";
 import { bindElementProps } from "./element-binder";
 import { appendRenderableNodes } from "./append";
+
+function createElementInNamespace<Tag extends ElementTag>(
+  tag: Tag,
+  namespace: Namespace,
+): ElementInstance<Tag> {
+  const ownerDocument = document;
+
+  return (
+    namespace === "svg"
+      ? ownerDocument.createElementNS(SVG_NS, tag)
+      : namespace === "mathml"
+        ? ownerDocument.createElementNS(MATHML_NS, tag)
+      : ownerDocument.createElement(tag)
+  ) as unknown as ElementInstance<Tag>;
+}
 
 function resolveShadowRootConfig(
   props: Record<string, unknown>,
@@ -50,15 +63,28 @@ function resolveShadowRootConfig(
   return null;
 }
 
-function applyAdoptedStyleSheets(
-  root: ShadowRoot,
+function resolveElementShadowRoot(
+  hostElement: Element,
+  props: Record<string, unknown>,
+): ShadowRoot | null {
+  const shadowRootConfig = resolveShadowRootConfig(props);
+
+  if (shadowRootConfig === null || !(hostElement instanceof HTMLElement)) {
+    return null;
+  }
+
+  return hostElement.shadowRoot ?? hostElement.attachShadow(shadowRootConfig);
+}
+
+function applyShadowRootAdoptedStyleSheets(
+  shadowRoot: ShadowRoot,
   value: unknown,
 ): unknown {
-  if (!("adoptedStyleSheets" in root)) {
+  if (!("adoptedStyleSheets" in shadowRoot)) {
     return value;
   }
 
-  (root as ShadowRoot & { adoptedStyleSheets: CSSStyleSheet[] })
+  (shadowRoot as ShadowRoot & { adoptedStyleSheets: CSSStyleSheet[] })
     .adoptedStyleSheets =
       value == null
         ? []
@@ -68,100 +94,152 @@ function applyAdoptedStyleSheets(
   return value;
 }
 
+function shouldMountLightDomChildren(
+  tag: ElementTag,
+  props: Record<string, unknown>,
+): boolean {
+  return !(
+    tag === "textarea" &&
+    ("value" in props || "defaultValue" in props)
+  );
+}
+
+function bindShadowRootReference(
+  renderer: DOMRenderer,
+  shadowRoot: ShadowRoot,
+  shadowRootRef: unknown,
+): void {
+  registerCleanup(
+    renderer.owner,
+    attachRef(shadowRoot, shadowRootRef as Ref<ShadowRoot> | undefined),
+  );
+}
+
+function mountShadowRootChildren(
+  renderer: DOMRenderer,
+  shadowRoot: ShadowRoot,
+  shadowChildren: unknown,
+): void {
+  const shadowRenderRange = mountRenderRange(
+    renderer,
+    shadowRoot,
+    shadowChildren,
+    "html",
+  );
+
+  registerCleanup(renderer.owner, () => {
+    shadowRenderRange.destroy();
+  });
+}
+
+function bindReactiveAdoptedStyleSheets(
+  renderer: DOMRenderer,
+  shadowRoot: ShadowRoot,
+  getNextStyleSheets: () => unknown,
+): void {
+  applyShadowRootAdoptedStyleSheets(shadowRoot, getNextStyleSheets());
+
+  useEffect(renderer.owner, () => {
+    const nextStyleSheets = getNextStyleSheets();
+
+    onEffectStart(() => {
+      applyShadowRootAdoptedStyleSheets(shadowRoot, nextStyleSheets);
+    });
+  });
+}
+
+function bindShadowRootAdoptedStyleSheets(
+  renderer: DOMRenderer,
+  shadowRoot: ShadowRoot,
+  adoptedStyleSheets: unknown,
+): void {
+  if (typeof adoptedStyleSheets === "function") {
+    bindReactiveAdoptedStyleSheets(
+      renderer,
+      shadowRoot,
+      adoptedStyleSheets as () => unknown,
+    );
+    return;
+  }
+
+  applyShadowRootAdoptedStyleSheets(shadowRoot, adoptedStyleSheets);
+}
+
+function bindElementInternalsReference(
+  renderer: DOMRenderer,
+  hostElement: Element,
+  elementInternalsRef: unknown,
+): void {
+  if (
+    !(hostElement instanceof HTMLElement) ||
+    typeof hostElement.attachInternals !== "function"
+  ) {
+    return;
+  }
+
+  try {
+    const elementInternals = hostElement.attachInternals();
+    registerCleanup(
+      renderer.owner,
+      attachRef(
+        elementInternals,
+        elementInternalsRef as Ref<ElementInternals> | undefined,
+      ),
+    );
+  } catch {
+    // Only autonomous custom elements can attach internals.
+  }
+}
+
 export function mountElement<Tag extends ElementTag>(
   renderer: DOMRenderer,
   tag: Tag,
   props: ElementProps<Tag>,
   parentNamespace: Namespace,
 ): ElementInstance<Tag> {
-  const ns = resolveNamespace(tag, parentNamespace);
-  const doc = document;
-  const el = (
-    ns === "svg"
-      ? doc.createElementNS(SVG_NS, tag)
-      : ns === "mathml"
-        ? doc.createElementNS(MATHML_NS, tag)
-      : doc.createElement(tag)
-  ) as unknown as ElementInstance<Tag>;
-  const rawProps = props as Record<string, unknown>;
-  const shadowConfig = resolveShadowRootConfig(rawProps);
-  const shadowRoot =
-    shadowConfig !== null && el instanceof HTMLElement
-      ? (el.shadowRoot ?? el.attachShadow(shadowConfig))
-      : null;
+  const elementNamespace = resolveNamespace(tag, parentNamespace);
+  const element = createElementInNamespace(tag, elementNamespace);
+  const propsRecord = props as Record<string, unknown>;
+  const shadowRoot = resolveElementShadowRoot(element, propsRecord);
 
-  bindElementProps(renderer, el, rawProps, ns, "initial");
+  bindElementProps(renderer, element, propsRecord, elementNamespace, "initial");
 
-  const shouldMountLightChildren = !(
-    tag === "textarea" &&
-    ("value" in rawProps || "defaultValue" in rawProps)
-  );
-
-  if (shouldMountLightChildren) {
-    appendRenderableNodes(renderer, el, rawProps.children, ns);
+  if (shouldMountLightDomChildren(tag, propsRecord)) {
+    appendRenderableNodes(
+      renderer,
+      element,
+      propsRecord.children,
+      elementNamespace,
+    );
   }
 
-  bindElementProps(renderer, el, rawProps, ns, "deferred");
+  bindElementProps(renderer, element, propsRecord, elementNamespace, "deferred");
 
   if (shadowRoot !== null) {
-    if (rawProps.shadowRootRef !== undefined) {
-      registerCleanup(
-        renderer.owner,
-        attachRef(shadowRoot, rawProps.shadowRootRef as Ref<ShadowRoot> | undefined),
+    if (propsRecord.shadowRootRef !== undefined) {
+      bindShadowRootReference(renderer, shadowRoot, propsRecord.shadowRootRef);
+    }
+
+    if (propsRecord.shadowChildren !== undefined) {
+      mountShadowRootChildren(renderer, shadowRoot, propsRecord.shadowChildren);
+    }
+
+    if (propsRecord.shadowAdoptedStyleSheets !== undefined) {
+      bindShadowRootAdoptedStyleSheets(
+        renderer,
+        shadowRoot,
+        propsRecord.shadowAdoptedStyleSheets,
       );
-    }
-
-    if (rawProps.shadowChildren !== undefined) {
-      const shadowScope = createScope();
-
-      runInOwnershipScope(renderer.owner, shadowScope, () => {
-        appendRenderableNodes(renderer, shadowRoot, rawProps.shadowChildren, "html");
-      });
-
-      registerCleanup(renderer.owner, () => {
-        disposeScope(shadowScope);
-        shadowRoot.replaceChildren();
-      });
-    }
-
-    if (rawProps.shadowAdoptedStyleSheets !== undefined) {
-      if (typeof rawProps.shadowAdoptedStyleSheets === "function") {
-        applyAdoptedStyleSheets(
-          shadowRoot,
-          (rawProps.shadowAdoptedStyleSheets as () => unknown)(),
-        );
-
-        useEffect(renderer.owner, () => {
-          const nextValue = (rawProps.shadowAdoptedStyleSheets as () => unknown)();
-
-          onEffectStart(() => {
-            applyAdoptedStyleSheets(shadowRoot, nextValue);
-          });
-        });
-      } else {
-        applyAdoptedStyleSheets(shadowRoot, rawProps.shadowAdoptedStyleSheets);
-      }
     }
   }
 
-  if (
-    rawProps.elementInternals !== undefined &&
-    el instanceof HTMLElement &&
-    typeof el.attachInternals === "function"
-  ) {
-    try {
-      const internals = el.attachInternals();
-      registerCleanup(
-        renderer.owner,
-        attachRef(
-          internals,
-          rawProps.elementInternals as Ref<ElementInternals> | undefined,
-        ),
-      );
-    } catch {
-      // Only autonomous custom elements can attach internals.
-    }
+  if (propsRecord.elementInternals !== undefined) {
+    bindElementInternalsReference(
+      renderer,
+      element,
+      propsRecord.elementInternals,
+    );
   }
 
-  return el;
+  return element;
 }

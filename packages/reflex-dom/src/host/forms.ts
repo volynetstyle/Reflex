@@ -1,12 +1,15 @@
-type TextControlElement = HTMLInputElement | HTMLTextAreaElement;
+type TextEntryControl = HTMLInputElement | HTMLTextAreaElement;
 
-interface TextControlState {
+interface TextEntryControlState {
   composing: boolean;
   pendingValue: string | null;
 }
 
-const textControlStates = new WeakMap<TextControlElement, TextControlState>();
-const NON_TEXT_INPUT_TYPES: ReadonlySet<string> = new Set([
+const textEntryControlStates = new WeakMap<
+  TextEntryControl,
+  TextEntryControlState
+>();
+const NON_TEXTUAL_INPUT_TYPES: ReadonlySet<string> = new Set([
   "button",
   "checkbox",
   "color",
@@ -19,12 +22,14 @@ const NON_TEXT_INPUT_TYPES: ReadonlySet<string> = new Set([
   "submit",
 ] as const);
 
-function isTextInput(el: HTMLInputElement): boolean {
-  return !NON_TEXT_INPUT_TYPES.has(el.type);
+function isTextEntryInput(inputElement: HTMLInputElement): boolean {
+  return !NON_TEXTUAL_INPUT_TYPES.has(inputElement.type);
 }
 
-function getTextControlState(el: TextControlElement): TextControlState {
-  let state = textControlStates.get(el);
+function ensureTextEntryControlState(
+  controlElement: TextEntryControl,
+): TextEntryControlState {
+  let state = textEntryControlStates.get(controlElement);
 
   if (state !== undefined) {
     return state;
@@ -34,16 +39,19 @@ function getTextControlState(el: TextControlElement): TextControlState {
     composing: false,
     pendingValue: null,
   };
-  textControlStates.set(el, state);
+  textEntryControlStates.set(controlElement, state);
 
-  el.addEventListener("compositionstart", () => {
+  controlElement.addEventListener("compositionstart", () => {
     state!.composing = true;
   });
-  el.addEventListener("compositionend", () => {
+  controlElement.addEventListener("compositionend", () => {
     state!.composing = false;
 
     if (state!.pendingValue !== null) {
-      setTextControlValue(el, state!.pendingValue);
+      writeTextControlValuePreservingSelection(
+        controlElement,
+        state!.pendingValue,
+      );
       state!.pendingValue = null;
     }
   });
@@ -51,24 +59,26 @@ function getTextControlState(el: TextControlElement): TextControlState {
   return state;
 }
 
-function toTextValue(value: unknown): string {
+function coerceFormValueToString(value: unknown): string {
   return value == null ? "" : String(value);
 }
 
-interface SelectionSnapshot {
+interface TextSelectionSnapshot {
   start: number;
   end: number;
   direction: "forward" | "backward" | "none" | null;
 }
 
-function captureSelection(el: TextControlElement): SelectionSnapshot | null {
-  if (el.ownerDocument?.activeElement !== el) {
+function captureActiveTextSelection(
+  controlElement: TextEntryControl,
+): TextSelectionSnapshot | null {
+  if (controlElement.ownerDocument?.activeElement !== controlElement) {
     return null;
   }
 
   try {
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
+    const start = controlElement.selectionStart;
+    const end = controlElement.selectionEnd;
 
     if (typeof start !== "number" || typeof end !== "number") {
       return null;
@@ -77,92 +87,99 @@ function captureSelection(el: TextControlElement): SelectionSnapshot | null {
     return {
       start,
       end,
-      direction: el.selectionDirection,
+      direction: controlElement.selectionDirection,
     };
   } catch {
     return null;
   }
 }
 
-function restoreSelection(
-  el: TextControlElement,
-  snapshot: SelectionSnapshot | null,
+function restoreTextSelection(
+  controlElement: TextEntryControl,
+  selectionSnapshot: TextSelectionSnapshot | null,
 ): void {
-  if (snapshot === null) {
+  if (selectionSnapshot === null) {
     return;
   }
 
-  const max = el.value.length;
-  const start = Math.min(snapshot.start, max);
-  const end = Math.min(snapshot.end, max);
+  const maxTextLength = controlElement.value.length;
+  const start = Math.min(selectionSnapshot.start, maxTextLength);
+  const end = Math.min(selectionSnapshot.end, maxTextLength);
 
   try {
-    el.setSelectionRange(start, end, snapshot.direction ?? undefined);
+    controlElement.setSelectionRange(
+      start,
+      end,
+      selectionSnapshot.direction ?? undefined,
+    );
   } catch {
     // Some input types do not support restoring selection ranges.
   }
 }
 
-function setTextControlValue(el: TextControlElement, next: string): void {
-  if (el.value === next) {
+function writeTextControlValuePreservingSelection(
+  controlElement: TextEntryControl,
+  nextValue: string,
+): void {
+  if (controlElement.value === nextValue) {
     return;
   }
 
-  const selection = captureSelection(el);
-  el.value = next;
-  restoreSelection(el, selection);
+  const activeSelection = captureActiveTextSelection(controlElement);
+  controlElement.value = nextValue;
+  restoreTextSelection(controlElement, activeSelection);
 }
 
-function applyTextControlValue(
-  el: TextControlElement,
+function applyControlledTextValue(
+  controlElement: TextEntryControl,
   value: unknown,
 ): unknown {
-  const next = toTextValue(value);
-  const state = getTextControlState(el);
+  const nextValue = coerceFormValueToString(value);
+  const state = ensureTextEntryControlState(controlElement);
 
   if (state.composing) {
-    state.pendingValue = next;
+    state.pendingValue = nextValue;
     return value;
   }
 
   state.pendingValue = null;
-  setTextControlValue(el, next);
+  writeTextControlValuePreservingSelection(controlElement, nextValue);
   return value;
 }
 
-function applyTextControlDefaultValue(
-  el: TextControlElement,
+function applyDefaultTextValue(
+  controlElement: TextEntryControl,
   value: unknown,
 ): unknown {
-  el.defaultValue = toTextValue(value);
+  controlElement.defaultValue = coerceFormValueToString(value);
   return value;
 }
 
-function applyInputChecked(
-  el: HTMLInputElement,
+function applyControlledCheckedState(
+  inputElement: HTMLInputElement,
   value: unknown,
 ): unknown {
-  el.checked = value === true;
+  inputElement.checked = value === true;
   return value;
 }
 
-function applyInputDefaultChecked(
-  el: HTMLInputElement,
+function applyDefaultCheckedState(
+  inputElement: HTMLInputElement,
   value: unknown,
 ): unknown {
-  el.defaultChecked = value === true;
+  inputElement.defaultChecked = value === true;
   return value;
 }
 
-function applyInputIndeterminate(
-  el: HTMLInputElement,
+function applyIndeterminateState(
+  inputElement: HTMLInputElement,
   value: unknown,
 ): unknown {
-  el.indeterminate = value === true;
+  inputElement.indeterminate = value === true;
   return value;
 }
 
-function normalizeSelectValues(
+function normalizeSelectBoundValues(
   value: unknown,
   multiple: boolean,
 ): readonly string[] {
@@ -178,60 +195,79 @@ function normalizeSelectValues(
   return multiple ? [single] : [single];
 }
 
-function applySelectValue(
-  el: HTMLSelectElement,
+function applyMultipleSelectValue(
+  selectElement: HTMLSelectElement,
+  selectedValues: readonly string[],
+): void {
+  const selectedValueSet = new Set(selectedValues);
+
+  for (let optionIndex = 0; optionIndex < selectElement.options.length; optionIndex++) {
+    const optionElement = selectElement.options[optionIndex]!;
+    optionElement.selected = selectedValueSet.has(optionElement.value);
+  }
+}
+
+function applySingleSelectValue(
+  selectElement: HTMLSelectElement,
+  selectedValues: readonly string[],
+): void {
+  const nextValue = selectedValues[0] ?? "";
+
+  if (nextValue === "") {
+    selectElement.selectedIndex = -1;
+    return;
+  }
+
+  selectElement.value = nextValue;
+}
+
+function applyControlledSelectValue(
+  selectElement: HTMLSelectElement,
   value: unknown,
 ): unknown {
-  const values = normalizeSelectValues(value, el.multiple);
+  const selectedValues = normalizeSelectBoundValues(
+    value,
+    selectElement.multiple,
+  );
 
-  if (el.multiple) {
-    const selected = new Set(values);
-
-    for (let i = 0; i < el.options.length; i++) {
-      const option = el.options[i]!;
-      option.selected = selected.has(option.value);
-    }
-
+  if (selectElement.multiple) {
+    applyMultipleSelectValue(selectElement, selectedValues);
     return value;
   }
 
-  const next = values[0] ?? "";
-
-  if (next === "") {
-    el.selectedIndex = -1;
-    return value;
-  }
-
-  el.value = next;
+  applySingleSelectValue(selectElement, selectedValues);
   return value;
 }
 
-function applySelectSelectedIndex(
-  el: HTMLSelectElement,
+function applyControlledSelectedIndex(
+  selectElement: HTMLSelectElement,
   value: unknown,
 ): unknown {
-  el.selectedIndex =
+  selectElement.selectedIndex =
     value == null || value === false ? -1 : Number(value);
   return value;
 }
 
-function applyOptionSelected(
-  el: HTMLOptionElement,
+function applyControlledOptionSelectedState(
+  optionElement: HTMLOptionElement,
   value: unknown,
 ): unknown {
-  el.selected = value === true;
+  optionElement.selected = value === true;
   return value;
 }
 
-function applyOptionDefaultSelected(
-  el: HTMLOptionElement,
+function applyDefaultOptionSelectedState(
+  optionElement: HTMLOptionElement,
   value: unknown,
 ): unknown {
-  el.defaultSelected = value === true;
+  optionElement.defaultSelected = value === true;
   return value;
 }
 
-function isManagedInputProp(el: HTMLInputElement, name: string): boolean {
+function isManagedInputProperty(
+  inputElement: HTMLInputElement,
+  name: string,
+): boolean {
   switch (name) {
     case "checked":
     case "defaultChecked":
@@ -239,29 +275,32 @@ function isManagedInputProp(el: HTMLInputElement, name: string): boolean {
       return true;
     case "value":
     case "defaultValue":
-      return isTextInput(el) || el.type === "file";
+      return isTextEntryInput(inputElement) || inputElement.type === "file";
     default:
       return false;
   }
 }
 
-export function isManagedFormProp(el: Element, name: string): boolean {
-  if (el instanceof HTMLInputElement) {
-    return isManagedInputProp(el, name);
+export function isManagedFormProp(
+  formElement: Element,
+  name: string,
+): boolean {
+  if (formElement instanceof HTMLInputElement) {
+    return isManagedInputProperty(formElement, name);
   }
 
-  if (el instanceof HTMLTextAreaElement) {
+  if (formElement instanceof HTMLTextAreaElement) {
     return name === "value" || name === "defaultValue";
   }
 
-  if (el instanceof HTMLSelectElement) {
+  if (formElement instanceof HTMLSelectElement) {
     return (
       name === "value" ||
       name === "selectedIndex"
     );
   }
 
-  if (el instanceof HTMLOptionElement) {
+  if (formElement instanceof HTMLOptionElement) {
     return (
       name === "selected" ||
       name === "defaultSelected" ||
@@ -273,57 +312,57 @@ export function isManagedFormProp(el: Element, name: string): boolean {
 }
 
 export function applyManagedFormProp(
-  el: Element,
+  formElement: Element,
   name: string,
   value: unknown,
 ): unknown {
-  if (el instanceof HTMLInputElement) {
+  if (formElement instanceof HTMLInputElement) {
     switch (name) {
       case "value":
-        if (el.type === "file") {
+        if (formElement.type === "file") {
           if (value == null || value === "") {
-            el.value = "";
+            formElement.value = "";
           }
           return value;
         }
-        return applyTextControlValue(el, value);
+        return applyControlledTextValue(formElement, value);
       case "defaultValue":
-        return applyTextControlDefaultValue(el, value);
+        return applyDefaultTextValue(formElement, value);
       case "checked":
-        return applyInputChecked(el, value);
+        return applyControlledCheckedState(formElement, value);
       case "defaultChecked":
-        return applyInputDefaultChecked(el, value);
+        return applyDefaultCheckedState(formElement, value);
       case "indeterminate":
-        return applyInputIndeterminate(el, value);
+        return applyIndeterminateState(formElement, value);
     }
   }
 
-  if (el instanceof HTMLTextAreaElement) {
+  if (formElement instanceof HTMLTextAreaElement) {
     switch (name) {
       case "value":
-        return applyTextControlValue(el, value);
+        return applyControlledTextValue(formElement, value);
       case "defaultValue":
-        return applyTextControlDefaultValue(el, value);
+        return applyDefaultTextValue(formElement, value);
     }
   }
 
-  if (el instanceof HTMLSelectElement) {
+  if (formElement instanceof HTMLSelectElement) {
     switch (name) {
       case "value":
-        return applySelectValue(el, value);
+        return applyControlledSelectValue(formElement, value);
       case "selectedIndex":
-        return applySelectSelectedIndex(el, value);
+        return applyControlledSelectedIndex(formElement, value);
     }
   }
 
-  if (el instanceof HTMLOptionElement) {
+  if (formElement instanceof HTMLOptionElement) {
     switch (name) {
       case "selected":
-        return applyOptionSelected(el, value);
+        return applyControlledOptionSelectedState(formElement, value);
       case "defaultSelected":
-        return applyOptionDefaultSelected(el, value);
+        return applyDefaultOptionSelectedState(formElement, value);
       case "value":
-        el.value = toTextValue(value);
+        formElement.value = coerceFormValueToString(value);
         return value;
     }
   }

@@ -7,6 +7,11 @@ that it does so with an explicit ownership tree. DOM nodes, reactive effects,
 event listeners, refs, and dynamic branch cleanups are all tied to lifecycle
 scopes, so mount, update, replace, and dispose stay deterministic.
 
+## Documentation
+
+- English architecture overview: `README.md`
+- Russian developer onboarding: `docs/ONBOARDING.ru.md`
+
 ## What This Package Is Responsible For
 
 | Area | Files | Responsibility |
@@ -90,7 +95,7 @@ The root transaction is:
 2. Read the mounted root scope from the container.
 3. Dispose the previous root scope if the container is already mounted.
 4. Create a fresh root scope.
-5. Clear the container.
+5. Clear only the renderer-managed root range.
 6. Mount the new tree inside `runInOwnershipScope(rootScope, ...)`.
 7. Store the new root scope on the container.
 8. Return an idempotent dispose function.
@@ -188,6 +193,55 @@ rendererB.render(...) -> rendererB sees scope A on container and disposes it
 
 With a renderer-local `WeakMap`, that cross-renderer handoff would be much
 harder to reason about.
+
+## Managed Root Ranges
+
+Mounted root state is not just a scope anymore. It is a managed render range:
+
+- a start anchor
+- an end anchor
+- a scope that owns everything between them
+
+That range model is what enables:
+
+- renderer handoff on the same container
+- non-destructive root replacement
+- basic `hydrate()` and `resume()`
+- coexistence with foreign DOM inside the same host container
+
+The important invariant is:
+
+- `reflex-dom` may clear its own range
+- `reflex-dom` must not blindly clear the whole container
+
+For the Russian walkthrough of that model, see `docs/ONBOARDING.ru.md`.
+
+## SSR, Hydration, Resume, and Portals
+
+The package now exposes four platform-facing entry points in addition to normal
+client rendering:
+
+- `render()`
+- `hydrate()`
+- `resume()`
+- `renderToString()`
+
+And one structural operator for out-of-tree mounting:
+
+- `Portal`
+
+Current intent:
+
+- `renderToString()` produces baseline SSR HTML and marks dynamic slot regions
+  for hydration.
+- `hydrate()` tries to adopt matching DOM without recreating it.
+- `resume()` adopts an existing DOM subtree under renderer ownership without
+  rebuilding it.
+- `Portal` mounts children into another DOM target while keeping cleanup tied
+  to the original ownership tree.
+
+These are still intentionally basic, but they already share the same ownership
+and managed-range model as client rendering.
 
 ## Ownership Deep Dive
 

@@ -1,15 +1,19 @@
 export {
   Fragment,
   For,
+  Portal,
   Show,
   Switch,
   createDOMRenderer,
   createDOMRuntime,
+  hydrate,
   jsx,
   jsxDEV,
   jsxs,
   mount,
   render,
+  renderToString,
+  resume,
 } from "./runtime";
 export type { DOMRenderer, DOMRuntimeOptions } from "./runtime";
 export type {
@@ -39,6 +43,7 @@ export type {
 } from "./types";
 export type {
   ForProps,
+  PortalProps,
   ShowProps,
   SwitchCase,
   SwitchProps,
