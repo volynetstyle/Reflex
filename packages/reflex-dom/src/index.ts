@@ -13,6 +13,8 @@ export {
 } from "./runtime";
 export type { DOMRenderer, DOMRuntimeOptions } from "./runtime";
 export type {
+  CustomElementProps,
+  CustomElementTag,
   DOMEvent,
   DOMEventHandler,
   DOMEventHandlerProp,
@@ -26,6 +28,8 @@ export type {
   HTMLProps,
   IntrinsicElements,
   JSXRenderable,
+  MathMLProps,
+  PlatformProps,
   Ref,
   RefAttributes,
   RefObject,

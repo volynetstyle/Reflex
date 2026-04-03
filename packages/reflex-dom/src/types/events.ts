@@ -67,6 +67,10 @@ type CustomDOMEventProps<T extends Element, Events extends object> = {
     T,
     Extract<Events[K], Event>
   >;
+} & {
+  [Name in `on:${string}` as Name extends `on:${keyof Events & string}`
+    ? never
+    : Name]?: DOMEventHandlerProp<T, any>;
 };
 
 export type DOMEventProps<

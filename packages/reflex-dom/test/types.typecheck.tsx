@@ -70,6 +70,36 @@ const buttonRef = { current: null as HTMLButtonElement | null };
   <circle cx={5} cy={5} r={4} strokeWidth={2} />
 </svg>;
 
+const shadowRootRef = { current: null as ShadowRoot | null };
+const internalsRef = { current: null as ElementInternals | null };
+const styleSheet = {} as CSSStyleSheet;
+
+<math display="block">
+  <mrow>
+    <mi>x</mi>
+    <mo>+</mo>
+    <mn>1</mn>
+  </mrow>
+</math>;
+
+<my-widget
+  shadowRoot={{ mode: "open", delegatesFocus: true }}
+  shadowRootRef={shadowRootRef}
+  shadowAdoptedStyleSheets={[styleSheet]}
+  shadowChildren={<span>shadow</span>}
+  elementInternals={internalsRef}
+  customValue={{ ok: true }}
+  on:widget-ready={(event) => {
+    const customEvent: Event = event;
+    customEvent.preventDefault();
+  }}
+/>;
+
+<select multiple value={["a", "b"]}>
+  <option value="a">A</option>
+  <option value="b">B</option>
+</select>;
+
 <Show when={"ready"}>
   {(value) => <span>{value.toUpperCase()}</span>}
 </Show>;

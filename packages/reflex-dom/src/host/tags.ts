@@ -204,6 +204,39 @@ const SVG = makeLookup([
   "vkern",
 ] as const);
 
+const MATHML = makeLookup([
+  "annotation",
+  "annotation-xml",
+  "maction",
+  "math",
+  "merror",
+  "mfrac",
+  "mi",
+  "mmultiscripts",
+  "mn",
+  "mo",
+  "mover",
+  "mpadded",
+  "mphantom",
+  "mprescripts",
+  "mroot",
+  "mrow",
+  "ms",
+  "mspace",
+  "msqrt",
+  "mstyle",
+  "msub",
+  "msubsup",
+  "msup",
+  "mtable",
+  "mtd",
+  "mtext",
+  "mtr",
+  "munder",
+  "munderover",
+  "semantics",
+] as const);
+
 const VOID = makeLookup([
   "area",
   "base",
@@ -223,15 +256,18 @@ const VOID = makeLookup([
 
 export type HTMLTag = keyof typeof HTML;
 export type SVGTag = keyof typeof SVG;
+export type MathMLTag = keyof typeof MATHML;
 export type VoidTag = keyof typeof VOID;
 
 export const isHTMLTag = (t: string): t is HTMLTag =>
   HTML[t as HTMLTag] === true;
 export const isSVGTag = (t: string): t is SVGTag => SVG[t as SVGTag] === true;
+export const isMathMLTag = (t: string): t is MathMLTag =>
+  MATHML[t as MathMLTag] === true;
 export const isVoidTag = (t: string): t is VoidTag =>
   VOID[t as VoidTag] === true;
 
-const TABLE = { html: HTML, svg: SVG, void: VOID } as const;
+const TABLE = { html: HTML, svg: SVG, mathml: MATHML, void: VOID } as const;
 
 export function hasTag(tag: string, type: keyof typeof TABLE): boolean {
   return TABLE[type][tag as never] === true;

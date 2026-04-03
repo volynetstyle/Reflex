@@ -7,14 +7,43 @@ import { registerCleanup } from "reflex-framework/ownership";
 import type { DOMRenderer } from "../runtime";
 import type { Ref } from "../types";
 
-function bindElementProp(
+type BindingPhase = "initial" | "deferred";
+
+function isPlatformManagedProp(name: string): boolean {
+  return (
+    name === "shadowRoot" ||
+    name === "shadowChildren" ||
+    name === "shadowRootRef" ||
+    name === "shadowAdoptedStyleSheets" ||
+    name === "elementInternals"
+  );
+}
+
+function shouldDeferElementProp(element: Element, name: string): boolean {
+  return (
+    element instanceof HTMLSelectElement &&
+    (name === "value" || name === "selectedIndex")
+  );
+}
+
+export function bindElementProp(
   renderer: DOMRenderer,
   element: Element,
   name: string,
   value: unknown,
   namespace: Namespace,
+  phase: BindingPhase = "initial",
 ): void {
   if (name === "children" || name === "key" || value === undefined) {
+    return;
+  }
+
+  if (isPlatformManagedProp(name)) {
+    return;
+  }
+
+  const deferred = shouldDeferElementProp(element, name);
+  if ((phase === "deferred") !== deferred) {
     return;
   }
 
@@ -51,8 +80,9 @@ export function bindElementProps(
   element: Element,
   props: Record<string, unknown>,
   namespace: Namespace,
+  phase: BindingPhase = "initial",
 ): void {
   for (const name in props) {
-    bindElementProp(renderer, element, name, props[name], namespace);
+    bindElementProp(renderer, element, name, props[name], namespace, phase);
   }
 }

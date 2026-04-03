@@ -1,5 +1,6 @@
 import type { Namespace } from "./namespace";
 import type { StyleValue } from "../types";
+import { applyManagedFormProp, isManagedFormProp } from "./forms";
 import { setAttr } from "./attr";
 import { applyStyle } from "./styles";
 import { normalizeAttr } from "./aliases";
@@ -13,6 +14,10 @@ export function applyProp(
 ): unknown {
   if (name === "children" || name === "key") {
     return prev;
+  }
+
+  if (isManagedFormProp(el, name)) {
+    return applyManagedFormProp(el, name, value);
   }
 
   if (value === prev) {
