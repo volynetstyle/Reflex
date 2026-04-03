@@ -1,4 +1,4 @@
-import type { Cleanup } from "src/types";
+import type { Cleanup } from "../types/core";
 import {
   isShuttingDown,
   markClosing,

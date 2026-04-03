@@ -1,27 +1,17 @@
 import type { Namespace } from "../host/namespace";
-import type { Scope } from "../ownership";
+import { registerCleanup } from "reflex-framework/ownership";
 import {
   onEffectStart,
-  ownedEffect,
-  registerCleanup,
-  runWithScope,
-} from "../ownership";
+  runInOwnershipScope,
+  useEffect,
+} from "reflex-framework/ownership/reflex";
 import type { DOMRenderer } from "../runtime";
-import type { Accessor } from "../types";
 import type { ContentSlot } from "../structure/content-slot";
 import { createContentSlot } from "../structure/content-slot";
 import { appendRenderableNodes } from "./append";
 
-function mountNestedValue(
-  renderer: DOMRenderer,
-  parent: Node,
-  scope: Scope,
-  value: unknown,
-  ns: Namespace,
-): void {
-  runWithScope(renderer.owner, scope, () => {
-    appendRenderableNodes(renderer, parent, value, ns);
-  });
+function identity<T>(value: T): T {
+  return value;
 }
 
 export function createMountedSlot(
@@ -32,7 +22,9 @@ export function createMountedSlot(
   return createContentSlot(
     document,
     (parent, scope, nextValue) => {
-      mountNestedValue(renderer, parent, scope, nextValue, ns);
+      runInOwnershipScope(renderer.owner, scope, () => {
+        appendRenderableNodes(renderer, parent, nextValue, ns);
+      });
     },
     value,
   );
@@ -46,7 +38,7 @@ export function mountReactiveSlot<T>(
 ): Node {
   const slot = createMountedSlot(renderer, resolveValue(readValue()), ns);
 
-  ownedEffect(renderer.owner, () => {
+  useEffect(renderer.owner, () => {
     const nextValue = readValue();
 
     onEffectStart(() => {
@@ -61,11 +53,4 @@ export function mountReactiveSlot<T>(
   return slot.fragment;
 }
 
-export function mountDynamic(
-  renderer: DOMRenderer,
-  acc: Accessor<unknown>,
-  ns: Namespace,
-): Node {
-  renderer.ensureRuntime();
-  return mountReactiveSlot(renderer, acc, (value) => value, ns);
-}
+export { identity };

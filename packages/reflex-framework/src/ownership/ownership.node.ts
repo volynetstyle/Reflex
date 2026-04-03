@@ -1,8 +1,7 @@
-import type {
-  IOwnershipContextRecord,
-} from "./ownership.context";
+import type { Cleanup } from "../types/core";
+import type { OwnershipContextRecord } from "./ownership.context";
 
-type Cleanup = (() => void) | Array<() => void>;
+type CleanupList = Cleanup | Cleanup[];
 
 export class OwnershipNode {
   parent: OwnershipNode | null = null;
@@ -14,6 +13,6 @@ export class OwnershipNode {
   // Lower 24 bits: child count. Upper 8 bits: flags.
   meta = 0;
 
-  context: IOwnershipContextRecord | null = null;
-  cleanups: Cleanup | null = null;
+  context: OwnershipContextRecord | null = null;
+  cleanups: CleanupList | null = null;
 }

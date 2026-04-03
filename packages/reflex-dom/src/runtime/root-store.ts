@@ -1,4 +1,4 @@
-import type { Scope } from "../ownership";
+import type { Scope } from "reflex-framework/ownership";
 
 const mountedScopeKey = Symbol("reflex-dom.mounted-scope");
 
@@ -7,21 +7,21 @@ type MountedContainer = (ParentNode & Node) & {
 };
 
 export interface MountedScopeStore {
-  get(container: ParentNode & Node): Scope | undefined;
-  set(container: ParentNode & Node, scope: Scope): void;
-  delete(container: ParentNode & Node): void;
+  get(container: MountedContainer): Scope | undefined;
+  set(container: MountedContainer, scope: Scope): void;
+  delete(container: MountedContainer): void;
 }
 
 export function createMountedScopeStore(): MountedScopeStore {
   return {
     get(container) {
-      return (container as MountedContainer)[mountedScopeKey];
+      return container[mountedScopeKey];
     },
     set(container, scope) {
-      (container as MountedContainer)[mountedScopeKey] = scope;
+      container[mountedScopeKey] = scope;
     },
     delete(container) {
-      delete (container as MountedContainer)[mountedScopeKey];
+      container[mountedScopeKey] = undefined;
     },
   };
 }

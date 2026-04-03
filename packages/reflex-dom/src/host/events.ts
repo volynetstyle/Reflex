@@ -40,37 +40,16 @@ export function isEventProp(name: string, value: unknown): boolean {
   );
 }
 
-export interface BoundEvent {
-  event: string;
-  handler: EventListenerOrEventListenerObject;
-  options: AddEventListenerOptions | boolean | undefined;
-}
-
-export function bindEvent(
-  name: string,
-  handler: EventListenerOrEventListenerObject,
-): BoundEvent {
-  return {
-    event: resolveEventName(name),
-    handler,
-    options: resolveEventOptions(handler),
-  };
-}
-
-export function attachBoundEvent(
-  el: Element,
-  bound: BoundEvent,
-): () => void {
-  el.addEventListener(bound.event, bound.handler, bound.options);
-  return () => {
-    el.removeEventListener(bound.event, bound.handler, bound.options);
-  };
-}
-
 export function attachEventListener(
   el: Element,
   name: string,
   handler: EventListenerOrEventListenerObject,
 ): () => void {
-  return attachBoundEvent(el, bindEvent(name, handler));
+  const event = resolveEventName(name);
+  const options = resolveEventOptions(handler);
+  el.addEventListener(event, handler, options);
+
+  return () => {
+    el.removeEventListener(event, handler, options);
+  };
 }

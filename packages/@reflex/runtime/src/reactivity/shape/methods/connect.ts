@@ -1,7 +1,4 @@
-import {
-  clearReactiveEdgeLinks,
-  ReactiveEdge,
-} from "../ReactiveEdge";
+import { clearReactiveEdgeLinks, ReactiveEdge } from "../ReactiveEdge";
 import { isDisposedNode, markDisposedNode } from "../ReactiveMeta";
 import type ReactiveNode from "../ReactiveNode";
 
@@ -176,10 +173,10 @@ export function connect(
 
   if (depsTail?.from === parent) {
     return depsTail;
-  } else {
-    for (let e = depsTail; e; e = e.prevIn) {
-      if (e.from === parent) return e;
-    }
+  }
+  
+  for (let e = depsTail; e; e = e.prevIn) {
+    if (e.from === parent) return e;
   }
 
   return linkEdge(parent, child);

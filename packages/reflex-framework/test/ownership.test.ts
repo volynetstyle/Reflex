@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { createRuntime, signal } from "@volynetstyle/reflex";
 import {
   addCleanup,
   appendChild,
@@ -7,9 +6,7 @@ import {
   createScope,
   disposeScope,
   getChildCount,
-  ownedEffect,
   registerCleanup,
-  runWithOwner,
   runWithScope,
 } from "../src/ownership";
 
@@ -246,34 +243,6 @@ describe("ownership lifecycle", () => {
     expect(lateChild.parent).toBeNull();
     expect(lateChild.prevSibling).toBeNull();
     expect(lateChild.nextSibling).toBeNull();
-  });
-
-  it("does not start owned effects while scope disposal is in progress", () => {
-    const rt = createRuntime();
-    const [source, setSource] = signal(1);
-    const owner = createOwnerContext();
-    const root = createScope();
-    const spy = vi.fn(() => {
-      source();
-    });
-
-    runWithScope(owner, root, () => {
-      registerCleanup(owner, () => {
-        runWithOwner(owner, root, () => {
-          ownedEffect(owner, spy);
-        });
-      });
-    });
-
-    disposeScope(root);
-    rt.flush();
-
-    expect(spy).not.toHaveBeenCalled();
-
-    setSource(2);
-    rt.flush();
-
-    expect(spy).not.toHaveBeenCalled();
   });
 
   it("keeps scope disposal reentrancy-safe when cleanup disposes the same scope", () => {

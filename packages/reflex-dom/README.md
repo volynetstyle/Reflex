@@ -19,7 +19,7 @@ scopes, so mount, update, replace, and dispose stay deterministic.
 | Structural operators | `src/mount/show.ts`, `src/mount/switch.ts`, `src/mount/for.ts` | Mount conditional and keyed-list branches |
 | List reconciliation | `src/reconcile/*` | Hold keyed and unkeyed diff logic outside operator mounting so list behavior is easier to reason about and extend |
 | Execution policies | `src/runtime/policies.ts` | Describe renderer scheduling intent and map it onto the current Reflex runtime options |
-| Ownership and cleanup | `src/ownership/*` | Track who owns which subtree and dispose it in a predictable order |
+| Ownership and cleanup | `reflex-framework/ownership` + DOM mount sites | Track who owns which subtree and dispose it in a predictable order |
 
 ## Mental Model
 
@@ -58,7 +58,7 @@ render.ts
   - create new root scope
         |
         v
-runWithScope(root)
+runInOwnershipScope(root)
         |
         v
 mount/append.ts
@@ -70,11 +70,12 @@ mount/append.ts
   \- primitives -> text nodes
         |
         v
-ownership/*
+reflex-framework/ownership/*
   - scopes
-  - effect ownership
+  - context
   - cleanup registration
   - subtree disposal
+  - reactive bridge used by DOM mounts
 ```
 
 ## End-to-End Lifecycle
@@ -90,7 +91,7 @@ The root transaction is:
 3. Dispose the previous root scope if the container is already mounted.
 4. Create a fresh root scope.
 5. Clear the container.
-6. Mount the new tree inside `runWithScope(rootScope, ...)`.
+6. Mount the new tree inside `runInOwnershipScope(rootScope, ...)`.
 7. Store the new root scope on the container.
 8. Return an idempotent dispose function.
 
@@ -109,7 +110,7 @@ Inside the root scope, `mount/append.ts` dispatches by value shape:
 
 ### 3. Reactive updates
 
-Reactive bindings are registered through `ownedEffect()`.
+Reactive bindings are registered through `useEffect()`.
 
 That effect helper does two important things:
 
@@ -117,6 +118,9 @@ That effect helper does two important things:
 - Restores that same owner during later reruns.
 
 As a result, updates still know which scope owns any nested work they trigger.
+
+Plain Reflex effects created during mount are captured by the current ownership
+scope because DOM mounts enter the tree through `runInOwnershipScope()`.
 
 `onEffectStart()` is used to skip DOM writes on the first effect pass when the
 initial DOM was already produced during mount. Later reruns are allowed to patch
@@ -187,18 +191,10 @@ harder to reason about.
 
 ## Ownership Deep Dive
 
-The full ownership subsystem is documented here:
+`reflex-dom` now consumes ownership from `reflex-framework`.
 
-- [Ownership Readme](./src/ownership/Readme.md)
-
-That document explains:
-
-- the ownership node structure
-- scope creation and attachment
-- effect ownership
-- cleanup ordering
-- disposal traversal
-- invariants and extension rules
+The renderer is responsible for choosing where DOM mounts enter ownership
+scopes, but the ownership tree itself belongs to the platform-agnostic core.
 
 ## Example Trace
 

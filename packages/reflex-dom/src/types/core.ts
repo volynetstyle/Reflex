@@ -1,13 +1,12 @@
-export type Accessor<T> = () => T;
-export type MaybeAccessor<T> = T | Accessor<T>;
+import type { Attributes } from "reflex-framework";
 
-export type Cleanup = (() => void) & { dispose?: () => void };
-
-export type AttributeKey = string | number | bigint;
-
-export interface Attributes {
-  key?: AttributeKey | null | undefined;
-}
+export type {
+  Accessor,
+  AttributeKey,
+  Attributes,
+  Cleanup,
+  MaybeAccessor,
+} from "reflex-framework";
 
 export interface RefObject<T extends Node> {
   current: T | null;

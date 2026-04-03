@@ -170,12 +170,12 @@ export type DOMProps<T extends Element = Element> = DOMPropsBase<T> &
 
 export type HTMLProps<T extends HTMLElement = HTMLElement> = DOMProps<T> &
   HTMLAliasAttributeProps &
-  DOMEventProps<T, HTMLElementEventMap>;
+  DOMEventProps<T>;
 
 export type SVGProps<T extends SVGElement = SVGElement> = DOMProps<T> &
   SVGAliasAttributeProps &
   SVGCoreAttributeProps &
-  DOMEventProps<T, SVGElementEventMap>;
+  DOMEventProps<T>;
 
 export type HTMLIntrinsicElements = {
   [Tag in keyof HTMLElementTagNameMap]: HTMLProps<HTMLElementTagNameMap[Tag]>;

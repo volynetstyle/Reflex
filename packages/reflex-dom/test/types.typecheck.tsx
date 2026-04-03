@@ -1,6 +1,10 @@
 /** @jsxImportSource ../src */
 
 import { For, Show } from "../src";
+// @ts-expect-error reflex-dom should not re-export framework context api
+import { createContext } from "../src";
+// @ts-expect-error reflex-dom should not re-export framework hooks
+import { useSignal } from "../src";
 
 const buttonRef = { current: null as HTMLButtonElement | null };
 
@@ -15,6 +19,50 @@ const buttonRef = { current: null as HTMLButtonElement | null };
   }}
   on:click={(event) => {
     event.currentTarget.disabled = false;
+  }}
+/>;
+
+<div
+  onFullscreenChange={(event) => {
+    const nativeEvent: Event = event;
+    event.currentTarget.hidden = false;
+    nativeEvent.preventDefault();
+  }}
+  onPointerRawUpdate={(event) => {
+    const rawPointerEvent: Event = event;
+    event.currentTarget.hidden = rawPointerEvent.type.length > 0;
+  }}
+  onDragExit={(event) => {
+    const fallbackEvent: Event = event;
+    event.currentTarget.draggable = true;
+    fallbackEvent.stopPropagation();
+  }}
+/>;
+
+<input
+  onKeyPress={(event) => {
+    const keyEvent: KeyboardEvent = event;
+    event.currentTarget.value = keyEvent.key;
+  }}
+/>;
+
+<body
+  onBeforeUnload={(event) => {
+    const beforeUnloadEvent: BeforeUnloadEvent = event;
+    beforeUnloadEvent.returnValue = "";
+    event.currentTarget.hidden = false;
+  }}
+/>;
+
+<video
+  onEncrypted={(event) => {
+    const encryptedEvent: MediaEncryptedEvent = event;
+    event.currentTarget.muted = encryptedEvent.initDataType.length > 0;
+  }}
+  onEnterPictureInPicture={(event) => {
+    const pictureInPictureEvent: PictureInPictureEvent = event;
+    pictureInPictureEvent.pictureInPictureWindow.width;
+    event.currentTarget.pause();
   }}
 />;
 
@@ -43,6 +91,12 @@ const wrongRef = { current: null as HTMLDivElement | null };
 
 // @ts-expect-error onClick must receive the correct event type
 <button onClick={(event: KeyboardEvent) => event.preventDefault()} />;
+
+// @ts-expect-error body-level window events should not exist on div
+<div onBeforeUnload={(event) => event.preventDefault()} />;
+
+// @ts-expect-error media events should not exist on button
+<button onEncrypted={(event) => event.preventDefault()} />;
 
 // @ts-expect-error unknown style keys should be rejected
 <div style={{ madeUpProp: "nope" }} />;

@@ -101,7 +101,7 @@ importers:
       '@swc/core':
         specifier: ^1.15.18
         version: 1.15.18
-      '@volynetstyle/reflex':
+      '@volynets/reflex':
         specifier: workspace:*
         version: link:../reflex
       vite:

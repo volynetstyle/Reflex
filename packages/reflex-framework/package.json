@@ -1,0 +1,80 @@
+{
+  "name": "reflex-framework",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Platform-agnostic JSX runtime and renderable model for Reflex",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "source": {
+        "types": "./src/index.ts",
+        "default": "./src/index.ts"
+      },
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./jsx-runtime": {
+      "source": {
+        "types": "./src/jsx-runtime.ts",
+        "default": "./src/jsx-runtime.ts"
+      },
+      "types": "./dist/jsx-runtime.d.ts",
+      "import": "./dist/jsx-runtime.js"
+    },
+    "./jsx-dev-runtime": {
+      "source": {
+        "types": "./src/jsx-dev-runtime.ts",
+        "default": "./src/jsx-dev-runtime.ts"
+      },
+      "types": "./dist/jsx-dev-runtime.d.ts",
+      "import": "./dist/jsx-dev-runtime.js"
+    },
+    "./ownership": {
+      "source": {
+        "types": "./src/ownership/index.ts",
+        "default": "./src/ownership/index.ts"
+      },
+      "types": "./dist/ownership/index.d.ts",
+      "import": "./dist/ownership/index.js"
+    },
+    "./ownership/bridge": {
+      "source": {
+        "types": "./src/ownership/bridge.ts",
+        "default": "./src/ownership/bridge.ts"
+      },
+      "types": "./dist/ownership/bridge.d.ts",
+      "import": "./dist/ownership/bridge.js"
+    },
+    "./ownership/reflex": {
+      "source": {
+        "types": "./src/ownership/reflex.ts",
+        "default": "./src/ownership/reflex.ts"
+      },
+      "types": "./dist/ownership/reflex.d.ts",
+      "import": "./dist/ownership/reflex.js"
+    },
+    "./hooks": {
+      "source": {
+        "types": "./src/hooks/index.ts",
+        "default": "./src/hooks/index.ts"
+      },
+      "types": "./dist/hooks/index.d.ts",
+      "import": "./dist/hooks/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "node ./scripts/clean.mjs",
+    "build": "node ./scripts/clean.mjs && node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
+    "test": "pnpm exec vitest run --config vite.config.ts",
+    "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json"
+  },
+  "dependencies": {
+    "@volynets/reflex": "workspace:*"
+  }
+}

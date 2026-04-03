@@ -10,17 +10,26 @@
   "sideEffects": false,
   "exports": {
     ".": {
+      "source": {
+        "types": "./src/index.ts",
+        "default": "./src/index.ts"
+      },
       "types": "./dist/globals.d.ts",
       "import": "./dist/esm/index.js",
       "require": "./dist/cjs/index.cjs"
     },
     "./unstable": {
+      "source": {
+        "types": "./src/unstable/index.ts",
+        "default": "./src/unstable/index.ts"
+      },
       "types": "./dist/unstable/index.d.ts",
       "import": "./dist/esm/unstable/index.js",
       "require": "./dist/cjs/unstable/index.cjs"
     }
   },
   "files": [
+    "src",
     "dist/cjs",
     "dist/esm",
     "dist/globals.d.ts",

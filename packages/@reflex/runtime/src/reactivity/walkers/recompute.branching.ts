@@ -9,13 +9,8 @@
 // activation so nested re-entrant calls don't see each other's frames.
 
 import type { ExecutionContext } from "../context";
-import type {
-  ReactiveEdge,
-  ReactiveNode} from "../shape";
-import {
-  ReactiveNodeState,
-  DIRTY_STATE,
-} from "../shape";
+import type { ReactiveEdge, ReactiveNode } from "../shape";
+import { ReactiveNodeState, DIRTY_STATE } from "../shape";
 import { refreshRecompute } from "./recompute.refresh";
 
 export function shouldRecomputeBranching(

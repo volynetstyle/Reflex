@@ -1,8 +1,4 @@
-import {
-  decChildCount,
-  incChildCount,
-  isShuttingDown,
-} from "./ownership.meta";
+import { decChildCount, incChildCount, isShuttingDown } from "./ownership.meta";
 import type { OwnershipNode } from "./ownership.node";
 
 export function appendChild(parent: OwnershipNode, child: OwnershipNode): void {
@@ -48,9 +44,7 @@ export function detach(node: OwnershipNode): void {
     parent.lastChild = prev;
   }
 
-  node.parent = null;
-  node.prevSibling = null;
-  node.nextSibling = null;
+  node.parent = node.prevSibling = node.nextSibling = null;
 
   decChildCount(parent);
 }

@@ -1,7 +1,7 @@
 /** @jsxImportSource ../src */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { computed, effect, memo, signal } from "@volynetstyle/reflex";
+import { computed, effect, memo, signal } from "@volynets/reflex";
 import { createDOMRenderer, createDOMRuntime, render } from "../src";
 
 describe("render lifecycle and reactive bindings", () => {

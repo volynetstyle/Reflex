@@ -24,5 +24,6 @@ export function refreshRecompute(
   if (changed && (link.prevOut !== null || link.nextOut !== null)) {
     propagateOnce(node, context);
   }
+  
   return changed;
 }

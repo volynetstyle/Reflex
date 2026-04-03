@@ -1,7 +1,7 @@
 /** @jsxImportSource ../src */
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { effect, signal } from "@volynetstyle/reflex";
+import { effect, signal } from "@volynets/reflex";
 import { createDOMRuntime, For, Show, Switch, render } from "../src";
 
 describe("render structural operators and leaf dataflow", () => {

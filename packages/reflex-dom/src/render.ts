@@ -1,7 +1,7 @@
-
 import type { Cleanup, JSXRenderable } from "./types";
 import type { DOMRenderer } from "./runtime";
-import { createScope, disposeScope, runWithScope } from "./ownership";
+import { createScope, disposeScope } from "reflex-framework/ownership";
+import { runInOwnershipScope } from "reflex-framework/ownership/reflex";
 import { appendRenderableNodes } from "./mount/append";
 
 export function renderWithRenderer(
@@ -21,25 +21,20 @@ export function renderWithRenderer(
 
   container.replaceChildren();
 
-  runWithScope(renderer.owner, scope, () => {
+  runInOwnershipScope(renderer.owner, scope, () => {
     appendRenderableNodes(renderer, container, input, "html");
   });
 
   renderer.mountedScopes.set(container, scope);
 
-  const dispose = Object.assign(
-    () => {
-      disposeScope(scope);
+  const dispose = (() => {
+    disposeScope(scope);
 
-      if (renderer.mountedScopes.get(container) === scope) {
-        renderer.mountedScopes.delete(container);
-        container.replaceChildren();
-      }
-    },
-    {
-      dispose: undefined as unknown as () => void,
-    },
-  ) as Cleanup;
+    if (renderer.mountedScopes.get(container) === scope) {
+      renderer.mountedScopes.delete(container);
+      container.replaceChildren();
+    }
+  }) as Cleanup;
 
   dispose.dispose = dispose;
   return dispose;

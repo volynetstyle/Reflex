@@ -1,5 +1,5 @@
-import { COMPONENT_RENDERABLE } from "../component";
-import { ELEMENT_RENDERABLE } from "../element";
+import { COMPONENT_RENDERABLE } from "../operators/component";
+import { ELEMENT_RENDERABLE } from "../operators/element";
 import {
   FOR_RENDERABLE,
   SHOW_RENDERABLE,

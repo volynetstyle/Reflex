@@ -1,8 +1,6 @@
 import type { Namespace } from "../host/namespace";
-import {
-  createScope,
-  runWithScope,
-} from "../ownership";
+import { createScope } from "reflex-framework/ownership";
+import { runInOwnershipScope } from "reflex-framework/ownership/reflex";
 import type { DOMRenderer } from "../runtime";
 import type { ComponentRenderable } from "../types";
 import { appendRenderableNodes } from "./append";
@@ -13,9 +11,7 @@ export function mountComponent(
   renderable: ComponentRenderable<unknown>,
   ns: Namespace,
 ): void {
-  const scope = createScope();
-
-  runWithScope(renderer.owner, scope, () => {
+  runInOwnershipScope(renderer.owner, createScope(), () => {
     appendRenderableNodes(
       renderer,
       parent,

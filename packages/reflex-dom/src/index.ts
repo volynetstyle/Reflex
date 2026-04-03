@@ -1,6 +1,6 @@
 export {
-  For,
   Fragment,
+  For,
   Show,
   Switch,
   createDOMRenderer,
@@ -11,23 +11,12 @@ export {
   mount,
   render,
 } from "./runtime";
-export {
-  createContext,
-  hasOwnContext,
-  provideContext,
-  useContext,
-} from "./ownership";
 export type { DOMRenderer, DOMRuntimeOptions } from "./runtime";
-export type { OwnershipContext } from "./ownership";
 export type {
-  Accessor,
-  Attributes,
-  Cleanup,
-  Component,
-  ComponentProps,
   DOMEvent,
   DOMEventHandler,
   DOMEventHandlerProp,
+  DOMEventMapFor,
   DOMEventListenerObject,
   DOMProps,
   DOMPropsBase,
@@ -37,7 +26,6 @@ export type {
   HTMLProps,
   IntrinsicElements,
   JSXRenderable,
-  MaybeAccessor,
   Ref,
   RefAttributes,
   RefObject,

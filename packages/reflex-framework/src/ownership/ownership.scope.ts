@@ -1,4 +1,3 @@
-import { withEffectCleanupRegistrar } from "@volynetstyle/reflex";
 import { addCleanup, dispose } from "./ownership.cleanup";
 import { isShuttingDown } from "./ownership.meta";
 import { OwnershipNode } from "./ownership.node";
@@ -68,9 +67,7 @@ export function runWithScope<T>(
 
   attachScope(owner.currentOwner, scope);
 
-  return runWithOwner(owner, scope, () =>
-    withEffectCleanupRegistrar((cleanup) => addCleanup(scope, cleanup), fn),
-  );
+  return runWithOwner(owner, scope, fn);
 }
 
 export function registerCleanup(owner: OwnerContext, fn: () => void): void {

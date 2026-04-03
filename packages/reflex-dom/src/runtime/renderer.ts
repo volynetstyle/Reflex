@@ -1,5 +1,5 @@
-import type { OwnerContext } from "../ownership";
-import { createOwnerContext } from "../ownership";
+import type { OwnerContext } from "reflex-framework/ownership";
+import { createOwnerContext } from "reflex-framework/ownership";
 import { renderWithRenderer } from "../render";
 import type { Cleanup, JSXRenderable } from "../types";
 import {

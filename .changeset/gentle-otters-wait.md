@@ -1,6 +1,6 @@
 ---
 "@reflex/runtime": patch
-"@volynetstyle/reflex": patch
+"@volynets/reflex": patch
 ---
 
 Align the Rollup output layout with published package exports, emit real `.cjs`

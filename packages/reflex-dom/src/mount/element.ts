@@ -5,36 +5,8 @@ import type {
 } from "../types";
 import type { DOMRenderer } from "../runtime";
 import { SVG_NS, resolveNamespace, type Namespace } from "../host/namespace";
-import { createElementBinder } from "./element-binder";
+import { bindElementProps } from "./element-binder";
 import { appendRenderableNodes } from "./append";
-
-function createHostElement(
-  tag: string,
-  ns: Namespace,
-  doc: Document,
-): Element {
-  return ns === "svg"
-    ? doc.createElementNS(SVG_NS, tag)
-    : doc.createElement(tag);
-}
-
-function mountProps(
-  renderer: DOMRenderer,
-  el: Element,
-  props: Record<string, unknown>,
-  ns: Namespace,
-): void {
-  createElementBinder(renderer, el, ns).bindProps(props);
-}
-
-function mountChildren(
-  renderer: DOMRenderer,
-  el: Element,
-  children: unknown,
-  ns: Namespace,
-): void {
-  appendRenderableNodes(renderer, el, children, ns);
-}
 
 export function mountElement<Tag extends ElementTag>(
   renderer: DOMRenderer,
@@ -44,10 +16,14 @@ export function mountElement<Tag extends ElementTag>(
 ): ElementInstance<Tag> {
   const ns = resolveNamespace(tag, parentNamespace);
   const doc = document;
-  const el = createHostElement(tag, ns, doc) as ElementInstance<Tag>;
+  const el = (
+    ns === "svg"
+      ? doc.createElementNS(SVG_NS, tag)
+      : doc.createElement(tag)
+  ) as unknown as ElementInstance<Tag>;
 
-  mountProps(renderer, el, props as Record<string, unknown>, ns);
-  mountChildren(renderer, el, props.children ?? null, ns);
+  bindElementProps(renderer, el, props as Record<string, unknown>, ns);
+  appendRenderableNodes(renderer, el, props.children, ns);
 
   return el;
 }

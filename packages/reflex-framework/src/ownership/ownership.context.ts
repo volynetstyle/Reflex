@@ -10,15 +10,11 @@ export interface OwnershipContextRecord {
   readonly values: Map<ContextId, unknown>;
 }
 
-export type IOwnershipContextRecord = OwnershipContextRecord;
-
 export interface OwnershipContext<T = unknown> {
   readonly id: ContextId;
   readonly defaultValue: T | undefined;
   readonly hasDefaultValue: boolean;
 }
-
-export type IOwnershipContext<T = unknown> = OwnershipContext<T>;
 
 export function createContext<T>(): OwnershipContext<T | undefined>;
 export function createContext<T>(defaultValue: T): OwnershipContext<T>;

@@ -1,4 +1,4 @@
-import { createRuntime } from "@volynetstyle/reflex";
+import { createRuntime } from "@volynets/reflex";
 import {
   createDefaultPolicyConfig,
   resolveEffectStrategy,

@@ -15,7 +15,7 @@ import type { Namespace } from "../host/namespace";
 import { RenderableKind, classifyRenderable } from "./renderable";
 import type { DOMRenderer } from "../runtime";
 import { mountComponent } from "./component";
-import { mountDynamic } from "./reactive-slot";
+import { identity, mountReactiveSlot } from "./reactive-slot";
 import { mountElement } from "./element";
 import { mountFor } from "./for";
 import { mountShow } from "./show";
@@ -27,13 +27,12 @@ export function appendRenderableNodes(
   value: JSXRenderable | unknown,
   ns: Namespace,
 ): void {
-  if (classifyRenderable(value) === RenderableKind.Empty) {
+  if (value == null || typeof value === "boolean") {
     return;
   }
 
-  let top = 0;
+  let top = 1;
   const stack: unknown[] = [value];
-  ++top;
   const doc = parent.ownerDocument!;
 
   while (top > 0) {
@@ -61,7 +60,7 @@ export function appendRenderableNodes(
 
       case RenderableKind.Accessor:
         parent.appendChild(
-          mountDynamic(renderer, current as () => unknown, ns),
+          mountReactiveSlot(renderer, current as () => unknown, identity, ns),
         );
         continue;
 

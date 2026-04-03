@@ -151,6 +151,6 @@ These checks are intentionally useful in debug builds:
 - `recompute dead node`
 - `write into dead node`
 - `register cleanup into disposed scope`
-- `ownedEffect in disposed scope`
+- `useEffect in disposed scope`
 
 Production behavior should remain safe even when callers violate the protocol.

@@ -1,6 +1,7 @@
 import type { Namespace } from "../host/namespace";
 import { moveRangeBefore } from "../host/mutations";
-import { onEffectStart, ownedEffect, registerCleanup } from "../ownership";
+import { registerCleanup } from "reflex-framework/ownership";
+import { onEffectStart, useEffect } from "reflex-framework/ownership/reflex";
 import type { ForRenderable } from "../operators";
 import { reconcileKeyedList, type KeyedItem } from "../reconcile/keyed";
 import type { DOMRenderer } from "../runtime";
@@ -111,7 +112,7 @@ export function mountFor(
 
   reconcile(renderable.each());
 
-  ownedEffect(renderer.owner, () => {
+  useEffect(renderer.owner, () => {
     const nextItems = renderable.each();
 
     onEffectStart(() => {
