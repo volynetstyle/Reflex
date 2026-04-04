@@ -16,9 +16,10 @@ import {
   resolveShowValue,
   resolveSwitchValue,
 } from "./operators";
-import { RenderableKind, classifyRenderable } from "./mount/renderable";
+import { RenderableKind } from "./renderable-kind";
+import { classifyClientRenderable } from "./mount/renderable";
 import { bindElementProps } from "./mount/element-binder";
-import { hydrateReactiveSlot, identity } from "./mount/reactive-slot";
+import { hydrateReactiveSlot } from "./structure/reactive-slot";
 import { mountPortal } from "./mount/portal";
 import type { DOMRenderer } from "./runtime";
 import {
@@ -36,6 +37,10 @@ import { runInOwnershipScope } from "reflex-framework/ownership/reflex";
 import { resolveNamespace, SVG_NS, MATHML_NS, type Namespace } from "./host/namespace";
 
 class HydrationMismatch extends Error {}
+
+function identity<T>(value: T): T {
+  return value;
+}
 
 function failHydration(): never {
   throw new HydrationMismatch();
@@ -157,7 +162,7 @@ function hydrateRenderableValue(
   currentNode: Node | null,
   boundary: Node | null,
 ): Node | null {
-  switch (classifyRenderable(value)) {
+  switch (classifyClientRenderable(value)) {
     case RenderableKind.Empty:
       return currentNode;
 

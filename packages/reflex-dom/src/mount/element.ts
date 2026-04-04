@@ -1,9 +1,4 @@
-import type {
-  ElementInstance,
-  ElementProps,
-  ElementTag,
-  Ref,
-} from "../types";
+import type { ElementInstance, ElementProps, ElementTag, Ref } from "../types";
 import type { DOMRenderer } from "../runtime";
 import { attachRef } from "../host/refs";
 import {
@@ -12,13 +7,8 @@ import {
   resolveNamespace,
   type Namespace,
 } from "../host/namespace";
-import {
-  registerCleanup,
-} from "reflex-framework/ownership";
-import {
-  onEffectStart,
-  useEffect,
-} from "reflex-framework/ownership/reflex";
+import { registerCleanup } from "reflex-framework/ownership";
+import { onEffectStart, useEffect } from "reflex-framework/ownership/reflex";
 import { mountRenderRange } from "../structure/render-range";
 import { bindElementProps } from "./element-binder";
 import { appendRenderableNodes } from "./append";
@@ -27,21 +17,19 @@ function createElementInNamespace<Tag extends ElementTag>(
   tag: Tag,
   namespace: Namespace,
 ): ElementInstance<Tag> {
-  const ownerDocument = document;
-
-  return (
-    namespace === "svg"
-      ? ownerDocument.createElementNS(SVG_NS, tag)
-      : namespace === "mathml"
-        ? ownerDocument.createElementNS(MATHML_NS, tag)
-      : ownerDocument.createElement(tag)
-  ) as unknown as ElementInstance<Tag>;
+  return (namespace === "html"
+    ? document.createElement(tag)
+    : document.createElementNS(
+        namespace === "svg" ? SVG_NS : MATHML_NS,
+        tag,
+      )) as unknown as ElementInstance<Tag>;
 }
 
 function resolveShadowRootConfig(
   props: Record<string, unknown>,
 ): ShadowRootInit | null {
-  const requested = props.shadowRoot ??
+  const requested =
+    props.shadowRoot ??
     (props.shadowChildren !== undefined ||
     props.shadowAdoptedStyleSheets !== undefined ||
     props.shadowRootRef !== undefined
@@ -84,13 +72,14 @@ function applyShadowRootAdoptedStyleSheets(
     return value;
   }
 
-  (shadowRoot as ShadowRoot & { adoptedStyleSheets: CSSStyleSheet[] })
-    .adoptedStyleSheets =
-      value == null
-        ? []
-        : Array.isArray(value)
-          ? [...value]
-          : Array.from(value as Iterable<CSSStyleSheet>);
+  (
+    shadowRoot as ShadowRoot & { adoptedStyleSheets: CSSStyleSheet[] }
+  ).adoptedStyleSheets =
+    value == null
+      ? []
+      : Array.isArray(value)
+        ? [...value]
+        : Array.from(value as Iterable<CSSStyleSheet>);
   return value;
 }
 
@@ -98,10 +87,7 @@ function shouldMountLightDomChildren(
   tag: ElementTag,
   props: Record<string, unknown>,
 ): boolean {
-  return !(
-    tag === "textarea" &&
-    ("value" in props || "defaultValue" in props)
-  );
+  return !(tag === "textarea" && ("value" in props || "defaultValue" in props));
 }
 
 function bindShadowRootReference(
@@ -213,7 +199,13 @@ export function mountElement<Tag extends ElementTag>(
     );
   }
 
-  bindElementProps(renderer, element, propsRecord, elementNamespace, "deferred");
+  bindElementProps(
+    renderer,
+    element,
+    propsRecord,
+    elementNamespace,
+    "deferred",
+  );
 
   if (shadowRoot !== null) {
     if (propsRecord.shadowRootRef !== undefined) {

@@ -6,7 +6,7 @@ import type { ForRenderable } from "../operators";
 import { reconcileKeyedList, type KeyedItem } from "../reconcile/keyed";
 import type { DOMRenderer } from "../runtime";
 import type { ContentSlot } from "../structure/content-slot";
-import { createMountedSlot } from "./reactive-slot";
+import { createMountedSlot } from "../structure/reactive-slot";
 
 interface ForRow<T> extends KeyedItem<T> {
   slot: ContentSlot;

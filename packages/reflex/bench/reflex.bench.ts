@@ -1,576 +1,371 @@
-import { bench, describe } from "vitest";
-import { createRuntime, signal, memo } from "../dist/esm/index";
+import {
+  CONSUMER_INITIAL_STATE,
+  ConsumerReadMode,
+  createExecutionContext,
+  DIRTY_STATE,
+  disposeWatcher,
+  PRODUCER_INITIAL_STATE,
+  readConsumer,
+  readProducer,
+  ReactiveNode,
+  ReactiveNodeState,
+  runWatcher,
+  type ExecutionContext,
+  WATCHER_INITIAL_STATE,
+  writeProducer,
+} from "@reflex/runtime/debug";
+import {
+  blackhole,
+  type BenchHarness,
+  type BenchVariant,
+  type EffectMeta,
+  HarnessMetrics,
+  registerBenchFile,
+  type WriteInput,
+} from "./shared";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+type ReflexMode =
+  | "eager-walk"
+  | "heap-ordering"
+  | "late-snapshot"
+  | "naive-host-queue";
 
-type Read<T> = () => T;
-type Write<T> = (value: T) => void;
-type OursPair<T> = readonly [Read<T>, Write<T>, ReturnType<typeof signal<T>>];
+type EffectNode = ReactiveNode<unknown>;
 
-// ─── Blackhole sink ───────────────────────────────────────────────────────────
-
-let sinkAcc = 0;
-const bh = (v: number) => {
-  sinkAcc = (sinkAcc * 100_019 + (v | 0)) | 0;
-};
-
-// ─── Utilities ────────────────────────────────────────────────────────────────
-
-function at<T>(arr: readonly T[], i: number): T {
-  const v = arr[i];
-  if (v === undefined) throw new Error(`Missing item at index ${i}`);
-  return v;
+interface HeapEntry {
+  node: EffectNode;
+  order: number;
+  priority: number;
 }
 
-function createRng(seed: number) {
-  let s = seed | 0;
-  return {
-    next(): number {
-      s = (s + 0x6d2b79f5) | 0;
-      let t = Math.imul(s ^ (s >>> 15), 1 | s);
-      t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    },
-    int: (n: number) => 0 as number,
-    centered: (n: number) => 0 as number,
-  };
-}
+const compareNumbers = (left: number, right: number) => Object.is(left, right);
 
-function rng(seed: number) {
-  const r = createRng(seed);
-  const next = r.next.bind(r);
-  return {
-    next,
-    int(n: number) {
-      return Math.floor(next() * n);
-    },
-    centered(n: number) {
-      return next() * n * 2 - n;
-    },
-  };
-}
+class EffectHeap {
+  private readonly items: HeapEntry[] = [];
 
-function primeReads(reads: readonly Read<number>[]) {
-  for (const r of reads) bh(r());
-}
+  get size(): number {
+    return this.items.length;
+  }
 
-function createUniqueIndexSampler(max: number) {
-  const marks = new Uint32Array(max);
-  let epoch = 0;
-  return (count: number, r: ReturnType<typeof rng>, out: number[]) => {
-    if (++epoch === 0) {
-      marks.fill(0);
-      epoch = 1;
+  push(entry: HeapEntry): void {
+    this.items.push(entry);
+    this.bubbleUp(this.items.length - 1);
+  }
+
+  pop(): HeapEntry | undefined {
+    if (this.items.length === 0) return undefined;
+
+    const top = this.items[0];
+    const last = this.items.pop();
+
+    if (last !== undefined && this.items.length !== 0) {
+      this.items[0] = last;
+      this.bubbleDown(0);
     }
-    out.length = 0;
-    while (out.length < count) {
-      const i = r.int(max);
-      if (marks[i] === epoch) continue;
-      marks[i] = epoch;
-      out.push(i);
+
+    return top;
+  }
+
+  private bubbleUp(index: number): void {
+    while (index > 0) {
+      const parent = (index - 1) >> 1;
+      if (this.compare(index, parent) <= 0) return;
+      this.swap(index, parent);
+      index = parent;
     }
-    return out as readonly number[];
-  };
+  }
+
+  private bubbleDown(index: number): void {
+    const length = this.items.length;
+
+    while (true) {
+      const left = index * 2 + 1;
+      const right = left + 1;
+      let best = index;
+
+      if (left < length && this.compare(left, best) > 0) {
+        best = left;
+      }
+      if (right < length && this.compare(right, best) > 0) {
+        best = right;
+      }
+      if (best === index) return;
+
+      this.swap(index, best);
+      index = best;
+    }
+  }
+
+  private compare(leftIndex: number, rightIndex: number): number {
+    const left = this.items[leftIndex]!;
+    const right = this.items[rightIndex]!;
+
+    if (left.priority !== right.priority) {
+      return left.priority - right.priority;
+    }
+
+    return right.order - left.order;
+  }
+
+  private swap(leftIndex: number, rightIndex: number): void {
+    const left = this.items[leftIndex]!;
+    this.items[leftIndex] = this.items[rightIndex]!;
+    this.items[rightIndex] = left;
+  }
 }
 
-// ─── Harness ──────────────────────────────────────────────────────────────────
+class ReflexScheduler {
+  private readonly fifo: EffectNode[] = [];
+  private readonly heap = new EffectHeap();
+  private head = 0;
+  private batchDepth = 0;
+  private flushing = false;
+  private order = 0;
 
-function oursHarness() {
-  const rt = createRuntime();
-  return {
-    signal<T>(v: T): OursPair<T> {
-      const s = signal(v);
-      return s as any;
-    },
-    memo<T>(fn: () => T): Read<T> {
-      const m = memo(fn);
-      return () => m();
-    },
-  };
-}
+  constructor(
+    private readonly mode: ReflexMode,
+    private readonly context: ExecutionContext,
+    private readonly metrics: HarnessMetrics,
+    private readonly priorities: WeakMap<EffectNode, number>,
+  ) {}
 
-// ─── Suite 1: Wide static graph ───────────────────────────────────────────────
+  batch<T>(fn: () => T): T {
+    ++this.batchDepth;
 
-describe("Wide static graph (1000 memos × 5 deps)", () => {
-  const MEMOS = 1000,
-    DEPS = 5;
+    try {
+      return fn();
+    } finally {
+      --this.batchDepth;
+      this.maybeAutoFlush();
+    }
+  }
 
-  function buildWideGraph(
-    memoCount: number,
-    depCount: number,
-    sourceCount: number,
-  ) {
-    const ours = oursHarness();
-    const oursSrc = Array.from({ length: sourceCount }, (_, i) =>
-      ours.signal(i),
-    );
-    const makeOursMemo = (mi: number) =>
-      ours.memo(() => {
-        let s = 0;
-        for (let d = 0; d < depCount; d++)
-          s += at(oursSrc, (mi + d * 3) % sourceCount)[0]();
-        return s;
+  enqueue(node: EffectNode): void {
+    this.metrics.recordSchedulerOp();
+
+    const dedupe = this.mode !== "naive-host-queue";
+    if (dedupe && (node.state & ReactiveNodeState.Scheduled) !== 0) {
+      this.metrics.recordSchedulerOp();
+      return;
+    }
+
+    if (dedupe) {
+      node.state |= ReactiveNodeState.Scheduled;
+    }
+
+    this.metrics.recordStepAllocation();
+
+    if (this.mode === "heap-ordering") {
+      this.heap.push({
+        node,
+        order: this.order++,
+        priority: this.priorities.get(node) ?? 0,
       });
-    const oursMemos = Array.from({ length: memoCount }, (_, i) =>
-      makeOursMemo(i),
-    );
-    for (const [, w] of oursSrc) w(0);
-    primeReads(oursMemos);
-    return { oursSrc, oursMemos, ours };
+    } else {
+      this.fifo.push(node);
+    }
+
+    this.maybeAutoFlush();
   }
 
-  const g2 = buildWideGraph(MEMOS, DEPS, 2);
-  const g25 = buildWideGraph(MEMOS, DEPS, 25);
+  flush(): void {
+    if (this.flushing || !this.hasPending()) return;
 
-  const r = {
-    ours2: rng(0x201),
-    ours25: rng(0x251),
-  };
+    this.flushing = true;
+    this.metrics.recordSchedulerOp();
 
-  function runWide(
-    sources: readonly (readonly [Read<number>, Write<number>])[],
-    memos: readonly Read<number>[],
-    r: ReturnType<typeof rng>,
-    readEvery: number,
-  ) {
-    at(sources, r.int(sources.length))[1](r.next() * 1000);
-    for (let i = 0; i < memos.length; i += readEvery) bh(at(memos, i)());
-  }
+    try {
+      while (true) {
+        const node = this.takeNext();
+        if (node === null) break;
 
-  bench(
-    "ours - 2 sources, change 1, read ~10%",
-    () => runWide(g2.oursSrc, g2.oursMemos, r.ours2, 10),
-    { iterations: 150, warmupIterations: 30 },
-  );
+        this.metrics.recordSchedulerOp();
 
-  bench(
-    "ours - 25 sources, change 1, read ~10%",
-    () => runWide(g25.oursSrc, g25.oursMemos, r.ours25, 9),
-    { iterations: 120, warmupIterations: 25 },
-  );
-});
-
-// ─── Suite 2: Deep chains ─────────────────────────────────────────────────────
-
-describe("Deep chains (8 × 400 depth)", () => {
-  function buildDeepChains(
-    sourceCount: number,
-    chainCount: number,
-    depth: number,
-  ) {
-    const ours = oursHarness();
-    const oursSrc = Array.from({ length: sourceCount }, () => ours.signal(0));
-
-    function buildChain<T>(
-      count: number,
-      getBase: (i: number) => Read<T>,
-      makeMemo: (fn: () => T) => Read<T>,
-    ) {
-      const ends: Read<T>[] = [];
-      for (let c = 0; c < count; c++) {
-        let prev = getBase(c % sourceCount);
-        for (let l = 0; l < depth; l++) {
-          const p = prev;
-          prev = makeMemo(() => p());
+        if (this.mode !== "naive-host-queue") {
+          node.state &= ~ReactiveNodeState.Scheduled;
         }
-        ends.push(prev);
+
+        if ((node.state & ReactiveNodeState.Disposed) !== 0) continue;
+        if ((node.state & DIRTY_STATE) === 0) continue;
+
+        runWatcher(node, this.context);
       }
-      return ends;
+    } finally {
+      this.fifo.length = 0;
+      this.head = 0;
+      this.flushing = false;
     }
-
-    const oursEnds = buildChain(
-      chainCount,
-      (i) => oursSrc[i]![0],
-      (fn) => ours.memo(fn),
-    );
-
-    for (const [, w] of oursSrc) w(0);
-    primeReads(oursEnds);
-
-    return { oursSrc, oursEnds };
   }
 
-  const g = buildDeepChains(4, 8, 400);
-  const rO = rng(0x401);
+  notifySettled(): void {
+    this.maybeAutoFlush();
+  }
 
-  bench(
-    "ours - change 1 source, read 8 ends",
-    () => {
-      at(g.oursSrc, 1)[1](rO.next() * 200);
-      for (const r of g.oursEnds) bh(r());
-    },
-    { iterations: 400, warmupIterations: 50 },
-  );
-});
+  private hasPending(): boolean {
+    return this.mode === "heap-ordering"
+      ? this.heap.size > 0
+      : this.head < this.fifo.length;
+  }
 
-// ─── Suite 3: Diamond fan-out → fan-in ────────────────────────────────────────
+  private takeNext(): EffectNode | null {
+    if (this.mode === "heap-ordering") {
+      return this.heap.pop()?.node ?? null;
+    }
 
-describe("Diamond / fan-out→fan-in (200 paths × 5 depth)", () => {
-  const PATHS = 200,
-    DEPTH = 5;
+    if (this.head >= this.fifo.length) {
+      return null;
+    }
 
-  function buildDiamond() {
-    const ours = oursHarness();
+    return this.fifo[this.head++] ?? null;
+  }
 
-    const sources = Array.from({ length: PATHS }, () => ours.signal(0));
-    const pathEnds = sources.map(([src]) => {
-      let prev: Read<number> = src;
-      for (let l = 0; l < DEPTH; l++) {
-        const p = prev;
-        prev = ours.memo(() => p() * 1.0001 + l);
-      }
-      return prev;
+  private maybeAutoFlush(): void {
+    if (this.mode !== "eager-walk") return;
+    if (this.flushing) return;
+    if (this.batchDepth !== 0) return;
+    if (this.context.propagationDepth !== 0) return;
+    if (this.context.activeComputed !== null) return;
+    if (!this.hasPending()) return;
+
+    this.flush();
+  }
+}
+
+class ReflexHarness implements BenchHarness {
+  readonly metrics = new HarnessMetrics();
+  private readonly priorities = new WeakMap<EffectNode, number>();
+  private readonly disposers: Array<() => void> = [];
+  private readonly context: ExecutionContext;
+  private readonly scheduler: ReflexScheduler;
+
+  constructor(mode: ReflexMode) {
+    this.context = createExecutionContext();
+    this.scheduler = new ReflexScheduler(
+      mode,
+      this.context,
+      this.metrics,
+      this.priorities,
+    );
+
+    this.context.setHooks({
+      onEffectInvalidated: (node) => {
+        this.scheduler.enqueue(node as EffectNode);
+      },
+      onReactiveSettled: () => {
+        this.scheduler.notifySettled();
+      },
     });
-    const final = ours.memo(() => {
-      let s = 0;
-      for (const r of pathEnds) s += r();
-      return s;
-    });
-    for (const [, w] of sources) w(0);
-    bh(final());
-
-    return { sources, final };
   }
 
-  const g = buildDiamond();
-  const rO = rng(0x501);
+  signal(
+    initial: number,
+    _label?: string,
+  ): readonly [() => number, (value: WriteInput) => void] {
+    this.metrics.recordSetupAllocation();
 
-  bench(
-    "ours - change 1, read final",
-    () => {
-      at(g.sources, rO.int(PATHS))[1](rO.next() * 100);
-      bh(g.final());
-    },
-    { iterations: 800, warmupIterations: 100 },
-  );
-});
-
-// ─── Suite 4: Dynamic deps ────────────────────────────────────────────────────
-
-describe("Dynamic deps + frequent flip", () => {
-  const MEMOS = 150,
-    SRCS = 12,
-    DEPS = 12;
-
-  function buildDynamic() {
-    const ours = oursHarness();
-    const sources = Array.from({ length: SRCS }, () => ours.signal(0));
-    const memos = Array.from({ length: MEMOS }, (_, mi) =>
-      ours.memo(() => {
-        let s = 0;
-        const flip = at(sources, 0)[0]() % 3;
-        for (let d = 0; d < DEPS; d++)
-          s += at(sources, (mi + d + flip * 7) % SRCS)[0]();
-        return s;
-      }),
-    );
-    for (const [, w] of sources) w(0);
-    primeReads(memos);
-    return { sources, memos, ours };
-  }
-
-  const g = buildDynamic();
-  const rO = rng(0x601);
-
-  bench(
-    "ours - flip deps, read 100%",
-    () => {
-      at(g.sources, 0)[1](rO.int(1000));
-      for (const r of g.memos) bh(r());
-    },
-    { iterations: 300, warmupIterations: 50 },
-  );
-});
-
-// ─── Suite 5: Large batch write ───────────────────────────────────────────────
-
-describe("Large batch write (20% sources) + full read", () => {
-  const MEMOS = 800,
-    SRCS = 80,
-    BATCH = Math.floor(SRCS * 0.2);
-
-  function buildBatch() {
-    const ours = oursHarness();
-    const oursSrc = Array.from({ length: SRCS }, () => ours.signal(0));
-    const makeOursMemo = (mi: number) =>
-      ours.memo(() => {
-        let s = 0;
-        for (let d = 0; d < 6; d++) s += at(oursSrc, (mi + d) % SRCS)[0]();
-        return s;
-      });
-    const oursMemos = Array.from({ length: MEMOS }, (_, i) => makeOursMemo(i));
-    for (const [, w] of oursSrc) w(0);
-    primeReads(oursMemos);
-
-    const batchWrites = Array.from(
-      { length: BATCH },
-      (_, i) => [oursSrc[i]![2], 0] as [any, any],
+    const node = new ReactiveNode<number>(
+      initial,
+      null,
+      PRODUCER_INITIAL_STATE,
     );
 
-    return { oursSrc, oursMemos, batchWrites, ours };
+    return [
+      () => readProducer(node, this.context),
+      (value) => {
+        this.metrics.recordSchedulerOp();
+        const next =
+          typeof value === "function"
+            ? value(readProducer(node, this.context))
+            : value;
+        writeProducer(node, next, compareNumbers, this.context);
+      },
+    ] as const;
   }
 
-  const g = buildBatch();
-  const rO = rng(0x701);
+  memo(fn: () => number, _label?: string): () => number {
+    this.metrics.recordSetupAllocation();
 
-  bench(
-    "ours - batch 20% sources, read all",
-    () => {
-      for (let i = 0; i < g.batchWrites.length; i++)
-        g.batchWrites[i]![1] = rO.next() * 100;
+    const node = new ReactiveNode<number>(
+      0,
+      () => {
+        this.metrics.recordRecompute();
+        return fn();
+      },
+      CONSUMER_INITIAL_STATE,
+    );
 
-      for (const r of g.oursMemos) bh(r());
-    },
-    { iterations: 180, warmupIterations: 40 },
-  );
-});
-
-// ─── Suite 6: Virtualized table ───────────────────────────────────────────────
-
-describe("Virtualized table (4000 rows × 6 cols)", () => {
-  const ROWS = 4000,
-    COLS = 6,
-    VISIBLE = 400;
-  const CHANGED = Math.floor(ROWS * 0.02);
-
-  function primeTable(
-    cells: readonly (readonly Read<number>[])[],
-    sums: readonly Read<number>[],
-    step: number,
-  ) {
-    for (let p = 0; p < 4; p++)
-      for (let r = 0; r < cells.length; r += step) {
-        for (let c = 0; c < 4; c++) bh(cells[r]![c]!());
-        bh(sums[r]!());
-      }
+    return () => {
+      this.metrics.recordRefresh();
+      return readConsumer(node, ConsumerReadMode.lazy, this.context);
+    };
   }
 
-  function renderVisible(
-    cells: readonly (readonly Read<number>[])[],
-    sums: readonly Read<number>[],
-    start: number,
-  ) {
-    for (let r = start; r < start + VISIBLE; r++) {
-      bh(sums[r]!());
-      for (let c = 0; c < COLS; c++) bh(cells[r]![c]!());
+  effect(read: () => number, meta?: EffectMeta): () => void {
+    this.metrics.recordSetupAllocation();
+
+    const node = new ReactiveNode<unknown>(
+      null,
+      () => {
+        this.metrics.recordRecompute();
+        this.metrics.recordEffectRun();
+        blackhole(read());
+      },
+      WATCHER_INITIAL_STATE,
+    );
+
+    this.priorities.set(node, meta?.priority ?? 0);
+    runWatcher(node, this.context);
+
+    const dispose = () => disposeWatcher(node);
+    this.disposers.push(dispose);
+    return dispose;
+  }
+
+  batch<T>(fn: () => T): T {
+    return this.scheduler.batch(fn);
+  }
+
+  flush(): void {
+    this.scheduler.flush();
+  }
+
+  resetRunMetrics(): void {
+    this.metrics.resetRunMetrics();
+  }
+
+  beginStep(): void {
+    this.metrics.beginStep();
+  }
+
+  endStep(wallTimeMs: number) {
+    return this.metrics.endStep(wallTimeMs);
+  }
+
+  dispose(): void {
+    for (let index = this.disposers.length - 1; index >= 0; --index) {
+      this.disposers[index]!();
     }
+    this.disposers.length = 0;
   }
+}
 
-  function buildTable() {
-    const ours = oursHarness();
+const variants: readonly BenchVariant[] = [
+  {
+    label: "eager-walk",
+    createHarness: () => new ReflexHarness("eager-walk"),
+  },
+  {
+    label: "heap-ordering",
+    createHarness: () => new ReflexHarness("heap-ordering"),
+  },
+  {
+    label: "late-snapshot",
+    createHarness: () => new ReflexHarness("late-snapshot"),
+  },
+  {
+    label: "naive-host-queue",
+    createHarness: () => new ReflexHarness("naive-host-queue"),
+  },
+];
 
-    const rowSources = Array.from({ length: ROWS }, () =>
-      Array.from({ length: COLS }, (_, c) => ours.signal(c === 0 ? 100 : 0)),
-    );
-    const cells = Array.from({ length: ROWS }, (_, ri) =>
-      Array.from({ length: COLS }, (_, ci) =>
-        ours.memo(() => {
-          const base = rowSources[ri]![0]![0]();
-          if (ci === 0) return base;
-          return Math.round(base * (1 + ci * 0.1) + rowSources[ri]![ci]![0]());
-        }),
-      ),
-    );
-    const rowSums = Array.from({ length: ROWS }, (_, ri) =>
-      ours.memo(() => {
-        let s = 0;
-        for (let c = 0; c < COLS; c++) s += cells[ri]![c]!();
-        return s;
-      }),
-    );
-    for (let ri = 0; ri < ROWS; ri++)
-      for (let ci = 0; ci < COLS; ci++)
-        rowSources[ri]![ci]![1](ci === 0 ? 100 + ((ri * 17 + 13) % 900) : 0);
-
-    primeTable(cells, rowSums, 150);
-
-    return { rowSources, cells, rowSums, ours };
-  }
-
-  const g = buildTable();
-  const sampler = createUniqueIndexSampler(ROWS);
-  const changed: number[] = [];
-  const rO1 = rng(0x801);
-  const rO2 = rng(0x811);
-
-  bench(
-    "ours - partial update ~2% rows, render 400 visible",
-    () => {
-      for (const ri of sampler(CHANGED, rO1, changed)) {
-        const [r, w] = g.rowSources[ri]![0]!;
-        w(r() + rO1.centered(25));
-      }
-      renderVisible(g.cells, g.rowSums, rO1.int(ROWS - VISIBLE));
-    },
-    { iterations: 80, warmupIterations: 20 },
-  );
-
-  bench(
-    "ours - live col-2 update all rows, render 400 visible",
-    () => {
-      const delta = rO2.centered(5);
-      for (let ri = 0; ri < ROWS; ri++) {
-        const [r, w] = g.rowSources[ri]![2]!;
-        w(r() + delta);
-      }
-      const start = rO2.int(ROWS - VISIBLE);
-      for (let ri = start; ri < start + VISIBLE; ri++) {
-        bh(g.cells[ri]![2]!());
-        bh(g.rowSums[ri]!());
-      }
-    },
-    { iterations: 100, warmupIterations: 30 },
-  );
-});
-
-// ─── Suite 7: Form with derived state (2-layer) ───────────────────────────────
-
-describe("UI: form with derived state (2-layer, 20 fields)", () => {
-  const FIELDS = 20;
-
-  function buildForm() {
-    const ours = oursHarness();
-    const fields = Array.from({ length: FIELDS }, (_, i) =>
-      ours.signal(i * 10),
-    );
-    const trimmed = fields.map(([r]) => ours.memo(() => r() % 1000));
-    const valid = fields.map(([r], i) =>
-      ours.memo(() => (r() > 0 && trimmed[i]!() < 999 ? 1 : 0)),
-    );
-    const formatted = fields.map((_, i) =>
-      ours.memo(() => Math.round(trimmed[i]!() * valid[i]!())),
-    );
-    const formValid = ours.memo(() => valid.reduce((acc, v) => acc + v(), 0));
-    return { fields, formatted, formValid };
-  }
-
-  const g = buildForm();
-  const rO = rng(0xa01);
-
-  bench(
-    "ours - edit 1 field, read all formatted + formValid",
-    () => {
-      const fi = rO.int(FIELDS);
-      g.fields[fi]![2](g.fields[fi]![0]() + rO.centered(50));
-      for (const r of g.formatted) bh(r());
-      bh(g.formValid());
-    },
-    { iterations: 500, warmupIterations: 80 },
-  );
-});
-
-// ─── Suite 8: Filtered + sorted list (3-layer) ────────────────────────────────
-
-describe("UI: filtered + sorted list (3-layer, 500 items)", () => {
-  const ITEMS = 500,
-    PAGE = 20;
-
-  function buildList() {
-    const ours = oursHarness();
-    const oursItems = Array.from({ length: ITEMS }, (_, i) => ours.signal(i));
-    const oursMin = ours.signal(200);
-    const oursPage = ours.signal(0);
-    const oursFiltered = ours.memo(() =>
-      oursItems.map(([r]) => r()).filter((v) => v >= oursMin[0]()),
-    );
-    const oursSorted = ours.memo(() =>
-      [...oursFiltered()].sort((a, b) => a - b),
-    );
-    const oursSlice = ours.memo(() =>
-      oursSorted().slice(oursPage[0]() * PAGE, (oursPage[0]() + 1) * PAGE),
-    );
-    const oursCount = ours.memo(() => oursFiltered().length);
-    return { oursItems, oursMin, oursSlice, oursCount };
-  }
-
-  const g = buildList();
-  const rO = rng(0xb01);
-
-  bench(
-    "ours - update 1 item, read page + count",
-    () => {
-      g.oursItems[rO.int(ITEMS)]![1](rO.int(ITEMS));
-      for (const v of g.oursSlice()) bh(v);
-      bh(g.oursCount());
-    },
-    { iterations: 300, warmupIterations: 60 },
-  );
-
-  bench(
-    "ours - change filter threshold, read page + count",
-    () => {
-      g.oursMin[1](rO.int(ITEMS));
-      for (const v of g.oursSlice()) bh(v);
-      bh(g.oursCount());
-    },
-    { iterations: 300, warmupIterations: 60 },
-  );
-});
-
-// ─── Suite 9: Component tree (3-layer props drilling) ─────────────────────────
-
-describe("UI: component tree (3-layer props, 8 parents × 10 children)", () => {
-  const PARENTS = 8,
-    CHILDREN = 10;
-
-  function buildTree() {
-    const ours = oursHarness();
-    const scale = ours.signal(1);
-    const locale = ours.signal(1);
-    const base = ours.signal(16);
-
-    const parents = Array.from({ length: PARENTS }, (_, pi) => ({
-      fontSize: ours.memo(() => base[0]() * scale[0]() * (1 + pi * 0.1)),
-      spacing: ours.memo(() => scale[0]() * 8 * (1 + pi * 0.05)),
-      rtl: ours.memo(() => locale[0]() % 2),
-    }));
-
-    const children = parents.flatMap((p, pi) =>
-      Array.from({ length: CHILDREN }, (_, ci) => ({
-        display: ours.memo(() => p.fontSize() * (1 + ci * 0.02)),
-        margin: ours.memo(() => p.spacing() * ((ci % 3) + 1)),
-        dir: ours.memo(() => p.rtl()),
-        label: ours.memo(() => Math.round(p.fontSize() * 10 + ci)),
-      })),
-    );
-
-    return { scale, locale, children };
-  }
-
-  const g = buildTree();
-  const rO = rng(0xc01);
-
-  function readAllChildren(
-    children: {
-      display: Read<number>;
-      margin: Read<number>;
-      dir: Read<number>;
-      label: Read<number>;
-    }[],
-  ) {
-    for (const c of children) {
-      bh(c.display());
-      bh(c.margin());
-      bh(c.dir());
-      bh(c.label());
-    }
-  }
-
-  bench(
-    "ours - global scale change, read all children",
-    () => {
-      g.scale[1](0.8 + rO.next() * 0.4);
-      readAllChildren(g.children);
-    },
-    { iterations: 600, warmupIterations: 80 },
-  );
-
-  bench(
-    "ours - locale change, read all children",
-    () => {
-      g.locale[1](rO.int(10));
-      readAllChildren(g.children);
-    },
-    { iterations: 600, warmupIterations: 80 },
-  );
-});
+registerBenchFile("reflex", variants);

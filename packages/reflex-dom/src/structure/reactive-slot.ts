@@ -6,13 +6,9 @@ import {
   useEffect,
 } from "reflex-framework/ownership/reflex";
 import type { DOMRenderer } from "../runtime";
-import type { ContentSlot } from "../structure/content-slot";
-import { adoptContentSlot, createContentSlot } from "../structure/content-slot";
-import { appendRenderableNodes } from "./append";
-
-function identity<T>(value: T): T {
-  return value;
-}
+import type { ContentSlot } from "./content-slot";
+import { adoptContentSlot, createContentSlot } from "./content-slot";
+import { appendRenderableNodes } from "../mount/append";
 
 export function createMountedSlot(
   renderer: DOMRenderer,
@@ -48,14 +44,12 @@ export function createHydratedSlot(
   );
 }
 
-export function mountReactiveSlot<T>(
+export function bindReactiveSlotLifecycle<T>(
   renderer: DOMRenderer,
+  slot: ContentSlot,
   readValue: () => T,
   resolveValue: (value: T) => unknown,
-  ns: Namespace,
-): Node {
-  const slot = createMountedSlot(renderer, resolveValue(readValue()), ns);
-
+): void {
   useEffect(renderer.owner, () => {
     const nextValue = readValue();
 
@@ -67,8 +61,6 @@ export function mountReactiveSlot<T>(
   registerCleanup(renderer.owner, () => {
     slot.destroy();
   });
-
-  return slot.fragment;
 }
 
 export function hydrateReactiveSlot<T>(
@@ -80,18 +72,5 @@ export function hydrateReactiveSlot<T>(
   ns: Namespace,
 ): void {
   const slot = createHydratedSlot(renderer, start, end, ns);
-
-  useEffect(renderer.owner, () => {
-    const nextValue = readValue();
-
-    onEffectStart(() => {
-      slot.update(resolveValue(nextValue));
-    });
-  });
-
-  registerCleanup(renderer.owner, () => {
-    slot.destroy();
-  });
+  bindReactiveSlotLifecycle(renderer, slot, readValue, resolveValue);
 }
-
-export { identity };

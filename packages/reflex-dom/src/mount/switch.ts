@@ -2,7 +2,7 @@ import type { Namespace } from "../host/namespace";
 import type { SwitchRenderable } from "../operators";
 import { resolveSwitchValue } from "../operators";
 import type { DOMRenderer } from "../runtime";
-import { mountReactiveSlot } from "./reactive-slot";
+import { mountReactiveSlot } from "./reactive";
 
 export function mountSwitch(
   renderer: DOMRenderer,

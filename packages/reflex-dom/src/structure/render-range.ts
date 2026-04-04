@@ -21,8 +21,16 @@ export interface MountedRenderRange extends RenderRangeAnchors {
   destroy(): void;
 }
 
+const enum MountState {
+  None = 0,
+  Cleared = 1 << 0,
+  Destroyed = 1 << 1,
+}
+
 function resolveOwnerDocument(parent: Node): Document {
-  return parent.ownerDocument ?? document;
+  return parent.nodeType === Node.DOCUMENT_NODE
+    ? (parent as Document)
+    : (parent.ownerDocument ?? document);
 }
 
 export function createRenderRangeAnchors(parent: Node): RenderRangeAnchors {
@@ -33,10 +41,7 @@ export function createRenderRangeAnchors(parent: Node): RenderRangeAnchors {
   parent.appendChild(startAnchor);
   parent.appendChild(endAnchor);
 
-  return {
-    startAnchor,
-    endAnchor,
-  };
+  return { startAnchor, endAnchor };
 }
 
 export function adoptExistingContentRange(parent: Node): RenderRangeAnchors {
@@ -53,47 +58,47 @@ export function adoptExistingContentRange(parent: Node): RenderRangeAnchors {
     parent.appendChild(endAnchor);
   }
 
-  return {
-    startAnchor,
-    endAnchor,
-  };
+  return { startAnchor, endAnchor };
 }
 
 export function createRenderRangeMount(
   scope: Scope,
   anchors: RenderRangeAnchors,
 ): MountedRenderRange {
-  let isCleared = false;
-  let isDestroyed = false;
+  const { startAnchor, endAnchor } = anchors;
+  let state = MountState.None;
+
+  const clearRange = (): void => {
+    if ((state & (MountState.Cleared | MountState.Destroyed)) !== 0) {
+      return;
+    }
+
+    state |= MountState.Cleared;
+    disposeScope(scope);
+
+    const parent = startAnchor.parentNode;
+    if (parent !== null && endAnchor.parentNode === parent) {
+      clearBetween(startAnchor, endAnchor);
+    }
+  };
+
+  const destroyRange = (): void => {
+    if ((state & MountState.Destroyed) !== 0) {
+      return;
+    }
+
+    clearRange();
+    startAnchor.remove();
+    endAnchor.remove();
+    state |= MountState.Destroyed;
+  };
 
   return {
     scope,
-    ...anchors,
-
-    clear(): void {
-      if (isCleared || isDestroyed) {
-        return;
-      }
-
-      isCleared = true;
-      disposeScope(scope);
-
-      const rangeParent = anchors.startAnchor.parentNode;
-      if (rangeParent !== null && anchors.endAnchor.parentNode === rangeParent) {
-        clearBetween(anchors.startAnchor, anchors.endAnchor);
-      }
-    },
-
-    destroy(): void {
-      if (isDestroyed) {
-        return;
-      }
-
-      this.clear();
-      anchors.startAnchor.remove();
-      anchors.endAnchor.remove();
-      isDestroyed = true;
-    },
+    startAnchor,
+    endAnchor,
+    clear: clearRange,
+    destroy: destroyRange,
   };
 }
 
@@ -105,8 +110,7 @@ function mountRangeContent(
   namespace: Namespace,
   scope: Scope,
 ): void {
-  const ownerDocument = resolveOwnerDocument(parent);
-  const fragment = ownerDocument.createDocumentFragment();
+  const fragment = resolveOwnerDocument(parent).createDocumentFragment();
 
   runInOwnershipScope(renderer.owner, scope, () => {
     appendRenderableNodes(renderer, fragment, renderable, namespace);

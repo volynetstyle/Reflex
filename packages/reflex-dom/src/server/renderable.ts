@@ -3,11 +3,6 @@ import {
   getTaggedRenderableKind,
   isEmptyRenderableValue,
 } from "../renderable-kind";
-import type { JSXRenderable, RenderableRecord } from "../types";
-
-export type Renderable = JSXRenderable | unknown;
-export type JSXElement = JSXRenderable;
-export type InternalRenderable = RenderableRecord;
 
 function isIterableRenderableValue(value: unknown): value is Iterable<unknown> {
   return (
@@ -18,15 +13,15 @@ function isIterableRenderableValue(value: unknown): value is Iterable<unknown> {
   );
 }
 
-function isClientNodeValue(value: unknown): value is Node {
-  return value instanceof Node;
+function isServerNodeValue(value: unknown): value is Node {
+  return typeof Node !== "undefined" && value instanceof Node;
 }
 
 function isAccessorRenderableValue(value: unknown): value is () => unknown {
   return typeof value === "function";
 }
 
-export function classifyClientRenderable(value: unknown): RenderableKind {
+export function classifyServerRenderable(value: unknown): RenderableKind {
   if (isEmptyRenderableValue(value)) {
     return RenderableKind.Empty;
   }
@@ -35,7 +30,7 @@ export function classifyClientRenderable(value: unknown): RenderableKind {
     return RenderableKind.Array;
   }
 
-  if (isClientNodeValue(value)) {
+  if (isServerNodeValue(value)) {
     return RenderableKind.Node;
   }
 

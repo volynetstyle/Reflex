@@ -15,9 +15,10 @@ import { isEventProp } from "../host/events";
 import { normalizeAttr } from "../host/aliases";
 import { resolveNamespace, type Namespace } from "../host/namespace";
 import { isVoidTag } from "../host/tags";
-import { RenderableKind, classifyRenderable } from "../mount/renderable";
+import { RenderableKind } from "../renderable-kind";
 import { wrapHydrationSlotMarkup } from "../hydrate/markers";
-import type {  StyleValue } from "../types";
+import type { StyleValue } from "../types";
+import { classifyServerRenderable } from "./renderable";
 
 const PLATFORM_PROPS = new Set<string>([
   "elementInternals",
@@ -215,7 +216,7 @@ function renderRenderableToString(
   value: JSXRenderable | unknown,
   parentNamespace: Namespace,
 ): string {
-  switch (classifyRenderable(value)) {
+  switch (classifyServerRenderable(value)) {
     case RenderableKind.Empty:
       return "";
 
