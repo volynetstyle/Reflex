@@ -48,6 +48,34 @@ describe("Reactive system - edge cases", () => {
     expect(snapshots).toEqual(["1->2", "2->4"]);
   });
 
+  it("eager effects batch rereads of shared subgraphs into one rerun per invalidation", () => {
+    createRuntime({ effectStrategy: "eager" });
+    const [source, setSource] = signal(1);
+    const leaves = Array.from({ length: 6 }, (_, index) =>
+      computed(() => source() * (index + 1)),
+    );
+    const shared = computed(() => {
+      let total = 0;
+      for (let index = 0; index < leaves.length; ++index) {
+        total += leaves[index]!();
+      }
+      return total;
+    });
+    const effects = Array.from({ length: 4 }, () =>
+      vi.fn(() => shared() + leaves[0]!()),
+    );
+
+    for (let index = 0; index < effects.length; ++index) {
+      effect(effects[index]!);
+    }
+
+    setSource(2);
+
+    for (let index = 0; index < effects.length; ++index) {
+      expect(effects[index]).toHaveBeenCalledTimes(2);
+    }
+  });
+
   it("drops stale dynamic dependencies after branch switches", () => {
     const [flag, setFlag] = signal(true);
     const [left, setLeft] = signal(1);

@@ -1,3 +1,4 @@
+import type { ExecutionContext } from "../context";
 import { getDefaultContext } from "../context";
 import { devAssertShouldRecomputeAlive } from "../dev";
 import type { ReactiveNode } from "../shape";
@@ -9,8 +10,12 @@ const REENTRANT_STALE = ReactiveNodeState.Invalid | ReactiveNodeState.Visited;
 
 // Entry point. Kept small so TurboFan/Ion/DFG eagerly inline it into callers.
 // All early-exit checks come first so the common fast paths never touch
-// getDefaultContext() or the stack.
-export function shouldRecompute(node: ReactiveNode): boolean {
+// the dependency stack, and explicit callers can thread their own context
+// instead of falling back to the global default.
+export function shouldRecompute(
+  node: ReactiveNode,
+  context: ExecutionContext = getDefaultContext(),
+): boolean {
   const state = node.state;
 
   // Producers commit on write — pull walk is never needed.
@@ -35,5 +40,5 @@ export function shouldRecompute(node: ReactiveNode): boolean {
     return false;
   }
 
-  return shouldRecomputeLinear(node, firstIn, getDefaultContext());
+  return shouldRecomputeLinear(node, firstIn, context);
 }

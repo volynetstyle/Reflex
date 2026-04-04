@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { isEffectScheduled } from "../src/api/effect";
 import { createWatcherNode } from "../src/infra/factory";
 import {
   EffectScheduler,
@@ -7,7 +8,16 @@ import {
 } from "../src/policy/effect_scheduler";
 import { EventDispatcher } from "../src/policy/event_dispatcher";
 import {
+  createExecutionContext,
+  ConsumerReadMode,
+  readConsumer,
+  readProducer,
   ReactiveNodeState,
+  runWatcher,
+  writeProducer,
+  ReactiveNode,
+  CONSUMER_INITIAL_STATE,
+  PRODUCER_INITIAL_STATE,
 } from "@reflex/runtime";
 import type { EventBoundary, EventSubscriber } from "../src/infra/event";
 import {
@@ -18,6 +28,7 @@ import {
   removeSubscriber,
   subscribeEvent,
 } from "../src/infra/event";
+import { createRuntime } from "../src/infra/runtime";
 
 function createSubscriber<T>(fn: (value: T) => void): EventSubscriber<T> {
   return {
@@ -114,6 +125,88 @@ describe("Reactive system - policy helpers", () => {
     });
 
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it("queues eager invalidations during propagation and flushes them after settle", () => {
+    const context = createExecutionContext();
+    const scheduler = new EffectScheduler(EffectSchedulerMode.Eager, context);
+    const spy = vi.fn(() => {});
+    const node = createWatcherNode(spy);
+    node.state |= ReactiveNodeState.Changed;
+    context.propagationDepth = 1;
+
+    expect(scheduler.canRunImmediately(node)).toBe(false);
+    expect(scheduler.scheduleInvalidated(node)).toBe(true);
+    expect(spy).not.toHaveBeenCalled();
+    expect(isEffectScheduled(node)).toBe(true);
+
+    context.propagationDepth = 0;
+    scheduler.notifySettled();
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(isEffectScheduled(node)).toBe(false);
+  });
+
+  it("preserves queued effects after a flush throws", () => {
+    const scheduler = new EffectScheduler(EffectSchedulerMode.Flush);
+    const boom = new Error("boom");
+    const second = vi.fn(() => {});
+    const firstNode = createWatcherNode(() => {
+      throw boom;
+    });
+    const secondNode = createWatcherNode(second);
+
+    scheduler.enqueue(firstNode);
+    scheduler.enqueue(secondNode);
+
+    expect(() => scheduler.flush()).toThrow(boom);
+    expect(isEffectScheduled(secondNode)).toBe(true);
+    expect(second).not.toHaveBeenCalled();
+
+    scheduler.flush();
+
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(isEffectScheduled(secondNode)).toBe(false);
+  });
+
+  it("scheduler integration invalidates every low-level watcher in a shared branch", () => {
+    const invalidated: string[] = [];
+    const rt = createRuntime({
+      effectStrategy: "eager",
+      hooks: {
+        onEffectInvalidated(node) {
+          if (node === direct) invalidated.push("direct");
+          else if (node === left) invalidated.push("left");
+          else if (node === right) invalidated.push("right");
+        },
+      },
+    });
+
+    const source = new ReactiveNode(1, null, PRODUCER_INITIAL_STATE);
+    const shared = new ReactiveNode(
+      0,
+      () => readProducer(source, rt.ctx) * 2,
+      CONSUMER_INITIAL_STATE,
+    );
+    const direct = createWatcherNode(() => {
+      readProducer(source, rt.ctx);
+    });
+    const left = createWatcherNode(() => {
+      readConsumer(shared, ConsumerReadMode.lazy, rt.ctx);
+    });
+    const right = createWatcherNode(() => {
+      readConsumer(shared, ConsumerReadMode.lazy, rt.ctx);
+    });
+
+    readConsumer(shared, ConsumerReadMode.eager, rt.ctx);
+    runWatcher(direct, rt.ctx);
+    runWatcher(left, rt.ctx);
+    runWatcher(right, rt.ctx);
+
+    invalidated.length = 0;
+    writeProducer(source, 2, Object.is, rt.ctx);
+
+    expect(invalidated).toEqual(["left", "right", "direct"]);
   });
 
   it("can take the guarded auto-flush branch in finally when forced", () => {

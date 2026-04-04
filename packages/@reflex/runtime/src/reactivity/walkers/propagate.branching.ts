@@ -15,6 +15,7 @@ function isTrackedPrefixEdge(
   depsTail: ReactiveEdge | null,
 ): boolean {
   if (depsTail === null) return false;
+  if (edge === depsTail) return true;
 
   for (
     let cursor: ReactiveEdge | null = edge.prevIn;
@@ -84,6 +85,14 @@ export function propagateBranching(
   let stackTop = stackBase;
   let promoteBit = NON_IMMEDIATE;
 
+  if (resume !== null) {
+    edgeStack[stackTop] = resume;
+    promoteStack[stackTop++] = resumePromote;
+  }
+
+  resume = edge.nextOut;
+  resumePromote = promoteBit;
+
   while (true) {
     const sub = edge.to;
     const state = sub.state;
@@ -110,8 +119,9 @@ export function propagateBranching(
           }
 
           edge = firstOut;
+          promoteBit = NON_IMMEDIATE;
           resume = firstOut.nextOut;
-          promoteBit = resumePromote = NON_IMMEDIATE;
+          resumePromote = promoteBit;
           continue;
         }
       }
@@ -122,12 +132,13 @@ export function propagateBranching(
       promoteBit = resumePromote;
     } else if (stackTop > stackBase) {
       edge = edgeStack[--stackTop]!;
-      promoteBit = resumePromote = promoteStack[stackTop]!;
+      promoteBit = promoteStack[stackTop]!;
     } else {
       edgeStack.length = promoteStack.length = stackBase;
       return thrown;
     }
 
     resume = edge.nextOut;
+    resumePromote = promoteBit;
   }
 }

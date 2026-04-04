@@ -1,35 +1,48 @@
 import {
   disposeWatcher,
   getDefaultContext,
-  ReactiveNodeState,
   runWatcher,
 } from "@reflex/runtime";
 import type { ReactiveNode } from "@reflex/runtime";
 import type { UNINITIALIZED } from "../infra/factory";
 import { createWatcherNode } from "../infra/factory";
 
+type EffectNode = ReactiveNode<typeof UNINITIALIZED | Destructor>;
+const EFFECT_SCHEDULED = Symbol("reflex.effect_scheduled");
+type ScheduledEffectNode = EffectNode & {
+  [EFFECT_SCHEDULED]?: 0 | 1;
+};
+
 /**
- * Marks an effect watcher node as scheduled.
+ * Marks an effect watcher node as queued in the host scheduler.
  *
- * This is a low-level helper used by scheduler integrations and tests to set
- * the runtime's scheduled flag on a watcher node.
+ * This is a low-level helper used by scheduler integrations and tests. Reflex
+ * stores the queued marker on the watcher instance itself so the host
+ * scheduler can dedupe enqueues without mutating runtime state bits.
  */
 export function effectScheduled(
-  node: ReactiveNode<typeof UNINITIALIZED | Destructor>,
+  node: EffectNode,
 ) {
-  node.state |= ReactiveNodeState.Scheduled;
+  (node as ScheduledEffectNode)[EFFECT_SCHEDULED] = 1;
 }
 
 /**
- * Clears the scheduled flag from an effect watcher node.
+ * Clears the scheduler-owned queued marker from an effect watcher node.
  *
  * This is a low-level helper used by scheduler integrations and tests to mark
  * a watcher as no longer queued for execution.
  */
 export function effectUnscheduled(
-  node: ReactiveNode<typeof UNINITIALIZED | Destructor>,
+  node: EffectNode,
 ) {
-  node.state &= ~ReactiveNodeState.Scheduled;
+  (node as ScheduledEffectNode)[EFFECT_SCHEDULED] = 0;
+}
+
+/**
+ * Returns whether the host scheduler currently considers the watcher queued.
+ */
+export function isEffectScheduled(node: EffectNode): boolean {
+  return (node as ScheduledEffectNode)[EFFECT_SCHEDULED] === 1;
 }
 
 /**

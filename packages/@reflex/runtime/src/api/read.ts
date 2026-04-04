@@ -140,7 +140,8 @@ function stabilizeConsumer<T>(
     // - If Changed flag set: upstream definitely changed, skip verification
     // - If Invalid flag set: might be transitive stale flag, verify via dependency walk
     const needs =
-      (state & ReactiveNodeState.Changed) !== 0 || shouldRecompute(node);
+      (state & ReactiveNodeState.Changed) !== 0 ||
+      shouldRecompute(node, context);
 
     if (needs) {
       // Re-execute the compute function and update payload

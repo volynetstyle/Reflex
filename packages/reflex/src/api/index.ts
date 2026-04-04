@@ -1,3 +1,4 @@
+export * from "./batch";
 export * from "./derived";
 export * from "./effect";
 export * from "./event";

@@ -5,7 +5,11 @@ import {
   getDefaultContext,
 } from "@reflex/runtime";
 import type { ExecutionContext } from "@reflex/runtime";
-import { effectScheduled, effectUnscheduled } from "../api/effect";
+import {
+  effectScheduled,
+  effectUnscheduled,
+  isEffectScheduled,
+} from "../api/effect";
 import type { UNINITIALIZED } from "../infra/factory";
 import type { ReactiveNode } from "@reflex/runtime";
 
@@ -22,6 +26,12 @@ export const enum SchedulerPhase {
 
 export type EffectStrategy = "flush" | "eager";
 
+const SETTLED_NEXT = Symbol("reflex.settled_next");
+
+type ScheduledReactiveNode = ReactiveNode & {
+  [SETTLED_NEXT]?: ReactiveNode | null;
+};
+
 export function resolveEffectSchedulerMode(
   strategy: EffectStrategy | undefined,
 ): EffectSchedulerMode {
@@ -31,19 +41,36 @@ export function resolveEffectSchedulerMode(
 }
 
 export class EffectScheduler {
-  private readonly queue: ReactiveNode<typeof UNINITIALIZED | Destructor>[] =
-    [];
+  private readonly queue: ReactiveNode<typeof UNINITIALIZED | Destructor>[] = [];
   private head = 0;
   private batchDepth = 0;
   private phase = SchedulerPhase.Idle;
 
+  private currentNode: ReactiveNode | null = null;
+
+  private settledHead: ReactiveNode | null = null;
+  private settledTail: ReactiveNode | null = null;
+
+  private readonly ctx: ExecutionContext;
+
   constructor(
     private readonly mode: EffectSchedulerMode,
-    private readonly context?: ExecutionContext,
-  ) {}
+    context?: ExecutionContext,
+  ) {
+    this.ctx = context ?? getDefaultContext();
+  }
 
-  private getContext(): ExecutionContext {
-    return this.context ?? getDefaultContext();
+  scheduleInvalidated(node: ReactiveNode): boolean {
+    if (this.isNodeIgnored(node)) return false;
+    if ((node.state & DIRTY_STATE) === 0) return false;
+
+    if (this.canRunImmediately(node)) {
+      this.runImmediately(node);
+      return true;
+    }
+
+    this.enqueue(node);
+    return true;
   }
 
   enqueue(node: ReactiveNode): void {
@@ -68,28 +95,39 @@ export class EffectScheduler {
   }
 
   flush(): void {
-    if (this.phase & SchedulerPhase.Flushing) return;
+    if (this.phase === SchedulerPhase.Flushing) return;
     if (!this.hasPending()) return;
 
     this.phase = SchedulerPhase.Flushing;
-    const ctx = this.getContext();
+    let completed = false;
 
     try {
       while (this.head < this.queue.length) {
         const node = this.queue[this.head++]!;
-        effectUnscheduled(node);
-
-        if (this.shouldSkipNode(node)) continue;
-
-        runWatcher(node, ctx);
+        this.runQueuedNode(node);
       }
+
+      completed = true;
     } finally {
-      this.queue.length = 0;
-      this.head = 0;
+      if (completed) {
+        this.queue.length = 0;
+        this.head = 0;
+      } else if (this.head > 0) {
+        // сохранить хвост очереди после throw
+        this.queue.copyWithin(0, this.head);
+        this.queue.length -= this.head;
+        this.head = 0;
+      }
+
       this.phase =
         this.batchDepth > 0 ? SchedulerPhase.Batching : SchedulerPhase.Idle;
 
-      /* c8 ignore start -- the queue is fully drained before reaching this branch */
+      // settled effects переводим в обычную очередь только после завершения flush
+      if (this.phase === SchedulerPhase.Idle && this.settledHead !== null) {
+        this.drainSettledIntoMainQueue();
+      }
+
+      /* c8 ignore start */
       if (this.phase === SchedulerPhase.Idle && this.shouldAutoFlush()) {
         this.flush();
       }
@@ -102,22 +140,140 @@ export class EffectScheduler {
     this.head = 0;
     this.batchDepth = 0;
     this.phase = SchedulerPhase.Idle;
+    this.currentNode = null;
+    this.clearSettledQueue();
   }
 
   notifySettled(): void {
+    if (this.settledHead !== null) {
+      this.drainSettledIntoMainQueue();
+    }
+
     if (this.shouldAutoFlush()) {
       this.flush();
     }
+  }
+
+  isFlushing(): boolean {
+    return this.phase === SchedulerPhase.Flushing;
+  }
+
+  isRunning(node: ReactiveNode): boolean {
+    return this.currentNode === node;
+  }
+
+  deferUntilSettled(node: ReactiveNode): void {
+    if ((node.state & ReactiveNodeState.Disposed) !== 0) return;
+    if (isEffectScheduled(node)) return;
+
+    effectScheduled(node);
+
+    const scheduledNode = node as ScheduledReactiveNode;
+    scheduledNode[SETTLED_NEXT] = null;
+
+    if (this.settledTail === null) {
+      this.settledHead = node;
+    } else {
+      (this.settledTail as ScheduledReactiveNode)[SETTLED_NEXT] = node;
+    }
+
+    this.settledTail = node;
+  }
+
+  canRunImmediately(node: ReactiveNode): boolean {
+    return (
+      (node.state & DIRTY_STATE) !== 0 &&
+      this.mode === EffectSchedulerMode.Eager &&
+      this.phase === SchedulerPhase.Idle &&
+      this.batchDepth === 0 &&
+      this.ctx.propagationDepth === 0 &&
+      this.ctx.activeComputed === null
+    );
+  }
+
+  canDeferUntilSettled(node: ReactiveNode): boolean {
+    return (
+      (node.state & DIRTY_STATE) !== 0 &&
+      this.mode === EffectSchedulerMode.Eager &&
+      this.phase === SchedulerPhase.Idle &&
+      this.batchDepth === 0 &&
+      this.ctx.propagationDepth !== 0 &&
+      this.ctx.activeComputed === null
+    );
   }
 
   private hasPending(): boolean {
     return this.head < this.queue.length;
   }
 
+  private runImmediately(node: ReactiveNode): void {
+    effectScheduled(node);
+
+    let threw = false;
+    let thrown: unknown;
+
+    this.currentNode = node;
+    try {
+      runWatcher(node, this.ctx);
+    } catch (error) {
+      threw = true;
+      thrown = error;
+    } finally {
+      this.currentNode = null;
+    }
+
+    if (threw) {
+      effectUnscheduled(node);
+      throw thrown;
+    }
+
+    this.finishOwnedNode(node);
+
+    if (this.shouldAutoFlush()) {
+      this.flush();
+    }
+  }
+
+  private runQueuedNode(node: ReactiveNode): void {
+    if (this.shouldSkipNode(node)) {
+      effectUnscheduled(node);
+      return;
+    }
+
+    let threw = false;
+    let thrown: unknown;
+
+    this.currentNode = node;
+    try {
+      runWatcher(node, this.ctx);
+    } catch (error) {
+      threw = true;
+      thrown = error;
+    } finally {
+      this.currentNode = null;
+    }
+
+    if (threw) {
+      effectUnscheduled(node);
+      throw thrown;
+    }
+
+    this.finishOwnedNode(node);
+  }
+
+  private finishOwnedNode(node: ReactiveNode): void {
+    if (this.shouldSkipNode(node)) {
+      effectUnscheduled(node);
+      return;
+    }
+
+    this.queue.push(node);
+  }
+
   private isNodeIgnored(node: ReactiveNode): boolean {
     return (
       (node.state & ReactiveNodeState.Disposed) !== 0 ||
-      (node.state & ReactiveNodeState.Scheduled) !== 0
+      isEffectScheduled(node)
     );
   }
 
@@ -129,14 +285,41 @@ export class EffectScheduler {
   }
 
   private shouldAutoFlush(): boolean {
-    const ctx = this.getContext();
     return (
       this.mode === EffectSchedulerMode.Eager &&
       this.phase === SchedulerPhase.Idle &&
-      ctx.propagationDepth === 0 &&
-      ctx.activeComputed === null &&
+      this.ctx.propagationDepth === 0 &&
+      this.ctx.activeComputed === null &&
       this.hasPending()
     );
+  }
+
+  private drainSettledIntoMainQueue(): void {
+    let node = this.settledHead;
+    this.settledHead = null;
+    this.settledTail = null;
+
+    while (node !== null) {
+      const scheduledNode = node as ScheduledReactiveNode;
+      const next = scheduledNode[SETTLED_NEXT] ?? null;
+      scheduledNode[SETTLED_NEXT] = null;
+      this.queue.push(node);
+      node = next;
+    }
+  }
+
+  private clearSettledQueue(): void {
+    let node = this.settledHead;
+    this.settledHead = null;
+    this.settledTail = null;
+
+    while (node !== null) {
+      const scheduledNode = node as ScheduledReactiveNode;
+      const next = scheduledNode[SETTLED_NEXT] ?? null;
+      scheduledNode[SETTLED_NEXT] = null;
+      effectUnscheduled(node);
+      node = next;
+    }
   }
 
   private enterBatch(): void {
@@ -154,6 +337,10 @@ export class EffectScheduler {
     if (this.phase === SchedulerPhase.Flushing) return;
 
     this.phase = SchedulerPhase.Idle;
+
+    if (this.settledHead !== null) {
+      this.drainSettledIntoMainQueue();
+    }
 
     if (this.shouldAutoFlush()) {
       this.flush();

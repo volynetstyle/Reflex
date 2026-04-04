@@ -11,7 +11,8 @@ Key properties:
 - minimal recomputation/refresh
 - no persistent global ordering structure in core
 
-This project provides a minimal reactive execution engine based on explicit node kinds and host-controlled scheduling. It is designed as a **general-purpose computation substrate**, not a UI framework.
+This project provides a minimal reactive execution engine based on explicit node kinds and host-controlled scheduling. It is designed as a 
+**general-purpose computation substrate**, not a UI framework.
 
 ---
 

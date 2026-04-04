@@ -66,10 +66,11 @@ class AlienHarness implements BenchHarness {
 
   effect(read: () => number, _meta?: { label?: string; priority?: number }): () => void {
     this.metrics.recordSetupAllocation();
+    const effectId = this.metrics.allocateEffectId();
 
     const dispose = effect(() => {
       this.metrics.recordRecompute();
-      this.metrics.recordEffectRun();
+      this.metrics.recordEffectRun(effectId);
       blackhole(read());
     });
 

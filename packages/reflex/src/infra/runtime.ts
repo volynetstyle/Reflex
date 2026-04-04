@@ -1,5 +1,6 @@
 import {
   createExecutionContext,
+
   setDefaultContext,
 } from "@reflex/runtime";
 import type {
@@ -13,6 +14,7 @@ import {
   EventDispatcher,
   resolveEffectSchedulerMode,
 } from "../policy";
+import { bindEffectScheduler } from "./scheduler_binding";
 import { subscribeEvent } from "./event";
 import { createSource } from "./factory";
 
@@ -32,27 +34,33 @@ interface RuntimeOptions {
    */
   effectStrategy?: EffectStrategy;
 }
-
 function createRuntimeInfrastructure(options?: RuntimeOptions) {
   const hooks = options?.hooks;
+  const onExternalEffectInvalidated = hooks?.onEffectInvalidated;
+  const onExternalReactiveSettled = hooks?.onReactiveSettled;
 
   const executionContext = createExecutionContext();
-
   const scheduler = new EffectScheduler(
     resolveEffectSchedulerMode(options?.effectStrategy),
     executionContext,
   );
+
+  bindEffectScheduler(executionContext, scheduler);
+
   const dispatcher = new EventDispatcher((fn) => scheduler.batch(fn));
 
   executionContext.setHooks({
     ...hooks,
     onEffectInvalidated(node: ReactiveNode) {
-      scheduler.enqueue(node);
-      hooks?.onEffectInvalidated?.(node);
+      if (scheduler.scheduleInvalidated(node)) {
+        onExternalEffectInvalidated?.(node);
+      }
     },
     onReactiveSettled() {
-      scheduler.notifySettled();
-      hooks?.onReactiveSettled?.();
+      if (!scheduler.isFlushing()) {
+        scheduler.notifySettled();
+      }
+      onExternalReactiveSettled?.();
     },
   });
 
@@ -121,6 +129,13 @@ export interface Runtime {
    * scheduled effects to observe the latest stable snapshot.
    */
   flush(): void;
+  /**
+   * Runs `fn` inside the runtime's effect batch boundary.
+   *
+   * In eager mode this defers queued effect re-runs until the outermost batch
+   * exits. In flush mode, effects still wait for an explicit `rt.flush()`.
+   */
+  batch<T>(fn: () => T): T;
   /**
    * Underlying execution context used by this runtime.
    *
@@ -200,6 +215,10 @@ export function createRuntime(options?: RuntimeOptions): Runtime {
 
     flush() {
       scheduler.flush();
+    },
+
+    batch<T>(fn: () => T) {
+      return scheduler.batch(fn);
     },
   };
 }

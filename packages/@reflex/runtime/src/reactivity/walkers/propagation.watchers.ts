@@ -1,6 +1,6 @@
 import { recordDebugEvent } from "../../debug";
-import type { ExecutionContext } from "../context";
-import type { ReactiveEdge, ReactiveNode } from "../shape";
+  import type { ExecutionContext } from "../context";
+import { type ReactiveEdge, type ReactiveNode } from "../shape";
 import { IMMEDIATE } from "./propagate.constants";
 
 // ─── recordPropagation ────────────────────────────────────────────────────────
@@ -28,12 +28,12 @@ export function notifyWatcherInvalidation(
   thrown: unknown,
   context: ExecutionContext,
 ): unknown {
+  const onEffectInvalidated = context.onEffectInvalidatedHook;
+  if (onEffectInvalidated === undefined) return thrown;
+
   if (__DEV__) {
     recordDebugEvent(context, "watcher:invalidated", { node });
   }
-
-  const onEffectInvalidated = context.onEffectInvalidatedHook;
-  if (onEffectInvalidated === undefined) return thrown;
 
   try {
     onEffectInvalidated(node);

@@ -32,7 +32,7 @@ export enum ReactiveNodeState {
   Disposed = 1 << 6,
   /** Node is currently executing its compute function. Used for cycle detection. */
   Computing = 1 << 7,
-  /** Watcher has already been scheduled/notified for the current invalidation wave. */
+  /** Host-owned scheduler marker. The runtime core does not read or write this bit. */
   Scheduled = 1 << 8,
   /** Node is collecting dependencies during the current computation pass. */
   Tracking = 1 << 9,
@@ -82,6 +82,11 @@ export const WALKER_STATE =
 /** Clear the re-entrant marker after the walker no longer needs it. */
 export function clearNodeVisited(node: ReactiveNode): void {
   node.state &= ~ReactiveNodeState.Visited;
+}
+
+/** Host scheduler helper for clearing its own queued marker. */
+export function clearNodeScheduled(node: ReactiveNode): void {
+  node.state &= ~ReactiveNodeState.Scheduled;
 }
 
 /** Enter dependency collection mode for the current compute pass. */
