@@ -89,7 +89,15 @@ class AlienHarness implements BenchHarness {
     }
   }
 
-  flush(): void {}
+  flush(): void {
+    startBatch();
+
+    try {
+     
+    } finally {
+      endBatch();
+    }
+  }
 
   resetRunMetrics(): void {
     this.metrics.resetRunMetrics();

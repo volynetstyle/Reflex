@@ -328,7 +328,13 @@ export function registerBenchFile(
 
       for (let i = 0; i < runners.length; ++i) {
         const runner = runners[i]!;
-        bench(runner.label, () => { runner.runStep(); }, scenario.bench);
+        bench(
+          runner.label,
+          () => {
+            runner.runStep();
+          },
+          scenario.bench,
+        );
       }
     });
   }
@@ -451,8 +457,14 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
         return total;
       }, "diamond:join");
 
-      harness.effect(() => sharedSum(), { label: "diamond:sum-effect", priority: 64 });
-      harness.effect(() => sharedDiff(), { label: "diamond:diff-effect", priority: 64 });
+      harness.effect(() => sharedSum(), {
+        label: "diamond:sum-effect",
+        priority: 64,
+      });
+      harness.effect(() => sharedDiff(), {
+        label: "diamond:diff-effect",
+        priority: 64,
+      });
 
       for (let index = 0; index < branches.length; index += 32) {
         const branch = branches[index]!;
@@ -462,7 +474,10 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
         });
       }
 
-      harness.effect(() => join(), { label: "diamond:join-effect", priority: 320 });
+      harness.effect(() => join(), {
+        label: "diamond:join-effect",
+        priority: 320,
+      });
 
       return {
         runStep() {
@@ -559,10 +574,10 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
       for (let index = 0; index < 96; ++index) {
         const addend = (index & 1) === 0 ? index : index * 3;
         const base = (index & 1) === 0 ? source : doubled;
-        harness.effect(
-          () => base() + addend,
-          { label: `effects:sink:${index}`, priority: index },
-        );
+        harness.effect(() => base() + addend, {
+          label: `effects:sink:${index}`,
+          priority: index,
+        });
       }
 
       return {
@@ -590,11 +605,99 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
 
       const total = harness.memo(() => {
         let sum = 0;
+        for (let i = 0; i < srcLen; ++i) {
+          sum += sources[i]![0]();
+        }
+        return sum;
+      }, "fanin:total");
+
+      harness.effect(() => total(), {
+        label: "fanin:total-effect",
+        priority: 512,
+      });
+
+      harness.effect(
+        () => {
+          let sum = 0;
+          for (let i = 0; i < srcLen; i += 16) {
+            sum += sources[i]![0]();
+          }
+          return sum;
+        },
+        { label: "fanin:direct-effect", priority: 256 },
+      );
+
+      return {
+        runStep() {
+          harness.batch(() => {
+            for (const index of sampler(8, rng, touched)) {
+              const [, write] = sources[index]!;
+              const delta = Math.trunc(rng.centered(6));
+              write((prev) => prev + delta);
+            }
+          });
+
+          // Не нужен, если batch() уже flush-ит при выходе.
+          // Оставляй только если конкретный harness реально не flush-ит сам.
+          harness.flush();
+        },
+      };
+    },
+  },
+  {
+    id: "many-sources-one-computed",
+    title: "Many sources into one computed -> effect",
+    sampleIterations: 22,
+    bench: { iterations: 140, warmupIterations: 28 },
+    build(harness, seed) {
+      const rng = createRng(seed);
+      const sampler = createUniqueIndexSampler(128);
+      const touched: number[] = [];
+
+      const sources = Array.from({ length: 128 }, (_, index) =>
+        harness.signal(index, `fanin:source:${index}`),
+      );
+      const srcLen = sources.length;
+
+      const total = harness.memo(() => {
+        let sum = 0;
         for (let i = 0; i < srcLen; ++i) sum += sources[i]![0]();
         return sum;
       }, "fanin:total");
 
-      harness.effect(() => total(), { label: "fanin:total-effect", priority: 512 });
+      harness.effect(() => total(), {
+        label: "fanin:total-effect",
+        priority: 512,
+      });
+
+      return {
+        runStep() {
+          harness.batch(() => {
+            for (const index of sampler(8, rng, touched)) {
+              const [, write] = sources[index]!;
+              const delta = Math.trunc(rng.centered(6));
+              write((prev) => prev + delta);
+            }
+          });
+          harness.flush();
+        },
+      };
+    },
+  },
+  {
+    id: "many-sources-one-direct-effect",
+    title: "Many sources into one direct effect",
+    sampleIterations: 22,
+    bench: { iterations: 140, warmupIterations: 28 },
+    build(harness, seed) {
+      const rng = createRng(seed);
+      const sampler = createUniqueIndexSampler(128);
+      const touched: number[] = [];
+
+      const sources = Array.from({ length: 128 }, (_, index) =>
+        harness.signal(index, `fanin:source:${index}`),
+      );
+      const srcLen = sources.length;
 
       harness.effect(
         () => {
@@ -609,8 +712,9 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
         runStep() {
           harness.batch(() => {
             for (const index of sampler(8, rng, touched)) {
-              const [read, write] = sources[index]!;
-              write(read() + Math.trunc(rng.centered(6)));
+              const [, write] = sources[index]!;
+              const delta = Math.trunc(rng.centered(6));
+              write((prev) => prev + delta);
             }
           });
           harness.flush();

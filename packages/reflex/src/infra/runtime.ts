@@ -1,7 +1,4 @@
-import {
-  createExecutionContext,
-  setDefaultContext,
-} from "@reflex/runtime";
+import { createExecutionContext, setDefaultContext } from "@reflex/runtime";
 import type {
   ExecutionContext,
   EngineHooks,
@@ -106,6 +103,7 @@ export interface EventSource<T> extends Event<T> {
  * context used by the top-level Reflex primitives.
  */
 export interface Runtime {
+  batch<T>(fn: () => T): T;
   /**
    * Creates a new mutable event source associated with this runtime.
    *
@@ -183,6 +181,10 @@ export function createRuntime(options?: RuntimeOptions): Runtime {
   return {
     get ctx() {
       return executionContext;
+    },
+
+    batch(fn) {
+      return scheduler.batch(fn);
     },
 
     event<T>() {

@@ -72,7 +72,6 @@ export class EffectScheduler {
     if (!this.hasPending()) return;
 
     this.phase = SchedulerPhase.Flushing;
-    const ctx = this.getContext();
 
     try {
       while (this.head < this.queue.length) {
@@ -81,7 +80,7 @@ export class EffectScheduler {
 
         if (this.shouldSkipNode(node)) continue;
 
-        runWatcher(node, ctx);
+        runWatcher(node);
       }
     } finally {
       this.queue.length = 0;
@@ -98,6 +97,10 @@ export class EffectScheduler {
   }
 
   reset(): void {
+    for (let i = this.head; i < this.queue.length; ++i) {
+      effectUnscheduled(this.queue[i]!);
+    }
+
     this.queue.length = 0;
     this.head = 0;
     this.batchDepth = 0;

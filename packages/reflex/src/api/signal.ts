@@ -56,37 +56,18 @@ interface SignalOptions {
  * @see memo
  * @see effect
  */
-export function signal<T>(
-  initialValue: T,
-  options?: SignalOptions,
-): readonly [value: Accessor<T>, setValue: Setter<T>] {
+export function signal<T>(initialValue: T): readonly [() => T, Setter<T>] {
   const node = createSignalNode(initialValue);
 
-  const value: Accessor<T> = () => readProducer(node);
-
-  const setValue = <Setter<T>>function (this: void, input?: Updater<T>): T {
-    /* c8 ignore start -- dev-only diagnostics are compiled out in the test build */
-    if (__DEV__) {
-      if (arguments.length === 0) {
-        let message = `Signal(${initialValue})`;
-
-        if (options) {
-          message = `${options.name}(${initialValue})`;
-        }
-
-        throw new TypeError(
-          `[ERROR ${message}]: setValue() was called without an argument. 
-          This is only valid for signals whose type includes undefined.`,
-        );
-      }
-    }
-    /* c8 ignore stop */
-
-    const next = typeof input !== "function" ? input : input(node.payload);
+  function setValue(this: void, input: Updater<T>): T {
+    const next =
+      typeof input === "function"
+        ? (input as (prev: T) => T)(node.payload)
+        : input;
 
     writeProducer(node, next);
     return next as T;
-  };
+  }
 
-  return [value, setValue] as const;
+  return [() => readProducer(node), setValue as any] as const;
 }

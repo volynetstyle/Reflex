@@ -7,12 +7,13 @@ export default defineConfig({
     __PROD__: false,
   },
   build: {
-    lib: false, 
+    lib: false,
   },
- test: {
+  test: {
     environment: "node",
-    isolate: false,         
-    pool: "forks",          
+    include: ["tests/**/*.dev.test.ts"],
+    isolate: false,
+    pool: "forks",
   },
   esbuild: {
     platform: "node",

@@ -222,7 +222,7 @@ class ResourceCore<T, E = unknown> {
   refetchNode: ReactiveNode<number> | null = null;
 
   track(): void {
-    readProducer(this.stateNode, this.context);
+    readProducer(this.stateNode);
   }
 
   bump(): void {
@@ -456,7 +456,7 @@ export function resource<S, T, E = unknown>(
       const load = maybeLoad;
 
       core.watcher = createWatcherNode(() => {
-        readProducer(core.refetchNode!, core.context);
+        readProducer(core.refetchNode!);
 
         let sourceValue: S;
 
@@ -474,12 +474,12 @@ export function resource<S, T, E = unknown>(
       const load = sourceOrLoad as ResourceJob<T>;
 
       core.watcher = createWatcherNode(() => {
-        readProducer(core.refetchNode!, core.context);
+        readProducer(core.refetchNode!);
         core.runLoad(load);
       });
     }
 
-    runWatcher(core.watcher, core.context);
+    runWatcher(core.watcher);
     core.context.registerWatcherCleanup(() => {
       core.dispose();
     });

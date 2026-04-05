@@ -10,9 +10,9 @@ import {
   ReactiveNode,
   ReactiveNodeState,
   runWatcher,
-  type ExecutionContext,
   WATCHER_INITIAL_STATE,
   writeProducer,
+  setDefaultContext,
 } from "@reflex/runtime/debug";
 import {
   blackhole,
@@ -39,6 +39,9 @@ interface HeapEntry {
 }
 
 const compareNumbers = (left: number, right: number) => Object.is(left, right);
+const SCHEDULED_BIT = ReactiveNodeState.Scheduled;
+
+// ─── EffectHeap ───────────────────────────────────────────────────────────────
 
 class EffectHeap {
   private readonly items: HeapEntry[] = [];
@@ -53,107 +56,89 @@ class EffectHeap {
   }
 
   pop(): HeapEntry | undefined {
-    if (this.items.length === 0) return undefined;
-
-    const top = this.items[0];
-    const last = this.items.pop();
-
-    if (last !== undefined && this.items.length !== 0) {
-      this.items[0] = last;
+    const items = this.items;
+    if (items.length === 0) return undefined;
+    const top = items[0]!;
+    const last = items.pop()!;
+    if (items.length !== 0) {
+      items[0] = last;
       this.bubbleDown(0);
     }
-
     return top;
   }
 
   private bubbleUp(index: number): void {
+    const items = this.items;
     while (index > 0) {
       const parent = (index - 1) >> 1;
-      if (this.compare(index, parent) <= 0) return;
-      this.swap(index, parent);
+      if (this.compare(items[index]!, items[parent]!) <= 0) return;
+      const tmp = items[parent]!;
+      items[parent] = items[index]!;
+      items[index] = tmp;
       index = parent;
     }
   }
 
   private bubbleDown(index: number): void {
-    const length = this.items.length;
-
+    const items = this.items;
+    const length = items.length;
     while (true) {
       const left = index * 2 + 1;
       const right = left + 1;
       let best = index;
-
-      if (left < length && this.compare(left, best) > 0) {
-        best = left;
-      }
-      if (right < length && this.compare(right, best) > 0) {
-        best = right;
-      }
+      if (left < length && this.compare(items[left]!, items[best]!) > 0) best = left;
+      if (right < length && this.compare(items[right]!, items[best]!) > 0) best = right;
       if (best === index) return;
-
-      this.swap(index, best);
+      const tmp = items[best]!;
+      items[best] = items[index]!;
+      items[index] = tmp;
       index = best;
     }
   }
 
-  private compare(leftIndex: number, rightIndex: number): number {
-    const left = this.items[leftIndex]!;
-    const right = this.items[rightIndex]!;
-
-    if (left.priority !== right.priority) {
-      return left.priority - right.priority;
-    }
-
+  private compare(left: HeapEntry, right: HeapEntry): number {
+    if (left.priority !== right.priority) return left.priority - right.priority;
     return right.order - left.order;
-  }
-
-  private swap(leftIndex: number, rightIndex: number): void {
-    const left = this.items[leftIndex]!;
-    this.items[leftIndex] = this.items[rightIndex]!;
-    this.items[rightIndex] = left;
   }
 }
 
+// ─── ReflexScheduler ──────────────────────────────────────────────────────────
+
 class ReflexScheduler {
-  private readonly fifo: EffectNode[] = [];
+  private readonly fifo: (EffectNode | undefined)[] = new Array(128);
   private readonly heap = new EffectHeap();
   private head = 0;
+  private tail = 0;
   private batchDepth = 0;
   private flushing = false;
   private order = 0;
 
   constructor(
     private readonly mode: ReflexMode,
-    private readonly context: ExecutionContext,
     private readonly metrics: HarnessMetrics,
     private readonly priorities: WeakMap<EffectNode, number>,
   ) {}
 
   batch<T>(fn: () => T): T {
     ++this.batchDepth;
-
     try {
       return fn();
     } finally {
-      --this.batchDepth;
-      this.maybeAutoFlush();
+      if (!--this.batchDepth) this.flush();
     }
   }
 
   enqueue(node: EffectNode): void {
-    this.metrics.recordSchedulerOp();
+    const metrics = this.metrics;
+    metrics.schedulerOps += 1;
 
     const dedupe = this.mode !== "naive-host-queue";
-    if (dedupe && (node.state & ReactiveNodeState.Scheduled) !== 0) {
-      this.metrics.recordSchedulerOp();
-      return;
-    }
-
     if (dedupe) {
-      node.state |= ReactiveNodeState.Scheduled;
+      if ((node.state & SCHEDULED_BIT) !== 0) return;
+      node.state |= SCHEDULED_BIT;
     }
 
-    this.metrics.recordStepAllocation();
+    metrics.stepAllocations += 1;
 
     if (this.mode === "heap-ordering") {
       this.heap.push({
@@ -162,210 +147,183 @@ class ReflexScheduler {
         priority: this.priorities.get(node) ?? 0,
       });
     } else {
-      this.fifo.push(node);
+      if (this.tail === this.fifo.length) {
+        // Amortised growth — rare path
+        (this.fifo as EffectNode[]).push(node);
+        this.tail = this.fifo.length;
+      } else {
+        this.fifo[this.tail++] = node;
+      }
     }
 
-    this.maybeAutoFlush();
+    // eager-walk: auto-flush handled via onReactiveSettled after propagation
+    // completes — not here, to avoid flushing mid-propagation.
   }
 
   flush(): void {
     if (this.flushing || !this.hasPending()) return;
 
     this.flushing = true;
-    this.metrics.recordSchedulerOp();
+    this.metrics.schedulerOps += 1;
+
+    const fifo = this.fifo;
+    const dedupe = this.mode !== "naive-host-queue";
 
     try {
       while (true) {
         const node = this.takeNext();
         if (node === null) break;
 
-        this.metrics.recordSchedulerOp();
+        this.metrics.schedulerOps += 1;
 
-        if (this.mode !== "naive-host-queue") {
-          node.state &= ~ReactiveNodeState.Scheduled;
-        }
+        if (dedupe) node.state &= ~SCHEDULED_BIT;
 
-        if ((node.state & ReactiveNodeState.Disposed) !== 0) continue;
-        if ((node.state & DIRTY_STATE) === 0) continue;
+        const state = node.state;
+        if ((state & ReactiveNodeState.Disposed) !== 0) continue;
+        if ((state & DIRTY_STATE) === 0) continue;
 
-        runWatcher(node, this.context);
+        runWatcher(node);
       }
     } finally {
-      this.fifo.length = 0;
+      // Clear remaining SCHEDULED bits on exception path
+      if (dedupe) {
+        while (this.hasPending()) {
+          const node = this.takeNext();
+          if (node !== null) node.state &= ~SCHEDULED_BIT;
+        }
+      }
+      // Reset fifo without reallocating
+      for (let i = this.head; i < this.tail; i++) fifo[i] = undefined;
       this.head = 0;
+      this.tail = 0;
       this.flushing = false;
     }
   }
 
   notifySettled(): void {
-    this.maybeAutoFlush();
+    if (this.mode !== "eager-walk") return;
+    if (this.batchDepth !== 0) return;
+    this.flush();
   }
 
   private hasPending(): boolean {
     return this.mode === "heap-ordering"
       ? this.heap.size > 0
-      : this.head < this.fifo.length;
+      : this.head < this.tail;
   }
 
   private takeNext(): EffectNode | null {
     if (this.mode === "heap-ordering") {
       return this.heap.pop()?.node ?? null;
     }
-
-    if (this.head >= this.fifo.length) {
-      return null;
-    }
-
-    return this.fifo[this.head++] ?? null;
-  }
-
-  private maybeAutoFlush(): void {
-    if (this.mode !== "eager-walk") return;
-    if (this.flushing) return;
-    if (this.batchDepth !== 0) return;
-    if (this.context.propagationDepth !== 0) return;
-    if (this.context.activeComputed !== null) return;
-    if (!this.hasPending()) return;
-
-    this.flush();
+    if (this.head >= this.tail) return null;
+    const node = this.fifo[this.head]!;
+    this.fifo[this.head++] = undefined;
+    return node;
   }
 }
+
+// ─── ReflexHarness ────────────────────────────────────────────────────────────
 
 class ReflexHarness implements BenchHarness {
   readonly metrics = new HarnessMetrics();
   private readonly priorities = new WeakMap<EffectNode, number>();
-  private readonly disposers: Array<() => void> = [];
-  private readonly context: ExecutionContext;
+  private readonly effectNodes: EffectNode[] = [];
   private readonly scheduler: ReflexScheduler;
 
   constructor(mode: ReflexMode) {
-    this.context = createExecutionContext();
-    this.scheduler = new ReflexScheduler(
-      mode,
-      this.context,
-      this.metrics,
-      this.priorities,
-    );
+    const metrics = this.metrics;
+    const scheduler = new ReflexScheduler(mode, metrics, this.priorities);
+    this.scheduler = scheduler;
 
-    this.context.setHooks({
+    setDefaultContext(createExecutionContext({
       onEffectInvalidated: (node) => {
-        this.scheduler.enqueue(node as EffectNode);
+        scheduler.enqueue(node as EffectNode);
       },
       onReactiveSettled: () => {
-        this.scheduler.notifySettled();
+        scheduler.notifySettled();
       },
-    });
+    }));
   }
 
   signal(
     initial: number,
     _label?: string,
   ): readonly [() => number, (value: WriteInput) => void] {
-    this.metrics.recordSetupAllocation();
-
-    const node = new ReactiveNode<number>(
-      initial,
-      null,
-      PRODUCER_INITIAL_STATE,
-    );
-
+    this.metrics.setupAllocations += 1;
+    const node = new ReactiveNode<number>(initial, null, PRODUCER_INITIAL_STATE);
+    const metrics = this.metrics;
+    const scheduler = this.scheduler;
     return [
-      () => readProducer(node, this.context),
-      (value) => {
-        this.metrics.recordSchedulerOp();
-        const next =
-          typeof value === "function"
-            ? value(readProducer(node, this.context))
-            : value;
-        writeProducer(node, next, compareNumbers, this.context);
+      (): number => readProducer(node),
+      (value: WriteInput): void => {
+        metrics.schedulerOps += 1;
+        writeProducer(
+          node,
+          typeof value === "function" ? value(readProducer(node)) : value,
+          compareNumbers,
+        );
+        // eager-walk flushes via onReactiveSettled; others flush here
+        if (scheduler["batchDepth"] === 0) scheduler.flush();
       },
     ] as const;
   }
 
   memo(fn: () => number, _label?: string): () => number {
-    this.metrics.recordSetupAllocation();
-
+    this.metrics.setupAllocations += 1;
+    const metrics = this.metrics;
     const node = new ReactiveNode<number>(
       0,
-      () => {
-        this.metrics.recordRecompute();
-        return fn();
-      },
+      () => { metrics.recomputes += 1; return fn(); },
       CONSUMER_INITIAL_STATE,
     );
-
-    return () => {
-      this.metrics.recordRefresh();
-      return readConsumer(node, ConsumerReadMode.lazy, this.context);
+    return (): number => {
+      metrics.refreshes += 1;
+      return readConsumer(node, ConsumerReadMode.lazy);
     };
   }
 
   effect(read: () => number, meta?: EffectMeta): () => void {
-    this.metrics.recordSetupAllocation();
-
+    this.metrics.setupAllocations += 1;
+    const metrics = this.metrics;
     const node = new ReactiveNode<unknown>(
       null,
       () => {
-        this.metrics.recordRecompute();
-        this.metrics.recordEffectRun();
+        metrics.recomputes += 1;
+        metrics.schedulerOps += 1;
+        const start = metrics.stepStartMs;
+        if (start >= 0) {
+          const latency = performance.now() - start;
+          if (latency > metrics.maxFlushLatencyMs) metrics.maxFlushLatencyMs = latency;
+        }
         blackhole(read());
       },
       WATCHER_INITIAL_STATE,
     );
-
     this.priorities.set(node, meta?.priority ?? 0);
-    runWatcher(node, this.context);
-
-    const dispose = () => disposeWatcher(node);
-    this.disposers.push(dispose);
-    return dispose;
+    runWatcher(node);
+    this.effectNodes.push(node);
+    return (): void => { disposeWatcher(node); };
   }
 
-  batch<T>(fn: () => T): T {
-    return this.scheduler.batch(fn);
-  }
-
-  flush(): void {
-    this.scheduler.flush();
-  }
-
-  resetRunMetrics(): void {
-    this.metrics.resetRunMetrics();
-  }
-
-  beginStep(): void {
-    this.metrics.beginStep();
-  }
-
-  endStep(wallTimeMs: number) {
-    return this.metrics.endStep(wallTimeMs);
-  }
+  batch<T>(fn: () => T): T { return this.scheduler.batch(fn); }
+  flush(): void { this.scheduler.flush(); }
+  resetRunMetrics(): void { this.metrics.resetRunMetrics(); }
+  beginStep(): void { this.metrics.beginStep(); }
+  endStep(wallTimeMs: number) { return this.metrics.endStep(wallTimeMs); }
 
   dispose(): void {
-    for (let index = this.disposers.length - 1; index >= 0; --index) {
-      this.disposers[index]!();
-    }
-    this.disposers.length = 0;
+    const nodes = this.effectNodes;
+    for (let i = nodes.length - 1; i >= 0; --i) disposeWatcher(nodes[i]!);
+    nodes.length = 0;
   }
 }
 
 const variants: readonly BenchVariant[] = [
-  {
-    label: "eager-walk",
-    createHarness: () => new ReflexHarness("eager-walk"),
-  },
-  {
-    label: "heap-ordering",
-    createHarness: () => new ReflexHarness("heap-ordering"),
-  },
-  {
-    label: "late-snapshot",
-    createHarness: () => new ReflexHarness("late-snapshot"),
-  },
-  {
-    label: "naive-host-queue",
-    createHarness: () => new ReflexHarness("naive-host-queue"),
-  },
+  { label: "eager-walk",      createHarness: () => new ReflexHarness("eager-walk") },
+  { label: "heap-ordering",   createHarness: () => new ReflexHarness("heap-ordering") },
+  { label: "late-snapshot",   createHarness: () => new ReflexHarness("late-snapshot") },
+  { label: "naive-host-queue",createHarness: () => new ReflexHarness("naive-host-queue") },
 ];
 
 registerBenchFile("reflex", variants);
