@@ -1,4 +1,3 @@
-import { getDefaultContext } from "../context";
 import { devAssertShouldRecomputeAlive } from "../dev";
 import type { ReactiveNode } from "../shape";
 import { ReactiveNodeState } from "../shape";
@@ -35,5 +34,5 @@ export function shouldRecompute(node: ReactiveNode): boolean {
     return false;
   }
 
-  return shouldRecomputeLinear(node, firstIn, getDefaultContext());
+  return shouldRecomputeLinear(node, firstIn);
 }

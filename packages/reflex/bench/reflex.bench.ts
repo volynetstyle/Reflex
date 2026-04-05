@@ -22,131 +22,187 @@ import {
   writeProducer,
   ExecutionContext,
   createExecutionContext,
+  setDefaultContext,
 } from "@reflex/runtime";
 
 type EffectNode = ReactiveNode<unknown>;
 
-const compareNumbers = (left: number, right: number) => Object.is(left, right);
+const compareNumbers = (left: number, right: number): boolean =>
+  Object.is(left, right);
 
-class ReflexScheduler {
-  private readonly queue: EffectNode[] = [];
-  private head = 0;
-  private flushing = false;
+// ReactiveNodeState.Scheduled = 1 << 8
+const SCHEDULED_BIT = ReactiveNodeState.Scheduled;
 
-  constructor(private readonly metrics: HarnessMetrics) {}
-
-  enqueue(node: EffectNode): void {
-    this.metrics.recordSchedulerOp();
-    this.metrics.recordStepAllocation();
-    this.queue.push(node);
-  }
-
-  flush(): void {
-    if (this.flushing || this.head >= this.queue.length) return;
-
-    this.flushing = true;
-    this.metrics.recordSchedulerOp();
-
-    try {
-      while (this.head < this.queue.length) {
-        const node = this.queue[this.head++]!;
-
-        this.metrics.recordSchedulerOp();
-
-        if ((node.state & ReactiveNodeState.Disposed) !== 0) continue;
-        if ((node.state & DIRTY_STATE) === 0) continue;
-
-        runWatcher(node);
-      }
-    } finally {
-      this.queue.length = 0;
-      this.head = 0;
-      this.flushing = false;
-    }
-  }
-}
+// ─── Harness ──────────────────────────────────────────────────────────────────
+//
+// Scheduler state lives on the instance, not at module level.
+//
+// Why not module-level (aliens-signals style)?
+// registerBenchFile creates a sampleRunner AND a benchRunner for each variant
+// simultaneously — both are alive at the same time. Shared batchDepth would
+// cause one harness's batch() to suppress the other's flush. Shared queue
+// would mix up their effect nodes. Per-instance fields avoid all of this with
+// negligible overhead: `this.` in a tight loop costs nothing after JIT.
 
 class ReflexHarness implements BenchHarness {
   readonly metrics = new HarnessMetrics();
-  private readonly disposers: Array<() => void> = [];
-  private readonly scheduler: ReflexScheduler;
+  private readonly effectNodes: EffectNode[] = [];
   private readonly context: ExecutionContext;
 
+  private queue: (EffectNode | undefined)[] = new Array(128);
+  private notifyIndex = 0;
+  private queuedLength = 0;
+  private batchDepth = 0;
+
   constructor() {
-    this.context = createExecutionContext({
-      onEffectInvalidated: (node) => {
-        this.scheduler.enqueue(node as EffectNode);
-      },
-    })
-    this.scheduler = new ReflexScheduler(this.metrics);
+    const c = createExecutionContext({});
+    setDefaultContext(c);
+    this.context = c;
+  }
+
+  private _enqueue(node: EffectNode): void {
+    // Dedup: same watcher can be invalidated multiple times in one batch
+    // (two writes both propagating to the same effect via different paths).
+    if ((node.state & SCHEDULED_BIT) !== 0) return;
+    node.state |= SCHEDULED_BIT;
+
+    if (this.queuedLength === this.queue.length) {
+      this.queue = this.queue.concat(new Array(this.queue.length));
+    }
+    this.metrics.schedulerOps += 1;
+    this.metrics.stepAllocations += 1;
+    this.queue[this.queuedLength++] = node;
+  }
+
+  private _flush(): void {
+    const c = this.context;
+    this.metrics.schedulerOps += 1;
+
+    const queue = this.queue;
+    try {
+      while (this.notifyIndex < this.queuedLength) {
+        const node = queue[this.notifyIndex]!;
+        queue[this.notifyIndex++] = undefined;
+
+        // Clear before run so a re-entrant write inside the effect
+        // can re-enqueue this node within the same flush.
+        node.state &= ~SCHEDULED_BIT;
+
+        const state = node.state;
+        if ((state & ReactiveNodeState.Disposed) !== 0) continue;
+        if ((state & DIRTY_STATE) === 0) continue;
+        runWatcher(node);
+      }
+    } finally {
+      // Exception path: drain remaining slots and clear their Scheduled bit.
+      while (this.notifyIndex < this.queuedLength) {
+        const node = queue[this.notifyIndex]!;
+        queue[this.notifyIndex++] = undefined;
+        node.state &= ~SCHEDULED_BIT;
+      }
+      this.notifyIndex = 0;
+      this.queuedLength = 0;
+    }
   }
 
   signal(
     initial: number,
     _label?: string,
   ): readonly [() => number, (value: WriteInput) => void] {
-    this.metrics.recordSetupAllocation();
+    this.metrics.setupAllocations += 1;
 
     const node = new ReactiveNode<number>(
       initial,
       null,
       PRODUCER_INITIAL_STATE,
     );
+    const context = this.context;
+    const metrics = this.metrics;
 
-    return [
-      () => readProducer(node),
-      (value) => {
-        this.metrics.recordSchedulerOp();
-        const next = typeof value === "function" ? value(readProducer(node, this.context)) : value;
-        writeProducer(node, next, compareNumbers, this.context);
-      },
-    ] as const;
+    const read = (): number => readProducer(node);
+
+    const write = (value: WriteInput): void => {
+      metrics.schedulerOps += 1;
+      writeProducer(
+        node,
+        typeof value === "function" ? value(readProducer(node)) : value,
+        compareNumbers,
+      );
+      if (!this.batchDepth) {
+        this._flush();
+      }
+    };
+
+    return [read, write] as const;
   }
 
   memo(fn: () => number, _label?: string): () => number {
-    this.metrics.recordSetupAllocation();
+    this.metrics.setupAllocations += 1;
+
+    const metrics = this.metrics;
+    const context = this.context;
 
     const node = new ReactiveNode<number>(
       0,
       () => {
-        this.metrics.recordRecompute();
+        metrics.recomputes += 1;
         return fn();
       },
       CONSUMER_INITIAL_STATE,
     );
 
-    return () => {
-      this.metrics.recordRefresh();
-      return readConsumer(node, ConsumerReadMode.lazy, this.context);
+    return (): number => {
+      metrics.refreshes += 1;
+      return readConsumer(node, ConsumerReadMode.lazy);
     };
   }
 
-  effect(read: () => number, _meta?: { label?: string; priority?: number }): () => void {
-    this.metrics.recordSetupAllocation();
+  effect(
+    read: () => number,
+    _meta?: { label?: string; priority?: number },
+  ): () => void {
+    this.metrics.setupAllocations += 1;
+
+    const metrics = this.metrics;
 
     const node = new ReactiveNode<unknown>(
       null,
       () => {
-        this.metrics.recordRecompute();
-        this.metrics.recordEffectRun();
+        metrics.recomputes += 1;
+        metrics.schedulerOps += 1;
+        const start = metrics.stepStartMs;
+        if (start >= 0) {
+          const latency = performance.now() - start;
+          if (latency > metrics.maxFlushLatencyMs) {
+            metrics.maxFlushLatencyMs = latency;
+          }
+        }
         blackhole(read());
       },
       WATCHER_INITIAL_STATE,
     );
 
-    runWatcher(node, this.context);
+    runWatcher(node);
+    this.effectNodes.push(node);
 
-    const dispose = () => disposeWatcher(node);
-    this.disposers.push(dispose);
-    return dispose;
+    return (): void => {
+      disposeWatcher(node);
+    };
   }
 
   batch<T>(fn: () => T): T {
-    return fn();
+    ++this.batchDepth;
+    try {
+      return fn();
+    } finally {
+      if (!--this.batchDepth) {
+        this._flush();
+      }
+    }
   }
 
   flush(): void {
-    this.scheduler.flush();
+    this._flush();
   }
 
   resetRunMetrics(): void {
@@ -162,10 +218,11 @@ class ReflexHarness implements BenchHarness {
   }
 
   dispose(): void {
-    for (let index = this.disposers.length - 1; index >= 0; --index) {
-      this.disposers[index]!();
+    const nodes = this.effectNodes;
+    for (let i = nodes.length - 1; i >= 0; --i) {
+      disposeWatcher(nodes[i]!);
     }
-    this.disposers.length = 0;
+    nodes.length = 0;
   }
 }
 

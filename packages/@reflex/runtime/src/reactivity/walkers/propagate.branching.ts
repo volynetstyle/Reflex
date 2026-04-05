@@ -1,4 +1,4 @@
-import type { ExecutionContext } from "../context";
+import { getDefaultContext } from "../context";
 import type { ReactiveEdge } from "../shape";
 import { DIRTY_STATE, ReactiveNodeState } from "../shape";
 import { CAN_ESCAPE_INVALIDATION, NON_IMMEDIATE } from "./propagate.constants";
@@ -15,6 +15,7 @@ function isTrackedPrefixEdge(
   depsTail: ReactiveEdge | null,
 ): boolean {
   if (depsTail === null) return false;
+  if (edge === depsTail) return true;
 
   for (
     let cursor: ReactiveEdge | null = edge.prevIn;
@@ -70,19 +71,25 @@ function getSlowInvalidatedSubscriberState(
 //
 // 3. stackTop postfix increment/decrement:
 //    stack[stackTop++] / stack[--stackTop] — one fewer bytecode per iteration.
-
 export function propagateBranching(
   edge: ReactiveEdge,
   resume: ReactiveEdge | null,
   resumePromote: number,
   thrown: unknown,
-  context: ExecutionContext,
 ): unknown {
   const edgeStack = propagateEdgeStack;
   const promoteStack = propagatePromoteStack;
   const stackBase = edgeStack.length;
   let stackTop = stackBase;
   let promoteBit = NON_IMMEDIATE;
+
+  if (resume !== null) {
+    edgeStack[stackTop] = resume;
+    promoteStack[stackTop++] = resumePromote;
+  }
+
+  resume = edge.nextOut;
+  resumePromote = promoteBit;
 
   while (true) {
     const sub = edge.to;
@@ -97,10 +104,11 @@ export function propagateBranching(
 
     if (nextState !== 0) {
       sub.state = nextState;
-      if (__DEV__) recordPropagation(edge, nextState, promoteBit, context);
+      if (__DEV__)
+        recordPropagation(edge, nextState, promoteBit, getDefaultContext());
 
       if ((nextState & ReactiveNodeState.Watcher) !== 0) {
-        thrown = notifyWatcherInvalidation(sub, thrown, context);
+        thrown = notifyWatcherInvalidation(sub, thrown);
       } else {
         const firstOut = sub.firstOut;
         if (firstOut !== null) {
@@ -110,8 +118,9 @@ export function propagateBranching(
           }
 
           edge = firstOut;
+          promoteBit = NON_IMMEDIATE;
           resume = firstOut.nextOut;
-          promoteBit = resumePromote = NON_IMMEDIATE;
+          resumePromote = promoteBit;
           continue;
         }
       }
@@ -122,12 +131,13 @@ export function propagateBranching(
       promoteBit = resumePromote;
     } else if (stackTop > stackBase) {
       edge = edgeStack[--stackTop]!;
-      promoteBit = resumePromote = promoteStack[stackTop]!;
+      promoteBit = promoteStack[stackTop]!;
     } else {
       edgeStack.length = promoteStack.length = stackBase;
       return thrown;
     }
 
     resume = edge.nextOut;
+    resumePromote = promoteBit;
   }
 }

@@ -1,5 +1,4 @@
 import type { ReactiveNode } from "../reactivity/shape";
-import type { ExecutionContext } from "../reactivity/context";
 import { recordDebugEvent } from "../debug";
 import {
   clearNodeVisited,
@@ -13,12 +12,10 @@ import { executeNodeComputation } from "../reactivity/engine/execute";
 import { shouldRecompute } from "../reactivity";
 import { getDefaultContext } from "../reactivity/context";
 
-export function runWatcher(
-  node: ReactiveNode,
-  context: ExecutionContext = getDefaultContext(),
-): void {
+export function runWatcher(node: ReactiveNode): void {
   const state = node.state;
-
+  const context = getDefaultContext();
+  
   if ((state & ReactiveNodeState.Disposed) !== 0) {
     if (__DEV__) {
       recordDebugEvent(context, "watcher:run:skip", {

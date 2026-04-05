@@ -70,7 +70,6 @@ export enum ConsumerReadMode {
  */
 export function readProducer<T>(
   node: ReactiveNode<T>,
-  context: ExecutionContext = getDefaultContext(),
 ): T {
   if (isDisposedNode(node)) {
     devAssertReadDeadProducer();
@@ -78,9 +77,9 @@ export function readProducer<T>(
   }
 
   // Register this read as a dependency if there's an active computation
-  trackRead(node, context);
+  trackRead(node);
 
-  devRecordReadProducer(node, node.payload, context);
+  devRecordReadProducer(node, node.payload, getDefaultContext());
 
   return node.payload as T;
 }
@@ -121,10 +120,7 @@ export function readProducer<T>(
  * @invariant If value changed, nodes with fanout are notified via propagateOnce
  * @cost O(deps) for shouldRecompute walk + O(compute) for re-execution if needed
  */
-function stabilizeConsumer<T>(
-  node: ReactiveNode<T>,
-  context: ExecutionContext,
-): T {
+function stabilizeConsumer<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
   if ((state & ReactiveNodeState.Disposed) !== 0) {
@@ -145,7 +141,7 @@ function stabilizeConsumer<T>(
     if (needs) {
       // Re-execute the compute function and update payload
       // If value changed AND node has multiple subscribers, notify siblings
-      if (recompute(node, context)) propagateOnce(node, context);
+      if (recompute(node)) propagateOnce(node);
     } else {
       // Verification confirmed all dirty flags were stale
       // Clear dirty state, node is still valid
@@ -202,9 +198,9 @@ function stabilizeConsumer<T>(
 export function readConsumer<T>(
   node: ReactiveNode<T>,
   mode: ConsumerReadMode = ConsumerReadMode.lazy,
-  context: ExecutionContext = getDefaultContext(),
 ): T {
-  const value = stabilizeConsumer(node, context);
+  const value = stabilizeConsumer(node);
+  const context = getDefaultContext();
 
   if (mode === ConsumerReadMode.eager) {
     if (__DEV__) devRecordReadConsumer(node, "eager", value, context);
@@ -218,7 +214,7 @@ export function readConsumer<T>(
   const activeComputed = context.activeComputed;
 
   if (activeComputed !== null) {
-    trackRead(node, context);
+    trackRead(node);
   }
 
   if (__DEV__) {
@@ -274,10 +270,9 @@ export function readConsumer<T>(
  * @invariant context.activeComputed is restored after fn() returns/throws
  * @cost O(1) for context manipulation
  */
-export function untracked<T>(
-  fn: () => T,
-  context: ExecutionContext = getDefaultContext(),
-): T {
+export function untracked<T>(fn: () => T, _context: ExecutionContext): T {
+  const context = getDefaultContext();
+
   // Save the current active computation context
   const prev = context.activeComputed;
   // Clear the active context so reads don't create dependencies

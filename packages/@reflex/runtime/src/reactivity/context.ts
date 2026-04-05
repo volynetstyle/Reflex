@@ -26,12 +26,12 @@ function normalizeOwnHook<T extends keyof EngineHooks>(
 
 /**
  * ExecutionContext управляет состоянием вычисления и уведомлениями host'у.
- * 
+ *
  * Ключевые принципы:
  * - Контекст НЕ глобальный - это объект, передаваемый по параметрам
  * - Host полностью контролирует scheduling эффектов
  * - Контекст только отслеживает текущее состояние вычисления
- * 
+ *
  * Поля:
  * - activeComputed: текущий узел в процессе вычисления (для trackRead)
  * - propagationDepth: глубина каскада инвалидаций
@@ -69,17 +69,13 @@ export class ExecutionContext {
   }
 
   dispatchWatcherEvent(node: ReactiveNode): void {
-    const hook = this.onEffectInvalidatedHook;
-
     if (__DEV__) {
-      recordDebugEvent(this, "watcher:invalidated", {
-        node,
-      });
-    } else if (hook === undefined) {
-      return;
+      recordDebugEvent(this, "watcher:invalidated", { node });
     }
-
-    hook?.(node);
+    const hook = this.onEffectInvalidatedHook;
+    if (hook !== undefined) {
+      hook(node); // прямой вызов — монomorphic call site
+    }
   }
 
   maybeNotifySettled(): void {
@@ -150,10 +146,7 @@ export class ExecutionContext {
     this.cleanupRegistrar?.(cleanup);
   }
 
-  withCleanupRegistrar<T>(
-    registrar: CleanupRegistrar | null,
-    fn: () => T,
-  ): T {
+  withCleanupRegistrar<T>(registrar: CleanupRegistrar | null, fn: () => T): T {
     const previousRegistrar = this.cleanupRegistrar;
     this.cleanupRegistrar = registrar;
 
@@ -174,8 +167,7 @@ export class ExecutionContext {
   }
 
   private setOnReactiveSettledHook(hook: OnReactiveSettledHook): void {
-    this.onReactiveSettledHook =
-      typeof hook === "function" ? hook : undefined;
+    this.onReactiveSettledHook = typeof hook === "function" ? hook : undefined;
     this.updateHookMask(
       REACTIVE_SETTLED_HOOK,
       this.onReactiveSettledHook !== undefined,
@@ -189,14 +181,14 @@ export class ExecutionContext {
 
 /**
  * Default execution context for single-threaded environments.
- * 
+ *
  * Used as the default parameter in all API functions. When a new context
  * is created with createExecutionContext(), the global context should be
  * explicitly passed if needed. This prevents accidental state pollution
  * in multi-context scenarios.
- * 
+ *
  */
-let defaultContext = createExecutionContext(undefined);
+let defaultContext = createExecutionContext({});
 
 export function createExecutionContext(
   hooks: EngineHooks = {},
@@ -206,7 +198,7 @@ export function createExecutionContext(
 
 /**
  * Get the current default execution context.
- * 
+ *
  * Note: When working with multiple contexts, explicitly pass the desired
  * context to API functions instead of relying on this default.
  */
@@ -216,9 +208,9 @@ export function getDefaultContext(): ExecutionContext {
 
 /**
  * Replace the default execution context and return the previous one.
- * 
+ *
  * This allows for proper cleanup and testing of context switches.
- * 
+ *
  * Example:
  * ```ts
  * const previousCtx = setDefaultContext(newContext);
@@ -226,9 +218,7 @@ export function getDefaultContext(): ExecutionContext {
  * setDefaultContext(previousCtx);  // restore
  * ```
  */
-export function setDefaultContext(
-  context: ExecutionContext,
-): ExecutionContext {
+export function setDefaultContext(context: ExecutionContext): ExecutionContext {
   const previous = defaultContext;
   defaultContext = context;
   return previous;
@@ -238,9 +228,7 @@ export function setDefaultContext(
  * Reset the default context to a fresh instance.
  * Useful for testing.
  */
-export function resetDefaultContext(
-  hooks: EngineHooks = {},
-): ExecutionContext {
+export function resetDefaultContext(hooks: EngineHooks = {}): ExecutionContext {
   const next = new ExecutionContext(hooks);
   defaultContext = next;
   return next;

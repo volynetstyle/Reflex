@@ -64,12 +64,13 @@ interface SummaryRow {
 
 export class HarnessMetrics {
   setupAllocations = 0;
-  private recomputes = 0;
-  private refreshes = 0;
-  private schedulerOps = 0;
-  private stepAllocations = 0;
-  private maxFlushLatencyMs = 0;
-  private stepStartMs = -1;
+  // Pack hot counters together for cache-friendly access
+  recomputes = 0;
+  refreshes = 0;
+  schedulerOps = 0;
+  stepAllocations = 0;
+  maxFlushLatencyMs = 0;
+  stepStartMs = -1;
 
   recordSetupAllocation(count = 1): void {
     this.setupAllocations += count;
@@ -92,11 +93,12 @@ export class HarnessMetrics {
   }
 
   recordEffectRun(now = performance.now()): void {
-    this.recordSchedulerOp();
+    this.schedulerOps += 1; // inline recordSchedulerOp — avoids call overhead
 
-    if (this.stepStartMs < 0) return;
+    const start = this.stepStartMs;
+    if (start < 0) return;
 
-    const latency = now - this.stepStartMs;
+    const latency = now - start;
     if (latency > this.maxFlushLatencyMs) {
       this.maxFlushLatencyMs = latency;
     }
@@ -124,7 +126,6 @@ export class HarnessMetrics {
       stepAllocations: this.stepAllocations,
       maxFlushLatencyMs: this.maxFlushLatencyMs,
     };
-
     this.resetRunMetrics();
     return snapshot;
   }
@@ -132,26 +133,27 @@ export class HarnessMetrics {
 
 let sinkAcc = 0;
 
+// value is always a JS number (float64); no need for `| 0` on it
 export function blackhole(value: number): void {
-  sinkAcc = (sinkAcc * 100_019 + (value | 0)) | 0;
+  sinkAcc = (Math.imul(sinkAcc, 100_019) + (value | 0)) | 0;
 }
 
 export function createRng(seed: number) {
   let state = seed | 0;
 
-  const next = () => {
+  const next = (): number => {
     state = (state + 0x6d2b79f5) | 0;
-    let value = Math.imul(state ^ (state >>> 15), 1 | state);
-    value ^= value + Math.imul(value ^ (value >>> 7), 61 | value);
-    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+    let v = Math.imul(state ^ (state >>> 15), 1 | state);
+    v ^= v + Math.imul(v ^ (v >>> 7), 61 | v);
+    return ((v ^ (v >>> 14)) >>> 0) / 4294967296;
   };
 
   return {
     next,
-    int(max: number) {
-      return Math.floor(next() * max);
+    int(max: number): number {
+      return (next() * max) | 0; // faster than Math.floor for positive integers
     },
-    centered(max: number) {
+    centered(max: number): number {
       return next() * max * 2 - max;
     },
   };
@@ -166,41 +168,50 @@ export function createUniqueIndexSampler(max: number) {
     rng: ReturnType<typeof createRng>,
     out: number[],
   ): readonly number[] => {
-    if (++epoch === 0) {
+    // Avoid fill(0) on overflow — just restart from 1 with a clean array
+    if (epoch === 0xffffffff) {
       marks.fill(0);
-      epoch = 1;
+      epoch = 0;
     }
+    epoch += 1;
 
-    out.length = 0;
+    // Reuse out array without shrinking
+    let len = 0;
 
-    while (out.length < count) {
-      const index = rng.int(max);
+    while (len < count) {
+      const index = (rng.next() * max) | 0;
       if (marks[index] === epoch) continue;
       marks[index] = epoch;
-      out.push(index);
+      out[len++] = index;
     }
 
+    out.length = len;
     return out;
   };
 }
 
+// Only used outside hot path — readability over micro-perf
 function formatNumber(value: number, digits = 2): string {
   return value.toFixed(digits);
 }
 
+// Unsafe fast access — callers must guarantee index is in bounds
 function at<T>(items: readonly T[], index: number): T {
-  const value = items[index];
-  if (value === undefined) {
-    throw new Error(`Missing item at index ${index}`);
-  }
-  return value;
+  return (items as T[])[index] as T;
+}
+
+interface Runner {
+  label: string;
+  setupAllocations: number;
+  runStep(): StepMetrics;
+  dispose(): void;
 }
 
 function createRunner(
   variant: BenchVariant,
   scenario: ScenarioDefinition,
   seed: number,
-) {
+): Runner {
   const harness = variant.createHarness();
   const instance = scenario.build(harness, seed);
 
@@ -210,13 +221,13 @@ function createRunner(
   return {
     label: variant.label,
     setupAllocations: harness.metrics.setupAllocations,
-    runStep() {
+    runStep(): StepMetrics {
       harness.beginStep();
       const startedAt = performance.now();
       instance.runStep();
       return harness.endStep(performance.now() - startedAt);
     },
-    dispose() {
+    dispose(): void {
       harness.dispose();
     },
   };
@@ -237,11 +248,8 @@ function sampleScenario(
   let maxFlushLatencyMs = 0;
 
   try {
-    for (
-      let iteration = 0;
-      iteration < scenario.sampleIterations;
-      ++iteration
-    ) {
+    const n = scenario.sampleIterations;
+    for (let i = 0; i < n; ++i) {
       const step = runner.runStep();
       wallTimeMs += step.wallTimeMs;
       recomputes += step.recomputes;
@@ -256,16 +264,16 @@ function sampleScenario(
     runner.dispose();
   }
 
-  const sampleIterations = scenario.sampleIterations;
+  const inv = 1 / scenario.sampleIterations; // one division instead of N
 
   return {
     variant: variant.label,
-    "sample ms/step": formatNumber(wallTimeMs / sampleIterations, 3),
-    "recompute/step": formatNumber(recomputes / sampleIterations, 1),
-    "refresh/step": formatNumber(refreshes / sampleIterations, 1),
-    "scheduler/step": formatNumber(schedulerOps / sampleIterations, 1),
+    "sample ms/step": formatNumber(wallTimeMs * inv, 3),
+    "recompute/step": formatNumber(recomputes * inv, 1),
+    "refresh/step": formatNumber(refreshes * inv, 1),
+    "scheduler/step": formatNumber(schedulerOps * inv, 1),
     "setup allocs": String(runner.setupAllocations),
-    "step allocs/step": formatNumber(stepAllocations / sampleIterations, 1),
+    "step allocs/step": formatNumber(stepAllocations * inv, 1),
     "max flush ms": formatNumber(maxFlushLatencyMs, 3),
   };
 }
@@ -285,49 +293,48 @@ export function registerBenchFile(
   libraryName: string,
   variants: readonly BenchVariant[],
 ): void {
-  for (
-    let scenarioIndex = 0;
-    scenarioIndex < GRAPH_SCENARIOS.length;
-    ++scenarioIndex
-  ) {
-    const scenario = GRAPH_SCENARIOS[scenarioIndex]!;
-    const sampleRows = variants.map((variant, variantIndex) =>
-      sampleScenario(
-        variant,
+  const scenarioCount = GRAPH_SCENARIOS.length;
+  const variantCount = variants.length;
+
+  for (let si = 0; si < scenarioCount; ++si) {
+    const scenario = GRAPH_SCENARIOS[si]!;
+
+    const sampleRows: SummaryRow[] = new Array(variantCount);
+    for (let vi = 0; vi < variantCount; ++vi) {
+      sampleRows[vi] = sampleScenario(
+        variants[vi]!,
         scenario,
-        0x6000 + scenarioIndex * 977 + variantIndex * 131,
-      ),
-    );
+        0x6000 + si * 977 + vi * 131,
+      );
+    }
 
     logScenarioSummary(libraryName, scenario, sampleRows);
 
-    const runners = variants.map((variant, variantIndex) =>
-      createRunner(
-        variant,
+    const runners: Runner[] = new Array(variantCount);
+    for (let vi = 0; vi < variantCount; ++vi) {
+      runners[vi] = createRunner(
+        variants[vi]!,
         scenario,
-        0xa000 + scenarioIndex * 193 + variantIndex * 17,
-      ),
-    );
+        0xa000 + si * 193 + vi * 17,
+      );
+    }
 
     describe(`${libraryName}: ${scenario.title}`, () => {
       afterAll(() => {
-        for (const runner of runners) {
-          runner.dispose();
+        for (let i = 0; i < runners.length; ++i) {
+          runners[i]!.dispose();
         }
       });
 
-      for (const runner of runners) {
-        bench(
-          runner.label,
-          () => {
-            runner.runStep();
-          },
-          scenario.bench,
-        );
+      for (let i = 0; i < runners.length; ++i) {
+        const runner = runners[i]!;
+        bench(runner.label, () => { runner.runStep(); }, scenario.bench);
       }
     });
   }
 }
+
+// ─── Scenarios ────────────────────────────────────────────────────────────────
 
 const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
   {
@@ -338,26 +345,29 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
     build(harness, seed) {
       const rng = createRng(seed);
       const [source, setSource] = harness.signal(1, "chain:source");
-      const layers: Read[] = [];
+      const layers: Read[] = new Array(192);
       let current = source;
 
       for (let depth = 0; depth < 192; ++depth) {
         const previous = current;
+        const addend = (depth & 3) + 1;
         current = harness.memo(
-          () => previous() + ((depth & 3) + 1),
+          () => previous() + addend, // capture constant, avoid recomputing `(depth & 3) + 1`
           `chain:memo:${depth}`,
         );
-        layers.push(current);
+        layers[depth] = current;
 
         if ((depth + 1) % 48 === 0) {
-          harness.effect(() => at(layers, depth)(), {
+          const tap = layers[depth]!;
+          harness.effect(() => tap(), {
             label: `chain:tap:${depth}`,
             priority: depth + 1,
           });
         }
       }
 
-      harness.effect(() => current(), { label: "chain:tail", priority: 256 });
+      const tail = current;
+      harness.effect(() => tail(), { label: "chain:tail", priority: 256 });
 
       return {
         runStep() {
@@ -375,22 +385,26 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
     build(harness, seed) {
       const rng = createRng(seed);
       const [source, setSource] = harness.signal(3, "fanout:source");
-      const leaves = Array.from({ length: 192 }, (_, index) =>
-        harness.memo(
-          () => source() * ((index % 7) + 1) + index,
+
+      const leaves: Read[] = new Array(192);
+      for (let index = 0; index < 192; ++index) {
+        const multiplier = (index % 7) + 1;
+        const offset = index;
+        leaves[index] = harness.memo(
+          () => source() * multiplier + offset,
           `fanout:leaf:${index}`,
-        ),
-      );
+        );
+      }
+
       const aggregate = harness.memo(() => {
         let total = 0;
-        for (let index = 0; index < leaves.length; ++index) {
-          total += at(leaves, index)();
-        }
+        for (let i = 0; i < leaves.length; ++i) total += leaves[i]!();
         return total;
       }, "fanout:aggregate");
 
       for (let index = 0; index < leaves.length; index += 48) {
-        harness.effect(() => at(leaves, index)(), {
+        const leaf = leaves[index]!;
+        harness.effect(() => leaf(), {
           label: `fanout:tap:${index}`,
           priority: 96 + index,
         });
@@ -420,47 +434,39 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
       const [right, setRight] = harness.signal(10, "diamond:right");
       const sharedSum = harness.memo(() => left() + right(), "diamond:sum");
       const sharedDiff = harness.memo(() => left() - right(), "diamond:diff");
-      const branches = Array.from({ length: 96 }, (_, index) =>
-        harness.memo(
-          () =>
-            ((index & 1) === 0 ? sharedSum() : sharedDiff()) *
-            ((index % 5) + 1),
+
+      const branches: Read[] = new Array(96);
+      for (let index = 0; index < 96; ++index) {
+        const multiplier = (index % 5) + 1;
+        const useDiff = (index & 1) !== 0;
+        branches[index] = harness.memo(
+          () => (useDiff ? sharedDiff() : sharedSum()) * multiplier,
           `diamond:branch:${index}`,
-        ),
-      );
+        );
+      }
+
       const join = harness.memo(() => {
         let total = 0;
-        for (let index = 0; index < branches.length; ++index) {
-          total += at(branches, index)();
-        }
+        for (let i = 0; i < branches.length; ++i) total += branches[i]!();
         return total;
       }, "diamond:join");
 
-      harness.effect(() => sharedSum(), {
-        label: "diamond:sum-effect",
-        priority: 64,
-      });
-      harness.effect(() => sharedDiff(), {
-        label: "diamond:diff-effect",
-        priority: 64,
-      });
+      harness.effect(() => sharedSum(), { label: "diamond:sum-effect", priority: 64 });
+      harness.effect(() => sharedDiff(), { label: "diamond:diff-effect", priority: 64 });
 
       for (let index = 0; index < branches.length; index += 32) {
-        harness.effect(() => at(branches, index)(), {
+        const branch = branches[index]!;
+        harness.effect(() => branch(), {
           label: `diamond:branch-effect:${index}`,
           priority: 128 + index,
         });
       }
 
-      harness.effect(() => join(), {
-        label: "diamond:join-effect",
-        priority: 320,
-      });
+      harness.effect(() => join(), { label: "diamond:join-effect", priority: 320 });
 
       return {
         runStep() {
           let nextRight = right();
-
           harness.batch(() => {
             if ((rng.int(4) & 1) === 0) {
               setLeft(left() + 1 + rng.int(3));
@@ -468,7 +474,6 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
               nextRight += 1 + rng.int(5);
               setRight(nextRight);
             }
-
             if (rng.int(3) === 0) {
               nextRight += 1;
               setRight(nextRight);
@@ -490,30 +495,31 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
       const sources = Array.from({ length: 18 }, (_, index) =>
         harness.signal(index * 3, `dynamic:source:${index}`),
       );
-      const branches = Array.from({ length: 72 }, (_, branchIndex) =>
-        harness.memo(() => {
+      const srcLen = sources.length;
+
+      const branches: Read[] = new Array(72);
+      for (let branchIndex = 0; branchIndex < 72; ++branchIndex) {
+        const base = branchIndex * 5;
+        branches[branchIndex] = harness.memo(() => {
           const mode = selector() % 3;
+          const modeOff = mode * 7;
           let total = 0;
-
           for (let offset = 0; offset < 4; ++offset) {
-            const sourceIndex =
-              (branchIndex * 5 + offset + mode * 7) % sources.length;
-            total += at(sources, sourceIndex)[0]();
+            total += sources[(base + offset + modeOff) % srcLen]![0]();
           }
-
           return total;
-        }, `dynamic:branch:${branchIndex}`),
-      );
+        }, `dynamic:branch:${branchIndex}`);
+      }
+
       const aggregate = harness.memo(() => {
         let total = selector();
-        for (let index = 0; index < branches.length; ++index) {
-          total += at(branches, index)();
-        }
+        for (let i = 0; i < branches.length; ++i) total += branches[i]!();
         return total;
       }, "dynamic:aggregate");
 
       for (let index = 0; index < branches.length; index += 24) {
-        harness.effect(() => at(branches, index)(), {
+        const branch = branches[index]!;
+        harness.effect(() => branch(), {
           label: `dynamic:branch-effect:${index}`,
           priority: 96 + index,
         });
@@ -528,15 +534,12 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
         runStep() {
           harness.batch(() => {
             setSelector((selector() + 1) % 3);
-
-            const firstIndex = rng.int(sources.length);
-            const secondIndex = (firstIndex + 5 + rng.int(5)) % sources.length;
-
-            const [firstRead, firstWrite] = at(sources, firstIndex);
-            const [secondRead, secondWrite] = at(sources, secondIndex);
-
-            firstWrite(firstRead() + 1 + rng.int(4));
-            secondWrite(secondRead() + rng.centered(3));
+            const firstIndex = rng.int(srcLen);
+            const secondIndex = (firstIndex + 5 + rng.int(5)) % srcLen;
+            const [r1, w1] = sources[firstIndex]!;
+            const [r2, w2] = sources[secondIndex]!;
+            w1(r1() + 1 + rng.int(4));
+            w2(r2() + rng.centered(3));
           });
           harness.flush();
         },
@@ -554,8 +557,10 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
       const doubled = harness.memo(() => source() * 2, "effects:doubled");
 
       for (let index = 0; index < 96; ++index) {
+        const addend = (index & 1) === 0 ? index : index * 3;
+        const base = (index & 1) === 0 ? source : doubled;
         harness.effect(
-          () => ((index & 1) === 0 ? source() + index : doubled() + index * 3),
+          () => base() + addend,
           { label: `effects:sink:${index}`, priority: index },
         );
       }
@@ -577,27 +582,24 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
       const rng = createRng(seed);
       const sampler = createUniqueIndexSampler(128);
       const touched: number[] = [];
+
       const sources = Array.from({ length: 128 }, (_, index) =>
         harness.signal(index, `fanin:source:${index}`),
       );
+      const srcLen = sources.length;
+
       const total = harness.memo(() => {
         let sum = 0;
-        for (let index = 0; index < sources.length; ++index) {
-          sum += at(sources, index)[0]();
-        }
+        for (let i = 0; i < srcLen; ++i) sum += sources[i]![0]();
         return sum;
       }, "fanin:total");
 
-      harness.effect(() => total(), {
-        label: "fanin:total-effect",
-        priority: 512,
-      });
+      harness.effect(() => total(), { label: "fanin:total-effect", priority: 512 });
+
       harness.effect(
         () => {
           let sum = 0;
-          for (let index = 0; index < sources.length; index += 16) {
-            sum += at(sources, index)[0]();
-          }
+          for (let i = 0; i < srcLen; i += 16) sum += sources[i]![0]();
           return sum;
         },
         { label: "fanin:direct-effect", priority: 256 },
@@ -607,7 +609,7 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
         runStep() {
           harness.batch(() => {
             for (const index of sampler(8, rng, touched)) {
-              const [read, write] = at(sources, index);
+              const [read, write] = sources[index]!;
               write(read() + Math.trunc(rng.centered(6)));
             }
           });

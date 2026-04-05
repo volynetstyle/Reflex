@@ -13,7 +13,6 @@
 //
 // The function never throws (all inputs are typed, no user callbacks here),
 
-import type { ExecutionContext } from "../context";
 import type { ReactiveNode, ReactiveEdge } from "../shape";
 import { ReactiveNodeState, DIRTY_STATE } from "../shape";
 import { shouldRecomputeBranching } from "./recompute.branching";
@@ -28,7 +27,6 @@ const shouldRecomputeStack: ReactiveEdge[] = [];
 export function shouldRecomputeLinear(
   node: ReactiveNode,
   firstIn: ReactiveEdge,
-  context: ExecutionContext,
 ): boolean {
   const stack = shouldRecomputeStack;
   const stackBase = stack.length;
@@ -44,7 +42,6 @@ export function shouldRecomputeLinear(
       return shouldRecomputeBranching(
         link,
         consumer,
-        context,
         stack,
         stackTop,
         stackBase,
@@ -60,7 +57,7 @@ export function shouldRecomputeLinear(
     const depState = dep.state;
 
     if ((depState & ReactiveNodeState.Changed) !== 0) {
-      changed = refreshRecompute(link, dep, context);
+      changed = refreshRecompute(link, dep);
 
       if (changed || link.nextIn === null) break;
     }
@@ -74,7 +71,6 @@ export function shouldRecomputeLinear(
           const result = shouldRecomputeBranching(
             deps,
             dep,
-            context,
             stack,
             stackTop,
             stackBase,
@@ -93,7 +89,7 @@ export function shouldRecomputeLinear(
         continue;
       }
 
-      changed = refreshRecompute(link, dep, context);
+      changed = refreshRecompute(link, dep);
       break;
     }
 
@@ -114,7 +110,7 @@ export function shouldRecomputeLinear(
     const parentLink = stack[--stackTop]!;
 
     if (changed) {
-      changed = refreshRecompute(parentLink, consumer, context);
+      changed = refreshRecompute(parentLink, consumer);
     } else {
       consumer.state &= ~ReactiveNodeState.Invalid;
     }

@@ -12,10 +12,9 @@ import { getDefaultContext } from "../context";
 
 type CommitComputation<T> = (result: unknown) => T;
 
-function prepareNodeExecution(
-  node: ReactiveNode,
-  context: ExecutionContext,
-): () => void {
+function prepareNodeExecution(node: ReactiveNode): () => void {
+  const context = getDefaultContext();
+
   node.depsTail = null;
   node.state =
     (node.state & ~ReactiveNodeState.Visited) | ReactiveNodeState.Tracking;
@@ -38,10 +37,7 @@ function prepareNodeExecution(
   };
 }
 
-export function executeNodeComputationRaw(
-  node: ReactiveNode,
-  context: ExecutionContext = getDefaultContext(),
-): unknown {
+export function executeNodeComputationRaw(node: ReactiveNode): unknown {
   if (__DEV__) {
     if (!node.compute) {
       throw new Error(
@@ -53,14 +49,15 @@ export function executeNodeComputationRaw(
     }
   }
 
+  const context = getDefaultContext();
   const compute = node.compute!;
-  const restoreActive = prepareNodeExecution(node, context);
+  const restoreActive = prepareNodeExecution(node);
   let result: unknown;
 
   try {
     result = compute();
     restoreActive();
-    cleanupStaleSources(node, context);
+    cleanupStaleSources(node);
 
     if (__DEV__) {
       recordDebugEvent(context, "compute:finish", {
@@ -111,13 +108,13 @@ export function executeNodeComputation<T>(
   }
 
   const compute = node.compute!;
-  const restoreActive = prepareNodeExecution(node, context);
+  const restoreActive = prepareNodeExecution(node);
   let result: unknown;
 
   try {
     result = compute();
     restoreActive();
-    cleanupStaleSources(node, context);
+    cleanupStaleSources(node);
     const committed = commit(result);
 
     if (__DEV__) {

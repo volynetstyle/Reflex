@@ -1,5 +1,5 @@
 import { recordDebugEvent } from "../../debug";
-import type { ExecutionContext } from "../context";
+import { getDefaultContext, type ExecutionContext } from "../context";
 import type { ReactiveEdge, ReactiveNode } from "../shape";
 import { IMMEDIATE } from "./propagate.constants";
 
@@ -26,8 +26,9 @@ export function recordPropagation(
 export function notifyWatcherInvalidation(
   node: ReactiveNode,
   thrown: unknown,
-  context: ExecutionContext,
 ): unknown {
+  const context = getDefaultContext();
+  
   if (__DEV__) {
     recordDebugEvent(context, "watcher:invalidated", { node });
   }

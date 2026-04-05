@@ -4,7 +4,6 @@
 // never reach shouldRecompute() with dirty bits set, so this helper stays
 // monomorphic and tiny enough for JIT inlining at every call site.
 
-import type { ExecutionContext } from "../context";
 import { recompute } from "../engine";
 import type { ReactiveNode, ReactiveEdge } from "../shape";
 import { propagateOnce } from "./propagate.once";
@@ -16,13 +15,12 @@ import { propagateOnce } from "./propagate.once";
 export function refreshRecompute(
   link: ReactiveEdge,
   node: ReactiveNode,
-  context: ExecutionContext,
 ): boolean {
-  const changed = recompute(node, context);
+  const changed = recompute(node);
   // Fanout check: if this node has siblings (prevOut or nextOut),
   // push the change sideways so they don't read a stale value on pull.
   if (changed && (link.prevOut !== null || link.nextOut !== null)) {
-    propagateOnce(node, context);
+    propagateOnce(node);
   }
   
   return changed;

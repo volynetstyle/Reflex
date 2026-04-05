@@ -4,7 +4,6 @@
 // Called from pull-phase when a computed node's value changed and it has fanout.
 // No stack needed — single level only.
 
-import type { ExecutionContext } from "../context";
 import { getDefaultContext } from "../context";
 import { devAssertPropagateAlive } from "../dev";
 import type { ReactiveNode } from "../shape";
@@ -15,10 +14,7 @@ import {
   notifyWatcherInvalidation,
 } from "./propagation.watchers";
 
-export function propagateOnce(
-  node: ReactiveNode,
-  context: ExecutionContext = getDefaultContext(),
-): void {
+export function propagateOnce(node: ReactiveNode): void {
   if ((node.state & ReactiveNodeState.Disposed) !== 0) {
     if (__DEV__) devAssertPropagateAlive();
     return;
@@ -36,10 +32,11 @@ export function propagateOnce(
       (state & ~ReactiveNodeState.Invalid) | ReactiveNodeState.Changed;
     sub.state = nextState;
 
-    if (__DEV__) recordPropagation(edge, nextState, IMMEDIATE, context);
+    if (__DEV__)
+      recordPropagation(edge, nextState, IMMEDIATE, getDefaultContext());
 
     if ((nextState & ReactiveNodeState.Watcher) !== 0) {
-      thrown = notifyWatcherInvalidation(sub, thrown, context);
+      thrown = notifyWatcherInvalidation(sub, thrown);
     }
   }
 

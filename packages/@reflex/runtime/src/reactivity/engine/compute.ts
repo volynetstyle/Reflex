@@ -1,15 +1,11 @@
 import { compare } from "../../api/compare";
 import type { ReactiveNode } from "../shape";
-import type { ExecutionContext } from "../context";
 import { devAssertRecomputeAlive, devRecordRecompute } from "../dev";
 import { clearDirtyState, isDisposedNode } from "../shape";
 import { executeNodeComputationRaw } from "./execute";
 import { getDefaultContext } from "../context";
 
-export function recompute(
-  node: ReactiveNode,
-  context: ExecutionContext = getDefaultContext(),
-): boolean {
+export function recompute(node: ReactiveNode): boolean {
   if (isDisposedNode(node)) {
     if (__DEV__) {
       devAssertRecomputeAlive();
@@ -21,7 +17,7 @@ export function recompute(
   let next: unknown = prev;
   let hasChanged = false;
 
-  next = executeNodeComputationRaw(node, context);
+  next = executeNodeComputationRaw(node);
 
   if (!isDisposedNode(node)) {
     const changed = !compare(prev, next);
@@ -32,7 +28,7 @@ export function recompute(
   clearDirtyState(node);
 
   if (__DEV__) {
-    devRecordRecompute(node, hasChanged, next, prev, context);
+    devRecordRecompute(node, hasChanged, next, prev, getDefaultContext());
   }
 
   return hasChanged;

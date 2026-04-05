@@ -1,4 +1,3 @@
-import type { ExecutionContext } from "../context";
 import type ReactiveNode from "../shape/ReactiveNode";
 import { isDisposedNode } from "../shape";
 import {
@@ -20,8 +19,8 @@ import { getDefaultContext } from "../context";
  */
 export function trackRead(
   source: ReactiveNode,
-  context: ExecutionContext = getDefaultContext(),
 ): void {
+  const context = getDefaultContext();
   const consumer = context.activeComputed;
 
   if (!consumer) return;
@@ -42,7 +41,7 @@ export function trackRead(
   const prevEdge = consumer.depsTail;
   if (prevEdge === null) {
     const firstIn = consumer.firstIn;
-    
+
     if (firstIn === null) {
       consumer.depsTail = linkEdge(source, consumer, null);
       return;
@@ -82,10 +81,7 @@ export function trackRead(
  * Suffix cleanup over the consumer's incoming edges after recompute.
  * Everything after depsTail belongs to the old dependency list and is unlinked.
  */
-export function cleanupStaleSources(
-  node: ReactiveNode,
-  _context: ExecutionContext = getDefaultContext(),
-): void {
+export function cleanupStaleSources(node: ReactiveNode): void {
   const tail = node.depsTail;
   const staleHead = tail === null ? node.firstIn : tail.nextIn;
   if (staleHead === null) return;
@@ -99,7 +95,7 @@ export function cleanupStaleSources(
   }
 
   if (__DEV__) {
-    devRecordCleanupStaleSources(node, staleHead, _context);
+    devRecordCleanupStaleSources(node, staleHead, getDefaultContext());
   }
 
   unlinkDetachedIncomingEdgeSequence(staleHead);

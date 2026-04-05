@@ -1,4 +1,4 @@
-import type { ExecutionContext } from "../context";
+import { getDefaultContext} from "../context";
 import type { ReactiveEdge } from "../shape";
 import { ReactiveNodeState } from "../shape";
 import { CAN_ESCAPE_INVALIDATION, NON_IMMEDIATE } from "./propagate.constants";
@@ -21,7 +21,6 @@ export function propagateBranch(
   edge: ReactiveEdge,
   promoteBit: number,
   thrown: unknown,
-  context: ExecutionContext,
 ): unknown {
   while (true) {
     const sub = edge.to;
@@ -38,10 +37,10 @@ export function propagateBranch(
 
     if (nextState) {
       sub.state = nextState;
-      if (__DEV__) recordPropagation(edge, nextState, promoteBit, context);
+      if (__DEV__) recordPropagation(edge, nextState, promoteBit, getDefaultContext());
 
       if ((nextState & ReactiveNodeState.Watcher) !== 0) {
-        thrown = notifyWatcherInvalidation(sub, thrown, context);
+        thrown = notifyWatcherInvalidation(sub, thrown);
       } else {
         const firstOut = sub.firstOut;
         if (firstOut !== null) {
@@ -51,7 +50,6 @@ export function propagateBranch(
               next,
               promoteBit,
               thrown,
-              context,
             );
           }
 
