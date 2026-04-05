@@ -5,13 +5,15 @@ import {
   ReactiveNodeState,
   readConsumer,
   readProducer,
+  runWatcher,
+  setDefaultContext,
   writeProducer,
 } from "../src";
 import {
+  getDefaultContext,
   IMMEDIATE,
   propagate,
   propagateOnce,
-  setDefaultContext,
   shouldRecompute,
 } from "../src/reactivity";
 import { linkEdge } from "../src/reactivity/shape/methods/connect";
@@ -19,6 +21,8 @@ import {
   createConsumer,
   createProducer,
   createTestContext,
+  createWatcher,
+  hasSubscriber,
   resetRuntime,
 } from "./runtime.test_utils";
 
@@ -42,6 +46,8 @@ describe("Reactive runtime - walker invariants", () => {
     linkEdge(source, right);
     linkEdge(left, leftLeaf);
     linkEdge(right, rightLeaf);
+
+    setDefaultContext(createTestContext());
 
     propagate(source.firstOut!, IMMEDIATE);
 
@@ -70,6 +76,7 @@ describe("Reactive runtime - walker invariants", () => {
         invalidated.push(node);
       },
     });
+
     setDefaultContext(context);
 
     linkEdge(source, left);
@@ -97,6 +104,7 @@ describe("Reactive runtime - walker invariants", () => {
     );
     const disposedLeaf = createNode(ReactiveNodeState.Consumer);
     const sibling = createNode(ReactiveNodeState.Consumer);
+    setDefaultContext(createTestContext());
 
     linkEdge(source, disposed);
     linkEdge(source, sibling);
@@ -120,6 +128,7 @@ describe("Reactive runtime - walker invariants", () => {
       ReactiveNodeState.Consumer | ReactiveNodeState.Tracking,
     );
     const sibling = createNode(ReactiveNodeState.Consumer);
+    setDefaultContext(createTestContext());
 
     const prefixEdge = linkEdge(prefix, tracked, null);
     linkEdge(source, tracked);
@@ -136,12 +145,46 @@ describe("Reactive runtime - walker invariants", () => {
     );
   });
 
+  it("propagate branching accepts depsTail edge without traversing prevIn", () => {
+    const source = createNode(ReactiveNodeState.Producer);
+    const branch = createNode(ReactiveNodeState.Consumer);
+    const sibling = createNode(ReactiveNodeState.Consumer);
+    const tracked = createNode(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Tracking,
+    );
+    setDefaultContext(createTestContext());
+
+    linkEdge(source, branch);
+    linkEdge(source, sibling);
+    const trackedEdge = linkEdge(branch, tracked);
+    tracked.depsTail = trackedEdge;
+
+    Object.defineProperty(trackedEdge, "prevIn", {
+      configurable: true,
+      get() {
+        throw new Error("branching helper should short-circuit on depsTail");
+      },
+    });
+
+    expect(() => propagate(source.firstOut!, IMMEDIATE)).not.toThrow();
+    expect(tracked.state).toBe(
+      ReactiveNodeState.Consumer |
+        ReactiveNodeState.Tracking |
+        ReactiveNodeState.Visited |
+        ReactiveNodeState.Invalid,
+    );
+    expect(sibling.state).toBe(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Changed,
+    );
+  });
+
   it("keeps transitive slow-path subscribers Invalid when only Visited is set", () => {
     const source = createNode(ReactiveNodeState.Producer);
     const middle = createNode(ReactiveNodeState.Consumer);
     const leaf = createNode(
       ReactiveNodeState.Consumer | ReactiveNodeState.Visited,
     );
+    setDefaultContext(createTestContext());
 
     linkEdge(source, middle);
     linkEdge(middle, leaf);
@@ -194,6 +237,74 @@ describe("Reactive runtime - walker invariants", () => {
     expect(invalidated).toEqual(["watcher"]);
   });
 
+  it("invalidates every watcher that hangs off a shared computed branch", () => {
+    const invalidated: ReactiveNode[] = [];
+
+    resetRuntime({
+      onEffectInvalidated(node) {
+        invalidated.push(node);
+      },
+    });
+
+    const source = createProducer(1);
+    const shared = createConsumer(() => readProducer(source) * 2);
+    const direct = createWatcher(() => {
+      readProducer(source);
+    });
+    const left = createWatcher(() => {
+      readConsumer(shared);
+    });
+    const right = createWatcher(() => {
+      readConsumer(shared);
+    });
+
+    runWatcher(direct);
+    runWatcher(left);
+    runWatcher(right);
+
+    expect(hasSubscriber(source, direct)).toBe(true);
+    expect(hasSubscriber(source, shared)).toBe(true);
+    expect(hasSubscriber(shared, left)).toBe(true);
+    expect(hasSubscriber(shared, right)).toBe(true);
+
+    invalidated.length = 0;
+    writeProducer(source, 2);
+
+    expect(invalidated).toEqual([direct, left, right]);
+  });
+
+  it("still invalidates every watcher when the shared computed was warmed eagerly", () => {
+    const invalidated: ReactiveNode[] = [];
+
+    resetRuntime({
+      onEffectInvalidated(node) {
+        invalidated.push(node);
+      },
+    });
+
+    const source = createProducer(1);
+    const shared = createConsumer(() => readProducer(source) * 2);
+    const direct = createWatcher(() => {
+      readProducer(source);
+    });
+    const left = createWatcher(() => {
+      readConsumer(shared);
+    });
+    const right = createWatcher(() => {
+      readConsumer(shared);
+    });
+
+    expect(readConsumer(shared)).toBe(2);
+    runWatcher(direct);
+    runWatcher(left);
+    runWatcher(right);
+
+    invalidated.length = 0;
+    writeProducer(source, 2);
+
+    expect(invalidated).toEqual([left, right, direct]);
+  });
+
   it("shouldRecompute clears Invalid when a dirty dependency recomputes to the same value", () => {
     const source = createProducer(1);
     const sharedSpy = vi.fn(() => {
@@ -233,5 +344,44 @@ describe("Reactive runtime - walker invariants", () => {
     expect(left.state & ReactiveNodeState.Changed).toBeTruthy();
     expect(right.state & ReactiveNodeState.Changed).toBeTruthy();
     expect(right.state & ReactiveNodeState.Invalid).toBeFalsy();
+  });
+
+  it("shouldRecompute routes pull-phase invalidations through the caller context and back to default", () => {
+    const invalidatedA: ReactiveNode[] = [];
+    const invalidatedB: ReactiveNode[] = [];
+    const contextA = createTestContext({
+      onEffectInvalidated(node) {
+        invalidatedA.push(node);
+      },
+    });
+
+    const defaults = getDefaultContext();
+    const previous = setDefaultContext(contextA);
+
+    try {
+      const source = createProducer(1);
+      const shared = createConsumer(() => readProducer(source) * 2);
+      const left = createWatcher(() => {
+        readConsumer(shared, undefined);
+      });
+      const right = createWatcher(() => {
+        readConsumer(shared, undefined);
+      });
+
+      runWatcher(left);
+      runWatcher(right);
+
+      writeProducer(source, 2, Object.is);
+      invalidatedA.length = 0;
+      invalidatedB.length = 0;
+
+      runWatcher(left);
+
+      expect(invalidatedB).toEqual([]);
+      expect(invalidatedA).toContain(right);
+    } finally {
+      setDefaultContext(previous);
+      expect(getDefaultContext()).toBe(defaults);
+    }
   });
 });

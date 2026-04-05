@@ -55,27 +55,26 @@ class ReflexHarness implements BenchHarness {
   private batchDepth = 0;
 
   constructor() {
-    const c = createExecutionContext({});
+    const c = createExecutionContext({
+      onEffectInvalidated: (node) => {
+        // Dedup: same watcher can be invalidated multiple times in one batch
+        // (two writes both propagating to the same effect via different paths).
+        if ((node.state & SCHEDULED_BIT) !== 0) return;
+        node.state |= SCHEDULED_BIT;
+
+        if (this.queuedLength === this.queue.length) {
+          this.queue = this.queue.concat(new Array(this.queue.length));
+        }
+        this.metrics.schedulerOps += 1;
+        this.metrics.stepAllocations += 1;
+        this.queue[this.queuedLength++] = node;
+      },
+    });
     setDefaultContext(c);
     this.context = c;
   }
 
-  private _enqueue(node: EffectNode): void {
-    // Dedup: same watcher can be invalidated multiple times in one batch
-    // (two writes both propagating to the same effect via different paths).
-    if ((node.state & SCHEDULED_BIT) !== 0) return;
-    node.state |= SCHEDULED_BIT;
-
-    if (this.queuedLength === this.queue.length) {
-      this.queue = this.queue.concat(new Array(this.queue.length));
-    }
-    this.metrics.schedulerOps += 1;
-    this.metrics.stepAllocations += 1;
-    this.queue[this.queuedLength++] = node;
-  }
-
   private _flush(): void {
-    const c = this.context;
     this.metrics.schedulerOps += 1;
 
     const queue = this.queue;
@@ -116,20 +115,25 @@ class ReflexHarness implements BenchHarness {
       null,
       PRODUCER_INITIAL_STATE,
     );
-    const context = this.context;
     const metrics = this.metrics;
 
     const read = (): number => readProducer(node);
 
     const write = (value: WriteInput): void => {
       metrics.schedulerOps += 1;
+      const prev = node.payload;
       writeProducer(
         node,
         typeof value === "function" ? value(readProducer(node)) : value,
         compareNumbers,
       );
-      if (!this.batchDepth) {
-        this._flush();
+
+      if (value !== prev) {
+        if (node.firstOut !== null) {
+          if (!this.batchDepth) {
+            this._flush();
+          }
+        }
       }
     };
 
@@ -140,7 +144,6 @@ class ReflexHarness implements BenchHarness {
     this.metrics.setupAllocations += 1;
 
     const metrics = this.metrics;
-    const context = this.context;
 
     const node = new ReactiveNode<number>(
       0,
