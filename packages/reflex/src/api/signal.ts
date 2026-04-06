@@ -1,12 +1,5 @@
-import { readProducer, writeProducer } from "@reflex/runtime";
+import { writeProducer } from "@reflex/runtime";
 import { createSignalNode } from "../infra";
-
-interface SignalOptions {
-  /**
-   * Optional display name used in development-only diagnostics.
-   */
-  name: string;
-}
 
 /**
  * Creates writable reactive state.
@@ -59,15 +52,15 @@ interface SignalOptions {
 export function signal<T>(initialValue: T): readonly [() => T, Setter<T>] {
   const node = createSignalNode(initialValue);
 
-  function setValue(this: void, input: Updater<T>): T {
+  function set(input: SetInput<T>): T {
     const next =
       typeof input === "function"
-        ? (input as (prev: T) => T)(node.payload)
+        ? (input as (prev: T) => T)(node.payload as T)
         : input;
-
     writeProducer(node, next);
-    return next as T;
+
+    return next;
   }
 
-  return [() => readProducer(node), setValue as any] as const;
+  return [node, set as Setter<T>] as const;
 }

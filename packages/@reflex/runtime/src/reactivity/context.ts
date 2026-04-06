@@ -189,7 +189,7 @@ export class ExecutionContext {
  * in multi-context scenarios.
  *
  */
-let defaultContext = createExecutionContext({});
+export let defaultContext = createExecutionContext({});
 
 export function createExecutionContext(
   hooks: EngineHooks = {},

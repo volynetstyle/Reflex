@@ -68,9 +68,7 @@ export enum ConsumerReadMode {
  * @invariant If called during compute, creates edge from producer to active consumer
  * @cost O(1) for value access + O(k) for dependency tracking (k = cursor distance)
  */
-export function readProducer<T>(
-  node: ReactiveNode<T>,
-): T {
+export function readProducer<T>(node: ReactiveNode<T>): T {
   if (isDisposedNode(node)) {
     devAssertReadDeadProducer();
     return node.payload as T;
@@ -141,7 +139,10 @@ function stabilizeConsumer<T>(node: ReactiveNode<T>): T {
     if (needs) {
       // Re-execute the compute function and update payload
       // If value changed AND node has multiple subscribers, notify siblings
-      if (recompute(node)) propagateOnce(node);
+      const hasSiblings = node.firstOut !== null;
+      if (recompute(node) && hasSiblings) {
+        propagateOnce(node);
+      }
     } else {
       // Verification confirmed all dirty flags were stale
       // Clear dirty state, node is still valid

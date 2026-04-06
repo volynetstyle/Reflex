@@ -31,35 +31,36 @@ export function resolveEffectSchedulerMode(
 }
 
 export class EffectScheduler {
-  private readonly queue: ReactiveNode<typeof UNINITIALIZED | Destructor>[] =
-    [];
-  private head = 0;
-  private batchDepth = 0;
-  private phase = SchedulerPhase.Idle;
+  readonly queue: (ReactiveNode<typeof UNINITIALIZED | Destructor> | undefined)[] = [];
+  head = 0;
+  batchDepth = 0;
+  phase = SchedulerPhase.Idle;
+  readonly mode: EffectSchedulerMode;
+  readonly context: ExecutionContext;
 
   constructor(
-    private readonly mode: EffectSchedulerMode,
-    private readonly context?: ExecutionContext,
-  ) {}
-
-  private getContext(): ExecutionContext {
-    return this.context ?? getDefaultContext();
+    mode: EffectSchedulerMode,
+    context: ExecutionContext = getDefaultContext(),
+  ) {
+    this.mode = mode;
+    this.context = context;
   }
 
   enqueue(node: ReactiveNode): void {
-    if (this.isNodeIgnored(node)) return;
+    if ((node.state & (ReactiveNodeState.Disposed | ReactiveNodeState.Scheduled)) !== 0)
+      return;
+
+    if (this.mode === EffectSchedulerMode.Eager && this.isIdle()) {
+      runWatcher(node);
+      return;
+    }
 
     effectScheduled(node);
     this.queue.push(node);
-
-    if (this.shouldAutoFlush()) {
-      this.flush();
-    }
   }
 
   batch<T>(fn: () => T): T {
     this.enterBatch();
-
     try {
       return fn();
     } finally {
@@ -68,97 +69,72 @@ export class EffectScheduler {
   }
 
   flush(): void {
-    if (this.phase & SchedulerPhase.Flushing) return;
-    if (!this.hasPending()) return;
+    if (this.phase !== SchedulerPhase.Idle) return;
+    if (this.head >= this.queue.length) return;
 
     this.phase = SchedulerPhase.Flushing;
+    const q = this.queue;
 
     try {
-      while (this.head < this.queue.length) {
-        const node = this.queue[this.head++]!;
+      while (this.head < q.length) {
+        const node = q[this.head]!;
+        q[this.head++] = undefined; // освобождаем ссылку сразу → GC
+
         effectUnscheduled(node);
 
-        if (this.shouldSkipNode(node)) continue;
-
-        runWatcher(node);
+        if (
+          (node.state & ReactiveNodeState.Disposed) === 0 &&
+          (node.state & DIRTY_STATE) !== 0
+        ) {
+          runWatcher(node);
+        }
       }
     } finally {
-      this.queue.length = 0;
-      this.head = 0;
-      this.phase =
-        this.batchDepth > 0 ? SchedulerPhase.Batching : SchedulerPhase.Idle;
-
-      /* c8 ignore start -- the queue is fully drained before reaching this branch */
-      if (this.phase === SchedulerPhase.Idle && this.shouldAutoFlush()) {
-        this.flush();
+      // runWatcher бросил → доочищаем остаток: снимаем Scheduled, не запускаем
+      while (this.head < q.length) {
+        const node = q[this.head]!;
+        q[this.head++] = undefined;
+        effectUnscheduled(node);
       }
-      /* c8 ignore stop */
+      q.length = 0;
+      this.head = 0;
+      this.phase = this.batchDepth > 0 ? SchedulerPhase.Batching : SchedulerPhase.Idle;
     }
   }
 
-  reset(): void {
-    for (let i = this.head; i < this.queue.length; ++i) {
-      effectUnscheduled(this.queue[i]!);
-    }
+  notifySettled(): void {
+    if (this.head < this.queue.length) this.flush();
+  }
 
-    this.queue.length = 0;
+  reset(): void {
+    const q = this.queue;
+    for (let i = this.head; i < q.length; ++i) effectUnscheduled(q[i]!);
+    q.length = 0;
     this.head = 0;
     this.batchDepth = 0;
     this.phase = SchedulerPhase.Idle;
   }
 
-  notifySettled(): void {
-    if (this.shouldAutoFlush()) {
-      this.flush();
-    }
-  }
-
-  private hasPending(): boolean {
-    return this.head < this.queue.length;
-  }
-
-  private isNodeIgnored(node: ReactiveNode): boolean {
+  private isIdle(): boolean {
     return (
-      (node.state & ReactiveNodeState.Disposed) !== 0 ||
-      (node.state & ReactiveNodeState.Scheduled) !== 0
-    );
-  }
-
-  private shouldSkipNode(node: ReactiveNode): boolean {
-    return (
-      (node.state & ReactiveNodeState.Disposed) !== 0 ||
-      (node.state & DIRTY_STATE) === 0
-    );
-  }
-
-  private shouldAutoFlush(): boolean {
-    const ctx = this.getContext();
-    return (
-      this.mode === EffectSchedulerMode.Eager &&
       this.phase === SchedulerPhase.Idle &&
-      ctx.propagationDepth === 0 &&
-      ctx.activeComputed === null &&
-      this.hasPending()
+      this.context.propagationDepth === 0 &&
+      this.context.activeComputed === null
     );
   }
 
   private enterBatch(): void {
-    ++this.batchDepth;
-
-    if (this.phase !== SchedulerPhase.Flushing) {
+    if (++this.batchDepth === 1 && this.phase !== SchedulerPhase.Flushing) {
       this.phase = SchedulerPhase.Batching;
     }
   }
 
   private leaveBatch(): void {
-    --this.batchDepth;
-
-    if (this.batchDepth !== 0) return;
+    if (--this.batchDepth !== 0) return;
     if (this.phase === SchedulerPhase.Flushing) return;
 
     this.phase = SchedulerPhase.Idle;
-
-    if (this.shouldAutoFlush()) {
+    if (this.mode === EffectSchedulerMode.Flush && this.head < this.queue.length) {
       this.flush();
     }
   }

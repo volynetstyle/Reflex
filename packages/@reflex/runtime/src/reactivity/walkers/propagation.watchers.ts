@@ -1,5 +1,5 @@
 import { recordDebugEvent } from "../../debug";
-import { getDefaultContext, type ExecutionContext } from "../context";
+import { defaultContext, type ExecutionContext } from "../context";
 import type { ReactiveEdge, ReactiveNode } from "../shape";
 import { IMMEDIATE } from "./propagate.constants";
 
@@ -27,20 +27,14 @@ export function notifyWatcherInvalidation(
   node: ReactiveNode,
   thrown: unknown,
 ): unknown {
-  const context = getDefaultContext();
-  
   if (__DEV__) {
-    recordDebugEvent(context, "watcher:invalidated", { node });
+    recordDebugEvent(defaultContext, "watcher:invalidated", { node });
   }
 
-  const onEffectInvalidated = context.onEffectInvalidatedHook;
+  const onEffectInvalidated = defaultContext.onEffectInvalidatedHook;
   if (onEffectInvalidated === undefined) return thrown;
 
-  try {
-    onEffectInvalidated(node);
-  } catch (error) {
-    return thrown ?? error;
-  }
+  onEffectInvalidated(node);
 
   return thrown;
 }

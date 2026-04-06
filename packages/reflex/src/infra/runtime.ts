@@ -31,8 +31,6 @@ interface RuntimeOptions {
 }
 
 function createRuntimeInfrastructure(options?: RuntimeOptions) {
-  const hooks = options?.hooks;
-
   const executionContext = createExecutionContext();
 
   const scheduler = new EffectScheduler(
@@ -42,14 +40,11 @@ function createRuntimeInfrastructure(options?: RuntimeOptions) {
   const dispatcher = new EventDispatcher((fn) => scheduler.batch(fn));
 
   executionContext.setHooks({
-    ...hooks,
     onEffectInvalidated(node: ReactiveNode) {
       scheduler.enqueue(node);
-      hooks?.onEffectInvalidated?.(node);
     },
     onReactiveSettled() {
       scheduler.notifySettled();
-      hooks?.onReactiveSettled?.();
     },
   });
 
