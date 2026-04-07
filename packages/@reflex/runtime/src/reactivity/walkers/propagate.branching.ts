@@ -1,58 +1,20 @@
 import { getDefaultContext } from "../context";
 import type { ReactiveEdge } from "../shape";
-import { DIRTY_STATE, ReactiveNodeState } from "../shape";
-import { CAN_ESCAPE_INVALIDATION, NON_IMMEDIATE } from "./propagate.constants";
+import {
+  NON_IMMEDIATE,
+  SLOW_INVALIDATION_MASK,
+  VISITED_MASK,
+  WATCHER_MASK,
+} from "./propagate.constants";
+import { getSlowInvalidatedSubscriberState } from "./propagate.utils";
 import {
   recordPropagation,
   notifyWatcherInvalidation,
 } from "./propagation.watchers";
 
 const propagateEdgeStack: ReactiveEdge[] = [];
-const propagatePromoteStack: number[] = [];
+const propagatePromoteStack: Uint32Array = new Uint32Array(512);
 
-function isTrackedPrefixEdge(
-  edge: ReactiveEdge,
-  depsTail: ReactiveEdge | null,
-): boolean {
-  if (depsTail === null) return false;
-  if (edge === depsTail) return true;
-
-  for (
-    let cursor: ReactiveEdge | null = edge.prevIn;
-    cursor !== null;
-    cursor = cursor.prevIn
-  ) {
-    if (cursor === depsTail) return false;
-  }
-
-  return true;
-}
-
-// ─── getSlowInvalidatedSubscriberState ───────────────────────────────────────
-//
-// Hot-path fast check moved to call sites (see propagateBranching /
-// propagateBranch). This function handles only the three slow-path cases.
-//
-// Inlining budget: ~20 AST nodes — will be inlined by all three JITs since
-// both call sites are monomorphic (same edge/state shapes every time).
-function getSlowInvalidatedSubscriberState(
-  edge: ReactiveEdge,
-  state: number,
-  promoteBit: number,
-): number {
-  if ((state & (DIRTY_STATE | ReactiveNodeState.Disposed)) !== 0) return 0;
-
-  if ((state & ReactiveNodeState.Tracking) === 0) {
-    return (state & ~ReactiveNodeState.Visited) | promoteBit;
-  }
-
-  return isTrackedPrefixEdge(edge, edge.to.depsTail)
-    ? state | ReactiveNodeState.Visited | ReactiveNodeState.Invalid
-    : 0;
-}
-
-// ─── propagateBranching ───────────────────────────────────────────────────────
-//
 // DFS with explicit stack for fanout nodes (multiple outgoing edges).
 // try/finally retained here — unlike shouldRecompute.ts, this function can
 // genuinely throw via notifyWatcherInvalidation, so cleanup must be guaranteed.
@@ -82,6 +44,7 @@ export function propagateBranching(
   const stackBase = edgeStack.length;
   let stackTop = stackBase;
   let promoteBit = NON_IMMEDIATE;
+  const ctx = __DEV__ ? getDefaultContext() : undefined;
 
   if (resume !== null) {
     edgeStack[stackTop] = resume;
@@ -91,53 +54,59 @@ export function propagateBranching(
   resume = edge.nextOut;
   resumePromote = promoteBit;
 
-  while (true) {
-    const sub = edge.to;
-    const state = sub.state;
-    let nextState = 0;
+  try {
+    while (true) {
+      const sub = edge.to;
+      const state = sub.state;
 
-    if ((state & CAN_ESCAPE_INVALIDATION) === 0) {
-      nextState = state | promoteBit;
-    } else {
-      nextState = getSlowInvalidatedSubscriberState(edge, state, promoteBit);
-    }
+      let nextState: number;
 
-    if (nextState !== 0) {
-      sub.state = nextState;
-      if (__DEV__)
-        recordPropagation(edge, nextState, promoteBit, getDefaultContext());
-
-      if ((nextState & ReactiveNodeState.Watcher) !== 0) {
-        thrown = notifyWatcherInvalidation(sub, thrown);
+      if ((state & SLOW_INVALIDATION_MASK) === 0) {
+        nextState = (state & ~VISITED_MASK) | promoteBit;
       } else {
-        const firstOut = sub.firstOut;
-        if (firstOut !== null) {
-          if (resume !== null) {
-            edgeStack[stackTop] = resume;
-            promoteStack[stackTop++] = resumePromote;
-          }
+        nextState = getSlowInvalidatedSubscriberState(edge, state, promoteBit);
+      }
 
-          edge = firstOut;
-          promoteBit = NON_IMMEDIATE;
-          resume = firstOut.nextOut;
-          resumePromote = promoteBit;
-          continue;
+      if (nextState !== 0) {
+        sub.state = nextState;
+
+        if (__DEV__) {
+          recordPropagation(edge, nextState, promoteBit, ctx!);
+        }
+
+        if ((nextState & WATCHER_MASK) !== 0) {
+          thrown = notifyWatcherInvalidation(sub, thrown);
+        } else {
+          const firstOut = sub.firstOut;
+          if (firstOut !== null) {
+            if (resume !== null) {
+              edgeStack[stackTop] = resume;
+              promoteStack[stackTop++] = resumePromote;
+            }
+
+            edge = firstOut;
+            promoteBit = NON_IMMEDIATE;
+            resume = firstOut.nextOut;
+            resumePromote = promoteBit;
+            continue;
+          }
         }
       }
-    }
 
-    if (resume !== null) {
-      edge = resume;
-      promoteBit = resumePromote;
-    } else if (stackTop > stackBase) {
-      edge = edgeStack[--stackTop]!;
-      promoteBit = promoteStack[stackTop]!;
-    } else {
-      edgeStack.length = promoteStack.length = stackBase;
-      return thrown;
-    }
+      if (resume !== null) {
+        edge = resume;
+        promoteBit = resumePromote;
+      } else if (stackTop > stackBase) {
+        edge = edgeStack[--stackTop]!;
+        promoteBit = promoteStack[stackTop]!;
+      } else {
+        return thrown;
+      }
 
-    resume = edge.nextOut;
-    resumePromote = promoteBit;
+      resume = edge.nextOut;
+      resumePromote = promoteBit;
+    }
+  } finally {
+    edgeStack.length = stackBase;
   }
 }

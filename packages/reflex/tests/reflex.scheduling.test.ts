@@ -23,7 +23,7 @@ import {
   ReactiveNodeState,
 } from "@reflex/runtime";
 import {
-  EffectScheduler,
+  createEffectScheduler,
   EffectSchedulerMode,
 } from "../src/policy/effect_scheduler";
 
@@ -41,14 +41,14 @@ function createNode(state: number = DIRTY_STATE) {
   return { state } as any;
 }
 
-describe("EffectScheduler", () => {
+describe("createEffectScheduler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getDefaultContext.mockReturnValue(createContext());
   });
 
   it("enqueue marks node as scheduled in flush mode but does not run it", () => {
-    const scheduler = new EffectScheduler(EffectSchedulerMode.Flush);
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
     const node = createNode();
 
     scheduler.enqueue(node);
@@ -58,7 +58,7 @@ describe("EffectScheduler", () => {
   });
 
   it("flush unschedules and runs dirty node", () => {
-    const scheduler = new EffectScheduler(EffectSchedulerMode.Flush);
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
     const node = createNode();
 
     scheduler.enqueue(node);
@@ -70,7 +70,7 @@ describe("EffectScheduler", () => {
   });
 
   it("flush unschedules but does not run clean node", () => {
-    const scheduler = new EffectScheduler(EffectSchedulerMode.Flush);
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
     const node = createNode();
 
     scheduler.enqueue(node);
@@ -83,7 +83,7 @@ describe("EffectScheduler", () => {
   });
 
   it("runs immediately in eager mode when context is idle", () => {
-    const scheduler = new EffectScheduler(EffectSchedulerMode.Eager);
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Eager);
     const node = createNode();
 
     scheduler.enqueue(node);
@@ -93,7 +93,7 @@ describe("EffectScheduler", () => {
   });
 
   it("defers eager flush until batch exits", () => {
-    const scheduler = new EffectScheduler(EffectSchedulerMode.Eager);
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Eager);
     const a = createNode();
     const b = createNode();
 
@@ -116,7 +116,7 @@ describe("EffectScheduler", () => {
       createContext({ propagationDepth: 1 }),
     );
 
-    const scheduler = new EffectScheduler(EffectSchedulerMode.Eager);
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Eager);
     const node = createNode();
 
     scheduler.enqueue(node);
@@ -132,7 +132,7 @@ describe("EffectScheduler", () => {
   });
 
   it("ignores disposed nodes on enqueue", () => {
-    const scheduler = new EffectScheduler(EffectSchedulerMode.Flush);
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
     const node = createNode(DIRTY_STATE | ReactiveNodeState.Disposed);
 
     scheduler.enqueue(node);
@@ -143,7 +143,7 @@ describe("EffectScheduler", () => {
   });
 
   it("reset clears pending queue", () => {
-    const scheduler = new EffectScheduler(EffectSchedulerMode.Flush);
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
     const node = createNode();
 
     scheduler.enqueue(node);
@@ -155,7 +155,7 @@ describe("EffectScheduler", () => {
   });
 
   it("reset allows previously queued node to be scheduled again", () => {
-  const scheduler = new EffectScheduler(EffectSchedulerMode.Flush);
+  const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
   const node = createNode();
 
   scheduler.enqueue(node);

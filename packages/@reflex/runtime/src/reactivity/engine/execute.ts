@@ -1,4 +1,3 @@
-import type { ExecutionContext } from "../context";
 import { recordDebugEvent } from "../../debug";
 import type { ReactiveNode } from "../shape";
 import {
@@ -8,7 +7,7 @@ import {
   markNodeComputing,
 } from "../shape";
 import { cleanupStaleSources } from "./tracking";
-import { getDefaultContext } from "../context";
+import { defaultContext, getDefaultContext } from "../context";
 
 type CommitComputation<T> = (result: unknown) => T;
 
@@ -34,6 +33,8 @@ function prepareNodeExecution(node: ReactiveNode): () => void {
     if (restored) return;
     restored = true;
     context.activeComputed = prevActive;
+    node.state &= ~ReactiveNodeState.Tracking;
+    clearNodeComputing(node);
   };
 }
 
@@ -49,7 +50,6 @@ export function executeNodeComputationRaw(node: ReactiveNode): unknown {
     }
   }
 
-  const context = getDefaultContext();
   const compute = node.compute!;
   const restoreActive = prepareNodeExecution(node);
   let result: unknown;
@@ -60,7 +60,7 @@ export function executeNodeComputationRaw(node: ReactiveNode): unknown {
     cleanupStaleSources(node);
 
     if (__DEV__) {
-      recordDebugEvent(context, "compute:finish", {
+      recordDebugEvent(defaultContext, "compute:finish", {
         node,
         detail: {
           result,
@@ -73,7 +73,7 @@ export function executeNodeComputationRaw(node: ReactiveNode): unknown {
     restoreActive();
 
     if (__DEV__) {
-      recordDebugEvent(context, "compute:error", {
+      recordDebugEvent(defaultContext, "compute:error", {
         node,
         detail: {
           error,
@@ -82,17 +82,12 @@ export function executeNodeComputationRaw(node: ReactiveNode): unknown {
     }
 
     throw error;
-  } finally {
-    node.state &= ~ReactiveNodeState.Tracking;
-    clearNodeComputing(node);
-    context.maybeNotifySettled();
   }
 }
 
 export function executeNodeComputation<T>(
   node: ReactiveNode,
   commit: CommitComputation<T>,
-  context: ExecutionContext = getDefaultContext(),
 ): T {
   if (isDisposedNode(node)) return undefined as T;
 
@@ -118,7 +113,7 @@ export function executeNodeComputation<T>(
     const committed = commit(result);
 
     if (__DEV__) {
-      recordDebugEvent(context, "compute:finish", {
+      recordDebugEvent(defaultContext, "compute:finish", {
         node,
         detail: {
           result,
@@ -131,7 +126,7 @@ export function executeNodeComputation<T>(
     restoreActive();
 
     if (__DEV__) {
-      recordDebugEvent(context, "compute:error", {
+      recordDebugEvent(defaultContext, "compute:error", {
         node,
         detail: {
           error,
@@ -140,9 +135,5 @@ export function executeNodeComputation<T>(
     }
 
     throw error;
-  } finally {
-    node.state &= ~ReactiveNodeState.Tracking;
-    clearNodeComputing(node);
-    context.maybeNotifySettled();
   }
 }

@@ -43,7 +43,7 @@ import { createComputedNode } from "../infra";
  */
 export function computed<T>(fn: () => T): Accessor<T> {
   const node = createComputedNode(fn);
-  return () => readConsumer(node);
+  return readConsumer.bind(null, node) as Accessor<T>;
 }
 
 /**

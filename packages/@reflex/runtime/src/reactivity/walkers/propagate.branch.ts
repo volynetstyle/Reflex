@@ -1,7 +1,6 @@
 import { getDefaultContext} from "../context";
 import type { ReactiveEdge } from "../shape";
-import { ReactiveNodeState } from "../shape";
-import { CAN_ESCAPE_INVALIDATION, NON_IMMEDIATE } from "./propagate.constants";
+import {  NON_IMMEDIATE, SLOW_INVALIDATION_MASK, VISITED_MASK, WATCHER_MASK } from "./propagate.constants";
 import { propagateBranching } from "./propagate.branching";
 import { getSlowInvalidatedSubscriberState } from "./propagate.utils";
 import {
@@ -22,24 +21,32 @@ export function propagateBranch(
   promoteBit: number,
   thrown: unknown,
 ): unknown {
+  const ctx = __DEV__ ? getDefaultContext() : undefined;
+
   while (true) {
     const sub = edge.to;
     const state = sub.state;
-    let nextState = 0;
+    const next = edge.nextOut;
 
-    if ((state & CAN_ESCAPE_INVALIDATION) === 0) {
-      nextState = state | promoteBit;
+    let nextState: number;
+
+    // Сверхдешёвый путь:
+    // обычный узел, не dirty, не disposed, не tracking.
+    // Visited не считаем blocker'ом.
+    if ((state & SLOW_INVALIDATION_MASK) === 0) {
+      nextState = (state & ~VISITED_MASK) | promoteBit;
     } else {
       nextState = getSlowInvalidatedSubscriberState(edge, state, promoteBit);
     }
 
-    const next = edge.nextOut;
-
-    if (nextState) {
+    if (nextState !== 0) {
       sub.state = nextState;
-      if (__DEV__) recordPropagation(edge, nextState, promoteBit, getDefaultContext());
 
-      if ((nextState & ReactiveNodeState.Watcher) !== 0) {
+      if (__DEV__) {
+        recordPropagation(edge, nextState, promoteBit, ctx!);
+      }
+
+      if ((nextState & WATCHER_MASK) !== 0) {
         thrown = notifyWatcherInvalidation(sub, thrown);
       } else {
         const firstOut = sub.firstOut;
@@ -60,8 +67,11 @@ export function propagateBranch(
       }
     }
 
-    if (next === null) return thrown;
+    if (next === null) {
+      return thrown;
+    }
+
     edge = next;
-    // promoteBit stays the same: siblings at the same level share promotion status
+    // sibling остаётся в той же promotion zone
   }
 }

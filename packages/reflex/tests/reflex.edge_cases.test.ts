@@ -112,7 +112,7 @@ describe("Reactive system - edge cases", () => {
   });
 
   it("stabilizes re-entrant effects that write to their own source", () => {
-    const rt = createRuntime();
+    const rt = createRuntime({effectStrategy: "flush"});
     const [count, setCount] = signal(0);
     const seen: number[] = [];
 

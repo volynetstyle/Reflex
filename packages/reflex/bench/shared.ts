@@ -343,92 +343,185 @@ export function registerBenchFile(
 // ─── Scenarios ────────────────────────────────────────────────────────────────
 
 const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
-  {
-    id: "linear-chain",
-    title: "Linear chain",
-    sampleIterations: 28,
-    bench: { iterations: 220, warmupIterations: 40 },
-    build(harness, seed) {
-      const rng = createRng(seed);
-      const [source, setSource] = harness.signal(1, "chain:source");
-      const layers: Read[] = new Array(192);
-      let current = source;
+ {
+  id: "linear-chain",
+  title: "Linear chain",
+  sampleIterations: 28,
+  bench: { iterations: 220, warmupIterations: 40 },
+  build(harness, seed) {
+    const rng = createRng(seed);
+    const [source, setSource] = harness.signal(1, "chain:source");
+    const layers: Read[] = new Array(192);
+    let current = source;
 
-      for (let depth = 0; depth < 192; ++depth) {
-        const previous = current;
-        const addend = (depth & 3) + 1;
-        current = harness.memo(
-          () => previous() + addend, // capture constant, avoid recomputing `(depth & 3) + 1`
-          `chain:memo:${depth}`,
-        );
-        layers[depth] = current;
+    const tapValues = new Map<number, number>();
+    let tailValue = NaN;
 
-        if ((depth + 1) % 48 === 0) {
-          const tap = layers[depth]!;
-          harness.effect(() => tap(), {
-            label: `chain:tap:${depth}`,
-            priority: depth + 1,
-          });
+    for (let depth = 0; depth < 192; ++depth) {
+      const previous = current;
+      const addend = (depth & 3) + 1;
+
+      current = harness.memo(
+        () => previous() + addend,
+        `chain:memo:${depth}`,
+      );
+      layers[depth] = current;
+
+      if ((depth + 1) % 48 === 0) {
+        const tap = layers[depth]!;
+        harness.effect(() => {
+          tapValues.set(depth, tap());
+        }, {
+          label: `chain:tap:${depth}`,
+          priority: depth + 1,
+        });
+      }
+    }
+
+    const tail = current;
+    harness.effect(() => {
+      tailValue = tail();
+    }, { label: "chain:tail", priority: 256 });
+
+    const expectedPrefixSum = (depthInclusive: number): number => {
+      let total = 0;
+      for (let i = 0; i <= depthInclusive; ++i) {
+        total += (i & 3) + 1;
+      }
+      return total;
+    };
+
+    const validate = () => {
+      const sourceValue = source();
+
+      for (const depth of [47, 95, 143, 191]) {
+        const actual = tapValues.get(depth);
+        const expected = sourceValue + expectedPrefixSum(depth);
+
+        if (actual !== expected) {
+          throw new Error(
+            `[linear-chain] invalid tap at depth ${depth}: expected ${expected}, got ${actual}`,
+          );
         }
       }
 
-      const tail = current;
-      harness.effect(() => tail(), { label: "chain:tail", priority: 256 });
-
-      return {
-        runStep() {
-          setSource(source() + 1 + rng.int(3));
-          harness.flush();
-        },
-      };
-    },
-  },
-  {
-    id: "wide-fan-out",
-    title: "Wide fan-out",
-    sampleIterations: 24,
-    bench: { iterations: 180, warmupIterations: 35 },
-    build(harness, seed) {
-      const rng = createRng(seed);
-      const [source, setSource] = harness.signal(3, "fanout:source");
-
-      const leaves: Read[] = new Array(192);
-      for (let index = 0; index < 192; ++index) {
-        const multiplier = (index % 7) + 1;
-        const offset = index;
-        leaves[index] = harness.memo(
-          () => source() * multiplier + offset,
-          `fanout:leaf:${index}`,
+      const expectedTail = sourceValue + expectedPrefixSum(191);
+      if (tailValue !== expectedTail) {
+        throw new Error(
+          `[linear-chain] invalid tail: expected ${expectedTail}, got ${tailValue}`,
         );
       }
+    };
 
-      const aggregate = harness.memo(() => {
-        let total = 0;
-        for (let i = 0; i < leaves.length; ++i) total += leaves[i]!();
-        return total;
-      }, "fanout:aggregate");
+    // Проверка начального состояния после построения графа
+    harness.flush();
+    validate();
 
-      for (let index = 0; index < leaves.length; index += 48) {
-        const leaf = leaves[index]!;
-        harness.effect(() => leaf(), {
-          label: `fanout:tap:${index}`,
-          priority: 96 + index,
+    return {
+      runStep() {
+        harness.batch(() => {
+          setSource(source() + 1 + rng.int(3));
         });
+        harness.flush();
+        validate();
+      },
+    };
+  },
+},
+  {
+  id: "wide-fan-out",
+  title: "Wide fan-out",
+  sampleIterations: 24,
+  bench: { iterations: 180, warmupIterations: 35 },
+  build(harness, seed) {
+    const rng = createRng(seed);
+    const [source, setSource] = harness.signal(3, "fanout:source");
+
+    const leaves: Read[] = new Array(192);
+    const tapValues = new Map<number, number>();
+    let aggregateValue = NaN;
+
+    for (let index = 0; index < 192; ++index) {
+      const multiplier = (index % 7) + 1;
+      const offset = index;
+
+      leaves[index] = harness.memo(
+        () => source() * multiplier + offset,
+        `fanout:leaf:${index}`,
+      );
+    }
+
+    const aggregate = harness.memo(() => {
+      let total = 0;
+      for (let i = 0; i < leaves.length; ++i) total += leaves[i]!();
+      return total;
+    }, "fanout:aggregate");
+
+    for (let index = 0; index < leaves.length; index += 48) {
+      const leaf = leaves[index]!;
+      harness.effect(() => {
+        tapValues.set(index, leaf());
+      }, {
+        label: `fanout:tap:${index}`,
+        priority: 96 + index,
+      });
+    }
+
+    harness.effect(() => {
+      aggregateValue = aggregate();
+    }, {
+      label: "fanout:aggregate-effect",
+      priority: 384,
+    });
+
+    const expectedAggregate = (sourceValue: number): number => {
+      let total = 0;
+      for (let i = 0; i < 192; ++i) {
+        total += sourceValue * ((i % 7) + 1) + i;
+      }
+      return total;
+    };
+
+    const expectedLeaf = (sourceValue: number, index: number): number => {
+      return sourceValue * ((index % 7) + 1) + index;
+    };
+
+    const validate = () => {
+      const sourceValue = source();
+
+      for (const index of [0, 48, 96, 144]) {
+        const actual = tapValues.get(index);
+        const expected = expectedLeaf(sourceValue, index);
+
+        if (actual !== expected) {
+          throw new Error(
+            `[wide-fan-out] invalid tap at index ${index}: expected ${expected}, got ${actual}`,
+          );
+        }
       }
 
-      harness.effect(() => aggregate(), {
-        label: "fanout:aggregate-effect",
-        priority: 384,
-      });
+      const expected = expectedAggregate(sourceValue);
+      if (aggregateValue !== expected) {
+        throw new Error(
+          `[wide-fan-out] invalid aggregate: expected ${expected}, got ${aggregateValue}`,
+        );
+      }
+    };
 
-      return {
-        runStep() {
+    harness.flush();
+    validate();
+
+    return {
+      runStep() {
+        harness.batch(() => {
           setSource(source() + 1 + rng.int(5));
-          harness.flush();
-        },
-      };
-    },
+        });
+        harness.flush();
+        validate();
+      },
+    };
   },
+},
   {
     id: "diamond-shared-deps",
     title: "Diamond / shared deps",

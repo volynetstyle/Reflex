@@ -10,15 +10,14 @@ import {
 } from "../reactivity/shape";
 import { executeNodeComputation } from "../reactivity/engine/execute";
 import { shouldRecompute } from "../reactivity";
-import { getDefaultContext } from "../reactivity/context";
+import { defaultContext } from "../reactivity/context";
 
 export function runWatcher(node: ReactiveNode): void {
   const state = node.state;
-  const context = getDefaultContext();
-  
+
   if ((state & ReactiveNodeState.Disposed) !== 0) {
     if (__DEV__) {
-      recordDebugEvent(context, "watcher:run:skip", {
+      recordDebugEvent(defaultContext, "watcher:run:skip", {
         node,
         detail: { reason: "disposed" },
       });
@@ -29,7 +28,7 @@ export function runWatcher(node: ReactiveNode): void {
   const dirty = (state & DIRTY_STATE) !== 0;
   if (!dirty) {
     if (__DEV__) {
-      recordDebugEvent(context, "watcher:run:skip", {
+      recordDebugEvent(defaultContext, "watcher:run:skip", {
         node,
         detail: { reason: "clean" },
       });
@@ -38,11 +37,11 @@ export function runWatcher(node: ReactiveNode): void {
   }
 
   const changed = (state & ReactiveNodeState.Changed) !== 0;
-  if (!changed && !shouldRecompute(node)) {
+  if (!(changed && shouldRecompute(node))) {
     clearDirtyState(node);
 
     if (__DEV__) {
-      recordDebugEvent(context, "watcher:run:skip", {
+      recordDebugEvent(defaultContext, "watcher:run:skip", {
         node,
         detail: { reason: "stable" },
       });
@@ -55,7 +54,7 @@ export function runWatcher(node: ReactiveNode): void {
     typeof payload === "function" ? (payload as () => void) : null;
 
   if (__DEV__) {
-    recordDebugEvent(context, "watcher:run:start", {
+    recordDebugEvent(defaultContext, "watcher:run:start", {
       node,
       detail: { hadCleanup: prevCleanup !== null },
     });
@@ -63,12 +62,13 @@ export function runWatcher(node: ReactiveNode): void {
 
   node.payload = UNINITIALIZED;
   clearNodeVisited(node);
-  clearDirtyState(node);
 
-  prevCleanup?.();
+  if (prevCleanup) {
+    prevCleanup();
 
-  if (__DEV__ && prevCleanup !== null) {
-    recordDebugEvent(context, "watcher:cleanup", { node });
+    if (__DEV__) {
+      recordDebugEvent(defaultContext, "watcher:cleanup", { node });
+    }
   }
 
   if ((node.state & ReactiveNodeState.Disposed) !== 0) {
@@ -78,25 +78,22 @@ export function runWatcher(node: ReactiveNode): void {
   let finalResult: unknown = UNINITIALIZED;
   let hasCleanup = false;
 
-  executeNodeComputation(
-    node,
-    (result: unknown) => {
-      if ((node.state & ReactiveNodeState.Disposed) !== 0) {
-        return;
-      }
+  executeNodeComputation(node, (result: unknown) => {
+    if ((node.state & ReactiveNodeState.Disposed) !== 0) {
+      return;
+    }
 
-      finalResult = result;
+    finalResult = result;
 
-      if (typeof result === "function") {
-        hasCleanup = true;
-        node.payload = result as () => void;
-      }
-    },
-    context,
-  );
+    if (typeof result === "function") {
+      hasCleanup = true;
+      node.payload = result as () => void;
+    }
+    clearDirtyState(node);
+  });
 
   if (__DEV__) {
-    recordDebugEvent(context, "watcher:run:finish", {
+    recordDebugEvent(defaultContext, "watcher:run:finish", {
       node,
       detail: {
         hasCleanup,
@@ -118,7 +115,7 @@ export function disposeWatcher(node: ReactiveNode): void {
   node.payload = UNINITIALIZED;
 
   if (__DEV__) {
-    recordDebugEvent(getDefaultContext(), "watcher:dispose", {
+    recordDebugEvent(defaultContext, "watcher:dispose", {
       node,
       detail: {
         hadCleanup,

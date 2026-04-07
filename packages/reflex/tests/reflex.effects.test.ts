@@ -69,6 +69,7 @@ describe("Reactive system - effects", () => {
   it("notifies custom invalidation hooks before flush", () => {
     let invalidations = 0;
     const rt = createRuntime({
+      effectStrategy: "flush",
       hooks: {
         onEffectInvalidated() {
           invalidations += 1;

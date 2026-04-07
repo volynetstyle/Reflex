@@ -1,12 +1,8 @@
 import { createExecutionContext, setDefaultContext } from "@reflex/runtime";
-import type {
-  ExecutionContext,
-  EngineHooks,
-  ReactiveNode,
-} from "@reflex/runtime";
+import type { ExecutionContext, EngineHooks } from "@reflex/runtime";
 import type { EffectStrategy } from "../policy";
 import {
-  EffectScheduler,
+  createEffectScheduler,
   EventDispatcher,
   resolveEffectSchedulerMode,
 } from "../policy";
@@ -33,19 +29,18 @@ interface RuntimeOptions {
 function createRuntimeInfrastructure(options?: RuntimeOptions) {
   const executionContext = createExecutionContext();
 
-  const scheduler = new EffectScheduler(
+  const scheduler = createEffectScheduler(
     resolveEffectSchedulerMode(options?.effectStrategy),
     executionContext,
   );
   const dispatcher = new EventDispatcher((fn) => scheduler.batch(fn));
 
+  const onEffectInvalidated = scheduler.enqueue;
+  const onReactiveSettled = scheduler.notifySettled;
+  
   executionContext.setHooks({
-    onEffectInvalidated(node: ReactiveNode) {
-      scheduler.enqueue(node);
-    },
-    onReactiveSettled() {
-      scheduler.notifySettled();
-    },
+    onEffectInvalidated,
+    onReactiveSettled,
   });
 
   return {

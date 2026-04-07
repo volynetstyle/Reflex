@@ -32,9 +32,14 @@ export function notifyWatcherInvalidation(
   }
 
   const onEffectInvalidated = defaultContext.onEffectInvalidatedHook;
-  if (onEffectInvalidated === undefined) return thrown;
+  if (!onEffectInvalidated) return thrown;
 
-  onEffectInvalidated(node);
-
+  try {
+    onEffectInvalidated(node);
+  } catch (error) {
+    if (thrown === null) {
+      thrown = error;
+    }
+  }
   return thrown;
 }

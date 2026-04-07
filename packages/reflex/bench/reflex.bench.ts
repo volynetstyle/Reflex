@@ -31,7 +31,7 @@ const compareNumbers = (left: number, right: number): boolean =>
   Object.is(left, right);
 
 
-const rt = createRuntime();
+const rt = createRuntime({effectStrategy: "flush"});
 
 class ReflexHarness implements BenchHarness {
   readonly metrics = new HarnessMetrics();

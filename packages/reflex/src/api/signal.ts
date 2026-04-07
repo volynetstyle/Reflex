@@ -1,4 +1,4 @@
-import { writeProducer } from "@reflex/runtime";
+import { readProducer, writeProducer } from "@reflex/runtime";
 import { createSignalNode } from "../infra";
 
 /**
@@ -49,7 +49,7 @@ import { createSignalNode } from "../infra";
  * @see memo
  * @see effect
  */
-export function signal<T>(initialValue: T): readonly [() => T, Setter<T>] {
+export function signal<T>(initialValue: T): readonly [Accessor<T>, Setter<T>] {
   const node = createSignalNode(initialValue);
 
   function set(input: SetInput<T>): T {
@@ -57,10 +57,13 @@ export function signal<T>(initialValue: T): readonly [() => T, Setter<T>] {
       typeof input === "function"
         ? (input as (prev: T) => T)(node.payload as T)
         : input;
-    writeProducer(node, next);
+    writeProducer.call(null, node, next);
 
     return next;
   }
 
-  return [node, set as Setter<T>] as const;
+  return [
+    readProducer.bind(null, node) as Accessor<T>,
+    set as Setter<T>,
+  ] as const;
 }

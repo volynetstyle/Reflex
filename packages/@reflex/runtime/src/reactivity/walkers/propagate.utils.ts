@@ -1,5 +1,10 @@
 import type { ReactiveEdge } from "../shape";
 import { DIRTY_STATE, ReactiveNodeState } from "../shape";
+import {
+  DISPOSED_MASK,
+  TRACKING_MASK,
+  VISITED_MASK,
+} from "./propagate.constants";
 
 export function isTrackedPrefixEdge(
   edge: ReactiveEdge,
@@ -26,13 +31,16 @@ export function getSlowInvalidatedSubscriberState(
   state: number,
   promoteBit: number,
 ): number {
-  if ((state & (DIRTY_STATE | ReactiveNodeState.Disposed)) !== 0) return 0;
+  if ((state & (DIRTY_STATE | DISPOSED_MASK)) !== 0) {
+    return 0;
+  }
 
-  if ((state & ReactiveNodeState.Tracking) === 0) {
-    return (state & ~ReactiveNodeState.Visited) | promoteBit;
+  if ((state & TRACKING_MASK) === 0) {
+    // Visited здесь просто нормализуется и не ломает invalidation.
+    return (state & ~VISITED_MASK) | promoteBit;
   }
 
   return isTrackedPrefixEdge(edge, edge.to.depsTail)
-    ? state | ReactiveNodeState.Visited | ReactiveNodeState.Invalid
+    ? state | VISITED_MASK | ReactiveNodeState.Invalid
     : 0;
 }

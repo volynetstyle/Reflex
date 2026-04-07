@@ -1,7 +1,6 @@
 import type { ReactiveNode } from "./shape";
 import { recordDebugEvent } from "../debug";
 
-
 export interface EngineHooks {
   onEffectInvalidated?(node: ReactiveNode): void;
   onReactiveSettled?(): void;
@@ -89,7 +88,8 @@ export class ExecutionContext {
       recordDebugEvent(this, "context:settled");
     }
 
-    hook?.();
+    console.log("Sellted")
+    if (hook) hook();
   }
 
   enterPropagation(): void {
