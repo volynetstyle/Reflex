@@ -59,37 +59,6 @@ function getWatcherCleanup(payload: unknown): (() => void) | null {
   return typeof payload === "function" ? (payload as () => void) : null;
 }
 
-function commitWatcherResult(
-  node: ReactiveNode,
-  result: unknown,
-): { hasCleanup: boolean; finalResult: unknown } {
-  if ((node.state & ReactiveNodeState.Disposed) !== 0) {
-    return {
-      hasCleanup: false,
-      finalResult: UNINITIALIZED,
-    };
-  }
-
-  let hasCleanup = false;
-
-  if (typeof result === "function") {
-    hasCleanup = true;
-    node.payload = result as () => void;
-  }
-
-  if ((node.state & ReactiveNodeState.Visited) === 0) {
-    clearDirtyState(node);
-  } else {
-    node.state =
-      (node.state & ~ReactiveNodeState.Changed) | ReactiveNodeState.Invalid;
-  }
-
-  return {
-    hasCleanup,
-    finalResult: result,
-  };
-}
-
 export function runWatcher(node: ReactiveNode): void {
   const state = node.state;
 
@@ -121,28 +90,39 @@ export function runWatcher(node: ReactiveNode): void {
   }
 
   if ((node.state & ReactiveNodeState.Disposed) !== 0) {
+    if (__DEV__) recordWatcherFinish(node, false, UNINITIALIZED);
     return;
   }
 
+  let hasCleanup = false;
   const result = executeNodeComputation(node);
-  const { hasCleanup, finalResult } = commitWatcherResult(node, result);
-  recordWatcherFinish(node, hasCleanup, finalResult);
+
+  if (typeof result === "function") {
+    if (__DEV__) hasCleanup = true;
+    node.payload = result as () => void;
+  }
+
+  if ((node.state & ReactiveNodeState.Visited) === 0) {
+    clearDirtyState(node);
+  } else {
+    node.state =
+      (node.state & ~ReactiveNodeState.Changed) | ReactiveNodeState.Invalid;
+  }
+
+  if (__DEV__) recordWatcherFinish(node, hasCleanup, result);
 }
 
 export function disposeWatcher(node: ReactiveNode): void {
   const cleanup = getWatcherCleanup(node.payload);
-  const hadCleanup = cleanup !== null;
-
   disposeNode(node);
-
-  cleanup?.();
+  if (cleanup !== null) cleanup();
   node.payload = UNINITIALIZED;
 
   if (__DEV__) {
     recordDebugEvent(defaultContext, "watcher:dispose", {
       node,
       detail: {
-        hadCleanup,
+        hadCleanup: cleanup !== null,
       },
     });
   }

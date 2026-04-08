@@ -20,7 +20,6 @@ import {
 // Resume points stay edge-based: we must come back to a specific sibling link,
 // and tracking checks depend on the current incoming edge identity.
 const propagateEdgeStack: ReactiveEdge[] = [];
-const propagatePromoteStack: Uint32Array = new Uint32Array(512);
 
 function getInvalidatedSubscriberState(
   edge: ReactiveEdge,
@@ -28,142 +27,108 @@ function getInvalidatedSubscriberState(
   subState: number,
   promoteBit: number,
 ): number {
-  if ((subState & SLOW_INVALIDATION_MASK) === 0) {
-    return (subState & ~VISITED_MASK) | promoteBit;
-  }
+  const promotedState = (subState & ~VISITED_MASK) | promoteBit;
+  const invalidatedState = subState | VISITED_MASK | ReactiveNodeState.Invalid;
 
-  if ((subState & DISPOSED_MASK) !== 0) {
-    return 0;
-  }
+  if ((subState & SLOW_INVALIDATION_MASK) === 0) return promotedState;
+  if ((subState & DISPOSED_MASK) !== 0) return 0;
 
   if ((subState & TRACKING_MASK) !== 0) {
     const depsTail = sub.depsTail;
-
-    if (depsTail === null) {
-      return 0;
-    }
-
-    if (edge === depsTail) {
-      return subState | VISITED_MASK | ReactiveNodeState.Invalid;
-    }
+    if (depsTail === null) return 0;
+    if (edge === depsTail) return invalidatedState;
 
     const prevIn = edge.prevIn;
-
-    if (prevIn === null) {
-      return subState | VISITED_MASK | ReactiveNodeState.Invalid;
-    }
-
-    if (prevIn === depsTail) {
-      return 0;
-    }
+    if (prevIn === null) return invalidatedState;
+    if (prevIn === depsTail) return 0;
 
     let cursor = prevIn.prevIn;
-
     while (cursor !== null && cursor !== depsTail) {
       cursor = cursor.prevIn;
     }
 
-    return cursor === depsTail
-      ? 0
-      : subState | VISITED_MASK | ReactiveNodeState.Invalid;
+    return cursor === depsTail ? 0 : invalidatedState;
   }
 
-  if ((subState & DIRTY_STATE) !== 0) {
-    return 0;
-  }
-
-  return (subState & ~VISITED_MASK) | promoteBit;
+  return (subState & DIRTY_STATE) !== 0 ? 0 : promotedState;
 }
 
 export function propagate(
   startEdge: ReactiveEdge,
   promoteImmediate: number = NON_IMMEDIATE,
 ): void {
-  if ((startEdge.from.state & ReactiveNodeState.Disposed) !== 0) {
+  const root = startEdge.from;
+
+  if ((root.state & ReactiveNodeState.Disposed) !== 0) {
     if (__DEV__) devAssertPropagateAlive();
     return;
   }
 
-  const context = defaultContext;
-  const dispatch = context.effectInvalidatedDispatch;
+  const dispatch = defaultContext.effectInvalidatedDispatch;
   const edgeStack = propagateEdgeStack;
-  const promoteStack = propagatePromoteStack;
   const stackBase = edgeStack.length;
   let stackTop = stackBase;
   let edge = startEdge;
-  let promoteBit = promoteImmediate;
+
   let thrown: unknown = null;
 
-  try {
-    while (true) {
-      while (true) {
-        const sub = edge.to;
-        const next = edge.nextOut;
-        const nextState = getInvalidatedSubscriberState(
-          edge,
-          sub,
-          sub.state,
-          promoteBit,
-        );
+  while (true) {
+    const sub = edge.to;
+    const next = edge.nextOut;
+    const promoteBit = edge.from === root ? promoteImmediate : NON_IMMEDIATE;
+    const nextState = getInvalidatedSubscriberState(
+      edge,
+      sub,
+      sub.state,
+      promoteBit,
+    );
 
-        if (nextState !== 0) {
-          sub.state = nextState;
+    if (nextState !== 0) {
+      sub.state = nextState;
 
-          if (__DEV__) {
-            recordDebugEvent(context, "propagate", {
-              detail: { immediate: promoteBit === IMMEDIATE, nextState },
-              source: edge.from,
-              target: sub,
-            });
-          }
-
-          if ((nextState & WATCHER_MASK) === 0) {
-            const firstOut = sub.firstOut;
-
-            if (firstOut !== null) {
-              if (next !== null) {
-                edgeStack[stackTop] = next;
-                promoteStack[stackTop++] = promoteBit;
-              }
-
-              edge = firstOut;
-              promoteBit = NON_IMMEDIATE;
-              continue;
-            }
-          } else {
-            if (__DEV__) {
-              recordDebugEvent(context, "watcher:invalidated", { node: sub });
-            }
-
-            if (dispatch !== undefined) {
-              try {
-                dispatch(sub);
-              } catch (error) {
-                if (thrown === null) {
-                  thrown = error;
-                }
-              }
-            }
-          }
-        }
-
-        if (next === null) {
-          break;
-        }
-
-        edge = next;
+      if (__DEV__) {
+        recordDebugEvent(defaultContext, "propagate", {
+          detail: { immediate: promoteBit === IMMEDIATE, nextState },
+          source: edge.from,
+          target: sub,
+        });
       }
 
-      if (stackTop === stackBase) {
-        break;
-      }
+      if ((nextState & WATCHER_MASK) === 0) {
+        const firstOut = sub.firstOut;
 
-      edge = edgeStack[--stackTop]!;
-      promoteBit = promoteStack[stackTop]!;
+        if (firstOut !== null) {
+          if (next !== null) edgeStack[stackTop++] = next;
+          edge = firstOut;
+          continue;
+        }
+      } else if (dispatch !== undefined) {
+        try {
+          dispatch(sub);
+        } catch (error) {
+          if (thrown === null) {
+            thrown = error;
+          }
+        }
+      } else if (__DEV__) {
+        recordDebugEvent(defaultContext, "watcher:invalidated", { node: sub });
+      }
     }
-  } finally {
-    edgeStack.length = stackBase;
+
+    if (next !== null) {
+      edge = next;
+      continue;
+    }
+
+    if (stackTop !== stackBase) {
+      edge = edgeStack[--stackTop]!;
+      continue;
+    }
+
+    break;
   }
+
+  edgeStack.length = stackBase;
 
   if (thrown !== null) throw thrown;
 }

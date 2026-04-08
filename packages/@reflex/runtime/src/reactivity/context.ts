@@ -47,7 +47,7 @@ function composeEffectInvalidatedDispatch(
   if (runtimeHook === undefined) return hook;
   if (hook === undefined) return runtimeHook;
 
-  return (node) => {
+  return function (node) {
     runtimeHook(node);
     hook(node);
   };
@@ -102,7 +102,10 @@ const HOOK_VIEW_DESCRIPTORS: PropertyDescriptorMap = {
 };
 
 function createHookView(owner: HookOwner): EngineHooks {
-  const hooks = Object.create(Object.prototype, HOOK_VIEW_DESCRIPTORS) as HookView;
+  const hooks = Object.create(
+    Object.prototype,
+    HOOK_VIEW_DESCRIPTORS,
+  ) as HookView;
   Object.defineProperty(hooks, HOOK_VIEW_OWNER, {
     value: owner,
   });

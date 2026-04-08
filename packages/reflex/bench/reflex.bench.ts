@@ -7,31 +7,9 @@ import {
   type WriteInput,
 } from "./shared";
 
-import {
-  CONSUMER_INITIAL_STATE,
-  ConsumerReadMode,
-  DIRTY_STATE,
-  disposeWatcher,
-  PRODUCER_INITIAL_STATE,
-  readConsumer,
-  readProducer,
-  ReactiveNode,
-  ReactiveNodeState,
-  runWatcher,
-  WATCHER_INITIAL_STATE,
-  writeProducer,
-  createExecutionContext,
-  setDefaultContext,
-} from "@reflex/runtime";
+import { createRuntime, effect, memo, signal } from "../dist/esm";
 
-import { computed, createRuntime, effect, memo, signal } from "../dist/esm";
-
-
-const compareNumbers = (left: number, right: number): boolean =>
-  Object.is(left, right);
-
-
-const rt = createRuntime({effectStrategy: "flush"});
+const rt = createRuntime({ effectStrategy: "flush" });
 
 class ReflexHarness implements BenchHarness {
   readonly metrics = new HarnessMetrics();
@@ -46,7 +24,7 @@ class ReflexHarness implements BenchHarness {
   }
 
   memo(fn: () => number, _label?: string): () => number {
-    return computed(fn);
+    return memo(fn);
   }
 
   effect(

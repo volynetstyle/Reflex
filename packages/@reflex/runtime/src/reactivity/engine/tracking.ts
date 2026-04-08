@@ -7,7 +7,7 @@ import {
 } from "../dev";
 import {
   linkEdge,
-  reuseOrCreateIncomingEdge,
+  reuseIncomingEdgeFromSuffixOrCreate,
   unlinkDetachedIncomingEdgeSequence,
 } from "../shape/methods/connect";
 import { defaultContext } from "../context";
@@ -65,7 +65,7 @@ export function trackReadActive(
       return;
     }
 
-    consumer.depsTail = reuseOrCreateIncomingEdge(
+    consumer.depsTail = reuseIncomingEdgeFromSuffixOrCreate(
       source,
       consumer,
       null,
@@ -92,7 +92,7 @@ export function trackReadActive(
     return;
   }
 
-  consumer.depsTail = reuseOrCreateIncomingEdge(
+  consumer.depsTail = reuseIncomingEdgeFromSuffixOrCreate(
     source,
     consumer,
     prevEdge,

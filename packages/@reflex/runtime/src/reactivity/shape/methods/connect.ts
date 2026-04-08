@@ -1,6 +1,7 @@
 import { clearReactiveEdgeLinks, ReactiveEdge } from "../ReactiveEdge";
 import { isDisposedNode, markDisposedNode } from "../ReactiveMeta";
 import type ReactiveNode from "../ReactiveNode";
+import { UNINITIALIZED } from "../ReactiveNode";
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
 
@@ -48,7 +49,7 @@ export function linkEdge(
 ): ReactiveEdge {
   const prevOut = from.lastOut;
   const nextIn = after ? after.nextIn : to.firstIn;
-  const edge = new ReactiveEdge(from, to, prevOut, null, after, nextIn);
+  const edge = new ReactiveEdge(prevOut, null, from, to, after, nextIn);
 
   if (prevOut) prevOut.nextOut = edge;
   else from.firstOut = edge;
@@ -77,7 +78,7 @@ export function unlinkEdge(edge: ReactiveEdge): void {
  * Reuses an existing edge from `from → to` if possible, repositioning it
  * after `prev` when needed. Falls back to creating a new edge.
  */
-export function reuseOrCreateIncomingEdge(
+export function reuseIncomingEdgeFromSuffixOrCreate(
   from: ReactiveNode,
   to: ReactiveNode,
   prev: ReactiveEdge | null,
@@ -174,7 +175,7 @@ export function connect(
   if (depsTail?.from === parent) {
     return depsTail;
   }
-  
+
   for (let e = depsTail; e; e = e.prevIn) {
     if (e.from === parent) return e;
   }
@@ -199,6 +200,7 @@ export function disposeNode(node: ReactiveNode): void {
   unlinkAllSources(node);
   unlinkAllSubscribers(node);
   node.compute = null;
+  node.payload = UNINITIALIZED;
 }
 
 export function disposeNodeEvent(node: ReactiveNode): void {
