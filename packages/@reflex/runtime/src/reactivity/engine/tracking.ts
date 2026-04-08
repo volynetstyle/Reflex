@@ -24,6 +24,14 @@ export function trackRead(
   const consumer = context.activeComputed;
 
   if (!consumer) return;
+  trackReadActive(source, consumer, context);
+}
+
+export function trackReadActive(
+  source: ReactiveNode,
+  consumer: ReactiveNode,
+  context = defaultContext,
+): void {
   const sourceDead = isDisposedNode(source);
   const consumerDead = isDisposedNode(consumer);
   if (sourceDead || consumerDead) {
@@ -52,6 +60,11 @@ export function trackRead(
       return;
     }
 
+    if (firstIn.nextIn === null) {
+      consumer.depsTail = linkEdge(source, consumer, null);
+      return;
+    }
+
     consumer.depsTail = reuseOrCreateIncomingEdge(
       source,
       consumer,
@@ -64,8 +77,18 @@ export function trackRead(
   if (prevEdge.from === source) return;
 
   const nextExpected = prevEdge.nextIn;
-  if (nextExpected !== null && nextExpected.from === source) {
+  if (nextExpected === null) {
+    consumer.depsTail = linkEdge(source, consumer, prevEdge);
+    return;
+  }
+
+  if (nextExpected.from === source) {
     consumer.depsTail = nextExpected;
+    return;
+  }
+
+  if (nextExpected.nextIn === null) {
+    consumer.depsTail = linkEdge(source, consumer, prevEdge);
     return;
   }
 

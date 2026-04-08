@@ -1,4 +1,4 @@
-import { ConsumerReadMode, readConsumer } from "@reflex/runtime";
+import { readConsumerEager, readConsumerLazy } from "@reflex/runtime";
 import { createComputedNode } from "../infra";
 
 /**
@@ -43,7 +43,7 @@ import { createComputedNode } from "../infra";
  */
 export function computed<T>(fn: () => T): Accessor<T> {
   const node = createComputedNode(fn);
-  return readConsumer.bind(null, node) as Accessor<T>;
+  return readConsumerLazy.bind(null, node) as Accessor<T>;
 }
 
 /**
@@ -85,6 +85,6 @@ export function computed<T>(fn: () => T): Accessor<T> {
  */
 export function memo<T>(fn: () => T): Accessor<T> {
   const node = createComputedNode(fn);
-  readConsumer(node, ConsumerReadMode.eager);
-  return () => readConsumer(node);
+  readConsumerEager.call(null, node);
+  return readConsumerLazy.bind(null, node) as Accessor<T>;
 }

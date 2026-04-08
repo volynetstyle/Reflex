@@ -9,7 +9,7 @@ import {
 } from "../reactivity/dev";
 import {
   ReactiveNodeState,
-  trackRead,
+  trackReadActive,
   DIRTY_STATE,
   shouldRecompute,
   recompute,
@@ -74,11 +74,16 @@ export function readProducer<T>(node: ReactiveNode<T>): T {
     return node.payload as T;
   }
 
+  const context = defaultContext;
+  const activeComputed = context.activeComputed;
+
   // Register this read as a dependency if there's an active computation
-  trackRead(node);
+  if (activeComputed !== null) {
+    trackReadActive(node, activeComputed, context);
+  }
 
   if (__DEV__) {
-    devRecordReadProducer(node, node.payload, defaultContext);
+    devRecordReadProducer(node, node.payload, context);
   }
 
   return node.payload as T;
@@ -157,6 +162,67 @@ function stabilizeConsumer<T>(node: ReactiveNode<T>): T {
   return node.payload as T;
 }
 
+export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
+  const state = node.state;
+
+  if ((state & ReactiveNodeState.Disposed) !== 0) {
+    devAssertReadDeadConsumer();
+    return node.payload as T;
+  }
+
+  if (__DEV__) {
+    devAssertConsumerCanStabilize(state);
+  }
+
+  const value =
+    (state & DIRTY_STATE) !== 0 ? stabilizeConsumer(node) : (node.payload as T);
+
+  if ((state & DIRTY_STATE) !== 0 && isDisposedNode(node)) {
+    return value;
+  }
+
+  const context = defaultContext;
+  const activeComputed = context.activeComputed;
+
+  if (activeComputed !== null) {
+    trackReadActive(node, activeComputed, context);
+  }
+
+  if (__DEV__) {
+    devRecordReadConsumer(
+      node,
+      "lazy",
+      value,
+      context,
+      activeComputed ?? undefined,
+    );
+  }
+
+  return value;
+}
+
+export function readConsumerEager<T>(node: ReactiveNode<T>): T {
+  const state = node.state;
+
+  if ((state & ReactiveNodeState.Disposed) !== 0) {
+    devAssertReadDeadConsumer();
+    return node.payload as T;
+  }
+
+  if (__DEV__) {
+    devAssertConsumerCanStabilize(state);
+  }
+
+  const value =
+    (state & DIRTY_STATE) !== 0 ? stabilizeConsumer(node) : (node.payload as T);
+
+  if (__DEV__) {
+    devRecordReadConsumer(node, "eager", value, defaultContext);
+  }
+
+  return value;
+}
+
 /**
  * Read the value of a consumer (computed) node.
  *
@@ -204,34 +270,9 @@ export function readConsumer<T>(
   node: ReactiveNode<T>,
   mode: ConsumerReadMode = ConsumerReadMode.lazy,
 ): T {
-  const value = stabilizeConsumer(node);
-  const context = defaultContext;
-
-  if (mode === ConsumerReadMode.eager) {
-    if (__DEV__) devRecordReadConsumer(node, "eager", value, context);
-    return value;
-  }
-
-  if (isDisposedNode(node)) {
-    return value;
-  }
-
-  const activeComputed = context.activeComputed;
-
-  if (activeComputed !== null) {
-    trackRead(node);
-  }
-
-  if (__DEV__) {
-    devRecordReadConsumer(
-      node,
-      "lazy",
-      value,
-      context,
-      activeComputed ?? undefined,
-    );
-  }
-  return value;
+  return mode === ConsumerReadMode.eager
+    ? readConsumerEager(node)
+    : readConsumerLazy(node);
 }
 
 /**

@@ -4,7 +4,7 @@
 // never reach shouldRecompute() with dirty bits set, so this helper stays
 // monomorphic and tiny enough for JIT inlining at every call site.
 
-import { recompute } from "../engine";
+import { recompute } from "../engine/compute";
 import type { ReactiveNode, ReactiveEdge } from "../shape";
 import { propagateOnce } from "./propagate.once";
 

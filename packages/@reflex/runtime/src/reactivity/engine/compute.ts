@@ -2,7 +2,7 @@ import { compare } from "../../api/compare";
 import type { ReactiveNode } from "../shape";
 import { devAssertRecomputeAlive, devRecordRecompute } from "../dev";
 import { clearDirtyState, isDisposedNode } from "../shape";
-import { executeNodeComputationRaw } from "./execute";
+import { executeNodeComputation } from "./execute";
 import { defaultContext } from "../context";
 
 export function recompute(node: ReactiveNode): boolean {
@@ -17,7 +17,7 @@ export function recompute(node: ReactiveNode): boolean {
   let next: unknown = prev;
   let hasChanged = false;
 
-  next = executeNodeComputationRaw(node);
+  next = executeNodeComputation(node);
 
   if (!isDisposedNode(node)) {
     const changed = !compare(prev, next);

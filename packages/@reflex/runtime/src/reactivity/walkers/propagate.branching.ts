@@ -1,50 +1,32 @@
-import { getDefaultContext } from "../context";
-import type { ReactiveEdge } from "../shape";
+import { recordDebugEvent } from "../../debug";
+import type { ExecutionContext } from "../context";
+import { DIRTY_STATE, type ReactiveEdge, ReactiveNodeState } from "../shape";
 import {
+  DISPOSED_MASK,
+  IMMEDIATE,
   NON_IMMEDIATE,
   SLOW_INVALIDATION_MASK,
+  TRACKING_MASK,
   VISITED_MASK,
   WATCHER_MASK,
 } from "./propagate.constants";
-import { getSlowInvalidatedSubscriberState } from "./propagate.utils";
-import {
-  recordPropagation,
-  notifyWatcherInvalidation,
-} from "./propagation.watchers";
 
 const propagateEdgeStack: ReactiveEdge[] = [];
 const propagatePromoteStack: Uint32Array = new Uint32Array(512);
 
-// DFS with explicit stack for fanout nodes (multiple outgoing edges).
-// try/finally retained here — unlike shouldRecompute.ts, this function can
-// genuinely throw via notifyWatcherInvalidation, so cleanup must be guaranteed.
-//
-// Changes vs original:
-//
-// 1. promoteBit/resumePromote symmetry fix:
-//    Original passed (NON_IMMEDIATE, promoteBit) when escalating from linear,
-//    meaning siblings of the escalation point inherited the wrong promoteBit level.
-//    Now linear passes its own `promoteBit` as resumePromote so siblings stay
-//    in the same promotion zone.
-//
-// 2. __DEV__ guard at call site:
-//    recordPropagation() is now called only inside `if (__DEV__)` blocks,
-//    removing the internal guard and the call overhead in prod builds.
-//
-// 3. stackTop postfix increment/decrement:
-//    stack[stackTop++] / stack[--stackTop] — one fewer bytecode per iteration.
 export function propagateBranching(
   edge: ReactiveEdge,
   resume: ReactiveEdge | null,
   resumePromote: number,
   thrown: unknown,
+  context: ExecutionContext,
+  dispatch: ExecutionContext["effectInvalidatedDispatch"],
 ): unknown {
   const edgeStack = propagateEdgeStack;
   const promoteStack = propagatePromoteStack;
   const stackBase = edgeStack.length;
   let stackTop = stackBase;
   let promoteBit = NON_IMMEDIATE;
-  const ctx = __DEV__ ? getDefaultContext() : undefined;
 
   if (resume !== null) {
     edgeStack[stackTop] = resume;
@@ -63,21 +45,47 @@ export function propagateBranching(
 
       if ((state & SLOW_INVALIDATION_MASK) === 0) {
         nextState = (state & ~VISITED_MASK) | promoteBit;
+      } else if ((state & DISPOSED_MASK) !== 0) {
+        nextState = 0;
+      } else if ((state & TRACKING_MASK) !== 0) {
+        const depsTail = sub.depsTail;
+
+        if (depsTail === null) {
+          nextState = 0;
+        } else if (edge === depsTail) {
+          nextState = state | VISITED_MASK | ReactiveNodeState.Invalid;
+        } else {
+          let cursor = edge.prevIn;
+
+          while (cursor !== null && cursor !== depsTail) {
+            cursor = cursor.prevIn;
+          }
+
+          nextState =
+            cursor === depsTail
+              ? 0
+              : state | VISITED_MASK | ReactiveNodeState.Invalid;
+        }
+      } else if ((state & DIRTY_STATE) !== 0) {
+        nextState = 0;
       } else {
-        nextState = getSlowInvalidatedSubscriberState(edge, state, promoteBit);
+        nextState = (state & ~VISITED_MASK) | promoteBit;
       }
 
       if (nextState !== 0) {
         sub.state = nextState;
 
         if (__DEV__) {
-          recordPropagation(edge, nextState, promoteBit, ctx!);
+          recordDebugEvent(context, "propagate", {
+            detail: { immediate: promoteBit === IMMEDIATE, nextState },
+            source: edge.from,
+            target: sub,
+          });
         }
 
-        if ((nextState & WATCHER_MASK) !== 0) {
-          thrown = notifyWatcherInvalidation(sub, thrown);
-        } else {
+        if ((nextState & WATCHER_MASK) === 0) {
           const firstOut = sub.firstOut;
+
           if (firstOut !== null) {
             if (resume !== null) {
               edgeStack[stackTop] = resume;
@@ -89,6 +97,20 @@ export function propagateBranching(
             resume = firstOut.nextOut;
             resumePromote = promoteBit;
             continue;
+          }
+        } else {
+          if (__DEV__) {
+            recordDebugEvent(context, "watcher:invalidated", { node: sub });
+          }
+
+          if (dispatch !== undefined) {
+            try {
+              dispatch(sub);
+            } catch (error) {
+              if (thrown === null) {
+                thrown = error;
+              }
+            }
           }
         }
       }

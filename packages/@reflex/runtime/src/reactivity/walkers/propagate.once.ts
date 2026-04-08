@@ -1,18 +1,8 @@
-// ─── propagateOnce ────────────────────────────────────────────────────────────
-//
-// Shallow one-level promotion: Invalid → Changed for direct subscribers.
-// Called from pull-phase when a computed node's value changed and it has fanout.
-// No stack needed — single level only.
-
-import { getDefaultContext } from "../context";
+import { recordDebugEvent } from "../../debug";
+import { defaultContext } from "../context";
 import { devAssertPropagateAlive } from "../dev";
 import type { ReactiveNode } from "../shape";
-import { ReactiveNodeState, DIRTY_STATE } from "../shape";
-import { IMMEDIATE } from "./propagate.constants";
-import {
-  recordPropagation,
-  notifyWatcherInvalidation,
-} from "./propagation.watchers";
+import { DIRTY_STATE, ReactiveNodeState } from "../shape";
 
 export function propagateOnce(node: ReactiveNode): void {
   if ((node.state & ReactiveNodeState.Disposed) !== 0) {
@@ -20,6 +10,8 @@ export function propagateOnce(node: ReactiveNode): void {
     return;
   }
 
+  const context = defaultContext;
+  const dispatch = context.effectInvalidatedDispatch;
   let thrown: unknown = null;
 
   for (let edge = node.firstOut; edge !== null; edge = edge.nextOut) {
@@ -32,11 +24,28 @@ export function propagateOnce(node: ReactiveNode): void {
       (state & ~ReactiveNodeState.Invalid) | ReactiveNodeState.Changed;
     sub.state = nextState;
 
-    if (__DEV__)
-      recordPropagation(edge, nextState, IMMEDIATE, getDefaultContext());
+    if (__DEV__) {
+      recordDebugEvent(context, "propagate", {
+        detail: { immediate: true, nextState },
+        source: edge.from,
+        target: sub,
+      });
+    }
 
-    if ((nextState & ReactiveNodeState.Watcher) !== 0) {
-      thrown = notifyWatcherInvalidation(sub, thrown);
+    if ((nextState & ReactiveNodeState.Watcher) === 0) continue;
+
+    if (__DEV__) {
+      recordDebugEvent(context, "watcher:invalidated", { node: sub });
+    }
+
+    if (dispatch !== undefined) {
+      try {
+        dispatch(sub);
+      } catch (error) {
+        if (thrown === null) {
+          thrown = error;
+        }
+      }
     }
   }
 
