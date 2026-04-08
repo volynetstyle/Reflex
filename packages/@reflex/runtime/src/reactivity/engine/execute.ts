@@ -7,12 +7,12 @@ import {
   markNodeComputing,
 } from "../shape";
 import { cleanupStaleSources } from "./tracking";
-import { defaultContext, getDefaultContext } from "../context";
+import { defaultContext } from "../context";
 
 type CommitComputation<T> = (result: unknown) => T;
 
 function prepareNodeExecution(node: ReactiveNode): () => void {
-  const context = getDefaultContext();
+  const context = defaultContext;
 
   node.depsTail = null;
   node.state =

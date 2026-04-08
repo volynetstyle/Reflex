@@ -3,7 +3,7 @@ import type { ReactiveNode } from "../reactivity";
 import { compare as defaultComparator } from "./compare";
 import { devAssertWriteAlive, devRecordWriteProducer } from "../reactivity/dev";
 import { IMMEDIATE, isDisposedNode, propagate } from "../reactivity";
-import { getDefaultContext } from "../reactivity/context";
+import { defaultContext } from "../reactivity/context";
 
 /**
  * Write a new value to a producer (source) node.
@@ -82,7 +82,7 @@ export function writeProducer<T>(
         value,
         previous,
         undefined,
-        getDefaultContext(),
+        defaultContext,
       );
 
     // Value didn't change, skip propagation
@@ -102,13 +102,13 @@ export function writeProducer<T>(
       value,
       previous,
       firstSubscriberEdge !== null,
-      getDefaultContext(),
+      defaultContext,
     );
 
   // If no subscribers, propagation is unnecessary
   if (firstSubscriberEdge === null) return;
 
-  const context = getDefaultContext();
+  const context = defaultContext;
   // Enter propagation phase: increment nesting counter
   // This allows multiple concurrent propagations to batch correctly
   context.enterPropagation();

@@ -27,19 +27,22 @@ export function notifyWatcherInvalidation(
   node: ReactiveNode,
   thrown: unknown,
 ): unknown {
+  const context = defaultContext;
+  const dispatch = context.effectInvalidatedDispatch;
+
   if (__DEV__) {
-    recordDebugEvent(defaultContext, "watcher:invalidated", { node });
+    recordDebugEvent(context, "watcher:invalidated", { node });
   }
 
-  const onEffectInvalidated = defaultContext.onEffectInvalidatedHook;
-  if (!onEffectInvalidated) return thrown;
+  if (dispatch === undefined) return thrown;
 
   try {
-    onEffectInvalidated(node);
+    dispatch(node);
   } catch (error) {
     if (thrown === null) {
       thrown = error;
     }
   }
+
   return thrown;
 }

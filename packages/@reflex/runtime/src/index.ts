@@ -1,3 +1,5 @@
+import "./dev_flag";
+
 export {
   readProducer,
   writeProducer,

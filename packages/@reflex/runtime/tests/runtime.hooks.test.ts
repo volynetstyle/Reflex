@@ -35,7 +35,7 @@ describe("ReactivegetDefaultContext() - hooks and resilience", () => {
     expect(settled).toHaveBeenCalledTimes(1);
   });
 
-  it("fires settled only after the outermost recompute finishes", () => {
+  it("does not fire settled for plain recomputes without propagation", () => {
     const phases: string[] = [];
 
     resetRuntime({
@@ -57,7 +57,7 @@ describe("ReactivegetDefaultContext() - hooks and resilience", () => {
     });
 
     expect(readConsumer(outer)).toBe(5);
-    expect(phases).toEqual(["outer:start", "inner", "outer:end", "settled"]);
+    expect(phases).toEqual(["outer:start", "inner", "outer:end"]);
   });
 
   it("settles once after nested propagation triggered from an invalidation hook", () => {
@@ -136,12 +136,9 @@ describe("ReactivegetDefaultContext() - hooks and resilience", () => {
   });
 
   it("restoresgetDefaultContext() bookkeeping when watcher computation throws", () => {
-    const settled = vi.fn();
     const error = new Error("watcher failed");
 
-    resetRuntime({
-      onReactiveSettled: settled,
-    });
+    resetRuntime();
 
     const source = createProducer(1);
     const watcher = createWatcher(() => {
@@ -153,7 +150,6 @@ describe("ReactivegetDefaultContext() - hooks and resilience", () => {
     expect(getDefaultContext().activeComputed).toBeNull();
     expect(watcher.state & ReactiveNodeState.Tracking).toBe(0);
     expect(watcher.state & ReactiveNodeState.Computing).toBe(0);
-    expect(settled).toHaveBeenCalledTimes(1);
   });
 
   it("runs watcher cleanup exactly once per rerun and once on disposal", () => {

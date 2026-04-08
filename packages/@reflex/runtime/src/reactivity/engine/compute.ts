@@ -3,7 +3,7 @@ import type { ReactiveNode } from "../shape";
 import { devAssertRecomputeAlive, devRecordRecompute } from "../dev";
 import { clearDirtyState, isDisposedNode } from "../shape";
 import { executeNodeComputationRaw } from "./execute";
-import { getDefaultContext } from "../context";
+import { defaultContext } from "../context";
 
 export function recompute(node: ReactiveNode): boolean {
   if (isDisposedNode(node)) {
@@ -28,7 +28,7 @@ export function recompute(node: ReactiveNode): boolean {
   clearDirtyState(node);
 
   if (__DEV__) {
-    devRecordRecompute(node, hasChanged, next, prev, getDefaultContext());
+    devRecordRecompute(node, hasChanged, next, prev, defaultContext);
   }
 
   return hasChanged;

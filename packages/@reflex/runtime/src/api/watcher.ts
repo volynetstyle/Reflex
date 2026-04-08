@@ -36,8 +36,7 @@ export function runWatcher(node: ReactiveNode): void {
     return;
   }
 
-  const changed = (state & ReactiveNodeState.Changed) !== 0;
-  if (!(changed && shouldRecompute(node))) {
+  if (!shouldRecompute(node)) {
     clearDirtyState(node);
 
     if (__DEV__) {

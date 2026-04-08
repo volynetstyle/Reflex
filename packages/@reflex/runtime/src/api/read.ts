@@ -17,7 +17,7 @@ import {
   clearDirtyState,
   isDisposedNode,
 } from "../reactivity";
-import { getDefaultContext } from "../reactivity/context";
+import { defaultContext } from "../reactivity/context";
 
 /**
  * Read mode for consumer nodes (computed values).
@@ -77,7 +77,9 @@ export function readProducer<T>(node: ReactiveNode<T>): T {
   // Register this read as a dependency if there's an active computation
   trackRead(node);
 
-  devRecordReadProducer(node, node.payload, getDefaultContext());
+  if (__DEV__) {
+    devRecordReadProducer(node, node.payload, defaultContext);
+  }
 
   return node.payload as T;
 }
@@ -126,7 +128,9 @@ function stabilizeConsumer<T>(node: ReactiveNode<T>): T {
     return node.payload as T;
   }
 
-  devAssertConsumerCanStabilize(state);
+  if (__DEV__) {
+    devAssertConsumerCanStabilize(state);
+  }
 
   // Only proceed if node is marked dirty (has changes to verify)
   if ((state & DIRTY_STATE) !== 0) {
@@ -201,7 +205,7 @@ export function readConsumer<T>(
   mode: ConsumerReadMode = ConsumerReadMode.lazy,
 ): T {
   const value = stabilizeConsumer(node);
-  const context = getDefaultContext();
+  const context = defaultContext;
 
   if (mode === ConsumerReadMode.eager) {
     if (__DEV__) devRecordReadConsumer(node, "eager", value, context);
@@ -272,7 +276,7 @@ export function readConsumer<T>(
  * @cost O(1) for context manipulation
  */
 export function untracked<T>(fn: () => T, _context: ExecutionContext): T {
-  const context = getDefaultContext();
+  const context = defaultContext;
 
   // Save the current active computation context
   const prev = context.activeComputed;

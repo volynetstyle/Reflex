@@ -5,7 +5,6 @@ import {
   getDefaultContext,
 } from "@reflex/runtime";
 import type { ExecutionContext, ReactiveNode } from "@reflex/runtime";
-import { effectScheduled, effectUnscheduled } from "../api/effect";
 import type { UNINITIALIZED } from "../infra/factory";
 
 export const enum EffectSchedulerMode {
@@ -45,39 +44,53 @@ export interface EffectScheduler {
   get phase(): SchedulerPhase;
 }
 
+function noopNotifySettled(): void {}
+
 export function createEffectScheduler(
   mode: EffectSchedulerMode = EffectSchedulerMode.Flush,
-  context: ExecutionContext = getDefaultContext(),
+  context?: ExecutionContext,
 ): EffectScheduler {
   const queue: ReactiveNode<typeof UNINITIALIZED | Destructor>[] = [];
+  const eager = mode === EffectSchedulerMode.Eager;
+  const getContext = context === undefined ? getDefaultContext : () => context;
 
   let head = 0;
   let batchDepth = 0;
   let phase = SchedulerPhase.Idle;
 
-  function isIdle(): boolean {
-    return (
-      phase === SchedulerPhase.Idle &&
-      batchDepth === 0 &&
-      context.propagationDepth === 0 &&
-      context.activeComputed === null
-    );
-  }
-
-  function enqueue(node: ReactiveNode): void {
+  function enqueueFlush(node: ReactiveNode): void {
+    const state = node.state;
     if (
-      (node.state &
-        (ReactiveNodeState.Disposed | ReactiveNodeState.Scheduled)) !==
+      (state & (ReactiveNodeState.Disposed | ReactiveNodeState.Scheduled)) !==
       0
     ) {
       return;
     }
 
-    effectScheduled(node);
+    node.state = state | ReactiveNodeState.Scheduled;
+    queue.push(node);
+  }
+
+  function enqueueEager(node: ReactiveNode): void {
+    const state = node.state;
+    if (
+      (state & (ReactiveNodeState.Disposed | ReactiveNodeState.Scheduled)) !==
+      0
+    ) {
+      return;
+    }
+
+    node.state = state | ReactiveNodeState.Scheduled;
     queue.push(node);
 
-    if (mode === EffectSchedulerMode.Eager && isIdle()) {
-      flushEager();
+    const currentContext = getContext();
+    if (
+      phase === SchedulerPhase.Idle &&
+      batchDepth === 0 &&
+      currentContext.propagationDepth === 0 &&
+      currentContext.activeComputed === null
+    ) {
+      flushQueue();
     }
   }
 
@@ -87,16 +100,26 @@ export function createEffectScheduler(
     }
   }
 
-  function leaveBatch(): void {
+  function leaveBatchFlush(): void {
+    if (--batchDepth !== 0) return;
+    if (phase === SchedulerPhase.Flushing) return;
+
+    phase = SchedulerPhase.Idle;
+  }
+
+  function leaveBatchEager(): void {
     if (--batchDepth !== 0) return;
     if (phase === SchedulerPhase.Flushing) return;
 
     phase = SchedulerPhase.Idle;
 
-    if (mode === EffectSchedulerMode.Eager && head < queue.length) {
-      flushEager();
+    if (head < queue.length) {
+      flushQueue();
     }
   }
+
+  const enqueue = eager ? enqueueEager : enqueueFlush;
+  const leaveBatch = eager ? leaveBatchEager : leaveBatchFlush;
 
   function batch<T>(fn: () => T): T {
     enterBatch();
@@ -110,19 +133,20 @@ export function createEffectScheduler(
   function drainQueue(): void {
     while (head < queue.length) {
       const node = queue[head++]!;
-      effectUnscheduled(node);
+      const state = node.state & ~ReactiveNodeState.Scheduled;
+      node.state = state;
 
       if (
-        (node.state & ReactiveNodeState.Disposed) === 0 &&
-        (node.state & DIRTY_STATE) !== 0
+        (state & ReactiveNodeState.Disposed) === 0 &&
+        (state & DIRTY_STATE) !== 0
       ) {
         runWatcher(node);
       }
     }
   }
 
-  function flushEager(): void {
-    if (phase !== SchedulerPhase.Idle) return;
+  function flushQueue(): void {
+    if (phase === SchedulerPhase.Flushing) return;
     if (head >= queue.length) return;
 
     phase = SchedulerPhase.Flushing;
@@ -136,40 +160,25 @@ export function createEffectScheduler(
     }
   }
 
-  function flush(): void {
-    if (mode === EffectSchedulerMode.Eager) {
-      flushEager();
-      return;
-    }
-
-    if (phase !== SchedulerPhase.Idle) return;
-    if (head >= queue.length) return;
-
-    phase = SchedulerPhase.Flushing;
-
-    try {
-      drainQueue();
-    } finally {
-      queue.length = 0;
-      head = 0;
-      phase = batchDepth > 0 ? SchedulerPhase.Batching : SchedulerPhase.Idle;
+  function notifySettledEager(): void {
+    const currentContext = getContext();
+    if (
+      phase === SchedulerPhase.Idle &&
+      batchDepth === 0 &&
+      currentContext.propagationDepth === 0 &&
+      currentContext.activeComputed === null &&
+      head < queue.length
+    ) {
+      flushQueue();
     }
   }
 
-  function notifySettled(): void {
-    if (mode === EffectSchedulerMode.Eager) {
-      if (isIdle() && head < queue.length) {
-        flushEager();
-      }
-      return;
-    }
-
-    // flush mode: do nothing automatically
-  }
+  const flush = flushQueue;
+  const notifySettled = eager ? notifySettledEager : noopNotifySettled;
 
   function reset(): void {
     for (let i = head; i < queue.length; ++i) {
-      effectUnscheduled(queue[i]!);
+      queue[i]!.state &= ~ReactiveNodeState.Scheduled;
     }
 
     queue.length = 0;
@@ -181,7 +190,9 @@ export function createEffectScheduler(
   return {
     queue,
     mode,
-    context,
+    get context() {
+      return getContext();
+    },
     enqueue,
     batch,
     flush,

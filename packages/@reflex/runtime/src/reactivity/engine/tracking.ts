@@ -10,7 +10,7 @@ import {
   reuseOrCreateIncomingEdge,
   unlinkDetachedIncomingEdgeSequence,
 } from "../shape/methods/connect";
-import { getDefaultContext } from "../context";
+import { defaultContext } from "../context";
 
 /**
  * Cursor-guided incoming-edge walk used during dependency collection.
@@ -20,7 +20,7 @@ import { getDefaultContext } from "../context";
 export function trackRead(
   source: ReactiveNode,
 ): void {
-  const context = getDefaultContext();
+  const context = defaultContext;
   const consumer = context.activeComputed;
 
   if (!consumer) return;
@@ -95,7 +95,7 @@ export function cleanupStaleSources(node: ReactiveNode): void {
   }
 
   if (__DEV__) {
-    devRecordCleanupStaleSources(node, staleHead, getDefaultContext());
+    devRecordCleanupStaleSources(node, staleHead, defaultContext);
   }
 
   unlinkDetachedIncomingEdgeSequence(staleHead);

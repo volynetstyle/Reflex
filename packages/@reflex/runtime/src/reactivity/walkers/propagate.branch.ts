@@ -1,6 +1,11 @@
-import { getDefaultContext} from "../context";
+import { getDefaultContext } from "../context";
 import type { ReactiveEdge } from "../shape";
-import {  NON_IMMEDIATE, SLOW_INVALIDATION_MASK, VISITED_MASK, WATCHER_MASK } from "./propagate.constants";
+import {
+  NON_IMMEDIATE,
+  SLOW_INVALIDATION_MASK,
+  VISITED_MASK,
+  WATCHER_MASK,
+} from "./propagate.constants";
 import { propagateBranching } from "./propagate.branching";
 import { getSlowInvalidatedSubscriberState } from "./propagate.utils";
 import {
@@ -25,19 +30,19 @@ export function propagateBranch(
 
   while (true) {
     const sub = edge.to;
-    const state = sub.state;
-    const next = edge.nextOut;
+    const nextSub = edge.nextOut;
+    const subState = sub.state;
 
     let nextState: number;
 
     // Сверхдешёвый путь:
     // обычный узел, не dirty, не disposed, не tracking.
     // Visited не считаем blocker'ом.
-    if ((state & SLOW_INVALIDATION_MASK) === 0) {
-      nextState = (state & ~VISITED_MASK) | promoteBit;
+    if ((subState & SLOW_INVALIDATION_MASK) === 0) {
+      nextState = (subState & ~VISITED_MASK) | promoteBit;
     } else {
-      nextState = getSlowInvalidatedSubscriberState(edge, state, promoteBit);
-    }
+      nextState = getSlowInvalidatedSubscriberState(edge, subState, promoteBit);
+    } 
 
     if (nextState !== 0) {
       sub.state = nextState;
@@ -51,13 +56,8 @@ export function propagateBranch(
       } else {
         const firstOut = sub.firstOut;
         if (firstOut !== null) {
-          if (next !== null) {
-            return propagateBranching(
-              firstOut,
-              next,
-              promoteBit,
-              thrown,
-            );
+          if (nextSub !== null) {
+            return propagateBranching(firstOut, nextSub, promoteBit, thrown);
           }
 
           edge = firstOut;
@@ -67,11 +67,11 @@ export function propagateBranch(
       }
     }
 
-    if (next === null) {
+    if (nextSub === null) {
       return thrown;
     }
 
-    edge = next;
+    edge = nextSub;
     // sibling остаётся в той же promotion zone
   }
 }
