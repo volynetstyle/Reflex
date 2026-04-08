@@ -3,6 +3,7 @@ import { defaultContext } from "../context";
 import { devAssertPropagateAlive } from "../dev";
 import type { ReactiveNode } from "../shape";
 import { DIRTY_STATE, ReactiveNodeState } from "../shape";
+import { WATCHER_MASK } from "./propagate.constants";
 
 export function propagateOnce(node: ReactiveNode): void {
   if ((node.state & ReactiveNodeState.Disposed) !== 0) {
@@ -10,9 +11,9 @@ export function propagateOnce(node: ReactiveNode): void {
     return;
   }
 
+  let thrown: unknown = null;
   const context = defaultContext;
   const dispatch = context.effectInvalidatedDispatch;
-  let thrown: unknown = null;
 
   for (let edge = node.firstOut; edge !== null; edge = edge.nextOut) {
     const sub = edge.to;
@@ -32,7 +33,7 @@ export function propagateOnce(node: ReactiveNode): void {
       });
     }
 
-    if ((nextState & ReactiveNodeState.Watcher) === 0) continue;
+    if ((nextState & WATCHER_MASK) === 0) continue;
 
     if (__DEV__) {
       recordDebugEvent(context, "watcher:invalidated", { node: sub });

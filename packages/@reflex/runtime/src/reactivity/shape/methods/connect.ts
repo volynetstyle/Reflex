@@ -172,7 +172,7 @@ export function connect(
 ): ReactiveEdge {
   const depsTail = child.lastIn;
 
-  if (depsTail?.from === parent) {
+  if (depsTail !== null && depsTail.from === parent) {
     return depsTail;
   }
 

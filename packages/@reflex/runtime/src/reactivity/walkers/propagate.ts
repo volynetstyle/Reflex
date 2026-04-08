@@ -64,7 +64,8 @@ export function propagate(
     return;
   }
 
-  const dispatch = defaultContext.effectInvalidatedDispatch;
+  const context = defaultContext;
+  const dispatch = context.effectInvalidatedDispatch;
   const edgeStack = propagateEdgeStack;
   const stackBase = edgeStack.length;
   let stackTop = stackBase;
@@ -87,7 +88,7 @@ export function propagate(
       sub.state = nextState;
 
       if (__DEV__) {
-        recordDebugEvent(defaultContext, "propagate", {
+        recordDebugEvent(context, "propagate", {
           detail: { immediate: promoteBit === IMMEDIATE, nextState },
           source: edge.from,
           target: sub,
@@ -111,7 +112,7 @@ export function propagate(
           }
         }
       } else if (__DEV__) {
-        recordDebugEvent(defaultContext, "watcher:invalidated", { node: sub });
+        recordDebugEvent(context, "watcher:invalidated", { node: sub });
       }
     }
 
