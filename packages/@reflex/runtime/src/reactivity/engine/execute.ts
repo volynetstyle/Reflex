@@ -1,4 +1,3 @@
-import type { ExecutionContext } from "../context";
 import { recordDebugEvent } from "../../debug";
 import type { ReactiveNode } from "../shape";
 import {
@@ -7,14 +6,11 @@ import {
   markNodeComputing,
 } from "../shape";
 import { cleanupStaleSources } from "./tracking";
-import { getDefaultContext } from "../context";
+import { defaultContext } from "../context";
 
-type CommitComputation<T> = (result: unknown) => T;
+function prepareNodeExecution(node: ReactiveNode): () => void {
+  const context = defaultContext;
 
-function prepareNodeExecution(
-  node: ReactiveNode,
-  context: ExecutionContext,
-): () => void {
   node.depsTail = null;
   node.state =
     (node.state & ~ReactiveNodeState.Visited) | ReactiveNodeState.Tracking;
@@ -34,13 +30,12 @@ function prepareNodeExecution(
     if (restored) return;
     restored = true;
     context.activeComputed = prevActive;
+    node.state &= ~ReactiveNodeState.Tracking;
+    clearNodeComputing(node);
   };
 }
 
-export function executeNodeComputationRaw(
-  node: ReactiveNode,
-  context: ExecutionContext = getDefaultContext(),
-): unknown {
+export function executeNodeComputation(node: ReactiveNode): unknown {
   if (__DEV__) {
     if (!node.compute) {
       throw new Error(
@@ -53,16 +48,19 @@ export function executeNodeComputationRaw(
   }
 
   const compute = node.compute!;
-  const restoreActive = prepareNodeExecution(node, context);
+  const restoreActive = prepareNodeExecution(node);
   let result: unknown;
 
   try {
     result = compute();
     restoreActive();
-    cleanupStaleSources(node, context);
+
+    if (node.depsTail !== node.lastIn) {
+      cleanupStaleSources(node);
+    }
 
     if (__DEV__) {
-      recordDebugEvent(context, "compute:finish", {
+      recordDebugEvent(defaultContext, "compute:finish", {
         node,
         detail: {
           result,
@@ -75,7 +73,7 @@ export function executeNodeComputationRaw(
     restoreActive();
 
     if (__DEV__) {
-      recordDebugEvent(context, "compute:error", {
+      recordDebugEvent(defaultContext, "compute:error", {
         node,
         detail: {
           error,
@@ -84,65 +82,5 @@ export function executeNodeComputationRaw(
     }
 
     throw error;
-  } finally {
-    node.state &= ~ReactiveNodeState.Tracking;
-    clearNodeComputing(node);
-    context.maybeNotifySettled();
-  }
-}
-
-export function executeNodeComputation<T>(
-  node: ReactiveNode,
-  commit: CommitComputation<T>,
-  context: ExecutionContext = getDefaultContext(),
-): T {
-  if (__DEV__) {
-    if (!node.compute) {
-      throw new Error(
-        "Cannot execute a reactive node without a compute function",
-      );
-    }
-    if ((node.state & ReactiveNodeState.Computing) !== 0) {
-      throw new Error("Cycle detected while recomputing reactive node");
-    }
-  }
-
-  const compute = node.compute!;
-  const restoreActive = prepareNodeExecution(node, context);
-  let result: unknown;
-
-  try {
-    result = compute();
-    restoreActive();
-    cleanupStaleSources(node, context);
-    const committed = commit(result);
-
-    if (__DEV__) {
-      recordDebugEvent(context, "compute:finish", {
-        node,
-        detail: {
-          result,
-        },
-      });
-    }
-
-    return committed;
-  } catch (error) {
-    restoreActive();
-
-    if (__DEV__) {
-      recordDebugEvent(context, "compute:error", {
-        node,
-        detail: {
-          error,
-        },
-      });
-    }
-
-    throw error;
-  } finally {
-    node.state &= ~ReactiveNodeState.Tracking;
-    clearNodeComputing(node);
-    context.maybeNotifySettled();
   }
 }

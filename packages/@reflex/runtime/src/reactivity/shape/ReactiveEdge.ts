@@ -6,35 +6,32 @@ import type ReactiveNode from "./ReactiveNode";
  * incoming list, so pointer rewrites must keep both views in sync.
  */
 class ReactiveEdge {
-  from: ReactiveNode;
-  to: ReactiveNode;
   prevOut: ReactiveEdge | null;
   nextOut: ReactiveEdge | null;
+  from: ReactiveNode;
+  to: ReactiveNode;
   prevIn: ReactiveEdge | null;
   nextIn: ReactiveEdge | null;
 
   constructor(
-    from: ReactiveNode,
-    to: ReactiveNode,
     prevOut: ReactiveEdge | null,
     nextOut: ReactiveEdge | null,
+    from: ReactiveNode,
+    to: ReactiveNode,
     prevIn: ReactiveEdge | null,
     nextIn: ReactiveEdge | null,
   ) {
-    this.from = from;
-    this.to = to;
     this.prevOut = prevOut;
     this.nextOut = nextOut;
+    this.from = from;
+    this.to = to;
     this.prevIn = prevIn;
     this.nextIn = nextIn;
   }
 }
 
 export function clearReactiveEdgeLinks(edge: ReactiveEdge): void {
-  edge.prevOut = null;
-  edge.nextOut = null;
-  edge.prevIn = null;
-  edge.nextIn = null;
+  edge.prevOut = edge.nextOut = edge.prevIn = edge.nextIn = null;
 }
 
 export { ReactiveEdge };

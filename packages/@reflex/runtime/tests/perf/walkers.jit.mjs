@@ -332,10 +332,9 @@ function buildExecuteNodeComputationStatic(fanIn) {
     run() {
       value += 1;
       sources[0].payload = value;
-      return executeNodeComputation(node, (result) => {
-        node.payload = result;
-        return result;
-      });
+      const result = executeNodeComputation(node);
+      node.payload = result;
+      return result;
     },
   };
 }
@@ -370,10 +369,9 @@ function buildExecuteNodeComputationChurn(fanIn, narrowWidth) {
       wide = !wide;
       value += 1;
       sources[0].payload = value;
-      return executeNodeComputation(node, (result) => {
-        node.payload = result;
-        return result;
-      });
+      const result = executeNodeComputation(node);
+      node.payload = result;
+      return result;
     },
   };
 }

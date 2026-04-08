@@ -2,16 +2,33 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "baseUrl": ".",
+    "paths": {
+      "@volynets/reflex": ["../reflex/src/index.ts"],
+      "reflex-framework": [
+        "../reflex-framework/src/index.ts",
+        "../reflex-framework/dist/index.d.ts"
+      ],
+      "reflex-framework/ownership": [
+        "../reflex-framework/src/ownership/index.ts",
+        "../reflex-framework/dist/ownership/index.d.ts"
+      ],
+      "reflex-framework/ownership/reflex": [
+        "../reflex-framework/src/ownership/reflex.ts",
+        "../reflex-framework/dist/ownership/reflex.d.ts"
+      ],
+      "reflex-framework/jsx-runtime": [
+        "../reflex-framework/src/jsx-runtime.ts",
+        "../reflex-framework/dist/jsx-runtime.d.ts"
+      ],
+      "reflex-framework/jsx-dev-runtime": [
+        "../reflex-framework/src/jsx-dev-runtime.ts",
+        "../reflex-framework/dist/jsx-dev-runtime.d.ts"
+      ]
+    },
     "composite": false,
     "declaration": false,
     "declarationMap": false,
-    "jsx": "react-jsx",
-    "paths": {
-      "@volynetstyle/reflex": [
-        "../reflex/dist/esm/index.d.ts",
-        "../reflex/src/index.ts"
-      ]
-    }
+    "jsx": "react-jsx"
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.typecheck.tsx"]
 }

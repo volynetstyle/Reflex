@@ -9,42 +9,176 @@ import {
 } from "@reflex/runtime";
 import { createResourceStateNode, createWatcherNode } from "../infra";
 
+/**
+ * Current lifecycle state of a resource request.
+ *
+ * - `"idle"` - no active request is in flight.
+ * - `"pending"` - the current request is still running.
+ * - `"resolved"` - the latest current request completed successfully.
+ * - `"rejected"` - the latest current request failed.
+ */
 export type ResourceStatus = "idle" | "pending" | "resolved" | "rejected";
 
+/**
+ * Guard object bound to a single resource request token.
+ *
+ * Loaders receive a guard so they can tell whether their work is still current
+ * before committing side effects or returning follow-up work.
+ */
 export interface ResourceGuard {
+  /**
+   * Monotonic token identifying the request that produced this guard.
+   */
   readonly token: number;
+  /**
+   * Returns `true` while this request is still current and the resource has not
+   * been disposed.
+   */
   alive(): boolean;
 }
 
+/**
+ * Mutable handle for manually settling a resource request.
+ *
+ * Manual resources expose this handle from `start()`. It extends
+ * `ResourceGuard` with methods that attempt to resolve or reject the current
+ * request.
+ *
+ * @typeParam T - Resolved value type.
+ * @typeParam E - Rejection type.
+ */
 export interface ResourceHandle<T, E = unknown> extends ResourceGuard {
+  /**
+   * Resolves the request with `value`.
+   *
+   * @param value - Value to commit as the latest successful result.
+   *
+   * @returns `true` if the value was accepted, or `false` if this handle is
+   * stale or the resource has already been disposed.
+   */
   resolve(value: T): boolean;
+  /**
+   * Rejects the request with `error`.
+   *
+   * @param error - Error to commit as the latest failure.
+   *
+   * @returns `true` if the error was accepted, or `false` if this handle is
+   * stale or the resource has already been disposed.
+   */
   reject(error: E): boolean;
 }
 
+/**
+ * Reactive view of a resource request lifecycle.
+ *
+ * A resource exposes tracked accessors for its status, latest value, latest
+ * error, and current request token, along with imperative controls to reset or
+ * dispose the resource.
+ *
+ * @typeParam T - Resolved value type.
+ * @typeParam E - Rejection type.
+ */
 export interface Resource<T, E = unknown> {
+  /**
+   * Tracked accessor that returns the current request lifecycle state.
+   */
   readonly status: Accessor<ResourceStatus>;
+  /**
+   * Tracked accessor that returns the latest successfully resolved value, if
+   * one exists.
+   *
+   * The last resolved value is retained while a newer request is pending or
+   * rejected.
+   */
   readonly value: Accessor<T | undefined>;
+  /**
+   * Tracked accessor that returns the latest rejected error, if one exists.
+   */
   readonly error: Accessor<E | undefined>;
+  /**
+   * Tracked accessor that returns the current monotonic request token.
+   *
+   * The token increments whenever a new request starts, the resource is
+   * cleared, or the resource is disposed.
+   */
   readonly token: Accessor<number>;
+  /**
+   * Resets the resource to the `"idle"` state and invalidates any in-flight
+   * request.
+   */
   clear(): void;
+  /**
+   * Disposes the resource permanently and invalidates any in-flight request.
+   *
+   * After disposal, the resource stops reacting to future source changes or
+   * refetch requests.
+   */
   dispose(): void;
 }
 
+/**
+ * Imperative resource whose requests are started and settled manually.
+ *
+ * @typeParam T - Resolved value type.
+ * @typeParam E - Rejection type.
+ */
 export interface ManualResource<T, E = unknown> extends Resource<T, E> {
+  /**
+   * Starts a new request and returns a handle that can resolve or reject it.
+   *
+   * Starting a new request invalidates all older handles.
+   */
   start(): ResourceHandle<T, E>;
 }
 
+/**
+ * Auto-loading resource backed by a loader function.
+ *
+ * @typeParam T - Resolved value type.
+ * @typeParam E - Rejection type.
+ */
 export interface AsyncResource<T, E = unknown> extends Resource<T, E> {
+  /**
+   * Requests another load.
+   *
+   * In the default runtime strategy, the reload starts when the surrounding
+   * runtime flushes scheduled effects.
+   */
   refetch(): void;
 }
 
+/**
+ * Loader used by `resource(load)`.
+ *
+ * It receives a guard for the current request and may return either a value or
+ * a promise-like value.
+ *
+ * @typeParam T - Resolved value type.
+ */
 export type ResourceJob<T> = (guard: ResourceGuard) => T | PromiseLike<T>;
+
+/**
+ * Loader used by `resource(source, load)`.
+ *
+ * It receives the latest source value plus a guard for the current request, and
+ * may return either a value or a promise-like value.
+ *
+ * @typeParam S - Source value type.
+ * @typeParam T - Resolved value type.
+ */
 export type ResourceLoader<S, T> = (
   source: S,
   guard: ResourceGuard,
 ) => T | PromiseLike<T>;
 
-export function isPending(resource: Resource<unknown, unknown>) {
+/**
+ * Returns `true` when the resource's current request is pending.
+ *
+ * @param resource - Resource to inspect.
+ *
+ * @returns Whether `resource.status()` currently equals `"pending"`.
+ */
+export function isPending(resource: Resource<unknown, unknown>): boolean {
   return "pending" === resource.status();
 }
 
@@ -88,7 +222,7 @@ class ResourceCore<T, E = unknown> {
   refetchNode: ReactiveNode<number> | null = null;
 
   track(): void {
-    readProducer(this.stateNode, this.context);
+    readProducer(this.stateNode);
   }
 
   bump(): void {
@@ -213,6 +347,68 @@ class ResourceCore<T, E = unknown> {
   }
 }
 
+/**
+ * Creates an unstable resource for manual or loader-driven async state.
+ *
+ * `resource` models request lifecycles with tracked accessors for `status`,
+ * `value`, `error`, and `token`. It can be used in three modes:
+ *
+ * - `resource<T, E>()` creates a manual resource. Call `start()` to begin a
+ *   request, then settle that request through the returned handle.
+ * - `resource(load)` creates an auto-loading resource that starts immediately
+ *   and can be reloaded with `refetch()`.
+ * - `resource(source, load)` creates a source-driven resource that reloads
+ *   whenever `source()` changes.
+ *
+ * @typeParam S - Source value type for the source-driven overload.
+ * @typeParam T - Resolved value type.
+ * @typeParam E - Rejection type tracked by `error()`.
+ *
+ * @param sourceOrLoad - Either the reactive source accessor to watch or the
+ *   no-source loader function, depending on the overload.
+ * @param maybeLoad - Loader used with the source-driven overload.
+ *
+ * @returns Either a `ManualResource` or an `AsyncResource`, depending on the
+ * selected overload.
+ *
+ * @example
+ * ```ts
+ * import { createRuntime, signal } from "@volynets/reflex";
+ * import { resource } from "@volynets/reflex/unstable";
+ *
+ * const rt = createRuntime();
+ * const [userId, setUserId] = signal(1);
+ *
+ * const user = resource(() => userId(), async (id) => {
+ *   await Promise.resolve();
+ *   return { id, name: `user-${id}` };
+ * });
+ *
+ * console.log(user.status()); // "pending"
+ *
+ * setUserId(2);
+ * rt.flush();
+ * ```
+ *
+ * @remarks
+ * - This API is exported from `@volynets/reflex/unstable` and may change
+ *   between releases.
+ * - Each new request increments `token()`. Older handles and stale async
+ *   resolutions are ignored automatically.
+ * - `value()` retains the last resolved value while a newer request is pending
+ *   or rejected.
+ * - `clear()` resets the resource to `"idle"` and invalidates the current
+ *   request.
+ * - `dispose()` invalidates the current request and permanently stops future
+ *   updates.
+ * - `refetch()` and source changes schedule a new load through the runtime.
+ *   With the default effect strategy, call `rt.flush()` to start it.
+ * - If a source accessor or loader throws synchronously, the current request
+ *   is rejected with that error.
+ *
+ * @see isPending
+ * @see createRuntime
+ */
 export function resource<T, E = unknown>(): ManualResource<T, E>;
 export function resource<T, E = unknown>(
   load: ResourceJob<T>,
@@ -260,7 +456,7 @@ export function resource<S, T, E = unknown>(
       const load = maybeLoad;
 
       core.watcher = createWatcherNode(() => {
-        readProducer(core.refetchNode!, core.context);
+        readProducer(core.refetchNode!);
 
         let sourceValue: S;
 
@@ -278,12 +474,12 @@ export function resource<S, T, E = unknown>(
       const load = sourceOrLoad as ResourceJob<T>;
 
       core.watcher = createWatcherNode(() => {
-        readProducer(core.refetchNode!, core.context);
+        readProducer(core.refetchNode!);
         core.runLoad(load);
       });
     }
 
-    runWatcher(core.watcher, core.context);
+    runWatcher(core.watcher);
     core.context.registerWatcherCleanup(() => {
       core.dispose();
     });

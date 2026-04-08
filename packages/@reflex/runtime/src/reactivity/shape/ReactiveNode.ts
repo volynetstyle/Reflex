@@ -1,9 +1,17 @@
 import type { Reactivable } from "./Reactivable";
 import type { ReactiveEdge } from "./ReactiveEdge";
 
-type ComputeFn<T> = (() => T) | null;
-
 const UNINITIALIZED: unique symbol = Symbol.for("UNINITIALIZED");
+
+export type Primitive = string | number | boolean | bigint | symbol | null | undefined;
+
+export type Payload<T> = T extends Primitive | Function
+  ? T
+  : T extends Array<infer U>
+    ? ReadonlyArray<Payload<U>>
+    : { readonly [K in keyof T]: Payload<T[K]> };
+
+type ComputeFn<T> = (() => T) | null;
 
 class ReactiveNode<T = unknown> implements Reactivable {
   state: number;
@@ -11,18 +19,20 @@ class ReactiveNode<T = unknown> implements Reactivable {
   firstIn: ReactiveEdge | null;
   lastOut: ReactiveEdge | null;
   lastIn: ReactiveEdge | null;
-  compute: ComputeFn<T>;
   depsTail: ReactiveEdge | null;
+
+  compute: ComputeFn<T>;
   payload: T;
 
-  constructor(payload: T | undefined, compute: ComputeFn<T>, state: number) {
+  constructor(payload: T, compute: ComputeFn<T>, state: number) {
     this.state = state;
     this.firstOut = null;
     this.firstIn = null;
     this.lastOut = null;
     this.lastIn = null;
-    this.compute = compute;
     this.depsTail = null;
+
+    this.compute = compute;
     this.payload = payload as T;
   }
 }

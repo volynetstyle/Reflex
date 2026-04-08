@@ -71,7 +71,7 @@ runtime. Its architecture, render pipeline, ownership model, and lifecycle are
 documented here:
 
 - `packages/reflex-dom/README.md`
-- `packages/reflex-dom/src/ownership/Readme.md`
+- `packages/reflex-dom/docs/ONBOARDING.ru.md`
 
 ## Philosophy
 

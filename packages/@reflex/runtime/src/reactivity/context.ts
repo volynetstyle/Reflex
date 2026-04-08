@@ -11,8 +11,24 @@ export type CleanupRegistrar = (cleanup: () => void) => void;
 type OnEffectInvalidatedHook = EngineHooks["onEffectInvalidated"];
 type OnReactiveSettledHook = EngineHooks["onReactiveSettled"];
 
-const EFFECT_INVALIDATED_HOOK = 1;
-const REACTIVE_SETTLED_HOOK = 1 << 1;
+const EMPTY_HOOKS = Object.freeze({}) as Readonly<EngineHooks>;
+const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
+const HOOK_VIEW_OWNER = Symbol("ExecutionContext.hookViewOwner");
+const SET_PUBLIC_EFFECT_INVALIDATED = Symbol(
+  "ExecutionContext.setPublicEffectInvalidated",
+);
+const SET_PUBLIC_REACTIVE_SETTLED = Symbol(
+  "ExecutionContext.setPublicReactiveSettled",
+);
+
+type HookOwner = ExecutionContext & {
+  [SET_PUBLIC_EFFECT_INVALIDATED](hook: OnEffectInvalidatedHook): void;
+  [SET_PUBLIC_REACTIVE_SETTLED](hook: OnReactiveSettledHook): void;
+};
+
+type HookView = EngineHooks & {
+  [HOOK_VIEW_OWNER]: HookOwner;
+};
 
 function normalizeOwnHook<T extends keyof EngineHooks>(
   hooks: EngineHooks,
@@ -24,19 +40,78 @@ function normalizeOwnHook<T extends keyof EngineHooks>(
   return typeof hook === "function" ? hook : undefined;
 }
 
-/**
- * ExecutionContext управляет состоянием вычисления и уведомлениями host'у.
- * 
- * Ключевые принципы:
- * - Контекст НЕ глобальный - это объект, передаваемый по параметрам
- * - Host полностью контролирует scheduling эффектов
- * - Контекст только отслеживает текущее состояние вычисления
- * 
- * Поля:
- * - activeComputed: текущий узел в процессе вычисления (для trackRead)
- * - propagationDepth: глубина каскада инвалидаций
- * - cleanupRegistrar: функция для регистрации cleanup в эффектах
- */
+function composeEffectInvalidatedDispatch(
+  runtimeHook: OnEffectInvalidatedHook,
+  hook: OnEffectInvalidatedHook,
+): OnEffectInvalidatedHook {
+  if (runtimeHook === undefined) return hook;
+  if (hook === undefined) return runtimeHook;
+
+  return function (node) {
+    runtimeHook(node);
+    hook(node);
+  };
+}
+
+function composeSettledDispatch(
+  runtimeHook: OnReactiveSettledHook,
+  hook: OnReactiveSettledHook,
+): OnReactiveSettledHook {
+  if (runtimeHook === undefined) return hook;
+  if (hook === undefined) return runtimeHook;
+
+  return () => {
+    runtimeHook();
+    hook();
+  };
+}
+
+function getEffectInvalidatedHook(this: HookView): OnEffectInvalidatedHook {
+  return this[HOOK_VIEW_OWNER].onEffectInvalidatedHook;
+}
+
+function setEffectInvalidatedHook(
+  this: HookView,
+  hook: OnEffectInvalidatedHook,
+): void {
+  this[HOOK_VIEW_OWNER][SET_PUBLIC_EFFECT_INVALIDATED](hook);
+}
+
+function getReactiveSettledHook(this: HookView): OnReactiveSettledHook {
+  return this[HOOK_VIEW_OWNER].onReactiveSettledHook;
+}
+
+function setReactiveSettledHook(
+  this: HookView,
+  hook: OnReactiveSettledHook,
+): void {
+  this[HOOK_VIEW_OWNER][SET_PUBLIC_REACTIVE_SETTLED](hook);
+}
+
+const HOOK_VIEW_DESCRIPTORS: PropertyDescriptorMap = {
+  onEffectInvalidated: {
+    enumerable: true,
+    get: getEffectInvalidatedHook,
+    set: setEffectInvalidatedHook,
+  },
+  onReactiveSettled: {
+    enumerable: true,
+    get: getReactiveSettledHook,
+    set: setReactiveSettledHook,
+  },
+};
+
+function createHookView(owner: HookOwner): EngineHooks {
+  const hooks = Object.create(
+    Object.prototype,
+    HOOK_VIEW_DESCRIPTORS,
+  ) as HookView;
+  Object.defineProperty(hooks, HOOK_VIEW_OWNER, {
+    value: owner,
+  });
+  return hooks;
+}
+
 export class ExecutionContext {
   activeComputed: ReactiveNode | null = null;
   propagationDepth = 0;
@@ -44,61 +119,43 @@ export class ExecutionContext {
   readonly hooks: EngineHooks;
   onEffectInvalidatedHook: OnEffectInvalidatedHook = undefined;
   onReactiveSettledHook: OnReactiveSettledHook = undefined;
-  private hookMask = 0;
+  runtimeOnEffectInvalidatedHook: OnEffectInvalidatedHook = undefined;
+  runtimeOnReactiveSettledHook: OnReactiveSettledHook = undefined;
+  effectInvalidatedDispatch: OnEffectInvalidatedHook = undefined;
+  settledDispatch: OnReactiveSettledHook = undefined;
 
-  constructor(hooks: EngineHooks = {}) {
-    this.hooks = {};
-    // Keep the public hook snapshot and the hot-path caches synchronized.
-    Object.defineProperties(this.hooks, {
-      onEffectInvalidated: {
-        enumerable: true,
-        get: () => this.onEffectInvalidatedHook,
-        set: (hook: OnEffectInvalidatedHook) => {
-          this.setOnEffectInvalidatedHook(hook);
-        },
-      },
-      onReactiveSettled: {
-        enumerable: true,
-        get: () => this.onReactiveSettledHook,
-        set: (hook: OnReactiveSettledHook) => {
-          this.setOnReactiveSettledHook(hook);
-        },
-      },
-    });
+  constructor(hooks: EngineHooks = EMPTY_HOOKS) {
+    this.hooks = createHookView(this as HookOwner);
     this.setHooks(hooks);
   }
 
   dispatchWatcherEvent(node: ReactiveNode): void {
-    const hook = this.onEffectInvalidatedHook;
+    const dispatch = this.effectInvalidatedDispatch;
+    if (!IS_DEV && dispatch === undefined) return;
 
-    if (__DEV__) {
-      recordDebugEvent(this, "watcher:invalidated", {
-        node,
-      });
-    } else if (hook === undefined) {
-      return;
+    if (IS_DEV) {
+      recordDebugEvent(this, "watcher:invalidated", { node });
     }
 
-    hook?.(node);
+    if (dispatch !== undefined) dispatch(node);
   }
 
   maybeNotifySettled(): void {
-    if (!__DEV__ && (this.hookMask & REACTIVE_SETTLED_HOOK) === 0) return;
+    const dispatch = this.settledDispatch;
+    if (!IS_DEV && dispatch === undefined) return;
     if (this.propagationDepth !== 0 || this.activeComputed !== null) return;
 
-    const hook = this.onReactiveSettledHook;
-
-    if (__DEV__) {
+    if (IS_DEV) {
       recordDebugEvent(this, "context:settled");
     }
 
-    hook?.();
+    if (dispatch !== undefined) dispatch();
   }
 
   enterPropagation(): void {
     ++this.propagationDepth;
 
-    if (__DEV__) {
+    if (IS_DEV) {
       recordDebugEvent(this, "context:enter-propagation", {
         detail: {
           depth: this.propagationDepth,
@@ -112,7 +169,7 @@ export class ExecutionContext {
       --this.propagationDepth;
     }
 
-    if (__DEV__) {
+    if (IS_DEV) {
       recordDebugEvent(this, "context:leave-propagation", {
         detail: {
           depth: this.propagationDepth,
@@ -129,31 +186,36 @@ export class ExecutionContext {
     this.cleanupRegistrar = null;
   }
 
-  setHooks(hooks: EngineHooks = {}): void {
-    const onEffectInvalidated = normalizeOwnHook(hooks, "onEffectInvalidated");
-    const onReactiveSettled = normalizeOwnHook(hooks, "onReactiveSettled");
+  setHooks(hooks: EngineHooks = EMPTY_HOOKS): void {
+    this[SET_PUBLIC_EFFECT_INVALIDATED](
+      normalizeOwnHook(hooks, "onEffectInvalidated"),
+    );
+    this[SET_PUBLIC_REACTIVE_SETTLED](
+      normalizeOwnHook(hooks, "onReactiveSettled"),
+    );
+    this.recordHookSnapshot();
+  }
 
-    this.hooks.onEffectInvalidated = onEffectInvalidated;
-    this.hooks.onReactiveSettled = onReactiveSettled;
-
-    if (__DEV__) {
-      recordDebugEvent(this, "context:hooks", {
-        detail: {
-          hasOnEffectInvalidated: this.onEffectInvalidatedHook !== undefined,
-          hasOnReactiveSettled: this.onReactiveSettledHook !== undefined,
-        },
-      });
-    }
+  setRuntimeHooks(
+    onEffectInvalidated: OnEffectInvalidatedHook = undefined,
+    onReactiveSettled: OnReactiveSettledHook = undefined,
+  ): void {
+    this.runtimeOnEffectInvalidatedHook =
+      typeof onEffectInvalidated === "function"
+        ? onEffectInvalidated
+        : undefined;
+    this.runtimeOnReactiveSettledHook =
+      typeof onReactiveSettled === "function" ? onReactiveSettled : undefined;
+    this.refreshEffectInvalidatedDispatch();
+    this.refreshSettledDispatch();
+    this.recordHookSnapshot();
   }
 
   registerWatcherCleanup(cleanup: () => void): void {
     this.cleanupRegistrar?.(cleanup);
   }
 
-  withCleanupRegistrar<T>(
-    registrar: CleanupRegistrar | null,
-    fn: () => T,
-  ): T {
+  withCleanupRegistrar<T>(registrar: CleanupRegistrar | null, fn: () => T): T {
     const previousRegistrar = this.cleanupRegistrar;
     this.cleanupRegistrar = registrar;
 
@@ -164,82 +226,63 @@ export class ExecutionContext {
     }
   }
 
-  private setOnEffectInvalidatedHook(hook: OnEffectInvalidatedHook): void {
+  [SET_PUBLIC_EFFECT_INVALIDATED](hook: OnEffectInvalidatedHook): void {
     this.onEffectInvalidatedHook =
       typeof hook === "function" ? hook : undefined;
-    this.updateHookMask(
-      EFFECT_INVALIDATED_HOOK,
-      this.onEffectInvalidatedHook !== undefined,
+    this.refreshEffectInvalidatedDispatch();
+  }
+
+  [SET_PUBLIC_REACTIVE_SETTLED](hook: OnReactiveSettledHook): void {
+    this.onReactiveSettledHook = typeof hook === "function" ? hook : undefined;
+    this.refreshSettledDispatch();
+  }
+
+  private refreshEffectInvalidatedDispatch(): void {
+    this.effectInvalidatedDispatch = composeEffectInvalidatedDispatch(
+      this.runtimeOnEffectInvalidatedHook,
+      this.onEffectInvalidatedHook,
     );
   }
 
-  private setOnReactiveSettledHook(hook: OnReactiveSettledHook): void {
-    this.onReactiveSettledHook =
-      typeof hook === "function" ? hook : undefined;
-    this.updateHookMask(
-      REACTIVE_SETTLED_HOOK,
-      this.onReactiveSettledHook !== undefined,
+  private refreshSettledDispatch(): void {
+    this.settledDispatch = composeSettledDispatch(
+      this.runtimeOnReactiveSettledHook,
+      this.onReactiveSettledHook,
     );
   }
 
-  private updateHookMask(bit: number, enabled: boolean): void {
-    this.hookMask = enabled ? this.hookMask | bit : this.hookMask & ~bit;
+  private recordHookSnapshot(): void {
+    if (!IS_DEV) return;
+
+    recordDebugEvent(this, "context:hooks", {
+      detail: {
+        hasOnEffectInvalidated: this.effectInvalidatedDispatch !== undefined,
+        hasOnReactiveSettled: this.settledDispatch !== undefined,
+      },
+    });
   }
 }
 
-/**
- * Default execution context for single-threaded environments.
- * 
- * Used as the default parameter in all API functions. When a new context
- * is created with createExecutionContext(), the global context should be
- * explicitly passed if needed. This prevents accidental state pollution
- * in multi-context scenarios.
- * 
- */
-let defaultContext = createExecutionContext(undefined);
+export let defaultContext = createExecutionContext(EMPTY_HOOKS);
 
 export function createExecutionContext(
-  hooks: EngineHooks = {},
+  hooks: EngineHooks = EMPTY_HOOKS,
 ): ExecutionContext {
   return new ExecutionContext(hooks);
 }
 
-/**
- * Get the current default execution context.
- * 
- * Note: When working with multiple contexts, explicitly pass the desired
- * context to API functions instead of relying on this default.
- */
 export function getDefaultContext(): ExecutionContext {
   return defaultContext;
 }
 
-/**
- * Replace the default execution context and return the previous one.
- * 
- * This allows for proper cleanup and testing of context switches.
- * 
- * Example:
- * ```ts
- * const previousCtx = setDefaultContext(newContext);
- * // ... do something with newContext ...
- * setDefaultContext(previousCtx);  // restore
- * ```
- */
-export function setDefaultContext(
-  context: ExecutionContext,
-): ExecutionContext {
+export function setDefaultContext(context: ExecutionContext): ExecutionContext {
   const previous = defaultContext;
   defaultContext = context;
   return previous;
 }
 
-/**
- * Reset the default context to a fresh instance.
- * Useful for testing.
- */
 export function resetDefaultContext(
-  hooks: EngineHooks = {},
+  hooks: EngineHooks = EMPTY_HOOKS,
 ): ExecutionContext {
   const next = new ExecutionContext(hooks);
   defaultContext = next;

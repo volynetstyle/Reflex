@@ -4,7 +4,7 @@ import type {
   JSXRenderable,
 } from "./types";
 
-export { Fragment, jsxDEV } from "./runtime";
+export { Fragment, jsxDEV } from "reflex-framework/jsx-dev-runtime";
 
 export namespace JSX {
   export type Element = JSXRenderable;

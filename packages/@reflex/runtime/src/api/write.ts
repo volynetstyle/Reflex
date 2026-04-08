@@ -1,14 +1,9 @@
 import type { ProducerComparator } from "./compare";
 import type { ReactiveNode } from "../reactivity";
-import type { ExecutionContext } from "../reactivity/context";
 import { compare as defaultComparator } from "./compare";
 import { devAssertWriteAlive, devRecordWriteProducer } from "../reactivity/dev";
-import {
-  IMMEDIATE,
-  isDisposedNode,
-  propagate,
-} from "../reactivity";
-import { getDefaultContext } from "../reactivity/context";
+import { IMMEDIATE, isDisposedNode, propagate } from "../reactivity";
+import { defaultContext } from "../reactivity/context";
 
 /**
  * Write a new value to a producer (source) node.
@@ -69,10 +64,9 @@ export function writeProducer<T>(
   node: ReactiveNode<T>,
   value: T,
   compare: ProducerComparator<T> = defaultComparator,
-  context: ExecutionContext = getDefaultContext(),
 ): void {
   if (isDisposedNode(node)) {
-    devAssertWriteAlive();
+    if (__DEV__) devAssertWriteAlive();
     return;
   }
 
@@ -81,7 +75,15 @@ export function writeProducer<T>(
   // Check if the value actually changed using stable comparison
   // This prevents false invalidation when setting to the same value
   if (compare(previous, value)) {
-    devRecordWriteProducer(node, false, value, previous, undefined, context);
+    if (__DEV__)
+      devRecordWriteProducer(
+        node,
+        false,
+        value,
+        previous,
+        undefined,
+        defaultContext,
+      );
 
     // Value didn't change, skip propagation
     return;
@@ -92,19 +94,21 @@ export function writeProducer<T>(
 
   // Get the first subscriber edge (if any)
   const firstSubscriberEdge = node.firstOut;
-
-  devRecordWriteProducer(
-    node,
-    true,
-    value,
-    previous,
-    firstSubscriberEdge !== null,
-    context,
-  );
+  
+  if (__DEV__)
+    devRecordWriteProducer(
+      node,
+      true,
+      value,
+      previous,
+      firstSubscriberEdge !== null,
+      defaultContext,
+    );
 
   // If no subscribers, propagation is unnecessary
   if (firstSubscriberEdge === null) return;
 
+  const context = defaultContext;
   // Enter propagation phase: increment nesting counter
   // This allows multiple concurrent propagations to batch correctly
   context.enterPropagation();
@@ -113,7 +117,7 @@ export function writeProducer<T>(
     // Push phase: notify all subscribers depth-first, mark them dirty
     // IMMEDIATE flag: direct subscribers are promoted from Invalid→Changed
     // This tells them "definitely changed, don't verify, recompute"
-    propagate(firstSubscriberEdge, IMMEDIATE, context);
+    propagate(firstSubscriberEdge, IMMEDIATE);
   } finally {
     // Always exit propagation phase, even if propagate throws
     context.leavePropagation();

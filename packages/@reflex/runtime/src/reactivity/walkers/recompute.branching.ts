@@ -8,20 +8,13 @@
 // popped during backtrack. stackBase marks the logical bottom for this
 // activation so nested re-entrant calls don't see each other's frames.
 
-import type { ExecutionContext } from "../context";
-import type {
-  ReactiveEdge,
-  ReactiveNode} from "../shape";
-import {
-  ReactiveNodeState,
-  DIRTY_STATE,
-} from "../shape";
+import type { ReactiveEdge, ReactiveNode } from "../shape";
+import { ReactiveNodeState, DIRTY_STATE } from "../shape";
 import { refreshRecompute } from "./recompute.refresh";
 
 export function shouldRecomputeBranching(
   link: ReactiveEdge,
   consumer: ReactiveNode,
-  context: ExecutionContext,
   stack: ReactiveEdge[],
   stackTop: number,
   stackBase: number,
@@ -36,7 +29,7 @@ export function shouldRecomputeBranching(
       changed = true;
     } else if ((depState & ReactiveNodeState.Changed) !== 0) {
       // Already-confirmed computed dependency: refresh and stop searching.
-      changed = refreshRecompute(link, dep, context);
+      changed = refreshRecompute(link, dep);
     } else if ((depState & DIRTY_STATE) !== 0) {
       const deps = dep.firstIn;
       if (deps !== null) {
@@ -45,7 +38,7 @@ export function shouldRecomputeBranching(
         consumer = dep;
         continue;
       }
-      changed = refreshRecompute(link, dep, context);
+      changed = refreshRecompute(link, dep);
     }
 
     if (!changed) {
@@ -61,7 +54,7 @@ export function shouldRecomputeBranching(
       const parentLink = stack[--stackTop]!;
 
       if (changed) {
-        changed = refreshRecompute(parentLink, consumer, context);
+        changed = refreshRecompute(parentLink, consumer);
       } else {
         consumer.state &= ~ReactiveNodeState.Invalid;
       }

@@ -1,48 +1,15 @@
-import { COMPONENT_RENDERABLE } from "../component";
-import { ELEMENT_RENDERABLE } from "../element";
 import {
-  FOR_RENDERABLE,
-  SHOW_RENDERABLE,
-  SWITCH_RENDERABLE,
-} from "../operators";
+  RenderableKind,
+  getTaggedRenderableKind,
+  isEmptyRenderableValue,
+} from "../renderable-kind";
 import type { JSXRenderable, RenderableRecord } from "../types";
-
-export const enum RenderableKind {
-  Empty = 0,
-  Array = 1,
-  Node = 2,
-  Accessor = 3,
-  Element = 4,
-  Component = 5,
-  Show = 6,
-  Switch = 7,
-  For = 8,
-  Text = 9,
-}
 
 export type Renderable = JSXRenderable | unknown;
 export type JSXElement = JSXRenderable;
 export type InternalRenderable = RenderableRecord;
 
-export function isEmpty(value: unknown): boolean {
-  return value == null || typeof value === "boolean";
-}
-
-export function isTextValue(
-  value: unknown,
-): value is string | number | bigint {
-  return (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "bigint"
-  );
-}
-
-export function isNodeValue(value: unknown): value is Node {
-  return value instanceof Node;
-}
-
-export function isArrayValue(value: unknown): value is Iterable<unknown> {
+function isIterableRenderableValue(value: unknown): value is Iterable<unknown> {
   return (
     Array.isArray(value) ||
     (typeof value === "object" &&
@@ -51,45 +18,30 @@ export function isArrayValue(value: unknown): value is Iterable<unknown> {
   );
 }
 
-function isAccessor(value: unknown): value is () => unknown {
+function isClientNodeValue(value: unknown): value is Node {
+  return value instanceof Node;
+}
+
+function isAccessorRenderableValue(value: unknown): value is () => unknown {
   return typeof value === "function";
 }
 
-function getRenderableKind(value: unknown): unknown {
-  return typeof value === "object" && value !== null
-    ? (value as { kind?: unknown }).kind
-    : undefined;
-}
-
-export function classifyRenderable(value: unknown): RenderableKind {
-  if (isEmpty(value)) {
+export function classifyClientRenderable(value: unknown): RenderableKind {
+  if (isEmptyRenderableValue(value)) {
     return RenderableKind.Empty;
   }
 
-  if (isArrayValue(value)) {
+  if (isIterableRenderableValue(value)) {
     return RenderableKind.Array;
   }
 
-  if (isNodeValue(value)) {
+  if (isClientNodeValue(value)) {
     return RenderableKind.Node;
   }
 
-  if (isAccessor(value)) {
+  if (isAccessorRenderableValue(value)) {
     return RenderableKind.Accessor;
   }
 
-  switch (getRenderableKind(value)) {
-    case ELEMENT_RENDERABLE:
-      return RenderableKind.Element;
-    case COMPONENT_RENDERABLE:
-      return RenderableKind.Component;
-    case SHOW_RENDERABLE:
-      return RenderableKind.Show;
-    case SWITCH_RENDERABLE:
-      return RenderableKind.Switch;
-    case FOR_RENDERABLE:
-      return RenderableKind.For;
-    default:
-      return RenderableKind.Text;
-  }
+  return getTaggedRenderableKind(value) ?? RenderableKind.Text;
 }

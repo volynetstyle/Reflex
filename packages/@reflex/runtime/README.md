@@ -1,6 +1,15 @@
 # Reactive Runtime
 
-A low-level runtime for building deterministic reactive systems.
+Reflex is optimized for selective, on-demand recomputation and low-level runtime for building deterministic reactive systems.
+
+Instead of maintaining a global execution order (e.g. via topological heaps),
+it stabilizes only the actually accessed subgraph using a walk-based algorithm.
+
+Key properties:
+
+- lazy pull-based stabilization
+- minimal recomputation/refresh
+- no persistent global ordering structure in core
 
 This project provides a minimal reactive execution engine based on explicit node kinds and host-controlled scheduling. It is designed as a **general-purpose computation substrate**, not a UI framework.
 

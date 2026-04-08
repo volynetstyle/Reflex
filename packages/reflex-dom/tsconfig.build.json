@@ -1,6 +1,20 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "reflex-framework": ["../reflex-framework/dist/index.d.ts"],
+      "reflex-framework/ownership": [
+        "../reflex-framework/dist/ownership/index.d.ts"
+      ],
+      "reflex-framework/ownership/reflex": [
+        "../reflex-framework/dist/ownership/reflex.d.ts"
+      ],
+      "reflex-framework/jsx-runtime": ["../reflex-framework/dist/jsx-runtime.d.ts"],
+      "reflex-framework/jsx-dev-runtime": [
+        "../reflex-framework/dist/jsx-dev-runtime.d.ts"
+      ]
+    },
     "rootDir": "src",
     "outDir": "dist",
     "tsBuildInfoFile": "dist/tsconfig.build.tsbuildinfo"

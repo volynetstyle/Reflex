@@ -1,4 +1,3 @@
-import type { ExecutionContext } from "../context";
 import type ReactiveNode from "../shape/ReactiveNode";
 import { isDisposedNode } from "../shape";
 import {
@@ -8,10 +7,10 @@ import {
 } from "../dev";
 import {
   linkEdge,
-  reuseOrCreateIncomingEdge,
+  reuseIncomingEdgeFromSuffixOrCreate,
   unlinkDetachedIncomingEdgeSequence,
 } from "../shape/methods/connect";
-import { getDefaultContext } from "../context";
+import { defaultContext } from "../context";
 
 /**
  * Cursor-guided incoming-edge walk used during dependency collection.
@@ -20,11 +19,19 @@ import { getDefaultContext } from "../context";
  */
 export function trackRead(
   source: ReactiveNode,
-  context: ExecutionContext = getDefaultContext(),
 ): void {
+  const context = defaultContext;
   const consumer = context.activeComputed;
 
   if (!consumer) return;
+  trackReadActive(source, consumer, context);
+}
+
+export function trackReadActive(
+  source: ReactiveNode,
+  consumer: ReactiveNode,
+  context = defaultContext,
+): void {
   const sourceDead = isDisposedNode(source);
   const consumerDead = isDisposedNode(consumer);
   if (sourceDead || consumerDead) {
@@ -42,7 +49,7 @@ export function trackRead(
   const prevEdge = consumer.depsTail;
   if (prevEdge === null) {
     const firstIn = consumer.firstIn;
-    
+
     if (firstIn === null) {
       consumer.depsTail = linkEdge(source, consumer, null);
       return;
@@ -53,7 +60,12 @@ export function trackRead(
       return;
     }
 
-    consumer.depsTail = reuseOrCreateIncomingEdge(
+    if (firstIn.nextIn === null) {
+      consumer.depsTail = linkEdge(source, consumer, null);
+      return;
+    }
+
+    consumer.depsTail = reuseIncomingEdgeFromSuffixOrCreate(
       source,
       consumer,
       null,
@@ -65,12 +77,22 @@ export function trackRead(
   if (prevEdge.from === source) return;
 
   const nextExpected = prevEdge.nextIn;
-  if (nextExpected !== null && nextExpected.from === source) {
+  if (nextExpected === null) {
+    consumer.depsTail = linkEdge(source, consumer, prevEdge);
+    return;
+  }
+
+  if (nextExpected.from === source) {
     consumer.depsTail = nextExpected;
     return;
   }
 
-  consumer.depsTail = reuseOrCreateIncomingEdge(
+  if (nextExpected.nextIn === null) {
+    consumer.depsTail = linkEdge(source, consumer, prevEdge);
+    return;
+  }
+
+  consumer.depsTail = reuseIncomingEdgeFromSuffixOrCreate(
     source,
     consumer,
     prevEdge,
@@ -82,10 +104,7 @@ export function trackRead(
  * Suffix cleanup over the consumer's incoming edges after recompute.
  * Everything after depsTail belongs to the old dependency list and is unlinked.
  */
-export function cleanupStaleSources(
-  node: ReactiveNode,
-  _context: ExecutionContext = getDefaultContext(),
-): void {
+export function cleanupStaleSources(node: ReactiveNode): void {
   const tail = node.depsTail;
   const staleHead = tail === null ? node.firstIn : tail.nextIn;
   if (staleHead === null) return;
@@ -99,7 +118,7 @@ export function cleanupStaleSources(
   }
 
   if (__DEV__) {
-    devRecordCleanupStaleSources(node, staleHead, _context);
+    devRecordCleanupStaleSources(node, staleHead, defaultContext);
   }
 
   unlinkDetachedIncomingEdgeSequence(staleHead);

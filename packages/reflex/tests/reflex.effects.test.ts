@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ReactiveNodeState } from "../../@reflex/runtime/src/reactivity/shape/ReactiveMeta";
 import { effect, effectScheduled, effectUnscheduled } from "../src/api/effect";
 import { createWatcherNode } from "../src/infra/factory";
-import { createRuntime, signal } from "./reflex.test_utils";
+import { createRuntime, memo, signal } from "./reflex.test_utils";
 
 describe("Reactive system - effects", () => {
   it("runs once immediately and reruns after flush", () => {
@@ -47,6 +47,25 @@ describe("Reactive system - effects", () => {
     expect(spy).toHaveBeenCalledTimes(2);
   });
 
+  it("reruns after transitive memo invalidation on flush", () => {
+    const rt = createRuntime();
+    const [source, setSource] = signal(1);
+    const inner = memo(() => source() + 1);
+    const outer = memo(() => inner() + 1);
+    const spy = vi.fn(() => {
+      outer();
+    });
+
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    setSource(2);
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    rt.flush();
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
   it("callable scope disposes the effect", () => {
     const rt = createRuntime();
     const [source, setSource] = signal(1);
@@ -69,6 +88,7 @@ describe("Reactive system - effects", () => {
   it("notifies custom invalidation hooks before flush", () => {
     let invalidations = 0;
     const rt = createRuntime({
+      effectStrategy: "flush",
       hooks: {
         onEffectInvalidated() {
           invalidations += 1;

@@ -1,32 +1,20 @@
-import type { Accessor } from "./core";
+import type {
+  Component as FrameworkComponent,
+  ComponentRenderable as FrameworkComponentRenderable,
+  JSXRenderable as FrameworkJSXRenderable,
+} from "reflex-framework";
 
-export type JSXText = string | number | bigint;
-export type JSXPrimitive = JSXText | boolean | null | undefined;
+export type {
+  ComponentProps,
+  ElementRenderable,
+  JSXPrimitive,
+  JSXText,
+  RenderableRecord,
+} from "reflex-framework";
 
-export interface RenderableRecord {
-  readonly kind: symbol;
-}
+export type JSXRenderable = FrameworkJSXRenderable<Node>;
 
-export type JSXRenderable =
-  | JSXPrimitive
-  | Node
-  | RenderableRecord
-  | Iterable<unknown>
-  | Accessor<unknown>;
+export type Component<P = Record<string, never>> = FrameworkComponent<P, Node>;
 
-export type Component<P = Record<string, never>> = (props: P) => JSXRenderable;
-
-export interface ComponentRenderable<P = Record<string, never>>
-  extends RenderableRecord {
-  readonly type: Component<P>;
-  readonly props: P;
-}
-
-export interface ElementRenderable<Tag extends string = string, Props = unknown>
-  extends RenderableRecord {
-  readonly tag: Tag;
-  readonly props: Props;
-}
-
-export type ComponentProps<T> =
-  T extends Component<infer Props> ? Props : never;
+export type ComponentRenderable<P = Record<string, never>> =
+  FrameworkComponentRenderable<P, Node>;

@@ -3,6 +3,22 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "paths": {
+      "reflex-framework": ["../reflex-framework/dist/index.d.ts"],
+      "reflex-framework/ownership": [
+        "../reflex-framework/dist/ownership/index.d.ts"
+      ],
+      "reflex-framework/ownership/reflex": [
+        "../reflex-framework/dist/ownership/reflex.d.ts"
+      ],
+      "reflex-framework/jsx-runtime": [
+        "../reflex-framework/dist/jsx-runtime.d.ts"
+      ],
+      "reflex-framework/jsx-dev-runtime": [
+        "../reflex-framework/dist/jsx-dev-runtime.d.ts"
+      ]
+    },
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
@@ -12,10 +28,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": ".",
-    "paths": {
-      "@volynetstyle/reflex": ["../reflex/dist/esm/index.d.ts"]
-    },
+    "customConditions": ["source"],
     "allowImportingTsExtensions": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,

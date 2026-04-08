@@ -1,10 +1,10 @@
 import type {
-  Attributes,
-  IntrinsicElements as ReflexIntrinsicElements,
+  Attributes as DOMIntrinsicAttributes,
+  IntrinsicElements as DOMIntrinsicElements,
   JSXRenderable,
 } from "./types";
 
-export { Fragment, jsx, jsxs } from "./runtime";
+export { Fragment, jsx, jsxs } from "reflex-framework/jsx-runtime";
 
 export namespace JSX {
   export type Element = JSXRenderable;
@@ -13,9 +13,9 @@ export namespace JSX {
     children: {};
   }
 
-  export type IntrinsicAttributes = Attributes;
+  export type IntrinsicAttributes = DOMIntrinsicAttributes;
 
   export type LibraryManagedAttributes<_, P> = P;
 
-  export type IntrinsicElements = ReflexIntrinsicElements;
+  export type IntrinsicElements = DOMIntrinsicElements;
 }

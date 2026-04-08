@@ -1,11 +1,12 @@
 import type { Namespace } from "../host/namespace";
 import { moveRangeBefore } from "../host/mutations";
-import { onEffectStart, ownedEffect, registerCleanup } from "../ownership";
+import { registerCleanup } from "reflex-framework/ownership";
+import { onEffectStart, useEffect } from "reflex-framework/ownership/reflex";
 import type { ForRenderable } from "../operators";
 import { reconcileKeyedList, type KeyedItem } from "../reconcile/keyed";
 import type { DOMRenderer } from "../runtime";
 import type { ContentSlot } from "../structure/content-slot";
-import { createMountedSlot } from "./reactive-slot";
+import { createMountedSlot } from "../structure/reactive-slot";
 
 interface ForRow<T> extends KeyedItem<T> {
   slot: ContentSlot;
@@ -111,7 +112,7 @@ export function mountFor(
 
   reconcile(renderable.each());
 
-  ownedEffect(renderer.owner, () => {
+  useEffect(renderer.owner, () => {
     const nextItems = renderable.each();
 
     onEffectStart(() => {

@@ -9,7 +9,7 @@ import {
 } from "../reactivity/dev";
 import {
   ReactiveNodeState,
-  trackRead,
+  trackReadActive,
   DIRTY_STATE,
   shouldRecompute,
   recompute,
@@ -17,7 +17,7 @@ import {
   clearDirtyState,
   isDisposedNode,
 } from "../reactivity";
-import { getDefaultContext } from "../reactivity/context";
+import { defaultContext } from "../reactivity/context";
 
 /**
  * Read mode for consumer nodes (computed values).
@@ -30,13 +30,16 @@ import { getDefaultContext } from "../reactivity/context";
  *   If no computation is active, the read is not tracked.
  *
  * @property {2} eager - Stabilize immediately without dependency registration.
- *   The node is synchronized by reading it in an untracked context. Useful
- *   for force-refreshing a value without creating a dependency relationship.
+ *   The node is synchronized without the final dependency `trackRead()` step.
+ *   Useful for force-refreshing a value without creating a dependency relationship.
  */
-export enum ConsumerReadMode {
-  lazy = 1 << 0,
-  eager = 1 << 1,
-}
+export const ConsumerReadMode = {
+  lazy: 1 << 0,
+  eager: 1 << 1,
+} as const;
+
+export type ConsumerReadMode =
+  (typeof ConsumerReadMode)[keyof typeof ConsumerReadMode];
 
 /**
  * Read the value of a producer (source) node.
@@ -68,19 +71,23 @@ export enum ConsumerReadMode {
  * @invariant If called during compute, creates edge from producer to active consumer
  * @cost O(1) for value access + O(k) for dependency tracking (k = cursor distance)
  */
-export function readProducer<T>(
-  node: ReactiveNode<T>,
-  context: ExecutionContext = getDefaultContext(),
-): T {
+export function readProducer<T>(node: ReactiveNode<T>): T {
   if (isDisposedNode(node)) {
     devAssertReadDeadProducer();
     return node.payload as T;
   }
 
-  // Register this read as a dependency if there's an active computation
-  trackRead(node, context);
+  const context = defaultContext;
+  const activeComputed = context.activeComputed;
 
-  devRecordReadProducer(node, node.payload, context);
+  // Register this read as a dependency if there's an active computation
+  if (activeComputed !== null) {
+    trackReadActive(node, activeComputed, context);
+  }
+
+  if (__DEV__) {
+    devRecordReadProducer(node, node.payload, context);
+  }
 
   return node.payload as T;
 }
@@ -121,10 +128,7 @@ export function readProducer<T>(
  * @invariant If value changed, nodes with fanout are notified via propagateOnce
  * @cost O(deps) for shouldRecompute walk + O(compute) for re-execution if needed
  */
-function stabilizeConsumer<T>(
-  node: ReactiveNode<T>,
-  context: ExecutionContext,
-): T {
+function stabilizeConsumer<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
   if ((state & ReactiveNodeState.Disposed) !== 0) {
@@ -132,7 +136,9 @@ function stabilizeConsumer<T>(
     return node.payload as T;
   }
 
-  devAssertConsumerCanStabilize(state);
+  if (__DEV__) {
+    devAssertConsumerCanStabilize(state);
+  }
 
   // Only proceed if node is marked dirty (has changes to verify)
   if ((state & DIRTY_STATE) !== 0) {
@@ -145,7 +151,10 @@ function stabilizeConsumer<T>(
     if (needs) {
       // Re-execute the compute function and update payload
       // If value changed AND node has multiple subscribers, notify siblings
-      if (recompute(node, context)) propagateOnce(node, context);
+      const hasSiblings = node.firstOut !== null;
+      if (recompute(node) && hasSiblings) {
+        propagateOnce(node);
+      }
     } else {
       // Verification confirmed all dirty flags were stale
       // Clear dirty state, node is still valid
@@ -154,6 +163,67 @@ function stabilizeConsumer<T>(
   }
 
   return node.payload as T;
+}
+
+export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
+  const state = node.state;
+
+  if ((state & ReactiveNodeState.Disposed) !== 0) {
+    devAssertReadDeadConsumer();
+    return node.payload as T;
+  }
+
+  if (__DEV__) {
+    devAssertConsumerCanStabilize(state);
+  }
+
+  const value =
+    (state & DIRTY_STATE) !== 0 ? stabilizeConsumer(node) : (node.payload as T);
+
+  if ((state & DIRTY_STATE) !== 0 && isDisposedNode(node)) {
+    return value;
+  }
+
+  const context = defaultContext;
+  const activeComputed = context.activeComputed;
+
+  if (activeComputed !== null) {
+    trackReadActive(node, activeComputed, context);
+  }
+
+  if (__DEV__) {
+    devRecordReadConsumer(
+      node,
+      "lazy",
+      value,
+      context,
+      activeComputed ?? undefined,
+    );
+  }
+
+  return value;
+}
+
+export function readConsumerEager<T>(node: ReactiveNode<T>): T {
+  const state = node.state;
+
+  if ((state & ReactiveNodeState.Disposed) !== 0) {
+    devAssertReadDeadConsumer();
+    return node.payload as T;
+  }
+
+  if (__DEV__) {
+    devAssertConsumerCanStabilize(state);
+  }
+
+  const value =
+    (state & DIRTY_STATE) !== 0 ? stabilizeConsumer(node) : (node.payload as T);
+
+  if (__DEV__) {
+    devRecordReadConsumer(node, "eager", value, defaultContext);
+  }
+
+  return value;
 }
 
 /**
@@ -171,8 +241,8 @@ function stabilizeConsumer<T>(
  * Two modes are available:
  * - **Lazy** (default): Stabilization happens in the current context, preserving
  *   dependency tracking. Use when the computed value is a real dependency.
- * - **Eager**: Stabilization happens in an untracked context. Use for probing
- *   the value without creating a dependency edge.
+ * - **Eager**: Stabilization happens without the final dependency registration.
+ *   Use for probing the value without creating a dependency edge.
  *
  * @template T - The type of value stored in the node
  *
@@ -202,42 +272,10 @@ function stabilizeConsumer<T>(
 export function readConsumer<T>(
   node: ReactiveNode<T>,
   mode: ConsumerReadMode = ConsumerReadMode.lazy,
-  context: ExecutionContext = getDefaultContext(),
 ): T {
-  if (mode === ConsumerReadMode.eager) {
-    const previous = context.activeComputed;
-    context.activeComputed = null;
-
-    let value: T;
-    try {
-      // Eager mode: stabilize without registering dependency
-      value = stabilizeConsumer(node, context);
-    } finally {
-      context.activeComputed = previous;
-    }
-
-    devRecordReadConsumer(node, "eager", value, context);
-
-    return value;
-  }
-
-  // Lazy mode (default): stabilize in current context, then register dependency
-  const value = stabilizeConsumer(node, context);
-  if (isDisposedNode(node)) {
-    return value;
-  }
-  // Register this read as a dependency if there's an active computation
-  trackRead(node, context);
-
-  devRecordReadConsumer(
-    node,
-    "lazy",
-    value,
-    context,
-    context.activeComputed ?? undefined,
-  );
-
-  return value;
+  return mode === ConsumerReadMode.eager
+    ? readConsumerEager(node)
+    : readConsumerLazy(node);
 }
 
 /**
@@ -281,10 +319,9 @@ export function readConsumer<T>(
  * @invariant context.activeComputed is restored after fn() returns/throws
  * @cost O(1) for context manipulation
  */
-export function untracked<T>(
-  fn: () => T,
-  context: ExecutionContext = getDefaultContext(),
-): T {
+export function untracked<T>(fn: () => T, _context: ExecutionContext): T {
+  const context = defaultContext;
+
   // Save the current active computation context
   const prev = context.activeComputed;
   // Clear the active context so reads don't create dependencies

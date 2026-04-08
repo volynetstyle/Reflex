@@ -7,6 +7,11 @@ that it does so with an explicit ownership tree. DOM nodes, reactive effects,
 event listeners, refs, and dynamic branch cleanups are all tied to lifecycle
 scopes, so mount, update, replace, and dispose stay deterministic.
 
+## Documentation
+
+- English architecture overview: `README.md`
+- Russian developer onboarding: `docs/ONBOARDING.ru.md`
+
 ## What This Package Is Responsible For
 
 | Area | Files | Responsibility |
@@ -19,7 +24,7 @@ scopes, so mount, update, replace, and dispose stay deterministic.
 | Structural operators | `src/mount/show.ts`, `src/mount/switch.ts`, `src/mount/for.ts` | Mount conditional and keyed-list branches |
 | List reconciliation | `src/reconcile/*` | Hold keyed and unkeyed diff logic outside operator mounting so list behavior is easier to reason about and extend |
 | Execution policies | `src/runtime/policies.ts` | Describe renderer scheduling intent and map it onto the current Reflex runtime options |
-| Ownership and cleanup | `src/ownership/*` | Track who owns which subtree and dispose it in a predictable order |
+| Ownership and cleanup | `reflex-framework/ownership` + DOM mount sites | Track who owns which subtree and dispose it in a predictable order |
 
 ## Mental Model
 
@@ -58,7 +63,7 @@ render.ts
   - create new root scope
         |
         v
-runWithScope(root)
+runInOwnershipScope(root)
         |
         v
 mount/append.ts
@@ -70,11 +75,12 @@ mount/append.ts
   \- primitives -> text nodes
         |
         v
-ownership/*
+reflex-framework/ownership/*
   - scopes
-  - effect ownership
+  - context
   - cleanup registration
   - subtree disposal
+  - reactive bridge used by DOM mounts
 ```
 
 ## End-to-End Lifecycle
@@ -89,8 +95,8 @@ The root transaction is:
 2. Read the mounted root scope from the container.
 3. Dispose the previous root scope if the container is already mounted.
 4. Create a fresh root scope.
-5. Clear the container.
-6. Mount the new tree inside `runWithScope(rootScope, ...)`.
+5. Clear only the renderer-managed root range.
+6. Mount the new tree inside `runInOwnershipScope(rootScope, ...)`.
 7. Store the new root scope on the container.
 8. Return an idempotent dispose function.
 
@@ -109,7 +115,7 @@ Inside the root scope, `mount/append.ts` dispatches by value shape:
 
 ### 3. Reactive updates
 
-Reactive bindings are registered through `ownedEffect()`.
+Reactive bindings are registered through `useEffect()`.
 
 That effect helper does two important things:
 
@@ -117,6 +123,9 @@ That effect helper does two important things:
 - Restores that same owner during later reruns.
 
 As a result, updates still know which scope owns any nested work they trigger.
+
+Plain Reflex effects created during mount are captured by the current ownership
+scope because DOM mounts enter the tree through `runInOwnershipScope()`.
 
 `onEffectStart()` is used to skip DOM writes on the first effect pass when the
 initial DOM was already produced during mount. Later reruns are allowed to patch
@@ -185,20 +194,61 @@ rendererB.render(...) -> rendererB sees scope A on container and disposes it
 With a renderer-local `WeakMap`, that cross-renderer handoff would be much
 harder to reason about.
 
+## Managed Root Ranges
+
+Mounted root state is not just a scope anymore. It is a managed render range:
+
+- a start anchor
+- an end anchor
+- a scope that owns everything between them
+
+That range model is what enables:
+
+- renderer handoff on the same container
+- non-destructive root replacement
+- basic `hydrate()` and `resume()`
+- coexistence with foreign DOM inside the same host container
+
+The important invariant is:
+
+- `reflex-dom` may clear its own range
+- `reflex-dom` must not blindly clear the whole container
+
+For the Russian walkthrough of that model, see `docs/ONBOARDING.ru.md`.
+
+## SSR, Hydration, Resume, and Portals
+
+The package now exposes four platform-facing entry points in addition to normal
+client rendering:
+
+- `render()`
+- `hydrate()`
+- `resume()`
+- `renderToString()`
+
+And one structural operator for out-of-tree mounting:
+
+- `Portal`
+
+Current intent:
+
+- `renderToString()` produces baseline SSR HTML and marks dynamic slot regions
+  for hydration.
+- `hydrate()` tries to adopt matching DOM without recreating it.
+- `resume()` adopts an existing DOM subtree under renderer ownership without
+  rebuilding it.
+- `Portal` mounts children into another DOM target while keeping cleanup tied
+  to the original ownership tree.
+
+These are still intentionally basic, but they already share the same ownership
+and managed-range model as client rendering.
+
 ## Ownership Deep Dive
 
-The full ownership subsystem is documented here:
+`reflex-dom` now consumes ownership from `reflex-framework`.
 
-- [Ownership Readme](./src/ownership/Readme.md)
-
-That document explains:
-
-- the ownership node structure
-- scope creation and attachment
-- effect ownership
-- cleanup ordering
-- disposal traversal
-- invariants and extension rules
+The renderer is responsible for choosing where DOM mounts enter ownership
+scopes, but the ownership tree itself belongs to the platform-agnostic core.
 
 ## Example Trace
 

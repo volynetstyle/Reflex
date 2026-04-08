@@ -1,6 +1,6 @@
 /** @jsxImportSource reflex-dom */
 
-import { signal } from "@volynetstyle/reflex";
+import { signal } from "@volynets/reflex";
 import { render } from "reflex-dom";
 
 const [count, setCount] = signal(0);

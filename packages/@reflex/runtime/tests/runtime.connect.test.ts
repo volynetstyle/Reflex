@@ -4,7 +4,7 @@ import {
   linkEdge,
   ReactiveEdge,
   unlinkEdge,
-  reuseOrCreateIncomingEdge,
+  reuseIncomingEdgeFromSuffixOrCreate,
 } from "../src/reactivity";
 
 function createNode(kind: ReactiveNodeState = ReactiveNodeState.Producer) {
@@ -58,7 +58,7 @@ describe("Reactive graph - edge wiring", () => {
     const bb = linkEdge(b, target);
     const cb = linkEdge(c, target);
 
-    const reused = reuseOrCreateIncomingEdge(c, target, ab, bb);
+    const reused = reuseIncomingEdgeFromSuffixOrCreate(c, target, ab, bb);
 
     expect(reused).toBe(cb);
     expect(target.firstIn).toBe(ab);

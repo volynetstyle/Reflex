@@ -1,7 +1,11 @@
+import "./dev_flag";
+
 export {
   readProducer,
   writeProducer,
   readConsumer,
+  readConsumerLazy,
+  readConsumerEager,
   runWatcher,
   disposeWatcher,
   ProducerComparator,

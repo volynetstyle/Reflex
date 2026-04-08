@@ -1,33 +1,28 @@
 export {
-  For,
   Fragment,
+  For,
+  Portal,
   Show,
   Switch,
   createDOMRenderer,
   createDOMRuntime,
+  hydrate,
   jsx,
   jsxDEV,
   jsxs,
   mount,
   render,
+  renderToString,
+  resume,
 } from "./runtime";
-export {
-  createContext,
-  hasOwnContext,
-  provideContext,
-  useContext,
-} from "./ownership";
 export type { DOMRenderer, DOMRuntimeOptions } from "./runtime";
-export type { OwnershipContext } from "./ownership";
 export type {
-  Accessor,
-  Attributes,
-  Cleanup,
-  Component,
-  ComponentProps,
+  CustomElementProps,
+  CustomElementTag,
   DOMEvent,
   DOMEventHandler,
   DOMEventHandlerProp,
+  DOMEventMapFor,
   DOMEventListenerObject,
   DOMProps,
   DOMPropsBase,
@@ -37,7 +32,8 @@ export type {
   HTMLProps,
   IntrinsicElements,
   JSXRenderable,
-  MaybeAccessor,
+  MathMLProps,
+  PlatformProps,
   Ref,
   RefAttributes,
   RefObject,
@@ -47,6 +43,7 @@ export type {
 } from "./types";
 export type {
   ForProps,
+  PortalProps,
   ShowProps,
   SwitchCase,
   SwitchProps,

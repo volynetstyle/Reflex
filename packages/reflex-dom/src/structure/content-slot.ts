@@ -1,5 +1,9 @@
 import { clearBetween } from "../host/mutations";
-import { createScope, disposeScope, type Scope } from "../ownership";
+import {
+  createScope,
+  disposeScope,
+  type Scope,
+} from "reflex-framework/ownership";
 
 export type MountUnknown = (parent: Node, scope: Scope, value: unknown) => void;
 
@@ -7,7 +11,8 @@ type ContentState =
   | { kind: "empty" }
   | { kind: "text"; node: Text; value: string }
   | { kind: "node"; node: Node }
-  | { kind: "fallback"; scope: Scope };
+  | { kind: "mounted"; scope: Scope }
+  | { kind: "adopted" };
 
 export interface ContentSlot {
   fragment: DocumentFragment;
@@ -17,6 +22,8 @@ export interface ContentSlot {
   dispose(): void;
   destroy(): void;
 }
+
+const NO_INITIAL_VALUE = Symbol("no-initial-value");
 
 function isEmptyValue(value: unknown): boolean {
   return value == null || typeof value === "boolean";
@@ -36,21 +43,60 @@ function isSingleNodeValue(value: unknown): value is Node {
   );
 }
 
-export function createContentSlot(
+function createSlotController(
   doc: Document,
   mountUnknown: MountUnknown,
-  initialValue: unknown,
+  start: Comment,
+  end: Comment,
+  initialState: ContentState,
+  initialValue: unknown | typeof NO_INITIAL_VALUE,
+  fragment: DocumentFragment,
 ): ContentSlot {
-  const fragment = doc.createDocumentFragment();
-  const start = doc.createComment("");
-  const end = doc.createComment("");
-
   let destroyed = false;
-  let state: ContentState = { kind: "empty" };
+  let state: ContentState = initialState;
 
-  function unmountCurrent(): void {
-    if (state.kind === "fallback") {
-      disposeScope(state.scope);
+  function mountText(parent: Node, value: string): void {
+    const node = doc.createTextNode(value);
+    parent.insertBefore(node, end);
+    state = { kind: "text", node, value };
+  }
+
+  function mountNode(parent: Node, node: Node): void {
+    parent.insertBefore(node, end);
+    state = { kind: "node", node };
+  }
+
+  function mountFallback(parent: Node, value: unknown): void {
+    const scope = createScope();
+    const content = doc.createDocumentFragment();
+
+    mountUnknown(content, scope, value);
+    parent.insertBefore(content, end);
+
+    state = { kind: "mounted", scope };
+  }
+
+  function clearCurrent(): void {
+    switch (state.kind) {
+      case "empty":
+        return;
+
+      case "text":
+      case "node":
+        const node = state.node;
+        const parent = node.parentNode;
+        if (parent !== null) {
+          parent.removeChild(node);
+        }
+        state = { kind: "empty" };
+        return;
+
+      case "mounted":
+        disposeScope(state.scope);
+        break;
+
+      case "adopted":
+        break;
     }
 
     const parent = start.parentNode;
@@ -61,45 +107,28 @@ export function createContentSlot(
     state = { kind: "empty" };
   }
 
-  function mount(parent: Node, value: unknown): void {
+  function mountInitial(value: unknown): void {
     if (isEmptyValue(value)) {
       state = { kind: "empty" };
       return;
     }
 
     if (isTextValue(value)) {
-      const text = doc.createTextNode(value + "");
-      parent.insertBefore(text, end);
-      state = {
-        kind: "text",
-        node: text,
-        value: text.data,
-      };
+      mountText(fragment, String(value));
       return;
     }
 
     if (isSingleNodeValue(value)) {
-      parent.insertBefore(value, end);
-      state = {
-        kind: "node",
-        node: value,
-      };
+      mountNode(fragment, value);
       return;
     }
 
-    const scope = createScope();
-    const content = doc.createDocumentFragment();
-    mountUnknown(content, scope, value);
-    parent.insertBefore(content, end);
-    state = {
-      kind: "fallback",
-      scope,
-    };
+    mountFallback(fragment, value);
   }
 
-  fragment.appendChild(start);
-  fragment.appendChild(end);
-  mount(fragment, initialValue);
+  if (initialValue !== NO_INITIAL_VALUE) {
+    mountInitial(initialValue);
+  }
 
   return {
     fragment,
@@ -113,14 +142,12 @@ export function createContentSlot(
       if (parent === null) return;
 
       if (isEmptyValue(value)) {
-        if (state.kind !== "empty") {
-          unmountCurrent();
-        }
+        clearCurrent();
         return;
       }
 
       if (isTextValue(value)) {
-        const next = value + "";
+        const next = String(value);
 
         if (state.kind === "text") {
           if (state.value !== next) {
@@ -130,8 +157,8 @@ export function createContentSlot(
           return;
         }
 
-        unmountCurrent();
-        mount(parent, next);
+        clearCurrent();
+        mountText(parent, next);
         return;
       }
 
@@ -140,29 +167,71 @@ export function createContentSlot(
           return;
         }
 
-        unmountCurrent();
-        mount(parent, value);
+        clearCurrent();
+        mountNode(parent, value);
         return;
       }
 
-      unmountCurrent();
-      mount(parent, value);
+      clearCurrent();
+      mountFallback(parent, value);
     },
 
     dispose(): void {
       if (destroyed) return;
-      if (state.kind !== "empty") {
-        unmountCurrent();
-      }
+      clearCurrent();
     },
 
     destroy(): void {
       if (destroyed) return;
 
-      unmountCurrent();
+      clearCurrent();
       start.remove();
       end.remove();
       destroyed = true;
     },
   };
+}
+
+export function createContentSlot(
+  doc: Document,
+  mountUnknown: MountUnknown,
+  initialValue: unknown,
+): ContentSlot {
+  const fragment = doc.createDocumentFragment();
+  const start = doc.createComment("");
+  const end = doc.createComment("");
+
+  fragment.appendChild(start);
+  fragment.appendChild(end);
+
+  return createSlotController(
+    doc,
+    mountUnknown,
+    start,
+    end,
+    { kind: "empty" },
+    initialValue,
+    fragment,
+  );
+}
+
+export function adoptContentSlot(
+  doc: Document,
+  mountUnknown: MountUnknown,
+  start: Comment,
+  end: Comment,
+): ContentSlot {
+  const fragment = doc.createDocumentFragment();
+  const initialState: ContentState =
+    start.nextSibling === end ? { kind: "empty" } : { kind: "adopted" };
+
+  return createSlotController(
+    doc,
+    mountUnknown,
+    start,
+    end,
+    initialState,
+    NO_INITIAL_VALUE,
+    fragment,
+  );
 }

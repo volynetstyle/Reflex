@@ -1,7 +1,7 @@
 /** @jsxImportSource ../src */
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { computed, effect, memo, signal } from "@volynetstyle/reflex";
+import { computed, effect, memo, signal } from "@volynets/reflex";
 import { createDOMRuntime, render, Fragment } from "../src";
 
 describe("render", () => {
@@ -280,6 +280,53 @@ describe("render", () => {
 
     expect(container.querySelector("section")?.getAttribute("data-kind")).toBe("frame");
     expect(container.querySelector("span")?.textContent).toBe("inside");
+  });
+
+  it("renders deeply nested components that forward children without remounting wrappers", () => {
+    const container = document.createElement("div");
+    const [name, setName] = signal("Alice");
+
+    const Shell = ({ children }: { children?: unknown }) => (
+      <section data-shell="true">{children as any}</section>
+    );
+    const Card = ({ title, children }: { title: string; children?: unknown }) => (
+      <article>
+        <h2>{title}</h2>
+        <div class="card-body">{children as any}</div>
+      </article>
+    );
+    const Row = ({ label, children }: { label: string; children?: unknown }) => (
+      <p>
+        <span>{label}</span>
+        {children as any}
+      </p>
+    );
+
+    render(
+      <Shell>
+        <Card title="Profile">
+          <Row label="Name: ">{name}</Row>
+        </Card>
+      </Shell>,
+      container,
+    );
+
+    const shell = container.querySelector("section");
+    const card = container.querySelector("article");
+    const row = container.querySelector("p");
+    const label = container.querySelector("span");
+
+    expect(shell?.getAttribute("data-shell")).toBe("true");
+    expect(card?.querySelector("h2")?.textContent).toBe("Profile");
+    expect(row?.textContent).toBe("Name: Alice");
+
+    setName("Bob");
+
+    expect(container.querySelector("section")).toBe(shell);
+    expect(container.querySelector("article")).toBe(card);
+    expect(container.querySelector("p")).toBe(row);
+    expect(container.querySelector("span")).toBe(label);
+    expect(row?.textContent).toBe("Name: Bob");
   });
 
   it("renders nested components with reactive children", () => {

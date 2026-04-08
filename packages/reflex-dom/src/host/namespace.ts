@@ -1,13 +1,9 @@
-import type { ElementTag, JSXRenderable } from "../types";
-import { isSVGTag } from "./tags";
+import { isMathMLTag, isSVGTag } from "./tags";
 
-export type Namespace = "html" | "svg";
-export type JSXTag =
-  | ElementTag
-  | typeof Fragment
-  | ((props: unknown) => JSXRenderable);
+export type Namespace = "html" | "svg" | "mathml";
 
 export const SVG_NS = "http://www.w3.org/2000/svg";
+export const MATHML_NS = "http://www.w3.org/1998/Math/MathML";
 export const XLINK_NS = "http://www.w3.org/1999/xlink";
 
 export const URL_ATTRS = new Set<string>([
@@ -19,11 +15,12 @@ export const URL_ATTRS = new Set<string>([
   "xlink:href",
 ]);
 
-export const Fragment = Symbol.for("reflex-dom.fragment");
-
 export function resolveNamespace(tag: string, parent: Namespace): Namespace {
   if (tag === "foreignObject") return "html";
   if (tag === "svg") return "svg";
+  if (tag === "math") return "mathml";
   if (parent === "svg") return "svg";
+  if (parent === "mathml") return "mathml";
+  if (isMathMLTag(tag)) return "mathml";
   return isSVGTag(tag) ? "svg" : "html";
 }

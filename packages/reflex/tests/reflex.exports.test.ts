@@ -23,7 +23,7 @@ describe("Reactive system - exports", () => {
   });
 
   it("re-exports policy helpers from the policy barrel", () => {
-    expect(typeof policy.EffectScheduler).toBe("function");
+    expect(typeof policy.createEffectScheduler).toBe("function");
     expect(typeof policy.EventDispatcher).toBe("function");
     expect(typeof policy.resolveEffectSchedulerMode).toBe("function");
   });

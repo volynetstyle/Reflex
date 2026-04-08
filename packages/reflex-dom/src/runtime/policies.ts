@@ -1,4 +1,4 @@
-import type { createRuntime } from "@volynetstyle/reflex";
+import type { createRuntime } from "@volynets/reflex";
 
 type RuntimeEffectStrategy = NonNullable<
   Parameters<typeof createRuntime>[0]

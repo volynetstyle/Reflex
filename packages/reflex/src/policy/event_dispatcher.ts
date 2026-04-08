@@ -2,31 +2,32 @@ import type { EventBoundary, EventSource } from "../infra/event";
 import { identityBoundary, emitEvent } from "../infra/event";
 
 export class EventDispatcher {
-  private readonly queue: unknown[] = [];
-  private head = 0;
-  private flushing = false;
+  readonly queue: unknown[] = [];
+  head: number = 0;
+  flushing: boolean = false;
+  readonly runBoundary: EventBoundary;
+  readonly flush: () => void;
 
-  constructor(private readonly runBoundary: EventBoundary = identityBoundary) {}
+  constructor(runBoundary: EventBoundary = identityBoundary) {
+    this.runBoundary = runBoundary;
+    this.flush = (): void => this._flush();
+    this.flush = this._flush.bind(this);
+  }
 
   emit<T>(source: EventSource<T>, value: T): void {
     this.queue.push(source, value);
-
-    if (!this.flushing) {
-      this.runBoundary(this.flush);
-    }
+    if (!this.flushing) this.runBoundary(this.flush);
   }
 
-  private readonly flush = (): void => {
+  private _flush(): void {
     if (this.flushing) return;
-
     this.flushing = true;
 
     try {
-      const queue = this.queue;
-
-      while (this.head < queue.length) {
-        const source = queue[this.head++] as EventSource<unknown>;
-        const value = queue[this.head++];
+      const q = this.queue;
+      while (this.head < q.length) {
+        const source = q[this.head++] as EventSource<unknown>;
+        const value = q[this.head++];
         emitEvent(source, value);
       }
     } finally {
@@ -34,5 +35,5 @@ export class EventDispatcher {
       this.head = 0;
       this.flushing = false;
     }
-  };
+  }
 }

@@ -1,4 +1,4 @@
-import type { Namespace} from "./namespace";
+import type { Namespace } from "./namespace";
 import { XLINK_NS, URL_ATTRS } from "./namespace";
 import { sanitizeURL } from "./sanitize";
 

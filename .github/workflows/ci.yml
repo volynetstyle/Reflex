@@ -72,16 +72,16 @@ jobs:
         run: pnpm --filter @reflex/runtime build
 
       - name: Reflex lint
-        run: pnpm --filter @volynetstyle/reflex lint
+        run: pnpm --filter @volynets/reflex lint
 
       - name: Reflex typecheck
-        run: pnpm --filter @volynetstyle/reflex typecheck
+        run: pnpm --filter @volynets/reflex typecheck
 
       - name: Reflex test
-        run: pnpm --filter @volynetstyle/reflex test
+        run: pnpm --filter @volynets/reflex test
 
       - name: Reflex build
-        run: pnpm --filter @volynetstyle/reflex build
+        run: pnpm --filter @volynets/reflex build
 
   runtime-e2e:
     name: runtime e2e

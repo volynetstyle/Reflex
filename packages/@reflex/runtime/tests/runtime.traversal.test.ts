@@ -247,6 +247,42 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(siblingWatcher.state & DIRTY_STATE).toBeTruthy();
   });
 
+  it("surfaces Invalid -> Changed promotion to the host when the host does not dedupe", () => {
+    let invalidations = 0;
+    resetRuntime({
+      onEffectInvalidated() {
+        invalidations += 1;
+      },
+    });
+
+    const source = createProducer(1);
+    const shared = createConsumer(() => readProducer(source) * 2);
+    const effectSpy = vi.fn(() => {
+      readConsumer(shared);
+    });
+    const watcher = createWatcher(effectSpy);
+
+    runWatcher(watcher);
+    expect(effectSpy).toHaveBeenCalledTimes(1);
+
+    writeProducer(source, 2);
+
+    expect(invalidations).toBe(1);
+    expect(watcher.state & ReactiveNodeState.Invalid).toBeTruthy();
+    expect(watcher.state & ReactiveNodeState.Changed).toBeFalsy();
+
+    expect(readConsumer(shared)).toBe(4);
+    expect(invalidations).toBe(2);
+    expect(watcher.state & ReactiveNodeState.Changed).toBeTruthy();
+
+    runWatcher(watcher);
+    expect(effectSpy).toHaveBeenCalledTimes(2);
+    expect(watcher.state & DIRTY_STATE).toBe(0);
+
+    writeProducer(source, 3);
+    expect(invalidations).toBe(3);
+  });
+
   it("preserves outer dirty-check traversal when recompute reads another invalid consumer", () => {
     const source = createProducer(1);
     const nestedSource = createProducer(10);
