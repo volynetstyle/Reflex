@@ -33,10 +33,13 @@ import { defaultContext } from "../reactivity/context";
  *   The node is synchronized without the final dependency `trackRead()` step.
  *   Useful for force-refreshing a value without creating a dependency relationship.
  */
-export enum ConsumerReadMode {
-  lazy = 1 << 0,
-  eager = 1 << 1,
-}
+export const ConsumerReadMode = {
+  lazy: 1 << 0,
+  eager: 1 << 1,
+} as const;
+
+export type ConsumerReadMode =
+  (typeof ConsumerReadMode)[keyof typeof ConsumerReadMode];
 
 /**
  * Read the value of a producer (source) node.

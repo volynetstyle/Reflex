@@ -14,29 +14,32 @@ import type ReactiveNode from "./ReactiveNode";
  * - `Invalid` means "upstream may have changed, verify through shouldRecompute()"
  * - producers commit on write and should not normally participate in pull-walk
  */
-export enum ReactiveNodeState {
+export const ReactiveNodeState = {
   /** Mutable source node. Holds committed payload directly and never recomputes. */
-  Producer = 1 << 0,
+  Producer: 1 << 0,
   /** Pure computed node. Re-executes lazily when its dependencies become dirty. */
-  Consumer = 1 << 1,
+  Consumer: 1 << 1,
   /** Effect-like sink. Invalidations schedule or notify work rather than return data. */
-  Watcher = 1 << 2,
+  Watcher: 1 << 2,
 
   /** Maybe stale: value is not confirmed changed yet and must be verified on read. */
-  Invalid = 1 << 3,
+  Invalid: 1 << 3,
   /** Definitely stale: a direct upstream dependency already confirmed a change. */
-  Changed = 1 << 4,
+  Changed: 1 << 4,
   /** Re-entrant marker used when a tracked dependency invalidates mid-computation. */
-  Visited = 1 << 5,
+  Visited: 1 << 5,
   /** Terminal lifecycle state. Disposed nodes must no longer participate in the graph. */
-  Disposed = 1 << 6,
+  Disposed: 1 << 6,
   /** Node is currently executing its compute function. Used for cycle detection. */
-  Computing = 1 << 7,
+  Computing: 1 << 7,
   /** Watcher has already been scheduled/notified for the current invalidation wave. */
-  Scheduled = 1 << 8,
+  Scheduled: 1 << 8,
   /** Node is collecting dependencies during the current computation pass. */
-  Tracking = 1 << 9,
-}
+  Tracking: 1 << 9,
+} as const;
+
+export type ReactiveNodeState =
+  (typeof ReactiveNodeState)[keyof typeof ReactiveNodeState];
 
 /** Mask for the mutually-exclusive node kind bits. */
 export const NODE_KIND_STATE =
