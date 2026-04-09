@@ -17,7 +17,7 @@ import { UNINITIALIZED } from "../../build/esm/reactivity/shape/ReactiveNode.js"
 import ReactiveNode from "../../build/esm/reactivity/shape/ReactiveNode.js";
 import { linkEdge } from "../../build/esm/reactivity/shape/methods/connect.js";
 import { propagate } from "../../build/esm/reactivity/walkers/propagate.js";
-import { shouldRecompute } from "../../build/esm/reactivity/walkers/shouldRecompute.js";
+import { shouldRecompute } from "../../build/esm/reactivity/walkers/recompute.js";
 
 const runtime = getDefaultContext();
 
