@@ -1,5 +1,5 @@
 import { recordDebugEvent } from "../../debug";
-import { defaultContext } from "../context";
+import { defaultContext, dispatchEffectInvalidated } from "../context";
 import { devAssertPropagateAlive } from "../dev";
 import {
   DIRTY_STATE,
@@ -57,8 +57,6 @@ function getSlowInvalidatedSubscriberState(
 function propagateBranching(
   edge: ReactiveEdge,
   promote: number,
-  dispatch: ((node: ReactiveNode) => void) | undefined,
-  context: typeof defaultContext,
   thrown: unknown,
   parentResume: ReactiveEdge | null,
   parentResumePromote: number,
@@ -69,6 +67,7 @@ function propagateBranching(
   let stackTop = stackBase;
   let resume: ReactiveEdge | null = edge.nextOut;
   let resumePromote = promote;
+  const dispatch = dispatchEffectInvalidated;
 
   if (parentResume !== null) {
     edgeStack[stackTop] = parentResume;
@@ -87,7 +86,7 @@ function propagateBranching(
       sub.state = nextState;
 
       if (__DEV__) {
-        recordDebugEvent(context, "propagate", {
+        recordDebugEvent(defaultContext, "propagate", {
           detail: { immediate: promote === IMMEDIATE, nextState },
           source: edge.from,
           target: sub,
@@ -104,7 +103,7 @@ function propagateBranching(
             }
           }
         } else if (__DEV__) {
-          recordDebugEvent(context, "watcher:invalidated", { node: sub });
+          recordDebugEvent(defaultContext, "watcher:invalidated", { node: sub });
         }
       } else {
         const firstOut = sub.firstOut;
@@ -145,10 +144,9 @@ function propagateBranching(
 function propagateLinear(
   edge: ReactiveEdge,
   promote: number,
-  dispatch: ((node: ReactiveNode) => void) | undefined,
-  context: typeof defaultContext,
 ): unknown {
   let thrown: unknown = null;
+  const dispatch = dispatchEffectInvalidated;
 
   while (true) {
     const sub = edge.to;
@@ -163,7 +161,7 @@ function propagateLinear(
       sub.state = nextState;
 
       if (__DEV__) {
-        recordDebugEvent(context, "propagate", {
+        recordDebugEvent(defaultContext, "propagate", {
           detail: { immediate: promote === IMMEDIATE, nextState },
           source: edge.from,
           target: sub,
@@ -180,7 +178,7 @@ function propagateLinear(
             }
           }
         } else if (__DEV__) {
-          recordDebugEvent(context, "watcher:invalidated", { node: sub });
+          recordDebugEvent(defaultContext, "watcher:invalidated", { node: sub });
         }
       } else {
         const firstOut = sub.firstOut;
@@ -191,8 +189,6 @@ function propagateLinear(
             return propagateBranching(
               edge,
               NON_IMMEDIATE,
-              dispatch,
-              context,
               thrown,
               next,
               promote,
@@ -221,9 +217,7 @@ export function propagate(
     return;
   }
 
-  const context = defaultContext;
-  const dispatch = context.dispatchWatcherEvent;
-  const thrown = propagateLinear(startEdge, promoteImmediate, dispatch, context);
+  const thrown = propagateLinear(startEdge, promoteImmediate);
 
   if (thrown !== null) throw thrown;
 }

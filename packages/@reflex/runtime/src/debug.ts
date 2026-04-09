@@ -112,9 +112,15 @@ interface RuntimeDebugEventInput {
   target?: ReactiveNode;
 }
 
-const contextStates = new WeakMap<ExecutionContext, RuntimeDebugState>();
+const contextStates = new WeakMap<object, RuntimeDebugState>();
 const nodeIds = new WeakMap<ReactiveNode, number>();
 const nodeLabels = new WeakMap<ReactiveNode, string>();
+const invalidContextKey = {};
+const invalidNodeIds = new Map<unknown, number>();
+
+function isObjectKey(value: unknown): value is object {
+  return (typeof value === "object" || typeof value === "function") && value !== null;
+}
 
 let nextContextId = 1;
 let nextNodeId = 1;
@@ -162,8 +168,13 @@ function getFlags(state: number): RuntimeDebugFlag[] {
   return flags;
 }
 
+function normalizeContextKey(context: ExecutionContext): object {
+  return isObjectKey(context) ? context : invalidContextKey;
+}
+
 function ensureContextState(context: ExecutionContext): RuntimeDebugState {
-  const existing = contextStates.get(context);
+  const key = normalizeContextKey(context);
+  const existing = contextStates.get(key);
 
   if (existing) return existing;
 
@@ -175,11 +186,20 @@ function ensureContextState(context: ExecutionContext): RuntimeDebugState {
     listeners: new Set(),
   };
 
-  contextStates.set(context, state);
+  contextStates.set(key, state);
   return state;
 }
 
 function ensureNodeId(node: ReactiveNode): number {
+  if (!isObjectKey(node)) {
+    const existing = invalidNodeIds.get(node);
+    if (existing !== undefined) return existing;
+
+    const id = nextNodeId++;
+    invalidNodeIds.set(node, id);
+    return id;
+  }
+
   const existing = nodeIds.get(node);
 
   if (existing !== undefined) return existing;
@@ -190,6 +210,16 @@ function ensureNodeId(node: ReactiveNode): number {
 }
 
 function createNodeRef(node: ReactiveNode): RuntimeDebugNodeRef {
+  if (!isObjectKey(node)) {
+    return {
+      id: ensureNodeId(node),
+      kind: "unknown",
+      dirty: "clean",
+      flags: [],
+      state: 0,
+    };
+  }
+
   const label = nodeLabels.get(node);
   const ref: RuntimeDebugNodeRef = {
     id: ensureNodeId(node),

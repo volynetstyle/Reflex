@@ -3,7 +3,14 @@ import type { ReactiveEdge } from "./ReactiveEdge";
 
 const UNINITIALIZED: unique symbol = Symbol.for("UNINITIALIZED");
 
-export type Primitive = string | number | boolean | bigint | symbol | null | undefined;
+export type Primitive =
+  | string
+  | number
+  | boolean
+  | bigint
+  | symbol
+  | null
+  | undefined;
 
 export type Payload<T> = T extends Primitive | Function
   ? T
@@ -25,7 +32,7 @@ class ReactiveNode<T = unknown> implements Reactivable {
   payload: T;
 
   constructor(payload: T, compute: ComputeFn<T>, state: number) {
-    this.state = state;
+    this.state = state | 0;
     this.firstOut = null;
     this.firstIn = null;
     this.lastOut = null;

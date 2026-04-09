@@ -1,6 +1,7 @@
 import type { ReactiveNode } from "./shape";
 import { recordDebugEvent } from "../debug";
 
+
 export interface EngineHooks {
   onEffectInvalidated?(node: ReactiveNode): void;
   onReactiveSettled?(): void;
@@ -12,6 +13,8 @@ type OnEffectInvalidatedHook = EngineHooks["onEffectInvalidated"];
 type OnReactiveSettledHook = EngineHooks["onReactiveSettled"];
 
 const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
+
+export let dispatchEffectInvalidated = undefined as OnEffectInvalidatedHook;
 
 export class ExecutionContext {
   activeComputed: ReactiveNode | null = null;
@@ -110,7 +113,7 @@ export class ExecutionContext {
     const rs = this.runtimeOnReactiveSettled,
       ps = this.onReactiveSettled;
 
-    this.effectInvalidatedDispatch =
+    dispatchEffectInvalidated = this.effectInvalidatedDispatch =
       ri && pi
         ? function (node) {
             ri(node);

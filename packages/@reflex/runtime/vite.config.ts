@@ -2,7 +2,7 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   define: {
-    __DEV__: true,
+    __DEV__: false,
     __TEST__: true,
     __PROD__: false,
   },
