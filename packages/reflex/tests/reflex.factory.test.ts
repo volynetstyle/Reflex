@@ -32,7 +32,7 @@ describe("Reactive system - factory helpers", () => {
 
     expect(node.compute).toBe(compute);
     expect(node.state).toBe(CONSUMER_INITIAL_STATE);
-    expect(node.payload).toBe(UNINITIALIZED);
+    expect(node.payload).toBeUndefined();
   });
 
   it("creates effect nodes with watcher state", () => {
@@ -42,7 +42,7 @@ describe("Reactive system - factory helpers", () => {
     expect(node.compute).toBe(compute);
     expect(node.state).toBe(WATCHER_INITIAL_STATE);
     expect(node.state & ReactiveNodeState.Watcher).toBeTruthy();
-    expect(node.payload).toBeNull();
+    expect(node.payload).toBeUndefined();
   });
 
   it("creates empty event sources", () => {

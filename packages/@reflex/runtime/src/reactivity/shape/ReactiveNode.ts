@@ -1,6 +1,7 @@
 import type { Reactivable } from "./Reactivable";
 import type { ReactiveEdge } from "./ReactiveEdge";
 
+// TODO: Potentially polymorphic path if fist comes symbol then anouther type
 const UNINITIALIZED: unique symbol = Symbol.for("UNINITIALIZED");
 
 export type Primitive =

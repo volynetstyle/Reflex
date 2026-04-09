@@ -1,11 +1,36 @@
 import {
-  DIRTY_STATE,
   ReactiveNodeState,
   runWatcher,
   getDefaultContext,
 } from "@reflex/runtime";
 import type { ExecutionContext, ReactiveNode } from "@reflex/runtime";
 import type { UNINITIALIZED } from "../infra/factory";
+
+/**
+ * Marks an effect watcher node as scheduled.
+ *
+ * This is a low-level helper used by scheduler integrations and tests to set
+ * the runtime's scheduled flag on a watcher node.
+ */
+export function effectScheduled(
+  node: ReactiveNode<typeof UNINITIALIZED | Destructor>,
+) {
+  const s = node.state;
+  node.state = s | ReactiveNodeState.Scheduled;
+}
+
+/**
+ * Clears the scheduled flag from an effect watcher node.
+ *
+ * This is a low-level helper used by scheduler integrations and tests to mark
+ * a watcher as no longer queued for execution.
+ */
+export function effectUnscheduled(
+  node: ReactiveNode<typeof UNINITIALIZED | Destructor>,
+) {
+  const s = node.state;
+  node.state = s & ~ReactiveNodeState.Scheduled;
+}
 
 export const enum EffectSchedulerMode {
   Flush = 0,
@@ -29,7 +54,7 @@ export function resolveEffectSchedulerMode(
 }
 
 export interface EffectScheduler {
-  readonly queue: ReactiveNode<typeof UNINITIALIZED | Destructor>[];
+  readonly ring: ReactiveNode<typeof UNINITIALIZED | Destructor>[];
   readonly mode: EffectSchedulerMode;
   readonly context: ExecutionContext;
 
@@ -46,7 +71,7 @@ export interface EffectScheduler {
 
 function noopNotifySettled(): void {}
 
-const SCHEDULED_DISPOSED =
+const SCHEDULED_OR_DISPOSED =
   ReactiveNodeState.Disposed | ReactiveNodeState.Scheduled;
 const INITIAL_QUEUE_CAPACITY = 16;
 
@@ -58,7 +83,7 @@ export function createEffectScheduler(
   let tail = 0;
   let size = 0;
 
-  const queue: ReactiveNode<typeof UNINITIALIZED | Destructor>[] = [];
+  const ring: ReactiveNode<typeof UNINITIALIZED | Destructor>[] = [];
   const eager = mode === EffectSchedulerMode.Eager;
   const getContext = context === undefined ? getDefaultContext : () => context;
 
@@ -70,7 +95,7 @@ export function createEffectScheduler(
   }
 
   function growQueue(): void {
-    const capacity = queue.length;
+    const capacity = ring.length;
     const nextCapacity =
       capacity === 0 ? INITIAL_QUEUE_CAPACITY : capacity << 1;
 
@@ -79,12 +104,12 @@ export function createEffectScheduler(
     >(nextCapacity);
 
     for (let i = 0; i < size; ++i) {
-      nextQueue[i] = queue[(head + i) % capacity]!;
+      nextQueue[i] = ring[(head + i) % capacity]!;
     }
 
-    queue.length = nextCapacity;
+    ring.length = nextCapacity;
     for (let i = 0; i < size; ++i) {
-      queue[i] = nextQueue[i]!;
+      ring[i] = nextQueue[i]!;
     }
 
     head = 0;
@@ -92,12 +117,12 @@ export function createEffectScheduler(
   }
 
   function push(node: ReactiveNode<typeof UNINITIALIZED | Destructor>): void {
-    if (size === queue.length) {
+    if (size === ring.length) {
       growQueue();
     }
 
-    queue[tail] = node;
-    tail = (tail + 1) % queue.length;
+    ring[tail] = node;
+    tail = (tail + 1) % ring.length;
     ++size;
   }
 
@@ -106,30 +131,30 @@ export function createEffectScheduler(
       return null;
     }
 
-    const node = queue[head]!;
-    queue[head] = undefined as never;
-    head = (head + 1) % queue.length;
+    const node = ring[head]!;
+    ring[head] = undefined as never;
+    head = (head + 1) % ring.length;
     --size;
     return node;
   }
 
   function enqueueFlush(node: ReactiveNode): void {
     const state = node.state;
-    if ((state & SCHEDULED_DISPOSED) !== 0) {
+    if ((state & SCHEDULED_OR_DISPOSED) !== 0) {
       return;
     }
 
-    node.state = state | ReactiveNodeState.Scheduled;
+    effectScheduled(node);
     push(node);
   }
 
   function enqueueEager(node: ReactiveNode): void {
     const state = node.state;
-    if ((state & SCHEDULED_DISPOSED) !== 0) {
+    if ((state & SCHEDULED_OR_DISPOSED) !== 0) {
       return;
     }
 
-    node.state = state | ReactiveNodeState.Scheduled;
+    effectScheduled(node);
     push(node);
 
     const currentContext = getContext();
@@ -188,15 +213,12 @@ export function createEffectScheduler(
     try {
       while (size !== 0) {
         const node = shift()!;
-        const state = node.state & ~ReactiveNodeState.Scheduled;
-        node.state = state;
-
-        if (
-          (state & ReactiveNodeState.Disposed) === 0 &&
-          (state & DIRTY_STATE) !== 0
-        ) {
-          runWatcher(node);
-        }
+        effectUnscheduled(node);
+        // if (
+        //   (state & ReactiveNodeState.Disposed) === 0 &&
+        //   (state & DIRTY_STATE) !== 0
+        // ) must be there but already guaranties by runWatcher {}
+        runWatcher(node);
       }
     } finally {
       head = tail = size = 0;
@@ -230,7 +252,7 @@ export function createEffectScheduler(
   }
 
   return {
-    queue,
+    ring,
     mode,
     get context() {
       return getContext();
