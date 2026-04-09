@@ -67,25 +67,26 @@ function shouldRecomputeBranching(
   let changed = false;
 
   outer: while (true) {
-    const dep = link.from;
-    const depState = dep.state;
-    const fanout = hasFanout(link);
-
     if ((consumer.state & ReactiveNodeState.Changed) !== 0) {
       changed = true;
-    } else if ((depState & ReactiveNodeState.Changed) !== 0) {
-      // Already-confirmed computed dependency: refresh and stop searching.
-      changed = refreshAndPropagateIfNeeded(dep, fanout);
-    } else if ((depState & DIRTY_STATE) !== 0) {
-      const deps = dep.firstIn;
-      if (deps !== null) {
-        stack[stackTop++] = link;
-        link = deps;
-        consumer = dep;
-        continue;
-      }
+    } else {
+      const dep = link.from;
+      const depState = dep.state;
 
-      changed = refreshAndPropagateIfNeeded(dep, fanout);
+      if ((depState & ReactiveNodeState.Changed) !== 0) {
+        // Already-confirmed computed dependency: refresh and stop searching.
+        changed = refreshAndPropagateIfNeeded(dep, hasFanout(link));
+      } else if ((depState & DIRTY_STATE) !== 0) {
+        const deps = dep.firstIn;
+        if (deps !== null) {
+          stack[stackTop++] = link;
+          link = deps;
+          consumer = dep;
+          continue;
+        }
+
+        changed = refreshAndPropagateIfNeeded(dep, hasFanout(link));
+      }
     }
 
     if (!changed) {
@@ -156,12 +157,10 @@ export function shouldRecomputeLinear(
 
     const dep = link.from;
     const depState = dep.state;
-    const fanout = hasFanout(link);
 
     if ((depState & ReactiveNodeState.Changed) !== 0) {
-      changed = refreshAndPropagateIfFanout(dep, fanout);
-
-      if (changed || nextIn === null) break;
+      changed = refreshAndPropagateIfFanout(dep, hasFanout(link));
+      break;
     }
 
     if ((depState & DIRTY_STATE) !== 0) {
@@ -191,7 +190,7 @@ export function shouldRecomputeLinear(
         continue;
       }
 
-      changed = refreshAndPropagateIfFanout(dep, fanout);
+      changed = refreshAndPropagateIfFanout(dep, hasFanout(link));
       break;
     }
 

@@ -199,6 +199,29 @@ describe("Reactive runtime - walker invariants", () => {
     );
   });
 
+  it("clears stale Visited on fast-path subscribers while preserving Changed and Invalid", () => {
+    const source = createNode(ReactiveNodeState.Producer);
+    const middle = createNode(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Visited,
+    );
+    const leaf = createNode(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Visited,
+    );
+    setDefaultContext(createTestContext());
+
+    linkEdge(source, middle);
+    linkEdge(middle, leaf);
+
+    propagate(source.firstOut!, IMMEDIATE);
+
+    expect(middle.state).toBe(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Changed,
+    );
+    expect(leaf.state).toBe(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Invalid,
+    );
+  });
+
   it("propagateOnce upgrades only pure Invalid subscribers and notifies watchers once", () => {
     const source = createNode(ReactiveNodeState.Producer);
     const consumer = createNode(
@@ -235,6 +258,33 @@ describe("Reactive runtime - walker invariants", () => {
       ReactiveNodeState.Watcher | ReactiveNodeState.Changed,
     );
     expect(invalidated).toEqual(["watcher"]);
+  });
+
+  it("propagateOnce preserves Visited while upgrading Invalid watchers to Changed", () => {
+    const source = createNode(ReactiveNodeState.Producer);
+    const watcher = createNode(
+      ReactiveNodeState.Watcher |
+        ReactiveNodeState.Invalid |
+        ReactiveNodeState.Visited,
+    );
+    const invalidated: ReactiveNode[] = [];
+    const context = createTestContext({
+      onEffectInvalidated(node) {
+        invalidated.push(node);
+      },
+    });
+    setDefaultContext(context);
+
+    linkEdge(source, watcher);
+
+    propagateOnce(source);
+
+    expect(watcher.state).toBe(
+      ReactiveNodeState.Watcher |
+        ReactiveNodeState.Changed |
+        ReactiveNodeState.Visited,
+    );
+    expect(invalidated).toEqual([watcher]);
   });
 
   it("invalidates every watcher that hangs off a shared computed branch", () => {
@@ -344,6 +394,54 @@ describe("Reactive runtime - walker invariants", () => {
     expect(left.state & ReactiveNodeState.Changed).toBeTruthy();
     expect(right.state & ReactiveNodeState.Changed).toBeTruthy();
     expect(right.state & ReactiveNodeState.Invalid).toBeFalsy();
+  });
+
+  it("shouldRecompute scans later branching siblings when the first dependency is already clean", () => {
+    const leftSource = createProducer(1);
+    const rightSource = createProducer(10);
+    const leftSpy = vi.fn(() => readProducer(leftSource) + 1);
+    const rightSpy = vi.fn(() => readProducer(rightSource) + 1);
+    const left = createConsumer(leftSpy);
+    const right = createConsumer(rightSpy);
+    const root = createConsumer(() => readConsumer(left) + readConsumer(right));
+
+    expect(readConsumer(root)).toBe(13);
+    expect(leftSpy).toHaveBeenCalledTimes(1);
+    expect(rightSpy).toHaveBeenCalledTimes(1);
+
+    writeProducer(rightSource, 20);
+
+    expect(root.state & ReactiveNodeState.Invalid).toBeTruthy();
+    expect(left.state & DIRTY_STATE).toBe(0);
+    expect(right.state & ReactiveNodeState.Changed).toBeTruthy();
+    expect(shouldRecompute(root)).toBe(true);
+    expect(leftSpy).toHaveBeenCalledTimes(1);
+    expect(rightSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("shouldRecompute clears Invalid when only a later branching sibling recomputes same-as-current", () => {
+    const leftSource = createProducer(1);
+    const rightSource = createProducer(10);
+    const leftSpy = vi.fn(() => readProducer(leftSource) + 1);
+    const rightSpy = vi.fn(() => {
+      readProducer(rightSource);
+      return 20;
+    });
+    const left = createConsumer(leftSpy);
+    const right = createConsumer(rightSpy);
+    const root = createConsumer(() => readConsumer(left) + readConsumer(right));
+
+    expect(readConsumer(root)).toBe(22);
+    expect(leftSpy).toHaveBeenCalledTimes(1);
+    expect(rightSpy).toHaveBeenCalledTimes(1);
+
+    writeProducer(rightSource, 99);
+
+    expect(root.state & ReactiveNodeState.Invalid).toBeTruthy();
+    expect(shouldRecompute(root)).toBe(false);
+    expect(root.state & ReactiveNodeState.Invalid).toBeFalsy();
+    expect(leftSpy).toHaveBeenCalledTimes(1);
+    expect(rightSpy).toHaveBeenCalledTimes(2);
   });
 
   it("shouldRecompute routes pull-phase invalidations through the caller context and back to default", () => {
