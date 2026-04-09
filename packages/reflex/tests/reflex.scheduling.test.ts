@@ -18,10 +18,7 @@ vi.mock("@reflex/runtime", async () => {
   };
 });
 
-import {
-  DIRTY_STATE,
-  ReactiveNodeState,
-} from "@reflex/runtime";
+import { DIRTY_STATE, ReactiveNodeState } from "@reflex/runtime";
 import {
   createEffectScheduler,
   EffectSchedulerMode,
@@ -80,6 +77,17 @@ describe("createEffectScheduler", () => {
 
     expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
     expect(mocks.runWatcher).not.toHaveBeenCalled();
+  });
+
+  it("flush runs dirty nodes even when extra state bits are present", () => {
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
+    const node = createNode(DIRTY_STATE | ReactiveNodeState.Changed);
+
+    scheduler.enqueue(node);
+    scheduler.flush();
+
+    expect(mocks.runWatcher).toHaveBeenCalledTimes(1);
+    expect(mocks.runWatcher).toHaveBeenCalledWith(node);
   });
 
   it("runs immediately in eager mode when context is idle", () => {
@@ -155,15 +163,65 @@ describe("createEffectScheduler", () => {
   });
 
   it("reset allows previously queued node to be scheduled again", () => {
-  const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
-  const node = createNode();
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
+    const node = createNode();
 
-  scheduler.enqueue(node);
-  scheduler.reset();
+    scheduler.enqueue(node);
+    scheduler.reset();
 
-  scheduler.enqueue(node);
-  scheduler.flush();
+    scheduler.enqueue(node);
+    scheduler.flush();
 
-  expect(mocks.runWatcher).toHaveBeenCalledTimes(1);
-});
+    expect(mocks.runWatcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves FIFO order after buffer wrap-around during flush", () => {
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
+    const initial = Array.from({ length: 16 }, () => createNode());
+    const deferred = Array.from({ length: 8 }, () => createNode());
+
+    for (const node of initial) {
+      scheduler.enqueue(node);
+    }
+
+    let deferredIndex = 0;
+    mocks.runWatcher.mockImplementation((node) => {
+      if (
+        deferredIndex < deferred.length &&
+        node === initial[deferredIndex]
+      ) {
+        scheduler.enqueue(deferred[deferredIndex]!);
+        deferredIndex += 1;
+      }
+    });
+
+    scheduler.flush();
+
+    expect(mocks.runWatcher.mock.calls.map(([node]) => node)).toEqual([
+      ...initial,
+      ...deferred,
+    ]);
+  });
+
+  it("drains long linear invalidation chains without skipping nodes", () => {
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
+    const depth = 192;
+    const nodes = Array.from({ length: depth }, () => createNode());
+    const seen: number[] = [];
+
+    mocks.runWatcher.mockImplementation((node) => {
+      const index = nodes.indexOf(node);
+      seen.push(index);
+
+      const next = nodes[index + 1];
+      if (next !== undefined) {
+        scheduler.enqueue(next);
+      }
+    });
+
+    scheduler.enqueue(nodes[0]!);
+    scheduler.flush();
+
+    expect(seen).toEqual(Array.from({ length: depth }, (_, i) => i));
+  });
 });

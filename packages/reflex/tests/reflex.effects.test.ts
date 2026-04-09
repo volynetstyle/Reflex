@@ -66,6 +66,42 @@ describe("Reactive system - effects", () => {
     expect(spy).toHaveBeenCalledTimes(2);
   });
 
+  it("propagates through long linear chains without dropping updates", () => {
+    const rt = createRuntime();
+    const [source, setSource] = signal(73);
+    const tapValues = new Map<number, number>();
+
+    let current = source;
+    for (let depth = 0; depth < 192; ++depth) {
+      const prev = current;
+      current = memo(() => prev() + ((depth & 3) + 1));
+
+      if (depth === 47 || depth === 95 || depth === 143 || depth === 191) {
+        const tap = current;
+        effect(() => {
+          tapValues.set(depth, tap());
+        });
+      }
+    }
+
+    const expectedPrefixSum = (depthInclusive: number): number => {
+      let total = 0;
+      for (let i = 0; i <= depthInclusive; ++i) {
+        total += (i & 3) + 1;
+      }
+      return total;
+    };
+
+    rt.flush();
+
+    setSource(75);
+    rt.flush();
+
+    for (const depth of [47, 95, 143, 191]) {
+      expect(tapValues.get(depth)).toBe(75 + expectedPrefixSum(depth));
+    }
+  });
+
   it("callable scope disposes the effect", () => {
     const rt = createRuntime();
     const [source, setSource] = signal(1);

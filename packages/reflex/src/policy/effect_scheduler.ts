@@ -46,42 +46,91 @@ export interface EffectScheduler {
 
 function noopNotifySettled(): void {}
 
+const SCHEDULED_DISPOSED =
+  ReactiveNodeState.Disposed | ReactiveNodeState.Scheduled;
+const INITIAL_QUEUE_CAPACITY = 16;
+
 export function createEffectScheduler(
   mode: EffectSchedulerMode = EffectSchedulerMode.Flush,
   context?: ExecutionContext,
 ): EffectScheduler {
+  let head = 0;
+  let tail = 0;
+  let size = 0;
+
   const queue: ReactiveNode<typeof UNINITIALIZED | Destructor>[] = [];
   const eager = mode === EffectSchedulerMode.Eager;
   const getContext = context === undefined ? getDefaultContext : () => context;
 
-  let head = 0;
   let batchDepth = 0;
   let phase = SchedulerPhase.Idle;
 
+  function hasPending(): boolean {
+    return size !== 0;
+  }
+
+  function growQueue(): void {
+    const capacity = queue.length;
+    const nextCapacity =
+      capacity === 0 ? INITIAL_QUEUE_CAPACITY : capacity << 1;
+
+    const nextQueue = new Array<
+      ReactiveNode<typeof UNINITIALIZED | Destructor>
+    >(nextCapacity);
+
+    for (let i = 0; i < size; ++i) {
+      nextQueue[i] = queue[(head + i) % capacity]!;
+    }
+
+    queue.length = nextCapacity;
+    for (let i = 0; i < size; ++i) {
+      queue[i] = nextQueue[i]!;
+    }
+
+    head = 0;
+    tail = size;
+  }
+
+  function push(node: ReactiveNode<typeof UNINITIALIZED | Destructor>): void {
+    if (size === queue.length) {
+      growQueue();
+    }
+
+    queue[tail] = node;
+    tail = (tail + 1) % queue.length;
+    ++size;
+  }
+
+  function shift(): ReactiveNode<typeof UNINITIALIZED | Destructor> | null {
+    if (size === 0) {
+      return null;
+    }
+
+    const node = queue[head]!;
+    queue[head] = undefined as never;
+    head = (head + 1) % queue.length;
+    --size;
+    return node;
+  }
+
   function enqueueFlush(node: ReactiveNode): void {
     const state = node.state;
-    if (
-      (state & (ReactiveNodeState.Disposed | ReactiveNodeState.Scheduled)) !==
-      0
-    ) {
+    if ((state & SCHEDULED_DISPOSED) !== 0) {
       return;
     }
 
     node.state = state | ReactiveNodeState.Scheduled;
-    queue.push(node);
+    push(node);
   }
 
   function enqueueEager(node: ReactiveNode): void {
     const state = node.state;
-    if (
-      (state & (ReactiveNodeState.Disposed | ReactiveNodeState.Scheduled)) !==
-      0
-    ) {
+    if ((state & SCHEDULED_DISPOSED) !== 0) {
       return;
     }
 
     node.state = state | ReactiveNodeState.Scheduled;
-    queue.push(node);
+    push(node);
 
     const currentContext = getContext();
     if (
@@ -113,7 +162,7 @@ export function createEffectScheduler(
 
     phase = SchedulerPhase.Idle;
 
-    if (head < queue.length) {
+    if (hasPending()) {
       flushQueue();
     }
   }
@@ -130,45 +179,40 @@ export function createEffectScheduler(
     }
   }
 
-  function drainQueue(): void {
-    while (head < queue.length) {
-      const node = queue[head++]!;
-      const state = node.state & ~ReactiveNodeState.Scheduled;
-      node.state = state;
-
-      if (
-        (state & ReactiveNodeState.Disposed) === 0 &&
-        (state & DIRTY_STATE) !== 0
-      ) {
-        runWatcher(node);
-      }
-    }
-  }
-
   function flushQueue(): void {
     if (phase === SchedulerPhase.Flushing) return;
-    if (head >= queue.length) return;
+    if (!hasPending()) return;
 
     phase = SchedulerPhase.Flushing;
 
     try {
-      drainQueue();
+      while (size !== 0) {
+        const node = shift()!;
+        const state = node.state & ~ReactiveNodeState.Scheduled;
+        node.state = state;
+
+        if (
+          (state & ReactiveNodeState.Disposed) === 0 &&
+          (state & DIRTY_STATE) !== 0
+        ) {
+          runWatcher(node);
+        }
+      }
     } finally {
-      queue.length = 0;
-      head = 0;
+      head = tail = size = 0;
       phase = batchDepth > 0 ? SchedulerPhase.Batching : SchedulerPhase.Idle;
     }
   }
 
   function notifySettledEager(): void {
     const currentContext = getContext();
-    if (
+    const inactive =
       phase === SchedulerPhase.Idle &&
       batchDepth === 0 &&
       currentContext.propagationDepth === 0 &&
-      currentContext.activeComputed === null &&
-      head < queue.length
-    ) {
+      currentContext.activeComputed === null;
+
+    if (inactive && hasPending()) {
       flushQueue();
     }
   }
@@ -177,13 +221,11 @@ export function createEffectScheduler(
   const notifySettled = eager ? notifySettledEager : noopNotifySettled;
 
   function reset(): void {
-    for (let i = head; i < queue.length; ++i) {
-      queue[i]!.state &= ~ReactiveNodeState.Scheduled;
+    while (size !== 0) {
+      shift()!.state &= ~ReactiveNodeState.Scheduled;
     }
 
-    queue.length = 0;
-    head = 0;
-    batchDepth = 0;
+    head = tail = size = batchDepth = 0;
     phase = SchedulerPhase.Idle;
   }
 
