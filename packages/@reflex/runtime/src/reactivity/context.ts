@@ -1,4 +1,5 @@
-import type { ReactiveNode } from "./shape";
+import type { ReactiveEdge, ReactiveNode } from "./shape";
+import { reuseIncomingEdgeFromSuffixOrCreate } from "./shape/methods/connect";
 import { recordDebugEvent } from "../debug";
 
 export interface EngineHooks {
@@ -7,6 +8,16 @@ export interface EngineHooks {
 }
 
 export type CleanupRegistrar = (cleanup: () => void) => void;
+export type TrackReadFallback = (
+  source: ReactiveNode,
+  consumer: ReactiveNode,
+  prev: ReactiveEdge | null,
+  nextExpected: ReactiveEdge | null,
+) => ReactiveEdge;
+
+export interface ExecutionContextOptions {
+  trackReadFallback?: TrackReadFallback;
+}
 
 type OnEffectInvalidatedHook = EngineHooks["onEffectInvalidated"];
 type OnReactiveSettledHook = EngineHooks["onReactiveSettled"];
@@ -14,11 +25,14 @@ type OnReactiveSettledHook = EngineHooks["onReactiveSettled"];
 const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
 
 export let dispatchEffectInvalidated = undefined as OnEffectInvalidatedHook;
+export let trackReadFallback: TrackReadFallback =
+  reuseIncomingEdgeFromSuffixOrCreate;
 
 export class ExecutionContext {
   activeComputed: ReactiveNode | null = null;
   propagationDepth = 0;
   cleanupRegistrar: CleanupRegistrar | null = null;
+  trackReadFallback: TrackReadFallback = reuseIncomingEdgeFromSuffixOrCreate;
 
   onEffectInvalidated: OnEffectInvalidatedHook = undefined;
   onReactiveSettled: OnReactiveSettledHook = undefined;
@@ -29,8 +43,9 @@ export class ExecutionContext {
   effectInvalidatedDispatch: OnEffectInvalidatedHook = undefined;
   settledDispatch: OnReactiveSettledHook = undefined;
 
-  constructor(hooks: EngineHooks = {}) {
+  constructor(hooks: EngineHooks = {}, options: ExecutionContextOptions = {}) {
     this.setHooks(hooks);
+    this.setOptions(options);
   }
 
   dispatchWatcherEvent(node: ReactiveNode): void {
@@ -65,6 +80,13 @@ export class ExecutionContext {
     this.activeComputed = null;
     this.propagationDepth = 0;
     this.cleanupRegistrar = null;
+  }
+
+  setOptions(options: ExecutionContextOptions = {}): void {
+    this.trackReadFallback = trackReadFallback =
+      typeof options.trackReadFallback === "function"
+        ? options.trackReadFallback
+        : reuseIncomingEdgeFromSuffixOrCreate;
   }
 
   setHooks(hooks: EngineHooks = {}): void {
@@ -142,8 +164,9 @@ export let defaultContext = new ExecutionContext();
 
 export function createExecutionContext(
   hooks: EngineHooks = {},
+  options: ExecutionContextOptions = {},
 ): ExecutionContext {
-  return new ExecutionContext(hooks);
+  return new ExecutionContext(hooks, options);
 }
 
 export function getDefaultContext(): ExecutionContext {
@@ -156,6 +179,9 @@ export function setDefaultContext(context: ExecutionContext): ExecutionContext {
   return previous;
 }
 
-export function resetDefaultContext(hooks: EngineHooks = {}): ExecutionContext {
-  return (defaultContext = new ExecutionContext(hooks));
+export function resetDefaultContext(
+  hooks: EngineHooks = {},
+  options: ExecutionContextOptions = {},
+): ExecutionContext {
+  return (defaultContext = new ExecutionContext(hooks, options));
 }

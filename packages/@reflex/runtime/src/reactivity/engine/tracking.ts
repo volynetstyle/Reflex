@@ -7,30 +7,26 @@ import {
 } from "../dev";
 import {
   linkEdge,
-  reuseIncomingEdgeFromSuffixOrCreate,
   unlinkDetachedIncomingEdgeSequence,
 } from "../shape/methods/connect";
-import { defaultContext } from "../context";
+import { defaultContext, trackReadFallback } from "../context";
 
 /**
  * Cursor-guided incoming-edge walk used during dependency collection.
  * It first probes the hot cache and expected next edge, then falls back to a
  * linear scan that reorders the found edge into the reused dependency prefix.
  */
-export function trackRead(
-  source: ReactiveNode,
-): void {
+export function trackRead(source: ReactiveNode): void {
   const context = defaultContext;
   const consumer = context.activeComputed;
 
   if (!consumer) return;
-  trackReadActive(source, consumer, context);
+  trackReadActive(source, consumer);
 }
 
 export function trackReadActive(
   source: ReactiveNode,
   consumer: ReactiveNode,
-  context = defaultContext,
 ): void {
   const sourceDead = isDisposedNode(source);
   const consumerDead = isDisposedNode(consumer);
@@ -43,7 +39,7 @@ export function trackReadActive(
   }
 
   if (__DEV__) {
-    devRecordTrackRead(context, consumer, source);
+    devRecordTrackRead(defaultContext, consumer, source);
   }
 
   const prevEdge = consumer.depsTail;
@@ -65,12 +61,7 @@ export function trackReadActive(
       return;
     }
 
-    consumer.depsTail = reuseIncomingEdgeFromSuffixOrCreate(
-      source,
-      consumer,
-      null,
-      firstIn,
-    );
+    consumer.depsTail = trackReadFallback(source, consumer, null, firstIn);
     return;
   }
 
@@ -92,7 +83,7 @@ export function trackReadActive(
     return;
   }
 
-  consumer.depsTail = reuseIncomingEdgeFromSuffixOrCreate(
+  consumer.depsTail = trackReadFallback(
     source,
     consumer,
     prevEdge,

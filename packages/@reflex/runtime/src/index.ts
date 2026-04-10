@@ -20,8 +20,10 @@ export {
   setDefaultContext,
   resetDefaultContext,
   type ExecutionContext,
+  type ExecutionContextOptions,
   type EngineHooks,
   type CleanupRegistrar,
+  type TrackReadFallback,
 } from "./reactivity/context";
 
 export {

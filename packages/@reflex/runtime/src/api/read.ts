@@ -11,11 +11,11 @@ import {
   ReactiveNodeState,
   trackReadActive,
   DIRTY_STATE,
-  shouldRecompute,
   recompute,
   propagateOnce,
   clearDirtyState,
   isDisposedNode,
+  shouldRecomputeDirtyConsumer,
 } from "../reactivity";
 import { defaultContext } from "../reactivity/context";
 
@@ -82,7 +82,7 @@ export function readProducer<T>(node: ReactiveNode<T>): T {
 
   // Register this read as a dependency if there's an active computation
   if (activeComputed !== null) {
-    trackReadActive(node, activeComputed, context);
+    trackReadActive(node, activeComputed);
   }
 
   if (__DEV__) {
@@ -136,30 +136,18 @@ function stabilizeConsumer<T>(node: ReactiveNode<T>): T {
     return node.payload as T;
   }
 
-  if (__DEV__) {
-    devAssertConsumerCanStabilize(state);
+  if (__DEV__) devAssertConsumerCanStabilize(state);
+
+  if ((state & DIRTY_STATE) === 0) {
+    return node.payload as T;
   }
 
-  // Only proceed if node is marked dirty (has changes to verify)
-  if ((state & DIRTY_STATE) !== 0) {
-    // Determine if re-computation is needed:
-    // - If Changed flag set: upstream definitely changed, skip verification
-    // - If Invalid flag set: might be transitive stale flag, verify via dependency walk
-    const needs =
-      (state & ReactiveNodeState.Changed) !== 0 || shouldRecompute(node);
-
-    if (needs) {
-      // Re-execute the compute function and update payload
-      // If value changed AND node has multiple subscribers, notify siblings
-      const hasSiblings = node.firstOut !== null;
-      if (recompute(node) && hasSiblings) {
-        propagateOnce(node);
-      }
-    } else {
-      // Verification confirmed all dirty flags were stale
-      // Clear dirty state, node is still valid
-      clearDirtyState(node);
+  if (shouldRecomputeDirtyConsumer(node, state)) {
+    if (recompute(node) && node.firstOut !== null) {
+      propagateOnce(node);
     }
+  } else {
+    clearDirtyState(node);
   }
 
   return node.payload as T;
@@ -188,7 +176,7 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
   const activeComputed = context.activeComputed;
 
   if (activeComputed !== null) {
-    trackReadActive(node, activeComputed, context);
+    trackReadActive(node, activeComputed);
   }
 
   if (__DEV__) {
