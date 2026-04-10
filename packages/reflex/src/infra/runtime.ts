@@ -1,14 +1,47 @@
-import { createExecutionContext, setDefaultContext } from "@reflex/runtime";
-import type { ExecutionContext, EngineHooks } from "@reflex/runtime";
-import type { EffectStrategy } from "../policy";
 import {
-  createEffectScheduler,
-  EffectSchedulerMode,
-  EventDispatcher,
-  resolveEffectSchedulerMode,
-} from "../policy";
+  createExecutionContext,
+  getDefaultContext,
+  setDefaultContext,
+} from "@reflex/runtime";
+import type { ExecutionContext, EngineHooks } from "@reflex/runtime";
 import { subscribeEvent } from "./event";
 import { createSource } from "./factory";
+import { EventDispatcher } from "../policy";
+import type { EffectScheduler } from "../policy/scheduler";
+import {
+  EffectSchedulerMode,
+  createEagerScheduler,
+  createSabScheduler,
+  createFlushScheduler,
+} from "../policy/scheduler";
+
+export type EffectStrategy = "flush" | "eager" | "sab";
+
+const strategyMap: Record<EffectStrategy, EffectSchedulerMode> = {
+  eager: EffectSchedulerMode.Eager,
+  sab: EffectSchedulerMode.SAB,
+  flush: EffectSchedulerMode.Flush,
+};
+
+export function resolveEffectSchedulerMode(
+  strategy?: EffectStrategy,
+): EffectSchedulerMode {
+  return strategy ? strategyMap[strategy] : EffectSchedulerMode.Flush;
+}
+
+export function createEffectScheduler(
+  mode: EffectSchedulerMode = EffectSchedulerMode.Flush,
+  context: ExecutionContext = getDefaultContext(),
+): EffectScheduler {
+  switch (mode) {
+    case EffectSchedulerMode.Eager:
+      return createEagerScheduler(context);
+    case EffectSchedulerMode.SAB:
+      return createSabScheduler(context);
+    default:
+      return createFlushScheduler(context);
+  }
+}
 
 export interface RuntimeOptions {
   /**
@@ -25,25 +58,23 @@ export interface RuntimeOptions {
    * - `"sab"` keeps lazy enqueue semantics but stabilizes effects after the
    *   outermost `rt.batch()` exits.
    * - `"eager"` flushes reruns automatically.
+   *
+   * @default "flush"
    */
   effectStrategy?: EffectStrategy;
 }
 
 function createRuntimeInfrastructure(options?: RuntimeOptions) {
   const executionContext = createExecutionContext(options?.hooks);
-  const schedulerMode = resolveEffectSchedulerMode(options?.effectStrategy);
-
   const scheduler = createEffectScheduler(
-    schedulerMode,
+    resolveEffectSchedulerMode(options?.effectStrategy),
     executionContext,
   );
-  const dispatcher = new EventDispatcher((fn) => scheduler.batch(fn));
+  const dispatcher = new EventDispatcher(scheduler.batch);
 
   executionContext.setRuntimeHooks(
     scheduler.enqueue,
-    schedulerMode === EffectSchedulerMode.Eager
-      ? scheduler.notifySettled
-      : undefined,
+    scheduler.runtimeNotifySettled,
   );
 
   executionContext.resetState();
@@ -172,13 +203,8 @@ export function createRuntime(options?: RuntimeOptions): Runtime {
   const { scheduler, dispatcher, executionContext } =
     createRuntimeInfrastructure(options);
   return {
-    get ctx() {
-      return executionContext;
-    },
-
-    batch(fn) {
-      return scheduler.batch(fn);
-    },
+    ctx: executionContext,
+    batch: scheduler.batch,
 
     event<T>() {
       const source = createSource();
@@ -192,9 +218,6 @@ export function createRuntime(options?: RuntimeOptions): Runtime {
         },
       };
     },
-
-    flush() {
-      scheduler.flush();
-    },
+    flush: scheduler.flush,
   };
 }

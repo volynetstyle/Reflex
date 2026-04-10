@@ -141,9 +141,8 @@ describe("createEffectScheduler", () => {
   });
 
   it("keeps sab effects queued when batch exits during active propagation", () => {
-    mocks.getDefaultContext.mockReturnValue(
-      createContext({ propagationDepth: 1 }),
-    );
+    const context = createContext({ propagationDepth: 1 });
+    mocks.getDefaultContext.mockReturnValue(context);
 
     const scheduler = createEffectScheduler(EffectSchedulerMode.SAB);
     const node = createNode();
@@ -155,7 +154,7 @@ describe("createEffectScheduler", () => {
     expect(mocks.runWatcher).not.toHaveBeenCalled();
     expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
 
-    mocks.getDefaultContext.mockReturnValue(createContext());
+    context.propagationDepth = 0;
     scheduler.flush();
 
     expect(mocks.runWatcher).toHaveBeenCalledTimes(1);
@@ -163,9 +162,8 @@ describe("createEffectScheduler", () => {
   });
 
   it("does not auto-flush while propagation is active", () => {
-    mocks.getDefaultContext.mockReturnValue(
-      createContext({ propagationDepth: 1 }),
-    );
+    const context = createContext({ propagationDepth: 1 });
+    mocks.getDefaultContext.mockReturnValue(context);
 
     const scheduler = createEffectScheduler(EffectSchedulerMode.Eager);
     const node = createNode();
@@ -175,7 +173,7 @@ describe("createEffectScheduler", () => {
     expect(mocks.runWatcher).not.toHaveBeenCalled();
     expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
 
-    mocks.getDefaultContext.mockReturnValue(createContext());
+    context.propagationDepth = 0;
     scheduler.notifySettled();
 
     expect(mocks.runWatcher).toHaveBeenCalledTimes(1);

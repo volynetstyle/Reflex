@@ -85,6 +85,6 @@ export function computed<T>(fn: () => T): Accessor<T> {
  */
 export function memo<T>(fn: () => T): Accessor<T> {
   const node = createComputedNode(fn);
-  readConsumerEager.call(null, node);
+  readConsumerEager(node);
   return readConsumerLazy.bind(null, node) as Accessor<T>;
 }

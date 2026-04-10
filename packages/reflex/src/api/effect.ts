@@ -110,11 +110,11 @@ export function withEffectCleanupRegistrar<T>(
  * @see memo
  */
 export function effect(fn: EffectFn): Destructor {
-  const node = createWatcherNode(fn);
   const context = getDefaultContext();
+  const node = createWatcherNode(fn);
   runWatcher(node);
 
-  const dispose = () => disposeWatcher(node);
+  const dispose = disposeWatcher.bind(null, node) as Destructor;
   context.registerWatcherCleanup(dispose);
   return dispose;
 }

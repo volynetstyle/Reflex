@@ -52,14 +52,13 @@ import { createSignalNode } from "../infra";
 export function signal<T>(initialValue: T): readonly [Accessor<T>, Setter<T>] {
   const node = createSignalNode(initialValue);
 
-  function set(input: SetInput<T>): T {
+  function set(input: SetInput<T>) {
+    const payload = node.payload;
     const next =
       typeof input === "function"
-        ? (input as (prev: T) => T)(node.payload as T)
+        ? (input as (prev: T) => T)(payload as T)
         : input;
-    writeProducer.call(null, node, next);
-
-    return next;
+    writeProducer(node, next);
   }
 
   return [
