@@ -121,6 +121,47 @@ describe("createEffectScheduler", () => {
     expect((b.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
   });
 
+  it("can flush on outermost batch exit in sab mode", () => {
+    const scheduler = createEffectScheduler(EffectSchedulerMode.SAB);
+    const a = createNode();
+    const b = createNode();
+
+    scheduler.batch(() => {
+      scheduler.enqueue(a);
+      scheduler.enqueue(b);
+
+      expect(mocks.runWatcher).not.toHaveBeenCalled();
+      expect((a.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
+      expect((b.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
+    });
+
+    expect(mocks.runWatcher).toHaveBeenCalledTimes(2);
+    expect((a.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((b.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+  });
+
+  it("keeps sab effects queued when batch exits during active propagation", () => {
+    mocks.getDefaultContext.mockReturnValue(
+      createContext({ propagationDepth: 1 }),
+    );
+
+    const scheduler = createEffectScheduler(EffectSchedulerMode.SAB);
+    const node = createNode();
+
+    scheduler.batch(() => {
+      scheduler.enqueue(node);
+    });
+
+    expect(mocks.runWatcher).not.toHaveBeenCalled();
+    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
+
+    mocks.getDefaultContext.mockReturnValue(createContext());
+    scheduler.flush();
+
+    expect(mocks.runWatcher).toHaveBeenCalledTimes(1);
+    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+  });
+
   it("does not auto-flush while propagation is active", () => {
     mocks.getDefaultContext.mockReturnValue(
       createContext({ propagationDepth: 1 }),

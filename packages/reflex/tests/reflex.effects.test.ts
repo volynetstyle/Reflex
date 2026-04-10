@@ -47,6 +47,26 @@ describe("Reactive system - effects", () => {
     expect(spy).toHaveBeenCalledTimes(2);
   });
 
+  it("can flush after batch exits in sab mode", () => {
+    const rt = createRuntime({
+      effectStrategy: "sab",
+    });
+    const [source, setSource] = signal(1);
+    const spy = vi.fn(() => {
+      source();
+    });
+
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    rt.batch(() => {
+      setSource(2);
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
   it("reruns after transitive memo invalidation on flush", () => {
     const rt = createRuntime();
     const [source, setSource] = signal(1);

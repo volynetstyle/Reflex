@@ -22,6 +22,26 @@ import {
 const propagateEdgeStack: ReactiveEdge[] = [];
 const propagatePromoteStack: number[] = [];
 
+function dispatchInvalidatedWatcher(
+  sub: ReactiveNode,
+  dispatch: typeof dispatchEffectInvalidated,
+  thrown: unknown,
+): unknown {
+  if (dispatch !== undefined) {
+    try {
+      dispatch(sub);
+    } catch (error) {
+      if (thrown === null) {
+        return error;
+      }
+    }
+  } else if (__DEV__) {
+    recordDebugEvent(defaultContext, "watcher:invalidated", { node: sub });
+  }
+
+  return thrown;
+}
+
 function getSlowInvalidatedSubscriberState(
   edge: ReactiveEdge,
   sub: ReactiveNode,
@@ -93,19 +113,7 @@ function propagateBranching(
         });
       }
 
-      if ((nextState & WATCHER_MASK) !== 0) {
-        if (dispatch !== undefined) {
-          try {
-            dispatch(sub);
-          } catch (error) {
-            if (thrown === null) {
-              thrown = error;
-            }
-          }
-        } else if (__DEV__) {
-          recordDebugEvent(defaultContext, "watcher:invalidated", { node: sub });
-        }
-      } else {
+      if ((nextState & WATCHER_MASK) === 0) {
         const firstOut = sub.firstOut;
         if (firstOut !== null) {
           if (resume !== null) {
@@ -118,6 +126,8 @@ function propagateBranching(
           promote = resumePromote = NON_IMMEDIATE;
           continue;
         }
+      } else {
+        thrown = dispatchInvalidatedWatcher(sub, dispatch, thrown);
       }
     }
 
@@ -168,19 +178,7 @@ function propagateLinear(
         });
       }
 
-      if ((nextState & WATCHER_MASK) !== 0) {
-        if (dispatch !== undefined) {
-          try {
-            dispatch(sub);
-          } catch (error) {
-            if (thrown === null) {
-              thrown = error;
-            }
-          }
-        } else if (__DEV__) {
-          recordDebugEvent(defaultContext, "watcher:invalidated", { node: sub });
-        }
-      } else {
+      if ((nextState & WATCHER_MASK) === 0) {
         const firstOut = sub.firstOut;
         if (firstOut !== null) {
           edge = firstOut;
@@ -198,6 +196,8 @@ function propagateLinear(
           promote = NON_IMMEDIATE;
           continue;
         }
+      } else {
+        thrown = dispatchInvalidatedWatcher(sub, dispatch, thrown);
       }
     }
 

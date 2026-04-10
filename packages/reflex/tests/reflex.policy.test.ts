@@ -35,6 +35,7 @@ describe("Reactive system - policy helpers", () => {
       EffectSchedulerMode.Flush,
     );
     expect(resolveEffectSchedulerMode("flush")).toBe(EffectSchedulerMode.Flush);
+    expect(resolveEffectSchedulerMode("sab")).toBe(EffectSchedulerMode.SAB);
     expect(resolveEffectSchedulerMode("eager")).toBe(EffectSchedulerMode.Eager);
   });
 
@@ -72,6 +73,19 @@ describe("Reactive system - policy helpers", () => {
       scheduler.enqueue(node);
       scheduler.reset();
     });
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it("sab scheduler auto-delivers after batch exits", () => {
+    const scheduler = createEffectScheduler(EffectSchedulerMode.SAB);
+    const spy = vi.fn(() => {});
+    const node = createWatcherNode(spy);
+
+    scheduler.batch(() => {
+      scheduler.enqueue(node);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
     expect(spy).toHaveBeenCalledTimes(1);
   });
 

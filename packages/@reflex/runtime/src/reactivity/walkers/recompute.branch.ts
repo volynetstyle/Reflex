@@ -37,7 +37,7 @@ function refreshAndPropagateIfFanout(
 ): boolean {
   const changed = refreshRecompute(node);
 
-  if (fanout) {
+  if (changed && fanout) {
     propagateOnce(node);
   }
 
@@ -50,7 +50,7 @@ function refreshAndPropagateIfNeeded(
 ): boolean {
   const changed = refreshRecompute(node);
 
-  if (changed || fanout) {
+  if (changed && fanout) {
     propagateOnce(node);
   }
 

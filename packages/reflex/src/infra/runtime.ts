@@ -10,7 +10,7 @@ import {
 import { subscribeEvent } from "./event";
 import { createSource } from "./factory";
 
-interface RuntimeOptions {
+export interface RuntimeOptions {
   /**
    * Optional low-level runtime hooks forwarded to the execution context.
    *
@@ -22,6 +22,8 @@ interface RuntimeOptions {
    * Controls when invalidated effects are executed.
    *
    * - `"flush"` queues reruns until `rt.flush()` is called.
+   * - `"sab"` keeps lazy enqueue semantics but stabilizes effects after the
+   *   outermost `rt.batch()` exits.
    * - `"eager"` flushes reruns automatically.
    */
   effectStrategy?: EffectStrategy;
@@ -110,7 +112,8 @@ export interface Runtime {
    * Flushes queued effect re-runs immediately.
    *
    * In the default `"flush"` strategy, call this after writes when you want
-   * scheduled effects to observe the latest stable snapshot.
+   * scheduled effects to observe the latest stable snapshot. In `"sab"` and
+   * `"eager"` it remains available as an explicit synchronization escape hatch.
    */
   flush(): void;
   /**
@@ -131,7 +134,7 @@ export interface Runtime {
  *
  * @param options - Optional runtime configuration:
  * - `effectStrategy` controls whether invalidated effects flush on
- *   `rt.flush()` or automatically.
+ *   `rt.flush()`, stabilize after the outermost batch, or run automatically.
  * - `hooks` installs low-level runtime hooks that are composed with Reflex's
  *   scheduler integration.
  *

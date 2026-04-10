@@ -396,6 +396,30 @@ describe("Reactive runtime - walker invariants", () => {
     expect(right.state & ReactiveNodeState.Invalid).toBeFalsy();
   });
 
+  it("shouldRecompute does not promote sibling invalid subscribers when a shared dependency recomputes same-as-current", () => {
+    const source = createProducer(1);
+    const sharedSpy = vi.fn(() => {
+      readProducer(source);
+      return 10;
+    });
+    const shared = createConsumer(sharedSpy);
+    const left = createConsumer(() => readConsumer(shared) + 1);
+    const right = createConsumer(() => readConsumer(shared) + 2);
+
+    expect(readConsumer(left)).toBe(11);
+    expect(readConsumer(right)).toBe(12);
+
+    writeProducer(source, 2);
+
+    expect(shared.state & ReactiveNodeState.Changed).toBeTruthy();
+    expect(left.state & ReactiveNodeState.Invalid).toBeTruthy();
+    expect(right.state & ReactiveNodeState.Invalid).toBeTruthy();
+    expect(shouldRecompute(left)).toBe(false);
+    expect(sharedSpy).toHaveBeenCalledTimes(2);
+    expect(right.state & ReactiveNodeState.Changed).toBeFalsy();
+    expect(right.state & ReactiveNodeState.Invalid).toBeTruthy();
+  });
+
   it("shouldRecompute scans later branching siblings when the first dependency is already clean", () => {
     const leftSource = createProducer(1);
     const rightSource = createProducer(10);

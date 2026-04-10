@@ -165,6 +165,7 @@ subscribeOnce(labels, (value) => {
 - `effect(fn)` runs once immediately on creation.
 - If an effect returns cleanup, that cleanup runs before the next effect run and on dispose.
 - With the default runtime, invalidated effects run on `rt.flush()`.
+- With `createRuntime({ effectStrategy: "sab" })`, invalidated effects stay lazy during a batch and auto-deliver when the outermost batch exits.
 - With `createRuntime({ effectStrategy: "eager" })`, invalidated effects flush automatically.
 - Pure signal and computed reads do not require `flush()`.
 - Same-value signal writes do not force recomputation.
@@ -178,7 +179,7 @@ subscribeOnce(labels, (value) => {
 
 ```ts
 const rt = createRuntime({
-  effectStrategy: "flush", // or "eager"
+  effectStrategy: "flush", // or "sab" / "eager"
   hooks: {
     onEffectInvalidated(node) {
       // low-level integration hook
@@ -189,7 +190,7 @@ const rt = createRuntime({
 
 Options:
 
-- `effectStrategy: "flush" | "eager"` controls whether invalidated effects wait for `rt.flush()` or run automatically
+- `effectStrategy: "flush" | "sab" | "eager"` controls whether invalidated effects wait for `rt.flush()`, stabilize after `batch()`, or run automatically
 - `hooks.onEffectInvalidated(node)` is a low-level hook for integrations that want to observe effect invalidation
 
 Returned API:
@@ -333,7 +334,7 @@ They are exported as top-level functions, but they run against the currently con
 
 ### Do I always need to call `flush()`?
 
-No. You need `flush()` for scheduled effects when using the default `effectStrategy: "flush"`. You do not need `flush()` just to read up-to-date `signal()` or `computed()` values.
+No. You need `flush()` for scheduled effects when using the default `effectStrategy: "flush"`. In `effectStrategy: "sab"`, effects auto-deliver after the outermost `batch()`. You do not need `flush()` just to read up-to-date `signal()` or `computed()` values.
 
 ### Is `computed()` lazy or eager?
 
@@ -345,7 +346,7 @@ Lazy. It does not run until the first read. After that it behaves like a cached 
 
 ### Does `effect()` run immediately?
 
-Yes. It runs once on creation. Future re-runs happen after invalidation, either on `rt.flush()` or automatically when using the eager effect strategy.
+Yes. It runs once on creation. Future re-runs happen after invalidation, either on `rt.flush()`, at the end of an outermost batch in `sab`, or automatically when using the eager effect strategy.
 
 ### Why do `scan()` and `hold()` return tuples instead of only an accessor?
 

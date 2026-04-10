@@ -35,6 +35,7 @@ export function effectUnscheduled(
 export const enum EffectSchedulerMode {
   Flush = 0,
   Eager = 1,
+  SAB = 2,
 }
 
 export const enum SchedulerPhase {
@@ -43,14 +44,16 @@ export const enum SchedulerPhase {
   Flushing = 2,
 }
 
-export type EffectStrategy = "flush" | "eager";
+export type EffectStrategy = "flush" | "eager" | "sab";
 
 export function resolveEffectSchedulerMode(
   strategy: EffectStrategy | undefined,
 ): EffectSchedulerMode {
   return strategy === "eager"
     ? EffectSchedulerMode.Eager
-    : EffectSchedulerMode.Flush;
+    : strategy === "sab"
+      ? EffectSchedulerMode.SAB
+      : EffectSchedulerMode.Flush;
 }
 
 export interface EffectScheduler {
@@ -85,6 +88,7 @@ export function createEffectScheduler(
 
   const ring: ReactiveNode<typeof UNINITIALIZED | Destructor>[] = [];
   const eager = mode === EffectSchedulerMode.Eager;
+  const sab = mode === EffectSchedulerMode.SAB;
   const getContext = context === undefined ? getDefaultContext : () => context;
 
   let batchDepth = 0;
@@ -192,8 +196,31 @@ export function createEffectScheduler(
     }
   }
 
+  function leaveBatchSAB(): void {
+    if (--batchDepth !== 0) return;
+    if (phase === SchedulerPhase.Flushing) return;
+
+    phase = SchedulerPhase.Idle;
+
+    if (!hasPending()) {
+      return;
+    }
+
+    const currentContext = getContext();
+    if (
+      currentContext.propagationDepth === 0 &&
+      currentContext.activeComputed === null
+    ) {
+      flushQueue();
+    }
+  }
+
   const enqueue = eager ? enqueueEager : enqueueFlush;
-  const leaveBatch = eager ? leaveBatchEager : leaveBatchFlush;
+  const leaveBatch = eager
+    ? leaveBatchEager
+    : sab
+      ? leaveBatchSAB
+      : leaveBatchFlush;
 
   function batch<T>(fn: () => T): T {
     enterBatch();
