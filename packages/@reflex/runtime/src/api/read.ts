@@ -10,6 +10,7 @@ import {
 import {
   ReactiveNodeState,
   trackReadActive,
+  tryTrackReadFastPath,
   DIRTY_STATE,
   recompute,
   propagateOnce,
@@ -82,7 +83,9 @@ export function readProducer<T>(node: ReactiveNode<T>): T {
 
   // Register this read as a dependency if there's an active computation
   if (activeComputed !== null) {
-    trackReadActive(node, activeComputed);
+    if (!tryTrackReadFastPath(node, activeComputed)) {
+      trackReadActive(node, activeComputed);
+    }
   }
 
   if (__DEV__) {
@@ -176,7 +179,9 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
   const activeComputed = context.activeComputed;
 
   if (activeComputed !== null) {
-    trackReadActive(node, activeComputed);
+    if (!tryTrackReadFastPath(node, activeComputed)) {
+      trackReadActive(node, activeComputed);
+    }
   }
 
   if (__DEV__) {

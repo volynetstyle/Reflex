@@ -22,7 +22,52 @@ export function trackRead(source: ReactiveNode): void {
   const consumer = context.activeComputed;
 
   if (!consumer) return;
+  if (tryTrackReadFastPath(source, consumer)) return;
   trackReadActive(source, consumer);
+}
+
+/**
+ * Consumer-local cursor fast path that avoids entering the full tracking path
+ * when the next unique dependency is already obvious from the current cursor.
+ *
+ * - Immediate duplicate (`depsTail.from === source`) is structurally inert.
+ * - Expected next (`depsTail.nextIn === source`, or `firstIn` when no tail yet)
+ *   reuses the existing edge and advances the cursor.
+ */
+export function tryTrackReadFastPath(
+  source: ReactiveNode,
+  consumer: ReactiveNode,
+): boolean {
+  const prevEdge = consumer.depsTail;
+  const perf = runtimePerfCounters;
+
+  if (prevEdge !== null) {
+    if (prevEdge.from === source) {
+      if (perf !== null) {
+        perf.trackReadDuplicateSourceHit += 1;
+      }
+      return true;
+    }
+
+    const nextExpected = prevEdge.nextIn;
+    if (nextExpected !== null && nextExpected.from === source) {
+      if (perf !== null) {
+        perf.trackReadExpectedEdgeHit += 1;
+      }
+      consumer.depsTail = nextExpected;
+      return true;
+    }
+
+    return false;
+  }
+
+  const firstIn = consumer.firstIn;
+  if (firstIn !== null && firstIn.from === source) {
+    consumer.depsTail = firstIn;
+    return true;
+  }
+
+  return false;
 }
 
 export function trackReadActive(
