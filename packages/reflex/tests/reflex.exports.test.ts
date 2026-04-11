@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import * as reflex from "../src";
 import * as api from "../src/api";
 import * as infra from "../src/infra";
-import * as policy from "../src/policy";
+import * as policy from "../src/policy/scheduler";
+import * as d from "../src/policy";
 import * as unstable from "../src/unstable";
 import { resource } from "../src/unstable/resource";
 
@@ -24,7 +25,7 @@ describe("Reactive system - exports", () => {
 
   it("re-exports policy helpers from the policy barrel", () => {
     expect(typeof policy.createEffectScheduler).toBe("function");
-    expect(typeof policy.EventDispatcher).toBe("function");
+    expect(typeof d.EventDispatcher).toBe("function");
     expect(typeof policy.resolveEffectSchedulerMode).toBe("function");
   });
 

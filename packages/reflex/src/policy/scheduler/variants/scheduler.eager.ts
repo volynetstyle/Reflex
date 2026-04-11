@@ -6,7 +6,7 @@ import {
   createSchedulerInstance,
   tryEnqueue,
 } from "../scheduler.core";
-import type { EffectScheduler } from "../scheduler.types";
+import type { EffectNode, EffectScheduler } from "../scheduler.types";
 
 export function createEagerScheduler(
   context: ExecutionContext,
@@ -18,30 +18,28 @@ export function createEagerScheduler(
       core.flush();
     }
   };
+  const enqueueToQueue = tryEnqueue.bind(null, queue);
+  const enqueue = (node: EffectNode) => {
+    if (!enqueueToQueue(node)) return;
+    if (isRuntimeInactive(context, core)) core.flush();
+  };
+  const batch = <T>(fn: () => T): T => {
+    core.enterBatch();
+    try {
+      return fn();
+    } finally {
+      if (core.leaveBatch() && queue.size !== 0) {
+        core.flush();
+      }
+    }
+  };
 
   return createSchedulerInstance(
     EffectSchedulerMode.Eager,
     context,
     core,
-    (node) => {
-      if (!tryEnqueue(queue, node)) {
-        return;
-      }
-
-      if (isRuntimeInactive(context, core)) {
-        core.flush();
-      }
-    },
-    <T>(fn: () => T): T => {
-      core.enterBatch();
-      try {
-        return fn();
-      } finally {
-        if (core.leaveBatch() && queue.size !== 0) {
-          core.flush();
-        }
-      }
-    },
+    enqueue,
+    batch,
     notifySettled,
     notifySettled,
   );

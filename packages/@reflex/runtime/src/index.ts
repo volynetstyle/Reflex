@@ -27,6 +27,12 @@ export {
 } from "./reactivity/context";
 
 export {
+  createRuntimePerfCounters,
+  setRuntimePerfCounters,
+  type RuntimePerfCounters,
+} from "./reactivity/perf";
+
+export {
   DIRTY_STATE,
   //
   PRODUCER_INITIAL_STATE,

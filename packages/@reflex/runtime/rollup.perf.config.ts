@@ -28,6 +28,8 @@ const createPerfDomain = (input: string, file: string) => ({
 
 export default [
   createPerfDomain("build/esm/index.js", "dist/perf.js"),
+  createPerfDomain("tests/perf/duplicate-read-single-source.jit.mjs", "dist/duplicate-read-single-source.jit.js"),
+  createPerfDomain("tests/perf/repeated-read-branching.jit.mjs", "dist/repeated-read-branching.jit.js"),
   createPerfDomain("tests/perf/runtime-versioned-skip.jit.mjs", "dist/runtime-versioned-skip.jit.js"),
   createPerfDomain("tests/perf/tracking-cleanup-matrix.jit.mjs", "dist/tracking-cleanup-matrix.jit.js"),
   createPerfDomain("tests/perf/tracking-connect.jit.mjs", "dist/tracking-connect.jit.js"),

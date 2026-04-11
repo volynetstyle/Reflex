@@ -8,7 +8,7 @@ import {
 import { cleanupStaleSources } from "./tracking";
 import { defaultContext } from "../context";
 
-function prepareNodeExecution(node: ReactiveNode): () => void {
+function prepareNodeExecution(node: ReactiveNode): ReactiveNode | null {
   const context = defaultContext;
 
   node.depsTail = null;
@@ -18,7 +18,6 @@ function prepareNodeExecution(node: ReactiveNode): () => void {
 
   const prevActive = context.activeComputed;
   context.activeComputed = node;
-  let restored = false;
 
   if (__DEV__) {
     recordDebugEvent(context, "compute:start", {
@@ -26,13 +25,16 @@ function prepareNodeExecution(node: ReactiveNode): () => void {
     });
   }
 
-  return () => {
-    if (restored) return;
-    restored = true;
-    context.activeComputed = prevActive;
-    node.state &= ~ReactiveNodeState.Tracking;
-    clearNodeComputing(node);
-  };
+  return prevActive;
+}
+
+function restoreNodeExecution(
+  node: ReactiveNode,
+  prevActive: ReactiveNode | null,
+): void {
+  defaultContext.activeComputed = prevActive;
+  node.state &= ~ReactiveNodeState.Tracking;
+  clearNodeComputing(node);
 }
 
 export function executeNodeComputation(node: ReactiveNode): unknown {
@@ -48,12 +50,12 @@ export function executeNodeComputation(node: ReactiveNode): unknown {
   }
 
   const compute = node.compute!;
-  const restoreActive = prepareNodeExecution(node);
+  const prevActive = prepareNodeExecution(node);
   let result: unknown;
 
   try {
     result = compute();
-    restoreActive();
+    restoreNodeExecution(node, prevActive);
 
     if (node.depsTail !== node.lastIn) {
       cleanupStaleSources(node);
@@ -70,7 +72,7 @@ export function executeNodeComputation(node: ReactiveNode): unknown {
 
     return result;
   } catch (error) {
-    restoreActive();
+    restoreNodeExecution(node, prevActive);
 
     if (__DEV__) {
       recordDebugEvent(defaultContext, "compute:error", {

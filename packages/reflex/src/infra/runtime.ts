@@ -1,47 +1,13 @@
-import {
-  createExecutionContext,
-  getDefaultContext,
-  setDefaultContext,
-} from "@reflex/runtime";
+import { createExecutionContext, setDefaultContext } from "@reflex/runtime";
 import type { ExecutionContext, EngineHooks } from "@reflex/runtime";
 import { subscribeEvent } from "./event";
 import { createSource } from "./factory";
 import { EventDispatcher } from "../policy";
-import type { EffectScheduler } from "../policy/scheduler";
+import type { EffectStrategy } from "../policy/scheduler";
 import {
-  EffectSchedulerMode,
-  createEagerScheduler,
-  createSabScheduler,
-  createFlushScheduler,
+  createEffectScheduler,
+  resolveEffectSchedulerMode,
 } from "../policy/scheduler";
-
-export type EffectStrategy = "flush" | "eager" | "sab";
-
-const strategyMap: Record<EffectStrategy, EffectSchedulerMode> = {
-  eager: EffectSchedulerMode.Eager,
-  sab: EffectSchedulerMode.SAB,
-  flush: EffectSchedulerMode.Flush,
-};
-
-export function resolveEffectSchedulerMode(
-  strategy?: EffectStrategy,
-): EffectSchedulerMode {
-  return strategy ? strategyMap[strategy] : EffectSchedulerMode.Flush;
-}
-
-export function createEffectScheduler(
-  mode: EffectSchedulerMode = EffectSchedulerMode.Flush,
-  context: ExecutionContext = getDefaultContext(),
-): EffectScheduler {
-  switch (mode) {
-    case EffectSchedulerMode.Eager:
-      return createEagerScheduler(context);
-    case EffectSchedulerMode.SAB:
-      return createSabScheduler(context);
-    default:
-      return createFlushScheduler(context);
-  }
-}
 
 export interface RuntimeOptions {
   /**

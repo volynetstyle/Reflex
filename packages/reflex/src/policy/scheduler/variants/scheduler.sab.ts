@@ -12,28 +12,25 @@ import { noopNotifySettled } from "../scheduler.types";
 export function createSabScheduler(context: ExecutionContext): EffectScheduler {
   const core = createSchedulerCore();
   const queue = core.queue;
+  const enqueue = tryEnqueue.bind(null, queue);
+
+  const batch = <T>(fn: () => T): T => {
+    core.enterBatch();
+    try {
+      return fn();
+    } finally {
+      if (core.leaveBatch() && queue.size !== 0 && isContextSettled(context)) {
+        core.flush();
+      }
+    }
+  };
 
   return createSchedulerInstance(
     EffectSchedulerMode.SAB,
     context,
     core,
-    (node) => {
-      tryEnqueue(queue, node);
-    },
-    <T>(fn: () => T): T => {
-      core.enterBatch();
-      try {
-        return fn();
-      } finally {
-        if (
-          core.leaveBatch() &&
-          queue.size !== 0 &&
-          isContextSettled(context)
-        ) {
-          core.flush();
-        }
-      }
-    },
+    enqueue,
+    batch,
     noopNotifySettled,
     undefined,
   );

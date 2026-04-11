@@ -18,6 +18,8 @@ import type {
   WatcherQueue,
 } from "./scheduler.types";
 
+const runner = runWatcher.bind(null);
+
 /**
  * Marks an effect watcher node as scheduled.
  *
@@ -66,9 +68,10 @@ export function createSchedulerCore(): SchedulerCore {
 
     try {
       while (queue.size !== 0) {
-        const node = queue.shift()!;
-        node.state &= UNSCHEDULE_MASK;
-        runWatcher(node);
+        const node = queue.shift()!,
+          s = node.state;
+        node.state = s & UNSCHEDULE_MASK;
+        runner(node);
       }
     } finally {
       queue.clear();

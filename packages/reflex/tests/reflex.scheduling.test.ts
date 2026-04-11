@@ -22,7 +22,7 @@ import { DIRTY_STATE, ReactiveNodeState } from "@reflex/runtime";
 import {
   createEffectScheduler,
   EffectSchedulerMode,
-} from "../src/policy/effect_scheduler";
+} from "../src/policy/scheduler";
 
 function createContext(
   overrides: Partial<ExecutionContext> = {},

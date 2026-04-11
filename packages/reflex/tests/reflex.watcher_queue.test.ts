@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createWatcherNode } from "../src/infra/factory";
-import { createWatcherQueue } from "../src/policy/scheduler/createWatcherQueue";
+import { createWatcherQueue } from "../src/policy/scheduler";
 
 function createNodes(count: number) {
   return Array.from({ length: count }, () => createWatcherNode(() => {}));

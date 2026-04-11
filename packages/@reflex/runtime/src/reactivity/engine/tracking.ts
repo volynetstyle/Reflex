@@ -10,6 +10,7 @@ import {
   unlinkDetachedIncomingEdgeSequence,
 } from "../shape/methods/connect";
 import { defaultContext, trackReadFallback } from "../context";
+import { runtimePerfCounters } from "../perf";
 
 /**
  * Cursor-guided incoming-edge walk used during dependency collection.
@@ -28,9 +29,19 @@ export function trackReadActive(
   source: ReactiveNode,
   consumer: ReactiveNode,
 ): void {
+  const perf = runtimePerfCounters;
+  if (perf !== null) {
+    perf.trackReadCalls += 1;
+    perf.trackReadWhileActive += 1;
+  }
+
   const sourceDead = isDisposedNode(source);
   const consumerDead = isDisposedNode(consumer);
   if (sourceDead || consumerDead) {
+    if (perf !== null) {
+      perf.trackReadDisposedSkip += 1;
+    }
+
     if (__DEV__) {
       devAssertTrackReadAlive(sourceDead, consumerDead);
     }
@@ -47,6 +58,9 @@ export function trackReadActive(
     const firstIn = consumer.firstIn;
 
     if (firstIn === null) {
+      if (perf !== null) {
+        perf.trackReadNewEdge += 1;
+      }
       consumer.depsTail = linkEdge(source, consumer, null);
       return;
     }
@@ -57,32 +71,55 @@ export function trackReadActive(
     }
 
     if (firstIn.nextIn === null) {
+      if (perf !== null) {
+        perf.trackReadNewEdge += 1;
+      }
       consumer.depsTail = linkEdge(source, consumer, null);
       return;
     }
 
+    if (perf !== null) {
+      perf.trackReadFallbackScan += 1;
+    }
     consumer.depsTail = trackReadFallback(source, consumer, null, firstIn);
     return;
   }
 
-  if (prevEdge.from === source) return;
+  if (prevEdge.from === source) {
+    if (perf !== null) {
+      perf.trackReadDuplicateSourceHit += 1;
+    }
+    return;
+  }
 
   const nextExpected = prevEdge.nextIn;
   if (nextExpected === null) {
+    if (perf !== null) {
+      perf.trackReadNewEdge += 1;
+    }
     consumer.depsTail = linkEdge(source, consumer, prevEdge);
     return;
   }
 
   if (nextExpected.from === source) {
+    if (perf !== null) {
+      perf.trackReadExpectedEdgeHit += 1;
+    }
     consumer.depsTail = nextExpected;
     return;
   }
 
   if (nextExpected.nextIn === null) {
+    if (perf !== null) {
+      perf.trackReadNewEdge += 1;
+    }
     consumer.depsTail = linkEdge(source, consumer, prevEdge);
     return;
   }
 
+  if (perf !== null) {
+    perf.trackReadFallbackScan += 1;
+  }
   consumer.depsTail = trackReadFallback(
     source,
     consumer,
@@ -96,9 +133,15 @@ export function trackReadActive(
  * Everything after depsTail belongs to the old dependency list and is unlinked.
  */
 export function cleanupStaleSources(node: ReactiveNode): void {
+  const perf = runtimePerfCounters;
+  if (perf !== null) {
+    perf.cleanupPassCount += 1;
+  }
+
   const tail = node.depsTail;
   const staleHead = tail === null ? node.firstIn : tail.nextIn;
   if (staleHead === null) return;
+  const detachedStaleHead: NonNullable<typeof staleHead> = staleHead;
 
   if (tail === null) {
     node.firstIn = null;
@@ -109,8 +152,20 @@ export function cleanupStaleSources(node: ReactiveNode): void {
   }
 
   if (__DEV__) {
-    devRecordCleanupStaleSources(node, staleHead, defaultContext);
+    devRecordCleanupStaleSources(node, detachedStaleHead, defaultContext);
   }
 
-  unlinkDetachedIncomingEdgeSequence(staleHead);
+  if (perf !== null) {
+    let removedCount = 0;
+    for (
+      let edge: typeof detachedStaleHead | null = detachedStaleHead;
+      edge !== null;
+      edge = edge.nextIn
+    ) {
+      removedCount += 1;
+    }
+    perf.cleanupStaleEdgeCount += removedCount;
+  }
+
+  unlinkDetachedIncomingEdgeSequence(detachedStaleHead);
 }
