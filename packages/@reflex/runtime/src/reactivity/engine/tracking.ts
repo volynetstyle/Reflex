@@ -39,10 +39,20 @@ export function tryTrackReadFastPath(
   consumer: ReactiveNode,
 ): boolean {
   const prevEdge = consumer.depsTail;
+  const version = defaultContext.trackingVersion;
   const perf = runtimePerfCounters;
 
-  if (prevEdge !== null) {
+  const lastOut = source.lastOut;
+  if (lastOut != null && lastOut.version === version && lastOut.to === consumer) {
+    if (perf !== null) {
+      perf.trackReadDuplicateSourceHit += 1;
+    }
+    return true;
+  }
+
+  if (prevEdge != null) {
     if (prevEdge.from === source) {
+      prevEdge.version = version;
       if (perf !== null) {
         perf.trackReadDuplicateSourceHit += 1;
       }
@@ -50,7 +60,8 @@ export function tryTrackReadFastPath(
     }
 
     const nextExpected = prevEdge.nextIn;
-    if (nextExpected !== null && nextExpected.from === source) {
+    if (nextExpected != null && nextExpected.from === source) {
+      nextExpected.version = version;
       if (perf !== null) {
         perf.trackReadExpectedEdgeHit += 1;
       }
@@ -62,7 +73,8 @@ export function tryTrackReadFastPath(
   }
 
   const firstIn = consumer.firstIn;
-  if (firstIn !== null && firstIn.from === source) {
+  if (firstIn != null && firstIn.from === source) {
+    firstIn.version = version;
     consumer.depsTail = firstIn;
     return true;
   }
@@ -74,6 +86,7 @@ export function trackReadActive(
   source: ReactiveNode,
   consumer: ReactiveNode,
 ): void {
+  const version = defaultContext.trackingVersion;
   const perf = runtimePerfCounters;
   if (perf !== null) {
     perf.trackReadCalls += 1;
@@ -106,11 +119,12 @@ export function trackReadActive(
       if (perf !== null) {
         perf.trackReadNewEdge += 1;
       }
-      consumer.depsTail = linkEdge(source, consumer, null);
+      consumer.depsTail = linkEdge(source, consumer, null, version);
       return;
     }
 
     if (firstIn.from === source) {
+      firstIn.version = version;
       consumer.depsTail = firstIn;
       return;
     }
@@ -119,18 +133,25 @@ export function trackReadActive(
       if (perf !== null) {
         perf.trackReadNewEdge += 1;
       }
-      consumer.depsTail = linkEdge(source, consumer, null);
+      consumer.depsTail = linkEdge(source, consumer, null, version);
       return;
     }
 
     if (perf !== null) {
       perf.trackReadFallbackScan += 1;
     }
-    consumer.depsTail = trackReadFallback(source, consumer, null, firstIn);
+    consumer.depsTail = trackReadFallback(
+      source,
+      consumer,
+      null,
+      firstIn,
+      version,
+    );
     return;
   }
 
   if (prevEdge.from === source) {
+    prevEdge.version = version;
     if (perf !== null) {
       perf.trackReadDuplicateSourceHit += 1;
     }
@@ -142,11 +163,12 @@ export function trackReadActive(
     if (perf !== null) {
       perf.trackReadNewEdge += 1;
     }
-    consumer.depsTail = linkEdge(source, consumer, prevEdge);
+    consumer.depsTail = linkEdge(source, consumer, prevEdge, version);
     return;
   }
 
   if (nextExpected.from === source) {
+    nextExpected.version = version;
     if (perf !== null) {
       perf.trackReadExpectedEdgeHit += 1;
     }
@@ -158,7 +180,7 @@ export function trackReadActive(
     if (perf !== null) {
       perf.trackReadNewEdge += 1;
     }
-    consumer.depsTail = linkEdge(source, consumer, prevEdge);
+    consumer.depsTail = linkEdge(source, consumer, prevEdge, version);
     return;
   }
 
@@ -170,6 +192,7 @@ export function trackReadActive(
     consumer,
     prevEdge,
     nextExpected,
+    version,
   );
 }
 

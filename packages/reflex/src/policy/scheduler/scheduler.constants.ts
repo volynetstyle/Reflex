@@ -4,6 +4,7 @@ export const enum EffectSchedulerMode {
   Flush = 0,
   Eager = 1,
   SAB = 2,
+  Ranked = 3,
 }
 
 export const enum SchedulerPhase {

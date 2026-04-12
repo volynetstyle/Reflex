@@ -61,6 +61,27 @@ describe("Reactive runtime - cursor fast path", () => {
     expect(counters.trackReadExpectedEdgeHit).toBeGreaterThanOrEqual(1);
   });
 
+  it("makes non-adjacent duplicate reads inert within the same pass via edge versioning", () => {
+    const counters = createRuntimePerfCounters();
+    setRuntimePerfCounters(counters);
+
+    const a = createProducer(1);
+    const b = createProducer(10);
+    const current = createConsumer(
+      () => readProducer(a) + readProducer(b) + readProducer(a) + readProducer(b),
+    );
+
+    expect(readConsumer(current)).toBe(22);
+    expect(incomingSources(current)).toEqual([a, b]);
+    expect(counters.trackReadCalls).toBe(2);
+    expect(counters.trackReadDuplicateSourceHit).toBeGreaterThanOrEqual(2);
+
+    writeProducer(a, 2);
+    expect(readConsumer(current)).toBe(24);
+    expect(incomingSources(current)).toEqual([a, b]);
+    expect(counters.trackReadCalls).toBe(2);
+  });
+
   it("keeps branch flips correct across passes and prunes stale deps", () => {
     const counters = createRuntimePerfCounters();
     setRuntimePerfCounters(counters);

@@ -21,6 +21,8 @@ export interface RuntimeOptions {
    * Controls when invalidated effects are executed.
    *
    * - `"flush"` queues reruns until `rt.flush()` is called.
+   * - `"ranked"` queues reruns until `rt.flush()` and then drains higher-rank
+   *   watchers before lower-rank ones.
    * - `"sab"` keeps lazy enqueue semantics but stabilizes effects after the
    *   outermost `rt.batch()` exits.
    * - `"eager"` flushes reruns automatically.
@@ -131,7 +133,8 @@ export interface Runtime {
  *
  * @param options - Optional runtime configuration:
  * - `effectStrategy` controls whether invalidated effects flush on
- *   `rt.flush()`, stabilize after the outermost batch, or run automatically.
+ *   `rt.flush()`, flush in rank order, stabilize after the outermost batch, or
+ *   run automatically.
  * - `hooks` installs low-level runtime hooks that are composed with Reflex's
  *   scheduler integration.
  *

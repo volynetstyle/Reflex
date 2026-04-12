@@ -81,6 +81,32 @@ describe("createEffectScheduler", () => {
     //    expect(mocks.runWatcher).not.toHaveBeenCalled();
   });
 
+  it("ranked flush runs higher-priority nodes first and keeps FIFO for ties", () => {
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Ranked);
+    const low = createNode() as any;
+    const high = createNode() as any;
+    const midA = createNode() as any;
+    const midB = createNode() as any;
+
+    low.priority = 1;
+    high.priority = 10;
+    midA.priority = 5;
+    midB.priority = 5;
+
+    scheduler.enqueue(midA);
+    scheduler.enqueue(low);
+    scheduler.enqueue(high);
+    scheduler.enqueue(midB);
+    scheduler.flush();
+
+    expect(mocks.runWatcher.mock.calls.map(([node]) => node)).toEqual([
+      high,
+      midA,
+      midB,
+      low,
+    ]);
+  });
+
   it("flush runs dirty nodes even when extra state bits are present", () => {
     const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
     const node = createNode(DIRTY_STATE | ReactiveNodeState.Changed);

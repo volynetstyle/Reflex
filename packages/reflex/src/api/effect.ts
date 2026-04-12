@@ -98,6 +98,8 @@ export function withEffectCleanupRegistrar<T>(
  * - The first run happens synchronously during `effect()` creation.
  * - With the default runtime strategy, later re-runs are queued until
  *   `rt.flush()`.
+ * - With `createRuntime({ effectStrategy: "ranked" })`, later re-runs are
+ *   queued until `rt.flush()` and then drained in descending watcher rank.
  * - With `createRuntime({ effectStrategy: "sab" })`, invalidations stay lazy
  *   during propagation but auto-deliver after the outermost `rt.batch()`.
  * - With `createRuntime({ effectStrategy: "eager" })`, invalidations flush

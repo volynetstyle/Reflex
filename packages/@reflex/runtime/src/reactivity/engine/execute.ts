@@ -10,11 +10,13 @@ import { defaultContext } from "../context";
 
 function prepareNodeExecution(node: ReactiveNode): ReactiveNode | null {
   const context = defaultContext;
+  const nextVersion = (context.trackingVersion + 1) >>> 0;
 
   node.depsTail = null;
   node.state =
     (node.state & ~ReactiveNodeState.Visited) | ReactiveNodeState.Tracking;
   markNodeComputing(node);
+  context.trackingVersion = nextVersion === 0 ? 1 : nextVersion;
 
   const prevActive = context.activeComputed;
   context.activeComputed = node;

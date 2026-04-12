@@ -65,6 +65,31 @@ describe("Reactive runtime - walker invariants", () => {
     );
   });
 
+  it("propagate keeps sibling continuation promote while child descent resets to Invalid", () => {
+    const source = createNode(ReactiveNodeState.Producer);
+    const left = createNode(ReactiveNodeState.Consumer);
+    const right = createNode(ReactiveNodeState.Consumer);
+    const leftLeaf = createNode(ReactiveNodeState.Consumer);
+
+    linkEdge(source, left);
+    linkEdge(source, right);
+    linkEdge(left, leftLeaf);
+
+    setDefaultContext(createTestContext());
+
+    propagate(source.firstOut!, IMMEDIATE);
+
+    expect(left.state).toBe(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Changed,
+    );
+    expect(leftLeaf.state).toBe(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Invalid,
+    );
+    expect(right.state).toBe(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Changed,
+    );
+  });
+
   it("can mark the whole reachable graph Changed when every subscriber is direct", () => {
     const source = createNode(ReactiveNodeState.Producer);
     const left = createNode(ReactiveNodeState.Consumer);

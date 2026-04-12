@@ -13,6 +13,7 @@ export type TrackReadFallback = (
   consumer: ReactiveNode,
   prev: ReactiveEdge | null,
   nextExpected: ReactiveEdge | null,
+  version: number,
 ) => ReactiveEdge;
 
 export interface ExecutionContextOptions {
@@ -30,6 +31,7 @@ export let trackReadFallback: TrackReadFallback =
 
 export class ExecutionContext {
   activeComputed: ReactiveNode | null = null;
+  trackingVersion = 0;
   propagationDepth = 0;
   cleanupRegistrar: CleanupRegistrar | null = null;
   trackReadFallback: TrackReadFallback = reuseIncomingEdgeFromSuffixOrCreate;
@@ -78,6 +80,7 @@ export class ExecutionContext {
 
   resetState(): void {
     this.activeComputed = null;
+    this.trackingVersion = 0;
     this.propagationDepth = 0;
     this.cleanupRegistrar = null;
   }

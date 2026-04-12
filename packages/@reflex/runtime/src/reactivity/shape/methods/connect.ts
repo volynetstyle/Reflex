@@ -47,10 +47,19 @@ export function linkEdge(
   from: ReactiveNode,
   to: ReactiveNode,
   after: ReactiveEdge | null = to.lastIn,
+  version = 0,
 ): ReactiveEdge {
   const prevOut = from.lastOut;
   const nextIn = after ? after.nextIn : to.firstIn;
-  const edge = new ReactiveEdge(prevOut, null, from, to, after, nextIn);
+  const edge = new ReactiveEdge(
+    version,
+    prevOut,
+    null,
+    from,
+    to,
+    after,
+    nextIn,
+  );
 
   if (prevOut) prevOut.nextOut = edge;
   else from.firstOut = edge;
@@ -84,12 +93,14 @@ export function reuseIncomingEdgeFromSuffixOrCreate(
   to: ReactiveNode,
   prev: ReactiveEdge | null,
   nextExpected: ReactiveEdge | null,
+  version = 0,
 ): ReactiveEdge {
   const perf = runtimePerfCounters;
-
-  // Scan the rest of the incoming list for a reusable edge.
+  // Scan the remaining suffix for a reusable edge.
+  // `nextExpected` already points at the first still-available edge after the
+  // reused prefix, so the fallback scan must include it.
   for (
-    let edge = nextExpected ? nextExpected.nextIn : to.firstIn;
+    let edge = nextExpected ?? to.firstIn;
     edge !== null;
     edge = edge.nextIn
   ) {
@@ -104,6 +115,7 @@ export function reuseIncomingEdgeFromSuffixOrCreate(
       attachInEdge(to, edge, prev);
     }
 
+    edge.version = version;
     return edge;
   }
 
@@ -111,7 +123,7 @@ export function reuseIncomingEdgeFromSuffixOrCreate(
     perf.trackReadNewEdge += 1;
   }
 
-  return linkEdge(from, to, prev);
+  return linkEdge(from, to, prev, version);
 }
 
 export function unlinkDetachedIncomingEdgeSequence(
