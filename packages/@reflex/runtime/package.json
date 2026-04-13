@@ -18,8 +18,8 @@
       "require": "./dist/cjs/index.cjs"
     },
     "./debug": {
-      "types": "./dist/globals.d.ts",
-      "import": "./dist/dev/index.js"
+      "types": "./dist/esm/debug.d.ts",
+      "import": "./dist/dev/debug.js"
     }
   },
   "files": [

@@ -80,15 +80,6 @@ export {
   disposeNodeEvent,
 } from "./reactivity";
 
-export {
-  subtle,
-  type RuntimeDebugContextSnapshot,
-  type RuntimeDebugEvent,
-  type RuntimeDebugListener,
-  type RuntimeDebugNodeSnapshot,
-  type RuntimeDebugOptions,
-  type RuntimeSubtle,
-} from "./subtle";
 ```
 
 Two clarifications matter:
@@ -508,9 +499,9 @@ What happens here:
 4. the host decides when to drain `pending`
 5. `runWatcher()` performs cleanup-if-needed and re-executes the effect
 
-## Debug API: `subtle`
+## Debug API: `@reflex/runtime/debug`
 
-`subtle` is a small introspection surface exported from the package root.
+`subtle` is a small introspection surface exported from `@reflex/runtime/debug`.
 
 Useful methods include:
 

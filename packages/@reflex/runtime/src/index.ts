@@ -20,8 +20,10 @@ export {
   setDefaultContext,
   resetDefaultContext,
   type ExecutionContext,
+  type ExecutionContextOptions,
   type EngineHooks,
   type CleanupRegistrar,
+  type TrackReadFallback,
 } from "./reactivity/context";
 
 export {
@@ -46,13 +48,3 @@ export {
   disposeNode,
   disposeNodeEvent,
 } from "./reactivity";
-
-export {
-  subtle,
-  type RuntimeDebugContextSnapshot,
-  type RuntimeDebugEvent,
-  type RuntimeDebugListener,
-  type RuntimeDebugNodeSnapshot,
-  type RuntimeDebugOptions,
-  type RuntimeSubtle,
-} from "./subtle";

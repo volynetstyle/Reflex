@@ -1,9 +1,11 @@
 import { performance } from "node:perf_hooks";
+import { hrtime } from "node:process";
 import {
   ConsumerReadMode,
   readConsumer,
   readProducer,
 } from "../../build/esm/api/read.js";
+import { runWatcher } from "../../build/esm/api/watcher.js";
 import { writeProducer } from "../../build/esm/api/write.js";
 import { getDefaultContext } from "../../build/esm/reactivity/context.js";
 import { recompute } from "../../build/esm/reactivity/engine/compute.js";
@@ -17,7 +19,7 @@ import { UNINITIALIZED } from "../../build/esm/reactivity/shape/ReactiveNode.js"
 import ReactiveNode from "../../build/esm/reactivity/shape/ReactiveNode.js";
 import { linkEdge } from "../../build/esm/reactivity/shape/methods/connect.js";
 import { propagate } from "../../build/esm/reactivity/walkers/propagate.js";
-import { shouldRecompute } from "../../build/esm/reactivity/walkers/shouldRecompute.js";
+import { shouldRecompute } from "../../build/esm/reactivity/walkers/recompute.js";
 
 const runtime = getDefaultContext();
 
@@ -526,6 +528,40 @@ function warm(fn, iterations) {
   return sink;
 }
 
+function nowNs() {
+  return Number(hrtime.bigint());
+}
+
+function maybeGc() {
+  if (globalThis.gc) globalThis.gc();
+}
+
+function quantile(values, ratio) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const index = Math.min(
+    sorted.length - 1,
+    Math.max(0, Math.ceil(sorted.length * ratio) - 1),
+  );
+  return sorted[index];
+}
+
+function median(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[(sorted.length / 2) | 0];
+}
+
+function formatNs(ns) {
+  if (ns >= 1e6) return `${(ns / 1e6).toFixed(3)} ms`;
+  if (ns >= 1e3) return `${(ns / 1e3).toFixed(3)} us`;
+  return `${ns.toFixed(1)} ns`;
+}
+
+function formatOpsSec(opsSec) {
+  if (opsSec >= 1e6) return `${(opsSec / 1e6).toFixed(2)} Mops/s`;
+  if (opsSec >= 1e3) return `${(opsSec / 1e3).toFixed(2)} Kops/s`;
+  return `${opsSec.toFixed(1)} ops/s`;
+}
+
 function bench(label, fn, iterations, warmup = iterations) {
   warm(fn, warmup);
 
@@ -543,6 +579,118 @@ function bench(label, fn, iterations, warmup = iterations) {
   const elapsedMs = performance.now() - start;
   const nsPerOp = (elapsedMs * 1e6) / iterations;
   console.log(`${label}: ${nsPerOp.toFixed(1)} ns/op | sink=${sink}`);
+}
+
+function benchTailLatency(
+  label,
+  fn,
+  iterations,
+  warmup = iterations >> 1,
+  sampleIterations = 256,
+  rounds = 7,
+) {
+  warm(fn, warmup);
+
+  const opsSamples = [];
+  const p50Samples = [];
+  const p95Samples = [];
+  const p99Samples = [];
+  const maxSamples = [];
+  let sink = 0;
+
+  for (let round = 0; round < rounds; round += 1) {
+    maybeGc();
+    const bulkStart = nowNs();
+
+    for (let i = 0; i < iterations; i += 1) {
+      sink ^= fn(i + round * iterations) & 1;
+    }
+
+    const bulkNs = nowNs() - bulkStart;
+    opsSamples.push((iterations * 1e9) / bulkNs);
+
+    const latencies = [];
+    for (let i = 0; i < sampleIterations; i += 1) {
+      const start = nowNs();
+      sink ^= fn(i + round * sampleIterations + 0x100000) & 1;
+      latencies.push(nowNs() - start);
+    }
+
+    p50Samples.push(quantile(latencies, 0.5));
+    p95Samples.push(quantile(latencies, 0.95));
+    p99Samples.push(quantile(latencies, 0.99));
+    maxSamples.push(Math.max(...latencies));
+  }
+
+  console.log(
+    `${label}: ops/sec=${formatOpsSec(median(opsSamples))} | p50=${formatNs(
+      median(p50Samples),
+    )} | p95=${formatNs(median(p95Samples))} | p99=${formatNs(
+      median(p99Samples),
+    )} | max=${formatNs(median(maxSamples))} | sink=${sink}`,
+  );
+}
+
+function benchTailLatencyWithHooks({
+  label,
+  prepare,
+  run,
+  cleanup,
+  iterations,
+  warmup = iterations >> 1,
+  sampleIterations = 256,
+  rounds = 7,
+}) {
+  for (let i = 0; i < warmup; i += 1) {
+    prepare?.(i);
+    run(i);
+    cleanup?.(i);
+  }
+
+  const opsSamples = [];
+  const p50Samples = [];
+  const p95Samples = [];
+  const p99Samples = [];
+  const maxSamples = [];
+  let sink = 0;
+
+  for (let round = 0; round < rounds; round += 1) {
+    maybeGc();
+    const bulkStart = nowNs();
+
+    for (let i = 0; i < iterations; i += 1) {
+      const index = i + round * iterations;
+      prepare?.(index);
+      sink ^= run(index) & 1;
+      cleanup?.(index);
+    }
+
+    const bulkNs = nowNs() - bulkStart;
+    opsSamples.push((iterations * 1e9) / bulkNs);
+
+    const latencies = [];
+    for (let i = 0; i < sampleIterations; i += 1) {
+      const index = i + round * sampleIterations + 0x100000;
+      prepare?.(index);
+      const start = nowNs();
+      sink ^= run(index) & 1;
+      latencies.push(nowNs() - start);
+      cleanup?.(index);
+    }
+
+    p50Samples.push(quantile(latencies, 0.5));
+    p95Samples.push(quantile(latencies, 0.95));
+    p99Samples.push(quantile(latencies, 0.99));
+    maxSamples.push(Math.max(...latencies));
+  }
+
+  console.log(
+    `${label}: ops/sec=${formatOpsSec(median(opsSamples))} | p50=${formatNs(
+      median(p50Samples),
+    )} | p95=${formatNs(median(p95Samples))} | p99=${formatNs(
+      median(p99Samples),
+    )} | max=${formatNs(median(maxSamples))} | sink=${sink}`,
+  );
 }
 
 function runBenchSuite() {
@@ -578,6 +726,147 @@ function runEngineBenchSuite() {
   bench("api_readConsumer_eager_chain", () => readEagerChain.run(), 100000, 50000);
   bench("api_writeProducer_no_subscribers", () => writeNoSubscribers.run(), 300000, 100000);
   bench("api_writeProducer_fanout", () => writeFanout.run(), 100000, 50000);
+}
+
+function buildWriteProducerWideFanout(width) {
+  resetRuntime();
+
+  const source = createProducer(0);
+  const nodes = [];
+
+  for (let i = 0; i < width; i += 1) {
+    const leaf = createConsumer(() => i);
+    nodes.push(leaf);
+    linkEdge(source, leaf);
+  }
+
+  let value = 0;
+
+  return {
+    run() {
+      value += 1;
+      writeProducer(source, value);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+  };
+}
+
+function buildSharedFanoutWatchers(width) {
+  let invalidations = 0;
+  resetRuntime({
+    onEffectInvalidated() {
+      invalidations += 1;
+    },
+  });
+
+  const source = createProducer(0);
+  const shared = createConsumer(() => readProducer(source) * 2);
+  const watchers = [];
+
+  for (let i = 0; i < width; i += 1) {
+    const watcher = new ReactiveNode(
+      null,
+      () => {
+        readConsumer(shared);
+      },
+      ReactiveNodeState.Watcher | ReactiveNodeState.Changed,
+    );
+    watchers.push(watcher);
+    runWatcher(watcher);
+  }
+
+  let value = 0;
+
+  return {
+    run() {
+      value += 1;
+      const before = invalidations;
+      writeProducer(source, value);
+
+      for (let i = 0; i < watchers.length; i += 1) {
+        runWatcher(watchers[i]);
+      }
+
+      return (invalidations - before) ^ (shared.payload & 1);
+    },
+  };
+}
+
+function buildRunWatcherSharedFanout(width) {
+  let invalidations = 0;
+  resetRuntime({
+    onEffectInvalidated() {
+      invalidations += 1;
+    },
+  });
+
+  const source = createProducer(0);
+  const shared = createConsumer(() => readProducer(source) * 2);
+  const watchers = [];
+
+  for (let i = 0; i < width; i += 1) {
+    const watcher = new ReactiveNode(
+      null,
+      () => {
+        readConsumer(shared);
+      },
+      ReactiveNodeState.Watcher | ReactiveNodeState.Changed,
+    );
+    watchers.push(watcher);
+    runWatcher(watcher);
+  }
+
+  const first = watchers[0];
+  let value = 0;
+  let beforeInvalidations = 0;
+
+  return {
+    prepare() {
+      value += 1;
+      beforeInvalidations = invalidations;
+      writeProducer(source, value);
+    },
+    run() {
+      runWatcher(first);
+      return (invalidations - beforeInvalidations) ^ (shared.payload & 1);
+    },
+    cleanup() {
+      for (let i = 1; i < watchers.length; i += 1) {
+        runWatcher(watchers[i]);
+      }
+    },
+  };
+}
+
+function runTailBenchSuite() {
+  const wideFanout = buildWriteProducerWideFanout(4096);
+  const sharedWatchers = buildSharedFanoutWatchers(256);
+  const sharedWatcherRun = buildRunWatcherSharedFanout(256);
+
+  benchTailLatency(
+    "p99_writeProducer_wide_fanout_4096",
+    () => wideFanout.run(),
+    6000,
+    2000,
+    384,
+  );
+  benchTailLatency(
+    "p99_shared_fanout_watchers_256",
+    () => sharedWatchers.run(),
+    3000,
+    1000,
+    256,
+  );
+  benchTailLatencyWithHooks({
+    label: "p99_runWatcher_shared_propagateOnce_256",
+    prepare: () => sharedWatcherRun.prepare(),
+    run: () => sharedWatcherRun.run(),
+    cleanup: () => sharedWatcherRun.cleanup(),
+    iterations: 3000,
+    warmup: 1000,
+    sampleIterations: 256,
+  });
 }
 
 function runSingleScenario(name) {
@@ -647,6 +936,29 @@ function runSingleScenario(name) {
       bench(name, () => scenario.run(), 100000, 50000);
       return;
     }
+    case "p99_writeProducer_wide_fanout_4096": {
+      const scenario = buildWriteProducerWideFanout(4096);
+      benchTailLatency(name, () => scenario.run(), 6000, 2000, 384);
+      return;
+    }
+    case "p99_shared_fanout_watchers_256": {
+      const scenario = buildSharedFanoutWatchers(256);
+      benchTailLatency(name, () => scenario.run(), 3000, 1000, 256);
+      return;
+    }
+    case "p99_runWatcher_shared_propagateOnce_256": {
+      const scenario = buildRunWatcherSharedFanout(256);
+      benchTailLatencyWithHooks({
+        label: name,
+        prepare: () => scenario.prepare(),
+        run: () => scenario.run(),
+        cleanup: () => scenario.cleanup(),
+        iterations: 3000,
+        warmup: 1000,
+        sampleIterations: 256,
+      });
+      return;
+    }
     default:
       throw new Error(`Unknown scenario: ${name}`);
   }
@@ -662,6 +974,11 @@ function main() {
 
   if (mode === "engine") {
     runEngineBenchSuite();
+    return;
+  }
+
+  if (mode === "p99") {
+    runTailBenchSuite();
     return;
   }
 

@@ -23,9 +23,8 @@ describe("Reactive runtime - security regressions", () => {
     context.maybeNotifySettled();
 
     expect(settled).toHaveBeenCalledTimes(1);
-    expect(Object.getPrototypeOf(context.hooks)).toBe(Object.prototype);
-    expect("polluted" in context.hooks).toBe(false);
-    expect((context.hooks as Record<string, unknown>).polluted).toBeUndefined();
+    expect(Object.getPrototypeOf(context)).toBe(Object.prototype);
+    expect("polluted" in context).toBe(false);
   });
 
   it("setHooks ignores inherited callbacks on replacement objects", () => {
@@ -43,7 +42,7 @@ describe("Reactive runtime - security regressions", () => {
 
     expect(previous).not.toHaveBeenCalled();
     expect(inherited).not.toHaveBeenCalled();
-    expect(context.hooks.onReactiveSettled).toBe(undefined);
+    expect(context.onReactiveSettled).toBe(undefined);
   });
 
   it("keeps direct hook assignments synchronized with cached callbacks", () => {
@@ -51,15 +50,15 @@ describe("Reactive runtime - security regressions", () => {
     const second = vi.fn();
     const context = createExecutionContext();
 
-    context.hooks.onReactiveSettled = first;
+    context.onReactiveSettled = first;
     context.maybeNotifySettled();
-    context.hooks.onReactiveSettled = second;
+    context.onReactiveSettled = second;
     context.maybeNotifySettled();
-    context.hooks.onReactiveSettled = undefined;
+    context.onReactiveSettled = undefined;
     context.maybeNotifySettled();
 
     expect(first).toHaveBeenCalledTimes(1);
     expect(second).toHaveBeenCalledTimes(1);
-    expect(context.hooks.onReactiveSettled).toBe(undefined);
+    expect(context.onReactiveSettled).toBe(undefined);
   });
 });

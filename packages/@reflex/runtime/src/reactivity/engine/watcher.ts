@@ -1,5 +1,5 @@
-import { recordDebugEvent } from "../../debug";
-import { shouldRecompute } from "../walkers/recompute";
+import { recordDebugEvent } from "../../debug.runtime";
+import { shouldRecomputeDirtyWatcher } from "../walkers/recompute";
 import type { ReactiveNode } from "../shape";
 import {
   clearNodeVisited,
@@ -63,30 +63,30 @@ export function runWatcher(node: ReactiveNode): void {
   const state = node.state;
 
   if ((state & ReactiveNodeState.Disposed) !== 0) {
-    recordWatcherSkip(node, "disposed");
+    if (__DEV__) recordWatcherSkip(node, "disposed");
     return;
   }
 
   if ((state & DIRTY_STATE) === 0) {
-    recordWatcherSkip(node, "clean");
+    if (__DEV__) recordWatcherSkip(node, "clean");
     return;
   }
 
-  if (!shouldRecompute(node)) {
+  if (!shouldRecomputeDirtyWatcher(node, state)) {
     clearDirtyState(node);
-    recordWatcherSkip(node, "stable");
+    if (__DEV__) recordWatcherSkip(node, "stable");
     return;
   }
 
   const prevCleanup = getWatcherCleanup(node.payload);
-  recordWatcherStart(node, prevCleanup !== null);
+  if (__DEV__) recordWatcherStart(node, prevCleanup !== null);
 
   node.payload = UNINITIALIZED;
   clearNodeVisited(node);
 
   if (prevCleanup !== null) {
     prevCleanup();
-    recordWatcherCleanup(node);
+    if (__DEV__) recordWatcherCleanup(node);
   }
 
   if ((node.state & ReactiveNodeState.Disposed) !== 0) {
@@ -94,11 +94,10 @@ export function runWatcher(node: ReactiveNode): void {
     return;
   }
 
-  let hasCleanup = false;
   const result = executeNodeComputation(node);
+  const hasCleanup = typeof result === "function";
 
-  if (typeof result === "function") {
-    if (__DEV__) hasCleanup = true;
+  if (hasCleanup) {
     node.payload = result as () => void;
   }
 

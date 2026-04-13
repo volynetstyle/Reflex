@@ -6,6 +6,7 @@ import type ReactiveNode from "./ReactiveNode";
  * incoming list, so pointer rewrites must keep both views in sync.
  */
 class ReactiveEdge {
+  version: number;
   prevOut: ReactiveEdge | null;
   nextOut: ReactiveEdge | null;
   from: ReactiveNode;
@@ -14,6 +15,7 @@ class ReactiveEdge {
   nextIn: ReactiveEdge | null;
 
   constructor(
+    version: number,
     prevOut: ReactiveEdge | null,
     nextOut: ReactiveEdge | null,
     from: ReactiveNode,
@@ -21,6 +23,7 @@ class ReactiveEdge {
     prevIn: ReactiveEdge | null,
     nextIn: ReactiveEdge | null,
   ) {
+    this.version = version;
     this.prevOut = prevOut;
     this.nextOut = nextOut;
     this.from = from;

@@ -1,7 +1,7 @@
 import {
   collectDebugNodeRefs,
   recordDebugEvent,
-} from "../debug";
+} from "../debug.runtime";
 import type { ExecutionContext } from "./context";
 import {
   type ReactiveEdge,

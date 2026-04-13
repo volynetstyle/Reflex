@@ -3,4 +3,12 @@
 
 export { signal, computed, memo, effect, withEffectCleanupRegistrar } from "./api";
 export { subscribeOnce, map, filter, merge, scan, hold } from "./api";
-export { createRuntime } from "./infra";
+export { batch, createRuntime } from "./infra";
+export { createModel, isModel, own } from "./infra/model";
+export type {
+  Model,
+  ModelFactory,
+  ModelShape,
+  ModelTuple,
+  ValidatedModelShape,
+} from "./infra/model";

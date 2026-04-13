@@ -1,8 +1,9 @@
-import { recordDebugEvent } from "../../debug";
-import { defaultContext } from "../context";
+import { recordDebugEvent } from "../../debug.runtime";
+import { defaultContext, dispatchEffectInvalidated } from "../context";
 import { devAssertPropagateAlive } from "../dev";
 import type { ReactiveNode } from "../shape";
 import { DIRTY_STATE, ReactiveNodeState } from "../shape";
+import { WATCHER_MASK } from "./propagate.constants";
 
 export function propagateOnce(node: ReactiveNode): void {
   if ((node.state & ReactiveNodeState.Disposed) !== 0) {
@@ -10,9 +11,8 @@ export function propagateOnce(node: ReactiveNode): void {
     return;
   }
 
-  const context = defaultContext;
-  const dispatch = context.effectInvalidatedDispatch;
   let thrown: unknown = null;
+  const dispatch = dispatchEffectInvalidated;
 
   for (let edge = node.firstOut; edge !== null; edge = edge.nextOut) {
     const sub = edge.to;
@@ -20,22 +20,21 @@ export function propagateOnce(node: ReactiveNode): void {
 
     if ((state & DIRTY_STATE) !== ReactiveNodeState.Invalid) continue;
 
-    const nextState =
-      (state & ~ReactiveNodeState.Invalid) | ReactiveNodeState.Changed;
+    const nextState = state ^ DIRTY_STATE;
     sub.state = nextState;
 
     if (__DEV__) {
-      recordDebugEvent(context, "propagate", {
+      recordDebugEvent(defaultContext, "propagate", {
         detail: { immediate: true, nextState },
         source: edge.from,
         target: sub,
       });
     }
 
-    if ((nextState & ReactiveNodeState.Watcher) === 0) continue;
+    if ((nextState & WATCHER_MASK) === 0) continue;
 
     if (__DEV__) {
-      recordDebugEvent(context, "watcher:invalidated", { node: sub });
+      recordDebugEvent(defaultContext, "watcher:invalidated", { node: sub });
     }
 
     if (dispatch !== undefined) {

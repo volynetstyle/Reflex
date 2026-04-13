@@ -98,6 +98,10 @@ export function withEffectCleanupRegistrar<T>(
  * - The first run happens synchronously during `effect()` creation.
  * - With the default runtime strategy, later re-runs are queued until
  *   `rt.flush()`.
+ * - With `createRuntime({ effectStrategy: "ranked" })`, later re-runs are
+ *   queued until `rt.flush()` and then drained in descending watcher rank.
+ * - With `createRuntime({ effectStrategy: "sab" })`, invalidations stay lazy
+ *   during propagation but auto-deliver after the outermost `rt.batch()`.
  * - With `createRuntime({ effectStrategy: "eager" })`, invalidations flush
  *   automatically.
  * - Reads performed inside cleanup do not become dependencies of the next run.
@@ -108,11 +112,11 @@ export function withEffectCleanupRegistrar<T>(
  * @see memo
  */
 export function effect(fn: EffectFn): Destructor {
-  const node = createWatcherNode(fn);
   const context = getDefaultContext();
+  const node = createWatcherNode(fn);
   runWatcher(node);
 
-  const dispose = () => disposeWatcher(node);
+  const dispose = disposeWatcher.bind(null, node) as Destructor;
   context.registerWatcherCleanup(dispose);
   return dispose;
 }

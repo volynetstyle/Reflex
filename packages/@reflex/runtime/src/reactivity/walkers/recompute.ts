@@ -5,6 +5,50 @@ import { shouldRecomputeLinear } from "./recompute.branch";
 
 const STOP_RECOMPUTE = ReactiveNodeState.Producer | ReactiveNodeState.Disposed;
 const REENTRANT_STALE = ReactiveNodeState.Invalid | ReactiveNodeState.Visited;
+const WATCHER_REENTRANT_STALE =
+  ReactiveNodeState.Invalid | ReactiveNodeState.Visited;
+
+export function shouldRecomputeDirtyConsumer(
+  node: ReactiveNode,
+  state: number,
+): boolean {
+  if ((state & ReactiveNodeState.Changed) !== 0) {
+    return true;
+  }
+
+  if ((state & REENTRANT_STALE) === REENTRANT_STALE) {
+    return true;
+  }
+
+  const firstIn = node.firstIn;
+  if (firstIn === null) {
+    node.state = state & ~ReactiveNodeState.Invalid;
+    return false;
+  }
+
+  return shouldRecomputeLinear(node, firstIn);
+}
+
+export function shouldRecomputeDirtyWatcher(
+  node: ReactiveNode,
+  state: number,
+): boolean {
+  if ((state & ReactiveNodeState.Changed) !== 0) {
+    return true;
+  }
+
+  if ((state & WATCHER_REENTRANT_STALE) === WATCHER_REENTRANT_STALE) {
+    return true;
+  }
+
+  const firstIn = node.firstIn;
+  if (firstIn === null) {
+    node.state = state & ~ReactiveNodeState.Invalid;
+    return false;
+  }
+
+  return shouldRecomputeLinear(node, firstIn);
+}
 
 // Entry point. Kept small so TurboFan/Ion/DFG eagerly inline it into callers.
 // All early-exit checks come first so the common fast paths never touch

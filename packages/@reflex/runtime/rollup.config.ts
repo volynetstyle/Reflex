@@ -8,6 +8,7 @@ import constEnum from "rollup-plugin-const-enum";
 type BuildFormat = "esm" | "cjs";
 
 interface BuildTarget {
+  input: Record<string, string>;
   name: string;
   outDir: string;
   format: BuildFormat;
@@ -34,9 +35,30 @@ const PURE_FUNCS = [
 ] as const;
 
 const TARGETS: BuildTarget[] = [
-  { name: "esm", outDir: "esm", format: "esm", dev: false },
-  { name: "esm-dev", outDir: "dev", format: "esm", dev: true },
-  { name: "cjs", outDir: "cjs", format: "cjs", dev: false },
+  {
+    input: { index: "build/esm/index.js" },
+    name: "esm",
+    outDir: "esm",
+    format: "esm",
+    dev: false,
+  },
+  {
+    input: {
+      index: "build/esm/index.js",
+      debug: "build/esm/debug.js",
+    },
+    name: "esm-dev",
+    outDir: "dev",
+    format: "esm",
+    dev: true,
+  },
+  {
+    input: { index: "build/esm/index.js" },
+    name: "cjs",
+    outDir: "cjs",
+    format: "cjs",
+    dev: false,
+  },
 ];
 
 function compactPlugins(plugins: Array<Plugin | undefined | false>): Plugin[] {
@@ -169,7 +191,7 @@ function createPlugins(target: BuildTarget): Plugin[] {
 function createConfig(target: BuildTarget): RollupOptions {
   return {
     input: {
-      index: "build/esm/index.js",
+      ...target.input,
     },
 
     treeshake: {
@@ -184,7 +206,6 @@ function createConfig(target: BuildTarget): RollupOptions {
     output: {
       dir: `dist/${target.outDir}`,
       format: target.format,
-      inlineDynamicImports: true,
       entryFileNames: target.format === "cjs" ? "[name].cjs" : "[name].js",
       exports: target.format === "cjs" ? "named" : undefined,
       sourcemap: target.dev,

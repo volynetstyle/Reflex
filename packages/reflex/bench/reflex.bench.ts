@@ -9,7 +9,7 @@ import {
 
 import { createRuntime, effect, memo, signal } from "../dist/esm";
 
-const rt = createRuntime({ effectStrategy: "flush" });
+const rt = createRuntime({ effectStrategy: "sab" });
 
 class ReflexHarness implements BenchHarness {
   readonly metrics = new HarnessMetrics();

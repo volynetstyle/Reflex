@@ -18,6 +18,7 @@ It gives you:
 
 - a compact signal-style API
 - runtime-backed execution with explicit effect flushing
+- disposable typed models with batched untracked actions
 - event sources plus composition helpers like `map()`, `filter()`, `merge()`, `scan()`, and `hold()`
 - predictable semantics for lazy derived values and scheduled effects
 
@@ -75,6 +76,7 @@ The top-level primitives are not methods on `rt`, but they are still runtime-bac
 - Preserve explicit runtime control instead of hiding scheduling.
 - Make derived state cheap to read through lazy cached computeds.
 - Support both state-style and event-style reactive flows.
+- Provide a small ownership boundary for feature-local reactive state.
 - Expose low-level escape hatches only when needed, without forcing them into normal usage.
 
 ## Core Primitives
@@ -131,6 +133,91 @@ disposeLatest();
 - the first item is the accessor you read from
 - the second item is a disposer that unsubscribes from the event source and releases the internal node
 
+### Models
+
+```ts
+import {
+  computed,
+  createModel,
+  createRuntime,
+  own,
+  signal,
+} from "@volynets/reflex";
+
+createRuntime();
+
+const createCounterModel = createModel((ctx, initial = 0) => {
+  const [count, setCount] = signal(initial);
+  const doubled = computed(() => count() * 2);
+
+  const timer = own(ctx, {
+    [Symbol.dispose]() {
+      console.log("timer disposed");
+    },
+  });
+
+  return {
+    count,
+    doubled,
+    inc: ctx.action(() => setCount((value) => value + 1)),
+    reset: ctx.action(() => setCount(initial)),
+    timer,
+  };
+});
+
+const counter = createCounterModel(1);
+
+counter.inc();
+console.log(counter.doubled()); // 4
+
+counter[Symbol.dispose]();
+```
+
+Model rules:
+
+- return only readable reactive values, `ctx.action(...)`, and nested objects
+- model actions run untracked and inside the active `batch()`
+- use `ctx.onDispose(...)` or `own(ctx, value)` for owned resources
+- do not return `effect()` from a model; effects are rejected by both types and runtime validation
+- in dev builds, `own()` warns if the resource looks already disposed
+
+Full contract: `docs/models.md`
+
+#### Model Semantics (Contract)
+
+1. Lifecycle
+   - created when you call the factory returned by `createModel(...)`
+   - disposed when `model[Symbol.dispose]()` is called
+   - disposal is idempotent: calling `model[Symbol.dispose]()` multiple times has no additional effect
+   - a disposed model is "dead": actions throw, and cleanup hooks will not run again
+   - dead models are not reusable; construct a new instance instead
+2. Ownership contract
+   - `own(ctx, value)` registers one disposal; sharing the same resource across multiple models will dispose it multiple times
+   - passing an already-disposed resource is allowed but discouraged; `own()` does not guard against it
+   - dispose order is guaranteed LIFO (last registered cleanup runs first)
+   - nested models can be owned: `own(ctx, createChildModel())` is valid
+3. Action semantics
+   - actions can be nested; each action participates in the active `batch()`
+   - if no batch is active, the outermost action creates one; nested actions reuse it and do not flush independently
+   - actions run untracked; dependency tracking is suspended during the action
+   - if an action throws, the error is rethrown and tracking/batch state is restored
+   - return values pass through unchanged
+   - actions are synchronous for reactive correctness; async work runs outside the batch/untracked scope
+4. Post-dispose behavior
+   - actions always throw after disposal
+   - during disposal, the model is already marked dead; actions invoked from cleanups throw the same as after disposal
+   - reads from previously returned accessors are outside the model contract: they may appear to work, but are not guaranteed to be valid or stable
+   - effects are not allowed in models; subscriptions or external resources must be torn down via `ctx.onDispose()`/`own()`
+5. Visibility
+   - anything returned from the model is part of its public API
+   - `own(ctx, value)` and `ctx.onDispose(...)` are lifecycle primitives, not public surface
+   - keep internal details private by not returning them, or document them explicitly
+
+Error policy for dispose:
+
+- all cleanups run in LIFO order
+- cleanup errors are logged and do not prevent remaining cleanups from running
+
 ### Event composition
 
 ```ts
@@ -165,6 +252,7 @@ subscribeOnce(labels, (value) => {
 - `effect(fn)` runs once immediately on creation.
 - If an effect returns cleanup, that cleanup runs before the next effect run and on dispose.
 - With the default runtime, invalidated effects run on `rt.flush()`.
+- With `createRuntime({ effectStrategy: "sab" })`, invalidated effects stay lazy during a batch and auto-deliver when the outermost batch exits.
 - With `createRuntime({ effectStrategy: "eager" })`, invalidated effects flush automatically.
 - Pure signal and computed reads do not require `flush()`.
 - Same-value signal writes do not force recomputation.
@@ -178,7 +266,7 @@ subscribeOnce(labels, (value) => {
 
 ```ts
 const rt = createRuntime({
-  effectStrategy: "flush", // or "eager"
+  effectStrategy: "flush", // or "sab" / "eager"
   hooks: {
     onEffectInvalidated(node) {
       // low-level integration hook
@@ -189,7 +277,7 @@ const rt = createRuntime({
 
 Options:
 
-- `effectStrategy: "flush" | "eager"` controls whether invalidated effects wait for `rt.flush()` or run automatically
+- `effectStrategy: "flush" | "sab" | "eager"` controls whether invalidated effects wait for `rt.flush()`, stabilize after `batch()`, or run automatically
 - `hooks.onEffectInvalidated(node)` is a low-level hook for integrations that want to observe effect invalidation
 
 Returned API:
@@ -255,6 +343,43 @@ const stop = effect(() => {
 - may return a cleanup function
 - cleanup runs before the next execution and on dispose
 - returns a callable disposer with `.dispose()`
+
+### `createModel(factory)`
+
+Creates a typed disposable model factory.
+
+```ts
+const createTodoModel = createModel((ctx) => {
+  const [title, setTitle] = signal("");
+
+  return {
+    title,
+    rename: ctx.action((next: string) => setTitle(next)),
+  };
+});
+```
+
+- returned model instances are disposable via `model[Symbol.dispose]()`
+- `ctx.action(...)` creates the only supported function values inside the model shape
+- actions are batched and untracked
+- nested objects are allowed
+- `effect()` values are forbidden inside the returned model shape
+
+### `own(ctx, value)`
+
+Registers a nested disposable so it is disposed together with the model.
+
+```ts
+const socket = own(ctx, {
+  [Symbol.dispose]() {
+    ws.close();
+  },
+});
+```
+
+### `isModel(value)`
+
+Returns `true` when `value` is a Reflex model created by `createModel()`.
 
 ### `rt.event<T>()`
 
@@ -333,7 +458,7 @@ They are exported as top-level functions, but they run against the currently con
 
 ### Do I always need to call `flush()`?
 
-No. You need `flush()` for scheduled effects when using the default `effectStrategy: "flush"`. You do not need `flush()` just to read up-to-date `signal()` or `computed()` values.
+No. You need `flush()` for scheduled effects when using the default `effectStrategy: "flush"`. In `effectStrategy: "sab"`, effects auto-deliver after the outermost `batch()`. You do not need `flush()` just to read up-to-date `signal()` or `computed()` values.
 
 ### Is `computed()` lazy or eager?
 
@@ -345,7 +470,7 @@ Lazy. It does not run until the first read. After that it behaves like a cached 
 
 ### Does `effect()` run immediately?
 
-Yes. It runs once on creation. Future re-runs happen after invalidation, either on `rt.flush()` or automatically when using the eager effect strategy.
+Yes. It runs once on creation. Future re-runs happen after invalidation, either on `rt.flush()`, at the end of an outermost batch in `sab`, or automatically when using the eager effect strategy.
 
 ### Why do `scan()` and `hold()` return tuples instead of only an accessor?
 

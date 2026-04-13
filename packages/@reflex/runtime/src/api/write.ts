@@ -2,7 +2,7 @@ import type { ProducerComparator } from "./compare";
 import type { ReactiveNode } from "../reactivity";
 import { compare as defaultComparator } from "./compare";
 import { devAssertWriteAlive, devRecordWriteProducer } from "../reactivity/dev";
-import { IMMEDIATE, isDisposedNode, propagate } from "../reactivity";
+import { PROMOTE_CHANGED, isDisposedNode, propagate } from "../reactivity";
 import { defaultContext } from "../reactivity/context";
 
 /**
@@ -19,7 +19,7 @@ import { defaultContext } from "../reactivity/context";
  *    - Synchronously notifies ALL subscribers through the "push phase"
  *    - All subscribers are marked with Changed state so they'll recompute when read
  *
- * The propagation is SYNCHRONOUS and IMMEDIATE. All nodes reachable from this
+ * The propagation is synchronous and immediately promotes direct subscribers.
  * producer are notified before writeProducer returns. This ensures deterministic
  * ordering and allows batching of changes at a higher level (scheduler).
  *
@@ -114,10 +114,10 @@ export function writeProducer<T>(
   context.enterPropagation();
 
   try {
-    // Push phase: notify all subscribers depth-first, mark them dirty
-    // IMMEDIATE flag: direct subscribers are promoted from Invalid→Changed
+    // Push phase: notify all subscribers depth-first, mark them dirty.
+    // Direct subscribers are promoted from Invalid to Changed.
     // This tells them "definitely changed, don't verify, recompute"
-    propagate(firstSubscriberEdge, IMMEDIATE);
+    propagate(firstSubscriberEdge, PROMOTE_CHANGED);
   } finally {
     // Always exit propagation phase, even if propagate throws
     context.leavePropagation();

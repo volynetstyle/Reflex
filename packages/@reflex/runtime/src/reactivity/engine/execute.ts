@@ -1,4 +1,4 @@
-import { recordDebugEvent } from "../../debug";
+import { recordDebugEvent } from "../../debug.runtime";
 import type { ReactiveNode } from "../shape";
 import {
   ReactiveNodeState,
@@ -8,17 +8,18 @@ import {
 import { cleanupStaleSources } from "./tracking";
 import { defaultContext } from "../context";
 
-function prepareNodeExecution(node: ReactiveNode): () => void {
+function prepareNodeExecution(node: ReactiveNode): ReactiveNode | null {
   const context = defaultContext;
+  const nextVersion = (context.trackingVersion + 1) >>> 0;
 
   node.depsTail = null;
   node.state =
     (node.state & ~ReactiveNodeState.Visited) | ReactiveNodeState.Tracking;
   markNodeComputing(node);
+  context.trackingVersion = nextVersion === 0 ? 1 : nextVersion;
 
   const prevActive = context.activeComputed;
   context.activeComputed = node;
-  let restored = false;
 
   if (__DEV__) {
     recordDebugEvent(context, "compute:start", {
@@ -26,13 +27,16 @@ function prepareNodeExecution(node: ReactiveNode): () => void {
     });
   }
 
-  return () => {
-    if (restored) return;
-    restored = true;
-    context.activeComputed = prevActive;
-    node.state &= ~ReactiveNodeState.Tracking;
-    clearNodeComputing(node);
-  };
+  return prevActive;
+}
+
+function restoreNodeExecution(
+  node: ReactiveNode,
+  prevActive: ReactiveNode | null,
+): void {
+  defaultContext.activeComputed = prevActive;
+  node.state &= ~ReactiveNodeState.Tracking;
+  clearNodeComputing(node);
 }
 
 export function executeNodeComputation(node: ReactiveNode): unknown {
@@ -48,12 +52,12 @@ export function executeNodeComputation(node: ReactiveNode): unknown {
   }
 
   const compute = node.compute!;
-  const restoreActive = prepareNodeExecution(node);
+  const prevActive = prepareNodeExecution(node);
   let result: unknown;
 
   try {
     result = compute();
-    restoreActive();
+    restoreNodeExecution(node, prevActive);
 
     if (node.depsTail !== node.lastIn) {
       cleanupStaleSources(node);
@@ -70,7 +74,7 @@ export function executeNodeComputation(node: ReactiveNode): unknown {
 
     return result;
   } catch (error) {
-    restoreActive();
+    restoreNodeExecution(node, prevActive);
 
     if (__DEV__) {
       recordDebugEvent(defaultContext, "compute:error", {

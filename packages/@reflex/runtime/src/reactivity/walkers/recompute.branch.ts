@@ -15,13 +15,113 @@
 
 import type { ReactiveNode, ReactiveEdge } from "../shape";
 import { ReactiveNodeState, DIRTY_STATE } from "../shape";
-import { shouldRecomputeBranching } from "./recompute.branching";
-import { refreshRecompute } from "./recompute.refresh";
+import { recompute } from "../engine/compute";
+import { propagateOnce } from "./propagate.once";
 
 // Shared stack — reused across calls to avoid allocation.
 // stackBase tracks the logical bottom per call so recursive entries
 // don't trample each other's frames.
 const shouldRecomputeStack: ReactiveEdge[] = [];
+
+function refreshRecompute(node: ReactiveNode): boolean {
+  return recompute(node);
+}
+
+function hasFanout(edge: ReactiveEdge): boolean {
+  return edge.prevOut !== null || edge.nextOut !== null;
+}
+
+function refreshAndPropagateIfFanout(
+  node: ReactiveNode,
+  fanout: boolean,
+): boolean {
+  const changed = refreshRecompute(node);
+
+  if (changed && fanout) {
+    propagateOnce(node);
+  }
+
+  return changed;
+}
+
+function refreshAndPropagateIfNeeded(
+  node: ReactiveNode,
+  fanout: boolean,
+): boolean {
+  const changed = refreshRecompute(node);
+
+  if (changed && fanout) {
+    propagateOnce(node);
+  }
+
+  return changed;
+}
+
+function shouldRecomputeBranching(
+  link: ReactiveEdge,
+  consumer: ReactiveNode,
+  stack: ReactiveEdge[],
+  stackTop: number,
+  stackBase: number,
+): boolean {
+  let changed = false;
+
+  outer: while (true) {
+    if ((consumer.state & ReactiveNodeState.Changed) !== 0) {
+      changed = true;
+    } else {
+      const dep = link.from;
+      const depState = dep.state;
+
+      if ((depState & ReactiveNodeState.Changed) !== 0) {
+        // Already-confirmed computed dependency: refresh and stop searching.
+        changed = refreshAndPropagateIfNeeded(dep, hasFanout(link));
+      } else if ((depState & DIRTY_STATE) !== 0) {
+        const deps = dep.firstIn;
+        if (deps !== null) {
+          stack[stackTop++] = link;
+          link = deps;
+          consumer = dep;
+          continue;
+        }
+
+        changed = refreshAndPropagateIfNeeded(dep, hasFanout(link));
+      }
+    }
+
+    if (!changed) {
+      const next = link.nextIn;
+      if (next !== null) {
+        link = next;
+        continue;
+      }
+      consumer.state &= ~ReactiveNodeState.Invalid;
+    }
+
+    while (stackTop > stackBase) {
+      const parentLink = stack[--stackTop]!;
+      const parentFanout = hasFanout(parentLink);
+
+      if (changed) {
+        changed = refreshAndPropagateIfNeeded(consumer, parentFanout);
+      } else {
+        consumer.state &= ~ReactiveNodeState.Invalid;
+      }
+
+      consumer = parentLink.to;
+
+      if (!changed) {
+        const next = parentLink.nextIn;
+        if (next !== null) {
+          link = next;
+          continue outer;
+        }
+      }
+    }
+
+    return changed;
+  }
+}
 
 // so the finally was only cleanup — moving it inline is correct.
 export function shouldRecomputeLinear(
@@ -36,7 +136,9 @@ export function shouldRecomputeLinear(
   let changed = false;
 
   while (true) {
-    if (link.nextIn !== null) {
+    const nextIn = link.nextIn;
+
+    if (nextIn !== null) {
       // Multiple deps at this level: hand off to DFS.
       // Stack ownership transfers — branching will pop down to stackBase.
       return shouldRecomputeBranching(
@@ -57,9 +159,8 @@ export function shouldRecomputeLinear(
     const depState = dep.state;
 
     if ((depState & ReactiveNodeState.Changed) !== 0) {
-      changed = refreshRecompute(link, dep);
-
-      if (changed || link.nextIn === null) break;
+      changed = refreshAndPropagateIfFanout(dep, hasFanout(link));
+      break;
     }
 
     if ((depState & DIRTY_STATE) !== 0) {
@@ -89,7 +190,7 @@ export function shouldRecomputeLinear(
         continue;
       }
 
-      changed = refreshRecompute(link, dep);
+      changed = refreshAndPropagateIfFanout(dep, hasFanout(link));
       break;
     }
 
@@ -98,6 +199,7 @@ export function shouldRecomputeLinear(
 
     if (stackTop === stackBase) {
       // Stack empty: nothing changed anymore.
+      stack.length = stackBase;
       return false;
     }
 
@@ -108,9 +210,10 @@ export function shouldRecomputeLinear(
   // Unwind: propagate the change (or clean) decision up the stack.
   while (stackTop > stackBase) {
     const parentLink = stack[--stackTop]!;
+    const parentFanout = hasFanout(parentLink);
 
     if (changed) {
-      changed = refreshRecompute(parentLink, consumer);
+      changed = refreshAndPropagateIfNeeded(consumer, parentFanout);
     } else {
       consumer.state &= ~ReactiveNodeState.Invalid;
     }
@@ -124,4 +227,3 @@ export function shouldRecomputeLinear(
   stack.length = stackBase;
   return changed;
 }
-

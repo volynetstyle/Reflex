@@ -11,6 +11,7 @@ import { UNINITIALIZED } from "../../build/esm/reactivity/shape/ReactiveNode.js"
 import ReactiveNode from "../../build/esm/reactivity/shape/ReactiveNode.js";
 import { linkEdge } from "../../build/esm/reactivity/shape/methods/connect.js";
 import { propagate as propagateImported } from "../../build/esm/reactivity/walkers/propagate.js";
+import { PROMOTE_CHANGED } from "../../build/esm/reactivity/walkers/propagate.constants.js";
 
 const runtime = getDefaultContext();
 
@@ -80,6 +81,103 @@ function notifyWatcherInvalidation(node, thrown, context) {
   }
 
   return thrown;
+}
+
+function createProfileCounters() {
+  return {
+    edgeVisits: 0,
+    linearBranchHandoffs: 0,
+    branchingEntries: 0,
+    linearReentriesAfterBranching: 0,
+    linearEdgeVisits: 0,
+    branchingEdgeVisits: 0,
+    firstBranchRuns: 0,
+    linearEdgesBeforeFirstBranch: 0,
+    linearTimeMs: 0,
+    branchingTimeMs: 0,
+    slowPathHits: 0,
+    trackingSlowPathHits: 0,
+    trackingFallbackScans: 0,
+    trackingFallbackScanSteps: 0,
+    stackPushes: 0,
+    stackPops: 0,
+  };
+}
+
+function resetProfileCounters(counters) {
+  counters.edgeVisits = 0;
+  counters.linearBranchHandoffs = 0;
+  counters.branchingEntries = 0;
+  counters.linearReentriesAfterBranching = 0;
+  counters.linearEdgeVisits = 0;
+  counters.branchingEdgeVisits = 0;
+  counters.firstBranchRuns = 0;
+  counters.linearEdgesBeforeFirstBranch = 0;
+  counters.linearTimeMs = 0;
+  counters.branchingTimeMs = 0;
+  counters.slowPathHits = 0;
+  counters.trackingSlowPathHits = 0;
+  counters.trackingFallbackScans = 0;
+  counters.trackingFallbackScanSteps = 0;
+  counters.stackPushes = 0;
+  counters.stackPops = 0;
+}
+
+function snapshotProfileCounters(counters) {
+  return { ...counters };
+}
+
+function getSlowInvalidatedSubscriberStateProfiled(
+  edge,
+  state,
+  promoteImmediate,
+  counters,
+) {
+  counters.slowPathHits += 1;
+
+  if ((state & (DIRTY_STATE | ReactiveNodeState.Disposed)) !== 0) return 0;
+
+  if ((state & ReactiveNodeState.Tracking) === 0) {
+    return (
+      (state & ~ReactiveNodeState.Visited) |
+      (promoteImmediate ? ReactiveNodeState.Changed : ReactiveNodeState.Invalid)
+    );
+  }
+
+  counters.trackingSlowPathHits += 1;
+
+  const depsTail = edge.to.depsTail;
+  if (depsTail === null) return 0;
+  if (edge === depsTail) {
+    return state | ReactiveNodeState.Visited | ReactiveNodeState.Invalid;
+  }
+
+  const prevIn = edge.prevIn;
+  if (prevIn === null) {
+    return state | ReactiveNodeState.Visited | ReactiveNodeState.Invalid;
+  }
+  if (prevIn === depsTail) return 0;
+
+  counters.trackingFallbackScans += 1;
+
+  let cursor = prevIn.prevIn;
+  while (cursor !== null && cursor !== depsTail) {
+    counters.trackingFallbackScanSteps += 1;
+    cursor = cursor.prevIn;
+  }
+
+  return cursor === depsTail
+    ? 0
+    : state | ReactiveNodeState.Visited | ReactiveNodeState.Invalid;
+}
+
+function getNextStateProfiled(edge, state, promote, counters) {
+  counters.edgeVisits += 1;
+
+  return (state & INVALIDATION_SLOW_PATH_MASK) === 0
+    ? state |
+        (promote ? ReactiveNodeState.Changed : ReactiveNodeState.Invalid)
+    : getSlowInvalidatedSubscriberStateProfiled(edge, state, promote, counters);
 }
 
 function createPropagateArrayVariant() {
@@ -197,6 +295,155 @@ function createPropagateArrayVariant() {
     const thrown = propagateLinear(startEdge, promoteImmediate, null, context);
     if (thrown !== null) throw thrown;
   };
+}
+
+function createPropagateSplitProfileVariant() {
+  const edgeStack = [];
+  const promoteStack = [];
+  const counters = createProfileCounters();
+  let currentRunSawFirstBranch = false;
+
+  function propagateBranching(
+    edge,
+    promote,
+    thrown,
+    parentResume,
+    parentResumePromote,
+    context,
+  ) {
+    const stackBase = edgeStack.length;
+    let stackTop = stackBase;
+    let resume = edge.nextOut;
+    let resumePromote = promote;
+    let localBranchingEdges = 0;
+    const startedAt = performance.now();
+
+    counters.branchingEntries += 1;
+
+    if (parentResume !== null) {
+      edgeStack[stackTop] = parentResume;
+      promoteStack[stackTop++] = parentResumePromote;
+      counters.stackPushes += 1;
+    }
+
+    try {
+      while (true) {
+        const sub = edge.to;
+        const state = sub.state;
+        localBranchingEdges += 1;
+        const nextState = getNextStateProfiled(edge, state, promote, counters);
+
+        if (nextState !== 0) {
+          sub.state = nextState;
+
+          if ((nextState & ReactiveNodeState.Watcher) !== 0) {
+            thrown = notifyWatcherInvalidation(sub, thrown, context);
+          } else {
+            const firstOut = sub.firstOut;
+            if (firstOut !== null) {
+              if (resume !== null) {
+                edgeStack[stackTop] = resume;
+                promoteStack[stackTop++] = resumePromote;
+                counters.stackPushes += 1;
+              }
+              edge = firstOut;
+              resume = edge.nextOut;
+              promote = resumePromote = NON_IMMEDIATE;
+              continue;
+            }
+          }
+        }
+
+        if (resume !== null) {
+          edge = resume;
+          promote = resumePromote;
+          resume = edge.nextOut;
+        } else if (stackTop > stackBase) {
+          --stackTop;
+          counters.stackPops += 1;
+          edge = edgeStack[stackTop];
+          promote = resumePromote = promoteStack[stackTop];
+          resume = edge.nextOut;
+        } else {
+          return thrown;
+        }
+      }
+    } finally {
+      counters.branchingEdgeVisits += localBranchingEdges;
+      counters.branchingTimeMs += performance.now() - startedAt;
+      edgeStack.length = stackBase;
+      promoteStack.length = stackBase;
+    }
+  }
+
+  function propagateLinear(edge, promote, thrown, context) {
+    let localLinearEdges = 0;
+    const startedAt = performance.now();
+
+    try {
+      while (true) {
+        const sub = edge.to;
+        const state = sub.state;
+        localLinearEdges += 1;
+        const nextState = getNextStateProfiled(edge, state, promote, counters);
+        const next = edge.nextOut;
+
+        if (nextState !== 0) {
+          sub.state = nextState;
+
+          if ((nextState & ReactiveNodeState.Watcher) !== 0) {
+            thrown = notifyWatcherInvalidation(sub, thrown, context);
+          } else {
+            const firstOut = sub.firstOut;
+            if (firstOut !== null) {
+              edge = firstOut;
+              if (next !== null) {
+                counters.linearBranchHandoffs += 1;
+                if (!currentRunSawFirstBranch) {
+                  currentRunSawFirstBranch = true;
+                  counters.firstBranchRuns += 1;
+                  counters.linearEdgesBeforeFirstBranch += localLinearEdges;
+                }
+
+                return propagateBranching(
+                  edge,
+                  NON_IMMEDIATE,
+                  thrown,
+                  next,
+                  promote,
+                  context,
+                );
+              }
+              promote = NON_IMMEDIATE;
+              continue;
+            }
+          }
+        }
+
+        if (next === null) return thrown;
+        edge = next;
+      }
+    } finally {
+      counters.linearEdgeVisits += localLinearEdges;
+      counters.linearTimeMs += performance.now() - startedAt;
+    }
+  }
+
+  function propagateArrayProfileVariant(
+    startEdge,
+    promoteImmediate = NON_IMMEDIATE,
+    context = runtime,
+  ) {
+    if ((startEdge.from.state & ReactiveNodeState.Disposed) !== 0) return;
+    currentRunSawFirstBranch = false;
+
+    const thrown = propagateLinear(startEdge, promoteImmediate, null, context);
+    if (thrown !== null) throw thrown;
+  }
+
+  propagateArrayProfileVariant.resetProfile = () => resetProfileCounters(counters);
+  propagateArrayProfileVariant.readProfile = () => snapshotProfileCounters(counters);
+  return propagateArrayProfileVariant;
 }
 
 function createPropagateInt32Variant() {
@@ -327,8 +574,156 @@ function createPropagateInt32Variant() {
   };
 }
 
+function createPropagateHybridVariant() {
+  const edgeStack = [];
+  const promoteStack = [];
+
+  return function propagateHybridVariant(
+    startEdge,
+    promoteImmediate = NON_IMMEDIATE,
+    context = runtime,
+  ) {
+    if ((startEdge.from.state & ReactiveNodeState.Disposed) !== 0) return;
+
+    const stackBase = edgeStack.length;
+    let stackTop = stackBase;
+    let edge = startEdge;
+    let promote = promoteImmediate;
+    let thrown = null;
+
+    try {
+      while (edge !== null) {
+        const sub = edge.to;
+        const next = edge.nextOut;
+        const state = sub.state;
+        const nextState =
+          (state & INVALIDATION_SLOW_PATH_MASK) === 0
+            ? state |
+              (promote ? ReactiveNodeState.Changed : ReactiveNodeState.Invalid)
+            : getSlowInvalidatedSubscriberState(edge, state, promote);
+
+        if (nextState !== 0) {
+          sub.state = nextState;
+
+          if ((nextState & ReactiveNodeState.Watcher) !== 0) {
+            thrown = notifyWatcherInvalidation(sub, thrown, context);
+          } else {
+            const firstOut = sub.firstOut;
+            if (firstOut !== null) {
+              if (next !== null) {
+                edgeStack[stackTop] = next;
+                promoteStack[stackTop++] = promote;
+              }
+
+              edge = firstOut;
+              promote = NON_IMMEDIATE;
+              continue;
+            }
+          }
+        }
+
+        if (next !== null) {
+          edge = next;
+          continue;
+        }
+
+        if (stackTop > stackBase) {
+          --stackTop;
+          edge = edgeStack[stackTop];
+          promote = promoteStack[stackTop];
+          continue;
+        }
+
+        edge = null;
+      }
+    } finally {
+      edgeStack.length = stackBase;
+      promoteStack.length = stackBase;
+    }
+
+    if (thrown !== null) throw thrown;
+  };
+}
+
+function createPropagateHybridProfileVariant() {
+  const edgeStack = [];
+  const promoteStack = [];
+  const counters = createProfileCounters();
+
+  function propagateHybridProfileVariant(
+    startEdge,
+    promoteImmediate = NON_IMMEDIATE,
+    context = runtime,
+  ) {
+    if ((startEdge.from.state & ReactiveNodeState.Disposed) !== 0) return;
+
+    const stackBase = edgeStack.length;
+    let stackTop = stackBase;
+    let edge = startEdge;
+    let promote = promoteImmediate;
+    let thrown = null;
+
+    try {
+      while (edge !== null) {
+        const sub = edge.to;
+        const next = edge.nextOut;
+        const state = sub.state;
+        const nextState = getNextStateProfiled(edge, state, promote, counters);
+
+        if (nextState !== 0) {
+          sub.state = nextState;
+
+          if ((nextState & ReactiveNodeState.Watcher) !== 0) {
+            thrown = notifyWatcherInvalidation(sub, thrown, context);
+          } else {
+            const firstOut = sub.firstOut;
+            if (firstOut !== null) {
+              if (next !== null) {
+                edgeStack[stackTop] = next;
+                promoteStack[stackTop++] = promote;
+                counters.stackPushes += 1;
+              }
+
+              edge = firstOut;
+              promote = NON_IMMEDIATE;
+              continue;
+            }
+          }
+        }
+
+        if (next !== null) {
+          edge = next;
+          continue;
+        }
+
+        if (stackTop > stackBase) {
+          --stackTop;
+          counters.stackPops += 1;
+          edge = edgeStack[stackTop];
+          promote = promoteStack[stackTop];
+          continue;
+        }
+
+        edge = null;
+      }
+    } finally {
+      edgeStack.length = stackBase;
+      promoteStack.length = stackBase;
+    }
+
+    if (thrown !== null) throw thrown;
+  }
+
+  propagateHybridProfileVariant.resetProfile = () => resetProfileCounters(counters);
+  propagateHybridProfileVariant.readProfile = () => snapshotProfileCounters(counters);
+  return propagateHybridProfileVariant;
+}
+
 const propagateArrayLocal = createPropagateArrayVariant();
+const propagateSplitProfile = createPropagateSplitProfileVariant();
 const propagateInt32Local = createPropagateInt32Variant();
+const propagateHybridLocal = createPropagateHybridVariant();
+const propagateHybridProfile = createPropagateHybridProfileVariant();
 
 function buildPropagateChain(depth) {
   resetRuntime();
@@ -347,9 +742,40 @@ function buildPropagateChain(depth) {
   const startEdge = root.firstOut;
   if (startEdge === null) throw new Error("propagate chain root has no edge");
 
+  function baseline() {
+    clearWalkerState(nodes);
+    return nodes.length;
+  }
+
   return {
-    run(propagateImpl) {
-      propagateImpl(startEdge, IMMEDIATE, runtime);
+    baseline,
+    imported() {
+      propagateImported(startEdge, PROMOTE_CHANGED);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    arrayLocal() {
+      propagateArrayLocal(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    int32Local() {
+      propagateInt32Local(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    hybridLocal() {
+      propagateHybridLocal(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    splitProfile() {
+      propagateSplitProfile(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    hybridProfile() {
+      propagateHybridProfile(startEdge, IMMEDIATE, runtime);
       clearWalkerState(nodes);
       return nodes.length;
     },
@@ -378,9 +804,40 @@ function buildPropagateFanout(width, depth) {
   const startEdge = root.firstOut;
   if (startEdge === null) throw new Error("propagate fanout root has no edge");
 
+  function baseline() {
+    clearWalkerState(nodes);
+    return nodes.length;
+  }
+
   return {
-    run(propagateImpl) {
-      propagateImpl(startEdge, IMMEDIATE, runtime);
+    baseline,
+    imported() {
+      propagateImported(startEdge, PROMOTE_CHANGED);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    arrayLocal() {
+      propagateArrayLocal(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    int32Local() {
+      propagateInt32Local(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    hybridLocal() {
+      propagateHybridLocal(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    splitProfile() {
+      propagateSplitProfile(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    hybridProfile() {
+      propagateHybridProfile(startEdge, IMMEDIATE, runtime);
       clearWalkerState(nodes);
       return nodes.length;
     },
@@ -409,11 +866,107 @@ function buildPropagateTree(branching, depth) {
   const startEdge = root.firstOut;
   if (startEdge === null) throw new Error("propagate tree root has no edge");
 
+  function baseline() {
+    clearWalkerState(nodes);
+    return nodes.length;
+  }
+
   return {
-    run(propagateImpl) {
-      propagateImpl(startEdge, IMMEDIATE, runtime);
+    baseline,
+    imported() {
+      propagateImported(startEdge, PROMOTE_CHANGED);
       clearWalkerState(nodes);
       return nodes.length;
+    },
+    arrayLocal() {
+      propagateArrayLocal(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    int32Local() {
+      propagateInt32Local(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    hybridLocal() {
+      propagateHybridLocal(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    splitProfile() {
+      propagateSplitProfile(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    hybridProfile() {
+      propagateHybridProfile(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+  };
+}
+
+function buildTrackedPrefixStress(fanIn, depsTailIndex, edgeIndex) {
+  resetRuntime();
+
+  const target = createConsumer(() => 0);
+  const edges = [];
+
+  for (let i = 0; i < fanIn; i += 1) {
+    const producer = createProducer(i);
+    edges.push(linkEdge(producer, target));
+  }
+
+  const depsTail = edges[depsTailIndex];
+  const targetEdge = edges[edgeIndex];
+
+  if (!depsTail || !targetEdge) {
+    throw new Error("tracked-prefix stress graph is incomplete");
+  }
+
+  function baseline() {
+    target.state = TRACKING_CONSUMER_STATE;
+    target.depsTail = depsTail;
+    return target.state;
+  }
+
+  return {
+    baseline,
+    imported() {
+      target.state = TRACKING_CONSUMER_STATE;
+      target.depsTail = depsTail;
+      propagateImported(targetEdge, PROMOTE_CHANGED);
+      return target.state;
+    },
+    arrayLocal() {
+      target.state = TRACKING_CONSUMER_STATE;
+      target.depsTail = depsTail;
+      propagateArrayLocal(targetEdge, IMMEDIATE, runtime);
+      return target.state;
+    },
+    int32Local() {
+      target.state = TRACKING_CONSUMER_STATE;
+      target.depsTail = depsTail;
+      propagateInt32Local(targetEdge, IMMEDIATE, runtime);
+      return target.state;
+    },
+    hybridLocal() {
+      target.state = TRACKING_CONSUMER_STATE;
+      target.depsTail = depsTail;
+      propagateHybridLocal(targetEdge, IMMEDIATE, runtime);
+      return target.state;
+    },
+    splitProfile() {
+      target.state = TRACKING_CONSUMER_STATE;
+      target.depsTail = depsTail;
+      propagateSplitProfile(targetEdge, IMMEDIATE, runtime);
+      return target.state;
+    },
+    hybridProfile() {
+      target.state = TRACKING_CONSUMER_STATE;
+      target.depsTail = depsTail;
+      propagateHybridProfile(targetEdge, IMMEDIATE, runtime);
+      return target.state;
     },
   };
 }
@@ -483,9 +1036,38 @@ function buildPropagateBranchingTrackingMix(width, depth) {
   }
 
   return {
-    run(propagateImpl) {
+    baseline() {
       armTracking();
-      propagateImpl(startEdge, IMMEDIATE, runtime);
+      return nodes.length;
+    },
+    imported() {
+      armTracking();
+      propagateImported(startEdge, PROMOTE_CHANGED);
+      return nodes.length;
+    },
+    arrayLocal() {
+      armTracking();
+      propagateArrayLocal(startEdge, IMMEDIATE, runtime);
+      return nodes.length;
+    },
+    int32Local() {
+      armTracking();
+      propagateInt32Local(startEdge, IMMEDIATE, runtime);
+      return nodes.length;
+    },
+    hybridLocal() {
+      armTracking();
+      propagateHybridLocal(startEdge, IMMEDIATE, runtime);
+      return nodes.length;
+    },
+    splitProfile() {
+      armTracking();
+      propagateSplitProfile(startEdge, IMMEDIATE, runtime);
+      return nodes.length;
+    },
+    hybridProfile() {
+      armTracking();
+      propagateHybridProfile(startEdge, IMMEDIATE, runtime);
       return nodes.length;
     },
   };
@@ -518,6 +1100,21 @@ function measure(fn, iterations) {
   };
 }
 
+function collectProfile(run, variant, iterations) {
+  variant.resetProfile();
+
+  let sink = 0;
+  for (let i = 0; i < iterations; i += 1) {
+    sink ^= run(i) & 1;
+  }
+
+  return {
+    iterations,
+    sink,
+    ...variant.readProfile(),
+  };
+}
+
 function median(values) {
   const sorted = [...values].sort((a, b) => a - b);
   return sorted[(sorted.length / 2) | 0];
@@ -529,21 +1126,41 @@ function formatDelta(candidate, baseline) {
   return `${sign}${delta.toFixed(1)}%`;
 }
 
+function formatPerOp(count, iterations) {
+  return (count / iterations).toFixed(2);
+}
+
+function formatRate(count, total) {
+  if (total === 0) return "0.0%";
+  return `${((count / total) * 100).toFixed(1)}%`;
+}
+
+function printProfileLine(label, profile) {
+  const linearTimeTotal = profile.linearTimeMs + profile.branchingTimeMs;
+  console.log(
+    `  ${label}: edges/op=${formatPerOp(profile.edgeVisits, profile.iterations)} | handoffs/op=${formatPerOp(profile.linearBranchHandoffs, profile.iterations)} | branching_entries/op=${formatPerOp(profile.branchingEntries, profile.iterations)} | linear_reentries_after_branch/op=${formatPerOp(profile.linearReentriesAfterBranching, profile.iterations)} | linear_before_first_branch/op=${formatPerOp(profile.linearEdgesBeforeFirstBranch, profile.firstBranchRuns || 1)} | linear_edge_share=${formatRate(profile.linearEdgeVisits, profile.edgeVisits)} | linear_time_share=${formatRate(profile.linearTimeMs, linearTimeTotal)} | pushes/op=${formatPerOp(profile.stackPushes, profile.iterations)} | pops/op=${formatPerOp(profile.stackPops, profile.iterations)} | slow/op=${formatPerOp(profile.slowPathHits, profile.iterations)} (${formatRate(profile.slowPathHits, profile.edgeVisits)}) | tracking_slow/op=${formatPerOp(profile.trackingSlowPathHits, profile.iterations)} | tracking_scans/op=${formatPerOp(profile.trackingFallbackScans, profile.iterations)} | scan_steps/op=${formatPerOp(profile.trackingFallbackScanSteps, profile.iterations)}`,
+  );
+}
+
 function runScenario(label, scenario, iterations, warmup = iterations >> 1, rounds = 7) {
   const variants = [
-    ["imported", () => scenario.run(propagateImported)],
-    ["array_local", () => scenario.run(propagateArrayLocal)],
-    ["int32_local", () => scenario.run(propagateInt32Local)],
+    ["imported", scenario.imported],
+    ["array_local", scenario.arrayLocal],
+    ["int32_local", scenario.int32Local],
+    ["hybrid_local", scenario.hybridLocal],
   ];
   const samples = new Map();
+  const baselineSamples = [];
 
+  warm(scenario.baseline, warmup);
   for (const [name, fn] of variants) {
     warm(fn, warmup);
     samples.set(name, []);
   }
 
   for (let round = 0; round < rounds; round += 1) {
-    const order = round % 3;
+    baselineSamples.push(measure(scenario.baseline, iterations).nsPerOp);
+    const order = round % variants.length;
     for (let offset = 0; offset < variants.length; offset += 1) {
       const [name, fn] = variants[(order + offset) % variants.length];
       const result = measure(fn, iterations);
@@ -551,26 +1168,60 @@ function runScenario(label, scenario, iterations, warmup = iterations >> 1, roun
     }
   }
 
-  const importedMedian = median(samples.get("imported"));
-  const arrayMedian = median(samples.get("array_local"));
-  const int32Median = median(samples.get("int32_local"));
+  const baselineMedian = median(baselineSamples);
+  const importedMedianRaw = median(samples.get("imported"));
+  const arrayMedianRaw = median(samples.get("array_local"));
+  const int32MedianRaw = median(samples.get("int32_local"));
+  const hybridMedianRaw = median(samples.get("hybrid_local"));
+  const importedMedian = importedMedianRaw - baselineMedian;
+  const arrayMedian = arrayMedianRaw - baselineMedian;
+  const int32Median = int32MedianRaw - baselineMedian;
+  const hybridMedian = hybridMedianRaw - baselineMedian;
+  const profileIterations = Math.min(iterations, 256);
+  const splitProfile = collectProfile(
+    scenario.splitProfile,
+    propagateSplitProfile,
+    profileIterations,
+  );
+  const hybridProfile = collectProfile(
+    scenario.hybridProfile,
+    propagateHybridProfile,
+    profileIterations,
+  );
 
   console.log(`\n${label}`);
   console.log(
-    `  imported:    ${importedMedian.toFixed(1)} ns/op`,
+    `  baseline:    ${baselineMedian.toFixed(1)} ns/op`,
   );
   console.log(
-    `  array_local: ${arrayMedian.toFixed(1)} ns/op (${formatDelta(
+    `  imported:    ${importedMedian.toFixed(1)} ns/op adj (${importedMedianRaw.toFixed(1)} raw)`,
+  );
+  console.log(
+    `  array_local: ${arrayMedian.toFixed(1)} ns/op adj (${arrayMedianRaw.toFixed(1)} raw, ${formatDelta(
       arrayMedian,
       importedMedian,
     )} vs imported)`,
   );
   console.log(
-    `  int32_local: ${int32Median.toFixed(1)} ns/op (${formatDelta(
+    `  int32_local: ${int32Median.toFixed(1)} ns/op adj (${int32MedianRaw.toFixed(1)} raw, ${formatDelta(
+      int32Median,
+      importedMedian,
+    )} vs imported)`,
+  );
+  console.log(
+    `  hybrid_local: ${hybridMedian.toFixed(1)} ns/op adj (${hybridMedianRaw.toFixed(1)} raw, ${formatDelta(
+      hybridMedian,
+      importedMedian,
+    )} vs imported)`,
+  );
+  console.log(
+    `  int32 vs array: ${formatDelta(
       int32Median,
       arrayMedian,
-    )} vs array_local)`,
+    )}`,
   );
+  printProfileLine("split_profile", splitProfile);
+  printProfileLine("hybrid_profile", hybridProfile);
 }
 
 function main() {
@@ -578,6 +1229,18 @@ function main() {
   runScenario("propagate_fanout_32x8", buildPropagateFanout(32, 8), 100000);
   runScenario("propagate_tree_4x5", buildPropagateTree(4, 5), 20000, 10000);
   runScenario("propagate_tree_4x6", buildPropagateTree(4, 6), 5000, 2500);
+  runScenario(
+    "tracked_prefix_scan_true_1024_768_767",
+    buildTrackedPrefixStress(1024, 768, 767),
+    50000,
+    25000,
+  );
+  runScenario(
+    "tracked_prefix_scan_false_1024_31_1023",
+    buildTrackedPrefixStress(1024, 31, 1023),
+    50000,
+    25000,
+  );
   runScenario(
     "propagate_branching_tracking_mix_32x8",
     buildPropagateBranchingTrackingMix(32, 8),

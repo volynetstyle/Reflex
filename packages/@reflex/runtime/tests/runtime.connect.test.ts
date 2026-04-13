@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { ReactiveNodeState, ReactiveNode } from "../src";
+import { ReactiveNodeState, ReactiveNode, createExecutionContext } from "../src";
 import {
   linkEdge,
   ReactiveEdge,
+  trackReadActive,
   unlinkEdge,
   reuseIncomingEdgeFromSuffixOrCreate,
 } from "../src/reactivity";
@@ -67,5 +68,50 @@ describe("Reactive graph - edge wiring", () => {
     expect(cb.nextIn).toBe(bb);
     expect(bb.prevIn).toBe(cb);
     expect(target.lastIn).toBe(bb);
+  });
+
+  it("routes fallback edge reuse through the execution-context seam", () => {
+    const a = createNode(ReactiveNodeState.Producer);
+    const b = createNode(ReactiveNodeState.Producer);
+    const c = createNode(ReactiveNodeState.Producer);
+    const target = createNode(ReactiveNodeState.Consumer);
+    const calls: Array<{
+      source: ReactiveNode;
+      consumer: ReactiveNode;
+      prev: ReactiveEdge | null;
+      nextExpected: ReactiveEdge | null;
+    }> = [];
+
+    const ab = linkEdge(a, target);
+    const bb = linkEdge(b, target);
+    const cb = linkEdge(c, target);
+    const context = createExecutionContext(
+      {},
+      {
+        trackReadFallback(source, consumer, prev, nextExpected) {
+          calls.push({ source, consumer, prev, nextExpected });
+          return reuseIncomingEdgeFromSuffixOrCreate(
+            source,
+            consumer,
+            prev,
+            nextExpected,
+          );
+        },
+      },
+    );
+
+    target.depsTail = ab;
+    trackReadActive(c, target, context);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toEqual({
+      source: c,
+      consumer: target,
+      prev: ab,
+      nextExpected: bb,
+    });
+    expect(target.depsTail).toBe(cb);
+    expect(ab.nextIn).toBe(cb);
+    expect(cb.prevIn).toBe(ab);
   });
 });
