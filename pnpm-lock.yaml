@@ -104,6 +104,9 @@ importers:
       '@volynets/reflex':
         specifier: workspace:*
         version: link:../reflex
+      reflex-framework:
+        specifier: workspace:*
+        version: link:../reflex-framework
       vite:
         specifier: ^6.0.0
         version: 6.4.1(@types/node@24.10.1)(terser@5.44.1)(yaml@2.8.1)
