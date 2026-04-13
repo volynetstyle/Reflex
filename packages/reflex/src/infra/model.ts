@@ -12,6 +12,7 @@ type Cleanup = () => void;
 type ModelState = { disposed: boolean };
 
 const DISPOSE = Symbol.dispose;
+const MODEL_DISPOSED = Symbol("MODEL_DISPOSED");
 
 interface DisposableLike {
   [DISPOSE](): void;
@@ -41,6 +42,12 @@ interface ModelContext {
 const MODEL_BRAND = Symbol("MODEL_BRAND");
 
 type ModelTypeError<Message extends string> = Message;
+
+type DisposedHint = {
+  disposed?: boolean;
+  isDisposed?: boolean;
+  [MODEL_DISPOSED]?: boolean;
+};
 
 type ReadableModelBrand =
   | Brand<"signal">
@@ -169,6 +176,18 @@ export function isModel(value: unknown): value is DisposableLike {
  * Registers a nested disposable so it is disposed with the parent model.
  */
 export function own<T extends DisposableLike>(ctx: ModelContext, value: T): T {
+  if (typeof __DEV__ !== "undefined" && __DEV__) {
+    const kind = typeof value;
+    if (kind === "object" || kind === "function") {
+      const hint = value as DisposedHint;
+      if (hint[MODEL_DISPOSED] === true || hint.disposed === true || hint.isDisposed === true) {
+        console.warn(
+          "own(ctx, value) received a disposed resource. This is allowed but likely a bug.",
+        );
+      }
+    }
+  }
+
   ctx.onDispose(() => value[DISPOSE]!());
   return value;
 }
@@ -187,6 +206,9 @@ export function own<T extends DisposableLike>(ctx: ModelContext, value: T): T {
  * Effects are intentionally forbidden inside model shapes. If a model needs
  * ownership-aware resources, create them outside the returned object and wire
  * their teardown through `ctx.onDispose()` or `own(ctx, value)`.
+ *
+ * Disposal is idempotent and marks the model as dead before running cleanups.
+ * Cleanup errors are logged and do not prevent remaining cleanups from running.
  */
 export function createModel<TFactory extends ModelFactory<object, unknown[]>>(
   factory: CheckedModelFactory<TFactory>,
@@ -226,11 +248,18 @@ export function createModel<TFactory extends ModelFactory<object, unknown[]>>(
       configurable: false,
       writable: false,
     });
+    Object.defineProperty(model, MODEL_DISPOSED, {
+      value: false,
+      enumerable: false,
+      configurable: false,
+      writable: true,
+    });
 
     Object.defineProperty(model, DISPOSE, {
       value() {
         if (state.disposed) return;
         state.disposed = true;
+        (model as DisposedHint)[MODEL_DISPOSED] = true;
 
         for (let i = cleanups.length - 1; i >= 0; i--) {
           const cleanup = cleanups[i];

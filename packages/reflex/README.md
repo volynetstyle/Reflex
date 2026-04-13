@@ -179,31 +179,44 @@ Model rules:
 - model actions run untracked and inside the active `batch()`
 - use `ctx.onDispose(...)` or `own(ctx, value)` for owned resources
 - do not return `effect()` from a model; effects are rejected by both types and runtime validation
+- in dev builds, `own()` warns if the resource looks already disposed
+
+Full contract: `docs/models.md`
 
 #### Model Semantics (Contract)
 
 1. Lifecycle
    - created when you call the factory returned by `createModel(...)`
    - disposed when `model[Symbol.dispose]()` is called
+   - disposal is idempotent: calling `model[Symbol.dispose]()` multiple times has no additional effect
    - a disposed model is "dead": actions throw, and cleanup hooks will not run again
    - dead models are not reusable; construct a new instance instead
 2. Ownership contract
    - `own(ctx, value)` registers one disposal; sharing the same resource across multiple models will dispose it multiple times
    - passing an already-disposed resource is allowed but discouraged; `own()` does not guard against it
    - dispose order is guaranteed LIFO (last registered cleanup runs first)
+   - nested models can be owned: `own(ctx, createChildModel())` is valid
 3. Action semantics
-   - actions can be nested; each action runs inside the active `batch()`
+   - actions can be nested; each action participates in the active `batch()`
+   - if no batch is active, the outermost action creates one; nested actions reuse it and do not flush independently
    - actions run untracked; dependency tracking is suspended during the action
    - if an action throws, the error is rethrown and tracking/batch state is restored
+   - return values pass through unchanged
    - actions are synchronous for reactive correctness; async work runs outside the batch/untracked scope
 4. Post-dispose behavior
    - actions always throw after disposal
-   - reads of returned accessors may still succeed, but the model is considered dead and behavior is not guaranteed
+   - during disposal, the model is already marked dead; actions invoked from cleanups throw the same as after disposal
+   - reads from previously returned accessors are outside the model contract: they may appear to work, but are not guaranteed to be valid or stable
    - effects are not allowed in models; subscriptions or external resources must be torn down via `ctx.onDispose()`/`own()`
 5. Visibility
-   - `own(ctx, value)` is public but intended for implementation detail (ownership, teardown)
    - anything returned from the model is part of its public API
+   - `own(ctx, value)` and `ctx.onDispose(...)` are lifecycle primitives, not public surface
    - keep internal details private by not returning them, or document them explicitly
+
+Error policy for dispose:
+
+- all cleanups run in LIFO order
+- cleanup errors are logged and do not prevent remaining cleanups from running
 
 ### Event composition
 

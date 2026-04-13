@@ -36,6 +36,7 @@ Public application-facing facade.
 - `createRuntime`
 - `map` / `filter` / `merge`
 - `scan` / `hold` / `subscribeOnce`
+- model contract: `docs/models.md`
 
 ## Recommended Entry Point
 
