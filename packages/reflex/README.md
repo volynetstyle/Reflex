@@ -18,6 +18,7 @@ It gives you:
 
 - a compact signal-style API
 - runtime-backed execution with explicit effect flushing
+- disposable typed models with batched untracked actions
 - event sources plus composition helpers like `map()`, `filter()`, `merge()`, `scan()`, and `hold()`
 - predictable semantics for lazy derived values and scheduled effects
 
@@ -75,6 +76,7 @@ The top-level primitives are not methods on `rt`, but they are still runtime-bac
 - Preserve explicit runtime control instead of hiding scheduling.
 - Make derived state cheap to read through lazy cached computeds.
 - Support both state-style and event-style reactive flows.
+- Provide a small ownership boundary for feature-local reactive state.
 - Expose low-level escape hatches only when needed, without forcing them into normal usage.
 
 ## Core Primitives
@@ -130,6 +132,78 @@ disposeLatest();
 
 - the first item is the accessor you read from
 - the second item is a disposer that unsubscribes from the event source and releases the internal node
+
+### Models
+
+```ts
+import {
+  computed,
+  createModel,
+  createRuntime,
+  own,
+  signal,
+} from "@volynets/reflex";
+
+createRuntime();
+
+const createCounterModel = createModel((ctx, initial = 0) => {
+  const [count, setCount] = signal(initial);
+  const doubled = computed(() => count() * 2);
+
+  const timer = own(ctx, {
+    [Symbol.dispose]() {
+      console.log("timer disposed");
+    },
+  });
+
+  return {
+    count,
+    doubled,
+    inc: ctx.action(() => setCount((value) => value + 1)),
+    reset: ctx.action(() => setCount(initial)),
+    timer,
+  };
+});
+
+const counter = createCounterModel(1);
+
+counter.inc();
+console.log(counter.doubled()); // 4
+
+counter[Symbol.dispose]();
+```
+
+Model rules:
+
+- return only readable reactive values, `ctx.action(...)`, and nested objects
+- model actions run untracked and inside the active `batch()`
+- use `ctx.onDispose(...)` or `own(ctx, value)` for owned resources
+- do not return `effect()` from a model; effects are rejected by both types and runtime validation
+
+#### Model Semantics (Contract)
+
+1. Lifecycle
+   - created when you call the factory returned by `createModel(...)`
+   - disposed when `model[Symbol.dispose]()` is called
+   - a disposed model is "dead": actions throw, and cleanup hooks will not run again
+   - dead models are not reusable; construct a new instance instead
+2. Ownership contract
+   - `own(ctx, value)` registers one disposal; sharing the same resource across multiple models will dispose it multiple times
+   - passing an already-disposed resource is allowed but discouraged; `own()` does not guard against it
+   - dispose order is guaranteed LIFO (last registered cleanup runs first)
+3. Action semantics
+   - actions can be nested; each action runs inside the active `batch()`
+   - actions run untracked; dependency tracking is suspended during the action
+   - if an action throws, the error is rethrown and tracking/batch state is restored
+   - actions are synchronous for reactive correctness; async work runs outside the batch/untracked scope
+4. Post-dispose behavior
+   - actions always throw after disposal
+   - reads of returned accessors may still succeed, but the model is considered dead and behavior is not guaranteed
+   - effects are not allowed in models; subscriptions or external resources must be torn down via `ctx.onDispose()`/`own()`
+5. Visibility
+   - `own(ctx, value)` is public but intended for implementation detail (ownership, teardown)
+   - anything returned from the model is part of its public API
+   - keep internal details private by not returning them, or document them explicitly
 
 ### Event composition
 
@@ -256,6 +330,43 @@ const stop = effect(() => {
 - may return a cleanup function
 - cleanup runs before the next execution and on dispose
 - returns a callable disposer with `.dispose()`
+
+### `createModel(factory)`
+
+Creates a typed disposable model factory.
+
+```ts
+const createTodoModel = createModel((ctx) => {
+  const [title, setTitle] = signal("");
+
+  return {
+    title,
+    rename: ctx.action((next: string) => setTitle(next)),
+  };
+});
+```
+
+- returned model instances are disposable via `model[Symbol.dispose]()`
+- `ctx.action(...)` creates the only supported function values inside the model shape
+- actions are batched and untracked
+- nested objects are allowed
+- `effect()` values are forbidden inside the returned model shape
+
+### `own(ctx, value)`
+
+Registers a nested disposable so it is disposed together with the model.
+
+```ts
+const socket = own(ctx, {
+  [Symbol.dispose]() {
+    ws.close();
+  },
+});
+```
+
+### `isModel(value)`
+
+Returns `true` when `value` is a Reflex model created by `createModel()`.
 
 ### `rt.event<T>()`
 

@@ -1,4 +1,4 @@
-import { recordDebugEvent } from "../../debug";
+import { recordDebugEvent } from "../../debug.runtime";
 import type { ReactiveNode } from "../shape";
 import {
   ReactiveNodeState,

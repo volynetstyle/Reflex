@@ -11,6 +11,7 @@ import { UNINITIALIZED } from "../../build/esm/reactivity/shape/ReactiveNode.js"
 import ReactiveNode from "../../build/esm/reactivity/shape/ReactiveNode.js";
 import { linkEdge } from "../../build/esm/reactivity/shape/methods/connect.js";
 import { propagate as propagateImported } from "../../build/esm/reactivity/walkers/propagate.js";
+import { PROMOTE_CHANGED } from "../../build/esm/reactivity/walkers/propagate.constants.js";
 
 const runtime = getDefaultContext();
 
@@ -741,9 +742,40 @@ function buildPropagateChain(depth) {
   const startEdge = root.firstOut;
   if (startEdge === null) throw new Error("propagate chain root has no edge");
 
+  function baseline() {
+    clearWalkerState(nodes);
+    return nodes.length;
+  }
+
   return {
-    run(propagateImpl) {
-      propagateImpl(startEdge, IMMEDIATE, runtime);
+    baseline,
+    imported() {
+      propagateImported(startEdge, PROMOTE_CHANGED);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    arrayLocal() {
+      propagateArrayLocal(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    int32Local() {
+      propagateInt32Local(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    hybridLocal() {
+      propagateHybridLocal(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    splitProfile() {
+      propagateSplitProfile(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    hybridProfile() {
+      propagateHybridProfile(startEdge, IMMEDIATE, runtime);
       clearWalkerState(nodes);
       return nodes.length;
     },
@@ -772,9 +804,40 @@ function buildPropagateFanout(width, depth) {
   const startEdge = root.firstOut;
   if (startEdge === null) throw new Error("propagate fanout root has no edge");
 
+  function baseline() {
+    clearWalkerState(nodes);
+    return nodes.length;
+  }
+
   return {
-    run(propagateImpl) {
-      propagateImpl(startEdge, IMMEDIATE, runtime);
+    baseline,
+    imported() {
+      propagateImported(startEdge, PROMOTE_CHANGED);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    arrayLocal() {
+      propagateArrayLocal(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    int32Local() {
+      propagateInt32Local(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    hybridLocal() {
+      propagateHybridLocal(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    splitProfile() {
+      propagateSplitProfile(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    hybridProfile() {
+      propagateHybridProfile(startEdge, IMMEDIATE, runtime);
       clearWalkerState(nodes);
       return nodes.length;
     },
@@ -803,9 +866,40 @@ function buildPropagateTree(branching, depth) {
   const startEdge = root.firstOut;
   if (startEdge === null) throw new Error("propagate tree root has no edge");
 
+  function baseline() {
+    clearWalkerState(nodes);
+    return nodes.length;
+  }
+
   return {
-    run(propagateImpl) {
-      propagateImpl(startEdge, IMMEDIATE, runtime);
+    baseline,
+    imported() {
+      propagateImported(startEdge, PROMOTE_CHANGED);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    arrayLocal() {
+      propagateArrayLocal(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    int32Local() {
+      propagateInt32Local(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    hybridLocal() {
+      propagateHybridLocal(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    splitProfile() {
+      propagateSplitProfile(startEdge, IMMEDIATE, runtime);
+      clearWalkerState(nodes);
+      return nodes.length;
+    },
+    hybridProfile() {
+      propagateHybridProfile(startEdge, IMMEDIATE, runtime);
       clearWalkerState(nodes);
       return nodes.length;
     },
@@ -830,11 +924,48 @@ function buildTrackedPrefixStress(fanIn, depsTailIndex, edgeIndex) {
     throw new Error("tracked-prefix stress graph is incomplete");
   }
 
+  function baseline() {
+    target.state = TRACKING_CONSUMER_STATE;
+    target.depsTail = depsTail;
+    return target.state;
+  }
+
   return {
-    run(propagateImpl) {
+    baseline,
+    imported() {
       target.state = TRACKING_CONSUMER_STATE;
       target.depsTail = depsTail;
-      propagateImpl(targetEdge, IMMEDIATE, runtime);
+      propagateImported(targetEdge, PROMOTE_CHANGED);
+      return target.state;
+    },
+    arrayLocal() {
+      target.state = TRACKING_CONSUMER_STATE;
+      target.depsTail = depsTail;
+      propagateArrayLocal(targetEdge, IMMEDIATE, runtime);
+      return target.state;
+    },
+    int32Local() {
+      target.state = TRACKING_CONSUMER_STATE;
+      target.depsTail = depsTail;
+      propagateInt32Local(targetEdge, IMMEDIATE, runtime);
+      return target.state;
+    },
+    hybridLocal() {
+      target.state = TRACKING_CONSUMER_STATE;
+      target.depsTail = depsTail;
+      propagateHybridLocal(targetEdge, IMMEDIATE, runtime);
+      return target.state;
+    },
+    splitProfile() {
+      target.state = TRACKING_CONSUMER_STATE;
+      target.depsTail = depsTail;
+      propagateSplitProfile(targetEdge, IMMEDIATE, runtime);
+      return target.state;
+    },
+    hybridProfile() {
+      target.state = TRACKING_CONSUMER_STATE;
+      target.depsTail = depsTail;
+      propagateHybridProfile(targetEdge, IMMEDIATE, runtime);
       return target.state;
     },
   };
@@ -905,9 +1036,38 @@ function buildPropagateBranchingTrackingMix(width, depth) {
   }
 
   return {
-    run(propagateImpl) {
+    baseline() {
       armTracking();
-      propagateImpl(startEdge, IMMEDIATE, runtime);
+      return nodes.length;
+    },
+    imported() {
+      armTracking();
+      propagateImported(startEdge, PROMOTE_CHANGED);
+      return nodes.length;
+    },
+    arrayLocal() {
+      armTracking();
+      propagateArrayLocal(startEdge, IMMEDIATE, runtime);
+      return nodes.length;
+    },
+    int32Local() {
+      armTracking();
+      propagateInt32Local(startEdge, IMMEDIATE, runtime);
+      return nodes.length;
+    },
+    hybridLocal() {
+      armTracking();
+      propagateHybridLocal(startEdge, IMMEDIATE, runtime);
+      return nodes.length;
+    },
+    splitProfile() {
+      armTracking();
+      propagateSplitProfile(startEdge, IMMEDIATE, runtime);
+      return nodes.length;
+    },
+    hybridProfile() {
+      armTracking();
+      propagateHybridProfile(startEdge, IMMEDIATE, runtime);
       return nodes.length;
     },
   };
@@ -984,19 +1144,22 @@ function printProfileLine(label, profile) {
 
 function runScenario(label, scenario, iterations, warmup = iterations >> 1, rounds = 7) {
   const variants = [
-    ["imported", () => scenario.run(propagateImported)],
-    ["array_local", () => scenario.run(propagateArrayLocal)],
-    ["int32_local", () => scenario.run(propagateInt32Local)],
-    ["hybrid_local", () => scenario.run(propagateHybridLocal)],
+    ["imported", scenario.imported],
+    ["array_local", scenario.arrayLocal],
+    ["int32_local", scenario.int32Local],
+    ["hybrid_local", scenario.hybridLocal],
   ];
   const samples = new Map();
+  const baselineSamples = [];
 
+  warm(scenario.baseline, warmup);
   for (const [name, fn] of variants) {
     warm(fn, warmup);
     samples.set(name, []);
   }
 
   for (let round = 0; round < rounds; round += 1) {
+    baselineSamples.push(measure(scenario.baseline, iterations).nsPerOp);
     const order = round % variants.length;
     for (let offset = 0; offset < variants.length; offset += 1) {
       const [name, fn] = variants[(order + offset) % variants.length];
@@ -1005,40 +1168,48 @@ function runScenario(label, scenario, iterations, warmup = iterations >> 1, roun
     }
   }
 
-  const importedMedian = median(samples.get("imported"));
-  const arrayMedian = median(samples.get("array_local"));
-  const int32Median = median(samples.get("int32_local"));
-  const hybridMedian = median(samples.get("hybrid_local"));
+  const baselineMedian = median(baselineSamples);
+  const importedMedianRaw = median(samples.get("imported"));
+  const arrayMedianRaw = median(samples.get("array_local"));
+  const int32MedianRaw = median(samples.get("int32_local"));
+  const hybridMedianRaw = median(samples.get("hybrid_local"));
+  const importedMedian = importedMedianRaw - baselineMedian;
+  const arrayMedian = arrayMedianRaw - baselineMedian;
+  const int32Median = int32MedianRaw - baselineMedian;
+  const hybridMedian = hybridMedianRaw - baselineMedian;
   const profileIterations = Math.min(iterations, 256);
   const splitProfile = collectProfile(
-    () => scenario.run(propagateSplitProfile),
+    scenario.splitProfile,
     propagateSplitProfile,
     profileIterations,
   );
   const hybridProfile = collectProfile(
-    () => scenario.run(propagateHybridProfile),
+    scenario.hybridProfile,
     propagateHybridProfile,
     profileIterations,
   );
 
   console.log(`\n${label}`);
   console.log(
-    `  imported:    ${importedMedian.toFixed(1)} ns/op`,
+    `  baseline:    ${baselineMedian.toFixed(1)} ns/op`,
   );
   console.log(
-    `  array_local: ${arrayMedian.toFixed(1)} ns/op (${formatDelta(
+    `  imported:    ${importedMedian.toFixed(1)} ns/op adj (${importedMedianRaw.toFixed(1)} raw)`,
+  );
+  console.log(
+    `  array_local: ${arrayMedian.toFixed(1)} ns/op adj (${arrayMedianRaw.toFixed(1)} raw, ${formatDelta(
       arrayMedian,
       importedMedian,
     )} vs imported)`,
   );
   console.log(
-    `  int32_local: ${int32Median.toFixed(1)} ns/op (${formatDelta(
+    `  int32_local: ${int32Median.toFixed(1)} ns/op adj (${int32MedianRaw.toFixed(1)} raw, ${formatDelta(
       int32Median,
       importedMedian,
     )} vs imported)`,
   );
   console.log(
-    `  hybrid_local: ${hybridMedian.toFixed(1)} ns/op (${formatDelta(
+    `  hybrid_local: ${hybridMedian.toFixed(1)} ns/op adj (${hybridMedianRaw.toFixed(1)} raw, ${formatDelta(
       hybridMedian,
       importedMedian,
     )} vs imported)`,

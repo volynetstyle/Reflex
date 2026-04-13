@@ -1,0 +1,91 @@
+export type RuntimeDebugEventType =
+  | "cleanup:stale-sources"
+  | "compute:error"
+  | "compute:finish"
+  | "compute:start"
+  | "context:enter-propagation"
+  | "context:hooks"
+  | "context:optimizations"
+  | "context:leave-propagation"
+  | "context:settled"
+  | "propagate"
+  | "read:consumer"
+  | "read:producer"
+  | "recompute"
+  | "track:read"
+  | "watcher:cleanup"
+  | "watcher:dispose"
+  | "watcher:invalidated"
+  | "watcher:run:finish"
+  | "watcher:run:skip"
+  | "watcher:run:start"
+  | "write:producer";
+
+export type RuntimeDebugFlag =
+  | "changed"
+  | "computing"
+  | "consumer"
+  | "disposed"
+  | "invalid"
+  | "producer"
+  | "scheduled"
+  | "tracking"
+  | "visited"
+  | "watcher";
+
+export type RuntimeDebugNodeKind =
+  | "consumer"
+  | "producer"
+  | "unknown"
+  | "watcher";
+
+export type RuntimeDebugDirtyState =
+  | "changed"
+  | "clean"
+  | "invalid"
+  | "invalid+changed";
+
+export interface RuntimeDebugOptions {
+  historyLimit?: number;
+}
+
+export interface RuntimeDebugNodeRef {
+  id: number;
+  kind: RuntimeDebugNodeKind;
+  dirty: RuntimeDebugDirtyState;
+  flags: RuntimeDebugFlag[];
+  label?: string;
+  state: number;
+}
+
+export interface RuntimeDebugNodeSnapshot extends RuntimeDebugNodeRef {
+  payload: unknown;
+  hasCompute: boolean;
+  inDegree: number;
+  outDegree: number;
+  sources: RuntimeDebugNodeRef[];
+  subscribers: RuntimeDebugNodeRef[];
+}
+
+export interface RuntimeDebugContextSnapshot {
+  id: number;
+  propagationDepth: number;
+  historySize: number;
+  historyLimit: number;
+  observerCount: number;
+  activeComputed?: RuntimeDebugNodeRef;
+}
+
+export interface RuntimeDebugEvent {
+  id: number;
+  contextId: number;
+  timestamp: number;
+  type: RuntimeDebugEventType;
+  consumer?: RuntimeDebugNodeRef;
+  detail?: Record<string, unknown>;
+  node?: RuntimeDebugNodeRef;
+  source?: RuntimeDebugNodeRef;
+  target?: RuntimeDebugNodeRef;
+}
+
+export type RuntimeDebugListener = (event: RuntimeDebugEvent) => void;

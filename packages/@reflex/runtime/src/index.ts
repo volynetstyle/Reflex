@@ -27,12 +27,6 @@ export {
 } from "./reactivity/context";
 
 export {
-  createRuntimePerfCounters,
-  setRuntimePerfCounters,
-  type RuntimePerfCounters,
-} from "./reactivity/perf";
-
-export {
   DIRTY_STATE,
   //
   PRODUCER_INITIAL_STATE,
@@ -54,13 +48,3 @@ export {
   disposeNode,
   disposeNodeEvent,
 } from "./reactivity";
-
-export {
-  subtle,
-  type RuntimeDebugContextSnapshot,
-  type RuntimeDebugEvent,
-  type RuntimeDebugListener,
-  type RuntimeDebugNodeSnapshot,
-  type RuntimeDebugOptions,
-  type RuntimeSubtle,
-} from "./subtle";

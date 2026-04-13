@@ -1,5 +1,9 @@
 declare const __DEV__: boolean;
 
+interface SymbolConstructor {
+  readonly dispose: unique symbol;
+}
+
 /**
  * Cleanup function returned from an effect.
  */

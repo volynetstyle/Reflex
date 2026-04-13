@@ -78,18 +78,15 @@ export function readProducer<T>(node: ReactiveNode<T>): T {
     return node.payload as T;
   }
 
-  const context = defaultContext;
-  const activeComputed = context.activeComputed;
+  const activeComputed = defaultContext.activeComputed;
 
   // Register this read as a dependency if there's an active computation
-  if (activeComputed !== null) {
-    if (!tryTrackReadFastPath(node, activeComputed)) {
-      trackReadActive(node, activeComputed);
-    }
+  if (activeComputed !== null && !tryTrackReadFastPath(node, activeComputed)) {
+    trackReadActive(node, activeComputed);
   }
 
   if (__DEV__) {
-    devRecordReadProducer(node, node.payload, context);
+    devRecordReadProducer(node, node.payload, defaultContext);
   }
 
   return node.payload as T;
@@ -145,10 +142,12 @@ function stabilizeConsumer<T>(node: ReactiveNode<T>): T {
     return node.payload as T;
   }
 
-  if (shouldRecomputeDirtyConsumer(node, state)) {
-    if (recompute(node) && node.firstOut !== null) {
-      propagateOnce(node);
-    }
+  if (
+    shouldRecomputeDirtyConsumer(node, state) &&
+    recompute(node) &&
+    node.firstOut !== null
+  ) {
+    propagateOnce(node);
   } else {
     clearDirtyState(node);
   }
@@ -178,10 +177,8 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
   const context = defaultContext;
   const activeComputed = context.activeComputed;
 
-  if (activeComputed !== null) {
-    if (!tryTrackReadFastPath(node, activeComputed)) {
-      trackReadActive(node, activeComputed);
-    }
+  if (activeComputed !== null && !tryTrackReadFastPath(node, activeComputed)) {
+    trackReadActive(node, activeComputed);
   }
 
   if (__DEV__) {

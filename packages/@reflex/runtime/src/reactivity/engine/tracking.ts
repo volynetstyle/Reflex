@@ -10,7 +10,6 @@ import {
   unlinkDetachedIncomingEdgeSequence,
 } from "../shape/methods/connect";
 import { defaultContext, trackReadFallback } from "../context";
-import { runtimePerfCounters } from "../perf";
 
 /**
  * Cursor-guided incoming-edge walk used during dependency collection.
@@ -40,31 +39,22 @@ export function tryTrackReadFastPath(
 ): boolean {
   const prevEdge = consumer.depsTail;
   const version = defaultContext.trackingVersion;
-  const perf = runtimePerfCounters;
 
   const lastOut = source.lastOut;
   if (lastOut != null && lastOut.version === version && lastOut.to === consumer) {
-    if (perf !== null) {
-      perf.trackReadDuplicateSourceHit += 1;
-    }
+
     return true;
   }
 
   if (prevEdge != null) {
     if (prevEdge.from === source) {
       prevEdge.version = version;
-      if (perf !== null) {
-        perf.trackReadDuplicateSourceHit += 1;
-      }
       return true;
     }
 
     const nextExpected = prevEdge.nextIn;
     if (nextExpected != null && nextExpected.from === source) {
       nextExpected.version = version;
-      if (perf !== null) {
-        perf.trackReadExpectedEdgeHit += 1;
-      }
       consumer.depsTail = nextExpected;
       return true;
     }
@@ -87,19 +77,10 @@ export function trackReadActive(
   consumer: ReactiveNode,
 ): void {
   const version = defaultContext.trackingVersion;
-  const perf = runtimePerfCounters;
-  if (perf !== null) {
-    perf.trackReadCalls += 1;
-    perf.trackReadWhileActive += 1;
-  }
-
   const sourceDead = isDisposedNode(source);
   const consumerDead = isDisposedNode(consumer);
-  if (sourceDead || consumerDead) {
-    if (perf !== null) {
-      perf.trackReadDisposedSkip += 1;
-    }
 
+  if (sourceDead || consumerDead) {
     if (__DEV__) {
       devAssertTrackReadAlive(sourceDead, consumerDead);
     }
@@ -116,9 +97,6 @@ export function trackReadActive(
     const firstIn = consumer.firstIn;
 
     if (firstIn === null) {
-      if (perf !== null) {
-        perf.trackReadNewEdge += 1;
-      }
       consumer.depsTail = linkEdge(source, consumer, null, version);
       return;
     }
@@ -130,16 +108,10 @@ export function trackReadActive(
     }
 
     if (firstIn.nextIn === null) {
-      if (perf !== null) {
-        perf.trackReadNewEdge += 1;
-      }
       consumer.depsTail = linkEdge(source, consumer, null, version);
       return;
     }
 
-    if (perf !== null) {
-      perf.trackReadFallbackScan += 1;
-    }
     consumer.depsTail = trackReadFallback(
       source,
       consumer,
@@ -152,41 +124,26 @@ export function trackReadActive(
 
   if (prevEdge.from === source) {
     prevEdge.version = version;
-    if (perf !== null) {
-      perf.trackReadDuplicateSourceHit += 1;
-    }
     return;
   }
 
   const nextExpected = prevEdge.nextIn;
   if (nextExpected === null) {
-    if (perf !== null) {
-      perf.trackReadNewEdge += 1;
-    }
     consumer.depsTail = linkEdge(source, consumer, prevEdge, version);
     return;
   }
 
   if (nextExpected.from === source) {
     nextExpected.version = version;
-    if (perf !== null) {
-      perf.trackReadExpectedEdgeHit += 1;
-    }
     consumer.depsTail = nextExpected;
     return;
   }
 
   if (nextExpected.nextIn === null) {
-    if (perf !== null) {
-      perf.trackReadNewEdge += 1;
-    }
     consumer.depsTail = linkEdge(source, consumer, prevEdge, version);
     return;
   }
 
-  if (perf !== null) {
-    perf.trackReadFallbackScan += 1;
-  }
   consumer.depsTail = trackReadFallback(
     source,
     consumer,
@@ -201,11 +158,6 @@ export function trackReadActive(
  * Everything after depsTail belongs to the old dependency list and is unlinked.
  */
 export function cleanupStaleSources(node: ReactiveNode): void {
-  const perf = runtimePerfCounters;
-  if (perf !== null) {
-    perf.cleanupPassCount += 1;
-  }
-
   const tail = node.depsTail;
   const staleHead = tail === null ? node.firstIn : tail.nextIn;
   if (staleHead === null) return;
@@ -221,18 +173,6 @@ export function cleanupStaleSources(node: ReactiveNode): void {
 
   if (__DEV__) {
     devRecordCleanupStaleSources(node, detachedStaleHead, defaultContext);
-  }
-
-  if (perf !== null) {
-    let removedCount = 0;
-    for (
-      let edge: typeof detachedStaleHead | null = detachedStaleHead;
-      edge !== null;
-      edge = edge.nextIn
-    ) {
-      removedCount += 1;
-    }
-    perf.cleanupStaleEdgeCount += removedCount;
   }
 
   unlinkDetachedIncomingEdgeSequence(detachedStaleHead);

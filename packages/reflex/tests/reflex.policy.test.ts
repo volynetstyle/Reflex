@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+vi.unmock("@reflex/runtime");
 import { createWatcherNode } from "../src/infra/factory";
 import {
   createEffectScheduler,

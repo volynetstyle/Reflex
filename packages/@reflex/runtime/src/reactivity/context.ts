@@ -1,6 +1,6 @@
 import type { ReactiveEdge, ReactiveNode } from "./shape";
 import { reuseIncomingEdgeFromSuffixOrCreate } from "./shape/methods/connect";
-import { recordDebugEvent } from "../debug";
+import { recordDebugEvent } from "../debug.runtime";
 
 export interface EngineHooks {
   onEffectInvalidated?(node: ReactiveNode): void;

@@ -2,7 +2,6 @@ import { clearReactiveEdgeLinks, ReactiveEdge } from "../ReactiveEdge";
 import { isDisposedNode, markDisposedNode } from "../ReactiveMeta";
 import type ReactiveNode from "../ReactiveNode";
 import { UNINITIALIZED } from "../ReactiveNode";
-import { runtimePerfCounters } from "../../perf";
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
 
@@ -95,7 +94,6 @@ export function reuseIncomingEdgeFromSuffixOrCreate(
   nextExpected: ReactiveEdge | null,
   version = 0,
 ): ReactiveEdge {
-  const perf = runtimePerfCounters;
   // Scan the remaining suffix for a reusable edge.
   // `nextExpected` already points at the first still-available edge after the
   // reused prefix, so the fallback scan must include it.
@@ -108,19 +106,12 @@ export function reuseIncomingEdgeFromSuffixOrCreate(
 
     // Found one — reposition it if it's out of order.
     if (edge.prevIn !== prev) {
-      if (perf !== null) {
-        perf.trackReadReorder += 1;
-      }
       detachInEdge(to, edge);
       attachInEdge(to, edge, prev);
     }
 
     edge.version = version;
     return edge;
-  }
-
-  if (perf !== null) {
-    perf.trackReadNewEdge += 1;
   }
 
   return linkEdge(from, to, prev, version);

@@ -11,7 +11,7 @@ import {
 } from "../src";
 import {
   getDefaultContext,
-  IMMEDIATE,
+  PROMOTE_CHANGED,
   propagate,
   propagateOnce,
   shouldRecompute,
@@ -49,7 +49,7 @@ describe("Reactive runtime - walker invariants", () => {
 
     setDefaultContext(createTestContext());
 
-    propagate(source.firstOut!, IMMEDIATE);
+    propagate(source.firstOut!, PROMOTE_CHANGED);
 
     expect(left.state).toBe(
       ReactiveNodeState.Consumer | ReactiveNodeState.Changed,
@@ -77,7 +77,7 @@ describe("Reactive runtime - walker invariants", () => {
 
     setDefaultContext(createTestContext());
 
-    propagate(source.firstOut!, IMMEDIATE);
+    propagate(source.firstOut!, PROMOTE_CHANGED);
 
     expect(left.state).toBe(
       ReactiveNodeState.Consumer | ReactiveNodeState.Changed,
@@ -108,7 +108,7 @@ describe("Reactive runtime - walker invariants", () => {
     linkEdge(source, right);
     linkEdge(source, watcher);
 
-    propagate(source.firstOut!, IMMEDIATE);
+    propagate(source.firstOut!, PROMOTE_CHANGED);
 
     expect(left.state).toBe(
       ReactiveNodeState.Consumer | ReactiveNodeState.Changed,
@@ -135,7 +135,7 @@ describe("Reactive runtime - walker invariants", () => {
     linkEdge(source, sibling);
     linkEdge(disposed, disposedLeaf);
 
-    propagate(source.firstOut!, IMMEDIATE);
+    propagate(source.firstOut!, PROMOTE_CHANGED);
 
     expect(disposed.state).toBe(
       ReactiveNodeState.Consumer | ReactiveNodeState.Disposed,
@@ -160,7 +160,7 @@ describe("Reactive runtime - walker invariants", () => {
     linkEdge(source, sibling);
     tracked.depsTail = prefixEdge;
 
-    propagate(source.firstOut!, IMMEDIATE);
+    propagate(source.firstOut!, PROMOTE_CHANGED);
 
     expect(tracked.state).toBe(
       ReactiveNodeState.Consumer | ReactiveNodeState.Tracking,
@@ -191,7 +191,7 @@ describe("Reactive runtime - walker invariants", () => {
       },
     });
 
-    expect(() => propagate(source.firstOut!, IMMEDIATE)).not.toThrow();
+    expect(() => propagate(source.firstOut!, PROMOTE_CHANGED)).not.toThrow();
     expect(tracked.state).toBe(
       ReactiveNodeState.Consumer |
         ReactiveNodeState.Tracking |
@@ -214,7 +214,7 @@ describe("Reactive runtime - walker invariants", () => {
     linkEdge(source, middle);
     linkEdge(middle, leaf);
 
-    propagate(source.firstOut!, IMMEDIATE);
+    propagate(source.firstOut!, PROMOTE_CHANGED);
 
     expect(middle.state).toBe(
       ReactiveNodeState.Consumer | ReactiveNodeState.Changed,
@@ -237,7 +237,7 @@ describe("Reactive runtime - walker invariants", () => {
     linkEdge(source, middle);
     linkEdge(middle, leaf);
 
-    propagate(source.firstOut!, IMMEDIATE);
+    propagate(source.firstOut!, PROMOTE_CHANGED);
 
     expect(middle.state).toBe(
       ReactiveNodeState.Consumer | ReactiveNodeState.Changed,

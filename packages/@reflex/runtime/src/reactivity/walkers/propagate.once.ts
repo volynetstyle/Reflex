@@ -1,4 +1,4 @@
-import { recordDebugEvent } from "../../debug";
+import { recordDebugEvent } from "../../debug.runtime";
 import { defaultContext, dispatchEffectInvalidated } from "../context";
 import { devAssertPropagateAlive } from "../dev";
 import type { ReactiveNode } from "../shape";

@@ -6,7 +6,7 @@ import {
   subtle,
   type RuntimeDebugEvent,
   writeProducer,
-} from "../src";
+} from "../src/debug";
 import {
   createConsumer,
   createProducer,

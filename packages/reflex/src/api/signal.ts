@@ -1,5 +1,6 @@
 import { readProducer, writeProducer } from "@reflex/runtime";
 import { createSignalNode } from "../infra";
+import { markModelReadable } from "../infra/modelValue";
 
 /**
  * Creates writable reactive state.
@@ -49,7 +50,7 @@ import { createSignalNode } from "../infra";
  * @see memo
  * @see effect
  */
-export function signal<T>(initialValue: T): readonly [Accessor<T>, Setter<T>] {
+export function signal<T>(initialValue: T): readonly [Signal<T>, Setter<T>] {
   const node = createSignalNode(initialValue);
 
   function set(input: SetInput<T>) {
@@ -62,7 +63,7 @@ export function signal<T>(initialValue: T): readonly [Accessor<T>, Setter<T>] {
   }
 
   return [
-    readProducer.bind(null, node) as Accessor<T>,
+    markModelReadable(readProducer.bind(null, node) as Signal<T>),
     set as Setter<T>,
   ] as const;
 }

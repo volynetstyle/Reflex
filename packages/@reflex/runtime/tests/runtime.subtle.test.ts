@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { subtle } from "../src";
+import { subtle } from "../src/debug";
 import { createProducer, resetRuntime } from "./runtime.test_utils";
 
 describe("Reactive runtime - subtle debug surface", () => {

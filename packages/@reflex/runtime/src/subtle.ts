@@ -6,16 +6,18 @@ import {
   readDebugHistory,
   snapshotDebugContext,
   snapshotDebugNode,
-  type RuntimeDebugContextSnapshot,
-  type RuntimeDebugEvent,
-  type RuntimeDebugListener,
-  type RuntimeDebugNodeSnapshot,
-  type RuntimeDebugOptions,
-} from "./debug";
+} from "./debug.runtime";
 import { getCurrentComputedInternal } from "./internal";
 import { getDefaultContext } from "./reactivity/context";
 import type { ExecutionContext } from "./reactivity/context";
 import type { ReactiveNode } from "./reactivity/shape";
+import type {
+  RuntimeDebugContextSnapshot,
+  RuntimeDebugEvent,
+  RuntimeDebugListener,
+  RuntimeDebugNodeSnapshot,
+  RuntimeDebugOptions,
+} from "./debug.types";
 
 const noopUnsubscribe = () => {};
 const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;

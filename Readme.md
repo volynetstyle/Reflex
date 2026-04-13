@@ -30,6 +30,9 @@ Public application-facing facade.
 - `computed`
 - `memo`
 - `effect`
+- `createModel`
+- `own`
+- `isModel`
 - `createRuntime`
 - `map` / `filter` / `merge`
 - `scan` / `hold` / `subscribeOnce`
@@ -39,18 +42,28 @@ Public application-facing facade.
 For application code, start with `@volynets/reflex`.
 
 ```ts
-import { signal, computed, effect, createRuntime } from "@volynets/reflex";
+import {
+  createModel,
+  createRuntime,
+  effect,
+  signal,
+} from "@volynets/reflex";
 
 const rt = createRuntime();
 
 const [count, setCount] = signal(0);
-const double = computed(() => count() * 2);
+const createCounterModel = createModel((ctx) => ({
+  count,
+  inc: ctx.action(() => setCount((value) => value + 1)),
+}));
+
+const counter = createCounterModel();
 
 effect(() => {
-  console.log(count(), double());
+  console.log(counter.count());
 });
 
-setCount(5);
+counter.inc();
 rt.flush();
 ```
 
