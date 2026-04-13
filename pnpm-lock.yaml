@@ -108,6 +108,12 @@ importers:
         specifier: ^6.0.0
         version: 6.4.1(@types/node@24.10.1)(terser@5.44.1)(yaml@2.8.1)
 
+  packages/reflex-framework:
+    dependencies:
+      '@volynets/reflex':
+        specifier: workspace:*
+        version: link:../reflex
+
 packages:
 
   0x@6.0.0:
