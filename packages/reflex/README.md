@@ -292,6 +292,64 @@ Important notes:
 - `ctx` is low-level. Most users should not need it.
 - Creating a new runtime resets the shared runtime state. It is best treated as app setup or test isolation, not as something you create repeatedly inside feature code.
 
+## Unstable
+
+Experimental helpers live under `@volynets/reflex/unstable`.
+
+### `optimistic(valueOrFn)`
+
+Creates a temporary optimistic overlay on top of either a fixed fallback value
+or a tracked derived fallback.
+
+```ts
+import { createRuntime, signal } from "@volynets/reflex";
+import { optimistic, transition } from "@volynets/reflex/unstable";
+
+createRuntime();
+
+const [serverTitle, setServerTitle] = signal("Draft");
+const [title, setTitle] = optimistic(() => serverTitle());
+
+await transition(async () => {
+  setTitle("Saving...");
+  setServerTitle("Published");
+  await Promise.resolve();
+});
+
+console.log(title()); // "Published"
+```
+
+Useful patterns:
+
+- fixed fallback with automatic microtask revert
+
+```ts
+const [status, setStatus] = optimistic("idle");
+
+setStatus("saving");
+console.log(status()); // "saving"
+
+await Promise.resolve();
+console.log(status()); // "idle"
+```
+
+- updater functions build on the latest optimistic value
+
+```ts
+const [count, setCount] = optimistic(10);
+
+setCount((prev) => prev + 5);
+setCount((prev) => prev * 2);
+
+console.log(count()); // 30
+```
+
+### `transition(fn)`
+
+Keeps optimistic layers created during `fn` alive until the transition settles.
+For sync callbacks that means until `fn` returns. For async callbacks that means
+until the returned promise resolves or rejects.
+
 ## API Reference
 
 ### `signal(initialValue)`

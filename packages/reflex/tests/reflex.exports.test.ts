@@ -5,6 +5,10 @@ import * as infra from "../src/infra";
 import * as policy from "../src/policy/scheduler";
 import * as d from "../src/policy";
 import * as unstable from "../src/unstable";
+import {
+  optimistic,
+  transition,
+} from "../src/unstable/optimistic";
 import { resource } from "../src/unstable/resource";
 import { createModel, isModel, own } from "../src/infra/model";
 
@@ -35,6 +39,8 @@ describe("Reactive system - exports", () => {
   });
 
   it("keeps unstable exports behind the unstable barrel", () => {
+    expect(unstable.optimistic).toBe(optimistic);
     expect(unstable.resource).toBe(resource);
+    expect(unstable.transition).toBe(transition);
   });
 });
