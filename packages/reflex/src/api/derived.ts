@@ -1,6 +1,5 @@
 import { readConsumerEager, readConsumerLazy } from "@reflex/runtime";
 import { createComputedNode } from "../infra";
-import { markModelReadable } from "../infra/modelValue";
 
 /**
  * Creates a lazy derived accessor.
@@ -44,7 +43,7 @@ import { markModelReadable } from "../infra/modelValue";
  */
 export function computed<T>(fn: () => T): Computed<T> {
   const node = createComputedNode(fn);
-  return markModelReadable(readConsumerLazy.bind(null, node) as Computed<T>);
+  return readConsumerLazy.bind(null, node) as Computed<T>;
 }
 
 /**
@@ -87,5 +86,5 @@ export function computed<T>(fn: () => T): Computed<T> {
 export function memo<T>(fn: () => T): Memo<T> {
   const node = createComputedNode(fn);
   readConsumerEager(node);
-  return markModelReadable(readConsumerLazy.bind(null, node) as Memo<T>);
+  return readConsumerLazy.bind(null, node) as Memo<T>;
 }

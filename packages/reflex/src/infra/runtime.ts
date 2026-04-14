@@ -10,41 +10,16 @@ import {
 } from "../policy/scheduler";
 
 type BatchFn = <T>(fn: () => T) => T;
+type EventFn = <T>() => EventSource<T>;
 
 let activeBatch: BatchFn = (fn) => fn();
+let activeEvent: EventFn = (() => {}) as EventFn;
+let activeFlush: () => void = () => {};
 
 export interface RuntimeOptions {
   hooks?: EngineHooks;
   effectStrategy?: EffectStrategy;
 }
-
-function createRuntimeInfrastructure(options?: RuntimeOptions) {
-  const executionContext = createExecutionContext(options?.hooks);
-  const scheduler = createEffectScheduler(
-    resolveEffectSchedulerMode(options?.effectStrategy),
-    executionContext,
-  );
-  const dispatcher = new EventDispatcher(scheduler.batch);
-
-  executionContext.setRuntimeHooks(
-    scheduler.enqueue,
-    scheduler.runtimeNotifySettled,
-  );
-
-  executionContext.resetState();
-  setDefaultContext(executionContext);
-
-  return {
-    scheduler,
-    dispatcher,
-    executionContext,
-  };
-}
-
-export function batch<T>(fn: () => T): T {
-  return activeBatch(fn);
-}
-
 export interface Event<T> {
   subscribe(fn: (value: T) => void): Destructor;
 }
@@ -61,27 +36,59 @@ export interface Runtime {
 }
 
 export function createRuntime(options?: RuntimeOptions): Runtime {
-  const { scheduler, dispatcher, executionContext } =
-    createRuntimeInfrastructure(options);
+  const executionContext = createExecutionContext(options?.hooks);
+  const scheduler = createEffectScheduler(
+    resolveEffectSchedulerMode(options?.effectStrategy),
+    executionContext,
+  );
+  const dispatcher = new EventDispatcher(scheduler.batch);
 
-  activeBatch = scheduler.batch;
+  executionContext.setRuntimeHooks(
+    scheduler.enqueue,
+    scheduler.runtimeNotifySettled,
+  );
+
+  executionContext.resetState();
+  setDefaultContext(executionContext);
+
+  activeBatch = scheduler.batch.bind(scheduler);
+  activeEvent = function <T>() {
+    const source = createSource();
+
+    return {
+      subscribe(fn: (value: T) => void) {
+        return subscribeEvent(source, fn);
+      },
+      emit(value: T) {
+        dispatcher.emit(source, value);
+      },
+    };
+  }.bind(dispatcher);
+  activeFlush = scheduler.flush.bind(scheduler);
 
   return {
     ctx: executionContext,
-    batch: scheduler.batch,
-
-    event<T>() {
-      const source = createSource();
-
-      return {
-        subscribe(fn: (value: T) => void) {
-          return subscribeEvent(source, fn);
-        },
-        emit(value: T) {
-          dispatcher.emit(source, value);
-        },
-      };
-    },
-    flush: scheduler.flush,
+    batch: activeBatch,
+    event: activeEvent,
+    flush: activeFlush,
   };
 }
+
+/**
+ * Exportet func alias
+ * @param fn
+ * @returns
+ */
+export const batch = activeBatch;
+/**
+ * Exportet func alias
+ * @param fn
+ * @returns
+ */
+export const event = activeEvent;
+/**
+ * Exportet func alias
+ * @param fn
+ * @returns
+ */
+export const flush = activeFlush;

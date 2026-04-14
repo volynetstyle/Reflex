@@ -24,6 +24,22 @@ createModel((ctx) => ({
   zeroArg: ctx.action(() => count()),
 }));
 
+const createParamModel = createModel(
+  (ctx, amount: number, label?: string, enabled: boolean = true) => ({
+    count,
+    nested: {
+      doubled,
+      label: computed(() => label ?? "default"),
+      enabled: computed(() => enabled),
+      bump: ctx.action(() => setCount((value) => value + amount)),
+    },
+  }),
+);
+
+createParamModel(2);
+createParamModel(3, "demo");
+createParamModel(4, "demo", false);
+
 const validShape: ModelShape<{
   count: Signal<number>;
   doubled: Computed<number>;

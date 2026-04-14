@@ -183,11 +183,11 @@ export function isPending(resource: Resource<unknown, unknown>): boolean {
 }
 
 function isPromiseLike<T>(value: T | PromiseLike<T>): value is PromiseLike<T> {
+  const kind = typeof value;
   return (
-    typeof value === "object" &&
+    (kind === "object" || kind === "function") &&
     value !== null &&
-    "then" in value &&
-    typeof value.then === "function"
+    typeof (value as PromiseLike<T>).then === "function"
   );
 }
 
@@ -208,11 +208,20 @@ class ResourceRequest<T, E = unknown> implements ResourceHandle<T, E> {
   reject(error: E): boolean {
     return this.owner.reject(this.token, error);
   }
+
+  readonly onResolve = (value: T): void => {
+    this.owner.resolve(this.token, value);
+  };
+
+  readonly onReject = (error: unknown): void => {
+    this.owner.reject(this.token, error as E);
+  };
 }
 
 class ResourceCore<T, E = unknown> {
   readonly context = getDefaultContext();
   readonly stateNode = createResourceStateNode();
+
   status: ResourceStatus = "idle";
   value: T | undefined = undefined;
   error: E | undefined = undefined;
@@ -233,53 +242,55 @@ class ResourceCore<T, E = unknown> {
     return !this.disposed && this.token === token;
   }
 
-  start(): ResourceRequest<T, E> {
-    const nextToken = this.disposed ? this.token : this.token + 1;
+  begin(): number {
+    if (this.disposed) return this.token;
 
-    if (!this.disposed) {
-      this.token = nextToken;
-      this.status = "pending";
-      this.error = undefined;
-      this.bump();
-    }
-
-    return new ResourceRequest(this, nextToken);
+    const nextToken = this.token + 1;
+    this.token = nextToken;
+    this.status = "pending";
+    this.error = undefined;
+    this.bump();
+    return nextToken;
   }
 
-  clear(): void {
-    if (this.disposed) return;
+  start(): ResourceRequest<T, E> {
+    return new ResourceRequest(this, this.begin());
+  }
 
-    this.token += 1;
+  private resetToIdle(nextToken: number): void {
+    this.token = nextToken;
     this.status = "idle";
     this.value = undefined;
     this.error = undefined;
     this.bump();
+  }
+
+  clear(): void {
+    if (this.disposed) return;
+    this.resetToIdle(this.token + 1);
   }
 
   dispose(): void {
     if (this.disposed) return;
 
     this.disposed = true;
-    this.token += 1;
-    this.status = "idle";
-    this.value = undefined;
-    this.error = undefined;
-    this.bump();
+    this.resetToIdle(this.token + 1);
 
-    if (this.watcher !== null) {
-      disposeWatcher(this.watcher);
+    const watcher = this.watcher;
+    if (watcher !== null) {
       this.watcher = null;
+      disposeWatcher(watcher);
     }
 
-    if (this.refetchNode !== null) {
-      disposeNode(this.refetchNode);
+    const refetchNode = this.refetchNode;
+    if (refetchNode !== null) {
       this.refetchNode = null;
+      disposeNode(refetchNode);
     }
   }
 
   resolve(token: number, value: T): boolean {
     if (!this.isAlive(token)) return false;
-
     this.status = "resolved";
     this.value = value;
     this.error = undefined;
@@ -289,7 +300,6 @@ class ResourceCore<T, E = unknown> {
 
   reject(token: number, error: E): boolean {
     if (!this.isAlive(token)) return false;
-
     this.status = "rejected";
     this.error = error;
     this.bump();
@@ -302,14 +312,7 @@ class ResourceCore<T, E = unknown> {
       return;
     }
 
-    void result.then(
-      (value) => {
-        request.resolve(value);
-      },
-      (error) => {
-        request.reject(error as E);
-      },
-    );
+    void result.then(request.onResolve, request.onReject);
   }
 
   runLoad(load: ResourceJob<T>): void {
@@ -341,9 +344,10 @@ class ResourceCore<T, E = unknown> {
   }
 
   refetch(): void {
-    if (this.disposed || this.refetchNode === null) return;
+    const refetchNode = this.refetchNode;
+    if (this.disposed || refetchNode === null) return;
 
-    writeProducer(this.refetchNode, this.refetchNode.payload + 1);
+    writeProducer(refetchNode, refetchNode.payload + 1);
   }
 }
 
@@ -423,6 +427,10 @@ export function resource<S, T, E = unknown>(
 ): ManualResource<T, E> | AsyncResource<T, E> {
   const core = new ResourceCore<T, E>();
 
+  core.context.registerWatcherCleanup(() => {
+    core.dispose();
+  });
+
   const baseResource: Resource<T, E> = {
     status: () => {
       core.track();
@@ -448,58 +456,52 @@ export function resource<S, T, E = unknown>(
     },
   };
 
-  if (typeof sourceOrLoad === "function") {
-    core.refetchNode = createResourceStateNode();
-
-    if (typeof maybeLoad === "function") {
-      const source = sourceOrLoad as Accessor<S>;
-      const load = maybeLoad;
-
-      core.watcher = createWatcherNode(() => {
-        readProducer(core.refetchNode!);
-
-        let sourceValue: S;
-
-        try {
-          sourceValue = source();
-        } catch (error) {
-          const request = core.start();
-          request.reject(error as E);
-          return;
-        }
-
-        core.runSourceLoad(sourceValue, load);
-      });
-    } else {
-      const load = sourceOrLoad as ResourceJob<T>;
-
-      core.watcher = createWatcherNode(() => {
-        readProducer(core.refetchNode!);
-        core.runLoad(load);
-      });
-    }
-
-    runWatcher(core.watcher);
-    core.context.registerWatcherCleanup(() => {
-      core.dispose();
-    });
-
+  if (typeof sourceOrLoad !== "function") {
     return {
       ...baseResource,
-      refetch() {
-        core.refetch();
+      start() {
+        return core.start();
       },
     };
   }
 
-  core.context.registerWatcherCleanup(() => {
-    core.dispose();
-  });
+  core.refetchNode = createResourceStateNode();
+
+  if (typeof maybeLoad === "function") {
+    const source = sourceOrLoad as Accessor<S>;
+    const load = maybeLoad;
+
+    core.watcher = createWatcherNode(() => {
+      const refetchNode = core.refetchNode;
+      if (refetchNode !== null) readProducer(refetchNode);
+
+      let sourceValue: S;
+      try {
+        sourceValue = source();
+      } catch (error) {
+        const token = core.begin();
+        core.reject(token, error as E);
+        return;
+      }
+
+      core.runSourceLoad(sourceValue, load);
+    });
+  } else {
+    const load = sourceOrLoad as ResourceJob<T>;
+
+    core.watcher = createWatcherNode(() => {
+      const refetchNode = core.refetchNode;
+      if (refetchNode !== null) readProducer(refetchNode);
+      core.runLoad(load);
+    });
+  }
+
+  runWatcher(core.watcher);
 
   return {
     ...baseResource,
-    start() {
-      return core.start();
+    refetch() {
+      core.refetch();
     },
   };
 }

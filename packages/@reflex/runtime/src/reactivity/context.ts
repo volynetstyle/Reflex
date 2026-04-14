@@ -122,6 +122,8 @@ export class ExecutionContext {
   }
 
   withCleanupRegistrar<T>(registrar: CleanupRegistrar | null, fn: () => T): T {
+    if (this.cleanupRegistrar === registrar) return fn();
+
     const prev = this.cleanupRegistrar;
     this.cleanupRegistrar = registrar;
     try {

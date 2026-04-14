@@ -34,7 +34,36 @@ describe("Reactive system - model actions", () => {
     expect(snapshots).toEqual([1]);
   });
 
-  it("batches writes performed inside a model action", () => {
+  it("couple writes applies inside action in order (flush)", () => {
+    const rt = createRuntime({ effectStrategy: "flush" });
+    const [count, setCount] = signal(0);
+    const seen: number[] = [];
+
+    const createCounterModel = createModel((ctx) => ({
+      count,
+      bumpTwice: ctx.action(() => {
+        setCount(1);
+        setCount(2);
+      }),
+    }));
+
+    const model = createCounterModel();
+
+    effect(() => {
+      seen.push(model.count());
+    });
+
+    expect(seen).toEqual([0]);
+
+    model.bumpTwice();
+
+    expect(seen).toEqual([0]);
+    expect(model.count()).toBe(2);
+    rt.flush();
+    expect(seen).toEqual([0, 2]);
+  });
+
+  it("applies writes performed inside a model action in order (eager)", () => {
     const rt = createRuntime({ effectStrategy: "eager" });
     const [count, setCount] = signal(0);
     const seen: number[] = [];
@@ -57,26 +86,29 @@ describe("Reactive system - model actions", () => {
 
     model.bumpTwice();
 
-    expect(seen).toEqual([0, 2]);
+    expect(seen).toEqual([0, 1, 2]);
     expect(model.count()).toBe(2);
     rt.flush();
-    expect(seen).toEqual([0, 2]);
+    expect(seen).toEqual([0, 1, 2]);
   });
 
-  it("supports nested readable values and branded actions", () => {
+  it("supports nested readable values and model actions", () => {
     createRuntime();
-    const [count, setCount] = signal(1);
-    const doubled = computed(() => count() * 2);
 
-    const createCounterModel = createModel((ctx) => ({
-      count,
-      nested: {
-        doubled,
-        inc: ctx.action(() => setCount((value) => value + 1)),
-      },
-    }));
+    const createCounterModel = createModel((ctx, v: number = 0) => {
+      const [count, setCount] = signal(1);
+      const doubled = computed(() => count() * 2);
 
-    const model = createCounterModel();
+      return {
+        count,
+        nested: {
+          doubled,
+          inc: ctx.action(() => setCount((value) => value * v)),
+        },
+      };
+    });
+
+    const model = createCounterModel(10);
 
     expect(isModel(model)).toBe(true);
     expect(model.count()).toBe(1);
@@ -84,38 +116,34 @@ describe("Reactive system - model actions", () => {
 
     model.nested.inc();
 
-    expect(model.count()).toBe(2);
-    expect(model.nested.doubled()).toBe(4);
+    expect(model.count()).toBe(10);
+    expect(model.nested.doubled()).toBe(20);
   });
 
-  it("rejects effects returned from a model factory", () => {
+  it("allows effect values returned from a model factory in production mode", () => {
     createRuntime();
     const [count] = signal(1);
 
-    expect(() =>
-      createModel(() => ({
-        stop: effect(() => {
-          count();
-        }),
-      }))(),
-    ).toThrowError(
-      "Invalid model.stop: model values must be readable reactive values, model actions, or nested objects.",
-    );
+    const model = createModel(() => ({
+      stop: effect(() => {
+        count();
+      }),
+    }))();
+
+    expect(typeof model.stop).toBe("function");
   });
 
-  it("rejects plain functions returned from a model factory", () => {
+  it("allows plain functions returned from a model factory in production mode", () => {
     createRuntime();
 
-    expect(() =>
-      createModel(() => ({
-        invalid: () => 123,
-      }))(),
-    ).toThrowError(
-      "Invalid model.invalid: model values must be readable reactive values, model actions, or nested objects.",
-    );
+    const model = createModel(() => ({
+      invalid: () => 123,
+    }))();
+
+    expect(model.invalid()).toBe(123);
   });
 
-  it("throws when calling an action after disposal", () => {
+  it("returns undefined when calling an action after disposal in production mode", () => {
     createRuntime();
 
     const createTestModel = createModel((ctx) => ({
@@ -126,9 +154,7 @@ describe("Reactive system - model actions", () => {
 
     model[Symbol.dispose]();
 
-    expect(() => model.run()).toThrowError(
-      "Cannot call a model action after the model was disposed.",
-    );
+    expect(model.run()).toBeUndefined();
   });
 
   it("runs cleanup functions in reverse order during disposal", () => {

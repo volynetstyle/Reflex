@@ -595,6 +595,7 @@ function benchTailLatency(
   const p50Samples = [];
   const p95Samples = [];
   const p99Samples = [];
+  const p999Samples = [];
   const maxSamples = [];
   let sink = 0;
 
@@ -619,6 +620,7 @@ function benchTailLatency(
     p50Samples.push(quantile(latencies, 0.5));
     p95Samples.push(quantile(latencies, 0.95));
     p99Samples.push(quantile(latencies, 0.99));
+    p999Samples.push(quantile(latencies, 0.999));
     maxSamples.push(Math.max(...latencies));
   }
 
@@ -627,7 +629,9 @@ function benchTailLatency(
       median(p50Samples),
     )} | p95=${formatNs(median(p95Samples))} | p99=${formatNs(
       median(p99Samples),
-    )} | max=${formatNs(median(maxSamples))} | sink=${sink}`,
+    )} | p999=${formatNs(median(p999Samples))} | max=${formatNs(
+      median(maxSamples),
+    )} | sink=${sink}`,
   );
 }
 
@@ -651,6 +655,7 @@ function benchTailLatencyWithHooks({
   const p50Samples = [];
   const p95Samples = [];
   const p99Samples = [];
+  const p999Samples = [];
   const maxSamples = [];
   let sink = 0;
 
@@ -681,6 +686,7 @@ function benchTailLatencyWithHooks({
     p50Samples.push(quantile(latencies, 0.5));
     p95Samples.push(quantile(latencies, 0.95));
     p99Samples.push(quantile(latencies, 0.99));
+    p999Samples.push(quantile(latencies, 0.999));
     maxSamples.push(Math.max(...latencies));
   }
 
@@ -689,7 +695,9 @@ function benchTailLatencyWithHooks({
       median(p50Samples),
     )} | p95=${formatNs(median(p95Samples))} | p99=${formatNs(
       median(p99Samples),
-    )} | max=${formatNs(median(maxSamples))} | sink=${sink}`,
+    )} | p999=${formatNs(median(p999Samples))} | max=${formatNs(
+      median(maxSamples),
+    )} | sink=${sink}`,
   );
 }
 
@@ -944,6 +952,11 @@ function runSingleScenario(name) {
     case "p99_shared_fanout_watchers_256": {
       const scenario = buildSharedFanoutWatchers(256);
       benchTailLatency(name, () => scenario.run(), 3000, 1000, 256);
+      return;
+    }
+    case "p99_propagate_chain_64": {
+      const scenario = buildPropagateChain(64);
+      benchTailLatency(name, () => scenario.run(), 8000, 3000, 2048, 7);
       return;
     }
     case "p99_runWatcher_shared_propagateOnce_256": {

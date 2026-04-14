@@ -379,7 +379,7 @@ const socket = own(ctx, {
 
 ### `isModel(value)`
 
-Returns `true` when `value` is a Reflex model created by `createModel()`.
+Returns `true` when `value` exposes the Reflex model disposal surface, including models created by `createModel()`.
 
 ### `rt.event<T>()`
 

@@ -12,10 +12,13 @@ type Cleanup = () => void;
 type ModelState = { disposed: boolean };
 
 const DISPOSE = Symbol.dispose;
-const MODEL_DISPOSED = Symbol("MODEL_DISPOSED");
 
-interface DisposableLike {
+interface DisposableResourceLike {
   [DISPOSE](): void;
+}
+
+interface DisposableLike extends DisposableResourceLike {
+  dispose(): void;
 }
 
 interface ModelContext {
@@ -39,28 +42,14 @@ interface ModelContext {
   readonly disposed: boolean;
 }
 
-const MODEL_BRAND = Symbol("MODEL_BRAND");
-
 type ModelTypeError<Message extends string> = Message;
 
 type DisposedHint = {
   disposed?: boolean;
   isDisposed?: boolean;
-  [MODEL_DISPOSED]?: boolean;
 };
 
-type ReadableModelBrand =
-  | Brand<"signal">
-  | Brand<"computed">
-  | Brand<"memo">
-  | Brand<"derived">
-  | Brand<"realtime">
-  | Brand<"stream">;
-
-type PrimitiveModelValue =
-  | ReadableModelBrand
-  | ModelActionBrand
-  | DisposableLike;
+type PrimitiveModelValue = ModelActionBrand | DisposableResourceLike;
 
 type InvalidModelValue =
   ModelTypeError<"Model values must be readable reactive values, model actions, or nested objects.">;
@@ -91,34 +80,20 @@ export type ValidatedModelShape<T> = ValidateModel<T>;
  * - actions created with `ctx.action(...)`
  * - nested plain objects following the same rules
  */
-export type ModelFactory<TModel, TArgs extends unknown[] = []> = (
+export type ModelFactory<TModel, TArgs extends unknown[]> = (
   ctx: ModelContext,
   ...args: TArgs
 ) => TModel & ValidateModel<TModel>;
 
-export type ModelTuple<TModel, TArgs extends unknown[] = []> = (
+export type ModelTuple<TArgs extends unknown[], TModel> = (
   ...args: TArgs
 ) => Model<TModel>;
 
-type ModelFactoryArgs<TFactory> = TFactory extends (
+type CheckedModelFactory<TArgs extends unknown[], TModel extends object> = ((
   ctx: ModelContext,
-  ...args: infer TArgs
-) => unknown
-  ? TArgs
-  : never;
-
-type ModelFactoryReturn<TFactory> = TFactory extends (
-  ...args: never[]
-) => infer TModel
-  ? TModel
-  : never;
-
-type CheckedModelFactory<TFactory extends ModelFactory<object, unknown[]>> =
-  TFactory &
-    ((
-      ctx: ModelContext,
-      ...args: ModelFactoryArgs<TFactory>
-    ) => ValidateModel<ModelFactoryReturn<TFactory>>);
+  ...args: TArgs
+) => TModel) &
+  ((ctx: ModelContext, ...args: TArgs) => ValidateModel<TModel>);
 
 function createAction<TArgs extends unknown[], TReturn>(
   state: ModelState,
@@ -129,9 +104,12 @@ function createAction<TArgs extends unknown[], TReturn>(
     ...args: TArgs
   ): TReturn {
     if (state.disposed) {
-      throw new Error(
-        "Cannot call a model action after the model was disposed.",
-      );
+      if (__DEV__) {
+        throw new Error(
+          "Cannot call a model action after the model was disposed.",
+        );
+      }
+      return undefined as TReturn;
     }
 
     return batch(() => {
@@ -152,7 +130,7 @@ function validateModelShape(value: unknown, path = "model"): void {
   if (
     isModelReadableValue(value) ||
     isModelActionValue(value) ||
-    isModel(value)
+    isDisposableValue(value)
   ) {
     return;
   }
@@ -169,18 +147,35 @@ function validateModelShape(value: unknown, path = "model"): void {
 }
 
 export function isModel(value: unknown): value is DisposableLike {
-  return typeof value === "object" && value !== null && MODEL_BRAND in value;
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { dispose?: unknown }).dispose === "function" &&
+    typeof (value as { [DISPOSE]?: unknown })[DISPOSE] === "function"
+  );
+}
+
+function isDisposableValue(value: unknown): value is DisposableResourceLike {
+  return (
+    (typeof value === "object" || typeof value === "function") &&
+    value !== null &&
+    typeof (value as { [DISPOSE]?: unknown })[DISPOSE] === "function"
+  );
 }
 
 /**
  * Registers a nested disposable so it is disposed with the parent model.
  */
-export function own<T extends DisposableLike>(ctx: ModelContext, value: T): T {
+export function own<T extends DisposableResourceLike>(
+  ctx: ModelContext,
+  value: T,
+): T {
   if (typeof __DEV__ !== "undefined" && __DEV__) {
     const kind = typeof value;
+
     if (kind === "object" || kind === "function") {
       const hint = value as DisposedHint;
-      if (hint[MODEL_DISPOSED] === true || hint.disposed === true || hint.isDisposed === true) {
+      if (hint.disposed === true || hint.isDisposed === true) {
         console.warn(
           "own(ctx, value) received a disposed resource. This is allowed but likely a bug.",
         );
@@ -209,15 +204,58 @@ export function own<T extends DisposableLike>(ctx: ModelContext, value: T): T {
  *
  * Disposal is idempotent and marks the model as dead before running cleanups.
  * Cleanup errors are logged and do not prevent remaining cleanups from running.
+ * 
+ * The returned factory preserves:
+ * - model arguments
+ * - reactive values
+ * - action signatures
+ *
+ * @returns A function that creates model instances.
+ *
+ * @example
+ * ```ts
+ * const createCounterModel = createModel((ctx) => {
+ *   const count = signal(0);
+ *
+ *   const bumpTwice = ctx.action(() => {
+ *     count.set((value) => value + 2);
+ *   });
+ *
+ *   return {
+ *     count,
+ *     bumpTwice,
+ *   };
+ * });
+ *
+ * const counter = createCounterModel();
+ *
+ * counter.count();   // number
+ * counter.bumpTwice();
+ * counter.dispose();
+ * ```
+ *
+ * @example
+ * ```ts
+ * // Inferred type
+ * const createCounterModel: ModelTuple<
+ *   [], // List of incoming model args (ctx, excluded)
+ *   {
+ *     count: Signal<number>;
+ *     bumpTwice: ModelAction<
+ *       [], // List of incoming actions args
+ *       void
+ *     >;
+ *   }
+ * >
+ * ```
+ *
  */
-export function createModel<TFactory extends ModelFactory<object, unknown[]>>(
-  factory: CheckedModelFactory<TFactory>,
-): ModelTuple<ModelFactoryReturn<TFactory>, ModelFactoryArgs<TFactory>> {
-  return (
-    ...args: ModelFactoryArgs<TFactory>
-  ): Model<ModelFactoryReturn<TFactory>> => {
+export function createModel<TArgs extends unknown[], TModel extends object>(
+  factory: CheckedModelFactory<TArgs, TModel>,
+): ModelTuple<TArgs, TModel> {
+  return (...args: TArgs): Model<TModel> => {
     const state: ModelState = { disposed: false };
-    const cleanups: Cleanup[] = [];
+    let cleanups: Cleanup[] | null = null;
 
     const ctx: ModelContext = {
       action(fn) {
@@ -226,12 +264,15 @@ export function createModel<TFactory extends ModelFactory<object, unknown[]>>(
 
       onDispose(fn) {
         if (state.disposed) {
-          throw new Error(
-            "Cannot register cleanup after the model was disposed.",
-          );
+          if (__DEV__) {
+            throw new Error(
+              "Cannot register cleanup after the model was disposed.",
+            );
+          }
+          return;
         }
 
-        cleanups.push(fn);
+        (cleanups ??= []).push(fn);
       },
 
       get disposed() {
@@ -239,45 +280,36 @@ export function createModel<TFactory extends ModelFactory<object, unknown[]>>(
       },
     };
 
-    const model = factory(ctx, ...args) as Model<ModelFactoryReturn<TFactory>>;
-    validateModelShape(model);
+    const model = factory(ctx, ...args) as Model<TModel>;
 
-    Object.defineProperty(model, MODEL_BRAND, {
-      value: true,
-      enumerable: false,
-      configurable: false,
-      writable: false,
-    });
-    Object.defineProperty(model, MODEL_DISPOSED, {
-      value: false,
-      enumerable: false,
-      configurable: false,
-      writable: true,
-    });
+    if (__DEV__) {
+      validateModelShape(model);
+    }
 
-    Object.defineProperty(model, DISPOSE, {
-      value() {
-        if (state.disposed) return;
-        state.disposed = true;
-        (model as DisposedHint)[MODEL_DISPOSED] = true;
+    const dispose = () => {
+      if (state.disposed) return;
+      state.disposed = true;
 
-        for (let i = cleanups.length - 1; i >= 0; i--) {
-          const cleanup = cleanups[i];
-          if (!cleanup) continue;
+      const list = cleanups;
+      if (list === null) return;
 
-          try {
-            cleanup();
-          } catch (error) {
-            console.error("Error during model disposal:", error);
-          }
+      for (let i = list.length - 1; i >= 0; i--) {
+        const cleanup = list[i];
+        if (!cleanup) continue;
+
+        try {
+          cleanup();
+        } catch (error) {
+          console.error("Error during model disposal:", error);
         }
+      }
 
-        cleanups.length = 0;
-      },
-      enumerable: false,
-      configurable: false,
-      writable: false,
-    });
+      cleanups = null;
+    };
+
+    const disposableModel = model as Model<TModel> & DisposableLike;
+    disposableModel.dispose = dispose;
+    disposableModel[DISPOSE] = dispose;
 
     return model;
   };
