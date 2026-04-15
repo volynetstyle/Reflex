@@ -2,7 +2,7 @@ import {
   collectDebugNodeRefs,
   recordDebugEvent,
 } from "../debug.runtime";
-import type { ExecutionContext } from "./context";
+import { activeComputed, type ExecutionContext } from "./context";
 import {
   type ReactiveEdge,
   ReactiveNodeState,
@@ -104,7 +104,7 @@ export function devRecordReadProducer(
   if (!__DEV__) return;
 
   recordDebugEvent(context, "read:producer", {
-    consumer: context.activeComputed ?? undefined,
+    consumer: activeComputed ?? undefined,
     node,
     detail: {
       value,

@@ -240,7 +240,7 @@ function propagateLinear(
 export function propagate(
   startEdge: ReactiveEdge,
   promoteImmediate: number = NON_IMMEDIATE,
-): void {
+) {
   const root = startEdge.from;
 
   if ((root.state & ReactiveNodeState.Disposed) !== 0) {
@@ -250,5 +250,5 @@ export function propagate(
 
   const thrown = propagateLinear(startEdge, promoteImmediate);
 
-  if (thrown !== null) throw thrown;
+  return thrown;
 }

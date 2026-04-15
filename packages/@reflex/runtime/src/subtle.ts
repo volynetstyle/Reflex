@@ -54,8 +54,8 @@ export type {
 export const subtle: RuntimeSubtle = {
   enabled: IS_DEV,
 
-  currentComputed(context = getDefaultContext()) {
-    return getCurrentComputedInternal(context);
+  currentComputed() {
+    return getCurrentComputedInternal();
   },
 
   context(context = getDefaultContext()) {

@@ -6,23 +6,28 @@ import {
   markNodeComputing,
 } from "../shape";
 import { cleanupStaleSources } from "./tracking";
-import { defaultContext } from "../context";
+import {
+  activeComputed,
+  defaultContext,
+  setActiveComputed,
+  setTrackingVersion,
+  trackingVersion,
+} from "../context";
 
 function prepareNodeExecution(node: ReactiveNode): ReactiveNode | null {
-  const context = defaultContext;
-  const nextVersion = (context.trackingVersion + 1) >>> 0;
+  const nextVersion = (trackingVersion + 1) >>> 0;
 
   node.depsTail = null;
   node.state =
     (node.state & ~ReactiveNodeState.Visited) | ReactiveNodeState.Tracking;
   markNodeComputing(node);
-  context.trackingVersion = nextVersion === 0 ? 1 : nextVersion;
+  setTrackingVersion(nextVersion === 0 ? 1 : nextVersion);
 
-  const prevActive = context.activeComputed;
-  context.activeComputed = node;
+  const prevActive = activeComputed;
+  setActiveComputed(node);
 
   if (__DEV__) {
-    recordDebugEvent(context, "compute:start", {
+    recordDebugEvent(defaultContext, "compute:start", {
       node,
     });
   }
@@ -34,7 +39,7 @@ function restoreNodeExecution(
   node: ReactiveNode,
   prevActive: ReactiveNode | null,
 ): void {
-  defaultContext.activeComputed = prevActive;
+  setActiveComputed(prevActive);
   node.state &= ~ReactiveNodeState.Tracking;
   clearNodeComputing(node);
 }

@@ -9,7 +9,13 @@ import {
   linkEdge,
   unlinkDetachedIncomingEdgeSequence,
 } from "../shape/methods/connect";
-import { defaultContext, trackReadFallback } from "../context";
+import {
+  activeComputed,
+  defaultContext,
+  trackingVersion,
+  trackReadFallback,
+  type ExecutionContext,
+} from "../context";
 
 /**
  * Cursor-guided incoming-edge walk used during dependency collection.
@@ -17,8 +23,7 @@ import { defaultContext, trackReadFallback } from "../context";
  * linear scan that reorders the found edge into the reused dependency prefix.
  */
 export function trackRead(source: ReactiveNode): void {
-  const context = defaultContext;
-  const consumer = context.activeComputed;
+  const consumer = activeComputed;
 
   if (!consumer) return;
   if (tryTrackReadFastPath(source, consumer)) return;
@@ -38,10 +43,13 @@ export function tryTrackReadFastPath(
   consumer: ReactiveNode,
 ): boolean {
   const prevEdge = consumer.depsTail;
-  const version = defaultContext.trackingVersion;
+  const version = trackingVersion;
 
   const lastOut = source.lastOut;
   if (lastOut != null && lastOut.version === version && lastOut.to === consumer) {
+    if (__DEV__) {
+      devRecordTrackRead(defaultContext, consumer, source);
+    }
 
     return true;
   }
@@ -49,6 +57,9 @@ export function tryTrackReadFastPath(
   if (prevEdge != null) {
     if (prevEdge.from === source) {
       prevEdge.version = version;
+      if (__DEV__) {
+        devRecordTrackRead(defaultContext, consumer, source);
+      }
       return true;
     }
 
@@ -56,6 +67,9 @@ export function tryTrackReadFastPath(
     if (nextExpected != null && nextExpected.from === source) {
       nextExpected.version = version;
       consumer.depsTail = nextExpected;
+      if (__DEV__) {
+        devRecordTrackRead(defaultContext, consumer, source);
+      }
       return true;
     }
 
@@ -66,6 +80,9 @@ export function tryTrackReadFastPath(
   if (firstIn != null && firstIn.from === source) {
     firstIn.version = version;
     consumer.depsTail = firstIn;
+    if (__DEV__) {
+      devRecordTrackRead(defaultContext, consumer, source);
+    }
     return true;
   }
 
@@ -75,8 +92,9 @@ export function tryTrackReadFastPath(
 export function trackReadActive(
   source: ReactiveNode,
   consumer: ReactiveNode,
+  context: ExecutionContext = defaultContext,
 ): void {
-  const version = defaultContext.trackingVersion;
+  const version = trackingVersion;
   const sourceDead = isDisposedNode(source);
   const consumerDead = isDisposedNode(consumer);
 
@@ -89,7 +107,7 @@ export function trackReadActive(
   }
 
   if (__DEV__) {
-    devRecordTrackRead(defaultContext, consumer, source);
+    devRecordTrackRead(context, consumer, source);
   }
 
   const prevEdge = consumer.depsTail;
@@ -112,7 +130,7 @@ export function trackReadActive(
       return;
     }
 
-    consumer.depsTail = trackReadFallback(
+    consumer.depsTail = (context.trackReadFallback ?? trackReadFallback)(
       source,
       consumer,
       null,
@@ -144,7 +162,7 @@ export function trackReadActive(
     return;
   }
 
-  consumer.depsTail = trackReadFallback(
+  consumer.depsTail = (context.trackReadFallback ?? trackReadFallback)(
     source,
     consumer,
     prevEdge,

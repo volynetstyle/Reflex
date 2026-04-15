@@ -1,5 +1,10 @@
 import type { ExecutionContext, ReactiveNode } from "@reflex/runtime";
-import { ReactiveNodeState, runWatcher } from "@reflex/runtime";
+import {
+  getActiveComputed,
+  getPropagationDepth,
+  ReactiveNodeState,
+  runWatcher,
+} from "@reflex/runtime";
 import { createWatcherQueue } from "./scheduler.queue";
 import type { EffectSchedulerMode } from "./scheduler.constants";
 import {
@@ -40,8 +45,8 @@ export function effectUnscheduled(node: EffectNode) {
   node.state &= ~ReactiveNodeState.Scheduled;
 }
 
-export function isContextSettled(context: ExecutionContext): boolean {
-  return context.propagationDepth === 0 && context.activeComputed === null;
+export function isContextSettled(): boolean {
+  return getPropagationDepth() === 0 && getActiveComputed() === null;
 }
 
 export function isRuntimeInactive(
@@ -51,7 +56,7 @@ export function isRuntimeInactive(
   return (
     core.phase === SchedulerPhase.Idle &&
     core.batchDepth === 0 &&
-    isContextSettled(context)
+    isContextSettled()
   );
 }
 

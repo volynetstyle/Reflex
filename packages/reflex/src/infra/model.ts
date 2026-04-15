@@ -1,4 +1,4 @@
-import { getDefaultContext } from "@reflex/runtime";
+import {untracked } from "@reflex/runtime";
 import { batch } from "./runtime";
 import {
   isModelActionValue,
@@ -113,15 +113,12 @@ function createAction<TArgs extends unknown[], TReturn>(
     }
 
     return batch(() => {
-      const context = getDefaultContext();
-      const prev = context.activeComputed;
-      context.activeComputed = null;
+      let result = undefined as TReturn;
+      untracked(() => {
+        result = fn.apply(this, args);
+      });
 
-      try {
-        return fn.apply(this, args);
-      } finally {
-        context.activeComputed = prev;
-      }
+      return result;
     });
   });
 }
@@ -204,7 +201,7 @@ export function own<T extends DisposableResourceLike>(
  *
  * Disposal is idempotent and marks the model as dead before running cleanups.
  * Cleanup errors are logged and do not prevent remaining cleanups from running.
- * 
+ *
  * The returned factory preserves:
  * - model arguments
  * - reactive values

@@ -4,6 +4,7 @@ import type { ExecutionContext } from "@reflex/runtime";
 const mocks = vi.hoisted(() => ({
   runWatcher: vi.fn(),
   getDefaultContext: vi.fn(),
+  getPropagationDepth: vi.fn(),
 }));
 
 vi.mock("@reflex/runtime", async () => {
@@ -15,6 +16,7 @@ vi.mock("@reflex/runtime", async () => {
     ...actual,
     runWatcher: mocks.runWatcher,
     getDefaultContext: mocks.getDefaultContext,
+    getPropagationDepth: mocks.getPropagationDepth,
   };
 });
 
@@ -28,8 +30,6 @@ function createContext(
   overrides: Partial<ExecutionContext> = {},
 ): ExecutionContext {
   return {
-    propagationDepth: 0,
-    activeComputed: null,
     ...overrides,
   } as ExecutionContext;
 }
@@ -41,6 +41,7 @@ function createNode(state: number = DIRTY_STATE) {
 describe("createEffectScheduler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.getPropagationDepth.mockReturnValue(0);
     mocks.getDefaultContext.mockReturnValue(createContext());
   });
 
@@ -167,7 +168,8 @@ describe("createEffectScheduler", () => {
   });
 
   it("keeps sab effects queued when batch exits during active propagation", () => {
-    const context = createContext({ propagationDepth: 1 });
+    mocks.getPropagationDepth.mockReturnValue(1);
+    const context = createContext();
     mocks.getDefaultContext.mockReturnValue(context);
 
     const scheduler = createEffectScheduler(EffectSchedulerMode.SAB);
@@ -180,7 +182,7 @@ describe("createEffectScheduler", () => {
     expect(mocks.runWatcher).not.toHaveBeenCalled();
     expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
 
-    context.propagationDepth = 0;
+    mocks.getPropagationDepth.mockReturnValue(0);
     scheduler.flush();
 
     expect(mocks.runWatcher).toHaveBeenCalledTimes(1);
@@ -188,7 +190,8 @@ describe("createEffectScheduler", () => {
   });
 
   it("does not auto-flush while propagation is active", () => {
-    const context = createContext({ propagationDepth: 1 });
+    mocks.getPropagationDepth.mockReturnValue(1);
+    const context = createContext();
     mocks.getDefaultContext.mockReturnValue(context);
 
     const scheduler = createEffectScheduler(EffectSchedulerMode.Eager);
@@ -199,7 +202,7 @@ describe("createEffectScheduler", () => {
     expect(mocks.runWatcher).not.toHaveBeenCalled();
     expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
 
-    context.propagationDepth = 0;
+    mocks.getPropagationDepth.mockReturnValue(0);
     scheduler.notifySettled();
 
     expect(mocks.runWatcher).toHaveBeenCalledTimes(1);

@@ -3,6 +3,7 @@ import {
   DIRTY_STATE,
   ReactiveNodeState,
   disposeWatcher,
+  getActiveComputed,
   getDefaultContext,
   readConsumer,
   readProducer,
@@ -147,7 +148,7 @@ describe("ReactivegetDefaultContext() - hooks and resilience", () => {
     });
 
     expect(() => runWatcher(watcher)).toThrow(error);
-    expect(getDefaultContext().activeComputed).toBeNull();
+    expect(getActiveComputed()).toBeNull();
     expect(watcher.state & ReactiveNodeState.Tracking).toBe(0);
     expect(watcher.state & ReactiveNodeState.Computing).toBe(0);
   });

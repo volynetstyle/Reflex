@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getActiveComputed } from "@reflex/runtime";
 import { computed, createRuntime, signal } from "./reflex.test_utils";
 
 describe("Reactive system - safety and robustness", () => {
@@ -12,9 +13,9 @@ describe("Reactive system - safety and robustness", () => {
     const stable = computed(() => source() + 1);
 
     expect(() => boom()).toThrow("boom");
-    expect(rt.ctx.activeComputed).toBe(null);
+    expect(getActiveComputed()).toBe(null);
     expect(stable()).toBe(2);
-    expect(rt.ctx.activeComputed).toBe(null);
+    expect(getActiveComputed()).toBe(null);
   });
 
   it("keeps other computeds usable after one compute throws", () => {

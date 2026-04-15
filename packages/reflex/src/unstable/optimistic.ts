@@ -144,7 +144,7 @@ class OptimisticCore<T> {
 
   private peek(): T {
     const layer = this.peekLayer();
-    return layer ? layer.value : untracked(this.base, this.context);
+    return layer ? layer.value : untracked(this.base);
   }
 
   private peekLayer(): OptimisticLayer<T> | undefined {

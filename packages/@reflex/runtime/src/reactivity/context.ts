@@ -22,156 +22,272 @@ export interface ExecutionContextOptions {
 
 type OnEffectInvalidatedHook = EngineHooks["onEffectInvalidated"];
 type OnReactiveSettledHook = EngineHooks["onReactiveSettled"];
+type MutableContextFields = {
+  cleanupRegistrar: CleanupRegistrar | null;
+  trackReadFallback: TrackReadFallback;
+  runtimeOnEffectInvalidated: OnEffectInvalidatedHook;
+  runtimeOnReactiveSettled: OnReactiveSettledHook;
+  effectInvalidatedDispatch: OnEffectInvalidatedHook;
+  settledDispatch: OnReactiveSettledHook;
+};
 
 const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
-
+export let activeComputed: ReactiveNode | null = null;
+export const getActiveComputed = () => activeComputed;
+// @__INLINE___
+export const setActiveComputed = (c: ReactiveNode | null) =>
+  void (activeComputed = c);
+export let trackingVersion = 0;
+// @__INLINE___
+export const setTrackingVersion = (v: number) => void (trackingVersion = v);
+export let propagationDepth = 0;
+export const getPropagationDepth = () => propagationDepth;
+// @__INLINE___
+export const setPropagationDepth = (v: number) => void (propagationDepth = v);
 export let dispatchEffectInvalidated = undefined as OnEffectInvalidatedHook;
 export let trackReadFallback: TrackReadFallback =
   reuseIncomingEdgeFromSuffixOrCreate;
+export let dispatchReactiveSettled: OnReactiveSettledHook =
+  undefined as OnReactiveSettledHook;
+let onEffectInvalidatedHook = undefined as OnEffectInvalidatedHook;
+let onReactiveSettledHook = undefined as OnReactiveSettledHook;
+export let defaultContext!: ExecutionContext;
 
-export class ExecutionContext {
-  activeComputed: ReactiveNode | null = null;
-  trackingVersion = 0;
-  propagationDepth = 0;
-  cleanupRegistrar: CleanupRegistrar | null = null;
-  trackReadFallback: TrackReadFallback = reuseIncomingEdgeFromSuffixOrCreate;
-
-  onEffectInvalidated: OnEffectInvalidatedHook = undefined;
-  onReactiveSettled: OnReactiveSettledHook = undefined;
-
-  runtimeOnEffectInvalidated: OnEffectInvalidatedHook = undefined;
-  runtimeOnReactiveSettled: OnReactiveSettledHook = undefined;
-
-  effectInvalidatedDispatch: OnEffectInvalidatedHook = undefined;
-  settledDispatch: OnReactiveSettledHook = undefined;
-
-  constructor(hooks: EngineHooks = {}, options: ExecutionContextOptions = {}) {
-    this.setHooks(hooks);
-    this.setOptions(options);
+// @__INLINE___
+export function enterPropagation(): void {
+  ++propagationDepth;
+}
+// @__INLINE___
+export function leavePropagation(): void {
+  if (propagationDepth > 0) --propagationDepth;
+  if (
+    propagationDepth === 0 &&
+    activeComputed === null &&
+    dispatchReactiveSettled
+  ) {
+    dispatchReactiveSettled();
   }
+}
+function composeEffectInvalidated(
+  runtimeHook: OnEffectInvalidatedHook,
+  userHook: OnEffectInvalidatedHook,
+): OnEffectInvalidatedHook {
+  if (runtimeHook === undefined) return userHook;
+  if (userHook === undefined) return runtimeHook;
 
-  dispatchWatcherEvent(node: ReactiveNode): void {
-    if (IS_DEV) recordDebugEvent(this, "watcher:invalidated", { node });
-    this.effectInvalidatedDispatch?.(node);
-  }
+  return function dispatch(node: ReactiveNode): void {
+    runtimeHook(node);
+    userHook(node);
+  };
+}
 
-  maybeNotifySettled(): void {
-    if (this.propagationDepth !== 0 || this.activeComputed !== null) return;
-    if (IS_DEV) recordDebugEvent(this, "context:settled");
-    this.settledDispatch?.();
-  }
+function composeSettled(
+  runtimeHook: OnReactiveSettledHook,
+  userHook: OnReactiveSettledHook,
+): OnReactiveSettledHook {
+  if (runtimeHook === undefined) return userHook;
+  if (userHook === undefined) return runtimeHook;
 
-  enterPropagation(): void {
-    ++this.propagationDepth;
-    if (IS_DEV)
-      recordDebugEvent(this, "context:enter-propagation", {
-        detail: { depth: this.propagationDepth },
-      });
-  }
+  return function dispatch(): void {
+    runtimeHook();
+    userHook();
+  };
+}
 
-  leavePropagation(): void {
-    if (this.propagationDepth > 0) --this.propagationDepth;
-    if (IS_DEV)
-      recordDebugEvent(this, "context:leave-propagation", {
-        detail: { depth: this.propagationDepth },
-      });
-    this.maybeNotifySettled();
-  }
-
-  resetState(): void {
-    this.activeComputed = null;
-    this.trackingVersion = 0;
-    this.propagationDepth = 0;
-    this.cleanupRegistrar = null;
-  }
-
-  setOptions(options: ExecutionContextOptions = {}): void {
-    this.trackReadFallback = trackReadFallback =
-      typeof options.trackReadFallback === "function"
-        ? options.trackReadFallback
-        : reuseIncomingEdgeFromSuffixOrCreate;
-  }
-
-  setHooks(hooks: EngineHooks = {}): void {
-    this.onEffectInvalidated =
-      typeof hooks.onEffectInvalidated === "function"
-        ? hooks.onEffectInvalidated
-        : undefined;
-    this.onReactiveSettled =
-      typeof hooks.onReactiveSettled === "function"
-        ? hooks.onReactiveSettled
-        : undefined;
-    this.refreshDispatchers();
-  }
-
+export interface ExecutionContext extends MutableContextFields {
+  dispatchWatcherEvent(node: ReactiveNode): void;
+  maybeNotifySettled(): void;
+  enterPropagation(): void;
+  leavePropagation(): void;
+  resetState(): void;
+  setOptions(options?: ExecutionContextOptions): void;
+  setHooks(hooks?: EngineHooks): void;
   setRuntimeHooks(
-    onEffectInvalidated: OnEffectInvalidatedHook = undefined,
-    onReactiveSettled: OnReactiveSettledHook = undefined,
-  ): void {
-    this.runtimeOnEffectInvalidated =
-      typeof onEffectInvalidated === "function"
-        ? onEffectInvalidated
-        : undefined;
-    this.runtimeOnReactiveSettled =
-      typeof onReactiveSettled === "function" ? onReactiveSettled : undefined;
-    this.refreshDispatchers();
+    onEffectInvalidated?: OnEffectInvalidatedHook,
+    onReactiveSettled?: OnReactiveSettledHook,
+  ): void;
+  registerWatcherCleanup(cleanup: () => void): void;
+  withCleanupRegistrar<T>(registrar: CleanupRegistrar | null, fn: () => T): T;
+}
+
+function normalizeHook<T extends Function | undefined>(
+  value: unknown,
+): T | undefined {
+  return typeof value === "function" ? (value as T) : undefined;
+}
+
+function normalizeOwnHook<
+  TKey extends keyof EngineHooks,
+  TValue extends EngineHooks[TKey],
+>(hooks: EngineHooks, key: TKey): TValue | undefined {
+  return Object.hasOwn(hooks, key)
+    ? normalizeHook<TValue>(hooks[key])
+    : undefined;
+}
+
+function normalizeTrackReadFallback(
+  options: ExecutionContextOptions,
+): TrackReadFallback {
+  return Object.hasOwn(options, "trackReadFallback")
+    ? (normalizeHook<TrackReadFallback>(options.trackReadFallback) ??
+        reuseIncomingEdgeFromSuffixOrCreate)
+    : reuseIncomingEdgeFromSuffixOrCreate;
+}
+
+export function getEffectInvalidatedHook(): OnEffectInvalidatedHook {
+  return onEffectInvalidatedHook;
+}
+
+export function setEffectInvalidatedHook(
+  hook: OnEffectInvalidatedHook,
+): OnEffectInvalidatedHook {
+  onEffectInvalidatedHook = normalizeHook<OnEffectInvalidatedHook>(hook);
+  return onEffectInvalidatedHook;
+}
+
+export function getReactiveSettledHook(): OnReactiveSettledHook {
+  return onReactiveSettledHook;
+}
+
+export function setReactiveSettledHook(
+  hook: OnReactiveSettledHook,
+): OnReactiveSettledHook {
+  onReactiveSettledHook = normalizeHook<OnReactiveSettledHook>(hook);
+  return onReactiveSettledHook;
+}
+
+function refreshDispatchers(context: ExecutionContext): void {
+  context.effectInvalidatedDispatch = composeEffectInvalidated(
+    context.runtimeOnEffectInvalidated,
+    onEffectInvalidatedHook,
+  );
+
+  context.settledDispatch = composeSettled(
+    context.runtimeOnReactiveSettled,
+    onReactiveSettledHook,
+  );
+
+  if (defaultContext === context) {
+    dispatchEffectInvalidated = context.effectInvalidatedDispatch;
+    dispatchReactiveSettled = context.settledDispatch;
   }
 
-  registerWatcherCleanup(cleanup: () => void): void {
-    this.cleanupRegistrar?.(cleanup);
-  }
-
-  withCleanupRegistrar<T>(registrar: CleanupRegistrar | null, fn: () => T): T {
-    if (this.cleanupRegistrar === registrar) return fn();
-
-    const prev = this.cleanupRegistrar;
-    this.cleanupRegistrar = registrar;
-    try {
-      return fn();
-    } finally {
-      this.cleanupRegistrar = prev;
-    }
-  }
-
-  private refreshDispatchers(): void {
-    const ri = this.runtimeOnEffectInvalidated,
-      pi = this.onEffectInvalidated;
-    const rs = this.runtimeOnReactiveSettled,
-      ps = this.onReactiveSettled;
-
-    this.effectInvalidatedDispatch = dispatchEffectInvalidated =
-      ri && pi
-        ? function (node) {
-            ri(node);
-            pi(node);
-          }
-        : (ri ?? pi);
-
-    this.settledDispatch =
-      rs && ps
-        ? function () {
-            rs();
-            ps();
-          }
-        : (rs ?? ps);
-
-    if (IS_DEV)
-      recordDebugEvent(this, "context:hooks", {
-        detail: {
-          hasOnEffectInvalidated: this.effectInvalidatedDispatch !== undefined,
-          hasOnReactiveSettled: this.settledDispatch !== undefined,
-        },
-      });
+  if (IS_DEV) {
+    recordDebugEvent(context, "context:hooks", {
+      detail: {
+        hasOnEffectInvalidated: context.effectInvalidatedDispatch !== undefined,
+        hasOnReactiveSettled: context.settledDispatch !== undefined,
+      },
+    });
   }
 }
 
-export let defaultContext = new ExecutionContext();
+function refreshHookRouting(context: ExecutionContext): void {
+  refreshDispatchers(context);
+  if (defaultContext !== context) {
+    refreshDispatchers(defaultContext);
+  }
+}
+
+function createExecutionContextShape(): ExecutionContext {
+  const context = {
+    cleanupRegistrar: null,
+    trackReadFallback: reuseIncomingEdgeFromSuffixOrCreate,
+    runtimeOnEffectInvalidated: undefined,
+    runtimeOnReactiveSettled: undefined,
+    effectInvalidatedDispatch: undefined,
+    settledDispatch: undefined,
+
+    dispatchWatcherEvent(node: ReactiveNode): void {
+      if (IS_DEV) recordDebugEvent(context, "watcher:invalidated", { node });
+      composeEffectInvalidated(
+        context.runtimeOnEffectInvalidated,
+        onEffectInvalidatedHook,
+      )?.(node);
+    },
+
+    maybeNotifySettled(): void {
+      if (propagationDepth !== 0 || activeComputed !== null) return;
+      if (IS_DEV) recordDebugEvent(context, "context:settled");
+      composeSettled(
+        context.runtimeOnReactiveSettled,
+        onReactiveSettledHook,
+      )?.();
+    },
+
+    resetState(): void {
+      activeComputed = null;
+      trackingVersion = 0;
+      propagationDepth = 0;
+      context.cleanupRegistrar = null;
+    },
+
+    setOptions(options: ExecutionContextOptions = {}): void {
+      context.trackReadFallback = normalizeTrackReadFallback(options);
+
+      if (defaultContext === context) {
+        trackReadFallback = context.trackReadFallback;
+      }
+    },
+
+    setHooks(hooks: EngineHooks = {}): void {
+      setEffectInvalidatedHook(normalizeOwnHook(hooks, "onEffectInvalidated"));
+      setReactiveSettledHook(normalizeOwnHook(hooks, "onReactiveSettled"));
+      refreshHookRouting(context);
+    },
+
+    setRuntimeHooks(
+      onEffectInvalidated: OnEffectInvalidatedHook = undefined,
+      onReactiveSettled: OnReactiveSettledHook = undefined,
+    ): void {
+      context.runtimeOnEffectInvalidated =
+        normalizeHook<OnEffectInvalidatedHook>(onEffectInvalidated);
+      context.runtimeOnReactiveSettled =
+        normalizeHook<OnReactiveSettledHook>(onReactiveSettled);
+      refreshDispatchers(context);
+    },
+
+    registerWatcherCleanup(cleanup: () => void): void {
+      context.cleanupRegistrar?.(cleanup);
+    },
+
+    withCleanupRegistrar<T>(
+      registrar: CleanupRegistrar | null,
+      fn: () => T,
+    ): T {
+      if (context.cleanupRegistrar === registrar) return fn();
+
+      const prev = context.cleanupRegistrar;
+      context.cleanupRegistrar = registrar;
+      try {
+        return fn();
+      } finally {
+        context.cleanupRegistrar = prev;
+      }
+    },
+  } as ExecutionContext;
+
+  return context;
+}
+
+defaultContext = createExecutionContextShape();
+
+function installExecutionContext(context: ExecutionContext): void {
+  trackReadFallback = context.trackReadFallback;
+  dispatchEffectInvalidated = context.effectInvalidatedDispatch;
+  dispatchReactiveSettled = context.settledDispatch;
+}
+
+installExecutionContext(defaultContext);
 
 export function createExecutionContext(
   hooks: EngineHooks = {},
   options: ExecutionContextOptions = {},
 ): ExecutionContext {
-  return new ExecutionContext(hooks, options);
+  const context = createExecutionContextShape();
+  context.setHooks(hooks);
+  context.setOptions(options);
+  return context;
 }
 
 export function getDefaultContext(): ExecutionContext {
@@ -181,6 +297,8 @@ export function getDefaultContext(): ExecutionContext {
 export function setDefaultContext(context: ExecutionContext): ExecutionContext {
   const previous = defaultContext;
   defaultContext = context;
+  refreshDispatchers(context);
+  installExecutionContext(context);
   return previous;
 }
 
@@ -188,5 +306,7 @@ export function resetDefaultContext(
   hooks: EngineHooks = {},
   options: ExecutionContextOptions = {},
 ): ExecutionContext {
-  return (defaultContext = new ExecutionContext(hooks, options));
+  defaultContext = createExecutionContext(hooks, options);
+  installExecutionContext(defaultContext);
+  return defaultContext;
 }

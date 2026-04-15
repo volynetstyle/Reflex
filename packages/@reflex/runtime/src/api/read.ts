@@ -1,5 +1,4 @@
 import type { ReactiveNode } from "../reactivity";
-import type { ExecutionContext } from "../reactivity/context";
 import {
   devAssertConsumerCanStabilize,
   devAssertReadDeadConsumer,
@@ -18,7 +17,11 @@ import {
   isDisposedNode,
   shouldRecomputeDirtyConsumer,
 } from "../reactivity";
-import { defaultContext } from "../reactivity/context";
+import {
+  activeComputed,
+  defaultContext,
+  setActiveComputed,
+} from "../reactivity/context";
 
 /**
  * Read mode for consumer nodes (computed values).
@@ -77,8 +80,6 @@ export function readProducer<T>(node: ReactiveNode<T>): T {
     devAssertReadDeadProducer();
     return node.payload as T;
   }
-
-  const activeComputed = defaultContext.activeComputed;
 
   // Register this read as a dependency if there's an active computation
   if (activeComputed !== null && !tryTrackReadFastPath(node, activeComputed)) {
@@ -174,9 +175,6 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
     return value;
   }
 
-  const context = defaultContext;
-  const activeComputed = context.activeComputed;
-
   if (activeComputed !== null && !tryTrackReadFastPath(node, activeComputed)) {
     trackReadActive(node, activeComputed);
   }
@@ -186,7 +184,7 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
       node,
       "lazy",
       value,
-      context,
+      defaultContext,
       activeComputed ?? undefined,
     );
   }
@@ -309,19 +307,17 @@ export function readConsumer<T>(
  * @invariant context.activeComputed is restored after fn() returns/throws
  * @cost O(1) for context manipulation
  */
-export function untracked<T>(fn: () => T, _context: ExecutionContext): T {
-  const context = defaultContext;
-
+export function untracked<T>(fn: () => T): T {
   // Save the current active computation context
-  const prev = context.activeComputed;
+  const prev = activeComputed;
   // Clear the active context so reads don't create dependencies
-  context.activeComputed = null;
+  setActiveComputed(null);
 
   try {
     // Execute the callback in untracked context
     return fn();
   } finally {
     // Always restore the previous context
-    context.activeComputed = prev;
+    setActiveComputed(prev);
   }
 }

@@ -19,7 +19,7 @@ export function createSabScheduler(context: ExecutionContext): EffectScheduler {
     try {
       return fn();
     } finally {
-      if (core.leaveBatch() && queue.size !== 0 && isContextSettled(context)) {
+      if (core.leaveBatch() && queue.size !== 0 && isContextSettled()) {
         core.flush();
       }
     }

@@ -35,21 +35,21 @@ export interface Runtime {
   readonly ctx: ExecutionContext;
 }
 
-export function createRuntime(options?: RuntimeOptions): Runtime {
-  const executionContext = createExecutionContext(options?.hooks);
-  const scheduler = createEffectScheduler(
-    resolveEffectSchedulerMode(options?.effectStrategy),
-    executionContext,
-  );
-  const dispatcher = new EventDispatcher(scheduler.batch);
+  export function createRuntime(options?: RuntimeOptions): Runtime {
+    const executionContext = createExecutionContext(options?.hooks);
+    const scheduler = createEffectScheduler(
+      resolveEffectSchedulerMode(options?.effectStrategy),
+      executionContext,
+    );
+    const dispatcher = new EventDispatcher(scheduler.batch);
 
-  executionContext.setRuntimeHooks(
-    scheduler.enqueue,
-    scheduler.runtimeNotifySettled,
-  );
+    executionContext.setRuntimeHooks(
+      scheduler.enqueue,
+      scheduler.runtimeNotifySettled,
+    );
 
-  executionContext.resetState();
-  setDefaultContext(executionContext);
+    executionContext.resetState();
+    setDefaultContext(executionContext);
 
   activeBatch = scheduler.batch.bind(scheduler);
   activeEvent = function <T>() {

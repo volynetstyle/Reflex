@@ -1,4 +1,4 @@
-import type { ExecutionContext } from "./reactivity/context";
+import { activeComputed, propagationDepth, type ExecutionContext } from "./reactivity/context";
 import type { ReactiveEdge, ReactiveNode } from "./reactivity/shape";
 import { DIRTY_STATE, ReactiveNodeState } from "./reactivity/shape";
 import type {
@@ -251,14 +251,14 @@ export function snapshotDebugContext(
   const state = ensureContextState(context);
   const snapshot: RuntimeDebugContextSnapshot = {
     id: state.id,
-    propagationDepth: context.propagationDepth,
+    propagationDepth: propagationDepth,
     historyLimit: state.historyLimit,
     historySize: state.history.length,
     observerCount: state.listeners.size,
   };
 
-  if (context.activeComputed !== null) {
-    snapshot.activeComputed = createNodeRef(context.activeComputed);
+  if (activeComputed !== null) {
+    snapshot.activeComputed = createNodeRef(activeComputed);
   }
 
   return snapshot;

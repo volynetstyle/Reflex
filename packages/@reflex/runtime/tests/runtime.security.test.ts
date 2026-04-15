@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   type EngineHooks,
   createExecutionContext,
+  getReactiveSettledHook,
+  setReactiveSettledHook,
 } from "../src/reactivity/context";
 
 describe("Reactive runtime - security regressions", () => {
@@ -42,23 +44,23 @@ describe("Reactive runtime - security regressions", () => {
 
     expect(previous).not.toHaveBeenCalled();
     expect(inherited).not.toHaveBeenCalled();
-    expect(context.onReactiveSettled).toBe(undefined);
+    expect(getReactiveSettledHook()).toBe(undefined);
   });
 
-  it("keeps direct hook assignments synchronized with cached callbacks", () => {
+  it("keeps global hook updates synchronized with cached callbacks", () => {
     const first = vi.fn();
     const second = vi.fn();
     const context = createExecutionContext();
 
-    context.onReactiveSettled = first;
+    setReactiveSettledHook(first);
     context.maybeNotifySettled();
-    context.onReactiveSettled = second;
+    setReactiveSettledHook(second);
     context.maybeNotifySettled();
-    context.onReactiveSettled = undefined;
+    setReactiveSettledHook(undefined);
     context.maybeNotifySettled();
 
     expect(first).toHaveBeenCalledTimes(1);
     expect(second).toHaveBeenCalledTimes(1);
-    expect(context.onReactiveSettled).toBe(undefined);
+    expect(getReactiveSettledHook()).toBe(undefined);
   });
 });

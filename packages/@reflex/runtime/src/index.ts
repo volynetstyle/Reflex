@@ -15,9 +15,16 @@ export {
 
 // Execution context management
 export {
+  getActiveComputed,
+  getEffectInvalidatedHook,
+  getPropagationDepth,
+  setPropagationDepth,
   createExecutionContext,
   getDefaultContext,
+  getReactiveSettledHook,
   setDefaultContext,
+  setEffectInvalidatedHook,
+  setReactiveSettledHook,
   resetDefaultContext,
   type ExecutionContext,
   type ExecutionContextOptions,
