@@ -94,7 +94,8 @@ describe("Reactive system - effects", () => {
     let current = source;
     for (let depth = 0; depth < 192; ++depth) {
       const prev = current;
-      current = memo(() => prev() + ((depth & 3) + 1));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      current = memo(() => prev() + ((depth & 3) + 1)) as any;
 
       if (depth === 47 || depth === 95 || depth === 143 || depth === 191) {
         const tap = current;

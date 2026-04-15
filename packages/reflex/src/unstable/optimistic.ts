@@ -99,7 +99,10 @@ class OptimisticCore<T> {
 
   set = (input: SetInput<T>): T => {
     const prev = this.peek();
-    const next = typeof input === "function" ? input(prev) : input;
+    const next =
+      typeof input === "function"
+        ? (input as (prev: T) => T)(prev)
+        : input;
 
     if (this.disposed) {
       return next;

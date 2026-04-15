@@ -25,6 +25,14 @@ import type {
 
 const runner = runWatcher.bind(null);
 
+function unscheduleQueuedNodes(queue: WatcherQueue): void {
+  while (queue.size !== 0) {
+    queue.shift()!.state &= UNSCHEDULE_MASK;
+  }
+
+  queue.clear();
+}
+
 /**
  * Marks an effect watcher node as scheduled.
  *
@@ -70,17 +78,28 @@ export function createSchedulerCore(): SchedulerCore {
     if (queue.size === 0) return;
 
     phase = SchedulerPhase.Flushing;
+    let thrown: unknown = null;
 
     try {
       while (queue.size !== 0) {
         const node = queue.shift()!,
           s = node.state;
         node.state = s & UNSCHEDULE_MASK;
-        runner(node);
+        try {
+          runner(node);
+        } catch (error) {
+          if (thrown === null) {
+            thrown = error;
+          }
+        }
       }
     } finally {
-      queue.clear();
+      unscheduleQueuedNodes(queue);
       phase = batchDepth > 0 ? SchedulerPhase.Batching : SchedulerPhase.Idle;
+    }
+
+    if (thrown !== null) {
+      throw thrown;
     }
   }
 
@@ -108,11 +127,7 @@ export function createSchedulerCore(): SchedulerCore {
     },
 
     reset() {
-      while (queue.size !== 0) {
-        queue.shift()!.state &= UNSCHEDULE_MASK;
-      }
-
-      queue.clear();
+      unscheduleQueuedNodes(queue);
       batchDepth = 0;
       phase = SchedulerPhase.Idle;
     },

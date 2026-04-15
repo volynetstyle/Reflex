@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ExecutionContext } from "@reflex/runtime";
 
@@ -8,9 +9,9 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@reflex/runtime", async () => {
-  const actual = await vi.importActual<typeof import("@reflex/runtime")>(
-    "@reflex/runtime",
-  );
+  const actual =
+    // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+    await vi.importActual<typeof import("@reflex/runtime")>("@reflex/runtime");
 
   return {
     ...actual,
@@ -256,10 +257,7 @@ describe("createEffectScheduler", () => {
 
     let deferredIndex = 0;
     mocks.runWatcher.mockImplementation((node) => {
-      if (
-        deferredIndex < deferred.length &&
-        node === initial[deferredIndex]
-      ) {
+      if (deferredIndex < deferred.length && node === initial[deferredIndex]) {
         scheduler.enqueue(deferred[deferredIndex]!);
         deferredIndex += 1;
       }
@@ -293,5 +291,60 @@ describe("createEffectScheduler", () => {
     scheduler.flush();
 
     expect(seen).toEqual(Array.from({ length: depth }, (_, i) => i));
+  });
+
+  it("flush mode continues draining queued nodes and rethrows the first watcher error", () => {
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
+    const failure = new Error("boom");
+    const first = createNode();
+    const second = createNode();
+
+    mocks.runWatcher.mockImplementation((node) => {
+      if (node === first) {
+        throw failure;
+      }
+    });
+
+    scheduler.enqueue(first);
+    scheduler.enqueue(second);
+
+    expect(() => scheduler.flush()).toThrow(failure);
+    expect(mocks.runWatcher).toHaveBeenCalledTimes(2);
+    expect(mocks.runWatcher.mock.calls.map(([node]) => node)).toEqual([
+      first,
+      second,
+    ]);
+    expect((first.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((second.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect(scheduler.batchDepth).toBe(0);
+  });
+
+  it("ranked mode continues draining pending nodes and rethrows the first watcher error", () => {
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Ranked);
+    const failure = new Error("ranked boom");
+    const first = createNode() as any;
+    const second = createNode() as any;
+
+    first.priority = 10;
+    second.priority = 1;
+
+    mocks.runWatcher.mockImplementation((node) => {
+      if (node === first) {
+        throw failure;
+      }
+    });
+
+    scheduler.enqueue(second);
+    scheduler.enqueue(first);
+
+    expect(() => scheduler.flush()).toThrow(failure);
+    expect(mocks.runWatcher).toHaveBeenCalledTimes(2);
+    expect(mocks.runWatcher.mock.calls.map(([node]) => node)).toEqual([
+      first,
+      second,
+    ]);
+    expect((first.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((second.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect(scheduler.batchDepth).toBe(0);
   });
 });

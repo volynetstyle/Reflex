@@ -63,7 +63,7 @@ describe("Reactive system - model actions", () => {
     expect(seen).toEqual([0, 2]);
   });
 
-  it("applies writes performed inside a model action in order (eager)", () => {
+  it("keeps model actions atomic for eager effects", () => {
     const rt = createRuntime({ effectStrategy: "eager" });
     const [count, setCount] = signal(0);
     const seen: number[] = [];
@@ -86,10 +86,10 @@ describe("Reactive system - model actions", () => {
 
     model.bumpTwice();
 
-    expect(seen).toEqual([0, 1, 2]);
+    expect(seen).toEqual([0, 2]);
     expect(model.count()).toBe(2);
     rt.flush();
-    expect(seen).toEqual([0, 1, 2]);
+    expect(seen).toEqual([0, 2]);
   });
 
   it("supports nested readable values and model actions", () => {
@@ -103,7 +103,7 @@ describe("Reactive system - model actions", () => {
         count,
         nested: {
           doubled,
-          inc: ctx.action(() => setCount((value) => value * v)),
+          inc: ctx.action(() => setCount((value: number) => value * v)),
         },
       };
     });

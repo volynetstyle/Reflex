@@ -33,7 +33,7 @@ describe("Reactive system - basic correctness", () => {
   it("supports updater functions", () => {
     const [count, setCount] = signal(2);
 
-    setCount((prev) => prev + 3);
+    setCount((prev: number) => prev + 3);
 
     // new: set count return nothing
     // expect(setCount((prev) => prev + 3)).toBe(5);

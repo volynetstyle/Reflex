@@ -6,7 +6,6 @@ import {
 import { describe, expect, it } from "vitest";
 import { ReactiveNodeState } from "../../@reflex/runtime/src/reactivity/shape/ReactiveMeta";
 import {
-  UNINITIALIZED,
   createComputedNode,
   createWatcherNode,
   createAccumulator,

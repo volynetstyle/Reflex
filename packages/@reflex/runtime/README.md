@@ -1,370 +1,164 @@
-# Reactive Runtime
+---
+description: |
+  Low-level reactive graph engine for deterministic, host-controlled execution.
+  See DOC-TOPOLOGY.md for documentation structure and reading paths.
+---
 
-Reflex is optimized for selective, on-demand recomputation and low-level runtime for building deterministic reactive systems.
+# Reflex Runtime
 
-Instead of maintaining a global execution order (e.g. via topological heaps),
-it stabilizes only the actually accessed subgraph using a walk-based algorithm.
+`@reflex/runtime` is a minimal reactive graph engine optimized for selective, on-demand recomputation.
 
-Key properties:
+Instead of a global execution order, it stabilizes only the accessed subgraph using a walk-based algorithm:
 
-- lazy pull-based stabilization
-- minimal recomputation/refresh
-- no persistent global ordering structure in core
+- **Push phase:** cheap invalidation via `propagate()`
+- **Pull phase:** lazy stabilization via `readConsumer()`
+- **No built-in scheduler:** execution is host-controlled
 
-This project provides a minimal reactive execution engine based on explicit node kinds and host-controlled scheduling. It is designed as a **general-purpose computation substrate**, not a UI framework.
+This is a **low-level computation substrate**, not a UI framework or convenience library.
 
 ---
 
-## Table of Contents
+## Mental Model
 
-- Philosophy
-- Architecture
-- Node Model
-- Execution Model
-- Example
-- Scheduler
-- Invariants
-- Disposal Protocol
-- How It Differs From Typical Signals Libraries
-- When To Use
-- When Not To Use
+Think of three node kinds:
+
+- **Producer:** mutable source (like a cell in a spreadsheet)
+- **Consumer:** pure derived computation (like a formula)
+- **Watcher:** side effect sink (like an observer or logger)
+
+The runtime maintains a dependency graph and propagates changes deterministically. Your host code controls when computation happens.
 
 ---
 
-# Philosophy
-
-Reactive systems contain unavoidable global complexity:
-
-- dependency ordering
-- invalidation semantics
-- lifecycle management
-- ownership boundaries
-- scheduling policy
-
-Hiding this behind a “complete” API does not remove complexity — it relocates it.
-
-This runtime keeps complexity explicit, minimal, and composable.
-
----
-
-# Architecture
-
-The system is divided into:
-
-1. **Core runtime** (this package)
-2. **Scheduler layer** (external)
-3. **Optional wrapper APIs** (signals-style interfaces)
-
-The core handles:
-
-- Dependency graph construction
-- Change invalidation
-- Deterministic propagation
-- Lifecycle boundaries
-
-The core does not handle:
-
-- Frame batching
-- Async scheduling
-- Priority queues
-- Rendering semantics
-
-These are host responsibilities.
-
----
-
-# Node Model
-
-Reactive behavior is built from explicit node kinds.
-
-## Producer
-
-Source of mutation.
-
-- Holds mutable state
-- Can invalidate dependents
-- Does not execute computation
-
-## Consumer
-
-Pure derived computation.
-
-- Tracks dependencies during execution
-- Recomputes when invalidated
-- Holds cached derived value
-
-## Recycler
-
-Lifecycle + effect boundary.
-
-- Observes reactive reads
-- Executes side-effects
-- Registers cleanup logic
-- May dynamically change dependencies
-
----
-
-## Node Role Summary
-
-| Kind     | Holds State  | Executes Code | Owns Cleanup | Causes Invalidation |
-| -------- | ------------ | ------------- | ------------ | ------------------- |
-| Producer | ✔           | ✖            | ✖           | ✔                  |
-| Consumer | ✔ (derived) | ✔            | ✖           | ✖                  |
-| Recycler | ✖           | ✔            | ✔           | ✖                  |
-
----
-
-# Execution Model
-
-The runtime is **host-driven**.
-
-Mutation does not trigger execution.
-
-Execution occurs only when the host calls:
+## Minimal Example
 
 ```ts
-flush();
-```
+import { ReactiveNode, readProducer, writeProducer, readConsumer, runWatcher } from "@reflex/runtime";
+import { PRODUCER_INITIAL_STATE, CONSUMER_INITIAL_STATE, WATCHER_INITIAL_STATE } from "@reflex/runtime";
 
-This ensures:
+// 1. Producer: mutable source
+const count = new ReactiveNode(0, null, PRODUCER_INITIAL_STATE);
 
-- Scheduler agnosticism
-- Deterministic execution
-- Explicit control over propagation timing
+// 2. Consumer: pure computation, tracks dependencies
+const doubled = new ReactiveNode(undefined, () => {
+  const c = readProducer(count);
+  return c * 2;
+}, CONSUMER_INITIAL_STATE);
 
----
+// 3. Watcher: effect sink, runs on demand
+const effect = new ReactiveNode(null, () => {
+  const d = readConsumer(doubled);
+  console.log("doubled is now:", d);
+  return () => console.log("effect cleanup");
+}, WATCHER_INITIAL_STATE);
 
-# Example
+// Mutation: push invalidation
+writeProducer(count, 5);
 
-```ts
-// Source of change
-const a = new ReactiveNode(Kind.Producer);
-
-// Derived computation
-const b = new ReactiveNode(Kind.Consumer, () => readProducer(a) * 2);
-
-// Mutate
-writeProducer(a, 2);
-
-// Execute propagation
-flush();
-
-console.log(readConsumer(b)); // 4
+// Host decides when to compute: pull stabilization
+readConsumer(doubled);  // recomputes doubled if invalid
+runWatcher(effect);     // executes effect
 ```
 
 ### What Happens
 
-1. `writeProducer` marks dependents dirty.
-2. No computation runs immediately.
-3. `flush()` performs propagation.
-4. `b` recomputes once.
-5. `readConsumer` returns stable value.
+1. `writeProducer(count, 5)` marks subscribers invalid (cheap push)
+2. `readConsumer(doubled)` checks if `doubled` is dirty, recomputes only if needed (pull)
+3. `runWatcher(effect)` executes the effect function and stores cleanup
+4. Next mutation only invalidates, never auto-executes
 
 ---
 
-## Debug Introspection Example
+## Core Roles
 
-Run:
+### Producer
 
-```bash
-pnpm --filter @reflex/runtime example:introspection
-```
+- Holds mutable state
+- Never computes
+- Invalidates dependents on write
+- Example: signal, mutable store
 
-The script uses `@reflex/runtime/debug` and prints:
+### Consumer
 
-- execution phases
-- invalidation / recompute events
-- graph snapshots for key nodes
-- current queue and context state
+- Pure function with dependencies
+- Computes lazily on read
+- Caches result
+- Example: derived value, computed property
+
+### Watcher
+
+- Effect-like node
+- Executes only when host calls `runWatcher()`
+- Can return cleanup function
+- Example: logger, side-effect handler, subscriber
 
 ---
 
-## Recycler Example
+## Host Responsibilities
+
+This runtime does **not** provide:
+
+- `flush()` or automatic batching
+- Built-in scheduler
+- Microtask management
+- Frame-driven execution
+
+Instead, your host code:
+
+1. Calls `writeProducer()` to mutate
+2. Decides when to call `readConsumer()` (lazy pull)
+3. Decides when to call `runWatcher()` (effect scheduling)
+4. Owns the execution context and hooks
+
+Example host scheduler:
 
 ```ts
-const e = new ReactiveNode(Kind.Recycler, () => {
-  console.log(`a = ${readProducer(a)}, b = ${readConsumer(b)}`);
-
-  return () => {
-    // cleanup logic
-  };
+const ctx = createExecutionContext({
+  onEffectInvalidated(node) {
+    pendingWatchers.push(node);
+  },
 });
 
-const cleanup = recycling(e);
+// Somewhere in your event loop:
+while (pendingWatchers.length) {
+  runWatcher(pendingWatchers.shift(), ctx);
+}
 ```
 
-Recycler nodes:
+---
 
-- Execute effects
-- Track reactive reads
-- Run cleanup before next execution
-- May alter graph topology dynamically
+## Key Properties
+
+- **Lazy:** computation only on demand
+- **Explicit:** no hidden scheduling or automatic execution
+- **Composable:** clear separation of concerns
+- **Observable:** dirty states and tracking are exposed
+- **Deterministic:** no implicit ordering or randomness
 
 ---
 
-# Scheduler
+## Documentation Map
 
-This runtime intentionally does not embed a scheduler.
-
-Different domains require different policies:
-
-| Domain     | Scheduling Strategy |
-| ---------- | ------------------- |
-| UI         | Frame batching      |
-| SSR        | Synchronous flush   |
-| Workers    | Message-driven      |
-| Simulation | Tick-based          |
-| Streaming  | Backpressure-aware  |
-
-A built-in scheduler would impose assumptions and reduce generality.
-
-Instead, the runtime exposes minimal hooks to integrate any execution strategy.
+- **[RUNTIME.md](./RUNTIME.md)** — precise public contract, state constants, invariants
+- **[DISPOSE.md](./DISPOSE.md)** — disposal and cleanup semantics
+- **[DOC-TOPOLOGY.md](./DOC-TOPOLOGY.md)** — doc structure and reading paths
+- **[study/](./study/)** — deep dives for maintainers (start with [study/README.md](./study/README.md))
+- **[src/reactivity/walkers/README.md](./src/reactivity/walkers/README.md)** — algorithm reference
 
 ---
 
-# Invariants
+## Use When
 
-If these invariants hold, they should be documented clearly:
-
-- A consumer executes at most once per flush cycle.
-- A producer mutation never triggers immediate execution.
-- Propagation order is topologically consistent.
-- Cleanup runs before next execution of the same recycler.
-- Derived values are stable between flush cycles.
-
-The disposal-specific contract is documented separately in
-[`DISPOSAL_PROTOCOL.md`](./DISPOSAL_PROTOCOL.md).
-
-These invariants define the semantic contract of the runtime.
+- Building a reactive framework
+- You need deterministic, host-controlled execution
+- Full control over scheduling is required
+- Reactive computation outside UI contexts
 
 ---
 
-# How It Differs From Typical Signals Libraries
+## Do Not Use When
 
-Most signals libraries provide:
-
-- Implicit scheduling
-- Implicit batching
-- UI-oriented execution model
-- Unified API surface
-- Hidden lifecycle boundaries
-
-This runtime differs fundamentally.
-
-## 1. No Hidden Scheduler
-
-Typical libraries trigger execution automatically after mutation.
-
-This runtime separates:
-
-- Mutation
-- Invalidation
-- Execution
-
-Execution is always host-controlled.
-
----
-
-## 2. Explicit Node Kinds
-
-Signals libraries often blur:
-
-- Derived computation
-- Effects
-- State
-
-Here they are structurally distinct:
-
-- Producer
-- Consumer
-- Recycler
-
-This prevents semantic ambiguity.
-
----
-
-## 3. Scheduler-Agnostic by Design
-
-Signals libraries encode assumptions about:
-
-- Rendering frames
-- Microtasks
-- Async batching
-
-This runtime encodes none of these.
-
-It can power:
-
-- UI frameworks
-- Deterministic engines
-- Simulation systems
-- Server computation pipelines
-
----
-
-## 4. No Opinionated API Layer
-
-Signals libraries expose a unified ergonomic API.
-
-This runtime exposes primitives.
-
-Wrappers are optional and replaceable.
-
----
-
-## 5. Lifecycle as First-Class Concern
-
-Recycler nodes explicitly model:
-
-- Effect execution
-- Cleanup semantics
-- Resource ownership
-
-Most libraries treat lifecycle implicitly.
-
----
-
-## 6. Graph Topology Is Dynamic
-
-This runtime allows:
-
-- Dynamic dependency creation
-- Dependency recycling
-- Graph segment replacement
-
-Without requiring framework-level abstractions.
-
----
-
-# When To Use
-
-Use this runtime if:
-
-- You are building a reactive framework
-- You need deterministic execution
-- You require full control over scheduling
-- You want to experiment with execution models
-- You need reactive computation outside UI
-
----
-
-# When Not To Use
-
-Do not use this if:
-
-- You only need local component state
-- You want batteries-included convenience
-- You do not plan to control scheduling
-- You expect automatic batching
-
----
-
-# Mental Model
-
-Think of this as:
-
-> A deterministic dependency graph engine.
-
-Not:
-
-> A convenience signals library.
+- You want automatic, implicit scheduling
+- You need batteries-included convenience
+- Local component state is your only concern
+- Framework-specific integration is unimportant

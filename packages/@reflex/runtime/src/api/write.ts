@@ -107,11 +107,19 @@ export function writeProducer<T>(
 
   // Enter propagation phase: increment nesting counter
   // This allows multiple concurrent propagations to batch correctly
+  let thrown: unknown = null;
   enterPropagation();
-  // Push phase: notify all subscribers depth-first, mark them dirty.
-  // Direct subscribers are promoted from Invalid to Changed.
-  // This tells them "definitely changed, don't verify, recompute"
-  propagate(firstSubscriberEdge, PROMOTE_CHANGED);
-  // Always exit propagation phase, even if propagate throws
-  leavePropagation();
+  try {
+    // Push phase: notify all subscribers depth-first, mark them dirty.
+    // Direct subscribers are promoted from Invalid to Changed.
+    // This tells them "definitely changed, don't verify, recompute"
+    thrown = propagate(firstSubscriberEdge, PROMOTE_CHANGED);
+  } finally {
+    // Always exit propagation phase, even if propagation or hooks fail.
+    leavePropagation();
+  }
+
+  if (thrown !== null) {
+    throw thrown;
+  }
 }

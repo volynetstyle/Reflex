@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getActiveComputed } from "@reflex/runtime";
-import { computed, createRuntime, signal } from "./reflex.test_utils";
+import { computed, createRuntime, effect, signal } from "./reflex.test_utils";
 
 describe("Reactive system - safety and robustness", () => {
   it("restores the active consumer after a thrown compute", () => {
@@ -36,5 +36,35 @@ describe("Reactive system - safety and robustness", () => {
     setSource(2);
     expect(() => boom()).toThrow("unstable");
     expect(stable()).toBe(20);
+  });
+
+  it("keeps unaffected effects schedulable after another effect throws during flush", () => {
+    const rt = createRuntime();
+    const [badSource, setBadSource] = signal(1);
+    const [goodSource, setGoodSource] = signal(1);
+    const seen: number[] = [];
+
+    effect(() => {
+      if (badSource() === 2) {
+        throw new Error("effect boom");
+      }
+    });
+
+    effect(() => {
+      seen.push(goodSource());
+    });
+
+    expect(seen).toEqual([1]);
+
+    setBadSource(2);
+    setGoodSource(2);
+
+    expect(() => rt.flush()).toThrow("effect boom");
+    expect(seen).toEqual([1, 2]);
+
+    setGoodSource(3);
+    rt.flush();
+
+    expect(seen).toEqual([1, 2, 3]);
   });
 });

@@ -21,6 +21,23 @@ type RankedEffectNode = EffectNode & {
 
 const runner = runWatcher.bind(null);
 
+function unscheduleQueuedNodes(queue: ReturnType<typeof createWatcherQueue>): void {
+  while (queue.size !== 0) {
+    queue.shift()!.state &= UNSCHEDULE_MASK;
+  }
+
+  queue.clear();
+}
+
+function unschedulePendingNodes(
+  pending: readonly EffectNode[],
+  startIndex: number,
+): void {
+  for (let i = startIndex; i < pending.length; ++i) {
+    pending[i]!.state &= UNSCHEDULE_MASK;
+  }
+}
+
 function getNodeRank(node: EffectNode): number {
   const rankedNode = node as RankedEffectNode;
   return rankedNode.priority ?? rankedNode.rank ?? 0;
@@ -39,6 +56,8 @@ export function createRankedScheduler(
 
     phase = SchedulerPhase.Flushing;
     const pending: EffectNode[] = [];
+    let processed = 0;
+    let thrown: unknown = null;
 
     try {
       while (queue.size !== 0) {
@@ -47,15 +66,26 @@ export function createRankedScheduler(
 
       pending.sort((left, right) => getNodeRank(right) - getNodeRank(left));
 
-      for (let i = 0; i < pending.length; ++i) {
-        const node = pending[i]!,
+      for (; processed < pending.length; ++processed) {
+        const node = pending[processed]!,
           s = node.state;
         node.state = s & UNSCHEDULE_MASK;
-        runner(node);
+        try {
+          runner(node);
+        } catch (error) {
+          if (thrown === null) {
+            thrown = error;
+          }
+        }
       }
     } finally {
-      queue.clear();
+      unschedulePendingNodes(pending, processed);
+      unscheduleQueuedNodes(queue);
       phase = batchDepth > 0 ? SchedulerPhase.Batching : SchedulerPhase.Idle;
+    }
+
+    if (thrown !== null) {
+      throw thrown;
     }
   };
 
@@ -80,11 +110,7 @@ export function createRankedScheduler(
       return true;
     },
     reset() {
-      while (queue.size !== 0) {
-        queue.shift()!.state &= UNSCHEDULE_MASK;
-      }
-
-      queue.clear();
+      unscheduleQueuedNodes(queue);
       batchDepth = 0;
       phase = SchedulerPhase.Idle;
     },
