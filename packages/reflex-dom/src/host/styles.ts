@@ -1,6 +1,8 @@
 import type { StyleObject, StyleValue } from "../types";
 
 type StyleRecord = Record<string, string | number | null | undefined>;
+type MutableStyleDeclaration = CSSStyleDeclaration &
+  Record<string, string | number | null | undefined>;
 
 function toStyleRecord(value: StyleObject): StyleRecord {
   return value as StyleRecord;
@@ -18,11 +20,12 @@ function clearStyleObject(
   style: CSSStyleDeclaration,
   prev: StyleObject,
 ): void {
+  const mutableStyle = style as MutableStyleDeclaration;
   for (const key in prev) {
     if (isCustomProp(key)) {
       style.removeProperty(key);
     } else {
-      (style as any)[key] = "";
+      mutableStyle[key] = "";
     }
   }
 }
@@ -32,11 +35,12 @@ function setStyleValue(
   key: string,
   value: unknown,
 ): void {
+  const mutableStyle = style as MutableStyleDeclaration;
   if (value == null) {
     if (isCustomProp(key)) {
       style.removeProperty(key);
     } else {
-      (style as any)[key] = "";
+      mutableStyle[key] = "";
     }
     return;
   }
@@ -44,7 +48,7 @@ function setStyleValue(
   if (isCustomProp(key)) {
     style.setProperty(key, String(value));
   } else {
-    (style as any)[key] = value;
+    mutableStyle[key] = value as string | number;
   }
 }
 
@@ -55,6 +59,7 @@ function patchStyleObject(
 ): void {
   const nextRecord = toStyleRecord(next);
   const prevRecord = toStyleRecord(prev);
+  const mutableStyle = style as MutableStyleDeclaration;
 
   // remove stale keys
   for (const key in prevRecord) {
@@ -62,7 +67,7 @@ function patchStyleObject(
       if (isCustomProp(key)) {
         style.removeProperty(key);
       } else {
-        (style as any)[key] = "";
+        mutableStyle[key] = "";
       }
     }
   }

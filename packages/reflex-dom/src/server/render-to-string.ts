@@ -13,7 +13,8 @@ import type {
 import { resolveShowValue, resolveSwitchValue } from "../operators";
 import { isEventProp } from "../host/events";
 import { normalizeAttr } from "../host/aliases";
-import { resolveNamespace, type Namespace } from "../host/namespace";
+import { resolveNamespace, type Namespace, URL_ATTRS } from "../host/namespace";
+import { sanitizeURL } from "../host/sanitize";
 import { isVoidTag } from "../host/tags";
 import { RenderableKind } from "../renderable-kind";
 import { wrapHydrationSlotMarkup } from "../hydrate/markers";
@@ -143,13 +144,17 @@ function renderAttributes(
     }
 
     const attributeName = normalizeAttr(name);
+    const normalizedValue =
+      URL_ATTRS.has(attributeName) && typeof resolvedValue === "string"
+        ? sanitizeURL(resolvedValue)
+        : resolvedValue;
 
-    if (resolvedValue === true) {
+    if (normalizedValue === true) {
       attributes += ` ${attributeName}`;
       continue;
     }
 
-    attributes += ` ${attributeName}="${escapeAttribute(String(resolvedValue))}"`;
+    attributes += ` ${attributeName}="${escapeAttribute(String(normalizedValue))}"`;
   }
 
   if (namespace === "svg" && tag === "svg" && !("xmlns" in props)) {

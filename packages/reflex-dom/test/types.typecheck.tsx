@@ -6,6 +6,9 @@ import { createContext } from "../src";
 // @ts-expect-error reflex-dom should not re-export framework hooks
 import { useSignal } from "../src";
 
+void createContext;
+void useSignal;
+
 const buttonRef = { current: null as HTMLButtonElement | null };
 
 <button
@@ -61,7 +64,7 @@ const buttonRef = { current: null as HTMLButtonElement | null };
   }}
   onEnterPictureInPicture={(event) => {
     const pictureInPictureEvent: PictureInPictureEvent = event;
-    pictureInPictureEvent.pictureInPictureWindow.width;
+    void pictureInPictureEvent.pictureInPictureWindow.width;
     event.currentTarget.pause();
   }}
 />;

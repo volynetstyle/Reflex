@@ -39,14 +39,20 @@ function resolveAttrKind(el: Element, name: string, ns: Namespace): AttrKind {
 }
 
 function clearProperty(el: Element, name: string): void {
-  const target = el as any;
-  target[name] = typeof target[name] === "boolean" ? false : "";
+  const target = el as unknown as Record<string, unknown>;
+  const currentValue = target[name];
+  target[name] = typeof currentValue === "boolean" ? false : "";
 }
 
 function setProperty(el: Element, name: string, value: unknown): void {
-  const target = el as any;
+  const target = el as unknown as Record<string, unknown>;
+  const normalized =
+    URL_ATTRS.has(name) && typeof value === "string"
+      ? sanitizeURL(value)
+      : value;
+  const currentValue = target[name];
   target[name] =
-    typeof target[name] === "boolean" ? value === true : (value ?? "");
+    typeof currentValue === "boolean" ? normalized === true : (normalized ?? "");
 }
 
 function setAttributeValue(el: Element, name: string, value: unknown): void {
@@ -77,7 +83,11 @@ export function setAttr(
       if (value == null || value === false) {
         el.removeAttributeNS(XLINK_NS, "href");
       } else {
-        el.setAttributeNS(XLINK_NS, name, String(value));
+        const normalized =
+          URL_ATTRS.has(name) && typeof value === "string"
+            ? sanitizeURL(value)
+            : value;
+        el.setAttributeNS(XLINK_NS, name, String(normalized));
       }
       return value;
 

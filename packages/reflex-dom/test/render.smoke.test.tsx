@@ -2,6 +2,7 @@
 
 import { beforeEach, describe, expect, it } from "vitest";
 import { computed, effect, memo, signal } from "@volynets/reflex";
+import type { JSXRenderable } from "../src";
 import { createDOMRuntime, render, Fragment } from "../src";
 
 describe("render", () => {
@@ -57,20 +58,20 @@ describe("render", () => {
 
   it("renders plain text node", () => {
     const container = document.createElement("div");
-    render("hello" as any, container);
+    render("hello" as JSXRenderable, container);
     expect(container.textContent).toBe("hello");
   });
 
   it("renders number as text", () => {
     const container = document.createElement("div");
-    render(42 as any, container);
+    render(42 as JSXRenderable, container);
     expect(container.textContent).toBe("42");
   });
 
   it("renders null/undefined/boolean as nothing", () => {
     const container = document.createElement("div");
     for (const v of [null, undefined, true, false]) {
-      render(v as any, container);
+      render(v as JSXRenderable, container);
       expect(container.innerHTML).toBe("");
     }
   });
@@ -106,7 +107,7 @@ describe("render", () => {
   it("renders array of elements", () => {
     const container = document.createElement("div");
     render(
-      [<b key="1">x</b>, <b key="2">y</b>] as any,
+      [<b key="1">x</b>, <b key="2">y</b>] as JSXRenderable,
       container,
     );
     expect(container.querySelectorAll("b")).toHaveLength(2);
@@ -128,7 +129,7 @@ describe("render", () => {
 
   it("removes attribute when value is null", () => {
     const container = document.createElement("div");
-    render(<input placeholder={null as any} />, container);
+    render(<input placeholder={null as unknown as string} />, container);
     expect(container.querySelector("input")?.hasAttribute("placeholder")).toBe(false);
   });
 
@@ -267,8 +268,8 @@ describe("render", () => {
 
   it("passes children into components", () => {
     const container = document.createElement("div");
-    const Frame = ({ children }: { children?: unknown }) => (
-      <section data-kind="frame">{children as any}</section>
+    const Frame = ({ children }: { children?: JSXRenderable }) => (
+      <section data-kind="frame">{children}</section>
     );
 
     render(
@@ -286,19 +287,19 @@ describe("render", () => {
     const container = document.createElement("div");
     const [name, setName] = signal("Alice");
 
-    const Shell = ({ children }: { children?: unknown }) => (
-      <section data-shell="true">{children as any}</section>
+    const Shell = ({ children }: { children?: JSXRenderable }) => (
+      <section data-shell="true">{children}</section>
     );
-    const Card = ({ title, children }: { title: string; children?: unknown }) => (
+    const Card = ({ title, children }: { title: string; children?: JSXRenderable }) => (
       <article>
         <h2>{title}</h2>
-        <div class="card-body">{children as any}</div>
+        <div class="card-body">{children}</div>
       </article>
     );
-    const Row = ({ label, children }: { label: string; children?: unknown }) => (
+    const Row = ({ label, children }: { label: string; children?: JSXRenderable }) => (
       <p>
         <span>{label}</span>
-        {children as any}
+        {children}
       </p>
     );
 
