@@ -35,21 +35,21 @@ export interface Runtime {
   readonly ctx: ExecutionContext;
 }
 
-  export function createRuntime(options?: RuntimeOptions): Runtime {
-    const executionContext = createExecutionContext(options?.hooks);
-    const scheduler = createEffectScheduler(
-      resolveEffectSchedulerMode(options?.effectStrategy),
-      executionContext,
-    );
-    const dispatcher = new EventDispatcher(scheduler.batch);
+export function createRuntime(options?: RuntimeOptions): Runtime {
+  const executionContext = createExecutionContext(options?.hooks);
+  const scheduler = createEffectScheduler(
+    resolveEffectSchedulerMode(options?.effectStrategy),
+    executionContext,
+  );
+  const dispatcher = new EventDispatcher(scheduler.batch);
 
-    executionContext.setRuntimeHooks(
-      scheduler.enqueue,
-      scheduler.runtimeNotifySettled,
-    );
+  executionContext.setRuntimeHooks(
+    scheduler.enqueue,
+    scheduler.runtimeNotifySettled,
+  );
 
-    executionContext.resetState();
-    setDefaultContext(executionContext);
+  executionContext.resetState();
+  setDefaultContext(executionContext);
 
   activeBatch = scheduler.batch.bind(scheduler);
   activeEvent = function <T>() {
@@ -75,20 +75,16 @@ export interface Runtime {
 }
 
 /**
- * Exportet func alias
+ * Exported function alias that always resolves the current runtime batch.
  * @param fn
  * @returns
  */
-export const batch = activeBatch;
+export const batch: BatchFn = <T>(fn: () => T) => activeBatch(fn);
 /**
- * Exportet func alias
- * @param fn
- * @returns
+ * Exported function alias that always resolves the current runtime event.
  */
-export const event = activeEvent;
+export const event: EventFn = <T>() => activeEvent<T>();
 /**
- * Exportet func alias
- * @param fn
- * @returns
+ * Exported function alias that always resolves the current runtime flush.
  */
-export const flush = activeFlush;
+export const flush = () => activeFlush();

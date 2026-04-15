@@ -29,7 +29,30 @@ describe("Reactive system - exports", () => {
     expect(reflex.isModel).toBe(isModel);
     expect(reflex.own).toBe(own);
     expect(reflex.createRuntime).toBe(infra.createRuntime);
+    expect(reflex.batch).toBe(infra.batch);
+    expect(reflex.event).toBe(infra.event);
+    expect(reflex.flush).toBe(infra.flush);
     expect("resource" in reflex).toBe(false);
+  });
+
+  it("keeps global runtime aliases live after createRuntime()", () => {
+    const rt = reflex.createRuntime();
+    const calls: number[] = [];
+
+    reflex.batch(() => {
+      calls.push(1);
+    });
+
+    const source = reflex.event<number>();
+    source.subscribe((value) => {
+      calls.push(value);
+    });
+
+    source.emit(2);
+    reflex.flush();
+
+    expect(calls).toEqual([1, 2]);
+    expect(rt.batch(() => 3)).toBe(3);
   });
 
   it("re-exports policy helpers from the policy barrel", () => {

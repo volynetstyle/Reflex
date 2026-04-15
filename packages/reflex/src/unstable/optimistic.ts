@@ -65,10 +65,7 @@ function isOptimisticOptionsLike<T>(
   return (
     value !== null &&
     typeof value === "object" &&
-    ("equals" in value ||
-      "name" in value ||
-      "id" in value ||
-      "lazy" in value)
+    ("equals" in value || "name" in value || "id" in value || "lazy" in value)
   );
 }
 
@@ -102,8 +99,7 @@ class OptimisticCore<T> {
 
   set = (input: SetInput<T>): T => {
     const prev = this.peek();
-    const next =
-      typeof input === "function" ? (input as Updater<T>)(prev) : input;
+    const next = typeof input === "function" ? input(prev) : input;
 
     if (this.disposed) {
       return next;

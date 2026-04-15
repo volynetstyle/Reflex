@@ -1,5 +1,7 @@
 declare const __DEV__: boolean;
 
+declare const UPDATER: unique symbol;
+
 interface SymbolConstructor {
   readonly dispose: unique symbol;
 }
@@ -26,20 +28,21 @@ type DirectValue<T> = Exclude<T, AnyFn>;
 /**
  * Functional updater.
  */
-type Updater<T> = (prev: T) => T;
-
+interface Updater<T> {
+  readonly _tag: typeof UPDATER;
+  readonly fn: (prev: T) => T;
+}
 /**
  * Accepted input for writable reactive values.
  */
 type SetInput<T> = DirectValue<T> | Updater<T>;
 
-type Setter<T> =
-  undefined extends T
-    ? {
-        (): T;
-        (value: SetInput<T>): T;
-      }
-    : (value: SetInput<T>) => T;
+type Setter<T> = undefined extends T
+  ? {
+      (): T;
+      (value: SetInput<T>): T;
+    }
+  : (value: SetInput<T>) => T;
 
 /**
  * Tracked callable read.
