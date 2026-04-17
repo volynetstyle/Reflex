@@ -3,10 +3,10 @@ import {
   getDefaultContext,
   ReactiveNodeState,
   runWatcher,
+  WATCHER_INITIAL_STATE,
 } from "@reflex/runtime";
-import type { ReactiveNode } from "@reflex/runtime";
+import { ReactiveNode } from "@reflex/runtime";
 import type { UNINITIALIZED } from "../infra/factory";
-import { createWatcherNode } from "../infra/factory";
 
 /**
  * Marks an effect watcher node as scheduled.
@@ -113,7 +113,7 @@ export function withEffectCleanupRegistrar<T>(
  */
 export function effect(fn: EffectFn): Destructor {
   const context = getDefaultContext();
-  const node = createWatcherNode(fn);
+  const node = new ReactiveNode(undefined, fn, WATCHER_INITIAL_STATE);
   runWatcher(node);
 
   const dispose = disposeWatcher.bind(null, node) as Destructor;

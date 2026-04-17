@@ -41,6 +41,7 @@ export let trackingVersion = 0;
 // @__INLINE___
 export const setTrackingVersion = (v: number) => void (trackingVersion = v);
 export let propagationDepth = 0;
+// @__INLINE___
 export const getPropagationDepth = () => propagationDepth;
 // @__INLINE___
 export const setPropagationDepth = (v: number) => void (propagationDepth = v);

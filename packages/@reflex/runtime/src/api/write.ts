@@ -67,21 +67,19 @@ export function writeProducer<T>(
     return;
   }
 
-  const previous = node.payload;
-
   // Check if the value actually changed using stable comparison
   // This prevents false invalidation when setting to the same value
-  if (compare(previous, value)) {
-    if (__DEV__)
+  if (compare(node.payload, value)) {
+    if (__DEV__) {
       devRecordWriteProducer(
         node,
         false,
         value,
-        previous,
+        node.payload,
         undefined,
         defaultContext,
       );
-
+    }
     // Value didn't change, skip propagation
     return;
   }
@@ -92,15 +90,16 @@ export function writeProducer<T>(
   // Get the first subscriber edge (if any)
   const firstSubscriberEdge = node.firstOut;
 
-  if (__DEV__)
+  if (__DEV__) {
     devRecordWriteProducer(
       node,
       true,
       value,
-      previous,
+      node.payload,
       firstSubscriberEdge !== null,
       defaultContext,
     );
+  }
 
   // If no subscribers, propagation is unnecessary
   if (firstSubscriberEdge === null) return;
@@ -109,16 +108,13 @@ export function writeProducer<T>(
   // This allows multiple concurrent propagations to batch correctly
   let thrown: unknown = null;
   enterPropagation();
-  try {
-    // Push phase: notify all subscribers depth-first, mark them dirty.
-    // Direct subscribers are promoted from Invalid to Changed.
-    // This tells them "definitely changed, don't verify, recompute"
-    thrown = propagate(firstSubscriberEdge, PROMOTE_CHANGED);
-  } finally {
-    // Always exit propagation phase, even if propagation or hooks fail.
-    leavePropagation();
-  }
-
+  // Push phase: notify all subscribers depth-first, mark them dirty.
+  // Direct subscribers are promoted from Invalid to Changed.
+  // This tells them "definitely changed, don't verify, recompute"
+  thrown = propagate(firstSubscriberEdge, PROMOTE_CHANGED);
+  // Always exit propagation phase, even if propagation or hooks fail.
+  leavePropagation();
+  
   if (thrown !== null) {
     throw thrown;
   }

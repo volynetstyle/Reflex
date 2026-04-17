@@ -5,7 +5,8 @@
 // duplicate branch-heavy logic inline.
 
 import { recordDebugEvent } from "../../debug.runtime";
-import { defaultContext, dispatchEffectInvalidated } from "../context";
+import { dispatchEffectInvalidated } from "../context";
+import { defaultContext } from "../context";
 import {
   DIRTY_STATE,
   type ReactiveEdge,
@@ -18,17 +19,15 @@ import {
   SLOW_INVALIDATION_MASK,
   TRACKING_MASK,
   VISITED_MASK,
-  WATCHER_MASK,
 } from "./propagate.constants";
 
 export function dispatchInvalidatedWatcher(
   sub: ReactiveNode,
-  dispatch: typeof dispatchEffectInvalidated,
   thrown: unknown,
 ): unknown {
-  if (dispatch !== undefined) {
+  if (dispatchEffectInvalidated !== undefined) {
     try {
-      dispatch(sub);
+      dispatchEffectInvalidated(sub);
     } catch (error) {
       if (thrown === null) {
         return error;
@@ -64,7 +63,7 @@ function getTrackingInvalidatedSubscriberState(
   return cursor === depsTail ? 0 : invalidatedState;
 }
 
-export function getInvalidatedSubscriberState(
+export function invalidateSubscriber(
   edge: ReactiveEdge,
   sub: ReactiveNode,
   subState: number,
@@ -72,22 +71,19 @@ export function getInvalidatedSubscriberState(
 ): number {
   const promotedState = (subState & ~VISITED_MASK) | promoteBit;
 
-  if ((subState & SLOW_INVALIDATION_MASK) === 0) return promotedState;
-  if ((subState & DISPOSED_MASK) !== 0) return 0;
+  let nextState = promotedState;
 
-  if ((subState & TRACKING_MASK) === 0) {
-    return (subState & DIRTY_STATE) !== 0 ? 0 : promotedState;
+  if ((subState & SLOW_INVALIDATION_MASK) !== 0) {
+    if ((subState & DISPOSED_MASK) !== 0) return 0;
+
+    if ((subState & TRACKING_MASK) === 0) {
+      if ((subState & DIRTY_STATE) !== 0) return 0;
+    } else {
+      nextState = getTrackingInvalidatedSubscriberState(edge, sub, subState);
+      if (nextState === 0) return 0;
+    }
   }
 
-  return getTrackingInvalidatedSubscriberState(edge, sub, subState);
-}
-
-export function commitInvalidatedSubscriberState(
-  edge: ReactiveEdge,
-  sub: ReactiveNode,
-  nextState: number,
-  promoteBit: number,
-): ReactiveEdge | null {
   sub.state = nextState;
 
   if (__DEV__) {
@@ -98,9 +94,5 @@ export function commitInvalidatedSubscriberState(
     });
   }
 
-  return (nextState & WATCHER_MASK) === 0 ? sub.firstOut : null;
-}
-
-export function isWatcherInvalidatedState(nextState: number): boolean {
-  return (nextState & WATCHER_MASK) !== 0;
+  return nextState;
 }
