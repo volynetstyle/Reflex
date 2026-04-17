@@ -41,6 +41,7 @@
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "pnpm clean && pnpm build:ts && pnpm build:types && pnpm build:npm",
+    "build:all": "pnpm --filter @reflex/runtime build && pnpm --filter @volynets/reflex build",
     "build:ts": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
     "build:types": "rollup -c rollup.dts.config.ts --configPlugin @rollup/plugin-swc && node ../../scripts/write-globals-dts.mjs . && node ./scripts/write-subpath-dts.mjs .",
     "build:npm": "rollup -c rollup.config.ts --configPlugin @rollup/plugin-swc",

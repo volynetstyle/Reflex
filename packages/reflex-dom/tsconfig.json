@@ -5,17 +5,17 @@
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
-      "reflex-framework": ["../reflex-framework/dist/index.d.ts"],
-      "reflex-framework/ownership": [
+      "@volynets/reflex-framework": ["../reflex-framework/dist/index.d.ts"],
+      "@volynets/reflex-framework/ownership": [
         "../reflex-framework/dist/ownership/index.d.ts"
       ],
-      "reflex-framework/ownership/reflex": [
+      "@volynets/reflex-framework/ownership/reflex": [
         "../reflex-framework/dist/ownership/reflex.d.ts"
       ],
-      "reflex-framework/jsx-runtime": [
+      "@volynets/reflex-framework/jsx-runtime": [
         "../reflex-framework/dist/jsx-runtime.d.ts"
       ],
-      "reflex-framework/jsx-dev-runtime": [
+      "@volynets/reflex-framework/jsx-dev-runtime": [
         "../reflex-framework/dist/jsx-dev-runtime.d.ts"
       ]
     },

@@ -35,10 +35,13 @@ export interface Runtime {
   readonly ctx: ExecutionContext;
 }
 
-export function createRuntime(options?: RuntimeOptions): Runtime {
-  const executionContext = createExecutionContext(options?.hooks);
+export function createRuntime({
+  hooks,
+  effectStrategy,
+}: RuntimeOptions = {}): Runtime {
+  const executionContext = createExecutionContext(hooks);
   const scheduler = createEffectScheduler(
-    resolveEffectSchedulerMode(options?.effectStrategy),
+    resolveEffectSchedulerMode(effectStrategy),
     executionContext,
   );
   const dispatcher = new EventDispatcher(scheduler.batch);

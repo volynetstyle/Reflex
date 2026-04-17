@@ -12,31 +12,31 @@ export default defineConfig({
         ),
       },
       {
-        find: "reflex-framework/ownership/reflex",
+        find: "@volynets/reflex-framework/ownership/reflex",
         replacement: fileURLToPath(
           new URL("../reflex-framework/src/ownership/reflex.ts", import.meta.url),
         ),
       },
       {
-        find: "reflex-framework/ownership",
+        find: "@volynets/reflex-framework/ownership",
         replacement: fileURLToPath(
           new URL("../reflex-framework/src/ownership/index.ts", import.meta.url),
         ),
       },
       {
-        find: "reflex-framework/jsx-runtime",
+        find: "@volynets/reflex-framework/jsx-runtime",
         replacement: fileURLToPath(
           new URL("../reflex-framework/src/jsx-runtime.ts", import.meta.url),
         ),
       },
       {
-        find: "reflex-framework/jsx-dev-runtime",
+        find: "@volynets/reflex-framework/jsx-dev-runtime",
         replacement: fileURLToPath(
           new URL("../reflex-framework/src/jsx-dev-runtime.ts", import.meta.url),
         ),
       },
       {
-        find: "reflex-framework",
+        find: "@volynets/reflex-framework",
         replacement: fileURLToPath(
           new URL("../reflex-framework/src/index.ts", import.meta.url),
         ),

@@ -2,6 +2,7 @@ import { readdirSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+const buildDir = fileURLToPath(new URL("../build", import.meta.url));
 const distDir = fileURLToPath(new URL("../dist", import.meta.url));
 const srcDir = fileURLToPath(new URL("../src", import.meta.url));
 
@@ -32,5 +33,6 @@ function removeGeneratedArtifacts(dir) {
   }
 }
 
+removeIfExists(buildDir);
 removeIfExists(distDir);
 removeGeneratedArtifacts(srcDir);

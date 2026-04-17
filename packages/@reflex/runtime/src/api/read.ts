@@ -143,11 +143,9 @@ function stabilizeConsumer<T>(node: ReactiveNode<T>): T {
     return node.payload as T;
   }
 
-  if (
-    shouldRecomputeDirtyConsumer(node, state) &&
-    recompute(node) &&
-    node.firstOut !== null
-  ) {
+  const allowRecompute = shouldRecomputeDirtyConsumer(node, state);
+
+  if (allowRecompute && recompute(node) && node.firstOut !== null) {
     propagateOnce(node);
   } else {
     clearDirtyState(node);

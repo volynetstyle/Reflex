@@ -1,21 +1,27 @@
-import type { Plugin, RollupOptions } from "rollup";
 import replace from "@rollup/plugin-replace";
-import terser from "@rollup/plugin-terser";
 import resolve from "@rollup/plugin-node-resolve";
 import swc from "@rollup/plugin-swc";
+import terser from "@rollup/plugin-terser";
 import constEnum from "rollup-plugin-const-enum";
+import type { Plugin, RollupOptions, OutputOptions } from "rollup";
 
 type BuildFormat = "esm" | "cjs";
 
 interface BuildTarget {
-  input: Record<string, string>;
-  name: string;
-  outDir: string;
-  format: BuildFormat;
-  dev: boolean;
+  readonly input: Record<string, string>;
+  readonly name: string;
+  readonly outDir: string;
+  readonly format: BuildFormat;
+  readonly isDev: boolean;
 }
 
-const EXTERNALS = ["vitest", "expect-type"] as const;
+const INDEX_INPUT = { index: "build/esm/index.js" } as const;
+const INDEX_AND_DEBUG_INPUT = {
+  index: "build/esm/index.js",
+  debug: "build/esm/debug.js",
+} as const;
+
+const EXTERNALS = ["vitest", "expect-type"]
 
 const PURE_FUNCS = [
   "Object.freeze",
@@ -34,77 +40,66 @@ const PURE_FUNCS = [
   "isEffectKind",
 ] as const;
 
-const TARGETS: BuildTarget[] = [
+const TREESHAKE_OPTIONS: RollupOptions["treeshake"] = {
+  preset: "recommended",
+  moduleSideEffects: false,
+  propertyReadSideEffects: false,
+  tryCatchDeoptimization: false,
+  correctVarValueBeforeDeclaration: false,
+  unknownGlobalSideEffects: false,
+};
+
+const GENERATED_CODE_OPTIONS: NonNullable<OutputOptions["generatedCode"]> = {
+  constBindings: true,
+  arrowFunctions: true,
+};
+
+const TARGETS: readonly BuildTarget[] = [
   {
-    input: { index: "build/esm/index.js" },
+    input: INDEX_INPUT,
     name: "esm",
     outDir: "esm",
     format: "esm",
-    dev: false,
+    isDev: false,
   },
   {
-    input: {
-      index: "build/esm/index.js",
-      debug: "build/esm/debug.js",
-    },
+    input: INDEX_AND_DEBUG_INPUT,
     name: "esm-dev",
     outDir: "dev",
     format: "esm",
-    dev: true,
+    isDev: true,
   },
   {
-    input: { index: "build/esm/index.js" },
+    input: INDEX_INPUT,
     name: "cjs",
     outDir: "cjs",
     format: "cjs",
-    dev: false,
+    isDev: false,
   },
-];
+] as const;
 
-function compactPlugins(plugins: Array<Plugin | undefined | false>): Plugin[] {
-  return plugins.filter((plugin): plugin is Plugin => Boolean(plugin));
-}
-
-function loggerPlugin(target: BuildTarget): Plugin {
-  const { name } = target;
-
+function createLoggerPlugin(targetName: string): Plugin {
   return {
     name: "pipeline-logger",
     buildStart() {
-      console.log(`\n🚀 start build → ${name}`);
+      console.log(`\nstart build -> ${targetName}`);
     },
     generateBundle(_, bundle) {
-      console.log(`📦 ${name} modules: ${Object.keys(bundle).length}`);
+      console.log(`bundle ${targetName} modules: ${Object.keys(bundle).length}`);
     },
     writeBundle(_, bundle) {
       const size = Object.values(bundle).reduce((total, chunk) => {
         return total + ("code" in chunk ? chunk.code.length : 0);
       }, 0);
 
-      console.log(`📊 ${name} size ${(size / 1024).toFixed(2)} KB`);
-      console.log(`✔ done → ${name}\n`);
+      console.log(`bundle ${targetName} size ${(size / 1024).toFixed(2)} KB`);
+      console.log(`done -> ${targetName}\n`);
     },
   };
 }
 
-function resolvePlugin(): Plugin {
-  return resolve({
-    extensions: [".js"],
-    exportConditions: ["import", "default"],
-  });
-}
-
-function replacePlugin(target: BuildTarget): Plugin {
-  return replace({
-    preventAssignment: true,
-    values: {
-      __DEV__: JSON.stringify(target.dev),
-    },
-  });
-}
-
-function swcPlugin(target: BuildTarget): Plugin | undefined {
-  if (target.dev) return undefined;
+function createSwcPlugin(isDev: boolean): Plugin | null {
+  if (isDev) return null;
 
   return swc({
     swc: {
@@ -116,7 +111,7 @@ function swcPlugin(target: BuildTarget): Plugin | undefined {
             simplify: true,
             globals: {
               vars: {
-                __DEV__: JSON.stringify(target.dev),
+                __DEV__: JSON.stringify(isDev),
               },
             },
           },
@@ -126,38 +121,32 @@ function swcPlugin(target: BuildTarget): Plugin | undefined {
     },
   });
 }
-function terserPlugin(target: BuildTarget): Plugin | undefined {
-  if (target.dev) return undefined;
+
+function createTerserPlugin(isDev: boolean): Plugin | null {
+  if (isDev) return null;
 
   return terser({
     compress: {
-      passes: 4,
-      inline: 3,
+      passes: 1,
+      inline: false,
       hoist_props: true,
       collapse_vars: true,
       dead_code: true,
       drop_console: true,
       drop_debugger: true,
       reduce_vars: true,
-      reduce_funcs: true,
-      conditionals: true,
+      reduce_funcs: false,
+      conditionals: false,
       comparisons: true,
       booleans: true,
       unused: true,
       if_return: true,
-      sequences: true,
+      sequences: false,
       pure_getters: true,
       evaluate: true,
       pure_funcs: [...PURE_FUNCS],
       toplevel: true,
       module: true,
-
-      // Осторожно: unsafe-флаги полезны не всегда.
-      unsafe: true,
-      unsafe_arrows: true,
-      unsafe_methods: true,
-      unsafe_math: true,
-      unsafe_comps: true,
     },
     mangle: {
       toplevel: true,
@@ -178,45 +167,52 @@ function terserPlugin(target: BuildTarget): Plugin | undefined {
 }
 
 function createPlugins(target: BuildTarget): Plugin[] {
-  return compactPlugins([
-    loggerPlugin(target),
-    resolvePlugin(),
-    replacePlugin(target),
-    swcPlugin(target),
-    terserPlugin(target),
+  const plugins: Plugin[] = [
+    createLoggerPlugin(target.name),
+    resolve({
+      extensions: [".js"],
+      exportConditions: ["import", "default"],
+    }),
+    replace({
+      preventAssignment: true,
+      values: {
+        __DEV__: JSON.stringify(target.isDev),
+      },
+    }),
     constEnum(),
-  ]);
+  ];
+
+  const swcPlugin = createSwcPlugin(target.isDev);
+  if (swcPlugin !== null) {
+    plugins.push(swcPlugin);
+  }
+
+  const terserPlugin = createTerserPlugin(target.isDev);
+  if (terserPlugin !== null) {
+    plugins.push(terserPlugin);
+  }
+
+  return plugins;
+}
+
+function createOutput(target: BuildTarget): OutputOptions {
+  return {
+    dir: `dist/${target.outDir}`,
+    format: target.format,
+    entryFileNames: target.format === "cjs" ? "[name].cjs" : "[name].js",
+    exports: target.format === "cjs" ? "named" : undefined,
+    sourcemap: target.isDev,
+    generatedCode: GENERATED_CODE_OPTIONS,
+  };
 }
 
 function createConfig(target: BuildTarget): RollupOptions {
   return {
-    input: {
-      ...target.input,
-    },
-
-    treeshake: {
-      preset: "recommended",
-      moduleSideEffects: false,
-      propertyReadSideEffects: false,
-      tryCatchDeoptimization: false,
-      correctVarValueBeforeDeclaration: false,
-      unknownGlobalSideEffects: false,
-    },
-
-    output: {
-      dir: `dist/${target.outDir}`,
-      format: target.format,
-      entryFileNames: target.format === "cjs" ? "[name].cjs" : "[name].js",
-      exports: target.format === "cjs" ? "named" : undefined,
-      sourcemap: target.dev,
-      generatedCode: {
-        constBindings: true,
-        arrowFunctions: true,
-      },
-    },
-
+    input: target.input,
+    output: createOutput(target),
+    treeshake: TREESHAKE_OPTIONS,
     plugins: createPlugins(target),
-    external: [...EXTERNALS],
+    external: EXTERNALS,
   };
 }
 

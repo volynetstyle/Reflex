@@ -3,7 +3,7 @@ import { isEventProp, attachEventListener } from "../host/events";
 import type { Namespace } from "../host/namespace";
 import { applyProp } from "../host/props";
 import { attachRef } from "../host/refs";
-import { registerCleanup } from "reflex-framework/ownership";
+import { registerCleanup } from "@volynets/reflex-framework/ownership";
 import type { DOMRenderer } from "../runtime";
 import type { Ref } from "../types";
 

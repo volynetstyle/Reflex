@@ -32,8 +32,8 @@ import {
   isHydrationSlotEnd,
   isHydrationSlotStart,
 } from "./hydrate/markers";
-import { createScope } from "reflex-framework/ownership";
-import { runInOwnershipScope } from "reflex-framework/ownership/reflex";
+import { createScope } from "@volynets/reflex-framework/ownership";
+import { runInOwnershipScope } from "@volynets/reflex-framework/ownership/reflex";
 import { resolveNamespace, SVG_NS, MATHML_NS, type Namespace } from "./host/namespace";
 
 class HydrationMismatch extends Error {}

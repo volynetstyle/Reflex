@@ -2,7 +2,7 @@ import type {
   Component as FrameworkComponent,
   ComponentRenderable as FrameworkComponentRenderable,
   JSXRenderable as FrameworkJSXRenderable,
-} from "reflex-framework";
+} from "@volynets/reflex-framework";
 
 export type {
   ComponentProps,
@@ -10,7 +10,7 @@ export type {
   JSXPrimitive,
   JSXText,
   RenderableRecord,
-} from "reflex-framework";
+} from "@volynets/reflex-framework";
 
 export type JSXRenderable = FrameworkJSXRenderable<Node>;
 

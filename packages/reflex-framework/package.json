@@ -1,5 +1,5 @@
 {
-  "name": "reflex-framework",
+  "name": "@volynets/reflex-framework",
   "version": "0.1.0",
   "type": "module",
   "description": "Platform-agnostic JSX runtime and renderable model for Reflex",
@@ -68,13 +68,38 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "clean": "node ./scripts/clean.mjs",
-    "build": "node ./scripts/clean.mjs && node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
+    "build": "node ./scripts/clean.mjs && node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs dist",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "test": "pnpm exec vitest run --config vite.config.ts",
-    "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json"
+    "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build"
   },
   "dependencies": {
-    "@volynets/reflex": "workspace:*"
+    "@volynets/reflex": "^0.2.2"
+  },
+  "keywords": [
+    "jsx",
+    "reactivity",
+    "renderer",
+    "runtime",
+    "reflex"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/volynetstyle/Reflex.git",
+    "directory": "packages/reflex-framework"
+  },
+  "homepage": "https://github.com/volynetstyle/Reflex/tree/main/packages/reflex-framework",
+  "bugs": {
+    "url": "https://github.com/volynetstyle/Reflex/issues"
+  },
+  "engines": {
+    "node": ">=20.19.0"
   }
 }

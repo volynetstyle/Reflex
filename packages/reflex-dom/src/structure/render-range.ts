@@ -4,8 +4,8 @@ import {
   createScope,
   disposeScope,
   type Scope,
-} from "reflex-framework/ownership";
-import { runInOwnershipScope } from "reflex-framework/ownership/reflex";
+} from "@volynets/reflex-framework/ownership";
+import { runInOwnershipScope } from "@volynets/reflex-framework/ownership/reflex";
 import type { DOMRenderer } from "../runtime";
 import type { JSXRenderable } from "../types";
 import { appendRenderableNodes } from "../mount/append";
@@ -102,23 +102,6 @@ export function createRenderRangeMount(
   };
 }
 
-function mountRangeContent(
-  renderer: DOMRenderer,
-  parent: Node,
-  endAnchor: Node,
-  renderable: JSXRenderable | unknown,
-  namespace: Namespace,
-  scope: Scope,
-): void {
-  const fragment = resolveOwnerDocument(parent).createDocumentFragment();
-
-  runInOwnershipScope(renderer.owner, scope, () => {
-    appendRenderableNodes(renderer, fragment, renderable, namespace);
-  });
-
-  parent.insertBefore(fragment, endAnchor);
-}
-
 export function mountRenderRange(
   renderer: DOMRenderer,
   parent: Node,
@@ -127,15 +110,12 @@ export function mountRenderRange(
   anchors: RenderRangeAnchors = createRenderRangeAnchors(parent),
 ): MountedRenderRange {
   const scope = createScope();
+  const fragment = resolveOwnerDocument(parent).createDocumentFragment();
 
-  mountRangeContent(
-    renderer,
-    parent,
-    anchors.endAnchor,
-    renderable,
-    namespace,
-    scope,
-  );
+  runInOwnershipScope(renderer.owner, scope, () => {
+    appendRenderableNodes(renderer, fragment, renderable, namespace);
+  });
 
+  parent.insertBefore(fragment, anchors.endAnchor);
   return createRenderRangeMount(scope, anchors);
 }

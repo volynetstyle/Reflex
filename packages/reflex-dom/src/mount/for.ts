@@ -1,7 +1,10 @@
 import type { Namespace } from "../host/namespace";
 import { moveRangeBefore } from "../host/mutations";
-import { registerCleanup } from "reflex-framework/ownership";
-import { onEffectStart, useEffect } from "reflex-framework/ownership/reflex";
+import { registerCleanup } from "@volynets/reflex-framework/ownership";
+import {
+  onEffectStart,
+  useEffect,
+} from "@volynets/reflex-framework/ownership/reflex";
 import type { ForRenderable } from "../operators";
 import { reconcileKeyedList, type KeyedItem } from "../reconcile/keyed";
 import type { DOMRenderer } from "../runtime";

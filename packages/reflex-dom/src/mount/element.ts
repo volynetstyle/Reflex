@@ -7,8 +7,11 @@ import {
   resolveNamespace,
   type Namespace,
 } from "../host/namespace";
-import { registerCleanup } from "reflex-framework/ownership";
-import { onEffectStart, useEffect } from "reflex-framework/ownership/reflex";
+import { registerCleanup } from "@volynets/reflex-framework/ownership";
+import {
+  onEffectStart,
+  useEffect,
+} from "@volynets/reflex-framework/ownership/reflex";
 import { mountRenderRange } from "../structure/render-range";
 import { bindElementProps } from "./element-binder";
 import { appendRenderableNodes } from "./append";

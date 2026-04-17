@@ -202,6 +202,23 @@ function expectPropagationTargetsIncluded(
   }
 }
 
+function expectPropagationTargetsVisitedOnce(
+  summary: EventSummary,
+  expectedTargets: string[],
+): void {
+  const counts = new Map<string, number>();
+
+  for (const entry of summary.propagations) {
+    const arrowIndex = entry.indexOf(">");
+    const target = entry.slice(arrowIndex + 1);
+    counts.set(target, (counts.get(target) ?? 0) + 1);
+  }
+
+  for (const target of expectedTargets) {
+    expect(counts.get(target)).toBe(1);
+  }
+}
+
 describe("Reactive runtime - graph semantic regressions (dev)", () => {
   beforeEach(() => {
     expect(subtle.enabled).toBe(true);
@@ -392,6 +409,35 @@ describe("Reactive runtime - graph semantic regressions (dev)", () => {
     expect(
       summary.recomputes.filter((entry) => entry.startsWith("shared:")).length,
     ).toBe(1);
+  });
+
+  it("visits each node once during propagation in a diamond graph", () => {
+    const h = createHistoryHarness();
+    const source = h.label(createProducer(1), "source");
+    const left = h.label(
+      createConsumer(() => readProducer(source) + 1),
+      "left",
+    );
+    const right = h.label(
+      createConsumer(() => readProducer(source) + 2),
+      "right",
+    );
+    const sink = h.label(
+      createConsumer(() => readConsumer(left) + readConsumer(right)),
+      "sink",
+    );
+
+    expect(readConsumer(sink)).toBe(5);
+    h.clear();
+
+    writeProducer(source, 2);
+
+    const summary = h.summary();
+
+    expect(summary.consumerReads).toEqual([]);
+    expect(summary.recomputes).toEqual([]);
+    expect(summary.watcherInvalidations).toEqual([]);
+    expectPropagationTargetsVisitedOnce(summary, ["left", "right", "sink"]);
   });
 
   it("rewires dynamic dependencies and cleans stale sources", () => {

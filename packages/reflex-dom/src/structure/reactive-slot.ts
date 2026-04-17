@@ -1,10 +1,10 @@
 import type { Namespace } from "../host/namespace";
-import { registerCleanup } from "reflex-framework/ownership";
+import { registerCleanup } from "@volynets/reflex-framework/ownership";
 import {
   onEffectStart,
   runInOwnershipScope,
   useEffect,
-} from "reflex-framework/ownership/reflex";
+} from "@volynets/reflex-framework/ownership/reflex";
 import type { DOMRenderer } from "../runtime";
 import type { ContentSlot } from "./content-slot";
 import { adoptContentSlot, createContentSlot } from "./content-slot";

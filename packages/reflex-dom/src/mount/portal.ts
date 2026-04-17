@@ -1,5 +1,8 @@
-import { registerCleanup } from "reflex-framework/ownership";
-import { onEffectStart, useEffect } from "reflex-framework/ownership/reflex";
+import { registerCleanup } from "@volynets/reflex-framework/ownership";
+import {
+  onEffectStart,
+  useEffect,
+} from "@volynets/reflex-framework/ownership/reflex";
 import type { PortalRenderable } from "../operators";
 import { mountRenderRange, type MountedRenderRange } from "../structure/render-range";
 import type { DOMRenderer } from "../runtime";
