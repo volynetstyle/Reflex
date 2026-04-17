@@ -21,13 +21,12 @@ export function noopNotifySettled(): void {}
 
 export interface SchedulerCore {
   readonly queue: WatcherQueue;
+  batchDepth: number;
+  phase: SchedulerPhase;
   flush(): void;
   enterBatch(): void;
   leaveBatch(): boolean;
   reset(): void;
-
-  get batchDepth(): number;
-  get phase(): SchedulerPhase;
 }
 
 export interface EffectScheduler {
@@ -42,9 +41,9 @@ export interface EffectScheduler {
   notifySettled(): void;
   reset(): void;
 
-  get head(): number;
-  get batchDepth(): number;
-  get phase(): SchedulerPhase;
+  readonly head: number;
+  readonly batchDepth: number;
+  readonly phase: SchedulerPhase;
 }
 
 export type SchedulerBatch = EffectScheduler["batch"];

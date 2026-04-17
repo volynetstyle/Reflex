@@ -5,7 +5,12 @@ import {
   ReactiveNodeState,
   runWatcher,
 } from "@reflex/runtime";
-import { createWatcherQueue } from "./scheduler.queue";
+import {
+  clearWatcherQueue,
+  createWatcherQueue,
+  pushWatcherQueue,
+  shiftWatcherQueue,
+} from "./scheduler.queue";
 import type { EffectSchedulerMode } from "./scheduler.constants";
 import {
   SCHEDULED_OR_DISPOSED,
@@ -23,14 +28,72 @@ import type {
   WatcherQueue,
 } from "./scheduler.types";
 
-const runner = runWatcher.bind(null);
-
 function unscheduleQueuedNodes(queue: WatcherQueue): void {
   while (queue.size !== 0) {
-    queue.shift()!.state &= UNSCHEDULE_MASK;
+    shiftWatcherQueue(queue)!.state &= UNSCHEDULE_MASK;
   }
 
-  queue.clear();
+  clearWatcherQueue(queue);
+}
+
+function flushSchedulerQueue(this: SchedulerCore): void {
+  const queue = this.queue;
+  if (this.phase === SchedulerPhase.Flushing) return;
+  if (queue.size === 0) return;
+
+  this.phase = SchedulerPhase.Flushing;
+  let thrown: unknown = null;
+
+  try {
+    while (queue.size !== 0) {
+      const node = shiftWatcherQueue(queue)!;
+      node.state &= UNSCHEDULE_MASK;
+      try {
+        runWatcher(node);
+      } catch (error) {
+        if (thrown === null) {
+          thrown = error;
+        }
+      }
+    }
+  } finally {
+    unscheduleQueuedNodes(queue);
+    this.phase =
+      this.batchDepth > 0 ? SchedulerPhase.Batching : SchedulerPhase.Idle;
+  }
+
+  if (thrown !== null) {
+    throw thrown;
+  }
+}
+
+function enterSchedulerBatch(this: SchedulerCore): void {
+  if (++this.batchDepth === 1 && this.phase !== SchedulerPhase.Flushing) {
+    this.phase = SchedulerPhase.Batching;
+  }
+}
+
+function leaveSchedulerBatch(this: SchedulerCore): boolean {
+  if (--this.batchDepth !== 0) {
+    return false;
+  }
+
+  if (this.phase === SchedulerPhase.Flushing) {
+    return false;
+  }
+
+  this.phase = SchedulerPhase.Idle;
+  return true;
+}
+
+function resetSchedulerCore(this: SchedulerCore): void {
+  unscheduleQueuedNodes(this.queue);
+  this.batchDepth = 0;
+  this.phase = SchedulerPhase.Idle;
+}
+
+function getSchedulerHead(this: SchedulerCore): number {
+  return this.queue.head;
 }
 
 /**
@@ -57,10 +120,7 @@ export function isContextSettled(): boolean {
   return getPropagationDepth() === 0 && getActiveComputed() === null;
 }
 
-export function isRuntimeInactive(
-  context: ExecutionContext,
-  core: SchedulerCore,
-): boolean {
+export function isRuntimeInactive(core: SchedulerCore): boolean {
   return (
     core.phase === SchedulerPhase.Idle &&
     core.batchDepth === 0 &&
@@ -69,74 +129,14 @@ export function isRuntimeInactive(
 }
 
 export function createSchedulerCore(): SchedulerCore {
-  const queue = createWatcherQueue();
-  let batchDepth = 0;
-  let phase = SchedulerPhase.Idle;
-
-  function flush(): void {
-    if (phase === SchedulerPhase.Flushing) return;
-    if (queue.size === 0) return;
-
-    phase = SchedulerPhase.Flushing;
-    let thrown: unknown = null;
-
-    try {
-      while (queue.size !== 0) {
-        const node = queue.shift()!,
-          s = node.state;
-        node.state = s & UNSCHEDULE_MASK;
-        try {
-          runner(node);
-        } catch (error) {
-          if (thrown === null) {
-            thrown = error;
-          }
-        }
-      }
-    } finally {
-      unscheduleQueuedNodes(queue);
-      phase = batchDepth > 0 ? SchedulerPhase.Batching : SchedulerPhase.Idle;
-    }
-
-    if (thrown !== null) {
-      throw thrown;
-    }
-  }
-
   return {
-    queue,
-    flush,
-
-    enterBatch() {
-      if (++batchDepth === 1 && phase !== SchedulerPhase.Flushing) {
-        phase = SchedulerPhase.Batching;
-      }
-    },
-
-    leaveBatch() {
-      if (--batchDepth !== 0) {
-        return false;
-      }
-
-      if (phase === SchedulerPhase.Flushing) {
-        return false;
-      }
-
-      phase = SchedulerPhase.Idle;
-      return true;
-    },
-
-    reset() {
-      unscheduleQueuedNodes(queue);
-      batchDepth = 0;
-      phase = SchedulerPhase.Idle;
-    },
-    get batchDepth() {
-      return batchDepth;
-    },
-    get phase() {
-      return phase;
-    },
+    queue: createWatcherQueue(),
+    batchDepth: 0,
+    phase: SchedulerPhase.Idle,
+    flush: flushSchedulerQueue,
+    enterBatch: enterSchedulerBatch,
+    leaveBatch: leaveSchedulerBatch,
+    reset: resetSchedulerCore,
   };
 }
 
@@ -148,7 +148,7 @@ export function tryEnqueue(queue: WatcherQueue, node: ReactiveNode): boolean {
   }
 
   effectNode.state = state | ReactiveNodeState.Scheduled;
-  queue.push(effectNode);
+  pushWatcherQueue(queue, effectNode);
   return true;
 }
 
@@ -161,25 +161,30 @@ export function createSchedulerInstance(
   notifySettled: SchedulerNotifySettled,
   runtimeNotifySettled: SchedulerRuntimeNotifySettled,
 ): EffectScheduler {
-  return {
-    ring: core.queue.ring,
-    mode,
-    context,
-    runtimeNotifySettled,
-    enqueue,
-    batch,
-    flush: core.flush,
-    notifySettled,
-    reset: core.reset,
-
-    get head() {
-      return core.queue.head;
-    },
-    get batchDepth() {
-      return core.batchDepth;
-    },
-    get phase() {
-      return core.phase;
-    },
+  const scheduler = core as SchedulerCore & {
+    ring: EffectScheduler["ring"];
+    mode: EffectScheduler["mode"];
+    context: EffectScheduler["context"];
+    runtimeNotifySettled: EffectScheduler["runtimeNotifySettled"];
+    enqueue: EffectScheduler["enqueue"];
+    batch: EffectScheduler["batch"];
+    notifySettled: EffectScheduler["notifySettled"];
+    head: number;
   };
+
+  scheduler.ring = core.queue.ring;
+  scheduler.mode = mode;
+  scheduler.context = context;
+  scheduler.runtimeNotifySettled = runtimeNotifySettled;
+  scheduler.enqueue = enqueue;
+  scheduler.batch = batch;
+  scheduler.notifySettled = notifySettled;
+
+  Object.defineProperty(scheduler, "head", {
+    configurable: true,
+    enumerable: true,
+    get: getSchedulerHead,
+  });
+
+  return scheduler;
 }

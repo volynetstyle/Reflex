@@ -1,12 +1,19 @@
-import type { ExecutionContext } from "@reflex/runtime";
+import type { ExecutionContext, ReactiveNode } from "@reflex/runtime";
 import { runWatcher } from "@reflex/runtime";
 import {
   EffectSchedulerMode,
   SchedulerPhase,
   UNSCHEDULE_MASK,
 } from "../scheduler.constants";
-import { createSchedulerInstance, tryEnqueue } from "../scheduler.core";
-import { createWatcherQueue } from "../scheduler.queue";
+import {
+  createSchedulerCore,
+  createSchedulerInstance,
+  tryEnqueue,
+} from "../scheduler.core";
+import {
+  clearWatcherQueue,
+  shiftWatcherQueue,
+} from "../scheduler.queue";
 import type {
   EffectNode,
   EffectScheduler,
@@ -19,14 +26,16 @@ type RankedEffectNode = EffectNode & {
   rank?: number;
 };
 
-const runner = runWatcher.bind(null);
+type RankedSchedulerCore = SchedulerCore & {
+  pending: EffectNode[];
+};
 
-function unscheduleQueuedNodes(queue: ReturnType<typeof createWatcherQueue>): void {
+function unscheduleQueuedNodes(queue: RankedSchedulerCore["queue"]): void {
   while (queue.size !== 0) {
-    queue.shift()!.state &= UNSCHEDULE_MASK;
+    shiftWatcherQueue(queue)!.state &= UNSCHEDULE_MASK;
   }
 
-  queue.clear();
+  clearWatcherQueue(queue);
 }
 
 function unschedulePendingNodes(
@@ -43,86 +52,62 @@ function getNodeRank(node: EffectNode): number {
   return rankedNode.priority ?? rankedNode.rank ?? 0;
 }
 
+function compareNodeRank(left: EffectNode, right: EffectNode): number {
+  return getNodeRank(right) - getNodeRank(left);
+}
+
+function rankedFlush(this: RankedSchedulerCore): void {
+  const queue = this.queue;
+  if (this.phase === SchedulerPhase.Flushing) return;
+  if (queue.size === 0) return;
+
+  this.phase = SchedulerPhase.Flushing;
+  const pending = this.pending;
+  pending.length = 0;
+  let processed = 0;
+  let thrown: unknown = null;
+
+  try {
+    while (queue.size !== 0) {
+      pending.push(shiftWatcherQueue(queue)!);
+    }
+
+    pending.sort(compareNodeRank);
+
+    for (; processed < pending.length; ++processed) {
+      const node = pending[processed]!;
+      node.state &= UNSCHEDULE_MASK;
+      try {
+        runWatcher(node);
+      } catch (error) {
+        if (thrown === null) {
+          thrown = error;
+        }
+      }
+    }
+  } finally {
+    unschedulePendingNodes(pending, processed);
+    pending.length = 0;
+    unscheduleQueuedNodes(queue);
+    this.phase =
+      this.batchDepth > 0 ? SchedulerPhase.Batching : SchedulerPhase.Idle;
+  }
+
+  if (thrown !== null) {
+    throw thrown;
+  }
+}
+
 export function createRankedScheduler(
   context: ExecutionContext,
 ): EffectScheduler {
-  const queue = createWatcherQueue();
-  let batchDepth = 0;
-  let phase = SchedulerPhase.Idle;
-
-  const flush = (): void => {
-    if (phase === SchedulerPhase.Flushing) return;
-    if (queue.size === 0) return;
-
-    phase = SchedulerPhase.Flushing;
-    const pending: EffectNode[] = [];
-    let processed = 0;
-    let thrown: unknown = null;
-
-    try {
-      while (queue.size !== 0) {
-        pending.push(queue.shift()!);
-      }
-
-      pending.sort((left, right) => getNodeRank(right) - getNodeRank(left));
-
-      for (; processed < pending.length; ++processed) {
-        const node = pending[processed]!,
-          s = node.state;
-        node.state = s & UNSCHEDULE_MASK;
-        try {
-          runner(node);
-        } catch (error) {
-          if (thrown === null) {
-            thrown = error;
-          }
-        }
-      }
-    } finally {
-      unschedulePendingNodes(pending, processed);
-      unscheduleQueuedNodes(queue);
-      phase = batchDepth > 0 ? SchedulerPhase.Batching : SchedulerPhase.Idle;
-    }
-
-    if (thrown !== null) {
-      throw thrown;
-    }
+  const core = createSchedulerCore() as RankedSchedulerCore;
+  core.pending = [];
+  core.flush = rankedFlush;
+  const enqueue = (node: ReactiveNode): void => {
+    tryEnqueue(core.queue, node);
   };
 
-  const core: SchedulerCore = {
-    queue,
-    flush,
-    enterBatch() {
-      if (++batchDepth === 1 && phase !== SchedulerPhase.Flushing) {
-        phase = SchedulerPhase.Batching;
-      }
-    },
-    leaveBatch() {
-      if (--batchDepth !== 0) {
-        return false;
-      }
-
-      if (phase === SchedulerPhase.Flushing) {
-        return false;
-      }
-
-      phase = SchedulerPhase.Idle;
-      return true;
-    },
-    reset() {
-      unscheduleQueuedNodes(queue);
-      batchDepth = 0;
-      phase = SchedulerPhase.Idle;
-    },
-    get batchDepth() {
-      return batchDepth;
-    },
-    get phase() {
-      return phase;
-    },
-  };
-
-  const enqueue = tryEnqueue.bind(null, queue);
   const batch = <T>(fn: () => T): T => {
     core.enterBatch();
     try {

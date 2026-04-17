@@ -1,4 +1,4 @@
-import type { ExecutionContext } from "@reflex/runtime";
+import type { ExecutionContext, ReactiveNode } from "@reflex/runtime";
 import { EffectSchedulerMode } from "../scheduler.constants";
 import {
   createSchedulerCore,
@@ -11,15 +11,15 @@ import { noopNotifySettled } from "../scheduler.types";
 
 export function createSabScheduler(context: ExecutionContext): EffectScheduler {
   const core = createSchedulerCore();
-  const queue = core.queue;
-  const enqueue = tryEnqueue.bind(null, queue);
-
+  const enqueue = (node: ReactiveNode): void => {
+    tryEnqueue(core.queue, node);
+  };
   const batch = <T>(fn: () => T): T => {
     core.enterBatch();
     try {
       return fn();
     } finally {
-      if (core.leaveBatch() && queue.size !== 0 && isContextSettled()) {
+      if (core.leaveBatch() && core.queue.size !== 0 && isContextSettled()) {
         core.flush();
       }
     }

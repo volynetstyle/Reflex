@@ -16,6 +16,22 @@ interface BuildContext {
   target: BuildTarget;
 }
 
+// Keep compression explicit and conservative so V8 sees stable function
+// boundaries instead of a few giant inlined CFG-heavy functions.
+const JIT_SAFE_COMPRESS = {
+  defaults: false,
+  booleans: true,
+  comparisons: true,
+  dead_code: true,
+  drop_console: true,
+  drop_debugger: true,
+  evaluate: true,
+  pure_getters: true,
+  side_effects: true,
+  toplevel: true,
+  unused: true,
+} as const;
+
 function loggerStage(ctx: BuildContext): Plugin {
   const name = ctx.target.name;
 
@@ -62,24 +78,7 @@ function minifyStage(ctx: BuildContext): Plugin | null {
   if (ctx.target.dev) return null;
 
   return terser({
-    compress: {
-      passes: 3,
-      inline: 3,
-      dead_code: true,
-      drop_console: true,
-      drop_debugger: true,
-      reduce_vars: true,
-      reduce_funcs: true,
-      conditionals: true,
-      comparisons: true,
-      booleans: true,
-      unused: true,
-      if_return: true,
-      sequences: true,
-      pure_getters: true,
-      unsafe: true,
-      evaluate: true,
-    },
+    compress: JIT_SAFE_COMPRESS,
     mangle: {
       toplevel: true,
       keep_classnames: true,

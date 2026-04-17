@@ -1,4 +1,4 @@
-import type { ExecutionContext } from "@reflex/runtime";
+import type { ExecutionContext, ReactiveNode } from "@reflex/runtime";
 import { EffectSchedulerMode } from "../scheduler.constants";
 import {
   createSchedulerCore,
@@ -6,29 +6,27 @@ import {
   createSchedulerInstance,
   tryEnqueue,
 } from "../scheduler.core";
-import type { EffectNode, EffectScheduler } from "../scheduler.types";
+import type { EffectScheduler } from "../scheduler.types";
 
 export function createEagerScheduler(
   context: ExecutionContext,
 ): EffectScheduler {
   const core = createSchedulerCore();
-  const queue = core.queue;
   const notifySettled = (): void => {
-    if (isRuntimeInactive(context, core) && queue.size !== 0) {
+    if (isRuntimeInactive(core) && core.queue.size !== 0) {
       core.flush();
     }
   };
-  const enqueueToQueue = tryEnqueue.bind(null, queue);
-  const enqueue = (node: EffectNode) => {
-    if (!enqueueToQueue(node)) return;
-    if (isRuntimeInactive(context, core)) core.flush();
+  const enqueue = (node: ReactiveNode): void => {
+    if (!tryEnqueue(core.queue, node)) return;
+    if (isRuntimeInactive(core)) core.flush();
   };
   const batch = <T>(fn: () => T): T => {
     core.enterBatch();
     try {
       return fn();
     } finally {
-      if (core.leaveBatch() && queue.size !== 0) {
+      if (core.leaveBatch() && core.queue.size !== 0) {
         core.flush();
       }
     }

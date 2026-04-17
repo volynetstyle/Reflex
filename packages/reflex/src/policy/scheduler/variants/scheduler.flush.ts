@@ -1,4 +1,4 @@
-import type { ExecutionContext } from "@reflex/runtime";
+import type { ExecutionContext, ReactiveNode } from "@reflex/runtime";
 import { EffectSchedulerMode } from "../scheduler.constants";
 import {
   createSchedulerCore,
@@ -12,8 +12,9 @@ export function createFlushScheduler(
   context: ExecutionContext,
 ): EffectScheduler {
   const core = createSchedulerCore();
-  const queue = core.queue;
-  const enqueue = tryEnqueue.bind(null, queue);
+  const enqueue = (node: ReactiveNode): void => {
+    tryEnqueue(core.queue, node);
+  };
   const batch = <T>(fn: () => T): T => {
     core.enterBatch();
     try {
@@ -22,7 +23,7 @@ export function createFlushScheduler(
       core.leaveBatch();
     }
   };
-  
+
   return createSchedulerInstance(
     EffectSchedulerMode.Flush,
     context,

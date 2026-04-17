@@ -29,36 +29,48 @@ function growWatcherQueue(queue: WatcherQueue): void {
   queue.tail = size;
 }
 
-function pushWatcherQueue(this: WatcherQueue, node: EffectNode): void {
-  const ring = this.ring;
-  if (this.size === ring.length) {
-    growWatcherQueue(this);
+export function pushWatcherQueue(queue: WatcherQueue, node: EffectNode): void {
+  const ring = queue.ring;
+  if (queue.size === ring.length) {
+    growWatcherQueue(queue);
   }
 
-  const tail = this.tail;
+  const tail = queue.tail;
   ring[tail] = node;
-  this.tail = (tail + 1) & (ring.length - 1);
-  ++this.size;
+  queue.tail = (tail + 1) & (ring.length - 1);
+  ++queue.size;
 }
 
-function shiftWatcherQueue(this: WatcherQueue): EffectNode | null {
-  if (this.size === 0) {
+export function shiftWatcherQueue(queue: WatcherQueue): EffectNode | null {
+  if (queue.size === 0) {
     return null;
   }
 
-  const ring = this.ring;
-  const head = this.head;
+  const ring = queue.ring;
+  const head = queue.head;
   const node = ring[head]!;
   ring[head] = undefined as never;
-  this.head = (head + 1) & (ring.length - 1);
-  --this.size;
+  queue.head = (head + 1) & (ring.length - 1);
+  --queue.size;
   return node;
 }
 
-function clearWatcherQueue(this: WatcherQueue): void {
-  this.head = 0;
-  this.tail = 0;
-  this.size = 0;
+export function clearWatcherQueue(queue: WatcherQueue): void {
+  queue.head = 0;
+  queue.tail = 0;
+  queue.size = 0;
+}
+
+function pushWatcherQueueMethod(this: WatcherQueue, node: EffectNode): void {
+  pushWatcherQueue(this, node);
+}
+
+function shiftWatcherQueueMethod(this: WatcherQueue): EffectNode | null {
+  return shiftWatcherQueue(this);
+}
+
+function clearWatcherQueueMethod(this: WatcherQueue): void {
+  clearWatcherQueue(this);
 }
 
 export function createWatcherQueue(): WatcherQueue {
@@ -67,8 +79,8 @@ export function createWatcherQueue(): WatcherQueue {
     head: 0,
     tail: 0,
     size: 0,
-    push: pushWatcherQueue,
-    shift: shiftWatcherQueue,
-    clear: clearWatcherQueue,
+    push: pushWatcherQueueMethod,
+    shift: shiftWatcherQueueMethod,
+    clear: clearWatcherQueueMethod,
   };
 }

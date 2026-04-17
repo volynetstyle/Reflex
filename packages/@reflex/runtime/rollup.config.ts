@@ -40,6 +40,24 @@ const PURE_FUNCS = [
   "isEffectKind",
 ] as const;
 
+// V8 generally prefers many small stable functions over one aggressively
+// collapsed mega-function. Keep minification conservative and explicit.
+const JIT_SAFE_COMPRESS = {
+  defaults: false,
+  booleans: true,
+  comparisons: true,
+  dead_code: true,
+  drop_console: true,
+  drop_debugger: true,
+  evaluate: true,
+  module: true,
+  pure_getters: true,
+  pure_funcs: [...PURE_FUNCS],
+  side_effects: true,
+  toplevel: true,
+  unused: true,
+} as const;
+
 const TREESHAKE_OPTIONS: RollupOptions["treeshake"] = {
   preset: "recommended",
   moduleSideEffects: false,
@@ -106,16 +124,6 @@ function createSwcPlugin(isDev: boolean): Plugin | null {
       jsc: {
         target: "es2022",
         parser: { syntax: "ecmascript" },
-        transform: {
-          optimizer: {
-            simplify: true,
-            globals: {
-              vars: {
-                __DEV__: JSON.stringify(isDev),
-              },
-            },
-          },
-        },
       },
       module: { type: "es6" },
     },
@@ -126,28 +134,7 @@ function createTerserPlugin(isDev: boolean): Plugin | null {
   if (isDev) return null;
 
   return terser({
-    compress: {
-      passes: 1,
-      inline: false,
-      hoist_props: true,
-      collapse_vars: true,
-      dead_code: true,
-      drop_console: true,
-      drop_debugger: true,
-      reduce_vars: true,
-      reduce_funcs: false,
-      conditionals: false,
-      comparisons: true,
-      booleans: true,
-      unused: true,
-      if_return: true,
-      sequences: false,
-      pure_getters: true,
-      evaluate: true,
-      pure_funcs: [...PURE_FUNCS],
-      toplevel: true,
-      module: true,
-    },
+    compress: JIT_SAFE_COMPRESS,
     mangle: {
       toplevel: true,
       module: true,

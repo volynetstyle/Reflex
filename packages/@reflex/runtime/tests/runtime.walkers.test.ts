@@ -146,6 +146,50 @@ describe("Reactive runtime - walker invariants", () => {
     );
   });
 
+  it("propagate reuses deep branching resume stacks across repeated waves", () => {
+    const source = createNode(ReactiveNodeState.Producer);
+    const consumers: ReactiveNode[] = [];
+    const watchers: ReactiveNode[] = [];
+    const invalidated: ReactiveNode[] = [];
+    let parent = source;
+
+    setDefaultContext(
+      createTestContext({
+        onEffectInvalidated(node) {
+          invalidated.push(node);
+        },
+      }),
+    );
+
+    for (let i = 0; i < 80; i += 1) {
+      const next = createNode(ReactiveNodeState.Consumer);
+      const watcher = createNode(ReactiveNodeState.Watcher);
+
+      linkEdge(parent, next);
+      linkEdge(parent, watcher);
+      consumers.push(next);
+      watchers.push(watcher);
+      parent = next;
+    }
+
+    for (let iteration = 0; iteration < 3; iteration += 1) {
+      invalidated.length = 0;
+
+      for (const consumer of consumers) {
+        consumer.state = ReactiveNodeState.Consumer;
+      }
+
+      for (const watcher of watchers) {
+        watcher.state = ReactiveNodeState.Watcher;
+      }
+
+      propagate(source.firstOut!, PROMOTE_CHANGED);
+
+      expect(invalidated).toHaveLength(watchers.length);
+      expect(new Set(invalidated)).toEqual(new Set(watchers));
+    }
+  });
+
   it("propagate ignores stale tracked-prefix edges but still resumes sibling branches", () => {
     const source = createNode(ReactiveNodeState.Producer);
     const prefix = createNode(ReactiveNodeState.Producer);
@@ -399,6 +443,24 @@ describe("Reactive runtime - walker invariants", () => {
     expect(sharedSpy).toHaveBeenCalledTimes(2);
     expect(shared.state & DIRTY_STATE).toBe(0);
     expect(root.state & ReactiveNodeState.Invalid).toBe(0);
+  });
+
+  it("shouldRecompute reuses deep branching stacks across repeated reads", () => {
+    const left = createProducer(1);
+    const right = createProducer(2);
+    let root = createConsumer(() => readProducer(left) + readProducer(right));
+
+    for (let i = 0; i < 80; i += 1) {
+      const prev = root;
+      root = createConsumer(() => readConsumer(prev) + 1);
+    }
+
+    expect(readConsumer(root)).toBe(83);
+
+    for (let iteration = 0; iteration < 6; iteration += 1) {
+      writeProducer(right, iteration + 3);
+      expect(readConsumer(root)).toBe(iteration + 84);
+    }
   });
 
   it("shouldRecompute promotes sibling invalid subscribers when a shared dependency is confirmed changed", () => {

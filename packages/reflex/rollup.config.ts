@@ -38,6 +38,24 @@ const PURE_FUNCS = [
   "isEffectKind",
 ] as const;
 
+// Keep bundle transforms conservative for V8: avoid rewrites that collapse many
+// small helpers into a few large polymorphic control-flow-heavy functions.
+const JIT_SAFE_COMPRESS = {
+  defaults: false,
+  booleans: true,
+  comparisons: true,
+  dead_code: true,
+  drop_console: true,
+  drop_debugger: true,
+  evaluate: true,
+  module: true,
+  pure_getters: true,
+  pure_funcs: [...PURE_FUNCS],
+  side_effects: true,
+  toplevel: true,
+  unused: true,
+} as const;
+
 const TARGETS: BuildTarget[] = [
   { name: "esm", outDir: "esm", format: "esm", dev: false },
   { name: "esm-dev", outDir: "dev", format: "esm", dev: true },
@@ -105,16 +123,6 @@ function swcPlugin(target: BuildTarget): Plugin | undefined {
       jsc: {
         target: "es2022",
         parser: { syntax: "ecmascript" },
-        transform: {
-          optimizer: {
-            simplify: true,
-            globals: {
-              vars: {
-                __DEV__: JSON.stringify(target.dev),
-              },
-            },
-          },
-        },
       },
       module: { type: "es6" },
     },
@@ -124,28 +132,7 @@ function terserPlugin(target: BuildTarget): Plugin | undefined {
   if (target.dev) return undefined;
 
   return terser({
-    compress: {
-      passes: 4,
-      inline: 3,
-      hoist_props: true,
-      collapse_vars: true,
-      dead_code: true,
-      drop_console: true,
-      drop_debugger: true,
-      reduce_vars: true,
-      reduce_funcs: false,
-      conditionals: false,
-      comparisons: true,
-      booleans: true,
-      unused: true,
-      if_return: true,
-      sequences: false,
-      pure_getters: true,
-      evaluate: true,
-      pure_funcs: [...PURE_FUNCS],
-      toplevel: true,
-      module: true,
-    },
+    compress: JIT_SAFE_COMPRESS,
     mangle: {
       toplevel: true,
       module: true,
