@@ -382,10 +382,11 @@ src/
     
     walkers/
       propagate.ts           ← Main push invalidation
+      propagate.invalidate.ts ← Shared push-side invalidation seam
       propagate.once.ts      ← Reentrant-safe variant
       propagate.constants.ts ← State tokens
       recompute.ts           ← Pull stabilization orchestration
-      recompute.refresh.ts   ← Actual compute execution
+      recompute.refresh.ts   ← Shared pull-side refresh seam
       recompute.branch.ts    ← Branch switching, stale cleanup
 ```
 

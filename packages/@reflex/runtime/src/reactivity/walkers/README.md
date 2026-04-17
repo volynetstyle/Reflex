@@ -24,7 +24,7 @@ writeProducer(node, value)
 
 **Cost:** O(subscribers), no recomputation.
 
-**Files:** `propagate.ts`, `propagate.once.ts`
+**Files:** `propagate.ts`, `propagate.invalidate.ts`, `propagate.once.ts`
 
 ### Phase 2: Pull Stabilization (On Demand)
 
@@ -126,6 +126,7 @@ If `propagate()` is called while already propagating (nested mutation):
 ### Files
 
 - **`propagate.ts`** — Main propagation walker, handles linear edge traversal
+- **`propagate.invalidate.ts`** — Shared subscriber invalidation seam for push walkers
 - **`propagate.once.ts`** — Reentrant-safe variant
 - **`propagate.constants.ts`** — State tokens and masks
 
@@ -221,7 +222,7 @@ Once unlinked, writes to the old source no longer affect this consumer.
 ### Files
 
 - **`recompute.ts`** — Core recompute orchestration
-- **`recompute.refresh.ts`** — Actual compute function execution and dependency tracking
+- **`recompute.refresh.ts`** — Shared recompute + fanout propagation seam for pull walkers
 - **`recompute.branch.ts`** — Branch switching, stale-suffix cleanup, edge management
 
 ---

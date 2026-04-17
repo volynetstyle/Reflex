@@ -1,27 +1,26 @@
-// ─── refreshDependency ────────────────────────────────────────────────────────
+// ─── recompute refresh seam ──────────────────────────────────────────────────
 //
-// Pull-walk only refreshes computed nodes. Producers commit on write and should
-// never reach shouldRecompute() with dirty bits set, so this helper stays
-// monomorphic and tiny enough for JIT inlining at every call site.
+// Keep the recompute + sideways propagation protocol in one tiny helper so the
+// hot pull walkers can reuse a stable call site instead of re-inlining the
+// same branchy block at every exit.
 
 import { recompute } from "../engine/compute";
-import type { ReactiveNode, ReactiveEdge } from "../shape";
+import type { ReactiveEdge, ReactiveNode } from "../shape";
 import { propagateOnce } from "./propagate.once";
 
-/**
- * Refresh a Computed node and propagate sideways if it has fanout.
- * Returns true if its value changed.
- */
-export function refreshRecompute(
-  link: ReactiveEdge,
+export function hasFanout(edge: ReactiveEdge): boolean {
+  return edge.prevOut !== null || edge.nextOut !== null;
+}
+
+export function refreshAndPropagateIfNeeded(
   node: ReactiveNode,
+  fanout: boolean,
 ): boolean {
   const changed = recompute(node);
-  // Fanout check: if this node has siblings (prevOut or nextOut),
-  // push the change sideways so they don't read a stale value on pull.
-  if (changed && (link.prevOut !== null || link.nextOut !== null)) {
+
+  if (changed && fanout) {
     propagateOnce(node);
   }
-  
+
   return changed;
 }

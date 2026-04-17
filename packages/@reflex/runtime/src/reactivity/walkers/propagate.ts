@@ -1,101 +1,19 @@
-import { recordDebugEvent } from "../../debug.runtime";
-import { defaultContext, dispatchEffectInvalidated } from "../context";
+import { dispatchEffectInvalidated } from "../context";
 import { devAssertPropagateAlive } from "../dev";
+import { type ReactiveEdge, ReactiveNodeState } from "../shape";
 import {
-  DIRTY_STATE,
-  type ReactiveEdge,
-  type ReactiveNode,
-  ReactiveNodeState,
-} from "../shape";
-import {
-  DISPOSED_MASK,
-  IMMEDIATE,
   NON_IMMEDIATE,
-  SLOW_INVALIDATION_MASK,
-  TRACKING_MASK,
-  VISITED_MASK,
-  WATCHER_MASK,
 } from "./propagate.constants";
+import {
+  commitInvalidatedSubscriberState,
+  dispatchInvalidatedWatcher,
+  getInvalidatedSubscriberState,
+  isWatcherInvalidatedState,
+} from "./propagate.invalidate";
 
-// Resume points stay edge-based: we must come back to a specific sibling link,
-// and tracking checks depend on the current incoming edge identity.
+// Resume points stay edge-based: we must come back to a specific sibling link.
 const propagateEdgeStack: ReactiveEdge[] = [];
 const propagatePromoteStack: number[] = [];
-
-function dispatchInvalidatedWatcher(
-  sub: ReactiveNode,
-  dispatch: typeof dispatchEffectInvalidated,
-  thrown: unknown,
-): unknown {
-  if (dispatch !== undefined) {
-    try {
-      dispatch(sub);
-    } catch (error) {
-      if (thrown === null) {
-        return error;
-      }
-    }
-  } else if (__DEV__) {
-    recordDebugEvent(defaultContext, "watcher:invalidated", { node: sub });
-  }
-
-  return thrown;
-}
-
-function getTrackingInvalidatedSubscriberState(
-  edge: ReactiveEdge,
-  sub: ReactiveNode,
-  subState: number,
-): number {
-  const depsTail = sub.depsTail;
-  if (depsTail === null) return 0;
-
-  const invalidatedState = subState | VISITED_MASK | ReactiveNodeState.Invalid;
-  if (edge === depsTail) return invalidatedState;
-
-  const prevIn = edge.prevIn;
-  if (prevIn === null) return invalidatedState;
-  if (prevIn === depsTail) return 0;
-
-  let cursor = prevIn.prevIn;
-  while (cursor !== null && cursor !== depsTail) {
-    cursor = cursor.prevIn;
-  }
-
-  return cursor === depsTail ? 0 : invalidatedState;
-}
-
-function getSlowInvalidatedSubscriberState(
-  edge: ReactiveEdge,
-  sub: ReactiveNode,
-  subState: number,
-  promoteBit: number,
-): number {
-  const promotedState = (subState & ~VISITED_MASK) | promoteBit;
-  const invalidatedState = subState | VISITED_MASK | ReactiveNodeState.Invalid;
-
-  if ((subState & SLOW_INVALIDATION_MASK) === 0) return promotedState;
-  if ((subState & DISPOSED_MASK) !== 0) return 0;
-
-  if ((subState & TRACKING_MASK) !== 0) {
-    const depsTail = sub.depsTail;
-    if (depsTail === null) return 0;
-    if (edge === depsTail) return invalidatedState;
-
-    const prevIn = edge.prevIn;
-    if (prevIn === null) return invalidatedState;
-    if (prevIn === depsTail) return 0;
-
-    let cursor = prevIn.prevIn;
-    while (cursor !== null && cursor !== depsTail) {
-      cursor = cursor.prevIn;
-    }
-
-    return cursor === depsTail ? 0 : invalidatedState;
-  }
-
-  return (subState & DIRTY_STATE) !== 0 ? 0 : promotedState;
-}
 
 function propagateBranching(
   edge: ReactiveEdge,
@@ -119,43 +37,29 @@ function propagateBranching(
   while (true) {
     const sub = edge.to;
     const subState = sub.state;
-    const promotedState = (subState & ~VISITED_MASK) | promote;
-    let nextState = promotedState;
-
-    if ((subState & SLOW_INVALIDATION_MASK) !== 0) {
-      nextState =
-        (subState & TRACKING_MASK) !== 0
-          ? getTrackingInvalidatedSubscriberState(edge, sub, subState)
-          : (subState & (DIRTY_STATE | DISPOSED_MASK)) !== 0
-            ? 0
-            : promotedState;
-    }
+    const nextState = getInvalidatedSubscriberState(edge, sub, subState, promote);
 
     if (nextState !== 0) {
-      sub.state = nextState;
+      const firstOut = commitInvalidatedSubscriberState(
+        edge,
+        sub,
+        nextState,
+        promote,
+      );
 
-      if (__DEV__) {
-        recordDebugEvent(defaultContext, "propagate", {
-          detail: { immediate: promote === IMMEDIATE, nextState },
-          source: edge.from,
-          target: sub,
-        });
+      if (firstOut !== null) {
+        if (next !== null) {
+          edgeStack[stackTop] = next;
+          promoteStack[stackTop++] = promote;
+        }
+
+        edge = firstOut;
+        next = edge.nextOut;
+        promote = NON_IMMEDIATE;
+        continue;
       }
 
-      if ((nextState & WATCHER_MASK) === 0) {
-        const firstOut = sub.firstOut;
-        if (firstOut !== null) {
-          if (next !== null) {
-            edgeStack[stackTop] = next;
-            promoteStack[stackTop++] = promote;
-          }
-
-          edge = firstOut;
-          next = edge.nextOut;
-          promote = NON_IMMEDIATE;
-          continue;
-        }
-      } else {
+      if (isWatcherInvalidatedState(nextState)) {
         thrown = dispatchInvalidatedWatcher(sub, dispatch, thrown);
       }
     }
@@ -190,41 +94,34 @@ function propagateLinear(
     const sub = edge.to;
     const next = edge.nextOut;
     const subState = sub.state;
-    const nextState =
-      (subState & SLOW_INVALIDATION_MASK) === 0
-        ? (subState & ~VISITED_MASK) | promote
-        : getSlowInvalidatedSubscriberState(edge, sub, subState, promote);
+    const nextState = getInvalidatedSubscriberState(edge, sub, subState, promote);
 
     if (nextState !== 0) {
-      sub.state = nextState;
+      const firstOut = commitInvalidatedSubscriberState(
+        edge,
+        sub,
+        nextState,
+        promote,
+      );
 
-      if (__DEV__) {
-        recordDebugEvent(defaultContext, "propagate", {
-          detail: { immediate: promote === IMMEDIATE, nextState },
-          source: edge.from,
-          target: sub,
-        });
+      if (firstOut !== null) {
+        edge = firstOut;
+
+        if (next !== null) {
+          return propagateBranching(
+            edge,
+            NON_IMMEDIATE,
+            thrown,
+            next,
+            promote,
+          );
+        }
+
+        promote = NON_IMMEDIATE;
+        continue;
       }
 
-      if ((nextState & WATCHER_MASK) === 0) {
-        const firstOut = sub.firstOut;
-        if (firstOut !== null) {
-          edge = firstOut;
-
-          if (next !== null) {
-            return propagateBranching(
-              edge,
-              NON_IMMEDIATE,
-              thrown,
-              next,
-              promote,
-            );
-          }
-
-          promote = NON_IMMEDIATE;
-          continue;
-        }
-      } else {
+      if (isWatcherInvalidatedState(nextState)) {
         thrown = dispatchInvalidatedWatcher(sub, dispatch, thrown);
       }
     }
