@@ -21,6 +21,7 @@ import {
 // and tracking checks depend on the current incoming edge identity.
 const propagateEdgeStack: ReactiveEdge[] = [];
 const propagatePromoteStack: number[] = [];
+let propagateStackTop = 0;
 
 function dispatchInvalidatedWatcher(
   sub: ReactiveNode,
@@ -106,8 +107,9 @@ function propagateBranching(
 ): unknown {
   const edgeStack = propagateEdgeStack;
   const promoteStack = propagatePromoteStack;
-  const stackBase = edgeStack.length;
+  const stackBase = propagateStackTop;
   let stackTop = stackBase;
+  let stackHigh = stackTop;
   let next: ReactiveEdge | null = edge.nextOut;
   let nextPromote = promote;
   const dispatch = dispatchEffectInvalidated;
@@ -115,6 +117,7 @@ function propagateBranching(
   if (parentResume !== null) {
     edgeStack[stackTop] = parentResume;
     promoteStack[stackTop++] = parentResumePromote;
+    if (stackTop > stackHigh) stackHigh = stackTop;
   }
 
   while (true) {
@@ -150,6 +153,7 @@ function propagateBranching(
           if (next !== null) {
             edgeStack[stackTop] = next;
             promoteStack[stackTop++] = nextPromote;
+            if (stackTop > stackHigh) stackHigh = stackTop;
           }
 
           edge = firstOut;
@@ -158,6 +162,7 @@ function propagateBranching(
           continue;
         }
       } else {
+        propagateStackTop = stackTop;
         thrown = dispatchInvalidatedWatcher(sub, dispatch, thrown);
       }
     }
@@ -176,8 +181,12 @@ function propagateBranching(
       continue;
     }
 
-    edgeStack.length = stackBase;
-    promoteStack.length = stackBase;
+    while (stackHigh > stackBase) {
+      const slot = --stackHigh;
+      edgeStack[slot] = undefined!;
+      promoteStack[slot] = undefined!;
+    }
+    propagateStackTop = stackBase;
     return thrown;
   }
 }
