@@ -21,7 +21,6 @@ import {
 // and tracking checks depend on the current incoming edge identity.
 const propagateEdgeStack: ReactiveEdge[] = [];
 const propagatePromoteStack: number[] = [];
-let propagateStackTop = 0;
 
 function dispatchInvalidatedWatcher(
   sub: ReactiveNode,
@@ -107,33 +106,29 @@ function propagateBranching(
 ): unknown {
   const edgeStack = propagateEdgeStack;
   const promoteStack = propagatePromoteStack;
-  const stackBase = propagateStackTop;
+  const stackBase = edgeStack.length;
   let stackTop = stackBase;
-  let stackHigh = stackTop;
   let next: ReactiveEdge | null = edge.nextOut;
-  let nextPromote = promote;
   const dispatch = dispatchEffectInvalidated;
 
   if (parentResume !== null) {
     edgeStack[stackTop] = parentResume;
     promoteStack[stackTop++] = parentResumePromote;
-    if (stackTop > stackHigh) stackHigh = stackTop;
   }
 
   while (true) {
     const sub = edge.to;
     const subState = sub.state;
-    let nextState: number;
+    const promotedState = (subState & ~VISITED_MASK) | promote;
+    let nextState = promotedState;
 
-    if ((subState & SLOW_INVALIDATION_MASK) === 0) {
-      nextState = (subState & ~VISITED_MASK) | promote;
-    } else if ((subState & TRACKING_MASK) !== 0) {
-      nextState = getTrackingInvalidatedSubscriberState(edge, sub, subState);
-    } else {
+    if ((subState & SLOW_INVALIDATION_MASK) !== 0) {
       nextState =
-        (subState & (DIRTY_STATE | DISPOSED_MASK)) !== 0
-          ? 0
-          : (subState & ~VISITED_MASK) | promote;
+        (subState & TRACKING_MASK) !== 0
+          ? getTrackingInvalidatedSubscriberState(edge, sub, subState)
+          : (subState & (DIRTY_STATE | DISPOSED_MASK)) !== 0
+            ? 0
+            : promotedState;
     }
 
     if (nextState !== 0) {
@@ -152,41 +147,34 @@ function propagateBranching(
         if (firstOut !== null) {
           if (next !== null) {
             edgeStack[stackTop] = next;
-            promoteStack[stackTop++] = nextPromote;
-            if (stackTop > stackHigh) stackHigh = stackTop;
+            promoteStack[stackTop++] = promote;
           }
 
           edge = firstOut;
           next = edge.nextOut;
-          promote = nextPromote = NON_IMMEDIATE;
+          promote = NON_IMMEDIATE;
           continue;
         }
       } else {
-        propagateStackTop = stackTop;
         thrown = dispatchInvalidatedWatcher(sub, dispatch, thrown);
       }
     }
 
     if (next !== null) {
       edge = next;
-      promote = nextPromote;
       next = edge.nextOut;
       continue;
     }
 
     if (stackTop !== stackBase) {
       edge = edgeStack[--stackTop]!;
-      promote = nextPromote = promoteStack[stackTop]!;
+      promote = promoteStack[stackTop]!;
       next = edge.nextOut;
       continue;
     }
 
-    while (stackHigh > stackBase) {
-      const slot = --stackHigh;
-      edgeStack[slot] = undefined!;
-      promoteStack[slot] = undefined!;
-    }
-    propagateStackTop = stackBase;
+    edgeStack.length = stackBase;
+    promoteStack.length = stackBase;
     return thrown;
   }
 }
