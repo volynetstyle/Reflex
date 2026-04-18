@@ -50,6 +50,7 @@ export {
   WALKER_STATE,
   //
   ReactiveNode,
+  ReactiveEdge,
   ReactiveNodeState,
   isDisposedNode,
   disposeNode,

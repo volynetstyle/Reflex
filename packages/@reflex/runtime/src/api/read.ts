@@ -8,7 +8,7 @@ import {
 } from "../reactivity/dev";
 import {
   ReactiveNodeState,
-  trackReadActive,
+  trackReadAfterMiss,
   tryTrackReadFastPath,
   DIRTY_STATE,
   recompute,
@@ -83,7 +83,7 @@ export function readProducer<T>(node: ReactiveNode<T>): T {
 
   // Register this read as a dependency if there's an active computation
   if (activeComputed !== null && !tryTrackReadFastPath(node, activeComputed)) {
-    trackReadActive(node, activeComputed);
+    trackReadAfterMiss(node, activeComputed);
   }
 
   if (__DEV__) {
@@ -176,7 +176,7 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
   }
 
   if (activeComputed !== null && !tryTrackReadFastPath(node, activeComputed)) {
-    trackReadActive(node, activeComputed);
+    trackReadAfterMiss(node, activeComputed);
   }
 
   if (__DEV__) {

@@ -7,8 +7,6 @@ import {
 import type { ReactiveNode } from "@reflex/runtime";
 import { EventSource as RuntimeEventSource } from "./event";
 
-export const UNINITIALIZED = Symbol("UNINITIALIZED") as unknown;
-
 export const createSignalNode = <T>(payload: T) => {
   return new RuntimeReactiveNode<T>(
     payload,

@@ -2,7 +2,6 @@ import {
   CONSUMER_INITIAL_STATE,
   PRODUCER_INITIAL_STATE,
   ReactiveNode,
-  type ReactiveEdge,
   type EngineHooks,
   type ExecutionContext,
   WATCHER_INITIAL_STATE,
@@ -10,7 +9,9 @@ import {
   resetDefaultContext,
 } from "../src";
 import { expect } from "vitest";
-import { UNINITIALIZED } from "../src/reactivity/shape/ReactiveNode";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ReactiveEdge = any;
 
 /**
  * Reset the default context to a fresh instance with optional hooks.
@@ -25,7 +26,7 @@ export function createProducer<T>(value: T): ReactiveNode<T> {
 }
 
 export function createConsumer<T>(compute: () => T): ReactiveNode<T> {
-  return new ReactiveNode(UNINITIALIZED as T, compute, CONSUMER_INITIAL_STATE);
+  return new ReactiveNode(undefined as T, compute, CONSUMER_INITIAL_STATE);
 }
 
 export function createWatcher(

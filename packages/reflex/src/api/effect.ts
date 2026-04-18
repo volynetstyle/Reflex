@@ -6,7 +6,6 @@ import {
   WATCHER_INITIAL_STATE,
 } from "@reflex/runtime";
 import { ReactiveNode } from "@reflex/runtime";
-import type { UNINITIALIZED } from "../infra/factory";
 
 /**
  * Marks an effect watcher node as scheduled.
@@ -15,7 +14,7 @@ import type { UNINITIALIZED } from "../infra/factory";
  * the runtime's scheduled flag on a watcher node.
  */
 export function effectScheduled(
-  node: ReactiveNode<typeof UNINITIALIZED | Destructor>,
+  node: ReactiveNode<typeof undefined | Destructor>,
 ) {
   node.state |= ReactiveNodeState.Scheduled;
 }
@@ -27,7 +26,7 @@ export function effectScheduled(
  * a watcher as no longer queued for execution.
  */
 export function effectUnscheduled(
-  node: ReactiveNode<typeof UNINITIALIZED | Destructor>,
+  node: ReactiveNode<typeof undefined | Destructor>,
 ) {
   node.state &= ~ReactiveNodeState.Scheduled;
 }

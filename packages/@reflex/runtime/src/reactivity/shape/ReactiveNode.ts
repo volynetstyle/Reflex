@@ -1,9 +1,6 @@
 import type { Reactivable } from "./Reactivable";
 import type { ReactiveEdge } from "./ReactiveEdge";
 
-// TODO: Potentially polymorphic path if fist comes symbol then anouther type
-const UNINITIALIZED: unique symbol = Symbol.for("UNINITIALIZED");
-
 export type Primitive =
   | string
   | number
@@ -45,6 +42,5 @@ class ReactiveNode<T = unknown> implements Reactivable {
   }
 }
 
-export { UNINITIALIZED };
 export type { Reactivable, ReactiveNode, ComputeFn };
 export default ReactiveNode;

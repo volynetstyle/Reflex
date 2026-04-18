@@ -17,6 +17,57 @@ import {
   type ExecutionContext,
 } from "../context";
 
+function recordTrackRead(
+  context: ExecutionContext,
+  consumer: ReactiveNode,
+  source: ReactiveNode,
+): void {
+  if (__DEV__) {
+    devRecordTrackRead(context, consumer, source);
+  }
+}
+
+function trackReadSlowPath(
+  source: ReactiveNode,
+  consumer: ReactiveNode,
+  context: ExecutionContext,
+): void {
+  const version = trackingVersion;
+  const prevEdge = consumer.depsTail;
+
+  if (prevEdge === null) {
+    const firstIn = consumer.firstIn;
+
+    if (firstIn === null || firstIn.nextIn === null) {
+      consumer.depsTail = linkEdge(source, consumer, null, version);
+      return;
+    }
+
+    consumer.depsTail = (context.trackReadFallback ?? trackReadFallback)(
+      source,
+      consumer,
+      null,
+      firstIn,
+      version,
+    );
+    return;
+  }
+
+  const nextExpected = prevEdge.nextIn;
+  if (nextExpected === null || nextExpected.nextIn === null) {
+    consumer.depsTail = linkEdge(source, consumer, prevEdge, version);
+    return;
+  }
+
+  consumer.depsTail = (context.trackReadFallback ?? trackReadFallback)(
+    source,
+    consumer,
+    prevEdge,
+    nextExpected,
+    version,
+  );
+}
+
 /**
  * Cursor-guided incoming-edge walk used during dependency collection.
  * It first probes the hot cache and expected next edge, then falls back to a
@@ -27,7 +78,7 @@ export function trackRead(source: ReactiveNode): void {
 
   if (!consumer) return;
   if (tryTrackReadFastPath(source, consumer)) return;
-  trackReadActive(source, consumer);
+  trackReadAfterMiss(source, consumer);
 }
 
 /**
@@ -47,19 +98,14 @@ export function tryTrackReadFastPath(
 
   const lastOut = source.lastOut;
   if (lastOut != null && lastOut.version === version && lastOut.to === consumer) {
-    if (__DEV__) {
-      devRecordTrackRead(defaultContext, consumer, source);
-    }
-
+    recordTrackRead(defaultContext, consumer, source);
     return true;
   }
 
   if (prevEdge != null) {
     if (prevEdge.from === source) {
       prevEdge.version = version;
-      if (__DEV__) {
-        devRecordTrackRead(defaultContext, consumer, source);
-      }
+      recordTrackRead(defaultContext, consumer, source);
       return true;
     }
 
@@ -67,9 +113,7 @@ export function tryTrackReadFastPath(
     if (nextExpected != null && nextExpected.from === source) {
       nextExpected.version = version;
       consumer.depsTail = nextExpected;
-      if (__DEV__) {
-        devRecordTrackRead(defaultContext, consumer, source);
-      }
+      recordTrackRead(defaultContext, consumer, source);
       return true;
     }
 
@@ -80,21 +124,18 @@ export function tryTrackReadFastPath(
   if (firstIn != null && firstIn.from === source) {
     firstIn.version = version;
     consumer.depsTail = firstIn;
-    if (__DEV__) {
-      devRecordTrackRead(defaultContext, consumer, source);
-    }
+    recordTrackRead(defaultContext, consumer, source);
     return true;
   }
 
   return false;
 }
 
-export function trackReadActive(
+export function trackReadAfterMiss(
   source: ReactiveNode,
   consumer: ReactiveNode,
   context: ExecutionContext = defaultContext,
 ): void {
-  const version = trackingVersion;
   const sourceDead = isDisposedNode(source);
   const consumerDead = isDisposedNode(consumer);
 
@@ -106,10 +147,29 @@ export function trackReadActive(
     return;
   }
 
-  if (__DEV__) {
-    devRecordTrackRead(context, consumer, source);
+  recordTrackRead(context, consumer, source);
+  trackReadSlowPath(source, consumer, context);
+}
+
+export function trackReadActive(
+  source: ReactiveNode,
+  consumer: ReactiveNode,
+  context: ExecutionContext = defaultContext,
+): void {
+  const sourceDead = isDisposedNode(source);
+  const consumerDead = isDisposedNode(consumer);
+
+  if (sourceDead || consumerDead) {
+    if (__DEV__) {
+      devAssertTrackReadAlive(sourceDead, consumerDead);
+    }
+
+    return;
   }
 
+  recordTrackRead(context, consumer, source);
+
+  const version = trackingVersion;
   const prevEdge = consumer.depsTail;
   if (prevEdge === null) {
     const firstIn = consumer.firstIn;
