@@ -1,6 +1,6 @@
+import { recordDebugEvent } from "../debug/debug.impl";
 import type { ReactiveEdge, ReactiveNode } from "./shape";
 import { reuseIncomingEdgeFromSuffixOrCreate } from "./shape/methods/connect";
-import { recordDebugEvent } from "../debug.runtime";
 
 export interface EngineHooks {
   onEffectInvalidated?(node: ReactiveNode): void;
@@ -32,25 +32,34 @@ type MutableContextFields = {
 };
 
 const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
+
 export let activeComputed: ReactiveNode | null = null;
+// @__INLINE___
 export const getActiveComputed = () => activeComputed;
 // @__INLINE___
 export const setActiveComputed = (c: ReactiveNode | null) =>
   void (activeComputed = c);
+
 export let trackingVersion = 0;
 // @__INLINE___
 export const setTrackingVersion = (v: number) => void (trackingVersion = v);
+
 export let propagationDepth = 0;
 // @__INLINE___
 export const getPropagationDepth = () => propagationDepth;
 // @__INLINE___
 export const setPropagationDepth = (v: number) => void (propagationDepth = v);
+
 export let dispatchEffectInvalidated = undefined as OnEffectInvalidatedHook;
+
 export let trackReadFallback: TrackReadFallback =
   reuseIncomingEdgeFromSuffixOrCreate;
+
 export let dispatchReactiveSettled: OnReactiveSettledHook =
   undefined as OnReactiveSettledHook;
+
 let onEffectInvalidatedHook = undefined as OnEffectInvalidatedHook;
+
 let onReactiveSettledHook = undefined as OnReactiveSettledHook;
 export let defaultContext!: ExecutionContext;
 

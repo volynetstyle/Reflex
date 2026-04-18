@@ -25,7 +25,7 @@ describe("Reactive system - factory helpers", () => {
     expect(scanNode.state).toBe(PRODUCER_INITIAL_STATE);
   });
 
-  it("creates computed nodes with uninitialized payload", () => {
+  it("creates computed nodes with uninitialized and undefined payload", () => {
     const compute = () => 42;
     const node = createComputedNode(compute);
 

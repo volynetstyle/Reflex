@@ -1,4 +1,3 @@
-import { recordDebugEvent } from "../../debug.runtime";
 import type { ReactiveNode } from "../shape";
 import {
   ReactiveNodeState,
@@ -13,6 +12,7 @@ import {
   setTrackingVersion,
   trackingVersion,
 } from "../context";
+import { recordDebugEvent } from "../../debug/debug.impl";
 
 function prepareNodeExecution(node: ReactiveNode): ReactiveNode | null {
   const nextVersion = (trackingVersion + 1) >>> 0;

@@ -108,22 +108,14 @@ export function readProducer<T>(node: ReactiveNode<T>): T {
  *
  * This separation prevents false recomputes: a node marked Invalid due to
  * transitive invalidation is verified before re-executing user code.
- *
  * @template T - The type of value stored in the node
- *
  * @param {ReactiveNode<T>} node - The consumer node to stabilize
- * @param {ExecutionContext} context - Execution context
- *
  * @returns {T} The up-to-date payload value
- *
  * @throws {Error} If a cycle is detected (node is already Computing)
- *
- * @example
- * const signal = createProducer(1)
+ * @example const signal = createProducer(1)
  * const doubled = createConsumer(() => readProducer(signal) * 2)
  *
  * const value = stabilizeConsumer(doubled)  // Ensures value is current
- *
  * @invariant Returns node.payload after ensuring it reflects upstream state
  * @invariant Node.state & DIRTY_STATE === 0 after return
  * @invariant If value changed, nodes with fanout are notified via propagateOnce
@@ -216,42 +208,35 @@ export function readConsumerEager<T>(node: ReactiveNode<T>): T {
 
 /**
  * Read the value of a consumer (computed) node.
- *
+ * 
  * A consumer is a pure derived computation that caches its result and re-executes
  * when dependencies change. This function:
- *
+ * 
  * 1. Synchronizes the node to reflect all upstream changes (eager or lazy)
  * 2. Returns the current payload value
  * 3. If lazy mode (default), registers this read as a dependency of the active
  *    consumer (if any). This allows the calling code to be notified if this
  *    computed node's value changes.
- *
+ * 
  * Two modes are available:
  * - **Lazy** (default): Stabilization happens in the current context, preserving
  *   dependency tracking. Use when the computed value is a real dependency.
  * - **Eager**: Stabilization happens without the final dependency registration.
  *   Use for probing the value without creating a dependency edge.
- *
  * @template T - The type of value stored in the node
- *
  * @param {ReactiveNode<T>} node - The consumer node to read from
  * @param {ConsumerReadMode} mode - How to read the node (lazy or eager)
- * @param {ExecutionContext} context - Execution context (defaults to global context)
- *
  * @returns {T} The current, up-to-date payload value
- *
- * @example
- * const signal = createProducer(1)
- * const doubled = createConsumer(() => readProducer(signal) * 2)
- *
- * // Lazy read: synchronize and register dependency
- * const computed = createConsumer(() => {
- *   return readConsumer(doubled)  // Depends on doubled
- * })
- *
- * // Eager read: synchronize without dependency
- * const debugValue = readConsumer(doubled, ConsumerReadMode.eager)
- *
+ * @example const signal = createProducer(1)
+const doubled = createConsumer(() => readProducer(signal) * 2)
+
+// Lazy read: synchronize and register dependency
+const computed = createConsumer(() => {
+  return readConsumer(doubled)  // Depends on doubled
+})
+
+// Eager read: synchronize without dependency
+const debugValue = readConsumer(doubled, ConsumerReadMode.eager)
  * @invariant Returns node.payload after stabilization
  * @invariant In lazy mode, if called during compute, registers edge to active consumer
  * @invariant In eager mode, no dependency edge is created
@@ -268,41 +253,33 @@ export function readConsumer<T>(
 
 /**
  * Execute a callback function without registering reactive dependencies.
- *
+ * 
  * Temporarily clears the active computation context, allowing reads within
  * the callback to NOT create dependency edges. Useful for:
- *
+ * 
  * - Debugging or logging values without affecting reactivity
  * - Accessing side-effect values that shouldn't trigger re-execution
  * - Breaking dependency chains when you need a one-time read
- *
+ * 
  * The context is always restored after the callback returns, even if an
  * exception is thrown.
- *
  * @template T - The return type of the callback
- *
  * @param {() => T} fn - Function to execute without dependency tracking
- * @param {ExecutionContext} context - Execution context (defaults to global context)
- *
  * @returns {T} The return value of the callback
- *
  * @throws Propagates any exception thrown by the callback
- *
- * @example
- * const signal = createProducer(42)
- *
- * const computed = createConsumer(() => {
- *   const value = readProducer(signal)  // Creates dependency
- *
- *   // Read the value without creating dependency
- *   const debugValue = untracked(() => readProducer(signal))
- *
- *   return value * 2
- * })
- *
- * // If signal changes, computed re-executes (has dependency)
- * // But untracked read inside doesn't affect this
- *
+ * @example const signal = createProducer(42)
+
+const computed = createConsumer(() => {
+  const value = readProducer(signal)  // Creates dependency
+
+  // Read the value without creating dependency
+  const debugValue = untracked(() => readProducer(signal))
+
+  return value * 2
+})
+
+// If signal changes, computed re-executes (has dependency)
+// But untracked read inside doesn't affect this
  * @invariant context.activeComputed is null during fn() execution
  * @invariant context.activeComputed is restored after fn() returns/throws
  * @cost O(1) for context manipulation

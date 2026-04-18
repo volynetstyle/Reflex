@@ -1,16 +1,15 @@
-import { recordDebugEvent } from "../../debug.runtime";
 import { shouldRecomputeDirtyWatcher } from "../walkers/recompute";
 import type { ReactiveNode } from "../shape";
 import {
   clearNodeVisited,
   DIRTY_STATE,
   ReactiveNodeState,
-  UNINITIALIZED,
   clearDirtyState,
   disposeNode,
 } from "../shape";
 import { executeNodeComputation } from "./execute";
 import { defaultContext } from "../context";
+import { recordDebugEvent } from "../../debug/debug.impl";
 
 function recordWatcherSkip(
   node: ReactiveNode,
@@ -81,7 +80,7 @@ export function runWatcher(node: ReactiveNode): void {
   const prevCleanup = getWatcherCleanup(node.payload);
   if (__DEV__) recordWatcherStart(node, prevCleanup !== null);
 
-  node.payload = UNINITIALIZED;
+  node.payload = undefined;
   clearNodeVisited(node);
 
   if (prevCleanup !== null) {
@@ -90,7 +89,7 @@ export function runWatcher(node: ReactiveNode): void {
   }
 
   if ((node.state & ReactiveNodeState.Disposed) !== 0) {
-    if (__DEV__) recordWatcherFinish(node, false, UNINITIALIZED);
+    if (__DEV__) recordWatcherFinish(node, false, undefined);
     return;
   }
 
@@ -115,7 +114,7 @@ export function disposeWatcher(node: ReactiveNode): void {
   const cleanup = getWatcherCleanup(node.payload);
   disposeNode(node);
   if (cleanup !== null) cleanup();
-  node.payload = UNINITIALIZED;
+  node.payload = undefined;
 
   if (__DEV__) {
     recordDebugEvent(defaultContext, "watcher:dispose", {

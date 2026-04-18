@@ -1,12 +1,6 @@
-import {
-  collectDebugNodeRefs,
-  recordDebugEvent,
-} from "../debug.runtime";
+import { recordDebugEvent, collectDebugNodeRefs } from "../debug/debug.impl";
 import { activeComputed, type ExecutionContext } from "./context";
-import {
-  type ReactiveEdge,
-  ReactiveNodeState,
-} from "./shape";
+import { type ReactiveEdge, ReactiveNodeState } from "./shape";
 import type ReactiveNode from "./shape/ReactiveNode";
 
 export function devAssertTrackReadAlive(
