@@ -3,3 +3,4 @@
 
 export * from "./optimistic";
 export * from "./resource";
+export * from "./selector";
