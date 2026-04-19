@@ -1,5 +1,5 @@
 import {
-  getDefaultContext,
+  registerWatcherCleanup,
   readConsumerEager,
   readConsumerLazy,
   readProducer,
@@ -44,7 +44,7 @@ class OptimisticTransition {
   }
 }
 
-interface OptimisticLayer<T> {
+interface OptimisticOverride<T> {
   owner: object;
   value: T;
 }
@@ -74,10 +74,9 @@ function sameValue<T>(prev: T, next: T): boolean {
 }
 
 class OptimisticCore<T> {
-  private readonly context = getDefaultContext();
   private readonly stateNode = createResourceStateNode();
-  private readonly layers: OptimisticLayer<T>[] = [];
   private readonly registeredTransitions = new WeakSet<OptimisticTransition>();
+  private activeOverride: OptimisticOverride<T> | null = null;
 
   private disposed = false;
 
@@ -85,7 +84,7 @@ class OptimisticCore<T> {
     private readonly base: Accessor<T>,
     private readonly equals: (prev: T, next: T) => boolean,
   ) {
-    this.context.registerWatcherCleanup(() => {
+    registerWatcherCleanup(() => {
       this.dispose();
     });
   }
@@ -93,12 +92,12 @@ class OptimisticCore<T> {
   read = (): T => {
     readProducer(this.stateNode);
 
-    const layer = this.peekLayer();
-    return layer ? layer.value : this.base();
+    const override = this.activeOverride;
+    return override ? override.value : this.base();
   };
 
   set = (input: SetInput<T>): T => {
-    const prev = this.peek();
+    const prev = this.peekVisible();
     const next =
       typeof input === "function"
         ? (input as (prev: T) => T)(prev)
@@ -109,26 +108,23 @@ class OptimisticCore<T> {
     }
 
     const owner = activeTransition ?? this.createMicrotaskOwner();
-    const index = this.findLayerIndex(owner);
+    const override = this.activeOverride;
 
-    if (index >= 0) {
-      const layer = this.layers[index]!;
-
-      if (this.equals(layer.value, next)) {
+    if (override?.owner === owner) {
+      if (this.equals(override.value, next)) {
         return next;
       }
 
-      const wasTop = index === this.layers.length - 1;
-      layer.value = next;
+      override.value = next;
 
-      if (wasTop && !this.equals(prev, next)) {
+      if (!this.equals(prev, next)) {
         this.bump();
       }
 
       return next;
     }
 
-    this.layers.push({ owner, value: next });
+    this.activeOverride = { owner, value: next };
 
     if (owner instanceof OptimisticTransition) {
       this.registerTransition(owner);
@@ -141,21 +137,13 @@ class OptimisticCore<T> {
     return next;
   };
 
-  private peek(): T {
-    const layer = this.peekLayer();
-    return layer ? layer.value : untracked(this.base);
+  private peekVisible(): T {
+    const override = this.activeOverride;
+    return override ? override.value : this.peekBase();
   }
 
-  private peekLayer(): OptimisticLayer<T> | undefined {
-    return this.layers[this.layers.length - 1];
-  }
-
-  private findLayerIndex(owner: object): number {
-    for (let i = this.layers.length - 1; i >= 0; --i) {
-      if (this.layers[i]?.owner === owner) return i;
-    }
-
-    return -1;
+  private peekBase(): T {
+    return untracked(this.base);
   }
 
   private createMicrotaskOwner(): object {
@@ -181,13 +169,13 @@ class OptimisticCore<T> {
   private clearOwner(owner: object): void {
     if (this.disposed) return;
 
-    const previous = this.peek();
-    const index = this.findLayerIndex(owner);
-    if (index < 0) return;
+    const override = this.activeOverride;
+    if (!override || override.owner !== owner) return;
 
-    this.layers.splice(index, 1);
+    const previous = override.value;
+    this.activeOverride = null;
 
-    const next = this.peek();
+    const next = this.peekBase();
     if (!this.equals(previous, next)) {
       this.bump();
     }
@@ -197,10 +185,14 @@ class OptimisticCore<T> {
     if (this.disposed) return;
     this.disposed = true;
 
-    if (this.layers.length === 0) return;
+    const override = this.activeOverride;
+    if (!override) return;
 
-    this.layers.length = 0;
-    this.bump();
+    this.activeOverride = null;
+
+    if (!this.equals(override.value, this.peekBase())) {
+      this.bump();
+    }
   }
 
   private bump(): void {
@@ -272,8 +264,8 @@ export function transition<T>(fn: () => T | PromiseLike<T>): T | Promise<T> {
  * Creates an unstable optimistic signal.
  *
  * Plain values use a fixed fallback value. Function overloads derive their
- * fallback from a tracked memo-like computation and temporarily overlay
- * optimistic writes on top.
+ * fallback from a tracked memo-like computation and temporarily apply a single
+ * optimistic override on top.
  *
  * @param valueOrFn - Either a fixed fallback value or a tracked computation
  * that provides the fallback value when no optimistic layer is active.
@@ -338,11 +330,12 @@ export function transition<T>(fn: () => T | PromiseLike<T>): T | Promise<T> {
  * @remarks
  * - Outside `transition(...)`, optimistic writes are scoped to the current
  * microtask.
- * - Inside `transition(...)`, the optimistic layer stays visible until that
+ * - Inside `transition(...)`, the active optimistic override stays visible until that
  * transition settles.
- * - Multiple writes in the same owner update the same optimistic layer.
+ * - Multiple writes in the same owner update the same optimistic override.
+ * - Newer owners take over older optimistic overrides instead of stacking.
  * - Function overloads fall back to the latest computed source value after the
- * optimistic layer clears.
+ * optimistic override clears.
  */
 export function optimistic<T>(
   value: T,

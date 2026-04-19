@@ -237,7 +237,7 @@ class ReflexHarness implements BenchHarness {
     this.scheduler = scheduler;
 
     setDefaultContext(createExecutionContext({
-      onEffectInvalidated: (node) => {
+      onSinkInvalidated: (node) => {
         scheduler.enqueue(node as EffectNode);
       },
       onReactiveSettled: () => {

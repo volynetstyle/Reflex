@@ -2,7 +2,7 @@ import type { ReactiveNode } from "@reflex/runtime";
 import {
   disposeNode,
   disposeWatcher,
-  getDefaultContext,
+  registerWatcherCleanup,
   readProducer,
   runWatcher,
   writeProducer,
@@ -219,7 +219,6 @@ class ResourceRequest<T, E = unknown> implements ResourceHandle<T, E> {
 }
 
 class ResourceCore<T, E = unknown> {
-  readonly context = getDefaultContext();
   readonly stateNode = createResourceStateNode();
 
   status: ResourceStatus = "idle";
@@ -427,7 +426,7 @@ export function resource<S, T, E = unknown>(
 ): ManualResource<T, E> | AsyncResource<T, E> {
   const core = new ResourceCore<T, E>();
 
-  core.context.registerWatcherCleanup(() => {
+  registerWatcherCleanup(() => {
     core.dispose();
   });
 

@@ -47,7 +47,7 @@ import {
  */
 export function computed<T>(fn: () => T): Computed<T> {
   const node = new ReactiveNode<T>(undefined as T, fn, CONSUMER_INITIAL_STATE);
-  return (() => readConsumerLazy(node)) as Computed<T>;
+  return readConsumerLazy.bind(null, node) as Computed<T>;
 }
 
 /**

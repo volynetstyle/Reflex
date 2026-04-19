@@ -14,6 +14,8 @@ Small signal-style reactivity on top of the Reflex runtime.
 
 `@volynets/reflex` is the product-facing API for building reactive state, derived values, effects, and event-driven state without dropping down to the lower-level runtime primitives.
 
+This package is intentionally the facade/scheduler layer. Policy such as `flush()`, `effectStrategy`, `batch()` behavior, and event delivery semantics lives here, not in `@reflex/runtime`.
+
 It gives you:
 
 - a compact signal-style API
@@ -268,7 +270,7 @@ subscribeOnce(labels, (value) => {
 const rt = createRuntime({
   effectStrategy: "flush", // or "sab" / "eager"
   hooks: {
-    onEffectInvalidated(node) {
+    onSinkInvalidated(node) {
       // low-level integration hook
     },
   },
@@ -278,7 +280,7 @@ const rt = createRuntime({
 Options:
 
 - `effectStrategy: "flush" | "sab" | "eager"` controls whether invalidated effects wait for `rt.flush()`, stabilize after `batch()`, or run automatically
-- `hooks.onEffectInvalidated(node)` is a low-level hook for integrations that want to observe effect invalidation
+- `hooks.onSinkInvalidated(node)` is the low-level hook for integrations that want to observe sink invalidation
 
 Returned API:
 

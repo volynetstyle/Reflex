@@ -9,7 +9,7 @@ import {
 
 import { createRuntime, batch, flush, effect, memo, signal } from "../dist/esm";
 
-createRuntime({ effectStrategy: "flush" });
+createRuntime({ effectStrategy: "ranked" });
 
 class ReflexHarness implements BenchHarness {
   readonly metrics = new HarnessMetrics();
