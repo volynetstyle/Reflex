@@ -3,11 +3,12 @@ import type { ReactiveEdge, ReactiveNode } from "./shape";
 import { reuseIncomingEdgeFromSuffixOrCreate } from "./shape/methods/connect";
 
 export interface EngineHooks {
-  onEffectInvalidated?(node: ReactiveNode): void;
+  onSinkInvalidated?(node: ReactiveNode): void;
   onReactiveSettled?(): void;
 }
 
 export type CleanupRegistrar = (cleanup: () => void) => void;
+
 export type TrackReadFallback = (
   source: ReactiveNode,
   consumer: ReactiveNode,
@@ -20,303 +21,224 @@ export interface ExecutionContextOptions {
   trackReadFallback?: TrackReadFallback;
 }
 
-type OnEffectInvalidatedHook = EngineHooks["onEffectInvalidated"];
+type OnSinkInvalidatedHook = EngineHooks["onSinkInvalidated"];
 type OnReactiveSettledHook = EngineHooks["onReactiveSettled"];
-type MutableContextFields = {
+
+export interface ContextSnapshot {
+  activeConsumer: ReactiveNode | null;
+  trackingVersion: number;
+  propagationDepth: number;
   cleanupRegistrar: CleanupRegistrar | null;
   trackReadFallback: TrackReadFallback;
-  runtimeOnEffectInvalidated: OnEffectInvalidatedHook;
+  runtimeOnSinkInvalidated: OnSinkInvalidatedHook;
   runtimeOnReactiveSettled: OnReactiveSettledHook;
-  effectInvalidatedDispatch: OnEffectInvalidatedHook;
-  settledDispatch: OnReactiveSettledHook;
-};
+  globalOnSinkInvalidated: OnSinkInvalidatedHook;
+  globalOnReactiveSettled: OnReactiveSettledHook;
+}
+
+export interface RuntimeDebugContext {
+  readonly scope: "runtime";
+}
 
 const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
-
-export let activeComputed: ReactiveNode | null = null;
-// @__INLINE___
-export const getActiveComputed = () => activeComputed;
-// @__INLINE___
-export const setActiveComputed = (c: ReactiveNode | null) =>
-  void (activeComputed = c);
-
-export let trackingVersion = 0;
-// @__INLINE___
-export const setTrackingVersion = (v: number) => void (trackingVersion = v);
-
-export let propagationDepth = 0;
-// @__INLINE___
-export const getPropagationDepth = () => propagationDepth;
-// @__INLINE___
-export const setPropagationDepth = (v: number) => void (propagationDepth = v);
-
-export let dispatchEffectInvalidated = undefined as OnEffectInvalidatedHook;
-
-export let trackReadFallback: TrackReadFallback =
+const DEFAULT_TRACK_READ_FALLBACK: TrackReadFallback =
   reuseIncomingEdgeFromSuffixOrCreate;
 
-export let dispatchReactiveSettled: OnReactiveSettledHook =
-  undefined as OnReactiveSettledHook;
+export const defaultContext: RuntimeDebugContext = Object.freeze({
+  scope: "runtime",
+});
 
-let onEffectInvalidatedHook = undefined as OnEffectInvalidatedHook;
+export let activeConsumer: ReactiveNode | null = null;
+export let trackingVersion = 0;
+export let propagationDepth = 0;
+export let cleanupRegistrar: CleanupRegistrar | null = null;
+export let trackReadFallback: TrackReadFallback = DEFAULT_TRACK_READ_FALLBACK;
+export let onSinkInvalidated: OnSinkInvalidatedHook = undefined;
+export let onReactiveSettled: OnReactiveSettledHook = undefined;
 
-let onReactiveSettledHook = undefined as OnReactiveSettledHook;
-export let defaultContext!: ExecutionContext;
+let runtimeOnSinkInvalidated: OnSinkInvalidatedHook = undefined;
+let runtimeOnReactiveSettled: OnReactiveSettledHook = undefined;
+let globalOnSinkInvalidated: OnSinkInvalidatedHook = undefined;
+let globalOnReactiveSettled: OnReactiveSettledHook = undefined;
 
-// @__INLINE___
-export function enterPropagation(): void {
-  ++propagationDepth;
-}
-// @__INLINE___
-export function leavePropagation(): void {
-  if (propagationDepth > 0) --propagationDepth;
-  if (
-    propagationDepth === 0 &&
-    activeComputed === null &&
-    dispatchReactiveSettled
-  ) {
-    dispatchReactiveSettled();
-  }
-}
-function composeEffectInvalidated(
-  runtimeHook: OnEffectInvalidatedHook,
-  userHook: OnEffectInvalidatedHook,
-): OnEffectInvalidatedHook {
-  if (runtimeHook === undefined) return userHook;
-  if (userHook === undefined) return runtimeHook;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyFunction<TArgs extends unknown[] = any> =
+  | ((...args: TArgs) => void)
+  | undefined;
 
-  return function dispatch(node: ReactiveNode): void {
-    runtimeHook(node);
-    userHook(node);
+function composeHooks<TArgs extends unknown[]>(
+  a: ((...args: TArgs) => void) | undefined,
+  b: ((...args: TArgs) => void) | undefined,
+): ((...args: TArgs) => void) | undefined {
+  if (a === undefined) return b;
+  if (b === undefined) return a;
+
+  return (...args) => {
+    a(...args);
+    b(...args);
   };
 }
 
-function composeSettled(
-  runtimeHook: OnReactiveSettledHook,
-  userHook: OnReactiveSettledHook,
-): OnReactiveSettledHook {
-  if (runtimeHook === undefined) return userHook;
-  if (userHook === undefined) return runtimeHook;
-
-  return function dispatch(): void {
-    runtimeHook();
-    userHook();
-  };
-}
-
-export interface ExecutionContext extends MutableContextFields {
-  dispatchWatcherEvent(node: ReactiveNode): void;
-  maybeNotifySettled(): void;
-  enterPropagation(): void;
-  leavePropagation(): void;
-  resetState(): void;
-  setOptions(options?: ExecutionContextOptions): void;
-  setHooks(hooks?: EngineHooks): void;
-  setRuntimeHooks(
-    onEffectInvalidated?: OnEffectInvalidatedHook,
-    onReactiveSettled?: OnReactiveSettledHook,
-  ): void;
-  registerWatcherCleanup(cleanup: () => void): void;
-  withCleanupRegistrar<T>(registrar: CleanupRegistrar | null, fn: () => T): T;
-}
-
-function normalizeHook<T extends Function | undefined>(
-  value: unknown,
-): T | undefined {
+function normalizeHook<T extends AnyFunction>(value: unknown): T | undefined {
   return typeof value === "function" ? (value as T) : undefined;
 }
 
-function normalizeOwnHook<
-  TKey extends keyof EngineHooks,
-  TValue extends EngineHooks[TKey],
->(hooks: EngineHooks, key: TKey): TValue | undefined {
-  return Object.hasOwn(hooks, key)
-    ? normalizeHook<TValue>(hooks[key])
-    : undefined;
+function refreshDispatchers(): void {
+  onSinkInvalidated = composeHooks<[ReactiveNode]>(
+    runtimeOnSinkInvalidated,
+    globalOnSinkInvalidated,
+  );
+  onReactiveSettled = composeHooks(
+    runtimeOnReactiveSettled,
+    globalOnReactiveSettled,
+  );
 }
 
-function normalizeTrackReadFallback(
-  options: ExecutionContextOptions,
-): TrackReadFallback {
-  return Object.hasOwn(options, "trackReadFallback")
-    ? (normalizeHook<TrackReadFallback>(options.trackReadFallback) ??
-        reuseIncomingEdgeFromSuffixOrCreate)
-    : reuseIncomingEdgeFromSuffixOrCreate;
+export function getActiveConsumer(): ReactiveNode | null {
+  return activeConsumer;
 }
 
-export function getEffectInvalidatedHook(): OnEffectInvalidatedHook {
-  return onEffectInvalidatedHook;
+export function setActiveConsumer(node: ReactiveNode | null): void {
+  activeConsumer = node;
 }
 
-export function setEffectInvalidatedHook(
-  hook: OnEffectInvalidatedHook,
-): OnEffectInvalidatedHook {
-  onEffectInvalidatedHook = normalizeHook<OnEffectInvalidatedHook>(hook);
-  return onEffectInvalidatedHook;
+export function getPropagationDepth(): number {
+  return propagationDepth;
+}
+
+export function setPropagationDepth(depth: number): void {
+  propagationDepth = depth;
+}
+
+export function setTrackingVersion(version: number): void {
+  trackingVersion = version;
+}
+
+export function getSinkInvalidatedHook(): OnSinkInvalidatedHook {
+  return globalOnSinkInvalidated;
+}
+
+export function setSinkInvalidatedHook(
+  hook: OnSinkInvalidatedHook = undefined,
+): void {
+  globalOnSinkInvalidated = normalizeHook<OnSinkInvalidatedHook>(hook);
+  refreshDispatchers();
 }
 
 export function getReactiveSettledHook(): OnReactiveSettledHook {
-  return onReactiveSettledHook;
+  return globalOnReactiveSettled;
 }
 
 export function setReactiveSettledHook(
-  hook: OnReactiveSettledHook,
-): OnReactiveSettledHook {
-  onReactiveSettledHook = normalizeHook<OnReactiveSettledHook>(hook);
-  return onReactiveSettledHook;
+  hook: OnReactiveSettledHook = undefined,
+): void {
+  globalOnReactiveSettled = normalizeHook<OnReactiveSettledHook>(hook);
+  refreshDispatchers();
 }
 
-function refreshDispatchers(context: ExecutionContext): void {
-  context.effectInvalidatedDispatch = composeEffectInvalidated(
-    context.runtimeOnEffectInvalidated,
-    onEffectInvalidatedHook,
-  );
+export const dispatchSinkInvalidated = notifySinkInvalidated;
 
-  context.settledDispatch = composeSettled(
-    context.runtimeOnReactiveSettled,
-    onReactiveSettledHook,
-  );
+// @__INLINE__
+export function enterPropagation(): void {
+  ++propagationDepth;
+}
 
-  if (defaultContext === context) {
-    dispatchEffectInvalidated = context.effectInvalidatedDispatch;
-    dispatchReactiveSettled = context.settledDispatch;
-  }
-
-  if (IS_DEV) {
-    recordDebugEvent(context, "context:hooks", {
-      detail: {
-        hasOnEffectInvalidated: context.effectInvalidatedDispatch !== undefined,
-        hasOnReactiveSettled: context.settledDispatch !== undefined,
-      },
-    });
+// @__INLINE__
+export function leavePropagation(): void {
+  if (propagationDepth > 0) --propagationDepth;
+  if (propagationDepth === 0 && activeConsumer === null) {
+    onReactiveSettled?.();
   }
 }
 
-function refreshHookRouting(context: ExecutionContext): void {
-  refreshDispatchers(context);
-  if (defaultContext !== context) {
-    refreshDispatchers(defaultContext);
+export function notifySinkInvalidated(node: ReactiveNode): void {
+  if (IS_DEV) recordDebugEvent(defaultContext, "watcher:invalidated", { node });
+  onSinkInvalidated?.(node);
+}
+
+export function notifySettledIfIdle(): void {
+  if (propagationDepth !== 0 || activeConsumer !== null) return;
+  if (IS_DEV) recordDebugEvent(defaultContext, "context:settled");
+  onReactiveSettled?.();
+}
+
+export function registerWatcherCleanup(cleanup: () => void): void {
+  cleanupRegistrar?.(cleanup);
+}
+
+export function withCleanupRegistrar<T>(
+  registrar: CleanupRegistrar | null,
+  fn: () => T,
+): T {
+  if (cleanupRegistrar === registrar) return fn();
+  const prev = cleanupRegistrar;
+  cleanupRegistrar = registrar;
+
+  try {
+    return fn();
+  } finally {
+    cleanupRegistrar = prev;
   }
 }
 
-function createExecutionContextShape(): ExecutionContext {
-  const context = {
-    cleanupRegistrar: null,
-    trackReadFallback: reuseIncomingEdgeFromSuffixOrCreate,
-    runtimeOnEffectInvalidated: undefined,
-    runtimeOnReactiveSettled: undefined,
-    effectInvalidatedDispatch: undefined,
-    settledDispatch: undefined,
-
-    dispatchWatcherEvent(node: ReactiveNode): void {
-      if (IS_DEV) recordDebugEvent(context, "watcher:invalidated", { node });
-      composeEffectInvalidated(
-        context.runtimeOnEffectInvalidated,
-        onEffectInvalidatedHook,
-      )?.(node);
-    },
-
-    maybeNotifySettled(): void {
-      if (propagationDepth !== 0 || activeComputed !== null) return;
-      if (IS_DEV) recordDebugEvent(context, "context:settled");
-      composeSettled(
-        context.runtimeOnReactiveSettled,
-        onReactiveSettledHook,
-      )?.();
-    },
-
-    resetState(): void {
-      activeComputed = null;
-      trackingVersion = 0;
-      propagationDepth = 0;
-      context.cleanupRegistrar = null;
-    },
-
-    setOptions(options: ExecutionContextOptions = {}): void {
-      context.trackReadFallback = normalizeTrackReadFallback(options);
-
-      if (defaultContext === context) {
-        trackReadFallback = context.trackReadFallback;
-      }
-    },
-
-    setHooks(hooks: EngineHooks = {}): void {
-      setEffectInvalidatedHook(normalizeOwnHook(hooks, "onEffectInvalidated"));
-      setReactiveSettledHook(normalizeOwnHook(hooks, "onReactiveSettled"));
-      refreshHookRouting(context);
-    },
-
-    setRuntimeHooks(
-      onEffectInvalidated: OnEffectInvalidatedHook = undefined,
-      onReactiveSettled: OnReactiveSettledHook = undefined,
-    ): void {
-      context.runtimeOnEffectInvalidated =
-        normalizeHook<OnEffectInvalidatedHook>(onEffectInvalidated);
-      context.runtimeOnReactiveSettled =
-        normalizeHook<OnReactiveSettledHook>(onReactiveSettled);
-      refreshDispatchers(context);
-    },
-
-    registerWatcherCleanup(cleanup: () => void): void {
-      context.cleanupRegistrar?.(cleanup);
-    },
-
-    withCleanupRegistrar<T>(
-      registrar: CleanupRegistrar | null,
-      fn: () => T,
-    ): T {
-      if (context.cleanupRegistrar === registrar) return fn();
-
-      const prev = context.cleanupRegistrar;
-      context.cleanupRegistrar = registrar;
-      try {
-        return fn();
-      } finally {
-        context.cleanupRegistrar = prev;
-      }
-    },
-  } as ExecutionContext;
-
-  return context;
+export function setHooks(hooks: EngineHooks = {}): void {
+  globalOnSinkInvalidated = Object.hasOwn(hooks, "onSinkInvalidated")
+    ? normalizeHook(hooks.onSinkInvalidated)
+    : undefined;
+  globalOnReactiveSettled = Object.hasOwn(hooks, "onReactiveSettled")
+    ? normalizeHook(hooks.onReactiveSettled)
+    : undefined;
+  refreshDispatchers();
 }
 
-defaultContext = createExecutionContextShape();
-
-function installExecutionContext(context: ExecutionContext): void {
-  trackReadFallback = context.trackReadFallback;
-  dispatchEffectInvalidated = context.effectInvalidatedDispatch;
-  dispatchReactiveSettled = context.settledDispatch;
+export function setRuntimeHooks(
+  onInvalidated: OnSinkInvalidatedHook = undefined,
+  onSettled: OnReactiveSettledHook = undefined,
+): void {
+  runtimeOnSinkInvalidated = normalizeHook<OnSinkInvalidatedHook>(onInvalidated);
+  runtimeOnReactiveSettled = normalizeHook<OnReactiveSettledHook>(onSettled);
+  refreshDispatchers();
 }
 
-installExecutionContext(defaultContext);
-
-export function createExecutionContext(
-  hooks: EngineHooks = {},
-  options: ExecutionContextOptions = {},
-): ExecutionContext {
-  const context = createExecutionContextShape();
-  context.setHooks(hooks);
-  context.setOptions(options);
-  return context;
+export function setOptions(options: ExecutionContextOptions = {}): void {
+  if (!Object.hasOwn(options, "trackReadFallback")) return;
+  trackReadFallback =
+    normalizeHook<TrackReadFallback>(options.trackReadFallback) ??
+    DEFAULT_TRACK_READ_FALLBACK;
 }
 
-export function getDefaultContext(): ExecutionContext {
-  return defaultContext;
+export function saveContext(): ContextSnapshot {
+  return {
+    activeConsumer,
+    trackingVersion,
+    propagationDepth,
+    cleanupRegistrar,
+    trackReadFallback,
+    runtimeOnSinkInvalidated,
+    runtimeOnReactiveSettled,
+    globalOnSinkInvalidated,
+    globalOnReactiveSettled,
+  };
 }
 
-export function setDefaultContext(context: ExecutionContext): ExecutionContext {
-  const previous = defaultContext;
-  defaultContext = context;
-  refreshDispatchers(context);
-  installExecutionContext(context);
-  return previous;
+export function restoreContext(snapshot: ContextSnapshot): void {
+  activeConsumer = snapshot.activeConsumer;
+  trackingVersion = snapshot.trackingVersion;
+  propagationDepth = snapshot.propagationDepth;
+  cleanupRegistrar = snapshot.cleanupRegistrar;
+  trackReadFallback = snapshot.trackReadFallback;
+  runtimeOnSinkInvalidated = snapshot.runtimeOnSinkInvalidated;
+  runtimeOnReactiveSettled = snapshot.runtimeOnReactiveSettled;
+  globalOnSinkInvalidated = snapshot.globalOnSinkInvalidated;
+  globalOnReactiveSettled = snapshot.globalOnReactiveSettled;
+  refreshDispatchers();
 }
 
-export function resetDefaultContext(
-  hooks: EngineHooks = {},
-  options: ExecutionContextOptions = {},
-): ExecutionContext {
-  defaultContext = createExecutionContext(hooks, options);
-  installExecutionContext(defaultContext);
-  return defaultContext;
+export function resetState(): void {
+  activeConsumer = null;
+  trackingVersion = 0;
+  propagationDepth = 0;
+  cleanupRegistrar = null;
 }
+
+refreshDispatchers();

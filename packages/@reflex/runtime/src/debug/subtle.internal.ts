@@ -1,6 +1,5 @@
 import { getCurrentComputedInternal } from "../internal";
-import type { ExecutionContext, ReactiveNode } from "../reactivity";
-import { getDefaultContext } from "../reactivity";
+import type { ReactiveNode } from "../reactivity";
 import {
   snapshotDebugContext,
   labelDebugNode,
@@ -23,19 +22,13 @@ const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
 
 export interface RuntimeSubtle {
   readonly enabled: boolean;
-  clearHistory(context?: ExecutionContext): void;
-  configure(
-    options?: RuntimeDebugOptions,
-    context?: ExecutionContext,
-  ): RuntimeDebugContextSnapshot | undefined;
-  context(context?: ExecutionContext): RuntimeDebugContextSnapshot | undefined;
-  currentComputed(context?: ExecutionContext): ReactiveNode | undefined;
-  history(context?: ExecutionContext): RuntimeDebugEvent[];
+  clearHistory(): void;
+  configure(options?: RuntimeDebugOptions): RuntimeDebugContextSnapshot | undefined;
+  context(): RuntimeDebugContextSnapshot | undefined;
+  currentComputed(): ReactiveNode | undefined;
+  history(): RuntimeDebugEvent[];
   label<T extends ReactiveNode>(node: T, label: string | null | undefined): T;
-  observe(
-    listener: RuntimeDebugListener,
-    context?: ExecutionContext,
-  ): () => void;
+  observe(listener: RuntimeDebugListener): () => void;
   snapshot(node: ReactiveNode): RuntimeDebugNodeSnapshot | undefined;
 }
 
@@ -54,9 +47,9 @@ export const subtle: RuntimeSubtle = {
     return getCurrentComputedInternal();
   },
 
-  context(context = getDefaultContext()) {
+  context() {
     if (!IS_DEV) return undefined;
-    return snapshotDebugContext(context);
+    return snapshotDebugContext();
   },
 
   label(node, label) {
@@ -69,23 +62,23 @@ export const subtle: RuntimeSubtle = {
     return snapshotDebugNode(node);
   },
 
-  history(context = getDefaultContext()) {
+  history() {
     if (!IS_DEV) return [];
-    return readDebugHistory(context);
+    return readDebugHistory();
   },
 
-  clearHistory(context = getDefaultContext()) {
+  clearHistory() {
     if (!IS_DEV) return;
-    clearDebugHistory(context);
+    clearDebugHistory();
   },
 
-  configure(options = {}, context = getDefaultContext()) {
+  configure(options = {}) {
     if (!IS_DEV) return undefined;
-    return configureDebugContext(context, options);
+    return configureDebugContext(undefined, options);
   },
 
-  observe(listener, context = getDefaultContext()) {
+  observe(listener) {
     if (!IS_DEV) return noopUnsubscribe;
-    return observeDebugContext(context, listener);
+    return observeDebugContext(undefined, listener);
   },
 };

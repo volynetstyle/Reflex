@@ -8,19 +8,18 @@ import {
 } from "../reactivity/dev";
 import {
   ReactiveNodeState,
-  trackReadAfterMiss,
-  tryTrackReadFastPath,
   DIRTY_STATE,
   recompute,
   propagateOnce,
   clearDirtyState,
   isDisposedNode,
   shouldRecomputeDirtyConsumer,
+  trackRead,
 } from "../reactivity";
 import {
-  activeComputed,
+  activeConsumer,
   defaultContext,
-  setActiveComputed,
+  setActiveConsumer,
 } from "../reactivity/context";
 
 /**
@@ -82,9 +81,7 @@ export function readProducer<T>(node: ReactiveNode<T>): T {
   }
 
   // Register this read as a dependency if there's an active computation
-  if (activeComputed !== null && !tryTrackReadFastPath(node, activeComputed)) {
-    trackReadAfterMiss(node, activeComputed);
-  }
+  trackRead(node);
 
   if (__DEV__) {
     devRecordReadProducer(node, node.payload, defaultContext);
@@ -125,61 +122,56 @@ function stabilizeConsumer<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
   if ((state & ReactiveNodeState.Disposed) !== 0) {
-    devAssertReadDeadConsumer();
+    if (__DEV__) devAssertReadDeadConsumer();
     return node.payload as T;
   }
 
   if (__DEV__) devAssertConsumerCanStabilize(state);
 
-  if ((state & DIRTY_STATE) === 0) {
+  if ((state & DIRTY_STATE) === 0) return node.payload as T;
+
+  if (!shouldRecomputeDirtyConsumer(node, state)) {
+    clearDirtyState(node);
     return node.payload as T;
   }
 
-  if (
-    shouldRecomputeDirtyConsumer(node, state) &&
-    recompute(node) &&
-    node.firstOut !== null
-  ) {
+  if (recompute(node) && node.firstOut !== null) {
     propagateOnce(node);
-  } else {
-    clearDirtyState(node);
   }
 
   return node.payload as T;
+}
+
+function stabilizeConsumerUntracked<T>(node: ReactiveNode<T>, state: number): T {
+  if ((state & DIRTY_STATE) === 0) return node.payload as T;
+  if (activeConsumer === null) return stabilizeConsumer(node);
+  return untracked(() => stabilizeConsumer(node));
 }
 
 export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
   if ((state & ReactiveNodeState.Disposed) !== 0) {
-    devAssertReadDeadConsumer();
+    if (__DEV__) devAssertReadDeadConsumer();
     return node.payload as T;
   }
 
-  if (__DEV__) {
-    devAssertConsumerCanStabilize(state);
-  }
+  if (__DEV__) devAssertConsumerCanStabilize(state);
 
   const value =
     (state & DIRTY_STATE) !== 0 ? stabilizeConsumer(node) : (node.payload as T);
 
-  if ((state & DIRTY_STATE) !== 0 && isDisposedNode(node)) {
-    return value;
-  }
+  // Skip tracking if the node was disposed during stabilization
+  if (!isDisposedNode(node)) trackRead(node);
 
-  if (activeComputed !== null && !tryTrackReadFastPath(node, activeComputed)) {
-    trackReadAfterMiss(node, activeComputed);
-  }
-
-  if (__DEV__) {
+  if (__DEV__)
     devRecordReadConsumer(
       node,
       "lazy",
       value,
       defaultContext,
-      activeComputed ?? undefined,
+      activeConsumer ?? undefined,
     );
-  }
 
   return value;
 }
@@ -188,20 +180,13 @@ export function readConsumerEager<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
   if ((state & ReactiveNodeState.Disposed) !== 0) {
-    devAssertReadDeadConsumer();
+    if (__DEV__) devAssertReadDeadConsumer();
     return node.payload as T;
   }
 
-  if (__DEV__) {
-    devAssertConsumerCanStabilize(state);
-  }
+  if (__DEV__) devAssertConsumerCanStabilize(state);
 
-  const value =
-    (state & DIRTY_STATE) !== 0 ? stabilizeConsumer(node) : (node.payload as T);
-
-  if (__DEV__) {
-    devRecordReadConsumer(node, "eager", value, defaultContext);
-  }
+  const value = stabilizeConsumerUntracked(node, state);
 
   return value;
 }
@@ -246,9 +231,39 @@ export function readConsumer<T>(
   node: ReactiveNode<T>,
   mode: ConsumerReadMode = ConsumerReadMode.lazy,
 ): T {
-  return mode === ConsumerReadMode.eager
-    ? readConsumerEager(node)
-    : readConsumerLazy(node);
+  const state = node.state;
+
+  if ((state & ReactiveNodeState.Disposed) !== 0) {
+    if (__DEV__) devAssertReadDeadConsumer();
+    return node.payload as T;
+  }
+
+  if (__DEV__) devAssertConsumerCanStabilize(state);
+
+  const value =
+    mode === ConsumerReadMode.lazy
+      ? (state & DIRTY_STATE) !== 0
+        ? stabilizeConsumer(node)
+        : (node.payload as T)
+      : stabilizeConsumerUntracked(node, state);
+
+  if (mode === ConsumerReadMode.lazy) {
+    // Skip tracking if the node was disposed during stabilization
+    if (!isDisposedNode(node)) trackRead(node);
+
+    if (__DEV__)
+      devRecordReadConsumer(
+        node,
+        "lazy",
+        value,
+        defaultContext,
+        activeConsumer ?? undefined,
+      );
+  } else {
+    if (__DEV__) devRecordReadConsumer(node, "eager", value, defaultContext);
+  }
+
+  return value;
 }
 
 /**
@@ -280,21 +295,21 @@ const computed = createConsumer(() => {
 
 // If signal changes, computed re-executes (has dependency)
 // But untracked read inside doesn't affect this
- * @invariant context.activeComputed is null during fn() execution
- * @invariant context.activeComputed is restored after fn() returns/throws
+ * @invariant context.activeConsumer is null during fn() execution
+ * @invariant context.activeConsumer is restored after fn() returns/throws
  * @cost O(1) for context manipulation
  */
 export function untracked<T>(fn: () => T): T {
   // Save the current active computation context
-  const prev = activeComputed;
+  const prev = activeConsumer;
   // Clear the active context so reads don't create dependencies
-  setActiveComputed(null);
+  setActiveConsumer(null);
 
   try {
     // Execute the callback in untracked context
     return fn();
   } finally {
     // Always restore the previous context
-    setActiveComputed(prev);
+    setActiveConsumer(prev);
   }
 }

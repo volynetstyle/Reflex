@@ -67,15 +67,17 @@ export function writeProducer<T>(
     return;
   }
 
+  const prev = node.payload;
+
   // Check if the value actually changed using stable comparison
   // This prevents false invalidation when setting to the same value
-  if (compare(node.payload, value)) {
+  if (compare(prev, value)) {
     if (__DEV__) {
       devRecordWriteProducer(
         node,
         false,
         value,
-        node.payload,
+        prev,
         undefined,
         defaultContext,
       );
@@ -95,7 +97,7 @@ export function writeProducer<T>(
       node,
       true,
       value,
-      node.payload,
+      prev,
       firstSubscriberEdge !== null,
       defaultContext,
     );

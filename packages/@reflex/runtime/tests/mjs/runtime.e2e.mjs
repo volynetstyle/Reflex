@@ -150,7 +150,7 @@ const pending = [];
 let invalidations = 0;
 
 runtime.setHooks({
-  onEffectInvalidated(node) {
+  onSinkInvalidated(node) {
     invalidations += 1;
 
     if (!pending.includes(node)) {

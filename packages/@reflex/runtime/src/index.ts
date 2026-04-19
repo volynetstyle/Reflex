@@ -1,4 +1,4 @@
-import "./dev_flag";
+import "./debug/dev_flag";
 
 export {
   readProducer,
@@ -8,25 +8,31 @@ export {
   readConsumerEager,
   runWatcher,
   disposeWatcher,
-  ProducerComparator,
   ConsumerReadMode,
   untracked,
 } from "./api";
+export type { ProducerComparator } from "./api";
 
 // Execution context management
 export {
-  getActiveComputed,
-  getEffectInvalidatedHook,
+  getActiveConsumer,
+  getSinkInvalidatedHook,
   getPropagationDepth,
   setPropagationDepth,
-  createExecutionContext,
-  getDefaultContext,
-  getReactiveSettledHook,
-  setDefaultContext,
-  setEffectInvalidatedHook,
+  setSinkInvalidatedHook,
   setReactiveSettledHook,
-  resetDefaultContext,
-  type ExecutionContext,
+  getReactiveSettledHook,
+  setHooks,
+  setRuntimeHooks,
+  setOptions,
+  saveContext,
+  restoreContext,
+  resetState,
+  withCleanupRegistrar,
+  registerWatcherCleanup,
+  notifySettledIfIdle,
+  notifySinkInvalidated,
+  dispatchSinkInvalidated,
   type ExecutionContextOptions,
   type EngineHooks,
   type CleanupRegistrar,

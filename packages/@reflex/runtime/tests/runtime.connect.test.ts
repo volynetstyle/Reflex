@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ReactiveNodeState, ReactiveNode, createExecutionContext } from "../src";
+import {
+  ReactiveNodeState,
+  ReactiveNode,
+  restoreContext,
+  saveContext,
+  setOptions,
+} from "../src";
 import {
   linkEdge,
   ReactiveEdge,
@@ -28,7 +34,7 @@ describe("Reactive graph - edge wiring", () => {
     expect(target.lastIn).toBe(edge);
   });
 
-  it("keeps depsTail separate from the physical incoming tail when unlinking", () => {
+  it("keeps lastOutTail separate from the physical incoming tail when unlinking", () => {
     const a = createNode(ReactiveNodeState.Producer);
     const b = createNode(ReactiveNodeState.Producer);
     const c = createNode(ReactiveNodeState.Producer);
@@ -38,10 +44,10 @@ describe("Reactive graph - edge wiring", () => {
     const bb = linkEdge(b, target);
     const cb = linkEdge(c, target);
 
-    target.depsTail = bb;
+    target.lastOutTail = bb;
     unlinkEdge(cb);
 
-    expect(target.depsTail).toBe(bb);
+    expect(target.lastOutTail).toBe(bb);
     expect(target.lastIn).toBe(bb);
     expect(target.firstIn).toBe(ab);
     expect(ab.nextIn).toBe(bb);
@@ -85,23 +91,21 @@ describe("Reactive graph - edge wiring", () => {
     const ab = linkEdge(a, target);
     const bb = linkEdge(b, target);
     const cb = linkEdge(c, target);
-    const context = createExecutionContext(
-      {},
-      {
-        trackReadFallback(source, consumer, prev, nextExpected) {
-          calls.push({ source, consumer, prev, nextExpected });
-          return reuseIncomingEdgeFromSuffixOrCreate(
-            source,
-            consumer,
-            prev,
-            nextExpected,
-          );
-        },
+    const snapshot = saveContext();
+    setOptions({
+      trackReadFallback(source, consumer, prev, nextExpected) {
+        calls.push({ source, consumer, prev, nextExpected });
+        return reuseIncomingEdgeFromSuffixOrCreate(
+          source,
+          consumer,
+          prev,
+          nextExpected,
+        );
       },
-    );
+    });
 
-    target.depsTail = ab;
-    trackReadActive(c, target, context);
+    target.lastOutTail = ab;
+    trackReadActive(c, target);
 
     expect(calls).toHaveLength(1);
     expect(calls[0]).toEqual({
@@ -110,8 +114,9 @@ describe("Reactive graph - edge wiring", () => {
       prev: ab,
       nextExpected: bb,
     });
-    expect(target.depsTail).toBe(cb);
+    expect(target.lastOutTail).toBe(cb);
     expect(ab.nextIn).toBe(cb);
     expect(cb.prevIn).toBe(ab);
+    restoreContext(snapshot);
   });
 });

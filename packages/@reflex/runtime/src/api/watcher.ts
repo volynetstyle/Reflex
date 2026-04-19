@@ -1,1 +1,4 @@
-export { disposeWatcher, runWatcher } from "../reactivity/engine/watcher";
+export {
+  disposeWatcher,
+  runWatcher,
+} from "../reactivity/engine/watcher";

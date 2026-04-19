@@ -23,7 +23,7 @@ export function unlinkAllSources(node: ReactiveNode): void {
 
   node.firstIn = null;
   node.lastIn = null;
-  node.depsTail = null;
+  node.lastOutTail = null;
 
   while (edge) {
     const next = edge.nextIn;
@@ -46,7 +46,7 @@ export function unlinkAllSubscribers(node: ReactiveNode): void {
   while (edge) {
     const next = edge.nextOut;
 
-    if (edge.to.depsTail === edge) edge.to.depsTail = edge.prevIn;
+    if (edge.to.lastOutTail === edge) edge.to.lastOutTail = edge.prevIn;
     detachIncomingEdge(edge.to, edge);
     clearReactiveEdgeLinks(edge);
     edge = next;

@@ -6,7 +6,7 @@ export function disposeNode(node: ReactiveNode): void {
   if (isDisposedNode(node)) return;
 
   markDisposedNode(node);
-  node.depsTail = null;
+  node.lastOutTail = null;
   unlinkAllSources(node);
   unlinkAllSubscribers(node);
   node.compute = null;

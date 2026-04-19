@@ -6,9 +6,9 @@ import {
 } from "../shape";
 import { cleanupStaleSources } from "./tracking";
 import {
-  activeComputed,
+  activeConsumer,
   defaultContext,
-  setActiveComputed,
+  setActiveConsumer,
   setTrackingVersion,
   trackingVersion,
 } from "../context";
@@ -17,14 +17,14 @@ import { recordDebugEvent } from "../../debug/debug.impl";
 function prepareNodeExecution(node: ReactiveNode): ReactiveNode | null {
   const nextVersion = (trackingVersion + 1) >>> 0;
 
-  node.depsTail = null;
+  node.lastOutTail = null;
   node.state =
     (node.state & ~ReactiveNodeState.Visited) | ReactiveNodeState.Tracking;
   markNodeComputing(node);
   setTrackingVersion(nextVersion === 0 ? 1 : nextVersion);
 
-  const prevActive = activeComputed;
-  setActiveComputed(node);
+  const prevActive = activeConsumer;
+  setActiveConsumer(node);
 
   if (__DEV__) {
     recordDebugEvent(defaultContext, "compute:start", {
@@ -39,7 +39,7 @@ function restoreNodeExecution(
   node: ReactiveNode,
   prevActive: ReactiveNode | null,
 ): void {
-  setActiveComputed(prevActive);
+  setActiveConsumer(prevActive);
   node.state &= ~ReactiveNodeState.Tracking;
   clearNodeComputing(node);
 }
@@ -64,7 +64,7 @@ export function executeNodeComputation(node: ReactiveNode): unknown {
     result = compute();
     restoreNodeExecution(node, prevActive);
 
-    if (node.depsTail !== node.lastIn) {
+    if (node.lastOutTail !== node.lastIn) {
       cleanupStaleSources(node);
     }
 

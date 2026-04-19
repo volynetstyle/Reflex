@@ -1,18 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  readConsumer,
-  readProducer,
-  runWatcher,
-  subtle,
-  type RuntimeDebugEvent,
-  writeProducer,
-} from "../src/debug";
+import { RuntimeDebugEvent, subtle } from "../src/debug";
 import {
   createConsumer,
   createProducer,
   createWatcher,
   resetRuntime,
 } from "./runtime.test_utils";
+import { readProducer, readConsumer, writeProducer, runWatcher } from "../src";
 
 type EventSummary = {
   byType: Record<string, number>;

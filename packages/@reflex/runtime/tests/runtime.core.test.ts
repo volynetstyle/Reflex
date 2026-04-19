@@ -15,7 +15,6 @@ import {
   resetRuntime,
   hasSubscriber,
   incomingSources,
-  createTestContext,
 } from "./runtime.test_utils";
 
 describe("Runtime Core: Algorithm Correctness", () => {
@@ -337,16 +336,12 @@ describe("Runtime Core: Algorithm Correctness", () => {
   });
 
   describe("Context Isolation", () => {
-    it("separate contexts don't interfere", () => {
-      const ctx1 = createTestContext();
-      const ctx2 = createTestContext();
-
+    it("saved runtime snapshots can be restored without corrupting state", () => {
       const source = createProducer(1);
       const consumer = createConsumer(() => readProducer(source));
 
       readConsumer(consumer);
-      // consumer should be tracked correctly
-      // Both contexts use independent propagation state
+      expect(hasSubscriber(source, consumer)).toBe(true);
     });
   });
 

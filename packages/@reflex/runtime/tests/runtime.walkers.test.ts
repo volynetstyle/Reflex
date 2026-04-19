@@ -5,12 +5,13 @@ import {
   ReactiveNodeState,
   readConsumer,
   readProducer,
+  restoreContext,
   runWatcher,
-  setDefaultContext,
+  saveContext,
+  setHooks,
   writeProducer,
 } from "../src";
 import {
-  getDefaultContext,
   PROMOTE_CHANGED,
   propagate,
   propagateOnce,
@@ -20,7 +21,6 @@ import { linkEdge } from "../src/reactivity/shape/methods/connect";
 import {
   createConsumer,
   createProducer,
-  createTestContext,
   createWatcher,
   hasSubscriber,
   resetRuntime,
@@ -47,7 +47,7 @@ describe("Reactive runtime - walker invariants", () => {
     linkEdge(left, leftLeaf);
     linkEdge(right, rightLeaf);
 
-    setDefaultContext(createTestContext());
+    resetRuntime();
 
     propagate(source.firstOut!, PROMOTE_CHANGED);
 
@@ -75,7 +75,7 @@ describe("Reactive runtime - walker invariants", () => {
     linkEdge(source, right);
     linkEdge(left, leftLeaf);
 
-    setDefaultContext(createTestContext());
+    resetRuntime();
 
     propagate(source.firstOut!, PROMOTE_CHANGED);
 
@@ -96,13 +96,11 @@ describe("Reactive runtime - walker invariants", () => {
     const right = createNode(ReactiveNodeState.Consumer);
     const watcher = createNode(ReactiveNodeState.Watcher);
     const invalidated: ReactiveNode[] = [];
-    const context = createTestContext({
-      onEffectInvalidated(node) {
+    resetRuntime({
+      onSinkInvalidated(node) {
         invalidated.push(node);
       },
     });
-
-    setDefaultContext(context);
 
     linkEdge(source, left);
     linkEdge(source, right);
@@ -129,7 +127,7 @@ describe("Reactive runtime - walker invariants", () => {
     );
     const disposedLeaf = createNode(ReactiveNodeState.Consumer);
     const sibling = createNode(ReactiveNodeState.Consumer);
-    setDefaultContext(createTestContext());
+    resetRuntime();
 
     linkEdge(source, disposed);
     linkEdge(source, sibling);
@@ -153,13 +151,11 @@ describe("Reactive runtime - walker invariants", () => {
     const invalidated: ReactiveNode[] = [];
     let parent = source;
 
-    setDefaultContext(
-      createTestContext({
-        onEffectInvalidated(node) {
-          invalidated.push(node);
-        },
-      }),
-    );
+    resetRuntime({
+      onSinkInvalidated(node) {
+        invalidated.push(node);
+      },
+    });
 
     for (let i = 0; i < 80; i += 1) {
       const next = createNode(ReactiveNodeState.Consumer);
@@ -197,12 +193,12 @@ describe("Reactive runtime - walker invariants", () => {
       ReactiveNodeState.Consumer | ReactiveNodeState.Tracking,
     );
     const sibling = createNode(ReactiveNodeState.Consumer);
-    setDefaultContext(createTestContext());
+    resetRuntime();
 
     const prefixEdge = linkEdge(prefix, tracked, null);
     linkEdge(source, tracked);
     linkEdge(source, sibling);
-    tracked.depsTail = prefixEdge;
+    tracked.lastOutTail = prefixEdge;
 
     propagate(source.firstOut!, PROMOTE_CHANGED);
 
@@ -214,24 +210,24 @@ describe("Reactive runtime - walker invariants", () => {
     );
   });
 
-  it("propagate branching accepts depsTail edge without traversing prevIn", () => {
+  it("propagate branching accepts lastOutTail edge without traversing prevIn", () => {
     const source = createNode(ReactiveNodeState.Producer);
     const branch = createNode(ReactiveNodeState.Consumer);
     const sibling = createNode(ReactiveNodeState.Consumer);
     const tracked = createNode(
       ReactiveNodeState.Consumer | ReactiveNodeState.Tracking,
     );
-    setDefaultContext(createTestContext());
+    resetRuntime();
 
     linkEdge(source, branch);
     linkEdge(source, sibling);
     const trackedEdge = linkEdge(branch, tracked);
-    tracked.depsTail = trackedEdge;
+    tracked.lastOutTail = trackedEdge;
 
     Object.defineProperty(trackedEdge, "prevIn", {
       configurable: true,
       get() {
-        throw new Error("branching helper should short-circuit on depsTail");
+        throw new Error("branching helper should short-circuit on lastOutTail");
       },
     });
 
@@ -253,7 +249,7 @@ describe("Reactive runtime - walker invariants", () => {
     const leaf = createNode(
       ReactiveNodeState.Consumer | ReactiveNodeState.Visited,
     );
-    setDefaultContext(createTestContext());
+    resetRuntime();
 
     linkEdge(source, middle);
     linkEdge(middle, leaf);
@@ -276,7 +272,7 @@ describe("Reactive runtime - walker invariants", () => {
     const leaf = createNode(
       ReactiveNodeState.Consumer | ReactiveNodeState.Visited,
     );
-    setDefaultContext(createTestContext());
+    resetRuntime();
 
     linkEdge(source, middle);
     linkEdge(middle, leaf);
@@ -303,13 +299,12 @@ describe("Reactive runtime - walker invariants", () => {
       ReactiveNodeState.Watcher | ReactiveNodeState.Changed,
     );
     const invalidated: string[] = [];
-    const context = createTestContext({
-      onEffectInvalidated(node) {
+    resetRuntime({
+      onSinkInvalidated(node) {
         if (node === watcher) invalidated.push("watcher");
         if (node === alreadyChangedWatcher) invalidated.push("already-changed");
       },
     });
-    setDefaultContext(context);
 
     linkEdge(source, consumer);
     linkEdge(source, watcher);
@@ -337,12 +332,11 @@ describe("Reactive runtime - walker invariants", () => {
         ReactiveNodeState.Visited,
     );
     const invalidated: ReactiveNode[] = [];
-    const context = createTestContext({
-      onEffectInvalidated(node) {
+    resetRuntime({
+      onSinkInvalidated(node) {
         invalidated.push(node);
       },
     });
-    setDefaultContext(context);
 
     linkEdge(source, watcher);
 
@@ -360,7 +354,7 @@ describe("Reactive runtime - walker invariants", () => {
     const invalidated: ReactiveNode[] = [];
 
     resetRuntime({
-      onEffectInvalidated(node) {
+      onSinkInvalidated(node) {
         invalidated.push(node);
       },
     });
@@ -396,7 +390,7 @@ describe("Reactive runtime - walker invariants", () => {
     const invalidated: ReactiveNode[] = [];
 
     resetRuntime({
-      onEffectInvalidated(node) {
+      onSinkInvalidated(node) {
         invalidated.push(node);
       },
     });
@@ -558,14 +552,12 @@ describe("Reactive runtime - walker invariants", () => {
   it("shouldRecompute routes pull-phase invalidations through the caller context and back to default", () => {
     const invalidatedA: ReactiveNode[] = [];
     const invalidatedB: ReactiveNode[] = [];
-    const contextA = createTestContext({
-      onEffectInvalidated(node) {
+    const snapshot = saveContext();
+    setHooks({
+      onSinkInvalidated(node) {
         invalidatedA.push(node);
       },
     });
-
-    const defaults = getDefaultContext();
-    const previous = setDefaultContext(contextA);
 
     try {
       const source = createProducer(1);
@@ -589,8 +581,7 @@ describe("Reactive runtime - walker invariants", () => {
       expect(invalidatedB).toEqual([]);
       expect(invalidatedA).toContain(right);
     } finally {
-      setDefaultContext(previous);
-      expect(getDefaultContext()).toBe(defaults);
+      restoreContext(snapshot);
     }
   });
 });

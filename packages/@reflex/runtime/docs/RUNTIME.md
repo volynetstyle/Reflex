@@ -51,8 +51,8 @@ Instead, it exports:
 readProducer(node, context?)        // Return producer payload, track if reading
 writeProducer(node, value, compare?, context?)  // Write to producer, invalidate subscribers
 readConsumer(node, mode?, context?) // Stabilize consumer, return derived value
-runWatcher(node, context?)          // Execute watcher if dirty
-disposeWatcher(node)                // Dispose watcher and run cleanup
+runWatcher(node)                    // Execute watcher node if dirty
+disposeWatcher(node)                // Dispose watcher node and run cleanup
 untracked(fn, context?)             // Execute function without tracking
 ```
 
@@ -72,20 +72,21 @@ ProducerComparator                  // Type: (prev, next) => boolean
 ConsumerReadMode                    // Enum: { lazy, eager }
 ```
 
-### Execution Context
+### Execution Hooks
 
 ```ts
-createExecutionContext(options)     // Create new context with hooks
-getDefaultContext()                 // Get shared default context
-setDefaultContext(context)          // Replace default context
-resetDefaultContext()               // Restore factory default
+setHooks(hooks)                     // Install host hooks on the active runtime context
+setRuntimeHooks(onInvalidated, onSettled) // Install runtime-owned hooks
+saveContext()                       // Snapshot runtime-global context state
+restoreContext(snapshot)            // Restore a saved runtime-global context state
+resetState()                        // Clear runtime-global tracking state
 ```
 
 ### Types
 
 ```ts
 type ExecutionContext               // Execution environment: owns hooks, propagation state
-type ExecutionContextOptions        // Constructor options: { onEffectInvalidated?, onReactiveSettled? }
+type ExecutionContextOptions        // Runtime options for tracking fallback
 type EngineHooks                    // Hook definitions
 type CleanupRegistrar               // Cleanup function registration interface
 ```
@@ -176,11 +177,11 @@ Semantics:
 - **Effect container:** Executes user code with side effects
 - **Host-scheduled:** Runs only when host calls `runWatcher()`
 - **Cleanup support:** May return a cleanup function
-- **Invalidation signals:** Runtime signals dirty state through `onEffectInvalidated` hook
+- **Invalidation signals:** Runtime signals dirty state through `onSinkInvalidated` hook
 
 Guarantee:
 
-- Runtime invalidates watchers but does not auto-execute them
+- Runtime invalidates watcher nodes but does not auto-execute them
 - Host owns the scheduler: "when does this run?"
 - Cleanup runs before next execution or before disposal
 
@@ -235,34 +236,28 @@ An `ExecutionContext` does **not** own:
 - Dependency edges (stored on nodes)
 - Producer payloads (stored on nodes)
 
-### Context Helpers
+### Hook Integration
 
 ```ts
 // Create a new context with hooks
-const ctx = createExecutionContext({
-  onEffectInvalidated(node) {
+setHooks({
+  onSinkInvalidated(node) {
     pendingWatchers.push(node);
   },
   onReactiveSettled() {
-    // Fired when: propagationDepth === 0 && activeComputed === null
     console.log("Graph is idle");
   },
 });
-
-// Global default context management
-setDefaultContext(ctx);
-const sameCtx = getDefaultContext();
-resetDefaultContext();  // Restore factory default
 ```
 
 ### Hook Semantics
 
-**`onEffectInvalidated(node)`**
+**`onSinkInvalidated(node)`**
 
-- **When:** Fires synchronously during propagation when a watcher becomes dirty
-- **What:** Signals that watcher node needs execution
-- **Does not:** Run the watcher for you
-- **Typical use:** Queue the watcher for later execution by host scheduler
+- **When:** Fires synchronously during propagation when a sink node becomes dirty
+- **What:** Signals that the sink node needs execution
+- **Does not:** Run the node for you
+- **Typical use:** Queue the node for later execution by host scheduler
 
 **`onReactiveSettled()`**
 
@@ -282,11 +277,11 @@ readProducer(a);           // Uses default context
 readConsumer(b);           // Uses default context
 
 // Option B: Explicit context (isolation, custom hooks)
-const isolated = createExecutionContext({
-  onEffectInvalidated(node) { /* custom logic */ },
+setHooks({
+  onSinkInvalidated(node) { /* custom logic */ },
 });
-readProducer(a, isolated);
-readConsumer(b, isolated);
+readProducer(a);
+readConsumer(b);
 ```
 
 Contexts isolate scheduling hooks and propagation state, not graph ownership.
@@ -328,15 +323,15 @@ Multiple contexts can reference the same nodes.
 - Producer writes are **immediate**
 - Propagation is **synchronous**
 - No consumer compute runs during this call
-- No watcher compute runs during this call
-- Watcher hooks **may** run during propagation (queueing for execution)
+- No sink compute runs during this call
+- Sink invalidation hooks **may** run during propagation (queueing for execution)
 
 **Typical flow:**
 
 ```ts
 writeProducer(count, 5, Object.is, ctx);  // Invalidates subscribers
 // At this point, derived consumers are marked dirty but not recomputed
-// Watchers are queued via onEffectInvalidated hook
+// Sink nodes are queued via onSinkInvalidated hook
 
 readConsumer(derived, ctx);               // Now the consumer recomputes
 ```
@@ -371,7 +366,7 @@ enum ConsumerReadMode {
 
 **Guarantee:** Returns the latest stable value after stabilization completes.
 
-### `runWatcher(node, context?): void`
+### `runWatcher(node): void`
 
 **Executes** the watcher node if dirty.
 
@@ -388,7 +383,7 @@ enum ConsumerReadMode {
 
 **Returns:** `void` (intentionally).
 
-The absence of a return value is deliberate: watcher scheduling is a **host responsibility**. The runtime only signals "this watcher is dirty" via `onEffectInvalidated`.
+The absence of a return value is deliberate: watcher scheduling is a **host responsibility**. The runtime only signals "this node is dirty" via `onSinkInvalidated`.
 
 **Example:**
 
@@ -396,21 +391,21 @@ The absence of a return value is deliberate: watcher scheduling is a **host resp
 // Host controls when to run queued watchers
 const pending: ReactiveNode[] = [];
 
-const ctx = createExecutionContext({
-  onEffectInvalidated(node) {
+setHooks({
+  onSinkInvalidated(node) {
     pending.push(node);
   },
 });
 
 // Later, in host's event loop:
 while (pending.length > 0) {
-  runWatcher(pending.shift()!, ctx);
+  runWatcher(pending.shift()!);
 }
 ```
 
 ### `disposeWatcher(node): void`
 
-**Disposes** the watcher and runs its last cleanup.
+**Disposes** the watcher node and runs its last cleanup.
 
 **Steps:**
 1. Check if already disposed (idempotent)
@@ -572,9 +567,8 @@ These invariants define the semantic contract:
 5. **Disposed nodes are terminal.**
    Once disposed, a node never participates in graph operations.
 
-6. **Default context remains stable across calls.**
-   Unless explicitly changed via `setDefaultContext()`, the default context does
-   not change during operation.
+6. **Hook wiring remains stable across calls unless explicitly replaced.**
+   Host hooks change only through `setHooks()` / `setRuntimeHooks()`.
 
 ---
 
@@ -587,7 +581,7 @@ import {
   PRODUCER_INITIAL_STATE,
   ReactiveNode,
   WATCHER_INITIAL_STATE,
-  createExecutionContext,
+  setHooks,
   readConsumer,
   readProducer,
   runWatcher,
@@ -597,8 +591,8 @@ import {
 // Host scheduler queue
 const pending: ReactiveNode[] = [];
 
-const ctx = createExecutionContext({
-  onEffectInvalidated(node) {
+setHooks({
+  onSinkInvalidated(node) {
     if (!pending.includes(node)) {
       pending.push(node);
     }
@@ -618,16 +612,16 @@ const effect = new ReactiveNode(null, () => {
 }, WATCHER_INITIAL_STATE);
 
 // Step 1: First effect execution (establishes tracking)
-runWatcher(effect, ctx);
+runWatcher(effect);
 // Output: "Sum: 3"
 
 // Step 2: Mutation
 writeProducer(left, 10, Object.is, ctx);
-// At this point: effect is queued via onEffectInvalidated
+// At this point: effect is queued via onSinkInvalidated
 
 // Step 3: Host drains pending effects
 while (pending.length > 0) {
-  runWatcher(pending.shift()!, ctx);
+  runWatcher(pending.shift()!);
 }
 // Output: "Sum: 12"
 ```
@@ -663,13 +657,15 @@ Useful for introspection:
 
 The runtime provides:
 
-- **Explicit node kinds:** Producer (source), Consumer (derived), Watcher (effect)
+- **Explicit node kinds:** Producer (source), Consumer (derived), Watcher (sink)
 - **Lazy evaluation:** Consumers recompute on demand, not automatically
-- **Host-controlled scheduling:** Watchers are invalidated but not auto-executed
+- **Host-controlled scheduling:** Watcher nodes are invalidated but not auto-executed
 - **Observable dirty states:** Changed vs. Invalid; Disposed is terminal
 - **Dynamic dependencies:** Tracked per-compute, pruned afterward
 - **Deterministic propagation:** Push invalidation, pull stabilization
 - **Composable hooks:** Host integrates custom execution policies via contexts
+
+Use `onSinkInvalidated` as the invalidation hook name.
 
 For deeper algorithm details, see:
 

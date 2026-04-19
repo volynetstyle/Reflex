@@ -5,7 +5,7 @@
 // duplicate branch-heavy logic inline.
 
 import { recordDebugEvent } from "../../debug/debug.impl";
-import { dispatchEffectInvalidated } from "../context";
+import { dispatchSinkInvalidated } from "../context";
 import { defaultContext } from "../context";
 import {
   DIRTY_STATE,
@@ -25,16 +25,22 @@ export function dispatchInvalidatedWatcher(
   sub: ReactiveNode,
   thrown: unknown,
 ): unknown {
-  if (dispatchEffectInvalidated !== undefined) {
-    try {
-      dispatchEffectInvalidated(sub);
-    } catch (error) {
-      if (thrown === null) {
-        return error;
-      }
+  const dispatch = dispatchSinkInvalidated;
+
+  if (dispatch === undefined) {
+    if (__DEV__) {
+      recordDebugEvent(defaultContext, "watcher:invalidated", { node: sub });
     }
-  } else if (__DEV__) {
-    recordDebugEvent(defaultContext, "watcher:invalidated", { node: sub });
+
+    return thrown;
+  }
+
+  try {
+    dispatch(sub);
+  } catch (error) {
+    if (thrown === null) {
+      return error;
+    }
   }
 
   return thrown;
@@ -45,22 +51,22 @@ function getTrackingInvalidatedSubscriberState(
   sub: ReactiveNode,
   subState: number,
 ): number {
-  const depsTail = sub.depsTail;
-  if (depsTail === null) return 0;
+  const lastOutTail = sub.lastOutTail;
+  if (lastOutTail === null) return 0;
 
   const invalidatedState = subState | VISITED_MASK | ReactiveNodeState.Invalid;
-  if (edge === depsTail) return invalidatedState;
+  if (edge === lastOutTail) return invalidatedState;
 
   const prevIn = edge.prevIn;
   if (prevIn === null) return invalidatedState;
-  if (prevIn === depsTail) return 0;
+  if (prevIn === lastOutTail) return 0;
 
   let cursor = prevIn.prevIn;
-  while (cursor !== null && cursor !== depsTail) {
+  while (cursor !== null && cursor !== lastOutTail) {
     cursor = cursor.prevIn;
   }
 
-  return cursor === depsTail ? 0 : invalidatedState;
+  return cursor === lastOutTail ? 0 : invalidatedState;
 }
 
 export function invalidateSubscriber(
@@ -70,17 +76,16 @@ export function invalidateSubscriber(
   promoteBit: number,
 ): number {
   const promotedState = (subState & ~VISITED_MASK) | promoteBit;
-
   let nextState = promotedState;
 
   if ((subState & SLOW_INVALIDATION_MASK) !== 0) {
     if ((subState & DISPOSED_MASK) !== 0) return 0;
 
-    if ((subState & TRACKING_MASK) === 0) {
-      if ((subState & DIRTY_STATE) !== 0) return 0;
-    } else {
+    if ((subState & TRACKING_MASK) !== 0) {
       nextState = getTrackingInvalidatedSubscriberState(edge, sub, subState);
       if (nextState === 0) return 0;
+    } else {
+      if ((subState & DIRTY_STATE) !== 0) return 0;
     }
   }
 

@@ -1,5 +1,5 @@
-import { recordDebugEvent } from "../../debug.runtime";
-import { defaultContext} from "../context";
+import { recordDebugEvent } from "../../debug/debug.runtime";
+import { defaultContext } from "../context";
 import { devAssertPropagateAlive } from "../dev";
 import type { ReactiveNode } from "../shape";
 import { DIRTY_STATE, ReactiveNodeState } from "../shape";
@@ -12,13 +12,14 @@ export function propagateOnce(node: ReactiveNode): void {
     return;
   }
 
+  const invalidState = ReactiveNodeState.Invalid;
   let thrown: unknown = null;
 
   for (let edge = node.firstOut; edge !== null; edge = edge.nextOut) {
     const sub = edge.to;
     const state = sub.state;
 
-    if ((state & DIRTY_STATE) !== ReactiveNodeState.Invalid) continue;
+    if ((state & DIRTY_STATE) !== invalidState) continue;
 
     const nextState = state ^ DIRTY_STATE;
     sub.state = nextState;
@@ -33,11 +34,7 @@ export function propagateOnce(node: ReactiveNode): void {
 
     if ((nextState & WATCHER_MASK) === 0) continue;
 
-    if (__DEV__) {
-      recordDebugEvent(defaultContext, "watcher:invalidated", { node: sub });
-    }
-
-    thrown = dispatchInvalidatedWatcher(sub, thrown)
+    thrown = dispatchInvalidatedWatcher(sub, thrown);
   }
 
   if (thrown !== null) throw thrown;

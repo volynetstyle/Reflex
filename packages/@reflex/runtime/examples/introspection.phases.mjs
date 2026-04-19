@@ -14,7 +14,7 @@ import {
 
 const pending = [];
 const context = createExecutionContext({
-  onEffectInvalidated(node) {
+  onSinkInvalidated(node) {
     if (!pending.includes(node)) {
       pending.push(node);
     }

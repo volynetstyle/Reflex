@@ -3,8 +3,8 @@ import {
   DIRTY_STATE,
   ReactiveNodeState,
   disposeWatcher,
-  getActiveComputed,
-  getDefaultContext,
+  getActiveConsumer,
+  notifySettledIfIdle,
   readConsumer,
   readProducer,
   runWatcher,
@@ -17,7 +17,7 @@ import {
   resetRuntime,
 } from "./runtime.test_utils";
 
-describe("ReactivegetDefaultContext() - hooks and resilience", () => {
+describe("Reactive runtime - hooks and resilience", () => {
   beforeEach(() => {
     resetRuntime();
   });
@@ -26,12 +26,12 @@ describe("ReactivegetDefaultContext() - hooks and resilience", () => {
     const settled = vi.fn();
 
     resetRuntime({ onReactiveSettled: settled });
-   getDefaultContext().maybeNotifySettled();
+    notifySettledIfIdle();
 
     expect(settled).toHaveBeenCalledTimes(1);
 
     resetRuntime();
-   getDefaultContext().maybeNotifySettled();
+    notifySettledIfIdle();
 
     expect(settled).toHaveBeenCalledTimes(1);
   });
@@ -68,7 +68,7 @@ describe("ReactivegetDefaultContext() - hooks and resilience", () => {
     let innerWatcher!: ReturnType<typeof createWatcher>;
 
     resetRuntime({
-      onEffectInvalidated(node) {
+      onSinkInvalidated(node) {
         if (node === outerWatcher) {
           writeProducer(innerSource, 2);
         }
@@ -105,7 +105,7 @@ describe("ReactivegetDefaultContext() - hooks and resilience", () => {
     let right!: ReturnType<typeof createWatcher>;
 
     resetRuntime({
-      onEffectInvalidated(node) {
+      onSinkInvalidated(node) {
         if (node === left) {
           invalidated.push("left");
           throw firstError;
@@ -136,7 +136,7 @@ describe("ReactivegetDefaultContext() - hooks and resilience", () => {
     expect(settled).toHaveBeenCalledTimes(1);
   });
 
-  it("restoresgetDefaultContext() bookkeeping when watcher computation throws", () => {
+  it("restores runtime bookkeeping when watcher computation throws", () => {
     const error = new Error("watcher failed");
 
     resetRuntime();
@@ -148,7 +148,7 @@ describe("ReactivegetDefaultContext() - hooks and resilience", () => {
     });
 
     expect(() => runWatcher(watcher)).toThrow(error);
-    expect(getActiveComputed()).toBeNull();
+    expect(getActiveConsumer()).toBeNull();
     expect(watcher.state & ReactiveNodeState.Tracking).toBe(0);
     expect(watcher.state & ReactiveNodeState.Computing).toBe(0);
   });
@@ -201,7 +201,7 @@ describe("ReactivegetDefaultContext() - hooks and resilience", () => {
     let right!: ReturnType<typeof createWatcher>;
 
     resetRuntime({
-      onEffectInvalidated(node) {
+      onSinkInvalidated(node) {
         if (node === left) {
           invalidated.push("left");
           disposeWatcher(right);
