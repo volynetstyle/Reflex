@@ -50,6 +50,7 @@
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "bench": "vitest bench",
+    "bench:projection": "node ./bench/projection-compare.node.mjs",
     "dev": "node ../../node_modules/typescript/bin/tsc -w -p tsconfig.build.json",
     "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
     "typecheck:tests": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.type-tests.json",
