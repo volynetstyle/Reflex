@@ -51,7 +51,7 @@ export interface ScopedRuntime extends Runtime {
   signal<T>(initialValue: T): readonly [Signal<T>, Setter<T>];
   computed<T>(fn: () => T): Computed<T>;
   memo<T>(fn: () => T): Memo<T>;
-  effect(fn: EffectFn): Destructor;
+  effect(fn: EffectFn, options?: EffectOptions): Destructor;
   withCleanupRegistrar<T>(
     registrar: EffectCleanupRegistrar | null,
     fn: () => T,
@@ -143,8 +143,8 @@ function createScopedRuntimeCore({
       );
     },
 
-    effect(fn: EffectFn): Destructor {
-      return withRuntimeBinding(runtime, () => createEffect(fn));
+    effect(fn: EffectFn, options?: EffectOptions): Destructor {
+      return withRuntimeBinding(runtime, () => createEffect(fn, options));
     },
 
     withCleanupRegistrar<T>(

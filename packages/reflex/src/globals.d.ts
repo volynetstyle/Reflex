@@ -15,6 +15,10 @@ type Destructor = () => void;
  */
 type EffectFn = () => void | Destructor;
 
+interface EffectOptions {
+  priority?: number;
+}
+
 type AnyFn = (...args: never[]) => unknown;
 
 /**

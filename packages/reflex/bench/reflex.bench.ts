@@ -7,42 +7,44 @@ import {
   type WriteInput,
 } from "./shared";
 
-import { createRuntime, batch, flush, effect, memo, signal } from "../dist/esm";
-
-createRuntime({ effectStrategy: "ranked" });
+import { createScopedRuntime } from "../dist/esm/index";
 
 class ReflexHarness implements BenchHarness {
   readonly metrics = new HarnessMetrics();
-
-  constructor() {}
+  private readonly runtime = createScopedRuntime({ effectStrategy: "ranked" });
 
   signal(
     initial: number,
     _label?: string,
   ): readonly [() => number, (value: WriteInput) => void] {
-    return signal(initial) as any;
+    return this.runtime.signal(initial) as readonly [
+      () => number,
+      (value: WriteInput) => void,
+    ];
   }
 
   memo(fn: () => number, _label?: string): () => number {
-    return memo(fn);
+    return this.runtime.memo(fn);
   }
 
   effect(
     read: () => number,
     _meta?: { label?: string; priority?: number },
   ): () => void {
-    return effect(read);
+    return this.runtime.effect(() => {
+      blackhole(read());
+    });
   }
 
   batch<T>(fn: () => T): T {
-    return batch(fn);
+    return this.runtime.batch(fn);
   }
 
   // Called explicitly by shared.ts after batch() in runStep — batch already
   // flushes on exit, so this is a no-op most of the time (queue empty).
   // Kept for correctness: non-batched scenarios call flush() directly.
   flush(): void {
-    flush();
+    this.runtime.flush();
   }
 
   resetRunMetrics(): void {
@@ -55,7 +57,9 @@ class ReflexHarness implements BenchHarness {
     return this.metrics.endStep(wallTimeMs);
   }
 
-  dispose(): void {}
+  dispose(): void {
+    this.runtime.dispose();
+  }
 }
 
 const variants: readonly BenchVariant[] = [
