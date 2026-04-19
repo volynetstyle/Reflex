@@ -1,11 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ExecutionContext } from "@reflex/runtime";
 
 const mocks = vi.hoisted(() => ({
   runWatcher: vi.fn(),
-  getDefaultContext: vi.fn(),
   getPropagationDepth: vi.fn(),
+  getActiveConsumer: vi.fn(),
 }));
 
 vi.mock("@reflex/runtime", async () => {
@@ -16,8 +15,8 @@ vi.mock("@reflex/runtime", async () => {
   return {
     ...actual,
     runWatcher: mocks.runWatcher,
-    getDefaultContext: mocks.getDefaultContext,
     getPropagationDepth: mocks.getPropagationDepth,
+    getActiveConsumer: mocks.getActiveConsumer,
   };
 });
 
@@ -27,14 +26,6 @@ import {
   EffectSchedulerMode,
 } from "../src/policy/scheduler";
 
-function createContext(
-  overrides: Partial<ExecutionContext> = {},
-): ExecutionContext {
-  return {
-    ...overrides,
-  } as ExecutionContext;
-}
-
 function createNode(state: number = DIRTY_STATE) {
   return { state } as any;
 }
@@ -43,7 +34,7 @@ describe("createEffectScheduler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getPropagationDepth.mockReturnValue(0);
-    mocks.getDefaultContext.mockReturnValue(createContext());
+    mocks.getActiveConsumer.mockReturnValue(null);
   });
 
   it("enqueue marks node as scheduled in flush mode but does not run it", () => {
@@ -170,9 +161,6 @@ describe("createEffectScheduler", () => {
 
   it("keeps sab effects queued when batch exits during active propagation", () => {
     mocks.getPropagationDepth.mockReturnValue(1);
-    const context = createContext();
-    mocks.getDefaultContext.mockReturnValue(context);
-
     const scheduler = createEffectScheduler(EffectSchedulerMode.SAB);
     const node = createNode();
 
@@ -192,9 +180,6 @@ describe("createEffectScheduler", () => {
 
   it("does not auto-flush while propagation is active", () => {
     mocks.getPropagationDepth.mockReturnValue(1);
-    const context = createContext();
-    mocks.getDefaultContext.mockReturnValue(context);
-
     const scheduler = createEffectScheduler(EffectSchedulerMode.Eager);
     const node = createNode();
 

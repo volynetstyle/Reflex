@@ -1,4 +1,4 @@
-import type { ExecutionContext, ReactiveNode } from "@reflex/runtime";
+import type { ReactiveNode } from "@reflex/runtime";
 import type {
   EffectSchedulerMode,
   SchedulerPhase,
@@ -32,7 +32,6 @@ export interface SchedulerCore {
 export interface EffectScheduler {
   readonly ring: EffectNode[];
   readonly mode: EffectSchedulerMode;
-  readonly context: ExecutionContext;
   readonly runtimeNotifySettled: (() => void) | undefined;
 
   enqueue(node: ReactiveNode): void;

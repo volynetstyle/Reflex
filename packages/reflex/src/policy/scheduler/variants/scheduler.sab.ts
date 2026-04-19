@@ -1,4 +1,4 @@
-import type { ExecutionContext, ReactiveNode } from "@reflex/runtime";
+import type { ReactiveNode } from "@reflex/runtime";
 import { EffectSchedulerMode } from "../scheduler.constants";
 import {
   createSchedulerCore,
@@ -9,7 +9,7 @@ import {
 import type { EffectScheduler } from "../scheduler.types";
 import { noopNotifySettled } from "../scheduler.types";
 
-export function createSabScheduler(context: ExecutionContext): EffectScheduler {
+export function createSabScheduler(): EffectScheduler {
   const core = createSchedulerCore();
   const enqueue = (node: ReactiveNode): void => {
     tryEnqueue(core.queue, node);
@@ -27,7 +27,6 @@ export function createSabScheduler(context: ExecutionContext): EffectScheduler {
 
   return createSchedulerInstance(
     EffectSchedulerMode.SAB,
-    context,
     core,
     enqueue,
     batch,

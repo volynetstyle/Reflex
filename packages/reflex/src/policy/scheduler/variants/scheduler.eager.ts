@@ -1,4 +1,4 @@
-import type { ExecutionContext, ReactiveNode } from "@reflex/runtime";
+import type { ReactiveNode } from "@reflex/runtime";
 import { EffectSchedulerMode } from "../scheduler.constants";
 import {
   createSchedulerCore,
@@ -8,9 +8,7 @@ import {
 } from "../scheduler.core";
 import type { EffectScheduler } from "../scheduler.types";
 
-export function createEagerScheduler(
-  context: ExecutionContext,
-): EffectScheduler {
+export function createEagerScheduler(): EffectScheduler {
   const core = createSchedulerCore();
   const notifySettled = (): void => {
     if (isRuntimeInactive(core) && core.queue.size !== 0) {
@@ -34,7 +32,6 @@ export function createEagerScheduler(
 
   return createSchedulerInstance(
     EffectSchedulerMode.Eager,
-    context,
     core,
     enqueue,
     batch,

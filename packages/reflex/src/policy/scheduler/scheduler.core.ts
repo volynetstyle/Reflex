@@ -1,6 +1,6 @@
-import type { ExecutionContext, ReactiveNode } from "@reflex/runtime";
+import type { ReactiveNode } from "@reflex/runtime";
 import {
-  getActiveComputed,
+  getActiveConsumer,
   getPropagationDepth,
   ReactiveNodeState,
   runWatcher,
@@ -117,7 +117,7 @@ export function effectUnscheduled(node: EffectNode) {
 }
 
 export function isContextSettled(): boolean {
-  return getPropagationDepth() === 0 && getActiveComputed() === null;
+  return getPropagationDepth() === 0 && getActiveConsumer() === null;
 }
 
 export function isRuntimeInactive(core: SchedulerCore): boolean {
@@ -154,7 +154,6 @@ export function tryEnqueue(queue: WatcherQueue, node: ReactiveNode): boolean {
 
 export function createSchedulerInstance(
   mode: EffectSchedulerMode,
-  context: ExecutionContext,
   core: SchedulerCore,
   enqueue: SchedulerEnqueue,
   batch: SchedulerBatch,
@@ -164,7 +163,6 @@ export function createSchedulerInstance(
   const scheduler = core as SchedulerCore & {
     ring: EffectScheduler["ring"];
     mode: EffectScheduler["mode"];
-    context: EffectScheduler["context"];
     runtimeNotifySettled: EffectScheduler["runtimeNotifySettled"];
     enqueue: EffectScheduler["enqueue"];
     batch: EffectScheduler["batch"];
@@ -174,7 +172,6 @@ export function createSchedulerInstance(
 
   scheduler.ring = core.queue.ring;
   scheduler.mode = mode;
-  scheduler.context = context;
   scheduler.runtimeNotifySettled = runtimeNotifySettled;
   scheduler.enqueue = enqueue;
   scheduler.batch = batch;
