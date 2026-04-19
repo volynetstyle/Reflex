@@ -1,11 +1,18 @@
 import {
   disposeWatcher,
-  getDefaultContext,
+  registerWatcherCleanup,
   ReactiveNodeState,
   runWatcher,
   WATCHER_INITIAL_STATE,
+  withCleanupRegistrar,
 } from "@reflex/runtime";
 import { ReactiveNode } from "@reflex/runtime";
+import {
+  bindWatcherToRuntime,
+  getCurrentRuntimeBinding,
+  getDefaultRuntimeBinding,
+  withRuntimeBinding,
+} from "../infra/runtime.binding";
 
 /**
  * Marks an effect watcher node as scheduled.
@@ -62,8 +69,7 @@ export function withEffectCleanupRegistrar<T>(
   registrar: EffectCleanupRegistrar | null,
   fn: () => T,
 ): T {
-  const context = getDefaultContext();
-  return context.withCleanupRegistrar(registrar, fn);
+  return withCleanupRegistrar(registrar, fn);
 }
 
 /**
@@ -111,11 +117,14 @@ export function withEffectCleanupRegistrar<T>(
  * @see memo
  */
 export function effect(fn: EffectFn): Destructor {
-  const context = getDefaultContext();
-  const node = new ReactiveNode(undefined, fn, WATCHER_INITIAL_STATE);
+  const runtime = getCurrentRuntimeBinding() ?? getDefaultRuntimeBinding();
+  const compute =
+    runtime === null ? fn : () => withRuntimeBinding(runtime, fn);
+  const node = new ReactiveNode(undefined, compute, WATCHER_INITIAL_STATE);
+  bindWatcherToRuntime(node, runtime);
   runWatcher(node);
 
   const dispose = disposeWatcher.bind(null, node) as Destructor;
-  context.registerWatcherCleanup(dispose);
+  registerWatcherCleanup(dispose);
   return dispose;
 }

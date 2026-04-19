@@ -29,7 +29,8 @@ describe("Reactive system - factory helpers", () => {
     const compute = () => 42;
     const node = createComputedNode(compute);
 
-    expect(node.compute).toBe(compute);
+    expect(typeof node.compute).toBe("function");
+    expect((node.compute as () => number)()).toBe(42);
     expect(node.state).toBe(CONSUMER_INITIAL_STATE);
     expect(node.payload).toBeUndefined();
   });
@@ -38,7 +39,7 @@ describe("Reactive system - factory helpers", () => {
     const compute = () => {};
     const node = createWatcherNode(compute);
 
-    expect(node.compute).toBe(compute);
+    expect(typeof node.compute).toBe("function");
     expect(node.state).toBe(WATCHER_INITIAL_STATE);
     expect(node.state & ReactiveNodeState.Watcher).toBeTruthy();
     expect(node.payload).toBeUndefined();

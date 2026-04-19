@@ -23,7 +23,7 @@ export {
 /**
  * API
  */
-export { batch, event, flush, createRuntime } from "./infra";
+export { batch, event, flush, createRuntime, createScopedRuntime } from "./infra";
 /**
  * API
  */

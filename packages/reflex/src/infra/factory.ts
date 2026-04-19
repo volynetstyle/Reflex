@@ -6,6 +6,12 @@ import {
 } from "@reflex/runtime";
 import type { ReactiveNode } from "@reflex/runtime";
 import { EventSource as RuntimeEventSource } from "./event";
+import {
+  bindWatcherToRuntime,
+  getCurrentRuntimeBinding,
+  getDefaultRuntimeBinding,
+  withRuntimeBinding,
+} from "./runtime.binding";
 
 export const createSignalNode = <T>(payload: T) => {
   return new RuntimeReactiveNode<T>(
@@ -36,9 +42,27 @@ export const createAccumulator = <T>(payload: T): ReactiveNode<T> => {
 };
 
 export const createComputedNode = <T>(fn: () => T) => {
-  return new RuntimeReactiveNode<T>(undefined as T, fn, CONSUMER_INITIAL_STATE);
+  const runtime = getCurrentRuntimeBinding() ?? getDefaultRuntimeBinding();
+  const compute =
+    runtime === null ? fn : () => withRuntimeBinding(runtime, fn);
+
+  return new RuntimeReactiveNode<T>(
+    undefined as T,
+    compute,
+    CONSUMER_INITIAL_STATE,
+  );
 };
 
 export const createWatcherNode = (compute: EffectFn): ReactiveNode => {
-  return new RuntimeReactiveNode(undefined, compute, WATCHER_INITIAL_STATE);
+  const runtime = getCurrentRuntimeBinding() ?? getDefaultRuntimeBinding();
+  const boundCompute =
+    runtime === null ? compute : () => withRuntimeBinding(runtime, compute);
+  const node = new RuntimeReactiveNode(
+    undefined,
+    boundCompute,
+    WATCHER_INITIAL_STATE,
+  );
+
+  bindWatcherToRuntime(node, runtime);
+  return node;
 };

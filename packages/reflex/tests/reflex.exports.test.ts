@@ -10,6 +10,10 @@ import {
   transition,
 } from "../src/unstable/optimistic";
 import { resource } from "../src/unstable/resource";
+import {
+  createProjection as unstableCreateProjection,
+  createSelector as unstableCreateSelector,
+} from "../src/unstable";
 import { createModel, isModel, own } from "../src/infra/model";
 
 describe("Reactive system - exports", () => {
@@ -29,6 +33,7 @@ describe("Reactive system - exports", () => {
     expect(reflex.isModel).toBe(isModel);
     expect(reflex.own).toBe(own);
     expect(reflex.createRuntime).toBe(infra.createRuntime);
+    expect(reflex.createScopedRuntime).toBe(infra.createScopedRuntime);
     expect(reflex.batch).toBe(infra.batch);
     expect(reflex.event).toBe(infra.event);
     expect(reflex.flush).toBe(infra.flush);
@@ -65,5 +70,7 @@ describe("Reactive system - exports", () => {
     expect(unstable.optimistic).toBe(optimistic);
     expect(unstable.resource).toBe(resource);
     expect(unstable.transition).toBe(transition);
+    expect(unstable.createProjection).toBe(unstableCreateProjection);
+    expect(unstable.createSelector).toBe(unstableCreateSelector);
   });
 });
