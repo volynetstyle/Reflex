@@ -34,7 +34,7 @@ export function linkEdge(
 export function unlinkEdge(edge: ReactiveEdge): void {
   const { from, to } = edge;
 
-  if (to.depsTail === edge) to.depsTail = edge.prevIn;
+  if (to.lastOutTail === edge) to.lastOutTail = edge.prevIn;
 
   detachOutgoingEdge(from, edge);
   detachIncomingEdge(to, edge);

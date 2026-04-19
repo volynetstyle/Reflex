@@ -763,7 +763,7 @@ function buildWriteProducerWideFanout(width) {
 function buildSharedFanoutWatchers(width) {
   let invalidations = 0;
   resetRuntime({
-    onEffectInvalidated() {
+    onSinkInvalidated() {
       invalidations += 1;
     },
   });
@@ -804,7 +804,7 @@ function buildSharedFanoutWatchers(width) {
 function buildRunWatcherSharedFanout(width) {
   let invalidations = 0;
   resetRuntime({
-    onEffectInvalidated() {
+    onSinkInvalidated() {
       invalidations += 1;
     },
   });

@@ -10,40 +10,31 @@ import {
   unlinkDetachedIncomingEdgeSequence,
 } from "../shape/methods/connect";
 import {
-  activeComputed,
+  activeConsumer,
   defaultContext,
   trackingVersion,
   trackReadFallback,
-  type ExecutionContext,
 } from "../context";
 
-function recordTrackRead(
-  context: ExecutionContext,
-  consumer: ReactiveNode,
-  source: ReactiveNode,
-): void {
+function recordTrackRead(consumer: ReactiveNode, source: ReactiveNode): void {
   if (__DEV__) {
-    devRecordTrackRead(context, consumer, source);
+    devRecordTrackRead(defaultContext, consumer, source);
   }
 }
 
-function trackReadSlowPath(
-  source: ReactiveNode,
-  consumer: ReactiveNode,
-  context: ExecutionContext,
-): void {
+function trackReadSlowPath(source: ReactiveNode, consumer: ReactiveNode): void {
   const version = trackingVersion;
-  const prevEdge = consumer.depsTail;
+  const prevEdge = consumer.lastOutTail;
 
   if (prevEdge === null) {
     const firstIn = consumer.firstIn;
 
     if (firstIn === null || firstIn.nextIn === null) {
-      consumer.depsTail = linkEdge(source, consumer, null, version);
+      consumer.lastOutTail = linkEdge(source, consumer, null, version);
       return;
     }
 
-    consumer.depsTail = (context.trackReadFallback ?? trackReadFallback)(
+    consumer.lastOutTail = trackReadFallback(
       source,
       consumer,
       null,
@@ -55,11 +46,11 @@ function trackReadSlowPath(
 
   const nextExpected = prevEdge.nextIn;
   if (nextExpected === null || nextExpected.nextIn === null) {
-    consumer.depsTail = linkEdge(source, consumer, prevEdge, version);
+    consumer.lastOutTail = linkEdge(source, consumer, prevEdge, version);
     return;
   }
 
-  consumer.depsTail = (context.trackReadFallback ?? trackReadFallback)(
+  consumer.lastOutTail = trackReadFallback(
     source,
     consumer,
     prevEdge,
@@ -68,52 +59,72 @@ function trackReadSlowPath(
   );
 }
 
+function trackReadMiss(source: ReactiveNode, consumer: ReactiveNode): void {
+  const sourceDead = isDisposedNode(source);
+  const consumerDead = isDisposedNode(consumer);
+
+  if (sourceDead || consumerDead) {
+    if (__DEV__) {
+      devAssertTrackReadAlive(sourceDead, consumerDead);
+    }
+
+    return;
+  }
+
+  recordTrackRead(consumer, source);
+  trackReadSlowPath(source, consumer);
+}
+
 /**
  * Cursor-guided incoming-edge walk used during dependency collection.
  * It first probes the hot cache and expected next edge, then falls back to a
  * linear scan that reorders the found edge into the reused dependency prefix.
  */
 export function trackRead(source: ReactiveNode): void {
-  const consumer = activeComputed;
+  const consumer = activeConsumer;
 
   if (!consumer) return;
   if (tryTrackReadFastPath(source, consumer)) return;
-  trackReadAfterMiss(source, consumer);
+  trackReadMiss(source, consumer);
 }
 
 /**
  * Consumer-local cursor fast path that avoids entering the full tracking path
  * when the next unique dependency is already obvious from the current cursor.
  *
- * - Immediate duplicate (`depsTail.from === source`) is structurally inert.
- * - Expected next (`depsTail.nextIn === source`, or `firstIn` when no tail yet)
+ * - Immediate duplicate (`lastOutTail.from === source`) is structurally inert.
+ * - Expected next (`lastOutTail.nextIn === source`, or `firstIn` when no tail yet)
  *   reuses the existing edge and advances the cursor.
  */
 export function tryTrackReadFastPath(
   source: ReactiveNode,
   consumer: ReactiveNode,
 ): boolean {
-  const prevEdge = consumer.depsTail;
+  const prevEdge = consumer.lastOutTail;
   const version = trackingVersion;
 
   const lastOut = source.lastOut;
-  if (lastOut != null && lastOut.version === version && lastOut.to === consumer) {
-    recordTrackRead(defaultContext, consumer, source);
+  if (
+    lastOut != null &&
+    lastOut.version === version &&
+    lastOut.to === consumer
+  ) {
+    recordTrackRead(consumer, source);
     return true;
   }
 
   if (prevEdge != null) {
     if (prevEdge.from === source) {
       prevEdge.version = version;
-      recordTrackRead(defaultContext, consumer, source);
+      recordTrackRead(consumer, source);
       return true;
     }
 
     const nextExpected = prevEdge.nextIn;
     if (nextExpected != null && nextExpected.from === source) {
       nextExpected.version = version;
-      consumer.depsTail = nextExpected;
-      recordTrackRead(defaultContext, consumer, source);
+      consumer.lastOutTail = nextExpected;
+      recordTrackRead(consumer, source);
       return true;
     }
 
@@ -123,38 +134,17 @@ export function tryTrackReadFastPath(
   const firstIn = consumer.firstIn;
   if (firstIn != null && firstIn.from === source) {
     firstIn.version = version;
-    consumer.depsTail = firstIn;
-    recordTrackRead(defaultContext, consumer, source);
+    consumer.lastOutTail = firstIn;
+    recordTrackRead(consumer, source);
     return true;
   }
 
   return false;
 }
 
-export function trackReadAfterMiss(
-  source: ReactiveNode,
-  consumer: ReactiveNode,
-  context: ExecutionContext = defaultContext,
-): void {
-  const sourceDead = isDisposedNode(source);
-  const consumerDead = isDisposedNode(consumer);
-
-  if (sourceDead || consumerDead) {
-    if (__DEV__) {
-      devAssertTrackReadAlive(sourceDead, consumerDead);
-    }
-
-    return;
-  }
-
-  recordTrackRead(context, consumer, source);
-  trackReadSlowPath(source, consumer, context);
-}
-
 export function trackReadActive(
   source: ReactiveNode,
   consumer: ReactiveNode,
-  context: ExecutionContext = defaultContext,
 ): void {
   const sourceDead = isDisposedNode(source);
   const consumerDead = isDisposedNode(consumer);
@@ -167,30 +157,30 @@ export function trackReadActive(
     return;
   }
 
-  recordTrackRead(context, consumer, source);
+  recordTrackRead(consumer, source);
 
   const version = trackingVersion;
-  const prevEdge = consumer.depsTail;
+  const prevEdge = consumer.lastOutTail;
   if (prevEdge === null) {
     const firstIn = consumer.firstIn;
 
     if (firstIn === null) {
-      consumer.depsTail = linkEdge(source, consumer, null, version);
+      consumer.lastOutTail = linkEdge(source, consumer, null, version);
       return;
     }
 
     if (firstIn.from === source) {
       firstIn.version = version;
-      consumer.depsTail = firstIn;
+      consumer.lastOutTail = firstIn;
       return;
     }
 
     if (firstIn.nextIn === null) {
-      consumer.depsTail = linkEdge(source, consumer, null, version);
+      consumer.lastOutTail = linkEdge(source, consumer, null, version);
       return;
     }
 
-    consumer.depsTail = (context.trackReadFallback ?? trackReadFallback)(
+    consumer.lastOutTail = trackReadFallback(
       source,
       consumer,
       null,
@@ -207,22 +197,22 @@ export function trackReadActive(
 
   const nextExpected = prevEdge.nextIn;
   if (nextExpected === null) {
-    consumer.depsTail = linkEdge(source, consumer, prevEdge, version);
+    consumer.lastOutTail = linkEdge(source, consumer, prevEdge, version);
     return;
   }
 
   if (nextExpected.from === source) {
     nextExpected.version = version;
-    consumer.depsTail = nextExpected;
+    consumer.lastOutTail = nextExpected;
     return;
   }
 
   if (nextExpected.nextIn === null) {
-    consumer.depsTail = linkEdge(source, consumer, prevEdge, version);
+    consumer.lastOutTail = linkEdge(source, consumer, prevEdge, version);
     return;
   }
 
-  consumer.depsTail = (context.trackReadFallback ?? trackReadFallback)(
+  consumer.lastOutTail = trackReadFallback(
     source,
     consumer,
     prevEdge,
@@ -233,10 +223,10 @@ export function trackReadActive(
 
 /**
  * Suffix cleanup over the consumer's incoming edges after recompute.
- * Everything after depsTail belongs to the old dependency list and is unlinked.
+ * Everything after lastOutTail belongs to the old dependency list and is unlinked.
  */
 export function cleanupStaleSources(node: ReactiveNode): void {
-  const tail = node.depsTail;
+  const tail = node.lastOutTail;
   const staleHead = tail === null ? node.firstIn : tail.nextIn;
   if (staleHead === null) return;
   const detachedStaleHead: NonNullable<typeof staleHead> = staleHead;

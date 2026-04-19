@@ -1,6 +1,11 @@
-import { activeComputed, propagationDepth, type ExecutionContext } from "./reactivity/context";
-import type { ReactiveEdge, ReactiveNode } from "./reactivity/shape";
-import { DIRTY_STATE, ReactiveNodeState } from "./reactivity/shape";
+import {
+  activeConsumer,
+  propagationDepth,
+  defaultContext,
+  type RuntimeDebugContext,
+} from "../reactivity/context";
+import type { ReactiveEdge, ReactiveNode } from "../reactivity/shape";
+import { DIRTY_STATE, ReactiveNodeState } from "../reactivity/shape";
 import type {
   RuntimeDebugContextSnapshot,
   RuntimeDebugEvent,
@@ -90,11 +95,11 @@ function getFlags(state: number): RuntimeDebugFlag[] {
   return flags;
 }
 
-function normalizeContextKey(context: ExecutionContext): object {
+function normalizeContextKey(context: RuntimeDebugContext): object {
   return isObjectKey(context) ? context : invalidContextKey;
 }
 
-function ensureContextState(context: ExecutionContext): RuntimeDebugState {
+function ensureContextState(context: RuntimeDebugContext): RuntimeDebugState {
   const key = normalizeContextKey(context);
   const existing = contextStates.get(key);
 
@@ -206,7 +211,7 @@ export function labelDebugNode<T extends ReactiveNode>(
 }
 
 export function configureDebugContext(
-  context: ExecutionContext,
+  context: RuntimeDebugContext = defaultContext,
   options: RuntimeDebugOptions = {},
 ): RuntimeDebugContextSnapshot {
   const state = ensureContextState(context);
@@ -224,7 +229,7 @@ export function configureDebugContext(
 }
 
 export function observeDebugContext(
-  context: ExecutionContext,
+  context: RuntimeDebugContext = defaultContext,
   listener: RuntimeDebugListener,
 ): () => void {
   const state = ensureContextState(context);
@@ -236,17 +241,19 @@ export function observeDebugContext(
 }
 
 export function readDebugHistory(
-  context: ExecutionContext,
+  context: RuntimeDebugContext = defaultContext,
 ): RuntimeDebugEvent[] {
   return ensureContextState(context).history.slice();
 }
 
-export function clearDebugHistory(context: ExecutionContext): void {
+export function clearDebugHistory(
+  context: RuntimeDebugContext = defaultContext,
+): void {
   ensureContextState(context).history.length = 0;
 }
 
 export function snapshotDebugContext(
-  context: ExecutionContext,
+  context: RuntimeDebugContext = defaultContext,
 ): RuntimeDebugContextSnapshot {
   const state = ensureContextState(context);
   const snapshot: RuntimeDebugContextSnapshot = {
@@ -257,8 +264,8 @@ export function snapshotDebugContext(
     observerCount: state.listeners.size,
   };
 
-  if (activeComputed !== null) {
-    snapshot.activeComputed = createNodeRef(activeComputed);
+  if (activeConsumer !== null) {
+    snapshot.activeConsumer = createNodeRef(activeConsumer);
   }
 
   return snapshot;
@@ -298,7 +305,7 @@ export function collectDebugNodeRefs(
 }
 
 export function recordDebugEvent(
-  context: ExecutionContext,
+  context: RuntimeDebugContext = defaultContext,
   type: RuntimeDebugEventType,
   input: RuntimeDebugEventInput = {},
 ): RuntimeDebugEvent {

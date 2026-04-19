@@ -36,7 +36,7 @@ Read these to understand integration points:
 4. **[study/06-effects-and-scheduler.md](./study/06-effects-and-scheduler.md)** — Hook integration (30 min)
 
 Key files:
-- Execution context: `createExecutionContext()`, `EngineHooks`
+- Execution hooks: `EngineHooks`
 - Watcher management: `runWatcher()`, `disposeWatcher()`
 - Dirty state tracking: `readConsumer()` modes and semantics
 
@@ -163,7 +163,7 @@ The runtime uses precise terminology consistently:
 |------|-----------|
 | **Producer** | Mutable source state; stores payload directly |
 | **Consumer** | Pure derived computation; tracks dependencies, caches result |
-| **Watcher** | Effect-like sink; executes code with side effects |
+| **Watcher** | Sink node; executes host-controlled side effects |
 | **Dirty/Invalid** | Node needs recomputation (bit flags: `Invalid`, `Changed`) |
 | **Changed** | Direct upstream definitely changed → recompute always |
 | **Invalid** | Transitive change possible → verify before recomputing |
@@ -173,7 +173,7 @@ The runtime uses precise terminology consistently:
 | **Stabilization** | Pull phase: lazy verification and recomputation |
 | **Host** | Consumer of the runtime; responsible for scheduling |
 | **Execution Context** | Runtime environment: owns hooks, tracking state |
-| **onEffectInvalidated** | Hook: signals when watcher becomes dirty |
+| **onSinkInvalidated** | Hook: signals when a sink node becomes dirty |
 | **onReactiveSettled** | Hook: signals when graph reaches quiescence |
 
 ---

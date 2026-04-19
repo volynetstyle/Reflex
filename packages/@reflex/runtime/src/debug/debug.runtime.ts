@@ -1,5 +1,5 @@
-import type { ExecutionContext } from "./reactivity/context";
-import type { ReactiveEdge, ReactiveNode } from "./reactivity/shape";
+import type { RuntimeDebugContext } from "../reactivity/context";
+import type { ReactiveEdge, ReactiveNode } from "../reactivity/shape";
 import type {
   RuntimeDebugContextSnapshot,
   RuntimeDebugEvent,
@@ -19,14 +19,14 @@ type RecordDebugEventInput = {
 };
 
 interface RuntimeDebugImplementation {
-  clearDebugHistory(context: ExecutionContext): void;
+  clearDebugHistory(context: RuntimeDebugContext): void;
   collectDebugNodeRefs(
     edge: ReactiveEdge | null,
     selectNode: (edge: ReactiveEdge) => ReactiveNode,
     next: (edge: ReactiveEdge) => ReactiveEdge | null,
   ): RuntimeDebugNodeRef[];
   configureDebugContext(
-    context: ExecutionContext,
+    context: RuntimeDebugContext,
     options?: RuntimeDebugOptions,
   ): RuntimeDebugContextSnapshot | undefined;
   labelDebugNode<T extends ReactiveNode>(
@@ -34,17 +34,17 @@ interface RuntimeDebugImplementation {
     label: string | null | undefined,
   ): T;
   observeDebugContext(
-    context: ExecutionContext,
+    context: RuntimeDebugContext,
     listener: RuntimeDebugListener,
   ): () => void;
-  readDebugHistory(context: ExecutionContext): RuntimeDebugEvent[];
+  readDebugHistory(context: RuntimeDebugContext): RuntimeDebugEvent[];
   recordDebugEvent(
-    context: ExecutionContext,
+    context: RuntimeDebugContext,
     type: RuntimeDebugEventType,
     input?: RecordDebugEventInput,
   ): RuntimeDebugEvent | undefined;
   snapshotDebugContext(
-    context: ExecutionContext,
+    context: RuntimeDebugContext,
   ): RuntimeDebugContextSnapshot | undefined;
   snapshotDebugNode(
     node: ReactiveNode,
@@ -95,7 +95,7 @@ export function installRuntimeDebug(
   runtimeDebug.snapshotDebugNode = implementation.snapshotDebugNode;
 }
 
-export function clearDebugHistory(context: ExecutionContext): void {
+export function clearDebugHistory(context: RuntimeDebugContext): void {
   runtimeDebug.clearDebugHistory(context);
 }
 
@@ -108,7 +108,7 @@ export function collectDebugNodeRefs(
 }
 
 export function configureDebugContext(
-  context: ExecutionContext,
+  context: RuntimeDebugContext,
   options: RuntimeDebugOptions = {},
 ): RuntimeDebugContextSnapshot | undefined {
   return runtimeDebug.configureDebugContext(context, options);
@@ -122,20 +122,20 @@ export function labelDebugNode<T extends ReactiveNode>(
 }
 
 export function observeDebugContext(
-  context: ExecutionContext,
+  context: RuntimeDebugContext,
   listener: RuntimeDebugListener,
 ): () => void {
   return runtimeDebug.observeDebugContext(context, listener);
 }
 
 export function readDebugHistory(
-  context: ExecutionContext,
+  context: RuntimeDebugContext,
 ): RuntimeDebugEvent[] {
   return runtimeDebug.readDebugHistory(context);
 }
 
 export function recordDebugEvent(
-  context: ExecutionContext,
+  context: RuntimeDebugContext,
   type: RuntimeDebugEventType,
   input: RecordDebugEventInput = {},
 ): RuntimeDebugEvent | undefined {
@@ -143,7 +143,7 @@ export function recordDebugEvent(
 }
 
 export function snapshotDebugContext(
-  context: ExecutionContext,
+  context: RuntimeDebugContext,
 ): RuntimeDebugContextSnapshot | undefined {
   return runtimeDebug.snapshotDebugContext(context);
 }

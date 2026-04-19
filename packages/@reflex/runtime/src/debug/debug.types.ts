@@ -73,7 +73,7 @@ export interface RuntimeDebugContextSnapshot {
   historySize: number;
   historyLimit: number;
   observerCount: number;
-  activeComputed?: RuntimeDebugNodeRef;
+  activeConsumer?: RuntimeDebugNodeRef;
 }
 
 export interface RuntimeDebugEvent {

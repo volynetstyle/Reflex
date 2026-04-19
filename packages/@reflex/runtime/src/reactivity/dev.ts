@@ -1,5 +1,5 @@
 import { recordDebugEvent, collectDebugNodeRefs } from "../debug/debug.impl";
-import { activeComputed, type ExecutionContext } from "./context";
+import { activeConsumer, type RuntimeDebugContext } from "./context";
 import { type ReactiveEdge, ReactiveNodeState } from "./shape";
 import type ReactiveNode from "./shape/ReactiveNode";
 
@@ -13,7 +13,7 @@ export function devAssertTrackReadAlive(
 }
 
 export function devRecordTrackRead(
-  context: ExecutionContext,
+  context: RuntimeDebugContext,
   consumer: ReactiveNode,
   source: ReactiveNode,
 ): void {
@@ -28,7 +28,7 @@ export function devRecordTrackRead(
 export function devRecordCleanupStaleSources(
   node: ReactiveNode,
   staleHead: ReactiveEdge,
-  context: ExecutionContext,
+  context: RuntimeDebugContext,
 ): void {
   if (!__DEV__) return;
 
@@ -58,7 +58,7 @@ export function devRecordRecompute(
   changed: boolean,
   next: unknown,
   previous: unknown,
-  context: ExecutionContext,
+  context: RuntimeDebugContext,
 ): void {
   if (!__DEV__) return;
 
@@ -93,12 +93,12 @@ export function devAssertConsumerCanStabilize(state: number): void {
 export function devRecordReadProducer(
   node: ReactiveNode,
   value: unknown,
-  context: ExecutionContext,
+  context: RuntimeDebugContext,
 ): void {
   if (!__DEV__) return;
 
   recordDebugEvent(context, "read:producer", {
-    consumer: activeComputed ?? undefined,
+    consumer: activeConsumer ?? undefined,
     node,
     detail: {
       value,
@@ -110,7 +110,7 @@ export function devRecordReadConsumer(
   node: ReactiveNode,
   mode: "eager" | "lazy",
   value: unknown,
-  context: ExecutionContext,
+  context: RuntimeDebugContext,
   consumer?: ReactiveNode,
 ): void {
   if (!__DEV__) return;
@@ -137,7 +137,7 @@ export function devRecordWriteProducer(
   next: unknown,
   previous: unknown,
   hasSubscribers: boolean | undefined,
-  context: ExecutionContext,
+  context: RuntimeDebugContext,
 ): void {
   if (!__DEV__) return;
 

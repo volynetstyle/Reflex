@@ -17,7 +17,7 @@ describe("Reactive runtime - integration safety", () => {
     const failure = new Error("watcher failed");
 
     resetRuntime({
-      onEffectInvalidated() {
+      onSinkInvalidated() {
         throw failure;
       },
       onReactiveSettled: settled,
@@ -42,7 +42,7 @@ describe("Reactive runtime - integration safety", () => {
     let shouldThrow = true;
 
     resetRuntime({
-      onEffectInvalidated() {
+      onSinkInvalidated() {
         if (shouldThrow) {
           failures.push("thrown");
           throw new Error("boom");

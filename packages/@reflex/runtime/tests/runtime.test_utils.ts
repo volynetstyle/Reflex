@@ -3,10 +3,12 @@ import {
   PRODUCER_INITIAL_STATE,
   ReactiveNode,
   type EngineHooks,
-  type ExecutionContext,
   WATCHER_INITIAL_STATE,
-  createExecutionContext,
-  resetDefaultContext,
+  resetState,
+  saveContext,
+  setHooks,
+  setOptions,
+  setRuntimeHooks,
 } from "../src";
 import { expect } from "vitest";
 
@@ -14,11 +16,14 @@ import { expect } from "vitest";
 type ReactiveEdge = any;
 
 /**
- * Reset the default context to a fresh instance with optional hooks.
+ * Reset runtime-global context state, hooks, and options for test isolation.
  * Recommended for test isolation.
  */
-export function resetRuntime(hooks: EngineHooks = {}): ExecutionContext {
-  return resetDefaultContext(hooks);
+export function resetRuntime(hooks: EngineHooks = {}): void {
+  resetState();
+  setRuntimeHooks();
+  setHooks(hooks);
+  setOptions({});
 }
 
 export function createProducer<T>(value: T): ReactiveNode<T> {
@@ -53,9 +58,7 @@ export function hasSubscriber(from: ReactiveNode, to: ReactiveNode): boolean {
   return false;
 }
 
-export function createTestContext(hooks: EngineHooks = {}): ExecutionContext {
-  return createExecutionContext(hooks);
-}
+export const saveRuntimeContext = saveContext;
 
 function expectLinearChainIntegrity(
   head: ReactiveEdge | null,
@@ -104,7 +107,7 @@ export function expectNodeGraphIntegrity(node: ReactiveNode): void {
     expect(edge.to).toBeTruthy();
   }
 
-  if (node.depsTail !== null) {
-    expect(incoming.includes(node.depsTail)).toBe(true);
+  if (node.lastOutTail !== null) {
+    expect(incoming.includes(node.lastOutTail)).toBe(true);
   }
 }

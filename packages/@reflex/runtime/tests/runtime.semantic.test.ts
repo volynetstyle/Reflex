@@ -104,6 +104,32 @@ describe("Reactive runtime - semantic correctness", () => {
     expect(outerSpy).toHaveBeenCalledTimes(1);
   });
 
+  it("does not let eager stabilization subscribe the current consumer to transitive sources", () => {
+    const source = createProducer(1);
+    const innerSpy = vi.fn(() => readProducer(source) * 2);
+    const inner = createConsumer(innerSpy);
+    const outerSpy = vi.fn(() => {
+      expect(readConsumer(inner, ConsumerReadMode.eager)).toBe(2);
+      return 0;
+    });
+    const outer = createConsumer(outerSpy);
+
+    expect(readConsumer(outer)).toBe(0);
+    expect(innerSpy).toHaveBeenCalledTimes(1);
+    expect(outerSpy).toHaveBeenCalledTimes(1);
+    expect(incomingSources(outer)).toEqual([]);
+    expect(hasSubscriber(source, outer)).toBe(false);
+
+    writeProducer(source, 2);
+
+    expect(outer.state & DIRTY_STATE).toBe(0);
+    expect(readConsumer(outer)).toBe(0);
+    expect(innerSpy).toHaveBeenCalledTimes(1);
+    expect(outerSpy).toHaveBeenCalledTimes(1);
+    expect(readConsumer(inner)).toBe(4);
+    expect(innerSpy).toHaveBeenCalledTimes(2);
+  });
+
   it("prunes stale branch edges after recompute and ignores later writes from that branch", () => {
     const flag = createProducer(true);
     const left = createProducer(1);

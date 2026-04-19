@@ -84,7 +84,7 @@ describe("Reactive runtime - traversal invariants", () => {
   it("coalesces repeated push invalidations across committed writes", () => {
     let invalidations = 0;
     resetRuntime({
-      onEffectInvalidated() {
+      onSinkInvalidated() {
         invalidations += 1;
       },
     });
@@ -118,7 +118,7 @@ describe("Reactive runtime - traversal invariants", () => {
   it("removes disposed watchers from future traversals", () => {
     let invalidations = 0;
     resetRuntime({
-      onEffectInvalidated() {
+      onSinkInvalidated() {
         invalidations += 1;
       },
     });
@@ -150,7 +150,7 @@ describe("Reactive runtime - traversal invariants", () => {
     const staleEdge = linkEdge(stale, target);
 
     target.state = ReactiveNodeState.Consumer | ReactiveNodeState.Tracking;
-    target.depsTail = trackedEdge;
+    target.lastOutTail = trackedEdge;
 
     writeProducer(stale, 3);
     expect(target.state).toBe(
@@ -164,7 +164,7 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(target.state & ReactiveNodeState.Invalid).toBeTruthy();
   });
 
-  it("treats depsTail as the tracked-prefix boundary while computing", () => {
+  it("treats lastOutTail as the tracked-prefix boundary while computing", () => {
     const first = createProducer(1);
     const second = createProducer(2);
     const stale = createProducer(3);
@@ -175,7 +175,7 @@ describe("Reactive runtime - traversal invariants", () => {
     linkEdge(stale, target);
 
     target.state = ReactiveNodeState.Consumer | ReactiveNodeState.Tracking;
-    target.depsTail = secondEdge;
+    target.lastOutTail = secondEdge;
 
     writeProducer(stale, 4);
     expect(target.state).toBe(
@@ -183,7 +183,7 @@ describe("Reactive runtime - traversal invariants", () => {
     );
 
     writeProducer(first, 5);
-    expect(target.depsTail).toBe(secondEdge);
+    expect(target.lastOutTail).toBe(secondEdge);
     expect(firstEdge.nextIn).toBe(secondEdge);
     expect(target.state & ReactiveNodeState.Tracking).toBeTruthy();
     expect(target.state & ReactiveNodeState.Visited).toBeTruthy();
@@ -200,7 +200,7 @@ describe("Reactive runtime - traversal invariants", () => {
     let nestedWriteTriggered = false;
 
     resetRuntime({
-      onEffectInvalidated(node) {
+      onSinkInvalidated(node) {
         if (node === nestedWatcher) {
           invalidations.push("nested");
 
@@ -250,7 +250,7 @@ describe("Reactive runtime - traversal invariants", () => {
   it("surfaces Invalid -> Changed promotion to the host when the host does not dedupe", () => {
     let invalidations = 0;
     resetRuntime({
-      onEffectInvalidated() {
+      onSinkInvalidated() {
         invalidations += 1;
       },
     });

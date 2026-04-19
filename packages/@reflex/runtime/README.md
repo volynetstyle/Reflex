@@ -24,7 +24,7 @@ Think of three node kinds:
 
 - **Producer:** mutable source (like a cell in a spreadsheet)
 - **Consumer:** pure derived computation (like a formula)
-- **Watcher:** side effect sink (like an observer or logger)
+- **Watcher:** side-effect sink (like an observer or logger)
 
 The runtime maintains a dependency graph and propagates changes deterministically. Your host code controls when computation happens.
 
@@ -45,7 +45,7 @@ const doubled = new ReactiveNode(undefined, () => {
   return c * 2;
 }, CONSUMER_INITIAL_STATE);
 
-// 3. Watcher: effect sink, runs on demand
+// 3. Watcher: sink node, runs on demand
 const effect = new ReactiveNode(null, () => {
   const d = readConsumer(doubled);
   console.log("doubled is now:", d);
@@ -57,14 +57,14 @@ writeProducer(count, 5);
 
 // Host decides when to compute: pull stabilization
 readConsumer(doubled);  // recomputes doubled if invalid
-runWatcher(effect);     // executes effect
+runWatcher(effect);     // executes sink work
 ```
 
 ### What Happens
 
 1. `writeProducer(count, 5)` marks subscribers invalid (cheap push)
 2. `readConsumer(doubled)` checks if `doubled` is dirty, recomputes only if needed (pull)
-3. `runWatcher(effect)` executes the effect function and stores cleanup
+3. `runWatcher(effect)` executes the sink function and stores cleanup
 4. Next mutation only invalidates, never auto-executes
 
 ---
@@ -107,21 +107,21 @@ Instead, your host code:
 
 1. Calls `writeProducer()` to mutate
 2. Decides when to call `readConsumer()` (lazy pull)
-3. Decides when to call `runWatcher()` (effect scheduling)
+3. Decides when to call `runWatcher()` (sink scheduling)
 4. Owns the execution context and hooks
 
 Example host scheduler:
 
 ```ts
-const ctx = createExecutionContext({
-  onEffectInvalidated(node) {
+setHooks({
+  onSinkInvalidated(node) {
     pendingWatchers.push(node);
   },
 });
 
 // Somewhere in your event loop:
 while (pendingWatchers.length) {
-  runWatcher(pendingWatchers.shift(), ctx);
+  runWatcher(pendingWatchers.shift()!);
 }
 ```
 
@@ -134,6 +134,11 @@ while (pendingWatchers.length) {
 - **Composable:** clear separation of concerns
 - **Observable:** dirty states and tracking are exposed
 - **Deterministic:** no implicit ordering or randomness
+
+Preferred host hook vocabulary:
+
+- Use `onSinkInvalidated` for invalidation callbacks.
+- Keep `Watcher` / `runWatcher()` / `disposeWatcher()` as the node vocabulary.
 
 ---
 

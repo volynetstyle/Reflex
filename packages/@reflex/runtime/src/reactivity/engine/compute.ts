@@ -14,22 +14,25 @@ export function recompute(node: ReactiveNode): boolean {
   }
 
   const prev = node.payload;
-  let next: unknown = prev;
-  let hasChanged = false;
-
-  next = executeNodeComputation(node);
+  const next = executeNodeComputation(node);
 
   if (!isDisposedNode(node)) {
-    const changed = !compare(prev, next);
-    hasChanged = changed;
+    const hasChanged = !compare(prev, next);
     node.payload = next;
+    clearDirtyState(node);
+
+    if (__DEV__) {
+      devRecordRecompute(node, hasChanged, next, prev, defaultContext);
+    }
+
+    return hasChanged;
   }
 
   clearDirtyState(node);
 
   if (__DEV__) {
-    devRecordRecompute(node, hasChanged, next, prev, defaultContext);
+    devRecordRecompute(node, false, next, prev, defaultContext);
   }
 
-  return hasChanged;
+  return false;
 }
