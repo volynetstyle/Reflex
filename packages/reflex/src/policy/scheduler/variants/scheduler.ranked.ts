@@ -10,24 +10,14 @@ import {
   createSchedulerInstance,
   tryEnqueue,
 } from "../scheduler.core";
-import {
-  clearWatcherQueue,
-  shiftWatcherQueue,
-} from "../scheduler.queue";
+import { clearWatcherQueue, shiftWatcherQueue } from "../scheduler.queue";
 import type {
   EffectNode,
   EffectScheduler,
   SchedulerCore,
 } from "../scheduler.types";
 import { noopNotifySettled } from "../scheduler.types";
-
-type RankedEffectNode = EffectNode & {
-  priority?: number;
-  rank?: number;
-  rankedPriority: number;
-  nextRanked: RankedEffectNode | undefined;
-  prevRanked: RankedEffectNode;
-};
+import type { RankedEffectNode } from "../../../infra";
 
 type RankedSchedulerCore = SchedulerCore & {
   rankedHeads: (RankedEffectNode | undefined)[];
@@ -79,12 +69,14 @@ function unschedulePendingNodes(
   }
 }
 
-function getNodePriority(node: EffectNode): number {
-  const rankedNode = node as RankedEffectNode;
-  return rankedNode.priority ?? rankedNode.rank ?? 0;
+function getNodePriority(node: RankedEffectNode): number {
+  return node.priority ?? node.rank ?? 0;
 }
 
-function ensureRankedCapacity(core: RankedSchedulerCore, priority: number): void {
+function ensureRankedCapacity(
+  core: RankedSchedulerCore,
+  priority: number,
+): void {
   const heads = core.rankedHeads;
   if (priority < heads.length) return;
   heads.length = priority + 1;
@@ -95,7 +87,10 @@ function detachRankedNode(node: RankedEffectNode): void {
   node.nextRanked = undefined;
 }
 
-function pushPendingNode(core: RankedSchedulerCore, effectNode: EffectNode): void {
+function pushPendingNode(
+  core: RankedSchedulerCore,
+  effectNode: EffectNode,
+): void {
   const node = effectNode as RankedEffectNode;
   const priority = getNodePriority(node);
   ensureRankedCapacity(core, priority);
@@ -170,11 +165,7 @@ function rankedFlush(this: RankedSchedulerCore): void {
       }
     }
   } finally {
-    unschedulePendingNodes(
-      this.rankedHeads,
-      processedPriority,
-      processedNode,
-    );
+    unschedulePendingNodes(this.rankedHeads, processedPriority, processedNode);
     resetPendingBuckets(this);
     unscheduleQueuedNodes(queue);
     this.phase =

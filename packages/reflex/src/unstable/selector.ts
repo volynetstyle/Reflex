@@ -8,7 +8,7 @@ import {
   runWatcher,
   writeProducer,
 } from "@reflex/runtime";
-import { createSignalNode, createWatcherNode } from "../infra";
+import { createSignalNode, createWatcherRankedrNode } from "../infra";
 
 const MISSING = Symbol("selector.missing");
 
@@ -28,7 +28,10 @@ function sameValue<T>(prev: T, next: T): boolean {
 }
 
 class SelectorCore<T> {
-  private readonly keyed = new Map<T, ReturnType<typeof createSignalNode<boolean>>>();
+  private readonly keyed = new Map<
+    T,
+    ReturnType<typeof createSignalNode<boolean>>
+  >();
   private current: T | Missing = MISSING;
   private readonly watcher: ReactiveNode;
   private readonly dispose: Destructor;
@@ -38,10 +41,9 @@ class SelectorCore<T> {
     private readonly equals: (prev: T, next: T) => boolean,
     priority: number,
   ) {
-    const watcher = createWatcherNode(() => {
+    const watcher = createWatcherRankedrNode(() => {
       this.sync();
-    });
-    (watcher as { priority?: number }).priority = priority;
+    }, priority);
     this.watcher = watcher;
     runWatcher(watcher);
     this.dispose = disposeWatcher.bind(null, watcher) as Destructor;
@@ -87,7 +89,10 @@ class SelectorCore<T> {
 }
 
 class ProjectionCore<T, K, R> {
-  private readonly keyed = new Map<K, ReturnType<typeof createSignalNode<R | undefined>>>();
+  private readonly keyed = new Map<
+    K,
+    ReturnType<typeof createSignalNode<R | undefined>>
+  >();
   private currentKey: K | Missing = MISSING;
   private readonly watcher: ReactiveNode;
   private readonly dispose: Destructor;
@@ -100,10 +105,9 @@ class ProjectionCore<T, K, R> {
     private readonly fallback: R | undefined,
     priority: number,
   ) {
-    const watcher = createWatcherNode(() => {
+    const watcher = createWatcherRankedrNode(() => {
       this.sync();
-    });
-    (watcher as { priority?: number }).priority = priority;
+    }, priority);
     this.watcher = watcher;
     runWatcher(watcher);
     this.dispose = disposeWatcher.bind(null, watcher) as Destructor;

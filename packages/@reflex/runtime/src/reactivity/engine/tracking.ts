@@ -125,6 +125,7 @@ export function tryTrackReadFastPath(
       nextExpected.version = version;
       consumer.lastOutTail = nextExpected;
       recordTrackRead(consumer, source);
+      recordTrackRead(consumer, source);
       return true;
     }
 
@@ -135,6 +136,7 @@ export function tryTrackReadFastPath(
   if (firstIn != null && firstIn.from === source) {
     firstIn.version = version;
     consumer.lastOutTail = firstIn;
+    recordTrackRead(consumer, source);
     recordTrackRead(consumer, source);
     return true;
   }

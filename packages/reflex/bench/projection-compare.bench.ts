@@ -12,12 +12,9 @@ const {
   flush: solidFlush,
   getOwner,
   runWithOwner,
-} = SolidSignalsModule as {
+} = SolidSignalsModule as unknown as {
   createEffect<T>(compute: () => T, effectFn: (value: T, prev?: T) => void): void;
-  createProjection<T extends object>(
-    fn: (draft: T) => void,
-    initialValue?: T,
-  ): T;
+  createProjection<T extends object>(fn: (draft: T) => void, initialValue?: T): T;
   createRoot<T>(init: (dispose: () => void) => T): T;
   createSignal<T>(
     initial?: T,
@@ -27,9 +24,10 @@ const {
   runWithOwner<T>(owner: unknown, fn: () => T): T;
 };
 
-const ROWS = 1_000;
 const WARMUP_ITERATIONS = 150;
 const ITERATIONS = 1_000;
+const DEFAULT_ROWS = 1_000;
+const SCALE_ROWS = [100, 1_000, 10_000] as const;
 
 function blackhole(value: unknown): void {
   void value;
@@ -40,7 +38,38 @@ interface BenchCase {
   dispose(): void;
 }
 
-function createReflexSelectionCase(): BenchCase {
+interface Entity {
+  id: number;
+  label: string;
+}
+
+type SelectionMode = "switch" | "noop";
+type EntityMode = "switch" | "same-key" | "noop";
+
+function registerCase(title: string, factory: () => BenchCase): void {
+  let instance: BenchCase | null = null;
+
+  describe(title, () => {
+    afterAll(() => {
+      instance?.dispose();
+      instance = null;
+    });
+
+    bench(
+      "run",
+      () => {
+        instance ??= factory();
+        instance.step();
+      },
+      {
+        warmupIterations: WARMUP_ITERATIONS,
+        iterations: ITERATIONS,
+      },
+    );
+  });
+}
+
+function createReflexSelectionCase(rows = DEFAULT_ROWS, mode: SelectionMode = "switch"): BenchCase {
   const runtime = createScopedRuntime({ effectStrategy: "ranked" });
   const [selected, setSelected] = runtime.signal<number | undefined>(undefined);
 
@@ -53,7 +82,7 @@ function createReflexSelectionCase(): BenchCase {
     ),
   );
 
-  const disposers = Array.from({ length: ROWS }, (_, index) =>
+  const disposers = Array.from({ length: rows }, (_, index) =>
     runtime.effect(() => {
       blackhole(projection(index));
     }),
@@ -63,7 +92,9 @@ function createReflexSelectionCase(): BenchCase {
 
   return {
     step() {
-      next = (next + 1) % ROWS;
+      if (mode === "switch") {
+        next = (next + 1) % rows;
+      }
       setSelected(next);
       runtime.flush();
     },
@@ -76,7 +107,7 @@ function createReflexSelectionCase(): BenchCase {
   };
 }
 
-function createSolidSelectionCase(): BenchCase {
+function createSolidSelectionCase(rows = DEFAULT_ROWS, mode: SelectionMode = "switch"): BenchCase {
   let owner: unknown;
   let disposeRoot = () => {};
 
@@ -108,7 +139,7 @@ function createSolidSelectionCase(): BenchCase {
     }, {}),
   );
 
-  for (let index = 0; index < ROWS; ++index) {
+  for (let index = 0; index < rows; ++index) {
     withOwner(() =>
       createEffect(
         () => projection[index],
@@ -123,7 +154,9 @@ function createSolidSelectionCase(): BenchCase {
 
   return {
     step() {
-      next = (next + 1) % ROWS;
+      if (mode === "switch") {
+        next = (next + 1) % rows;
+      }
       setSelected(next);
       solidFlush();
     },
@@ -133,9 +166,9 @@ function createSolidSelectionCase(): BenchCase {
   };
 }
 
-function createReflexEntityProjectionCase(): BenchCase {
+function createReflexEntityProjectionCase(rows = DEFAULT_ROWS, mode: EntityMode = "switch"): BenchCase {
   const runtime = createScopedRuntime({ effectStrategy: "ranked" });
-  const [entity, setEntity] = runtime.signal({ id: 0, label: "label-0" });
+  const [entity, setEntity] = runtime.signal<Entity>({ id: 0, label: "label-0" });
 
   const labels = runtime.run(() =>
     createReflexProjection(
@@ -146,7 +179,7 @@ function createReflexEntityProjectionCase(): BenchCase {
     ),
   );
 
-  const disposers = Array.from({ length: ROWS }, (_, index) =>
+  const disposers = Array.from({ length: rows }, (_, index) =>
     runtime.effect(() => {
       blackhole(labels(index));
     }),
@@ -156,8 +189,14 @@ function createReflexEntityProjectionCase(): BenchCase {
 
   return {
     step() {
-      next = (next + 1) % ROWS;
-      setEntity({ id: next, label: `label-${next}` });
+      if (mode === "switch") {
+        next = (next + 1) % rows;
+        setEntity({ id: next, label: `label-${next}` });
+      } else if (mode === "same-key") {
+        setEntity({ id: next, label: `label-${next + 1}` });
+      } else {
+        setEntity({ id: next, label: `label-${next}` });
+      }
       runtime.flush();
     },
     dispose() {
@@ -169,7 +208,7 @@ function createReflexEntityProjectionCase(): BenchCase {
   };
 }
 
-function createSolidEntityProjectionCase(): BenchCase {
+function createSolidEntityProjectionCase(rows = DEFAULT_ROWS, mode: EntityMode = "switch"): BenchCase {
   let owner: unknown;
   let disposeRoot = () => {};
 
@@ -186,7 +225,7 @@ function createSolidEntityProjectionCase(): BenchCase {
   const withOwner = <T>(fn: () => T) => runWithOwner(owner, fn);
 
   const [entity, setEntity] = withOwner(() =>
-    createSignal({ id: 0, label: "label-0" }),
+    createSignal<Entity>({ id: 0, label: "label-0" }),
   );
   let previous: number | undefined;
 
@@ -201,7 +240,7 @@ function createSolidEntityProjectionCase(): BenchCase {
     }, {}),
   );
 
-  for (let index = 0; index < ROWS; ++index) {
+  for (let index = 0; index < rows; ++index) {
     withOwner(() =>
       createEffect(
         () => projection[index],
@@ -213,11 +252,20 @@ function createSolidEntityProjectionCase(): BenchCase {
   }
 
   let next = 0;
+  let labelVersion = 0;
 
   return {
     step() {
-      next = (next + 1) % ROWS;
-      setEntity({ id: next, label: `label-${next}` });
+      if (mode === "switch") {
+        next = (next + 1) % rows;
+        labelVersion = next;
+        setEntity({ id: next, label: `label-${labelVersion}` });
+      } else if (mode === "same-key") {
+        labelVersion += 1;
+        setEntity({ id: next, label: `label-${labelVersion}` });
+      } else {
+        setEntity({ id: next, label: `label-${labelVersion}` });
+      }
       solidFlush();
     },
     dispose() {
@@ -226,30 +274,55 @@ function createSolidEntityProjectionCase(): BenchCase {
   };
 }
 
-function registerCase(title: string, factory: () => BenchCase): void {
-  let instance: BenchCase | null = null;
+registerCase(
+  "reflex projection: selection dictionary",
+  () => createReflexSelectionCase(DEFAULT_ROWS, "switch"),
+);
+registerCase(
+  "solid projection: selection dictionary",
+  () => createSolidSelectionCase(DEFAULT_ROWS, "switch"),
+);
+registerCase(
+  "reflex projection: selection dictionary noop",
+  () => createReflexSelectionCase(DEFAULT_ROWS, "noop"),
+);
+registerCase(
+  "solid projection: selection dictionary noop",
+  () => createSolidSelectionCase(DEFAULT_ROWS, "noop"),
+);
 
-  describe(title, () => {
-    afterAll(() => {
-      instance?.dispose();
-      instance = null;
-    });
+registerCase(
+  "reflex projection: active entity label",
+  () => createReflexEntityProjectionCase(DEFAULT_ROWS, "switch"),
+);
+registerCase(
+  "solid projection: active entity label",
+  () => createSolidEntityProjectionCase(DEFAULT_ROWS, "switch"),
+);
+registerCase(
+  "reflex projection: active entity label same-key",
+  () => createReflexEntityProjectionCase(DEFAULT_ROWS, "same-key"),
+);
+registerCase(
+  "solid projection: active entity label same-key",
+  () => createSolidEntityProjectionCase(DEFAULT_ROWS, "same-key"),
+);
+registerCase(
+  "reflex projection: active entity label noop",
+  () => createReflexEntityProjectionCase(DEFAULT_ROWS, "noop"),
+);
+registerCase(
+  "solid projection: active entity label noop",
+  () => createSolidEntityProjectionCase(DEFAULT_ROWS, "noop"),
+);
 
-    bench(
-      "run",
-      () => {
-        instance ??= factory();
-        instance.step();
-      },
-      {
-        warmupIterations: WARMUP_ITERATIONS,
-        iterations: ITERATIONS,
-      },
-    );
-  });
+for (const rows of SCALE_ROWS) {
+  registerCase(
+    `reflex projection: active entity label scale ${rows}`,
+    () => createReflexEntityProjectionCase(rows, "switch"),
+  );
+  registerCase(
+    `solid projection: active entity label scale ${rows}`,
+    () => createSolidEntityProjectionCase(rows, "switch"),
+  );
 }
-
-registerCase("reflex projection: selection dictionary", createReflexSelectionCase);
-registerCase("solid projection: selection dictionary", createSolidSelectionCase);
-registerCase("reflex projection: active entity label", createReflexEntityProjectionCase);
-registerCase("solid projection: active entity label", createSolidEntityProjectionCase);

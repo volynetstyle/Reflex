@@ -95,14 +95,14 @@ function createScopedRuntimeCore({
   const scheduler = createEffectScheduler(
     resolveEffectSchedulerMode(effectStrategy),
   );
-  let runtime: InternalRuntime;
+
   let disposed = false;
 
   const dispatcher = new EventDispatcher((flush) => {
     return runtime.batch(flush);
   });
 
-  runtime = {
+  const runtime: InternalRuntime = {
     batch<T>(fn: () => T): T {
       if (disposed) return fn();
       return scheduler.batch(() => withRuntimeBinding(runtime, fn));
@@ -190,9 +190,8 @@ function createScopedRuntimeCore({
 }
 
 function getActiveRuntime(): ScopedRuntime {
-  const current =
-    (getCurrentRuntimeBinding() ??
-      getDefaultRuntimeBinding()) as ScopedRuntime | null;
+  const current = (getCurrentRuntimeBinding() ??
+    getDefaultRuntimeBinding()) as ScopedRuntime | null;
 
   if (current !== null) {
     return current;
@@ -201,7 +200,9 @@ function getActiveRuntime(): ScopedRuntime {
   return createRuntime();
 }
 
-export function createScopedRuntime(options: RuntimeOptions = {}): ScopedRuntime {
+export function createScopedRuntime(
+  options: RuntimeOptions = {},
+): ScopedRuntime {
   return createScopedRuntimeCore(options);
 }
 

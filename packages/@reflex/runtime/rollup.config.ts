@@ -18,7 +18,7 @@ interface BuildTarget {
 const INDEX_INPUT = { index: "build/esm/index.js" } as const;
 const INDEX_AND_DEBUG_INPUT = {
   index: "build/esm/index.js",
-  debug: "build/esm/debug.js",
+  debug: "build/esm/debug/index.js",
 } as const;
 
 const EXTERNALS = ["vitest", "expect-type"]

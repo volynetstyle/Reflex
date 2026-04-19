@@ -18,7 +18,7 @@
       "require": "./dist/cjs/index.cjs"
     },
     "./debug": {
-      "types": "./dist/esm/debug.d.ts",
+      "types": "./dist/esm/debug/index.d.ts",
       "import": "./dist/dev/debug.js"
     }
   },

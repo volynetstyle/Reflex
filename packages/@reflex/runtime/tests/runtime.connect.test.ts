@@ -106,6 +106,7 @@ describe("Reactive graph - edge wiring", () => {
 
     target.lastOutTail = ab;
     trackReadActive(c, target);
+    trackReadActive(c, target);
 
     expect(calls).toHaveLength(1);
     expect(calls[0]).toEqual({
