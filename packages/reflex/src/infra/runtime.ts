@@ -1,32 +1,31 @@
 import {
+  resetState,
   setHooks,
   setRuntimeHooks,
-  withCleanupRegistrar,
 } from "@reflex/runtime";
-import type { EngineHooks, ReactiveNode } from "@reflex/runtime";
+import type { EngineHooks } from "@reflex/runtime";
 import { subscribeEvent } from "./event";
 import { createSource } from "./factory";
-import {
-  getCurrentRuntimeBinding,
-  getDefaultRuntimeBinding,
-  getRuntimeBindings,
-  getWatcherRuntime,
-  registerRuntimeBinding,
-  setDefaultRuntimeBinding,
-  unregisterRuntimeBinding,
-  withRuntimeBinding,
-  type RuntimeBinding,
-} from "./runtime.binding";
 import { EventDispatcher } from "../policy";
 import type { EffectStrategy } from "../policy/scheduler";
 import {
   createEffectScheduler,
   resolveEffectSchedulerMode,
 } from "../policy/scheduler";
-import { computed as createComputed, memo as createMemo } from "../api/derived";
-import { effect as createEffect } from "../api/effect";
-import { signal as createSignal } from "../api/signal";
-import type { EffectCleanupRegistrar } from "../api/effect";
+
+type BatchFn = <T>(fn: () => T) => T;
+type EventFn = <T>() => EventSource<T>;
+
+export interface RuntimeContext {
+  readonly scope: "runtime";
+}
+
+let activeBatch: BatchFn = (fn) => fn();
+let activeEvent: EventFn = (() => {
+  throw new Error("Runtime has not been created");
+}) as EventFn;
+let activeFlush: () => void = () => {};
+let activeContext: RuntimeContext = { scope: "runtime" };
 
 export interface RuntimeOptions {
   hooks?: EngineHooks;
@@ -45,177 +44,54 @@ export interface Runtime {
   batch<T>(fn: () => T): T;
   event<T>(): EventSource<T>;
   flush(): void;
+  readonly ctx: RuntimeContext;
 }
 
-export interface ScopedRuntime extends Runtime {
-  signal<T>(initialValue: T): readonly [Signal<T>, Setter<T>];
-  computed<T>(fn: () => T): Computed<T>;
-  memo<T>(fn: () => T): Memo<T>;
-  effect(fn: EffectFn, options?: EffectOptions): Destructor;
-  withCleanupRegistrar<T>(
-    registrar: EffectCleanupRegistrar | null,
-    fn: () => T,
-  ): T;
-  run<T>(fn: () => T): T;
-  dispose(): void;
-}
-
-type InternalRuntime = ScopedRuntime & RuntimeBinding;
-
-let dispatchersInstalled = false;
-
-function ensureScopedDispatchers(): void {
-  if (dispatchersInstalled) return;
-
-  setRuntimeHooks(
-    (node: ReactiveNode) => {
-      const runtime = getWatcherRuntime(node);
-      runtime?.enqueue(node);
-    },
-    () => {
-      for (const runtime of getRuntimeBindings()) {
-        runtime.notifySettled();
-      }
-    },
-  );
-
-  dispatchersInstalled = true;
-}
-
-function createScopedRuntimeCore({
+export function createRuntime({
   hooks,
   effectStrategy,
-}: RuntimeOptions = {}): InternalRuntime {
-  ensureScopedDispatchers();
+}: RuntimeOptions = {}): Runtime {
+  const scheduler = createEffectScheduler(
+    resolveEffectSchedulerMode(effectStrategy),
+  );
+  const dispatcher = new EventDispatcher(scheduler.batch.bind(scheduler));
 
   if (hooks !== undefined) {
     setHooks(hooks);
   }
 
-  const scheduler = createEffectScheduler(
-    resolveEffectSchedulerMode(effectStrategy),
+  setRuntimeHooks(
+    scheduler.enqueue.bind(scheduler),
+    scheduler.runtimeNotifySettled,
   );
 
-  let disposed = false;
+  resetState();
+  activeContext = { scope: "runtime" };
+  activeBatch = scheduler.batch.bind(scheduler);
+  activeEvent = function <T>() {
+    const source = createSource<T>();
 
-  const dispatcher = new EventDispatcher((flush) => {
-    return runtime.batch(flush);
-  });
-
-  const runtime: InternalRuntime = {
-    batch<T>(fn: () => T): T {
-      if (disposed) return fn();
-      return scheduler.batch(() => withRuntimeBinding(runtime, fn));
-    },
-
-    event<T>(): EventSource<T> {
-      const source = createSource<T>();
-
-      return {
-        subscribe(fn: (value: T) => void) {
-          return subscribeEvent(source, fn);
-        },
-        emit(value: T) {
-          if (disposed) return;
-          dispatcher.emit(source, value);
-        },
-      };
-    },
-
-    flush(): void {
-      if (disposed) return;
-      scheduler.flush();
-    },
-
-    signal<T>(initialValue: T): readonly [Signal<T>, Setter<T>] {
-      return withRuntimeBinding(runtime, () => createSignal(initialValue));
-    },
-
-    computed<T>(fn: () => T): Computed<T> {
-      return withRuntimeBinding(runtime, () =>
-        createComputed(() => withRuntimeBinding(runtime, fn)),
-      );
-    },
-
-    memo<T>(fn: () => T): Memo<T> {
-      return withRuntimeBinding(runtime, () =>
-        createMemo(() => withRuntimeBinding(runtime, fn)),
-      );
-    },
-
-    effect(fn: EffectFn, options?: EffectOptions): Destructor {
-      return withRuntimeBinding(runtime, () => createEffect(fn, options));
-    },
-
-    withCleanupRegistrar<T>(
-      registrar: EffectCleanupRegistrar | null,
-      fn: () => T,
-    ): T {
-      return withRuntimeBinding(runtime, () =>
-        withCleanupRegistrar(registrar, fn),
-      );
-    },
-
-    run<T>(fn: () => T): T {
-      return withRuntimeBinding(runtime, fn);
-    },
-
-    dispose(): void {
-      if (disposed) return;
-      disposed = true;
-      unregisterRuntimeBinding(runtime);
-      scheduler.reset();
-      dispatcher.queue.length = 0;
-      dispatcher.head = 0;
-      dispatcher.flushing = false;
-    },
-
-    enqueue(node: ReactiveNode): void {
-      if (disposed) return;
-      scheduler.enqueue(node);
-    },
-
-    notifySettled(): void {
-      if (disposed) return;
-      scheduler.notifySettled();
-    },
-
-    isDisposed(): boolean {
-      return disposed;
-    },
+    return {
+      subscribe(fn: (value: T) => void) {
+        return subscribeEvent(source, fn);
+      },
+      emit(value: T) {
+        dispatcher.emit(source, value);
+      },
+    };
   };
+  activeFlush = scheduler.flush.bind(scheduler);
 
-  registerRuntimeBinding(runtime);
-  return runtime;
+  return {
+    ctx: activeContext,
+    batch: activeBatch,
+    event: activeEvent,
+    flush: activeFlush,
+  };
 }
 
-function getActiveRuntime(): ScopedRuntime {
-  const current = (getCurrentRuntimeBinding() ??
-    getDefaultRuntimeBinding()) as ScopedRuntime | null;
+export const batch: BatchFn = <T>(fn: () => T) => activeBatch(fn);
 
-  if (current !== null) {
-    return current;
-  }
+export const event: EventFn = <T>() => activeEvent<T>();
 
-  return createRuntime();
-}
-
-export function createScopedRuntime(
-  options: RuntimeOptions = {},
-): ScopedRuntime {
-  return createScopedRuntimeCore(options);
-}
-
-export function createRuntime(options: RuntimeOptions = {}): ScopedRuntime {
-  const runtime = createScopedRuntimeCore(options);
-  setDefaultRuntimeBinding(runtime);
-  return runtime;
-}
-
-export const batch = <T>(fn: () => T): T => getActiveRuntime().batch(fn);
-
-export const event = <T>(): EventSource<T> => getActiveRuntime().event<T>();
-
-export const flush = (): void => {
-  getActiveRuntime().flush();
-};
+export const flush = (): void => activeFlush();

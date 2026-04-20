@@ -310,27 +310,24 @@ export function registerBenchFile(
 
     logScenarioSummary(libraryName, scenario, sampleRows);
 
-    const runners: Runner[] = new Array(variantCount);
-    for (let vi = 0; vi < variantCount; ++vi) {
-      runners[vi] = createRunner(
-        variants[vi]!,
-        scenario,
-        0xa000 + si * 193 + vi * 17,
-      );
-    }
-
     describe(`${libraryName}: ${scenario.title}`, () => {
-      afterAll(() => {
-        for (let i = 0; i < runners.length; ++i) {
-          runners[i]!.dispose();
-        }
-      });
+      for (let vi = 0; vi < variantCount; ++vi) {
+        const variant = variants[vi]!;
+        let runner: Runner | null = null;
 
-      for (let i = 0; i < runners.length; ++i) {
-        const runner = runners[i]!;
+        afterAll(() => {
+          runner?.dispose();
+          runner = null;
+        });
+
         bench(
-          runner.label,
+          variant.label,
           () => {
+            runner ??= createRunner(
+              variant,
+              scenario,
+              0xa000 + si * 193 + vi * 17,
+            );
             runner.runStep();
           },
           scenario.bench,

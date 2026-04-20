@@ -159,7 +159,7 @@ describe("Reactive runtime - traversal invariants", () => {
 
     writeProducer(tracked, 2);
     expect(target.state & ReactiveNodeState.Tracking).toBeTruthy();
-    expect(target.state & ReactiveNodeState.Visited).toBeTruthy();
+    expect(target.state & ReactiveNodeState.Reentrant).toBeTruthy();
     expect(target.state & ReactiveNodeState.Changed).toBeFalsy();
     expect(target.state & ReactiveNodeState.Invalid).toBeTruthy();
   });
@@ -186,7 +186,7 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(target.lastOutTail).toBe(secondEdge);
     expect(firstEdge.nextIn).toBe(secondEdge);
     expect(target.state & ReactiveNodeState.Tracking).toBeTruthy();
-    expect(target.state & ReactiveNodeState.Visited).toBeTruthy();
+    expect(target.state & ReactiveNodeState.Reentrant).toBeTruthy();
     expect(target.state & ReactiveNodeState.Changed).toBeFalsy();
     expect(target.state & ReactiveNodeState.Invalid).toBeTruthy();
   });
@@ -315,7 +315,7 @@ describe("Reactive runtime - traversal invariants", () => {
     runWatcher(watcher);
     expect(seen).toEqual([0]);
     expect(watcher.state & ReactiveNodeState.Invalid).toBeTruthy();
-    expect(watcher.state & ReactiveNodeState.Visited).toBeTruthy();
+    expect(watcher.state & ReactiveNodeState.Reentrant).toBeTruthy();
 
     runWatcher(watcher);
     expect(seen).toEqual([0, 1]);

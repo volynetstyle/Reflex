@@ -4,9 +4,9 @@ import { ReactiveNodeState } from "../shape";
 import { shouldRecomputeLinear } from "./recompute.branch";
 
 const STOP_RECOMPUTE = ReactiveNodeState.Producer | ReactiveNodeState.Disposed;
-const REENTRANT_STALE = ReactiveNodeState.Invalid | ReactiveNodeState.Visited;
+const REENTRANT_STALE = ReactiveNodeState.Invalid | ReactiveNodeState.Reentrant;
 const WATCHER_REENTRANT_STALE =
-  ReactiveNodeState.Invalid | ReactiveNodeState.Visited;
+  ReactiveNodeState.Invalid | ReactiveNodeState.Reentrant;
 
 export function shouldRecomputeDirtyConsumer(
   node: ReactiveNode,

@@ -100,7 +100,7 @@ export function runWatcher(node: ReactiveNode): void {
     node.payload = result as () => void;
   }
 
-  if ((node.state & ReactiveNodeState.Visited) === 0) {
+  if ((node.state & ReactiveNodeState.Reentrant) === 0) {
     clearDirtyState(node);
   } else {
     node.state =

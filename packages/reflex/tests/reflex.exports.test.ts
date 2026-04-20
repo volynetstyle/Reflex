@@ -33,7 +33,6 @@ describe("Reactive system - exports", () => {
     expect(reflex.isModel).toBe(isModel);
     expect(reflex.own).toBe(own);
     expect(reflex.createRuntime).toBe(infra.createRuntime);
-    expect(reflex.createScopedRuntime).toBe(infra.createScopedRuntime);
     expect(reflex.batch).toBe(infra.batch);
     expect(reflex.event).toBe(infra.event);
     expect(reflex.flush).toBe(infra.flush);

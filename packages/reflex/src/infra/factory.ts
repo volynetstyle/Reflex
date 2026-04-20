@@ -6,12 +6,6 @@ import {
 } from "@reflex/runtime";
 import type { ReactiveEdge, ReactiveNode } from "@reflex/runtime";
 import { EventSource as RuntimeEventSource } from "./event";
-import {
-  bindWatcherToRuntime,
-  getCurrentRuntimeBinding,
-  getDefaultRuntimeBinding,
-  withRuntimeBinding,
-} from "./runtime.binding";
 
 export class RankedEffectNode<T = unknown> implements ReactiveNode<T> {
   state: number;
@@ -58,24 +52,18 @@ export const createWatcherRankedrNode = (
   compute: EffectFn,
   priority = 0,
 ): ReactiveNode => {
-  const runtime = getCurrentRuntimeBinding() ?? getDefaultRuntimeBinding();
-  const boundCompute =
-    runtime === null ? compute : () => withRuntimeBinding(runtime, compute);
-  const node = new RankedEffectNode(
+  return new RankedEffectNode(
     undefined,
-    boundCompute,
+    compute,
     WATCHER_INITIAL_STATE,
     priority,
   );
-
-  bindWatcherToRuntime(node, runtime);
-  return node;
 };
 
 export const createSignalNode = <T>(payload: T) => {
   return new RuntimeReactiveNode<T>(
     payload,
-    /*TODO: replace with undefined*/ null,
+    null,
     PRODUCER_INITIAL_STATE,
   );
 };
@@ -85,42 +73,21 @@ export const createSource = <T>(): RuntimeEventSource<T> => {
 };
 
 export const createResourceStateNode = () => {
-  return new RuntimeReactiveNode<number>(
-    0,
-    /*TODO: replace with undefined*/ null,
-    PRODUCER_INITIAL_STATE,
-  );
+  return new RuntimeReactiveNode<number>(0, null, PRODUCER_INITIAL_STATE);
 };
 
 export const createAccumulator = <T>(payload: T): ReactiveNode<T> => {
-  return new RuntimeReactiveNode(
-    payload,
-    /*TODO: replace with undefined*/ null,
-    PRODUCER_INITIAL_STATE,
-  );
+  return new RuntimeReactiveNode(payload, null, PRODUCER_INITIAL_STATE);
 };
 
 export const createComputedNode = <T>(fn: () => T) => {
-  const runtime = getCurrentRuntimeBinding() ?? getDefaultRuntimeBinding();
-  const compute = runtime === null ? fn : () => withRuntimeBinding(runtime, fn);
-
   return new RuntimeReactiveNode<T>(
     undefined as T,
-    compute,
+    fn,
     CONSUMER_INITIAL_STATE,
   );
 };
 
 export const createWatcherNode = (compute: EffectFn): ReactiveNode => {
-  const runtime = getCurrentRuntimeBinding() ?? getDefaultRuntimeBinding();
-  const boundCompute =
-    runtime === null ? compute : () => withRuntimeBinding(runtime, compute);
-  const node = new RuntimeReactiveNode(
-    undefined,
-    boundCompute,
-    WATCHER_INITIAL_STATE,
-  );
-
-  bindWatcherToRuntime(node, runtime);
-  return node;
+  return new RuntimeReactiveNode(undefined, compute, WATCHER_INITIAL_STATE);
 };

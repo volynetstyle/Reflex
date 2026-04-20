@@ -100,6 +100,55 @@ describe("createEffectScheduler", () => {
     ]);
   });
 
+  it("ranked flush handles sparse priority ranges without losing order", () => {
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Ranked);
+    const low = createNode() as any;
+    const mid = createNode() as any;
+    const high = createNode() as any;
+
+    low.priority = 1;
+    mid.priority = 10_000;
+    high.priority = 1_000_000;
+
+    scheduler.enqueue(low);
+    scheduler.enqueue(high);
+    scheduler.enqueue(mid);
+    scheduler.flush();
+
+    expect(mocks.runWatcher.mock.calls.map(([node]) => node)).toEqual([
+      high,
+      mid,
+      low,
+    ]);
+  });
+
+  it("ranked flush drains newly enqueued nodes after the current priority wave", () => {
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Ranked);
+    const high = createNode() as any;
+    const low = createNode() as any;
+    const late = createNode() as any;
+
+    high.priority = 10;
+    low.priority = 1;
+    late.priority = 5;
+
+    mocks.runWatcher.mockImplementation((node) => {
+      if (node === high) {
+        scheduler.enqueue(late);
+      }
+    });
+
+    scheduler.enqueue(low);
+    scheduler.enqueue(high);
+    scheduler.flush();
+
+    expect(mocks.runWatcher.mock.calls.map(([node]) => node)).toEqual([
+      high,
+      low,
+      late,
+    ]);
+  });
+
   it("flush runs dirty nodes even when extra state bits are present", () => {
     const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
     const node = createNode(DIRTY_STATE | ReactiveNodeState.Changed);

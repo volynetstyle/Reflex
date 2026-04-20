@@ -235,7 +235,7 @@ describe("Reactive runtime - walker invariants", () => {
     expect(tracked.state).toBe(
       ReactiveNodeState.Consumer |
         ReactiveNodeState.Tracking |
-        ReactiveNodeState.Visited |
+        ReactiveNodeState.Reentrant |
         ReactiveNodeState.Invalid,
     );
     expect(sibling.state).toBe(
@@ -247,7 +247,7 @@ describe("Reactive runtime - walker invariants", () => {
     const source = createNode(ReactiveNodeState.Producer);
     const middle = createNode(ReactiveNodeState.Consumer);
     const leaf = createNode(
-      ReactiveNodeState.Consumer | ReactiveNodeState.Visited,
+      ReactiveNodeState.Consumer | ReactiveNodeState.Reentrant,
     );
     resetRuntime();
 
@@ -267,10 +267,10 @@ describe("Reactive runtime - walker invariants", () => {
   it("clears stale Visited on fast-path subscribers while preserving Changed and Invalid", () => {
     const source = createNode(ReactiveNodeState.Producer);
     const middle = createNode(
-      ReactiveNodeState.Consumer | ReactiveNodeState.Visited,
+      ReactiveNodeState.Consumer | ReactiveNodeState.Reentrant,
     );
     const leaf = createNode(
-      ReactiveNodeState.Consumer | ReactiveNodeState.Visited,
+      ReactiveNodeState.Consumer | ReactiveNodeState.Reentrant,
     );
     resetRuntime();
 
@@ -329,7 +329,7 @@ describe("Reactive runtime - walker invariants", () => {
     const watcher = createNode(
       ReactiveNodeState.Watcher |
         ReactiveNodeState.Invalid |
-        ReactiveNodeState.Visited,
+        ReactiveNodeState.Reentrant,
     );
     const invalidated: ReactiveNode[] = [];
     resetRuntime({
@@ -345,7 +345,7 @@ describe("Reactive runtime - walker invariants", () => {
     expect(watcher.state).toBe(
       ReactiveNodeState.Watcher |
         ReactiveNodeState.Changed |
-        ReactiveNodeState.Visited,
+        ReactiveNodeState.Reentrant,
     );
     expect(invalidated).toEqual([watcher]);
   });

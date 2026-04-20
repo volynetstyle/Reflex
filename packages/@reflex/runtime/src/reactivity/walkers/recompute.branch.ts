@@ -15,10 +15,7 @@
 
 import type { ReactiveNode, ReactiveEdge } from "../shape";
 import { ReactiveNodeState, DIRTY_STATE } from "../shape";
-import {
-  hasFanout,
-  refreshAndPropagateIfNeeded,
-} from "./recompute.refresh";
+import { hasFanout, refreshAndPropagateIfNeeded } from "./recompute.refresh";
 
 // Shared stack — reused across calls to avoid allocation.
 // stackBase tracks the logical bottom per call so recursive entries
@@ -73,11 +70,10 @@ function shouldRecomputeBranching(
     while (stackTop > stackBase) {
       const parentLink = stack[--stackTop]!;
       shouldRecomputeStackHigh = stackTop;
-      const parentFanout = hasFanout(parentLink);
 
       if (changed) {
         shouldRecomputeStackHigh = stackTop;
-        changed = refreshAndPropagateIfNeeded(consumer, parentFanout);
+        changed = refreshAndPropagateIfNeeded(consumer, hasFanout(parentLink));
       } else {
         consumer.state &= ~ReactiveNodeState.Invalid;
       }
@@ -186,11 +182,10 @@ export function shouldRecomputeLinear(
   while (stackTop > stackBase) {
     const parentLink = stack[--stackTop]!;
     shouldRecomputeStackHigh = stackTop;
-    const parentFanout = hasFanout(parentLink);
 
     if (changed) {
       shouldRecomputeStackHigh = stackTop;
-      changed = refreshAndPropagateIfNeeded(consumer, parentFanout);
+      changed = refreshAndPropagateIfNeeded(consumer, hasFanout(parentLink));
     } else {
       consumer.state &= ~ReactiveNodeState.Invalid;
     }

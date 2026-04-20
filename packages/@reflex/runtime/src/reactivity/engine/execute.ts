@@ -19,7 +19,7 @@ function prepareNodeExecution(node: ReactiveNode): ReactiveNode | null {
 
   node.lastOutTail = null;
   node.state =
-    (node.state & ~ReactiveNodeState.Visited) | ReactiveNodeState.Tracking;
+    (node.state & ~ReactiveNodeState.Reentrant) | ReactiveNodeState.Tracking;
   markNodeComputing(node);
   setTrackingVersion(nextVersion === 0 ? 1 : nextVersion);
 

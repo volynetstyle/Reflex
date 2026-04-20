@@ -19,7 +19,7 @@ const CONSUMER = 1 << 1;
 const WATCHER = 1 << 2;
 const INVALID = 1 << 3;
 const CHANGED = 1 << 4;
-const VISITED = 1 << 5;
+const REENTRANT = 1 << 5;
 const DISPOSED = 1 << 6;
 const COMPUTING = 1 << 7;
 const SCHEDULED = 1 << 8;
@@ -38,7 +38,7 @@ export const ReactiveNodeState = {
   /** Definitely stale: a direct upstream dependency already confirmed a change. */
   Changed: CHANGED,
   /** Re-entrant marker used when a tracked dependency invalidates mid-computation. */
-  Visited: VISITED,
+  Reentrant: REENTRANT,
   /** Terminal lifecycle state. Disposed nodes must no longer participate in the graph. */
   Disposed: DISPOSED,
   /** Node is currently executing its compute function. Used for cycle detection. */
@@ -85,16 +85,16 @@ export const CONSUMER_DIRTY = CONSUMER | DIRTY_STATE;
 export const WATCHER_CHANGED = CHANGED | WATCHER;
 
 /** Transient walker-only bits that should not survive a settled execution. */
-export const WALKER_STATE = VISITED | TRACKING;
+export const WALKER_STATE = REENTRANT | TRACKING;
 
 /** Clear the re-entrant marker after the walker no longer needs it. */
 export function clearNodeVisited(node: ReactiveNode): void {
-  node.state &= ~VISITED;
+  node.state &= ~REENTRANT;
 }
 
 /** Enter dependency collection mode for the current compute pass. */
 export function beginNodeTracking(node: ReactiveNode): void {
-  node.state = (node.state & ~VISITED) | TRACKING;
+  node.state = (node.state & ~REENTRANT) | TRACKING;
 }
 
 /** Leave dependency collection mode after compute finishes. */

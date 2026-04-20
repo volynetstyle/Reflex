@@ -124,7 +124,7 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     expect(readConsumer(target)).toBe(1);
     expect(seenInside & ReactiveNodeState.Tracking).toBeTruthy();
     expect(seenInside & ReactiveNodeState.Computing).toBeTruthy();
-    expect(seenInside & ReactiveNodeState.Visited).toBeFalsy();
+    expect(seenInside & ReactiveNodeState.Reentrant).toBeFalsy();
     expect(target.state & ReactiveNodeState.Tracking).toBeFalsy();
     expect(target.state & ReactiveNodeState.Computing).toBeFalsy();
   });
@@ -141,12 +141,12 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
 
     expect(readConsumer(target)).toBe(3);
 
-    target.state |= ReactiveNodeState.Visited | ReactiveNodeState.Changed;
+    target.state |= ReactiveNodeState.Reentrant | ReactiveNodeState.Changed;
 
     expect(readConsumer(target)).toBe(3);
-    expect(seenInside & ReactiveNodeState.Visited).toBeFalsy();
+    expect(seenInside & ReactiveNodeState.Reentrant).toBeFalsy();
     expect(seenInside & ReactiveNodeState.Tracking).toBeTruthy();
-    expect(target.state & ReactiveNodeState.Visited).toBeFalsy();
+    expect(target.state & ReactiveNodeState.Reentrant).toBeFalsy();
     expect(target.state & DIRTY_STATE).toBe(0);
   });
 });

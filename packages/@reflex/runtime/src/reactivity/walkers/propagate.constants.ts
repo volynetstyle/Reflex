@@ -20,7 +20,7 @@ export const ALREADY_DIRTY_MASK =
 
 export const TERMINAL_MASK = ReactiveNodeState.Disposed;
 export const TRANSITIONAL_MASK = ReactiveNodeState.Tracking;
-export const TRAVERSAL_GUARD_MASK = ReactiveNodeState.Visited;
+export const TRAVERSAL_GUARD_MASK = ReactiveNodeState.Reentrant;
 
 // Only states that truly require slow-path invalidation handling.
 // Visited is intentionally excluded.

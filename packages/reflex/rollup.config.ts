@@ -19,7 +19,7 @@ interface BuildEntry {
   outputPath: string;
 }
 
-const EXTERNALS = ["vitest", "expect-type", "@reflex/runtime"] as const;
+const EXTERNALS = ["vitest", "expect-type"] as const;
 
 const PURE_FUNCS = [
   "Object.freeze",

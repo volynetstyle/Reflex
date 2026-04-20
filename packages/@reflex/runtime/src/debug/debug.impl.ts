@@ -86,7 +86,7 @@ function getFlags(state: number): RuntimeDebugFlag[] {
   if ((state & ReactiveNodeState.Watcher) !== 0) flags.push("watcher");
   if ((state & ReactiveNodeState.Invalid) !== 0) flags.push("invalid");
   if ((state & ReactiveNodeState.Changed) !== 0) flags.push("changed");
-  if ((state & ReactiveNodeState.Visited) !== 0) flags.push("visited");
+  if ((state & ReactiveNodeState.Reentrant) !== 0) flags.push("visited");
   if ((state & ReactiveNodeState.Disposed) !== 0) flags.push("disposed");
   if ((state & ReactiveNodeState.Computing) !== 0) flags.push("computing");
   if ((state & ReactiveNodeState.Scheduled) !== 0) flags.push("scheduled");
