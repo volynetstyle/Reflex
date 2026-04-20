@@ -34,7 +34,7 @@ describe("Reactive graph - edge wiring", () => {
     expect(target.lastIn).toBe(edge);
   });
 
-  it("keeps lastOutTail separate from the physical incoming tail when unlinking", () => {
+  it("keeps lastInTail separate from the physical incoming tail when unlinking", () => {
     const a = createNode(ReactiveNodeState.Producer);
     const b = createNode(ReactiveNodeState.Producer);
     const c = createNode(ReactiveNodeState.Producer);
@@ -44,10 +44,10 @@ describe("Reactive graph - edge wiring", () => {
     const bb = linkEdge(b, target);
     const cb = linkEdge(c, target);
 
-    target.lastOutTail = bb;
+    target.lastInTail = bb;
     unlinkEdge(cb);
 
-    expect(target.lastOutTail).toBe(bb);
+    expect(target.lastInTail).toBe(bb);
     expect(target.lastIn).toBe(bb);
     expect(target.firstIn).toBe(ab);
     expect(ab.nextIn).toBe(bb);
@@ -104,7 +104,7 @@ describe("Reactive graph - edge wiring", () => {
       },
     });
 
-    target.lastOutTail = ab;
+    target.lastInTail = ab;
     trackReadActive(c, target);
     trackReadActive(c, target);
 
@@ -115,7 +115,7 @@ describe("Reactive graph - edge wiring", () => {
       prev: ab,
       nextExpected: bb,
     });
-    expect(target.lastOutTail).toBe(cb);
+    expect(target.lastInTail).toBe(cb);
     expect(ab.nextIn).toBe(cb);
     expect(cb.prevIn).toBe(ab);
     restoreContext(snapshot);

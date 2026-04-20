@@ -17,7 +17,7 @@ import { recordDebugEvent } from "../../debug/debug.impl";
 function prepareNodeExecution(node: ReactiveNode): ReactiveNode | null {
   const nextVersion = (trackingVersion + 1) >>> 0;
 
-  node.lastOutTail = null;
+  node.lastInTail = null;
   node.state =
     (node.state & ~ReactiveNodeState.Reentrant) | ReactiveNodeState.Tracking;
   markNodeComputing(node);
@@ -64,7 +64,7 @@ export function executeNodeComputation(node: ReactiveNode): unknown {
     result = compute();
     restoreNodeExecution(node, prevActive);
 
-    if (node.lastOutTail !== node.lastIn) {
+    if (node.lastInTail !== node.lastIn) {
       cleanupStaleSources(node);
     }
 

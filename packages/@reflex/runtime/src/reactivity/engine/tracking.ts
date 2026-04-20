@@ -24,17 +24,17 @@ function recordTrackRead(consumer: ReactiveNode, source: ReactiveNode): void {
 
 function trackReadSlowPath(source: ReactiveNode, consumer: ReactiveNode): void {
   const version = trackingVersion;
-  const prevEdge = consumer.lastOutTail;
+  const prevEdge = consumer.lastInTail;
 
   if (prevEdge === null) {
     const firstIn = consumer.firstIn;
 
     if (firstIn === null || firstIn.nextIn === null) {
-      consumer.lastOutTail = linkEdge(source, consumer, null, version);
+      consumer.lastInTail = linkEdge(source, consumer, null, version);
       return;
     }
 
-    consumer.lastOutTail = trackReadFallback(
+    consumer.lastInTail = trackReadFallback(
       source,
       consumer,
       null,
@@ -46,11 +46,11 @@ function trackReadSlowPath(source: ReactiveNode, consumer: ReactiveNode): void {
 
   const nextExpected = prevEdge.nextIn;
   if (nextExpected === null || nextExpected.nextIn === null) {
-    consumer.lastOutTail = linkEdge(source, consumer, prevEdge, version);
+    consumer.lastInTail = linkEdge(source, consumer, prevEdge, version);
     return;
   }
 
-  consumer.lastOutTail = trackReadFallback(
+  consumer.lastInTail = trackReadFallback(
     source,
     consumer,
     prevEdge,
@@ -92,15 +92,15 @@ export function trackRead(source: ReactiveNode): void {
  * Consumer-local cursor fast path that avoids entering the full tracking path
  * when the next unique dependency is already obvious from the current cursor.
  *
- * - Immediate duplicate (`lastOutTail.from === source`) is structurally inert.
- * - Expected next (`lastOutTail.nextIn === source`, or `firstIn` when no tail yet)
+ * - Immediate duplicate (`lastInTail.from === source`) is structurally inert.
+ * - Expected next (`lastInTail.nextIn === source`, or `firstIn` when no tail yet)
  *   reuses the existing edge and advances the cursor.
  */
 export function tryTrackReadFastPath(
   source: ReactiveNode,
   consumer: ReactiveNode,
 ): boolean {
-  const prevEdge = consumer.lastOutTail;
+  const prevEdge = consumer.lastInTail;
   const version = trackingVersion;
 
   const lastOut = source.lastOut;
@@ -123,8 +123,7 @@ export function tryTrackReadFastPath(
     const nextExpected = prevEdge.nextIn;
     if (nextExpected != null && nextExpected.from === source) {
       nextExpected.version = version;
-      consumer.lastOutTail = nextExpected;
-      recordTrackRead(consumer, source);
+      consumer.lastInTail = nextExpected;
       recordTrackRead(consumer, source);
       return true;
     }
@@ -135,8 +134,7 @@ export function tryTrackReadFastPath(
   const firstIn = consumer.firstIn;
   if (firstIn != null && firstIn.from === source) {
     firstIn.version = version;
-    consumer.lastOutTail = firstIn;
-    recordTrackRead(consumer, source);
+    consumer.lastInTail = firstIn;
     recordTrackRead(consumer, source);
     return true;
   }
@@ -162,27 +160,27 @@ export function trackReadActive(
   recordTrackRead(consumer, source);
 
   const version = trackingVersion;
-  const prevEdge = consumer.lastOutTail;
+  const prevEdge = consumer.lastInTail;
   if (prevEdge === null) {
     const firstIn = consumer.firstIn;
 
     if (firstIn === null) {
-      consumer.lastOutTail = linkEdge(source, consumer, null, version);
+      consumer.lastInTail = linkEdge(source, consumer, null, version);
       return;
     }
 
     if (firstIn.from === source) {
       firstIn.version = version;
-      consumer.lastOutTail = firstIn;
+      consumer.lastInTail = firstIn;
       return;
     }
 
     if (firstIn.nextIn === null) {
-      consumer.lastOutTail = linkEdge(source, consumer, null, version);
+      consumer.lastInTail = linkEdge(source, consumer, null, version);
       return;
     }
 
-    consumer.lastOutTail = trackReadFallback(
+    consumer.lastInTail = trackReadFallback(
       source,
       consumer,
       null,
@@ -199,22 +197,22 @@ export function trackReadActive(
 
   const nextExpected = prevEdge.nextIn;
   if (nextExpected === null) {
-    consumer.lastOutTail = linkEdge(source, consumer, prevEdge, version);
+    consumer.lastInTail = linkEdge(source, consumer, prevEdge, version);
     return;
   }
 
   if (nextExpected.from === source) {
     nextExpected.version = version;
-    consumer.lastOutTail = nextExpected;
+    consumer.lastInTail = nextExpected;
     return;
   }
 
   if (nextExpected.nextIn === null) {
-    consumer.lastOutTail = linkEdge(source, consumer, prevEdge, version);
+    consumer.lastInTail = linkEdge(source, consumer, prevEdge, version);
     return;
   }
 
-  consumer.lastOutTail = trackReadFallback(
+  consumer.lastInTail = trackReadFallback(
     source,
     consumer,
     prevEdge,
@@ -225,10 +223,10 @@ export function trackReadActive(
 
 /**
  * Suffix cleanup over the consumer's incoming edges after recompute.
- * Everything after lastOutTail belongs to the old dependency list and is unlinked.
+ * Everything after lastInTail belongs to the old dependency list and is unlinked.
  */
 export function cleanupStaleSources(node: ReactiveNode): void {
-  const tail = node.lastOutTail;
+  const tail = node.lastInTail;
   const staleHead = tail === null ? node.firstIn : tail.nextIn;
   if (staleHead === null) return;
   const detachedStaleHead: NonNullable<typeof staleHead> = staleHead;

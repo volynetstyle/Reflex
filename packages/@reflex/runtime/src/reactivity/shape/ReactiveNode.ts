@@ -24,7 +24,7 @@ class ReactiveNode<T = unknown> implements Reactivable {
   firstIn: ReactiveEdge | null;
   lastOut: ReactiveEdge | null;
   lastIn: ReactiveEdge | null;
-  lastOutTail: ReactiveEdge | null;
+  lastInTail: ReactiveEdge | null;
 
   compute: ComputeFn<T>;
   payload: T;
@@ -35,7 +35,7 @@ class ReactiveNode<T = unknown> implements Reactivable {
     this.firstIn = null;
     this.lastOut = null;
     this.lastIn = null;
-    this.lastOutTail = null;
+    this.lastInTail = null;
 
     this.compute = compute;
     this.payload = payload as T;

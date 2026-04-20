@@ -16,88 +16,107 @@ import {
 import {
   DISPOSED_MASK,
   IMMEDIATE,
-  SLOW_INVALIDATION_MASK,
+  SLOW_PATH_INVALIDATION_MASK,
   TRACKING_MASK,
   VISITED_MASK,
 } from "./propagate.constants";
 
 export function dispatchInvalidatedWatcher(
-  sub: ReactiveNode,
-  thrown: unknown,
+  watcherNode: ReactiveNode,
+  firstThrownError: unknown,
 ): unknown {
-  const dispatch = dispatchSinkInvalidated;
+  const notifyInvalidatedSink = dispatchSinkInvalidated;
 
-  if (dispatch === undefined) {
+  if (notifyInvalidatedSink === undefined) {
     if (__DEV__) {
-      recordDebugEvent(defaultContext, "watcher:invalidated", { node: sub });
+      recordDebugEvent(defaultContext, "watcher:invalidated", {
+        node: watcherNode,
+      });
     }
 
-    return thrown;
+    return firstThrownError;
   }
 
   try {
-    dispatch(sub);
+    notifyInvalidatedSink(watcherNode);
   } catch (error) {
-    if (thrown === null) {
+    if (firstThrownError === null) {
       return error;
     }
   }
 
-  return thrown;
+  return firstThrownError;
 }
 
-function getTrackingInvalidatedSubscriberState(
-  edge: ReactiveEdge,
-  sub: ReactiveNode,
-  subState: number,
+function getTrackedSubscriberInvalidationState(
+  inboundEdge: ReactiveEdge,
+  subscriber: ReactiveNode,
+  subscriberState: number,
 ): number {
-  const lastOutTail = sub.lastOutTail;
-  if (lastOutTail === null) return 0;
+  const trackedInputTail = subscriber.lastInTail;
+  if (trackedInputTail === null) return 0;
 
-  const invalidatedState = subState | VISITED_MASK | ReactiveNodeState.Invalid;
-  if (edge === lastOutTail) return invalidatedState;
+  const trackedInvalidState =
+    subscriberState |
+    VISITED_MASK |
+    ReactiveNodeState.Invalid;
+  if (inboundEdge === trackedInputTail) return trackedInvalidState;
 
-  const prevIn = edge.prevIn;
-  if (prevIn === null) return invalidatedState;
-  if (prevIn === lastOutTail) return 0;
+  const previousInboundEdge = inboundEdge.prevIn;
+  if (previousInboundEdge === null) return trackedInvalidState;
+  if (previousInboundEdge === trackedInputTail) return 0;
 
-  let cursor = prevIn.prevIn;
-  while (cursor !== null && cursor !== lastOutTail) {
-    cursor = cursor.prevIn;
+  let scannedInputEdge = previousInboundEdge.prevIn;
+  while (
+    scannedInputEdge !== null &&
+    scannedInputEdge !== trackedInputTail
+  ) {
+    scannedInputEdge = scannedInputEdge.prevIn;
   }
 
-  return cursor === lastOutTail ? 0 : invalidatedState;
+  return scannedInputEdge === trackedInputTail
+    ? 0
+    : trackedInvalidState;
 }
 
 export function invalidateSubscriber(
-  edge: ReactiveEdge,
-  sub: ReactiveNode,
-  subState: number,
-  promoteBit: number,
+  inboundEdge: ReactiveEdge,
+  subscriber: ReactiveNode,
+  subscriberState: number,
+  promoteState: number,
 ): number {
-  const promotedState = (subState & ~VISITED_MASK) | promoteBit;
-  let nextState = promotedState;
+  const clearedVisitedState =
+    (subscriberState & ~VISITED_MASK) |
+    promoteState;
+  let nextSubscriberState = clearedVisitedState;
 
-  if ((subState & SLOW_INVALIDATION_MASK) !== 0) {
-    if ((subState & DISPOSED_MASK) !== 0) return 0;
+  if ((subscriberState & SLOW_PATH_INVALIDATION_MASK) !== 0) {
+    if ((subscriberState & DISPOSED_MASK) !== 0) return 0;
 
-    if ((subState & TRACKING_MASK) !== 0) {
-      nextState = getTrackingInvalidatedSubscriberState(edge, sub, subState);
-      if (nextState === 0) return 0;
+    if ((subscriberState & TRACKING_MASK) !== 0) {
+      nextSubscriberState = getTrackedSubscriberInvalidationState(
+        inboundEdge,
+        subscriber,
+        subscriberState,
+      );
+      if (nextSubscriberState === 0) return 0;
     } else {
-      if ((subState & DIRTY_STATE) !== 0) return 0;
+      if ((subscriberState & DIRTY_STATE) !== 0) return 0;
     }
   }
 
-  sub.state = nextState;
+  subscriber.state = nextSubscriberState;
 
   if (__DEV__) {
     recordDebugEvent(defaultContext, "propagate", {
-      detail: { immediate: promoteBit === IMMEDIATE, nextState },
-      source: edge.from,
-      target: sub,
+      detail: {
+        immediate: promoteState === IMMEDIATE,
+        nextState: nextSubscriberState,
+      },
+      source: inboundEdge.from,
+      target: subscriber,
     });
   }
 
-  return nextState;
+  return nextSubscriberState;
 }

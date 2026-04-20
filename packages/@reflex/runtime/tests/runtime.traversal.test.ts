@@ -150,7 +150,7 @@ describe("Reactive runtime - traversal invariants", () => {
     const staleEdge = linkEdge(stale, target);
 
     target.state = ReactiveNodeState.Consumer | ReactiveNodeState.Tracking;
-    target.lastOutTail = trackedEdge;
+    target.lastInTail = trackedEdge;
 
     writeProducer(stale, 3);
     expect(target.state).toBe(
@@ -164,7 +164,7 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(target.state & ReactiveNodeState.Invalid).toBeTruthy();
   });
 
-  it("treats lastOutTail as the tracked-prefix boundary while computing", () => {
+  it("treats lastInTail as the tracked-prefix boundary while computing", () => {
     const first = createProducer(1);
     const second = createProducer(2);
     const stale = createProducer(3);
@@ -175,7 +175,7 @@ describe("Reactive runtime - traversal invariants", () => {
     linkEdge(stale, target);
 
     target.state = ReactiveNodeState.Consumer | ReactiveNodeState.Tracking;
-    target.lastOutTail = secondEdge;
+    target.lastInTail = secondEdge;
 
     writeProducer(stale, 4);
     expect(target.state).toBe(
@@ -183,7 +183,7 @@ describe("Reactive runtime - traversal invariants", () => {
     );
 
     writeProducer(first, 5);
-    expect(target.lastOutTail).toBe(secondEdge);
+    expect(target.lastInTail).toBe(secondEdge);
     expect(firstEdge.nextIn).toBe(secondEdge);
     expect(target.state & ReactiveNodeState.Tracking).toBeTruthy();
     expect(target.state & ReactiveNodeState.Reentrant).toBeTruthy();

@@ -107,7 +107,7 @@ export function expectNodeGraphIntegrity(node: ReactiveNode): void {
     expect(edge.to).toBeTruthy();
   }
 
-  if (node.lastOutTail !== null) {
-    expect(incoming.includes(node.lastOutTail)).toBe(true);
+  if (node.lastInTail !== null) {
+    expect(incoming.includes(node.lastInTail)).toBe(true);
   }
 }

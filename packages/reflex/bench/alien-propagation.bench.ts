@@ -172,7 +172,7 @@ class LinkedPropagationHarness implements BenchHarness {
       flags: ReactiveFlags.None,
       queued: false,
       deps: undefined,
-      lastOutTail: undefined,
+      lastInTail: undefined,
       subs: undefined,
       subsTail: undefined,
     };
@@ -189,7 +189,7 @@ class LinkedPropagationHarness implements BenchHarness {
       flags: flags | ReactiveFlags.Dirty,
       queued: false,
       deps: undefined,
-      lastOutTail: undefined,
+      lastInTail: undefined,
       subs: undefined,
       subsTail: undefined,
     };
@@ -456,7 +456,7 @@ registerBenchFile("alien-propagation", variants);
 
 export interface ReactiveNode {
   deps?: Link;
-  lastOutTail?: Link;
+  lastInTail?: Link;
   subs?: Link;
   subsTail?: Link;
   flags: ReactiveFlags;
@@ -505,7 +505,7 @@ function createReactiveSystem({
   };
 
   function link(dep: ReactiveNode, sub: ReactiveNode, version: number): void {
-    const prevDep = sub.lastOutTail;
+    const prevDep = sub.lastInTail;
     if (prevDep !== undefined && prevDep.dep === dep) {
       prevDep.version = version;
       return;
@@ -513,7 +513,7 @@ function createReactiveSystem({
     const nextDep = prevDep !== undefined ? prevDep.nextDep : sub.deps;
     if (nextDep !== undefined && nextDep.dep === dep) {
       nextDep.version = version;
-      sub.lastOutTail = nextDep;
+      sub.lastInTail = nextDep;
       return;
     }
     const prevSub = dep.subsTail;
@@ -521,7 +521,7 @@ function createReactiveSystem({
       return;
     }
     const newLink =
-      sub.lastOutTail =
+      sub.lastInTail =
       dep.subsTail =
         {
           version,
@@ -556,7 +556,7 @@ function createReactiveSystem({
     if (nextDep !== undefined) {
       nextDep.prevDep = prevDep;
     } else {
-      sub.lastOutTail = prevDep;
+      sub.lastInTail = prevDep;
     }
     if (prevDep !== undefined) {
       prevDep.nextDep = nextDep;
@@ -718,7 +718,7 @@ function createReactiveSystem({
   }
 
   function isValidLink(checkLink: Link, sub: ReactiveNode): boolean {
-    let link = sub.lastOutTail;
+    let link = sub.lastInTail;
     while (link !== undefined) {
       if (link === checkLink) {
         return true;

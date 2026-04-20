@@ -1,3 +1,4 @@
+import fc from "fast-check";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DIRTY_STATE,
@@ -28,6 +29,29 @@ import {
 
 function createNode(state: number) {
   return new ReactiveNode(undefined, null, state);
+}
+
+type BranchPlan = readonly BranchPlan[];
+
+function attachBranchPlan(
+  from: ReactiveNode,
+  plan: BranchPlan,
+  depth: number,
+  levels: ReactiveNode[][],
+): void {
+  const level = (levels[depth] ??= []);
+
+  for (const childPlan of plan) {
+    const child = createNode(ReactiveNodeState.Consumer);
+    level.push(child);
+    linkEdge(from, child);
+    attachBranchPlan(child, childPlan, depth + 1, levels);
+  }
+}
+
+function branchPlanArbitrary(depth: number): fc.Arbitrary<BranchPlan> {
+  if (depth === 0) return fc.constant([]);
+  return fc.array(branchPlanArbitrary(depth - 1), { maxLength: 3 });
 }
 
 describe("Reactive runtime - walker invariants", () => {
@@ -87,6 +111,82 @@ describe("Reactive runtime - walker invariants", () => {
     );
     expect(right.state).toBe(
       ReactiveNodeState.Consumer | ReactiveNodeState.Changed,
+    );
+  });
+
+  it("propagate restores the direct promote only for deferred outer siblings", () => {
+    const source = createNode(ReactiveNodeState.Producer);
+    const left = createNode(ReactiveNodeState.Consumer);
+    const middle = createNode(ReactiveNodeState.Consumer);
+    const right = createNode(ReactiveNodeState.Consumer);
+    const leftA = createNode(ReactiveNodeState.Consumer);
+    const leftB = createNode(ReactiveNodeState.Consumer);
+    const leftC = createNode(ReactiveNodeState.Consumer);
+    const leftLeaf = createNode(ReactiveNodeState.Consumer);
+
+    linkEdge(source, left);
+    linkEdge(source, middle);
+    linkEdge(source, right);
+    linkEdge(left, leftA);
+    linkEdge(left, leftB);
+    linkEdge(left, leftC);
+    linkEdge(leftA, leftLeaf);
+
+    resetRuntime();
+
+    propagate(source.firstOut!, PROMOTE_CHANGED);
+
+    expect(left.state).toBe(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Changed,
+    );
+    expect(middle.state).toBe(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Changed,
+    );
+    expect(right.state).toBe(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Changed,
+    );
+    expect(leftA.state).toBe(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Invalid,
+    );
+    expect(leftB.state).toBe(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Invalid,
+    );
+    expect(leftC.state).toBe(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Invalid,
+    );
+    expect(leftLeaf.state).toBe(
+      ReactiveNodeState.Consumer | ReactiveNodeState.Invalid,
+    );
+  });
+
+  it("propagate keeps direct promote local to depth-0 across generated branching shapes", () => {
+    fc.assert(
+      fc.property(
+        fc.array(branchPlanArbitrary(3), { minLength: 1, maxLength: 4 }),
+        (plan) => {
+          resetRuntime();
+          const source = createNode(ReactiveNodeState.Producer);
+          const levels: ReactiveNode[][] = [];
+
+          attachBranchPlan(source, plan, 0, levels);
+          propagate(source.firstOut!, PROMOTE_CHANGED);
+
+          for (const node of levels[0] ?? []) {
+            expect(node.state).toBe(
+              ReactiveNodeState.Consumer | ReactiveNodeState.Changed,
+            );
+          }
+
+          for (let depth = 1; depth < levels.length; depth += 1) {
+            for (const node of levels[depth] ?? []) {
+              expect(node.state).toBe(
+                ReactiveNodeState.Consumer | ReactiveNodeState.Invalid,
+              );
+            }
+          }
+        },
+      ),
+      { numRuns: 100 },
     );
   });
 
@@ -198,7 +298,7 @@ describe("Reactive runtime - walker invariants", () => {
     const prefixEdge = linkEdge(prefix, tracked, null);
     linkEdge(source, tracked);
     linkEdge(source, sibling);
-    tracked.lastOutTail = prefixEdge;
+    tracked.lastInTail = prefixEdge;
 
     propagate(source.firstOut!, PROMOTE_CHANGED);
 
@@ -210,7 +310,7 @@ describe("Reactive runtime - walker invariants", () => {
     );
   });
 
-  it("propagate branching accepts lastOutTail edge without traversing prevIn", () => {
+  it("propagate branching accepts lastInTail edge without traversing prevIn", () => {
     const source = createNode(ReactiveNodeState.Producer);
     const branch = createNode(ReactiveNodeState.Consumer);
     const sibling = createNode(ReactiveNodeState.Consumer);
@@ -222,12 +322,12 @@ describe("Reactive runtime - walker invariants", () => {
     linkEdge(source, branch);
     linkEdge(source, sibling);
     const trackedEdge = linkEdge(branch, tracked);
-    tracked.lastOutTail = trackedEdge;
+    tracked.lastInTail = trackedEdge;
 
     Object.defineProperty(trackedEdge, "prevIn", {
       configurable: true,
       get() {
-        throw new Error("branching helper should short-circuit on lastOutTail");
+        throw new Error("branching helper should short-circuit on lastInTail");
       },
     });
 

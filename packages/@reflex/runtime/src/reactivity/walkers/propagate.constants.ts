@@ -14,31 +14,37 @@ export const PROMOTE_INVALID = ReactiveNodeState.Invalid;
  */
 export const PROMOTE_CHANGED = ReactiveNodeState.Changed;
 
-export const ALREADY_DIRTY_MASK =
+export const DIRTY_SUBSCRIBER_MASK =
   ReactiveNodeState.Invalid |
   ReactiveNodeState.Changed;
 
-export const TERMINAL_MASK = ReactiveNodeState.Disposed;
-export const TRANSITIONAL_MASK = ReactiveNodeState.Tracking;
-export const TRAVERSAL_GUARD_MASK = ReactiveNodeState.Reentrant;
+export const DISPOSED_STATE_MASK = ReactiveNodeState.Disposed;
+export const TRACKING_STATE_MASK = ReactiveNodeState.Tracking;
+export const REENTRANT_STATE_MASK = ReactiveNodeState.Reentrant;
 
 // Only states that truly require slow-path invalidation handling.
 // Visited is intentionally excluded.
-export const SLOW_INVALIDATION_MASK =
-  ALREADY_DIRTY_MASK |
-  TERMINAL_MASK |
-  TRANSITIONAL_MASK;
+export const SLOW_PATH_INVALIDATION_MASK =
+  DIRTY_SUBSCRIBER_MASK |
+  DISPOSED_STATE_MASK |
+  TRACKING_STATE_MASK;
 
-export const VISITED_MASK = TRAVERSAL_GUARD_MASK;
+export const VISITED_MASK = REENTRANT_STATE_MASK;
 export const WATCHER_MASK = ReactiveNodeState.Watcher;
-export const TRACKING_MASK = TRANSITIONAL_MASK;
-export const DISPOSED_MASK = TERMINAL_MASK;
+export const TRACKING_MASK = TRACKING_STATE_MASK;
+export const DISPOSED_MASK = DISPOSED_STATE_MASK;
 
 // Backward-compatible aliases for existing imports and tests.
+export const ALREADY_DIRTY_MASK = DIRTY_SUBSCRIBER_MASK;
+export const TERMINAL_MASK = DISPOSED_STATE_MASK;
+export const TRANSITIONAL_MASK = TRACKING_STATE_MASK;
+export const TRAVERSAL_GUARD_MASK = REENTRANT_STATE_MASK;
+export const SLOW_INVALIDATION_MASK = SLOW_PATH_INVALIDATION_MASK;
+
 export const NON_IMMEDIATE = PROMOTE_INVALID;
 export const IMMEDIATE = PROMOTE_CHANGED;
 export const CAN_ESCAPE_INVALIDATION =
-  ALREADY_DIRTY_MASK |
-  TERMINAL_MASK |
-  TRAVERSAL_GUARD_MASK |
-  TRANSITIONAL_MASK;
+  DIRTY_SUBSCRIBER_MASK |
+  DISPOSED_STATE_MASK |
+  REENTRANT_STATE_MASK |
+  TRACKING_STATE_MASK;
