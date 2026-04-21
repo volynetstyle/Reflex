@@ -1,9 +1,8 @@
 import {
-  PRODUCER_INITIAL_STATE,
-  ReactiveNode,
   readProducer,
   writeProducer,
 } from "@reflex/runtime";
+import { createSignalNode } from "../infra";
 
 /**
  * Creates writable reactive state.
@@ -54,11 +53,7 @@ import {
  * @see effect
  */
 export function signal<T>(initialValue: T): readonly [Signal<T>, Setter<T>] {
-  const node = new ReactiveNode<T>(
-    initialValue,
-    /*TODO: replace with undefined*/ null,
-    PRODUCER_INITIAL_STATE,
-  );
+  const node = createSignalNode(initialValue);
 
   const set = (input: SetInput<T>) => {
     const payload = node.payload;

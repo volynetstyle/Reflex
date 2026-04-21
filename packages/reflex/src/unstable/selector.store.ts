@@ -1,5 +1,5 @@
 import { readProducer, writeProducer } from "@reflex/runtime";
-import { effect } from "../api/effect";
+import { effectRanked } from "../api/effect";
 import { createSignalNode } from "../infra";
 import {
   cloneProjectionValue,
@@ -30,7 +30,7 @@ class StoreProjectionCore<T extends object> {
     this.root = this.createPathEntry(this.state);
     this.store = this.getProxy(this.root, []) as T;
 
-    this.dispose = effect(
+    this.dispose = effectRanked(
       () => {
         const draft = clone(this.state);
         const result = fn(draft);
@@ -63,7 +63,9 @@ class StoreProjectionCore<T extends object> {
       const key = path[index]!;
       let nextEntry = entry.children.get(key);
       if (nextEntry === undefined) {
-        nextEntry = this.createPathEntry(readProjectionPath(this.state, path.slice(0, index + 1)));
+        nextEntry = this.createPathEntry(
+          readProjectionPath(this.state, path.slice(0, index + 1)),
+        );
         entry.children.set(key, nextEntry);
       }
       entry = nextEntry;

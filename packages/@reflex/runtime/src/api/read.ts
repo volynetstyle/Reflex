@@ -7,7 +7,6 @@ import {
   devRecordReadProducer,
 } from "../reactivity/dev";
 import {
-  ReactiveNodeState,
   DIRTY_STATE,
   recompute,
   propagateOnce,
@@ -15,6 +14,7 @@ import {
   isDisposedNode,
   shouldRecomputeDirtyConsumer,
   trackRead,
+  Disposed,
 } from "../reactivity";
 import {
   activeConsumer,
@@ -121,7 +121,7 @@ export function readProducer<T>(node: ReactiveNode<T>): T {
 function stabilizeConsumer<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
-  if ((state & ReactiveNodeState.Disposed) !== 0) {
+  if ((state & Disposed) !== 0) {
     if (__DEV__) devAssertReadDeadConsumer();
     return node.payload as T;
   }
@@ -151,7 +151,7 @@ function stabilizeConsumerUntracked<T>(node: ReactiveNode<T>, state: number): T 
 export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
-  if ((state & ReactiveNodeState.Disposed) !== 0) {
+  if ((state & Disposed) !== 0) {
     if (__DEV__) devAssertReadDeadConsumer();
     return node.payload as T;
   }
@@ -179,7 +179,7 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
 export function readConsumerEager<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
-  if ((state & ReactiveNodeState.Disposed) !== 0) {
+  if ((state & Disposed) !== 0) {
     if (__DEV__) devAssertReadDeadConsumer();
     return node.payload as T;
   }
@@ -233,7 +233,7 @@ export function readConsumer<T>(
 ): T {
   const state = node.state;
 
-  if ((state & ReactiveNodeState.Disposed) !== 0) {
+  if ((state & Disposed) !== 0) {
     if (__DEV__) devAssertReadDeadConsumer();
     return node.payload as T;
   }

@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   type ReactiveNode,
+  Changed,
   ConsumerReadMode,
+  Invalid,
   ReactiveNodeState,
   readConsumer,
   readProducer,
@@ -26,8 +28,8 @@ describe("Runtime Core: Algorithm Correctness", () => {
       const consumer = createConsumer(() => readProducer(source) * 2);
 
       writeProducer(source, 10);
-      expect(consumer.state & ReactiveNodeState.Changed).toBe(
-        ReactiveNodeState.Changed,
+      expect(consumer.state & Changed).toBe(
+        Changed,
       );
     });
 
@@ -40,14 +42,14 @@ describe("Runtime Core: Algorithm Correctness", () => {
       writeProducer(source, 2);
 
       // Direct subscriber
-      expect(middle.state & ReactiveNodeState.Changed).toBe(
-        ReactiveNodeState.Changed,
+      expect(middle.state & Changed).toBe(
+        Changed,
       );
       // Transitive subscriber
-      expect(leaf.state & ReactiveNodeState.Invalid).toBe(
-        ReactiveNodeState.Invalid,
+      expect(leaf.state & Invalid).toBe(
+        Invalid,
       );
-      expect(leaf.state & ReactiveNodeState.Changed).toBe(0);
+      expect(leaf.state & Changed).toBe(0);
     });
 
     it("marks direct watcher subscribers Changed without treating them as transitive Invalid", () => {
@@ -59,10 +61,10 @@ describe("Runtime Core: Algorithm Correctness", () => {
 
       runWatcher(watcher);
       writeProducer(source, 2);
-      expect(watcher.state & ReactiveNodeState.Changed).toBe(
-        ReactiveNodeState.Changed,
+      expect(watcher.state & Changed).toBe(
+        Changed,
       );
-      expect(watcher.state & ReactiveNodeState.Invalid).toBe(0);
+      expect(watcher.state & Invalid).toBe(0);
     });
 
     it("handles re-entrant mutations safely", () => {
@@ -93,11 +95,11 @@ describe("Runtime Core: Algorithm Correctness", () => {
 
       writeProducer(source, 1);
 
-      expect(left.state & ReactiveNodeState.Changed).toBe(
-        ReactiveNodeState.Changed,
+      expect(left.state & Changed).toBe(
+        Changed,
       );
-      expect(right.state & ReactiveNodeState.Changed).toBe(
-        ReactiveNodeState.Changed,
+      expect(right.state & Changed).toBe(
+        Changed,
       );
     });
   });
@@ -229,7 +231,7 @@ describe("Runtime Core: Algorithm Correctness", () => {
       // Subsequent write to old doesn't affect consumer
       writeProducer(old, "changed");
       // Consumer should remain clean
-      expect(consumer.state & ReactiveNodeState.Invalid).toBe(0);
+      expect(consumer.state & Invalid).toBe(0);
     });
 
     it("handles untracked reads", () => {
@@ -305,8 +307,8 @@ describe("Runtime Core: Algorithm Correctness", () => {
   describe("State Transitions", () => {
     it("starts consumer in Changed state (dirty)", () => {
       const consumer = createConsumer(() => 42);
-      expect(consumer.state & ReactiveNodeState.Changed).toBe(
-        ReactiveNodeState.Changed,
+      expect(consumer.state & Changed).toBe(
+        Changed,
       );
     });
 
@@ -314,24 +316,24 @@ describe("Runtime Core: Algorithm Correctness", () => {
       const source = createProducer(1);
       const consumer = createConsumer(() => readProducer(source));
 
-      expect(consumer.state & ReactiveNodeState.Changed).toBe(
-        ReactiveNodeState.Changed,
+      expect(consumer.state & Changed).toBe(
+        Changed,
       );
       readConsumer(consumer);
-      expect(consumer.state & ReactiveNodeState.Changed).toBe(0);
+      expect(consumer.state & Changed).toBe(0);
     });
 
     it("watcher starts in Changed state", () => {
       const watcher = createWatcher(() => {});
-      expect(watcher.state & ReactiveNodeState.Changed).toBe(
-        ReactiveNodeState.Changed,
+      expect(watcher.state & Changed).toBe(
+        Changed,
       );
     });
 
     it("producer starts clean", () => {
       const producer = createProducer(0);
       // Producers start clean (no DIRTY_STATE)
-      expect(producer.state & (ReactiveNodeState.Invalid | ReactiveNodeState.Changed)).toBe(0);
+      expect(producer.state & (Invalid | Changed)).toBe(0);
     });
   });
 

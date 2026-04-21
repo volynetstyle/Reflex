@@ -5,13 +5,16 @@
 // duplicate branch-heavy logic inline.
 
 import { recordDebugEvent } from "../../debug/debug.impl";
-import { dispatchSinkInvalidated } from "../context";
-import { defaultContext } from "../context";
+import {
+  captureThrownError,
+  defaultContext,
+  dispatchSinkInvalidated,
+} from "../context";
 import {
   DIRTY_STATE,
+  Invalid,
   type ReactiveEdge,
   type ReactiveNode,
-  ReactiveNodeState,
 } from "../shape";
 import {
   DISPOSED_MASK,
@@ -23,8 +26,7 @@ import {
 
 export function dispatchInvalidatedWatcher(
   watcherNode: ReactiveNode,
-  firstThrownError: unknown,
-): unknown {
+): void {
   const notifyInvalidatedSink = dispatchSinkInvalidated;
 
   if (notifyInvalidatedSink === undefined) {
@@ -34,18 +36,14 @@ export function dispatchInvalidatedWatcher(
       });
     }
 
-    return firstThrownError;
+    return;
   }
 
   try {
     notifyInvalidatedSink(watcherNode);
   } catch (error) {
-    if (firstThrownError === null) {
-      return error;
-    }
+    captureThrownError(error);
   }
-
-  return firstThrownError;
 }
 
 function getTrackedSubscriberInvalidationState(
@@ -59,7 +57,7 @@ function getTrackedSubscriberInvalidationState(
   const trackedInvalidState =
     subscriberState |
     VISITED_MASK |
-    ReactiveNodeState.Invalid;
+    Invalid;
   if (inboundEdge === trackedInputTail) return trackedInvalidState;
 
   const previousInboundEdge = inboundEdge.prevIn;

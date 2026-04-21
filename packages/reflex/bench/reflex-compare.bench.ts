@@ -39,7 +39,7 @@ interface HeapEntry {
 }
 
 const compareNumbers = (left: number, right: number) => Object.is(left, right);
-const SCHEDULED_BIT = ReactiveNodeState.Scheduled;
+const SCHEDULED_BIT = Scheduled;
 
 // ─── EffectHeap ───────────────────────────────────────────────────────────────
 
@@ -179,7 +179,7 @@ class ReflexScheduler {
         if (dedupe) node.state &= ~SCHEDULED_BIT;
 
         const state = node.state;
-        if ((state & ReactiveNodeState.Disposed) !== 0) continue;
+        if ((state & Disposed) !== 0) continue;
         if ((state & DIRTY_STATE) === 0) continue;
 
         runWatcher(node);

@@ -1,12 +1,12 @@
 import { bench, describe } from "vitest";
-import { DIRTY_STATE, ReactiveNodeState } from "@reflex/runtime";
+import { DIRTY_STATE, ReactiveNodeState, Scheduled, Disposed } from "@reflex/runtime";
 import { blackhole } from "./shared";
 
 const CAPACITIES = [16, 32, 64, 256, 1024] as const;
 const INNER_ITERATIONS = 2_000_000;
 
 const SCHEDULED_DISPOSED =
-  ReactiveNodeState.Disposed | ReactiveNodeState.Scheduled;
+  Disposed | Scheduled;
 
 describe("tail update microbench: pure loop", () => {
   for (const capacity of CAPACITIES) {
@@ -60,7 +60,7 @@ describe("tail update microbench: scheduler path", () => {
         const state = node.state;
         if ((state & SCHEDULED_DISPOSED) !== 0) continue;
 
-        node.state = state | ReactiveNodeState.Scheduled;
+        node.state = state | Scheduled;
         queue[tail] = node;
         tail = (tail + 1) % capacity;
         size += 1;
@@ -71,7 +71,7 @@ describe("tail update microbench: scheduler path", () => {
             queue[head] = undefined;
             head = (head + 1) % capacity;
             size -= 1;
-            next.state &= ~ReactiveNodeState.Scheduled;
+            next.state &= ~Scheduled;
           }
         }
       }
@@ -81,7 +81,7 @@ describe("tail update microbench: scheduler path", () => {
         queue[head] = undefined;
         head = (head + 1) % capacity;
         size -= 1;
-        next.state &= ~ReactiveNodeState.Scheduled;
+        next.state &= ~Scheduled;
       }
 
       blackhole(head + tail + size);
@@ -104,7 +104,7 @@ describe("tail update microbench: scheduler path", () => {
         const state = node.state;
         if ((state & SCHEDULED_DISPOSED) !== 0) continue;
 
-        node.state = state | ReactiveNodeState.Scheduled;
+        node.state = state | Scheduled;
         queue[tail] = node;
         tail = (tail + 1) & mask;
         size += 1;
@@ -115,7 +115,7 @@ describe("tail update microbench: scheduler path", () => {
             queue[head] = undefined;
             head = (head + 1) & mask;
             size -= 1;
-            next.state &= ~ReactiveNodeState.Scheduled;
+            next.state &= ~Scheduled;
           }
         }
       }
@@ -125,7 +125,7 @@ describe("tail update microbench: scheduler path", () => {
         queue[head] = undefined;
         head = (head + 1) & mask;
         size -= 1;
-        next.state &= ~ReactiveNodeState.Scheduled;
+        next.state &= ~Scheduled;
       }
 
       blackhole(head + tail + size);
@@ -148,7 +148,7 @@ describe("tail update microbench: scheduler path", () => {
         const state = node.state;
         if ((state & SCHEDULED_DISPOSED) !== 0) continue;
 
-        node.state = state | ReactiveNodeState.Scheduled;
+        node.state = state | Scheduled;
         queue[tail] = node;
         tail += 1;
         if (tail === capacity) tail = 0;
@@ -161,7 +161,7 @@ describe("tail update microbench: scheduler path", () => {
             head += 1;
             if (head === capacity) head = 0;
             size -= 1;
-            next.state &= ~ReactiveNodeState.Scheduled;
+            next.state &= ~Scheduled;
           }
         }
       }
@@ -172,7 +172,7 @@ describe("tail update microbench: scheduler path", () => {
         head += 1;
         if (head === capacity) head = 0;
         size -= 1;
-        next.state &= ~ReactiveNodeState.Scheduled;
+        next.state &= ~Scheduled;
       }
 
       blackhole(head + tail + size);

@@ -1,6 +1,12 @@
 import { getCurrentComputedInternal } from "../internal";
 import type { ReactiveNode } from "../reactivity";
 import {
+  readPropagateStackStats,
+  readShouldRecomputeStackStats,
+  resetRuntimeWalkerStackStats,
+  type RuntimeWalkerStackStats,
+} from "../reactivity/walkers";
+import {
   snapshotDebugContext,
   labelDebugNode,
   snapshotDebugNode,
@@ -30,6 +36,11 @@ export interface RuntimeSubtle {
   label<T extends ReactiveNode>(node: T, label: string | null | undefined): T;
   observe(listener: RuntimeDebugListener): () => void;
   snapshot(node: ReactiveNode): RuntimeDebugNodeSnapshot | undefined;
+  stackStats(): {
+    shouldRecompute: RuntimeWalkerStackStats;
+    propagate: RuntimeWalkerStackStats;
+  } | undefined;
+  resetStackStats(): void;
 }
 
 export type {
@@ -80,5 +91,20 @@ export const subtle: RuntimeSubtle = {
   observe(listener) {
     if (!IS_DEV) return noopUnsubscribe;
     return observeDebugContext(undefined, listener);
+  },
+
+  stackStats() {
+    if (!IS_DEV) return undefined;
+    const shouldRecompute = readShouldRecomputeStackStats().shouldRecompute;
+    const propagate = readPropagateStackStats().propagate;
+    return {
+      shouldRecompute,
+      propagate,
+    };
+  },
+
+  resetStackStats() {
+    if (!IS_DEV) return;
+    resetRuntimeWalkerStackStats();
   },
 };

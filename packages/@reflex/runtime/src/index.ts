@@ -57,7 +57,19 @@ export {
   //
   ReactiveNode,
   ReactiveEdge,
+  
+  Producer,
+  Consumer,
+  Watcher,
+  Invalid,
+  Changed,
+  Reentrant,
+  Disposed,
+  Scheduled,
+  Computing,
+  Tracking,
   ReactiveNodeState,
+ 
   isDisposedNode,
   disposeNode,
   disposeNodeEvent,

@@ -1,9 +1,8 @@
 import {
-  CONSUMER_INITIAL_STATE,
-  ReactiveNode,
   readConsumerEager,
   readConsumerLazy,
 } from "@reflex/runtime";
+import { createComputedNode } from "../infra";
 
 /**
  * Creates a lazy derived accessor.
@@ -46,7 +45,7 @@ import {
  * @see effect
  */
 export function computed<T>(fn: () => T): Computed<T> {
-  const node = new ReactiveNode<T>(undefined as T, fn, CONSUMER_INITIAL_STATE);
+  const node = createComputedNode(fn);
   return readConsumerLazy.bind(null, node) as Computed<T>;
 }
 
@@ -88,7 +87,7 @@ export function computed<T>(fn: () => T): Computed<T> {
  * @see computed
  */
 export function memo<T>(fn: () => T): Memo<T> {
-  const node = new ReactiveNode<T>(undefined as T, fn, CONSUMER_INITIAL_STATE);
+  const node = createComputedNode(fn);
   readConsumerEager(node);
   return readConsumerLazy.bind(null, node) as Memo<T>;
 }

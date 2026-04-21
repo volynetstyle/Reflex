@@ -14,102 +14,75 @@ import type ReactiveNode from "./ReactiveNode";
  * - `Invalid` means "upstream may have changed, verify through shouldRecompute()"
  * - producers commit on write and should not normally participate in pull-walk
  */
-const PRODUCER = 1 << 0;
-const CONSUMER = 1 << 1;
-const WATCHER = 1 << 2;
-const INVALID = 1 << 3;
-const CHANGED = 1 << 4;
-const REENTRANT = 1 << 5;
-const DISPOSED = 1 << 6;
-const COMPUTING = 1 << 7;
-const SCHEDULED = 1 << 8;
-const TRACKING = 1 << 9;
+export const Producer = 1 << 0;
+export const Consumer = 1 << 1;
+export const Watcher = 1 << 2;
+export const Invalid = 1 << 3;
+export const Changed = 1 << 4;
+export const Reentrant = 1 << 5;
+export const Disposed = 1 << 6;
+export const Computing = 1 << 7;
+export const Scheduled = 1 << 8;
+export const Tracking = 1 << 9;
 
-export const ReactiveNodeState = {
-  /** Mutable source node. Holds committed payload directly and never recomputes. */
-  Producer: PRODUCER,
-  /** Pure computed node. Re-executes lazily when its dependencies become dirty. */
-  Consumer: CONSUMER,
-  /** Effect-like sink. Invalidations schedule or notify work rather than return data. */
-  Watcher: WATCHER,
-
-  /** Maybe stale: value is not confirmed changed yet and must be verified on read. */
-  Invalid: INVALID,
-  /** Definitely stale: a direct upstream dependency already confirmed a change. */
-  Changed: CHANGED,
-  /** Re-entrant marker used when a tracked dependency invalidates mid-computation. */
-  Reentrant: REENTRANT,
-  /** Terminal lifecycle state. Disposed nodes must no longer participate in the graph. */
-  Disposed: DISPOSED,
-  /** Node is currently executing its compute function. Used for cycle detection. */
-  Computing: COMPUTING,
-  /** Watcher has already been scheduled/notified for the current invalidation wave. */
-  Scheduled: SCHEDULED,
-  /** Node is collecting dependencies during the current computation pass. */
-  Tracking: TRACKING,
-} as const;
-
-export type ReactiveNodeState =
-  (typeof ReactiveNodeState)[keyof typeof ReactiveNodeState];
+export type ReactiveNodeState = number;
 
 /** Mask for the mutually-exclusive node kind bits. */
-export const NODE_KIND_STATE = PRODUCER | CONSUMER | WATCHER;
+export const NODE_KIND_STATE = Producer | Consumer | Watcher;
 
 // export const MAYBE_CHANGE_STATE = ReactiveNodeState.Invalid;
 // export const CHANGED_STATE = ReactiveNodeState.Changed;
 
 /** All dirty bits. In supported runtime flows this is either `Invalid` or `Changed`. */
-export const DIRTY_STATE = INVALID | CHANGED;
+export const DIRTY_STATE = Invalid | Changed;
 
 /** Clean producer. Normal steady state for source nodes. */
-export const PRODUCER_INITIAL_STATE = PRODUCER;
+export const PRODUCER_INITIAL_STATE = Producer;
 
 /**
  * Legacy/testing helper for a producer carrying `Changed`.
  * Runtime write flow should normally commit producers immediately instead.
  */
-export const PRODUCER_CHANGED =
-  PRODUCER | CHANGED;
+export const PRODUCER_CHANGED = Producer | Changed;
 
 /** Legacy/testing helper for any dirty producer state. */
-export const PRODUCER_DIRTY = PRODUCER | DIRTY_STATE;
+export const PRODUCER_DIRTY = Producer | DIRTY_STATE;
 
 /** Directly invalidated computed node: skip verification and recompute on read. */
-export const CONSUMER_CHANGED =
-  CHANGED | CONSUMER;
+export const CONSUMER_CHANGED = Changed | Consumer;
 
 /** Computed node carrying either `Invalid` or `Changed`. */
-export const CONSUMER_DIRTY = CONSUMER | DIRTY_STATE;
+export const CONSUMER_DIRTY = Consumer | DIRTY_STATE;
 
 /** Directly invalidated watcher. */
-export const WATCHER_CHANGED = CHANGED | WATCHER;
+export const WATCHER_CHANGED = Changed | Watcher;
 
 /** Transient walker-only bits that should not survive a settled execution. */
-export const WALKER_STATE = REENTRANT | TRACKING;
+export const WALKER_STATE = Reentrant | Tracking;
 
 /** Clear the re-entrant marker after the walker no longer needs it. */
 export function clearNodeVisited(node: ReactiveNode): void {
-  node.state &= ~REENTRANT;
+  node.state &= ~Reentrant;
 }
 
 /** Enter dependency collection mode for the current compute pass. */
 export function beginNodeTracking(node: ReactiveNode): void {
-  node.state = (node.state & ~REENTRANT) | TRACKING;
+  node.state = (node.state & ~Reentrant) | Tracking;
 }
 
 /** Leave dependency collection mode after compute finishes. */
 export function clearNodeTracking(node: ReactiveNode): void {
-  node.state &= ~TRACKING;
+  node.state &= ~Tracking;
 }
 
 /** Mark a node as actively executing its compute function. */
 export function markNodeComputing(node: ReactiveNode): void {
-  node.state |= COMPUTING;
+  node.state = (node.state & ~Reentrant) | Tracking | Computing;
 }
 
 /** Clear the active-computation marker. */
 export function clearNodeComputing(node: ReactiveNode): void {
-  node.state &= ~COMPUTING;
+  node.state &= ~(Computing | Tracking);
 }
 
 /** Clear both `Invalid` and `Changed`, returning the node to a clean state. */
@@ -119,10 +92,10 @@ export function clearDirtyState(node: ReactiveNode): void {
 
 /** Runtime helper for the terminal lifecycle check. */
 export function isDisposedNode(node: ReactiveNode): boolean {
-  return (node.state & DISPOSED) !== 0;
+  return (node.state & Disposed) !== 0;
 }
 
 /** Collapse a node to kind + disposed, dropping transient execution flags. */
 export function markDisposedNode(node: ReactiveNode): void {
-  node.state = (node.state & NODE_KIND_STATE) | DISPOSED;
+  node.state = (node.state & NODE_KIND_STATE) | Disposed;
 }

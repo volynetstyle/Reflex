@@ -5,7 +5,7 @@ import {
   type RuntimeDebugContext,
 } from "../reactivity/context";
 import type { ReactiveEdge, ReactiveNode } from "../reactivity/shape";
-import { DIRTY_STATE, ReactiveNodeState } from "../reactivity/shape";
+import { Changed, Computing, Consumer, DIRTY_STATE, Disposed, Invalid, Producer, Reentrant, Scheduled, Tracking, Watcher } from "../reactivity/shape";
 import type {
   RuntimeDebugContextSnapshot,
   RuntimeDebugEvent,
@@ -66,31 +66,31 @@ function getDirtyState(state: number): RuntimeDebugDirtyState {
   const dirty = state & DIRTY_STATE;
 
   if (dirty === 0) return "clean";
-  if (dirty === ReactiveNodeState.Invalid) return "invalid";
-  if (dirty === ReactiveNodeState.Changed) return "changed";
+  if (dirty === Invalid) return "invalid";
+  if (dirty === Changed) return "changed";
   return "invalid+changed";
 }
 
 function getNodeKind(state: number): RuntimeDebugNodeKind {
-  if ((state & ReactiveNodeState.Watcher) !== 0) return "watcher";
-  if ((state & ReactiveNodeState.Consumer) !== 0) return "consumer";
-  if ((state & ReactiveNodeState.Producer) !== 0) return "producer";
+  if ((state & Watcher) !== 0) return "watcher";
+  if ((state & Consumer) !== 0) return "consumer";
+  if ((state & Producer) !== 0) return "producer";
   return "unknown";
 }
 
 function getFlags(state: number): RuntimeDebugFlag[] {
   const flags: RuntimeDebugFlag[] = [];
 
-  if ((state & ReactiveNodeState.Producer) !== 0) flags.push("producer");
-  if ((state & ReactiveNodeState.Consumer) !== 0) flags.push("consumer");
-  if ((state & ReactiveNodeState.Watcher) !== 0) flags.push("watcher");
-  if ((state & ReactiveNodeState.Invalid) !== 0) flags.push("invalid");
-  if ((state & ReactiveNodeState.Changed) !== 0) flags.push("changed");
-  if ((state & ReactiveNodeState.Reentrant) !== 0) flags.push("visited");
-  if ((state & ReactiveNodeState.Disposed) !== 0) flags.push("disposed");
-  if ((state & ReactiveNodeState.Computing) !== 0) flags.push("computing");
-  if ((state & ReactiveNodeState.Scheduled) !== 0) flags.push("scheduled");
-  if ((state & ReactiveNodeState.Tracking) !== 0) flags.push("tracking");
+  if ((state & Producer) !== 0) flags.push("producer");
+  if ((state & Consumer) !== 0) flags.push("consumer");
+  if ((state & Watcher) !== 0) flags.push("watcher");
+  if ((state & Invalid) !== 0) flags.push("invalid");
+  if ((state & Changed) !== 0) flags.push("changed");
+  if ((state & Reentrant) !== 0) flags.push("visited");
+  if ((state & Disposed) !== 0) flags.push("disposed");
+  if ((state & Computing) !== 0) flags.push("computing");
+  if ((state & Scheduled) !== 0) flags.push("scheduled");
+  if ((state & Tracking) !== 0) flags.push("tracking");
 
   return flags;
 }

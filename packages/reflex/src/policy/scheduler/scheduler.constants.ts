@@ -1,4 +1,4 @@
-import { ReactiveNodeState } from "@reflex/runtime";
+import { Disposed, Scheduled } from "@reflex/runtime";
 
 export const enum EffectSchedulerMode {
   Flush = 0,
@@ -13,6 +13,5 @@ export const enum SchedulerPhase {
   Flushing = 2,
 }
 
-export const SCHEDULED_OR_DISPOSED =
-  ReactiveNodeState.Disposed | ReactiveNodeState.Scheduled;
-export const UNSCHEDULE_MASK = ~ReactiveNodeState.Scheduled;
+export const SCHEDULED_OR_DISPOSED = Disposed | Scheduled;
+export const UNSCHEDULE_MASK = ~Scheduled;

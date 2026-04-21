@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  Computing,
   DIRTY_STATE,
+  Disposed,
   ReactiveNodeState,
+  Tracking,
   disposeWatcher,
   getActiveConsumer,
   notifySettledIfIdle,
@@ -149,8 +152,8 @@ describe("Reactive runtime - hooks and resilience", () => {
 
     expect(() => runWatcher(watcher)).toThrow(error);
     expect(getActiveConsumer()).toBeNull();
-    expect(watcher.state & ReactiveNodeState.Tracking).toBe(0);
-    expect(watcher.state & ReactiveNodeState.Computing).toBe(0);
+    expect(watcher.state & Tracking).toBe(0);
+    expect(watcher.state & Computing).toBe(0);
   });
 
   it("runs watcher cleanup exactly once per rerun and once on disposal", () => {
@@ -168,7 +171,7 @@ describe("Reactive runtime - hooks and resilience", () => {
     disposeWatcher(watcher);
 
     expect(cleanup).toHaveBeenCalledTimes(2);
-    expect(watcher.state & ReactiveNodeState.Disposed).toBeTruthy();
+    expect(watcher.state & Disposed).toBeTruthy();
   });
 
   it("keeps watcher disposal reentrancy-safe when cleanup disposes the same watcher", () => {
@@ -192,7 +195,7 @@ describe("Reactive runtime - hooks and resilience", () => {
 
     expect(() => runWatcher(watcher)).not.toThrow();
     expect(runs).toEqual([1]);
-    expect(watcher.state & ReactiveNodeState.Disposed).toBeTruthy();
+    expect(watcher.state & Disposed).toBeTruthy();
   });
 
   it("tolerates nodes becoming dead in the middle of propagation", () => {
@@ -227,6 +230,6 @@ describe("Reactive runtime - hooks and resilience", () => {
 
     expect(() => writeProducer(source, 2)).not.toThrow();
     expect(invalidated).toEqual(["left"]);
-    expect(right.state & ReactiveNodeState.Disposed).toBeTruthy();
+    expect(right.state & Disposed).toBeTruthy();
   });
 });

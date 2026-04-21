@@ -1,26 +1,26 @@
-import { ReactiveNodeState } from "../shape";
+import { Changed, Disposed, Invalid, Reentrant, Tracking, Watcher } from "../shape";
 
 /**
  * Promotion mode for transitive subscribers: mark them as Invalid.
  *
  * This tells them "maybe changed, verify dependencies and then recompute".
  */
-export const PROMOTE_INVALID = ReactiveNodeState.Invalid;
+export const PROMOTE_INVALID = Invalid;
 
 /**
  * Promotion mode for direct subscribers: mark them as Changed.
  *
  * This tells them "definitely changed, don't verify, recompute".
  */
-export const PROMOTE_CHANGED = ReactiveNodeState.Changed;
+export const PROMOTE_CHANGED = Changed;
 
 export const DIRTY_SUBSCRIBER_MASK =
-  ReactiveNodeState.Invalid |
-  ReactiveNodeState.Changed;
+  Invalid |
+  Changed;
 
-export const DISPOSED_STATE_MASK = ReactiveNodeState.Disposed;
-export const TRACKING_STATE_MASK = ReactiveNodeState.Tracking;
-export const REENTRANT_STATE_MASK = ReactiveNodeState.Reentrant;
+export const DISPOSED_STATE_MASK = Disposed;
+export const TRACKING_STATE_MASK = Tracking;
+export const REENTRANT_STATE_MASK = Reentrant;
 
 // Only states that truly require slow-path invalidation handling.
 // Visited is intentionally excluded.
@@ -30,7 +30,7 @@ export const SLOW_PATH_INVALIDATION_MASK =
   TRACKING_STATE_MASK;
 
 export const VISITED_MASK = REENTRANT_STATE_MASK;
-export const WATCHER_MASK = ReactiveNodeState.Watcher;
+export const WATCHER_MASK = Watcher;
 export const TRACKING_MASK = TRACKING_STATE_MASK;
 export const DISPOSED_MASK = DISPOSED_STATE_MASK;
 

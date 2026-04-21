@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  Changed,
+  Computing,
   DIRTY_STATE,
+  Disposed,
   ReactiveNodeState,
+  Reentrant,
+  Tracking,
   disposeNode,
   readConsumer,
   readProducer,
@@ -55,7 +60,7 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
 
     disposeNode(target);
 
-    expect(target.state & ReactiveNodeState.Disposed).toBeTruthy();
+    expect(target.state & Disposed).toBeTruthy();
     expect(incomingSources(target)).toEqual([]);
     expect(hasSubscriber(source, target)).toBe(false);
 
@@ -122,11 +127,11 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     });
 
     expect(readConsumer(target)).toBe(1);
-    expect(seenInside & ReactiveNodeState.Tracking).toBeTruthy();
-    expect(seenInside & ReactiveNodeState.Computing).toBeTruthy();
-    expect(seenInside & ReactiveNodeState.Reentrant).toBeFalsy();
-    expect(target.state & ReactiveNodeState.Tracking).toBeFalsy();
-    expect(target.state & ReactiveNodeState.Computing).toBeFalsy();
+    expect(seenInside & Tracking).toBeTruthy();
+    expect(seenInside & Computing).toBeTruthy();
+    expect(seenInside & Reentrant).toBeFalsy();
+    expect(target.state & Tracking).toBeFalsy();
+    expect(target.state & Computing).toBeFalsy();
   });
 
   it("characterization: recompute clears a stale Visited bit before compute", () => {
@@ -141,12 +146,12 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
 
     expect(readConsumer(target)).toBe(3);
 
-    target.state |= ReactiveNodeState.Reentrant | ReactiveNodeState.Changed;
+    target.state |= Reentrant | Changed;
 
     expect(readConsumer(target)).toBe(3);
-    expect(seenInside & ReactiveNodeState.Reentrant).toBeFalsy();
-    expect(seenInside & ReactiveNodeState.Tracking).toBeTruthy();
-    expect(target.state & ReactiveNodeState.Reentrant).toBeFalsy();
+    expect(seenInside & Reentrant).toBeFalsy();
+    expect(seenInside & Tracking).toBeTruthy();
+    expect(target.state & Reentrant).toBeFalsy();
     expect(target.state & DIRTY_STATE).toBe(0);
   });
 });

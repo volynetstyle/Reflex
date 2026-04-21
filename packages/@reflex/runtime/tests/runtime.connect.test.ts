@@ -1,27 +1,25 @@
 import { describe, expect, it } from "vitest";
-import {
-  ReactiveNodeState,
-  ReactiveNode,
-  restoreContext,
-  saveContext,
-  setOptions,
-} from "../src";
+import { ReactiveNode, restoreContext, saveContext, setOptions } from "../src";
+import type {
+  ReactiveNodeState} from "../src/reactivity";
 import {
   linkEdge,
   ReactiveEdge,
   trackReadActive,
   unlinkEdge,
   reuseIncomingEdgeFromSuffixOrCreate,
+  Consumer,
+  Producer
 } from "../src/reactivity";
 
-function createNode(kind: ReactiveNodeState = ReactiveNodeState.Producer) {
+function createNode(kind: ReactiveNodeState = Producer) {
   return new ReactiveNode(undefined, null, kind);
 }
 
 describe("Reactive graph - edge wiring", () => {
   it("creates reactive edges and wires both intrusive lists", () => {
-    const source = createNode(ReactiveNodeState.Producer);
-    const target = createNode(ReactiveNodeState.Consumer);
+    const source = createNode(Producer);
+    const target = createNode(Consumer);
 
     const edge = linkEdge(source, target);
 
@@ -35,10 +33,10 @@ describe("Reactive graph - edge wiring", () => {
   });
 
   it("keeps lastInTail separate from the physical incoming tail when unlinking", () => {
-    const a = createNode(ReactiveNodeState.Producer);
-    const b = createNode(ReactiveNodeState.Producer);
-    const c = createNode(ReactiveNodeState.Producer);
-    const target = createNode(ReactiveNodeState.Consumer);
+    const a = createNode(Producer);
+    const b = createNode(Producer);
+    const c = createNode(Producer);
+    const target = createNode(Consumer);
 
     const ab = linkEdge(a, target);
     const bb = linkEdge(b, target);
@@ -56,10 +54,10 @@ describe("Reactive graph - edge wiring", () => {
   });
 
   it("repositions a reused incoming edge without corrupting the true tail", () => {
-    const a = createNode(ReactiveNodeState.Producer);
-    const b = createNode(ReactiveNodeState.Producer);
-    const c = createNode(ReactiveNodeState.Producer);
-    const target = createNode(ReactiveNodeState.Consumer);
+    const a = createNode(Producer);
+    const b = createNode(Producer);
+    const c = createNode(Producer);
+    const target = createNode(Consumer);
 
     const ab = linkEdge(a, target);
     const bb = linkEdge(b, target);
@@ -77,10 +75,10 @@ describe("Reactive graph - edge wiring", () => {
   });
 
   it("routes fallback edge reuse through the execution-context seam", () => {
-    const a = createNode(ReactiveNodeState.Producer);
-    const b = createNode(ReactiveNodeState.Producer);
-    const c = createNode(ReactiveNodeState.Producer);
-    const target = createNode(ReactiveNodeState.Consumer);
+    const a = createNode(Producer);
+    const b = createNode(Producer);
+    const c = createNode(Producer);
+    const target = createNode(Consumer);
     const calls: Array<{
       source: ReactiveNode;
       consumer: ReactiveNode;

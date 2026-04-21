@@ -20,7 +20,7 @@ vi.mock("@reflex/runtime", async () => {
   };
 });
 
-import { DIRTY_STATE, ReactiveNodeState } from "@reflex/runtime";
+import { Changed, DIRTY_STATE, Disposed, ReactiveNodeState, Scheduled } from "@reflex/runtime";
 import {
   createEffectScheduler,
   EffectSchedulerMode,
@@ -43,7 +43,7 @@ describe("createEffectScheduler", () => {
 
     scheduler.enqueue(node);
 
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
+    expect((node.state & Scheduled) !== 0).toBe(true);
     expect(mocks.runWatcher).not.toHaveBeenCalled();
   });
 
@@ -54,7 +54,7 @@ describe("createEffectScheduler", () => {
     scheduler.enqueue(node);
     scheduler.flush();
 
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((node.state & Scheduled) !== 0).toBe(false);
     expect(mocks.runWatcher).toHaveBeenCalledTimes(1);
     expect(mocks.runWatcher).toHaveBeenCalledWith(node);
   });
@@ -68,7 +68,7 @@ describe("createEffectScheduler", () => {
 
     scheduler.flush();
 
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((node.state & Scheduled) !== 0).toBe(false);
 
     // calls because early exit in runWatcher
     //    expect(mocks.runWatcher).not.toHaveBeenCalled();
@@ -151,7 +151,7 @@ describe("createEffectScheduler", () => {
 
   it("flush runs dirty nodes even when extra state bits are present", () => {
     const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
-    const node = createNode(DIRTY_STATE | ReactiveNodeState.Changed);
+    const node = createNode(DIRTY_STATE | Changed);
 
     scheduler.enqueue(node);
     scheduler.flush();
@@ -167,7 +167,7 @@ describe("createEffectScheduler", () => {
     scheduler.enqueue(node);
 
     expect(mocks.runWatcher).toHaveBeenCalledTimes(1);
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((node.state & Scheduled) !== 0).toBe(false);
   });
 
   it("defers eager flush until batch exits", () => {
@@ -180,13 +180,13 @@ describe("createEffectScheduler", () => {
       scheduler.enqueue(b);
 
       expect(mocks.runWatcher).not.toHaveBeenCalled();
-      expect((a.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
-      expect((b.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
+      expect((a.state & Scheduled) !== 0).toBe(true);
+      expect((b.state & Scheduled) !== 0).toBe(true);
     });
 
     expect(mocks.runWatcher).toHaveBeenCalledTimes(2);
-    expect((a.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
-    expect((b.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((a.state & Scheduled) !== 0).toBe(false);
+    expect((b.state & Scheduled) !== 0).toBe(false);
   });
 
   it("can flush on outermost batch exit in sab mode", () => {
@@ -199,13 +199,13 @@ describe("createEffectScheduler", () => {
       scheduler.enqueue(b);
 
       expect(mocks.runWatcher).not.toHaveBeenCalled();
-      expect((a.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
-      expect((b.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
+      expect((a.state & Scheduled) !== 0).toBe(true);
+      expect((b.state & Scheduled) !== 0).toBe(true);
     });
 
     expect(mocks.runWatcher).toHaveBeenCalledTimes(2);
-    expect((a.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
-    expect((b.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((a.state & Scheduled) !== 0).toBe(false);
+    expect((b.state & Scheduled) !== 0).toBe(false);
   });
 
   it("keeps sab effects queued when batch exits during active propagation", () => {
@@ -218,13 +218,13 @@ describe("createEffectScheduler", () => {
     });
 
     expect(mocks.runWatcher).not.toHaveBeenCalled();
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
+    expect((node.state & Scheduled) !== 0).toBe(true);
 
     mocks.getPropagationDepth.mockReturnValue(0);
     scheduler.flush();
 
     expect(mocks.runWatcher).toHaveBeenCalledTimes(1);
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((node.state & Scheduled) !== 0).toBe(false);
   });
 
   it("does not auto-flush while propagation is active", () => {
@@ -235,23 +235,23 @@ describe("createEffectScheduler", () => {
     scheduler.enqueue(node);
 
     expect(mocks.runWatcher).not.toHaveBeenCalled();
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
+    expect((node.state & Scheduled) !== 0).toBe(true);
 
     mocks.getPropagationDepth.mockReturnValue(0);
     scheduler.notifySettled();
 
     expect(mocks.runWatcher).toHaveBeenCalledTimes(1);
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((node.state & Scheduled) !== 0).toBe(false);
   });
 
   it("ignores disposed nodes on enqueue", () => {
     const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
-    const node = createNode(DIRTY_STATE | ReactiveNodeState.Disposed);
+    const node = createNode(DIRTY_STATE | Disposed);
 
     scheduler.enqueue(node);
     scheduler.flush();
 
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((node.state & Scheduled) !== 0).toBe(false);
     expect(mocks.runWatcher).not.toHaveBeenCalled();
   });
 
@@ -264,7 +264,7 @@ describe("createEffectScheduler", () => {
     scheduler.flush();
 
     expect(mocks.runWatcher).not.toHaveBeenCalled();
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((node.state & Scheduled) !== 0).toBe(false);
   });
 
   it("reset allows previously queued node to be scheduled again", () => {
@@ -348,8 +348,8 @@ describe("createEffectScheduler", () => {
       first,
       second,
     ]);
-    expect((first.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
-    expect((second.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((first.state & Scheduled) !== 0).toBe(false);
+    expect((second.state & Scheduled) !== 0).toBe(false);
     expect(scheduler.batchDepth).toBe(0);
   });
 
@@ -377,8 +377,8 @@ describe("createEffectScheduler", () => {
       first,
       second,
     ]);
-    expect((first.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
-    expect((second.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((first.state & Scheduled) !== 0).toBe(false);
+    expect((second.state & Scheduled) !== 0).toBe(false);
     expect(scheduler.batchDepth).toBe(0);
   });
 });

@@ -227,21 +227,19 @@ export function trackReadActive(
  */
 export function cleanupStaleSources(node: ReactiveNode): void {
   const tail = node.lastInTail;
+  
   const staleHead = tail === null ? node.firstIn : tail.nextIn;
   if (staleHead === null) return;
-  const detachedStaleHead: NonNullable<typeof staleHead> = staleHead;
 
-  if (tail === null) {
-    node.firstIn = null;
-    node.lastIn = null;
-  } else {
+  if (tail === null) node.firstIn = node.lastIn = null;
+  else {
     tail.nextIn = null;
     node.lastIn = tail;
   }
 
   if (__DEV__) {
-    devRecordCleanupStaleSources(node, detachedStaleHead, defaultContext);
+    devRecordCleanupStaleSources(node, staleHead, defaultContext);
   }
 
-  unlinkDetachedIncomingEdgeSequence(detachedStaleHead);
+  unlinkDetachedIncomingEdgeSequence(staleHead);
 }

@@ -1,82 +1,107 @@
 import { type ReactiveEdge } from "../shape";
-import {
-  NON_IMMEDIATE,
-  WATCHER_MASK,
-} from "./propagate.constants";
+import { NON_IMMEDIATE, WATCHER_MASK } from "./propagate.constants";
 import {
   dispatchInvalidatedWatcher,
   invalidateSubscriber,
 } from "./propagate.invalidate";
+import {
+  noteResumeEdgeStackUsage,
+  readRuntimeWalkerStackStats,
+  trimWalkerStackIfSparse,
+} from "./stack.stats";
 
-// Resume points stay edge-based: we must come back to a specific sibling link.
 const resumeEdgeStack: ReactiveEdge[] = [];
 let resumeStackHigh = 0;
 
-// Promote is step-local:
-// - it applies only to the current invalidate step
-// - every descendant descent resets to NON_IMMEDIATE
-// - exactly one deferred sibling lane may restore the direct-wave promote
-// - restore happens only through directResumeIndex during unwind
+function restoreResumeStackBase(stackBase: number): void {
+  resumeStackHigh = stackBase;
+  trimWalkerStackIfSparse(resumeEdgeStack, stackBase);
+}
+
+export function readPropagateStackStats(): {
+  shouldRecompute: { current: number; peak: number; capacity: number };
+  propagate: { current: number; peak: number; capacity: number };
+} {
+  return readRuntimeWalkerStackStats(
+    0,
+    0,
+    resumeStackHigh,
+    resumeEdgeStack.length,
+  );
+}
+
+function pushResumeEdge(
+  stack: ReactiveEdge[],
+  stackTop: number,
+  edge: ReactiveEdge,
+  promote: number,
+): { nextTop: number; promotedIndex: number } {
+  stack[stackTop] = edge;
+  const promotedIndex = promote !== NON_IMMEDIATE ? stackTop : -1;
+  const nextTop = stackTop + 1;
+  noteResumeEdgeStackUsage(nextTop);
+  return { nextTop, promotedIndex };
+}
+
 function propagateBranchingWave(
   currentEdge: ReactiveEdge,
   currentPromote: number,
-  firstThrownError: unknown,
   deferredSiblingEdge: ReactiveEdge | null,
   deferredSiblingPromote: number,
-): unknown {
+): void {
   const edgeStack = resumeEdgeStack;
   const stackBase = resumeStackHigh;
   const directSiblingPromote = deferredSiblingPromote;
+
   let stackTop = stackBase;
   let nextSiblingEdge: ReactiveEdge | null = currentEdge.nextOut;
-  // Only one resumed sibling lane can carry the direct-wave promote; every
-  // deeper descent resets to NON_IMMEDIATE until that lane is restored.
   let directSiblingResumeIndex = -1;
 
   if (deferredSiblingEdge !== null) {
-    edgeStack[stackTop] = deferredSiblingEdge;
-    if (deferredSiblingPromote !== NON_IMMEDIATE) {
-      directSiblingResumeIndex = stackTop;
-    }
-    stackTop += 1;
+    const pushed = pushResumeEdge(
+      edgeStack,
+      stackTop,
+      deferredSiblingEdge,
+      deferredSiblingPromote,
+    );
+    stackTop = pushed.nextTop;
+    directSiblingResumeIndex = pushed.promotedIndex;
   }
 
   while (true) {
     const subscriber = currentEdge.to;
-    const subscriberState = subscriber.state;
     const nextSubscriberState = invalidateSubscriber(
       currentEdge,
       subscriber,
-      subscriberState,
+      subscriber.state,
       currentPromote,
     );
 
-    if (nextSubscriberState !== 0) {
-      if ((nextSubscriberState & WATCHER_MASK) === 0) {
-        const firstChildEdge = subscriber.firstOut;
-
-        if (firstChildEdge !== null) {
-          if (nextSiblingEdge !== null) {
-            edgeStack[stackTop] = nextSiblingEdge;
-            if (currentPromote !== NON_IMMEDIATE) {
-              directSiblingResumeIndex = stackTop;
-            }
-            stackTop += 1;
+    if (nextSubscriberState === 0) {
+    } // no-op, fall through to sibling/unwind
+    else if ((nextSubscriberState & WATCHER_MASK) !== 0) {
+      resumeStackHigh = stackTop;
+      dispatchInvalidatedWatcher(subscriber);
+    } else {
+      const firstChildEdge = subscriber.firstOut;
+      if (firstChildEdge !== null) {
+        if (nextSiblingEdge !== null) {
+          const pushed = pushResumeEdge(
+            edgeStack,
+            stackTop,
+            nextSiblingEdge,
+            currentPromote,
+          );
+          stackTop = pushed.nextTop;
+          if (pushed.promotedIndex !== -1) {
+            directSiblingResumeIndex = pushed.promotedIndex;
           }
-
-          currentEdge = firstChildEdge;
-          nextSiblingEdge = currentEdge.nextOut;
-          currentPromote = NON_IMMEDIATE;
-          continue;
         }
-      } else {
-        // Watcher dispatch may re-enter propagation, so publish the current
-        // stack height immediately before crossing that external boundary.
-        resumeStackHigh = stackTop;
-        firstThrownError = dispatchInvalidatedWatcher(
-          subscriber,
-          firstThrownError,
-        );
+
+        currentEdge = firstChildEdge;
+        nextSiblingEdge = currentEdge.nextOut;
+        currentPromote = NON_IMMEDIATE;
+        continue;
       }
     }
 
@@ -86,70 +111,64 @@ function propagateBranchingWave(
       continue;
     }
 
-    if (stackTop !== stackBase) {
-      const resumeIndex = --stackTop;
-      currentEdge = edgeStack[resumeIndex]!;
-      if (resumeIndex === directSiblingResumeIndex) {
-        directSiblingResumeIndex = -1;
-        currentPromote = directSiblingPromote;
-      } else {
-        currentPromote = NON_IMMEDIATE;
-      }
-      nextSiblingEdge = currentEdge.nextOut;
-      continue;
+    if (stackTop === stackBase) {
+      restoreResumeStackBase(stackBase);
+      return;
     }
 
-    resumeStackHigh = stackBase;
-    return firstThrownError;
+    const resumeIndex = --stackTop;
+    currentEdge = edgeStack[resumeIndex]!;
+    currentPromote =
+      resumeIndex === directSiblingResumeIndex
+        ? ((directSiblingResumeIndex = -1), directSiblingPromote)
+        : NON_IMMEDIATE;
+    nextSiblingEdge = currentEdge.nextOut;
   }
 }
 
 export function propagate(
   startEdge: ReactiveEdge,
   startPromote: number,
-): unknown {
-  let firstThrownError: unknown = null;
+): void {
 
   while (true) {
     const subscriber = startEdge.to;
     const nextSiblingEdge = startEdge.nextOut;
-    const subscriberState = subscriber.state;
     const nextSubscriberState = invalidateSubscriber(
       startEdge,
       subscriber,
-      subscriberState,
+      subscriber.state,
       startPromote,
     );
 
-    if (nextSubscriberState !== 0) {
-      if ((nextSubscriberState & WATCHER_MASK) === 0) {
-        const firstChildEdge = subscriber.firstOut;
+    if (nextSubscriberState === 0) {
+    } // fall through
+    else if ((nextSubscriberState & WATCHER_MASK) !== 0) {
+      dispatchInvalidatedWatcher(subscriber);
+    } else {
+      const firstChildEdge = subscriber.firstOut;
+      if (firstChildEdge !== null) {
+        startEdge = firstChildEdge;
 
-        if (firstChildEdge !== null) {
-          startEdge = firstChildEdge;
-
-          if (nextSiblingEdge !== null) {
-            return propagateBranchingWave(
-              startEdge,
-              NON_IMMEDIATE,
-              firstThrownError,
-              nextSiblingEdge,
-              startPromote,
-            );
-          }
-
-          startPromote = NON_IMMEDIATE;
-          continue;
+        if (nextSiblingEdge !== null) {
+          propagateBranchingWave(
+            startEdge,
+            NON_IMMEDIATE,
+            nextSiblingEdge,
+            startPromote,
+          );
+          return;
         }
-      } else {
-        firstThrownError = dispatchInvalidatedWatcher(
-          subscriber,
-          firstThrownError,
-        );
+
+        startPromote = NON_IMMEDIATE;
+        continue;
       }
     }
 
-    if (nextSiblingEdge === null) return firstThrownError;
+    if (nextSiblingEdge === null) {
+      return;
+    }
+
     startEdge = nextSiblingEdge;
   }
 }

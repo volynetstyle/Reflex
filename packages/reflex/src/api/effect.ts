@@ -1,12 +1,12 @@
 import {
   disposeWatcher,
   registerWatcherCleanup,
-  ReactiveNodeState,
+  Scheduled,
   runWatcher,
   withCleanupRegistrar,
 } from "@reflex/runtime";
-import { ReactiveNode } from "@reflex/runtime";
-import { createWatcherRankedrNode } from "../infra/factory";
+import type { ReactiveNode } from "@reflex/runtime";
+import { createWatcherNode, createWatcherRankedrNode } from "../infra/factory";
 
 /**
  * Marks an effect watcher node as scheduled.
@@ -17,7 +17,7 @@ import { createWatcherRankedrNode } from "../infra/factory";
 export function effectScheduled(
   node: ReactiveNode<typeof undefined | Destructor>,
 ) {
-  node.state |= ReactiveNodeState.Scheduled;
+  node.state |= Scheduled;
 }
 
 /**
@@ -29,7 +29,7 @@ export function effectScheduled(
 export function effectUnscheduled(
   node: ReactiveNode<typeof undefined | Destructor>,
 ) {
-  node.state &= ~ReactiveNodeState.Scheduled;
+  node.state &= ~Scheduled;
 }
 
 /**
@@ -110,7 +110,16 @@ export function withEffectCleanupRegistrar<T>(
  * @see computed
  * @see memo
  */
-export function effect(
+export function effect(fn: EffectFn): Destructor {
+  const node = createWatcherNode(fn);
+  runWatcher(node);
+
+  const dispose = disposeWatcher.bind(null, node) as Destructor;
+  registerWatcherCleanup(dispose);
+  return dispose;
+}
+
+export function effectRanked(
   fn: EffectFn,
   options: EffectOptions = {},
 ): Destructor {

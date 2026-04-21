@@ -1,18 +1,25 @@
 import { devAssertShouldRecomputeAlive } from "../dev";
 import type { ReactiveNode } from "../shape";
-import { ReactiveNodeState } from "../shape";
-import { shouldRecomputeLinear } from "./recompute.branch";
+import { Changed, Disposed, Invalid, Producer, Reentrant } from "../shape";
+import {
+  shouldRecomputeLinear,
+} from "./recompute.branch";
 
-const STOP_RECOMPUTE = ReactiveNodeState.Producer | ReactiveNodeState.Disposed;
-const REENTRANT_STALE = ReactiveNodeState.Invalid | ReactiveNodeState.Reentrant;
+export {
+  readShouldRecomputeStackStats,
+  resetShouldRecomputeStackStats,
+} from "./recompute.branch";
+
+const STOP_RECOMPUTE = Producer | Disposed;
+const REENTRANT_STALE = Invalid | Reentrant;
 const WATCHER_REENTRANT_STALE =
-  ReactiveNodeState.Invalid | ReactiveNodeState.Reentrant;
+  Invalid | Reentrant;
 
 export function shouldRecomputeDirtyConsumer(
   node: ReactiveNode,
   state: number,
 ): boolean {
-  if ((state & ReactiveNodeState.Changed) !== 0) {
+  if ((state & Changed) !== 0) {
     return true;
   }
 
@@ -22,7 +29,7 @@ export function shouldRecomputeDirtyConsumer(
 
   const firstIn = node.firstIn;
   if (firstIn === null) {
-    node.state = state & ~ReactiveNodeState.Invalid;
+    node.state = state & ~Invalid;
     return false;
   }
 
@@ -33,7 +40,7 @@ export function shouldRecomputeDirtyWatcher(
   node: ReactiveNode,
   state: number,
 ): boolean {
-  if ((state & ReactiveNodeState.Changed) !== 0) {
+  if ((state & Changed) !== 0) {
     return true;
   }
 
@@ -43,7 +50,7 @@ export function shouldRecomputeDirtyWatcher(
 
   const firstIn = node.firstIn;
   if (firstIn === null) {
-    node.state = state & ~ReactiveNodeState.Invalid;
+    node.state = state & ~Invalid;
     return false;
   }
 
@@ -66,7 +73,7 @@ export function shouldRecompute(node: ReactiveNode): boolean {
   // Push-side propagate already confirmed a change.
   // Or this node was invalidated while mid-compute and must rerun.
   if (
-    (state & ReactiveNodeState.Changed) !== 0 ||
+    (state & Changed) !== 0 ||
     (state & REENTRANT_STALE) === REENTRANT_STALE
   ) {
     return true;
@@ -74,7 +81,7 @@ export function shouldRecompute(node: ReactiveNode): boolean {
 
   const firstIn = node.firstIn;
   if (firstIn === null) {
-    node.state = state & ~ReactiveNodeState.Invalid;
+    node.state = state & ~Invalid;
     return false;
   }
 

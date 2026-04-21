@@ -57,11 +57,11 @@ const JIT_SAFE_COMPRESS = {
   pure_funcs: [...PURE_FUNCS],
   reduce_funcs: false,
   reduce_vars: true,
-  passes: 2,
+  passes: 3,
   side_effects: true,
   toplevel: true,
   unused: true,
-} as const;
+};
 
 const TREESHAKE_OPTIONS: RollupOptions["treeshake"] = {
   preset: "recommended",

@@ -8,7 +8,7 @@ import {
   runWatcher,
   writeProducer,
 } from "../src";
-import { shouldRecompute } from "../src/reactivity";
+import { Changed, Consumer, Disposed, Invalid, Reentrant, shouldRecompute, Tracking } from "../src/reactivity";
 import { linkEdge } from "../src/reactivity/shape/methods/connect";
 import {
   createConsumer,
@@ -67,16 +67,16 @@ describe("Reactive runtime - traversal invariants", () => {
     writeProducer(source, 2);
 
     expect(source.state & DIRTY_STATE).toBe(0);
-    expect(mid.state & ReactiveNodeState.Changed).toBeTruthy();
-    expect(mid.state & ReactiveNodeState.Invalid).toBeFalsy();
-    expect(leaf.state & ReactiveNodeState.Invalid).toBeTruthy();
-    expect(leaf.state & ReactiveNodeState.Changed).toBeFalsy();
+    expect(mid.state & Changed).toBeTruthy();
+    expect(mid.state & Invalid).toBeFalsy();
+    expect(leaf.state & Invalid).toBeTruthy();
+    expect(leaf.state & Changed).toBeFalsy();
 
     expect(readProducer(source)).toBe(2);
-    expect(mid.state & ReactiveNodeState.Changed).toBeTruthy();
-    expect(mid.state & ReactiveNodeState.Invalid).toBeFalsy();
-    expect(leaf.state & ReactiveNodeState.Invalid).toBeTruthy();
-    expect(leaf.state & ReactiveNodeState.Changed).toBeFalsy();
+    expect(mid.state & Changed).toBeTruthy();
+    expect(mid.state & Invalid).toBeFalsy();
+    expect(leaf.state & Invalid).toBeTruthy();
+    expect(leaf.state & Changed).toBeFalsy();
     expect(midSpy).toHaveBeenCalledTimes(1);
     expect(leafSpy).toHaveBeenCalledTimes(1);
   });
@@ -134,7 +134,7 @@ describe("Reactive runtime - traversal invariants", () => {
 
     disposeWatcher(watcher);
 
-    expect(watcher.state & ReactiveNodeState.Disposed).toBeTruthy();
+    expect(watcher.state & Disposed).toBeTruthy();
     expect(hasSubscriber(source, watcher)).toBe(false);
 
     writeProducer(source, 2);
@@ -149,19 +149,19 @@ describe("Reactive runtime - traversal invariants", () => {
     const trackedEdge = linkEdge(tracked, target);
     const staleEdge = linkEdge(stale, target);
 
-    target.state = ReactiveNodeState.Consumer | ReactiveNodeState.Tracking;
+    target.state = Consumer | Tracking;
     target.lastInTail = trackedEdge;
 
     writeProducer(stale, 3);
     expect(target.state).toBe(
-      ReactiveNodeState.Consumer | ReactiveNodeState.Tracking,
+      Consumer | Tracking,
     );
 
     writeProducer(tracked, 2);
-    expect(target.state & ReactiveNodeState.Tracking).toBeTruthy();
-    expect(target.state & ReactiveNodeState.Reentrant).toBeTruthy();
-    expect(target.state & ReactiveNodeState.Changed).toBeFalsy();
-    expect(target.state & ReactiveNodeState.Invalid).toBeTruthy();
+    expect(target.state & Tracking).toBeTruthy();
+    expect(target.state & Reentrant).toBeTruthy();
+    expect(target.state & Changed).toBeFalsy();
+    expect(target.state & Invalid).toBeTruthy();
   });
 
   it("treats lastInTail as the tracked-prefix boundary while computing", () => {
@@ -174,21 +174,21 @@ describe("Reactive runtime - traversal invariants", () => {
 
     linkEdge(stale, target);
 
-    target.state = ReactiveNodeState.Consumer | ReactiveNodeState.Tracking;
+    target.state = Consumer | Tracking;
     target.lastInTail = secondEdge;
 
     writeProducer(stale, 4);
     expect(target.state).toBe(
-      ReactiveNodeState.Consumer | ReactiveNodeState.Tracking,
+      Consumer | Tracking,
     );
 
     writeProducer(first, 5);
     expect(target.lastInTail).toBe(secondEdge);
     expect(firstEdge.nextIn).toBe(secondEdge);
-    expect(target.state & ReactiveNodeState.Tracking).toBeTruthy();
-    expect(target.state & ReactiveNodeState.Reentrant).toBeTruthy();
-    expect(target.state & ReactiveNodeState.Changed).toBeFalsy();
-    expect(target.state & ReactiveNodeState.Invalid).toBeTruthy();
+    expect(target.state & Tracking).toBeTruthy();
+    expect(target.state & Reentrant).toBeTruthy();
+    expect(target.state & Changed).toBeFalsy();
+    expect(target.state & Invalid).toBeTruthy();
   });
 
   it("preserves outer propagate traversal when watcher invalidation triggers a nested write", () => {
@@ -268,12 +268,12 @@ describe("Reactive runtime - traversal invariants", () => {
     writeProducer(source, 2);
 
     expect(invalidations).toBe(1);
-    expect(watcher.state & ReactiveNodeState.Invalid).toBeTruthy();
-    expect(watcher.state & ReactiveNodeState.Changed).toBeFalsy();
+    expect(watcher.state & Invalid).toBeTruthy();
+    expect(watcher.state & Changed).toBeFalsy();
 
     expect(readConsumer(shared)).toBe(4);
     expect(invalidations).toBe(2);
-    expect(watcher.state & ReactiveNodeState.Changed).toBeTruthy();
+    expect(watcher.state & Changed).toBeTruthy();
 
     runWatcher(watcher);
     expect(effectSpy).toHaveBeenCalledTimes(2);
@@ -314,12 +314,12 @@ describe("Reactive runtime - traversal invariants", () => {
 
     runWatcher(watcher);
     expect(seen).toEqual([0]);
-    expect(watcher.state & ReactiveNodeState.Invalid).toBeTruthy();
-    expect(watcher.state & ReactiveNodeState.Reentrant).toBeTruthy();
+    expect(watcher.state & Invalid).toBeTruthy();
+    expect(watcher.state & Reentrant).toBeTruthy();
 
     runWatcher(watcher);
     expect(seen).toEqual([0, 1]);
-    expect(watcher.state & ReactiveNodeState.Invalid).toBeTruthy();
+    expect(watcher.state & Invalid).toBeTruthy();
 
     runWatcher(watcher);
     expect(seen).toEqual([0, 1, 2]);
@@ -335,11 +335,11 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(depSpy).toHaveBeenCalledTimes(1);
     expect(dep.firstIn).toBeNull();
 
-    dep.state |= ReactiveNodeState.Invalid;
+    dep.state |= Invalid;
 
     expect(shouldRecompute(root)).toBe(false);
     expect(depSpy).toHaveBeenCalledTimes(2);
-    expect(dep.state & ReactiveNodeState.Invalid).toBeFalsy();
+    expect(dep.state & Invalid).toBeFalsy();
   });
 
   it("keeps eager stale-source unlink as the default behavior", () => {

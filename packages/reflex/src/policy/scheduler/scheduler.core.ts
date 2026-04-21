@@ -2,7 +2,7 @@ import type { ReactiveNode } from "@reflex/runtime";
 import {
   getActiveConsumer,
   getPropagationDepth,
-  ReactiveNodeState,
+  Scheduled,
   runWatcher,
 } from "@reflex/runtime";
 import {
@@ -36,12 +36,12 @@ function unscheduleQueuedNodes(queue: WatcherQueue): void {
   clearWatcherQueue(queue);
 }
 
-function flushSchedulerQueue(this: SchedulerCore): void {
-  const queue = this.queue;
-  if (this.phase === SchedulerPhase.Flushing) return;
+function flushSchedulerQueue(core: SchedulerCore): void {
+  const queue = core.queue;
+  if (core.phase === SchedulerPhase.Flushing) return;
   if (queue.size === 0) return;
 
-  this.phase = SchedulerPhase.Flushing;
+  core.phase = SchedulerPhase.Flushing;
   let thrown: unknown = null;
 
   try {
@@ -58,8 +58,8 @@ function flushSchedulerQueue(this: SchedulerCore): void {
     }
   } finally {
     unscheduleQueuedNodes(queue);
-    this.phase =
-      this.batchDepth > 0 ? SchedulerPhase.Batching : SchedulerPhase.Idle;
+    core.phase =
+      core.batchDepth > 0 ? SchedulerPhase.Batching : SchedulerPhase.Idle;
   }
 
   if (thrown !== null) {
@@ -67,33 +67,29 @@ function flushSchedulerQueue(this: SchedulerCore): void {
   }
 }
 
-function enterSchedulerBatch(this: SchedulerCore): void {
-  if (++this.batchDepth === 1 && this.phase !== SchedulerPhase.Flushing) {
-    this.phase = SchedulerPhase.Batching;
+function enterSchedulerBatch(core: SchedulerCore): void {
+  if (++core.batchDepth === 1 && core.phase !== SchedulerPhase.Flushing) {
+    core.phase = SchedulerPhase.Batching;
   }
 }
 
-function leaveSchedulerBatch(this: SchedulerCore): boolean {
-  if (--this.batchDepth !== 0) {
+function leaveSchedulerBatch(core: SchedulerCore): boolean {
+  if (--core.batchDepth !== 0) {
     return false;
   }
 
-  if (this.phase === SchedulerPhase.Flushing) {
+  if (core.phase === SchedulerPhase.Flushing) {
     return false;
   }
 
-  this.phase = SchedulerPhase.Idle;
+  core.phase = SchedulerPhase.Idle;
   return true;
 }
 
-function resetSchedulerCore(this: SchedulerCore): void {
-  unscheduleQueuedNodes(this.queue);
-  this.batchDepth = 0;
-  this.phase = SchedulerPhase.Idle;
-}
-
-function getSchedulerHead(this: SchedulerCore): number {
-  return this.queue.head;
+function resetSchedulerCore(core: SchedulerCore): void {
+  unscheduleQueuedNodes(core.queue);
+  core.batchDepth = 0;
+  core.phase = SchedulerPhase.Idle;
 }
 
 /**
@@ -103,7 +99,7 @@ function getSchedulerHead(this: SchedulerCore): number {
  * the runtime's scheduled flag on a watcher node.
  */
 export function effectScheduled(node: EffectNode) {
-  node.state |= ReactiveNodeState.Scheduled;
+  node.state |= Scheduled;
 }
 
 /**
@@ -113,7 +109,7 @@ export function effectScheduled(node: EffectNode) {
  * a watcher as no longer queued for execution.
  */
 export function effectUnscheduled(node: EffectNode) {
-  node.state &= ~ReactiveNodeState.Scheduled;
+  node.state &= ~Scheduled;
 }
 
 export function isContextSettled(): boolean {
@@ -129,15 +125,19 @@ export function isRuntimeInactive(core: SchedulerCore): boolean {
 }
 
 export function createSchedulerCore(): SchedulerCore {
-  return {
-    queue: createWatcherQueue(),
+  const queue = createWatcherQueue();
+
+  const core: SchedulerCore = {
+    queue,
     batchDepth: 0,
     phase: SchedulerPhase.Idle,
-    flush: flushSchedulerQueue,
-    enterBatch: enterSchedulerBatch,
-    leaveBatch: leaveSchedulerBatch,
-    reset: resetSchedulerCore,
+    flush: (): void => flushSchedulerQueue(core),
+    enterBatch: (): void => enterSchedulerBatch(core),
+    leaveBatch: (): boolean => leaveSchedulerBatch(core),
+    reset: (): void => resetSchedulerCore(core),
   };
+
+  return core;
 }
 
 export function tryEnqueue(queue: WatcherQueue, node: ReactiveNode): boolean {
@@ -147,7 +147,7 @@ export function tryEnqueue(queue: WatcherQueue, node: ReactiveNode): boolean {
     return false;
   }
 
-  effectNode.state = state | ReactiveNodeState.Scheduled;
+  effectNode.state = state | Scheduled;
   pushWatcherQueue(queue, effectNode);
   return true;
 }
@@ -160,6 +160,7 @@ export function createSchedulerInstance(
   notifySettled: SchedulerNotifySettled,
   runtimeNotifySettled: SchedulerRuntimeNotifySettled,
 ): EffectScheduler {
+  const { queue } = core;
   const scheduler = core as SchedulerCore & {
     ring: EffectScheduler["ring"];
     mode: EffectScheduler["mode"];
@@ -170,7 +171,7 @@ export function createSchedulerInstance(
     head: number;
   };
 
-  scheduler.ring = core.queue.ring;
+  scheduler.ring = queue.ring;
   scheduler.mode = mode;
   scheduler.runtimeNotifySettled = runtimeNotifySettled;
   scheduler.enqueue = enqueue;
@@ -180,7 +181,7 @@ export function createSchedulerInstance(
   Object.defineProperty(scheduler, "head", {
     configurable: true,
     enumerable: true,
-    get: getSchedulerHead,
+    get: (): number => queue.head,
   });
 
   return scheduler;

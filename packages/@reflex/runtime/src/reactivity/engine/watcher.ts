@@ -3,9 +3,12 @@ import type { ReactiveNode } from "../shape";
 import {
   clearNodeVisited,
   DIRTY_STATE,
-  ReactiveNodeState,
   clearDirtyState,
   disposeNode,
+  Changed,
+  Disposed,
+  Invalid,
+  Reentrant,
 } from "../shape";
 import { executeNodeComputation } from "./execute";
 import { defaultContext } from "../context";
@@ -61,7 +64,7 @@ function getWatcherCleanup(payload: unknown): (() => void) | null {
 export function runWatcher(node: ReactiveNode): void {
   const state = node.state;
 
-  if ((state & ReactiveNodeState.Disposed) !== 0) {
+  if ((state & Disposed) !== 0) {
     if (__DEV__) recordWatcherSkip(node, "disposed");
     return;
   }
@@ -88,7 +91,7 @@ export function runWatcher(node: ReactiveNode): void {
     if (__DEV__) recordWatcherCleanup(node);
   }
 
-  if ((node.state & ReactiveNodeState.Disposed) !== 0) {
+  if ((node.state & Disposed) !== 0) {
     if (__DEV__) recordWatcherFinish(node, false, undefined);
     return;
   }
@@ -100,11 +103,11 @@ export function runWatcher(node: ReactiveNode): void {
     node.payload = result as () => void;
   }
 
-  if ((node.state & ReactiveNodeState.Reentrant) === 0) {
+  if ((node.state & Reentrant) === 0) {
     clearDirtyState(node);
   } else {
     node.state =
-      (node.state & ~ReactiveNodeState.Changed) | ReactiveNodeState.Invalid;
+      (node.state & ~Changed) | Invalid;
   }
 
   if (__DEV__) recordWatcherFinish(node, hasCleanup, result);

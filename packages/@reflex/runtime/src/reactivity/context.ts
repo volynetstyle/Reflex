@@ -29,6 +29,8 @@ export interface ContextSnapshot {
   trackingVersion: number;
   propagationDepth: number;
   cleanupRegistrar: CleanupRegistrar | null;
+  hasThrownError: boolean;
+  firstThrownError: unknown;
   trackReadFallback: TrackReadFallback;
   runtimeOnSinkInvalidated: OnSinkInvalidatedHook;
   runtimeOnReactiveSettled: OnReactiveSettledHook;
@@ -44,14 +46,16 @@ const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
 const DEFAULT_TRACK_READ_FALLBACK: TrackReadFallback =
   reuseIncomingEdgeFromSuffixOrCreate;
 
-export const defaultContext: RuntimeDebugContext = Object.freeze({
+export const defaultContext: RuntimeDebugContext = {
   scope: "runtime",
-});
+};
 
 export let activeConsumer: ReactiveNode | null = null;
 export let trackingVersion = 0;
 export let propagationDepth = 0;
 export let cleanupRegistrar: CleanupRegistrar | null = null;
+export let hasThrownError = false;
+export let firstThrownError: unknown = null;
 export let trackReadFallback: TrackReadFallback = DEFAULT_TRACK_READ_FALLBACK;
 export let onSinkInvalidated: OnSinkInvalidatedHook = undefined;
 export let onReactiveSettled: OnReactiveSettledHook = undefined;
@@ -114,6 +118,13 @@ export function setTrackingVersion(version: number): void {
   trackingVersion = version;
 }
 
+// @__INLINE__
+export function advanceTrackingVersion(): number {
+  const nextVersion = (trackingVersion + 1) >>> 0;
+  trackingVersion = nextVersion === 0 ? 1 : nextVersion;
+  return trackingVersion;
+}
+
 export function getSinkInvalidatedHook(): OnSinkInvalidatedHook {
   return globalOnSinkInvalidated;
 }
@@ -160,6 +171,24 @@ export function notifySettledIfIdle(): void {
   if (propagationDepth !== 0 || activeConsumer !== null) return;
   if (IS_DEV) recordDebugEvent(defaultContext, "context:settled");
   onReactiveSettled?.();
+}
+
+export function clearThrownError(): void {
+  hasThrownError = false;
+  firstThrownError = null;
+}
+
+export function captureThrownError(error: unknown): void {
+  if (hasThrownError) return;
+  hasThrownError = true;
+  firstThrownError = error;
+}
+
+export function rethrowCapturedError(): void {
+  if (!hasThrownError) return;
+  const error = firstThrownError;
+  clearThrownError();
+  throw error;
 }
 
 export function registerWatcherCleanup(cleanup: () => void): void {
@@ -213,6 +242,8 @@ export function saveContext(): ContextSnapshot {
     trackingVersion,
     propagationDepth,
     cleanupRegistrar,
+    hasThrownError,
+    firstThrownError,
     trackReadFallback,
     runtimeOnSinkInvalidated,
     runtimeOnReactiveSettled,
@@ -226,6 +257,8 @@ export function restoreContext(snapshot: ContextSnapshot): void {
   trackingVersion = snapshot.trackingVersion;
   propagationDepth = snapshot.propagationDepth;
   cleanupRegistrar = snapshot.cleanupRegistrar;
+  hasThrownError = snapshot.hasThrownError;
+  firstThrownError = snapshot.firstThrownError;
   trackReadFallback = snapshot.trackReadFallback;
   runtimeOnSinkInvalidated = snapshot.runtimeOnSinkInvalidated;
   runtimeOnReactiveSettled = snapshot.runtimeOnReactiveSettled;
@@ -239,6 +272,7 @@ export function resetState(): void {
   trackingVersion = 0;
   propagationDepth = 0;
   cleanupRegistrar = null;
+  clearThrownError();
 }
 
 refreshDispatchers();

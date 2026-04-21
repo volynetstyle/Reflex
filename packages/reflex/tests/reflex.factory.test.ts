@@ -4,7 +4,7 @@ import {
   WATCHER_INITIAL_STATE,
 } from "@reflex/runtime";
 import { describe, expect, it } from "vitest";
-import { ReactiveNodeState } from "../../@reflex/runtime/src/reactivity/shape/ReactiveMeta";
+import { ReactiveNodeState, Watcher } from "../../@reflex/runtime/src/reactivity/shape/ReactiveMeta";
 import {
   createComputedNode,
   createWatcherNode,
@@ -41,7 +41,7 @@ describe("Reactive system - factory helpers", () => {
 
     expect(typeof node.compute).toBe("function");
     expect(node.state).toBe(WATCHER_INITIAL_STATE);
-    expect(node.state & ReactiveNodeState.Watcher).toBeTruthy();
+    expect(node.state & Watcher).toBeTruthy();
     expect(node.payload).toBeUndefined();
   });
 

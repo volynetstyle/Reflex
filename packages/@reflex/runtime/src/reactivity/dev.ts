@@ -1,6 +1,6 @@
 import { recordDebugEvent, collectDebugNodeRefs } from "../debug/debug.impl";
 import { activeConsumer, type RuntimeDebugContext } from "./context";
-import { type ReactiveEdge, ReactiveNodeState } from "./shape";
+import { Computing, type ReactiveEdge,  } from "./shape";
 import type ReactiveNode from "./shape/ReactiveNode";
 
 export function devAssertTrackReadAlive(
@@ -85,7 +85,7 @@ export function devAssertReadDeadConsumer(): void {
 }
 
 export function devAssertConsumerCanStabilize(state: number): void {
-  if (__DEV__ && (state & ReactiveNodeState.Computing) !== 0) {
+  if (__DEV__ && (state & Computing) !== 0) {
     throw new Error("Cycle detected while refreshing reactive graph");
   }
 }

@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  Changed,
   ConsumerReadMode,
   DIRTY_STATE,
+  Invalid,
   ReactiveNodeState,
   readConsumer,
   readProducer,
@@ -46,8 +48,8 @@ describe("Reactive runtime - semantic correctness", () => {
 
     expect(spy).toHaveBeenCalledTimes(1);
     expect(source.state & DIRTY_STATE).toBe(0);
-    expect(derived.state & ReactiveNodeState.Changed).toBeTruthy();
-    expect(derived.state & ReactiveNodeState.Invalid).toBeFalsy();
+    expect(derived.state & Changed).toBeTruthy();
+    expect(derived.state & Invalid).toBeFalsy();
 
     expect(readConsumer(derived)).toBe(4);
     expect(spy).toHaveBeenCalledTimes(2);

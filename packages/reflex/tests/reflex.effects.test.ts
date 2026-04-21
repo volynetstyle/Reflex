@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ReactiveNodeState } from "../../@reflex/runtime/src/reactivity/shape/ReactiveMeta";
+import {  Scheduled } from "../../@reflex/runtime/src/reactivity/shape/ReactiveMeta";
 import {
   effect,
   effectScheduled,
@@ -306,9 +306,9 @@ describe("Reactive system - effects", () => {
     const node = createWatcherNode(() => {});
 
     effectScheduled(node);
-    expect(node.state & ReactiveNodeState.Scheduled).toBeTruthy();
+    expect(node.state & Scheduled).toBeTruthy();
 
     effectUnscheduled(node);
-    expect(node.state & ReactiveNodeState.Scheduled).toBeFalsy();
+    expect(node.state & Scheduled).toBeFalsy();
   });
 });
