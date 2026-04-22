@@ -68,9 +68,10 @@ export {
   Scheduled,
   Computing,
   Tracking,
-  ReactiveNodeState,
  
   isDisposedNode,
   disposeNode,
   disposeNodeEvent,
 } from "./reactivity";
+
+export type { ReactiveNodeState } from "./reactivity";

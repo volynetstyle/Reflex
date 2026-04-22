@@ -118,16 +118,10 @@ export function readProducer<T>(node: ReactiveNode<T>): T {
  * @invariant If value changed, nodes with fanout are notified via propagateOnce
  * @cost O(deps) for shouldRecompute walk + O(compute) for re-execution if needed
  */
-function stabilizeConsumer<T>(node: ReactiveNode<T>): T {
-  const state = node.state;
-
-  if ((state & Disposed) !== 0) {
-    if (__DEV__) devAssertReadDeadConsumer();
-    return node.payload as T;
-  }
-
-  if (__DEV__) devAssertConsumerCanStabilize(state);
-
+function stabilizeConsumerKnownAlive<T>(
+  node: ReactiveNode<T>,
+  state: number,
+): T {
   if ((state & DIRTY_STATE) === 0) return node.payload as T;
 
   if (!shouldRecomputeDirtyConsumer(node, state)) {
@@ -142,10 +136,13 @@ function stabilizeConsumer<T>(node: ReactiveNode<T>): T {
   return node.payload as T;
 }
 
-function stabilizeConsumerUntracked<T>(node: ReactiveNode<T>, state: number): T {
+function stabilizeConsumerUntracked<T>(
+  node: ReactiveNode<T>,
+  state: number,
+): T {
   if ((state & DIRTY_STATE) === 0) return node.payload as T;
-  if (activeConsumer === null) return stabilizeConsumer(node);
-  return untracked(() => stabilizeConsumer(node));
+  if (activeConsumer === null) return stabilizeConsumerKnownAlive(node, state);
+  return untracked(() => stabilizeConsumerKnownAlive(node, state));
 }
 
 export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
@@ -159,7 +156,9 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
   if (__DEV__) devAssertConsumerCanStabilize(state);
 
   const value =
-    (state & DIRTY_STATE) !== 0 ? stabilizeConsumer(node) : (node.payload as T);
+    (state & DIRTY_STATE) !== 0
+      ? stabilizeConsumerKnownAlive(node, state)
+      : (node.payload as T);
 
   // Skip tracking if the node was disposed during stabilization
   if (!isDisposedNode(node)) trackRead(node);
@@ -243,7 +242,7 @@ export function readConsumer<T>(
   const value =
     mode === ConsumerReadMode.lazy
       ? (state & DIRTY_STATE) !== 0
-        ? stabilizeConsumer(node)
+        ? stabilizeConsumerKnownAlive(node, state)
         : (node.payload as T)
       : stabilizeConsumerUntracked(node, state);
 
