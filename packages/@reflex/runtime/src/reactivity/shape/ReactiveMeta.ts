@@ -14,16 +14,19 @@ import type ReactiveNode from "./ReactiveNode";
  * - `Invalid` means "upstream may have changed, verify through shouldRecompute()"
  * - producers commit on write and should not normally participate in pull-walk
  */
-export const Producer = 1 << 0;
-export const Consumer = 1 << 1;
-export const Watcher = 1 << 2;
-export const Invalid = 1 << 3;
-export const Changed = 1 << 4;
-export const Reentrant = 1 << 5;
-export const Disposed = 1 << 6;
-export const Computing = 1 << 7;
-export const Scheduled = 1 << 8;
-export const Tracking = 1 << 9;
+export const Invalid = 1 << 0; // 1
+export const Changed = 1 << 1; // 2
+export const Reentrant = 1 << 2; // 4
+export const Tracking = 1 << 3; // 8
+export const Disposed = 1 << 4; // 16
+
+export const Watcher = 1 << 5; // 32
+export const Scheduled = 1 << 6; // 64
+// possible can be added next some flags
+
+export const Producer = __DEV__ ? 1 << 28 : 0;
+export const Consumer = __DEV__ ? 1 << 29 : 0;
+export const Computing = 1 << 30;
 
 export type ReactiveNodeState = number;
 
