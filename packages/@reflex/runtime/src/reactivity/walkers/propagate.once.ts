@@ -1,13 +1,6 @@
-import { recordDebugEvent } from "../../debug/debug.runtime";
-import {
-  clearThrownError,
-  defaultContext,
-  hasThrownError,
-  rethrowCapturedError,
-} from "../context";
 import { devAssertPropagateAlive } from "../dev";
 import type { ReactiveNode } from "../shape";
-import { DIRTY_STATE, Disposed, Invalid  } from "../shape";
+import { Changed, Disposed, Invalid } from "../shape";
 import { WATCHER_MASK } from "./propagate.constants";
 import { dispatchInvalidatedWatcher } from "./propagate.invalidate";
 
@@ -16,31 +9,15 @@ export function propagateOnce(node: ReactiveNode): void {
     if (__DEV__) devAssertPropagateAlive();
     return;
   }
+  let edge = node.firstOut!;
 
-  const invalidState = Invalid;
-  clearThrownError();
+  do {
+    const sub = edge.to,
+      state = sub.state;
 
-  for (let edge = node.firstOut; edge !== null; edge = edge.nextOut) {
-    const sub = edge.to;
-    const state = sub.state;
-
-    if ((state & DIRTY_STATE) !== invalidState) continue;
-
-    const nextState = state ^ DIRTY_STATE;
-    sub.state = nextState;
-
-    if (__DEV__) {
-      recordDebugEvent(defaultContext, "propagate", {
-        detail: { immediate: true, nextState },
-        source: edge.from,
-        target: sub,
-      });
+    if ((state & Changed) === 0) {
+      sub.state = (state & ~Invalid) | Changed;
+      if ((state & WATCHER_MASK) !== 0) dispatchInvalidatedWatcher(sub);
     }
-
-    if ((nextState & WATCHER_MASK) === 0) continue;
-
-    dispatchInvalidatedWatcher(sub);
-  }
-
-  if (hasThrownError) rethrowCapturedError();
+  } while ((edge = edge.nextOut!) !== null);
 }

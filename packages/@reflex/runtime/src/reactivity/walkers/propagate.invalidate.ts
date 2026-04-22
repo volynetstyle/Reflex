@@ -6,7 +6,6 @@
 
 import { recordDebugEvent } from "../../debug/debug.impl";
 import {
-  captureThrownError,
   defaultContext,
   dispatchSinkInvalidated,
 } from "../context";
@@ -39,11 +38,7 @@ export function dispatchInvalidatedWatcher(
     return;
   }
 
-  try {
-    notifyInvalidatedSink(watcherNode);
-  } catch (error) {
-    captureThrownError(error);
-  }
+  notifyInvalidatedSink(watcherNode);
 }
 
 function getTrackedSubscriberInvalidationState(

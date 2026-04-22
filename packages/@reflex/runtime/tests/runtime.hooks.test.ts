@@ -99,11 +99,10 @@ describe("Reactive runtime - hooks and resilience", () => {
     expect(innerWatcher.state & DIRTY_STATE).toBeTruthy();
   });
 
-  it("notifies all invalidated watchers and rethrows the first hook error", () => {
+  it("fails fast on the first invalidation hook error", () => {
     const settled = vi.fn();
     const invalidated: string[] = [];
     const firstError = new Error("first watcher failure");
-    const secondError = new Error("second watcher failure");
     let left!: ReturnType<typeof createWatcher>;
     let right!: ReturnType<typeof createWatcher>;
 
@@ -116,7 +115,6 @@ describe("Reactive runtime - hooks and resilience", () => {
 
         if (node === right) {
           invalidated.push("right");
-          throw secondError;
         }
       },
       onReactiveSettled: settled,
@@ -135,7 +133,7 @@ describe("Reactive runtime - hooks and resilience", () => {
     settled.mockClear();
 
     expect(() => writeProducer(source, 2)).toThrow(firstError);
-    expect(invalidated).toEqual(["left", "right"]);
+    expect(invalidated).toEqual(["left"]);
     expect(settled).toHaveBeenCalledTimes(1);
   });
 

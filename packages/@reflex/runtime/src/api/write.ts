@@ -4,12 +4,9 @@ import { compare as defaultComparator } from "./compare";
 import { devAssertWriteAlive, devRecordWriteProducer } from "../reactivity/dev";
 import { PROMOTE_CHANGED, isDisposedNode, propagate } from "../reactivity";
 import {
-  clearThrownError,
   defaultContext,
   enterPropagation,
-  hasThrownError,
   leavePropagation,
-  rethrowCapturedError,
 } from "../reactivity/context";
 
 /**
@@ -109,16 +106,15 @@ export function writeProducer<T>(
   // If no subscribers, propagation is unnecessary
   if (firstSubscriberEdge === null) return;
 
-  // Enter propagation phase: increment nesting counter
-  // This allows multiple concurrent propagations to batch correctly
-  clearThrownError();
   enterPropagation();
-  // Push phase: notify all subscribers depth-first, mark them dirty.
-  // Direct subscribers are promoted from Invalid to Changed.
-  // This tells them "definitely changed, don't verify, recompute"
-  propagate(firstSubscriberEdge, PROMOTE_CHANGED);
-  // Always exit propagation phase, even if propagation or hooks fail.
-  leavePropagation();
 
-  if (hasThrownError) rethrowCapturedError();
+  try {
+    // Push phase: notify all subscribers depth-first, mark them dirty.
+    // Direct subscribers are promoted from Invalid to Changed.
+    // This tells them "definitely changed, don't verify, recompute"
+    propagate(firstSubscriberEdge, PROMOTE_CHANGED);
+  } finally {
+    // Always exit propagation phase, even if propagation or hooks fail.
+    leavePropagation();
+  }
 }

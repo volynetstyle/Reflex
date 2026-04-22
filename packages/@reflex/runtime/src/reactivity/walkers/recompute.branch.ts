@@ -17,7 +17,6 @@ import type { ReactiveNode, ReactiveEdge } from "../shape";
 import { Changed, Invalid } from "../shape";
 import { hasFanout, refreshAndPropagateIfNeeded } from "./recompute.refresh";
 import {
-  noteShouldRecomputeStackUsage,
   readRuntimeWalkerStackStats,
   resetRuntimeWalkerStackStats,
   trimWalkerStackIfSparse,
@@ -76,15 +75,13 @@ function shouldRecomputeBranching(
         const deps = dep.firstIn;
         if (deps !== null) {
           stack[stackTop++] = link;
-          noteShouldRecomputeStackUsage(stackTop);
+          shouldRecomputeStackHigh = stackTop; //noteShouldRecomputeStackUsage(stackTop);
           link = deps;
           consumer = dep;
           continue;
         }
         changed = refreshAndPropagateIfNeeded(dep, hasFanout(link));
       }
-
-      shouldRecomputeStackHigh = stackTop;
     }
 
     if (!changed) {
@@ -158,7 +155,6 @@ export function shouldRecomputeLinear(
     const depState = dep.state;
 
     if (depState & Changed) {
-      shouldRecomputeStackHigh = stackTop;
       changed = refreshAndPropagateIfNeeded(dep, hasFanout(link));
       break;
     }
@@ -169,20 +165,20 @@ export function shouldRecomputeLinear(
         if (deps.nextIn !== null) {
           // dep itself has multiple deps: escalate to DFS immediately.
           stack[stackTop++] = link;
-          noteShouldRecomputeStackUsage(stackTop);
-          shouldRecomputeStackHigh = stackTop;
-          return shouldRecomputeBranching(
+          const result = shouldRecomputeBranching(
             deps,
             dep,
             stack,
             stackTop,
             stackBase,
           );
+          shouldRecomputeStackHigh = stackTop; //noteShouldRecomputeStackUsage(stackTop);
+          return result;
         }
 
         // Single dep of dep: continue descent on linear path.
         stack[stackTop++] = link;
-        noteShouldRecomputeStackUsage(stackTop);
+        //noteShouldRecomputeStackUsage(stackTop);
         shouldRecomputeStackHigh = stackTop;
         link = deps;
         consumer = dep;
