@@ -1,4 +1,4 @@
-import {untracked } from "@reflex/runtime";
+import { untracked } from "@reflex/runtime";
 import { batch } from "./runtime";
 import {
   isModelActionValue,
@@ -114,6 +114,7 @@ function createAction<TArgs extends unknown[], TReturn>(
 
     return batch(() => {
       let result = undefined as TReturn;
+
       untracked(() => {
         result = fn.apply(this, args);
       });
@@ -250,7 +251,7 @@ export function own<T extends DisposableResourceLike>(
 export function createModel<TArgs extends unknown[], TModel extends object>(
   factory: CheckedModelFactory<TArgs, TModel>,
 ): ModelTuple<TArgs, TModel> {
-  return (...args: TArgs): Model<TModel> => {
+  return function model(...args: TArgs): Model<TModel> {
     const state: ModelState = { disposed: false };
     let cleanups: Cleanup[] | null = null;
 

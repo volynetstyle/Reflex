@@ -4,68 +4,36 @@ import { defineConfig } from "vite";
 const rootDir = __dirname;
 const workspaceDir = resolve(rootDir, "../../..");
 
+function fromWorkspace(path: string): string {
+  return resolve(workspaceDir, path);
+}
+
+const aliasMap = {
+  "@volynets/reflex-dom/jsx-runtime": "reflex-dom/src/jsx-runtime.ts",
+  "@volynets/reflex-dom/jsx-dev-runtime": "reflex-dom/src/jsx-dev-runtime.ts",
+  "@volynets/reflex-framework/jsx-runtime":
+    "reflex-framework/src/jsx-runtime.ts",
+  "@volynets/reflex-framework/jsx-dev-runtime":
+    "reflex-framework/src/jsx-dev-runtime.ts",
+  "@volynets/reflex-framework/ownership/reflex":
+    "reflex-framework/src/ownership/reflex.ts",
+  "@volynets/reflex-framework/ownership":
+    "reflex-framework/src/ownership/index.ts",
+  "@volynets/reflex/unstable": "reflex/src/unstable/index.ts",
+  "@reflex/runtime": "@reflex/runtime/src/index.ts",
+  "@volynets/reflex-dom": "reflex-dom/src/index.ts",
+  "@volynets/reflex-framework": "reflex-framework/src/index.ts",
+  "@volynets/reflex": "reflex/src/index.ts",
+};
+
+const alias = Object.entries(aliasMap).map(([find, replacement]) => ({
+  find,
+  replacement: fromWorkspace(replacement),
+}));
+
 export default defineConfig({
   root: rootDir,
-  resolve: {
-    alias: [
-      {
-        find: "@volynets/reflex-dom/jsx-runtime",
-        replacement: resolve(workspaceDir, "reflex-dom/src/jsx-runtime.ts"),
-      },
-      {
-        find: "@volynets/reflex-dom/jsx-dev-runtime",
-        replacement: resolve(workspaceDir, "reflex-dom/src/jsx-dev-runtime.ts"),
-      },
-      {
-        find: "@volynets/reflex-framework/jsx-runtime",
-        replacement: resolve(
-          workspaceDir,
-          "reflex-framework/src/jsx-runtime.ts",
-        ),
-      },
-      {
-        find: "@volynets/reflex-framework/jsx-dev-runtime",
-        replacement: resolve(
-          workspaceDir,
-          "reflex-framework/src/jsx-dev-runtime.ts",
-        ),
-      },
-      {
-        find: "@volynets/reflex-framework/ownership/reflex",
-        replacement: resolve(
-          workspaceDir,
-          "reflex-framework/src/ownership/reflex.ts",
-        ),
-      },
-      {
-        find: "@volynets/reflex-framework/ownership",
-        replacement: resolve(
-          workspaceDir,
-          "reflex-framework/src/ownership/index.ts",
-        ),
-      },
-      {
-        find: "@volynets/reflex/unstable",
-        replacement: resolve(workspaceDir, "reflex/src/unstable/index.ts"),
-      },
-      {
-        find: "@reflex/runtime",
-        replacement: resolve(workspaceDir, "@reflex/runtime/src/index.ts"),
-      },
-      {
-        find: "@volynets/reflex-dom",
-        replacement: resolve(workspaceDir, "reflex-dom/src/index.ts"),
-      },
-      {
-        find: "@volynets/reflex-framework",
-        replacement: resolve(workspaceDir, "reflex-framework/src/index.ts"),
-      },
-      {
-        find: "@volynets/reflex",
-        replacement: resolve(workspaceDir, "reflex/src/index.ts"),
-      },
-    ],
-  },
+  resolve: { alias },
   define: {
     __DEV__: true,
     __TEST__: false,
