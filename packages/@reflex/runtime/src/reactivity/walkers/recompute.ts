@@ -2,7 +2,7 @@ import { devAssertShouldRecomputeAlive } from "../dev";
 import type { ReactiveNode } from "../shape";
 import { Changed, Disposed, Invalid, Producer, Reentrant } from "../shape";
 import {
-  shouldRecomputeLinear,
+  shouldRecomputeWalk,
 } from "./recompute.branch";
 
 export {
@@ -33,7 +33,7 @@ export function shouldRecomputeDirtyConsumer(
     return false;
   }
 
-  return shouldRecomputeLinear(node, firstIn);
+  return shouldRecomputeWalk(node, firstIn);
 }
 
 export function shouldRecomputeDirtyWatcher(
@@ -54,7 +54,7 @@ export function shouldRecomputeDirtyWatcher(
     return false;
   }
 
-  return shouldRecomputeLinear(node, firstIn);
+  return shouldRecomputeWalk(node, firstIn);
 }
 
 // Entry point. Kept small so TurboFan/Ion/DFG eagerly inline it into callers.
@@ -85,5 +85,5 @@ export function shouldRecompute(node: ReactiveNode): boolean {
     return false;
   }
 
-  return shouldRecomputeLinear(node, firstIn);
+  return shouldRecomputeWalk(node, firstIn);
 }

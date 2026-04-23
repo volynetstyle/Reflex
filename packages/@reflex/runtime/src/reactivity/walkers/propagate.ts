@@ -43,30 +43,21 @@ function pushResumeEdge(
   return { nextTop, promotedIndex };
 }
 
-function propagateBranchingWave(
-  currentEdge: ReactiveEdge,
-  currentPromote: number,
-  deferredSiblingEdge: ReactiveEdge | null,
-  deferredSiblingPromote: number,
+export function propagate(
+  startEdge: ReactiveEdge,
+  startPromote: number,
 ): void {
   const edgeStack = resumeEdgeStack;
   const stackBase = resumeStackHigh;
-  const directSiblingPromote = deferredSiblingPromote;
+  // Only direct siblings at the current breadth keep the caller's promote token.
+  // Once we descend into children, propagation always continues as NON_IMMEDIATE.
+  const directSiblingPromote = startPromote;
 
   let stackTop = stackBase;
+  let currentEdge = startEdge;
+  let currentPromote = startPromote;
   let nextSiblingEdge: ReactiveEdge | null = currentEdge.nextOut;
   let directSiblingResumeIndex = -1;
-
-  if (deferredSiblingEdge !== null) {
-    const pushed = pushResumeEdge(
-      edgeStack,
-      stackTop,
-      deferredSiblingEdge,
-      deferredSiblingPromote,
-    );
-    stackTop = pushed.nextTop;
-    directSiblingResumeIndex = pushed.promotedIndex;
-  }
 
   while (true) {
     const subscriber = currentEdge.to;
@@ -123,52 +114,5 @@ function propagateBranchingWave(
         ? ((directSiblingResumeIndex = -1), directSiblingPromote)
         : NON_IMMEDIATE;
     nextSiblingEdge = currentEdge.nextOut;
-  }
-}
-
-export function propagate(
-  startEdge: ReactiveEdge,
-  startPromote: number,
-): void {
-
-  while (true) {
-    const subscriber = startEdge.to;
-    const nextSiblingEdge = startEdge.nextOut;
-    const nextSubscriberState = invalidateSubscriber(
-      startEdge,
-      subscriber,
-      subscriber.state,
-      startPromote,
-    );
-
-    if (nextSubscriberState === 0) {
-    } // fall through
-    else if ((nextSubscriberState & WATCHER_MASK) !== 0) {
-      dispatchInvalidatedWatcher(subscriber);
-    } else {
-      const firstChildEdge = subscriber.firstOut;
-      if (firstChildEdge !== null) {
-        startEdge = firstChildEdge;
-
-        if (nextSiblingEdge !== null) {
-          propagateBranchingWave(
-            startEdge,
-            NON_IMMEDIATE,
-            nextSiblingEdge,
-            startPromote,
-          );
-          return;
-        }
-
-        startPromote = NON_IMMEDIATE;
-        continue;
-      }
-    }
-
-    if (nextSiblingEdge === null) {
-      return;
-    }
-
-    startEdge = nextSiblingEdge;
   }
 }

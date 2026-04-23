@@ -417,6 +417,7 @@ Key measurements:
 
 - **[../RUNTIME.md](../RUNTIME.md)** — Public API and observable semantics
 - **[../DISPOSE.md](../DISPOSE.md)** — Disposal protocol details
+- **[./RECOMPUTE_WALKER_MANUAL.md](./RECOMPUTE_WALKER_MANUAL.md)** — Step-by-step engineer guide for `shouldRecomputeWalk()`
 - **[../study/04-read-and-write-paths.md](../study/04-read-and-write-paths.md)** — Step-by-step control flow
 - **[../study/05-dynamic-dependencies.md](../study/05-dynamic-dependencies.md)** — Tracking and branch switching
 - **[../study/07-invariants-dev-and-prod.md](../study/07-invariants-dev-and-prod.md)** — Invariant enforcement

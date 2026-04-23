@@ -1,7 +1,8 @@
-// ─── shouldRecomputeLinear ────────────────────────────────────────────────────
+// ─── shouldRecomputeWalk ──────────────────────────────────────────────────────
 //
-// Fast path: walks a chain where every node has exactly one dependency.
-// Stays allocation-free and branch-minimised for the common case.
+// Unified pull walker for both linear chains and branching graphs.
+// Keeps the same allocation-free shared stack contract while preserving
+// a tight inner loop for single-dependency stretches inside the walk.
 //
 // try/finally removed intentionally:
 //   - JSC and SpiderMonkey refuse to inline functions containing try/finally.
@@ -52,16 +53,18 @@ function restoreShouldRecomputeStackBase(
   trimWalkerStackIfSparse(stack, stackBase);
 }
 
-function shouldRecomputeBranching(
-  link: ReactiveEdge,
-  consumer: ReactiveNode,
-  stack: ReactiveEdge[],
-  stackTop: number,
-  stackBase: number,
+export function shouldRecomputeWalk(
+  node: ReactiveNode,
+  firstIn: ReactiveEdge,
 ): boolean {
+  const stack = shouldRecomputeStack;
+  const stackBase = shouldRecomputeStackHigh;
+  let stackTop = stackBase;
+  let link = firstIn;
+  let consumer = node;
   let changed = false;
 
-  outer: while (true) {
+  outer: do {
     while (true) {
       if (consumer.state & Changed) {
         changed = true;
@@ -72,7 +75,7 @@ function shouldRecomputeBranching(
         depState = dep.state;
 
       if (depState & Changed) {
-        // Already-confirmed computed dependency: refresh and stop searching.
+        // A direct dependency is already confirmed changed: refresh upward from here.
         changed = refreshAndPropagateIfNeeded(dep, hasFanout(link));
         break;
       }
@@ -86,9 +89,8 @@ function shouldRecomputeBranching(
           consumer = dep;
 
           if (deps.nextIn === null) {
-            // Once inside a branching walk, many child arms collapse back into
-            // a single-dependency chain. Run that tail linearly until the next
-            // fork or terminal node instead of bouncing through the DFS loop.
+            // Many branch arms immediately collapse into a straight chain.
+            // Stay in the inner loop until the next sibling edge or terminal node.
             continue;
           }
           continue outer;
@@ -98,8 +100,8 @@ function shouldRecomputeBranching(
         break;
       }
 
-      // dep is already clean: mark consumer clean and keep descending linearly
-      // while this arm stays single-dependency.
+      // dep is already clean: mark this consumer clean and then either scan the
+      // next sibling at the same depth or unwind to the parent frame.
       consumer.state &= ~Invalid;
       const next = link.nextIn;
       if (next !== null) {
@@ -124,14 +126,15 @@ function shouldRecomputeBranching(
       }
     }
 
-    if (!changed) {
-      const next = link.nextIn;
-      if (next !== null) {
-        link = next;
-        continue;
+      if (!changed) {
+        const next = link.nextIn;
+        if (next !== null) {
+          link = next;
+          continue;
+        }
+
+        consumer.state &= ~Invalid;
       }
-      consumer.state &= ~Invalid;
-    }
 
     while (stackTop > stackBase) {
       const parentLink = stack[--stackTop]!;
@@ -156,111 +159,5 @@ function shouldRecomputeBranching(
 
     restoreShouldRecomputeStackBase(stack, stackBase);
     return changed;
-  }
-}
-
-// so the finally was only cleanup — moving it inline is correct.
-export function shouldRecomputeLinear(
-  node: ReactiveNode,
-  firstIn: ReactiveEdge,
-): boolean {
-  const stack = shouldRecomputeStack;
-  const stackBase = shouldRecomputeStackHigh;
-  let stackTop = stackBase;
-  let link = firstIn;
-  let consumer = node;
-  let changed = false;
-
-  while (true) {
-    const nextIn = link.nextIn;
-
-    if (nextIn !== null) {
-      // Multiple deps at this level: hand off to DFS.
-      // Stack ownership transfers — branching restores stack.length itself.
-      return shouldRecomputeBranching(
-        link,
-        consumer,
-        stack,
-        stackTop,
-        stackBase,
-      );
-    }
-
-    if (consumer.state & Changed) {
-      changed = true;
-      break;
-    }
-
-    const dep = link.from;
-    const depState = dep.state;
-
-    if (depState & Changed) {
-      changed = refreshAndPropagateIfNeeded(dep, hasFanout(link));
-      break;
-    }
-
-    if (depState & Invalid) {
-      const deps = dep.firstIn;
-      if (deps !== null) {
-        if (deps.nextIn !== null) {
-          // dep itself has multiple deps: escalate to DFS immediately.
-          stack[stackTop++] = link;
-          const result = shouldRecomputeBranching(
-            deps,
-            dep,
-            stack,
-            stackTop,
-            stackBase,
-          );
-          shouldRecomputeStackHigh = stackTop; //noteShouldRecomputeStackUsage(stackTop);
-          return result;
-        }
-
-        // Single dep of dep: continue descent on linear path.
-        stack[stackTop++] = link;
-        //noteShouldRecomputeStackUsage(stackTop);
-        shouldRecomputeStackHigh = stackTop;
-        link = deps;
-        consumer = dep;
-        continue;
-      }
-
-      shouldRecomputeStackHigh = stackTop;
-      changed = refreshAndPropagateIfNeeded(dep, hasFanout(link));
-      break;
-    }
-
-    // dep is clean: mark consumer clean too.
-    consumer.state &= ~Invalid;
-
-    if (stackTop === stackBase) {
-      // Stack empty: nothing changed anymore.
-      restoreShouldRecomputeStackBase(stack, stackBase);
-      return false;
-    }
-
-    link = stack[--stackTop]!;
-    shouldRecomputeStackHigh = stackTop;
-    consumer = link.to;
-  }
-
-  // Unwind: propagate the change (or clean) decision up the stack.
-  while (stackTop > stackBase) {
-    const parentLink = stack[--stackTop]!;
-    shouldRecomputeStackHigh = stackTop;
-
-    if (changed) {
-      changed = refreshAndPropagateIfNeeded(consumer, hasFanout(parentLink));
-    } else {
-      consumer.state &= ~Invalid;
-    }
-
-    consumer = parentLink.to;
-  }
-
-  if (!changed) consumer.state &= ~Invalid;
-
-  // Explicit cleanup — replaces try/finally.
-  restoreShouldRecomputeStackBase(stack, stackBase);
-  return changed;
+  } while (true);
 }
