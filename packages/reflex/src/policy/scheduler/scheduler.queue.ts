@@ -1,8 +1,8 @@
-import type { WatcherQueue, EffectNode } from "./scheduler.types";
+import type { RingQueue, WatcherQueue, EffectNode } from "./scheduler.types";
 
 const INITIAL_QUEUE_CAPACITY = 16;
 
-function growWatcherQueue(queue: WatcherQueue): void {
+function growRingQueue<T>(queue: RingQueue<T>): void {
   const ring = queue.ring;
   const capacity = ring.length;
   if (capacity === 0) {
@@ -14,7 +14,7 @@ function growWatcherQueue(queue: WatcherQueue): void {
   const head = queue.head;
   const mask = capacity - 1;
   const nextCapacity = capacity << 1;
-  const next = new Array<EffectNode>(nextCapacity);
+  const next = new Array<T>(nextCapacity);
 
   for (let i = 0; i < size; ++i) {
     next[i] = ring[(head + i) & mask]!;
@@ -29,10 +29,10 @@ function growWatcherQueue(queue: WatcherQueue): void {
   queue.tail = size;
 }
 
-export function pushWatcherQueue(queue: WatcherQueue, node: EffectNode): void {
+export function pushRingQueue<T>(queue: RingQueue<T>, node: T): void {
   const ring = queue.ring;
   if (queue.size === ring.length) {
-    growWatcherQueue(queue);
+    growRingQueue(queue);
   }
 
   const tail = queue.tail;
@@ -41,7 +41,7 @@ export function pushWatcherQueue(queue: WatcherQueue, node: EffectNode): void {
   ++queue.size;
 }
 
-export function shiftWatcherQueue(queue: WatcherQueue): EffectNode | null {
+export function shiftRingQueue<T>(queue: RingQueue<T>): T | null {
   if (queue.size === 0) {
     return null;
   }
@@ -49,38 +49,54 @@ export function shiftWatcherQueue(queue: WatcherQueue): EffectNode | null {
   const ring = queue.ring;
   const head = queue.head;
   const node = ring[head]!;
-  ring[head] = undefined as never;
+  ring[head] = undefined as T;
   queue.head = (head + 1) & (ring.length - 1);
   --queue.size;
   return node;
 }
 
-export function clearWatcherQueue(queue: WatcherQueue): void {
+export function clearRingQueue<T>(queue: RingQueue<T>): void {
   queue.head = 0;
   queue.tail = 0;
   queue.size = 0;
 }
 
-function pushWatcherQueueMethod(this: WatcherQueue, node: EffectNode): void {
-  pushWatcherQueue(this, node);
+function pushRingQueueMethod<T>(this: RingQueue<T>, node: T): void {
+  pushRingQueue(this, node);
 }
 
-function shiftWatcherQueueMethod(this: WatcherQueue): EffectNode | null {
-  return shiftWatcherQueue(this);
+function shiftRingQueueMethod<T>(this: RingQueue<T>): T | null {
+  return shiftRingQueue(this);
 }
 
-function clearWatcherQueueMethod(this: WatcherQueue): void {
-  clearWatcherQueue(this);
+function clearRingQueueMethod<T>(this: RingQueue<T>): void {
+  clearRingQueue(this);
 }
 
-export function createWatcherQueue(): WatcherQueue {
+export function createRingQueue<T>(): RingQueue<T> {
   return {
-    ring: [],
+    ring: [] as T[],
     head: 0,
     tail: 0,
     size: 0,
-    push: pushWatcherQueueMethod,
-    shift: shiftWatcherQueueMethod,
-    clear: clearWatcherQueueMethod,
+    push: pushRingQueueMethod,
+    shift: shiftRingQueueMethod,
+    clear: clearRingQueueMethod,
   };
+}
+
+export function pushWatcherQueue(queue: WatcherQueue, node: EffectNode): void {
+  pushRingQueue(queue, node);
+}
+
+export function shiftWatcherQueue(queue: WatcherQueue): EffectNode | null {
+  return shiftRingQueue(queue);
+}
+
+export function clearWatcherQueue(queue: WatcherQueue): void {
+  clearRingQueue(queue);
+}
+
+export function createWatcherQueue(): WatcherQueue {
+  return createRingQueue<EffectNode>();
 }

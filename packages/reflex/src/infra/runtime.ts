@@ -6,7 +6,7 @@ import {
 import type { EngineHooks } from "@reflex/runtime";
 import { subscribeEvent } from "./event";
 import { createSource } from "./factory";
-import { EventDispatcher } from "../policy";
+import { createEventDispatcher } from "../policy";
 import type { EffectStrategy } from "../policy/scheduler";
 import {
   createEffectScheduler,
@@ -54,7 +54,7 @@ export function createRuntime({
   const scheduler = createEffectScheduler(
     resolveEffectSchedulerMode(effectStrategy),
   );
-  const dispatcher = new EventDispatcher(scheduler.batch.bind(scheduler));
+  const dispatcher = createEventDispatcher(scheduler.batch.bind(scheduler));
 
   if (hooks !== undefined) {
     setHooks(hooks);

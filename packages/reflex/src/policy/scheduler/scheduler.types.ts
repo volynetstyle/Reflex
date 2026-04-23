@@ -6,15 +6,23 @@ import type {
 
 export type EffectNode = ReactiveNode<undefined | Destructor>;
 
-export interface WatcherQueue {
-  readonly ring: EffectNode[];
+export interface RingQueue<T> {
+  readonly ring: T[];
   head: number;
   tail: number;
   size: number;
 
-  push(node: EffectNode): void;
-  shift(): EffectNode | null;
+  push(node: T): void;
+  shift(): T | null;
   clear(): void;
+}
+
+export type WatcherQueue = RingQueue<EffectNode>;
+
+export interface QueueBacked<T> {
+  readonly queue: RingQueue<T>;
+  readonly ring: T[];
+  readonly head: number;
 }
 
 export function noopNotifySettled(): void {}

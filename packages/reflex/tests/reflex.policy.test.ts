@@ -6,7 +6,7 @@ import {
   EffectSchedulerMode,
   resolveEffectSchedulerMode,
 } from "../src/policy/scheduler";
-import { EventDispatcher } from "../src/policy/event_dispatcher";
+import { createEventDispatcher } from "../src/policy/event_dispatcher";
 import { Changed, Disposed } from "@reflex/runtime";
 import type { EventSubscriber } from "../src/infra/event";
 import {
@@ -170,7 +170,7 @@ describe("Reactive system - policy helpers", () => {
     const source = new EventSource<number>();
     const seen: number[] = [];
     const boundary = vi.fn((flush: () => void) => flush());
-    const dispatcher = new EventDispatcher(boundary);
+    const dispatcher = createEventDispatcher(boundary);
 
     subscribeEvent(source, (value) => {
       seen.push(value);
@@ -187,7 +187,7 @@ describe("Reactive system - policy helpers", () => {
 
   it("skips unsubscribed listeners and tolerates empty sources", () => {
     const source = new EventSource<number>();
-    const dispatcher = new EventDispatcher();
+    const dispatcher = createEventDispatcher();
     const seen: string[] = [];
 
     let unsubscribeSecond = () => {};
@@ -209,7 +209,7 @@ describe("Reactive system - policy helpers", () => {
     const source = new EventSource<number>();
     const seen: string[] = [];
     let unsubscribeMiddle = () => {};
-    const dispatcher = new EventDispatcher((flush: () => void) => {
+    const dispatcher = createEventDispatcher((flush: () => void) => {
       flush();
       flush();
     });
