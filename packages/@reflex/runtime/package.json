@@ -10,6 +10,10 @@
   "sideEffects": false,
   "exports": {
     ".": {
+      "source": {
+        "types": "./src/index.ts",
+        "default": "./src/index.ts"
+      },
       "types": "./dist/globals.d.ts",
       "import": {
         "development": "./dist/dev/index.js",
@@ -18,6 +22,10 @@
       "require": "./dist/cjs/index.cjs"
     },
     "./debug": {
+      "source": {
+        "types": "./src/debug/index.ts",
+        "default": "./src/debug/index.ts"
+      },
       "types": "./dist/esm/debug/index.d.ts",
       "import": "./dist/dev/debug.js"
     }

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   reflexDOMVitePlugin,
   transformReflexDOMJSX,
-} from "../src/vite";
+} from "../plugins/vite";
 
 function getOpeningAttributes(code: string) {
   const ast = parseSync(code, {

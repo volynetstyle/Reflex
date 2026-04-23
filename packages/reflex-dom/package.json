@@ -16,14 +16,6 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./vite": {
-      "source": {
-        "types": "./src/vite.ts",
-        "default": "./src/vite.ts"
-      },
-      "types": "./dist/vite.d.ts",
-      "import": "./dist/vite.js"
-    },
     "./jsx-runtime": {
       "source": {
         "types": "./src/jsx-runtime.ts",
@@ -39,14 +31,6 @@
       },
       "types": "./dist/jsx-dev-runtime.d.ts",
       "import": "./dist/jsx-dev-runtime.js"
-    },
-    "./server": {
-      "source": {
-        "types": "./src/server.ts",
-        "default": "./src/server.ts"
-      },
-      "types": "./dist/server.d.ts",
-      "import": "./dist/server.js"
     }
   },
   "files": [
@@ -65,9 +49,8 @@
     "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build"
   },
   "dependencies": {
-    "@swc/core": "^1.15.18",
-    "@volynets/reflex": "^0.2.2",
-    "@volynets/reflex-framework": "^0.1.0"
+    "@volynets/reflex": "workspace:*",
+    "@volynets/reflex-framework": "workspace:*"
   },
   "peerDependencies": {
     "vite": "^6.0.0"

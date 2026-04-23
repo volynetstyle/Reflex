@@ -102,7 +102,10 @@ function stripQueryAndHash(id: string): string {
   return id.replace(/[?#].*$/, "");
 }
 
-function shouldProcessFile(id: string, options: Required<ReflexDOMTransformOptions>): boolean {
+function shouldProcessFile(
+  id: string,
+  options: Required<ReflexDOMTransformOptions>,
+): boolean {
   const cleanId = stripQueryAndHash(id);
 
   return options.include.test(cleanId) && !options.exclude.test(cleanId);
@@ -135,7 +138,9 @@ function shouldWrapExpression(expression: Expression): boolean {
   return WRAPPABLE_EXPRESSION_TYPES.has(expression.type);
 }
 
-function createAccessorExpression(expression: Expression): ArrowFunctionExpression {
+function createAccessorExpression(
+  expression: Expression,
+): ArrowFunctionExpression {
   return {
     type: "ArrowFunctionExpression",
     span: (expression as ArrowFunctionExpression).span,

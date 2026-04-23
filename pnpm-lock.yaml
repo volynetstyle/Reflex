@@ -95,6 +95,9 @@ importers:
       '@reflex/runtime':
         specifier: workspace:*
         version: link:../@reflex/runtime
+      '@volynets/reflex-dom':
+        specifier: workspace:*
+        version: link:../reflex-dom
 
   packages/reflex-devtools:
     dependencies:
@@ -110,7 +113,7 @@ importers:
       '@volynets/reflex':
         specifier: workspace:*
         version: link:../reflex
-      reflex-framework:
+      '@volynets/reflex-framework':
         specifier: workspace:*
         version: link:../reflex-framework
       vite:

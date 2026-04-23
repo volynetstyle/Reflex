@@ -71,11 +71,10 @@ export function shouldRecomputeWalk(
         break;
       }
 
-      const dep = link.from,
-        depState = dep.state;
+      const dep = link.from;
+      const depState = dep.state;
 
       if (depState & Changed) {
-        // A direct dependency is already confirmed changed: refresh upward from here.
         changed = refreshAndPropagateIfNeeded(dep, hasFanout(link));
         break;
       }
@@ -84,15 +83,9 @@ export function shouldRecomputeWalk(
         const deps = dep.firstIn;
         if (deps !== null) {
           stack[stackTop++] = link;
-          shouldRecomputeStackHigh = stackTop; //noteShouldRecomputeStackUsage(stackTop);
+          shouldRecomputeStackHigh = stackTop;
           link = deps;
           consumer = dep;
-
-          if (deps.nextIn === null) {
-            // Many branch arms immediately collapse into a straight chain.
-            // Stay in the inner loop until the next sibling edge or terminal node.
-            continue;
-          }
           continue outer;
         }
 
@@ -100,14 +93,13 @@ export function shouldRecomputeWalk(
         break;
       }
 
-      // dep is already clean: mark this consumer clean and then either scan the
-      // next sibling at the same depth or unwind to the parent frame.
-      consumer.state &= ~Invalid;
       const next = link.nextIn;
       if (next !== null) {
         link = next;
         continue outer;
       }
+
+      consumer.state &= ~Invalid;
 
       if (stackTop === stackBase) {
         restoreShouldRecomputeStackBase(stack, stackBase);
@@ -116,7 +108,6 @@ export function shouldRecomputeWalk(
 
       const parentLink = stack[--stackTop]!;
       shouldRecomputeStackHigh = stackTop;
-      link = parentLink;
       consumer = parentLink.to;
 
       const parentNext = parentLink.nextIn;
@@ -126,15 +117,15 @@ export function shouldRecomputeWalk(
       }
     }
 
-      if (!changed) {
-        const next = link.nextIn;
-        if (next !== null) {
-          link = next;
-          continue;
-        }
-
-        consumer.state &= ~Invalid;
+    if (!changed) {
+      const next = link.nextIn;
+      if (next !== null) {
+        link = next;
+        continue;
       }
+
+      consumer.state &= ~Invalid;
+    }
 
     while (stackTop > stackBase) {
       const parentLink = stack[--stackTop]!;

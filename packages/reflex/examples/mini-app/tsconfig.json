@@ -3,6 +3,7 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "customConditions": ["source"],
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
@@ -10,33 +11,7 @@
     "skipLibCheck": true,
     "jsx": "preserve",
     "jsxImportSource": "@volynets/reflex-dom",
-    "types": ["vite/client"],
-    "baseUrl": ".",
-    "paths": {
-      "@reflex/runtime": ["../../../@reflex/runtime/src/index.ts"],
-      "@volynets/reflex": ["../../src/index.ts"],
-      "@volynets/reflex/unstable": ["../../src/unstable/index.ts"],
-      "@volynets/reflex-dom": ["../../../reflex-dom/src/index.ts"],
-      "@volynets/reflex-dom/jsx-runtime": [
-        "../../../reflex-dom/src/jsx-runtime.ts"
-      ],
-      "@volynets/reflex-dom/jsx-dev-runtime": [
-        "../../../reflex-dom/src/jsx-dev-runtime.ts"
-      ],
-      "@volynets/reflex-framework": ["../../../reflex-framework/src/index.ts"],
-      "@volynets/reflex-framework/jsx-runtime": [
-        "../../../reflex-framework/src/jsx-runtime.ts"
-      ],
-      "@volynets/reflex-framework/jsx-dev-runtime": [
-        "../../../reflex-framework/src/jsx-dev-runtime.ts"
-      ],
-      "@volynets/reflex-framework/ownership": [
-        "../../../reflex-framework/src/ownership/index.ts"
-      ],
-      "@volynets/reflex-framework/ownership/reflex": [
-        "../../../reflex-framework/src/ownership/reflex.ts"
-      ]
-    }
+    "types": ["vite/client"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"]
 }

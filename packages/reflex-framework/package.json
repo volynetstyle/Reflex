@@ -40,14 +40,6 @@
       "types": "./dist/ownership/index.d.ts",
       "import": "./dist/ownership/index.js"
     },
-    "./ownership/bridge": {
-      "source": {
-        "types": "./src/ownership/bridge.ts",
-        "default": "./src/ownership/bridge.ts"
-      },
-      "types": "./dist/ownership/bridge.d.ts",
-      "import": "./dist/ownership/bridge.js"
-    },
     "./ownership/reflex": {
       "source": {
         "types": "./src/ownership/reflex.ts",
@@ -55,14 +47,6 @@
       },
       "types": "./dist/ownership/reflex.d.ts",
       "import": "./dist/ownership/reflex.js"
-    },
-    "./hooks": {
-      "source": {
-        "types": "./src/hooks/index.ts",
-        "default": "./src/hooks/index.ts"
-      },
-      "types": "./dist/hooks/index.d.ts",
-      "import": "./dist/hooks/index.js"
     }
   },
   "files": [
@@ -81,7 +65,7 @@
     "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build"
   },
   "dependencies": {
-    "@volynets/reflex": "^0.2.2"
+    "@volynets/reflex": "workspace:*"
   },
   "keywords": [
     "jsx",
