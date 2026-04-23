@@ -2,7 +2,7 @@ import {
   readConsumerEager,
   readConsumerLazy,
 } from "@reflex/runtime";
-import { createComputedNode } from "../infra";
+import { createComputedNode } from "../infra/factory";
 
 /**
  * Creates a lazy derived accessor.

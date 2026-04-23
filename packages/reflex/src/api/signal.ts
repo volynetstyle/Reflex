@@ -2,7 +2,7 @@ import {
   readProducer,
   writeProducer,
 } from "@reflex/runtime";
-import { createSignalNode } from "../infra";
+import { createSignalNode } from "../infra/factory";
 
 /**
  * Creates writable reactive state.

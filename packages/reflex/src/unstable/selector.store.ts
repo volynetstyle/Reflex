@@ -1,6 +1,6 @@
 import { readProducer, writeProducer } from "@reflex/runtime";
 import { effectRanked } from "../api/effect";
-import { createSignalNode } from "../infra";
+import { createSignalNode } from "../infra/factory";
 import {
   cloneProjectionValue,
   isObject,

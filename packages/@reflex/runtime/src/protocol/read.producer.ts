@@ -1,6 +1,6 @@
 import {
   ReactiveNode,
-  isDisposedNode,
+  Disposed,
   trackRead,
   defaultContext,
 } from "../reactivity";
@@ -34,8 +34,9 @@ const computed = createConsumer(() => {
  */
 export function readProducer<T>(node: ReactiveNode<T>): T {
   const value = node.payload;
+  const state = node.state;
 
-  if (isDisposedNode(node)) {
+  if ((state & Disposed) !== 0) {
     if (__DEV__) {
       devAssertReadDeadProducer();
     }

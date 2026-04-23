@@ -4,8 +4,8 @@ import {
   readProducer,
   writeProducer,
 } from "@reflex/runtime";
-import type { Event } from "../infra";
-import { createAccumulator } from "../infra";
+import type { Event } from "../infra/runtime";
+import { createAccumulator } from "../infra/factory";
 
 type EventValue<E extends Event<unknown>> =
   E extends Event<infer T> ? T : never;

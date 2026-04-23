@@ -16,7 +16,7 @@
 
 import type { ReactiveNode, ReactiveEdge } from "../shape";
 import { Changed, Invalid } from "../shape";
-import { hasFanout, refreshAndPropagateIfNeeded } from "./recompute.refresh";
+import { refreshAndPropagateIfNeeded } from "./recompute.refresh";
 import {
   readRuntimeWalkerStackStats,
   resetRuntimeWalkerStackStats,
@@ -75,7 +75,7 @@ export function shouldRecomputeWalk(
       const depState = dep.state;
 
       if (depState & Changed) {
-        changed = refreshAndPropagateIfNeeded(dep, hasFanout(link));
+        changed = refreshAndPropagateIfNeeded(dep, dep.outDegree > 1);
         break;
       }
 
@@ -89,7 +89,7 @@ export function shouldRecomputeWalk(
           continue outer;
         }
 
-        changed = refreshAndPropagateIfNeeded(dep, hasFanout(link));
+        changed = refreshAndPropagateIfNeeded(dep, dep.outDegree > 1);
         break;
       }
 
@@ -129,10 +129,12 @@ export function shouldRecomputeWalk(
 
     while (stackTop > stackBase) {
       const parentLink = stack[--stackTop]!;
+      const parent = parentLink.from;
+
       shouldRecomputeStackHigh = stackTop;
 
       if (changed) {
-        changed = refreshAndPropagateIfNeeded(consumer, hasFanout(parentLink));
+        changed = refreshAndPropagateIfNeeded(consumer, parent.outDegree > 1);
       } else {
         consumer.state &= ~Invalid;
       }

@@ -1,9 +1,9 @@
 import { untracked } from "@reflex/runtime";
 import { batch } from "./runtime";
 import {
+  createModelAction,
   isModelActionValue,
   isModelReadableValue,
-  markModelAction,
   type ModelAction,
   type ModelActionBrand,
 } from "./modelValue";
@@ -60,7 +60,9 @@ type InvalidEffectValue =
 type ValidateModel<T> =
   T extends Effect<unknown>
     ? InvalidEffectValue
-    : T extends PrimitiveModelValue
+    : T extends Accessor<unknown>
+      ? T
+      : T extends PrimitiveModelValue
       ? T
       : T extends (...args: unknown[]) => unknown
         ? InvalidModelValue
@@ -99,7 +101,7 @@ function createAction<TArgs extends unknown[], TReturn>(
   state: ModelState,
   fn: (...args: TArgs) => TReturn,
 ): ModelAction<TArgs, TReturn> {
-  return markModelAction(function modelAction(
+  return createModelAction(function modelAction(
     this: unknown,
     ...args: TArgs
   ): TReturn {

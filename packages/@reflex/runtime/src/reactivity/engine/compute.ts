@@ -1,12 +1,12 @@
 import type { ReactiveNode } from "../shape";
 import { devAssertRecomputeAlive, devRecordRecompute } from "../dev";
-import { clearDirtyState, isDisposedNode } from "../shape";
+import { clearDirtyState, Disposed } from "../shape";
 import { executeNodeComputation } from "./execute";
 import { defaultContext } from "../context";
 import { compare } from "../../protocol/utils/compare";
 
 export function recompute(node: ReactiveNode): boolean {
-  if (isDisposedNode(node)) {
+  if ((node.state & Disposed) !== 0) {
     if (__DEV__) {
       devAssertRecomputeAlive();
     }
@@ -16,7 +16,7 @@ export function recompute(node: ReactiveNode): boolean {
   const prev = node.payload;
   const next = executeNodeComputation(node);
 
-  if (!isDisposedNode(node)) {
+  if ((node.state & Disposed) === 0) {
     const hasChanged = !compare(prev, next);
     node.payload = next;
     clearDirtyState(node);

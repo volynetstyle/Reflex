@@ -1,5 +1,5 @@
 import type ReactiveNode from "../shape/ReactiveNode";
-import { isDisposedNode } from "../shape";
+import { Disposed } from "../shape";
 import {
   devAssertTrackReadAlive,
   devRecordCleanupStaleSources,
@@ -60,8 +60,8 @@ function trackReadSlowPath(source: ReactiveNode, consumer: ReactiveNode): void {
 }
 
 function trackReadMiss(source: ReactiveNode, consumer: ReactiveNode): void {
-  const sourceDead = isDisposedNode(source);
-  const consumerDead = isDisposedNode(consumer);
+  const sourceDead = (source.state & Disposed) !== 0;
+  const consumerDead = (consumer.state & Disposed) !== 0;
 
   if (sourceDead || consumerDead) {
     if (__DEV__) {
@@ -146,8 +146,8 @@ export function trackReadActive(
   source: ReactiveNode,
   consumer: ReactiveNode,
 ): void {
-  const sourceDead = isDisposedNode(source);
-  const consumerDead = isDisposedNode(consumer);
+  const sourceDead = (source.state & Disposed) !== 0;
+  const consumerDead = (consumer.state & Disposed) !== 0;
 
   if (sourceDead || consumerDead) {
     if (__DEV__) {

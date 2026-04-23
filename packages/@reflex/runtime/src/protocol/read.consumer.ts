@@ -1,6 +1,5 @@
 import type { ReactiveNode } from "../reactivity";
 import {
-  isDisposedNode,
   DIRTY_STATE,
   trackRead,
   defaultContext,
@@ -36,7 +35,7 @@ import {
 export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
-  if (isDisposedNode(node)) {
+  if ((state & Disposed) !== 0) {
     if (__DEV__) devAssertReadDeadConsumer();
     return node.payload;
   }
@@ -72,7 +71,7 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
 export function readConsumerEager<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
-  if (isDisposedNode(node)) {
+  if ((state & Disposed) !== 0) {
     if (__DEV__) devAssertReadDeadConsumer();
     return node.payload;
   }
@@ -140,7 +139,7 @@ export function readConsumer<T>(
 
   if (mode === ConsumerReadMode.lazy) {
     // Skip tracking if the node was disposed during stabilization
-    if (!isDisposedNode(node)) trackRead(node);
+    if ((node.state & Disposed) === 0) trackRead(node);
 
     if (__DEV__)
       devRecordReadConsumer(

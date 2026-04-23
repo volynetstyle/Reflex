@@ -1,5 +1,9 @@
 import { getCurrentComputedInternal } from "../internal";
-import type { ReactiveNode } from "../reactivity";
+import {
+  Watcher as WatcherFlag,
+  type ReactiveNode,
+} from "../reactivity";
+import { untracked } from "../protocol";
 import {
   readPropagateStackStats,
   readShouldRecomputeStackStats,
@@ -26,13 +30,49 @@ import type {
 const noopUnsubscribe = () => {};
 const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
 
+export type State<T = unknown> = ReactiveNode<T> & { compute: null };
+export type Computed<T = unknown> = ReactiveNode<T> & { compute: () => T };
+export type Watcher<T = unknown> = ReactiveNode<T> & { compute: () => T };
+
+function isWatcherNode(node: ReactiveNode): node is Watcher {
+  return (node.state & WatcherFlag) !== 0;
+}
+
+function isComputedNode(node: ReactiveNode | null | undefined): node is Computed {
+  return node !== null && node !== undefined && !isWatcherNode(node) && node.compute !== null;
+}
+
+function collectSources(node: ReactiveNode): ReactiveNode[] {
+  const sources: ReactiveNode[] = [];
+
+  for (let edge = node.firstIn; edge !== null; edge = edge.nextIn) {
+    sources.push(edge.from);
+  }
+
+  return sources;
+}
+
+function collectSinks(node: ReactiveNode): ReactiveNode[] {
+  const sinks: ReactiveNode[] = [];
+
+  for (let edge = node.firstOut; edge !== null; edge = edge.nextOut) {
+    sinks.push(edge.to);
+  }
+
+  return sinks;
+}
+
 export interface RuntimeSubtle {
   readonly enabled: boolean;
   clearHistory(): void;
   configure(options?: RuntimeDebugOptions): RuntimeDebugContextSnapshot | undefined;
   context(): RuntimeDebugContextSnapshot | undefined;
-  currentComputed(): ReactiveNode | undefined;
+  currentComputed(): Computed | undefined;
   history(): RuntimeDebugEvent[];
+  hasSinks(s: State | Computed): boolean;
+  hasSources(s: Computed | Watcher): boolean;
+  introspectSinks(s: State | Computed): (Computed | Watcher)[];
+  introspectSources(s: Computed | Watcher): (State | Computed)[];
   label<T extends ReactiveNode>(node: T, label: string | null | undefined): T;
   observe(listener: RuntimeDebugListener): () => void;
   snapshot(node: ReactiveNode): RuntimeDebugNodeSnapshot | undefined;
@@ -41,6 +81,7 @@ export interface RuntimeSubtle {
     propagate: RuntimeWalkerStackStats;
   } | undefined;
   resetStackStats(): void;
+  untrack<T>(cb: () => T): T;
 }
 
 export type {
@@ -54,8 +95,31 @@ export type {
 export const subtle: RuntimeSubtle = {
   enabled: IS_DEV,
 
+  untrack(cb) {
+    return untracked(cb);
+  },
+
   currentComputed() {
-    return getCurrentComputedInternal();
+    const node = getCurrentComputedInternal();
+    return isComputedNode(node) ? node : undefined;
+  },
+
+  introspectSources(node) {
+    return collectSources(node) as (State | Computed)[];
+  },
+
+  introspectSinks(node) {
+    return collectSinks(node).filter(
+      (sink): sink is Computed | Watcher => sink.compute !== null,
+    );
+  },
+
+  hasSinks(node) {
+    return node.outDegree !== 0;
+  },
+
+  hasSources(node) {
+    return node.firstIn !== null;
   },
 
   context() {

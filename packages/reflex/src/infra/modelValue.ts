@@ -1,49 +1,31 @@
-export const MODEL_ACTION = Symbol("MODEL_ACTION");
-export const MODEL_READABLE = Symbol("MODEL_READABLE");
+declare const MODEL_ACTION_TYPE: unique symbol;
+
+const modelActions = new WeakSet<Function>();
 
 export type ModelActionBrand = {
-  readonly [MODEL_ACTION]: true;
+  readonly [MODEL_ACTION_TYPE]: true;
 };
 
 export type ModelAction<TArgs extends unknown[] = unknown[], TReturn = unknown> =
   ((...args: TArgs) => TReturn) & ModelActionBrand;
 
-export function markModelAction<TArgs extends unknown[], TReturn>(
+export function createModelAction<TArgs extends unknown[], TReturn>(
   fn: (...args: TArgs) => TReturn,
 ): ModelAction<TArgs, TReturn> {
-  Object.defineProperty(fn, MODEL_ACTION, {
-    value: true,
-    enumerable: false,
-    configurable: false,
-    writable: false,
-  });
-
+  modelActions.add(fn);
   return fn as ModelAction<TArgs, TReturn>;
-}
-
-export function markModelReadable<T extends Accessor<unknown>>(fn: T): T {
-  Object.defineProperty(fn, MODEL_READABLE, {
-    value: true,
-    enumerable: false,
-    configurable: false,
-    writable: false,
-  });
-
-  return fn;
 }
 
 export function isModelActionValue(
   value: unknown,
 ): value is ModelAction<unknown[], unknown> {
-  return (
-    typeof value === "function" &&
-    (value as { [MODEL_ACTION]?: true })[MODEL_ACTION] === true
-  );
+  return typeof value === "function" && modelActions.has(value);
 }
 
 export function isModelReadableValue(value: unknown): value is Accessor<unknown> {
   return (
     typeof value === "function" &&
-    (value as { [MODEL_READABLE]?: true })[MODEL_READABLE] === true
+    value.length === 0 &&
+    !isModelActionValue(value)
   );
 }

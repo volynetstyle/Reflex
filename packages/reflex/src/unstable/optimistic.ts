@@ -6,7 +6,8 @@ import {
   untracked,
   writeProducer,
 } from "@reflex/runtime";
-import { batch, createComputedNode, createResourceStateNode } from "../infra";
+import { createComputedNode, createResourceStateNode } from "../infra/factory";
+import { batch } from "../infra/runtime";
 
 export interface OptimisticOptions<T> {
   equals?: (prev: T, next: T) => boolean;

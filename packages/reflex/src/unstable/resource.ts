@@ -7,7 +7,7 @@ import {
   runWatcher,
   writeProducer,
 } from "@reflex/runtime";
-import { createResourceStateNode, createWatcherNode } from "../infra";
+import { createResourceStateNode, createWatcherNode } from "../infra/factory";
 
 /**
  * Current lifecycle state of a resource request.

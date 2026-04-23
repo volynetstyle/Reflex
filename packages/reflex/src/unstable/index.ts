@@ -16,19 +16,23 @@ export type {
  */
 export {
   signal,
+} from "../api/signal";
+export {
   computed,
   memo,
+} from "../api/derived";
+export {
   effect,
   withEffectCleanupRegistrar,
-} from "../api";
+} from "../api/effect";
 /**
  * API
  */
-export { batch, event, flush, createRuntime } from "../infra";
+export { batch, event, flush, createRuntime } from "../infra/runtime";
 /**
  * API
  */
-export { subscribeOnce, map, filter, merge, scan, hold } from "../api";
+export { subscribeOnce, map, filter, merge, scan, hold } from "../api/event";
 /**
  * API
  */
@@ -37,4 +41,5 @@ export { createModel, isModel, own } from "../infra/model";
 export * from "./optimistic";
 export * from "./resource";
 export * from "./selector";
-export * from "./store";
+export type { CompiledStore, StoreShape } from "./store/createStore";
+export { createStore } from "./store/createStore";

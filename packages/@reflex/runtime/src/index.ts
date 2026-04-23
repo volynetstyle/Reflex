@@ -1,4 +1,5 @@
 import "./debug/dev_flag";
+export { subtle, type RuntimeSubtle } from "./subtle";
 
 export {
   readProducer,

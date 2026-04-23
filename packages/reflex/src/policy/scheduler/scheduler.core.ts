@@ -159,7 +159,11 @@ export function attachQueueState<TInstance extends object, TItem>(
 ): TInstance & Pick<QueueBacked<TItem>, "ring" | "head"> {
   const instance = target as TInstance & Pick<QueueBacked<TItem>, "ring" | "head">;
 
-  instance.ring = queue.ring;
+  Object.defineProperty(instance, "ring", {
+    configurable: true,
+    enumerable: true,
+    value: queue.ring,
+  });
 
   Object.defineProperty(instance, "head", {
     configurable: true,

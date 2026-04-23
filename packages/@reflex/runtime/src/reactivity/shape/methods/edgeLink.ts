@@ -26,6 +26,7 @@ export function linkEdge(
   if (prevOut) prevOut.nextOut = edge;
   else from.firstOut = edge;
   from.lastOut = edge;
+  ++from.outDegree;
 
   attachIncomingEdgeAfter(to, edge, after);
   return edge;

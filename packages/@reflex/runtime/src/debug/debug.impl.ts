@@ -290,7 +290,7 @@ export function snapshotDebugNode(
     payload: node.payload,
     hasCompute: node.compute !== null,
     inDegree: sources.length,
-    outDegree: subscribers.length,
+    outDegree: node.outDegree,
     sources,
     subscribers,
   };

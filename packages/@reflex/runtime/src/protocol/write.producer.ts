@@ -100,7 +100,7 @@ export function writeProducer<T>(
       true,
       value,
       prev,
-      firstSubscriberEdge !== null,
+      node.outDegree !== 0,
       defaultContext,
     );
   }

@@ -42,6 +42,7 @@ export function detachOutgoingEdge(
   else from.firstOut = nextOut;
   if (nextOut) nextOut.prevOut = prevOut;
   else from.lastOut = prevOut;
+  --from.outDegree;
 }
 
 export function moveIncomingEdgeAfter(

@@ -42,6 +42,7 @@ export function unlinkAllSubscribers(node: ReactiveNode): void {
 
   node.firstOut = null;
   node.lastOut = null;
+  node.outDegree = 0;
 
   while (edge) {
     const next = edge.nextOut;

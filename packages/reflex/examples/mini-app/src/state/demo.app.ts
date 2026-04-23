@@ -27,7 +27,6 @@ import {
   resource,
   transition,
 } from "@volynets/reflex/unstable";
-import { markModelReadable } from "../../../../src/infra/modelValue";
 import {
   createInsight,
   demoTasks,
@@ -157,13 +156,11 @@ const createOwnershipModel = createModel((ctx) => {
   const [beat, setBeat] = signal(0);
   own(ctx, createHeartbeat(setBeat) as { [Symbol.dispose](): void });
 
-  const badge = markModelReadable(
-    memo(() => `Owned heartbeat / ${beat()} ticks`),
-  );
+  const badge = memo(() => `Owned heartbeat / ${beat()} ticks`);
 
   return {
     badge,
-    beat: markModelReadable(beat),
+    beat,
     ping: ctx.action(() => {
       setBeat((value) => value + 1);
     }),

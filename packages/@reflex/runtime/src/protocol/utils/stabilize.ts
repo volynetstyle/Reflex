@@ -38,7 +38,7 @@ export function stabilizeConsumerKnownAlive<T>(
     return node.payload as T;
   }
 
-  if (recompute(node) && node.firstOut !== null) {
+  if (recompute(node) && node.outDegree !== 0) {
     propagateOnce(node);
   }
 

@@ -43,6 +43,8 @@ export function createEventDispatcher(
   return dispatcher;
 }
 
+export const EventDispatcher = createEventDispatcher;
+
 function flushEventDispatcher(dispatcher: EventDispatcher): void {
   if (dispatcher.flushing) return;
   dispatcher.flushing = true;
