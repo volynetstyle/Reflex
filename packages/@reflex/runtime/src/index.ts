@@ -3,15 +3,20 @@ import "./debug/dev_flag";
 export {
   readProducer,
   writeProducer,
+  //
   readConsumer,
   readConsumerLazy,
   readConsumerEager,
+  //
+  ConsumerReadMode,
+  //
+  watcher,
   runWatcher,
   disposeWatcher,
-  ConsumerReadMode,
+  //
   untracked,
-} from "./api";
-export type { ProducerComparator } from "./api";
+} from "./protocol";
+export type { ProducerComparator } from "./protocol";
 
 // Execution context management
 export {
@@ -57,7 +62,6 @@ export {
   //
   ReactiveNode,
   ReactiveEdge,
-  
   Producer,
   Consumer,
   Watcher,
@@ -68,7 +72,6 @@ export {
   Scheduled,
   Computing,
   Tracking,
- 
   isDisposedNode,
   disposeNode,
   disposeNodeEvent,

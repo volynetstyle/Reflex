@@ -62,25 +62,65 @@ function shouldRecomputeBranching(
   let changed = false;
 
   outer: while (true) {
-    if (consumer.state & Changed) {
-      changed = true;
-    } else {
+    while (true) {
+      if (consumer.state & Changed) {
+        changed = true;
+        break;
+      }
+
       const dep = link.from,
         depState = dep.state;
 
       if (depState & Changed) {
         // Already-confirmed computed dependency: refresh and stop searching.
         changed = refreshAndPropagateIfNeeded(dep, hasFanout(link));
-      } else if (depState & Invalid) {
+        break;
+      }
+
+      if (depState & Invalid) {
         const deps = dep.firstIn;
         if (deps !== null) {
           stack[stackTop++] = link;
           shouldRecomputeStackHigh = stackTop; //noteShouldRecomputeStackUsage(stackTop);
           link = deps;
           consumer = dep;
-          continue;
+
+          if (deps.nextIn === null) {
+            // Once inside a branching walk, many child arms collapse back into
+            // a single-dependency chain. Run that tail linearly until the next
+            // fork or terminal node instead of bouncing through the DFS loop.
+            continue;
+          }
+          continue outer;
         }
+
         changed = refreshAndPropagateIfNeeded(dep, hasFanout(link));
+        break;
+      }
+
+      // dep is already clean: mark consumer clean and keep descending linearly
+      // while this arm stays single-dependency.
+      consumer.state &= ~Invalid;
+      const next = link.nextIn;
+      if (next !== null) {
+        link = next;
+        continue outer;
+      }
+
+      if (stackTop === stackBase) {
+        restoreShouldRecomputeStackBase(stack, stackBase);
+        return false;
+      }
+
+      const parentLink = stack[--stackTop]!;
+      shouldRecomputeStackHigh = stackTop;
+      link = parentLink;
+      consumer = parentLink.to;
+
+      const parentNext = parentLink.nextIn;
+      if (parentNext !== null) {
+        link = parentNext;
+        continue outer;
       }
     }
 

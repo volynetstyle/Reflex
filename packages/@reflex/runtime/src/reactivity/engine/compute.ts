@@ -1,9 +1,9 @@
-import { compare } from "../../api/compare";
 import type { ReactiveNode } from "../shape";
 import { devAssertRecomputeAlive, devRecordRecompute } from "../dev";
 import { clearDirtyState, isDisposedNode } from "../shape";
 import { executeNodeComputation } from "./execute";
 import { defaultContext } from "../context";
+import { compare } from "../../protocol/utils/compare";
 
 export function recompute(node: ReactiveNode): boolean {
   if (isDisposedNode(node)) {
