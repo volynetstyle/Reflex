@@ -1,11 +1,11 @@
-import { registerCleanup } from "@volynets/reflex-framework/ownership";
 import {
   onEffectStart,
+  registerCleanup,
   useEffect,
-} from "@volynets/reflex-framework/ownership/reflex";
+} from "@volynets/reflex-framework";
 import type { PortalRenderable } from "../operators";
 import { mountRenderRange, type MountedRenderRange } from "../structure/render-range";
-import type { DOMRenderer } from "../runtime";
+import type { DOMRenderer } from "../runtime/renderer";
 
 export function mountPortal(
   renderer: DOMRenderer,

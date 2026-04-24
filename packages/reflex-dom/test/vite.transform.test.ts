@@ -1,9 +1,10 @@
 import { parseSync } from "@swc/core";
 import { describe, expect, it } from "vitest";
 import {
+  reflex,
   reflexDOMVitePlugin,
   transformReflexDOMJSX,
-} from "../plugins/vite";
+} from "../../../plugins/@vite/reflex-vite-plugin/src/index";
 
 function getOpeningAttributes(code: string) {
   const ast = parseSync(code, {
@@ -96,6 +97,18 @@ describe("transformReflexDOMJSX", () => {
   it("exposes a vite plugin wrapper", async () => {
     const plugin = reflexDOMVitePlugin();
     const transformed = await plugin.transform?.call(
+      {} as never,
+      'const view = <div class={count() === 0 ? "idle" : "active"} />;',
+      "Component.tsx",
+    );
+
+    expect(transformed).not.toBeNull();
+    expect(typeof transformed).toBe("object");
+  });
+
+  it("enables the transform through the shared reflex plugin option", async () => {
+    const [plugin] = reflex({ dom: true });
+    const transformed = await plugin?.transform?.call(
       {} as never,
       'const view = <div class={count() === 0 ? "idle" : "active"} />;',
       "Component.tsx",

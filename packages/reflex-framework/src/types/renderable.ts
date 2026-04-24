@@ -18,10 +18,8 @@ export type Component<P = Record<string, never>, Host = never> = (
   props: P,
 ) => JSXRenderable<Host>;
 
-export interface ComponentRenderable<
-  P = Record<string, never>,
-  Host = never,
-> extends RenderableRecord {
+export interface ComponentRenderable<P = Record<string, never>, Host = never>
+  extends RenderableRecord {
   readonly type: Component<P, Host>;
   readonly props: P;
 }
@@ -32,5 +30,5 @@ export interface ElementRenderable<Tag extends string = string, Props = unknown>
   readonly props: Props;
 }
 
-export type ComponentProps<T> =
-  T extends Component<infer Props, any> ? Props : never;
+export type ComponentProps<T, H = unknown> =
+  T extends Component<infer Props, H> ? Props : never;

@@ -2,7 +2,7 @@ import {
   RenderableKind,
   getTaggedRenderableKind,
   isEmptyRenderableValue,
-} from "../renderable-kind";
+} from "../renderable/kind";
 
 function isIterableRenderableValue(value: unknown): value is Iterable<unknown> {
   return (

@@ -13,6 +13,8 @@ import type {
 } from "@swc/core";
 import type { Plugin } from "vite";
 
+type SelectorType = string | RegExp | Array<string | RegExp>;
+
 const DEFAULT_REACTIVE_PROPS = ["class", "className", "style"] as const;
 
 const WRAPPABLE_EXPRESSION_TYPES = new Set<Expression["type"]>([
@@ -48,6 +50,49 @@ export interface ReflexDOMTransformOptions {
 export interface ReflexDOMTransformResult {
   code: string;
   map: string | null;
+}
+
+export interface ReflexPluginOptions {
+  /**
+   * Can be used to process extra files like `.mdx`
+   * @example include: /\.(mdx|js|jsx|ts|tsx)$/
+   * @default /\.[tj]sx?$/
+   */
+  include?: SelectorType;
+  /**
+   * Can be used to exclude JSX/TSX files that run in a worker or are not Reflex files.
+   * Except if explicitly desired, keep node_modules in the exclude list.
+   * @example exclude: [/\/pdf\//, /\.solid\.tsx$/, /\/node_modules\//]
+   * @default /\/node_modules\//
+   */
+  exclude?: SelectorType;
+  /**
+   * Control where the JSX factory is imported from.
+   * https://oxc.rs/docs/guide/usage/transformer/jsx.html#import-source
+   * @default "Reflex"
+   */
+  jsxImportSource?: string;
+  /**
+   * Note: Skipping Reflex import with classic runtime is not supported from v4.
+   * @default "automatic"
+   */
+  jsxRuntime?: "classic" | "automatic" | "reflex" | "tsrx";
+  /**
+   * Reflex Fast Refresh runtime options.
+   */
+  reflex?: {
+    /**
+     * Reflex Fast Refresh runtime URL prefix.
+     * Useful in a module federation context to enable HMR by specifying
+     * the host application URL in the Vite config of a remote application.
+     */
+    refreshHost?: string;
+  };
+  /**
+   * Enables the DOM JSX transform that wraps computed reactive props
+   * like class/className/style into accessors.
+   */
+  dom?: boolean | ReflexDOMTransformOptions;
 }
 
 class ReflexDOMJSXReactivePropsVisitor extends Visitor {
@@ -88,7 +133,7 @@ class ReflexDOMJSXReactivePropsVisitor extends Visitor {
   }
 }
 
-function normalizeOptions(
+function normalizeDOMOptions(
   options: ReflexDOMTransformOptions = {},
 ): Required<ReflexDOMTransformOptions> {
   return {
@@ -178,12 +223,22 @@ function printProgram(program: Program, id: string): ReflexDOMTransformResult {
   };
 }
 
+function normalizeDOMPluginOptions(
+  options: boolean | ReflexDOMTransformOptions | undefined,
+): ReflexDOMTransformOptions | null {
+  if (options === undefined || options === false) {
+    return null;
+  }
+
+  return options === true ? {} : options;
+}
+
 export function transformReflexDOMJSX(
   code: string,
   id: string,
   rawOptions: ReflexDOMTransformOptions = {},
 ): ReflexDOMTransformResult | null {
-  const options = normalizeOptions(rawOptions);
+  const options = normalizeDOMOptions(rawOptions);
 
   if (!shouldProcessFile(id, options)) {
     return null;
@@ -213,3 +268,16 @@ export function reflexDOMVitePlugin(
     },
   };
 }
+
+export function reflex(options: ReflexPluginOptions = {}): Plugin[] {
+  const plugins: Plugin[] = [];
+  const domOptions = normalizeDOMPluginOptions(options.dom);
+
+  if (domOptions !== null) {
+    plugins.push(reflexDOMVitePlugin(domOptions));
+  }
+
+  return plugins;
+}
+
+export default reflex;

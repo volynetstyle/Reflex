@@ -1,11 +1,11 @@
 import type { Accessor } from "../types";
 import type { Namespace } from "../host/namespace";
-import type { DOMRenderer } from "../runtime";
+import type { DOMRenderer } from "../runtime/renderer";
 import { applyProp } from "../host/props";
 import {
   onEffectStart,
   useEffect,
-} from "@volynets/reflex-framework/ownership/reflex";
+} from "@volynets/reflex-framework";
 
 export function bindReactiveProp(
   renderer: DOMRenderer,

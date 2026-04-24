@@ -16,7 +16,7 @@ import { normalizeAttr } from "../host/aliases";
 import { resolveNamespace, type Namespace, URL_ATTRS } from "../host/namespace";
 import { sanitizeURL } from "../host/sanitize";
 import { isVoidTag } from "../host/tags";
-import { RenderableKind } from "../renderable-kind";
+import { RenderableKind } from "../renderable/kind";
 import { wrapHydrationSlotMarkup } from "../hydrate/markers";
 import type { StyleValue } from "../types";
 import { classifyServerRenderable } from "./renderable";

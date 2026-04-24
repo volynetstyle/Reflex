@@ -1,7 +1,9 @@
-import type { OwnerContext } from "@volynets/reflex-framework/ownership";
-import { createOwnerContext } from "@volynets/reflex-framework/ownership";
-import { hydrateWithRenderer, resumeWithRenderer } from "../hydration";
-import { renderWithRenderer } from "../render";
+import {
+  createOwnerContext,
+  type OwnerContext,
+} from "@volynets/reflex-framework";
+import { hydrateWithRenderer, resumeWithRenderer } from "./hydration";
+import { renderWithRenderer } from "./render";
 import type { Cleanup, JSXRenderable } from "../types";
 import {
   createRendererRuntime,

@@ -3,8 +3,8 @@ import { isEventProp, attachEventListener } from "../host/events";
 import type { Namespace } from "../host/namespace";
 import { applyProp } from "../host/props";
 import { attachRef } from "../host/refs";
-import { registerCleanup } from "@volynets/reflex-framework/ownership";
-import type { DOMRenderer } from "../runtime";
+import { registerCleanup } from "@volynets/reflex-framework";
+import type { DOMRenderer } from "../runtime/renderer";
 import type { Ref } from "../types";
 
 type ElementBindingPhase = "initial" | "deferred";

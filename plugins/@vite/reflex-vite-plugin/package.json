@@ -1,0 +1,54 @@
+{
+  "name": "@reflex/vite-plugin",
+  "version": "0.0.1",
+  "description": "The default Vite plugin for Reflex projects",
+  "keywords": [
+    "reflex",
+    "vite",
+    "vite-plugin",
+    "jsx"
+  ],
+  "homepage": "https://github.com/volynetstyle/Reflex/tree/main/plugins/@vite/reflex-vite-plugin#readme",
+  "bugs": {
+    "url": "https://github.com/volynetstyle/Reflex/issues"
+  },
+  "license": "MIT",
+  "author": "Andrii Volynets",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/volynetstyle/Reflex.git",
+    "directory": "plugins/@vite/reflex-vite-plugin"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": {
+        "types": "./src/index.ts",
+        "default": "./src/index.ts"
+      },
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "pnpm clean && tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "prepublishOnly": "pnpm typecheck && pnpm build"
+  },
+  "dependencies": {
+    "@swc/core": "^1.15.18"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  },
+  "peerDependencies": {
+    "vite": "^6.0.0"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}

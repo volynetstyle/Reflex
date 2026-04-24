@@ -1,9 +1,7 @@
 import type { MountedRenderRange } from "../structure/render-range";
 
-const mountedRootKey = Symbol("reflex-dom.mounted-root");
-
 type MountedContainer = (ParentNode & Node) & {
-  [mountedRootKey]?: MountedRenderRange | undefined;
+  root?: MountedRenderRange | undefined;
 };
 
 export interface MountedRootStore {
@@ -15,13 +13,13 @@ export interface MountedRootStore {
 export function createMountedRootStore(): MountedRootStore {
   return {
     get(container) {
-      return container[mountedRootKey];
+      return container.root;
     },
     set(container, root) {
-      container[mountedRootKey] = root;
+      container.root = root;
     },
     delete(container) {
-      container[mountedRootKey] = undefined;
+      container.root = undefined;
     },
   };
 }

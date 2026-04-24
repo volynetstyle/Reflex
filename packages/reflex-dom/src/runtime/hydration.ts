@@ -5,36 +5,35 @@ import type {
   ElementRenderable,
   ElementTag,
   JSXRenderable,
-} from "./types";
+} from "../types";
 import type {
   ForRenderable,
   PortalRenderable,
   ShowRenderable,
   SwitchRenderable,
-} from "./operators";
+} from "../operators";
 import {
   resolveShowValue,
   resolveSwitchValue,
-} from "./operators";
-import { RenderableKind } from "./renderable-kind";
-import { classifyClientRenderable } from "./mount/renderable";
-import { bindElementProps } from "./mount/element-binder";
-import { hydrateReactiveSlot } from "./structure/reactive-slot";
-import { mountPortal } from "./mount/portal";
-import type { DOMRenderer } from "./runtime";
+} from "../operators";
+import { RenderableKind } from "../renderable/kind";
+import { classifyClientRenderable } from "../mount/renderable";
+import { bindElementProps } from "../mount/element-binder";
+import { hydrateReactiveSlot } from "../structure/reactive-slot";
+import { mountPortal } from "../mount/portal";
+import type { DOMRenderer } from "./renderer";
 import {
   adoptExistingContentRange,
   createRenderRangeMount,
   mountRenderRange,
   type MountedRenderRange,
-} from "./structure/render-range";
+} from "../structure/render-range";
 import {
   isHydrationSlotEnd,
   isHydrationSlotStart,
-} from "./hydrate/markers";
-import { createScope } from "@volynets/reflex-framework/ownership";
-import { runInOwnershipScope } from "@volynets/reflex-framework/ownership/reflex";
-import { resolveNamespace, SVG_NS, MATHML_NS, type Namespace } from "./host/namespace";
+} from "../hydrate/markers";
+import { createScope, runInOwnershipScope } from "@volynets/reflex-framework";
+import { resolveNamespace, SVG_NS, MATHML_NS, type Namespace } from "../host/namespace";
 
 class HydrationMismatch extends Error {}
 

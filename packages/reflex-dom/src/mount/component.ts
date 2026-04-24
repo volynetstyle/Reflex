@@ -1,7 +1,6 @@
 import type { Namespace } from "../host/namespace";
-import { createScope } from "@volynets/reflex-framework/ownership";
-import { runInOwnershipScope } from "@volynets/reflex-framework/ownership/reflex";
-import type { DOMRenderer } from "../runtime";
+import { createScope, runInOwnershipScope } from "@volynets/reflex-framework";
+import type { DOMRenderer } from "../runtime/renderer";
 import type { ComponentRenderable } from "../types";
 import { appendRenderableNodes } from "./append";
 

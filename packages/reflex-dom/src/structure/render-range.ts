@@ -3,10 +3,10 @@ import type { Namespace } from "../host/namespace";
 import {
   createScope,
   disposeScope,
+  runInOwnershipScope,
   type Scope,
-} from "@volynets/reflex-framework/ownership";
-import { runInOwnershipScope } from "@volynets/reflex-framework/ownership/reflex";
-import type { DOMRenderer } from "../runtime";
+} from "@volynets/reflex-framework";
+import type { DOMRenderer } from "../runtime/renderer";
 import type { JSXRenderable } from "../types";
 import { appendRenderableNodes } from "../mount/append";
 

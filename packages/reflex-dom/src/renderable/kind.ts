@@ -1,11 +1,11 @@
-import { COMPONENT_RENDERABLE } from "./operators/component";
-import { ELEMENT_RENDERABLE } from "./operators/element";
+import { COMPONENT_RENDERABLE } from "../operators/component";
+import { ELEMENT_RENDERABLE } from "../operators/element";
 import {
   FOR_RENDERABLE,
   PORTAL_RENDERABLE,
   SHOW_RENDERABLE,
   SWITCH_RENDERABLE,
-} from "./operators";
+} from "../operators";
 
 export const enum RenderableKind {
   Empty = 0,

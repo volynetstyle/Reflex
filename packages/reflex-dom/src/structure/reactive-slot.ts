@@ -1,11 +1,11 @@
 import type { Namespace } from "../host/namespace";
-import { registerCleanup } from "@volynets/reflex-framework/ownership";
 import {
   onEffectStart,
+  registerCleanup,
   runInOwnershipScope,
   useEffect,
-} from "@volynets/reflex-framework/ownership/reflex";
-import type { DOMRenderer } from "../runtime";
+} from "@volynets/reflex-framework";
+import type { DOMRenderer } from "../runtime/renderer";
 import type { ContentSlot } from "./content-slot";
 import { adoptContentSlot, createContentSlot } from "./content-slot";
 import { appendRenderableNodes } from "../mount/append";

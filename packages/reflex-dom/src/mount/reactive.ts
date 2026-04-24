@@ -1,5 +1,5 @@
 import type { Namespace } from "../host/namespace";
-import type { DOMRenderer } from "../runtime";
+import type { DOMRenderer } from "../runtime/renderer";
 import {
   bindReactiveSlotLifecycle,
   createMountedSlot,

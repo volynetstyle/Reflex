@@ -1,11 +1,11 @@
-import type { Cleanup, JSXRenderable } from "./types";
-import type { DOMRenderer } from "./runtime";
+import type { Cleanup, JSXRenderable } from "../types";
 import {
   createRenderRangeAnchors,
   mountRenderRange,
   type MountedRenderRange,
   type RenderRangeAnchors,
-} from "./structure/render-range";
+} from "../structure/render-range";
+import type { DOMRenderer } from "./renderer";
 
 function resolveContainerRangeAnchors(
   renderer: DOMRenderer,

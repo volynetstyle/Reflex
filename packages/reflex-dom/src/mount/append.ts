@@ -17,8 +17,8 @@ import {
   RenderableKind,
   getTaggedRenderableKind,
   isTextRenderableValue,
-} from "../renderable-kind";
-import type { DOMRenderer } from "../runtime";
+} from "../renderable/kind";
+import type { DOMRenderer } from "../runtime/renderer";
 import { mountComponent } from "./component";
 import { mountReactiveSlot } from "./reactive";
 import { mountElement } from "./element";

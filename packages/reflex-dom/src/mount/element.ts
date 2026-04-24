@@ -1,5 +1,5 @@
 import type { ElementInstance, ElementProps, ElementTag, Ref } from "../types";
-import type { DOMRenderer } from "../runtime";
+import type { DOMRenderer } from "../runtime/renderer";
 import { attachRef } from "../host/refs";
 import {
   MATHML_NS,
@@ -7,11 +7,11 @@ import {
   resolveNamespace,
   type Namespace,
 } from "../host/namespace";
-import { registerCleanup } from "@volynets/reflex-framework/ownership";
 import {
   onEffectStart,
+  registerCleanup,
   useEffect,
-} from "@volynets/reflex-framework/ownership/reflex";
+} from "@volynets/reflex-framework";
 import { mountRenderRange } from "../structure/render-range";
 import { bindElementProps } from "./element-binder";
 import { appendRenderableNodes } from "./append";
@@ -31,11 +31,18 @@ function createElementInNamespace<Tag extends ElementTag>(
 function resolveShadowRootConfig(
   props: Record<string, unknown>,
 ): ShadowRootInit | null {
+  const {
+    shadowRoot,
+    shadowChildren,
+    shadowAdoptedStyleSheets,
+    shadowRootRef,
+  } = props;
+
   const requested =
-    props.shadowRoot ??
-    (props.shadowChildren !== undefined ||
-    props.shadowAdoptedStyleSheets !== undefined ||
-    props.shadowRootRef !== undefined
+    shadowRoot ??
+    (shadowChildren !== undefined ||
+    shadowAdoptedStyleSheets !== undefined ||
+    shadowRootRef !== undefined
       ? true
       : undefined);
 
