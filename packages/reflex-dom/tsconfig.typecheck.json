@@ -12,14 +12,6 @@
         "../reflex-framework/src/index.ts",
         "../reflex-framework/dist/index.d.ts"
       ],
-      "@volynets/reflex-framework/ownership": [
-        "../reflex-framework/src/ownership/index.ts",
-        "../reflex-framework/dist/ownership/index.d.ts"
-      ],
-      "@volynets/reflex-framework/ownership/reflex": [
-        "../reflex-framework/src/ownership/reflex.ts",
-        "../reflex-framework/dist/ownership/reflex.d.ts"
-      ],
       "@volynets/reflex-framework/jsx-runtime": [
         "../reflex-framework/src/jsx-runtime.ts",
         "../reflex-framework/dist/jsx-runtime.d.ts"

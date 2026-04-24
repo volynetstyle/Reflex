@@ -1,4 +1,4 @@
-import { effect, withEffectCleanupRegistrar } from "@volynets/reflex";
+import { effect, effectRanked, withEffectCleanupRegistrar } from "@volynets/reflex";
 import {
   createOwnershipReactiveBridge,
   type OwnershipReactiveBridge,
@@ -6,7 +6,13 @@ import {
 
 export const reflexOwnershipBridge: OwnershipReactiveBridge =
   createOwnershipReactiveBridge({
-    effect,
+    effect(fn, options) {
+      if (options?.priority !== undefined) {
+        return effectRanked(fn, { priority: options.priority });
+      }
+
+      return effect(fn);
+    },
     withCleanupRegistrar: withEffectCleanupRegistrar,
   });
 

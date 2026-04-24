@@ -15,8 +15,6 @@ describe("package exports", () => {
       ".",
       "./jsx-runtime",
       "./jsx-dev-runtime",
-      "./ownership",
-      "./ownership/reflex",
     ]);
   });
 });

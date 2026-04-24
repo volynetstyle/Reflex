@@ -22,6 +22,7 @@ export {
 } from "./api/derived";
 export {
   effect,
+  effectRanked,
   withEffectCleanupRegistrar,
 } from "./api/effect";
 /**

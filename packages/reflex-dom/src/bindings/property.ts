@@ -4,7 +4,7 @@ import type { DOMRenderer } from "../runtime/renderer";
 import { applyProp } from "../host/props";
 import {
   onEffectStart,
-  useEffect,
+  useOwnedEffect,
 } from "@volynets/reflex-framework";
 
 export function bindReactiveProp(
@@ -16,7 +16,7 @@ export function bindReactiveProp(
 ) {
   let previousValue = applyProp(el, name, acc(), ns, undefined);
 
-  useEffect(renderer.owner, () => {
+  useOwnedEffect({ owner: renderer.owner }, () => {
     const nextValue = acc();
 
     onEffectStart(() => {

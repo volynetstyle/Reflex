@@ -3,7 +3,7 @@ import {
   onEffectStart,
   registerCleanup,
   runInOwnershipScope,
-  useEffect,
+  useOwnedEffect,
 } from "@volynets/reflex-framework";
 import type { DOMRenderer } from "../runtime/renderer";
 import type { ContentSlot } from "./content-slot";
@@ -50,7 +50,7 @@ export function bindReactiveSlotLifecycle<T>(
   readValue: () => T,
   resolveValue: (value: T) => unknown,
 ): void {
-  useEffect(renderer.owner, () => {
+  useOwnedEffect({ owner: renderer.owner }, () => {
     const nextValue = readValue();
 
     onEffectStart(() => {

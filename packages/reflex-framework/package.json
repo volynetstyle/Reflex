@@ -31,22 +31,6 @@
       },
       "types": "./dist/jsx-dev-runtime.d.ts",
       "import": "./dist/jsx-dev-runtime.js"
-    },
-    "./ownership": {
-      "source": {
-        "types": "./src/ownership/index.ts",
-        "default": "./src/ownership/index.ts"
-      },
-      "types": "./dist/ownership/index.d.ts",
-      "import": "./dist/ownership/index.js"
-    },
-    "./ownership/reflex": {
-      "source": {
-        "types": "./src/ownership/reflex.ts",
-        "default": "./src/ownership/reflex.ts"
-      },
-      "types": "./dist/ownership/reflex.d.ts",
-      "import": "./dist/ownership/reflex.js"
     }
   },
   "files": [

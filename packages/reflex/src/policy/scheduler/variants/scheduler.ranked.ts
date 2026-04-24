@@ -151,11 +151,7 @@ function rankedFlush(this: RankedSchedulerCore): void {
 
       sortActivePrioritiesDesc(activePriorities);
 
-      for (
-        let index = 0;
-        index < activePriorities.length;
-        ++index
-      ) {
+      for (let index = 0; index < activePriorities.length; ++index) {
         const priority = activePriorities[index]!;
         let node = rankedHeads[priority];
 

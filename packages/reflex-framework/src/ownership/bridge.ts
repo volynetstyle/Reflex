@@ -7,8 +7,17 @@ import { runWithOwner, runWithScope } from "./ownership.scope";
 export type useEffectFn = () => void | Cleanup;
 export type OwnershipCleanupRegistrar = (cleanup: Cleanup) => void;
 
+export interface OwnedEffectOptions {
+  owner: OwnerContext;
+  priority?: number;
+}
+
+export interface OwnershipReactiveEffectOptions {
+  priority?: number;
+}
+
 export interface OwnershipReactiveAdapter {
-  effect(fn: useEffectFn): Cleanup;
+  effect(fn: useEffectFn, options?: OwnershipReactiveEffectOptions): Cleanup;
   withCleanupRegistrar<T>(
     registrar: OwnershipCleanupRegistrar | null,
     fn: () => T,
@@ -17,7 +26,7 @@ export interface OwnershipReactiveAdapter {
 
 export interface OwnershipReactiveBridge {
   readonly onEffectStart: (fn: () => void) => void;
-  readonly useEffect: (owner: OwnerContext, fn: useEffectFn) => Cleanup;
+  readonly useEffect: (options: OwnedEffectOptions, fn: useEffectFn) => Cleanup;
   readonly runInOwnershipScope: <T>(
     owner: OwnerContext,
     scope: Scope,
@@ -55,7 +64,8 @@ export function createOwnershipReactiveBridge(
     );
   }
 
-  function useEffect(owner: OwnerContext, fn: useEffectFn): Cleanup {
+  function useEffect(options: OwnedEffectOptions, fn: useEffectFn): Cleanup {
+    const { owner } = options;
     const scope = owner.currentOwner;
 
     if (scope !== null && isShuttingDown(scope)) {
@@ -71,18 +81,20 @@ export function createOwnershipReactiveBridge(
         skipStartCallbacks: true,
       };
 
-      const dispose = adapter.effect(() =>
-        runWithOwner(owner, scope, () => {
-          const previousState = currentuseEffectState;
-          currentuseEffectState = state;
+      const dispose = adapter.effect(
+        () =>
+          runWithOwner(owner, scope, () => {
+            const previousState = currentuseEffectState;
+            currentuseEffectState = state;
 
-          try {
-            return fn();
-          } finally {
-            currentuseEffectState = previousState;
-            state.skipStartCallbacks = false;
-          }
-        }),
+            try {
+              return fn();
+            } finally {
+              currentuseEffectState = previousState;
+              state.skipStartCallbacks = false;
+            }
+          }),
+        options,
       );
 
       if (scope !== null) {

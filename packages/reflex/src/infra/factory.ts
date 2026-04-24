@@ -14,7 +14,6 @@ export class RankedEffectNode<T = unknown> implements ReactiveNode<T> {
   lastOut: ReactiveEdge | null;
   lastIn: ReactiveEdge | null;
   lastInTail: ReactiveEdge | null;
-  outBranchCount: number =0;
 
   compute: (() => T) | null;
   payload: T;
@@ -40,8 +39,7 @@ export class RankedEffectNode<T = unknown> implements ReactiveNode<T> {
     this.compute = compute;
     this.payload = payload as T;
 
-    this.priority 
-    = priority;
+    this.priority = priority;
     this.rank = 0;
     this.rankedPriority = 0;
     this.nextRanked = undefined;
@@ -62,11 +60,7 @@ export const createWatcherRankedrNode = (
 };
 
 export const createSignalNode = <T>(payload: T) => {
-  return new RuntimeReactiveNode<T>(
-    payload,
-    null,
-    PRODUCER_INITIAL_STATE,
-  );
+  return new RuntimeReactiveNode<T>(payload, null, PRODUCER_INITIAL_STATE);
 };
 
 export const createSource = <T>(): RuntimeEventSource<T> => {
@@ -82,11 +76,7 @@ export const createAccumulator = <T>(payload: T): ReactiveNode<T> => {
 };
 
 export const createComputedNode = <T>(fn: () => T) => {
-  return new RuntimeReactiveNode<T>(
-    undefined as T,
-    fn,
-    CONSUMER_INITIAL_STATE,
-  );
+  return new RuntimeReactiveNode<T>(undefined as T, fn, CONSUMER_INITIAL_STATE);
 };
 
 export const createWatcherNode = (compute: EffectFn): ReactiveNode => {

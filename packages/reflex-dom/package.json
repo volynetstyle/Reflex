@@ -52,9 +52,6 @@
     "@volynets/reflex": "workspace:*",
     "@volynets/reflex-framework": "workspace:*"
   },
-  "peerDependencies": {
-    "vite": "^6.0.0"
-  },
   "keywords": [
     "dom",
     "jsx",

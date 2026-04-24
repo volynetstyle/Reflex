@@ -9,8 +9,8 @@ import {
   useEffect,
   useEffectOnce,
   useSignal,
+  runInOwnershipScope,
 } from "../src";
-import { runInOwnershipScope } from "../src/ownership/reflex";
 
 describe("framework hooks", () => {
   it("exposes signal state through useSignal and reacts through useEffect", () => {

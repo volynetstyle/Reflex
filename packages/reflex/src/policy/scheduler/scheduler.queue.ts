@@ -75,7 +75,7 @@ function clearRingQueueMethod<T>(this: RingQueue<T>): void {
 
 export function createRingQueue<T>(): RingQueue<T> {
   return {
-    ring: [] as T[],
+    ring: [],
     head: 0,
     tail: 0,
     size: 0,

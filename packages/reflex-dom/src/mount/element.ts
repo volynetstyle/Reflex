@@ -10,7 +10,7 @@ import {
 import {
   onEffectStart,
   registerCleanup,
-  useEffect,
+  useOwnedEffect,
 } from "@volynets/reflex-framework";
 import { mountRenderRange } from "../structure/render-range";
 import { bindElementProps } from "./element-binder";
@@ -135,7 +135,7 @@ function bindReactiveAdoptedStyleSheets(
 ): void {
   applyShadowRootAdoptedStyleSheets(shadowRoot, getNextStyleSheets());
 
-  useEffect(renderer.owner, () => {
+  useOwnedEffect({ owner: renderer.owner }, () => {
     const nextStyleSheets = getNextStyleSheets();
 
     onEffectStart(() => {

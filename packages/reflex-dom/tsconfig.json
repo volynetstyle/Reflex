@@ -6,12 +6,6 @@
     "baseUrl": ".",
     "paths": {
       "@volynets/reflex-framework": ["../reflex-framework/dist/index.d.ts"],
-      "@volynets/reflex-framework/ownership": [
-        "../reflex-framework/dist/ownership/index.d.ts"
-      ],
-      "@volynets/reflex-framework/ownership/reflex": [
-        "../reflex-framework/dist/ownership/reflex.d.ts"
-      ],
       "@volynets/reflex-framework/jsx-runtime": [
         "../reflex-framework/dist/jsx-runtime.d.ts"
       ],

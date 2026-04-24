@@ -3,7 +3,7 @@ import { moveRangeBefore } from "../host/mutations";
 import {
   onEffectStart,
   registerCleanup,
-  useEffect,
+  useOwnedEffect,
 } from "@volynets/reflex-framework";
 import type { ForRenderable } from "../operators";
 import { reconcileKeyedList, type KeyedItem } from "../reconcile/keyed";
@@ -115,7 +115,7 @@ export function mountFor(
 
   reconcile(renderable.each());
 
-  useEffect(renderer.owner, () => {
+  useOwnedEffect({ owner: renderer.owner }, () => {
     const nextItems = renderable.each();
 
     onEffectStart(() => {
