@@ -1,10 +1,10 @@
-import type { ReactiveNode } from "@reflex/runtime";
+import type { ReactiveNode } from "@volynets/reflex-runtime";
 import {
   getActiveConsumer,
   getPropagationDepth,
   Scheduled,
   runWatcher,
-} from "@reflex/runtime";
+} from "@volynets/reflex-runtime";
 import {
   clearWatcherQueue,
   createWatcherQueue,

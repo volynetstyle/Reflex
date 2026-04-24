@@ -4,8 +4,8 @@ import {
   Scheduled,
   runWatcher,
   withCleanupRegistrar,
-} from "@reflex/runtime";
-import type { ReactiveNode } from "@reflex/runtime";
+} from "@volynets/reflex-runtime";
+import type { ReactiveNode } from "@volynets/reflex-runtime";
 import { createWatcherNode, createWatcherRankedrNode } from "../infra/factory";
 
 /**

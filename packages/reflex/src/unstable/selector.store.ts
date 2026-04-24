@@ -1,4 +1,4 @@
-import { readProducer, writeProducer } from "@reflex/runtime";
+import { readProducer, writeProducer } from "@volynets/reflex-runtime";
 import { effectRanked } from "../api/effect";
 import { createSignalNode } from "../infra/factory";
 import {

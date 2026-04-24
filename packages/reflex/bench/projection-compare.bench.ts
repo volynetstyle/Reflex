@@ -9,7 +9,7 @@ import {
   signal,
   withEffectCleanupRegistrar,
 } from "../dist/esm/unstable/index.js";
-import * as SolidSignalsModule from "../../@reflex/runtime/node_modules/@solidjs/signals/dist/prod.js";
+import * as SolidSignalsModule from "../../@volynets/reflex-runtime/node_modules/@solidjs/signals/dist/prod.js";
 
 // ---------------------------------------------------------------------------
 // Solid bindings

@@ -2,8 +2,8 @@ import {
   resetState,
   setHooks,
   setRuntimeHooks,
-} from "@reflex/runtime";
-import type { EngineHooks } from "@reflex/runtime";
+} from "@volynets/reflex-runtime";
+import type { EngineHooks } from "@volynets/reflex-runtime";
 import { subscribeEvent } from "./event";
 import { createSource } from "./factory";
 import { createEventDispatcher } from "../policy";

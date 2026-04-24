@@ -1,7 +1,7 @@
 import {
   readConsumerEager,
   readConsumerLazy,
-} from "@reflex/runtime";
+} from "@volynets/reflex-runtime";
 import { createComputedNode } from "../infra/factory";
 
 /**

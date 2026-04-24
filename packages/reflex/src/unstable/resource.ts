@@ -1,4 +1,4 @@
-import type { ReactiveNode } from "@reflex/runtime";
+import type { ReactiveNode } from "@volynets/reflex-runtime";
 import {
   disposeNode,
   disposeWatcher,
@@ -6,7 +6,7 @@ import {
   readProducer,
   runWatcher,
   writeProducer,
-} from "@reflex/runtime";
+} from "@volynets/reflex-runtime";
 import { createResourceStateNode, createWatcherNode } from "../infra/factory";
 
 /**

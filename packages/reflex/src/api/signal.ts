@@ -1,7 +1,7 @@
 import {
   readProducer,
   writeProducer,
-} from "@reflex/runtime";
+} from "@volynets/reflex-runtime";
 import { createSignalNode } from "../infra/factory";
 
 /**

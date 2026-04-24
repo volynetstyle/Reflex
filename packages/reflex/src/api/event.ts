@@ -3,7 +3,7 @@ import {
   isDisposedNode,
   readProducer,
   writeProducer,
-} from "@reflex/runtime";
+} from "@volynets/reflex-runtime";
 import type { Event } from "../infra/runtime";
 import { createAccumulator } from "../infra/factory";
 

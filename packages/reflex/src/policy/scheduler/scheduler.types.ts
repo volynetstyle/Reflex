@@ -1,4 +1,4 @@
-import type { ReactiveNode } from "@reflex/runtime";
+import type { ReactiveNode } from "@volynets/reflex-runtime";
 import type {
   EffectSchedulerMode,
   SchedulerPhase,

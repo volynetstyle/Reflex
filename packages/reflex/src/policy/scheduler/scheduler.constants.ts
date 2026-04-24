@@ -1,4 +1,4 @@
-import { Disposed, Scheduled } from "@reflex/runtime";
+import { Disposed, Scheduled } from "@volynets/reflex-runtime";
 
 export const enum EffectSchedulerMode {
   Flush = 0,

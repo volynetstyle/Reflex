@@ -13,7 +13,7 @@ import {
   WATCHER_INITIAL_STATE,
   writeProducer,
   setDefaultContext,
-} from "@reflex/runtime/debug";
+} from "@volynets/reflex-runtime/debug";
 import {
   blackhole,
   type BenchHarness,

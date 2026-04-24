@@ -60,7 +60,7 @@
     "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm build:clean"
   },
   "devDependencies": {
-    "@reflex/runtime": "workspace:*",
+    "@volynets/reflex-runtime": "workspace:*",
     "@volynets/reflex-dom": "workspace:*"
   }
 }

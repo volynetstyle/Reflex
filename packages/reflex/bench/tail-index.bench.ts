@@ -1,5 +1,5 @@
 import { bench, describe } from "vitest";
-import { DIRTY_STATE, ReactiveNodeState, Scheduled, Disposed } from "@reflex/runtime";
+import { DIRTY_STATE, ReactiveNodeState, Scheduled, Disposed } from "@volynets/reflex-runtime";
 import { blackhole } from "./shared";
 
 const CAPACITIES = [16, 32, 64, 256, 1024] as const;

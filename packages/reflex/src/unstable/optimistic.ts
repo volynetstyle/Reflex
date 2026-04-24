@@ -5,7 +5,7 @@ import {
   readProducer,
   untracked,
   writeProducer,
-} from "@reflex/runtime";
+} from "@volynets/reflex-runtime";
 import { createComputedNode, createResourceStateNode } from "../infra/factory";
 import { batch } from "../infra/runtime";
 

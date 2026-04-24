@@ -1,5 +1,5 @@
 {
-  "name": "@reflex/runtime",
+  "name": "@volynets/reflex-runtime",
   "version": "0.2.0",
   "type": "module",
   "description": "Runtime / Universe / Laws for Reflex",
@@ -46,7 +46,7 @@
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "dev": "vite",
-    "build:ts": "tsc -p tsconfig.build.json && node ../../../scripts/write-globals-dts.mjs .",
+    "build:ts": "tsc -p tsconfig.build.json && node ../../scripts/write-globals-dts.mjs .",
     "build:npm": "rollup -c rollup.config.ts --configPlugin @rollup/plugin-swc",
     "build:perf": "rollup -c rollup.perf.config.ts --configPlugin @rollup/plugin-swc",
     "build": "pnpm clean && pnpm build:ts && pnpm build:npm",

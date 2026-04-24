@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import {  Scheduled } from "../../@reflex/runtime/src/reactivity/shape/ReactiveMeta";
+import {  Scheduled } from "../../@volynets/reflex-runtime/src/reactivity/shape/ReactiveMeta";
 import {
   effect,
   effectScheduled,

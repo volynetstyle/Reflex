@@ -1,5 +1,5 @@
-import type { ReactiveNode } from "@reflex/runtime";
-import { runWatcher } from "@reflex/runtime";
+import type { ReactiveNode } from "@volynets/reflex-runtime";
+import { runWatcher } from "@volynets/reflex-runtime";
 import {
   EffectSchedulerMode,
   SchedulerPhase,

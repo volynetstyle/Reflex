@@ -79,25 +79,14 @@ importers:
         specifier: ^4.0.0
         version: 4.0.9(@types/node@24.10.1)(jsdom@29.0.1)(terser@5.44.1)(yaml@2.8.1)
 
-  packages/@reflex/core: {}
-
-  packages/@reflex/runtime:
-    devDependencies:
-      '@solidjs/signals':
-        specifier: ^0.13.4
-        version: 0.13.5
-      alien-signals:
-        specifier: ^2.0.0
-        version: 2.0.8
-
   packages/reflex:
     devDependencies:
-      '@reflex/runtime':
-        specifier: workspace:*
-        version: link:../@reflex/runtime
       '@volynets/reflex-dom':
         specifier: workspace:*
         version: link:../reflex-dom
+      '@volynets/reflex-runtime':
+        specifier: workspace:*
+        version: link:../reflex-runtime
 
   packages/reflex-devtools:
     dependencies:
@@ -119,6 +108,15 @@ importers:
       '@volynets/reflex':
         specifier: workspace:*
         version: link:../reflex
+
+  packages/reflex-runtime:
+    devDependencies:
+      '@solidjs/signals':
+        specifier: ^0.13.4
+        version: 0.13.5
+      alien-signals:
+        specifier: ^2.0.0
+        version: 2.0.8
 
   plugins/@vite/reflex-vite-plugin:
     dependencies:

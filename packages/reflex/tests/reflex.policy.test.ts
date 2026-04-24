@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-vi.unmock("@reflex/runtime");
+vi.unmock("@volynets/reflex-runtime");
 import { createWatcherNode } from "../src/infra/factory";
 import {
   createEffectScheduler,
@@ -7,7 +7,7 @@ import {
   resolveEffectSchedulerMode,
 } from "../src/policy/scheduler";
 import { createEventDispatcher } from "../src/policy/event_dispatcher";
-import { Changed, Disposed } from "@reflex/runtime";
+import { Changed, Disposed } from "@volynets/reflex-runtime";
 import type { EventSubscriber } from "../src/infra/event";
 import {
   appendSubscriber,

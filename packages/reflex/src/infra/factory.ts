@@ -3,8 +3,8 @@ import {
   PRODUCER_INITIAL_STATE,
   WATCHER_INITIAL_STATE,
   CONSUMER_INITIAL_STATE,
-} from "@reflex/runtime";
-import type { ReactiveEdge, ReactiveNode } from "@reflex/runtime";
+} from "@volynets/reflex-runtime";
+import type { ReactiveEdge, ReactiveNode } from "@volynets/reflex-runtime";
 import { EventSource as RuntimeEventSource } from "./event";
 
 export class RankedEffectNode<T = unknown> implements ReactiveNode<T> {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getActiveConsumer } from "@reflex/runtime";
+import { getActiveConsumer } from "@volynets/reflex-runtime";
 import { computed, createRuntime, effect, signal } from "./reflex.test_utils";
 
 describe("Reactive system - safety and robustness", () => {

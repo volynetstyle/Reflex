@@ -26,7 +26,7 @@ function createConfig(entry: DtsEntry): RollupOptions {
     },
     plugins: [
       dts({
-        includeExternal: ["@reflex/runtime"],
+        includeExternal: ["@volynets/reflex-runtime"],
       }),
     ],
   };

@@ -7,7 +7,7 @@ import {
   type WriteInput,
 } from "./shared";
 
-import * as AlienSignalsModule from "../../@reflex/runtime/node_modules/alien-signals/esm/index.mjs";
+import * as AlienSignalsModule from "../../@volynets/reflex-runtime/node_modules/alien-signals/esm/index.mjs";
 import {
   createRuntime as createReflexRuntime,
   effect as reflexEffect,

@@ -7,10 +7,10 @@ const mocks = vi.hoisted(() => ({
   getActiveConsumer: vi.fn(),
 }));
 
-vi.mock("@reflex/runtime", async () => {
+vi.mock("@volynets/reflex-runtime", async () => {
   const actual =
     // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-    await vi.importActual<typeof import("@reflex/runtime")>("@reflex/runtime");
+    await vi.importActual<typeof import("@volynets/reflex-runtime")>("@volynets/reflex-runtime");
 
   return {
     ...actual,
@@ -20,7 +20,7 @@ vi.mock("@reflex/runtime", async () => {
   };
 });
 
-import { Changed, DIRTY_STATE, Disposed, ReactiveNodeState, Scheduled } from "@reflex/runtime";
+import { Changed, DIRTY_STATE, Disposed, ReactiveNodeState, Scheduled } from "@volynets/reflex-runtime";
 import {
   createEffectScheduler,
   EffectSchedulerMode,
