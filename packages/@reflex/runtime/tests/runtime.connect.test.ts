@@ -32,6 +32,34 @@ describe("Reactive graph - edge wiring", () => {
     expect(target.lastIn).toBe(edge);
   });
 
+  it("tracks whether direct subscribers are leaves", () => {
+    const source = createNode(Producer);
+    const left = createNode(Consumer);
+    const right = createNode(Consumer);
+    const leftChild = createNode(Consumer);
+    const rightChild = createNode(Consumer);
+
+    const leftEdge = linkEdge(source, left);
+    linkEdge(source, right);
+
+    expect(source.outBranchCount).toBe(0);
+
+    const leftChildEdge = linkEdge(left, leftChild);
+    expect(source.outBranchCount).toBe(1);
+
+    const rightChildEdge = linkEdge(right, rightChild);
+    expect(source.outBranchCount).toBe(2);
+
+    unlinkEdge(leftChildEdge);
+    expect(source.outBranchCount).toBe(1);
+
+    unlinkEdge(leftEdge);
+    expect(source.outBranchCount).toBe(1);
+
+    unlinkEdge(rightChildEdge);
+    expect(source.outBranchCount).toBe(0);
+  });
+
   it("keeps lastInTail separate from the physical incoming tail when unlinking", () => {
     const a = createNode(Producer);
     const b = createNode(Producer);

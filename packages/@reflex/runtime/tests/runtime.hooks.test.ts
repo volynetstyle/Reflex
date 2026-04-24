@@ -7,6 +7,7 @@ import {
   Tracking,
   disposeWatcher,
   getActiveConsumer,
+  getPropagationDepth,
   notifySettledIfIdle,
   readConsumer,
   readProducer,
@@ -62,6 +63,25 @@ describe("Reactive runtime - hooks and resilience", () => {
 
     expect(readConsumer(outer)).toBe(5);
     expect(phases).toEqual(["outer:start", "inner", "outer:end"]);
+  });
+
+  it("settles after leaf-only producer fanout propagation", () => {
+    const settled = vi.fn();
+
+    resetRuntime({ onReactiveSettled: settled });
+
+    const source = createProducer(1);
+    const left = createConsumer(() => readProducer(source) + 1);
+    const right = createConsumer(() => readProducer(source) + 2);
+
+    expect(readConsumer(left)).toBe(2);
+    expect(readConsumer(right)).toBe(3);
+    settled.mockClear();
+
+    writeProducer(source, 2);
+
+    expect(getPropagationDepth()).toBe(0);
+    expect(settled).toHaveBeenCalledTimes(1);
   });
 
   it("settles once after nested propagation triggered from an invalidation hook", () => {

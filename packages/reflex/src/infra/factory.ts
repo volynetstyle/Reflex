@@ -14,7 +14,7 @@ export class RankedEffectNode<T = unknown> implements ReactiveNode<T> {
   lastOut: ReactiveEdge | null;
   lastIn: ReactiveEdge | null;
   lastInTail: ReactiveEdge | null;
-  outDegree: number;
+  outBranchCount: number =0;
 
   compute: (() => T) | null;
   payload: T;
@@ -37,7 +37,6 @@ export class RankedEffectNode<T = unknown> implements ReactiveNode<T> {
     this.lastOut = null;
     this.lastIn = null;
     this.lastInTail = null;
-    this.outDegree = 0;
     this.compute = compute;
     this.payload = payload as T;
 

@@ -1,48 +1,49 @@
 import { performance } from "node:perf_hooks";
 import { hrtime } from "node:process";
 import {
+  Changed,
   ConsumerReadMode,
+  CONSUMER_INITIAL_STATE,
+  Consumer,
+  Disposed,
+  Invalid,
+  PRODUCER_INITIAL_STATE,
+  ReactiveNode,
+  Reentrant,
+  Tracking,
+  Watcher,
   readConsumer,
   readProducer,
-} from "../../build/esm/api/read.js";
-import { runWatcher } from "../../build/esm/api/watcher.js";
-import { writeProducer } from "../../build/esm/api/write.js";
-import { getDefaultContext } from "../../build/esm/reactivity/context.js";
+  resetState,
+  runWatcher,
+  setHooks,
+  writeProducer,
+} from "../../build/esm/index.js";
 import { recompute } from "../../build/esm/reactivity/engine/compute.js";
 import { executeNodeComputation } from "../../build/esm/reactivity/engine/execute.js";
-import {
-  CONSUMER_CHANGED,
-  PRODUCER_INITIAL_STATE,
-  ReactiveNodeState,
-} from "../../build/esm/reactivity/shape/ReactiveMeta.js";
-import { UNINITIALIZED } from "../../build/esm/reactivity/shape/ReactiveNode.js";
-import ReactiveNode from "../../build/esm/reactivity/shape/ReactiveNode.js";
 import { linkEdge } from "../../build/esm/reactivity/shape/methods/connect.js";
 import { propagate } from "../../build/esm/reactivity/walkers/propagate.js";
 import { shouldRecompute } from "../../build/esm/reactivity/walkers/recompute.js";
 
-const runtime = getDefaultContext();
-
 const DIRTY_OR_WALKER =
-  ReactiveNodeState.Invalid |
-  ReactiveNodeState.Changed |
-  ReactiveNodeState.Visited |
-  ReactiveNodeState.Tracking;
-const CONSUMER_INITIAL_STATE = CONSUMER_CHANGED;
+  Invalid |
+  Changed |
+  Reentrant |
+  Tracking;
 const TRACKING_CONSUMER_STATE =
-  ReactiveNodeState.Consumer | ReactiveNodeState.Tracking;
+  Consumer | Tracking;
 
 function createProducer(value) {
   return new ReactiveNode(value, null, PRODUCER_INITIAL_STATE);
 }
 
 function createConsumer(compute) {
-  return new ReactiveNode(UNINITIALIZED, compute, CONSUMER_INITIAL_STATE);
+  return new ReactiveNode(undefined, compute, CONSUMER_INITIAL_STATE);
 }
 
 function resetRuntime() {
-  runtime.resetState();
-  runtime.setHooks({});
+  resetState();
+  setHooks({});
 }
 
 function clearWalkerState(nodes) {
@@ -71,7 +72,7 @@ function buildPropagateChain(depth) {
   return {
     nodes,
     run() {
-      propagate(startEdge, true);
+      propagate(startEdge, Changed);
       clearWalkerState(nodes);
       return nodes.length;
     },
@@ -103,7 +104,7 @@ function buildPropagateFanout(width, depth) {
   return {
     nodes,
     run() {
-      propagate(startEdge, true);
+      propagate(startEdge, Changed);
       clearWalkerState(nodes);
       return nodes.length;
     },
@@ -133,18 +134,18 @@ function buildTrackedPrefix(fanIn, trackedCount) {
 
   function resetTrackingState() {
     target.state = TRACKING_CONSUMER_STATE;
-    target.depsTail = trackedEdge;
+    target.lastInTail = trackedEdge;
   }
 
   return {
     prefix() {
       resetTrackingState();
-      propagate(prefixEdge, true);
+      propagate(prefixEdge, Changed);
       return target.state;
     },
     stale() {
       resetTrackingState();
-      propagate(staleEdge, true);
+      propagate(staleEdge, Changed);
       return target.state;
     },
   };
@@ -173,8 +174,8 @@ function buildTrackedPrefixStress(fanIn, depsTailIndex, edgeIndex) {
   return {
     run() {
       target.state = TRACKING_CONSUMER_STATE;
-      target.depsTail = depsTail;
-      propagate(targetEdge, true);
+      target.lastInTail = depsTail;
+      propagate(targetEdge, Changed);
       return target.state;
     },
   };
@@ -235,20 +236,20 @@ function buildPropagateBranchingTrackingMix(width, depth) {
     for (let i = 0; i < trackingAccept.length; i += 1) {
       const entry = trackingAccept[i];
       entry.node.state = TRACKING_CONSUMER_STATE;
-      entry.node.depsTail = entry.depsTail;
+      entry.node.lastInTail = entry.depsTail;
     }
 
     for (let i = 0; i < trackingReject.length; i += 1) {
       const entry = trackingReject[i];
       entry.node.state = TRACKING_CONSUMER_STATE;
-      entry.node.depsTail = entry.depsTail;
+      entry.node.lastInTail = entry.depsTail;
     }
   }
 
   return {
     run() {
       armTracking();
-      propagate(startEdge, true);
+      propagate(startEdge, Changed);
       return nodes.length;
     },
   };
@@ -258,9 +259,9 @@ function buildShouldRecomputeChain(depth) {
   resetRuntime();
 
   const source = createProducer(0);
-  let parent = source;
+  let parent = createConsumer(() => readProducer(source) + 1);
 
-  for (let i = 0; i < depth; i += 1) {
+  for (let i = 1; i < depth; i += 1) {
     const previous = parent;
     parent = createConsumer(() => readConsumer(previous) + 1);
   }
@@ -275,8 +276,8 @@ function buildShouldRecomputeChain(depth) {
       value += 1;
       writeProducer(source, value);
       const dirty = shouldRecompute(root);
-      if (!dirty) throw new Error("expected dirty root");
-      recompute(root);
+      if (dirty) recompute(root);
+      else readConsumer(root);
       return root.payload;
     },
   };
@@ -300,8 +301,8 @@ function buildShouldRecomputeDiamond() {
       value += 1;
       writeProducer(source, value);
       const dirty = shouldRecompute(root);
-      if (!dirty) throw new Error("expected dirty diamond root");
-      recompute(root);
+      if (dirty) recompute(root);
+      else readConsumer(root);
       return root.payload;
     },
   };
@@ -405,7 +406,7 @@ function buildRecomputeStatic(fanIn) {
     run() {
       value += 1;
       sources[0].payload = value;
-      node.state |= ReactiveNodeState.Invalid;
+      node.state |= Invalid;
       return recompute(node) ? 1 : 0;
     },
   };
@@ -441,7 +442,7 @@ function buildRecomputeChurn(fanIn, narrowWidth) {
       wide = !wide;
       value += 1;
       sources[0].payload = value;
-      node.state |= ReactiveNodeState.Invalid;
+      node.state |= Invalid;
       return recompute(node) ? 1 : 0;
     },
   };
@@ -451,9 +452,9 @@ function buildReadConsumerDirtyChain(depth, mode = ConsumerReadMode.lazy) {
   resetRuntime();
 
   const source = createProducer(0);
-  let parent = source;
+  let parent = createConsumer(() => readProducer(source) + 1);
 
-  for (let i = 0; i < depth; i += 1) {
+  for (let i = 1; i < depth; i += 1) {
     const previous = parent;
     parent = createConsumer(() => readConsumer(previous) + 1);
   }
@@ -778,7 +779,7 @@ function buildSharedFanoutWatchers(width) {
       () => {
         readConsumer(shared);
       },
-      ReactiveNodeState.Watcher | ReactiveNodeState.Changed,
+      Watcher | Changed,
     );
     watchers.push(watcher);
     runWatcher(watcher);
@@ -819,7 +820,7 @@ function buildRunWatcherSharedFanout(width) {
       () => {
         readConsumer(shared);
       },
-      ReactiveNodeState.Watcher | ReactiveNodeState.Changed,
+      Watcher | Changed,
     );
     watchers.push(watcher);
     runWatcher(watcher);

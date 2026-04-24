@@ -9,7 +9,7 @@ import type { ReactiveEdge, ReactiveNode } from "../shape";
 import { propagateOnce } from "./propagate.once";
 
 export function hasFanout(edge: ReactiveEdge): boolean {
-  return edge.from.outDegree > 1;
+  return edge.prevOut !== null || edge.nextOut !== null;
 }
 
 export function refreshAndPropagateIfNeeded(

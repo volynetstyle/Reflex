@@ -62,7 +62,6 @@ export interface RuntimeDebugNodeSnapshot extends RuntimeDebugNodeRef {
   payload: unknown;
   hasCompute: boolean;
   inDegree: number;
-  outDegree: number;
   sources: RuntimeDebugNodeRef[];
   subscribers: RuntimeDebugNodeRef[];
 }

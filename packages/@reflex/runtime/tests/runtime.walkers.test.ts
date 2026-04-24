@@ -122,6 +122,20 @@ describe("Reactive runtime - walker invariants", () => {
     );
   });
 
+  it("writeProducer falls back to branching propagation when a direct subscriber has children", () => {
+    const source = createProducer(1);
+    const mid = createConsumer(() => readProducer(source) + 1);
+    const root = createConsumer(() => readConsumer(mid) + 1);
+
+    expect(readConsumer(root)).toBe(3);
+    expect(source.outBranchCount).toBe(1);
+
+    writeProducer(source, 2);
+
+    expect(mid.state & Changed).toBeTruthy();
+    expect(root.state & Invalid).toBeTruthy();
+  });
+
   it("propagate restores the direct promote only for deferred outer siblings", () => {
     const source = createNode(Producer);
     const left = createNode(Consumer);
@@ -292,6 +306,60 @@ describe("Reactive runtime - walker invariants", () => {
       expect(invalidated).toHaveLength(watchers.length);
       expect(new Set(invalidated)).toEqual(new Set(watchers));
     }
+  });
+
+  it("keeps outer resume stack intact across nested watcher invalidation writes", () => {
+    let outerWatcher!: ReactiveNode;
+    let innerSource!: ReactiveNode;
+    let nestedWrites = 0;
+
+    resetRuntime({
+      onSinkInvalidated(node) {
+        if (node !== outerWatcher) return;
+        nestedWrites += 1;
+        writeProducer(innerSource, 1);
+      },
+    });
+
+    const outerSource = createNode(Producer);
+    const outerLeft = createNode(Consumer);
+    const outerRight = createNode(Consumer);
+    outerWatcher = createNode(Watcher);
+
+    innerSource = createNode(Producer);
+    const innerLeft = createNode(Consumer);
+    const innerRight = createNode(Consumer);
+    const innerLeaf = createNode(Consumer);
+
+    linkEdge(outerSource, outerLeft);
+    linkEdge(outerSource, outerRight);
+    linkEdge(outerLeft, outerWatcher);
+
+    linkEdge(innerSource, innerLeft);
+    linkEdge(innerSource, innerRight);
+    linkEdge(innerLeft, innerLeaf);
+
+    writeProducer(outerSource, 1);
+
+    expect(nestedWrites).toBe(1);
+    expect(outerLeft.state).toBe(
+      Consumer | Changed,
+    );
+    expect(outerWatcher.state).toBe(
+      Watcher | Invalid,
+    );
+    expect(outerRight.state).toBe(
+      Consumer | Changed,
+    );
+    expect(innerLeft.state).toBe(
+      Consumer | Changed,
+    );
+    expect(innerRight.state).toBe(
+      Consumer | Changed,
+    );
+    expect(innerLeaf.state).toBe(
+      Consumer | Invalid,
+    );
   });
 
   it("propagate ignores stale tracked-prefix edges but still resumes sibling branches", () => {
@@ -547,6 +615,27 @@ describe("Reactive runtime - walker invariants", () => {
     expect(root.state & Invalid).toBe(0);
   });
 
+  it("shouldRecompute clears Invalid across a deep linear chain when the leaf recomputes same-as-current", () => {
+    const source = createProducer(1);
+    const leafSpy = vi.fn(() => {
+      readProducer(source);
+      return 10;
+    });
+    const leaf = createConsumer(leafSpy);
+    const mid = createConsumer(() => readConsumer(leaf) + 1);
+    const root = createConsumer(() => readConsumer(mid) + 1);
+
+    expect(readConsumer(root)).toBe(12);
+
+    writeProducer(source, 2);
+
+    expect(shouldRecompute(root)).toBe(false);
+    expect(leafSpy).toHaveBeenCalledTimes(2);
+    expect(leaf.state & DIRTY_STATE).toBe(0);
+    expect(mid.state & Invalid).toBe(0);
+    expect(root.state & Invalid).toBe(0);
+  });
+
   it("shouldRecompute reuses deep branching stacks across repeated reads", () => {
     const left = createProducer(1);
     const right = createProducer(2);
@@ -630,6 +719,38 @@ describe("Reactive runtime - walker invariants", () => {
     expect(shouldRecompute(root)).toBe(true);
     expect(leftSpy).toHaveBeenCalledTimes(1);
     expect(rightSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("shouldRecompute preserves outer stack frames across nested dirty reads", () => {
+    const source = createProducer(1);
+    const rightSource = createProducer(10);
+    const nestedSource = createProducer(100);
+
+    const nestedDeep = createConsumer(() => {
+      readProducer(nestedSource);
+      return 5;
+    });
+    const nestedMid = createConsumer(() => readConsumer(nestedDeep));
+    const nestedRoot = createConsumer(() => readConsumer(nestedMid));
+
+    const deep = createConsumer(() => {
+      readConsumer(nestedRoot);
+      readProducer(source);
+      return 1;
+    });
+    const mid = createConsumer(() => readConsumer(deep));
+    const parent = createConsumer(() => readConsumer(mid));
+    const right = createConsumer(() => readProducer(rightSource));
+    const root = createConsumer(() => readConsumer(parent) + readConsumer(right));
+
+    expect(readConsumer(root)).toBe(11);
+
+    writeProducer(source, 2);
+    writeProducer(nestedSource, 200);
+    writeProducer(rightSource, 20);
+
+    expect(readConsumer(root)).toBe(21);
+    expect(root.state & DIRTY_STATE).toBe(0);
   });
 
   it("shouldRecompute clears Invalid when only a later branching sibling recomputes same-as-current", () => {

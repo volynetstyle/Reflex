@@ -5,8 +5,6 @@ import {
 } from "../reactivity";
 import { untracked } from "../protocol";
 import {
-  readPropagateStackStats,
-  readShouldRecomputeStackStats,
   resetRuntimeWalkerStackStats,
   type RuntimeWalkerStackStats,
 } from "../reactivity/walkers";
@@ -115,7 +113,7 @@ export const subtle: RuntimeSubtle = {
   },
 
   hasSinks(node) {
-    return node.outDegree !== 0;
+    return node.firstOut !== null;
   },
 
   hasSources(node) {
@@ -159,12 +157,6 @@ export const subtle: RuntimeSubtle = {
 
   stackStats() {
     if (!IS_DEV) return undefined;
-    const shouldRecompute = readShouldRecomputeStackStats().shouldRecompute;
-    const propagate = readPropagateStackStats().propagate;
-    return {
-      shouldRecompute,
-      propagate,
-    };
   },
 
   resetStackStats() {

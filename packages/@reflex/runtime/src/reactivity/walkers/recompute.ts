@@ -5,10 +5,6 @@ import {
   shouldRecomputeWalk,
 } from "./recompute.branch";
 
-export {
-  readShouldRecomputeStackStats,
-  resetShouldRecomputeStackStats,
-} from "./recompute.branch";
 
 const STOP_RECOMPUTE = Producer | Disposed;
 const REENTRANT_STALE = Invalid | Reentrant;
