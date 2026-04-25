@@ -1,40 +1,47 @@
 import type ReactiveNode from "./ReactiveNode";
 
-/**
- * Plain-object edge shaped after alien-signals' Link.
- * A single edge lives in both the source's outgoing list and the target's
- * incoming list, so pointer rewrites must keep both views in sync.
- */
-class ReactiveEdge {
-  version: number;
-  prevOut: ReactiveEdge | null;
-  nextOut: ReactiveEdge | null;
+export class ReactiveEdge {
+  version: number = 0;
+
   from: ReactiveNode;
   to: ReactiveNode;
-  prevIn: ReactiveEdge | null;
-  nextIn: ReactiveEdge | null;
+
+  prevOut: ReactiveEdge | null = null;
+  nextOut: ReactiveEdge | null = null;
+
+  prevIn: ReactiveEdge | null = null;
+  nextIn: ReactiveEdge | null = null;
 
   constructor(
     version: number,
-    prevOut: ReactiveEdge | null,
-    nextOut: ReactiveEdge | null,
     from: ReactiveNode,
     to: ReactiveNode,
-    prevIn: ReactiveEdge | null,
-    nextIn: ReactiveEdge | null,
+    prevOut: ReactiveEdge | null = null,
+    nextOut: ReactiveEdge | null = null,
+    prevIn: ReactiveEdge | null = null,
+    nextIn: ReactiveEdge | null = null,
   ) {
-    this.version = version;
-    this.prevOut = prevOut;
-    this.nextOut = nextOut;
+    this.version = version | 0;
     this.from = from;
     this.to = to;
+    this.prevOut = prevOut;
+    this.nextOut = nextOut;
     this.prevIn = prevIn;
     this.nextIn = nextIn;
   }
 }
 
-export function clearReactiveEdgeLinks(edge: ReactiveEdge): void {
-  edge.prevOut = edge.nextOut = edge.prevIn = edge.nextIn = null;
+export function createReactiveEdge(
+  version: number,
+  from: ReactiveNode,
+  to: ReactiveNode,
+): ReactiveEdge {
+  return new ReactiveEdge(version, from, to);
 }
 
-export { ReactiveEdge };
+export function clearReactiveEdgeLinks(edge: ReactiveEdge): void {
+  edge.prevOut = null;
+  edge.nextOut = null;
+  edge.prevIn = null;
+  edge.nextIn = null;
+}

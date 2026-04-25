@@ -9,7 +9,8 @@ import {
   unlinkEdge,
   reuseIncomingEdgeFromSuffixOrCreate,
   Consumer,
-  Producer
+  Producer,
+  setTrackingVersion
 } from "../src/reactivity";
 
 function createNode(kind: ReactiveNodeState = Producer) {
@@ -144,6 +145,24 @@ describe("Reactive graph - edge wiring", () => {
     expect(target.lastInTail).toBe(cb);
     expect(ab.nextIn).toBe(cb);
     expect(cb.prevIn).toBe(ab);
+    restoreContext(snapshot);
+  });
+
+  it("does not roll back tracking stamps when restoring context", () => {
+    const a = createNode(Producer);
+    const target = createNode(Consumer);
+    const snapshot = saveContext();
+
+    setTrackingVersion(1);
+    const staleSnapshot = saveContext();
+    const edge = linkEdge(a, target, null, 1);
+    setTrackingVersion(2);
+    restoreContext(staleSnapshot);
+    target.lastInTail = null;
+
+    trackReadActive(a, target);
+
+    expect(target.lastInTail).toBe(edge);
     restoreContext(snapshot);
   });
 });

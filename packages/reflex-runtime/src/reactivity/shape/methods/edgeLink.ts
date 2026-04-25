@@ -1,4 +1,5 @@
-import { clearReactiveEdgeLinks, ReactiveEdge } from "../ReactiveEdge";
+import type { ReactiveEdge } from "../ReactiveEdge";
+import { clearReactiveEdgeLinks, createReactiveEdge } from "../ReactiveEdge";
 import type ReactiveNode from "../ReactiveNode";
 import {
   attachIncomingEdgeAfter,
@@ -13,15 +14,7 @@ export function linkEdge(
   version = 0,
 ): ReactiveEdge {
   const prevOut = from.lastOut;
-  const edge = new ReactiveEdge(
-    version,
-    prevOut,
-    null,
-    from,
-    to,
-    after,
-    after ? after.nextIn : to.firstIn,
-  );
+  const edge = createReactiveEdge(version, from, to);
 
   if (prevOut) prevOut.nextOut = edge;
   else from.firstOut = edge;

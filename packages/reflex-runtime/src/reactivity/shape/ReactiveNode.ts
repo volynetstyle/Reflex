@@ -1,4 +1,3 @@
-import type { Reactivable } from "./Reactivable";
 import type { ReactiveEdge } from "./ReactiveEdge";
 
 export type Primitive =
@@ -10,37 +9,38 @@ export type Primitive =
   | null
   | undefined;
 
-export type Payload<T> = T extends Primitive | Function
-  ? T
-  : T extends Array<infer U>
-    ? ReadonlyArray<Payload<U>>
-    : { readonly [K in keyof T]: Payload<T[K]> };
+export type Payload<T> =
+  T extends Primitive | Function
+    ? T
+    : T extends readonly (infer U)[]
+      ? readonly Payload<U>[]
+      : { readonly [K in keyof T]: Payload<T[K]> };
 
-type ComputeFn<T> = (() => T) | null;
+export type ComputeFn<T> = (() => T) | null;
 
-class ReactiveNode<T = unknown> implements Reactivable {
-  state: number;
-  firstOut: ReactiveEdge | null;
-  firstIn: ReactiveEdge | null;
-  lastOut: ReactiveEdge | null;
-  lastIn: ReactiveEdge | null;
-  lastInTail: ReactiveEdge | null;
+export class ReactiveNode<T = unknown> {
+  state: number = 0;
 
-  compute: ComputeFn<T>;
+  firstOut: ReactiveEdge | null = null;
+  lastOut: ReactiveEdge | null = null;
+
+  firstIn: ReactiveEdge | null = null;
+  lastIn: ReactiveEdge | null = null;
+
+  /**
+   * Operational cursor for dependency tracking.
+   * Not a structural graph invariant.
+   */
+  lastInTail: ReactiveEdge | null = null;
+
+  compute: ComputeFn<T> = null;
   payload: T;
 
   constructor(payload: T, compute: ComputeFn<T>, state: number) {
-    this.state = state | 0;
-    this.firstOut = null;
-    this.firstIn = null;
-    this.lastOut = null;
-    this.lastIn = null;
-    this.lastInTail = null;
-
+    this.payload = payload;
     this.compute = compute;
-    this.payload = payload as T;
+    this.state = state | 0;
   }
 }
 
-export type { Reactivable, ReactiveNode, ComputeFn };
 export default ReactiveNode;

@@ -111,7 +111,7 @@ export function setPropagationDepth(depth: number): void {
 }
 
 export function setTrackingVersion(version: number): void {
-  trackingVersion = version;
+  if (version > trackingVersion) trackingVersion = version;
 }
 
 // @__INLINE__
@@ -230,7 +230,9 @@ export function saveContext(): ContextSnapshot {
 
 export function restoreContext(snapshot: ContextSnapshot): void {
   activeConsumer = snapshot.activeConsumer;
-  trackingVersion = snapshot.trackingVersion;
+  if (snapshot.trackingVersion > trackingVersion) {
+    trackingVersion = snapshot.trackingVersion;
+  }
   propagationDepth = snapshot.propagationDepth;
   cleanupRegistrar = snapshot.cleanupRegistrar;
   trackReadFallback = snapshot.trackReadFallback;

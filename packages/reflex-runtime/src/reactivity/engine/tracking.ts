@@ -22,7 +22,25 @@ function recordTrackRead(consumer: ReactiveNode, source: ReactiveNode): void {
   }
 }
 
-function trackReadSlowPath(source: ReactiveNode, consumer: ReactiveNode): void {
+function isDead(source: ReactiveNode, consumer: ReactiveNode): boolean {
+  const sourceDead = (source.state & Disposed) !== 0;
+  const consumerDead = (consumer.state & Disposed) !== 0;
+
+  if (sourceDead || consumerDead) {
+    if (__DEV__) {
+      devAssertTrackReadAlive(sourceDead, consumerDead);
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
+function trackReadAttachOrFallback(
+  source: ReactiveNode,
+  consumer: ReactiveNode,
+): void {
   const version = trackingVersion;
   const prevEdge = consumer.lastInTail;
 
@@ -45,6 +63,7 @@ function trackReadSlowPath(source: ReactiveNode, consumer: ReactiveNode): void {
   }
 
   const nextExpected = prevEdge.nextIn;
+
   if (nextExpected === null || nextExpected.nextIn === null) {
     consumer.lastInTail = linkEdge(source, consumer, prevEdge, version);
     return;
@@ -59,53 +78,25 @@ function trackReadSlowPath(source: ReactiveNode, consumer: ReactiveNode): void {
   );
 }
 
-function trackReadMiss(source: ReactiveNode, consumer: ReactiveNode): void {
-  const sourceDead = (source.state & Disposed) !== 0;
-  const consumerDead = (consumer.state & Disposed) !== 0;
-
-  if (sourceDead || consumerDead) {
-    if (__DEV__) {
-      devAssertTrackReadAlive(sourceDead, consumerDead);
-    }
-
-    return;
-  }
-
-  recordTrackRead(consumer, source);
-  trackReadSlowPath(source, consumer);
-}
-
 /**
- * Cursor-guided incoming-edge walk used during dependency collection.
- * It first probes the hot cache and expected next edge, then falls back to a
- * linear scan that reorders the found edge into the reused dependency prefix.
- */
-export function trackRead(source: ReactiveNode): void {
-  const consumer = activeConsumer;
-
-  if (!consumer) return;
-  if (tryTrackReadFastPath(source, consumer)) return;
-  trackReadMiss(source, consumer);
-}
-
-/**
- * Consumer-local cursor fast path that avoids entering the full tracking path
- * when the next unique dependency is already obvious from the current cursor.
+ * Fast cursor-guided dependency tracking.
  *
- * - Immediate duplicate (`lastInTail.from === source`) is structurally inert.
- * - Expected next (`lastInTail.nextIn === source`, or `firstIn` when no tail yet)
- *   reuses the existing edge and advances the cursor.
+ * Handles:
+ * - last outgoing cache hit
+ * - immediate duplicate read
+ * - expected next dependency
+ * - first dependency reuse
  */
 export function tryTrackReadFastPath(
   source: ReactiveNode,
   consumer: ReactiveNode,
 ): boolean {
-  const prevEdge = consumer.lastInTail;
   const version = trackingVersion;
+  const prevEdge = consumer.lastInTail;
 
   const lastOut = source.lastOut;
   if (
-    lastOut != null &&
+    lastOut !== null &&
     lastOut.version === version &&
     lastOut.to === consumer
   ) {
@@ -113,7 +104,7 @@ export function tryTrackReadFastPath(
     return true;
   }
 
-  if (prevEdge != null) {
+  if (prevEdge !== null) {
     if (prevEdge.from === source) {
       prevEdge.version = version;
       recordTrackRead(consumer, source);
@@ -121,7 +112,7 @@ export function tryTrackReadFastPath(
     }
 
     const nextExpected = prevEdge.nextIn;
-    if (nextExpected != null && nextExpected.from === source) {
+    if (nextExpected !== null && nextExpected.from === source) {
       nextExpected.version = version;
       consumer.lastInTail = nextExpected;
       recordTrackRead(consumer, source);
@@ -132,7 +123,7 @@ export function tryTrackReadFastPath(
   }
 
   const firstIn = consumer.firstIn;
-  if (firstIn != null && firstIn.from === source) {
+  if (firstIn !== null && firstIn.from === source) {
     firstIn.version = version;
     consumer.lastInTail = firstIn;
     recordTrackRead(consumer, source);
@@ -142,97 +133,54 @@ export function tryTrackReadFastPath(
   return false;
 }
 
+function trackReadMiss(source: ReactiveNode, consumer: ReactiveNode): void {
+  recordTrackRead(consumer, source);
+  trackReadAttachOrFallback(source, consumer);
+}
+
+/**
+ * Track read for the current active consumer.
+ */
+export function trackRead(source: ReactiveNode): void {
+  const consumer = activeConsumer;
+
+  if (consumer === null) return;
+  if (isDead(source, consumer)) return;
+  if (tryTrackReadFastPath(source, consumer)) return;
+
+  trackReadMiss(source, consumer);
+}
+
+/**
+ * Track read when the consumer is already known.
+ *
+ * Unlike trackRead(), this preserves the old eager disposed-check behavior.
+ */
 export function trackReadActive(
   source: ReactiveNode,
   consumer: ReactiveNode,
 ): void {
-  const sourceDead = (source.state & Disposed) !== 0;
-  const consumerDead = (consumer.state & Disposed) !== 0;
-
-  if (sourceDead || consumerDead) {
-    if (__DEV__) {
-      devAssertTrackReadAlive(sourceDead, consumerDead);
-    }
-
-    return;
-  }
+  if (tryTrackReadFastPath(source, consumer)) return;
 
   recordTrackRead(consumer, source);
-
-  const version = trackingVersion;
-  const prevEdge = consumer.lastInTail;
-  if (prevEdge === null) {
-    const firstIn = consumer.firstIn;
-
-    if (firstIn === null) {
-      consumer.lastInTail = linkEdge(source, consumer, null, version);
-      return;
-    }
-
-    if (firstIn.from === source) {
-      firstIn.version = version;
-      consumer.lastInTail = firstIn;
-      return;
-    }
-
-    if (firstIn.nextIn === null) {
-      consumer.lastInTail = linkEdge(source, consumer, null, version);
-      return;
-    }
-
-    consumer.lastInTail = trackReadFallback(
-      source,
-      consumer,
-      null,
-      firstIn,
-      version,
-    );
-    return;
-  }
-
-  if (prevEdge.from === source) {
-    prevEdge.version = version;
-    return;
-  }
-
-  const nextExpected = prevEdge.nextIn;
-  if (nextExpected === null) {
-    consumer.lastInTail = linkEdge(source, consumer, prevEdge, version);
-    return;
-  }
-
-  if (nextExpected.from === source) {
-    nextExpected.version = version;
-    consumer.lastInTail = nextExpected;
-    return;
-  }
-
-  if (nextExpected.nextIn === null) {
-    consumer.lastInTail = linkEdge(source, consumer, prevEdge, version);
-    return;
-  }
-
-  consumer.lastInTail = trackReadFallback(
-    source,
-    consumer,
-    prevEdge,
-    nextExpected,
-    version,
-  );
+  trackReadAttachOrFallback(source, consumer);
 }
 
 /**
  * Suffix cleanup over the consumer's incoming edges after recompute.
+ *
  * Everything after lastInTail belongs to the old dependency list and is unlinked.
  */
 export function cleanupStaleSources(node: ReactiveNode): void {
   const tail = node.lastInTail;
-  
   const staleHead = tail === null ? node.firstIn : tail.nextIn;
+
   if (staleHead === null) return;
 
-  if (tail === null) node.firstIn = node.lastIn = null;
-  else {
+  if (tail === null) {
+    node.firstIn = null;
+    node.lastIn = null;
+  } else {
     tail.nextIn = null;
     node.lastIn = tail;
   }

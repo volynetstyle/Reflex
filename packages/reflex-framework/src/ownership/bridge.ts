@@ -34,22 +34,26 @@ export interface OwnershipReactiveBridge {
   ) => T;
 }
 
-interface useEffectState {
+interface EffectStartState {
   skipStartCallbacks: boolean;
 }
+
+function noop(): void {}
 
 export function createOwnershipReactiveBridge(
   adapter: OwnershipReactiveAdapter,
 ): OwnershipReactiveBridge {
-  let currentuseEffectState: useEffectState | null = null;
+  let currentEffectStartState: EffectStartState | null = null;
 
   function onEffectStart(fn: () => void): void {
-    if (currentuseEffectState === null) {
+    const state = currentEffectStartState;
+
+    if (state === null) {
       fn();
       return;
     }
 
-    if (!currentuseEffectState.skipStartCallbacks) {
+    if (!state.skipStartCallbacks) {
       fn();
     }
   }
@@ -73,24 +77,24 @@ export function createOwnershipReactiveBridge(
         throw new Error("useEffect in disposed scope");
       }
 
-      return (() => {}) as Cleanup;
+      return noop as Cleanup;
     }
 
     return adapter.withCleanupRegistrar(null, () => {
-      const state: useEffectState = {
+      const state: EffectStartState = {
         skipStartCallbacks: true,
       };
 
       const dispose = adapter.effect(
         () =>
           runWithOwner(owner, scope, () => {
-            const previousState = currentuseEffectState;
-            currentuseEffectState = state;
+            const previousState = currentEffectStartState;
+            currentEffectStartState = state;
 
             try {
               return fn();
             } finally {
-              currentuseEffectState = previousState;
+              currentEffectStartState = previousState;
               state.skipStartCallbacks = false;
             }
           }),

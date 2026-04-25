@@ -4,3 +4,4 @@ export * from "./ownership.meta";
 export * from "./ownership.node";
 export * from "./ownership.scope";
 export * from "./ownership.tree";
+export * from "./mounted-root-store";
