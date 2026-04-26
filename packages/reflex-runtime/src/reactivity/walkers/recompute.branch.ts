@@ -123,6 +123,7 @@ function tryShouldRecomputeLinearChain(
 
   while (stackTop > stackBase) {
     const parentLink = stack[--stackTop]!;
+    shouldRecomputeStackHigh = stackTop;
 
     changed = refreshFromShouldRecompute(
       consumer,
@@ -242,6 +243,7 @@ function shouldRecomputeBranchingWalk(
 
     while (stackTop > stackBase) {
       const parentLink = stack[--stackTop]!;
+      shouldRecomputeStackHigh = stackTop;
 
       if (changed) {
         changed = refreshFromShouldRecompute(

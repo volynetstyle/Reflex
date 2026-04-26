@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import {  Scheduled } from "../../@volynets/reflex-runtime/src/reactivity/shape/ReactiveMeta";
 import {
   effect,
   effectScheduled,
@@ -8,6 +7,7 @@ import {
 } from "../src/api/effect";
 import { createWatcherNode } from "../src/infra/factory";
 import { createRuntime, memo, signal } from "./reflex.test_utils";
+import { Scheduled } from "@volynets/reflex-runtime";
 
 describe("Reactive system - effects", () => {
   it("runs once immediately and reruns after flush", () => {

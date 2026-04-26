@@ -1,10 +1,10 @@
 import {
   CONSUMER_INITIAL_STATE,
   PRODUCER_INITIAL_STATE,
+  Watcher,
   WATCHER_INITIAL_STATE,
 } from "@volynets/reflex-runtime";
 import { describe, expect, it } from "vitest";
-import { ReactiveNodeState, Watcher } from "../../@volynets/reflex-runtime/src/reactivity/shape/ReactiveMeta";
 import {
   createComputedNode,
   createWatcherNode,

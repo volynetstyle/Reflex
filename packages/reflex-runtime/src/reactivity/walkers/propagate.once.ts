@@ -9,7 +9,8 @@ export function propagateOnce(node: ReactiveNode): void {
     if (__DEV__) devAssertPropagateAlive();
     return;
   }
-  let edge = node.firstOut!;
+  let edge = node.firstOut;
+  if (edge === null) return;
 
   do {
     const sub = edge.to,

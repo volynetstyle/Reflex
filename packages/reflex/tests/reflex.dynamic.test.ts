@@ -4,9 +4,10 @@ import { setup } from "./reflex.test_utils";
 describe("Reactive system - dynamic dependencies", () => {
   let signal: ReturnType<typeof setup>["signal"];
   let computed: ReturnType<typeof setup>["computed"];
+  let rt: ReturnType<typeof setup>["rt"];
 
   beforeEach(() => {
-    ({ signal, computed } = setup());
+    ({ rt, signal, computed } = setup());
   });
 
   it("switches branches and follows the active dependency", () => {
@@ -36,5 +37,28 @@ describe("Reactive system - dynamic dependencies", () => {
 
     setValue(3);
     expect(total()).toBe(9);
+  });
+
+  it("keeps downstream propagation safe while dynamic dependencies switch in batches", () => {
+    const [selector, setSelector] = signal(0);
+    const [left, setLeft] = signal(1);
+    const [right, setRight] = signal(2);
+
+    const selected = computed(() =>
+      selector() % 2 === 0 ? left() : right(),
+    );
+    const plusOne = computed(() => selected() + 1);
+    const doubled = computed(() => plusOne() * 2);
+
+    expect(doubled()).toBe(4);
+
+    for (let i = 1; i <= 10_000; i++) {
+      rt.batch(() => {
+        setSelector(i);
+        if (i % 2 === 0) setLeft(i);
+        else setRight(i);
+        expect(doubled()).toBe((i + 1) * 2);
+      });
+    }
   });
 });

@@ -472,6 +472,49 @@ describe("Reactive runtime - graph semantic regressions (dev)", () => {
     expectNoWatcherActivity(summary);
   });
 
+  it("keeps branching pull stack coherent when refresh performs a nested pull", () => {
+    const h = createHistoryHarness();
+    const source = h.label(createProducer(1), "source");
+    const probeSource = h.label(createProducer(10), "probeSource");
+    const side = h.label(createProducer(100), "side");
+
+    const probe = h.label(
+      createConsumer(() => readProducer(probeSource) * 2),
+      "probe",
+    );
+    const left = h.label(
+      createConsumer(() => readProducer(source) + readConsumer(probe)),
+      "left",
+    );
+    const right = h.label(
+      createConsumer(() => readProducer(side) + 1),
+      "right",
+    );
+    const sink = h.label(
+      createConsumer(() => readConsumer(left) + readConsumer(right)),
+      "sink",
+    );
+
+    expect(readConsumer(sink)).toBe(122);
+    h.clear();
+
+    writeProducer(source, 2);
+    writeProducer(probeSource, 20);
+
+    expect(readConsumer(sink)).toBe(143);
+
+    const summary = h.summary();
+
+    expectChanged(summary, ["probe", "left", "sink"]);
+    expectRecomputed(summary, ["probe", "left", "sink"]);
+    expect(summary.consumerReads).toContain("probe:lazy@left");
+    expect(summary.consumerReads).toContain("left:lazy@sink");
+    expect(summary.consumerReads).toContain("sink:lazy@#?");
+
+    expectNoWatcherActivity(summary);
+    expectNoStaleCleanup(summary);
+  });
+
   it("invalidates multiple effects from one source", () => {
     const h = createHistoryHarness();
     const source = h.label(createProducer(1), "source");
