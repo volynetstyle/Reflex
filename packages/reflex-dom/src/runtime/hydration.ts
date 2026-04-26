@@ -32,7 +32,11 @@ import {
   isHydrationSlotEnd,
   isHydrationSlotStart,
 } from "../hydrate/markers";
-import { createScope, runInOwnershipScope } from "@volynets/reflex-framework";
+import {
+  createScope,
+  runInOwnershipScope,
+  runWithComponentHooks,
+} from "@volynets/reflex-framework";
 import { resolveNamespace, SVG_NS, MATHML_NS, type Namespace } from "../host/namespace";
 
 class HydrationMismatch extends Error {}
@@ -261,7 +265,14 @@ function hydrateRenderableValue(
       const renderable = value as ComponentRenderable<unknown>;
       return hydrateRenderableValue(
         renderer,
-        renderable.type(renderable.props),
+        runWithComponentHooks(
+          {
+            owner: renderer.owner,
+            scope: renderer.owner.currentOwner,
+            renderEffectScheduler: renderer.renderEffectScheduler,
+          },
+          () => renderable.type(renderable.props),
+        ),
         parentNamespace,
         currentNode,
         boundary,
@@ -383,5 +394,6 @@ export function hydrateWithRenderer(
 
   const hydratedRoot = hydrateManagedContainer(renderer, renderable, container);
   renderer.mountedRoots.set(container, hydratedRoot);
+  renderer.renderEffectScheduler.flush();
   return createRootCleanup(renderer, container, hydratedRoot);
 }

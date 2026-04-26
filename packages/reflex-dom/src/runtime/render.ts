@@ -50,6 +50,7 @@ export function renderWithRenderer(
     renderable,
     container,
   );
+  renderer.renderEffectScheduler.flush();
 
   const disposeRenderMount = (() => {
     rootMount.clear();

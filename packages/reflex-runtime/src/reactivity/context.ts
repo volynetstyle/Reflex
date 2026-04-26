@@ -7,6 +7,12 @@ export interface EngineHooks {
   onReactiveSettled?(): void;
 }
 
+/**
+ * Dynamic receiver for cleanup functions produced by watcher-backed helpers.
+ *
+ * The runtime invokes this receiver when helpers such as `effect()` create a
+ * disposer while a framework integration is collecting ownership cleanups.
+ */
 export type CleanupRegistrar = (cleanup: () => void) => void;
 
 export type TrackReadFallback = (
@@ -173,6 +179,13 @@ export function registerWatcherCleanup(cleanup: () => void): void {
   cleanupRegistrar?.(cleanup);
 }
 
+/**
+ * Runs `fn` with a temporary cleanup receiver in the runtime context.
+ *
+ * Passing `null` creates an explicit boundary: cleanups created during `fn` are
+ * not forwarded to an outer receiver. The previous receiver is restored even if
+ * `fn` throws.
+ */
 export function withCleanupRegistrar<T>(
   registrar: CleanupRegistrar | null,
   fn: () => T,

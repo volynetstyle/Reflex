@@ -16,7 +16,7 @@ export function bindReactiveProp(
 ) {
   let previousValue = applyProp(el, name, acc(), ns, undefined);
 
-  useOwnedEffect({ owner: renderer.owner }, () => {
+  useOwnedEffect({ owner: renderer.owner, phase: "render" }, () => {
     const nextValue = acc();
 
     onEffectStart(() => {

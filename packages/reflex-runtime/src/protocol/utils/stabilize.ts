@@ -1,4 +1,12 @@
-import { ReactiveNode, DIRTY_STATE, shouldRecomputeDirtyConsumer, clearDirtyState, recompute, propagateOnce, activeConsumer } from "../../reactivity";
+import {
+  DIRTY_STATE,
+  shouldRecomputeDirtyConsumer,
+  clearDirtyState,
+  recompute,
+  propagateOnce,
+  activeConsumer,
+} from "../../reactivity";
+import type { ReactiveNode } from "../../reactivity";
 import { untracked } from "./untracked";
 
 /**

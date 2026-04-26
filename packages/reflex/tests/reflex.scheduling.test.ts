@@ -59,6 +59,21 @@ describe("createEffectScheduler", () => {
     expect(mocks.runWatcher).toHaveBeenCalledWith(node);
   });
 
+  it("flush runs render-phase effects before user effects", () => {
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
+    const user = createNode();
+    const render = { ...createNode(), effectPhase: 1 } as any;
+
+    scheduler.enqueue(user);
+    scheduler.enqueue(render);
+    scheduler.flush();
+
+    expect(mocks.runWatcher.mock.calls.map(([node]) => node)).toEqual([
+      render,
+      user,
+    ]);
+  });
+
   it("flush unschedules but does not run clean node", () => {
     const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
     const node = createNode();
@@ -97,6 +112,23 @@ describe("createEffectScheduler", () => {
       midA,
       midB,
       low,
+    ]);
+  });
+
+  it("ranked flush runs render-phase effects before ranked user effects", () => {
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Ranked);
+    const high = createNode() as any;
+    const render = { ...createNode(), effectPhase: 1 } as any;
+
+    high.priority = 100;
+
+    scheduler.enqueue(high);
+    scheduler.enqueue(render);
+    scheduler.flush();
+
+    expect(mocks.runWatcher.mock.calls.map(([node]) => node)).toEqual([
+      render,
+      high,
     ]);
   });
 

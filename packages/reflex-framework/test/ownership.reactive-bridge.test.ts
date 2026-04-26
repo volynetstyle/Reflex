@@ -112,7 +112,7 @@ describe("ownership reactive bridge", () => {
         currentRegistrar?.(cleanup);
         return cleanup;
       },
-      withCleanupRegistrar<T>(registrar: ((cleanup: Cleanup) => void) | null, fn: () => T): T {
+      withCleanupScope<T>(registrar: ((cleanup: Cleanup) => void) | null, fn: () => T): T {
         const previousRegistrar = currentRegistrar;
         currentRegistrar = registrar;
 

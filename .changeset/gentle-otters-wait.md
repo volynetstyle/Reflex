@@ -1,5 +1,5 @@
 ---
-"@reflex/runtime": patch
+"@volynets/reflex-runtime": patch
 "@volynets/reflex": patch
 ---
 

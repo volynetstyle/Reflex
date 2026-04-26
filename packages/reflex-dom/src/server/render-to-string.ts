@@ -20,6 +20,7 @@ import { RenderableKind } from "../renderable/kind";
 import { wrapHydrationSlotMarkup } from "../hydrate/markers";
 import type { StyleValue } from "../types";
 import { classifyServerRenderable } from "./renderable";
+import { runWithComponentHooks } from "@volynets/reflex-framework";
 
 const PLATFORM_PROPS = new Set<string>([
   "elementInternals",
@@ -276,7 +277,10 @@ function renderRenderableToString(
     case RenderableKind.Component: {
       const renderable = value as ComponentRenderable<unknown>;
       return renderRenderableToString(
-        renderable.type(renderable.props),
+        runWithComponentHooks(
+          { renderEffectScheduler: null },
+          () => renderable.type(renderable.props),
+        ),
         parentNamespace,
       );
     }

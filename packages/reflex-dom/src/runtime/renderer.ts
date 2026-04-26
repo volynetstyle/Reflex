@@ -14,11 +14,16 @@ import {
   createMountedRootStore,
   type MountedRootStore,
 } from "./root-store";
+import {
+  createRenderEffectScheduler,
+  type DOMRenderEffectScheduler,
+} from "./render-effect-scheduler";
 
 export interface DOMRenderer {
   runtime: RuntimeInstance | null;
   owner: OwnerContext;
   mountedRoots: MountedRootStore;
+  renderEffectScheduler: DOMRenderEffectScheduler;
   ensureRuntime(): RuntimeInstance;
   hydrate(input: JSXRenderable, container: ParentNode & Node): Cleanup;
   render(input: JSXRenderable, container: ParentNode & Node): Cleanup;
@@ -31,8 +36,12 @@ export function createDOMRenderer(options?: DOMRuntimeOptions): DOMRenderer {
     runtime: null,
     owner: createOwnerContext(),
     mountedRoots: createMountedRootStore(),
+    renderEffectScheduler: createRenderEffectScheduler(),
     ensureRuntime() {
-      return (renderer.runtime ??= createRendererRuntime(options));
+      return (renderer.runtime ??= createRendererRuntime(
+        options,
+        renderer.renderEffectScheduler,
+      ));
     },
     hydrate(input, container) {
       return hydrateWithRenderer(renderer, input, container);

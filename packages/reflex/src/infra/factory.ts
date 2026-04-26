@@ -7,6 +7,15 @@ import {
 import type { ReactiveEdge, ReactiveNode } from "@volynets/reflex-runtime";
 import { EventSource as RuntimeEventSource } from "./event";
 
+export const enum WatcherPhase {
+  User = 0,
+  Render = 1,
+}
+
+export interface PhasedWatcherNode {
+  effectPhase?: WatcherPhase;
+}
+
 export class RankedEffectNode<T = unknown> implements ReactiveNode<T> {
   state: number;
   firstOut: ReactiveEdge | null;
@@ -20,6 +29,7 @@ export class RankedEffectNode<T = unknown> implements ReactiveNode<T> {
 
   priority?: number;
   rank?: number;
+  effectPhase?: WatcherPhase;
   rankedPriority: number;
   nextRanked: RankedEffectNode | undefined;
   prevRanked: RankedEffectNode;
@@ -29,6 +39,7 @@ export class RankedEffectNode<T = unknown> implements ReactiveNode<T> {
     compute: (() => T) | null,
     state: number,
     priority: number = 0,
+    effectPhase: WatcherPhase = WatcherPhase.User,
   ) {
     this.state = state | 0;
     this.firstOut = null;
@@ -41,6 +52,7 @@ export class RankedEffectNode<T = unknown> implements ReactiveNode<T> {
 
     this.priority = priority;
     this.rank = 0;
+    this.effectPhase = effectPhase;
     this.rankedPriority = 0;
     this.nextRanked = undefined;
     this.prevRanked = undefined as unknown as RankedEffectNode;
@@ -50,12 +62,14 @@ export class RankedEffectNode<T = unknown> implements ReactiveNode<T> {
 export const createWatcherRankedrNode = (
   compute: EffectFn,
   priority = 0,
+  effectPhase: WatcherPhase = WatcherPhase.User,
 ): ReactiveNode => {
   return new RankedEffectNode(
     undefined,
     compute,
     WATCHER_INITIAL_STATE,
     priority,
+    effectPhase,
   );
 };
 
@@ -79,6 +93,16 @@ export const createComputedNode = <T>(fn: () => T) => {
   return new RuntimeReactiveNode<T>(undefined as T, fn, CONSUMER_INITIAL_STATE);
 };
 
-export const createWatcherNode = (compute: EffectFn): ReactiveNode => {
-  return new RuntimeReactiveNode(undefined, compute, WATCHER_INITIAL_STATE);
+export const createWatcherNode = (
+  compute: EffectFn,
+  effectPhase: WatcherPhase = WatcherPhase.User,
+): ReactiveNode => {
+  const node = new RuntimeReactiveNode(
+    undefined,
+    compute,
+    WATCHER_INITIAL_STATE,
+  ) as RuntimeReactiveNode & PhasedWatcherNode;
+
+  node.effectPhase = effectPhase;
+  return node;
 };

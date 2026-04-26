@@ -22,8 +22,14 @@ export {
 } from "./api/derived";
 export {
   effect,
+  effectRender,
   effectRanked,
   withEffectCleanupRegistrar,
+  withEffectCleanupScope,
+} from "./api/effect";
+export type {
+  EffectCleanupReceiver,
+  EffectCleanupRegistrar,
 } from "./api/effect";
 /**
  * API

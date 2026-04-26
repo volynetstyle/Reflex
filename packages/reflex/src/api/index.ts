@@ -1,4 +1,11 @@
 export { computed, memo } from "./derived";
-export { effect, effectRanked, withEffectCleanupRegistrar } from "./effect";
+export {
+  effect,
+  effectRender,
+  effectRanked,
+  withEffectCleanupRegistrar,
+  withEffectCleanupScope,
+} from "./effect";
+export type { EffectCleanupReceiver, EffectCleanupRegistrar } from "./effect";
 export { filter, hold, map, merge, scan, subscribeOnce } from "./event";
 export { signal } from "./signal";

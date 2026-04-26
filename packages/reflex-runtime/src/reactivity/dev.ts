@@ -1,7 +1,22 @@
 import { recordDebugEvent, collectDebugNodeRefs } from "../debug/debug.impl";
 import { activeConsumer, type RuntimeDebugContext } from "./context";
-import { Computing, type ReactiveEdge,  } from "./shape";
+import { Computing, type ReactiveEdge } from "./shape";
 import type ReactiveNode from "./shape/ReactiveNode";
+
+type DebugNodeEventInput = {
+  consumer?: ReactiveNode;
+  node: ReactiveNode;
+  detail: Record<string, unknown>;
+};
+
+function withOptionalConsumer(
+  input: Omit<DebugNodeEventInput, "consumer">,
+  consumer: ReactiveNode | null | undefined,
+): DebugNodeEventInput {
+  return consumer === null || consumer === undefined
+    ? input
+    : { ...input, consumer };
+}
 
 export function devAssertTrackReadAlive(
   sourceDead: boolean,
@@ -97,13 +112,19 @@ export function devRecordReadProducer(
 ): void {
   if (!__DEV__) return;
 
-  recordDebugEvent(context, "read:producer", {
-    consumer: activeConsumer ?? undefined,
-    node,
-    detail: {
-      value,
-    },
-  });
+  recordDebugEvent(
+    context,
+    "read:producer",
+    withOptionalConsumer(
+      {
+        node,
+        detail: {
+          value,
+        },
+      },
+      activeConsumer,
+    ),
+  );
 }
 
 export function devRecordReadConsumer(
@@ -115,14 +136,20 @@ export function devRecordReadConsumer(
 ): void {
   if (!__DEV__) return;
 
-  recordDebugEvent(context, "read:consumer", {
-    consumer,
-    node,
-    detail: {
-      mode,
-      value,
-    },
-  });
+  recordDebugEvent(
+    context,
+    "read:consumer",
+    withOptionalConsumer(
+      {
+        node,
+        detail: {
+          mode,
+          value,
+        },
+      },
+      consumer,
+    ),
+  );
 }
 
 export function devAssertWriteAlive(): void {

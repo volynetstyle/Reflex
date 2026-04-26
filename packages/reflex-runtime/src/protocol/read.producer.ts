@@ -1,9 +1,5 @@
-import {
-  ReactiveNode,
-  Disposed,
-  trackRead,
-  defaultContext,
-} from "../reactivity";
+import { Disposed, trackRead, defaultContext } from "../reactivity";
+import type { ReactiveNode } from "../reactivity";
 import {
   devAssertReadDeadProducer,
   devRecordReadProducer,

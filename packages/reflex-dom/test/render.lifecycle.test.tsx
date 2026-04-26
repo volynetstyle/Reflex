@@ -2,6 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, effect, memo, signal } from "@volynets/reflex";
+import { useEffectRender } from "@volynets/reflex-framework";
 import { createDOMRenderer, createDOMRuntime, render } from "../src";
 
 describe("render lifecycle and reactive bindings", () => {
@@ -113,6 +114,82 @@ describe("render lifecycle and reactive bindings", () => {
 
     expect(output?.textContent).toBe("value:6");
     expect(output?.getAttribute("data-label")).toBe("value:6");
+  });
+
+  it("runs useEffectRender after the component DOM is mounted", () => {
+    const container = document.createElement("div");
+    const log: string[] = [];
+
+    function Child() {
+      useEffectRender(() => {
+        log.push(container.querySelector("span")?.textContent ?? "missing");
+
+        return () => {
+          log.push("cleanup");
+        };
+      });
+
+      log.push("render");
+      return <span>mounted</span>;
+    }
+
+    const dispose = render(<Child />, container);
+
+    expect(log).toEqual(["render", "mounted"]);
+
+    dispose();
+
+    expect(log).toEqual(["render", "mounted", "cleanup"]);
+  });
+
+  it("runs useEffectRender after reactive DOM updates settle", () => {
+    const container = document.createElement("div");
+    const [count, setCount] = signal(1);
+    const log: string[] = [];
+
+    function Child() {
+      useEffectRender(() => {
+        count();
+        log.push(container.querySelector("span")?.textContent ?? "missing");
+      });
+
+      return <span>{() => count()}</span>;
+    }
+
+    render(<Child />, container);
+
+    expect(log).toEqual(["1"]);
+
+    setCount(2);
+
+    expect(container.querySelector("span")?.textContent).toBe("2");
+    expect(log).toEqual(["1", "2"]);
+  });
+
+  it("runs reactive useEffectRender updates before user effects", () => {
+    const container = document.createElement("div");
+    const [count, setCount] = signal(1);
+    const log: string[] = [];
+
+    function Child() {
+      useEffectRender(() => {
+        const value = count();
+        log.push(`render:${value}:${container.querySelector("span")?.textContent}`);
+      });
+
+      effect(() => {
+        log.push(`user:${count()}`);
+      });
+
+      return <span>{() => count()}</span>;
+    }
+
+    render(<Child />, container);
+    log.length = 0;
+
+    setCount(2);
+
+    expect(log).toEqual(["render:2:2", "user:2"]);
   });
 
   it("stops text and prop bindings after their range is removed", () => {

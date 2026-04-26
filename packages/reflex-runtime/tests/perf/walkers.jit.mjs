@@ -5,7 +5,6 @@ import {
   ConsumerReadMode,
   CONSUMER_INITIAL_STATE,
   Consumer,
-  Disposed,
   Invalid,
   PRODUCER_INITIAL_STATE,
   ReactiveNode,

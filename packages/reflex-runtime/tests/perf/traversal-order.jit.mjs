@@ -29,12 +29,6 @@ function directionLabel(direction) {
     : "reverse(lastOut->prevOut)";
 }
 
-function inspectLabel(mode) {
-  if (mode === INSPECT_FIRST_IN) return "scan+firstIn";
-  if (mode === INSPECT_LAST_IN) return "scan+lastIn";
-  return "scan-only";
-}
-
 function median(values) {
   const sorted = [...values].sort((a, b) => a - b);
   return sorted[(sorted.length / 2) | 0];
@@ -240,11 +234,9 @@ function profileRunner({
     const heapBefore = process.memoryUsage().heapUsed;
     const bulkStart = nowNs();
 
-    let metricTotal = 0;
     for (let i = 0; i < iterations; i += 1) {
       prepare?.(i + round * iterations);
       const result = run(i);
-      if (metricName !== null) metricTotal += result;
       sink ^= result & 1;
     }
 

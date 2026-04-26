@@ -19,7 +19,9 @@
     "resolveJsonModule": true,
     "preserveConstEnums": false,
     "isolatedModules": false,
-    "composite": true
+    "composite": true,
+    "exactOptionalPropertyTypes": true,
+    "noFallthroughCasesInSwitch": true,
   },
   "include": ["src", "alien"],
   "exclude": ["dist"]

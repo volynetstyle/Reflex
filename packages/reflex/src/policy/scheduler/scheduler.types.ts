@@ -29,6 +29,7 @@ export function noopNotifySettled(): void {}
 
 export interface SchedulerCore {
   readonly queue: WatcherQueue;
+  readonly renderQueue: WatcherQueue;
   batchDepth: number;
   phase: SchedulerPhase;
   flush(): void;

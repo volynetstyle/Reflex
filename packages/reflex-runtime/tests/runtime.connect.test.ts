@@ -33,7 +33,7 @@ describe("Reactive graph - edge wiring", () => {
     expect(target.lastIn).toBe(edge);
   });
 
-  it("tracks whether direct subscribers are leaves", () => {
+  it("keeps direct subscriber branches wired through ordinary edge lists", () => {
     const source = createNode(Producer);
     const left = createNode(Consumer);
     const right = createNode(Consumer);
@@ -43,22 +43,23 @@ describe("Reactive graph - edge wiring", () => {
     const leftEdge = linkEdge(source, left);
     linkEdge(source, right);
 
-    expect(source.outBranchCount).toBe(0);
+    expect(source.firstOut?.to).toBe(left);
+    expect(source.firstOut?.nextOut?.to).toBe(right);
 
     const leftChildEdge = linkEdge(left, leftChild);
-    expect(source.outBranchCount).toBe(1);
+    expect(left.firstOut).toBe(leftChildEdge);
 
     const rightChildEdge = linkEdge(right, rightChild);
-    expect(source.outBranchCount).toBe(2);
+    expect(right.firstOut).toBe(rightChildEdge);
 
     unlinkEdge(leftChildEdge);
-    expect(source.outBranchCount).toBe(1);
+    expect(left.firstOut).toBeNull();
 
     unlinkEdge(leftEdge);
-    expect(source.outBranchCount).toBe(1);
+    expect(source.firstOut?.to).toBe(right);
 
     unlinkEdge(rightChildEdge);
-    expect(source.outBranchCount).toBe(0);
+    expect(right.firstOut).toBeNull();
   });
 
   it("keeps lastInTail separate from the physical incoming tail when unlinking", () => {

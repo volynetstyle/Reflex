@@ -128,7 +128,8 @@ describe("Reactive runtime - walker invariants", () => {
     const root = createConsumer(() => readConsumer(mid) + 1);
 
     expect(readConsumer(root)).toBe(3);
-    expect(source.outBranchCount).toBe(1);
+    expect(source.firstOut?.to).toBe(mid);
+    expect(mid.firstOut?.to).toBe(root);
 
     writeProducer(source, 2);
 

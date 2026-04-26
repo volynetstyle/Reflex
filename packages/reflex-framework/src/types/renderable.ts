@@ -11,7 +11,7 @@ export type JSXRenderable<Host = never> =
   | JSXPrimitive
   | Host
   | RenderableRecord
-  | Iterable<unknown>
+  | Iterable<JSXRenderable<Host>>
   | Accessor<unknown>;
 
 export type Component<P = Record<string, never>, Host = never> = (
@@ -30,5 +30,6 @@ export interface ElementRenderable<Tag extends string = string, Props = unknown>
   readonly props: Props;
 }
 
-export type ComponentProps<T, H = unknown> =
-  T extends Component<infer Props, H> ? Props : never;
+export type ComponentProps<T> = T extends (props: infer Props) => unknown
+  ? Props
+  : never;

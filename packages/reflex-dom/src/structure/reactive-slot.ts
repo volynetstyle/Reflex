@@ -50,7 +50,7 @@ export function bindReactiveSlotLifecycle<T>(
   readValue: () => T,
   resolveValue: (value: T) => unknown,
 ): void {
-  useOwnedEffect({ owner: renderer.owner }, () => {
+  useOwnedEffect({ owner: renderer.owner, phase: "render" }, () => {
     const nextValue = readValue();
 
     onEffectStart(() => {

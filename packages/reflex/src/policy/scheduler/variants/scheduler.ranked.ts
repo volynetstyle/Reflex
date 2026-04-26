@@ -8,7 +8,7 @@ import {
 import {
   createSchedulerCore,
   createSchedulerInstance,
-  tryEnqueue,
+  tryEnqueueEffect,
 } from "../scheduler.core";
 import { clearWatcherQueue, shiftWatcherQueue } from "../scheduler.queue";
 import type {
@@ -55,15 +55,6 @@ function getNodePriority(node: RankedEffectNode): number {
   return node.priority ?? node.rank ?? 0;
 }
 
-function ensureRankedCapacity(
-  core: RankedSchedulerCore,
-  priority: number,
-): void {
-  const heads = core.rankedHeads;
-  if (priority < heads.length) return;
-  heads.length = priority + 1;
-}
-
 function detachRankedNode(node: RankedEffectNode): void {
   node.prevRanked = node;
   node.nextRanked = undefined;
@@ -84,28 +75,48 @@ function shiftBucketHead(node: RankedEffectNode): RankedEffectNode | undefined {
   return next;
 }
 
+function insertActivePriorityDesc(
+  activePriorities: number[],
+  priority: number,
+): void {
+  let index = activePriorities.length;
+
+  while (index > 0 && activePriorities[index - 1]! < priority) {
+    activePriorities[index] = activePriorities[index - 1]!;
+    --index;
+  }
+
+  activePriorities[index] = priority;
+}
+
 function pushPendingNode(
   core: RankedSchedulerCore,
   effectNode: EffectNode,
 ): void {
   const node = effectNode as RankedEffectNode;
   const priority = getNodePriority(node);
-  ensureRankedCapacity(core, priority);
-  const head = core.rankedHeads[priority];
+  const heads = core.rankedHeads;
+
+  if (priority >= heads.length) {
+    heads.length = priority + 1;
+  }
+
+  const head = heads[priority];
 
   node.rankedPriority = priority;
   if (head === undefined) {
     node.prevRanked = node;
     node.nextRanked = node;
-    core.rankedHeads[priority] = node;
-    core.activePriorities.push(priority);
-  } else {
-    const tail = head.prevRanked;
-    tail.nextRanked = node;
-    node.prevRanked = tail;
-    node.nextRanked = head;
-    head.prevRanked = node;
+    heads[priority] = node;
+    insertActivePriorityDesc(core.activePriorities, priority);
+    return;
   }
+
+  const tail = head.prevRanked;
+  tail.nextRanked = node;
+  node.prevRanked = tail;
+  node.nextRanked = head;
+  head.prevRanked = node;
 }
 
 function resetPendingBuckets(core: RankedSchedulerCore): void {
@@ -119,37 +130,37 @@ function resetPendingBuckets(core: RankedSchedulerCore): void {
   activePriorities.length = 0;
 }
 
-function sortActivePrioritiesDesc(activePriorities: number[]): void {
-  for (let index = 1; index < activePriorities.length; ++index) {
-    const priority = activePriorities[index]!;
-    let cursor = index - 1;
-
-    while (cursor >= 0 && activePriorities[cursor]! < priority) {
-      activePriorities[cursor + 1] = activePriorities[cursor]!;
-      --cursor;
-    }
-
-    activePriorities[cursor + 1] = priority;
-  }
-}
-
 function rankedFlush(this: RankedSchedulerCore): void {
   const queue = this.queue;
   const rankedHeads = this.rankedHeads;
   const activePriorities = this.activePriorities;
   if (this.phase === SchedulerPhase.Flushing) return;
-  if (queue.size === 0) return;
+  if (queue.size === 0 && this.renderQueue.size === 0) return;
 
   this.phase = SchedulerPhase.Flushing;
   let thrown: unknown = null;
 
   try {
-    while (queue.size !== 0 || activePriorities.length !== 0) {
+    while (
+      this.renderQueue.size !== 0 ||
+      queue.size !== 0 ||
+      activePriorities.length !== 0
+    ) {
+      while (this.renderQueue.size !== 0) {
+        const node = shiftWatcherQueue(this.renderQueue)!;
+        node.state &= UNSCHEDULE_MASK;
+        try {
+          runWatcher(node);
+        } catch (error) {
+          if (thrown === null) {
+            thrown = error;
+          }
+        }
+      }
+
       while (queue.size !== 0) {
         pushPendingNode(this, shiftWatcherQueue(queue)!);
       }
-
-      sortActivePrioritiesDesc(activePriorities);
 
       for (let index = 0; index < activePriorities.length; ++index) {
         const priority = activePriorities[index]!;
@@ -173,6 +184,7 @@ function rankedFlush(this: RankedSchedulerCore): void {
       activePriorities.length = 0;
     }
   } finally {
+    unscheduleQueuedNodes(this.renderQueue);
     unschedulePendingNodes(rankedHeads, activePriorities);
     resetPendingBuckets(this);
     unscheduleQueuedNodes(queue);
@@ -191,7 +203,7 @@ export function createRankedScheduler(): EffectScheduler {
   core.activePriorities = [];
   core.flush = rankedFlush;
   const enqueue = (node: ReactiveNode): void => {
-    tryEnqueue(core.queue, node);
+    tryEnqueueEffect(core, node);
   };
 
   const batch = <T>(fn: () => T): T => {

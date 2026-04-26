@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { RuntimeDebugEvent, subtle } from "../src/debug";
+import { subtle } from "../src/debug";
+import type { RuntimeDebugEvent } from "../src/debug";
 import {
   createConsumer,
   createProducer,

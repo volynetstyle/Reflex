@@ -98,8 +98,12 @@ export function tryTrackReadFastPath(
   if (
     lastOut !== null &&
     lastOut.version === version &&
-    lastOut.to === consumer
+    lastOut.to === consumer &&
+    (lastOut === prevEdge ||
+      lastOut === prevEdge?.nextIn ||
+      (prevEdge === null && lastOut === consumer.firstIn))
   ) {
+    consumer.lastInTail = lastOut;
     recordTrackRead(consumer, source);
     return true;
   }

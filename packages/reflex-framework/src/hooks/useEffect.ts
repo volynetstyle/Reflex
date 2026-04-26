@@ -1,30 +1,26 @@
-import { effect } from "@volynets/reflex";
 import type { Cleanup } from "../types/core";
+import { assertHookUsage } from "./context";
+import {
+  type EffectCallback,
+  type EffectCleanup,
+  useEffectInternal,
+  useEffectOnceInternal,
+  useEffectRenderInternal,
+} from "./useEffectCore";
 
-export type EffectCleanup = void | Cleanup;
-export type EffectCallback = () => EffectCleanup;
+export type { EffectCallback, EffectCleanup };
 
 export function useEffect(callback: EffectCallback): Cleanup {
-  return effect(callback);
+  assertHookUsage("useEffect");
+  return useEffectInternal(callback);
 }
 
 export function useEffectOnce(callback: () => void): void {
-  let didRun = false;
-
-  const dispose = effect(() => {
-    if (didRun) {
-      return;
-    }
-
-    didRun = true;
-    callback();
-  });
-
-  if (didRun) {
-    dispose();
-  }
+  assertHookUsage("useEffectOnce");
+  useEffectOnceInternal(callback);
 }
 
 export function useEffectRender(callback: EffectCallback): Cleanup {
-  return useEffect(callback);
+  assertHookUsage("useEffectRender");
+  return useEffectRenderInternal(callback);
 }

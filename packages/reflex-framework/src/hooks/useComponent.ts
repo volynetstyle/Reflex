@@ -1,11 +1,14 @@
-import { useEffect, useEffectOnce } from "./useEffect";
+import { assertHookUsage } from "./context";
+import { useEffectInternal, useEffectOnceInternal } from "./useEffectCore";
 
 export function useComponentDidMount(callback: () => void): void {
-  useEffectOnce(() => {
+  assertHookUsage("useComponentDidMount");
+  useEffectOnceInternal(() => {
     callback();
   });
 }
 
 export function useComponentDidUnmount(callback: () => void): void {
-  useEffect(() => callback);
+  assertHookUsage("useComponentDidUnmount");
+  useEffectInternal(() => callback);
 }
