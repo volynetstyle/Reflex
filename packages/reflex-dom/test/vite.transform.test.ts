@@ -1,5 +1,6 @@
 import { parseSync } from "@swc/core";
 import { describe, expect, it } from "vitest";
+import type { Plugin } from "vite";
 import {
   reflex,
   reflexDOMVitePlugin,
@@ -28,6 +29,54 @@ function getOpeningAttributes(code: string) {
   }
 
   return jsx.opening.attributes;
+}
+
+function getFirstJSXChildExpression(code: string) {
+  const ast = parseSync(code, {
+    syntax: "typescript",
+    tsx: true,
+    target: "es2022",
+  });
+
+  const declaration = ast.body[0];
+
+  if (declaration?.type !== "VariableDeclaration") {
+    throw new TypeError("Expected a JSX variable declaration");
+  }
+
+  const init = declaration.declarations[0]?.init;
+  const jsx =
+    init?.type === "ParenthesisExpression" ? init.expression : init;
+
+  if (jsx?.type !== "JSXElement") {
+    throw new TypeError("Expected a JSX element");
+  }
+
+  const child = jsx.children.find(
+    (candidate) => candidate.type === "JSXExpressionContainer",
+  );
+
+  if (child?.type !== "JSXExpressionContainer") {
+    throw new TypeError("Expected a JSX expression child");
+  }
+
+  return child.expression;
+}
+
+async function resolvePluginConfig(plugin: Plugin) {
+  const hook = plugin.config;
+
+  if (!hook) {
+    return undefined;
+  }
+
+  const handler = typeof hook === "function" ? hook : hook.handler;
+
+  return handler.call(
+    {} as never,
+    {},
+    { command: "serve", mode: "development" },
+  );
 }
 
 describe("transformReflexDOMJSX", () => {
@@ -94,6 +143,16 @@ describe("transformReflexDOMJSX", () => {
     expect(styleAttr.value.expression.type).toBe("Identifier");
   });
 
+  it("wraps computed child expressions even when props are static", () => {
+    const source = 'const view = <p class="value">{count()}</p>;';
+    const result = transformReflexDOMJSX(source, "Component.tsx");
+
+    expect(result).not.toBeNull();
+
+    const expression = getFirstJSXChildExpression(result!.code);
+    expect(expression.type).toBe("ArrowFunctionExpression");
+  });
+
   it("exposes a vite plugin wrapper", async () => {
     const plugin = reflexDOMVitePlugin();
     const transformed = await plugin.transform?.call(
@@ -116,5 +175,29 @@ describe("transformReflexDOMJSX", () => {
 
     expect(transformed).not.toBeNull();
     expect(typeof transformed).toBe("object");
+  });
+
+  it("configures Vite JSX through the shared reflex plugin by default", async () => {
+    const [plugin] = reflex();
+    const config = await resolvePluginConfig(plugin!);
+
+    expect(config).toMatchObject({
+      esbuild: {
+        jsx: "automatic",
+        jsxImportSource: "@volynets/reflex-dom",
+      },
+    });
+  });
+
+  it("passes a custom JSX import source to Vite", async () => {
+    const [plugin] = reflex({ jsxImportSource: "custom-dom" });
+    const config = await resolvePluginConfig(plugin!);
+
+    expect(config).toMatchObject({
+      esbuild: {
+        jsx: "automatic",
+        jsxImportSource: "custom-dom",
+      },
+    });
   });
 });

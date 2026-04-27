@@ -8,7 +8,7 @@ import {
 import {
   linkEdge,
   unlinkDetachedIncomingEdgeSequence,
-} from "../shape/methods/connect";
+} from "../shape/graph/connect";
 import {
   activeConsumer,
   defaultContext,
@@ -37,7 +37,7 @@ function isDead(source: ReactiveNode, consumer: ReactiveNode): boolean {
   return false;
 }
 
-function trackReadAttachOrFallback(
+function trackReadSlowPath(
   source: ReactiveNode,
   consumer: ReactiveNode,
 ): void {
@@ -78,13 +78,24 @@ function trackReadAttachOrFallback(
   );
 }
 
+function hasTrackedPrefixDependency(
+  source: ReactiveNode,
+  edge: ReactiveNode["lastInTail"],
+): boolean {
+  for (let current = edge; current !== null; current = current.prevIn) {
+    if (current.from === source) return true;
+  }
+
+  return false;
+}
+
 /**
  * Fast cursor-guided dependency tracking.
  *
  * Handles:
- * - last outgoing cache hit
  * - immediate duplicate read
  * - expected next dependency
+ * - duplicate already accepted in the current dependency prefix
  * - first dependency reuse
  */
 export function tryTrackReadFastPath(
@@ -93,20 +104,6 @@ export function tryTrackReadFastPath(
 ): boolean {
   const version = trackingVersion;
   const prevEdge = consumer.lastInTail;
-
-  const lastOut = source.lastOut;
-  if (
-    lastOut !== null &&
-    lastOut.version === version &&
-    lastOut.to === consumer &&
-    (lastOut === prevEdge ||
-      lastOut === prevEdge?.nextIn ||
-      (prevEdge === null && lastOut === consumer.firstIn))
-  ) {
-    consumer.lastInTail = lastOut;
-    recordTrackRead(consumer, source);
-    return true;
-  }
 
   if (prevEdge !== null) {
     if (prevEdge.from === source) {
@@ -119,6 +116,11 @@ export function tryTrackReadFastPath(
     if (nextExpected !== null && nextExpected.from === source) {
       nextExpected.version = version;
       consumer.lastInTail = nextExpected;
+      recordTrackRead(consumer, source);
+      return true;
+    }
+
+    if (hasTrackedPrefixDependency(source, prevEdge.prevIn)) {
       recordTrackRead(consumer, source);
       return true;
     }
@@ -139,7 +141,7 @@ export function tryTrackReadFastPath(
 
 function trackReadMiss(source: ReactiveNode, consumer: ReactiveNode): void {
   recordTrackRead(consumer, source);
-  trackReadAttachOrFallback(source, consumer);
+  trackReadSlowPath(source, consumer);
 }
 
 /**
@@ -164,10 +166,11 @@ export function trackReadActive(
   source: ReactiveNode,
   consumer: ReactiveNode,
 ): void {
+  if (isDead(source, consumer)) return;
   if (tryTrackReadFastPath(source, consumer)) return;
 
   recordTrackRead(consumer, source);
-  trackReadAttachOrFallback(source, consumer);
+  trackReadSlowPath(source, consumer);
 }
 
 /**

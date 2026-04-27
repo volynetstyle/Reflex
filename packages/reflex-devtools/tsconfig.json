@@ -3,23 +3,15 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "customConditions": ["source"],
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "useUnknownInCatchVariables": true,
-    "useDefineForClassFields": true,
     "skipLibCheck": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "outDir": "./dist",
-    "allowImportingTsExtensions": false,
-    "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "preserveConstEnums": false,
-    "isolatedModules": false,
-    "composite": true
+    "jsx": "preserve",
+    "jsxImportSource": "@volynets/reflex-dom",
+    "types": ["vite/client"]
   },
-  "include": ["src"],
-  "exclude": ["dist"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"]
 }

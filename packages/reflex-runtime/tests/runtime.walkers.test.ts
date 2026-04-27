@@ -563,24 +563,29 @@ describe("Reactive runtime - walker invariants", () => {
     expect(invalidated).toEqual([direct, left, right]);
   });
 
-  it("still invalidates every watcher when the shared computed was warmed eagerly", () => {
-    const invalidated: ReactiveNode[] = [];
+  it("invalidates direct watchers before deeper warmed computed subscribers", () => {
+    const invalidated: string[] = [];
+    let direct!: ReactiveNode;
+    let left!: ReactiveNode;
+    let right!: ReactiveNode;
 
     resetRuntime({
       onSinkInvalidated(node) {
-        invalidated.push(node);
+        if (node === direct) invalidated.push("direct");
+        if (node === left) invalidated.push("left");
+        if (node === right) invalidated.push("right");
       },
     });
 
     const source = createProducer(1);
     const shared = createConsumer(() => readProducer(source) * 2);
-    const direct = createWatcher(() => {
+    direct = createWatcher(() => {
       readProducer(source);
     });
-    const left = createWatcher(() => {
+    left = createWatcher(() => {
       readConsumer(shared);
     });
-    const right = createWatcher(() => {
+    right = createWatcher(() => {
       readConsumer(shared);
     });
 
@@ -592,7 +597,7 @@ describe("Reactive runtime - walker invariants", () => {
     invalidated.length = 0;
     writeProducer(source, 2);
 
-    expect(invalidated).toEqual([left, right, direct]);
+    expect(invalidated).toEqual(["direct", "left", "right"]);
   });
 
   it("shouldRecompute clears Invalid when a dirty dependency recomputes to the same value", () => {

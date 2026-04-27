@@ -49,14 +49,14 @@ function getTrackedSubscriberInvalidationState(
   const trackedInputTail = subscriber.lastInTail;
   if (trackedInputTail === null) return 0;
 
-  const trackedInvalidState =
-    subscriberState |
-    VISITED_MASK |
-    Invalid;
-  if (inboundEdge === trackedInputTail) return trackedInvalidState;
+  if (inboundEdge === trackedInputTail) {
+    return subscriberState | VISITED_MASK | Invalid;
+  }
 
   const previousInboundEdge = inboundEdge.prevIn;
-  if (previousInboundEdge === null) return trackedInvalidState;
+  if (previousInboundEdge === null) {
+    return subscriberState | VISITED_MASK | Invalid;
+  }
   if (previousInboundEdge === trackedInputTail) return 0;
 
   let scannedInputEdge = previousInboundEdge.prevIn;
@@ -69,7 +69,7 @@ function getTrackedSubscriberInvalidationState(
 
   return scannedInputEdge === trackedInputTail
     ? 0
-    : trackedInvalidState;
+    : subscriberState | VISITED_MASK | Invalid;
 }
 
 export function invalidateSubscriber(
@@ -78,10 +78,7 @@ export function invalidateSubscriber(
   subscriberState: number,
   promoteState: number,
 ): number {
-  const clearedVisitedState =
-    (subscriberState & ~VISITED_MASK) |
-    promoteState;
-  let nextSubscriberState = clearedVisitedState;
+  let nextSubscriberState: number;
 
   if ((subscriberState & SLOW_PATH_INVALIDATION_MASK) !== 0) {
     if ((subscriberState & DISPOSED_MASK) !== 0) return 0;
@@ -95,7 +92,14 @@ export function invalidateSubscriber(
       if (nextSubscriberState === 0) return 0;
     } else {
       if ((subscriberState & DIRTY_STATE) !== 0) return 0;
+      nextSubscriberState =
+        (subscriberState & ~VISITED_MASK) |
+        promoteState;
     }
+  } else {
+    nextSubscriberState =
+      (subscriberState & ~VISITED_MASK) |
+      promoteState;
   }
 
   subscriber.state = nextSubscriberState;

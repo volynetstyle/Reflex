@@ -1,5 +1,5 @@
 import { parseSync, printSync } from "@swc/core";
-import { Visitor } from "@swc/core/Visitor";
+import { Visitor } from "@swc/core/Visitor.js";
 import type {
   ArrowFunctionExpression,
   Expression,
@@ -15,6 +15,7 @@ import type { Plugin } from "vite";
 
 type SelectorType = string | RegExp | Array<string | RegExp>;
 
+const DEFAULT_JSX_IMPORT_SOURCE = "@volynets/reflex-dom";
 const DEFAULT_REACTIVE_PROPS = ["class", "className", "style"] as const;
 
 const WRAPPABLE_EXPRESSION_TYPES = new Set<Expression["type"]>([
@@ -69,7 +70,7 @@ export interface ReflexPluginOptions {
   /**
    * Control where the JSX factory is imported from.
    * https://oxc.rs/docs/guide/usage/transformer/jsx.html#import-source
-   * @default "Reflex"
+   * @default "@volynets/reflex-dom"
    */
   jsxImportSource?: string;
   /**
@@ -96,12 +97,22 @@ export interface ReflexPluginOptions {
 }
 
 class ReflexDOMJSXReactivePropsVisitor extends Visitor {
+  private jsxAttributeDepth = 0;
+
   constructor(private readonly reactiveProps: ReadonlySet<string>) {
     super();
   }
 
   override visitJSXAttribute(node: JSXAttribute): JSXAttributeOrSpread {
-    const next = super.visitJSXAttribute(node) as JSXAttribute;
+    this.jsxAttributeDepth++;
+    let next: JSXAttribute;
+
+    try {
+      next = super.visitJSXAttribute(node) as JSXAttribute;
+    } finally {
+      this.jsxAttributeDepth--;
+    }
+
     const propName = getJSXAttributeName(next.name);
 
     if (!propName || !this.reactiveProps.has(propName)) {
@@ -131,6 +142,31 @@ class ReflexDOMJSXReactivePropsVisitor extends Visitor {
 
     return next;
   }
+
+  override visitJSXExpressionContainer(
+    node: JSXExpressionContainer,
+  ): JSXExpressionContainer {
+    const next = super.visitJSXExpressionContainer(node);
+
+    if (this.jsxAttributeDepth > 0) {
+      return next;
+    }
+
+    const expression = next.expression;
+
+    if (expression.type === "JSXEmptyExpression") {
+      return next;
+    }
+
+    if (!shouldWrapExpression(expression)) {
+      return next;
+    }
+
+    return {
+      ...next,
+      expression: createAccessorExpression(expression),
+    };
+  }
 }
 
 function normalizeDOMOptions(
@@ -156,13 +192,19 @@ function shouldProcessFile(
   return options.include.test(cleanId) && !options.exclude.test(cleanId);
 }
 
-function hasReactivePropExpression(
+function hasPotentialReactiveJSXExpression(
   code: string,
   reactiveProps: readonly string[],
 ): boolean {
-  return reactiveProps.some((propName) =>
+  const hasReactivePropExpression = reactiveProps.some((propName) =>
     new RegExp(`\\b${propName}\\s*=\\s*\\{`).test(code),
   );
+
+  if (hasReactivePropExpression) {
+    return true;
+  }
+
+  return code.includes("{") && /<[A-Za-z][\w.:$-]*(?:\s|>|\/)|<>/.test(code);
 }
 
 function getJSXAttributeName(name: JSXAttributeName): string | null {
@@ -233,6 +275,24 @@ function normalizeDOMPluginOptions(
   return options === true ? {} : options;
 }
 
+function createJSXEsbuildOptions(options: ReflexPluginOptions) {
+  const jsxRuntime = options.jsxRuntime ?? "automatic";
+  const jsxImportSource = options.jsxImportSource ?? DEFAULT_JSX_IMPORT_SOURCE;
+
+  if (jsxRuntime === "classic") {
+    return {
+      jsx: "transform" as const,
+      jsxFactory: "jsx",
+      jsxFragment: "Fragment",
+    };
+  }
+
+  return {
+    jsx: "automatic" as const,
+    jsxImportSource,
+  };
+}
+
 export function transformReflexDOMJSX(
   code: string,
   id: string,
@@ -244,7 +304,7 @@ export function transformReflexDOMJSX(
     return null;
   }
 
-  if (!hasReactivePropExpression(code, options.reactiveProps)) {
+  if (!hasPotentialReactiveJSXExpression(code, options.reactiveProps)) {
     return null;
   }
 
@@ -269,6 +329,17 @@ export function reflexDOMVitePlugin(
   };
 }
 
+export function reflexJSXVitePlugin(options: ReflexPluginOptions = {}): Plugin {
+  return {
+    name: "reflex-jsx",
+    config() {
+      return {
+        esbuild: createJSXEsbuildOptions(options),
+      };
+    },
+  };
+}
+
 export function reflex(options: ReflexPluginOptions = {}): Plugin[] {
   const plugins: Plugin[] = [];
   const domOptions = normalizeDOMPluginOptions(options.dom);
@@ -276,6 +347,8 @@ export function reflex(options: ReflexPluginOptions = {}): Plugin[] {
   if (domOptions !== null) {
     plugins.push(reflexDOMVitePlugin(domOptions));
   }
+
+  plugins.push(reflexJSXVitePlugin(options));
 
   return plugins;
 }

@@ -84,4 +84,43 @@ describe("Reactive runtime - graph topology and consistency", () => {
     expectNodeGraphIntegrity(source);
     expectNodeGraphIntegrity(consumer);
   });
+
+  it("keeps repeated branch reads deduped while alternating computed dependencies", () => {
+    const head = createProducer(0);
+    const double = createConsumer(() => readProducer(head) * 2);
+    const inverse = createConsumer(() => -readProducer(head));
+    const current = createConsumer(() => {
+      let result = 0;
+
+      for (let i = 0; i < 20; i += 1) {
+        result += readProducer(head) % 2
+          ? readConsumer(double)
+          : readConsumer(inverse);
+      }
+
+      return result;
+    });
+
+    expect(readConsumer(current)).toBe(0);
+    expect(incomingSources(current)).toEqual([head, inverse]);
+    expect(hasSubscriber(double, current)).toBe(false);
+
+    for (let value = 1; value < 6; value += 1) {
+      writeProducer(head, value);
+
+      const expected = value % 2 === 1 ? value * 40 : -value * 20;
+      const activeBranch = value % 2 === 1 ? double : inverse;
+      const staleBranch = value % 2 === 1 ? inverse : double;
+
+      expect(readConsumer(current)).toBe(expected);
+      expect(incomingSources(current)).toEqual([head, activeBranch]);
+      expect(hasSubscriber(activeBranch, current)).toBe(true);
+      expect(hasSubscriber(staleBranch, current)).toBe(false);
+
+      expectNodeGraphIntegrity(head);
+      expectNodeGraphIntegrity(double);
+      expectNodeGraphIntegrity(inverse);
+      expectNodeGraphIntegrity(current);
+    }
+  });
 });

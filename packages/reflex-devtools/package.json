@@ -1,14 +1,18 @@
 {
   "name": "reflex-devtools",
   "version": "0.0.1",
+  "type": "module",
   "description": "",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite dev"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@volynets/reflex": "workspace:*"
+    "@reflex/vite-plugin": "workspace:*",
+    "@volynets/reflex": "workspace:*",
+    "@volynets/reflex-dom": "workspace:*",
+    "cytoscape": "^3.33.2"
   }
 }

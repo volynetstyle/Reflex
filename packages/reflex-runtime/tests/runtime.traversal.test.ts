@@ -243,7 +243,7 @@ describe("Reactive runtime - traversal invariants", () => {
 
     writeProducer(outerSource, 2);
 
-    expect(invalidations).toEqual(["nested", "inner", "sibling"]);
+    expect(invalidations).toEqual(["sibling", "nested", "inner"]);
     expect(siblingWatcher.state & DIRTY_STATE).toBeTruthy();
   });
 

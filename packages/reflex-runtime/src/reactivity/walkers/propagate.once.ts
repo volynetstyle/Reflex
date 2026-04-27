@@ -9,10 +9,8 @@ export function propagateOnce(node: ReactiveNode): void {
     if (__DEV__) devAssertPropagateAlive();
     return;
   }
-  let edge = node.firstOut;
-  if (edge === null) return;
 
-  do {
+  for (let edge = node.firstOut; edge !== null; edge = edge.nextOut) {
     const sub = edge.to,
       state = sub.state;
 
@@ -20,5 +18,5 @@ export function propagateOnce(node: ReactiveNode): void {
       sub.state = (state & ~Invalid) | Changed;
       if ((state & WATCHER_MASK) !== 0) dispatchInvalidatedWatcher(sub);
     }
-  } while ((edge = edge.nextOut!) !== null);
+  }
 }

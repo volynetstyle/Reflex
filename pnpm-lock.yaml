@@ -90,9 +90,18 @@ importers:
 
   packages/reflex-devtools:
     dependencies:
+      '@reflex/vite-plugin':
+        specifier: workspace:*
+        version: link:../../plugins/@vite/reflex-vite-plugin
       '@volynets/reflex':
         specifier: workspace:*
         version: link:../reflex
+      '@volynets/reflex-dom':
+        specifier: workspace:*
+        version: link:../reflex-dom
+      cytoscape:
+        specifier: ^3.33.2
+        version: 3.33.2
 
   packages/reflex-dom:
     dependencies:
@@ -1222,6 +1231,10 @@ packages:
   css-tree@3.2.1:
     resolution: {integrity: sha512-X7sjQzceUhu1u7Y/ylrRZFU2FS6LRiFVp6rKLPg23y3x3c3DOKAwuXGDp+PAGjh6CSnCjYeAul8pcT8bAl+lSA==}
     engines: {node: ^10 || ^12.20.0 || ^14.13.0 || >=15.0.0}
+
+  cytoscape@3.33.2:
+    resolution: {integrity: sha512-sj4HXd3DokGhzZAdjDejGvTPLqlt84vNFN8m7bGsOzDY5DyVcxIb2ejIXat2Iy7HxWhdT/N1oKyheJ5YdpsGuw==}
+    engines: {node: '>=0.10'}
 
   d3-array@2.12.1:
     resolution: {integrity: sha512-B0ErZK/66mHtEsR1TkPEEkwdy+WDesimkM5gpZr5Dsg54BiTA5RXtYW5qTLIAcekaS9xfZrzBLF/OAkB3Qn1YQ==}
@@ -4081,6 +4094,8 @@ snapshots:
     dependencies:
       mdn-data: 2.27.1
       source-map-js: 1.2.1
+
+  cytoscape@3.33.2: {}
 
   d3-array@2.12.1:
     dependencies:

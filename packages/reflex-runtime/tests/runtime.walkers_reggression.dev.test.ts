@@ -835,4 +835,67 @@ describe("Reactive runtime - graph semantic regressions (dev)", () => {
 
     expectNoStaleCleanup(summary);
   });
+
+  it("dedupes repeated branch reads while alternating computed dependencies", () => {
+    const h = createHistoryHarness();
+    const head = h.label(createProducer(0), "head");
+    const double = h.label(
+      createConsumer(() => readProducer(head) * 2),
+      "double",
+    );
+    const inverse = h.label(
+      createConsumer(() => -readProducer(head)),
+      "inverse",
+    );
+    const current = h.label(
+      createConsumer(() => {
+        let result = 0;
+
+        for (let i = 0; i < 20; i += 1) {
+          result += readProducer(head) % 2
+            ? readConsumer(double)
+            : readConsumer(inverse);
+        }
+
+        return result;
+      }),
+      "current",
+    );
+
+    expect(readConsumer(current)).toBe(0);
+
+    h.clear();
+
+    writeProducer(head, 1);
+    expect(readConsumer(current)).toBe(40);
+
+    let summary = h.summary();
+
+    expect(summary.producerReads.filter((entry) => entry === "head@current"))
+      .toHaveLength(20);
+    expect(summary.consumerReads.filter((entry) => entry === "double:lazy@current"))
+      .toHaveLength(20);
+    expect(summary.trackReads.filter((entry) => entry === "head->current"))
+      .toHaveLength(20);
+    expect(summary.trackReads.filter((entry) => entry === "double->current"))
+      .toHaveLength(20);
+    expect(summary.staleCleanups).toEqual(["current:1:inverse"]);
+
+    h.clear();
+
+    writeProducer(head, 2);
+    expect(readConsumer(current)).toBe(-40);
+
+    summary = h.summary();
+
+    expect(summary.producerReads.filter((entry) => entry === "head@current"))
+      .toHaveLength(20);
+    expect(summary.consumerReads.filter((entry) => entry === "inverse:lazy@current"))
+      .toHaveLength(20);
+    expect(summary.trackReads.filter((entry) => entry === "head->current"))
+      .toHaveLength(20);
+    expect(summary.trackReads.filter((entry) => entry === "inverse->current"))
+      .toHaveLength(20);
+    expect(summary.staleCleanups).toEqual(["current:1:double"]);
+  });
 });

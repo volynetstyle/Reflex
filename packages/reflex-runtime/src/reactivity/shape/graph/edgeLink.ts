@@ -16,6 +16,8 @@ export function linkEdge(
   const prevOut = from.lastOut;
   const edge = createReactiveEdge(version, from, to);
 
+  edge.prevOut = prevOut;
+
   if (prevOut) prevOut.nextOut = edge;
   else from.firstOut = edge;
   from.lastOut = edge;

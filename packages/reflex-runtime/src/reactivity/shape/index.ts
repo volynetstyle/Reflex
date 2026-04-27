@@ -1,4 +1,4 @@
-export * from "./methods";
+export * from "./graph";
 export * from "./ReactiveEdge";
 export * from "./ReactiveMeta";
 export * from "./ReactiveNode";

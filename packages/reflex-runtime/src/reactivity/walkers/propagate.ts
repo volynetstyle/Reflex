@@ -30,89 +30,89 @@ export function readPropagateStackStats(): {
   );
 }
 
-function pushResumeEdge(
-  stack: ReactiveEdge[],
-  stackTop: number,
-  edge: ReactiveEdge,
-  promote: number,
-): { nextTop: number; promotedIndex: number } {
-  stack[stackTop] = edge;
-  const promotedIndex = promote !== NON_IMMEDIATE ? stackTop : -1;
-  const nextTop = stackTop + 1;
-  noteResumeEdgeStackUsage(nextTop);
-  return { nextTop, promotedIndex };
-}
-
 export function propagate(
   startEdge: ReactiveEdge,
   startPromote: number,
 ): void {
   const edgeStack = resumeEdgeStack;
   const stackBase = resumeStackHigh;
-  // Only direct siblings at the current breadth keep the caller's promote token.
-  // Once we descend into children, propagation always continues as NON_IMMEDIATE.
-  const directSiblingPromote = startPromote;
-
   let stackTop = stackBase;
-  let currentEdge = startEdge;
-  let currentPromote = startPromote;
-  let nextSiblingEdge: ReactiveEdge | null = currentEdge.nextOut;
-  let directSiblingResumeIndex = -1;
 
-  while (true) {
-    const subscriber = currentEdge.to;
+  for (
+    let edge: ReactiveEdge | null = startEdge;
+    edge !== null;
+    edge = edge.nextOut
+  ) {
+    const subscriber = edge.to;
     const nextSubscriberState = invalidateSubscriber(
-      currentEdge,
+      edge,
       subscriber,
       subscriber.state,
-      currentPromote,
+      startPromote,
     );
 
     if (nextSubscriberState === 0) {
-    } // no-op, fall through to sibling/unwind
-    else if ((nextSubscriberState & WATCHER_MASK) !== 0) {
-      resumeStackHigh = stackTop;
-      dispatchInvalidatedWatcher(subscriber);
-    } else {
-      const firstChildEdge = subscriber.firstOut;
-      if (firstChildEdge !== null) {
-        if (nextSiblingEdge !== null) {
-          const pushed = pushResumeEdge(
-            edgeStack,
-            stackTop,
-            nextSiblingEdge,
-            currentPromote,
-          );
-          stackTop = pushed.nextTop;
-          if (pushed.promotedIndex !== -1) {
-            directSiblingResumeIndex = pushed.promotedIndex;
-          }
-        }
-
-        currentEdge = firstChildEdge;
-        nextSiblingEdge = currentEdge.nextOut;
-        currentPromote = NON_IMMEDIATE;
-        continue;
-      }
-    }
-
-    if (nextSiblingEdge !== null) {
-      currentEdge = nextSiblingEdge;
-      nextSiblingEdge = currentEdge.nextOut;
       continue;
     }
 
-    if (stackTop === stackBase) {
-      restoreResumeStackBase(stackBase);
-      return;
+    if ((nextSubscriberState & WATCHER_MASK) !== 0) {
+      resumeStackHigh = stackTop;
+      dispatchInvalidatedWatcher(subscriber);
+      continue;
     }
 
-    const resumeIndex = --stackTop;
-    currentEdge = edgeStack[resumeIndex]!;
-    currentPromote =
-      resumeIndex === directSiblingResumeIndex
-        ? ((directSiblingResumeIndex = -1), directSiblingPromote)
-        : NON_IMMEDIATE;
-    nextSiblingEdge = currentEdge.nextOut;
+    const firstChildEdge = subscriber.firstOut;
+    if (firstChildEdge !== null) {
+      edgeStack[stackTop++] = firstChildEdge;
+      if (__DEV__) noteResumeEdgeStackUsage(stackTop);
+    }
   }
+
+  if (stackTop === stackBase) {
+    return;
+  }
+
+  while (stackTop !== stackBase) {
+    let currentEdge = edgeStack[--stackTop]!;
+    let nextSiblingEdge: ReactiveEdge | null = currentEdge.nextOut;
+
+    while (true) {
+      const subscriber = currentEdge.to;
+      const nextSubscriberState = invalidateSubscriber(
+        currentEdge,
+        subscriber,
+        subscriber.state,
+        NON_IMMEDIATE,
+      );
+
+      if (nextSubscriberState === 0) {
+      } else if ((nextSubscriberState & WATCHER_MASK) !== 0) {
+        resumeStackHigh = stackTop;
+        dispatchInvalidatedWatcher(subscriber);
+      } else {
+        const firstChildEdge = subscriber.firstOut;
+
+        if (firstChildEdge !== null) {
+          if (nextSiblingEdge !== null) {
+            edgeStack[stackTop++] = nextSiblingEdge;
+            if (__DEV__) noteResumeEdgeStackUsage(stackTop);
+          }
+
+          currentEdge = firstChildEdge;
+          nextSiblingEdge = currentEdge.nextOut;
+          continue;
+        }
+      }
+
+      if (nextSiblingEdge !== null) {
+        currentEdge = nextSiblingEdge;
+        nextSiblingEdge = currentEdge.nextOut;
+        continue;
+      }
+
+      break;
+    }
+  }
+
+  restoreResumeStackBase(stackBase);
 }
