@@ -11,8 +11,12 @@ export const createApplication = (App: JSXRenderable, container = "app") => {
   queueMicrotask(() => {
     const root = document.getElementById(container);
 
-    if (root !== null) {
-      render(App, root);
+    if (root === null) {
+      throw new Error(
+        "[createApplication]: No container provider or default container in index.html non exist!",
+      );
     }
+
+    render(App, root);
   });
 };

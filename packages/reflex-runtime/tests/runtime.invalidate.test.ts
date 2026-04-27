@@ -4,6 +4,7 @@ import {
   Consumer,
   Disposed,
   Invalid,
+  linkEdge,
   PROMOTE_CHANGED,
   PROMOTE_INVALID,
   ReactiveNode,
@@ -11,7 +12,6 @@ import {
   Tracking,
   Watcher,
 } from "../src/reactivity";
-import { linkEdge } from "../src/reactivity/shape/methods/connect";
 import { invalidateSubscriber } from "../src/reactivity/walkers/propagate.invalidate";
 import { resetRuntime } from "./runtime.test_utils";
 

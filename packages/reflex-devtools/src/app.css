@@ -1,0 +1,245 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
+@custom-variant light (&:where(.light, .light *, [data-theme="light"], [data-theme="light"] *));
+@custom-variant theme-midnight (&:where([data-theme="midnight"], [data-theme="midnight"] *));
+@custom-variant theme-forest (&:where([data-theme="forest"], [data-theme="forest"] *));
+@custom-variant theme-lab (&:where([data-theme="lab"], [data-theme="lab"] *));
+
+@theme {
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--theme-background);
+  --color-foreground: var(--theme-foreground);
+  --color-muted: var(--theme-muted);
+  --color-muted-foreground: var(--theme-muted-foreground);
+  --color-surface: var(--theme-surface);
+  --color-surface-foreground: var(--theme-surface-foreground);
+  --color-card: var(--theme-card);
+  --color-card-foreground: var(--theme-card-foreground);
+  --color-border: var(--theme-border);
+  --color-ring: var(--theme-ring);
+  --color-primary: var(--theme-primary);
+  --color-primary-foreground: var(--theme-primary-foreground);
+  --color-success: var(--theme-success);
+  --color-warning: var(--theme-warning);
+  --color-danger: var(--theme-danger);
+
+  --radius-app: var(--theme-radius);
+  --radius-control: calc(var(--theme-radius) - 0.5rem);
+  --shadow-card: var(--theme-card-shadow);
+}
+
+:root,
+.dark,
+[data-theme="dark"],
+[data-theme="midnight"] {
+  color-scheme: dark;
+
+  --theme-background: #020617;
+  --theme-foreground: #e2e8f0;
+  --theme-muted: #1e293b;
+  --theme-muted-foreground: #94a3b8;
+  --theme-surface: #0f172a;
+  --theme-surface-foreground: #e2e8f0;
+  --theme-card: #1e293b;
+  --theme-card-foreground: #f8fafc;
+  --theme-border: rgb(148 163 184 / 22%);
+  --theme-ring: #60a5fa;
+  --theme-primary: #3b82f6;
+  --theme-primary-foreground: #ffffff;
+  --theme-success: #22c55e;
+  --theme-warning: #f59e0b;
+  --theme-danger: #ef4444;
+  --theme-radius: 1rem;
+  --theme-card-shadow: 0 20px 40px rgb(0 0 0 / 40%);
+  --theme-background-image: radial-gradient(circle at top, #1e293b, #020617);
+
+  --bg: var(--theme-background);
+  --card: var(--theme-card);
+  --accent: var(--theme-primary);
+  --text: var(--theme-foreground);
+}
+
+.light,
+[data-theme="light"] {
+  color-scheme: light;
+
+  --theme-background: #f8fafc;
+  --theme-foreground: #0f172a;
+  --theme-muted: #e2e8f0;
+  --theme-muted-foreground: #64748b;
+  --theme-surface: #ffffff;
+  --theme-surface-foreground: #0f172a;
+  --theme-card: #ffffff;
+  --theme-card-foreground: #0f172a;
+  --theme-border: rgb(15 23 42 / 12%);
+  --theme-ring: #2563eb;
+  --theme-primary: #2563eb;
+  --theme-primary-foreground: #ffffff;
+  --theme-success: #16a34a;
+  --theme-warning: #d97706;
+  --theme-danger: #dc2626;
+  --theme-radius: 1rem;
+  --theme-card-shadow: 0 20px 40px rgb(15 23 42 / 12%);
+  --theme-background-image: radial-gradient(
+    circle at top,
+    #e0f2fe,
+    #f8fafc 56%
+  );
+}
+
+[data-theme="forest"] {
+  color-scheme: dark;
+
+  --theme-background: #07130f;
+  --theme-foreground: #ecfdf5;
+  --theme-muted: #15352b;
+  --theme-muted-foreground: #a7f3d0;
+  --theme-surface: #0c1f19;
+  --theme-surface-foreground: #ecfdf5;
+  --theme-card: #112820;
+  --theme-card-foreground: #f0fdf4;
+  --theme-border: rgb(167 243 208 / 20%);
+  --theme-ring: #34d399;
+  --theme-primary: #10b981;
+  --theme-primary-foreground: #032014;
+  --theme-success: #84cc16;
+  --theme-warning: #fbbf24;
+  --theme-danger: #fb7185;
+  --theme-radius: 0.75rem;
+  --theme-card-shadow: 0 20px 48px rgb(0 0 0 / 35%);
+  --theme-background-image:
+    radial-gradient(circle at top left, #14532d, transparent 36%),
+    linear-gradient(160deg, #07130f 10%, #0c1f19 100%);
+}
+
+[data-theme="lab"] {
+  color-scheme: light;
+
+  --theme-background: #f7f7fb;
+  --theme-foreground: #16151f;
+  --theme-muted: #e7e5f2;
+  --theme-muted-foreground: #656174;
+  --theme-surface: #ffffff;
+  --theme-surface-foreground: #16151f;
+  --theme-card: #ffffff;
+  --theme-card-foreground: #16151f;
+  --theme-border: rgb(22 21 31 / 12%);
+  --theme-ring: #e11d48;
+  --theme-primary: #e11d48;
+  --theme-primary-foreground: #ffffff;
+  --theme-success: #0d9488;
+  --theme-warning: #ca8a04;
+  --theme-danger: #b91c1c;
+  --theme-radius: 0.5rem;
+  --theme-card-shadow: 0 18px 36px rgb(22 21 31 / 10%);
+  --theme-background-image:
+    radial-gradient(circle at top right, #ffe4e6, transparent 36%),
+    linear-gradient(180deg, #ffffff 0%, #f7f7fb 100%);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  background: var(--theme-background);
+  background-image: var(--theme-background-image);
+  color: var(--theme-foreground);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.app {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.app-layout {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  background: var(--theme-background);
+  background-image: var(--theme-background-image);
+}
+
+.app-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow: auto;
+}
+
+.card {
+  width: min(100%, 480px);
+  padding: 2rem;
+  border: 1px solid var(--theme-border);
+  border-radius: var(--theme-radius);
+  background: var(--theme-card);
+  color: var(--theme-card-foreground);
+  box-shadow: var(--theme-card-shadow);
+  text-align: center;
+}
+
+h1 {
+  margin-bottom: 1rem;
+  color: var(--theme-card-foreground);
+  font-size: 1.4rem;
+  opacity: 0.9;
+}
+
+.value {
+  margin: 1rem 0;
+  color: var(--theme-foreground);
+  font-size: 3rem;
+  font-weight: 700;
+}
+
+.buttons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+button {
+  min-width: 2.75rem;
+  padding: 0.6rem 1rem;
+  border: 0;
+  border-radius: calc(var(--theme-radius) - 0.5rem);
+  background: var(--theme-primary);
+  color: var(--theme-primary-foreground);
+  cursor: pointer;
+  font-size: 1rem;
+  transition:
+    transform 0.1s ease,
+    opacity 0.1s ease,
+    box-shadow 0.1s ease;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--theme-ring);
+  outline-offset: 2px;
+}
+
+button:active {
+  transform: scale(0.95);
+}

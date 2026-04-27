@@ -5,10 +5,27 @@ import { describe, expect, it, vi } from "vitest";
 import { computed } from "../src/api/derived";
 import { effect } from "../src/api/effect";
 import { signal } from "../src/api/signal";
-import { createModel, isModel, own } from "../src/infra/model";
+import { createModel, isModel, own, readModelValue } from "../src/infra/model";
 import { createRuntime } from "./reflex.test_utils";
 
 describe("Reactive system - model actions", () => {
+  it("reads model readable values without invoking model actions", () => {
+    createRuntime();
+    const [count] = signal(1);
+
+    const createTestModel = createModel((ctx) => ({
+      count,
+      save: ctx.action(() => {
+        throw new Error("action should not be invoked while reading a model value");
+      }),
+    }));
+
+    const model = createTestModel();
+
+    expect(readModelValue(model.count)).toBe(1);
+    expect(readModelValue(model.save)).toBe(model.save);
+  });
+
   it("runs model actions untracked", () => {
     const rt = createRuntime();
     const [source, setSource] = signal(1);

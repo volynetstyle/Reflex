@@ -29,3 +29,13 @@ export function isModelReadableValue(value: unknown): value is Accessor<unknown>
     !isModelActionValue(value)
   );
 }
+
+export function readModelValue<T>(
+  value: T,
+): T extends Accessor<infer TValue> ? TValue : T {
+  return (isModelReadableValue(value) ? value() : value) as T extends Accessor<
+    infer TValue
+  >
+    ? TValue
+    : T;
+}

@@ -14,7 +14,9 @@ function getOpeningAttributes(code: string) {
     target: "es2022",
   });
 
-  const declaration = ast.body[0];
+  const declaration = ast.body.find(
+    (item) => item.type === "VariableDeclaration",
+  );
 
   if (declaration?.type !== "VariableDeclaration") {
     throw new TypeError("Expected a JSX variable declaration");
@@ -38,7 +40,9 @@ function getFirstJSXChildExpression(code: string) {
     target: "es2022",
   });
 
-  const declaration = ast.body[0];
+  const declaration = ast.body.find(
+    (item) => item.type === "VariableDeclaration",
+  );
 
   if (declaration?.type !== "VariableDeclaration") {
     throw new TypeError("Expected a JSX variable declaration");
@@ -151,6 +155,85 @@ describe("transformReflexDOMJSX", () => {
 
     const expression = getFirstJSXChildExpression(result!.code);
     expect(expression.type).toBe("ArrowFunctionExpression");
+  });
+
+  it("reads model member children through the model value helper", () => {
+    const source = "const view = <p>{model.count}</p>;";
+    const result = transformReflexDOMJSX(source, "Component.tsx");
+
+    expect(result).not.toBeNull();
+    expect(result!.code).toContain(
+      "readModelValue as __readReflexModelValue",
+    );
+
+    const expression = getFirstJSXChildExpression(result!.code);
+
+    expect(expression.type).toBe("ArrowFunctionExpression");
+
+    if (expression.type !== "ArrowFunctionExpression") {
+      throw new TypeError("Expected a model child accessor");
+    }
+
+    expect(expression.body.type).toBe("CallExpression");
+  });
+
+  it("reads model member props through the model value helper", () => {
+    const source =
+      'const view = <input value={model.searchQuery} class={model.inputClass} />;';
+    const result = transformReflexDOMJSX(source, "Component.tsx");
+
+    expect(result).not.toBeNull();
+
+    const [valueAttr, classAttr] = getOpeningAttributes(result!.code);
+
+    expect(valueAttr?.type).toBe("JSXAttribute");
+    expect(classAttr?.type).toBe("JSXAttribute");
+
+    if (
+      valueAttr?.type !== "JSXAttribute" ||
+      valueAttr.value?.type !== "JSXExpressionContainer" ||
+      classAttr?.type !== "JSXAttribute" ||
+      classAttr.value?.type !== "JSXExpressionContainer"
+    ) {
+      throw new TypeError("Expected JSX attributes with expression containers");
+    }
+
+    expect(valueAttr.value.expression.type).toBe("ArrowFunctionExpression");
+    expect(classAttr.value.expression.type).toBe("ArrowFunctionExpression");
+  });
+
+  it("leaves model event handlers as functions", () => {
+    const source = "const view = <button onClick={model.save}>Save</button>;";
+    const result = transformReflexDOMJSX(source, "Component.tsx");
+
+    expect(result).not.toBeNull();
+    expect(result!.code).not.toContain("__readReflexModelValue");
+
+    const [onClickAttr] = getOpeningAttributes(result!.code);
+
+    expect(onClickAttr?.type).toBe("JSXAttribute");
+
+    if (
+      onClickAttr?.type !== "JSXAttribute" ||
+      onClickAttr.value?.type !== "JSXExpressionContainer"
+    ) {
+      throw new TypeError("Expected JSX attributes with expression containers");
+    }
+
+    expect(onClickAttr.value.expression.type).toBe("MemberExpression");
+  });
+
+  it("skips TypeScript type nodes while transforming TSX modules", () => {
+    const source = [
+      'import type { HTMLProps } from "@volynets/reflex-dom";',
+      "interface ButtonProps extends HTMLProps<HTMLButtonElement> {}",
+      "const Button = ({ children, ...rest }: ButtonProps) => {",
+      "  return <button {...rest}>{children}</button>;",
+      "};",
+      "export default Button;",
+    ].join("\n");
+
+    expect(() => transformReflexDOMJSX(source, "Button.tsx")).not.toThrow();
   });
 
   it("exposes a vite plugin wrapper", async () => {

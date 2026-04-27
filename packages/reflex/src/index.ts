@@ -42,4 +42,4 @@ export { subscribeOnce, map, filter, merge, scan, hold } from "./api/event";
 /**
  * API
  */
-export { createModel, isModel, own } from "./infra/model";
+export { createModel, isModel, own, readModelValue } from "./infra/model";

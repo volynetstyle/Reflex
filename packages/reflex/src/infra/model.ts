@@ -8,6 +8,8 @@ import {
   type ModelActionBrand,
 } from "./modelValue";
 
+export { readModelValue } from "./modelValue";
+
 type Cleanup = () => void;
 type ModelState = { disposed: boolean };
 

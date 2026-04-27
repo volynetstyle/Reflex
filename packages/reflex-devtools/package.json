@@ -10,9 +10,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@reflex/vite-plugin": "workspace:*",
     "@volynets/reflex": "workspace:*",
     "@volynets/reflex-dom": "workspace:*",
-    "cytoscape": "^3.33.2"
+    "@reflex/vite-plugin": "workspace:*",
+    "@tailwindcss/vite": "^4.2.4",
+    "cytoscape": "^3.33.2",
+    "tailwindcss": "^4.2.4"
   }
 }
