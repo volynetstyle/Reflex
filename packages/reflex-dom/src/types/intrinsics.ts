@@ -242,8 +242,14 @@ type TextareaProps = OverrideProps<
   HTMLProps<HTMLTextAreaElement>,
   TextareaControlProps
 >;
-type SelectProps = OverrideProps<HTMLProps<HTMLSelectElement>, SelectControlProps>;
-type OptionProps = OverrideProps<HTMLProps<HTMLOptionElement>, OptionControlProps>;
+type SelectProps = OverrideProps<
+  HTMLProps<HTMLSelectElement>,
+  SelectControlProps
+>;
+type OptionProps = OverrideProps<
+  HTMLProps<HTMLOptionElement>,
+  OptionControlProps
+>;
 
 type HTMLIntrinsicElementsBase = {
   [Tag in keyof HTMLElementTagNameMap]: HTMLProps<HTMLElementTagNameMap[Tag]>;
@@ -264,18 +270,19 @@ export type SVGIntrinsicElements = {
 };
 
 export type MathMLIntrinsicElements = {
-  [Tag in keyof MathMLElementTagNameMap]: MathMLProps<MathMLElementTagNameMap[Tag]>;
+  [Tag in keyof MathMLElementTagNameMap]: MathMLProps<
+    MathMLElementTagNameMap[Tag]
+  >;
 };
 
 export type CustomElementIntrinsicElements = {
   [Tag in CustomElementTag]: CustomElementProps<HTMLElement>;
 };
 
-export type IntrinsicElements =
-  & HTMLIntrinsicElements
-  & SVGIntrinsicElements
-  & MathMLIntrinsicElements
-  & CustomElementIntrinsicElements;
+export type IntrinsicElements = HTMLIntrinsicElements &
+  SVGIntrinsicElements &
+  MathMLIntrinsicElements &
+  CustomElementIntrinsicElements;
 
 export type ElementTag =
   | keyof HTMLIntrinsicElements

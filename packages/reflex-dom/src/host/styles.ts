@@ -1,54 +1,54 @@
 import type { StyleObject, StyleValue } from "../types";
 
 type StyleRecord = Record<string, string | number | null | undefined>;
-type MutableStyleDeclaration = CSSStyleDeclaration &
+type MutableStyle = CSSStyleDeclaration &
   Record<string, string | number | null | undefined>;
 
-function toStyleRecord(value: StyleObject): StyleRecord {
-  return value as StyleRecord;
+type StylableElement = Element & { style: CSSStyleDeclaration };
+
+function hasStyle(el: Element): el is StylableElement {
+  return "style" in el;
 }
 
 function isCustomProp(key: string): boolean {
   return key.charCodeAt(0) === 45 && key.charCodeAt(1) === 45;
 }
 
-function clearStyleString(style: CSSStyleDeclaration): void {
-  style.cssText = "";
-}
-
-function clearStyleObject(
-  style: CSSStyleDeclaration,
-  prev: StyleObject,
-): void {
-  const mutableStyle = style as MutableStyleDeclaration;
-  for (const key in prev) {
-    if (isCustomProp(key)) {
-      style.removeProperty(key);
-    } else {
-      mutableStyle[key] = "";
-    }
+function clearStyleKey(style: CSSStyleDeclaration, key: string): void {
+  if (isCustomProp(key)) {
+    style.removeProperty(key);
+  } else {
+    (style as MutableStyle)[key] = "";
   }
 }
 
-function setStyleValue(
+function setStyleKey(
   style: CSSStyleDeclaration,
   key: string,
-  value: unknown,
+  value: string | number | null | undefined,
 ): void {
-  const mutableStyle = style as MutableStyleDeclaration;
   if (value == null) {
-    if (isCustomProp(key)) {
-      style.removeProperty(key);
-    } else {
-      mutableStyle[key] = "";
-    }
-    return;
-  }
-
-  if (isCustomProp(key)) {
-    style.setProperty(key, String(value));
+    clearStyleKey(style, key);
+  } else if (isCustomProp(key)) {
+    style.setProperty(key, "" + value);
   } else {
-    mutableStyle[key] = value as string | number;
+    (style as MutableStyle)[key] = value;
+  }
+}
+
+function applyStyleObject(style: CSSStyleDeclaration, next: StyleObject): void {
+  const record = next as StyleRecord;
+
+  for (const key in record) {
+    setStyleKey(style, key, record[key]);
+  }
+}
+
+function clearStyleObject(style: CSSStyleDeclaration, prev: StyleObject): void {
+  const record = prev as StyleRecord;
+
+  for (const key in record) {
+    clearStyleKey(style, key);
   }
 }
 
@@ -57,26 +57,20 @@ function patchStyleObject(
   next: StyleObject,
   prev: StyleObject,
 ): void {
-  const nextRecord = toStyleRecord(next);
-  const prevRecord = toStyleRecord(prev);
-  const mutableStyle = style as MutableStyleDeclaration;
+  const nextRecord = next as StyleRecord;
+  const prevRecord = prev as StyleRecord;
 
-  // remove stale keys
   for (const key in prevRecord) {
     if (!(key in nextRecord)) {
-      if (isCustomProp(key)) {
-        style.removeProperty(key);
-      } else {
-        mutableStyle[key] = "";
-      }
+      clearStyleKey(style, key);
     }
   }
 
-  // apply only changed keys
   for (const key in nextRecord) {
     const nextValue = nextRecord[key];
+
     if (prevRecord[key] !== nextValue) {
-      setStyleValue(style, key, nextValue);
+      setStyleKey(style, key, nextValue);
     }
   }
 }
@@ -86,51 +80,38 @@ export function applyStyle(
   next: StyleValue | null | undefined,
   prev: StyleValue | null | undefined,
 ): StyleValue | null | undefined {
-  if (!(el instanceof HTMLElement || el instanceof SVGElement)) {
-    return next;
-  }
-
-  if (next === prev) {
-    return next;
-  }
+  if (next === prev) return next;
+  if (!hasStyle(el)) return next;
 
   const style = el.style;
 
   if (next == null) {
     if (prev != null) {
       if (typeof prev === "string") {
-        clearStyleString(style);
+        style.cssText = "";
       } else {
         clearStyleObject(style, prev);
       }
+
       el.removeAttribute("style");
     }
+
     return next;
   }
 
   if (typeof next === "string") {
-    if (typeof prev !== "string" || prev !== next) {
-      style.cssText = next;
-    }
+    style.cssText = next;
     return next;
   }
 
   if (prev == null) {
-    const nextRecord = toStyleRecord(next);
-
-    for (const key in nextRecord) {
-      setStyleValue(style, key, nextRecord[key]);
-    }
+    applyStyleObject(style, next);
     return next;
   }
 
   if (typeof prev === "string") {
-    clearStyleString(style);
-    const nextRecord = toStyleRecord(next);
-
-    for (const key in nextRecord) {
-      setStyleValue(style, key, nextRecord[key]);
-    }
+    style.cssText = "";
+    applyStyleObject(style, next);
     return next;
   }
 

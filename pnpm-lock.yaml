@@ -102,6 +102,9 @@ importers:
       '@volynets/reflex-dom':
         specifier: workspace:*
         version: link:../reflex-dom
+      '@volynets/reflex-runtime':
+        specifier: workspace:*
+        version: link:../reflex-runtime
       cytoscape:
         specifier: ^3.33.2
         version: 3.33.2

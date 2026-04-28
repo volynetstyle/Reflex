@@ -1,20 +1,26 @@
 import type { Ref } from "../types";
 
-export function attachRef<T>(el: T, ref: Ref<T> | undefined) {
-  if (!ref) return () => {};
+const noop = (): void => {};
 
-  if (typeof ref === "function") {
-    const cleanup = ref(el);
+export function attachRef<T>(el: T, ref: Ref<T> | undefined): () => void {
+  if (!ref) return noop;
+
+  if (typeof ref !== "function") {
+    ref.current = el;
 
     return () => {
-      if (cleanup) cleanup();
-      ref(null);
+      ref.current = null;
     };
   }
 
-  ref.current = el;
+  const cleanup = ref(el);
 
-  return () => {
-    ref.current = null;
-  };
+  return typeof cleanup === "function"
+    ? () => {
+        cleanup();
+        ref(null);
+      }
+    : () => {
+        ref(null);
+      };
 }

@@ -2,7 +2,7 @@ import {
   createOwnerContext,
   type OwnerContext,
 } from "@volynets/reflex-framework";
-import { hydrateWithRenderer, resumeWithRenderer } from "./hydration";
+import { hydrateWithRenderer, resumeWithRenderer } from "../hydrate/hydration";
 import { renderWithRenderer } from "./render";
 import type { Cleanup, JSXRenderable } from "../types";
 import {

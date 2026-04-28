@@ -16,11 +16,18 @@ export const URL_ATTRS = new Set<string>([
 ]);
 
 export function resolveNamespace(tag: string, parent: Namespace): Namespace {
-  if (tag === "foreignObject") return "html";
+  // explicit roots / escapes
   if (tag === "svg") return "svg";
   if (tag === "math") return "mathml";
+  if (tag === "foreignObject") return "html";
+
+  // inherited namespace
   if (parent === "svg") return "svg";
   if (parent === "mathml") return "mathml";
+
+  // fallback detection (rare path)
   if (isMathMLTag(tag)) return "mathml";
-  return isSVGTag(tag) ? "svg" : "html";
+  if (isSVGTag(tag)) return "svg";
+
+  return "html";
 }

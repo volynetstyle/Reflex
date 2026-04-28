@@ -3,12 +3,12 @@ import { useEffectInternal, useEffectOnceInternal } from "./useEffectCore";
 
 export function useComponentDidMount(callback: () => void): void {
   assertHookUsage("useComponentDidMount");
-  useEffectOnceInternal(() => {
+  void useEffectOnceInternal(() => {
     callback();
   });
 }
 
 export function useComponentDidUnmount(callback: () => void): void {
   assertHookUsage("useComponentDidUnmount");
-  useEffectInternal(() => callback);
+  void useEffectInternal(() => callback);
 }

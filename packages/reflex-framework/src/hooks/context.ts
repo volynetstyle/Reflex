@@ -12,6 +12,7 @@ export const noopRenderEffectScheduler: RenderEffectScheduler = Object.freeze({
 });
 
 interface ComponentHookContext {
+  hookIndex: number;
   owner: OwnerContext;
   scope: Scope | null;
   renderEffectScheduler: RenderEffectScheduler | null;
@@ -36,27 +37,22 @@ export function runWithComponentHooks<T>(
   optionsOrFn: ComponentHookOptions | (() => T),
   maybeFn?: () => T,
 ): T {
-  const fn =
-    typeof optionsOrFn === "function"
-      ? optionsOrFn
-      : maybeFn;
+  const fn = typeof optionsOrFn === "function" ? optionsOrFn : maybeFn;
 
   if (fn === undefined) {
     throw new TypeError("runWithComponentHooks requires a callback");
   }
 
-  const options =
-    typeof optionsOrFn === "function"
-      ? undefined
-      : optionsOrFn;
+  const options = typeof optionsOrFn === "function" ? undefined : optionsOrFn;
   const owner = options?.owner ?? getHookOwner();
   const previousHookContext = currentHookContext;
 
   currentHookContext = {
+    hookIndex: 0,
     owner,
     scope: options?.scope ?? owner.currentOwner,
-  renderEffectScheduler:
-    options?.renderEffectScheduler ?? noopRenderEffectScheduler,
+    renderEffectScheduler:
+      options?.renderEffectScheduler ?? noopRenderEffectScheduler,
   };
   componentHookDepth++;
 
@@ -69,7 +65,9 @@ export function runWithComponentHooks<T>(
 }
 
 export function assertHookUsage(hookName: string): void {
-  if (!__DEV__ || componentHookDepth > 0 || warnedHooks.has(hookName)) return;
+  if (!__DEV__) return;
+
+  if (componentHookDepth > 0 || warnedHooks.has(hookName)) return;
 
   warnedHooks.add(hookName);
   console.warn(
@@ -92,4 +90,12 @@ export function isInsideComponentHooks(): boolean {
 
 export function getCurrentRenderEffectScheduler(): RenderEffectScheduler {
   return currentHookContext?.renderEffectScheduler ?? noopRenderEffectScheduler;
+}
+
+export function consumeHookSlot(): number {
+  assertHookUsage("hook");
+
+  if (currentHookContext === null) return 0;
+
+  return currentHookContext.hookIndex++;
 }

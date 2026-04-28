@@ -1,6 +1,20 @@
 export { For, Portal, Show, Switch } from "./operators";
+
+export {
+  useComponentDidMount,
+  useComponentDidUnmount,
+  useContext,
+  useEffect,
+  useEffectOnce,
+  useEffectRender,
+  useRef,
+  type UseEffectFn,
+} from "@volynets/reflex-framework";
+
 export { Fragment, jsx, jsxDEV, jsxs } from "./runtime/jsx";
+
 export { createDOMRenderer, type DOMRenderer } from "./runtime/renderer";
+
 export {
   createDOMRuntime,
   hydrate,

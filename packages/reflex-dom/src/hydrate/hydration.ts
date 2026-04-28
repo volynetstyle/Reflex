@@ -12,32 +12,31 @@ import type {
   ShowRenderable,
   SwitchRenderable,
 } from "../operators";
-import {
-  resolveShowValue,
-  resolveSwitchValue,
-} from "../operators";
+import { resolveShowValue, resolveSwitchValue } from "../operators";
 import { RenderableKind } from "../renderable/kind";
 import { classifyClientRenderable } from "../mount/renderable";
 import { bindElementProps } from "../mount/element-binder";
 import { hydrateReactiveSlot } from "../structure/reactive-slot";
 import { mountPortal } from "../mount/portal";
-import type { DOMRenderer } from "./renderer";
 import {
   adoptExistingContentRange,
   createRenderRangeMount,
   mountRenderRange,
   type MountedRenderRange,
 } from "../structure/render-range";
-import {
-  isHydrationSlotEnd,
-  isHydrationSlotStart,
-} from "../hydrate/markers";
+import { isHydrationSlotEnd, isHydrationSlotStart } from "../hydrate/markers";
 import {
   createScope,
   runInOwnershipScope,
   runWithComponentHooks,
 } from "@volynets/reflex-framework";
-import { resolveNamespace, SVG_NS, MATHML_NS, type Namespace } from "../host/namespace";
+import {
+  resolveNamespace,
+  SVG_NS,
+  MATHML_NS,
+  type Namespace,
+} from "../host/namespace";
+import type { DOMRenderer } from "src/runtime/renderer";
 
 class HydrationMismatch extends Error {}
 
@@ -152,10 +151,7 @@ function shouldHydrateLightDomChildren(
   tag: ElementTag,
   props: Record<string, unknown>,
 ): boolean {
-  return !(
-    tag === "textarea" &&
-    ("value" in props || "defaultValue" in props)
-  );
+  return !(tag === "textarea" && ("value" in props || "defaultValue" in props));
 }
 
 function hydrateRenderableValue(
@@ -288,14 +284,25 @@ function hydrateRenderableValue(
         ElementTag,
         ElementProps<ElementTag>
       >;
-      const elementNamespace = resolveNamespace(renderable.tag, parentNamespace);
+      const elementNamespace = resolveNamespace(
+        renderable.tag,
+        parentNamespace,
+      );
 
-      if (!matchesHydratedElement(currentNode, renderable.tag, elementNamespace)) {
+      if (
+        !matchesHydratedElement(currentNode, renderable.tag, elementNamespace)
+      ) {
         failHydration();
       }
 
       const props = renderable.props as Record<string, unknown>;
-      bindElementProps(renderer, currentNode, props, elementNamespace, "initial");
+      bindElementProps(
+        renderer,
+        currentNode,
+        props,
+        elementNamespace,
+        "initial",
+      );
 
       if (shouldHydrateLightDomChildren(renderable.tag, props)) {
         const remainingChild = hydrateRenderableValue(
@@ -311,7 +318,13 @@ function hydrateRenderableValue(
         }
       }
 
-      bindElementProps(renderer, currentNode, props, elementNamespace, "deferred");
+      bindElementProps(
+        renderer,
+        currentNode,
+        props,
+        elementNamespace,
+        "deferred",
+      );
 
       return nextSiblingWithinBoundary(currentNode, boundary);
     }

@@ -1,4 +1,3 @@
-import type { Cleanup } from "../types/core";
 import { assertHookUsage } from "./context";
 import {
   type EffectCallback,
@@ -10,17 +9,17 @@ import {
 
 export type { EffectCallback, EffectCleanup };
 
-export function useEffect(callback: EffectCallback): Cleanup {
+export function useEffect(callback: EffectCallback): void {
   assertHookUsage("useEffect");
-  return useEffectInternal(callback);
+  void useEffectInternal(callback);
 }
 
 export function useEffectOnce(callback: () => void): void {
   assertHookUsage("useEffectOnce");
-  useEffectOnceInternal(callback);
+  void useEffectOnceInternal(callback);
 }
 
-export function useEffectRender(callback: EffectCallback): Cleanup {
+export function useEffectRender(callback: EffectCallback): void {
   assertHookUsage("useEffectRender");
-  return useEffectRenderInternal(callback);
+  void useEffectRenderInternal(callback);
 }

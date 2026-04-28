@@ -33,13 +33,13 @@ export function useEffectOnceInternal(callback: () => void): void {
 
 export function useEffectRenderInternal(callback: EffectCallback): Cleanup {
   const scheduler = getCurrentRenderEffectScheduler();
-
   const owner = getCurrentHookOwner();
   const scope = getCurrentHookScope();
+
   let disposed = false;
   let disposeEffect: Cleanup | null = null;
 
-  const cancelScheduledTask = scheduler.schedule(() => {
+  const cancelableScheduledTask = scheduler.schedule(() => {
     if (disposed) return;
 
     disposeEffect = runWithOwner(owner, scope, () =>
@@ -54,7 +54,7 @@ export function useEffectRenderInternal(callback: EffectCallback): Cleanup {
 
   const dispose = (() => {
     disposed = true;
-    cancelScheduledTask();
+    cancelableScheduledTask();
     disposeEffect?.();
     disposeEffect = null;
   }) as Cleanup;

@@ -2,71 +2,50 @@ import type { Namespace } from "./namespace";
 import { XLINK_NS, URL_ATTRS } from "./namespace";
 import { sanitizeURL } from "./sanitize";
 
-const enum AttrKind {
-  Property = 0,
-  Attribute = 1,
-  XLink = 2,
-}
+function isAriaOrDataAttr(name: string): boolean {
+  if (name.length <= 5) return false;
 
-function isAriaAttr(name: string): boolean {
-  return (
-    name.length > 5 &&
-    name.charCodeAt(0) === 97 &&
-    name.charCodeAt(1) === 114 &&
-    name.charCodeAt(2) === 105 &&
-    name.charCodeAt(3) === 97 &&
-    name.charCodeAt(4) === 45
-  );
-}
+  const c0 = name.charCodeAt(0);
+  const c1 = name.charCodeAt(1);
+  const c2 = name.charCodeAt(2);
+  const c3 = name.charCodeAt(3);
+  const c4 = name.charCodeAt(4);
 
-function isDataAttr(name: string): boolean {
-  return (
-    name.length > 5 &&
-    name.charCodeAt(0) === 100 &&
-    name.charCodeAt(1) === 97 &&
-    name.charCodeAt(2) === 116 &&
-    name.charCodeAt(3) === 97 &&
-    name.charCodeAt(4) === 45
-  );
-}
-
-function resolveAttrKind(el: Element, name: string, ns: Namespace): AttrKind {
-  if (name === "xlink:href") return AttrKind.XLink;
-  if (ns !== "svg" && !isAriaAttr(name) && !isDataAttr(name) && name in el) {
-    return AttrKind.Property;
+  // aria-
+  if (c0 === 97 && c1 === 114 && c2 === 105 && c3 === 97 && c4 === 45) {
+    return true;
   }
-  return AttrKind.Attribute;
+
+  // data-
+  return c0 === 100 && c1 === 97 && c2 === 116 && c3 === 97 && c4 === 45;
+}
+
+function normalizeURLAttr(name: string, value: unknown): unknown {
+  return URL_ATTRS.has(name) && typeof value === "string"
+    ? sanitizeURL(value)
+    : value;
 }
 
 function clearProperty(el: Element, name: string): void {
   const target = el as unknown as Record<string, unknown>;
-  const currentValue = target[name];
-  target[name] = typeof currentValue === "boolean" ? false : "";
+  target[name] = typeof target[name] === "boolean" ? false : "";
 }
 
 function setProperty(el: Element, name: string, value: unknown): void {
   const target = el as unknown as Record<string, unknown>;
-  const normalized =
-    URL_ATTRS.has(name) && typeof value === "string"
-      ? sanitizeURL(value)
-      : value;
-  const currentValue = target[name];
+  const current = target[name];
+  const normalized = normalizeURLAttr(name, value);
+
   target[name] =
-    typeof currentValue === "boolean" ? normalized === true : (normalized ?? "");
+    typeof current === "boolean" ? normalized === true : (normalized ?? "");
 }
 
-function setAttributeValue(el: Element, name: string, value: unknown): void {
+function setPlainAttribute(el: Element, name: string, value: unknown): void {
   if (value === true) {
     el.setAttribute(name, "");
-    return;
+  } else {
+    el.setAttribute(name, String(normalizeURLAttr(name, value)));
   }
-
-  const normalized =
-    URL_ATTRS.has(name) && typeof value === "string"
-      ? sanitizeURL(value)
-      : value;
-
-  el.setAttribute(name, String(normalized));
 }
 
 export function setAttr(
@@ -78,34 +57,38 @@ export function setAttr(
 ): unknown {
   if (value === prev) return prev;
 
-  switch (resolveAttrKind(el, name, ns)) {
-    case AttrKind.XLink:
-      if (value == null || value === false) {
-        el.removeAttributeNS(XLINK_NS, "href");
-      } else {
-        const normalized =
-          URL_ATTRS.has(name) && typeof value === "string"
-            ? sanitizeURL(value)
-            : value;
-        el.setAttributeNS(XLINK_NS, name, String(normalized));
-      }
-      return value;
+  const remove = value == null || value === false;
 
-    case AttrKind.Property:
-      if (value == null || value === false) {
-        clearProperty(el, name);
-        el.removeAttribute(name);
-      } else {
-        setProperty(el, name, value);
-      }
-      return value;
+  if (name === "xlink:href") {
+    if (remove) {
+      el.removeAttributeNS(XLINK_NS, "href");
+    } else {
+      el.setAttributeNS(
+        XLINK_NS,
+        "href",
+        String(normalizeURLAttr(name, value)),
+      );
+    }
 
-    default:
-      if (value == null || value === false) {
-        el.removeAttribute(name);
-      } else {
-        setAttributeValue(el, name, value);
-      }
-      return value;
+    return value;
   }
+
+  if (ns !== "svg" && !isAriaOrDataAttr(name) && name in el) {
+    if (remove) {
+      clearProperty(el, name);
+      el.removeAttribute(name);
+    } else {
+      setProperty(el, name, value);
+    }
+
+    return value;
+  }
+
+  if (remove) {
+    el.removeAttribute(name);
+  } else {
+    setPlainAttribute(el, name, value);
+  }
+
+  return value;
 }
