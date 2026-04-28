@@ -1,11 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   addCleanup,
-  appendChild,
   createOwnerContext,
   createScope,
   disposeScope,
-  getChildCount,
+  prependChild,
   registerCleanup,
   runWithScope,
 } from "../src/ownership";
@@ -56,11 +55,11 @@ describe("ownership lifecycle", () => {
     disposeScope(root);
 
     expect(log).toEqual([
+      "second-child:1",
       "grand-child:2",
       "grand-child:1",
       "first-child:2",
       "first-child:1",
-      "second-child:1",
       "root:2",
       "root:1",
     ]);
@@ -148,17 +147,14 @@ describe("ownership lifecycle", () => {
 
     disposeScope(branch!);
 
-    expect(root.firstChild).toBe(left!);
-    expect(root.lastChild).toBe(right!);
-    expect(left!.nextSibling).toBe(right!);
-    expect(right!.prevSibling).toBe(left!);
-    expect(getChildCount(root)).toBe(2);
+    expect(root.firstChild).toBe(right!);
+    expect(right!.nextSibling).toBe(left!);
+    expect(left!.prevSibling).toBe(right!);
 
     expect(branch!.parent).toBeNull();
     expect(branch!.prevSibling).toBeNull();
     expect(branch!.nextSibling).toBeNull();
     expect(branch!.firstChild).toBeNull();
-    expect(branch!.lastChild).toBeNull();
 
     expect(grandChild!.parent).toBeNull();
     expect(grandChild!.prevSibling).toBeNull();
@@ -200,11 +196,9 @@ describe("ownership lifecycle", () => {
         cleanupError,
       );
 
-      expect(root.firstChild).toBe(left!);
-      expect(root.lastChild).toBe(right!);
-      expect(left!.nextSibling).toBe(right!);
-      expect(right!.prevSibling).toBe(left!);
-      expect(getChildCount(root)).toBe(2);
+      expect(root.firstChild).toBe(right!);
+      expect(right!.nextSibling).toBe(left!);
+      expect(left!.prevSibling).toBe(right!);
 
       expect(branch!.parent).toBeNull();
       expect(branch!.prevSibling).toBeNull();
@@ -231,7 +225,7 @@ describe("ownership lifecycle", () => {
           });
 
           lateChild = createScope();
-          appendChild(branch, lateChild);
+          prependChild(branch, lateChild);
         });
       });
     });

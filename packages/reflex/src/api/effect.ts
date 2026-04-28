@@ -9,7 +9,6 @@ import type { ReactiveNode } from "@volynets/reflex-runtime";
 import {
   createWatcherNode,
   createWatcherRankedrNode,
-  WatcherPhase,
 } from "../infra/factory";
 
 /**
@@ -145,24 +144,11 @@ export function effect(fn: EffectFn): Destructor {
   return dispose;
 }
 
-export function effectRender(fn: EffectFn): Destructor {
-  const node = createWatcherNode(fn, WatcherPhase.Render);
-  runWatcher(node);
-
-  const dispose = disposeWatcher.bind(null, node) as Destructor;
-  registerWatcherCleanup(dispose);
-  return dispose;
-}
-
 export function effectRanked(
   fn: EffectFn,
   options: EffectOptions = {},
 ): Destructor {
-  const node = createWatcherRankedrNode(
-    fn,
-    options.priority ?? 0,
-    options.phase === "render" ? WatcherPhase.Render : WatcherPhase.User,
-  );
+  const node = createWatcherRankedrNode(fn, options.priority ?? 0);
   runWatcher(node);
 
   const dispose = disposeWatcher.bind(null, node) as Destructor;

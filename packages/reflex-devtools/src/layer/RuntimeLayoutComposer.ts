@@ -23,24 +23,41 @@ const DEFAULT_OPTIONS: LayoutOptions = {
   incremental: true,
 };
 
-type AdjacencyMap = Map<number, Set<number>>;
+type AdjacencyMap = Map<number, number[]>;
 type PositionMap = Map<number, { x: number; y: number }>;
 
 function buildAdjacency(edges: Map<string, RuntimeGraphEdge>): {
   children: AdjacencyMap;
   parents: AdjacencyMap;
 } {
-  const children: AdjacencyMap = new Map();
-  const parents: AdjacencyMap = new Map();
+  const children = new Map<number, number[]>();
+  const parents = new Map<number, number[]>();
 
   for (const edge of edges.values()) {
-    if (!children.has(edge.source)) children.set(edge.source, new Set());
-    if (!children.has(edge.target)) children.set(edge.target, new Set());
-    if (!parents.has(edge.source)) parents.set(edge.source, new Set());
-    if (!parents.has(edge.target)) parents.set(edge.target, new Set());
+    let out = children.get(edge.source);
+    if (out === undefined) {
+      out = [];
+      children.set(edge.source, out);
+    }
+    out.push(edge.target);
 
-    children.get(edge.source)?.add(edge.target);
-    parents.get(edge.target)?.add(edge.source);
+    let incoming = parents.get(edge.target);
+    if (incoming === undefined) {
+      incoming = [];
+      parents.set(edge.target, incoming);
+    }
+    incoming.push(edge.source);
+
+    if (!children.has(edge.target)) children.set(edge.target, []);
+    if (!parents.has(edge.source)) parents.set(edge.source, []);
+  }
+
+  for (const list of children.values()) {
+    list.sort((a, b) => a - b);
+  }
+
+  for (const list of parents.values()) {
+    list.sort((a, b) => a - b);
   }
 
   return { children, parents };
@@ -57,7 +74,7 @@ function findRoots(
     if (!nodes.has(id)) continue;
 
     const nodeParents = parents.get(id);
-    if (nodeParents === undefined || nodeParents.size === 0) {
+    if (nodeParents === undefined || nodeParents.length === 0) {
       roots.push(id);
     }
   }
@@ -65,8 +82,13 @@ function findRoots(
   return roots.sort((a, b) => a - b);
 }
 
-function sortedChildren(children: AdjacencyMap, nodeId: number): number[] {
-  return [...(children.get(nodeId) ?? [])].sort((a, b) => a - b);
+const EMPTY_CHILDREN: readonly number[] = [];
+
+function sortedChildren(
+  children: Map<number, number[]>,
+  nodeId: number,
+): readonly number[] {
+  return children.get(nodeId) ?? EMPTY_CHILDREN;
 }
 
 function subtreeWidth(
@@ -316,7 +338,10 @@ export class RuntimeLayoutComposer {
     this.prevEdges = new Map();
   }
 
-  rememberManualPosition(nodeId: number, position: { x: number; y: number }): void {
+  rememberManualPosition(
+    nodeId: number,
+    position: { x: number; y: number },
+  ): void {
     this.manualPositions.set(nodeId, position);
   }
 

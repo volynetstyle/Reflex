@@ -23,7 +23,6 @@ export {
 } from "../api/derived";
 export {
   effect,
-  effectRender,
   withEffectCleanupRegistrar,
   withEffectCleanupScope,
 } from "../api/effect";

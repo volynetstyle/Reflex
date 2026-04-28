@@ -1,35 +1,16 @@
 import type { OwnershipNode } from "./ownership.node";
 
-const CHILD_MASK = 0x00ffffff;
-const FLAG_SHIFT = 24;
-
 export const enum OwnershipFlags {
-  CLOSING = 1,
+  CLOSING = 1 << 0,
   DISPOSED = 1 << 1,
 }
 
-export function getChildCount(node: OwnershipNode): number {
-  return node.meta & CHILD_MASK;
-}
-
-export function setChildCount(node: OwnershipNode, value: number): void {
-  node.meta = (node.meta & ~CHILD_MASK) | (value & CHILD_MASK);
-}
-
-export function incChildCount(node: OwnershipNode): void {
-  ++node.meta;
-}
-
-export function decChildCount(node: OwnershipNode): void {
-  --node.meta;
-}
-
 export function isDisposed(node: OwnershipNode): boolean {
-  return !!(((node.meta >>> FLAG_SHIFT) & OwnershipFlags.DISPOSED) !== 0);
+  return (node.meta & OwnershipFlags.DISPOSED) !== 0;
 }
 
 export function isClosing(node: OwnershipNode): boolean {
-  return !!(((node.meta >>> FLAG_SHIFT) & OwnershipFlags.CLOSING) !== 0);
+  return (node.meta & OwnershipFlags.CLOSING) !== 0;
 }
 
 export function isShuttingDown(node: OwnershipNode): boolean {
@@ -37,10 +18,9 @@ export function isShuttingDown(node: OwnershipNode): boolean {
 }
 
 export function markClosing(node: OwnershipNode): void {
-  node.meta |= OwnershipFlags.CLOSING << FLAG_SHIFT;
+  node.meta |= OwnershipFlags.CLOSING;
 }
 
 export function markDisposed(node: OwnershipNode): void {
-  node.meta =
-    (node.meta & CHILD_MASK) | (OwnershipFlags.DISPOSED << FLAG_SHIFT);
+  node.meta |= OwnershipFlags.DISPOSED;
 }

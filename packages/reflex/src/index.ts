@@ -22,7 +22,6 @@ export {
 } from "./api/derived";
 export {
   effect,
-  effectRender,
   effectRanked,
   withEffectCleanupRegistrar,
   withEffectCleanupScope,

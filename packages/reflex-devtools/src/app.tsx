@@ -56,7 +56,7 @@ const App = () => {
   const a = memo(() => count() * 2);
   const b = memo(() => count() * 2);
 
-  const doubled = memo(() => (count() % 2 === 0 ? a() * 2 : b() * 2));
+  const doubled = memo(() => (count() % 2 === 0 ? a() : b()));
 
   return (
     <div class="app-layout">

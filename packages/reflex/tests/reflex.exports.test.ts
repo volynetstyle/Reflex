@@ -22,7 +22,6 @@ describe("Reactive system - exports", () => {
     expect(reflex.computed).toBe(api.computed);
     expect(reflex.memo).toBe(api.memo);
     expect(reflex.effect).toBe(api.effect);
-    expect(reflex.effectRender).toBe(api.effectRender);
     expect(reflex.effectRanked).toBe(api.effectRanked);
     expect(reflex.subscribeOnce).toBe(api.subscribeOnce);
     expect(reflex.map).toBe(api.map);

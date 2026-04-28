@@ -8,9 +8,7 @@ export class OwnershipNode {
   firstChild: OwnershipNode | null = null;
   nextSibling: OwnershipNode | null = null;
   prevSibling: OwnershipNode | null = null;
-  lastChild: OwnershipNode | null = null;
 
-  // Lower 24 bits: child count. Upper 8 bits: flags.
   meta = 0;
 
   context: OwnershipContextRecord | null = null;

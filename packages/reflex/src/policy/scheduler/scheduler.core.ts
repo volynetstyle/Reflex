@@ -61,20 +61,17 @@ function flushWatcherQueue(queue: WatcherQueue, thrown: unknown): unknown {
 
 function flushSchedulerQueue(core: SchedulerCore): void {
   const queue = core.queue;
-  const renderQueue = core.renderQueue;
   if (core.phase === SchedulerPhase.Flushing) return;
-  if (queue.size === 0 && renderQueue.size === 0) return;
+  if (queue.size === 0) return;
 
   core.phase = SchedulerPhase.Flushing;
   let thrown: unknown = null;
 
   try {
-    while (renderQueue.size !== 0 || queue.size !== 0) {
-      thrown = flushWatcherQueue(renderQueue, thrown);
+    while (queue.size !== 0) {
       thrown = flushWatcherQueue(queue, thrown);
     }
   } finally {
-    unscheduleQueuedNodes(renderQueue);
     unscheduleQueuedNodes(queue);
     core.phase =
       core.batchDepth > 0 ? SchedulerPhase.Batching : SchedulerPhase.Idle;
@@ -143,16 +140,14 @@ export function isRuntimeInactive(core: SchedulerCore): boolean {
 }
 
 export function hasPendingEffects(core: SchedulerCore): boolean {
-  return core.renderQueue.size !== 0 || core.queue.size !== 0;
+  return core.queue.size !== 0;
 }
 
 export function createSchedulerCore(): SchedulerCore {
   const queue = createWatcherQueue();
-  const renderQueue = createWatcherQueue();
 
   const core: SchedulerCore = {
     queue,
-    renderQueue,
     batchDepth: 0,
     phase: SchedulerPhase.Idle,
     flush: (): void => flushSchedulerQueue(core),
@@ -162,12 +157,6 @@ export function createSchedulerCore(): SchedulerCore {
   };
 
   return core;
-}
-
-function getEffectQueue(core: SchedulerCore, node: EffectNode): WatcherQueue {
-  return (node as EffectNode & { effectPhase?: number }).effectPhase === 1
-    ? core.renderQueue
-    : core.queue;
 }
 
 export function tryEnqueue(queue: WatcherQueue, node: ReactiveNode): boolean {
@@ -193,7 +182,7 @@ export function tryEnqueueEffect(
   }
 
   effectNode.state = state | Scheduled;
-  pushWatcherQueue(getEffectQueue(core, effectNode), effectNode);
+  pushWatcherQueue(core.queue, effectNode);
   return true;
 }
 

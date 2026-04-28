@@ -135,29 +135,13 @@ function rankedFlush(this: RankedSchedulerCore): void {
   const rankedHeads = this.rankedHeads;
   const activePriorities = this.activePriorities;
   if (this.phase === SchedulerPhase.Flushing) return;
-  if (queue.size === 0 && this.renderQueue.size === 0) return;
+  if (queue.size === 0) return;
 
   this.phase = SchedulerPhase.Flushing;
   let thrown: unknown = null;
 
   try {
-    while (
-      this.renderQueue.size !== 0 ||
-      queue.size !== 0 ||
-      activePriorities.length !== 0
-    ) {
-      while (this.renderQueue.size !== 0) {
-        const node = shiftWatcherQueue(this.renderQueue)!;
-        node.state &= UNSCHEDULE_MASK;
-        try {
-          runWatcher(node);
-        } catch (error) {
-          if (thrown === null) {
-            thrown = error;
-          }
-        }
-      }
-
+    while (queue.size !== 0 || activePriorities.length !== 0) {
       while (queue.size !== 0) {
         pushPendingNode(this, shiftWatcherQueue(queue)!);
       }
@@ -184,7 +168,6 @@ function rankedFlush(this: RankedSchedulerCore): void {
       activePriorities.length = 0;
     }
   } finally {
-    unscheduleQueuedNodes(this.renderQueue);
     unschedulePendingNodes(rankedHeads, activePriorities);
     resetPendingBuckets(this);
     unscheduleQueuedNodes(queue);

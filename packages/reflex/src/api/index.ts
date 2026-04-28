@@ -1,7 +1,6 @@
 export { computed, memo } from "./derived";
 export {
   effect,
-  effectRender,
   effectRanked,
   withEffectCleanupRegistrar,
   withEffectCleanupScope,

@@ -1,8 +1,4 @@
-import {
-  effect,
-  effectRanked,
-  withEffectCleanupRegistrar as withEffectCleanupScope,
-} from "@volynets/reflex";
+import { effect, effectRanked, withEffectCleanupScope } from "@volynets/reflex";
 
 import type { Cleanup } from "../types/core";
 import { addCleanup } from "./ownership.cleanup";
@@ -16,12 +12,10 @@ export type OwnershipCleanupRegistrar = (cleanup: Cleanup) => void;
 export interface OwnedEffectOptions {
   owner: OwnerContext;
   priority?: number;
-  phase?: "user" | "render";
 }
 
 export interface OwnershipReactiveEffectOptions {
   priority?: number;
-  phase?: "user" | "render";
 }
 
 export interface OwnershipReactiveAdapter {
@@ -68,16 +62,10 @@ export function createOwnershipReactiveBridge(
     fn: () => T,
   ): T =>
     runWithScope(owner, scope, () =>
-      adapter.withCleanupScope(
-        (cleanup) => addCleanup(scope, cleanup),
-        fn,
-      ),
+      adapter.withCleanupScope((cleanup) => addCleanup(scope, cleanup), fn),
     );
 
-  const useEffect = (
-    options: OwnedEffectOptions,
-    fn: UseEffectFn,
-  ): Cleanup => {
+  const useEffect = (options: OwnedEffectOptions, fn: UseEffectFn): Cleanup => {
     const { owner } = options;
     const scope = owner.currentOwner;
 
@@ -118,10 +106,9 @@ export const reflexOwnershipBridge: OwnershipReactiveBridge =
   createOwnershipReactiveBridge({
     effect(fn, options) {
       const priority = options?.priority;
-      const phase = options?.phase;
 
-      if (priority !== undefined || phase === "render") {
-        return effectRanked(fn, { priority, phase });
+      if (priority !== undefined) {
+        return effectRanked(fn, { priority });
       }
 
       return effect(fn);

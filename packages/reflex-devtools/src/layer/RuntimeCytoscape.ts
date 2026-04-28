@@ -353,7 +353,12 @@ export function createRuntimeCytoscapeController({
     render() {
       cy.batch(syncElements);
       cy.resize();
-      layout.apply(cy, graph.nodes, graph.edges, getConnectedNodeIds(graph.edges));
+      layout.apply(
+        cy,
+        graph.nodes,
+        graph.edges,
+        getConnectedNodeIds(graph.edges),
+      );
       if (!didInitialFit && !cy.elements().empty()) {
         cy.fit(undefined, 32);
         didInitialFit = true;

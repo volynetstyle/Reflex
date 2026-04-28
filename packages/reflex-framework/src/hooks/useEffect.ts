@@ -9,9 +9,9 @@ import {
 
 export type { EffectCallback, EffectCleanup };
 
-export function useEffect(callback: EffectCallback): void {
+export function useEffect(callback: EffectCallback): EffectCleanup {
   assertHookUsage("useEffect");
-  void useEffectInternal(callback);
+  return useEffectInternal(callback);
 }
 
 export function useEffectOnce(callback: () => void): void {
@@ -19,7 +19,7 @@ export function useEffectOnce(callback: () => void): void {
   void useEffectOnceInternal(callback);
 }
 
-export function useEffectRender(callback: EffectCallback): void {
+export function useEffectRender(callback: EffectCallback): EffectCleanup {
   assertHookUsage("useEffectRender");
-  void useEffectRenderInternal(callback);
+  return useEffectRenderInternal(callback);
 }

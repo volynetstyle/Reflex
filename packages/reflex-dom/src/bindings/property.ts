@@ -7,6 +7,8 @@ import {
   useOwnedEffect,
 } from "@volynets/reflex-framework";
 
+const DOM_BINDING_PRIORITY = 2;
+
 export function bindReactiveProp(
   renderer: DOMRenderer,
   el: Element,
@@ -16,11 +18,14 @@ export function bindReactiveProp(
 ) {
   let previousValue = applyProp(el, name, acc(), ns, undefined);
 
-  useOwnedEffect({ owner: renderer.owner, phase: "render" }, () => {
-    const nextValue = acc();
+  useOwnedEffect(
+    { owner: renderer.owner, priority: DOM_BINDING_PRIORITY },
+    () => {
+      const nextValue = acc();
 
-    onEffectStart(() => {
-      previousValue = applyProp(el, name, nextValue, ns, previousValue);
-    });
-  });
+      onEffectStart(() => {
+        previousValue = applyProp(el, name, nextValue, ns, previousValue);
+      });
+    },
+  );
 }

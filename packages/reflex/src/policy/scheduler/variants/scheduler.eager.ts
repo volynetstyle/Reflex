@@ -7,10 +7,12 @@ import {
   createSchedulerInstance,
   tryEnqueueEffect,
 } from "../scheduler.core";
+import { flushPrioritySchedulerQueue } from "../scheduler.priority";
 import type { EffectScheduler } from "../scheduler.types";
 
 export function createEagerScheduler(): EffectScheduler {
   const core = createSchedulerCore();
+  core.flush = (): void => flushPrioritySchedulerQueue(core);
   const notifySettled = (): void => {
     if (isRuntimeInactive(core) && hasPendingEffects(core)) {
       core.flush();

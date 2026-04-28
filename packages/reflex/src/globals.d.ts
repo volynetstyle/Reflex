@@ -17,7 +17,6 @@ type EffectFn = () => void | Destructor;
 
 interface EffectOptions {
   priority?: number;
-  phase?: "user" | "render";
 }
 
 type AnyFn = (...args: never[]) => unknown;

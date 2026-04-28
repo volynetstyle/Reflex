@@ -7,11 +7,13 @@ import {
   isContextSettled,
   tryEnqueueEffect,
 } from "../scheduler.core";
+import { flushPrioritySchedulerQueue } from "../scheduler.priority";
 import type { EffectScheduler } from "../scheduler.types";
 import { noopNotifySettled } from "../scheduler.types";
 
 export function createSabScheduler(): EffectScheduler {
   const core = createSchedulerCore();
+  core.flush = (): void => flushPrioritySchedulerQueue(core);
   const enqueue = (node: ReactiveNode): void => {
     tryEnqueueEffect(core, node);
   };
