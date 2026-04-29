@@ -2,32 +2,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { readConsumer, readProducer, writeProducer } from "../src";
 import {
   createConsumer,
+  createComputeCounter,
   createProducer,
   resetRuntime,
 } from "./runtime.test_utils";
-
-function createComputeCounter() {
-  const counts = new Map<string, number>();
-
-  return {
-    count<T>(label: string, compute: () => T): () => T {
-      return () => {
-        counts.set(label, (counts.get(label) ?? 0) + 1);
-        return compute();
-      };
-    },
-    reset(): void {
-      counts.clear();
-    },
-    expectOnce(labels: string[]): void {
-      expect(new Set(counts.keys())).toEqual(new Set(labels));
-
-      for (const label of labels) {
-        expect(counts.get(label)).toBe(1);
-      }
-    },
-  };
-}
 
 describe("Reactive runtime - topology recompute cardinality", () => {
   beforeEach(() => {

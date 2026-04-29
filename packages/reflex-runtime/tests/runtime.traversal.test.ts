@@ -20,6 +20,7 @@ import {
 import { linkEdge } from "../src/reactivity/shape/graph/connect";
 import {
   createConsumer,
+  createComputeCounter,
   createProducer,
   createWatcher,
   hasSubscriber,
@@ -32,35 +33,33 @@ describe("Reactive runtime - traversal invariants", () => {
   });
 
   it("stabilizes a shared upstream node only once per read phase", () => {
+    const counter = createComputeCounter();
     const source = createProducer(1);
-    const sharedSpy = vi.fn(() => readProducer(source) * 2);
-    const shared = createConsumer(sharedSpy);
-    const leftSpy = vi.fn(() => readConsumer(shared) + 1);
-    const left = createConsumer(leftSpy);
-    const rightSpy = vi.fn(() => readConsumer(shared) + 2);
-    const right = createConsumer(rightSpy);
-    const sinkSpy = vi.fn(() => readConsumer(left) + readConsumer(right));
-    const sink = createConsumer(sinkSpy);
+    const shared = createConsumer(
+      counter.count("shared", () => readProducer(source) * 2),
+    );
+    const left = createConsumer(
+      counter.count("left", () => readConsumer(shared) + 1),
+    );
+    const right = createConsumer(
+      counter.count("right", () => readConsumer(shared) + 2),
+    );
+    const sink = createConsumer(
+      counter.count("sink", () => readConsumer(left) + readConsumer(right)),
+    );
 
     expect(readConsumer(sink)).toBe(7);
-    expect(sharedSpy).toHaveBeenCalledTimes(1);
-    expect(leftSpy).toHaveBeenCalledTimes(1);
-    expect(rightSpy).toHaveBeenCalledTimes(1);
-    expect(sinkSpy).toHaveBeenCalledTimes(1);
+    counter.expectOnce(["shared", "left", "right", "sink"]);
+    counter.reset();
 
     writeProducer(source, 2);
 
     expect(readConsumer(sink)).toBe(11);
-    expect(sharedSpy).toHaveBeenCalledTimes(2);
-    expect(leftSpy).toHaveBeenCalledTimes(2);
-    expect(rightSpy).toHaveBeenCalledTimes(2);
-    expect(sinkSpy).toHaveBeenCalledTimes(2);
+    counter.expectOnce(["shared", "left", "right", "sink"]);
+    counter.reset();
 
     expect(readConsumer(sink)).toBe(11);
-    expect(sharedSpy).toHaveBeenCalledTimes(2);
-    expect(leftSpy).toHaveBeenCalledTimes(2);
-    expect(rightSpy).toHaveBeenCalledTimes(2);
-    expect(sinkSpy).toHaveBeenCalledTimes(2);
+    counter.expectNone();
   });
 
   it("marks only immediate subscribers changed when a producer writes", () => {

@@ -2,10 +2,13 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const testDir = fileURLToPath(new URL(".", import.meta.url));
 const packageDir = resolve(testDir, "..", "..");
+const fixtureUrl = pathToFileURL(
+  resolve(testDir, "..", "tools", "runtime-fixtures.mjs"),
+).href;
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const tempRoots = [];
 
@@ -126,13 +129,20 @@ function installPackedRuntime(tempRoot, tarballPath) {
   return appDir;
 }
 
-function createScenarioSource(importBlock) {
-  return `${importBlock}
+function createScenarioSource(importBlock, useSharedFixtures = false) {
+  const fixtureBlock = useSharedFixtures
+    ? `import { createRuntimeFixtures } from "${fixtureUrl}";
 
-const runtime = createExecutionContext();
-setDefaultContext(runtime);
-
-function createProducer(value) {
+const { createProducer, createConsumer, createWatcher } = createRuntimeFixtures({
+  CONSUMER_INITIAL_STATE,
+  PRODUCER_INITIAL_STATE,
+  ReactiveNode,
+  WATCHER_INITIAL_STATE,
+  readConsumer,
+  readProducer,
+});
+`
+    : `function createProducer(value) {
   return new ReactiveNode(value, null, PRODUCER_INITIAL_STATE);
 }
 
@@ -143,13 +153,18 @@ function createConsumer(compute) {
 function createWatcher(compute) {
   return new ReactiveNode(null, compute, WATCHER_INITIAL_STATE);
 }
+`;
 
-runtime.resetState();
+  return `${importBlock}
+
+${fixtureBlock}
+
+resetState();
 
 const pending = [];
 let invalidations = 0;
 
-runtime.setHooks({
+setHooks({
   onSinkInvalidated(node) {
     invalidations += 1;
 
@@ -202,7 +217,7 @@ const sameValueQueue = pending.length;
 
 disposeWatcher(watcher);
 
-const disposed = Boolean(watcher.state & ReactiveNodeState.Disposed);
+const disposed = Boolean(watcher.state & Disposed);
 
 writeProducer(right, 100);
 
@@ -227,9 +242,12 @@ console.log(
 `;
 }
 
-function runScenario(appDir, filename, importBlock) {
+function runScenario(appDir, filename, importBlock, useSharedFixtures = false) {
   const cacheDir = join(appDir, ".npm-cache");
-  writeFileSync(join(appDir, filename), createScenarioSource(importBlock));
+  writeFileSync(
+    join(appDir, filename),
+    createScenarioSource(importBlock, useSharedFixtures),
+  );
 
   const output = runCommand(process.execPath, [filename], appDir, cacheDir);
 
@@ -244,12 +262,13 @@ try {
   const esm = runScenario(
     appDir,
     "scenario.mjs",
-    'import { CONSUMER_INITIAL_STATE, PRODUCER_INITIAL_STATE, ReactiveNode, ReactiveNodeState, WATCHER_INITIAL_STATE, createExecutionContext, disposeWatcher, readConsumer, readProducer, runWatcher, setDefaultContext, writeProducer } from "@reflex/runtime";',
+    'import { CONSUMER_INITIAL_STATE, Disposed, PRODUCER_INITIAL_STATE, ReactiveNode, WATCHER_INITIAL_STATE, disposeWatcher, readConsumer, readProducer, resetState, runWatcher, setHooks, writeProducer } from "@volynets/reflex-runtime";',
+    true,
   );
   const cjs = runScenario(
     appDir,
     "scenario.cjs",
-    'const { CONSUMER_INITIAL_STATE, PRODUCER_INITIAL_STATE, ReactiveNode, ReactiveNodeState, WATCHER_INITIAL_STATE, createExecutionContext, disposeWatcher, readConsumer, readProducer, runWatcher, setDefaultContext, writeProducer } = require("@reflex/runtime");',
+    'const { CONSUMER_INITIAL_STATE, Disposed, PRODUCER_INITIAL_STATE, ReactiveNode, WATCHER_INITIAL_STATE, disposeWatcher, readConsumer, readProducer, resetState, runWatcher, setHooks, writeProducer } = require("@volynets/reflex-runtime");',
   );
 
   const expected = {
