@@ -15,6 +15,10 @@ const ENTRIES: ReadonlyArray<DtsEntry> = [
     input: "build/types/unstable/index.d.ts",
     output: "build/types-bundle/unstable/index.d.ts",
   },
+  {
+    input: "build/types/debug/index.d.ts",
+    output: "build/types-bundle/debug/index.d.ts",
+  },
 ];
 
 function createConfig(entry: DtsEntry): RollupOptions {
@@ -26,7 +30,10 @@ function createConfig(entry: DtsEntry): RollupOptions {
     },
     plugins: [
       dts({
-        includeExternal: ["@volynets/reflex-runtime"],
+        includeExternal: [
+          "@volynets/reflex-runtime",
+          "@volynets/reflex-runtime/debug",
+        ],
       }),
     ],
   };

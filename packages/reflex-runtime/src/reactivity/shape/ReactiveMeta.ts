@@ -24,7 +24,17 @@ export const Watcher = 1 << 5; // 32
 export const Scheduled = 1 << 6; // 64
 // possible can be added next some flags
 
+/**
+ * Only available in the development environment (DEV),
+ * as it is not required in the production environment
+ * prod) under heavy use (hot path).
+ */
 export const Producer = __DEV__ ? 1 << 28 : 0;
+/**
+ * Only available in the development environment (DEV),
+ * as it is not required in the production environment
+ * prod) under heavy use (hot path).
+ */
 export const Consumer = __DEV__ ? 1 << 29 : 0;
 export const Computing = 1 << 30;
 

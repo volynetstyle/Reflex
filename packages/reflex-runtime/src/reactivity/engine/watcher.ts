@@ -12,7 +12,7 @@ import {
 } from "../shape";
 import { executeNodeComputation } from "./execute";
 import { defaultContext } from "../context";
-import { recordDebugEvent } from "../../debug/debug.impl";
+import { recordDebugEvent } from "../../debug/debug.runtime";
 
 function recordWatcherSkip(
   node: ReactiveNode,

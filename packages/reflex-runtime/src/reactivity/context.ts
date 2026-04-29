@@ -1,4 +1,4 @@
-import { recordDebugEvent } from "../debug/debug.impl";
+import { recordDebugEvent } from "../debug/debug.runtime";
 import type { ReactiveEdge, ReactiveNode } from "./shape";
 import { reuseIncomingEdgeFromSuffixOrCreate } from "./shape/graph/connect";
 

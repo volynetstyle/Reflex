@@ -11,7 +11,7 @@ import {
   defaultContext,
   setActiveConsumer,
 } from "../context";
-import { recordDebugEvent } from "../../debug/debug.impl";
+import { recordDebugEvent } from "../../debug/debug.runtime";
 
 function prepareNodeExecution(node: ReactiveNode): ReactiveNode | null {
   node.lastInTail = null;

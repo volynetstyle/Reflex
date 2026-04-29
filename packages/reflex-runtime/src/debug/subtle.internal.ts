@@ -9,6 +9,10 @@ import {
   type RuntimeWalkerStackStats,
 } from "../reactivity/walkers";
 import {
+  checkDebugGraphIntegrity,
+  snapshotDebugGraph,
+} from "./debug.graph";
+import {
   snapshotDebugContext,
   labelDebugNode,
   snapshotDebugNode,
@@ -24,6 +28,14 @@ import type {
   RuntimeDebugListener,
   RuntimeDebugNodeSnapshot,
 } from "./debug.types";
+import {
+  type RuntimeDebugGraphEdgeSnapshot,
+  type RuntimeDebugGraphIntegrity,
+  type RuntimeDebugGraphOptions,
+  type RuntimeDebugGraphSnapshot,
+  type RuntimeDebugSession,
+} from "./debug.protocol";
+import { createRuntimeDebugSession } from "./debug.session";
 
 const noopUnsubscribe = () => {};
 const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
@@ -31,6 +43,12 @@ const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
 export type State<T = unknown> = ReactiveNode<T> & { compute: null };
 export type Computed<T = unknown> = ReactiveNode<T> & { compute: () => T };
 export type Watcher<T = unknown> = ReactiveNode<T> & { compute: () => T };
+
+export type RuntimeSubtleGraphOptions = RuntimeDebugGraphOptions;
+export type RuntimeSubtleGraphEdge = RuntimeDebugGraphEdgeSnapshot;
+export type RuntimeSubtleGraphSnapshot = RuntimeDebugGraphSnapshot;
+export type RuntimeSubtleGraphIssue = RuntimeDebugGraphIntegrity["issues"][number];
+export type RuntimeSubtleGraphIntegrity = RuntimeDebugGraphIntegrity;
 
 function isWatcherNode(node: ReactiveNode): node is Watcher {
   return (node.state & WatcherFlag) !== 0;
@@ -69,10 +87,16 @@ export interface RuntimeSubtle {
   history(): RuntimeDebugEvent[];
   hasSinks(s: State | Computed): boolean;
   hasSources(s: Computed | Watcher): boolean;
+  graph(
+    s: ReactiveNode,
+    options?: RuntimeSubtleGraphOptions,
+  ): RuntimeSubtleGraphSnapshot;
+  graphIntegrity(s: ReactiveNode): RuntimeSubtleGraphIntegrity;
   introspectSinks(s: State | Computed): (Computed | Watcher)[];
   introspectSources(s: Computed | Watcher): (State | Computed)[];
   label<T extends ReactiveNode>(node: T, label: string | null | undefined): T;
   observe(listener: RuntimeDebugListener): () => void;
+  session(): RuntimeDebugSession;
   snapshot(node: ReactiveNode): RuntimeDebugNodeSnapshot | undefined;
   stackStats(): {
     shouldRecompute: RuntimeWalkerStackStats;
@@ -120,6 +144,14 @@ export const subtle: RuntimeSubtle = {
     return node.firstIn !== null;
   },
 
+  graph(node, options) {
+    return snapshotDebugGraph(node, snapshotDebugNode, options);
+  },
+
+  graphIntegrity(node) {
+    return checkDebugGraphIntegrity(node, snapshotDebugNode);
+  },
+
   context() {
     if (!IS_DEV) return undefined;
     return snapshotDebugContext();
@@ -153,6 +185,10 @@ export const subtle: RuntimeSubtle = {
   observe(listener) {
     if (!IS_DEV) return noopUnsubscribe;
     return observeDebugContext(undefined, listener);
+  },
+
+  session() {
+    return createRuntimeDebugSession(this);
   },
 
   stackStats() {

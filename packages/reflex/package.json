@@ -26,12 +26,22 @@
       "types": "./dist/unstable/index.d.ts",
       "import": "./dist/esm/unstable/index.js",
       "require": "./dist/cjs/unstable/index.cjs"
+    },
+    "./debug": {
+      "source": {
+        "types": "./src/debug/index.ts",
+        "default": "./src/debug/index.ts"
+      },
+      "types": "./dist/debug/index.d.ts",
+      "import": "./dist/dev/debug/index.js",
+      "require": "./dist/cjs/debug/index.cjs"
     }
   },
   "files": [
     "src",
     "dist/cjs",
     "dist/esm",
+    "dist/debug",
     "dist/globals.d.ts",
     "dist/unstable"
   ],

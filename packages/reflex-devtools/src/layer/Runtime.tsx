@@ -1,10 +1,20 @@
-import { subtle } from "@volynets/reflex-runtime/debug";
+import { subtle, type RuntimeDebugMessage } from "@volynets/reflex/debug";
 import { useEffectRender, useRef } from "@volynets/reflex-dom";
 import {
   createRuntimeCytoscapeController,
   type RuntimeCytoscapeController,
 } from "./RuntimeCytoscape";
-import { applyGraphEvent, buildGraph } from "./RuntimeGraphModel";
+import {
+  RUNTIME_GRAPH_HISTORY_LIMIT,
+  RUNTIME_INITIAL_HIGHLIGHT_DELAY_MS,
+  RUNTIME_LAYER_FALLBACK_HEIGHT,
+  RUNTIME_SESSION_HISTORY_LIMIT,
+} from "./RuntimeConstants";
+import {
+  applyGraphEvent,
+  applyGraphSnapshot,
+  buildGraph,
+} from "./RuntimeGraphModel";
 import { RuntimeLayoutComposer } from "./RuntimeLayoutComposer";
 
 const RuntimeLayer = () => {
@@ -19,11 +29,15 @@ const RuntimeLayer = () => {
     if (container === null) return;
 
     if (container.clientWidth === 0) container.style.width = "100%";
-    if (container.clientHeight === 0) container.style.height = "420px";
+    if (container.clientHeight === 0) {
+      container.style.height = RUNTIME_LAYER_FALLBACK_HEIGHT;
+    }
 
-    subtle.configure({ historyLimit: 500 });
+    const session = subtle.session();
+    session.configure({ historyLimit: RUNTIME_SESSION_HISTORY_LIMIT });
 
-    const graph = buildGraph(subtle.history());
+    const initialSnapshot = session.snapshot();
+    const graph = buildGraph(initialSnapshot.history);
     let frame = 0;
     let controller: RuntimeCytoscapeController | null =
       createRuntimeCytoscapeController({
@@ -44,10 +58,27 @@ const RuntimeLayer = () => {
       });
     };
 
-    const unsubscribe = subtle.observe((event) => {
-      applyGraphEvent(graph, event);
-      scheduleRender();
-      window.setTimeout(() => controller?.highlight(event), 40);
+    const unsubscribe = session.observe((message: RuntimeDebugMessage) => {
+      if (message.type === "debug:event") {
+        applyGraphEvent(graph, message.event);
+        scheduleRender();
+        window.setTimeout(
+          () => controller?.highlight(message.event),
+          RUNTIME_INITIAL_HIGHLIGHT_DELAY_MS,
+        );
+        return;
+      }
+
+      if (message.type === "debug:snapshot") {
+        graph.history.length = 0;
+        graph.history.push(
+          ...message.snapshot.history.slice(-RUNTIME_GRAPH_HISTORY_LIMIT),
+        );
+        if (message.snapshot.graph !== undefined) {
+          applyGraphSnapshot(graph, message.snapshot.graph);
+        }
+        scheduleRender();
+      }
     });
 
     const resizeObserver = new ResizeObserver(() => {
@@ -59,6 +90,7 @@ const RuntimeLayer = () => {
     return () => {
       resizeObserver.disconnect();
       unsubscribe();
+      session.destroy();
       layoutRef.current.reset();
       if (frame !== 0) window.cancelAnimationFrame(frame);
       controller?.destroy();

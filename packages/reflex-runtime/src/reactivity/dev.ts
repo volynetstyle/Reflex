@@ -1,4 +1,4 @@
-import { recordDebugEvent, collectDebugNodeRefs } from "../debug/debug.impl";
+import { recordDebugEvent, collectDebugNodeRefs } from "../debug/debug.runtime";
 import { activeConsumer, type RuntimeDebugContext } from "./context";
 import { Computing, type ReactiveEdge } from "./shape";
 import type ReactiveNode from "./shape/ReactiveNode";

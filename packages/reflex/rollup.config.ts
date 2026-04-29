@@ -76,6 +76,10 @@ const ENTRIES: ReadonlyArray<BuildEntry> = [
     input: "build/esm/unstable/index.js",
     outputPath: "unstable/index",
   },
+  {
+    input: "build/esm/debug/index.js",
+    outputPath: "debug/index",
+  },
 ];
 
 function compactPlugins(plugins: Array<Plugin | undefined | false>): Plugin[] {

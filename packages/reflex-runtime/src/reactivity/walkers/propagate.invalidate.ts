@@ -4,7 +4,7 @@
 // so both propagate loops reuse the same small call sites instead of carrying
 // duplicate branch-heavy logic inline.
 
-import { recordDebugEvent } from "../../debug/debug.impl";
+import { recordDebugEvent } from "../../debug/debug.runtime";
 import {
   defaultContext,
   dispatchSinkInvalidated,

@@ -1,7 +1,7 @@
 import type {
   RuntimeDebugEvent,
   RuntimeDebugNodeRef,
-} from "@volynets/reflex-runtime/debug";
+} from "@volynets/reflex/debug";
 import { formatNodeLabel } from "./RuntimeGraphModel";
 
 function formatEventNode(node: RuntimeDebugNodeRef | undefined): string {

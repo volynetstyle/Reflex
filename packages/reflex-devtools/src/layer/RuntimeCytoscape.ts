@@ -1,4 +1,4 @@
-import type { RuntimeDebugEvent } from "@volynets/reflex-runtime/debug";
+import type { RuntimeDebugEvent } from "@volynets/reflex/debug";
 import cytoscape, {
   type Core,
   type ElementDefinition,
@@ -12,9 +12,15 @@ import {
 import {
   getConnectedNodeIds,
   formatNodeLabel,
-  NODE_COLORS,
   type RuntimeGraphModel,
 } from "./RuntimeGraphModel";
+import {
+  RUNTIME_CYTOSCAPE_CLASSES,
+  RUNTIME_GRAPH_COLORS,
+  RUNTIME_GRAPH_TIMING,
+  RUNTIME_GRAPH_VIEW,
+  RUNTIME_HISTORY_PANEL_LIMIT,
+} from "./RuntimeConstants";
 import type { RuntimeLayoutComposer } from "./RuntimeLayoutComposer";
 
 type RuntimeCytoscapeControllerOptions = {
@@ -40,62 +46,65 @@ const runtimeStyles: StylesheetJson = [
     style: {
       "background-color": "data(color)",
       "border-color": "data(borderColor)",
-      "border-width": 2,
-      color: "#e2e8f0",
-      "font-size": 11,
+      "border-width": RUNTIME_GRAPH_VIEW.nodeBorderWidth,
+      color: RUNTIME_GRAPH_COLORS.label,
+      "font-size": RUNTIME_GRAPH_VIEW.labelFontSize,
       "font-weight": 700,
       label: "data(label)",
-      "min-zoomed-font-size": 8,
+      "min-zoomed-font-size": RUNTIME_GRAPH_VIEW.minZoomedLabelFontSize,
       "overlay-opacity": 0,
-      "text-background-color": "#0f172a",
-      "text-background-opacity": 0.72,
+      "text-background-color": RUNTIME_GRAPH_COLORS.labelBackground,
+      "text-background-opacity": RUNTIME_GRAPH_VIEW.labelTextBackgroundOpacity,
       "text-background-padding": "3px",
       "text-halign": "center",
-      "text-margin-y": 10,
+      "text-margin-y": RUNTIME_GRAPH_VIEW.labelMarginY,
       "text-max-width": "92px",
       "text-overflow-wrap": "anywhere",
       "text-valign": "bottom",
-      width: 38,
-      height: 38,
+      width: RUNTIME_GRAPH_VIEW.nodeSize,
+      height: RUNTIME_GRAPH_VIEW.nodeSize,
     },
   },
   {
     selector: "edge",
     style: {
       "curve-style": "bezier",
-      "line-color": "#475569",
-      opacity: 0.58,
-      "target-arrow-color": "#64748b",
+      "line-color": RUNTIME_GRAPH_COLORS.edge,
+      opacity: RUNTIME_GRAPH_VIEW.edgeOpacity,
+      "target-arrow-color": RUNTIME_GRAPH_COLORS.edgeArrow,
       "target-arrow-shape": "triangle",
-      width: 2,
+      width: RUNTIME_GRAPH_VIEW.edgeWidth,
     },
   },
   {
-    selector: ".runtime-node-changed",
+    selector: `.${RUNTIME_CYTOSCAPE_CLASSES.changedNode}`,
     style: {
-      "border-color": "#f8fafc",
-      "border-width": 4,
+      "border-color": RUNTIME_GRAPH_COLORS.active,
+      "border-width": RUNTIME_GRAPH_VIEW.nodeChangedBorderWidth,
     },
   },
   {
-    selector: ".runtime-edge-active",
+    selector: `.${RUNTIME_CYTOSCAPE_CLASSES.activeEdge}`,
     style: {
-      "line-color": "#f8fafc",
+      "line-color": RUNTIME_GRAPH_COLORS.active,
       opacity: 1,
-      "target-arrow-color": "#f8fafc",
-      width: 4,
+      "target-arrow-color": RUNTIME_GRAPH_COLORS.active,
+      width: RUNTIME_GRAPH_VIEW.activeEdgeWidth,
     },
   },
   {
     selector: 'node[dirty != "clean"]',
-    style: { "border-color": "#facc15", "border-width": 3 },
+    style: {
+      "border-color": RUNTIME_GRAPH_COLORS.dirty,
+      "border-width": RUNTIME_GRAPH_VIEW.dirtyBorderWidth,
+    },
   },
   {
     selector: ":selected",
     style: {
-      "background-color": "#f8fafc",
-      "line-color": "#f8fafc",
-      "target-arrow-color": "#f8fafc",
+      "background-color": RUNTIME_GRAPH_COLORS.active,
+      "line-color": RUNTIME_GRAPH_COLORS.active,
+      "target-arrow-color": RUNTIME_GRAPH_COLORS.active,
     },
   },
 ];
@@ -114,8 +123,10 @@ function toElements(graph: RuntimeGraphModel): ElementDefinition[] {
         kind: node.kind,
         dirty: node.dirty,
         flags: node.flags.join(", "),
-        color: NODE_COLORS[node.kind],
-        borderColor: node.flags.includes("disposed") ? "#ef4444" : "#0f172a",
+        color: RUNTIME_GRAPH_COLORS.nodeKinds[node.kind],
+        borderColor: node.flags.includes("disposed")
+          ? RUNTIME_GRAPH_COLORS.disposed
+          : RUNTIME_GRAPH_COLORS.nodeBorder,
       },
     });
   }
@@ -148,7 +159,11 @@ export function createRuntimeCytoscapeController({
   const cy = cytoscape({
     container,
     elements: toElements(graph),
-    layout: { name: "preset", fit: true, padding: 32 },
+    layout: {
+      name: "preset",
+      fit: true,
+      padding: RUNTIME_GRAPH_VIEW.fitPadding,
+    },
     style: runtimeStyles,
   });
 
@@ -184,8 +199,10 @@ export function createRuntimeCytoscapeController({
         kind: node.kind,
         dirty: node.dirty,
         flags: node.flags.join(", "),
-        color: NODE_COLORS[node.kind],
-        borderColor: node.flags.includes("disposed") ? "#ef4444" : "#0f172a",
+        color: RUNTIME_GRAPH_COLORS.nodeKinds[node.kind],
+        borderColor: node.flags.includes("disposed")
+          ? RUNTIME_GRAPH_COLORS.disposed
+          : RUNTIME_GRAPH_COLORS.nodeBorder,
       };
       const existing = cy.getElementById(id);
 
@@ -215,7 +232,10 @@ export function createRuntimeCytoscapeController({
   const updateHistory = () => {
     if (history === null) return;
 
-    const start = Math.max(0, graph.history.length - 30);
+    const start = Math.max(
+      0,
+      graph.history.length - RUNTIME_HISTORY_PANEL_LIMIT,
+    );
     const items: HTMLElement[] = [];
 
     for (let i = graph.history.length - 1; i >= start; i--) {
@@ -257,7 +277,7 @@ export function createRuntimeCytoscapeController({
     const tip = existing ?? document.createElement("div");
 
     tip.dataset.nodeId = nodeIdStr;
-    tip.className = "runtime-node-tip";
+    tip.className = RUNTIME_CYTOSCAPE_CLASSES.tooltip;
     tip.textContent = message;
     tip.style.left = `${position.x}px`;
     tip.style.top = `${position.y}px`;
@@ -267,10 +287,13 @@ export function createRuntimeCytoscapeController({
     if (prevTimer !== undefined) window.clearTimeout(prevTimer);
 
     const timer = window.setTimeout(() => {
-      tip.classList.add("runtime-node-tip--hide");
+      tip.classList.add(RUNTIME_CYTOSCAPE_CLASSES.tooltipHidden);
       activeTips.delete(nodeId);
-      window.setTimeout(() => tip.remove(), 350);
-    }, 900);
+      window.setTimeout(
+        () => tip.remove(),
+        RUNTIME_GRAPH_TIMING.tooltipRemoveMs,
+      );
+    }, RUNTIME_GRAPH_TIMING.tooltipVisibleMs);
     activeTips.set(nodeId, timer);
   };
 
@@ -333,20 +356,23 @@ export function createRuntimeCytoscapeController({
       const tooltip = eventTooltip(event);
       for (const nodeId of nodeIds) {
         const element = cy.getElementById(String(nodeId));
-        element.addClass("runtime-node-changed");
+        element.addClass(RUNTIME_CYTOSCAPE_CLASSES.changedNode);
         showTooltip(nodeId, tooltip);
         window.setTimeout(
-          () => element.removeClass("runtime-node-changed"),
-          1100,
+          () => element.removeClass(RUNTIME_CYTOSCAPE_CLASSES.changedNode),
+          RUNTIME_GRAPH_TIMING.nodeHighlightMs,
         );
       }
 
       edgeIds.forEach((edgeId, index) => {
         const edge = cy.getElementById(edgeId);
         window.setTimeout(() => {
-          edge.addClass("runtime-edge-active");
-          window.setTimeout(() => edge.removeClass("runtime-edge-active"), 850);
-        }, index * 180);
+          edge.addClass(RUNTIME_CYTOSCAPE_CLASSES.activeEdge);
+          window.setTimeout(
+            () => edge.removeClass(RUNTIME_CYTOSCAPE_CLASSES.activeEdge),
+            RUNTIME_GRAPH_TIMING.edgeHighlightMs,
+          );
+        }, index * RUNTIME_GRAPH_TIMING.edgeHighlightStaggerMs);
       });
     },
 
@@ -360,7 +386,7 @@ export function createRuntimeCytoscapeController({
         getConnectedNodeIds(graph.edges),
       );
       if (!didInitialFit && !cy.elements().empty()) {
-        cy.fit(undefined, 32);
+        cy.fit(undefined, RUNTIME_GRAPH_VIEW.fitPadding);
         didInitialFit = true;
         userChangedViewport = false;
       }
@@ -370,7 +396,7 @@ export function createRuntimeCytoscapeController({
     resize() {
       cy.resize();
       if (!userChangedViewport && !cy.elements().empty()) {
-        cy.fit(undefined, 32);
+        cy.fit(undefined, RUNTIME_GRAPH_VIEW.fitPadding);
       }
     },
   };

@@ -1,7 +1,9 @@
 import type {
   RuntimeDebugEvent,
+  RuntimeDebugGraphSnapshot,
   RuntimeDebugNodeRef,
-} from "@volynets/reflex-runtime/debug";
+} from "@volynets/reflex/debug";
+import { RUNTIME_GRAPH_HISTORY_LIMIT } from "./RuntimeConstants";
 
 export type RuntimeGraphEdge = {
   id: string;
@@ -17,13 +19,6 @@ export type RuntimeGraphModel = {
   changedNodeIds: Set<number>;
 };
 
-export const NODE_COLORS: Record<RuntimeDebugNodeRef["kind"], string> = {
-  consumer: "#60a5fa",
-  producer: "#34d399",
-  unknown: "#94a3b8",
-  watcher: "#f59e0b",
-};
-
 export function createGraphModel(): RuntimeGraphModel {
   return {
     eventCount: 0,
@@ -32,6 +27,28 @@ export function createGraphModel(): RuntimeGraphModel {
     edges: new Map(),
     changedNodeIds: new Set(),
   };
+}
+
+export function applyGraphSnapshot(
+  model: RuntimeGraphModel,
+  snapshot: RuntimeDebugGraphSnapshot,
+): void {
+  model.nodes.clear();
+  model.edges.clear();
+  model.changedNodeIds.clear();
+
+  for (const node of snapshot.nodes) {
+    model.nodes.set(node.id, node);
+  }
+
+  for (const edge of snapshot.edges) {
+    const id = `${edge.from.id}->${edge.to.id}`;
+    model.edges.set(id, {
+      id,
+      source: edge.from.id,
+      target: edge.to.id,
+    });
+  }
 }
 
 export function formatNodeLabel(node: RuntimeDebugNodeRef): string {
@@ -107,8 +124,11 @@ export function applyGraphEvent(
   model.changedNodeIds.clear();
   model.history.push(event);
 
-  if (model.history.length > 80) {
-    model.history.splice(0, model.history.length - 80);
+  if (model.history.length > RUNTIME_GRAPH_HISTORY_LIMIT) {
+    model.history.splice(
+      0,
+      model.history.length - RUNTIME_GRAPH_HISTORY_LIMIT,
+    );
   }
 
   const { node, source, target, consumer } = event;
