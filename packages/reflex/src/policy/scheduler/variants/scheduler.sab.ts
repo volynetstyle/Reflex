@@ -1,25 +1,28 @@
-import type { ExecutionContext } from "@reflex/runtime";
+import type { ReactiveNode } from "@volynets/reflex-runtime";
 import { EffectSchedulerMode } from "../scheduler.constants";
 import {
   createSchedulerCore,
   createSchedulerInstance,
+  hasPendingEffects,
   isContextSettled,
-  tryEnqueue,
+  tryEnqueueEffect,
 } from "../scheduler.core";
+import { flushPrioritySchedulerQueue } from "../scheduler.priority";
 import type { EffectScheduler } from "../scheduler.types";
 import { noopNotifySettled } from "../scheduler.types";
 
-export function createSabScheduler(context: ExecutionContext): EffectScheduler {
+export function createSabScheduler(): EffectScheduler {
   const core = createSchedulerCore();
-  const queue = core.queue;
-  const enqueue = tryEnqueue.bind(null, queue);
-
+  core.flush = (): void => flushPrioritySchedulerQueue(core);
+  const enqueue = (node: ReactiveNode): void => {
+    tryEnqueueEffect(core, node);
+  };
   const batch = <T>(fn: () => T): T => {
     core.enterBatch();
     try {
       return fn();
     } finally {
-      if (core.leaveBatch() && queue.size !== 0 && isContextSettled(context)) {
+      if (core.leaveBatch() && hasPendingEffects(core) && isContextSettled()) {
         core.flush();
       }
     }
@@ -27,7 +30,6 @@ export function createSabScheduler(context: ExecutionContext): EffectScheduler {
 
   return createSchedulerInstance(
     EffectSchedulerMode.SAB,
-    context,
     core,
     enqueue,
     batch,

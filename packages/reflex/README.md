@@ -1,18 +1,20 @@
 # `@volynets/reflex`
 
 [![npm version](https://img.shields.io/npm/v/%40volynets%2Freflex?logo=npm)](https://www.npmjs.com/package/@volynets/reflex)
-[![npm downloads](https://img.shields.io/npm/dm/%40volynets%2Freflex?logo=npm)](https://www.npmjs.com/package/@volynets/reflex)
-[![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/volynetstyle/Reflex/blob/main/packages/reflex/LICENSE)
-[![typed with TypeScript](https://img.shields.io/badge/typed-TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![runtime: Reflex](https://img.shields.io/badge/runtime-Reflex-111827)](https://github.com/volynetstyle/Reflex)
-[![CI](https://img.shields.io/github/actions/workflow/status/volynetstyle/Reflex/ci.yml?branch=main&label=CI&logo=githubactions)](https://github.com/volynetstyle/Reflex/actions/workflows/ci.yml)
+[![scheduler: explicit](https://img.shields.io/badge/scheduler-explicit-7c3aed)](https://github.com/volynetstyle/Reflex/tree/main/packages/reflex)
+[![typed with TypeScript](https://img.shields.io/badge/typed-TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![tested with Vitest](https://img.shields.io/badge/tested%20with-Vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
 [![module formats: ESM+CJS](https://img.shields.io/badge/modules-ESM%20%2B%20CJS-0f172a)](https://github.com/volynetstyle/Reflex/blob/main/packages/reflex/package.json)
-[![scheduler: explicit](https://img.shields.io/badge/scheduler-explicit-7c3aed)](https://github.com/volynetstyle/Reflex/tree/main/packages/reflex)
+[![CI](https://img.shields.io/github/actions/workflow/status/volynetstyle/Reflex/ci.yml?branch=main&label=CI&logo=githubactions)](https://github.com/volynetstyle/Reflex/actions/workflows/ci.yml)
+[![npm downloads](https://img.shields.io/npm/dm/%40volynets%2Freflex?logo=npm)](https://www.npmjs.com/package/@volynets/reflex)
+[![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/volynetstyle/Reflex/blob/main/packages/reflex/LICENSE)
 
 Small signal-style reactivity on top of the Reflex runtime.
 
 `@volynets/reflex` is the product-facing API for building reactive state, derived values, effects, and event-driven state without dropping down to the lower-level runtime primitives.
+
+This package is intentionally the facade/scheduler layer. Policy such as `flush()`, `effectStrategy`, `batch()` behavior, and event delivery semantics lives here, not in `@reflex/runtime`.
 
 It gives you:
 
@@ -268,7 +270,7 @@ subscribeOnce(labels, (value) => {
 const rt = createRuntime({
   effectStrategy: "flush", // or "sab" / "eager"
   hooks: {
-    onEffectInvalidated(node) {
+    onSinkInvalidated(node) {
       // low-level integration hook
     },
   },
@@ -278,7 +280,7 @@ const rt = createRuntime({
 Options:
 
 - `effectStrategy: "flush" | "sab" | "eager"` controls whether invalidated effects wait for `rt.flush()`, stabilize after `batch()`, or run automatically
-- `hooks.onEffectInvalidated(node)` is a low-level hook for integrations that want to observe effect invalidation
+- `hooks.onSinkInvalidated(node)` is the low-level hook for integrations that want to observe sink invalidation
 
 Returned API:
 
@@ -291,6 +293,64 @@ Important notes:
 - For normal app code, create one runtime near startup and keep using the top-level primitives.
 - `ctx` is low-level. Most users should not need it.
 - Creating a new runtime resets the shared runtime state. It is best treated as app setup or test isolation, not as something you create repeatedly inside feature code.
+
+## Unstable
+
+Experimental helpers live under `@volynets/reflex/unstable`.
+
+### `optimistic(valueOrFn)`
+
+Creates a temporary optimistic overlay on top of either a fixed fallback value
+or a tracked derived fallback.
+
+```ts
+import { createRuntime, signal } from "@volynets/reflex";
+import { optimistic, transition } from "@volynets/reflex/unstable";
+
+createRuntime();
+
+const [serverTitle, setServerTitle] = signal("Draft");
+const [title, setTitle] = optimistic(() => serverTitle());
+
+await transition(async () => {
+  setTitle("Saving...");
+  setServerTitle("Published");
+  await Promise.resolve();
+});
+
+console.log(title()); // "Published"
+```
+
+Useful patterns:
+
+- fixed fallback with automatic microtask revert
+
+```ts
+const [status, setStatus] = optimistic("idle");
+
+setStatus("saving");
+console.log(status()); // "saving"
+
+await Promise.resolve();
+console.log(status()); // "idle"
+```
+
+- updater functions build on the latest optimistic value
+
+```ts
+const [count, setCount] = optimistic(10);
+
+setCount((prev) => prev + 5);
+setCount((prev) => prev * 2);
+
+console.log(count()); // 30
+```
+
+### `transition(fn)`
+
+Keeps optimistic layers created during `fn` alive until the transition settles.
+For sync callbacks that means until `fn` returns. For async callbacks that means
+until the returned promise resolves or rejects.
 
 ## API Reference
 
@@ -379,7 +439,7 @@ const socket = own(ctx, {
 
 ### `isModel(value)`
 
-Returns `true` when `value` is a Reflex model created by `createModel()`.
+Returns `true` when `value` exposes the Reflex model disposal surface, including models created by `createModel()`.
 
 ### `rt.event<T>()`
 

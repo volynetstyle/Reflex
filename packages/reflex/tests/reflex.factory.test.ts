@@ -1,12 +1,11 @@
 import {
   CONSUMER_INITIAL_STATE,
   PRODUCER_INITIAL_STATE,
+  Watcher,
   WATCHER_INITIAL_STATE,
-} from "@reflex/runtime";
+} from "@volynets/reflex-runtime";
 import { describe, expect, it } from "vitest";
-import { ReactiveNodeState } from "../../@reflex/runtime/src/reactivity/shape/ReactiveMeta";
 import {
-  UNINITIALIZED,
   createComputedNode,
   createWatcherNode,
   createAccumulator,
@@ -26,11 +25,12 @@ describe("Reactive system - factory helpers", () => {
     expect(scanNode.state).toBe(PRODUCER_INITIAL_STATE);
   });
 
-  it("creates computed nodes with uninitialized payload", () => {
+  it("creates computed nodes with uninitialized and undefined payload", () => {
     const compute = () => 42;
     const node = createComputedNode(compute);
 
-    expect(node.compute).toBe(compute);
+    expect(typeof node.compute).toBe("function");
+    expect((node.compute as () => number)()).toBe(42);
     expect(node.state).toBe(CONSUMER_INITIAL_STATE);
     expect(node.payload).toBeUndefined();
   });
@@ -39,9 +39,9 @@ describe("Reactive system - factory helpers", () => {
     const compute = () => {};
     const node = createWatcherNode(compute);
 
-    expect(node.compute).toBe(compute);
+    expect(typeof node.compute).toBe("function");
     expect(node.state).toBe(WATCHER_INITIAL_STATE);
-    expect(node.state & ReactiveNodeState.Watcher).toBeTruthy();
+    expect(node.state & Watcher).toBeTruthy();
     expect(node.payload).toBeUndefined();
   });
 

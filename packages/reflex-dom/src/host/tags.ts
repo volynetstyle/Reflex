@@ -1,12 +1,10 @@
-type Lookup<T extends readonly string[]> = {
-  readonly [K in T[number]]: true;
-};
+type Lookup = Record<string, true>;
 
-function makeLookup<const T extends readonly string[]>(items: T): Lookup<T> {
-  const table = Object.create(null);
+function makeLookup<const T extends readonly string[]>(items: T): Lookup {
+  const table = Object.create(null) as Lookup;
 
   for (let i = 0; i < items.length; i++) {
-    table[items[i] as T[number]] = true;
+    table[items[i]!] = true;
   }
 
   return table;
@@ -259,16 +257,18 @@ export type SVGTag = keyof typeof SVG;
 export type MathMLTag = keyof typeof MATHML;
 export type VoidTag = keyof typeof VOID;
 
-export const isHTMLTag = (t: string): t is HTMLTag =>
-  HTML[t as HTMLTag] === true;
-export const isSVGTag = (t: string): t is SVGTag => SVG[t as SVGTag] === true;
-export const isMathMLTag = (t: string): t is MathMLTag =>
-  MATHML[t as MathMLTag] === true;
-export const isVoidTag = (t: string): t is VoidTag =>
-  VOID[t as VoidTag] === true;
+export const isHTMLTag = (t: string): t is HTMLTag => HTML[t] === true;
+export const isSVGTag = (t: string): t is SVGTag => SVG[t] === true;
+export const isMathMLTag = (t: string): t is MathMLTag => MATHML[t] === true;
+export const isVoidTag = (t: string): t is VoidTag => VOID[t] === true;
 
-const TABLE = { html: HTML, svg: SVG, mathml: MATHML, void: VOID } as const;
+const TABLE = {
+  html: HTML,
+  svg: SVG,
+  mathml: MATHML,
+  void: VOID,
+} as const;
 
 export function hasTag(tag: string, type: keyof typeof TABLE): boolean {
-  return TABLE[type][tag as never] === true;
+  return TABLE[type][tag] === true;
 }

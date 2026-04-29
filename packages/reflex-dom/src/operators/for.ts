@@ -1,29 +1,14 @@
-import type { Accessor, JSXRenderable } from "../types";
-import { type MaybeAccessor, toAccessor } from "./shared";
+import {
+  For as createForRenderable,
+  type ForProps as FrameworkForProps,
+  type ForRenderable as FrameworkForRenderable,
+} from "@volynets/reflex-framework";
 
-export const FOR_RENDERABLE = Symbol.for("reflex-dom.for");
+export { FOR_RENDERABLE } from "@volynets/reflex-framework";
 
-export interface ForProps<T> {
-  each: MaybeAccessor<readonly T[] | null | undefined>;
-  by: (item: T, index: number) => PropertyKey;
-  children: (item: T, index: number) => JSXRenderable;
-  fallback?: JSXRenderable;
-}
-
-export interface ForRenderable<T> {
-  readonly kind: typeof FOR_RENDERABLE;
-  readonly each: Accessor<readonly T[] | null | undefined>;
-  readonly by: (item: T, index: number) => PropertyKey;
-  readonly children: (item: T, index: number) => JSXRenderable;
-  readonly fallback: JSXRenderable;
-}
+export type ForProps<T> = FrameworkForProps<T, Node>;
+export type ForRenderable<T> = FrameworkForRenderable<T, Node>;
 
 export function For<T>(props: ForProps<T>): ForRenderable<T> {
-  return {
-    kind: FOR_RENDERABLE,
-    each: toAccessor(props.each),
-    by: props.by,
-    children: props.children,
-    fallback: props.fallback ?? null,
-  };
+  return createForRenderable<T, Node>(props);
 }

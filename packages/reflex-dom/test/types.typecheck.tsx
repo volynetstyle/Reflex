@@ -1,10 +1,15 @@
 /** @jsxImportSource ../src */
 
 import { For, Portal, Show } from "../src";
-// @ts-expect-error reflex-dom should not re-export framework context api
-import { createContext } from "../src";
+import { createContext, hasOwnContext, provideContext, useContext } from "../src";
 // @ts-expect-error reflex-dom should not re-export framework hooks
 import { useSignal } from "../src";
+
+void createContext;
+void hasOwnContext;
+void provideContext;
+void useContext;
+void useSignal;
 
 const buttonRef = { current: null as HTMLButtonElement | null };
 
@@ -61,7 +66,7 @@ const buttonRef = { current: null as HTMLButtonElement | null };
   }}
   onEnterPictureInPicture={(event) => {
     const pictureInPictureEvent: PictureInPictureEvent = event;
-    pictureInPictureEvent.pictureInPictureWindow.width;
+    void pictureInPictureEvent.pictureInPictureWindow.width;
     event.currentTarget.pause();
   }}
 />;

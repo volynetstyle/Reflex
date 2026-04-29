@@ -1,10 +1,13 @@
 import type { Namespace } from "../host/namespace";
 import { moveRangeBefore } from "../host/mutations";
-import { registerCleanup } from "reflex-framework/ownership";
-import { onEffectStart, useEffect } from "reflex-framework/ownership/reflex";
+import {
+  onEffectStart,
+  registerCleanup,
+  useOwnedEffect,
+} from "@volynets/reflex-framework";
 import type { ForRenderable } from "../operators";
 import { reconcileKeyedList, type KeyedItem } from "../reconcile/keyed";
-import type { DOMRenderer } from "../runtime";
+import type { DOMRenderer } from "../runtime/renderer";
 import type { ContentSlot } from "../structure/content-slot";
 import { createMountedSlot } from "../structure/reactive-slot";
 
@@ -112,7 +115,7 @@ export function mountFor(
 
   reconcile(renderable.each());
 
-  useEffect(renderer.owner, () => {
+  useOwnedEffect({ owner: renderer.owner }, () => {
     const nextItems = renderable.each();
 
     onEffectStart(() => {

@@ -1,6 +1,6 @@
 {
   "name": "@volynets/reflex",
-  "version": "0.2.0",
+  "version": "0.3.3",
   "type": "module",
   "description": "Public Reflex facade with a connected runtime",
   "license": "MIT",
@@ -26,12 +26,22 @@
       "types": "./dist/unstable/index.d.ts",
       "import": "./dist/esm/unstable/index.js",
       "require": "./dist/cjs/unstable/index.cjs"
+    },
+    "./debug": {
+      "source": {
+        "types": "./src/debug/index.ts",
+        "default": "./src/debug/index.ts"
+      },
+      "types": "./dist/debug/index.d.ts",
+      "import": "./dist/dev/debug/index.js",
+      "require": "./dist/cjs/debug/index.cjs"
     }
   },
   "files": [
     "src",
     "dist/cjs",
     "dist/esm",
+    "dist/debug",
     "dist/globals.d.ts",
     "dist/unstable"
   ],
@@ -41,6 +51,7 @@
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "pnpm clean && pnpm build:ts && pnpm build:types && pnpm build:npm",
+    "build:all": "pnpm --filter @reflex/runtime build && pnpm --filter @volynets/reflex build",
     "build:ts": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
     "build:types": "rollup -c rollup.dts.config.ts --configPlugin @rollup/plugin-swc && node ../../scripts/write-globals-dts.mjs . && node ./scripts/write-subpath-dts.mjs .",
     "build:npm": "rollup -c rollup.config.ts --configPlugin @rollup/plugin-swc",
@@ -49,12 +60,17 @@
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "bench": "vitest bench",
+    "bench:projection": "node ./bench/projection-compare.node.mjs",
+    "demo": "vite --config examples/mini-app/vite.config.ts",
+    "demo:build": "vite build --config examples/mini-app/vite.config.ts",
+    "demo:typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p examples/mini-app/tsconfig.json",
     "dev": "node ../../node_modules/typescript/bin/tsc -w -p tsconfig.build.json",
     "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
     "typecheck:tests": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.type-tests.json",
     "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm build:clean"
   },
   "devDependencies": {
-    "@reflex/runtime": "workspace:*"
+    "@volynets/reflex-runtime": "workspace:*",
+    "@volynets/reflex-dom": "workspace:*"
   }
 }

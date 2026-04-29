@@ -1,0 +1,21 @@
+{
+  "name": "reflex-devtools",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "",
+  "scripts": {
+    "dev": "vite dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@volynets/reflex-runtime": "workspace:*",
+    "@volynets/reflex": "workspace:*",
+    "@volynets/reflex-dom": "workspace:*",
+    "@reflex/vite-plugin": "workspace:*",
+    "@tailwindcss/vite": "^4.2.4",
+    "cytoscape": "^3.33.2",
+    "tailwindcss": "^4.2.4"
+  }
+}

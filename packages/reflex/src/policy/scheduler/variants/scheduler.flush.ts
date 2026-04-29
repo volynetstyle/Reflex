@@ -1,19 +1,20 @@
-import type { ExecutionContext } from "@reflex/runtime";
+import type { ReactiveNode } from "@volynets/reflex-runtime";
 import { EffectSchedulerMode } from "../scheduler.constants";
 import {
   createSchedulerCore,
   createSchedulerInstance,
-  tryEnqueue,
+  tryEnqueueEffect,
 } from "../scheduler.core";
+import { flushPrioritySchedulerQueue } from "../scheduler.priority";
 import type { EffectScheduler } from "../scheduler.types";
 import { noopNotifySettled } from "../scheduler.types";
 
-export function createFlushScheduler(
-  context: ExecutionContext,
-): EffectScheduler {
+export function createFlushScheduler(): EffectScheduler {
   const core = createSchedulerCore();
-  const queue = core.queue;
-  const enqueue = tryEnqueue.bind(null, queue);
+  core.flush = (): void => flushPrioritySchedulerQueue(core);
+  const enqueue = (node: ReactiveNode): void => {
+    tryEnqueueEffect(core, node);
+  };
   const batch = <T>(fn: () => T): T => {
     core.enterBatch();
     try {
@@ -22,10 +23,9 @@ export function createFlushScheduler(
       core.leaveBatch();
     }
   };
-  
+
   return createSchedulerInstance(
     EffectSchedulerMode.Flush,
-    context,
     core,
     enqueue,
     batch,

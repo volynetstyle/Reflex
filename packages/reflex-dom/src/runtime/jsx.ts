@@ -1,1 +1,1 @@
-export { Fragment, jsx, jsxDEV, jsxs } from "reflex-framework";
+export { Fragment, jsx, jsxDEV, jsxs } from "@volynets/reflex-framework";

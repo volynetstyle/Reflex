@@ -1,8 +1,11 @@
-import { registerCleanup } from "reflex-framework/ownership";
-import { onEffectStart, useEffect } from "reflex-framework/ownership/reflex";
+import {
+  onEffectStart,
+  registerCleanup,
+  useOwnedEffect,
+} from "@volynets/reflex-framework";
 import type { PortalRenderable } from "../operators";
 import { mountRenderRange, type MountedRenderRange } from "../structure/render-range";
-import type { DOMRenderer } from "../runtime";
+import type { DOMRenderer } from "../runtime/renderer";
 
 export function mountPortal(
   renderer: DOMRenderer,
@@ -37,7 +40,7 @@ export function mountPortal(
 
   remountIntoTarget(renderable.to());
 
-  useEffect(renderer.owner, () => {
+  useOwnedEffect({ owner: renderer.owner }, () => {
     const nextTarget = renderable.to();
 
     onEffectStart(() => {

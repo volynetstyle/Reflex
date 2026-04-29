@@ -1,0 +1,70 @@
+{
+  "name": "@volynets/reflex-runtime",
+  "version": "0.2.0",
+  "type": "module",
+  "description": "Runtime / Universe / Laws for Reflex",
+  "license": "MIT",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/globals.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "source": {
+        "types": "./src/index.ts",
+        "default": "./src/index.ts"
+      },
+      "types": "./dist/globals.d.ts",
+      "import": {
+        "development": "./dist/dev/index.js",
+        "default": "./dist/esm/index.js"
+      },
+      "require": "./dist/cjs/index.cjs"
+    },
+    "./debug": {
+      "source": {
+        "types": "./src/debug/index.ts",
+        "default": "./src/debug/index.ts"
+      },
+      "types": "./dist/esm/debug/index.d.ts",
+      "import": "./dist/dev/debug.js"
+    }
+  },
+  "files": [
+    "dist/cjs",
+    "dist/dev",
+    "dist/esm",
+    "dist/globals.d.ts"
+  ],
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "devDependencies": {
+    "@solidjs/signals": "^0.13.4",
+    "alien-signals": "^2.0.0"
+  },
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "dev": "vite",
+    "build:ts": "tsc -p tsconfig.build.json && node ../../scripts/write-globals-dts.mjs .",
+    "build:npm": "rollup -c rollup.config.ts --configPlugin @rollup/plugin-swc",
+    "build:perf": "rollup -c rollup.perf.config.ts --configPlugin @rollup/plugin-swc",
+    "build": "pnpm clean && pnpm build:ts && pnpm build:npm",
+    "example:introspection": "pnpm build && node examples/introspection.phases.mjs",
+    "bench:core": "pnpm build:perf && node --expose-gc dist/perf.js",
+    "test": "vitest run",
+    "pretest:e2e": "pnpm build",
+    "test:e2e": "node tests/mjs/runtime.e2e.mjs",
+    "bench": "pnpm build && vitest bench test/signal_beta.bench.ts",
+    "bench:flame": "0x -- node dist/tests/ownership.run.js",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build",
+    "release": "changeset version && pnpm install && changeset publish",
+    "prepare": "husky"
+  }
+}

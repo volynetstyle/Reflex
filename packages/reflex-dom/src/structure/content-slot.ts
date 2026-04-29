@@ -3,7 +3,7 @@ import {
   createScope,
   disposeScope,
   type Scope,
-} from "reflex-framework/ownership";
+} from "@volynets/reflex-framework";
 
 export type MountUnknown = (parent: Node, scope: Scope, value: unknown) => void;
 

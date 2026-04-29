@@ -1,12 +1,15 @@
 import {
   disposeWatcher,
-  getDefaultContext,
-  ReactiveNodeState,
+  registerWatcherCleanup,
+  Scheduled,
   runWatcher,
-} from "@reflex/runtime";
-import type { ReactiveNode } from "@reflex/runtime";
-import type { UNINITIALIZED } from "../infra/factory";
-import { createWatcherNode } from "../infra/factory";
+  withCleanupRegistrar,
+} from "@volynets/reflex-runtime";
+import type { ReactiveNode } from "@volynets/reflex-runtime";
+import {
+  createWatcherNode,
+  createWatcherRankedrNode,
+} from "../infra/factory";
 
 /**
  * Marks an effect watcher node as scheduled.
@@ -15,9 +18,9 @@ import { createWatcherNode } from "../infra/factory";
  * the runtime's scheduled flag on a watcher node.
  */
 export function effectScheduled(
-  node: ReactiveNode<typeof UNINITIALIZED | Destructor>,
+  node: ReactiveNode<typeof undefined | Destructor>,
 ) {
-  node.state |= ReactiveNodeState.Scheduled;
+  node.state |= Scheduled;
 }
 
 /**
@@ -27,44 +30,65 @@ export function effectScheduled(
  * a watcher as no longer queued for execution.
  */
 export function effectUnscheduled(
-  node: ReactiveNode<typeof UNINITIALIZED | Destructor>,
+  node: ReactiveNode<typeof undefined | Destructor>,
 ) {
-  node.state &= ~ReactiveNodeState.Scheduled;
+  node.state &= ~Scheduled;
 }
 
 /**
- * Callback used to register cleanup produced by nested helpers with an
- * enclosing effect scope.
+ * Receives cleanup functions created by helpers running inside an effect-owned
+ * setup scope.
+ *
+ * The callback does not run the cleanup immediately. It records the cleanup so
+ * the owner can dispose it later, usually when an effect reruns or an ownership
+ * scope is torn down.
  */
-export type EffectCleanupRegistrar = (cleanup: Destructor) => void;
+export type EffectCleanupReceiver = (cleanup: Destructor) => void;
 
 /**
- * Runs `fn` with a temporary cleanup registrar installed on the active runtime
+ * @deprecated Use {@link EffectCleanupReceiver}.
+ */
+export type EffectCleanupRegistrar = EffectCleanupReceiver;
+
+/**
+ * Runs `fn` with a temporary cleanup receiver installed on the active runtime
  * context.
  *
- * Helpers that allocate resources during `fn` can forward their teardown to
- * `registrar`, allowing the surrounding effect or integration to dispose them
- * automatically.
+ * Any effect/resource created while `fn` is running may call the runtime's
+ * cleanup hook. That hook forwards the produced cleanup into `receiveCleanup`,
+ * letting framework integrations bind plain Reflex effects to a larger
+ * ownership scope.
  *
  * @typeParam T - Return type of `fn`.
  *
- * @param registrar - Cleanup registrar to expose during `fn`, or `null` to run
- * without one.
- * @param fn - Callback executed with the temporary registrar installed.
+ * @param receiveCleanup - Callback that records cleanups created during `fn`,
+ * or `null` to intentionally disable parent cleanup capture.
+ * @param fn - Callback executed with the temporary cleanup receiver installed.
  *
  * @returns The value returned by `fn`.
  *
  * @remarks
- * - The registrar is scoped to the duration of `fn`.
+ * - The receiver is scoped to the synchronous duration of `fn`.
+ * - Passing `null` creates an explicit boundary: nested helpers still work, but
+ *   their cleanups are not forwarded to an outer scope.
  * - This is a low-level integration helper. Most application code should use
  *   `effect()` directly.
  */
-export function withEffectCleanupRegistrar<T>(
-  registrar: EffectCleanupRegistrar | null,
+export function withEffectCleanupScope<T>(
+  receiveCleanup: EffectCleanupReceiver | null,
   fn: () => T,
 ): T {
-  const context = getDefaultContext();
-  return context.withCleanupRegistrar(registrar, fn);
+  return withCleanupRegistrar(receiveCleanup, fn);
+}
+
+/**
+ * @deprecated Use {@link withEffectCleanupScope}.
+ */
+export function withEffectCleanupRegistrar<T>(
+  receiveCleanup: EffectCleanupReceiver | null,
+  fn: () => T,
+): T {
+  return withEffectCleanupScope(receiveCleanup, fn);
 }
 
 /**
@@ -112,11 +136,22 @@ export function withEffectCleanupRegistrar<T>(
  * @see memo
  */
 export function effect(fn: EffectFn): Destructor {
-  const context = getDefaultContext();
   const node = createWatcherNode(fn);
   runWatcher(node);
 
   const dispose = disposeWatcher.bind(null, node) as Destructor;
-  context.registerWatcherCleanup(dispose);
+  registerWatcherCleanup(dispose);
+  return dispose;
+}
+
+export function effectRanked(
+  fn: EffectFn,
+  options: EffectOptions = {},
+): Destructor {
+  const node = createWatcherRankedrNode(fn, options.priority ?? 0);
+  runWatcher(node);
+
+  const dispose = disposeWatcher.bind(null, node) as Destructor;
+  registerWatcherCleanup(dispose);
   return dispose;
 }

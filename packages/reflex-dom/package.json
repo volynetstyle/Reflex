@@ -1,8 +1,9 @@
 {
-  "name": "reflex-dom",
-  "version": "0.1.0",
+  "name": "@volynets/reflex-dom",
+  "version": "0.0.2",
   "type": "module",
   "description": "DOM renderer for Reflex",
+  "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "sideEffects": false,
@@ -14,14 +15,6 @@
       },
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./vite": {
-      "source": {
-        "types": "./src/vite.ts",
-        "default": "./src/vite.ts"
-      },
-      "types": "./dist/vite.d.ts",
-      "import": "./dist/vite.js"
     },
     "./jsx-runtime": {
       "source": {
@@ -38,32 +31,44 @@
       },
       "types": "./dist/jsx-dev-runtime.d.ts",
       "import": "./dist/jsx-dev-runtime.js"
-    },
-    "./server": {
-      "source": {
-        "types": "./src/server.ts",
-        "default": "./src/server.ts"
-      },
-      "types": "./dist/server.d.ts",
-      "import": "./dist/server.js"
     }
   },
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
+    "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "pnpm clean && node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs dist",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "pnpm exec vitest run --config vite.config.ts",
-    "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json"
+    "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build"
   },
   "dependencies": {
-    "@swc/core": "^1.15.18",
     "@volynets/reflex": "workspace:*",
-    "reflex-framework": "workspace:*"
+    "@volynets/reflex-framework": "workspace:*"
   },
-  "peerDependencies": {
-    "vite": "^6.0.0"
+  "keywords": [
+    "dom",
+    "jsx",
+    "reactivity",
+    "renderer",
+    "reflex"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/volynetstyle/Reflex.git",
+    "directory": "packages/reflex-dom"
+  },
+  "homepage": "https://github.com/volynetstyle/Reflex/tree/main/packages/reflex-dom",
+  "bugs": {
+    "url": "https://github.com/volynetstyle/Reflex/issues"
+  },
+  "engines": {
+    "node": ">=20.19.0"
   }
 }

@@ -1,15 +1,31 @@
+import { effect, effectRanked, withEffectCleanupScope } from "@volynets/reflex";
+
 import type { Cleanup } from "../types/core";
 import { addCleanup } from "./ownership.cleanup";
 import { isShuttingDown } from "./ownership.meta";
 import type { OwnerContext, Scope } from "./ownership.scope";
 import { runWithOwner, runWithScope } from "./ownership.scope";
 
-export type useEffectFn = () => void | Cleanup;
+export type UseEffectFn = () => void | Cleanup;
 export type OwnershipCleanupRegistrar = (cleanup: Cleanup) => void;
 
+export interface OwnedEffectOptions {
+  owner: OwnerContext;
+  priority?: number;
+}
+
+export interface OwnershipReactiveEffectOptions {
+  priority?: number;
+}
+
 export interface OwnershipReactiveAdapter {
-  effect(fn: useEffectFn): Cleanup;
-  withCleanupRegistrar<T>(
+  effect(fn: UseEffectFn, options?: OwnershipReactiveEffectOptions): Cleanup;
+
+  /**
+   * Runs `fn` while plain reactive helpers can register their cleanup with the
+   * provided receiver. Passing `null` intentionally creates a cleanup boundary.
+   */
+  withCleanupScope<T>(
     registrar: OwnershipCleanupRegistrar | null,
     fn: () => T,
   ): T;
@@ -17,7 +33,7 @@ export interface OwnershipReactiveAdapter {
 
 export interface OwnershipReactiveBridge {
   readonly onEffectStart: (fn: () => void) => void;
-  readonly useEffect: (owner: OwnerContext, fn: useEffectFn) => Cleanup;
+  readonly useEffect: (options: OwnedEffectOptions, fn: UseEffectFn) => Cleanup;
   readonly runInOwnershipScope: <T>(
     owner: OwnerContext,
     scope: Scope,
@@ -25,73 +41,59 @@ export interface OwnershipReactiveBridge {
   ) => T;
 }
 
-interface useEffectState {
-  skipStartCallbacks: boolean;
+interface EffectStartGate {
+  skip: boolean;
 }
+
+const noopCleanup: Cleanup = () => {};
 
 export function createOwnershipReactiveBridge(
   adapter: OwnershipReactiveAdapter,
 ): OwnershipReactiveBridge {
-  let currentuseEffectState: useEffectState | null = null;
+  let currentStartGate: EffectStartGate | null = null;
 
-  function onEffectStart(fn: () => void): void {
-    if (currentuseEffectState === null) {
-      fn();
-      return;
-    }
+  const onEffectStart = (fn: () => void): void => {
+    if (currentStartGate?.skip !== true) fn();
+  };
 
-    if (!currentuseEffectState.skipStartCallbacks) {
-      fn();
-    }
-  }
-
-  function runInOwnershipScope<T>(
+  const runInOwnershipScope = <T>(
     owner: OwnerContext,
     scope: Scope,
     fn: () => T,
-  ): T {
-    return runWithScope(owner, scope, () =>
-      adapter.withCleanupRegistrar((cleanup) => addCleanup(scope, cleanup), fn),
+  ): T =>
+    runWithScope(owner, scope, () =>
+      adapter.withCleanupScope((cleanup) => addCleanup(scope, cleanup), fn),
     );
-  }
 
-  function useEffect(owner: OwnerContext, fn: useEffectFn): Cleanup {
+  const useEffect = (options: OwnedEffectOptions, fn: UseEffectFn): Cleanup => {
+    const { owner } = options;
     const scope = owner.currentOwner;
 
     if (scope !== null && isShuttingDown(scope)) {
-      if (__DEV__) {
-        throw new Error("useEffect in disposed scope");
-      }
-
-      return (() => {}) as Cleanup;
+      if (__DEV__) throw new Error("useEffect in disposed scope");
+      return noopCleanup;
     }
 
-    return adapter.withCleanupRegistrar(null, () => {
-      const state: useEffectState = {
-        skipStartCallbacks: true,
-      };
+    return adapter.withCleanupScope(null, () => {
+      const gate: EffectStartGate = { skip: true };
 
-      const dispose = adapter.effect(() =>
-        runWithOwner(owner, scope, () => {
-          const previousState = currentuseEffectState;
-          currentuseEffectState = state;
+      const dispose = adapter.effect(() => {
+        const prevGate = currentStartGate;
+        currentStartGate = gate;
 
-          try {
-            return fn();
-          } finally {
-            currentuseEffectState = previousState;
-            state.skipStartCallbacks = false;
-          }
-        }),
-      );
+        try {
+          return runWithOwner(owner, scope, fn);
+        } finally {
+          currentStartGate = prevGate;
+          gate.skip = false;
+        }
+      }, options);
 
-      if (scope !== null) {
-        addCleanup(scope, dispose);
-      }
+      if (scope !== null) addCleanup(scope, dispose);
 
       return dispose;
     });
-  }
+  };
 
   return Object.freeze({
     onEffectStart,
@@ -99,3 +101,24 @@ export function createOwnershipReactiveBridge(
     runInOwnershipScope,
   });
 }
+
+export const reflexOwnershipBridge: OwnershipReactiveBridge =
+  createOwnershipReactiveBridge({
+    effect(fn, options) {
+      const priority = options?.priority;
+
+      if (priority !== undefined) {
+        return effectRanked(fn, { priority });
+      }
+
+      return effect(fn);
+    },
+
+    withCleanupScope: withEffectCleanupScope,
+  });
+
+export const {
+  onEffectStart,
+  runInOwnershipScope,
+  useEffect: useOwnedEffect,
+} = reflexOwnershipBridge;

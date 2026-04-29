@@ -1,0 +1,192 @@
+import { recordDebugEvent, collectDebugNodeRefs } from "../debug/debug.runtime";
+import { activeConsumer, type RuntimeDebugContext } from "./context";
+import { Computing, type ReactiveEdge } from "./shape";
+import type ReactiveNode from "./shape/ReactiveNode";
+
+type DebugNodeEventInput = {
+  consumer?: ReactiveNode;
+  node: ReactiveNode;
+  detail: Record<string, unknown>;
+};
+
+function withOptionalConsumer(
+  input: Omit<DebugNodeEventInput, "consumer">,
+  consumer: ReactiveNode | null | undefined,
+): DebugNodeEventInput {
+  return consumer === null || consumer === undefined
+    ? input
+    : { ...input, consumer };
+}
+
+export function devAssertTrackReadAlive(
+  sourceDead: boolean,
+  consumerDead: boolean,
+): void {
+  if (!__DEV__) return;
+  if (sourceDead) throw new Error("track from dead source");
+  if (consumerDead) throw new Error("track into dead consumer");
+}
+
+export function devRecordTrackRead(
+  context: RuntimeDebugContext,
+  consumer: ReactiveNode,
+  source: ReactiveNode,
+): void {
+  if (!__DEV__) return;
+
+  recordDebugEvent(context, "track:read", {
+    consumer,
+    source,
+  });
+}
+
+export function devRecordCleanupStaleSources(
+  node: ReactiveNode,
+  staleHead: ReactiveEdge,
+  context: RuntimeDebugContext,
+): void {
+  if (!__DEV__) return;
+
+  const removedSources = collectDebugNodeRefs(
+    staleHead,
+    (edge) => edge.from,
+    (edge) => edge.nextIn,
+  );
+
+  recordDebugEvent(context, "cleanup:stale-sources", {
+    node,
+    detail: {
+      removedCount: removedSources.length,
+      removedSources,
+    },
+  });
+}
+
+export function devAssertRecomputeAlive(): void {
+  if (__DEV__) {
+    throw new Error("recompute dead node");
+  }
+}
+
+export function devRecordRecompute(
+  node: ReactiveNode,
+  changed: boolean,
+  next: unknown,
+  previous: unknown,
+  context: RuntimeDebugContext,
+): void {
+  if (!__DEV__) return;
+
+  recordDebugEvent(context, "recompute", {
+    node,
+    detail: {
+      changed,
+      next,
+      previous,
+    },
+  });
+}
+
+export function devAssertReadDeadProducer(): void {
+  if (__DEV__) {
+    throw new Error("read from dead producer");
+  }
+}
+
+export function devAssertReadDeadConsumer(): void {
+  if (__DEV__) {
+    throw new Error("read dead consumer");
+  }
+}
+
+export function devAssertConsumerCanStabilize(state: number): void {
+  if (__DEV__ && (state & Computing) !== 0) {
+    throw new Error("Cycle detected while refreshing reactive graph");
+  }
+}
+
+export function devRecordReadProducer(
+  node: ReactiveNode,
+  value: unknown,
+  context: RuntimeDebugContext,
+): void {
+  if (!__DEV__) return;
+
+  recordDebugEvent(
+    context,
+    "read:producer",
+    withOptionalConsumer(
+      {
+        node,
+        detail: {
+          value,
+        },
+      },
+      activeConsumer,
+    ),
+  );
+}
+
+export function devRecordReadConsumer(
+  node: ReactiveNode,
+  mode: "eager" | "lazy",
+  value: unknown,
+  context: RuntimeDebugContext,
+  consumer?: ReactiveNode,
+): void {
+  if (!__DEV__) return;
+
+  recordDebugEvent(
+    context,
+    "read:consumer",
+    withOptionalConsumer(
+      {
+        node,
+        detail: {
+          mode,
+          value,
+        },
+      },
+      consumer,
+    ),
+  );
+}
+
+export function devAssertWriteAlive(): void {
+  if (__DEV__) {
+    throw new Error("write into dead node");
+  }
+}
+
+export function devRecordWriteProducer(
+  node: ReactiveNode,
+  changed: boolean,
+  next: unknown,
+  previous: unknown,
+  hasSubscribers: boolean | undefined,
+  context: RuntimeDebugContext,
+): void {
+  if (!__DEV__) return;
+
+  recordDebugEvent(context, "write:producer", {
+    node,
+    detail: {
+      changed,
+      next,
+      previous,
+      hasSubscribers,
+    },
+  });
+}
+
+export function devAssertShouldRecomputeAlive(): void {
+  if (__DEV__) {
+    throw new Error("shouldRecompute dead node");
+  }
+}
+
+export function devAssertPropagateAlive(): void {
+  if (__DEV__) {
+    throw new Error("propagate from dead node");
+  }
+}

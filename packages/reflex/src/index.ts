@@ -1,10 +1,8 @@
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="./globals.d.ts" />
-
-export { signal, computed, memo, effect, withEffectCleanupRegistrar } from "./api";
-export { subscribeOnce, map, filter, merge, scan, hold } from "./api";
-export { batch, createRuntime } from "./infra";
-export { createModel, isModel, own } from "./infra/model";
+/**
+ * API
+ */
 export type {
   Model,
   ModelFactory,
@@ -12,3 +10,35 @@ export type {
   ModelTuple,
   ValidatedModelShape,
 } from "./infra/model";
+/**
+ * API
+ */
+export {
+  signal,
+} from "./api/signal";
+export {
+  computed,
+  memo,
+} from "./api/derived";
+export {
+  effect,
+  effectRanked,
+  withEffectCleanupRegistrar,
+  withEffectCleanupScope,
+} from "./api/effect";
+export type {
+  EffectCleanupReceiver,
+  EffectCleanupRegistrar,
+} from "./api/effect";
+/**
+ * API
+ */
+export { batch, event, flush, createRuntime } from "./infra/runtime";
+/**
+ * API
+ */
+export { subscribeOnce, map, filter, merge, scan, hold } from "./api/event";
+/**
+ * API
+ */
+export { createModel, isModel, own, readModelValue } from "./infra/model";

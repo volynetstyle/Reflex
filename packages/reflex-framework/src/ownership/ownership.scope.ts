@@ -1,7 +1,7 @@
 import { addCleanup, dispose } from "./ownership.cleanup";
 import { isShuttingDown } from "./ownership.meta";
 import { OwnershipNode } from "./ownership.node";
-import { appendChild } from "./ownership.tree";
+import { prependChild } from "./ownership.tree";
 
 export type Scope = OwnershipNode;
 
@@ -49,7 +49,7 @@ function attachScope(parent: Scope | null, scope: Scope): void {
     return;
   }
 
-  appendChild(parent, scope);
+  prependChild(parent, scope);
 }
 
 export function runWithScope<T>(

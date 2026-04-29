@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   createContext,
+  createOwnerContext,
+  createScope,
   hasOwnContext,
   provideContext,
+  runWithScope,
   useContext,
   type OwnershipContext,
 } from "../src";
-import { createOwnerContext, createScope, runWithScope } from "../src/ownership";
 
 describe("ownership context public api", () => {
   it("exports a typed context API with default values", () => {

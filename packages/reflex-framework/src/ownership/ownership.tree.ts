@@ -1,28 +1,23 @@
-import { decChildCount, incChildCount, isShuttingDown } from "./ownership.meta";
+import { isShuttingDown } from "./ownership.meta";
 import type { OwnershipNode } from "./ownership.node";
 
-export function appendChild(parent: OwnershipNode, child: OwnershipNode): void {
+export function prependChild(parent: OwnershipNode, child: OwnershipNode): void {
   if (isShuttingDown(parent) || isShuttingDown(child)) return;
   if (child === parent) {
-    throw new Error("Cannot append node to itself");
+    throw new Error("Cannot prepend node to itself");
   }
 
   detach(child);
 
   child.parent = parent;
-  child.nextSibling = null;
+  child.prevSibling = null;
+  child.nextSibling = parent.firstChild;
 
-  const last = parent.lastChild;
-  child.prevSibling = last;
-
-  if (last !== null) {
-    last.nextSibling = child;
-  } else {
-    parent.firstChild = child;
+  if (child.nextSibling !== null) {
+    child.nextSibling.prevSibling = child;
   }
 
-  parent.lastChild = child;
-  incChildCount(parent);
+  parent.firstChild = child;
 }
 
 export function detach(node: OwnershipNode): void {
@@ -40,11 +35,7 @@ export function detach(node: OwnershipNode): void {
 
   if (next !== null) {
     next.prevSibling = prev;
-  } else {
-    parent.lastChild = prev;
   }
 
   node.parent = node.prevSibling = node.nextSibling = null;
-
-  decChildCount(parent);
 }

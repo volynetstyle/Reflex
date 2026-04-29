@@ -1,8 +1,12 @@
-import { createExecutionContext, setDefaultContext } from "@reflex/runtime";
-import type { ExecutionContext, EngineHooks } from "@reflex/runtime";
+import {
+  resetState,
+  setHooks,
+  setRuntimeHooks,
+} from "@volynets/reflex-runtime";
+import type { EngineHooks } from "@volynets/reflex-runtime";
 import { subscribeEvent } from "./event";
 import { createSource } from "./factory";
-import { EventDispatcher } from "../policy";
+import { createEventDispatcher } from "../policy";
 import type { EffectStrategy } from "../policy/scheduler";
 import {
   createEffectScheduler,
@@ -10,39 +14,22 @@ import {
 } from "../policy/scheduler";
 
 type BatchFn = <T>(fn: () => T) => T;
+type EventFn = <T>() => EventSource<T>;
+
+export interface RuntimeContext {
+  readonly scope: "runtime";
+}
 
 let activeBatch: BatchFn = (fn) => fn();
+let activeEvent: EventFn = (() => {
+  throw new Error("Runtime has not been created");
+}) as EventFn;
+let activeFlush: () => void = () => {};
+let activeContext: RuntimeContext = { scope: "runtime" };
 
 export interface RuntimeOptions {
   hooks?: EngineHooks;
   effectStrategy?: EffectStrategy;
-}
-
-function createRuntimeInfrastructure(options?: RuntimeOptions) {
-  const executionContext = createExecutionContext(options?.hooks);
-  const scheduler = createEffectScheduler(
-    resolveEffectSchedulerMode(options?.effectStrategy),
-    executionContext,
-  );
-  const dispatcher = new EventDispatcher(scheduler.batch);
-
-  executionContext.setRuntimeHooks(
-    scheduler.enqueue,
-    scheduler.runtimeNotifySettled,
-  );
-
-  executionContext.resetState();
-  setDefaultContext(executionContext);
-
-  return {
-    scheduler,
-    dispatcher,
-    executionContext,
-  };
-}
-
-export function batch<T>(fn: () => T): T {
-  return activeBatch(fn);
 }
 
 export interface Event<T> {
@@ -57,31 +44,54 @@ export interface Runtime {
   batch<T>(fn: () => T): T;
   event<T>(): EventSource<T>;
   flush(): void;
-  readonly ctx: ExecutionContext;
+  readonly ctx: RuntimeContext;
 }
 
-export function createRuntime(options?: RuntimeOptions): Runtime {
-  const { scheduler, dispatcher, executionContext } =
-    createRuntimeInfrastructure(options);
+export function createRuntime({
+  hooks,
+  effectStrategy,
+}: RuntimeOptions = {}): Runtime {
+  const scheduler = createEffectScheduler(
+    resolveEffectSchedulerMode(effectStrategy),
+  );
+  const dispatcher = createEventDispatcher(scheduler.batch.bind(scheduler));
 
-  activeBatch = scheduler.batch;
+  if (hooks !== undefined) {
+    setHooks(hooks);
+  }
+
+  setRuntimeHooks(
+    scheduler.enqueue.bind(scheduler),
+    scheduler.runtimeNotifySettled,
+  );
+
+  resetState();
+  activeContext = { scope: "runtime" };
+  activeBatch = scheduler.batch.bind(scheduler);
+  activeEvent = function <T>() {
+    const source = createSource<T>();
+
+    return {
+      subscribe(fn: (value: T) => void) {
+        return subscribeEvent(source, fn);
+      },
+      emit(value: T) {
+        dispatcher.emit(source, value);
+      },
+    };
+  };
+  activeFlush = scheduler.flush.bind(scheduler);
 
   return {
-    ctx: executionContext,
-    batch: scheduler.batch,
-
-    event<T>() {
-      const source = createSource();
-
-      return {
-        subscribe(fn: (value: T) => void) {
-          return subscribeEvent(source, fn);
-        },
-        emit(value: T) {
-          dispatcher.emit(source, value);
-        },
-      };
-    },
-    flush: scheduler.flush,
+    ctx: activeContext,
+    batch: activeBatch,
+    event: activeEvent,
+    flush: activeFlush,
   };
 }
+
+export const batch: BatchFn = <T>(fn: () => T) => activeBatch(fn);
+
+export const event: EventFn = <T>() => activeEvent<T>();
+
+export const flush = (): void => activeFlush();

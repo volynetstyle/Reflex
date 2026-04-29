@@ -5,7 +5,15 @@ import * as infra from "../src/infra";
 import * as policy from "../src/policy/scheduler";
 import * as d from "../src/policy";
 import * as unstable from "../src/unstable";
+import {
+  optimistic,
+  transition,
+} from "../src/unstable/optimistic";
 import { resource } from "../src/unstable/resource";
+import {
+  createProjection as unstableCreateProjection,
+  createSelector as unstableCreateSelector,
+} from "../src/unstable";
 import { createModel, isModel, own } from "../src/infra/model";
 
 describe("Reactive system - exports", () => {
@@ -14,6 +22,7 @@ describe("Reactive system - exports", () => {
     expect(reflex.computed).toBe(api.computed);
     expect(reflex.memo).toBe(api.memo);
     expect(reflex.effect).toBe(api.effect);
+    expect(reflex.effectRanked).toBe(api.effectRanked);
     expect(reflex.subscribeOnce).toBe(api.subscribeOnce);
     expect(reflex.map).toBe(api.map);
     expect(reflex.filter).toBe(api.filter);
@@ -25,7 +34,30 @@ describe("Reactive system - exports", () => {
     expect(reflex.isModel).toBe(isModel);
     expect(reflex.own).toBe(own);
     expect(reflex.createRuntime).toBe(infra.createRuntime);
+    expect(reflex.batch).toBe(infra.batch);
+    expect(reflex.event).toBe(infra.event);
+    expect(reflex.flush).toBe(infra.flush);
     expect("resource" in reflex).toBe(false);
+  });
+
+  it("keeps global runtime aliases live after createRuntime()", () => {
+    const rt = reflex.createRuntime();
+    const calls: number[] = [];
+
+    reflex.batch(() => {
+      calls.push(1);
+    });
+
+    const source = reflex.event<number>();
+    source.subscribe((value) => {
+      calls.push(value);
+    });
+
+    source.emit(2);
+    reflex.flush();
+
+    expect(calls).toEqual([1, 2]);
+    expect(rt.batch(() => 3)).toBe(3);
   });
 
   it("re-exports policy helpers from the policy barrel", () => {
@@ -35,6 +67,10 @@ describe("Reactive system - exports", () => {
   });
 
   it("keeps unstable exports behind the unstable barrel", () => {
+    expect(unstable.optimistic).toBe(optimistic);
     expect(unstable.resource).toBe(resource);
+    expect(unstable.transition).toBe(transition);
+    expect(unstable.createProjection).toBe(unstableCreateProjection);
+    expect(unstable.createSelector).toBe(unstableCreateSelector);
   });
 });
