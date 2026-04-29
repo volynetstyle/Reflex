@@ -28,9 +28,7 @@ describe("Runtime Core: Algorithm Correctness", () => {
       const consumer = createConsumer(() => readProducer(source) * 2);
 
       writeProducer(source, 10);
-      expect(consumer.state & Changed).toBe(
-        Changed,
-      );
+      expect(consumer.state & Changed).toBe(Changed);
     });
 
     it("marks transitive subscribers Invalid, not Changed", () => {
@@ -42,13 +40,9 @@ describe("Runtime Core: Algorithm Correctness", () => {
       writeProducer(source, 2);
 
       // Direct subscriber
-      expect(middle.state & Changed).toBe(
-        Changed,
-      );
+      expect(middle.state & Changed).toBe(Changed);
       // Transitive subscriber
-      expect(leaf.state & Invalid).toBe(
-        Invalid,
-      );
+      expect(leaf.state & Invalid).toBe(Invalid);
       expect(leaf.state & Changed).toBe(0);
     });
 
@@ -61,9 +55,7 @@ describe("Runtime Core: Algorithm Correctness", () => {
 
       runWatcher(watcher);
       writeProducer(source, 2);
-      expect(watcher.state & Changed).toBe(
-        Changed,
-      );
+      expect(watcher.state & Changed).toBe(Changed);
       expect(watcher.state & Invalid).toBe(0);
     });
 
@@ -95,12 +87,8 @@ describe("Runtime Core: Algorithm Correctness", () => {
 
       writeProducer(source, 1);
 
-      expect(left.state & Changed).toBe(
-        Changed,
-      );
-      expect(right.state & Changed).toBe(
-        Changed,
-      );
+      expect(left.state & Changed).toBe(Changed);
+      expect(right.state & Changed).toBe(Changed);
     });
   });
 
@@ -307,27 +295,21 @@ describe("Runtime Core: Algorithm Correctness", () => {
   describe("State Transitions", () => {
     it("starts consumer in Changed state (dirty)", () => {
       const consumer = createConsumer(() => 42);
-      expect(consumer.state & Changed).toBe(
-        Changed,
-      );
+      expect(consumer.state & Changed).toBe(Changed);
     });
 
     it("clears dirty bits after successful read", () => {
       const source = createProducer(1);
       const consumer = createConsumer(() => readProducer(source));
 
-      expect(consumer.state & Changed).toBe(
-        Changed,
-      );
+      expect(consumer.state & Changed).toBe(Changed);
       readConsumer(consumer);
       expect(consumer.state & Changed).toBe(0);
     });
 
     it("watcher starts in Changed state", () => {
       const watcher = createWatcher(() => {});
-      expect(watcher.state & Changed).toBe(
-        Changed,
-      );
+      expect(watcher.state & Changed).toBe(Changed);
     });
 
     it("producer starts clean", () => {

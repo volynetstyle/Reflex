@@ -5,7 +5,11 @@ import {
   runWatcher,
   writeProducer,
 } from "../src";
-import { createProducer, createWatcher, resetRuntime } from "./runtime.test_utils";
+import {
+  createProducer,
+  createWatcher,
+  resetRuntime,
+} from "./runtime.test_utils";
 
 describe("Reactive runtime - integration safety", () => {
   beforeEach(() => {

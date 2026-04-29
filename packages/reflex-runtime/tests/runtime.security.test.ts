@@ -14,7 +14,8 @@ import {
 describe("Reactive runtime - security regressions", () => {
   it("normalizes hook payloads instead of inheriting __proto__ pollution", () => {
     const settled = vi.fn();
-    const payload = Object.create(null) as EngineHooks & Record<string, unknown>;
+    const payload = Object.create(null) as EngineHooks &
+      Record<string, unknown>;
 
     Object.defineProperty(payload, "__proto__", {
       enumerable: true,

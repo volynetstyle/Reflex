@@ -1,218 +1,22 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { subtle } from "../src/debug";
-import type { RuntimeDebugEvent } from "../src/debug";
 import {
+  createTraceHarness as createHistoryHarness,
   createConsumer,
   createProducer,
   createWatcher,
-  resetRuntime,
+  expectContainsAll,
+  expectNoStaleCleanup,
+  expectNoWatcherActivity,
+  expectPropagationTargetsIncluded,
+  expectPropagationTargetsVisitedOnce,
+  expectSetEqual,
+  expectTraceChanged as expectChanged,
+  expectTraceProducerReads as expectProducerReads,
+  expectTraceRecomputed as expectRecomputed,
+  expectTraceTracked as expectTracked,
 } from "./runtime.test_utils";
 import { readProducer, readConsumer, writeProducer, runWatcher } from "../src";
-
-type EventSummary = {
-  byType: Record<string, number>;
-  trackReads: string[];
-  producerReads: string[];
-  consumerReads: string[];
-  recomputes: string[];
-  propagations: string[];
-  watcherInvalidations: string[];
-  watcherRuns: string[];
-  staleCleanups: string[];
-};
-
-function countByType(events: RuntimeDebugEvent[]): Record<string, number> {
-  const counts: Record<string, number> = {};
-
-  for (const event of events) {
-    counts[event.type] = (counts[event.type] ?? 0) + 1;
-  }
-
-  return counts;
-}
-
-function labelOf(
-  ref:
-    | RuntimeDebugEvent["consumer"]
-    | RuntimeDebugEvent["node"]
-    | RuntimeDebugEvent["source"]
-    | RuntimeDebugEvent["target"],
-): string {
-  return ref?.label ?? `#${ref?.id ?? "?"}`;
-}
-
-function summarize(events: RuntimeDebugEvent[]): EventSummary {
-  const trackReads: string[] = [];
-  const producerReads: string[] = [];
-  const consumerReads: string[] = [];
-  const recomputes: string[] = [];
-  const propagations: string[] = [];
-  const watcherInvalidations: string[] = [];
-  const watcherRuns: string[] = [];
-  const staleCleanups: string[] = [];
-
-  for (const event of events) {
-    if (event.type === "track:read") {
-      trackReads.push(`${labelOf(event.source)}->${labelOf(event.consumer)}`);
-      continue;
-    }
-
-    if (event.type === "read:producer") {
-      producerReads.push(`${labelOf(event.node)}@${labelOf(event.consumer)}`);
-      continue;
-    }
-
-    if (event.type === "read:consumer") {
-      const mode = String(event.detail?.mode ?? "?");
-      consumerReads.push(
-        `${labelOf(event.node)}:${mode}@${labelOf(event.consumer)}`,
-      );
-      continue;
-    }
-
-    if (event.type === "recompute") {
-      const changed = event.detail?.changed === true ? "changed" : "stable";
-      recomputes.push(`${labelOf(event.node)}:${changed}`);
-      continue;
-    }
-
-    if (event.type === "propagate") {
-      const immediate = event.detail?.immediate === true ? "!" : "~";
-      propagations.push(
-        `${labelOf(event.source)}-${immediate}>${labelOf(event.target)}`,
-      );
-      continue;
-    }
-
-    if (event.type === "watcher:invalidated") {
-      watcherInvalidations.push(labelOf(event.node));
-      continue;
-    }
-
-    if (
-      event.type === "watcher:run:start" ||
-      event.type === "watcher:run:finish" ||
-      event.type === "watcher:run:skip"
-    ) {
-      watcherRuns.push(`${event.type}:${labelOf(event.node)}`);
-      continue;
-    }
-
-    if (event.type === "cleanup:stale-sources") {
-      const removedSources = Array.isArray(event.detail?.removedSources)
-        ? event.detail.removedSources
-            .map((ref) =>
-              typeof ref === "object" && ref !== null && "label" in ref
-                ? String(ref.label ?? "#?")
-                : "#?",
-            )
-            .join(",")
-        : "";
-
-      staleCleanups.push(
-        `${labelOf(event.node)}:${String(event.detail?.removedCount ?? 0)}:${removedSources}`,
-      );
-    }
-  }
-
-  return {
-    byType: countByType(events),
-    trackReads,
-    producerReads,
-    consumerReads,
-    recomputes,
-    propagations,
-    watcherInvalidations,
-    watcherRuns,
-    staleCleanups,
-  };
-}
-
-function createHistoryHarness() {
-  resetRuntime();
-  subtle.configure({ historyLimit: 1_000 });
-
-  return {
-    label<T>(node: T, label: string): T {
-      return subtle.label(node as never, label) as T;
-    },
-    clear() {
-      subtle.clearHistory();
-    },
-    summary(): EventSummary {
-      return summarize(subtle.history());
-    },
-  };
-}
-
-function expectContainsAll(actual: string[], expected: string[]): void {
-  for (const item of expected) {
-    expect(actual).toContain(item);
-  }
-}
-
-function expectSetEqual(actual: string[], expected: string[]): void {
-  expect(new Set(actual)).toEqual(new Set(expected));
-}
-
-function expectRecomputed(summary: EventSummary, labels: string[]): void {
-  const actual = summary.recomputes.map((entry) => entry.split(":")[0]);
-  expectSetEqual(actual, labels);
-}
-
-function expectChanged(summary: EventSummary, labels: string[]): void {
-  for (const label of labels) {
-    expect(summary.recomputes).toContain(`${label}:changed`);
-  }
-}
-
-function expectProducerReads(summary: EventSummary, expected: string[]): void {
-  expectSetEqual(summary.producerReads, expected);
-}
-
-function expectTracked(summary: EventSummary, expected: string[]): void {
-  expectContainsAll(summary.trackReads, expected);
-}
-
-function expectNoWatcherActivity(summary: EventSummary): void {
-  expect(summary.watcherInvalidations).toEqual([]);
-  expect(summary.watcherRuns).toEqual([]);
-}
-
-function expectNoStaleCleanup(summary: EventSummary): void {
-  expect(summary.staleCleanups).toEqual([]);
-}
-
-function expectPropagationTargetsIncluded(
-  summary: EventSummary,
-  expectedTargets: string[],
-): void {
-  const targets = summary.propagations.map((entry) => {
-    const arrowIndex = entry.indexOf(">");
-    return entry.slice(arrowIndex + 1);
-  });
-
-  for (const target of expectedTargets) {
-    expect(targets).toContain(target);
-  }
-}
-
-function expectPropagationTargetsVisitedOnce(
-  summary: EventSummary,
-  expectedTargets: string[],
-): void {
-  const counts = new Map<string, number>();
-
-  for (const entry of summary.propagations) {
-    const arrowIndex = entry.indexOf(">");
-    const target = entry.slice(arrowIndex + 1);
-    counts.set(target, (counts.get(target) ?? 0) + 1);
-  }
-
-  for (const target of expectedTargets) {
-    expect(counts.get(target)).toBe(1);
-  }
-}
 
 describe("Reactive runtime - graph semantic regressions (dev)", () => {
   beforeEach(() => {
@@ -243,16 +47,16 @@ describe("Reactive runtime - graph semantic regressions (dev)", () => {
 
     const summary = h.summary();
 
-    expectChanged(summary, ["c1", "c2", "c3"]);
-    expectRecomputed(summary, ["c1", "c2", "c3"]);
+    h.expectChanged(["c1", "c2", "c3"]);
+    h.expectRecomputed(["c1", "c2", "c3"]);
 
-    expectTracked(summary, ["source->c1", "c1->c2", "c2->c3"]);
-    expectProducerReads(summary, ["source@c1"]);
+    h.expectTracked(["source->c1", "c1->c2", "c2->c3"]);
+    h.expectProducerReads(["source@c1"]);
     expect(summary.consumerReads).toContain("c1:lazy@c2");
     expect(summary.consumerReads).toContain("c2:lazy@c3");
     expect(summary.consumerReads).toContain("c3:lazy@#?");
 
-    expectPropagationTargetsIncluded(summary, ["c1", "c2", "c3"]);
+    h.expectPropagationTargetsIncluded(["c1", "c2", "c3"]);
     expect(summary.byType["write:producer"]).toBe(1);
     expect(summary.byType["recompute"]).toBe(3);
 
@@ -298,17 +102,17 @@ describe("Reactive runtime - graph semantic regressions (dev)", () => {
 
     const summary = h.summary();
 
-    expectChanged(summary, ["left", "right", "far", "wide", "sink"]);
-    expectRecomputed(summary, ["left", "right", "far", "wide", "sink"]);
+    h.expectChanged(["left", "right", "far", "wide", "sink"]);
+    h.expectRecomputed(["left", "right", "far", "wide", "sink"]);
 
-    expectProducerReads(summary, [
+    h.expectProducerReads([
       "source@left",
       "source@right",
       "source@far",
       "source@wide",
     ]);
 
-    expectTracked(summary, [
+    h.expectTracked([
       "source->left",
       "left->sink",
       "source->right",
@@ -325,7 +129,7 @@ describe("Reactive runtime - graph semantic regressions (dev)", () => {
     expect(summary.consumerReads).toContain("wide:lazy@sink");
     expect(summary.consumerReads).toContain("sink:lazy@#?");
 
-    expectPropagationTargetsIncluded(summary, [
+    h.expectPropagationTargetsIncluded([
       "left",
       "right",
       "far",
@@ -336,8 +140,8 @@ describe("Reactive runtime - graph semantic regressions (dev)", () => {
     expect(summary.byType["write:producer"]).toBe(1);
     expect(summary.byType["recompute"]).toBe(5);
 
-    expectNoWatcherActivity(summary);
-    expectNoStaleCleanup(summary);
+    h.expectNoWatcherActivity();
+    h.expectNoStaleCleanup();
   });
 
   it("reuses a shared dependency in a diamond graph without losing correctness", () => {
@@ -368,11 +172,11 @@ describe("Reactive runtime - graph semantic regressions (dev)", () => {
 
     const summary = h.summary();
 
-    expectChanged(summary, ["shared", "left", "right", "sink"]);
-    expectRecomputed(summary, ["shared", "left", "right", "sink"]);
+    h.expectChanged(["shared", "left", "right", "sink"]);
+    h.expectRecomputed(["shared", "left", "right", "sink"]);
 
-    expectProducerReads(summary, ["source@shared"]);
-    expectTracked(summary, [
+    h.expectProducerReads(["source@shared"]);
+    h.expectTracked([
       "source->shared",
       "shared->left",
       "shared->right",
@@ -386,7 +190,7 @@ describe("Reactive runtime - graph semantic regressions (dev)", () => {
     expect(summary.consumerReads).toContain("right:lazy@sink");
     expect(summary.consumerReads).toContain("sink:lazy@#?");
 
-    expectPropagationTargetsIncluded(summary, [
+    h.expectPropagationTargetsIncluded([
       "shared",
       "left",
       "right",
@@ -396,8 +200,8 @@ describe("Reactive runtime - graph semantic regressions (dev)", () => {
     expect(summary.byType["write:producer"]).toBe(1);
     expect(summary.byType["recompute"]).toBe(4);
 
-    expectNoWatcherActivity(summary);
-    expectNoStaleCleanup(summary);
+    h.expectNoWatcherActivity();
+    h.expectNoStaleCleanup();
 
     // Мягкая защита от явной деградации:
     // shared не должен recompute больше одного раза в одном coherent read.
@@ -511,8 +315,8 @@ describe("Reactive runtime - graph semantic regressions (dev)", () => {
     expect(summary.consumerReads).toContain("left:lazy@sink");
     expect(summary.consumerReads).toContain("sink:lazy@#?");
 
-    expectNoWatcherActivity(summary);
-    expectNoStaleCleanup(summary);
+    h.expectNoWatcherActivity();
+    h.expectNoStaleCleanup();
   });
 
   it("invalidates multiple effects from one source", () => {

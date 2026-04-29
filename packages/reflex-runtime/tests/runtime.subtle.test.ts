@@ -26,7 +26,9 @@ describe("Reactive runtime - subtle debug surface", () => {
 
   it("exposes untrack as a subtle alias", () => {
     const source = createProducer(1);
-    const consumer = createConsumer(() => subtle.untrack(() => readProducer(source)));
+    const consumer = createConsumer(() =>
+      subtle.untrack(() => readProducer(source)),
+    );
 
     readConsumer(consumer);
 
@@ -126,14 +128,14 @@ describe("Reactive runtime - subtle debug surface", () => {
     readConsumer(sink);
 
     expect(
-      subtle.graph(middle, { direction: "sources", depth: 1 }).nodes.map(
-        (node) => node.payload,
-      ),
+      subtle
+        .graph(middle, { direction: "sources", depth: 1 })
+        .nodes.map((node) => node.payload),
     ).toEqual([2, 1]);
     expect(
-      subtle.graph(middle, { direction: "sinks", depth: 1 }).nodes.map(
-        (node) => node.payload,
-      ),
+      subtle
+        .graph(middle, { direction: "sinks", depth: 1 })
+        .nodes.map((node) => node.payload),
     ).toEqual([2, 3]);
   });
 

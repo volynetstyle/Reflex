@@ -12,10 +12,7 @@ import {
   readProducer,
   writeProducer,
 } from "../src";
-import {
-  connect,
-  disconnect,
-} from "../src/reactivity/shape/methods/connect";
+import { connect, disconnect } from "../src/reactivity/shape/graph/connect";
 import {
   createConsumer,
   createProducer,

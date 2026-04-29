@@ -1,13 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  disposeNode,
-  readConsumer,
-  readProducer,
-  writeProducer,
-} from "../src";
+import { disposeNode, readConsumer, readProducer, writeProducer } from "../src";
 import {
   createConsumer,
   createProducer,
+  scenario,
+  expectGraph,
+  expectGraphIntegrity,
   expectNodeGraphIntegrity,
   hasSubscriber,
   incomingSources,
@@ -26,33 +24,23 @@ describe("Reactive runtime - graph topology and consistency", () => {
 
     expect(readConsumer(sink)).toBe(3);
 
-    expectNodeGraphIntegrity(source);
-    expectNodeGraphIntegrity(middle);
-    expectNodeGraphIntegrity(sink);
+    expectGraphIntegrity([source, middle, sink]);
     expect(hasSubscriber(source, middle)).toBe(true);
     expect(hasSubscriber(middle, sink)).toBe(true);
     expect(incomingSources(sink)).toEqual([middle]);
   });
 
   it("preserves chain integrity when a branch switch prunes a stale suffix", () => {
-    const gate = createProducer(true);
-    const left = createProducer(1);
-    const right = createProducer(10);
-    const selected = createConsumer(() =>
-      readProducer(gate) ? readProducer(left) : readProducer(right),
-    );
+    const graph = scenario.branchSwitch({ gate: true, left: 1, right: 10 });
 
-    expect(readConsumer(selected)).toBe(1);
-    writeProducer(gate, false);
+    expect(readConsumer(graph.selected)).toBe(1);
+    writeProducer(graph.gate, false);
 
-    expect(readConsumer(selected)).toBe(10);
-    expect(incomingSources(selected)).toEqual([gate, right]);
-    expect(hasSubscriber(left, selected)).toBe(false);
+    expect(readConsumer(graph.selected)).toBe(10);
+    expect(incomingSources(graph.selected)).toEqual([graph.gate, graph.right]);
+    expect(hasSubscriber(graph.left, graph.selected)).toBe(false);
 
-    expectNodeGraphIntegrity(gate);
-    expectNodeGraphIntegrity(left);
-    expectNodeGraphIntegrity(right);
-    expectNodeGraphIntegrity(selected);
+    expectGraph(graph).toBeBidirectional();
   });
 
   it("removes both sides of the edge when an intermediate consumer is disposed", () => {
@@ -75,7 +63,9 @@ describe("Reactive runtime - graph topology and consistency", () => {
 
   it("reuses dependency edges without creating duplicate incoming links", () => {
     const source = createProducer(2);
-    const consumer = createConsumer(() => readProducer(source) + readProducer(source));
+    const consumer = createConsumer(
+      () => readProducer(source) + readProducer(source),
+    );
 
     expect(readConsumer(consumer)).toBe(4);
     expect(readConsumer(consumer)).toBe(4);
@@ -93,9 +83,8 @@ describe("Reactive runtime - graph topology and consistency", () => {
       let result = 0;
 
       for (let i = 0; i < 20; i += 1) {
-        result += readProducer(head) % 2
-          ? readConsumer(double)
-          : readConsumer(inverse);
+        result +=
+          readProducer(head) % 2 ? readConsumer(double) : readConsumer(inverse);
       }
 
       return result;

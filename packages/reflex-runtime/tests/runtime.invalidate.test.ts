@@ -52,9 +52,9 @@ describe("Reactive runtime - invalidateSubscriber transition matrix", () => {
     const subscriber = createNode(initial);
     const edge = linkEdge(source, subscriber);
 
-    expect(invalidateSubscriber(edge, subscriber, subscriber.state, promote)).toBe(
-      expected,
-    );
+    expect(
+      invalidateSubscriber(edge, subscriber, subscriber.state, promote),
+    ).toBe(expected);
     expect(subscriber.state).toBe(expected);
   });
 
@@ -126,37 +126,34 @@ describe("Reactive runtime - invalidateSubscriber transition matrix", () => {
       tailIndex: 1,
       expectedChanged: false,
     },
-  ])(
-    "$name",
-    ({ inboundIndex, tailIndex, expectedChanged }) => {
-      resetRuntime();
+  ])("$name", ({ inboundIndex, tailIndex, expectedChanged }) => {
+    resetRuntime();
 
-      const subscriber = createNode(Consumer | Tracking);
-      const sources = [
-        createNode(0),
-        createNode(0),
-        createNode(0),
-        createNode(0),
-      ];
-      const edges = sources.map((source) => linkEdge(source, subscriber));
-      const initial = subscriber.state;
-      subscriber.lastInTail = edges[tailIndex]!;
+    const subscriber = createNode(Consumer | Tracking);
+    const sources = [
+      createNode(0),
+      createNode(0),
+      createNode(0),
+      createNode(0),
+    ];
+    const edges = sources.map((source) => linkEdge(source, subscriber));
+    const initial = subscriber.state;
+    subscriber.lastInTail = edges[tailIndex]!;
 
-      const nextState = invalidateSubscriber(
-        edges[inboundIndex]!,
-        subscriber,
-        subscriber.state,
-        PROMOTE_CHANGED,
-      );
+    const nextState = invalidateSubscriber(
+      edges[inboundIndex]!,
+      subscriber,
+      subscriber.state,
+      PROMOTE_CHANGED,
+    );
 
-      if (expectedChanged) {
-        const expected = Consumer | Tracking | Reentrant | Invalid;
-        expect(nextState).toBe(expected);
-        expect(subscriber.state).toBe(expected);
-      } else {
-        expect(nextState).toBe(0);
-        expect(subscriber.state).toBe(initial);
-      }
-    },
-  );
+    if (expectedChanged) {
+      const expected = Consumer | Tracking | Reentrant | Invalid;
+      expect(nextState).toBe(expected);
+      expect(subscriber.state).toBe(expected);
+    } else {
+      expect(nextState).toBe(0);
+      expect(subscriber.state).toBe(initial);
+    }
+  });
 });

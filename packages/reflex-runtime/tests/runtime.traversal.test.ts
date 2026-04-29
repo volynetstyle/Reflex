@@ -8,8 +8,16 @@ import {
   runWatcher,
   writeProducer,
 } from "../src";
-import { Changed, Consumer, Disposed, Invalid, Reentrant, shouldRecompute, Tracking } from "../src/reactivity";
-import { linkEdge } from "../src/reactivity/shape/methods/connect";
+import {
+  Changed,
+  Consumer,
+  Disposed,
+  Invalid,
+  Reentrant,
+  shouldRecompute,
+  Tracking,
+} from "../src/reactivity";
+import { linkEdge } from "../src/reactivity/shape/graph/connect";
 import {
   createConsumer,
   createProducer,
@@ -153,9 +161,7 @@ describe("Reactive runtime - traversal invariants", () => {
     target.lastInTail = trackedEdge;
 
     writeProducer(stale, 3);
-    expect(target.state).toBe(
-      Consumer | Tracking,
-    );
+    expect(target.state).toBe(Consumer | Tracking);
 
     writeProducer(tracked, 2);
     expect(target.state & Tracking).toBeTruthy();
@@ -178,9 +184,7 @@ describe("Reactive runtime - traversal invariants", () => {
     target.lastInTail = secondEdge;
 
     writeProducer(stale, 4);
-    expect(target.state).toBe(
-      Consumer | Tracking,
-    );
+    expect(target.state).toBe(Consumer | Tracking);
 
     writeProducer(first, 5);
     expect(target.lastInTail).toBe(secondEdge);
@@ -287,7 +291,9 @@ describe("Reactive runtime - traversal invariants", () => {
     const source = createProducer(1);
     const nestedSource = createProducer(10);
     const nested = createConsumer(() => readProducer(nestedSource) * 2);
-    const deep = createConsumer(() => readProducer(source) + readConsumer(nested));
+    const deep = createConsumer(
+      () => readProducer(source) + readConsumer(nested),
+    );
     const mid = createConsumer(() => readConsumer(deep) + 1);
     const root = createConsumer(() => readConsumer(mid) + 1);
 
