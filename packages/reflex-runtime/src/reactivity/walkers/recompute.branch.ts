@@ -133,8 +133,12 @@ export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
           high = top;
           edge = deps;
           node = dep;
-          if (deps.nextIn === null) continue;
-          continue scan;
+
+          if (deps.nextIn !== null) {
+            continue scan;
+          }
+
+          continue;
         }
 
         dirty = refresh(dep, edge);
@@ -174,34 +178,36 @@ export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
       node.state &= ~Invalid;
     }
 
-    while (top > base) {
+    while (top > base && dirty) {
       const parent = stack[--top]!;
       high = top;
 
-      if (dirty) {
-        dirty = refresh(node, parent);
-        node = parent.to;
+      dirty = refresh(node, parent);
+      node = parent.to;
 
-        if (!dirty) {
-          const next = parent.nextIn;
-          if (next !== null) {
-            edge = next;
-            continue scan;
-          }
-
-          node.state &= ~Invalid;
-        }
-
-        continue;
-      } else {
+      if (!dirty) {
         const next = parent.nextIn;
         if (next !== null) {
           edge = next;
           continue scan;
         }
+
         node.state &= ~Invalid;
+        break;
+      }
+    }
+
+    while (top > base) {
+      const parent = stack[--top]!;
+      high = top;
+
+      const next = parent.nextIn;
+      if (next !== null) {
+        edge = next;
+        continue scan;
       }
 
+      node.state &= ~Invalid;
       node = parent.to;
     }
 
