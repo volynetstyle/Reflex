@@ -31,6 +31,11 @@ import {
   createConsumer,
   createProducer,
   createWatcher,
+  expectChanged,
+  expectInvalid,
+  expectSubscribers,
+  expectState,
+  expectStates,
   hasSubscriber,
   resetRuntime,
 } from "./runtime.test_utils";
@@ -83,10 +88,12 @@ describe("Reactive runtime - walker invariants", () => {
 
     propagate(source.firstOut!, PROMOTE_CHANGED);
 
-    expect(left.state).toBe(Consumer | Changed);
-    expect(right.state).toBe(Consumer | Changed);
-    expect(leftLeaf.state).toBe(Consumer | Invalid);
-    expect(rightLeaf.state).toBe(Consumer | Invalid);
+    expectStates([
+      [left, Consumer | Changed],
+      [right, Consumer | Changed],
+      [leftLeaf, Consumer | Invalid],
+      [rightLeaf, Consumer | Invalid],
+    ]);
   });
 
   it("propagate keeps sibling continuation promote while child descent resets to Invalid", () => {
@@ -103,9 +110,11 @@ describe("Reactive runtime - walker invariants", () => {
 
     propagate(source.firstOut!, PROMOTE_CHANGED);
 
-    expect(left.state).toBe(Consumer | Changed);
-    expect(leftLeaf.state).toBe(Consumer | Invalid);
-    expect(right.state).toBe(Consumer | Changed);
+    expectStates([
+      [left, Consumer | Changed],
+      [leftLeaf, Consumer | Invalid],
+      [right, Consumer | Changed],
+    ]);
   });
 
   it("writeProducer falls back to branching propagation when a direct subscriber has children", () => {
@@ -114,13 +123,13 @@ describe("Reactive runtime - walker invariants", () => {
     const root = createConsumer(() => readConsumer(mid) + 1);
 
     expect(readConsumer(root)).toBe(3);
-    expect(source.firstOut?.to).toBe(mid);
-    expect(mid.firstOut?.to).toBe(root);
+    expectSubscribers(source, [mid]);
+    expectSubscribers(mid, [root]);
 
     writeProducer(source, 2);
 
-    expect(mid.state & Changed).toBeTruthy();
-    expect(root.state & Invalid).toBeTruthy();
+    expectChanged(mid);
+    expectInvalid(root);
   });
 
   it("propagate restores the direct promote only for deferred outer siblings", () => {
@@ -145,13 +154,15 @@ describe("Reactive runtime - walker invariants", () => {
 
     propagate(source.firstOut!, PROMOTE_CHANGED);
 
-    expect(left.state).toBe(Consumer | Changed);
-    expect(middle.state).toBe(Consumer | Changed);
-    expect(right.state).toBe(Consumer | Changed);
-    expect(leftA.state).toBe(Consumer | Invalid);
-    expect(leftB.state).toBe(Consumer | Invalid);
-    expect(leftC.state).toBe(Consumer | Invalid);
-    expect(leftLeaf.state).toBe(Consumer | Invalid);
+    expectStates([
+      [left, Consumer | Changed],
+      [middle, Consumer | Changed],
+      [right, Consumer | Changed],
+      [leftA, Consumer | Invalid],
+      [leftB, Consumer | Invalid],
+      [leftC, Consumer | Invalid],
+      [leftLeaf, Consumer | Invalid],
+    ]);
   });
 
   it("propagate keeps direct promote local to depth-0 across generated branching shapes", () => {
@@ -167,12 +178,12 @@ describe("Reactive runtime - walker invariants", () => {
           propagate(source.firstOut!, PROMOTE_CHANGED);
 
           for (const node of levels[0] ?? []) {
-            expect(node.state).toBe(Consumer | Changed);
+            expectState(node, Consumer | Changed);
           }
 
           for (let depth = 1; depth < levels.length; depth += 1) {
             for (const node of levels[depth] ?? []) {
-              expect(node.state).toBe(Consumer | Invalid);
+              expectState(node, Consumer | Invalid);
             }
           }
         },

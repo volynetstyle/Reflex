@@ -11,6 +11,12 @@ import {
   trackReadActive,
   unlinkEdge,
 } from "../src/reactivity";
+import {
+  expectGraphIntegrity,
+  expectIncomingEdges,
+  expectLastInTail,
+  expectOutgoingEdges,
+} from "./runtime.test_utils";
 
 function createNode(kind: ReactiveNodeState = Producer) {
   return new ReactiveNode(undefined, null, kind);
@@ -27,18 +33,11 @@ describe("Reactive graph - edge wiring", () => {
     const middleEdge = linkEdge(source, middle);
     const rightEdge = linkEdge(source, right);
 
-    expect(source.firstOut).toBe(leftEdge);
-    expect(source.lastOut).toBe(rightEdge);
-    expect(leftEdge.prevOut).toBeNull();
-    expect(leftEdge.nextOut).toBe(middleEdge);
-    expect(middleEdge.prevOut).toBe(leftEdge);
-    expect(middleEdge.nextOut).toBe(rightEdge);
-    expect(rightEdge.prevOut).toBe(middleEdge);
-    expect(rightEdge.nextOut).toBeNull();
-
-    expect(left.firstIn).toBe(leftEdge);
-    expect(middle.firstIn).toBe(middleEdge);
-    expect(right.firstIn).toBe(rightEdge);
+    expectOutgoingEdges(source, [leftEdge, middleEdge, rightEdge]);
+    expectIncomingEdges(left, [leftEdge]);
+    expectIncomingEdges(middle, [middleEdge]);
+    expectIncomingEdges(right, [rightEdge]);
+    expectGraphIntegrity([source, left, middle, right]);
   });
 
   it("creates reactive edges and wires both intrusive lists", () => {
@@ -50,10 +49,9 @@ describe("Reactive graph - edge wiring", () => {
     expect(edge).toBeInstanceOf(ReactiveEdge);
     expect(edge.from).toBe(source);
     expect(edge.to).toBe(target);
-    expect(source.firstOut).toBe(edge);
-    expect(source.lastOut).toBe(edge);
-    expect(target.firstIn).toBe(edge);
-    expect(target.lastIn).toBe(edge);
+    expectOutgoingEdges(source, [edge]);
+    expectIncomingEdges(target, [edge]);
+    expectGraphIntegrity([source, target]);
   });
 
   it("keeps direct subscriber branches wired through ordinary edge lists", () => {
@@ -64,25 +62,25 @@ describe("Reactive graph - edge wiring", () => {
     const rightChild = createNode(Consumer);
 
     const leftEdge = linkEdge(source, left);
-    linkEdge(source, right);
+    const rightEdge = linkEdge(source, right);
 
-    expect(source.firstOut?.to).toBe(left);
-    expect(source.firstOut?.nextOut?.to).toBe(right);
+    expectOutgoingEdges(source, [leftEdge, rightEdge]);
 
     const leftChildEdge = linkEdge(left, leftChild);
-    expect(left.firstOut).toBe(leftChildEdge);
+    expectOutgoingEdges(left, [leftChildEdge]);
 
     const rightChildEdge = linkEdge(right, rightChild);
-    expect(right.firstOut).toBe(rightChildEdge);
+    expectOutgoingEdges(right, [rightChildEdge]);
 
     unlinkEdge(leftChildEdge);
-    expect(left.firstOut).toBeNull();
+    expectOutgoingEdges(left, []);
 
     unlinkEdge(leftEdge);
-    expect(source.firstOut?.to).toBe(right);
+    expectOutgoingEdges(source, [rightEdge]);
 
     unlinkEdge(rightChildEdge);
-    expect(right.firstOut).toBeNull();
+    expectOutgoingEdges(right, []);
+    expectGraphIntegrity([source, left, right, leftChild, rightChild]);
   });
 
   it("unlinks outgoing head, middle, and tail without corrupting neighbors", () => {
@@ -97,22 +95,17 @@ describe("Reactive graph - edge wiring", () => {
 
     unlinkEdge(middleEdge);
 
-    expect(source.firstOut).toBe(leftEdge);
-    expect(source.lastOut).toBe(rightEdge);
-    expect(leftEdge.nextOut).toBe(rightEdge);
-    expect(rightEdge.prevOut).toBe(leftEdge);
-    expect(middle.firstIn).toBeNull();
+    expectOutgoingEdges(source, [leftEdge, rightEdge]);
+    expectIncomingEdges(middle, []);
 
     unlinkEdge(leftEdge);
 
-    expect(source.firstOut).toBe(rightEdge);
-    expect(source.lastOut).toBe(rightEdge);
-    expect(rightEdge.prevOut).toBeNull();
+    expectOutgoingEdges(source, [rightEdge]);
 
     unlinkEdge(rightEdge);
 
-    expect(source.firstOut).toBeNull();
-    expect(source.lastOut).toBeNull();
+    expectOutgoingEdges(source, []);
+    expectGraphIntegrity([source, left, middle, right]);
   });
 
   it("keeps lastInTail separate from the physical incoming tail when unlinking", () => {
@@ -128,12 +121,9 @@ describe("Reactive graph - edge wiring", () => {
     target.lastInTail = bb;
     unlinkEdge(cb);
 
-    expect(target.lastInTail).toBe(bb);
-    expect(target.lastIn).toBe(bb);
-    expect(target.firstIn).toBe(ab);
-    expect(ab.nextIn).toBe(bb);
-    expect(bb.prevIn).toBe(ab);
-    expect(bb.nextIn).toBeNull();
+    expectLastInTail(target, bb);
+    expectIncomingEdges(target, [ab, bb]);
+    expectGraphIntegrity([a, b, c, target]);
   });
 
   it("repositions a reused incoming edge without corrupting the true tail", () => {
@@ -149,16 +139,9 @@ describe("Reactive graph - edge wiring", () => {
     const reused = reuseIncomingEdgeFromSuffixOrCreate(c, target, ab, bb);
 
     expect(reused).toBe(cb);
-    expect(target.firstIn).toBe(ab);
-    expect(ab.nextIn).toBe(cb);
-    expect(cb.prevIn).toBe(ab);
-    expect(cb.nextIn).toBe(bb);
-    expect(bb.prevIn).toBe(cb);
-    expect(target.lastIn).toBe(bb);
-    expect(c.firstOut).toBe(cb);
-    expect(c.lastOut).toBe(cb);
-    expect(cb.prevOut).toBeNull();
-    expect(cb.nextOut).toBeNull();
+    expectIncomingEdges(target, [ab, cb, bb]);
+    expectOutgoingEdges(c, [cb]);
+    expectGraphIntegrity([a, b, c, target]);
   });
 
   it("routes fallback edge reuse through the execution-context seam", () => {
@@ -200,9 +183,9 @@ describe("Reactive graph - edge wiring", () => {
       prev: ab,
       nextExpected: bb,
     });
-    expect(target.lastInTail).toBe(cb);
-    expect(ab.nextIn).toBe(cb);
-    expect(cb.prevIn).toBe(ab);
+    expectLastInTail(target, cb);
+    expectIncomingEdges(target, [ab, cb, bb]);
+    expectGraphIntegrity([a, b, c, target]);
     restoreContext(snapshot);
   });
 
@@ -241,15 +224,11 @@ describe("Reactive graph - edge wiring", () => {
     trackReadActive(b, target);
 
     expect(calls).toEqual([]);
-    expect(target.firstIn).toBe(ab);
-    expect(target.lastIn).toBe(bb);
-    expect(target.lastInTail).toBe(bb);
-    expect(ab.nextIn).toBe(bb);
-    expect(bb.prevIn).toBe(ab);
-    expect(a.firstOut).toBe(ab);
-    expect(a.lastOut).toBe(ab);
-    expect(b.firstOut).toBe(bb);
-    expect(b.lastOut).toBe(bb);
+    expectIncomingEdges(target, [ab, bb]);
+    expectLastInTail(target, bb);
+    expectOutgoingEdges(a, [ab]);
+    expectOutgoingEdges(b, [bb]);
+    expectGraphIntegrity([a, b, target]);
 
     restoreContext(snapshot);
   });
@@ -268,7 +247,8 @@ describe("Reactive graph - edge wiring", () => {
 
     trackReadActive(a, target);
 
-    expect(target.lastInTail).toBe(edge);
+    expectLastInTail(target, edge);
+    expectIncomingEdges(target, [edge]);
     restoreContext(snapshot);
   });
 });

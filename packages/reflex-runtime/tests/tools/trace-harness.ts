@@ -97,7 +97,7 @@ export function summarizeTrace(events: RuntimeDebugEvent[]): EventSummary {
         ? event.detail.removedSources
             .map((ref) =>
               typeof ref === "object" && ref !== null && "label" in ref
-                ? String(ref.label ?? "#?")
+                ? (ref.label ?? "#?") + ""
                 : "#?",
             )
             .join(",")

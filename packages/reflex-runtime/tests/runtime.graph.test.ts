@@ -7,8 +7,9 @@ import {
   expectGraph,
   expectGraphIntegrity,
   expectNodeGraphIntegrity,
-  hasSubscriber,
-  incomingSources,
+  expectNoSubscriber,
+  expectSources,
+  expectSubscriber,
   resetRuntime,
 } from "./runtime.test_utils";
 
@@ -25,9 +26,9 @@ describe("Reactive runtime - graph topology and consistency", () => {
     expect(readConsumer(sink)).toBe(3);
 
     expectGraphIntegrity([source, middle, sink]);
-    expect(hasSubscriber(source, middle)).toBe(true);
-    expect(hasSubscriber(middle, sink)).toBe(true);
-    expect(incomingSources(sink)).toEqual([middle]);
+    expectSubscriber(source, middle);
+    expectSubscriber(middle, sink);
+    expectSources(sink, [middle]);
   });
 
   it("preserves chain integrity when a branch switch prunes a stale suffix", () => {
@@ -37,8 +38,8 @@ describe("Reactive runtime - graph topology and consistency", () => {
     writeProducer(graph.gate, false);
 
     expect(readConsumer(graph.selected)).toBe(10);
-    expect(incomingSources(graph.selected)).toEqual([graph.gate, graph.right]);
-    expect(hasSubscriber(graph.left, graph.selected)).toBe(false);
+    expectSources(graph.selected, [graph.gate, graph.right]);
+    expectNoSubscriber(graph.left, graph.selected);
 
     expectGraph(graph).toBeBidirectional();
   });
@@ -51,10 +52,10 @@ describe("Reactive runtime - graph topology and consistency", () => {
     expect(readConsumer(sink)).toBe(3);
     disposeNode(middle);
 
-    expect(hasSubscriber(source, middle)).toBe(false);
-    expect(hasSubscriber(middle, sink)).toBe(false);
-    expect(incomingSources(middle)).toEqual([]);
-    expect(incomingSources(sink)).toEqual([]);
+    expectNoSubscriber(source, middle);
+    expectNoSubscriber(middle, sink);
+    expectSources(middle, []);
+    expectSources(sink, []);
 
     expectNodeGraphIntegrity(source);
     expectNodeGraphIntegrity(middle);
@@ -70,7 +71,7 @@ describe("Reactive runtime - graph topology and consistency", () => {
     expect(readConsumer(consumer)).toBe(4);
     expect(readConsumer(consumer)).toBe(4);
 
-    expect(incomingSources(consumer)).toEqual([source]);
+    expectSources(consumer, [source]);
     expectNodeGraphIntegrity(source);
     expectNodeGraphIntegrity(consumer);
   });
@@ -91,8 +92,8 @@ describe("Reactive runtime - graph topology and consistency", () => {
     });
 
     expect(readConsumer(current)).toBe(0);
-    expect(incomingSources(current)).toEqual([head, inverse]);
-    expect(hasSubscriber(double, current)).toBe(false);
+    expectSources(current, [head, inverse]);
+    expectNoSubscriber(double, current);
 
     for (let value = 1; value < 6; value += 1) {
       writeProducer(head, value);
@@ -102,9 +103,9 @@ describe("Reactive runtime - graph topology and consistency", () => {
       const staleBranch = value % 2 === 1 ? inverse : double;
 
       expect(readConsumer(current)).toBe(expected);
-      expect(incomingSources(current)).toEqual([head, activeBranch]);
-      expect(hasSubscriber(activeBranch, current)).toBe(true);
-      expect(hasSubscriber(staleBranch, current)).toBe(false);
+      expectSources(current, [head, activeBranch]);
+      expectSubscriber(activeBranch, current);
+      expectNoSubscriber(staleBranch, current);
 
       expectNodeGraphIntegrity(head);
       expectNodeGraphIntegrity(double);

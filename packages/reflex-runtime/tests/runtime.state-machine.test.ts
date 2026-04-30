@@ -13,8 +13,10 @@ import {
   createConsumer,
   createProducer,
   createWatcher,
+  expectChanged,
   expectClean,
   expectGraph,
+  expectInvalid,
   resetRuntime,
 } from "./runtime.test_utils";
 
@@ -56,7 +58,8 @@ describe("Reactive runtime - state and read-mode matrices", () => {
 
     writeProducer(source, 2);
 
-    expect(target.state & expected).toBeTruthy();
+    if (expected === Changed) expectChanged(target);
+    if (expected === Invalid) expectInvalid(target);
   });
 
   it.each([
@@ -99,7 +102,7 @@ describe("Reactive runtime - state and read-mode matrices", () => {
     writeProducer(source, 2);
 
     if (expectedSubscriber) {
-      expect(observer.state & Invalid).toBeTruthy();
+      expectInvalid(observer);
     } else {
       expectClean(observer);
     }

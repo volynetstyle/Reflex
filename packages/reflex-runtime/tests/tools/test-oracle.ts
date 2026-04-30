@@ -1,13 +1,18 @@
 import { expect } from "vitest";
-import { getActiveConsumer, getPropagationDepth, ReactiveNode } from "../../src";
+import type { ReactiveNode } from "../../src";
+import { getActiveConsumer, getPropagationDepth } from "../../src";
 import type { EventSummary } from "./trace-harness";
 import {
   expectGraphIntegrity,
+  expectIncomingEdges,
+  expectIncomingPrefix,
+  expectOutgoingEdges,
   expectSources,
   hasSubscriber,
   incomingSources,
   outgoingSubscribers,
 } from "./graph-inspector";
+import type { TestReactiveEdge } from "./graph-inspector";
 
 export type GraphSubject =
   | Iterable<ReactiveNode>
@@ -42,6 +47,18 @@ export function expectGraph(subject: GraphSubject) {
     },
     toHaveSources(node: ReactiveNode, expected: ReactiveNode[]): void {
       expectSources(node, expected);
+    },
+    toHaveIncomingEdges(node: ReactiveNode, expected: TestReactiveEdge[]): void {
+      expectIncomingEdges(node, expected);
+    },
+    toHaveIncomingPrefix(
+      node: ReactiveNode,
+      expected: TestReactiveEdge[],
+    ): void {
+      expectIncomingPrefix(node, expected);
+    },
+    toHaveOutgoingEdges(node: ReactiveNode, expected: TestReactiveEdge[]): void {
+      expectOutgoingEdges(node, expected);
     },
     toHaveSubscriber(from: ReactiveNode, to: ReactiveNode): void {
       expect(hasSubscriber(from, to)).toBe(true);

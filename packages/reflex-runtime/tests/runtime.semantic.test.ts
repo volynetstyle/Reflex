@@ -1,19 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  Changed,
-  ConsumerReadMode,
-  DIRTY_STATE,
-  Invalid,
-  ReactiveNodeState,
-  readConsumer,
-  readProducer,
-  writeProducer,
-} from "../src";
+import { ConsumerReadMode, readConsumer, readProducer, writeProducer } from "../src";
 import {
   createConsumer,
+  createComputeCounter,
   createProducer,
-  hasSubscriber,
-  incomingSources,
+  expectChanged,
+  expectClean,
+  expectNoSubscriber,
+  expectNotInvalid,
+  expectSources,
   resetRuntime,
 } from "./runtime.test_utils";
 
@@ -37,49 +32,26 @@ describe("Reactive runtime - semantic correctness", () => {
   });
 
   it("commits producer writes eagerly but defers recomputation until read", () => {
+    const counter = createComputeCounter();
     const source = createProducer(1);
-    const spy = vi.fn(() => readProducer(source) * 2);
-    const derived = createConsumer(spy);
+    const derived = createConsumer(
+      counter.count("derived", () => readProducer(source) * 2),
+    );
 
     expect(readConsumer(derived)).toBe(2);
-    expect(spy).toHaveBeenCalledTimes(1);
+    counter.expectOnce(["derived"]);
+    counter.reset();
 
     writeProducer(source, 2);
 
-    expect(spy).toHaveBeenCalledTimes(1);
-    expect(source.state & DIRTY_STATE).toBe(0);
-    expect(derived.state & Changed).toBeTruthy();
-    expect(derived.state & Invalid).toBeFalsy();
+    counter.expectNone();
+    expectClean(source);
+    expectChanged(derived);
+    expectNotInvalid(derived);
 
     expect(readConsumer(derived)).toBe(4);
-    expect(spy).toHaveBeenCalledTimes(2);
-    expect(derived.state & DIRTY_STATE).toBe(0);
-  });
-
-  it("recomputes only the stale prefix when an upstream result stays same-as-current", () => {
-    const source = createProducer(1);
-    const stableSpy = vi.fn(() => {
-      readProducer(source);
-      return 10;
-    });
-    const stable = createConsumer(stableSpy);
-    const leafSpy = vi.fn(() => readConsumer(stable) + 1);
-    const leaf = createConsumer(leafSpy);
-
-    expect(readConsumer(leaf)).toBe(11);
-    expect(stableSpy).toHaveBeenCalledTimes(1);
-    expect(leafSpy).toHaveBeenCalledTimes(1);
-
-    writeProducer(source, 2);
-
-    expect(readConsumer(leaf)).toBe(11);
-    expect(stableSpy).toHaveBeenCalledTimes(2);
-    expect(leafSpy).toHaveBeenCalledTimes(1);
-    expect(leaf.state & DIRTY_STATE).toBe(0);
-
-    expect(readConsumer(leaf)).toBe(11);
-    expect(stableSpy).toHaveBeenCalledTimes(2);
-    expect(leafSpy).toHaveBeenCalledTimes(1);
+    counter.expectOnce(["derived"]);
+    expectClean(derived);
   });
 
   it("can eagerly initialize a consumer without subscribing the current consumer", () => {
@@ -95,12 +67,12 @@ describe("Reactive runtime - semantic correctness", () => {
     expect(readConsumer(outer)).toBe(0);
     expect(derivedSpy).toHaveBeenCalledTimes(1);
     expect(outerSpy).toHaveBeenCalledTimes(1);
-    expect(incomingSources(outer)).toEqual([]);
-    expect(hasSubscriber(derived, outer)).toBe(false);
+    expectSources(outer, []);
+    expectNoSubscriber(derived, outer);
 
     writeProducer(source, 2);
 
-    expect(outer.state & DIRTY_STATE).toBe(0);
+    expectClean(outer);
     expect(readConsumer(derived)).toBe(4);
     expect(derivedSpy).toHaveBeenCalledTimes(2);
     expect(outerSpy).toHaveBeenCalledTimes(1);
@@ -119,12 +91,12 @@ describe("Reactive runtime - semantic correctness", () => {
     expect(readConsumer(outer)).toBe(0);
     expect(innerSpy).toHaveBeenCalledTimes(1);
     expect(outerSpy).toHaveBeenCalledTimes(1);
-    expect(incomingSources(outer)).toEqual([]);
-    expect(hasSubscriber(source, outer)).toBe(false);
+    expectSources(outer, []);
+    expectNoSubscriber(source, outer);
 
     writeProducer(source, 2);
 
-    expect(outer.state & DIRTY_STATE).toBe(0);
+    expectClean(outer);
     expect(readConsumer(outer)).toBe(0);
     expect(innerSpy).toHaveBeenCalledTimes(1);
     expect(outerSpy).toHaveBeenCalledTimes(1);
@@ -132,36 +104,4 @@ describe("Reactive runtime - semantic correctness", () => {
     expect(innerSpy).toHaveBeenCalledTimes(2);
   });
 
-  it("prunes stale branch edges after recompute and ignores later writes from that branch", () => {
-    const flag = createProducer(true);
-    const left = createProducer(1);
-    const right = createProducer(10);
-    const selectedSpy = vi.fn(() =>
-      readProducer(flag) ? readProducer(left) : readProducer(right),
-    );
-    const selected = createConsumer(selectedSpy);
-
-    expect(readConsumer(selected)).toBe(1);
-    expect(incomingSources(selected)).toEqual([flag, left]);
-    expect(hasSubscriber(left, selected)).toBe(true);
-    expect(hasSubscriber(right, selected)).toBe(false);
-
-    writeProducer(flag, false);
-
-    expect(readConsumer(selected)).toBe(10);
-    expect(selectedSpy).toHaveBeenCalledTimes(2);
-    expect(incomingSources(selected)).toEqual([flag, right]);
-    expect(hasSubscriber(left, selected)).toBe(false);
-    expect(hasSubscriber(right, selected)).toBe(true);
-
-    writeProducer(left, 2);
-
-    expect(selected.state & DIRTY_STATE).toBe(0);
-    expect(readConsumer(selected)).toBe(10);
-    expect(selectedSpy).toHaveBeenCalledTimes(2);
-
-    writeProducer(right, 20);
-    expect(readConsumer(selected)).toBe(20);
-    expect(selectedSpy).toHaveBeenCalledTimes(3);
-  });
 });

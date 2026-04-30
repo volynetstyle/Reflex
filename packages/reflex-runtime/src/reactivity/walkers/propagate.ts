@@ -86,6 +86,7 @@ export function propagate(
       );
 
       if (nextSubscriberState === 0) {
+        // nothing
       } else if ((nextSubscriberState & WATCHER_MASK) !== 0) {
         resumeStackHigh = stackTop;
         dispatchInvalidatedWatcher(subscriber);

@@ -3,8 +3,6 @@ import {
   Changed,
   Computing,
   DIRTY_STATE,
-  Disposed,
-  ReactiveNodeState,
   Reentrant,
   Tracking,
   disposeNode,
@@ -16,8 +14,14 @@ import { connect, disconnect } from "../src/reactivity/shape/graph/connect";
 import {
   createConsumer,
   createProducer,
-  hasSubscriber,
-  incomingSources,
+  expectClean,
+  expectDisposed,
+  expectNoSubscriber,
+  expectNotComputing,
+  expectNotReentrant,
+  expectNotTracking,
+  expectSources,
+  expectSubscriber,
   resetRuntime,
 } from "./runtime.test_utils";
 
@@ -34,17 +38,17 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     const second = connect(source, target);
 
     expect(second).toBe(first);
-    expect(incomingSources(target)).toEqual([source]);
-    expect(hasSubscriber(source, target)).toBe(true);
+    expectSources(target, [source]);
+    expectSubscriber(source, target);
 
     disconnect(source, target);
 
-    expect(incomingSources(target)).toEqual([]);
-    expect(hasSubscriber(source, target)).toBe(false);
+    expectSources(target, []);
+    expectNoSubscriber(source, target);
 
     target.state &= ~DIRTY_STATE;
     writeProducer(source, 2);
-    expect(target.state & DIRTY_STATE).toBe(0);
+    expectClean(target);
   });
 
   it("disposed consumers are removed from their sources and stop participating in push/pull", () => {
@@ -53,17 +57,17 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     const target = createConsumer(spy);
 
     expect(readConsumer(target)).toBe(2);
-    expect(hasSubscriber(source, target)).toBe(true);
+    expectSubscriber(source, target);
 
     disposeNode(target);
 
-    expect(target.state & Disposed).toBeTruthy();
-    expect(incomingSources(target)).toEqual([]);
-    expect(hasSubscriber(source, target)).toBe(false);
+    expectDisposed(target);
+    expectSources(target, []);
+    expectNoSubscriber(source, target);
 
     writeProducer(source, 2);
 
-    expect(target.state & DIRTY_STATE).toBe(0);
+    expectClean(target);
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
@@ -96,20 +100,20 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     const sink = createConsumer(sinkSpy);
 
     expect(readConsumer(sink)).toBe(3);
-    expect(hasSubscriber(source, middle)).toBe(true);
-    expect(hasSubscriber(middle, sink)).toBe(true);
-    expect(incomingSources(sink)).toEqual([middle]);
+    expectSubscriber(source, middle);
+    expectSubscriber(middle, sink);
+    expectSources(sink, [middle]);
 
     disposeNode(middle);
 
-    expect(hasSubscriber(source, middle)).toBe(false);
-    expect(hasSubscriber(middle, sink)).toBe(false);
-    expect(incomingSources(middle)).toEqual([]);
-    expect(incomingSources(sink)).toEqual([]);
+    expectNoSubscriber(source, middle);
+    expectNoSubscriber(middle, sink);
+    expectSources(middle, []);
+    expectSources(sink, []);
 
     writeProducer(source, 2);
 
-    expect(sink.state & DIRTY_STATE).toBe(0);
+    expectClean(sink);
     expect(middleSpy).toHaveBeenCalledTimes(1);
     expect(sinkSpy).toHaveBeenCalledTimes(1);
   });
@@ -127,8 +131,8 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     expect(seenInside & Tracking).toBeTruthy();
     expect(seenInside & Computing).toBeTruthy();
     expect(seenInside & Reentrant).toBeFalsy();
-    expect(target.state & Tracking).toBeFalsy();
-    expect(target.state & Computing).toBeFalsy();
+    expectNotTracking(target);
+    expectNotComputing(target);
   });
 
   it("characterization: recompute clears a stale Visited bit before compute", () => {
@@ -146,9 +150,8 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     target.state |= Reentrant | Changed;
 
     expect(readConsumer(target)).toBe(3);
-    expect(seenInside & Reentrant).toBeFalsy();
     expect(seenInside & Tracking).toBeTruthy();
-    expect(target.state & Reentrant).toBeFalsy();
-    expect(target.state & DIRTY_STATE).toBe(0);
+    expectNotReentrant(target);
+    expectClean(target);
   });
 });

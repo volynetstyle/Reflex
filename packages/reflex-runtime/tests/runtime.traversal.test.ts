@@ -1,8 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DIRTY_STATE,
-  ReactiveNodeState,
-  disposeWatcher,
   readConsumer,
   readProducer,
   runWatcher,
@@ -11,7 +9,6 @@ import {
 import {
   Changed,
   Consumer,
-  Disposed,
   Invalid,
   Reentrant,
   shouldRecompute,
@@ -23,6 +20,9 @@ import {
   createComputeCounter,
   createProducer,
   createWatcher,
+  expectIncomingEdges,
+  expectIncomingPrefix,
+  expectLastInTail,
   hasSubscriber,
   resetRuntime,
 } from "./runtime.test_utils";
@@ -122,33 +122,6 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(invalidations).toBe(1);
   });
 
-  it("removes disposed watchers from future traversals", () => {
-    let invalidations = 0;
-    resetRuntime({
-      onSinkInvalidated() {
-        invalidations += 1;
-      },
-    });
-
-    const source = createProducer(1);
-    const effectSpy = vi.fn(() => {
-      readProducer(source);
-    });
-    const watcher = createWatcher(effectSpy);
-
-    runWatcher(watcher);
-    expect(hasSubscriber(source, watcher)).toBe(true);
-
-    disposeWatcher(watcher);
-
-    expect(watcher.state & Disposed).toBeTruthy();
-    expect(hasSubscriber(source, watcher)).toBe(false);
-
-    writeProducer(source, 2);
-    expect(invalidations).toBe(0);
-    expect(effectSpy).toHaveBeenCalledTimes(1);
-  });
-
   it("ignores invalidation from edges outside the current tracked prefix", () => {
     const tracked = createProducer(1);
     const stale = createProducer(2);
@@ -186,68 +159,12 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(target.state).toBe(Consumer | Tracking);
 
     writeProducer(first, 5);
-    expect(target.lastInTail).toBe(secondEdge);
-    expect(firstEdge.nextIn).toBe(secondEdge);
+    expectLastInTail(target, secondEdge);
+    expectIncomingPrefix(target, [firstEdge, secondEdge]);
     expect(target.state & Tracking).toBeTruthy();
     expect(target.state & Reentrant).toBeTruthy();
     expect(target.state & Changed).toBeFalsy();
     expect(target.state & Invalid).toBeTruthy();
-  });
-
-  it("preserves outer propagate traversal when watcher invalidation triggers a nested write", () => {
-    let innerSource!: ReturnType<typeof createProducer>;
-    let nestedWatcher!: ReturnType<typeof createWatcher>;
-    let siblingWatcher!: ReturnType<typeof createWatcher>;
-    let innerWatcher!: ReturnType<typeof createWatcher>;
-    const invalidations: string[] = [];
-    let nestedWriteTriggered = false;
-
-    resetRuntime({
-      onSinkInvalidated(node) {
-        if (node === nestedWatcher) {
-          invalidations.push("nested");
-
-          if (!nestedWriteTriggered) {
-            nestedWriteTriggered = true;
-            writeProducer(innerSource, 11);
-          }
-
-          return;
-        }
-
-        if (node === siblingWatcher) {
-          invalidations.push("sibling");
-          return;
-        }
-
-        if (node === innerWatcher) {
-          invalidations.push("inner");
-        }
-      },
-    });
-
-    const outerSource = createProducer(1);
-    innerSource = createProducer(10);
-    const branch = createConsumer(() => readProducer(outerSource) * 2);
-
-    nestedWatcher = createWatcher(() => {
-      readConsumer(branch);
-    });
-    siblingWatcher = createWatcher(() => {
-      readProducer(outerSource);
-    });
-    innerWatcher = createWatcher(() => {
-      readProducer(innerSource);
-    });
-
-    runWatcher(nestedWatcher);
-    runWatcher(siblingWatcher);
-    runWatcher(innerWatcher);
-
-    writeProducer(outerSource, 2);
-
-    expect(invalidations).toEqual(["sibling", "nested", "inner"]);
-    expect(siblingWatcher.state & DIRTY_STATE).toBeTruthy();
   });
 
   it("surfaces Invalid -> Changed promotion to the host when the host does not dedupe", () => {
@@ -338,7 +255,7 @@ describe("Reactive runtime - traversal invariants", () => {
 
     expect(readConsumer(root)).toBe(2);
     expect(depSpy).toHaveBeenCalledTimes(1);
-    expect(dep.firstIn).toBeNull();
+    expectIncomingEdges(dep, []);
 
     dep.state |= Invalid;
 

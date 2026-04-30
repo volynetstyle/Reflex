@@ -3,8 +3,9 @@ import { readConsumer, readProducer, writeProducer } from "../src";
 import {
   createConsumer,
   createProducer,
-  hasSubscriber,
-  incomingSources,
+  expectNoSubscriber,
+  expectSources,
+  expectSubscriber,
   resetRuntime,
 } from "./runtime.test_utils";
 
@@ -48,9 +49,9 @@ describe("Reactive runtime - branch cleanup matrix", () => {
     writeProducer(g.gate, matrix.nextGate);
 
     expect(readConsumer(g.selected)).toBe(matrix.activeValue);
-    expect(incomingSources(g.selected)).toEqual([g.gate, g[matrix.active]]);
-    expect(hasSubscriber(g[matrix.active], g.selected)).toBe(true);
-    expect(hasSubscriber(g[matrix.stale], g.selected)).toBe(false);
+    expectSources(g.selected, [g.gate, g[matrix.active]]);
+    expectSubscriber(g[matrix.active], g.selected);
+    expectNoSubscriber(g[matrix.stale], g.selected);
   });
 
   it("dedupes repeated branch reads while cleaning stale computed branches", () => {
@@ -69,13 +70,13 @@ describe("Reactive runtime - branch cleanup matrix", () => {
     });
 
     expect(readConsumer(current)).toBe(0);
-    expect(incomingSources(current)).toEqual([head, inverse]);
+    expectSources(current, [head, inverse]);
 
     writeProducer(head, 1);
 
     expect(readConsumer(current)).toBe(40);
-    expect(incomingSources(current)).toEqual([head, double]);
-    expect(hasSubscriber(inverse, current)).toBe(false);
+    expectSources(current, [head, double]);
+    expectNoSubscriber(inverse, current);
   });
 
   it("stale source write after branch switch does not invalidate, active write does", () => {

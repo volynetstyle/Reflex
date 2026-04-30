@@ -2,7 +2,7 @@ import { expect } from "vitest";
 import { ReactiveNode } from "../../src";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ReactiveEdge = any;
+export type TestReactiveEdge = any;
 
 export function incomingSources(node: ReactiveNode): ReactiveNode[] {
   const sources: ReactiveNode[] = [];
@@ -24,19 +24,39 @@ export function outgoingSubscribers(node: ReactiveNode): ReactiveNode[] {
   return subscribers;
 }
 
+export function incomingEdges(node: ReactiveNode): TestReactiveEdge[] {
+  const edges: TestReactiveEdge[] = [];
+
+  for (let edge = node.firstIn; edge !== null; edge = edge.nextIn) {
+    edges.push(edge);
+  }
+
+  return edges;
+}
+
+export function outgoingEdges(node: ReactiveNode): TestReactiveEdge[] {
+  const edges: TestReactiveEdge[] = [];
+
+  for (let edge = node.firstOut; edge !== null; edge = edge.nextOut) {
+    edges.push(edge);
+  }
+
+  return edges;
+}
+
 export function hasSubscriber(from: ReactiveNode, to: ReactiveNode): boolean {
   return outgoingSubscribers(from).includes(to);
 }
 
 function expectLinearChainIntegrity(
-  head: ReactiveEdge | null,
-  next: (edge: ReactiveEdge) => ReactiveEdge | null,
-  prev: (edge: ReactiveEdge) => ReactiveEdge | null,
-): ReactiveEdge[] {
-  const edges: ReactiveEdge[] = [];
-  const seen = new Set<ReactiveEdge>();
+  head: TestReactiveEdge | null,
+  next: (edge: TestReactiveEdge) => TestReactiveEdge | null,
+  prev: (edge: TestReactiveEdge) => TestReactiveEdge | null,
+): TestReactiveEdge[] {
+  const edges: TestReactiveEdge[] = [];
+  const seen = new Set<TestReactiveEdge>();
   let current = head;
-  let previous: ReactiveEdge | null = null;
+  let previous: TestReactiveEdge | null = null;
 
   while (current !== null) {
     expect(seen.has(current)).toBe(false);
@@ -86,6 +106,41 @@ export function expectGraphIntegrity(nodes: Iterable<ReactiveNode>): void {
   }
 }
 
+export function expectIncomingEdges(
+  node: ReactiveNode,
+  expected: TestReactiveEdge[],
+): void {
+  expect(incomingEdges(node)).toEqual(expected);
+  expect(node.firstIn).toBe(expected[0] ?? null);
+  expect(node.lastIn).toBe(expected.at(-1) ?? null);
+}
+
+export function expectIncomingPrefix(
+  node: ReactiveNode,
+  expectedPrefix: TestReactiveEdge[],
+): void {
+  expect(incomingEdges(node).slice(0, expectedPrefix.length)).toEqual(
+    expectedPrefix,
+  );
+  expect(node.firstIn).toBe(expectedPrefix[0] ?? null);
+}
+
+export function expectOutgoingEdges(
+  node: ReactiveNode,
+  expected: TestReactiveEdge[],
+): void {
+  expect(outgoingEdges(node)).toEqual(expected);
+  expect(node.firstOut).toBe(expected[0] ?? null);
+  expect(node.lastOut).toBe(expected.at(-1) ?? null);
+}
+
+export function expectLastInTail(
+  node: ReactiveNode,
+  expected: TestReactiveEdge | null,
+): void {
+  expect(node.lastInTail).toBe(expected);
+}
+
 export function expectSources(
   node: ReactiveNode,
   expected: ReactiveNode[],
@@ -98,6 +153,13 @@ export function expectSubscriber(
   to: ReactiveNode,
 ): void {
   expect(hasSubscriber(from, to)).toBe(true);
+}
+
+export function expectSubscribers(
+  from: ReactiveNode,
+  expected: ReactiveNode[],
+): void {
+  expect(outgoingSubscribers(from)).toEqual(expected);
 }
 
 export function expectNoSubscriber(

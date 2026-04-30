@@ -1,12 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  Computing,
   DIRTY_STATE,
   Disposed,
-  ReactiveNodeState,
-  Tracking,
   disposeWatcher,
-  getActiveConsumer,
   getPropagationDepth,
   notifySettledIfIdle,
   readConsumer,
@@ -157,23 +153,6 @@ describe("Reactive runtime - hooks and resilience", () => {
     expect(settled).toHaveBeenCalledTimes(1);
   });
 
-  it("restores runtime bookkeeping when watcher computation throws", () => {
-    const error = new Error("watcher failed");
-
-    resetRuntime();
-
-    const source = createProducer(1);
-    const watcher = createWatcher(() => {
-      readProducer(source);
-      throw error;
-    });
-
-    expect(() => runWatcher(watcher)).toThrow(error);
-    expect(getActiveConsumer()).toBeNull();
-    expect(watcher.state & Tracking).toBe(0);
-    expect(watcher.state & Computing).toBe(0);
-  });
-
   it("runs watcher cleanup exactly once per rerun and once on disposal", () => {
     const cleanup = vi.fn();
     const source = createProducer(1);
@@ -189,30 +168,6 @@ describe("Reactive runtime - hooks and resilience", () => {
     disposeWatcher(watcher);
 
     expect(cleanup).toHaveBeenCalledTimes(2);
-    expect(watcher.state & Disposed).toBeTruthy();
-  });
-
-  it("keeps watcher disposal reentrancy-safe when cleanup disposes the same watcher", () => {
-    const source = createProducer(1);
-    const runs: number[] = [];
-    let watcher!: ReturnType<typeof createWatcher>;
-
-    watcher = createWatcher(() => {
-      const value = readProducer(source);
-      runs.push(value);
-
-      return () => {
-        if (value === 1) {
-          disposeWatcher(watcher);
-        }
-      };
-    });
-
-    runWatcher(watcher);
-    writeProducer(source, 2);
-
-    expect(() => runWatcher(watcher)).not.toThrow();
-    expect(runs).toEqual([1]);
     expect(watcher.state & Disposed).toBeTruthy();
   });
 
