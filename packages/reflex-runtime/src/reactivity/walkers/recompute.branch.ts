@@ -1,45 +1,42 @@
+import { recompute } from "../engine";
 import type { ReactiveEdge, ReactiveNode } from "../shape";
 import { Changed, Invalid } from "../shape";
-import { refreshAndPropagateIfNeeded } from "./recompute.refresh";
+import { propagateOnce } from "./propagate.once";
 
 const stack: ReactiveEdge[] = [];
 let high = 0;
 
-const CLEAN = 0;
-const DIRTY = 1;
-const BAIL = 2;
+export const CLEAN = 0;
+export const DIRTY = 1;
+export const BAIL = 2;
 
-function refresh(
-  node: ReactiveNode,
-  edge: ReactiveEdge,
-  base: number,
-): boolean {
-  try {
-    return refreshAndPropagateIfNeeded(
-      node,
-      edge.prevOut !== null || edge.nextOut !== null,
-    );
-  } catch (error) {
-    high = base;
-    throw error;
+function refresh(node: ReactiveNode, edge: ReactiveEdge): boolean {
+  if (__DEV__ && edge.from !== node) {
+    throw new Error("refresh invariant violation");
   }
+
+  const changed = recompute(node);
+
+  if (changed && (edge.prevOut !== null || edge.nextOut !== null)) {
+    propagateOnce(node);
+  }
+
+  return changed;
 }
 
-function clearInvalid(
-  node: ReactiveNode,
-  top: number,
-  base: number,
-): void {
+function clearInvalid(node: ReactiveNode, top: number, base: number): void {
   node.state &= ~Invalid;
 
-  while (top > base) {
-    stack[--top]!.to.state &= ~Invalid;
+  if (top !== base) {
+    while (top > base) {
+      stack[--top]!.to.state &= ~Invalid;
+    }
   }
 
   high = base;
 }
 
-function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
+export function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
   const base = high;
   let top = base;
   let dirty = false;
@@ -54,7 +51,7 @@ function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
     const state = dep.state;
 
     if ((state & Changed) !== 0) {
-      dirty = refresh(dep, edge, base);
+      dirty = refresh(dep, edge);
       break;
     }
 
@@ -74,7 +71,7 @@ function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
         continue;
       }
 
-      dirty = refresh(dep, edge, base);
+      dirty = refresh(dep, edge);
       break;
     }
 
@@ -95,7 +92,7 @@ function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
   while (top > base) {
     const parent = stack[--top]!;
     high = top;
-    dirty = refresh(node, parent, base);
+    dirty = refresh(node, parent);
     node = parent.to;
 
     if (!dirty) {
@@ -108,19 +105,7 @@ function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
   return DIRTY;
 }
 
-export function shouldRecomputeWalk(
-  node: ReactiveNode,
-  edge: ReactiveEdge,
-): boolean {
-  if (edge.nextIn === null) {
-    const dirty = walkLine(node, edge);
-    if (dirty !== BAIL) return dirty === DIRTY;
-  }
-
-  return walkBranch(node, edge);
-}
-
-function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
+export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
   const base = high;
   let top = base;
   let dirty = false;
@@ -136,7 +121,7 @@ function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
       const state = dep.state;
 
       if ((state & Changed) !== 0) {
-        dirty = refresh(dep, edge, base);
+        dirty = refresh(dep, edge);
         break;
       }
 
@@ -152,7 +137,7 @@ function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
           continue scan;
         }
 
-        dirty = refresh(dep, edge, base);
+        dirty = refresh(dep, edge);
         break;
       }
 
@@ -170,6 +155,7 @@ function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
       }
 
       const parent = stack[--top]!;
+      high = top;
       node = parent.to;
 
       const parentNext = parent.nextIn;
@@ -193,7 +179,20 @@ function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
       high = top;
 
       if (dirty) {
-        dirty = refresh(node, parent, base);
+        dirty = refresh(node, parent);
+        node = parent.to;
+
+        if (!dirty) {
+          const next = parent.nextIn;
+          if (next !== null) {
+            edge = next;
+            continue scan;
+          }
+
+          node.state &= ~Invalid;
+        }
+
+        continue;
       } else {
         const next = parent.nextIn;
         if (next !== null) {

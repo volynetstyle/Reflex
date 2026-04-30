@@ -1,7 +1,7 @@
 import { devAssertShouldRecomputeAlive } from "../dev";
 import type { ReactiveNode } from "../shape";
 import { Changed, Disposed, Invalid, Producer, Reentrant } from "../shape";
-import { shouldRecomputeWalk } from "./recompute.branch";
+import { BAIL, DIRTY, walkBranch, walkLine } from "./recompute.branch";
 
 const DEAD = Producer | Disposed;
 const STALE = Invalid | Reentrant;
@@ -16,7 +16,12 @@ function dirty(node: ReactiveNode, state: number): boolean {
     return false;
   }
 
-  return shouldRecomputeWalk(node, edge);
+  if (edge.nextIn === null) {
+    const dirty = walkLine(node, edge);
+    if (dirty !== BAIL) return dirty === DIRTY;
+  }
+
+  return walkBranch(node, edge);
 }
 
 export const shouldRecomputeDirtyConsumer = dirty;

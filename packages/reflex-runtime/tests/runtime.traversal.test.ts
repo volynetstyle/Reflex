@@ -248,6 +248,29 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(watcher.state & DIRTY_STATE).toBe(0);
   });
 
+  it("keeps tracked invalidation after nested compute advances the global version", () => {
+    const source = createProducer(0);
+    const nestedSource = createProducer(10);
+    const nested = createConsumer(() => readProducer(nestedSource) * 2);
+    const seen: number[] = [];
+    const watcher = createWatcher(() => {
+      const value = readProducer(source);
+      readConsumer(nested);
+      seen.push(value);
+
+      if (value < 1) {
+        writeProducer(source, value + 1);
+      }
+    });
+
+    runWatcher(watcher);
+
+    expect(seen).toEqual([0]);
+    expect(watcher.state & Tracking).toBeFalsy();
+    expect(watcher.state & Invalid).toBeTruthy();
+    expect(watcher.state & Reentrant).toBeTruthy();
+  });
+
   it("recomputes invalid consumers even when their dependency list is empty", () => {
     const depSpy = vi.fn(() => 1);
     const dep = createConsumer(depSpy);

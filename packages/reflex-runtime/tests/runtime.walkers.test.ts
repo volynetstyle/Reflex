@@ -633,6 +633,67 @@ describe("Reactive runtime - walker invariants", () => {
     expect(rightSpy).toHaveBeenCalledTimes(2);
   });
 
+  it("shouldRecompute scans later siblings after an earlier dirty dependency is stable", () => {
+    const leftSource = createProducer(1);
+    const rightSource = createProducer(10);
+    const leftSpy = vi.fn(() => {
+      readProducer(leftSource);
+      return 10;
+    });
+    const rightSpy = vi.fn(() => readProducer(rightSource) + 1);
+    const left = createConsumer(leftSpy);
+    const right = createConsumer(rightSpy);
+    const root = createConsumer(() => readConsumer(left) + readConsumer(right));
+
+    expect(readConsumer(root)).toBe(21);
+    expect(leftSpy).toHaveBeenCalledTimes(1);
+    expect(rightSpy).toHaveBeenCalledTimes(1);
+
+    writeProducer(leftSource, 2);
+    writeProducer(rightSource, 20);
+
+    expect(left.state & Changed).toBeTruthy();
+    expect(right.state & Changed).toBeTruthy();
+    expect(root.state & Invalid).toBeTruthy();
+    expect(shouldRecompute(root)).toBe(true);
+    expect(leftSpy).toHaveBeenCalledTimes(2);
+    expect(rightSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("shouldRecompute scans root siblings after a nested dirty branch stabilizes", () => {
+    const leftSource = createProducer(1);
+    const rightSource = createProducer(10);
+    const leafSpy = vi.fn(() => readProducer(leftSource));
+    const leaf = createConsumer(leafSpy);
+    const stableSpy = vi.fn(() => {
+      readConsumer(leaf);
+      return 10;
+    });
+    const rightSpy = vi.fn(() => readProducer(rightSource) + 1);
+    const stable = createConsumer(stableSpy);
+    const right = createConsumer(rightSpy);
+    const root = createConsumer(
+      () => readConsumer(stable) + readConsumer(right),
+    );
+
+    expect(readConsumer(root)).toBe(21);
+    expect(leafSpy).toHaveBeenCalledTimes(1);
+    expect(stableSpy).toHaveBeenCalledTimes(1);
+    expect(rightSpy).toHaveBeenCalledTimes(1);
+
+    writeProducer(leftSource, 2);
+    writeProducer(rightSource, 20);
+
+    expect(leaf.state & Changed).toBeTruthy();
+    expect(stable.state & Invalid).toBeTruthy();
+    expect(right.state & Changed).toBeTruthy();
+    expect(root.state & Invalid).toBeTruthy();
+    expect(shouldRecompute(root)).toBe(true);
+    expect(leafSpy).toHaveBeenCalledTimes(2);
+    expect(stableSpy).toHaveBeenCalledTimes(2);
+    expect(rightSpy).toHaveBeenCalledTimes(2);
+  });
+
   it("shouldRecompute preserves outer stack frames across nested dirty reads", () => {
     const source = createProducer(1);
     const rightSource = createProducer(10);

@@ -9,11 +9,7 @@ import {
 const resumeEdgeStack: ReactiveEdge[] = [];
 let resumeStackHigh = 0;
 
-
-export function propagate(
-  startEdge: ReactiveEdge,
-  startPromote: number,
-): void {
+export function propagate(startEdge: ReactiveEdge, startPromote: number): void {
   const stack = resumeEdgeStack;
   const base = resumeStackHigh;
   let top = base;
@@ -24,12 +20,7 @@ export function propagate(
     edge = edge.nextOut
   ) {
     const sub = edge.to;
-    const next = invalidateSub(
-      edge,
-      sub,
-      sub.state,
-      startPromote,
-    );
+    const next = invalidateSub(edge, sub, sub.state, startPromote);
 
     if (next === 0) {
       continue;
