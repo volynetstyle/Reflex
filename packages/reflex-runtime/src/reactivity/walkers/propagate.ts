@@ -1,9 +1,5 @@
-import { type ReactiveEdge } from "../shape";
-import { NON_IMMEDIATE, WATCHER_MASK } from "./propagate.constants";
-import {
-  dispatchInvalidatedWatcher,
-  invalidateSubscriber,
-} from "./propagate.invalidate";
+import { Invalid, Watcher, type ReactiveEdge } from "../shape";
+import { notifyWatcher, invalidateSub } from "./propagate.invalidate";
 import {
   noteResumeEdgeStackUsage,
   readRuntimeWalkerStackStats,
@@ -12,6 +8,90 @@ import {
 
 const resumeEdgeStack: ReactiveEdge[] = [];
 let resumeStackHigh = 0;
+
+
+export function propagate(
+  startEdge: ReactiveEdge,
+  startPromote: number,
+): void {
+  const stack = resumeEdgeStack;
+  const base = resumeStackHigh;
+  let top = base;
+
+  for (
+    let edge: ReactiveEdge | null = startEdge;
+    edge !== null;
+    edge = edge.nextOut
+  ) {
+    const sub = edge.to;
+    const next = invalidateSub(
+      edge,
+      sub,
+      sub.state,
+      startPromote,
+    );
+
+    if (next === 0) {
+      continue;
+    }
+
+    if ((next & Watcher) !== 0) {
+      resumeStackHigh = top;
+      notifyWatcher(sub);
+      continue;
+    }
+
+    const child = sub.firstOut;
+    if (child !== null) {
+      stack[top++] = child;
+      if (__DEV__) noteResumeEdgeStackUsage(top);
+    }
+  }
+
+  if (top === base) {
+    return;
+  }
+
+  while (top !== base) {
+    let edge = stack[--top]!;
+    let nextEdge: ReactiveEdge | null = edge.nextOut;
+
+    while (true) {
+      const sub = edge.to;
+      const next = invalidateSub(edge, sub, sub.state, Invalid);
+
+      if (next !== 0) {
+        if ((next & Watcher) !== 0) {
+          resumeStackHigh = top;
+          notifyWatcher(sub);
+        } else {
+          const child = sub.firstOut;
+
+          if (child !== null) {
+            if (nextEdge !== null) {
+              stack[top++] = nextEdge;
+              if (__DEV__) noteResumeEdgeStackUsage(top);
+            }
+
+            edge = child;
+            nextEdge = edge.nextOut;
+            continue;
+          }
+        }
+      }
+
+      if (nextEdge !== null) {
+        edge = nextEdge;
+        nextEdge = edge.nextOut;
+        continue;
+      }
+
+      break;
+    }
+  }
+
+  restoreResumeStackBase(base);
+}
 
 function restoreResumeStackBase(stackBase: number): void {
   resumeStackHigh = stackBase;
@@ -28,92 +108,4 @@ export function readPropagateStackStats(): {
     resumeStackHigh,
     resumeEdgeStack.length,
   );
-}
-
-export function propagate(
-  startEdge: ReactiveEdge,
-  startPromote: number,
-): void {
-  const edgeStack = resumeEdgeStack;
-  const stackBase = resumeStackHigh;
-  let stackTop = stackBase;
-
-  for (
-    let edge: ReactiveEdge | null = startEdge;
-    edge !== null;
-    edge = edge.nextOut
-  ) {
-    const subscriber = edge.to;
-    const nextSubscriberState = invalidateSubscriber(
-      edge,
-      subscriber,
-      subscriber.state,
-      startPromote,
-    );
-
-    if (nextSubscriberState === 0) {
-      continue;
-    }
-
-    if ((nextSubscriberState & WATCHER_MASK) !== 0) {
-      resumeStackHigh = stackTop;
-      dispatchInvalidatedWatcher(subscriber);
-      continue;
-    }
-
-    const firstChildEdge = subscriber.firstOut;
-    if (firstChildEdge !== null) {
-      edgeStack[stackTop++] = firstChildEdge;
-      if (__DEV__) noteResumeEdgeStackUsage(stackTop);
-    }
-  }
-
-  if (stackTop === stackBase) {
-    return;
-  }
-
-  while (stackTop !== stackBase) {
-    let currentEdge = edgeStack[--stackTop]!;
-    let nextSiblingEdge: ReactiveEdge | null = currentEdge.nextOut;
-
-    while (true) {
-      const subscriber = currentEdge.to;
-      const nextSubscriberState = invalidateSubscriber(
-        currentEdge,
-        subscriber,
-        subscriber.state,
-        NON_IMMEDIATE,
-      );
-
-      if (nextSubscriberState === 0) {
-        // nothing
-      } else if ((nextSubscriberState & WATCHER_MASK) !== 0) {
-        resumeStackHigh = stackTop;
-        dispatchInvalidatedWatcher(subscriber);
-      } else {
-        const firstChildEdge = subscriber.firstOut;
-
-        if (firstChildEdge !== null) {
-          if (nextSiblingEdge !== null) {
-            edgeStack[stackTop++] = nextSiblingEdge;
-            if (__DEV__) noteResumeEdgeStackUsage(stackTop);
-          }
-
-          currentEdge = firstChildEdge;
-          nextSiblingEdge = currentEdge.nextOut;
-          continue;
-        }
-      }
-
-      if (nextSiblingEdge !== null) {
-        currentEdge = nextSiblingEdge;
-        nextSiblingEdge = currentEdge.nextOut;
-        continue;
-      }
-
-      break;
-    }
-  }
-
-  restoreResumeStackBase(stackBase);
 }

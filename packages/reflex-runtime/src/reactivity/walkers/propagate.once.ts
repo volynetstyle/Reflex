@@ -1,8 +1,7 @@
 import { devAssertPropagateAlive } from "../dev";
 import type { ReactiveNode } from "../shape";
-import { Changed, Disposed, Invalid } from "../shape";
-import { WATCHER_MASK } from "./propagate.constants";
-import { dispatchInvalidatedWatcher } from "./propagate.invalidate";
+import { Changed, Disposed, Invalid, Watcher } from "../shape";
+import { notifyWatcher } from "./propagate.invalidate";
 
 export function propagateOnce(node: ReactiveNode): void {
   if ((node.state & Disposed) !== 0) {
@@ -16,7 +15,7 @@ export function propagateOnce(node: ReactiveNode): void {
 
     if ((state & Changed) === 0) {
       sub.state = (state & ~Invalid) | Changed;
-      if ((state & WATCHER_MASK) !== 0) dispatchInvalidatedWatcher(sub);
+      if ((state & Watcher) !== 0) notifyWatcher(sub);
     }
   }
 }

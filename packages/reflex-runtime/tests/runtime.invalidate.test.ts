@@ -12,14 +12,14 @@ import {
   Tracking,
   Watcher,
 } from "../src/reactivity";
-import { invalidateSubscriber } from "../src/reactivity/walkers/propagate.invalidate";
+import { invalidateSub } from "../src/reactivity/walkers/propagate.invalidate";
 import { resetRuntime } from "./runtime.test_utils";
 
 function createNode(state: number): ReactiveNode {
   return new ReactiveNode(undefined, null, state);
 }
 
-describe("Reactive runtime - invalidateSubscriber transition matrix", () => {
+describe("Reactive runtime - invalidateSub transition matrix", () => {
   it.each([
     {
       name: "clean consumer promotes to Changed",
@@ -53,7 +53,7 @@ describe("Reactive runtime - invalidateSubscriber transition matrix", () => {
     const edge = linkEdge(source, subscriber);
 
     expect(
-      invalidateSubscriber(edge, subscriber, subscriber.state, promote),
+      invalidateSub(edge, subscriber, subscriber.state, promote),
     ).toBe(expected);
     expect(subscriber.state).toBe(expected);
   });
@@ -83,7 +83,7 @@ describe("Reactive runtime - invalidateSubscriber transition matrix", () => {
     const edge = linkEdge(source, subscriber);
 
     expect(
-      invalidateSubscriber(edge, subscriber, subscriber.state, PROMOTE_CHANGED),
+      invalidateSub(edge, subscriber, subscriber.state, PROMOTE_CHANGED),
     ).toBe(0);
     expect(subscriber.state).toBe(initial);
   });
@@ -96,7 +96,7 @@ describe("Reactive runtime - invalidateSubscriber transition matrix", () => {
     const edge = linkEdge(source, subscriber);
 
     expect(
-      invalidateSubscriber(edge, subscriber, subscriber.state, PROMOTE_CHANGED),
+      invalidateSub(edge, subscriber, subscriber.state, PROMOTE_CHANGED),
     ).toBe(0);
     expect(subscriber.state).toBe(Consumer | Tracking);
   });
@@ -140,7 +140,7 @@ describe("Reactive runtime - invalidateSubscriber transition matrix", () => {
     const initial = subscriber.state;
     subscriber.lastInTail = edges[tailIndex]!;
 
-    const nextState = invalidateSubscriber(
+    const nextState = invalidateSub(
       edges[inboundIndex]!,
       subscriber,
       subscriber.state,

@@ -1,269 +1,212 @@
-// ─── shouldRecomputeWalk ──────────────────────────────────────────────────────
-//
-// Pull walker for dirty consumers.
-// Pure incoming chains use a small linear fast path; branching graphs fall back
-// to the unified DFS walker. Both paths share the same allocation-free stack.
-//
-// try/finally removed intentionally:
-//   - JSC and SpiderMonkey refuse to inline functions containing try/finally.
-//   - TurboFan creates a separate deopt frame for the finally block even when
-//     the path is exception-free, adding hidden overhead.
-//   - Instead, every return site restores the shared stack high-water mark. This is
-//     safe because these pull walkers own the slice [stackBase, stackTop) and
-//     every exit path restores it before returning.
-//
-// Refresh can execute user compute functions. The hot walker stays outside
-// try/catch; the refresh helper restores stack ownership on the throwing path.
-
-import type { ReactiveNode, ReactiveEdge } from "../shape";
+import type { ReactiveEdge, ReactiveNode } from "../shape";
 import { Changed, Invalid } from "../shape";
 import { refreshAndPropagateIfNeeded } from "./recompute.refresh";
 
-// Shared stack — reused across calls to avoid allocation.
-// stackBase tracks the logical bottom per call so recursive entries
-// don't trample each other's frames.
-const shouldRecomputeStack: ReactiveEdge[] = new Array(2048).fill(undefined);
-let shouldRecomputeStackHigh = 0;
-const LINEAR_CLEAN = 0;
-const LINEAR_CHANGED = 1;
-const LINEAR_BAIL = 2;
+const stack: ReactiveEdge[] = [];
+let high = 0;
 
-function refreshFromShouldRecompute(
+const CLEAN = 0;
+const DIRTY = 1;
+const BAIL = 2;
+
+function refresh(
   node: ReactiveNode,
-  fanout: boolean,
-  stackBase: number,
+  edge: ReactiveEdge,
+  base: number,
 ): boolean {
   try {
-    return refreshAndPropagateIfNeeded(node, fanout);
+    return refreshAndPropagateIfNeeded(
+      node,
+      edge.prevOut !== null || edge.nextOut !== null,
+    );
   } catch (error) {
-    shouldRecomputeStackHigh = stackBase;
+    high = base;
     throw error;
   }
 }
 
-function tryShouldRecomputeLinearChain(
-  consumer: ReactiveNode,
-  link: ReactiveEdge,
-): number {
-  const stack = shouldRecomputeStack;
-  const stackBase = shouldRecomputeStackHigh;
-  let stackTop = stackBase;
-  let changed = false;
+function clearInvalid(
+  node: ReactiveNode,
+  top: number,
+  base: number,
+): void {
+  node.state &= ~Invalid;
+
+  while (top > base) {
+    stack[--top]!.to.state &= ~Invalid;
+  }
+
+  high = base;
+}
+
+function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
+  const base = high;
+  let top = base;
+  let dirty = false;
 
   while (true) {
-    if (consumer.state & Changed) {
-      changed = true;
+    if ((node.state & Changed) !== 0) {
+      dirty = true;
       break;
     }
 
-    const dep = link.from;
-    const depState = dep.state;
+    const dep = edge.from;
+    const state = dep.state;
 
-    if (depState & Changed) {
-      changed = refreshFromShouldRecompute(
-        dep,
-        link.prevOut !== null || link.nextOut !== null,
-        stackBase,
-      );
+    if ((state & Changed) !== 0) {
+      dirty = refresh(dep, edge, base);
       break;
     }
 
-    if (depState & Invalid) {
+    if ((state & Invalid) !== 0) {
       const deps = dep.firstIn;
 
       if (deps !== null) {
         if (deps.nextIn !== null) {
-          shouldRecomputeStackHigh = stackBase;
-          return LINEAR_BAIL;
+          high = base;
+          return BAIL;
         }
 
-        stack[stackTop++] = link;
-        shouldRecomputeStackHigh = stackTop;
-        link = deps;
-        consumer = dep;
+        stack[top++] = edge;
+        high = top;
+        edge = deps;
+        node = dep;
         continue;
       }
 
-      changed = refreshFromShouldRecompute(
-        dep,
-        link.prevOut !== null || link.nextOut !== null,
-        stackBase,
-      );
+      dirty = refresh(dep, edge, base);
       break;
     }
 
-    if (link.nextIn !== null) {
-      shouldRecomputeStackHigh = stackBase;
-      return LINEAR_BAIL;
+    if (edge.nextIn !== null) {
+      high = base;
+      return BAIL;
     }
 
-    consumer.state &= ~Invalid;
-
-    while (stackTop > stackBase) {
-      const parentLink = stack[--stackTop]!;
-      consumer = parentLink.to;
-      consumer.state &= ~Invalid;
-    }
-
-    shouldRecomputeStackHigh = stackBase;
-    return LINEAR_CLEAN;
+    clearInvalid(node, top, base);
+    return CLEAN;
   }
 
-  if (!changed) {
-    consumer.state &= ~Invalid;
-
-    while (stackTop > stackBase) {
-      consumer = stack[--stackTop]!.to;
-      consumer.state &= ~Invalid;
-    }
-
-    shouldRecomputeStackHigh = stackBase;
-    return LINEAR_CLEAN;
+  if (!dirty) {
+    clearInvalid(node, top, base);
+    return CLEAN;
   }
 
-  while (stackTop > stackBase) {
-    const parentLink = stack[--stackTop]!;
-    shouldRecomputeStackHigh = stackTop;
+  while (top > base) {
+    const parent = stack[--top]!;
+    high = top;
+    dirty = refresh(node, parent, base);
+    node = parent.to;
 
-    changed = refreshFromShouldRecompute(
-      consumer,
-      parentLink.prevOut !== null || parentLink.nextOut !== null,
-      stackBase,
-    );
-    consumer = parentLink.to;
-
-    if (!changed) {
-      consumer.state &= ~Invalid;
-
-      while (stackTop > stackBase) {
-        consumer = stack[--stackTop]!.to;
-        consumer.state &= ~Invalid;
-      }
-
-      shouldRecomputeStackHigh = stackBase;
-      return LINEAR_CLEAN;
+    if (!dirty) {
+      clearInvalid(node, top, base);
+      return CLEAN;
     }
   }
 
-  shouldRecomputeStackHigh = stackBase;
-  return LINEAR_CHANGED;
+  high = base;
+  return DIRTY;
 }
 
 export function shouldRecomputeWalk(
-  consumer: ReactiveNode,
-  link: ReactiveEdge,
+  node: ReactiveNode,
+  edge: ReactiveEdge,
 ): boolean {
-  if (link.nextIn === null) {
-    const changed = tryShouldRecomputeLinearChain(consumer, link);
-    if (changed !== LINEAR_BAIL) return changed === LINEAR_CHANGED;
+  if (edge.nextIn === null) {
+    const dirty = walkLine(node, edge);
+    if (dirty !== BAIL) return dirty === DIRTY;
   }
 
-  return shouldRecomputeBranchingWalk(consumer, link);
+  return walkBranch(node, edge);
 }
 
-function shouldRecomputeBranchingWalk(
-  consumer: ReactiveNode,
-  link: ReactiveEdge,
-): boolean {
-  const stack = shouldRecomputeStack;
-  const stackBase = shouldRecomputeStackHigh;
-  let stackTop = stackBase;
-  let changed = false;
+function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
+  const base = high;
+  let top = base;
+  let dirty = false;
 
-  outer: do {
+  scan: while (true) {
     while (true) {
-      if (consumer.state & Changed) {
-        changed = true;
+      if ((node.state & Changed) !== 0) {
+        dirty = true;
         break;
       }
 
-      const dep = link.from;
-      const depState = dep.state;
+      const dep = edge.from;
+      const state = dep.state;
 
-      if (depState & Changed) {
-        changed = refreshFromShouldRecompute(
-          dep,
-          link.prevOut !== null || link.nextOut !== null,
-          stackBase,
-        );
+      if ((state & Changed) !== 0) {
+        dirty = refresh(dep, edge, base);
         break;
       }
 
-      if (depState & Invalid) {
+      if ((state & Invalid) !== 0) {
         const deps = dep.firstIn;
 
         if (deps !== null) {
-          stack[stackTop++] = link;
-          shouldRecomputeStackHigh = stackTop;
-          link = deps;
-          consumer = dep;
+          stack[top++] = edge;
+          high = top;
+          edge = deps;
+          node = dep;
           if (deps.nextIn === null) continue;
-          continue outer;
+          continue scan;
         }
 
-        changed = refreshFromShouldRecompute(
-          dep,
-          link.prevOut !== null || link.nextOut !== null,
-          stackBase,
-        );
+        dirty = refresh(dep, edge, base);
         break;
       }
 
-      const next = link.nextIn;
+      const next = edge.nextIn;
       if (next !== null) {
-        link = next;
-        continue outer;
+        edge = next;
+        continue scan;
       }
 
-      consumer.state &= ~Invalid;
+      node.state &= ~Invalid;
 
-      if (stackTop === stackBase) {
-        shouldRecomputeStackHigh = stackBase;
+      if (top === base) {
+        high = base;
         return false;
       }
 
-      const parentLink = stack[--stackTop]!;
-      consumer = parentLink.to;
+      const parent = stack[--top]!;
+      node = parent.to;
 
-      const parentNext = parentLink.nextIn;
+      const parentNext = parent.nextIn;
       if (parentNext !== null) {
-        link = parentNext;
-        continue outer;
+        edge = parentNext;
+        continue scan;
       }
     }
 
-    if (!changed) {
-      const next = link.nextIn;
+    if (!dirty) {
+      const next = edge.nextIn;
       if (next !== null) {
-        link = next;
+        edge = next;
         continue;
       }
-      consumer.state &= ~Invalid;
+      node.state &= ~Invalid;
     }
 
-    while (stackTop > stackBase) {
-      const parentLink = stack[--stackTop]!;
-      shouldRecomputeStackHigh = stackTop;
+    while (top > base) {
+      const parent = stack[--top]!;
+      high = top;
 
-      if (changed) {
-        changed = refreshFromShouldRecompute(
-          consumer,
-          parentLink.prevOut !== null || parentLink.nextOut !== null,
-          stackBase,
-        );
+      if (dirty) {
+        dirty = refresh(node, parent, base);
       } else {
-        const next = parentLink.nextIn;
+        const next = parent.nextIn;
         if (next !== null) {
-          link = next;
-          continue outer;
+          edge = next;
+          continue scan;
         }
-        consumer.state &= ~Invalid;
+        node.state &= ~Invalid;
       }
 
-      consumer = parentLink.to;
+      node = parent.to;
     }
 
-    shouldRecomputeStackHigh = stackBase;
-    return changed;
-  } while (true);
+    high = base;
+    return dirty;
+  }
 }
