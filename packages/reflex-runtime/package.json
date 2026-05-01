@@ -52,6 +52,7 @@
     "build": "pnpm clean && pnpm build:ts && pnpm build:npm",
     "example:introspection": "pnpm build && node examples/introspection.phases.mjs",
     "bench:core": "pnpm build:perf && node --expose-gc dist/perf.js",
+    "perf:tree": "pnpm build:ts && pnpm build:perf && node --expose-gc dist/perf-tree.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:dev": "vitest run --config vite.dev.config.ts",

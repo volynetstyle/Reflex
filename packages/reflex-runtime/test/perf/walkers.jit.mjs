@@ -20,7 +20,7 @@ import {
 } from "../../build/esm/index.js";
 import { recompute } from "../../build/esm/reactivity/engine/compute.js";
 import { executeNodeComputation } from "../../build/esm/reactivity/engine/execute.js";
-import { linkEdge } from "../../build/esm/reactivity/shape/methods/connect.js";
+import { linkEdge } from "../../build/esm/reactivity/shape/graph/connect.js";
 import { propagate } from "../../build/esm/reactivity/walkers/propagate.js";
 import { shouldRecompute } from "../../build/esm/reactivity/walkers/recompute.js";
 

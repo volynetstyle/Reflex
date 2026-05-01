@@ -130,28 +130,30 @@ export function readConsumer<T>(
 
   if (__DEV__) devAssertConsumerCanStabilize(state);
 
-  const value =
-    mode === ConsumerReadMode.lazy
-      ? (state & DIRTY_STATE) !== 0
-        ? stabilizeConsumerKnownAlive(node, state)
-        : (node.payload as T)
-      : stabilizeConsumerUntracked(node, state);
+  if (mode !== ConsumerReadMode.lazy) {
+    const value = stabilizeConsumerUntracked(node, state);
 
-  if (mode === ConsumerReadMode.lazy) {
-    // Skip tracking if the node was disposed during stabilization
-    if ((node.state & Disposed) === 0) trackRead(node);
-
-    if (__DEV__)
-      devRecordReadConsumer(
-        node,
-        "lazy",
-        value,
-        defaultContext,
-        activeConsumer ?? undefined,
-      );
-  } else {
     if (__DEV__) devRecordReadConsumer(node, "eager", value, defaultContext);
+
+    return value;
   }
+
+  const value =
+    (state & DIRTY_STATE) !== 0
+      ? stabilizeConsumerKnownAlive(node, state)
+      : (node.payload as T);
+
+  // Skip tracking if the node was disposed during stabilization
+  if ((node.state & Disposed) === 0) trackRead(node);
+
+  if (__DEV__)
+    devRecordReadConsumer(
+      node,
+      "lazy",
+      value,
+      defaultContext,
+      activeConsumer ?? undefined,
+    );
 
   return value;
 }

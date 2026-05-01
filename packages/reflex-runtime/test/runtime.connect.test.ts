@@ -144,7 +144,7 @@ describe("Reactive graph - edge wiring", () => {
     expectGraphIntegrity([a, b, c, target]);
   });
 
-  it("routes fallback edge reuse through the execution-context seam", () => {
+  it("handles tiny suffix edge reuse before the execution-context fallback seam", () => {
     const a = createNode(Producer);
     const b = createNode(Producer);
     const c = createNode(Producer);
@@ -176,16 +176,58 @@ describe("Reactive graph - edge wiring", () => {
     trackReadActive(c, target);
     trackReadActive(c, target);
 
+    expect(calls).toEqual([]);
+    expectLastInTail(target, cb);
+    expectIncomingEdges(target, [ab, cb, bb]);
+    expectGraphIntegrity([a, b, c, target]);
+    restoreContext(snapshot);
+  });
+
+  it("routes full fallback edge reuse through the execution-context seam", () => {
+    const a = createNode(Producer);
+    const b = createNode(Producer);
+    const c = createNode(Producer);
+    const d = createNode(Producer);
+    const e = createNode(Producer);
+    const target = createNode(Consumer);
+    const calls: Array<{
+      source: ReactiveNode;
+      consumer: ReactiveNode;
+      prev: ReactiveEdge | null;
+      nextExpected: ReactiveEdge | null;
+    }> = [];
+
+    const ab = linkEdge(a, target);
+    const bb = linkEdge(b, target);
+    const cb = linkEdge(c, target);
+    const db = linkEdge(d, target);
+    const eb = linkEdge(e, target);
+    const snapshot = saveContext();
+    setOptions({
+      trackReadFallback(source, consumer, prev, nextExpected) {
+        calls.push({ source, consumer, prev, nextExpected });
+        return reuseIncomingEdgeFromSuffixOrCreate(
+          source,
+          consumer,
+          prev,
+          nextExpected,
+        );
+      },
+    });
+
+    target.lastInTail = ab;
+    trackReadActive(e, target);
+
     expect(calls).toHaveLength(1);
     expect(calls[0]).toEqual({
-      source: c,
+      source: e,
       consumer: target,
       prev: ab,
       nextExpected: bb,
     });
-    expectLastInTail(target, cb);
-    expectIncomingEdges(target, [ab, cb, bb]);
-    expectGraphIntegrity([a, b, c, target]);
+    expectLastInTail(target, eb);
+    expectIncomingEdges(target, [ab, eb, bb, cb, db]);
+    expectGraphIntegrity([a, b, c, d, e, target]);
     restoreContext(snapshot);
   });
 

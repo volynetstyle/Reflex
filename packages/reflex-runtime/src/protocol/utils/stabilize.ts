@@ -1,7 +1,6 @@
 import {
   DIRTY_STATE,
   shouldRecomputeDirtyConsumer,
-  clearDirtyState,
   recompute,
   propagateOnce,
   activeConsumer,
@@ -42,7 +41,7 @@ export function stabilizeConsumerKnownAlive<T>(
   state: number,
 ): T {
   if (!shouldRecomputeDirtyConsumer(node, state)) {
-    clearDirtyState(node);
+    node.state &= ~DIRTY_STATE;
     return node.payload as T;
   }
 

@@ -28,5 +28,6 @@ const createPerfDomain = (input: string, file: string) => ({
 
 export default [
   createPerfDomain("build/esm/index.js", "dist/perf.js"),
-  createPerfDomain("tests/perf/walkers.jit.mjs", "dist/walkers.jit.js"),
+  createPerfDomain("test/perf/walkers.jit.mjs", "dist/walkers.jit.js"),
+  createPerfDomain("perf-tree/run.mjs", "dist/perf-tree.js"),
 ];

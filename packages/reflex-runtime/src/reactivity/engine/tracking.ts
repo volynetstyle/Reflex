@@ -37,10 +37,7 @@ function isDead(source: ReactiveNode, consumer: ReactiveNode): boolean {
   return false;
 }
 
-function trackReadSlowPath(
-  source: ReactiveNode,
-  consumer: ReactiveNode,
-): void {
+function trackReadSlowPath(source: ReactiveNode, consumer: ReactiveNode): void {
   const version = trackingVersion;
   const prevEdge = consumer.lastInTail;
 
@@ -89,6 +86,50 @@ function hasTrackedPrefixDependency(
   return false;
 }
 
+function tryTrackReadTinySuffix(
+  source: ReactiveNode,
+  consumer: ReactiveNode,
+  prevEdge: NonNullable<ReactiveNode["lastInTail"]>,
+  nextExpected: NonNullable<ReactiveNode["lastInTail"]>,
+  version: number,
+): boolean {
+  const next1 = nextExpected.nextIn;
+
+  if (next1 !== null && next1.from === source) {
+    const next = next1.nextIn;
+    nextExpected.nextIn = next;
+    if (next !== null) next.prevIn = nextExpected;
+    else consumer.lastIn = nextExpected;
+    prevEdge.nextIn = next1;
+    next1.prevIn = prevEdge;
+    next1.nextIn = nextExpected;
+    nextExpected.prevIn = next1;
+    next1.version = version;
+    consumer.lastInTail = next1;
+    if (__DEV__) recordTrackRead(consumer, source);
+    return true;
+  }
+
+  const next2 = next1?.nextIn ?? null;
+
+  if (next1 !== null && next2 !== null && next2.from === source) {
+    const next = next2.nextIn;
+    next1.nextIn = next;
+    if (next !== null) next.prevIn = next1;
+    else consumer.lastIn = next1;
+    prevEdge.nextIn = next2;
+    next2.prevIn = prevEdge;
+    next2.nextIn = nextExpected;
+    nextExpected.prevIn = next2;
+    next2.version = version;
+    consumer.lastInTail = next2;
+    if (__DEV__) recordTrackRead(consumer, source);
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * Fast cursor-guided dependency tracking.
  *
@@ -108,7 +149,7 @@ export function tryTrackReadFastPath(
   if (prevEdge !== null) {
     if (prevEdge.from === source) {
       prevEdge.version = version;
-      recordTrackRead(consumer, source);
+      if (__DEV__) recordTrackRead(consumer, source);
       return true;
     }
 
@@ -116,12 +157,19 @@ export function tryTrackReadFastPath(
     if (nextExpected !== null && nextExpected.from === source) {
       nextExpected.version = version;
       consumer.lastInTail = nextExpected;
-      recordTrackRead(consumer, source);
+      if (__DEV__) recordTrackRead(consumer, source);
+      return true;
+    }
+
+    if (
+      nextExpected !== null &&
+      tryTrackReadTinySuffix(source, consumer, prevEdge, nextExpected, version)
+    ) {
       return true;
     }
 
     if (hasTrackedPrefixDependency(source, prevEdge.prevIn)) {
-      recordTrackRead(consumer, source);
+      if (__DEV__) recordTrackRead(consumer, source);
       return true;
     }
 
@@ -132,16 +180,11 @@ export function tryTrackReadFastPath(
   if (firstIn !== null && firstIn.from === source) {
     firstIn.version = version;
     consumer.lastInTail = firstIn;
-    recordTrackRead(consumer, source);
+    if (__DEV__) recordTrackRead(consumer, source);
     return true;
   }
 
   return false;
-}
-
-function trackReadMiss(source: ReactiveNode, consumer: ReactiveNode): void {
-  recordTrackRead(consumer, source);
-  trackReadSlowPath(source, consumer);
 }
 
 /**
@@ -152,9 +195,48 @@ export function trackRead(source: ReactiveNode): void {
 
   if (consumer === null) return;
   if (isDead(source, consumer)) return;
-  if (tryTrackReadFastPath(source, consumer)) return;
 
-  trackReadMiss(source, consumer);
+  const version = trackingVersion;
+  const prevEdge = consumer.lastInTail;
+
+  if (prevEdge !== null) {
+    if (prevEdge.from === source) {
+      prevEdge.version = version;
+      if (__DEV__) recordTrackRead(consumer, source);
+      return;
+    }
+
+    const nextExpected = prevEdge.nextIn;
+    if (nextExpected !== null && nextExpected.from === source) {
+      nextExpected.version = version;
+      consumer.lastInTail = nextExpected;
+      if (__DEV__) recordTrackRead(consumer, source);
+      return;
+    }
+
+    if (
+      nextExpected !== null &&
+      tryTrackReadTinySuffix(source, consumer, prevEdge, nextExpected, version)
+    ) {
+      return;
+    }
+
+    if (hasTrackedPrefixDependency(source, prevEdge.prevIn)) {
+      if (__DEV__) recordTrackRead(consumer, source);
+      return;
+    }
+  } else {
+    const firstIn = consumer.firstIn;
+    if (firstIn !== null && firstIn.from === source) {
+      firstIn.version = version;
+      consumer.lastInTail = firstIn;
+      if (__DEV__) recordTrackRead(consumer, source);
+      return;
+    }
+  }
+
+  if (__DEV__) recordTrackRead(consumer, source);
+  trackReadSlowPath(source, consumer);
 }
 
 /**
@@ -167,9 +249,47 @@ export function trackReadActive(
   consumer: ReactiveNode,
 ): void {
   if (isDead(source, consumer)) return;
-  if (tryTrackReadFastPath(source, consumer)) return;
 
-  recordTrackRead(consumer, source);
+  const version = trackingVersion;
+  const prevEdge = consumer.lastInTail;
+
+  if (prevEdge !== null) {
+    if (prevEdge.from === source) {
+      prevEdge.version = version;
+      if (__DEV__) recordTrackRead(consumer, source);
+      return;
+    }
+
+    const nextExpected = prevEdge.nextIn;
+    if (nextExpected !== null && nextExpected.from === source) {
+      nextExpected.version = version;
+      consumer.lastInTail = nextExpected;
+      if (__DEV__) recordTrackRead(consumer, source);
+      return;
+    }
+
+    if (
+      nextExpected !== null &&
+      tryTrackReadTinySuffix(source, consumer, prevEdge, nextExpected, version)
+    ) {
+      return;
+    }
+
+    if (hasTrackedPrefixDependency(source, prevEdge.prevIn)) {
+      if (__DEV__) recordTrackRead(consumer, source);
+      return;
+    }
+  } else {
+    const firstIn = consumer.firstIn;
+    if (firstIn !== null && firstIn.from === source) {
+      firstIn.version = version;
+      consumer.lastInTail = firstIn;
+      if (__DEV__) recordTrackRead(consumer, source);
+      return;
+    }
+  }
+
+  if (__DEV__) recordTrackRead(consumer, source);
   trackReadSlowPath(source, consumer);
 }
 
