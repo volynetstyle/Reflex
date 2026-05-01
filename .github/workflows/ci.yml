@@ -12,7 +12,7 @@ on:
       - pnpm-workspace.yaml
       - eslint.config.mjs
       - scripts/**
-      - packages/@reflex/runtime/**
+      - packages/reflex-runtime/**
       - packages/reflex/**
   pull_request:
     paths:
@@ -22,7 +22,7 @@ on:
       - pnpm-workspace.yaml
       - eslint.config.mjs
       - scripts/**
-      - packages/@reflex/runtime/**
+      - packages/reflex-runtime/**
       - packages/reflex/**
 
 permissions:
@@ -60,16 +60,22 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Runtime lint
-        run: pnpm --filter @reflex/runtime lint
+        run: pnpm --filter @volynets/reflex-runtime lint
 
       - name: Runtime typecheck
-        run: pnpm --filter @reflex/runtime typecheck
+        run: pnpm --filter @volynets/reflex-runtime typecheck
 
       - name: Runtime test
-        run: pnpm --filter @reflex/runtime test
+        run: pnpm --filter @volynets/reflex-runtime test
+
+      - name: Runtime dev test
+        run: pnpm --filter @volynets/reflex-runtime test:dev
+
+      - name: Runtime coverage
+        run: pnpm --filter @volynets/reflex-runtime test:coverage
 
       - name: Runtime build
-        run: pnpm --filter @reflex/runtime build
+        run: pnpm --filter @volynets/reflex-runtime build
 
       - name: Reflex lint
         run: pnpm --filter @volynets/reflex lint
@@ -107,4 +113,4 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Runtime E2E
-        run: pnpm --filter @reflex/runtime test:e2e
+        run: pnpm --filter @volynets/reflex-runtime test:e2e

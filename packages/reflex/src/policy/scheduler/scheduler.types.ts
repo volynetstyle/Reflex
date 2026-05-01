@@ -7,7 +7,7 @@ import type {
 export type EffectNode = ReactiveNode<undefined | Destructor>;
 
 export interface RingQueue<T> {
-  readonly ring: T[];
+  ring: T[];
   head: number;
   tail: number;
   size: number;
@@ -31,6 +31,7 @@ export interface SchedulerCore {
   readonly queue: WatcherQueue;
   batchDepth: number;
   phase: SchedulerPhase;
+  priority: boolean;
   flush(): void;
   enterBatch(): void;
   leaveBatch(): boolean;

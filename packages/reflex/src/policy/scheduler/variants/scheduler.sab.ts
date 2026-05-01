@@ -1,21 +1,19 @@
 import type { ReactiveNode } from "@volynets/reflex-runtime";
 import { EffectSchedulerMode } from "../scheduler.constants";
 import {
-  createSchedulerCore,
-  createSchedulerInstance,
   hasPendingEffects,
   isContextSettled,
-  tryEnqueueEffect,
-} from "../scheduler.core";
-import { flushPrioritySchedulerQueue } from "../scheduler.priority";
+} from "../scheduler.context";
+import { createSchedulerCore } from "../scheduler.core";
+import { tryEnqueue } from "../scheduler.enqueue";
+import { createSchedulerInstance } from "../scheduler.instance";
 import type { EffectScheduler } from "../scheduler.types";
 import { noopNotifySettled } from "../scheduler.types";
 
 export function createSabScheduler(): EffectScheduler {
   const core = createSchedulerCore();
-  core.flush = (): void => flushPrioritySchedulerQueue(core);
   const enqueue = (node: ReactiveNode): void => {
-    tryEnqueueEffect(core, node);
+    tryEnqueue(core.queue, node);
   };
   const batch = <T>(fn: () => T): T => {
     core.enterBatch();

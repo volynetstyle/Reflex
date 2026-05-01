@@ -1,7 +1,7 @@
 import type { EventBoundary, EventSource } from "../infra/event";
 import { identityBoundary, emitEvent } from "../infra/event";
-import { attachQueueState } from "./scheduler";
 import { createRingQueue } from "./scheduler/scheduler.queue";
+import { attachQueueState } from "./scheduler/scheduler.instance";
 import type { QueueBacked } from "./scheduler";
 
 type EventDispatchRecord = {

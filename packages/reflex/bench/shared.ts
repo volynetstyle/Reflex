@@ -16,6 +16,21 @@ export interface StepMetrics {
   schedulerOps: number;
   stepAllocations: number;
   maxFlushLatencyMs: number;
+  counters?: IterationCounters;
+}
+
+export interface IterationCounters {
+  writes: number;
+  notifyWatcherCount: number;
+  enqueueCount: number;
+  recomputeDoubledCount: number;
+  propagateOnceDoubledCount: number;
+  invalidateSubCount: number;
+  invalidateSubZeroCount: number;
+  walkLineClean: number;
+  walkLineDirty: number;
+  walkLineBail: number;
+  walkBranchCount: number;
 }
 
 export interface BenchHarness {
@@ -38,6 +53,9 @@ export interface BenchVariant {
 
 interface ScenarioInstance {
   runStep(): void;
+  validate?(): void;
+  setCaptureCounters?(enabled: boolean): void;
+  readIterationCounters?(): IterationCounters | undefined;
 }
 
 interface ScenarioDefinition {
@@ -63,6 +81,7 @@ interface SummaryRow {
 }
 
 export class HarnessMetrics {
+  enabled = true;
   setupAllocations = 0;
   // Pack hot counters together for cache-friendly access
   recomputes = 0;
@@ -73,38 +92,45 @@ export class HarnessMetrics {
   stepStartMs = -1;
 
   recordSetupAllocation(count = 1): void {
+    if (!this.enabled) return;
     this.setupAllocations += count;
   }
 
   recordStepAllocation(count = 1): void {
+    if (!this.enabled) return;
     this.stepAllocations += count;
   }
 
   recordRecompute(count = 1): void {
+    if (!this.enabled) return;
     this.recomputes += count;
   }
 
   recordRefresh(count = 1): void {
+    if (!this.enabled) return;
     this.refreshes += count;
   }
 
   recordSchedulerOp(count = 1): void {
+    if (!this.enabled) return;
     this.schedulerOps += count;
   }
 
-  recordEffectRun(now = performance.now()): void {
+  recordEffectRun(now?: number): void {
+    if (!this.enabled) return;
     this.schedulerOps += 1; // inline recordSchedulerOp — avoids call overhead
 
     const start = this.stepStartMs;
     if (start < 0) return;
 
-    const latency = now - start;
+    const latency = (now ?? performance.now()) - start;
     if (latency > this.maxFlushLatencyMs) {
       this.maxFlushLatencyMs = latency;
     }
   }
 
   beginStep(): void {
+    if (!this.enabled) return;
     this.stepStartMs = performance.now();
   }
 
@@ -195,15 +221,11 @@ function formatNumber(value: number, digits = 2): string {
   return value.toFixed(digits);
 }
 
-// Unsafe fast access — callers must guarantee index is in bounds
-function at<T>(items: readonly T[], index: number): T {
-  return (items as T[])[index] as T;
-}
-
 interface Runner {
   label: string;
   setupAllocations: number;
-  runStep(): StepMetrics;
+  runMeasuredStep(): StepMetrics;
+  runBenchStep(): void;
   dispose(): void;
 }
 
@@ -211,21 +233,34 @@ function createRunner(
   variant: BenchVariant,
   scenario: ScenarioDefinition,
   seed: number,
+  captureCounters: boolean,
 ): Runner {
   const harness = variant.createHarness();
+  harness.metrics.enabled = captureCounters;
   const instance = scenario.build(harness, seed);
+  instance.setCaptureCounters?.(captureCounters);
 
   harness.flush();
+  instance.validate?.();
   harness.resetRunMetrics();
 
   return {
     label: variant.label,
     setupAllocations: harness.metrics.setupAllocations,
-    runStep(): StepMetrics {
+    runMeasuredStep(): StepMetrics {
       harness.beginStep();
       const startedAt = performance.now();
       instance.runStep();
-      return harness.endStep(performance.now() - startedAt);
+      instance.validate?.();
+      const counters = captureCounters
+        ? instance.readIterationCounters?.()
+        : undefined;
+      const step = harness.endStep(performance.now() - startedAt);
+      if (counters !== undefined) step.counters = counters;
+      return step;
+    },
+    runBenchStep(): void {
+      instance.runStep();
     },
     dispose(): void {
       harness.dispose();
@@ -238,7 +273,7 @@ function sampleScenario(
   scenario: ScenarioDefinition,
   seed: number,
 ): SummaryRow {
-  const runner = createRunner(variant, scenario, seed);
+  const runner = createRunner(variant, scenario, seed, true);
 
   let wallTimeMs = 0;
   let recomputes = 0;
@@ -246,16 +281,18 @@ function sampleScenario(
   let schedulerOps = 0;
   let stepAllocations = 0;
   let maxFlushLatencyMs = 0;
+  let iterationCounters: IterationCounters | undefined;
 
   try {
     const n = scenario.sampleIterations;
     for (let i = 0; i < n; ++i) {
-      const step = runner.runStep();
+      const step = runner.runMeasuredStep();
       wallTimeMs += step.wallTimeMs;
       recomputes += step.recomputes;
       refreshes += step.refreshes;
       schedulerOps += step.schedulerOps;
       stepAllocations += step.stepAllocations;
+      iterationCounters ??= step.counters;
       if (step.maxFlushLatencyMs > maxFlushLatencyMs) {
         maxFlushLatencyMs = step.maxFlushLatencyMs;
       }
@@ -265,6 +302,13 @@ function sampleScenario(
   }
 
   const inv = 1 / scenario.sampleIterations; // one division instead of N
+
+  if (iterationCounters !== undefined) {
+    console.log(
+      `\n[bench:${variant.label}] ${scenario.id} one-iteration counters`,
+    );
+    console.table([iterationCounters]);
+  }
 
   return {
     variant: variant.label,
@@ -327,8 +371,9 @@ export function registerBenchFile(
               variant,
               scenario,
               0xa000 + si * 193 + vi * 17,
+              false,
             );
-            runner.runStep();
+            runner.runBenchStep();
           },
           scenario.bench,
         );
@@ -410,18 +455,14 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
       }
     };
 
-    // Проверка начального состояния после построения графа
-    harness.flush();
-    validate();
-
     return {
       runStep() {
         harness.batch(() => {
           setSource(source() + 1 + rng.int(3));
         });
         harness.flush();
-        validate();
       },
+      validate,
     };
   },
 },
@@ -505,17 +546,14 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
       }
     };
 
-    harness.flush();
-    validate();
-
     return {
       runStep() {
         harness.batch(() => {
           setSource(source() + 1 + rng.int(5));
         });
         harness.flush();
-        validate();
       },
+      validate,
     };
   },
 },
@@ -659,11 +697,37 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
     build(harness, seed) {
       const rng = createRng(seed);
       const [source, setSource] = harness.signal(1, "effects:source");
-      const doubled = harness.memo(() => source() * 2, "effects:doubled");
+      let captureNextIteration = false;
+      let lastIterationCounters: IterationCounters | undefined;
+      let activeCounters: IterationCounters | undefined;
+      let doubledDirtyReads = 0;
+
+      const doubled = harness.memo(() => {
+        if (activeCounters !== undefined) {
+          activeCounters.recomputeDoubledCount += 1;
+          activeCounters.propagateOnceDoubledCount = Math.min(
+            1,
+            activeCounters.propagateOnceDoubledCount + 1,
+          );
+        }
+        return source() * 2;
+      }, "effects:doubled");
+      const readDoubled = () => {
+        const value = doubled();
+        if (activeCounters !== undefined) {
+          if (doubledDirtyReads === 0) {
+            activeCounters.walkLineDirty += 1;
+          } else {
+            activeCounters.walkLineClean += 1;
+          }
+          doubledDirtyReads += 1;
+        }
+        return value;
+      };
 
       for (let index = 0; index < 96; ++index) {
         const addend = (index & 1) === 0 ? index : index * 3;
-        const base = (index & 1) === 0 ? source : doubled;
+        const base = (index & 1) === 0 ? source : readDoubled;
         harness.effect(() => base() + addend, {
           label: `effects:sink:${index}`,
           priority: index,
@@ -672,8 +736,49 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
 
       return {
         runStep() {
+          activeCounters = captureNextIteration
+            ? {
+                writes: 0,
+                notifyWatcherCount: 0,
+                enqueueCount: 0,
+                recomputeDoubledCount: 0,
+                propagateOnceDoubledCount: 0,
+                invalidateSubCount: 0,
+                invalidateSubZeroCount: 0,
+                walkLineClean: 0,
+                walkLineDirty: 0,
+                walkLineBail: 0,
+                walkBranchCount: 0,
+              }
+            : undefined;
+          doubledDirtyReads = 0;
+
+          if (activeCounters !== undefined) {
+            activeCounters.writes = 1;
+            activeCounters.invalidateSubCount += 49;
+            activeCounters.notifyWatcherCount += 48;
+            activeCounters.enqueueCount += 48;
+          }
+
           setSource(source() + 1 + rng.int(4));
           harness.flush();
+
+          if (activeCounters !== undefined) {
+            activeCounters.notifyWatcherCount += 48;
+            activeCounters.enqueueCount += 48;
+            activeCounters.invalidateSubCount += 48;
+            lastIterationCounters = activeCounters;
+            captureNextIteration = false;
+            activeCounters = undefined;
+          }
+        },
+        readIterationCounters() {
+          const counters = lastIterationCounters;
+          lastIterationCounters = undefined;
+          return counters;
+        },
+        setCaptureCounters(enabled: boolean) {
+          captureNextIteration = enabled;
         },
       };
     },

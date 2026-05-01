@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { createWatcherNode } from "../src/infra/factory";
-import { createWatcherQueue } from "../src/policy/scheduler";
+import { createRingQueue } from "../src/policy/scheduler";
 
 function createNodes(count: number) {
   return Array.from({ length: count }, () => createWatcherNode(() => {}));
 }
 
-describe("createWatcherQueue", () => {
+describe("createRingQueue", () => {
   it("starts empty and shifts null", () => {
-    const queue = createWatcherQueue();
+    const queue = createRingQueue();
 
     expect(queue.size).toBe(0);
     expect(queue.head).toBe(0);
@@ -17,7 +17,7 @@ describe("createWatcherQueue", () => {
   });
 
   it("preserves FIFO order without growth", () => {
-    const queue = createWatcherQueue();
+    const queue = createRingQueue();
     const nodes = createNodes(4);
 
     for (const node of nodes) {
@@ -36,7 +36,7 @@ describe("createWatcherQueue", () => {
   });
 
   it("grows from the initial capacity and preserves order", () => {
-    const queue = createWatcherQueue();
+    const queue = createRingQueue();
     const nodes = createNodes(20);
 
     for (const node of nodes) {
@@ -54,7 +54,7 @@ describe("createWatcherQueue", () => {
   });
 
   it("preserves FIFO order after wrap-around growth", () => {
-    const queue = createWatcherQueue();
+    const queue = createRingQueue();
     const initial = createNodes(16);
     const wrapped = createNodes(9);
 
@@ -85,7 +85,7 @@ describe("createWatcherQueue", () => {
   });
 
   it("clear resets indices and allows reuse", () => {
-    const queue = createWatcherQueue();
+    const queue = createRingQueue();
     const first = createNodes(3);
     const second = createNodes(2);
 

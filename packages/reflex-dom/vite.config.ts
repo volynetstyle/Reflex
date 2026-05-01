@@ -18,6 +18,6 @@ export default defineConfig({
     },
   },
   esbuild: {
-    jsx: "automatic",
+    jsx: "transform"
   },
 });

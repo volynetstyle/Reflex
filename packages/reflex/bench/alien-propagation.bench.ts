@@ -7,7 +7,7 @@ import {
   type WriteInput,
 } from "./shared";
 
-import * as AlienSignalsModule from "../../@volynets/reflex-runtime/node_modules/alien-signals/esm/index.mjs";
+import * as AlienSignalsModule from "../../reflex-runtime/node_modules/alien-signals/esm/index.mjs";
 import {
   createRuntime as createReflexRuntime,
   effect as reflexEffect,
@@ -309,6 +309,16 @@ class AlienHarness implements BenchHarness {
     this.metrics.recordSetupAllocation();
     const state = signal(initial);
 
+    if (!this.metrics.enabled) {
+      return [
+        () => state(),
+        (value) => {
+          const next = typeof value === "function" ? value(state()) : value;
+          state(next);
+        },
+      ] as const;
+    }
+
     return [
       () => state(),
       (value) => {
@@ -322,31 +332,48 @@ class AlienHarness implements BenchHarness {
   memo(fn: () => number, _label?: string): () => number {
     this.metrics.recordSetupAllocation();
 
-    const accessor = computed(() => {
-      this.metrics.recordRecompute();
-      return fn();
-    });
+    const accessor = this.metrics.enabled
+      ? computed(() => {
+          this.metrics.recordRecompute();
+          return fn();
+        })
+      : computed(fn);
 
-    return () => {
-      this.metrics.recordRefresh();
-      return accessor();
-    };
+    return this.metrics.enabled
+      ? () => {
+          this.metrics.recordRefresh();
+          return accessor();
+        }
+      : accessor;
   }
 
   effect(read: () => number, _meta?: { label?: string; priority?: number }): () => void {
     this.metrics.recordSetupAllocation();
 
-    const dispose = alienEffect(() => {
-      this.metrics.recordRecompute();
-      this.metrics.recordEffectRun();
-      blackhole(read());
-    });
+    const dispose = this.metrics.enabled
+      ? alienEffect(() => {
+          this.metrics.recordRecompute();
+          this.metrics.recordEffectRun();
+          blackhole(read());
+        })
+      : alienEffect(() => {
+          blackhole(read());
+        });
 
     this.disposers.push(dispose);
     return dispose;
   }
 
   batch<T>(fn: () => T): T {
+    if (!this.metrics.enabled) {
+      startBatch();
+      try {
+        return fn();
+      } finally {
+        endBatch();
+      }
+    }
+
     this.metrics.recordSchedulerOp();
     startBatch();
 

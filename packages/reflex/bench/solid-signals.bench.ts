@@ -7,7 +7,7 @@ import {
   type WriteInput,
 } from "./shared";
 
-import * as SolidSignalsModule from "../../@volynets/reflex-runtime/node_modules/@solidjs/signals/dist/prod.js";
+import * as SolidSignalsModule from "../../reflex-runtime/node_modules/@solidjs/signals/dist/prod.js";
 
 const {
   createEffect,
@@ -64,6 +64,10 @@ class SolidHarness implements BenchHarness {
     const pair = this.withOwner(() => createSignal(initial));
     const [read, write] = pair;
 
+    if (!this.metrics.enabled) {
+      return [read, write] as const;
+    }
+
     return [
       read,
       (value) => {
@@ -77,32 +81,38 @@ class SolidHarness implements BenchHarness {
     this.metrics.recordSetupAllocation();
 
     const accessor = this.withOwner(() =>
-      createMemo(() => {
-        this.metrics.recordRecompute();
-        return fn();
-      }),
+      this.metrics.enabled
+        ? createMemo(() => {
+            this.metrics.recordRecompute();
+            return fn();
+          })
+        : createMemo(fn),
     );
 
-    return () => {
-      this.metrics.recordRefresh();
-      return accessor();
-    };
+    return this.metrics.enabled
+      ? () => {
+          this.metrics.recordRefresh();
+          return accessor();
+        }
+      : accessor;
   }
 
   effect(read: () => number, _meta?: { label?: string; priority?: number }): () => void {
     this.metrics.recordSetupAllocation();
 
     this.withOwner(() =>
-      createEffect(
-        () => {
-          this.metrics.recordRecompute();
-          return read();
-        },
-        (value) => {
-          this.metrics.recordEffectRun();
-          blackhole(value);
-        },
-      ),
+      this.metrics.enabled
+        ? createEffect(
+            () => {
+              this.metrics.recordRecompute();
+              return read();
+            },
+            (value) => {
+              this.metrics.recordEffectRun();
+              blackhole(value);
+            },
+          )
+        : createEffect(read, blackhole),
     );
 
     return () => {};
@@ -113,6 +123,11 @@ class SolidHarness implements BenchHarness {
   }
 
   flush(): void {
+    if (!this.metrics.enabled) {
+      flush();
+      return;
+    }
+
     this.metrics.recordSchedulerOp();
     flush();
   }

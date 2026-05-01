@@ -2,9 +2,9 @@ import { EffectSchedulerMode } from "./scheduler.constants";
 import type { EffectScheduler } from "./scheduler.types";
 import {
   createEagerScheduler,
-  createRankedScheduler,
   createSabScheduler,
   createFlushScheduler,
+  createRankedScheduler,
 } from "./variants";
 
 export type EffectStrategy = "flush" | "eager" | "sab" | "ranked";
@@ -28,10 +28,10 @@ export function createEffectScheduler(
   switch (mode) {
     case EffectSchedulerMode.Eager:
       return createEagerScheduler();
-    case EffectSchedulerMode.Ranked:
-      return createRankedScheduler();
     case EffectSchedulerMode.SAB:
       return createSabScheduler();
+    case EffectSchedulerMode.Ranked:
+      return createRankedScheduler();
     default:
       return createFlushScheduler();
   }

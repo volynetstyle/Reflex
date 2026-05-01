@@ -13,7 +13,7 @@ import {
   WATCHER_INITIAL_STATE,
   writeProducer,
   setDefaultContext,
-} from "@volynets/reflex-runtime/debug";
+} from "@volynets/reflex-runtime";
 import {
   blackhole,
   type BenchHarness,
@@ -130,7 +130,7 @@ class ReflexScheduler {
 
   enqueue(node: EffectNode): void {
     const metrics = this.metrics;
-    metrics.schedulerOps += 1;
+    metrics.recordSchedulerOp();
 
     const dedupe = this.mode !== "naive-host-queue";
     if (dedupe) {
@@ -138,7 +138,7 @@ class ReflexScheduler {
       node.state |= SCHEDULED_BIT;
     }
 
-    metrics.stepAllocations += 1;
+    metrics.recordStepAllocation();
 
     if (this.mode === "heap-ordering") {
       this.heap.push({
@@ -164,7 +164,7 @@ class ReflexScheduler {
     if (this.flushing || !this.hasPending()) return;
 
     this.flushing = true;
-    this.metrics.schedulerOps += 1;
+    this.metrics.recordSchedulerOp();
 
     const fifo = this.fifo;
     const dedupe = this.mode !== "naive-host-queue";
@@ -174,7 +174,7 @@ class ReflexScheduler {
         const node = this.takeNext();
         if (node === null) break;
 
-        this.metrics.schedulerOps += 1;
+        this.metrics.recordSchedulerOp();
 
         if (dedupe) node.state &= ~SCHEDULED_BIT;
 
@@ -250,14 +250,14 @@ class ReflexHarness implements BenchHarness {
     initial: number,
     _label?: string,
   ): readonly [() => number, (value: WriteInput) => void] {
-    this.metrics.setupAllocations += 1;
+    this.metrics.recordSetupAllocation();
     const node = new ReactiveNode<number>(initial, null, PRODUCER_INITIAL_STATE);
     const metrics = this.metrics;
     const scheduler = this.scheduler;
     return [
       (): number => readProducer(node),
       (value: WriteInput): void => {
-        metrics.schedulerOps += 1;
+        metrics.recordSchedulerOp();
         writeProducer(
           node,
           typeof value === "function" ? value(readProducer(node)) : value,
@@ -270,32 +270,30 @@ class ReflexHarness implements BenchHarness {
   }
 
   memo(fn: () => number, _label?: string): () => number {
-    this.metrics.setupAllocations += 1;
+    this.metrics.recordSetupAllocation();
     const metrics = this.metrics;
     const node = new ReactiveNode<number>(
       0,
-      () => { metrics.recomputes += 1; return fn(); },
+      () => {
+        metrics.recordRecompute();
+        return fn();
+      },
       CONSUMER_INITIAL_STATE,
     );
     return (): number => {
-      metrics.refreshes += 1;
+      metrics.recordRefresh();
       return readConsumer(node, ConsumerReadMode.lazy);
     };
   }
 
   effect(read: () => number, meta?: EffectMeta): () => void {
-    this.metrics.setupAllocations += 1;
+    this.metrics.recordSetupAllocation();
     const metrics = this.metrics;
     const node = new ReactiveNode<unknown>(
       null,
       () => {
-        metrics.recomputes += 1;
-        metrics.schedulerOps += 1;
-        const start = metrics.stepStartMs;
-        if (start >= 0) {
-          const latency = performance.now() - start;
-          if (latency > metrics.maxFlushLatencyMs) metrics.maxFlushLatencyMs = latency;
-        }
+        metrics.recordRecompute();
+        metrics.recordEffectRun();
         blackhole(read());
       },
       WATCHER_INITIAL_STATE,

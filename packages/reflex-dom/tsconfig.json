@@ -4,6 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "baseUrl": ".",
+    "jsxFactory": "h",
     "paths": {
       "@volynets/reflex-framework": ["../reflex-framework/dist/index.d.ts"],
       "@volynets/reflex-framework/jsx-runtime": [

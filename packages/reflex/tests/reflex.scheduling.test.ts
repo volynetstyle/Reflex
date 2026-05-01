@@ -59,7 +59,7 @@ describe("createEffectScheduler", () => {
     expect(mocks.runWatcher).toHaveBeenCalledWith(node);
   });
 
-  it("flush runs higher-priority effects before default-priority effects", () => {
+  it("flush preserves FIFO order without sorting by priority", () => {
     const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
     const normal = createNode();
     const high = createNode() as any;
@@ -70,8 +70,8 @@ describe("createEffectScheduler", () => {
     scheduler.flush();
 
     expect(mocks.runWatcher.mock.calls.map(([node]) => node)).toEqual([
-      high,
       normal,
+      high,
     ]);
   });
 

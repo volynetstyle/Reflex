@@ -53,6 +53,8 @@
     "example:introspection": "pnpm build && node examples/introspection.phases.mjs",
     "bench:core": "pnpm build:perf && node --expose-gc dist/perf.js",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:dev": "vitest run --config vite.dev.config.ts",
     "pretest:e2e": "pnpm build",
     "test:e2e": "node tests/mjs/runtime.e2e.mjs",
     "bench": "pnpm build && vitest bench test/signal_beta.bench.ts",
