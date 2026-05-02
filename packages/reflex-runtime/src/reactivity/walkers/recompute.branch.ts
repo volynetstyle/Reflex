@@ -1,4 +1,4 @@
-import { recompute } from "../engine";
+import { recompute } from "../engine/compute";
 import type { ReactiveEdge, ReactiveNode } from "../shape";
 import { Changed, Invalid } from "../shape";
 import { propagateOnce } from "./propagate.once";
@@ -51,6 +51,7 @@ export function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
     const state = dep.state;
 
     if ((state & Changed) !== 0) {
+      high = top;
       dirty = refresh(dep, edge);
       break;
     }
@@ -65,12 +66,12 @@ export function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
         }
 
         stack[top++] = edge;
-        high = top;
         edge = deps;
         node = dep;
         continue;
       }
 
+      high = top;
       dirty = refresh(dep, edge);
       break;
     }
@@ -121,6 +122,7 @@ export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
       const state = dep.state;
 
       if ((state & Changed) !== 0) {
+        high = top;
         dirty = refresh(dep, edge);
         break;
       }
@@ -130,7 +132,6 @@ export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
         if (deps !== null) {
           stack[top++] = edge;
-          high = top;
           edge = deps;
           node = dep;
 
@@ -141,6 +142,7 @@ export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
           continue;
         }
 
+        high = top;
         dirty = refresh(dep, edge);
         break;
       }
