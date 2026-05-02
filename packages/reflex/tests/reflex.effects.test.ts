@@ -3,7 +3,9 @@ import {
   effect,
   effectScheduled,
   effectUnscheduled,
+  reaction,
   withEffectCleanupRegistrar,
+  watch,
 } from "../src/api/effect";
 import { createWatcherNode } from "../src/infra/factory";
 import { createRuntime, memo, signal } from "./reflex.test_utils";
@@ -159,18 +161,21 @@ describe("Reactive system - effects", () => {
 
       log.push(`outer:run:${branchValue}`);
 
-      withEffectCleanupRegistrar((cleanup) => {
-        nestedCleanups.push(cleanup);
-      }, () => {
-        effect(() => {
-          const innerValue = value();
-          log.push(`inner:run:${branchValue}:${innerValue}`);
+      withEffectCleanupRegistrar(
+        (cleanup) => {
+          nestedCleanups.push(cleanup);
+        },
+        () => {
+          effect(() => {
+            const innerValue = value();
+            log.push(`inner:run:${branchValue}:${innerValue}`);
 
-          return () => {
-            log.push(`inner:cleanup:${branchValue}:${innerValue}`);
-          };
-        });
-      });
+            return () => {
+              log.push(`inner:cleanup:${branchValue}:${innerValue}`);
+            };
+          });
+        },
+      );
 
       return () => {
         for (let index = nestedCleanups.length - 1; index >= 0; --index) {
@@ -252,15 +257,18 @@ describe("Reactive system - effects", () => {
     const stop = effect(() => {
       const nestedCleanups: Destructor[] = [];
 
-      withEffectCleanupRegistrar((cleanup) => {
-        nestedCleanups.push(cleanup);
-      }, () => {
-        effect(() => {
-          innerSpy();
-          value();
-          return innerCleanup;
-        });
-      });
+      withEffectCleanupRegistrar(
+        (cleanup) => {
+          nestedCleanups.push(cleanup);
+        },
+        () => {
+          effect(() => {
+            innerSpy();
+            value();
+            return innerCleanup;
+          });
+        },
+      );
 
       return () => {
         for (let index = nestedCleanups.length - 1; index >= 0; --index) {
@@ -310,5 +318,94 @@ describe("Reactive system - effects", () => {
 
     effectUnscheduled(node);
     expect(node.state & Scheduled).toBeFalsy();
+  });
+
+  it("subscribes to watched selector changes with previous value", () => {
+    const rt = createRuntime();
+    const [name, setName] = signal("Ada");
+    const spy = vi.fn();
+
+    const stop = watch(() => name()).subscribe(spy);
+
+    expect(spy).not.toHaveBeenCalled();
+
+    setName("Grace");
+    rt.flush();
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenLastCalledWith("Grace", "Ada");
+
+    setName("Katherine");
+    rt.flush();
+
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(spy).toHaveBeenLastCalledWith("Katherine", "Grace");
+
+    stop();
+    setName("Margaret");
+    rt.flush();
+
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it("subscribes to reaction selector changes with previous value", () => {
+    const rt = createRuntime();
+    const [name, setName] = signal("Ada");
+    const spy = vi.fn();
+
+    const stop = reaction(() => name()).subscribe(spy);
+
+    setName("Grace");
+    rt.flush();
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenLastCalledWith("Grace", "Ada");
+
+    stop();
+  });
+
+  it("does not track reads inside reaction subscribers", () => {
+    const rt = createRuntime();
+    const [source, setSource] = signal(0);
+    const [incidental, setIncidental] = signal("a");
+    const spy = vi.fn(() => {
+      incidental();
+    });
+
+    reaction(() => source()).subscribe(spy);
+
+    setIncidental("b");
+    rt.flush();
+
+    expect(spy).not.toHaveBeenCalled();
+
+    setSource(1);
+    rt.flush();
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenLastCalledWith(1, 0);
+  });
+
+  it("#48 disposes nested reactions during propagation", () => {
+    createRuntime({ effectStrategy: "eager" });
+    const [source, setSource] = signal(0);
+    const innerSpy = vi.fn();
+    let disposeInner: Destructor | undefined;
+
+    reaction(() => source()).subscribe((val) => {
+      if (val === 1) {
+        disposeInner = reaction(() => source()).subscribe(() => {
+          innerSpy();
+        });
+      } else if (val === 2) {
+        disposeInner!();
+      }
+    });
+
+    setSource(1);
+    setSource(2);
+    setSource(3);
+
+    expect(innerSpy).toHaveBeenCalledTimes(0);
   });
 });

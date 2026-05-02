@@ -3,13 +3,11 @@ import {
   registerWatcherCleanup,
   Scheduled,
   runWatcher,
+  untracked,
   withCleanupRegistrar,
 } from "@volynets/reflex-runtime";
 import type { ReactiveNode } from "@volynets/reflex-runtime";
-import {
-  createWatcherNode,
-  createWatcherRankedrNode,
-} from "../infra/factory";
+import { createWatcherNode, createWatcherRankedrNode } from "../infra/factory";
 
 /**
  * Marks an effect watcher node as scheduled.
@@ -144,6 +142,72 @@ export function effect(fn: EffectFn): Destructor {
   return dispose;
 }
 
+export type ReactionFn<T> = (value: T, prev: T) => void;
+
+export interface Reaction<T> {
+  subscribe(fn: ReactionFn<T>): Destructor;
+}
+
+export type Watch<T> = Reaction<T>;
+
+/**
+ * Runs `fn` when the value produced by `read` changes.
+ *
+ * The initial `read` happens immediately to collect dependencies and establish
+ * the first previous value. `fn` is called only on later watcher runs, and it
+ * receives both the next value and the value observed during the previous run.
+ *
+ * @typeParam T - Watched value type.
+ *
+ * @param read - Tracked value selector.
+ *
+ * @returns Object with `subscribe(fn)` that starts a reaction and returns its
+ * disposer.
+ */
+export function reaction<T>(read: () => T): Reaction<T> {
+  return {
+    subscribe(fn: ReactionFn<T>): Destructor {
+      return subscribeReaction(read, fn);
+    },
+  };
+}
+
+function subscribeReaction<T>(read: () => T, fn: ReactionFn<T>): Destructor {
+  let initialized = false;
+  let prev: T;
+
+  return effect(() => {
+    const value = read();
+
+    if (initialized) {
+      untracked(() => {
+        fn(value, prev);
+      });
+    } else {
+      initialized = true;
+    }
+
+    prev = value;
+  });
+}
+
+/**
+ * Creates a subscribable watcher for a tracked selector.
+ *
+ * @typeParam T - Watched value type.
+ *
+ * @param read - Tracked value selector.
+ *
+ * @returns Object with `subscribe(fn)` that starts a reaction and returns its
+ * disposer.
+ */
+export function watch<T>(read: () => T): Watch<T> {
+  return reaction(read);
+}
+
+/**
+ * @deprecated
+ */
 export function effectRanked(
   fn: EffectFn,
   options: EffectOptions = {},
