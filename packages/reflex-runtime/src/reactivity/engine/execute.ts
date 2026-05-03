@@ -1,9 +1,5 @@
 import type { ReactiveNode } from "../shape";
-import {
-  Computing,
-  clearNodeComputing,
-  markNodeComputing,
-} from "../shape";
+import { Computing, clearNodeComputing, markNodeComputing } from "../shape";
 import { cleanupStaleSources } from "./tracking";
 import {
   activeConsumer,
@@ -38,6 +34,11 @@ function restoreNodeExecution(
   clearNodeComputing(node);
 }
 
+/**
+ * This piece of code has error boundary
+ * @param node
+ * @returns
+ */
 export function executeNodeComputation(node: ReactiveNode): unknown {
   if (__DEV__) {
     if (!node.compute) {

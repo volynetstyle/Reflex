@@ -103,13 +103,13 @@ export function writeProducer<T>(
 
   enterPropagation();
 
-  try {
+ 
     // Push phase: notify all subscribers depth-first, mark them dirty.
     // Direct subscribers are promoted from Invalid to Changed.
     // This tells them "definitely changed, don't verify, recompute"
     propagate(firstSubscriberEdge, PROMOTE_CHANGED);
-  } finally {
+ 
     // Always exit propagation phase, even if propagation or hooks fail.
     leavePropagation();
-  }
+  
 }

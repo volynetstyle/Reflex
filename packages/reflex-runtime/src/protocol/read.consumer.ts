@@ -4,7 +4,11 @@ import {
   trackRead,
   defaultContext,
   activeConsumer,
+  setActiveConsumer,
   Disposed,
+  shouldRecomputeDirtyConsumer,
+  recompute,
+  propagateOnce,
 } from "../reactivity";
 import {
   devAssertReadDeadConsumer,
@@ -12,10 +16,6 @@ import {
   devRecordReadConsumer,
 } from "../reactivity/dev";
 import { ConsumerReadMode } from "./utils/constants";
-import {
-  stabilizeConsumerKnownAlive,
-  stabilizeConsumerUntracked,
-} from "./utils/stabilize";
 
 /**
  * Read a consumer in tracking mode.
@@ -28,9 +28,8 @@ import {
  * 4. Stabilize dirty nodes before observing the value
  * 5. Register the read in the active reactive context
  *
- * The fast-path intentionally stays here rather than inside
- * `stabilizeConsumerKnownAlive()`, so that helper can assume a dirty input and
- * focus only on stabilization work.
+ * The fast-path intentionally stays here, with dirty stabilization isolated in
+ * a local slow path so clean reads do not bounce through helper layers.
  */
 export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
   const state = node.state;
@@ -63,7 +62,7 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
 }
 
 function readConsumerLazySlow<T>(node: ReactiveNode<T>, state: number): T {
-  const value = stabilizeConsumerKnownAlive(node, state);
+  const value = stabilizeDirtyConsumer(node, state);
 
   trackRead(node);
 
@@ -82,9 +81,8 @@ function readConsumerLazySlow<T>(node: ReactiveNode<T>, state: number): T {
 /**
  * Read a consumer without tracking the final dependency edge.
  *
- * Clean nodes return immediately. Dirty nodes are stabilized through
- * `stabilizeConsumerUntracked()`, which avoids binding the current
- * `activeConsumer` to this read.
+ * Clean nodes return immediately. Dirty nodes are stabilized without binding
+ * the current `activeConsumer` to this read.
  */
 export function readConsumerEager<T>(node: ReactiveNode<T>): T {
   const state = node.state;
@@ -102,7 +100,9 @@ export function readConsumerEager<T>(node: ReactiveNode<T>): T {
 }
 
 function readConsumerEagerSlow<T>(node: ReactiveNode<T>, state: number): T {
-  return stabilizeConsumerUntracked(node, state);
+  if (activeConsumer === null) return stabilizeDirtyConsumer(node, state);
+
+  return stabilizeDirtyConsumer(node, state);
 }
 
 /**
@@ -191,7 +191,7 @@ export function readConsumer<T>(
 }
 
 function readConsumerSlow<T>(node: ReactiveNode<T>, state: number): T {
-  const value = stabilizeConsumerKnownAlive(node, state);
+  const value = stabilizeDirtyConsumer(node, state);
 
   // Skip tracking if the node was disposed during stabilization
   if ((node.state & Disposed) === 0) trackRead(node);
@@ -206,4 +206,15 @@ function readConsumerSlow<T>(node: ReactiveNode<T>, state: number): T {
     );
 
   return value;
+}
+
+function stabilizeDirtyConsumer<T>(node: ReactiveNode<T>, state: number): T {
+  if (!shouldRecomputeDirtyConsumer(node, state)) {
+    node.state &= ~DIRTY_STATE;
+    return node.payload as T;
+  }
+
+  if (recompute(node)) propagateOnce(node);
+
+  return node.payload as T;
 }
