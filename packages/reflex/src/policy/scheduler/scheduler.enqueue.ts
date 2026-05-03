@@ -5,6 +5,7 @@ import {
   UNSCHEDULE_MASK,
 } from "./scheduler.constants";
 import type { EffectNode, WatcherQueue } from "./scheduler.types";
+import { pushRingQueue } from "./scheduler.queue";
 
 /**
  * Marks an effect watcher node as scheduled.
@@ -34,6 +35,6 @@ export function tryEnqueue(queue: WatcherQueue, node: ReactiveNode): boolean {
   }
 
   effectNode.state = state | Scheduled;
-  queue.push(effectNode);
+  pushRingQueue(queue, effectNode);
   return true;
 }

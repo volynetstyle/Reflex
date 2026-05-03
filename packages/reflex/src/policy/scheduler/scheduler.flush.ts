@@ -18,8 +18,17 @@ function flushWatcherQueueFIFO(
   queue: WatcherQueue,
   thrown: unknown,
 ): unknown {
+  let head = queue.head;
+
   while (queue.size !== 0) {
-    const node = queue.shift()!;
+    const ring = queue.ring;
+    const mask = ring.length - 1;
+    const node = ring[head]!;
+    ring[head] = undefined as unknown as EffectNode;
+    head = (head + 1) & mask;
+    queue.head = head;
+    --queue.size;
+
     node.state &= UNSCHEDULE_MASK;
 
     try {
@@ -30,6 +39,8 @@ function flushWatcherQueueFIFO(
       }
     }
   }
+
+  queue.tail = head;
 
   return thrown;
 }

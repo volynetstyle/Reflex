@@ -1,4 +1,9 @@
-import { Disposed, trackRead, defaultContext } from "../reactivity";
+import {
+  activeConsumer,
+  Disposed,
+  trackRead,
+  defaultContext,
+} from "../reactivity";
 import type { ReactiveNode } from "../reactivity";
 import {
   devAssertReadDeadProducer,
@@ -41,7 +46,7 @@ export function readProducer<T>(node: ReactiveNode<T>): T {
   }
 
   // Register this read as a dependency if there's an active computation
-  trackRead(node);
+  if (activeConsumer !== null) trackRead(node);
 
   if (__DEV__) {
     devRecordReadProducer(node, node.payload, defaultContext);

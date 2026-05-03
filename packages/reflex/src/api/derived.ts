@@ -46,7 +46,7 @@ import { createComputedNode } from "../infra/factory";
  */
 export function computed<T>(fn: () => T): Computed<T> {
   const node = createComputedNode(fn);
-  return readConsumerLazy.bind(null, node) as Computed<T>;
+  return (() => readConsumerLazy(node)) as Computed<T>;
 }
 
 /**
@@ -89,5 +89,5 @@ export function computed<T>(fn: () => T): Computed<T> {
 export function memo<T>(fn: () => T): Memo<T> {
   const node = createComputedNode(fn);
   readConsumerEager(node);
-  return readConsumerLazy.bind(null, node) as Memo<T>;
+  return (() => readConsumerLazy(node)) as Memo<T>;
 }

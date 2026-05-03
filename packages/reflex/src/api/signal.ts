@@ -64,8 +64,5 @@ export function signal<T>(initialValue: T): readonly [Signal<T>, Setter<T>] {
     writeProducer(node, next);
   }
 
-  return [
-    readProducer.bind(null, node) as Signal<T>,
-    set as Setter<T>,
-  ] as const;
+  return [(() => readProducer(node)) as Signal<T>, set as Setter<T>] as const;
 }

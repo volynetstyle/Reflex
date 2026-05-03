@@ -7,55 +7,16 @@ import {
 import type { ReactiveEdge, ReactiveNode } from "@volynets/reflex-runtime";
 import { EventSource as RuntimeEventSource } from "./event";
 
-export class RankedEffectNode<T = unknown> implements ReactiveNode<T> {
-  state: number;
-  firstOut: ReactiveEdge | null;
-  firstIn: ReactiveEdge | null;
-  lastOut: ReactiveEdge | null;
-  lastIn: ReactiveEdge | null;
-  lastInTail: ReactiveEdge | null;
 
-  compute: (() => T) | null;
-  payload: T;
-
-  priority?: number;
-  rank?: number;
-  rankedPriority: number;
-  nextRanked: RankedEffectNode | undefined;
-  prevRanked: RankedEffectNode;
-
-  constructor(
-    payload: T,
-    compute: (() => T) | null,
-    state: number,
-    priority: number = 0,
-  ) {
-    this.state = state | 0;
-    this.firstOut = null;
-    this.firstIn = null;
-    this.lastOut = null;
-    this.lastIn = null;
-    this.lastInTail = null;
-    this.compute = compute;
-    this.payload = payload as T;
-
-    this.priority = priority;
-    this.rank = 0;
-    this.rankedPriority = 0;
-    this.nextRanked = undefined;
-    this.prevRanked = undefined as unknown as RankedEffectNode;
-  }
-}
 
 export const createWatcherRankedrNode = (
   compute: EffectFn,
   priority = 0,
 ): ReactiveNode => {
-  return new RankedEffectNode(
+    return new RuntimeReactiveNode(
     undefined,
     compute,
     WATCHER_INITIAL_STATE,
-    priority,
   );
 };
 
