@@ -42,10 +42,28 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
 
   if (__DEV__) devAssertConsumerCanStabilize(state);
 
-  const value =
-    (state & DIRTY_STATE) !== 0
-      ? stabilizeConsumerKnownAlive(node, state)
-      : node.payload;
+  if ((state & DIRTY_STATE) === 0) {
+    const value = node.payload as T;
+
+    if (activeConsumer !== null) trackRead(node);
+
+    if (__DEV__)
+      devRecordReadConsumer(
+        node,
+        "lazy",
+        value,
+        defaultContext,
+        activeConsumer ?? undefined,
+      );
+
+    return value;
+  }
+
+  return readConsumerLazySlow(node, state);
+}
+
+function readConsumerLazySlow<T>(node: ReactiveNode<T>, state: number): T {
+  const value = stabilizeConsumerKnownAlive(node, state);
 
   trackRead(node);
 
@@ -78,6 +96,12 @@ export function readConsumerEager<T>(node: ReactiveNode<T>): T {
 
   if (__DEV__) devAssertConsumerCanStabilize(state);
 
+  if ((state & DIRTY_STATE) === 0) return node.payload as T;
+
+  return readConsumerEagerSlow(node, state);
+}
+
+function readConsumerEagerSlow<T>(node: ReactiveNode<T>, state: number): T {
   return stabilizeConsumerUntracked(node, state);
 }
 
@@ -131,17 +155,43 @@ export function readConsumer<T>(
   if (__DEV__) devAssertConsumerCanStabilize(state);
 
   if (mode !== ConsumerReadMode.lazy) {
-    const value = stabilizeConsumerUntracked(node, state);
+    if ((state & DIRTY_STATE) === 0) {
+      const value = node.payload as T;
+
+      if (__DEV__) devRecordReadConsumer(node, "eager", value, defaultContext);
+
+      return value;
+    }
+
+    const value = readConsumerEagerSlow(node, state);
 
     if (__DEV__) devRecordReadConsumer(node, "eager", value, defaultContext);
 
     return value;
   }
 
-  const value =
-    (state & DIRTY_STATE) !== 0
-      ? stabilizeConsumerKnownAlive(node, state)
-      : (node.payload as T);
+  if ((state & DIRTY_STATE) === 0) {
+    const value = node.payload as T;
+
+    if (activeConsumer !== null) trackRead(node);
+
+    if (__DEV__)
+      devRecordReadConsumer(
+        node,
+        "lazy",
+        value,
+        defaultContext,
+        activeConsumer ?? undefined,
+      );
+
+    return value;
+  }
+
+  return readConsumerSlow(node, state);
+}
+
+function readConsumerSlow<T>(node: ReactiveNode<T>, state: number): T {
+  const value = stabilizeConsumerKnownAlive(node, state);
 
   // Skip tracking if the node was disposed during stabilization
   if ((node.state & Disposed) === 0) trackRead(node);
