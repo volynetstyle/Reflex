@@ -4,7 +4,6 @@ import {
   trackRead,
   defaultContext,
   activeConsumer,
-  setActiveConsumer,
   Disposed,
   shouldRecomputeDirtyConsumer,
   recompute,
