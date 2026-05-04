@@ -772,7 +772,7 @@ function trackRead(source, consumer, strategy, passState, passVersion, graphStat
         found.edge.prevIn !== prevEdge
       ) {
         stats.fallbackReorders += 1;
-        moveIncomingEdgeAfter(found.edge, consumer, prevEdge);
+        moveIncomingEdgeAfter(consumer, found.edge, prevEdge);
       }
 
       found.edge.mark = passVersion;
@@ -833,7 +833,7 @@ function trackRead(source, consumer, strategy, passState, passVersion, graphStat
       found.edge.prevIn !== null
     ) {
       stats.fallbackReorders += 1;
-      moveIncomingEdgeAfter(found.edge, consumer, null);
+      moveIncomingEdgeAfter(consumer, found.edge, null);
     }
 
     found.edge.mark = passVersion;

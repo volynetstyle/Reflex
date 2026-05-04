@@ -6,6 +6,7 @@ import {
   Producer,
   ReactiveEdge,
   linkEdge,
+  moveIncomingEdgeAfter,
   reuseIncomingEdgeFromSuffixOrCreate,
   setTrackingVersion,
   trackReadActive,
@@ -141,6 +142,24 @@ describe("Reactive graph - edge wiring", () => {
     expect(reused).toBe(cb);
     expectIncomingEdges(target, [ab, cb, bb]);
     expectOutgoingEdges(c, [cb]);
+    expectGraphIntegrity([a, b, c, target]);
+  });
+
+  it("keeps no-op incoming edge moves structurally inert", () => {
+    const a = createNode(Producer);
+    const b = createNode(Producer);
+    const c = createNode(Producer);
+    const target = createNode(Consumer);
+
+    const ab = linkEdge(a, target);
+    const bb = linkEdge(b, target);
+    const cb = linkEdge(c, target);
+
+    moveIncomingEdgeAfter(target, bb, bb);
+    moveIncomingEdgeAfter(target, bb, ab);
+    moveIncomingEdgeAfter(target, ab, null);
+
+    expectIncomingEdges(target, [ab, bb, cb]);
     expectGraphIntegrity([a, b, c, target]);
   });
 

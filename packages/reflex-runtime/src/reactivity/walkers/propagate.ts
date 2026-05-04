@@ -9,7 +9,7 @@ import {
 const resumeEdgeStack: ReactiveEdge[] = [];
 let resumeStackHigh = 0;
 
-export function propagate(startEdge: ReactiveEdge, startPromote: number): void {
+export function propagate(startEdge: ReactiveEdge | null, startPromote: number): void {
   const stack = resumeEdgeStack;
   const base = resumeStackHigh;
   let top = base;

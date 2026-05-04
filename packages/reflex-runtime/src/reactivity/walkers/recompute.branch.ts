@@ -2,6 +2,11 @@ import { recompute } from "../engine/compute";
 import type { ReactiveEdge, ReactiveNode } from "../shape";
 import { Changed, Invalid } from "../shape";
 import { propagateOnce } from "./propagate.once";
+import {
+  noteShouldRecomputeStackUsage,
+  readRuntimeWalkerStackStats,
+  trimWalkerStackIfSparse,
+} from "./stack.stats";
 
 /**
  * Shared traversal stack.
@@ -11,6 +16,17 @@ import { propagateOnce } from "./propagate.once";
  */
 const stack: ReactiveEdge[] = [];
 let high = 0;
+
+function pushStack(edge: ReactiveEdge, top: number): number {
+  stack[top++] = edge;
+  if (__DEV__) noteShouldRecomputeStackUsage(top);
+  return top;
+}
+
+function restoreStackBase(base: number): void {
+  high = base;
+  trimWalkerStackIfSparse(stack, base);
+}
 
 /**
  * Walk result:
@@ -22,6 +38,13 @@ let high = 0;
 export const CLEAN = 0;
 export const DIRTY = 1;
 export const BAIL = 2;
+
+export function readShouldRecomputeStackStats(): {
+  shouldRecompute: { current: number; peak: number; capacity: number };
+  propagate: { current: number; peak: number; capacity: number };
+} {
+  return readRuntimeWalkerStackStats(high, stack.length, 0, 0);
+}
 
 /**
  * Recompute `node` and, if it changed, propagate dirtiness to its outgoing users.
@@ -57,7 +80,7 @@ function clearInvalid(node: ReactiveNode, top: number, base: number): void {
     stack[--top]!.to.state &= ~Invalid;
   }
 
-  high = base;
+  restoreStackBase(base);
 }
 
 /**
@@ -103,12 +126,12 @@ export function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
       if (deps !== null) {
         // More than one dependency means this is no longer a line.
         if (deps.nextIn !== null) {
-          high = base;
+          restoreStackBase(base);
           return BAIL;
         }
 
         // Descend one level.
-        stack[top++] = edge;
+        top = pushStack(edge, top);
         edge = deps;
         node = dep;
         continue;
@@ -123,7 +146,7 @@ export function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
     // Current dependency is clean, but there are siblings.
     // Linear walker cannot prove the whole branch clean.
     if (edge.nextIn !== null) {
-      high = base;
+      restoreStackBase(base);
       return BAIL;
     }
 
@@ -151,7 +174,7 @@ export function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
     }
   }
 
-  high = base;
+  restoreStackBase(base);
   return DIRTY;
 }
 
@@ -204,7 +227,7 @@ export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
         if (deps !== null) {
           // Descend into dependency subtree.
-          stack[top++] = edge;
+          top = pushStack(edge, top);
           edge = deps;
           node = dep;
 
@@ -233,7 +256,7 @@ export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
       node.state &= ~Invalid;
 
       if (top === base) {
-        high = base;
+        restoreStackBase(base);
         return false;
       }
 
@@ -309,7 +332,7 @@ export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
       node = parent.to;
     }
 
-    high = base;
+    restoreStackBase(base);
     return dirty;
   }
 }

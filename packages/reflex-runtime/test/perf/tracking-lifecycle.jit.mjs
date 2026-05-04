@@ -937,7 +937,7 @@ function trackReadLifecycle(source, consumer, policyId, passState, passVersion, 
         if (shouldReorder(strategy.policy, found.scanSteps)) {
           stats.fallbackReorders += 1;
           passState.fallbackReorders += 1;
-          moveIncomingEdgeAfter(found.edge, consumer, prevEdge);
+          moveIncomingEdgeAfter(consumer, found.edge, prevEdge);
         } else {
           stats.fallbackSkippedReorders += 1;
         }
@@ -1009,7 +1009,7 @@ function trackReadLifecycle(source, consumer, policyId, passState, passVersion, 
       if (shouldReorder(strategy.policy, found.scanSteps)) {
         stats.fallbackReorders += 1;
         passState.fallbackReorders += 1;
-        moveIncomingEdgeAfter(found.edge, consumer, null);
+        moveIncomingEdgeAfter(consumer, found.edge, null);
       } else {
         stats.fallbackSkippedReorders += 1;
       }

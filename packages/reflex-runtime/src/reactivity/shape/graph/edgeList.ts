@@ -45,13 +45,39 @@ export function detachOutgoingEdge(
 }
 
 export function moveIncomingEdgeAfter(
-  edge: ReactiveEdge,
   to: ReactiveNode,
+  edge: ReactiveEdge,
   after: ReactiveEdge | null,
 ): void {
+  if (edge === after) return;
   if (edge.prevIn === after) return;
   if (after === null && to.firstIn === edge) return;
 
-  detachIncomingEdge(to, edge);
-  attachIncomingEdgeAfter(to, edge, after);
+  moveIncomingEdgeAfterUnchecked(to, edge, after);
+}
+
+export function moveIncomingEdgeAfterUnchecked(
+  to: ReactiveNode,
+  edge: ReactiveEdge,
+  after: ReactiveEdge | null,
+): void {
+  const prev = edge.prevIn;
+  const next = edge.nextIn;
+
+  if (prev) prev.nextIn = next;
+  else to.firstIn = next;
+
+  if (next) next.prevIn = prev;
+  else to.lastIn = prev;
+
+  const insertNext = after ? after.nextIn : to.firstIn;
+
+  edge.prevIn = after;
+  edge.nextIn = insertNext;
+
+  if (insertNext) insertNext.prevIn = edge;
+  else to.lastIn = edge;
+
+  if (after) after.nextIn = edge;
+  else to.firstIn = edge;
 }

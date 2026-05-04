@@ -1,11 +1,11 @@
 import type { ReactiveNode } from "../reactivity";
 import {
-  isDisposedNode,
   defaultContext,
   enterPropagation,
   propagate,
   PROMOTE_CHANGED,
   leavePropagation,
+  Disposed,
 } from "../reactivity";
 import { devAssertWriteAlive, devRecordWriteProducer } from "../reactivity/dev";
 import type { ProducerComparator } from "./utils/compare";
@@ -64,7 +64,7 @@ export function writeProducer<T>(
   value: T,
   compare: ProducerComparator<T> = defaultComparator,
 ): void {
-  if (isDisposedNode(node)) {
+  if ((node.state & Disposed) !== 0) {
     if (__DEV__) devAssertWriteAlive();
     return;
   }
@@ -91,25 +91,14 @@ export function writeProducer<T>(
   // Update the payload to the new value
   node.payload = value;
 
-  // Get the first subscriber edge (if any)
-  const firstSubscriberEdge = node.firstOut;
-
   if (__DEV__) {
     devRecordWriteProducer(node, true, value, prev, undefined, defaultContext);
   }
 
-  // If no subscribers, propagation is unnecessary
-  if (firstSubscriberEdge === null) return;
-
   enterPropagation();
-
- 
-    // Push phase: notify all subscribers depth-first, mark them dirty.
-    // Direct subscribers are promoted from Invalid to Changed.
-    // This tells them "definitely changed, don't verify, recompute"
-    propagate(firstSubscriberEdge, PROMOTE_CHANGED);
- 
-    // Always exit propagation phase, even if propagation or hooks fail.
-    leavePropagation();
-  
+  // Push phase: notify all subscribers depth-first, mark them dirty.
+  // Direct subscribers are promoted from Invalid to Changed.
+  // This tells them "definitely changed, don't verify, recompute"
+  propagate(node.firstOut, PROMOTE_CHANGED);
+  leavePropagation();
 }

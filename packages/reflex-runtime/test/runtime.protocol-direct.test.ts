@@ -45,12 +45,20 @@ describe("Reactive runtime - direct protocol helpers", () => {
     producer.state |= Disposed;
     consumer.state |= Disposed;
 
-    expect(() => readProducer(producer)).toThrow("read from dead producer");
-    expect(() => readConsumer(consumer)).toThrow("read dead consumer");
-    expect(() => readConsumerLazy(consumer)).toThrow("read dead consumer");
-    expect(() => readConsumerEager(consumer)).toThrow("read dead consumer");
+    if (__DEV__) {
+      expect(() => readProducer(producer)).toThrow("read from dead producer");
+      expect(() => readConsumer(consumer)).toThrow("read dead consumer");
+      expect(() => readConsumerLazy(consumer)).toThrow("read dead consumer");
+      expect(() => readConsumerEager(consumer)).toThrow("read dead consumer");
+      expect(() => writeProducer(producer, 2)).toThrow("write into dead node");
+    } else {
+      expect(readProducer(producer)).toBe(1);
+      expect(readConsumer(consumer)).toBeUndefined();
+      expect(readConsumerLazy(consumer)).toBeUndefined();
+      expect(readConsumerEager(consumer)).toBeUndefined();
+      expect(() => writeProducer(producer, 2)).not.toThrow();
+    }
 
-    expect(() => writeProducer(producer, 2)).toThrow("write into dead node");
     expect(producer.payload).toBe(1);
   });
 

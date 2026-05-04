@@ -301,7 +301,7 @@ function trackReadWithPolicy(
         found.edge.prevIn !== prevEdge &&
         shouldReorder(policyId, found.scanSteps, policyState)
       ) {
-        moveIncomingEdgeAfter(found.edge, consumer, prevEdge);
+        moveIncomingEdgeAfter(consumer, found.edge, prevEdge);
       }
 
       found.edge.mark = passVersion;
@@ -346,7 +346,7 @@ function trackReadWithPolicy(
       found.edge.prevIn !== null &&
       shouldReorder(policyId, found.scanSteps, policyState)
     ) {
-      moveIncomingEdgeAfter(found.edge, consumer, null);
+      moveIncomingEdgeAfter(consumer, found.edge, null);
     }
 
     found.edge.mark = passVersion;
@@ -411,7 +411,7 @@ function trackReadWithPolicyProfile(
       if (found.edge.prevIn !== prevEdge) {
         if (shouldReorder(policyId, found.scanSteps, policyState)) {
           stats.fallbackReorders += 1;
-          moveIncomingEdgeAfter(found.edge, consumer, prevEdge);
+          moveIncomingEdgeAfter(consumer, found.edge, prevEdge);
         } else {
           stats.fallbackSkippedReorders += 1;
         }
@@ -464,7 +464,7 @@ function trackReadWithPolicyProfile(
     if (found.edge.prevIn !== null) {
       if (shouldReorder(policyId, found.scanSteps, policyState)) {
         stats.fallbackReorders += 1;
-        moveIncomingEdgeAfter(found.edge, consumer, null);
+        moveIncomingEdgeAfter(consumer, found.edge, null);
       } else {
         stats.fallbackSkippedReorders += 1;
       }

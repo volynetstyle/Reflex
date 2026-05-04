@@ -159,9 +159,7 @@ export function enterPropagation(): void {
 // @__INLINE__
 export function leavePropagation(): void {
   if (propagationDepth > 0) --propagationDepth;
-  if (propagationDepth === 0 && activeConsumer === null) {
-    onReactiveSettled?.();
-  }
+  if (!propagationDepth && activeConsumer === null) onReactiveSettled?.();
 }
 
 export function notifySinkInvalidated(node: ReactiveNode): void {
@@ -215,7 +213,8 @@ export function setRuntimeHooks(
   onInvalidated: OnSinkInvalidatedHook = undefined,
   onSettled: OnReactiveSettledHook = undefined,
 ): void {
-  runtimeOnSinkInvalidated = normalizeHook<OnSinkInvalidatedHook>(onInvalidated);
+  runtimeOnSinkInvalidated =
+    normalizeHook<OnSinkInvalidatedHook>(onInvalidated);
   runtimeOnReactiveSettled = normalizeHook<OnReactiveSettledHook>(onSettled);
   refreshDispatchers();
 }

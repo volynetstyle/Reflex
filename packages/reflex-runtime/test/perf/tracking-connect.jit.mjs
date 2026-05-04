@@ -215,7 +215,7 @@ function trackReadProfiled(source, consumer, stats) {
 
       if (edge.prevIn !== prevEdge) {
         stats.fallbackReorders += 1;
-        moveIncomingEdgeAfter(edge, consumer, prevEdge);
+        moveIncomingEdgeAfter(consumer, edge, prevEdge);
       }
 
       consumer.depsTail = edge;
@@ -255,7 +255,7 @@ function trackReadProfiled(source, consumer, stats) {
 
     if (edge.prevIn !== null) {
       stats.fallbackReorders += 1;
-      moveIncomingEdgeAfter(edge, consumer, null);
+      moveIncomingEdgeAfter(consumer, edge, null);
     }
 
     consumer.depsTail = edge;

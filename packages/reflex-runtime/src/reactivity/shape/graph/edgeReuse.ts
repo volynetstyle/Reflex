@@ -1,6 +1,6 @@
 import type { ReactiveEdge } from "../ReactiveEdge";
 import type ReactiveNode from "../ReactiveNode";
-import { attachIncomingEdgeAfter, detachIncomingEdge } from "./edgeList";
+import { moveIncomingEdgeAfterUnchecked } from "./edgeList";
 import { linkEdge } from "./edgeLink";
 
 /**
@@ -14,18 +14,19 @@ export function reuseIncomingEdgeFromSuffixOrCreate(
   nextExpected: ReactiveEdge | null,
   version = 0,
 ): ReactiveEdge {
+  if (nextExpected?.from === from) {
+    nextExpected.version = version;
+    return nextExpected;
+  }
+
   for (
-    let edge = nextExpected ?? to.firstIn;
-    edge !== null;
+    let edge = nextExpected?.nextIn ?? to.firstIn;
+    edge;
     edge = edge.nextIn
   ) {
     if (edge.from !== from) continue;
 
-    if (edge.prevIn !== prev) {
-      detachIncomingEdge(to, edge);
-      attachIncomingEdgeAfter(to, edge, prev);
-    }
-
+    if (edge.prevIn !== prev) moveIncomingEdgeAfterUnchecked(to, edge, prev);
     edge.version = version;
     return edge;
   }
