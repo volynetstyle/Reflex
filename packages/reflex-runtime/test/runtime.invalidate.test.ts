@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   Changed,
   Consumer,
-  Disposed,
   Invalid,
   linkEdge,
   PROMOTE_CHANGED,
@@ -66,14 +65,6 @@ describe("Reactive runtime - invalidateSub transition matrix", () => {
     {
       name: "already Changed",
       initial: Consumer | Changed,
-    },
-    {
-      name: "disposed clean node",
-      initial: Consumer | Disposed,
-    },
-    {
-      name: "disposed dirty node",
-      initial: Consumer | Disposed | Invalid,
     },
   ])("returns 0 and preserves state for $name", ({ initial }) => {
     resetRuntime();

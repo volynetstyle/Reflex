@@ -3,7 +3,6 @@ import { defaultContext, dispatchSinkInvalidated } from "../context";
 import {
   Changed,
   DIRTY_STATE,
-  Disposed,
   Invalid,
   Reentrant,
   Tracking,
@@ -49,9 +48,7 @@ export function invalidateSub(
 ): number {
   let next = (state & ~Reentrant) | promote;
 
-  if ((state & (DIRTY_STATE | Disposed | Tracking)) !== 0) {
-    if ((state & Disposed) !== 0) return 0;
-
+  if ((state & (DIRTY_STATE | Tracking)) !== 0) {
     if ((state & Tracking) !== 0) {
       next = invalidateTracked(edge, sub, state);
       if (next === 0) return 0;

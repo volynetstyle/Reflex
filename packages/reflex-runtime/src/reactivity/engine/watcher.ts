@@ -6,7 +6,6 @@ import {
   clearDirtyState,
   disposeNode,
   Changed,
-  Disposed,
   Invalid,
   Reentrant,
 } from "../shape";
@@ -16,7 +15,7 @@ import { recordDebugEvent } from "../../debug/debug.runtime";
 
 function recordWatcherSkip(
   node: ReactiveNode,
-  reason: "disposed" | "clean" | "stable",
+  reason: "clean" | "stable",
 ): void {
   if (__DEV__) {
     recordDebugEvent(defaultContext, "watcher:run:skip", {
@@ -64,11 +63,6 @@ function getWatcherCleanup(payload: unknown): (() => void) | null {
 export function runWatcher(node: ReactiveNode): void {
   const state = node.state;
 
-  if ((state & Disposed) !== 0) {
-    if (__DEV__) recordWatcherSkip(node, "disposed");
-    return;
-  }
-
   if ((state & DIRTY_STATE) === 0) {
     if (__DEV__) recordWatcherSkip(node, "clean");
     return;
@@ -91,7 +85,7 @@ export function runWatcher(node: ReactiveNode): void {
     if (__DEV__) recordWatcherCleanup(node);
   }
 
-  if ((node.state & Disposed) !== 0) {
+  if (node.compute === null) {
     if (__DEV__) recordWatcherFinish(node, false, undefined);
     return;
   }

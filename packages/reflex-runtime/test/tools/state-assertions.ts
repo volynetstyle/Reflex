@@ -4,7 +4,6 @@ import {
   Changed,
   Computing,
   DIRTY_STATE,
-  Disposed,
   Invalid,
   Reentrant,
   Tracking,
@@ -32,10 +31,6 @@ export function expectDirty(node: ReactiveNode): void {
 
 export function expectClean(node: ReactiveNode): void {
   expect(node.state & DIRTY_STATE).toBe(0);
-}
-
-export function expectDisposed(node: ReactiveNode): void {
-  expect(node.state & Disposed).toBeTruthy();
 }
 
 export function expectTracking(node: ReactiveNode): void {

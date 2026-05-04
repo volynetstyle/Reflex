@@ -43,7 +43,6 @@ export const RUNTIME_GRAPH_TIMING = {
 export const RUNTIME_GRAPH_COLORS = {
   active: "#f8fafc",
   dirty: "#facc15",
-  disposed: "#ef4444",
   edge: "#475569",
   edgeArrow: "#64748b",
   label: "#e2e8f0",

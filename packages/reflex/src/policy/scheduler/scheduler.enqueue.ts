@@ -1,7 +1,7 @@
 import type { ReactiveNode } from "@volynets/reflex-runtime";
 import { Scheduled } from "@volynets/reflex-runtime";
 import {
-  SCHEDULED_OR_DISPOSED,
+  SCHEDULED_STATE,
   UNSCHEDULE_MASK,
 } from "./scheduler.constants";
 import type { EffectNode, WatcherQueue } from "./scheduler.types";
@@ -30,7 +30,7 @@ export function effectUnscheduled(node: EffectNode) {
 export function tryEnqueue(queue: WatcherQueue, node: ReactiveNode): boolean {
   const effectNode = node as EffectNode;
   const state = effectNode.state;
-  if ((state & SCHEDULED_OR_DISPOSED) !== 0) {
+  if ((state & SCHEDULED_STATE) !== 0) {
     return false;
   }
 

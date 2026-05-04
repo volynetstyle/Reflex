@@ -15,7 +15,6 @@ import {
   createConsumer,
   createProducer,
   expectClean,
-  expectDisposed,
   expectNoSubscriber,
   expectNotComputing,
   expectNotReentrant,
@@ -61,7 +60,7 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
 
     disposeNode(target);
 
-    expectDisposed(target);
+    expectClean(target);
     expectSources(target, []);
     expectNoSubscriber(source, target);
 

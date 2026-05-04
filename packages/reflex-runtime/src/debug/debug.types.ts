@@ -25,7 +25,6 @@ export type RuntimeDebugFlag =
   | "changed"
   | "computing"
   | "consumer"
-  | "disposed"
   | "invalid"
   | "producer"
   | "scheduled"

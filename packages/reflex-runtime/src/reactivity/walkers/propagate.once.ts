@@ -1,14 +1,8 @@
-import { devAssertPropagateAlive } from "../dev";
 import type { ReactiveNode } from "../shape";
-import { Changed, Disposed, Invalid, Watcher } from "../shape";
+import { Changed, Invalid, Watcher } from "../shape";
 import { notifyWatcher } from "./propagate.invalidate";
 
 export function propagateOnce(node: ReactiveNode): void {
-  if ((node.state & Disposed) !== 0) {
-    if (__DEV__) devAssertPropagateAlive();
-    return;
-  }
-
   for (let edge = node.firstOut; edge !== null; edge = edge.nextOut) {
     const sub = edge.to,
       state = sub.state;

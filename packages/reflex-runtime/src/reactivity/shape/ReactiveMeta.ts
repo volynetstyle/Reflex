@@ -18,7 +18,6 @@ export const Invalid = 1 << 0; // 1
 export const Changed = 1 << 1; // 2
 export const Reentrant = 1 << 2; // 4
 export const Tracking = 1 << 3; // 8
-export const Disposed = 1 << 4; // 16
 
 export const Watcher = 1 << 5; // 32
 export const Scheduled = 1 << 6; // 64
@@ -103,12 +102,3 @@ export function clearDirtyState(node: ReactiveNode): void {
   node.state &= ~DIRTY_STATE;
 }
 
-/** Runtime helper for the terminal lifecycle check. */
-export function isDisposedNode(node: ReactiveNode): boolean {
-  return (node.state & Disposed) !== 0;
-}
-
-/** Collapse a node to kind + disposed, dropping transient execution flags. */
-export function markDisposedNode(node: ReactiveNode): void {
-  node.state = (node.state & NODE_KIND_STATE) | Disposed;
-}

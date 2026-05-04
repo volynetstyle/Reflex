@@ -7,7 +7,7 @@ import {
   resolveEffectSchedulerMode,
 } from "../src/policy/scheduler";
 import { createEventDispatcher } from "../src/policy/event_dispatcher";
-import { Changed, Disposed } from "@volynets/reflex-runtime";
+import { Changed } from "@volynets/reflex-runtime";
 import type { EventSubscriber } from "../src/infra/event";
 import {
   appendSubscriber,
@@ -89,18 +89,6 @@ describe("Reactive system - policy helpers", () => {
     });
 
     expect(spy).toHaveBeenCalledTimes(1);
-  });
-
-  it("ignores disposed effect nodes", () => {
-    const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
-    const spy = vi.fn(() => {});
-    const node = createWatcherNode(spy);
-    node.state |= Disposed;
-
-    scheduler.enqueue(node);
-    scheduler.flush();
-
-    expect(spy).not.toHaveBeenCalled();
   });
 
   it("handles nested flush and batch calls during an active flush", () => {

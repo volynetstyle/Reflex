@@ -1,11 +1,9 @@
-import { isDisposedNode, markDisposedNode } from "../ReactiveMeta";
 import type ReactiveNode from "../ReactiveNode";
+import { NODE_KIND_STATE } from "../ReactiveMeta";
 import { unlinkAllSources, unlinkAllSubscribers } from "./edgeSweep";
 
 export function disposeNode(node: ReactiveNode): void {
-  if (isDisposedNode(node)) return;
-
-  markDisposedNode(node);
+  node.state &= NODE_KIND_STATE;
   node.lastInTail = null;
   unlinkAllSources(node);
   unlinkAllSubscribers(node);

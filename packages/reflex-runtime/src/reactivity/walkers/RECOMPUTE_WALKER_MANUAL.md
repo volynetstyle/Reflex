@@ -44,7 +44,7 @@ without switching to a separate top-level algorithm.
 
 The caller already handled:
 
-- disposed / producer early exits
+- producer early exits
 - `Changed` fast exits
 - empty dependency lists
 

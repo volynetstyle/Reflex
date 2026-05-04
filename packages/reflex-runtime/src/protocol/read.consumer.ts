@@ -4,13 +4,11 @@ import {
   trackRead,
   defaultContext,
   activeConsumer,
-  Disposed,
   shouldRecomputeDirtyConsumer,
   recompute,
   propagateOnce,
 } from "../reactivity";
 import {
-  devAssertReadDeadConsumer,
   devAssertConsumerCanStabilize,
   devRecordReadConsumer,
 } from "../reactivity/dev";
@@ -21,11 +19,10 @@ import { ConsumerReadMode } from "./utils/constants";
  *
  * This is the common read path for computed values:
  *
- * 1. Reject disposed consumers
- * 2. Assert that the current state may be stabilized
- * 3. Fast-path clean nodes by returning `node.payload` directly
- * 4. Stabilize dirty nodes before observing the value
- * 5. Register the read in the active reactive context
+ * 1. Assert that the current state may be stabilized
+ * 2. Fast-path clean nodes by returning `node.payload` directly
+ * 3. Stabilize dirty nodes before observing the value
+ * 4. Register the read in the active reactive context
  *
  * The fast-path intentionally stays here, with dirty stabilization isolated in
  * a local slow path so clean reads do not bounce through helper layers.
@@ -33,31 +30,21 @@ import { ConsumerReadMode } from "./utils/constants";
 export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
-  if ((state & Disposed) !== 0) {
-    if (__DEV__) devAssertReadDeadConsumer();
-    return node.payload;
+  if ((state & DIRTY_STATE) !== 0) {
+    if (__DEV__) devAssertConsumerCanStabilize(state);
+    return readConsumerLazySlow(node, state);
   }
 
-  if (__DEV__) devAssertConsumerCanStabilize(state);
+  const value = node.payload;
 
-  if ((state & DIRTY_STATE) === 0) {
-    const value = node.payload as T;
+  if (activeConsumer === null) return value;
 
-    if (activeConsumer !== null) trackRead(node);
+  trackRead(node);
 
-    if (__DEV__)
-      devRecordReadConsumer(
-        node,
-        "lazy",
-        value,
-        defaultContext,
-        activeConsumer ?? undefined,
-      );
+  if (__DEV__)
+    devRecordReadConsumer(node, "lazy", value, defaultContext, activeConsumer);
 
-    return value;
-  }
-
-  return readConsumerLazySlow(node, state);
+  return value;
 }
 
 function readConsumerLazySlow<T>(node: ReactiveNode<T>, state: number): T {
@@ -85,11 +72,6 @@ function readConsumerLazySlow<T>(node: ReactiveNode<T>, state: number): T {
  */
 export function readConsumerEager<T>(node: ReactiveNode<T>): T {
   const state = node.state;
-
-  if ((state & Disposed) !== 0) {
-    if (__DEV__) devAssertReadDeadConsumer();
-    return node.payload;
-  }
 
   if (__DEV__) devAssertConsumerCanStabilize(state);
 
@@ -146,11 +128,6 @@ export function readConsumer<T>(
 ): T {
   const state = node.state;
 
-  if ((state & Disposed) !== 0) {
-    if (__DEV__) devAssertReadDeadConsumer();
-    return node.payload as T;
-  }
-
   if (__DEV__) devAssertConsumerCanStabilize(state);
 
   if (mode !== ConsumerReadMode.lazy) {
@@ -192,8 +169,7 @@ export function readConsumer<T>(
 function readConsumerSlow<T>(node: ReactiveNode<T>, state: number): T {
   const value = stabilizeDirtyConsumer(node, state);
 
-  // Skip tracking if the node was disposed during stabilization
-  if ((node.state & Disposed) === 0) trackRead(node);
+  trackRead(node);
 
   if (__DEV__)
     devRecordReadConsumer(

@@ -217,8 +217,6 @@ const sameValueQueue = pending.length;
 
 disposeWatcher(watcher);
 
-const disposed = Boolean(watcher.state & Disposed);
-
 writeProducer(right, 100);
 
 const postDisposeQueue = pending.length;
@@ -227,7 +225,6 @@ const finalSelected = readConsumer(selected);
 console.log(
   JSON.stringify({
     cleanupValues,
-    disposed,
     effectValues,
     finalSelected,
     invalidations,
@@ -262,18 +259,17 @@ try {
   const esm = runScenario(
     appDir,
     "scenario.mjs",
-    'import { CONSUMER_INITIAL_STATE, Disposed, PRODUCER_INITIAL_STATE, ReactiveNode, WATCHER_INITIAL_STATE, disposeWatcher, readConsumer, readProducer, resetState, runWatcher, setHooks, writeProducer } from "@volynets/reflex-runtime";',
+    'import { CONSUMER_INITIAL_STATE, PRODUCER_INITIAL_STATE, ReactiveNode, WATCHER_INITIAL_STATE, disposeWatcher, readConsumer, readProducer, resetState, runWatcher, setHooks, writeProducer } from "@volynets/reflex-runtime";',
     true,
   );
   const cjs = runScenario(
     appDir,
     "scenario.cjs",
-    'const { CONSUMER_INITIAL_STATE, Disposed, PRODUCER_INITIAL_STATE, ReactiveNode, WATCHER_INITIAL_STATE, disposeWatcher, readConsumer, readProducer, resetState, runWatcher, setHooks, writeProducer } = require("@volynets/reflex-runtime");',
+    'const { CONSUMER_INITIAL_STATE, PRODUCER_INITIAL_STATE, ReactiveNode, WATCHER_INITIAL_STATE, disposeWatcher, readConsumer, readProducer, resetState, runWatcher, setHooks, writeProducer } = require("@volynets/reflex-runtime");',
   );
 
   const expected = {
     cleanupValues: [1, 99],
-    disposed: true,
     effectValues: [1, 99],
     finalSelected: 100,
     invalidations: 1,

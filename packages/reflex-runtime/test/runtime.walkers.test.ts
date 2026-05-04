@@ -15,7 +15,6 @@ import {
 import {
   Changed,
   Consumer,
-  Disposed,
   Invalid,
   Producer,
   PROMOTE_CHANGED,
@@ -214,24 +213,6 @@ describe("Reactive runtime - walker invariants", () => {
     expect(right.state).toBe(Consumer | Changed);
     expect(watcher.state).toBe(Watcher | Changed);
     expect(invalidated).toEqual([watcher]);
-  });
-
-  it("propagate skips disposed subtrees without aborting sibling traversal", () => {
-    const source = createNode(Producer);
-    const disposed = createNode(Consumer | Disposed);
-    const disposedLeaf = createNode(Consumer);
-    const sibling = createNode(Consumer);
-    resetRuntime();
-
-    linkEdge(source, disposed);
-    linkEdge(source, sibling);
-    linkEdge(disposed, disposedLeaf);
-
-    propagate(source.firstOut!, PROMOTE_CHANGED);
-
-    expect(disposed.state).toBe(Consumer | Disposed);
-    expect(disposedLeaf.state).toBe(Consumer);
-    expect(sibling.state).toBe(Consumer | Changed);
   });
 
   it("propagate reuses deep branching resume stacks across repeated waves", () => {

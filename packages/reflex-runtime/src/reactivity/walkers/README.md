@@ -99,7 +99,7 @@ if ((node.state & INVALIDATION_SLOW_PATH_MASK) === 0) {
   // Fast path: simple state update
   node.state |= promote ? Changed : Invalid
 } else {
-  // Slow path: node is already dirty, visited, computing, or disposed
+  // Slow path: node is already dirty, visited, or computing
   // Handle accordingly
 }
 ```
@@ -347,16 +347,13 @@ producer → consumer → watcher → [unknown]
   ✗ Walkers don't descend into watcher
 ```
 
-### 5. Disposal Terminal State
-
-Once `Disposed` is set, the node never reactivates.
+### 5. Disposal Cleanup
 
 After disposal:
 
 - Incoming edges unlinked
 - Outgoing edges unlinked
 - Compute function cleared
-- No future graph operations touch this node
 
 ---
 

@@ -5,9 +5,8 @@ import {
   propagate,
   PROMOTE_CHANGED,
   leavePropagation,
-  Disposed,
 } from "../reactivity";
-import { devAssertWriteAlive, devRecordWriteProducer } from "../reactivity/dev";
+import { devRecordWriteProducer } from "../reactivity/dev";
 import type { ProducerComparator } from "./utils/compare";
 import { compare as defaultComparator } from "./utils/compare";
 
@@ -64,11 +63,6 @@ export function writeProducer<T>(
   value: T,
   compare: ProducerComparator<T> = defaultComparator,
 ): void {
-  if ((node.state & Disposed) !== 0) {
-    if (__DEV__) devAssertWriteAlive();
-    return;
-  }
-
   const prev = node.payload;
 
   // Check if the value actually changed using stable comparison

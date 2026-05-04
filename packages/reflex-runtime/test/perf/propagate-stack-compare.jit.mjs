@@ -24,8 +24,7 @@ const TRACKING_CONSUMER_STATE =
   ReactiveNodeState.Consumer | ReactiveNodeState.Tracking;
 const NON_IMMEDIATE = 0;
 const IMMEDIATE = 1;
-const INVALIDATION_SLOW_PATH_MASK =
-  DIRTY_STATE | ReactiveNodeState.Disposed | WALKER_STATE;
+const INVALIDATION_SLOW_PATH_MASK = DIRTY_STATE | WALKER_STATE;
 
 function createProducer(value) {
   return new ReactiveNode(value, null, PRODUCER_INITIAL_STATE);
@@ -56,7 +55,7 @@ function isTrackedPrefixEdge(edge, depsTail) {
 }
 
 function getSlowInvalidatedSubscriberState(edge, state, promoteImmediate) {
-  if ((state & (DIRTY_STATE | ReactiveNodeState.Disposed)) !== 0) return 0;
+  if ((state & DIRTY_STATE) !== 0) return 0;
 
   if ((state & ReactiveNodeState.Tracking) === 0) {
     return (
@@ -135,7 +134,7 @@ function getSlowInvalidatedSubscriberStateProfiled(
 ) {
   counters.slowPathHits += 1;
 
-  if ((state & (DIRTY_STATE | ReactiveNodeState.Disposed)) !== 0) return 0;
+  if ((state & DIRTY_STATE) !== 0) return 0;
 
   if ((state & ReactiveNodeState.Tracking) === 0) {
     return (
@@ -290,7 +289,6 @@ function createPropagateArrayVariant() {
     promoteImmediate = NON_IMMEDIATE,
     context = runtime,
   ) {
-    if ((startEdge.from.state & ReactiveNodeState.Disposed) !== 0) return;
 
     const thrown = propagateLinear(startEdge, promoteImmediate, null, context);
     if (thrown !== null) throw thrown;
@@ -434,7 +432,6 @@ function createPropagateSplitProfileVariant() {
     promoteImmediate = NON_IMMEDIATE,
     context = runtime,
   ) {
-    if ((startEdge.from.state & ReactiveNodeState.Disposed) !== 0) return;
     currentRunSawFirstBranch = false;
 
     const thrown = propagateLinear(startEdge, promoteImmediate, null, context);
@@ -567,7 +564,6 @@ function createPropagateInt32Variant() {
     promoteImmediate = NON_IMMEDIATE,
     context = runtime,
   ) {
-    if ((startEdge.from.state & ReactiveNodeState.Disposed) !== 0) return;
 
     const thrown = propagateLinear(startEdge, promoteImmediate, null, context);
     if (thrown !== null) throw thrown;
@@ -583,7 +579,6 @@ function createPropagateHybridVariant() {
     promoteImmediate = NON_IMMEDIATE,
     context = runtime,
   ) {
-    if ((startEdge.from.state & ReactiveNodeState.Disposed) !== 0) return;
 
     const stackBase = edgeStack.length;
     let stackTop = stackBase;
@@ -655,7 +650,6 @@ function createPropagateHybridProfileVariant() {
     promoteImmediate = NON_IMMEDIATE,
     context = runtime,
   ) {
-    if ((startEdge.from.state & ReactiveNodeState.Disposed) !== 0) return;
 
     const stackBase = edgeStack.length;
     let stackTop = stackBase;

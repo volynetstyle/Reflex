@@ -5,7 +5,7 @@ import {
   type RuntimeDebugContext,
 } from "../reactivity/context";
 import type { ReactiveEdge, ReactiveNode } from "../reactivity/shape";
-import { Changed, Computing, Consumer, DIRTY_STATE, Disposed, Invalid, Producer, Reentrant, Scheduled, Tracking, Watcher } from "../reactivity/shape";
+import { Changed, Computing, Consumer, DIRTY_STATE, Invalid, Producer, Reentrant, Scheduled, Tracking, Watcher } from "../reactivity/shape";
 import type {
   RuntimeDebugContextSnapshot,
   RuntimeDebugEvent,
@@ -87,7 +87,6 @@ function getFlags(state: number): RuntimeDebugFlag[] {
   if ((state & Invalid) !== 0) flags.push("invalid");
   if ((state & Changed) !== 0) flags.push("changed");
   if ((state & Reentrant) !== 0) flags.push("visited");
-  if ((state & Disposed) !== 0) flags.push("disposed");
   if ((state & Computing) !== 0) flags.push("computing");
   if ((state & Scheduled) !== 0) flags.push("scheduled");
   if ((state & Tracking) !== 0) flags.push("tracking");

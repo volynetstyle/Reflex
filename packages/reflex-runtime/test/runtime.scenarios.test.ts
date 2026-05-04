@@ -33,7 +33,7 @@ describe("Reactive runtime - reusable scenario coverage", () => {
     expectRuntime().toBeSettled();
   });
 
-  it.skipIf(!subtle.enabled)(
+  it.skipIf(!subtle.enabled || !__DEV__)(
     "uses trace oracle assertions for high-level debug expectations",
     () => {
       const trace = createTraceHarness();

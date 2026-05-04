@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DIRTY_STATE,
-  Disposed,
   disposeWatcher,
   getPropagationDepth,
   notifySettledIfIdle,
@@ -168,7 +167,7 @@ describe("Reactive runtime - hooks and resilience", () => {
     disposeWatcher(watcher);
 
     expect(cleanup).toHaveBeenCalledTimes(2);
-    expect(watcher.state & Disposed).toBeTruthy();
+    expect(watcher.state & DIRTY_STATE).toBe(0);
   });
 
   it("tolerates nodes becoming dead in the middle of propagation", () => {
@@ -203,6 +202,6 @@ describe("Reactive runtime - hooks and resilience", () => {
 
     expect(() => writeProducer(source, 2)).not.toThrow();
     expect(invalidated).toEqual(["left"]);
-    expect(right.state & Disposed).toBeTruthy();
+    expect(right.state & DIRTY_STATE).toBe(0);
   });
 });

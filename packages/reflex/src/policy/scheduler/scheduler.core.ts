@@ -1,5 +1,4 @@
 import { createRingQueue } from "./scheduler.queue";
-import { SchedulerPhase } from "./scheduler.constants";
 import {
   cleanupQueuedNodesAfterAbort,
   flushQueuedWatchers,
@@ -8,13 +7,14 @@ import type {
   SchedulerCore,
   EffectNode,
 } from "./scheduler.types";
+import { Flushing, Batching, Idle } from "./scheduler.constants";
 
 function flushSchedulerQueue(core: SchedulerCore): void {
   const queue = core.queue;
-  if (core.phase === SchedulerPhase.Flushing) return;
+  if (core.phase === Flushing) return;
   if (queue.size === 0) return;
 
-  core.phase = SchedulerPhase.Flushing;
+  core.phase = Flushing;
   let thrown: unknown = null;
 
   try {
@@ -24,7 +24,7 @@ function flushSchedulerQueue(core: SchedulerCore): void {
   } finally {
     cleanupQueuedNodesAfterAbort(queue);
     core.phase =
-      core.batchDepth > 0 ? SchedulerPhase.Batching : SchedulerPhase.Idle;
+      core.batchDepth > 0 ? Batching : Idle;
   }
 
   if (thrown !== null) {
@@ -33,8 +33,8 @@ function flushSchedulerQueue(core: SchedulerCore): void {
 }
 
 function enterSchedulerBatch(core: SchedulerCore): void {
-  if (++core.batchDepth === 1 && core.phase !== SchedulerPhase.Flushing) {
-    core.phase = SchedulerPhase.Batching;
+  if (++core.batchDepth === 1 && core.phase !== Flushing) {
+    core.phase = Batching;
   }
 }
 
@@ -43,18 +43,18 @@ function leaveSchedulerBatch(core: SchedulerCore): boolean {
     return false;
   }
 
-  if (core.phase === SchedulerPhase.Flushing) {
+  if (core.phase === Flushing) {
     return false;
   }
 
-  core.phase = SchedulerPhase.Idle;
+  core.phase = Idle;
   return true;
 }
 
 function resetSchedulerCore(core: SchedulerCore): void {
   cleanupQueuedNodesAfterAbort(core.queue);
   core.batchDepth = 0;
-  core.phase = SchedulerPhase.Idle;
+  core.phase = Idle;
 }
 
 export function createSchedulerCore(priority = false): SchedulerCore {
@@ -63,7 +63,7 @@ export function createSchedulerCore(priority = false): SchedulerCore {
   const core: SchedulerCore = {
     queue,
     batchDepth: 0,
-    phase: SchedulerPhase.Idle,
+    phase: Idle,
     priority,
     flush: (): void => flushSchedulerQueue(core),
     enterBatch: (): void => enterSchedulerBatch(core),

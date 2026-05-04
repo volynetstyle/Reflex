@@ -1,6 +1,5 @@
 import {
   disposeNodeEvent,
-  isDisposedNode,
   readProducer,
   writeProducer,
 } from "@volynets/reflex-runtime";
@@ -235,17 +234,20 @@ function createScan<T, A>(
 ): [read: Accessor<A>, dispose: Destructor] {
   const node = createAccumulator(seed);
   let current = seed;
-  const accessor = () => (isDisposedNode(node) ? current : readProducer(node));
+  let active = true;
+  const accessor = () => (active ? readProducer(node) : current);
 
   let unsubscribe: Destructor | undefined = source.subscribe((value: T) => {
     /* c8 ignore start -- disposal unsubscribes before a queued delivery can reach this callback */
-    if (isDisposedNode(node)) return;
+    if (!active) return;
     /* c8 ignore stop */
     current = reducer(current, value);
     writeProducer(node, current);
   });
 
   function dispose(): void {
+    if (!active) return;
+    active = false;
     disposeNodeEvent(node);
 
     const stop = unsubscribe;

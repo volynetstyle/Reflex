@@ -1,8 +1,5 @@
 import type { ReactiveNode } from "@volynets/reflex-runtime";
-import type {
-  EffectSchedulerMode,
-  SchedulerPhase,
-} from "./scheduler.constants";
+import type { EffectSchedulerMode } from "./scheduler.constants";
 
 export type EffectNode = ReactiveNode<undefined | Destructor>;
 
@@ -30,7 +27,7 @@ export function noopNotifySettled(): void {}
 export interface SchedulerCore {
   readonly queue: WatcherQueue;
   batchDepth: number;
-  phase: SchedulerPhase;
+  phase: number;
   priority: boolean;
   flush(): void;
   enterBatch(): void;
@@ -51,7 +48,7 @@ export interface EffectScheduler {
 
   readonly head: number;
   readonly batchDepth: number;
-  readonly phase: SchedulerPhase;
+  readonly phase: number;
 }
 
 export type SchedulerBatch = EffectScheduler["batch"];

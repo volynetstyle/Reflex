@@ -20,7 +20,7 @@ vi.mock("@volynets/reflex-runtime", async () => {
   };
 });
 
-import { Changed, DIRTY_STATE, Disposed, ReactiveNodeState, Scheduled } from "@volynets/reflex-runtime";
+import { Changed, DIRTY_STATE, ReactiveNodeState, Scheduled } from "@volynets/reflex-runtime";
 import {
   createEffectScheduler,
   EffectSchedulerMode,
@@ -258,17 +258,6 @@ describe("createEffectScheduler", () => {
 
     expect(mocks.runWatcher).toHaveBeenCalledTimes(1);
     expect((node.state & Scheduled) !== 0).toBe(false);
-  });
-
-  it("ignores disposed nodes on enqueue", () => {
-    const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
-    const node = createNode(DIRTY_STATE | Disposed);
-
-    scheduler.enqueue(node);
-    scheduler.flush();
-
-    expect((node.state & Scheduled) !== 0).toBe(false);
-    expect(mocks.runWatcher).not.toHaveBeenCalled();
   });
 
   it("reset clears pending queue", () => {

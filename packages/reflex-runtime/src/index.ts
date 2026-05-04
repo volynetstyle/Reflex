@@ -85,11 +85,9 @@ export {
   Invalid,
   Changed,
   Reentrant,
-  Disposed,
   Scheduled,
   Computing,
   Tracking,
-  isDisposedNode,
   disposeNode,
   disposeNodeEvent,
 } from "./reactivity";

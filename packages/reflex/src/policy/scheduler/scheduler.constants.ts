@@ -1,4 +1,4 @@
-import { Disposed, Scheduled } from "@volynets/reflex-runtime";
+import { Scheduled } from "@volynets/reflex-runtime";
 
 export const enum EffectSchedulerMode {
   Flush = 0,
@@ -7,11 +7,9 @@ export const enum EffectSchedulerMode {
   Ranked = 3,
 }
 
-export const enum SchedulerPhase {
-  Idle = 0,
-  Batching = 1,
-  Flushing = 2,
-}
+export const Idle = 1 << 0;
+export const Batching = 1 << 1;
+export const Flushing = 1 << 2;
 
-export const SCHEDULED_OR_DISPOSED = Disposed | Scheduled;
+export const SCHEDULED_STATE = Scheduled;
 export const UNSCHEDULE_MASK = ~Scheduled;

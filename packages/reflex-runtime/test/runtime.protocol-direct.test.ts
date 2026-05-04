@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   CONSUMER_INITIAL_STATE,
-  Disposed,
   readConsumer,
   readConsumerEager,
   readConsumerLazy,
@@ -38,38 +37,14 @@ describe("Reactive runtime - direct protocol helpers", () => {
     expect(hasSubscriber(eager, parent)).toBe(false);
   });
 
-  it("returns payloads without tracking for disposed reads and writes", () => {
-    const producer = createProducer(1);
-    const consumer = createConsumer(() => 2);
-
-    producer.state |= Disposed;
-    consumer.state |= Disposed;
-
-    if (__DEV__) {
-      expect(() => readProducer(producer)).toThrow("read from dead producer");
-      expect(() => readConsumer(consumer)).toThrow("read dead consumer");
-      expect(() => readConsumerLazy(consumer)).toThrow("read dead consumer");
-      expect(() => readConsumerEager(consumer)).toThrow("read dead consumer");
-      expect(() => writeProducer(producer, 2)).toThrow("write into dead node");
-    } else {
-      expect(readProducer(producer)).toBe(1);
-      expect(readConsumer(consumer)).toBeUndefined();
-      expect(readConsumerLazy(consumer)).toBeUndefined();
-      expect(readConsumerEager(consumer)).toBeUndefined();
-      expect(() => writeProducer(producer, 2)).not.toThrow();
-    }
-
-    expect(producer.payload).toBe(1);
-  });
-
-  it("recomputes cleanly after disposal during computation", () => {
+  it("recomputes cleanly after state changes during computation", () => {
     const consumer = createConsumer(() => {
-      consumer.state |= Disposed;
+      consumer.state = CONSUMER_INITIAL_STATE;
       return 42;
     });
 
-    expect(recompute(consumer)).toBe(false);
-    expect(consumer.payload).toBeUndefined();
+    expect(recompute(consumer)).toBe(true);
+    expect(consumer.payload).toBe(42);
   });
 
   it("refreshes and propagates only when a recompute changes a fanout node", () => {

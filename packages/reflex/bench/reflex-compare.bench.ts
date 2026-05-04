@@ -10,6 +10,7 @@ import {
   ReactiveNode,
   ReactiveNodeState,
   runWatcher,
+  Scheduled,
   WATCHER_INITIAL_STATE,
   writeProducer,
   setDefaultContext,
@@ -179,7 +180,6 @@ class ReflexScheduler {
         if (dedupe) node.state &= ~SCHEDULED_BIT;
 
         const state = node.state;
-        if ((state & Disposed) !== 0) continue;
         if ((state & DIRTY_STATE) === 0) continue;
 
         runWatcher(node);

@@ -1,10 +1,5 @@
 import type ReactiveNode from "../shape/ReactiveNode";
-import { Disposed } from "../shape";
-import {
-  devAssertTrackReadAlive,
-  devRecordCleanupStaleSources,
-  devRecordTrackRead,
-} from "../dev";
+import { devRecordCleanupStaleSources, devRecordTrackRead } from "../dev";
 import {
   linkEdge,
   unlinkDetachedIncomingEdgeSequence,
@@ -20,21 +15,6 @@ function recordTrackRead(consumer: ReactiveNode, source: ReactiveNode): void {
   if (__DEV__) {
     devRecordTrackRead(defaultContext, consumer, source);
   }
-}
-
-function isDead(source: ReactiveNode, consumer: ReactiveNode): boolean {
-  const sourceDead = (source.state & Disposed) !== 0;
-  const consumerDead = (consumer.state & Disposed) !== 0;
-
-  if (sourceDead || consumerDead) {
-    if (__DEV__) {
-      devAssertTrackReadAlive(sourceDead, consumerDead);
-    }
-
-    return true;
-  }
-
-  return false;
 }
 
 function trackReadSlowPath(source: ReactiveNode, consumer: ReactiveNode): void {
@@ -230,7 +210,6 @@ export function trackRead(source: ReactiveNode): void {
   const consumer = activeConsumer;
 
   if (consumer === null) return;
-  if (isDead(source, consumer)) return;
 
   trackReadResolved(source, consumer, trackingVersion, true);
 }
@@ -238,14 +217,12 @@ export function trackRead(source: ReactiveNode): void {
 /**
  * Track read when the consumer is already known.
  *
- * Unlike trackRead(), this preserves the old eager disposed-check behavior.
+ * Unlike trackRead(), this accepts an already known consumer.
  */
 export function trackReadActive(
   source: ReactiveNode,
   consumer: ReactiveNode,
 ): void {
-  if (isDead(source, consumer)) return;
-
   trackReadResolved(source, consumer, trackingVersion, true);
 }
 

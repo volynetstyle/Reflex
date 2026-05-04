@@ -1,9 +1,9 @@
 import { devAssertShouldRecomputeAlive } from "../dev";
 import type { ReactiveNode } from "../shape";
-import { Changed, Disposed, Invalid, Producer, Reentrant } from "../shape";
+import { Changed, Invalid, Producer, Reentrant } from "../shape";
 import { BAIL, DIRTY, walkBranch, walkLine } from "./recompute.branch";
 
-const DEAD = Producer | Disposed;
+const DEAD = Producer;
 const STALE = Invalid | Reentrant;
 
 function dirty(node: ReactiveNode, state: number): boolean {

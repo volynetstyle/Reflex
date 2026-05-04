@@ -1,12 +1,11 @@
 import { bench, describe } from "vitest";
-import { DIRTY_STATE, ReactiveNodeState, Scheduled, Disposed } from "@volynets/reflex-runtime";
+import { DIRTY_STATE, ReactiveNodeState, Scheduled } from "@volynets/reflex-runtime";
 import { blackhole } from "./shared";
 
 const CAPACITIES = [16, 32, 64, 256, 1024] as const;
 const INNER_ITERATIONS = 2_000_000;
 
-const SCHEDULED_DISPOSED =
-  Disposed | Scheduled;
+const SCHEDULED_STATE = Scheduled;
 
 describe("tail update microbench: pure loop", () => {
   for (const capacity of CAPACITIES) {
@@ -58,7 +57,7 @@ describe("tail update microbench: scheduler path", () => {
       for (let i = 0; i < INNER_ITERATIONS; ++i) {
         const node = nodes[i & mask]!;
         const state = node.state;
-        if ((state & SCHEDULED_DISPOSED) !== 0) continue;
+        if ((state & SCHEDULED_STATE) !== 0) continue;
 
         node.state = state | Scheduled;
         queue[tail] = node;
@@ -102,7 +101,7 @@ describe("tail update microbench: scheduler path", () => {
       for (let i = 0; i < INNER_ITERATIONS; ++i) {
         const node = nodes[i & mask]!;
         const state = node.state;
-        if ((state & SCHEDULED_DISPOSED) !== 0) continue;
+        if ((state & SCHEDULED_STATE) !== 0) continue;
 
         node.state = state | Scheduled;
         queue[tail] = node;
@@ -146,7 +145,7 @@ describe("tail update microbench: scheduler path", () => {
       for (let i = 0; i < INNER_ITERATIONS; ++i) {
         const node = nodes[i & mask]!;
         const state = node.state;
-        if ((state & SCHEDULED_DISPOSED) !== 0) continue;
+        if ((state & SCHEDULED_STATE) !== 0) continue;
 
         node.state = state | Scheduled;
         queue[tail] = node;
