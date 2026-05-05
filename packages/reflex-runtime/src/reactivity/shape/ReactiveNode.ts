@@ -9,12 +9,11 @@ export type Primitive =
   | null
   | undefined;
 
-export type Payload<T> =
-  T extends Primitive | Function
-    ? T
-    : T extends readonly (infer U)[]
-      ? readonly Payload<U>[]
-      : { readonly [K in keyof T]: Payload<T[K]> };
+export type Payload<T> = T extends Primitive | Function
+  ? T
+  : T extends readonly (infer U)[]
+    ? readonly Payload<U>[]
+    : { readonly [K in keyof T]: Payload<T[K]> };
 
 export type ComputeFn<T> = (() => T) | null;
 
@@ -37,9 +36,9 @@ export class ReactiveNode<T = unknown> {
   payload: T;
 
   constructor(payload: T, compute: ComputeFn<T>, state: number) {
-    this.payload = payload;
-    this.compute = compute;
     this.state = state | 0;
+    this.compute = compute;
+    this.payload = payload;
   }
 }
 

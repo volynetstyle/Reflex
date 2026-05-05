@@ -21,16 +21,25 @@ export function unlinkDetachedIncomingEdgeSequence(
 export function unlinkAllSources(node: ReactiveNode): void {
   let edge = node.firstIn;
 
+  if (edge === null) {
+    node.lastIn = null;
+    node.lastInTail = null;
+    return;
+  }
+
   node.firstIn = null;
   node.lastIn = null;
   node.lastInTail = null;
 
-  while (edge) {
-    const next = edge.nextIn;
-    detachOutgoingEdge(edge.from, edge);
+  do {
+    const next: ReactiveEdge | null = edge.nextIn;
+    const from = edge.from;
+
+    detachOutgoingEdge(from, edge);
     clearReactiveEdgeLinks(edge);
+
     edge = next;
-  }
+  } while (edge !== null);
 }
 
 /**
@@ -40,15 +49,25 @@ export function unlinkAllSources(node: ReactiveNode): void {
 export function unlinkAllSubscribers(node: ReactiveNode): void {
   let edge = node.firstOut;
 
+  if (edge === null) {
+    node.lastOut = null;
+    return;
+  }
+
   node.firstOut = null;
   node.lastOut = null;
 
-  while (edge) {
-    const next = edge.nextOut;
+  do {
+    const next: ReactiveEdge | null = edge.nextOut;
+    const to = edge.to;
 
-    if (edge.to.lastInTail === edge) edge.to.lastInTail = edge.prevIn;
-    detachIncomingEdge(edge.to, edge);
+    if (to.lastInTail === edge) {
+      to.lastInTail = edge.prevIn;
+    }
+
+    detachIncomingEdge(to, edge);
     clearReactiveEdgeLinks(edge);
+
     edge = next;
-  }
+  } while (edge !== null);
 }

@@ -18,17 +18,19 @@ export function attachIncomingEdgeAfter(
   else to.firstIn = edge;
 }
 
-/** Splice `edge` out of `to`'s incoming list (does not touch the out-list). */
-export function detachIncomingEdge(
-  to: ReactiveNode,
-  edge: ReactiveEdge,
-): void {
-  const { prevIn, nextIn } = edge;
+export function detachIncomingEdge(to: ReactiveNode, edge: ReactiveEdge): void {
+  const prev = edge.prevIn;
+  const next = edge.nextIn;
 
-  if (prevIn) prevIn.nextIn = nextIn;
-  else to.firstIn = nextIn;
-  if (nextIn) nextIn.prevIn = prevIn;
-  else to.lastIn = prevIn;
+  if (to.lastInTail === edge) {
+    to.lastInTail = prev;
+  }
+
+  if (prev !== null) prev.nextIn = next;
+  else to.firstIn = next;
+
+  if (next !== null) next.prevIn = prev;
+  else to.lastIn = prev;
 }
 
 /** Splice `edge` out of `from`'s outgoing list (does not touch the in-list). */

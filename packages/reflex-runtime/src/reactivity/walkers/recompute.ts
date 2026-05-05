@@ -24,9 +24,6 @@ function dirty(node: ReactiveNode, state: number): boolean {
   return walkBranch(node, edge);
 }
 
-export const shouldRecomputeDirtyConsumer = dirty;
-export const shouldRecomputeDirtyWatcher = dirty;
-
 export function shouldRecompute(node: ReactiveNode): boolean {
   const state = node.state;
 
@@ -37,3 +34,8 @@ export function shouldRecompute(node: ReactiveNode): boolean {
 
   return dirty(node, state);
 }
+
+export {
+  dirty as shouldRecomputeDirtyConsumer,
+  dirty as shouldRecomputeDirtyWatcher,
+};

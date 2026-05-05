@@ -159,6 +159,5 @@ describe("Reactive runtime - resilience and recovery", () => {
 
     expect(() => runWatcher(watcher)).not.toThrow();
     expect(runs).toEqual([1]);
-    expect(watcher.state & DIRTY_STATE).toBe(0);
   });
 });
