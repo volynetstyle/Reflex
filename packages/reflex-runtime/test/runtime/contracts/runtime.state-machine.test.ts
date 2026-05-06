@@ -8,7 +8,7 @@ import {
   runWatcher,
   writeProducer,
 } from "../../runtime.test_utils";
-import { subtle } from "../../runtime.test_utils/debug";
+import { subtle } from "../../../src/debug";
 import {
   createConsumer,
   createProducer,

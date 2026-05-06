@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ReactiveNode, restoreContext, saveContext, setOptions } from "../../runtime.test_utils";
-import type { ReactiveNodeState } from "../../runtime.test_utils/reactivity";
+import type { ReactiveNodeState } from "../../../src/reactivity";
 import {
   Consumer,
   Producer,
@@ -11,7 +11,7 @@ import {
   setTrackingVersion,
   trackReadActive,
   unlinkEdge,
-} from "../../runtime.test_utils/reactivity";
+} from "../../../src/reactivity";
 import {
   expectGraphIntegrity,
   expectIncomingEdges,

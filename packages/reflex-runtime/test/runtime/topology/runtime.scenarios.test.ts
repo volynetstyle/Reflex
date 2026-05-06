@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { readConsumer, writeProducer } from "../../runtime.test_utils";
-import { subtle } from "../../runtime.test_utils/debug";
+import { subtle } from "../../../src/debug";
 import {
   expectGraph,
   expectRuntime,

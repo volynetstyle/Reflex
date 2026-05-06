@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { subtle } from "../../runtime.test_utils/debug";
+import { subtle } from "../../../src/debug";
 import { readConsumer, writeProducer } from "../../runtime.test_utils";
 import {
   createTraceHarness,

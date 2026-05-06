@@ -7,8 +7,8 @@ import {
   readProducer,
   writeProducer,
 } from "../../runtime.test_utils";
-import { recompute } from "../../runtime.test_utils/reactivity/engine/compute";
-import { refreshAndPropagateIfNeeded } from "../../runtime.test_utils/reactivity/walkers/recompute.refresh";
+import { recompute } from "../../../src/reactivity/engine/compute";
+import { refreshAndPropagateIfNeeded } from "../../../src/reactivity/walkers/recompute.refresh";
 import {
   createConsumer,
   createProducer,

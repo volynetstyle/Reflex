@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   RUNTIME_DEBUG_PROTOCOL_VERSION,
   subtle as debugSubtle,
-} from "../../runtime.test_utils/debug";
+} from "../../../src/debug";
 import {
   readConsumer,
   readProducer,

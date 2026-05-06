@@ -3,8 +3,9 @@ import { readConsumer, readProducer, resetState, writeProducer } from "../../../
 import { subtle } from "../../../src/debug";
 import { createConsumer, createProducer } from "../../runtime.test_utils";
 
+/** Covers dev-only memory guardrails for debug history and walker stack stats. */
 describe.skipIf(!subtle.enabled)("Reactive runtime - dev memory guardrails", () => {
-  it("trims should-recompute walker stack references after a deep pull", () => {
+  it("returns should-recompute stack capacity to the dev floor after a deep pull", () => {
     resetState();
     subtle.resetStackStats();
 
@@ -24,7 +25,7 @@ describe.skipIf(!subtle.enabled)("Reactive runtime - dev memory guardrails", () 
 
     expect(stats?.shouldRecompute.peak).toBeGreaterThanOrEqual(256);
     expect(stats?.shouldRecompute.current).toBe(0);
-    expect(stats?.shouldRecompute.capacity).toBe(0);
+    expect(stats?.shouldRecompute.capacity).toBe(256);
   });
 
   it("keeps debug history bounded under sustained runtime events", () => {
@@ -46,4 +47,3 @@ describe.skipIf(!subtle.enabled)("Reactive runtime - dev memory guardrails", () 
     expect(subtle.history()).toHaveLength(32);
   });
 });
-

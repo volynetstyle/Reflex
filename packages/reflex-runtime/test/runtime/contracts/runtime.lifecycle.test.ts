@@ -10,7 +10,7 @@ import {
   readProducer,
   writeProducer,
 } from "../../runtime.test_utils";
-import { connect, disconnect } from "../../runtime.test_utils/reactivity/shape/graph/connect";
+import { connect, disconnect } from "../../../src/reactivity/shape/graph/connect";
 import {
   createConsumer,
   createProducer,
