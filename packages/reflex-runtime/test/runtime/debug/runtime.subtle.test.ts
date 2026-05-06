@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   RUNTIME_DEBUG_PROTOCOL_VERSION,
   subtle as debugSubtle,
-} from "../../src/debug";
+} from "../../runtime.test_utils/debug";
 import {
   readConsumer,
   readProducer,
   runWatcher,
   subtle,
   untracked,
-} from "../../src";
+} from "../../runtime.test_utils";
 import {
   createConsumer,
   createProducer,
@@ -202,5 +202,6 @@ describe("Reactive runtime - subtle debug surface", () => {
     );
   });
 });
+
 
 

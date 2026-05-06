@@ -8,7 +8,7 @@ import {
   readProducer,
   runWatcher,
   writeProducer,
-} from "../../src";
+} from "../../../src";
 import {
   createConsumer,
   createProducer,
@@ -170,5 +170,6 @@ describe("Reactive runtime - hooks and resilience", () => {
     expect(right.state & DIRTY_STATE).toBe(0);
   });
 });
+
 
 

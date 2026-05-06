@@ -1,17 +1,17 @@
 import { performance } from "node:perf_hooks";
-import { getDefaultContext } from "../../build/esm/reactivity/context.js";
+import { getDefaultContext } from "../../../build/esm/reactivity/context.js";
 import {
   CONSUMER_CHANGED,
   DIRTY_STATE,
   PRODUCER_INITIAL_STATE,
   ReactiveNodeState,
   WALKER_STATE,
-} from "../../build/esm/reactivity/shape/ReactiveMeta.js";
-import { UNINITIALIZED } from "../../build/esm/reactivity/shape/ReactiveNode.js";
-import ReactiveNode from "../../build/esm/reactivity/shape/ReactiveNode.js";
-import { linkEdge } from "../../build/esm/reactivity/shape/methods/connect.js";
-import { propagate as propagateImported } from "../../build/esm/reactivity/walkers/propagate.js";
-import { PROMOTE_CHANGED } from "../../build/esm/reactivity/walkers/propagate.constants.js";
+} from "../../../build/esm/reactivity/shape/ReactiveMeta.js";
+import { UNINITIALIZED } from "../../../build/esm/reactivity/shape/ReactiveNode.js";
+import ReactiveNode from "../../../build/esm/reactivity/shape/ReactiveNode.js";
+import { linkEdge } from "../../../build/esm/reactivity/shape/methods/connect.js";
+import { propagate as propagateImported } from "../../../build/esm/reactivity/walkers/propagate.js";
+import { PROMOTE_CHANGED } from "../../../build/esm/reactivity/walkers/propagate.constants.js";
 
 const runtime = getDefaultContext();
 
@@ -1244,3 +1244,4 @@ function main() {
 }
 
 main();
+

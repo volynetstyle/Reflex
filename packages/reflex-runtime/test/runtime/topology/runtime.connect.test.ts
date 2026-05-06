@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ReactiveNode, restoreContext, saveContext, setOptions } from "../../src";
-import type { ReactiveNodeState } from "../../src/reactivity";
+import { ReactiveNode, restoreContext, saveContext, setOptions } from "../../runtime.test_utils";
+import type { ReactiveNodeState } from "../../runtime.test_utils/reactivity";
 import {
   Consumer,
   Producer,
@@ -11,7 +11,7 @@ import {
   setTrackingVersion,
   trackReadActive,
   unlinkEdge,
-} from "../../src/reactivity";
+} from "../../runtime.test_utils/reactivity";
 import {
   expectGraphIntegrity,
   expectIncomingEdges,
@@ -314,5 +314,6 @@ describe("Reactive runtime - edge wiring", () => {
     restoreContext(snapshot);
   });
 });
+
 
 

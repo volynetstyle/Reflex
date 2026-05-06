@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { disposeNode, readConsumer, readProducer, writeProducer } from "../../src";
+import { disposeNode, readConsumer, readProducer, writeProducer } from "../../runtime.test_utils";
 import {
   createConsumer,
   createProducer,
@@ -115,5 +115,6 @@ describe("Reactive runtime - graph topology and consistency", () => {
     }
   });
 });
+
 
 

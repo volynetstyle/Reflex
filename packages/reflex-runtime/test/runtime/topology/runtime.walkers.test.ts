@@ -11,7 +11,7 @@ import {
   saveContext,
   setHooks,
   writeProducer,
-} from "../../src";
+} from "../../runtime.test_utils";
 import {
   Changed,
   Consumer,
@@ -24,8 +24,8 @@ import {
   shouldRecompute,
   Tracking,
   Watcher,
-} from "../../src/reactivity";
-import { linkEdge } from "../../src/reactivity/shape/graph/connect";
+} from "../../runtime.test_utils/reactivity";
+import { linkEdge } from "../../runtime.test_utils/reactivity/shape/graph/connect";
 import {
   createConsumer,
   createProducer,
@@ -771,5 +771,6 @@ describe("Reactive runtime - walker invariants", () => {
     }
   });
 });
+
 
 

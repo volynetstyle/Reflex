@@ -10,7 +10,7 @@ import {
   readProducer,
   runWatcher,
   writeProducer,
-} from "../../src";
+} from "../../runtime.test_utils";
 import {
   createConsumer,
   createProducer,
@@ -112,5 +112,6 @@ describe("Reactive runtime - resilience and recovery", () => {
     expect(runs).toEqual([1]);
   });
 });
+
 
 

@@ -1,5 +1,5 @@
 import { expect } from "vitest";
-import { ReactiveNode } from "../../src";
+import { ReactiveNode } from "../../../src";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type TestReactiveEdge = any;

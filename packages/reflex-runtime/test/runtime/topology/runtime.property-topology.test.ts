@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { beforeEach, describe, expect, it } from "vitest";
-import { readConsumer, readProducer, writeProducer } from "../../src";
+import { readConsumer, readProducer, writeProducer } from "../../runtime.test_utils";
 import {
   createComputeCounter,
   createConsumer,
@@ -79,5 +79,6 @@ describe("Reactive runtime - generated topology properties", () => {
     );
   });
 });
+
 
 

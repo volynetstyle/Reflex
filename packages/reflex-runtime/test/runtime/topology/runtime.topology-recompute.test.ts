@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { readConsumer, readProducer, writeProducer } from "../../src";
+import { readConsumer, readProducer, writeProducer } from "../../runtime.test_utils";
 import {
   createConsumer,
   createComputeCounter,
@@ -164,5 +164,6 @@ describe("Reactive runtime - topology recompute cardinality", () => {
     topology.counter.expectOnce(topology.labels);
   });
 });
+
 
 

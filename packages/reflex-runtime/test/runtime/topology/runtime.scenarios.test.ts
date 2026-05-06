@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { readConsumer, writeProducer } from "../../src";
-import { subtle } from "../../src/debug";
+import { readConsumer, writeProducer } from "../../runtime.test_utils";
+import { subtle } from "../../runtime.test_utils/debug";
 import {
   expectGraph,
   expectRuntime,
@@ -71,5 +71,6 @@ describe("Reactive runtime - reusable scenario coverage", () => {
     },
   );
 });
+
 
 

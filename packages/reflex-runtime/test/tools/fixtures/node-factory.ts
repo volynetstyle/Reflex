@@ -3,8 +3,7 @@ import {
   PRODUCER_INITIAL_STATE,
   ReactiveNode,
   WATCHER_INITIAL_STATE,
-} from "../../src";
-
+} from "../../../src";
 export function createProducer<T>(value: T): ReactiveNode<T> {
   return new ReactiveNode(value, null, PRODUCER_INITIAL_STATE);
 }
@@ -22,3 +21,4 @@ export function createWatcher(
 export function createRawNode(state: number): ReactiveNode {
   return new ReactiveNode(undefined, null, state);
 }
+

@@ -1,7 +1,7 @@
 import { expect } from "vitest";
-import type { ReactiveNode } from "../../src";
-import { getActiveConsumer, getPropagationDepth } from "../../src";
-import type { EventSummary } from "./trace-harness";
+import type { ReactiveNode } from "../../../src";
+import { getActiveConsumer, getPropagationDepth } from "../../../src";
+import type { EventSummary } from "../debug/trace-harness";
 import {
   expectGraphIntegrity,
   expectIncomingEdges,
@@ -11,8 +11,8 @@ import {
   hasSubscriber,
   incomingSources,
   outgoingSubscribers,
-} from "./graph-inspector";
-import type { TestReactiveEdge } from "./graph-inspector";
+} from "../graph/graph-inspector";
+import type { TestReactiveEdge } from "../graph/graph-inspector";
 
 export type GraphSubject =
   | Iterable<ReactiveNode>

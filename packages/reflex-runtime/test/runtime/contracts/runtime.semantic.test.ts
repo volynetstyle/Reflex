@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ConsumerReadMode, readConsumer, readProducer, writeProducer } from "../../src";
+import { ConsumerReadMode, readConsumer, readProducer, writeProducer } from "../../runtime.test_utils";
 import {
   createConsumer,
   createComputeCounter,
@@ -106,5 +106,6 @@ describe("Reactive runtime - semantic correctness", () => {
   });
 
 });
+
 
 

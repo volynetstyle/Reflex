@@ -1,4 +1,4 @@
-import { readConsumer, readProducer } from "../../src";
+import { readConsumer, readProducer } from "../../../src";
 import { createConsumer, createProducer, createWatcher } from "./node-factory";
 
 export type LinearChainOptions = {

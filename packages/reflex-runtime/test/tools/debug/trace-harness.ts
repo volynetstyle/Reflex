@@ -1,7 +1,7 @@
 import { expect } from "vitest";
-import { subtle } from "../../src/debug";
-import type { RuntimeDebugEvent } from "../../src/debug";
-import { resetRuntime } from "./runtime-harness";
+import { subtle } from "../../../src/debug";
+import type { RuntimeDebugEvent } from "../../../src/debug";
+import { resetRuntime } from "../harness/runtime-harness";
 
 export type EventSummary = {
   byType: Record<string, number>;

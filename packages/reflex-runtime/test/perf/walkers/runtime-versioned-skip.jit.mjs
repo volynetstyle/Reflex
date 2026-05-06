@@ -4,15 +4,15 @@ import {
   readConsumer,
   readProducer,
   writeProducer,
-} from "../../build/esm/api/index.js";
-import { createExecutionContext } from "../../build/esm/reactivity/context.js";
+} from "../../../build/esm/api/index.js";
+import { createExecutionContext } from "../../../build/esm/reactivity/context.js";
 import ReactiveNode, {
   UNINITIALIZED,
-} from "../../build/esm/reactivity/shape/ReactiveNode.js";
+} from "../../../build/esm/reactivity/shape/ReactiveNode.js";
 import {
   CONSUMER_CHANGED,
   PRODUCER_INITIAL_STATE,
-} from "../../build/esm/reactivity/shape/ReactiveMeta.js";
+} from "../../../build/esm/reactivity/shape/ReactiveMeta.js";
 
 const WORKLOAD_KINDS = new Set([
   "rotate",
@@ -275,3 +275,4 @@ function main() {
 }
 
 main();
+

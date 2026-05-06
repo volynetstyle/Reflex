@@ -5,7 +5,7 @@ import {
   reflex,
   reflexDOMVitePlugin,
   transformReflexDOMJSX,
-} from "../../../plugins/@vite/reflex-vite-plugin/src/index";
+} from "../../../../plugins/@vite/reflex-vite-plugin/src/index";
 
 function getOpeningAttributes(code: string) {
   const ast = parseSync(code, {

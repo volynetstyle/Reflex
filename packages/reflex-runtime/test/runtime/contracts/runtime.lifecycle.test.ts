@@ -9,8 +9,8 @@ import {
   readConsumer,
   readProducer,
   writeProducer,
-} from "../../src";
-import { connect, disconnect } from "../../src/reactivity/shape/graph/connect";
+} from "../../runtime.test_utils";
+import { connect, disconnect } from "../../runtime.test_utils/reactivity/shape/graph/connect";
 import {
   createConsumer,
   createProducer,
@@ -136,5 +136,6 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     expectClean(target);
   });
 });
+
 
 

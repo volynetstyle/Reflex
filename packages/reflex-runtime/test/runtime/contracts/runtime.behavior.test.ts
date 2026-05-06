@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { readConsumer, readProducer, writeProducer } from "../../src";
+import { readConsumer, readProducer, writeProducer } from "../../runtime.test_utils";
 import {
   createConsumer,
   createProducer,
@@ -73,5 +73,6 @@ describe("Reactive runtime - public behavior guarantees", () => {
     expect(readConsumer(current)).toBe(11);
   });
 });
+
 
 

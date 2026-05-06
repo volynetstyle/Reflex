@@ -1,5 +1,5 @@
 import { expect } from "vitest";
-import type { ReactiveNode } from "../../src";
+import type { ReactiveNode } from "../../../src";
 import {
   Changed,
   Computing,
@@ -7,7 +7,7 @@ import {
   Invalid,
   Reentrant,
   Tracking,
-} from "../../src";
+} from "../../../src";
 
 export function expectChanged(node: ReactiveNode): void {
   expect(node.state & Changed).toBeTruthy();

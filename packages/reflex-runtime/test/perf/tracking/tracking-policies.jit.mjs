@@ -2,13 +2,13 @@ import { performance } from "node:perf_hooks";
 import {
   CONSUMER_CHANGED,
   PRODUCER_INITIAL_STATE,
-} from "../../build/esm/reactivity/shape/ReactiveMeta.js";
-import { UNINITIALIZED } from "../../build/esm/reactivity/shape/ReactiveNode.js";
-import ReactiveNode from "../../build/esm/reactivity/shape/ReactiveNode.js";
+} from "../../../build/esm/reactivity/shape/ReactiveMeta.js";
+import { UNINITIALIZED } from "../../../build/esm/reactivity/shape/ReactiveNode.js";
+import ReactiveNode from "../../../build/esm/reactivity/shape/ReactiveNode.js";
 import {
   linkEdge,
   moveIncomingEdgeAfter,
-} from "../../build/esm/reactivity/shape/methods/connect.js";
+} from "../../../build/esm/reactivity/shape/methods/connect.js";
 
 const POLICIES = [
   { id: "reorder_always" },
@@ -929,3 +929,4 @@ function main() {
 }
 
 main();
+

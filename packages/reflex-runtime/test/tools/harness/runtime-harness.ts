@@ -5,7 +5,7 @@ import {
   setHooks,
   setOptions,
   setRuntimeHooks,
-} from "../../src";
+} from "../../../src";
 
 /**
  * Reset runtime-global context state, hooks, and options for test isolation.

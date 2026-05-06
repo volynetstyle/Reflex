@@ -5,7 +5,7 @@ import {
   readProducer,
   runWatcher,
   writeProducer,
-} from "../../src";
+} from "../../runtime.test_utils";
 import {
   Changed,
   Consumer,
@@ -13,8 +13,8 @@ import {
   Reentrant,
   shouldRecompute,
   Tracking,
-} from "../../src/reactivity";
-import { linkEdge } from "../../src/reactivity/shape/graph/connect";
+} from "../../runtime.test_utils/reactivity";
+import { linkEdge } from "../../runtime.test_utils/reactivity/shape/graph/connect";
 import {
   createConsumer,
   createComputeCounter,
@@ -307,5 +307,6 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(hasSubscriber(right, target)).toBe(true);
   });
 });
+
 
 

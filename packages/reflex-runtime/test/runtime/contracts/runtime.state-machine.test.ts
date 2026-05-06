@@ -7,8 +7,8 @@ import {
   readProducer,
   runWatcher,
   writeProducer,
-} from "../../src";
-import { subtle } from "../../src/debug";
+} from "../../runtime.test_utils";
+import { subtle } from "../../runtime.test_utils/debug";
 import {
   createConsumer,
   createProducer,
@@ -109,5 +109,6 @@ describe("Reactive runtime - state and read-mode matrices", () => {
     }
   });
 });
+
 
 

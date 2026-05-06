@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const testDir = fileURLToPath(new URL(".", import.meta.url));
 const packageDir = resolve(testDir, "..", "..");
 const contractUrl = pathToFileURL(
-  resolve(testDir, "..", "tools", "runtime-contract.mjs"),
+  resolve(testDir, "..", "tools", "oracles", "runtime-contract.mjs"),
 ).href;
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const tempRoots = [];

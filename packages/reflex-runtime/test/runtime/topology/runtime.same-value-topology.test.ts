@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { readConsumer, readProducer, writeProducer } from "../../src";
+import { readConsumer, readProducer, writeProducer } from "../../runtime.test_utils";
 import {
   createComputeCounter,
   createConsumer,
@@ -64,5 +64,6 @@ describe("Reactive runtime - same-value topology pruning", () => {
     counter.expectOnly({ shared: 1 });
   });
 });
+
 
 

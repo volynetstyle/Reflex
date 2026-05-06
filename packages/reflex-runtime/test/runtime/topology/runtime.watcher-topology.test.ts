@@ -6,7 +6,7 @@ import {
   readProducer,
   runWatcher,
   writeProducer,
-} from "../../src";
+} from "../../runtime.test_utils";
 import {
   createConsumer,
   createProducer,
@@ -137,5 +137,6 @@ describe("Reactive runtime - watcher topology invalidation cardinality", () => {
     expect(invalidations).toBe(0);
   });
 });
+
 
 

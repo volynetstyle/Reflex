@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { subtle } from "../../src/debug";
-import { readConsumer, writeProducer } from "../../src";
+import { subtle } from "../../runtime.test_utils/debug";
+import { readConsumer, writeProducer } from "../../runtime.test_utils";
 import {
   createTraceHarness,
   expectTrace,
@@ -47,5 +47,6 @@ describe.skipIf(!subtle.enabled)(
     });
   },
 );
+
 
 

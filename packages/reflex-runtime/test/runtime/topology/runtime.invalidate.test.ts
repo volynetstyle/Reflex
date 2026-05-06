@@ -10,8 +10,8 @@ import {
   Reentrant,
   Tracking,
   Watcher,
-} from "../../src/reactivity";
-import { invalidateSub } from "../../src/reactivity/walkers/propagate.invalidate";
+} from "../../runtime.test_utils/reactivity";
+import { invalidateSub } from "../../runtime.test_utils/reactivity/walkers/propagate.invalidate";
 import { resetRuntime } from "../../runtime.test_utils";
 
 function createNode(state: number): ReactiveNode {
@@ -149,5 +149,6 @@ describe("Reactive runtime - invalidateSub transition matrix", () => {
     }
   });
 });
+
 
 

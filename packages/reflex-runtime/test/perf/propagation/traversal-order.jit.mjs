@@ -3,9 +3,9 @@ import {
   CONSUMER_CHANGED,
   PRODUCER_INITIAL_STATE,
   ReactiveNodeState,
-} from "../../build/esm/reactivity/shape/ReactiveMeta.js";
-import ReactiveNode from "../../build/esm/reactivity/shape/ReactiveNode.js";
-import { linkEdge } from "../../build/esm/reactivity/shape/methods/connect.js";
+} from "../../../build/esm/reactivity/shape/ReactiveMeta.js";
+import ReactiveNode from "../../../build/esm/reactivity/shape/ReactiveNode.js";
+import { linkEdge } from "../../../build/esm/reactivity/shape/methods/connect.js";
 
 const FORWARD = 0;
 const REVERSE = 1;
@@ -568,3 +568,4 @@ function main() {
 }
 
 main();
+

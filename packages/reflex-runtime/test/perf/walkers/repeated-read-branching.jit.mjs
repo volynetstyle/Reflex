@@ -9,8 +9,8 @@ import {
   resetDefaultContext,
   runWatcher,
   writeProducer,
-} from "../../build/esm/index.js";
-import { UNINITIALIZED } from "../../build/esm/reactivity/shape/ReactiveNode.js";
+} from "../../../build/esm/index.js";
+import { UNINITIALIZED } from "../../../build/esm/reactivity/shape/ReactiveNode.js";
 
 function createProducer(value) {
   return new ReactiveNode(value, null, PRODUCER_INITIAL_STATE);
@@ -195,3 +195,4 @@ function runSuite() {
 }
 
 runSuite();
+
