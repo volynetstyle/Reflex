@@ -5,7 +5,7 @@ import {
   readProducer,
   runWatcher,
   writeProducer,
-} from "../src";
+} from "../../src";
 import {
   Changed,
   Consumer,
@@ -13,8 +13,8 @@ import {
   Reentrant,
   shouldRecompute,
   Tracking,
-} from "../src/reactivity";
-import { linkEdge } from "../src/reactivity/shape/graph/connect";
+} from "../../src/reactivity";
+import { linkEdge } from "../../src/reactivity/shape/graph/connect";
 import {
   createConsumer,
   createComputeCounter,
@@ -25,8 +25,9 @@ import {
   expectLastInTail,
   hasSubscriber,
   resetRuntime,
-} from "./runtime.test_utils";
+} from "../../runtime.test_utils";
 
+/** Covers push/pull traversal invariants and tracked-prefix edge behavior. */
 describe("Reactive runtime - traversal invariants", () => {
   beforeEach(() => {
     resetRuntime();
@@ -306,3 +307,5 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(hasSubscriber(right, target)).toBe(true);
   });
 });
+
+

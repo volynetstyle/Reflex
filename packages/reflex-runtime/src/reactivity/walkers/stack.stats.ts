@@ -27,15 +27,15 @@ export function resetRuntimeWalkerStackStats(): void {
   resumeEdgeStackPeak = 0;
 }
 
-export function trimWalkerStackIfSparse<T>(
-  stack: T[],
-  stackHigh: number,
-): void {
-  const l = stack.length;
+const STACK_TRIM_FACTOR = 2;
 
-  if (l < STACK_TRIM_MIN_CAPACITY || stackHigh > l >> 2) return;
+export function trimWalkerStackIfSparse<T>(stack: T[], high: number): void {
+  const len = stack.length;
 
-  stack.length = stackHigh;
+  if (len < STACK_TRIM_MIN_CAPACITY) return;
+  if (high > len >> 2) return;
+
+  stack.length = Math.max(STACK_TRIM_MIN_CAPACITY, high << STACK_TRIM_FACTOR);
 }
 
 export function readRuntimeWalkerStackStats(

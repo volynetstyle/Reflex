@@ -57,7 +57,7 @@
     "test:coverage": "vitest run --coverage",
     "test:dev": "vitest run --config vite.dev.config.ts",
     "pretest:e2e": "pnpm build",
-    "test:e2e": "node tests/mjs/runtime.e2e.mjs",
+    "test:e2e": "node test/mjs/runtime.e2e.mjs",
     "bench": "pnpm build && vitest bench test/signal_beta.bench.ts",
     "bench:flame": "0x -- node dist/tests/ownership.run.js",
     "test:watch": "vitest",

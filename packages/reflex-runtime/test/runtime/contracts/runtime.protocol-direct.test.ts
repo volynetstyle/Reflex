@@ -6,17 +6,18 @@ import {
   readConsumerLazy,
   readProducer,
   writeProducer,
-} from "../src";
-import { recompute } from "../src/reactivity/engine/compute";
-import { refreshAndPropagateIfNeeded } from "../src/reactivity/walkers/recompute.refresh";
+} from "../../src";
+import { recompute } from "../../src/reactivity/engine/compute";
+import { refreshAndPropagateIfNeeded } from "../../src/reactivity/walkers/recompute.refresh";
 import {
   createConsumer,
   createProducer,
   hasSubscriber,
   incomingSources,
   resetRuntime,
-} from "./runtime.test_utils";
+} from "../../runtime.test_utils";
 
+/** Covers direct helper APIs that expose protocol-level runtime behavior. */
 describe("Reactive runtime - direct protocol helpers", () => {
   beforeEach(() => {
     resetRuntime();
@@ -61,3 +62,5 @@ describe("Reactive runtime - direct protocol helpers", () => {
     expect(readConsumer(sink)).toBe(2);
   });
 });
+
+

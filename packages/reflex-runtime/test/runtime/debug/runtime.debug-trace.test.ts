@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { subtle } from "../src/debug";
-import { readConsumer, writeProducer } from "../src";
+import { subtle } from "../../src/debug";
+import { readConsumer, writeProducer } from "../../src";
 import {
   createTraceHarness,
   expectTrace,
   scenario,
-} from "./runtime.test_utils";
+} from "../../runtime.test_utils";
 
+/** Covers the debug-trace oracle that higher-level semantic tests rely on. */
 describe.skipIf(!subtle.enabled)(
   "Reactive runtime - debug trace oracle",
   () => {
@@ -26,23 +27,25 @@ describe.skipIf(!subtle.enabled)(
       expect(readConsumer(g.selected)).toBe(10);
       trace.clear();
 
-    writeProducer(g.gate, false);
-    expect(readConsumer(g.selected)).toBe(20);
+      writeProducer(g.gate, false);
+      expect(readConsumer(g.selected)).toBe(20);
 
-    const summary = trace.summary();
-    if (summary.recomputes.length === 0) {
-      expect(summary.byType["recompute"] ?? 0).toBe(0);
-      return;
-    }
+      const summary = trace.summary();
+      if (summary.recomputes.length === 0) {
+        expect(summary.byType["recompute"] ?? 0).toBe(0);
+        return;
+      }
 
-    trace.expectChanged(["selected"]);
-    trace.expectRecomputed(["selected"]);
-    trace.expectProducerReads(["gate@selected", "right@selected"]);
-    trace.expectTracked(["gate->selected", "right->selected"]);
+      trace.expectChanged(["selected"]);
+      trace.expectRecomputed(["selected"]);
+      trace.expectProducerReads(["gate@selected", "right@selected"]);
+      trace.expectTracked(["gate->selected", "right->selected"]);
 
-    expect(summary.byType["cleanup:stale-sources"]).toBe(1);
+      expect(summary.byType["cleanup:stale-sources"]).toBe(1);
       expect(summary.staleCleanups).toEqual(["selected:1:left"]);
       expectTrace(trace).toHaveSingleRecompute("selected");
     });
   },
 );
+
+

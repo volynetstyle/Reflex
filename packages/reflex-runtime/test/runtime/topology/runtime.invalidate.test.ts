@@ -10,14 +10,15 @@ import {
   Reentrant,
   Tracking,
   Watcher,
-} from "../src/reactivity";
-import { invalidateSub } from "../src/reactivity/walkers/propagate.invalidate";
-import { resetRuntime } from "./runtime.test_utils";
+} from "../../src/reactivity";
+import { invalidateSub } from "../../src/reactivity/walkers/propagate.invalidate";
+import { resetRuntime } from "../../runtime.test_utils";
 
 function createNode(state: number): ReactiveNode {
   return new ReactiveNode(undefined, null, state);
 }
 
+/** Covers explicit state transitions for low-level subscriber invalidation. */
 describe("Reactive runtime - invalidateSub transition matrix", () => {
   it.each([
     {
@@ -148,3 +149,5 @@ describe("Reactive runtime - invalidateSub transition matrix", () => {
     }
   });
 });
+
+

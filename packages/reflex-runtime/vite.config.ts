@@ -11,6 +11,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    exclude: ["test/dev/**/*.dev.test.ts"],
     isolate: false,
     pool: "forks",
     coverage: {

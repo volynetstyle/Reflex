@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ReactiveNode, restoreContext, saveContext, setOptions } from "../src";
-import type { ReactiveNodeState } from "../src/reactivity";
+import { ReactiveNode, restoreContext, saveContext, setOptions } from "../../src";
+import type { ReactiveNodeState } from "../../src/reactivity";
 import {
   Consumer,
   Producer,
@@ -11,19 +11,20 @@ import {
   setTrackingVersion,
   trackReadActive,
   unlinkEdge,
-} from "../src/reactivity";
+} from "../../src/reactivity";
 import {
   expectGraphIntegrity,
   expectIncomingEdges,
   expectLastInTail,
   expectOutgoingEdges,
-} from "./runtime.test_utils";
+} from "../../runtime.test_utils";
 
 function createNode(kind: ReactiveNodeState = Producer) {
   return new ReactiveNode(undefined, null, kind);
 }
 
-describe("Reactive graph - edge wiring", () => {
+/** Covers low-level intrusive edge-list wiring and reuse invariants. */
+describe("Reactive runtime - edge wiring", () => {
   it("wires multi-edge outgoing and incoming lists bidirectionally", () => {
     const source = createNode(Producer);
     const left = createNode(Consumer);
@@ -313,3 +314,5 @@ describe("Reactive graph - edge wiring", () => {
     restoreContext(snapshot);
   });
 });
+
+

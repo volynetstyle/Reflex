@@ -11,7 +11,7 @@ import {
   saveContext,
   setHooks,
   writeProducer,
-} from "../src";
+} from "../../src";
 import {
   Changed,
   Consumer,
@@ -24,8 +24,8 @@ import {
   shouldRecompute,
   Tracking,
   Watcher,
-} from "../src/reactivity";
-import { linkEdge } from "../src/reactivity/shape/graph/connect";
+} from "../../src/reactivity";
+import { linkEdge } from "../../src/reactivity/shape/graph/connect";
 import {
   createConsumer,
   createProducer,
@@ -37,7 +37,7 @@ import {
   expectStates,
   hasSubscriber,
   resetRuntime,
-} from "./runtime.test_utils";
+} from "../../runtime.test_utils";
 
 function createNode(state: number) {
   return new ReactiveNode(undefined, null, state);
@@ -66,6 +66,7 @@ function branchPlanArbitrary(depth: number): fc.Arbitrary<BranchPlan> {
   return fc.array(branchPlanArbitrary(depth - 1), { maxLength: 3 });
 }
 
+/** Covers the core propagation and recompute walkers across edge-case graphs. */
 describe("Reactive runtime - walker invariants", () => {
   beforeEach(() => {
     resetRuntime();
@@ -770,3 +771,5 @@ describe("Reactive runtime - walker invariants", () => {
     }
   });
 });
+
+

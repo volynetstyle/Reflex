@@ -5,8 +5,9 @@ import {
   readRuntimeWalkerStackStats,
   resetRuntimeWalkerStackStats,
   trimWalkerStackIfSparse,
-} from "../src/reactivity/walkers/stack.stats";
+} from "../../src/reactivity/walkers/stack.stats";
 
+/** Covers debug-only stack-stat counters for walker storage management. */
 describe("Reactive runtime - walker stack stats", () => {
   it("trims sparse walker stacks only after the minimum capacity", () => {
     const small = Array.from({ length: 255 }, (_, index) => index);
@@ -33,3 +34,5 @@ describe("Reactive runtime - walker stack stats", () => {
     });
   });
 });
+
+

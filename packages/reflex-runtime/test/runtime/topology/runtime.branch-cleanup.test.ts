@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { readConsumer, readProducer, writeProducer } from "../src";
+import { readConsumer, readProducer, writeProducer } from "../../src";
 import {
   createConsumer,
   createProducer,
@@ -7,7 +7,7 @@ import {
   expectSources,
   expectSubscriber,
   resetRuntime,
-} from "./runtime.test_utils";
+} from "../../runtime.test_utils";
 
 function createBranchCase(initialGate: boolean) {
   const gate = createProducer(initialGate);
@@ -20,6 +20,7 @@ function createBranchCase(initialGate: boolean) {
   return { gate, left, right, selected };
 }
 
+/** Covers dynamic-branch rewiring and stale dependency cleanup semantics. */
 describe("Reactive runtime - branch cleanup matrix", () => {
   beforeEach(() => {
     resetRuntime();
@@ -93,3 +94,5 @@ describe("Reactive runtime - branch cleanup matrix", () => {
     expect(readConsumer(g.selected)).toBe(21);
   });
 });
+
+

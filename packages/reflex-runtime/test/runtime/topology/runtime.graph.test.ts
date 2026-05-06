@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { disposeNode, readConsumer, readProducer, writeProducer } from "../src";
+import { disposeNode, readConsumer, readProducer, writeProducer } from "../../src";
 import {
   createConsumer,
   createProducer,
@@ -11,8 +11,9 @@ import {
   expectSources,
   expectSubscriber,
   resetRuntime,
-} from "./runtime.test_utils";
+} from "../../runtime.test_utils";
 
+/** Covers graph-shape invariants that should hold after ordinary runtime use. */
 describe("Reactive runtime - graph topology and consistency", () => {
   beforeEach(() => {
     resetRuntime();
@@ -114,3 +115,5 @@ describe("Reactive runtime - graph topology and consistency", () => {
     }
   });
 });
+
+

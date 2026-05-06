@@ -7,8 +7,8 @@ import {
   readProducer,
   runWatcher,
   writeProducer,
-} from "../src";
-import { subtle } from "../src/debug";
+} from "../../src";
+import { subtle } from "../../src/debug";
 import {
   createConsumer,
   createProducer,
@@ -18,8 +18,9 @@ import {
   expectGraph,
   expectInvalid,
   resetRuntime,
-} from "./runtime.test_utils";
+} from "../../runtime.test_utils";
 
+/** Covers state-bit and read-mode matrices across the main subscriber kinds. */
 describe("Reactive runtime - state and read-mode matrices", () => {
   it.each([
     {
@@ -108,3 +109,5 @@ describe("Reactive runtime - state and read-mode matrices", () => {
     }
   });
 });
+
+

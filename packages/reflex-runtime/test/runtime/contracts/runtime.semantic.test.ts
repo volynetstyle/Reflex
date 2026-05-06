@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ConsumerReadMode, readConsumer, readProducer, writeProducer } from "../src";
+import { ConsumerReadMode, readConsumer, readProducer, writeProducer } from "../../src";
 import {
   createConsumer,
   createComputeCounter,
@@ -10,8 +10,9 @@ import {
   expectNotInvalid,
   expectSources,
   resetRuntime,
-} from "./runtime.test_utils";
+} from "../../runtime.test_utils";
 
+/** Covers semantic contracts around lazy reads, eager reads, and subscriptions. */
 describe("Reactive runtime - semantic correctness", () => {
   beforeEach(() => {
     resetRuntime();
@@ -105,3 +106,5 @@ describe("Reactive runtime - semantic correctness", () => {
   });
 
 });
+
+

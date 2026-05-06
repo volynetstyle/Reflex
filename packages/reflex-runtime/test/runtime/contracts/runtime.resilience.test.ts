@@ -10,70 +10,21 @@ import {
   readProducer,
   runWatcher,
   writeProducer,
-} from "../src";
+} from "../../src";
 import {
   createConsumer,
   createProducer,
   createWatcher,
   resetRuntime,
-} from "./runtime.test_utils";
+} from "../../runtime.test_utils";
 
+/** Covers failure recovery and bookkeeping restoration across reentrant paths. */
 describe("Reactive runtime - resilience and recovery", () => {
   beforeEach(() => {
     resetRuntime();
   });
 
-  // it("restores propagation bookkeeping before rethrowing invalidation hook errors", () => {
-  //   const settled = vi.fn();
-  //   const failure = new Error("watcher failed");
-
-  //   resetRuntime({
-  //     onSinkInvalidated() {
-  //       throw failure;
-  //     },
-  //     onReactiveSettled: settled,
-  //   });
-
-  //   const source = createProducer(1);
-  //   const watcher = createWatcher(() => {
-  //     readProducer(source);
-  //   });
-
-  //   runWatcher(watcher);
-  //   settled.mockClear();
-
-  //   expect(() => writeProducer(source, 2));
-  //   expect(getPropagationDepth()).toBe(0);
-  //   expect(settled).toHaveBeenCalledTimes(1);
-  // });
-
-  // it("continues propagating after a previous invalidation error", () => {
-  //   const settled = vi.fn();
-  //   let shouldThrow = true;
-
-  //   resetRuntime({
-  //     onSinkInvalidated() {
-  //       if (shouldThrow) throw new Error("boom");
-  //     },
-  //     onReactiveSettled: settled,
-  //   });
-
-  //   const source = createProducer(1);
-  //   const watcher = createWatcher(() => {
-  //     readProducer(source);
-  //   });
-
-  //   runWatcher(watcher);
-
-  //   expect(() => writeProducer(source, 2));
-  //   expect(getPropagationDepth()).toBe(0);
-
-  //   shouldThrow = false;
-  //   writeProducer(source, 3);
-
-  //   expect(getPropagationDepth()).toBe(0);
-  //   expect(settled).toHaveBeenCalledTimes(2);
-  // });
+  // Pending: re-enable once invalidation-hook error semantics are finalized.
 
   it("preserves outer propagation when an invalidation hook performs nested writes", () => {
     let innerSource!: ReturnType<typeof createProducer>;
@@ -161,3 +112,5 @@ describe("Reactive runtime - resilience and recovery", () => {
     expect(runs).toEqual([1]);
   });
 });
+
+

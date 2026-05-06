@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   RUNTIME_DEBUG_PROTOCOL_VERSION,
   subtle as debugSubtle,
-} from "../src/debug";
+} from "../../src/debug";
 import {
   readConsumer,
   readProducer,
   runWatcher,
   subtle,
   untracked,
-} from "../src";
+} from "../../src";
 import {
   createConsumer,
   createProducer,
@@ -17,8 +17,9 @@ import {
   hasSubscriber,
   incomingSources,
   resetRuntime,
-} from "./runtime.test_utils";
+} from "../../runtime.test_utils";
 
+/** Covers the public subtle/debug surface and its graph introspection helpers. */
 describe("Reactive runtime - subtle debug surface", () => {
   beforeEach(() => {
     resetRuntime();
@@ -201,3 +202,5 @@ describe("Reactive runtime - subtle debug surface", () => {
     );
   });
 });
+
+

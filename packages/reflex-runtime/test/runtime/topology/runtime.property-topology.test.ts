@@ -1,14 +1,15 @@
 import fc from "fast-check";
 import { beforeEach, describe, expect, it } from "vitest";
-import { readConsumer, readProducer, writeProducer } from "../src";
+import { readConsumer, readProducer, writeProducer } from "../../src";
 import {
   createComputeCounter,
   createConsumer,
   createProducer,
   expectGraphIntegrity,
   resetRuntime,
-} from "./runtime.test_utils";
+} from "../../runtime.test_utils";
 
+/** Covers generated-DAG property checks for recompute cardinality and integrity. */
 describe("Reactive runtime - generated topology properties", () => {
   beforeEach(() => {
     resetRuntime();
@@ -78,3 +79,5 @@ describe("Reactive runtime - generated topology properties", () => {
     );
   });
 });
+
+

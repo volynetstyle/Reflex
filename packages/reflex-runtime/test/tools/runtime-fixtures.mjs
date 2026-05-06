@@ -1,3 +1,7 @@
+/**
+ * Shared low-level graph fixtures for tests that intentionally work with the
+ * raw Reflex runtime node shape instead of the portable contract adapter.
+ */
 export function createRuntimeFixtures(runtime) {
   const {
     CONSUMER_INITIAL_STATE,
@@ -20,6 +24,9 @@ export function createRuntimeFixtures(runtime) {
     return new ReactiveNode(null, compute, WATCHER_INITIAL_STATE);
   }
 
+  /**
+   * Producer -> conditional consumer fixture used by branch pruning tests.
+   */
   function branchSwitch(options = {}) {
     const gate = createProducer(options.gate ?? true);
     const left = createProducer(options.left ?? 1);
@@ -37,6 +44,9 @@ export function createRuntimeFixtures(runtime) {
     };
   }
 
+  /**
+   * Classic diamond dependency graph used to verify shared-parent semantics.
+   */
   function diamond(options = {}) {
     const sharedCompute = options.shared ?? ((value) => value * 2);
     const leftCompute = options.left ?? ((value) => value + 1);

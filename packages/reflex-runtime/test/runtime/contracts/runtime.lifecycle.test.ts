@@ -9,8 +9,8 @@ import {
   readConsumer,
   readProducer,
   writeProducer,
-} from "../src";
-import { connect, disconnect } from "../src/reactivity/shape/graph/connect";
+} from "../../src";
+import { connect, disconnect } from "../../src/reactivity/shape/graph/connect";
 import {
   createConsumer,
   createProducer,
@@ -22,8 +22,9 @@ import {
   expectSources,
   expectSubscriber,
   resetRuntime,
-} from "./runtime.test_utils";
+} from "../../runtime.test_utils";
 
+/** Covers disposal, connect/disconnect, and state-bit lifecycle characterization. */
 describe("Reactive runtime - lifecycle and state characterization", () => {
   beforeEach(() => {
     resetRuntime();
@@ -70,26 +71,7 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
-  // it("keeps disposed consumers terminal when they are read again", () => {
-  //   const source = createProducer(1);
-  //   const spy = vi.fn(() => readProducer(source) * 2);
-  //   const target = createConsumer(spy);
-
-  //   expect(readConsumer(target)).toBe(2);
-
-  //   disposeNode(target);
-
-  //   expect(readConsumer(target)).toBe(2);
-  //   expect(incomingSources(target)).toEqual([]);
-  //   expect(hasSubscriber(source, target)).toBe(false);
-  //   expect(target.state & DIRTY_STATE).toBe(0);
-  //   expect(spy).toHaveBeenCalledTimes(1);
-
-  //   writeProducer(source, 2);
-
-  //   expect(readConsumer(target)).toBe(2);
-  //   expect(spy).toHaveBeenCalledTimes(1);
-  // });
+  // Pending: re-enable once post-disposal read semantics are intentionally specified.
 
   it("eagerly detaches downstream subscribers when an intermediate consumer is disposed", () => {
     const source = createProducer(1);
@@ -154,3 +136,5 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     expectClean(target);
   });
 });
+
+

@@ -8,14 +8,15 @@ import {
   readProducer,
   runWatcher,
   writeProducer,
-} from "../src";
+} from "../../src";
 import {
   createConsumer,
   createProducer,
   createWatcher,
   resetRuntime,
-} from "./runtime.test_utils";
+} from "../../runtime.test_utils";
 
+/** Covers runtime hook replacement, scheduling, and cleanup semantics. */
 describe("Reactive runtime - hooks and resilience", () => {
   beforeEach(() => {
     resetRuntime();
@@ -114,43 +115,7 @@ describe("Reactive runtime - hooks and resilience", () => {
     expect(innerWatcher.state & DIRTY_STATE).toBeTruthy();
   });
 
-  // it("fails fast on the first invalidation hook error", () => {
-  //   const settled = vi.fn();
-  //   const invalidated: string[] = [];
-  //   const firstError = new Error("first watcher failure");
-  //   let left!: ReturnType<typeof createWatcher>;
-  //   let right!: ReturnType<typeof createWatcher>;
-
-  //   resetRuntime({
-  //     onSinkInvalidated(node) {
-  //       if (node === left) {
-  //         invalidated.push("left");
-  //         throw firstError;
-  //       }
-
-  //       if (node === right) {
-  //         invalidated.push("right");
-  //       }
-  //     },
-  //     onReactiveSettled: settled,
-  //   });
-
-  //   const source = createProducer(1);
-  //   left = createWatcher(() => {
-  //     readProducer(source);
-  //   });
-  //   right = createWatcher(() => {
-  //     readProducer(source);
-  //   });
-
-  //   runWatcher(left);
-  //   runWatcher(right);
-  //   settled.mockClear();
-
-  //   expect(() => writeProducer(source, 2)).toThrow(firstError);
-  //   expect(invalidated).toEqual(["left"]);
-  //   expect(settled).toHaveBeenCalledTimes(1);
-  // });
+  // Pending: re-enable once hook-error propagation semantics are finalized.
 
   it("runs watcher cleanup exactly once per rerun and once on disposal", () => {
     const cleanup = vi.fn();
@@ -205,3 +170,5 @@ describe("Reactive runtime - hooks and resilience", () => {
     expect(right.state & DIRTY_STATE).toBe(0);
   });
 });
+
+

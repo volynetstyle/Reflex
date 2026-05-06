@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { readConsumer, readProducer, writeProducer } from "../src";
+import { readConsumer, readProducer, writeProducer } from "../../src";
 import {
   createConsumer,
   createProducer,
   expectClean,
   resetRuntime,
-} from "./runtime.test_utils";
+} from "../../runtime.test_utils";
 
+/** Covers observable runtime guarantees that should remain stable for consumers. */
 describe("Reactive runtime - public behavior guarantees", () => {
   beforeEach(() => {
     resetRuntime();
@@ -72,3 +73,5 @@ describe("Reactive runtime - public behavior guarantees", () => {
     expect(readConsumer(current)).toBe(11);
   });
 });
+
+

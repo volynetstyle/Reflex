@@ -6,14 +6,15 @@ import {
   readProducer,
   runWatcher,
   writeProducer,
-} from "../src";
+} from "../../src";
 import {
   createConsumer,
   createProducer,
   createWatcher,
   resetRuntime,
-} from "./runtime.test_utils";
+} from "../../runtime.test_utils";
 
+/** Covers watcher invalidation cardinality across direct and shared fanout. */
 describe("Reactive runtime - watcher topology invalidation cardinality", () => {
   beforeEach(() => {
     resetRuntime();
@@ -136,3 +137,5 @@ describe("Reactive runtime - watcher topology invalidation cardinality", () => {
     expect(invalidations).toBe(0);
   });
 });
+
+

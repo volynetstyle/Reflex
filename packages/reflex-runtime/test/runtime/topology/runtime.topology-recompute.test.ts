@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { readConsumer, readProducer, writeProducer } from "../src";
+import { readConsumer, readProducer, writeProducer } from "../../src";
 import {
   createConsumer,
   createComputeCounter,
   createProducer,
   resetRuntime,
-} from "./runtime.test_utils";
+} from "../../runtime.test_utils";
 
+/** Covers recompute cardinality across representative topology shapes. */
 describe("Reactive runtime - topology recompute cardinality", () => {
   beforeEach(() => {
     resetRuntime();
@@ -163,3 +164,5 @@ describe("Reactive runtime - topology recompute cardinality", () => {
     topology.counter.expectOnce(topology.labels);
   });
 });
+
+

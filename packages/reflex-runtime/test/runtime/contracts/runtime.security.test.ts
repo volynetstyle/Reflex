@@ -9,8 +9,9 @@ import {
   restoreContext,
   setHooks,
   setReactiveSettledHook,
-} from "../src/reactivity/context";
+} from "../../src/reactivity/context";
 
+/** Covers security-sensitive hook normalization and replacement behavior. */
 describe("Reactive runtime - security regressions", () => {
   it("normalizes hook payloads instead of inheriting __proto__ pollution", () => {
     const settled = vi.fn();
@@ -96,3 +97,5 @@ describe("Reactive runtime - security regressions", () => {
     expect(getReactiveSettledHook()).toBe(previous);
   });
 });
+
+

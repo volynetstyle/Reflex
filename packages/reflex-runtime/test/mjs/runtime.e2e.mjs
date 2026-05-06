@@ -6,12 +6,16 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const testDir = fileURLToPath(new URL(".", import.meta.url));
 const packageDir = resolve(testDir, "..", "..");
-const fixtureUrl = pathToFileURL(
-  resolve(testDir, "..", "tools", "runtime-fixtures.mjs"),
+const contractUrl = pathToFileURL(
+  resolve(testDir, "..", "tools", "runtime-contract.mjs"),
 ).href;
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const tempRoots = [];
 
+/**
+ * Run commands with a per-test npm cache so the packed-consumer flow stays
+ * isolated from the workspace.
+ */
 function runCommand(command, args, cwd, cacheDir) {
   const env = {
     ...process.env,
@@ -82,6 +86,10 @@ function parseJsonOutput(output) {
   );
 }
 
+/**
+ * Pack the current workspace package the same way an external consumer would
+ * receive it from npm.
+ */
 function packRuntime(tempRoot) {
   const cacheDir = join(tempRoot, ".npm-cache");
   const output = runCommand(
@@ -129,121 +137,50 @@ function installPackedRuntime(tempRoot, tarballPath) {
   return appDir;
 }
 
-function createScenarioSource(importBlock, useSharedFixtures = false) {
-  const fixtureBlock = useSharedFixtures
-    ? `import { createRuntimeFixtures } from "${fixtureUrl}";
+/**
+ * Generate a tiny consumer entrypoint that imports the packed runtime and runs
+ * the shared portable contract suite against it.
+ */
+function createScenarioSource(importBlock, label, format) {
+  if (format === "cjs") {
+    return `${importBlock}
 
-const { createProducer, createConsumer, createWatcher } = createRuntimeFixtures({
-  CONSUMER_INITIAL_STATE,
-  PRODUCER_INITIAL_STATE,
-  ReactiveNode,
-  WATCHER_INITIAL_STATE,
-  readConsumer,
-  readProducer,
+void (async () => {
+  const {
+    createReflexRuntimeContractAdapter,
+    runRuntimeContractTests,
+  } = await import("${contractUrl}");
+
+  const adapter = createReflexRuntimeContractAdapter(runtime);
+  const results = runRuntimeContractTests(adapter, { label: ${JSON.stringify(label)} });
+
+  console.log(JSON.stringify(results));
+})().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
 });
-`
-    : `function createProducer(value) {
-  return new ReactiveNode(value, null, PRODUCER_INITIAL_STATE);
-}
-
-function createConsumer(compute) {
-  return new ReactiveNode(undefined, compute, CONSUMER_INITIAL_STATE);
-}
-
-function createWatcher(compute) {
-  return new ReactiveNode(null, compute, WATCHER_INITIAL_STATE);
-}
 `;
+  }
 
-  return `${importBlock}
+  return `import {
+  createReflexRuntimeContractAdapter,
+  runRuntimeContractTests,
+} from "${contractUrl}";
 
-${fixtureBlock}
+${importBlock}
 
-resetState();
+const adapter = createReflexRuntimeContractAdapter(runtime);
+const results = runRuntimeContractTests(adapter, { label: ${JSON.stringify(label)} });
 
-const pending = [];
-let invalidations = 0;
-
-setHooks({
-  onSinkInvalidated(node) {
-    invalidations += 1;
-
-    if (!pending.includes(node)) {
-      pending.push(node);
-    }
-  },
-});
-
-const flag = createProducer(true);
-const left = createProducer(1);
-const right = createProducer(10);
-const selected = createConsumer(() =>
-  readProducer(flag) ? readProducer(left) : readProducer(right),
-);
-const effectValues = [];
-const cleanupValues = [];
-
-const watcher = createWatcher(() => {
-  const value = readConsumer(selected);
-  effectValues.push(value);
-
-  return () => {
-    cleanupValues.push(value);
-  };
-});
-
-runWatcher(watcher);
-
-writeProducer(left, 2);
-writeProducer(right, 99);
-writeProducer(flag, false);
-
-const queueBeforeFlush = pending.length;
-
-while (pending.length > 0) {
-  runWatcher(pending.shift());
-}
-
-const valueAfterFlush = readConsumer(selected);
-
-writeProducer(left, 3);
-
-const staleBranchQueue = pending.length;
-const valueAfterStaleBranchWrite = readConsumer(selected);
-
-writeProducer(right, 99);
-
-const sameValueQueue = pending.length;
-
-disposeWatcher(watcher);
-
-writeProducer(right, 100);
-
-const postDisposeQueue = pending.length;
-const finalSelected = readConsumer(selected);
-
-console.log(
-  JSON.stringify({
-    cleanupValues,
-    effectValues,
-    finalSelected,
-    invalidations,
-    postDisposeQueue,
-    queueBeforeFlush,
-    sameValueQueue,
-    staleBranchQueue,
-    valueAfterFlush,
-    valueAfterStaleBranchWrite,
-  }),
-);
+console.log(JSON.stringify(results));
 `;
 }
 
-function runScenario(appDir, filename, importBlock, useSharedFixtures = false) {
+function runScenario(appDir, filename, importBlock, label, format) {
   const cacheDir = join(appDir, ".npm-cache");
   writeFileSync(
     join(appDir, filename),
-    createScenarioSource(importBlock, useSharedFixtures),
+    createScenarioSource(importBlock, label, format),
   );
 
   const output = runCommand(process.execPath, [filename], appDir, cacheDir);
@@ -259,30 +196,35 @@ try {
   const esm = runScenario(
     appDir,
     "scenario.mjs",
-    'import { CONSUMER_INITIAL_STATE, PRODUCER_INITIAL_STATE, ReactiveNode, WATCHER_INITIAL_STATE, disposeWatcher, readConsumer, readProducer, resetState, runWatcher, setHooks, writeProducer } from "@volynets/reflex-runtime";',
-    true,
+    'import * as runtime from "@volynets/reflex-runtime";',
+    "esm",
+    "esm",
   );
   const cjs = runScenario(
     appDir,
     "scenario.cjs",
-    'const { CONSUMER_INITIAL_STATE, PRODUCER_INITIAL_STATE, ReactiveNode, WATCHER_INITIAL_STATE, disposeWatcher, readConsumer, readProducer, resetState, runWatcher, setHooks, writeProducer } = require("@volynets/reflex-runtime");',
+    'const runtime = require("@volynets/reflex-runtime");',
+    "cjs",
+    "cjs",
   );
 
-  const expected = {
-    cleanupValues: [1, 99],
-    effectValues: [1, 99],
-    finalSelected: 100,
-    invalidations: 1,
-    postDisposeQueue: 0,
-    queueBeforeFlush: 1,
-    sameValueQueue: 0,
-    staleBranchQueue: 0,
-    valueAfterFlush: 99,
-    valueAfterStaleBranchWrite: 99,
-  };
+  const expectedNames = [
+    "computed values are lazy and cached until a dependency changes",
+    "rapid successive writes expose the latest value",
+    "dynamic dependencies unsubscribe from stale branches",
+    "diamond graphs recompute each derived node at most once per read",
+    "effects are scheduled once for a burst and observe flushed state",
+    "disposed effects stop observing future writes",
+  ];
 
-  assert.deepStrictEqual(esm, expected);
-  assert.deepStrictEqual(cjs, expected);
+  assert.deepStrictEqual(
+    esm,
+    expectedNames.map((name) => `esm: ${name}`),
+  );
+  assert.deepStrictEqual(
+    cjs,
+    expectedNames.map((name) => `cjs: ${name}`),
+  );
 } finally {
   cleanupTempRoots();
 }

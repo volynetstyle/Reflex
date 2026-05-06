@@ -1,7 +1,6 @@
-import { recompute } from "../engine/compute";
 import type { ReactiveEdge, ReactiveNode } from "../shape";
 import { Changed, Invalid } from "../shape";
-import { propagateOnce } from "./propagate.once";
+import { refresh } from "./recompute.refresh";
 import {
   noteShouldRecomputeStackUsage,
   readRuntimeWalkerStackStats,
@@ -16,6 +15,31 @@ import {
  */
 const stack: ReactiveEdge[] = [];
 let high = 0;
+/**
+ * Reset current walker slice without touching stack capacity.
+ *
+ * Used for BAIL paths where the caller is expected to fallback into
+ * walkBranch and may immediately reuse the same shared stack.
+ */
+function resetStackBase(base: number): void {
+  high = base;
+}
+
+/**
+ * Release current walker slice and optionally trim retained capacity.
+ *
+ * Used on final exits where traversal is actually done.
+ */
+function releaseStackBase(base: number): void {
+  high = base;
+  trimWalkerStackIfSparse(stack, base);
+}
+
+function assertIncomingEdge(node: ReactiveNode, edge: ReactiveEdge): void {
+  if (__DEV__ && edge.to !== node) {
+    throw new Error("walker invariant violation: edge.to !== node");
+  }
+}
 
 function pushStack(edge: ReactiveEdge, top: number): number {
   stack[top++] = edge;
@@ -28,6 +52,26 @@ function restoreStackBase(base: number): void {
   trimWalkerStackIfSparse(stack, base);
 }
 
+/**
+ * Clear Invalid flag for the current node and all nodes collected on stack
+ * between `base` and `top`.
+ *
+ * Used when the walk proves that the inspected dependency path is clean.
+ */
+export function clearInvalid(
+  node: ReactiveNode,
+  top: number,
+  base: number,
+): void {
+  node.state &= ~Invalid;
+
+  while (top > base) {
+    const sub = stack[--top]!.to;
+    sub.state &= ~Invalid;
+  }
+
+  releaseStackBase(base);
+}
 /**
  * Walk result:
  *
@@ -47,43 +91,6 @@ export function readShouldRecomputeStackStats(): {
 }
 
 /**
- * Recompute `node` and, if it changed, propagate dirtiness to its outgoing users.
- *
- * `edge` must be an outgoing edge from `node`.
- */
-function refresh(node: ReactiveNode, edge: ReactiveEdge): boolean {
-  if (__DEV__ && edge.from !== node) {
-    throw new Error("refresh invariant violation");
-  }
-
-  const changed = recompute(node);
-
-  // Only propagate if this node has side-fanout.
-  // A single direct parent is handled by the current walk.
-  if (changed && (edge.prevOut !== null || edge.nextOut !== null)) {
-    propagateOnce(node);
-  }
-
-  return changed;
-}
-
-/**
- * Clear Invalid flag for the current node and all nodes collected on stack
- * between `base` and `top`.
- *
- * Used when the walk proves that the inspected dependency path is clean.
- */
-function clearInvalid(node: ReactiveNode, top: number, base: number): void {
-  node.state &= ~Invalid;
-
-  while (top > base) {
-    stack[--top]!.to.state &= ~Invalid;
-  }
-
-  restoreStackBase(base);
-}
-
-/**
  * Fast-path walker for a linear dependency chain.
  *
  * It follows `edge.from` while every visited node has at most one dependency.
@@ -97,12 +104,13 @@ function clearInvalid(node: ReactiveNode, top: number, base: number): void {
  * where the dependency path is narrow and can be resolved without full DFS.
  */
 export function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
+  if (__DEV__) assertIncomingEdge(node, edge);
+
   const base = high;
   let top = base;
   let dirty = false;
 
   while (true) {
-    // Current node is already known changed.
     if ((node.state & Changed) !== 0) {
       dirty = true;
       break;
@@ -111,42 +119,36 @@ export function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
     const dep = edge.from;
     const state = dep.state;
 
-    // Direct dependency changed.
-    // Pull it now and decide whether this path is dirty.
     if ((state & Changed) !== 0) {
       high = top;
       dirty = refresh(dep, edge);
       break;
     }
 
-    // Dependency is invalid, so it may need to be pulled.
     if ((state & Invalid) !== 0) {
       const deps = dep.firstIn;
 
       if (deps !== null) {
-        // More than one dependency means this is no longer a line.
         if (deps.nextIn !== null) {
-          restoreStackBase(base);
+          resetStackBase(base);
           return BAIL;
         }
 
-        // Descend one level.
-        top = pushStack(edge, top);
+        stack[top++] = edge;
+        if (__DEV__) noteShouldRecomputeStackUsage(top);
+
         edge = deps;
         node = dep;
         continue;
       }
 
-      // Invalid leaf: recompute directly.
       high = top;
       dirty = refresh(dep, edge);
       break;
     }
 
-    // Current dependency is clean, but there are siblings.
-    // Linear walker cannot prove the whole branch clean.
     if (edge.nextIn !== null) {
-      restoreStackBase(base);
+      resetStackBase(base);
       return BAIL;
     }
 
@@ -154,13 +156,11 @@ export function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
     return CLEAN;
   }
 
-  // Recompute happened but value stayed equal.
   if (!dirty) {
     clearInvalid(node, top, base);
     return CLEAN;
   }
 
-  // Bubble the change back up through the saved parent edges.
   while (top > base) {
     const parent = stack[--top]!;
     high = top;
@@ -174,7 +174,7 @@ export function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
     }
   }
 
-  restoreStackBase(base);
+  releaseStackBase(base);
   return DIRTY;
 }
 

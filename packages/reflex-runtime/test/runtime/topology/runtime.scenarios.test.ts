@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { readConsumer, writeProducer } from "../src";
-import { subtle } from "../src/debug";
+import { readConsumer, writeProducer } from "../../src";
+import { subtle } from "../../src/debug";
 import {
   expectGraph,
   expectRuntime,
@@ -8,8 +8,9 @@ import {
   scenario,
   createTraceHarness,
   resetRuntime,
-} from "./runtime.test_utils";
+} from "../../runtime.test_utils";
 
+/** Covers reusable scenario builders that other suites depend on. */
 describe("Reactive runtime - reusable scenario coverage", () => {
   beforeEach(() => {
     resetRuntime();
@@ -70,3 +71,5 @@ describe("Reactive runtime - reusable scenario coverage", () => {
     },
   );
 });
+
+

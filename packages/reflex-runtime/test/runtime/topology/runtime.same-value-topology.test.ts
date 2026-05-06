@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { readConsumer, readProducer, writeProducer } from "../src";
+import { readConsumer, readProducer, writeProducer } from "../../src";
 import {
   createComputeCounter,
   createConsumer,
   createProducer,
   resetRuntime,
-} from "./runtime.test_utils";
+} from "../../runtime.test_utils";
 
+/** Covers same-value recompute behavior across shared topology. */
 describe("Reactive runtime - same-value topology pruning", () => {
   beforeEach(() => {
     resetRuntime();
@@ -63,3 +64,5 @@ describe("Reactive runtime - same-value topology pruning", () => {
     counter.expectOnly({ shared: 1 });
   });
 });
+
+

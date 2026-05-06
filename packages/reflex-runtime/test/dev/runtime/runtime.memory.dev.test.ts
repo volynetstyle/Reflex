@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { readConsumer, readProducer, resetState, writeProducer } from "../src";
-import { subtle } from "../src/debug";
-import { createConsumer, createProducer } from "../test/runtime.test_utils";
+import { readConsumer, readProducer, resetState, writeProducer } from "../../../src";
+import { subtle } from "../../../src/debug";
+import { createConsumer, createProducer } from "../../runtime.test_utils";
 
 describe.skipIf(!subtle.enabled)("Reactive runtime - dev memory guardrails", () => {
   it("trims should-recompute walker stack references after a deep pull", () => {
@@ -46,3 +46,4 @@ describe.skipIf(!subtle.enabled)("Reactive runtime - dev memory guardrails", () 
     expect(subtle.history()).toHaveLength(32);
   });
 });
+
