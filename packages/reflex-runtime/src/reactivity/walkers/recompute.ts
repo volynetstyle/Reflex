@@ -4,7 +4,7 @@ import { BAIL, DIRTY, walkBranch, walkLine } from "./recompute.branch";
 
 const INVALID_REENTRANT = Invalid | Reentrant;
 
-function isChanged(node: ReactiveNode, state: number): boolean {
+function isChanged(node: ReactiveNode, state: number = 0): boolean {
   // Already known dirty.
   if ((state & Changed) !== 0) return true;
 

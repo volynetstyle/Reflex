@@ -1,8 +1,10 @@
-import {
-  readConsumerEager,
-  readConsumerLazy,
-} from "@volynets/reflex-runtime";
+import type { ReactiveNode } from "@volynets/reflex-runtime";
+import { readConsumerEager, readConsumerLazy } from "@volynets/reflex-runtime";
 import { createComputedNode } from "../infra/factory";
+
+function computedGetter<T>(this: ReactiveNode<T>): T {
+  return readConsumerLazy(this);
+}
 
 /**
  * Creates a lazy derived accessor.
@@ -45,8 +47,7 @@ import { createComputedNode } from "../infra/factory";
  * @see effect
  */
 export function computed<T>(fn: () => T): Computed<T> {
-  const node = createComputedNode(fn);
-  return (() => readConsumerLazy(node)) as Computed<T>;
+  return computedGetter.bind(createComputedNode(fn)) as Computed<T>;
 }
 
 /**
@@ -89,5 +90,5 @@ export function computed<T>(fn: () => T): Computed<T> {
 export function memo<T>(fn: () => T): Memo<T> {
   const node = createComputedNode(fn);
   readConsumerEager(node);
-  return (() => readConsumerLazy(node)) as Memo<T>;
+  return computedGetter.bind(node) as Memo<T>;
 }

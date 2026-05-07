@@ -5,6 +5,7 @@ import {
   runWatcher,
   untracked,
   withCleanupRegistrar,
+  watcher,
 } from "@volynets/reflex-runtime";
 import type { ReactiveNode } from "@volynets/reflex-runtime";
 import { createWatcherNode, createWatcherRankedrNode } from "../infra/factory";
@@ -135,11 +136,14 @@ export function withEffectCleanupRegistrar<T>(
  */
 export function effect(fn: EffectFn): Destructor {
   const node = createWatcherNode(fn);
-  runWatcher(node);
+  const run = watcher.run;
+  const dispose = watcher.dispose;
 
-  const dispose = disposeWatcher.bind(null, node) as Destructor;
-  registerWatcherCleanup(dispose);
-  return dispose;
+  run(node);
+
+  const disposer: Destructor = dispose.bind(null, node);
+  registerWatcherCleanup(disposer);
+  return disposer;
 }
 
 export type ReactionFn<T> = (value: T, prev: T) => void;

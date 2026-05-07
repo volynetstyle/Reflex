@@ -1,4 +1,5 @@
 import {
+  ReactiveNode,
   readProducer,
   writeProducer,
 } from "@volynets/reflex-runtime";
@@ -52,17 +53,24 @@ import { createSignalNode } from "../infra/factory";
  * @see memo
  * @see effect
  */
+
 export function signal<T>(initialValue: T): readonly [Signal<T>, Setter<T>] {
   const node = createSignalNode(initialValue);
 
-  function set(input: SetInput<T>) {
-    const payload = node.payload;
-    const next =
-      typeof input === "function"
-        ? (input as (prev: T) => T)(payload as T)
-        : input;
-    writeProducer(node, next);
-  }
+  return [
+    getter.bind(node) as Signal<T>,
+    setter.bind(node) as Setter<T>,
+  ] as const;
+}
 
-  return [(() => readProducer(node)) as Signal<T>, set as Setter<T>] as const;
+function getter<T>(this: ReactiveNode<T>): T {
+  return readProducer(this);
+}
+
+function setter<T>(this: ReactiveNode<T>, input: SetInput<T>): void {
+  const next =
+    typeof input === "function"
+      ? (input as (prev: T) => T)(this.payload as T)
+      : input;
+  writeProducer(this, next);
 }

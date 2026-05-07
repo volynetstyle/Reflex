@@ -283,7 +283,7 @@ describe("Reactive runtime - traversal invariants", () => {
 
     dep.state |= Invalid;
 
-    expect(shouldRecompute(root)).toBe(false);
+    expect(shouldRecompute(root, root.state)).toBe(false);
     expect(depSpy).toHaveBeenCalledTimes(2);
     expect(dep.state & Invalid).toBeFalsy();
   });
