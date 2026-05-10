@@ -7,7 +7,6 @@ import {
   effect,
   flush,
   signal,
-  withEffectCleanupRegistrar,
 } from "../dist/esm/unstable/index.js";
 import * as SolidSignalsModule from "../../reflex-runtime/node_modules/@solidjs/signals/dist/prod.js";
 
@@ -141,11 +140,7 @@ type SelectionCase = BenchCase & { readProjection(id: number): boolean };
 function createReflexSelectionCase(rows = MEDIUM, mode: SelectionMode = "switch"): SelectionCase {
   createRuntime({ effectStrategy: "flush" });
   const [selected, setSelected] = signal<number | undefined>(undefined);
-  const cleanups: Array<() => void> = [];
-  const projection = withEffectCleanupRegistrar(
-    (c) => { cleanups.push(c); },
-    () => createReflexProjection(selected, (v) => v, (v) => v !== undefined, { fallback: false, priority: 100 }),
-  );
+  const projection = createReflexProjection(selected, (v) => v, (v) => v !== undefined, { fallback: false, priority: 100 });
   const disposers: Array<() => void> = new Array(rows);
   for (let i = 0; i < rows; i++) {
     const idx = i;
@@ -160,7 +155,6 @@ function createReflexSelectionCase(rows = MEDIUM, mode: SelectionMode = "switch"
     },
     dispose() {
       for (let i = disposers.length - 1; i >= 0; i--) disposers[i]!();
-      for (let i = cleanups.length - 1; i >= 0; i--) cleanups[i]!();
     },
     readProjection: (id) => projection(id),
   };
@@ -205,11 +199,7 @@ type EntityCase = BenchCase & { readLabel(id: number): string | undefined };
 function createReflexEntityCase(rows = MEDIUM, mode: EntityMode = "switch"): EntityCase {
   createRuntime({ effectStrategy: "flush" });
   const [entity, setEntity] = signal<Entity>({ id: 0, label: "label-0" });
-  const cleanups: Array<() => void> = [];
-  const labels = withEffectCleanupRegistrar(
-    (c) => { cleanups.push(c); },
-    () => createReflexProjection(entity, (v) => v.id, (v) => v.label, { fallback: undefined, priority: 100 }),
-  );
+  const labels = createReflexProjection(entity, (v) => v.id, (v) => v.label, { fallback: undefined, priority: 100 });
   const disposers: Array<() => void> = new Array(rows);
   for (let i = 0; i < rows; i++) {
     const idx = i;
@@ -226,7 +216,6 @@ function createReflexEntityCase(rows = MEDIUM, mode: EntityMode = "switch"): Ent
     },
     dispose() {
       for (let i = disposers.length - 1; i >= 0; i--) disposers[i]!();
-      for (let i = cleanups.length - 1; i >= 0; i--) cleanups[i]!();
     },
     readLabel: (id) => labels(id),
   };
@@ -453,11 +442,7 @@ function createReflexChurnCase(rows = MEDIUM): ChurnCase {
   createRuntime({ effectStrategy: "flush" });
   const lcg = makeLCG();
   const [entity, setEntity] = signal<Entity>({ id: 0, label: "label-0" });
-  const cleanups: Array<() => void> = [];
-  const labels = withEffectCleanupRegistrar(
-    (c) => { cleanups.push(c); },
-    () => createReflexProjection(entity, (v) => v.id, (v) => v.label, { fallback: undefined, priority: 100 }),
-  );
+  const labels = createReflexProjection(entity, (v) => v.id, (v) => v.label, { fallback: undefined, priority: 100 });
   const disposers: Array<() => void> = new Array(rows);
   for (let i = 0; i < rows; i++) {
     const idx = i;
@@ -471,7 +456,6 @@ function createReflexChurnCase(rows = MEDIUM): ChurnCase {
     },
     dispose() {
       for (let i = disposers.length - 1; i >= 0; i--) disposers[i]!();
-      for (let i = cleanups.length - 1; i >= 0; i--) cleanups[i]!();
     },
     readLabel: (id) => labels(id),
   };
@@ -517,15 +501,11 @@ function createReflexSweepCase(rows = SMALL): SweepCase {
   createRuntime({ effectStrategy: "flush" });
   // Signal carries a "version" — all row labels derive from it
   const [version, setVersion] = signal(0);
-  const cleanups: Array<() => void> = [];
-  const labels = withEffectCleanupRegistrar(
-    (c) => { cleanups.push(c); },
-    () => createReflexProjection(
-      version,
-      (v) => v,          // key = version itself (changes every step)
-      (v) => `v${v}`,    // value = version string (all rows share it)
-      { fallback: undefined, priority: 100 },
-    ),
+  const labels = createReflexProjection(
+    version,
+    (v) => v,          // key = version itself (changes every step)
+    (v) => `v${v}`,    // value = version string (all rows share it)
+    { fallback: undefined, priority: 100 },
   );
   const disposers: Array<() => void> = new Array(rows);
   for (let i = 0; i < rows; i++) {
@@ -537,7 +517,6 @@ function createReflexSweepCase(rows = SMALL): SweepCase {
     step() { setVersion(++v); flush(); },
     dispose() {
       for (let i = disposers.length - 1; i >= 0; i--) disposers[i]!();
-      for (let i = cleanups.length - 1; i >= 0; i--) cleanups[i]!();
     },
     readLabel: (id) => labels(id) as string | undefined,
   };

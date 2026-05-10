@@ -7,14 +7,6 @@ export interface EngineHooks {
   onReactiveSettled?(): void;
 }
 
-/**
- * Dynamic receiver for cleanup functions produced by watcher-backed helpers.
- *
- * The runtime invokes this receiver when helpers such as `effect()` create a
- * disposer while a framework integration is collecting ownership cleanups.
- */
-export type CleanupRegistrar = (cleanup: () => void) => void;
-
 export type TrackReadFallback = (
   source: ReactiveNode,
   consumer: ReactiveNode,
@@ -34,7 +26,6 @@ export interface ContextSnapshot {
   activeConsumer: ReactiveNode | null;
   trackingVersion: number;
   propagationDepth: number;
-  cleanupRegistrar: CleanupRegistrar | null;
   trackReadFallback: TrackReadFallback;
   runtimeOnSinkInvalidated: OnSinkInvalidatedHook;
   runtimeOnReactiveSettled: OnReactiveSettledHook;
@@ -57,7 +48,6 @@ export const defaultContext: RuntimeDebugContext = {
 export let activeConsumer: ReactiveNode | null = null;
 export let trackingVersion = 0;
 export let propagationDepth = 0;
-export let cleanupRegistrar: CleanupRegistrar | null = null;
 export let trackReadFallback: TrackReadFallback = DEFAULT_TRACK_READ_FALLBACK;
 export let onSinkInvalidated: OnSinkInvalidatedHook = undefined;
 export let onReactiveSettled: OnReactiveSettledHook = undefined;
@@ -173,32 +163,6 @@ export function notifySettledIfIdle(): void {
   onReactiveSettled?.();
 }
 
-export function registerWatcherCleanup(cleanup: () => void): void {
-  cleanupRegistrar?.(cleanup);
-}
-
-/**
- * Runs `fn` with a temporary cleanup receiver in the runtime context.
- *
- * Passing `null` creates an explicit boundary: cleanups created during `fn` are
- * not forwarded to an outer receiver. The previous receiver is restored even if
- * `fn` throws.
- */
-export function withCleanupRegistrar<T>(
-  registrar: CleanupRegistrar | null,
-  fn: () => T,
-): T {
-  if (cleanupRegistrar === registrar) return fn();
-  const prev = cleanupRegistrar;
-  cleanupRegistrar = registrar;
-
-  try {
-    return fn();
-  } finally {
-    cleanupRegistrar = prev;
-  }
-}
-
 export function setHooks(hooks: EngineHooks = {}): void {
   globalOnSinkInvalidated = Object.hasOwn(hooks, "onSinkInvalidated")
     ? normalizeHook(hooks.onSinkInvalidated)
@@ -231,7 +195,6 @@ export function saveContext(): ContextSnapshot {
     activeConsumer,
     trackingVersion,
     propagationDepth,
-    cleanupRegistrar,
     trackReadFallback,
     runtimeOnSinkInvalidated,
     runtimeOnReactiveSettled,
@@ -246,7 +209,6 @@ export function restoreContext(snapshot: ContextSnapshot): void {
     trackingVersion = snapshot.trackingVersion;
   }
   propagationDepth = snapshot.propagationDepth;
-  cleanupRegistrar = snapshot.cleanupRegistrar;
   trackReadFallback = snapshot.trackReadFallback;
   runtimeOnSinkInvalidated = snapshot.runtimeOnSinkInvalidated;
   runtimeOnReactiveSettled = snapshot.runtimeOnReactiveSettled;
@@ -259,7 +221,6 @@ export function resetState(): void {
   activeConsumer = null;
   trackingVersion = 0;
   propagationDepth = 0;
-  cleanupRegistrar = null;
 }
 
 refreshDispatchers();

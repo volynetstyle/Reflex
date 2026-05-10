@@ -23,10 +23,7 @@ export {
 } from "../api/derived";
 export {
   effect,
-  withEffectCleanupRegistrar,
-  withEffectCleanupScope,
 } from "../api/effect";
-export type { EffectCleanupReceiver, EffectCleanupRegistrar } from "../api/effect";
 /**
  * API
  */

@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 import { computed, createRuntime, effect, signal } from "./reflex.test_utils";
-import { withEffectCleanupRegistrar } from "../src";
 import {
   createKeyedProjection,
   createProjection,
@@ -235,43 +234,6 @@ describe("Store-style projection", () => {
     expect(seen).toEqual(["light", "dark"]);
   });
 
-  it("stops updating store projections after cleanup disposal", () => {
-    const rt = createRuntime();
-    const [name, setName] = signal("Ada");
-    const cleanups: Destructor[] = [];
-    const projection = withEffectCleanupRegistrar(
-      (cleanup) => {
-        cleanups.push(cleanup);
-      },
-      () =>
-        createStoreProjection(
-          (draft: { name: string }) => {
-            draft.name = name();
-          },
-          { name: "" },
-        ),
-    );
-    const seen: string[] = [];
-
-    effect(() => {
-      seen.push(projection.name);
-    });
-
-    expect(seen).toEqual(["Ada"]);
-    expect(cleanups).toHaveLength(1);
-
-    setName("Byron");
-    rt.flush();
-
-    expect(seen).toEqual(["Ada", "Byron"]);
-
-    cleanups[0]!();
-    setName("Lovelace");
-    rt.flush();
-
-    expect(seen).toEqual(["Ada", "Byron"]);
-  });
-
   it("updates only affected record keys for store projections", () => {
     const rt = createRuntime();
     const [payload, setPayload] = signal<{ ids: number[]; labels: string[] }>({
@@ -487,39 +449,6 @@ describe("Projection basics", () => {
     expect(tmp).toHaveBeenNthCalledWith(2, 3, undefined);
   });
 
-  it("stops updating after projection cleanup is disposed", () => {
-    const rt = createRuntime();
-    const [source, setSource] = signal({ id: "a", label: "one" });
-    const cleanups: Destructor[] = [];
-    const projection = withEffectCleanupRegistrar(
-      (cleanup) => {
-        cleanups.push(cleanup);
-      },
-      () =>
-        createProjection(
-          source,
-          (value) => value.id,
-          (value) => value.label,
-        ),
-    );
-    const seen: string[] = [];
-
-    effect(() => {
-      seen.push(String(projection("a")));
-    });
-
-    setSource({ id: "a", label: "two" });
-    rt.flush();
-
-    expect(seen).toEqual(["one", "two"]);
-    expect(cleanups).toHaveLength(1);
-
-    cleanups[0]!();
-    setSource({ id: "a", label: "three" });
-    rt.flush();
-
-    expect(seen).toEqual(["one", "two"]);
-  });
 });
 
 describe("selection with projections", () => {

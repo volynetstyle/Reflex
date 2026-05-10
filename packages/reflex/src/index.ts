@@ -24,13 +24,9 @@ export {
   effect,
   effectRanked,
   reaction,
-  withEffectCleanupRegistrar,
-  withEffectCleanupScope,
   watch,
 } from "./api/effect";
 export type {
-  EffectCleanupReceiver,
-  EffectCleanupRegistrar,
   Reaction,
   ReactionFn,
   Watch,

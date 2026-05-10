@@ -88,7 +88,6 @@ resetState()                        // Clear runtime-global tracking state
 type ExecutionContext               // Execution environment: owns hooks, propagation state
 type ExecutionContextOptions        // Runtime options for tracking fallback
 type EngineHooks                    // Hook definitions
-type CleanupRegistrar               // Cleanup function registration interface
 ```
 
 ### State Constants

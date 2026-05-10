@@ -2,7 +2,6 @@ import type { ReactiveNode } from "@volynets/reflex-runtime";
 import {
   disposeNode,
   disposeWatcher,
-  registerWatcherCleanup,
   readProducer,
   runWatcher,
   writeProducer,
@@ -425,10 +424,6 @@ export function resource<S, T, E = unknown>(
   maybeLoad?: ResourceLoader<S, T>,
 ): ManualResource<T, E> | AsyncResource<T, E> {
   const core = new ResourceCore<T, E>();
-
-  registerWatcherCleanup(() => {
-    core.dispose();
-  });
 
   const baseResource: Resource<T, E> = {
     status: () => {

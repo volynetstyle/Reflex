@@ -205,6 +205,7 @@ export function tryTrackReadFastPath(
 
 /**
  * Track read for the current active consumer.
+ *
  */
 export function trackRead(source: ReactiveNode): void {
   const consumer = activeConsumer;
@@ -219,10 +220,9 @@ export function trackRead(source: ReactiveNode): void {
  *
  * Unlike trackRead(), this accepts an already known consumer.
  */
-export function trackReadActive(
-  source: ReactiveNode,
-  consumer: ReactiveNode,
-): void {
+export function trackReadActive(source: ReactiveNode): void {
+  const consumer = activeConsumer as NonNullable<ReactiveNode>;
+
   trackReadResolved(source, consumer, trackingVersion, true);
 }
 

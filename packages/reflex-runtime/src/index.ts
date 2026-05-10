@@ -50,14 +50,11 @@ export {
   saveContext,
   restoreContext,
   resetState,
-  withCleanupRegistrar,
-  registerWatcherCleanup,
   notifySettledIfIdle,
   notifySinkInvalidated,
   dispatchSinkInvalidated,
   type ExecutionContextOptions,
   type EngineHooks,
-  type CleanupRegistrar,
   type TrackReadFallback,
 } from "./reactivity/context";
 

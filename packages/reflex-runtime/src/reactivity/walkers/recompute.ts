@@ -2,14 +2,14 @@ import type { ReactiveNode } from "../shape";
 import { Changed, Invalid, Reentrant } from "../shape";
 import { BAIL, DIRTY, walkBranch, walkLine } from "./recompute.branch";
 
-const INVALID_REENTRANT = Invalid | Reentrant;
+const CLEAN_DEMAND = Changed | Invalid | Reentrant;
 
 function isChanged(node: ReactiveNode, state: number = 0): boolean {
-  // Already known dirty.
-  if ((state & Changed) !== 0) return true;
+  // // Already known dirty.
+  // if ((state & Changed) !== 0) return true;
 
   // Reentrant invalid consumer must recompute.
-  if ((state & INVALID_REENTRANT) === INVALID_REENTRANT) return true;
+  if ((state & CLEAN_DEMAND) === CLEAN_DEMAND) return true;
 
   // If node is not invalid, dependencies do not need inspection.
   //

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { computed, effect, signal, withEffectCleanupRegistrar } from "../src";
+import { computed, effect, signal } from "../src";
 import { optimistic, transition } from "../src/unstable";
 import { createRuntime } from "./reflex.test_utils";
 
@@ -321,30 +321,4 @@ describe("Reactive system - unstable optimistic invariants", () => {
     expect(state()).toBe(0);
   });
 
-  it("clears the active override on dispose and keeps later writes as no-ops", () => {
-    createRuntime();
-    const [base, setBase] = signal(1);
-    let state!: () => number;
-    let setState!: (value: number | ((prev: number) => number)) => number;
-    const cleanups: Array<() => void> = [];
-
-    withEffectCleanupRegistrar((cleanup) => {
-      cleanups.push(cleanup);
-    }, () => {
-      [state, setState] = optimistic(() => base());
-    });
-
-    setState(5);
-    expect(state()).toBe(5);
-
-    cleanups[0]?.();
-
-    expect(state()).toBe(1);
-
-    setBase(2);
-    expect(state()).toBe(2);
-
-    expect(setState(9)).toBe(9);
-    expect(state()).toBe(2);
-  });
 });

@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { withEffectCleanupRegistrar } from "../src/api/effect";
 import { resource } from "../src/unstable";
 import { createRuntime, signal } from "./reflex.test_utils";
 
@@ -91,26 +90,6 @@ describe("Reactive system - unstable resource protocol", () => {
     expect(afterDispose.resolve(20)).toBe(false);
     expect(afterDispose.reject("dead")).toBe(false);
     expect(user.token()).toBe(3);
-  });
-
-  it("registers disposal in the active cleanup registrar", () => {
-    let cleanup: Destructor | undefined;
-
-    const user = withEffectCleanupRegistrar((nextCleanup) => {
-      cleanup = nextCleanup;
-    }, () => resource<number>());
-
-    const request = user.start();
-
-    expect(typeof cleanup).toBe("function");
-    expect(request.alive()).toBe(true);
-
-    cleanup?.();
-
-    expect(request.alive()).toBe(false);
-    expect(user.status()).toBe("idle");
-    expect(user.value()).toBeUndefined();
-    expect(user.error()).toBeUndefined();
   });
 
   it("supports a no-source loader with runtime-scheduled refetch", async () => {

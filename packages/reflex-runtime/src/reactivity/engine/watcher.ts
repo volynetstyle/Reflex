@@ -100,8 +100,7 @@ export function runWatcher(node: ReactiveNode): void {
   if ((node.state & Reentrant) === 0) {
     clearDirtyState(node);
   } else {
-    node.state =
-      (node.state & ~Changed) | Invalid;
+    node.state = (node.state & ~Changed) | Invalid;
   }
 
   if (__DEV__) recordWatcherFinish(node, hasCleanup, result);

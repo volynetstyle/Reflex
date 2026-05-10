@@ -7,6 +7,7 @@ import {
   shouldRecomputeDirtyConsumer,
   recompute,
   propagateOnce,
+  trackReadActive,
 } from "../reactivity";
 import {
   devAssertConsumerCanStabilize,
@@ -39,7 +40,7 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
 
   if (activeConsumer === null) return value;
 
-  trackRead(node);
+  trackReadActive(node);
 
   if (__DEV__)
     devRecordReadConsumer(node, "lazy", value, defaultContext, activeConsumer);

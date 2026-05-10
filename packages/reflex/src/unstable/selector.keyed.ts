@@ -1,8 +1,6 @@
 import {
   DIRTY_STATE,
-  disposeWatcher,
   readProducer,
-  registerWatcherCleanup,
   type ReactiveNode,
   runWatcher,
   untracked,
@@ -30,7 +28,6 @@ class SelectorCore<T> {
   private current: T | Missing = getMissing();
   private currentNode: BooleanSignalNode | null = null;
   private readonly watcher: ReactiveNode;
-  private readonly dispose: Destructor;
 
   constructor(
     private readonly source: Accessor<T>,
@@ -42,8 +39,6 @@ class SelectorCore<T> {
     }, priority);
     this.watcher = watcher;
     runWatcher(watcher);
-    this.dispose = disposeWatcher.bind(null, watcher) as Destructor;
-    registerWatcherCleanup(this.dispose);
   }
 
   read = (key: T): boolean => {
@@ -95,7 +90,6 @@ class KeyedProjectionCore<T, K, R> {
   private currentKey: K | Missing = getMissing();
   private currentNode: ProjectionSignalNode<R> | null = null;
   private readonly watcher: ReactiveNode;
-  private readonly dispose: Destructor;
 
   constructor(
     private readonly source: Accessor<T>,
@@ -110,8 +104,6 @@ class KeyedProjectionCore<T, K, R> {
     }, priority);
     this.watcher = watcher;
     runWatcher(watcher);
-    this.dispose = disposeWatcher.bind(null, watcher) as Destructor;
-    registerWatcherCleanup(this.dispose);
   }
 
   read = (key: K): R | undefined => {

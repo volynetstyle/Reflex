@@ -1,9 +1,10 @@
-import {
-  ReactiveNode,
-  readProducer,
-  writeProducer,
-} from "@volynets/reflex-runtime";
+import type { ReactiveNode } from "@volynets/reflex-runtime";
+import { readProducer, writeProducer } from "@volynets/reflex-runtime";
 import { createSignalNode } from "../infra/factory";
+import {
+  devassertSetterReceivedPromise,
+  devassertSetterReturn,
+} from "./signal.dev";
 
 /**
  * Creates writable reactive state.
@@ -24,8 +25,7 @@ import { createSignalNode } from "../infra/factory";
  * @returns A readonly tuple:
  * - `value` - tracked accessor that returns the current signal value.
  * - `setValue` - setter that accepts either a direct value or an updater
- *   function receiving the previous value. The setter returns the committed
- *   next value.
+ *   function receiving the previous value.
  *
  * @example
  * ```ts
@@ -67,10 +67,15 @@ function getter<T>(this: ReactiveNode<T>): T {
   return readProducer(this);
 }
 
-function setter<T>(this: ReactiveNode<T>, input: SetInput<T>): void {
+function setter<T>(this: ReactiveNode<T>, input: SetInput<T>) {
+  devassertSetterReceivedPromise(input);
+
   const next =
     typeof input === "function"
       ? (input as (prev: T) => T)(this.payload as T)
       : input;
+
+  devassertSetterReturn(next);
+
   writeProducer(this, next);
 }

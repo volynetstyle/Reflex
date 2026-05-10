@@ -188,7 +188,6 @@ Shared mutable context:
 class EngineContext {
   activeComputed: ReactiveNode | null;
   propagationDepth: number;
-  cleanupRegistrar: CleanupRegistrar | null;
   hooks: EngineHooks;
 }
 ```

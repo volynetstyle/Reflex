@@ -1,6 +1,7 @@
 import type { ReactiveNode } from "@volynets/reflex-runtime";
 import { readConsumerEager, readConsumerLazy } from "@volynets/reflex-runtime";
 import { createComputedNode } from "../infra/factory";
+import { devassertDerivedFn, wrapDerivedFn } from "./derived.dev";
 
 function computedGetter<T>(this: ReactiveNode<T>): T {
   return readConsumerLazy(this);
@@ -47,7 +48,11 @@ function computedGetter<T>(this: ReactiveNode<T>): T {
  * @see effect
  */
 export function computed<T>(fn: () => T): Computed<T> {
-  return computedGetter.bind(createComputedNode(fn)) as Computed<T>;
+  devassertDerivedFn(fn, "computed");
+
+  const node = createComputedNode(wrapDerivedFn(fn, "computed"));
+
+  return computedGetter.bind(node) as Computed<T>;
 }
 
 /**
@@ -88,7 +93,11 @@ export function computed<T>(fn: () => T): Computed<T> {
  * @see computed
  */
 export function memo<T>(fn: () => T): Memo<T> {
-  const node = createComputedNode(fn);
+  devassertDerivedFn(fn, "memo");
+
+  const node = createComputedNode(wrapDerivedFn(fn, "memo"));
+
   readConsumerEager(node);
+
   return computedGetter.bind(node) as Memo<T>;
 }

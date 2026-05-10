@@ -4,7 +4,7 @@ export interface RuntimeWalkerStackStats {
   capacity: number;
 }
 
-const STACK_TRIM_MIN_CAPACITY = 256;
+export const STACK_TRIM_MIN_CAPACITY = 256;
 
 let shouldRecomputeStackPeak = 0;
 let resumeEdgeStackPeak = 0;

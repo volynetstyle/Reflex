@@ -3,13 +3,9 @@ export {
   effect,
   effectRanked,
   reaction,
-  withEffectCleanupRegistrar,
-  withEffectCleanupScope,
   watch,
 } from "./effect";
 export type {
-  EffectCleanupReceiver,
-  EffectCleanupRegistrar,
   Reaction,
   ReactionFn,
   Watch,

@@ -1,14 +1,20 @@
 import {
   disposeWatcher,
-  registerWatcherCleanup,
   Scheduled,
   runWatcher,
   untracked,
-  withCleanupRegistrar,
   watcher,
 } from "@volynets/reflex-runtime";
 import type { ReactiveNode } from "@volynets/reflex-runtime";
 import { createWatcherNode, createWatcherRankedrNode } from "../infra/factory";
+import {
+  devassertEffectFn,
+  devassertReactionFn,
+  devassertReactionReturn,
+  devassertSelectorFn,
+  devassertSelectorReturn,
+  wrapEffectFn,
+} from "./effect.dev";
 
 /**
  * Marks an effect watcher node as scheduled.
@@ -32,62 +38,6 @@ export function effectUnscheduled(
   node: ReactiveNode<typeof undefined | Destructor>,
 ) {
   node.state &= ~Scheduled;
-}
-
-/**
- * Receives cleanup functions created by helpers running inside an effect-owned
- * setup scope.
- *
- * The callback does not run the cleanup immediately. It records the cleanup so
- * the owner can dispose it later, usually when an effect reruns or an ownership
- * scope is torn down.
- */
-export type EffectCleanupReceiver = (cleanup: Destructor) => void;
-
-/**
- * @deprecated Use {@link EffectCleanupReceiver}.
- */
-export type EffectCleanupRegistrar = EffectCleanupReceiver;
-
-/**
- * Runs `fn` with a temporary cleanup receiver installed on the active runtime
- * context.
- *
- * Any effect/resource created while `fn` is running may call the runtime's
- * cleanup hook. That hook forwards the produced cleanup into `receiveCleanup`,
- * letting framework integrations bind plain Reflex effects to a larger
- * ownership scope.
- *
- * @typeParam T - Return type of `fn`.
- *
- * @param receiveCleanup - Callback that records cleanups created during `fn`,
- * or `null` to intentionally disable parent cleanup capture.
- * @param fn - Callback executed with the temporary cleanup receiver installed.
- *
- * @returns The value returned by `fn`.
- *
- * @remarks
- * - The receiver is scoped to the synchronous duration of `fn`.
- * - Passing `null` creates an explicit boundary: nested helpers still work, but
- *   their cleanups are not forwarded to an outer scope.
- * - This is a low-level integration helper. Most application code should use
- *   `effect()` directly.
- */
-export function withEffectCleanupScope<T>(
-  receiveCleanup: EffectCleanupReceiver | null,
-  fn: () => T,
-): T {
-  return withCleanupRegistrar(receiveCleanup, fn);
-}
-
-/**
- * @deprecated Use {@link withEffectCleanupScope}.
- */
-export function withEffectCleanupRegistrar<T>(
-  receiveCleanup: EffectCleanupReceiver | null,
-  fn: () => T,
-): T {
-  return withEffectCleanupScope(receiveCleanup, fn);
 }
 
 /**
@@ -135,14 +85,15 @@ export function withEffectCleanupRegistrar<T>(
  * @see memo
  */
 export function effect(fn: EffectFn): Destructor {
-  const node = createWatcherNode(fn);
+  devassertEffectFn(fn, "effect");
+
+  const node = createWatcherNode(wrapEffectFn(fn, "effect"));
   const run = watcher.run;
   const dispose = watcher.dispose;
 
   run(node);
 
   const disposer: Destructor = dispose.bind(null, node);
-  registerWatcherCleanup(disposer);
   return disposer;
 }
 
@@ -169,23 +120,35 @@ export type Watch<T> = Reaction<T>;
  * disposer.
  */
 export function reaction<T>(read: () => T): Reaction<T> {
+  devassertSelectorFn<T>(read, "reaction");
+
   return {
     subscribe(fn: ReactionFn<T>): Destructor {
-      return subscribeReaction(read, fn);
+      devassertReactionFn<T>(fn, "reaction");
+
+      return subscribeReaction(read, fn, "reaction");
     },
   };
 }
 
-function subscribeReaction<T>(read: () => T, fn: ReactionFn<T>): Destructor {
+function subscribeReaction<T>(
+  read: () => T,
+  fn: ReactionFn<T>,
+  kind: "reaction" | "watch",
+): Destructor {
   let initialized = false;
   let prev: T;
 
   return effect(() => {
     const value = read();
 
+    devassertSelectorReturn(value, kind);
+
     if (initialized) {
       untracked(() => {
-        fn(value, prev);
+        const result = fn(value, prev);
+
+        devassertReactionReturn(result, kind);
       });
     } else {
       initialized = true;
@@ -206,7 +169,15 @@ function subscribeReaction<T>(read: () => T, fn: ReactionFn<T>): Destructor {
  * disposer.
  */
 export function watch<T>(read: () => T): Watch<T> {
-  return reaction(read);
+  devassertSelectorFn<T>(read, "watch");
+
+  return {
+    subscribe(fn: ReactionFn<T>): Destructor {
+      devassertReactionFn<T>(fn, "watch");
+
+      return subscribeReaction(read, fn, "watch");
+    },
+  };
 }
 
 /**
@@ -216,10 +187,15 @@ export function effectRanked(
   fn: EffectFn,
   options: EffectOptions = {},
 ): Destructor {
-  const node = createWatcherRankedrNode(fn, options.priority ?? 0);
+  devassertEffectFn(fn, "effectRanked");
+
+  const node = createWatcherRankedrNode(
+    wrapEffectFn(fn, "effectRanked"),
+    options.priority ?? 0,
+  );
+
   runWatcher(node);
 
   const dispose = disposeWatcher.bind(null, node) as Destructor;
-  registerWatcherCleanup(dispose);
   return dispose;
 }

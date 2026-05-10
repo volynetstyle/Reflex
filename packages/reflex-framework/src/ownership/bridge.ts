@@ -1,4 +1,4 @@
-import { effect, effectRanked, withEffectCleanupScope } from "@volynets/reflex";
+import { effect, effectRanked } from "@volynets/reflex";
 
 import type { Cleanup } from "../types/core";
 import { addCleanup } from "./ownership.cleanup";
@@ -7,7 +7,6 @@ import type { OwnerContext, Scope } from "./ownership.scope";
 import { runWithOwner, runWithScope } from "./ownership.scope";
 
 export type UseEffectFn = () => void | Cleanup;
-export type OwnershipCleanupRegistrar = (cleanup: Cleanup) => void;
 
 export interface OwnedEffectOptions {
   owner: OwnerContext;
@@ -20,15 +19,6 @@ export interface OwnershipReactiveEffectOptions {
 
 export interface OwnershipReactiveAdapter {
   effect(fn: UseEffectFn, options?: OwnershipReactiveEffectOptions): Cleanup;
-
-  /**
-   * Runs `fn` while plain reactive helpers can register their cleanup with the
-   * provided receiver. Passing `null` intentionally creates a cleanup boundary.
-   */
-  withCleanupScope<T>(
-    registrar: OwnershipCleanupRegistrar | null,
-    fn: () => T,
-  ): T;
 }
 
 export interface OwnershipReactiveBridge {
@@ -60,10 +50,7 @@ export function createOwnershipReactiveBridge(
     owner: OwnerContext,
     scope: Scope,
     fn: () => T,
-  ): T =>
-    runWithScope(owner, scope, () =>
-      adapter.withCleanupScope((cleanup) => addCleanup(scope, cleanup), fn),
-    );
+  ): T => runWithScope(owner, scope, fn);
 
   const useEffect = (options: OwnedEffectOptions, fn: UseEffectFn): Cleanup => {
     const { owner } = options;
@@ -74,25 +61,23 @@ export function createOwnershipReactiveBridge(
       return noopCleanup;
     }
 
-    return adapter.withCleanupScope(null, () => {
-      const gate: EffectStartGate = { skip: true };
+    const gate: EffectStartGate = { skip: true };
 
-      const dispose = adapter.effect(() => {
-        const prevGate = currentStartGate;
-        currentStartGate = gate;
+    const dispose = adapter.effect(() => {
+      const prevGate = currentStartGate;
+      currentStartGate = gate;
 
-        try {
-          return runWithOwner(owner, scope, fn);
-        } finally {
-          currentStartGate = prevGate;
-          gate.skip = false;
-        }
-      }, options);
+      try {
+        return runWithOwner(owner, scope, fn);
+      } finally {
+        currentStartGate = prevGate;
+        gate.skip = false;
+      }
+    }, options);
 
-      if (scope !== null) addCleanup(scope, dispose);
+    if (scope !== null) addCleanup(scope, dispose);
 
-      return dispose;
-    });
+    return dispose;
   };
 
   return Object.freeze({
@@ -113,8 +98,6 @@ export const reflexOwnershipBridge: OwnershipReactiveBridge =
 
       return effect(fn);
     },
-
-    withCleanupScope: withEffectCleanupScope,
   });
 
 export const {
