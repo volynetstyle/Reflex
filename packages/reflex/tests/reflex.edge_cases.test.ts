@@ -163,6 +163,42 @@ describe("Reactive system - edge cases", () => {
     expect(cleanup).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps sibling effects fresh when one effect is disposed during computed stabilization", () => {
+    createRuntime({ effectStrategy: "eager" });
+    const [source, setSource] = signal(0);
+    let disposeFirst!: Destructor;
+    let secondValue = -1;
+    let thirdValue = -1;
+
+    const derived = computed(() => {
+      const value = source();
+
+      if (value === 1) {
+        disposeFirst();
+      }
+
+      return value;
+    });
+
+    disposeFirst = effect(() => {
+      derived();
+    });
+    effect(() => {
+      secondValue = derived();
+    });
+    effect(() => {
+      thirdValue = derived();
+    });
+
+    expect(secondValue).toBe(0);
+    expect(thirdValue).toBe(0);
+
+    setSource(1);
+
+    expect(secondValue).toBe(1);
+    expect(thirdValue).toBe(1);
+  });
+
   it("flush effects observe one consistent snapshot after multiple writes", () => {
     const rt = createRuntime();
     const [left, setLeft] = signal(1);
