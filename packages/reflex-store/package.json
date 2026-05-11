@@ -1,0 +1,104 @@
+{
+  "name": "@volynets/reflex-store",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "State management primitives for Reflex",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "source": {
+        "types": "./src/index.ts",
+        "default": "./src/index.ts"
+      },
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./selectors": {
+      "source": {
+        "types": "./src/selectors/index.ts",
+        "default": "./src/selectors/index.ts"
+      },
+      "types": "./dist/selectors/index.d.ts",
+      "import": "./dist/selectors/index.js"
+    },
+    "./selectors/shared": {
+      "source": {
+        "types": "./src/selectors/shared.ts",
+        "default": "./src/selectors/shared.ts"
+      },
+      "types": "./dist/selectors/shared.d.ts",
+      "import": "./dist/selectors/shared.js"
+    },
+    "./store": {
+      "source": {
+        "types": "./src/store/index.ts",
+        "default": "./src/store/index.ts"
+      },
+      "types": "./dist/store/index.d.ts",
+      "import": "./dist/store/index.js"
+    },
+    "./compiled-store": {
+      "source": {
+        "types": "./src/store/index.ts",
+        "default": "./src/store/index.ts"
+      },
+      "types": "./dist/store/index.d.ts",
+      "import": "./dist/store/index.js"
+    },
+    "./vite": {
+      "source": {
+        "types": "./src/vite.ts",
+        "default": "./src/vite.ts"
+      },
+      "types": "./dist/vite.d.ts",
+      "import": "./dist/vite.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src/store/README.md",
+    "src/store/TRANSFORM_SPEC.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true});require('node:fs').rmSync('build',{recursive:true,force:true})\"",
+    "build": "pnpm clean && tsc -p tsconfig.build.json && node ../../../scripts/fix-esm-specifiers.mjs dist",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run --config vite.config.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build"
+  },
+  "dependencies": {
+    "@swc/core": "^1.15.18",
+    "@volynets/reflex-runtime": "workspace:*"
+  },
+  "peerDependencies": {
+    "@volynets/reflex": "workspace:*",
+    "vite": "^6.0.0"
+  },
+  "keywords": [
+    "reflex",
+    "state",
+    "store",
+    "selector",
+    "reactivity"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/volynetstyle/Reflex.git",
+    "directory": "packages/@reflex/store"
+  },
+  "homepage": "https://github.com/volynetstyle/Reflex/tree/main/packages/@reflex/store",
+  "bugs": {
+    "url": "https://github.com/volynetstyle/Reflex/issues"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}

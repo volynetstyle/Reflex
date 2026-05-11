@@ -280,14 +280,16 @@ Recommended diagnostics:
 - `Aliasing nested compiled-store branches is not supported in phase 1.`
 - `Spread and reflection are not guaranteed for compiled stores in phase 1.`
 
-## Notes on the draft transform
+## Notes on the phase-1 compiler
 
-The adjacent [`./transform.ts`](./transform.ts) file is intentionally a draft:
+The [`./transform.ts`](./transform.ts) entrypoint delegates to the dedicated
+[`./transform/`](./transform/) module, which implements the phase-1 compiler:
 
 - it recognizes `createStore({ ... })` declarations
+- it erases direct `createStore` imports from `@reflex/store`
+- it emits a Reflex runtime import for `createModel` and `signal`
+- it materializes per-leaf signal readers and model-action writers
+- it lowers the store binding to a model object with nested getters/setters
 - it rewrites read member access to generated accessor calls
 - it rewrites `=`, `+=`, `-=`, `++`, and `--`
-- it emits accessor names rather than the full `createModel(...)` lowering
-
-That draft is meant to validate path matching and expression semantics before
-the full runtime-lowering stage is introduced.
+- it rejects the phase-1 unsupported constructs with diagnostics

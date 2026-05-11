@@ -39,6 +39,3 @@ export { createModel, isModel, own } from "../infra/model";
 
 export * from "./optimistic";
 export * from "./resource";
-export * from "./selector";
-export type { CompiledStore, StoreShape } from "./store/createStore";
-export { createStore } from "./store/createStore";

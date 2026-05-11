@@ -11,6 +11,10 @@ function readPackageExports(): Record<string, unknown> {
 
 describe("package exports", () => {
   it("keeps unstable helpers behind the unstable subpath", () => {
-    expect(Object.keys(readPackageExports())).toEqual([".", "./unstable"]);
+    expect(Object.keys(readPackageExports())).toEqual([
+      ".",
+      "./unstable",
+      "./debug",
+    ]);
   });
 });

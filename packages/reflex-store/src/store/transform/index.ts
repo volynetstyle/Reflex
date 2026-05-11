@@ -2,34 +2,118 @@
 import { parseSync, printSync } from "@swc/core";
 import type { Expression, Module, Program } from "@swc/core";
 
+const STORE_MODULES = new Set([
+  "@reflex/store",
+  "@reflex/store/store",
+  "@reflex/store/compiled-store",
+]);
+
+const DEFAULT_RUNTIME_MODULE = "@volynets/reflex";
+
 type StoreLeafPath = {
+  initial: Expression;
   mangled: string;
   path: string;
+  parts: string[];
 };
 
 type StoreBinding = {
+  name: string;
+  branchPaths: Set<string>;
   leafPaths: Map<string, StoreLeafPath>;
+  leaves: StoreLeafPath[];
 };
 
+type RuntimeNames = {
+  createModel: string;
+  signal: string;
+};
+
+type DiagnosticCode =
+  | "dynamic-access"
+  | "branch-alias"
+  | "spread-reflection"
+  | "delete"
+  | "optional-chain";
+
 type TransformState = {
+  diagnostics: CompiledStoreDiagnostic[];
+  options: Required<CompiledStoreTransformOptions>;
+  runtimeNames: RuntimeNames;
   stores: Map<string, StoreBinding>;
   tempCounter: number;
 };
 
+export interface CompiledStoreDiagnostic {
+  code: DiagnosticCode;
+  message: string;
+}
+
+export interface CompiledStoreTransformOptions {
+  /**
+   * Emits the runtime import needed by generated code.
+   *
+   * Test harnesses can disable this and provide `__reflex_createModel` and
+   * `__reflex_signal` in scope manually.
+   */
+  importRuntime?: boolean;
+  /**
+   * Runtime facade used by generated code.
+   */
+  runtimeModule?: string;
+  /**
+   * `throw` is the compiler default because unsupported store syntax should be
+   * found during development, not discovered as a runtime semantic mismatch.
+   */
+  onDiagnostic?: "throw" | "collect";
+}
+
 export interface CompiledStoreTransformResult {
   code: string;
+  diagnostics: CompiledStoreDiagnostic[];
   map: string | null;
 }
 
-export function transformCompiledStore(
+export class CompiledStoreTransformError extends Error {
+  readonly diagnostics: CompiledStoreDiagnostic[];
+
+  constructor(diagnostics: CompiledStoreDiagnostic[]) {
+    super(diagnostics.map((diagnostic) => diagnostic.message).join("\n"));
+    this.name = "CompiledStoreTransformError";
+    this.diagnostics = diagnostics;
+  }
+}
+
+export function compileStore(
   code: string,
   id = "compiled-store.ts",
+  options: CompiledStoreTransformOptions = {},
 ): CompiledStoreTransformResult {
   const ast = parseModule(code, id);
   const state: TransformState = {
+    diagnostics: [],
+    options: {
+      importRuntime: options.importRuntime ?? true,
+      onDiagnostic: options.onDiagnostic ?? "throw",
+      runtimeModule: options.runtimeModule ?? DEFAULT_RUNTIME_MODULE,
+    },
+    runtimeNames: {
+      createModel: "__reflex_createModel",
+      signal: "__reflex_signal",
+    },
     stores: collectStoreBindings(ast),
     tempCounter: 0,
   };
+
+  scanUnsupportedStoreSyntax(ast, state);
+
+  if (
+    state.diagnostics.length > 0 &&
+    state.options.onDiagnostic === "throw"
+  ) {
+    throw new CompiledStoreTransformError(state.diagnostics);
+  }
+
   const transformed = transformProgram(ast, state) as Program;
   const output = printSync(transformed, {
     filename: id,
@@ -38,8 +122,17 @@ export function transformCompiledStore(
 
   return {
     code: output.code,
+    diagnostics: [...state.diagnostics],
     map: output.map ?? null,
   };
+}
+
+export function transformCompiledStore(
+  code: string,
+  id = "compiled-store.ts",
+  options: CompiledStoreTransformOptions = {},
+): CompiledStoreTransformResult {
+  return compileStore(code, id, options);
 }
 
 function parseModule(code: string, id: string): Module {
@@ -75,9 +168,11 @@ function collectStoreBindings(program: Module): Map<string, StoreBinding> {
         continue;
       }
 
+      const branchPaths = new Set<string>();
       const leafPaths = new Map<string, StoreLeafPath>();
-      collectLeafPaths(objectArg, leafPaths);
-      stores.set(name, { leafPaths });
+      const leaves: StoreLeafPath[] = [];
+      collectLeafPaths(objectArg, [], leafPaths, branchPaths, leaves);
+      stores.set(name, { name, branchPaths, leafPaths, leaves });
     }
   }
 
@@ -89,29 +184,105 @@ function transformProgram(program: Program, state: TransformState): Program {
     return program;
   }
 
+  let body = program.body.flatMap((item) => transformModuleItem(item, state));
+
+  if (state.stores.size > 0 && state.options.importRuntime) {
+    body = insertRuntimeImport(body, state);
+  }
+
   return {
     ...program,
-    body: program.body.map((item) => transformModuleItem(item, state)),
+    body,
   };
 }
 
-function transformModuleItem(item: any, state: TransformState): any {
+function transformModuleItem(item: any, state: TransformState): any[] {
   switch (item.type) {
+    case "ImportDeclaration":
+      return transformImportDeclaration(item);
     case "VariableDeclaration":
-      return {
-        ...item,
-        declarations: item.declarations.map((declaration: any) =>
-          transformVariableDeclarator(declaration, state),
-        ),
-      };
+      return transformVariableDeclaration(item, state);
     case "ExpressionStatement":
-      return {
-        ...item,
-        expression: transformExpression(item.expression, state),
-      };
+      return [
+        {
+          ...item,
+          expression: transformExpression(item.expression, state),
+        },
+      ];
     default:
-      return item;
+      return [item];
   }
+}
+
+function transformImportDeclaration(item: any): any[] {
+  if (!STORE_MODULES.has(item.source?.value)) {
+    return [item];
+  }
+
+  const specifiers = (item.specifiers ?? []).filter(
+    (specifier: any) => !isCreateStoreImportSpecifier(specifier),
+  );
+
+  if (specifiers.length === 0) {
+    return [];
+  }
+
+  return [{ ...item, specifiers }];
+}
+
+function isCreateStoreImportSpecifier(specifier: any): boolean {
+  switch (specifier.type) {
+    case "ImportSpecifier": {
+      const imported = specifier.imported;
+      const importedName =
+        imported?.type === "Identifier" || imported?.type === "StringLiteral"
+          ? imported.value
+          : undefined;
+      return (importedName ?? specifier.local?.value) === "createStore";
+    }
+    case "ImportDefaultSpecifier":
+    case "ImportNamespaceSpecifier":
+      return specifier.local?.value === "createStore";
+    default:
+      return false;
+  }
+}
+
+function transformVariableDeclaration(
+  item: any,
+  state: TransformState,
+): any[] {
+  const output: any[] = [];
+  let pending: any[] = [];
+
+  const flushPending = () => {
+    if (pending.length === 0) {
+      return;
+    }
+
+    output.push({
+      ...item,
+      declarations: pending,
+    });
+    pending = [];
+  };
+
+  for (const declaration of item.declarations ?? []) {
+    const name =
+      declaration.id?.type === "Identifier" ? declaration.id.value : null;
+    const binding = name === null ? undefined : state.stores.get(name);
+
+    if (binding === undefined) {
+      pending.push(transformVariableDeclarator(declaration, state));
+      continue;
+    }
+
+    flushPending();
+    output.push(...createCompiledStoreStatements(binding, item.kind, state));
+  }
+
+  flushPending();
+  return output;
 }
 
 function transformVariableDeclarator(declaration: any, state: TransformState): any {
@@ -123,6 +294,165 @@ function transformVariableDeclarator(declaration: any, state: TransformState): a
     ...declaration,
     init: transformExpression(declaration.init, state),
   };
+}
+
+function insertRuntimeImport(body: any[], state: TransformState): any[] {
+  const source = [
+    `import {`,
+    `  createModel as ${state.runtimeNames.createModel},`,
+    `  signal as ${state.runtimeNames.signal}`,
+    `} from ${JSON.stringify(state.options.runtimeModule)};`,
+  ].join("\n");
+  const runtimeImport = parseModule(source, "compiled-store-runtime-import.ts")
+    .body[0]!;
+  const insertIndex = body.findIndex(
+    (item) => item.type !== "ImportDeclaration",
+  );
+  const index = insertIndex === -1 ? body.length : insertIndex;
+
+  return [
+    ...body.slice(0, index),
+    runtimeImport,
+    ...body.slice(index),
+  ];
+}
+
+function createCompiledStoreStatements(
+  binding: StoreBinding,
+  kind: "const" | "let" | "var",
+  state: TransformState,
+): any[] {
+  const lines: string[] = [];
+
+  for (const leaf of binding.leaves) {
+    lines.push(
+      `const [__read_${leaf.mangled}, __set_${leaf.mangled}] = ` +
+        `${state.runtimeNames.signal}(${printExpression(leaf.initial)});`,
+    );
+    lines.push(`let __write_${leaf.mangled};`);
+  }
+
+  lines.push(`${kind} ${binding.name} = ${state.runtimeNames.createModel}((ctx) => {`);
+
+  for (const leaf of binding.leaves) {
+    lines.push(`  __write_${leaf.mangled} = ctx.action((value) => {`);
+    lines.push(`    __set_${leaf.mangled}(value);`);
+    lines.push(`    return value;`);
+    lines.push(`  });`);
+  }
+
+  lines.push(`  return ${createStoreObjectSource(binding)};`);
+  lines.push(`})();`);
+
+  return parseModule(lines.join("\n"), "compiled-store-lowering.ts").body;
+}
+
+type StoreTreeNode = {
+  branches: Map<string, StoreTreeNode>;
+  leaves: Map<string, StoreLeafPath>;
+};
+
+function createStoreObjectSource(binding: StoreBinding): string {
+  const root = createStoreTreeNode();
+
+  for (const leaf of binding.leaves) {
+    insertStoreLeaf(root, leaf.parts, leaf);
+  }
+
+  return createStoreTreeObjectSource(root, 2);
+}
+
+function createStoreTreeNode(): StoreTreeNode {
+  return {
+    branches: new Map(),
+    leaves: new Map(),
+  };
+}
+
+function insertStoreLeaf(
+  node: StoreTreeNode,
+  parts: readonly string[],
+  leaf: StoreLeafPath,
+): void {
+  const [head, ...tail] = parts;
+  if (head === undefined) {
+    return;
+  }
+
+  if (tail.length === 0) {
+    node.leaves.set(head, leaf);
+    return;
+  }
+
+  let branch = node.branches.get(head);
+  if (branch === undefined) {
+    branch = createStoreTreeNode();
+    node.branches.set(head, branch);
+  }
+  insertStoreLeaf(branch, tail, leaf);
+}
+
+function createStoreTreeObjectSource(
+  node: StoreTreeNode,
+  indent: number,
+): string {
+  const pad = " ".repeat(indent);
+  const childPad = " ".repeat(indent + 2);
+  const entries: string[] = [];
+
+  for (const [key, branch] of node.branches) {
+    entries.push(
+      `${childPad}${formatObjectKey(key)}: ${createStoreTreeObjectSource(
+        branch,
+        indent + 2,
+      )}`,
+    );
+  }
+
+  for (const [key, leaf] of node.leaves) {
+    entries.push(
+      [
+        `${childPad}get ${formatObjectKey(key)}() {`,
+        `${childPad}  return __read_${leaf.mangled}();`,
+        `${childPad}},`,
+        `${childPad}set ${formatObjectKey(key)}(value) {`,
+        `${childPad}  __write_${leaf.mangled}(value);`,
+        `${childPad}}`,
+      ].join("\n"),
+    );
+  }
+
+  if (entries.length === 0) {
+    return "{}";
+  }
+
+  return `{\n${entries.join(",\n")}\n${pad}}`;
+}
+
+function formatObjectKey(key: string): string {
+  return isIdentifierName(key) ? key : JSON.stringify(key);
+}
+
+function printExpression(expression: Expression): string {
+  const output = printSync(
+    {
+      type: "Module",
+      span: DUMMY_SPAN,
+      body: [
+        {
+          type: "ExpressionStatement",
+          span: DUMMY_SPAN,
+          expression,
+        },
+      ],
+      interpreter: null,
+    } as any,
+    {
+      sourceMaps: false,
+    },
+  ).code.trim();
+
+  return output.endsWith(";") ? output.slice(0, -1) : output;
 }
 
 function transformExpression(node: Expression, state: TransformState): Expression {
@@ -184,43 +514,40 @@ function isCreateStoreCall(expression: any): expression is any {
 }
 
 function collectLeafPaths(
-  rootObjectExpression: any,
+  objectExpression: any,
+  prefix: string[],
   target: Map<string, StoreLeafPath>,
+  branches: Set<string>,
+  leaves: StoreLeafPath[],
 ): void {
-  const stack: Array<{ objectExpression: any; prefix: string[] }> = [
-    { objectExpression: rootObjectExpression, prefix: [] },
-  ];
-
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (current === undefined) {
+  for (const property of objectExpression.properties ?? []) {
+    if (property.type !== "KeyValueProperty") {
       continue;
     }
 
-    for (const property of current.objectExpression.properties ?? []) {
-      if (property.type !== "KeyValueProperty") {
-        continue;
-      }
-
-      const key = getStaticPropertyKey(property.key);
-      if (key === null) {
-        continue;
-      }
-
-      const path = [...current.prefix, key];
-      const value = property.value;
-
-      if (value?.type === "ObjectExpression") {
-        stack.push({ objectExpression: value, prefix: path });
-        continue;
-      }
-
-      const joined = path.join(".");
-      target.set(joined, {
-        path: joined,
-        mangled: path.join("_"),
-      });
+    const key = getStaticPropertyKey(property.key);
+    if (key === null) {
+      continue;
     }
+
+    const path = [...prefix, key];
+    const value = property.value;
+
+    if (value?.type === "ObjectExpression") {
+      branches.add(path.join("."));
+      collectLeafPaths(value, path, target, branches, leaves);
+      continue;
+    }
+
+    const joined = path.join(".");
+    const leaf = {
+      initial: value,
+      path: joined,
+      parts: path,
+      mangled: manglePath(path),
+    };
+    target.set(joined, leaf);
+    leaves.push(leaf);
   }
 }
 
@@ -235,6 +562,19 @@ function getStaticPropertyKey(node: any): string | null {
     default:
       return null;
   }
+}
+
+function manglePath(path: readonly string[]): string {
+  return path.map(mangleIdentifierPart).join("_");
+}
+
+function mangleIdentifierPart(part: string): string {
+  const mangled = part.replace(/[^A-Za-z0-9_$]/g, "_");
+  return /^[0-9]/.test(mangled) ? `_${mangled}` : mangled;
+}
+
+function isIdentifierName(value: string): boolean {
+  return /^[$A-Z_a-z][$\w]*$/.test(value);
 }
 
 function getLeafPathForMember(
@@ -605,7 +945,9 @@ function finalizeExpression(
     case "CallExpression":
       return finalizeCallExpression(node, slots, state);
     default:
-      return SIMPLE_CHILDREN.has(node.type) ? finalizeSimpleExpression(node, slots) : node;
+      return SIMPLE_CHILDREN.has(node.type)
+        ? finalizeSimpleExpression(node, slots)
+        : node;
   }
 }
 
@@ -627,10 +969,17 @@ function getSimpleChildSpecs(node: Expression): ChildSpec[] {
   }
 }
 
-function finalizeSimpleExpression(node: Expression, slots: Expression[]): Expression {
+function finalizeSimpleExpression(
+  node: Expression,
+  slots: Expression[],
+): Expression {
   switch (node.type) {
     case "BinaryExpression":
-      return { ...node, left: slots[0] ?? node.left, right: slots[1] ?? node.right } as Expression;
+      return {
+        ...node,
+        left: slots[0] ?? node.left,
+        right: slots[1] ?? node.right,
+      } as Expression;
     case "ParenthesisExpression":
       return { ...node, expression: slots[0] ?? node.expression } as Expression;
     case "UnaryExpression":
@@ -788,7 +1137,10 @@ function getCallExpressionChildCount(node: any): number {
   return count;
 }
 
-function getCallExpressionCalleeSlotIndex(node: any, _state: TransformState): number {
+function getCallExpressionCalleeSlotIndex(
+  node: any,
+  _state: TransformState,
+): number {
   return getCalleeExpression(node.callee) === null ? -1 : 0;
 }
 
@@ -844,6 +1196,244 @@ function pushChild(
       slots[index] = expression;
     },
   });
+}
+
+function scanUnsupportedStoreSyntax(
+  program: Module,
+  state: TransformState,
+): void {
+  if (state.stores.size === 0) {
+    return;
+  }
+
+  visitNode(program, (node) => {
+    if (node.type === "MemberExpression") {
+      scanMemberExpression(node, state);
+      return;
+    }
+
+    if (node.type === "VariableDeclarator") {
+      scanVariableDeclarator(node, state);
+      return;
+    }
+
+    if (node.type === "BinaryExpression" && node.operator === "in") {
+      if (isStoreRootOrBranch(node.right, state)) {
+        addDiagnostic(
+          state,
+          "spread-reflection",
+          "Spread and reflection are not guaranteed for compiled stores in phase 1.",
+        );
+      }
+      return;
+    }
+
+    if (node.type === "UnaryExpression" && node.operator === "delete") {
+      if (isStoreRootOrBranch(node.argument, state)) {
+        addDiagnostic(
+          state,
+          "delete",
+          "Deleting compiled-store paths is not supported in phase 1.",
+        );
+      }
+      return;
+    }
+
+    if (node.type === "CallExpression") {
+      scanCallExpression(node, state);
+      return;
+    }
+
+    if (node.type === "ObjectExpression") {
+      scanObjectExpression(node, state);
+      return;
+    }
+
+    if (node.type === "OptionalChainingExpression" || node.type === "OptChainExpression") {
+      addDiagnostic(
+        state,
+        "optional-chain",
+        "Optional chaining on compiled stores is not supported in phase 1.",
+      );
+    }
+  });
+}
+
+function scanMemberExpression(node: any, state: TransformState): void {
+  const root = getMemberRootIdentifier(node);
+  if (root === null || !state.stores.has(root)) {
+    return;
+  }
+
+  if (hasDynamicMemberAccess(node)) {
+    addDiagnostic(
+      state,
+      "dynamic-access",
+      "Dynamic compiled-store access is not supported in phase 1.",
+    );
+  }
+}
+
+function scanVariableDeclarator(node: any, state: TransformState): void {
+  if (node.id?.type === "ObjectPattern" && isStoreRootOrBranch(node.init, state)) {
+    addDiagnostic(
+      state,
+      "spread-reflection",
+      "Spread and reflection are not guaranteed for compiled stores in phase 1.",
+    );
+    return;
+  }
+
+  if (node.id?.type !== "Identifier") {
+    return;
+  }
+
+  if (isStoreBranchMember(node.init, state)) {
+    addDiagnostic(
+      state,
+      "branch-alias",
+      "Aliasing nested compiled-store branches is not supported in phase 1.",
+    );
+  }
+}
+
+function scanCallExpression(node: any, state: TransformState): void {
+  const calleePath = collectStaticMemberPath(node.callee);
+  if (calleePath === null) {
+    return;
+  }
+
+  const [root, method] = calleePath;
+  const arg = node.arguments?.[0]?.expression;
+  const isReflection =
+    (root === "Object" &&
+      (method === "keys" ||
+        method === "values" ||
+        method === "entries" ||
+        method === "getOwnPropertyNames" ||
+        method === "getOwnPropertySymbols")) ||
+    (root === "Reflect" && method === "ownKeys");
+
+  if (isReflection && isStoreRootOrBranch(arg, state)) {
+    addDiagnostic(
+      state,
+      "spread-reflection",
+      "Spread and reflection are not guaranteed for compiled stores in phase 1.",
+    );
+  }
+}
+
+function scanObjectExpression(node: any, state: TransformState): void {
+  for (const property of node.properties ?? []) {
+    if (
+      property.type === "SpreadElement" &&
+      isStoreRootOrBranch(property.arguments ?? property.expression, state)
+    ) {
+      addDiagnostic(
+        state,
+        "spread-reflection",
+        "Spread and reflection are not guaranteed for compiled stores in phase 1.",
+      );
+    }
+  }
+}
+
+function isStoreRootOrBranch(node: any, state: TransformState): boolean {
+  if (node?.type === "Identifier") {
+    return state.stores.has(node.value);
+  }
+
+  return isStoreBranchMember(node, state);
+}
+
+function isStoreBranchMember(node: any, state: TransformState): boolean {
+  const parts = collectStaticMemberPath(node);
+  if (parts === null || parts.length < 2) {
+    return false;
+  }
+
+  const [root, ...path] = parts;
+  if (root === undefined) {
+    return false;
+  }
+
+  const binding = state.stores.get(root);
+  if (binding === undefined) {
+    return false;
+  }
+
+  const joined = path.join(".");
+  return binding.branchPaths.has(joined);
+}
+
+function getMemberRootIdentifier(node: any): string | null {
+  let current = node;
+
+  while (current?.type === "MemberExpression") {
+    current = current.object;
+  }
+
+  return current?.type === "Identifier" ? current.value : null;
+}
+
+function hasDynamicMemberAccess(node: any): boolean {
+  let current = node;
+
+  while (current?.type === "MemberExpression") {
+    if (current.computed || current.property?.type === "Computed") {
+      return true;
+    }
+    current = current.object;
+  }
+
+  return false;
+}
+
+function addDiagnostic(
+  state: TransformState,
+  code: DiagnosticCode,
+  message: string,
+): void {
+  if (
+    state.diagnostics.some(
+      (diagnostic) => diagnostic.code === code && diagnostic.message === message,
+    )
+  ) {
+    return;
+  }
+
+  state.diagnostics.push({ code, message });
+}
+
+function visitNode(node: any, visit: (node: any) => void): void {
+  if (node === null || typeof node !== "object") {
+    return;
+  }
+
+  if (typeof node.type === "string") {
+    visit(node);
+  }
+
+  for (const key of Object.keys(node)) {
+    if (
+      key === "span" ||
+      key === "ctxt" ||
+      key === "type" ||
+      key === "raw"
+    ) {
+      continue;
+    }
+
+    const value = node[key];
+    if (Array.isArray(value)) {
+      for (const child of value) {
+        visitNode(child, visit);
+      }
+      continue;
+    }
+
+    visitNode(value, visit);
+  }
 }
 
 const DUMMY_SPAN = {

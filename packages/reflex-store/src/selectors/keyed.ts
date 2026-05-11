@@ -6,17 +6,18 @@ import {
   untracked,
   writeProducer,
 } from "@volynets/reflex-runtime";
+import type { Accessor } from "../types";
 import {
   createSignalNode,
-  createWatcherRankedrNode,
-} from "../infra/factory";
+  createWatcherRankedNode,
+} from "../internal/runtime";
 import {
   getMissing,
   type KeyedOptions,
   type Missing,
   type ProjectionOptions,
   sameValue,
-} from "./selector.shared";
+} from "./shared";
 
 type BooleanSignalNode = ReturnType<typeof createSignalNode<boolean>>;
 type ProjectionSignalNode<R> = ReturnType<
@@ -34,7 +35,7 @@ class SelectorCore<T> {
     private readonly equals: (prev: T, next: T) => boolean,
     priority: number,
   ) {
-    const watcher = createWatcherRankedrNode(() => {
+    const watcher = createWatcherRankedNode(() => {
       this.sync();
     }, priority);
     this.watcher = watcher;
@@ -99,7 +100,7 @@ class KeyedProjectionCore<T, K, R> {
     private readonly fallback: R | undefined,
     priority: number,
   ) {
-    const watcher = createWatcherRankedrNode(() => {
+    const watcher = createWatcherRankedNode(() => {
       this.sync();
     }, priority);
     this.watcher = watcher;

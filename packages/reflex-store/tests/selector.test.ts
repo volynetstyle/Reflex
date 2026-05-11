@@ -1,11 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
-import { computed, createRuntime, effect, signal } from "./reflex.test_utils";
+import {
+  computed,
+  createRuntime,
+  effect,
+  signal,
+} from "../../../reflex/tests/reflex.test_utils";
 import {
   createKeyedProjection,
   createProjection,
   createSelector,
   createStoreProjection,
-} from "../src/unstable";
+} from "../src";
 
 describe("Reactive system - unstable selector/projection", () => {
   it("createSelector reruns only the previously selected and next selected keys", () => {

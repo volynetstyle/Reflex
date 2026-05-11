@@ -2,16 +2,17 @@ export type {
   KeyedOptions,
   ProjectionOptions,
   StoreProjectionOptions,
-} from "./selector.shared";
-export { createKeyedProjection, createSelector } from "./selector.keyed";
-export { createStoreProjection } from "./selector.store";
+} from "./shared";
+export { createKeyedProjection, createSelector } from "./keyed";
+export { createStoreProjection } from "./store";
 
-import { createKeyedProjection } from "./selector.keyed";
-import { createStoreProjection } from "./selector.store";
+import { createKeyedProjection } from "./keyed";
+import { createStoreProjection } from "./store";
 import type {
   ProjectionOptions,
   StoreProjectionOptions,
-} from "./selector.shared";
+} from "./shared";
+import type { Accessor } from "../types";
 
 export function createProjection<T extends object>(
   fn: (draft: T) => void | T,

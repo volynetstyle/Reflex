@@ -1,12 +1,12 @@
 import { readProducer, writeProducer } from "@volynets/reflex-runtime";
-import { effectRanked } from "../api/effect";
-import { createSignalNode } from "../infra/factory";
+import type { Destructor } from "../types";
+import { createSignalNode, effectRanked } from "../internal/runtime";
 import {
   cloneProjectionValue,
   isObject,
   readProjectionPath,
   type StoreProjectionOptions,
-} from "./selector.shared";
+} from "./shared";
 
 type PathEntry = {
   node: ReturnType<typeof createSignalNode<unknown>>;
