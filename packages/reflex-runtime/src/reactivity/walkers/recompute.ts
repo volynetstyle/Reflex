@@ -2,20 +2,22 @@ import type { ReactiveNode } from "../shape";
 import { Changed, Invalid, Reentrant } from "../shape";
 import { BAIL, DIRTY, walkBranch, walkLine } from "./recompute.branch";
 
-const CLEAN_DEMAND = Changed | Invalid | Reentrant;
+const INVALID_REENTRANT = Invalid | Reentrant;
 
-function isChanged(node: ReactiveNode, state: number = 0): boolean {
-  // // Already known dirty.
-  // if ((state & Changed) !== 0) return true;
+function isChanged(node: ReactiveNode, state: number = node.state): boolean {
+  // Already known dirty.
+  if ((state & Changed) !== 0) return true;
 
   // Reentrant invalid consumer must recompute.
-  if ((state & CLEAN_DEMAND) === CLEAN_DEMAND) return true;
+  if ((state & INVALID_REENTRANT) === INVALID_REENTRANT) return true;
 
   // If node is not invalid, dependencies do not need inspection.
   //
   // This relies on the core invariant:
   // if a dependency may affect this node, propagation marks this node Invalid/Changed.
-  if ((state & Invalid) === 0) return false;
+  if ((state & Invalid) === 0) {
+    return false;
+  }
 
   const edge = node.firstIn;
 

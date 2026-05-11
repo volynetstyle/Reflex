@@ -5,13 +5,23 @@
 // same branchy block at every exit.
 
 import { recompute } from "../engine/compute";
-import type { ReactiveEdge, ReactiveNode } from "../shape";
+import { AttachedOut, OutHasSibling, type ReactiveEdge, type ReactiveNode } from "../shape";
 import { propagateOnce } from "./propagate.once";
 
 
 function assertRefreshEdge(node: ReactiveNode, edge: ReactiveEdge): void {
-  if (__DEV__ && edge.from !== node) {
+  if (!__DEV__) return;
+
+  if (edge.from !== node) {
     throw new Error("refresh invariant violation: edge.from !== node");
+  }
+
+  const actual =
+    edge.prevOut !== null || edge.nextOut !== null || node.firstOut === edge;
+  const flagged = (edge.flags & AttachedOut) !== 0;
+
+  if (actual !== flagged) {
+    throw new Error("Edge attachment invariant broken");
   }
 }
 
@@ -28,7 +38,7 @@ export function refresh(node: ReactiveNode, edge: ReactiveEdge): boolean {
   // Keep this exact semantic:
   // the current parent path is handled by the walker;
   // only side-fanout needs explicit propagation.
-  if (changed && (edge.prevOut !== null || edge.nextOut !== null)) {
+  if (changed && (edge.flags & OutHasSibling) !== 0) {
     propagateOnce(node);
   }
 

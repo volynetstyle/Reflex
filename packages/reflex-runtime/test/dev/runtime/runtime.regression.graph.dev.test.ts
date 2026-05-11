@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { subtle } from "../../../src/debug";
 import { readConsumer, readProducer, runWatcher, writeProducer } from "../../../src";
+import { AttachedOut, HasNextIn, shouldRecompute } from "../../../src/reactivity";
 import {
   createConsumer,
   createProducer,
@@ -233,5 +234,43 @@ describe("Reactive runtime - graph regressions (dev)", () => {
     expect(summary.consumerReads).toEqual([]);
     expectNoStaleCleanup(summary);
     expect(summary.byType["watcher:invalidated"]).toBe(3);
+  });
+
+  it("fails fast when an outgoing edge attachment flag drifts from topology", () => {
+    const source = createProducer(1);
+    const shared = createConsumer(() => readProducer(source) * 2);
+    const left = createConsumer(() => readConsumer(shared) + 1);
+    const right = createConsumer(() => readConsumer(shared) + 2);
+
+    expect(readConsumer(left)).toBe(3);
+    expect(readConsumer(right)).toBe(4);
+
+    writeProducer(source, 2);
+
+    const edge = shared.firstOut;
+    expect(edge).not.toBeNull();
+    edge!.flags &= ~AttachedOut;
+
+    expect(() => shouldRecompute(left)).toThrow(
+      "Edge attachment invariant broken",
+    );
+  });
+
+  it("fails fast when an incoming next flag drifts from topology", () => {
+    const leftSource = createProducer(1);
+    const rightSource = createProducer(10);
+    const left = createConsumer(() => readProducer(leftSource) + 1);
+    const right = createConsumer(() => readProducer(rightSource) + 1);
+    const root = createConsumer(() => readConsumer(left) + readConsumer(right));
+
+    expect(readConsumer(root)).toBe(13);
+    writeProducer(rightSource, 20);
+
+    const edge = root.firstIn;
+    expect(edge).not.toBeNull();
+    expect(edge!.nextIn).not.toBeNull();
+    edge!.flags &= ~HasNextIn;
+
+    expect(() => shouldRecompute(root)).toThrow("Edge nextIn invariant broken");
   });
 });
