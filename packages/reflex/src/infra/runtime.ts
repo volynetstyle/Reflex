@@ -56,9 +56,7 @@ export function createRuntime({
   );
   const dispatcher = createEventDispatcher(scheduler.batch.bind(scheduler));
 
-  if (hooks !== undefined) {
-    setHooks(hooks);
-  }
+  setHooks(hooks ?? {});
 
   setRuntimeHooks(
     scheduler.enqueue.bind(scheduler),
