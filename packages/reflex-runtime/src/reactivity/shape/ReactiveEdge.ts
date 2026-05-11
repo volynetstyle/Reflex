@@ -1,11 +1,7 @@
 import type ReactiveNode from "./ReactiveNode";
 
-export const AttachedOut = 1 << 0;
-export const OutHasSibling = 1 << 1;
-
 export class ReactiveEdge {
   version: number = 0;
-  flags: number = 0;
 
   from: ReactiveNode;
   to: ReactiveNode;
@@ -44,7 +40,6 @@ export function createReactiveEdge(
 }
 
 export function clearReactiveEdgeLinks(edge: ReactiveEdge): void {
-  edge.flags = 0;
   edge.prevOut = null;
   edge.nextOut = null;
   edge.prevIn = null;

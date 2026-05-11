@@ -1,5 +1,4 @@
 import type { ReactiveEdge } from "../ReactiveEdge";
-import { AttachedOut, OutHasSibling } from "../ReactiveEdge";
 import type ReactiveNode from "../ReactiveNode";
 
 /** Insert `edge` into `to`'s incoming list right after `after` (or at head). */
@@ -48,16 +47,6 @@ export function detachOutgoingEdge(
   else from.firstOut = nextOut;
   if (nextOut) nextOut.prevOut = prevOut;
   else from.lastOut = prevOut;
-
-  if (prevOut !== null && prevOut.prevOut === null && nextOut === null) {
-    prevOut.flags &= ~OutHasSibling;
-  }
-
-  if (nextOut !== null && prevOut === null && nextOut.nextOut === null) {
-    nextOut.flags &= ~OutHasSibling;
-  }
-
-  edge.flags &= ~(AttachedOut | OutHasSibling);
   edge.prevOut = null;
   edge.nextOut = null;
 }

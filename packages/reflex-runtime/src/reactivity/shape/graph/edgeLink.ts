@@ -1,10 +1,5 @@
 import type { ReactiveEdge } from "../ReactiveEdge";
-import {
-  AttachedOut,
-  clearReactiveEdgeLinks,
-  createReactiveEdge,
-  OutHasSibling,
-} from "../ReactiveEdge";
+import { clearReactiveEdgeLinks, createReactiveEdge } from "../ReactiveEdge";
 import type ReactiveNode from "../ReactiveNode";
 import {
   attachIncomingEdgeAfter,
@@ -22,12 +17,9 @@ export function linkEdge(
   const edge = createReactiveEdge(version, from, to);
 
   edge.prevOut = prevOut;
-  edge.flags |= AttachedOut;
 
   if (prevOut) {
     prevOut.nextOut = edge;
-    prevOut.flags |= OutHasSibling;
-    edge.flags |= OutHasSibling;
   } else {
     from.firstOut = edge;
   }

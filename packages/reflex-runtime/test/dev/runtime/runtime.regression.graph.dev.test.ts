@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { subtle } from "../../../src/debug";
 import { readConsumer, readProducer, runWatcher, writeProducer } from "../../../src";
-import { AttachedOut, shouldRecompute } from "../../../src/reactivity";
+import { shouldRecompute } from "../../../src/reactivity";
 import {
   createConsumer,
   createProducer,
@@ -236,7 +236,7 @@ describe("Reactive runtime - graph regressions (dev)", () => {
     expect(summary.byType["watcher:invalidated"]).toBe(3);
   });
 
-  it("fails fast when an outgoing edge attachment flag drifts from topology", () => {
+  it("fails fast when a refresh edge is detached from outgoing topology", () => {
     const source = createProducer(1);
     const shared = createConsumer(() => readProducer(source) * 2);
     const left = createConsumer(() => readConsumer(shared) + 1);
@@ -249,11 +249,13 @@ describe("Reactive runtime - graph regressions (dev)", () => {
 
     const edge = shared.firstOut;
     expect(edge).not.toBeNull();
-    edge!.flags &= ~AttachedOut;
+    shared.firstOut = edge!.nextOut;
+    if (shared.firstOut !== null) shared.firstOut.prevOut = null;
+    edge!.prevOut = null;
+    edge!.nextOut = null;
 
     expect(() => shouldRecompute(left)).toThrow(
-      "Edge attachment invariant broken",
+      "refresh invariant violation: edge is not attached out",
     );
   });
-
 });
