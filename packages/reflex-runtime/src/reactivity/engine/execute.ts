@@ -30,7 +30,7 @@ function restoreNodeExecution(
   node: ReactiveNode,
   prevActive: ReactiveNode | null,
 ): void {
-  setActiveConsumer(prevActive);
+  setActiveConsumer(prevActive?.compute === null ? null : prevActive);
   clearNodeComputing(node);
 }
 
