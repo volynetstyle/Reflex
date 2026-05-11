@@ -2,12 +2,14 @@ import { afterAll, bench, describe } from "vitest";
 
 import {
   batch,
-  createProjection as createReflexProjection,
   createRuntime,
   effect,
   flush,
   signal,
 } from "../dist/esm/unstable/index.js";
+import {
+  createProjection as createReflexProjection,
+} from "../../@reflex/store/dist/index.js";
 import * as SolidSignalsModule from "../../reflex-runtime/node_modules/@solidjs/signals/dist/prod.js";
 
 // ---------------------------------------------------------------------------

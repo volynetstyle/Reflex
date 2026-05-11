@@ -2,11 +2,13 @@ import { afterAll, bench, describe } from "vitest";
 
 import {
   createRuntime,
-  createStoreProjection as createReflexStoreProjection,
   effect,
   flush,
   signal,
 } from "../dist/esm/unstable/index.js";
+import {
+  createStoreProjection as createReflexStoreProjection,
+} from "../../@reflex/store/dist/index.js";
 import * as SolidSignalsModule from "../../reflex-runtime/node_modules/@solidjs/signals/dist/prod.js";
 
 const {
