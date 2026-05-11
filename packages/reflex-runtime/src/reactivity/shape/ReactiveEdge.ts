@@ -2,7 +2,6 @@ import type ReactiveNode from "./ReactiveNode";
 
 export const AttachedOut = 1 << 0;
 export const OutHasSibling = 1 << 1;
-export const HasNextIn = 1 << 2;
 
 export class ReactiveEdge {
   version: number = 0;

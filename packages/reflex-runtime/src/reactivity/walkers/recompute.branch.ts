@@ -1,5 +1,5 @@
 import type { ReactiveEdge, ReactiveNode } from "../shape";
-import { Changed, HasNextIn, Invalid } from "../shape";
+import { Changed, Invalid } from "../shape";
 import { refresh } from "./recompute.refresh";
 import {
   noteShouldRecomputeStackUsage,
@@ -39,19 +39,6 @@ function assertIncomingEdge(node: ReactiveNode, edge: ReactiveEdge): void {
   if (__DEV__ && edge.to !== node) {
     throw new Error("walker invariant violation: edge.to !== node");
   }
-}
-
-function hasNextIn(edge: ReactiveEdge): boolean {
-  if (__DEV__) {
-    const actual = edge.nextIn !== null;
-    const flagged = (edge.flags & HasNextIn) !== 0;
-
-    if (actual !== flagged) {
-      throw new Error("Edge nextIn invariant broken");
-    }
-  }
-
-  return (edge.flags & HasNextIn) !== 0;
 }
 
 function pushStack(edge: ReactiveEdge, top: number): number {
@@ -142,7 +129,7 @@ export function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
       const deps = dep.firstIn;
 
       if (deps !== null) {
-        if (hasNextIn(deps)) {
+        if (deps.nextIn !== null) {
           resetStackBase(base);
           return BAIL;
         }
@@ -160,7 +147,7 @@ export function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
       break;
     }
 
-    if (hasNextIn(edge)) {
+    if (edge.nextIn !== null) {
       resetStackBase(base);
       return BAIL;
     }
@@ -245,7 +232,7 @@ export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
           node = dep;
 
           // Multiple deps: continue DFS scan.
-          if (hasNextIn(deps)) {
+          if (deps.nextIn !== null) {
             continue scan;
           }
 
@@ -259,8 +246,9 @@ export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
       }
 
       // Current dep is clean. Try sibling dependency.
-      if (hasNextIn(edge)) {
-        edge = edge.nextIn!;
+      const next = edge.nextIn;
+      if (next !== null) {
+        edge = next;
         continue scan;
       }
 
@@ -277,8 +265,9 @@ export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
       high = top;
       node = parent.to;
 
-      if (hasNextIn(parent)) {
-        edge = parent.nextIn!;
+      const parentNext = parent.nextIn;
+      if (parentNext !== null) {
+        edge = parentNext;
         continue scan;
       }
     }
@@ -288,8 +277,9 @@ export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
      * continue scanning siblings before deciding the parent is clean.
      */
     if (!dirty) {
-      if (hasNextIn(edge)) {
-        edge = edge.nextIn!;
+      const next = edge.nextIn;
+      if (next !== null) {
+        edge = next;
         continue;
       }
 
@@ -311,8 +301,9 @@ export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
       // Parent recomputed but value stayed equal.
       // Continue with sibling dependencies if they exist.
       if (!dirty) {
-        if (hasNextIn(parent)) {
-          edge = parent.nextIn!;
+        const next = parent.nextIn;
+        if (next !== null) {
+          edge = next;
           continue scan;
         }
 
@@ -331,8 +322,9 @@ export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
       const parent = stack[--top]!;
       high = top;
 
-      if (hasNextIn(parent)) {
-        edge = parent.nextIn!;
+      const next = parent.nextIn;
+      if (next !== null) {
+        edge = next;
         continue scan;
       }
 

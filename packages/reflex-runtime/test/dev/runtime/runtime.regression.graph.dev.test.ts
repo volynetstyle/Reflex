@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { subtle } from "../../../src/debug";
 import { readConsumer, readProducer, runWatcher, writeProducer } from "../../../src";
-import { AttachedOut, HasNextIn, shouldRecompute } from "../../../src/reactivity";
+import { AttachedOut, shouldRecompute } from "../../../src/reactivity";
 import {
   createConsumer,
   createProducer,
@@ -256,21 +256,4 @@ describe("Reactive runtime - graph regressions (dev)", () => {
     );
   });
 
-  it("fails fast when an incoming next flag drifts from topology", () => {
-    const leftSource = createProducer(1);
-    const rightSource = createProducer(10);
-    const left = createConsumer(() => readProducer(leftSource) + 1);
-    const right = createConsumer(() => readProducer(rightSource) + 1);
-    const root = createConsumer(() => readConsumer(left) + readConsumer(right));
-
-    expect(readConsumer(root)).toBe(13);
-    writeProducer(rightSource, 20);
-
-    const edge = root.firstIn;
-    expect(edge).not.toBeNull();
-    expect(edge!.nextIn).not.toBeNull();
-    edge!.flags &= ~HasNextIn;
-
-    expect(() => shouldRecompute(root)).toThrow("Edge nextIn invariant broken");
-  });
 });

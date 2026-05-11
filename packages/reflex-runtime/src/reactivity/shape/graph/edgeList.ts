@@ -1,5 +1,5 @@
 import type { ReactiveEdge } from "../ReactiveEdge";
-import { AttachedOut, HasNextIn, OutHasSibling } from "../ReactiveEdge";
+import { AttachedOut, OutHasSibling } from "../ReactiveEdge";
 import type ReactiveNode from "../ReactiveNode";
 
 /** Insert `edge` into `to`'s incoming list right after `after` (or at head). */
@@ -12,14 +12,11 @@ export function attachIncomingEdgeAfter(
 
   edge.prevIn = after;
   edge.nextIn = next;
-  if (next !== null) edge.flags |= HasNextIn;
-  else edge.flags &= ~HasNextIn;
 
   if (next) next.prevIn = edge;
   else to.lastIn = edge;
   if (after) {
     after.nextIn = edge;
-    after.flags |= HasNextIn;
   } else {
     to.firstIn = edge;
   }
@@ -33,17 +30,11 @@ export function detachIncomingEdge(to: ReactiveNode, edge: ReactiveEdge): void {
     to.lastInTail = prev;
   }
 
-  if (prev !== null) {
-    prev.nextIn = next;
-    if (next !== null) prev.flags |= HasNextIn;
-    else prev.flags &= ~HasNextIn;
-  }
+  if (prev !== null) prev.nextIn = next;
   else to.firstIn = next;
 
   if (next !== null) next.prevIn = prev;
   else to.lastIn = prev;
-
-  edge.flags &= ~HasNextIn;
 }
 
 /** Splice `edge` out of `from`'s outgoing list (does not touch the in-list). */
@@ -97,24 +88,14 @@ export function moveIncomingEdgeAfterUnchecked(
   if (next) next.prevIn = prev;
   else to.lastIn = prev;
 
-  if (prev) {
-    if (next) prev.flags |= HasNextIn;
-    else prev.flags &= ~HasNextIn;
-  }
-
   const insertNext = after ? after.nextIn : to.firstIn;
 
   edge.prevIn = after;
   edge.nextIn = insertNext;
-  if (insertNext) edge.flags |= HasNextIn;
-  else edge.flags &= ~HasNextIn;
 
   if (insertNext) insertNext.prevIn = edge;
   else to.lastIn = edge;
 
-  if (after) {
-    after.nextIn = edge;
-    after.flags |= HasNextIn;
-  }
+  if (after) after.nextIn = edge;
   else to.firstIn = edge;
 }
