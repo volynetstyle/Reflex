@@ -12,9 +12,7 @@ import {
 } from "../context";
 
 function recordTrackRead(consumer: ReactiveNode, source: ReactiveNode): void {
-  if (__DEV__) {
-    devRecordTrackRead(defaultContext, consumer, source);
-  }
+  devRecordTrackRead(defaultContext, consumer, source);
 }
 
 function trackReadSlowPath(source: ReactiveNode, consumer: ReactiveNode): void {
@@ -66,7 +64,7 @@ function trackReadResolved(
   if (prevEdge !== null) {
     if (prevEdge.from === source) {
       prevEdge.version = version;
-      if (__DEV__) recordTrackRead(consumer, source);
+      recordTrackRead(consumer, source);
       return true;
     }
 
@@ -74,13 +72,13 @@ function trackReadResolved(
     if (nextExpected !== null && nextExpected.from === source) {
       nextExpected.version = version;
       consumer.lastInTail = nextExpected;
-      if (__DEV__) recordTrackRead(consumer, source);
+      recordTrackRead(consumer, source);
       return true;
     }
 
     if (nextExpected === null) {
       if (hasTrackedPrefixDependency(source, prevEdge.prevIn)) {
-        if (__DEV__) recordTrackRead(consumer, source);
+        recordTrackRead(consumer, source);
         return true;
       }
 
@@ -95,7 +93,7 @@ function trackReadResolved(
     }
 
     if (hasTrackedPrefixDependency(source, prevEdge.prevIn)) {
-      if (__DEV__) recordTrackRead(consumer, source);
+      recordTrackRead(consumer, source);
       return true;
     }
 
@@ -110,14 +108,14 @@ function trackReadResolved(
     if (firstIn.from === source) {
       firstIn.version = version;
       consumer.lastInTail = firstIn;
-      if (__DEV__) recordTrackRead(consumer, source);
+      recordTrackRead(consumer, source);
       return true;
     }
 
     if (!slowPath) return false;
   }
 
-  if (__DEV__) recordTrackRead(consumer, source);
+  recordTrackRead(consumer, source);
   trackReadSlowPath(source, consumer);
   return true;
 }
@@ -140,7 +138,7 @@ function appendTrackedDependency(
   version: number,
 ): void {
   consumer.lastInTail = linkEdge(source, consumer, prevEdge, version);
-  if (__DEV__) recordTrackRead(consumer, source);
+  recordTrackRead(consumer, source);
 }
 
 function tryTrackReadTinySuffix(
@@ -163,7 +161,7 @@ function tryTrackReadTinySuffix(
     nextExpected.prevIn = next1;
     next1.version = version;
     consumer.lastInTail = next1;
-    if (__DEV__) recordTrackRead(consumer, source);
+    recordTrackRead(consumer, source);
     return true;
   }
 
@@ -180,7 +178,7 @@ function tryTrackReadTinySuffix(
     nextExpected.prevIn = next2;
     next2.version = version;
     consumer.lastInTail = next2;
-    if (__DEV__) recordTrackRead(consumer, source);
+    recordTrackRead(consumer, source);
     return true;
   }
 
@@ -245,9 +243,7 @@ export function cleanupStaleSources(node: ReactiveNode): void {
     node.lastIn = tail;
   }
 
-  if (__DEV__) {
-    devRecordCleanupStaleSources(node, staleHead, defaultContext);
-  }
+  devRecordCleanupStaleSources(node, staleHead, defaultContext);
 
   unlinkDetachedIncomingEdgeSequence(staleHead);
 }

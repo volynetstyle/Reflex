@@ -1,5 +1,6 @@
 import type { ReactiveEdge, ReactiveNode } from "../shape";
 import { Changed, Invalid } from "../shape";
+import { devAssertIncomingEdge } from "../dev";
 import { refresh } from "./recompute.refresh";
 import {
   noteShouldRecomputeStackUsage,
@@ -35,15 +36,9 @@ function releaseStackBase(base: number): void {
   trimWalkerStackIfSparse(stack, base);
 }
 
-function assertIncomingEdge(node: ReactiveNode, edge: ReactiveEdge): void {
-  if (__DEV__ && edge.to !== node) {
-    throw new Error("walker invariant violation: edge.to !== node");
-  }
-}
-
 function pushStack(edge: ReactiveEdge, top: number): number {
   stack[top++] = edge;
-  if (__DEV__) noteShouldRecomputeStackUsage(top);
+  noteShouldRecomputeStackUsage(top);
   return top;
 }
 
@@ -104,7 +99,7 @@ export function readShouldRecomputeStackStats(): {
  * where the dependency path is narrow and can be resolved without full DFS.
  */
 export function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
-  if (__DEV__) assertIncomingEdge(node, edge);
+  devAssertIncomingEdge(node, edge);
 
   const base = high;
   let top = base;
@@ -135,7 +130,7 @@ export function walkLine(node: ReactiveNode, edge: ReactiveEdge): number {
         }
 
         stack[top++] = edge;
-        if (__DEV__) noteShouldRecomputeStackUsage(top);
+        noteShouldRecomputeStackUsage(top);
 
         edge = deps;
         node = dep;

@@ -68,16 +68,7 @@ export function writeProducer<T>(
   // Check if the value actually changed using stable comparison
   // This prevents false invalidation when setting to the same value
   if (compare(prev, value)) {
-    if (__DEV__) {
-      devRecordWriteProducer(
-        node,
-        false,
-        value,
-        prev,
-        undefined,
-        defaultContext,
-      );
-    }
+    devRecordWriteProducer(node, false, value, prev, undefined, defaultContext);
     // Value didn't change, skip propagation
     return;
   }
@@ -85,9 +76,7 @@ export function writeProducer<T>(
   // Update the payload to the new value
   node.payload = value;
 
-  if (__DEV__) {
-    devRecordWriteProducer(node, true, value, prev, undefined, defaultContext);
-  }
+  devRecordWriteProducer(node, true, value, prev, undefined, defaultContext);
 
   enterPropagation();
   // Push phase: notify all subscribers depth-first, mark them dirty.

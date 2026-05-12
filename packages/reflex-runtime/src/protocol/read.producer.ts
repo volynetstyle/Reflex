@@ -35,9 +35,7 @@ export function readProducer<T>(node: ReactiveNode<T>): T {
   // Register this read as a dependency if there's an active computation
   if (activeConsumer !== null) trackRead(node);
 
-  if (__DEV__) {
-    devRecordReadProducer(node, node.payload, defaultContext);
-  }
+  devRecordReadProducer(node, node.payload, defaultContext);
 
   return value;
 }

@@ -13,9 +13,7 @@ export function recompute(node: ReactiveNode): boolean {
   node.payload = next;
   clearDirtyState(node);
 
-  if (__DEV__) {
-    devRecordRecompute(node, hasChanged, next, prev, defaultContext);
-  }
+  devRecordRecompute(node, hasChanged, next, prev, defaultContext);
 
   return hasChanged;
 }

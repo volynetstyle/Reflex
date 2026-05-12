@@ -5,25 +5,12 @@
 // same branchy block at every exit.
 
 import { recompute } from "../engine/compute";
+import { devAssertRefreshEdge } from "../dev";
 import type { ReactiveEdge, ReactiveNode } from "../shape";
 import { propagateOnce } from "./propagate.once";
 
 function hasSideFanout(node: ReactiveNode): boolean {
   return node.firstOut !== node.lastOut;
-}
-
-function assertRefreshEdge(node: ReactiveNode, edge: ReactiveEdge): void {
-  if (!__DEV__) return;
-
-  if (edge.from !== node) {
-    throw new Error("refresh invariant violation: edge.from !== node");
-  }
-
-  for (let cursor = node.firstOut; cursor !== null; cursor = cursor.nextOut) {
-    if (cursor === edge) return;
-  }
-
-  throw new Error("refresh invariant violation: edge is not attached out");
 }
 
 /**
@@ -32,7 +19,7 @@ function assertRefreshEdge(node: ReactiveNode, edge: ReactiveEdge): void {
  * `edge` must be an outgoing edge from `node`.
  */
 export function refresh(node: ReactiveNode, edge: ReactiveEdge): boolean {
-  assertRefreshEdge(node, edge);
+  devAssertRefreshEdge(node, edge);
 
   const changed = recompute(node);
 

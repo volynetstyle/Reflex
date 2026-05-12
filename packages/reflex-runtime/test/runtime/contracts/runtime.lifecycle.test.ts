@@ -6,13 +6,17 @@ import {
   Reentrant,
   Tracking,
   disposeNode,
+  disposeWatcher,
   readConsumer,
   readProducer,
+  runWatcher,
+  setActiveConsumer,
   writeProducer,
 } from "../../runtime.test_utils";
 import { connect, disconnect } from "../../../src/reactivity/shape/graph/connect";
 import {
   createConsumer,
+  createWatcher,
   createProducer,
   expectClean,
   expectNoSubscriber,
@@ -134,6 +138,52 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     expect(seenInside & Tracking).toBeTruthy();
     expectNotReentrant(target);
     expectClean(target);
+  });
+
+  it("runs watcher cleanup outside parent tracking during rerun", () => {
+    const trigger = createProducer(0);
+    const incidental = createProducer(0);
+    const parent = createConsumer(() => 0);
+    const watcher = createWatcher(() => {
+      readProducer(trigger);
+
+      return () => {
+        readProducer(incidental);
+      };
+    });
+
+    runWatcher(watcher);
+
+    writeProducer(trigger, 1);
+    setActiveConsumer(parent);
+    try {
+      runWatcher(watcher);
+    } finally {
+      setActiveConsumer(null);
+    }
+
+    expectNoSubscriber(incidental, parent);
+  });
+
+  it("runs watcher cleanup outside parent tracking during dispose", () => {
+    const incidental = createProducer(0);
+    const parent = createConsumer(() => 0);
+    const watcher = createWatcher(() => {
+      return () => {
+        readProducer(incidental);
+      };
+    });
+
+    runWatcher(watcher);
+
+    setActiveConsumer(parent);
+    try {
+      disposeWatcher(watcher);
+    } finally {
+      setActiveConsumer(null);
+    }
+
+    expectNoSubscriber(incidental, parent);
   });
 });
 

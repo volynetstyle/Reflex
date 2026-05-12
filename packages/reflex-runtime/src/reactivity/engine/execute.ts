@@ -1,5 +1,5 @@
 import type { ReactiveNode } from "../shape";
-import { Computing, clearNodeComputing, markNodeComputing } from "../shape";
+import { clearNodeComputing, markNodeComputing } from "../shape";
 import { cleanupStaleSources } from "./tracking";
 import {
   activeConsumer,
@@ -7,7 +7,12 @@ import {
   defaultContext,
   setActiveConsumer,
 } from "../context";
-import { recordDebugEvent } from "../../debug/debug.runtime";
+import {
+  devAssertExecutableNode,
+  devRecordComputeError,
+  devRecordComputeFinish,
+  devRecordComputeStart,
+} from "../dev";
 
 function prepareNodeExecution(node: ReactiveNode): ReactiveNode | null {
   node.lastInTail = null;
@@ -17,11 +22,7 @@ function prepareNodeExecution(node: ReactiveNode): ReactiveNode | null {
   const prevActive = activeConsumer;
   setActiveConsumer(node);
 
-  if (__DEV__) {
-    recordDebugEvent(defaultContext, "compute:start", {
-      node,
-    });
-  }
+  devRecordComputeStart(node, defaultContext);
 
   return prevActive;
 }
@@ -40,16 +41,7 @@ function restoreNodeExecution(
  * @returns
  */
 export function executeNodeComputation(node: ReactiveNode): unknown {
-  if (__DEV__) {
-    if (!node.compute) {
-      throw new Error(
-        "Cannot execute a reactive node without a compute function",
-      );
-    }
-    if ((node.state & Computing) !== 0) {
-      throw new Error("Cycle detected while recomputing reactive node");
-    }
-  }
+  devAssertExecutableNode(node);
 
   const prevActive = prepareNodeExecution(node);
 
@@ -58,13 +50,7 @@ export function executeNodeComputation(node: ReactiveNode): unknown {
     result = (node.compute as NonNullable<typeof node.compute>)();
   } catch (error) {
     restoreNodeExecution(node, prevActive);
-
-    if (__DEV__) {
-      recordDebugEvent(defaultContext, "compute:error", {
-        node,
-        detail: { error },
-      });
-    }
+    devRecordComputeError(node, error, defaultContext);
 
     throw error;
   }
@@ -72,12 +58,7 @@ export function executeNodeComputation(node: ReactiveNode): unknown {
   restoreNodeExecution(node, prevActive);
   if (node.lastInTail !== node.lastIn) cleanupStaleSources(node);
 
-  if (__DEV__) {
-    recordDebugEvent(defaultContext, "compute:finish", {
-      node,
-      detail: { result },
-    });
-  }
+  devRecordComputeFinish(node, result, defaultContext);
 
   return result;
 }

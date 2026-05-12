@@ -10,15 +10,17 @@ let shouldRecomputeStackPeak = 0;
 let resumeEdgeStackPeak = 0;
 
 export function noteShouldRecomputeStackUsage(stackTop: number): void {
-  if (__DEV__ && stackTop > shouldRecomputeStackPeak) {
-    shouldRecomputeStackPeak = stackTop;
-  }
+  if (!__DEV__) return;
+  if (stackTop <= shouldRecomputeStackPeak) return;
+
+  shouldRecomputeStackPeak = stackTop;
 }
 
 export function noteResumeEdgeStackUsage(stackTop: number): void {
-  if (__DEV__ && stackTop > resumeEdgeStackPeak) {
-    resumeEdgeStackPeak = stackTop;
-  }
+  if (!__DEV__) return;
+  if (stackTop <= resumeEdgeStackPeak) return;
+
+  resumeEdgeStackPeak = stackTop;
 }
 
 export function resetRuntimeWalkerStackStats(): void {

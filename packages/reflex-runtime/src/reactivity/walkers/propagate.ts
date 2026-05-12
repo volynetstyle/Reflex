@@ -35,7 +35,7 @@ export function propagate(startEdge: ReactiveEdge | null, startPromote: number):
     const child = sub.firstOut;
     if (child !== null) {
       stack[top++] = child;
-      if (__DEV__) noteResumeEdgeStackUsage(top);
+      noteResumeEdgeStackUsage(top);
     }
   }
 
@@ -61,7 +61,7 @@ export function propagate(startEdge: ReactiveEdge | null, startPromote: number):
           if (child !== null) {
             if (nextEdge !== null) {
               stack[top++] = nextEdge;
-              if (__DEV__) noteResumeEdgeStackUsage(top);
+              noteResumeEdgeStackUsage(top);
             }
 
             edge = child;

@@ -32,7 +32,7 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
   if ((state & DIRTY_STATE) !== 0) {
-    if (__DEV__) devAssertConsumerCanStabilize(state);
+    devAssertConsumerCanStabilize(state);
     return readConsumerLazySlow(node, state);
   }
 
@@ -42,8 +42,7 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
 
   trackReadActive(node);
 
-  if (__DEV__)
-    devRecordReadConsumer(node, "lazy", value, defaultContext, activeConsumer);
+  devRecordReadConsumer(node, "lazy", value, defaultContext, activeConsumer);
 
   return value;
 }
@@ -53,14 +52,13 @@ function readConsumerLazySlow<T>(node: ReactiveNode<T>, state: number): T {
 
   trackRead(node);
 
-  if (__DEV__)
-    devRecordReadConsumer(
-      node,
-      "lazy",
-      value,
-      defaultContext,
-      activeConsumer ?? undefined,
-    );
+  devRecordReadConsumer(
+    node,
+    "lazy",
+    value,
+    defaultContext,
+    activeConsumer ?? undefined,
+  );
 
   return value;
 }
@@ -74,7 +72,7 @@ function readConsumerLazySlow<T>(node: ReactiveNode<T>, state: number): T {
 export function readConsumerEager<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
-  if (__DEV__) devAssertConsumerCanStabilize(state);
+  devAssertConsumerCanStabilize(state);
 
   if ((state & DIRTY_STATE) === 0) return node.payload as T;
 
@@ -129,20 +127,20 @@ export function readConsumer<T>(
 ): T {
   const state = node.state;
 
-  if (__DEV__) devAssertConsumerCanStabilize(state);
+  devAssertConsumerCanStabilize(state);
 
   if (mode !== ConsumerReadMode.lazy) {
     if ((state & DIRTY_STATE) === 0) {
       const value = node.payload as T;
 
-      if (__DEV__) devRecordReadConsumer(node, "eager", value, defaultContext);
+      devRecordReadConsumer(node, "eager", value, defaultContext);
 
       return value;
     }
 
     const value = readConsumerEagerSlow(node, state);
 
-    if (__DEV__) devRecordReadConsumer(node, "eager", value, defaultContext);
+    devRecordReadConsumer(node, "eager", value, defaultContext);
 
     return value;
   }
@@ -152,14 +150,13 @@ export function readConsumer<T>(
 
     if (activeConsumer !== null) trackRead(node);
 
-    if (__DEV__)
-      devRecordReadConsumer(
-        node,
-        "lazy",
-        value,
-        defaultContext,
-        activeConsumer ?? undefined,
-      );
+    devRecordReadConsumer(
+      node,
+      "lazy",
+      value,
+      defaultContext,
+      activeConsumer ?? undefined,
+    );
 
     return value;
   }
@@ -172,14 +169,13 @@ function readConsumerSlow<T>(node: ReactiveNode<T>, state: number): T {
 
   trackRead(node);
 
-  if (__DEV__)
-    devRecordReadConsumer(
-      node,
-      "lazy",
-      value,
-      defaultContext,
-      activeConsumer ?? undefined,
-    );
+  devRecordReadConsumer(
+    node,
+    "lazy",
+    value,
+    defaultContext,
+    activeConsumer ?? undefined,
+  );
 
   return value;
 }

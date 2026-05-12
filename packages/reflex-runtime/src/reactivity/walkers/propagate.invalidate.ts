@@ -1,5 +1,5 @@
-import { recordDebugEvent } from "../../debug/debug.runtime";
 import { defaultContext, dispatchSinkInvalidated } from "../context";
+import { devRecordPropagate, devRecordWatcherInvalidated } from "../dev";
 import {
   Changed,
   DIRTY_STATE,
@@ -14,9 +14,7 @@ export function notifyWatcher(node: ReactiveNode): void {
   const notify = dispatchSinkInvalidated;
 
   if (notify === undefined) {
-    if (__DEV__) {
-      recordDebugEvent(defaultContext, "watcher:invalidated", { node });
-    }
+    devRecordWatcherInvalidated(node, defaultContext);
     return;
   }
 
@@ -59,16 +57,7 @@ export function invalidateSub(
 
   sub.state = next;
 
-  if (__DEV__) {
-    recordDebugEvent(defaultContext, "propagate", {
-      detail: {
-        immediate: promote === Changed,
-        nextState: next,
-      },
-      source: edge.from,
-      target: sub,
-    });
-  }
+  devRecordPropagate(edge, next, promote === Changed, defaultContext);
 
   return next;
 }
