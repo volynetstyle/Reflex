@@ -15,11 +15,11 @@ import {
 } from "../build/esm/index.js";
 import {
   linkEdge,
-} from "../build/esm/reactivity/shape/graph/connect.js";
+} from "../build/esm/kernel/shape/graph/connect.js";
 import {
   attachIncomingEdgeAfter,
   detachIncomingEdge,
-} from "../build/esm/reactivity/shape/graph/edgeList.js";
+} from "../build/esm/kernel/shape/graph/edgeList.js";
 
 const UNINITIALIZED = Symbol("reflex.perf.uninitialized");
 const DEFAULT_SAMPLES = 9;

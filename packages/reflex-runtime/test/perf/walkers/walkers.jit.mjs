@@ -18,11 +18,11 @@ import {
   setHooks,
   writeProducer,
 } from "../../../build/esm/index.js";
-import { recompute } from "../../../build/esm/reactivity/engine/compute.js";
-import { executeNodeComputation } from "../../../build/esm/reactivity/engine/execute.js";
-import { linkEdge } from "../../../build/esm/reactivity/shape/graph/connect.js";
-import { propagate } from "../../../build/esm/reactivity/walkers/propagate.js";
-import { shouldRecompute } from "../../../build/esm/reactivity/walkers/recompute.js";
+import { recompute } from "../../../build/esm/kernel/engine/computeNode.js";
+import { executeNodeComputation } from "../../../build/esm/kernel/engine/executeWatcher.js";
+import { linkEdge } from "../../../build/esm/kernel/shape/graph/connect.js";
+import { propagate } from "../../../build/esm/kernel/walkers/propagateChange.js";
+import { shouldRecompute } from "../../../build/esm/kernel/walkers/recomputeNode.js";
 
 const DIRTY_OR_WALKER =
   Invalid |
@@ -472,6 +472,73 @@ function buildReadConsumerDirtyChain(depth, mode = ConsumerReadMode.lazy) {
   };
 }
 
+function createStableOrder(fanIn) {
+  const order = Array.from({ length: fanIn }, (_, i) => i);
+  return () => order;
+}
+
+function createRotatingOrder(fanIn, step) {
+  let offset = 0;
+  const order = Array.from({ length: fanIn }, (_, i) => i);
+
+  return () => {
+    offset = (offset + step) % fanIn;
+
+    for (let i = 0; i < fanIn; i += 1) {
+      order[i] = (i + offset) % fanIn;
+    }
+
+    return order;
+  };
+}
+
+function createReverseOrder(fanIn) {
+  const forward = Array.from({ length: fanIn }, (_, i) => i);
+  const reversed = forward.slice().reverse();
+  let reverse = false;
+
+  return () => {
+    reverse = !reverse;
+    return reverse ? reversed : forward;
+  };
+}
+
+function buildTrackingReadOrder(fanIn, getOrder, duplicate = false) {
+  resetRuntime();
+
+  const sources = Array.from({ length: fanIn }, (_, i) => createProducer(i + 1));
+  const tick = createProducer(0);
+  const root = createConsumer(() => {
+    readProducer(tick);
+
+    let sum = 0;
+    const order = getOrder();
+
+    for (let i = 0; i < fanIn; i += 1) {
+      const source = sources[order[i]];
+      sum += readProducer(source);
+
+      if (duplicate) {
+        sum += readProducer(source);
+      }
+    }
+
+    return sum;
+  });
+
+  readConsumer(root);
+
+  let value = 0;
+
+  return {
+    run() {
+      value += 1;
+      writeProducer(tick, value);
+      return readConsumer(root);
+    },
+  };
+}
+
 function buildWriteProducerNoSubscribers() {
   resetRuntime();
 
@@ -593,6 +660,7 @@ function benchTailLatency(
 
   const opsSamples = [];
   const p50Samples = [];
+  const p75Samples = [];
   const p95Samples = [];
   const p99Samples = [];
   const p999Samples = [];
@@ -618,6 +686,7 @@ function benchTailLatency(
     }
 
     p50Samples.push(quantile(latencies, 0.5));
+    p75Samples.push(quantile(latencies, 0.75));
     p95Samples.push(quantile(latencies, 0.95));
     p99Samples.push(quantile(latencies, 0.99));
     p999Samples.push(quantile(latencies, 0.999));
@@ -627,10 +696,14 @@ function benchTailLatency(
   console.log(
     `${label}: ops/sec=${formatOpsSec(median(opsSamples))} | p50=${formatNs(
       median(p50Samples),
-    )} | p95=${formatNs(median(p95Samples))} | p99=${formatNs(
+    )} | p75=${formatNs(median(p75Samples))} | p95=${formatNs(
+      median(p95Samples),
+    )} | p99=${formatNs(
       median(p99Samples),
     )} | p999=${formatNs(median(p999Samples))} | max=${formatNs(
       median(maxSamples),
+    )} | worstMax=${formatNs(
+      Math.max(...maxSamples),
     )} | sink=${sink}`,
   );
 }
@@ -653,6 +726,7 @@ function benchTailLatencyWithHooks({
 
   const opsSamples = [];
   const p50Samples = [];
+  const p75Samples = [];
   const p95Samples = [];
   const p99Samples = [];
   const p999Samples = [];
@@ -684,6 +758,7 @@ function benchTailLatencyWithHooks({
     }
 
     p50Samples.push(quantile(latencies, 0.5));
+    p75Samples.push(quantile(latencies, 0.75));
     p95Samples.push(quantile(latencies, 0.95));
     p99Samples.push(quantile(latencies, 0.99));
     p999Samples.push(quantile(latencies, 0.999));
@@ -693,10 +768,14 @@ function benchTailLatencyWithHooks({
   console.log(
     `${label}: ops/sec=${formatOpsSec(median(opsSamples))} | p50=${formatNs(
       median(p50Samples),
-    )} | p95=${formatNs(median(p95Samples))} | p99=${formatNs(
+    )} | p75=${formatNs(median(p75Samples))} | p95=${formatNs(
+      median(p95Samples),
+    )} | p99=${formatNs(
       median(p99Samples),
     )} | p999=${formatNs(median(p999Samples))} | max=${formatNs(
       median(maxSamples),
+    )} | worstMax=${formatNs(
+      Math.max(...maxSamples),
     )} | sink=${sink}`,
   );
 }
@@ -957,6 +1036,41 @@ function runSingleScenario(name) {
     case "p99_propagate_chain_64": {
       const scenario = buildPropagateChain(64);
       benchTailLatency(name, () => scenario.run(), 8000, 3000, 2048, 7);
+      return;
+    }
+    case "p99_shouldRecompute_chain_32": {
+      const scenario = buildShouldRecomputeChain(32);
+      benchTailLatency(name, () => scenario.run(), 8000, 3000, 2048, 9);
+      return;
+    }
+    case "p99_shouldRecompute_diamond": {
+      const scenario = buildShouldRecomputeDiamond();
+      benchTailLatency(name, () => scenario.run(), 8000, 3000, 2048, 9);
+      return;
+    }
+    case "p99_tracking_expected_next_64": {
+      const scenario = buildTrackingReadOrder(64, createStableOrder(64));
+      benchTailLatency(name, () => scenario.run(), 6000, 2500, 2048, 9);
+      return;
+    }
+    case "p99_tracking_tiny_step1_64": {
+      const scenario = buildTrackingReadOrder(64, createRotatingOrder(64, 1));
+      benchTailLatency(name, () => scenario.run(), 6000, 2500, 2048, 9);
+      return;
+    }
+    case "p99_tracking_tiny_step2_64": {
+      const scenario = buildTrackingReadOrder(64, createRotatingOrder(64, 2));
+      benchTailLatency(name, () => scenario.run(), 6000, 2500, 2048, 9);
+      return;
+    }
+    case "p99_tracking_fallback_reverse_64": {
+      const scenario = buildTrackingReadOrder(64, createReverseOrder(64));
+      benchTailLatency(name, () => scenario.run(), 6000, 2500, 2048, 9);
+      return;
+    }
+    case "p99_tracking_duplicate_64": {
+      const scenario = buildTrackingReadOrder(64, createStableOrder(64), true);
+      benchTailLatency(name, () => scenario.run(), 6000, 2500, 2048, 9);
       return;
     }
     case "p99_runWatcher_shared_propagateOnce_256": {
