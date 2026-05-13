@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { subtle } from "../../../src/debug";
 import { readConsumer, readProducer, runWatcher, writeProducer } from "../../../src";
-import { shouldRecompute } from "../../../src/reactivity";
+import { shouldRecompute } from "../../../src/kernel";
 import {
   createConsumer,
   createProducer,

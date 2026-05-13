@@ -56,7 +56,7 @@ export {
   type ExecutionContextOptions,
   type EngineHooks,
   type TrackReadFallback,
-} from "./reactivity/context";
+} from "./kernel/context";
 
 export {
   DIRTY_STATE,
@@ -87,6 +87,6 @@ export {
   Tracking,
   disposeNode,
   disposeNodeEvent,
-} from "./reactivity";
+} from "./kernel";
 
-export type { ReactiveNodeState } from "./reactivity";
+export type { ReactiveNodeState } from "./kernel";

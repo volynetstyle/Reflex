@@ -1,4 +1,4 @@
-import type { ReactiveNode } from "../reactivity";
+import type { ReactiveNode } from "../kernel";
 import {
   type RuntimeDebugGraphEdgeSnapshot,
   type RuntimeDebugGraphIntegrity,

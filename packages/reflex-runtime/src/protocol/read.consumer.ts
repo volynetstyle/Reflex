@@ -1,4 +1,4 @@
-import type { ReactiveNode } from "../reactivity";
+import type { ReactiveNode } from "../kernel";
 import {
   DIRTY_STATE,
   trackRead,
@@ -8,11 +8,11 @@ import {
   recompute,
   propagateOnce,
   trackReadActive,
-} from "../reactivity";
+} from "../kernel";
 import {
   devAssertConsumerCanStabilize,
   devRecordReadConsumer,
-} from "../reactivity/dev";
+} from "../kernel/dev";
 import { ConsumerReadMode } from "./utils/constants";
 
 /**
@@ -32,7 +32,7 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
   if ((state & DIRTY_STATE) !== 0) {
-    devAssertConsumerCanStabilize(state);
+    if (__DEV__) devAssertConsumerCanStabilize(state);
     return readConsumerLazySlow(node, state);
   }
 
@@ -42,7 +42,9 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
 
   trackReadActive(node);
 
-  devRecordReadConsumer(node, "lazy", value, defaultContext, activeConsumer);
+  if (__DEV__) {
+    devRecordReadConsumer(node, "lazy", value, defaultContext, activeConsumer);
+  }
 
   return value;
 }
@@ -50,15 +52,17 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
 function readConsumerLazySlow<T>(node: ReactiveNode<T>, state: number): T {
   const value = stabilizeDirtyConsumer(node, state);
 
-  trackRead(node);
+  if (activeConsumer !== null) trackRead(node);
 
-  devRecordReadConsumer(
-    node,
-    "lazy",
-    value,
-    defaultContext,
-    activeConsumer ?? undefined,
-  );
+  if (__DEV__) {
+    devRecordReadConsumer(
+      node,
+      "lazy",
+      value,
+      defaultContext,
+      activeConsumer ?? undefined,
+    );
+  }
 
   return value;
 }
@@ -72,7 +76,7 @@ function readConsumerLazySlow<T>(node: ReactiveNode<T>, state: number): T {
 export function readConsumerEager<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
-  devAssertConsumerCanStabilize(state);
+  if (__DEV__) devAssertConsumerCanStabilize(state);
 
   if ((state & DIRTY_STATE) === 0) return node.payload as T;
 
@@ -80,8 +84,6 @@ export function readConsumerEager<T>(node: ReactiveNode<T>): T {
 }
 
 function readConsumerEagerSlow<T>(node: ReactiveNode<T>, state: number): T {
-  if (activeConsumer === null) return stabilizeDirtyConsumer(node, state);
-
   return stabilizeDirtyConsumer(node, state);
 }
 
@@ -127,20 +129,20 @@ export function readConsumer<T>(
 ): T {
   const state = node.state;
 
-  devAssertConsumerCanStabilize(state);
+  if (__DEV__) devAssertConsumerCanStabilize(state);
 
   if (mode !== ConsumerReadMode.lazy) {
     if ((state & DIRTY_STATE) === 0) {
       const value = node.payload as T;
 
-      devRecordReadConsumer(node, "eager", value, defaultContext);
+      if (__DEV__) devRecordReadConsumer(node, "eager", value, defaultContext);
 
       return value;
     }
 
     const value = readConsumerEagerSlow(node, state);
 
-    devRecordReadConsumer(node, "eager", value, defaultContext);
+    if (__DEV__) devRecordReadConsumer(node, "eager", value, defaultContext);
 
     return value;
   }
@@ -150,13 +152,15 @@ export function readConsumer<T>(
 
     if (activeConsumer !== null) trackRead(node);
 
-    devRecordReadConsumer(
-      node,
-      "lazy",
-      value,
-      defaultContext,
-      activeConsumer ?? undefined,
-    );
+    if (__DEV__) {
+      devRecordReadConsumer(
+        node,
+        "lazy",
+        value,
+        defaultContext,
+        activeConsumer ?? undefined,
+      );
+    }
 
     return value;
   }
@@ -167,15 +171,17 @@ export function readConsumer<T>(
 function readConsumerSlow<T>(node: ReactiveNode<T>, state: number): T {
   const value = stabilizeDirtyConsumer(node, state);
 
-  trackRead(node);
+  if (activeConsumer !== null) trackRead(node);
 
-  devRecordReadConsumer(
-    node,
-    "lazy",
-    value,
-    defaultContext,
-    activeConsumer ?? undefined,
-  );
+  if (__DEV__) {
+    devRecordReadConsumer(
+      node,
+      "lazy",
+      value,
+      defaultContext,
+      activeConsumer ?? undefined,
+    );
+  }
 
   return value;
 }

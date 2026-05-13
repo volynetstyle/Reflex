@@ -2,14 +2,14 @@ import { getCurrentComputedInternal } from "../internal";
 import {
   Watcher as WatcherFlag,
   type ReactiveNode,
-} from "../reactivity";
+} from "../kernel";
 import { untracked } from "../protocol";
 import {
   readPropagateStackStats,
   readShouldRecomputeStackStats,
   resetRuntimeWalkerStackStats,
   type RuntimeWalkerStackStats,
-} from "../reactivity/walkers";
+} from "../kernel/walkers";
 import {
   checkDebugGraphIntegrity,
   snapshotDebugGraph,

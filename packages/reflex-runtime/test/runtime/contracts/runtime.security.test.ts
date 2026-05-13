@@ -9,7 +9,7 @@ import {
   restoreContext,
   setHooks,
   setReactiveSettledHook,
-} from "../../../src/reactivity/context";
+} from "../../../src/kernel/context";
 
 /** Covers security-sensitive hook normalization and replacement behavior. */
 describe("Reactive runtime - security regressions", () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ReactiveNode, restoreContext, saveContext, setOptions } from "../../runtime.test_utils";
-import type { ReactiveNodeState } from "../../../src/reactivity";
+import type { ReactiveNodeState } from "../../../src/kernel";
 import {
   Consumer,
   Producer,
@@ -11,7 +11,7 @@ import {
   setTrackingVersion,
   trackReadActive,
   unlinkEdge,
-} from "../../../src/reactivity";
+} from "../../../src/kernel";
 import {
   expectGraphIntegrity,
   expectIncomingEdges,
@@ -209,6 +209,7 @@ describe("Reactive runtime - edge wiring", () => {
     const c = createNode(Producer);
     const d = createNode(Producer);
     const e = createNode(Producer);
+    const f = createNode(Producer);
     const target = createNode(Consumer);
     const calls: Array<{
       source: ReactiveNode;
@@ -222,6 +223,7 @@ describe("Reactive runtime - edge wiring", () => {
     const cb = linkEdge(c, target);
     const db = linkEdge(d, target);
     const eb = linkEdge(e, target);
+    const fb = linkEdge(f, target);
     const snapshot = saveContext();
     setOptions({
       trackReadFallback(source, consumer, prev, nextExpected) {
@@ -246,8 +248,47 @@ describe("Reactive runtime - edge wiring", () => {
       nextExpected: bb,
     });
     expectLastInTail(target, eb);
-    expectIncomingEdges(target, [ab, eb, bb, cb, db]);
-    expectGraphIntegrity([a, b, c, d, e, target]);
+    expectIncomingEdges(target, [ab, eb, bb, cb, db, fb]);
+    expectGraphIntegrity([a, b, c, d, e, f, target]);
+    restoreContext(snapshot);
+  });
+
+  it("reuses the incoming tail before the execution-context fallback seam", () => {
+    const a = createNode(Producer);
+    const b = createNode(Producer);
+    const c = createNode(Producer);
+    const target = createNode(Consumer);
+    const calls: Array<{
+      source: ReactiveNode;
+      consumer: ReactiveNode;
+      prev: ReactiveEdge | null;
+      nextExpected: ReactiveEdge | null;
+    }> = [];
+    const snapshot = saveContext();
+
+    const ab = linkEdge(a, target);
+    const bb = linkEdge(b, target);
+    const cb = linkEdge(c, target);
+
+    setOptions({
+      trackReadFallback(source, consumer, prev, nextExpected) {
+        calls.push({ source, consumer, prev, nextExpected });
+        return reuseIncomingEdgeFromSuffixOrCreate(
+          source,
+          consumer,
+          prev,
+          nextExpected,
+        );
+      },
+    });
+
+    target.lastInTail = ab;
+    trackReadActive(c, target);
+
+    expect(calls).toEqual([]);
+    expectLastInTail(target, cb);
+    expectIncomingEdges(target, [ab, cb, bb]);
+    expectGraphIntegrity([a, b, c, target]);
     restoreContext(snapshot);
   });
 

@@ -5,7 +5,7 @@ import {
   readRuntimeWalkerStackStats,
   resetRuntimeWalkerStackStats,
   trimWalkerStackIfSparse,
-} from "../../../src/reactivity/walkers/stack.stats";
+} from "../../../src/kernel/walkers/walkerStackStats";
 
 /** Covers debug-only stack-stat counters for walker storage management. */
 describe("Reactive runtime - walker stack stats", () => {

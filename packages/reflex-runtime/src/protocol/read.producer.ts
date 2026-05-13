@@ -2,9 +2,9 @@ import {
   activeConsumer,
   trackRead,
   defaultContext,
-} from "../reactivity";
-import type { ReactiveNode } from "../reactivity";
-import { devRecordReadProducer } from "../reactivity/dev";
+} from "../kernel";
+import type { ReactiveNode } from "../kernel";
+import { devRecordReadProducer } from "../kernel/dev";
 
 /**
  * Read the value of a producer (source) node.
@@ -35,7 +35,7 @@ export function readProducer<T>(node: ReactiveNode<T>): T {
   // Register this read as a dependency if there's an active computation
   if (activeConsumer !== null) trackRead(node);
 
-  devRecordReadProducer(node, node.payload, defaultContext);
+  if (__DEV__) devRecordReadProducer(node, value, defaultContext);
 
   return value;
 }

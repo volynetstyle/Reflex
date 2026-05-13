@@ -1,12 +1,13 @@
-import type { ReactiveNode } from "../reactivity";
+import type { ReactiveNode } from "../kernel";
 import {
   defaultContext,
   enterPropagation,
   propagate,
   PROMOTE_CHANGED,
   leavePropagation,
-} from "../reactivity";
-import { devRecordWriteProducer } from "../reactivity/dev";
+  notifySettledIfIdle,
+} from "../kernel";
+import { devRecordWriteProducer } from "../kernel/dev";
 import type { ProducerComparator } from "./utils/compare";
 import { compare as defaultComparator } from "./utils/compare";
 
@@ -68,7 +69,9 @@ export function writeProducer<T>(
   // Check if the value actually changed using stable comparison
   // This prevents false invalidation when setting to the same value
   if (compare(prev, value)) {
-    devRecordWriteProducer(node, false, value, prev, undefined, defaultContext);
+    if (__DEV__) {
+      devRecordWriteProducer(node, false, value, prev, undefined, defaultContext);
+    }
     // Value didn't change, skip propagation
     return;
   }
@@ -76,12 +79,21 @@ export function writeProducer<T>(
   // Update the payload to the new value
   node.payload = value;
 
-  devRecordWriteProducer(node, true, value, prev, undefined, defaultContext);
+  if (__DEV__) {
+    devRecordWriteProducer(node, true, value, prev, undefined, defaultContext);
+  }
+
+  const firstOut = node.firstOut;
+
+  if (firstOut === null) {
+    notifySettledIfIdle();
+    return;
+  }
 
   enterPropagation();
   // Push phase: notify all subscribers depth-first, mark them dirty.
   // Direct subscribers are promoted from Invalid to Changed.
   // This tells them "definitely changed, don't verify, recompute"
-  propagate(node.firstOut, PROMOTE_CHANGED);
+  propagate(firstOut, PROMOTE_CHANGED);
   leavePropagation();
 }

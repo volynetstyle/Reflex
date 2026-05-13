@@ -1,4 +1,4 @@
-import { activeConsumer, setActiveConsumer } from "../../reactivity";
+import { activeConsumer, setActiveConsumer } from "../../kernel";
 
 /**
  * Execute a callback function without registering reactive dependencies.

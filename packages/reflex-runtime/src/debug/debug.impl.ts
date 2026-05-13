@@ -3,9 +3,9 @@ import {
   propagationDepth,
   defaultContext,
   type RuntimeDebugContext,
-} from "../reactivity/context";
-import type { ReactiveEdge, ReactiveNode } from "../reactivity/shape";
-import { Changed, Computing, Consumer, DIRTY_STATE, Invalid, Producer, Reentrant, Scheduled, Tracking, Watcher } from "../reactivity/shape";
+} from "../kernel/context";
+import type { ReactiveEdge, ReactiveNode } from "../kernel/shape";
+import { Changed, Computing, Consumer, DIRTY_STATE, Invalid, Producer, Reentrant, Scheduled, Tracking, Watcher } from "../kernel/shape";
 import type {
   RuntimeDebugContextSnapshot,
   RuntimeDebugEvent,

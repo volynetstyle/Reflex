@@ -10,8 +10,8 @@ import {
   Reentrant,
   Tracking,
   Watcher,
-} from "../../../src/reactivity";
-import { invalidateSub } from "../../../src/reactivity/walkers/propagate.invalidate";
+} from "../../../src/kernel";
+import { invalidateSub } from "../../../src/kernel/walkers/invalidateBranch";
 import { resetRuntime } from "../../runtime.test_utils";
 
 function createNode(state: number): ReactiveNode {

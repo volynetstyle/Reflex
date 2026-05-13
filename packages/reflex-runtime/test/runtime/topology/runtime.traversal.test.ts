@@ -13,8 +13,8 @@ import {
   Reentrant,
   shouldRecompute,
   Tracking,
-} from "../../../src/reactivity";
-import { linkEdge } from "../../../src/reactivity/shape/graph/connect";
+} from "../../../src/kernel";
+import { linkEdge } from "../../../src/kernel/shape/graph/connect";
 import {
   createConsumer,
   createComputeCounter,
