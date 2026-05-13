@@ -191,11 +191,11 @@ Perf counters усередині hot path майже завжди перекош
 
 Для current perf-профілю насамперед важливі:
 
-- `src/reactivity/walkers/propagate.ts`
-- `src/reactivity/walkers/shouldRecompute.ts`
-- `src/reactivity/engine/tracking.ts`
+- `src/reactivity/walkers/propagateChange.ts`
+- `src/reactivity/walkers/shouldRecomputeNode.ts`
+- `src/reactivity/engine/trackingContext.ts`
 - `src/reactivity/shape/methods/connect.ts`
-- `src/reactivity/engine/execute.ts`
+- `src/reactivity/engine/executeWatcher.ts`
 
 Для відтворюваних JIT прогонів:
 

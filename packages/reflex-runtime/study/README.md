@@ -149,7 +149,7 @@ runWatcher()
 - Dirty protocol: `Invalid` / `Changed` (not `Obsolete`)
 - Pull-side: `shouldRecompute()` + `recompute()` pipeline
 - Dynamic deps: `depsTail` cursor + edge reorder (not epoch-based)
-- Split modules: `walkers/`, `tracking.ts`, `engine/`
+- Split modules: `walkers/`, `trackingContext.ts`, `engine/`
 
 ---
 
@@ -236,19 +236,19 @@ See `src/reactivity/walkers/README.md` for algorithm-level details.
 ## Common Questions
 
 **Q: Where do I find the push-invalidation code?**
-A: `src/reactivity/walkers/propagate.ts` and `src/reactivity/walkers/propagate.once.ts`
+A: `src/reactivity/walkers/propagateChange.ts` and `src/reactivity/walkers/propagateOnce.ts`
 
 **Q: Where's the pull-stabilization code?**
-A: `src/reactivity/walkers/recompute.ts` and `src/reactivity/engine/execute.ts`
+A: `src/reactivity/walkers/recomputeNode.ts` and `src/reactivity/engine/executeWatcher.ts`
 
 **Q: How are dependencies tracked?**
-A: `src/reactivity/engine/tracking.ts` + `src/api/read.ts` → `trackRead()` integration
+A: `src/reactivity/engine/trackingContext.ts` + `src/api/read.ts` → `trackRead()` integration
 
 **Q: What's the invariant enforcement level?**
 A: Check `NODE_ENV` and `NODE_DEBUG`; see `src/debug_flag.ts`
 
 **Q: How do I understand the state bits?**
-A: See `study/03-core-model.md` + `src/reactivity/shape/ReactiveNode.ts`
+A: See `study/03-core-model.md` + `src/reactivity/shape/node.ts`
 
 ---
 

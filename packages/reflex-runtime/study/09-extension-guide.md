@@ -65,7 +65,7 @@
 - host queues
 - telemetry
 
-### `src/reactivity/engine/execute.ts`
+### `src/reactivity/engine/executeWatcher.ts`
 
 Shared executor для вузлів із `compute`.
 
@@ -75,7 +75,7 @@ Shared executor для вузлів із `compute`.
 - cycle safety
 - спільного enter/leave execution
 
-### `src/reactivity/engine/tracking.ts`
+### `src/reactivity/engine/trackingContext.ts`
 
 Тут живе dynamic dependency maintenance:
 
@@ -103,8 +103,8 @@ Shared executor для вузлів із `compute`.
 
 Тут живуть обидва walker-и:
 
-- push side в `propagate.ts`
-- pull side в `shouldRecompute.ts`
+- push side в `propagateChange.ts`
+- pull side в `shouldRecomputeNode.ts`
 
 Саме тут не можна бездумно тягнути "красиві" абстракції в hot path.
 
@@ -201,8 +201,8 @@ Host policy вирішує, коли його викликати.
 
 - новий queue policy для watcher-ів -> hooks / host layer
 - новий compare mode для producer write -> `api/write.ts`
-- новий tracking fast path -> `engine/tracking.ts` + `shape/methods/connect.ts`
-- зміна pull-side refresh protocol -> `walkers/shouldRecompute.ts`
+- новий tracking fast path -> `engine/trackingContext.ts` + `shape/methods/connect.ts`
+- зміна pull-side refresh protocol -> `walkers/shouldRecomputeNode.ts`
 
 ## 5. Практичний порядок роботи
 
