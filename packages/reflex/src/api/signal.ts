@@ -57,14 +57,9 @@ import {
 export function signal<T>(initialValue: T): readonly [Signal<T>, Setter<T>] {
   const node = createSignalNode(initialValue);
 
-  return [
-    getter.bind(node) as Signal<T>,
-    setter.bind(node) as Setter<T>,
-  ] as const;
-}
+  const read = (): T => readProducer(node);
 
-function getter<T>(this: ReactiveNode<T>): T {
-  return readProducer(this);
+  return [read as Signal<T>, setter.bind(node) as Setter<T>] as const;
 }
 
 function setter<T>(this: ReactiveNode<T>, input: SetInput<T>) {

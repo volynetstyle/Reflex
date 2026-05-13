@@ -11,8 +11,11 @@ type EventDispatchRecord = {
 
 export interface EventDispatcher extends QueueBacked<EventDispatchRecord> {
   flushing: boolean;
+  directSource: EventSource<unknown> | null;
+  directValue: unknown;
   readonly runBoundary: EventBoundary;
   readonly flush: () => void;
+  readonly flushDirect: () => void;
   emit<T>(source: EventSource<T>, value: T): void;
 }
 
@@ -24,17 +27,25 @@ export function createEventDispatcher(
   const dispatcher = attachQueueState(
     {
       queue,
-      flushing: false,
+      flushing: false as boolean,
+      directSource: null as EventSource<unknown> | null,
+      directValue: undefined as unknown,
       runBoundary,
       flush: () => flushEventDispatcher(dispatcher),
+      flushDirect: () => flushDirectEvent(dispatcher),
       emit<T>(source: EventSource<T>, value: T): void {
+        if (!dispatcher.flushing && queue.size === 0) {
+          dispatcher.directSource = source as EventSource<unknown>;
+          dispatcher.directValue = value;
+          runBoundary(dispatcher.flushDirect);
+          return;
+        }
+
         queue.push({
           source: source as EventSource<unknown>,
           value,
         });
-        if (!dispatcher.flushing) {
-          runBoundary(dispatcher.flush);
-        }
+        if (!dispatcher.flushing) runBoundary(dispatcher.flush);
       },
     },
     queue,
@@ -44,6 +55,24 @@ export function createEventDispatcher(
 }
 
 export const EventDispatcher = createEventDispatcher;
+
+function flushDirectEvent(dispatcher: EventDispatcher): void {
+  const source = dispatcher.directSource;
+  if (source === null) return;
+
+  const value = dispatcher.directValue;
+  dispatcher.directSource = null;
+  dispatcher.directValue = undefined;
+  dispatcher.flushing = true;
+
+  try {
+    emitEvent(source, value);
+  } finally {
+    dispatcher.flushing = false;
+
+    if (dispatcher.queue.size !== 0) dispatcher.flush();
+  }
+}
 
 function flushEventDispatcher(dispatcher: EventDispatcher): void {
   if (dispatcher.flushing) return;

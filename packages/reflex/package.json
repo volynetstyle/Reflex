@@ -60,6 +60,7 @@
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "bench": "vitest bench",
+    "bench:api": "pnpm --filter @volynets/reflex-runtime build && pnpm build && node --expose-gc bench/api-facade.jit.mjs",
     "bench:projection": "node ./bench/projection-compare.node.mjs",
     "demo": "vite --config examples/mini-app/vite.config.ts",
     "demo:build": "vite build --config examples/mini-app/vite.config.ts",
