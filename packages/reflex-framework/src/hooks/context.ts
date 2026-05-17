@@ -2,8 +2,17 @@ import type { OwnerContext, Scope } from "../ownership/ownership.scope";
 import { getHookOwner } from "./owner";
 
 export interface RenderEffectScheduler {
-  schedule(task: () => void): () => void;
+  schedule(task: () => void, phase?: RenderEffectPhase): () => void;
 }
+
+export const RenderEffectPhase = Object.freeze({
+  BeforeRender: "before-render",
+  Render: "render",
+  AfterRender: "after-render",
+} as const);
+
+export type RenderEffectPhase =
+  (typeof RenderEffectPhase)[keyof typeof RenderEffectPhase];
 
 export const noopRenderEffectScheduler: RenderEffectScheduler = Object.freeze({
   schedule() {

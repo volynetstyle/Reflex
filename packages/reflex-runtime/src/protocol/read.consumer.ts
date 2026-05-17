@@ -6,7 +6,7 @@ import {
   activeConsumer,
   shouldRecomputeDirtyConsumer,
   recompute,
-  propagateOnce,
+  propagateOnceFromEdge,
   trackReadActive,
 } from "../kernel";
 import {
@@ -192,7 +192,7 @@ function stabilizeDirtyConsumer<T>(node: ReactiveNode<T>, state: number): T {
     return node.payload as T;
   }
 
-  if (recompute(node)) propagateOnce(node);
+  if (recompute(node)) propagateOnceFromEdge(node.firstOut);
 
   return node.payload as T;
 }

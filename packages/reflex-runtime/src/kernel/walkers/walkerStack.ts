@@ -16,10 +16,12 @@ import {
 const stack: ReactiveEdge[] = [];
 let high = 0;
 
+// @__INLINE__
 export function getRecomputeStackBase(): number {
   return high;
 }
 
+// @__INLINE__
 export function setRecomputeStackHigh(top: number): void {
   high = top;
 }
@@ -30,6 +32,7 @@ export function setRecomputeStackHigh(top: number): void {
  * Used by `walkLine` when it bails into `walkBranch`; the fallback may reuse
  * the same stack immediately.
  */
+// @__INLINE__
 export function resetRecomputeStackBase(base: number): void {
   high = base;
 }
@@ -37,17 +40,20 @@ export function resetRecomputeStackBase(base: number): void {
 /**
  * Release the current walker slice and optionally trim retained capacity.
  */
+// @__INLINE__
 export function releaseRecomputeStackBase(base: number): void {
   high = base;
   trimWalkerStackIfSparse(stack, base);
 }
 
+// @__INLINE__
 export function pushRecomputeStack(edge: ReactiveEdge, top: number): number {
   stack[top++] = edge;
   if (__DEV__) noteShouldRecomputeStackUsage(top);
   return top;
 }
 
+// @__INLINE__
 export function readRecomputeStack(top: number): ReactiveEdge {
   return stack[top]!;
 }
@@ -57,6 +63,7 @@ export function readRecomputeStack(top: number): ReactiveEdge {
  *
  * Used when the pull walk proves the inspected dependency path is clean.
  */
+// @__INLINE__
 export function clearInvalid(
   node: ReactiveNode,
   top: number,

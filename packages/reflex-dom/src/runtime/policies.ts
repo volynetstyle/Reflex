@@ -32,24 +32,29 @@ export function createDefaultPolicyConfig(): PolicyConfig {
 
 export function resolveEffectStrategy(
   policy: ExecutionPolicy = ExecutionPolicy.Eager,
+  priorityLevels = false,
 ): RuntimeEffectStrategy {
-  return policy === ExecutionPolicy.Eager ? "eager" : "flush";
+  if (policy === ExecutionPolicy.Eager) return "eager";
+  if (policy === ExecutionPolicy.Batch) return "sab";
+  return priorityLevels ? "ranked" : "flush";
 }
 
 export function createUpdateScheduler(): UpdateScheduler {
   let scheduled = false;
+  let head = 0;
   const queue: Array<() => void> = [];
 
   function flush(): void {
-    if (queue.length === 0) {
+    if (head >= queue.length) {
       return;
     }
 
-    const batch = queue.splice(0);
-
-    for (let i = 0; i < batch.length; i++) {
-      batch[i]!();
+    while (head < queue.length) {
+      queue[head++]!();
     }
+
+    queue.length = 0;
+    head = 0;
   }
 
   return {

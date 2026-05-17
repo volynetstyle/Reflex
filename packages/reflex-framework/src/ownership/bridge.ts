@@ -4,7 +4,11 @@ import type { Cleanup } from "../types/core";
 import { addCleanup } from "./ownership.cleanup";
 import { isShuttingDown } from "./ownership.meta";
 import type { OwnerContext, Scope } from "./ownership.scope";
-import { runWithOwner, runWithScope } from "./ownership.scope";
+import {
+  getActiveOwnerContext,
+  runWithOwner,
+  runWithScope,
+} from "./ownership.scope";
 
 export type UseEffectFn = () => void | Cleanup;
 
@@ -35,7 +39,26 @@ interface EffectStartGate {
   skip: boolean;
 }
 
+const EFFECT_CLEANUP_HOOK = Symbol.for("reflex.effectCleanupHook");
 const noopCleanup: Cleanup = () => {};
+let suppressEffectCleanupHook = false;
+
+type EffectCleanupHook = (dispose: Cleanup) => void;
+type EffectCleanupGlobal = typeof globalThis & {
+  [EFFECT_CLEANUP_HOOK]?: EffectCleanupHook;
+};
+
+function installEffectCleanupHook(): void {
+  (globalThis as EffectCleanupGlobal)[EFFECT_CLEANUP_HOOK] = (dispose) => {
+    if (suppressEffectCleanupHook) return;
+
+    const owner = getActiveOwnerContext();
+    const scope = owner?.currentOwner ?? null;
+    if (scope !== null) addCleanup(scope, dispose);
+  };
+}
+
+installEffectCleanupHook();
 
 export function createOwnershipReactiveBridge(
   adapter: OwnershipReactiveAdapter,
@@ -63,17 +86,24 @@ export function createOwnershipReactiveBridge(
 
     const gate: EffectStartGate = { skip: true };
 
-    const dispose = adapter.effect(() => {
-      const prevGate = currentStartGate;
-      currentStartGate = gate;
+    suppressEffectCleanupHook = true;
+    let dispose: Cleanup;
 
-      try {
-        return runWithOwner(owner, scope, fn);
-      } finally {
-        currentStartGate = prevGate;
-        gate.skip = false;
-      }
-    }, options);
+    try {
+      dispose = adapter.effect(() => {
+        const prevGate = currentStartGate;
+        currentStartGate = gate;
+
+        try {
+          return runWithOwner(owner, scope, fn);
+        } finally {
+          currentStartGate = prevGate;
+          gate.skip = false;
+        }
+      }, options);
+    } finally {
+      suppressEffectCleanupHook = false;
+    }
 
     if (scope !== null) addCleanup(scope, dispose);
 

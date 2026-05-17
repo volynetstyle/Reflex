@@ -18,6 +18,7 @@ export default defineConfig({
     },
   },
   esbuild: {
-    jsx: "transform"
+    jsx: "automatic",
+    jsxImportSource: "../src",
   },
 });

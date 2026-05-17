@@ -3,7 +3,6 @@ import { devRecordPropagate, devRecordWatcherInvalidated } from "../dev";
 import {
   Changed,
   DIRTY_STATE,
-  Disposed,
   Invalid,
   Reentrant,
   Tracking,
@@ -11,8 +10,9 @@ import {
   type ReactiveNode,
 } from "../shape";
 
-const INVALIDATE_SLOW_STATE = Disposed | DIRTY_STATE | Tracking;
+const INVALIDATE_SLOW_STATE = DIRTY_STATE | Tracking;
 
+// @__INLINE__
 export function notifyWatcher(node: ReactiveNode): void {
   const notify = dispatchSinkInvalidated;
 
@@ -24,6 +24,7 @@ export function notifyWatcher(node: ReactiveNode): void {
   notify(node);
 }
 
+// @__INLINE__
 function invalidateTracked(
   edge: ReactiveEdge,
   sub: ReactiveNode,
@@ -56,7 +57,6 @@ export function invalidateSub(
     return next;
   }
 
-  if ((state & Disposed) !== 0) return 0;
   let next = (state & ~Reentrant) | promote;
 
   if ((state & (DIRTY_STATE | Tracking)) !== 0) {

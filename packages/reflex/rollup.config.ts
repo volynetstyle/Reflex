@@ -31,7 +31,6 @@ const PURE_FUNCS = [
   "isObsoleteState",
   "isTrackingState",
   "isVisitedState",
-  "isDisposedState",
   "isComputingState",
   "isScheduledState",
   "isSignalKind",

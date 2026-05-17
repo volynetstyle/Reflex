@@ -74,6 +74,7 @@ export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
         }
 
         // Invalid leaf.
+
         setRecomputeStackHigh(top);
         dirty = refresh(dep);
         break;

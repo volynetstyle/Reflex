@@ -2,7 +2,10 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, effect, memo, signal } from "@volynets/reflex";
-import { useEffectRender } from "@volynets/reflex-framework";
+import {
+  RenderEffectPhase,
+  useEffectRender,
+} from "@volynets/reflex-framework";
 import { createDOMRenderer, createDOMRuntime, render } from "../src";
 
 describe("render lifecycle and reactive bindings", () => {
@@ -140,6 +143,28 @@ describe("render lifecycle and reactive bindings", () => {
     dispose();
 
     expect(log).toEqual(["render", "mounted", "cleanup"]);
+  });
+
+  it("flushes render effect scheduler phases in render order", () => {
+    const renderer = createDOMRenderer();
+    const log: string[] = [];
+
+    renderer.renderEffectScheduler.schedule(
+      () => log.push("after"),
+      RenderEffectPhase.AfterRender,
+    );
+    renderer.renderEffectScheduler.schedule(
+      () => log.push("render"),
+      RenderEffectPhase.Render,
+    );
+    renderer.renderEffectScheduler.schedule(
+      () => log.push("before"),
+      RenderEffectPhase.BeforeRender,
+    );
+
+    renderer.renderEffectScheduler.flush();
+
+    expect(log).toEqual(["before", "render", "after"]);
   });
 
   it("runs useEffectRender after reactive DOM updates settle", () => {

@@ -12,6 +12,7 @@ import {
   runWithComponentHooks,
   runInOwnershipScope,
   getHookOwner,
+  RenderEffectPhase,
 } from "../src";
 
 describe("framework hooks", () => {
@@ -54,6 +55,7 @@ describe("framework hooks", () => {
     const owner = getHookOwner();
     const root = createScope();
     const tasks: Array<() => void> = [];
+    const phases: unknown[] = [];
     const values: string[] = [];
 
     runInOwnershipScope(owner, root, () => {
@@ -62,8 +64,9 @@ describe("framework hooks", () => {
           owner,
           scope: root,
           renderEffectScheduler: {
-            schedule(task) {
+            schedule(task, phase) {
               tasks.push(task);
+              phases.push(phase);
               return () => {};
             },
           },
@@ -78,6 +81,7 @@ describe("framework hooks", () => {
 
     expect(values).toEqual([]);
     expect(tasks).toHaveLength(1);
+    expect(phases).toEqual([RenderEffectPhase.Render]);
 
     tasks[0]!();
     rt.flush();

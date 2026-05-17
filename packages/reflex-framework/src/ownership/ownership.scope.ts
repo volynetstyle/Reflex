@@ -9,6 +9,8 @@ export interface OwnerContext {
   currentOwner: Scope | null;
 }
 
+let activeOwnerContext: OwnerContext | null = null;
+
 export function createOwnerContext(): OwnerContext {
   return Object.preventExtensions({
     currentOwner: null,
@@ -29,13 +31,20 @@ export function runWithOwner<T>(
   fn: () => T,
 ): T {
   const previousOwner = owner.currentOwner;
+  const previousActiveOwnerContext = activeOwnerContext;
   owner.currentOwner = scope;
+  activeOwnerContext = owner;
 
   try {
     return fn();
   } finally {
     owner.currentOwner = previousOwner;
+    activeOwnerContext = previousActiveOwnerContext;
   }
+}
+
+export function getActiveOwnerContext(): OwnerContext | null {
+  return activeOwnerContext;
 }
 
 function attachScope(parent: Scope | null, scope: Scope): void {

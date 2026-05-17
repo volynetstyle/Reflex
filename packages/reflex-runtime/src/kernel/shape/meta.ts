@@ -21,7 +21,6 @@ export const Tracking = 1 << 3; // 8
 
 export const Watcher = 1 << 5; // 32
 export const Scheduled = 1 << 6; // 64
-export const Disposed = 1 << 7; // 128
 // possible can be added next some flags
 
 /**

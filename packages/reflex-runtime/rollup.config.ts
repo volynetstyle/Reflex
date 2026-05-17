@@ -33,7 +33,6 @@ const PURE_FUNCS = [
   "isObsoleteState",
   "isTrackingState",
   "isVisitedState",
-  "isDisposedState",
   "isComputingState",
   "isScheduledState",
   "isSignalKind",
@@ -41,7 +40,8 @@ const PURE_FUNCS = [
 ] as const;
 
 // V8 generally prefers many small stable functions over one aggressively
-// collapsed mega-function. Keep minification conservative and explicit.
+// collapsed mega-function. Keep minification conservative, but allow Rollup's
+// production Terser pass to inline the small helpers marked in hot-path source.
 const JIT_SAFE_COMPRESS = {
   defaults: false,
   booleans: true,
@@ -51,7 +51,7 @@ const JIT_SAFE_COMPRESS = {
   drop_debugger: true,
   evaluate: true,
   hoist_props: true,
-  inline: 0,
+  inline: 3,
   module: true,
   pure_getters: true,
   pure_funcs: [...PURE_FUNCS],

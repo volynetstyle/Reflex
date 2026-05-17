@@ -4,6 +4,7 @@ import { walkBranch } from "./recomputeBranch";
 import { walkLine } from "./recomputeLine";
 import { BAIL, DIRTY } from "./walkerConstants";
 
+// @__INLINE__
 function isChanged(node: ReactiveNode, state: number = node.state): boolean {
   // Already known dirty.
   if ((state & Changed) !== 0) return true;

@@ -12,7 +12,7 @@ import { createSchedulerInstance } from "../scheduler.instance";
 import type { EffectScheduler } from "../scheduler.types";
 
 export function createEagerScheduler(): EffectScheduler {
-  const core = createSchedulerCore();
+  const core = createSchedulerCore(true);
   const notifySettled = (): void => {
     if (isRuntimeInactive(core) && hasPendingEffects(core)) {
       core.flush();

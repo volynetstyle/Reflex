@@ -16,6 +16,17 @@ import {
   wrapEffectFn,
 } from "./effect.dev";
 
+const EFFECT_CLEANUP_HOOK = Symbol.for("reflex.effectCleanupHook");
+
+type EffectCleanupHook = (dispose: Destructor) => void;
+type EffectCleanupGlobal = typeof globalThis & {
+  [EFFECT_CLEANUP_HOOK]?: EffectCleanupHook;
+};
+
+function registerEffectCleanup(dispose: Destructor): void {
+  (globalThis as EffectCleanupGlobal)[EFFECT_CLEANUP_HOOK]?.(dispose);
+}
+
 /**
  * Marks an effect watcher node as scheduled.
  *
@@ -94,6 +105,7 @@ export function effect(fn: EffectFn): Destructor {
   run(node);
 
   const disposer: Destructor = dispose.bind(null, node);
+  registerEffectCleanup(disposer);
   return disposer;
 }
 
@@ -197,5 +209,6 @@ export function effectRanked(
   runWatcher(node);
 
   const dispose = disposeWatcher.bind(null, node) as Destructor;
+  registerEffectCleanup(dispose);
   return dispose;
 }

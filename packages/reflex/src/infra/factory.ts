@@ -4,20 +4,21 @@ import {
   WATCHER_INITIAL_STATE,
   CONSUMER_INITIAL_STATE,
 } from "@volynets/reflex-runtime";
-import type { ReactiveEdge, ReactiveNode } from "@volynets/reflex-runtime";
+import type { ReactiveNode } from "@volynets/reflex-runtime";
 import { EventSource as RuntimeEventSource } from "./event";
-
-
 
 export const createWatcherRankedrNode = (
   compute: EffectFn,
   priority = 0,
 ): ReactiveNode => {
-    return new RuntimeReactiveNode(
+  const node = new RuntimeReactiveNode(
     undefined,
     compute,
     WATCHER_INITIAL_STATE,
-  );
+  ) as ReactiveNode & { priority?: number };
+
+  node.priority = priority;
+  return node;
 };
 
 export const createSignalNode = <T>(payload: T) => {
