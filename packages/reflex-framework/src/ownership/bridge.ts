@@ -1,4 +1,4 @@
-import { effect, effectRanked } from "@volynets/reflex";
+import { effect } from "@volynets/reflex";
 
 import type { Cleanup } from "../types/core";
 import { addCleanup } from "./ownership.cleanup";
@@ -14,15 +14,10 @@ export type UseEffectFn = () => void | Cleanup;
 
 export interface OwnedEffectOptions {
   owner: OwnerContext;
-  priority?: number;
-}
-
-export interface OwnershipReactiveEffectOptions {
-  priority?: number;
 }
 
 export interface OwnershipReactiveAdapter {
-  effect(fn: UseEffectFn, options?: OwnershipReactiveEffectOptions): Cleanup;
+  effect(fn: UseEffectFn): Cleanup;
 }
 
 export interface OwnershipReactiveBridge {
@@ -100,7 +95,7 @@ export function createOwnershipReactiveBridge(
           currentStartGate = prevGate;
           gate.skip = false;
         }
-      }, options);
+      });
     } finally {
       suppressEffectCleanupHook = false;
     }
@@ -119,13 +114,7 @@ export function createOwnershipReactiveBridge(
 
 export const reflexOwnershipBridge: OwnershipReactiveBridge =
   createOwnershipReactiveBridge({
-    effect(fn, options) {
-      const priority = options?.priority;
-
-      if (priority !== undefined) {
-        return effectRanked(fn, { priority });
-      }
-
+    effect(fn) {
       return effect(fn);
     },
   });

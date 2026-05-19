@@ -191,7 +191,7 @@ describe("render lifecycle and reactive bindings", () => {
     expect(log).toEqual(["1", "2"]);
   });
 
-  it("runs reactive useEffectRender updates before user effects", () => {
+  it("runs reactive useEffectRender updates in scheduler FIFO order", () => {
     const container = document.createElement("div");
     const [count, setCount] = signal(1);
     const log: string[] = [];
@@ -214,7 +214,7 @@ describe("render lifecycle and reactive bindings", () => {
 
     setCount(2);
 
-    expect(log).toEqual(["render:2:2", "user:2"]);
+    expect(log).toEqual(["user:2", "render:2:2"]);
   });
 
   it("stops text and prop bindings after their range is removed", () => {

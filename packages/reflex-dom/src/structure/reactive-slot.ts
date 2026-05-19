@@ -10,8 +10,6 @@ import type { ContentSlot } from "./content-slot";
 import { adoptContentSlot, createContentSlot } from "./content-slot";
 import { appendRenderableNodes } from "../mount/append";
 
-const DOM_BINDING_PRIORITY = 2;
-
 export function createMountedSlot(
   renderer: DOMRenderer,
   value: unknown,
@@ -53,7 +51,7 @@ export function bindReactiveSlotLifecycle<T>(
   resolveValue: (value: T) => unknown,
 ): void {
   useOwnedEffect(
-    { owner: renderer.owner, priority: DOM_BINDING_PRIORITY },
+    { owner: renderer.owner },
     () => {
       const nextValue = readValue();
 

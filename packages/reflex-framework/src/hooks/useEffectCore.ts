@@ -11,8 +11,6 @@ import {
 export type EffectCleanup = void | Cleanup;
 export type EffectCallback = () => EffectCleanup;
 
-const RENDER_EFFECT_PRIORITY = 1;
-
 export function useEffectInternal(callback: EffectCallback): Cleanup {
   return useOwnedEffect({ owner: getCurrentHookOwner() }, callback);
 }
@@ -47,10 +45,7 @@ export function useEffectRenderInternal(callback: EffectCallback): Cleanup {
       if (disposed) return;
 
       disposeEffect = runWithOwner(owner, scope, () =>
-        useOwnedEffect(
-          { owner, priority: RENDER_EFFECT_PRIORITY },
-          callback,
-        ),
+        useOwnedEffect({ owner }, callback),
       );
 
       if (disposed) {
