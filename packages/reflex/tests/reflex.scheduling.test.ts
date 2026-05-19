@@ -293,7 +293,7 @@ describe("createEffectScheduler", () => {
     expect(calls).toEqual([first, second]);
     expect((first.state & Scheduled) !== 0).toBe(false);
     expect((second.state & Scheduled) !== 0).toBe(false);
-    expect(scheduler.batchDepth).toBe(0);
+    expect(scheduler.core.batchDepth).toBe(0);
   });
 
 });

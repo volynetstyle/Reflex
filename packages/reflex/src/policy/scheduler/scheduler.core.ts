@@ -8,7 +8,7 @@ import { Flushing, Batching, Idle } from "./scheduler.constants";
 
 const NO_THROW: unique symbol = Symbol("NO_THROW");
 
-function flushSchedulerQueue(core: SchedulerCore): void {
+export function flushSchedulerQueue(core: SchedulerCore): void {
   const queue = core.queue;
 
   if (core.phase === Flushing) return;
@@ -33,7 +33,7 @@ function flushSchedulerQueue(core: SchedulerCore): void {
   }
 }
 
-function enterSchedulerBatch(core: SchedulerCore): void {
+export function enterSchedulerBatch(core: SchedulerCore): void {
   ++core.batchDepth;
 
   if (core.phase === Idle) {
@@ -41,7 +41,7 @@ function enterSchedulerBatch(core: SchedulerCore): void {
   }
 }
 
-function leaveSchedulerBatch(core: SchedulerCore): boolean {
+export function leaveSchedulerBatch(core: SchedulerCore): boolean {
   const batchDepth = core.batchDepth - 1;
   core.batchDepth = batchDepth;
 
@@ -57,7 +57,7 @@ function leaveSchedulerBatch(core: SchedulerCore): boolean {
   return true;
 }
 
-function resetSchedulerCore(core: SchedulerCore): void {
+export function resetSchedulerCore(core: SchedulerCore): void {
   cleanupQueuedNodesAfterAbort(core.queue);
   core.batchDepth = 0;
   core.phase = Idle;
@@ -70,11 +70,6 @@ export function createSchedulerCore(): SchedulerCore {
     queue,
     batchDepth: 0,
     phase: Idle,
-
-    flush: (): void => flushSchedulerQueue(core),
-    enterBatch: (): void => enterSchedulerBatch(core),
-    leaveBatch: (): boolean => leaveSchedulerBatch(core),
-    reset: (): void => resetSchedulerCore(core),
   };
 
   return core;

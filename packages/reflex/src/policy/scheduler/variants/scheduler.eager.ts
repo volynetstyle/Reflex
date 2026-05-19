@@ -6,6 +6,9 @@ import {
 } from "../scheduler.context";
 import {
   createSchedulerCore,
+  enterSchedulerBatch,
+  flushSchedulerQueue,
+  leaveSchedulerBatch,
 } from "../scheduler.core";
 import { tryEnqueue } from "../scheduler.enqueue";
 import { createSchedulerInstance } from "../scheduler.instance";
@@ -15,20 +18,20 @@ export function createEagerScheduler(): EffectScheduler {
   const core = createSchedulerCore();
   const notifySettled = (): void => {
     if (isRuntimeInactive(core) && hasPendingEffects(core)) {
-      core.flush();
+      flushSchedulerQueue(core);
     }
   };
   const enqueue = (node: ReactiveNode): void => {
     if (!tryEnqueue(core.queue, node)) return;
-    if (isRuntimeInactive(core)) core.flush();
+    if (isRuntimeInactive(core)) flushSchedulerQueue(core);
   };
   const batch = <T>(fn: () => T): T => {
-    core.enterBatch();
+    enterSchedulerBatch(core);
     try {
       return fn();
     } finally {
-      if (core.leaveBatch() && hasPendingEffects(core)) {
-        core.flush();
+      if (leaveSchedulerBatch(core) && hasPendingEffects(core)) {
+        flushSchedulerQueue(core);
       }
     }
   };

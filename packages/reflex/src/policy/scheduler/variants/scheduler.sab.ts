@@ -4,7 +4,12 @@ import {
   hasPendingEffects,
   isContextSettled,
 } from "../scheduler.context";
-import { createSchedulerCore } from "../scheduler.core";
+import {
+  createSchedulerCore,
+  enterSchedulerBatch,
+  flushSchedulerQueue,
+  leaveSchedulerBatch,
+} from "../scheduler.core";
 import { tryEnqueue } from "../scheduler.enqueue";
 import { createSchedulerInstance } from "../scheduler.instance";
 import type { EffectScheduler } from "../scheduler.types";
@@ -16,12 +21,16 @@ export function createSabScheduler(): EffectScheduler {
     tryEnqueue(core.queue, node);
   };
   const batch = <T>(fn: () => T): T => {
-    core.enterBatch();
+    enterSchedulerBatch(core);
     try {
       return fn();
     } finally {
-      if (core.leaveBatch() && hasPendingEffects(core) && isContextSettled()) {
-        core.flush();
+      if (
+        leaveSchedulerBatch(core) &&
+        hasPendingEffects(core) &&
+        isContextSettled()
+      ) {
+        flushSchedulerQueue(core);
       }
     }
   };

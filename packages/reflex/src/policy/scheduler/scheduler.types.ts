@@ -12,27 +12,17 @@ export interface RingQueue<T> {
 
 export type WatcherQueue = RingQueue<EffectNode>;
 
-export interface QueueBacked<T> {
-  readonly queue: RingQueue<T>;
-  readonly ring: Array<T | undefined>;
-  readonly head: number;
-}
-
 export function noopNotifySettled(): void {}
 
 export interface SchedulerCore {
   readonly queue: WatcherQueue;
   batchDepth: number;
   phase: number;
-  flush(): void;
-  enterBatch(): void;
-  leaveBatch(): boolean;
-  reset(): void;
 }
 
 export interface EffectScheduler {
-  readonly ring: Array<EffectNode | undefined>;
   readonly mode: EffectSchedulerMode;
+  readonly core: SchedulerCore;
   readonly runtimeNotifySettled: (() => void) | undefined;
 
   enqueue(node: ReactiveNode): void;
@@ -40,10 +30,6 @@ export interface EffectScheduler {
   flush(): void;
   notifySettled(): void;
   reset(): void;
-
-  readonly head: number;
-  readonly batchDepth: number;
-  readonly phase: number;
 }
 
 export type SchedulerBatch = EffectScheduler["batch"];

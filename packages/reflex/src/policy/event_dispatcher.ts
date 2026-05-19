@@ -6,15 +6,15 @@ import {
   pushRingQueue,
   shiftRingQueue,
 } from "./scheduler/scheduler.queue";
-import { attachQueueState } from "./scheduler/scheduler.instance";
-import type { QueueBacked } from "./scheduler";
+import type { RingQueue } from "./scheduler";
 
 type EventDispatchRecord = {
   source: EventSource<unknown>;
   value: unknown;
 };
 
-export interface EventDispatcher extends QueueBacked<EventDispatchRecord> {
+export interface EventDispatcher {
+  readonly queue: RingQueue<EventDispatchRecord>;
   flushing: boolean;
   directSource: EventSource<unknown> | null;
   directValue: unknown;
@@ -29,32 +29,29 @@ export function createEventDispatcher(
 ): EventDispatcher {
   const queue = createRingQueue<EventDispatchRecord>();
 
-  const dispatcher = attachQueueState(
-    {
-      queue,
-      flushing: false as boolean,
-      directSource: null as EventSource<unknown> | null,
-      directValue: undefined as unknown,
-      runBoundary,
-      flush: () => flushEventDispatcher(dispatcher),
-      flushDirect: () => flushDirectEvent(dispatcher),
-      emit<T>(source: EventSource<T>, value: T): void {
-        if (!dispatcher.flushing && queue.head === queue.tail) {
-          dispatcher.directSource = source as EventSource<unknown>;
-          dispatcher.directValue = value;
-          runBoundary(dispatcher.flushDirect);
-          return;
-        }
-
-        pushRingQueue(queue, {
-          source: source as EventSource<unknown>,
-          value,
-        });
-        if (!dispatcher.flushing) runBoundary(dispatcher.flush);
-      },
-    },
+  const dispatcher: EventDispatcher = {
     queue,
-  ) satisfies EventDispatcher;
+    flushing: false,
+    directSource: null,
+    directValue: undefined,
+    runBoundary,
+    flush: () => flushEventDispatcher(dispatcher),
+    flushDirect: () => flushDirectEvent(dispatcher),
+    emit<T>(source: EventSource<T>, value: T): void {
+      if (!dispatcher.flushing && queue.head === queue.tail) {
+        dispatcher.directSource = source as EventSource<unknown>;
+        dispatcher.directValue = value;
+        runBoundary(dispatcher.flushDirect);
+        return;
+      }
+
+      pushRingQueue(queue, {
+        source: source as EventSource<unknown>,
+        value,
+      });
+      if (!dispatcher.flushing) runBoundary(dispatcher.flush);
+    },
+  };
 
   return dispatcher;
 }
