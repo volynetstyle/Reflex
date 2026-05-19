@@ -34,9 +34,6 @@ describe("Reactive system - policy helpers", () => {
       EffectSchedulerMode.Flush,
     );
     expect(resolveEffectSchedulerMode("flush")).toBe(EffectSchedulerMode.Flush);
-    expect(resolveEffectSchedulerMode("ranked")).toBe(
-      EffectSchedulerMode.Ranked,
-    );
     expect(resolveEffectSchedulerMode("sab")).toBe(EffectSchedulerMode.SAB);
     expect(resolveEffectSchedulerMode("eager")).toBe(EffectSchedulerMode.Eager);
   });

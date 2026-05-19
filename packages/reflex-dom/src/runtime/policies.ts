@@ -32,11 +32,11 @@ export function createDefaultPolicyConfig(): PolicyConfig {
 
 export function resolveEffectStrategy(
   policy: ExecutionPolicy = ExecutionPolicy.Eager,
-  priorityLevels = false,
+  _priorityLevels = false,
 ): RuntimeEffectStrategy {
   if (policy === ExecutionPolicy.Eager) return "eager";
   if (policy === ExecutionPolicy.Batch) return "sab";
-  return priorityLevels ? "ranked" : "flush";
+  return "flush";
 }
 
 export function createUpdateScheduler(): UpdateScheduler {

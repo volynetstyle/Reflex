@@ -124,10 +124,10 @@ describe("Reactive system - unstable selector/projection", () => {
     expect(runs).toBe(2);
   });
 
-  it("integrates with ranked scheduling via sync watcher priority", () => {
-    const rt = createRuntime({ effectStrategy: "ranked" });
+  it("integrates with flush scheduling", () => {
+    const rt = createRuntime({ effectStrategy: "flush" });
     const [selected, setSelected] = signal("a");
-    const isSelected = createSelector(selected, { priority: 100 });
+    const isSelected = createSelector(selected);
     const seen: string[] = [];
 
     effect(() => {
@@ -142,14 +142,13 @@ describe("Reactive system - unstable selector/projection", () => {
     expect(seen).toEqual(["view:other", "view:b"]);
   });
 
-  it("updates same-key projections before lower-priority ranked views run", () => {
-    const rt = createRuntime({ effectStrategy: "ranked" });
+  it("updates same-key projections before views observe them", () => {
+    const rt = createRuntime({ effectStrategy: "flush" });
     const [source, setSource] = signal({ id: "a", label: "one" });
     const labels = createProjection(
       source,
       (value) => value.id,
       (value) => value.label,
-      { priority: 100 },
     );
     const seen: string[] = [];
 
@@ -157,7 +156,6 @@ describe("Reactive system - unstable selector/projection", () => {
       () => {
         seen.push(String(labels("a")));
       },
-      { priority: 0 },
     );
 
     expect(seen).toEqual(["one"]);

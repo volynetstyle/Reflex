@@ -4,16 +4,14 @@ import {
   createEagerScheduler,
   createSabScheduler,
   createFlushScheduler,
-  createRankedScheduler,
 } from "./variants";
 
-export type EffectStrategy = "flush" | "eager" | "sab" | "ranked";
+export type EffectStrategy = "flush" | "eager" | "sab";
 
 const strategyMap: Record<EffectStrategy, EffectSchedulerMode> = {
   eager: EffectSchedulerMode.Eager,
   sab: EffectSchedulerMode.SAB,
   flush: EffectSchedulerMode.Flush,
-  ranked: EffectSchedulerMode.Ranked,
 };
 
 export function resolveEffectSchedulerMode(
@@ -30,8 +28,6 @@ export function createEffectScheduler(
       return createEagerScheduler();
     case EffectSchedulerMode.SAB:
       return createSabScheduler();
-    case EffectSchedulerMode.Ranked:
-      return createRankedScheduler();
     default:
       return createFlushScheduler();
   }

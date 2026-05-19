@@ -38,7 +38,7 @@ describe("Reactive system - runtime", () => {
 
     expect(seen).toEqual([0]);
 
-    const secondDefault = createRuntime({ effectStrategy: "ranked" });
+    const secondDefault = createRuntime({ effectStrategy: "flush" });
 
     setCount(1);
     firstDefault.flush();

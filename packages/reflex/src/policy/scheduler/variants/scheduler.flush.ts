@@ -7,18 +7,7 @@ import type { EffectScheduler } from "../scheduler.types";
 import { noopNotifySettled } from "../scheduler.types";
 
 export function createFlushScheduler(): EffectScheduler {
-  return createQueueFlushScheduler(EffectSchedulerMode.Flush, false);
-}
-
-export function createRankedScheduler(): EffectScheduler {
-  return createQueueFlushScheduler(EffectSchedulerMode.Ranked, true);
-}
-
-function createQueueFlushScheduler(
-  mode: EffectSchedulerMode,
-  priority: boolean,
-): EffectScheduler {
-  const core = createSchedulerCore(priority);
+  const core = createSchedulerCore();
   const enqueue = (node: ReactiveNode): void => {
     tryEnqueue(core.queue, node);
   };
@@ -32,7 +21,7 @@ function createQueueFlushScheduler(
   };
 
   return createSchedulerInstance(
-    mode,
+    EffectSchedulerMode.Flush,
     core,
     enqueue,
     batch,

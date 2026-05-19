@@ -3,43 +3,49 @@ import {
   cleanupQueuedNodesAfterAbort,
   flushQueuedWatchers,
 } from "./scheduler.flush";
-import type {
-  SchedulerCore,
-  EffectNode,
-} from "./scheduler.types";
+import type { SchedulerCore, EffectNode } from "./scheduler.types";
 import { Flushing, Batching, Idle } from "./scheduler.constants";
+
+const NO_THROW: unique symbol = Symbol("NO_THROW");
 
 function flushSchedulerQueue(core: SchedulerCore): void {
   const queue = core.queue;
+
   if (core.phase === Flushing) return;
-  if (queue.size === 0) return;
+  if (queue.head === queue.tail) return;
 
   core.phase = Flushing;
-  let thrown: unknown = null;
+
+  let thrown: unknown = NO_THROW;
 
   try {
-    while (queue.size !== 0) {
-      thrown = flushQueuedWatchers(queue, thrown, core.priority);
-    }
+    thrown = flushQueuedWatchers(queue, thrown, NO_THROW);
   } finally {
-    cleanupQueuedNodesAfterAbort(queue);
-    core.phase =
-      core.batchDepth > 0 ? Batching : Idle;
+    if (queue.head !== queue.tail) {
+      cleanupQueuedNodesAfterAbort(queue);
+    }
+
+    core.phase = core.batchDepth > 0 ? Batching : Idle;
   }
 
-  if (thrown !== null) {
+  if (thrown !== NO_THROW) {
     throw thrown;
   }
 }
 
 function enterSchedulerBatch(core: SchedulerCore): void {
-  if (++core.batchDepth === 1 && core.phase !== Flushing) {
+  ++core.batchDepth;
+
+  if (core.phase === Idle) {
     core.phase = Batching;
   }
 }
 
 function leaveSchedulerBatch(core: SchedulerCore): boolean {
-  if (--core.batchDepth !== 0) {
+  const batchDepth = core.batchDepth - 1;
+  core.batchDepth = batchDepth;
+
+  if (batchDepth !== 0) {
     return false;
   }
 
@@ -57,14 +63,14 @@ function resetSchedulerCore(core: SchedulerCore): void {
   core.phase = Idle;
 }
 
-export function createSchedulerCore(priority = false): SchedulerCore {
+export function createSchedulerCore(): SchedulerCore {
   const queue = createRingQueue<EffectNode>();
 
   const core: SchedulerCore = {
     queue,
     batchDepth: 0,
     phase: Idle,
-    priority,
+
     flush: (): void => flushSchedulerQueue(core),
     enterBatch: (): void => enterSchedulerBatch(core),
     leaveBatch: (): boolean => leaveSchedulerBatch(core),

@@ -4,21 +4,17 @@ import type { EffectSchedulerMode } from "./scheduler.constants";
 export type EffectNode = ReactiveNode<undefined | Destructor>;
 
 export interface RingQueue<T> {
-  ring: T[];
+  ring: Array<T | undefined>;
+  mask: number;
   head: number;
   tail: number;
-  size: number;
-
-  push(node: T): void;
-  shift(): T | null;
-  clear(): void;
 }
 
 export type WatcherQueue = RingQueue<EffectNode>;
 
 export interface QueueBacked<T> {
   readonly queue: RingQueue<T>;
-  readonly ring: T[];
+  readonly ring: Array<T | undefined>;
   readonly head: number;
 }
 
@@ -28,7 +24,6 @@ export interface SchedulerCore {
   readonly queue: WatcherQueue;
   batchDepth: number;
   phase: number;
-  priority: boolean;
   flush(): void;
   enterBatch(): void;
   leaveBatch(): boolean;
@@ -36,7 +31,7 @@ export interface SchedulerCore {
 }
 
 export interface EffectScheduler {
-  readonly ring: EffectNode[];
+  readonly ring: Array<EffectNode | undefined>;
   readonly mode: EffectSchedulerMode;
   readonly runtimeNotifySettled: (() => void) | undefined;
 

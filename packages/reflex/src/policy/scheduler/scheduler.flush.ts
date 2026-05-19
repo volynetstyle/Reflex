@@ -1,86 +1,51 @@
 import { runWatcher } from "@volynets/reflex-runtime";
 import { UNSCHEDULE_MASK } from "./scheduler.constants";
-import type { EffectNode, WatcherQueue } from "./scheduler.types";
+import type { WatcherQueue } from "./scheduler.types";
 
 export function cleanupQueuedNodesAfterAbort(queue: WatcherQueue): void {
-  while (queue.size !== 0) {
-    queue.shift()!.state &= UNSCHEDULE_MASK;
-  }
-
-  queue.clear();
-}
-
-function getEffectPriority(node: EffectNode): number {
-  return (node as EffectNode & { priority?: number }).priority ?? 0;
-}
-
-function flushWatcherQueueFIFO(
-  queue: WatcherQueue,
-  thrown: unknown,
-): unknown {
+  const ring = queue.ring;
+  const mask = queue.mask;
   let head = queue.head;
 
-  while (queue.size !== 0) {
-    const ring = queue.ring;
-    const mask = ring.length - 1;
-    const node = ring[head]!;
-    ring[head] = undefined as unknown as EffectNode;
-    head = (head + 1) & mask;
-    queue.head = head;
-    --queue.size;
+  while (head !== queue.tail) {
+    const index = head & mask;
+    const node = ring[index]!;
 
+    ring[index] = undefined;
     node.state &= UNSCHEDULE_MASK;
-
-    try {
-      runWatcher(node);
-    } catch (error) {
-      if (thrown === null) {
-        thrown = error;
-      }
-    }
+    ++head;
   }
 
-  queue.tail = head;
-
-  return thrown;
-}
-
-function flushWatcherQueuePriority(
-  queue: WatcherQueue,
-  thrown: unknown,
-): unknown {
-  const pending: EffectNode[] = [];
-
-  while (queue.size !== 0) {
-    pending.push(queue.shift()!);
-  }
-
-  pending.sort(
-    (left, right) => getEffectPriority(right) - getEffectPriority(left),
-  );
-
-  for (let index = 0; index < pending.length; index++) {
-    const node = pending[index]!;
-    node.state &= UNSCHEDULE_MASK;
-
-    try {
-      runWatcher(node);
-    } catch (error) {
-      if (thrown === null) {
-        thrown = error;
-      }
-    }
-  }
-
-  return thrown;
+  queue.head = 0;
+  queue.tail = 0;
 }
 
 export function flushQueuedWatchers(
   queue: WatcherQueue,
   thrown: unknown,
-  priority: boolean,
+  noThrow: unknown,
 ): unknown {
-  return priority
-    ? flushWatcherQueuePriority(queue, thrown)
-    : flushWatcherQueueFIFO(queue, thrown);
+  while (queue.head !== queue.tail) {
+    const head = queue.head;
+    const index = head & queue.mask;
+    const node = queue.ring[index]!;
+
+    queue.ring[index] = undefined;
+    queue.head = head + 1;
+
+    // Clear before running so a watcher may enqueue itself again.
+    node.state &= UNSCHEDULE_MASK;
+
+    try {
+      runWatcher(node);
+    } catch (error) {
+      if (thrown === noThrow) {
+        thrown = error;
+      }
+    }
+  }
+
+  queue.tail = queue.head;
+
+  return thrown;
 }

@@ -12,7 +12,7 @@ import {
   EffectSchedulerMode,
 } from "../src/policy/scheduler";
 
-type TestNode = ReturnType<typeof createWatcherNode> & { priority?: number };
+type TestNode = ReturnType<typeof createWatcherNode>;
 
 let calls: TestNode[];
 
@@ -53,73 +53,16 @@ describe("createEffectScheduler", () => {
     expect(calls).toEqual([node]);
   });
 
-  it("flush preserves FIFO order without sorting by priority", () => {
+  it("flush preserves FIFO order", () => {
     const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
     const normal = createNode();
     const high = createNode();
-    high.priority = 1;
 
     scheduler.enqueue(normal);
     scheduler.enqueue(high);
     scheduler.flush();
 
     expect(calls).toEqual([normal, high]);
-  });
-
-  it("ranked flush runs higher-priority nodes first and keeps FIFO for ties", () => {
-    const scheduler = createEffectScheduler(EffectSchedulerMode.Ranked);
-    const low = createNode();
-    const high = createNode();
-    const midA = createNode();
-    const midB = createNode();
-
-    low.priority = 1;
-    high.priority = 10;
-    midA.priority = 5;
-    midB.priority = 5;
-
-    scheduler.enqueue(midA);
-    scheduler.enqueue(low);
-    scheduler.enqueue(high);
-    scheduler.enqueue(midB);
-    scheduler.flush();
-
-    expect(calls).toEqual([high, midA, midB, low]);
-  });
-
-  it("ranked flush handles sparse priority ranges without losing order", () => {
-    const scheduler = createEffectScheduler(EffectSchedulerMode.Ranked);
-    const low = createNode();
-    const mid = createNode();
-    const high = createNode();
-
-    low.priority = 1;
-    mid.priority = 10_000;
-    high.priority = 1_000_000;
-
-    scheduler.enqueue(low);
-    scheduler.enqueue(high);
-    scheduler.enqueue(mid);
-    scheduler.flush();
-
-    expect(calls).toEqual([high, mid, low]);
-  });
-
-  it("ranked flush drains newly enqueued nodes after the current priority wave", () => {
-    const scheduler = createEffectScheduler(EffectSchedulerMode.Ranked);
-    const late = createNode();
-    const high = createNode(() => scheduler.enqueue(late));
-    const low = createNode();
-
-    high.priority = 10;
-    low.priority = 1;
-    late.priority = 5;
-
-    scheduler.enqueue(low);
-    scheduler.enqueue(high);
-    scheduler.flush();
-
-    expect(calls).toEqual([high, low, late]);
   });
 
   it("flush runs dirty nodes even when extra state bits are present", () => {
@@ -353,24 +296,4 @@ describe("createEffectScheduler", () => {
     expect(scheduler.batchDepth).toBe(0);
   });
 
-  it("ranked mode continues draining pending nodes and rethrows the first watcher error", () => {
-    const scheduler = createEffectScheduler(EffectSchedulerMode.Ranked);
-    const failure = new Error("ranked boom");
-    const first = createNode(() => {
-      throw failure;
-    });
-    const second = createNode();
-
-    first.priority = 10;
-    second.priority = 1;
-
-    scheduler.enqueue(second);
-    scheduler.enqueue(first);
-
-    expect(() => scheduler.flush()).toThrow(failure);
-    expect(calls).toEqual([first, second]);
-    expect((first.state & Scheduled) !== 0).toBe(false);
-    expect((second.state & Scheduled) !== 0).toBe(false);
-    expect(scheduler.batchDepth).toBe(0);
-  });
 });

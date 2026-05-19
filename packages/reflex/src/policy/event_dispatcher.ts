@@ -1,6 +1,11 @@
 import type { EventBoundary, EventSource } from "../infra/event";
 import { identityBoundary, emitEvent } from "../infra/event";
-import { createRingQueue } from "./scheduler/scheduler.queue";
+import {
+  clearRingQueue,
+  createRingQueue,
+  pushRingQueue,
+  shiftRingQueue,
+} from "./scheduler/scheduler.queue";
 import { attachQueueState } from "./scheduler/scheduler.instance";
 import type { QueueBacked } from "./scheduler";
 
@@ -34,14 +39,14 @@ export function createEventDispatcher(
       flush: () => flushEventDispatcher(dispatcher),
       flushDirect: () => flushDirectEvent(dispatcher),
       emit<T>(source: EventSource<T>, value: T): void {
-        if (!dispatcher.flushing && queue.size === 0) {
+        if (!dispatcher.flushing && queue.head === queue.tail) {
           dispatcher.directSource = source as EventSource<unknown>;
           dispatcher.directValue = value;
           runBoundary(dispatcher.flushDirect);
           return;
         }
 
-        queue.push({
+        pushRingQueue(queue, {
           source: source as EventSource<unknown>,
           value,
         });
@@ -70,7 +75,7 @@ function flushDirectEvent(dispatcher: EventDispatcher): void {
   } finally {
     dispatcher.flushing = false;
 
-    if (dispatcher.queue.size !== 0) dispatcher.flush();
+    if (dispatcher.queue.head !== dispatcher.queue.tail) dispatcher.flush();
   }
 }
 
@@ -79,12 +84,12 @@ function flushEventDispatcher(dispatcher: EventDispatcher): void {
   dispatcher.flushing = true;
 
   try {
-    while (dispatcher.queue.size !== 0) {
-      const record = dispatcher.queue.shift()!;
+    while (dispatcher.queue.head !== dispatcher.queue.tail) {
+      const record = shiftRingQueue(dispatcher.queue)!;
       emitEvent(record.source, record.value);
     }
   } finally {
-    dispatcher.queue.clear();
+    clearRingQueue(dispatcher.queue);
     dispatcher.flushing = false;
   }
 }

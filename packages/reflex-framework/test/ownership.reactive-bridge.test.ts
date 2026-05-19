@@ -77,19 +77,19 @@ describe("ownership reactive bridge", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it("passes owned effect priority to the Reflex ranked scheduler", () => {
-    const rt = createRuntime({ effectStrategy: "ranked" });
+  it("runs owned effects in scheduler FIFO order", () => {
+    const rt = createRuntime({ effectStrategy: "flush" });
     const [source, setSource] = signal(1);
     const owner = createOwnerContext();
     const root = createScope();
     const log: string[] = [];
 
     runInOwnershipScope(owner, root, () => {
-      useOwnedEffect({ owner, priority: 1 }, () => {
+      useOwnedEffect({ owner }, () => {
         log.push(`low:${source()}`);
       });
 
-      useOwnedEffect({ owner, priority: 10 }, () => {
+      useOwnedEffect({ owner }, () => {
         log.push(`high:${source()}`);
       });
     });
@@ -100,7 +100,7 @@ describe("ownership reactive bridge", () => {
     setSource(2);
     rt.flush();
 
-    expect(log).toEqual(["high:2", "low:2"]);
+    expect(log).toEqual(["low:2", "high:2"]);
   });
 
   it("adapts ownership to custom reactive engines through a thin adapter", () => {

@@ -18,7 +18,7 @@ export function attachQueueState<TInstance extends object, TItem>(
   Object.defineProperty(instance, "ring", {
     configurable: true,
     enumerable: true,
-    get: (): TItem[] => queue.ring,
+    get: (): Array<TItem | undefined> => queue.ring,
   });
 
   Object.defineProperty(instance, "head", {
