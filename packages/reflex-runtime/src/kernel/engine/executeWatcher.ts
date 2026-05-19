@@ -1,5 +1,5 @@
 import type { ReactiveNode } from "../shape";
-import { clearNodeComputing, markNodeComputing } from "../shape";
+import { clearNodeComputing, markNodeComputing, Producer } from "../shape";
 import { cleanupStaleSources } from "./trackingContext";
 import {
   activeConsumer,
@@ -31,7 +31,7 @@ function restoreNodeExecution(
   node: ReactiveNode,
   prevActive: ReactiveNode | null,
 ): void {
-  setActiveConsumer(prevActive?.compute === null ? null : prevActive);
+  setActiveConsumer((node.state & Producer) !== 0 ? null : prevActive);
   clearNodeComputing(node);
 }
 

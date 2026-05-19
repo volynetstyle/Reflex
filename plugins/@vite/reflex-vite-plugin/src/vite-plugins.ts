@@ -6,12 +6,12 @@ import type { Plugin } from "vite";
 import type {
   ReflexDOMTransformOptions,
   ReflexPluginOptions,
-} from "./types";
+} from "./types.js";
 import {
   normalizeDOMPluginOptions,
   createJSXEsbuildOptions,
-} from "./normalize-options";
-import { transformReflexDOMJSX } from "./transform";
+} from "./normalize-options.js";
+import { transformReflexDOMJSX } from "./transform.js";
 
 /**
  * Creates the Reflex DOM JSX reactive props Vite plugin

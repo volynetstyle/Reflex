@@ -1,6 +1,6 @@
 {
-  "name": "@reflex/vite-plugin",
-  "version": "0.0.1",
+  "name": "@volynets/reflex-vite-plugin",
+  "version": "0.0.2",
   "description": "The default Vite plugin for Reflex projects",
   "keywords": [
     "reflex",
@@ -42,13 +42,12 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "prepublishOnly": "pnpm typecheck && pnpm build"
   },
-  "dependencies": {
-    "@swc/core": "^1.15.18"
-  },
   "devDependencies": {
+    "@swc/core": "^1.15.18",
     "vite": "^6.0.0"
   },
   "peerDependencies": {
+    "@swc/core": "^1.15.18",
     "vite": "^6.0.0"
   },
   "engines": {

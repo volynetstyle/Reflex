@@ -17,17 +17,17 @@ export type {
   NormalizedDOMTransformOptions,
   ReflexPluginOptions,
   SelectorType,
-} from "./types";
+} from "./types.js";
 
 // Re-export the main transformation function
-export { transformReflexDOMJSX } from "./transform";
+export { transformReflexDOMJSX } from "./transform.js";
 
 // Re-export plugin creators
 export {
   reflexDOMVitePlugin,
   reflexJSXVitePlugin,
   reflex,
-} from "./vite-plugins";
+} from "./vite-plugins.js";
 
 // Default export
-export { reflex as default } from "./vite-plugins";
+export { reflex as default } from "./vite-plugins.js";

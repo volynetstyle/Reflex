@@ -3,7 +3,7 @@
  */
 
 import type { Expression, MemberExpression } from "@swc/core";
-import { WRAPPABLE_EXPRESSION_TYPES } from "./types";
+import { WRAPPABLE_EXPRESSION_TYPES } from "./types.js";
 
 /**
  * Checks if an expression should be wrapped in an accessor

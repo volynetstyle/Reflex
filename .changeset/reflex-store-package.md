@@ -1,5 +1,5 @@
 ---
-"@reflex/store": minor
+"@volynets/reflex-store": minor
 "@volynets/reflex": minor
 ---
 

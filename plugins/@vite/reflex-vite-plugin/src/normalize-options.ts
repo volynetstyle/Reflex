@@ -7,14 +7,14 @@ import type {
   ReflexModelTransformOptions,
   NormalizedDOMTransformOptions,
   NormalizedReflexModelTransformOptions,
-} from "./types";
+} from "./types.js";
 import {
   DEFAULT_MODEL_IMPORT_SOURCE,
   DEFAULT_MODEL_READ_HELPER,
   DEFAULT_MODEL_ROOTS,
   DEFAULT_REACTIVE_PROPS,
   DEFAULT_JSX_IMPORT_SOURCE,
-} from "./types";
+} from "./types.js";
 
 /**
  * Normalizes DOM transform options

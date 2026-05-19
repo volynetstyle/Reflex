@@ -90,22 +90,27 @@ function refreshDispatchers(): void {
   );
 }
 
+// @__INLINE__
 export function getActiveConsumer(): ReactiveNode | null {
   return activeConsumer;
 }
 
+// @__INLINE__
 export function setActiveConsumer(node: ReactiveNode | null): void {
   activeConsumer = node;
 }
 
+// @__INLINE__
 export function getPropagationDepth(): number {
   return propagationDepth;
 }
 
+// @__INLINE__
 export function setPropagationDepth(depth: number): void {
   propagationDepth = depth;
 }
 
+// @__INLINE__
 export function setTrackingVersion(version: number): void {
   if (version > trackingVersion) trackingVersion = version;
 }
@@ -139,6 +144,7 @@ export function setReactiveSettledHook(
   refreshDispatchers();
 }
 
+// @__INLINE__
 export const dispatchSinkInvalidated = notifySinkInvalidated;
 
 // @__INLINE__
@@ -152,11 +158,13 @@ export function leavePropagation(): void {
   if (!propagationDepth && activeConsumer === null) onReactiveSettled?.();
 }
 
+// @__INLINE__
 export function notifySinkInvalidated(node: ReactiveNode): void {
   if (IS_DEV) recordDebugEvent(defaultContext, "watcher:invalidated", { node });
   onSinkInvalidated?.(node);
 }
 
+// @__INLINE__
 export function notifySettledIfIdle(): void {
   if (propagationDepth !== 0 || activeConsumer !== null) return;
   if (IS_DEV) recordDebugEvent(defaultContext, "context:settled");
