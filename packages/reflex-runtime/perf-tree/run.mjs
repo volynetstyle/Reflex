@@ -15,7 +15,7 @@ import {
 } from "../build/esm/index.js";
 import {
   linkEdge,
-} from "../build/esm/kernel/shape/graph/connect.js";
+} from "../build/esm/kernel/shape/graph.js";
 import {
   attachIncomingEdgeAfter,
   detachIncomingEdge,

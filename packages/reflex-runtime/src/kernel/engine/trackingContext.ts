@@ -3,7 +3,7 @@ import { devRecordCleanupStaleSources, devRecordTrackRead } from "../dev";
 import {
   linkEdge,
   unlinkDetachedIncomingEdgeSequence,
-} from "../shape/graph/connect";
+} from "../shape/graph";
 import { moveIncomingEdgeAfterUnchecked } from "../shape/graph/edgeList";
 import {
   activeConsumer,

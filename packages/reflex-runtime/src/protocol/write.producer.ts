@@ -2,8 +2,7 @@ import type { ReactiveNode } from "../kernel";
 import {
   defaultContext,
   enterPropagation,
-  propagate,
-  PROMOTE_CHANGED,
+  propagateChanged,
   leavePropagation,
   notifySettledIfIdle,
 } from "../kernel";
@@ -94,6 +93,6 @@ export function writeProducer<T>(
   // Push phase: notify all subscribers depth-first, mark them dirty.
   // Direct subscribers are promoted from Invalid to Changed.
   // This tells them "definitely changed, don't verify, recompute"
-  propagate(firstOut, PROMOTE_CHANGED);
+  propagateChanged(firstOut);
   leavePropagation();
 }

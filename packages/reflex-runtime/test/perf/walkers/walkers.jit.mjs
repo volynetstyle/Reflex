@@ -20,7 +20,7 @@ import {
 } from "../../../build/esm/index.js";
 import { recompute } from "../../../build/esm/kernel/engine/computeNode.js";
 import { executeNodeComputation } from "../../../build/esm/kernel/engine/executeWatcher.js";
-import { linkEdge } from "../../../build/esm/kernel/shape/graph/connect.js";
+import { linkEdge } from "../../../build/esm/kernel/shape/graph.js";
 import { propagate } from "../../../build/esm/kernel/walkers/propagateChange.js";
 import { shouldRecompute } from "../../../build/esm/kernel/walkers/recomputeNode.js";
 

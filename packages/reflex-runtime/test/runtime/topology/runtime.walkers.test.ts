@@ -25,7 +25,7 @@ import {
   Tracking,
   Watcher,
 } from "../../../src/kernel";
-import { linkEdge } from "../../../src/kernel/shape/graph/connect";
+import { linkEdge } from "../../../src/kernel/shape/graph";
 import {
   createConsumer,
   createProducer,

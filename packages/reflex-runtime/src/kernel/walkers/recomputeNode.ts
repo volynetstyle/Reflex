@@ -5,7 +5,7 @@ import { walkLine } from "./recomputeLine";
 import { BAIL, DIRTY } from "./walkerConstants";
 
 // @__INLINE__
-function isChanged(node: ReactiveNode, state: number = node.state): boolean {
+function shouldRecompute(node: ReactiveNode, state: number = node.state): boolean {
   // Already known dirty.
   if ((state & Changed) !== 0) return true;
 
@@ -46,8 +46,32 @@ function isChanged(node: ReactiveNode, state: number = node.state): boolean {
   return walkBranch(node, edge);
 }
 
+// @__INLINE__
+function shouldRecomputeDirty(node: ReactiveNode, state: number): boolean {
+  if ((state & Changed) !== 0) return true;
+
+  // Reentrant invalid consumer must recompute.
+  if ((state & Reentrant) !== 0) return true;
+
+  const edge = node.firstIn;
+
+  // Invalid leaf with no dependencies: nothing to pull.
+  if (edge === null) {
+    node.state = state & ~Invalid;
+    return false;
+  }
+
+  // Fast path only when current node has exactly one dependency.
+  if (edge.nextIn === null) {
+    const result = walkLine(node, edge);
+    if (result !== BAIL) return result === DIRTY;
+  }
+
+  return walkBranch(node, edge);
+}
+
 export {
-  isChanged as shouldRecompute,
-  isChanged as shouldRecomputeDirtyConsumer,
-  isChanged as shouldRecomputeDirtyWatcher,
+  shouldRecompute,
+  shouldRecomputeDirty as shouldRecomputeDirtyConsumer,
+  shouldRecomputeDirty as shouldRecomputeDirtyWatcher,
 };

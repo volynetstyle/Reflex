@@ -14,7 +14,7 @@ import {
   shouldRecompute,
   Tracking,
 } from "../../../src/kernel";
-import { linkEdge } from "../../../src/kernel/shape/graph/connect";
+import { linkEdge } from "../../../src/kernel/shape/graph";
 import {
   createConsumer,
   createComputeCounter,

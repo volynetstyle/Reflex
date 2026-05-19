@@ -1,4 +1,4 @@
-import { Invalid, Watcher, type ReactiveEdge } from "../shape";
+import { Changed, Invalid, Watcher, type ReactiveEdge } from "../shape";
 import { notifyWatcher, invalidateSub } from "./invalidateBranch";
 import {
   getPropagateStackBase,
@@ -10,19 +10,18 @@ import {
 } from "./propagationStack";
 
 /**
- * Push invalidation from `startEdge` through outgoing subscriber edges.
+ * API write-path specialization.
  *
- * Depth-zero subscribers receive `startPromote` (usually `Changed`), while
- * descendants are marked `Invalid`. Watchers are terminal: they are notified
- * but propagation does not descend through them.
+ * `writeProducer()` already filters null fanout and always promotes direct
+ * subscribers to Changed, so this entry skips those generic dispatch branches.
  */
-export function propagate(startEdge: ReactiveEdge | null, startPromote: number): void {
+export function propagateChanged(startEdge: ReactiveEdge): void {
   const base = getPropagateStackBase();
   let top = base;
 
-  if (startEdge !== null && startEdge.nextOut === null) {
+  if (startEdge.nextOut === null) {
     const sub = startEdge.to;
-    const next = invalidateSub(startEdge, sub, sub.state, startPromote);
+    const next = invalidateSub(startEdge, sub, sub.state, Changed);
 
     if (next === 0) {
       return;
@@ -87,7 +86,7 @@ export function propagate(startEdge: ReactiveEdge | null, startPromote: number):
     edge = edge.nextOut
   ) {
     const sub = edge.to;
-    const next = invalidateSub(edge, sub, sub.state, startPromote);
+    const next = invalidateSub(edge, sub, sub.state, Changed);
 
     if (next === 0) {
       continue;
