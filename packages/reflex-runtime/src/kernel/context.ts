@@ -22,6 +22,19 @@ export interface ExecutionContextOptions {
 type OnSinkInvalidatedHook = EngineHooks["onSinkInvalidated"];
 type OnReactiveSettledHook = EngineHooks["onReactiveSettled"];
 
+export interface ExecutionState {
+  activeConsumer: ReactiveNode | null;
+  trackingVersion: number;
+  propagationDepth: number;
+  trackReadFallback: TrackReadFallback;
+  runtimeOnSinkInvalidated: OnSinkInvalidatedHook;
+  runtimeOnReactiveSettled: OnReactiveSettledHook;
+  globalOnSinkInvalidated: OnSinkInvalidatedHook;
+  globalOnReactiveSettled: OnReactiveSettledHook;
+  onSinkInvalidated: OnSinkInvalidatedHook;
+  onReactiveSettled: OnReactiveSettledHook;
+}
+
 export interface ContextSnapshot {
   activeConsumer: ReactiveNode | null;
   trackingVersion: number;
@@ -56,6 +69,7 @@ let runtimeOnSinkInvalidated: OnSinkInvalidatedHook = undefined;
 let runtimeOnReactiveSettled: OnReactiveSettledHook = undefined;
 let globalOnSinkInvalidated: OnSinkInvalidatedHook = undefined;
 let globalOnReactiveSettled: OnReactiveSettledHook = undefined;
+let currentExecutionState: ExecutionState;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFunction<TArgs extends unknown[] = any> =
@@ -79,7 +93,18 @@ function normalizeHook<T extends AnyFunction>(value: unknown): T | undefined {
   return typeof value === "function" ? (value as T) : undefined;
 }
 
-function refreshDispatchers(): void {
+function refreshStateDispatchers(state: ExecutionState): void {
+  state.onSinkInvalidated = composeHooks<[ReactiveNode]>(
+    state.runtimeOnSinkInvalidated,
+    state.globalOnSinkInvalidated,
+  );
+  state.onReactiveSettled = composeHooks(
+    state.runtimeOnReactiveSettled,
+    state.globalOnReactiveSettled,
+  );
+}
+
+function refreshActiveDispatchers(): void {
   onSinkInvalidated = composeHooks<[ReactiveNode]>(
     runtimeOnSinkInvalidated,
     globalOnSinkInvalidated,
@@ -88,6 +113,96 @@ function refreshDispatchers(): void {
     runtimeOnReactiveSettled,
     globalOnReactiveSettled,
   );
+  currentExecutionState.onSinkInvalidated = onSinkInvalidated;
+  currentExecutionState.onReactiveSettled = onReactiveSettled;
+}
+
+export function createExecutionState(
+  options: ExecutionContextOptions = {},
+): ExecutionState {
+  const state: ExecutionState = {
+    activeConsumer: null,
+    trackingVersion: 0,
+    propagationDepth: 0,
+    trackReadFallback:
+      normalizeHook<TrackReadFallback>(options.trackReadFallback) ??
+      DEFAULT_TRACK_READ_FALLBACK,
+    runtimeOnSinkInvalidated: undefined,
+    runtimeOnReactiveSettled: undefined,
+    globalOnSinkInvalidated: undefined,
+    globalOnReactiveSettled: undefined,
+    onSinkInvalidated: undefined,
+    onReactiveSettled: undefined,
+  };
+
+  refreshStateDispatchers(state);
+  return state;
+}
+
+export const defaultExecutionState = createExecutionState();
+currentExecutionState = defaultExecutionState;
+
+function loadExecutionState(state: ExecutionState): void {
+  currentExecutionState = state;
+
+  activeConsumer = state.activeConsumer;
+  trackingVersion = state.trackingVersion;
+  propagationDepth = state.propagationDepth;
+  trackReadFallback = state.trackReadFallback;
+  runtimeOnSinkInvalidated = state.runtimeOnSinkInvalidated;
+  runtimeOnReactiveSettled = state.runtimeOnReactiveSettled;
+  globalOnSinkInvalidated = state.globalOnSinkInvalidated;
+  globalOnReactiveSettled = state.globalOnReactiveSettled;
+  onSinkInvalidated = state.onSinkInvalidated;
+  onReactiveSettled = state.onReactiveSettled;
+}
+
+function storeExecutionState(
+  state: ExecutionState = currentExecutionState,
+): void {
+  state.activeConsumer = activeConsumer;
+  if (trackingVersion > state.trackingVersion) {
+    state.trackingVersion = trackingVersion;
+  }
+  state.propagationDepth = propagationDepth;
+  state.trackReadFallback = trackReadFallback;
+  state.runtimeOnSinkInvalidated = runtimeOnSinkInvalidated;
+  state.runtimeOnReactiveSettled = runtimeOnReactiveSettled;
+  state.globalOnSinkInvalidated = globalOnSinkInvalidated;
+  state.globalOnReactiveSettled = globalOnReactiveSettled;
+  state.onSinkInvalidated = onSinkInvalidated;
+  state.onReactiveSettled = onReactiveSettled;
+}
+
+export function getActiveExecutionState(): ExecutionState {
+  return currentExecutionState;
+}
+
+export function setActiveExecutionState(state: ExecutionState): void {
+  if (state === currentExecutionState) return;
+  storeExecutionState();
+  loadExecutionState(state);
+}
+
+export function runWithExecutionState<T>(
+  state: ExecutionState,
+  fn: () => T,
+): T {
+  const prevState = currentExecutionState;
+
+  if (prevState === state) {
+    return fn();
+  }
+
+  storeExecutionState(prevState);
+  loadExecutionState(state);
+
+  try {
+    return fn();
+  } finally {
+    storeExecutionState(state);
+    loadExecutionState(prevState);
+  }
 }
 
 // @__INLINE__
@@ -130,7 +245,8 @@ export function setSinkInvalidatedHook(
   hook: OnSinkInvalidatedHook = undefined,
 ): void {
   globalOnSinkInvalidated = normalizeHook<OnSinkInvalidatedHook>(hook);
-  refreshDispatchers();
+  currentExecutionState.globalOnSinkInvalidated = globalOnSinkInvalidated;
+  refreshActiveDispatchers();
 }
 
 export function getReactiveSettledHook(): OnReactiveSettledHook {
@@ -141,7 +257,8 @@ export function setReactiveSettledHook(
   hook: OnReactiveSettledHook = undefined,
 ): void {
   globalOnReactiveSettled = normalizeHook<OnReactiveSettledHook>(hook);
-  refreshDispatchers();
+  currentExecutionState.globalOnReactiveSettled = globalOnReactiveSettled;
+  refreshActiveDispatchers();
 }
 
 // @__INLINE__
@@ -171,64 +288,173 @@ export function notifySettledIfIdle(): void {
   onReactiveSettled?.();
 }
 
-export function setHooks(hooks: EngineHooks = {}): void {
-  globalOnSinkInvalidated = Object.hasOwn(hooks, "onSinkInvalidated")
-    ? normalizeHook(hooks.onSinkInvalidated)
-    : undefined;
-  globalOnReactiveSettled = Object.hasOwn(hooks, "onReactiveSettled")
-    ? normalizeHook(hooks.onReactiveSettled)
-    : undefined;
-  refreshDispatchers();
+function isExecutionState(value: unknown): value is ExecutionState {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "trackReadFallback" in value &&
+    "runtimeOnSinkInvalidated" in value &&
+    "globalOnSinkInvalidated" in value
+  );
 }
 
-export function setRuntimeHooks(
+function setHooksForState(state: ExecutionState, hooks: EngineHooks = {}): void {
+  state.globalOnSinkInvalidated = Object.hasOwn(hooks, "onSinkInvalidated")
+    ? normalizeHook(hooks.onSinkInvalidated)
+    : undefined;
+  state.globalOnReactiveSettled = Object.hasOwn(hooks, "onReactiveSettled")
+    ? normalizeHook(hooks.onReactiveSettled)
+    : undefined;
+  refreshStateDispatchers(state);
+}
+
+function setRuntimeHooksForState(
+  state: ExecutionState,
   onInvalidated: OnSinkInvalidatedHook = undefined,
   onSettled: OnReactiveSettledHook = undefined,
 ): void {
-  runtimeOnSinkInvalidated =
+  state.runtimeOnSinkInvalidated =
     normalizeHook<OnSinkInvalidatedHook>(onInvalidated);
-  runtimeOnReactiveSettled = normalizeHook<OnReactiveSettledHook>(onSettled);
-  refreshDispatchers();
+  state.runtimeOnReactiveSettled =
+    normalizeHook<OnReactiveSettledHook>(onSettled);
+  refreshStateDispatchers(state);
 }
 
-export function setOptions(options: ExecutionContextOptions = {}): void {
+function setOptionsForState(
+  state: ExecutionState,
+  options: ExecutionContextOptions = {},
+): void {
   if (!Object.hasOwn(options, "trackReadFallback")) return;
-  trackReadFallback =
+  state.trackReadFallback =
     normalizeHook<TrackReadFallback>(options.trackReadFallback) ??
     DEFAULT_TRACK_READ_FALLBACK;
 }
 
-export function saveContext(): ContextSnapshot {
+function reloadActiveStateIfCurrent(state: ExecutionState): void {
+  if (state === currentExecutionState) {
+    loadExecutionState(state);
+  }
+}
+
+export function setHooks(state: ExecutionState, hooks?: EngineHooks): void;
+export function setHooks(hooks?: EngineHooks): void;
+export function setHooks(
+  stateOrHooks: ExecutionState | EngineHooks = {},
+  maybeHooks: EngineHooks = {},
+): void {
+  if (isExecutionState(stateOrHooks)) {
+    setHooksForState(stateOrHooks, maybeHooks);
+    reloadActiveStateIfCurrent(stateOrHooks);
+    return;
+  }
+
+  const state = currentExecutionState;
+  const hooks = stateOrHooks;
+  setHooksForState(state, hooks);
+  reloadActiveStateIfCurrent(state);
+}
+
+export function setRuntimeHooks(
+  state: ExecutionState,
+  onInvalidated?: OnSinkInvalidatedHook,
+  onSettled?: OnReactiveSettledHook,
+): void;
+export function setRuntimeHooks(
+  onInvalidated?: OnSinkInvalidatedHook,
+  onSettled?: OnReactiveSettledHook,
+): void;
+export function setRuntimeHooks(
+  stateOrOnInvalidated: ExecutionState | OnSinkInvalidatedHook = undefined,
+  onInvalidatedOrSettled: OnSinkInvalidatedHook | OnReactiveSettledHook =
+    undefined,
+  maybeSettled: OnReactiveSettledHook = undefined,
+): void {
+  if (isExecutionState(stateOrOnInvalidated)) {
+    setRuntimeHooksForState(
+      stateOrOnInvalidated,
+      onInvalidatedOrSettled as OnSinkInvalidatedHook,
+      maybeSettled,
+    );
+    reloadActiveStateIfCurrent(stateOrOnInvalidated);
+    return;
+  }
+
+  const state = currentExecutionState;
+  setRuntimeHooksForState(
+    state,
+    stateOrOnInvalidated,
+    onInvalidatedOrSettled as OnReactiveSettledHook,
+  );
+  reloadActiveStateIfCurrent(state);
+}
+
+export function setOptions(
+  state: ExecutionState,
+  options?: ExecutionContextOptions,
+): void;
+export function setOptions(options?: ExecutionContextOptions): void;
+export function setOptions(
+  stateOrOptions: ExecutionState | ExecutionContextOptions = {},
+  maybeOptions: ExecutionContextOptions = {},
+): void {
+  if (isExecutionState(stateOrOptions)) {
+    setOptionsForState(stateOrOptions, maybeOptions);
+    reloadActiveStateIfCurrent(stateOrOptions);
+    return;
+  }
+
+  const state = currentExecutionState;
+  setOptionsForState(state, stateOrOptions);
+  reloadActiveStateIfCurrent(state);
+}
+
+export function saveExecutionState(state: ExecutionState): ContextSnapshot {
   return {
-    activeConsumer,
-    trackingVersion,
-    propagationDepth,
-    trackReadFallback,
-    runtimeOnSinkInvalidated,
-    runtimeOnReactiveSettled,
-    globalOnSinkInvalidated,
-    globalOnReactiveSettled,
+    activeConsumer: state.activeConsumer,
+    trackingVersion: state.trackingVersion,
+    propagationDepth: state.propagationDepth,
+    trackReadFallback: state.trackReadFallback,
+    runtimeOnSinkInvalidated: state.runtimeOnSinkInvalidated,
+    runtimeOnReactiveSettled: state.runtimeOnReactiveSettled,
+    globalOnSinkInvalidated: state.globalOnSinkInvalidated,
+    globalOnReactiveSettled: state.globalOnReactiveSettled,
   };
 }
 
+export function restoreExecutionState(
+  state: ExecutionState,
+  snapshot: ContextSnapshot,
+): void {
+  const currentVersion =
+    state === currentExecutionState ? trackingVersion : state.trackingVersion;
+
+  state.activeConsumer = snapshot.activeConsumer;
+  state.trackingVersion =
+    snapshot.trackingVersion > currentVersion
+      ? snapshot.trackingVersion
+      : currentVersion;
+  state.propagationDepth = snapshot.propagationDepth;
+  state.trackReadFallback = snapshot.trackReadFallback;
+  state.runtimeOnSinkInvalidated = snapshot.runtimeOnSinkInvalidated;
+  state.runtimeOnReactiveSettled = snapshot.runtimeOnReactiveSettled;
+  state.globalOnSinkInvalidated = snapshot.globalOnSinkInvalidated;
+  state.globalOnReactiveSettled = snapshot.globalOnReactiveSettled;
+  refreshStateDispatchers(state);
+  reloadActiveStateIfCurrent(state);
+}
+
+export function saveContext(): ContextSnapshot {
+  storeExecutionState();
+  return saveExecutionState(currentExecutionState);
+}
+
 export function restoreContext(snapshot: ContextSnapshot): void {
-  activeConsumer = snapshot.activeConsumer;
-  if (snapshot.trackingVersion > trackingVersion) {
-    trackingVersion = snapshot.trackingVersion;
-  }
-  propagationDepth = snapshot.propagationDepth;
-  trackReadFallback = snapshot.trackReadFallback;
-  runtimeOnSinkInvalidated = snapshot.runtimeOnSinkInvalidated;
-  runtimeOnReactiveSettled = snapshot.runtimeOnReactiveSettled;
-  globalOnSinkInvalidated = snapshot.globalOnSinkInvalidated;
-  globalOnReactiveSettled = snapshot.globalOnReactiveSettled;
-  refreshDispatchers();
+  restoreExecutionState(currentExecutionState, snapshot);
 }
 
-export function resetState(): void {
-  activeConsumer = null;
-  trackingVersion = 0;
-  propagationDepth = 0;
+export function resetState(state: ExecutionState = currentExecutionState): void {
+  state.activeConsumer = null;
+  state.trackingVersion = 0;
+  state.propagationDepth = 0;
+  reloadActiveStateIfCurrent(state);
 }
-
-refreshDispatchers();
