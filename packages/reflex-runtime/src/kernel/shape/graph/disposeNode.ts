@@ -1,7 +1,9 @@
 import type ReactiveNode from "../node";
+import { clearGraphReductionState } from "../../reduction";
 import { unlinkAllSources, unlinkAllSubscribers } from "./sweepEdges";
 
 export function disposeNode(node: ReactiveNode): void {
+  clearGraphReductionState(node);
   node.lastInTail = null;
   unlinkAllSources(node);
   unlinkAllSubscribers(node);

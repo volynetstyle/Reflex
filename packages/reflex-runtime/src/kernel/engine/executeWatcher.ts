@@ -5,8 +5,10 @@ import {
   activeConsumer,
   advanceTrackingVersion,
   defaultContext,
+  graphReduction,
   setActiveConsumer,
 } from "../context";
+import { observeGraphReductionRun } from "../reduction";
 import {
   devAssertExecutableNode,
   devRecordComputeError,
@@ -57,6 +59,7 @@ export function executeNodeComputation(node: ReactiveNode): unknown {
 
   restoreNodeExecution(node, prevActive);
   if (node.lastInTail !== node.lastIn) cleanupStaleSources(node);
+  if (graphReduction.enabled) observeGraphReductionRun(node, graphReduction);
 
   devRecordComputeFinish(node, result, defaultContext);
 

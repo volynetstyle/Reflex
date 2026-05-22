@@ -19,6 +19,7 @@ export type ComputeFn<T> = (() => T) | null;
 
 export class ReactiveNode<T = unknown> {
   state: number = 0;
+  topologyVersion: number = 0;
 
   firstOut: ReactiveEdge | null = null;
   lastOut: ReactiveEdge | null = null;
@@ -40,6 +41,12 @@ export class ReactiveNode<T = unknown> {
     this.compute = compute;
     this.payload = payload;
   }
+}
+
+// @__INLINE__
+export function bumpNodeTopologyVersion(node: ReactiveNode): void {
+  const next = (node.topologyVersion + 1) >>> 0;
+  node.topologyVersion = next === 0 ? 1 : next;
 }
 
 export default ReactiveNode;

@@ -1,4 +1,6 @@
 export * from "./context";
 export * from "./engine";
+export * from "./reduction";
 export * from "./shape";
+export * from "./staticTransitionPlan";
 export * from "./walkers";

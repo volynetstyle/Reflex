@@ -1,9 +1,7 @@
 import type ReactiveNode from "../shape/node";
+import { bumpNodeTopologyVersion } from "../shape/node";
 import { devRecordCleanupStaleSources, devRecordTrackRead } from "../dev";
-import {
-  linkEdge,
-  unlinkDetachedIncomingEdgeSequence,
-} from "../shape/graph";
+import { linkEdge, unlinkDetachedIncomingEdgeSequence } from "../shape/graph";
 import { moveIncomingEdgeAfterUnchecked } from "../shape/graph/edgeList";
 import {
   activeConsumer,
@@ -99,6 +97,7 @@ function trackReadResolved(
       nextExpected.prevIn = next1;
       next1.version = version;
       consumer.lastInTail = next1;
+      bumpNodeTopologyVersion(consumer);
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
       return true;
     }
@@ -117,6 +116,7 @@ function trackReadResolved(
         nextExpected.prevIn = next2;
         next2.version = version;
         consumer.lastInTail = next2;
+        bumpNodeTopologyVersion(consumer);
         if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
         return true;
       }

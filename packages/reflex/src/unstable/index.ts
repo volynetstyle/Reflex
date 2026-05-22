@@ -14,16 +14,9 @@ export type {
 /**
  * API
  */
-export {
-  signal,
-} from "../api/signal";
-export {
-  computed,
-  memo,
-} from "../api/derived";
-export {
-  effect,
-} from "../api/effect";
+export { signal } from "../api/signal";
+export { computed, memo } from "../api/derived";
+export { effect } from "../api/effect";
 /**
  * API
  */
@@ -39,3 +32,4 @@ export { createModel, isModel, own } from "../infra/model";
 
 export * from "./optimistic";
 export * from "./resource";
+export * from "./reduction";

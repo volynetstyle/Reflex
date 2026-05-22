@@ -93,8 +93,23 @@ export {
   Scheduled,
   Computing,
   Tracking,
+  createStaticTransitionPlan,
   disposeNode,
   disposeNodeEvent,
+  executeStaticPlan,
+  executeStaticPlanRange,
+  getGraphReductionState,
+  notifyStaticSink,
+  recomputeStaticNode,
+  writeStaticPlanSource,
 } from "./kernel";
 
-export type { ReactiveNodeState } from "./kernel";
+export type {
+  GraphReductionMode,
+  GraphReductionOptions,
+  GraphReductionState,
+  ReactiveNodeState,
+  StaticPlanRange,
+  StaticTransitionPlan,
+  TopologyGuard,
+} from "./kernel";

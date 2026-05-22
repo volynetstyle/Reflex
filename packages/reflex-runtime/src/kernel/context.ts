@@ -1,6 +1,12 @@
 import { recordDebugEvent } from "../debug/debug.runtime";
 import type { ReactiveEdge, ReactiveNode } from "./shape";
 import { reuseIncomingEdgeFromSuffixOrCreate } from "./shape/graph";
+import {
+  DEFAULT_GRAPH_REDUCTION_OPTIONS,
+  normalizeGraphReductionOptions,
+  type GraphReductionOptions,
+  type NormalizedGraphReductionOptions,
+} from "./reduction";
 
 export interface EngineHooks {
   onSinkInvalidated?(node: ReactiveNode): void;
@@ -17,6 +23,7 @@ export type TrackReadFallback = (
 
 export interface ExecutionContextOptions {
   trackReadFallback?: TrackReadFallback;
+  graphReduction?: GraphReductionOptions | boolean;
 }
 
 type OnSinkInvalidatedHook = EngineHooks["onSinkInvalidated"];
@@ -27,6 +34,7 @@ export interface ExecutionState {
   trackingVersion: number;
   propagationDepth: number;
   trackReadFallback: TrackReadFallback;
+  graphReduction: NormalizedGraphReductionOptions;
   runtimeOnSinkInvalidated: OnSinkInvalidatedHook;
   runtimeOnReactiveSettled: OnReactiveSettledHook;
   globalOnSinkInvalidated: OnSinkInvalidatedHook;
@@ -40,6 +48,7 @@ export interface ContextSnapshot {
   trackingVersion: number;
   propagationDepth: number;
   trackReadFallback: TrackReadFallback;
+  graphReduction: NormalizedGraphReductionOptions;
   runtimeOnSinkInvalidated: OnSinkInvalidatedHook;
   runtimeOnReactiveSettled: OnReactiveSettledHook;
   globalOnSinkInvalidated: OnSinkInvalidatedHook;
@@ -62,6 +71,8 @@ export let activeConsumer: ReactiveNode | null = null;
 export let trackingVersion = 0;
 export let propagationDepth = 0;
 export let trackReadFallback: TrackReadFallback = DEFAULT_TRACK_READ_FALLBACK;
+export let graphReduction: NormalizedGraphReductionOptions =
+  DEFAULT_GRAPH_REDUCTION_OPTIONS;
 export let onSinkInvalidated: OnSinkInvalidatedHook = undefined;
 export let onReactiveSettled: OnReactiveSettledHook = undefined;
 
@@ -127,6 +138,7 @@ export function createExecutionState(
     trackReadFallback:
       normalizeHook<TrackReadFallback>(options.trackReadFallback) ??
       DEFAULT_TRACK_READ_FALLBACK,
+    graphReduction: normalizeGraphReductionOptions(options.graphReduction),
     runtimeOnSinkInvalidated: undefined,
     runtimeOnReactiveSettled: undefined,
     globalOnSinkInvalidated: undefined,
@@ -149,6 +161,7 @@ function loadExecutionState(state: ExecutionState): void {
   trackingVersion = state.trackingVersion;
   propagationDepth = state.propagationDepth;
   trackReadFallback = state.trackReadFallback;
+  graphReduction = state.graphReduction;
   runtimeOnSinkInvalidated = state.runtimeOnSinkInvalidated;
   runtimeOnReactiveSettled = state.runtimeOnReactiveSettled;
   globalOnSinkInvalidated = state.globalOnSinkInvalidated;
@@ -166,6 +179,7 @@ function storeExecutionState(
   }
   state.propagationDepth = propagationDepth;
   state.trackReadFallback = trackReadFallback;
+  state.graphReduction = graphReduction;
   state.runtimeOnSinkInvalidated = runtimeOnSinkInvalidated;
   state.runtimeOnReactiveSettled = runtimeOnReactiveSettled;
   state.globalOnSinkInvalidated = globalOnSinkInvalidated;
@@ -298,7 +312,10 @@ function isExecutionState(value: unknown): value is ExecutionState {
   );
 }
 
-function setHooksForState(state: ExecutionState, hooks: EngineHooks = {}): void {
+function setHooksForState(
+  state: ExecutionState,
+  hooks: EngineHooks = {},
+): void {
   state.globalOnSinkInvalidated = Object.hasOwn(hooks, "onSinkInvalidated")
     ? normalizeHook(hooks.onSinkInvalidated)
     : undefined;
@@ -324,10 +341,18 @@ function setOptionsForState(
   state: ExecutionState,
   options: ExecutionContextOptions = {},
 ): void {
-  if (!Object.hasOwn(options, "trackReadFallback")) return;
-  state.trackReadFallback =
-    normalizeHook<TrackReadFallback>(options.trackReadFallback) ??
-    DEFAULT_TRACK_READ_FALLBACK;
+  if (Object.hasOwn(options, "trackReadFallback")) {
+    state.trackReadFallback =
+      normalizeHook<TrackReadFallback>(options.trackReadFallback) ??
+      DEFAULT_TRACK_READ_FALLBACK;
+  }
+
+  if (Object.hasOwn(options, "graphReduction")) {
+    state.graphReduction = normalizeGraphReductionOptions(
+      options.graphReduction,
+      state.graphReduction,
+    );
+  }
 }
 
 function reloadActiveStateIfCurrent(state: ExecutionState): void {
@@ -365,8 +390,9 @@ export function setRuntimeHooks(
 ): void;
 export function setRuntimeHooks(
   stateOrOnInvalidated: ExecutionState | OnSinkInvalidatedHook = undefined,
-  onInvalidatedOrSettled: OnSinkInvalidatedHook | OnReactiveSettledHook =
-    undefined,
+  onInvalidatedOrSettled:
+    | OnSinkInvalidatedHook
+    | OnReactiveSettledHook = undefined,
   maybeSettled: OnReactiveSettledHook = undefined,
 ): void {
   if (isExecutionState(stateOrOnInvalidated)) {
@@ -414,6 +440,7 @@ export function saveExecutionState(state: ExecutionState): ContextSnapshot {
     trackingVersion: state.trackingVersion,
     propagationDepth: state.propagationDepth,
     trackReadFallback: state.trackReadFallback,
+    graphReduction: state.graphReduction,
     runtimeOnSinkInvalidated: state.runtimeOnSinkInvalidated,
     runtimeOnReactiveSettled: state.runtimeOnReactiveSettled,
     globalOnSinkInvalidated: state.globalOnSinkInvalidated,
@@ -435,6 +462,7 @@ export function restoreExecutionState(
       : currentVersion;
   state.propagationDepth = snapshot.propagationDepth;
   state.trackReadFallback = snapshot.trackReadFallback;
+  state.graphReduction = snapshot.graphReduction;
   state.runtimeOnSinkInvalidated = snapshot.runtimeOnSinkInvalidated;
   state.runtimeOnReactiveSettled = snapshot.runtimeOnReactiveSettled;
   state.globalOnSinkInvalidated = snapshot.globalOnSinkInvalidated;
@@ -452,9 +480,12 @@ export function restoreContext(snapshot: ContextSnapshot): void {
   restoreExecutionState(currentExecutionState, snapshot);
 }
 
-export function resetState(state: ExecutionState = currentExecutionState): void {
+export function resetState(
+  state: ExecutionState = currentExecutionState,
+): void {
   state.activeConsumer = null;
   state.trackingVersion = 0;
   state.propagationDepth = 0;
+  state.graphReduction = DEFAULT_GRAPH_REDUCTION_OPTIONS;
   reloadActiveStateIfCurrent(state);
 }
