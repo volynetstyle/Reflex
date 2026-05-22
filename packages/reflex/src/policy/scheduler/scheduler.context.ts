@@ -14,5 +14,6 @@ export function isRuntimeInactive(core: SchedulerCore): boolean {
 }
 
 export function hasPendingEffects(core: SchedulerCore): boolean {
-  return core.queue.head !== core.queue.tail;
+  const q = core.queue;
+  return q.head !== q.tail;
 }

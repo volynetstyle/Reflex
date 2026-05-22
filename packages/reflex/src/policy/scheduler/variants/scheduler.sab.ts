@@ -26,6 +26,7 @@ export function createSabScheduler(): EffectScheduler {
       return fn();
     } finally {
       if (
+        
         leaveSchedulerBatch(core) &&
         hasPendingEffects(core) &&
         isContextSettled()
