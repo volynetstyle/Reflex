@@ -1,4 +1,5 @@
 import { createRuntime } from "@volynets/reflex";
+import type { DOMRenderEffectScheduler } from "./render-effect-scheduler";
 import {
   createDefaultPolicyConfig,
   resolveEffectStrategy,
@@ -15,8 +16,9 @@ export interface DOMRuntimeOptions extends BaseDOMRuntimeOptions {
 
 export function createRendererRuntime(
   options?: DOMRuntimeOptions,
+  renderEffectScheduler?: DOMRenderEffectScheduler,
 ): RuntimeInstance {
-  const { policy, ...runtimeOptions } = options ?? {};
+  const { policy, hooks, ...runtimeOptions } = options ?? {};
   const mergedPolicy = {
     ...createDefaultPolicyConfig(),
     ...policy,
@@ -26,6 +28,13 @@ export function createRendererRuntime(
     effectStrategy:
       runtimeOptions.effectStrategy ??
       resolveEffectStrategy(mergedPolicy.effectPolicy),
+    hooks: {
+      ...hooks,
+      onReactiveSettled() {
+        renderEffectScheduler?.flush();
+        hooks?.onReactiveSettled?.();
+      },
+    },
     ...runtimeOptions,
   });
 }

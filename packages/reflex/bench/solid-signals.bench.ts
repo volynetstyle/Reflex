@@ -7,7 +7,7 @@ import {
   type WriteInput,
 } from "./shared";
 
-import * as SolidSignalsModule from "../../@reflex/runtime/node_modules/@solidjs/signals/dist/prod.js";
+import * as SolidSignalsModule from "../../@volynets/reflex-runtime/node_modules/@solidjs/signals/dist/prod.js";
 
 const {
   createEffect,

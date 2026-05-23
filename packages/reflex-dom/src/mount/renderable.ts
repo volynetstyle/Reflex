@@ -2,7 +2,7 @@ import {
   RenderableKind,
   getTaggedRenderableKind,
   isEmptyRenderableValue,
-} from "../renderable-kind";
+} from "../renderable/kind";
 import type { JSXRenderable, RenderableRecord } from "../types";
 
 export type Renderable = JSXRenderable | unknown;

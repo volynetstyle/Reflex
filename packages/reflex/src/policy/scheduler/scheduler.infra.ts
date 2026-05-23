@@ -1,5 +1,3 @@
-import type { ExecutionContext } from "@reflex/runtime";
-import { getDefaultContext } from "@reflex/runtime";
 import { EffectSchedulerMode } from "./scheduler.constants";
 import type { EffectScheduler } from "./scheduler.types";
 import {
@@ -26,16 +24,15 @@ export function resolveEffectSchedulerMode(
 
 export function createEffectScheduler(
   mode: EffectSchedulerMode = EffectSchedulerMode.Flush,
-  context: ExecutionContext = getDefaultContext(),
 ): EffectScheduler {
   switch (mode) {
     case EffectSchedulerMode.Eager:
-      return createEagerScheduler(context);
+      return createEagerScheduler();
     case EffectSchedulerMode.Ranked:
-      return createRankedScheduler(context);
+      return createRankedScheduler();
     case EffectSchedulerMode.SAB:
-      return createSabScheduler(context);
+      return createSabScheduler();
     default:
-      return createFlushScheduler(context);
+      return createFlushScheduler();
   }
 }

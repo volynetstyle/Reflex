@@ -143,6 +143,28 @@ describe("Reactive system - unstable resource protocol", () => {
     expect(user.value()).toBe(2);
   });
 
+  it("accepts function-like thenables from loaders", async () => {
+    const thenable: PromiseLike<number> & (() => void) = Object.assign(
+      () => undefined,
+      {
+        then(onFulfilled?: (value: number) => unknown) {
+          return Promise.resolve(3).then(onFulfilled);
+        },
+      },
+    );
+
+    const user = resource(() => thenable);
+
+    expect(user.status()).toBe("pending");
+    expect(user.token()).toBe(1);
+
+    await Promise.resolve();
+
+    expect(user.status()).toBe("resolved");
+    expect(user.value()).toBe(3);
+    expect(user.error()).toBeUndefined();
+  });
+
   it("tracks a reactive source and ignores stale async resolutions", async () => {
     const rt = createRuntime();
     const [id, setId] = signal(1);

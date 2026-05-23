@@ -1,4 +1,4 @@
-import type { ExecutionContext, ReactiveNode } from "@reflex/runtime";
+import type { ReactiveNode } from "@volynets/reflex-runtime";
 import type {
   EffectSchedulerMode,
   SchedulerPhase,
@@ -6,34 +6,40 @@ import type {
 
 export type EffectNode = ReactiveNode<undefined | Destructor>;
 
-export interface WatcherQueue {
-  readonly ring: EffectNode[];
+export interface RingQueue<T> {
+  readonly ring: T[];
   head: number;
   tail: number;
   size: number;
 
-  push(node: EffectNode): void;
-  shift(): EffectNode | null;
+  push(node: T): void;
+  shift(): T | null;
   clear(): void;
+}
+
+export type WatcherQueue = RingQueue<EffectNode>;
+
+export interface QueueBacked<T> {
+  readonly queue: RingQueue<T>;
+  readonly ring: T[];
+  readonly head: number;
 }
 
 export function noopNotifySettled(): void {}
 
 export interface SchedulerCore {
   readonly queue: WatcherQueue;
+  batchDepth: number;
+  phase: SchedulerPhase;
   flush(): void;
   enterBatch(): void;
   leaveBatch(): boolean;
   reset(): void;
-
-  get batchDepth(): number;
-  get phase(): SchedulerPhase;
 }
 
 export interface EffectScheduler {
   readonly ring: EffectNode[];
   readonly mode: EffectSchedulerMode;
-  readonly context: ExecutionContext;
   readonly runtimeNotifySettled: (() => void) | undefined;
 
   enqueue(node: ReactiveNode): void;
@@ -42,9 +48,9 @@ export interface EffectScheduler {
   notifySettled(): void;
   reset(): void;
 
-  get head(): number;
-  get batchDepth(): number;
-  get phase(): SchedulerPhase;
+  readonly head: number;
+  readonly batchDepth: number;
+  readonly phase: SchedulerPhase;
 }
 
 export type SchedulerBatch = EffectScheduler["batch"];

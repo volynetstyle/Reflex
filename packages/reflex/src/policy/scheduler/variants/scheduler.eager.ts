@@ -1,34 +1,33 @@
-import type { ExecutionContext } from "@reflex/runtime";
+import type { ReactiveNode } from "@volynets/reflex-runtime";
 import { EffectSchedulerMode } from "../scheduler.constants";
 import {
   createSchedulerCore,
+  hasPendingEffects,
   isRuntimeInactive,
   createSchedulerInstance,
-  tryEnqueue,
+  tryEnqueueEffect,
 } from "../scheduler.core";
-import type { EffectNode, EffectScheduler } from "../scheduler.types";
+import { flushPrioritySchedulerQueue } from "../scheduler.priority";
+import type { EffectScheduler } from "../scheduler.types";
 
-export function createEagerScheduler(
-  context: ExecutionContext,
-): EffectScheduler {
+export function createEagerScheduler(): EffectScheduler {
   const core = createSchedulerCore();
-  const queue = core.queue;
+  core.flush = (): void => flushPrioritySchedulerQueue(core);
   const notifySettled = (): void => {
-    if (isRuntimeInactive(context, core) && queue.size !== 0) {
+    if (isRuntimeInactive(core) && hasPendingEffects(core)) {
       core.flush();
     }
   };
-  const enqueueToQueue = tryEnqueue.bind(null, queue);
-  const enqueue = (node: EffectNode) => {
-    if (!enqueueToQueue(node)) return;
-    if (isRuntimeInactive(context, core)) core.flush();
+  const enqueue = (node: ReactiveNode): void => {
+    if (!tryEnqueueEffect(core, node)) return;
+    if (isRuntimeInactive(core)) core.flush();
   };
   const batch = <T>(fn: () => T): T => {
     core.enterBatch();
     try {
       return fn();
     } finally {
-      if (core.leaveBatch() && queue.size !== 0) {
+      if (core.leaveBatch() && hasPendingEffects(core)) {
         core.flush();
       }
     }
@@ -36,7 +35,6 @@ export function createEagerScheduler(
 
   return createSchedulerInstance(
     EffectSchedulerMode.Eager,
-    context,
     core,
     enqueue,
     batch,

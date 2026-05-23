@@ -4,8 +4,8 @@
     "baseUrl": ".",
     "paths": {
       "@volynets/reflex": [
-        "../reflex/dist/globals.d.ts",
-        "../reflex/src/index.ts"
+        "../reflex/src/index.ts",
+        "../reflex/dist/globals.d.ts"
       ]
     },
     "composite": false,

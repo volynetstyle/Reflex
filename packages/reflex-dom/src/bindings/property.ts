@@ -1,8 +1,13 @@
 import type { Accessor } from "../types";
 import type { Namespace } from "../host/namespace";
-import type { DOMRenderer } from "../runtime";
+import type { DOMRenderer } from "../runtime/renderer";
 import { applyProp } from "../host/props";
-import { onEffectStart, useEffect } from "reflex-framework/ownership/reflex";
+import {
+  onEffectStart,
+  useOwnedEffect,
+} from "@volynets/reflex-framework";
+
+const DOM_BINDING_PRIORITY = 2;
 
 export function bindReactiveProp(
   renderer: DOMRenderer,
@@ -13,11 +18,14 @@ export function bindReactiveProp(
 ) {
   let previousValue = applyProp(el, name, acc(), ns, undefined);
 
-  useEffect(renderer.owner, () => {
-    const nextValue = acc();
+  useOwnedEffect(
+    { owner: renderer.owner, priority: DOM_BINDING_PRIORITY },
+    () => {
+      const nextValue = acc();
 
-    onEffectStart(() => {
-      previousValue = applyProp(el, name, nextValue, ns, previousValue);
-    });
-  });
+      onEffectStart(() => {
+        previousValue = applyProp(el, name, nextValue, ns, previousValue);
+      });
+    },
+  );
 }

@@ -104,7 +104,7 @@ describe("Reactive system - edge cases", () => {
 
     effect(spy);
 
-    setSource((prev) => prev);
+    setSource((prev: number) => prev);
     rt.flush();
 
     expect(spy).toHaveBeenCalledTimes(1);
@@ -112,7 +112,7 @@ describe("Reactive system - edge cases", () => {
   });
 
   it("stabilizes re-entrant effects that write to their own source", () => {
-    const rt = createRuntime({effectStrategy: "flush"});
+    const rt = createRuntime({ effectStrategy: "flush" });
     const [count, setCount] = signal(0);
     const seen: number[] = [];
 
@@ -140,7 +140,7 @@ describe("Reactive system - edge cases", () => {
       return cleanup;
     });
 
-    let disposeWatched: Destructor = () => {};
+    let disposeWatched = () => {};
 
     effect(() => {
       if (source() === 1) {

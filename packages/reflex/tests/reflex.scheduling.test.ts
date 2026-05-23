@@ -1,38 +1,30 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ExecutionContext } from "@reflex/runtime";
 
 const mocks = vi.hoisted(() => ({
   runWatcher: vi.fn(),
-  getDefaultContext: vi.fn(),
+  getPropagationDepth: vi.fn(),
+  getActiveConsumer: vi.fn(),
 }));
 
-vi.mock("@reflex/runtime", async () => {
-  const actual = await vi.importActual<typeof import("@reflex/runtime")>(
-    "@reflex/runtime",
-  );
+vi.mock("@volynets/reflex-runtime", async () => {
+  const actual =
+    // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+    await vi.importActual<typeof import("@volynets/reflex-runtime")>("@volynets/reflex-runtime");
 
   return {
     ...actual,
     runWatcher: mocks.runWatcher,
-    getDefaultContext: mocks.getDefaultContext,
+    getPropagationDepth: mocks.getPropagationDepth,
+    getActiveConsumer: mocks.getActiveConsumer,
   };
 });
 
-import { DIRTY_STATE, ReactiveNodeState } from "@reflex/runtime";
+import { Changed, DIRTY_STATE, Disposed, ReactiveNodeState, Scheduled } from "@volynets/reflex-runtime";
 import {
   createEffectScheduler,
   EffectSchedulerMode,
 } from "../src/policy/scheduler";
-
-function createContext(
-  overrides: Partial<ExecutionContext> = {},
-): ExecutionContext {
-  return {
-    propagationDepth: 0,
-    activeComputed: null,
-    ...overrides,
-  } as ExecutionContext;
-}
 
 function createNode(state: number = DIRTY_STATE) {
   return { state } as any;
@@ -41,7 +33,8 @@ function createNode(state: number = DIRTY_STATE) {
 describe("createEffectScheduler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.getDefaultContext.mockReturnValue(createContext());
+    mocks.getPropagationDepth.mockReturnValue(0);
+    mocks.getActiveConsumer.mockReturnValue(null);
   });
 
   it("enqueue marks node as scheduled in flush mode but does not run it", () => {
@@ -50,7 +43,7 @@ describe("createEffectScheduler", () => {
 
     scheduler.enqueue(node);
 
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
+    expect((node.state & Scheduled) !== 0).toBe(true);
     expect(mocks.runWatcher).not.toHaveBeenCalled();
   });
 
@@ -61,9 +54,25 @@ describe("createEffectScheduler", () => {
     scheduler.enqueue(node);
     scheduler.flush();
 
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((node.state & Scheduled) !== 0).toBe(false);
     expect(mocks.runWatcher).toHaveBeenCalledTimes(1);
     expect(mocks.runWatcher).toHaveBeenCalledWith(node);
+  });
+
+  it("flush runs higher-priority effects before default-priority effects", () => {
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
+    const normal = createNode();
+    const high = createNode() as any;
+    high.priority = 1;
+
+    scheduler.enqueue(normal);
+    scheduler.enqueue(high);
+    scheduler.flush();
+
+    expect(mocks.runWatcher.mock.calls.map(([node]) => node)).toEqual([
+      high,
+      normal,
+    ]);
   });
 
   it("flush unschedules but does not run clean node", () => {
@@ -75,7 +84,7 @@ describe("createEffectScheduler", () => {
 
     scheduler.flush();
 
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((node.state & Scheduled) !== 0).toBe(false);
 
     // calls because early exit in runWatcher
     //    expect(mocks.runWatcher).not.toHaveBeenCalled();
@@ -107,9 +116,58 @@ describe("createEffectScheduler", () => {
     ]);
   });
 
+  it("ranked flush handles sparse priority ranges without losing order", () => {
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Ranked);
+    const low = createNode() as any;
+    const mid = createNode() as any;
+    const high = createNode() as any;
+
+    low.priority = 1;
+    mid.priority = 10_000;
+    high.priority = 1_000_000;
+
+    scheduler.enqueue(low);
+    scheduler.enqueue(high);
+    scheduler.enqueue(mid);
+    scheduler.flush();
+
+    expect(mocks.runWatcher.mock.calls.map(([node]) => node)).toEqual([
+      high,
+      mid,
+      low,
+    ]);
+  });
+
+  it("ranked flush drains newly enqueued nodes after the current priority wave", () => {
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Ranked);
+    const high = createNode() as any;
+    const low = createNode() as any;
+    const late = createNode() as any;
+
+    high.priority = 10;
+    low.priority = 1;
+    late.priority = 5;
+
+    mocks.runWatcher.mockImplementation((node) => {
+      if (node === high) {
+        scheduler.enqueue(late);
+      }
+    });
+
+    scheduler.enqueue(low);
+    scheduler.enqueue(high);
+    scheduler.flush();
+
+    expect(mocks.runWatcher.mock.calls.map(([node]) => node)).toEqual([
+      high,
+      low,
+      late,
+    ]);
+  });
+
   it("flush runs dirty nodes even when extra state bits are present", () => {
     const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
-    const node = createNode(DIRTY_STATE | ReactiveNodeState.Changed);
+    const node = createNode(DIRTY_STATE | Changed);
 
     scheduler.enqueue(node);
     scheduler.flush();
@@ -125,7 +183,7 @@ describe("createEffectScheduler", () => {
     scheduler.enqueue(node);
 
     expect(mocks.runWatcher).toHaveBeenCalledTimes(1);
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((node.state & Scheduled) !== 0).toBe(false);
   });
 
   it("defers eager flush until batch exits", () => {
@@ -138,13 +196,13 @@ describe("createEffectScheduler", () => {
       scheduler.enqueue(b);
 
       expect(mocks.runWatcher).not.toHaveBeenCalled();
-      expect((a.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
-      expect((b.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
+      expect((a.state & Scheduled) !== 0).toBe(true);
+      expect((b.state & Scheduled) !== 0).toBe(true);
     });
 
     expect(mocks.runWatcher).toHaveBeenCalledTimes(2);
-    expect((a.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
-    expect((b.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((a.state & Scheduled) !== 0).toBe(false);
+    expect((b.state & Scheduled) !== 0).toBe(false);
   });
 
   it("can flush on outermost batch exit in sab mode", () => {
@@ -157,19 +215,17 @@ describe("createEffectScheduler", () => {
       scheduler.enqueue(b);
 
       expect(mocks.runWatcher).not.toHaveBeenCalled();
-      expect((a.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
-      expect((b.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
+      expect((a.state & Scheduled) !== 0).toBe(true);
+      expect((b.state & Scheduled) !== 0).toBe(true);
     });
 
     expect(mocks.runWatcher).toHaveBeenCalledTimes(2);
-    expect((a.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
-    expect((b.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((a.state & Scheduled) !== 0).toBe(false);
+    expect((b.state & Scheduled) !== 0).toBe(false);
   });
 
   it("keeps sab effects queued when batch exits during active propagation", () => {
-    const context = createContext({ propagationDepth: 1 });
-    mocks.getDefaultContext.mockReturnValue(context);
-
+    mocks.getPropagationDepth.mockReturnValue(1);
     const scheduler = createEffectScheduler(EffectSchedulerMode.SAB);
     const node = createNode();
 
@@ -178,42 +234,40 @@ describe("createEffectScheduler", () => {
     });
 
     expect(mocks.runWatcher).not.toHaveBeenCalled();
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
+    expect((node.state & Scheduled) !== 0).toBe(true);
 
-    context.propagationDepth = 0;
+    mocks.getPropagationDepth.mockReturnValue(0);
     scheduler.flush();
 
     expect(mocks.runWatcher).toHaveBeenCalledTimes(1);
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((node.state & Scheduled) !== 0).toBe(false);
   });
 
   it("does not auto-flush while propagation is active", () => {
-    const context = createContext({ propagationDepth: 1 });
-    mocks.getDefaultContext.mockReturnValue(context);
-
+    mocks.getPropagationDepth.mockReturnValue(1);
     const scheduler = createEffectScheduler(EffectSchedulerMode.Eager);
     const node = createNode();
 
     scheduler.enqueue(node);
 
     expect(mocks.runWatcher).not.toHaveBeenCalled();
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(true);
+    expect((node.state & Scheduled) !== 0).toBe(true);
 
-    context.propagationDepth = 0;
+    mocks.getPropagationDepth.mockReturnValue(0);
     scheduler.notifySettled();
 
     expect(mocks.runWatcher).toHaveBeenCalledTimes(1);
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((node.state & Scheduled) !== 0).toBe(false);
   });
 
   it("ignores disposed nodes on enqueue", () => {
     const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
-    const node = createNode(DIRTY_STATE | ReactiveNodeState.Disposed);
+    const node = createNode(DIRTY_STATE | Disposed);
 
     scheduler.enqueue(node);
     scheduler.flush();
 
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((node.state & Scheduled) !== 0).toBe(false);
     expect(mocks.runWatcher).not.toHaveBeenCalled();
   });
 
@@ -226,7 +280,7 @@ describe("createEffectScheduler", () => {
     scheduler.flush();
 
     expect(mocks.runWatcher).not.toHaveBeenCalled();
-    expect((node.state & ReactiveNodeState.Scheduled) !== 0).toBe(false);
+    expect((node.state & Scheduled) !== 0).toBe(false);
   });
 
   it("reset allows previously queued node to be scheduled again", () => {
@@ -253,10 +307,7 @@ describe("createEffectScheduler", () => {
 
     let deferredIndex = 0;
     mocks.runWatcher.mockImplementation((node) => {
-      if (
-        deferredIndex < deferred.length &&
-        node === initial[deferredIndex]
-      ) {
+      if (deferredIndex < deferred.length && node === initial[deferredIndex]) {
         scheduler.enqueue(deferred[deferredIndex]!);
         deferredIndex += 1;
       }
@@ -290,5 +341,60 @@ describe("createEffectScheduler", () => {
     scheduler.flush();
 
     expect(seen).toEqual(Array.from({ length: depth }, (_, i) => i));
+  });
+
+  it("flush mode continues draining queued nodes and rethrows the first watcher error", () => {
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
+    const failure = new Error("boom");
+    const first = createNode();
+    const second = createNode();
+
+    mocks.runWatcher.mockImplementation((node) => {
+      if (node === first) {
+        throw failure;
+      }
+    });
+
+    scheduler.enqueue(first);
+    scheduler.enqueue(second);
+
+    expect(() => scheduler.flush()).toThrow(failure);
+    expect(mocks.runWatcher).toHaveBeenCalledTimes(2);
+    expect(mocks.runWatcher.mock.calls.map(([node]) => node)).toEqual([
+      first,
+      second,
+    ]);
+    expect((first.state & Scheduled) !== 0).toBe(false);
+    expect((second.state & Scheduled) !== 0).toBe(false);
+    expect(scheduler.batchDepth).toBe(0);
+  });
+
+  it("ranked mode continues draining pending nodes and rethrows the first watcher error", () => {
+    const scheduler = createEffectScheduler(EffectSchedulerMode.Ranked);
+    const failure = new Error("ranked boom");
+    const first = createNode() as any;
+    const second = createNode() as any;
+
+    first.priority = 10;
+    second.priority = 1;
+
+    mocks.runWatcher.mockImplementation((node) => {
+      if (node === first) {
+        throw failure;
+      }
+    });
+
+    scheduler.enqueue(second);
+    scheduler.enqueue(first);
+
+    expect(() => scheduler.flush()).toThrow(failure);
+    expect(mocks.runWatcher).toHaveBeenCalledTimes(2);
+    expect(mocks.runWatcher.mock.calls.map(([node]) => node)).toEqual([
+      first,
+      second,
+    ]);
+    expect((first.state & Scheduled) !== 0).toBe(false);
+    expect((second.state & Scheduled) !== 0).toBe(false);
+    expect(scheduler.batchDepth).toBe(0);
   });
 });

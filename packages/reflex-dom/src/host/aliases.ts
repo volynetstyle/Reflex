@@ -44,6 +44,26 @@ export const attributeAliases = {
   ...SVG_ATTRIBUTE_ALIASES,
 } as const;
 
+const cache = Object.create(null) as Record<string, string>;
+
 export function normalizeAttr(name: string): string {
-  return attributeAliases[name as keyof typeof attributeAliases] ?? name;
+  switch (name) {
+    case "className":
+      return "class";
+    case "htmlFor":
+      return "for";
+    case "acceptCharset":
+      return "accept-charset";
+    case "httpEquiv":
+      return "http-equiv";
+    case "crossOrigin":
+      return "crossorigin";
+    default:
+      let v = cache[name];
+      if (v !== undefined) return v;
+
+      v = attributeAliases[name as keyof typeof attributeAliases] ?? name;
+      cache[name] = v;
+      return v;
+  }
 }

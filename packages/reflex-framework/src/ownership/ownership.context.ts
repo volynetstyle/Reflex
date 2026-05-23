@@ -38,7 +38,7 @@ export function createContextLayer(
 }
 
 function resolveContextTarget(target: ContextTarget): OwnershipNode | null {
-  return target instanceof OwnershipNode ? target : target.currentOwner;
+  return "currentOwner" in target ? target.currentOwner : target;
 }
 
 function ensureContextLayer(node: OwnershipNode): OwnershipContextRecord {

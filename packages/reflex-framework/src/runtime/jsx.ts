@@ -3,50 +3,53 @@ import { createElementRenderable } from "../operators/element";
 import type { AttributeKey } from "../types/core";
 import type { Component, JSXRenderable } from "../types/renderable";
 
-type FragmentProps<Host = never> = {
+export type FragmentProps<Host = never> = {
   children?: JSXRenderable<Host>;
 };
 
-type RuntimeComponent = (props: unknown) => JSXRenderable<unknown>;
+type JSXType<P = unknown, Host = unknown> =
+  | string
+  | typeof Fragment
+  | Component<P, Host>;
 
 export const Fragment = Symbol.for("reflex.fragment");
+
+const EMPTY_PROPS = Object.freeze({}) as Record<string, unknown>;
 
 export function jsx(
   type: typeof Fragment,
   props: FragmentProps | null,
-  _key?: AttributeKey,
+  key?: AttributeKey,
 ): JSXRenderable;
+
 export function jsx<Tag extends string, Props extends Record<string, unknown>>(
   type: Tag,
   props: Props | null,
-  _key?: AttributeKey,
+  key?: AttributeKey,
 ): JSXRenderable;
+
 export function jsx<P, Host>(
   type: Component<P, Host>,
   props: P | null,
-  _key?: AttributeKey,
+  key?: AttributeKey,
 ): JSXRenderable<Host>;
+
 export function jsx(
-  type: string | typeof Fragment | RuntimeComponent,
+  type: JSXType,
   props: Record<string, unknown> | FragmentProps | null,
-  _key?: unknown,
+  _key?: AttributeKey,
 ): JSXRenderable {
-  const p = props ?? {};
-
   if (type === Fragment) {
-    return (p as FragmentProps).children ?? null;
+    return props === null ? null : ((props as FragmentProps).children ?? null);
   }
 
-  if (typeof type === "function") {
-    return createComponentRenderable(type, p);
-  }
+  const normalizedProps = props ?? EMPTY_PROPS;
 
-  return createElementRenderable(type, p);
+  return typeof type === "function"
+    ? createComponentRenderable(type, normalizedProps)
+    : createElementRenderable(type, normalizedProps);
 }
 
 export const jsxs = jsx;
-export const jsxDEV: typeof jsx = (
-  type: string | typeof Fragment | RuntimeComponent,
-  props: Record<string, unknown> | FragmentProps | null,
-  key?: unknown,
-) => jsx(type as never, props as never, key as AttributeKey | undefined);
+
+export const jsxDEV: typeof jsx = jsx;

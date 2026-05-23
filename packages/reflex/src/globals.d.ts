@@ -15,7 +15,11 @@ type Destructor = () => void;
  */
 type EffectFn = () => void | Destructor;
 
-type AnyFn = (...args: unknown[]) => unknown;
+interface EffectOptions {
+  priority?: number;
+}
+
+type AnyFn = (...args: never[]) => unknown;
 
 /**
  * Direct value that can be assigned via `.set(value)`.
@@ -23,43 +27,23 @@ type AnyFn = (...args: unknown[]) => unknown;
  */
 type DirectValue<T> = Exclude<T, AnyFn>;
 
-/**
- * Functional updater.
- */
 type Updater<T> = (prev: T) => T;
-
 /**
  * Accepted input for writable reactive values.
  */
 type SetInput<T> = DirectValue<T> | Updater<T>;
 
-interface RequiredSetter<T> {
-  (value: SetInput<T>): T;
-}
-
-interface OptionalSetter<T> {
-  (): T;
-  (value: SetInput<T>): T;
-}
+type Setter<T> = undefined extends T
+  ? {
+      (): T;
+      (value: SetInput<T>): T;
+    }
+  : (value: SetInput<T>) => T;
 
 /**
- * If T includes undefined, calling `set()` with no arguments is allowed.
+ * Tracked callable read.
  */
-type Setter<T> = undefined extends T ? OptionalSetter<T> : RequiredSetter<T>;
-
-/**
- * Nominal brand helper for semantically distinct reactive primitives.
- */
-interface Brand<K extends string> {
-  readonly __brand?: K;
-}
-
-/**
- * Callable tracked read.
- */
-interface Accessor<T> {
-  (): T;
-}
+type Accessor<T> = () => T;
 
 /**
  * Property-based read.
@@ -89,62 +73,45 @@ interface Disposable {
 /**
  * Standard readable reactive value.
  */
-interface Readable<T> extends Accessor<T>, ValueReadable<T> {}
+type Readable<T> = Accessor<T> & ValueReadable<T>;
 
 /**
  * Readable value with untracked read.
  */
-interface PeekableReadable<T> extends Readable<T>, Peekable<T> {}
+type PeekableReadable<T> = Readable<T> & Peekable<T>;
 
 /**
  * Writable signal-like value.
  */
-interface WritableReadable<T> extends Readable<T>, Writable<T> {}
+type WritableReadable<T> = Readable<T> & Writable<T>;
 
 /**
  * Writable signal-like value with untracked read.
  */
-interface PeekableWritableReadable<T>
-  extends WritableReadable<T>,
-    Peekable<T> {}
+type PeekableWritableReadable<T> = WritableReadable<T> & Peekable<T>;
 
 /**
- * Mutable signal.
+ * Core reactive shapes.
  */
-interface Signal<T> extends PeekableWritableReadable<T>, Brand<"signal"> {}
+type Signal<T> = PeekableWritableReadable<T>;
+type Computed<T> = PeekableReadable<T>;
+type Memo<T> = PeekableReadable<T>;
+type Derived<T> = PeekableReadable<T>;
 
-/**
- * Computed reactive value.
- */
-interface Computed<T> extends PeekableReadable<T>, Brand<"computed"> {}
-
-/**
- * Memoized derived value.
- */
-interface Memo<T> extends PeekableReadable<T>, Brand<"memo"> {}
-
-/**
- * Derived reactive value.
- */
-interface Derived<T> extends PeekableReadable<T>, Brand<"derived"> {}
-
-interface Effect<T> extends Readable<T>, Brand<"effect">, Disposable {}
-
-interface Scan<T> extends Readable<T>, Brand<"scan">, Disposable {}
+type Effect<T = void> = Readable<T> & Disposable;
+type Scan<T> = Readable<T> & Disposable;
 
 /**
  * Push-based realtime source.
  */
-interface Realtime<T> extends PeekableWritableReadable<T>, Brand<"realtime"> {
+type Realtime<T> = PeekableWritableReadable<T> & {
   subscribe(cb: () => void): () => void;
-}
+};
 
 /**
  * Async iterable stream source.
  */
-interface Stream<T> extends PeekableWritableReadable<T>, Brand<"stream"> {
-  [Symbol.asyncIterator](): AsyncIterator<T>;
-}
+type Stream<T> = PeekableWritableReadable<T> & AsyncIterable<T>;
 
 /**
  * Common readonly view over reactive values.

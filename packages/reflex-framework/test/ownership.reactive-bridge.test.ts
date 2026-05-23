@@ -7,10 +7,11 @@ import {
   registerCleanup,
   runWithOwner,
   runWithScope,
+  runInOwnershipScope,
+  useOwnedEffect,
   type Cleanup,
+  createOwnershipReactiveBridge,
 } from "../src";
-import { createOwnershipReactiveBridge } from "../src/ownership/bridge";
-import { useEffect, runInOwnershipScope } from "../src/ownership/reflex";
 
 describe("ownership reactive bridge", () => {
   it("registers plain Reflex effects created inside reactive scopes", () => {
@@ -60,7 +61,7 @@ describe("ownership reactive bridge", () => {
     runWithScope(owner, root, () => {
       registerCleanup(owner, () => {
         runWithOwner(owner, root, () => {
-          useEffect(owner, spy);
+          useOwnedEffect({ owner }, spy);
         });
       });
     });
@@ -76,6 +77,32 @@ describe("ownership reactive bridge", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
+  it("passes owned effect priority to the Reflex ranked scheduler", () => {
+    const rt = createRuntime({ effectStrategy: "ranked" });
+    const [source, setSource] = signal(1);
+    const owner = createOwnerContext();
+    const root = createScope();
+    const log: string[] = [];
+
+    runInOwnershipScope(owner, root, () => {
+      useOwnedEffect({ owner, priority: 1 }, () => {
+        log.push(`low:${source()}`);
+      });
+
+      useOwnedEffect({ owner, priority: 10 }, () => {
+        log.push(`high:${source()}`);
+      });
+    });
+
+    expect(log).toEqual(["low:1", "high:1"]);
+
+    log.length = 0;
+    setSource(2);
+    rt.flush();
+
+    expect(log).toEqual(["high:2", "low:2"]);
+  });
+
   it("adapts ownership to custom reactive engines through a thin adapter", () => {
     let currentRegistrar: ((cleanup: Cleanup) => void) | null = null;
 
@@ -85,7 +112,7 @@ describe("ownership reactive bridge", () => {
         currentRegistrar?.(cleanup);
         return cleanup;
       },
-      withCleanupRegistrar<T>(registrar: ((cleanup: Cleanup) => void) | null, fn: () => T): T {
+      withCleanupScope<T>(registrar: ((cleanup: Cleanup) => void) | null, fn: () => T): T {
         const previousRegistrar = currentRegistrar;
         currentRegistrar = registrar;
 
@@ -106,7 +133,7 @@ describe("ownership reactive bridge", () => {
         throw new Error("reactive scope should expose cleanup registrar");
       }
 
-      bridge.useEffect(owner, () => {
+      bridge.useEffect({ owner }, () => {
         log.push("owned:run");
 
         return () => {

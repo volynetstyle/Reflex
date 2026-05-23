@@ -28,7 +28,7 @@ export function applyProp(
     if (value == null || value === false) {
       el.removeAttribute("class");
     } else {
-      el.setAttribute("class", String(value));
+      el.setAttribute("class", "" + value);
     }
 
     return value;

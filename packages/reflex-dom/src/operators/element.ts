@@ -1,4 +1,4 @@
 export {
   ELEMENT_RENDERABLE,
   createElementRenderable,
-} from "reflex-framework";
+} from "@volynets/reflex-framework";

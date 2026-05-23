@@ -1,14 +1,16 @@
 import type { Namespace } from "../host/namespace";
-import { registerCleanup } from "reflex-framework/ownership";
 import {
   onEffectStart,
+  registerCleanup,
   runInOwnershipScope,
-  useEffect,
-} from "reflex-framework/ownership/reflex";
-import type { DOMRenderer } from "../runtime";
+  useOwnedEffect,
+} from "@volynets/reflex-framework";
+import type { DOMRenderer } from "../runtime/renderer";
 import type { ContentSlot } from "./content-slot";
 import { adoptContentSlot, createContentSlot } from "./content-slot";
 import { appendRenderableNodes } from "../mount/append";
+
+const DOM_BINDING_PRIORITY = 2;
 
 export function createMountedSlot(
   renderer: DOMRenderer,
@@ -50,13 +52,16 @@ export function bindReactiveSlotLifecycle<T>(
   readValue: () => T,
   resolveValue: (value: T) => unknown,
 ): void {
-  useEffect(renderer.owner, () => {
-    const nextValue = readValue();
+  useOwnedEffect(
+    { owner: renderer.owner, priority: DOM_BINDING_PRIORITY },
+    () => {
+      const nextValue = readValue();
 
-    onEffectStart(() => {
-      slot.update(resolveValue(nextValue));
-    });
-  });
+      onEffectStart(() => {
+        slot.update(resolveValue(nextValue));
+      });
+    },
+  );
 
   registerCleanup(renderer.owner, () => {
     slot.destroy();

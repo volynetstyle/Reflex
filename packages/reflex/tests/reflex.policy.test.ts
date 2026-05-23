@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
-vi.unmock("@reflex/runtime");
+vi.unmock("@volynets/reflex-runtime");
 import { createWatcherNode } from "../src/infra/factory";
 import {
   createEffectScheduler,
   EffectSchedulerMode,
   resolveEffectSchedulerMode,
 } from "../src/policy/scheduler";
-import { EventDispatcher } from "../src/policy/event_dispatcher";
-import { ReactiveNodeState } from "@reflex/runtime";
-import type { EventBoundary, EventSubscriber } from "../src/infra/event";
+import { createEventDispatcher } from "../src/policy/event_dispatcher";
+import { Changed, Disposed } from "@volynets/reflex-runtime";
+import type { EventSubscriber } from "../src/infra/event";
 import {
   appendSubscriber,
   emitEvent,
@@ -69,7 +69,7 @@ describe("Reactive system - policy helpers", () => {
     });
     expect(spy).toHaveBeenCalledTimes(1);
 
-    node.state |= ReactiveNodeState.Changed;
+    node.state |= Changed;
 
     scheduler.batch(() => {
       scheduler.enqueue(node);
@@ -95,7 +95,7 @@ describe("Reactive system - policy helpers", () => {
     const scheduler = createEffectScheduler(EffectSchedulerMode.Flush);
     const spy = vi.fn(() => {});
     const node = createWatcherNode(spy);
-    node.state |= ReactiveNodeState.Disposed;
+    node.state |= Disposed;
 
     scheduler.enqueue(node);
     scheduler.flush();
@@ -170,7 +170,7 @@ describe("Reactive system - policy helpers", () => {
     const source = new EventSource<number>();
     const seen: number[] = [];
     const boundary = vi.fn((flush: () => void) => flush());
-    const dispatcher = new EventDispatcher(boundary);
+    const dispatcher = createEventDispatcher(boundary);
 
     subscribeEvent(source, (value) => {
       seen.push(value);
@@ -187,7 +187,7 @@ describe("Reactive system - policy helpers", () => {
 
   it("skips unsubscribed listeners and tolerates empty sources", () => {
     const source = new EventSource<number>();
-    const dispatcher = new EventDispatcher();
+    const dispatcher = createEventDispatcher();
     const seen: string[] = [];
 
     let unsubscribeSecond = () => {};
@@ -209,7 +209,7 @@ describe("Reactive system - policy helpers", () => {
     const source = new EventSource<number>();
     const seen: string[] = [];
     let unsubscribeMiddle = () => {};
-    const dispatcher = new EventDispatcher((flush: () => void) => {
+    const dispatcher = createEventDispatcher((flush: () => void) => {
       flush();
       flush();
     });

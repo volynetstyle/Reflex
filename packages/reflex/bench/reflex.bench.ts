@@ -7,9 +7,9 @@ import {
   type WriteInput,
 } from "./shared";
 
-import { createRuntime, effect, memo, signal } from "../dist/esm";
+import { createRuntime, batch, flush, effect, memo, signal } from "../dist/esm";
 
-const rt = createRuntime({ effectStrategy: "sab" });
+createRuntime({ effectStrategy: "flush" });
 
 class ReflexHarness implements BenchHarness {
   readonly metrics = new HarnessMetrics();
@@ -35,14 +35,14 @@ class ReflexHarness implements BenchHarness {
   }
 
   batch<T>(fn: () => T): T {
-    return rt.batch(fn);
+    return batch(fn);
   }
 
   // Called explicitly by shared.ts after batch() in runStep — batch already
   // flushes on exit, so this is a no-op most of the time (queue empty).
   // Kept for correctness: non-batched scenarios call flush() directly.
   flush(): void {
-    rt.flush();
+    flush();
   }
 
   resetRunMetrics(): void {

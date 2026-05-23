@@ -71,7 +71,6 @@ export function dispose(root: OwnershipNode): void {
     detach(node);
 
     node.firstChild = null;
-    node.lastChild = null;
     node.context = null;
 
     node = next;

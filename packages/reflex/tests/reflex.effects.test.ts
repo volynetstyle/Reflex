@@ -1,8 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
-import { ReactiveNodeState } from "../../@reflex/runtime/src/reactivity/shape/ReactiveMeta";
-import { effect, effectScheduled, effectUnscheduled } from "../src/api/effect";
+import {
+  effect,
+  effectScheduled,
+  effectUnscheduled,
+  withEffectCleanupRegistrar,
+} from "../src/api/effect";
 import { createWatcherNode } from "../src/infra/factory";
 import { createRuntime, memo, signal } from "./reflex.test_utils";
+import { Scheduled } from "@volynets/reflex-runtime";
 
 describe("Reactive system - effects", () => {
   it("runs once immediately and reruns after flush", () => {
@@ -94,7 +99,8 @@ describe("Reactive system - effects", () => {
     let current = source;
     for (let depth = 0; depth < 192; ++depth) {
       const prev = current;
-      current = memo(() => prev() + ((depth & 3) + 1));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      current = memo(() => prev() + ((depth & 3) + 1)) as any;
 
       if (depth === 47 || depth === 95 || depth === 143 || depth === 191) {
         const tap = current;
@@ -141,12 +147,144 @@ describe("Reactive system - effects", () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
+  it("can scope nested effects to an outer effect cleanup", () => {
+    const rt = createRuntime();
+    const [branch, setBranch] = signal("a");
+    const [value, setValue] = signal(1);
+    const log: string[] = [];
+
+    const stop = effect(() => {
+      const branchValue = branch();
+      const nestedCleanups: Destructor[] = [];
+
+      log.push(`outer:run:${branchValue}`);
+
+      withEffectCleanupRegistrar((cleanup) => {
+        nestedCleanups.push(cleanup);
+      }, () => {
+        effect(() => {
+          const innerValue = value();
+          log.push(`inner:run:${branchValue}:${innerValue}`);
+
+          return () => {
+            log.push(`inner:cleanup:${branchValue}:${innerValue}`);
+          };
+        });
+      });
+
+      return () => {
+        for (let index = nestedCleanups.length - 1; index >= 0; --index) {
+          nestedCleanups[index]!();
+        }
+
+        log.push(`outer:cleanup:${branchValue}`);
+      };
+    });
+
+    expect(log).toEqual(["outer:run:a", "inner:run:a:1"]);
+
+    setValue(2);
+    rt.flush();
+
+    expect(log).toEqual([
+      "outer:run:a",
+      "inner:run:a:1",
+      "inner:cleanup:a:1",
+      "inner:run:a:2",
+    ]);
+
+    setBranch("b");
+    rt.flush();
+
+    expect(log).toEqual([
+      "outer:run:a",
+      "inner:run:a:1",
+      "inner:cleanup:a:1",
+      "inner:run:a:2",
+      "inner:cleanup:a:2",
+      "outer:cleanup:a",
+      "outer:run:b",
+      "inner:run:b:2",
+    ]);
+
+    setValue(3);
+    rt.flush();
+
+    expect(log).toEqual([
+      "outer:run:a",
+      "inner:run:a:1",
+      "inner:cleanup:a:1",
+      "inner:run:a:2",
+      "inner:cleanup:a:2",
+      "outer:cleanup:a",
+      "outer:run:b",
+      "inner:run:b:2",
+      "inner:cleanup:b:2",
+      "inner:run:b:3",
+    ]);
+
+    stop();
+
+    expect(log).toEqual([
+      "outer:run:a",
+      "inner:run:a:1",
+      "inner:cleanup:a:1",
+      "inner:run:a:2",
+      "inner:cleanup:a:2",
+      "outer:cleanup:a",
+      "outer:run:b",
+      "inner:run:b:2",
+      "inner:cleanup:b:2",
+      "inner:run:b:3",
+      "inner:cleanup:b:3",
+      "outer:cleanup:b",
+    ]);
+  });
+
+  it("disposes scheduled nested effects when the outer effect stops", () => {
+    const rt = createRuntime();
+    const [value, setValue] = signal(1);
+    const innerSpy = vi.fn(() => {
+      value();
+    });
+    const innerCleanup = vi.fn();
+
+    const stop = effect(() => {
+      const nestedCleanups: Destructor[] = [];
+
+      withEffectCleanupRegistrar((cleanup) => {
+        nestedCleanups.push(cleanup);
+      }, () => {
+        effect(() => {
+          innerSpy();
+          value();
+          return innerCleanup;
+        });
+      });
+
+      return () => {
+        for (let index = nestedCleanups.length - 1; index >= 0; --index) {
+          nestedCleanups[index]!();
+        }
+      };
+    });
+
+    expect(innerSpy).toHaveBeenCalledTimes(1);
+
+    setValue(2);
+    stop();
+    rt.flush();
+
+    expect(innerSpy).toHaveBeenCalledTimes(1);
+    expect(innerCleanup).toHaveBeenCalledTimes(1);
+  });
+
   it("notifies custom invalidation hooks before flush", () => {
     let invalidations = 0;
     const rt = createRuntime({
       effectStrategy: "flush",
       hooks: {
-        onEffectInvalidated() {
+        onSinkInvalidated() {
           invalidations += 1;
         },
       },
@@ -168,9 +306,9 @@ describe("Reactive system - effects", () => {
     const node = createWatcherNode(() => {});
 
     effectScheduled(node);
-    expect(node.state & ReactiveNodeState.Scheduled).toBeTruthy();
+    expect(node.state & Scheduled).toBeTruthy();
 
     effectUnscheduled(node);
-    expect(node.state & ReactiveNodeState.Scheduled).toBeFalsy();
+    expect(node.state & Scheduled).toBeFalsy();
   });
 });

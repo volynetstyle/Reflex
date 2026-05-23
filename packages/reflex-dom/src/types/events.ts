@@ -62,6 +62,10 @@ type NativeDOMEventProps<T extends Element, Events extends object> = {
   >;
 };
 
+// Custom event names are intentionally open-ended for user-defined DOM events.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type UnknownCustomDOMEventHandlerProp<T extends Element> = DOMEventHandlerProp<T, any>;
+
 type CustomDOMEventProps<T extends Element, Events extends object> = {
   [K in keyof Events & string as `on:${K}`]?: DOMEventHandlerProp<
     T,
@@ -70,7 +74,7 @@ type CustomDOMEventProps<T extends Element, Events extends object> = {
 } & {
   [Name in `on:${string}` as Name extends `on:${keyof Events & string}`
     ? never
-    : Name]?: DOMEventHandlerProp<T, any>;
+    : Name]?: UnknownCustomDOMEventHandlerProp<T>;
 };
 
 export type DOMEventProps<

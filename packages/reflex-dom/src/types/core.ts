@@ -1,4 +1,4 @@
-import type { Attributes } from "reflex-framework";
+import type { Attributes } from "@volynets/reflex-framework";
 
 export type {
   Accessor,
@@ -6,7 +6,7 @@ export type {
   Attributes,
   Cleanup,
   MaybeAccessor,
-} from "reflex-framework";
+} from "@volynets/reflex-framework";
 
 export interface RefObject<T> {
   current: T | null;
