@@ -1,4 +1,5 @@
 import type { ReactiveEdge } from "./edge";
+import type { NormalizedGraphReductionOptions } from "../reduction";
 
 export type Primitive =
   | string
@@ -19,21 +20,20 @@ export type ComputeFn<T> = (() => T) | null;
 
 export class ReactiveNode<T = unknown> {
   state: number = 0;
-  topologyVersion: number = 0;
-
   firstOut: ReactiveEdge | null = null;
   lastOut: ReactiveEdge | null = null;
 
   firstIn: ReactiveEdge | null = null;
   lastIn: ReactiveEdge | null = null;
+  tailIn: ReactiveEdge | null = null;
 
   /**
-   * Operational cursor for dependency tracking.
-   * Not a structural graph invariant.
+   * Current graph topology structural version.
    */
-  lastInTail: ReactiveEdge | null = null;
+  s: number = 0;
 
   compute: ComputeFn<T> = null;
+  graphReductionPolicy: NormalizedGraphReductionOptions | null = null;
   payload: T;
 
   constructor(payload: T, compute: ComputeFn<T>, state: number) {
@@ -44,9 +44,9 @@ export class ReactiveNode<T = unknown> {
 }
 
 // @__INLINE__
-export function bumpNodeTopologyVersion(node: ReactiveNode): void {
-  const next = (node.topologyVersion + 1) >>> 0;
-  node.topologyVersion = next === 0 ? 1 : next;
+export function bumpNodes(node: ReactiveNode): void {
+  const next = (node.s + 1) >>> 0;
+  node.s = next === 0 ? 1 : next;
 }
 
 export default ReactiveNode;

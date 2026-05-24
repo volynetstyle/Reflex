@@ -4,8 +4,8 @@ import {
   DIRTY_STATE,
   Tracking,
   disposeWatcher,
-  getActiveConsumer,
-  getPropagationDepth,
+  getCurrentConsumer,
+  getPropagationScopeDepth,
   readConsumer,
   readProducer,
   runWatcher,
@@ -35,7 +35,7 @@ describe("Reactive runtime - resilience and recovery", () => {
     let nestedWriteTriggered = false;
 
     resetRuntime({
-      onSinkInvalidated(node) {
+      sinkInvalidatedDispatcher(node) {
         if (node === nestedWatcher) {
           invalidations.push("nested");
           if (!nestedWriteTriggered) {
@@ -74,7 +74,7 @@ describe("Reactive runtime - resilience and recovery", () => {
     writeProducer(outerSource, 2);
 
     expect(invalidations).toEqual(["sibling", "nested", "inner"]);
-    expect(getPropagationDepth()).toBe(0);
+    expect(getPropagationScopeDepth()).toBe(0);
   });
 
   it("restores runtime bookkeeping when watcher computation throws", () => {
@@ -86,7 +86,7 @@ describe("Reactive runtime - resilience and recovery", () => {
     });
 
     expect(() => runWatcher(watcher)).toThrow(error);
-    expect(getActiveConsumer()).toBeNull();
+    expect(getCurrentConsumer()).toBeNull();
     expect(watcher.state & Tracking).toBe(0);
     expect(watcher.state & Computing).toBe(0);
   });

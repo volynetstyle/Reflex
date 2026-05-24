@@ -1,6 +1,5 @@
-import type { ReactiveNode } from "@volynets/reflex-runtime";
+import { disposeNode, type ReactiveNode } from "@volynets/reflex-runtime/internal";
 import {
-  disposeNode,
   disposeWatcher,
   readProducer,
   runWatcher,

@@ -3,8 +3,10 @@ import {
   PRODUCER_INITIAL_STATE,
   WATCHER_INITIAL_STATE,
   CONSUMER_INITIAL_STATE,
-} from "@volynets/reflex-runtime";
-import type { ReactiveNode } from "@volynets/reflex-runtime";
+  setNodeGraphReductionPolicy,
+  type GraphReductionOptions,
+} from "@volynets/reflex-runtime/internal";
+import type { ReactiveNode } from "@volynets/reflex-runtime/internal";
 import { EventSource as RuntimeEventSource } from "./event";
 
 export const createWatcherRankedrNode = (
@@ -37,8 +39,21 @@ export const createAccumulator = <T>(payload: T): ReactiveNode<T> => {
   return new RuntimeReactiveNode(payload, null, PRODUCER_INITIAL_STATE);
 };
 
-export const createComputedNode = <T>(fn: () => T) => {
-  return new RuntimeReactiveNode<T>(undefined as T, fn, CONSUMER_INITIAL_STATE);
+export const createComputedNode = <T>(
+  fn: () => T,
+  graphReductionPolicy?: GraphReductionOptions,
+) => {
+  const node = new RuntimeReactiveNode<T>(
+    undefined as T,
+    fn,
+    CONSUMER_INITIAL_STATE,
+  );
+
+  if (graphReductionPolicy !== undefined) {
+    setNodeGraphReductionPolicy(node, graphReductionPolicy);
+  }
+
+  return node;
 };
 
 export const createWatcherNode = (compute: EffectFn): ReactiveNode => {

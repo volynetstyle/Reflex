@@ -1,6 +1,6 @@
 import {
-  activeConsumer,
-  propagationDepth,
+  currentConsumer,
+  propagationScopeDepth,
   defaultContext,
   type RuntimeDebugContext,
 } from "../kernel/context";
@@ -257,14 +257,14 @@ export function snapshotDebugContext(
   const state = ensureContextState(context);
   const snapshot: RuntimeDebugContextSnapshot = {
     id: state.id,
-    propagationDepth: propagationDepth,
+    propagationScopeDepth: propagationScopeDepth,
     historyLimit: state.historyLimit,
     historySize: state.history.length,
     observerCount: state.listeners.size,
   };
 
-  if (activeConsumer !== null) {
-    snapshot.activeConsumer = createNodeRef(activeConsumer);
+  if (currentConsumer !== null) {
+    snapshot.currentConsumer = createNodeRef(currentConsumer);
   }
 
   return snapshot;

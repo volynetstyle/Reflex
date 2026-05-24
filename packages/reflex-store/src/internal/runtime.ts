@@ -4,7 +4,7 @@ import {
   ReactiveNode,
   runWatcher,
   WATCHER_INITIAL_STATE,
-} from "@volynets/reflex-runtime";
+} from "@volynets/reflex-runtime/internal";
 import type { Destructor, EffectFn, EffectOptions } from "../types";
 
 export function createSignalNode<T>(payload: T): ReactiveNode<T> {

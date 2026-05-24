@@ -22,7 +22,7 @@ import {
   createWatcher,
   expectIncomingEdges,
   expectIncomingPrefix,
-  expectLastInTail,
+  expecttailIn,
   hasSubscriber,
   resetRuntime,
 } from "../../runtime.test_utils";
@@ -92,7 +92,7 @@ describe("Reactive runtime - traversal invariants", () => {
   it("coalesces repeated push invalidations across committed writes", () => {
     let invalidations = 0;
     resetRuntime({
-      onSinkInvalidated() {
+      sinkInvalidatedDispatcher() {
         invalidations += 1;
       },
     });
@@ -131,7 +131,7 @@ describe("Reactive runtime - traversal invariants", () => {
     const staleEdge = linkEdge(stale, target);
 
     target.state = Consumer | Tracking;
-    target.lastInTail = trackedEdge;
+    target.tailIn = trackedEdge;
 
     writeProducer(stale, 3);
     expect(target.state).toBe(Consumer | Tracking);
@@ -143,7 +143,7 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(target.state & Invalid).toBeTruthy();
   });
 
-  it("treats lastInTail as the tracked-prefix boundary while computing", () => {
+  it("treats tailIn as the tracked-prefix boundary while computing", () => {
     const first = createProducer(1);
     const second = createProducer(2);
     const stale = createProducer(3);
@@ -154,13 +154,13 @@ describe("Reactive runtime - traversal invariants", () => {
     linkEdge(stale, target);
 
     target.state = Consumer | Tracking;
-    target.lastInTail = secondEdge;
+    target.tailIn = secondEdge;
 
     writeProducer(stale, 4);
     expect(target.state).toBe(Consumer | Tracking);
 
     writeProducer(first, 5);
-    expectLastInTail(target, secondEdge);
+    expecttailIn(target, secondEdge);
     expectIncomingPrefix(target, [firstEdge, secondEdge]);
     expect(target.state & Tracking).toBeTruthy();
     expect(target.state & Reentrant).toBeTruthy();
@@ -171,7 +171,7 @@ describe("Reactive runtime - traversal invariants", () => {
   it("surfaces Invalid -> Changed promotion to the host when the host does not dedupe", () => {
     let invalidations = 0;
     resetRuntime({
-      onSinkInvalidated() {
+      sinkInvalidatedDispatcher() {
         invalidations += 1;
       },
     });

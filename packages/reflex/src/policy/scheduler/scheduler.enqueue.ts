@@ -1,5 +1,4 @@
-import type { ReactiveNode } from "@volynets/reflex-runtime";
-import { Scheduled } from "@volynets/reflex-runtime";
+import { Scheduled, type ReactiveNode } from "@volynets/reflex-runtime/internal";
 import type { EffectNode, WatcherQueue } from "./scheduler.types";
 import { pushRingQueue } from "./scheduler.queue";
 
@@ -26,6 +25,7 @@ export function effectUnscheduled(node: EffectNode) {
 }
 
 // @__INLINE__
+// STRAIGHT 
 export function tryEnqueue(queue: WatcherQueue, node: ReactiveNode): boolean {
   const state = node.state;
   if ((state & Scheduled) !== 0) {

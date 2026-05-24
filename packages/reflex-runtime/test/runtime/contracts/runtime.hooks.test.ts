@@ -2,13 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DIRTY_STATE,
   disposeWatcher,
-  getPropagationDepth,
-  notifySettledIfIdle,
+  getPropagationScopeDepth,
+  emitSettledIfIdle,
   readConsumer,
   readProducer,
   runWatcher,
   writeProducer,
-} from "../../../src";
+} from "../../../src/internal";
 import {
   createConsumer,
   createProducer,
@@ -25,13 +25,13 @@ describe("Reactive runtime - hooks and resilience", () => {
   it("replaces settled hooks instead of retaining stale callbacks", () => {
     const settled = vi.fn();
 
-    resetRuntime({ onReactiveSettled: settled });
-    notifySettledIfIdle();
+    resetRuntime({ reactiveSettledDispatcher: settled });
+    emitSettledIfIdle();
 
     expect(settled).toHaveBeenCalledTimes(1);
 
     resetRuntime();
-    notifySettledIfIdle();
+    emitSettledIfIdle();
 
     expect(settled).toHaveBeenCalledTimes(1);
   });
@@ -40,7 +40,7 @@ describe("Reactive runtime - hooks and resilience", () => {
     const phases: string[] = [];
 
     resetRuntime({
-      onReactiveSettled() {
+      reactiveSettledDispatcher() {
         phases.push("settled");
       },
     });
@@ -64,7 +64,7 @@ describe("Reactive runtime - hooks and resilience", () => {
   it("settles after leaf-only producer fanout propagation", () => {
     const settled = vi.fn();
 
-    resetRuntime({ onReactiveSettled: settled });
+    resetRuntime({ reactiveSettledDispatcher: settled });
 
     const source = createProducer(1);
     const left = createConsumer(() => readProducer(source) + 1);
@@ -76,7 +76,7 @@ describe("Reactive runtime - hooks and resilience", () => {
 
     writeProducer(source, 2);
 
-    expect(getPropagationDepth()).toBe(0);
+    expect(getPropagationScopeDepth()).toBe(0);
     expect(settled).toHaveBeenCalledTimes(1);
   });
 
@@ -87,12 +87,12 @@ describe("Reactive runtime - hooks and resilience", () => {
     let innerWatcher!: ReturnType<typeof createWatcher>;
 
     resetRuntime({
-      onSinkInvalidated(node) {
+      sinkInvalidatedDispatcher(node) {
         if (node === outerWatcher) {
           writeProducer(innerSource, 2);
         }
       },
-      onReactiveSettled: settled,
+      reactiveSettledDispatcher: settled,
     });
 
     const outerSource = createProducer(1);
@@ -141,7 +141,7 @@ describe("Reactive runtime - hooks and resilience", () => {
     let right!: ReturnType<typeof createWatcher>;
 
     resetRuntime({
-      onSinkInvalidated(node) {
+      sinkInvalidatedDispatcher(node) {
         if (node === left) {
           invalidated.push("left");
           disposeWatcher(right);

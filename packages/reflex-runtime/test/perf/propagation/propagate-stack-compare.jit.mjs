@@ -11,7 +11,7 @@ import { UNINITIALIZED } from "../../../build/esm/reactivity/shape/ReactiveNode.
 import ReactiveNode from "../../../build/esm/reactivity/shape/ReactiveNode.js";
 import { linkEdge } from "../../../build/esm/reactivity/shape/methods/connect.js";
 import { propagate as propagateImported } from "../../../build/esm/reactivity/walkers/propagate.js";
-import { PROMOTE_CHANGED } from "../../../build/esm/reactivity/walkers/propagate.constants.js";
+import { Changed } from "../../../build/esm/reactivity/walkers/propagate.constants.js";
 
 const runtime = getDefaultContext();
 
@@ -36,7 +36,7 @@ function createConsumer(compute) {
 
 function resetRuntime() {
   runtime.resetState();
-  runtime.setHooks({});
+  runtime.setHostHooks({});
 }
 
 function clearWalkerState(nodes) {
@@ -744,7 +744,7 @@ function buildPropagateChain(depth) {
   return {
     baseline,
     imported() {
-      propagateImported(startEdge, PROMOTE_CHANGED);
+      propagateImported(startEdge, Changed);
       clearWalkerState(nodes);
       return nodes.length;
     },
@@ -806,7 +806,7 @@ function buildPropagateFanout(width, depth) {
   return {
     baseline,
     imported() {
-      propagateImported(startEdge, PROMOTE_CHANGED);
+      propagateImported(startEdge, Changed);
       clearWalkerState(nodes);
       return nodes.length;
     },
@@ -868,7 +868,7 @@ function buildPropagateTree(branching, depth) {
   return {
     baseline,
     imported() {
-      propagateImported(startEdge, PROMOTE_CHANGED);
+      propagateImported(startEdge, Changed);
       clearWalkerState(nodes);
       return nodes.length;
     },
@@ -929,7 +929,7 @@ function buildTrackedPrefixStress(fanIn, depsTailIndex, edgeIndex) {
     imported() {
       target.state = TRACKING_CONSUMER_STATE;
       target.depsTail = depsTail;
-      propagateImported(targetEdge, PROMOTE_CHANGED);
+      propagateImported(targetEdge, Changed);
       return target.state;
     },
     arrayLocal() {
@@ -1036,7 +1036,7 @@ function buildPropagateBranchingTrackingMix(width, depth) {
     },
     imported() {
       armTracking();
-      propagateImported(startEdge, PROMOTE_CHANGED);
+      propagateImported(startEdge, Changed);
       return nodes.length;
     },
     arrayLocal() {

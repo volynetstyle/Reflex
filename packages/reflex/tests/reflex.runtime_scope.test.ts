@@ -64,7 +64,7 @@ describe("Reactive system - runtime", () => {
     const first = createRuntime({
       effectStrategy: "flush",
       hooks: {
-        onReactiveSettled() {
+        reactiveSettledDispatcher() {
           firstSettled.push("first");
         },
       },
@@ -74,7 +74,7 @@ describe("Reactive system - runtime", () => {
     const second = createRuntime({
       effectStrategy: "flush",
       hooks: {
-        onReactiveSettled() {
+        reactiveSettledDispatcher() {
           secondSettled.push("second");
         },
       },

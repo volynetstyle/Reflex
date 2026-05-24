@@ -9,7 +9,7 @@ import {
   restoreContext,
   runWatcher,
   saveContext,
-  setHooks,
+  setHostHooks,
   writeProducer,
 } from "../../runtime.test_utils";
 import {
@@ -17,7 +17,6 @@ import {
   Consumer,
   Invalid,
   Producer,
-  PROMOTE_CHANGED,
   propagate,
   propagateOnce,
   Reentrant,
@@ -86,7 +85,7 @@ describe("Reactive runtime - walker invariants", () => {
 
     resetRuntime();
 
-    propagate(source.firstOut!, PROMOTE_CHANGED);
+    propagate(source.firstOut!, Changed);
 
     expectStates([
       [left, Consumer | Changed],
@@ -108,7 +107,7 @@ describe("Reactive runtime - walker invariants", () => {
 
     resetRuntime();
 
-    propagate(source.firstOut!, PROMOTE_CHANGED);
+    propagate(source.firstOut!, Changed);
 
     expectStates([
       [left, Consumer | Changed],
@@ -152,7 +151,7 @@ describe("Reactive runtime - walker invariants", () => {
 
     resetRuntime();
 
-    propagate(source.firstOut!, PROMOTE_CHANGED);
+    propagate(source.firstOut!, Changed);
 
     expectStates([
       [left, Consumer | Changed],
@@ -175,7 +174,7 @@ describe("Reactive runtime - walker invariants", () => {
           const levels: ReactiveNode[][] = [];
 
           attachBranchPlan(source, plan, 0, levels);
-          propagate(source.firstOut!, PROMOTE_CHANGED);
+          propagate(source.firstOut!, Changed);
 
           for (const node of levels[0] ?? []) {
             expectState(node, Consumer | Changed);
@@ -199,7 +198,7 @@ describe("Reactive runtime - walker invariants", () => {
     const watcher = createNode(Watcher);
     const invalidated: ReactiveNode[] = [];
     resetRuntime({
-      onSinkInvalidated(node) {
+      sinkInvalidatedDispatcher(node) {
         invalidated.push(node);
       },
     });
@@ -208,7 +207,7 @@ describe("Reactive runtime - walker invariants", () => {
     linkEdge(source, right);
     linkEdge(source, watcher);
 
-    propagate(source.firstOut!, PROMOTE_CHANGED);
+    propagate(source.firstOut!, Changed);
 
     expect(left.state).toBe(Consumer | Changed);
     expect(right.state).toBe(Consumer | Changed);
@@ -224,7 +223,7 @@ describe("Reactive runtime - walker invariants", () => {
     let parent = source;
 
     resetRuntime({
-      onSinkInvalidated(node) {
+      sinkInvalidatedDispatcher(node) {
         invalidated.push(node);
       },
     });
@@ -251,7 +250,7 @@ describe("Reactive runtime - walker invariants", () => {
         watcher.state = Watcher;
       }
 
-      propagate(source.firstOut!, PROMOTE_CHANGED);
+      propagate(source.firstOut!, Changed);
 
       expect(invalidated).toHaveLength(watchers.length);
       expect(new Set(invalidated)).toEqual(new Set(watchers));
@@ -264,7 +263,7 @@ describe("Reactive runtime - walker invariants", () => {
     let nestedWrites = 0;
 
     resetRuntime({
-      onSinkInvalidated(node) {
+      sinkInvalidatedDispatcher(node) {
         if (node !== outerWatcher) return;
         nestedWrites += 1;
         writeProducer(innerSource, 1);
@@ -310,15 +309,15 @@ describe("Reactive runtime - walker invariants", () => {
     const prefixEdge = linkEdge(prefix, tracked, null);
     linkEdge(source, tracked);
     linkEdge(source, sibling);
-    tracked.lastInTail = prefixEdge;
+    tracked.tailIn = prefixEdge;
 
-    propagate(source.firstOut!, PROMOTE_CHANGED);
+    propagate(source.firstOut!, Changed);
 
     expect(tracked.state).toBe(Consumer | Tracking);
     expect(sibling.state).toBe(Consumer | Changed);
   });
 
-  it("propagate branching accepts lastInTail edge without traversing prevIn", () => {
+  it("propagate branching accepts tailIn edge without traversing prevIn", () => {
     const source = createNode(Producer);
     const branch = createNode(Consumer);
     const sibling = createNode(Consumer);
@@ -328,16 +327,16 @@ describe("Reactive runtime - walker invariants", () => {
     linkEdge(source, branch);
     linkEdge(source, sibling);
     const trackedEdge = linkEdge(branch, tracked);
-    tracked.lastInTail = trackedEdge;
+    tracked.tailIn = trackedEdge;
 
     Object.defineProperty(trackedEdge, "prevIn", {
       configurable: true,
       get() {
-        throw new Error("branching helper should short-circuit on lastInTail");
+        throw new Error("branching helper should short-circuit on tailIn");
       },
     });
 
-    expect(() => propagate(source.firstOut!, PROMOTE_CHANGED)).not.toThrow();
+    expect(() => propagate(source.firstOut!, Changed)).not.toThrow();
     expect(tracked.state).toBe(Consumer | Tracking | Reentrant | Invalid);
     expect(sibling.state).toBe(Consumer | Changed);
   });
@@ -351,7 +350,7 @@ describe("Reactive runtime - walker invariants", () => {
     linkEdge(source, middle);
     linkEdge(middle, leaf);
 
-    propagate(source.firstOut!, PROMOTE_CHANGED);
+    propagate(source.firstOut!, Changed);
 
     expect(middle.state).toBe(Consumer | Changed);
     expect(leaf.state).toBe(Consumer | Invalid);
@@ -366,7 +365,7 @@ describe("Reactive runtime - walker invariants", () => {
     linkEdge(source, middle);
     linkEdge(middle, leaf);
 
-    propagate(source.firstOut!, PROMOTE_CHANGED);
+    propagate(source.firstOut!, Changed);
 
     expect(middle.state).toBe(Consumer | Changed);
     expect(leaf.state).toBe(Consumer | Invalid);
@@ -379,7 +378,7 @@ describe("Reactive runtime - walker invariants", () => {
     const alreadyChangedWatcher = createNode(Watcher | Changed);
     const invalidated: string[] = [];
     resetRuntime({
-      onSinkInvalidated(node) {
+      sinkInvalidatedDispatcher(node) {
         if (node === watcher) invalidated.push("watcher");
         if (node === alreadyChangedWatcher) invalidated.push("already-changed");
       },
@@ -402,7 +401,7 @@ describe("Reactive runtime - walker invariants", () => {
     const watcher = createNode(Watcher | Invalid | Reentrant);
     const invalidated: ReactiveNode[] = [];
     resetRuntime({
-      onSinkInvalidated(node) {
+      sinkInvalidatedDispatcher(node) {
         invalidated.push(node);
       },
     });
@@ -419,7 +418,7 @@ describe("Reactive runtime - walker invariants", () => {
     const invalidated: ReactiveNode[] = [];
 
     resetRuntime({
-      onSinkInvalidated(node) {
+      sinkInvalidatedDispatcher(node) {
         invalidated.push(node);
       },
     });
@@ -458,7 +457,7 @@ describe("Reactive runtime - walker invariants", () => {
     let right!: ReactiveNode;
 
     resetRuntime({
-      onSinkInvalidated(node) {
+      sinkInvalidatedDispatcher(node) {
         if (node === direct) invalidated.push("direct");
         if (node === left) invalidated.push("left");
         if (node === right) invalidated.push("right");
@@ -739,8 +738,8 @@ describe("Reactive runtime - walker invariants", () => {
     const invalidatedA: ReactiveNode[] = [];
     const invalidatedB: ReactiveNode[] = [];
     const snapshot = saveContext();
-    setHooks({
-      onSinkInvalidated(node) {
+    setHostHooks({
+      sinkInvalidatedDispatcher(node) {
         invalidatedA.push(node);
       },
     });

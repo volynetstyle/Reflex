@@ -1,5 +1,5 @@
 import { expect } from "vitest";
-import { ReactiveNode } from "../../../src";
+import { ReactiveNode } from "../../../src/internal";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type TestReactiveEdge = any;
@@ -95,8 +95,8 @@ export function expectNodeGraphIntegrity(node: ReactiveNode): void {
     expect(edge.to).toBeTruthy();
   }
 
-  if (node.lastInTail !== null) {
-    expect(incoming.includes(node.lastInTail)).toBe(true);
+  if (node.tailIn !== null) {
+    expect(incoming.includes(node.tailIn)).toBe(true);
   }
 }
 
@@ -134,11 +134,11 @@ export function expectOutgoingEdges(
   expect(node.lastOut).toBe(expected.at(-1) ?? null);
 }
 
-export function expectLastInTail(
+export function expecttailIn(
   node: ReactiveNode,
   expected: TestReactiveEdge | null,
 ): void {
-  expect(node.lastInTail).toBe(expected);
+  expect(node.tailIn).toBe(expected);
 }
 
 export function expectSources(

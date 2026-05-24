@@ -29,7 +29,7 @@ export interface GraphReductionState {
   readonly mode: GraphReductionMode;
   readonly stableRuns: number;
   readonly dependencyCount: number;
-  readonly topologyVersion: number;
+  readonly s: number;
   readonly deoptCount: number;
   readonly mismatchCount: number;
   readonly cooldownRuns: number;
@@ -39,7 +39,7 @@ interface MutableGraphReductionState {
   mode: GraphReductionMode;
   stableRuns: number;
   dependencyCount: number;
-  topologyVersion: number;
+  s: number;
   deoptCount: number;
   mismatchCount: number;
   cooldownRuns: number;
@@ -56,7 +56,7 @@ export const DEFAULT_GRAPH_REDUCTION_OPTIONS: NormalizedGraphReductionOptions =
     cooldownAfterDeopt: 16,
   };
 
-const graphReductionStates = new WeakMap<
+const graphReductionPolicyStates = new WeakMap<
   ReactiveNode,
   MutableGraphReductionState
 >();
@@ -163,20 +163,20 @@ export function observeGraphReductionRun(
   if (!options.enabled) return;
 
   const sources = readIncomingSources(node);
-  let state = graphReductionStates.get(node);
+  let state = graphReductionPolicyStates.get(node);
 
   if (state === undefined) {
     state = {
       mode: resolveMode(1, options),
       stableRuns: 1,
       dependencyCount: sources.length,
-      topologyVersion: 0,
+      s: 0,
       deoptCount: 0,
       mismatchCount: 0,
       cooldownRuns: 0,
       sources,
     };
-    graphReductionStates.set(node, state);
+    graphReductionPolicyStates.set(node, state);
     return;
   }
 
@@ -197,7 +197,7 @@ export function observeGraphReductionRun(
     }
     state.mode = "dynamic";
     state.stableRuns = 0;
-    state.topologyVersion += 1;
+    state.s += 1;
     state.sources = sources;
   }
 
@@ -206,10 +206,18 @@ export function observeGraphReductionRun(
     state.cooldownRuns > 0 ? "dynamic" : resolveMode(state.stableRuns, options);
 }
 
+export function setNodeGraphReductionPolicy(
+  node: ReactiveNode,
+  options: GraphReductionOptions | boolean | undefined,
+): void {
+  node.graphReductionPolicy =
+    options === undefined ? null : normalizeGraphReductionOptions(options);
+}
+
 export function getGraphReductionState(
   node: ReactiveNode,
 ): GraphReductionState | undefined {
-  const state = graphReductionStates.get(node);
+  const state = graphReductionPolicyStates.get(node);
 
   if (state === undefined) return undefined;
 
@@ -217,7 +225,7 @@ export function getGraphReductionState(
     mode: state.mode,
     stableRuns: state.stableRuns,
     dependencyCount: state.dependencyCount,
-    topologyVersion: state.topologyVersion,
+    s: state.s,
     deoptCount: state.deoptCount,
     mismatchCount: state.mismatchCount,
     cooldownRuns: state.cooldownRuns,
@@ -225,5 +233,5 @@ export function getGraphReductionState(
 }
 
 export function clearGraphReductionState(node: ReactiveNode): void {
-  graphReductionStates.delete(node);
+  graphReductionPolicyStates.delete(node);
 }

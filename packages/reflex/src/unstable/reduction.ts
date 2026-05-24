@@ -1,14 +1,14 @@
 import {
   restoreContext,
   saveContext,
-  setOptions,
+  setRuntimeContextOptions,
   type GraphReductionOptions,
-} from "@volynets/reflex-runtime";
+} from "@volynets/reflex-runtime/internal";
 
 export type {
   GraphReductionMode,
   GraphReductionOptions,
-} from "@volynets/reflex-runtime";
+} from "@volynets/reflex-runtime/internal";
 
 let activeReductionOptions: GraphReductionOptions | undefined;
 
@@ -18,8 +18,8 @@ function enableReductionForRun<T>(
 ): T {
   const snapshot = saveContext();
 
-  setOptions({
-    graphReduction: {
+  setRuntimeContextOptions({
+    graphReductionPolicy: {
       ...options,
       enabled: true,
     },
@@ -34,15 +34,6 @@ function enableReductionForRun<T>(
 
 export function getActiveReductionOptions(): GraphReductionOptions | undefined {
   return activeReductionOptions;
-}
-
-export function wrapReductionCompute<T>(
-  fn: () => T,
-  options = activeReductionOptions,
-): () => T {
-  if (options === undefined) return fn;
-
-  return () => enableReductionForRun(fn, options);
 }
 
 export function specialize<T>(

@@ -1,4 +1,4 @@
-import type { ReactiveNode } from "@volynets/reflex-runtime";
+import type { ReactiveNode } from "@volynets/reflex-runtime/internal";
 import type { EffectSchedulerMode } from "./scheduler.constants";
 
 export type EffectNode = ReactiveNode<undefined | Destructor>;

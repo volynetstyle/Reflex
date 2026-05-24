@@ -32,7 +32,7 @@ The code is split by traversal responsibility. Public entry points remain stable
 `writeProducer()` commits a changed producer and calls:
 
 ```ts
-propagate(node.firstOut, PROMOTE_CHANGED);
+propagate(node.firstOut, Changed);
 ```
 
 The traversal walks outgoing edges in source-to-subscriber order:

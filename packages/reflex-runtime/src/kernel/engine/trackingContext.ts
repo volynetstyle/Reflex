@@ -1,30 +1,30 @@
 import type ReactiveNode from "../shape/node";
-import { bumpNodeTopologyVersion } from "../shape/node";
+import { bumpNodes } from "../shape/node";
 import { devRecordCleanupStaleSources, devRecordTrackRead } from "../dev";
 import { linkEdge, unlinkDetachedIncomingEdgeSequence } from "../shape/graph";
 import { moveIncomingEdgeAfterUnchecked } from "../shape/graph/edgeList";
 import {
-  activeConsumer,
+  currentConsumer,
   defaultContext,
-  trackingVersion,
-  trackReadFallback,
+  trackingEpoch,
+  readTrackingStrategy,
 } from "../context";
 
 function trackReadSlowPath(
   source: ReactiveNode,
   consumer: ReactiveNode,
   version: number,
-  prevEdge: ReactiveNode["lastInTail"],
+  prevEdge: ReactiveNode["tailIn"],
 ): void {
   if (prevEdge === null) {
     const firstIn = consumer.firstIn;
 
     if (firstIn === null || firstIn.nextIn === null) {
-      consumer.lastInTail = linkEdge(source, consumer, null, version);
+      consumer.tailIn = linkEdge(source, consumer, null, version);
       return;
     }
 
-    consumer.lastInTail = trackReadFallback(
+    consumer.tailIn = readTrackingStrategy(
       source,
       consumer,
       null,
@@ -37,11 +37,11 @@ function trackReadSlowPath(
   const nextExpected = prevEdge.nextIn;
 
   if (nextExpected === null || nextExpected.nextIn === null) {
-    consumer.lastInTail = linkEdge(source, consumer, prevEdge, version);
+    consumer.tailIn = linkEdge(source, consumer, prevEdge, version);
     return;
   }
 
-  consumer.lastInTail = trackReadFallback(
+  consumer.tailIn = readTrackingStrategy(
     source,
     consumer,
     prevEdge,
@@ -56,7 +56,7 @@ function trackReadResolved(
   version: number,
   slowPath: boolean,
 ): boolean {
-  const prevEdge = consumer.lastInTail;
+  const prevEdge = consumer.tailIn;
 
   if (prevEdge !== null) {
     if (prevEdge.from === source) {
@@ -68,7 +68,7 @@ function trackReadResolved(
     const nextExpected = prevEdge.nextIn;
     if (nextExpected !== null && nextExpected.from === source) {
       nextExpected.version = version;
-      consumer.lastInTail = nextExpected;
+      consumer.tailIn = nextExpected;
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
       return true;
     }
@@ -79,7 +79,7 @@ function trackReadResolved(
         return true;
       }
 
-      consumer.lastInTail = linkEdge(source, consumer, prevEdge, version);
+      consumer.tailIn = linkEdge(source, consumer, prevEdge, version);
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
       return true;
     }
@@ -96,8 +96,8 @@ function trackReadResolved(
       next1.nextIn = nextExpected;
       nextExpected.prevIn = next1;
       next1.version = version;
-      consumer.lastInTail = next1;
-      bumpNodeTopologyVersion(consumer);
+      consumer.tailIn = next1;
+      bumpNodes(consumer);
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
       return true;
     }
@@ -115,8 +115,8 @@ function trackReadResolved(
         next2.nextIn = nextExpected;
         nextExpected.prevIn = next2;
         next2.version = version;
-        consumer.lastInTail = next2;
-        bumpNodeTopologyVersion(consumer);
+        consumer.tailIn = next2;
+        bumpNodes(consumer);
         if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
         return true;
       }
@@ -126,7 +126,7 @@ function trackReadResolved(
     if (lastIn !== null && lastIn.from === source) {
       moveIncomingEdgeAfterUnchecked(consumer, lastIn, prevEdge);
       lastIn.version = version;
-      consumer.lastInTail = lastIn;
+      consumer.tailIn = lastIn;
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
       return true;
     }
@@ -140,14 +140,14 @@ function trackReadResolved(
   } else {
     const firstIn = consumer.firstIn;
     if (firstIn === null) {
-      consumer.lastInTail = linkEdge(source, consumer, null, version);
+      consumer.tailIn = linkEdge(source, consumer, null, version);
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
       return true;
     }
 
     if (firstIn.from === source) {
       firstIn.version = version;
-      consumer.lastInTail = firstIn;
+      consumer.tailIn = firstIn;
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
       return true;
     }
@@ -156,7 +156,7 @@ function trackReadResolved(
     if (lastIn !== null && lastIn.from === source) {
       moveIncomingEdgeAfterUnchecked(consumer, lastIn, null);
       lastIn.version = version;
-      consumer.lastInTail = lastIn;
+      consumer.tailIn = lastIn;
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
       return true;
     }
@@ -171,7 +171,7 @@ function trackReadResolved(
 
 function hasTrackedPrefixDependency(
   source: ReactiveNode,
-  edge: ReactiveNode["lastInTail"],
+  edge: ReactiveNode["tailIn"],
 ): boolean {
   for (let current = edge; current !== null; current = current.prevIn) {
     if (current.from === source) return true;
@@ -193,7 +193,7 @@ export function tryTrackReadFastPath(
   source: ReactiveNode,
   consumer: ReactiveNode,
 ): boolean {
-  return trackReadResolved(source, consumer, trackingVersion, false);
+  return trackReadResolved(source, consumer, trackingEpoch, false);
 }
 
 /**
@@ -201,11 +201,11 @@ export function tryTrackReadFastPath(
  *
  */
 export function trackRead(source: ReactiveNode): void {
-  const consumer = activeConsumer;
+  const consumer = currentConsumer;
 
   if (consumer === null) return;
 
-  trackReadResolved(source, consumer, trackingVersion, true);
+  trackReadResolved(source, consumer, trackingEpoch, true);
 }
 
 /**
@@ -215,18 +215,18 @@ export function trackRead(source: ReactiveNode): void {
  */
 export function trackReadActive(
   source: ReactiveNode,
-  consumer = activeConsumer as NonNullable<ReactiveNode>,
+  consumer = currentConsumer as NonNullable<ReactiveNode>,
 ): void {
-  trackReadResolved(source, consumer, trackingVersion, true);
+  trackReadResolved(source, consumer, trackingEpoch, true);
 }
 
 /**
  * Suffix cleanup over the consumer's incoming edges after recompute.
  *
- * Everything after lastInTail belongs to the old dependency list and is unlinked.
+ * Everything after tailIn belongs to the old dependency list and is unlinked.
  */
 export function cleanupStaleSources(node: ReactiveNode): void {
-  const tail = node.lastInTail;
+  const tail = node.tailIn;
   const staleHead = tail === null ? node.firstIn : tail.nextIn;
 
   if (staleHead === null) return;

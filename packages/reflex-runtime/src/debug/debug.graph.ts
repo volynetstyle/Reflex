@@ -222,12 +222,12 @@ export function checkDebugGraphIntegrity(
       });
     }
 
-    if (node.lastInTail !== null && !incoming.includes(node.lastInTail)) {
+    if (node.tailIn !== null && !incoming.includes(node.tailIn)) {
       issues.push({
         code: "invalid-last-in-tail",
         node: nodeSnapshot,
-        edge: snapshotDebugGraphEdge(node.lastInTail, snapshotNode),
-        message: "lastInTail does not belong to the incoming edge list.",
+        edge: snapshotDebugGraphEdge(node.tailIn, snapshotNode),
+        message: "tailIn does not belong to the incoming edge list.",
       });
     }
 

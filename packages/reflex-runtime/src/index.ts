@@ -20,96 +20,13 @@ export {
 export {
   readProducer,
   writeProducer,
-  //
   readConsumer,
   readConsumerLazy,
   readConsumerEager,
-  //
   ConsumerReadMode,
-  //
   watcher,
   runWatcher,
   disposeWatcher,
-  //
   untracked,
 } from "./protocol";
 export type { ProducerComparator } from "./protocol";
-
-// Execution context management
-export {
-  getActiveConsumer,
-  getSinkInvalidatedHook,
-  getPropagationDepth,
-  setPropagationDepth,
-  setSinkInvalidatedHook,
-  setReactiveSettledHook,
-  getReactiveSettledHook,
-  setHooks,
-  setRuntimeHooks,
-  setOptions,
-  createExecutionState,
-  defaultExecutionState,
-  getActiveExecutionState,
-  setActiveExecutionState,
-  runWithExecutionState,
-  saveExecutionState,
-  restoreExecutionState,
-  saveContext,
-  restoreContext,
-  resetState,
-  notifySettledIfIdle,
-  notifySinkInvalidated,
-  dispatchSinkInvalidated,
-  type ExecutionContextOptions,
-  type ExecutionState,
-  type EngineHooks,
-  type TrackReadFallback,
-} from "./kernel/context";
-
-export {
-  DIRTY_STATE,
-  //
-  PRODUCER_INITIAL_STATE,
-  PRODUCER_CHANGED,
-  PRODUCER_DIRTY,
-  //
-  CONSUMER_CHANGED as CONSUMER_INITIAL_STATE,
-  CONSUMER_CHANGED,
-  CONSUMER_DIRTY,
-  //
-  WATCHER_CHANGED as WATCHER_INITIAL_STATE,
-  WATCHER_CHANGED,
-  //
-  WALKER_STATE,
-  //
-  ReactiveNode,
-  ReactiveEdge,
-  Producer,
-  Consumer,
-  Watcher,
-  Invalid,
-  Changed,
-  Reentrant,
-  Scheduled,
-  Computing,
-  Tracking,
-  createStaticTransitionPlan,
-  disposeNode,
-  disposeNodeEvent,
-  executeStaticPlan,
-  executeStaticPlanRange,
-  getGraphReductionState,
-  notifyStaticSink,
-  recomputeStaticNode,
-  writeStaticPlanSource,
-} from "./kernel";
-
-export type {
-  GraphReductionMode,
-  GraphReductionOptions,
-  GraphReductionState,
-  ReactiveNodeState,
-  StaticPlanRange,
-  StaticTransitionPlan,
-  TopologyGuard,
-} from "./kernel";

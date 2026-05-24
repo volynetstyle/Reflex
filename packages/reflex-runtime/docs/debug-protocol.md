@@ -54,7 +54,7 @@ detect ordering changes without reaching into runtime internals.
 `subtle.graphIntegrity(node)` checks structural invariants:
 
 - incoming/outgoing previous links
-- `lastIn`, `lastOut`, and `lastInTail`
+- `lastIn`, `lastOut`, and `tailIn`
 - source/target back-references
 - dangling and duplicate edges
 

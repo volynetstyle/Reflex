@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   createConsumer,
-  createExecutionState,
+  createRuntimeContext,
   createProducer,
   getGraphReductionState,
   readConsumer,
   readProducer,
   resetRuntime,
-  runWithExecutionState,
+  runWithRuntimeContext,
   writeProducer,
 } from "../../runtime.test_utils";
 
@@ -17,8 +17,8 @@ describe("Reactive runtime - graph reduction", () => {
   });
 
   it("promotes stable dependency order through reduction modes", () => {
-    const execution = createExecutionState({
-      graphReduction: {
+    const execution = createRuntimeContext({
+      graphReductionPolicy: {
         enabled: true,
         stableThreshold: 2,
         specializeThreshold: 3,
@@ -31,7 +31,7 @@ describe("Reactive runtime - graph reduction", () => {
       () => readProducer(left) + readProducer(right),
     );
 
-    runWithExecutionState(execution, () => {
+    runWithRuntimeContext(execution, () => {
       expect(readConsumer(total)).toBe(3);
       expect(getGraphReductionState(total)?.mode).toBe("dynamic");
 
@@ -52,8 +52,8 @@ describe("Reactive runtime - graph reduction", () => {
   });
 
   it("deoptimizes when dependency topology changes", () => {
-    const execution = createExecutionState({
-      graphReduction: {
+    const execution = createRuntimeContext({
+      graphReductionPolicy: {
         enabled: true,
         stableThreshold: 2,
         specializeThreshold: 2,
@@ -66,7 +66,7 @@ describe("Reactive runtime - graph reduction", () => {
       readProducer(flag) ? readProducer(left) : readProducer(right),
     );
 
-    runWithExecutionState(execution, () => {
+    runWithRuntimeContext(execution, () => {
       expect(readConsumer(selected)).toBe(1);
       writeProducer(left, 2);
       expect(readConsumer(selected)).toBe(2);
@@ -78,15 +78,15 @@ describe("Reactive runtime - graph reduction", () => {
       expect(getGraphReductionState(selected)).toMatchObject({
         mode: "dynamic",
         deoptCount: 1,
-        topologyVersion: 1,
+        s: 1,
         cooldownRuns: 16,
       });
     });
   });
 
   it("keeps a branch in cooldown after deopt until stability returns", () => {
-    const execution = createExecutionState({
-      graphReduction: {
+    const execution = createRuntimeContext({
+      graphReductionPolicy: {
         enabled: true,
         stabilizeAfter: 2,
         specializeThreshold: 2,
@@ -101,7 +101,7 @@ describe("Reactive runtime - graph reduction", () => {
       readProducer(flag) ? readProducer(left) : readProducer(right),
     );
 
-    runWithExecutionState(execution, () => {
+    runWithRuntimeContext(execution, () => {
       expect(readConsumer(selected)).toBe(1);
       writeProducer(left, 2);
       expect(readConsumer(selected)).toBe(2);

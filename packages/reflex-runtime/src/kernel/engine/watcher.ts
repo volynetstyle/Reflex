@@ -10,7 +10,7 @@ import {
   Reentrant,
 } from "../shape";
 import { executeNodeComputation } from "./executeWatcher";
-import { activeConsumer, defaultContext, setActiveConsumer } from "../context";
+import { currentConsumer, defaultContext, setCurrentConsumer } from "../context";
 import {
   devRecordWatcherCleanup,
   devRecordWatcherDispose,
@@ -24,13 +24,13 @@ function getWatcherCleanup(payload: unknown): (() => void) | null {
 }
 
 function runCleanup(cleanup: () => void): void {
-  const prevActive = activeConsumer;
-  setActiveConsumer(null);
+  const prevActive = currentConsumer;
+  setCurrentConsumer(null);
 
   try {
     cleanup();
   } finally {
-    setActiveConsumer(prevActive);
+    setCurrentConsumer(prevActive);
   }
 }
 

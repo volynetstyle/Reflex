@@ -4,7 +4,7 @@ import { unlinkAllSources, unlinkAllSubscribers } from "./sweepEdges";
 
 export function disposeNode(node: ReactiveNode): void {
   clearGraphReductionState(node);
-  node.lastInTail = null;
+  node.tailIn = null;
   unlinkAllSources(node);
   unlinkAllSubscribers(node);
   node.compute = null;

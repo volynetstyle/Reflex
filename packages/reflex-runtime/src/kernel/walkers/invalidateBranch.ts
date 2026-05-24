@@ -1,5 +1,5 @@
-import { defaultContext, dispatchSinkInvalidated } from "../context";
-import { devRecordPropagate, devRecordWatcherInvalidated } from "../dev";
+import { defaultContext, emitSinkInvalidated } from "../context";
+import { devRecordPropagate } from "../dev";
 import {
   Changed,
   DIRTY_STATE,
@@ -13,16 +13,7 @@ import {
 const INVALIDATE_SLOW_STATE = DIRTY_STATE | Tracking;
 
 // @__INLINE__
-export function notifyWatcher(node: ReactiveNode): void {
-  const notify = dispatchSinkInvalidated;
-
-  if (notify === undefined) {
-    devRecordWatcherInvalidated(node, defaultContext);
-    return;
-  }
-
-  notify(node);
-}
+export const notifyWatcher = emitSinkInvalidated;
 
 // @__INLINE__
 function invalidateTracked(
@@ -30,7 +21,7 @@ function invalidateTracked(
   sub: ReactiveNode,
   state: number,
 ): number {
-  const tail = sub.lastInTail;
+  const tail = sub.tailIn;
   if (tail === null) return 0;
 
   if (edge !== tail) {

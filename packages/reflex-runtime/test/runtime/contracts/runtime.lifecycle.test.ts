@@ -10,7 +10,7 @@ import {
   readConsumer,
   readProducer,
   runWatcher,
-  setActiveConsumer,
+  setCurrentConsumer,
   writeProducer,
 } from "../../runtime.test_utils";
 import { connect, disconnect } from "../../../src/kernel/shape/graph";
@@ -155,11 +155,11 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     runWatcher(watcher);
 
     writeProducer(trigger, 1);
-    setActiveConsumer(parent);
+    setCurrentConsumer(parent);
     try {
       runWatcher(watcher);
     } finally {
-      setActiveConsumer(null);
+      setCurrentConsumer(null);
     }
 
     expectNoSubscriber(incidental, parent);
@@ -176,11 +176,11 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
 
     runWatcher(watcher);
 
-    setActiveConsumer(parent);
+    setCurrentConsumer(parent);
     try {
       disposeWatcher(watcher);
     } finally {
-      setActiveConsumer(null);
+      setCurrentConsumer(null);
     }
 
     expectNoSubscriber(incidental, parent);

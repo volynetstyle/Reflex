@@ -28,7 +28,7 @@ function createConsumer() {
 
 function resetRuntime() {
   runtime.resetState();
-  runtime.setHooks({});
+  runtime.setHostHooks({});
 }
 
 function warm(fn, iterations) {

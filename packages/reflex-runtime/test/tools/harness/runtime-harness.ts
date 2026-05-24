@@ -1,20 +1,20 @@
 import {
-  type EngineHooks,
+  type RuntimeHostHooks,
   resetState,
   saveContext,
-  setHooks,
-  setOptions,
-  setRuntimeHooks,
-} from "../../../src";
+  setHostHooks,
+  setRuntimeContextOptions,
+  setInternalHooks,
+} from "../../../src/internal";
 
 /**
  * Reset runtime-global context state, hooks, and options for test isolation.
  */
-export function resetRuntime(hooks: EngineHooks = {}): void {
+export function resetRuntime(hooks: RuntimeHostHooks = {}): void {
   resetState();
-  setRuntimeHooks();
-  setHooks(hooks);
-  setOptions({});
+  setInternalHooks();
+  setHostHooks(hooks);
+  setRuntimeContextOptions({});
 }
 
 export const saveRuntimeContext = saveContext;

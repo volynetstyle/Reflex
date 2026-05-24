@@ -10,6 +10,62 @@ import {
 } from "./propagationStack";
 
 /**
+ * Drains Invalid propagation from an edge list.
+ *
+ * Contract:
+ * - `edge` is already selected as the current edge.
+ * - `top` is the current stack top.
+ * - if caller popped `edge` from stack, it must pass the decremented `top`.
+ *
+ * This preserves the original DFS + sibling-stack traversal order.
+ */
+// @__INLINE__
+function drainInvalidPropagation(
+  edge: ReactiveEdge,
+  top: number,
+  base: number,
+): number {
+  let nextEdge: ReactiveEdge | null = edge.nextOut;
+
+  while (true) {
+    const sub = edge.to;
+    const next = invalidateSub(edge, sub, sub.state, Invalid);
+
+    if (next !== 0) {
+      if ((next & Watcher) !== 0) {
+        setPropagateStackHigh(top);
+        notifyWatcher(sub);
+      } else {
+        const child = sub.firstOut;
+
+        if (child !== null) {
+          if (nextEdge !== null) {
+            top = pushPropagateStack(nextEdge, top);
+          }
+
+          edge = child;
+          nextEdge = edge.nextOut;
+          continue;
+        }
+      }
+    }
+
+    if (nextEdge !== null) {
+      edge = nextEdge;
+      nextEdge = edge.nextOut;
+      continue;
+    }
+
+    if (top === base) {
+      return top;
+    }
+
+    edge = readPropagateStack(--top);
+    nextEdge = edge.nextOut;
+  }
+}
+
+/**
  * API write-path specialization.
  *
  * `writeProducer()` already filters null fanout and always promotes direct
@@ -34,50 +90,14 @@ export function propagateChanged(startEdge: ReactiveEdge): void {
     }
 
     const child = sub.firstOut;
+
     if (child === null) {
       return;
     }
 
-    let edge = child;
-    let nextEdge: ReactiveEdge | null = edge.nextOut;
-
-    while (true) {
-      const sub = edge.to;
-      const next = invalidateSub(edge, sub, sub.state, Invalid);
-
-      if (next !== 0) {
-        if ((next & Watcher) !== 0) {
-          setPropagateStackHigh(top);
-          notifyWatcher(sub);
-        } else {
-          const child = sub.firstOut;
-
-          if (child !== null) {
-            if (nextEdge !== null) {
-              top = pushPropagateStack(nextEdge, top);
-            }
-
-            edge = child;
-            nextEdge = edge.nextOut;
-            continue;
-          }
-        }
-      }
-
-      if (nextEdge !== null) {
-        edge = nextEdge;
-        nextEdge = edge.nextOut;
-        continue;
-      }
-
-      if (top === base) {
-        restorePropagateStackBase(base);
-        return;
-      }
-
-      edge = readPropagateStack(--top);
-      nextEdge = edge.nextOut;
-    }
+    drainInvalidPropagation(child, top, base);
+    restorePropagateStackBase(base);
+    return;
   }
 
   for (
@@ -99,6 +119,7 @@ export function propagateChanged(startEdge: ReactiveEdge): void {
     }
 
     const child = sub.firstOut;
+
     if (child !== null) {
       top = pushPropagateStack(child, top);
     }
@@ -108,44 +129,13 @@ export function propagateChanged(startEdge: ReactiveEdge): void {
     return;
   }
 
-  while (top !== base) {
-    let edge = readPropagateStack(--top);
-    let nextEdge: ReactiveEdge | null = edge.nextOut;
-
-    while (true) {
-      const sub = edge.to;
-      const next = invalidateSub(edge, sub, sub.state, Invalid);
-
-      if (next !== 0) {
-        if ((next & Watcher) !== 0) {
-          setPropagateStackHigh(top);
-          notifyWatcher(sub);
-        } else {
-          const child = sub.firstOut;
-
-          if (child !== null) {
-            if (nextEdge !== null) {
-              top = pushPropagateStack(nextEdge, top);
-            }
-
-            edge = child;
-            nextEdge = edge.nextOut;
-            continue;
-          }
-        }
-      }
-
-      if (nextEdge !== null) {
-        edge = nextEdge;
-        nextEdge = edge.nextOut;
-        continue;
-      }
-
-      break;
-    }
-  }
-
+  const edge = readPropagateStack(--top);
+  drainInvalidPropagation(edge, top, base);
   restorePropagateStackBase(base);
+}
+
+export function propagate(startEdge: ReactiveEdge, _promote: typeof Changed): void {
+  propagateChanged(startEdge);
 }
 
 export function readPropagateStackStats(): {

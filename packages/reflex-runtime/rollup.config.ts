@@ -4,6 +4,10 @@ import swc from "@rollup/plugin-swc";
 import terser from "@rollup/plugin-terser";
 import constEnum from "rollup-plugin-const-enum";
 import type { Plugin, RollupOptions, OutputOptions } from "rollup";
+import {
+  createBuildReporter,
+  reportRollupWarning,
+} from "../../scripts/rollup-build-reporter.ts";
 
 type BuildFormat = "esm" | "cjs";
 
@@ -16,8 +20,13 @@ interface BuildTarget {
 }
 
 const INDEX_INPUT = { index: "build/esm/index.js" } as const;
+const INDEX_AND_INTERNAL_INPUT = {
+  index: "build/esm/index.js",
+  internal: "build/esm/internal/index.js",
+} as const;
 const INDEX_AND_DEBUG_INPUT = {
   index: "build/esm/index.js",
+  internal: "build/esm/internal/index.js",
   debug: "build/esm/debug/index.js",
 } as const;
 
@@ -79,7 +88,7 @@ const GENERATED_CODE_OPTIONS: NonNullable<OutputOptions["generatedCode"]> = {
 
 const TARGETS: readonly BuildTarget[] = [
   {
-    input: INDEX_INPUT,
+    input: INDEX_AND_INTERNAL_INPUT,
     name: "esm",
     outDir: "esm",
     format: "esm",
@@ -93,33 +102,13 @@ const TARGETS: readonly BuildTarget[] = [
     isDev: true,
   },
   {
-    input: INDEX_INPUT,
+    input: INDEX_AND_INTERNAL_INPUT,
     name: "cjs",
     outDir: "cjs",
     format: "cjs",
     isDev: false,
   },
 ] as const;
-
-function createLoggerPlugin(targetName: string): Plugin {
-  return {
-    name: "pipeline-logger",
-    buildStart() {
-      console.log(`\nstart build -> ${targetName}`);
-    },
-    generateBundle(_, bundle) {
-      console.log(`bundle ${targetName} modules: ${Object.keys(bundle).length}`);
-    },
-    writeBundle(_, bundle) {
-      const size = Object.values(bundle).reduce((total, chunk) => {
-        return total + ("code" in chunk ? chunk.code.length : 0);
-      }, 0);
-
-      console.log(`bundle ${targetName} size ${(size / 1024).toFixed(2)} KB`);
-      console.log(`done -> ${targetName}\n`);
-    },
-  };
-}
 
 function createSwcPlugin(isDev: boolean): Plugin | null {
   if (isDev) return null;
@@ -160,7 +149,7 @@ function createTerserPlugin(isDev: boolean): Plugin | null {
 
 function createPlugins(target: BuildTarget): Plugin[] {
   const plugins: Plugin[] = [
-    createLoggerPlugin(target.name),
+    createBuildReporter("@volynets/reflex-runtime", target.name),
     resolve({
       extensions: [".js"],
       exportConditions: ["import", "default"],
@@ -192,6 +181,7 @@ function createOutput(target: BuildTarget): OutputOptions {
     dir: `dist/${target.outDir}`,
     format: target.format,
     entryFileNames: target.format === "cjs" ? "[name].cjs" : "[name].js",
+    chunkFileNames: target.format === "cjs" ? "[name].cjs" : "[name].js",
     exports: target.format === "cjs" ? "named" : undefined,
     sourcemap: target.isDev,
     generatedCode: GENERATED_CODE_OPTIONS,
@@ -201,6 +191,8 @@ function createOutput(target: BuildTarget): OutputOptions {
 function createConfig(target: BuildTarget): RollupOptions {
   return {
     input: target.input,
+    logLevel: "silent",
+    onwarn: reportRollupWarning,
     output: createOutput(target),
     treeshake: TREESHAKE_OPTIONS,
     plugins: createPlugins(target),

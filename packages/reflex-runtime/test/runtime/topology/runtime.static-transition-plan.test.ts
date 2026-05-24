@@ -8,7 +8,7 @@ import {
   readProducer,
   resetRuntime,
   runWatcher,
-  setRuntimeHooks,
+  setInternalHooks,
   writeStaticPlanSource,
 } from "../../runtime.test_utils";
 
@@ -18,7 +18,7 @@ describe("Reactive runtime - static transition plan", () => {
   });
 
   it("executes a stabilized object-ref plan linearly", () => {
-    setRuntimeHooks((node) => runWatcher(node));
+    setInternalHooks((node) => runWatcher(node));
 
     const source = createProducer(1);
     const doubled = createConsumer(() => readProducer(source) * 2);
@@ -48,7 +48,7 @@ describe("Reactive runtime - static transition plan", () => {
   });
 
   it("deopts the object-ref plan when topology changes", () => {
-    setRuntimeHooks((node) => runWatcher(node));
+    setInternalHooks((node) => runWatcher(node));
 
     const flag = createProducer(true);
     const left = createProducer(1);
@@ -78,7 +78,7 @@ describe("Reactive runtime - static transition plan", () => {
   });
 
   it("topologically orders a diamond and recomputes the join once", () => {
-    setRuntimeHooks((node) => runWatcher(node));
+    setInternalHooks((node) => runWatcher(node));
 
     const source = createProducer(1);
     let bRuns = 0;
@@ -122,7 +122,7 @@ describe("Reactive runtime - static transition plan", () => {
   });
 
   it("builds valid plans for fan-out, fan-in, layered DAG and stable branch shapes", () => {
-    setRuntimeHooks((node) => runWatcher(node));
+    setInternalHooks((node) => runWatcher(node));
 
     const source = createProducer(1);
     const left = createConsumer(() => readProducer(source) + 1);
@@ -146,7 +146,7 @@ describe("Reactive runtime - static transition plan", () => {
   });
 
   it("executes only the source range for independent partitions", () => {
-    setRuntimeHooks((node) => runWatcher(node));
+    setInternalHooks((node) => runWatcher(node));
 
     const leftSource = createProducer(1);
     const rightSource = createProducer(10);

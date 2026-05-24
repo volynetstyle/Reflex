@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  type EngineHooks,
-  enterPropagation,
+  type RuntimeHostHooks,
+  enterPropagationScope,
   getReactiveSettledHook,
-  leavePropagation,
-  notifySettledIfIdle,
+  leavePropagationScope,
+  emitSettledIfIdle,
   saveContext,
   restoreContext,
-  setHooks,
+  setHostHooks,
   setReactiveSettledHook,
 } from "../../../src/kernel/context";
 
@@ -15,39 +15,39 @@ import {
 describe("Reactive runtime - security regressions", () => {
   it("normalizes hook payloads instead of inheriting __proto__ pollution", () => {
     const settled = vi.fn();
-    const payload = Object.create(null) as EngineHooks &
+    const payload = Object.create(null) as RuntimeHostHooks &
       Record<string, unknown>;
 
     Object.defineProperty(payload, "__proto__", {
       enumerable: true,
       value: { polluted: true },
     });
-    Object.defineProperty(payload, "onReactiveSettled", {
+    Object.defineProperty(payload, "reactiveSettledDispatcher", {
       enumerable: true,
       value: settled,
     });
 
     const previous = saveContext();
-    setHooks(payload);
-    notifySettledIfIdle();
+    setHostHooks(payload);
+    emitSettledIfIdle();
 
     expect(settled).toHaveBeenCalledTimes(1);
     restoreContext(previous);
   });
 
-  it("setHooks ignores inherited callbacks on replacement objects", () => {
+  it("setHostHooks ignores inherited callbacks on replacement objects", () => {
     const previous = vi.fn();
     const inherited = vi.fn();
     const replacement = Object.create({
-      onReactiveSettled: inherited,
-    }) as EngineHooks;
+      reactiveSettledDispatcher: inherited,
+    }) as RuntimeHostHooks;
 
     const snapshot = saveContext();
-    setHooks({
-      onReactiveSettled: previous,
+    setHostHooks({
+      reactiveSettledDispatcher: previous,
     });
-    setHooks(replacement);
-    notifySettledIfIdle();
+    setHostHooks(replacement);
+    emitSettledIfIdle();
 
     expect(previous).not.toHaveBeenCalled();
     expect(inherited).not.toHaveBeenCalled();
@@ -60,11 +60,11 @@ describe("Reactive runtime - security regressions", () => {
     const second = vi.fn();
 
     setReactiveSettledHook(first);
-    notifySettledIfIdle();
+    emitSettledIfIdle();
     setReactiveSettledHook(second);
-    notifySettledIfIdle();
+    emitSettledIfIdle();
     setReactiveSettledHook(undefined);
-    notifySettledIfIdle();
+    emitSettledIfIdle();
 
     expect(first).toHaveBeenCalledTimes(1);
     expect(second).toHaveBeenCalledTimes(1);
@@ -78,16 +78,16 @@ describe("Reactive runtime - security regressions", () => {
 
     try {
       setReactiveSettledHook(first);
-      enterPropagation();
-      leavePropagation();
+      enterPropagationScope();
+      leavePropagationScope();
 
       setReactiveSettledHook(second);
-      enterPropagation();
-      leavePropagation();
+      enterPropagationScope();
+      leavePropagationScope();
 
       setReactiveSettledHook(undefined);
-      enterPropagation();
-      leavePropagation();
+      enterPropagationScope();
+      leavePropagationScope();
     } finally {
       setReactiveSettledHook(previous);
     }

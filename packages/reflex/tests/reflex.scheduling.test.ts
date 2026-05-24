@@ -4,7 +4,7 @@ import {
   Changed,
   resetState,
   Scheduled,
-  setPropagationDepth,
+  setPropagationScopeDepth,
 } from "@volynets/reflex-runtime";
 import { createWatcherNode } from "../src/infra/factory";
 import {
@@ -29,7 +29,7 @@ describe("createEffectScheduler", () => {
   beforeEach(() => {
     calls = [];
     resetState();
-    setPropagationDepth(0);
+    setPropagationScopeDepth(0);
   });
 
   it("enqueue marks node as scheduled in flush mode but does not run it", () => {
@@ -176,7 +176,7 @@ describe("createEffectScheduler", () => {
   });
 
   it("keeps sab effects queued when batch exits during active propagation", () => {
-    setPropagationDepth(1);
+    setPropagationScopeDepth(1);
     const scheduler = createEffectScheduler(EffectSchedulerMode.SAB);
     const node = createNode();
 
@@ -187,7 +187,7 @@ describe("createEffectScheduler", () => {
     expect(calls).toEqual([]);
     expect((node.state & Scheduled) !== 0).toBe(true);
 
-    setPropagationDepth(0);
+    setPropagationScopeDepth(0);
     scheduler.flush();
 
     expect(calls).toEqual([node]);
@@ -195,7 +195,7 @@ describe("createEffectScheduler", () => {
   });
 
   it("does not auto-flush while propagation is active", () => {
-    setPropagationDepth(1);
+    setPropagationScopeDepth(1);
     const scheduler = createEffectScheduler(EffectSchedulerMode.Eager);
     const node = createNode();
 
@@ -204,7 +204,7 @@ describe("createEffectScheduler", () => {
     expect(calls).toEqual([]);
     expect((node.state & Scheduled) !== 0).toBe(true);
 
-    setPropagationDepth(0);
+    setPropagationScopeDepth(0);
     scheduler.notifySettled();
 
     expect(calls).toEqual([node]);

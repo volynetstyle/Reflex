@@ -3,7 +3,7 @@ import {
   DIRTY_STATE,
   trackRead,
   defaultContext,
-  activeConsumer,
+  currentConsumer,
   shouldRecomputeDirtyConsumer,
   recompute,
   propagateOnceFromEdge,
@@ -13,7 +13,7 @@ import {
   devAssertConsumerCanStabilize,
   devRecordReadConsumer,
 } from "../kernel/dev";
-import { ConsumerReadMode } from "./utils/constants";
+import { LAZY } from "./utils/constants";
 
 /**
  * Read a consumer in tracking mode.
@@ -32,18 +32,18 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
   if ((state & DIRTY_STATE) !== 0) {
-    if (__DEV__) devAssertConsumerCanStabilize(state);
+    devAssertConsumerCanStabilize(state);
     return readConsumerLazySlow(node, state);
   }
 
   const value = node.payload;
 
-  if (activeConsumer === null) return value;
+  if (currentConsumer === null) return value;
 
   trackReadActive(node);
 
-  if (__DEV__) {
-    devRecordReadConsumer(node, "lazy", value, defaultContext, activeConsumer);
+  {
+    devRecordReadConsumer(node, "lazy", value, defaultContext, currentConsumer);
   }
 
   return value;
@@ -52,15 +52,15 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
 function readConsumerLazySlow<T>(node: ReactiveNode<T>, state: number): T {
   const value = stabilizeDirtyConsumer(node, state);
 
-  if (activeConsumer !== null) trackRead(node);
+  if (currentConsumer !== null) trackRead(node);
 
-  if (__DEV__) {
+  {
     devRecordReadConsumer(
       node,
       "lazy",
       value,
       defaultContext,
-      activeConsumer ?? undefined,
+      currentConsumer ?? undefined,
     );
   }
 
@@ -71,19 +71,15 @@ function readConsumerLazySlow<T>(node: ReactiveNode<T>, state: number): T {
  * Read a consumer without tracking the final dependency edge.
  *
  * Clean nodes return immediately. Dirty nodes are stabilized without binding
- * the current `activeConsumer` to this read.
+ * the current `currentConsumer` to this read.
  */
 export function readConsumerEager<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
-  if (__DEV__) devAssertConsumerCanStabilize(state);
+  devAssertConsumerCanStabilize(state);
 
   if ((state & DIRTY_STATE) === 0) return node.payload as T;
 
-  return readConsumerEagerSlow(node, state);
-}
-
-function readConsumerEagerSlow<T>(node: ReactiveNode<T>, state: number): T {
   return stabilizeDirtyConsumer(node, state);
 }
 
@@ -123,26 +119,23 @@ const debugValue = readConsumer(doubled, ConsumerReadMode.eager)
  * @invariant In eager mode, no dependency edge is created
  * @cost O(1) + stabilization cost (depends on upstream changes)
  */
-export function readConsumer<T>(
-  node: ReactiveNode<T>,
-  mode: ConsumerReadMode = ConsumerReadMode.lazy,
-): T {
+export function readConsumer<T>(node: ReactiveNode<T>, mode: number = LAZY): T {
   const state = node.state;
 
-  if (__DEV__) devAssertConsumerCanStabilize(state);
+  devAssertConsumerCanStabilize(state);
 
-  if (mode !== ConsumerReadMode.lazy) {
+  if ((mode & LAZY) === 0) {
     if ((state & DIRTY_STATE) === 0) {
       const value = node.payload as T;
 
-      if (__DEV__) devRecordReadConsumer(node, "eager", value, defaultContext);
+      devRecordReadConsumer(node, "eager", value, defaultContext);
 
       return value;
     }
 
-    const value = readConsumerEagerSlow(node, state);
+    const value = stabilizeDirtyConsumer(node, state);
 
-    if (__DEV__) devRecordReadConsumer(node, "eager", value, defaultContext);
+    devRecordReadConsumer(node, "eager", value, defaultContext);
 
     return value;
   }
@@ -150,38 +143,32 @@ export function readConsumer<T>(
   if ((state & DIRTY_STATE) === 0) {
     const value = node.payload as T;
 
-    if (activeConsumer !== null) trackRead(node);
+    if (currentConsumer !== null) trackRead(node);
 
-    if (__DEV__) {
+    {
       devRecordReadConsumer(
         node,
         "lazy",
         value,
         defaultContext,
-        activeConsumer ?? undefined,
+        currentConsumer ?? undefined,
       );
     }
 
     return value;
   }
 
-  return readConsumerSlow(node, state);
-}
-
-function readConsumerSlow<T>(node: ReactiveNode<T>, state: number): T {
   const value = stabilizeDirtyConsumer(node, state);
 
-  if (activeConsumer !== null) trackRead(node);
+  if (currentConsumer !== null) trackRead(node);
 
-  if (__DEV__) {
-    devRecordReadConsumer(
-      node,
-      "lazy",
-      value,
-      defaultContext,
-      activeConsumer ?? undefined,
-    );
-  }
+  devRecordReadConsumer(
+    node,
+    "lazy",
+    value,
+    defaultContext,
+    currentConsumer ?? undefined,
+  );
 
   return value;
 }

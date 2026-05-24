@@ -1,10 +1,10 @@
 import {
-  disposeNodeEvent,
   readProducer,
   writeProducer,
 } from "@volynets/reflex-runtime";
 import type { Event } from "../infra/runtime";
 import { createAccumulator } from "../infra/factory";
+import { disposeNodeEvent } from "@volynets/reflex-runtime/internal";
 
 type EventValue<E extends Event<unknown>> =
   E extends Event<infer T> ? T : never;

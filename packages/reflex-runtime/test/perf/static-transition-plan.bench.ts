@@ -8,7 +8,7 @@ import {
   readProducer,
   resetRuntime,
   runWatcher,
-  setRuntimeHooks,
+  setInternalHooks,
   writeProducer,
   writeStaticPlanSource,
   type ReactiveNode,
@@ -131,7 +131,7 @@ function createLayeredDag(): ReturnType<GraphFactory> {
 
 function createDynamicCase(factory: GraphFactory): BenchCase {
   resetRuntime();
-  setRuntimeHooks((node) => runWatcher(node));
+  setInternalHooks((node) => runWatcher(node));
 
   const graph = factory();
   let next = 0;
@@ -149,7 +149,7 @@ function createDynamicCase(factory: GraphFactory): BenchCase {
 
 function createStaticPlanCase(factory: GraphFactory): BenchCase {
   resetRuntime();
-  setRuntimeHooks((node) => runWatcher(node));
+  setInternalHooks((node) => runWatcher(node));
 
   const graph = factory();
   const plan: StaticTransitionPlan = createStaticTransitionPlan([graph.source]);
@@ -169,7 +169,7 @@ function createStaticPlanCase(factory: GraphFactory): BenchCase {
 
 function createBranchCase(switchEvery: number): BenchCase {
   resetRuntime();
-  setRuntimeHooks((node) => runWatcher(node));
+  setInternalHooks((node) => runWatcher(node));
 
   const flag = createProducer(true);
   const left = createProducer(0);

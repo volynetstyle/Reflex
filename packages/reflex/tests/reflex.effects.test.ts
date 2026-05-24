@@ -153,7 +153,7 @@ describe("Reactive system - effects", () => {
     const rt = createRuntime({
       effectStrategy: "flush",
       hooks: {
-        onSinkInvalidated() {
+        sinkInvalidatedDispatcher() {
           invalidations += 1;
         },
       },

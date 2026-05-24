@@ -1,10 +1,10 @@
 import type { ReactiveNode } from "../kernel";
 import {
   defaultContext,
-  enterPropagation,
+  enterPropagationScope,
   propagateChanged,
-  leavePropagation,
-  notifySettledIfIdle,
+  leavePropagationScope,
+  emitSettledIfIdle,
 } from "../kernel";
 import { devRecordWriteProducer } from "../kernel/dev";
 import type { ProducerComparator } from "./utils/compare";
@@ -85,14 +85,14 @@ export function writeProducer<T>(
   const firstOut = node.firstOut;
 
   if (firstOut === null) {
-    notifySettledIfIdle();
+    emitSettledIfIdle();
     return;
   }
 
-  enterPropagation();
+  enterPropagationScope();
   // Push phase: notify all subscribers depth-first, mark them dirty.
   // Direct subscribers are promoted from Invalid to Changed.
   // This tells them "definitely changed, don't verify, recompute"
   propagateChanged(firstOut);
-  leavePropagation();
+  leavePropagationScope();
 }

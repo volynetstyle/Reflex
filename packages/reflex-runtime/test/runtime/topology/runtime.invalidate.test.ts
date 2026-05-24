@@ -4,8 +4,6 @@ import {
   Consumer,
   Invalid,
   linkEdge,
-  PROMOTE_CHANGED,
-  PROMOTE_INVALID,
   ReactiveNode,
   Reentrant,
   Tracking,
@@ -24,25 +22,25 @@ describe("Reactive runtime - invalidateSub transition matrix", () => {
     {
       name: "clean consumer promotes to Changed",
       initial: Consumer,
-      promote: PROMOTE_CHANGED,
+      promote: Changed,
       expected: Consumer | Changed,
     },
     {
       name: "clean consumer promotes to Invalid",
       initial: Consumer,
-      promote: PROMOTE_INVALID,
+      promote: Invalid,
       expected: Consumer | Invalid,
     },
     {
       name: "clean watcher promotes and keeps watcher bit",
       initial: Watcher,
-      promote: PROMOTE_CHANGED,
+      promote: Changed,
       expected: Watcher | Changed,
     },
     {
       name: "stale Visited is cleared on fast path",
       initial: Consumer | Reentrant,
-      promote: PROMOTE_CHANGED,
+      promote: Changed,
       expected: Consumer | Changed,
     },
   ])("$name", ({ initial, promote, expected }) => {
@@ -75,7 +73,7 @@ describe("Reactive runtime - invalidateSub transition matrix", () => {
     const edge = linkEdge(source, subscriber);
 
     expect(
-      invalidateSub(edge, subscriber, subscriber.state, PROMOTE_CHANGED),
+      invalidateSub(edge, subscriber, subscriber.state, Changed),
     ).toBe(0);
     expect(subscriber.state).toBe(initial);
   });
@@ -88,7 +86,7 @@ describe("Reactive runtime - invalidateSub transition matrix", () => {
     const edge = linkEdge(source, subscriber);
 
     expect(
-      invalidateSub(edge, subscriber, subscriber.state, PROMOTE_CHANGED),
+      invalidateSub(edge, subscriber, subscriber.state, Changed),
     ).toBe(0);
     expect(subscriber.state).toBe(Consumer | Tracking);
   });
@@ -130,13 +128,13 @@ describe("Reactive runtime - invalidateSub transition matrix", () => {
     ];
     const edges = sources.map((source) => linkEdge(source, subscriber));
     const initial = subscriber.state;
-    subscriber.lastInTail = edges[tailIndex]!;
+    subscriber.tailIn = edges[tailIndex]!;
 
     const nextState = invalidateSub(
       edges[inboundIndex]!,
       subscriber,
       subscriber.state,
-      PROMOTE_CHANGED,
+      Changed,
     );
 
     if (expectedChanged) {

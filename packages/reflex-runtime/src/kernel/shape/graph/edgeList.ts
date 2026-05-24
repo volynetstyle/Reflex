@@ -1,6 +1,6 @@
 import type { ReactiveEdge } from "../edge";
 import type ReactiveNode from "../node";
-import { bumpNodeTopologyVersion } from "../node";
+import { bumpNodes } from "../node";
 
 /** Insert `edge` into `to`'s incoming list right after `after` (or at head). */
 export function attachIncomingEdgeAfter(
@@ -21,15 +21,15 @@ export function attachIncomingEdgeAfter(
     to.firstIn = edge;
   }
 
-  bumpNodeTopologyVersion(to);
+  bumpNodes(to);
 }
 
 export function detachIncomingEdge(to: ReactiveNode, edge: ReactiveEdge): void {
   const prev = edge.prevIn;
   const next = edge.nextIn;
 
-  if (to.lastInTail === edge) {
-    to.lastInTail = prev;
+  if (to.tailIn === edge) {
+    to.tailIn = prev;
   }
 
   if (prev !== null) prev.nextIn = next;
@@ -38,7 +38,7 @@ export function detachIncomingEdge(to: ReactiveNode, edge: ReactiveEdge): void {
   if (next !== null) next.prevIn = prev;
   else to.lastIn = prev;
 
-  bumpNodeTopologyVersion(to);
+  bumpNodes(to);
 }
 
 /** Splice `edge` out of `from`'s outgoing list (does not touch the in-list). */
@@ -92,5 +92,5 @@ export function moveIncomingEdgeAfterUnchecked(
   if (after) after.nextIn = edge;
   else to.firstIn = edge;
 
-  bumpNodeTopologyVersion(to);
+  bumpNodes(to);
 }

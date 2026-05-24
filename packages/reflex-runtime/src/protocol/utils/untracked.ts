@@ -1,4 +1,4 @@
-import { activeConsumer, setActiveConsumer } from "../../kernel";
+import { currentConsumer, setCurrentConsumer } from "../../kernel";
 
 /**
  * Execute a callback function without registering reactive dependencies.
@@ -29,21 +29,21 @@ const computed = createConsumer(() => {
 
 // If signal changes, computed re-executes (has dependency)
 // But untracked read inside doesn't affect this
- * @invariant context.activeConsumer is null during fn() execution
- * @invariant context.activeConsumer is restored after fn() returns/throws
+ * @invariant context.currentConsumer is null during fn() execution
+ * @invariant context.currentConsumer is restored after fn() returns/throws
  * @cost O(1) for context manipulation
  */
 export function untracked<T>(fn: () => T): T {
   // Save the current active computation context
-  const prev = activeConsumer;
+  const prev = currentConsumer;
   // Clear the active context so reads don't create dependencies
-  setActiveConsumer(null);
+  setCurrentConsumer(null);
 
   try {
     // Execute the callback in untracked context
     return fn();
   } finally {
     // Always restore the previous context
-    setActiveConsumer(prev);
+    setCurrentConsumer(prev);
   }
 }

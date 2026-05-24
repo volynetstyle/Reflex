@@ -196,14 +196,14 @@ try {
   const esm = runScenario(
     appDir,
     "scenario.mjs",
-    'import * as runtime from "@volynets/reflex-runtime";',
+    'import * as publicRuntime from "@volynets/reflex-runtime";\nimport * as internalRuntime from "@volynets/reflex-runtime/internal";\nconst runtime = { ...publicRuntime, ...internalRuntime };',
     "esm",
     "esm",
   );
   const cjs = runScenario(
     appDir,
     "scenario.cjs",
-    'const runtime = require("@volynets/reflex-runtime");',
+    'const runtime = { ...require("@volynets/reflex-runtime"), ...require("@volynets/reflex-runtime/internal") };',
     "cjs",
     "cjs",
   );

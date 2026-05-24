@@ -70,9 +70,9 @@ function createReflexFixtures(runtime) {
     readProducer,
     resetState,
     runWatcher,
-    setHooks,
-    setOptions,
-    setRuntimeHooks,
+    setHostHooks,
+    setRuntimeContextOptions,
+    setInternalHooks,
     writeProducer,
   } = runtime;
 
@@ -81,11 +81,11 @@ function createReflexFixtures(runtime) {
   return {
     reset() {
       resetState();
-      setRuntimeHooks?.();
-      setOptions?.({});
+      setInternalHooks?.();
+      setRuntimeContextOptions?.({});
       scheduler.flush(noop);
-      setHooks({
-        onSinkInvalidated(node) {
+      setHostHooks({
+        sinkInvalidatedDispatcher(node) {
           scheduler.enqueue(node);
         },
       });

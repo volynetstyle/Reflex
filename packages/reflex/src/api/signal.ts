@@ -1,4 +1,4 @@
-import type { ReactiveNode } from "@volynets/reflex-runtime";
+import type { ReactiveNode } from "@volynets/reflex-runtime/internal";
 import { readProducer, writeProducer } from "@volynets/reflex-runtime";
 import { createSignalNode } from "../infra/factory";
 import {

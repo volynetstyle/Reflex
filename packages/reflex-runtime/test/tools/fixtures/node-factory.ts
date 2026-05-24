@@ -3,7 +3,7 @@ import {
   PRODUCER_INITIAL_STATE,
   ReactiveNode,
   WATCHER_INITIAL_STATE,
-} from "../../../src";
+} from "../../../src/internal";
 export function createProducer<T>(value: T): ReactiveNode<T> {
   return new ReactiveNode(value, null, PRODUCER_INITIAL_STATE);
 }

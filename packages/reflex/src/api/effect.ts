@@ -1,11 +1,10 @@
 import {
   disposeWatcher,
-  Scheduled,
   runWatcher,
   untracked,
   watcher,
 } from "@volynets/reflex-runtime";
-import type { ReactiveNode } from "@volynets/reflex-runtime";
+import { Scheduled, type ReactiveNode } from "@volynets/reflex-runtime/internal";
 import { createWatcherNode, createWatcherRankedrNode } from "../infra/factory";
 import {
   devassertEffectFn,

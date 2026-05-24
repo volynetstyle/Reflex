@@ -32,7 +32,7 @@ export interface StaticTransitionPlan {
 
 interface NodeTopologySnapshot {
   node: ReactiveNode;
-  topologyVersion: number;
+  s: number;
 }
 
 class StaticTopologyGuard implements TopologyGuard {
@@ -53,14 +53,14 @@ class StaticTopologyGuard implements TopologyGuard {
   ): boolean {
     for (let i = nodeStart; i < nodeEnd; i++) {
       const snapshot = this.nodes[i]!;
-      if (snapshot.node.topologyVersion !== snapshot.topologyVersion) {
+      if (snapshot.node.s !== snapshot.s) {
         return false;
       }
     }
 
     for (let i = sinkStart; i < sinkEnd; i++) {
       const snapshot = this.sinks[i]!;
-      if (snapshot.node.topologyVersion !== snapshot.topologyVersion) {
+      if (snapshot.node.s !== snapshot.s) {
         return false;
       }
     }
@@ -159,7 +159,7 @@ function createSnapshots(
     const node = nodes[i]!;
     snapshots[i] = {
       node,
-      topologyVersion: node.topologyVersion,
+      s: node.s,
     };
   }
 

@@ -1,4 +1,4 @@
-import { Scheduled } from "@volynets/reflex-runtime";
+import { Scheduled } from "@volynets/reflex-runtime/internal";
 
 export const enum EffectSchedulerMode {
   Flush = 0,

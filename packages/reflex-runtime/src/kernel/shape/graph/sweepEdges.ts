@@ -1,7 +1,7 @@
 import type { ReactiveEdge } from "../edge";
 import { clearReactiveEdgeLinks } from "../edge";
 import type ReactiveNode from "../node";
-import { bumpNodeTopologyVersion } from "../node";
+import { bumpNodes } from "../node";
 import { detachIncomingEdge, detachOutgoingEdge } from "./edgeList";
 
 export function unlinkDetachedIncomingEdgeSequence(
@@ -16,7 +16,7 @@ export function unlinkDetachedIncomingEdgeSequence(
     edge = next;
   }
 
-  if (to !== null) bumpNodeTopologyVersion(to);
+  if (to !== null) bumpNodes(to);
 }
 
 /**
@@ -28,15 +28,15 @@ export function unlinkAllSources(node: ReactiveNode): void {
 
   if (edge === null) {
     node.lastIn = null;
-    node.lastInTail = null;
+    node.tailIn = null;
     return;
   }
 
-  bumpNodeTopologyVersion(node);
+  bumpNodes(node);
 
   node.firstIn = null;
   node.lastIn = null;
-  node.lastInTail = null;
+  node.tailIn = null;
 
   do {
     const next: ReactiveEdge | null = edge.nextIn;
@@ -68,8 +68,8 @@ export function unlinkAllSubscribers(node: ReactiveNode): void {
     const next: ReactiveEdge | null = edge.nextOut;
     const to = edge.to;
 
-    if (to.lastInTail === edge) {
-      to.lastInTail = edge.prevIn;
+    if (to.tailIn === edge) {
+      to.tailIn = edge.prevIn;
     }
 
     detachIncomingEdge(to, edge);

@@ -9,8 +9,8 @@ import {
   readProducer,
   resetState,
   runWatcher,
-  setOptions,
-  setRuntimeHooks,
+  setRuntimeContextOptions,
+  setInternalHooks,
   writeProducer,
 } from "../build/esm/index.js";
 import {
@@ -78,14 +78,14 @@ function watcher(compute) {
 
 function withRuntime(fn) {
   resetState();
-  setRuntimeHooks();
-  setOptions();
+  setInternalHooks();
+  setRuntimeContextOptions();
   try {
     return fn();
   } finally {
     resetState();
-    setRuntimeHooks();
-    setOptions();
+    setInternalHooks();
+    setRuntimeContextOptions();
   }
 }
 
@@ -340,7 +340,7 @@ const benches = [
         const source = producer(0);
         const watchers = [];
         let invalidated = 0;
-        setRuntimeHooks(() => {
+        setInternalHooks(() => {
           invalidated += 1;
         });
         for (let i = 0; i < 1000; i += 1) {
@@ -667,8 +667,8 @@ function trackReadBench(bench, getOrder, fanIn, options = {}) {
       return sum;
     });
 
-    setOptions({
-      trackReadFallback: createInstrumentedFallback(counters, options),
+    setRuntimeContextOptions({
+      readTrackingStrategy: createInstrumentedFallback(counters, options),
     });
 
     readConsumer(root);
@@ -720,8 +720,8 @@ function trackReadMissAddEdgeBench(bench, fanIn) {
       return sum;
     });
 
-    setOptions({
-      trackReadFallback: createInstrumentedFallback(counters),
+    setRuntimeContextOptions({
+      readTrackingStrategy: createInstrumentedFallback(counters),
     });
 
     readConsumer(root);
@@ -763,8 +763,8 @@ function trackReadDuplicateBench(bench, fanIn) {
       return sum;
     });
 
-    setOptions({
-      trackReadFallback: createInstrumentedFallback(counters),
+    setRuntimeContextOptions({
+      readTrackingStrategy: createInstrumentedFallback(counters),
     });
 
     readConsumer(root);

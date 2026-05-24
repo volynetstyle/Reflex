@@ -1,12 +1,12 @@
 import {
-  getActiveConsumer,
-  getPropagationDepth,
-} from "@volynets/reflex-runtime";
+  getCurrentConsumer,
+  getPropagationScopeDepth,
+} from "@volynets/reflex-runtime/internal";
 import type { SchedulerCore } from "./scheduler.types";
 import { Idle } from ".";
 
 export function isContextSettled(): boolean {
-  return getActiveConsumer() === null && getPropagationDepth() === 0;
+  return getCurrentConsumer() === null && getPropagationScopeDepth() === 0;
 }
 
 export function isRuntimeInactive(core: SchedulerCore): boolean {

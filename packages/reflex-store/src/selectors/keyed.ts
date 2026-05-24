@@ -5,7 +5,7 @@ import {
   runWatcher,
   untracked,
   writeProducer,
-} from "@volynets/reflex-runtime";
+} from "@volynets/reflex-runtime/internal";
 import type { Accessor } from "../types";
 import {
   createSignalNode,

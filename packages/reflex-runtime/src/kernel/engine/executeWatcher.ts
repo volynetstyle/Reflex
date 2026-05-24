@@ -2,11 +2,11 @@ import type { ReactiveNode } from "../shape";
 import { clearNodeComputing, markNodeComputing, Producer } from "../shape";
 import { cleanupStaleSources } from "./trackingContext";
 import {
-  activeConsumer,
-  advanceTrackingVersion,
+  currentConsumer,
+  advanceTrackingEpoch,
   defaultContext,
-  graphReduction,
-  setActiveConsumer,
+  graphReductionPolicy,
+  setCurrentConsumer,
 } from "../context";
 import { observeGraphReductionRun } from "../reduction";
 import {
@@ -17,12 +17,12 @@ import {
 } from "../dev";
 
 function prepareNodeExecution(node: ReactiveNode): ReactiveNode | null {
-  node.lastInTail = null;
+  node.tailIn = null;
   markNodeComputing(node);
-  advanceTrackingVersion();
+  advanceTrackingEpoch();
 
-  const prevActive = activeConsumer;
-  setActiveConsumer(node);
+  const prevActive = currentConsumer;
+  setCurrentConsumer(node);
 
   devRecordComputeStart(node, defaultContext);
 
@@ -33,7 +33,7 @@ function restoreNodeExecution(
   node: ReactiveNode,
   prevActive: ReactiveNode | null,
 ): void {
-  setActiveConsumer((node.state & Producer) !== 0 ? null : prevActive);
+  setCurrentConsumer((node.state & Producer) !== 0 ? null : prevActive);
   clearNodeComputing(node);
 }
 
@@ -58,8 +58,9 @@ export function executeNodeComputation(node: ReactiveNode): unknown {
   }
 
   restoreNodeExecution(node, prevActive);
-  if (node.lastInTail !== node.lastIn) cleanupStaleSources(node);
-  if (graphReduction.enabled) observeGraphReductionRun(node, graphReduction);
+  if (node.tailIn !== node.lastIn) cleanupStaleSources(node);
+  const reductionPolicy = node.graphReductionPolicy ?? graphReductionPolicy;
+  if (reductionPolicy.enabled) observeGraphReductionRun(node, reductionPolicy);
 
   devRecordComputeFinish(node, result, defaultContext);
 

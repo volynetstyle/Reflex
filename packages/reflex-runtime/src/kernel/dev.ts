@@ -1,5 +1,5 @@
 import { recordDebugEvent, collectDebugNodeRefs } from "../debug/debug.runtime";
-import { activeConsumer, type RuntimeDebugContext } from "./context";
+import { currentConsumer, type RuntimeDebugContext } from "./context";
 import { Computing, type ReactiveEdge } from "./shape";
 import type ReactiveNode from "./shape/node";
 
@@ -123,7 +123,7 @@ export function devRecordReadProducer(
           value,
         },
       },
-      activeConsumer,
+      currentConsumer,
     ),
   );
 }

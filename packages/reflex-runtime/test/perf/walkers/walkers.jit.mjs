@@ -15,7 +15,7 @@ import {
   readProducer,
   resetState,
   runWatcher,
-  setHooks,
+  setHostHooks,
   writeProducer,
 } from "../../../build/esm/index.js";
 import { recompute } from "../../../build/esm/kernel/engine/computeNode.js";
@@ -42,7 +42,7 @@ function createConsumer(compute) {
 
 function resetRuntime() {
   resetState();
-  setHooks({});
+  setHostHooks({});
 }
 
 function clearWalkerState(nodes) {
@@ -133,7 +133,7 @@ function buildTrackedPrefix(fanIn, trackedCount) {
 
   function resetTrackingState() {
     target.state = TRACKING_CONSUMER_STATE;
-    target.lastInTail = trackedEdge;
+    target.tailIn = trackedEdge;
   }
 
   return {
@@ -173,7 +173,7 @@ function buildTrackedPrefixStress(fanIn, depsTailIndex, edgeIndex) {
   return {
     run() {
       target.state = TRACKING_CONSUMER_STATE;
-      target.lastInTail = depsTail;
+      target.tailIn = depsTail;
       propagate(targetEdge, Changed);
       return target.state;
     },
@@ -235,13 +235,13 @@ function buildPropagateBranchingTrackingMix(width, depth) {
     for (let i = 0; i < trackingAccept.length; i += 1) {
       const entry = trackingAccept[i];
       entry.node.state = TRACKING_CONSUMER_STATE;
-      entry.node.lastInTail = entry.depsTail;
+      entry.node.tailIn = entry.depsTail;
     }
 
     for (let i = 0; i < trackingReject.length; i += 1) {
       const entry = trackingReject[i];
       entry.node.state = TRACKING_CONSUMER_STATE;
-      entry.node.lastInTail = entry.depsTail;
+      entry.node.tailIn = entry.depsTail;
     }
   }
 
@@ -842,7 +842,7 @@ function buildWriteProducerWideFanout(width) {
 function buildSharedFanoutWatchers(width) {
   let invalidations = 0;
   resetRuntime({
-    onSinkInvalidated() {
+    sinkInvalidatedDispatcher() {
       invalidations += 1;
     },
   });
@@ -883,7 +883,7 @@ function buildSharedFanoutWatchers(width) {
 function buildRunWatcherSharedFanout(width) {
   let invalidations = 0;
   resetRuntime({
-    onSinkInvalidated() {
+    sinkInvalidatedDispatcher() {
       invalidations += 1;
     },
   });

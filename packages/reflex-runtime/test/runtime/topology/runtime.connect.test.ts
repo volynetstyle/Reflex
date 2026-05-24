@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ReactiveNode, restoreContext, saveContext, setOptions } from "../../runtime.test_utils";
+import { ReactiveNode, restoreContext, saveContext, setRuntimeContextOptions } from "../../runtime.test_utils";
 import type { ReactiveNodeState } from "../../../src/kernel";
 import {
   Consumer,
@@ -8,14 +8,14 @@ import {
   linkEdge,
   moveIncomingEdgeAfter,
   reuseIncomingEdgeFromSuffixOrCreate,
-  setTrackingVersion,
+  setTrackingEpoch,
   trackReadActive,
   unlinkEdge,
 } from "../../../src/kernel";
 import {
   expectGraphIntegrity,
   expectIncomingEdges,
-  expectLastInTail,
+  expecttailIn,
   expectOutgoingEdges,
 } from "../../runtime.test_utils";
 
@@ -110,7 +110,7 @@ describe("Reactive runtime - edge wiring", () => {
     expectGraphIntegrity([source, left, middle, right]);
   });
 
-  it("keeps lastInTail separate from the physical incoming tail when unlinking", () => {
+  it("keeps tailIn separate from the physical incoming tail when unlinking", () => {
     const a = createNode(Producer);
     const b = createNode(Producer);
     const c = createNode(Producer);
@@ -120,10 +120,10 @@ describe("Reactive runtime - edge wiring", () => {
     const bb = linkEdge(b, target);
     const cb = linkEdge(c, target);
 
-    target.lastInTail = bb;
+    target.tailIn = bb;
     unlinkEdge(cb);
 
-    expectLastInTail(target, bb);
+    expecttailIn(target, bb);
     expectIncomingEdges(target, [ab, bb]);
     expectGraphIntegrity([a, b, c, target]);
   });
@@ -180,8 +180,8 @@ describe("Reactive runtime - edge wiring", () => {
     const bb = linkEdge(b, target);
     const cb = linkEdge(c, target);
     const snapshot = saveContext();
-    setOptions({
-      trackReadFallback(source, consumer, prev, nextExpected) {
+    setRuntimeContextOptions({
+      readTrackingStrategy(source, consumer, prev, nextExpected) {
         calls.push({ source, consumer, prev, nextExpected });
         return reuseIncomingEdgeFromSuffixOrCreate(
           source,
@@ -192,12 +192,12 @@ describe("Reactive runtime - edge wiring", () => {
       },
     });
 
-    target.lastInTail = ab;
+    target.tailIn = ab;
     trackReadActive(c, target);
     trackReadActive(c, target);
 
     expect(calls).toEqual([]);
-    expectLastInTail(target, cb);
+    expecttailIn(target, cb);
     expectIncomingEdges(target, [ab, cb, bb]);
     expectGraphIntegrity([a, b, c, target]);
     restoreContext(snapshot);
@@ -225,8 +225,8 @@ describe("Reactive runtime - edge wiring", () => {
     const eb = linkEdge(e, target);
     const fb = linkEdge(f, target);
     const snapshot = saveContext();
-    setOptions({
-      trackReadFallback(source, consumer, prev, nextExpected) {
+    setRuntimeContextOptions({
+      readTrackingStrategy(source, consumer, prev, nextExpected) {
         calls.push({ source, consumer, prev, nextExpected });
         return reuseIncomingEdgeFromSuffixOrCreate(
           source,
@@ -237,7 +237,7 @@ describe("Reactive runtime - edge wiring", () => {
       },
     });
 
-    target.lastInTail = ab;
+    target.tailIn = ab;
     trackReadActive(e, target);
 
     expect(calls).toHaveLength(1);
@@ -247,7 +247,7 @@ describe("Reactive runtime - edge wiring", () => {
       prev: ab,
       nextExpected: bb,
     });
-    expectLastInTail(target, eb);
+    expecttailIn(target, eb);
     expectIncomingEdges(target, [ab, eb, bb, cb, db, fb]);
     expectGraphIntegrity([a, b, c, d, e, f, target]);
     restoreContext(snapshot);
@@ -270,8 +270,8 @@ describe("Reactive runtime - edge wiring", () => {
     const bb = linkEdge(b, target);
     const cb = linkEdge(c, target);
 
-    setOptions({
-      trackReadFallback(source, consumer, prev, nextExpected) {
+    setRuntimeContextOptions({
+      readTrackingStrategy(source, consumer, prev, nextExpected) {
         calls.push({ source, consumer, prev, nextExpected });
         return reuseIncomingEdgeFromSuffixOrCreate(
           source,
@@ -282,11 +282,11 @@ describe("Reactive runtime - edge wiring", () => {
       },
     });
 
-    target.lastInTail = ab;
+    target.tailIn = ab;
     trackReadActive(c, target);
 
     expect(calls).toEqual([]);
-    expectLastInTail(target, cb);
+    expecttailIn(target, cb);
     expectIncomingEdges(target, [ab, cb, bb]);
     expectGraphIntegrity([a, b, c, target]);
     restoreContext(snapshot);
@@ -304,8 +304,8 @@ describe("Reactive runtime - edge wiring", () => {
     }> = [];
     const snapshot = saveContext();
 
-    setOptions({
-      trackReadFallback(source, consumer, prev, nextExpected) {
+    setRuntimeContextOptions({
+      readTrackingStrategy(source, consumer, prev, nextExpected) {
         calls.push({ source, consumer, prev, nextExpected });
         return reuseIncomingEdgeFromSuffixOrCreate(
           source,
@@ -319,8 +319,8 @@ describe("Reactive runtime - edge wiring", () => {
     const ab = linkEdge(a, target, null, 1);
     const bb = linkEdge(b, target, ab, 1);
 
-    target.lastInTail = ab;
-    setTrackingVersion(2);
+    target.tailIn = ab;
+    setTrackingEpoch(2);
 
     trackReadActive(b, target);
     trackReadActive(a, target);
@@ -328,7 +328,7 @@ describe("Reactive runtime - edge wiring", () => {
 
     expect(calls).toEqual([]);
     expectIncomingEdges(target, [ab, bb]);
-    expectLastInTail(target, bb);
+    expecttailIn(target, bb);
     expectOutgoingEdges(a, [ab]);
     expectOutgoingEdges(b, [bb]);
     expectGraphIntegrity([a, b, target]);
@@ -341,16 +341,16 @@ describe("Reactive runtime - edge wiring", () => {
     const target = createNode(Consumer);
     const snapshot = saveContext();
 
-    setTrackingVersion(1);
+    setTrackingEpoch(1);
     const staleSnapshot = saveContext();
     const edge = linkEdge(a, target, null, 1);
-    setTrackingVersion(2);
+    setTrackingEpoch(2);
     restoreContext(staleSnapshot);
-    target.lastInTail = null;
+    target.tailIn = null;
 
     trackReadActive(a, target);
 
-    expectLastInTail(target, edge);
+    expecttailIn(target, edge);
     expectIncomingEdges(target, [edge]);
     restoreContext(snapshot);
   });
