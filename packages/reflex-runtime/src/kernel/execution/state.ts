@@ -13,6 +13,7 @@ import type { ReactiveNode } from "../shape";
 import { RUNTIME_CONTEXT_BRAND } from "./types";
 import type {
   ReactiveSettledHook,
+  EffectCleanupHook,
   ReadTrackingStrategy,
   RuntimeContext,
   RuntimeContextOptions,
@@ -31,6 +32,7 @@ export let internalSinkInvalidatedHook: SinkInvalidatedHook = undefined;
 export let internalReactiveSettledHook: ReactiveSettledHook = undefined;
 export let hostSinkInvalidatedHook: SinkInvalidatedHook = undefined;
 export let hostReactiveSettledHook: ReactiveSettledHook = undefined;
+export let hostEffectCleanupHook: EffectCleanupHook = undefined;
 let activeRuntimeContext: RuntimeContext;
 
 export function createRuntimeContext(
@@ -51,6 +53,7 @@ export function createRuntimeContext(
     internalReactiveSettledHook: undefined,
     hostSinkInvalidatedHook: undefined,
     hostReactiveSettledHook: undefined,
+    hostEffectCleanupHook: undefined,
   };
 
   return context;
@@ -71,6 +74,7 @@ export function activateRuntimeContext(context: RuntimeContext): void {
   internalReactiveSettledHook = context.internalReactiveSettledHook;
   hostSinkInvalidatedHook = context.hostSinkInvalidatedHook;
   hostReactiveSettledHook = context.hostReactiveSettledHook;
+  hostEffectCleanupHook = context.hostEffectCleanupHook;
 }
 
 export function commitRuntimeContext(
@@ -85,6 +89,7 @@ export function commitRuntimeContext(
   context.internalReactiveSettledHook = internalReactiveSettledHook;
   context.hostSinkInvalidatedHook = hostSinkInvalidatedHook;
   context.hostReactiveSettledHook = hostReactiveSettledHook;
+  context.hostEffectCleanupHook = hostEffectCleanupHook;
 }
 
 export function getActiveRuntimeContext(): RuntimeContext {
@@ -175,11 +180,22 @@ export function getReactiveSettledHook(): ReactiveSettledHook {
   return hostReactiveSettledHook;
 }
 
+export function getEffectCleanupHook(): EffectCleanupHook {
+  return hostEffectCleanupHook;
+}
+
 export function setReactiveSettledHook(
   hook: ReactiveSettledHook = undefined,
 ): void {
   hostReactiveSettledHook = normalizeHook<ReactiveSettledHook>(hook);
   activeRuntimeContext.hostReactiveSettledHook = hostReactiveSettledHook;
+}
+
+export function setEffectCleanupHook(
+  hook: EffectCleanupHook = undefined,
+): void {
+  hostEffectCleanupHook = normalizeHook<EffectCleanupHook>(hook);
+  activeRuntimeContext.hostEffectCleanupHook = hostEffectCleanupHook;
 }
 
 export function reloadActiveContextIfCurrent(context: RuntimeContext): void {

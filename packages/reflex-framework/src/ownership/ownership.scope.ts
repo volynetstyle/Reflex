@@ -5,15 +5,33 @@ import { prependChild } from "./ownership.tree";
 
 export type Scope = OwnershipNode;
 
+export interface OwnerHookState {
+  currentHookContext: unknown | null;
+  componentHookDepth: number;
+  warnedHooks: Set<string>;
+}
+
 export interface OwnerContext {
   currentOwner: Scope | null;
+  hookState: OwnerHookState;
+  effectCleanupSuppressionDepth: number;
 }
 
 let activeOwnerContext: OwnerContext | null = null;
 
+function createOwnerHookState(): OwnerHookState {
+  return {
+    currentHookContext: null,
+    componentHookDepth: 0,
+    warnedHooks: new Set<string>(),
+  };
+}
+
 export function createOwnerContext(): OwnerContext {
   return Object.preventExtensions({
     currentOwner: null,
+    hookState: createOwnerHookState(),
+    effectCleanupSuppressionDepth: 0,
   });
 }
 

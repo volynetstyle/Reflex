@@ -9,6 +9,7 @@ export const RUNTIME_CONTEXT_BRAND: unique symbol = Symbol("RuntimeContext");
 export interface RuntimeHostHooks {
   sinkInvalidatedDispatcher?(node: ReactiveNode): void;
   reactiveSettledDispatcher?(): void;
+  effectCleanupRegistrar?(dispose: () => void): void;
 }
 
 export type ReadTrackingStrategy = (
@@ -28,6 +29,8 @@ export type SinkInvalidatedHook =
   RuntimeHostHooks["sinkInvalidatedDispatcher"];
 export type ReactiveSettledHook =
   RuntimeHostHooks["reactiveSettledDispatcher"];
+export type EffectCleanupHook =
+  RuntimeHostHooks["effectCleanupRegistrar"];
 
 export interface RuntimeContext {
   readonly [RUNTIME_CONTEXT_BRAND]: true;
@@ -40,6 +43,7 @@ export interface RuntimeContext {
   internalReactiveSettledHook: ReactiveSettledHook;
   hostSinkInvalidatedHook: SinkInvalidatedHook;
   hostReactiveSettledHook: ReactiveSettledHook;
+  hostEffectCleanupHook: EffectCleanupHook;
 }
 
 export interface RuntimeContextSnapshot {
@@ -52,6 +56,7 @@ export interface RuntimeContextSnapshot {
   internalReactiveSettledHook: ReactiveSettledHook;
   hostSinkInvalidatedHook: SinkInvalidatedHook;
   hostReactiveSettledHook: ReactiveSettledHook;
+  hostEffectCleanupHook: EffectCleanupHook;
 }
 
 export interface RuntimeDebugContext {

@@ -129,7 +129,7 @@ reflex-framework/ownership/*
   - context
   - cleanup registration
   - subtree disposal
-  - reactive bridge used by DOM mounts
+  - ownership-bound effects used by DOM mounts
 ```
 
 ## End-to-End Lifecycle

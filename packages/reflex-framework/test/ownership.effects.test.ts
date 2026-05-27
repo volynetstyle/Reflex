@@ -9,11 +9,9 @@ import {
   runWithScope,
   runInOwnershipScope,
   useOwnedEffect,
-  createOwnershipReactiveBridge,
-  type Cleanup,
 } from "../src";
 
-describe("ownership reactive bridge", () => {
+describe("ownership effects", () => {
   it("registers owned effects created inside reactive scopes", () => {
     const rt = createRuntime();
     const [source, setSource] = signal("a");
@@ -101,34 +99,5 @@ describe("ownership reactive bridge", () => {
     rt.flush();
 
     expect(log).toEqual(["low:2", "high:2"]);
-  });
-
-  it("adapts ownership to custom reactive engines through a thin adapter", () => {
-    const bridge = createOwnershipReactiveBridge({
-      effect(fn) {
-        const cleanup = (fn() ?? (() => {})) as Cleanup;
-        return cleanup;
-      },
-    });
-
-    const owner = createOwnerContext();
-    const root = createScope();
-    const log: string[] = [];
-
-    bridge.runInOwnershipScope(owner, root, () => {
-      bridge.useEffect({ owner }, () => {
-        log.push("owned:run");
-
-        return () => {
-          log.push("owned:cleanup");
-        };
-      });
-    });
-
-    expect(log).toEqual(["owned:run"]);
-
-    disposeScope(root);
-
-    expect(log).toEqual(["owned:run", "owned:cleanup"]);
   });
 });

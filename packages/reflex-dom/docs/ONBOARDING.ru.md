@@ -63,7 +63,7 @@ pnpm --filter reflex-dom exec vitest run test/render.ssr-hydration.test.tsx
 - `packages/reflex`
   публичная реактивная facade API, которой чаще всего пользуется приложение;
 - `packages/reflex-framework`
-  ownership, JSX runtime и bridge-слой между реактивностью и renderer'ом.
+  ownership, JSX runtime и ownership effects для связи реактивности с renderer'ом.
 
 Практический вывод:
 

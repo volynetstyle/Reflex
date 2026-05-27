@@ -1,5 +1,5 @@
 import type { Cleanup } from "../types/core";
-import { useOwnedEffect } from "../ownership/bridge";
+import { useOwnedEffect } from "../ownership/effects";
 import { runWithOwner } from "../ownership/ownership.scope";
 import {
   RenderEffectPhase,

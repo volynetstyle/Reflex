@@ -1,13 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
-import { createRuntime } from "@volynets/reflex";
+import { createRuntime, signal } from "@volynets/reflex";
 import {
   createScope,
   disposeScope,
   useComponentDidMount,
   useComponentDidUnmount,
+  useComputed,
   useEffect,
   useEffectOnce,
   useEffectRender,
+  useMemo,
   useSignal,
   runWithComponentHooks,
   runInOwnershipScope,
@@ -129,5 +131,78 @@ describe("framework hooks", () => {
     disposeScope(root);
 
     expect(log).toEqual(["mount", "unmount"]);
+  });
+
+  it("keeps disposed computed hooks from recalculating", () => {
+    const owner = getHookOwner();
+    const root = createScope();
+    const [source, setSource] = signal(1);
+    const compute = vi.fn(() => source() * 2);
+    let doubled: Computed<number>;
+
+    runInOwnershipScope(owner, root, () => {
+      runWithComponentHooks({ owner, scope: root }, () => {
+        doubled = useComputed(compute);
+      });
+    });
+
+    expect(doubled!()).toBe(2);
+    expect(compute).toHaveBeenCalledTimes(1);
+
+    disposeScope(root);
+    setSource(2);
+
+    expect(doubled!()).toBe(2);
+    expect(compute).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps disposed memo hooks on their last materialized value", () => {
+    const owner = getHookOwner();
+    const root = createScope();
+    const [source, setSource] = signal(1);
+    const compute = vi.fn(() => source() * 3);
+    let tripled: Memo<number>;
+
+    runInOwnershipScope(owner, root, () => {
+      runWithComponentHooks({ owner, scope: root }, () => {
+        tripled = useMemo(compute);
+      });
+    });
+
+    expect(tripled!()).toBe(3);
+    expect(compute).toHaveBeenCalledTimes(1);
+
+    disposeScope(root);
+    setSource(2);
+
+    expect(tripled!()).toBe(3);
+    expect(compute).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not track useMemo warm-up in the active consumer", () => {
+    const rt = createRuntime();
+    const owner = getHookOwner();
+    const root = createScope();
+    const [source, setSource] = signal(1);
+    const effectSpy = vi.fn();
+
+    runInOwnershipScope(owner, root, () => {
+      useEffect(() => {
+        effectSpy();
+
+        runWithComponentHooks({ owner, scope: root }, () => {
+          useMemo(() => source() * 2);
+        });
+      });
+    });
+
+    expect(effectSpy).toHaveBeenCalledTimes(1);
+
+    setSource(2);
+    rt.flush();
+
+    expect(effectSpy).toHaveBeenCalledTimes(1);
+
+    disposeScope(root);
   });
 });

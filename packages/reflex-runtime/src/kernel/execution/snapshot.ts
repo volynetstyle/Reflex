@@ -23,6 +23,7 @@ export function saveRuntimeContext(
     internalReactiveSettledHook: context.internalReactiveSettledHook,
     hostSinkInvalidatedHook: context.hostSinkInvalidatedHook,
     hostReactiveSettledHook: context.hostReactiveSettledHook,
+    hostEffectCleanupHook: context.hostEffectCleanupHook,
   };
 }
 
@@ -46,6 +47,7 @@ export function restoreRuntimeContext(
   context.internalReactiveSettledHook = snapshot.internalReactiveSettledHook;
   context.hostSinkInvalidatedHook = snapshot.hostSinkInvalidatedHook;
   context.hostReactiveSettledHook = snapshot.hostReactiveSettledHook;
+  context.hostEffectCleanupHook = snapshot.hostEffectCleanupHook;
   reloadActiveContextIfCurrent(context);
 }
 

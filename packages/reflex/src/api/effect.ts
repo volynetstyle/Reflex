@@ -4,7 +4,11 @@ import {
   untracked,
   watcher,
 } from "@volynets/reflex-runtime";
-import { Scheduled, type ReactiveNode } from "@volynets/reflex-runtime/internal";
+import {
+  getEffectCleanupHook,
+  Scheduled,
+  type ReactiveNode,
+} from "@volynets/reflex-runtime/internal";
 import { createWatcherNode, createWatcherRankedrNode } from "../infra/factory";
 import {
   devassertEffectFn,
@@ -15,15 +19,8 @@ import {
   wrapEffectFn,
 } from "./effect.dev";
 
-const EFFECT_CLEANUP_HOOK = Symbol.for("reflex.effectCleanupHook");
-
-type EffectCleanupHook = (dispose: Destructor) => void;
-type EffectCleanupGlobal = typeof globalThis & {
-  [EFFECT_CLEANUP_HOOK]?: EffectCleanupHook;
-};
-
 function registerEffectCleanup(dispose: Destructor): void {
-  (globalThis as EffectCleanupGlobal)[EFFECT_CLEANUP_HOOK]?.(dispose);
+  getEffectCleanupHook()?.(dispose);
 }
 
 /**

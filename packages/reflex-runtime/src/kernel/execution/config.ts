@@ -42,6 +42,12 @@ function setHostHooksForContext(
   )
     ? normalizeHook(hooks.reactiveSettledDispatcher)
     : undefined;
+  context.hostEffectCleanupHook = Object.hasOwn(
+    hooks,
+    "effectCleanupRegistrar",
+  )
+    ? normalizeHook(hooks.effectCleanupRegistrar)
+    : undefined;
 }
 
 function setInternalHooksForContext(

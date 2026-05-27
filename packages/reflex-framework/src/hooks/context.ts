@@ -1,4 +1,10 @@
-import type { OwnerContext, Scope } from "../ownership/ownership.scope";
+import {
+  getActiveOwnerContext,
+  runWithOwner,
+  type OwnerContext,
+  type OwnerHookState,
+  type Scope,
+} from "../ownership/ownership.scope";
 import { getHookOwner } from "./owner";
 
 export interface RenderEffectScheduler {
@@ -33,9 +39,13 @@ interface ComponentHookOptions {
   renderEffectScheduler?: RenderEffectScheduler | null;
 }
 
-let componentHookDepth = 0;
-let currentHookContext: ComponentHookContext | null = null;
-const warnedHooks = new Set<string>();
+function getCurrentHookState(): OwnerHookState {
+  return (getActiveOwnerContext() ?? getHookOwner()).hookState;
+}
+
+function getCurrentHookContext(): ComponentHookContext | null {
+  return getCurrentHookState().currentHookContext as ComponentHookContext | null;
+}
 
 export function runWithComponentHooks<T>(fn: () => T): T;
 export function runWithComponentHooks<T>(
@@ -53,57 +63,73 @@ export function runWithComponentHooks<T>(
   }
 
   const options = typeof optionsOrFn === "function" ? undefined : optionsOrFn;
-  const owner = options?.owner ?? getHookOwner();
-  const previousHookContext = currentHookContext;
+  const owner = options?.owner ?? getActiveOwnerContext() ?? getHookOwner();
+  const scope = options?.scope ?? owner.currentOwner;
+  const hookState = owner.hookState;
+  const previousHookContext = hookState.currentHookContext;
 
-  currentHookContext = {
-    hookIndex: 0,
-    owner,
-    scope: options?.scope ?? owner.currentOwner,
-    renderEffectScheduler:
-      options?.renderEffectScheduler ?? noopRenderEffectScheduler,
-  };
-  componentHookDepth++;
+  return runWithOwner(owner, scope, () => {
+    hookState.currentHookContext = {
+      hookIndex: 0,
+      owner,
+      scope,
+      renderEffectScheduler:
+        options?.renderEffectScheduler ?? noopRenderEffectScheduler,
+    };
+    hookState.componentHookDepth++;
 
-  try {
-    return fn();
-  } finally {
-    componentHookDepth--;
-    currentHookContext = previousHookContext;
-  }
+    try {
+      return fn();
+    } finally {
+      hookState.componentHookDepth--;
+      hookState.currentHookContext = previousHookContext;
+    }
+  });
 }
 
 export function assertHookUsage(hookName: string): void {
   if (!__DEV__) return;
 
-  if (componentHookDepth > 0 || warnedHooks.has(hookName)) return;
+  const hookState = getCurrentHookState();
 
-  warnedHooks.add(hookName);
+  if (
+    hookState.componentHookDepth > 0 ||
+    hookState.warnedHooks.has(hookName)
+  ) {
+    return;
+  }
+
+  hookState.warnedHooks.add(hookName);
   console.warn(
     `${hookName}() should only be used while rendering a Reflex component.`,
   );
 }
 
 export function getCurrentHookOwner(): OwnerContext {
-  return currentHookContext?.owner ?? getHookOwner();
+  return (
+    getCurrentHookContext()?.owner ?? getActiveOwnerContext() ?? getHookOwner()
+  );
 }
 
 export function getCurrentHookScope(): Scope | null {
   const owner = getCurrentHookOwner();
-  return currentHookContext?.scope ?? owner.currentOwner;
+  return getCurrentHookContext()?.scope ?? owner.currentOwner;
 }
 
 export function isInsideComponentHooks(): boolean {
-  return componentHookDepth > 0;
+  return getCurrentHookState().componentHookDepth > 0;
 }
 
 export function getCurrentRenderEffectScheduler(): RenderEffectScheduler {
-  return currentHookContext?.renderEffectScheduler ?? noopRenderEffectScheduler;
+  return (
+    getCurrentHookContext()?.renderEffectScheduler ?? noopRenderEffectScheduler
+  );
 }
 
 export function consumeHookSlot(): number {
   assertHookUsage("hook");
 
+  const currentHookContext = getCurrentHookContext();
   if (currentHookContext === null) return 0;
 
   return currentHookContext.hookIndex++;

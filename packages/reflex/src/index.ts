@@ -14,7 +14,13 @@ export type {
  * API
  */
 export { signal } from "./api/signal";
-export { computed, memo } from "./api/derived";
+export {
+  computed,
+  createDisposableComputed,
+  memo,
+  warmDisposableComputed,
+} from "./api/derived";
+export type { DisposableComputed } from "./api/derived";
 export { effect, effectRanked, reaction, watch } from "./api/effect";
 export type { Reaction, ReactionFn, Watch } from "./api/effect";
 /**
