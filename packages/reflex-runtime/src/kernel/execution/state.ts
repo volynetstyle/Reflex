@@ -2,9 +2,7 @@ import {
   DEFAULT_GRAPH_REDUCTION_OPTIONS,
   DEFAULT_READ_TRACKING_STRATEGY,
 } from "./defaults";
-import {
-  normalizeHook,
-} from "./hooks";
+import { normalizeHook } from "./hooks";
 import {
   normalizeGraphReductionOptions,
   type NormalizedGraphReductionOptions,
@@ -159,10 +157,12 @@ export function setTrackingEpoch(epoch: number): void {
 }
 
 // @__INLINE__
-export function advanceTrackingEpoch(): number {
-  const nextEpoch = (trackingEpoch + 1) >>> 0;
-  trackingEpoch = nextEpoch === 0 ? 1 : nextEpoch;
-  return trackingEpoch;
+export function nextTrackingEpoch(): void {
+  trackingEpoch = (trackingEpoch + 1) >>> 0 || 1;
+}
+
+export function isNewer(a: number, b: number): boolean {
+  return ((a - b) | 0) > 0;
 }
 
 export function getSinkInvalidatedHook(): SinkInvalidatedHook {

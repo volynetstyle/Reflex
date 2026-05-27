@@ -8,7 +8,7 @@ import {
 } from "../dev";
 import { Computing, DIRTY_STATE, Reentrant, Tracking } from "../shape";
 import {
-  advanceTrackingEpoch,
+  nextTrackingEpoch,
   currentConsumer,
   defaultContext,
   graphReductionPolicy,
@@ -24,7 +24,7 @@ export function recompute(node: ReactiveNode): boolean {
 
   node.tailIn = null;
   node.state = (node.state & ~Reentrant) | Tracking | Computing;
-  advanceTrackingEpoch();
+  nextTrackingEpoch();
 
   const prevActive = currentConsumer;
   setCurrentConsumer(node);

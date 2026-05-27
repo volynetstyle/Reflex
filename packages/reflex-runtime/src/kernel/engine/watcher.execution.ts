@@ -3,7 +3,7 @@ import { clearNodeComputing, markNodeComputing } from "../shape";
 import { cleanupStaleSources } from "./tracking";
 import {
   currentConsumer,
-  advanceTrackingEpoch,
+  nextTrackingEpoch,
   defaultContext,
   graphReductionPolicy,
   setCurrentConsumer,
@@ -26,7 +26,7 @@ export function executeKnownNodeComputation(
 
   node.tailIn = null;
   markNodeComputing(node);
-  advanceTrackingEpoch();
+  nextTrackingEpoch();
   setCurrentConsumer(node);
 
   devRecordComputeStart(node, defaultContext);
