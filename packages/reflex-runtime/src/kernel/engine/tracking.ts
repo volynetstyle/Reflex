@@ -14,59 +14,37 @@ import {
 } from "../context";
 import type { ReactiveEdge } from "../shape";
 
+const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
+
+function hasTrackedPrefixEdge(
+  producer: ReactiveNode,
+  cursorEdge: ReactiveEdge,
+): boolean {
+  for (
+    let prefixEdge = cursorEdge.prevIn;
+    prefixEdge !== null;
+    prefixEdge = prefixEdge.prevIn
+  ) {
+    if (prefixEdge.from === producer) return true;
+  }
+
+  return false;
+}
+
 function trackReadSlowPath(
   producer: ReactiveNode,
   consumer: ReactiveNode,
   producerVersion: number,
   cursorEdge: ReactiveNode["tailIn"],
 ): void {
-  /**
-   * Slow path is entered only after the optimistic resolver failed.
-   *
-   * Important invariant:
-   * this function assumes that cheap cases were already checked by
-   * `trackReadResolved`, including:
-   *
-   * - cursor hit;
-   * - expected next-edge hit;
-   * - small lookahead reorders;
-   * - last-edge shortcut;
-   * - already-tracked prefix duplicates.
-   *
-   * Therefore this function is not a general-purpose tracking primitive.
-   * It is the fallback phase of layered read reconciliation.
-   */
-
   if (cursorEdge === null) {
-    /**
-     * S0: Initial cursor state.
-     *
-     * No dependency has been matched in the current tracking pass yet.
-     * The current read should become the first matched edge.
-     */
     const firstIncomingEdge = consumer.firstIn;
 
-    /**
-     * S0.1: Empty or tiny incoming list.
-     *
-     * If the previous dependency list is empty or has only one edge,
-     * there is no useful suffix to reconcile through the strategy.
-     *
-     * Since the optimistic resolver already checked the possible direct hit,
-     * this read can be linked at the initial position.
-     */
     if (firstIncomingEdge === null || firstIncomingEdge.nextIn === null) {
       consumer.tailIn = linkEdge(producer, consumer, null, producerVersion);
       return;
     }
 
-    /**
-     * S0.2: Initial suffix reconciliation.
-     *
-     * There is no cursor yet, so the strategy searches from the first
-     * incoming edge and either reuses an existing edge or creates a new one
-     * at the beginning of the tracked order.
-     */
     consumer.tailIn = readTrackingStrategy(
       producer,
       consumer,
@@ -77,34 +55,13 @@ function trackReadSlowPath(
     return;
   }
 
-  /**
-   * S1: Cursor-based fallback.
-   *
-   * Some prefix of the dependency list has already been matched.
-   * The remaining work is limited to the suffix after the cursor.
-   */
   const expectedNextEdge = cursorEdge.nextIn;
 
-  /**
-   * S1.1: Empty or tiny suffix.
-   *
-   * If there is no meaningful suffix after the cursor, the strategy would
-   * not provide value. Link the read after the current cursor.
-   *
-   * This relies on the optimistic resolver having already checked direct
-   * next-edge and last-edge cases.
-   */
   if (expectedNextEdge === null || expectedNextEdge.nextIn === null) {
     consumer.tailIn = linkEdge(producer, consumer, cursorEdge, producerVersion);
     return;
   }
 
-  /**
-   * S1.2: Suffix reconciliation strategy.
-   *
-   * The optimistic paths failed, but the remaining suffix is large enough
-   * to justify running the configured read tracking strategy.
-   */
   consumer.tailIn = readTrackingStrategy(
     producer,
     consumer,
@@ -157,7 +114,7 @@ export function trackReadResolved(
      */
     if (cursorEdge.from === producer) {
       cursorEdge.version = producerVersion;
-      devRecordTrackRead(defaultContext, consumer, producer);
+      if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -175,7 +132,7 @@ export function trackReadResolved(
     if (expectedNextEdge !== null && expectedNextEdge.from === producer) {
       expectedNextEdge.version = producerVersion;
       consumer.tailIn = expectedNextEdge;
-      devRecordTrackRead(defaultContext, consumer, producer);
+      if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -193,15 +150,9 @@ export function trackReadResolved(
        * Avoid creating a duplicate edge when the producer was already read
        * earlier in the current tracking pass.
        */
-      for (
-        let prefixEdge = cursorEdge.prevIn;
-        prefixEdge !== null;
-        prefixEdge = prefixEdge.prevIn
-      ) {
-        if (prefixEdge.from === producer) {
-          devRecordTrackRead(defaultContext, consumer, producer);
-          return true;
-        }
+      if (hasTrackedPrefixEdge(producer, cursorEdge)) {
+        if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
+        return true;
       }
 
       /**
@@ -217,7 +168,7 @@ export function trackReadResolved(
         producerVersion,
       );
 
-      devRecordTrackRead(defaultContext, consumer, producer);
+      if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -255,7 +206,7 @@ export function trackReadResolved(
       consumer.tailIn = lookahead1Edge;
 
       nodeStructureIncrement(consumer);
-      devRecordTrackRead(defaultContext, consumer, producer);
+      if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -294,7 +245,7 @@ export function trackReadResolved(
         consumer.tailIn = lookahead2Edge;
 
         nodeStructureIncrement(consumer);
-        devRecordTrackRead(defaultContext, consumer, producer);
+        if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
         return true;
       }
     }
@@ -317,7 +268,7 @@ export function trackReadResolved(
       lastIncomingEdge.version = producerVersion;
       consumer.tailIn = lastIncomingEdge;
 
-      devRecordTrackRead(defaultContext, consumer, producer);
+      if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -327,15 +278,9 @@ export function trackReadResolved(
      * The producer may already exist before the cursor.
      * In that case, this read is already represented by the current graph.
      */
-    for (
-      let prefixEdge = cursorEdge.prevIn;
-      prefixEdge !== null;
-      prefixEdge = prefixEdge.prevIn
-    ) {
-      if (prefixEdge.from === producer) {
-        devRecordTrackRead(defaultContext, consumer, producer);
-        return true;
-      }
+    if (hasTrackedPrefixEdge(producer, cursorEdge)) {
+      if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
+      return true;
     }
 
     /**
@@ -359,7 +304,7 @@ export function trackReadResolved(
     if (firstIncomingEdge === null) {
       consumer.tailIn = linkEdge(producer, consumer, null, producerVersion);
 
-      devRecordTrackRead(defaultContext, consumer, producer);
+      if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -372,7 +317,7 @@ export function trackReadResolved(
       firstIncomingEdge.version = producerVersion;
       consumer.tailIn = firstIncomingEdge;
 
-      devRecordTrackRead(defaultContext, consumer, producer);
+      if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -390,7 +335,7 @@ export function trackReadResolved(
       lastIncomingEdge.version = producerVersion;
       consumer.tailIn = lastIncomingEdge;
 
-      devRecordTrackRead(defaultContext, consumer, producer);
+      if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -406,7 +351,7 @@ export function trackReadResolved(
    * The optimistic fast paths could not resolve the read locally.
    * Delegate to the general dependency reconciliation logic.
    */
-  devRecordTrackRead(defaultContext, consumer, producer);
+  if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
   trackReadSlowPath(producer, consumer, producerVersion, cursorEdge);
   return true;
 }
