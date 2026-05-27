@@ -8,6 +8,10 @@ import ReactiveNode from "../../../build/esm/reactivity/shape/ReactiveNode.js";
 import {
   linkEdge,
   moveIncomingEdgeAfter,
+  moveLastIncomingEdgeAfterEdgeUnchecked,
+  moveLastIncomingEdgeToFrontUnchecked,
+  moveMiddleIncomingEdgeAfterEdgeUnchecked,
+  moveNonHeadIncomingEdgeToFrontUnchecked,
 } from "../../../build/esm/reactivity/shape/methods/connect.js";
 
 const POLICIES = [
@@ -301,7 +305,21 @@ function trackReadWithPolicy(
         found.edge.prevIn !== prevEdge &&
         shouldReorder(policyId, found.scanSteps, policyState)
       ) {
-        moveIncomingEdgeAfter(consumer, found.edge, prevEdge);
+        if (found.edge.nextIn === null) {
+          moveLastIncomingEdgeAfterEdgeUnchecked(
+            consumer,
+            found.edge,
+            prevEdge,
+          );
+        } else if (found.edge.prevIn !== null) {
+          moveMiddleIncomingEdgeAfterEdgeUnchecked(
+            consumer,
+            found.edge,
+            prevEdge,
+          );
+        } else {
+          moveIncomingEdgeAfter(consumer, found.edge, prevEdge);
+        }
       }
 
       found.edge.mark = passVersion;
@@ -346,7 +364,11 @@ function trackReadWithPolicy(
       found.edge.prevIn !== null &&
       shouldReorder(policyId, found.scanSteps, policyState)
     ) {
-      moveIncomingEdgeAfter(consumer, found.edge, null);
+      if (found.edge.nextIn === null) {
+        moveLastIncomingEdgeToFrontUnchecked(consumer, found.edge);
+      } else {
+        moveNonHeadIncomingEdgeToFrontUnchecked(consumer, found.edge);
+      }
     }
 
     found.edge.mark = passVersion;
@@ -411,7 +433,21 @@ function trackReadWithPolicyProfile(
       if (found.edge.prevIn !== prevEdge) {
         if (shouldReorder(policyId, found.scanSteps, policyState)) {
           stats.fallbackReorders += 1;
-          moveIncomingEdgeAfter(consumer, found.edge, prevEdge);
+          if (found.edge.nextIn === null) {
+            moveLastIncomingEdgeAfterEdgeUnchecked(
+              consumer,
+              found.edge,
+              prevEdge,
+            );
+          } else if (found.edge.prevIn !== null) {
+            moveMiddleIncomingEdgeAfterEdgeUnchecked(
+              consumer,
+              found.edge,
+              prevEdge,
+            );
+          } else {
+            moveIncomingEdgeAfter(consumer, found.edge, prevEdge);
+          }
         } else {
           stats.fallbackSkippedReorders += 1;
         }
@@ -464,7 +500,11 @@ function trackReadWithPolicyProfile(
     if (found.edge.prevIn !== null) {
       if (shouldReorder(policyId, found.scanSteps, policyState)) {
         stats.fallbackReorders += 1;
-        moveIncomingEdgeAfter(consumer, found.edge, null);
+        if (found.edge.nextIn === null) {
+          moveLastIncomingEdgeToFrontUnchecked(consumer, found.edge);
+        } else {
+          moveNonHeadIncomingEdgeToFrontUnchecked(consumer, found.edge);
+        }
       } else {
         stats.fallbackSkippedReorders += 1;
       }

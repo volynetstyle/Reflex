@@ -1,6 +1,15 @@
-export { moveIncomingEdgeAfter } from "./edgeList";
+export {
+  moveIncomingEdgeAfter,
+  moveLastIncomingEdgeAfterEdgeUnchecked,
+  moveLastIncomingEdgeToFrontUnchecked,
+  moveMiddleIncomingEdgeAfterEdgeUnchecked,
+  moveNonHeadIncomingEdgeToFrontUnchecked,
+} from "./edgeList";
 export { connect, disconnect, linkEdge, unlinkEdge } from "./linkEdge";
-export { reuseIncomingEdgeFromSuffixOrCreate } from "./reuseEdge";
+export {
+  reuseIncomingEdgeFromSuffixOrCreate,
+  reuseIncomingEdgeFromSuffixOrLink,
+} from "./reuseEdge";
 export {
   unlinkAllSources,
   unlinkAllSubscribers,

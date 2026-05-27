@@ -8,6 +8,10 @@ import ReactiveNode from "../../../build/esm/reactivity/shape/ReactiveNode.js";
 import {
   linkEdge,
   moveIncomingEdgeAfter,
+  moveLastIncomingEdgeAfterEdgeUnchecked,
+  moveLastIncomingEdgeToFrontUnchecked,
+  moveMiddleIncomingEdgeAfterEdgeUnchecked,
+  moveNonHeadIncomingEdgeToFrontUnchecked,
   unlinkDetachedIncomingEdgeSequence,
   unlinkEdge,
 } from "../../../build/esm/reactivity/shape/methods/connect.js";
@@ -937,7 +941,21 @@ function trackReadLifecycle(source, consumer, policyId, passState, passVersion, 
         if (shouldReorder(strategy.policy, found.scanSteps)) {
           stats.fallbackReorders += 1;
           passState.fallbackReorders += 1;
-          moveIncomingEdgeAfter(consumer, found.edge, prevEdge);
+          if (found.edge.nextIn === null) {
+            moveLastIncomingEdgeAfterEdgeUnchecked(
+              consumer,
+              found.edge,
+              prevEdge,
+            );
+          } else if (found.edge.prevIn !== null) {
+            moveMiddleIncomingEdgeAfterEdgeUnchecked(
+              consumer,
+              found.edge,
+              prevEdge,
+            );
+          } else {
+            moveIncomingEdgeAfter(consumer, found.edge, prevEdge);
+          }
         } else {
           stats.fallbackSkippedReorders += 1;
         }
@@ -1009,7 +1027,11 @@ function trackReadLifecycle(source, consumer, policyId, passState, passVersion, 
       if (shouldReorder(strategy.policy, found.scanSteps)) {
         stats.fallbackReorders += 1;
         passState.fallbackReorders += 1;
-        moveIncomingEdgeAfter(consumer, found.edge, null);
+        if (found.edge.nextIn === null) {
+          moveLastIncomingEdgeToFrontUnchecked(consumer, found.edge);
+        } else {
+          moveNonHeadIncomingEdgeToFrontUnchecked(consumer, found.edge);
+        }
       } else {
         stats.fallbackSkippedReorders += 1;
       }

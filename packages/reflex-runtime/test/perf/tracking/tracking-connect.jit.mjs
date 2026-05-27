@@ -13,6 +13,10 @@ import ReactiveNode from "../../../build/esm/reactivity/shape/ReactiveNode.js";
 import {
   linkEdge,
   moveIncomingEdgeAfter,
+  moveLastIncomingEdgeAfterEdgeUnchecked,
+  moveLastIncomingEdgeToFrontUnchecked,
+  moveMiddleIncomingEdgeAfterEdgeUnchecked,
+  moveNonHeadIncomingEdgeToFrontUnchecked,
   unlinkDetachedIncomingEdgeSequence,
 } from "../../../build/esm/reactivity/shape/methods/connect.js";
 
@@ -215,7 +219,13 @@ function trackReadProfiled(source, consumer, stats) {
 
       if (edge.prevIn !== prevEdge) {
         stats.fallbackReorders += 1;
-        moveIncomingEdgeAfter(consumer, edge, prevEdge);
+        if (edge.nextIn === null) {
+          moveLastIncomingEdgeAfterEdgeUnchecked(consumer, edge, prevEdge);
+        } else if (edge.prevIn !== null) {
+          moveMiddleIncomingEdgeAfterEdgeUnchecked(consumer, edge, prevEdge);
+        } else {
+          moveIncomingEdgeAfter(consumer, edge, prevEdge);
+        }
       }
 
       consumer.depsTail = edge;
@@ -255,7 +265,11 @@ function trackReadProfiled(source, consumer, stats) {
 
     if (edge.prevIn !== null) {
       stats.fallbackReorders += 1;
-      moveIncomingEdgeAfter(consumer, edge, null);
+      if (edge.nextIn === null) {
+        moveLastIncomingEdgeToFrontUnchecked(consumer, edge);
+      } else {
+        moveNonHeadIncomingEdgeToFrontUnchecked(consumer, edge);
+      }
     }
 
     consumer.depsTail = edge;

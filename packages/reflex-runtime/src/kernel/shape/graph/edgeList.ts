@@ -94,3 +94,95 @@ export function moveIncomingEdgeAfterUnchecked(
 
   nodeStructureIncrement(to);
 }
+
+export function moveMiddleIncomingEdgeAfterEdgeUnchecked(
+  to: ReactiveNode,
+  edge: ReactiveEdge,
+  after: ReactiveEdge,
+): void {
+  const prev = edge.prevIn!;
+  const next = edge.nextIn!;
+
+  prev.nextIn = next;
+  next.prevIn = prev;
+
+  const insertNext = after.nextIn;
+
+  edge.prevIn = after;
+  edge.nextIn = insertNext;
+
+  if (insertNext !== null) insertNext.prevIn = edge;
+  else to.lastIn = edge;
+
+  after.nextIn = edge;
+
+  nodeStructureIncrement(to);
+}
+
+export function moveNonHeadIncomingEdgeToFrontUnchecked(
+  to: ReactiveNode,
+  edge: ReactiveEdge,
+): void {
+  const prev = edge.prevIn!;
+  const next = edge.nextIn;
+
+  prev.nextIn = next;
+
+  if (next !== null) next.prevIn = prev;
+  else to.lastIn = prev;
+
+  const first = to.firstIn;
+
+  edge.prevIn = null;
+  edge.nextIn = first;
+
+  if (first !== null) first.prevIn = edge;
+
+  to.firstIn = edge;
+
+  nodeStructureIncrement(to);
+}
+
+export function moveLastIncomingEdgeAfterEdgeUnchecked(
+  to: ReactiveNode,
+  edge: ReactiveEdge,
+  after: ReactiveEdge,
+): void {
+  const prev = edge.prevIn!;
+
+  prev.nextIn = null;
+  to.lastIn = prev;
+
+  const insertNext = after.nextIn;
+
+  edge.prevIn = after;
+  edge.nextIn = insertNext;
+
+  if (insertNext !== null) insertNext.prevIn = edge;
+  else to.lastIn = edge;
+
+  after.nextIn = edge;
+
+  nodeStructureIncrement(to);
+}
+
+export function moveLastIncomingEdgeToFrontUnchecked(
+  to: ReactiveNode,
+  edge: ReactiveEdge,
+): void {
+  const prev = edge.prevIn!;
+
+  prev.nextIn = null;
+  to.lastIn = prev;
+
+  const first = to.firstIn;
+
+  edge.prevIn = null;
+  edge.nextIn = first;
+
+  if (first !== null) first.prevIn = edge;
+
+  to.firstIn = edge;
+
+  nodeStructureIncrement(to);
+}
