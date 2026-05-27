@@ -13,28 +13,14 @@ export type {
 /**
  * API
  */
-export {
-  signal,
-} from "./api/signal";
-export {
-  computed,
-  memo,
-} from "./api/derived";
-export {
-  effect,
-  effectRanked,
-  reaction,
-  watch,
-} from "./api/effect";
-export type {
-  Reaction,
-  ReactionFn,
-  Watch,
-} from "./api/effect";
+export { signal } from "./api/signal";
+export { computed, memo } from "./api/derived";
+export { effect, effectRanked, reaction, watch } from "./api/effect";
+export type { Reaction, ReactionFn, Watch } from "./api/effect";
 /**
  * API
  */
-export { batch, event, flush, createRuntime } from "./infra/runtime";
+export { untracked, batch, event, flush, createRuntime } from "./infra/runtime";
 /**
  * API
  */

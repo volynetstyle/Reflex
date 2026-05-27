@@ -374,7 +374,7 @@ export function optimistic<T>(
   }
 
   const core = new OptimisticCore(
-    readConsumerLazy.bind(null, node) as Accessor<T>,
+    readConsumerLazy.bind(node) as Accessor<T>,
     equals,
   );
 

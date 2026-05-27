@@ -44,7 +44,7 @@ export class ReactiveNode<T = unknown> {
 }
 
 // @__INLINE__
-export function bumpNodes(node: ReactiveNode): void {
+export function nodeStructureIncrement(node: ReactiveNode): void {
   const next = (node.s + 1) >>> 0;
   node.s = next === 0 ? 1 : next;
 }

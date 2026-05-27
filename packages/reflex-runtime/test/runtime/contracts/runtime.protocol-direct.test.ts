@@ -7,7 +7,7 @@ import {
   readProducer,
   writeProducer,
 } from "../../runtime.test_utils";
-import { recompute } from "../../../src/kernel/engine/computeNode";
+import { recompute } from "../../../src/kernel/engine/recompute";
 import { refreshAndPropagateIfNeeded } from "../../../src/kernel/walkers/ensureFresh";
 import {
   createConsumer,
@@ -28,7 +28,7 @@ describe("Reactive runtime - direct protocol helpers", () => {
     const lazy = createConsumer(() => readProducer(source) + 1);
     const eager = createConsumer(() => readProducer(source) + 2);
     const parent = createConsumer(() => {
-      const lazyValue = readConsumerLazy(lazy);
+      const lazyValue = readConsumerLazy.call(lazy) as number;
       const eagerValue = readConsumerEager(eager);
       return lazyValue + eagerValue;
     });
@@ -62,6 +62,3 @@ describe("Reactive runtime - direct protocol helpers", () => {
     expect(readConsumer(sink)).toBe(2);
   });
 });
-
-
-

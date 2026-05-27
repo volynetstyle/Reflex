@@ -24,6 +24,8 @@ import {
   expectIncomingPrefix,
   expecttailIn,
   hasSubscriber,
+  incomingEdges,
+  incomingSources,
   resetRuntime,
 } from "../../runtime.test_utils";
 
@@ -270,6 +272,118 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(watcher.state & Tracking).toBeFalsy();
     expect(watcher.state & Invalid).toBeTruthy();
     expect(watcher.state & Reentrant).toBeTruthy();
+  });
+
+  it("preserves nested computed tracking between producer reads", () => {
+    const cases: Array<{
+      name: string;
+      mutate: "computed-only" | "prefix" | "suffix";
+      expectedAfterNestedRun: number[];
+      expectedFinalRuns: number[][];
+      reentrant: boolean;
+    }> = [
+      {
+        name: "computed-only",
+        mutate: "computed-only",
+        expectedAfterNestedRun: [1, 22, 10],
+        expectedFinalRuns: [
+          [1, 20, 10],
+          [1, 22, 10],
+        ],
+        reentrant: false,
+      },
+      {
+        name: "prefix",
+        mutate: "prefix",
+        expectedAfterNestedRun: [1, 22, 10],
+        expectedFinalRuns: [
+          [1, 20, 10],
+          [1, 22, 10],
+          [2, 22, 10],
+        ],
+        reentrant: true,
+      },
+      {
+        name: "suffix",
+        mutate: "suffix",
+        expectedAfterNestedRun: [1, 22, 20],
+        expectedFinalRuns: [
+          [1, 20, 10],
+          [1, 22, 20],
+        ],
+        reentrant: false,
+      },
+    ];
+
+    for (const entry of cases) {
+      resetRuntime();
+
+      const a = createProducer(1);
+      const b = createProducer(10);
+      const computedSource = createProducer(10);
+      let mutateDuringNestedTracking = false;
+      const runs: number[][] = [];
+
+      const computedValue = createConsumer(() => {
+        const value = readProducer(computedSource);
+
+        if (mutateDuringNestedTracking) {
+          mutateDuringNestedTracking = false;
+
+          if (entry.mutate === "prefix") {
+            writeProducer(a, 2);
+          } else if (entry.mutate === "suffix") {
+            writeProducer(b, 20);
+          }
+        }
+
+        return value * 2;
+      });
+
+      const watcher = createWatcher(() => {
+        runs.push([
+          readProducer(a),
+          readConsumer(computedValue),
+          readProducer(b),
+        ]);
+      });
+
+      runWatcher(watcher);
+
+      const initialEdges = incomingEdges(watcher);
+      expect(incomingSources(watcher)).toEqual([a, computedValue, b]);
+
+      mutateDuringNestedTracking = true;
+      writeProducer(computedSource, 11);
+      watcher.state |= Changed;
+      runWatcher(watcher);
+
+      expect(runs.at(-1)).toEqual(entry.expectedAfterNestedRun);
+      expect(incomingSources(watcher), entry.name).toEqual([
+        a,
+        computedValue,
+        b,
+      ]);
+      expect(incomingEdges(watcher), entry.name).toEqual(initialEdges);
+
+      if (entry.reentrant) {
+        expect(watcher.state & Invalid, entry.name).toBeTruthy();
+        expect(watcher.state & Reentrant, entry.name).toBeTruthy();
+
+        runWatcher(watcher);
+      } else {
+        expect(watcher.state & DIRTY_STATE, entry.name).toBe(0);
+      }
+
+      expect(runs, entry.name).toEqual(entry.expectedFinalRuns);
+      expect(incomingSources(watcher), entry.name).toEqual([
+        a,
+        computedValue,
+        b,
+      ]);
+      expect(incomingEdges(watcher), entry.name).toEqual(initialEdges);
+      expect(watcher.state & DIRTY_STATE, entry.name).toBe(0);
+    }
   });
 
   it("recomputes invalid consumers even when their dependency list is empty", () => {

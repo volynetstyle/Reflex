@@ -5,13 +5,17 @@ import {
   type MountedRenderRange,
   type RenderRangeAnchors,
 } from "../structure/render-range";
-import type { DOMRenderer } from "./renderer";
+import {
+  ensureDOMRuntime,
+  getActiveDOMExecutionContext,
+  runWithDOMExecutionContext,
+} from "./execution";
 
 function resolveContainerRangeAnchors(
-  renderer: DOMRenderer,
   container: ParentNode & Node,
 ): RenderRangeAnchors {
-  const previousRoot = renderer.mountedRoots.get(container);
+  const context = getActiveDOMExecutionContext();
+  const previousRoot = context.mountedRoots.get(container);
 
   if (previousRoot === undefined) {
     return createRenderRangeAnchors(container);
@@ -22,45 +26,37 @@ function resolveContainerRangeAnchors(
 }
 
 function mountRenderableIntoContainerRange(
-  renderer: DOMRenderer,
   renderable: JSXRenderable,
   container: ParentNode & Node,
 ): MountedRenderRange {
-  const rangeAnchors = resolveContainerRangeAnchors(renderer, container);
-  const rootMount = mountRenderRange(
-    renderer,
-    container,
-    renderable,
-    "html",
-    rangeAnchors,
-  );
+  const context = getActiveDOMExecutionContext();
+  const rangeAnchors = resolveContainerRangeAnchors(container);
+  const rootMount = mountRenderRange(container, renderable, "html", rangeAnchors);
 
-  renderer.mountedRoots.set(container, rootMount);
+  context.mountedRoots.set(container, rootMount);
   return rootMount;
 }
 
-export function renderWithRenderer(
-  renderer: DOMRenderer,
+export function renderWithDOMExecution(
   renderable: JSXRenderable,
   container: ParentNode & Node,
 ): Cleanup {
-  renderer.ensureRuntime();
-  const rootMount = mountRenderableIntoContainerRange(
-    renderer,
-    renderable,
-    container,
-  );
-  renderer.renderEffectScheduler.flush();
+  const context = getActiveDOMExecutionContext();
+  ensureDOMRuntime(context);
+  const rootMount = mountRenderableIntoContainerRange(renderable, container);
+  context.renderEffectScheduler.flush();
 
   const disposeRenderMount = (() => {
-    rootMount.clear();
+    runWithDOMExecutionContext(context, () => {
+      rootMount.clear();
 
-    if (renderer.mountedRoots.get(container) !== rootMount) {
-      return;
-    }
+      if (context.mountedRoots.get(container) !== rootMount) {
+        return;
+      }
 
-    renderer.mountedRoots.delete(container);
-    rootMount.destroy();
+      context.mountedRoots.delete(container);
+      rootMount.destroy();
+    });
   }) as Cleanup;
 
   disposeRenderMount.dispose = disposeRenderMount;

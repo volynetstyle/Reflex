@@ -1,7 +1,7 @@
 import type { ReactiveEdge } from "../edge";
 import { clearReactiveEdgeLinks } from "../edge";
 import type ReactiveNode from "../node";
-import { bumpNodes } from "../node";
+import { nodeStructureIncrement } from "../node";
 import { detachIncomingEdge, detachOutgoingEdge } from "./edgeList";
 
 export function unlinkDetachedIncomingEdgeSequence(
@@ -16,7 +16,7 @@ export function unlinkDetachedIncomingEdgeSequence(
     edge = next;
   }
 
-  if (to !== null) bumpNodes(to);
+  if (to !== null) nodeStructureIncrement(to);
 }
 
 /**
@@ -32,7 +32,7 @@ export function unlinkAllSources(node: ReactiveNode): void {
     return;
   }
 
-  bumpNodes(node);
+  nodeStructureIncrement(node);
 
   node.firstIn = null;
   node.lastIn = null;

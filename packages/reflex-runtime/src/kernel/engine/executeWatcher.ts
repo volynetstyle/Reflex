@@ -1,6 +1,6 @@
 import type { ReactiveNode } from "../shape";
 import { clearNodeComputing, markNodeComputing, Producer } from "../shape";
-import { cleanupStaleSources } from "./trackingContext";
+import { cleanupStaleSources } from "./tracking";
 import {
   currentConsumer,
   advanceTrackingEpoch,

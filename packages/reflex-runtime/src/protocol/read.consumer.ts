@@ -7,12 +7,18 @@ import {
   shouldRecomputeDirtyConsumer,
   recompute,
   propagateOnceFromEdge,
-  trackReadActive,
+  trackingEpoch,
+  trackReadResolved,
+  Changed,
+  Reentrant,
 } from "../kernel";
 import {
   devAssertConsumerCanStabilize,
   devRecordReadConsumer,
 } from "../kernel/dev";
+import { walkBranch } from "../kernel/walkers/recomputeBranch";
+import { walkLine } from "../kernel/walkers/recomputeLine";
+import { BAIL, DIRTY } from "../kernel/walkers/walkerConstants";
 import { LAZY } from "./utils/constants";
 
 /**
@@ -28,41 +34,76 @@ import { LAZY } from "./utils/constants";
  * The fast-path intentionally stays here, with dirty stabilization isolated in
  * a local slow path so clean reads do not bounce through helper layers.
  */
-export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
+export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
+  // eslint-disable-next-line @typescript-eslint/no-this-alias
+  const node = this;
   const state = node.state;
 
-  if ((state & DIRTY_STATE) !== 0) {
-    devAssertConsumerCanStabilize(state);
-    return readConsumerLazySlow(node, state);
-  }
+  if ((state & DIRTY_STATE) === 0) {
+    const value = node.payload;
 
-  const value = node.payload;
+    const consumer = currentConsumer;
+    if (consumer !== null) {
+      trackReadResolved(node, consumer, trackingEpoch, true);
+    }
 
-  if (currentConsumer === null) return value;
-
-  trackReadActive(node);
-
-  {
-    devRecordReadConsumer(node, "lazy", value, defaultContext, currentConsumer);
-  }
-
-  return value;
-}
-
-function readConsumerLazySlow<T>(node: ReactiveNode<T>, state: number): T {
-  const value = stabilizeDirtyConsumer(node, state);
-
-  if (currentConsumer !== null) trackRead(node);
-
-  {
     devRecordReadConsumer(
       node,
       "lazy",
       value,
       defaultContext,
-      currentConsumer ?? undefined,
+      consumer ?? undefined,
     );
+
+    return value;
   }
+
+  devAssertConsumerCanStabilize(state);
+
+  let recomputeNeeded = false;
+
+  if ((state & (Changed | Reentrant)) !== 0) {
+    recomputeNeeded = true;
+  } else {
+    const edge = node.firstIn;
+
+    if (edge === null) {
+      node.state = state & ~DIRTY_STATE;
+    } else if (edge.nextIn === null) {
+      const result = walkLine(node, edge);
+
+      if (result === BAIL) {
+        recomputeNeeded = walkBranch(node, edge);
+      } else {
+        recomputeNeeded = result === DIRTY;
+      }
+    } else {
+      recomputeNeeded = walkBranch(node, edge);
+    }
+  }
+
+  if (recomputeNeeded) {
+    if (recompute(node)) {
+      propagateOnceFromEdge(node.firstOut);
+    }
+  } else {
+    node.state &= ~DIRTY_STATE;
+  }
+
+  const value = node.payload as T;
+
+  const consumer = currentConsumer;
+  if (consumer !== null) {
+    trackReadResolved(node, consumer, trackingEpoch, true);
+  }
+
+  devRecordReadConsumer(
+    node,
+    "lazy",
+    value,
+    defaultContext,
+    consumer ?? undefined,
+  );
 
   return value;
 }
@@ -78,7 +119,7 @@ export function readConsumerEager<T>(node: ReactiveNode<T>): T {
 
   devAssertConsumerCanStabilize(state);
 
-  if ((state & DIRTY_STATE) === 0) return node.payload as T;
+  if ((state & DIRTY_STATE) === 0) return node.payload;
 
   return stabilizeDirtyConsumer(node, state);
 }

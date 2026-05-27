@@ -230,9 +230,11 @@ function getGc(): GcFn | undefined {
 }
 
 function readHeapUsed(): number | undefined {
-  const maybeProcess = (globalThis as {
-    process?: { memoryUsage?: () => { heapUsed: number } };
-  }).process;
+  const maybeProcess = (
+    globalThis as {
+      process?: { memoryUsage?: () => { heapUsed: number } };
+    }
+  ).process;
   return maybeProcess?.memoryUsage?.().heapUsed;
 }
 
@@ -371,7 +373,9 @@ function sampleScenario(
       ? undefined
       : heapAfter - heapBefore;
   const heapPeakDelta =
-    heapBefore === undefined || heapPeak === 0 ? undefined : heapPeak - heapBefore;
+    heapBefore === undefined || heapPeak === 0
+      ? undefined
+      : heapPeak - heapBefore;
 
   if (iterationCounters !== undefined) {
     console.log(
@@ -540,22 +544,28 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
 
         if ((depth + 1) % 48 === 0) {
           const tap = layers[depth]!;
-          harness.effect(() => {
-            const v = tap();
-            blackhole(v); // FIX: prevent dead-code elimination
-            tapValues.set(depth, v);
-          }, {
-            label: `chain:tap:${depth}`,
-            priority: depth + 1,
-          });
+          harness.effect(
+            () => {
+              const v = tap();
+              blackhole(v); // FIX: prevent dead-code elimination
+              tapValues.set(depth, v);
+            },
+            {
+              label: `chain:tap:${depth}`,
+              priority: depth + 1,
+            },
+          );
         }
       }
 
       const tail = current;
-      harness.effect(() => {
-        tailValue = tail();
-        blackhole(tailValue);
-      }, { label: "chain:tail", priority: 256 });
+      harness.effect(
+        () => {
+          tailValue = tail();
+          blackhole(tailValue);
+        },
+        { label: "chain:tail", priority: 256 },
+      );
 
       const expectedPrefixSum = (depthInclusive: number): number => {
         let total = 0;
@@ -629,23 +639,29 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
 
       for (let index = 0; index < leaves.length; index += 48) {
         const leaf = leaves[index]!;
-        harness.effect(() => {
-          const v = leaf();
-          blackhole(v);
-          tapValues.set(index, v);
-        }, {
-          label: `fanout:tap:${index}`,
-          priority: 96 + index,
-        });
+        harness.effect(
+          () => {
+            const v = leaf();
+            blackhole(v);
+            tapValues.set(index, v);
+          },
+          {
+            label: `fanout:tap:${index}`,
+            priority: 96 + index,
+          },
+        );
       }
 
-      harness.effect(() => {
-        aggregateValue = aggregate();
-        blackhole(aggregateValue);
-      }, {
-        label: "fanout:aggregate-effect",
-        priority: 384,
-      });
+      harness.effect(
+        () => {
+          aggregateValue = aggregate();
+          blackhole(aggregateValue);
+        },
+        {
+          label: "fanout:aggregate-effect",
+          priority: 384,
+        },
+      );
 
       const expectedAggregate = (sourceValue: number): number => {
         let total = 0;
@@ -720,27 +736,47 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
         return total;
       }, "diamond:join");
 
-      harness.effect(() => { blackhole(sharedSum()); }, {
-        label: "diamond:sum-effect",
-        priority: 64,
-      });
-      harness.effect(() => { blackhole(sharedDiff()); }, {
-        label: "diamond:diff-effect",
-        priority: 64,
-      });
+      harness.effect(
+        () => {
+          blackhole(sharedSum());
+        },
+        {
+          label: "diamond:sum-effect",
+          priority: 64,
+        },
+      );
+      harness.effect(
+        () => {
+          blackhole(sharedDiff());
+        },
+        {
+          label: "diamond:diff-effect",
+          priority: 64,
+        },
+      );
 
       for (let index = 0; index < branches.length; index += 32) {
         const branch = branches[index]!;
-        harness.effect(() => { blackhole(branch()); }, {
-          label: `diamond:branch-effect:${index}`,
-          priority: 128 + index,
-        });
+        harness.effect(
+          () => {
+            blackhole(branch());
+          },
+          {
+            label: `diamond:branch-effect:${index}`,
+            priority: 128 + index,
+          },
+        );
       }
 
-      harness.effect(() => { blackhole(join()); }, {
-        label: "diamond:join-effect",
-        priority: 320,
-      });
+      harness.effect(
+        () => {
+          blackhole(join());
+        },
+        {
+          label: "diamond:join-effect",
+          priority: 320,
+        },
+      );
 
       return {
         runStep() {
@@ -797,16 +833,26 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
 
       for (let index = 0; index < branches.length; index += 24) {
         const branch = branches[index]!;
-        harness.effect(() => { blackhole(branch()); }, {
-          label: `dynamic:branch-effect:${index}`,
-          priority: 96 + index,
-        });
+        harness.effect(
+          () => {
+            blackhole(branch());
+          },
+          {
+            label: `dynamic:branch-effect:${index}`,
+            priority: 96 + index,
+          },
+        );
       }
 
-      harness.effect(() => { blackhole(aggregate()); }, {
-        label: "dynamic:aggregate-effect",
-        priority: 320,
-      });
+      harness.effect(
+        () => {
+          blackhole(aggregate());
+        },
+        {
+          label: "dynamic:aggregate-effect",
+          priority: 320,
+        },
+      );
 
       return {
         runStep() {
@@ -868,12 +914,15 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
       for (let index = 0; index < 96; ++index) {
         const addend = (index & 1) === 0 ? index : index * 3;
         const base = (index & 1) === 0 ? source : readDoubled;
-        harness.effect(() => {
-          blackhole(base() + addend);
-        }, {
-          label: `effects:sink:${index}`,
-          priority: index,
-        });
+        harness.effect(
+          () => {
+            blackhole(base() + addend);
+          },
+          {
+            label: `effects:sink:${index}`,
+            priority: index,
+          },
+        );
       }
 
       return {
@@ -940,10 +989,15 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
         return sum;
       }, "fanin:total");
 
-      harness.effect(() => { blackhole(total()); }, {
-        label: "fanin:total-effect",
-        priority: 512,
-      });
+      harness.effect(
+        () => {
+          blackhole(total());
+        },
+        {
+          label: "fanin:total-effect",
+          priority: 512,
+        },
+      );
 
       harness.effect(
         () => {
@@ -992,10 +1046,15 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
         return sum;
       }, "fanin:total");
 
-      harness.effect(() => { blackhole(total()); }, {
-        label: "fanin:total-effect",
-        priority: 512,
-      });
+      harness.effect(
+        () => {
+          blackhole(total());
+        },
+        {
+          label: "fanin:total-effect",
+          priority: 512,
+        },
+      );
 
       return {
         runStep() {
@@ -1046,58 +1105,6 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
             }
           });
           harness.flush();
-        },
-      };
-    },
-  },
-  {
-    id: "transient-graph-churn",
-    title: "Transient graph churn",
-    sampleIterations: 18,
-    sampleWarmupIterations: 60,
-    bench: { iterations: 90, warmupIterations: 30 },
-    build(harness, seed) {
-      const rng = createRng(seed);
-      const [source, setSource] = harness.signal(1, "churn:source");
-      let generation = 0;
-
-      return {
-        runStep() {
-          generation += 1;
-          const disposers: Array<() => void> = [];
-          const leaves: Read[] = new Array(48);
-
-          for (let index = 0; index < leaves.length; ++index) {
-            const [local, setLocal] = harness.signal(
-              generation + index,
-              `churn:local:${index}`,
-            );
-            const leaf = harness.memo(
-              () => source() + local() * ((index % 5) + 1),
-              `churn:leaf:${index}`,
-            );
-            leaves[index] = leaf;
-            disposers.push(
-              harness.effect(() => leaf(), {
-                label: `churn:effect:${index}`,
-                priority: index,
-              }),
-            );
-            setLocal((prev) => prev + rng.int(3));
-          }
-
-          harness.batch(() => {
-            setSource(source() + 1 + rng.int(4));
-          });
-          harness.flush();
-
-          for (let index = 0; index < leaves.length; ++index) {
-            blackhole(leaves[index]!());
-          }
-
-          for (let index = disposers.length - 1; index >= 0; --index) {
-            disposers[index]!();
-          }
         },
       };
     },

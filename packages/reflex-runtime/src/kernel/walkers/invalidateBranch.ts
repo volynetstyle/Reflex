@@ -15,24 +15,6 @@ const INVALIDATE_SLOW_STATE = DIRTY_STATE | Tracking;
 // @__INLINE__
 export const notifyWatcher = emitSinkInvalidated;
 
-// @__INLINE__
-function invalidateTracked(
-  edge: ReactiveEdge,
-  sub: ReactiveNode,
-  state: number,
-): number {
-  const tail = sub.tailIn;
-  if (tail === null) return 0;
-
-  if (edge !== tail) {
-    for (let prev = edge.prevIn; prev !== null; prev = prev.prevIn) {
-      if (prev === tail) return 0;
-    }
-  }
-
-  return state | Reentrant | Invalid;
-}
-
 export function invalidateSub(
   edge: ReactiveEdge,
   sub: ReactiveNode,
@@ -52,8 +34,23 @@ export function invalidateSub(
 
   if ((state & (DIRTY_STATE | Tracking)) !== 0) {
     if ((state & Tracking) !== 0) {
-      next = invalidateTracked(edge, sub, state);
-      if (next === 0) return 0;
+      const tail = sub.tailIn;
+      if (tail === null) return 0;
+
+      if (edge !== tail) {
+        let stale = false;
+
+        for (let prev = edge.prevIn; prev !== null; prev = prev.prevIn) {
+          if (prev === tail) {
+            stale = true;
+            break;
+          }
+        }
+
+        if (stale) return 0;
+      }
+
+      next = state | Reentrant | Invalid;
     } else if ((state & DIRTY_STATE) !== 0) {
       return 0;
     }

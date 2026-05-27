@@ -1,4 +1,4 @@
-export * from "./computeNode";
+export * from "./recompute";
 export * from "./executeWatcher";
-export * from "./trackingContext";
+export * from "./tracking";
 export * from "./watcher";

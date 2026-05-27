@@ -5,6 +5,7 @@ import {
   setActiveRuntimeContext,
   setHostHooks,
   setInternalHooks,
+  untracked,
 } from "@volynets/reflex-runtime/internal";
 import type {
   RuntimeContext as RuntimeExecutionContext,
@@ -110,3 +111,5 @@ export const batch: BatchFn = <T>(fn: () => T) => activeBatch(fn);
 export const event: EventFn = <T>() => activeEvent<T>();
 
 export const flush = (): void => activeFlush();
+
+export { untracked };

@@ -1,7 +1,8 @@
 import {
   currentConsumer,
-  trackRead,
   defaultContext,
+  trackingEpoch,
+  trackReadResolved,
 } from "../kernel";
 import type { ReactiveNode } from "../kernel";
 import { devRecordReadProducer } from "../kernel/dev";
@@ -33,7 +34,8 @@ export function readProducer<T>(node: ReactiveNode<T>): T {
   const value = node.payload;
 
   // Register this read as a dependency if there's an active computation
-  if (currentConsumer !== null) trackRead(node);
+  if (currentConsumer !== null)
+    trackReadResolved(node, currentConsumer, trackingEpoch, true);
 
   if (__DEV__) devRecordReadProducer(node, value, defaultContext);
 

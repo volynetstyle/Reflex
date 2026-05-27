@@ -18,7 +18,6 @@ import {
   getTaggedRenderableKind,
   isTextRenderableValue,
 } from "../renderable/kind";
-import type { DOMRenderer } from "../runtime/renderer";
 import { mountComponent } from "./component";
 import { mountReactiveSlot } from "./reactive";
 import { mountElement } from "./element";
@@ -44,7 +43,6 @@ function pushValuesOntoStack(
 }
 
 export function appendRenderableNodes(
-  renderer: DOMRenderer,
   parent: Node,
   value: JSXRenderable | unknown,
   ns: Namespace,
@@ -76,7 +74,7 @@ export function appendRenderableNodes(
 
     if (typeof current === "function") {
       parent.appendChild(
-        mountReactiveSlot(renderer, current as () => unknown, identity, ns),
+        mountReactiveSlot(current as () => unknown, identity, ns),
       );
       continue;
     }
@@ -102,36 +100,31 @@ export function appendRenderableNodes(
           >;
 
           parent.appendChild(
-            mountElement(renderer, element.tag, element.props, ns),
+            mountElement(element.tag, element.props, ns),
           );
           continue;
         }
 
         case RenderableKind.Show:
-          parent.appendChild(
-            mountShow(renderer, current as ShowRenderable<any>, ns),
-          );
+          parent.appendChild(mountShow(current as ShowRenderable<any>, ns));
           continue;
 
         case RenderableKind.Switch:
           parent.appendChild(
-            mountSwitch(renderer, current as SwitchRenderable<any>, ns),
+            mountSwitch(current as SwitchRenderable<any>, ns),
           );
           continue;
 
         case RenderableKind.For:
-          parent.appendChild(
-            mountFor(renderer, current as ForRenderable<any>, ns),
-          );
+          parent.appendChild(mountFor(current as ForRenderable<any>, ns));
           continue;
 
         case RenderableKind.Portal:
-          parent.appendChild(mountPortal(renderer, current as PortalRenderable));
+          parent.appendChild(mountPortal(current as PortalRenderable));
           continue;
 
         case RenderableKind.Component:
           mountComponent(
-            renderer,
             parent,
             current as ComponentRenderable<any>,
             ns,

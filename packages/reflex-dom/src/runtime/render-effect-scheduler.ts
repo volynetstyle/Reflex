@@ -14,13 +14,19 @@ export interface DOMRenderEffectScheduler extends RenderEffectScheduler {
   flush(phase?: RenderEffectPhase): void;
 }
 
+type RenderEffectTaskRunner = (task: () => void) => void;
+
 const renderEffectPhases: readonly RenderEffectPhase[] = [
   RenderEffectPhase.BeforeRender,
   RenderEffectPhase.Render,
   RenderEffectPhase.AfterRender,
 ];
 
-export function createRenderEffectScheduler(): DOMRenderEffectScheduler {
+export function createRenderEffectScheduler(
+  runTask: RenderEffectTaskRunner = (task) => {
+    task();
+  },
+): DOMRenderEffectScheduler {
   const pendingTasks: Record<RenderEffectPhase, RenderEffectQueue> = {
     [RenderEffectPhase.BeforeRender]: { tasks: [], version: 0 },
     [RenderEffectPhase.Render]: { tasks: [], version: 0 },
@@ -35,7 +41,7 @@ export function createRenderEffectScheduler(): DOMRenderEffectScheduler {
       const task = tasks[index];
 
       if (task !== undefined) {
-        task();
+        runTask(task);
       }
     }
 

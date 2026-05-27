@@ -9,7 +9,7 @@ import {
   moveIncomingEdgeAfter,
   reuseIncomingEdgeFromSuffixOrCreate,
   setTrackingEpoch,
-  trackReadActive,
+  trackRead,
   unlinkEdge,
 } from "../../../src/kernel";
 import {
@@ -193,8 +193,8 @@ describe("Reactive runtime - edge wiring", () => {
     });
 
     target.tailIn = ab;
-    trackReadActive(c, target);
-    trackReadActive(c, target);
+    trackRead(c, target);
+    trackRead(c, target);
 
     expect(calls).toEqual([]);
     expecttailIn(target, cb);
@@ -238,7 +238,7 @@ describe("Reactive runtime - edge wiring", () => {
     });
 
     target.tailIn = ab;
-    trackReadActive(e, target);
+    trackRead(e, target);
 
     expect(calls).toHaveLength(1);
     expect(calls[0]).toEqual({
@@ -283,7 +283,7 @@ describe("Reactive runtime - edge wiring", () => {
     });
 
     target.tailIn = ab;
-    trackReadActive(c, target);
+    trackRead(c, target);
 
     expect(calls).toEqual([]);
     expecttailIn(target, cb);
@@ -322,9 +322,9 @@ describe("Reactive runtime - edge wiring", () => {
     target.tailIn = ab;
     setTrackingEpoch(2);
 
-    trackReadActive(b, target);
-    trackReadActive(a, target);
-    trackReadActive(b, target);
+    trackRead(b, target);
+    trackRead(a, target);
+    trackRead(b, target);
 
     expect(calls).toEqual([]);
     expectIncomingEdges(target, [ab, bb]);
@@ -348,7 +348,7 @@ describe("Reactive runtime - edge wiring", () => {
     restoreContext(staleSnapshot);
     target.tailIn = null;
 
-    trackReadActive(a, target);
+    trackRead(a, target);
 
     expecttailIn(target, edge);
     expectIncomingEdges(target, [edge]);

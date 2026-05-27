@@ -3,8 +3,10 @@ import { isEventProp, attachEventListener } from "../host/events";
 import type { Namespace } from "../host/namespace";
 import { applyProp } from "../host/props";
 import { attachRef } from "../host/refs";
-import { registerCleanup } from "@volynets/reflex-framework";
-import type { DOMRenderer } from "../runtime/renderer";
+import {
+  getActiveDOMExecutionContext,
+  registerDOMCleanup,
+} from "../runtime/execution";
 import type { Ref } from "../types";
 
 type ElementBindingPhase = "initial" | "deferred";
@@ -31,7 +33,6 @@ function isSkippedElementProp(name: string, value: unknown): boolean {
 }
 
 export function bindElementProperty(
-  renderer: DOMRenderer,
   element: Element,
   name: string,
   value: unknown,
@@ -52,16 +53,12 @@ export function bindElementProperty(
   }
 
   if (name === "ref") {
-    registerCleanup(
-      renderer.owner,
-      attachRef(element, value as Ref<Element> | undefined),
-    );
+    registerDOMCleanup(attachRef(element, value as Ref<Element> | undefined));
     return;
   }
 
   if (isEventProp(name, value)) {
-    registerCleanup(
-      renderer.owner,
+    registerDOMCleanup(
       attachEventListener(
         element,
         name,
@@ -72,7 +69,7 @@ export function bindElementProperty(
   }
 
   if (typeof value === "function") {
-    bindReactiveProp(renderer, element, name, value as () => unknown, namespace);
+    bindReactiveProp(element, name, value as () => unknown, namespace);
     return;
   }
 
@@ -80,15 +77,15 @@ export function bindElementProperty(
 }
 
 export function bindElementProps(
-  renderer: DOMRenderer,
   element: Element,
   props: Record<string, unknown>,
   namespace: Namespace,
   bindingPhase: ElementBindingPhase = "initial",
 ): void {
+  getActiveDOMExecutionContext();
+
   for (const name in props) {
     bindElementProperty(
-      renderer,
       element,
       name,
       props[name],

@@ -37,9 +37,9 @@ export function createRendererRuntime(
     hooks: {
       ...hooks,
 
-      onReactiveSettled() {
+      reactiveSettledDispatcher() {
         renderEffectScheduler?.flush();
-        hooks?.onReactiveSettled?.();
+        hooks?.reactiveSettledDispatcher?.();
       },
     },
   });

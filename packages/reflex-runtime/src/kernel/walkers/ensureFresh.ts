@@ -1,9 +1,9 @@
 // Keep the recompute + sideways propagation protocol in one tiny helper.
 // Production Rollup/Terser builds inline this at annotated walker call-sites.
 
-import { recompute } from "../engine/computeNode";
+import { recompute } from "../engine/recompute";
 import type { ReactiveNode } from "../shape";
-import { propagateOnce, propagateOnceFromEdge } from "./propagateOnce";
+import { propagateOnce, propagateOnceFromEdgeNonNull } from "./propagateOnce";
 
 /**
  * Recompute `node` and, if it changed, propagate dirtiness to its outgoing users.
@@ -14,18 +14,14 @@ import { propagateOnce, propagateOnceFromEdge } from "./propagateOnce";
 // @__INLINE__
 export function refresh(node: ReactiveNode): boolean {
   const firstOut = node.firstOut;
-  const hasSideFanoutBeforeRecompute =
-    firstOut !== null && firstOut.nextOut !== null;
   const changed = recompute(node);
 
-  // Keep this exact semantic:
-  // the current parent path is handled by the walker;
-  // only side-fanout needs explicit propagation.
-  if (changed && hasSideFanoutBeforeRecompute) {
-    propagateOnceFromEdge(firstOut);
+  if (!changed || firstOut === null) {
+    return changed;
   }
 
-  return changed;
+  propagateOnceFromEdgeNonNull(firstOut);
+  return true;
 }
 
 export function refreshAndPropagateIfNeeded(

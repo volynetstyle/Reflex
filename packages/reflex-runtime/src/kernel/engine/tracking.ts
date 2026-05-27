@@ -1,7 +1,7 @@
 import type ReactiveNode from "../shape/node";
-import { bumpNodes } from "../shape/node";
+import { nodeStructureIncrement } from "../shape/node";
 import { devRecordCleanupStaleSources, devRecordTrackRead } from "../dev";
-import { linkEdge, unlinkDetachedIncomingEdgeSequence } from "../shape/graph";
+import { linkEdge } from "../shape/graph";
 import { moveIncomingEdgeAfterUnchecked } from "../shape/graph/edgeList";
 import {
   currentConsumer,
@@ -9,6 +9,7 @@ import {
   trackingEpoch,
   readTrackingStrategy,
 } from "../context";
+import type { ReactiveEdge } from "../shape";
 
 function trackReadSlowPath(
   source: ReactiveNode,
@@ -50,7 +51,7 @@ function trackReadSlowPath(
   );
 }
 
-function trackReadResolved(
+export function trackReadResolved(
   source: ReactiveNode,
   consumer: ReactiveNode,
   version: number,
@@ -61,7 +62,7 @@ function trackReadResolved(
   if (prevEdge !== null) {
     if (prevEdge.from === source) {
       prevEdge.version = version;
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
+      devRecordTrackRead(defaultContext, consumer, source);
       return true;
     }
 
@@ -69,18 +70,24 @@ function trackReadResolved(
     if (nextExpected !== null && nextExpected.from === source) {
       nextExpected.version = version;
       consumer.tailIn = nextExpected;
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
+      devRecordTrackRead(defaultContext, consumer, source);
       return true;
     }
 
     if (nextExpected === null) {
-      if (hasTrackedPrefixDependency(source, prevEdge.prevIn)) {
-        if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
-        return true;
+      for (
+        let current = prevEdge.prevIn;
+        current !== null;
+        current = current.prevIn
+      ) {
+        if (current.from === source) {
+          devRecordTrackRead(defaultContext, consumer, source);
+          return true;
+        }
       }
 
       consumer.tailIn = linkEdge(source, consumer, prevEdge, version);
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
+      devRecordTrackRead(defaultContext, consumer, source);
       return true;
     }
 
@@ -97,8 +104,8 @@ function trackReadResolved(
       nextExpected.prevIn = next1;
       next1.version = version;
       consumer.tailIn = next1;
-      bumpNodes(consumer);
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
+      nodeStructureIncrement(consumer);
+      devRecordTrackRead(defaultContext, consumer, source);
       return true;
     }
 
@@ -116,8 +123,8 @@ function trackReadResolved(
         nextExpected.prevIn = next2;
         next2.version = version;
         consumer.tailIn = next2;
-        bumpNodes(consumer);
-        if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
+        nodeStructureIncrement(consumer);
+        devRecordTrackRead(defaultContext, consumer, source);
         return true;
       }
     }
@@ -127,13 +134,19 @@ function trackReadResolved(
       moveIncomingEdgeAfterUnchecked(consumer, lastIn, prevEdge);
       lastIn.version = version;
       consumer.tailIn = lastIn;
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
+      devRecordTrackRead(defaultContext, consumer, source);
       return true;
     }
 
-    if (hasTrackedPrefixDependency(source, prevEdge.prevIn)) {
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
-      return true;
+    for (
+      let current = prevEdge.prevIn;
+      current !== null;
+      current = current.prevIn
+    ) {
+      if (current.from === source) {
+        devRecordTrackRead(defaultContext, consumer, source);
+        return true;
+      }
     }
 
     if (!slowPath) return false;
@@ -141,14 +154,14 @@ function trackReadResolved(
     const firstIn = consumer.firstIn;
     if (firstIn === null) {
       consumer.tailIn = linkEdge(source, consumer, null, version);
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
+      devRecordTrackRead(defaultContext, consumer, source);
       return true;
     }
 
     if (firstIn.from === source) {
       firstIn.version = version;
       consumer.tailIn = firstIn;
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
+      devRecordTrackRead(defaultContext, consumer, source);
       return true;
     }
 
@@ -157,66 +170,27 @@ function trackReadResolved(
       moveIncomingEdgeAfterUnchecked(consumer, lastIn, null);
       lastIn.version = version;
       consumer.tailIn = lastIn;
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
+      devRecordTrackRead(defaultContext, consumer, source);
       return true;
     }
 
     if (!slowPath) return false;
   }
 
-  if (__DEV__) devRecordTrackRead(defaultContext, consumer, source);
+  devRecordTrackRead(defaultContext, consumer, source);
   trackReadSlowPath(source, consumer, version, prevEdge);
   return true;
-}
-
-function hasTrackedPrefixDependency(
-  source: ReactiveNode,
-  edge: ReactiveNode["tailIn"],
-): boolean {
-  for (let current = edge; current !== null; current = current.prevIn) {
-    if (current.from === source) return true;
-  }
-
-  return false;
-}
-
-/**
- * Fast cursor-guided dependency tracking.
- *
- * Handles:
- * - immediate duplicate read
- * - expected next dependency
- * - duplicate already accepted in the current dependency prefix
- * - first dependency reuse
- */
-export function tryTrackReadFastPath(
-  source: ReactiveNode,
-  consumer: ReactiveNode,
-): boolean {
-  return trackReadResolved(source, consumer, trackingEpoch, false);
 }
 
 /**
  * Track read for the current active consumer.
  *
  */
-export function trackRead(source: ReactiveNode): void {
-  const consumer = currentConsumer;
-
-  if (consumer === null) return;
-
-  trackReadResolved(source, consumer, trackingEpoch, true);
-}
-
-/**
- * Track read when the consumer is already known.
- *
- * Unlike trackRead(), this accepts an already known consumer.
- */
-export function trackReadActive(
+export function trackRead(
   source: ReactiveNode,
-  consumer = currentConsumer as NonNullable<ReactiveNode>,
+  consumer = currentConsumer,
 ): void {
+  if (consumer === null) return;
   trackReadResolved(source, consumer, trackingEpoch, true);
 }
 
@@ -239,7 +213,38 @@ export function cleanupStaleSources(node: ReactiveNode): void {
     node.lastIn = tail;
   }
 
-  devRecordCleanupStaleSources(node, staleHead, defaultContext);
+  if (__DEV__) {
+    devRecordCleanupStaleSources(node, staleHead, defaultContext);
+  }
 
-  unlinkDetachedIncomingEdgeSequence(staleHead);
+  let edge: ReactiveEdge | null = staleHead;
+
+  do {
+    const nextIn: ReactiveEdge | null = edge.nextIn;
+
+    const from = edge.from;
+    const prevOut = edge.prevOut;
+    const nextOut = edge.nextOut;
+
+    if (prevOut !== null) {
+      prevOut.nextOut = nextOut;
+    } else {
+      from.firstOut = nextOut;
+    }
+
+    if (nextOut !== null) {
+      nextOut.prevOut = prevOut;
+    } else {
+      from.lastOut = prevOut;
+    }
+
+    edge.prevOut = null;
+    edge.nextOut = null;
+    edge.prevIn = null;
+    edge.nextIn = null;
+
+    edge = nextIn;
+  } while (edge !== null);
+
+  nodeStructureIncrement(node);
 }

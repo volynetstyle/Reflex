@@ -1,16 +1,15 @@
-import {
-  onEffectStart,
-  registerCleanup,
-  useOwnedEffect,
-} from "@volynets/reflex-framework";
+import { onEffectStart } from "@volynets/reflex-framework";
 import type { PortalRenderable } from "../operators";
-import { mountRenderRange, type MountedRenderRange } from "../structure/render-range";
-import type { DOMRenderer } from "../runtime/renderer";
+import {
+  mountRenderRange,
+  type MountedRenderRange,
+} from "../structure/render-range";
+import {
+  registerDOMCleanup,
+  useDOMOwnedEffect,
+} from "../runtime/execution";
 
-export function mountPortal(
-  renderer: DOMRenderer,
-  renderable: PortalRenderable,
-): Node {
+export function mountPortal(renderable: PortalRenderable): Node {
   const placeholder = document.createTextNode("");
   let activePortalRange: MountedRenderRange | null = null;
   let activeTarget: (ParentNode & Node) | null | undefined;
@@ -30,17 +29,12 @@ export function mountPortal(
       return;
     }
 
-    activePortalRange = mountRenderRange(
-      renderer,
-      nextTarget,
-      renderable.children,
-      "html",
-    );
+    activePortalRange = mountRenderRange(nextTarget, renderable.children, "html");
   }
 
   remountIntoTarget(renderable.to());
 
-  useOwnedEffect({ owner: renderer.owner }, () => {
+  useDOMOwnedEffect(() => {
     const nextTarget = renderable.to();
 
     onEffectStart(() => {
@@ -48,7 +42,7 @@ export function mountPortal(
     });
   });
 
-  registerCleanup(renderer.owner, () => {
+  registerDOMCleanup(() => {
     activePortalRange?.destroy();
     activePortalRange = null;
     activeTarget = null;

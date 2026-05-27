@@ -3,10 +3,9 @@ import type { Namespace } from "../host/namespace";
 import {
   createScope,
   disposeScope,
-  runInOwnershipScope,
   type Scope,
 } from "@volynets/reflex-framework";
-import type { DOMRenderer } from "../runtime/renderer";
+import { runInDOMOwnershipScope } from "../runtime/execution";
 import type { JSXRenderable } from "../types";
 import { appendRenderableNodes } from "../mount/append";
 
@@ -103,7 +102,6 @@ export function createRenderRangeMount(
 }
 
 export function mountRenderRange(
-  renderer: DOMRenderer,
   parent: Node,
   renderable: JSXRenderable | unknown,
   namespace: Namespace,
@@ -112,8 +110,8 @@ export function mountRenderRange(
   const scope = createScope();
   const fragment = resolveOwnerDocument(parent).createDocumentFragment();
 
-  runInOwnershipScope(renderer.owner, scope, () => {
-    appendRenderableNodes(renderer, fragment, renderable, namespace);
+  runInDOMOwnershipScope(scope, () => {
+    appendRenderableNodes(fragment, renderable, namespace);
   });
 
   parent.insertBefore(fragment, anchors.endAnchor);
