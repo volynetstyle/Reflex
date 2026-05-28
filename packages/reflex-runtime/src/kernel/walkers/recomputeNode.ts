@@ -1,8 +1,6 @@
 import type { ReactiveNode } from "../shape";
 import { Changed, Invalid, Reentrant } from "../shape";
 import { walkBranch } from "./recomputeBranch";
-import { walkLine } from "./recomputeLine";
-import { BAIL, DIRTY } from "./walkerConstants";
 
 // @__INLINE__
 function shouldRecompute(node: ReactiveNode, state: number = node.state): boolean {
@@ -18,11 +16,6 @@ function shouldRecompute(node: ReactiveNode, state: number = node.state): boolea
 
     if (edge === null) return false;
 
-    if (edge.nextIn === null) {
-      const result = walkLine(node, edge);
-      if (result !== BAIL) return result === DIRTY;
-    }
-
     return walkBranch(node, edge);
   }
 
@@ -35,12 +28,6 @@ function shouldRecompute(node: ReactiveNode, state: number = node.state): boolea
   if (edge === null) {
     node.state = state & ~Invalid;
     return false;
-  }
-
-  // Fast path only when current node has exactly one dependency.
-  if (edge.nextIn === null) {
-    const result = walkLine(node, edge);
-    if (result !== BAIL) return result === DIRTY;
   }
 
   return walkBranch(node, edge);
@@ -59,12 +46,6 @@ function shouldRecomputeDirty(node: ReactiveNode, state: number): boolean {
   if (edge === null) {
     node.state = state & ~Invalid;
     return false;
-  }
-
-  // Fast path only when current node has exactly one dependency.
-  if (edge.nextIn === null) {
-    const result = walkLine(node, edge);
-    if (result !== BAIL) return result === DIRTY;
   }
 
   return walkBranch(node, edge);

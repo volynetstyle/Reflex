@@ -1,7 +1,6 @@
 import type { ReactiveNode } from "../kernel";
 import {
   DIRTY_STATE,
-  trackRead,
   defaultContext,
   currentConsumer,
   shouldRecomputeDirtyConsumer,
@@ -17,8 +16,6 @@ import {
   devRecordReadConsumer,
 } from "../kernel/dev";
 import { walkBranch } from "../kernel/walkers/recomputeBranch";
-import { walkLine } from "../kernel/walkers/recomputeLine";
-import { BAIL, DIRTY } from "../kernel/walkers/walkerConstants";
 import { LAZY } from "./utils/constants";
 
 /**
@@ -47,18 +44,20 @@ export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
       trackReadResolved(node, consumer, trackingEpoch, true);
     }
 
-    devRecordReadConsumer(
-      node,
-      "lazy",
-      value,
-      defaultContext,
-      consumer ?? undefined,
-    );
+    if (__DEV__) {
+      devRecordReadConsumer(
+        node,
+        "lazy",
+        value,
+        defaultContext,
+        consumer ?? undefined,
+      );
+    }
 
     return value;
   }
 
-  devAssertConsumerCanStabilize(state);
+  if (__DEV__) devAssertConsumerCanStabilize(state);
 
   let recomputeNeeded = false;
 
@@ -69,14 +68,6 @@ export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
 
     if (edge === null) {
       node.state = state & ~DIRTY_STATE;
-    } else if (edge.nextIn === null) {
-      const result = walkLine(node, edge);
-
-      if (result === BAIL) {
-        recomputeNeeded = walkBranch(node, edge);
-      } else {
-        recomputeNeeded = result === DIRTY;
-      }
     } else {
       recomputeNeeded = walkBranch(node, edge);
     }
@@ -97,13 +88,15 @@ export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
     trackReadResolved(node, consumer, trackingEpoch, true);
   }
 
-  devRecordReadConsumer(
-    node,
-    "lazy",
-    value,
-    defaultContext,
-    consumer ?? undefined,
-  );
+  if (__DEV__) {
+    devRecordReadConsumer(
+      node,
+      "lazy",
+      value,
+      defaultContext,
+      consumer ?? undefined,
+    );
+  }
 
   return value;
 }
@@ -117,7 +110,7 @@ export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
 export function readConsumerEager<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
-  devAssertConsumerCanStabilize(state);
+  if (__DEV__) devAssertConsumerCanStabilize(state);
 
   if ((state & DIRTY_STATE) === 0) return node.payload;
 
@@ -163,20 +156,20 @@ const debugValue = readConsumer(doubled, ConsumerReadMode.eager)
 export function readConsumer<T>(node: ReactiveNode<T>, mode: number = LAZY): T {
   const state = node.state;
 
-  devAssertConsumerCanStabilize(state);
+  if (__DEV__) devAssertConsumerCanStabilize(state);
 
   if ((mode & LAZY) === 0) {
     if ((state & DIRTY_STATE) === 0) {
       const value = node.payload as T;
 
-      devRecordReadConsumer(node, "eager", value, defaultContext);
+      if (__DEV__) devRecordReadConsumer(node, "eager", value, defaultContext);
 
       return value;
     }
 
     const value = stabilizeDirtyConsumer(node, state);
 
-    devRecordReadConsumer(node, "eager", value, defaultContext);
+    if (__DEV__) devRecordReadConsumer(node, "eager", value, defaultContext);
 
     return value;
   }
@@ -184,15 +177,18 @@ export function readConsumer<T>(node: ReactiveNode<T>, mode: number = LAZY): T {
   if ((state & DIRTY_STATE) === 0) {
     const value = node.payload as T;
 
-    if (currentConsumer !== null) trackRead(node);
+    const consumer = currentConsumer;
+    if (consumer !== null) {
+      trackReadResolved(node, consumer, trackingEpoch, true);
+    }
 
-    {
+    if (__DEV__) {
       devRecordReadConsumer(
         node,
         "lazy",
         value,
         defaultContext,
-        currentConsumer ?? undefined,
+        consumer ?? undefined,
       );
     }
 
@@ -201,15 +197,20 @@ export function readConsumer<T>(node: ReactiveNode<T>, mode: number = LAZY): T {
 
   const value = stabilizeDirtyConsumer(node, state);
 
-  if (currentConsumer !== null) trackRead(node);
+  const consumer = currentConsumer;
+  if (consumer !== null) {
+    trackReadResolved(node, consumer, trackingEpoch, true);
+  }
 
-  devRecordReadConsumer(
-    node,
-    "lazy",
-    value,
-    defaultContext,
-    currentConsumer ?? undefined,
-  );
+  if (__DEV__) {
+    devRecordReadConsumer(
+      node,
+      "lazy",
+      value,
+      defaultContext,
+      consumer ?? undefined,
+    );
+  }
 
   return value;
 }

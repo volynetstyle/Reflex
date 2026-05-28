@@ -15,16 +15,13 @@ The code is split by traversal responsibility. Public entry points remain stable
 - `propagationStack.ts` - shared resume stack for branching propagation and nested watcher callbacks.
 - `invalidateBranch.ts` - subscriber state transition helper plus watcher notification dispatch.
 - `propagateOnce.ts` - re-entrant/side-fanout propagation used after pull recompute changes a shared consumer.
-- `propagationConstants.ts` - promote tokens and slow-path masks.
 
 ### Pull Stabilization
 
-- `recomputeNode.ts` - `shouldRecompute` entry point. It handles cheap state checks and chooses the linear or branching walker.
-- `recomputeLine.ts` - fast path for a single dependency chain, such as `source -> memo -> memo -> effect`.
-- `recomputeBranch.ts` - iterative DFS fallback for branching dependency graphs.
+- `recomputeNode.ts` - `shouldRecompute` entry point. It handles cheap state checks before dependency walking.
+- `recomputeBranch.ts` - compact pull walker for straight and branching dependency graphs.
 - `walkerStack.ts` - shared pull-walker stack and stack stats.
 - `ensureFresh.ts` - recompute helper that propagates side-fanout only when a recomputed node actually changed.
-- `walkerConstants.ts` - pull-walker result codes.
 - `walkerStackStats.ts` - debug counters and retained-capacity trimming shared by push and pull stacks.
 
 ## Push Phase
@@ -63,17 +60,15 @@ Cheap exits in `recomputeNode.ts`:
 - Clean state returns `false`.
 - Invalid leaf nodes clear `Invalid` and return `false`.
 
-When dependencies must be inspected:
+When dependencies must be inspected, `walkBranch()` uses one stack loop:
 
 ```text
-one incoming edge    -> walkLine()
-multiple edges       -> walkBranch()
-line hits branching  -> BAIL, then walkBranch()
+dirty dependency     -> refresh or descend
+stable dependency    -> resume sibling
+confirmed change     -> bubble upward
 ```
 
-`walkLine()` is the hot path for narrow graphs. It follows a single dependency chain and only bails when it sees sibling dependencies.
-
-`walkBranch()` is the complete iterative DFS. It scans dirty subtrees, recomputes invalid leaves, resumes unchecked siblings, and bubbles confirmed changes toward the original consumer.
+Straight chains stay cheap because the loop keeps stepping through `edge.from` without a separate walker or bailout. Branching graphs use the same stack slice to resume unchecked sibling dependencies.
 
 ## Refresh Contract
 
@@ -107,7 +102,7 @@ Push and pull walkers both use module-scoped stacks to avoid per-read/per-write 
 - Always capture `base` from the stack module before pushing.
 - Restore the stack high-water mark on every terminal path.
 - Trim retained capacity only when a traversal is complete.
-- For `walkLine()` bailouts, reset the base without trimming because `walkBranch()` may immediately reuse the same storage.
+- `walkBranch()` owns the stack slice for both straight-chain descent and branching DFS.
 
 ## Useful Tests
 

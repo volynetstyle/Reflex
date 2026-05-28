@@ -1,4 +1,15 @@
-import { Changed, Invalid, Watcher, type ReactiveEdge } from "../shape";
+import { defaultContext } from "../context";
+import { devRecordPropagate } from "../dev";
+import {
+  Changed,
+  DIRTY_STATE,
+  Invalid,
+  Reentrant,
+  Tracking,
+  Watcher,
+  type ReactiveEdge,
+  type ReactiveNode,
+} from "../shape";
 import { notifyWatcher, invalidateSub } from "./invalidateBranch";
 import {
   getPropagateStackBase,
@@ -9,44 +20,66 @@ import {
   setPropagateStackHigh,
 } from "./propagationStack";
 
-/**
- * Drains Invalid propagation from an edge list.
- *
- * Contract:
- * - `edge` is already selected as the current edge.
- * - `top` is the current stack top.
- * - if caller popped `edge` from stack, it must pass the decremented `top`.
- *
- * This preserves the original DFS + sibling-stack traversal order.
- */
+const PROPAGATE_SLOW_STATE = DIRTY_STATE | Tracking;
+
 // @__INLINE__
-function drainInvalidPropagation(
-  edge: ReactiveEdge,
-  top: number,
-  base: number,
-): number {
+function markChanged(edge: ReactiveEdge, sub: ReactiveNode): number {
+  const state = sub.state;
+
+  if ((state & PROPAGATE_SLOW_STATE) === 0) {
+    const next = (state & ~Reentrant) | Changed;
+    sub.state = next;
+
+    if (__DEV__) {
+      devRecordPropagate(edge, next, true, defaultContext);
+    }
+
+    return next;
+  }
+
+  return invalidateSub(edge, sub, state, Changed);
+}
+
+// @__INLINE__
+function markInvalid(edge: ReactiveEdge, sub: ReactiveNode): number {
+  const state = sub.state;
+
+  if ((state & PROPAGATE_SLOW_STATE) === 0) {
+    const next = (state & ~Reentrant) | Invalid;
+    sub.state = next;
+
+    if (__DEV__) {
+      devRecordPropagate(edge, next, false, defaultContext);
+    }
+
+    return next;
+  }
+
+  return invalidateSub(edge, sub, state, Invalid);
+}
+
+// @__INLINE__
+function drainInvalid(edge: ReactiveEdge, top: number, base: number): void {
   let nextEdge: ReactiveEdge | null = edge.nextOut;
 
   while (true) {
     const sub = edge.to;
-    const next = invalidateSub(edge, sub, sub.state, Invalid);
+    const next = markInvalid(edge, sub);
 
-    if (next !== 0) {
-      if ((next & Watcher) !== 0) {
-        setPropagateStackHigh(top);
-        notifyWatcher(sub);
-      } else {
-        const child = sub.firstOut;
+    if ((next & Watcher) !== 0) {
+      setPropagateStackHigh(top);
+      notifyWatcher(sub);
+    } else if (next !== 0) {
+      const child = sub.firstOut;
 
-        if (child !== null) {
-          if (nextEdge !== null) {
-            top = pushPropagateStack(nextEdge, top);
-          }
-
-          edge = child;
-          nextEdge = edge.nextOut;
-          continue;
+      if (child !== null) {
+        if (nextEdge !== null) {
+          top = pushPropagateStack(nextEdge, top);
         }
+
+        edge = child;
+        nextEdge = edge.nextOut;
+        continue;
       }
     }
 
@@ -57,7 +90,7 @@ function drainInvalidPropagation(
     }
 
     if (top === base) {
-      return top;
+      return;
     }
 
     edge = readPropagateStack(--top);
@@ -65,72 +98,39 @@ function drainInvalidPropagation(
   }
 }
 
-/**
- * API write-path specialization.
- *
- * `writeProducer()` already filters null fanout and always promotes direct
- * subscribers to Changed, so this entry skips those generic dispatch branches.
- */
 export function propagateChanged(startEdge: ReactiveEdge): void {
   const base = getPropagateStackBase();
   let top = base;
+  let pendingChild: ReactiveEdge | null = null;
+  let edge: ReactiveEdge | null = startEdge;
 
-  if (startEdge.nextOut === null) {
-    const sub = startEdge.to;
-    const next = invalidateSub(startEdge, sub, sub.state, Changed);
-
-    if (next === 0) {
-      return;
-    }
-
-    if ((next & Watcher) !== 0) {
-      setPropagateStackHigh(top);
-      notifyWatcher(sub);
-      return;
-    }
-
-    const child = sub.firstOut;
-
-    if (child === null) {
-      return;
-    }
-
-    drainInvalidPropagation(child, top, base);
-    restorePropagateStackBase(base);
-    return;
-  }
-
-  for (
-    let edge: ReactiveEdge | null = startEdge;
-    edge !== null;
-    edge = edge.nextOut
-  ) {
+  do {
     const sub = edge.to;
-    const next = invalidateSub(edge, sub, sub.state, Changed);
-
-    if (next === 0) {
-      continue;
-    }
+    const next = markChanged(edge, sub);
 
     if ((next & Watcher) !== 0) {
       setPropagateStackHigh(top);
       notifyWatcher(sub);
-      continue;
+    } else if (next !== 0) {
+      const child = sub.firstOut;
+
+      if (child !== null) {
+        if (pendingChild !== null) {
+          top = pushPropagateStack(pendingChild, top);
+        }
+
+        pendingChild = child;
+      }
     }
 
-    const child = sub.firstOut;
+    edge = edge.nextOut;
+  } while (edge !== null);
 
-    if (child !== null) {
-      top = pushPropagateStack(child, top);
-    }
-  }
-
-  if (top === base) {
+  if (pendingChild === null) {
     return;
   }
 
-  const edge = readPropagateStack(--top);
-  drainInvalidPropagation(edge, top, base);
+  drainInvalid(pendingChild, top, base);
   restorePropagateStackBase(base);
 }
 
