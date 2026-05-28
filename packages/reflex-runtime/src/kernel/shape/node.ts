@@ -1,5 +1,4 @@
 import type { ReactiveEdge } from "./edge";
-import type { NormalizedGraphReductionOptions } from "../reduction";
 
 export type Primitive =
   | string
@@ -33,7 +32,6 @@ export class ReactiveNode<T = unknown> {
   s: number = 0;
 
   compute: ComputeFn<T> = null;
-  graphReductionPolicy: NormalizedGraphReductionOptions | null = null;
   payload: T;
 
   constructor(payload: T, compute: ComputeFn<T>, state: number) {

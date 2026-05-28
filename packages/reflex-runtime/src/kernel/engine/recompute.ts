@@ -6,7 +6,13 @@ import {
   devRecordComputeStart,
   devRecordRecompute,
 } from "../dev";
-import { Computing, DIRTY_STATE, Reentrant, Tracking } from "../shape";
+import {
+  Computing,
+  DIRTY_STATE,
+  GraphReductionEnabled,
+  Reentrant,
+  Tracking,
+} from "../shape";
 import {
   nextTrackingEpoch,
   currentConsumer,
@@ -50,10 +56,12 @@ export function recompute(node: ReactiveNode): boolean {
     cleanupStaleSources(node);
   }
 
-  const reductionPolicy = node.graphReductionPolicy ?? graphReductionPolicy;
+  const reductionEnabled =
+    graphReductionPolicy.enabled ||
+    (node.state & GraphReductionEnabled) !== 0;
 
-  if (reductionPolicy.enabled) {
-    observeGraphReductionRun(node, reductionPolicy);
+  if (reductionEnabled) {
+    observeGraphReductionRun(node, graphReductionPolicy, reductionEnabled);
   }
 
   devRecordComputeFinish(node, next, defaultContext);

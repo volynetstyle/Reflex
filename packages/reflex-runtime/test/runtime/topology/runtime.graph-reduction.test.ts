@@ -8,6 +8,7 @@ import {
   readProducer,
   resetRuntime,
   runWithRuntimeContext,
+  setNodeGraphReductionPolicy,
   writeProducer,
 } from "../../runtime.test_utils";
 
@@ -48,6 +49,33 @@ describe("Reactive runtime - graph reduction", () => {
       expect(getGraphReductionState(total)?.mode).toBe(
         "static-transition-plan",
       );
+    });
+  });
+
+  it("allows a node-level enabled flag to opt into context thresholds", () => {
+    const execution = createRuntimeContext({
+      graphReductionPolicy: {
+        enabled: false,
+        stableThreshold: 2,
+        specializeThreshold: 2,
+        staticPlanThreshold: 3,
+      },
+    });
+    const left = createProducer(1);
+    const right = createProducer(2);
+    const total = createConsumer(
+      () => readProducer(left) + readProducer(right),
+    );
+
+    setNodeGraphReductionPolicy(total, true);
+
+    runWithRuntimeContext(execution, () => {
+      expect(readConsumer(total)).toBe(3);
+      expect(getGraphReductionState(total)?.mode).toBe("dynamic");
+
+      writeProducer(left, 2);
+      expect(readConsumer(total)).toBe(4);
+      expect(getGraphReductionState(total)?.mode).toBe("specialized");
     });
   });
 

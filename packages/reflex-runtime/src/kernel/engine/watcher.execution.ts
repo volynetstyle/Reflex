@@ -1,5 +1,9 @@
 import type { ReactiveNode } from "../shape";
-import { clearNodeComputing, markNodeComputing } from "../shape";
+import {
+  clearNodeComputing,
+  GraphReductionEnabled,
+  markNodeComputing,
+} from "../shape";
 import { cleanupStaleSources } from "./tracking";
 import {
   currentConsumer,
@@ -51,10 +55,12 @@ export function executeKnownNodeComputation(
     cleanupStaleSources(node);
   }
 
-  const reductionPolicy = node.graphReductionPolicy ?? graphReductionPolicy;
+  const reductionEnabled =
+    graphReductionPolicy.enabled ||
+    (node.state & GraphReductionEnabled) !== 0;
 
-  if (reductionPolicy.enabled) {
-    observeGraphReductionRun(node, reductionPolicy);
+  if (reductionEnabled) {
+    observeGraphReductionRun(node, graphReductionPolicy, reductionEnabled);
   }
 
   devRecordComputeFinish(node, result, defaultContext);

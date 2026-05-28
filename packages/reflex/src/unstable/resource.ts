@@ -1,4 +1,9 @@
-import { disposeNode, type ReactiveNode } from "@volynets/reflex-runtime/internal";
+import {
+  Changed,
+  disposeNode,
+  emitSinkInvalidated,
+  type ReactiveNode,
+} from "@volynets/reflex-runtime/internal";
 import {
   disposeWatcher,
   readProducer,
@@ -340,11 +345,24 @@ class ResourceCore<T, E = unknown> {
     this.settle(result, request);
   }
 
-  refetch(): void {
-    const refetchNode = this.refetchNode;
-    if (this.disposed || refetchNode === null) return;
+  scheduleLoad(): void {
+    const watcher = this.watcher;
+    if (this.disposed || watcher === null) return;
 
-    writeProducer(refetchNode, refetchNode.payload + 1);
+    watcher.state = (watcher.state & ~Changed) | Changed;
+    emitSinkInvalidated(watcher);
+  }
+
+  refetch(): void {
+    if (this.disposed) return;
+
+    const refetchNode = this.refetchNode;
+    if (refetchNode !== null) {
+      writeProducer(refetchNode, refetchNode.payload + 1);
+      return;
+    }
+
+    this.scheduleLoad();
   }
 }
 
@@ -458,11 +476,11 @@ export function resource<S, T, E = unknown>(
     };
   }
 
-  core.refetchNode = createResourceStateNode();
-
   if (typeof maybeLoad === "function") {
     const source = sourceOrLoad as Accessor<S>;
     const load = maybeLoad;
+
+    core.refetchNode = createResourceStateNode();
 
     core.watcher = createWatcherNode(() => {
       const refetchNode = core.refetchNode;
@@ -483,8 +501,6 @@ export function resource<S, T, E = unknown>(
     const load = sourceOrLoad as ResourceJob<T>;
 
     core.watcher = createWatcherNode(() => {
-      const refetchNode = core.refetchNode;
-      if (refetchNode !== null) readProducer(refetchNode);
       core.runLoad(load);
     });
   }
