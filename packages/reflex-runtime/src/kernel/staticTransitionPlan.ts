@@ -1,1 +1,1 @@
-export * from "./staticTransitionPlan/index";
+export * from "./static/index";
