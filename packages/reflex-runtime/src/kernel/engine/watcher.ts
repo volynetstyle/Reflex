@@ -47,13 +47,13 @@ export function runWatcher(node: ReactiveNode): void {
   const state = node.state;
 
   if ((state & DIRTY_STATE) === 0) {
-    devRecordWatcherSkip(node, "clean", defaultContext);
+    if (__DEV__) devRecordWatcherSkip(node, "clean", defaultContext);
     return;
   }
 
   if (!shouldRecomputeDirtyWatcher(node, state)) {
     clearDirtyState(node);
-    devRecordWatcherSkip(node, "stable", defaultContext);
+    if (__DEV__) devRecordWatcherSkip(node, "stable", defaultContext);
     return;
   }
 
@@ -61,7 +61,7 @@ export function runWatcher(node: ReactiveNode): void {
 
   if (compute === null) {
     clearDirtyState(node);
-    devRecordWatcherFinish(node, false, undefined, defaultContext);
+    if (__DEV__) devRecordWatcherFinish(node, false, undefined, defaultContext);
     return;
   }
 
@@ -69,18 +69,21 @@ export function runWatcher(node: ReactiveNode): void {
   const prevCleanup =
     typeof prevPayload === "function" ? (prevPayload as WatcherCleanup) : null;
 
-  devRecordWatcherStart(node, prevCleanup !== null, defaultContext);
+  if (__DEV__)
+    devRecordWatcherStart(node, prevCleanup !== null, defaultContext);
 
   node.payload = undefined;
   clearNodeVisited(node);
 
   if (prevCleanup !== null) {
     runCleanup(prevCleanup);
-    devRecordWatcherCleanup(node, defaultContext);
+    if (__DEV__) devRecordWatcherCleanup(node, defaultContext);
 
     if (node.compute === null) {
       clearDirtyState(node);
-      devRecordWatcherFinish(node, false, undefined, defaultContext);
+      if (__DEV__) {
+        devRecordWatcherFinish(node, false, undefined, defaultContext);
+      }
       return;
     }
   }
@@ -99,7 +102,7 @@ export function runWatcher(node: ReactiveNode): void {
     node.state = (node.state & ~Changed) | Invalid;
   }
 
-  devRecordWatcherFinish(node, hasCleanup, result, defaultContext);
+  if (__DEV__) devRecordWatcherFinish(node, hasCleanup, result, defaultContext);
 }
 
 export function disposeWatcher(node: ReactiveNode): void {
@@ -115,5 +118,5 @@ export function disposeWatcher(node: ReactiveNode): void {
 
   node.payload = undefined;
 
-  devRecordWatcherDispose(node, cleanup !== null, defaultContext);
+  if (__DEV__) devRecordWatcherDispose(node, cleanup !== null, defaultContext);
 }

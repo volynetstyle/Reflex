@@ -15,29 +15,29 @@ import {
 const resumeEdgeStack: ReactiveEdge[] = [];
 let resumeStackHigh = 0;
 
-// 
+//
 export function getPropagateStackBase(): number {
   return resumeStackHigh;
 }
 
-// 
+//
 export function setPropagateStackHigh(top: number): void {
   resumeStackHigh = top;
 }
 
-// 
+//
 export function pushPropagateStack(edge: ReactiveEdge, top: number): number {
   resumeEdgeStack[top++] = edge;
-  noteResumeEdgeStackUsage(top);
+  if (__DEV__) noteResumeEdgeStackUsage(top);
   return top;
 }
 
-// 
+//
 export function readPropagateStack(top: number): ReactiveEdge {
   return resumeEdgeStack[top]!;
 }
 
-// 
+//
 export function restorePropagateStackBase(stackBase: number): void {
   resumeStackHigh = stackBase;
   trimWalkerStackIfSparse(resumeEdgeStack, stackBase);

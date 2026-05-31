@@ -24,7 +24,7 @@ import { observeGraphReductionRun } from "../reduction";
 import { cleanupStaleSources } from "./tracking";
 
 export function recompute(node: ReactiveNode): boolean {
-  devAssertExecutableNode(node);
+  if (__DEV__) devAssertExecutableNode(node);
   const compute = node.compute as NonNullable<typeof node.compute>;
 
   node.tailIn = null;
@@ -34,7 +34,7 @@ export function recompute(node: ReactiveNode): boolean {
   const prevActive = currentConsumer;
   setCurrentConsumer(node);
 
-  devRecordComputeStart(node, defaultContext);
+  if (__DEV__) devRecordComputeStart(node, defaultContext);
 
   let next: unknown;
 
@@ -44,7 +44,7 @@ export function recompute(node: ReactiveNode): boolean {
     setCurrentConsumer(prevActive);
     node.state &= ~Computing;
 
-    devRecordComputeError(node, error, defaultContext);
+    if (__DEV__) devRecordComputeError(node, error, defaultContext);
     throw error;
   }
 
@@ -62,7 +62,7 @@ export function recompute(node: ReactiveNode): boolean {
     observeGraphReductionRun(node, graphReductionPolicy, reductionEnabled);
   }
 
-  devRecordComputeFinish(node, next, defaultContext);
+  if (__DEV__) devRecordComputeFinish(node, next, defaultContext);
 
   const prev = node.payload;
   const hasChanged = !compare(prev, next);
@@ -70,7 +70,7 @@ export function recompute(node: ReactiveNode): boolean {
   node.payload = next;
   node.state &= ~DIRTY_STATE;
 
-  devRecordRecompute(node, hasChanged, next, prev, defaultContext);
+  if (__DEV__) devRecordRecompute(node, hasChanged, next, prev, defaultContext);
 
   return hasChanged;
 }

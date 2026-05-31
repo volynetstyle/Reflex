@@ -42,15 +42,15 @@ describe("Reactive runtime - subtle debug surface", () => {
     let current = undefined;
 
     const consumer = createConsumer(() => {
-      current = subtle.currentComputed();
+      current = debugSubtle.currentComputed();
       return readProducer(source) * 2;
     });
 
-    expect(subtle.currentComputed()).toBeUndefined();
+    expect(debugSubtle.currentComputed()).toBeUndefined();
     readConsumer(consumer);
 
     expect(current).toBe(consumer);
-    expect(subtle.currentComputed()).toBeUndefined();
+    expect(debugSubtle.currentComputed()).toBeUndefined();
   });
 
   it("introspects sources and sinks in graph order", () => {
@@ -62,12 +62,12 @@ describe("Reactive runtime - subtle debug surface", () => {
     });
 
     readConsumer(sum);
-    expect(subtle.introspectSources(sum)).toEqual([a, b]);
-    expect(subtle.introspectSinks(a)).toEqual([sum]);
-    expect(subtle.hasSources(sum)).toBe(true);
-    expect(subtle.hasSinks(a)).toBe(true);
+    expect(debugSubtle.introspectSources(sum)).toEqual([a, b]);
+    expect(debugSubtle.introspectSinks(a)).toEqual([sum]);
+    expect(debugSubtle.hasSources(sum)).toBe(true);
+    expect(debugSubtle.hasSinks(a)).toBe(true);
     runWatcher(watcher);
-    expect(subtle.introspectSinks(sum)).toEqual([watcher]);
+    expect(debugSubtle.introspectSinks(sum)).toEqual([watcher]);
   });
 
   it("reports watcher sinks and nodes without dependencies", () => {
@@ -77,14 +77,14 @@ describe("Reactive runtime - subtle debug surface", () => {
       return () => {};
     });
 
-    expect(subtle.hasSinks(source)).toBe(false);
-    expect(subtle.hasSources(watcher)).toBe(false);
+    expect(debugSubtle.hasSinks(source)).toBe(false);
+    expect(debugSubtle.hasSources(watcher)).toBe(false);
 
     runWatcher(watcher);
 
-    expect(subtle.introspectSinks(source)).toEqual([watcher]);
-    expect(subtle.hasSinks(source)).toBe(true);
-    expect(subtle.hasSources(watcher)).toBe(true);
+    expect(debugSubtle.introspectSinks(source)).toEqual([watcher]);
+    expect(debugSubtle.hasSinks(source)).toBe(true);
+    expect(debugSubtle.hasSources(watcher)).toBe(true);
   });
 
   it("snapshots graph nodes and edges with strict edge order metadata", () => {
@@ -98,7 +98,7 @@ describe("Reactive runtime - subtle debug surface", () => {
     readConsumer(sum);
     runWatcher(watcher);
 
-    const graph = subtle.graph(sum);
+    const graph = debugSubtle.graph(sum);
 
     expect(graph.root.payload).toBe(3);
     expect(graph.nodes.map((node) => node.payload)).toEqual([
@@ -129,12 +129,12 @@ describe("Reactive runtime - subtle debug surface", () => {
     readConsumer(sink);
 
     expect(
-      subtle
+      debugSubtle
         .graph(middle, { direction: "sources", depth: 1 })
         .nodes.map((node) => node.payload),
     ).toEqual([2, 1]);
     expect(
-      subtle
+      debugSubtle
         .graph(middle, { direction: "sinks", depth: 1 })
         .nodes.map((node) => node.payload),
     ).toEqual([2, 3]);
@@ -146,7 +146,7 @@ describe("Reactive runtime - subtle debug surface", () => {
 
     readConsumer(sink);
 
-    expect(subtle.graphIntegrity(source)).toEqual({
+    expect(debugSubtle.graphIntegrity(source)).toEqual({
       ok: true,
       issues: [],
     });
@@ -158,7 +158,7 @@ describe("Reactive runtime - subtle debug surface", () => {
       edge.prevOut = edge;
     }
 
-    const integrity = subtle.graphIntegrity(source);
+    const integrity = debugSubtle.graphIntegrity(source);
 
     expect(integrity.ok).toBe(false);
     expect(integrity.issues.map((issue) => issue.code)).toContain(
@@ -201,7 +201,26 @@ describe("Reactive runtime - subtle debug surface", () => {
       untracked(() => readProducer(source)),
     );
   });
+
+  it("keeps the root subtle export as a production no-op facade", () => {
+    const source = createProducer(1);
+
+    expect(subtle.enabled).toBe(false);
+    expect(subtle.currentComputed()).toBeUndefined();
+    expect(
+      subtle.introspectSources(createConsumer(() => readProducer(source))),
+    ).toEqual([]);
+    expect(subtle.introspectSinks(source)).toEqual([]);
+    expect(subtle.hasSinks(source)).toBe(false);
+    expect(subtle.graph(source)).toMatchObject({
+      edges: [],
+      nodes: [],
+    });
+    expect(subtle.graphIntegrity(source)).toEqual({
+      issues: [],
+      ok: true,
+    });
+    expect(subtle.stackStats()).toBeUndefined();
+    expect(subtle.snapshot(source)).toBeUndefined();
+  });
 });
-
-
-

@@ -32,10 +32,10 @@ const computed = createConsumer(() => {
  */
 export function readProducer<T>(node: ReactiveNode<T>): T {
   const value = node.payload;
+  const consumer = currentConsumer;
 
   // Register this read as a dependency if there's an active computation
-  if (currentConsumer !== null)
-    trackReadResolved(node, currentConsumer, trackingEpoch, true);
+  if (consumer !== null) trackReadResolved(node, consumer, trackingEpoch, true);
 
   if (__DEV__) devRecordReadProducer(node, value, defaultContext);
 

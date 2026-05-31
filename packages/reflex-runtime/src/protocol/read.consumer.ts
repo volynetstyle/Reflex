@@ -5,15 +5,13 @@ import {
   currentConsumer,
   trackingEpoch,
   trackReadResolved,
-  Changed,
-  Visited,
+  shouldRecomputeDirtyConsumer,
 } from "../kernel";
 import {
   devAssertConsumerCanStabilize,
   devRecordReadConsumer,
 } from "../kernel/dev";
 import { advance } from "../kernel/walkers/ensureFresh";
-import { walkBranch } from "../kernel/walkers/recomputeBranch";
 import { LAZY } from "./utils/constants";
 
 /**
@@ -72,23 +70,10 @@ export function readConsumerEager<T>(node: ReactiveNode<T>): T {
     : stabilizeDirtyConsumer<T>(node, state);
 }
 
-const FORCE_RECOMPUTE_STATE = Changed | Visited;
-
-function shouldRecomputeDirty(node: ReactiveNode, state: number): boolean {
-  if ((state & FORCE_RECOMPUTE_STATE) !== 0) return true;
-
-  const edge = node.firstIn;
-  return edge !== null && walkBranch(node, edge);
-}
-
 function stabilizeDirtyConsumer<T>(node: ReactiveNode<T>, state: number): T {
   if (__DEV__) devAssertConsumerCanStabilize(state);
 
-  if (shouldRecomputeDirty(node, state)) {
-    if (!advance(node)) {
-      node.state &= ~DIRTY_STATE;
-    }
-  } else {
+  if (!shouldRecomputeDirtyConsumer(node, state) || !advance(node)) {
     node.state &= ~DIRTY_STATE;
   }
 
@@ -132,48 +117,25 @@ const debugValue = readConsumer(doubled, ConsumerReadMode.eager)
  * @cost O(1) + stabilization cost (depends on upstream changes)
  */
 export function readConsumer<T>(node: ReactiveNode<T>, mode: number = LAZY): T {
-  const state = node.state;
-
-  if (__DEV__) devAssertConsumerCanStabilize(state);
-
   if ((mode & LAZY) === 0) {
-    if ((state & DIRTY_STATE) === 0) {
-      const value = node.payload as T;
-
-      if (__DEV__) devRecordReadConsumer(node, "eager", value, defaultContext);
-
-      return value;
-    }
-
-    const value = stabilizeDirtyConsumer(node, state);
-
-    if (__DEV__) devRecordReadConsumer(node, "eager", value, defaultContext);
-
-    return value;
-  }
-
-  if ((state & DIRTY_STATE) === 0) {
-    const value = node.payload as T;
-
-    const consumer = currentConsumer;
-    if (consumer !== null) {
-      trackReadResolved(node, consumer, trackingEpoch, true);
-    }
+    const state = node.state;
+    const value =
+      (state & DIRTY_STATE) === 0
+        ? (node.payload as T)
+        : stabilizeDirtyConsumer(node, state);
 
     if (__DEV__) {
-      devRecordReadConsumer(
-        node,
-        "lazy",
-        value,
-        defaultContext,
-        consumer ?? undefined,
-      );
+      devRecordReadConsumer(node, "eager", value, defaultContext);
     }
 
     return value;
   }
 
-  const value = stabilizeDirtyConsumer(node, state);
+  const state = node.state;
+  const value =
+    (state & DIRTY_STATE) === 0
+      ? (node.payload as T)
+      : stabilizeDirtyConsumer(node, state);
 
   const consumer = currentConsumer;
   if (consumer !== null) {

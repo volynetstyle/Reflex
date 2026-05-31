@@ -2,19 +2,12 @@ import { emitSinkInvalidated } from "../execution";
 import type { ReactiveEdge, ReactiveNode } from "../shape";
 import { Changed, Invalid, Watcher } from "../shape";
 
-// 
 export function propagateOnceFromEdge(edge: ReactiveEdge | null): void {
   for (let current = edge; current !== null; current = current.nextOut) {
     const sub = current.to;
     const state = sub.state;
 
-    // если уже изменили подписчика
     if ((state & Changed) !== 0) continue;
-
-    if ((state & (Changed | Invalid | Watcher)) === 0) {
-      sub.state = state | Changed;
-      continue;
-    }
 
     sub.state = (state & ~Invalid) | Changed;
 
@@ -24,7 +17,8 @@ export function propagateOnceFromEdge(edge: ReactiveEdge | null): void {
   }
 }
 
-// 
+//
 export function propagateOnce(node: ReactiveNode): void {
-  propagateOnceFromEdge(node.firstOut);
+  const firstOut = node.firstOut;
+  if (firstOut !== null) propagateOnceFromEdge(firstOut);
 }

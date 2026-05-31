@@ -14,12 +14,12 @@ import {
 
 const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
 
-// 
+//
 export function enterPropagationScope(): void {
   incrementPropagationScopeDepth();
 }
 
-// 
+//
 export function leavePropagationScope(): void {
   decrementPropagationScopeDepth();
   if (!propagationScopeDepth && currentConsumer === null) {
@@ -27,14 +27,15 @@ export function leavePropagationScope(): void {
   }
 }
 
-// 
+//
 export function emitSinkInvalidated(node: ReactiveNode): void {
   if (IS_DEV) recordDebugEvent(defaultContext, "watcher:invalidated", { node });
-  internalSinkInvalidatedHook?.(node);
-  hostSinkInvalidatedHook?.(node);
+
+  if (internalSinkInvalidatedHook) internalSinkInvalidatedHook(node);
+  if (hostSinkInvalidatedHook) hostSinkInvalidatedHook(node);
 }
 
-// 
+//
 export function emitSettledIfIdle(): void {
   if (propagationScopeDepth !== 0 || currentConsumer !== null) return;
   if (IS_DEV) recordDebugEvent(defaultContext, "context:settled");

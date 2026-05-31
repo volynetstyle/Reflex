@@ -33,7 +33,7 @@ export function executeKnownNodeComputation(
   nextTrackingEpoch();
   setCurrentConsumer(node);
 
-  devRecordComputeStart(node, defaultContext);
+  if (__DEV__) devRecordComputeStart(node, defaultContext);
 
   let result: unknown;
 
@@ -43,7 +43,7 @@ export function executeKnownNodeComputation(
     setCurrentConsumer(prevActive);
     clearNodeComputing(node);
 
-    devRecordComputeError(node, error, defaultContext);
+    if (__DEV__) devRecordComputeError(node, error, defaultContext);
 
     throw error;
   }
@@ -56,20 +56,19 @@ export function executeKnownNodeComputation(
   }
 
   const reductionEnabled =
-    graphReductionPolicy.enabled ||
-    (node.state & GraphReductionEnabled) !== 0;
+    graphReductionPolicy.enabled || (node.state & GraphReductionEnabled) !== 0;
 
   if (reductionEnabled) {
     observeGraphReductionRun(node, graphReductionPolicy, reductionEnabled);
   }
 
-  devRecordComputeFinish(node, result, defaultContext);
+  if (__DEV__) devRecordComputeFinish(node, result, defaultContext);
 
   return result;
 }
 
 export function executeNodeComputation(node: ReactiveNode): unknown {
-  devAssertExecutableNode(node);
+  if (__DEV__) devAssertExecutableNode(node);
 
   return executeKnownNodeComputation(node, node.compute as NodeCompute);
 }
