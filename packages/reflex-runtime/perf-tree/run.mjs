@@ -1,6 +1,5 @@
 import { performance } from "node:perf_hooks";
 import {
-  ConsumerReadMode,
   ReactiveNode,
   CONSUMER_CHANGED,
   PRODUCER_INITIAL_STATE,
@@ -13,9 +12,7 @@ import {
   setInternalHooks,
   writeProducer,
 } from "../build/esm/index.js";
-import {
-  linkEdge,
-} from "../build/esm/kernel/shape/graph.js";
+import { linkEdge } from "../build/esm/kernel/shape/graph.js";
 import {
   attachIncomingEdgeAfter,
   detachIncomingEdge,
@@ -36,33 +33,9 @@ const childOrder = new Map([
   ],
   [
     "graph.trackRead.tinyScanHit",
-    [
-      "graph.trackRead.tinyScanHit.step1",
-      "graph.trackRead.tinyScanHit.step2",
-    ],
+    ["graph.trackRead.tinyScanHit.step1", "graph.trackRead.tinyScanHit.step2"],
   ],
 ]);
-
-const thresholds = {
-  api: {
-    warningPct: 3,
-    regressionPct: 7,
-    p99WarningPct: 10,
-    p99RegressionPct: 20,
-  },
-  graph: {
-    warningPct: 5,
-    regressionPct: 10,
-    p99WarningPct: 15,
-    p99RegressionPct: 25,
-  },
-  scheduler: {
-    warningPct: 5,
-    regressionPct: 12,
-    p99WarningPct: 15,
-    p99RegressionPct: 30,
-  },
-};
 
 function producer(value) {
   return new ReactiveNode(value, null, PRODUCER_INITIAL_STATE);
@@ -129,7 +102,8 @@ function percentile(sorted, p) {
 }
 
 function result(id, label, group, parentId, measured, counters = {}) {
-  const { sink: _sink, ...metrics } = measured;
+  const metrics = { ...measured };
+  delete metrics.sink;
   return { id, label, group, parentId, metrics, counters };
 }
 
@@ -467,18 +441,6 @@ function createRotatingOrder(fanIn, step = 1) {
   };
 }
 
-function createAdjacentSwapOrder(fanIn) {
-  const base = Array.from({ length: fanIn }, (_, i) => i);
-  const swapped = base.slice();
-  swapped[0] = 1;
-  swapped[1] = 0;
-  let useSwap = false;
-  return () => {
-    useSwap = !useSwap;
-    return useSwap ? swapped : base;
-  };
-}
-
 function createReverseOrder(fanIn) {
   const base = Array.from({ length: fanIn }, (_, i) => i);
   const reversed = base.slice().reverse();
@@ -549,7 +511,13 @@ function moveFoundEdge(counters, active, found, prev, steps, version) {
 function createInstrumentedFallback(counters, options = {}) {
   const tinyScanLimit = options.tinyScanLimit ?? 0;
 
-  return function instrumentedFallback(source, active, prev, nextExpected, version) {
+  return function instrumentedFallback(
+    source,
+    active,
+    prev,
+    nextExpected,
+    version,
+  ) {
     counters.fallbackCount += 1;
 
     if (tinyScanLimit > 0) {
@@ -564,7 +532,10 @@ function createInstrumentedFallback(counters, options = {}) {
 
         counters.tinyScanHitCount += 1;
         counters.fallbackScanStepsTotal += tinySteps;
-        counters.maxFallbackScanLen = Math.max(counters.maxFallbackScanLen, tinySteps);
+        counters.maxFallbackScanLen = Math.max(
+          counters.maxFallbackScanLen,
+          tinySteps,
+        );
         if (tinySteps <= 4) counters.hitNearHeadCount += 1;
         return moveFoundEdge(counters, active, edge, prev, tinySteps, version);
       }
@@ -576,7 +547,11 @@ function createInstrumentedFallback(counters, options = {}) {
 
     let steps = 0;
     let found = null;
-    for (let edge = nextExpected ?? active.firstIn; edge !== null; edge = edge.nextIn) {
+    for (
+      let edge = nextExpected ?? active.firstIn;
+      edge !== null;
+      edge = edge.nextIn
+    ) {
       steps += 1;
       if (edge.from === source) {
         found = edge;
@@ -594,7 +569,8 @@ function createInstrumentedFallback(counters, options = {}) {
     }
 
     if (steps <= 4) counters.hitNearHeadCount += 1;
-    if (steps >= Math.max(1, counters.fanIn - 4)) counters.hitNearTailCount += 1;
+    if (steps >= Math.max(1, counters.fanIn - 4))
+      counters.hitNearTailCount += 1;
     if (steps >= counters.fanIn) counters.fullScanHitCount += 1;
     if (nextExpected === null) counters.wrappedResolvedCount += 1;
 
@@ -606,7 +582,9 @@ function finalizeTrackReadCounters(counters) {
   if (counters.expectedNextHitCount === 0 && counters.tinyScanHitCount === 0) {
     counters.expectedNextHitCount = Math.max(
       0,
-      counters.trackReadCount - counters.fallbackCount - counters.duplicateReadCount,
+      counters.trackReadCount -
+        counters.fallbackCount -
+        counters.duplicateReadCount,
     );
   }
 
@@ -619,15 +597,21 @@ function finalizeTrackReadCounters(counters) {
       ? 0
       : counters.fallbackScanStepsTotal / counters.fallbackCount;
   counters.fallbackRate =
-    counters.trackReadCount === 0 ? 0 : counters.fallbackCount / counters.trackReadCount;
+    counters.trackReadCount === 0
+      ? 0
+      : counters.fallbackCount / counters.trackReadCount;
   counters.duplicateRate =
     counters.trackReadCount === 0
       ? 0
       : counters.duplicateReadCount / counters.trackReadCount;
   counters.addEdgeRate =
-    counters.fallbackCount === 0 ? 0 : counters.addEdgeCount / counters.fallbackCount;
+    counters.fallbackCount === 0
+      ? 0
+      : counters.addEdgeCount / counters.fallbackCount;
   counters.moveEdgeRate =
-    counters.fallbackCount === 0 ? 0 : counters.moveEdgeCount / counters.fallbackCount;
+    counters.fallbackCount === 0
+      ? 0
+      : counters.moveEdgeCount / counters.fallbackCount;
   counters.tinyScanCandidateCount = Math.max(
     0,
     counters.trackReadCount -
@@ -698,7 +682,9 @@ function trackReadBench(bench, getOrder, fanIn, options = {}) {
 
 function trackReadMissAddEdgeBench(bench, fanIn) {
   return withRuntime(() => {
-    const stableSources = Array.from({ length: fanIn - 1 }, (_, i) => producer(i + 1));
+    const stableSources = Array.from({ length: fanIn - 1 }, (_, i) =>
+      producer(i + 1),
+    );
     const split = Math.floor(stableSources.length / 2);
     const tick = producer(0);
     const counters = createTrackReadCounters(fanIn);
