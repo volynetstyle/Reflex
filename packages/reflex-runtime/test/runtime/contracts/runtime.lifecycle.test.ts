@@ -1,16 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   Changed,
-  Computing,
   DIRTY_STATE,
   Visited,
   Computing,
+  createRuntimeContext,
   disposeNode,
   disposeWatcher,
+  getActiveRuntimeContext,
   readConsumer,
   readProducer,
   runWatcher,
   setCurrentConsumer,
+  setHostHooks,
+  setInternalHooks,
+  setRuntimeContextOptions,
   writeProducer,
 } from "../../runtime.test_utils";
 import { connect, disconnect } from "../../../src/kernel/shape/graph";
@@ -183,6 +187,57 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     }
 
     expectNoSubscriber(incidental, parent);
+  });
+
+  it("configures hooks on the active runtime context", () => {
+    const onSinkInvalidated = vi.fn();
+    const onSettled = vi.fn();
+    const onCleanup = vi.fn();
+    const onInternalSinkInvalidated = vi.fn();
+    const onInternalSettled = vi.fn();
+
+    setHostHooks({
+      effectCleanupRegistrar: onCleanup,
+      reactiveSettledDispatcher: onSettled,
+      sinkInvalidatedDispatcher: onSinkInvalidated,
+    });
+    setInternalHooks(onInternalSinkInvalidated, onInternalSettled);
+
+    const context = getActiveRuntimeContext();
+
+    expect(context.hostEffectCleanupHook).toBe(onCleanup);
+    expect(context.hostReactiveSettledHook).toBe(onSettled);
+    expect(context.hostSinkInvalidatedHook).toBe(onSinkInvalidated);
+    expect(context.internalReactiveSettledHook).toBe(onInternalSettled);
+    expect(context.internalSinkInvalidatedHook).toBe(onInternalSinkInvalidated);
+  });
+
+  it("configures hooks and options on an explicit runtime context", () => {
+    const context = createRuntimeContext();
+    const onSinkInvalidated = vi.fn();
+    const onSettled = vi.fn();
+    const readTrackingStrategy = vi.fn();
+
+    setHostHooks(context, {
+      reactiveSettledDispatcher: onSettled,
+      sinkInvalidatedDispatcher: onSinkInvalidated,
+    });
+    setInternalHooks(context, onSinkInvalidated, onSettled);
+    setRuntimeContextOptions(context, {
+      graphReductionPolicy: {
+        enabled: true,
+        stableThreshold: 3,
+      },
+      readTrackingStrategy,
+    });
+
+    expect(context.hostSinkInvalidatedHook).toBe(onSinkInvalidated);
+    expect(context.hostReactiveSettledHook).toBe(onSettled);
+    expect(context.internalSinkInvalidatedHook).toBe(onSinkInvalidated);
+    expect(context.internalReactiveSettledHook).toBe(onSettled);
+    expect(context.readTrackingStrategy).toBe(readTrackingStrategy);
+    expect(context.graphReductionPolicy.enabled).toBe(true);
+    expect(context.graphReductionPolicy.stableThreshold).toBe(3);
   });
 });
 
