@@ -3,6 +3,7 @@
 
 import { recompute } from "../engine/recompute";
 import type { ReactiveNode } from "../shape";
+import { devAssertRefreshEdge } from "../dev";
 import { propagateOnceFromEdge } from "./propagateOnce";
 
 /**
@@ -19,7 +20,10 @@ export function advance(node: ReactiveNode): boolean {
 
   if (!recompute(node)) return false;
 
-  if (firstOut !== null) propagateOnceFromEdge(firstOut);
+  if (firstOut !== null) {
+    if (__DEV__) devAssertRefreshEdge(node, firstOut);
+    propagateOnceFromEdge(firstOut);
+  }
 
   return true;
 }

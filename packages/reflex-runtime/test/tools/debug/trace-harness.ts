@@ -79,7 +79,10 @@ export function summarizeTrace(events: RuntimeDebugEvent[]): EventSummary {
     }
 
     if (event.type === "watcher:invalidated") {
-      watcherInvalidations.push(labelOf(event.node));
+      const label = labelOf(event.node);
+      if (!watcherInvalidations.includes(label)) {
+        watcherInvalidations.push(label);
+      }
       continue;
     }
 
