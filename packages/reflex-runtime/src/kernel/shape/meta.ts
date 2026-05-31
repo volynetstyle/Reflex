@@ -6,7 +6,7 @@ import type ReactiveNode from "./node";
  * Layout:
  * - exactly one kind bit should normally be present: Producer / Consumer / Watcher
  * - dirty bits are mutually exclusive in supported flows: Invalid or Changed
- * - walker bits (`Visited`, `Tracking`) are transient and only meaningful during
+ * - walker bits (`Visited`, `Computing`) are transient and only meaningful during
  *   propagation / pull-walk execution
  *
  * High-level semantics:
@@ -16,8 +16,8 @@ import type ReactiveNode from "./node";
  */
 export const Invalid = 1 << 0; // 1
 export const Changed = 1 << 1; // 2
-export const Reentrant = 1 << 2; // 4
-export const Tracking = 1 << 3; // 8
+export const Visited = 1 << 2; // 4
+export const Computing = 1 << 3; // 8
 
 export const Watcher = 1 << 5; // 32
 export const Scheduled = 1 << 6; // 64
@@ -32,7 +32,6 @@ export const Producer = 1 << 28;
  * prod) under heavy use (hot path).
  */
 export const Consumer = __DEV__ ? 1 << 29 : 0;
-export const Computing = 1 << 30;
 
 export type ReactiveNodeState = number;
 
@@ -67,40 +66,28 @@ export const CONSUMER_DIRTY = Consumer | DIRTY_STATE;
 export const WATCHER_CHANGED = Changed | Watcher;
 
 /** Transient walker-only bits that should not survive a settled execution. */
-export const WALKER_STATE = Reentrant | Tracking;
+export const WALKER_STATE = Visited | Computing;
 
 /** Clear the re-entrant marker after the walker no longer needs it. */
-// @__INLINE__
+// 
 export function clearNodeVisited(node: ReactiveNode): void {
-  node.state &= ~Reentrant;
-}
-
-/** Enter dependency collection mode for the current compute pass. */
-// @__INLINE__
-export function beginNodeTracking(node: ReactiveNode): void {
-  node.state = (node.state & ~Reentrant) | Tracking;
-}
-
-/** Leave dependency collection mode after compute finishes. */
-// @__INLINE__
-export function clearNodeTracking(node: ReactiveNode): void {
-  node.state &= ~Tracking;
+  node.state &= ~Visited;
 }
 
 /** Mark a node as actively executing its compute function. */
-// @__INLINE__
+// 
 export function markNodeComputing(node: ReactiveNode): void {
-  node.state = (node.state & ~Reentrant) | Tracking | Computing;
+  node.state = (node.state & ~Visited) | Computing | Computing;
 }
 
 /** Clear the active-computation marker. */
-// @__INLINE__
+// 
 export function clearNodeComputing(node: ReactiveNode): void {
-  node.state &= ~(Computing | Tracking);
+  node.state &= ~(Computing | Computing);
 }
 
 /** Clear both `Invalid` and `Changed`, returning the node to a clean state. */
-// @__INLINE__
+// 
 export function clearDirtyState(node: ReactiveNode): void {
   node.state &= ~DIRTY_STATE;
 }

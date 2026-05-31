@@ -287,7 +287,7 @@ Outputs performance metrics for:
 - `writeProducer()` latency
 - `readConsumer()` latency
 - Propagation fanout
-- Tracking cleanup
+- Computing cleanup
 
 ### Run Specific Benchmark
 
@@ -383,10 +383,10 @@ src/
     walkers/
       propagateChange.ts           ← Main push invalidation
       invalidateBranch.ts ← Shared push-side invalidation seam
-      propagateOnce.ts      ← Reentrant-safe variant
+      propagateOnce.ts      ← Visited-safe variant
       propagationConstants.ts ← State tokens
       recomputeNode.ts           ← Pull stabilization orchestration
-      ensureFresh.ts   ← Shared pull-side refresh seam
+      ensureFresh.ts   ← Shared pull-side advance seam
       recomputeBranch.ts    ← Branch switching, stale cleanup
 ```
 

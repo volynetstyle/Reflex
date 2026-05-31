@@ -77,7 +77,7 @@ writeProducer(source, 10);
 2. при no-op write нічого не робить
 3. оновлює `payload`
 4. очищає dirty bits producer-а
-5. якщо є підписники, запускає `propagate(firstOut, true)`
+5. якщо є підписники, запускає `propagateChanged(firstOut)`
 
 Головна властивість:
 
@@ -100,7 +100,7 @@ readConsumer(node, ConsumerReadMode.eager);
 - стабілізує consumer в `untracked` режимі
 - не додає outer dependency
 
-Це корисно, коли треба force-refresh без побудови нового edge.
+Це корисно, коли треба force-advance без побудови нового edge.
 
 ## 5. `runWatcher()` і `disposeWatcher()`
 

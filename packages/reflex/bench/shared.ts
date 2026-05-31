@@ -75,7 +75,7 @@ interface SummaryRow {
   "sample ms/step": string;
   "order spread %": string;
   "recompute/step": string;
-  "refresh/step": string;
+  "advance/step": string;
   "scheduler/step": string;
   "setup allocs": string;
   "step allocs/step": string;
@@ -390,7 +390,7 @@ function sampleScenario(
     "order spread %":
       orderSpreadPct === undefined ? "n/a" : formatNumber(orderSpreadPct, 1),
     "recompute/step": formatNumber(recomputes * inv, 1),
-    "refresh/step": formatNumber(refreshes * inv, 1),
+    "advance/step": formatNumber(refreshes * inv, 1),
     "scheduler/step": formatNumber(schedulerOps * inv, 1),
     "setup allocs": String(runner.setupAllocations),
     "step allocs/step": formatNumber(stepAllocations * inv, 1),

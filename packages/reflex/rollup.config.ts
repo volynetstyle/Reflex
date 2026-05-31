@@ -52,7 +52,7 @@ const JIT_SAFE_COMPRESS = {
   drop_debugger: true,
   evaluate: true,
   hoist_props: true,
-  inline: 0,
+  inline: 1,
   module: true,
   pure_getters: true,
   pure_funcs: [...PURE_FUNCS],
@@ -62,7 +62,7 @@ const JIT_SAFE_COMPRESS = {
   side_effects: true,
   toplevel: true,
   unused: true,
-} as const;
+};
 
 const TARGETS: BuildTarget[] = [
   { name: "esm", outDir: "esm", format: "esm", dev: false },
@@ -151,9 +151,9 @@ function createPlugins(target: BuildTarget, entry: BuildEntry): Plugin[] {
     loggerPlugin(target, entry),
     resolvePlugin(),
     replacePlugin(target),
+    constEnum(),
     swcPlugin(target),
     terserPlugin(target),
-    constEnum(),
   ]);
 }
 
@@ -190,4 +190,6 @@ function createConfig(target: BuildTarget, entry: BuildEntry): RollupOptions {
   };
 }
 
-export default TARGETS.flatMap((target) => ENTRIES.map((entry) => createConfig(target, entry)));
+export default TARGETS.flatMap((target) =>
+  ENTRIES.map((entry) => createConfig(target, entry)),
+);

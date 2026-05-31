@@ -18,7 +18,7 @@ node.state &= ~DIRTY_STATE;
 if (node.firstOut !== null) {
   runtime.enterPropagation();
   try {
-    propagate(node.firstOut, true);
+    propagateChanged(node.firstOut);
   } finally {
     runtime.leavePropagation();
   }
@@ -31,7 +31,7 @@ if (node.firstOut !== null) {
 - producer комітить значення одразу
 - downstream не recompute-иться на write path
 
-## 2. Навіщо `propagate(..., true)`
+## 2. Навіщо `propagateChanged()`
 
 Другий аргумент означає:
 
@@ -134,7 +134,7 @@ if ((state & DIRTY_STATE) !== 0) {
 Тому `shouldRecompute()`:
 
 - проходить по incoming dependencies
-- refresh-ить dirty upstream вузли в правильному порядку
+- advance-ить dirty upstream вузли в правильному порядку
 - повертає `true` лише якщо реальна зміна підтвердилась
 
 ## 8. `shouldRecompute()` у поточному коді
@@ -149,7 +149,7 @@ Pull-side walker теж розщеплений на:
 - іде по `firstIn`
 - тримається на дешевому linear path, поки немає branching
 - при потребі спускається в dirty subtrees
-- refresh-ить dependency через `refreshDependency()`
+- advance-ить dependency через `refreshDependency()`
 
 Особливий fast path:
 
@@ -180,13 +180,13 @@ Pull-side walker теж розщеплений на:
 
 1. перевіряє cycle / відсутність `compute` у dev
 2. скидає `depsTail = null`
-3. виставляє `Tracking`
+3. виставляє `Computing`
 4. виставляє `Computing`
 5. перемикає `runtime.activeComputed`
 6. запускає `compute`
 7. викликає `cleanupStaleSources(node)`
 8. робить commit
-9. знімає `Tracking` і `Computing`
+9. знімає `Computing` і `Computing`
 10. викликає `runtime.maybeNotifySettled()`
 
 ## 11. Навіщо `propagateOnce()`

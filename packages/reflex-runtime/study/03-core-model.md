@@ -117,7 +117,7 @@ interface ReactiveEdge {
 - `Disposed`
 - `Computing`
 - `Scheduled`
-- `Tracking`
+- `Computing`
 
 ### Рольові bits
 
@@ -144,12 +144,12 @@ DIRTY_STATE = Invalid | Changed
 ### Walker bits
 
 - `Visited`
-- `Tracking`
+- `Computing`
 
 Ключова маска:
 
 ```ts
-WALKER_STATE = Visited | Tracking
+WALKER_STATE = Visited | Computing
 ```
 
 Вони використовуються push/pull walker-ами і dependency tracking.

@@ -221,14 +221,14 @@ export function devAssertRefreshEdge(
   if (!__DEV__) return;
 
   if (edge.from !== node) {
-    throw new Error("refresh invariant violation: edge.from !== node");
+    throw new Error("advance invariant violation: edge.from !== node");
   }
 
   for (let cursor = node.firstOut; cursor !== null; cursor = cursor.nextOut) {
     if (cursor === edge) return;
   }
 
-  throw new Error("refresh invariant violation: edge is not attached out");
+  throw new Error("advance invariant violation: edge is not attached out");
 }
 
 export function devRecordComputeStart(

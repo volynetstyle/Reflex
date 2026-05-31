@@ -5,7 +5,7 @@ import {
   type RuntimeDebugContext,
 } from "../kernel/context";
 import type { ReactiveEdge, ReactiveNode } from "../kernel/shape";
-import { Changed, Computing, Consumer, DIRTY_STATE, Invalid, Producer, Reentrant, Scheduled, Tracking, Watcher } from "../kernel/shape";
+import { Changed,  Consumer, DIRTY_STATE, Invalid, Producer, Visited, Scheduled, Computing, Watcher } from "../kernel/shape";
 import type {
   RuntimeDebugContextSnapshot,
   RuntimeDebugEvent,
@@ -86,10 +86,10 @@ function getFlags(state: number): RuntimeDebugFlag[] {
   if ((state & Watcher) !== 0) flags.push("watcher");
   if ((state & Invalid) !== 0) flags.push("invalid");
   if ((state & Changed) !== 0) flags.push("changed");
-  if ((state & Reentrant) !== 0) flags.push("visited");
+  if ((state & Visited) !== 0) flags.push("visited");
   if ((state & Computing) !== 0) flags.push("computing");
   if ((state & Scheduled) !== 0) flags.push("scheduled");
-  if ((state & Tracking) !== 0) flags.push("tracking");
+  if ((state & Computing) !== 0) flags.push("tracking");
 
   return flags;
 }

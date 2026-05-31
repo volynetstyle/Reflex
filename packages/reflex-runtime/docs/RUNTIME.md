@@ -294,7 +294,7 @@ Multiple contexts can reference the same nodes.
 
 **Returns:** `node.payload` immediately.
 
-**Tracking:** If a computation is currently active in `context`, this read creates a dependency edge.
+**Computing:** If a computation is currently active in `context`, this read creates a dependency edge.
 
 **Execution:** Does not stabilize anything; never runs user code.
 
@@ -461,7 +461,7 @@ enum ReactiveNodeState {
   Disposed = 1 << 6,
   Computing = 1 << 7,
   Scheduled = 1 << 8,
-  Tracking = 1 << 9,
+  Computing = 1 << 9,
 }
 ```
 

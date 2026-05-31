@@ -56,12 +56,12 @@ This document defines the role of each documentation file and the canonical read
 - **Purpose:** Structured learning path for deep understanding
 - **Content:**
   - Curated order of study materials
-  - Status annotations (current, historical, needs-refresh)
+  - Status annotations (current, historical, needs-advance)
   - Brief description of what each module teaches
   - Prerequisites and dependencies between topics
   - Reference to applicable code files
 
-**Status:** Needs refresh  
+**Status:** Needs advance  
 **Scope:** ~100 lines, navigation only
 
 ---
@@ -82,7 +82,7 @@ This document defines the role of each documentation file and the canonical read
   - 09-extension-guide.md: Safe extension points, seams for customization
   - 10-source-map.md: File organization, dependency graph of modules, reading order
 
-**Status:** Partially needs refresh  
+**Status:** Partially needs advance  
 **Scope:** 150-250 lines each
 
 ---
@@ -177,4 +177,4 @@ All documentation uses these terms consistently:
 
 ## Next Steps
 
-See individual document headers for their specific status and refresh requirements.
+See individual document headers for their specific status and advance requirements.

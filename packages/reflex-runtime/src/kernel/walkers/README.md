@@ -11,7 +11,7 @@ The code is split by traversal responsibility. Public entry points remain stable
 
 ### Push Invalidation
 
-- `propagateChange.ts` - main outgoing-edge traversal. Direct subscribers receive the caller's promote token; deeper descendants are marked `Invalid`. Watchers are terminal and are notified without descending further.
+- `propagateChange.ts` - main outgoing-edge traversal. `propagateOnceChanged()` marks direct subscribers `Changed`; `propagateInvalid()` marks deeper descendants `Invalid`. Watchers are terminal and are notified without descending further.
 - `propagationStack.ts` - shared resume stack for branching propagation and nested watcher callbacks.
 - `invalidateBranch.ts` - subscriber state transition helper plus watcher notification dispatch.
 - `propagateOnce.ts` - re-entrant/side-fanout propagation used after pull recompute changes a shared consumer.
@@ -29,7 +29,7 @@ The code is split by traversal responsibility. Public entry points remain stable
 `writeProducer()` commits a changed producer and calls:
 
 ```ts
-propagate(node.firstOut, Changed);
+propagateChanged(node.firstOut);
 ```
 
 The traversal walks outgoing edges in source-to-subscriber order:
@@ -56,14 +56,14 @@ Important details:
 Cheap exits in `recomputeNode.ts`:
 
 - `Changed` means the consumer must recompute.
-- `Invalid | Reentrant` means the consumer must recompute.
+- `Invalid | Visited` means the consumer must recompute.
 - Clean state returns `false`.
 - Invalid leaf nodes clear `Invalid` and return `false`.
 
 When dependencies must be inspected, `walkBranch()` uses one stack loop:
 
 ```text
-dirty dependency     -> refresh or descend
+dirty dependency     -> advance or descend
 stable dependency    -> resume sibling
 confirmed change     -> bubble upward
 ```
@@ -72,7 +72,7 @@ Straight chains stay cheap because the loop keeps stepping through `edge.from` w
 
 ## Refresh Contract
 
-`refresh(node, edge)` recomputes `node`.
+`advance(node, edge)` recomputes `node`.
 
 If the value changed and `node` has side subscribers, it calls `propagateOnce(node)`. The current parent path is already being handled by the active pull walker, so only side-fanout needs explicit propagation.
 
@@ -82,8 +82,8 @@ If the value changed and `node` has side subscribers, it calls `propagateOnce(no
 
 - `Changed` means a direct upstream dependency definitely changed.
 - `Invalid` means an upstream dependency may have changed and must be checked lazily.
-- `Tracking` protects the currently tracked dependency prefix during compute.
-- `Reentrant` marks nodes touched during nested execution.
+- `Computing` protects the currently tracked dependency prefix during compute.
+- `Visited` marks nodes touched during nested execution.
 - Walker-only bits must not survive a settled traversal unless the node is still actively tracking or re-entrant.
 
 ## Edge Invariants

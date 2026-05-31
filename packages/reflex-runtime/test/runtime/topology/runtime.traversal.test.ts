@@ -10,9 +10,9 @@ import {
   Changed,
   Consumer,
   Invalid,
-  Reentrant,
+  Visited,
   shouldRecompute,
-  Tracking,
+  Computing,
 } from "../../../src/kernel";
 import { linkEdge } from "../../../src/kernel/shape/graph";
 import {
@@ -132,15 +132,15 @@ describe("Reactive runtime - traversal invariants", () => {
     const trackedEdge = linkEdge(tracked, target);
     const staleEdge = linkEdge(stale, target);
 
-    target.state = Consumer | Tracking;
+    target.state = Consumer | Computing;
     target.tailIn = trackedEdge;
 
     writeProducer(stale, 3);
-    expect(target.state).toBe(Consumer | Tracking);
+    expect(target.state).toBe(Consumer | Computing);
 
     writeProducer(tracked, 2);
-    expect(target.state & Tracking).toBeTruthy();
-    expect(target.state & Reentrant).toBeTruthy();
+    expect(target.state & Computing).toBeTruthy();
+    expect(target.state & Visited).toBeTruthy();
     expect(target.state & Changed).toBeFalsy();
     expect(target.state & Invalid).toBeTruthy();
   });
@@ -155,17 +155,17 @@ describe("Reactive runtime - traversal invariants", () => {
 
     linkEdge(stale, target);
 
-    target.state = Consumer | Tracking;
+    target.state = Consumer | Computing;
     target.tailIn = secondEdge;
 
     writeProducer(stale, 4);
-    expect(target.state).toBe(Consumer | Tracking);
+    expect(target.state).toBe(Consumer | Computing);
 
     writeProducer(first, 5);
     expecttailIn(target, secondEdge);
     expectIncomingPrefix(target, [firstEdge, secondEdge]);
-    expect(target.state & Tracking).toBeTruthy();
-    expect(target.state & Reentrant).toBeTruthy();
+    expect(target.state & Computing).toBeTruthy();
+    expect(target.state & Visited).toBeTruthy();
     expect(target.state & Changed).toBeFalsy();
     expect(target.state & Invalid).toBeTruthy();
   });
@@ -240,7 +240,7 @@ describe("Reactive runtime - traversal invariants", () => {
     runWatcher(watcher);
     expect(seen).toEqual([0]);
     expect(watcher.state & Invalid).toBeTruthy();
-    expect(watcher.state & Reentrant).toBeTruthy();
+    expect(watcher.state & Visited).toBeTruthy();
 
     runWatcher(watcher);
     expect(seen).toEqual([0, 1]);
@@ -269,9 +269,9 @@ describe("Reactive runtime - traversal invariants", () => {
     runWatcher(watcher);
 
     expect(seen).toEqual([0]);
-    expect(watcher.state & Tracking).toBeFalsy();
+    expect(watcher.state & Computing).toBeFalsy();
     expect(watcher.state & Invalid).toBeTruthy();
-    expect(watcher.state & Reentrant).toBeTruthy();
+    expect(watcher.state & Visited).toBeTruthy();
   });
 
   it("preserves nested computed tracking between producer reads", () => {
@@ -368,7 +368,7 @@ describe("Reactive runtime - traversal invariants", () => {
 
       if (entry.reentrant) {
         expect(watcher.state & Invalid, entry.name).toBeTruthy();
-        expect(watcher.state & Reentrant, entry.name).toBeTruthy();
+        expect(watcher.state & Visited, entry.name).toBeTruthy();
 
         runWatcher(watcher);
       } else {

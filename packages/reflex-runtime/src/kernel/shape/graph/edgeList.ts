@@ -95,7 +95,7 @@ export function moveIncomingEdgeAfterUnchecked(
   nodeStructureIncrement(to);
 }
 
-// @__INLINE__
+// 
 export function moveMiddleIncomingEdgeAfterEdgeUnchecked(
   to: ReactiveNode,
   edge: ReactiveEdge,
@@ -120,7 +120,7 @@ export function moveMiddleIncomingEdgeAfterEdgeUnchecked(
   nodeStructureIncrement(to);
 }
 
-// @__INLINE__
+// 
 export function moveNonHeadIncomingEdgeToFrontUnchecked(
   to: ReactiveNode,
   edge: ReactiveEdge,
@@ -145,7 +145,7 @@ export function moveNonHeadIncomingEdgeToFrontUnchecked(
   nodeStructureIncrement(to);
 }
 
-// @__INLINE__
+// 
 export function moveLastIncomingEdgeAfterEdgeUnchecked(
   to: ReactiveNode,
   edge: ReactiveEdge,
@@ -169,7 +169,7 @@ export function moveLastIncomingEdgeAfterEdgeUnchecked(
   nodeStructureIncrement(to);
 }
 
-// @__INLINE__
+// 
 export function moveLastIncomingEdgeToFrontUnchecked(
   to: ReactiveNode,
   edge: ReactiveEdge,

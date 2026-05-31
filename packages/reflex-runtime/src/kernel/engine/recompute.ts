@@ -10,8 +10,7 @@ import {
   Computing,
   DIRTY_STATE,
   GraphReductionEnabled,
-  Reentrant,
-  Tracking,
+  Visited,
 } from "../shape";
 import {
   nextTrackingEpoch,
@@ -29,7 +28,7 @@ export function recompute(node: ReactiveNode): boolean {
   const compute = node.compute as NonNullable<typeof node.compute>;
 
   node.tailIn = null;
-  node.state = (node.state & ~Reentrant) | Tracking | Computing;
+  node.state = (node.state & ~Visited) | Computing;
   nextTrackingEpoch();
 
   const prevActive = currentConsumer;
@@ -43,22 +42,21 @@ export function recompute(node: ReactiveNode): boolean {
     next = compute();
   } catch (error) {
     setCurrentConsumer(prevActive);
-    node.state &= ~(Computing | Tracking);
+    node.state &= ~Computing;
 
     devRecordComputeError(node, error, defaultContext);
     throw error;
   }
 
   setCurrentConsumer(prevActive);
-  node.state &= ~(Computing | Tracking);
+  node.state &= ~Computing;
 
   if (node.tailIn !== node.lastIn) {
     cleanupStaleSources(node);
   }
 
   const reductionEnabled =
-    graphReductionPolicy.enabled ||
-    (node.state & GraphReductionEnabled) !== 0;
+    graphReductionPolicy.enabled || (node.state & GraphReductionEnabled) !== 0;
 
   if (reductionEnabled) {
     observeGraphReductionRun(node, graphReductionPolicy, reductionEnabled);

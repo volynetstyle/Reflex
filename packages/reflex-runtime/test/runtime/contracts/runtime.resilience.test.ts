@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   Computing,
   DIRTY_STATE,
-  Tracking,
+  Computing,
   disposeWatcher,
   getCurrentConsumer,
   getPropagationScopeDepth,
@@ -87,7 +87,7 @@ describe("Reactive runtime - resilience and recovery", () => {
 
     expect(() => runWatcher(watcher)).toThrow(error);
     expect(getCurrentConsumer()).toBeNull();
-    expect(watcher.state & Tracking).toBe(0);
+    expect(watcher.state & Computing).toBe(0);
     expect(watcher.state & Computing).toBe(0);
   });
 

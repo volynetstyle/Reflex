@@ -7,7 +7,7 @@ import {
   disposeNode,
   Changed,
   Invalid,
-  Reentrant,
+  Visited,
 } from "../shape";
 import { executeKnownNodeComputation } from "./watcher.execution";
 import {
@@ -93,7 +93,7 @@ export function runWatcher(node: ReactiveNode): void {
     node.payload = result as WatcherCleanup;
   }
 
-  if ((node.state & Reentrant) === 0) {
+  if ((node.state & Visited) === 0) {
     clearDirtyState(node);
   } else {
     node.state = (node.state & ~Changed) | Invalid;

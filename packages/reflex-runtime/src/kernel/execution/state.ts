@@ -121,44 +121,44 @@ export function runWithRuntimeContext<T>(
   }
 }
 
-// @__INLINE__
+// 
 export function getCurrentConsumer(): ReactiveNode | null {
   return currentConsumer;
 }
 
-// @__INLINE__
+// 
 export function setCurrentConsumer(node: ReactiveNode | null): void {
   currentConsumer = node;
 }
 
-// @__INLINE__
+// 
 export function getPropagationScopeDepth(): number {
   return propagationScopeDepth;
 }
 
-// @__INLINE__
+// 
 export function setPropagationScopeDepth(depth: number): void {
   propagationScopeDepth = depth;
 }
 
-// @__INLINE__
+// 
 export function incrementPropagationScopeDepth(): void {
   ++propagationScopeDepth;
 }
 
-// @__INLINE__
+// 
 export function decrementPropagationScopeDepth(): void {
   if (propagationScopeDepth > 0) --propagationScopeDepth;
 }
 
-// @__INLINE__
+// 
 export function setTrackingEpoch(epoch: number): void {
   if (epoch > trackingEpoch) trackingEpoch = epoch;
 }
 
-// @__INLINE__
-export function nextTrackingEpoch(): void {
-  trackingEpoch = (trackingEpoch + 1) >>> 0 || 1;
+// 
+export function nextTrackingEpoch(): number {
+  return (trackingEpoch = (trackingEpoch + 1) >>> 0 || 1);
 }
 
 export function isNewer(a: number, b: number): boolean {

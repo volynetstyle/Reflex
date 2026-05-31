@@ -15,12 +15,12 @@ import {
 const stack: ReactiveEdge[] = [];
 let high = 0;
 
-// @__INLINE__
+// 
 export function getRecomputeStackBase(): number {
   return high;
 }
 
-// @__INLINE__
+// 
 export function setRecomputeStackHigh(top: number): void {
   high = top;
 }
@@ -28,7 +28,7 @@ export function setRecomputeStackHigh(top: number): void {
 /**
  * Release the current walker slice and optionally trim retained capacity.
  */
-// @__INLINE__
+// 
 export function releaseRecomputeStackBase(base: number): void {
   high = base;
 
@@ -38,14 +38,14 @@ export function releaseRecomputeStackBase(base: number): void {
   }
 }
 
-// @__INLINE__
+// 
 export function pushRecomputeStack(edge: ReactiveEdge, top: number): number {
   stack[top++] = edge;
   if (__DEV__) noteShouldRecomputeStackUsage(top);
   return top;
 }
 
-// @__INLINE__
+// 
 export function readRecomputeStack(top: number): ReactiveEdge {
   return stack[top]!;
 }

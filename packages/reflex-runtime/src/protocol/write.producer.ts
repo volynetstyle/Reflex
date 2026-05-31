@@ -2,11 +2,16 @@ import type { ReactiveNode } from "../kernel";
 import {
   defaultContext,
   enterPropagationScope,
-  propagateChanged,
   leavePropagationScope,
   emitSettledIfIdle,
+  propagateOnceChanged,
+  propagateInvalid,
 } from "../kernel";
 import { devRecordWriteProducer } from "../kernel/dev";
+import {
+  getPropagateStackBase,
+  restorePropagateStackBase,
+} from "../kernel/walkers/propagationStack";
 import type { ProducerComparator } from "./utils/compare";
 import { compare as defaultComparator } from "./utils/compare";
 
@@ -69,7 +74,14 @@ export function writeProducer<T>(
   // This prevents false invalidation when setting to the same value
   if (compare(prev, value)) {
     if (__DEV__) {
-      devRecordWriteProducer(node, false, value, prev, undefined, defaultContext);
+      devRecordWriteProducer(
+        node,
+        false,
+        value,
+        prev,
+        undefined,
+        defaultContext,
+      );
     }
     // Value didn't change, skip propagation
     return;
@@ -90,9 +102,19 @@ export function writeProducer<T>(
   }
 
   enterPropagationScope();
-  // Push phase: notify all subscribers depth-first, mark them dirty.
-  // Direct subscribers are promoted from Invalid to Changed.
-  // This tells them "definitely changed, don't verify, recompute"
-  propagateChanged(firstOut);
-  leavePropagationScope();
+  const base = getPropagateStackBase();
+
+  try {
+    // Push phase: notify all subscribers depth-first, mark them dirty.
+    // Direct subscribers are promoted from Invalid to Changed.
+    // This tells them "definitely changed, don't verify, recompute"
+    const pendingInvalid = propagateOnceChanged(firstOut, base);
+
+    if (pendingInvalid !== null) {
+      propagateInvalid(pendingInvalid, getPropagateStackBase(), base);
+    }
+  } finally {
+    restorePropagateStackBase(base);
+    leavePropagationScope();
+  }
 }

@@ -166,7 +166,7 @@ Shared executor для вузлів із `compute`.
 
 Що читати:
 
-- встановлення `Tracking`
+- встановлення `Computing`
 - встановлення `Computing`
 - перемикання `activeComputed`
 - виклик `cleanupStaleSources()`

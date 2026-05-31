@@ -3,25 +3,23 @@
 
 import { recompute } from "../engine/recompute";
 import type { ReactiveNode } from "../shape";
-import { propagateOnce, propagateOnceFromEdgeNonNull } from "./propagateOnce";
+import { propagateOnce, propagateOnceFromEdge } from "./propagateOnce";
 
 /**
+ * Advance to next value
+ * 
  * Recompute `node` and, if it changed, propagate dirtiness to its outgoing users.
  *
  * The active pull walker owns the current parent edge; this only propagates
  * side-fanout that existed before recompute.
  */
-// @__INLINE__
-export function refresh(node: ReactiveNode): boolean {
+// 
+export function advance(node: ReactiveNode): boolean {
   const firstOut = node.firstOut;
-  const changed = recompute(node);
 
-  if (!changed || firstOut === null) {
-    return changed;
-  }
+  if (recompute(node)) return (propagateOnceFromEdge(firstOut), true);
 
-  propagateOnceFromEdgeNonNull(firstOut);
-  return true;
+  return false;
 }
 
 export function refreshAndPropagateIfNeeded(

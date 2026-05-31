@@ -8,8 +8,8 @@ import {
   Invalid,
   PRODUCER_INITIAL_STATE,
   ReactiveNode,
-  Reentrant,
-  Tracking,
+  Visited,
+  Computing,
   Watcher,
   readConsumer,
   readProducer,
@@ -21,16 +21,16 @@ import {
 import { recompute } from "../../../build/esm/kernel/engine/computeNode.js";
 import { executeNodeComputation } from "../../../build/esm/kernel/engine/executeWatcher.js";
 import { linkEdge } from "../../../build/esm/kernel/shape/graph.js";
-import { propagate } from "../../../build/esm/kernel/walkers/propagateChange.js";
+import { propagateChanged } from "../../../build/esm/kernel/walkers/propagateChange.js";
 import { shouldRecompute } from "../../../build/esm/kernel/walkers/recomputeNode.js";
 
 const DIRTY_OR_WALKER =
   Invalid |
   Changed |
-  Reentrant |
-  Tracking;
+  Visited |
+  Computing;
 const TRACKING_CONSUMER_STATE =
-  Consumer | Tracking;
+  Consumer | Computing;
 
 function createProducer(value) {
   return new ReactiveNode(value, null, PRODUCER_INITIAL_STATE);
@@ -71,7 +71,7 @@ function buildPropagateChain(depth) {
   return {
     nodes,
     run() {
-      propagate(startEdge, Changed);
+      propagateChanged(startEdge);
       clearWalkerState(nodes);
       return nodes.length;
     },
@@ -103,7 +103,7 @@ function buildPropagateFanout(width, depth) {
   return {
     nodes,
     run() {
-      propagate(startEdge, Changed);
+      propagateChanged(startEdge);
       clearWalkerState(nodes);
       return nodes.length;
     },
@@ -139,12 +139,12 @@ function buildTrackedPrefix(fanIn, trackedCount) {
   return {
     prefix() {
       resetTrackingState();
-      propagate(prefixEdge, Changed);
+      propagateChanged(prefixEdge);
       return target.state;
     },
     stale() {
       resetTrackingState();
-      propagate(staleEdge, Changed);
+      propagateChanged(staleEdge);
       return target.state;
     },
   };
@@ -174,7 +174,7 @@ function buildTrackedPrefixStress(fanIn, depsTailIndex, edgeIndex) {
     run() {
       target.state = TRACKING_CONSUMER_STATE;
       target.tailIn = depsTail;
-      propagate(targetEdge, Changed);
+      propagateChanged(targetEdge);
       return target.state;
     },
   };
@@ -248,7 +248,7 @@ function buildPropagateBranchingTrackingMix(width, depth) {
   return {
     run() {
       armTracking();
-      propagate(startEdge, Changed);
+      propagateChanged(startEdge);
       return nodes.length;
     },
   };

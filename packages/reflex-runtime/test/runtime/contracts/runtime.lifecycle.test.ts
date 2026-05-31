@@ -3,8 +3,8 @@ import {
   Changed,
   Computing,
   DIRTY_STATE,
-  Reentrant,
-  Tracking,
+  Visited,
+  Computing,
   disposeNode,
   disposeWatcher,
   readConsumer,
@@ -103,7 +103,7 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     expect(sinkSpy).toHaveBeenCalledTimes(1);
   });
 
-  it("characterization: compute executes with Tracking and Computing set, then clears them", () => {
+  it("characterization: compute executes with Computing and Computing set, then clears them", () => {
     let target!: ReturnType<typeof createConsumer<number>>;
     let seenInside = 0;
 
@@ -113,9 +113,8 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     });
 
     expect(readConsumer(target)).toBe(1);
-    expect(seenInside & Tracking).toBeTruthy();
     expect(seenInside & Computing).toBeTruthy();
-    expect(seenInside & Reentrant).toBeFalsy();
+    expect(seenInside & Visited).toBeFalsy();
     expectNotTracking(target);
     expectNotComputing(target);
   });
@@ -132,10 +131,10 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
 
     expect(readConsumer(target)).toBe(3);
 
-    target.state |= Reentrant | Changed;
+    target.state |= Visited | Changed;
 
     expect(readConsumer(target)).toBe(3);
-    expect(seenInside & Tracking).toBeTruthy();
+    expect(seenInside & Computing).toBeTruthy();
     expectNotReentrant(target);
     expectClean(target);
   });

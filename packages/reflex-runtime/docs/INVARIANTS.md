@@ -423,7 +423,7 @@ readConsumer(node, ctx2);  // doesn't affect ctx1
 
 - **Context parameter:** All operations accept `context?`
 - **Default context:** Fallback to shared default if omitted
-- **Tracking storage:** Per-context cleanup, activeComputed, etc.
+- **Computing storage:** Per-context cleanup, activeComputed, etc.
 
 ### How It Breaks
 

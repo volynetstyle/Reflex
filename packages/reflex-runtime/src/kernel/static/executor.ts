@@ -1,7 +1,7 @@
 import { compare as defaultCompare } from "../../protocol/utils/compare";
 import { recompute } from "../engine";
+import { emitSinkInvalidated } from "../execution";
 import { Changed, type ReactiveNode } from "../shape";
-import { notifyWatcher } from "../walkers/invalidateBranch";
 import { findSourceRange } from "./ranges";
 import type { StaticPlanRange, StaticTransitionPlan } from "./types";
 
@@ -11,7 +11,7 @@ export function recomputeStaticNode(node: ReactiveNode): boolean {
 
 export function notifyStaticSink(node: ReactiveNode): void {
   node.state = (node.state & ~Changed) | Changed;
-  notifyWatcher(node);
+  emitSinkInvalidated(node);
 }
 
 export function executeStaticPlan(plan: StaticTransitionPlan): boolean {

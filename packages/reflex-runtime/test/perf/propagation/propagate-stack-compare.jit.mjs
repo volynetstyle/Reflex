@@ -19,9 +19,9 @@ const DIRTY_OR_WALKER =
   ReactiveNodeState.Invalid |
   ReactiveNodeState.Changed |
   ReactiveNodeState.Visited |
-  ReactiveNodeState.Tracking;
+  ReactiveNodeState.Computing;
 const TRACKING_CONSUMER_STATE =
-  ReactiveNodeState.Consumer | ReactiveNodeState.Tracking;
+  ReactiveNodeState.Consumer | ReactiveNodeState.Computing;
 const NON_IMMEDIATE = 0;
 const IMMEDIATE = 1;
 const INVALIDATION_SLOW_PATH_MASK = DIRTY_STATE | WALKER_STATE;
@@ -57,7 +57,7 @@ function isTrackedPrefixEdge(edge, depsTail) {
 function getSlowInvalidatedSubscriberState(edge, state, promoteImmediate) {
   if ((state & DIRTY_STATE) !== 0) return 0;
 
-  if ((state & ReactiveNodeState.Tracking) === 0) {
+  if ((state & ReactiveNodeState.Computing) === 0) {
     return (
       (state & ~ReactiveNodeState.Visited) |
       (promoteImmediate ? ReactiveNodeState.Changed : ReactiveNodeState.Invalid)
@@ -136,7 +136,7 @@ function getSlowInvalidatedSubscriberStateProfiled(
 
   if ((state & DIRTY_STATE) !== 0) return 0;
 
-  if ((state & ReactiveNodeState.Tracking) === 0) {
+  if ((state & ReactiveNodeState.Computing) === 0) {
     return (
       (state & ~ReactiveNodeState.Visited) |
       (promoteImmediate ? ReactiveNodeState.Changed : ReactiveNodeState.Invalid)

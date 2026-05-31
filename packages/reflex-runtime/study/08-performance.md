@@ -40,7 +40,7 @@
 - `recompute()`
 - `executeNodeComputation()`
 
-### Tracking maintenance
+### Computing maintenance
 
 - `trackRead()`
 - `reuseOrCreateIncomingEdge()`
@@ -84,7 +84,7 @@ Pull-side вартість росте з:
 
 - fan-in конкретного consumer-а
 - глибиною dirty subtree
-- тим, скільки upstream вузлів реально треба refresh-ити
+- тим, скільки upstream вузлів реально треба advance-ити
 
 Але вона падає, якщо:
 

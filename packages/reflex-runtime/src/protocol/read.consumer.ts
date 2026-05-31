@@ -3,18 +3,16 @@ import {
   DIRTY_STATE,
   defaultContext,
   currentConsumer,
-  shouldRecomputeDirtyConsumer,
-  recompute,
-  propagateOnceFromEdge,
   trackingEpoch,
   trackReadResolved,
   Changed,
-  Reentrant,
+  Visited,
 } from "../kernel";
 import {
   devAssertConsumerCanStabilize,
   devRecordReadConsumer,
 } from "../kernel/dev";
+import { advance } from "../kernel/walkers/ensureFresh";
 import { walkBranch } from "../kernel/walkers/recomputeBranch";
 import { LAZY } from "./utils/constants";
 
@@ -36,54 +34,13 @@ export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
   const node = this;
   const state = node.state;
 
-  if ((state & DIRTY_STATE) === 0) {
-    const value = node.payload;
-
-    const consumer = currentConsumer;
-    if (consumer !== null) {
-      trackReadResolved(node, consumer, trackingEpoch, true);
-    }
-
-    if (__DEV__) {
-      devRecordReadConsumer(
-        node,
-        "lazy",
-        value,
-        defaultContext,
-        consumer ?? undefined,
-      );
-    }
-
-    return value;
-  }
-
-  if (__DEV__) devAssertConsumerCanStabilize(state);
-
-  let recomputeNeeded = false;
-
-  if ((state & (Changed | Reentrant)) !== 0) {
-    recomputeNeeded = true;
-  } else {
-    const edge = node.firstIn;
-
-    if (edge === null) {
-      node.state = state & ~DIRTY_STATE;
-    } else {
-      recomputeNeeded = walkBranch(node, edge);
-    }
-  }
-
-  if (recomputeNeeded) {
-    if (recompute(node)) {
-      propagateOnceFromEdge(node.firstOut);
-    }
-  } else {
-    node.state &= ~DIRTY_STATE;
-  }
-
-  const value = node.payload as T;
+  const value =
+    (state & DIRTY_STATE) === 0
+      ? (node.payload as T)
+      : stabilizeDirtyConsumer<T>(node, state);
 
   const consumer = currentConsumer;
+
   if (consumer !== null) {
     trackReadResolved(node, consumer, trackingEpoch, true);
   }
@@ -110,11 +67,32 @@ export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
 export function readConsumerEager<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
+  return (state & DIRTY_STATE) === 0
+    ? (node.payload as T)
+    : stabilizeDirtyConsumer<T>(node, state);
+}
+
+const FORCE_RECOMPUTE_STATE = Changed | Visited;
+
+function shouldRecomputeDirty(node: ReactiveNode, state: number): boolean {
+  if ((state & FORCE_RECOMPUTE_STATE) !== 0) return true;
+
+  const edge = node.firstIn;
+  return edge !== null && walkBranch(node, edge);
+}
+
+function stabilizeDirtyConsumer<T>(node: ReactiveNode<T>, state: number): T {
   if (__DEV__) devAssertConsumerCanStabilize(state);
 
-  if ((state & DIRTY_STATE) === 0) return node.payload;
+  if (shouldRecomputeDirty(node, state)) {
+    if (!advance(node)) {
+      node.state &= ~DIRTY_STATE;
+    }
+  } else {
+    node.state &= ~DIRTY_STATE;
+  }
 
-  return stabilizeDirtyConsumer(node, state);
+  return node.payload as T;
 }
 
 /**
@@ -213,15 +191,4 @@ export function readConsumer<T>(node: ReactiveNode<T>, mode: number = LAZY): T {
   }
 
   return value;
-}
-
-function stabilizeDirtyConsumer<T>(node: ReactiveNode<T>, state: number): T {
-  if (!shouldRecomputeDirtyConsumer(node, state)) {
-    node.state &= ~DIRTY_STATE;
-    return node.payload as T;
-  }
-
-  if (recompute(node)) propagateOnceFromEdge(node.firstOut);
-
-  return node.payload as T;
 }

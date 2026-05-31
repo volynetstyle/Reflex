@@ -17,11 +17,11 @@ import {
   Consumer,
   Invalid,
   Producer,
-  propagate,
+  propagateChanged,
   propagateOnce,
-  Reentrant,
+  Visited,
   shouldRecompute,
-  Tracking,
+  Computing,
   Watcher,
 } from "../../../src/kernel";
 import { linkEdge } from "../../../src/kernel/shape/graph";
@@ -85,7 +85,7 @@ describe("Reactive runtime - walker invariants", () => {
 
     resetRuntime();
 
-    propagate(source.firstOut!, Changed);
+    propagateChanged(source.firstOut!);
 
     expectStates([
       [left, Consumer | Changed],
@@ -107,7 +107,7 @@ describe("Reactive runtime - walker invariants", () => {
 
     resetRuntime();
 
-    propagate(source.firstOut!, Changed);
+    propagateChanged(source.firstOut!);
 
     expectStates([
       [left, Consumer | Changed],
@@ -151,7 +151,7 @@ describe("Reactive runtime - walker invariants", () => {
 
     resetRuntime();
 
-    propagate(source.firstOut!, Changed);
+    propagateChanged(source.firstOut!);
 
     expectStates([
       [left, Consumer | Changed],
@@ -174,7 +174,7 @@ describe("Reactive runtime - walker invariants", () => {
           const levels: ReactiveNode[][] = [];
 
           attachBranchPlan(source, plan, 0, levels);
-          propagate(source.firstOut!, Changed);
+          propagateChanged(source.firstOut!);
 
           for (const node of levels[0] ?? []) {
             expectState(node, Consumer | Changed);
@@ -207,7 +207,7 @@ describe("Reactive runtime - walker invariants", () => {
     linkEdge(source, right);
     linkEdge(source, watcher);
 
-    propagate(source.firstOut!, Changed);
+    propagateChanged(source.firstOut!);
 
     expect(left.state).toBe(Consumer | Changed);
     expect(right.state).toBe(Consumer | Changed);
@@ -250,7 +250,7 @@ describe("Reactive runtime - walker invariants", () => {
         watcher.state = Watcher;
       }
 
-      propagate(source.firstOut!, Changed);
+      propagateChanged(source.firstOut!);
 
       expect(invalidated).toHaveLength(watchers.length);
       expect(new Set(invalidated)).toEqual(new Set(watchers));
@@ -302,7 +302,7 @@ describe("Reactive runtime - walker invariants", () => {
   it("propagate ignores stale tracked-prefix edges but still resumes sibling branches", () => {
     const source = createNode(Producer);
     const prefix = createNode(Producer);
-    const tracked = createNode(Consumer | Tracking);
+    const tracked = createNode(Consumer | Computing);
     const sibling = createNode(Consumer);
     resetRuntime();
 
@@ -311,9 +311,9 @@ describe("Reactive runtime - walker invariants", () => {
     linkEdge(source, sibling);
     tracked.tailIn = prefixEdge;
 
-    propagate(source.firstOut!, Changed);
+    propagateChanged(source.firstOut!);
 
-    expect(tracked.state).toBe(Consumer | Tracking);
+    expect(tracked.state).toBe(Consumer | Computing);
     expect(sibling.state).toBe(Consumer | Changed);
   });
 
@@ -321,7 +321,7 @@ describe("Reactive runtime - walker invariants", () => {
     const source = createNode(Producer);
     const branch = createNode(Consumer);
     const sibling = createNode(Consumer);
-    const tracked = createNode(Consumer | Tracking);
+    const tracked = createNode(Consumer | Computing);
     resetRuntime();
 
     linkEdge(source, branch);
@@ -336,21 +336,21 @@ describe("Reactive runtime - walker invariants", () => {
       },
     });
 
-    expect(() => propagate(source.firstOut!, Changed)).not.toThrow();
-    expect(tracked.state).toBe(Consumer | Tracking | Reentrant | Invalid);
+    expect(() => propagateChanged(source.firstOut!)).not.toThrow();
+    expect(tracked.state).toBe(Consumer | Computing | Visited | Invalid);
     expect(sibling.state).toBe(Consumer | Changed);
   });
 
   it("keeps transitive slow-path subscribers Invalid when only Visited is set", () => {
     const source = createNode(Producer);
     const middle = createNode(Consumer);
-    const leaf = createNode(Consumer | Reentrant);
+    const leaf = createNode(Consumer | Visited);
     resetRuntime();
 
     linkEdge(source, middle);
     linkEdge(middle, leaf);
 
-    propagate(source.firstOut!, Changed);
+    propagateChanged(source.firstOut!);
 
     expect(middle.state).toBe(Consumer | Changed);
     expect(leaf.state).toBe(Consumer | Invalid);
@@ -358,14 +358,14 @@ describe("Reactive runtime - walker invariants", () => {
 
   it("clears stale Visited on fast-path subscribers while preserving Changed and Invalid", () => {
     const source = createNode(Producer);
-    const middle = createNode(Consumer | Reentrant);
-    const leaf = createNode(Consumer | Reentrant);
+    const middle = createNode(Consumer | Visited);
+    const leaf = createNode(Consumer | Visited);
     resetRuntime();
 
     linkEdge(source, middle);
     linkEdge(middle, leaf);
 
-    propagate(source.firstOut!, Changed);
+    propagateChanged(source.firstOut!);
 
     expect(middle.state).toBe(Consumer | Changed);
     expect(leaf.state).toBe(Consumer | Invalid);
@@ -398,7 +398,7 @@ describe("Reactive runtime - walker invariants", () => {
 
   it("propagateOnce preserves Visited while upgrading Invalid watchers to Changed", () => {
     const source = createNode(Producer);
-    const watcher = createNode(Watcher | Invalid | Reentrant);
+    const watcher = createNode(Watcher | Invalid | Visited);
     const invalidated: ReactiveNode[] = [];
     resetRuntime({
       sinkInvalidatedDispatcher(node) {
@@ -410,7 +410,7 @@ describe("Reactive runtime - walker invariants", () => {
 
     propagateOnce(source);
 
-    expect(watcher.state).toBe(Watcher | Changed | Reentrant);
+    expect(watcher.state).toBe(Watcher | Changed | Visited);
     expect(invalidated).toEqual([watcher]);
   });
 

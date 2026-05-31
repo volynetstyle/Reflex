@@ -213,7 +213,7 @@ const ctx = createExecutionContext({
 writeProducer(node, value, (a, b) => deepEqual(a, b), ctx);
 ```
 
-### Tracking Customization
+### Computing Customization
 
 **Advanced:** Use `untracked()` to disable dependency creation
 

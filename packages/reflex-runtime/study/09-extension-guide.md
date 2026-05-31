@@ -202,7 +202,7 @@ Host policy вирішує, коли його викликати.
 - новий queue policy для watcher-ів -> hooks / host layer
 - новий compare mode для producer write -> `api/write.ts`
 - новий tracking fast path -> `engine/trackingContext.ts` + `shape/methods/connect.ts`
-- зміна pull-side refresh protocol -> `walkers/shouldRecomputeNode.ts`
+- зміна pull-side advance protocol -> `walkers/shouldRecomputeNode.ts`
 
 ## 5. Практичний порядок роботи
 

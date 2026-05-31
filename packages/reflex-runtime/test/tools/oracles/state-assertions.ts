@@ -5,8 +5,8 @@ import {
   Computing,
   DIRTY_STATE,
   Invalid,
-  Reentrant,
-  Tracking,
+  Visited,
+  Computing,
 } from "../../../src/internal";
 
 export function expectChanged(node: ReactiveNode): void {
@@ -34,7 +34,7 @@ export function expectClean(node: ReactiveNode): void {
 }
 
 export function expectTracking(node: ReactiveNode): void {
-  expect(node.state & Tracking).toBeTruthy();
+  expect(node.state & Computing).toBeTruthy();
 }
 
 export function expectComputing(node: ReactiveNode): void {
@@ -42,15 +42,15 @@ export function expectComputing(node: ReactiveNode): void {
 }
 
 export function expectReentrant(node: ReactiveNode): void {
-  expect(node.state & Reentrant).toBeTruthy();
+  expect(node.state & Visited).toBeTruthy();
 }
 
 export function expectNotReentrant(node: ReactiveNode): void {
-  expect(node.state & Reentrant).toBeFalsy();
+  expect(node.state & Visited).toBeFalsy();
 }
 
 export function expectNotTracking(node: ReactiveNode): void {
-  expect(node.state & Tracking).toBeFalsy();
+  expect(node.state & Computing).toBeFalsy();
 }
 
 export function expectNotComputing(node: ReactiveNode): void {

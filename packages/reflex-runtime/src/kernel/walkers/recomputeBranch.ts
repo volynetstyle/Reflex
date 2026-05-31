@@ -1,6 +1,6 @@
 import type { ReactiveEdge, ReactiveNode } from "../shape";
 import { Changed, Invalid } from "../shape";
-import { refresh } from "./ensureFresh";
+import { advance } from "./ensureFresh";
 import {
   getRecomputeStackBase,
   pushRecomputeStack,
@@ -18,7 +18,7 @@ export { readShouldRecomputeStackStats } from "./walkerStack";
  * confirmed changes upward.
  */
 export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
-  const base = /**@__INLINE__*/ getRecomputeStackBase();
+  const base = /***/ getRecomputeStackBase();
   let top = base;
   let changed = false;
 
@@ -29,20 +29,21 @@ export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
     if ((node.state & Changed) !== 0) {
       changed = true;
     } else if ((state & Changed) !== 0) {
-      setRecomputeStackHigh(top);
-      changed = refresh(dep);
+      /***/ setRecomputeStackHigh(top);
+      changed = /***/ advance(dep);
     } else if ((state & Invalid) !== 0) {
+      // hidden classes risk deopt
       const deps = dep.firstIn;
 
       if (deps !== null) {
-        top = /**@__INLINE__*/ pushRecomputeStack(edge, top);
+        top = /***/ pushRecomputeStack(edge, top);
         edge = deps;
         node = dep;
         continue;
       }
 
-      /**@__INLINE__*/ setRecomputeStackHigh(top);
-      changed = refresh(dep);
+      /***/ setRecomputeStackHigh(top);
+      changed = advance(dep);
     }
 
     if (!changed) {
@@ -54,11 +55,12 @@ export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
     }
 
     while (top > base) {
-      const parent = /**@__INLINE__*/ readRecomputeStack(--top);
-      /**@__INLINE__*/ setRecomputeStackHigh(top);
+      --top;
+      /***/ setRecomputeStackHigh(top);
+      const parent = /***/ readRecomputeStack(top);
 
       if (changed) {
-        changed = refresh(node);
+        changed = advance(node);
       } else {
         node.state &= ~Invalid;
       }
@@ -78,7 +80,7 @@ export function walkBranch(node: ReactiveNode, edge: ReactiveEdge): boolean {
       node.state &= ~Invalid;
     }
 
-    /**@__INLINE__*/ releaseRecomputeStackBase(base);
+    /***/ releaseRecomputeStackBase(base);
     return changed;
   } while (true);
 }

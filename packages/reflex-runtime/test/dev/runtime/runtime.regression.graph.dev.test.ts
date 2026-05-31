@@ -170,7 +170,7 @@ describe("Reactive runtime - graph regressions (dev)", () => {
     expectPropagationTargetsVisitedOnce(summary, ["left", "right", "sink"]);
   });
 
-  it("keeps branching pull stack coherent when refresh performs a nested pull", () => {
+  it("keeps branching pull stack coherent when advance performs a nested pull", () => {
     const h = createHistoryHarness();
     const source = h.label(createProducer(1), "source");
     const probeSource = h.label(createProducer(10), "probeSource");
@@ -236,7 +236,7 @@ describe("Reactive runtime - graph regressions (dev)", () => {
     expect(summary.byType["watcher:invalidated"]).toBe(3);
   });
 
-  it("fails fast when a refresh edge is detached from outgoing topology", () => {
+  it("fails fast when a advance edge is detached from outgoing topology", () => {
     const source = createProducer(1);
     const shared = createConsumer(() => readProducer(source) * 2);
     const left = createConsumer(() => readConsumer(shared) + 1);
@@ -255,7 +255,7 @@ describe("Reactive runtime - graph regressions (dev)", () => {
     edge!.nextOut = null;
 
     expect(() => shouldRecompute(left)).toThrow(
-      "refresh invariant violation: edge is not attached out",
+      "advance invariant violation: edge is not attached out",
     );
   });
 });
