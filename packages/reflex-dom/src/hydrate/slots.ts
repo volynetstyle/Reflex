@@ -2,7 +2,7 @@ import { isHydrationSlotEnd, isHydrationSlotStart } from "./markers";
 import { nextSiblingWithinBoundary } from "./cursor";
 import { failHydration } from "./error";
 
-export function consumeHydrationSlsot(
+export function consumeHydrationSlot(
   currentNode: Node | null,
   boundary: Node | null,
 ): {
@@ -14,8 +14,9 @@ export function consumeHydrationSlsot(
     failHydration();
   }
 
+  const start = currentNode;
   let depth = 1;
-  let cursor = currentNode.nextSibling;
+  let cursor = start.nextSibling;
 
   while (cursor !== null && cursor !== boundary) {
     if (isHydrationSlotStart(cursor)) {
@@ -25,7 +26,7 @@ export function consumeHydrationSlsot(
 
       if (depth === 0) {
         return {
-          start: currentNode,
+          start,
           end: cursor,
           next: nextSiblingWithinBoundary(cursor, boundary),
         };
@@ -37,3 +38,5 @@ export function consumeHydrationSlsot(
 
   failHydration();
 }
+
+export { consumeHydrationSlot as consumeHydrationSlsot };

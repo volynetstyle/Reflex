@@ -1,35 +1,38 @@
 type TextEntryControl = HTMLInputElement | HTMLTextAreaElement;
+const TEXT_ENTRY_CONTROL_STATE: unique symbol = Symbol("TextEntryControlState");
+
+type StatefulTextEntryControl = TextEntryControl & {
+  [TEXT_ENTRY_CONTROL_STATE]?: TextEntryControlState;
+};
 
 interface TextEntryControlState {
   composing: boolean;
   pendingValue: string | null;
 }
 
-const textEntryControlStates = new WeakMap<
-  TextEntryControl,
-  TextEntryControlState
->();
-const NON_TEXTUAL_INPUT_TYPES: ReadonlySet<string> = new Set([
-  "button",
-  "checkbox",
-  "color",
-  "file",
-  "hidden",
-  "image",
-  "radio",
-  "range",
-  "reset",
-  "submit",
-] as const);
-
 function isTextEntryInput(inputElement: HTMLInputElement): boolean {
-  return !NON_TEXTUAL_INPUT_TYPES.has(inputElement.type);
+  switch (inputElement.type) {
+    case "button":
+    case "checkbox":
+    case "color":
+    case "file":
+    case "hidden":
+    case "image":
+    case "radio":
+    case "range":
+    case "reset":
+    case "submit":
+      return false;
+    default:
+      return true;
+  }
 }
 
 function ensureTextEntryControlState(
   controlElement: TextEntryControl,
 ): TextEntryControlState {
-  let state = textEntryControlStates.get(controlElement);
+  const statefulControl = controlElement as StatefulTextEntryControl;
+  let state = statefulControl[TEXT_ENTRY_CONTROL_STATE];
 
   if (state !== undefined) {
     return state;
@@ -39,7 +42,10 @@ function ensureTextEntryControlState(
     composing: false,
     pendingValue: null,
   };
-  textEntryControlStates.set(controlElement, state);
+  Object.defineProperty(statefulControl, TEXT_ENTRY_CONTROL_STATE, {
+    configurable: true,
+    value: state,
+  });
 
   controlElement.addEventListener("compositionstart", () => {
     state!.composing = true;

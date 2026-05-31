@@ -2,12 +2,14 @@ import { getCurrentComputedInternal } from "../internal";
 import {
   Watcher as WatcherFlag,
   type ReactiveNode,
-} from "../reactivity";
+} from "../kernel";
 import { untracked } from "../protocol";
 import {
+  readPropagateStackStats,
+  readShouldRecomputeStackStats,
   resetRuntimeWalkerStackStats,
   type RuntimeWalkerStackStats,
-} from "../reactivity/walkers";
+} from "../kernel/walkers";
 import {
   checkDebugGraphIntegrity,
   snapshotDebugGraph,
@@ -193,6 +195,13 @@ export const subtle: RuntimeSubtle = {
 
   stackStats() {
     if (!IS_DEV) return undefined;
+    const shouldRecompute = readShouldRecomputeStackStats();
+    const propagate = readPropagateStackStats();
+
+    return {
+      shouldRecompute: shouldRecompute.shouldRecompute,
+      propagate: propagate.propagate,
+    };
   },
 
   resetStackStats() {

@@ -1,9 +1,16 @@
 import {
+  createRuntimeContext,
+  runWithRuntimeContext,
   resetState,
-  setHooks,
-  setRuntimeHooks,
-} from "@volynets/reflex-runtime";
-import type { EngineHooks } from "@volynets/reflex-runtime";
+  setActiveRuntimeContext,
+  setHostHooks,
+  setInternalHooks,
+  untracked,
+} from "@volynets/reflex-runtime/internal";
+import type {
+  RuntimeContext as RuntimeExecutionContext,
+  RuntimeHostHooks,
+} from "@volynets/reflex-runtime/internal";
 import { subscribeEvent } from "./event";
 import { createSource } from "./factory";
 import { createEventDispatcher } from "../policy";
@@ -18,6 +25,7 @@ type EventFn = <T>() => EventSource<T>;
 
 export interface RuntimeContext {
   readonly scope: "runtime";
+  readonly execution: RuntimeExecutionContext;
 }
 
 let activeBatch: BatchFn = (fn) => fn();
@@ -25,10 +33,13 @@ let activeEvent: EventFn = (() => {
   throw new Error("Runtime has not been created");
 }) as EventFn;
 let activeFlush: () => void = () => {};
-let activeContext: RuntimeContext = { scope: "runtime" };
+let activeContext: RuntimeContext = {
+  scope: "runtime",
+  execution: createRuntimeContext(),
+};
 
 export interface RuntimeOptions {
-  hooks?: EngineHooks;
+  hooks?: RuntimeHostHooks;
   effectStrategy?: EffectStrategy;
 }
 
@@ -51,23 +62,28 @@ export function createRuntime({
   hooks,
   effectStrategy,
 }: RuntimeOptions = {}): Runtime {
+  const execution = createRuntimeContext();
+  const ctx: RuntimeContext = { scope: "runtime", execution };
   const scheduler = createEffectScheduler(
     resolveEffectSchedulerMode(effectStrategy),
   );
-  const dispatcher = createEventDispatcher(scheduler.batch.bind(scheduler));
+  const run = <T>(fn: () => T): T => runWithRuntimeContext(execution, fn);
+  const batch = <T>(fn: () => T): T => run(() => scheduler.batch(fn));
+  const flush = (): void => run(scheduler.flush.bind(scheduler));
+  const dispatcher = createEventDispatcher(batch);
 
-  if (hooks !== undefined) {
-    setHooks(hooks);
-  }
+  setHostHooks(execution, hooks ?? {});
 
-  setRuntimeHooks(
+  setInternalHooks(
+    execution,
     scheduler.enqueue.bind(scheduler),
     scheduler.runtimeNotifySettled,
   );
 
-  resetState();
-  activeContext = { scope: "runtime" };
-  activeBatch = scheduler.batch.bind(scheduler);
+  resetState(execution);
+  setActiveRuntimeContext(execution);
+  activeContext = ctx;
+  activeBatch = batch;
   activeEvent = function <T>() {
     const source = createSource<T>();
 
@@ -80,7 +96,7 @@ export function createRuntime({
       },
     };
   };
-  activeFlush = scheduler.flush.bind(scheduler);
+  activeFlush = flush;
 
   return {
     ctx: activeContext,
@@ -95,3 +111,5 @@ export const batch: BatchFn = <T>(fn: () => T) => activeBatch(fn);
 export const event: EventFn = <T>() => activeEvent<T>();
 
 export const flush = (): void => activeFlush();
+
+export { untracked };

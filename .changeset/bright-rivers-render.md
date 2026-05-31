@@ -2,7 +2,7 @@
 "@volynets/reflex": minor
 "@volynets/reflex-framework": minor
 "@volynets/reflex-dom": patch
-"@reflex/vite-plugin": patch
+"@volynets/reflex-vite-plugin": patch
 ---
 
 Prepare the DOM renderer, framework ownership API, Reflex ranked effects, and

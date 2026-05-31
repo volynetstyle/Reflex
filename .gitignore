@@ -92,6 +92,12 @@ _SpecRunner.html
 /packages/*/.turbo/
 /packages/*/.cache/
 /packages/*/node_modules/
+/packages/@reflex/*/dist/
+/packages/@reflex/*/build/
+/packages/@reflex/*/.tsbuildinfo
+/packages/@reflex/*/.turbo/
+/packages/@reflex/*/.cache/
+/packages/@reflex/*/node_modules/
 
 # -------------------------------------------------------
 # 🚀 Editor backups

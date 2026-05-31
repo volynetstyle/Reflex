@@ -1,5 +1,5 @@
-import type { RuntimeDebugContext } from "../reactivity/context";
-import type { ReactiveEdge, ReactiveNode } from "../reactivity/shape";
+import type { RuntimeDebugContext } from "../kernel/context";
+import type { ReactiveEdge, ReactiveNode } from "../kernel/shape";
 import type {
   RuntimeDebugContextSnapshot,
   RuntimeDebugEvent,

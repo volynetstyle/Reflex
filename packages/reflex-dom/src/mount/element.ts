@@ -1,5 +1,4 @@
 import type { ElementInstance, ElementProps, ElementTag, Ref } from "../types";
-import type { DOMRenderer } from "../runtime/renderer";
 import { attachRef } from "../host/refs";
 import {
   MATHML_NS,
@@ -7,12 +6,12 @@ import {
   resolveNamespace,
   type Namespace,
 } from "../host/namespace";
-import {
-  onEffectStart,
-  registerCleanup,
-  useOwnedEffect,
-} from "@volynets/reflex-framework";
+import { onEffectStart } from "@volynets/reflex-framework";
 import { mountRenderRange } from "../structure/render-range";
+import {
+  registerDOMCleanup,
+  useDOMOwnedEffect,
+} from "../runtime/execution";
 import { bindElementProps } from "./element-binder";
 import { appendRenderableNodes } from "./append";
 
@@ -101,41 +100,32 @@ function shouldMountLightDomChildren(
 }
 
 function bindShadowRootReference(
-  renderer: DOMRenderer,
   shadowRoot: ShadowRoot,
   shadowRootRef: unknown,
 ): void {
-  registerCleanup(
-    renderer.owner,
+  registerDOMCleanup(
     attachRef(shadowRoot, shadowRootRef as Ref<ShadowRoot> | undefined),
   );
 }
 
 function mountShadowRootChildren(
-  renderer: DOMRenderer,
   shadowRoot: ShadowRoot,
   shadowChildren: unknown,
 ): void {
-  const shadowRenderRange = mountRenderRange(
-    renderer,
-    shadowRoot,
-    shadowChildren,
-    "html",
-  );
+  const shadowRenderRange = mountRenderRange(shadowRoot, shadowChildren, "html");
 
-  registerCleanup(renderer.owner, () => {
+  registerDOMCleanup(() => {
     shadowRenderRange.destroy();
   });
 }
 
 function bindReactiveAdoptedStyleSheets(
-  renderer: DOMRenderer,
   shadowRoot: ShadowRoot,
   getNextStyleSheets: () => unknown,
 ): void {
   applyShadowRootAdoptedStyleSheets(shadowRoot, getNextStyleSheets());
 
-  useOwnedEffect({ owner: renderer.owner }, () => {
+  useDOMOwnedEffect(() => {
     const nextStyleSheets = getNextStyleSheets();
 
     onEffectStart(() => {
@@ -145,13 +135,11 @@ function bindReactiveAdoptedStyleSheets(
 }
 
 function bindShadowRootAdoptedStyleSheets(
-  renderer: DOMRenderer,
   shadowRoot: ShadowRoot,
   adoptedStyleSheets: unknown,
 ): void {
   if (typeof adoptedStyleSheets === "function") {
     bindReactiveAdoptedStyleSheets(
-      renderer,
       shadowRoot,
       adoptedStyleSheets as () => unknown,
     );
@@ -162,7 +150,6 @@ function bindShadowRootAdoptedStyleSheets(
 }
 
 function bindElementInternalsReference(
-  renderer: DOMRenderer,
   hostElement: Element,
   elementInternalsRef: unknown,
 ): void {
@@ -175,8 +162,7 @@ function bindElementInternalsReference(
 
   try {
     const elementInternals = hostElement.attachInternals();
-    registerCleanup(
-      renderer.owner,
+    registerDOMCleanup(
       attachRef(
         elementInternals,
         elementInternalsRef as Ref<ElementInternals> | undefined,
@@ -188,7 +174,6 @@ function bindElementInternalsReference(
 }
 
 export function mountElement<Tag extends ElementTag>(
-  renderer: DOMRenderer,
   tag: Tag,
   props: ElementProps<Tag>,
   parentNamespace: Namespace,
@@ -198,37 +183,25 @@ export function mountElement<Tag extends ElementTag>(
   const propsRecord = props as Record<string, unknown>;
   const shadowRoot = resolveElementShadowRoot(element, propsRecord);
 
-  bindElementProps(renderer, element, propsRecord, elementNamespace, "initial");
+  bindElementProps(element, propsRecord, elementNamespace, "initial");
 
   if (shouldMountLightDomChildren(tag, propsRecord)) {
-    appendRenderableNodes(
-      renderer,
-      element,
-      propsRecord.children,
-      elementNamespace,
-    );
+    appendRenderableNodes(element, propsRecord.children, elementNamespace);
   }
 
-  bindElementProps(
-    renderer,
-    element,
-    propsRecord,
-    elementNamespace,
-    "deferred",
-  );
+  bindElementProps(element, propsRecord, elementNamespace, "deferred");
 
   if (shadowRoot !== null) {
     if (propsRecord.shadowRootRef !== undefined) {
-      bindShadowRootReference(renderer, shadowRoot, propsRecord.shadowRootRef);
+      bindShadowRootReference(shadowRoot, propsRecord.shadowRootRef);
     }
 
     if (propsRecord.shadowChildren !== undefined) {
-      mountShadowRootChildren(renderer, shadowRoot, propsRecord.shadowChildren);
+      mountShadowRootChildren(shadowRoot, propsRecord.shadowChildren);
     }
 
     if (propsRecord.shadowAdoptedStyleSheets !== undefined) {
       bindShadowRootAdoptedStyleSheets(
-        renderer,
         shadowRoot,
         propsRecord.shadowAdoptedStyleSheets,
       );
@@ -236,11 +209,7 @@ export function mountElement<Tag extends ElementTag>(
   }
 
   if (propsRecord.elementInternals !== undefined) {
-    bindElementInternalsReference(
-      renderer,
-      element,
-      propsRecord.elementInternals,
-    );
+    bindElementInternalsReference(element, propsRecord.elementInternals);
   }
 
   return element;

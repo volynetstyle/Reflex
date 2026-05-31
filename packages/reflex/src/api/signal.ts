@@ -1,8 +1,10 @@
-import {
-  readProducer,
-  writeProducer,
-} from "@volynets/reflex-runtime";
+import type { ReactiveNode } from "@volynets/reflex-runtime/internal";
+import { readProducer, writeProducer } from "@volynets/reflex-runtime";
 import { createSignalNode } from "../infra/factory";
+import {
+  devassertSetterReceivedPromise,
+  devassertSetterReturn,
+} from "./signal.dev";
 
 /**
  * Creates writable reactive state.
@@ -23,8 +25,7 @@ import { createSignalNode } from "../infra/factory";
  * @returns A readonly tuple:
  * - `value` - tracked accessor that returns the current signal value.
  * - `setValue` - setter that accepts either a direct value or an updater
- *   function receiving the previous value. The setter returns the committed
- *   next value.
+ *   function receiving the previous value.
  *
  * @example
  * ```ts
@@ -52,20 +53,24 @@ import { createSignalNode } from "../infra/factory";
  * @see memo
  * @see effect
  */
+
 export function signal<T>(initialValue: T): readonly [Signal<T>, Setter<T>] {
   const node = createSignalNode(initialValue);
 
-  function set(input: SetInput<T>) {
-    const payload = node.payload;
-    const next =
-      typeof input === "function"
-        ? (input as (prev: T) => T)(payload as T)
-        : input;
-    writeProducer(node, next);
-  }
+  const read = (): T => readProducer(node);
 
-  return [
-    readProducer.bind(null, node) as Signal<T>,
-    set as Setter<T>,
-  ] as const;
+  return [read as Signal<T>, setter.bind(node) as Setter<T>] as const;
+}
+
+function setter<T>(this: ReactiveNode<T>, input: SetInput<T>) {
+  devassertSetterReceivedPromise(input);
+
+  const next =
+    typeof input === "function"
+      ? (input as (prev: T) => T)(this.payload as T)
+      : input;
+
+  devassertSetterReturn(next);
+
+  writeProducer(this, next);
 }

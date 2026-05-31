@@ -1,4 +1,4 @@
-import { OwnershipNode } from "./ownership.node";
+import type { OwnershipNode } from "./ownership.node";
 import type { OwnerContext } from "./ownership.scope";
 
 type ContextId = symbol;

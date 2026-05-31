@@ -11,7 +11,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["tests/**/*.dev.test.ts"],
+    include: ["test/dev/**/*.dev.test.ts"],
     isolate: false,
     pool: "forks",
   },

@@ -1,31 +1,23 @@
 import type { Namespace } from "../host/namespace";
 import {
   createScope,
-  runInOwnershipScope,
-  runWithComponentHooks,
 } from "@volynets/reflex-framework";
-import type { DOMRenderer } from "../runtime/renderer";
+import {
+  runInDOMOwnershipScope,
+  runWithDOMComponentHooks,
+} from "../runtime/execution";
 import type { ComponentRenderable } from "../types";
 import { appendRenderableNodes } from "./append";
 
 export function mountComponent(
-  renderer: DOMRenderer,
   parent: Node,
   renderable: ComponentRenderable<unknown>,
   ns: Namespace,
 ): void {
-  runInOwnershipScope(renderer.owner, createScope(), () => {
+  runInDOMOwnershipScope(createScope(), () => {
     appendRenderableNodes(
-      renderer,
       parent,
-      runWithComponentHooks(
-        {
-          owner: renderer.owner,
-          scope: renderer.owner.currentOwner,
-          renderEffectScheduler: renderer.renderEffectScheduler,
-        },
-        () => renderable.type(renderable.props),
-      ),
+      runWithDOMComponentHooks(() => renderable.type(renderable.props)),
       ns,
     );
   });

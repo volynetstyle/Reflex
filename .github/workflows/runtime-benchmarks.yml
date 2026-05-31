@@ -1,0 +1,75 @@
+name: Runtime Benchmarks
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/runtime-benchmarks.yml
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - scripts/collect-benchmark-results.ts
+      - scripts/compare-benchmark-results.ts
+      - packages/reflex-runtime/**
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/runtime-benchmarks.yml
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - scripts/collect-benchmark-results.ts
+      - scripts/compare-benchmark-results.ts
+      - packages/reflex-runtime/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runtime-benchmarks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  bench:
+    name: runtime taxonomy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Collect runtime benchmark JSON
+        run: pnpm bench:runtime:json
+
+      - name: Compare runtime benchmark JSON
+        run: pnpm bench:compare
+
+      - name: Upload runtime benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-benchmarks-${{ github.sha }}
+          path: |
+            bench-results/runtime/latest.json
+            bench-results/runtime/latest.raw.json
+          if-no-files-found: error

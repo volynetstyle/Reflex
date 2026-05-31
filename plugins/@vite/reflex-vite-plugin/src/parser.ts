@@ -4,8 +4,8 @@
 
 import { parseSync, printSync } from "@swc/core";
 import type { Module, Program } from "@swc/core";
-import { stripQueryAndHash } from "./string-utils";
-import type { ReflexDOMTransformResult } from "./types";
+import { stripQueryAndHash } from "./string-utils.js";
+import type { ReflexDOMTransformResult } from "./types.js";
 
 /**
  * Parses a JSX/TSX module

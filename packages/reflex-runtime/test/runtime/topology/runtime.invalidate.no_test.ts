@@ -1,0 +1,151 @@
+// import { describe, expect, it } from "vitest";
+// import {
+//   Changed,
+//   Consumer,
+//   Invalid,
+//   linkEdge,
+//   ReactiveNode,
+//   Visited,
+//   Computing,
+//   Watcher,
+// } from "../../../src/kernel";
+// import { resetRuntime } from "../../runtime.test_utils";
+
+// function createNode(state: number): ReactiveNode {
+//   return new ReactiveNode(undefined, null, state);
+// }
+
+// /** Covers explicit state transitions for low-level subscriber invalidation. */
+// describe("Reactive runtime - invalidateSub transition matrix", () => {
+//   it.each([
+//     {
+//       name: "clean consumer promotes to Changed",
+//       initial: Consumer,
+//       promote: Changed,
+//       expected: Consumer | Changed,
+//     },
+//     {
+//       name: "clean consumer promotes to Invalid",
+//       initial: Consumer,
+//       promote: Invalid,
+//       expected: Consumer | Invalid,
+//     },
+//     {
+//       name: "clean watcher promotes and keeps watcher bit",
+//       initial: Watcher,
+//       promote: Changed,
+//       expected: Watcher | Changed,
+//     },
+//     {
+//       name: "stale Visited is cleared on fast path",
+//       initial: Consumer | Visited,
+//       promote: Changed,
+//       expected: Consumer | Changed,
+//     },
+//   ])("$name", ({ initial, promote, expected }) => {
+//     resetRuntime();
+
+//     const source = createNode(0);
+//     const subscriber = createNode(initial);
+//     const edge = linkEdge(source, subscriber);
+
+//     expect(
+//       invalidateSub(edge, subscriber, subscriber.state, promote),
+//     ).toBe(expected);
+//     expect(subscriber.state).toBe(expected);
+//   });
+
+//   it.each([
+//     {
+//       name: "already Invalid",
+//       initial: Consumer | Invalid,
+//     },
+//     {
+//       name: "already Changed",
+//       initial: Consumer | Changed,
+//     },
+//   ])("returns 0 and preserves state for $name", ({ initial }) => {
+//     resetRuntime();
+
+//     const source = createNode(0);
+//     const subscriber = createNode(initial);
+//     const edge = linkEdge(source, subscriber);
+
+//     expect(
+//       invalidateSub(edge, subscriber, subscriber.state, Changed),
+//     ).toBe(0);
+//     expect(subscriber.state).toBe(initial);
+//   });
+
+//   it("returns 0 and preserves state for tracking subscribers without a prefix tail", () => {
+//     resetRuntime();
+
+//     const source = createNode(0);
+//     const subscriber = createNode(Consumer | Computing);
+//     const edge = linkEdge(source, subscriber);
+
+//     expect(
+//       invalidateSub(edge, subscriber, subscriber.state, Changed),
+//     ).toBe(0);
+//     expect(subscriber.state).toBe(Consumer | Computing);
+//   });
+
+//   it.each([
+//     {
+//       name: "inbound edge is the tracked tail",
+//       inboundIndex: 1,
+//       tailIndex: 1,
+//       expectedChanged: true,
+//     },
+//     {
+//       name: "inbound edge is before the tracked tail",
+//       inboundIndex: 0,
+//       tailIndex: 2,
+//       expectedChanged: true,
+//     },
+//     {
+//       name: "inbound edge immediately follows the tracked tail",
+//       inboundIndex: 2,
+//       tailIndex: 1,
+//       expectedChanged: false,
+//     },
+//     {
+//       name: "inbound edge is after the tracked tail",
+//       inboundIndex: 3,
+//       tailIndex: 1,
+//       expectedChanged: false,
+//     },
+//   ])("$name", ({ inboundIndex, tailIndex, expectedChanged }) => {
+//     resetRuntime();
+
+//     const subscriber = createNode(Consumer | Computing);
+//     const sources = [
+//       createNode(0),
+//       createNode(0),
+//       createNode(0),
+//       createNode(0),
+//     ];
+//     const edges = sources.map((source) => linkEdge(source, subscriber));
+//     const initial = subscriber.state;
+//     subscriber.tailIn = edges[tailIndex]!;
+
+//     const nextState = invalidateSub(
+//       edges[inboundIndex]!,
+//       subscriber,
+//       subscriber.state,
+//       Changed,
+//     );
+
+//     if (expectedChanged) {
+//       const expected = Consumer | Computing | Visited | Invalid;
+//       expect(nextState).toBe(expected);
+//       expect(subscriber.state).toBe(expected);
+//     } else {
+//       expect(nextState).toBe(0);
+//       expect(subscriber.state).toBe(initial);
+//     }
+//   });
+// });
+
+
+

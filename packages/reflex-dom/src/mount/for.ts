@@ -2,12 +2,13 @@ import type { Namespace } from "../host/namespace";
 import { moveRangeBefore } from "../host/mutations";
 import {
   onEffectStart,
-  registerCleanup,
-  useOwnedEffect,
 } from "@volynets/reflex-framework";
 import type { ForRenderable } from "../operators";
 import { reconcileKeyedList, type KeyedItem } from "../reconcile/keyed";
-import type { DOMRenderer } from "../runtime/renderer";
+import {
+  registerDOMCleanup,
+  useDOMOwnedEffect,
+} from "../runtime/execution";
 import type { ContentSlot } from "../structure/content-slot";
 import { createMountedSlot } from "../structure/reactive-slot";
 
@@ -16,7 +17,6 @@ interface ForRow<T> extends KeyedItem<T> {
 }
 
 export function mountFor(
-  renderer: DOMRenderer,
   renderable: ForRenderable<unknown>,
   ns: Namespace,
 ): Node {
@@ -51,7 +51,7 @@ export function mountFor(
     const row: ForRow<unknown> = {
       key,
       value: item,
-      slot: createMountedSlot(renderer, renderable.children(item, index), ns),
+      slot: createMountedSlot(renderable.children(item, index), ns),
     };
 
     parent.insertBefore(row.slot.fragment, before);
@@ -83,7 +83,7 @@ export function mountFor(
 
       if (renderable.fallback != null) {
         if (fallbackSlot === null) {
-          fallbackSlot = createMountedSlot(renderer, renderable.fallback, ns);
+          fallbackSlot = createMountedSlot(renderable.fallback, ns);
           parent.insertBefore(fallbackSlot.fragment, end);
         } else {
           fallbackSlot.update(renderable.fallback);
@@ -115,7 +115,7 @@ export function mountFor(
 
   reconcile(renderable.each());
 
-  useOwnedEffect({ owner: renderer.owner }, () => {
+  useDOMOwnedEffect(() => {
     const nextItems = renderable.each();
 
     onEffectStart(() => {
@@ -123,7 +123,7 @@ export function mountFor(
     });
   });
 
-  registerCleanup(renderer.owner, () => {
+  registerDOMCleanup(() => {
     destroyFallback();
     destroyRows(rows);
     start.parentNode?.removeChild(start);

@@ -15,13 +15,14 @@ import {
   scan,
   signal,
   subscribeOnce,
-  withEffectCleanupRegistrar,
 } from "@volynets/reflex";
 import {
   createKeyedProjection,
   createProjection,
   createSelector,
   createStoreProjection,
+} from "@reflex/store";
+import {
   isPending,
   optimistic,
   resource,
@@ -251,7 +252,7 @@ export function createDemoApp() {
       `Direct reads are live. Effects and resources settle when you flush. Cycle #${flushCount()}.`,
   );
 
-  const reactiveTools = withEffectCleanupRegistrar(registerCleanup, () => {
+  const reactiveTools = (() => {
     const selectionState = createSelector(selectedId);
     const spotlightSource = computed(
       () =>
@@ -378,6 +379,9 @@ export function createDemoApp() {
       spotlightTitleById,
       workspace,
     };
+  })();
+  registerCleanup(() => {
+    reactiveTools.insights.dispose();
   });
 
   registerCleanup(

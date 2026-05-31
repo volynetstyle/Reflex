@@ -1,6 +1,6 @@
 {
   "name": "@volynets/reflex",
-  "version": "0.3.3",
+  "version": "0.3.5",
   "type": "module",
   "description": "Public Reflex facade with a connected runtime",
   "license": "MIT",
@@ -51,15 +51,16 @@
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "pnpm clean && pnpm build:ts && pnpm build:types && pnpm build:npm",
-    "build:all": "pnpm --filter @reflex/runtime build && pnpm --filter @volynets/reflex build",
+    "build:all": "node ../../scripts/build-chain.mjs @volynets/reflex-runtime @volynets/reflex",
     "build:ts": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
-    "build:types": "rollup -c rollup.dts.config.ts --configPlugin @rollup/plugin-swc && node ../../scripts/write-globals-dts.mjs . && node ./scripts/write-subpath-dts.mjs .",
-    "build:npm": "rollup -c rollup.config.ts --configPlugin @rollup/plugin-swc",
+    "build:types": "rollup --silent -c rollup.dts.config.ts --configPlugin @rollup/plugin-swc && node ../../scripts/write-globals-dts.mjs . && node ./scripts/write-subpath-dts.mjs .",
+    "build:npm": "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc",
     "build:clean": "pnpm build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "bench": "vitest bench",
+    "bench:api": "pnpm --filter @volynets/reflex-runtime build && pnpm build && node --expose-gc bench/api-facade.jit.mjs",
     "bench:projection": "node ./bench/projection-compare.node.mjs",
     "demo": "vite --config examples/mini-app/vite.config.ts",
     "demo:build": "vite build --config examples/mini-app/vite.config.ts",
@@ -70,6 +71,7 @@
     "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm build:clean"
   },
   "devDependencies": {
+    "@reflex/store": "workspace:*",
     "@volynets/reflex-runtime": "workspace:*",
     "@volynets/reflex-dom": "workspace:*"
   }

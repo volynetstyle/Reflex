@@ -206,7 +206,7 @@ The runtime uses precise terminology consistently:
 │   ├── 02-public-api.md              ← What the package exports
 │   ├── 03-core-model.md              ← ReactiveNode, state bits
 │   ├── 04-read-and-write-paths.md    ← Control flow deep dive
-│   ├── 05-dynamic-dependencies.md    ← Tracking and branch switching
+│   ├── 05-dynamic-dependencies.md    ← Computing and branch switching
 │   ├── 06-effects-and-scheduler.md   ← Watcher protocol
 │   ├── 07-execution-contexts.md      ← Context lifecycle
 │   ├── 07-invariants-dev-and-prod.md ← Critical invariants

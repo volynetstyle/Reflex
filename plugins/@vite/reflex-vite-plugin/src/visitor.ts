@@ -10,18 +10,18 @@ import type {
   TsType,
   Expression,
 } from "@swc/core";
-import type { NormalizedReflexModelTransformOptions } from "./types";
+import type { NormalizedReflexModelTransformOptions } from "./types.js";
 import {
   createAccessorExpression,
   createCallExpression,
   createIdentifier,
-} from "./ast-utils";
+} from "./ast-utils.js";
 import {
   shouldWrapExpression,
   shouldWrapModelAttribute,
   isModelMemberExpression,
-} from "./expressions";
-import { getJSXAttributeName, isJSXExpressionContainer } from "./jsx-utils";
+} from "./expressions.js";
+import { getJSXAttributeName, isJSXExpressionContainer } from "./jsx-utils.js";
 
 /**
  * Visitor that transforms reactive JSX props into accessors

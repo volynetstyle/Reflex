@@ -27,16 +27,20 @@ import {
 import { isHydrationSlotEnd, isHydrationSlotStart } from "../hydrate/markers";
 import {
   createScope,
-  runInOwnershipScope,
-  runWithComponentHooks,
 } from "@volynets/reflex-framework";
+import {
+  ensureDOMRuntime,
+  getActiveDOMExecutionContext,
+  runInDOMOwnershipScope,
+  runWithDOMComponentHooks,
+  runWithDOMExecutionContext,
+} from "../runtime/execution";
 import {
   resolveNamespace,
   SVG_NS,
   MATHML_NS,
   type Namespace,
 } from "../host/namespace";
-import type { DOMRenderer } from "src/runtime/renderer";
 
 class HydrationMismatch extends Error {}
 
@@ -57,19 +61,22 @@ function nextSiblingWithinBoundary(
 }
 
 function createRootCleanup(
-  renderer: DOMRenderer,
   container: ParentNode & Node,
   rootMount: MountedRenderRange,
 ): Cleanup {
+  const context = getActiveDOMExecutionContext();
+
   const dispose = (() => {
-    rootMount.clear();
+    runWithDOMExecutionContext(context, () => {
+      rootMount.clear();
 
-    if (renderer.mountedRoots.get(container) !== rootMount) {
-      return;
-    }
+      if (context.mountedRoots.get(container) !== rootMount) {
+        return;
+      }
 
-    renderer.mountedRoots.delete(container);
-    rootMount.destroy();
+      context.mountedRoots.delete(container);
+      rootMount.destroy();
+    });
   }) as Cleanup;
 
   dispose.dispose = dispose;
@@ -155,7 +162,6 @@ function shouldHydrateLightDomChildren(
 }
 
 function hydrateRenderableValue(
-  renderer: DOMRenderer,
   value: JSXRenderable | unknown,
   parentNamespace: Namespace,
   currentNode: Node | null,
@@ -174,7 +180,6 @@ function hydrateRenderableValue(
 
       for (let index = 0; index < items.length; index++) {
         cursor = hydrateRenderableValue(
-          renderer,
           items[index],
           parentNamespace,
           cursor,
@@ -201,7 +206,6 @@ function hydrateRenderableValue(
     case RenderableKind.Accessor: {
       const slot = consumeHydrationSlot(currentNode, boundary);
       hydrateReactiveSlot(
-        renderer,
         value as () => unknown,
         identity,
         slot.start,
@@ -215,7 +219,6 @@ function hydrateRenderableValue(
       const renderable = value as ShowRenderable<unknown>;
       const slot = consumeHydrationSlot(currentNode, boundary);
       hydrateReactiveSlot(
-        renderer,
         renderable.when,
         (resolvedValue) => resolveShowValue(renderable, resolvedValue),
         slot.start,
@@ -229,7 +232,6 @@ function hydrateRenderableValue(
       const renderable = value as SwitchRenderable<unknown>;
       const slot = consumeHydrationSlot(currentNode, boundary);
       hydrateReactiveSlot(
-        renderer,
         renderable.value,
         (resolvedValue) => resolveSwitchValue(renderable, resolvedValue),
         slot.start,
@@ -243,7 +245,6 @@ function hydrateRenderableValue(
       const renderable = value as ForRenderable<unknown>;
       const slot = consumeHydrationSlot(currentNode, boundary);
       hydrateReactiveSlot(
-        renderer,
         renderable.each,
         (resolvedValue) => resolveForHydrationValue(renderable, resolvedValue),
         slot.start,
@@ -254,21 +255,13 @@ function hydrateRenderableValue(
     }
 
     case RenderableKind.Portal:
-      mountPortal(renderer, value as PortalRenderable);
+      mountPortal(value as PortalRenderable);
       return currentNode;
 
     case RenderableKind.Component: {
       const renderable = value as ComponentRenderable<unknown>;
       return hydrateRenderableValue(
-        renderer,
-        runWithComponentHooks(
-          {
-            owner: renderer.owner,
-            scope: renderer.owner.currentOwner,
-            renderEffectScheduler: renderer.renderEffectScheduler,
-          },
-          () => renderable.type(renderable.props),
-        ),
+        runWithDOMComponentHooks(() => renderable.type(renderable.props)),
         parentNamespace,
         currentNode,
         boundary,
@@ -297,7 +290,6 @@ function hydrateRenderableValue(
 
       const props = renderable.props as Record<string, unknown>;
       bindElementProps(
-        renderer,
         currentNode,
         props,
         elementNamespace,
@@ -306,7 +298,6 @@ function hydrateRenderableValue(
 
       if (shouldHydrateLightDomChildren(renderable.tag, props)) {
         const remainingChild = hydrateRenderableValue(
-          renderer,
           props.children,
           elementNamespace,
           currentNode.firstChild,
@@ -319,7 +310,6 @@ function hydrateRenderableValue(
       }
 
       bindElementProps(
-        renderer,
         currentNode,
         props,
         elementNamespace,
@@ -335,7 +325,6 @@ function hydrateRenderableValue(
 }
 
 function hydrateManagedContainer(
-  renderer: DOMRenderer,
   renderable: JSXRenderable,
   container: ParentNode & Node,
 ): MountedRenderRange {
@@ -343,9 +332,8 @@ function hydrateManagedContainer(
   const scope = createScope();
 
   try {
-    runInOwnershipScope(renderer.owner, scope, () => {
+    runInDOMOwnershipScope(scope, () => {
       const remainingNode = hydrateRenderableValue(
-        renderer,
         renderable,
         "html",
         anchors.startAnchor.nextSibling === anchors.endAnchor
@@ -368,19 +356,19 @@ function hydrateManagedContainer(
       throw error;
     }
 
-    return mountRenderRange(renderer, container, renderable, "html", anchors);
+    return mountRenderRange(container, renderable, "html", anchors);
   }
 }
 
-export function resumeWithRenderer(
-  renderer: DOMRenderer,
+export function resumeWithDOMExecution(
   container: ParentNode & Node,
 ): Cleanup {
-  renderer.ensureRuntime();
+  const context = getActiveDOMExecutionContext();
+  ensureDOMRuntime(context);
 
-  const currentRoot = renderer.mountedRoots.get(container);
+  const currentRoot = context.mountedRoots.get(container);
   if (currentRoot !== undefined) {
-    return createRootCleanup(renderer, container, currentRoot);
+    return createRootCleanup(container, currentRoot);
   }
 
   const resumedRoot = createRenderRangeMount(
@@ -388,25 +376,25 @@ export function resumeWithRenderer(
     adoptExistingContentRange(container),
   );
 
-  renderer.mountedRoots.set(container, resumedRoot);
-  return createRootCleanup(renderer, container, resumedRoot);
+  context.mountedRoots.set(container, resumedRoot);
+  return createRootCleanup(container, resumedRoot);
 }
 
-export function hydrateWithRenderer(
-  renderer: DOMRenderer,
+export function hydrateWithDOMExecution(
   renderable: JSXRenderable,
   container: ParentNode & Node,
 ): Cleanup {
-  renderer.ensureRuntime();
+  const context = getActiveDOMExecutionContext();
+  ensureDOMRuntime(context);
 
-  const existingRoot = renderer.mountedRoots.get(container);
+  const existingRoot = context.mountedRoots.get(container);
   if (existingRoot !== undefined) {
     existingRoot.destroy();
-    renderer.mountedRoots.delete(container);
+    context.mountedRoots.delete(container);
   }
 
-  const hydratedRoot = hydrateManagedContainer(renderer, renderable, container);
-  renderer.mountedRoots.set(container, hydratedRoot);
-  renderer.renderEffectScheduler.flush();
-  return createRootCleanup(renderer, container, hydratedRoot);
+  const hydratedRoot = hydrateManagedContainer(renderable, container);
+  context.mountedRoots.set(container, hydratedRoot);
+  context.renderEffectScheduler.flush();
+  return createRootCleanup(container, hydratedRoot);
 }

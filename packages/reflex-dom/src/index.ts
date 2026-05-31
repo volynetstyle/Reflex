@@ -19,6 +19,12 @@ export { Fragment, jsx, jsxDEV, jsxs } from "./runtime/jsx";
 export { createDOMRenderer, type DOMRenderer } from "./runtime/renderer";
 
 export {
+  createApp,
+  setupDOM,
+  type ReflexDOMApp,
+} from "./runtime/app";
+
+export {
   createDOMRuntime,
   hydrate,
   mount,

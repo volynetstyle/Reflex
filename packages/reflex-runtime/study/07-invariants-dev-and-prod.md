@@ -33,18 +33,18 @@ Push path downstream-ом займається окремо через `propagat
 
 Це різні речі, і саме на цьому тримається cheap write + selective recompute.
 
-## 3. `compute` виконується тільки під `Tracking` і `Computing`
+## 3. `compute` виконується тільки під `Computing` і `Computing`
 
 Під час `executeNodeComputation(node, ...)` має бути істинно:
 
-- `node.state & Tracking`
+- `node.state & Computing`
 - `node.state & Computing`
 - `runtime.activeComputed === node`
 - `node.depsTail === null` на старті compute
 
 Після завершення:
 
-- `Tracking` знятий
+- `Computing` знятий
 - `Computing` знятий
 - `runtime.activeComputed` відновлений
 
@@ -76,9 +76,9 @@ Push path downstream-ом займається окремо через `propagat
 Саме тому `connect.ts` такий pointer-heavy:
 тут correctness важливіша за красиву абстракцію.
 
-## 6. Tracking invalidation допускається лише для confirmed prefix
+## 6. Computing invalidation допускається лише для confirmed prefix
 
-Коли consumer має `Tracking`, push walker не може безумовно інвалідовувати будь-який старий edge.
+Коли consumer має `Computing`, push walker не може безумовно інвалідовувати будь-який старий edge.
 
 Потрібне правило:
 
@@ -105,7 +105,7 @@ Pull-side трактує це як:
 
 - лінійний fast path без стеку, якщо branching немає
 - branching DFS лише коли він реально потрібен
-- refresh dependency перед recompute поточного consumer-а
+- advance dependency перед recompute поточного consumer-а
 
 Можливий рефакторинг форми коду,
 але не можна зламати сам порядок:

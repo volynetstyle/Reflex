@@ -76,7 +76,7 @@ producer -> consumer -> watcher
 
 - `Invalid` - вузол треба перевірити
 - `Changed` - зміна вже підтверджена
-- `Tracking` - вузол зараз перебудовує dependency prefix
+- `Computing` - вузол зараз перебудовує dependency prefix
 - `Visited` - walker marker для спеціальних re-entrancy випадків
 - `Computing` - вузол зараз виконує `compute`
 - `Disposed` - вузол більше не бере участі в графі

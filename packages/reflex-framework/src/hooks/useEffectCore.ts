@@ -1,7 +1,8 @@
 import type { Cleanup } from "../types/core";
-import { useOwnedEffect } from "../ownership/bridge";
+import { useOwnedEffect } from "../ownership/effects";
 import { runWithOwner } from "../ownership/ownership.scope";
 import {
+  RenderEffectPhase,
   getCurrentHookOwner,
   getCurrentHookScope,
   getCurrentRenderEffectScheduler,
@@ -9,8 +10,6 @@ import {
 
 export type EffectCleanup = void | Cleanup;
 export type EffectCallback = () => EffectCleanup;
-
-const RENDER_EFFECT_PRIORITY = 1;
 
 export function useEffectInternal(callback: EffectCallback): Cleanup {
   return useOwnedEffect({ owner: getCurrentHookOwner() }, callback);
@@ -41,21 +40,21 @@ export function useEffectRenderInternal(callback: EffectCallback): Cleanup {
   let disposed = false;
   let disposeEffect: Cleanup | null = null;
 
-  const cancelableScheduledTask = scheduler.schedule(() => {
-    if (disposed) return;
+  const cancelableScheduledTask = scheduler.schedule(
+    () => {
+      if (disposed) return;
 
-    disposeEffect = runWithOwner(owner, scope, () =>
-      useOwnedEffect(
-        { owner, priority: RENDER_EFFECT_PRIORITY },
-        callback,
-      ),
-    );
+      disposeEffect = runWithOwner(owner, scope, () =>
+        useOwnedEffect({ owner }, callback),
+      );
 
-    if (disposed) {
-      disposeEffect();
-      disposeEffect = null;
-    }
-  });
+      if (disposed) {
+        disposeEffect();
+        disposeEffect = null;
+      }
+    },
+    RenderEffectPhase.Render,
+  );
 
   const dispose = (() => {
     disposed = true;

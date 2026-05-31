@@ -1,18 +1,16 @@
 import type { Namespace } from "../host/namespace";
-import type { DOMRenderer } from "../runtime/renderer";
 import {
   bindReactiveSlotLifecycle,
   createMountedSlot,
 } from "../structure/reactive-slot";
 
 export function mountReactiveSlot<T>(
-  renderer: DOMRenderer,
   readValue: () => T,
   resolveValue: (value: T) => unknown,
   ns: Namespace,
 ): Node {
-  const slot = createMountedSlot(renderer, resolveValue(readValue()), ns);
-  bindReactiveSlotLifecycle(renderer, slot, readValue, resolveValue);
+  const slot = createMountedSlot(resolveValue(readValue()), ns);
+  bindReactiveSlotLifecycle(slot, readValue, resolveValue);
 
   return slot.fragment;
 }

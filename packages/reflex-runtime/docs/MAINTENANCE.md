@@ -32,9 +32,9 @@ Use this map to find the right place:
 
 | Goal | Primary Files | Related |
 |------|---------------|---------|
-| Change write path | `src/api/write.ts` + `src/reactivity/walkers/propagate.ts` | RUNTIME.md |
-| Change read path | `src/api/read.ts` + `src/reactivity/walkers/recompute.ts` | 04-read-and-write-paths.md |
-| Change tracking | `src/reactivity/engine/tracking.ts` | 05-dynamic-dependencies.md |
+| Change write path | `src/api/write.ts` + `src/reactivity/walkers/propagateChange.ts` | RUNTIME.md |
+| Change read path | `src/api/read.ts` + `src/reactivity/walkers/recomputeNode.ts` | 04-read-and-write-paths.md |
+| Change tracking | `src/reactivity/engine/trackingContext.ts` | 05-dynamic-dependencies.md |
 | Change watcher behavior | `src/api/watcher.ts` + `src/reactivity/walkers/` | 06-effects-and-scheduler.md |
 | Change disposal | `src/reactivity/index.ts` | DISPOSE.md |
 | Change context | `src/reactivity/context.ts` | 07-execution-contexts.md |
@@ -50,7 +50,7 @@ Use this map to find the right place:
 **Steps:**
 
 1. **Measure first:** Run `pnpm bench:core` to establish baseline
-2. **Profile:** Identify the bottleneck in `src/reactivity/walkers/propagate.ts`
+2. **Profile:** Identify the bottleneck in `src/reactivity/walkers/propagateChange.ts`
 3. **Verify correctness:** Write test case that will catch regressions
 4. **Implement:** Make the change
 5. **Test:** Run `pnpm test` — all tests must pass
@@ -217,7 +217,7 @@ edge.to.firstIn = edge;  // <-- this too!
 
 ## Performance-Sensitive Zones
 
-### Zone 1: `src/reactivity/walkers/propagate.ts`
+### Zone 1: `src/reactivity/walkers/propagateChange.ts`
 
 **Why:** Runs on every `writeProducer()`
 
@@ -231,7 +231,7 @@ edge.to.firstIn = edge;  // <-- this too!
 - Avoid function calls in inner loop
 - Benchmark: `pnpm bench:core` → measure write latency
 
-### Zone 2: `src/reactivity/walkers/recompute.ts`
+### Zone 2: `src/reactivity/walkers/recomputeNode.ts`
 
 **Why:** Runs on every `readConsumer()`
 
@@ -245,7 +245,7 @@ edge.to.firstIn = edge;  // <-- this too!
 - Early exit in `shouldRecompute()` if any upstream changed
 - Benchmark: `pnpm bench:core` → measure read latency
 
-### Zone 3: `src/reactivity/engine/tracking.ts`
+### Zone 3: `src/reactivity/engine/trackingContext.ts`
 
 **Why:** Runs during every `compute()`
 
@@ -287,7 +287,7 @@ Outputs performance metrics for:
 - `writeProducer()` latency
 - `readConsumer()` latency
 - Propagation fanout
-- Tracking cleanup
+- Computing cleanup
 
 ### Run Specific Benchmark
 
@@ -368,26 +368,26 @@ src/
     index.ts         ← ReactiveNode, state constants
     
     engine/
-      compute.ts     ← executeNodeComputation
-      execute.ts     ← compute execution, dependency initialization
-      tracking.ts    ← trackRead, depsTail cursor logic
+      computeNode.ts     ← executeNodeComputation
+      executeWatcher.ts     ← compute execution, dependency initialization
+      trackingContext.ts    ← trackRead, depsTail cursor logic
       watcher.ts     ← watcher-specific execution
     
     shape/
       Reactivable.ts         ← Node state enum
-      ReactiveEdge.ts        ← Edge structure
-      ReactiveNode.ts        ← Node structure
-      ReactiveMeta.ts        ← Metadata storage
+      edge.ts        ← Edge structure
+      node.ts        ← Node structure
+      meta.ts        ← Metadata storage
       methods/               ← Internal helpers
     
     walkers/
-      propagate.ts           ← Main push invalidation
-      propagate.invalidate.ts ← Shared push-side invalidation seam
-      propagate.once.ts      ← Reentrant-safe variant
-      propagate.constants.ts ← State tokens
-      recompute.ts           ← Pull stabilization orchestration
-      recompute.refresh.ts   ← Shared pull-side refresh seam
-      recompute.branch.ts    ← Branch switching, stale cleanup
+      propagateChange.ts           ← Main push invalidation
+      invalidateBranch.ts ← Shared push-side invalidation seam
+      propagateOnce.ts      ← Visited-safe variant
+      propagationConstants.ts ← State tokens
+      recomputeNode.ts           ← Pull stabilization orchestration
+      ensureFresh.ts   ← Shared pull-side advance seam
+      recomputeBranch.ts    ← Branch switching, stale cleanup
 ```
 
 ### Dependency Graph (simplified)

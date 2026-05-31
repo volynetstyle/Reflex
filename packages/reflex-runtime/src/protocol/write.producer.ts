@@ -1,13 +1,17 @@
-import type { ReactiveNode } from "../reactivity";
+import type { ReactiveNode } from "../kernel";
 import {
-  isDisposedNode,
   defaultContext,
-  enterPropagation,
-  propagate,
-  PROMOTE_CHANGED,
-  leavePropagation,
-} from "../reactivity";
-import { devAssertWriteAlive, devRecordWriteProducer } from "../reactivity/dev";
+  enterPropagationScope,
+  leavePropagationScope,
+  emitSettledIfIdle,
+  propagateOnceChanged,
+  propagateInvalid,
+} from "../kernel";
+import { devRecordWriteProducer } from "../kernel/dev";
+import {
+  getPropagateStackBase,
+  restorePropagateStackBase,
+} from "../kernel/walkers/propagationStack";
 import type { ProducerComparator } from "./utils/compare";
 import { compare as defaultComparator } from "./utils/compare";
 
@@ -64,11 +68,6 @@ export function writeProducer<T>(
   value: T,
   compare: ProducerComparator<T> = defaultComparator,
 ): void {
-  if (isDisposedNode(node)) {
-    if (__DEV__) devAssertWriteAlive();
-    return;
-  }
-
   const prev = node.payload;
 
   // Check if the value actually changed using stable comparison
@@ -91,25 +90,31 @@ export function writeProducer<T>(
   // Update the payload to the new value
   node.payload = value;
 
-  // Get the first subscriber edge (if any)
-  const firstSubscriberEdge = node.firstOut;
-
   if (__DEV__) {
     devRecordWriteProducer(node, true, value, prev, undefined, defaultContext);
   }
 
-  // If no subscribers, propagation is unnecessary
-  if (firstSubscriberEdge === null) return;
+  const firstOut = node.firstOut;
 
-  enterPropagation();
+  if (firstOut === null) {
+    emitSettledIfIdle();
+    return;
+  }
+
+  enterPropagationScope();
+  const base = getPropagateStackBase();
 
   try {
     // Push phase: notify all subscribers depth-first, mark them dirty.
     // Direct subscribers are promoted from Invalid to Changed.
     // This tells them "definitely changed, don't verify, recompute"
-    propagate(firstSubscriberEdge, PROMOTE_CHANGED);
+    const pendingInvalid = propagateOnceChanged(firstOut, base);
+
+    if (pendingInvalid !== null) {
+      propagateInvalid(pendingInvalid, getPropagateStackBase(), base);
+    }
   } finally {
-    // Always exit propagation phase, even if propagation or hooks fail.
-    leavePropagation();
+    restorePropagateStackBase(base);
+    leavePropagationScope();
   }
 }

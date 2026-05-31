@@ -7,6 +7,55 @@ that it does so with an explicit ownership tree. DOM nodes, reactive effects,
 event listeners, refs, and dynamic branch cleanups are all tied to lifecycle
 scopes, so mount, update, replace, and dispose stay deterministic.
 
+## Quick Start
+
+Install the DOM renderer and use it as your JSX import source:
+
+```json
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@volynets/reflex-dom"
+  }
+}
+```
+
+Then render directly:
+
+```tsx
+import { signal } from "@volynets/reflex";
+import { render, setupDOM } from "@volynets/reflex-dom";
+
+setupDOM();
+
+const [count, setCount] = signal(0);
+
+render(
+  <button type="button" onClick={() => setCount((value) => value + 1)}>
+    count: {count}
+  </button>,
+  document.getElementById("app")!,
+);
+```
+
+For an isolated renderer, create an app:
+
+```tsx
+import { createApp } from "@volynets/reflex-dom";
+
+const app = createApp({
+  policy: {
+    priorityLevels: true,
+  },
+});
+
+app.render(<main>Hello Reflex</main>, document.getElementById("app")!);
+```
+
+The low-level `createDOMRenderer()` API remains available for tests and
+advanced integrations, but application code should usually start with
+`setupDOM()`, `createApp()`, and `render()`.
+
 ## Documentation
 
 - English architecture overview: `README.md`
@@ -80,7 +129,7 @@ reflex-framework/ownership/*
   - context
   - cleanup registration
   - subtree disposal
-  - reactive bridge used by DOM mounts
+  - ownership-bound effects used by DOM mounts
 ```
 
 ## End-to-End Lifecycle

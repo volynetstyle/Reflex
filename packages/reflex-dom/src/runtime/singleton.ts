@@ -1,39 +1,54 @@
 import type { Cleanup, JSXRenderable } from "../types";
-import { createDOMRenderer, type DOMRenderer } from "./renderer";
+import type { DOMRenderer } from "./renderer";
+import { hydrateWithDOMExecution, resumeWithDOMExecution } from "../hydrate/hydration";
 import type { DOMRuntimeOptions } from "./options";
+import { renderWithDOMExecution } from "./render";
+import {
+  createDOMExecutionContext,
+  ensureDOMRuntime,
+  runWithDOMExecutionContext,
+  type DOMExecutionContext,
+} from "./execution";
 
-let activeRenderer: DOMRenderer | null = null;
+let activeExecutionContext: DOMExecutionContext | null = null;
 
-function ensureRenderer(): DOMRenderer {
-  return (activeRenderer ??= createDOMRenderer());
+function ensureExecutionContext(): DOMExecutionContext {
+  return (activeExecutionContext ??= createDOMExecutionContext());
+}
+
+function runSingletonOperation<T>(fn: () => T): T {
+  const context = ensureExecutionContext();
+  const runtime = ensureDOMRuntime(context);
+
+  return runtime.batch(() => runWithDOMExecutionContext(context, fn));
 }
 
 export function createDOMRuntime(options?: DOMRuntimeOptions) {
-  const renderer = createDOMRenderer(options);
-  activeRenderer = renderer;
-  return renderer.ensureRuntime();
+  const context = createDOMExecutionContext(options);
+  activeExecutionContext = context;
+  return ensureDOMRuntime(context);
 }
 
 export function render(
   input: JSXRenderable,
   container: ParentNode & Node,
 ): Cleanup {
-  return ensureRenderer().render(input, container);
+  return runSingletonOperation(() => renderWithDOMExecution(input, container));
 }
 
 export function hydrate(
   input: JSXRenderable,
   container: ParentNode & Node,
 ): Cleanup {
-  return ensureRenderer().hydrate(input, container);
+  return runSingletonOperation(() => hydrateWithDOMExecution(input, container));
 }
 
 export const mount = render;
 
 export function resume(container: ParentNode & Node): Cleanup {
-  return ensureRenderer().resume(container);
+  return runSingletonOperation(() => resumeWithDOMExecution(container));
 }
 
 export function useDOMRenderer(renderer: DOMRenderer | null) {
-  activeRenderer = renderer;
+  activeExecutionContext = renderer?.execution ?? null;
 }

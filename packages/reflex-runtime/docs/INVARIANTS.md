@@ -27,8 +27,8 @@ subscriber.firstIn → ... → edge → ... → subscriber.lastIn
 
 ### Where Enforced
 
-- **Creation:** `trackRead()` in `src/reactivity/engine/tracking.ts`
-- **Removal:** Edge unlinking in `src/reactivity/walkers/recompute.branch.ts`
+- **Creation:** `trackRead()` in `src/reactivity/engine/trackingContext.ts`
+- **Removal:** Edge unlinking in `src/reactivity/walkers/recomputeBranch.ts`
 - **Verification:** Tests use `subtle.snapshot()` to inspect edge chains
 
 ### How It Breaks
@@ -56,7 +56,7 @@ edge.next.prev = edge.prev;
 
 - `tests/runtime.traversal.test.ts` — edge chain integrity
 - `tests/runtime.semantic.test.ts` — graph correctness across operations
-- Development assertions in `src/reactivity/shape/ReactiveEdge.ts`
+- Development assertions in `src/reactivity/shape/edge.ts`
 
 ---
 
@@ -78,8 +78,8 @@ transitive_subscriber.state |= Invalid // Transitive: maybe changed
 
 ### Where Enforced
 
-- **Propagation:** `src/reactivity/walkers/propagate.ts` — marks `Changed` vs. `Invalid`
-- **Stabilization:** `src/reactivity/walkers/recompute.ts` — decides recompute strategy
+- **Propagation:** `src/reactivity/walkers/propagateChange.ts` — marks `Changed` vs. `Invalid`
+- **Stabilization:** `src/reactivity/walkers/recomputeNode.ts` — decides recompute strategy
 
 ### How It Breaks
 
@@ -131,9 +131,9 @@ After a consumer recomputes, edges for reads that did **not** occur must be unli
 
 ### Where Enforced
 
-- **Dependency recording:** `src/reactivity/engine/tracking.ts`
-- **Recompute orchestration:** `src/reactivity/walkers/recompute.ts`
-- **Stale cleanup:** `src/reactivity/walkers/recompute.branch.ts` — `unlinkStaleSuffix()`
+- **Dependency recording:** `src/reactivity/engine/trackingContext.ts`
+- **Recompute orchestration:** `src/reactivity/walkers/recomputeNode.ts`
+- **Stale cleanup:** `src/reactivity/walkers/recomputeBranch.ts` — `unlinkStaleSuffix()`
 
 ### How It Breaks
 
@@ -184,9 +184,9 @@ unlink: old_edge1, old_edge2 (stale suffix)
 
 ### Where Enforced
 
-- **Initialization:** `src/reactivity/engine/tracking.ts` — set depsTail at recompute start
+- **Initialization:** `src/reactivity/engine/trackingContext.ts` — set depsTail at recompute start
 - **Reuse:** `trackRead()` checks if depsTail's source matches
-- **Cleanup:** `src/reactivity/walkers/recompute.branch.ts` — unlink from depsTail to lastIn
+- **Cleanup:** `src/reactivity/walkers/recomputeBranch.ts` — unlink from depsTail to lastIn
 
 ### How It Breaks
 
@@ -335,7 +335,7 @@ No node receives invalidation before its **direct upstream dependencies**.
 
 ### Where Enforced
 
-- **Linear traversal:** `src/reactivity/walkers/propagate.ts` — walk via edge chain
+- **Linear traversal:** `src/reactivity/walkers/propagateChange.ts` — walk via edge chain
 - **No priority queues:** Runtime doesn't reorder subscribers
 
 ### How It Breaks
@@ -386,7 +386,7 @@ const derived = new ReactiveNode(undefined, () => {
 
 ### Where Enforced
 
-- **Visited tracking:** `src/reactivity/walkers/propagate.once.ts`
+- **Visited tracking:** `src/reactivity/walkers/propagateOnce.ts`
 - **Propagation depth:** `context.propagationDepth` prevents nested waves
 - **Queue handling:** New invalidations deferred until depth === 0
 
@@ -423,7 +423,7 @@ readConsumer(node, ctx2);  // doesn't affect ctx1
 
 - **Context parameter:** All operations accept `context?`
 - **Default context:** Fallback to shared default if omitted
-- **Tracking storage:** Per-context cleanup, activeComputed, etc.
+- **Computing storage:** Per-context cleanup, activeComputed, etc.
 
 ### How It Breaks
 
@@ -462,7 +462,7 @@ runWatcher(watcher);  // NOW it executes
 
 ### Where Enforced
 
-- **Propagation:** `src/reactivity/walkers/propagate.ts` — stops at watcher, emits hook
+- **Propagation:** `src/reactivity/walkers/propagateChange.ts` — stops at watcher, emits hook
 - **No auto-execution:** `src/api/watcher.ts` — `runWatcher()` is host-called
 
 ### How It Breaks
@@ -486,12 +486,12 @@ Auto-executing watchers causes:
 |-|-|-|-|-|
 | 1 | Bidirectional edges | Edge creation/removal | Graph traversal wrong | traversal.test |
 | 2 | Changed vs. Invalid | propagate + recompute | Stale values | semantic.test |
-| 3 | Stale pruning | recompute.branch.ts | Ghost invalidations | semantic.test |
-| 4 | depsTail cursor | tracking.ts | Performance regression | perf benchmarks |
+| 3 | Stale pruning | recomputeBranch.ts | Ghost invalidations | semantic.test |
+| 4 | depsTail cursor | trackingContext.ts | Performance regression | perf benchmarks |
 | 5 | Disposal terminal | All entry points | Effects post-disposal | lifecycle.test |
 | 6 | Cleanup order | runWatcher, disposeWatcher | Resource leaks | lifecycle.test |
-| 7 | Topological order | propagate.ts | Cascading recompute wrong | traversal-order.jit |
-| 8 | Re-entrancy safe | propagate.once + depth | Infinite loops | semantic.test |
+| 7 | Topological order | propagateChange.ts | Cascading recompute wrong | traversal-order.jit |
+| 8 | Re-entrancy safe | propagateOnce + depth | Infinite loops | semantic.test |
 | 9 | Context isolation | Context parameter | Cross-context leakage | connect.test |
 | 10 | No immediate watchers | propagate hook | Lost host control | semantic.test |
 

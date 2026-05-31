@@ -124,9 +124,7 @@ function toElements(graph: RuntimeGraphModel): ElementDefinition[] {
         dirty: node.dirty,
         flags: node.flags.join(", "),
         color: RUNTIME_GRAPH_COLORS.nodeKinds[node.kind],
-        borderColor: node.flags.includes("disposed")
-          ? RUNTIME_GRAPH_COLORS.disposed
-          : RUNTIME_GRAPH_COLORS.nodeBorder,
+        borderColor: RUNTIME_GRAPH_COLORS.nodeBorder,
       },
     });
   }
@@ -200,9 +198,7 @@ export function createRuntimeCytoscapeController({
         dirty: node.dirty,
         flags: node.flags.join(", "),
         color: RUNTIME_GRAPH_COLORS.nodeKinds[node.kind],
-        borderColor: node.flags.includes("disposed")
-          ? RUNTIME_GRAPH_COLORS.disposed
-          : RUNTIME_GRAPH_COLORS.nodeBorder,
+        borderColor: RUNTIME_GRAPH_COLORS.nodeBorder,
       };
       const existing = cy.getElementById(id);
 

@@ -17,7 +17,7 @@ import {
   DUMMY_SPAN,
   MODEL_READ_EXPORT,
   type NormalizedReflexModelTransformOptions,
-} from "./types";
+} from "./types.js";
 
 /**
  * Creates an identifier expression

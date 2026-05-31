@@ -19,8 +19,6 @@ class ExecutionContext {
   // Глубина каскада инвалидаций (для onReactiveSettled)
   propagationDepth = 0;
 
-  // Registrar для cleanup функций в эффектах
-  cleanupRegistrar: CleanupRegistrar | null = null;
 
   // Callback hooks, которые host настраивает
   readonly hooks: EngineHooks;

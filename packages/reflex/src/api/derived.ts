@@ -1,8 +1,17 @@
 import {
   readConsumerEager,
   readConsumerLazy,
+  untracked,
 } from "@volynets/reflex-runtime";
+import { disposeNode } from "@volynets/reflex-runtime/internal";
 import { createComputedNode } from "../infra/factory";
+import { devassertDerivedFn } from "./derived.dev";
+import { getActiveReductionOptions } from "../unstable/reduction";
+
+export interface DisposableComputed<T> {
+  readonly read: Computed<T>;
+  dispose(): void;
+}
 
 /**
  * Creates a lazy derived accessor.
@@ -45,8 +54,11 @@ import { createComputedNode } from "../infra/factory";
  * @see effect
  */
 export function computed<T>(fn: () => T): Computed<T> {
-  const node = createComputedNode(fn);
-  return readConsumerLazy.bind(null, node) as Computed<T>;
+  devassertDerivedFn(fn, "computed");
+
+  const node = createComputedNode(fn, getActiveReductionOptions());
+
+  return readConsumerLazy.bind(node) as Computed<T>;
 }
 
 /**
@@ -87,7 +99,30 @@ export function computed<T>(fn: () => T): Computed<T> {
  * @see computed
  */
 export function memo<T>(fn: () => T): Memo<T> {
-  const node = createComputedNode(fn);
+  devassertDerivedFn(fn, "memo");
+
+  const node = createComputedNode(fn, getActiveReductionOptions());
+
   readConsumerEager(node);
-  return readConsumerLazy.bind(null, node) as Memo<T>;
+
+  return readConsumerLazy.bind(node) as Memo<T>;
+}
+
+export function createDisposableComputed<T>(fn: () => T): DisposableComputed<T> {
+  devassertDerivedFn(fn, "computed");
+
+  const node = createComputedNode(fn, getActiveReductionOptions());
+
+  return {
+    read: readConsumerLazy.bind(node) as Computed<T>,
+    dispose() {
+      disposeNode(node);
+    },
+  };
+}
+
+export function warmDisposableComputed<T>(
+  computed: DisposableComputed<T>,
+): T {
+  return untracked(computed.read);
 }

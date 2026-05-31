@@ -6,12 +6,12 @@ import type { Program } from "@swc/core";
 import type {
   ReflexDOMTransformOptions,
   ReflexDOMTransformResult,
-} from "./types";
-import { normalizeDOMOptions } from "./normalize-options";
-import { shouldProcessFile, hasPotentialReactiveJSXExpression } from "./string-utils";
-import { parseJSXModule, printProgram } from "./parser";
-import { ReflexDOMJSXReactivePropsVisitor } from "./visitor";
-import { injectModelValueReadImport } from "./ast-utils";
+} from "./types.js";
+import { normalizeDOMOptions } from "./normalize-options.js";
+import { shouldProcessFile, hasPotentialReactiveJSXExpression } from "./string-utils.js";
+import { parseJSXModule, printProgram } from "./parser.js";
+import { ReflexDOMJSXReactivePropsVisitor } from "./visitor.js";
+import { injectModelValueReadImport } from "./ast-utils.js";
 
 /**
  * Transforms Reflex DOM JSX code

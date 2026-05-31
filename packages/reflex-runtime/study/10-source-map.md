@@ -12,15 +12,15 @@
 3. `src/api/write.ts`
 4. `src/api/watcher.ts`
 5. `src/reactivity/context.ts`
-6. `src/reactivity/shape/ReactiveMeta.ts`
-7. `src/reactivity/shape/ReactiveNode.ts`
-8. `src/reactivity/shape/ReactiveEdge.ts`
+6. `src/reactivity/shape/meta.ts`
+7. `src/reactivity/shape/node.ts`
+8. `src/reactivity/shape/edge.ts`
 9. `src/reactivity/shape/methods/connect.ts`
-10. `src/reactivity/engine/execute.ts`
-11. `src/reactivity/engine/tracking.ts`
-12. `src/reactivity/engine/compute.ts`
-13. `src/reactivity/walkers/propagate.ts`
-14. `src/reactivity/walkers/shouldRecompute.ts`
+10. `src/reactivity/engine/executeWatcher.ts`
+11. `src/reactivity/engine/trackingContext.ts`
+12. `src/reactivity/engine/computeNode.ts`
+13. `src/reactivity/walkers/propagateChange.ts`
+14. `src/reactivity/walkers/shouldRecomputeNode.ts`
 15. `tests/runtime.semantic.test.ts`
 16. `tests/runtime.traversal.test.ts`
 17. `tests/runtime.hooks.test.ts`
@@ -107,7 +107,7 @@
 
 Саме цей файл пояснює, як tracking і host hooks взагалі стикуються з ядром.
 
-## `src/reactivity/shape/ReactiveMeta.ts`
+## `src/reactivity/shape/meta.ts`
 
 Тут state bits і маски.
 
@@ -119,7 +119,7 @@
 
 Це словник термінів для всього runtime.
 
-## `src/reactivity/shape/ReactiveNode.ts`
+## `src/reactivity/shape/node.ts`
 
 Тут shape вузла.
 
@@ -133,7 +133,7 @@
 
 Саме після цього файла починає бути зрозуміло, як runtime живе без окремих "signal/computed/effect objects".
 
-## `src/reactivity/shape/ReactiveEdge.ts`
+## `src/reactivity/shape/edge.ts`
 
 Тут shape ребра.
 
@@ -160,19 +160,19 @@
 - disposal
 - pointer-level hot path
 
-## `src/reactivity/engine/execute.ts`
+## `src/reactivity/engine/executeWatcher.ts`
 
 Shared executor для вузлів із `compute`.
 
 Що читати:
 
-- встановлення `Tracking`
+- встановлення `Computing`
 - встановлення `Computing`
 - перемикання `activeComputed`
 - виклик `cleanupStaleSources()`
 - `runtime.maybeNotifySettled()`
 
-## `src/reactivity/engine/tracking.ts`
+## `src/reactivity/engine/trackingContext.ts`
 
 Це dependency tracking шар.
 
@@ -187,7 +187,7 @@ Shared executor для вузлів із `compute`.
 - `depsTail` протокол
 - suffix cleanup після compute
 
-## `src/reactivity/engine/compute.ts`
+## `src/reactivity/engine/computeNode.ts`
 
 Тут commit логіка consumer recompute.
 
@@ -198,7 +198,7 @@ Shared executor для вузлів із `compute`.
 - визначає `changed`
 - чистить `DIRTY_STATE`
 
-## `src/reactivity/walkers/propagate.ts`
+## `src/reactivity/walkers/propagateChange.ts`
 
 Push-side walker.
 
@@ -211,7 +211,7 @@ Push-side walker.
 
 Якщо цікаво, як write іде вниз по графу, це ваш файл.
 
-## `src/reactivity/walkers/shouldRecompute.ts`
+## `src/reactivity/walkers/shouldRecomputeNode.ts`
 
 Pull-side walker.
 
@@ -277,12 +277,12 @@ Pull-side walker.
 
 Найкорисніший короткий маршрут:
 
-1. `src/reactivity/shape/ReactiveMeta.ts`
-2. `src/reactivity/shape/ReactiveNode.ts`
-3. `src/reactivity/engine/execute.ts`
-4. `src/reactivity/engine/tracking.ts`
-5. `src/reactivity/walkers/propagate.ts`
-6. `src/reactivity/walkers/shouldRecompute.ts`
+1. `src/reactivity/shape/meta.ts`
+2. `src/reactivity/shape/node.ts`
+3. `src/reactivity/engine/executeWatcher.ts`
+4. `src/reactivity/engine/trackingContext.ts`
+5. `src/reactivity/walkers/propagateChange.ts`
+6. `src/reactivity/walkers/shouldRecomputeNode.ts`
 
 Після цього вже йдіть у конкретний шар, який чіпає ваша задача.
 
@@ -302,4 +302,4 @@ Pull-side walker.
 - tests
 - perf harness
 
-Такий порядок значно краще відповідає реальному коду, ніж стара карта з `core.ts`, `walkers.ts` і `tracking.ts`.
+Такий порядок значно краще відповідає реальному коду, ніж стара карта з `core.ts`, `walkers.ts` і `trackingContext.ts`.

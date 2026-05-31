@@ -44,6 +44,23 @@ function isEventListenerObject(value: unknown): value is EventListenerObject {
   return value !== null && typeof value === "object" && "handleEvent" in value;
 }
 
+function getEventListenerOptions(
+  value: EventListenerOrEventListenerObject,
+): AddEventListenerOptions | undefined {
+  if (!isEventListenerObject(value)) return undefined;
+
+  const options = value as EventListenerObject & AddEventListenerOptions;
+  return options.once === true ||
+    options.capture === true ||
+    options.passive === true
+    ? {
+        once: options.once,
+        capture: options.capture,
+        passive: options.passive,
+      }
+    : undefined;
+}
+
 export function isEventProp(name: string, value: unknown): boolean {
   return (
     isOnPrefix(name) &&
@@ -57,10 +74,11 @@ export function attachEventListener(
   handler: EventListenerOrEventListenerObject,
 ): () => void {
   const event = resolveEventName(name);
+  const options = getEventListenerOptions(handler);
 
-  el.addEventListener(event, handler);
+  el.addEventListener(event, handler, options);
 
   return () => {
-    el.removeEventListener(event, handler);
+    el.removeEventListener(event, handler, options);
   };
 }

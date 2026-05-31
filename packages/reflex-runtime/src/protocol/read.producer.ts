@@ -1,9 +1,11 @@
-import { Disposed, trackRead, defaultContext } from "../reactivity";
-import type { ReactiveNode } from "../reactivity";
 import {
-  devAssertReadDeadProducer,
-  devRecordReadProducer,
-} from "../reactivity/dev";
+  currentConsumer,
+  defaultContext,
+  trackingEpoch,
+  trackReadResolved,
+} from "../kernel";
+import type { ReactiveNode } from "../kernel";
+import { devRecordReadProducer } from "../kernel/dev";
 
 /**
  * Read the value of a producer (source) node.
@@ -30,22 +32,12 @@ const computed = createConsumer(() => {
  */
 export function readProducer<T>(node: ReactiveNode<T>): T {
   const value = node.payload;
-  const state = node.state;
-
-  if ((state & Disposed) !== 0) {
-    if (__DEV__) {
-      devAssertReadDeadProducer();
-    }
-
-    return value;
-  }
+  const consumer = currentConsumer;
 
   // Register this read as a dependency if there's an active computation
-  trackRead(node);
+  if (consumer !== null) trackReadResolved(node, consumer, trackingEpoch, true);
 
-  if (__DEV__) {
-    devRecordReadProducer(node, node.payload, defaultContext);
-  }
+  if (__DEV__) devRecordReadProducer(node, value, defaultContext);
 
   return value;
 }

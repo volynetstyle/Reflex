@@ -1,11 +1,11 @@
 import {
-  activeConsumer,
-  propagationDepth,
+  currentConsumer,
+  propagationScopeDepth,
   defaultContext,
   type RuntimeDebugContext,
-} from "../reactivity/context";
-import type { ReactiveEdge, ReactiveNode } from "../reactivity/shape";
-import { Changed, Computing, Consumer, DIRTY_STATE, Disposed, Invalid, Producer, Reentrant, Scheduled, Tracking, Watcher } from "../reactivity/shape";
+} from "../kernel/context";
+import type { ReactiveEdge, ReactiveNode } from "../kernel/shape";
+import { Changed,  Consumer, DIRTY_STATE, Invalid, Producer, Visited, Scheduled, Computing, Watcher } from "../kernel/shape";
 import type {
   RuntimeDebugContextSnapshot,
   RuntimeDebugEvent,
@@ -86,11 +86,10 @@ function getFlags(state: number): RuntimeDebugFlag[] {
   if ((state & Watcher) !== 0) flags.push("watcher");
   if ((state & Invalid) !== 0) flags.push("invalid");
   if ((state & Changed) !== 0) flags.push("changed");
-  if ((state & Reentrant) !== 0) flags.push("visited");
-  if ((state & Disposed) !== 0) flags.push("disposed");
+  if ((state & Visited) !== 0) flags.push("visited");
   if ((state & Computing) !== 0) flags.push("computing");
   if ((state & Scheduled) !== 0) flags.push("scheduled");
-  if ((state & Tracking) !== 0) flags.push("tracking");
+  if ((state & Computing) !== 0) flags.push("tracking");
 
   return flags;
 }
@@ -258,14 +257,14 @@ export function snapshotDebugContext(
   const state = ensureContextState(context);
   const snapshot: RuntimeDebugContextSnapshot = {
     id: state.id,
-    propagationDepth: propagationDepth,
+    propagationScopeDepth: propagationScopeDepth,
     historyLimit: state.historyLimit,
     historySize: state.history.length,
     observerCount: state.listeners.size,
   };
 
-  if (activeConsumer !== null) {
-    snapshot.activeConsumer = createNodeRef(activeConsumer);
+  if (currentConsumer !== null) {
+    snapshot.currentConsumer = createNodeRef(currentConsumer);
   }
 
   return snapshot;

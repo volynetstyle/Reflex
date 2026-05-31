@@ -105,9 +105,9 @@ cleanupStaleSources(node)
 - cleanup не робиться read-by-read
 - cleanup робиться один раз після завершення compute
 
-## 7. Навіщо `Tracking`
+## 7. Навіщо `Computing`
 
-Під час `executeNodeComputation()` вузол отримує `Tracking`.
+Під час `executeNodeComputation()` вузол отримує `Computing`.
 
 У current runtime це означає:
 

@@ -38,7 +38,7 @@ describe("Reactive system - runtime", () => {
 
     expect(seen).toEqual([0]);
 
-    const secondDefault = createRuntime({ effectStrategy: "ranked" });
+    const secondDefault = createRuntime({ effectStrategy: "flush" });
 
     setCount(1);
     firstDefault.flush();
@@ -54,5 +54,59 @@ describe("Reactive system - runtime", () => {
     const runtime = createRuntime({ effectStrategy: "flush" });
     expect(runtime.ctx).toBeDefined();
     expect(typeof runtime.ctx).toBe("object");
+    expect(runtime.ctx.execution).toBeDefined();
+  });
+
+  it("keeps instance hooks isolated across runtime handles", () => {
+    const firstSettled: string[] = [];
+    const secondSettled: string[] = [];
+
+    const first = createRuntime({
+      effectStrategy: "flush",
+      hooks: {
+        reactiveSettledDispatcher() {
+          firstSettled.push("first");
+        },
+      },
+    });
+    const [firstCount, setFirstCount] = first.batch(() => signal(0));
+
+    const second = createRuntime({
+      effectStrategy: "flush",
+      hooks: {
+        reactiveSettledDispatcher() {
+          secondSettled.push("second");
+        },
+      },
+    });
+    const [secondCount, setSecondCount] = second.batch(() => signal(0));
+
+    first.batch(() => {
+      effect(() => {
+        firstCount();
+      });
+    });
+    second.batch(() => {
+      effect(() => {
+        secondCount();
+      });
+    });
+
+    firstSettled.length = 0;
+    secondSettled.length = 0;
+
+    first.batch(() => {
+      setFirstCount(1);
+    });
+
+    expect(firstSettled).toEqual(["first"]);
+    expect(secondSettled).toEqual([]);
+
+    second.batch(() => {
+      setSecondCount(1);
+    });
+
+    expect(firstSettled).toEqual(["first"]);
+    expect(secondSettled).toEqual(["second"]);
   });
 });

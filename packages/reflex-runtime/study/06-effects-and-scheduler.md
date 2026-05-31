@@ -153,7 +153,7 @@ kernel не тягне на собі всі execution стратегії.
 - cleanup рівно один раз перед rerun
 - cleanup рівно один раз на dispose
 - коректне відновлення `activeComputed`
-- коректне зняття `Tracking` і `Computing` навіть якщо compute кинув помилку
+- коректне зняття `Computing` і `Computing` навіть якщо compute кинув помилку
 - `onReactiveSettled` тільки після outermost completion
 
 ## 10. Чому це хороший seam

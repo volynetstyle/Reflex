@@ -1,111 +1,116 @@
 import { describe, expect, it } from "vitest";
 import { createWatcherNode } from "../src/infra/factory";
-import { createWatcherQueue } from "../src/policy/scheduler";
+import {
+  clearRingQueue,
+  createRingQueue,
+  pushRingQueue,
+  shiftRingQueue,
+} from "../src/policy/scheduler";
 
 function createNodes(count: number) {
   return Array.from({ length: count }, () => createWatcherNode(() => {}));
 }
 
-describe("createWatcherQueue", () => {
+describe("createRingQueue", () => {
   it("starts empty and shifts null", () => {
-    const queue = createWatcherQueue();
+    const queue = createRingQueue();
 
-    expect(queue.size).toBe(0);
+    expect(queue.tail - queue.head).toBe(0);
     expect(queue.head).toBe(0);
     expect(queue.tail).toBe(0);
-    expect(queue.shift()).toBeNull();
+    expect(shiftRingQueue(queue)).toBeNull();
   });
 
   it("preserves FIFO order without growth", () => {
-    const queue = createWatcherQueue();
+    const queue = createRingQueue();
     const nodes = createNodes(4);
 
     for (const node of nodes) {
-      queue.push(node);
+      pushRingQueue(queue, node);
     }
 
-    expect(queue.size).toBe(4);
+    expect(queue.tail - queue.head).toBe(4);
     expect(queue.ring.length).toBe(16);
 
     for (const node of nodes) {
-      expect(queue.shift()).toBe(node);
+      expect(shiftRingQueue(queue)).toBe(node);
     }
 
-    expect(queue.size).toBe(0);
-    expect(queue.shift()).toBeNull();
+    expect(queue.tail - queue.head).toBe(0);
+    expect(shiftRingQueue(queue)).toBeNull();
   });
 
   it("grows from the initial capacity and preserves order", () => {
-    const queue = createWatcherQueue();
+    const queue = createRingQueue();
     const nodes = createNodes(20);
 
     for (const node of nodes) {
-      queue.push(node);
+      pushRingQueue(queue, node);
     }
 
-    expect(queue.size).toBe(20);
+    expect(queue.tail - queue.head).toBe(20);
     expect(queue.ring.length).toBe(32);
 
     for (const node of nodes) {
-      expect(queue.shift()).toBe(node);
+      expect(shiftRingQueue(queue)).toBe(node);
     }
 
-    expect(queue.size).toBe(0);
+    expect(queue.tail - queue.head).toBe(0);
   });
 
   it("preserves FIFO order after wrap-around growth", () => {
-    const queue = createWatcherQueue();
+    const queue = createRingQueue();
     const initial = createNodes(16);
     const wrapped = createNodes(9);
 
     for (const node of initial) {
-      queue.push(node);
+      pushRingQueue(queue, node);
     }
 
     for (const node of initial.slice(0, 8)) {
-      expect(queue.shift()).toBe(node);
+      expect(shiftRingQueue(queue)).toBe(node);
     }
 
     for (const node of wrapped) {
-      queue.push(node);
+      pushRingQueue(queue, node);
     }
 
-    expect(queue.size).toBe(17);
+    expect(queue.tail - queue.head).toBe(17);
     expect(queue.ring.length).toBe(32);
 
     for (const node of initial.slice(8)) {
-      expect(queue.shift()).toBe(node);
+      expect(shiftRingQueue(queue)).toBe(node);
     }
 
     for (const node of wrapped) {
-      expect(queue.shift()).toBe(node);
+      expect(shiftRingQueue(queue)).toBe(node);
     }
 
-    expect(queue.size).toBe(0);
+    expect(queue.tail - queue.head).toBe(0);
   });
 
   it("clear resets indices and allows reuse", () => {
-    const queue = createWatcherQueue();
+    const queue = createRingQueue();
     const first = createNodes(3);
     const second = createNodes(2);
 
     for (const node of first) {
-      queue.push(node);
+      pushRingQueue(queue, node);
     }
 
-    queue.clear();
+    clearRingQueue(queue);
 
-    expect(queue.size).toBe(0);
+    expect(queue.tail - queue.head).toBe(0);
     expect(queue.head).toBe(0);
     expect(queue.tail).toBe(0);
-    expect(queue.shift()).toBeNull();
+    expect(shiftRingQueue(queue)).toBeNull();
 
     for (const node of second) {
-      queue.push(node);
+      pushRingQueue(queue, node);
     }
 
-    expect(queue.shift()).toBe(second[0]);
-    expect(queue.shift()).toBe(second[1]);
-    expect(queue.shift()).toBeNull();
+    expect(shiftRingQueue(queue)).toBe(second[0]);
+    expect(shiftRingQueue(queue)).toBe(second[1]);
+    expect(shiftRingQueue(queue)).toBeNull();
   });
 });

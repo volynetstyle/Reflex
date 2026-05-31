@@ -25,7 +25,6 @@ export type RuntimeDebugFlag =
   | "changed"
   | "computing"
   | "consumer"
-  | "disposed"
   | "invalid"
   | "producer"
   | "scheduled"
@@ -68,11 +67,11 @@ export interface RuntimeDebugNodeSnapshot extends RuntimeDebugNodeRef {
 
 export interface RuntimeDebugContextSnapshot {
   id: number;
-  propagationDepth: number;
+  propagationScopeDepth: number;
   historySize: number;
   historyLimit: number;
   observerCount: number;
-  activeConsumer?: RuntimeDebugNodeRef;
+  currentConsumer?: RuntimeDebugNodeRef;
 }
 
 export interface RuntimeDebugEvent {

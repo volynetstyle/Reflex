@@ -23,8 +23,7 @@
     },
     "composite": false,
     "declaration": false,
-    "declarationMap": false,
-    "jsx": "react-jsx"
+    "declarationMap": false
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.typecheck.tsx"]
 }

@@ -1,5 +1,4 @@
 import {
-  registerWatcherCleanup,
   readConsumerEager,
   readConsumerLazy,
   readProducer,
@@ -84,11 +83,7 @@ class OptimisticCore<T> {
   constructor(
     private readonly base: Accessor<T>,
     private readonly equals: (prev: T, next: T) => boolean,
-  ) {
-    registerWatcherCleanup(() => {
-      this.dispose();
-    });
-  }
+  ) {}
 
   read = (): T => {
     readProducer(this.stateNode);
@@ -379,7 +374,7 @@ export function optimistic<T>(
   }
 
   const core = new OptimisticCore(
-    readConsumerLazy.bind(null, node) as Accessor<T>,
+    readConsumerLazy.bind(node) as Accessor<T>,
     equals,
   );
 

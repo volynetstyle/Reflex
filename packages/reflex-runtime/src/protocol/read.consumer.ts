@@ -1,62 +1,57 @@
-import type { ReactiveNode } from "../reactivity";
+import type { ReactiveNode } from "../kernel";
 import {
   DIRTY_STATE,
-  trackRead,
   defaultContext,
-  activeConsumer,
-  Disposed,
-} from "../reactivity";
+  currentConsumer,
+  trackingEpoch,
+  trackReadResolved,
+  shouldRecomputeDirtyConsumer,
+} from "../kernel";
 import {
-  devAssertReadDeadConsumer,
   devAssertConsumerCanStabilize,
   devRecordReadConsumer,
-} from "../reactivity/dev";
-import { ConsumerReadMode } from "./utils/constants";
-import {
-  stabilizeConsumerKnownAlive,
-  stabilizeConsumerUntracked,
-} from "./utils/stabilize";
+} from "../kernel/dev";
+import { advance } from "../kernel/walkers/ensureFresh";
+import { LAZY } from "./utils/constants";
 
 /**
  * Read a consumer in tracking mode.
  *
  * This is the common read path for computed values:
  *
- * 1. Reject disposed consumers
- * 2. Assert that the current state may be stabilized
- * 3. Fast-path clean nodes by returning `node.payload` directly
- * 4. Stabilize dirty nodes before observing the value
- * 5. Register the read in the active reactive context
+ * 1. Assert that the current state may be stabilized
+ * 2. Fast-path clean nodes by returning `node.payload` directly
+ * 3. Stabilize dirty nodes before observing the value
+ * 4. Register the read in the active reactive context
  *
- * The fast-path intentionally stays here rather than inside
- * `stabilizeConsumerKnownAlive()`, so that helper can assume a dirty input and
- * focus only on stabilization work.
+ * The fast-path intentionally stays here, with dirty stabilization isolated in
+ * a local slow path so clean reads do not bounce through helper layers.
  */
-export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
+export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
+  // eslint-disable-next-line @typescript-eslint/no-this-alias
+  const node = this;
   const state = node.state;
 
-  if ((state & Disposed) !== 0) {
-    if (__DEV__) devAssertReadDeadConsumer();
-    return node.payload;
+  const value =
+    (state & DIRTY_STATE) === 0
+      ? (node.payload as T)
+      : stabilizeDirtyConsumer<T>(node, state);
+
+  const consumer = currentConsumer;
+
+  if (consumer !== null) {
+    trackReadResolved(node, consumer, trackingEpoch, true);
   }
 
-  if (__DEV__) devAssertConsumerCanStabilize(state);
-
-  const value =
-    (state & DIRTY_STATE) !== 0
-      ? stabilizeConsumerKnownAlive(node, state)
-      : node.payload;
-
-  trackRead(node);
-
-  if (__DEV__)
+  if (__DEV__) {
     devRecordReadConsumer(
       node,
       "lazy",
       value,
       defaultContext,
-      activeConsumer ?? undefined,
+      consumer ?? undefined,
     );
+  }
 
   return value;
 }
@@ -64,21 +59,25 @@ export function readConsumerLazy<T>(node: ReactiveNode<T>): T {
 /**
  * Read a consumer without tracking the final dependency edge.
  *
- * Clean nodes return immediately. Dirty nodes are stabilized through
- * `stabilizeConsumerUntracked()`, which avoids binding the current
- * `activeConsumer` to this read.
+ * Clean nodes return immediately. Dirty nodes are stabilized without binding
+ * the current `currentConsumer` to this read.
  */
 export function readConsumerEager<T>(node: ReactiveNode<T>): T {
   const state = node.state;
 
-  if ((state & Disposed) !== 0) {
-    if (__DEV__) devAssertReadDeadConsumer();
-    return node.payload;
-  }
+  return (state & DIRTY_STATE) === 0
+    ? (node.payload as T)
+    : stabilizeDirtyConsumer<T>(node, state);
+}
 
+function stabilizeDirtyConsumer<T>(node: ReactiveNode<T>, state: number): T {
   if (__DEV__) devAssertConsumerCanStabilize(state);
 
-  return stabilizeConsumerUntracked(node, state);
+  if (!shouldRecomputeDirtyConsumer(node, state) || !advance(node)) {
+    node.state &= ~DIRTY_STATE;
+  }
+
+  return node.payload as T;
 }
 
 /**
@@ -117,40 +116,40 @@ const debugValue = readConsumer(doubled, ConsumerReadMode.eager)
  * @invariant In eager mode, no dependency edge is created
  * @cost O(1) + stabilization cost (depends on upstream changes)
  */
-export function readConsumer<T>(
-  node: ReactiveNode<T>,
-  mode: ConsumerReadMode = ConsumerReadMode.lazy,
-): T {
-  const state = node.state;
+export function readConsumer<T>(node: ReactiveNode<T>, mode: number = LAZY): T {
+  if ((mode & LAZY) === 0) {
+    const state = node.state;
+    const value =
+      (state & DIRTY_STATE) === 0
+        ? (node.payload as T)
+        : stabilizeDirtyConsumer(node, state);
 
-  if ((state & Disposed) !== 0) {
-    if (__DEV__) devAssertReadDeadConsumer();
-    return node.payload as T;
+    if (__DEV__) {
+      devRecordReadConsumer(node, "eager", value, defaultContext);
+    }
+
+    return value;
   }
 
-  if (__DEV__) devAssertConsumerCanStabilize(state);
-
+  const state = node.state;
   const value =
-    mode === ConsumerReadMode.lazy
-      ? (state & DIRTY_STATE) !== 0
-        ? stabilizeConsumerKnownAlive(node, state)
-        : (node.payload as T)
-      : stabilizeConsumerUntracked(node, state);
+    (state & DIRTY_STATE) === 0
+      ? (node.payload as T)
+      : stabilizeDirtyConsumer(node, state);
 
-  if (mode === ConsumerReadMode.lazy) {
-    // Skip tracking if the node was disposed during stabilization
-    if ((node.state & Disposed) === 0) trackRead(node);
+  const consumer = currentConsumer;
+  if (consumer !== null) {
+    trackReadResolved(node, consumer, trackingEpoch, true);
+  }
 
-    if (__DEV__)
-      devRecordReadConsumer(
-        node,
-        "lazy",
-        value,
-        defaultContext,
-        activeConsumer ?? undefined,
-      );
-  } else {
-    if (__DEV__) devRecordReadConsumer(node, "eager", value, defaultContext);
+  if (__DEV__) {
+    devRecordReadConsumer(
+      node,
+      "lazy",
+      value,
+      defaultContext,
+      consumer ?? undefined,
+    );
   }
 
   return value;

@@ -1,4 +1,5 @@
 import { createRuntime } from "@volynets/reflex";
+import { registerActiveOwnerCleanup } from "@volynets/reflex-framework";
 import type { DOMRenderEffectScheduler } from "./render-effect-scheduler";
 import {
   createDefaultPolicyConfig,
@@ -8,33 +9,44 @@ import {
 
 export type RuntimeInstance = ReturnType<typeof createRuntime>;
 
-type BaseDOMRuntimeOptions = NonNullable<Parameters<typeof createRuntime>[0]>;
+type CreateRuntimeOptions = NonNullable<Parameters<typeof createRuntime>[0]>;
 
-export interface DOMRuntimeOptions extends BaseDOMRuntimeOptions {
+export interface DOMRuntimeOptions extends CreateRuntimeOptions {
   policy?: Partial<PolicyConfig>;
 }
 
 export function createRendererRuntime(
-  options?: DOMRuntimeOptions,
+  options: DOMRuntimeOptions = {},
   renderEffectScheduler?: DOMRenderEffectScheduler,
 ): RuntimeInstance {
-  const { policy, hooks, ...runtimeOptions } = options ?? {};
-  const mergedPolicy = {
-    ...createDefaultPolicyConfig(),
-    ...policy,
-  };
+  const { policy, hooks, effectStrategy, ...runtimeOptions } = options;
+
+  const defaultPolicy = createDefaultPolicyConfig();
+
+  const resolvedEffectStrategy =
+    effectStrategy ??
+    resolveEffectStrategy(
+      policy?.effectPolicy ?? defaultPolicy.effectPolicy,
+      policy?.priorityLevels ?? defaultPolicy.priorityLevels,
+    );
 
   return createRuntime({
-    effectStrategy:
-      runtimeOptions.effectStrategy ??
-      resolveEffectStrategy(mergedPolicy.effectPolicy),
+    ...runtimeOptions,
+
+    effectStrategy: resolvedEffectStrategy,
+
     hooks: {
       ...hooks,
-      onReactiveSettled() {
+
+      reactiveSettledDispatcher() {
         renderEffectScheduler?.flush();
-        hooks?.onReactiveSettled?.();
+        hooks?.reactiveSettledDispatcher?.();
+      },
+
+      effectCleanupRegistrar(dispose) {
+        registerActiveOwnerCleanup(dispose);
+        hooks?.effectCleanupRegistrar?.(dispose);
       },
     },
-    ...runtimeOptions,
   });
 }

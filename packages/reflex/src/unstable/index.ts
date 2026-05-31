@@ -14,19 +14,9 @@ export type {
 /**
  * API
  */
-export {
-  signal,
-} from "../api/signal";
-export {
-  computed,
-  memo,
-} from "../api/derived";
-export {
-  effect,
-  withEffectCleanupRegistrar,
-  withEffectCleanupScope,
-} from "../api/effect";
-export type { EffectCleanupReceiver, EffectCleanupRegistrar } from "../api/effect";
+export { signal } from "../api/signal";
+export { computed, memo } from "../api/derived";
+export { effect } from "../api/effect";
 /**
  * API
  */
@@ -42,6 +32,4 @@ export { createModel, isModel, own } from "../infra/model";
 
 export * from "./optimistic";
 export * from "./resource";
-export * from "./selector";
-export type { CompiledStore, StoreShape } from "./store/createStore";
-export { createStore } from "./store/createStore";
+export * from "./reduction";

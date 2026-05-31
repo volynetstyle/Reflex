@@ -1,29 +1,37 @@
-import type { ReactiveNode } from "@volynets/reflex-runtime";
+import type { ReactiveNode } from "@volynets/reflex-runtime/internal";
 import { EffectSchedulerMode } from "../scheduler.constants";
 import {
-  createSchedulerCore,
-  createSchedulerInstance,
   hasPendingEffects,
   isContextSettled,
-  tryEnqueueEffect,
+} from "../scheduler.context";
+import {
+  createSchedulerCore,
+  enterSchedulerBatch,
+  flushSchedulerQueue,
+  leaveSchedulerBatch,
 } from "../scheduler.core";
-import { flushPrioritySchedulerQueue } from "../scheduler.priority";
+import { tryEnqueue } from "../scheduler.enqueue";
+import { createSchedulerInstance } from "../scheduler.instance";
 import type { EffectScheduler } from "../scheduler.types";
 import { noopNotifySettled } from "../scheduler.types";
 
 export function createSabScheduler(): EffectScheduler {
   const core = createSchedulerCore();
-  core.flush = (): void => flushPrioritySchedulerQueue(core);
   const enqueue = (node: ReactiveNode): void => {
-    tryEnqueueEffect(core, node);
+    tryEnqueue(core.queue, node);
   };
   const batch = <T>(fn: () => T): T => {
-    core.enterBatch();
+    enterSchedulerBatch(core);
     try {
       return fn();
     } finally {
-      if (core.leaveBatch() && hasPendingEffects(core) && isContextSettled()) {
-        core.flush();
+      if (
+        
+        leaveSchedulerBatch(core) &&
+        hasPendingEffects(core) &&
+        isContextSettled()
+      ) {
+        flushSchedulerQueue(core);
       }
     }
   };

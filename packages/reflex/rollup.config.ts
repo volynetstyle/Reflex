@@ -4,6 +4,10 @@ import terser from "@rollup/plugin-terser";
 import resolve from "@rollup/plugin-node-resolve";
 import swc from "@rollup/plugin-swc";
 import constEnum from "rollup-plugin-const-enum";
+import {
+  createBuildReporter,
+  reportRollupWarning,
+} from "../../scripts/rollup-build-reporter.ts";
 
 type BuildFormat = "esm" | "cjs";
 
@@ -31,7 +35,6 @@ const PURE_FUNCS = [
   "isObsoleteState",
   "isTrackingState",
   "isVisitedState",
-  "isDisposedState",
   "isComputingState",
   "isScheduledState",
   "isSignalKind",
@@ -49,7 +52,7 @@ const JIT_SAFE_COMPRESS = {
   drop_debugger: true,
   evaluate: true,
   hoist_props: true,
-  inline: 0,
+  inline: 1,
   module: true,
   pure_getters: true,
   pure_funcs: [...PURE_FUNCS],
@@ -59,7 +62,7 @@ const JIT_SAFE_COMPRESS = {
   side_effects: true,
   toplevel: true,
   unused: true,
-} as const;
+};
 
 const TARGETS: BuildTarget[] = [
   { name: "esm", outDir: "esm", format: "esm", dev: false },
@@ -72,10 +75,10 @@ const ENTRIES: ReadonlyArray<BuildEntry> = [
     input: "build/esm/index.js",
     outputPath: "index",
   },
-  {
-    input: "build/esm/unstable/index.js",
-    outputPath: "unstable/index",
-  },
+  // {
+  //   input: "build/esm/unstable/index.js",
+  //   outputPath: "unstable/index",
+  // },
   {
     input: "build/esm/debug/index.js",
     outputPath: "debug/index",
@@ -88,24 +91,7 @@ function compactPlugins(plugins: Array<Plugin | undefined | false>): Plugin[] {
 
 function loggerPlugin(target: BuildTarget, entry: BuildEntry): Plugin {
   const name = `${target.name}:${entry.outputPath}`;
-
-  return {
-    name: "pipeline-logger",
-    buildStart() {
-      console.log(`\n🚀 start build → ${name}`);
-    },
-    generateBundle(_, bundle) {
-      console.log(`📦 ${name} modules: ${Object.keys(bundle).length}`);
-    },
-    writeBundle(_, bundle) {
-      const size = Object.values(bundle).reduce((total, chunk) => {
-        return total + ("code" in chunk ? chunk.code.length : 0);
-      }, 0);
-
-      console.log(`📊 ${name} size ${(size / 1024).toFixed(2)} KB`);
-      console.log(`✔ done → ${name}\n`);
-    },
-  };
+  return createBuildReporter("@volynets/reflex", name);
 }
 
 function resolvePlugin(): Plugin {
@@ -165,9 +151,9 @@ function createPlugins(target: BuildTarget, entry: BuildEntry): Plugin[] {
     loggerPlugin(target, entry),
     resolvePlugin(),
     replacePlugin(target),
+    constEnum(),
     swcPlugin(target),
     terserPlugin(target),
-    constEnum(),
   ]);
 }
 
@@ -176,6 +162,8 @@ function createConfig(target: BuildTarget, entry: BuildEntry): RollupOptions {
 
   return {
     input: entry.input,
+    logLevel: "silent",
+    onwarn: reportRollupWarning,
 
     treeshake: {
       preset: "recommended",
@@ -202,4 +190,6 @@ function createConfig(target: BuildTarget, entry: BuildEntry): RollupOptions {
   };
 }
 
-export default TARGETS.flatMap((target) => ENTRIES.map((entry) => createConfig(target, entry)));
+export default TARGETS.flatMap((target) =>
+  ENTRIES.map((entry) => createConfig(target, entry)),
+);
