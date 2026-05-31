@@ -14,8 +14,6 @@ import {
 } from "../context";
 import type { ReactiveEdge } from "../shape";
 
-const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
-
 function hasTrackedPrefixEdge(
   producer: ReactiveNode,
   cursorEdge: ReactiveEdge,
@@ -114,7 +112,7 @@ export function trackReadResolved(
      */
     if (cursorEdge.from === producer) {
       cursorEdge.version = producerVersion;
-      if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
+      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -132,7 +130,7 @@ export function trackReadResolved(
     if (expectedNextEdge !== null && expectedNextEdge.from === producer) {
       expectedNextEdge.version = producerVersion;
       consumer.tailIn = expectedNextEdge;
-      if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
+      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -151,7 +149,7 @@ export function trackReadResolved(
        * earlier in the current tracking pass.
        */
       if (hasTrackedPrefixEdge(producer, cursorEdge)) {
-        if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
+        if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
         return true;
       }
 
@@ -168,7 +166,7 @@ export function trackReadResolved(
         producerVersion,
       );
 
-      if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
+      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -206,7 +204,7 @@ export function trackReadResolved(
       consumer.tailIn = lookahead1Edge;
 
       nodeStructureIncrement(consumer);
-      if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
+      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -245,7 +243,7 @@ export function trackReadResolved(
         consumer.tailIn = lookahead2Edge;
 
         nodeStructureIncrement(consumer);
-        if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
+        if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
         return true;
       }
     }
@@ -268,7 +266,7 @@ export function trackReadResolved(
       lastIncomingEdge.version = producerVersion;
       consumer.tailIn = lastIncomingEdge;
 
-      if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
+      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -279,7 +277,7 @@ export function trackReadResolved(
      * In that case, this read is already represented by the current graph.
      */
     if (hasTrackedPrefixEdge(producer, cursorEdge)) {
-      if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
+      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -304,7 +302,7 @@ export function trackReadResolved(
     if (firstIncomingEdge === null) {
       consumer.tailIn = linkEdge(producer, consumer, null, producerVersion);
 
-      if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
+      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -317,7 +315,7 @@ export function trackReadResolved(
       firstIncomingEdge.version = producerVersion;
       consumer.tailIn = firstIncomingEdge;
 
-      if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
+      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -335,7 +333,7 @@ export function trackReadResolved(
       lastIncomingEdge.version = producerVersion;
       consumer.tailIn = lastIncomingEdge;
 
-      if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
+      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -351,7 +349,7 @@ export function trackReadResolved(
    * The optimistic fast paths could not resolve the read locally.
    * Delegate to the general dependency reconciliation logic.
    */
-  if (IS_DEV) devRecordTrackRead(defaultContext, consumer, producer);
+  if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
   trackReadSlowPath(producer, consumer, producerVersion, cursorEdge);
   return true;
 }

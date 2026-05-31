@@ -105,7 +105,6 @@ function markInvalid(edge: ReactiveEdge): number {
   return invalidateSlow(edge, sub, state, false);
 }
 
-//
 export function propagateOnceChanged(
   startEdge: ReactiveEdge,
   top: number = getPropagateStackBase(),
@@ -124,32 +123,27 @@ export function propagateOnceChanged(
     }
 
     const sub = edge.to;
+    const child = sub.firstOut;
+
+    if (child !== null && (next & Watcher) === 0) {
+      if (pendingChild !== null) {
+        top = pushPropagateStack(pendingChild, top);
+      }
+
+      pendingChild = child;
+      continue;
+    }
 
     if ((next & Watcher) !== 0) {
       setPropagateStackHigh(top);
       emitSinkInvalidated(sub);
-      continue;
     }
-
-    const child = sub.firstOut;
-
-    if (child === null) {
-      continue;
-    }
-
-    if (pendingChild !== null) {
-      top = pushPropagateStack(pendingChild, top);
-    }
-
-    pendingChild = child;
   }
 
   setPropagateStackHigh(top);
   return pendingChild;
 }
 
-//
-//
 export function propagateInvalid(
   edge: ReactiveEdge,
   top: number = getPropagateStackBase(),
@@ -162,22 +156,21 @@ export function propagateInvalid(
 
     if (next !== 0) {
       const sub = edge.to;
+      const child = sub.firstOut;
+
+      if (child !== null && (next & Watcher) === 0) {
+        if (nextEdge !== null) {
+          top = pushPropagateStack(nextEdge, top);
+        }
+
+        edge = child;
+        nextEdge = edge.nextOut;
+        continue;
+      }
 
       if ((next & Watcher) !== 0) {
         setPropagateStackHigh(top);
         emitSinkInvalidated(sub);
-      } else {
-        const child = sub.firstOut;
-
-        if (child !== null) {
-          if (nextEdge !== null) {
-            top = pushPropagateStack(nextEdge, top);
-          }
-
-          edge = child;
-          nextEdge = edge.nextOut;
-          continue;
-        }
       }
     }
 
@@ -205,17 +198,16 @@ export function propagateChanged(startEdge: ReactiveEdge): void {
 
     if (next !== 0) {
       const sub = startEdge.to;
+      const child = sub.firstOut;
+
+      if (child !== null && (next & Watcher) === 0) {
+        propagateInvalid(child, base, base);
+        return;
+      }
 
       if ((next & Watcher) !== 0) {
         setPropagateStackHigh(base);
         emitSinkInvalidated(sub);
-      } else {
-        const child = sub.firstOut;
-
-        if (child !== null) {
-          propagateInvalid(child, base, base);
-          return;
-        }
       }
     }
 
@@ -223,14 +215,14 @@ export function propagateChanged(startEdge: ReactiveEdge): void {
     return;
   }
 
-  const pendingInvalid = propagateOnceChanged(startEdge, base);
+  const pendingChild = propagateOnceChanged(startEdge, base);
 
-  if (pendingInvalid === null) {
+  if (pendingChild === null) {
     restorePropagateStackBase(base);
     return;
   }
 
-  propagateInvalid(pendingInvalid, getPropagateStackBase(), base);
+  propagateInvalid(pendingChild, getPropagateStackBase(), base);
 }
 
 export const propagate = propagateChanged;

@@ -4,14 +4,9 @@ import {
   enterPropagationScope,
   leavePropagationScope,
   emitSettledIfIdle,
-  propagateOnceChanged,
-  propagateInvalid,
+  propagateChanged,
 } from "../kernel";
 import { devRecordWriteProducer } from "../kernel/dev";
-import {
-  getPropagateStackBase,
-  restorePropagateStackBase,
-} from "../kernel/walkers/propagationStack";
 import type { ProducerComparator } from "./utils/compare";
 import { compare as defaultComparator } from "./utils/compare";
 
@@ -102,19 +97,9 @@ export function writeProducer<T>(
   }
 
   enterPropagationScope();
-  const base = getPropagateStackBase();
-
-  try {
-    // Push phase: notify all subscribers depth-first, mark them dirty.
-    // Direct subscribers are promoted from Invalid to Changed.
-    // This tells them "definitely changed, don't verify, recompute"
-    const pendingInvalid = propagateOnceChanged(firstOut, base);
-
-    if (pendingInvalid !== null) {
-      propagateInvalid(pendingInvalid, getPropagateStackBase(), base);
-    }
-  } finally {
-    restorePropagateStackBase(base);
-    leavePropagationScope();
-  }
+  // Push phase: notify all subscribers depth-first, mark them dirty.
+  // Direct subscribers are promoted from Invalid to Changed.
+  // This tells them "definitely changed, don't verify, recompute"
+  propagateChanged(firstOut);
+  leavePropagationScope();
 }

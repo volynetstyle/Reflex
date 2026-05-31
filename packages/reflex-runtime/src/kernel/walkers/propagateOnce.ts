@@ -7,12 +7,12 @@ export function propagateOnceFromEdge(edge: ReactiveEdge | null): void {
     const sub = current.to;
     const state = sub.state;
 
-    if ((state & Changed) !== 0) continue;
+    if ((state & Changed) === 0) {
+      sub.state = (state & ~Invalid) | Changed;
 
-    sub.state = (state & ~Invalid) | Changed;
-
-    if ((state & Watcher) !== 0) {
-      emitSinkInvalidated(sub);
+      if ((state & Watcher) !== 0) {
+        emitSinkInvalidated(sub);
+      }
     }
   }
 }
