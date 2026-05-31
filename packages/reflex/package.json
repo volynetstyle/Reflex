@@ -71,7 +71,7 @@
     "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm build:clean"
   },
   "devDependencies": {
-    "@reflex/store": "workspace:*",
+    "@volynets/reflex-store": "workspace:*",
     "@volynets/reflex-runtime": "workspace:*",
     "@volynets/reflex-dom": "workspace:*"
   }

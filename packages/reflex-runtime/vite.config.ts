@@ -20,9 +20,15 @@ export default defineConfig({
       exclude: [
         "src/**/*.d.ts",
         "src/**/index.ts",
+        "src/subtle.ts",
+        "src/debug/**",
         "src/debug/debug.types.ts",
         "src/debug/dev_flag.ts",
         "src/internal/process.ts",
+        "src/kernel/dev.ts",
+        "src/kernel/reduction/types.ts",
+        "src/kernel/stages/**",
+        "src/kernel/static/types.ts",
         "src/reactivity/dev.ts",
       ],
       thresholds: {

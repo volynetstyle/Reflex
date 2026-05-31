@@ -21,7 +21,7 @@ import {
   createProjection,
   createSelector,
   createStoreProjection,
-} from "@reflex/store";
+} from "@volynets/reflex-store";
 import {
   isPending,
   optimistic,
@@ -126,7 +126,11 @@ function createActivity(id: number, draft: ActivityDraft): ActivityEntry {
   };
 }
 
-function matchesFilter(task: DemoTask, mode: DemoFilterMode, query: string): boolean {
+function matchesFilter(
+  task: DemoTask,
+  mode: DemoFilterMode,
+  query: string,
+): boolean {
   const normalizedQuery = query.trim().toLowerCase();
   const queryMatch =
     normalizedQuery === "" ||
@@ -388,7 +392,9 @@ export function createDemoApp() {
     effect(() => {
       const current = selectedTask();
       const status = reactiveTools.insights.status();
-      const resourceLabel = current ? `${current.id} / ${status}` : "none / idle";
+      const resourceLabel = current
+        ? `${current.id} / ${status}`
+        : "none / idle";
 
       systemBus.emit({
         kind: "effect",
@@ -515,7 +521,8 @@ export function createDemoApp() {
     logCommand({
       kind: "save",
       label: `Started transition for ${current.id}`,
-      detail: "Optimistic overlay is now visible on top of the selected task title.",
+      detail:
+        "Optimistic overlay is now visible on top of the selected task title.",
       tone: "success",
     });
 
@@ -540,7 +547,8 @@ export function createDemoApp() {
         logCommand({
           kind: "save",
           label: `Committed ${current.id}`,
-          detail: "Server state caught up and the optimistic overlay can clear.",
+          detail:
+            "Server state caught up and the optimistic overlay can clear.",
           tone: "success",
         });
 

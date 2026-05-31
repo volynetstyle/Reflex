@@ -7,6 +7,10 @@ import {
   ReactiveEdge,
   linkEdge,
   moveIncomingEdgeAfter,
+  moveLastIncomingEdgeAfterEdgeUnchecked,
+  moveLastIncomingEdgeToFrontUnchecked,
+  moveMiddleIncomingEdgeAfterEdgeUnchecked,
+  moveNonHeadIncomingEdgeToFrontUnchecked,
   reuseIncomingEdgeFromSuffixOrCreate,
   setTrackingEpoch,
   trackRead,
@@ -162,6 +166,32 @@ describe("Reactive runtime - edge wiring", () => {
 
     expectIncomingEdges(target, [ab, bb, cb]);
     expectGraphIntegrity([a, b, c, target]);
+  });
+
+  it("moves middle and tail incoming edges through unchecked fast paths", () => {
+    const a = createNode(Producer);
+    const b = createNode(Producer);
+    const c = createNode(Producer);
+    const d = createNode(Producer);
+    const target = createNode(Consumer);
+
+    const ab = linkEdge(a, target);
+    const bb = linkEdge(b, target);
+    const cb = linkEdge(c, target);
+    const db = linkEdge(d, target);
+
+    moveMiddleIncomingEdgeAfterEdgeUnchecked(target, cb, ab);
+    expectIncomingEdges(target, [ab, cb, bb, db]);
+
+    moveNonHeadIncomingEdgeToFrontUnchecked(target, bb);
+    expectIncomingEdges(target, [bb, ab, cb, db]);
+
+    moveLastIncomingEdgeAfterEdgeUnchecked(target, db, ab);
+    expectIncomingEdges(target, [bb, ab, db, cb]);
+
+    moveLastIncomingEdgeToFrontUnchecked(target, cb);
+    expectIncomingEdges(target, [cb, bb, ab, db]);
+    expectGraphIntegrity([a, b, c, d, target]);
   });
 
   it("handles tiny suffix edge reuse before the execution-context fallback seam", () => {

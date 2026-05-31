@@ -1,5 +1,5 @@
 import { expect } from "vitest";
-import { ReactiveNode } from "../../../src/internal";
+import type { ReactiveNode } from "../../../src/internal";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type TestReactiveEdge = any;
@@ -148,10 +148,7 @@ export function expectSources(
   expect(incomingSources(node)).toEqual(expected);
 }
 
-export function expectSubscriber(
-  from: ReactiveNode,
-  to: ReactiveNode,
-): void {
+export function expectSubscriber(from: ReactiveNode, to: ReactiveNode): void {
   expect(hasSubscriber(from, to)).toBe(true);
 }
 
@@ -162,9 +159,6 @@ export function expectSubscribers(
   expect(outgoingSubscribers(from)).toEqual(expected);
 }
 
-export function expectNoSubscriber(
-  from: ReactiveNode,
-  to: ReactiveNode,
-): void {
+export function expectNoSubscriber(from: ReactiveNode, to: ReactiveNode): void {
   expect(hasSubscriber(from, to)).toBe(false);
 }

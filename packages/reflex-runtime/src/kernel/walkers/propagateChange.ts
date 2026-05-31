@@ -126,8 +126,8 @@ export function propagateOnceChanged(
     const sub = edge.to;
 
     if ((next & Watcher) !== 0) {
-      /***/ setPropagateStackHigh(top);
-      /***/ emitSinkInvalidated(sub);
+       setPropagateStackHigh(top);
+       emitSinkInvalidated(sub);
       continue;
     }
 
@@ -138,13 +138,13 @@ export function propagateOnceChanged(
     }
 
     if (pendingChild !== null) {
-      top = /***/ pushPropagateStack(pendingChild, top);
+      top =  pushPropagateStack(pendingChild, top);
     }
 
     pendingChild = child;
   }
 
-  /***/ setPropagateStackHigh(top);
+   setPropagateStackHigh(top);
   return pendingChild;
 }
 
@@ -164,14 +164,14 @@ export function propagateInvalid(
       const sub = edge.to;
 
       if ((next & Watcher) !== 0) {
-        /***/ setPropagateStackHigh(top);
-        /***/ emitSinkInvalidated(sub);
+         setPropagateStackHigh(top);
+         emitSinkInvalidated(sub);
       } else {
         const child = sub.firstOut;
 
         if (child !== null) {
           if (nextEdge !== null) {
-            top = /***/ pushPropagateStack(nextEdge, top);
+            top =  pushPropagateStack(nextEdge, top);
           }
 
           edge = child;
@@ -188,25 +188,25 @@ export function propagateInvalid(
     }
 
     if (top === base) {
-      /***/ restorePropagateStackBase(base);
+       restorePropagateStackBase(base);
       return;
     }
 
-    edge = /***/ readPropagateStack(--top);
+    edge =  readPropagateStack(--top);
     nextEdge = edge.nextOut;
   }
 }
 
 export function propagateChanged(startEdge: ReactiveEdge): void {
-  const base = /***/ getPropagateStackBase();
-  const pendingInvalid = /***/ propagateOnceChanged(startEdge, base);
+  const base =  getPropagateStackBase();
+  const pendingInvalid =  propagateOnceChanged(startEdge, base);
 
   if (pendingInvalid === null) {
-    /***/ restorePropagateStackBase(base);
+     restorePropagateStackBase(base);
     return;
   }
 
-  /***/ propagateInvalid(
+   propagateInvalid(
     pendingInvalid,
     getPropagateStackBase(),
     base,
