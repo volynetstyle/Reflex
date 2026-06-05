@@ -13,7 +13,7 @@ import {
   currentConsumer,
   setCurrentConsumer,
   defaultContext,
-} from "../../execution";
+} from "../../context";
 import {
   Computing,
   DIRTY_STATE,

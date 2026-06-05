@@ -1,6 +1,6 @@
 import { compare as defaultCompare } from "../../protocol/utils/compare";
 import { recompute } from "../engine";
-import { emitSinkInvalidated } from "../execution";
+import { emitSinkInvalidated } from "../context";
 import { Changed, type ReactiveNode } from "../shape";
 import { findSourceRange } from "./ranges";
 import type { StaticPlanRange, StaticTransitionPlan } from "./types";

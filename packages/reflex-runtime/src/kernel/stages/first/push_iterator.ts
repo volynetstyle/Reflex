@@ -1,4 +1,4 @@
-import { emitSinkInvalidated } from "../../execution";
+import { emitSinkInvalidated } from "../../context";
 import { readRuntimeWalkerStackStats } from "../stackStats";
 import type { ReactiveNode } from "../../shape";
 import {

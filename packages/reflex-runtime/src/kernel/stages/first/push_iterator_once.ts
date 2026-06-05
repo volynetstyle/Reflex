@@ -1,4 +1,4 @@
-import { emitSinkInvalidated } from "../../execution";
+import { emitSinkInvalidated } from "../../context";
 import type { ReactiveEdge } from "../../shape";
 import { Changed, Invalid, Watcher } from "../../shape";
 

@@ -18,8 +18,7 @@ import {
   saveRuntimeContext,
   runWatcher,
   setCurrentConsumer,
-  setHostHooks,
-  setInternalHooks,
+  setRuntimeHooks,
   setRuntimeContextOptions,
   writeProducer,
 } from "../../runtime.test_utils";
@@ -199,23 +198,18 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     const onSinkInvalidated = vi.fn();
     const onSettled = vi.fn();
     const onCleanup = vi.fn();
-    const onInternalSinkInvalidated = vi.fn();
-    const onInternalSettled = vi.fn();
 
-    setHostHooks({
+    setRuntimeHooks({
       effectCleanupRegistrar: onCleanup,
       reactiveSettledDispatcher: onSettled,
       sinkInvalidatedDispatcher: onSinkInvalidated,
     });
-    setInternalHooks(onInternalSinkInvalidated, onInternalSettled);
 
     const context = getActiveRuntimeContext();
 
-    expect(context.hostEffectCleanupHook).toBe(onCleanup);
-    expect(context.hostReactiveSettledHook).toBe(onSettled);
-    expect(context.hostSinkInvalidatedHook).toBe(onSinkInvalidated);
-    expect(context.internalReactiveSettledHook).toBe(onInternalSettled);
-    expect(context.internalSinkInvalidatedHook).toBe(onInternalSinkInvalidated);
+    expect(context.effectCleanupHook).toBe(onCleanup);
+    expect(context.reactiveSettledHook).toBe(onSettled);
+    expect(context.sinkInvalidatedHook).toBe(onSinkInvalidated);
   });
 
   it("configures hooks and options on an explicit runtime context", () => {
@@ -224,11 +218,10 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     const onSettled = vi.fn();
     const readTrackingStrategy = vi.fn();
 
-    setHostHooks(context, {
+    setRuntimeHooks(context, {
       reactiveSettledDispatcher: onSettled,
       sinkInvalidatedDispatcher: onSinkInvalidated,
     });
-    setInternalHooks(context, onSinkInvalidated, onSettled);
     setRuntimeContextOptions(context, {
       graphReductionPolicy: {
         enabled: true,
@@ -237,10 +230,8 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
       readTrackingStrategy,
     });
 
-    expect(context.hostSinkInvalidatedHook).toBe(onSinkInvalidated);
-    expect(context.hostReactiveSettledHook).toBe(onSettled);
-    expect(context.internalSinkInvalidatedHook).toBe(onSinkInvalidated);
-    expect(context.internalReactiveSettledHook).toBe(onSettled);
+    expect(context.sinkInvalidatedHook).toBe(onSinkInvalidated);
+    expect(context.reactiveSettledHook).toBe(onSettled);
     expect(context.readTrackingStrategy).toBe(readTrackingStrategy);
     expect(context.graphReductionPolicy.enabled).toBe(true);
     expect(context.graphReductionPolicy.stableThreshold).toBe(3);

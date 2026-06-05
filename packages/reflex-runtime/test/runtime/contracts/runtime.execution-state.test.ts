@@ -13,12 +13,11 @@ import {
   saveRuntimeContext,
   setActiveRuntimeContext,
   setCurrentConsumer,
-  setHostHooks,
-  setInternalHooks,
+  setRuntimeHooks,
   setTrackingEpoch,
   trackingEpoch,
 } from "../../../src/kernel/context";
-import { resetState } from "../../../src/kernel/execution";
+import { resetState } from "../../../src/kernel/context";
 import { createConsumer, resetRuntime } from "../../runtime.test_utils";
 
 describe("execution state", () => {
@@ -93,22 +92,21 @@ describe("execution state", () => {
     });
   });
 
-  it("dispatches runtime hooks before external hooks", () => {
+  it("dispatches the configured runtime invalidation hook", () => {
     const order: string[] = [];
     const node = createConsumer(() => 1);
 
-    setInternalHooks(() => order.push("runtime"));
-    setHostHooks({ sinkInvalidatedDispatcher: () => order.push("external") });
+    setRuntimeHooks({ sinkInvalidatedDispatcher: () => order.push("runtime") });
 
     emitSinkInvalidated(node);
 
-    expect(order).toEqual(["runtime", "external"]);
+    expect(order).toEqual(["runtime"]);
   });
 
   it("does not dispatch settled while propagationDepth > 0", () => {
     const settled = vi.fn();
 
-    setHostHooks({ reactiveSettledDispatcher: settled });
+    setRuntimeHooks({ reactiveSettledDispatcher: settled });
     enterPropagationScope();
     emitSettledIfIdle();
 
@@ -119,7 +117,7 @@ describe("execution state", () => {
     const settled = vi.fn();
     const consumer = createConsumer(() => 1);
 
-    setHostHooks({ reactiveSettledDispatcher: settled });
+    setRuntimeHooks({ reactiveSettledDispatcher: settled });
     setCurrentConsumer(consumer);
     emitSettledIfIdle();
 
@@ -129,7 +127,7 @@ describe("execution state", () => {
   it("dispatches settled after leaving outermost propagation", () => {
     const settled = vi.fn();
 
-    setHostHooks({ reactiveSettledDispatcher: settled });
+    setRuntimeHooks({ reactiveSettledDispatcher: settled });
     enterPropagationScope();
     enterPropagationScope();
     leavePropagationScope();
