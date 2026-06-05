@@ -1,4 +1,7 @@
-import type { ReactiveNode } from "@volynets/reflex-runtime/internal";
+import {
+  Scheduled,
+  type ReactiveNode,
+} from "@volynets/reflex-runtime/internal";
 import { EffectSchedulerMode } from "../scheduler.constants";
 import {
   hasPendingEffects,
@@ -10,8 +13,8 @@ import {
   flushSchedulerQueue,
   leaveSchedulerBatch,
 } from "../scheduler.core";
-import { tryEnqueue } from "../scheduler.enqueue";
 import { createSchedulerInstance } from "../scheduler.instance";
+import { pushRingQueue } from "../scheduler.queue";
 import type { EffectScheduler } from "../scheduler.types";
 
 export function createEagerScheduler(): EffectScheduler {
@@ -22,7 +25,11 @@ export function createEagerScheduler(): EffectScheduler {
     }
   };
   const enqueue = (node: ReactiveNode): void => {
-    if (!tryEnqueue(core.queue, node)) return;
+    const state = node.state;
+    if ((state & Scheduled) !== 0) return;
+    node.state = state | Scheduled;
+    pushRingQueue(core.queue, node);
+
     if (isRuntimeInactive(core)) flushSchedulerQueue(core);
   };
   const batch = <T>(fn: () => T): T => {

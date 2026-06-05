@@ -9,7 +9,7 @@ import {
   readShouldRecomputeStackStats,
   resetRuntimeWalkerStackStats,
   type RuntimeWalkerStackStats,
-} from "../kernel/walkers";
+} from "../kernel";
 import {
   checkDebugGraphIntegrity,
   snapshotDebugGraph,

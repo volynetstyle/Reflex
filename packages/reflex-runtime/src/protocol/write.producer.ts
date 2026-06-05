@@ -4,9 +4,11 @@ import {
   enterPropagationScope,
   leavePropagationScope,
   emitSettledIfIdle,
-  propagateChanged,
+  propagationScopeDepth,
+  propagate,
 } from "../kernel";
 import { devRecordWriteProducer } from "../kernel/dev";
+import { push_iterator } from "../kernel/stages/first/push_iterator";
 import type { ProducerComparator } from "./utils/compare";
 import { compare as defaultComparator } from "./utils/compare";
 
@@ -92,7 +94,12 @@ export function writeProducer<T>(
   const firstOut = node.firstOut;
 
   if (firstOut === null) {
-    emitSettledIfIdle();
+    if (propagationScopeDepth === 0) emitSettledIfIdle();
+    return;
+  }
+
+  if (propagationScopeDepth !== 0) {
+    propagate(firstOut);
     return;
   }
 
@@ -100,6 +107,6 @@ export function writeProducer<T>(
   // Push phase: notify all subscribers depth-first, mark them dirty.
   // Direct subscribers are promoted from Invalid to Changed.
   // This tells them "definitely changed, don't verify, recompute"
-  propagateChanged(firstOut);
+  push_iterator(firstOut);
   leavePropagationScope();
 }

@@ -4,4 +4,4 @@ export * from "./execution";
 export * from "./reduction";
 export * from "./shape";
 export * from "./static";
-export * from "./walkers";
+export * from "./stages";

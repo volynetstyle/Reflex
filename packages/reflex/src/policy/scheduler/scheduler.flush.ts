@@ -25,13 +25,17 @@ export function flushQueuedWatchers(
   thrown: unknown,
   noThrow: unknown,
 ): unknown {
-  while (queue.head !== queue.tail) {
-    const head = queue.head;
-    const index = head & queue.mask;
-    const node = queue.ring[index]!;
+  let head = queue.head;
+  let tail = queue.tail;
 
-    queue.ring[index] = undefined;
-    queue.head = head + 1;
+  while (head !== tail) {
+    const ring = queue.ring;
+    const index = head & queue.mask;
+    const node = ring[index]!;
+
+    ring[index] = undefined;
+    head += 1;
+    queue.head = head;
 
     // Clear before running so a watcher may enqueue itself again.
     node.state &= UNSCHEDULE_MASK;
@@ -43,9 +47,11 @@ export function flushQueuedWatchers(
         thrown = error;
       }
     }
+
+    tail = queue.tail;
   }
 
-  queue.tail = queue.head;
+  queue.tail = head;
 
   return thrown;
 }

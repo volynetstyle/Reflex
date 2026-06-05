@@ -1,17 +1,21 @@
-import type { ReactiveNode } from "../kernel";
+import type { ReactiveNode } from "../kernel/shape";
 import {
-  DIRTY_STATE,
   defaultContext,
   currentConsumer,
   trackingEpoch,
-  trackReadResolved,
-  shouldRecomputeDirtyConsumer,
-} from "../kernel";
+} from "../kernel/context";
+import { trackReadResolved } from "../kernel/engine/tracking";
+import {
+  Changed,
+  DIRTY_STATE,
+  Visited,
+} from "../kernel/shape";
 import {
   devAssertConsumerCanStabilize,
   devRecordReadConsumer,
 } from "../kernel/dev";
-import { advance } from "../kernel/walkers/ensureFresh";
+import { advance } from "../kernel/stages/second/advance";
+import { pull_iterator } from "../kernel/stages/second/pull_iterator";
 import { LAZY } from "./utils/constants";
 
 /**
@@ -70,10 +74,19 @@ export function readConsumerEager<T>(node: ReactiveNode<T>): T {
     : stabilizeDirtyConsumer<T>(node, state);
 }
 
+const FORCE_RECOMPUTE_STATE = Changed | Visited;
+
 function stabilizeDirtyConsumer<T>(node: ReactiveNode<T>, state: number): T {
   if (__DEV__) devAssertConsumerCanStabilize(state);
 
-  if (!shouldRecomputeDirtyConsumer(node, state) || !advance(node)) {
+  if ((state & FORCE_RECOMPUTE_STATE) !== 0) {
+    if (!advance(node)) node.state &= ~DIRTY_STATE;
+    return node.payload as T;
+  }
+
+  const edge = node.firstIn;
+
+  if (edge === null || !pull_iterator(node, edge) || !advance(node)) {
     node.state &= ~DIRTY_STATE;
   }
 
@@ -117,7 +130,7 @@ const debugValue = readConsumer(doubled, ConsumerReadMode.eager)
  * @cost O(1) + stabilization cost (depends on upstream changes)
  */
 export function readConsumer<T>(node: ReactiveNode<T>, mode: number = LAZY): T {
-  if ((mode & LAZY) === 0) {
+  if (mode !== LAZY) {
     const state = node.state;
     const value =
       (state & DIRTY_STATE) === 0

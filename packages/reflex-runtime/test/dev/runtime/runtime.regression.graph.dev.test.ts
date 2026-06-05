@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { subtle } from "../../../src/debug";
 import { readConsumer, readProducer, runWatcher, writeProducer } from "../../../src";
-import { shouldRecompute } from "../../../src/kernel";
 import {
   createConsumer,
   createProducer,
@@ -254,7 +253,7 @@ describe("Reactive runtime - graph regressions (dev)", () => {
     edge!.prevOut = null;
     edge!.nextOut = null;
 
-    expect(() => shouldRecompute(left)).toThrow(
+    expect(() => readConsumer(left)).toThrow(
       "advance invariant violation: edge is not attached out",
     );
   });

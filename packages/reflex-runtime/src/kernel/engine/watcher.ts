@@ -1,4 +1,3 @@
-import { shouldRecomputeDirtyWatcher } from "../walkers/recomputeNode";
 import type { ReactiveNode } from "../shape";
 import {
   clearNodeVisited,
@@ -9,6 +8,7 @@ import {
   Invalid,
   Visited,
 } from "../shape";
+import { pull_iterator } from "../stages/second/pull_iterator";
 import { executeKnownNodeComputation } from "./watcher.execution";
 import {
   currentConsumer,
@@ -25,6 +25,7 @@ import {
 
 type WatcherCleanup = () => void;
 type NodeCompute = NonNullable<ReactiveNode["compute"]>;
+const FORCE_RECOMPUTE_STATE = Changed | Visited;
 
 function runCleanup(cleanup: WatcherCleanup): void {
   const prevActive = currentConsumer;
@@ -43,6 +44,13 @@ function runCleanup(cleanup: WatcherCleanup): void {
   }
 }
 
+function shouldRunDirtyWatcher(node: ReactiveNode, state: number): boolean {
+  if ((state & FORCE_RECOMPUTE_STATE) !== 0) return true;
+
+  const edge = node.firstIn;
+  return edge !== null && pull_iterator(node, edge);
+}
+
 export function runWatcher(node: ReactiveNode): void {
   const state = node.state;
 
@@ -51,7 +59,7 @@ export function runWatcher(node: ReactiveNode): void {
     return;
   }
 
-  if (!shouldRecomputeDirtyWatcher(node, state)) {
+  if (!shouldRunDirtyWatcher(node, state)) {
     clearDirtyState(node);
     if (__DEV__) devRecordWatcherSkip(node, "stable", defaultContext);
     return;

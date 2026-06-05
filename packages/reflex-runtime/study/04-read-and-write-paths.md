@@ -18,7 +18,7 @@ node.state &= ~DIRTY_STATE;
 if (node.firstOut !== null) {
   runtime.enterPropagation();
   try {
-    propagateChanged(node.firstOut);
+    propagate(node.firstOut);
   } finally {
     runtime.leavePropagation();
   }
@@ -31,7 +31,7 @@ if (node.firstOut !== null) {
 - producer комітить значення одразу
 - downstream не recompute-иться на write path
 
-## 2. Навіщо `propagateChanged()`
+## 2. Навіщо `propagate()`
 
 Другий аргумент означає:
 

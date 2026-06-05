@@ -69,14 +69,14 @@ export function createRuntime({
   );
   const run = <T>(fn: () => T): T => runWithRuntimeContext(execution, fn);
   const batch = <T>(fn: () => T): T => run(() => scheduler.batch(fn));
-  const flush = (): void => run(scheduler.flush.bind(scheduler));
+  const flush = (): void => run(scheduler.flush);
   const dispatcher = createEventDispatcher(batch);
 
   setHostHooks(execution, hooks ?? {});
 
   setInternalHooks(
     execution,
-    scheduler.enqueue.bind(scheduler),
+    scheduler.enqueue,
     scheduler.runtimeNotifySettled,
   );
 

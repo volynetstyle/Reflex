@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  advance,
   CONSUMER_INITIAL_STATE,
   readConsumer,
   readConsumerEager,
@@ -7,8 +8,6 @@ import {
   readProducer,
   writeProducer,
 } from "../../runtime.test_utils";
-import { recompute } from "../../../src/kernel/engine/recompute";
-import { refreshAndPropagateIfNeeded } from "../../../src/kernel/walkers/ensureFresh";
 import {
   createConsumer,
   createProducer,
@@ -44,21 +43,7 @@ describe("Reactive runtime - direct protocol helpers", () => {
       return 42;
     });
 
-    expect(recompute(consumer)).toBe(true);
+    expect(advance(consumer)).toBe(true);
     expect(consumer.payload).toBe(42);
-  });
-
-  it("refreshes and propagates only when a recompute changes a fanout node", () => {
-    const source = createProducer(1);
-    const middle = createConsumer(() => readProducer(source));
-    const sink = createConsumer(() => readConsumer(middle));
-
-    expect(readConsumer(sink)).toBe(1);
-
-    middle.state = CONSUMER_INITIAL_STATE;
-    writeProducer(source, 2);
-
-    expect(refreshAndPropagateIfNeeded(middle, true)).toBe(true);
-    expect(readConsumer(sink)).toBe(2);
   });
 });

@@ -29,7 +29,6 @@ export function resetRuntimeWalkerStackStats(): void {
   resumeEdgeStackPeak = 0;
 }
 
-// 
 export function trimWalkerStackIfSparse<T>(stack: T[], high: number): void {
   const len = stack.length;
 
