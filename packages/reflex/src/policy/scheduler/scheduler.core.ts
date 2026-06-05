@@ -12,6 +12,7 @@ export function flushSchedulerQueue(core: SchedulerCore): void {
   const queue = core.queue;
 
   if (core.phase === Flushing) return;
+  // !hasPendingEffects but in hot path
   if (queue.head === queue.tail) return;
 
   core.phase = Flushing;
