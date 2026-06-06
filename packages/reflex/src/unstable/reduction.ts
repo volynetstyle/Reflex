@@ -1,6 +1,7 @@
 import {
-  restoreContext,
-  saveContext,
+  getActiveRuntimeContext,
+  restoreRuntimeContext,
+  saveRuntimeContext,
   setRuntimeContextOptions,
   type GraphReductionOptions,
 } from "@volynets/reflex-runtime/internal";
@@ -16,7 +17,8 @@ function enableReductionForRun<T>(
   fn: () => T,
   options: GraphReductionOptions,
 ): T {
-  const snapshot = saveContext();
+  const context = getActiveRuntimeContext();
+  const snapshot = saveRuntimeContext(context);
 
   setRuntimeContextOptions({
     graphReductionPolicy: {
@@ -28,7 +30,7 @@ function enableReductionForRun<T>(
   try {
     return fn();
   } finally {
-    restoreContext(snapshot);
+    restoreRuntimeContext(context, snapshot);
   }
 }
 

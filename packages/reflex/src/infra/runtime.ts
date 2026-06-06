@@ -3,8 +3,7 @@ import {
   runWithRuntimeContext,
   resetState,
   setActiveRuntimeContext,
-  setHostHooks,
-  setInternalHooks,
+  setRuntimeHooks,
   untracked,
 } from "@volynets/reflex-runtime/internal";
 import type {
@@ -72,15 +71,20 @@ export function createRuntime({
   const flush = (): void => run(scheduler.flush);
   const dispatcher = createEventDispatcher(batch);
 
-  setHostHooks(execution, hooks ?? {});
-
-  setInternalHooks(
-    execution,
-    scheduler.enqueue,
-    scheduler.runtimeNotifySettled,
-  );
-
   resetState(execution);
+
+  setRuntimeHooks(execution, {
+    effectCleanupRegistrar: hooks?.effectCleanupRegistrar,
+    sinkInvalidatedDispatcher(node) {
+      scheduler.enqueue(node);
+      hooks?.sinkInvalidatedDispatcher?.(node);
+    },
+    reactiveSettledDispatcher() {
+      scheduler.runtimeNotifySettled?.();
+      hooks?.reactiveSettledDispatcher?.();
+    },
+  });
+
   setActiveRuntimeContext(execution);
   activeContext = ctx;
   activeBatch = batch;

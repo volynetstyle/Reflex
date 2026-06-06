@@ -183,6 +183,26 @@ export function isNewer(a: number, b: number): boolean {
   return ((a - b) | 0) > 0;
 }
 
+// 
+export function getCurrentConsumer(): ReactiveNode | null {
+  return currentConsumer;
+}
+
+// 
+export function setCurrentConsumer(node: ReactiveNode | null): void {
+  currentConsumer = node;
+}
+
+// 
+export function getPropagationScopeDepth(): number {
+  return propagationScopeDepth;
+}
+
+// 
+export function setPropagationScopeDepth(depth: number): void {
+  propagationScopeDepth = depth;
+}
+
 export function enterPropagationScope(): void {
   ++propagationScopeDepth;
 }
@@ -238,6 +258,10 @@ export function setEffectCleanupHook(
   activeRuntimeContext.effectCleanupHook = effectCleanupHook;
 }
 
+export function getEffectCleanupHook(): EffectCleanupHook {
+  return effectCleanupHook;
+}
+
 export function setRuntimeHooks(
   context: RuntimeContext,
   hooks?: RuntimeHooks,
@@ -262,6 +286,16 @@ export function setRuntimeHooks(
   );
 
   reloadActiveContextIfCurrent(context);
+}
+
+export const setHostHooks = setRuntimeHooks;
+
+export function setInternalHooks(
+  sinkInvalidated: SinkInvalidatedHook = undefined,
+  reactiveSettled: ReactiveSettledHook = undefined,
+): void {
+  setSinkInvalidatedHook(sinkInvalidated);
+  setReactiveSettledHook(reactiveSettled);
 }
 
 export function setRuntimeContextOptions(
@@ -325,6 +359,8 @@ export function saveRuntimeContext(
   };
 }
 
+export const saveContext = saveRuntimeContext;
+
 export function restoreRuntimeContext(
   context: RuntimeContext,
   snapshot: RuntimeContextSnapshot,
@@ -345,6 +381,10 @@ export function restoreRuntimeContext(
   context.effectCleanupHook = snapshot.effectCleanupHook;
 
   reloadActiveContextIfCurrent(context);
+}
+
+export function restoreContext(snapshot: RuntimeContextSnapshot): void {
+  restoreRuntimeContext(activeRuntimeContext, snapshot);
 }
 
 export function resetState(

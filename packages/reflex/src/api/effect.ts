@@ -5,7 +5,7 @@ import {
   watcher,
 } from "@volynets/reflex-runtime";
 import {
-  getEffectCleanupHook,
+  effectCleanupHook,
   Scheduled,
   type ReactiveNode,
 } from "@volynets/reflex-runtime/internal";
@@ -20,7 +20,7 @@ import {
 } from "./effect.dev";
 
 function registerEffectCleanup(dispose: Destructor): void {
-  getEffectCleanupHook()?.(dispose);
+  effectCleanupHook?.(dispose);
 }
 
 /**

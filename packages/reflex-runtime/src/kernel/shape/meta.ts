@@ -21,7 +21,8 @@ export const Computing = 1 << 3; // 8
 
 export const Watcher = 1 << 5; // 32
 export const Scheduled = 1 << 6; // 64
-export const GraphReductionEnabled = 1 << 7; // 128
+export const Special = 1 << 7 // 128
+export const GraphReductionEnabled = 1 << 8; // 256
 // possible can be added next some flags
 
 
