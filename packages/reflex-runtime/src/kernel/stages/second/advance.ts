@@ -35,8 +35,6 @@ export function advance(node: ReactiveNode): boolean {
   if (__DEV__) devAssertExecutableNode(node);
 
   const compute = node.compute as NonNullable<typeof node.compute>;
-  const firstOut = node.firstOut;
-
   node.tailIn = null;
 
   const computingState = (node.state & ~Visited) | Computing;
@@ -83,6 +81,8 @@ export function advance(node: ReactiveNode): boolean {
   }
 
   if (__DEV__) devRecordRecompute(node, true, next, prev, defaultContext);
+
+  const firstOut = node.firstOut;
 
   if (firstOut !== null) {
     if (__DEV__) devAssertRefreshEdge(node, firstOut);

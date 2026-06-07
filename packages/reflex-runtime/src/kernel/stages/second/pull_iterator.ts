@@ -89,8 +89,35 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
       }
     }
 
+    if (changed) {
+      while (top !== base) {
+        top = top - 1;
+        high = top;
+
+        const parentEdge = stack[top]!;
+        changed = advance(node);
+        node = parentEdge.to;
+
+        if (!changed) {
+          const sibling = parentEdge.nextIn;
+
+          if (sibling !== null) {
+            edge = sibling;
+            continue scan;
+          }
+
+          break;
+        }
+      }
+
+      if (changed) {
+        high = base;
+        return true;
+      }
+    }
+
     /**
-     * Bubble phase.
+     * Stable bubble phase.
      *
      * Pop parent continuations until:
      * - a stable parent has another sibling to scan;
@@ -101,22 +128,14 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
       high = top;
 
       const parentEdge = stack[top]!;
-
-      if (changed) {
-        changed = advance(node);
-      } else {
-        node.state &= ~Invalid;
-      }
-
+      node.state &= ~Invalid;
       node = parentEdge.to;
 
-      if (!changed) {
-        const sibling = parentEdge.nextIn;
+      const sibling = parentEdge.nextIn;
 
-        if (sibling !== null) {
-          edge = sibling;
-          continue scan;
-        }
+      if (sibling !== null) {
+        edge = sibling;
+        continue scan;
       }
     }
 

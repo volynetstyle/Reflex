@@ -5,11 +5,7 @@ import {
   trackingEpoch,
 } from "../kernel/context";
 import { trackReadResolved } from "../kernel/engine/tracking";
-import {
-  Changed,
-  DIRTY_STATE,
-  Visited,
-} from "../kernel/shape";
+import { Changed, DIRTY_STATE, Visited } from "../kernel/shape";
 import {
   devAssertConsumerCanStabilize,
   devRecordReadConsumer,
@@ -35,17 +31,14 @@ export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
   // eslint-disable-next-line @typescript-eslint/no-this-alias
   const node = this;
   const state = node.state;
-
   const value =
     (state & DIRTY_STATE) === 0
       ? (node.payload as T)
       : stabilizeDirtyConsumer<T>(node, state);
 
-  const consumer = currentConsumer;
+  if (currentConsumer === null) return value;
 
-  if (consumer !== null) {
-    trackReadResolved(node, consumer, trackingEpoch, true);
-  }
+  trackReadResolved(node, currentConsumer, trackingEpoch, true);
 
   if (__DEV__) {
     devRecordReadConsumer(
@@ -53,7 +46,7 @@ export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
       "lazy",
       value,
       defaultContext,
-      consumer ?? undefined,
+      currentConsumer ?? undefined,
     );
   }
 

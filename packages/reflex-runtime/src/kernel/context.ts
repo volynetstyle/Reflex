@@ -262,6 +262,16 @@ export function getEffectCleanupHook(): EffectCleanupHook {
   return effectCleanupHook;
 }
 
+export function getReactiveSettledHook(): ReactiveSettledHook {
+  return reactiveSettledHook;
+}
+
+function ownHook<T>(hooks: RuntimeHooks, name: keyof RuntimeHooks): T | undefined {
+  return Object.prototype.hasOwnProperty.call(hooks, name)
+    ? asHook<T>(hooks[name])
+    : undefined;
+}
+
 export function setRuntimeHooks(
   context: RuntimeContext,
   hooks?: RuntimeHooks,
@@ -275,14 +285,17 @@ export function setRuntimeHooks(
   const context = hasContext ? contextOrHooks : activeRuntimeContext;
   const hooks = hasContext ? maybeHooks : contextOrHooks;
 
-  context.sinkInvalidatedHook = asHook<SinkInvalidatedHook>(
-    hooks.sinkInvalidatedDispatcher,
+  context.sinkInvalidatedHook = ownHook<SinkInvalidatedHook>(
+    hooks,
+    "sinkInvalidatedDispatcher",
   );
-  context.reactiveSettledHook = asHook<ReactiveSettledHook>(
-    hooks.reactiveSettledDispatcher,
+  context.reactiveSettledHook = ownHook<ReactiveSettledHook>(
+    hooks,
+    "reactiveSettledDispatcher",
   );
-  context.effectCleanupHook = asHook<EffectCleanupHook>(
-    hooks.effectCleanupRegistrar,
+  context.effectCleanupHook = ownHook<EffectCleanupHook>(
+    hooks,
+    "effectCleanupRegistrar",
   );
 
   reloadActiveContextIfCurrent(context);
@@ -345,7 +358,7 @@ export function resetRuntimeContextOptions(
 export function saveRuntimeContext(
   context: RuntimeContext = activeRuntimeContext,
 ): RuntimeContextSnapshot {
-  commitRuntimeContext(context);
+  if (context === activeRuntimeContext) commitRuntimeContext(context);
 
   return {
     currentConsumer: context.currentConsumer,

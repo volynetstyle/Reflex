@@ -1,18 +1,22 @@
 import { performance } from "node:perf_hooks";
 import {
+  readConsumer,
+  readProducer,
+  runWatcher,
+  writeProducer,
+} from "../build/esm/index.js";
+import {
   ReactiveNode,
   CONSUMER_CHANGED,
   PRODUCER_INITIAL_STATE,
   WATCHER_CHANGED,
-  readConsumer,
-  readProducer,
+} from "../build/esm/kernel/shape/index.js";
+import {
   resetState,
-  runWatcher,
   setRuntimeContextOptions,
   setInternalHooks,
-  writeProducer,
-} from "../build/esm/index.js";
-import { linkEdge } from "../build/esm/kernel/shape/graph.js";
+} from "../build/esm/kernel/context.js";
+import { linkEdge } from "../build/esm/kernel/shape/graph/index.js";
 import {
   attachIncomingEdgeAfter,
   detachIncomingEdge,

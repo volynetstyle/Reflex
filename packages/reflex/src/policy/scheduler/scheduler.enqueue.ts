@@ -1,6 +1,5 @@
 import { Scheduled, type ReactiveNode } from "@volynets/reflex-runtime/internal";
 import type { EffectNode, WatcherQueue } from "./scheduler.types";
-import { pushRingQueue } from "./scheduler.queue";
 
 /**
  * Marks an effect watcher node as scheduled.
@@ -33,6 +32,32 @@ export function tryEnqueue(queue: WatcherQueue, node: ReactiveNode): boolean {
   }
 
   node.state = state | Scheduled;
-  pushRingQueue(queue, node);
+  let ring = queue.ring;
+  const head = queue.head;
+  let tail = queue.tail;
+
+  if (tail - head === ring.length) {
+    const oldCapacity = ring.length;
+    const oldMask = queue.mask;
+    const size = tail - head;
+    const nextCapacity = oldCapacity << 1;
+    const next = new Array<EffectNode | undefined>(nextCapacity).fill(
+      undefined,
+    );
+
+    for (let i = 0; i < size; ++i) {
+      next[i] = ring[(head + i) & oldMask];
+    }
+
+    queue.ring = next;
+    queue.mask = nextCapacity - 1;
+    queue.head = 0;
+    queue.tail = size;
+    ring = next;
+    tail = size;
+  }
+
+  ring[tail & queue.mask] = node as EffectNode;
+  queue.tail = tail + 1;
   return true;
 }

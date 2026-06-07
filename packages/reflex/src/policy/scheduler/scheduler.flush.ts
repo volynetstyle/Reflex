@@ -27,10 +27,11 @@ export function flushQueuedWatchers(
 ): unknown {
   let head = queue.head;
   let tail = queue.tail;
+  const ring = queue.ring;
+  const mask = queue.mask;
 
   while (head !== tail) {
-    const ring = queue.ring;
-    const index = head & queue.mask;
+    const index = head & mask;
     const node = ring[index]!;
 
     ring[index] = undefined;

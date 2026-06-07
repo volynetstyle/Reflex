@@ -13,18 +13,15 @@ import {
   flushSchedulerQueue,
   leaveSchedulerBatch,
 } from "../scheduler.core";
+import { tryEnqueue } from "../scheduler.enqueue";
 import { createSchedulerInstance } from "../scheduler.instance";
-import { pushRingQueue } from "../scheduler.queue";
 import type { EffectScheduler } from "../scheduler.types";
 import { noopNotifySettled } from "../scheduler.types";
 
 export function createSabScheduler(): EffectScheduler {
   const core = createSchedulerCore();
   const enqueue = (node: ReactiveNode): void => {
-    const state = node.state;
-    if ((state & Scheduled) !== 0) return;
-    node.state = state | Scheduled;
-    pushRingQueue(core.queue, node);
+    tryEnqueue(core.queue, node);
   };
   const batch = <T>(fn: () => T): T => {
     enterSchedulerBatch(core);
