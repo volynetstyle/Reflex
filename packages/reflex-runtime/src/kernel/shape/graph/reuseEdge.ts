@@ -10,6 +10,8 @@ import {
 import { linkEdge } from "./linkEdge";
 import { unlinkDetachedIncomingEdgeSequence } from "./sweepEdges";
 
+const EAGER_STALE_SUFFIX_CLEANUP_MIN = 32;
+
 /**
  * Resolve a producer -> consumer incoming edge relative to a known insertion
  * position.
@@ -56,11 +58,15 @@ export function reuseIncomingEdgeFromSuffixOrLink(
    * Start after the suffix head if it exists, otherwise scan from the
    * beginning of the incoming list.
    */
+  let scannedSuffixEdges = suffixStartEdge === null ? 0 : 1;
+
   for (
     let candidateEdge = suffixStartEdge?.nextIn ?? consumer.firstIn;
     candidateEdge;
     candidateEdge = candidateEdge.nextIn
   ) {
+    scannedSuffixEdges += 1;
+
     if (candidateEdge.from !== producer) continue;
 
     /**
@@ -110,7 +116,10 @@ export function reuseIncomingEdgeFromSuffixOrLink(
    * so branch-swap/churn patterns pay one stale-suffix scan instead of one scan
    * per newly introduced dependency.
    */
-  if (suffixStartEdge !== null) {
+  if (
+    suffixStartEdge !== null &&
+    scannedSuffixEdges >= EAGER_STALE_SUFFIX_CLEANUP_MIN
+  ) {
     if (insertAfterEdge === null) {
       consumer.firstIn = null;
       consumer.lastIn = null;

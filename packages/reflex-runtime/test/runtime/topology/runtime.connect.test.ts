@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { ReactiveNode, restoreContext, saveContext, setRuntimeContextOptions } from "../../runtime.test_utils";
+import {
+  ReactiveNode,
+  restoreContext,
+  saveContext,
+  setRuntimeContextOptions,
+} from "../../runtime.test_utils";
 import type { ReactiveNodeState } from "../../../src/kernel";
 import {
   Consumer,
@@ -322,6 +327,89 @@ describe("Reactive runtime - edge wiring", () => {
     restoreContext(snapshot);
   });
 
+  it("keeps small stale suffixes reusable after a suffix miss", () => {
+    const target = createNode(Consumer);
+    const staleSources = Array.from({ length: 31 }, () => createNode(Producer));
+    const fresh = createNode(Producer);
+
+    for (const source of staleSources) {
+      linkEdge(source, target, target.lastIn);
+    }
+
+    const firstStaleEdge = target.firstIn;
+    const freshEdge = reuseIncomingEdgeFromSuffixOrCreate(
+      fresh,
+      target,
+      null,
+      firstStaleEdge,
+      1,
+    );
+
+    expectIncomingEdges(target, [
+      freshEdge,
+      ...staleSources.map((source) => source.firstOut),
+    ]);
+    for (const source of staleSources) {
+      expectOutgoingEdges(source, [source.firstOut]);
+    }
+    expectGraphIntegrity([target, fresh, ...staleSources]);
+  });
+
+  it("eagerly detaches large stale suffixes after a suffix miss", () => {
+    const target = createNode(Consumer);
+    const staleSources = Array.from({ length: 32 }, () => createNode(Producer));
+    const fresh = createNode(Producer);
+
+    for (const source of staleSources) {
+      linkEdge(source, target, target.lastIn);
+    }
+
+    const firstStaleEdge = target.firstIn;
+    const freshEdge = reuseIncomingEdgeFromSuffixOrCreate(
+      fresh,
+      target,
+      null,
+      firstStaleEdge,
+      1,
+    );
+
+    expectIncomingEdges(target, [freshEdge]);
+    for (const source of staleSources) {
+      expectOutgoingEdges(source, []);
+    }
+    expectGraphIntegrity([target, fresh, ...staleSources]);
+  });
+
+  it("eagerly detaches only the stale suffix after a retained prefix", () => {
+    const target = createNode(Consumer);
+    const retained = createNode(Producer);
+    const staleSources = Array.from({ length: 32 }, () => createNode(Producer));
+    const fresh = createNode(Producer);
+    const retainedEdge = linkEdge(retained, target);
+
+    for (const source of staleSources) {
+      linkEdge(source, target, target.lastIn);
+    }
+
+    const firstStaleEdge = retainedEdge.nextIn;
+    target.tailIn = retainedEdge;
+
+    const freshEdge = reuseIncomingEdgeFromSuffixOrCreate(
+      fresh,
+      target,
+      retainedEdge,
+      firstStaleEdge,
+      1,
+    );
+
+    expectIncomingEdges(target, [retainedEdge, freshEdge]);
+    expectOutgoingEdges(retained, [retainedEdge]);
+    for (const source of staleSources) {
+      expectOutgoingEdges(source, []);
+    }
+    expectGraphIntegrity([target, retained, fresh, ...staleSources]);
+  });
+
   it("keeps prefix duplicate tracking reads structurally inert", () => {
     const a = createNode(Producer);
     const b = createNode(Producer);
@@ -385,6 +473,3 @@ describe("Reactive runtime - edge wiring", () => {
     restoreContext(snapshot);
   });
 });
-
-
-

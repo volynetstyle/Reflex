@@ -6,3 +6,4 @@ export * from "./fixtures/scenario-builder";
 export * from "./oracles/state-assertions";
 export * from "./oracles/test-oracle";
 export * from "./debug/trace-harness";
+export * from "./model/runtime-model";

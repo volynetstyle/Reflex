@@ -176,6 +176,18 @@ export function resolveTrackedRead(
      *   2. a new dependency that should be appended after the cursor.
      */
     if (expectedNextEdge === null) {
+      if (producer.firstOut === null) {
+        consumer.tailIn = linkEdge(
+          producer,
+          consumer,
+          cursorEdge,
+          producerVersion,
+        );
+
+        if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+        return true;
+      }
+
       /**
        * L2a: Prefix duplicate guard.
        *
