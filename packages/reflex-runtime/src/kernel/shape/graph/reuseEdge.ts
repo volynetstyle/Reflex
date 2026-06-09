@@ -8,6 +8,7 @@ import {
   moveNonHeadIncomingEdgeToFrontUnchecked,
 } from "./edgeList";
 import { linkEdge } from "./linkEdge";
+import { unlinkDetachedIncomingEdgeSequence } from "./sweepEdges";
 
 /**
  * Resolve a producer -> consumer incoming edge relative to a known insertion
@@ -104,8 +105,24 @@ export function reuseIncomingEdgeFromSuffixOrLink(
    * R2: Suffix miss.
    *
    * The producer was not found in the reusable suffix, so this read introduces
-   * a new dependency edge.
+   * a new dependency edge. Once a full suffix scan misses, the previous suffix
+   * cannot contribute to the current tracked order anymore. Detach it eagerly
+   * so branch-swap/churn patterns pay one stale-suffix scan instead of one scan
+   * per newly introduced dependency.
    */
+  if (suffixStartEdge !== null) {
+    if (insertAfterEdge === null) {
+      consumer.firstIn = null;
+      consumer.lastIn = null;
+    } else {
+      insertAfterEdge.nextIn = null;
+      consumer.lastIn = insertAfterEdge;
+    }
+
+    suffixStartEdge.prevIn = null;
+    unlinkDetachedIncomingEdgeSequence(suffixStartEdge);
+  }
+
   return linkEdge(producer, consumer, insertAfterEdge, producerVersion);
 }
 
