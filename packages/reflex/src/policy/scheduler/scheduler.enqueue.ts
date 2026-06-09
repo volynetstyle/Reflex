@@ -1,4 +1,7 @@
-import { Scheduled, type ReactiveNode } from "@volynets/reflex-runtime/internal";
+import {
+  Scheduled,
+  type ReactiveNode,
+} from "@volynets/reflex-runtime/internal";
 import type { EffectNode, WatcherQueue } from "./scheduler.types";
 
 /**
@@ -7,7 +10,7 @@ import type { EffectNode, WatcherQueue } from "./scheduler.types";
  * This is a low-level helper used by scheduler integrations and tests to set
  * the runtime's scheduled flag on a watcher node.
  */
-// 
+//
 export function effectScheduled(node: EffectNode) {
   node.state = node.state | Scheduled;
 }
@@ -18,13 +21,13 @@ export function effectScheduled(node: EffectNode) {
  * This is a low-level helper used by scheduler integrations and tests to mark
  * a watcher as no longer queued for execution.
  */
-// 
+//
 export function effectUnscheduled(node: EffectNode) {
   node.state = node.state & ~Scheduled;
 }
 
-// 
-// STRAIGHT 
+//
+// STRAIGHT
 export function tryEnqueue(queue: WatcherQueue, node: ReactiveNode): boolean {
   const state = node.state;
   if ((state & Scheduled) !== 0) {
@@ -35,11 +38,12 @@ export function tryEnqueue(queue: WatcherQueue, node: ReactiveNode): boolean {
   let ring = queue.ring;
   const head = queue.head;
   let tail = queue.tail;
+  const rl = ring.length;
+  const size = tail - head;
 
-  if (tail - head === ring.length) {
-    const oldCapacity = ring.length;
+  if (size === rl) {
+    const oldCapacity = rl;
     const oldMask = queue.mask;
-    const size = tail - head;
     const nextCapacity = oldCapacity << 1;
     const next = new Array<EffectNode | undefined>(nextCapacity).fill(
       undefined,

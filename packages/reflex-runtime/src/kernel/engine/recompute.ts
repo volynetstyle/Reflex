@@ -21,7 +21,7 @@ import {
 } from "../context";
 import { compare } from "../../protocol/utils/compare";
 //import { observeGraphReductionRun } from "../reduction";
-import { cleanupStaleSources } from "./tracking";
+import { cleanupUnvisitedSources } from "./tracking";
 
 export function recompute(node: ReactiveNode): boolean {
   // #region DEV validation
@@ -123,7 +123,7 @@ export function recompute(node: ReactiveNode): boolean {
    * detached from the incoming dependency list.
    */
   if (node.tailIn !== node.lastIn) {
-    cleanupStaleSources(node);
+    cleanupUnvisitedSources(node);
   }
 
   // #endregion

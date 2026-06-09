@@ -7,7 +7,7 @@ import {
   devRecordComputeStart,
   devRecordRecompute,
 } from "../../dev";
-import { cleanupStaleSources } from "../../engine";
+import { cleanupUnvisitedSources } from "../../engine";
 import {
   nextTrackingEpoch,
   currentConsumer,
@@ -66,7 +66,7 @@ export function advance(node: ReactiveNode): boolean {
 
   if (node.tailIn !== node.lastIn) {
     node.state = computingState & ~Computing;
-    cleanupStaleSources(node);
+    cleanupUnvisitedSources(node);
   }
 
   if (__DEV__) devRecordComputeFinish(node, next, defaultContext);

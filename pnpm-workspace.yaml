@@ -1,4 +1,5 @@
 packages:
+- 'lab/*'
 - 'packages/*'
 - "packages/@reflex/*"
 - "plugins/@vite/*"

@@ -4,7 +4,7 @@ import {
   currentConsumer,
   trackingEpoch,
 } from "../kernel/context";
-import { trackReadResolved } from "../kernel/engine/tracking";
+import { resolveTrackedRead } from "../kernel/engine/tracking";
 import { Changed, DIRTY_STATE, Visited } from "../kernel/shape";
 import {
   devAssertConsumerCanStabilize,
@@ -38,7 +38,7 @@ export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
 
   if (currentConsumer === null) return value;
 
-  trackReadResolved(node, currentConsumer, trackingEpoch, true);
+  resolveTrackedRead(node, currentConsumer, trackingEpoch, true);
 
   if (__DEV__) {
     devRecordReadConsumer(
@@ -145,7 +145,7 @@ export function readConsumer<T>(node: ReactiveNode<T>, mode: number = LAZY): T {
 
   const consumer = currentConsumer;
   if (consumer !== null) {
-    trackReadResolved(node, consumer, trackingEpoch, true);
+    resolveTrackedRead(node, consumer, trackingEpoch, true);
   }
 
   if (__DEV__) {

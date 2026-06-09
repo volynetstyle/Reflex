@@ -14,7 +14,7 @@ import {
 } from "../context";
 import type { ReactiveEdge } from "../shape";
 
-function hasTrackedPrefixEdge(
+function hasProducerInTrackedPrefix(
   producer: ReactiveNode,
   cursorEdge: ReactiveEdge,
 ): boolean {
@@ -29,7 +29,15 @@ function hasTrackedPrefixEdge(
   return false;
 }
 
-function trackReadSlowPath(
+export const Failed = 1 << 0;
+export const CursorHit = 1 << 1;
+export const NextHit = 1 << 2;
+export const Append = 1 << 3;
+export const LocalReorder = 1 << 4;
+export const PrefixDuplicate = 1 << 5;
+export const Fallback = 1 << 6;
+
+function resolveTrackedReadFallback(
   producer: ReactiveNode,
   consumer: ReactiveNode,
   producerVersion: number,
@@ -70,10 +78,37 @@ function trackReadSlowPath(
 }
 
 /**
- * ```
+ *
  * Layered optimistic for tracking read-order reconciliation
  *
- * trackReadResolved
+ * Resolve one tracked producer read against the consumer's incoming edge list.
+ *
+ * This function is a layered dependency-shape resolver:
+ *
+ * 1. Static order:
+ *    - cursor hit
+ *    - next-edge hit
+ *    - first-edge hit
+ *
+ * 2. Append-only growth:
+ *    - append after cursor
+ *
+ * 3. Bounded local reorder:
+ *    - one-hop lookahead
+ *    - two-hop lookahead
+ *    - move last edge to cursor/front
+ *
+ * 4. Duplicate trace:
+ *    - producer already exists in the tracked prefix
+ *
+ * 5. Dynamic reconciliation:
+ *    - delegate to readTrackingStrategy
+ *
+ * The reached tier is useful for profiling and later statification:
+ * stable consumers can be promoted to cheaper tracking modes, while
+ * unstable consumers remain on the dynamic policy.
+ *
+ * resolveTrackedRead
  * ├─ optimistic O(1) cursor/next/lookahead/last checks
  * ├─ small local linked-list reorder
  * ├─ duplicate guards
@@ -82,14 +117,13 @@ function trackReadSlowPath(
  *       └─ readTrackingStrategy
  *             └─ reuseIncomingEdgeOrLink
  * ```
- *
  * @param producer
  * @param consumer
  * @param producerVersion
  * @param allowSlowPath
  * @returns
  */
-export function trackReadResolved(
+export function resolveTrackedRead(
   producer: ReactiveNode,
   consumer: ReactiveNode,
   producerVersion: number,
@@ -148,7 +182,7 @@ export function trackReadResolved(
        * Avoid creating a duplicate edge when the producer was already read
        * earlier in the current tracking pass.
        */
-      if (hasTrackedPrefixEdge(producer, cursorEdge)) {
+      if (hasProducerInTrackedPrefix(producer, cursorEdge)) {
         if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
         return true;
       }
@@ -276,7 +310,7 @@ export function trackReadResolved(
      * The producer may already exist before the cursor.
      * In that case, this read is already represented by the current graph.
      */
-    if (hasTrackedPrefixEdge(producer, cursorEdge)) {
+    if (hasProducerInTrackedPrefix(producer, cursorEdge)) {
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
@@ -350,7 +384,7 @@ export function trackReadResolved(
    * Delegate to the general dependency reconciliation logic.
    */
   if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
-  trackReadSlowPath(producer, consumer, producerVersion, cursorEdge);
+  resolveTrackedReadFallback(producer, consumer, producerVersion, cursorEdge);
   return true;
 }
 
@@ -363,7 +397,7 @@ export function trackRead(
   consumer = currentConsumer,
 ): void {
   if (consumer === null) return;
-  trackReadResolved(source, consumer, trackingEpoch, true);
+  resolveTrackedRead(source, consumer, trackingEpoch, true);
 }
 
 /**
@@ -371,15 +405,14 @@ export function trackRead(
  *
  * Everything after tailIn belongs to the old dependency list and is unlinked.
  */
-export function cleanupStaleSources(node: ReactiveNode): void {
+export function cleanupUnvisitedSources(node: ReactiveNode): void {
   const tail = node.tailIn;
   const staleHead = tail === null ? node.firstIn : tail.nextIn;
 
   if (staleHead === null) return;
 
   if (tail === null) {
-    node.firstIn = null;
-    node.lastIn = null;
+    node.firstIn = node.lastIn = null;
   } else {
     tail.nextIn = null;
     node.lastIn = tail;

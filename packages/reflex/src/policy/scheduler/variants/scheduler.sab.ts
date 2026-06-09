@@ -1,12 +1,6 @@
-import {
-  Scheduled,
-  type ReactiveNode,
-} from "@volynets/reflex-runtime/internal";
+import {} from "@volynets/reflex-runtime/internal";
 import { EffectSchedulerMode } from "../scheduler.constants";
-import {
-  hasPendingEffects,
-  isContextSettled,
-} from "../scheduler.context";
+import { hasPendingEffects, isContextSettled } from "../scheduler.context";
 import {
   createSchedulerCore,
   enterSchedulerBatch,
@@ -17,6 +11,7 @@ import { tryEnqueue } from "../scheduler.enqueue";
 import { createSchedulerInstance } from "../scheduler.instance";
 import type { EffectScheduler } from "../scheduler.types";
 import { noopNotifySettled } from "../scheduler.types";
+import type { ReactiveNode } from "@volynets/reflex-runtime";
 
 export function createSabScheduler(): EffectScheduler {
   const core = createSchedulerCore();
@@ -29,7 +24,6 @@ export function createSabScheduler(): EffectScheduler {
       return fn();
     } finally {
       if (
-        
         leaveSchedulerBatch(core) &&
         hasPendingEffects(core) &&
         isContextSettled()

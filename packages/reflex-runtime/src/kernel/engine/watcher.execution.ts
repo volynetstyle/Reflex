@@ -1,18 +1,18 @@
 import type { ReactiveNode } from "../shape";
 import {
   clearNodeComputing,
-  GraphReductionEnabled,
+  //GraphReductionEnabled,
   markNodeComputing,
 } from "../shape";
-import { cleanupStaleSources } from "./tracking";
+import { cleanupUnvisitedSources } from "./tracking";
 import {
   currentConsumer,
   nextTrackingEpoch,
   defaultContext,
-  graphReductionPolicy,
+  //graphReductionPolicy,
   setCurrentConsumer,
 } from "../context";
-import { observeGraphReductionRun } from "../reduction";
+//import { observeGraphReductionRun } from "../reduction";
 import {
   devAssertExecutableNode,
   devRecordComputeError,
@@ -52,15 +52,15 @@ export function executeKnownNodeComputation(
   clearNodeComputing(node);
 
   if (node.tailIn !== node.lastIn) {
-    cleanupStaleSources(node);
+    cleanupUnvisitedSources(node);
   }
 
-  const reductionEnabled =
-    graphReductionPolicy.enabled || (node.state & GraphReductionEnabled) !== 0;
+  // const reductionEnabled =
+  //   graphReductionPolicy.enabled || (node.state & GraphReductionEnabled) !== 0;
 
-  if (reductionEnabled) {
-    observeGraphReductionRun(node, graphReductionPolicy, reductionEnabled);
-  }
+  // if (reductionEnabled) {
+  //   observeGraphReductionRun(node, graphReductionPolicy, reductionEnabled);
+  // }
 
   if (__DEV__) devRecordComputeFinish(node, result, defaultContext);
 

@@ -16,7 +16,6 @@ export function flushSchedulerQueue(core: SchedulerCore): void {
   if (queue.head === queue.tail) return;
 
   core.phase = Flushing;
-
   let thrown: unknown = NO_THROW;
 
   try {
@@ -35,18 +34,13 @@ export function flushSchedulerQueue(core: SchedulerCore): void {
 }
 
 export function enterSchedulerBatch(core: SchedulerCore): void {
-  ++core.batchDepth;
-
-  if (core.phase === Idle) {
+  if (++core.batchDepth === 1 && core.phase !== Flushing) {
     core.phase = Batching;
   }
 }
 
 export function leaveSchedulerBatch(core: SchedulerCore): boolean {
-  const batchDepth = core.batchDepth - 1;
-  core.batchDepth = batchDepth;
-
-  if (batchDepth !== 0) {
+  if (--core.batchDepth !== 0) {
     return false;
   }
 

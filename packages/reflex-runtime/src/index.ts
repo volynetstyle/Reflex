@@ -17,6 +17,10 @@ export {
   type RuntimeDebugSessionSnapshot,
 } from "./debug/debug.protocol";
 
+export type {
+  ReactiveNode,
+} from "./kernel"
+
 export {
   readProducer,
   writeProducer,
