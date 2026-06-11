@@ -9,18 +9,21 @@ import {
 } from "../../dev";
 import { cleanupUnvisitedSources } from "../../engine";
 import {
-  nextTrackingEpoch,
-  currentConsumer,
-  setCurrentConsumer,
+  beginConsumerTracking,
+  restoreConsumer,
   defaultContext,
 } from "../../context";
 import {
   Computing,
   DIRTY_STATE,
   Visited,
+  type ReactiveEdge,
   type ReactiveNode,
 } from "../../shape";
-import { push_iterator_once } from "../first/push_iterator_once";
+import {
+  push_iterator_once,
+  push_iterator_once_skipping,
+} from "../first/push_iterator_once";
 
 /**
  * Advance to next value
@@ -31,7 +34,10 @@ import { push_iterator_once } from "../first/push_iterator_once";
  * side-fanout that existed before recompute.
  */
 
-export function advance(node: ReactiveNode): boolean {
+export function advance(
+  node: ReactiveNode,
+  skipOutEdge: ReactiveEdge | null = null,
+): boolean {
   if (__DEV__) devAssertExecutableNode(node);
 
   const compute = node.compute as NonNullable<typeof node.compute>;
@@ -40,10 +46,7 @@ export function advance(node: ReactiveNode): boolean {
   const computingState = (node.state & ~Visited) | Computing;
   node.state = computingState;
 
-  nextTrackingEpoch();
-
-  const prevActive = currentConsumer;
-  setCurrentConsumer(node);
+  const prevActive = beginConsumerTracking(node);
 
   if (__DEV__) devRecordComputeStart(node, defaultContext);
 
@@ -52,7 +55,7 @@ export function advance(node: ReactiveNode): boolean {
   try {
     next = compute();
   } catch (error) {
-    setCurrentConsumer(prevActive);
+    restoreConsumer(prevActive);
     node.state = computingState & ~Computing;
 
     if (__DEV__) devRecordComputeError(node, error, defaultContext);
@@ -60,7 +63,7 @@ export function advance(node: ReactiveNode): boolean {
     throw error;
   }
 
-  setCurrentConsumer(prevActive);
+  restoreConsumer(prevActive);
 
   const resolvedState = computingState & ~(Computing | DIRTY_STATE);
 
@@ -86,7 +89,13 @@ export function advance(node: ReactiveNode): boolean {
 
   if (firstOut !== null) {
     if (__DEV__) devAssertRefreshEdge(node, firstOut);
-    push_iterator_once(firstOut);
+    if (skipOutEdge !== null) {
+      if (firstOut !== skipOutEdge || skipOutEdge.nextOut !== null) {
+        push_iterator_once_skipping(firstOut, skipOutEdge);
+      }
+    } else {
+      push_iterator_once(firstOut);
+    }
   }
 
   return true;

@@ -47,7 +47,7 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
           devAssertRefreshEdge(dep, edge);
         }
 
-        changed = advance(dep);
+        changed = advance(dep, edge);
       } else if ((depState & Invalid) !== 0) {
         const firstIn = dep.firstIn;
 
@@ -70,7 +70,7 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
           devAssertRefreshEdge(dep, edge);
         }
 
-        changed = advance(dep);
+        changed = advance(dep, edge);
       } else {
         changed = false;
       }
@@ -95,7 +95,7 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
         high = top;
 
         const parentEdge = stack[top]!;
-        changed = advance(node);
+        changed = advance(node, parentEdge);
         node = parentEdge.to;
 
         if (!changed) {

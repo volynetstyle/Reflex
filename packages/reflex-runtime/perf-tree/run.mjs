@@ -393,6 +393,60 @@ const benches = [
     },
   },
   {
+    id: "graph.pull.branch.32x8.4sources",
+    label: "32x8 - 4 sources",
+    group: "graph",
+    parentId: "graph.pull.branch",
+    run() {
+      return withRuntime(() => {
+        const sources = Array.from({ length: 4 }, (_, index) =>
+          producer(index),
+        );
+        const sinks = [];
+
+        for (let branch = 0; branch < 32; branch += 1) {
+          let node = consumer(() =>
+            sources.reduce((sum, source) => sum + readProducer(source), 0),
+          );
+
+          for (let depth = 1; depth < 8; depth += 1) {
+            const prev = node;
+            node = consumer(() => readConsumer(prev) + 1);
+          }
+
+          readConsumer(node);
+          sinks.push(node);
+        }
+
+        let writes = 1;
+        const iterations = 1_000;
+        const measured = measure((i) => {
+          writeProducer(sources[i & 3], writes++);
+
+          let value = 0;
+          for (const sink of sinks) value += readConsumer(sink);
+
+          return value;
+        }, iterations);
+
+        return result(
+          this.id,
+          this.label,
+          this.group,
+          this.parentId,
+          measured,
+          {
+            writeCount: iterations * measured.samples,
+            sinkReadCount: iterations * measured.samples * sinks.length,
+            branchCount: sinks.length,
+            branchDepth: 8,
+            sourceCount: sources.length,
+          },
+        );
+      });
+    },
+  },
+  {
     id: "api.effect.flush.1kWatchers",
     label: "1kWatchers",
     group: "api",

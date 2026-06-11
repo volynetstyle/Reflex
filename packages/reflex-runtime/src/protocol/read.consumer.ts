@@ -36,18 +36,14 @@ export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
       ? (node.payload as T)
       : stabilizeDirtyConsumer<T>(node, state);
 
-  if (currentConsumer === null) return value;
+  const consumer = currentConsumer;
 
-  resolveTrackedRead(node, currentConsumer, trackingEpoch, true);
+  if (consumer === null) return value;
+
+  resolveTrackedRead(node, consumer, trackingEpoch, true);
 
   if (__DEV__) {
-    devRecordReadConsumer(
-      node,
-      "lazy",
-      value,
-      defaultContext,
-      currentConsumer ?? undefined,
-    );
+    devRecordReadConsumer(node, "lazy", value, defaultContext, consumer);
   }
 
   return value;

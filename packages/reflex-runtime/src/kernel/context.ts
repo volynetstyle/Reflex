@@ -175,6 +175,17 @@ export function nextTrackingEpoch(): number {
   return (trackingEpoch = (trackingEpoch + 1) >>> 0 || 1);
 }
 
+export function beginConsumerTracking(node: ReactiveNode): ReactiveNode | null {
+  const previous = currentConsumer;
+  trackingEpoch = (trackingEpoch + 1) >>> 0 || 1;
+  currentConsumer = node;
+  return previous;
+}
+
+export function restoreConsumer(node: ReactiveNode | null): void {
+  currentConsumer = node;
+}
+
 export function setTrackingEpoch(epoch: number): void {
   if (((epoch - trackingEpoch) | 0) > 0) trackingEpoch = epoch;
 }
@@ -183,22 +194,22 @@ export function isNewer(a: number, b: number): boolean {
   return ((a - b) | 0) > 0;
 }
 
-// 
+//
 export function getCurrentConsumer(): ReactiveNode | null {
   return currentConsumer;
 }
 
-// 
+//
 export function setCurrentConsumer(node: ReactiveNode | null): void {
   currentConsumer = node;
 }
 
-// 
+//
 export function getPropagationScopeDepth(): number {
   return propagationScopeDepth;
 }
 
-// 
+//
 export function setPropagationScopeDepth(depth: number): void {
   propagationScopeDepth = depth;
 }
@@ -266,7 +277,10 @@ export function getReactiveSettledHook(): ReactiveSettledHook {
   return reactiveSettledHook;
 }
 
-function ownHook<T>(hooks: RuntimeHooks, name: keyof RuntimeHooks): T | undefined {
+function ownHook<T>(
+  hooks: RuntimeHooks,
+  name: keyof RuntimeHooks,
+): T | undefined {
   return Object.prototype.hasOwnProperty.call(hooks, name)
     ? asHook<T>(hooks[name])
     : undefined;
