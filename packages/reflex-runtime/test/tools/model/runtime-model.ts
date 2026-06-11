@@ -88,7 +88,7 @@ export function expectRuntimeSectionHealthy(
 }
 
 export function runPatternScenario(scenario: PatternScenario): void {
-  const pool = scenario.deps * 2;
+  const pool = Math.max(scenario.deps * 2, inferPoolSize(scenario.patterns));
   const model = createPatternModel(scenario.patterns, pool);
   const steps = scenario.steps ?? scenario.patterns.length;
 
@@ -129,6 +129,60 @@ export function mixedChurnPatterns(deps: number, steps = deps): number[][] {
     );
 
     return interleave(stable, moving, step);
+  });
+}
+
+export function prefixSuffixChaoticPatterns(
+  deps: number,
+  steps = deps,
+): number[][] {
+  return Array.from({ length: steps }, (_, step) => {
+    const pivot = 1 + ((step * 37) % (deps - 1));
+    const prefix = range(pivot).reverse();
+    const suffix = range(deps - pivot, pivot);
+
+    return step % 2 === 0
+      ? interleave(prefix, suffix, step)
+      : interleave(suffix.reverse(), prefix, step);
+  });
+}
+
+export function oscillateRotateBranchPatterns(
+  deps: number,
+  steps = deps,
+): number[][] {
+  const half = Math.floor(deps / 2);
+
+  return Array.from({ length: steps }, (_, step) => {
+    if (step % 2 === 0) {
+      return Array.from({ length: deps }, (__, index) => (index + step) % deps);
+    }
+
+    return [
+      ...range(half),
+      ...range(deps - half, deps + ((step % 4) + 1) * half),
+    ];
+  });
+}
+
+export function oscillateRotateSwapPatterns(
+  deps: number,
+  steps = deps,
+): number[][] {
+  return Array.from({ length: steps }, (_, step) => {
+    if (step % 2 === 0) {
+      return Array.from({ length: deps }, (__, index) => (index + step) % deps);
+    }
+
+    const pattern = range(deps);
+
+    for (let swap = 0; swap < 4; swap += 1) {
+      const first = (step * 19 + swap * 23) % deps;
+      const second = (first + 1 + swap) % deps;
+      [pattern[first], pattern[second]] = [pattern[second]!, pattern[first]!];
+    }
+
+    return pattern;
   });
 }
 
@@ -174,4 +228,20 @@ function sumIndexes(pattern: number[]): number {
 
 function uniqueIndexes(pattern: number[]): number[] {
   return [...new Set(pattern)];
+}
+
+function range(length: number, start = 0): number[] {
+  return Array.from({ length }, (_, index) => start + index);
+}
+
+function inferPoolSize(patterns: number[][]): number {
+  let max = 0;
+
+  for (const pattern of patterns) {
+    for (const sourceIndex of pattern) {
+      if (sourceIndex > max) max = sourceIndex;
+    }
+  }
+
+  return max + 1;
 }

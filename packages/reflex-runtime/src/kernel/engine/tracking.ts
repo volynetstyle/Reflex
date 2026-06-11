@@ -16,14 +16,29 @@ import type { ReactiveEdge } from "../shape";
 
 function hasProducerInTrackedPrefix(
   producer: ReactiveNode,
+  consumer: ReactiveNode,
   cursorEdge: ReactiveEdge,
+  producerVersion: number,
 ): boolean {
+  let scannedPrefixEdges = 0;
+
   for (
     let prefixEdge = cursorEdge.prevIn;
     prefixEdge !== null;
     prefixEdge = prefixEdge.prevIn
   ) {
     if (prefixEdge.from === producer) return true;
+
+    scannedPrefixEdges += 1;
+    if (scannedPrefixEdges < 32 || producerVersion === 0) continue;
+
+    for (let edge = producer.firstOut; edge !== null; edge = edge.nextOut) {
+      if (edge.to === consumer && edge.version === producerVersion) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   return false;
@@ -194,7 +209,14 @@ export function resolveTrackedRead(
        * Avoid creating a duplicate edge when the producer was already read
        * earlier in the current tracking pass.
        */
-      if (hasProducerInTrackedPrefix(producer, cursorEdge)) {
+      if (
+        hasProducerInTrackedPrefix(
+          producer,
+          consumer,
+          cursorEdge,
+          producerVersion,
+        )
+      ) {
         if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
         return true;
       }
@@ -322,7 +344,14 @@ export function resolveTrackedRead(
      * The producer may already exist before the cursor.
      * In that case, this read is already represented by the current graph.
      */
-    if (hasProducerInTrackedPrefix(producer, cursorEdge)) {
+    if (
+      hasProducerInTrackedPrefix(
+        producer,
+        consumer,
+        cursorEdge,
+        producerVersion,
+      )
+    ) {
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }

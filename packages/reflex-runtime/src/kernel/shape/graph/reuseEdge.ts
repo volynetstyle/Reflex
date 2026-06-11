@@ -12,6 +12,56 @@ import { unlinkDetachedIncomingEdgeSequence } from "./sweepEdges";
 
 const EAGER_STALE_SUFFIX_CLEANUP_MIN = 32;
 
+function moveIncomingEdgeToPosition(
+  consumer: ReactiveNode,
+  edge: ReactiveEdge,
+  insertAfterEdge: ReactiveEdge | null,
+): void {
+  if (edge.prevIn === insertAfterEdge) return;
+
+  if (insertAfterEdge === null) {
+    if (edge.nextIn === null) {
+      moveLastIncomingEdgeToFrontUnchecked(consumer, edge);
+    } else {
+      moveNonHeadIncomingEdgeToFrontUnchecked(consumer, edge);
+    }
+  } else if (edge.prevIn === null) {
+    moveIncomingEdgeAfterUnchecked(consumer, edge, insertAfterEdge);
+  } else if (edge.nextIn === null) {
+    moveLastIncomingEdgeAfterEdgeUnchecked(consumer, edge, insertAfterEdge);
+  } else {
+    moveMiddleIncomingEdgeAfterEdgeUnchecked(consumer, edge, insertAfterEdge);
+  }
+}
+
+function findOutgoingEdgeToConsumer(
+  producer: ReactiveNode,
+  consumer: ReactiveNode,
+): ReactiveEdge | null {
+  for (let edge = producer.firstOut; edge !== null; edge = edge.nextOut) {
+    if (edge.to === consumer) return edge;
+  }
+
+  return null;
+}
+
+function detachIncomingSuffix(
+  consumer: ReactiveNode,
+  insertAfterEdge: ReactiveEdge | null,
+  suffixStartEdge: ReactiveEdge,
+): void {
+  if (insertAfterEdge === null) {
+    consumer.firstIn = null;
+    consumer.lastIn = null;
+  } else {
+    insertAfterEdge.nextIn = null;
+    consumer.lastIn = insertAfterEdge;
+  }
+
+  suffixStartEdge.prevIn = null;
+  unlinkDetachedIncomingEdgeSequence(suffixStartEdge);
+}
+
 /**
  * Resolve a producer -> consumer incoming edge relative to a known insertion
  * position.
@@ -67,7 +117,28 @@ export function reuseIncomingEdgeFromSuffixOrLink(
   ) {
     scannedSuffixEdges += 1;
 
-    if (candidateEdge.from !== producer) continue;
+    if (candidateEdge.from !== producer) {
+      if (
+        suffixStartEdge !== null &&
+        producerVersion !== 0 &&
+        scannedSuffixEdges === EAGER_STALE_SUFFIX_CLEANUP_MIN
+      ) {
+        const producerEdge = findOutgoingEdgeToConsumer(producer, consumer);
+
+        if (producerEdge === null) {
+          detachIncomingSuffix(consumer, insertAfterEdge, suffixStartEdge);
+          return linkEdge(producer, consumer, insertAfterEdge, producerVersion);
+        }
+
+        if (producerEdge.version !== producerVersion) {
+          moveIncomingEdgeToPosition(consumer, producerEdge, insertAfterEdge);
+          producerEdge.version = producerVersion;
+          return producerEdge;
+        }
+      }
+
+      continue;
+    }
 
     /**
      * Reuse the existing edge.
@@ -75,33 +146,7 @@ export function reuseIncomingEdgeFromSuffixOrLink(
      * If it is not already after the requested insertion point,
      * move it into the current tracked order.
      */
-    if (candidateEdge.prevIn !== insertAfterEdge) {
-      if (insertAfterEdge === null) {
-        if (candidateEdge.nextIn === null) {
-          moveLastIncomingEdgeToFrontUnchecked(consumer, candidateEdge);
-        } else {
-          moveNonHeadIncomingEdgeToFrontUnchecked(consumer, candidateEdge);
-        }
-      } else if (candidateEdge.prevIn === null) {
-        moveIncomingEdgeAfterUnchecked(
-          consumer,
-          candidateEdge,
-          insertAfterEdge,
-        );
-      } else if (candidateEdge.nextIn === null) {
-        moveLastIncomingEdgeAfterEdgeUnchecked(
-          consumer,
-          candidateEdge,
-          insertAfterEdge,
-        );
-      } else {
-        moveMiddleIncomingEdgeAfterEdgeUnchecked(
-          consumer,
-          candidateEdge,
-          insertAfterEdge,
-        );
-      }
-    }
+    moveIncomingEdgeToPosition(consumer, candidateEdge, insertAfterEdge);
 
     candidateEdge.version = producerVersion;
     return candidateEdge;
@@ -120,16 +165,7 @@ export function reuseIncomingEdgeFromSuffixOrLink(
     suffixStartEdge !== null &&
     scannedSuffixEdges >= EAGER_STALE_SUFFIX_CLEANUP_MIN
   ) {
-    if (insertAfterEdge === null) {
-      consumer.firstIn = null;
-      consumer.lastIn = null;
-    } else {
-      insertAfterEdge.nextIn = null;
-      consumer.lastIn = insertAfterEdge;
-    }
-
-    suffixStartEdge.prevIn = null;
-    unlinkDetachedIncomingEdgeSequence(suffixStartEdge);
+    detachIncomingSuffix(consumer, insertAfterEdge, suffixStartEdge);
   }
 
   return linkEdge(producer, consumer, insertAfterEdge, producerVersion);

@@ -19,6 +19,9 @@ import {
   expectSubscriber,
   linkEdge,
   mixedChurnPatterns,
+  oscillateRotateBranchPatterns,
+  oscillateRotateSwapPatterns,
+  prefixSuffixChaoticPatterns,
   readConsumer,
   readProducer,
   resetRuntime,
@@ -116,6 +119,24 @@ describe("Reactive runtime - section model coverage", () => {
         deps: 40,
         patterns: mixedChurnPatterns(40, 4),
         steps: 4,
+      },
+      {
+        name: "chaotic prefix/suffix retained dependency set",
+        deps: 40,
+        patterns: prefixSuffixChaoticPatterns(40, 8),
+        steps: 8,
+      },
+      {
+        name: "oscillating rotate and branch dependency set",
+        deps: 40,
+        patterns: oscillateRotateBranchPatterns(40, 8),
+        steps: 8,
+      },
+      {
+        name: "oscillating rotate and local swap order",
+        deps: 40,
+        patterns: oscillateRotateSwapPatterns(40, 8),
+        steps: 8,
       },
     ];
 
