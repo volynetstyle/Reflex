@@ -18,11 +18,9 @@ export function linkEdge(
 
   edge.prevOut = prevOut;
 
-  if (prevOut) {
-    prevOut.nextOut = edge;
-  } else {
-    from.firstOut = edge;
-  }
+  if (prevOut) prevOut.nextOut = edge;
+  else from.firstOut = edge;
+
   from.lastOut = edge;
 
   attachIncomingEdgeAfter(to, edge, after);

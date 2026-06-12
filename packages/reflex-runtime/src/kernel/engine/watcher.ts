@@ -24,7 +24,6 @@ import {
 } from "../dev";
 
 type WatcherCleanup = () => void;
-type NodeCompute = NonNullable<ReactiveNode["compute"]>;
 const FORCE_RECOMPUTE_STATE = Changed | Visited;
 
 function runCleanup(cleanup: WatcherCleanup): void {
@@ -44,14 +43,19 @@ function runCleanup(cleanup: WatcherCleanup): void {
   }
 }
 
-function shouldRunDirtyWatcher(node: ReactiveNode, state: number): boolean {
+function shouldRunDirtyWatcher(
+  node: ReactiveNode<WatcherCleanup | undefined>,
+  state: number,
+): boolean {
   if ((state & FORCE_RECOMPUTE_STATE) !== 0) return true;
 
   const edge = node.firstIn;
   return edge !== null && pull_iterator(node, edge);
 }
 
-export function runWatcher(node: ReactiveNode): void {
+export function runWatcher(
+  node: ReactiveNode<WatcherCleanup | undefined>,
+): void {
   const state = node.state;
 
   if ((state & DIRTY_STATE) === 0) {
@@ -65,17 +69,9 @@ export function runWatcher(node: ReactiveNode): void {
     return;
   }
 
-  const compute = node.compute as NodeCompute | null;
-
-  if (compute === null) {
-    clearDirtyState(node);
-    if (__DEV__) devRecordWatcherFinish(node, false, undefined, defaultContext);
-    return;
-  }
-
+  const compute = node.compute;
   const prevPayload = node.payload;
-  const prevCleanup =
-    typeof prevPayload === "function" ? (prevPayload as WatcherCleanup) : null;
+  const prevCleanup = typeof prevPayload === "function" ? prevPayload : null;
 
   if (__DEV__)
     devRecordWatcherStart(node, prevCleanup !== null, defaultContext);

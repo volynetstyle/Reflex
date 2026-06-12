@@ -1,4 +1,4 @@
-import type { ReactiveNode } from "../shape";
+import type { ComputeFn, ReactiveNode } from "../shape";
 import {
   clearNodeComputing,
   //GraphReductionEnabled,
@@ -20,11 +20,9 @@ import {
   devRecordComputeStart,
 } from "../dev";
 
-type NodeCompute = NonNullable<ReactiveNode["compute"]>;
-
 export function executeKnownNodeComputation(
   node: ReactiveNode,
-  compute: NodeCompute,
+  compute: ComputeFn<unknown>,
 ): unknown {
   const prevActive = currentConsumer;
 
@@ -38,7 +36,7 @@ export function executeKnownNodeComputation(
   let result: unknown;
 
   try {
-    result = compute();
+    result = compute!();
   } catch (error) {
     setCurrentConsumer(prevActive);
     clearNodeComputing(node);
@@ -70,5 +68,5 @@ export function executeKnownNodeComputation(
 export function executeNodeComputation(node: ReactiveNode): unknown {
   if (__DEV__) devAssertExecutableNode(node);
 
-  return executeKnownNodeComputation(node, node.compute as NodeCompute);
+  return executeKnownNodeComputation(node, node.compute);
 }

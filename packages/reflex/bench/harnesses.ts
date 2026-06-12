@@ -9,7 +9,7 @@ import {
 import * as AlienSignalsModule from "../../reflex-runtime/node_modules/alien-signals/esm/index.mjs";
 import { createRuntime, batch, flush, effect, memo, signal } from "../dist/esm";
 
-createRuntime({ effectStrategy: "sab" });
+createRuntime({ effectStrategy: "flush" });
 
 export class ReflexHarness implements BenchHarness {
   readonly metrics = new HarnessMetrics();

@@ -92,6 +92,51 @@ function resolveTrackedReadFallback(
   );
 }
 
+function moveTrackedIncomingEdgeAfterCursor(
+  consumer: ReactiveNode,
+  cursorEdge: ReactiveEdge,
+  movedEdge: ReactiveEdge,
+  producer: ReactiveNode,
+  producerVersion: number,
+): true {
+  const previousMovedEdge = movedEdge.prevIn;
+  const afterMovedEdge = movedEdge.nextIn;
+  const expectedNextEdge = cursorEdge.nextIn;
+
+  if (
+    previousMovedEdge === null ||
+    expectedNextEdge === null ||
+    expectedNextEdge === movedEdge
+  ) {
+    return true;
+  }
+
+  previousMovedEdge.nextIn = afterMovedEdge;
+
+  if (afterMovedEdge !== null) {
+    afterMovedEdge.prevIn = previousMovedEdge;
+  } else {
+    consumer.lastIn = previousMovedEdge;
+  }
+
+  cursorEdge.nextIn = movedEdge;
+  movedEdge.prevIn = cursorEdge;
+
+  movedEdge.nextIn = expectedNextEdge;
+  expectedNextEdge.prevIn = movedEdge;
+
+  movedEdge.version = producerVersion;
+  consumer.tailIn = movedEdge;
+
+  nodeStructureIncrement(consumer);
+
+  if (__DEV__) {
+    devRecordTrackRead(defaultContext, consumer, producer);
+  }
+
+  return true;
+}
+
 /**
  *
  * Layered optimistic for tracking read-order reconciliation
@@ -251,68 +296,38 @@ export function resolveTrackedRead(
      */
     const lookahead1Edge = expectedNextEdge.nextIn;
 
-    if (lookahead1Edge !== null && lookahead1Edge.from === producer) {
-      const afterMovedEdge = lookahead1Edge.nextIn;
-
-      expectedNextEdge.nextIn = afterMovedEdge;
-
-      if (afterMovedEdge !== null) {
-        afterMovedEdge.prevIn = expectedNextEdge;
-      } else {
-        consumer.lastIn = expectedNextEdge;
+    if (lookahead1Edge !== null) {
+      if (lookahead1Edge.from === producer) {
+        return moveTrackedIncomingEdgeAfterCursor(
+          consumer,
+          cursorEdge,
+          lookahead1Edge,
+          producer,
+          producerVersion,
+        );
       }
 
-      cursorEdge.nextIn = lookahead1Edge;
-      lookahead1Edge.prevIn = cursorEdge;
-
-      lookahead1Edge.nextIn = expectedNextEdge;
-      expectedNextEdge.prevIn = lookahead1Edge;
-
-      lookahead1Edge.version = producerVersion;
-      consumer.tailIn = lookahead1Edge;
-
-      nodeStructureIncrement(consumer);
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
-      return true;
-    }
-
-    /**
-     * L4: Two-hop lookahead reorder.
-     *
-     * The producer is two edges away from the expected next position.
-     *
-     * Before:
-     *   cursor -> expectedNext -> lookahead1 -> lookahead2
-     *
-     * After:
-     *   cursor -> lookahead2 -> expectedNext -> lookahead1
-     */
-    if (lookahead1Edge !== null) {
+      /**
+       * L4: Two-hop lookahead reorder.
+       *
+       * The producer is two edges away from the expected next position.
+       *
+       * Before:
+       *   cursor -> expectedNext -> lookahead1 -> lookahead2
+       *
+       * After:
+       *   cursor -> lookahead2 -> expectedNext -> lookahead1
+       */
       const lookahead2Edge = lookahead1Edge.nextIn;
 
       if (lookahead2Edge !== null && lookahead2Edge.from === producer) {
-        const afterMovedEdge = lookahead2Edge.nextIn;
-
-        lookahead1Edge.nextIn = afterMovedEdge;
-
-        if (afterMovedEdge !== null) {
-          afterMovedEdge.prevIn = lookahead1Edge;
-        } else {
-          consumer.lastIn = lookahead1Edge;
-        }
-
-        cursorEdge.nextIn = lookahead2Edge;
-        lookahead2Edge.prevIn = cursorEdge;
-
-        lookahead2Edge.nextIn = expectedNextEdge;
-        expectedNextEdge.prevIn = lookahead2Edge;
-
-        lookahead2Edge.version = producerVersion;
-        consumer.tailIn = lookahead2Edge;
-
-        nodeStructureIncrement(consumer);
-        if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
-        return true;
+        return moveTrackedIncomingEdgeAfterCursor(
+          consumer,
+          cursorEdge,
+          lookahead2Edge,
+          producer,
+          producerVersion,
+        );
       }
     }
 
@@ -355,11 +370,6 @@ export function resolveTrackedRead(
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
-
-    /**
-     * L7a: Optimistic path failed and slow path is disabled.
-     */
-    if (!allowSlowPath) return false;
   } else {
     /**
      * Initial tracking state.
@@ -411,12 +421,9 @@ export function resolveTrackedRead(
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
-
-    /**
-     * I3: Initial optimistic path failed and slow path is disabled.
-     */
-    if (!allowSlowPath) return false;
   }
+
+  if (!allowSlowPath) return false;
 
   /**
    * L7b / I4: Full slow-path reconciliation.
