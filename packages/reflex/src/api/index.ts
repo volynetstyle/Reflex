@@ -1,7 +1,6 @@
 export { computed, memo } from "./derived";
 export {
   effect,
-  effectRanked,
   reaction,
   watch,
 } from "./effect";

@@ -505,7 +505,7 @@ export function resource<S, T, E = unknown>(
     });
   }
 
-  runWatcher(core.watcher);
+  runWatcher(core.watcher as any);
 
   return {
     ...baseResource,

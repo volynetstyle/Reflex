@@ -9,18 +9,15 @@ import {
 import {
   Computing,
   DIRTY_STATE,
-  //GraphReductionEnabled,
   Visited,
 } from "../shape";
 import {
   nextTrackingEpoch,
   currentConsumer,
   defaultContext,
-  //graphReductionPolicy,
   setCurrentConsumer,
 } from "../context";
 import { compare } from "../../protocol/utils/compare";
-//import { observeGraphReductionRun } from "../reduction";
 import { cleanupUnvisitedSources } from "./tracking";
 
 export function recompute(node: ReactiveNode): boolean {
@@ -125,23 +122,6 @@ export function recompute(node: ReactiveNode): boolean {
   if (node.tailIn !== node.lastIn) {
     cleanupUnvisitedSources(node);
   }
-
-  // #endregion
-
-  // #region Optional graph reduction
-
-  /**
-   * Graph reduction can be enabled globally by policy or locally per node.
-   *
-   * This phase observes the final dependency state after tracking cleanup,
-   * so reduction decisions are based on the actual current graph shape.
-   */
-  // const reductionEnabled =
-  //   graphReductionPolicy.enabled || (node.state & GraphReductionEnabled) !== 0;
-
-  // if (reductionEnabled) {
-  //   observeGraphReductionRun(node, graphReductionPolicy, reductionEnabled);
-  // }
 
   // #endregion
 

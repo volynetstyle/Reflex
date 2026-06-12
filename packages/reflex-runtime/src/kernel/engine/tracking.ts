@@ -1,5 +1,4 @@
 import type ReactiveNode from "../shape/node";
-import { nodeStructureIncrement } from "../shape/node";
 import { devRecordCleanupStaleSources, devRecordTrackRead } from "../dev";
 import { linkEdge } from "../shape/graph";
 import {
@@ -127,8 +126,6 @@ function moveTrackedIncomingEdgeAfterCursor(
 
   movedEdge.version = producerVersion;
   consumer.tailIn = movedEdge;
-
-  nodeStructureIncrement(consumer);
 
   if (__DEV__) {
     devRecordTrackRead(defaultContext, consumer, producer);
@@ -496,5 +493,4 @@ export function cleanupUnvisitedSources(node: ReactiveNode): void {
     edge = nextIn;
   } while (edge !== null);
 
-  nodeStructureIncrement(node);
 }

@@ -1,6 +1,5 @@
 import type { ReactiveEdge } from "../edge";
 import type ReactiveNode from "../node";
-import { nodeStructureIncrement } from "../node";
 
 /** Insert `edge` into `to`'s incoming list right after `after` (or at head). */
 export function attachIncomingEdgeAfter(
@@ -20,8 +19,6 @@ export function attachIncomingEdgeAfter(
   } else {
     to.firstIn = edge;
   }
-
-  nodeStructureIncrement(to);
 }
 
 export function detachIncomingEdge(to: ReactiveNode, edge: ReactiveEdge): void {
@@ -37,8 +34,6 @@ export function detachIncomingEdge(to: ReactiveNode, edge: ReactiveEdge): void {
 
   if (next !== null) next.prevIn = prev;
   else to.lastIn = prev;
-
-  nodeStructureIncrement(to);
 }
 
 /** Splice `edge` out of `from`'s outgoing list (does not touch the in-list). */
@@ -91,8 +86,6 @@ export function moveIncomingEdgeAfterUnchecked(
 
   if (after) after.nextIn = edge;
   else to.firstIn = edge;
-
-  nodeStructureIncrement(to);
 }
 
 // 
@@ -116,8 +109,6 @@ export function moveMiddleIncomingEdgeAfterEdgeUnchecked(
   else to.lastIn = edge;
 
   after.nextIn = edge;
-
-  nodeStructureIncrement(to);
 }
 
 // 
@@ -141,8 +132,6 @@ export function moveNonHeadIncomingEdgeToFrontUnchecked(
   if (first !== null) first.prevIn = edge;
 
   to.firstIn = edge;
-
-  nodeStructureIncrement(to);
 }
 
 // 
@@ -165,8 +154,6 @@ export function moveLastIncomingEdgeAfterEdgeUnchecked(
   else to.lastIn = edge;
 
   after.nextIn = edge;
-
-  nodeStructureIncrement(to);
 }
 
 // 
@@ -187,6 +174,4 @@ export function moveLastIncomingEdgeToFrontUnchecked(
   if (first !== null) first.prevIn = edge;
 
   to.firstIn = edge;
-
-  nodeStructureIncrement(to);
 }

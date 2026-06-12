@@ -1,18 +1,13 @@
 import type ReactiveNode from "../node";
-import { clearGraphReductionState } from "../../reduction";
 import type { ReactiveEdge } from "../edge";
-import { nodeStructureIncrement } from "../node";
 
 export function disposeNode(node: ReactiveNode): void {
-  clearGraphReductionState(node);
-
   let edge = node.firstIn;
 
   node.tailIn = null;
 
   // Unlink all sources.
   if (edge !== null) {
-    nodeStructureIncrement(node);
 
     node.firstIn = null;
     node.lastIn = null;
@@ -64,8 +59,6 @@ export function disposeNode(node: ReactiveNode): void {
 
       if (nextIn !== null) nextIn.prevIn = prevIn;
       else to.lastIn = prevIn;
-
-      nodeStructureIncrement(to);
 
       edge.prevIn = null;
       edge.nextIn = null;

@@ -1,22 +1,17 @@
 import type { ReactiveEdge } from "../edge";
 import { clearReactiveEdgeLinks } from "../edge";
 import type ReactiveNode from "../node";
-import { nodeStructureIncrement } from "../node";
 import { detachIncomingEdge, detachOutgoingEdge } from "./edgeList";
 
 export function unlinkDetachedIncomingEdgeSequence(
   edge: ReactiveEdge | null,
 ): void {
-  const to = edge?.to ?? null;
-
   while (edge) {
     const next = edge.nextIn;
     detachOutgoingEdge(edge.from, edge);
     clearReactiveEdgeLinks(edge);
     edge = next;
   }
-
-  if (to !== null) nodeStructureIncrement(to);
 }
 
 /**
@@ -31,8 +26,6 @@ export function unlinkAllSources(node: ReactiveNode): void {
     node.tailIn = null;
     return;
   }
-
-  nodeStructureIncrement(node);
 
   node.firstIn = null;
   node.lastIn = null;

@@ -2,13 +2,10 @@ import type ReactiveNode from "./node";
 
 export class ReactiveEdge {
   version: number = 0;
-
   from: ReactiveNode;
   to: ReactiveNode;
-
   prevOut: ReactiveEdge | null = null;
-  nextOut: ReactiveEdge | null = null;
-
+  nextOut: ReactiveEdge | null = null
   prevIn: ReactiveEdge | null = null;
   nextIn: ReactiveEdge | null = null;
 

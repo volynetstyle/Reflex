@@ -223,18 +223,12 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
       sinkInvalidatedDispatcher: onSinkInvalidated,
     });
     setRuntimeContextOptions(context, {
-      graphReductionPolicy: {
-        enabled: true,
-        stableThreshold: 3,
-      },
       readTrackingStrategy,
     });
 
     expect(context.sinkInvalidatedHook).toBe(onSinkInvalidated);
     expect(context.reactiveSettledHook).toBe(onSettled);
     expect(context.readTrackingStrategy).toBe(readTrackingStrategy);
-    expect(context.graphReductionPolicy.enabled).toBe(true);
-    expect(context.graphReductionPolicy.stableThreshold).toBe(3);
   });
 
   it("resets runtime context options to defaults", () => {
@@ -242,18 +236,12 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     const readTrackingStrategy = vi.fn();
 
     setRuntimeContextOptions(context, {
-      graphReductionPolicy: {
-        enabled: true,
-        stableThreshold: 7,
-      },
       readTrackingStrategy,
     });
 
     resetRuntimeContextOptions(context);
 
     expect(context.readTrackingStrategy).not.toBe(readTrackingStrategy);
-    expect(context.graphReductionPolicy.enabled).toBe(false);
-    expect(context.graphReductionPolicy.stableThreshold).not.toBe(7);
   });
 
   it("saves and restores runtime context snapshots without rolling epoch back", () => {

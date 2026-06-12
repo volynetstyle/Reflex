@@ -1,10 +1,4 @@
 import { recordDebugEvent } from "../debug/debug.runtime";
-import {
-  DEFAULT_GRAPH_REDUCTION_OPTIONS,
-  normalizeGraphReductionOptions,
-  type GraphReductionOptions,
-  type NormalizedGraphReductionOptions,
-} from "./reduction";
 import type { ReactiveEdge, ReactiveNode } from "./shape";
 import { reuseIncomingEdgeFromSuffixOrCreate } from "./shape/graph";
 
@@ -28,7 +22,6 @@ export type ReadTrackingStrategy = (
 
 export interface RuntimeContextOptions {
   readTrackingStrategy?: ReadTrackingStrategy;
-  graphReductionPolicy?: GraphReductionOptions | boolean;
 }
 
 export type SinkInvalidatedHook = RuntimeHooks["sinkInvalidatedDispatcher"];
@@ -41,7 +34,6 @@ export interface RuntimeContext {
   trackingEpoch: number;
   propagationScopeDepth: number;
   readTrackingStrategy: ReadTrackingStrategy;
-  graphReductionPolicy: NormalizedGraphReductionOptions;
   sinkInvalidatedHook: SinkInvalidatedHook;
   reactiveSettledHook: ReactiveSettledHook;
   effectCleanupHook: EffectCleanupHook;
@@ -72,9 +64,6 @@ export let propagationScopeDepth = 0;
 export let readTrackingStrategy: ReadTrackingStrategy =
   DEFAULT_READ_TRACKING_STRATEGY;
 
-export let graphReductionPolicy: NormalizedGraphReductionOptions =
-  DEFAULT_GRAPH_REDUCTION_OPTIONS;
-
 export let sinkInvalidatedHook: SinkInvalidatedHook = undefined;
 export let reactiveSettledHook: ReactiveSettledHook = undefined;
 export let effectCleanupHook: EffectCleanupHook = undefined;
@@ -102,9 +91,6 @@ export function createRuntimeContext(
     readTrackingStrategy:
       asHook<ReadTrackingStrategy>(options.readTrackingStrategy) ??
       DEFAULT_READ_TRACKING_STRATEGY,
-    graphReductionPolicy: normalizeGraphReductionOptions(
-      options.graphReductionPolicy,
-    ),
     sinkInvalidatedHook: undefined,
     reactiveSettledHook: undefined,
     effectCleanupHook: undefined,
@@ -122,7 +108,6 @@ export function activateRuntimeContext(context: RuntimeContext): void {
   trackingEpoch = context.trackingEpoch;
   propagationScopeDepth = context.propagationScopeDepth;
   readTrackingStrategy = context.readTrackingStrategy;
-  graphReductionPolicy = context.graphReductionPolicy;
   sinkInvalidatedHook = context.sinkInvalidatedHook;
   reactiveSettledHook = context.reactiveSettledHook;
   effectCleanupHook = context.effectCleanupHook;
@@ -135,7 +120,6 @@ export function commitRuntimeContext(
   context.trackingEpoch = trackingEpoch;
   context.propagationScopeDepth = propagationScopeDepth;
   context.readTrackingStrategy = readTrackingStrategy;
-  context.graphReductionPolicy = graphReductionPolicy;
   context.sinkInvalidatedHook = sinkInvalidatedHook;
   context.reactiveSettledHook = reactiveSettledHook;
   context.effectCleanupHook = effectCleanupHook;
@@ -344,13 +328,6 @@ export function setRuntimeContextOptions(
       DEFAULT_READ_TRACKING_STRATEGY;
   }
 
-  if ("graphReductionPolicy" in options) {
-    context.graphReductionPolicy = normalizeGraphReductionOptions(
-      options.graphReductionPolicy,
-      context.graphReductionPolicy,
-    );
-  }
-
   reloadActiveContextIfCurrent(context);
 }
 
@@ -361,7 +338,6 @@ export function resetRuntimeContextOptions(
   context.trackingEpoch = 0;
   context.propagationScopeDepth = 0;
   context.readTrackingStrategy = DEFAULT_READ_TRACKING_STRATEGY;
-  context.graphReductionPolicy = DEFAULT_GRAPH_REDUCTION_OPTIONS;
   context.sinkInvalidatedHook = undefined;
   context.reactiveSettledHook = undefined;
   context.effectCleanupHook = undefined;
@@ -379,7 +355,6 @@ export function saveRuntimeContext(
     trackingEpoch: context.trackingEpoch,
     propagationScopeDepth: context.propagationScopeDepth,
     readTrackingStrategy: context.readTrackingStrategy,
-    graphReductionPolicy: context.graphReductionPolicy,
     sinkInvalidatedHook: context.sinkInvalidatedHook,
     reactiveSettledHook: context.reactiveSettledHook,
     effectCleanupHook: context.effectCleanupHook,
@@ -402,7 +377,6 @@ export function restoreRuntimeContext(
       : currentEpoch;
   context.propagationScopeDepth = snapshot.propagationScopeDepth;
   context.readTrackingStrategy = snapshot.readTrackingStrategy;
-  context.graphReductionPolicy = snapshot.graphReductionPolicy;
   context.sinkInvalidatedHook = snapshot.sinkInvalidatedHook;
   context.reactiveSettledHook = snapshot.reactiveSettledHook;
   context.effectCleanupHook = snapshot.effectCleanupHook;

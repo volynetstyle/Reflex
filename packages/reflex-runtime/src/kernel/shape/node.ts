@@ -21,16 +21,9 @@ export class ReactiveNode<T = unknown> {
   state: number = 0;
   firstOut: ReactiveEdge | null = null;
   lastOut: ReactiveEdge | null = null;
-
   firstIn: ReactiveEdge | null = null;
   lastIn: ReactiveEdge | null = null;
   tailIn: ReactiveEdge | null = null;
-
-  /**
-   * Current graph topology structural version.
-   */
-  s: number = 0;
-
   compute: ComputeFn<T> = null;
   payload: T;
 
@@ -39,12 +32,6 @@ export class ReactiveNode<T = unknown> {
     this.compute = compute;
     this.payload = payload;
   }
-}
-
-// 
-export function nodeStructureIncrement(node: ReactiveNode): void {
-  const next = (node.s + 1) >>> 0;
-  node.s = next === 0 ? 1 : next;
 }
 
 export default ReactiveNode;
