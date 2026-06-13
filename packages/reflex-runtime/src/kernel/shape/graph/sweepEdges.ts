@@ -1,16 +1,25 @@
 import type { ReactiveEdge } from "../edge";
-import { clearReactiveEdgeLinks } from "../edge";
 import type ReactiveNode from "../node";
-import { detachIncomingEdge, detachOutgoingEdge } from "./edgeList";
 
 export function unlinkDetachedIncomingEdgeSequence(
   edge: ReactiveEdge | null,
 ): void {
-  while (edge) {
-    const next = edge.nextIn;
-    detachOutgoingEdge(edge.from, edge);
-    clearReactiveEdgeLinks(edge);
-    edge = next;
+  while (edge !== null) {
+    const nextIn = edge.nextIn;
+    const { from, prevOut, nextOut } = edge;
+
+    if (prevOut !== null) prevOut.nextOut = nextOut;
+    else from.firstOut = nextOut;
+
+    if (nextOut !== null) nextOut.prevOut = prevOut;
+    else from.lastOut = prevOut;
+
+    edge.prevOut = null;
+    edge.nextOut = null;
+    edge.prevIn = null;
+    edge.nextIn = null;
+
+    edge = nextIn;
   }
 }
 
@@ -21,25 +30,27 @@ export function unlinkDetachedIncomingEdgeSequence(
 export function unlinkAllSources(node: ReactiveNode): void {
   let edge = node.firstIn;
 
-  if (edge === null) {
-    node.lastIn = null;
-    node.tailIn = null;
-    return;
-  }
-
   node.firstIn = null;
   node.lastIn = null;
   node.tailIn = null;
 
-  do {
-    const next: ReactiveEdge | null = edge.nextIn;
-    const from = edge.from;
+  while (edge !== null) {
+    const nextIn = edge.nextIn;
+    const { from, prevOut, nextOut } = edge;
 
-    detachOutgoingEdge(from, edge);
-    clearReactiveEdgeLinks(edge);
+    if (prevOut !== null) prevOut.nextOut = nextOut;
+    else from.firstOut = nextOut;
 
-    edge = next;
-  } while (edge !== null);
+    if (nextOut !== null) nextOut.prevOut = prevOut;
+    else from.lastOut = prevOut;
+
+    edge.prevOut = null;
+    edge.nextOut = null;
+    edge.prevIn = null;
+    edge.nextIn = null;
+
+    edge = nextIn;
+  }
 }
 
 /**
@@ -49,25 +60,28 @@ export function unlinkAllSources(node: ReactiveNode): void {
 export function unlinkAllSubscribers(node: ReactiveNode): void {
   let edge = node.firstOut;
 
-  if (edge === null) {
-    node.lastOut = null;
-    return;
-  }
-
   node.firstOut = null;
   node.lastOut = null;
 
-  do {
-    const next: ReactiveEdge | null = edge.nextOut;
-    const to = edge.to;
+  while (edge !== null) {
+    const nextOut = edge.nextOut;
+    const { to, prevIn, nextIn } = edge;
 
     if (to.tailIn === edge) {
-      to.tailIn = edge.prevIn;
+      to.tailIn = prevIn;
     }
 
-    detachIncomingEdge(to, edge);
-    clearReactiveEdgeLinks(edge);
+    if (prevIn !== null) prevIn.nextIn = nextIn;
+    else to.firstIn = nextIn;
 
-    edge = next;
-  } while (edge !== null);
+    if (nextIn !== null) nextIn.prevIn = prevIn;
+    else to.lastIn = prevIn;
+
+    edge.prevOut = null;
+    edge.nextOut = null;
+    edge.prevIn = null;
+    edge.nextIn = null;
+
+    edge = nextOut;
+  }
 }

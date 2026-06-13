@@ -1,102 +1,16 @@
-import type ReactiveNode from "../shape/node";
-import { devRecordCleanupStaleSources, devRecordTrackRead } from "../dev";
-import { linkEdge } from "../shape/graph";
+import type ReactiveNode from "../node";
+import { devRecordTrackRead } from "../../dev";
+import { linkEdge } from "../graph";
 import {
   moveLastIncomingEdgeAfterEdgeUnchecked,
   moveLastIncomingEdgeToFrontUnchecked,
-} from "../shape/graph/edgeList";
+  moveTrackedIncomingEdgeAfterCursorUnchecked,
+} from "../graph/edgeList";
+import { defaultContext, readTrackingStrategy } from "../../context";
 import {
-  currentConsumer,
-  defaultContext,
-  trackingEpoch,
-  readTrackingStrategy,
-} from "../context";
-import type { ReactiveEdge } from "../shape";
-
-const PrefixScanLimit = 32;
-
-function isProducerInTrackedPrefix(
-  producer: ReactiveNode,
-  cursorEdge: ReactiveEdge,
-): boolean | null {
-  let edge = cursorEdge.prevIn;
-
-  for (
-    let scanned = 0;
-    edge !== null && scanned < PrefixScanLimit;
-    scanned += 1
-  ) {
-    if (edge.from === producer) return true;
-    edge = edge.prevIn;
-  }
-
-  return edge === null ? false : null;
-}
-
-function hasProducerEdgeInCurrentPass(
-  producer: ReactiveNode,
-  consumer: ReactiveNode,
-  producerVersion: number,
-): boolean {
-  if (producerVersion === 0) return false;
-
-  for (let edge = producer.firstOut; edge !== null; edge = edge.nextOut) {
-    if (edge.to === consumer && edge.version === producerVersion) return true;
-  }
-
-  return false;
-}
-
-export const Failed = 1 << 0;
-export const CursorHit = 1 << 1;
-export const NextHit = 1 << 2;
-export const Append = 1 << 3;
-export const LocalReorder = 1 << 4;
-export const PrefixDuplicate = 1 << 5;
-export const Fallback = 1 << 6;
-
-function moveTrackedIncomingEdgeAfterCursor(
-  consumer: ReactiveNode,
-  cursorEdge: ReactiveEdge,
-  movedEdge: ReactiveEdge,
-  producer: ReactiveNode,
-  producerVersion: number,
-): true {
-  const previousMovedEdge = movedEdge.prevIn;
-  const afterMovedEdge = movedEdge.nextIn;
-  const expectedNextEdge = cursorEdge.nextIn;
-
-  if (
-    previousMovedEdge === null ||
-    expectedNextEdge === null ||
-    expectedNextEdge === movedEdge
-  ) {
-    return true;
-  }
-
-  previousMovedEdge.nextIn = afterMovedEdge;
-
-  if (afterMovedEdge !== null) {
-    afterMovedEdge.prevIn = previousMovedEdge;
-  } else {
-    consumer.lastIn = previousMovedEdge;
-  }
-
-  cursorEdge.nextIn = movedEdge;
-  movedEdge.prevIn = cursorEdge;
-
-  movedEdge.nextIn = expectedNextEdge;
-  expectedNextEdge.prevIn = movedEdge;
-
-  movedEdge.version = producerVersion;
-  consumer.tailIn = movedEdge;
-
-  if (__DEV__) {
-    devRecordTrackRead(defaultContext, consumer, producer);
-  }
-
-  return true;
-}
+  hasProducerEdgeInCurrentPassUnchecked,
+  isProducerInTrackedPrefix,
+} from "./prefix";
 
 /**
  *
@@ -130,13 +44,19 @@ function moveTrackedIncomingEdgeAfterCursor(
  * unstable consumers remain on the dynamic policy.
  *
  * resolveTrackedRead
- * ├─ optimistic O(1) cursor/next/lookahead/last checks
- * ├─ small local linked-list reorder
- * ├─ duplicate guards
- * └─ resolveReadFallback
- *       ├─ tiny-list append/link
- *       └─ readTrackingStrategy
- *             └─ reuseIncomingEdgeOrLink
+ * ├─ O(1) cursor / next / first checks
+ * ├─ append-only growth
+ * ├─ bounded linked-list reorder
+ * │  ├─ one-hop lookahead
+ * │  ├─ two-hop lookahead
+ * │  └─ last-edge shortcut
+ * ├─ duplicate-prefix guard
+ * └─ slow-path strategy fallback
+ *
+ * The tier reached by a read is useful for profiling and future specialization:
+ * stable consumers can be promoted to cheaper tracking modes, while unstable
+ * consumers stay on the dynamic reconciliation policy.
+ *
  * ```
  * @param producer
  * @param consumer
@@ -220,7 +140,12 @@ export function resolveTrackedRead(
       if (
         prefixResult === true ||
         (prefixResult === null &&
-          hasProducerEdgeInCurrentPass(producer, consumer, producerVersion))
+          producerVersion !== 0 &&
+          hasProducerEdgeInCurrentPassUnchecked(
+            producer,
+            consumer,
+            producerVersion,
+          ))
       ) {
         if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
         return true;
@@ -258,11 +183,12 @@ export function resolveTrackedRead(
 
     if (lookahead1Edge !== null) {
       if (lookahead1Edge.from === producer) {
-        return moveTrackedIncomingEdgeAfterCursor(
+        if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+
+        return moveTrackedIncomingEdgeAfterCursorUnchecked(
           consumer,
           cursorEdge,
           lookahead1Edge,
-          producer,
           producerVersion,
         );
       }
@@ -281,11 +207,12 @@ export function resolveTrackedRead(
       const lookahead2Edge = lookahead1Edge.nextIn;
 
       if (lookahead2Edge !== null && lookahead2Edge.from === producer) {
-        return moveTrackedIncomingEdgeAfterCursor(
+        if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+
+        return moveTrackedIncomingEdgeAfterCursorUnchecked(
           consumer,
           cursorEdge,
           lookahead2Edge,
-          producer,
           producerVersion,
         );
       }
@@ -324,7 +251,12 @@ export function resolveTrackedRead(
     if (
       prefixResult === true ||
       (prefixResult === null &&
-        hasProducerEdgeInCurrentPass(producer, consumer, producerVersion))
+        producerVersion !== 0 &&
+        hasProducerEdgeInCurrentPassUnchecked(
+          producer,
+          consumer,
+          producerVersion,
+        ))
     ) {
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
@@ -401,65 +333,4 @@ export function resolveTrackedRead(
   );
 
   return true;
-}
-
-/**
- * Track read for the current active consumer.
- *
- */
-export function trackRead(
-  source: ReactiveNode,
-  consumer = currentConsumer,
-): void {
-  if (consumer === null) return;
-  resolveTrackedRead(source, consumer, trackingEpoch, true);
-}
-
-/**
- * Suffix cleanup over the consumer's incoming edges after recompute.
- *
- * Everything after tailIn belongs to the old dependency list and is unlinked.
- */
-export function cleanupUnvisitedSources(node: ReactiveNode): void {
-  const tail = node.tailIn;
-  const staleHead = tail === null ? node.firstIn : tail.nextIn;
-
-  if (staleHead === null) return;
-
-  if (tail === null) {
-    node.firstIn = node.lastIn = null;
-  } else {
-    tail.nextIn = null;
-    node.lastIn = tail;
-  }
-
-  if (__DEV__) {
-    devRecordCleanupStaleSources(node, staleHead, defaultContext);
-  }
-
-  let edge: ReactiveEdge | null = staleHead;
-
-  do {
-    const nextIn: ReactiveEdge | null = edge.nextIn;
-
-    const from = edge.from;
-    const prevOut = edge.prevOut;
-    const nextOut = edge.nextOut;
-
-    if (prevOut !== null) {
-      prevOut.nextOut = nextOut;
-    } else {
-      from.firstOut = nextOut;
-    }
-
-    if (nextOut !== null) {
-      nextOut.prevOut = prevOut;
-    } else {
-      from.lastOut = prevOut;
-    }
-
-    edge.prevOut = edge.nextOut = edge.prevIn = edge.nextIn = null;
-
-    edge = nextIn;
-  } while (edge !== null);
 }

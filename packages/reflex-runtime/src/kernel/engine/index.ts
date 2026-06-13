@@ -1,2 +1,2 @@
-export * from "./tracking";
+export * from "../shape/tracking";
 export * from "./watcher";

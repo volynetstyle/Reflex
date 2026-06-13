@@ -4,7 +4,6 @@ import {
   DIRTY_STATE,
   Producer,
   ReactiveNode,
-  connect,
   createComputeCounter,
   createConsumer,
   createProducer,
@@ -73,17 +72,21 @@ describe("Reactive runtime - section model coverage", () => {
         },
       },
       {
-        name: "connect is idempotent and does not duplicate graph edges",
+        name: "unlink removes a selected parallel edge without touching siblings",
         run() {
           const source = createNode(Producer);
           const target = createNode(Consumer);
 
-          const first = connect(source, target);
-          const second = connect(source, target);
+          const first = linkEdge(source, target);
+          const second = linkEdge(source, target);
 
-          expect(second).toBe(first);
-          expectIncomingEdges(target, [first]);
-          expectOutgoingEdges(source, [first]);
+          expectIncomingEdges(target, [first, second]);
+          expectOutgoingEdges(source, [first, second]);
+
+          unlinkEdge(first);
+
+          expectIncomingEdges(target, [second]);
+          expectOutgoingEdges(source, [second]);
           expectRuntimeSectionHealthy([source, target]);
         },
       },

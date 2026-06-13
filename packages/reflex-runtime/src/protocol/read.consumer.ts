@@ -4,7 +4,7 @@ import {
   currentConsumer,
   trackingEpoch,
 } from "../kernel/context";
-import { resolveTrackedRead } from "../kernel/engine/tracking";
+import { resolveTrackedRead } from "../kernel/shape/tracking";
 import { Changed, DIRTY_STATE, Visited } from "../kernel/shape";
 import {
   devAssertConsumerCanStabilize,

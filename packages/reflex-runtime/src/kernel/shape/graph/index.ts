@@ -1,11 +1,11 @@
 export {
-  moveIncomingEdgeAfter,
+  moveIncomingEdgeAfterUnchecked,
   moveLastIncomingEdgeAfterEdgeUnchecked,
   moveLastIncomingEdgeToFrontUnchecked,
   moveMiddleIncomingEdgeAfterEdgeUnchecked,
   moveNonHeadIncomingEdgeToFrontUnchecked,
 } from "./edgeList";
-export { connect, disconnect, linkEdge, unlinkEdge } from "./linkEdge";
+export { linkEdge, unlinkEdge } from "./linkEdge";
 export {
   reuseIncomingEdgeFromSuffixOrCreate,
   reuseIncomingEdgeFromSuffixOrLink,

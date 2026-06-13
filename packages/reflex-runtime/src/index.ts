@@ -22,6 +22,7 @@ export type {
 } from "./kernel"
 
 export {
+  cre
   readProducer,
   writeProducer,
   readConsumer,

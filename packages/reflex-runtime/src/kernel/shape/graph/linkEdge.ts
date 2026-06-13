@@ -56,31 +56,3 @@ export function unlinkEdge(edge: ReactiveEdge): void {
   edge.prevIn = null;
   edge.nextIn = null;
 }
-
-/** Cold-path: links `parent -> child` only if not already connected. */
-export function connect(
-  parent: ReactiveNode,
-  child: ReactiveNode,
-): ReactiveEdge {
-  const lastIncoming = child.lastIn;
-
-  if (lastIncoming !== null && lastIncoming.from === parent) {
-    return lastIncoming;
-  }
-
-  for (let edge = lastIncoming; edge; edge = edge.prevIn) {
-    if (edge.from === parent) return edge;
-  }
-
-  return linkEdge(parent, child);
-}
-
-/** Cold-path: removes the first `parent -> child` edge if it exists. */
-export function disconnect(parent: ReactiveNode, child: ReactiveNode): void {
-  for (let edge = child.firstIn; edge; edge = edge.nextIn) {
-    if (edge.from === parent) {
-      unlinkEdge(edge);
-      return;
-    }
-  }
-}

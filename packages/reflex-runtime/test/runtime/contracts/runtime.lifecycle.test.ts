@@ -22,7 +22,6 @@ import {
   setRuntimeContextOptions,
   writeProducer,
 } from "../../runtime.test_utils";
-import { connect, disconnect } from "../../../src/kernel/shape/graph";
 import {
   createConsumer,
   createWatcher,
@@ -34,27 +33,27 @@ import {
   expectNotTracking,
   expectSources,
   expectSubscriber,
+  linkEdge,
   resetRuntime,
+  unlinkEdge,
 } from "../../runtime.test_utils";
 
-/** Covers disposal, connect/disconnect, and state-bit lifecycle characterization. */
+/** Covers disposal, explicit edge lifecycle, and state-bit characterization. */
 describe("Reactive runtime - lifecycle and state characterization", () => {
   beforeEach(() => {
     resetRuntime();
   });
 
-  it("connect is idempotent and disconnect removes the edge from future push invalidation", () => {
+  it("unlinkEdge removes a linked edge from future push invalidation", () => {
     const source = createProducer(1);
     const target = createConsumer(() => 0);
 
-    const first = connect(source, target);
-    const second = connect(source, target);
+    const edge = linkEdge(source, target);
 
-    expect(second).toBe(first);
     expectSources(target, [source]);
     expectSubscriber(source, target);
 
-    disconnect(source, target);
+    unlinkEdge(edge);
 
     expectSources(target, []);
     expectNoSubscriber(source, target);
