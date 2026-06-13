@@ -21,10 +21,6 @@ export const Computing = 1 << 3; // 8
 
 export const Watcher = 1 << 5; // 32
 export const Scheduled = 1 << 6; // 64
-export const Special = 1 << 7 // 128
-export const GraphReductionEnabled = 1 << 8; // 256
-// possible can be added next some flags
-
 
 export const Producer = 1 << 28;
 /**
@@ -70,25 +66,25 @@ export const WATCHER_CHANGED = Changed | Watcher;
 export const WALKER_STATE = Visited | Computing;
 
 /** Clear the re-entrant marker after the walker no longer needs it. */
-// 
+//
 export function clearNodeVisited(node: ReactiveNode): void {
   node.state &= ~Visited;
 }
 
 /** Mark a node as actively executing its compute function. */
-// 
+//
 export function markNodeComputing(node: ReactiveNode): void {
   node.state = (node.state & ~Visited) | Computing | Computing;
 }
 
 /** Clear the active-computation marker. */
-// 
+//
 export function clearNodeComputing(node: ReactiveNode): void {
   node.state &= ~(Computing | Computing);
 }
 
 /** Clear both `Invalid` and `Changed`, returning the node to a clean state. */
-// 
+//
 export function clearDirtyState(node: ReactiveNode): void {
   node.state &= ~DIRTY_STATE;
 }

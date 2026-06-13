@@ -23,7 +23,7 @@ import {
 import {
   push_iterator_once,
   push_iterator_once_skipping,
-} from "../first/push_iterator_once";
+} from "../first";
 
 /**
  * Advance to next value

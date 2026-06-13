@@ -1,19 +1,5 @@
 import type { ReactiveEdge } from "./edge";
-
-export type Primitive =
-  | string
-  | number
-  | boolean
-  | bigint
-  | symbol
-  | null
-  | undefined;
-
-export type Payload<T> = T extends Primitive | Function
-  ? T
-  : T extends readonly (infer U)[]
-    ? readonly Payload<U>[]
-    : { readonly [K in keyof T]: Payload<T[K]> };
+import { isPayload } from "./node.dev";
 
 export type ComputeFn<T> = (() => T) | null;
 
@@ -28,6 +14,10 @@ export class ReactiveNode<T = unknown> {
   payload: T;
 
   constructor(payload: T, compute: ComputeFn<T>, state: number) {
+    if (__DEV__ && !isPayload(payload)) {
+      throw new TypeError("ReactiveNode payload must be primitive, function, array, or plain object.");
+    }
+
     this.state = state | 0;
     this.compute = compute;
     this.payload = payload;
