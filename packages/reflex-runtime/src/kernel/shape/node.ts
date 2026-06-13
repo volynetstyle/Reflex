@@ -1,7 +1,7 @@
 import type { ReactiveEdge } from "./edge";
 import { isPayload } from "./node.dev";
 
-export type ComputeFn<T> = (() => T) | null;
+export type ComputeFn<T> = (() => T) | undefined;
 
 export class ReactiveNode<T = unknown> {
   state: number = 0;
@@ -10,12 +10,14 @@ export class ReactiveNode<T = unknown> {
   firstIn: ReactiveEdge | null = null;
   lastIn: ReactiveEdge | null = null;
   tailIn: ReactiveEdge | null = null;
-  compute: ComputeFn<T> = null;
+  compute: ComputeFn<T> = undefined;
   payload: T;
 
   constructor(payload: T, compute: ComputeFn<T>, state: number) {
     if (__DEV__ && !isPayload(payload)) {
-      throw new TypeError("ReactiveNode payload must be primitive, function, array, or plain object.");
+      throw new TypeError(
+        `[ReactiveNode(constructor)]: payload must be primitive, function, array, or plain object, but not a ${typeof payload}`,
+      );
     }
 
     this.state = state | 0;

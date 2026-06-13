@@ -1,13 +1,5 @@
 import type { ReactiveNode } from "../shape";
-import {
-  clearNodeVisited,
-  DIRTY_STATE,
-  clearDirtyState,
-  disposeNode,
-  Changed,
-  Invalid,
-  Visited,
-} from "../shape";
+import { DIRTY_STATE, disposeNode, Changed, Invalid, Visited } from "../shape";
 import { pull_iterator } from "../stages/second/pull_iterator";
 import { executeKnownNodeComputation } from "./watcher.execution";
 import {
@@ -23,7 +15,7 @@ import {
   devRecordWatcherStart,
 } from "../dev";
 
-type WatcherCleanup = () => void;
+export type WatcherCleanup = () => void;
 const FORCE_RECOMPUTE_STATE = Changed | Visited;
 
 function runCleanup(cleanup: WatcherCleanup): void {
@@ -64,7 +56,7 @@ export function runWatcher(
   }
 
   if (!shouldRunDirtyWatcher(node, state)) {
-    clearDirtyState(node);
+    node.state &= ~DIRTY_STATE;
     if (__DEV__) devRecordWatcherSkip(node, "stable", defaultContext);
     return;
   }
@@ -77,14 +69,14 @@ export function runWatcher(
     devRecordWatcherStart(node, prevCleanup !== null, defaultContext);
 
   node.payload = undefined;
-  clearNodeVisited(node);
+  node.state &= ~Visited;
 
   if (prevCleanup !== null) {
     runCleanup(prevCleanup);
     if (__DEV__) devRecordWatcherCleanup(node, defaultContext);
 
     if (node.compute === null) {
-      clearDirtyState(node);
+      node.state &= ~DIRTY_STATE;
       if (__DEV__) {
         devRecordWatcherFinish(node, false, undefined, defaultContext);
       }
@@ -101,7 +93,7 @@ export function runWatcher(
   }
 
   if ((node.state & Visited) === 0) {
-    clearDirtyState(node);
+    node.state &= ~DIRTY_STATE;
   } else {
     node.state = (node.state & ~Changed) | Invalid;
   }

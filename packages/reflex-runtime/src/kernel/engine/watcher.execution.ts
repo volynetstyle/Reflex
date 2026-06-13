@@ -1,18 +1,15 @@
 import type { ComputeFn, ReactiveNode } from "../shape";
 import {
-  clearNodeComputing,
-  //GraphReductionEnabled,
-  markNodeComputing,
+  Computing,
+  Visited,
 } from "../shape";
 import { cleanupUnvisitedSources } from "./tracking";
 import {
   currentConsumer,
   nextTrackingEpoch,
   defaultContext,
-  //graphReductionPolicy,
   setCurrentConsumer,
 } from "../context";
-//import { observeGraphReductionRun } from "../reduction";
 import {
   devAssertExecutableNode,
   devRecordComputeError,
@@ -27,7 +24,7 @@ export function executeKnownNodeComputation(
   const prevActive = currentConsumer;
 
   node.tailIn = null;
-  markNodeComputing(node);
+  node.state = (node.state & ~Visited) | Computing | Computing;
   nextTrackingEpoch();
   setCurrentConsumer(node);
 
@@ -39,7 +36,7 @@ export function executeKnownNodeComputation(
     result = compute!();
   } catch (error) {
     setCurrentConsumer(prevActive);
-    clearNodeComputing(node);
+    node.state &= ~(Computing | Computing);
 
     if (__DEV__) devRecordComputeError(node, error, defaultContext);
 
@@ -47,7 +44,7 @@ export function executeKnownNodeComputation(
   }
 
   setCurrentConsumer(prevActive);
-  clearNodeComputing(node);
+  node.state &= ~(Computing | Computing);
 
   if (node.tailIn !== node.lastIn) {
     cleanupUnvisitedSources(node);
