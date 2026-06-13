@@ -1,11 +1,5 @@
 import type { ReactiveEdge } from "../edge";
-import { clearReactiveEdgeLinks, createReactiveEdge } from "../edge";
 import type ReactiveNode from "../node";
-import {
-  attachIncomingEdgeAfter,
-  detachIncomingEdge,
-  detachOutgoingEdge,
-} from "./edgeList";
 
 export function linkEdge(
   from: ReactiveNode,
@@ -14,27 +8,53 @@ export function linkEdge(
   version = 0,
 ): ReactiveEdge {
   const prevOut = from.lastOut;
-  const edge = createReactiveEdge(version, from, to);
+  const nextIn = after === null ? to.firstIn : after.nextIn;
 
-  edge.prevOut = prevOut;
+  const edge: ReactiveEdge = {
+    version: version | 0,
+    from,
+    to,
+    prevOut,
+    nextOut: null,
+    prevIn: after,
+    nextIn,
+  };
 
-  if (prevOut) prevOut.nextOut = edge;
+  if (prevOut !== null) prevOut.nextOut = edge;
   else from.firstOut = edge;
 
   from.lastOut = edge;
 
-  attachIncomingEdgeAfter(to, edge, after);
+  if (nextIn !== null) nextIn.prevIn = edge;
+  else to.lastIn = edge;
+
+  if (after !== null) after.nextIn = edge;
+  else to.firstIn = edge;
+
   return edge;
 }
 
 export function unlinkEdge(edge: ReactiveEdge): void {
-  const { from, to } = edge;
+  const { from, to, prevOut, nextOut, prevIn, nextIn } = edge;
 
-  if (to.tailIn === edge) to.tailIn = edge.prevIn;
+  if (to.tailIn === edge) to.tailIn = prevIn;
 
-  detachOutgoingEdge(from, edge);
-  detachIncomingEdge(to, edge);
-  clearReactiveEdgeLinks(edge);
+  if (prevOut !== null) prevOut.nextOut = nextOut;
+  else from.firstOut = nextOut;
+
+  if (nextOut !== null) nextOut.prevOut = prevOut;
+  else from.lastOut = prevOut;
+
+  if (prevIn !== null) prevIn.nextIn = nextIn;
+  else to.firstIn = nextIn;
+
+  if (nextIn !== null) nextIn.prevIn = prevIn;
+  else to.lastIn = prevIn;
+
+  edge.prevOut = null;
+  edge.nextOut = null;
+  edge.prevIn = null;
+  edge.nextIn = null;
 }
 
 /** Cold-path: links `parent -> child` only if not already connected. */

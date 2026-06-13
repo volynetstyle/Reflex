@@ -37,4 +37,4 @@ export const PRODUCER_INITIAL_STATE = Producer;
 /** Directly invalidated computed node: skip verification and recompute on read. */
 export const CONSUMER_INITIAL_STATE = Changed | Consumer;
 /** Computed node carrying either `Invalid` or `Changed`. */
-export const WATCHER_INITIAL_STATE = Consumer | DIRTY_STATE;
+export const WATCHER_INITIAL_STATE = Changed | Invalid | Consumer;

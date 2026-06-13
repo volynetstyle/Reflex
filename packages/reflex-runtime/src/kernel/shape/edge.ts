@@ -1,43 +1,28 @@
 import type ReactiveNode from "./node";
 
-export class ReactiveEdge {
-  version: number = 0;
+export interface ReactiveEdge {
+  version: number;
   from: ReactiveNode;
   to: ReactiveNode;
-  prevOut: ReactiveEdge | null = null;
-  nextOut: ReactiveEdge | null = null
-  prevIn: ReactiveEdge | null = null;
-  nextIn: ReactiveEdge | null = null;
-
-  constructor(
-    version: number,
-    from: ReactiveNode,
-    to: ReactiveNode,
-    prevOut: ReactiveEdge | null = null,
-    nextOut: ReactiveEdge | null = null,
-    prevIn: ReactiveEdge | null = null,
-    nextIn: ReactiveEdge | null = null,
-  ) {
-    this.version = version | 0;
-    this.from = from;
-    this.to = to;
-    this.prevOut = prevOut;
-    this.nextOut = nextOut;
-    this.prevIn = prevIn;
-    this.nextIn = nextIn;
-  }
+  prevOut: ReactiveEdge | null;
+  nextOut: ReactiveEdge | null;
+  prevIn: ReactiveEdge | null;
+  nextIn: ReactiveEdge | null;
 }
 
-export function createReactiveEdge(
+export const createReactiveEdge = (
   version: number,
   from: ReactiveNode,
   to: ReactiveNode,
-): ReactiveEdge {
-  return new ReactiveEdge(version, from, to);
-}
+): ReactiveEdge => ({
+  version: version | 0,
+  from,
+  to,
+  prevOut: null,
+  nextOut: null,
+  prevIn: null,
+  nextIn: null,
+}); // Order matters!
 
-export function clearReactiveEdgeLinks(edge: ReactiveEdge): void {
-  edge.prevOut = null;
-  edge.prevIn = null;
-  edge.nextIn = null;
-}
+export const clearReactiveEdgeLinks = (edge: ReactiveEdge): void =>
+  void (edge.prevOut = edge.prevIn = edge.nextIn = null);

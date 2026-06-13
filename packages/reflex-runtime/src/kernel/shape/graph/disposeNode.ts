@@ -8,7 +8,6 @@ export function disposeNode(node: ReactiveNode): void {
 
   // Unlink all sources.
   if (edge !== null) {
-
     node.firstIn = null;
     node.lastIn = null;
 
@@ -71,7 +70,7 @@ export function disposeNode(node: ReactiveNode): void {
     node.lastOut = null;
   }
 
-  node.compute = null;
+  node.compute = undefined;
   node.payload = undefined;
 }
 
