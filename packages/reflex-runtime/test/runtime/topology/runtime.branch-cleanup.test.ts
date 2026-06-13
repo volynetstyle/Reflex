@@ -115,6 +115,58 @@ describe("Reactive runtime - branch cleanup matrix", () => {
     expectNoSubscriber(inverse, current);
   });
 
+  it("reorders retained dependencies without duplicating source subscriptions", () => {
+    const selector = createProducer(0);
+    const left = createProducer(10);
+    const right = createProducer(20);
+    const total = createConsumer(() => {
+      if (readProducer(selector) < 1) {
+        return readProducer(left) + readProducer(right);
+      }
+
+      return readProducer(right) + readProducer(left);
+    });
+
+    expect(readConsumer(total)).toBe(30);
+    expectSources(total, [selector, left, right]);
+    expectSubscriber(left, total);
+    expectSubscriber(right, total);
+
+    writeProducer(selector, 1);
+
+    expect(readConsumer(total)).toBe(30);
+    expectSources(total, [selector, right, left]);
+    expectSubscriber(left, total);
+    expectSubscriber(right, total);
+    expectGraphIntegrity([selector, left, right, total]);
+  });
+
+  it("reorders retained dependencies while cleaning stale subscriptions", () => {
+    const selector = createProducer(0);
+    const left = createProducer(10);
+    const right = createProducer(20);
+    const total = createConsumer(() => {
+      if (readProducer(selector) < 1) {
+        return readProducer(left) + readProducer(right);
+      }
+
+      return readProducer(right);
+    });
+
+    expect(readConsumer(total)).toBe(30);
+    expectSources(total, [selector, left, right]);
+    expectSubscriber(left, total);
+    expectSubscriber(right, total);
+
+    writeProducer(selector, 1);
+
+    expect(readConsumer(total)).toBe(20);
+    expectSources(total, [selector, right]);
+    expectNoSubscriber(left, total);
+    expectSubscriber(right, total);
+    expectGraphIntegrity([selector, left, right, total]);
+  });
+
   it("stale source write after branch switch does not invalidate, active write does", () => {
     const g = createBranchCase(true);
 
