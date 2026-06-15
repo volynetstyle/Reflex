@@ -32,3 +32,19 @@ export type {
   RuntimeDebugNodeSnapshot,
   RuntimeDebugOptions,
 } from "./debug.types";
+export {
+  createRuntimeProfileSession,
+  diffRuntimeProfileCounters,
+  isRuntimeProfilingEnabled,
+  profileRuntime,
+  profileRuntimeAsync,
+  readRuntimeProfileCounters,
+  resetRuntimeProfileCounters,
+  runtimeProfileCounters,
+  setRuntimeProfilingEnabled,
+  snapshotRuntimeProfileCounters,
+  type RuntimeProfileCounterName,
+  type RuntimeProfileCounters,
+  type RuntimeProfileResult,
+  type RuntimeProfileSession,
+} from "../profiling";

@@ -7,21 +7,19 @@ import {
 import type { ReactiveNode } from "@volynets/reflex-runtime/internal";
 import { EventSource as RuntimeEventSource } from "./event";
 
-export const createSignalNode = <T>(payload: T) => {
-  return new RuntimeReactiveNode<T>(payload, null, PRODUCER_INITIAL_STATE);
-};
-
 export const createSource = <T>(): RuntimeEventSource<T> => {
   return new RuntimeEventSource<T>();
 };
 
 export const createResourceStateNode = () => {
-  return new RuntimeReactiveNode<number>(0, null, PRODUCER_INITIAL_STATE);
+  return new RuntimeReactiveNode<number>(0, undefined, PRODUCER_INITIAL_STATE);
 };
 
 export const createAccumulator = <T>(payload: T): ReactiveNode<T> => {
-  return new RuntimeReactiveNode(payload, null, PRODUCER_INITIAL_STATE);
+  return new RuntimeReactiveNode(payload, undefined, PRODUCER_INITIAL_STATE);
 };
+
+export const createSignalNode = createAccumulator;
 
 export const createComputedNode = <T>(fn: () => T) => {
   const node = new RuntimeReactiveNode<T>(
@@ -33,8 +31,6 @@ export const createComputedNode = <T>(fn: () => T) => {
   return node;
 };
 
-export const createWatcherNode = (
-  compute: EffectFn,
-): ReactiveNode<any> => {
+export const createWatcherNode = (compute: EffectFn): ReactiveNode<any> => {
   return new RuntimeReactiveNode(undefined, compute, WATCHER_INITIAL_STATE);
 };

@@ -43,7 +43,7 @@ type SectionCase = {
 };
 
 function createNode(kind: typeof Producer | typeof Consumer) {
-  return new ReactiveNode(undefined, null, kind);
+  return new ReactiveNode(undefined, undefined, kind);
 }
 
 describe("Reactive runtime - section model coverage", () => {

@@ -21,6 +21,7 @@ const createPerfDomain = (input: string, file: string) => ({
       preventAssignment: true,
       values: {
         __DEV__: "false",
+        __PROFILE__: "true",
       },
     }),
   ],

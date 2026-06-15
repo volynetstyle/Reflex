@@ -3,15 +3,16 @@ import {
   type ReactiveNode,
 } from "@volynets/reflex-runtime/internal";
 import { EffectSchedulerMode } from "../scheduler.constants";
-import {
-  createSchedulerCore,
-  enterSchedulerBatch,
-  leaveSchedulerBatch,
-} from "../scheduler.core";
+import { createSchedulerCore } from "../scheduler.core";
+import { Batching, Flushing, Idle } from "../scheduler.constants";
 import { tryEnqueue } from "../scheduler.enqueue";
 import { createSchedulerInstance } from "../scheduler.instance";
 import type { EffectScheduler } from "../scheduler.types";
 import { noopNotifySettled } from "../scheduler.types";
+import {
+  schedulerPolicyCounters,
+  schedulerPolicyCountersEnabled,
+} from "../scheduler.counters";
 
 export function createFlushScheduler(): EffectScheduler {
   const core = createSchedulerCore();
@@ -19,11 +20,20 @@ export function createFlushScheduler(): EffectScheduler {
     tryEnqueue(core.queue, node);
   };
   const batch = <T>(fn: () => T): T => {
-    enterSchedulerBatch(core);
+    if (++core.batchDepth === 1 && core.phase !== Flushing) {
+      core.phase = Batching;
+    }
+
     try {
       return fn();
     } finally {
-      leaveSchedulerBatch(core);
+      if (__PROFILE__ && schedulerPolicyCountersEnabled) {
+        schedulerPolicyCounters.batchExit += 1;
+      }
+
+      if (--core.batchDepth === 0 && core.phase !== Flushing) {
+        core.phase = Idle;
+      }
     }
   };
 

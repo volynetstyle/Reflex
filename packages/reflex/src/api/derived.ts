@@ -1,10 +1,10 @@
 import {
+  createConsumer,
   readConsumerEager,
   readConsumerLazy,
   untracked,
 } from "@volynets/reflex-runtime";
 import { disposeNode } from "@volynets/reflex-runtime/internal";
-import { createComputedNode } from "../infra/factory";
 import { devassertDerivedFn } from "./derived.dev";
 
 export interface DisposableComputed<T> {
@@ -55,7 +55,7 @@ export interface DisposableComputed<T> {
 export function computed<T>(fn: () => T): Computed<T> {
   devassertDerivedFn(fn, "computed");
 
-  const node = createComputedNode(fn);
+  const node = createConsumer(fn);
 
   return readConsumerLazy.bind(node) as Computed<T>;
 }
@@ -100,7 +100,7 @@ export function computed<T>(fn: () => T): Computed<T> {
 export function memo<T>(fn: () => T): Memo<T> {
   devassertDerivedFn(fn, "memo");
 
-  const node = createComputedNode(fn);
+  const node = createConsumer(fn);
 
   readConsumerEager(node);
 
@@ -110,7 +110,7 @@ export function memo<T>(fn: () => T): Memo<T> {
 export function createDisposableComputed<T>(fn: () => T): DisposableComputed<T> {
   devassertDerivedFn(fn, "computed");
 
-  const node = createComputedNode(fn);
+  const node = createConsumer(fn);
 
   return {
     read: readConsumerLazy.bind(node) as Computed<T>,

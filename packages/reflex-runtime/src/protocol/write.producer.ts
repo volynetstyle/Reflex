@@ -5,10 +5,13 @@ import {
   leavePropagationScope,
   emitSettledIfIdle,
   propagationScopeDepth,
-  propagate,
 } from "../kernel";
 import { devRecordWriteProducer } from "../kernel/dev";
 import { push_iterator } from "../kernel/stages/first/push_iterator";
+import {
+  runtimeProfileCounters,
+  runtimeProfileCountersEnabled,
+} from "../profiling";
 import type { ProducerComparator } from "./utils/compare";
 import { compare as defaultComparator } from "./utils/compare";
 
@@ -65,11 +68,19 @@ export function writeProducer<T>(
   value: T,
   compare: ProducerComparator<T> = defaultComparator,
 ): void {
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters.writeCalls += 1;
+  }
+
   const prev = node.payload;
 
   // Check if the value actually changed using stable comparison
   // This prevents false invalidation when setting to the same value
   if (compare(prev, value)) {
+    if (__PROFILE__ && runtimeProfileCountersEnabled) {
+      runtimeProfileCounters.writeSameValue += 1;
+    }
+
     if (__DEV__) {
       devRecordWriteProducer(
         node,
@@ -87,6 +98,10 @@ export function writeProducer<T>(
   // Update the payload to the new value
   node.payload = value;
 
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters.writeChanged += 1;
+  }
+
   if (__DEV__) {
     devRecordWriteProducer(node, true, value, prev, undefined, defaultContext);
   }
@@ -94,12 +109,20 @@ export function writeProducer<T>(
   const firstOut = node.firstOut;
 
   if (firstOut === null) {
+    if (__PROFILE__ && runtimeProfileCountersEnabled) {
+      runtimeProfileCounters.writeNoSubscribers += 1;
+    }
+
     if (propagationScopeDepth === 0) emitSettledIfIdle();
     return;
   }
 
   if (propagationScopeDepth !== 0) {
-    propagate(firstOut);
+    if (__PROFILE__ && runtimeProfileCountersEnabled) {
+      runtimeProfileCounters.writeNestedPropagation += 1;
+    }
+
+    push_iterator(firstOut);
     return;
   }
 

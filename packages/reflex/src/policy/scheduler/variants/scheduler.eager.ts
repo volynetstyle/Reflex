@@ -13,6 +13,10 @@ import {
 import { tryEnqueue } from "../scheduler.enqueue";
 import { createSchedulerInstance } from "../scheduler.instance";
 import type { EffectScheduler } from "../scheduler.types";
+import {
+  schedulerPolicyCounters,
+  schedulerPolicyCountersEnabled,
+} from "../scheduler.counters";
 
 export function createEagerScheduler(): EffectScheduler {
   const core = createSchedulerCore();
@@ -31,6 +35,10 @@ export function createEagerScheduler(): EffectScheduler {
     try {
       return fn();
     } finally {
+      if (__PROFILE__ && schedulerPolicyCountersEnabled) {
+        schedulerPolicyCounters.batchExit += 1;
+      }
+
       if (leaveSchedulerBatch(core) && hasPendingEffects(core)) {
         flushSchedulerQueue(core);
       }

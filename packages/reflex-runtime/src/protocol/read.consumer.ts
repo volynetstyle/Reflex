@@ -4,7 +4,7 @@ import {
   currentConsumer,
   trackingEpoch,
 } from "../kernel/context";
-import { resolveTrackedRead } from "../kernel/shape/tracking";
+import { resolveTrackedRead } from "../kernel/engine/tracking";
 import { Changed, DIRTY_STATE, Visited } from "../kernel/shape";
 import {
   devAssertConsumerCanStabilize,
@@ -12,6 +12,10 @@ import {
 } from "../kernel/dev";
 import { advance } from "../kernel/stages/second/advance";
 import { pull_iterator } from "../kernel/stages/second/pull_iterator";
+import {
+  runtimeProfileCounters,
+  runtimeProfileCountersEnabled,
+} from "../profiling";
 import { LAZY } from "./utils/constants";
 
 /**
@@ -28,17 +32,33 @@ import { LAZY } from "./utils/constants";
  * a local slow path so clean reads do not bounce through helper layers.
  */
 export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters.readConsumerCalls += 1;
+    runtimeProfileCounters.readConsumerLazyCalls += 1;
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-this-alias
   const node = this;
   const state = node.state;
+  const isDirty = (state & DIRTY_STATE) !== 0;
+
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    if (isDirty) runtimeProfileCounters.readConsumerDirtyPath += 1;
+    else runtimeProfileCounters.readConsumerCleanFastPath += 1;
+  }
+
   const value =
-    (state & DIRTY_STATE) === 0
+    !isDirty
       ? (node.payload as T)
       : stabilizeDirtyConsumer<T>(node, state);
 
   const consumer = currentConsumer;
 
   if (consumer === null) return value;
+
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters.readConsumerTracked += 1;
+  }
 
   resolveTrackedRead(node, consumer, trackingEpoch, true);
 
@@ -56,9 +76,20 @@ export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
  * the current `currentConsumer` to this read.
  */
 export function readConsumerEager<T>(node: ReactiveNode<T>): T {
-  const state = node.state;
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters.readConsumerCalls += 1;
+    runtimeProfileCounters.readConsumerEagerCalls += 1;
+  }
 
-  return (state & DIRTY_STATE) === 0
+  const state = node.state;
+  const isDirty = (state & DIRTY_STATE) !== 0;
+
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    if (isDirty) runtimeProfileCounters.readConsumerDirtyPath += 1;
+    else runtimeProfileCounters.readConsumerCleanFastPath += 1;
+  }
+
+  return !isDirty
     ? (node.payload as T)
     : stabilizeDirtyConsumer<T>(node, state);
 }
@@ -69,11 +100,19 @@ function stabilizeDirtyConsumer<T>(node: ReactiveNode<T>, state: number): T {
   if (__DEV__) devAssertConsumerCanStabilize(state);
 
   if ((state & FORCE_RECOMPUTE_STATE) !== 0) {
+    if (__PROFILE__ && runtimeProfileCountersEnabled) {
+      runtimeProfileCounters.stabilizeForceAdvance += 1;
+    }
+
     if (!advance(node)) node.state &= ~DIRTY_STATE;
     return node.payload as T;
   }
 
   const edge = node.firstIn;
+
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters.stabilizePullAdvance += 1;
+  }
 
   if (edge === null || !pull_iterator(node, edge) || !advance(node)) {
     node.state &= ~DIRTY_STATE;
@@ -119,10 +158,25 @@ const debugValue = readConsumer(doubled, ConsumerReadMode.eager)
  * @cost O(1) + stabilization cost (depends on upstream changes)
  */
 export function readConsumer<T>(node: ReactiveNode<T>, mode: number = LAZY): T {
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters.readConsumerCalls += 1;
+  }
+
   if (mode !== LAZY) {
+    if (__PROFILE__ && runtimeProfileCountersEnabled) {
+      runtimeProfileCounters.readConsumerEagerCalls += 1;
+    }
+
     const state = node.state;
+    const isDirty = (state & DIRTY_STATE) !== 0;
+
+    if (__PROFILE__ && runtimeProfileCountersEnabled) {
+      if (isDirty) runtimeProfileCounters.readConsumerDirtyPath += 1;
+      else runtimeProfileCounters.readConsumerCleanFastPath += 1;
+    }
+
     const value =
-      (state & DIRTY_STATE) === 0
+      !isDirty
         ? (node.payload as T)
         : stabilizeDirtyConsumer(node, state);
 
@@ -133,14 +187,29 @@ export function readConsumer<T>(node: ReactiveNode<T>, mode: number = LAZY): T {
     return value;
   }
 
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters.readConsumerLazyCalls += 1;
+  }
+
   const state = node.state;
+  const isDirty = (state & DIRTY_STATE) !== 0;
+
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    if (isDirty) runtimeProfileCounters.readConsumerDirtyPath += 1;
+    else runtimeProfileCounters.readConsumerCleanFastPath += 1;
+  }
+
   const value =
-    (state & DIRTY_STATE) === 0
+    !isDirty
       ? (node.payload as T)
       : stabilizeDirtyConsumer(node, state);
 
   const consumer = currentConsumer;
   if (consumer !== null) {
+    if (__PROFILE__ && runtimeProfileCountersEnabled) {
+      runtimeProfileCounters.readConsumerTracked += 1;
+    }
+
     resolveTrackedRead(node, consumer, trackingEpoch, true);
   }
 

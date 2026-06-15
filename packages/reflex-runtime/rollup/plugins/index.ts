@@ -25,6 +25,7 @@ export function createPlugins(target: BuildTarget): Plugin[] {
       preventAssignment: true,
       values: {
         __DEV__: JSON.stringify(target.mode === "dev"),
+        __PROFILE__: JSON.stringify(target.mode === "dev"),
       },
     }),
     constEnum(),

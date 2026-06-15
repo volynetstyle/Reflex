@@ -3,7 +3,7 @@ import { isPayload } from "./node.dev";
 
 export type ComputeFn<T> = (() => T) | undefined;
 
-export class ReactiveNode<T = unknown> {
+class ReactiveNode<T = unknown> {
   state: number = 0;
   firstOut: ReactiveEdge | null = null;
   lastOut: ReactiveEdge | null = null;

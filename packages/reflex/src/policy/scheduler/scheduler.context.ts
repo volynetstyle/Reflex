@@ -2,6 +2,10 @@ import {
   getCurrentConsumer,
   getPropagationScopeDepth,
 } from "@volynets/reflex-runtime/internal";
+import {
+  schedulerPolicyCounters,
+  schedulerPolicyCountersEnabled,
+} from "./scheduler.counters";
 import type { SchedulerCore } from "./scheduler.types";
 import { Idle } from ".";
 
@@ -14,6 +18,11 @@ export function isRuntimeInactive(core: SchedulerCore): boolean {
 }
 
 export function hasPendingEffects(core: SchedulerCore): boolean {
+  if (__PROFILE__ && schedulerPolicyCountersEnabled) {
+    schedulerPolicyCounters.pendingWatcherChecks += 1;
+    schedulerPolicyCounters.schedulerQueueChecked += 1;
+  }
+
   const q = core.queue;
-  return q.head !== q.tail; 
+  return q.head !== q.tail;
 }

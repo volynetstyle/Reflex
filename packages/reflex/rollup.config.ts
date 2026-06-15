@@ -106,6 +106,7 @@ function replacePlugin(target: BuildTarget): Plugin {
     preventAssignment: true,
     values: {
       __DEV__: JSON.stringify(target.dev),
+      __PROFILE__: JSON.stringify(target.dev),
     },
   });
 }

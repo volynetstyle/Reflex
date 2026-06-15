@@ -1,6 +1,10 @@
-import { CONSUMER_INITIAL_STATE, WATCHER_INITIAL_STATE } from "../internal";
 import type { ComputeFn, WatcherCleanup } from "../kernel";
-import { ReactiveNode, PRODUCER_INITIAL_STATE } from "../kernel";
+import {
+  CONSUMER_INITIAL_STATE,
+  PRODUCER_INITIAL_STATE,
+  ReactiveNode,
+  WATCHER_INITIAL_STATE,
+} from "../kernel";
 
 /**
  * Callback function for a reactive effect (watcher).
@@ -17,9 +21,9 @@ export type WatcherFn = () => void | WatcherCleanup;
  * @returns A `ReactiveNode` instance configured as a pure Producer.
  *
  * @example
- * const count = createSignalNode(0);
+ * const count = createProducer(0);
  */
-export const createSignalNode = <T>(payload: T): ReactiveNode<T> =>
+export const createProducer = <T>(payload: T): ReactiveNode<T> =>
   new ReactiveNode<T>(payload, undefined, PRODUCER_INITIAL_STATE);
 
 /**
@@ -32,9 +36,9 @@ export const createSignalNode = <T>(payload: T): ReactiveNode<T> =>
  * @returns A `ReactiveNode` instance configured as a lazy Consumer/Producer.
  *
  * @example
- * const doubled = createComputedNode(() => count.get() * 2);
+ * const doubled = createConsumer(() => count.get() * 2);
  */
-export const createComputedNode = <T>(
+export const createConsumer = <T>(
   callback: ComputeFn<T>,
 ): ReactiveNode<T> =>
   new ReactiveNode<T>(<T>undefined, callback, CONSUMER_INITIAL_STATE);
@@ -48,7 +52,7 @@ export const createComputedNode = <T>(
  * @returns A `ReactiveNode` instance configured as an active Consumer (Watcher).
  *
  * @example
- * const logger = createWatcherNode(() => console.log(count.get()));
+ * const logger = createWatcher(() => console.log(count.get()));
  */
-export const createWatcherNode = (callback: WatcherFn): ReactiveNode<void> =>
+export const createWatcher = (callback: WatcherFn): ReactiveNode<void> =>
   new ReactiveNode<void>(undefined, callback, WATCHER_INITIAL_STATE);

@@ -1,5 +1,7 @@
 import {
   createRuntimeContext,
+  getActiveRuntimeContext,
+  runWithReactiveBatch,
   runWithRuntimeContext,
   resetState,
   setActiveRuntimeContext,
@@ -16,6 +18,8 @@ import { createEventDispatcher } from "../policy";
 import type { EffectStrategy } from "../policy/scheduler";
 import {
   createEffectScheduler,
+  schedulerPolicyCounters,
+  schedulerPolicyCountersEnabled,
   resolveEffectSchedulerMode,
 } from "../policy/scheduler";
 
@@ -66,9 +70,33 @@ export function createRuntime({
   const scheduler = createEffectScheduler(
     resolveEffectSchedulerMode(effectStrategy),
   );
+  const schedulerBatch = scheduler.batch;
+  const schedulerFlush = scheduler.flush;
   const run = <T>(fn: () => T): T => runWithRuntimeContext(execution, fn);
-  const batch = <T>(fn: () => T): T => run(() => scheduler.batch(fn));
-  const flush = (): void => run(scheduler.flush);
+  const emitReactiveSettled = (): void => {
+    if (__PROFILE__ && schedulerPolicyCountersEnabled) {
+      schedulerPolicyCounters.settleCalled += 1;
+    }
+    scheduler.runtimeNotifySettled?.();
+    hooks?.reactiveSettledDispatcher?.();
+  };
+  const batch = <T>(fn: () => T): T => {
+    const runBatch = (): T => runWithReactiveBatch(() => schedulerBatch(fn));
+
+    if (getActiveRuntimeContext() === execution) {
+      return runBatch();
+    }
+
+    return run(runBatch);
+  };
+  const flush = (): void => {
+    if (getActiveRuntimeContext() === execution) {
+      schedulerFlush();
+      return;
+    }
+
+    run(schedulerFlush);
+  };
   const dispatcher = createEventDispatcher(batch);
 
   resetState(execution);
@@ -80,8 +108,7 @@ export function createRuntime({
       hooks?.sinkInvalidatedDispatcher?.(node);
     },
     reactiveSettledDispatcher() {
-      scheduler.runtimeNotifySettled?.();
-      hooks?.reactiveSettledDispatcher?.();
+      emitReactiveSettled();
     },
   });
 

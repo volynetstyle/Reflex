@@ -1,13 +1,10 @@
-import {
-  untracked,
-  watcher,
-} from "@volynets/reflex-runtime";
+import { createWatcher, untracked, watcher } from "@volynets/reflex-runtime";
+import type { WatcherFn } from "@volynets/reflex-runtime/internal";
 import {
   effectCleanupHook,
   Scheduled,
   type ReactiveNode,
 } from "@volynets/reflex-runtime/internal";
-import { createWatcherNode} from "../infra/factory";
 import {
   devassertEffectFn,
   devassertReactionFn,
@@ -87,10 +84,10 @@ export function effectUnscheduled(
  * @see computed
  * @see memo
  */
-export function effect(fn: EffectFn): Destructor {
+export function effect(fn: WatcherFn): Destructor {
   devassertEffectFn(fn, "effect");
 
-  const node = createWatcherNode(wrapEffectFn(fn, "effect"));
+  const node = createWatcher(wrapEffectFn(fn, "effect")) as any;
   const run = watcher.run;
   const dispose = watcher.dispose;
 

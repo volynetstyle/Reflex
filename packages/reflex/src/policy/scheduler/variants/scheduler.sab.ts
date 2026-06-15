@@ -12,6 +12,10 @@ import { createSchedulerInstance } from "../scheduler.instance";
 import type { EffectScheduler } from "../scheduler.types";
 import { noopNotifySettled } from "../scheduler.types";
 import type { ReactiveNode } from "@volynets/reflex-runtime";
+import {
+  schedulerPolicyCounters,
+  schedulerPolicyCountersEnabled,
+} from "../scheduler.counters";
 
 export function createSabScheduler(): EffectScheduler {
   const core = createSchedulerCore();
@@ -23,6 +27,10 @@ export function createSabScheduler(): EffectScheduler {
     try {
       return fn();
     } finally {
+      if (__PROFILE__ && schedulerPolicyCountersEnabled) {
+        schedulerPolicyCounters.batchExit += 1;
+      }
+
       if (
         leaveSchedulerBatch(core) &&
         hasPendingEffects(core) &&

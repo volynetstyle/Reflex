@@ -1,4 +1,8 @@
 import { recordDebugEvent } from "../debug/debug.runtime";
+import {
+  runtimeProfileCounters,
+  runtimeProfileCountersEnabled,
+} from "../profiling";
 import type { ReactiveEdge, ReactiveNode } from "./shape";
 import { reuseIncomingEdgeFromSuffixOrCreate } from "./shape/graph";
 
@@ -33,6 +37,8 @@ export interface RuntimeContext {
   currentConsumer: ReactiveNode | null;
   trackingEpoch: number;
   propagationScopeDepth: number;
+  batchDepth: number;
+  pendingReactiveSettled: boolean;
   readTrackingStrategy: ReadTrackingStrategy;
   sinkInvalidatedHook: SinkInvalidatedHook;
   reactiveSettledHook: ReactiveSettledHook;
@@ -60,6 +66,8 @@ const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
 export let currentConsumer: ReactiveNode | null = null;
 export let trackingEpoch = 0;
 export let propagationScopeDepth = 0;
+export let batchDepth = 0;
+export let pendingReactiveSettled = false;
 
 export let readTrackingStrategy: ReadTrackingStrategy =
   DEFAULT_READ_TRACKING_STRATEGY;
@@ -88,6 +96,8 @@ export function createRuntimeContext(
     currentConsumer: null,
     trackingEpoch: 0,
     propagationScopeDepth: 0,
+    batchDepth: 0,
+    pendingReactiveSettled: false,
     readTrackingStrategy:
       asHook<ReadTrackingStrategy>(options.readTrackingStrategy) ??
       DEFAULT_READ_TRACKING_STRATEGY,
@@ -107,6 +117,8 @@ export function activateRuntimeContext(context: RuntimeContext): void {
   currentConsumer = context.currentConsumer;
   trackingEpoch = context.trackingEpoch;
   propagationScopeDepth = context.propagationScopeDepth;
+  batchDepth = context.batchDepth;
+  pendingReactiveSettled = context.pendingReactiveSettled;
   readTrackingStrategy = context.readTrackingStrategy;
   sinkInvalidatedHook = context.sinkInvalidatedHook;
   reactiveSettledHook = context.reactiveSettledHook;
@@ -119,6 +131,8 @@ export function commitRuntimeContext(
   context.currentConsumer = currentConsumer;
   context.trackingEpoch = trackingEpoch;
   context.propagationScopeDepth = propagationScopeDepth;
+  context.batchDepth = batchDepth;
+  context.pendingReactiveSettled = pendingReactiveSettled;
   context.readTrackingStrategy = readTrackingStrategy;
   context.sinkInvalidatedHook = sinkInvalidatedHook;
   context.reactiveSettledHook = reactiveSettledHook;
@@ -140,9 +154,17 @@ export function runWithRuntimeContext<T>(
   context: RuntimeContext,
   fn: () => T,
 ): T {
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters.contextRunCalls += 1;
+  }
+
   const previous = activeRuntimeContext;
 
   if (previous === context) return fn();
+
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters.contextSwitches += 1;
+  }
 
   commitRuntimeContext(previous);
   activateRuntimeContext(context);
@@ -198,11 +220,54 @@ export function setPropagationScopeDepth(depth: number): void {
   propagationScopeDepth = depth;
 }
 
+export function getBatchDepth(): number {
+  return batchDepth;
+}
+
+export function hasPendingReactiveSettled(): boolean {
+  return pendingReactiveSettled;
+}
+
+export function enterReactiveBatch(): void {
+  batchDepth += 1;
+}
+
+export function leaveReactiveBatch(): void {
+  if (batchDepth > 0) batchDepth -= 1;
+
+  if (batchDepth !== 0) return;
+  if (!pendingReactiveSettled) return;
+  if (propagationScopeDepth !== 0 || currentConsumer !== null) return;
+
+  pendingReactiveSettled = false;
+  emitReactiveSettled();
+}
+
+export function runWithReactiveBatch<T>(fn: () => T): T {
+  enterReactiveBatch();
+
+  try {
+    return fn();
+  } finally {
+    leaveReactiveBatch();
+  }
+}
+
 export function enterPropagationScope(): void {
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters.propagationScopesEntered += 1;
+    runtimeProfileCounters.contextPropagationEnter += 1;
+  }
+
   ++propagationScopeDepth;
 }
 
 export function leavePropagationScope(): void {
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters.propagationScopesLeft += 1;
+    runtimeProfileCounters.contextPropagationLeave += 1;
+  }
+
   if (propagationScopeDepth > 0) --propagationScopeDepth;
 
   if (propagationScopeDepth === 0 && currentConsumer === null) {
@@ -211,6 +276,10 @@ export function leavePropagationScope(): void {
 }
 
 export function emitSinkInvalidated(node: ReactiveNode): void {
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters.sinkInvalidatedEmits += 1;
+  }
+
   if (IS_DEV) {
     recordDebugEvent(defaultContext, "watcher:invalidated", { node });
   }
@@ -219,6 +288,10 @@ export function emitSinkInvalidated(node: ReactiveNode): void {
 }
 
 export function emitSettledIfIdle(): void {
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters.contextSettledChecks += 1;
+  }
+
   if (propagationScopeDepth !== 0 || currentConsumer !== null) return;
 
   if (IS_DEV) {
@@ -229,6 +302,18 @@ export function emitSettledIfIdle(): void {
 }
 
 function emitReactiveSettled(): void {
+  if (batchDepth !== 0) {
+    pendingReactiveSettled = true;
+    if (__PROFILE__ && runtimeProfileCountersEnabled) {
+      runtimeProfileCounters.contextSettledDeferred += 1;
+    }
+    return;
+  }
+
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters.contextSettledEmits += 1;
+  }
+
   reactiveSettledHook?.();
 }
 
@@ -337,6 +422,8 @@ export function resetRuntimeContextOptions(
   context.currentConsumer = null;
   context.trackingEpoch = 0;
   context.propagationScopeDepth = 0;
+  context.batchDepth = 0;
+  context.pendingReactiveSettled = false;
   context.readTrackingStrategy = DEFAULT_READ_TRACKING_STRATEGY;
   context.sinkInvalidatedHook = undefined;
   context.reactiveSettledHook = undefined;
@@ -354,6 +441,8 @@ export function saveRuntimeContext(
     currentConsumer: context.currentConsumer,
     trackingEpoch: context.trackingEpoch,
     propagationScopeDepth: context.propagationScopeDepth,
+    batchDepth: context.batchDepth,
+    pendingReactiveSettled: context.pendingReactiveSettled,
     readTrackingStrategy: context.readTrackingStrategy,
     sinkInvalidatedHook: context.sinkInvalidatedHook,
     reactiveSettledHook: context.reactiveSettledHook,
@@ -376,6 +465,8 @@ export function restoreRuntimeContext(
       ? snapshot.trackingEpoch
       : currentEpoch;
   context.propagationScopeDepth = snapshot.propagationScopeDepth;
+  context.batchDepth = snapshot.batchDepth;
+  context.pendingReactiveSettled = snapshot.pendingReactiveSettled;
   context.readTrackingStrategy = snapshot.readTrackingStrategy;
   context.sinkInvalidatedHook = snapshot.sinkInvalidatedHook;
   context.reactiveSettledHook = snapshot.reactiveSettledHook;

@@ -1,11 +1,15 @@
 import {
   currentConsumer,
   defaultContext,
-  trackingEpoch,
   resolveTrackedRead,
+  trackingEpoch,
 } from "../kernel";
 import type { ReactiveNode } from "../kernel";
 import { devRecordReadProducer } from "../kernel/dev";
+import {
+  runtimeProfileCounters,
+  runtimeProfileCountersEnabled,
+} from "../profiling";
 
 /**
  * Read the value of a producer (source) node.
@@ -31,11 +35,20 @@ const computed = createConsumer(() => {
  * @cost O(1) for value access + O(k) for dependency tracking (k = cursor distance)
  */
 export function readProducer<T>(node: ReactiveNode<T>): T {
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters.readProducerCalls += 1;
+  }
+
   const value = node.payload;
   const consumer = currentConsumer;
 
   // Register this read as a dependency if there's an active computation
-  if (consumer !== null) resolveTrackedRead(node, consumer, trackingEpoch, true);
+  if (consumer !== null) {
+    if (__PROFILE__ && runtimeProfileCountersEnabled) {
+      runtimeProfileCounters.readProducerTracked += 1;
+    }
+    resolveTrackedRead(node, consumer, trackingEpoch, true);
+  }
 
   if (__DEV__) devRecordReadProducer(node, value, defaultContext);
 

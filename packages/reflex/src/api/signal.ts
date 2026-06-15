@@ -1,6 +1,5 @@
 import type { ReactiveNode } from "@volynets/reflex-runtime/internal";
-import { readProducer, writeProducer } from "@volynets/reflex-runtime";
-import { createSignalNode } from "../infra/factory";
+import { createProducer, readProducer, writeProducer } from "@volynets/reflex-runtime";
 import {
   devassertSetterReceivedPromise,
   devassertSetterReturn,
@@ -55,7 +54,7 @@ import {
  */
 
 export function signal<T>(initialValue: T): readonly [Signal<T>, Setter<T>] {
-  const node = createSignalNode(initialValue);
+  const node = createProducer(initialValue);
 
   const read = (): T => readProducer(node);
 

@@ -3,7 +3,7 @@ import {
   Computing,
   Visited,
 } from "../shape";
-import { cleanupUnvisitedSources } from "../shape/tracking";
+import { cleanupUnvisitedSources } from "./tracking";
 import {
   currentConsumer,
   nextTrackingEpoch,

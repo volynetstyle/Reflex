@@ -1,4 +1,8 @@
 import { runWatcher } from "@volynets/reflex-runtime";
+import {
+  schedulerPolicyCounters,
+  schedulerPolicyCountersEnabled,
+} from "./scheduler.counters";
 import { UNSCHEDULE_MASK } from "./scheduler.constants";
 import type { WatcherQueue } from "./scheduler.types";
 
@@ -40,6 +44,15 @@ export function flushQueuedWatchers(
 
     // Clear before running so a watcher may enqueue itself again.
     node.state &= UNSCHEDULE_MASK;
+
+    if (typeof node.compute !== "function") {
+      tail = queue.tail;
+      continue;
+    }
+
+    if (__PROFILE__ && schedulerPolicyCountersEnabled) {
+      schedulerPolicyCounters.effectsRun += 1;
+    }
 
     try {
       runWatcher(node);

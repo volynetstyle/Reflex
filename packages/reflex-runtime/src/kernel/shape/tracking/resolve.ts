@@ -8,6 +8,10 @@ import {
 } from "../graph/edgeList";
 import { defaultContext, readTrackingStrategy } from "../../context";
 import {
+  runtimeProfileCounters,
+  runtimeProfileCountersEnabled,
+} from "../../../profiling";
+import {
   hasProducerEdgeInCurrentPassUnchecked,
   isProducerInTrackedPrefix,
 } from "./prefix";
@@ -70,6 +74,10 @@ export function resolveTrackedRead(
   producerVersion: number,
   allowSlowPath: boolean,
 ): boolean {
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters.trackingResolveCalls += 1;
+  }
+
   /**
    * `tailIn` is used here as the tracking cursor.
    *
@@ -87,6 +95,9 @@ export function resolveTrackedRead(
      */
     if (cursorEdge.from === producer) {
       cursorEdge.version = producerVersion;
+      if (__PROFILE__ && runtimeProfileCountersEnabled) {
+        runtimeProfileCounters.trackingCursorHit += 1;
+      }
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
@@ -105,6 +116,9 @@ export function resolveTrackedRead(
     if (expectedNextEdge !== null && expectedNextEdge.from === producer) {
       expectedNextEdge.version = producerVersion;
       consumer.tailIn = expectedNextEdge;
+      if (__PROFILE__ && runtimeProfileCountersEnabled) {
+        runtimeProfileCounters.trackingNextHit += 1;
+      }
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
@@ -124,6 +138,10 @@ export function resolveTrackedRead(
           cursorEdge,
           producerVersion,
         );
+
+        if (__PROFILE__ && runtimeProfileCountersEnabled) {
+          runtimeProfileCounters.trackingAppendAfterCursor += 1;
+        }
 
         if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
         return true;
@@ -147,6 +165,10 @@ export function resolveTrackedRead(
             producerVersion,
           ))
       ) {
+        if (__PROFILE__ && runtimeProfileCountersEnabled) {
+          runtimeProfileCounters.trackingPrefixDuplicate += 1;
+        }
+
         if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
         return true;
       }
@@ -163,6 +185,10 @@ export function resolveTrackedRead(
         cursorEdge,
         producerVersion,
       );
+
+      if (__PROFILE__ && runtimeProfileCountersEnabled) {
+        runtimeProfileCounters.trackingAppendAfterCursor += 1;
+      }
 
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
@@ -183,6 +209,10 @@ export function resolveTrackedRead(
 
     if (lookahead1Edge !== null) {
       if (lookahead1Edge.from === producer) {
+        if (__PROFILE__ && runtimeProfileCountersEnabled) {
+          runtimeProfileCounters.trackingOneHopReorder += 1;
+        }
+
         if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
 
         return moveTrackedIncomingEdgeAfterCursorUnchecked(
@@ -207,6 +237,10 @@ export function resolveTrackedRead(
       const lookahead2Edge = lookahead1Edge.nextIn;
 
       if (lookahead2Edge !== null && lookahead2Edge.from === producer) {
+        if (__PROFILE__ && runtimeProfileCountersEnabled) {
+          runtimeProfileCounters.trackingTwoHopReorder += 1;
+        }
+
         if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
 
         return moveTrackedIncomingEdgeAfterCursorUnchecked(
@@ -227,6 +261,10 @@ export function resolveTrackedRead(
     const lastIncomingEdge = consumer.lastIn;
 
     if (lastIncomingEdge !== null && lastIncomingEdge.from === producer) {
+      if (__PROFILE__ && runtimeProfileCountersEnabled) {
+        runtimeProfileCounters.trackingLastEdgeShortcut += 1;
+      }
+
       moveLastIncomingEdgeAfterEdgeUnchecked(
         consumer,
         lastIncomingEdge,
@@ -258,6 +296,10 @@ export function resolveTrackedRead(
           producerVersion,
         ))
     ) {
+      if (__PROFILE__ && runtimeProfileCountersEnabled) {
+        runtimeProfileCounters.trackingPrefixDuplicate += 1;
+      }
+
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
@@ -278,6 +320,10 @@ export function resolveTrackedRead(
     if (firstIncomingEdge === null) {
       consumer.tailIn = linkEdge(producer, consumer, null, producerVersion);
 
+      if (__PROFILE__ && runtimeProfileCountersEnabled) {
+        runtimeProfileCounters.trackingInitialCreate += 1;
+      }
+
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
@@ -290,6 +336,10 @@ export function resolveTrackedRead(
     if (firstIncomingEdge.from === producer) {
       firstIncomingEdge.version = producerVersion;
       consumer.tailIn = firstIncomingEdge;
+
+      if (__PROFILE__ && runtimeProfileCountersEnabled) {
+        runtimeProfileCounters.trackingInitialFirstHit += 1;
+      }
 
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
@@ -304,6 +354,10 @@ export function resolveTrackedRead(
     const lastIncomingEdge = consumer.lastIn;
 
     if (lastIncomingEdge !== null && lastIncomingEdge.from === producer) {
+      if (__PROFILE__ && runtimeProfileCountersEnabled) {
+        runtimeProfileCounters.trackingInitialLastEdgeShortcut += 1;
+      }
+
       moveLastIncomingEdgeToFrontUnchecked(consumer, lastIncomingEdge);
 
       lastIncomingEdge.version = producerVersion;
@@ -314,7 +368,12 @@ export function resolveTrackedRead(
     }
   }
 
-  if (!allowSlowPath) return false;
+  if (!allowSlowPath) {
+    if (__PROFILE__ && runtimeProfileCountersEnabled) {
+      runtimeProfileCounters.trackingSlowPathBlocked += 1;
+    }
+    return false;
+  }
 
   /**
    * L7b / I4: Full slow-path reconciliation.
@@ -323,6 +382,10 @@ export function resolveTrackedRead(
    * Delegate to the general dependency reconciliation logic.
    */
   if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters.trackingSlowPath += 1;
+  }
 
   consumer.tailIn = readTrackingStrategy(
     producer,

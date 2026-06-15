@@ -3,6 +3,10 @@ import {
   readRuntimeWalkerStackStats,
 } from "../stackStats";
 import { devAssertRefreshEdge } from "../../dev";
+import {
+  runtimeProfileCounters,
+  runtimeProfileCountersEnabled,
+} from "../../../profiling";
 import type { ReactiveEdge, ReactiveNode } from "../../shape";
 import { Changed, Invalid } from "../../shape";
 import { advance } from "./advance";
@@ -21,6 +25,10 @@ let high = 0;
  * - resumes siblings only while the current branch remains stable.
  */
 export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters.pullCalls += 1;
+  }
+
   const base = high;
   let top = base;
   let changed = false;
@@ -33,10 +41,19 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
     if ((node.state & Changed) !== 0) {
       changed = true;
     } else {
+      if (__PROFILE__ && runtimeProfileCountersEnabled) {
+        runtimeProfileCounters.pullEdgesVisited += 1;
+      }
+
       const dep = edge.from;
       const depState = dep.state;
 
       if ((depState & Changed) !== 0) {
+        if (__PROFILE__ && runtimeProfileCountersEnabled) {
+          runtimeProfileCounters.pullChangedDeps += 1;
+          runtimeProfileCounters.pullAdvanceCalls += 1;
+        }
+
         /**
          * advance() may re-enter pull walking, so expose only the active
          * stack slice before calling it.
@@ -49,9 +66,17 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
         changed = advance(dep, edge);
       } else if ((depState & Invalid) !== 0) {
+        if (__PROFILE__ && runtimeProfileCountersEnabled) {
+          runtimeProfileCounters.pullInvalidDeps += 1;
+        }
+
         const firstIn = dep.firstIn;
 
         if (firstIn !== null) {
+          if (__PROFILE__ && runtimeProfileCountersEnabled) {
+            runtimeProfileCounters.pullDescents += 1;
+          }
+
           stack[top] = edge;
           top = top + 1;
 
@@ -66,12 +91,20 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
         high = top;
 
+        if (__PROFILE__ && runtimeProfileCountersEnabled) {
+          runtimeProfileCounters.pullAdvanceCalls += 1;
+        }
+
         if (__DEV__) {
           devAssertRefreshEdge(dep, edge);
         }
 
         changed = advance(dep, edge);
       } else {
+        if (__PROFILE__ && runtimeProfileCountersEnabled) {
+          runtimeProfileCounters.pullCleanDeps += 1;
+        }
+
         changed = false;
       }
     }
@@ -84,6 +117,10 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
       const sibling = edge.nextIn;
 
       if (sibling !== null) {
+        if (__PROFILE__ && runtimeProfileCountersEnabled) {
+          runtimeProfileCounters.pullStableSiblingScans += 1;
+        }
+
         edge = sibling;
         continue scan;
       }
@@ -95,6 +132,10 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
         high = top;
 
         const parentEdge = stack[top]!;
+        if (__PROFILE__ && runtimeProfileCountersEnabled) {
+          runtimeProfileCounters.pullChangedBubbles += 1;
+          runtimeProfileCounters.pullAdvanceCalls += 1;
+        }
         changed = advance(node, parentEdge);
         node = parentEdge.to;
 
@@ -102,6 +143,10 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
           const sibling = parentEdge.nextIn;
 
           if (sibling !== null) {
+            if (__PROFILE__ && runtimeProfileCountersEnabled) {
+              runtimeProfileCounters.pullStableSiblingScans += 1;
+            }
+
             edge = sibling;
             continue scan;
           }
@@ -134,6 +179,10 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
       const sibling = parentEdge.nextIn;
 
       if (sibling !== null) {
+        if (__PROFILE__ && runtimeProfileCountersEnabled) {
+          runtimeProfileCounters.pullStableSiblingScans += 1;
+        }
+
         edge = sibling;
         continue scan;
       }
