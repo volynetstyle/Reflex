@@ -66,8 +66,11 @@ const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
 export let currentConsumer: ReactiveNode | null = null;
 export let trackingEpoch = 0;
 export let propagationScopeDepth = 0;
-export let batchDepth = 0;
-export let pendingReactiveSettled = false;
+
+export const reactiveBatchState = {
+  batchDepth: 0,
+  pendingReactiveSettled: false,
+};
 
 export let readTrackingStrategy: ReadTrackingStrategy =
   DEFAULT_READ_TRACKING_STRATEGY;
@@ -117,8 +120,8 @@ export function activateRuntimeContext(context: RuntimeContext): void {
   currentConsumer = context.currentConsumer;
   trackingEpoch = context.trackingEpoch;
   propagationScopeDepth = context.propagationScopeDepth;
-  batchDepth = context.batchDepth;
-  pendingReactiveSettled = context.pendingReactiveSettled;
+  reactiveBatchState.batchDepth = context.batchDepth;
+  reactiveBatchState.pendingReactiveSettled = context.pendingReactiveSettled;
   readTrackingStrategy = context.readTrackingStrategy;
   sinkInvalidatedHook = context.sinkInvalidatedHook;
   reactiveSettledHook = context.reactiveSettledHook;
@@ -131,8 +134,8 @@ export function commitRuntimeContext(
   context.currentConsumer = currentConsumer;
   context.trackingEpoch = trackingEpoch;
   context.propagationScopeDepth = propagationScopeDepth;
-  context.batchDepth = batchDepth;
-  context.pendingReactiveSettled = pendingReactiveSettled;
+  context.batchDepth = reactiveBatchState.batchDepth;
+  context.pendingReactiveSettled = reactiveBatchState.pendingReactiveSettled;
   context.readTrackingStrategy = readTrackingStrategy;
   context.sinkInvalidatedHook = sinkInvalidatedHook;
   context.reactiveSettledHook = reactiveSettledHook;
@@ -221,25 +224,31 @@ export function setPropagationScopeDepth(depth: number): void {
 }
 
 export function getBatchDepth(): number {
-  return batchDepth;
+  return reactiveBatchState.batchDepth;
 }
 
 export function hasPendingReactiveSettled(): boolean {
-  return pendingReactiveSettled;
+  return reactiveBatchState.pendingReactiveSettled;
 }
 
 export function enterReactiveBatch(): void {
-  batchDepth += 1;
+  reactiveBatchState.batchDepth += 1;
 }
 
 export function leaveReactiveBatch(): void {
-  if (batchDepth > 0) batchDepth -= 1;
+  if (reactiveBatchState.batchDepth > 0) {
+    reactiveBatchState.batchDepth -= 1;
+  }
 
-  if (batchDepth !== 0) return;
-  if (!pendingReactiveSettled) return;
+  flushPendingReactiveSettledIfIdle();
+}
+
+export function flushPendingReactiveSettledIfIdle(): void {
+  if (reactiveBatchState.batchDepth !== 0) return;
+  if (!reactiveBatchState.pendingReactiveSettled) return;
   if (propagationScopeDepth !== 0 || currentConsumer !== null) return;
 
-  pendingReactiveSettled = false;
+  reactiveBatchState.pendingReactiveSettled = false;
   emitReactiveSettled();
 }
 
@@ -302,8 +311,8 @@ export function emitSettledIfIdle(): void {
 }
 
 function emitReactiveSettled(): void {
-  if (batchDepth !== 0) {
-    pendingReactiveSettled = true;
+  if (reactiveBatchState.batchDepth !== 0) {
+    reactiveBatchState.pendingReactiveSettled = true;
     if (__PROFILE__ && runtimeProfileCountersEnabled) {
       runtimeProfileCounters.contextSettledDeferred += 1;
     }

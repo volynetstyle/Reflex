@@ -1,7 +1,8 @@
 import {
   createRuntimeContext,
+  flushPendingReactiveSettledIfIdle,
   getActiveRuntimeContext,
-  runWithReactiveBatch,
+  reactiveBatchState,
   runWithRuntimeContext,
   resetState,
   setActiveRuntimeContext,
@@ -17,7 +18,16 @@ import { createSource } from "./factory";
 import { createEventDispatcher } from "../policy";
 import type { EffectStrategy } from "../policy/scheduler";
 import {
+  EffectSchedulerMode,
+  Batching,
+  Flushing,
+  Idle,
   createEffectScheduler,
+  enterSchedulerBatch,
+  flushSchedulerQueue,
+  hasPendingEffects,
+  isContextSettled,
+  leaveSchedulerBatch,
   schedulerPolicyCounters,
   schedulerPolicyCountersEnabled,
   resolveEffectSchedulerMode,
@@ -31,15 +41,11 @@ export interface RuntimeContext {
   readonly execution: RuntimeExecutionContext;
 }
 
-let activeBatch: BatchFn = (fn) => fn();
+export let batch: BatchFn = <T>(fn: () => T): T => fn();
 let activeEvent: EventFn = (() => {
   throw new Error("Runtime has not been created");
 }) as EventFn;
 let activeFlush: () => void = () => {};
-let activeContext: RuntimeContext = {
-  scope: "runtime",
-  execution: createRuntimeContext(),
-};
 
 export interface RuntimeOptions {
   hooks?: RuntimeHostHooks;
@@ -70,7 +76,8 @@ export function createRuntime({
   const scheduler = createEffectScheduler(
     resolveEffectSchedulerMode(effectStrategy),
   );
-  const schedulerBatch = scheduler.batch;
+  const schedulerCore = scheduler.core;
+  const schedulerMode = scheduler.mode;
   const schedulerFlush = scheduler.flush;
   const run = <T>(fn: () => T): T => runWithRuntimeContext(execution, fn);
   const emitReactiveSettled = (): void => {
@@ -80,14 +87,80 @@ export function createRuntime({
     scheduler.runtimeNotifySettled?.();
     hooks?.reactiveSettledDispatcher?.();
   };
-  const batch = <T>(fn: () => T): T => {
-    const runBatch = (): T => runWithReactiveBatch(() => schedulerBatch(fn));
+  const runFlushBatch = <T>(fn: () => T): T => {
+    reactiveBatchState.batchDepth += 1;
 
-    if (getActiveRuntimeContext() === execution) {
-      return runBatch();
+    if (++schedulerCore.batchDepth === 1 && schedulerCore.phase !== Flushing) {
+      schedulerCore.phase = Batching;
     }
 
-    return run(runBatch);
+    try {
+      return fn();
+    } finally {
+      if (__PROFILE__ && schedulerPolicyCountersEnabled) {
+        schedulerPolicyCounters.batchExit += 1;
+      }
+
+      if (--schedulerCore.batchDepth === 0 && schedulerCore.phase !== Flushing) {
+        schedulerCore.phase = Idle;
+      }
+
+      if (reactiveBatchState.batchDepth > 0) {
+        reactiveBatchState.batchDepth -= 1;
+      }
+
+      if (reactiveBatchState.pendingReactiveSettled) {
+        flushPendingReactiveSettledIfIdle();
+      }
+    }
+  };
+  const runScheduledBatch = <T>(fn: () => T): T => {
+    reactiveBatchState.batchDepth += 1;
+    enterSchedulerBatch(schedulerCore);
+
+    try {
+      return fn();
+    } finally {
+      if (__PROFILE__ && schedulerPolicyCountersEnabled) {
+        schedulerPolicyCounters.batchExit += 1;
+      }
+
+      const leftOuterSchedulerBatch = leaveSchedulerBatch(schedulerCore);
+
+      if (leftOuterSchedulerBatch) {
+        if (
+          schedulerMode === EffectSchedulerMode.Eager &&
+          hasPendingEffects(schedulerCore)
+        ) {
+          flushSchedulerQueue(schedulerCore);
+        } else if (
+          schedulerMode === EffectSchedulerMode.SAB &&
+          hasPendingEffects(schedulerCore) &&
+          isContextSettled()
+        ) {
+          flushSchedulerQueue(schedulerCore);
+        }
+      }
+
+      if (reactiveBatchState.batchDepth > 0) {
+        reactiveBatchState.batchDepth -= 1;
+      }
+
+      if (reactiveBatchState.pendingReactiveSettled) {
+        flushPendingReactiveSettledIfIdle();
+      }
+    }
+  };
+  const runBatch =
+    schedulerMode === EffectSchedulerMode.Flush ? runFlushBatch : runScheduledBatch;
+  const runtimeBatch = <T>(fn: () => T): T => {
+    const runContextBatch = (): T => runBatch(fn);
+
+    if (getActiveRuntimeContext() === execution) {
+      return runContextBatch();
+    }
+
+    return run(runContextBatch);
   };
   const flush = (): void => {
     if (getActiveRuntimeContext() === execution) {
@@ -97,7 +170,7 @@ export function createRuntime({
 
     run(schedulerFlush);
   };
-  const dispatcher = createEventDispatcher(batch);
+  const dispatcher = createEventDispatcher(runtimeBatch);
 
   resetState(execution);
 
@@ -113,8 +186,8 @@ export function createRuntime({
   });
 
   setActiveRuntimeContext(execution);
-  activeContext = ctx;
-  activeBatch = batch;
+  // activeContext = ctx;
+  batch = runBatch;
   activeEvent = function <T>() {
     const source = createSource<T>();
 
@@ -130,14 +203,12 @@ export function createRuntime({
   activeFlush = flush;
 
   return {
-    ctx: activeContext,
-    batch: activeBatch,
+    ctx,
+    batch: runtimeBatch,
     event: activeEvent,
-    flush: activeFlush,
+    flush,
   };
 }
-
-export const batch: BatchFn = <T>(fn: () => T) => activeBatch(fn);
 
 export const event: EventFn = <T>() => activeEvent<T>();
 

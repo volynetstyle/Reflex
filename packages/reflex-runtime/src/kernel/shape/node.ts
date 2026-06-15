@@ -12,6 +12,7 @@ class ReactiveNode<T = unknown> {
   tailIn: ReactiveEdge | null = null;
   compute: ComputeFn<T> = undefined;
   payload: T;
+  pending: T;
 
   constructor(payload: T, compute: ComputeFn<T>, state: number) {
     if (__DEV__ && !isPayload(payload)) {
@@ -23,7 +24,28 @@ class ReactiveNode<T = unknown> {
     this.state = state | 0;
     this.compute = compute;
     this.payload = payload;
+    this.pending = payload;
   }
 }
+
+// export class ProducerNode<T = unknown> {
+//   state: number = 0;
+//   firstOut: ReactiveEdge | null = null;
+//   lastOut: ReactiveEdge | null = null;
+//   payload: T;
+//   pending: T;
+
+//   constructor(payload: T, pending: T, state: number) {
+//     if (__DEV__ && !isPayload(payload)) {
+//       throw new TypeError(
+//         `[ReactiveNode(constructor)]: payload must be primitive, function, array, or plain object, but not a ${typeof payload}`,
+//       );
+//     }
+
+//     this.state = state | 0;
+//     this.payload = payload;
+//     this.pending = pending;
+//   }
+// }
 
 export default ReactiveNode;
