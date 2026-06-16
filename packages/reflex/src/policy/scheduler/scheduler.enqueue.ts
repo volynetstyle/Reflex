@@ -2,10 +2,7 @@ import {
   Scheduled,
   type ReactiveNode,
 } from "@volynets/reflex-runtime/internal";
-import {
-  schedulerPolicyCounters,
-  schedulerPolicyCountersEnabled,
-} from "./scheduler.counters";
+import { profileSchedulerPolicyCounter } from "./scheduler.counters";
 import type { EffectNode, WatcherQueue } from "./scheduler.types";
 
 /**
@@ -67,8 +64,6 @@ export function tryEnqueue(queue: WatcherQueue, node: ReactiveNode): boolean {
 
   ring[tail & queue.mask] = node as EffectNode;
   queue.tail = tail + 1;
-  if (__PROFILE__ && schedulerPolicyCountersEnabled) {
-    schedulerPolicyCounters.effectsScheduled += 1;
-  }
+  profileSchedulerPolicyCounter("effectsScheduled");
   return true;
 }

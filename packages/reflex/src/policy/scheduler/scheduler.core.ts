@@ -1,8 +1,5 @@
 import { createRingQueue } from "./scheduler.queue";
-import {
-  schedulerPolicyCounters,
-  schedulerPolicyCountersEnabled,
-} from "./scheduler.counters";
+import { profileSchedulerPolicyCounter } from "./scheduler.counters";
 import {
   cleanupQueuedNodesAfterAbort,
   flushQueuedWatchers,
@@ -16,15 +13,11 @@ export function flushSchedulerQueue(core: SchedulerCore): void {
   const queue = core.queue;
 
   if (core.phase === Flushing) return;
-  if (__PROFILE__ && schedulerPolicyCountersEnabled) {
-    schedulerPolicyCounters.flushCalled += 1;
-    schedulerPolicyCounters.schedulerQueueChecked += 1;
-  }
+  profileSchedulerPolicyCounter("flushCalled");
+  profileSchedulerPolicyCounter("schedulerQueueChecked");
   // !hasPendingEffects but in hot path
   if (queue.head === queue.tail) {
-    if (__PROFILE__ && schedulerPolicyCountersEnabled) {
-      schedulerPolicyCounters.flushReturnedEmpty += 1;
-    }
+    profileSchedulerPolicyCounter("flushReturnedEmpty");
     return;
   }
 

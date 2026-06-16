@@ -7,10 +7,7 @@ import {
   moveTrackedIncomingEdgeAfterCursorUnchecked,
 } from "../graph/edgeList";
 import { defaultContext, readTrackingStrategy } from "../../context";
-import {
-  runtimeProfileCounters,
-  runtimeProfileCountersEnabled,
-} from "../../../profiling";
+import { profileRuntimeCounter } from "../../../profiling";
 import {
   hasProducerEdgeInCurrentPassUnchecked,
   isProducerInTrackedPrefix,
@@ -74,9 +71,7 @@ export function resolveTrackedRead(
   producerVersion: number,
   allowSlowPath: boolean,
 ): boolean {
-  if (__PROFILE__ && runtimeProfileCountersEnabled) {
-    runtimeProfileCounters.trackingResolveCalls += 1;
-  }
+  profileRuntimeCounter("trackingResolveCalls");
 
   /**
    * `tailIn` is used here as the tracking cursor.
@@ -95,9 +90,7 @@ export function resolveTrackedRead(
      */
     if (cursorEdge.from === producer) {
       cursorEdge.version = producerVersion;
-      if (__PROFILE__ && runtimeProfileCountersEnabled) {
-        runtimeProfileCounters.trackingCursorHit += 1;
-      }
+      profileRuntimeCounter("trackingCursorHit");
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
@@ -116,9 +109,7 @@ export function resolveTrackedRead(
     if (expectedNextEdge !== null && expectedNextEdge.from === producer) {
       expectedNextEdge.version = producerVersion;
       consumer.tailIn = expectedNextEdge;
-      if (__PROFILE__ && runtimeProfileCountersEnabled) {
-        runtimeProfileCounters.trackingNextHit += 1;
-      }
+      profileRuntimeCounter("trackingNextHit");
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
@@ -139,9 +130,7 @@ export function resolveTrackedRead(
           producerVersion,
         );
 
-        if (__PROFILE__ && runtimeProfileCountersEnabled) {
-          runtimeProfileCounters.trackingAppendAfterCursor += 1;
-        }
+        profileRuntimeCounter("trackingAppendAfterCursor");
 
         if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
         return true;
@@ -165,9 +154,7 @@ export function resolveTrackedRead(
             producerVersion,
           ))
       ) {
-        if (__PROFILE__ && runtimeProfileCountersEnabled) {
-          runtimeProfileCounters.trackingPrefixDuplicate += 1;
-        }
+        profileRuntimeCounter("trackingPrefixDuplicate");
 
         if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
         return true;
@@ -186,9 +173,7 @@ export function resolveTrackedRead(
         producerVersion,
       );
 
-      if (__PROFILE__ && runtimeProfileCountersEnabled) {
-        runtimeProfileCounters.trackingAppendAfterCursor += 1;
-      }
+      profileRuntimeCounter("trackingAppendAfterCursor");
 
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
@@ -209,9 +194,7 @@ export function resolveTrackedRead(
 
     if (lookahead1Edge !== null) {
       if (lookahead1Edge.from === producer) {
-        if (__PROFILE__ && runtimeProfileCountersEnabled) {
-          runtimeProfileCounters.trackingOneHopReorder += 1;
-        }
+        profileRuntimeCounter("trackingOneHopReorder");
 
         if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
 
@@ -237,9 +220,7 @@ export function resolveTrackedRead(
       const lookahead2Edge = lookahead1Edge.nextIn;
 
       if (lookahead2Edge !== null && lookahead2Edge.from === producer) {
-        if (__PROFILE__ && runtimeProfileCountersEnabled) {
-          runtimeProfileCounters.trackingTwoHopReorder += 1;
-        }
+        profileRuntimeCounter("trackingTwoHopReorder");
 
         if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
 
@@ -261,9 +242,7 @@ export function resolveTrackedRead(
     const lastIncomingEdge = consumer.lastIn;
 
     if (lastIncomingEdge !== null && lastIncomingEdge.from === producer) {
-      if (__PROFILE__ && runtimeProfileCountersEnabled) {
-        runtimeProfileCounters.trackingLastEdgeShortcut += 1;
-      }
+      profileRuntimeCounter("trackingLastEdgeShortcut");
 
       moveLastIncomingEdgeAfterEdgeUnchecked(
         consumer,
@@ -296,9 +275,7 @@ export function resolveTrackedRead(
           producerVersion,
         ))
     ) {
-      if (__PROFILE__ && runtimeProfileCountersEnabled) {
-        runtimeProfileCounters.trackingPrefixDuplicate += 1;
-      }
+      profileRuntimeCounter("trackingPrefixDuplicate");
 
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
@@ -320,9 +297,7 @@ export function resolveTrackedRead(
     if (firstIncomingEdge === null) {
       consumer.tailIn = linkEdge(producer, consumer, null, producerVersion);
 
-      if (__PROFILE__ && runtimeProfileCountersEnabled) {
-        runtimeProfileCounters.trackingInitialCreate += 1;
-      }
+      profileRuntimeCounter("trackingInitialCreate");
 
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
@@ -337,9 +312,7 @@ export function resolveTrackedRead(
       firstIncomingEdge.version = producerVersion;
       consumer.tailIn = firstIncomingEdge;
 
-      if (__PROFILE__ && runtimeProfileCountersEnabled) {
-        runtimeProfileCounters.trackingInitialFirstHit += 1;
-      }
+      profileRuntimeCounter("trackingInitialFirstHit");
 
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
@@ -354,9 +327,7 @@ export function resolveTrackedRead(
     const lastIncomingEdge = consumer.lastIn;
 
     if (lastIncomingEdge !== null && lastIncomingEdge.from === producer) {
-      if (__PROFILE__ && runtimeProfileCountersEnabled) {
-        runtimeProfileCounters.trackingInitialLastEdgeShortcut += 1;
-      }
+      profileRuntimeCounter("trackingInitialLastEdgeShortcut");
 
       moveLastIncomingEdgeToFrontUnchecked(consumer, lastIncomingEdge);
 
@@ -369,9 +340,7 @@ export function resolveTrackedRead(
   }
 
   if (!allowSlowPath) {
-    if (__PROFILE__ && runtimeProfileCountersEnabled) {
-      runtimeProfileCounters.trackingSlowPathBlocked += 1;
-    }
+    profileRuntimeCounter("trackingSlowPathBlocked");
     return false;
   }
 
@@ -383,9 +352,7 @@ export function resolveTrackedRead(
    */
   if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
 
-  if (__PROFILE__ && runtimeProfileCountersEnabled) {
-    runtimeProfileCounters.trackingSlowPath += 1;
-  }
+  profileRuntimeCounter("trackingSlowPath");
 
   consumer.tailIn = readTrackingStrategy(
     producer,

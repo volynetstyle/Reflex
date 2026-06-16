@@ -28,8 +28,7 @@ import {
   hasPendingEffects,
   isContextSettled,
   leaveSchedulerBatch,
-  schedulerPolicyCounters,
-  schedulerPolicyCountersEnabled,
+  profileSchedulerPolicyCounter,
   resolveEffectSchedulerMode,
 } from "../policy/scheduler";
 
@@ -81,9 +80,7 @@ export function createRuntime({
   const schedulerFlush = scheduler.flush;
   const run = <T>(fn: () => T): T => runWithRuntimeContext(execution, fn);
   const emitReactiveSettled = (): void => {
-    if (__PROFILE__ && schedulerPolicyCountersEnabled) {
-      schedulerPolicyCounters.settleCalled += 1;
-    }
+    profileSchedulerPolicyCounter("settleCalled");
     scheduler.runtimeNotifySettled?.();
     hooks?.reactiveSettledDispatcher?.();
   };
@@ -97,9 +94,7 @@ export function createRuntime({
     try {
       return fn();
     } finally {
-      if (__PROFILE__ && schedulerPolicyCountersEnabled) {
-        schedulerPolicyCounters.batchExit += 1;
-      }
+      profileSchedulerPolicyCounter("batchExit");
 
       if (--schedulerCore.batchDepth === 0 && schedulerCore.phase !== Flushing) {
         schedulerCore.phase = Idle;
@@ -121,9 +116,7 @@ export function createRuntime({
     try {
       return fn();
     } finally {
-      if (__PROFILE__ && schedulerPolicyCountersEnabled) {
-        schedulerPolicyCounters.batchExit += 1;
-      }
+      profileSchedulerPolicyCounter("batchExit");
 
       const leftOuterSchedulerBatch = leaveSchedulerBatch(schedulerCore);
 

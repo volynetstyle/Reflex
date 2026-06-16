@@ -1,8 +1,5 @@
 import { emitSinkInvalidated } from "../../context";
-import {
-  runtimeProfileCounters,
-  runtimeProfileCountersEnabled,
-} from "../../../profiling";
+import { profileRuntimeCounter } from "../../../profiling";
 import { readRuntimeWalkerStackStats } from "../stackStats";
 import type { ReactiveNode } from "../../shape";
 import {
@@ -26,11 +23,9 @@ let propagateStackHigh = 0;
  * - transitive subscribers get Invalid
  */
 export function push_iterator(firstOut: ReactiveEdge | null): void {
-  if (firstOut === null) return;
+  // if (firstOut === null) return;
 
-  if (__PROFILE__ && runtimeProfileCountersEnabled) {
-    runtimeProfileCounters.pushCalls += 1;
-  }
+  profileRuntimeCounter("pushCalls");
 
   const stack = propagateStack;
   const base = propagateStackHigh;
@@ -47,9 +42,7 @@ export function push_iterator(firstOut: ReactiveEdge | null): void {
     edge !== null;
     edge = edge.nextOut
   ) {
-    if (__PROFILE__ && runtimeProfileCountersEnabled) {
-      runtimeProfileCounters.pushDirectEdgesVisited += 1;
-    }
+    profileRuntimeCounter("pushDirectEdgesVisited");
 
     const sub: ReactiveNode<unknown> = edge.to;
     const state = sub.state;
@@ -60,9 +53,7 @@ export function push_iterator(firstOut: ReactiveEdge | null): void {
       next = (state & ~Visited) | Changed;
       sub.state = next;
     } else if ((state & Computing) !== 0) {
-      if (__PROFILE__ && runtimeProfileCountersEnabled) {
-        runtimeProfileCounters.pushComputingChecked += 1;
-      }
+      profileRuntimeCounter("pushComputingChecked");
 
       const tail = sub.tailIn;
 
@@ -86,24 +77,16 @@ export function push_iterator(firstOut: ReactiveEdge | null): void {
     }
 
     if (next === 0) {
-      if (__PROFILE__ && runtimeProfileCountersEnabled) {
-        runtimeProfileCounters.pushAlreadyDirtySkipped += 1;
-      }
+      profileRuntimeCounter("pushAlreadyDirtySkipped");
       continue;
     }
 
-    if (__PROFILE__ && runtimeProfileCountersEnabled) {
-      if ((next & Changed) !== 0) {
-        runtimeProfileCounters.pushMarkedChanged += 1;
-      } else {
-        runtimeProfileCounters.pushMarkedInvalid += 1;
-      }
-    }
+    profileRuntimeCounter(
+      (next & Changed) !== 0 ? "pushMarkedChanged" : "pushMarkedInvalid",
+    );
 
     if ((next & Watcher) !== 0) {
-      if (__PROFILE__ && runtimeProfileCountersEnabled) {
-        runtimeProfileCounters.pushWatchersInvalidated += 1;
-      }
+      profileRuntimeCounter("pushWatchersInvalidated");
 
       propagateStackHigh = top;
       emitSinkInvalidated(sub);
@@ -112,9 +95,7 @@ export function push_iterator(firstOut: ReactiveEdge | null): void {
 
     const child = sub.firstOut;
     if (child !== null) {
-      if (__PROFILE__ && runtimeProfileCountersEnabled) {
-        runtimeProfileCounters.pushChildBranchesQueued += 1;
-      }
+      profileRuntimeCounter("pushChildBranchesQueued");
 
       stack[top++] = child;
     }
@@ -130,9 +111,7 @@ export function push_iterator(firstOut: ReactiveEdge | null): void {
     let edge: ReactiveEdge | null = stack[--top]!;
 
     while (edge !== null) {
-      if (__PROFILE__ && runtimeProfileCountersEnabled) {
-        runtimeProfileCounters.pushTransitiveEdgesVisited += 1;
-      }
+      profileRuntimeCounter("pushTransitiveEdgesVisited");
 
       const sub: ReactiveNode<unknown> = edge.to;
       const state = sub.state;
@@ -143,9 +122,7 @@ export function push_iterator(firstOut: ReactiveEdge | null): void {
         next = (state & ~Visited) | Invalid;
         sub.state = next;
       } else if ((state & Computing) !== 0) {
-        if (__PROFILE__ && runtimeProfileCountersEnabled) {
-          runtimeProfileCounters.pushComputingChecked += 1;
-        }
+        profileRuntimeCounter("pushComputingChecked");
 
         const tail = sub.tailIn;
 
@@ -169,14 +146,10 @@ export function push_iterator(firstOut: ReactiveEdge | null): void {
       }
 
       if (next !== 0) {
-        if (__PROFILE__ && runtimeProfileCountersEnabled) {
-          runtimeProfileCounters.pushMarkedInvalid += 1;
-        }
+        profileRuntimeCounter("pushMarkedInvalid");
 
         if ((next & Watcher) !== 0) {
-          if (__PROFILE__ && runtimeProfileCountersEnabled) {
-            runtimeProfileCounters.pushWatchersInvalidated += 1;
-          }
+          profileRuntimeCounter("pushWatchersInvalidated");
 
           propagateStackHigh = top;
           emitSinkInvalidated(sub);
@@ -187,9 +160,7 @@ export function push_iterator(firstOut: ReactiveEdge | null): void {
             const sibling = edge.nextOut;
 
             if (sibling !== null) {
-              if (__PROFILE__ && runtimeProfileCountersEnabled) {
-                runtimeProfileCounters.pushChildBranchesQueued += 1;
-              }
+              profileRuntimeCounter("pushChildBranchesQueued");
 
               stack[top++] = sibling;
             }
@@ -198,8 +169,8 @@ export function push_iterator(firstOut: ReactiveEdge | null): void {
             continue;
           }
         }
-      } else if (__PROFILE__ && runtimeProfileCountersEnabled) {
-        runtimeProfileCounters.pushAlreadyDirtySkipped += 1;
+      } else {
+        profileRuntimeCounter("pushAlreadyDirtySkipped");
       }
 
       edge = edge.nextOut;

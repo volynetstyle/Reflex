@@ -1,8 +1,5 @@
 import { compare } from "../../../protocol";
-import {
-  runtimeProfileCounters,
-  runtimeProfileCountersEnabled,
-} from "../../../profiling";
+import { profileRuntimeCounter } from "../../../profiling";
 import {
   devAssertExecutableNode,
   devAssertRefreshEdge,
@@ -42,9 +39,7 @@ export function advance(
   node: ReactiveNode,
   skipOutEdge: ReactiveEdge | null = null,
 ): boolean {
-  if (__PROFILE__ && runtimeProfileCountersEnabled) {
-    runtimeProfileCounters.advanceCalls += 1;
-  }
+  profileRuntimeCounter("advanceCalls");
 
   if (__DEV__) devAssertExecutableNode(node);
 
@@ -61,9 +56,7 @@ export function advance(
   let next: unknown;
 
   try {
-    if (__PROFILE__ && runtimeProfileCountersEnabled) {
-      runtimeProfileCounters.advanceComputeRuns += 1;
-    }
+    profileRuntimeCounter("advanceComputeRuns");
 
     next = compute();
   } catch (error) {
@@ -79,15 +72,11 @@ export function advance(
 
   const resolvedState = computingState & ~(Computing | DIRTY_STATE);
 
-  if (__PROFILE__ && runtimeProfileCountersEnabled) {
-    runtimeProfileCounters.advanceCleanupChecks += 1;
-  }
+  profileRuntimeCounter("advanceCleanupChecks");
 
   if (node.tailIn !== node.lastIn) {
     node.state = computingState & ~Computing;
-    if (__PROFILE__ && runtimeProfileCountersEnabled) {
-      runtimeProfileCounters.advanceCleanupRuns += 1;
-    }
+    profileRuntimeCounter("advanceCleanupRuns");
     cleanupUnvisitedSources(node);
   }
 
@@ -98,33 +87,25 @@ export function advance(
   node.state = resolvedState;
 
   if (compare(prev, next)) {
-    if (__PROFILE__ && runtimeProfileCountersEnabled) {
-      runtimeProfileCounters.advanceUnchanged += 1;
-    }
+    profileRuntimeCounter("advanceUnchanged");
 
     if (__DEV__) devRecordRecompute(node, false, next, prev, defaultContext);
     return false;
   }
 
-  if (__PROFILE__ && runtimeProfileCountersEnabled) {
-    runtimeProfileCounters.advanceChanged += 1;
-  }
+  profileRuntimeCounter("advanceChanged");
 
   if (__DEV__) devRecordRecompute(node, true, next, prev, defaultContext);
 
   const firstOut = node.firstOut;
 
   if (firstOut !== null) {
-    if (__PROFILE__ && runtimeProfileCountersEnabled) {
-      runtimeProfileCounters.advancePropagateCalls += 1;
-    }
+    profileRuntimeCounter("advancePropagateCalls");
 
     if (__DEV__) devAssertRefreshEdge(node, firstOut);
     if (skipOutEdge !== null) {
       if (firstOut !== skipOutEdge || skipOutEdge.nextOut !== null) {
-        if (__PROFILE__ && runtimeProfileCountersEnabled) {
-          runtimeProfileCounters.advancePropagateSkippedEdge += 1;
-        }
+        profileRuntimeCounter("advancePropagateSkippedEdge");
         push_iterator_once_skipping(firstOut, skipOutEdge);
       }
     } else {

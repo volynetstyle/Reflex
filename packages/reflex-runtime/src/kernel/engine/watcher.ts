@@ -7,10 +7,7 @@ import {
   defaultContext,
   setCurrentConsumer,
 } from "../context";
-import {
-  runtimeProfileCounters,
-  runtimeProfileCountersEnabled,
-} from "../../profiling";
+import { profileRuntimeCounter } from "../../profiling";
 import {
   devRecordWatcherCleanup,
   devRecordWatcherDispose,
@@ -23,9 +20,7 @@ export type WatcherCleanup = () => void;
 const FORCE_RECOMPUTE_STATE = Changed | Visited;
 
 function runCleanup(cleanup: WatcherCleanup): void {
-  if (__PROFILE__ && runtimeProfileCountersEnabled) {
-    runtimeProfileCounters.watcherCleanups += 1;
-  }
+  profileRuntimeCounter("watcherCleanups");
 
   const prevActive = currentConsumer;
 
@@ -56,25 +51,19 @@ function shouldRunDirtyWatcher(
 export function runWatcher(
   node: ReactiveNode<WatcherCleanup | undefined>,
 ): void {
-  if (__PROFILE__ && runtimeProfileCountersEnabled) {
-    runtimeProfileCounters.watcherRunCalls += 1;
-  }
+  profileRuntimeCounter("watcherRunCalls");
 
   const state = node.state;
 
   if ((state & DIRTY_STATE) === 0) {
-    if (__PROFILE__ && runtimeProfileCountersEnabled) {
-      runtimeProfileCounters.watcherCleanSkips += 1;
-    }
+    profileRuntimeCounter("watcherCleanSkips");
 
     if (__DEV__) devRecordWatcherSkip(node, "clean", defaultContext);
     return;
   }
 
   if (!shouldRunDirtyWatcher(node, state)) {
-    if (__PROFILE__ && runtimeProfileCountersEnabled) {
-      runtimeProfileCounters.watcherStableSkips += 1;
-    }
+    profileRuntimeCounter("watcherStableSkips");
 
     node.state &= ~DIRTY_STATE;
     if (__DEV__) devRecordWatcherSkip(node, "stable", defaultContext);
@@ -82,9 +71,7 @@ export function runWatcher(
   }
 
   if (node.compute === undefined) {
-    if (__PROFILE__ && runtimeProfileCountersEnabled) {
-      runtimeProfileCounters.watcherDisposedSkips += 1;
-    }
+    profileRuntimeCounter("watcherDisposedSkips");
 
     node.state &= ~DIRTY_STATE;
     if (__DEV__) devRecordWatcherSkip(node, "stable", defaultContext);
@@ -92,9 +79,7 @@ export function runWatcher(
   }
 
   const compute = node.compute;
-  if (__PROFILE__ && runtimeProfileCountersEnabled) {
-    runtimeProfileCounters.watcherExecutions += 1;
-  }
+  profileRuntimeCounter("watcherExecutions");
 
   const prevPayload = node.payload;
   const prevCleanup = typeof prevPayload === "function" ? prevPayload : null;
@@ -136,9 +121,7 @@ export function runWatcher(
 }
 
 export function disposeWatcher(node: ReactiveNode): void {
-  if (__PROFILE__ && runtimeProfileCountersEnabled) {
-    runtimeProfileCounters.watcherDisposals += 1;
-  }
+  profileRuntimeCounter("watcherDisposals");
 
   const payload = node.payload;
   const cleanup =

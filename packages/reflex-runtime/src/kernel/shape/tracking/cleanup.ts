@@ -2,10 +2,7 @@ import type ReactiveNode from "../node";
 import type { ReactiveEdge } from "../edge";
 import { devRecordCleanupStaleSources } from "../../dev";
 import { defaultContext } from "../../context";
-import {
-  runtimeProfileCounters,
-  runtimeProfileCountersEnabled,
-} from "../../../profiling";
+import { profileRuntimeCounter } from "../../../profiling";
 
 /**
  * Suffix cleanup over the consumer's incoming edges after recompute.
@@ -13,17 +10,13 @@ import {
  * Everything after tailIn belongs to the old dependency list and is unlinked.
  */
 export function cleanupUnvisitedSources(node: ReactiveNode): void {
-  if (__PROFILE__ && runtimeProfileCountersEnabled) {
-    runtimeProfileCounters.cleanupCalls += 1;
-  }
+  profileRuntimeCounter("cleanupCalls");
 
   const tail = node.tailIn;
   const staleHead = tail === null ? node.firstIn : tail.nextIn;
 
   if (staleHead === null) {
-    if (__PROFILE__ && runtimeProfileCountersEnabled) {
-      runtimeProfileCounters.cleanupSkipped += 1;
-    }
+    profileRuntimeCounter("cleanupSkipped");
     return;
   }
 
@@ -41,9 +34,7 @@ export function cleanupUnvisitedSources(node: ReactiveNode): void {
   let edge: ReactiveEdge | null = staleHead;
 
   do {
-    if (__PROFILE__ && runtimeProfileCountersEnabled) {
-      runtimeProfileCounters.cleanupEdgesDropped += 1;
-    }
+    profileRuntimeCounter("cleanupEdgesDropped");
 
     const nextIn: ReactiveEdge | null = edge.nextIn;
 

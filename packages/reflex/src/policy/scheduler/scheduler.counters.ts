@@ -9,6 +9,8 @@ export interface SchedulerPolicyCounters {
   pendingWatcherChecks: number;
 }
 
+export type SchedulerPolicyCounterName = keyof SchedulerPolicyCounters;
+
 function createSchedulerPolicyCounters(): SchedulerPolicyCounters {
   return {
     batchExit: 0,
@@ -29,6 +31,14 @@ export let schedulerPolicyCountersEnabled = false;
 
 export function setSchedulerPolicyCountersEnabled(enabled: boolean): void {
   schedulerPolicyCountersEnabled = enabled;
+}
+
+export function profileSchedulerPolicyCounter(
+  name: SchedulerPolicyCounterName,
+): void {
+  if (__PROFILE__ && schedulerPolicyCountersEnabled) {
+    schedulerPolicyCounters[name] += 1;
+  }
 }
 
 export function resetSchedulerPolicyCounters(): void {

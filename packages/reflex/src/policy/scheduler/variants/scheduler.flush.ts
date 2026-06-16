@@ -9,10 +9,7 @@ import { tryEnqueue } from "../scheduler.enqueue";
 import { createSchedulerInstance } from "../scheduler.instance";
 import type { EffectScheduler } from "../scheduler.types";
 import { noopNotifySettled } from "../scheduler.types";
-import {
-  schedulerPolicyCounters,
-  schedulerPolicyCountersEnabled,
-} from "../scheduler.counters";
+import { profileSchedulerPolicyCounter } from "../scheduler.counters";
 
 export function createFlushScheduler(): EffectScheduler {
   const core = createSchedulerCore();
@@ -27,9 +24,7 @@ export function createFlushScheduler(): EffectScheduler {
     try {
       return fn();
     } finally {
-      if (__PROFILE__ && schedulerPolicyCountersEnabled) {
-        schedulerPolicyCounters.batchExit += 1;
-      }
+      profileSchedulerPolicyCounter("batchExit");
 
       if (--core.batchDepth === 0 && core.phase !== Flushing) {
         core.phase = Idle;

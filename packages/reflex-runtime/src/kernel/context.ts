@@ -1,8 +1,5 @@
 import { recordDebugEvent } from "../debug/debug.runtime";
-import {
-  runtimeProfileCounters,
-  runtimeProfileCountersEnabled,
-} from "../profiling";
+import { profileRuntimeCounter } from "../profiling";
 import type { ReactiveEdge, ReactiveNode } from "./shape";
 import { reuseIncomingEdgeFromSuffixOrCreate } from "./shape/graph";
 
@@ -157,17 +154,13 @@ export function runWithRuntimeContext<T>(
   context: RuntimeContext,
   fn: () => T,
 ): T {
-  if (__PROFILE__ && runtimeProfileCountersEnabled) {
-    runtimeProfileCounters.contextRunCalls += 1;
-  }
+  profileRuntimeCounter("contextRunCalls");
 
   const previous = activeRuntimeContext;
 
   if (previous === context) return fn();
 
-  if (__PROFILE__ && runtimeProfileCountersEnabled) {
-    runtimeProfileCounters.contextSwitches += 1;
-  }
+  profileRuntimeCounter("contextSwitches");
 
   commitRuntimeContext(previous);
   activateRuntimeContext(context);
@@ -263,19 +256,15 @@ export function runWithReactiveBatch<T>(fn: () => T): T {
 }
 
 export function enterPropagationScope(): void {
-  if (__PROFILE__ && runtimeProfileCountersEnabled) {
-    runtimeProfileCounters.propagationScopesEntered += 1;
-    runtimeProfileCounters.contextPropagationEnter += 1;
-  }
+  profileRuntimeCounter("propagationScopesEntered");
+  profileRuntimeCounter("contextPropagationEnter");
 
   ++propagationScopeDepth;
 }
 
 export function leavePropagationScope(): void {
-  if (__PROFILE__ && runtimeProfileCountersEnabled) {
-    runtimeProfileCounters.propagationScopesLeft += 1;
-    runtimeProfileCounters.contextPropagationLeave += 1;
-  }
+  profileRuntimeCounter("propagationScopesLeft");
+  profileRuntimeCounter("contextPropagationLeave");
 
   if (propagationScopeDepth > 0) --propagationScopeDepth;
 
@@ -285,9 +274,7 @@ export function leavePropagationScope(): void {
 }
 
 export function emitSinkInvalidated(node: ReactiveNode): void {
-  if (__PROFILE__ && runtimeProfileCountersEnabled) {
-    runtimeProfileCounters.sinkInvalidatedEmits += 1;
-  }
+  profileRuntimeCounter("sinkInvalidatedEmits");
 
   if (IS_DEV) {
     recordDebugEvent(defaultContext, "watcher:invalidated", { node });
@@ -297,9 +284,7 @@ export function emitSinkInvalidated(node: ReactiveNode): void {
 }
 
 export function emitSettledIfIdle(): void {
-  if (__PROFILE__ && runtimeProfileCountersEnabled) {
-    runtimeProfileCounters.contextSettledChecks += 1;
-  }
+  profileRuntimeCounter("contextSettledChecks");
 
   if (propagationScopeDepth !== 0 || currentConsumer !== null) return;
 
@@ -313,15 +298,11 @@ export function emitSettledIfIdle(): void {
 function emitReactiveSettled(): void {
   if (reactiveBatchState.batchDepth !== 0) {
     reactiveBatchState.pendingReactiveSettled = true;
-    if (__PROFILE__ && runtimeProfileCountersEnabled) {
-      runtimeProfileCounters.contextSettledDeferred += 1;
-    }
+    profileRuntimeCounter("contextSettledDeferred");
     return;
   }
 
-  if (__PROFILE__ && runtimeProfileCountersEnabled) {
-    runtimeProfileCounters.contextSettledEmits += 1;
-  }
+  profileRuntimeCounter("contextSettledEmits");
 
   reactiveSettledHook?.();
 }

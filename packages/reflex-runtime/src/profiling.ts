@@ -205,6 +205,19 @@ export function isRuntimeProfilingEnabled(): boolean {
   return runtimeProfileCountersEnabled;
 }
 
+export function profileRuntimeCounter(name: RuntimeProfileCounterName): void {
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters[name] += 1;
+  }
+}
+
+export function profileRuntimeReadConsumerPath(isDirty: boolean): void {
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    if (isDirty) runtimeProfileCounters.readConsumerDirtyPath += 1;
+    else runtimeProfileCounters.readConsumerCleanFastPath += 1;
+  }
+}
+
 export function resetRuntimeProfileCounters(): void {
   for (const name of COUNTER_NAMES) {
     runtimeProfileCounters[name] = 0;
