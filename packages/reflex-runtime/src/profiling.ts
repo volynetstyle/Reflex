@@ -60,10 +60,11 @@ export interface RuntimeProfileCounters {
   trackingInitialLastEdgeShortcut: number;
   trackingSlowPath: number;
   trackingSlowPathBlocked: number;
-  trackingOutgoingProbeHit1: number;
-  trackingOutgoingProbeHit2: number;
-  trackingOutgoingProbeMiss: number;
-  trackingOutgoingProbeSkippedHighFanout: number;
+  trackingSingletonOutProbeCalls: number;
+  trackingSingletonOutProbeHit: number;
+  trackingSingletonOutProbeOtherConsumer: number;
+  trackingSingletonOutProbeNoOut: number;
+  trackingSingletonOutProbeFanoutMany: number;
   cleanupCalls: number;
   cleanupSkipped: number;
   cleanupEdgesDropped: number;
@@ -166,10 +167,11 @@ const COUNTER_NAMES = [
   "trackingInitialLastEdgeShortcut",
   "trackingSlowPath",
   "trackingSlowPathBlocked",
-  "trackingOutgoingProbeHit1",
-  "trackingOutgoingProbeHit2",
-  "trackingOutgoingProbeMiss",
-  "trackingOutgoingProbeSkippedHighFanout",
+  "trackingSingletonOutProbeCalls",
+  "trackingSingletonOutProbeHit",
+  "trackingSingletonOutProbeOtherConsumer",
+  "trackingSingletonOutProbeNoOut",
+  "trackingSingletonOutProbeFanoutMany",
   "cleanupCalls",
   "cleanupSkipped",
   "cleanupEdgesDropped",

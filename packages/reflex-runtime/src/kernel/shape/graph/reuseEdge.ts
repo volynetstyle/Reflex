@@ -46,50 +46,39 @@ function findOutgoingEdgeToConsumer(
   return null;
 }
 
-function tryResolveBySmallOutgoingFanout(
+function tryResolveBySingletonOutgoingEdge(
   producer: ReactiveNode,
   consumer: ReactiveNode,
   insertAfterEdge: ReactiveEdge | null,
   producerVersion: number,
 ): ReactiveEdge | null {
+  profileRuntimeCounter("trackingSingletonOutProbeCalls");
+
   const firstOut = producer.firstOut;
 
   if (firstOut === null) {
-    profileRuntimeCounter("trackingOutgoingProbeMiss");
+    profileRuntimeCounter("trackingSingletonOutProbeNoOut");
     return null;
   }
 
-  if (firstOut.to === consumer) {
-    if (firstOut.version === producerVersion) {
-      return null;
-    }
-
-    moveIncomingEdgeToPosition(consumer, firstOut, insertAfterEdge);
-    firstOut.version = producerVersion;
-    profileRuntimeCounter("trackingOutgoingProbeHit1");
-    return firstOut;
-  }
-
-  const secondOut = firstOut.nextOut;
-
-  if (secondOut !== null && secondOut.nextOut !== null) {
-    profileRuntimeCounter("trackingOutgoingProbeSkippedHighFanout");
+  if (firstOut !== producer.lastOut) {
+    profileRuntimeCounter("trackingSingletonOutProbeFanoutMany");
     return null;
   }
 
-  if (secondOut !== null && secondOut.to === consumer) {
-    if (secondOut.version === producerVersion) {
-      return null;
-    }
-
-    moveIncomingEdgeToPosition(consumer, secondOut, insertAfterEdge);
-    secondOut.version = producerVersion;
-    profileRuntimeCounter("trackingOutgoingProbeHit2");
-    return secondOut;
+  if (firstOut.to !== consumer) {
+    profileRuntimeCounter("trackingSingletonOutProbeOtherConsumer");
+    return null;
   }
 
-  profileRuntimeCounter("trackingOutgoingProbeMiss");
-  return null;
+  if (firstOut.version === producerVersion) {
+    return null;
+  }
+
+  moveIncomingEdgeToPosition(consumer, firstOut, insertAfterEdge);
+  firstOut.version = producerVersion;
+  profileRuntimeCounter("trackingSingletonOutProbeHit");
+  return firstOut;
 }
 
 function detachIncomingSuffix(
@@ -150,7 +139,7 @@ export function reuseIncomingEdgeFromSuffixOrLink(
   }
 
   if (producerVersion !== 0) {
-    const outgoingEdge = tryResolveBySmallOutgoingFanout(
+    const outgoingEdge = tryResolveBySingletonOutgoingEdge(
       producer,
       consumer,
       insertAfterEdge,

@@ -208,10 +208,11 @@ type TrackingRouteCounterName =
   | "trackingInitialLastEdgeShortcut"
   | "trackingSlowPath"
   | "trackingSlowPathBlocked"
-  | "trackingOutgoingProbeHit1"
-  | "trackingOutgoingProbeHit2"
-  | "trackingOutgoingProbeMiss"
-  | "trackingOutgoingProbeSkippedHighFanout";
+  | "trackingSingletonOutProbeCalls"
+  | "trackingSingletonOutProbeHit"
+  | "trackingSingletonOutProbeOtherConsumer"
+  | "trackingSingletonOutProbeNoOut"
+  | "trackingSingletonOutProbeFanoutMany";
 
 type RuntimeProfileCounters = Record<TrackingRouteCounterName, number> & {
   trackingResolveCalls: number;
@@ -251,10 +252,11 @@ const trackingRouteCounters: readonly TrackingRouteCounterName[] = [
   "trackingInitialLastEdgeShortcut",
   "trackingSlowPath",
   "trackingSlowPathBlocked",
-  "trackingOutgoingProbeHit1",
-  "trackingOutgoingProbeHit2",
-  "trackingOutgoingProbeMiss",
-  "trackingOutgoingProbeSkippedHighFanout",
+  "trackingSingletonOutProbeCalls",
+  "trackingSingletonOutProbeHit",
+  "trackingSingletonOutProbeOtherConsumer",
+  "trackingSingletonOutProbeNoOut",
+  "trackingSingletonOutProbeFanoutMany",
 ];
 
 function logDependencyChurnTrackingProfiles(): void {
