@@ -1,0 +1,111 @@
+{
+  "capturedAt": "2026-06-16",
+  "change": {
+    "name": "tiny outgoing probe before suffix scan",
+    "summary": "Probe producer.firstOut and at most producer.firstOut.nextOut before the bounded incoming suffix scan. Producers with more than two outgoing edges are skipped instead of scanned."
+  },
+  "commands": [
+    "pnpm.cmd --filter @volynets/reflex build:all",
+    "pnpm.cmd --filter @volynets/reflex exec vitest bench bench/dependency-churn.bench.ts",
+    "pnpm.cmd --filter @volynets/reflex-runtime exec vitest bench test/perf/runtime-taxonomy.bench.ts"
+  ],
+  "dependencyChurnMeansMs": {
+    "static_1024": 0.5297,
+    "rotate_1024": 7.5687,
+    "alt_ab_1024": 7.1557,
+    "swap_small_1024": 6.1623,
+    "prefix_suffix_chaotic_1024": 18.0825,
+    "mixed_1024": 9.3227,
+    "branch_half_1024": 10.5856,
+    "stable_then_drop_1024": 5.8746,
+    "oscillate_rotate_branch_1024": 21.3406,
+    "oscillate_rotate_swap_1024": 20.5211,
+    "branch_swap_1024": 16.9934,
+    "mixed_churn_1024": 19.5678
+  },
+  "profileHighlights": [
+    {
+      "scenario": "swap_small_1024",
+      "outgoingProbeCalls": 730,
+      "hit1": 730,
+      "hit2": 0,
+      "miss": 0,
+      "skippedHighFanout": 0
+    },
+    {
+      "scenario": "prefix_suffix_chaotic_1024",
+      "outgoingProbeCalls": 206161,
+      "hit1": 206161,
+      "hit2": 0,
+      "miss": 0,
+      "skippedHighFanout": 0
+    },
+    {
+      "scenario": "mixed_1024",
+      "outgoingProbeCalls": 63630,
+      "hit1": 63630,
+      "hit2": 0,
+      "miss": 0,
+      "skippedHighFanout": 0
+    },
+    {
+      "scenario": "branch_half_1024",
+      "outgoingProbeCalls": 511,
+      "hit1": 0,
+      "hit2": 0,
+      "miss": 511,
+      "skippedHighFanout": 0
+    },
+    {
+      "scenario": "oscillate_rotate_branch_1024",
+      "outgoingProbeCalls": 130306,
+      "hit1": 129795,
+      "hit2": 0,
+      "miss": 511,
+      "skippedHighFanout": 0
+    },
+    {
+      "scenario": "oscillate_rotate_swap_1024",
+      "outgoingProbeCalls": 260105,
+      "hit1": 260105,
+      "hit2": 0,
+      "miss": 0,
+      "skippedHighFanout": 0
+    }
+  ],
+  "runtimeTaxonomyHighlights": {
+    "wide-fanout/write-read-all/fanout-1024": {
+      "meanMs": 11.2398,
+      "hz": 88.9696,
+      "rmePct": 0.3
+    },
+    "wide-fanin/write-read-one/fanin-1024": {
+      "meanMs": 3.4035,
+      "hz": 293.82,
+      "rmePct": 0.42
+    },
+    "dynamic-branch/churn/deps-512-toggle50": {
+      "meanMs": 1.6963,
+      "hz": 589.51,
+      "rmePct": 0.37
+    },
+    "deep-dynamic/churn/depth-512-toggle50": {
+      "meanMs": 8.1118,
+      "hz": 123.28,
+      "rmePct": 0.34
+    }
+  },
+  "mergeChecklist": {
+    "staticStableSwapSmall": "pass",
+    "fullGraphAndBroadRuntime": "pass",
+    "producerHighFanout": "pass",
+    "profilingOffTrend": "pass",
+    "countersAdded": [
+      "trackingOutgoingProbeHit1",
+      "trackingOutgoingProbeHit2",
+      "trackingOutgoingProbeMiss",
+      "trackingOutgoingProbeSkippedHighFanout"
+    ]
+  },
+  "verdict": "keep_experiment"
+}

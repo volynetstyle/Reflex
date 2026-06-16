@@ -1,0 +1,62 @@
+{
+  "capturedAt": "2026-06-16",
+  "command": "pnpm.cmd --filter @volynets/reflex exec vitest bench bench/dependency-churn.bench.ts",
+  "source": "packages/reflex/bench/dependency-churn.bench.ts",
+  "change": {
+    "name": "adaptive skip-scan budget",
+    "summary": "Consumers start with scanBudget 32. After 64 far-found hits they promote to scanBudget 2 and append as a new edge when the producer still exists beyond that budget.",
+    "state": {
+      "consumerFields": ["trackingFarHits", "trackingScanBudget"],
+      "defaultScanBudget": 32,
+      "promotedScanBudget": 2,
+      "farHitThreshold": 64
+    }
+  },
+  "profileHighlights": [
+    {
+      "scenario": "prefix_suffix_chaotic_1024",
+      "modeEnabled": 1,
+      "skipScanAppend": 451731,
+      "skipScanAppendPctOfReads": 86.08,
+      "slowPathBefore": 206161,
+      "slowPathAfter": 451824,
+      "meanMs": 39.1279
+    },
+    {
+      "scenario": "oscillate_rotate_swap_1024",
+      "modeEnabled": 1,
+      "skipScanAppend": 252931,
+      "skipScanAppendPctOfReads": 48.2,
+      "slowPathBefore": 260105,
+      "slowPathAfter": 260112,
+      "meanMs": 27.0583
+    },
+    {
+      "scenario": "oscillate_rotate_branch_1024",
+      "modeEnabled": 0,
+      "skipScanAppend": 0,
+      "slowPathBefore": 130306,
+      "slowPathAfter": 130306,
+      "meanMs": 35.1849
+    }
+  ],
+  "timingMeansMs": {
+    "static_1024": 0.4917,
+    "rotate_1024": 7.443,
+    "alt_ab_1024": 6.955,
+    "swap_small_1024": 5.9045,
+    "prefix_suffix_chaotic_1024": 39.1279,
+    "mixed_1024": 11.7607,
+    "branch_half_1024": 10.1602,
+    "stable_then_drop_1024": 6.1323,
+    "oscillate_rotate_branch_1024": 35.1849,
+    "oscillate_rotate_swap_1024": 27.0583,
+    "branch_swap_1024": 17.2473,
+    "mixed_churn_1024": 23.8787
+  },
+  "verdict": {
+    "adaptiveSkipScan": "mixed_reject",
+    "reason": "The mode helps oscillate_rotate_swap compared with the original baseline but loses badly to adaptive indexing and regresses prefix_suffix_chaotic. Appending duplicates still creates too much churn for broad use.",
+    "nextStep": "Discard code changes. If this line is revisited, it needs a narrower trigger than far-hit count, probably excluding prefix/suffix chaotic shapes."
+  }
+}

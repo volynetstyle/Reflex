@@ -197,7 +197,7 @@ export function emitReactiveSettled(): void {
 
 // #region Helpers
 
-function isFunction<T extends Function>(value: unknown): value is T {
+function isFunction<T>(value: unknown): value is T {
   return typeof value === "function";
 }
 

@@ -1,0 +1,62 @@
+{
+  "capturedAt": "2026-06-16",
+  "command": "pnpm.cmd --filter @volynets/reflex exec vitest bench bench/dependency-churn.bench.ts",
+  "source": "packages/reflex/bench/dependency-churn.bench.ts",
+  "change": {
+    "name": "tiny outgoing probe before suffix scan",
+    "summary": "After suffix head miss and before the 32-edge incoming suffix scan, probe producer.firstOut and a single second outgoing edge for an existing edge to this consumer. A hit reuses and moves that edge through the existing moveIncomingEdgeToPosition path."
+  },
+  "profileHighlights": [
+    {
+      "scenario": "prefix_suffix_chaotic_1024",
+      "outgoingProbeCalls": 206161,
+      "hit1": 206161,
+      "miss": 0,
+      "slowPath": 206161,
+      "meanMs": 17.2429
+    },
+    {
+      "scenario": "oscillate_rotate_swap_1024",
+      "outgoingProbeCalls": 260105,
+      "hit1": 260105,
+      "miss": 0,
+      "slowPath": 260105,
+      "meanMs": 19.3967
+    },
+    {
+      "scenario": "oscillate_rotate_branch_1024",
+      "outgoingProbeCalls": 130306,
+      "hit1": 129795,
+      "miss": 511,
+      "slowPath": 130306,
+      "meanMs": 19.4824
+    },
+    {
+      "scenario": "mixed_1024",
+      "outgoingProbeCalls": 63630,
+      "hit1": 63630,
+      "miss": 0,
+      "slowPath": 63630,
+      "meanMs": 9.3642
+    }
+  ],
+  "timingMeansMs": {
+    "static_1024": 0.4841,
+    "rotate_1024": 7.2321,
+    "alt_ab_1024": 7.0623,
+    "swap_small_1024": 5.7694,
+    "prefix_suffix_chaotic_1024": 17.2429,
+    "mixed_1024": 9.3642,
+    "branch_half_1024": 10.045,
+    "stable_then_drop_1024": 5.6833,
+    "oscillate_rotate_branch_1024": 19.4824,
+    "oscillate_rotate_swap_1024": 19.3967,
+    "branch_swap_1024": 14.7732,
+    "mixed_churn_1024": 17.0714
+  },
+  "verdict": {
+    "tinyOutgoingProbe": "promising",
+    "reason": "The first outgoing edge is a near-perfect implicit lookup for the pathological far-found cases, avoiding the 32-edge incoming scan without adding an index or a new adaptive mode.",
+    "nextStep": "Run runtime/facade tests and repeat benches, then consider keeping this before trying adaptive index again."
+  }
+}

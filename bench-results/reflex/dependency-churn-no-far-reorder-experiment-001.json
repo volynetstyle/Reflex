@@ -1,0 +1,56 @@
+{
+  "capturedAt": "2026-06-16",
+  "command": "pnpm.cmd --filter @volynets/reflex exec vitest bench bench/dependency-churn.bench.ts",
+  "source": "packages/reflex/bench/dependency-churn.bench.ts",
+  "change": {
+    "name": "adaptive no-far-reorder append mode",
+    "summary": "After repeated far-found slow-path hits, the consumer stops moving far existing edges and appends a new edge after the tracking cursor, leaving old stale edges for cleanup."
+  },
+  "profileHighlights": [
+    {
+      "scenario": "prefix_suffix_chaotic_1024",
+      "modeEnabled": 1,
+      "appendInsteadOfFarReorder": 406892,
+      "appendPctOfReads": 77.53,
+      "slowPathBefore": 206161,
+      "slowPathAfter": 443916,
+      "meanMs": 94.9841
+    },
+    {
+      "scenario": "oscillate_rotate_swap_1024",
+      "modeEnabled": 1,
+      "appendInsteadOfFarReorder": 245868,
+      "appendPctOfReads": 46.85,
+      "slowPathBefore": 260105,
+      "slowPathAfter": 260112,
+      "meanMs": 71.5629
+    },
+    {
+      "scenario": "oscillate_rotate_branch_1024",
+      "modeEnabled": 0,
+      "appendInsteadOfFarReorder": 0,
+      "slowPathBefore": 130306,
+      "slowPathAfter": 130306,
+      "meanMs": 50.355
+    }
+  ],
+  "timingMeansMs": {
+    "static_1024": 0.5021,
+    "rotate_1024": 7.6258,
+    "alt_ab_1024": 6.4272,
+    "swap_small_1024": 5.808,
+    "prefix_suffix_chaotic_1024": 94.9841,
+    "mixed_1024": 22.5343,
+    "branch_half_1024": 20.0803,
+    "stable_then_drop_1024": 11.8258,
+    "oscillate_rotate_branch_1024": 50.355,
+    "oscillate_rotate_swap_1024": 71.5629,
+    "branch_swap_1024": 26.4881,
+    "mixed_churn_1024": 32.2032
+  },
+  "verdict": {
+    "noFarReorderAppend": "reject",
+    "reason": "Appending duplicate edges causes much more edge churn and cleanup pressure than reordering existing far edges. It improves neither slowPath frequency nor timing in the pathological cases.",
+    "nextStep": "Discard code changes. Adaptive indexed tracking remains the strongest candidate among tested alternatives."
+  }
+}

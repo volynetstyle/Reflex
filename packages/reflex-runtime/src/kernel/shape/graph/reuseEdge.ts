@@ -1,5 +1,6 @@
 import type { ReactiveEdge } from "../edge";
 import type ReactiveNode from "../node";
+import { profileRuntimeCounter } from "../../../profiling";
 import {
   moveIncomingEdgeAfterUnchecked,
   moveLastIncomingEdgeAfterEdgeUnchecked,
@@ -42,6 +43,52 @@ function findOutgoingEdgeToConsumer(
     if (edge.to === consumer) return edge;
   }
 
+  return null;
+}
+
+function tryResolveBySmallOutgoingFanout(
+  producer: ReactiveNode,
+  consumer: ReactiveNode,
+  insertAfterEdge: ReactiveEdge | null,
+  producerVersion: number,
+): ReactiveEdge | null {
+  const firstOut = producer.firstOut;
+
+  if (firstOut === null) {
+    profileRuntimeCounter("trackingOutgoingProbeMiss");
+    return null;
+  }
+
+  if (firstOut.to === consumer) {
+    if (firstOut.version === producerVersion) {
+      return null;
+    }
+
+    moveIncomingEdgeToPosition(consumer, firstOut, insertAfterEdge);
+    firstOut.version = producerVersion;
+    profileRuntimeCounter("trackingOutgoingProbeHit1");
+    return firstOut;
+  }
+
+  const secondOut = firstOut.nextOut;
+
+  if (secondOut !== null && secondOut.nextOut !== null) {
+    profileRuntimeCounter("trackingOutgoingProbeSkippedHighFanout");
+    return null;
+  }
+
+  if (secondOut !== null && secondOut.to === consumer) {
+    if (secondOut.version === producerVersion) {
+      return null;
+    }
+
+    moveIncomingEdgeToPosition(consumer, secondOut, insertAfterEdge);
+    secondOut.version = producerVersion;
+    profileRuntimeCounter("trackingOutgoingProbeHit2");
+    return secondOut;
+  }
+
+  profileRuntimeCounter("trackingOutgoingProbeMiss");
   return null;
 }
 
@@ -100,6 +147,17 @@ export function reuseIncomingEdgeFromSuffixOrLink(
   if (suffixStartEdge?.from === producer) {
     suffixStartEdge.version = producerVersion;
     return suffixStartEdge;
+  }
+
+  if (producerVersion !== 0) {
+    const outgoingEdge = tryResolveBySmallOutgoingFanout(
+      producer,
+      consumer,
+      insertAfterEdge,
+      producerVersion,
+    );
+
+    if (outgoingEdge !== null) return outgoingEdge;
   }
 
   /**
