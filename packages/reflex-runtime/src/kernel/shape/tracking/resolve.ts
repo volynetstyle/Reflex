@@ -10,7 +10,9 @@ import { defaultContext, readTrackingStrategy } from "../../context";
 import { profileRuntimeCounter } from "../../../profiling";
 import {
   hasProducerEdgeInCurrentPassUnchecked,
-  isProducerInTrackedPrefix,
+  PrefixHit,
+  PrefixScanLimitReached,
+  scanProducerInTrackedPrefix,
 } from "./prefix";
 
 /**
@@ -106,12 +108,14 @@ export function resolveTrackedRead(
      */
     const expectedNextEdge = cursorEdge.nextIn;
 
-    if (expectedNextEdge !== null && expectedNextEdge.from === producer) {
-      expectedNextEdge.version = producerVersion;
-      consumer.tailIn = expectedNextEdge;
-      profileRuntimeCounter("trackingNextHit");
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
-      return true;
+    if (expectedNextEdge !== null) {
+      if (expectedNextEdge.from === producer) {
+        expectedNextEdge.version = producerVersion;
+        consumer.tailIn = expectedNextEdge;
+        profileRuntimeCounter("trackingNextHit");
+        if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+        return true;
+      }
     }
 
     /**
@@ -142,22 +146,30 @@ export function resolveTrackedRead(
        * Avoid creating a duplicate edge when the producer was already read
        * earlier in the current tracking pass.
        */
-      const prefixResult = isProducerInTrackedPrefix(producer, cursorEdge);
+      const prefixResult = scanProducerInTrackedPrefix(producer, cursorEdge);
 
-      if (
-        prefixResult === true ||
-        (prefixResult === null &&
-          producerVersion !== 0 &&
-          hasProducerEdgeInCurrentPassUnchecked(
-            producer,
-            consumer,
-            producerVersion,
-          ))
-      ) {
+      if (prefixResult === PrefixHit) {
         profileRuntimeCounter("trackingPrefixDuplicate");
 
         if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
         return true;
+      }
+
+      if (prefixResult === PrefixScanLimitReached) {
+        if (producerVersion !== 0) {
+          if (
+            hasProducerEdgeInCurrentPassUnchecked(
+              producer,
+              consumer,
+              producerVersion,
+            )
+          ) {
+            profileRuntimeCounter("trackingPrefixDuplicate");
+
+            if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+            return true;
+          }
+        }
       }
 
       /**
@@ -219,17 +231,19 @@ export function resolveTrackedRead(
        */
       const lookahead2Edge = lookahead1Edge.nextIn;
 
-      if (lookahead2Edge !== null && lookahead2Edge.from === producer) {
-        profileRuntimeCounter("trackingTwoHopReorder");
+      if (lookahead2Edge !== null) {
+        if (lookahead2Edge.from === producer) {
+          profileRuntimeCounter("trackingTwoHopReorder");
 
-        if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+          if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
 
-        return moveTrackedIncomingEdgeAfterCursorUnchecked(
-          consumer,
-          cursorEdge,
-          lookahead2Edge,
-          producerVersion,
-        );
+          return moveTrackedIncomingEdgeAfterCursorUnchecked(
+            consumer,
+            cursorEdge,
+            lookahead2Edge,
+            producerVersion,
+          );
+        }
       }
     }
 
@@ -241,20 +255,22 @@ export function resolveTrackedRead(
      */
     const lastIncomingEdge = consumer.lastIn;
 
-    if (lastIncomingEdge !== null && lastIncomingEdge.from === producer) {
-      profileRuntimeCounter("trackingLastEdgeShortcut");
+    if (lastIncomingEdge !== null) {
+      if (lastIncomingEdge.from === producer) {
+        profileRuntimeCounter("trackingLastEdgeShortcut");
 
-      moveLastIncomingEdgeAfterEdgeUnchecked(
-        consumer,
-        lastIncomingEdge,
-        cursorEdge,
-      );
+        moveLastIncomingEdgeAfterEdgeUnchecked(
+          consumer,
+          lastIncomingEdge,
+          cursorEdge,
+        );
 
-      lastIncomingEdge.version = producerVersion;
-      consumer.tailIn = lastIncomingEdge;
+        lastIncomingEdge.version = producerVersion;
+        consumer.tailIn = lastIncomingEdge;
 
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
-      return true;
+        if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+        return true;
+      }
     }
 
     /**
@@ -263,22 +279,30 @@ export function resolveTrackedRead(
      * The producer may already exist before the cursor.
      * In that case, this read is already represented by the current graph.
      */
-    const prefixResult = isProducerInTrackedPrefix(producer, cursorEdge);
+    const prefixResult = scanProducerInTrackedPrefix(producer, cursorEdge);
 
-    if (
-      prefixResult === true ||
-      (prefixResult === null &&
-        producerVersion !== 0 &&
-        hasProducerEdgeInCurrentPassUnchecked(
-          producer,
-          consumer,
-          producerVersion,
-        ))
-    ) {
+    if (prefixResult === PrefixHit) {
       profileRuntimeCounter("trackingPrefixDuplicate");
 
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
       return true;
+    }
+
+    if (prefixResult === PrefixScanLimitReached) {
+      if (producerVersion !== 0) {
+        if (
+          hasProducerEdgeInCurrentPassUnchecked(
+            producer,
+            consumer,
+            producerVersion,
+          )
+        ) {
+          profileRuntimeCounter("trackingPrefixDuplicate");
+
+          if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+          return true;
+        }
+      }
     }
   } else {
     /**
@@ -326,16 +350,18 @@ export function resolveTrackedRead(
      */
     const lastIncomingEdge = consumer.lastIn;
 
-    if (lastIncomingEdge !== null && lastIncomingEdge.from === producer) {
-      profileRuntimeCounter("trackingInitialLastEdgeShortcut");
+    if (lastIncomingEdge !== null) {
+      if (lastIncomingEdge.from === producer) {
+        profileRuntimeCounter("trackingInitialLastEdgeShortcut");
 
-      moveLastIncomingEdgeToFrontUnchecked(consumer, lastIncomingEdge);
+        moveLastIncomingEdgeToFrontUnchecked(consumer, lastIncomingEdge);
 
-      lastIncomingEdge.version = producerVersion;
-      consumer.tailIn = lastIncomingEdge;
+        lastIncomingEdge.version = producerVersion;
+        consumer.tailIn = lastIncomingEdge;
 
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
-      return true;
+        if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+        return true;
+      }
     }
   }
 

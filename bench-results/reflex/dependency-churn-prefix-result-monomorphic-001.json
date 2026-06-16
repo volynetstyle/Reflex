@@ -1,0 +1,61 @@
+{
+  "capturedAt": "2026-06-16",
+  "command": "pnpm.cmd --filter @volynets/reflex exec vitest bench bench/dependency-churn.bench.ts",
+  "source": "packages/reflex-runtime/src/kernel/shape/tracking/prefix.ts",
+  "change": {
+    "name": "monomorphic prefix scan result",
+    "summary": "Replaces the boolean|null return shape of isProducerInTrackedPrefix with numeric PrefixScanResult sentinels: PrefixMiss=0, PrefixHit=1, PrefixScanLimitReached=2."
+  },
+  "profileHighlights": [
+    {
+      "scenario": "prefix_suffix_chaotic_1024",
+      "meanMs": 18.895,
+      "slowPath": 206161,
+      "outgoingProbeHit1": 206161
+    },
+    {
+      "scenario": "mixed_1024",
+      "meanMs": 9.4866,
+      "slowPath": 63630,
+      "outgoingProbeHit1": 63630
+    },
+    {
+      "scenario": "oscillate_rotate_branch_1024",
+      "meanMs": 19.5939,
+      "slowPath": 130306,
+      "outgoingProbeHit1": 129795,
+      "outgoingProbeMiss": 511
+    },
+    {
+      "scenario": "oscillate_rotate_swap_1024",
+      "meanMs": 20.4768,
+      "slowPath": 260105,
+      "outgoingProbeHit1": 260105
+    }
+  ],
+  "timingMeansMs": {
+    "static_1024": 0.5669,
+    "rotate_1024": 7.6126,
+    "alt_ab_1024": 7.0684,
+    "swap_small_1024": 5.8206,
+    "prefix_suffix_chaotic_1024": 18.895,
+    "mixed_1024": 9.4866,
+    "branch_half_1024": 10.464,
+    "stable_then_drop_1024": 5.6738,
+    "oscillate_rotate_branch_1024": 19.5939,
+    "oscillate_rotate_swap_1024": 20.4768,
+    "branch_swap_1024": 15.9579,
+    "mixed_churn_1024": 23.4035
+  },
+  "validation": [
+    "pnpm.cmd --filter @volynets/reflex build:all",
+    "pnpm.cmd --filter @volynets/reflex-runtime test",
+    "pnpm.cmd --filter @volynets/reflex test",
+    "pnpm.cmd --filter @volynets/reflex exec vitest bench bench/dependency-churn.bench.ts",
+    "git diff --check"
+  ],
+  "verdict": {
+    "prefixResultShape": "keep",
+    "reason": "The prefix scan now returns a single primitive type for all three outcomes, keeping the same control flow and performance corridor."
+  }
+}

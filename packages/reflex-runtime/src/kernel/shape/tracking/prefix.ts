@@ -3,10 +3,19 @@ import type { ReactiveEdge } from "../edge";
 
 const PrefixScanLimit = 32;
 
-export function isProducerInTrackedPrefix(
+export const PrefixMiss = 0;
+export const PrefixHit = 1;
+export const PrefixScanLimitReached = 2;
+
+export type PrefixScanResult =
+  | typeof PrefixMiss
+  | typeof PrefixHit
+  | typeof PrefixScanLimitReached;
+
+export function scanProducerInTrackedPrefix(
   producer: ReactiveNode,
   cursorEdge: ReactiveEdge,
-): boolean | null {
+): PrefixScanResult {
   let edge = cursorEdge.prevIn;
 
   for (
@@ -14,11 +23,11 @@ export function isProducerInTrackedPrefix(
     edge !== null && scanned < PrefixScanLimit;
     scanned += 1
   ) {
-    if (edge.from === producer) return true;
+    if (edge.from === producer) return PrefixHit;
     edge = edge.prevIn;
   }
 
-  return edge === null ? false : null;
+  return edge === null ? PrefixMiss : PrefixScanLimitReached;
 }
 
 /*

@@ -46,39 +46,35 @@ function findOutgoingEdgeToConsumer(
   return null;
 }
 
-function tryResolveBySingletonOutgoingEdge(
+function tryResolveByFirstOutgoingEdge(
   producer: ReactiveNode,
   consumer: ReactiveNode,
   insertAfterEdge: ReactiveEdge | null,
   producerVersion: number,
 ): ReactiveEdge | null {
-  profileRuntimeCounter("trackingSingletonOutProbeCalls");
+  const edge = producer.firstOut;
 
-  const firstOut = producer.firstOut;
-
-  if (firstOut === null) {
-    profileRuntimeCounter("trackingSingletonOutProbeNoOut");
+  if (edge === null) {
+    profileRuntimeCounter("trackingOutgoingProbeMiss");
     return null;
   }
 
-  if (firstOut !== producer.lastOut) {
-    profileRuntimeCounter("trackingSingletonOutProbeFanoutMany");
+  if (edge.to !== consumer) {
+    profileRuntimeCounter("trackingOutgoingProbeMiss");
     return null;
   }
 
-  if (firstOut.to !== consumer) {
-    profileRuntimeCounter("trackingSingletonOutProbeOtherConsumer");
+  if (edge.version === producerVersion) {
     return null;
   }
 
-  if (firstOut.version === producerVersion) {
-    return null;
+  if (edge.prevIn !== insertAfterEdge) {
+    moveIncomingEdgeToPosition(consumer, edge, insertAfterEdge);
   }
 
-  moveIncomingEdgeToPosition(consumer, firstOut, insertAfterEdge);
-  firstOut.version = producerVersion;
-  profileRuntimeCounter("trackingSingletonOutProbeHit");
-  return firstOut;
+  edge.version = producerVersion;
+  profileRuntimeCounter("trackingOutgoingProbeHit1");
+  return edge;
 }
 
 function detachIncomingSuffix(
@@ -113,6 +109,10 @@ function detachIncomingSuffix(
  * R0: suffix head hit
  *     The expected suffix edge already points from the producer.
  *
+ * R0.5: first outgoing edge hit
+ *     Before scanning the consumer suffix, check the producer's first outgoing
+ *     edge as the cheapest existing graph lookup.
+ *
  * R1: suffix scan and reuse
  *     Search the remaining suffix for an existing producer edge and move it
  *     after the insertion point if needed.
@@ -133,13 +133,20 @@ export function reuseIncomingEdgeFromSuffixOrLink(
    * The first candidate in the suffix already matches the producer.
    * No list mutation is needed.
    */
-  if (suffixStartEdge?.from === producer) {
+  if (suffixStartEdge !== null && suffixStartEdge.from === producer) {
     suffixStartEdge.version = producerVersion;
     return suffixStartEdge;
   }
 
+  /**
+   * R0.5: First outgoing edge hit.
+   *
+   * This is not an index and does not scan the producer's outgoing list.
+   * It only reuses the first outgoing edge when it already points to this
+   * consumer, which covers the fanout-1 pathological reorder cases cheaply.
+   */
   if (producerVersion !== 0) {
-    const outgoingEdge = tryResolveBySingletonOutgoingEdge(
+    const outgoingEdge = tryResolveByFirstOutgoingEdge(
       producer,
       consumer,
       insertAfterEdge,
@@ -158,8 +165,9 @@ export function reuseIncomingEdgeFromSuffixOrLink(
   let scannedSuffixEdges = suffixStartEdge === null ? 0 : 1;
 
   for (
-    let candidateEdge = suffixStartEdge?.nextIn ?? consumer.firstIn;
-    candidateEdge;
+    let candidateEdge =
+      suffixStartEdge === null ? consumer.firstIn : suffixStartEdge.nextIn;
+    candidateEdge !== null;
     candidateEdge = candidateEdge.nextIn
   ) {
     scannedSuffixEdges += 1;
@@ -178,7 +186,10 @@ export function reuseIncomingEdgeFromSuffixOrLink(
         }
 
         if (producerEdge.version !== producerVersion) {
-          moveIncomingEdgeToPosition(consumer, producerEdge, insertAfterEdge);
+          if (producerEdge.prevIn !== insertAfterEdge) {
+            moveIncomingEdgeToPosition(consumer, producerEdge, insertAfterEdge);
+          }
+
           producerEdge.version = producerVersion;
           return producerEdge;
         }
@@ -193,7 +204,9 @@ export function reuseIncomingEdgeFromSuffixOrLink(
      * If it is not already after the requested insertion point,
      * move it into the current tracked order.
      */
-    moveIncomingEdgeToPosition(consumer, candidateEdge, insertAfterEdge);
+    if (candidateEdge.prevIn !== insertAfterEdge) {
+      moveIncomingEdgeToPosition(consumer, candidateEdge, insertAfterEdge);
+    }
 
     candidateEdge.version = producerVersion;
     return candidateEdge;

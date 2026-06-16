@@ -1,0 +1,57 @@
+{
+  "capturedAt": "2026-06-16",
+  "command": "pnpm.cmd --filter @volynets/reflex exec vitest bench bench/dependency-churn.bench.ts",
+  "source": "packages/reflex/bench/dependency-churn.bench.ts",
+  "change": {
+    "name": "strict firstOut hot-path model",
+    "summary": "Keep the runtime candidate as R0 suffix-head, R0.5 first outgoing edge, R1 bounded suffix scan, R2 link. Remove the same-process A/B harness from the default dependency-churn benchmark path."
+  },
+  "profileHighlights": [
+    {
+      "scenario": "prefix_suffix_chaotic_1024",
+      "slowPath": 206161,
+      "outgoingProbeHit1": 206161,
+      "outgoingProbeMiss": 0,
+      "meanMs": 17.6809
+    },
+    {
+      "scenario": "mixed_1024",
+      "slowPath": 63630,
+      "outgoingProbeHit1": 63630,
+      "outgoingProbeMiss": 0,
+      "meanMs": 9.3661
+    },
+    {
+      "scenario": "oscillate_rotate_branch_1024",
+      "slowPath": 130306,
+      "outgoingProbeHit1": 129795,
+      "outgoingProbeMiss": 511,
+      "meanMs": 19.9729
+    },
+    {
+      "scenario": "oscillate_rotate_swap_1024",
+      "slowPath": 260105,
+      "outgoingProbeHit1": 260105,
+      "outgoingProbeMiss": 0,
+      "meanMs": 20.0685
+    }
+  ],
+  "timingMeansMs": {
+    "static_1024": 0.5919,
+    "rotate_1024": 7.7935,
+    "alt_ab_1024": 6.7002,
+    "swap_small_1024": 6.519,
+    "prefix_suffix_chaotic_1024": 17.6809,
+    "mixed_1024": 9.3661,
+    "branch_half_1024": 11.0464,
+    "stable_then_drop_1024": 5.7985,
+    "oscillate_rotate_branch_1024": 19.9729,
+    "oscillate_rotate_swap_1024": 20.0685,
+    "branch_swap_1024": 16.0061,
+    "mixed_churn_1024": 18.3857
+  },
+  "verdict": {
+    "runtimeCandidate": "firstOutOnly",
+    "nextStep": "Keep the hot path strict. Further exploration should be isolated in separate harnesses or result snapshots, not in the default dependency-churn benchmark path."
+  }
+}
