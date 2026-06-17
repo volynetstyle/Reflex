@@ -2,29 +2,41 @@ import { emitSinkInvalidated } from "../../context";
 import { profileRuntimeCounter } from "../../../profiling";
 import { defaultContext } from "../../context";
 import { devRecordPropagate } from "../../dev";
+import {
+  enterRuntimePhase,
+  leaveRuntimePhase,
+  RuntimePhase,
+} from "../../execution";
 import type { ReactiveEdge } from "../../shape";
 import { Changed, Invalid, Watcher } from "../../shape";
 
 export function push_iterator_once(edge: ReactiveEdge | null): void {
-  profileRuntimeCounter("pushOnceCalls");
+  if (__DEV__) enterRuntimePhase(RuntimePhase.Propagating);
 
-  for (let current = edge; current !== null; current = current.nextOut) {
-    profileRuntimeCounter("pushOnceEdgesVisited");
+  try {
+    profileRuntimeCounter("pushOnceCalls");
 
-    const sub = current.to;
-    const state = sub.state;
+    for (let current = edge; current !== null; current = current.nextOut) {
+      profileRuntimeCounter("pushOnceEdgesVisited");
 
-    if ((state & Changed) === 0) {
-      sub.state = (state & ~Invalid) | Changed;
+      const sub = current.to;
+      const state = sub.state;
 
-      profileRuntimeCounter("pushOnceMarkedChanged");
-      if (__DEV__) devRecordPropagate(current, sub.state, true, defaultContext);
+      if ((state & Changed) === 0) {
+        sub.state = (state & ~Invalid) | Changed;
 
-      if ((state & Watcher) !== 0) {
-        emitSinkInvalidated(sub);
+        profileRuntimeCounter("pushOnceMarkedChanged");
+        if (__DEV__)
+          devRecordPropagate(current, sub.state, true, defaultContext);
+
+        if ((state & Watcher) !== 0) {
+          emitSinkInvalidated(sub);
+        }
+      } else {
+        profileRuntimeCounter("pushOnceAlreadyChangedSkipped");
       }
-    } else {
-      profileRuntimeCounter("pushOnceAlreadyChangedSkipped");
     }
+  } finally {
+    if (__DEV__) leaveRuntimePhase();
   }
 }

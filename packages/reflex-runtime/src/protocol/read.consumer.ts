@@ -10,6 +10,7 @@ import {
   devAssertConsumerCanStabilize,
   devRecordReadConsumer,
 } from "../kernel/dev";
+import { devAssertNoRuntimeHookReactiveRead } from "../kernel/execution";
 import { advance } from "../kernel/stages/second/advance";
 import { pull_iterator } from "../kernel/stages/second/pull_iterator";
 import {
@@ -32,6 +33,8 @@ import { LAZY } from "./utils/constants";
  * a local slow path so clean reads do not bounce through helper layers.
  */
 export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
+  if (__DEV__) devAssertNoRuntimeHookReactiveRead();
+
   profileRuntimeCounter("readConsumerCalls");
   profileRuntimeCounter("readConsumerLazyCalls");
 
@@ -42,10 +45,9 @@ export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
 
   profileRuntimeReadConsumerPath(isDirty);
 
-  const value =
-    !isDirty
-      ? (node.payload as T)
-      : stabilizeDirtyConsumer<T>(node, state);
+  const value = !isDirty
+    ? (node.payload as T)
+    : stabilizeDirtyConsumer<T>(node, state);
 
   const consumer = currentConsumer;
 
@@ -69,6 +71,8 @@ export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
  * the current `currentConsumer` to this read.
  */
 export function readConsumerEager<T>(node: ReactiveNode<T>): T {
+  if (__DEV__) devAssertNoRuntimeHookReactiveRead();
+
   profileRuntimeCounter("readConsumerCalls");
   profileRuntimeCounter("readConsumerEagerCalls");
 
@@ -142,6 +146,8 @@ const debugValue = readConsumer(doubled, ConsumerReadMode.eager)
  * @cost O(1) + stabilization cost (depends on upstream changes)
  */
 export function readConsumer<T>(node: ReactiveNode<T>, mode: number = LAZY): T {
+  if (__DEV__) devAssertNoRuntimeHookReactiveRead();
+
   profileRuntimeCounter("readConsumerCalls");
 
   if (mode !== LAZY) {
@@ -152,10 +158,9 @@ export function readConsumer<T>(node: ReactiveNode<T>, mode: number = LAZY): T {
 
     profileRuntimeReadConsumerPath(isDirty);
 
-    const value =
-      !isDirty
-        ? (node.payload as T)
-        : stabilizeDirtyConsumer(node, state);
+    const value = !isDirty
+      ? (node.payload as T)
+      : stabilizeDirtyConsumer(node, state);
 
     if (__DEV__) {
       devRecordReadConsumer(node, "eager", value, defaultContext);
@@ -171,10 +176,9 @@ export function readConsumer<T>(node: ReactiveNode<T>, mode: number = LAZY): T {
 
   profileRuntimeReadConsumerPath(isDirty);
 
-  const value =
-    !isDirty
-      ? (node.payload as T)
-      : stabilizeDirtyConsumer(node, state);
+  const value = !isDirty
+    ? (node.payload as T)
+    : stabilizeDirtyConsumer(node, state);
 
   const consumer = currentConsumer;
   if (consumer !== null) {

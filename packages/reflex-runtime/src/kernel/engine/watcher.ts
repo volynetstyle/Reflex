@@ -15,6 +15,12 @@ import {
   devRecordWatcherSkip,
   devRecordWatcherStart,
 } from "../dev";
+import {
+  devAssertNoRuntimeHookWatcherExecution,
+  enterRuntimePhase,
+  leaveRuntimePhase,
+  RuntimePhase,
+} from "../execution";
 
 export type WatcherCleanup = () => void;
 const FORCE_RECOMPUTE_STATE = Changed | Visited;
@@ -51,73 +57,83 @@ function shouldRunDirtyWatcher(
 export function runWatcher(
   node: ReactiveNode<WatcherCleanup | undefined>,
 ): void {
-  profileRuntimeCounter("watcherRunCalls");
-
-  const state = node.state;
-
-  if ((state & DIRTY_STATE) === 0) {
-    profileRuntimeCounter("watcherCleanSkips");
-
-    if (__DEV__) devRecordWatcherSkip(node, "clean", defaultContext);
-    return;
+  if (__DEV__) {
+    devAssertNoRuntimeHookWatcherExecution();
+    enterRuntimePhase(RuntimePhase.WatcherExecution);
   }
 
-  if (!shouldRunDirtyWatcher(node, state)) {
-    profileRuntimeCounter("watcherStableSkips");
+  try {
+    profileRuntimeCounter("watcherRunCalls");
 
-    node.state &= ~DIRTY_STATE;
-    if (__DEV__) devRecordWatcherSkip(node, "stable", defaultContext);
-    return;
-  }
+    const state = node.state;
 
-  if (node.compute === undefined) {
-    profileRuntimeCounter("watcherDisposedSkips");
+    if ((state & DIRTY_STATE) === 0) {
+      profileRuntimeCounter("watcherCleanSkips");
 
-    node.state &= ~DIRTY_STATE;
-    if (__DEV__) devRecordWatcherSkip(node, "stable", defaultContext);
-    return;
-  }
-
-  const compute = node.compute;
-  profileRuntimeCounter("watcherExecutions");
-
-  const prevPayload = node.payload;
-  const prevCleanup = typeof prevPayload === "function" ? prevPayload : null;
-
-  if (__DEV__)
-    devRecordWatcherStart(node, prevCleanup !== null, defaultContext);
-
-  node.payload = undefined;
-  node.state &= ~Visited;
-
-  if (prevCleanup !== null) {
-    runCleanup(prevCleanup);
-    if (__DEV__) devRecordWatcherCleanup(node, defaultContext);
-
-    if (node.compute === undefined) {
-      node.state &= ~DIRTY_STATE;
-      if (__DEV__) {
-        devRecordWatcherFinish(node, false, undefined, defaultContext);
-      }
+      if (__DEV__) devRecordWatcherSkip(node, "clean", defaultContext);
       return;
     }
+
+    if (!shouldRunDirtyWatcher(node, state)) {
+      profileRuntimeCounter("watcherStableSkips");
+
+      node.state &= ~DIRTY_STATE;
+      if (__DEV__) devRecordWatcherSkip(node, "stable", defaultContext);
+      return;
+    }
+
+    if (node.compute === undefined) {
+      profileRuntimeCounter("watcherDisposedSkips");
+
+      node.state &= ~DIRTY_STATE;
+      if (__DEV__) devRecordWatcherSkip(node, "stable", defaultContext);
+      return;
+    }
+
+    const compute = node.compute;
+    profileRuntimeCounter("watcherExecutions");
+
+    const prevPayload = node.payload;
+    const prevCleanup = typeof prevPayload === "function" ? prevPayload : null;
+
+    if (__DEV__)
+      devRecordWatcherStart(node, prevCleanup !== null, defaultContext);
+
+    node.payload = undefined;
+    node.state &= ~Visited;
+
+    if (prevCleanup !== null) {
+      runCleanup(prevCleanup);
+      if (__DEV__) devRecordWatcherCleanup(node, defaultContext);
+
+      if (node.compute === undefined) {
+        node.state &= ~DIRTY_STATE;
+        if (__DEV__) {
+          devRecordWatcherFinish(node, false, undefined, defaultContext);
+        }
+        return;
+      }
+    }
+
+    const result = executeKnownNodeComputation(node, compute);
+
+    const hasCleanup = typeof result === "function";
+
+    if (hasCleanup) {
+      node.payload = result as WatcherCleanup;
+    }
+
+    if ((node.state & Visited) === 0) {
+      node.state &= ~DIRTY_STATE;
+    } else {
+      node.state = (node.state & ~Changed) | Invalid;
+    }
+
+    if (__DEV__)
+      devRecordWatcherFinish(node, hasCleanup, result, defaultContext);
+  } finally {
+    if (__DEV__) leaveRuntimePhase();
   }
-
-  const result = executeKnownNodeComputation(node, compute);
-
-  const hasCleanup = typeof result === "function";
-
-  if (hasCleanup) {
-    node.payload = result as WatcherCleanup;
-  }
-
-  if ((node.state & Visited) === 0) {
-    node.state &= ~DIRTY_STATE;
-  } else {
-    node.state = (node.state & ~Changed) | Invalid;
-  }
-
-  if (__DEV__) devRecordWatcherFinish(node, hasCleanup, result, defaultContext);
 }
 
 export function disposeWatcher(node: ReactiveNode): void {

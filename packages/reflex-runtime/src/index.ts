@@ -35,3 +35,10 @@ export {
   untracked,
 } from "./protocol";
 export type { ProducerComparator } from "./protocol";
+
+export {
+  RuntimePhase,
+  readRuntimePhase,
+  readActiveRuntimeHook,
+} from "./kernel/execution";
+export type { RuntimeExecutionState } from "./kernel/execution";

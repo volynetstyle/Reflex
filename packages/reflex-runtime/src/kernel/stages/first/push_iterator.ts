@@ -6,6 +6,11 @@ import {
 } from "../../../profiling";
 import { defaultContext } from "../../context";
 import { devRecordPropagate } from "../../dev";
+import {
+  enterRuntimePhase,
+  leaveRuntimePhase,
+  RuntimePhase,
+} from "../../execution";
 import { readRuntimeWalkerStackStats } from "../stackStats";
 import type { ReactiveNode } from "../../shape";
 import {
@@ -67,107 +72,30 @@ function profilePushNode(
  * - transitive subscribers get Invalid
  */
 export function push_iterator(firstOut: ReactiveEdge | null): void {
-  // if (firstOut === null) return;
+  if (__DEV__) enterRuntimePhase(RuntimePhase.Propagating);
 
-  profileRuntimeCounter("pushCalls");
+  try {
+    // if (firstOut === null) return;
 
-  const stack = propagateStack;
-  const depthStack = propagateDepthStack;
-  const base = propagateStackHigh;
-  let top = base;
+    profileRuntimeCounter("pushCalls");
 
-  /**
-   * Phase 1:
-   * Direct outgoing edges.
-   *
-   * No DFS here. Children are only pushed to stack.
-   */
-  for (
-    let edge: ReactiveEdge | null = firstOut;
-    edge !== null;
-    edge = edge.nextOut
-  ) {
-    profileRuntimeCounter("pushDirectEdgesVisited");
+    const stack = propagateStack;
+    const depthStack = propagateDepthStack;
+    const base = propagateStackHigh;
+    let top = base;
 
-    const sub: ReactiveNode<unknown> = edge.to;
-    const state = sub.state;
-
-    let next = 0;
-
-    if ((state & FAST_BLOCK_MASK) === 0) {
-      next = (state & ~Visited) | Changed;
-      sub.state = next;
-    } else if ((state & Computing) !== 0) {
-      profileRuntimeCounter("pushComputingChecked");
-
-      const tail = sub.tailIn;
-
-      if (tail !== null) {
-        let confirmed = true;
-
-        if (edge !== tail) {
-          for (let p = edge.prevIn; p !== null; p = p.prevIn) {
-            if (p === tail) {
-              confirmed = false;
-              break;
-            }
-          }
-        }
-
-        if (confirmed) {
-          next = state | Visited | Invalid;
-          sub.state = next;
-        }
-      }
-    }
-
-    if (next === 0) {
-      profileRuntimeCounter("pushAlreadyDirtySkipped");
-      profilePushNode("direct.skip", sub, 1, top - base);
-      continue;
-    }
-
-    profileRuntimeCounter(
-      (next & Changed) !== 0 ? "pushMarkedChanged" : "pushMarkedInvalid",
-    );
-    profilePushNode(
-      (next & Changed) !== 0 ? "direct.changed" : "direct.invalid",
-      sub,
-      1,
-      top - base,
-    );
-    if (__DEV__) devRecordPropagate(edge, next, true, defaultContext);
-
-    if ((next & Watcher) !== 0) {
-      profileRuntimeCounter("pushWatchersInvalidated");
-      profilePushNode("direct.watcher", sub, 1, top - base);
-
-      propagateStackHigh = top;
-      emitSinkInvalidated(sub);
-      continue;
-    }
-
-    const child = sub.firstOut;
-    if (child !== null) {
-      profileRuntimeCounter("pushChildBranchesQueued");
-
-      depthStack[top] = 2;
-      stack[top++] = child;
-    }
-  }
-
-  /**
-   * Phase 2:
-   * Transitive DFS.
-   *
-   * Everything below direct level gets Invalid.
-   */
-  while (top !== base) {
-    let edge: ReactiveEdge | null = stack[--top]!;
-    let depth = depthStack[top]!;
-
-    while (edge !== null) {
-      profileRuntimeCounter("pushTransitiveEdgesVisited");
+    /**
+     * Phase 1:
+     * Direct outgoing edges.
+     *
+     * No DFS here. Children are only pushed to stack.
+     */
+    for (
+      let edge: ReactiveEdge | null = firstOut;
+      edge !== null;
+      edge = edge.nextOut
+    ) {
+      profileRuntimeCounter("pushDirectEdgesVisited");
 
       const sub: ReactiveNode<unknown> = edge.to;
       const state = sub.state;
@@ -175,7 +103,7 @@ export function push_iterator(firstOut: ReactiveEdge | null): void {
       let next = 0;
 
       if ((state & FAST_BLOCK_MASK) === 0) {
-        next = (state & ~Visited) | Invalid;
+        next = (state & ~Visited) | Changed;
         sub.state = next;
       } else if ((state & Computing) !== 0) {
         profileRuntimeCounter("pushComputingChecked");
@@ -201,45 +129,128 @@ export function push_iterator(firstOut: ReactiveEdge | null): void {
         }
       }
 
-      if (next !== 0) {
-        profileRuntimeCounter("pushMarkedInvalid");
-        profilePushNode("transitive.invalid", sub, depth, top - base);
-        if (__DEV__) devRecordPropagate(edge, next, false, defaultContext);
-
-        if ((next & Watcher) !== 0) {
-          profileRuntimeCounter("pushWatchersInvalidated");
-          profilePushNode("transitive.watcher", sub, depth, top - base);
-
-          propagateStackHigh = top;
-          emitSinkInvalidated(sub);
-        } else {
-          const child = sub.firstOut;
-
-          if (child !== null) {
-            const sibling = edge.nextOut;
-
-            if (sibling !== null) {
-              profileRuntimeCounter("pushChildBranchesQueued");
-
-              depthStack[top] = depth;
-              stack[top++] = sibling;
-            }
-
-            edge = child;
-            depth += 1;
-            continue;
-          }
-        }
-      } else {
+      if (next === 0) {
         profileRuntimeCounter("pushAlreadyDirtySkipped");
-        profilePushNode("transitive.skip", sub, depth, top - base);
+        profilePushNode("direct.skip", sub, 1, top - base);
+        continue;
       }
 
-      edge = edge.nextOut;
-    }
-  }
+      profileRuntimeCounter(
+        (next & Changed) !== 0 ? "pushMarkedChanged" : "pushMarkedInvalid",
+      );
+      profilePushNode(
+        (next & Changed) !== 0 ? "direct.changed" : "direct.invalid",
+        sub,
+        1,
+        top - base,
+      );
+      if (__DEV__) devRecordPropagate(edge, next, true, defaultContext);
 
-  propagateStackHigh = base;
+      if ((next & Watcher) !== 0) {
+        profileRuntimeCounter("pushWatchersInvalidated");
+        profilePushNode("direct.watcher", sub, 1, top - base);
+
+        propagateStackHigh = top;
+        emitSinkInvalidated(sub);
+        continue;
+      }
+
+      const child = sub.firstOut;
+      if (child !== null) {
+        profileRuntimeCounter("pushChildBranchesQueued");
+
+        depthStack[top] = 2;
+        stack[top++] = child;
+      }
+    }
+
+    /**
+     * Phase 2:
+     * Transitive DFS.
+     *
+     * Everything below direct level gets Invalid.
+     */
+    while (top !== base) {
+      let edge: ReactiveEdge | null = stack[--top]!;
+      let depth = depthStack[top]!;
+
+      while (edge !== null) {
+        profileRuntimeCounter("pushTransitiveEdgesVisited");
+
+        const sub: ReactiveNode<unknown> = edge.to;
+        const state = sub.state;
+
+        let next = 0;
+
+        if ((state & FAST_BLOCK_MASK) === 0) {
+          next = (state & ~Visited) | Invalid;
+          sub.state = next;
+        } else if ((state & Computing) !== 0) {
+          profileRuntimeCounter("pushComputingChecked");
+
+          const tail = sub.tailIn;
+
+          if (tail !== null) {
+            let confirmed = true;
+
+            if (edge !== tail) {
+              for (let p = edge.prevIn; p !== null; p = p.prevIn) {
+                if (p === tail) {
+                  confirmed = false;
+                  break;
+                }
+              }
+            }
+
+            if (confirmed) {
+              next = state | Visited | Invalid;
+              sub.state = next;
+            }
+          }
+        }
+
+        if (next !== 0) {
+          profileRuntimeCounter("pushMarkedInvalid");
+          profilePushNode("transitive.invalid", sub, depth, top - base);
+          if (__DEV__) devRecordPropagate(edge, next, false, defaultContext);
+
+          if ((next & Watcher) !== 0) {
+            profileRuntimeCounter("pushWatchersInvalidated");
+            profilePushNode("transitive.watcher", sub, depth, top - base);
+
+            propagateStackHigh = top;
+            emitSinkInvalidated(sub);
+          } else {
+            const child = sub.firstOut;
+
+            if (child !== null) {
+              const sibling = edge.nextOut;
+
+              if (sibling !== null) {
+                profileRuntimeCounter("pushChildBranchesQueued");
+
+                depthStack[top] = depth;
+                stack[top++] = sibling;
+              }
+
+              edge = child;
+              depth += 1;
+              continue;
+            }
+          }
+        } else {
+          profileRuntimeCounter("pushAlreadyDirtySkipped");
+          profilePushNode("transitive.skip", sub, depth, top - base);
+        }
+
+        edge = edge.nextOut;
+      }
+    }
+
+    propagateStackHigh = base;
+  } finally {
+    if (__DEV__) leaveRuntimePhase();
+  }
 }
 
 export const propagate = push_iterator;

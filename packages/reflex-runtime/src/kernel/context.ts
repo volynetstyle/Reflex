@@ -53,6 +53,7 @@ import {
   setTrackingEpoch as setTrackingEpochRegister,
   trackingEpoch,
 } from "./state";
+import { resetRuntimeExecutionState } from "./execution";
 import type { ReactiveNode } from "./shape";
 
 export {
@@ -397,6 +398,7 @@ export function resetRuntimeContextOptions(
   context.sinkInvalidatedHook = undefined;
   context.reactiveSettledHook = undefined;
   context.effectCleanupHook = undefined;
+  resetRuntimeExecutionState();
 
   reloadActiveContextIfCurrent(context);
 }
@@ -467,6 +469,4 @@ function ownHook<T>(
     : undefined;
 }
 
-export {
-  resetRuntimeConfiguration,
-};
+export { resetRuntimeConfiguration };

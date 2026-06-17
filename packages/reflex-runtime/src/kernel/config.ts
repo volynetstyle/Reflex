@@ -1,5 +1,11 @@
 import { recordDebugEvent } from "../debug/debug.runtime";
 import { profileRuntimeCounter } from "../profiling";
+import {
+  devAssertRuntimeHookDidNotReenter,
+  enterRuntimeHook,
+  leaveRuntimeHook,
+  readRuntimePhase,
+} from "./execution";
 import type { ReactiveEdge, ReactiveNode } from "./shape";
 import { reuseIncomingEdgeFromSuffixOrCreate } from "./shape/graph";
 
@@ -80,9 +86,7 @@ export function setReactiveSettledHook(
 export function setEffectCleanupHook(
   hook: EffectCleanupHook = undefined,
 ): void {
-  effectCleanupHook = isFunction<EffectCleanupHook>(hook)
-    ? hook
-    : undefined;
+  effectCleanupHook = isFunction<EffectCleanupHook>(hook) ? hook : undefined;
 }
 
 export function getReactiveSettledHook(): ReactiveSettledHook {
@@ -185,12 +189,56 @@ export function emitSinkInvalidated(node: ReactiveNode): void {
     recordDebugEvent(defaultContext, "watcher:invalidated", { node });
   }
 
-  sinkInvalidatedHook?.(node);
+  const hook = sinkInvalidatedHook;
+  if (hook === undefined) return;
+
+  if (!__DEV__) {
+    hook(node);
+    return;
+  }
+
+  const before = readRuntimePhase();
+  const phaseBefore = before.phase;
+  const depthBefore = before.depth;
+
+  enterRuntimeHook("sinkInvalidatedDispatcher");
+  try {
+    hook(node);
+    devAssertRuntimeHookDidNotReenter(
+      "sinkInvalidatedDispatcher",
+      phaseBefore,
+      depthBefore,
+    );
+  } finally {
+    leaveRuntimeHook();
+  }
 }
 
 export function emitReactiveSettled(): void {
   profileRuntimeCounter("contextSettledEmits");
-  reactiveSettledHook?.();
+  const hook = reactiveSettledHook;
+  if (hook === undefined) return;
+
+  if (!__DEV__) {
+    hook();
+    return;
+  }
+
+  const before = readRuntimePhase();
+  const phaseBefore = before.phase;
+  const depthBefore = before.depth;
+
+  enterRuntimeHook("reactiveSettledDispatcher");
+  try {
+    hook();
+    devAssertRuntimeHookDidNotReenter(
+      "reactiveSettledDispatcher",
+      phaseBefore,
+      depthBefore,
+    );
+  } finally {
+    leaveRuntimeHook();
+  }
 }
 
 // #endregion

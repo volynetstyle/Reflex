@@ -1,8 +1,5 @@
 import type { ComputeFn, ReactiveNode } from "../shape";
-import {
-  Computing,
-  Visited,
-} from "../shape";
+import { Computing, Visited } from "../shape";
 import { cleanupUnvisitedSources } from "./tracking";
 import {
   currentConsumer,
@@ -16,50 +13,61 @@ import {
   devRecordComputeFinish,
   devRecordComputeStart,
 } from "../dev";
+import {
+  enterRuntimePhase,
+  leaveRuntimePhase,
+  RuntimePhase,
+} from "../execution";
 
 export function executeKnownNodeComputation(
   node: ReactiveNode,
   compute: ComputeFn<unknown>,
 ): unknown {
-  const prevActive = currentConsumer;
-
-  node.tailIn = null;
-  node.state = (node.state & ~Visited) | Computing | Computing;
-  nextTrackingEpoch();
-  setCurrentConsumer(node);
-
-  if (__DEV__) devRecordComputeStart(node, defaultContext);
-
-  let result: unknown;
+  if (__DEV__) enterRuntimePhase(RuntimePhase.Recomputing);
 
   try {
-    result = compute!();
-  } catch (error) {
+    const prevActive = currentConsumer;
+
+    node.tailIn = null;
+    node.state = (node.state & ~Visited) | Computing | Computing;
+    nextTrackingEpoch();
+    setCurrentConsumer(node);
+
+    if (__DEV__) devRecordComputeStart(node, defaultContext);
+
+    let result: unknown;
+
+    try {
+      result = compute!();
+    } catch (error) {
+      setCurrentConsumer(prevActive);
+      node.state &= ~(Computing | Computing);
+
+      if (__DEV__) devRecordComputeError(node, error, defaultContext);
+
+      throw error;
+    }
+
     setCurrentConsumer(prevActive);
     node.state &= ~(Computing | Computing);
 
-    if (__DEV__) devRecordComputeError(node, error, defaultContext);
+    if (node.tailIn !== node.lastIn) {
+      cleanupUnvisitedSources(node);
+    }
 
-    throw error;
+    // const reductionEnabled =
+    //   graphReductionPolicy.enabled || (node.state & GraphReductionEnabled) !== 0;
+
+    // if (reductionEnabled) {
+    //   observeGraphReductionRun(node, graphReductionPolicy, reductionEnabled);
+    // }
+
+    if (__DEV__) devRecordComputeFinish(node, result, defaultContext);
+
+    return result;
+  } finally {
+    if (__DEV__) leaveRuntimePhase();
   }
-
-  setCurrentConsumer(prevActive);
-  node.state &= ~(Computing | Computing);
-
-  if (node.tailIn !== node.lastIn) {
-    cleanupUnvisitedSources(node);
-  }
-
-  // const reductionEnabled =
-  //   graphReductionPolicy.enabled || (node.state & GraphReductionEnabled) !== 0;
-
-  // if (reductionEnabled) {
-  //   observeGraphReductionRun(node, graphReductionPolicy, reductionEnabled);
-  // }
-
-  if (__DEV__) devRecordComputeFinish(node, result, defaultContext);
-
-  return result;
 }
 
 export function executeNodeComputation(node: ReactiveNode): unknown {
