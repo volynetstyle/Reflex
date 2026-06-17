@@ -29,7 +29,7 @@ export function enterRuntimePhase(phase: RuntimePhase): void {
   if (!SCHEDULER_POLICY_ENABLED) return;
 
   if (phase === RuntimePhase.Pulling) {
-    assertPhaseNotActive(
+    assertCurrentPhaseIsNot(
       RuntimePhase.Pulling,
       "REFLEX_NESTED_PULL",
       [
@@ -164,6 +164,21 @@ function assertPhaseNotActive(
   message: string,
 ): void {
   if (!isPhaseActive(phase)) {
+    return;
+  }
+
+  throw new Error(`[${code}]\n\n${message}`);
+}
+
+function assertCurrentPhaseIsNot(
+  phase: RuntimePhase,
+  code: string,
+  message: string,
+): void {
+  if (
+    runtimeExecutionState.phase !== phase ||
+    runtimeExecutionState.depth === 0
+  ) {
     return;
   }
 
