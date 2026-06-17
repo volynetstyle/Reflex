@@ -4,6 +4,8 @@ import {
   profileRuntimeCounter,
   profileRuntimePushPath,
 } from "../../../profiling";
+import { defaultContext } from "../../context";
+import { devRecordPropagate } from "../../dev";
 import { readRuntimeWalkerStackStats } from "../stackStats";
 import type { ReactiveNode } from "../../shape";
 import {
@@ -134,6 +136,7 @@ export function push_iterator(firstOut: ReactiveEdge | null): void {
       1,
       top - base,
     );
+    if (__DEV__) devRecordPropagate(edge, next, true, defaultContext);
 
     if ((next & Watcher) !== 0) {
       profileRuntimeCounter("pushWatchersInvalidated");
@@ -201,6 +204,7 @@ export function push_iterator(firstOut: ReactiveEdge | null): void {
       if (next !== 0) {
         profileRuntimeCounter("pushMarkedInvalid");
         profilePushNode("transitive.invalid", sub, depth, top - base);
+        if (__DEV__) devRecordPropagate(edge, next, false, defaultContext);
 
         if ((next & Watcher) !== 0) {
           profileRuntimeCounter("pushWatchersInvalidated");

@@ -1,6 +1,7 @@
 import {
   noteShouldRecomputeStackUsage,
   readRuntimeWalkerStackStats,
+  trimWalkerStackToFloorIfSparse,
 } from "../stackStats";
 import { devAssertRefreshEdge } from "../../dev";
 import {
@@ -183,6 +184,7 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
       if (changed) {
         high = base;
+        trimWalkerStackToFloorIfSparse(stack);
         return true;
       }
     }
@@ -218,6 +220,7 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
     }
 
     high = base;
+    trimWalkerStackToFloorIfSparse(stack);
     return changed;
   }
 }

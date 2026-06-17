@@ -1,5 +1,7 @@
 import { emitSinkInvalidated } from "../../context";
 import { profileRuntimeCounter } from "../../../profiling";
+import { defaultContext } from "../../context";
+import { devRecordPropagate } from "../../dev";
 import type { ReactiveEdge } from "../../shape";
 import { Changed, Invalid, Watcher } from "../../shape";
 
@@ -24,6 +26,7 @@ export function push_iterator_once_skipping(
       sub.state = (state & ~Invalid) | Changed;
 
       profileRuntimeCounter("pushOnceMarkedChanged");
+      if (__DEV__) devRecordPropagate(current, sub.state, true, defaultContext);
 
       if ((state & Watcher) !== 0) {
         emitSinkInvalidated(sub);

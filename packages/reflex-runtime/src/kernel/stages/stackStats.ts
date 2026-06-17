@@ -38,6 +38,14 @@ export function trimWalkerStackIfSparse<T>(stack: T[], high: number): void {
   stack.length = high;
 }
 
+export function trimWalkerStackToFloorIfSparse<T>(stack: T[]): void {
+  const len = stack.length;
+
+  if (len <= STACK_TRIM_MIN_CAPACITY) return;
+
+  stack.length = STACK_TRIM_MIN_CAPACITY;
+}
+
 export function readRuntimeWalkerStackStats(
   shouldRecomputeStackHigh: number,
   shouldRecomputeStackCapacity: number,
