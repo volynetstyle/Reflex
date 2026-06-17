@@ -4,6 +4,7 @@
   "type": "module",
   "description": "Low-level reactive runtime for deterministic dependency tracking and push/pull propagation.",
   "license": "MIT",
+  "author": "Andrii Volynets",
   "sideEffects": false,
   "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/index.js",

@@ -130,14 +130,7 @@ importers:
         specifier: ^0.3.5
         version: 0.3.5
 
-  packages/reflex-runtime:
-    devDependencies:
-      '@solidjs/signals':
-        specifier: ^0.13.4
-        version: 0.13.13
-      alien-signals:
-        specifier: ^2.0.0
-        version: 2.0.8
+  packages/reflex-runtime: {}
 
   packages/reflex-store:
     dependencies:
@@ -756,9 +749,6 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@solidjs/signals@0.13.13':
-    resolution: {integrity: sha512-4FrkhyvbAT5V6vprmv9Qoi5DAMzo25zkTa7ifEH1W1pwtU6N95ErEZZot8j2rm+KIRYlto9Kq0dzn6nNRdW/uA==}
-
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
@@ -1111,9 +1101,6 @@ packages:
 
   ajv@8.20.0:
     resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
-
-  alien-signals@2.0.8:
-    resolution: {integrity: sha512-844G1VLkk0Pe2SJjY0J8vp8ADI73IM4KliNu2OGlYzWpO28NexEUvjHTcFjFX3VXoiUtwTbHxLNI9ImkcoBqzA==}
 
   ansi-colors@4.1.3:
     resolution: {integrity: sha512-/6w/C21Pm1A7aZitlI5Ni/2J6FFQN8i1Cvz3kHABAAbw93v/NlvKdVOqz7CCWz/3iv/JplRSEEZ83XION15ovw==}
@@ -3725,8 +3712,6 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.60.3':
     optional: true
 
-  '@solidjs/signals@0.13.13': {}
-
   '@standard-schema/spec@1.1.0': {}
 
   '@swc/core-darwin-arm64@1.15.33':
@@ -4072,8 +4057,6 @@ snapshots:
       fast-uri: 3.1.2
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
-
-  alien-signals@2.0.8: {}
 
   ansi-colors@4.1.3: {}
 

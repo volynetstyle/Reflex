@@ -18,6 +18,14 @@ export function createConfig(target: BuildTarget): RollupOptions {
   };
 }
 
+function splitTargetInputs(target: BuildTarget): BuildTarget[] {
+  return Object.entries(target.input).map(([entryName, input]) => ({
+    ...target,
+    input: { [entryName]: input },
+    name: `${target.name}:${entryName}`,
+  }));
+}
+
 export function createRuntimeRollupConfig(): RollupOptions[] {
-  return TARGETS.map(createConfig);
+  return TARGETS.flatMap(splitTargetInputs).map(createConfig);
 }
