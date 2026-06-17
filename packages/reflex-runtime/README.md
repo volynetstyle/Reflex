@@ -6,11 +6,11 @@ It provides the primitive building blocks required to construct reactive systems
 
 Unlike most reactive libraries, Reflex separates:
 
-* dependency tracking,
-* graph propagation,
-* computation,
-* side-effect execution,
-* scheduling.
+- dependency tracking,
+- graph propagation,
+- computation,
+- side-effect execution,
+- scheduling.
 
 The runtime owns graph semantics. The host owns execution policy.
 
@@ -34,9 +34,9 @@ A mutable source value.
 
 Examples:
 
-* signals
-* stores
-* mutable state
+- signals
+- stores
+- mutable state
 
 Created with:
 
@@ -52,10 +52,10 @@ A derived computation.
 
 Consumers:
 
-* track dependencies automatically,
-* cache results,
-* recompute lazily,
-* participate in graph stabilization.
+- track dependencies automatically,
+- cache results,
+- recompute lazily,
+- participate in graph stabilization.
 
 Created with:
 
@@ -77,9 +77,9 @@ A side-effect sink.
 
 Watchers:
 
-* never participate in value propagation,
-* execute only when explicitly scheduled,
-* may return cleanup functions.
+- never participate in value propagation,
+- execute only when explicitly scheduled,
+- may return cleanup functions.
 
 Created with:
 
@@ -179,33 +179,121 @@ Reflex never performs implicit scheduling.
 
 Reflex intentionally does not provide:
 
-* automatic effect flushing,
-* microtask queues,
-* frame schedulers,
-* async orchestration,
-* rendering integration.
+- automatic effect flushing,
+- microtask queues,
+- frame schedulers,
+- async orchestration,
+- rendering integration.
 
 The host decides:
 
-* when to mutate,
-* when to read,
-* when to execute watchers,
-* how invalidated sinks should be scheduled.
+- when to mutate,
+- when to read,
+- when to execute watchers,
+- how invalidated sinks should be scheduled.
 
-Example:
+Runtime hooks are notification points. They may enqueue work or request a host
+flush, but they must not synchronously execute watchers, read reactive values, or
+mutate the graph while the runtime is propagating, pulling, or recomputing.
+
+Recommended scheduler shape:
 
 ```ts
-const queue = [];
+import {
+  runWatcher,
+  runWithReactiveBatch,
+  setRuntimeHooks,
+} from "@volynets/reflex-runtime/internal";
 
-setHooks({
-  onSinkInvalidated(watcher) {
-    queue.push(watcher);
+const pendingWatchers = new Set();
+let flushScheduled = false;
+let flushing = false;
+
+function flushWatchers() {
+  if (flushing || pendingWatchers.size === 0) return;
+
+  flushScheduled = false;
+  flushing = true;
+  try {
+    for (const watcher of pendingWatchers) {
+      pendingWatchers.delete(watcher);
+      runWatcher(watcher);
+    }
+  } finally {
+    flushing = false;
+  }
+}
+
+function scheduleFlush() {
+  if (flushScheduled) return;
+
+  flushScheduled = true;
+  queueMicrotask(flushWatchers);
+}
+
+setRuntimeHooks({
+  sinkInvalidatedDispatcher(watcher) {
+    pendingWatchers.add(watcher);
+  },
+  reactiveSettledDispatcher() {
+    scheduleFlush();
   },
 });
 
-while (queue.length) {
-  runWatcher(queue.shift());
-}
+runWithReactiveBatch(() => {
+  // write producers here
+});
+
+// Optional explicit host boundary.
+flushWatchers();
+```
+
+Allowed inside `sinkInvalidatedDispatcher`:
+
+```ts
+queue.add(watcher);
+```
+
+Allowed inside `reactiveSettledDispatcher`:
+
+```ts
+queueMicrotask(flushWatchers);
+requestAnimationFrame(flushWatchers);
+host.schedule(flushWatchers);
+```
+
+Forbidden inside runtime hooks:
+
+```ts
+runWatcher(watcher);
+readConsumer(node);
+readProducer(node);
+writeProducer(node, value);
+flushEffects();
+```
+
+In development validation builds, Reflex reports scheduler contract violations
+at the boundary where they happen:
+
+```txt
+[REFLEX_SCHEDULER_REENTRANT_FLUSH]
+
+Host scheduler executed runWatcher() synchronously from reactiveSettledDispatcher.
+```
+
+Other scheduler policy errors include:
+
+```txt
+REFLEX_SCHEDULER_REACTIVE_READ_IN_HOOK
+REFLEX_NESTED_PULL
+REFLEX_NESTED_PROPAGATION
+REFLEX_HOST_HOOK_REENTERED_RUNTIME
+```
+
+See also:
+
+```text
+docs/runtime/scheduler-contract.md
 ```
 
 ---
@@ -222,10 +310,10 @@ untracked(() => {
 
 Useful for:
 
-* diagnostics,
-* logging,
-* debugging,
-* metadata access.
+- diagnostics,
+- logging,
+- debugging,
+- metadata access.
 
 ---
 
@@ -259,10 +347,10 @@ import "@volynets/reflex-runtime/debug";
 
 The runtime exposes a versioned debugging protocol suitable for:
 
-* graph inspection,
-* runtime diagnostics,
-* visualization tooling,
-* developer extensions.
+- graph inspection,
+- runtime diagnostics,
+- visualization tooling,
+- developer extensions.
 
 Debug APIs are intentionally separated from the production runtime.
 
@@ -284,32 +372,32 @@ They are not covered by public stability guarantees.
 
 ## Key Properties
 
-* Deterministic graph propagation
-* Lazy recomputation
-* Explicit execution
-* Host-controlled scheduling
-* Dynamic dependency tracking
-* Minimal runtime surface
-* Framework-agnostic design
+- Deterministic graph propagation
+- Lazy recomputation
+- Explicit execution
+- Host-controlled scheduling
+- Dynamic dependency tracking
+- Minimal runtime surface
+- Framework-agnostic design
 
 ---
 
 ## Use When
 
-* Building a reactive framework
-* Building a scheduler
-* Building a state container
-* Researching reactive execution models
-* You need explicit control over computation timing
+- Building a reactive framework
+- Building a scheduler
+- Building a state container
+- Researching reactive execution models
+- You need explicit control over computation timing
 
 ---
 
 ## Do Not Use When
 
-* You want automatic effect scheduling
-* You want a UI framework
-* You need batteries-included state management
-* You prefer implicit execution semantics
+- You want automatic effect scheduling
+- You want a UI framework
+- You need batteries-included state management
+- You prefer implicit execution semantics
 
 ---
 
