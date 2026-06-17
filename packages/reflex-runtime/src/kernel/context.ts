@@ -1,45 +1,95 @@
 import { recordDebugEvent } from "../debug/debug.runtime";
 import { profileRuntimeCounter } from "../profiling";
-import type { ReactiveEdge, ReactiveNode } from "./shape";
-import { reuseIncomingEdgeFromSuffixOrCreate } from "./shape/graph";
+import {
+  DEFAULT_READ_TRACKING_STRATEGY,
+  defaultContext,
+  effectCleanupHook,
+  emitReactiveSettled,
+  emitSinkInvalidated,
+  getEffectCleanupHook,
+  getReactiveSettledHook,
+  reactiveSettledHook,
+  readTrackingStrategy,
+  resetRuntimeConfiguration,
+  restoreRuntimeConfiguration,
+  saveRuntimeConfiguration,
+  setEffectCleanupHook as setConfiguredEffectCleanupHook,
+  setReadTrackingStrategy as setConfiguredReadTrackingStrategy,
+  setReactiveSettledHook as setConfiguredReactiveSettledHook,
+  setSinkInvalidatedHook as setConfiguredSinkInvalidatedHook,
+  sinkInvalidatedHook,
+  type EffectCleanupHook,
+  type ReactiveSettledHook,
+  type ReadTrackingStrategy,
+  type RuntimeConfiguration,
+  type RuntimeConfigurationOptions,
+  type RuntimeDebugContext,
+  type RuntimeHooks,
+  type RuntimeHostHooks,
+  type SinkInvalidatedHook,
+} from "./config";
+import {
+  advanceTrackingEpoch,
+  clearReactiveSettledPending,
+  currentConsumer,
+  enterConsumerTracking,
+  enterPropagationScopeRegister,
+  enterReactiveBatchRegister,
+  hasPendingReactiveSettled,
+  isNewerEpoch,
+  isReactiveBatchActive,
+  isRuntimeExecutionIdle,
+  keepNewestTrackingEpoch,
+  leavePropagationScopeRegister,
+  leaveReactiveBatchRegister,
+  markReactiveSettledPending,
+  pendingReactiveSettled,
+  propagationScopeDepth,
+  reactiveBatchDepth,
+  restoreConsumerTracking,
+  setCurrentConsumer,
+  setPropagationScopeDepth,
+  setReactiveBatchState,
+  setTrackingEpoch as setTrackingEpochRegister,
+  trackingEpoch,
+} from "./state";
+import type { ReactiveNode } from "./shape";
+
+export {
+  DEFAULT_READ_TRACKING_STRATEGY,
+  currentConsumer,
+  defaultContext,
+  effectCleanupHook,
+  emitSinkInvalidated,
+  getEffectCleanupHook,
+  getReactiveSettledHook,
+  propagationScopeDepth,
+  reactiveBatchDepth,
+  reactiveSettledHook,
+  readTrackingStrategy,
+  setCurrentConsumer,
+  sinkInvalidatedHook,
+  trackingEpoch,
+  type EffectCleanupHook,
+  type ReactiveSettledHook,
+  type ReadTrackingStrategy,
+  type RuntimeDebugContext,
+  type RuntimeHooks,
+  type RuntimeHostHooks,
+  type SinkInvalidatedHook,
+};
 
 export const RUNTIME_CONTEXT_BRAND: unique symbol = Symbol("RuntimeContext");
 
-export interface RuntimeHooks {
-  sinkInvalidatedDispatcher?(node: ReactiveNode): void;
-  reactiveSettledDispatcher?(): void;
-  effectCleanupRegistrar?(dispose: () => void): void;
-}
+export type RuntimeContextOptions = RuntimeConfigurationOptions;
 
-export type RuntimeHostHooks = RuntimeHooks;
-
-export type ReadTrackingStrategy = (
-  source: ReactiveNode,
-  consumer: ReactiveNode,
-  prev: ReactiveEdge | null,
-  nextExpected: ReactiveEdge | null,
-  version: number,
-) => ReactiveEdge;
-
-export interface RuntimeContextOptions {
-  readTrackingStrategy?: ReadTrackingStrategy;
-}
-
-export type SinkInvalidatedHook = RuntimeHooks["sinkInvalidatedDispatcher"];
-export type ReactiveSettledHook = RuntimeHooks["reactiveSettledDispatcher"];
-export type EffectCleanupHook = RuntimeHooks["effectCleanupRegistrar"];
-
-export interface RuntimeContext {
+export interface RuntimeContext extends RuntimeConfiguration {
   readonly [RUNTIME_CONTEXT_BRAND]: true;
   currentConsumer: ReactiveNode | null;
   trackingEpoch: number;
   propagationScopeDepth: number;
   batchDepth: number;
   pendingReactiveSettled: boolean;
-  readTrackingStrategy: ReadTrackingStrategy;
-  sinkInvalidatedHook: SinkInvalidatedHook;
-  reactiveSettledHook: ReactiveSettledHook;
-  effectCleanupHook: EffectCleanupHook;
 }
 
 export type RuntimeContextSnapshot = Omit<
@@ -47,34 +97,7 @@ export type RuntimeContextSnapshot = Omit<
   typeof RUNTIME_CONTEXT_BRAND
 >;
 
-export interface RuntimeDebugContext {
-  readonly scope: "runtime";
-}
-
-export const DEFAULT_READ_TRACKING_STRATEGY: ReadTrackingStrategy =
-  reuseIncomingEdgeFromSuffixOrCreate;
-
-export const defaultContext: RuntimeDebugContext = {
-  scope: "runtime",
-};
-
 const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
-
-export let currentConsumer: ReactiveNode | null = null;
-export let trackingEpoch = 0;
-export let propagationScopeDepth = 0;
-
-export const reactiveBatchState = {
-  batchDepth: 0,
-  pendingReactiveSettled: false,
-};
-
-export let readTrackingStrategy: ReadTrackingStrategy =
-  DEFAULT_READ_TRACKING_STRATEGY;
-
-export let sinkInvalidatedHook: SinkInvalidatedHook = undefined;
-export let reactiveSettledHook: ReactiveSettledHook = undefined;
-export let effectCleanupHook: EffectCleanupHook = undefined;
 
 function asHook<T>(value: unknown): T | undefined {
   return typeof value === "function" ? (value as T) : undefined;
@@ -114,15 +137,11 @@ let activeRuntimeContext: RuntimeContext = defaultRuntimeContext;
 export function activateRuntimeContext(context: RuntimeContext): void {
   activeRuntimeContext = context;
 
-  currentConsumer = context.currentConsumer;
-  trackingEpoch = context.trackingEpoch;
-  propagationScopeDepth = context.propagationScopeDepth;
-  reactiveBatchState.batchDepth = context.batchDepth;
-  reactiveBatchState.pendingReactiveSettled = context.pendingReactiveSettled;
-  readTrackingStrategy = context.readTrackingStrategy;
-  sinkInvalidatedHook = context.sinkInvalidatedHook;
-  reactiveSettledHook = context.reactiveSettledHook;
-  effectCleanupHook = context.effectCleanupHook;
+  setCurrentConsumer(context.currentConsumer);
+  setTrackingEpochRegister(context.trackingEpoch);
+  setPropagationScopeDepth(context.propagationScopeDepth);
+  setReactiveBatchState(context.batchDepth, context.pendingReactiveSettled);
+  restoreRuntimeConfiguration(context);
 }
 
 export function commitRuntimeContext(
@@ -131,12 +150,14 @@ export function commitRuntimeContext(
   context.currentConsumer = currentConsumer;
   context.trackingEpoch = trackingEpoch;
   context.propagationScopeDepth = propagationScopeDepth;
-  context.batchDepth = reactiveBatchState.batchDepth;
-  context.pendingReactiveSettled = reactiveBatchState.pendingReactiveSettled;
-  context.readTrackingStrategy = readTrackingStrategy;
-  context.sinkInvalidatedHook = sinkInvalidatedHook;
-  context.reactiveSettledHook = reactiveSettledHook;
-  context.effectCleanupHook = effectCleanupHook;
+  context.batchDepth = reactiveBatchDepth;
+  context.pendingReactiveSettled = pendingReactiveSettled;
+
+  const configuration = saveRuntimeConfiguration();
+  context.readTrackingStrategy = configuration.readTrackingStrategy;
+  context.sinkInvalidatedHook = configuration.sinkInvalidatedHook;
+  context.reactiveSettledHook = configuration.reactiveSettledHook;
+  context.effectCleanupHook = configuration.effectCleanupHook;
 }
 
 export function getActiveRuntimeContext(): RuntimeContext {
@@ -174,74 +195,54 @@ export function runWithRuntimeContext<T>(
 }
 
 export function nextTrackingEpoch(): number {
-  return (trackingEpoch = (trackingEpoch + 1) >>> 0 || 1);
+  return advanceTrackingEpoch();
 }
 
 export function beginConsumerTracking(node: ReactiveNode): ReactiveNode | null {
-  const previous = currentConsumer;
-  trackingEpoch = (trackingEpoch + 1) >>> 0 || 1;
-  currentConsumer = node;
-  return previous;
+  return enterConsumerTracking(node);
 }
 
 export function restoreConsumer(node: ReactiveNode | null): void {
-  currentConsumer = node;
+  restoreConsumerTracking(node);
 }
 
 export function setTrackingEpoch(epoch: number): void {
-  if (((epoch - trackingEpoch) | 0) > 0) trackingEpoch = epoch;
+  keepNewestTrackingEpoch(epoch);
 }
 
 export function isNewer(a: number, b: number): boolean {
-  return ((a - b) | 0) > 0;
+  return isNewerEpoch(a, b);
 }
 
-//
 export function getCurrentConsumer(): ReactiveNode | null {
   return currentConsumer;
 }
 
-//
-export function setCurrentConsumer(node: ReactiveNode | null): void {
-  currentConsumer = node;
-}
-
-//
 export function getPropagationScopeDepth(): number {
   return propagationScopeDepth;
 }
 
-//
-export function setPropagationScopeDepth(depth: number): void {
-  propagationScopeDepth = depth;
-}
-
 export function getBatchDepth(): number {
-  return reactiveBatchState.batchDepth;
+  return reactiveBatchDepth;
 }
 
-export function hasPendingReactiveSettled(): boolean {
-  return reactiveBatchState.pendingReactiveSettled;
-}
+export { hasPendingReactiveSettled };
 
 export function enterReactiveBatch(): void {
-  reactiveBatchState.batchDepth += 1;
+  enterReactiveBatchRegister();
 }
 
 export function leaveReactiveBatch(): void {
-  if (reactiveBatchState.batchDepth > 0) {
-    reactiveBatchState.batchDepth -= 1;
-  }
-
+  leaveReactiveBatchRegister();
   flushPendingReactiveSettledIfIdle();
 }
 
 export function flushPendingReactiveSettledIfIdle(): void {
-  if (reactiveBatchState.batchDepth !== 0) return;
-  if (!reactiveBatchState.pendingReactiveSettled) return;
-  if (propagationScopeDepth !== 0 || currentConsumer !== null) return;
+  if (isReactiveBatchActive()) return;
+  if (!hasPendingReactiveSettled()) return;
+  if (!isRuntimeExecutionIdle()) return;
 
-  reactiveBatchState.pendingReactiveSettled = false;
+  clearReactiveSettledPending();
   emitReactiveSettled();
 }
 
@@ -259,90 +260,38 @@ export function enterPropagationScope(): void {
   profileRuntimeCounter("propagationScopesEntered");
   profileRuntimeCounter("contextPropagationEnter");
 
-  ++propagationScopeDepth;
+  enterPropagationScopeRegister();
 }
 
 export function leavePropagationScope(): void {
   profileRuntimeCounter("propagationScopesLeft");
   profileRuntimeCounter("contextPropagationLeave");
 
-  if (propagationScopeDepth > 0) --propagationScopeDepth;
-
-  if (propagationScopeDepth === 0 && currentConsumer === null) {
-    emitReactiveSettled();
+  if (leavePropagationScopeRegister()) {
+    emitReactiveSettledWithBatching();
   }
-}
-
-export function emitSinkInvalidated(node: ReactiveNode): void {
-  profileRuntimeCounter("sinkInvalidatedEmits");
-
-  if (IS_DEV) {
-    recordDebugEvent(defaultContext, "watcher:invalidated", { node });
-  }
-
-  sinkInvalidatedHook?.(node);
 }
 
 export function emitSettledIfIdle(): void {
   profileRuntimeCounter("contextSettledChecks");
 
-  if (propagationScopeDepth !== 0 || currentConsumer !== null) return;
+  if (!isRuntimeExecutionIdle()) return;
 
   if (IS_DEV) {
     recordDebugEvent(defaultContext, "context:settled");
   }
 
-  emitReactiveSettled();
+  emitReactiveSettledWithBatching();
 }
 
-function emitReactiveSettled(): void {
-  if (reactiveBatchState.batchDepth !== 0) {
-    reactiveBatchState.pendingReactiveSettled = true;
+function emitReactiveSettledWithBatching(): void {
+  if (isReactiveBatchActive()) {
+    markReactiveSettledPending();
     profileRuntimeCounter("contextSettledDeferred");
     return;
   }
 
-  profileRuntimeCounter("contextSettledEmits");
-
-  reactiveSettledHook?.();
-}
-
-export function setSinkInvalidatedHook(
-  hook: SinkInvalidatedHook = undefined,
-): void {
-  sinkInvalidatedHook = asHook<SinkInvalidatedHook>(hook);
-  activeRuntimeContext.sinkInvalidatedHook = sinkInvalidatedHook;
-}
-
-export function setReactiveSettledHook(
-  hook: ReactiveSettledHook = undefined,
-): void {
-  reactiveSettledHook = asHook<ReactiveSettledHook>(hook);
-  activeRuntimeContext.reactiveSettledHook = reactiveSettledHook;
-}
-
-export function setEffectCleanupHook(
-  hook: EffectCleanupHook = undefined,
-): void {
-  effectCleanupHook = asHook<EffectCleanupHook>(hook);
-  activeRuntimeContext.effectCleanupHook = effectCleanupHook;
-}
-
-export function getEffectCleanupHook(): EffectCleanupHook {
-  return effectCleanupHook;
-}
-
-export function getReactiveSettledHook(): ReactiveSettledHook {
-  return reactiveSettledHook;
-}
-
-function ownHook<T>(
-  hooks: RuntimeHooks,
-  name: keyof RuntimeHooks,
-): T | undefined {
-  return Object.prototype.hasOwnProperty.call(hooks, name)
-    ? asHook<T>(hooks[name])
-    : undefined;
+  emitReactiveSettled();
 }
 
 export function setRuntimeHooks(
@@ -382,6 +331,36 @@ export function setInternalHooks(
 ): void {
   setSinkInvalidatedHook(sinkInvalidated);
   setReactiveSettledHook(reactiveSettled);
+  activeRuntimeContext.sinkInvalidatedHook = sinkInvalidatedHook;
+  activeRuntimeContext.reactiveSettledHook = reactiveSettledHook;
+}
+
+export function setSinkInvalidatedHook(
+  hook: SinkInvalidatedHook = undefined,
+): void {
+  setConfiguredSinkInvalidatedHook(hook);
+  activeRuntimeContext.sinkInvalidatedHook = sinkInvalidatedHook;
+}
+
+export function setReactiveSettledHook(
+  hook: ReactiveSettledHook = undefined,
+): void {
+  setConfiguredReactiveSettledHook(hook);
+  activeRuntimeContext.reactiveSettledHook = reactiveSettledHook;
+}
+
+export function setEffectCleanupHook(
+  hook: EffectCleanupHook = undefined,
+): void {
+  setConfiguredEffectCleanupHook(hook);
+  activeRuntimeContext.effectCleanupHook = effectCleanupHook;
+}
+
+export function setReadTrackingStrategy(
+  strategy: ReadTrackingStrategy | null | undefined,
+): void {
+  setConfiguredReadTrackingStrategy(strategy);
+  activeRuntimeContext.readTrackingStrategy = readTrackingStrategy;
 }
 
 export function setRuntimeContextOptions(
@@ -478,3 +457,16 @@ export function resetState(
 export function reloadActiveContextIfCurrent(context: RuntimeContext): void {
   if (context === activeRuntimeContext) activateRuntimeContext(context);
 }
+
+function ownHook<T>(
+  hooks: RuntimeHooks,
+  name: keyof RuntimeHooks,
+): T | undefined {
+  return Object.prototype.hasOwnProperty.call(hooks, name)
+    ? asHook<T>(hooks[name])
+    : undefined;
+}
+
+export {
+  resetRuntimeConfiguration,
+};

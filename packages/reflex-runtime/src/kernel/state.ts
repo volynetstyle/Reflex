@@ -173,6 +173,14 @@ export function clearReactiveSettledPending(): void {
   pendingReactiveSettled = false;
 }
 
+export function setReactiveBatchState(
+  batchDepth: number,
+  pendingSettled: boolean,
+): void {
+  reactiveBatchDepth = batchDepth < 0 ? 0 : batchDepth;
+  pendingReactiveSettled = pendingSettled;
+}
+
 export function hasPendingReactiveSettled(): boolean {
   return pendingReactiveSettled;
 }
