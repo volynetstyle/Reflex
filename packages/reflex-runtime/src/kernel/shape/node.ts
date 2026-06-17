@@ -12,7 +12,6 @@ class ReactiveNode<T = unknown> {
   tailIn: ReactiveEdge | null = null;
   compute: ComputeFn<T> = undefined;
   payload: T;
-  pending: T;
 
   constructor(payload: T, compute: ComputeFn<T>, state: number) {
     if (__DEV__ && !isPayload(payload)) {
@@ -24,7 +23,6 @@ class ReactiveNode<T = unknown> {
     this.state = state | 0;
     this.compute = compute;
     this.payload = payload;
-    this.pending = payload;
   }
 }
 

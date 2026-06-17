@@ -3,13 +3,54 @@ import {
   readRuntimeWalkerStackStats,
 } from "../stackStats";
 import { devAssertRefreshEdge } from "../../dev";
-import { profileRuntimeCounter } from "../../../profiling";
+import {
+  isRuntimeProfilingEnabled,
+  profileRuntimeCounter,
+  profileRuntimePullPath,
+} from "../../../profiling";
 import type { ReactiveEdge, ReactiveNode } from "../../shape";
 import { Changed, Invalid } from "../../shape";
 import { advance } from "./advance";
 
 const stack: ReactiveEdge[] = [];
 let high = 0;
+
+function countIn(edge: ReactiveEdge | null): number {
+  let count = 0;
+
+  for (let current = edge; current !== null; current = current.nextIn) {
+    count += 1;
+  }
+
+  return count;
+}
+
+function countOut(edge: ReactiveEdge | null): number {
+  let count = 0;
+
+  for (let current = edge; current !== null; current = current.nextOut) {
+    count += 1;
+  }
+
+  return count;
+}
+
+function profilePullNode(
+  branch: string,
+  node: ReactiveNode<unknown>,
+  depth: number,
+  stackDepth: number,
+): void {
+  if (__PROFILE__ && isRuntimeProfilingEnabled()) {
+    profileRuntimePullPath(
+      branch,
+      depth,
+      countIn(node.firstIn),
+      countOut(node.firstOut),
+      stackDepth,
+    );
+  }
+}
 
 /**
  * Pull dependency walker for dirty incoming dependency links.
@@ -34,6 +75,7 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
      * does not need to be inspected. We are going to bubble anyway.
      */
     if ((node.state & Changed) !== 0) {
+      profilePullNode("node.changed", node, top - base, top - base);
       changed = true;
     } else {
       profileRuntimeCounter("pullEdgesVisited");
@@ -44,6 +86,7 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
       if ((depState & Changed) !== 0) {
         profileRuntimeCounter("pullChangedDeps");
         profileRuntimeCounter("pullAdvanceCalls");
+        profilePullNode("dep.changed.advance", dep, top - base + 1, top - base);
 
         /**
          * advance() may re-enter pull walking, so expose only the active
@@ -63,6 +106,7 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
         if (firstIn !== null) {
           profileRuntimeCounter("pullDescents");
+          profilePullNode("dep.invalid.descend", dep, top - base + 1, top - base);
 
           stack[top] = edge;
           top = top + 1;
@@ -79,6 +123,7 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
         high = top;
 
         profileRuntimeCounter("pullAdvanceCalls");
+        profilePullNode("dep.invalid.leaf.advance", dep, top - base + 1, top - base);
 
         if (__DEV__) {
           devAssertRefreshEdge(dep, edge);
@@ -87,6 +132,7 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
         changed = advance(dep, edge);
       } else {
         profileRuntimeCounter("pullCleanDeps");
+        profilePullNode("dep.clean", dep, top - base + 1, top - base);
 
         changed = false;
       }
@@ -101,6 +147,7 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
       if (sibling !== null) {
         profileRuntimeCounter("pullStableSiblingScans");
+        profilePullNode("sibling.stable", sibling.from, top - base + 1, top - base);
 
         edge = sibling;
         continue scan;
@@ -115,6 +162,7 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
         const parentEdge = stack[top]!;
         profileRuntimeCounter("pullChangedBubbles");
         profileRuntimeCounter("pullAdvanceCalls");
+        profilePullNode("bubble.changed.advance", node, top - base + 1, top - base);
         changed = advance(node, parentEdge);
         node = parentEdge.to;
 
@@ -123,6 +171,7 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
           if (sibling !== null) {
             profileRuntimeCounter("pullStableSiblingScans");
+            profilePullNode("sibling.after-bubble", sibling.from, top - base + 1, top - base);
 
             edge = sibling;
             continue scan;
@@ -157,6 +206,7 @@ export function pull_iterator(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
       if (sibling !== null) {
         profileRuntimeCounter("pullStableSiblingScans");
+        profilePullNode("sibling.after-stable-pop", sibling.from, top - base + 1, top - base);
 
         edge = sibling;
         continue scan;

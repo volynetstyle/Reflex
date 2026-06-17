@@ -73,7 +73,7 @@
     "bench": "pnpm build && vitest bench test/signal_beta.bench.ts",
     "bench:runtime": "vitest bench test/perf/runtime-taxonomy.bench.ts",
     "bench:runtime:json": "vitest bench test/perf/runtime-taxonomy.bench.ts --outputJson ../../bench-results/runtime/latest.raw.json",
-    "bench:push-pull": "vitest bench test/perf/push-pull-components.bench.ts",
+    "bench:push-pull": "vitest bench --config vite.dev.config.ts test/perf/push-pull-components.bench.ts",
     "bench:taxonomy": "pnpm bench:runtime",
     "bench:flame": "0x -- node dist/tests/ownership.run.js",
     "test:watch": "vitest",
