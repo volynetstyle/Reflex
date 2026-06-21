@@ -248,26 +248,30 @@ function createTopology(): RuntimeProfileTopology {
 
 const runtimeProfileTopology: RuntimeProfileTopology = createTopology();
 
-function bucketSize(size: number): string {
-  if (size <= 0) return "0";
-  if (size === 1) return "1";
-  if (size <= 3) return "2-3";
-  if (size <= 7) return "4-7";
-  if (size <= 15) return "8-15";
-  if (size <= 31) return "16-31";
-  if (size <= 63) return "32-63";
-  return "64+";
+function bucket(
+  value: number,
+  maxBucketStart: number
+): string {
+  if (value <= 0) return "0";
+  if (value === 1) return "1";
+
+  let start = 2;
+  let end = 3;
+
+  while (end < maxBucketStart && value > end) {
+    start = end + 1;
+    end = end * 2 + 1;
+  }
+
+  if (value > end) {
+    return `${maxBucketStart}+`;
+  }
+
+  return `${start}-${end}`;
 }
 
-function bucketDepth(depth: number): string {
-  if (depth <= 0) return "0";
-  if (depth === 1) return "1";
-  if (depth <= 3) return "2-3";
-  if (depth <= 7) return "4-7";
-  if (depth <= 15) return "8-15";
-  if (depth <= 31) return "16-31";
-  return "32+";
-}
+const bucketSize = (size: number) => bucket(size, 64);
+const bucketDepth = (depth: number) => bucket(depth, 32);
 
 function incrementBucket(record: Record<string, number>, key: string): void {
   record[key] = (record[key] ?? 0) + 1;
