@@ -4,7 +4,7 @@ import {
   currentConsumer,
   trackingEpoch,
 } from "../kernel/context";
-import { resolveTrackedRead } from "../kernel/engine/tracking";
+import { resolveTrackedRead } from "../kernel/shape/tracking";
 import { Changed, DIRTY_STATE, Visited } from "../kernel/shape";
 import {
   devAssertConsumerCanStabilize,
@@ -45,7 +45,7 @@ export function readConsumerLazy<T>(this: ConsumerNode<T>): T {
 
   profileRuntimeReadConsumerPath(isDirty);
 
-  const value = !isDirty ? node.payload : stabilizeDirtyConsumer(node, state);
+  const value = isDirty ? stabilizeDirtyConsumer(node, state) : node.payload;
 
   const consumer = currentConsumer;
 

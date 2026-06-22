@@ -1,12 +1,8 @@
-import {
-  currentConsumer,
-  defaultContext,
-  resolveTrackedRead,
-  trackingEpoch,
-} from "../kernel";
+import { currentConsumer, defaultContext, trackingEpoch } from "../kernel";
 import type { ProducerNode } from "../kernel";
 import { devRecordReadProducer } from "../kernel/dev";
 import { devAssertNoRuntimeHookReactiveRead } from "../kernel/execution";
+import { resolveTrackedRead } from "../kernel/shape/tracking";
 import { profileRuntimeCounter } from "../profiling";
 
 /**

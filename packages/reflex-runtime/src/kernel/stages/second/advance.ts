@@ -13,7 +13,7 @@ import {
   leaveRuntimePhase,
   RuntimePhase,
 } from "../../execution";
-import { cleanupUnvisitedSources } from "../../engine";
+import { cleanupUnvisitedSources } from "../../shape/tracking";
 import {
   beginConsumerTracking,
   restoreConsumer,

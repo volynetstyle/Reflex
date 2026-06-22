@@ -22,7 +22,7 @@ import {
   RuntimePhase,
 } from "../execution";
 
-const FORCE_RECOMPUTE_STATE = Changed | Visited;
+const FORCE_STABILIZATION_STATE = Changed | Visited;
 
 function runCleanup(cleanup: WatcherCleanup): void {
   profileRuntimeCounter("watcherCleanups");
@@ -43,91 +43,93 @@ function runCleanup(cleanup: WatcherCleanup): void {
   }
 }
 
-function shouldRunDirtyWatcher(node: WatcherNode, state: number): boolean {
-  if ((state & FORCE_RECOMPUTE_STATE) !== 0) return true;
-
-  const edge = node.firstIn;
-  return edge !== null && pull_iterator(node, edge);
-}
-
 export function runWatcher(node: WatcherNode): void {
-  if (__DEV__) {
-    devAssertNoRuntimeHookWatcherExecution();
-    enterRuntimePhase(RuntimePhase.WatcherExecution);
+  if (!__DEV__) {
+    runWatcherCore(node);
+    return;
   }
 
+  devAssertNoRuntimeHookWatcherExecution();
+  enterRuntimePhase(RuntimePhase.WatcherExecution);
   try {
-    profileRuntimeCounter("watcherRunCalls");
+    runWatcherCore(node);
+  } finally {
+    leaveRuntimePhase();
+  }
+}
 
-    const state = node.state;
+function runWatcherCore(node: WatcherNode): void {
+  profileRuntimeCounter("watcherRunCalls");
 
-    if ((state & DIRTY_STATE) === 0) {
-      profileRuntimeCounter("watcherCleanSkips");
+  const state = node.state;
 
-      if (__DEV__) devRecordWatcherSkip(node, "clean", defaultContext);
-      return;
-    }
+  if ((state & DIRTY_STATE) === 0) {
+    profileRuntimeCounter("watcherCleanSkips");
 
-    if (!shouldRunDirtyWatcher(node, state)) {
+    if (__DEV__) devRecordWatcherSkip(node, "clean", defaultContext);
+    return;
+  }
+
+  if ((state & FORCE_STABILIZATION_STATE) === 0) {
+    const edge = node.firstIn;
+
+    if (edge === null || !pull_iterator(node, edge)) {
       profileRuntimeCounter("watcherStableSkips");
 
       node.state &= ~DIRTY_STATE;
       if (__DEV__) devRecordWatcherSkip(node, "stable", defaultContext);
       return;
     }
+  }
+
+  if (node.compute === undefined) {
+    profileRuntimeCounter("watcherDisposedSkips");
+
+    node.state &= ~DIRTY_STATE;
+    if (__DEV__) devRecordWatcherSkip(node, "stable", defaultContext);
+    return;
+  }
+
+  const compute = node.compute;
+  profileRuntimeCounter("watcherExecutions");
+
+  const payload = node.payload;
+  const prevCleanup = typeof payload === "function" ? payload : null;
+
+  if (__DEV__)
+    devRecordWatcherStart(node, prevCleanup !== null, defaultContext);
+
+  node.payload = undefined;
+  node.state &= ~Visited;
+
+  if (prevCleanup !== null) {
+    runCleanup(prevCleanup);
+    if (__DEV__) devRecordWatcherCleanup(node, defaultContext);
 
     if (node.compute === undefined) {
-      profileRuntimeCounter("watcherDisposedSkips");
-
       node.state &= ~DIRTY_STATE;
-      if (__DEV__) devRecordWatcherSkip(node, "stable", defaultContext);
+      if (__DEV__) {
+        devRecordWatcherFinish(node, false, undefined, defaultContext);
+      }
       return;
     }
-
-    const compute = node.compute;
-    profileRuntimeCounter("watcherExecutions");
-
-    const prevPayload = node.payload;
-    const prevCleanup = typeof prevPayload === "function" ? prevPayload : null;
-
-    if (__DEV__)
-      devRecordWatcherStart(node, prevCleanup !== null, defaultContext);
-
-    node.payload = undefined;
-    node.state &= ~Visited;
-
-    if (prevCleanup !== null) {
-      runCleanup(prevCleanup);
-      if (__DEV__) devRecordWatcherCleanup(node, defaultContext);
-
-      if (node.compute === undefined) {
-        node.state &= ~DIRTY_STATE;
-        if (__DEV__) {
-          devRecordWatcherFinish(node, false, undefined, defaultContext);
-        }
-        return;
-      }
-    }
-
-    const result = executeKnownNodeComputation(node, compute);
-
-    const hasCleanup = typeof result === "function";
-
-    if (hasCleanup) {
-      node.payload = result;
-    }
-
-    if ((node.state & Visited) === 0) {
-      node.state &= ~DIRTY_STATE;
-    } else {
-      node.state = (node.state & ~Changed) | Invalid;
-    }
-
-    if (__DEV__)
-      devRecordWatcherFinish(node, hasCleanup, result, defaultContext);
-  } finally {
-    if (__DEV__) leaveRuntimePhase();
   }
+
+  const result = executeKnownNodeComputation(node, compute);
+
+  const hasCleanup = typeof result === "function";
+
+  if (hasCleanup) {
+    node.payload = result;
+  }
+
+  if ((node.state & Visited) === 0) {
+    node.state &= ~DIRTY_STATE;
+  } else {
+    node.state = (node.state & ~Changed) | Invalid;
+  }
+
+  if (__DEV__) devRecordWatcherFinish(node, hasCleanup, result, defaultContext);
 }
 
 export function disposeWatcher(node: WatcherNode): void {
