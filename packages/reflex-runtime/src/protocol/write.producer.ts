@@ -1,4 +1,4 @@
-import type { ReactiveNode } from "../kernel";
+import type { ProducerNode } from "../kernel";
 import {
   defaultContext,
   enterPropagationScope,
@@ -61,7 +61,7 @@ const value = readConsumer(doubled)  // Now returns 10
  * @cost O(n) where n = number of subscribers reachable from this node
  */
 export function writeProducer<T>(
-  node: ReactiveNode<T>,
+  node: ProducerNode<T>,
   value: T,
   compare: ProducerComparator<T> = defaultComparator,
 ): void {

@@ -1,4 +1,9 @@
-import type { ComputeFn, WatcherCleanup } from "../kernel";
+import type {
+  ConsumerNode,
+  ProducerNode,
+  WatcherCleanup,
+  WatcherNode,
+} from "../kernel";
 import {
   CONSUMER_INITIAL_STATE,
   PRODUCER_INITIAL_STATE,
@@ -23,8 +28,12 @@ export type WatcherFn = () => void | WatcherCleanup;
  * @example
  * const count = createProducer(0);
  */
-export const createProducer = <T>(payload: T): ReactiveNode<T> =>
-  new ReactiveNode<T>(payload, undefined, PRODUCER_INITIAL_STATE);
+export const createProducer = <T>(payload: T): ProducerNode<T> =>
+  new ReactiveNode<T>(
+    payload,
+    undefined,
+    PRODUCER_INITIAL_STATE,
+  ) as ProducerNode<T>;
 
 /**
  * Creates a Computed node whose value depends on other reactive nodes.
@@ -38,10 +47,12 @@ export const createProducer = <T>(payload: T): ReactiveNode<T> =>
  * @example
  * const doubled = createConsumer(() => count.get() * 2);
  */
-export const createConsumer = <T>(
-  callback: ComputeFn<T>,
-): ReactiveNode<T> =>
-  new ReactiveNode<T>(<T>undefined, callback, CONSUMER_INITIAL_STATE);
+export const createConsumer = <T>(callback: () => T): ConsumerNode<T> =>
+  new ReactiveNode<T>(
+    undefined as T,
+    callback,
+    CONSUMER_INITIAL_STATE,
+  ) as ConsumerNode<T>;
 
 /**
  * Creates a Watcher node (Effect) used to execute side effects.
@@ -54,5 +65,5 @@ export const createConsumer = <T>(
  * @example
  * const logger = createWatcher(() => console.log(count.get()));
  */
-export const createWatcher = (callback: WatcherFn): ReactiveNode<void> =>
-  new ReactiveNode<void>(undefined, callback, WATCHER_INITIAL_STATE);
+export const createWatcher = (callback: WatcherFn): WatcherNode =>
+  new ReactiveNode(undefined, callback, WATCHER_INITIAL_STATE) as WatcherNode;

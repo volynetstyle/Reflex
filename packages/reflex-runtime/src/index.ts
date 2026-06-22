@@ -17,7 +17,14 @@ export {
   type RuntimeDebugSessionSnapshot,
 } from "./debug/debug.protocol";
 
-export type { ReactiveNode } from "./kernel";
+export type {
+  ConsumerNode,
+  ProducerNode,
+  ReactiveNode,
+  WatcherCleanup,
+  WatcherNode,
+  WatcherResult,
+} from "./kernel";
 
 export {
   createProducer,
@@ -34,7 +41,11 @@ export {
   disposeWatcher,
   untracked,
 } from "./protocol";
-export type { ProducerComparator } from "./protocol";
+export type {
+  ConsumerReadModeValue,
+  ProducerComparator,
+  WatcherFn,
+} from "./protocol";
 
 export {
   RuntimePhase,

@@ -1,4 +1,4 @@
-import type { ReactiveNode } from "../kernel/shape";
+import type { ConsumerNode } from "../kernel/shape";
 import {
   defaultContext,
   currentConsumer,
@@ -17,7 +17,7 @@ import {
   profileRuntimeCounter,
   profileRuntimeReadConsumerPath,
 } from "../profiling";
-import { LAZY } from "./utils/constants";
+import { LAZY, type ConsumerReadModeValue } from "./utils/constants";
 
 /**
  * Read a consumer in tracking mode.
@@ -32,7 +32,7 @@ import { LAZY } from "./utils/constants";
  * The fast-path intentionally stays here, with dirty stabilization isolated in
  * a local slow path so clean reads do not bounce through helper layers.
  */
-export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
+export function readConsumerLazy<T>(this: ConsumerNode<T>): T {
   if (__DEV__) devAssertNoRuntimeHookReactiveRead();
 
   profileRuntimeCounter("readConsumerCalls");
@@ -45,9 +45,7 @@ export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
 
   profileRuntimeReadConsumerPath(isDirty);
 
-  const value = !isDirty
-    ? (node.payload as T)
-    : stabilizeDirtyConsumer<T>(node, state);
+  const value = !isDirty ? node.payload : stabilizeDirtyConsumer(node, state);
 
   const consumer = currentConsumer;
 
@@ -70,7 +68,7 @@ export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
  * Clean nodes return immediately. Dirty nodes are stabilized without binding
  * the current `currentConsumer` to this read.
  */
-export function readConsumerEager<T>(node: ReactiveNode<T>): T {
+export function readConsumerEager<T>(node: ConsumerNode<T>): T {
   if (__DEV__) devAssertNoRuntimeHookReactiveRead();
 
   profileRuntimeCounter("readConsumerCalls");
@@ -81,21 +79,19 @@ export function readConsumerEager<T>(node: ReactiveNode<T>): T {
 
   profileRuntimeReadConsumerPath(isDirty);
 
-  return !isDirty
-    ? (node.payload as T)
-    : stabilizeDirtyConsumer<T>(node, state);
+  return !isDirty ? node.payload : stabilizeDirtyConsumer(node, state);
 }
 
 const FORCE_RECOMPUTE_STATE = Changed | Visited;
 
-function stabilizeDirtyConsumer<T>(node: ReactiveNode<T>, state: number): T {
+function stabilizeDirtyConsumer<T>(node: ConsumerNode<T>, state: number): T {
   if (__DEV__) devAssertConsumerCanStabilize(state);
 
   if ((state & FORCE_RECOMPUTE_STATE) !== 0) {
     profileRuntimeCounter("stabilizeForceAdvance");
 
     if (!advance(node)) node.state &= ~DIRTY_STATE;
-    return node.payload as T;
+    return node.payload;
   }
 
   const edge = node.firstIn;
@@ -106,7 +102,7 @@ function stabilizeDirtyConsumer<T>(node: ReactiveNode<T>, state: number): T {
     node.state &= ~DIRTY_STATE;
   }
 
-  return node.payload as T;
+  return node.payload;
 }
 
 /**
@@ -145,7 +141,10 @@ const debugValue = readConsumer(doubled, ConsumerReadMode.eager)
  * @invariant In eager mode, no dependency edge is created
  * @cost O(1) + stabilization cost (depends on upstream changes)
  */
-export function readConsumer<T>(node: ReactiveNode<T>, mode: number = LAZY): T {
+export function readConsumer<T>(
+  node: ConsumerNode<T>,
+  mode: ConsumerReadModeValue = LAZY,
+): T {
   if (__DEV__) devAssertNoRuntimeHookReactiveRead();
 
   profileRuntimeCounter("readConsumerCalls");
@@ -158,9 +157,7 @@ export function readConsumer<T>(node: ReactiveNode<T>, mode: number = LAZY): T {
 
     profileRuntimeReadConsumerPath(isDirty);
 
-    const value = !isDirty
-      ? (node.payload as T)
-      : stabilizeDirtyConsumer(node, state);
+    const value = !isDirty ? node.payload : stabilizeDirtyConsumer(node, state);
 
     if (__DEV__) {
       devRecordReadConsumer(node, "eager", value, defaultContext);
@@ -176,9 +173,7 @@ export function readConsumer<T>(node: ReactiveNode<T>, mode: number = LAZY): T {
 
   profileRuntimeReadConsumerPath(isDirty);
 
-  const value = !isDirty
-    ? (node.payload as T)
-    : stabilizeDirtyConsumer(node, state);
+  const value = !isDirty ? node.payload : stabilizeDirtyConsumer(node, state);
 
   const consumer = currentConsumer;
   if (consumer !== null) {

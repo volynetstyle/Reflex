@@ -1,4 +1,4 @@
-import type { ReactiveNode } from "../shape";
+import type { WatcherCleanup, WatcherNode } from "../shape";
 import { DIRTY_STATE, disposeNode, Changed, Invalid, Visited } from "../shape";
 import { pull_iterator } from "../stages/second/pull_iterator";
 import { executeKnownNodeComputation } from "./watcher.execution";
@@ -22,7 +22,6 @@ import {
   RuntimePhase,
 } from "../execution";
 
-export type WatcherCleanup = () => void;
 const FORCE_RECOMPUTE_STATE = Changed | Visited;
 
 function runCleanup(cleanup: WatcherCleanup): void {
@@ -44,19 +43,14 @@ function runCleanup(cleanup: WatcherCleanup): void {
   }
 }
 
-function shouldRunDirtyWatcher(
-  node: ReactiveNode<WatcherCleanup | undefined>,
-  state: number,
-): boolean {
+function shouldRunDirtyWatcher(node: WatcherNode, state: number): boolean {
   if ((state & FORCE_RECOMPUTE_STATE) !== 0) return true;
 
   const edge = node.firstIn;
   return edge !== null && pull_iterator(node, edge);
 }
 
-export function runWatcher(
-  node: ReactiveNode<WatcherCleanup | undefined>,
-): void {
+export function runWatcher(node: WatcherNode): void {
   if (__DEV__) {
     devAssertNoRuntimeHookWatcherExecution();
     enterRuntimePhase(RuntimePhase.WatcherExecution);
@@ -120,7 +114,7 @@ export function runWatcher(
     const hasCleanup = typeof result === "function";
 
     if (hasCleanup) {
-      node.payload = result as WatcherCleanup;
+      node.payload = result;
     }
 
     if ((node.state & Visited) === 0) {
@@ -136,12 +130,11 @@ export function runWatcher(
   }
 }
 
-export function disposeWatcher(node: ReactiveNode): void {
+export function disposeWatcher(node: WatcherNode): void {
   profileRuntimeCounter("watcherDisposals");
 
   const payload = node.payload;
-  const cleanup =
-    typeof payload === "function" ? (payload as WatcherCleanup) : null;
+  const cleanup = typeof payload === "function" ? payload : null;
 
   disposeNode(node);
 

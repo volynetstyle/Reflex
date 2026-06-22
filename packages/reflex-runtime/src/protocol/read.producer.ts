@@ -4,7 +4,7 @@ import {
   resolveTrackedRead,
   trackingEpoch,
 } from "../kernel";
-import type { ReactiveNode } from "../kernel";
+import type { ProducerNode } from "../kernel";
 import { devRecordReadProducer } from "../kernel/dev";
 import { devAssertNoRuntimeHookReactiveRead } from "../kernel/execution";
 import { profileRuntimeCounter } from "../profiling";
@@ -32,7 +32,7 @@ const computed = createConsumer(() => {
  * @invariant If called during compute, creates edge from producer to active consumer
  * @cost O(1) for value access + O(k) for dependency tracking (k = cursor distance)
  */
-export function readProducer<T>(node: ReactiveNode<T>): T {
+export function readProducer<T>(node: ProducerNode<T>): T {
   if (__DEV__) devAssertNoRuntimeHookReactiveRead();
 
   profileRuntimeCounter("readProducerCalls");

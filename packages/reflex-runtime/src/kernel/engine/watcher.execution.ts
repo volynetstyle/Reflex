@@ -19,10 +19,10 @@ import {
   RuntimePhase,
 } from "../execution";
 
-export function executeKnownNodeComputation(
-  node: ReactiveNode,
-  compute: ComputeFn<unknown>,
-): unknown {
+export function executeKnownNodeComputation<T>(
+  node: ReactiveNode<T>,
+  compute: ComputeFn<T>,
+): T {
   if (__DEV__) enterRuntimePhase(RuntimePhase.Recomputing);
 
   try {
@@ -35,7 +35,7 @@ export function executeKnownNodeComputation(
 
     if (__DEV__) devRecordComputeStart(node, defaultContext);
 
-    let result: unknown;
+    let result: T;
 
     try {
       result = compute!();
@@ -70,7 +70,7 @@ export function executeKnownNodeComputation(
   }
 }
 
-export function executeNodeComputation(node: ReactiveNode): unknown {
+export function executeNodeComputation<T>(node: ReactiveNode<T>): T {
   if (__DEV__) devAssertExecutableNode(node);
 
   return executeKnownNodeComputation(node, node.compute);

@@ -17,3 +17,6 @@ export const ConsumerReadMode = {
   lazy: LAZY,
   eager: EAGER,
 } as const;
+
+export type ConsumerReadModeValue =
+  (typeof ConsumerReadMode)[keyof typeof ConsumerReadMode];
