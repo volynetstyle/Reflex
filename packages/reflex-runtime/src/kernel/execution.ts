@@ -1,10 +1,12 @@
-export enum RuntimePhase {
-  Idle,
-  Propagating,
-  Pulling,
-  Recomputing,
-  WatcherExecution,
-}
+export const RuntimePhase = {
+  Idle: 0,
+  Propagating: 1,
+  Pulling: 2,
+  Recomputing: 3,
+  WatcherExecution: 4,
+} as const;
+
+export type RuntimePhase = (typeof RuntimePhase)[keyof typeof RuntimePhase];
 
 export interface RuntimeExecutionState {
   phase: RuntimePhase;

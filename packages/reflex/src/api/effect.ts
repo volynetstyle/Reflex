@@ -1,4 +1,8 @@
-import { createWatcher, untracked, watcher } from "@volynets/reflex-runtime";
+import {
+  createWatcher,
+  untracked,
+  watcher,
+} from "@volynets/reflex-runtime/internal";
 import type { WatcherFn } from "@volynets/reflex-runtime/internal";
 import {
   effectCleanupHook,

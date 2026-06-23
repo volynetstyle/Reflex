@@ -1,7 +1,4 @@
-import {
-  readProducer,
-  writeProducer,
-} from "@volynets/reflex-runtime";
+import { readProducer, writeProducer } from "@volynets/reflex-runtime/internal";
 import type { Event } from "../infra/runtime";
 import { createAccumulator } from "../infra/factory";
 import { disposeNodeEvent } from "@volynets/reflex-runtime/internal";

@@ -1,0 +1,459 @@
+{
+  "files": [
+    {
+      "filepath": "D:/PersonalProjects/ReflesIndustries/Reflex/packages/reflex-runtime/test/perf/runtime-taxonomy.bench.ts",
+      "groups": [
+        {
+          "fullName": "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | harness | baseline/empty-harness/deterministic-counter",
+          "benchmarks": [
+            {
+              "id": "-174665796_0_0",
+              "name": "measure | empty",
+              "rank": 1,
+              "rme": 0.5984993384370546,
+              "samples": [],
+              "totalTime": 100.00009999993517,
+              "min": 0,
+              "max": 0.1855000000000473,
+              "hz": 17868082.13192945,
+              "period": 0.00005596571543697157,
+              "mean": 0.00005596571543697157,
+              "variance": 5.218404029742191e-8,
+              "sd": 0.0002284382636456115,
+              "sem": 1.7089512073563235e-7,
+              "df": 1786809,
+              "critical": 1.96,
+              "moe": 3.349544366418394e-7,
+              "p75": 0.00009999999997489795,
+              "p99": 0.00010000000020227162,
+              "p995": 0.0001999999999497959,
+              "p999": 0.00040000000012696546,
+              "sampleCount": 1786810,
+              "median": 0.00009999999997489795
+            }
+          ]
+        },
+        {
+          "fullName": "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | stabilization | linear/write-read-tail/depth-1000",
+          "benchmarks": [
+            {
+              "id": "-174665796_1_0",
+              "name": "measure | w=1 sr=1 pr=1 cr=999 runs=1000 cand=1000 inv=1000 edge=1999",
+              "rank": 1,
+              "rme": 0.3349622064428506,
+              "samples": [],
+              "totalTime": 9090.19449999996,
+              "min": 8.352500000000873,
+              "max": 15.153999999999542,
+              "hz": 110.00864722971598,
+              "period": 9.09019449999996,
+              "mean": 9.09019449999996,
+              "variance": 0.24133806490465073,
+              "sd": 0.4912617071425889,
+              "sem": 0.015535059217931895,
+              "df": 999,
+              "critical": 1.96,
+              "moe": 0.030448716067146515,
+              "p75": 9.335599999998522,
+              "p99": 10.573500000000422,
+              "p995": 11.88339999999971,
+              "p999": 13.000300000000607,
+              "sampleCount": 1000,
+              "median": 9.03360000000066
+            }
+          ]
+        },
+        {
+          "fullName": "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | stabilization | linear/hot-read/depth-1000",
+          "benchmarks": [
+            {
+              "id": "-174665796_2_0",
+              "name": "measure | sr=1",
+              "rank": 1,
+              "rme": 1.331536001100097,
+              "samples": [],
+              "totalTime": 100.00070000008054,
+              "min": 0.0011999999987892807,
+              "max": 0.6012000000009721,
+              "hz": 653755.4237115075,
+              "period": 0.0015296240210487112,
+              "mean": 0.0015296240210487112,
+              "variance": 0.000007059621524440634,
+              "sd": 0.0026569948295848515,
+              "sem": 0.000010391578837621692,
+              "df": 65375,
+              "critical": 1.96,
+              "moe": 0.000020367494521738514,
+              "p75": 0.0015000000003055902,
+              "p99": 0.0018000000000029104,
+              "p995": 0.002699999999094871,
+              "p999": 0.0059000000001105946,
+              "sampleCount": 65376,
+              "median": 0.0015000000003055902
+            }
+          ]
+        },
+        {
+          "fullName": "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | stabilization | diamond/write-read-sink/repeated-256",
+          "benchmarks": [
+            {
+              "id": "-174665796_3_0",
+              "name": "measure | w=1 sr=1 pr=256 cr=1024 runs=1025 cand=1025 inv=1025 edge=2049",
+              "rank": 1,
+              "rme": 1.8294033274055532,
+              "samples": [],
+              "totalTime": 14133.829699999995,
+              "min": 11.298500000000786,
+              "max": 39.83129999999801,
+              "hz": 70.75223214271503,
+              "period": 14.133829699999994,
+              "mean": 14.133829699999994,
+              "variance": 17.40309516020767,
+              "sd": 4.171701710358456,
+              "sem": 0.13192079123552766,
+              "df": 999,
+              "critical": 1.96,
+              "moe": 0.2585647508216342,
+              "p75": 13.109900000003108,
+              "p99": 24.92120000000068,
+              "p995": 26.23029999999926,
+              "p999": 30.4375,
+              "sampleCount": 1000,
+              "median": 12.450150000000576
+            }
+          ]
+        },
+        {
+          "fullName": "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | propagation | wide-fanout/write-read-all/fanout-1024",
+          "benchmarks": [
+            {
+              "id": "-174665796_4_0",
+              "name": "measure | w=1 sr=1 pr=1024 cr=1024 runs=1025 cand=1025 inv=1025 edge=2049",
+              "rank": 1,
+              "rme": 1.912985960340689,
+              "samples": [],
+              "totalTime": 18129.695599999977,
+              "min": 12.34059999999954,
+              "max": 42.81760000000213,
+              "hz": 55.158124111030375,
+              "period": 18.129695599999977,
+              "mean": 18.129695599999977,
+              "variance": 31.31067622300416,
+              "sd": 5.595594358332648,
+              "sem": 0.1769482303471955,
+              "df": 999,
+              "critical": 1.96,
+              "moe": 0.3468185314805032,
+              "p75": 24.493799999996554,
+              "p99": 27.34889999999723,
+              "p995": 29.76820000000589,
+              "p999": 34.97939999999653,
+              "sampleCount": 1000,
+              "median": 14.205050000000483
+            }
+          ]
+        },
+        {
+          "fullName": "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | stabilization | wide-fanin/write-read-one/fanin-1024",
+          "benchmarks": [
+            {
+              "id": "-174665796_5_0",
+              "name": "measure | w=1 sr=1 pr=1024 runs=1 cand=1 inv=1 edge=1025",
+              "rank": 1,
+              "rme": 1.977878058018508,
+              "samples": [],
+              "totalTime": 4838.627699999866,
+              "min": 3.1304000000018277,
+              "max": 9.005500000006577,
+              "hz": 206.67016807265983,
+              "period": 4.838627699999867,
+              "mean": 4.838627699999867,
+              "variance": 2.3841374906535355,
+              "sd": 1.5440652481853012,
+              "sem": 0.048827630401787225,
+              "df": 999,
+              "critical": 1.96,
+              "moe": 0.09570215558750296,
+              "p75": 6.481400000004214,
+              "p99": 7.1247999999977765,
+              "p995": 7.421199999997043,
+              "p999": 7.813999999998487,
+              "sampleCount": 1000,
+              "median": 3.598199999996723
+            }
+          ]
+        },
+        {
+          "fullName": "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | selectivity | layered/partial-read/64x4-read12-update6",
+          "benchmarks": [
+            {
+              "id": "-174665796_6_0",
+              "name": "measure | w=4 sr=1 pr=64 cr=264 runs=33 cand=33 inv=32 edge=96",
+              "rank": 1,
+              "rme": 0.4920434125531585,
+              "samples": [],
+              "totalTime": 290.55060000002413,
+              "min": 0.2540000000008149,
+              "max": 0.7584999999962747,
+              "hz": 3441.7413008264894,
+              "period": 0.29055060000002414,
+              "mean": 0.29055060000002414,
+              "variance": 0.0005320326122505823,
+              "sd": 0.023065832138697756,
+              "sem": 0.0007294056568539775,
+              "df": 999,
+              "critical": 1.96,
+              "moe": 0.001429635087433796,
+              "p75": 0.2915999999968335,
+              "p99": 0.3352999999988242,
+              "p995": 0.3945000000021537,
+              "p999": 0.6912000000011176,
+              "sampleCount": 1000,
+              "median": 0.2881000000015774
+            }
+          ]
+        },
+        {
+          "fullName": "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | propagation | dense-layered/write-read-all/32x4-fanin4-update12",
+          "benchmarks": [
+            {
+              "id": "-174665796_7_0",
+              "name": "measure | w=4 sr=1 pr=32 cr=544 runs=129 cand=129 inv=128 edge=640",
+              "rank": 1,
+              "rme": 0.3908352717107356,
+              "samples": [],
+              "totalTime": 2519.7716000001747,
+              "min": 2.2176999999937834,
+              "max": 4.852599999998347,
+              "hz": 396.86136632380914,
+              "period": 2.519771600000175,
+              "mean": 2.519771600000175,
+              "variance": 0.025246298451916414,
+              "sd": 0.15889083816229435,
+              "sem": 0.005024569479260528,
+              "df": 999,
+              "critical": 1.96,
+              "moe": 0.009848156179350635,
+              "p75": 2.5257000000055996,
+              "p99": 3.263599999998405,
+              "p995": 3.5587000000014086,
+              "p999": 3.970400000005611,
+              "sampleCount": 1000,
+              "median": 2.4983500000016647
+            }
+          ]
+        },
+        {
+          "fullName": "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | tracking | dynamic-branch/churn/deps-512-toggle50",
+          "benchmarks": [
+            {
+              "id": "-174665796_8_0",
+              "name": "measure | w=2 sr=1 pr=513 runs=1 cand=1 inv=1 edge=1025 add=512 drop=512",
+              "rank": 1,
+              "rme": 0.8353077928040242,
+              "samples": [],
+              "totalTime": 1811.5537000001568,
+              "min": 1.554100000001199,
+              "max": 5.282399999996414,
+              "hz": 552.0123416710824,
+              "period": 1.811553700000157,
+              "mean": 1.811553700000157,
+              "variance": 0.059605090016207146,
+              "sd": 0.24414153685148937,
+              "sem": 0.0077204332790464,
+              "df": 999,
+              "critical": 1.96,
+              "moe": 0.015132049226930944,
+              "p75": 1.7994000000035157,
+              "p99": 2.784399999996822,
+              "p995": 3.3366000000023632,
+              "p999": 4.724600000001374,
+              "sampleCount": 1000,
+              "median": 1.7657000000035623
+            }
+          ]
+        },
+        {
+          "fullName": "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | tracking | deep-dynamic/churn/depth-512-toggle50",
+          "benchmarks": [
+            {
+              "id": "-174665796_9_0",
+              "name": "measure | w=1 sr=1 pr=512 cr=1534 runs=1535 cand=1535 inv=1535 edge=3069 add=512 drop=512",
+              "rank": 1,
+              "rme": 0.2943513107325664,
+              "samples": [],
+              "totalTime": 10150.647699999994,
+              "min": 9.309699999997974,
+              "max": 19.352200000001176,
+              "hz": 98.51588091270281,
+              "period": 10.150647699999993,
+              "mean": 10.150647699999993,
+              "variance": 0.23238458447926455,
+              "sd": 0.4820628428734832,
+              "sem": 0.015244165588160757,
+              "df": 999,
+              "critical": 1.96,
+              "moe": 0.029878564552795084,
+              "p75": 10.224000000001979,
+              "p99": 11.283800000004703,
+              "p995": 11.447299999999814,
+              "p999": 16.78740000000107,
+              "sampleCount": 1000,
+              "median": 10.12985000000117
+            }
+          ]
+        },
+        {
+          "fullName": "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | selectivity | selector/update-one-key/entities-4096-active1",
+          "benchmarks": [
+            {
+              "id": "-174665796_10_0",
+              "name": "measure | w=2 sr=1 pr=2 cr=1 runs=2 cand=2 inv=2 edge=4",
+              "rank": 1,
+              "rme": 3.047633615092152,
+              "samples": [],
+              "totalTime": 100.02700000055484,
+              "min": 0.02449999999953434,
+              "max": 1.1891999999934342,
+              "hz": 34970.557949159695,
+              "period": 0.0285954831333776,
+              "mean": 0.0285954831333776,
+              "variance": 0.0006915571085538423,
+              "sd": 0.026297473425290162,
+              "sem": 0.00044463548794429714,
+              "df": 3497,
+              "critical": 1.96,
+              "moe": 0.0008714855563708223,
+              "p75": 0.02800000000570435,
+              "p99": 0.035199999998440035,
+              "p995": 0.04080000000249129,
+              "p999": 0.09149999999499414,
+              "sampleCount": 3498,
+              "median": 0.027600000001257285
+            }
+          ]
+        },
+        {
+          "fullName": "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | scheduler | effect-leaves/effect-flush/watchers-1024",
+          "benchmarks": [
+            {
+              "id": "-174665796_11_0",
+              "name": "measure | w=1 pr=1024 inv=1024 edge=1024 sched=1024 flush=1024",
+              "rank": 1,
+              "rme": 0.210071679597715,
+              "samples": [],
+              "totalTime": 10704.67640000007,
+              "min": 9.905799999993178,
+              "max": 14.208400000003166,
+              "hz": 93.41711628013282,
+              "period": 10.70467640000007,
+              "mean": 10.70467640000007,
+              "variance": 0.1316345700532158,
+              "sd": 0.3628147875338267,
+              "sem": 0.011473210973969571,
+              "df": 999,
+              "critical": 1.96,
+              "moe": 0.02248749350898036,
+              "p75": 10.88969999999972,
+              "p99": 11.696899999995367,
+              "p995": 12.025500000003376,
+              "p999": 13.123700000011013,
+              "sampleCount": 1000,
+              "median": 10.752249999990454
+            }
+          ]
+        },
+        {
+          "fullName": "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | scheduler | broad-propagation/batched-writes-read-tail/width-50-writes-50",
+          "benchmarks": [
+            {
+              "id": "-174665796_12_0",
+              "name": "measure | w=51 sr=50 pr=2550 cr=5150 runs=5100 cand=5100 inv=7650 edge=10200 sched=2550 flush=2550",
+              "rank": 1,
+              "rme": 1.4102219372920266,
+              "samples": [],
+              "totalTime": 81895.15339999997,
+              "min": 71.08859999998822,
+              "max": 154.65080000000307,
+              "hz": 12.210734805217427,
+              "period": 81.89515339999997,
+              "mean": 81.89515339999997,
+              "variance": 347.1995800748179,
+              "sd": 18.63329225002436,
+              "sem": 0.5892364381764064,
+              "df": 999,
+              "critical": 1.96,
+              "moe": 1.1549034188257565,
+              "p75": 78.18959999999788,
+              "p99": 149.5619000000006,
+              "p995": 152.13300000000163,
+              "p999": 153.80419999999867,
+              "sampleCount": 1000,
+              "median": 75.72844999998051
+            }
+          ]
+        },
+        {
+          "fullName": "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | scheduler | dispose-churn/create-dispose-watchers/count-1024",
+          "benchmarks": [
+            {
+              "id": "-174665796_13_0",
+              "name": "measure | w=1 pr=1024 runs=1024 edge=2048 add=1024 drop=1024 wc=1024 wd=1024",
+              "rank": 1,
+              "rme": 0.6245862787931428,
+              "samples": [],
+              "totalTime": 11308.953700000304,
+              "min": 10.06930000000284,
+              "max": 24.51260000001639,
+              "hz": 88.42551013361856,
+              "period": 11.308953700000304,
+              "mean": 11.308953700000304,
+              "variance": 1.298726157705141,
+              "sd": 1.139616671387858,
+              "sem": 0.03603784341085272,
+              "df": 999,
+              "critical": 1.96,
+              "moe": 0.07063417308527133,
+              "p75": 11.41390000001411,
+              "p99": 14.783599999995204,
+              "p995": 15.505000000004657,
+              "p999": 19.238099999987753,
+              "sampleCount": 1000,
+              "median": 11.015600000013364
+            }
+          ]
+        },
+        {
+          "fullName": "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | stabilization | wide-fanin/many-writes-read-once/sources-1024-batch-32",
+          "benchmarks": [
+            {
+              "id": "-174665796_14_0",
+              "name": "measure | w=32 sr=1 pr=1024 runs=1 cand=1 inv=1 edge=1056",
+              "rank": 1,
+              "rme": 7.221338755986411,
+              "samples": [],
+              "totalTime": 1428.5134000004618,
+              "min": 0.030700000002980232,
+              "max": 4.452900000003865,
+              "hz": 700.0284351548097,
+              "period": 1.4285134000004618,
+              "mean": 1.4285134000004618,
+              "variance": 2.770077573594138,
+              "sd": 1.6643550022738953,
+              "sem": 0.05263152642280231,
+              "df": 999,
+              "critical": 1.96,
+              "moe": 0.10315779178869253,
+              "p75": 3.4324999999953434,
+              "p99": 3.7600000000093132,
+              "p995": 3.7943000000086613,
+              "p999": 3.920299999997951,
+              "sampleCount": 1000,
+              "median": 0.05004999999073334
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

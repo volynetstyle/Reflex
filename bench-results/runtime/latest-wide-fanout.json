@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "suite": "runtime-taxonomy",
+  "generatedAt": "2026-06-22T20:36:15.177Z",
+  "commit": "a86442e27d58ad666e2b7a88d7cd9d8c631c7d5b",
+  "env": {
+    "node": "v25.2.0",
+    "v8": "14.1.146.11-node.13",
+    "platform": "win32",
+    "release": "10.0.19045",
+    "arch": "x64",
+    "cpu": "12th Gen Intel(R) Core(TM) i5-1235U",
+    "cpuCount": 12,
+    "totalMemoryMb": 16108,
+    "ci": false
+  },
+  "benchmarks": [
+    {
+      "id": "wide-fanout/write-read-all/fanout-1024",
+      "pressure": "propagation",
+      "label": "wide-fanout/write-read-all/fanout-1024",
+      "meanMs": 13.4142254,
+      "medianMs": 13.302499999999782,
+      "p75Ms": 13.532100000000355,
+      "p99Ms": 16.989799999999832,
+      "p999Ms": 26.96010000000024,
+      "minMs": 12.233399999999165,
+      "maxMs": 27.652000000000044,
+      "hz": 74.54772602822077,
+      "rme": 0.48375287846976983,
+      "samples": 1000,
+      "work": {
+        "writes": 1,
+        "sinkReads": 1,
+        "producerReads": 1024,
+        "consumerReads": 1024,
+        "computeRuns": 1025,
+        "recomputeCandidates": 1025,
+        "invalidated": 1025,
+        "edgeTraversals": 2049,
+        "scheduledWatchers": 0,
+        "flushes": 0,
+        "depsAdded": 0,
+        "depsDropped": 0,
+        "watchersCreated": 0,
+        "watchersDisposed": 0
+      },
+      "derived": {
+        "meanUsPerEdge": 6.546718106393362,
+        "meanUsPerRun": 13.087049170731706,
+        "meanUsPerRecomputeCandidate": 13.087049170731706,
+        "meanUsPerInvalidation": 13.087049170731706,
+        "meanUsPerDepChurn": null
+      }
+    }
+  ]
+}

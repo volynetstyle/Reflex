@@ -1,7 +1,10 @@
-import type { ReactiveNode } from "@volynets/reflex-runtime/internal";
+import type {
+  ReactiveNode,
+  WatcherNode,
+} from "@volynets/reflex-runtime/internal";
 import type { EffectSchedulerMode } from "./scheduler.constants";
 
-export type EffectNode = ReactiveNode<undefined | Destructor>;
+export type EffectNode = WatcherNode;
 
 export interface RingQueue<T> {
   ring: Array<T | undefined>;

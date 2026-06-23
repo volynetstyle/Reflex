@@ -1,8 +1,10 @@
 import {
   createRuntimeContext,
+  enterReactiveBatch,
   flushPendingReactiveSettledIfIdle,
   getActiveRuntimeContext,
-  reactiveBatchState,
+  hasPendingReactiveSettled,
+  leaveReactiveBatch,
   runWithRuntimeContext,
   resetState,
   setActiveRuntimeContext,
@@ -85,7 +87,7 @@ export function createRuntime({
     hooks?.reactiveSettledDispatcher?.();
   };
   const runFlushBatch = <T>(fn: () => T): T => {
-    reactiveBatchState.batchDepth += 1;
+    enterReactiveBatch();
 
     if (++schedulerCore.batchDepth === 1 && schedulerCore.phase !== Flushing) {
       schedulerCore.phase = Batching;
@@ -96,21 +98,22 @@ export function createRuntime({
     } finally {
       profileSchedulerPolicyCounter("batchExit");
 
-      if (--schedulerCore.batchDepth === 0 && schedulerCore.phase !== Flushing) {
+      if (
+        --schedulerCore.batchDepth === 0 &&
+        schedulerCore.phase !== Flushing
+      ) {
         schedulerCore.phase = Idle;
       }
 
-      if (reactiveBatchState.batchDepth > 0) {
-        reactiveBatchState.batchDepth -= 1;
-      }
+      leaveReactiveBatch();
 
-      if (reactiveBatchState.pendingReactiveSettled) {
+      if (hasPendingReactiveSettled()) {
         flushPendingReactiveSettledIfIdle();
       }
     }
   };
   const runScheduledBatch = <T>(fn: () => T): T => {
-    reactiveBatchState.batchDepth += 1;
+    enterReactiveBatch();
     enterSchedulerBatch(schedulerCore);
 
     try {
@@ -135,17 +138,17 @@ export function createRuntime({
         }
       }
 
-      if (reactiveBatchState.batchDepth > 0) {
-        reactiveBatchState.batchDepth -= 1;
-      }
+      leaveReactiveBatch();
 
-      if (reactiveBatchState.pendingReactiveSettled) {
+      if (hasPendingReactiveSettled()) {
         flushPendingReactiveSettledIfIdle();
       }
     }
   };
   const runBatch =
-    schedulerMode === EffectSchedulerMode.Flush ? runFlushBatch : runScheduledBatch;
+    schedulerMode === EffectSchedulerMode.Flush
+      ? runFlushBatch
+      : runScheduledBatch;
   const runtimeBatch = <T>(fn: () => T): T => {
     const runContextBatch = (): T => runBatch(fn);
 

@@ -1,5 +1,9 @@
-import type { ReactiveNode } from "@volynets/reflex-runtime/internal";
-import { createProducer, readProducer, writeProducer } from "@volynets/reflex-runtime";
+import type { ProducerNode } from "@volynets/reflex-runtime/internal";
+import {
+  createProducer,
+  readProducer,
+  writeProducer,
+} from "@volynets/reflex-runtime/internal";
 import {
   devassertSetterReceivedPromise,
   devassertSetterReturn,
@@ -61,7 +65,7 @@ export function signal<T>(initialValue: T): readonly [Signal<T>, Setter<T>] {
   return [read as Signal<T>, setter.bind(node) as Setter<T>] as const;
 }
 
-function setter<T>(this: ReactiveNode<T>, input: SetInput<T>) {
+function setter<T>(this: ProducerNode<T>, input: SetInput<T>) {
   devassertSetterReceivedPromise(input);
 
   const next =

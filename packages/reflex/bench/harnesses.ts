@@ -6,15 +6,8 @@ import {
   type WriteInput,
 } from "./shared";
 
-import * as AlienSignalsModule from "../../reflex-runtime/node_modules/alien-signals/esm/index.mjs";
-import {
-  createRuntime,
-  batch,
-  flush,
-  effect,
-  memo,
-  signal,
-} from "../dist/esm";
+import * as AlienSignalsModule from "alien-signals";
+import { createRuntime, batch, flush, effect, memo, signal } from "../dist/esm";
 import {
   readRuntimeProfileCounters,
   readSchedulerPolicyCounters,
@@ -24,11 +17,13 @@ import {
   setSchedulerPolicyCountersEnabled,
 } from "../dist/esm/debug/index.js";
 
-createRuntime({ effectStrategy: "flush" });
-
 export class ReflexHarness implements BenchHarness {
   readonly metrics = new HarnessMetrics();
   private readonly disposers: Array<() => void> = [];
+
+  constructor() {
+    createRuntime({ effectStrategy: "flush" });
+  }
 
   signal(
     initial: number,

@@ -73,8 +73,9 @@
     "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm build:clean"
   },
   "devDependencies": {
-    "@volynets/reflex-store": "workspace:*",
+    "@volynets/reflex-dom": "workspace:*",
     "@volynets/reflex-runtime": "workspace:*",
-    "@volynets/reflex-dom": "workspace:*"
+    "@volynets/reflex-store": "workspace:*",
+    "alien-signals": "^3.2.1"
   }
 }

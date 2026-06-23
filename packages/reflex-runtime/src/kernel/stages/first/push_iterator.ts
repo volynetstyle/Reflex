@@ -26,7 +26,9 @@ import {
 const FAST_BLOCK_MASK = DIRTY_STATE | Computing;
 
 const propagateStack: ReactiveEdge[] = new Array(512).fill(null);
-const propagateDepthStack: number[] = new Array(512).fill(0);
+const propagateDepthStack: number[] | undefined = __PROFILE__
+  ? new Array(512).fill(0)
+  : undefined;
 let propagateStackHigh = 0;
 
 function countIn(edge: ReactiveEdge | null): number {
@@ -80,7 +82,6 @@ export function push_iterator(firstOut: ReactiveEdge | null): void {
     profileRuntimeCounter("pushCalls");
 
     const stack = propagateStack;
-    const depthStack = propagateDepthStack;
     const base = propagateStackHigh;
     let top = base;
 
@@ -159,7 +160,7 @@ export function push_iterator(firstOut: ReactiveEdge | null): void {
       if (child !== null) {
         profileRuntimeCounter("pushChildBranchesQueued");
 
-        depthStack[top] = 2;
+        if (__PROFILE__) propagateDepthStack![top] = 2;
         stack[top++] = child;
       }
     }
@@ -172,7 +173,7 @@ export function push_iterator(firstOut: ReactiveEdge | null): void {
      */
     while (top !== base) {
       let edge: ReactiveEdge | null = stack[--top]!;
-      let depth = depthStack[top]!;
+      let depth = __PROFILE__ ? propagateDepthStack![top]! : 0;
 
       while (edge !== null) {
         profileRuntimeCounter("pushTransitiveEdgesVisited");
@@ -229,12 +230,12 @@ export function push_iterator(firstOut: ReactiveEdge | null): void {
               if (sibling !== null) {
                 profileRuntimeCounter("pushChildBranchesQueued");
 
-                depthStack[top] = depth;
+                if (__PROFILE__) propagateDepthStack![top] = depth;
                 stack[top++] = sibling;
               }
 
               edge = child;
-              depth += 1;
+              if (__PROFILE__) depth += 1;
               continue;
             }
           }

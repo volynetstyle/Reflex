@@ -1,0 +1,39 @@
+{
+  "files": [
+    {
+      "filepath": "D:/PersonalProjects/ReflesIndustries/Reflex/packages/reflex-runtime/test/perf/runtime-taxonomy.bench.ts",
+      "groups": [
+        {
+          "fullName": "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | propagation | wide-fanout/write-read-all/fanout-1024",
+          "benchmarks": [
+            {
+              "id": "-174665796_4_0",
+              "name": "measure | w=1 sr=1 pr=1024 cr=1024 runs=1025 cand=1025 inv=1025 edge=2049",
+              "rank": 1,
+              "rme": 0.48375287846976983,
+              "samples": [],
+              "totalTime": 13414.2254,
+              "min": 12.233399999999165,
+              "max": 27.652000000000044,
+              "hz": 74.54772602822077,
+              "period": 13.4142254,
+              "mean": 13.4142254,
+              "variance": 1.0961403902451465,
+              "sd": 1.0469672345614005,
+              "sem": 0.03310801096781785,
+              "df": 999,
+              "critical": 1.96,
+              "moe": 0.06489170149692298,
+              "p75": 13.532100000000355,
+              "p99": 16.989799999999832,
+              "p995": 19.898299999999836,
+              "p999": 26.96010000000024,
+              "sampleCount": 1000,
+              "median": 13.302499999999782
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

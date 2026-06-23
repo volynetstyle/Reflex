@@ -1,4 +1,4 @@
-import { runWatcher } from "@volynets/reflex-runtime";
+import { runWatcher } from "@volynets/reflex-runtime/internal";
 import { profileSchedulerPolicyCounter } from "./scheduler.counters";
 import { UNSCHEDULE_MASK } from "./scheduler.constants";
 import type { WatcherQueue } from "./scheduler.types";

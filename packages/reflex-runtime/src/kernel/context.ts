@@ -69,6 +69,7 @@ export {
   reactiveSettledHook,
   readTrackingStrategy,
   setCurrentConsumer,
+  setPropagationScopeDepth,
   sinkInvalidatedHook,
   trackingEpoch,
   type EffectCleanupHook,
