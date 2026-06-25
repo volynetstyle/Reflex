@@ -30,7 +30,16 @@ export { untracked, batch, event, flush, createRuntime } from "./infra/runtime";
 /**
  * API
  */
-export { subscribeOnce, map, filter, merge, scan, hold } from "./api/event";
+export {
+  subscribeOnce,
+  map,
+  filter,
+  merge,
+  switchMap,
+  flatten,
+  scan,
+  hold,
+} from "./api/event";
 /**
  * API
  */

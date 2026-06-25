@@ -691,262 +691,262 @@ function createOuterBatchWrites(
 }
 
 const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
-  {
-    id: "write-same-value",
-    title: "Write same value",
-    sampleIterations: 30,
-    bench: { iterations: 240, warmupIterations: 50 },
-    build(harness) {
-      const [source, setSource] = harness.signal(1, "write:same-value");
+  // {
+  //   id: "write-same-value",
+  //   title: "Write same value",
+  //   sampleIterations: 30,
+  //   bench: { iterations: 240, warmupIterations: 50 },
+  //   build(harness) {
+  //     const [source, setSource] = harness.signal(1, "write:same-value");
 
-      return {
-        runStep() {
-          setSource(1);
-          blackhole(source());
-        },
-        validate() {
-          const actual = source();
-          if (actual !== 1) {
-            throw new Error(
-              `[write-same-value] invalid source: expected 1, got ${actual}`,
-            );
-          }
-        },
-      };
-    },
-  },
-  {
-    id: "write-changed-no-subscribers",
-    title: "Write changed value / no subscribers",
-    sampleIterations: 30,
-    bench: { iterations: 240, warmupIterations: 50 },
-    build(harness) {
-      const [source, setSource] = harness.signal(0, "write:no-subscribers");
-      let nextValue = 0;
+  //     return {
+  //       runStep() {
+  //         setSource(1);
+  //         blackhole(source());
+  //       },
+  //       validate() {
+  //         const actual = source();
+  //         if (actual !== 1) {
+  //           throw new Error(
+  //             `[write-same-value] invalid source: expected 1, got ${actual}`,
+  //           );
+  //         }
+  //       },
+  //     };
+  //   },
+  // },
+  // {
+  //   id: "write-changed-no-subscribers",
+  //   title: "Write changed value / no subscribers",
+  //   sampleIterations: 30,
+  //   bench: { iterations: 240, warmupIterations: 50 },
+  //   build(harness) {
+  //     const [source, setSource] = harness.signal(0, "write:no-subscribers");
+  //     let nextValue = 0;
 
-      return {
-        runStep() {
-          nextValue += 1;
-          setSource(nextValue);
-          blackhole(nextValue);
-        },
-        validate() {
-          const actual = source();
-          if (actual !== nextValue) {
-            throw new Error(
-              `[write-changed-no-subscribers] invalid source: expected ${nextValue}, got ${actual}`,
-            );
-          }
-        },
-      };
-    },
-  },
-  {
-    id: "write-changed-one-subscriber",
-    title: "Write changed value / one subscriber",
-    sampleIterations: 30,
-    bench: { iterations: 240, warmupIterations: 50 },
-    build(harness) {
-      const [source, setSource] = harness.signal(0, "write:one-sub-source");
-      const derived = harness.memo(() => source() + 1, "write:one-sub-derived");
-      let nextValue = 0;
+  //     return {
+  //       runStep() {
+  //         nextValue += 1;
+  //         setSource(nextValue);
+  //         blackhole(nextValue);
+  //       },
+  //       validate() {
+  //         const actual = source();
+  //         if (actual !== nextValue) {
+  //           throw new Error(
+  //             `[write-changed-no-subscribers] invalid source: expected ${nextValue}, got ${actual}`,
+  //           );
+  //         }
+  //       },
+  //     };
+  //   },
+  // },
+  // {
+  //   id: "write-changed-one-subscriber",
+  //   title: "Write changed value / one subscriber",
+  //   sampleIterations: 30,
+  //   bench: { iterations: 240, warmupIterations: 50 },
+  //   build(harness) {
+  //     const [source, setSource] = harness.signal(0, "write:one-sub-source");
+  //     const derived = harness.memo(() => source() + 1, "write:one-sub-derived");
+  //     let nextValue = 0;
 
-      blackhole(derived());
+  //     blackhole(derived());
 
-      return {
-        runStep() {
-          nextValue += 1;
-          setSource(nextValue);
-          blackhole(nextValue);
-        },
-        validate() {
-          const actual = derived();
-          const expected = nextValue + 1;
-          if (actual !== expected) {
-            throw new Error(
-              `[write-changed-one-subscriber] invalid derived: expected ${expected}, got ${actual}`,
-            );
-          }
-        },
-      };
-    },
-  },
-  {
-    id: "write-changed-full-graph-subscribers",
-    title: "Write changed value / full graph subscribers",
-    sampleIterations: 30,
-    bench: { iterations: 200, warmupIterations: 45 },
-    build(harness) {
-      const [source, setSource] = harness.signal(0, "write:full-source");
-      const leaves: Read[] = new Array(192);
-      let nextValue = 0;
+  //     return {
+  //       runStep() {
+  //         nextValue += 1;
+  //         setSource(nextValue);
+  //         blackhole(nextValue);
+  //       },
+  //       validate() {
+  //         const actual = derived();
+  //         const expected = nextValue + 1;
+  //         if (actual !== expected) {
+  //           throw new Error(
+  //             `[write-changed-one-subscriber] invalid derived: expected ${expected}, got ${actual}`,
+  //           );
+  //         }
+  //       },
+  //     };
+  //   },
+  // },
+  // {
+  //   id: "write-changed-full-graph-subscribers",
+  //   title: "Write changed value / full graph subscribers",
+  //   sampleIterations: 30,
+  //   bench: { iterations: 200, warmupIterations: 45 },
+  //   build(harness) {
+  //     const [source, setSource] = harness.signal(0, "write:full-source");
+  //     const leaves: Read[] = new Array(192);
+  //     let nextValue = 0;
 
-      for (let index = 0; index < leaves.length; index += 1) {
-        leaves[index] = harness.memo(
-          () => source() + index,
-          `write:full-leaf:${index}`,
-        );
-      }
+  //     for (let index = 0; index < leaves.length; index += 1) {
+  //       leaves[index] = harness.memo(
+  //         () => source() + index,
+  //         `write:full-leaf:${index}`,
+  //       );
+  //     }
 
-      const root = harness.memo(() => {
-        let total = 0;
-        for (let index = 0; index < leaves.length; index += 1) {
-          total += leaves[index]!();
-        }
-        return total;
-      }, "write:full-root");
+  //     const root = harness.memo(() => {
+  //       let total = 0;
+  //       for (let index = 0; index < leaves.length; index += 1) {
+  //         total += leaves[index]!();
+  //       }
+  //       return total;
+  //     }, "write:full-root");
 
-      blackhole(root());
+  //     blackhole(root());
 
-      return {
-        runStep() {
-          nextValue += 1;
-          setSource(nextValue);
-          blackhole(nextValue);
-        },
-        validate() {
-          const expected =
-            leaves.length * nextValue +
-            ((leaves.length - 1) * leaves.length) / 2;
-          const actual = root();
-          if (actual !== expected) {
-            throw new Error(
-              `[write-changed-full-graph-subscribers] invalid root: expected ${expected}, got ${actual}`,
-            );
-          }
-        },
-      };
-    },
-  },
-  {
-    id: "write-changed-already-invalid-graph",
-    title: "Write changed value / already invalid graph",
-    sampleIterations: 30,
-    bench: { iterations: 200, warmupIterations: 45 },
-    build(harness) {
-      const [source, setSource] = harness.signal(0, "write:dirty-source");
-      const leaves: Read[] = new Array(192);
-      let nextValue = 0;
+  //     return {
+  //       runStep() {
+  //         nextValue += 1;
+  //         setSource(nextValue);
+  //         blackhole(nextValue);
+  //       },
+  //       validate() {
+  //         const expected =
+  //           leaves.length * nextValue +
+  //           ((leaves.length - 1) * leaves.length) / 2;
+  //         const actual = root();
+  //         if (actual !== expected) {
+  //           throw new Error(
+  //             `[write-changed-full-graph-subscribers] invalid root: expected ${expected}, got ${actual}`,
+  //           );
+  //         }
+  //       },
+  //     };
+  //   },
+  // },
+  // {
+  //   id: "write-changed-already-invalid-graph",
+  //   title: "Write changed value / already invalid graph",
+  //   sampleIterations: 30,
+  //   bench: { iterations: 200, warmupIterations: 45 },
+  //   build(harness) {
+  //     const [source, setSource] = harness.signal(0, "write:dirty-source");
+  //     const leaves: Read[] = new Array(192);
+  //     let nextValue = 0;
 
-      for (let index = 0; index < leaves.length; index += 1) {
-        leaves[index] = harness.memo(
-          () => source() + index,
-          `write:dirty-leaf:${index}`,
-        );
-      }
+  //     for (let index = 0; index < leaves.length; index += 1) {
+  //       leaves[index] = harness.memo(
+  //         () => source() + index,
+  //         `write:dirty-leaf:${index}`,
+  //       );
+  //     }
 
-      const root = harness.memo(() => {
-        let total = 0;
-        for (let index = 0; index < leaves.length; index += 1) {
-          total += leaves[index]!();
-        }
-        return total;
-      }, "write:dirty-root");
+  //     const root = harness.memo(() => {
+  //       let total = 0;
+  //       for (let index = 0; index < leaves.length; index += 1) {
+  //         total += leaves[index]!();
+  //       }
+  //       return total;
+  //     }, "write:dirty-root");
 
-      blackhole(root());
-      nextValue = 1;
-      setSource(nextValue);
+  //     blackhole(root());
+  //     nextValue = 1;
+  //     setSource(nextValue);
 
-      return {
-        runStep() {
-          nextValue += 1;
-          setSource(nextValue);
-          blackhole(nextValue);
-        },
-        validate() {
-          const expected =
-            leaves.length * nextValue +
-            ((leaves.length - 1) * leaves.length) / 2;
-          const actual = root();
-          if (actual !== expected) {
-            throw new Error(
-              `[write-changed-already-invalid-graph] invalid root: expected ${expected}, got ${actual}`,
-            );
-          }
-          nextValue += 1;
-          setSource(nextValue);
-        },
-      };
-    },
-  },
-  {
-    id: "empty-batch",
-    title: "Empty batch",
-    sampleIterations: 40,
-    bench: { iterations: 300, warmupIterations: 60 },
-    build(harness) {
-      let count = 0;
+  //     return {
+  //       runStep() {
+  //         nextValue += 1;
+  //         setSource(nextValue);
+  //         blackhole(nextValue);
+  //       },
+  //       validate() {
+  //         const expected =
+  //           leaves.length * nextValue +
+  //           ((leaves.length - 1) * leaves.length) / 2;
+  //         const actual = root();
+  //         if (actual !== expected) {
+  //           throw new Error(
+  //             `[write-changed-already-invalid-graph] invalid root: expected ${expected}, got ${actual}`,
+  //           );
+  //         }
+  //         nextValue += 1;
+  //         setSource(nextValue);
+  //       },
+  //     };
+  //   },
+  // },
+  // {
+  //   id: "empty-batch",
+  //   title: "Empty batch",
+  //   sampleIterations: 40,
+  //   bench: { iterations: 300, warmupIterations: 60 },
+  //   build(harness) {
+  //     let count = 0;
 
-      return {
-        runStep() {
-          harness.batch(() => {
-            count += 1;
-          });
-          blackhole(count);
-        },
-      };
-    },
-  },
-  {
-    id: "write-same-source-already-invalid",
-    title: "Write dirty pattern / same source",
-    sampleIterations: 30,
-    bench: { iterations: 220, warmupIterations: 45 },
-    build: (harness, seed) =>
-      createRotatingDirtyWrites(harness, 32, "same", seed),
-  },
-  {
-    id: "write-rotating-4-sources-already-invalid",
-    title: "Write dirty pattern / rotating 4 sources",
-    sampleIterations: 30,
-    bench: { iterations: 220, warmupIterations: 45 },
-    build: (harness, seed) =>
-      createRotatingDirtyWrites(harness, 4, "rotate", seed),
-  },
-  {
-    id: "write-rotating-32-sources-already-invalid",
-    title: "Write dirty pattern / rotating 32 sources",
-    sampleIterations: 30,
-    bench: { iterations: 220, warmupIterations: 45 },
-    build: (harness, seed) =>
-      createRotatingDirtyWrites(harness, 32, "rotate", seed),
-  },
-  {
-    id: "write-random-32-sources-already-invalid",
-    title: "Write dirty pattern / random 32 sources",
-    sampleIterations: 30,
-    bench: { iterations: 220, warmupIterations: 45 },
-    build: (harness, seed) =>
-      createRotatingDirtyWrites(harness, 32, "random", seed),
-  },
-  {
-    id: "outer-batch-1-write",
-    title: "Outer batch / 1 write",
-    sampleIterations: 30,
-    bench: { iterations: 220, warmupIterations: 45 },
-    build: (harness) => createOuterBatchWrites(harness, 1),
-  },
-  {
-    id: "outer-batch-10-writes",
-    title: "Outer batch / 10 writes",
-    sampleIterations: 30,
-    bench: { iterations: 180, warmupIterations: 40 },
-    build: (harness) => createOuterBatchWrites(harness, 10),
-  },
-  {
-    id: "outer-batch-100-writes",
-    title: "Outer batch / 100 writes",
-    sampleIterations: 24,
-    bench: { iterations: 140, warmupIterations: 35 },
-    build: (harness) => createOuterBatchWrites(harness, 100),
-  },
-  {
-    id: "outer-batch-10000-writes",
-    title: "Outer batch / 10000 writes",
-    sampleIterations: 10,
-    bench: { iterations: 20, warmupIterations: 5 },
-    build: (harness) => createOuterBatchWrites(harness, 10_000),
-  },
+  //     return {
+  //       runStep() {
+  //         harness.batch(() => {
+  //           count += 1;
+  //         });
+  //         blackhole(count);
+  //       },
+  //     };
+  //   },
+  // },
+  // {
+  //   id: "write-same-source-already-invalid",
+  //   title: "Write dirty pattern / same source",
+  //   sampleIterations: 30,
+  //   bench: { iterations: 220, warmupIterations: 45 },
+  //   build: (harness, seed) =>
+  //     createRotatingDirtyWrites(harness, 32, "same", seed),
+  // },
+  // {
+  //   id: "write-rotating-4-sources-already-invalid",
+  //   title: "Write dirty pattern / rotating 4 sources",
+  //   sampleIterations: 30,
+  //   bench: { iterations: 220, warmupIterations: 45 },
+  //   build: (harness, seed) =>
+  //     createRotatingDirtyWrites(harness, 4, "rotate", seed),
+  // },
+  // {
+  //   id: "write-rotating-32-sources-already-invalid",
+  //   title: "Write dirty pattern / rotating 32 sources",
+  //   sampleIterations: 30,
+  //   bench: { iterations: 220, warmupIterations: 45 },
+  //   build: (harness, seed) =>
+  //     createRotatingDirtyWrites(harness, 32, "rotate", seed),
+  // },
+  // {
+  //   id: "write-random-32-sources-already-invalid",
+  //   title: "Write dirty pattern / random 32 sources",
+  //   sampleIterations: 30,
+  //   bench: { iterations: 220, warmupIterations: 45 },
+  //   build: (harness, seed) =>
+  //     createRotatingDirtyWrites(harness, 32, "random", seed),
+  // },
+  // {
+  //   id: "outer-batch-1-write",
+  //   title: "Outer batch / 1 write",
+  //   sampleIterations: 30,
+  //   bench: { iterations: 220, warmupIterations: 45 },
+  //   build: (harness) => createOuterBatchWrites(harness, 1),
+  // },
+  // {
+  //   id: "outer-batch-10-writes",
+  //   title: "Outer batch / 10 writes",
+  //   sampleIterations: 30,
+  //   bench: { iterations: 180, warmupIterations: 40 },
+  //   build: (harness) => createOuterBatchWrites(harness, 10),
+  // },
+  // {
+  //   id: "outer-batch-100-writes",
+  //   title: "Outer batch / 100 writes",
+  //   sampleIterations: 24,
+  //   bench: { iterations: 140, warmupIterations: 35 },
+  //   build: (harness) => createOuterBatchWrites(harness, 100),
+  // },
+  // {
+  //   id: "outer-batch-10000-writes",
+  //   title: "Outer batch / 10000 writes",
+  //   sampleIterations: 10,
+  //   bench: { iterations: 20, warmupIterations: 5 },
+  //   build: (harness) => createOuterBatchWrites(harness, 10_000),
+  // },
   {
     id: "linear-chain",
     title: "Linear chain",

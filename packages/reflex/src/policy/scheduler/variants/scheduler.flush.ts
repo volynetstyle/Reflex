@@ -1,7 +1,4 @@
-import {
-  Scheduled,
-  type ReactiveNode,
-} from "@volynets/reflex-runtime/internal";
+import { type ReactiveNode } from "@volynets/reflex-runtime/internal";
 import { EffectSchedulerMode } from "../scheduler.constants";
 import { createSchedulerCore } from "../scheduler.core";
 import { Batching, Flushing, Idle } from "../scheduler.constants";

@@ -21,7 +21,7 @@ It gives you:
 - a compact signal-style API
 - runtime-backed execution with explicit effect flushing
 - disposable typed models with batched untracked actions
-- event sources plus composition helpers like `map()`, `filter()`, `merge()`, `scan()`, and `hold()`
+- event sources plus composition helpers like `map()`, `filter()`, `merge()`, `switchMap()`, `flatten()`, `scan()`, and `hold()`
 - predictable semantics for lazy derived values and scheduled effects
 
 Under the hood it is built on:
@@ -67,7 +67,7 @@ Think of the package as one connected model:
 1. Call `createRuntime()` once during setup.
 2. Build state with `signal()`, `computed()`, `memo()`, and `effect()`.
 3. Create event sources with `rt.event()`.
-4. Compose event sources with `map()`, `filter()`, `merge()`, and use `scan()` / `hold()` to turn events into readable state.
+4. Compose event sources with `map()`, `filter()`, `merge()`, `switchMap()`, and `flatten()`, and use `scan()` / `hold()` to turn events into readable state.
 5. Call `rt.flush()` when you want scheduled effects to run in the default `"flush"` mode.
 
 The top-level primitives are not methods on `rt`, but they are still runtime-backed. `createRuntime()` is not only for `event()` and `flush()`: it configures the runtime that the public primitives run against.
@@ -229,6 +229,7 @@ import {
   map,
   merge,
   subscribeOnce,
+  switchMap,
 } from "@volynets/reflex";
 
 const rt = createRuntime();
@@ -240,6 +241,7 @@ const labels = merge(
   map(importantClicks, (value) => `click:${value}`),
   map(submits, (value) => `submit:${value}`),
 );
+const activeLabels = switchMap(submits, () => labels);
 
 subscribeOnce(labels, (value) => {
   console.log("first label =", value);
@@ -258,7 +260,8 @@ subscribeOnce(labels, (value) => {
 - With `createRuntime({ effectStrategy: "eager" })`, invalidated effects flush automatically.
 - Pure signal and computed reads do not require `flush()`.
 - Same-value signal writes do not force recomputation.
-- Derived events created with `map()`, `filter()`, and `merge()` are lazy and subscribe upstream only while observed.
+- Derived events created with `map()`, `filter()`, `merge()`, `switchMap()`, and `flatten()` are lazy and subscribe upstream only while observed.
+- `switchMap()` and `flatten()` dispose replaced inner subscriptions automatically.
 - `scan()` and `hold()` update only from event deliveries.
 - Nested event emits are delivered after the current delivery finishes, preserving order.
 
@@ -484,6 +487,24 @@ Combines multiple event sources into one event stream.
 
 ```ts
 const all = merge(clicks, submits);
+```
+
+### `switchMap(source, project)`
+
+Projects each event value into an inner event stream and forwards values from the latest inner stream.
+
+When a newer source event arrives, the previous inner subscription is disposed automatically.
+
+```ts
+const drags = switchMap(pointerDown, () => pointerMove);
+```
+
+### `flatten(source)`
+
+Flattens an event stream of event streams by forwarding values from the latest inner stream.
+
+```ts
+const active = flatten(streams);
 ```
 
 ### `scan(source, seed, reducer)`
