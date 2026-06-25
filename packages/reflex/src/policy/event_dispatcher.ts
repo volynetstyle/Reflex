@@ -16,11 +16,8 @@ type EventDispatchRecord = {
 export interface EventDispatcher {
   readonly queue: RingQueue<EventDispatchRecord>;
   flushing: boolean;
-  directSource: EventSource<unknown> | null;
-  directValue: unknown;
   readonly runBoundary: EventBoundary;
   readonly flush: () => void;
-  readonly flushDirect: () => void;
   emit<T>(source: EventSource<T>, value: T): void;
 }
 
@@ -32,16 +29,17 @@ export function createEventDispatcher(
   const dispatcher: EventDispatcher = {
     queue,
     flushing: false,
-    directSource: null,
-    directValue: undefined,
     runBoundary,
     flush: () => flushEventDispatcher(dispatcher),
-    flushDirect: () => flushDirectEvent(dispatcher),
     emit<T>(source: EventSource<T>, value: T): void {
       if (!dispatcher.flushing && queue.head === queue.tail) {
-        dispatcher.directSource = source as EventSource<unknown>;
-        dispatcher.directValue = value;
-        runBoundary(dispatcher.flushDirect);
+        runBoundary(() => {
+          flushEventDispatcher(
+            dispatcher,
+            source as EventSource<unknown>,
+            value,
+          );
+        });
         return;
       }
 
@@ -58,35 +56,34 @@ export function createEventDispatcher(
 
 export const EventDispatcher = createEventDispatcher;
 
-function flushDirectEvent(dispatcher: EventDispatcher): void {
-  const source = dispatcher.directSource;
-  if (source === null) return;
-
-  const value = dispatcher.directValue;
-  dispatcher.directSource = null;
-  dispatcher.directValue = undefined;
-  dispatcher.flushing = true;
-
-  try {
-    emitEvent(source, value);
-  } finally {
-    dispatcher.flushing = false;
-
-    if (dispatcher.queue.head !== dispatcher.queue.tail) dispatcher.flush();
-  }
-}
-
-function flushEventDispatcher(dispatcher: EventDispatcher): void {
+function flushEventDispatcher(
+  dispatcher: EventDispatcher,
+  firstSource?: EventSource<unknown>,
+  firstValue?: unknown,
+): void {
   if (dispatcher.flushing) return;
   dispatcher.flushing = true;
 
   try {
-    while (dispatcher.queue.head !== dispatcher.queue.tail) {
-      const record = shiftRingQueue(dispatcher.queue)!;
-      emitEvent(record.source, record.value);
+    if (firstSource !== undefined) {
+      try {
+        emitEvent(firstSource, firstValue);
+      } finally {
+        drainEventQueue(dispatcher.queue);
+      }
+      return;
     }
+
+    drainEventQueue(dispatcher.queue);
   } finally {
     clearRingQueue(dispatcher.queue);
     dispatcher.flushing = false;
+  }
+}
+
+function drainEventQueue(queue: RingQueue<EventDispatchRecord>): void {
+  while (queue.head !== queue.tail) {
+    const record = shiftRingQueue(queue)!;
+    emitEvent(record.source, record.value);
   }
 }
