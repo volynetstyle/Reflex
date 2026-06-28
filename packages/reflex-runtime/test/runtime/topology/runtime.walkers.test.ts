@@ -22,6 +22,7 @@ import {
   Computing,
   Watcher,
   push_iterator_once,
+  push_iterator_once_skipping,
 } from "../../../src/kernel";
 import { linkEdge } from "../../../src/kernel/shape/graph";
 import {
@@ -453,6 +454,24 @@ describe("Reactive runtime - walker invariants", () => {
     expect(invalidated).toEqual([watcher]);
   });
 
+  it("propagateOnce skipping preserves all edges for a foreign skip", () => {
+    const source = createNode(Producer);
+    const left = createNode(Consumer);
+    const right = createNode(Consumer);
+    const foreignSource = createNode(Producer);
+    const foreign = createNode(Consumer);
+
+    linkEdge(source, left);
+    linkEdge(source, right);
+    const foreignEdge = linkEdge(foreignSource, foreign);
+
+    push_iterator_once_skipping(source.firstOut, foreignEdge);
+
+    expect(left.state).toBe(Consumer | Changed);
+    expect(right.state).toBe(Consumer | Changed);
+    expect(foreign.state).toBe(Consumer);
+  });
+
   it("invalidates every watcher that hangs off a shared computed branch", () => {
     const invalidated: ReactiveNode[] = [];
 
@@ -746,6 +765,33 @@ describe("Reactive runtime - walker invariants", () => {
 
     expect(readConsumer(root)).toBe(21);
     expect(root.state & DIRTY_STATE).toBe(0);
+  });
+
+  it("preserves deep outer pull frames when a nested pull crosses the trim floor", () => {
+    const outerSource = createProducer(1);
+    const nestedSource = createProducer(10);
+
+    let nestedRoot = createConsumer(() => readProducer(nestedSource));
+    for (let index = 0; index < 4; index += 1) {
+      const previous = nestedRoot;
+      nestedRoot = createConsumer(() => readConsumer(previous) + 1);
+    }
+
+    let outerRoot = createConsumer(
+      () => readProducer(outerSource) + readConsumer(nestedRoot),
+    );
+    for (let index = 0; index < 320; index += 1) {
+      const previous = outerRoot;
+      outerRoot = createConsumer(() => readConsumer(previous) + 1);
+    }
+
+    expect(readConsumer(outerRoot)).toBe(335);
+
+    writeProducer(outerSource, 2);
+    writeProducer(nestedSource, 20);
+
+    expect(readConsumer(outerRoot)).toBe(346);
+    expect(outerRoot.state & DIRTY_STATE).toBe(0);
   });
 
   it("stabilizeDirtyConsumer clears Invalid when only a later branching sibling recomputes same-as-current", () => {

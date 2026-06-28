@@ -10,33 +10,38 @@ import {
 import type { ReactiveEdge } from "../../shape";
 import { Changed, Invalid, Watcher } from "../../shape";
 
-export function push_iterator_once(edge: ReactiveEdge | null): void {
-  if (__DEV__) enterRuntimePhase(RuntimePhase.Propagating);
+function pushIteratorOnceCore(edge: ReactiveEdge | null): void {
+  if (__PROFILE__) profileRuntimeCounter("pushOnceCalls");
 
-  try {
-    profileRuntimeCounter("pushOnceCalls");
+  for (let current = edge; current !== null; current = current.nextOut) {
+    if (__PROFILE__) profileRuntimeCounter("pushOnceEdgesVisited");
 
-    for (let current = edge; current !== null; current = current.nextOut) {
-      profileRuntimeCounter("pushOnceEdgesVisited");
+    const sub = current.to;
+    const state = sub.state;
 
-      const sub = current.to;
-      const state = sub.state;
+    if ((state & Changed) === 0) {
+      sub.state = (state & ~Invalid) | Changed;
 
-      if ((state & Changed) === 0) {
-        sub.state = (state & ~Invalid) | Changed;
+      if (__PROFILE__) profileRuntimeCounter("pushOnceMarkedChanged");
+      if (__DEV__) devRecordPropagate(current, sub.state, true, defaultContext);
 
-        profileRuntimeCounter("pushOnceMarkedChanged");
-        if (__DEV__)
-          devRecordPropagate(current, sub.state, true, defaultContext);
-
-        if ((state & Watcher) !== 0) {
-          emitSinkInvalidated(sub);
-        }
-      } else {
-        profileRuntimeCounter("pushOnceAlreadyChangedSkipped");
+      if ((state & Watcher) !== 0) {
+        emitSinkInvalidated(sub);
       }
+    } else {
+      if (__PROFILE__) profileRuntimeCounter("pushOnceAlreadyChangedSkipped");
     }
-  } finally {
-    if (__DEV__) leaveRuntimePhase();
   }
 }
+
+export const push_iterator_once: (edge: ReactiveEdge | null) => void = __DEV__
+  ? function pushIteratorOnceDev(edge): void {
+      enterRuntimePhase(RuntimePhase.Propagating);
+
+      try {
+        pushIteratorOnceCore(edge);
+      } finally {
+        leaveRuntimePhase();
+      }
+    }
+  : pushIteratorOnceCore;

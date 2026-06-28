@@ -37,89 +37,98 @@ import { push_iterator_once, push_iterator_once_skipping } from "../first";
  * side-fanout that existed before recompute.
  */
 
-export function advance(
+function advanceCore(
   node: ReactiveNode,
   skipOutEdge: ReactiveEdge | null = null,
 ): boolean {
-  if (__DEV__) enterRuntimePhase(RuntimePhase.Recomputing);
+  if (__PROFILE__) profileRuntimeCounter("advanceCalls");
+
+  if (__DEV__) devAssertExecutableNode(node);
+
+  const compute = node.compute as NonNullable<typeof node.compute>;
+  node.tailIn = null;
+
+  const computingState = (node.state & ~Visited) | Computing;
+  node.state = computingState;
+
+  const prevActive = beginConsumerTracking(node);
+
+  if (__DEV__) devRecordComputeStart(node, defaultContext);
+
+  let next: unknown;
 
   try {
-    profileRuntimeCounter("advanceCalls");
+    if (__PROFILE__) profileRuntimeCounter("advanceComputeRuns");
 
-    if (__DEV__) devAssertExecutableNode(node);
-
-    const compute = node.compute as NonNullable<typeof node.compute>;
-    node.tailIn = null;
-
-    const computingState = (node.state & ~Visited) | Computing;
-    node.state = computingState;
-
-    const prevActive = beginConsumerTracking(node);
-
-    if (__DEV__) devRecordComputeStart(node, defaultContext);
-
-    let next: unknown;
-
-    try {
-      profileRuntimeCounter("advanceComputeRuns");
-
-      next = compute();
-    } catch (error) {
-      restoreConsumer(prevActive);
-      node.state = computingState & ~Computing;
-
-      if (__DEV__) devRecordComputeError(node, error, defaultContext);
-
-      throw error;
-    }
-
+    next = compute();
+  } catch (error) {
     restoreConsumer(prevActive);
+    node.state = computingState & ~Computing;
 
-    const resolvedState = computingState & ~(Computing | DIRTY_STATE);
+    if (__DEV__) devRecordComputeError(node, error, defaultContext);
 
-    profileRuntimeCounter("advanceCleanupChecks");
+    throw error;
+  }
 
-    if (node.tailIn !== node.lastIn) {
-      node.state = computingState & ~Computing;
-      profileRuntimeCounter("advanceCleanupRuns");
-      cleanupUnvisitedSources(node);
+  restoreConsumer(prevActive);
+
+  const resolvedState = computingState & ~(Computing | DIRTY_STATE);
+
+  if (__PROFILE__) profileRuntimeCounter("advanceCleanupChecks");
+
+  if (node.tailIn !== node.lastIn) {
+    node.state = computingState & ~Computing;
+    if (__PROFILE__) profileRuntimeCounter("advanceCleanupRuns");
+    cleanupUnvisitedSources(node);
+  }
+
+  if (__DEV__) devRecordComputeFinish(node, next, defaultContext);
+
+  const prev = node.payload;
+  node.payload = next;
+  node.state = resolvedState;
+
+  if (compare(prev, next)) {
+    if (__PROFILE__) profileRuntimeCounter("advanceUnchanged");
+
+    if (__DEV__) devRecordRecompute(node, false, next, prev, defaultContext);
+    return false;
+  }
+
+  if (__PROFILE__) profileRuntimeCounter("advanceChanged");
+
+  if (__DEV__) devRecordRecompute(node, true, next, prev, defaultContext);
+
+  const firstOut = node.firstOut;
+
+  if (firstOut !== null) {
+    if (__PROFILE__) profileRuntimeCounter("advancePropagateCalls");
+
+    if (__DEV__) devAssertRefreshEdge(node, firstOut);
+    if (skipOutEdge !== null) {
+      if (firstOut !== skipOutEdge || skipOutEdge.nextOut !== null) {
+        if (__PROFILE__) profileRuntimeCounter("advancePropagateSkippedEdge");
+        push_iterator_once_skipping(firstOut, skipOutEdge);
+      }
+    } else {
+      push_iterator_once(firstOut);
     }
+  }
 
-    if (__DEV__) devRecordComputeFinish(node, next, defaultContext);
+  return true;
+}
 
-    const prev = node.payload;
-    node.payload = next;
-    node.state = resolvedState;
+export const advance: (
+  node: ReactiveNode,
+  skipOutEdge?: ReactiveEdge | null,
+) => boolean = __DEV__
+  ? function advanceDev(node, skipOutEdge = null): boolean {
+      enterRuntimePhase(RuntimePhase.Recomputing);
 
-    if (compare(prev, next)) {
-      profileRuntimeCounter("advanceUnchanged");
-
-      if (__DEV__) devRecordRecompute(node, false, next, prev, defaultContext);
-      return false;
-    }
-
-    profileRuntimeCounter("advanceChanged");
-
-    if (__DEV__) devRecordRecompute(node, true, next, prev, defaultContext);
-
-    const firstOut = node.firstOut;
-
-    if (firstOut !== null) {
-      profileRuntimeCounter("advancePropagateCalls");
-
-      if (__DEV__) devAssertRefreshEdge(node, firstOut);
-      if (skipOutEdge !== null) {
-        if (firstOut !== skipOutEdge || skipOutEdge.nextOut !== null) {
-          profileRuntimeCounter("advancePropagateSkippedEdge");
-          push_iterator_once_skipping(firstOut, skipOutEdge);
-        }
-      } else {
-        push_iterator_once(firstOut);
+      try {
+        return advanceCore(node, skipOutEdge);
+      } finally {
+        leaveRuntimePhase();
       }
     }
-
-    return true;
-  } finally {
-    if (__DEV__) leaveRuntimePhase();
-  }
-}
+  : advanceCore;

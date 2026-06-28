@@ -10,41 +10,75 @@ import {
 import type { ReactiveEdge } from "../../shape";
 import { Changed, Invalid, Watcher } from "../../shape";
 
-export function push_iterator_once_skipping(
+function pushIteratorOnceSkippingCore(
   edge: ReactiveEdge | null,
   skip: ReactiveEdge,
 ): void {
-  if (__DEV__) enterRuntimePhase(RuntimePhase.Propagating);
+  if (__PROFILE__) profileRuntimeCounter("pushOnceCalls");
 
-  try {
-    profileRuntimeCounter("pushOnceCalls");
+  // Split around `skip` so the hot suffix only tests its termination pointer
+  // instead of checking `skip` for every remaining edge.
+  for (let current = edge; current !== skip; current = current.nextOut) {
+    // Preserve the old no-op behavior when a foreign skip edge is supplied.
+    if (current === null) return;
 
-    for (let current = edge; current !== null; current = current.nextOut) {
-      if (current === skip) {
-        profileRuntimeCounter("pushOnceSkippedEdges");
-        continue;
+    if (__PROFILE__) profileRuntimeCounter("pushOnceEdgesVisited");
+
+    const sub = current.to;
+    const state = sub.state;
+
+    if ((state & Changed) === 0) {
+      sub.state = (state & ~Invalid) | Changed;
+
+      if (__PROFILE__) profileRuntimeCounter("pushOnceMarkedChanged");
+      if (__DEV__) devRecordPropagate(current, sub.state, true, defaultContext);
+
+      if ((state & Watcher) !== 0) {
+        emitSinkInvalidated(sub);
       }
-
-      profileRuntimeCounter("pushOnceEdgesVisited");
-
-      const sub = current.to;
-      const state = sub.state;
-
-      if ((state & Changed) === 0) {
-        sub.state = (state & ~Invalid) | Changed;
-
-        profileRuntimeCounter("pushOnceMarkedChanged");
-        if (__DEV__)
-          devRecordPropagate(current, sub.state, true, defaultContext);
-
-        if ((state & Watcher) !== 0) {
-          emitSinkInvalidated(sub);
-        }
-      } else {
-        profileRuntimeCounter("pushOnceAlreadyChangedSkipped");
-      }
+    } else {
+      if (__PROFILE__) profileRuntimeCounter("pushOnceAlreadyChangedSkipped");
     }
-  } finally {
-    if (__DEV__) leaveRuntimePhase();
+  }
+
+  if (__PROFILE__) profileRuntimeCounter("pushOnceSkippedEdges");
+
+  for (
+    let current = skip.nextOut;
+    current !== null;
+    current = current.nextOut
+  ) {
+    if (__PROFILE__) profileRuntimeCounter("pushOnceEdgesVisited");
+
+    const sub = current.to;
+    const state = sub.state;
+
+    if ((state & Changed) === 0) {
+      sub.state = (state & ~Invalid) | Changed;
+
+      if (__PROFILE__) profileRuntimeCounter("pushOnceMarkedChanged");
+      if (__DEV__) devRecordPropagate(current, sub.state, true, defaultContext);
+
+      if ((state & Watcher) !== 0) {
+        emitSinkInvalidated(sub);
+      }
+    } else if (__PROFILE__) {
+      profileRuntimeCounter("pushOnceAlreadyChangedSkipped");
+    }
   }
 }
+
+export const push_iterator_once_skipping: (
+  edge: ReactiveEdge | null,
+  skip: ReactiveEdge,
+) => void = __DEV__
+  ? function pushIteratorOnceSkippingDev(edge, skip): void {
+      enterRuntimePhase(RuntimePhase.Propagating);
+
+      try {
+        pushIteratorOnceSkippingCore(edge, skip);
+      } finally {
+        leaveRuntimePhase();
+      }
+    }
+  : pushIteratorOnceSkippingCore;

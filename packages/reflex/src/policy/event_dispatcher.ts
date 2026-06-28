@@ -21,25 +21,33 @@ export interface EventDispatcher {
   emit<T>(source: EventSource<T>, value: T): void;
 }
 
+interface EventDispatcherCore extends EventDispatcher {
+  firstSource: EventSource<unknown> | null;
+  firstValue: unknown;
+  firstPending: boolean;
+  readonly flushFirst: () => void;
+}
+
 export function createEventDispatcher(
   runBoundary: EventBoundary = identityBoundary,
 ): EventDispatcher {
   const queue = createRingQueue<EventDispatchRecord>();
 
-  const dispatcher: EventDispatcher = {
+  const dispatcher: EventDispatcherCore = {
     queue,
     flushing: false,
+    firstSource: null,
+    firstValue: undefined,
+    firstPending: false,
     runBoundary,
     flush: () => flushEventDispatcher(dispatcher),
+    flushFirst: () => flushFirstEvent(dispatcher),
     emit<T>(source: EventSource<T>, value: T): void {
       if (!dispatcher.flushing && queue.head === queue.tail) {
-        runBoundary(() => {
-          flushEventDispatcher(
-            dispatcher,
-            source as EventSource<unknown>,
-            value,
-          );
-        });
+        dispatcher.firstSource = source as EventSource<unknown>;
+        dispatcher.firstValue = value;
+        dispatcher.firstPending = true;
+        runBoundary(dispatcher.flushFirst);
         return;
       }
 
@@ -55,6 +63,19 @@ export function createEventDispatcher(
 }
 
 export const EventDispatcher = createEventDispatcher;
+
+function flushFirstEvent(dispatcher: EventDispatcherCore): void {
+  if (!dispatcher.firstPending) return;
+
+  const source = dispatcher.firstSource!;
+  const value = dispatcher.firstValue;
+
+  dispatcher.firstSource = null;
+  dispatcher.firstValue = undefined;
+  dispatcher.firstPending = false;
+
+  flushEventDispatcher(dispatcher, source, value);
+}
 
 function flushEventDispatcher(
   dispatcher: EventDispatcher,

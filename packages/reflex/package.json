@@ -61,6 +61,10 @@
     "test": "vitest run",
     "bench": "vitest bench",
     "bench:api": "pnpm --filter @volynets/reflex-runtime build && pnpm build && node --expose-gc bench/api-facade.jit.mjs",
+    "bench:events": "vitest bench bench/event-*.bench.ts",
+    "bench:events:dispatcher": "vitest bench bench/event-dispatcher.bench.ts",
+    "bench:events:operators": "vitest bench bench/event-operators.compare.bench.ts",
+    "bench:events:raw": "vitest bench bench/event-delivery.compare.bench.ts",
     "bench:scheduler": "vitest bench bench/scheduler.bench.ts",
     "bench:scheduler:integration": "vitest bench bench/scheduler.integration.bench.ts",
     "bench:projection": "node ./bench/projection-compare.node.mjs",
@@ -76,6 +80,13 @@
     "@volynets/reflex-dom": "workspace:*",
     "@volynets/reflex-runtime": "workspace:*",
     "@volynets/reflex-store": "workspace:*",
-    "alien-signals": "^3.2.1"
+    "alien-signals": "^3.2.1",
+    "effector": "^23.4.4",
+    "eventemitter3": "^5.0.4",
+    "mitt": "^3.0.1",
+    "most": "^1.9.0",
+    "nanoevents": "^9.1.0",
+    "rxjs": "^7.8.2",
+    "xstream": "^11.14.0"
   }
 }
