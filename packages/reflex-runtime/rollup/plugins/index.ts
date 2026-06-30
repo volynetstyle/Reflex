@@ -26,6 +26,9 @@ export function createPlugins(target: BuildTarget): Plugin[] {
       values: {
         __DEV__: JSON.stringify(target.mode === "dev"),
         __PROFILE__: JSON.stringify(target.mode === "dev"),
+        __TRACKING_ONE_HOP__: "true",
+        __TRACKING_TWO_HOP__: "true",
+        __TRACKING_LAST_EDGE__: "true",
       },
     }),
     constEnum(),

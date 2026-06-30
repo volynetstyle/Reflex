@@ -205,7 +205,7 @@ export function resolveTrackedRead(
     const lookahead1Edge = expectedNextEdge.nextIn;
 
     if (lookahead1Edge !== null) {
-      if (lookahead1Edge.from === producer) {
+      if (__TRACKING_ONE_HOP__ && lookahead1Edge.from === producer) {
         profileRuntimeCounter("trackingOneHopReorder");
 
         if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
@@ -229,10 +229,10 @@ export function resolveTrackedRead(
        * After:
        *   cursor -> lookahead2 -> expectedNext -> lookahead1
        */
-      const lookahead2Edge = lookahead1Edge.nextIn;
+      if (__TRACKING_TWO_HOP__) {
+        const lookahead2Edge = lookahead1Edge.nextIn;
 
-      if (lookahead2Edge !== null) {
-        if (lookahead2Edge.from === producer) {
+        if (lookahead2Edge !== null && lookahead2Edge.from === producer) {
           profileRuntimeCounter("trackingTwoHopReorder");
 
           if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
@@ -253,10 +253,10 @@ export function resolveTrackedRead(
      * If the producer is the last incoming edge, move it after the cursor
      * without scanning the whole list.
      */
-    const lastIncomingEdge = consumer.lastIn;
+    if (__TRACKING_LAST_EDGE__) {
+      const lastIncomingEdge = consumer.lastIn;
 
-    if (lastIncomingEdge !== null) {
-      if (lastIncomingEdge.from === producer) {
+      if (lastIncomingEdge !== null && lastIncomingEdge.from === producer) {
         profileRuntimeCounter("trackingLastEdgeShortcut");
 
         moveLastIncomingEdgeAfterEdgeUnchecked(
@@ -348,10 +348,10 @@ export function resolveTrackedRead(
      * The first current read was previously the last dependency.
      * Move it to the front.
      */
-    const lastIncomingEdge = consumer.lastIn;
+    if (__TRACKING_LAST_EDGE__) {
+      const lastIncomingEdge = consumer.lastIn;
 
-    if (lastIncomingEdge !== null) {
-      if (lastIncomingEdge.from === producer) {
+      if (lastIncomingEdge !== null && lastIncomingEdge.from === producer) {
         profileRuntimeCounter("trackingInitialLastEdgeShortcut");
 
         moveLastIncomingEdgeToFrontUnchecked(consumer, lastIncomingEdge);

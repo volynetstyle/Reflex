@@ -22,6 +22,9 @@ const createPerfDomain = (input: string, file: string) => ({
       values: {
         __DEV__: "false",
         __PROFILE__: "true",
+        __TRACKING_ONE_HOP__: "true",
+        __TRACKING_TWO_HOP__: "true",
+        __TRACKING_LAST_EDGE__: "true",
       },
     }),
   ],

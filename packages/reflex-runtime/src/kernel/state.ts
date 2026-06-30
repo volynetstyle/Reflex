@@ -34,7 +34,7 @@ export function enterConsumerTracking(
 ): ReactiveNode | null {
   const previousConsumer = currentConsumer;
   currentConsumer = consumer;
-  advanceTrackingEpoch();
+  trackingEpoch = (trackingEpoch + 1) >>> 0 || 1;
   return previousConsumer;
 }
 
