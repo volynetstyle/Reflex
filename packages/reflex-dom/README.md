@@ -176,7 +176,7 @@ As a result, updates still know which scope owns any nested work they trigger.
 Plain Reflex effects created during mount are captured by the current ownership
 scope because DOM mounts enter the tree through `runInOwnershipScope()`.
 
-`onEffectStart()` is used to skip DOM writes on the first effect pass when the
+An owned reaction skips DOM writes on its first tracking pass when the
 initial DOM was already produced during mount. Later reruns are allowed to patch
 the DOM.
 

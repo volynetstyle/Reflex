@@ -2,13 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import { createRuntime, signal } from "@volynets/reflex";
 import {
   createOwnerContext,
+  createOwnedEffect,
   createScope,
   disposeScope,
   registerCleanup,
   runWithOwner,
   runWithScope,
-  runInOwnershipScope,
-  useOwnedEffect,
 } from "../src";
 
 describe("ownership effects", () => {
@@ -19,8 +18,8 @@ describe("ownership effects", () => {
     const root = createScope();
     const log: string[] = [];
 
-    runInOwnershipScope(owner, root, () => {
-      useOwnedEffect({ owner }, () => {
+    runWithScope(owner, root, () => {
+      createOwnedEffect(owner, root, () => {
         const value = source();
         log.push(`run:${value}`);
 
@@ -59,7 +58,7 @@ describe("ownership effects", () => {
     runWithScope(owner, root, () => {
       registerCleanup(owner, () => {
         runWithOwner(owner, root, () => {
-          useOwnedEffect({ owner }, spy);
+          createOwnedEffect(owner, root, spy);
         });
       });
     });
@@ -82,12 +81,12 @@ describe("ownership effects", () => {
     const root = createScope();
     const log: string[] = [];
 
-    runInOwnershipScope(owner, root, () => {
-      useOwnedEffect({ owner }, () => {
+    runWithScope(owner, root, () => {
+      createOwnedEffect(owner, root, () => {
         log.push(`low:${source()}`);
       });
 
-      useOwnedEffect({ owner }, () => {
+      createOwnedEffect(owner, root, () => {
         log.push(`high:${source()}`);
       });
     });
@@ -99,5 +98,38 @@ describe("ownership effects", () => {
     rt.flush();
 
     expect(log).toEqual(["low:2", "high:2"]);
+  });
+
+  it("disposes an effect when its scope closes during the initial run", () => {
+    const rt = createRuntime();
+    const [source, setSource] = signal(1);
+    const owner = createOwnerContext();
+    const root = createScope();
+    const log: string[] = [];
+
+    runWithScope(owner, root, () => {
+      createOwnedEffect(owner, root, () => {
+        log.push(`run:${source()}`);
+        disposeScope(root);
+        return () => log.push("cleanup");
+      });
+    });
+
+    expect(log).toEqual(["run:1", "cleanup"]);
+
+    setSource(2);
+    rt.flush();
+
+    expect(log).toEqual(["run:1", "cleanup"]);
+  });
+
+  it("does not register its runtime watcher through the public effect hook", () => {
+    const effectCleanupRegistrar = vi.fn();
+    createRuntime({ hooks: { effectCleanupRegistrar } });
+    const owner = createOwnerContext();
+
+    createOwnedEffect(owner, null, () => {});
+
+    expect(effectCleanupRegistrar).not.toHaveBeenCalled();
   });
 });

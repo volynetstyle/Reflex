@@ -34,6 +34,7 @@ function invokeCleanup(fn: Cleanup): void {
 }
 
 function runCleanups(node: OwnershipNode): void {
+  console.log("DEBUG cleanup node", node.meta, node.cleanups !== null);
   const cleanups = node.cleanups;
   if (cleanups === null) return;
 

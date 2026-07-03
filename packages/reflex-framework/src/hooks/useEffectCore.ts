@@ -1,5 +1,5 @@
 import type { Cleanup } from "../types/core";
-import { useOwnedEffect } from "../ownership/effects";
+import { createOwnedEffect } from "../reactivity/owned-effect";
 import { runWithOwner } from "../ownership/ownership.scope";
 import {
   RenderEffectPhase,
@@ -12,7 +12,8 @@ export type EffectCleanup = void | Cleanup;
 export type EffectCallback = () => EffectCleanup;
 
 export function useEffectInternal(callback: EffectCallback): Cleanup {
-  return useOwnedEffect({ owner: getCurrentHookOwner() }, callback);
+  const owner = getCurrentHookOwner();
+  return createOwnedEffect(owner, owner.currentOwner, callback);
 }
 
 export function useEffectOnceInternal(callback: () => void): void {
@@ -45,7 +46,7 @@ export function useEffectRenderInternal(callback: EffectCallback): Cleanup {
       if (disposed) return;
 
       disposeEffect = runWithOwner(owner, scope, () =>
-        useOwnedEffect({ owner }, callback),
+        createOwnedEffect(owner, scope, callback),
       );
 
       if (disposed) {

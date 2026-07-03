@@ -6,11 +6,10 @@ import {
   resolveNamespace,
   type Namespace,
 } from "../host/namespace";
-import { onEffectStart } from "@volynets/reflex-framework";
 import { mountRenderRange } from "../structure/render-range";
 import {
+  createDOMOwnedReaction,
   registerDOMCleanup,
-  useDOMOwnedEffect,
 } from "../runtime/execution";
 import { bindElementProps } from "./element-binder";
 import { appendRenderableNodes } from "./append";
@@ -125,12 +124,8 @@ function bindReactiveAdoptedStyleSheets(
 ): void {
   applyShadowRootAdoptedStyleSheets(shadowRoot, getNextStyleSheets());
 
-  useDOMOwnedEffect(() => {
-    const nextStyleSheets = getNextStyleSheets();
-
-    onEffectStart(() => {
-      applyShadowRootAdoptedStyleSheets(shadowRoot, nextStyleSheets);
-    });
+  createDOMOwnedReaction(getNextStyleSheets, (nextStyleSheets) => {
+    applyShadowRootAdoptedStyleSheets(shadowRoot, nextStyleSheets);
   });
 }
 

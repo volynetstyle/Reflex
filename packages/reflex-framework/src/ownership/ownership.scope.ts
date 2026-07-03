@@ -3,8 +3,6 @@ import { isShuttingDown } from "./ownership.meta";
 import { OwnershipNode } from "./ownership.node";
 import { prependChild } from "./ownership.tree";
 
-export type Scope = OwnershipNode;
-
 export interface OwnerHookState {
   currentHookContext: unknown | null;
   componentHookDepth: number;
@@ -12,9 +10,8 @@ export interface OwnerHookState {
 }
 
 export interface OwnerContext {
-  currentOwner: Scope | null;
+  currentOwner: OwnershipNode | null;
   hookState: OwnerHookState;
-  effectCleanupSuppressionDepth: number;
 }
 
 let activeOwnerContext: OwnerContext | null = null;
@@ -31,26 +28,25 @@ export function createOwnerContext(): OwnerContext {
   return Object.preventExtensions({
     currentOwner: null,
     hookState: createOwnerHookState(),
-    effectCleanupSuppressionDepth: 0,
   });
 }
 
-export function createScope(): Scope {
+export function createOwnershipNode(): OwnershipNode {
   return new OwnershipNode();
 }
 
-export function getOwner(owner: OwnerContext): Scope | null {
+export function getOwner(owner: OwnerContext): OwnershipNode | null {
   return owner.currentOwner;
 }
 
 export function runWithOwner<T>(
   owner: OwnerContext,
-  scope: Scope | null,
+  OwnershipNode: OwnershipNode | null,
   fn: () => T,
 ): T {
   const previousOwner = owner.currentOwner;
   const previousActiveOwnerContext = activeOwnerContext;
-  owner.currentOwner = scope;
+  owner.currentOwner = OwnershipNode;
   activeOwnerContext = owner;
 
   try {
@@ -65,50 +61,68 @@ export function getActiveOwnerContext(): OwnerContext | null {
   return activeOwnerContext;
 }
 
-function attachScope(parent: Scope | null, scope: Scope): void {
+function attachOwnershipNode(
+  parent: OwnershipNode | null,
+  OwnershipNode: OwnershipNode,
+): void {
   if (
     parent === null ||
-    parent === scope ||
-    scope.parent === parent ||
+    parent === OwnershipNode ||
+    OwnershipNode.parent === parent ||
     isShuttingDown(parent) ||
-    isShuttingDown(scope)
+    isShuttingDown(OwnershipNode)
   ) {
     return;
   }
 
-  prependChild(parent, scope);
+  prependChild(parent, OwnershipNode);
 }
 
-export function runWithScope<T>(
+export function runWithOwnershipNode<T>(
   owner: OwnerContext,
-  scope: Scope,
+  OwnershipNode: OwnershipNode,
   fn: () => T,
 ): T {
-  if (isShuttingDown(scope)) {
+  if (isShuttingDown(OwnershipNode)) {
     if (__DEV__) {
-      throw new Error("runWithScope on disposed scope");
+      throw new Error("runWithOwnershipNode on disposed OwnershipNode");
     }
 
     return undefined as T;
   }
 
-  attachScope(owner.currentOwner, scope);
+  attachOwnershipNode(owner.currentOwner, OwnershipNode);
 
-  return runWithOwner(owner, scope, fn);
+  return runWithOwner(owner, OwnershipNode, fn);
 }
 
 export function registerCleanup(owner: OwnerContext, fn: () => void): void {
-  const scope = owner.currentOwner;
+  const OwnershipNode = owner.currentOwner;
 
-  if (scope !== null) {
-    if (__DEV__ && isShuttingDown(scope)) {
-      throw new Error("register cleanup into disposed scope");
+  if (OwnershipNode !== null) {
+    if (__DEV__ && isShuttingDown(OwnershipNode)) {
+      throw new Error("register cleanup into disposed OwnershipNode");
     }
 
-    addCleanup(scope, fn);
+    addCleanup(OwnershipNode, fn);
   }
 }
 
-export function disposeScope(scope: Scope): void {
-  dispose(scope);
+export function disposeOwnershipNode(OwnershipNode: OwnershipNode): void {
+  dispose(OwnershipNode);
 }
+
+/** @deprecated Use `OwnershipNode` directly. */
+export type Scope = OwnershipNode;
+
+/** @deprecated Use `createOwnershipNode`. */
+export const createScope = createOwnershipNode;
+
+/** @deprecated Use `runWithOwnershipNode`. */
+export const runWithScope = runWithOwnershipNode;
+
+/** @deprecated Use `runWithOwnershipNode`. */
+export const runInOwnershipScope = runWithOwnershipNode;
+
+/** @deprecated Use `disposeOwnershipNode`. */
+export const disposeScope = disposeOwnershipNode;

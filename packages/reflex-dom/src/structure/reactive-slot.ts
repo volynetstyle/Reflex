@@ -1,12 +1,9 @@
 import type { Namespace } from "../host/namespace";
 import {
-  onEffectStart,
-} from "@volynets/reflex-framework";
-import {
+  createDOMOwnedReaction,
   getActiveDOMExecutionContext,
   registerDOMCleanup,
   runInDOMOwnershipScope,
-  useDOMOwnedEffect,
 } from "../runtime/execution";
 import type { ContentSlot } from "./content-slot";
 import { adoptContentSlot, createContentSlot } from "./content-slot";
@@ -61,12 +58,8 @@ export function bindReactiveSlotLifecycle<T>(
   readValue: () => T,
   resolveValue: (value: T) => unknown,
 ): void {
-  useDOMOwnedEffect(() => {
-    const nextValue = readValue();
-
-    onEffectStart(() => {
-      slot.update(resolveValue(nextValue));
-    });
+  createDOMOwnedReaction(readValue, (nextValue) => {
+    slot.update(resolveValue(nextValue));
   });
 
   registerDOMCleanup(() => {

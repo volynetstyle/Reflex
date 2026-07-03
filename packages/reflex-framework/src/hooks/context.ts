@@ -18,7 +18,10 @@ export const RenderEffectPhase = {
   before: 1 << 0,
   render: 1 << 1,
   after: 1 << 2,
-};
+  BeforeRender: 1 << 0,
+  Render: 1 << 1,
+  AfterRender: 1 << 2,
+} as const;
 
 export const noopRenderEffectScheduler: RenderEffectScheduler = Object.freeze({
   schedule() {

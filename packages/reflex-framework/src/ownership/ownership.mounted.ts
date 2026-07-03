@@ -24,3 +24,9 @@ export function createRootMountTable<TKey extends object, TRoot>(
     },
   };
 }
+
+/** @deprecated Use `RootMountTable`. */
+export type MountedRootStore<TKey extends object, TRoot> = RootMountTable<
+  TKey,
+  TRoot
+>;

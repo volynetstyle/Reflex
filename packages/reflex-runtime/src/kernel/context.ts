@@ -74,7 +74,6 @@ export function resetRuntimeContext(
   context.readTrackingStrategy = DEFAULT_READ_TRACKING_STRATEGY;
   context.sinkInvalidatedHook = undefined;
   context.reactiveSettledHook = undefined;
-  context.effectCleanupHook = undefined;
 
   if (context === getActiveRuntimeContext()) {
     resetRuntimeExecutionState();
@@ -96,7 +95,6 @@ export function snapshotRuntimeContext(
     readTrackingStrategy,
     sinkInvalidatedHook,
     reactiveSettledHook,
-    effectCleanupHook,
   } = context;
   return {
     currentConsumer,
@@ -107,7 +105,6 @@ export function snapshotRuntimeContext(
     readTrackingStrategy,
     sinkInvalidatedHook,
     reactiveSettledHook,
-    effectCleanupHook,
   };
 }
 

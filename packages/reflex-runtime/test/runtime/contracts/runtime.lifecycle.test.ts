@@ -205,7 +205,6 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
 
     const context = getActiveRuntimeContext();
 
-    expect(context.effectCleanupHook).toBe(onCleanup);
     expect(context.reactiveSettledHook).toBe(onSettled);
     expect(context.sinkInvalidatedHook).toBe(onSinkInvalidated);
   });

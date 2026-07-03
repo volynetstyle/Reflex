@@ -9,6 +9,6 @@ export {
   type OwnershipContext,
 } from "./ownership/ownership.context";
 export * from "./ownership";
-export * from "./ownership/effects";
+export * from "./reactivity";
 export * from "./hooks";
 export { Fragment, jsx, jsxDEV, jsxs } from "./runtime/jsx";

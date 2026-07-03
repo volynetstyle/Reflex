@@ -1,10 +1,7 @@
 import type { Accessor } from "../types";
 import type { Namespace } from "../host/namespace";
 import { applyProp } from "../host/props";
-import {
-  onEffectStart,
-} from "@volynets/reflex-framework";
-import { useDOMOwnedEffect } from "../runtime/execution";
+import { createDOMOwnedReaction } from "../runtime/execution";
 
 export function bindReactiveProp(
   el: Element,
@@ -14,11 +11,7 @@ export function bindReactiveProp(
 ) {
   let previousValue = applyProp(el, name, acc(), ns, undefined);
 
-  useDOMOwnedEffect(() => {
-    const nextValue = acc();
-
-    onEffectStart(() => {
-      previousValue = applyProp(el, name, nextValue, ns, previousValue);
-    });
+  createDOMOwnedReaction(acc, (nextValue) => {
+    previousValue = applyProp(el, name, nextValue, ns, previousValue);
   });
 }

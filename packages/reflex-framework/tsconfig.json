@@ -5,7 +5,9 @@
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
-      "@volynets/reflex": ["../reflex/dist/globals.d.ts"]
+      "@volynets/reflex": ["../reflex/dist/globals.d.ts"],
+      "@volynets/reflex-runtime": ["../reflex-runtime/src/index.ts"],
+      "@runtime/*": ["../reflex-runtime/src/*"]
     },
     "strict": true,
     "noUncheckedIndexedAccess": true,
@@ -23,6 +25,10 @@
     "isolatedModules": true,
     "composite": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "../reflex-runtime/src/globals.d.ts"
+  ],
   "exclude": ["dist", "**/*.test.ts"]
 }

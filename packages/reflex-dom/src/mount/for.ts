@@ -1,13 +1,10 @@
 import type { Namespace } from "../host/namespace";
 import { moveRangeBefore } from "../host/mutations";
-import {
-  onEffectStart,
-} from "@volynets/reflex-framework";
 import type { ForRenderable } from "../operators";
 import { reconcileKeyedList, type KeyedItem } from "../reconcile/keyed";
 import {
+  createDOMOwnedReaction,
   registerDOMCleanup,
-  useDOMOwnedEffect,
 } from "../runtime/execution";
 import type { ContentSlot } from "../structure/content-slot";
 import { createMountedSlot } from "../structure/reactive-slot";
@@ -115,13 +112,7 @@ export function mountFor(
 
   reconcile(renderable.each());
 
-  useDOMOwnedEffect(() => {
-    const nextItems = renderable.each();
-
-    onEffectStart(() => {
-      reconcile(nextItems);
-    });
-  });
+  createDOMOwnedReaction(renderable.each, reconcile);
 
   registerDOMCleanup(() => {
     destroyFallback();
