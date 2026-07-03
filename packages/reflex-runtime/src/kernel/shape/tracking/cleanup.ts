@@ -1,8 +1,8 @@
-import type ReactiveNode from "../node";
-import type { ReactiveEdge } from "../edge";
-import { devRecordCleanupStaleSources } from "../../dev";
-import { defaultContext } from "../../context";
-import { profileRuntimeCounter } from "../../../profiling";
+import { defaultContext } from "@runtime/kernel/config";
+import { devRecordCleanupStaleSources } from "@runtime/kernel/dev";
+import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
+import type ReactiveNode from "@runtime/kernel/shape/node";
+import { profileRuntimeCounter } from "@runtime/profiling";
 
 /**
  * Suffix cleanup over the consumer's incoming edges after recompute.

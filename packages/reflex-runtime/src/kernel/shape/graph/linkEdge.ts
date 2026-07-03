@@ -1,5 +1,5 @@
-import type { ReactiveEdge } from "../edge";
-import type ReactiveNode from "../node";
+import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
+import type ReactiveNode from "@runtime/kernel/shape/node";
 
 export function linkEdge(
   from: ReactiveNode,

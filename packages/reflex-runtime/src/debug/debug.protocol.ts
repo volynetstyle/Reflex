@@ -8,13 +8,9 @@ import type {
 
 export const RUNTIME_DEBUG_PROTOCOL_VERSION = 1;
 
-export type RuntimeDebugProtocolVersion =
-  typeof RUNTIME_DEBUG_PROTOCOL_VERSION;
+export type RuntimeDebugProtocolVersion = typeof RUNTIME_DEBUG_PROTOCOL_VERSION;
 
-export type RuntimeDebugGraphDirection =
-  | "both"
-  | "sources"
-  | "sinks";
+export type RuntimeDebugGraphDirection = "both" | "sources" | "sinks";
 
 export interface RuntimeDebugGraphOptions {
   depth?: number;
@@ -128,7 +124,9 @@ export type RuntimeDebugMessageListener = (
 
 export interface RuntimeDebugSession {
   clearHistory(): void;
-  configure(options?: RuntimeDebugOptions): RuntimeDebugContextSnapshot | undefined;
+  configure(
+    options?: RuntimeDebugOptions,
+  ): RuntimeDebugContextSnapshot | undefined;
   destroy(): void;
   handshake(): RuntimeDebugHandshake;
   history(): RuntimeDebugEvent[];

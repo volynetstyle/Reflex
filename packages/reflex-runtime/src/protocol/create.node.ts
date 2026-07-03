@@ -1,15 +1,13 @@
-import type {
-  ConsumerNode,
-  ProducerNode,
-  WatcherCleanup,
-  WatcherNode,
-} from "../kernel";
 import {
   CONSUMER_INITIAL_STATE,
   PRODUCER_INITIAL_STATE,
   ReactiveNode,
   WATCHER_INITIAL_STATE,
-} from "../kernel";
+  type ConsumerNode,
+  type ProducerNode,
+  type WatcherCleanup,
+  type WatcherNode,
+} from "@runtime/kernel";
 
 /**
  * Callback function for a reactive effect (watcher).

@@ -1,5 +1,8 @@
-import { compare } from "../../../protocol";
-import { profileRuntimeCounter } from "../../../profiling";
+import { defaultContext } from "@runtime/kernel/config";
+import {
+  enterConsumerTracking,
+  restoreConsumerTracking,
+} from "@runtime/kernel/state";
 import {
   devAssertExecutableNode,
   devAssertRefreshEdge,
@@ -7,26 +10,26 @@ import {
   devRecordComputeFinish,
   devRecordComputeStart,
   devRecordRecompute,
-} from "../../dev";
+} from "@runtime/kernel/dev";
 import {
   enterRuntimePhase,
   leaveRuntimePhase,
   RuntimePhase,
-} from "../../execution";
-import { cleanupUnvisitedSources } from "../../shape/tracking";
-import {
-  beginConsumerTracking,
-  restoreConsumer,
-  defaultContext,
-} from "../../context";
+} from "@runtime/kernel/execution";
 import {
   Computing,
   DIRTY_STATE,
   Visited,
   type ReactiveEdge,
   type ReactiveNode,
-} from "../../shape";
-import { push_iterator_once, push_iterator_once_skipping } from "../first";
+} from "@runtime/kernel/shape";
+import { cleanupUnvisitedSources } from "@runtime/kernel/shape/tracking";
+import {
+  push_iterator_once,
+  push_iterator_once_skipping,
+} from "@runtime/kernel/stages/first";
+import { profileRuntimeCounter } from "@runtime/profiling";
+import { compare } from "@runtime/protocol";
 
 /**
  * Advance to next value
@@ -51,7 +54,7 @@ function advanceCore(
   const computingState = (node.state & ~Visited) | Computing;
   node.state = computingState;
 
-  const prevActive = beginConsumerTracking(node);
+  const prevActive = enterConsumerTracking(node);
 
   if (__DEV__) devRecordComputeStart(node, defaultContext);
 
@@ -62,7 +65,7 @@ function advanceCore(
 
     next = compute();
   } catch (error) {
-    restoreConsumer(prevActive);
+    restoreConsumerTracking(prevActive);
     node.state = computingState & ~Computing;
 
     if (__DEV__) devRecordComputeError(node, error, defaultContext);
@@ -70,7 +73,7 @@ function advanceCore(
     throw error;
   }
 
-  restoreConsumer(prevActive);
+  restoreConsumerTracking(prevActive);
 
   const resolvedState = computingState & ~(Computing | DIRTY_STATE);
 

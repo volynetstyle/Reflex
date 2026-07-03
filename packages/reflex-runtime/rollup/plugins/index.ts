@@ -5,6 +5,7 @@ import type { Plugin } from "rollup";
 import { createBuildReporter } from "../../../../scripts/rollup-build-reporter.ts";
 import { isProd } from "../targets.ts";
 import type { BuildTarget } from "../types.ts";
+import { inlineKernelRegistersPlugin } from "./inlineKernelRegisters.ts";
 import { safeInlineIIFEPlugin } from "./safeInlineIIFE.ts";
 import { createSwcPlugin } from "./swc.ts";
 import { createTerserPlugin } from "./terser.ts";
@@ -36,7 +37,10 @@ export function createPlugins(target: BuildTarget): Plugin[] {
 
   pushIfPresent(plugins, createSwcPlugin(target));
 
-  if (isProd(target)) plugins.push(safeInlineIIFEPlugin());
+  if (isProd(target)) {
+    plugins.push(inlineKernelRegistersPlugin());
+    plugins.push(safeInlineIIFEPlugin());
+  }
 
   pushIfPresent(plugins, createTerserPlugin(target));
   plugins.push(validateFinalChunkPlugin());

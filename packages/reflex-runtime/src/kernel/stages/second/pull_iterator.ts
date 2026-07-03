@@ -1,21 +1,26 @@
-import {
-  noteShouldRecomputeStackUsage,
-  readRuntimeWalkerStackStats,
-  STACK_TRIM_MIN_CAPACITY,
-} from "../stackStats";
-import { devAssertRefreshEdge } from "../../dev";
-import {
-  isRuntimeProfilingEnabled,
-  profileRuntimeCounter,
-  profileRuntimePullPath,
-} from "../../../profiling";
-import type { ReactiveEdge, ReactiveNode } from "../../shape";
-import { Changed, Invalid } from "../../shape";
+import { devAssertRefreshEdge } from "@runtime/kernel/dev";
 import {
   enterRuntimePhase,
   leaveRuntimePhase,
   RuntimePhase,
-} from "../../execution";
+} from "@runtime/kernel/execution";
+import {
+  Changed,
+  Invalid,
+  type ReactiveEdge,
+  type ReactiveNode,
+} from "@runtime/kernel/shape";
+import {
+  noteShouldRecomputeStackUsage,
+  readRuntimeWalkerStackStats,
+  STACK_TRIM_MIN_CAPACITY,
+} from "@runtime/kernel/stages/stackStats";
+import {
+  isRuntimeProfilingEnabled,
+  profileRuntimeCounter,
+  profileRuntimePullPath,
+} from "@runtime/profiling";
+
 import { advance } from "./advance";
 
 const stack: ReactiveEdge[] = [];

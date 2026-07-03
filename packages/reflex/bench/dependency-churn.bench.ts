@@ -8,7 +8,7 @@ import {
   readConsumerEager,
   readConsumerLazy,
   readProducer,
-  setRuntimeContextOptions,
+  configureRuntimeContext,
   writeProducer,
   type ReactiveEdge,
   type ReactiveNode,
@@ -344,14 +344,14 @@ function withSlowPathScanProfiling<T>(
   stats: SlowPathScanStats,
   fn: () => T,
 ): T {
-  setRuntimeContextOptions({
+  configureRuntimeContext({
     readTrackingStrategy: createSlowPathScanStrategy(stats),
   });
 
   try {
     return fn();
   } finally {
-    setRuntimeContextOptions({
+    configureRuntimeContext({
       readTrackingStrategy: DEFAULT_READ_TRACKING_STRATEGY,
     });
   }

@@ -1,5 +1,4 @@
-import type { ReactiveNode } from "../kernel";
-import { currentConsumer, Watcher } from "../kernel";
+import { currentConsumer, Watcher, type ReactiveNode } from "@runtime/kernel";
 
 export function getCurrentComputedInternal(): ReactiveNode | undefined {
   const node = currentConsumer;

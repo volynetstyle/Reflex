@@ -75,11 +75,10 @@ ConsumerReadMode                    // Enum: { lazy, eager }
 ### Execution Hooks
 
 ```ts
-setHooks(hooks)                     // Install host hooks on the active runtime context
-setRuntimeHooks(onInvalidated, onSettled) // Install runtime-owned hooks
-saveContext()                       // Snapshot runtime-global context state
-restoreContext(snapshot)            // Restore a saved runtime-global context state
-resetState()                        // Clear runtime-global tracking state
+configureRuntimeContext(options)    // Configure hooks and tracking on the active context
+snapshotRuntimeContext()            // Snapshot the active runtime context
+restoreRuntimeContextSnapshot(ctx, snapshot) // Restore a context snapshot
+resetRuntimeContext(ctx)            // Reset a runtime context
 ```
 
 ### Types
@@ -567,7 +566,7 @@ These invariants define the semantic contract:
    Once disposed, a node never participates in graph operations.
 
 6. **Hook wiring remains stable across calls unless explicitly replaced.**
-   Host hooks change only through `setHooks()` / `setRuntimeHooks()`.
+   Host hooks change only through `configureRuntimeContext()`.
 
 ---
 

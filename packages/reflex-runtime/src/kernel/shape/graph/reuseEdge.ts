@@ -1,6 +1,7 @@
-import type { ReactiveEdge } from "../edge";
-import type ReactiveNode from "../node";
-import { profileRuntimeCounter } from "../../../profiling";
+import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
+import type ReactiveNode from "@runtime/kernel/shape/node";
+import { profileRuntimeCounter } from "@runtime/profiling";
+
 import {
   moveIncomingEdgeAfterUnchecked,
   moveLastIncomingEdgeAfterEdgeUnchecked,

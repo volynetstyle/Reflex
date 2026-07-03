@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   Changed,
-  resetState,
+  resetRuntimeContext,
   Scheduled,
   setPropagationScopeDepth,
 } from "@volynets/reflex-runtime";
@@ -28,7 +27,7 @@ function createNode(fn: () => void = (): void => {}): TestNode {
 describe("createEffectScheduler", () => {
   beforeEach(() => {
     calls = [];
-    resetState();
+    resetRuntimeContext();
     setPropagationScopeDepth(0);
   });
 

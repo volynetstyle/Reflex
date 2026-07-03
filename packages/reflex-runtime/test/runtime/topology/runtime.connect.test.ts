@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   ReactiveNode,
-  restoreContext,
-  saveContext,
-  setRuntimeContextOptions,
+  getActiveRuntimeContext,
+  restoreRuntimeContextSnapshot,
+  snapshotRuntimeContext,
+  configureRuntimeContext,
 } from "../../runtime.test_utils";
 import type { ReactiveNodeState } from "../../../src/kernel";
 import {
@@ -16,7 +17,7 @@ import {
   moveMiddleIncomingEdgeAfterEdgeUnchecked,
   moveNonHeadIncomingEdgeToFrontUnchecked,
   reuseIncomingEdgeFromSuffixOrCreate,
-  setTrackingEpoch,
+  keepNewestTrackingEpoch,
   trackRead,
   unlinkEdge,
 } from "../../../src/kernel";
@@ -259,13 +260,7 @@ describe("Reactive runtime - edge wiring", () => {
     moveIncomingEdgeAfterUnchecked(graph.target, graph.cb, graph.cb);
     expectIncomingEdges(graph.target, [graph.ab, graph.bb, graph.cb, graph.db]);
 
-    expectGraphIntegrity([
-      graph.a,
-      graph.b,
-      graph.c,
-      graph.d,
-      graph.target,
-    ]);
+    expectGraphIntegrity([graph.a, graph.b, graph.c, graph.d, graph.target]);
   });
 
   it("handles tiny suffix edge reuse before the execution-context fallback seam", () => {
@@ -283,8 +278,8 @@ describe("Reactive runtime - edge wiring", () => {
     const ab = linkEdge(a, target);
     const bb = linkEdge(b, target);
     const cb = linkEdge(c, target);
-    const snapshot = saveContext();
-    setRuntimeContextOptions({
+    const snapshot = snapshotRuntimeContext();
+    configureRuntimeContext({
       readTrackingStrategy(source, consumer, prev, nextExpected) {
         calls.push({ source, consumer, prev, nextExpected });
         return reuseIncomingEdgeFromSuffixOrCreate(
@@ -304,7 +299,7 @@ describe("Reactive runtime - edge wiring", () => {
     expecttailIn(target, cb);
     expectIncomingEdges(target, [ab, cb, bb]);
     expectGraphIntegrity([a, b, c, target]);
-    restoreContext(snapshot);
+    restoreRuntimeContextSnapshot(getActiveRuntimeContext(), snapshot);
   });
 
   it("routes full fallback edge reuse through the execution-context seam", () => {
@@ -328,8 +323,8 @@ describe("Reactive runtime - edge wiring", () => {
     const db = linkEdge(d, target);
     const eb = linkEdge(e, target);
     const fb = linkEdge(f, target);
-    const snapshot = saveContext();
-    setRuntimeContextOptions({
+    const snapshot = snapshotRuntimeContext();
+    configureRuntimeContext({
       readTrackingStrategy(source, consumer, prev, nextExpected) {
         calls.push({ source, consumer, prev, nextExpected });
         return reuseIncomingEdgeFromSuffixOrCreate(
@@ -354,7 +349,7 @@ describe("Reactive runtime - edge wiring", () => {
     expecttailIn(target, eb);
     expectIncomingEdges(target, [ab, eb, bb, cb, db, fb]);
     expectGraphIntegrity([a, b, c, d, e, f, target]);
-    restoreContext(snapshot);
+    restoreRuntimeContextSnapshot(getActiveRuntimeContext(), snapshot);
   });
 
   it("reuses the incoming tail before the execution-context fallback seam", () => {
@@ -368,13 +363,13 @@ describe("Reactive runtime - edge wiring", () => {
       prev: ReactiveEdge | null;
       nextExpected: ReactiveEdge | null;
     }> = [];
-    const snapshot = saveContext();
+    const snapshot = snapshotRuntimeContext();
 
     const ab = linkEdge(a, target);
     const bb = linkEdge(b, target);
     const cb = linkEdge(c, target);
 
-    setRuntimeContextOptions({
+    configureRuntimeContext({
       readTrackingStrategy(source, consumer, prev, nextExpected) {
         calls.push({ source, consumer, prev, nextExpected });
         return reuseIncomingEdgeFromSuffixOrCreate(
@@ -393,7 +388,7 @@ describe("Reactive runtime - edge wiring", () => {
     expecttailIn(target, cb);
     expectIncomingEdges(target, [ab, cb, bb]);
     expectGraphIntegrity([a, b, c, target]);
-    restoreContext(snapshot);
+    restoreRuntimeContextSnapshot(getActiveRuntimeContext(), snapshot);
   });
 
   it("keeps small stale suffixes reusable after a suffix miss", () => {
@@ -489,9 +484,9 @@ describe("Reactive runtime - edge wiring", () => {
       prev: ReactiveEdge | null;
       nextExpected: ReactiveEdge | null;
     }> = [];
-    const snapshot = saveContext();
+    const snapshot = snapshotRuntimeContext();
 
-    setRuntimeContextOptions({
+    configureRuntimeContext({
       readTrackingStrategy(source, consumer, prev, nextExpected) {
         calls.push({ source, consumer, prev, nextExpected });
         return reuseIncomingEdgeFromSuffixOrCreate(
@@ -507,7 +502,7 @@ describe("Reactive runtime - edge wiring", () => {
     const bb = linkEdge(b, target, ab, 1);
 
     target.tailIn = ab;
-    setTrackingEpoch(2);
+    keepNewestTrackingEpoch(2);
 
     trackRead(b, target);
     trackRead(a, target);
@@ -520,25 +515,25 @@ describe("Reactive runtime - edge wiring", () => {
     expectOutgoingEdges(b, [bb]);
     expectGraphIntegrity([a, b, target]);
 
-    restoreContext(snapshot);
+    restoreRuntimeContextSnapshot(getActiveRuntimeContext(), snapshot);
   });
 
   it("does not roll back tracking stamps when restoring context", () => {
     const a = createNode(Producer);
     const target = createNode(Consumer);
-    const snapshot = saveContext();
+    const snapshot = snapshotRuntimeContext();
 
-    setTrackingEpoch(1);
-    const staleSnapshot = saveContext();
+    keepNewestTrackingEpoch(1);
+    const staleSnapshot = snapshotRuntimeContext();
     const edge = linkEdge(a, target, null, 1);
-    setTrackingEpoch(2);
-    restoreContext(staleSnapshot);
+    keepNewestTrackingEpoch(2);
+    restoreRuntimeContextSnapshot(getActiveRuntimeContext(), staleSnapshot);
     target.tailIn = null;
 
     trackRead(a, target);
 
     expecttailIn(target, edge);
     expectIncomingEdges(target, [edge]);
-    restoreContext(snapshot);
+    restoreRuntimeContextSnapshot(getActiveRuntimeContext(), snapshot);
   });
 });

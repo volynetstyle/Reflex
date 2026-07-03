@@ -1,11 +1,22 @@
 import {
-  currentConsumer,
-  propagationScopeDepth,
   defaultContext,
   type RuntimeDebugContext,
-} from "../kernel/context";
-import type { ReactiveEdge, ReactiveNode } from "../kernel/shape";
-import { Changed,  Consumer, DIRTY_STATE, Invalid, Producer, Visited, Scheduled, Computing, Watcher } from "../kernel/shape";
+} from "@runtime/kernel/config";
+import { currentConsumer, propagationScopeDepth } from "@runtime/kernel/state";
+import {
+  Changed,
+  Consumer,
+  DIRTY_STATE,
+  Invalid,
+  Producer,
+  Visited,
+  Scheduled,
+  Computing,
+  Watcher,
+  type ReactiveEdge,
+  type ReactiveNode,
+} from "@runtime/kernel/shape";
+
 import type {
   RuntimeDebugContextSnapshot,
   RuntimeDebugEvent,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getCurrentConsumer } from "@volynets/reflex-runtime";
+import { currentConsumer } from "@volynets/reflex-runtime";
 import { computed, createRuntime, effect, signal } from "./reflex.test_utils";
 
 describe("Reactive system - safety and robustness", () => {
@@ -13,9 +13,9 @@ describe("Reactive system - safety and robustness", () => {
     const stable = computed(() => source() + 1);
 
     expect(() => boom()).toThrow("boom");
-    expect(getCurrentConsumer()).toBe(null);
+    expect(currentConsumer).toBe(null);
     expect(stable()).toBe(2);
-    expect(getCurrentConsumer()).toBe(null);
+    expect(currentConsumer).toBe(null);
   });
 
   it("keeps other computeds usable after one compute throws", () => {

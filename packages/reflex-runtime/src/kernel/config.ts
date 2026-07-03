@@ -1,5 +1,6 @@
-import { recordDebugEvent } from "../debug/debug.runtime";
-import { profileRuntimeCounter } from "../profiling";
+import { recordDebugEvent } from "@runtime/debug/debug.runtime";
+import { profileRuntimeCounter } from "@runtime/profiling";
+
 import {
   devAssertRuntimeHookDidNotReenter,
   enterRuntimeHook,
@@ -35,18 +36,6 @@ export const DEFAULT_READ_TRACKING_STRATEGY: ReadTrackingStrategy =
 export let readTrackingStrategy: ReadTrackingStrategy =
   DEFAULT_READ_TRACKING_STRATEGY;
 
-export function setReadTrackingStrategy(
-  strategy: ReadTrackingStrategy | null | undefined,
-): void {
-  readTrackingStrategy = isFunction<ReadTrackingStrategy>(strategy)
-    ? strategy
-    : DEFAULT_READ_TRACKING_STRATEGY;
-}
-
-export function resetReadTrackingStrategy(): void {
-  readTrackingStrategy = DEFAULT_READ_TRACKING_STRATEGY;
-}
-
 // #endregion
 
 // #region Runtime hooks
@@ -67,69 +56,6 @@ export let sinkInvalidatedHook: SinkInvalidatedHook = undefined;
 export let reactiveSettledHook: ReactiveSettledHook = undefined;
 export let effectCleanupHook: EffectCleanupHook = undefined;
 
-export function setSinkInvalidatedHook(
-  hook: SinkInvalidatedHook = undefined,
-): void {
-  sinkInvalidatedHook = isFunction<SinkInvalidatedHook>(hook)
-    ? hook
-    : undefined;
-}
-
-export function setReactiveSettledHook(
-  hook: ReactiveSettledHook = undefined,
-): void {
-  reactiveSettledHook = isFunction<ReactiveSettledHook>(hook)
-    ? hook
-    : undefined;
-}
-
-export function setEffectCleanupHook(
-  hook: EffectCleanupHook = undefined,
-): void {
-  effectCleanupHook = isFunction<EffectCleanupHook>(hook) ? hook : undefined;
-}
-
-export function getReactiveSettledHook(): ReactiveSettledHook {
-  return reactiveSettledHook;
-}
-
-export function getEffectCleanupHook(): EffectCleanupHook {
-  return effectCleanupHook;
-}
-
-export function setRuntimeHooks(hooks: RuntimeHooks = {}): void {
-  sinkInvalidatedHook = ownHook<SinkInvalidatedHook>(
-    hooks,
-    "sinkInvalidatedDispatcher",
-  );
-
-  reactiveSettledHook = ownHook<ReactiveSettledHook>(
-    hooks,
-    "reactiveSettledDispatcher",
-  );
-
-  effectCleanupHook = ownHook<EffectCleanupHook>(
-    hooks,
-    "effectCleanupRegistrar",
-  );
-}
-
-export const setHostHooks = setRuntimeHooks;
-
-export function setInternalHooks(
-  sinkInvalidated: SinkInvalidatedHook = undefined,
-  reactiveSettled: ReactiveSettledHook = undefined,
-): void {
-  setSinkInvalidatedHook(sinkInvalidated);
-  setReactiveSettledHook(reactiveSettled);
-}
-
-export function resetRuntimeHooks(): void {
-  sinkInvalidatedHook = undefined;
-  reactiveSettledHook = undefined;
-  effectCleanupHook = undefined;
-}
-
 // #endregion
 
 // #region Runtime configuration
@@ -143,19 +69,6 @@ export interface RuntimeConfiguration {
 
 export interface RuntimeConfigurationOptions {
   readTrackingStrategy?: ReadTrackingStrategy;
-}
-
-export function configureRuntime(
-  options: RuntimeConfigurationOptions = {},
-): void {
-  if ("readTrackingStrategy" in options) {
-    setReadTrackingStrategy(options.readTrackingStrategy);
-  }
-}
-
-export function resetRuntimeConfiguration(): void {
-  resetReadTrackingStrategy();
-  resetRuntimeHooks();
 }
 
 export function saveRuntimeConfiguration(): RuntimeConfiguration {
@@ -239,25 +152,6 @@ export function emitReactiveSettled(): void {
   } finally {
     leaveRuntimeHook();
   }
-}
-
-// #endregion
-
-// #region Helpers
-
-function isFunction<T>(value: unknown): value is T {
-  return typeof value === "function";
-}
-
-function ownHook<T>(
-  hooks: RuntimeHooks,
-  name: keyof RuntimeHooks,
-): T | undefined {
-  return Object.prototype.hasOwnProperty.call(hooks, name)
-    ? isFunction<T>(hooks[name])
-      ? hooks[name]
-      : undefined
-    : undefined;
 }
 
 // #endregion

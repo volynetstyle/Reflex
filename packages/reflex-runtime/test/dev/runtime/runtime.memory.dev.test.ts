@@ -4,7 +4,7 @@ import { subtle } from "../../../src/debug";
 import {
   createConsumer,
   createProducer,
-  resetState,
+  resetRuntimeContext,
 } from "../../runtime.test_utils";
 
 /** Covers dev-only memory guardrails for debug history and walker stack stats. */
@@ -12,7 +12,7 @@ describe.skipIf(!subtle.enabled)(
   "Reactive runtime - dev memory guardrails",
   () => {
     it("returns should-recompute stack capacity to the dev floor after a deep pull", () => {
-      resetState();
+      resetRuntimeContext();
       subtle.resetStackStats();
 
       const source = createProducer(0);
@@ -35,7 +35,7 @@ describe.skipIf(!subtle.enabled)(
     });
 
     it("keeps debug history bounded under sustained runtime events", () => {
-      resetState();
+      resetRuntimeContext();
       subtle.configure({ historyLimit: 32 });
       subtle.clearHistory();
 

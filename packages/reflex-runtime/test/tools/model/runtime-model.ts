@@ -1,7 +1,7 @@
 import { expect } from "vitest";
 import {
   currentConsumer,
-  getPropagationScopeDepth,
+  propagationScopeDepth,
   readConsumer,
   readProducer,
   writeProducer,
@@ -83,7 +83,7 @@ export function expectRuntimeSectionHealthy(
     );
   }
 
-  expect(getPropagationScopeDepth()).toBe(0);
+  expect(propagationScopeDepth).toBe(0);
   expect(currentConsumer).toBeNull();
 }
 

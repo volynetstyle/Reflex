@@ -6,9 +6,9 @@ import {
   hasPendingReactiveSettled,
   leaveReactiveBatch,
   runWithRuntimeContext,
-  resetState,
-  setActiveRuntimeContext,
-  setRuntimeHooks,
+  resetRuntimeContext,
+  switchRuntimeContext,
+  configureRuntimeContext,
   untracked,
 } from "@volynets/reflex-runtime/internal";
 import type {
@@ -168,20 +168,22 @@ export function createRuntime({
   };
   const dispatcher = createEventDispatcher(runtimeBatch);
 
-  resetState(execution);
+  resetRuntimeContext(execution);
 
-  setRuntimeHooks(execution, {
-    effectCleanupRegistrar: hooks?.effectCleanupRegistrar,
-    sinkInvalidatedDispatcher(node) {
-      scheduler.enqueue(node);
-      hooks?.sinkInvalidatedDispatcher?.(node);
-    },
-    reactiveSettledDispatcher() {
-      emitReactiveSettled();
+  configureRuntimeContext(execution, {
+    hooks: {
+      effectCleanupRegistrar: hooks?.effectCleanupRegistrar,
+      sinkInvalidatedDispatcher(node) {
+        scheduler.enqueue(node);
+        hooks?.sinkInvalidatedDispatcher?.(node);
+      },
+      reactiveSettledDispatcher() {
+        emitReactiveSettled();
+      },
     },
   });
 
-  setActiveRuntimeContext(execution);
+  switchRuntimeContext(execution);
   // activeContext = ctx;
   batch = runBatch;
   activeEvent = function <T>() {

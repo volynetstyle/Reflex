@@ -1,22 +1,24 @@
-import type { ConsumerNode } from "../kernel/shape";
-import {
-  defaultContext,
-  currentConsumer,
-  trackingEpoch,
-} from "../kernel/context";
-import { resolveTrackedRead } from "../kernel/shape/tracking";
-import { Changed, DIRTY_STATE, Visited } from "../kernel/shape";
+import { defaultContext } from "@runtime/kernel/config";
+import { currentConsumer, trackingEpoch } from "@runtime/kernel/state";
 import {
   devAssertConsumerCanStabilize,
   devRecordReadConsumer,
-} from "../kernel/dev";
-import { devAssertNoRuntimeHookReactiveRead } from "../kernel/execution";
-import { advance } from "../kernel/stages/second/advance";
-import { pull_iterator } from "../kernel/stages/second/pull_iterator";
+} from "@runtime/kernel/dev";
+import { devAssertNoRuntimeHookReactiveRead } from "@runtime/kernel/execution";
+import {
+  Changed,
+  DIRTY_STATE,
+  Visited,
+  type ConsumerNode,
+} from "@runtime/kernel/shape";
+import { resolveTrackedRead } from "@runtime/kernel/shape/tracking";
+import { advance } from "@runtime/kernel/stages/second/advance";
+import { pull_iterator } from "@runtime/kernel/stages/second/pull_iterator";
 import {
   profileRuntimeCounter,
   profileRuntimeReadConsumerPath,
-} from "../profiling";
+} from "@runtime/profiling";
+
 import { LAZY, type ConsumerReadModeValue } from "./utils/constants";
 
 /**

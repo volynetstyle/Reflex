@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DIRTY_STATE,
   disposeWatcher,
-  getPropagationScopeDepth,
+  propagationScopeDepth,
   emitSettledIfIdle,
   readConsumer,
   readProducer,
@@ -76,7 +76,7 @@ describe("Reactive runtime - hooks and resilience", () => {
 
     writeProducer(source, 2);
 
-    expect(getPropagationScopeDepth()).toBe(0);
+    expect(propagationScopeDepth).toBe(0);
     expect(settled).toHaveBeenCalledTimes(1);
   });
 

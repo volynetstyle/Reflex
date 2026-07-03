@@ -2,9 +2,9 @@ import { bench, describe } from "vitest";
 import {
   readConsumer,
   readProducer,
-  resetState,
+  resetRuntimeContext,
   runWatcher,
-  setRuntimeHooks,
+  configureRuntimeContext,
   writeProducer,
   type ReactiveNode,
 } from "@volynets/reflex-runtime/internal";
@@ -25,7 +25,11 @@ const WRITE_COUNT = 16;
 const WARMUP_ITERATIONS = 80;
 const ITERATIONS = 600;
 
-type SchedulerVariant = "runtime-direct" | "scheduler-flush" | "scheduler-eager" | "scheduler-sab";
+type SchedulerVariant =
+  | "runtime-direct"
+  | "scheduler-flush"
+  | "scheduler-eager"
+  | "scheduler-sab";
 
 interface DrainController {
   readonly label: SchedulerVariant;
@@ -50,9 +54,11 @@ function createDirectController(): DrainController {
   const queue: ReactiveNode[] = [];
   let head = 0;
 
-  setRuntimeHooks({
-    sinkInvalidatedDispatcher(node) {
-      queue.push(node);
+  configureRuntimeContext({
+    hooks: {
+      sinkInvalidatedDispatcher(node) {
+        queue.push(node);
+      },
     },
   });
 
@@ -73,7 +79,7 @@ function createDirectController(): DrainController {
     },
     dispose() {
       queue.length = 0;
-      setRuntimeHooks({});
+      configureRuntimeContext({ hooks: {} });
     },
   };
 }
@@ -84,12 +90,14 @@ function createSchedulerController(
 ): DrainController {
   const scheduler: EffectScheduler = createEffectScheduler(mode);
 
-  setRuntimeHooks({
-    sinkInvalidatedDispatcher(node) {
-      scheduler.enqueue(node);
-    },
-    reactiveSettledDispatcher() {
-      scheduler.runtimeNotifySettled?.();
+  configureRuntimeContext({
+    hooks: {
+      sinkInvalidatedDispatcher(node) {
+        scheduler.enqueue(node);
+      },
+      reactiveSettledDispatcher() {
+        scheduler.runtimeNotifySettled?.();
+      },
     },
   });
 
@@ -103,7 +111,7 @@ function createSchedulerController(
     },
     dispose() {
       scheduler.reset();
-      setRuntimeHooks({});
+      configureRuntimeContext({ hooks: {} });
     },
   };
 }
@@ -113,17 +121,26 @@ function createController(variant: SchedulerVariant): DrainController {
     case "runtime-direct":
       return createDirectController();
     case "scheduler-flush":
-      return createSchedulerController("scheduler-flush", EffectSchedulerMode.Flush);
+      return createSchedulerController(
+        "scheduler-flush",
+        EffectSchedulerMode.Flush,
+      );
     case "scheduler-eager":
-      return createSchedulerController("scheduler-eager", EffectSchedulerMode.Eager);
+      return createSchedulerController(
+        "scheduler-eager",
+        EffectSchedulerMode.Eager,
+      );
     case "scheduler-sab":
-      return createSchedulerController("scheduler-sab", EffectSchedulerMode.SAB);
+      return createSchedulerController(
+        "scheduler-sab",
+        EffectSchedulerMode.SAB,
+      );
   }
 }
 
 function setupRuntime(variant: SchedulerVariant): DrainController {
-  resetState();
-  setRuntimeHooks({});
+  resetRuntimeContext();
+  configureRuntimeContext({ hooks: {} });
   checksum = 0;
   return createController(variant);
 }

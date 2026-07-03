@@ -6,6 +6,7 @@
     "declaration": false,
     "declarationMap": false,
     "paths": {
+      "@runtime/*": ["../reflex-runtime/src/*"],
       "@reflex/runtime": [
         "../@reflex/runtime/src/index.ts",
         "../@reflex/runtime/dist/globals.d.ts"
@@ -19,5 +20,6 @@
         "../reflex-runtime/dist/esm/internal/index.d.ts"
       ]
     }
-  }
+  },
+  "include": ["src", "../reflex-runtime/src/globals.d.ts"]
 }

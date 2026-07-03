@@ -91,7 +91,7 @@ export function effectUnscheduled(
 export function effect(fn: WatcherFn): Destructor {
   devassertEffectFn(fn, "effect");
 
-  const node = createWatcher(wrapEffectFn(fn, "effect")) as any;
+  const node = createWatcher(wrapEffectFn(fn, "effect"));
   const run = watcher.run;
   const dispose = watcher.dispose;
 

@@ -1,6 +1,12 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@runtime": fileURLToPath(new URL("./src", import.meta.url)),
+    },
+  },
   define: {
     __DEV__: false,
     __PROFILE__: false,
@@ -11,7 +17,7 @@ export default defineConfig({
     __PROD__: false,
   },
   build: {
-    lib: false, 
+    lib: false,
   },
   test: {
     environment: "node",

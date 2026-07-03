@@ -1,26 +1,31 @@
-import type { WatcherCleanup, WatcherNode } from "../shape";
-import { DIRTY_STATE, disposeNode, Changed, Invalid, Visited } from "../shape";
-import { pull_iterator } from "../stages/second/pull_iterator";
-import { executeKnownNodeComputation } from "./watcher.execution";
-import {
-  currentConsumer,
-  defaultContext,
-  setCurrentConsumer,
-} from "../context";
-import { profileRuntimeCounter } from "../../profiling";
+import { defaultContext } from "@runtime/kernel/config";
+import { currentConsumer, setCurrentConsumer } from "@runtime/kernel/state";
 import {
   devRecordWatcherCleanup,
   devRecordWatcherDispose,
   devRecordWatcherFinish,
   devRecordWatcherSkip,
   devRecordWatcherStart,
-} from "../dev";
+} from "@runtime/kernel/dev";
 import {
   devAssertNoRuntimeHookWatcherExecution,
   enterRuntimePhase,
   leaveRuntimePhase,
   RuntimePhase,
-} from "../execution";
+} from "@runtime/kernel/execution";
+import {
+  DIRTY_STATE,
+  disposeNode,
+  Changed,
+  Invalid,
+  Visited,
+  type WatcherCleanup,
+  type WatcherNode,
+} from "@runtime/kernel/shape";
+import { pull_iterator } from "@runtime/kernel/stages/second/pull_iterator";
+import { profileRuntimeCounter } from "@runtime/profiling";
+
+import { executeKnownNodeComputation } from "./watcher.execution";
 
 const FORCE_STABILIZATION_STATE = Changed | Visited;
 

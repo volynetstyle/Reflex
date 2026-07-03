@@ -1,6 +1,6 @@
 {
   "name": "@volynets/reflex",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "type": "module",
   "description": "Public Reflex facade with a connected runtime",
   "license": "MIT",
@@ -52,6 +52,7 @@
     "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "pnpm clean && pnpm build:ts && pnpm build:types && pnpm build:npm",
     "build:all": "node ../../scripts/build-chain.mjs @volynets/reflex-runtime @volynets/reflex",
+    "prebuild:ts": "pnpm --filter @volynets/reflex-runtime build:ts",
     "build:ts": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
     "build:types": "rollup --silent -c rollup.dts.config.ts --configPlugin @rollup/plugin-swc && node ../../scripts/write-globals-dts.mjs . && node ./scripts/write-subpath-dts.mjs .",
     "build:npm": "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc",

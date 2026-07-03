@@ -1,28 +1,56 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as publicRuntime from "../../../src";
 import {
   createRuntimeContext,
-  currentConsumer,
-  emitSettledIfIdle,
-  emitSinkInvalidated,
-  enterPropagationScope,
   getActiveRuntimeContext,
-  leavePropagationScope,
-  propagationScopeDepth,
-  restoreRuntimeContext,
+  restoreRuntimeContextSnapshot,
   runWithRuntimeContext,
-  saveRuntimeContext,
-  setActiveRuntimeContext,
-  setCurrentConsumer,
-  setRuntimeHooks,
-  setTrackingEpoch,
-  trackingEpoch,
+  snapshotRuntimeContext,
+  configureRuntimeContext,
 } from "../../../src/kernel/context";
-import { resetState } from "../../../src/kernel/context";
+import { switchRuntimeContext } from "../../../src/kernel/context-switch";
+import { emitSinkInvalidated } from "../../../src/kernel/config";
+import {
+  emitSettledIfIdle,
+  enterPropagationScope,
+  leavePropagationScope,
+} from "../../../src/kernel/propagation-scope";
+import {
+  currentConsumer,
+  keepNewestTrackingEpoch,
+  propagationScopeDepth,
+  setCurrentConsumer,
+  trackingEpoch,
+} from "../../../src/kernel/state";
+import { resetRuntimeContext } from "../../../src/kernel/context";
 import { createConsumer, resetRuntime } from "../../runtime.test_utils";
 
 describe("execution state", () => {
   beforeEach(() => {
     resetRuntime();
+  });
+
+  it("exposes context intent without exposing runtime machinery", () => {
+    expect(publicRuntime).toMatchObject({
+      configureRuntimeContext: expect.any(Function),
+      createRuntimeContext: expect.any(Function),
+      getActiveRuntimeContext: expect.any(Function),
+      resetRuntimeContext: expect.any(Function),
+      restoreRuntimeContextSnapshot: expect.any(Function),
+      runWithRuntimeContext: expect.any(Function),
+      snapshotRuntimeContext: expect.any(Function),
+    });
+
+    for (const internalName of [
+      "currentConsumer",
+      "enterReactiveBatch",
+      "setCurrentConsumer",
+      "switchRuntimeContext",
+      "syncRuntimeContext",
+      "trackingEpoch",
+    ]) {
+      expect(publicRuntime).not.toHaveProperty(internalName);
+    }
   });
 
   it("restores previous state after runWithExecutionState", () => {
@@ -96,7 +124,9 @@ describe("execution state", () => {
     const order: string[] = [];
     const node = createConsumer(() => 1);
 
-    setRuntimeHooks({ sinkInvalidatedDispatcher: () => order.push("runtime") });
+    configureRuntimeContext({
+      hooks: { sinkInvalidatedDispatcher: () => order.push("runtime") },
+    });
 
     emitSinkInvalidated(node);
 
@@ -106,7 +136,7 @@ describe("execution state", () => {
   it("does not dispatch settled while propagationDepth > 0", () => {
     const settled = vi.fn();
 
-    setRuntimeHooks({ reactiveSettledDispatcher: settled });
+    configureRuntimeContext({ hooks: { reactiveSettledDispatcher: settled } });
     enterPropagationScope();
     emitSettledIfIdle();
 
@@ -117,7 +147,7 @@ describe("execution state", () => {
     const settled = vi.fn();
     const consumer = createConsumer(() => 1);
 
-    setRuntimeHooks({ reactiveSettledDispatcher: settled });
+    configureRuntimeContext({ hooks: { reactiveSettledDispatcher: settled } });
     setCurrentConsumer(consumer);
     emitSettledIfIdle();
 
@@ -127,7 +157,7 @@ describe("execution state", () => {
   it("dispatches settled after leaving outermost propagation", () => {
     const settled = vi.fn();
 
-    setRuntimeHooks({ reactiveSettledDispatcher: settled });
+    configureRuntimeContext({ hooks: { reactiveSettledDispatcher: settled } });
     enterPropagationScope();
     enterPropagationScope();
     leavePropagationScope();
@@ -142,12 +172,12 @@ describe("execution state", () => {
   it("does not rollback trackingVersion on restore", () => {
     const context = createRuntimeContext();
 
-    setActiveRuntimeContext(context);
-    setTrackingEpoch(1);
-    const snapshot = saveRuntimeContext(context);
+    switchRuntimeContext(context);
+    keepNewestTrackingEpoch(1);
+    const snapshot = snapshotRuntimeContext(context);
 
-    setTrackingEpoch(3);
-    restoreRuntimeContext(context, snapshot);
+    keepNewestTrackingEpoch(3);
+    restoreRuntimeContextSnapshot(context, snapshot);
 
     expect(trackingEpoch).toBe(3);
     expect(context.trackingEpoch).toBe(3);
@@ -157,12 +187,12 @@ describe("execution state", () => {
     const context = createRuntimeContext();
     const consumer = createConsumer(() => 1);
 
-    setActiveRuntimeContext(context);
+    switchRuntimeContext(context);
     setCurrentConsumer(consumer);
     enterPropagationScope();
-    setTrackingEpoch(2);
+    keepNewestTrackingEpoch(2);
 
-    resetState(context);
+    resetRuntimeContext(context);
 
     expect(currentConsumer).toBe(null);
     expect(propagationScopeDepth).toBe(0);

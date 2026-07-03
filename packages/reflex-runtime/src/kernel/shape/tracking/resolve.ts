@@ -1,13 +1,14 @@
-import type ReactiveNode from "../node";
-import { devRecordTrackRead } from "../../dev";
-import { linkEdge } from "../graph";
+import { defaultContext, readTrackingStrategy } from "@runtime/kernel/config";
+import { devRecordTrackRead } from "@runtime/kernel/dev";
+import { linkEdge } from "@runtime/kernel/shape/graph";
 import {
   moveLastIncomingEdgeAfterEdgeUnchecked,
   moveLastIncomingEdgeToFrontUnchecked,
   moveTrackedIncomingEdgeAfterCursorUnchecked,
-} from "../graph/edgeList";
-import { defaultContext, readTrackingStrategy } from "../../context";
-import { profileRuntimeCounter } from "../../../profiling";
+} from "@runtime/kernel/shape/graph/edgeList";
+import type ReactiveNode from "@runtime/kernel/shape/node";
+import { profileRuntimeCounter } from "@runtime/profiling";
+
 import {
   hasProducerEdgeInCurrentPassUnchecked,
   PrefixHit,

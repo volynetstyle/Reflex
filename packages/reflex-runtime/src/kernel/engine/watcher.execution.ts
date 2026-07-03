@@ -1,23 +1,27 @@
-import type { ComputeFn, ReactiveNode } from "../shape";
-import { Computing, Visited } from "../shape";
+import { defaultContext } from "@runtime/kernel/config";
 import {
+  advanceTrackingEpoch,
   currentConsumer,
-  nextTrackingEpoch,
-  defaultContext,
   setCurrentConsumer,
-} from "../context";
+} from "@runtime/kernel/state";
 import {
   devAssertExecutableNode,
   devRecordComputeError,
   devRecordComputeFinish,
   devRecordComputeStart,
-} from "../dev";
+} from "@runtime/kernel/dev";
 import {
   enterRuntimePhase,
   leaveRuntimePhase,
   RuntimePhase,
-} from "../execution";
-import { cleanupUnvisitedSources } from "../shape/tracking";
+} from "@runtime/kernel/execution";
+import {
+  Computing,
+  Visited,
+  type ComputeFn,
+  type ReactiveNode,
+} from "@runtime/kernel/shape";
+import { cleanupUnvisitedSources } from "@runtime/kernel/shape/tracking";
 
 export function executeKnownNodeComputation<T>(
   node: ReactiveNode<T>,
@@ -41,7 +45,7 @@ function executeComputation<T>(
 
   node.tailIn = null;
   node.state = (node.state & ~Visited) | Computing | Computing;
-  nextTrackingEpoch();
+  advanceTrackingEpoch();
   setCurrentConsumer(node);
 
   if (__DEV__) devRecordComputeStart(node, defaultContext);

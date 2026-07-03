@@ -1,4 +1,5 @@
-import type ReactiveNode from "../node";
+import type ReactiveNode from "@runtime/kernel/shape/node";
+
 import { unlinkAllSources, unlinkAllSubscribers } from "./sweepEdges";
 
 export function disposeNode(node: ReactiveNode): void {

@@ -1,20 +1,13 @@
 import {
   type RuntimeHostHooks,
-  resetState,
-  saveContext,
-  setHostHooks,
-  setRuntimeContextOptions,
-  setInternalHooks,
+  resetRuntimeContext,
+  configureRuntimeContext,
 } from "../../../src/internal";
 
 /**
  * Reset runtime-global context state, hooks, and options for test isolation.
  */
 export function resetRuntime(hooks: RuntimeHostHooks = {}): void {
-  resetState();
-  setInternalHooks();
-  setHostHooks(hooks);
-  setRuntimeContextOptions({});
+  resetRuntimeContext();
+  configureRuntimeContext({ hooks });
 }
-
-export const saveRuntimeContext = saveContext;

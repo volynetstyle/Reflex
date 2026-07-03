@@ -7,7 +7,7 @@ import {
 import {
   createRenderEffectScheduler,
 } from "../render-effect-scheduler";
-import { createMountedRootStore } from "../root-store";
+import { createRootMountTable } from "../root-store";
 import { DOM_EXECUTION_CONTEXT_BRAND } from "./types";
 import type { DOMExecutionContext } from "./types";
 
@@ -21,7 +21,7 @@ export function createDOMExecutionContext(
     runtime: null,
     options,
     owner: createOwnerContext(),
-    mountedRoots: createMountedRootStore(),
+    mountedRoots: createRootMountTable(),
     renderEffectScheduler: createRenderEffectScheduler((task) => {
       runWithDOMExecutionContext(context, task);
     }),

@@ -3,6 +3,7 @@ import {
   createConsumer,
   createProducer,
   createWatcher,
+  configureRuntimeContext,
   disposeWatcher,
   enterPropagationScope,
   leavePropagationScope,
@@ -10,10 +11,19 @@ import {
   readProducer,
   resetRuntime,
   runWatcher,
-  setInternalHooks,
   writeProducer,
   type ReactiveNode,
+  type RuntimeHooks,
 } from "../runtime.test_utils";
+
+function setInternalHooks(
+  sinkInvalidatedDispatcher: RuntimeHooks["sinkInvalidatedDispatcher"] = undefined,
+  reactiveSettledDispatcher: RuntimeHooks["reactiveSettledDispatcher"] = undefined,
+): void {
+  configureRuntimeContext({
+    hooks: { sinkInvalidatedDispatcher, reactiveSettledDispatcher },
+  });
+}
 
 const WARMUP_ITERATIONS = 100;
 const ITERATIONS = 1_000;

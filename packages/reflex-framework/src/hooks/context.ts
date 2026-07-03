@@ -11,14 +11,14 @@ export interface RenderEffectScheduler {
   schedule(task: () => void, phase?: RenderEffectPhase): () => void;
 }
 
-export const RenderEffectPhase = Object.freeze({
-  BeforeRender: "before-render",
-  Render: "render",
-  AfterRender: "after-render",
-} as const);
-
 export type RenderEffectPhase =
   (typeof RenderEffectPhase)[keyof typeof RenderEffectPhase];
+
+export const RenderEffectPhase = {
+  before: 1 << 0,
+  render: 1 << 1,
+  after: 1 << 2,
+};
 
 export const noopRenderEffectScheduler: RenderEffectScheduler = Object.freeze({
   schedule() {
@@ -44,7 +44,8 @@ function getCurrentHookState(): OwnerHookState {
 }
 
 function getCurrentHookContext(): ComponentHookContext | null {
-  return getCurrentHookState().currentHookContext as ComponentHookContext | null;
+  return getCurrentHookState()
+    .currentHookContext as ComponentHookContext | null;
 }
 
 export function runWithComponentHooks<T>(fn: () => T): T;
@@ -92,10 +93,7 @@ export function assertHookUsage(hookName: string): void {
 
   const hookState = getCurrentHookState();
 
-  if (
-    hookState.componentHookDepth > 0 ||
-    hookState.warnedHooks.has(hookName)
-  ) {
+  if (hookState.componentHookDepth > 0 || hookState.warnedHooks.has(hookName)) {
     return;
   }
 

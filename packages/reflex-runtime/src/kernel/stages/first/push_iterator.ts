@@ -1,18 +1,10 @@
-import { emitSinkInvalidated } from "../../context";
-import {
-  isRuntimeProfilingEnabled,
-  profileRuntimeCounter,
-  profileRuntimePushPath,
-} from "../../../profiling";
-import { defaultContext } from "../../context";
-import { devRecordPropagate } from "../../dev";
+import { defaultContext, emitSinkInvalidated } from "@runtime/kernel/config";
+import { devRecordPropagate } from "@runtime/kernel/dev";
 import {
   enterRuntimePhase,
   leaveRuntimePhase,
   RuntimePhase,
-} from "../../execution";
-import { readRuntimeWalkerStackStats } from "../stackStats";
-import type { ReactiveNode } from "../../shape";
+} from "@runtime/kernel/execution";
 import {
   Changed,
   Computing,
@@ -21,7 +13,14 @@ import {
   Visited,
   Watcher,
   type ReactiveEdge,
-} from "../../shape";
+  type ReactiveNode,
+} from "@runtime/kernel/shape";
+import { readRuntimeWalkerStackStats } from "@runtime/kernel/stages/stackStats";
+import {
+  isRuntimeProfilingEnabled,
+  profileRuntimeCounter,
+  profileRuntimePushPath,
+} from "@runtime/profiling";
 
 const FAST_BLOCK_MASK = DIRTY_STATE | Computing;
 

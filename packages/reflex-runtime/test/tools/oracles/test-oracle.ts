@@ -1,8 +1,8 @@
 import { expect } from "vitest";
 import type { ReactiveNode } from "../../../src/internal";
 import {
-  getCurrentConsumer,
-  getPropagationScopeDepth,
+  currentConsumer,
+  propagationScopeDepth,
 } from "../../../src/internal";
 import type { EventSummary } from "../debug/trace-harness";
 import {
@@ -75,8 +75,8 @@ export function expectGraph(subject: GraphSubject) {
 export function expectRuntime() {
   return {
     toBeSettled(): void {
-      expect(getPropagationScopeDepth()).toBe(0);
-      expect(getCurrentConsumer()).toBeNull();
+      expect(propagationScopeDepth).toBe(0);
+      expect(currentConsumer).toBeNull();
     },
   };
 }

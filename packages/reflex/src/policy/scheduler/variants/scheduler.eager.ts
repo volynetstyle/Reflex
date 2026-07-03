@@ -1,7 +1,4 @@
-import {
-  Scheduled,
-  type ReactiveNode,
-} from "@volynets/reflex-runtime/internal";
+import { type ReactiveNode } from "@volynets/reflex-runtime/internal";
 import { EffectSchedulerMode } from "../scheduler.constants";
 import { hasPendingEffects, isRuntimeInactive } from "../scheduler.context";
 import {

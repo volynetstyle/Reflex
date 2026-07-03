@@ -9,6 +9,10 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: "@runtime",
+        replacement: runtimeRoot,
+      },
+      {
         find: "@volynets/reflex-runtime/internal",
         replacement: resolve(runtimeRoot, "internal/index.ts"),
       },
@@ -25,15 +29,18 @@ export default defineConfig({
   define: {
     __DEV__: false,
     __PROFILE__: false,
+    __TRACKING_ONE_HOP__: true,
+    __TRACKING_TWO_HOP__: true,
+    __TRACKING_LAST_EDGE__: true,
     __TEST__: true,
     __PROD__: false,
   },
   build: {
-    lib: false, 
+    lib: false,
   },
- test: {
+  test: {
     environment: "node",
-    isolate: false,         
+    isolate: false,
     pool: "forks",
     coverage: {
       provider: "v8",

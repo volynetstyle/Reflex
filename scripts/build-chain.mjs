@@ -20,6 +20,7 @@ const packageConfigs = new Map([
       phases: [
         ["clean", cleanPackage],
         ["typescript", runTsc("tsconfig.build.json")],
+        ["aliases", runPackageNodeScript("scripts/rewrite-build-aliases.mjs", [])],
         ["globals", runNodeScript("scripts/write-globals-dts.mjs", ["."])],
         ["bundle", runRollup("rollup.config.ts")],
       ],

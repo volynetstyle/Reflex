@@ -4,12 +4,13 @@ import {
   DIRTY_STATE,
   ReactiveNode,
   ReactiveNodeState,
+  getActiveRuntimeContext,
   readConsumer,
   readProducer,
-  restoreContext,
+  restoreRuntimeContextSnapshot,
   runWatcher,
-  saveContext,
-  setHostHooks,
+  snapshotRuntimeContext,
+  configureRuntimeContext,
   writeProducer,
 } from "../../runtime.test_utils";
 import {
@@ -447,8 +448,7 @@ describe("Reactive runtime - walker invariants", () => {
 
     linkEdge(source, watcher);
 
-        push_iterator_once(source.firstOut);
-
+    push_iterator_once(source.firstOut);
 
     expect(watcher.state).toBe(Watcher | Changed | Visited);
     expect(invalidated).toEqual([watcher]);
@@ -822,10 +822,12 @@ describe("Reactive runtime - walker invariants", () => {
   it("stabilizeDirtyConsumer routes pull-phase invalidations through the caller context and back to default", () => {
     const invalidatedA: ReactiveNode[] = [];
     const invalidatedB: ReactiveNode[] = [];
-    const snapshot = saveContext();
-    setHostHooks({
-      sinkInvalidatedDispatcher(node) {
-        invalidatedA.push(node);
+    const snapshot = snapshotRuntimeContext();
+    configureRuntimeContext({
+      hooks: {
+        sinkInvalidatedDispatcher(node) {
+          invalidatedA.push(node);
+        },
       },
     });
 
@@ -851,10 +853,7 @@ describe("Reactive runtime - walker invariants", () => {
       expect(invalidatedB).toEqual([]);
       expect(invalidatedA).toContain(right);
     } finally {
-      restoreContext(snapshot);
+      restoreRuntimeContextSnapshot(getActiveRuntimeContext(), snapshot);
     }
   });
 });
-
-
-

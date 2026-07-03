@@ -1,5 +1,5 @@
 import {
-  createMountedRootStore as createFrameworkMountedRootStore,
+  createRootMountTable as createFrameworkMountedRootStore,
   type MountedRootStore as FrameworkMountedRootStore,
 } from "@volynets/reflex-framework";
 import type { MountedRenderRange } from "../structure/render-range";
@@ -13,7 +13,7 @@ export type MountedRootStore = FrameworkMountedRootStore<
   MountedRenderRange
 >;
 
-export function createMountedRootStore(): MountedRootStore {
+export function createRootMountTable(): MountedRootStore {
   return createFrameworkMountedRootStore<MountedContainer, MountedRenderRange>(
     "root",
   );

@@ -1,14 +1,17 @@
-import { emitSinkInvalidated } from "../../context";
-import { profileRuntimeCounter } from "../../../profiling";
-import { defaultContext } from "../../context";
-import { devRecordPropagate } from "../../dev";
+import { defaultContext, emitSinkInvalidated } from "@runtime/kernel/config";
+import { devRecordPropagate } from "@runtime/kernel/dev";
 import {
   enterRuntimePhase,
   leaveRuntimePhase,
   RuntimePhase,
-} from "../../execution";
-import type { ReactiveEdge } from "../../shape";
-import { Changed, Invalid, Watcher } from "../../shape";
+} from "@runtime/kernel/execution";
+import {
+  Changed,
+  Invalid,
+  Watcher,
+  type ReactiveEdge,
+} from "@runtime/kernel/shape";
+import { profileRuntimeCounter } from "@runtime/profiling";
 
 function pushIteratorOnceCore(edge: ReactiveEdge | null): void {
   if (__PROFILE__) profileRuntimeCounter("pushOnceCalls");

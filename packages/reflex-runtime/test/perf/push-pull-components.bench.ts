@@ -4,21 +4,39 @@ import {
   createConsumer,
   createProducer,
   createWatcher,
+  configureRuntimeContext,
   enterPropagationScope,
   leavePropagationScope,
   profileRuntime,
   readConsumer,
   readProducer,
   resetRuntime,
-  runWithReactiveBatch,
   runWatcher,
-  setInternalHooks,
   setRuntimeProfilingEnabled,
   writeProducer,
   type ReactiveNode,
   type RuntimeProfileCounters,
   type RuntimeProfileTopologyWalker,
+  type RuntimeHooks,
 } from "../runtime.test_utils";
+
+function runWithReactiveBatch<T>(fn: () => T): T {
+  enterReactiveBatch();
+  try {
+    return fn();
+  } finally {
+    leaveReactiveBatch();
+  }
+}
+
+function setInternalHooks(
+  sinkInvalidatedDispatcher: RuntimeHooks["sinkInvalidatedDispatcher"] = undefined,
+  reactiveSettledDispatcher: RuntimeHooks["reactiveSettledDispatcher"] = undefined,
+): void {
+  configureRuntimeContext({
+    hooks: { sinkInvalidatedDispatcher, reactiveSettledDispatcher },
+  });
+}
 
 const WARMUP_ITERATIONS = 100;
 const ITERATIONS = 1_000;
@@ -113,7 +131,9 @@ function createWideFanout(
       const actual = readConsumer(root);
 
       if (actual !== expected) {
-        throw new Error(`${leafCount}-fanout expected ${expected}, got ${actual}`);
+        throw new Error(
+          `${leafCount}-fanout expected ${expected}, got ${actual}`,
+        );
       }
 
       if (dirtyBeforeStep) {
@@ -652,8 +672,9 @@ function createDependencyPatternChurn(patterns: number[][]): BenchCase {
   resetRuntime();
 
   const selector = createProducer(0);
-  const sources = Array.from({ length: getPatternSourceCount(patterns) }, (_, index) =>
-    createProducer(index),
+  const sources = Array.from(
+    { length: getPatternSourceCount(patterns) },
+    (_, index) => createProducer(index),
   );
   const root = createConsumer(() => {
     const pattern = patterns[readProducer(selector) % patterns.length]!;
@@ -671,7 +692,10 @@ function createDependencyPatternChurn(patterns: number[][]): BenchCase {
   return {
     step(iteration) {
       writeProducer(selector, iteration % patterns.length);
-      writeProducer(sources[iteration % sources.length]!, iteration + sources.length);
+      writeProducer(
+        sources[iteration % sources.length]!,
+        iteration + sources.length,
+      );
       return readConsumer(root);
     },
   };
@@ -731,7 +755,10 @@ function oscillateABPatterns(width: number): number[][] {
 
 function chaoticPatterns(width: number): number[][] {
   return Array.from({ length: width }, (_, step) =>
-    Array.from({ length: width }, (__, index) => (index * 37 + step * 19) % width),
+    Array.from(
+      { length: width },
+      (__, index) => (index * 37 + step * 19) % width,
+    ),
   );
 }
 
@@ -1228,51 +1255,37 @@ function logNormalizedProfileTables(): void {
 
   console.log("\n[bench:runtime] fanout scaling");
   console.table(
-    rows
-      .filter((row) => row.group === "fanout")
-      .map(formatTopologyCostRow),
+    rows.filter((row) => row.group === "fanout").map(formatTopologyCostRow),
   );
 
   console.log("\n[bench:runtime] pull chain depth scaling");
   console.table(
-    rows
-      .filter((row) => row.group === "pull-depth")
-      .map(formatPullDepthRow),
+    rows.filter((row) => row.group === "pull-depth").map(formatPullDepthRow),
   );
 
   console.log("\n[bench:runtime] diamond/layered/shared topology profiles");
   console.table(
-    rows
-      .filter((row) => row.group === "topology")
-      .map(formatTopologyCostRow),
+    rows.filter((row) => row.group === "topology").map(formatTopologyCostRow),
   );
 
   console.log("\n[bench:runtime] cache-locality smoke profiles");
   console.table(
-    rows
-      .filter((row) => row.group === "locality")
-      .map(formatTopologyCostRow),
+    rows.filter((row) => row.group === "locality").map(formatTopologyCostRow),
   );
 
   console.log("\n[bench:runtime] scheduler boundary profiles");
   console.table(
-    rows
-      .filter((row) => row.group === "scheduler")
-      .map(formatSchedulerRow),
+    rows.filter((row) => row.group === "scheduler").map(formatSchedulerRow),
   );
 
   console.log("\n[bench:runtime] dynamic dependency tracking profiles");
   console.table(
-    rows
-      .filter((row) => row.group === "tracking")
-      .map(formatTrackingRow),
+    rows.filter((row) => row.group === "tracking").map(formatTrackingRow),
   );
 
   console.log("\n[bench:runtime] app-like dependency tracking profiles");
   console.table(
-    rows
-      .filter((row) => row.group === "app")
-      .map(formatTrackingRow),
+    rows.filter((row) => row.group === "app").map(formatTrackingRow),
   );
 }
 
@@ -1342,7 +1355,9 @@ function formatNormalizedCostRow(
     "ns/watcherEdge": formatNs(
       elapsedPer(row.elapsedNs, counters.pushWatchersInvalidated),
     ),
-    "ns/pullDescend": formatNs(elapsedPer(row.elapsedNs, counters.pullDescents)),
+    "ns/pullDescend": formatNs(
+      elapsedPer(row.elapsedNs, counters.pullDescents),
+    ),
     "ns/pullBubble": formatNs(
       elapsedPer(row.elapsedNs, counters.pullChangedBubbles),
     ),
@@ -1380,7 +1395,9 @@ function formatPullDepthRow(
     pullMaxStack: row.pull.maxStack,
     descends: row.counters.pullDescents,
     bubbles: row.counters.pullChangedBubbles,
-    "ns/descend": formatNs(elapsedPer(row.elapsedNs, row.counters.pullDescents)),
+    "ns/descend": formatNs(
+      elapsedPer(row.elapsedNs, row.counters.pullDescents),
+    ),
     "ns/bubble": formatNs(
       elapsedPer(row.elapsedNs, row.counters.pullChangedBubbles),
     ),
@@ -1428,12 +1445,13 @@ function formatTrackingRow(
     "ns/appendAfterCursor": formatNs(
       elapsedPer(row.elapsedNs, counters.trackingAppendAfterCursor),
     ),
-    "ns/slowPath": formatNs(elapsedPer(row.elapsedNs, counters.trackingSlowPath)),
+    "ns/slowPath": formatNs(
+      elapsedPer(row.elapsedNs, counters.trackingSlowPath),
+    ),
     "ns/outgoingProbe": formatNs(
       elapsedPer(
         row.elapsedNs,
-        counters.trackingOutgoingProbeHit1 +
-          counters.trackingOutgoingProbeMiss,
+        counters.trackingOutgoingProbeHit1 + counters.trackingOutgoingProbeMiss,
       ),
     ),
   };

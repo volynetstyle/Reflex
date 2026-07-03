@@ -53,3 +53,20 @@ export {
   readActiveRuntimeHook,
 } from "./kernel/execution";
 export type { RuntimeExecutionState } from "./kernel/execution";
+
+export {
+  configureRuntimeContext,
+  createRuntimeContext,
+  getActiveRuntimeContext,
+  resetRuntimeContext,
+  restoreRuntimeContextSnapshot,
+  runWithRuntimeContext,
+  snapshotRuntimeContext,
+} from "./kernel/context";
+export type {
+  RuntimeContext,
+  RuntimeContextOptions,
+  RuntimeContextSnapshot,
+  RuntimeHooks,
+  RuntimeHostHooks,
+} from "./kernel/context";

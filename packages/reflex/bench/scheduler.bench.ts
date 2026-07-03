@@ -1,7 +1,7 @@
 import { bench, describe } from "vitest";
 import {
   Changed,
-  resetState,
+  resetRuntimeContext,
   Scheduled,
   setPropagationScopeDepth,
 } from "@volynets/reflex-runtime/internal";
@@ -243,7 +243,7 @@ describe("scheduler: public runtime effect strategies", () => {
   let disposers: Destructor[];
 
   function setupRuntime(strategy: "flush" | "sab" | "eager") {
-    resetState();
+    resetRuntimeContext();
     rt = createRuntime({ effectStrategy: strategy });
     const [source, writeSource] = signal(0);
 

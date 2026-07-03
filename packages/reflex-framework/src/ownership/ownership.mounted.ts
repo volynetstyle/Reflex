@@ -1,21 +1,26 @@
-export interface MountedRootStore<TKey extends object, TRoot> {
-  get(key: TKey): TRoot | undefined;
-  set(key: TKey, root: TRoot): void;
-  delete(key: TKey): void;
+export interface RootMountTable<TKey extends object, TRoot> {
+  get(host: TKey): TRoot | undefined;
+  set(host: TKey, root: TRoot): void;
+  unset(host: TKey): void;
 }
 
-export function createMountedRootStore<TKey extends object, TRoot>(
+export function createRootMountTable<TKey extends object, TRoot>(
   slot: PropertyKey,
-): MountedRootStore<TKey, TRoot> {
+): RootMountTable<TKey, TRoot> {
+  const asSlots = (host: TKey): Record<PropertyKey, TRoot | undefined> =>
+    host as unknown as Record<PropertyKey, TRoot | undefined>;
+
   return {
-    get(key) {
-      return (key as Record<PropertyKey, unknown>)[slot] as TRoot | undefined;
+    get(host) {
+      return asSlots(host)[slot];
     },
-    set(key, root) {
-      (key as Record<PropertyKey, unknown>)[slot] = root;
+
+    set(host, root) {
+      asSlots(host)[slot] = root;
     },
-    delete(key) {
-      (key as Record<PropertyKey, unknown>)[slot] = undefined;
+
+    unset(host) {
+      delete asSlots(host)[slot];
     },
   };
 }

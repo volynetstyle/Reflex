@@ -1,9 +1,13 @@
-import { currentConsumer, defaultContext, trackingEpoch } from "../kernel";
-import type { ProducerNode } from "../kernel";
-import { devRecordReadProducer } from "../kernel/dev";
-import { devAssertNoRuntimeHookReactiveRead } from "../kernel/execution";
-import { resolveTrackedRead } from "../kernel/shape/tracking";
-import { profileRuntimeCounter } from "../profiling";
+import {
+  currentConsumer,
+  defaultContext,
+  trackingEpoch,
+  type ProducerNode,
+} from "@runtime/kernel";
+import { devRecordReadProducer } from "@runtime/kernel/dev";
+import { devAssertNoRuntimeHookReactiveRead } from "@runtime/kernel/execution";
+import { resolveTrackedRead } from "@runtime/kernel/shape/tracking";
+import { profileRuntimeCounter } from "@runtime/profiling";
 
 /**
  * Read the value of a producer (source) node.

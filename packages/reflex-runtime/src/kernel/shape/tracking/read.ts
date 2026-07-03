@@ -1,5 +1,6 @@
-import type ReactiveNode from "../node";
-import { currentConsumer, trackingEpoch } from "../../context";
+import { currentConsumer, trackingEpoch } from "@runtime/kernel/state";
+import type ReactiveNode from "@runtime/kernel/shape/node";
+
 import { resolveTrackedRead } from "./resolve";
 
 /**

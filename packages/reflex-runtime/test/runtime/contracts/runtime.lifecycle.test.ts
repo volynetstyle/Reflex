@@ -8,18 +8,15 @@ import {
   disposeNode,
   disposeWatcher,
   getActiveRuntimeContext,
-  nextTrackingEpoch,
-  resetRuntimeContextOptions,
-  restoreContext,
-  restoreRuntimeContext,
+  advanceTrackingEpoch,
+  resetRuntimeContext,
+  restoreRuntimeContextSnapshot,
   readConsumer,
   readProducer,
-  saveContext,
-  saveRuntimeContext,
+  snapshotRuntimeContext,
   runWatcher,
   setCurrentConsumer,
-  setRuntimeHooks,
-  setRuntimeContextOptions,
+  configureRuntimeContext,
   writeProducer,
 } from "../../runtime.test_utils";
 import {
@@ -198,10 +195,12 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     const onSettled = vi.fn();
     const onCleanup = vi.fn();
 
-    setRuntimeHooks({
-      effectCleanupRegistrar: onCleanup,
-      reactiveSettledDispatcher: onSettled,
-      sinkInvalidatedDispatcher: onSinkInvalidated,
+    configureRuntimeContext({
+      hooks: {
+        effectCleanupRegistrar: onCleanup,
+        reactiveSettledDispatcher: onSettled,
+        sinkInvalidatedDispatcher: onSinkInvalidated,
+      },
     });
 
     const context = getActiveRuntimeContext();
@@ -217,11 +216,13 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     const onSettled = vi.fn();
     const readTrackingStrategy = vi.fn();
 
-    setRuntimeHooks(context, {
-      reactiveSettledDispatcher: onSettled,
-      sinkInvalidatedDispatcher: onSinkInvalidated,
+    configureRuntimeContext(context, {
+      hooks: {
+        reactiveSettledDispatcher: onSettled,
+        sinkInvalidatedDispatcher: onSinkInvalidated,
+      },
     });
-    setRuntimeContextOptions(context, {
+    configureRuntimeContext(context, {
       readTrackingStrategy,
     });
 
@@ -234,11 +235,11 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     const context = createRuntimeContext();
     const readTrackingStrategy = vi.fn();
 
-    setRuntimeContextOptions(context, {
+    configureRuntimeContext(context, {
       readTrackingStrategy,
     });
 
-    resetRuntimeContextOptions(context);
+    resetRuntimeContext(context);
 
     expect(context.readTrackingStrategy).not.toBe(readTrackingStrategy);
   });
@@ -251,13 +252,13 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     context.trackingEpoch = 2;
     context.propagationScopeDepth = 1;
 
-    const snapshot = saveRuntimeContext(context);
+    const snapshot = snapshotRuntimeContext(context);
 
     context.currentConsumer = null;
     context.trackingEpoch = 5;
     context.propagationScopeDepth = 3;
 
-    restoreRuntimeContext(context, snapshot);
+    restoreRuntimeContextSnapshot(context, snapshot);
 
     expect(context.currentConsumer).toBe(consumer);
     expect(context.trackingEpoch).toBe(5);
@@ -266,17 +267,14 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
 
   it("saves and restores the active runtime context snapshot", () => {
     const context = getActiveRuntimeContext();
-    const snapshot = saveContext();
-    const epoch = nextTrackingEpoch();
+    const snapshot = snapshotRuntimeContext();
+    const epoch = advanceTrackingEpoch();
 
     setCurrentConsumer(createConsumer(() => 0));
 
-    restoreContext(snapshot);
+    restoreRuntimeContextSnapshot(context, snapshot);
 
     expect(context.currentConsumer).toBe(null);
     expect(context.trackingEpoch).toBe(epoch);
   });
 });
-
-
-

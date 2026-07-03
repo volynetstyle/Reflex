@@ -1,4 +1,5 @@
-import type { ReactiveNode } from "../kernel";
+import type { ReactiveNode } from "@runtime/kernel";
+
 import {
   type RuntimeDebugGraphEdgeSnapshot,
   type RuntimeDebugGraphIntegrity,
@@ -124,10 +125,12 @@ function collectEdgeListIntegrity(
   let previous: ReactiveNodeEdge | null = null;
 
   while (edge !== null) {
-    const duplicateCode = direction === "in"
-      ? "duplicate-incoming-edge"
-      : "duplicate-outgoing-edge";
-    const prevCode = direction === "in" ? "invalid-prev-in" : "invalid-prev-out";
+    const duplicateCode =
+      direction === "in"
+        ? "duplicate-incoming-edge"
+        : "duplicate-outgoing-edge";
+    const prevCode =
+      direction === "in" ? "invalid-prev-in" : "invalid-prev-out";
 
     if (seen.has(edge)) {
       issues.push({
@@ -156,7 +159,8 @@ function collectEdgeListIntegrity(
         code: "mismatched-incoming-target",
         node: snapshot,
         edge: snapshotDebugGraphEdge(edge, snapshotNode),
-        message: "Incoming edge target does not point back to the inspected node.",
+        message:
+          "Incoming edge target does not point back to the inspected node.",
       });
     }
 
@@ -165,7 +169,8 @@ function collectEdgeListIntegrity(
         code: "mismatched-outgoing-source",
         node: snapshot,
         edge: snapshotDebugGraphEdge(edge, snapshotNode),
-        message: "Outgoing edge source does not point back to the inspected node.",
+        message:
+          "Outgoing edge source does not point back to the inspected node.",
       });
     }
 

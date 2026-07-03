@@ -248,10 +248,7 @@ function createTopology(): RuntimeProfileTopology {
 
 const runtimeProfileTopology: RuntimeProfileTopology = createTopology();
 
-function bucket(
-  value: number,
-  maxBucketStart: number
-): string {
+function bucket(value: number, maxBucketStart: number): string {
   if (value <= 0) return "0";
   if (value === 1) return "1";
 

@@ -8,9 +8,10 @@ import {
   writeProducer,
 } from "../../../src";
 import {
+  enterReactiveBatch,
   enterRuntimePhase,
+  leaveReactiveBatch,
   leaveRuntimePhase,
-  runWithReactiveBatch,
 } from "../../../src/internal";
 import {
   createConsumer,
@@ -20,6 +21,15 @@ import {
 } from "../../runtime.test_utils";
 
 type RuntimeWatcher = ReturnType<typeof createWatcher>;
+
+function runWithReactiveBatch<T>(fn: () => T): T {
+  enterReactiveBatch();
+  try {
+    return fn();
+  } finally {
+    leaveReactiveBatch();
+  }
+}
 
 function createBenchmarkStyleScheduler(flushSynchronouslyFromHook = false) {
   const pendingWatchers = new Set<RuntimeWatcher>();

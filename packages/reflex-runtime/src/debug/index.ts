@@ -1,4 +1,5 @@
 import "./debug_flag";
+
 import { runtimeDebugInstalled } from "./debug.install";
 
 void runtimeDebugInstalled;
@@ -52,4 +53,4 @@ export {
   type RuntimeProfileTopology,
   type RuntimeProfileTopologyHotPath,
   type RuntimeProfileTopologyWalker,
-} from "../profiling";
+} from "@runtime/profiling";

@@ -12,9 +12,8 @@ import {
   WATCHER_CHANGED,
 } from "../build/esm/kernel/shape/index.js";
 import {
-  resetState,
-  setRuntimeContextOptions,
-  setInternalHooks,
+  resetRuntimeContext,
+  configureRuntimeContext,
 } from "../build/esm/kernel/context.js";
 import { linkEdge } from "../build/esm/kernel/shape/graph/index.js";
 import {
@@ -23,6 +22,15 @@ import {
 } from "../build/esm/kernel/shape/graph/edgeList.js";
 
 const UNINITIALIZED = Symbol("reflex.perf.uninitialized");
+
+function setInternalHooks(
+  sinkInvalidatedDispatcher,
+  reactiveSettledDispatcher,
+) {
+  configureRuntimeContext({
+    hooks: { sinkInvalidatedDispatcher, reactiveSettledDispatcher },
+  });
+}
 const DEFAULT_SAMPLES = 9;
 const childOrder = new Map([
   [
@@ -54,15 +62,15 @@ function watcher(compute) {
 }
 
 function withRuntime(fn) {
-  resetState();
+  resetRuntimeContext();
   setInternalHooks();
-  setRuntimeContextOptions();
+  configureRuntimeContext();
   try {
     return fn();
   } finally {
-    resetState();
+    resetRuntimeContext();
     setInternalHooks();
-    setRuntimeContextOptions();
+    configureRuntimeContext();
   }
 }
 
@@ -709,7 +717,7 @@ function trackReadBench(bench, getOrder, fanIn, options = {}) {
       return sum;
     });
 
-    setRuntimeContextOptions({
+    configureRuntimeContext({
       readTrackingStrategy: createInstrumentedFallback(counters, options),
     });
 
@@ -764,7 +772,7 @@ function trackReadMissAddEdgeBench(bench, fanIn) {
       return sum;
     });
 
-    setRuntimeContextOptions({
+    configureRuntimeContext({
       readTrackingStrategy: createInstrumentedFallback(counters),
     });
 
@@ -807,7 +815,7 @@ function trackReadDuplicateBench(bench, fanIn) {
       return sum;
     });
 
-    setRuntimeContextOptions({
+    configureRuntimeContext({
       readTrackingStrategy: createInstrumentedFallback(counters),
     });
 

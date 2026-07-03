@@ -1,16 +1,19 @@
-import type { ProducerNode } from "../kernel";
 import {
   defaultContext,
   enterPropagationScope,
   leavePropagationScope,
   emitSettledIfIdle,
   propagationScopeDepth,
-} from "../kernel";
-import { devRecordWriteProducer } from "../kernel/dev";
-import { push_iterator } from "../kernel/stages/first/push_iterator";
-import { profileRuntimeCounter } from "../profiling";
-import type { ProducerComparator } from "./utils/compare";
-import { compare as defaultComparator } from "./utils/compare";
+  type ProducerNode,
+} from "@runtime/kernel";
+import { devRecordWriteProducer } from "@runtime/kernel/dev";
+import { push_iterator } from "@runtime/kernel/stages/first/push_iterator";
+import { profileRuntimeCounter } from "@runtime/profiling";
+
+import {
+  compare as defaultComparator,
+  type ProducerComparator,
+} from "./utils/compare";
 
 /**
  * Write a new value to a producer (source) node.

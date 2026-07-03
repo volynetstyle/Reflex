@@ -200,9 +200,8 @@ Recommended scheduler shape:
 
 ```ts
 import {
+  configureRuntimeContext,
   runWatcher,
-  runWithReactiveBatch,
-  setRuntimeHooks,
 } from "@volynets/reflex-runtime/internal";
 
 const pendingWatchers = new Set();
@@ -231,17 +230,15 @@ function scheduleFlush() {
   queueMicrotask(flushWatchers);
 }
 
-setRuntimeHooks({
-  sinkInvalidatedDispatcher(watcher) {
-    pendingWatchers.add(watcher);
+configureRuntimeContext({
+  hooks: {
+    sinkInvalidatedDispatcher(watcher) {
+      pendingWatchers.add(watcher);
+    },
+    reactiveSettledDispatcher() {
+      scheduleFlush();
+    },
   },
-  reactiveSettledDispatcher() {
-    scheduleFlush();
-  },
-});
-
-runWithReactiveBatch(() => {
-  // write producers here
 });
 
 // Optional explicit host boundary.

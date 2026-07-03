@@ -1,7 +1,7 @@
 import {
   disposeWatcher as dispose,
   runWatcher as run,
-} from "../kernel/engine/watcher";
+} from "@runtime/kernel/engine/watcher";
 
 /**
  * Public watcher controls.
@@ -15,4 +15,4 @@ export const watcher = {
   dispose,
 } as const;
 
-export { runWatcher, disposeWatcher } from "../kernel/engine/watcher";
+export { runWatcher, disposeWatcher } from "@runtime/kernel/engine/watcher";

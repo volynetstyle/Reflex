@@ -45,7 +45,7 @@
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "dev": "vite",
-    "build:ts": "tsc -p tsconfig.build.json && node ../../scripts/write-index-dts.mjs .",
+    "build:ts": "tsc -p tsconfig.build.json && node scripts/rewrite-build-aliases.mjs && node ../../scripts/write-index-dts.mjs .",
     "build:npm": "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc",
     "build:perf": "rollup --silent -c rollup.perf.config.ts --configPlugin @rollup/plugin-swc",
     "build": "pnpm clean && pnpm build:ts && pnpm build:npm",
