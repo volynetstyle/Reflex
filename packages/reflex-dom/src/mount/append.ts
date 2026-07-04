@@ -29,16 +29,25 @@ function identity<T>(value: T): T {
   return value;
 }
 
-function pushValuesOntoStack(
+function appendText(parent: Node, doc: Document, value: unknown): void {
+  parent.appendChild(doc.createTextNode(String(value)));
+}
+
+function pushReverse(
   stack: unknown[],
-  stackTop: number,
+  top: number,
   values: readonly unknown[],
 ): number {
-  for (let index = values.length - 1; index >= 0; index--) {
-    stack[stackTop++] = values[index];
-  }
+  for (let i = values.length; i-- > 0; ) stack[top++] = values[i];
+  return top;
+}
 
-  return stackTop;
+function mountSlot<T>(
+  accessor: () => T,
+  map: (value: T) => unknown,
+  ns: Namespace,
+): Node {
+  return mountReactiveSlot(accessor, map, ns);
 }
 
 export function appendRenderableNodes(
@@ -46,118 +55,91 @@ export function appendRenderableNodes(
   value: JSXRenderable | unknown,
   ns: Namespace,
 ): void {
-  if (value == null || typeof value === "boolean") {
-    return;
-  }
+  if (value == null || typeof value === "boolean") return;
 
-  let stackTop = 1;
-  const stack: unknown[] = [value];
   const doc = parent.ownerDocument!;
+  const stack: unknown[] = [value];
+  let top = 1;
 
-  while (stackTop > 0) {
-    const current = stack[--stackTop];
+  while (top) {
+    const current = stack[--top];
 
-    if (current == null || typeof current === "boolean") {
-      continue;
-    }
+    if (current == null || typeof current === "boolean") continue;
 
     if (isTextRenderableValue(current)) {
-      parent.appendChild(doc.createTextNode(String(current)));
+      appendText(parent, doc, current);
       continue;
     }
 
     if (Array.isArray(current)) {
-      stackTop = pushValuesOntoStack(stack, stackTop, current);
+      top = pushReverse(stack, top, current);
       continue;
     }
 
     if (typeof current === "function") {
-      parent.appendChild(
-        mountReactiveSlot(current as () => unknown, identity, ns),
-      );
+      parent.appendChild(mountSlot(current as () => unknown, identity, ns));
       continue;
     }
 
     if (typeof current !== "object") {
-      parent.appendChild(doc.createTextNode(String(current)));
+      appendText(parent, doc, current);
       continue;
     }
 
-    if (current instanceof Node) {
+    if (current instanceof parent.ownerDocument!.defaultView!.Node) {
       parent.appendChild(current);
       continue;
     }
 
-    const taggedRenderableKind = getTaggedRenderableKind(current);
+    switch (getTaggedRenderableKind(current)) {
+      case RenderableKind.Element: {
+        const el = current as ElementRenderable<
+          ElementTag,
+          ElementProps<ElementTag>
+        >;
 
-    if (taggedRenderableKind !== undefined) {
-      switch (taggedRenderableKind) {
-        case RenderableKind.Element: {
-          const element = current as ElementRenderable<
-            ElementTag,
-            ElementProps<ElementTag>
-          >;
-
-          parent.appendChild(mountElement(element.tag, element.props, ns));
-          continue;
-        }
-
-        case RenderableKind.Show:
-          {
-            const renderable = current as ShowRenderable<any>;
-            parent.appendChild(
-              mountReactiveSlot(
-                renderable.when,
-                (value) => resolveShowValue(renderable, value),
-                ns,
-              ),
-            );
-          }
-          continue;
-
-        case RenderableKind.Switch:
-          {
-            const renderable = current as SwitchRenderable<any>;
-            parent.appendChild(
-              mountReactiveSlot(
-                renderable.value,
-                (value) => resolveSwitchValue(renderable, value),
-                ns,
-              ),
-            );
-          }
-          continue;
-
-        case RenderableKind.For:
-          parent.appendChild(mountFor(current as ForRenderable<any>, ns));
-          continue;
-
-        case RenderableKind.Portal:
-          parent.appendChild(mountPortal(current as PortalRenderable));
-          continue;
-
-        case RenderableKind.Component:
-          mountComponent(parent, current as ComponentRenderable<any>, ns);
-          continue;
-
-        case RenderableKind.Empty:
-        case RenderableKind.Array:
-        case RenderableKind.Node:
-        case RenderableKind.Accessor:
-        case RenderableKind.Text:
-          break;
+        parent.appendChild(mountElement(el.tag, el.props, ns));
+        continue;
       }
+
+      case RenderableKind.Show: {
+        const r = current as ShowRenderable<any>;
+        parent.appendChild(
+          mountSlot(r.when, (v) => resolveShowValue(r, v), ns),
+        );
+        continue;
+      }
+
+      case RenderableKind.Switch: {
+        const r = current as SwitchRenderable<any>;
+        parent.appendChild(
+          mountSlot(r.value, (v) => resolveSwitchValue(r, v), ns),
+        );
+        continue;
+      }
+
+      case RenderableKind.For:
+        parent.appendChild(mountFor(current as ForRenderable<any>, ns));
+        continue;
+
+      case RenderableKind.Portal:
+        parent.appendChild(mountPortal(current as PortalRenderable));
+        continue;
+
+      case RenderableKind.Component:
+        mountComponent(parent, current as ComponentRenderable<any>, ns);
+        continue;
     }
 
-    if ((current as Iterable<unknown>)[Symbol.iterator]) {
-      stackTop = pushValuesOntoStack(
-        stack,
-        stackTop,
-        Array.from(current as Iterable<unknown>),
-      );
+    if (isIterable(current)) {
+      top = pushReverse(stack, top, Array.from(current));
       continue;
     }
-
-    parent.appendChild(doc.createTextNode(String(current)));
+    
+    appendText(parent, doc, current);
   }
+}
+
+function isIterable(value: unknown): value is Iterable<unknown> {
+  return value != null && typeof (value as any)[Symbol.iterator] === "function";
 }

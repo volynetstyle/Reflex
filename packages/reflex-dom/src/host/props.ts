@@ -5,6 +5,16 @@ import { setAttr } from "./attr";
 import { applyStyle } from "./styles";
 import { normalizeAttr } from "./aliases";
 
+function applyClass(el: Element, value: unknown): unknown {
+  if (value == null || value === false) {
+    el.removeAttribute("class");
+  } else {
+    el.setAttribute("class", String(value));
+  }
+
+  return value;
+}
+
 export function applyProp(
   el: Element,
   name: string,
@@ -12,34 +22,25 @@ export function applyProp(
   ns: Namespace,
   prev: unknown,
 ): unknown {
-  if (name === "children" || name === "key") {
+  if (value === prev || name === "children" || name === "key") {
     return prev;
+  }
+
+  switch (name) {
+    case "class":
+    case "className":
+      return applyClass(el, value);
+
+    case "style":
+      return applyStyle(
+        el,
+        value as StyleValue | null | undefined,
+        prev as StyleValue | null | undefined,
+      );
   }
 
   if (isManagedFormProp(el, name)) {
     return applyManagedFormProp(el, name, value);
-  }
-
-  if (value === prev) {
-    return prev;
-  }
-
-  if (name === "class" || name === "className") {
-    if (value == null || value === false) {
-      el.removeAttribute("class");
-    } else {
-      el.setAttribute("class", "" + value);
-    }
-
-    return value;
-  }
-
-  if (name === "style") {
-    return applyStyle(
-      el,
-      value as StyleValue | null | undefined,
-      prev as StyleValue | null | undefined,
-    );
   }
 
   setAttr(el, normalizeAttr(name), value, ns);
