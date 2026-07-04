@@ -26,13 +26,12 @@ import {
 } from "../structure/render-range";
 import { isHydrationSlotEnd, isHydrationSlotStart } from "../hydrate/markers";
 import {
-  createScope,
+  createOwnershipNode,
+  runComponentRenderable,
 } from "@volynets/reflex-framework";
 import {
-  ensureDOMRuntime,
   getActiveDOMExecutionContext,
-  runInDOMOwnershipScope,
-  runWithDOMComponentHooks,
+  runInDOMOwnershipNode,
   runWithDOMExecutionContext,
 } from "../runtime/execution";
 import {
@@ -74,7 +73,7 @@ function createRootCleanup(
         return;
       }
 
-      context.mountedRoots.delete(container);
+      context.mountedRoots.unset(container);
       rootMount.destroy();
     });
   }) as Cleanup;
@@ -260,11 +259,21 @@ function hydrateRenderableValue(
 
     case RenderableKind.Component: {
       const renderable = value as ComponentRenderable<unknown>;
-      return hydrateRenderableValue(
-        runWithDOMComponentHooks(() => renderable.type(renderable.props)),
-        parentNamespace,
-        currentNode,
-        boundary,
+      const context = getActiveDOMExecutionContext();
+
+      return runComponentRenderable(
+        renderable,
+        {
+          owner: context.owner,
+          renderEffectScheduler: context.renderEffectScheduler,
+        },
+        (result) =>
+          hydrateRenderableValue(
+            result,
+            parentNamespace,
+            currentNode,
+            boundary,
+          ),
       );
     }
 
@@ -329,10 +338,10 @@ function hydrateManagedContainer(
   container: ParentNode & Node,
 ): MountedRenderRange {
   const anchors = adoptExistingContentRange(container);
-  const scope = createScope();
+  const ownershipNode = createOwnershipNode();
 
   try {
-    runInDOMOwnershipScope(scope, () => {
+    runInDOMOwnershipNode(ownershipNode, () => {
       const remainingNode = hydrateRenderableValue(
         renderable,
         "html",
@@ -347,9 +356,9 @@ function hydrateManagedContainer(
       }
     });
 
-    return createRenderRangeMount(scope, anchors);
+    return createRenderRangeMount(ownershipNode, anchors);
   } catch (error) {
-    const failedHydrationMount = createRenderRangeMount(scope, anchors);
+    const failedHydrationMount = createRenderRangeMount(ownershipNode, anchors);
     failedHydrationMount.clear();
 
     if (!(error instanceof HydrationMismatch)) {
@@ -364,7 +373,6 @@ export function resumeWithDOMExecution(
   container: ParentNode & Node,
 ): Cleanup {
   const context = getActiveDOMExecutionContext();
-  ensureDOMRuntime(context);
 
   const currentRoot = context.mountedRoots.get(container);
   if (currentRoot !== undefined) {
@@ -372,7 +380,7 @@ export function resumeWithDOMExecution(
   }
 
   const resumedRoot = createRenderRangeMount(
-    createScope(),
+    createOwnershipNode(),
     adoptExistingContentRange(container),
   );
 
@@ -385,12 +393,11 @@ export function hydrateWithDOMExecution(
   container: ParentNode & Node,
 ): Cleanup {
   const context = getActiveDOMExecutionContext();
-  ensureDOMRuntime(context);
 
   const existingRoot = context.mountedRoots.get(container);
   if (existingRoot !== undefined) {
     existingRoot.destroy();
-    context.mountedRoots.delete(container);
+    context.mountedRoots.unset(container);
   }
 
   const hydratedRoot = hydrateManagedContainer(renderable, container);

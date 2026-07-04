@@ -1,7 +1,8 @@
 import {
   createWatcher,
+  disposeWatcher,
+  runWatcher,
   untracked,
-  watcher,
 } from "@volynets/reflex-runtime/internal";
 import type { WatcherFn } from "@volynets/reflex-runtime/internal";
 import {
@@ -87,12 +88,9 @@ export function effect(fn: WatcherFn): Destructor {
   devassertEffectFn(fn, "effect");
 
   const node = createWatcher(wrapEffectFn(fn, "effect"));
-  const run = watcher.run;
-  const dispose = watcher.dispose;
+  runWatcher(node);
 
-  run(node);
-
-  const disposer: Destructor = dispose.bind(null, node);
+  const disposer: Destructor = disposeWatcher.bind(null, node);
   return disposer;
 }
 

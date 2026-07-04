@@ -27,7 +27,7 @@ function useDerived<T>(fn: () => T, warm: boolean): Computed<T> {
   const slot = useHookSlot<GuardedReadable<T>>(
     () => {
       // Component hooks do not rerender in place today: the first render owns
-      // this closure until its scope is disposed, so stale fn capture is the
+      // this closure until its ownership node is disposed, so stale fn capture is the
       // intended lifecycle contract rather than a missed dependency update.
       const computed = createDisposableComputed(fn);
       const state: GuardedReadable<T> = {

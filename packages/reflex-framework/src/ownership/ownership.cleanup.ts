@@ -1,9 +1,5 @@
 import type { Cleanup } from "../types/core";
-import {
-  isShuttingDown,
-  markClosing,
-  markDisposed,
-} from "./ownership.meta";
+import { isShuttingDown, markClosing, markDisposed } from "./ownership.meta";
 import type { OwnershipNode } from "./ownership.node";
 import { detach } from "./ownership.tree";
 
@@ -34,7 +30,6 @@ function invokeCleanup(fn: Cleanup): void {
 }
 
 function runCleanups(node: OwnershipNode): void {
-  console.log("DEBUG cleanup node", node.meta, node.cleanups !== null);
   const cleanups = node.cleanups;
   if (cleanups === null) return;
 
@@ -50,7 +45,7 @@ function runCleanups(node: OwnershipNode): void {
   }
 }
 
-export function dispose(root: OwnershipNode): void {
+export function disposeOwnershipNode(root: OwnershipNode): void {
   if (isShuttingDown(root)) return;
 
   markSubtreeClosing(root);
@@ -69,7 +64,22 @@ export function dispose(root: OwnershipNode): void {
 
     runCleanups(node);
     markDisposed(node);
-    detach(node);
+
+    // Internal links belong to a subtree that is being discarded wholesale.
+    // Only the root can still be linked into a live tree and needs full detach.
+    if (node === root) {
+      detach(node);
+    } else {
+      const parent = node.parent!;
+      const nextSibling = node.nextSibling;
+
+      parent.firstChild = nextSibling;
+      if (nextSibling !== null) {
+        nextSibling.prevSibling = null;
+      }
+
+      node.parent = node.prevSibling = node.nextSibling = null;
+    }
 
     node.firstChild = null;
     node.context = null;

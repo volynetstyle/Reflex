@@ -3,8 +3,8 @@ import {
   runWithOwner,
   type OwnerContext,
   type OwnerHookState,
-  type Scope,
 } from "../ownership/ownership.scope";
+import type { OwnershipNode } from "../ownership/ownership.node";
 import { getHookOwner } from "./owner";
 
 export interface RenderEffectScheduler {
@@ -32,13 +32,13 @@ export const noopRenderEffectScheduler: RenderEffectScheduler = Object.freeze({
 interface ComponentHookContext {
   hookIndex: number;
   owner: OwnerContext;
-  scope: Scope | null;
+  node: OwnershipNode | null;
   renderEffectScheduler: RenderEffectScheduler | null;
 }
 
 interface ComponentHookOptions {
   owner?: OwnerContext;
-  scope?: Scope | null;
+  node?: OwnershipNode | null;
   renderEffectScheduler?: RenderEffectScheduler | null;
 }
 
@@ -68,15 +68,15 @@ export function runWithComponentHooks<T>(
 
   const options = typeof optionsOrFn === "function" ? undefined : optionsOrFn;
   const owner = options?.owner ?? getActiveOwnerContext() ?? getHookOwner();
-  const scope = options?.scope ?? owner.currentOwner;
+  const node = options?.node ?? owner.currentNode;
   const hookState = owner.hookState;
   const previousHookContext = hookState.currentHookContext;
 
-  return runWithOwner(owner, scope, () => {
+  return runWithOwner(owner, node, () => {
     hookState.currentHookContext = {
       hookIndex: 0,
       owner,
-      scope,
+      node,
       renderEffectScheduler:
         options?.renderEffectScheduler ?? noopRenderEffectScheduler,
     };
@@ -112,9 +112,9 @@ export function getCurrentHookOwner(): OwnerContext {
   );
 }
 
-export function getCurrentHookScope(): Scope | null {
+export function getCurrentHookNode(): OwnershipNode | null {
   const owner = getCurrentHookOwner();
-  return getCurrentHookContext()?.scope ?? owner.currentOwner;
+  return getCurrentHookContext()?.node ?? owner.currentNode;
 }
 
 export function isInsideComponentHooks(): boolean {

@@ -12,3 +12,4 @@ export * from "./ownership";
 export * from "./reactivity";
 export * from "./hooks";
 export { Fragment, jsx, jsxDEV, jsxs } from "./runtime/jsx";
+export * from "./runtime/component";

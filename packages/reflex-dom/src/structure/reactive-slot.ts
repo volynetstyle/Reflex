@@ -3,7 +3,7 @@ import {
   createDOMOwnedReaction,
   getActiveDOMExecutionContext,
   registerDOMCleanup,
-  runInDOMOwnershipScope,
+  runInDOMOwnershipNode,
 } from "../runtime/execution";
 import type { ContentSlot } from "./content-slot";
 import { adoptContentSlot, createContentSlot } from "./content-slot";
@@ -17,9 +17,9 @@ export function createMountedSlot(
 
   return createContentSlot(
     document,
-    (parent, scope, nextValue) => {
-      runInDOMOwnershipScope(
-        scope,
+    (parent, ownershipNode, nextValue) => {
+      runInDOMOwnershipNode(
+        ownershipNode,
         () => {
           appendRenderableNodes(parent, nextValue, ns);
         },
@@ -39,9 +39,9 @@ export function createHydratedSlot(
 
   return adoptContentSlot(
     document,
-    (parent, scope, nextValue) => {
-      runInDOMOwnershipScope(
-        scope,
+    (parent, ownershipNode, nextValue) => {
+      runInDOMOwnershipNode(
+        ownershipNode,
         () => {
           appendRenderableNodes(parent, nextValue, ns);
         },

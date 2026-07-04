@@ -1,4 +1,9 @@
 import type { Cleanup } from "../types/core";
+import {
+  createWatcher,
+  disposeWatcher,
+  runWatcher,
+} from "@volynets/reflex-runtime";
 import { addCleanup } from "../ownership/ownership.cleanup";
 import { isShuttingDown } from "../ownership/ownership.meta";
 import type { OwnershipNode } from "../ownership/ownership.node";
@@ -6,7 +11,6 @@ import {
   runWithOwner,
   type OwnerContext,
 } from "../ownership/ownership.scope";
-import { createRuntimeEffect } from "./runtime-effect";
 
 export type OwnedEffectFn = () => void | Cleanup;
 
@@ -17,22 +21,30 @@ const noopCleanup: Cleanup = () => {};
 
 export function createOwnedEffect(
   owner: OwnerContext,
-  scope: OwnershipNode | null,
+  node: OwnershipNode | null,
   fn: OwnedEffectFn,
 ): Cleanup {
-  if (scope !== null && isShuttingDown(scope)) {
-    if (__DEV__) throw new Error("createOwnedEffect in disposed scope");
+  if (node !== null && isShuttingDown(node)) {
+    if (__DEV__) throw new Error("createOwnedEffect in disposed node");
     return noopCleanup;
   }
 
-  const dispose = createRuntimeEffect(() => runWithOwner(owner, scope, fn));
+  const watcher = createWatcher(() => runWithOwner(owner, node, fn));
 
-  if (scope !== null) {
-    console.log("DEBUG owned add", scope.meta, scope.parent !== null);
-    if (isShuttingDown(scope)) {
+  try {
+    runWatcher(watcher);
+  } catch (error) {
+    disposeWatcher(watcher);
+    throw error;
+  }
+
+  const dispose: Cleanup = () => disposeWatcher(watcher);
+
+  if (node !== null) {
+    if (isShuttingDown(node)) {
       dispose();
     } else {
-      addCleanup(scope, dispose);
+      addCleanup(node, dispose);
     }
   }
 

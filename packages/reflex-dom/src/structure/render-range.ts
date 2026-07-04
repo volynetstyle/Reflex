@@ -1,11 +1,11 @@
 import { clearBetween } from "../host/mutations";
 import type { Namespace } from "../host/namespace";
 import {
-  createScope,
-  disposeScope,
-  type Scope,
+  createOwnershipNode,
+  disposeOwnershipNode,
+  type OwnershipNode,
 } from "@volynets/reflex-framework";
-import { runInDOMOwnershipScope } from "../runtime/execution";
+import { runInDOMOwnershipNode } from "../runtime/execution";
 import type { JSXRenderable } from "../types";
 import { appendRenderableNodes } from "../mount/append";
 
@@ -15,7 +15,7 @@ export interface RenderRangeAnchors {
 }
 
 export interface MountedRenderRange extends RenderRangeAnchors {
-  scope: Scope;
+  ownershipNode: OwnershipNode;
   clear(): void;
   destroy(): void;
 }
@@ -61,7 +61,7 @@ export function adoptExistingContentRange(parent: Node): RenderRangeAnchors {
 }
 
 export function createRenderRangeMount(
-  scope: Scope,
+  ownershipNode: OwnershipNode,
   anchors: RenderRangeAnchors,
 ): MountedRenderRange {
   const { startAnchor, endAnchor } = anchors;
@@ -73,7 +73,7 @@ export function createRenderRangeMount(
     }
 
     state |= MountState.Cleared;
-    disposeScope(scope);
+    disposeOwnershipNode(ownershipNode);
 
     const parent = startAnchor.parentNode;
     if (parent !== null && endAnchor.parentNode === parent) {
@@ -93,7 +93,7 @@ export function createRenderRangeMount(
   };
 
   return {
-    scope,
+    ownershipNode,
     startAnchor,
     endAnchor,
     clear: clearRange,
@@ -107,13 +107,13 @@ export function mountRenderRange(
   namespace: Namespace,
   anchors: RenderRangeAnchors = createRenderRangeAnchors(parent),
 ): MountedRenderRange {
-  const scope = createScope();
+  const ownershipNode = createOwnershipNode();
   const fragment = resolveOwnerDocument(parent).createDocumentFragment();
 
-  runInDOMOwnershipScope(scope, () => {
+  runInDOMOwnershipNode(ownershipNode, () => {
     appendRenderableNodes(fragment, renderable, namespace);
   });
 
   parent.insertBefore(fragment, anchors.endAnchor);
-  return createRenderRangeMount(scope, anchors);
+  return createRenderRangeMount(ownershipNode, anchors);
 }

@@ -1,7 +1,7 @@
 import { addCleanup } from "../ownership/ownership.cleanup";
 import { isShuttingDown } from "../ownership/ownership.meta";
-import type { Scope } from "../ownership/ownership.scope";
-import { consumeHookSlot, getCurrentHookScope } from "./context";
+import type { OwnershipNode } from "../ownership/ownership.node";
+import { consumeHookSlot, getCurrentHookNode } from "./context";
 
 export interface HookSlot<T> {
   disposed: boolean;
@@ -16,9 +16,9 @@ export function useHookSlot<T>(
   create: () => T,
   dispose?: (value: T) => void,
 ): HookSlot<T> {
-  const scope = getCurrentHookScope();
+  const node = getCurrentHookNode();
 
-  if (scope === null) {
+  if (node === null) {
     return {
       disposed: false,
       value: create(),
@@ -26,11 +26,11 @@ export function useHookSlot<T>(
   }
 
   const index = consumeHookSlot();
-  let slots = scope.hookSlots as HookSlot<unknown>[] | null;
+  let slots = node.hookSlots as HookSlot<unknown>[] | null;
 
   if (slots === null) {
     slots = [];
-    scope.hookSlots = slots;
+    node.hookSlots = slots;
   }
 
   const existing = slots[index] as HookSlot<T> | undefined;
@@ -44,7 +44,7 @@ export function useHookSlot<T>(
   };
 
   slots[index] = slot as HookSlot<unknown>;
-  addCleanup(scope, () => {
+  addCleanup(node, () => {
     revokeHookSlot(slot, dispose);
   });
 
@@ -61,7 +61,7 @@ function revokeHookSlot<T>(
   dispose?.(slot.value);
 }
 
-export function isCurrentHookScopeDisposed(): boolean {
-  const scope: Scope | null = getCurrentHookScope();
-  return scope !== null && isShuttingDown(scope);
+export function isCurrentHookNodeDisposed(): boolean {
+  const node: OwnershipNode | null = getCurrentHookNode();
+  return node !== null && isShuttingDown(node);
 }

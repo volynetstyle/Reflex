@@ -43,14 +43,12 @@ export let readTrackingStrategy: ReadTrackingStrategy =
 export interface RuntimeHooks {
   sinkInvalidatedDispatcher?(node: ReactiveNode): void;
   reactiveSettledDispatcher?(): void;
-  effectCleanupRegistrar?(dispose: () => void): void;
 }
 
 export type RuntimeHostHooks = RuntimeHooks;
 
 export type SinkInvalidatedHook = RuntimeHooks["sinkInvalidatedDispatcher"];
 export type ReactiveSettledHook = RuntimeHooks["reactiveSettledDispatcher"];
-export type EffectCleanupHook = RuntimeHooks["effectCleanupRegistrar"];
 
 export let sinkInvalidatedHook: SinkInvalidatedHook = undefined;
 export let reactiveSettledHook: ReactiveSettledHook = undefined;

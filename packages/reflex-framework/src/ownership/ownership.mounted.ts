@@ -20,7 +20,7 @@ export function createRootMountTable<TKey extends object, TRoot>(
     },
 
     unset(host) {
-      delete asSlots(host)[slot];
+      asSlots(host)[slot] = undefined;
     },
   };
 }

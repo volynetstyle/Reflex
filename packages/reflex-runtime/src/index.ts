@@ -36,7 +36,6 @@ export {
   readConsumerLazy,
   readConsumerEager,
   ConsumerReadMode,
-  watcher,
   runWatcher,
   disposeWatcher,
   untracked,

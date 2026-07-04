@@ -1,17 +1,21 @@
 import { clearBetween } from "../host/mutations";
 import {
-  createScope,
-  disposeScope,
-  type Scope,
+  createOwnershipNode,
+  disposeOwnershipNode,
+  type OwnershipNode,
 } from "@volynets/reflex-framework";
 
-export type MountUnknown = (parent: Node, scope: Scope, value: unknown) => void;
+export type MountUnknown = (
+  parent: Node,
+  ownershipNode: OwnershipNode,
+  value: unknown,
+) => void;
 
 type ContentState =
   | { kind: "empty" }
   | { kind: "text"; node: Text; value: string }
   | { kind: "node"; node: Node }
-  | { kind: "mounted"; scope: Scope }
+  | { kind: "mounted"; ownershipNode: OwnershipNode }
   | { kind: "adopted" };
 
 export interface ContentSlot {
@@ -67,13 +71,13 @@ function createSlotController(
   }
 
   function mountFallback(parent: Node, value: unknown): void {
-    const scope = createScope();
+    const ownershipNode = createOwnershipNode();
     const content = doc.createDocumentFragment();
 
-    mountUnknown(content, scope, value);
+    mountUnknown(content, ownershipNode, value);
     parent.insertBefore(content, end);
 
-    state = { kind: "mounted", scope };
+    state = { kind: "mounted", ownershipNode };
   }
 
   function clearCurrent(): void {
@@ -92,7 +96,7 @@ function createSlotController(
         return;
 
       case "mounted":
-        disposeScope(state.scope);
+        disposeOwnershipNode(state.ownershipNode);
         break;
 
       case "adopted":

@@ -34,7 +34,7 @@ export function createRenderEffectScheduler(
   };
 
   function flushPhase(phase: RenderEffectPhase): void {
-    const queue = pendingTasks[phase];
+    const queue = pendingTasks[phase]!;
     const tasks = queue.tasks;
 
     for (let index = 0; index < tasks.length; index++) {
@@ -51,7 +51,7 @@ export function createRenderEffectScheduler(
 
   return {
     schedule(task, phase = RenderEffectPhase.Render) {
-      const queue = pendingTasks[phase];
+      const queue = pendingTasks[phase]!;
       const version = queue.version;
       const index = queue.tasks.length;
 

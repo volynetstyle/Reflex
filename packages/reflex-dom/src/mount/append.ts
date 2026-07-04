@@ -23,8 +23,7 @@ import { mountReactiveSlot } from "./reactive";
 import { mountElement } from "./element";
 import { mountFor } from "./for";
 import { mountPortal } from "./portal";
-import { mountShow } from "./show";
-import { mountSwitch } from "./switch";
+import { resolveShowValue, resolveSwitchValue } from "../operators";
 
 function identity<T>(value: T): T {
   return value;
@@ -99,20 +98,34 @@ export function appendRenderableNodes(
             ElementProps<ElementTag>
           >;
 
-          parent.appendChild(
-            mountElement(element.tag, element.props, ns),
-          );
+          parent.appendChild(mountElement(element.tag, element.props, ns));
           continue;
         }
 
         case RenderableKind.Show:
-          parent.appendChild(mountShow(current as ShowRenderable<any>, ns));
+          {
+            const renderable = current as ShowRenderable<any>;
+            parent.appendChild(
+              mountReactiveSlot(
+                renderable.when,
+                (value) => resolveShowValue(renderable, value),
+                ns,
+              ),
+            );
+          }
           continue;
 
         case RenderableKind.Switch:
-          parent.appendChild(
-            mountSwitch(current as SwitchRenderable<any>, ns),
-          );
+          {
+            const renderable = current as SwitchRenderable<any>;
+            parent.appendChild(
+              mountReactiveSlot(
+                renderable.value,
+                (value) => resolveSwitchValue(renderable, value),
+                ns,
+              ),
+            );
+          }
           continue;
 
         case RenderableKind.For:
@@ -124,11 +137,7 @@ export function appendRenderableNodes(
           continue;
 
         case RenderableKind.Component:
-          mountComponent(
-            parent,
-            current as ComponentRenderable<any>,
-            ns,
-          );
+          mountComponent(parent, current as ComponentRenderable<any>, ns);
           continue;
 
         case RenderableKind.Empty:
@@ -140,7 +149,7 @@ export function appendRenderableNodes(
       }
     }
 
-    if (Symbol.iterator in current) {
+    if ((current as Iterable<unknown>)[Symbol.iterator]) {
       stackTop = pushValuesOntoStack(
         stack,
         stackTop,

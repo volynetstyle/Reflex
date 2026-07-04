@@ -1,11 +1,6 @@
 import type { Namespace } from "../host/namespace";
-import {
-  createScope,
-} from "@volynets/reflex-framework";
-import {
-  runInDOMOwnershipScope,
-  runWithDOMComponentHooks,
-} from "../runtime/execution";
+import { runComponentRenderable } from "@volynets/reflex-framework";
+import { getActiveDOMExecutionContext } from "../runtime/execution";
 import type { ComponentRenderable } from "../types";
 import { appendRenderableNodes } from "./append";
 
@@ -14,11 +9,14 @@ export function mountComponent(
   renderable: ComponentRenderable<unknown>,
   ns: Namespace,
 ): void {
-  runInDOMOwnershipScope(createScope(), () => {
-    appendRenderableNodes(
-      parent,
-      runWithDOMComponentHooks(() => renderable.type(renderable.props)),
-      ns,
-    );
-  });
+  const context = getActiveDOMExecutionContext();
+
+  runComponentRenderable(
+    renderable,
+    {
+      owner: context.owner,
+      renderEffectScheduler: context.renderEffectScheduler,
+    },
+    (value) => appendRenderableNodes(parent, value, ns),
+  );
 }

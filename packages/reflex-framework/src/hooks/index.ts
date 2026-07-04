@@ -1,3 +1,4 @@
+export * from "./compat";
 export * from "./context";
 export * from "./owner";
 export * from "./useComponent";

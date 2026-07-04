@@ -193,11 +193,9 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
   it("configures hooks on the active runtime context", () => {
     const onSinkInvalidated = vi.fn();
     const onSettled = vi.fn();
-    const onCleanup = vi.fn();
 
     configureRuntimeContext({
       hooks: {
-        effectCleanupRegistrar: onCleanup,
         reactiveSettledDispatcher: onSettled,
         sinkInvalidatedDispatcher: onSinkInvalidated,
       },

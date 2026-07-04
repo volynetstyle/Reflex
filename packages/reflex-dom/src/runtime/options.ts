@@ -1,5 +1,4 @@
 import { createRuntime } from "@volynets/reflex";
-import { registerActiveOwnerCleanup } from "@volynets/reflex-framework";
 import type { DOMRenderEffectScheduler } from "./render-effect-scheduler";
 import {
   createDefaultPolicyConfig,
@@ -41,11 +40,6 @@ export function createRendererRuntime(
       reactiveSettledDispatcher() {
         renderEffectScheduler?.flush();
         hooks?.reactiveSettledDispatcher?.();
-      },
-
-      effectCleanupRegistrar(dispose) {
-        registerActiveOwnerCleanup(dispose);
-        hooks?.effectCleanupRegistrar?.(dispose);
       },
     },
   });

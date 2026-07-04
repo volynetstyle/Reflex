@@ -2,8 +2,7 @@ import {
   createOwnedEffect,
   registerCleanup,
   runWithOwnershipNode,
-  runWithComponentHooks,
-  type Scope,
+  type OwnershipNode,
 } from "@volynets/reflex-framework";
 import {
   getActiveDOMExecutionContext,
@@ -12,35 +11,12 @@ import {
 import type { DOMExecutionContext } from "./types";
 import type { Cleanup } from "../../types";
 
-export function runInDOMOwnershipScope<T>(
-  scope: Scope,
+export function runInDOMOwnershipNode<T>(
+  node: OwnershipNode,
   fn: () => T,
   context: DOMExecutionContext = getActiveDOMExecutionContext(),
 ): T {
-  return runWithOwnershipNode(context.owner, scope, () =>
-    runWithDOMExecutionContext(context, fn),
-  );
-}
-
-export function runWithDOMComponentHooks<T>(
-  fn: () => T,
-  context: DOMExecutionContext = getActiveDOMExecutionContext(),
-): T {
-  return runWithComponentHooks(
-    {
-      owner: context.owner,
-      scope: context.owner.currentOwner,
-      renderEffectScheduler: context.renderEffectScheduler,
-    },
-    () => runWithDOMExecutionContext(context, fn),
-  );
-}
-
-export function createDOMOwnedEffect(
-  fn: () => void | Cleanup,
-  context: DOMExecutionContext = getActiveDOMExecutionContext(),
-): Cleanup {
-  return createOwnedEffect(context.owner, context.owner.currentOwner, () =>
+  return runWithOwnershipNode(context.owner, node, () =>
     runWithDOMExecutionContext(context, fn),
   );
 }
@@ -52,16 +28,18 @@ export function createDOMOwnedReaction<T>(
 ): Cleanup {
   let initialized = false;
 
-  return createDOMOwnedEffect(() => {
-    const value = read();
+  return createOwnedEffect(context.owner, context.owner.currentNode, () =>
+    runWithDOMExecutionContext(context, () => {
+      const value = read();
 
-    if (!initialized) {
-      initialized = true;
-      return;
-    }
+      if (!initialized) {
+        initialized = true;
+        return;
+      }
 
-    return react(value);
-  }, context);
+      return react(value);
+    }),
+  );
 }
 
 export function registerDOMCleanup(

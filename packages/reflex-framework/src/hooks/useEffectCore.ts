@@ -4,7 +4,7 @@ import { runWithOwner } from "../ownership/ownership.scope";
 import {
   RenderEffectPhase,
   getCurrentHookOwner,
-  getCurrentHookScope,
+  getCurrentHookNode,
   getCurrentRenderEffectScheduler,
 } from "./context";
 
@@ -13,13 +13,14 @@ export type EffectCallback = () => EffectCleanup;
 
 export function useEffectInternal(callback: EffectCallback): Cleanup {
   const owner = getCurrentHookOwner();
-  return createOwnedEffect(owner, owner.currentOwner, callback);
+  return createOwnedEffect(owner, owner.currentNode, callback);
 }
 
 export function useEffectOnceInternal(callback: () => void): void {
   let didRun = false;
 
-  const dispose = useEffectInternal(() => {
+  const owner = getCurrentHookOwner();
+  const dispose = createOwnedEffect(owner, owner.currentNode, () => {
     if (didRun) {
       return;
     }
@@ -36,26 +37,23 @@ export function useEffectOnceInternal(callback: () => void): void {
 export function useEffectRenderInternal(callback: EffectCallback): Cleanup {
   const scheduler = getCurrentRenderEffectScheduler();
   const owner = getCurrentHookOwner();
-  const scope = getCurrentHookScope();
+  const node = getCurrentHookNode();
 
   let disposed = false;
   let disposeEffect: Cleanup | null = null;
 
-  const cancelableScheduledTask = scheduler.schedule(
-    () => {
-      if (disposed) return;
+  const cancelableScheduledTask = scheduler.schedule(() => {
+    if (disposed) return;
 
-      disposeEffect = runWithOwner(owner, scope, () =>
-        createOwnedEffect(owner, scope, callback),
-      );
+    disposeEffect = runWithOwner(owner, node, () =>
+      createOwnedEffect(owner, node, callback),
+    );
 
-      if (disposed) {
-        disposeEffect();
-        disposeEffect = null;
-      }
-    },
-    RenderEffectPhase.Render,
-  );
+    if (disposed) {
+      disposeEffect();
+      disposeEffect = null;
+    }
+  }, RenderEffectPhase.Render);
 
   const dispose = (() => {
     disposed = true;

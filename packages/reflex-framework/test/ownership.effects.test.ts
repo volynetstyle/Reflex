@@ -123,13 +123,4 @@ describe("ownership effects", () => {
     expect(log).toEqual(["run:1", "cleanup"]);
   });
 
-  it("does not register its runtime watcher through the public effect hook", () => {
-    const effectCleanupRegistrar = vi.fn();
-    createRuntime({ hooks: { effectCleanupRegistrar } });
-    const owner = createOwnerContext();
-
-    createOwnedEffect(owner, null, () => {});
-
-    expect(effectCleanupRegistrar).not.toHaveBeenCalled();
-  });
 });
