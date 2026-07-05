@@ -30,7 +30,6 @@ export const noopRenderEffectScheduler: RenderEffectScheduler = Object.freeze({
 });
 
 interface ComponentHookContext {
-  hookIndex: number;
   owner: OwnerContext;
   node: OwnershipNode | null;
   renderEffectScheduler: RenderEffectScheduler | null;
@@ -74,7 +73,6 @@ export function runWithComponentHooks<T>(
 
   return runWithOwner(owner, node, () => {
     hookState.currentHookContext = {
-      hookIndex: 0,
       owner,
       node,
       renderEffectScheduler:
@@ -125,13 +123,4 @@ export function getCurrentRenderEffectScheduler(): RenderEffectScheduler {
   return (
     getCurrentHookContext()?.renderEffectScheduler ?? noopRenderEffectScheduler
   );
-}
-
-export function consumeHookSlot(): number {
-  assertHookUsage("hook");
-
-  const currentHookContext = getCurrentHookContext();
-  if (currentHookContext === null) return 0;
-
-  return currentHookContext.hookIndex++;
 }

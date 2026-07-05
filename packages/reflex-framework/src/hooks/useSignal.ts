@@ -1,8 +1,8 @@
 import { signal } from "@volynets/reflex";
 import { assertHookUsage } from "./context";
-import { useHookSlot } from "./slot";
+import { useOwned } from "./useOwned";
 
 export function useSignal<T>(initial: T): ReturnType<typeof signal<T>> {
   assertHookUsage("useSignal");
-  return useHookSlot(() => signal(initial)).value;
+  return useOwned(() => signal(initial));
 }

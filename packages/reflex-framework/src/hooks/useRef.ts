@@ -1,5 +1,5 @@
 import { assertHookUsage } from "./context";
-import { useHookSlot } from "./slot";
+import { useOwned } from "./useOwned";
 
 export interface RefObject<T> {
   current: T;
@@ -8,5 +8,5 @@ export interface RefObject<T> {
 export function useRef<T>(initial: T): RefObject<T> {
   assertHookUsage("useRef");
 
-  return useHookSlot<RefObject<T>>(() => ({ current: initial })).value;
+  return useOwned<RefObject<T>>(() => ({ current: initial }));
 }

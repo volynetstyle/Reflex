@@ -47,6 +47,7 @@
     "test": "pnpm exec vitest run --config vite.config.ts",
     "bench": "pnpm exec vitest bench --config vite.config.ts",
     "bench:ownership": "pnpm exec vitest bench bench/ownership.bench.ts --config vite.config.ts",
+    "bench:ui": "pnpm exec vitest bench bench/ui-scenarios.bench.ts --config vite.config.ts",
     "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
     "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build"
   },

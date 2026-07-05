@@ -10,18 +10,22 @@ export function addCleanup(node: OwnershipNode, fn: Cleanup): void {
 
   if (cleanups === null) {
     node.cleanups = fn;
-  } else if (typeof cleanups === "function") {
-    node.cleanups = [cleanups, fn];
-  } else {
-    cleanups.push(fn);
+    return;
   }
+
+  if (typeof cleanups === "function") {
+    node.cleanups = [cleanups, fn];
+    return;
+  }
+
+  cleanups[cleanups.length] = fn;
 }
 
 function reportCleanupError(error: unknown): void {
   console.error("Ownership cleanup error:", error);
 }
 
-function invokeCleanup(fn: Cleanup): void {
+function runCleanup(fn: Cleanup): void {
   try {
     fn();
   } catch (error) {
@@ -31,54 +35,76 @@ function invokeCleanup(fn: Cleanup): void {
 
 function runCleanups(node: OwnershipNode): void {
   const cleanups = node.cleanups;
+
   if (cleanups === null) return;
 
   node.cleanups = null;
 
   if (typeof cleanups === "function") {
-    invokeCleanup(cleanups);
+    runCleanup(cleanups);
     return;
   }
 
   for (let i = cleanups.length - 1; i >= 0; i--) {
-    invokeCleanup(cleanups[i]!);
+    runCleanup(cleanups[i]!);
   }
 }
 
 export function disposeOwnershipNode(root: OwnershipNode): void {
   if (isShuttingDown(root)) return;
 
-  markSubtreeClosing(root);
+  markClosing(root);
 
+  if (root.firstChild === null) {
+    disposeClosedRootLeaf(root);
+    return;
+  }
+
+  markDescendantsClosing(root);
+  disposeClosedSubtree(root);
+}
+
+function disposeClosedRootLeaf(root: OwnershipNode): void {
+  runCleanups(root);
+  markDisposed(root);
+
+  detach(root);
+
+  root.context = null;
+}
+
+function disposeClosedSubtree(root: OwnershipNode): void {
   let node: OwnershipNode | null = root;
 
   while (node !== null) {
     const child: OwnershipNode | null = node.firstChild;
+
     if (child !== null) {
       node = child;
       continue;
     }
 
-    const next: OwnershipNode | null =
-      node === root ? null : (node.nextSibling ?? node.parent);
+    const isRoot: boolean = node === root;
+    const parent: OwnershipNode | null = node.parent;
+    const nextSibling: OwnershipNode | null = node.nextSibling;
+
+    const next: OwnershipNode | null = isRoot ? null : (nextSibling ?? parent);
 
     runCleanups(node);
     markDisposed(node);
 
-    // Internal links belong to a subtree that is being discarded wholesale.
-    // Only the root can still be linked into a live tree and needs full detach.
-    if (node === root) {
+    if (isRoot) {
       detach(node);
     } else {
-      const parent = node.parent!;
-      const nextSibling = node.nextSibling;
+      parent!.firstChild = nextSibling;
 
-      parent.firstChild = nextSibling;
       if (nextSibling !== null) {
         nextSibling.prevSibling = null;
       }
 
-      node.parent = node.prevSibling = node.nextSibling = null;
+      node.parent = null;
+      node.prevSibling = null;
+      node.nextSibling = null;
     }
 
     node.firstChild = null;
@@ -88,28 +114,27 @@ export function disposeOwnershipNode(root: OwnershipNode): void {
   }
 }
 
-function markSubtreeClosing(root: OwnershipNode): void {
-  let node: OwnershipNode | null = root;
+function markDescendantsClosing(root: OwnershipNode): void {
+  let node: OwnershipNode | null = root.firstChild;
 
   while (node !== null) {
     markClosing(node);
 
-    const child: OwnershipNode | null = node.firstChild;
+    const child = node.firstChild;
+
     if (child !== null) {
       node = child;
       continue;
     }
 
-    let current: OwnershipNode = node;
-
-    while (current !== root && current.nextSibling === null) {
-      current = current.parent!;
+    while (node !== root && node.nextSibling === null) {
+      node = node.parent!;
     }
 
-    if (current === root) {
+    if (node === root) {
       return;
     }
 
-    node = current.nextSibling;
+    node = node.nextSibling;
   }
 }
