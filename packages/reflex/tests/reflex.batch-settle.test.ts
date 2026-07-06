@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { batch, createRuntime, signal } from "../src";
+import { batch, createRuntime, effect, signal } from "../src";
 
 describe("batch reactive settled deferral", () => {
   it("does not emit settled for an empty batch", () => {
@@ -35,6 +35,16 @@ describe("batch reactive settled deferral", () => {
     });
 
     expect(settled).toBe(1);
+  });
+
+  it("applies writes immediately and exposes fresh reads inside a batch", () => {
+    createRuntime();
+    const [value, setValue] = signal(0);
+
+    batch(() => {
+      setValue(1);
+      expect(value()).toBe(1);
+    });
   });
 
   it("waits for the outer nested batch before emitting settled", () => {
@@ -82,5 +92,28 @@ describe("batch reactive settled deferral", () => {
     setValue(2);
 
     expect(settled).toBe(2);
+  });
+
+  it("closes and flushes scheduler policy before emitting settled", () => {
+    const events: string[] = [];
+    const runtime = createRuntime({
+      effectStrategy: "sab",
+      hooks: {
+        reactiveSettledDispatcher() {
+          events.push("settled");
+        },
+      },
+    });
+    const [value, setValue] = signal(0);
+
+    effect(() => {
+      value();
+      events.push("effect");
+    });
+    events.length = 0;
+
+    runtime.batch(() => setValue(1));
+
+    expect(events).toEqual(["effect", "settled"]);
   });
 });

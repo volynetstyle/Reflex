@@ -8,13 +8,13 @@ import {
   snapshotRuntimeContext,
   configureRuntimeContext,
 } from "../../../src/kernel/context";
-import { switchRuntimeContext } from "../../../src/kernel/context-switch";
+import { switchRuntimeContext } from "../../../src/kernel/context.switch";
 import { emitSinkInvalidated } from "../../../src/kernel/config";
 import {
   emitSettledIfIdle,
   enterPropagationScope,
   leavePropagationScope,
-} from "../../../src/kernel/propagation-scope";
+} from "../../../src/kernel/context.scope";
 import {
   currentConsumer,
   keepNewestTrackingEpoch,

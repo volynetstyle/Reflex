@@ -33,7 +33,7 @@ export type RuntimeContextSnapshot = Omit<
 export function createRuntimeContext(
   options: RuntimeContextOptions = {},
 ): RuntimeContext {
-  const context: RuntimeContext = {
+  const context = {
     [RUNTIME_CONTEXT_BRAND]: true,
     currentConsumer: null,
     trackingEpoch: 0,
@@ -44,7 +44,8 @@ export function createRuntimeContext(
     sinkInvalidatedHook: undefined,
     reactiveSettledHook: undefined,
     effectCleanupHook: undefined,
-  };
+  } satisfies RuntimeContext;
+
   applyRuntimeContextOptions(context, options);
   return context;
 }

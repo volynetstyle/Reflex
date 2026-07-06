@@ -11,7 +11,7 @@ import {
   emitSettledIfIdle,
   enterPropagationScope,
   leavePropagationScope,
-} from "../../../src/kernel/propagation-scope";
+} from "../../../src/kernel/context.scope";
 
 /** Covers security-sensitive hook normalization and replacement behavior. */
 describe("Reactive runtime - security regressions", () => {

@@ -11,7 +11,6 @@ export const STATE_IMPORT =
 export function inlineRegisterReads(code: string): string {
   return code
     .replaceAll("isReactiveBatchActive()", "(__kernelReactiveBatchDepth !== 0)")
-    .replaceAll("hasPendingReactiveSettled()", "__kernelPendingReactiveSettled")
     .replaceAll(
       "isRuntimeExecutionIdle()",
       "(__kernelPropagationScopeDepth === 0 && __kernelCurrentConsumer === null)",
@@ -171,6 +170,5 @@ export const REGISTER_HELPERS = [
   ["markReactiveSettledPending", 0],
   ["clearReactiveSettledPending", 0],
   ["setReactiveBatchState", 2],
-  ["hasPendingReactiveSettled", 0],
   ["isReactiveBatchActive", 0],
 ] as const;

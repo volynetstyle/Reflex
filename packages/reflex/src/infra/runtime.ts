@@ -1,9 +1,7 @@
 import {
   createRuntimeContext,
   enterReactiveBatch,
-  flushPendingReactiveSettledIfIdle,
   getActiveRuntimeContext,
-  hasPendingReactiveSettled,
   leaveReactiveBatch,
   runWithRuntimeContext,
   resetRuntimeContext,
@@ -18,21 +16,24 @@ import type {
 import { subscribeEvent } from "./event";
 import { createSource } from "./factory";
 import { createEventDispatcher } from "../policy";
-import type { EffectStrategy } from "../policy/scheduler";
+import { EffectSchedulerMode } from "../policy/scheduler/scheduler.constants";
 import {
-  EffectSchedulerMode,
-  Batching,
-  Flushing,
-  Idle,
-  createEffectScheduler,
-  enterSchedulerBatch,
-  flushSchedulerQueue,
   hasPendingEffects,
   isContextSettled,
+} from "../policy/scheduler/scheduler.context";
+import { profileSchedulerPolicyCounter } from "../policy/scheduler/scheduler.counters";
+import {
+  createSchedulerCore,
+  enterSchedulerBatch,
+  flushSchedulerQueue,
   leaveSchedulerBatch,
-  profileSchedulerPolicyCounter,
+} from "../policy/scheduler/scheduler.core";
+import {
+  enqueueEffectByPolicy,
+  notifyEffectSchedulerSettled,
   resolveEffectSchedulerMode,
-} from "../policy/scheduler";
+} from "../policy/scheduler/scheduler.infra";
+import type { EffectStrategy } from "../policy/scheduler/scheduler.infra";
 
 type BatchFn = <T>(fn: () => T) => T;
 type EventFn = <T>() => EventSource<T>;
@@ -74,45 +75,18 @@ export function createRuntime({
 }: RuntimeOptions = {}): Runtime {
   const execution = createRuntimeContext();
   const ctx: RuntimeContext = { scope: "runtime", execution };
-  const scheduler = createEffectScheduler(
-    resolveEffectSchedulerMode(effectStrategy),
-  );
-  const schedulerCore = scheduler.core;
-  const schedulerMode = scheduler.mode;
-  const schedulerFlush = scheduler.flush;
+  const schedulerMode = resolveEffectSchedulerMode(effectStrategy);
+  const schedulerCore = createSchedulerCore();
+  const schedulerFlush = (): void => flushSchedulerQueue(schedulerCore);
   const run = <T>(fn: () => T): T => runWithRuntimeContext(execution, fn);
   const emitReactiveSettled = (): void => {
     profileSchedulerPolicyCounter("settleCalled");
-    scheduler.runtimeNotifySettled?.();
+    notifyEffectSchedulerSettled(schedulerCore, schedulerMode);
     hooks?.reactiveSettledDispatcher?.();
   };
-  const runFlushBatch = <T>(fn: () => T): T => {
-    enterReactiveBatch();
-
-    if (++schedulerCore.batchDepth === 1 && schedulerCore.phase !== Flushing) {
-      schedulerCore.phase = Batching;
-    }
-
-    try {
-      return fn();
-    } finally {
-      profileSchedulerPolicyCounter("batchExit");
-
-      if (
-        --schedulerCore.batchDepth === 0 &&
-        schedulerCore.phase !== Flushing
-      ) {
-        schedulerCore.phase = Idle;
-      }
-
-      leaveReactiveBatch();
-
-      if (hasPendingReactiveSettled()) {
-        flushPendingReactiveSettledIfIdle();
-      }
-    }
-  };
-  const runScheduledBatch = <T>(fn: () => T): T => {
+  const runBatch = <T>(fn: () => T): T => {
+    // Public batching composes two independent boundaries. Close scheduler
+    // policy first so a settled hook never observes it in Batching phase.
     enterReactiveBatch();
     enterSchedulerBatch(schedulerCore);
 
@@ -139,16 +113,8 @@ export function createRuntime({
       }
 
       leaveReactiveBatch();
-
-      if (hasPendingReactiveSettled()) {
-        flushPendingReactiveSettledIfIdle();
-      }
     }
   };
-  const runBatch =
-    schedulerMode === EffectSchedulerMode.Flush
-      ? runFlushBatch
-      : runScheduledBatch;
   const runtimeBatch = <T>(fn: () => T): T => {
     const runContextBatch = (): T => runBatch(fn);
 
@@ -174,7 +140,7 @@ export function createRuntime({
     hooks: {
       effectCleanupRegistrar: hooks?.effectCleanupRegistrar,
       sinkInvalidatedDispatcher(node) {
-        scheduler.enqueue(node);
+        enqueueEffectByPolicy(schedulerCore, schedulerMode, node);
         hooks?.sinkInvalidatedDispatcher?.(node);
       },
       reactiveSettledDispatcher() {
