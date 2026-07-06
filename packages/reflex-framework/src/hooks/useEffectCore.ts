@@ -13,15 +13,21 @@ export type EffectCallback = () => EffectCleanup;
 
 export function useEffectInternal(callback: EffectCallback): Cleanup {
   const owner = getCurrentHookOwner();
-  return createOwnedEffect(owner, owner.currentNode, callback);
+  const node = getCurrentHookNode();
+
+  return createOwnedEffect(owner, node, callback);
 }
 
-export function useEffectOnceInternal(callback: () => void): void {
-  let didRun = false;
-
+export function useEffectOnceInternal(callback: () => void): Cleanup {
   const owner = getCurrentHookOwner();
-  const dispose = createOwnedEffect(owner, owner.currentNode, () => {
-    if (didRun) {
+  const node = getCurrentHookNode();
+
+  let didRun = false;
+  let disposed = false;
+  let disposeEffect: Cleanup | null = null;
+
+  disposeEffect = createOwnedEffect(owner, node, () => {
+    if (disposed || didRun) {
       return;
     }
 
@@ -29,9 +35,26 @@ export function useEffectOnceInternal(callback: () => void): void {
     callback();
   });
 
+  const dispose = (() => {
+    if (disposed) {
+      return;
+    }
+
+    disposed = true;
+
+    const effect = disposeEffect;
+    disposeEffect = null;
+
+    effect?.();
+  }) as Cleanup;
+
+  dispose.dispose = dispose;
+
   if (didRun) {
     dispose();
   }
+
+  return dispose;
 }
 
 export function useEffectRenderInternal(callback: EffectCallback): Cleanup {
@@ -42,26 +65,39 @@ export function useEffectRenderInternal(callback: EffectCallback): Cleanup {
   let disposed = false;
   let disposeEffect: Cleanup | null = null;
 
-  const cancelableScheduledTask = scheduler.schedule(() => {
-    if (disposed) return;
+  const cancelScheduledTask = scheduler.schedule(() => {
+    if (disposed) {
+      return;
+    }
 
-    disposeEffect = runWithOwner(owner, node, () =>
+    const effect = runWithOwner(owner, node, () =>
       createOwnedEffect(owner, node, callback),
     );
 
     if (disposed) {
-      disposeEffect();
-      disposeEffect = null;
+      effect();
+      return;
     }
+
+    disposeEffect = effect;
   }, RenderEffectPhase.Render);
 
   const dispose = (() => {
+    if (disposed) {
+      return;
+    }
+
     disposed = true;
-    cancelableScheduledTask();
-    disposeEffect?.();
+    cancelScheduledTask();
+
+    const effect = disposeEffect;
     disposeEffect = null;
+
+    effect?.();
   }) as Cleanup;
 
   dispose.dispose = dispose;
+
   return dispose;
 }
+

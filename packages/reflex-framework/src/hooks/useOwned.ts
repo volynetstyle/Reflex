@@ -3,14 +3,15 @@ import { getCurrentHookNode } from "./context";
 
 export function useOwned<T>(
   create: () => T,
-  dispose?: (value: T) => void,
+  dispose: (value: T) => void,
 ): T {
   const node = getCurrentHookNode();
   const value = create();
 
-  if (node !== null && dispose !== undefined) {
-    addCleanup(node, () => dispose(value));
+  if (node === null) {
+    return value;
   }
 
+  addCleanup(node, () => dispose(value));
   return value;
 }

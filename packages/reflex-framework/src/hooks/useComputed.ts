@@ -3,9 +3,9 @@ import {
   readConsumerLazy,
   untracked,
 } from "@volynets/reflex-runtime";
+import { disposeNode } from "@runtime/kernel";
 import { assertHookUsage } from "./context";
 import { useOwned } from "./useOwned";
-import { disposeNode } from "@runtime/kernel";
 
 export interface DisposableComputed<T> {
   readonly read: Computed<T>;
@@ -15,28 +15,32 @@ export interface DisposableComputed<T> {
 export function createDisposableComputed<T>(
   fn: () => T,
 ): DisposableComputed<T> {
-  // devassertDerivedFn(fn, "computed");
-
   const node = createConsumer(fn);
+  const read = readConsumerLazy.bind(node) as Computed<T>;
 
   return {
-    read: readConsumerLazy.bind(node) as Computed<T>,
+    read,
     dispose() {
       disposeNode(node);
     },
   };
 }
 
-export function warmDisposableComputed<T>(computed: DisposableComputed<T>): T {
+export function warmDisposableComputed<T>(
+  computed: DisposableComputed<T>,
+): T {
   return untracked(computed.read);
 }
 
 interface GuardedReadable<T> {
-  computed: DisposableComputed<T>;
+  readonly node: ReturnType<typeof createConsumer<T>>;
+  readonly read: Computed<T>;
+
   disposed: boolean;
-  guarded: Computed<T> | null;
   hasValue: boolean;
   value: T | undefined;
+
+  guarded: Computed<T>;
 }
 
 export function useComputed<T>(fn: () => T): Computed<T> {
@@ -51,35 +55,49 @@ export function useMemo<T>(fn: () => T): Memo<T> {
 
 function useDerived<T>(fn: () => T, warm: boolean): Computed<T> {
   const state = useOwned<GuardedReadable<T>>(
-    () => {
-      // Component hooks do not rerender in place today: the first render owns
-      // this closure until its ownership node is disposed, so stale fn capture is the
-      // intended lifecycle contract rather than a missed dependency update.
-      const computed = createDisposableComputed(fn);
-      const state: GuardedReadable<T> = {
-        computed,
-        disposed: false,
-        guarded: null,
-        hasValue: false,
-        value: undefined,
-      };
-
-      if (warm) {
-        state.value = warmDisposableComputed(computed);
-        state.hasValue = true;
-      }
-
-      return state;
-    },
-    (state) => {
-      state.disposed = true;
-      state.computed.dispose();
-    },
+    () => createGuardedReadable(fn, warm),
+    disposeGuardedReadable,
   );
 
-  state.guarded ??= bindState(state);
-
   return state.guarded;
+}
+
+function createGuardedReadable<T>(
+  fn: () => T,
+  warm: boolean,
+): GuardedReadable<T> {
+  const node = createConsumer(fn);
+  const read = readConsumerLazy.bind(node) as Computed<T>;
+
+  const state: GuardedReadable<T> = {
+    node,
+    read,
+
+    disposed: false,
+    hasValue: false,
+    value: undefined,
+
+    guarded: undefined as unknown as Computed<T>,
+  };
+
+  state.guarded = bindState(state);
+
+  try {
+    if (warm) {
+      state.value = untracked(read);
+      state.hasValue = true;
+    }
+
+    return state;
+  } catch (error) {
+    disposeNode(node);
+    throw error;
+  }
+}
+
+function disposeGuardedReadable<T>(state: GuardedReadable<T>): void {
+  state.disposed = true;
+  disposeNode(state.node);
 }
 
 function bindState<T>(state: GuardedReadable<T>): Computed<T> {
@@ -98,14 +116,26 @@ function bindState<T>(state: GuardedReadable<T>): Computed<T> {
 
 function readGuarded<T>(state: GuardedReadable<T>): T {
   if (state.disposed) {
-    if (state.hasValue) return state.value as T;
-    throw new Error(
-      "Cannot read disposed computed hook before initialization.",
-    );
+    return readDisposed(state);
   }
 
-  const value = state.computed.read();
+  const value = state.read();
+
   state.value = value;
-  state.hasValue = true;
+
+  if (!state.hasValue) {
+    state.hasValue = true;
+  }
+
   return value;
+}
+
+function readDisposed<T>(state: GuardedReadable<T>): T {
+  if (state.hasValue) {
+    return state.value as T;
+  }
+
+  throw new Error(
+    "Cannot read disposed computed hook before initialization.",
+  );
 }

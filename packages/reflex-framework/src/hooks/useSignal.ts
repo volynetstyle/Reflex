@@ -1,8 +1,13 @@
 import { signal } from "@volynets/reflex";
 import { assertHookUsage } from "./context";
-import { useOwned } from "./useOwned";
 
-export function useSignal<T>(initial: T): ReturnType<typeof signal<T>> {
+type SignalTuple<T> = ReturnType<typeof signal<T>>;
+
+export function useSignal<T>(initial: T): SignalTuple<T> {
   assertHookUsage("useSignal");
-  return useOwned(() => signal(initial));
+
+  // `initial` is used only during hook creation.
+  // Component hooks do not rerender in place today, so later `initial` values
+  // are intentionally ignored for this ownership node lifetime.
+  return signal(initial);
 }
