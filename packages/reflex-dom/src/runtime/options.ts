@@ -1,4 +1,13 @@
-import { createRuntime } from "@volynets/reflex";
+import {
+  createRuntimeContext,
+  enterReactiveBatch,
+  flushPendingReactiveSettledIfIdle,
+  hasPendingReactiveSettled,
+  leaveReactiveBatch,
+  runWithRuntimeContext,
+  type RuntimeContext,
+  type RuntimeContextOptions,
+} from "@volynets/reflex-runtime/internal";
 import type { DOMRenderEffectScheduler } from "./render-effect-scheduler";
 import {
   createDefaultPolicyConfig,
@@ -6,11 +15,12 @@ import {
   type PolicyConfig,
 } from "./policies";
 
-export type RuntimeInstance = ReturnType<typeof createRuntime>;
+export interface RuntimeInstance {
+  readonly execution: RuntimeContext;
+  batch<T>(fn: () => T): T;
+}
 
-type CreateRuntimeOptions = NonNullable<Parameters<typeof createRuntime>[0]>;
-
-export interface DOMRuntimeOptions extends CreateRuntimeOptions {
+export interface DOMRuntimeOptions extends RuntimeContextOptions {
   policy?: Partial<PolicyConfig>;
 }
 
@@ -18,22 +28,17 @@ export function createRendererRuntime(
   options: DOMRuntimeOptions = {},
   renderEffectScheduler?: DOMRenderEffectScheduler,
 ): RuntimeInstance {
-  const { policy, hooks, effectStrategy, ...runtimeOptions } = options;
+  const { policy, hooks, ...runtimeOptions } = options;
 
   const defaultPolicy = createDefaultPolicyConfig();
 
-  const resolvedEffectStrategy =
-    effectStrategy ??
-    resolveEffectStrategy(
-      policy?.effectPolicy ?? defaultPolicy.effectPolicy,
-      policy?.priorityLevels ?? defaultPolicy.priorityLevels,
-    );
+  resolveEffectStrategy(
+    policy?.effectPolicy ?? defaultPolicy.effectPolicy,
+    policy?.priorityLevels ?? defaultPolicy.priorityLevels,
+  );
 
-  return createRuntime({
+  const execution = createRuntimeContext({
     ...runtimeOptions,
-
-    effectStrategy: resolvedEffectStrategy,
-
     hooks: {
       ...hooks,
 
@@ -43,4 +48,21 @@ export function createRendererRuntime(
       },
     },
   });
+
+  return {
+    execution,
+    batch<T>(fn: () => T): T {
+      return runWithRuntimeContext(execution, () => {
+        enterReactiveBatch();
+        try {
+          return fn();
+        } finally {
+          leaveReactiveBatch();
+          if (hasPendingReactiveSettled()) {
+            flushPendingReactiveSettledIfIdle();
+          }
+        }
+      });
+    },
+  };
 }

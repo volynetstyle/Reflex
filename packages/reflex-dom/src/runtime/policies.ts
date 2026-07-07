@@ -1,8 +1,4 @@
-import type { createRuntime } from "@volynets/reflex";
-
-type RuntimeEffectStrategy = NonNullable<
-  Parameters<typeof createRuntime>[0]
->["effectStrategy"];
+type RuntimeEffectStrategy = "eager" | "sab" | "flush";
 
 export const enum ExecutionPolicy {
   Eager = "eager",

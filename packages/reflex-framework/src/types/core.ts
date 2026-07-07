@@ -12,6 +12,20 @@
  */
 export type Accessor<T> = () => T;
 
+export type SetInput<T> = T | ((previous: T) => T);
+
+export type Setter<T> = (input: SetInput<T>) => void;
+
+export type ReactiveReadable<T> = Accessor<T> & {
+  readonly value: T;
+};
+
+export type Signal<T> = ReactiveReadable<T>;
+
+export type Computed<T> = ReactiveReadable<T>;
+
+export type Memo<T> = ReactiveReadable<T>;
+
 /**
  * A value that may either be static or reactive.
  *

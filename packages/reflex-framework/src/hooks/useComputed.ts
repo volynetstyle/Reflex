@@ -3,7 +3,8 @@ import {
   readConsumerLazy,
   untracked,
 } from "@volynets/reflex-runtime";
-import { disposeNode } from "@runtime/kernel";
+import { disposeNode } from "@volynets/reflex-runtime/internal";
+import type { Computed, Memo } from "../types/core";
 import { assertHookUsage } from "./context";
 import { useOwned } from "./useOwned";
 

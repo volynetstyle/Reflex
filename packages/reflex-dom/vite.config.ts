@@ -4,7 +4,6 @@ import { fileURLToPath } from "node:url";
 
 const packageRoot = fileURLToPath(new URL(".", import.meta.url));
 const frameworkRoot = resolve(packageRoot, "../reflex-framework/src");
-const reflexRoot = resolve(packageRoot, "../reflex/src");
 const runtimeRoot = resolve(packageRoot, "../reflex-runtime/src");
 
 export default defineConfig({
@@ -30,10 +29,6 @@ export default defineConfig({
       {
         find: "@volynets/reflex-framework",
         replacement: resolve(frameworkRoot, "index.ts"),
-      },
-      {
-        find: "@volynets/reflex",
-        replacement: resolve(reflexRoot, "index.ts"),
       },
     ],
     conditions: ["source"],

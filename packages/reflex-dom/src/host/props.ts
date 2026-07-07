@@ -44,9 +44,9 @@ function applyClass(el: Element, value: unknown): unknown {
 export function applyProp(
   el: Element,
   name: string,
-  value: StyleValue,
+  value: unknown,
   ns: Namespace,
-  prev: StyleValue,
+  prev: unknown,
 ): unknown {
   if (value === prev || name === "children" || name === "key") {
     return prev;
@@ -58,7 +58,7 @@ export function applyProp(
       return applyClass(el, value);
 
     case "style":
-      return applyStyle(el, value, prev);
+      return applyStyle(el, value as StyleValue, prev as StyleValue);
   }
 
   if (isManagedFormProp(el, name)) {

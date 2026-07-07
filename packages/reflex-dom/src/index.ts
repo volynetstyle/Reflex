@@ -12,7 +12,6 @@ export {
   // side-effects
   useEffect,
   useEffectOnce,
-  useEffectRender,
   // Lifecycle
   useOwned,
   useMount,
@@ -24,6 +23,7 @@ export {
   hasOwnContext,
   type UseEffectFn,
 } from "@volynets/reflex-framework";
+export { useEffectRender } from "./hooks/use-effect-render";
 
 // JSX runtime
 export { Fragment, jsx, jsxDEV, jsxs } from "./runtime/jsx";

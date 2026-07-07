@@ -3,13 +3,15 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@volynets/reflex": ["../reflex/dist/globals.d.ts"],
       "@volynets/reflex-framework": ["../reflex-framework/dist/index.d.ts"],
       "@volynets/reflex-framework/jsx-runtime": [
         "../reflex-framework/dist/jsx-runtime.d.ts"
       ],
       "@volynets/reflex-framework/jsx-dev-runtime": [
         "../reflex-framework/dist/jsx-dev-runtime.d.ts"
+      ],
+      "@volynets/reflex-runtime/internal": [
+        "../reflex-runtime/dist/esm/internal/index.d.ts"
       ]
     },
     "rootDir": "src",

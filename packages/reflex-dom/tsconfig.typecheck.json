@@ -7,7 +7,6 @@
         "../@reflex/runtime/src/index.ts",
         "../@reflex/runtime/dist/globals.d.ts"
       ],
-      "@volynets/reflex": ["../reflex/src/index.ts"],
       "@volynets/reflex-framework": [
         "../reflex-framework/src/index.ts",
         "../reflex-framework/dist/index.d.ts"

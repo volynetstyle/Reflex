@@ -50,8 +50,8 @@
     "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build"
   },
   "dependencies": {
-    "@volynets/reflex": "^0.3.5",
-    "@volynets/reflex-framework": "^0.1.2"
+    "@volynets/reflex-framework": "workspace:^",
+    "@volynets/reflex-runtime": "workspace:^"
   },
   "keywords": [
     "dom",
