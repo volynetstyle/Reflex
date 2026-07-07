@@ -1,0 +1,96 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>reflex-dom mutation benchmark</title>
+<pre id="result">running</pre>
+<script>
+const out = document.querySelector("#result");
+const samples = 15;
+
+function nodes(count, type = "element") {
+  const parent = document.createElement("div");
+  const values = [];
+  for (let i = 0; i < count; i++) {
+    const node = type === "text" ? document.createTextNode("x") :
+      type === "comment" ? document.createComment("x") : document.createElement("i");
+    values.push(node);
+  }
+  parent.append(...values);
+  return { parent, values };
+}
+
+function moveManual(start, end, anchor) {
+  const parent = start.parentNode;
+  const frag = document.createDocumentFragment();
+  let node = start;
+  while (node) {
+    const next = node === end ? null : node.nextSibling;
+    frag.appendChild(node);
+    if (node === end) break;
+    node = next;
+  }
+  parent.insertBefore(frag, anchor);
+}
+function moveRange(start, end, anchor) {
+  const range = document.createRange();
+  range.setStartBefore(start); range.setEndAfter(end);
+  start.parentNode.insertBefore(range.extractContents(), anchor);
+}
+function clearManual(start, end) {
+  let node = start.nextSibling;
+  while (node && node !== end) { const next = node.nextSibling; node.remove(); node = next; }
+}
+function clearRange(start, end) {
+  const range = document.createRange();
+  range.setStartAfter(start); range.setEndBefore(end); range.deleteContents();
+}
+function insertBeforeSpread(anchor, values) { anchor.before(...values); }
+function insertBeforeFragment(anchor, values) {
+  const frag = document.createDocumentFragment();
+  for (const node of values) frag.appendChild(node);
+  anchor.parentNode.insertBefore(frag, anchor);
+}
+
+function median(xs) { const s = [...xs].sort((a,b) => a-b); return s[s.length >> 1]; }
+function measure(name, setup, operation) {
+  const times = [];
+  for (let i = -3; i < samples; i++) {
+    const state = setup();
+    const t = performance.now(); operation(state);
+    const elapsed = performance.now() - t;
+    state.parent.remove();
+    if (i >= 0) times.push(elapsed);
+  }
+  return { name, medianMs: +median(times).toFixed(4), minMs: +Math.min(...times).toFixed(4) };
+}
+
+(() => {
+const results = [];
+for (const c of [{ length: 2, start: 9000 }, { length: 1000, start: 4000 }]) {
+  for (const [label, fn] of [["manual", moveManual], ["range", moveRange]]) {
+    results.push(measure(`move/${label}/start=${c.start}/length=${c.length}`, () => {
+      const state = nodes(10000); document.body.append(state.parent);
+      return { ...state, start: state.values[c.start], end: state.values[c.start+c.length-1], anchor: state.values[100] };
+    }, s => fn(s.start, s.end, s.anchor)));
+  }
+}
+for (const startIndex of [0, 100, 5000, 9000]) for (const length of [0, 1, 2, 8, 128, 1024]) {
+  for (const [label, fn] of [["manual", clearManual], ["range", clearRange]]) {
+    results.push(measure(`clear/${label}/start=${startIndex}/between=${length}`, () => {
+      const state = nodes(Math.max(10002, startIndex + length + 2)); document.body.append(state.parent);
+      return { ...state, start: state.values[startIndex], end: state.values[startIndex+length+1] };
+    }, s => fn(s.start, s.end)));
+  }
+}
+for (const size of [1,2,4,8,16,128,1024,8192,16000,32000,60000]) {
+  for (const [label, fn] of [["spread", insertBeforeSpread], ["fragment", insertBeforeFragment]]) {
+    results.push(measure(`insert/${label}/size=${size}`, () => {
+      const parent = document.createElement("div"); const anchor = document.createComment("anchor");
+      parent.append(anchor); document.body.append(parent);
+      return { parent, anchor, values: nodes(size).values };
+    }, s => fn(s.anchor, s.values)));
+  }
+}
+out.textContent = JSON.stringify({ userAgent: navigator.userAgent, samples, results }, null, 2);
+document.documentElement.dataset.done = "true";
+})();
+</script>

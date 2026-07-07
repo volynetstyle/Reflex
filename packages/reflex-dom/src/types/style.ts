@@ -1,12 +1,8 @@
-type CSSPropertyValue = string | number | null | undefined;
+export type CSSPropertyValue = string | number | null | undefined;
 
 type CSSWritableKey = Exclude<
   {
-    [K in keyof CSSStyleDeclaration]: CSSStyleDeclaration[K] extends
-      | string
-      | number
-      | null
-      | undefined
+    [K in keyof CSSStyleDeclaration]: CSSStyleDeclaration[K] extends string
       ? K
       : never;
   }[keyof CSSStyleDeclaration],
@@ -17,4 +13,4 @@ export type StyleObject = Partial<Record<CSSWritableKey, CSSPropertyValue>> & {
   [CustomProperty in `--${string}`]?: CSSPropertyValue;
 };
 
-export type StyleValue = string | StyleObject;
+export type StyleValue = string | StyleObject | null | undefined;

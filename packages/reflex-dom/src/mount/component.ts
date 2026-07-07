@@ -1,8 +1,8 @@
-import type { Namespace } from "../host/namespace";
 import { runComponentRenderable } from "@volynets/reflex-framework";
-import { getActiveDOMExecutionContext } from "../runtime/execution";
-import type { ComponentRenderable } from "../types";
 import { appendRenderableNodes } from "./append";
+import { getActiveDOMExecutionContext } from "../runtime/execution";
+import type { Namespace } from "../host/namespace";
+import type { ComponentRenderable } from "../types";
 
 export function mountComponent(
   parent: Node,

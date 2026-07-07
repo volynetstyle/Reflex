@@ -1,6 +1,6 @@
 {
   "name": "@volynets/reflex-dom",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "type": "module",
   "description": "DOM renderer for Reflex",
   "license": "MIT",
@@ -42,6 +42,7 @@
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "pnpm clean && node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs dist",
+    "bench:mutations": "powershell -NoProfile -ExecutionPolicy Bypass -File ./bench/run-mutations.ps1",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "pnpm exec vitest run --config vite.config.ts",
