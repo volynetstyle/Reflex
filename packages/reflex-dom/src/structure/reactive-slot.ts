@@ -1,12 +1,9 @@
 import type { Namespace } from "../host/namespace";
 import {
-  onEffectStart,
-} from "@volynets/reflex-framework";
-import {
+  createDOMOwnedReaction,
   getActiveDOMExecutionContext,
   registerDOMCleanup,
-  runInDOMOwnershipScope,
-  useDOMOwnedEffect,
+  runInDOMOwnershipNode,
 } from "../runtime/execution";
 import type { ContentSlot } from "./content-slot";
 import { adoptContentSlot, createContentSlot } from "./content-slot";
@@ -20,9 +17,9 @@ export function createMountedSlot(
 
   return createContentSlot(
     document,
-    (parent, scope, nextValue) => {
-      runInDOMOwnershipScope(
-        scope,
+    (parent, ownershipNode, nextValue) => {
+      runInDOMOwnershipNode(
+        ownershipNode,
         () => {
           appendRenderableNodes(parent, nextValue, ns);
         },
@@ -42,9 +39,9 @@ export function createHydratedSlot(
 
   return adoptContentSlot(
     document,
-    (parent, scope, nextValue) => {
-      runInDOMOwnershipScope(
-        scope,
+    (parent, ownershipNode, nextValue) => {
+      runInDOMOwnershipNode(
+        ownershipNode,
         () => {
           appendRenderableNodes(parent, nextValue, ns);
         },
@@ -61,12 +58,8 @@ export function bindReactiveSlotLifecycle<T>(
   readValue: () => T,
   resolveValue: (value: T) => unknown,
 ): void {
-  useDOMOwnedEffect(() => {
-    const nextValue = readValue();
-
-    onEffectStart(() => {
-      slot.update(resolveValue(nextValue));
-    });
+  createDOMOwnedReaction(readValue, (nextValue) => {
+    slot.update(resolveValue(nextValue));
   });
 
   registerDOMCleanup(() => {

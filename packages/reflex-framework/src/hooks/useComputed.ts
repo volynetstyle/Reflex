@@ -1,62 +1,107 @@
 import {
-  createDisposableComputed,
-  warmDisposableComputed,
-  type DisposableComputed,
-} from "@volynets/reflex";
+  createConsumer,
+  readConsumerLazy,
+  untracked,
+} from "@volynets/reflex-runtime";
+import { disposeNode } from "@runtime/kernel";
 import { assertHookUsage } from "./context";
-import { type HookSlot, isHookSlotDisposed, useHookSlot } from "./slot";
+import { useOwned } from "./useOwned";
+
+export interface DisposableComputed<T> {
+  readonly read: Computed<T>;
+  dispose(): void;
+}
+
+export function createDisposableComputed<T>(
+  fn: () => T,
+): DisposableComputed<T> {
+  const node = createConsumer(fn);
+  const read = readConsumerLazy.bind(node) as Computed<T>;
+
+  return {
+    read,
+    dispose() {
+      disposeNode(node);
+    },
+  };
+}
+
+export function warmDisposableComputed<T>(computed: DisposableComputed<T>): T {
+  return untracked(computed.read);
+}
 
 interface GuardedReadable<T> {
-  computed: DisposableComputed<T>;
-  guarded: Computed<T> | null;
+  readonly node: ReturnType<typeof createConsumer<T>>;
+  readonly read: Computed<T>;
+
+  disposed: boolean;
   hasValue: boolean;
   value: T | undefined;
+
+  guarded: Computed<T>;
 }
 
 export function useComputed<T>(fn: () => T): Computed<T> {
   assertHookUsage("useComputed");
-  return useDerived(fn, false);
+  assertHookUsage("useMemo");
+  const state = useOwned<GuardedReadable<T>>(
+    () => createGuardedReadable(fn, false),
+    disposeGuardedReadable,
+  );
+
+  return state.guarded;
 }
 
 export function useMemo<T>(fn: () => T): Memo<T> {
   assertHookUsage("useMemo");
-  return useDerived(fn, true) as Memo<T>;
-}
-
-function useDerived<T>(fn: () => T, warm: boolean): Computed<T> {
-  const slot = useHookSlot<GuardedReadable<T>>(
-    () => {
-      // Component hooks do not rerender in place today: the first render owns
-      // this closure until its scope is disposed, so stale fn capture is the
-      // intended lifecycle contract rather than a missed dependency update.
-      const computed = createDisposableComputed(fn);
-      const state: GuardedReadable<T> = {
-        computed,
-        guarded: null,
-        hasValue: false,
-        value: undefined,
-      };
-
-      if (warm) {
-        state.value = warmDisposableComputed(computed);
-        state.hasValue = true;
-      }
-
-      return state;
-    },
-    (state) => {
-      state.computed.dispose();
-    },
+  const state = useOwned<GuardedReadable<T>>(
+    () => createGuardedReadable(fn, true),
+    disposeGuardedReadable,
   );
 
-  const readable = slot.value;
-  readable.guarded ??= bindSlot(slot);
-
-  return readable.guarded;
+  return state.guarded;
 }
 
-function bindSlot<T>(slot: HookSlot<GuardedReadable<T>>): Computed<T> {
-  const guarded = (() => readGuarded(slot, slot.value)) as Computed<T>;
+function createGuardedReadable<T>(
+  fn: () => T,
+  warm: boolean,
+): GuardedReadable<T> {
+  const node = createConsumer(fn);
+  const read = readConsumerLazy.bind(node) as Computed<T>;
+
+  const state: GuardedReadable<T> = {
+    node,
+    read,
+
+    disposed: false,
+    hasValue: false,
+    value: undefined,
+
+    guarded: undefined as unknown as Computed<T>,
+  };
+
+  state.guarded = bindState(state);
+
+  try {
+    if (warm) {
+      state.value = untracked(read);
+      state.hasValue = true;
+    }
+
+    return state;
+  } catch (error) {
+    disposeNode(node);
+    throw error;
+  }
+}
+
+function disposeGuardedReadable<T>(state: GuardedReadable<T>): void {
+  state.disposed = true;
+  disposeNode(state.node);
+}
+
+function bindState<T>(state: GuardedReadable<T>): Computed<T> {
+  const guarded = (() => readGuarded(state)) as Computed<T>;
 
   Object.defineProperty(guarded, "value", {
     configurable: true,
@@ -69,17 +114,26 @@ function bindSlot<T>(slot: HookSlot<GuardedReadable<T>>): Computed<T> {
   return guarded;
 }
 
-function readGuarded<T>(
-  slot: HookSlot<GuardedReadable<T>>,
-  state: GuardedReadable<T>,
-): T {
-  if (isHookSlotDisposed(slot)) {
-    if (state.hasValue) return state.value as T;
-    throw new Error("Cannot read disposed computed hook before initialization.");
+function readGuarded<T>(state: GuardedReadable<T>): T {
+  if (state.disposed) {
+    return readDisposed(state);
   }
 
-  const value = state.computed.read();
+  const value = state.read();
+
   state.value = value;
-  state.hasValue = true;
+
+  if (!state.hasValue) {
+    state.hasValue = true;
+  }
+
   return value;
+}
+
+function readDisposed<T>(state: GuardedReadable<T>): T {
+  if (state.hasValue) {
+    return state.value as T;
+  }
+
+  throw new Error("Cannot read disposed computed hook before initialization.");
 }

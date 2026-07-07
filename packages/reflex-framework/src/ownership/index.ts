@@ -1,4 +1,5 @@
 export * from "./ownership.cleanup";
+export * from "./ownership.compat";
 export * from "./ownership.context";
 export * from "./ownership.meta";
 export * from "./ownership.node";

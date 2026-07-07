@@ -10,23 +10,6 @@ interface TextEntryControlState {
   pendingValue: string | null;
 }
 
-function isTextEntryInput(inputElement: HTMLInputElement): boolean {
-  switch (inputElement.type) {
-    case "button":
-    case "checkbox":
-    case "color":
-    case "file":
-    case "hidden":
-    case "image":
-    case "radio":
-    case "range":
-    case "reset":
-    case "submit":
-      return false;
-    default:
-      return true;
-  }
-}
 
 function ensureTextEntryControlState(
   controlElement: TextEntryControl,
@@ -207,7 +190,11 @@ function applyMultipleSelectValue(
 ): void {
   const selectedValueSet = new Set(selectedValues);
 
-  for (let optionIndex = 0; optionIndex < selectElement.options.length; optionIndex++) {
+  for (
+    let optionIndex = 0;
+    optionIndex < selectElement.options.length;
+    optionIndex++
+  ) {
     const optionElement = selectElement.options[optionIndex]!;
     optionElement.selected = selectedValueSet.has(optionElement.value);
   }
@@ -270,51 +257,30 @@ function applyDefaultOptionSelectedState(
   return value;
 }
 
-function isManagedInputProperty(
-  inputElement: HTMLInputElement,
-  name: string,
-): boolean {
+export function isManagedFormProp(formElement: Element, name: string): boolean {
   switch (name) {
-    case "checked":
-    case "defaultChecked":
-    case "indeterminate":
-      return true;
     case "value":
     case "defaultValue":
-      return isTextEntryInput(inputElement) || inputElement.type === "file";
+      return (
+        formElement instanceof HTMLInputElement ||
+        formElement instanceof HTMLTextAreaElement ||
+        formElement instanceof HTMLOptionElement
+      );
+
+    case "checked":
+    case "defaultChecked":
+      return formElement instanceof HTMLInputElement;
+
+    case "selectedIndex":
+      return formElement instanceof HTMLSelectElement;
+
+    case "selected":
+    case "defaultSelected":
+      return formElement instanceof HTMLOptionElement;
+
     default:
       return false;
   }
-}
-
-export function isManagedFormProp(
-  formElement: Element,
-  name: string,
-): boolean {
-  if (formElement instanceof HTMLInputElement) {
-    return isManagedInputProperty(formElement, name);
-  }
-
-  if (formElement instanceof HTMLTextAreaElement) {
-    return name === "value" || name === "defaultValue";
-  }
-
-  if (formElement instanceof HTMLSelectElement) {
-    return (
-      name === "value" ||
-      name === "selectedIndex"
-    );
-  }
-
-  if (formElement instanceof HTMLOptionElement) {
-    return (
-      name === "selected" ||
-      name === "defaultSelected" ||
-      name === "value"
-    );
-  }
-
-  return false;
 }
 
 export function applyManagedFormProp(

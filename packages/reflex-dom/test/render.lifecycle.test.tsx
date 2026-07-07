@@ -1,12 +1,17 @@
 /** @jsxImportSource ../src */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { computed, effect, memo, signal } from "@volynets/reflex";
+import { computed, memo, signal } from "@volynets/reflex";
+import {
+  useEffect,
+} from "@volynets/reflex-framework";
 import {
   RenderEffectPhase,
+  createDOMRenderer,
+  createDOMRuntime,
+  render,
   useEffectRender,
-} from "@volynets/reflex-framework";
-import { createDOMRenderer, createDOMRuntime, render } from "../src";
+} from "../src";
 
 describe("render lifecycle and reactive bindings", () => {
   beforeEach(() => {
@@ -21,7 +26,7 @@ describe("render lifecycle and reactive bindings", () => {
     const log: string[] = [];
 
     function Child() {
-      effect(() => {
+      useEffect(() => {
         const value = source();
         log.push(`run:${value}`);
 
@@ -54,7 +59,7 @@ describe("render lifecycle and reactive bindings", () => {
     const log: string[] = [];
 
     function Child() {
-      effect(() => {
+      useEffect(() => {
         const value = source();
         log.push(`run:${value}`);
 
@@ -202,7 +207,7 @@ describe("render lifecycle and reactive bindings", () => {
         log.push(`render:${value}:${container.querySelector("span")?.textContent}`);
       });
 
-      effect(() => {
+      useEffect(() => {
         log.push(`user:${count()}`);
       });
 
@@ -256,7 +261,7 @@ describe("render lifecycle and reactive bindings", () => {
     const log: string[] = [];
 
     function Inner() {
-      effect(() => () => {
+      useEffect(() => () => {
         log.push("inner");
       });
 
@@ -264,7 +269,7 @@ describe("render lifecycle and reactive bindings", () => {
     }
 
     function Outer() {
-      effect(() => () => {
+      useEffect(() => () => {
         log.push("outer");
       });
 
@@ -290,7 +295,7 @@ describe("render lifecycle and reactive bindings", () => {
     const log: string[] = [];
 
     function Child() {
-      effect(() => {
+      useEffect(() => {
         const value = source();
         log.push(`run:${value}`);
 

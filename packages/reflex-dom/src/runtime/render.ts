@@ -2,48 +2,24 @@ import type { Cleanup, JSXRenderable } from "../types";
 import {
   createRenderRangeAnchors,
   mountRenderRange,
-  type MountedRenderRange,
-  type RenderRangeAnchors,
 } from "../structure/render-range";
 import {
-  ensureDOMRuntime,
   getActiveDOMExecutionContext,
   runWithDOMExecutionContext,
 } from "./execution";
-
-function resolveContainerRangeAnchors(
-  container: ParentNode & Node,
-): RenderRangeAnchors {
-  const context = getActiveDOMExecutionContext();
-  const previousRoot = context.mountedRoots.get(container);
-
-  if (previousRoot === undefined) {
-    return createRenderRangeAnchors(container);
-  }
-
-  previousRoot.clear();
-  return previousRoot;
-}
-
-function mountRenderableIntoContainerRange(
-  renderable: JSXRenderable,
-  container: ParentNode & Node,
-): MountedRenderRange {
-  const context = getActiveDOMExecutionContext();
-  const rangeAnchors = resolveContainerRangeAnchors(container);
-  const rootMount = mountRenderRange(container, renderable, "html", rangeAnchors);
-
-  context.mountedRoots.set(container, rootMount);
-  return rootMount;
-}
 
 export function renderWithDOMExecution(
   renderable: JSXRenderable,
   container: ParentNode & Node,
 ): Cleanup {
   const context = getActiveDOMExecutionContext();
-  ensureDOMRuntime(context);
-  const rootMount = mountRenderableIntoContainerRange(renderable, container);
+  const previousRoot = context.mountedRoots.get(container);
+  const anchors = previousRoot ?? createRenderRangeAnchors(container);
+
+  previousRoot?.clear();
+
+  const rootMount = mountRenderRange(container, renderable, "html", anchors);
+  context.mountedRoots.set(container, rootMount);
   context.renderEffectScheduler.flush();
 
   const disposeRenderMount = (() => {
@@ -54,7 +30,7 @@ export function renderWithDOMExecution(
         return;
       }
 
-      context.mountedRoots.delete(container);
+      context.mountedRoots.unset(container);
       rootMount.destroy();
     });
   }) as Cleanup;

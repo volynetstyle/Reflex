@@ -1,7 +1,8 @@
 /** @jsxImportSource ../src */
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { computed, effect, memo, signal } from "@volynets/reflex";
+import { computed, memo, signal } from "@volynets/reflex";
+import { useEffect } from "@volynets/reflex-framework";
 import type { JSXRenderable } from "../src";
 import { createDOMRuntime, render, Fragment } from "../src";
 
@@ -355,7 +356,7 @@ describe("render", () => {
       const doubled = computed(() => count() * 2);
       const badge = memo(() => `badge:${label()}`);
 
-      effect(() => {
+      useEffect(() => {
         const snapshot = `${count()}->${doubled()}`;
         effectLog.push(`effect:${snapshot}`);
         return () => {

@@ -43,18 +43,15 @@ export let readTrackingStrategy: ReadTrackingStrategy =
 export interface RuntimeHooks {
   sinkInvalidatedDispatcher?(node: ReactiveNode): void;
   reactiveSettledDispatcher?(): void;
-  effectCleanupRegistrar?(dispose: () => void): void;
 }
 
 export type RuntimeHostHooks = RuntimeHooks;
 
 export type SinkInvalidatedHook = RuntimeHooks["sinkInvalidatedDispatcher"];
 export type ReactiveSettledHook = RuntimeHooks["reactiveSettledDispatcher"];
-export type EffectCleanupHook = RuntimeHooks["effectCleanupRegistrar"];
 
 export let sinkInvalidatedHook: SinkInvalidatedHook = undefined;
 export let reactiveSettledHook: ReactiveSettledHook = undefined;
-export let effectCleanupHook: EffectCleanupHook = undefined;
 
 // #endregion
 
@@ -64,7 +61,6 @@ export interface RuntimeConfiguration {
   readTrackingStrategy: ReadTrackingStrategy;
   sinkInvalidatedHook: SinkInvalidatedHook;
   reactiveSettledHook: ReactiveSettledHook;
-  effectCleanupHook: EffectCleanupHook;
 }
 
 export interface RuntimeConfigurationOptions {
@@ -76,7 +72,6 @@ export function saveRuntimeConfiguration(): RuntimeConfiguration {
     readTrackingStrategy,
     sinkInvalidatedHook,
     reactiveSettledHook,
-    effectCleanupHook,
   };
 }
 
@@ -88,7 +83,6 @@ export function restoreRuntimeConfiguration(
 
   sinkInvalidatedHook = configuration.sinkInvalidatedHook;
   reactiveSettledHook = configuration.reactiveSettledHook;
-  effectCleanupHook = configuration.effectCleanupHook;
 }
 
 // #endregion

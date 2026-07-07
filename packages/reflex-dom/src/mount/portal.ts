@@ -1,12 +1,11 @@
-import { onEffectStart } from "@volynets/reflex-framework";
 import type { PortalRenderable } from "../operators";
 import {
   mountRenderRange,
   type MountedRenderRange,
 } from "../structure/render-range";
 import {
+  createDOMOwnedReaction,
   registerDOMCleanup,
-  useDOMOwnedEffect,
 } from "../runtime/execution";
 
 export function mountPortal(renderable: PortalRenderable): Node {
@@ -34,13 +33,7 @@ export function mountPortal(renderable: PortalRenderable): Node {
 
   remountIntoTarget(renderable.to());
 
-  useDOMOwnedEffect(() => {
-    const nextTarget = renderable.to();
-
-    onEffectStart(() => {
-      remountIntoTarget(nextTarget);
-    });
-  });
+  createDOMOwnedReaction(renderable.to, remountIntoTarget);
 
   registerDOMCleanup(() => {
     activePortalRange?.destroy();

@@ -1,11 +1,11 @@
 import {
   createWatcher,
+  disposeWatcher,
+  runWatcher,
   untracked,
-  watcher,
 } from "@volynets/reflex-runtime/internal";
 import type { WatcherFn } from "@volynets/reflex-runtime/internal";
 import {
-  effectCleanupHook,
   Scheduled,
   type ReactiveNode,
 } from "@volynets/reflex-runtime/internal";
@@ -17,10 +17,6 @@ import {
   devassertSelectorReturn,
   wrapEffectFn,
 } from "./effect.dev";
-
-function registerEffectCleanup(dispose: Destructor): void {
-  effectCleanupHook?.(dispose);
-}
 
 /**
  * Marks an effect watcher node as scheduled.
@@ -92,13 +88,9 @@ export function effect(fn: WatcherFn): Destructor {
   devassertEffectFn(fn, "effect");
 
   const node = createWatcher(wrapEffectFn(fn, "effect"));
-  const run = watcher.run;
-  const dispose = watcher.dispose;
+  runWatcher(node);
 
-  run(node);
-
-  const disposer: Destructor = dispose.bind(null, node);
-  registerEffectCleanup(disposer);
+  const disposer: Destructor = disposeWatcher.bind(null, node);
   return disposer;
 }
 

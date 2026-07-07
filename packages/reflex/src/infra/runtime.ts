@@ -138,7 +138,6 @@ export function createRuntime({
 
   configureRuntimeContext(execution, {
     hooks: {
-      effectCleanupRegistrar: hooks?.effectCleanupRegistrar,
       sinkInvalidatedDispatcher(node) {
         enqueueEffectByPolicy(schedulerCore, schedulerMode, node);
         hooks?.sinkInvalidatedDispatcher?.(node);

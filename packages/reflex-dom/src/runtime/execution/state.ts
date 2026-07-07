@@ -1,4 +1,7 @@
-import { createOwnerContext } from "@volynets/reflex-framework";
+import {
+  createOwnerContext,
+  createRootMountTable,
+} from "@volynets/reflex-framework";
 import {
   createRendererRuntime,
   type DOMRuntimeOptions,
@@ -7,7 +10,8 @@ import {
 import {
   createRenderEffectScheduler,
 } from "../render-effect-scheduler";
-import { createRootMountTable } from "../root-store";
+import type { MountedContainer, MountedRootStore } from "../root-store";
+import type { MountedRenderRange } from "../../structure/render-range";
 import { DOM_EXECUTION_CONTEXT_BRAND } from "./types";
 import type { DOMExecutionContext } from "./types";
 
@@ -21,7 +25,9 @@ export function createDOMExecutionContext(
     runtime: null,
     options,
     owner: createOwnerContext(),
-    mountedRoots: createRootMountTable(),
+    mountedRoots: createRootMountTable<MountedContainer, MountedRenderRange>(
+      "root",
+    ) as MountedRootStore,
     renderEffectScheduler: createRenderEffectScheduler((task) => {
       runWithDOMExecutionContext(context, task);
     }),
@@ -70,4 +76,13 @@ export function ensureDOMRuntime(
     context.options,
     context.renderEffectScheduler,
   ));
+}
+
+export function runDOMOperation<T>(
+  context: DOMExecutionContext,
+  fn: () => T,
+): T {
+  return ensureDOMRuntime(context).batch(() =>
+    runWithDOMExecutionContext(context, fn),
+  );
 }

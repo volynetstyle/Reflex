@@ -20,7 +20,13 @@ export function createRootMountTable<TKey extends object, TRoot>(
     },
 
     unset(host) {
-      delete asSlots(host)[slot];
+      asSlots(host)[slot] = undefined;
     },
   };
 }
+
+/** @deprecated Use `RootMountTable`. */
+export type MountedRootStore<TKey extends object, TRoot> = RootMountTable<
+  TKey,
+  TRoot
+>;

@@ -1,6 +1,5 @@
 import {
   DEFAULT_READ_TRACKING_STRATEGY,
-  type EffectCleanupHook,
   type ReadTrackingStrategy,
   type ReactiveSettledHook,
   type RuntimeConfiguration,
@@ -43,9 +42,7 @@ export function createRuntimeContext(
     readTrackingStrategy: DEFAULT_READ_TRACKING_STRATEGY,
     sinkInvalidatedHook: undefined,
     reactiveSettledHook: undefined,
-    effectCleanupHook: undefined,
-  } satisfies RuntimeContext;
-
+  };
   applyRuntimeContextOptions(context, options);
   return context;
 }
@@ -77,10 +74,6 @@ export function applyRuntimeContextOptions(
     context.reactiveSettledHook = ownFunction<ReactiveSettledHook>(
       hooks,
       "reactiveSettledDispatcher",
-    );
-    context.effectCleanupHook = ownFunction<EffectCleanupHook>(
-      hooks,
-      "effectCleanupRegistrar",
     );
   }
 }

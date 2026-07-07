@@ -17,10 +17,10 @@ export function createApp(options?: DOMRuntimeOptions): ReflexDOMApp {
 
   return Object.freeze({
     renderer,
-    render: renderer.render.bind(renderer),
-    hydrate: renderer.hydrate.bind(renderer),
-    mount: renderer.mount.bind(renderer),
-    resume: renderer.resume.bind(renderer),
+    render: renderer.render,
+    hydrate: renderer.hydrate,
+    mount: renderer.mount,
+    resume: renderer.resume,
     use() {
       useDOMRenderer(renderer);
     },

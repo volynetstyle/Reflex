@@ -1,114 +1,120 @@
-import { addCleanup, dispose } from "./ownership.cleanup";
+import { addCleanup, disposeOwnershipNode } from "./ownership.cleanup";
 import { isShuttingDown } from "./ownership.meta";
 import { OwnershipNode } from "./ownership.node";
 import { prependChild } from "./ownership.tree";
 
-export type Scope = OwnershipNode;
-
 export interface OwnerHookState {
-  currentHookContext: unknown | null;
-  componentHookDepth: number;
+  currentComponentContext: unknown | null;
+  componentExecutionDepth: number;
   warnedHooks: Set<string>;
 }
 
 export interface OwnerContext {
-  currentOwner: Scope | null;
+  currentNode: OwnershipNode | null;
   hookState: OwnerHookState;
-  effectCleanupSuppressionDepth: number;
 }
 
 let activeOwnerContext: OwnerContext | null = null;
 
 function createOwnerHookState(): OwnerHookState {
   return {
-    currentHookContext: null,
-    componentHookDepth: 0,
+    currentComponentContext: null,
+    componentExecutionDepth: 0,
     warnedHooks: new Set<string>(),
   };
 }
 
 export function createOwnerContext(): OwnerContext {
   return Object.preventExtensions({
-    currentOwner: null,
+    currentNode: null,
     hookState: createOwnerHookState(),
-    effectCleanupSuppressionDepth: 0,
   });
 }
 
-export function createScope(): Scope {
+export function createOwnershipNode(): OwnershipNode {
   return new OwnershipNode();
-}
-
-export function getOwner(owner: OwnerContext): Scope | null {
-  return owner.currentOwner;
-}
-
-export function runWithOwner<T>(
-  owner: OwnerContext,
-  scope: Scope | null,
-  fn: () => T,
-): T {
-  const previousOwner = owner.currentOwner;
-  const previousActiveOwnerContext = activeOwnerContext;
-  owner.currentOwner = scope;
-  activeOwnerContext = owner;
-
-  try {
-    return fn();
-  } finally {
-    owner.currentOwner = previousOwner;
-    activeOwnerContext = previousActiveOwnerContext;
-  }
 }
 
 export function getActiveOwnerContext(): OwnerContext | null {
   return activeOwnerContext;
 }
 
-function attachScope(parent: Scope | null, scope: Scope): void {
+export function runWithOwner<T>(
+  owner: OwnerContext,
+  node: OwnershipNode | null,
+  fn: () => T,
+): T {
+  const previousNode = owner.currentNode;
+  const previousActiveOwnerContext = activeOwnerContext;
+
+  owner.currentNode = node;
+  activeOwnerContext = owner;
+
+  try {
+    return fn();
+  } finally {
+    owner.currentNode = previousNode;
+    activeOwnerContext = previousActiveOwnerContext;
+  }
+}
+
+function attachOwnershipNode(
+  parent: OwnershipNode | null,
+  child: OwnershipNode,
+): void {
   if (
     parent === null ||
-    parent === scope ||
-    scope.parent === parent ||
+    parent === child ||
+    child.parent === parent ||
     isShuttingDown(parent) ||
-    isShuttingDown(scope)
+    isShuttingDown(child)
   ) {
     return;
   }
 
-  prependChild(parent, scope);
+  prependChild(parent, child);
 }
 
-export function runWithScope<T>(
+export function runWithOwnershipNode<T>(
   owner: OwnerContext,
-  scope: Scope,
+  node: OwnershipNode,
   fn: () => T,
 ): T {
-  if (isShuttingDown(scope)) {
+  if (isShuttingDown(node)) {
     if (__DEV__) {
-      throw new Error("runWithScope on disposed scope");
+      throw new Error("runWithOwnershipNode on disposed OwnershipNode");
     }
 
     return undefined as T;
   }
 
-  attachScope(owner.currentOwner, scope);
+  attachOwnershipNode(owner.currentNode, node);
 
-  return runWithOwner(owner, scope, fn);
+  return runWithOwner(owner, node, fn);
 }
 
-export function registerCleanup(owner: OwnerContext, fn: () => void): void {
-  const scope = owner.currentOwner;
+export function usingOwnershipNode<Result>(
+  owner: OwnerContext,
+  callback: (node: OwnershipNode) => Result,
+): Result {
+  const node = createOwnershipNode();
 
-  if (scope !== null) {
-    if (__DEV__ && isShuttingDown(scope)) {
-      throw new Error("register cleanup into disposed scope");
-    }
-
-    addCleanup(scope, fn);
+  try {
+    return runWithOwnershipNode(owner, node, () => callback(node));
+  } catch (error) {
+    disposeOwnershipNode(node);
+    throw error;
   }
 }
 
-export function disposeScope(scope: Scope): void {
-  dispose(scope);
+export function registerCleanup(owner: OwnerContext, fn: () => void): void {
+  const node = owner.currentNode;
+
+  if (node === null) return;
+
+  if (__DEV__ && isShuttingDown(node)) {
+    throw new Error("register cleanup into disposed OwnershipNode");
+  }
+
+  addCleanup(node, fn);
 }

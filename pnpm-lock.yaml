@@ -153,6 +153,9 @@ importers:
       '@volynets/reflex':
         specifier: ^0.3.5
         version: 0.3.5
+      '@volynets/reflex-runtime':
+        specifier: workspace:*
+        version: link:../reflex-runtime
 
   packages/reflex-runtime: {}
 

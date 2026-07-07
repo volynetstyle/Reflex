@@ -1,5 +1,4 @@
 import { assertHookUsage } from "./context";
-import { useHookSlot } from "./slot";
 
 export interface RefObject<T> {
   current: T;
@@ -8,5 +7,7 @@ export interface RefObject<T> {
 export function useRef<T>(initial: T): RefObject<T> {
   assertHookUsage("useRef");
 
-  return useHookSlot<RefObject<T>>(() => ({ current: initial })).value;
+  // `initial` is used only during hook creation.
+  // Later values are intentionally ignored for this ownership node lifetime.
+  return { current: initial };
 }

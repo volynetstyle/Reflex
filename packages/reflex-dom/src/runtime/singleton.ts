@@ -1,29 +1,18 @@
 import type { Cleanup, JSXRenderable } from "../types";
 import type { DOMRenderer } from "./renderer";
 import { hydrateWithDOMExecution, resumeWithDOMExecution } from "../hydrate/hydration";
-import type { DOMRuntimeOptions } from "./options";
+import type { DOMRuntimeOptions, RuntimeInstance } from "./options";
 import { renderWithDOMExecution } from "./render";
 import {
   createDOMExecutionContext,
   ensureDOMRuntime,
-  runWithDOMExecutionContext,
+  runDOMOperation,
   type DOMExecutionContext,
 } from "./execution";
 
 let activeExecutionContext: DOMExecutionContext | null = null;
 
-function ensureExecutionContext(): DOMExecutionContext {
-  return (activeExecutionContext ??= createDOMExecutionContext());
-}
-
-function runSingletonOperation<T>(fn: () => T): T {
-  const context = ensureExecutionContext();
-  const runtime = ensureDOMRuntime(context);
-
-  return runtime.batch(() => runWithDOMExecutionContext(context, fn));
-}
-
-export function createDOMRuntime(options?: DOMRuntimeOptions) {
+export function createDOMRuntime(options?: DOMRuntimeOptions): RuntimeInstance {
   const context = createDOMExecutionContext(options);
   activeExecutionContext = context;
   return ensureDOMRuntime(context);
@@ -33,20 +22,27 @@ export function render(
   input: JSXRenderable,
   container: ParentNode & Node,
 ): Cleanup {
-  return runSingletonOperation(() => renderWithDOMExecution(input, container));
+  const context = (activeExecutionContext ??= createDOMExecutionContext());
+  return runDOMOperation(context, () =>
+    renderWithDOMExecution(input, container),
+  );
 }
 
 export function hydrate(
   input: JSXRenderable,
   container: ParentNode & Node,
 ): Cleanup {
-  return runSingletonOperation(() => hydrateWithDOMExecution(input, container));
+  const context = (activeExecutionContext ??= createDOMExecutionContext());
+  return runDOMOperation(context, () =>
+    hydrateWithDOMExecution(input, container),
+  );
 }
 
 export const mount = render;
 
 export function resume(container: ParentNode & Node): Cleanup {
-  return runSingletonOperation(() => resumeWithDOMExecution(container));
+  const context = (activeExecutionContext ??= createDOMExecutionContext());
+  return runDOMOperation(context, () => resumeWithDOMExecution(container));
 }
 
 export function useDOMRenderer(renderer: DOMRenderer | null) {
