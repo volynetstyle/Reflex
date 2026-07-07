@@ -263,10 +263,7 @@ function hydrateRenderableValue(
 
       return runComponentRenderable(
         renderable,
-        {
-          owner: context.owner,
-          renderEffectScheduler: context.renderEffectScheduler,
-        },
+        { owner: context.owner },
         (result) =>
           hydrateRenderableValue(
             result,

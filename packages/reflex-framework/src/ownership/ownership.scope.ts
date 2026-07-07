@@ -1,11 +1,11 @@
-import { addCleanup } from "./ownership.cleanup";
+import { addCleanup, disposeOwnershipNode } from "./ownership.cleanup";
 import { isShuttingDown } from "./ownership.meta";
 import { OwnershipNode } from "./ownership.node";
 import { prependChild } from "./ownership.tree";
 
 export interface OwnerHookState {
-  currentHookContext: unknown | null;
-  componentHookDepth: number;
+  currentComponentContext: unknown | null;
+  componentExecutionDepth: number;
   warnedHooks: Set<string>;
 }
 
@@ -18,8 +18,8 @@ let activeOwnerContext: OwnerContext | null = null;
 
 function createOwnerHookState(): OwnerHookState {
   return {
-    currentHookContext: null,
-    componentHookDepth: 0,
+    currentComponentContext: null,
+    componentExecutionDepth: 0,
     warnedHooks: new Set<string>(),
   };
 }
@@ -91,6 +91,20 @@ export function runWithOwnershipNode<T>(
   attachOwnershipNode(owner.currentNode, node);
 
   return runWithOwner(owner, node, fn);
+}
+
+export function usingOwnershipNode<Result>(
+  owner: OwnerContext,
+  callback: (node: OwnershipNode) => Result,
+): Result {
+  const node = createOwnershipNode();
+
+  try {
+    return runWithOwnershipNode(owner, node, () => callback(node));
+  } catch (error) {
+    disposeOwnershipNode(node);
+    throw error;
+  }
 }
 
 export function registerCleanup(owner: OwnerContext, fn: () => void): void {

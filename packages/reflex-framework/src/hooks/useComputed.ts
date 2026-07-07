@@ -26,9 +26,7 @@ export function createDisposableComputed<T>(
   };
 }
 
-export function warmDisposableComputed<T>(
-  computed: DisposableComputed<T>,
-): T {
+export function warmDisposableComputed<T>(computed: DisposableComputed<T>): T {
   return untracked(computed.read);
 }
 
@@ -45,17 +43,19 @@ interface GuardedReadable<T> {
 
 export function useComputed<T>(fn: () => T): Computed<T> {
   assertHookUsage("useComputed");
-  return useDerived(fn, false);
+  assertHookUsage("useMemo");
+  const state = useOwned<GuardedReadable<T>>(
+    () => createGuardedReadable(fn, false),
+    disposeGuardedReadable,
+  );
+
+  return state.guarded;
 }
 
 export function useMemo<T>(fn: () => T): Memo<T> {
   assertHookUsage("useMemo");
-  return useDerived(fn, true) as Memo<T>;
-}
-
-function useDerived<T>(fn: () => T, warm: boolean): Computed<T> {
   const state = useOwned<GuardedReadable<T>>(
-    () => createGuardedReadable(fn, warm),
+    () => createGuardedReadable(fn, true),
     disposeGuardedReadable,
   );
 
@@ -135,7 +135,5 @@ function readDisposed<T>(state: GuardedReadable<T>): T {
     return state.value as T;
   }
 
-  throw new Error(
-    "Cannot read disposed computed hook before initialization.",
-  );
+  throw new Error("Cannot read disposed computed hook before initialization.");
 }

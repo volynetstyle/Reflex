@@ -285,7 +285,7 @@ function renderRenderableToString(
       const renderable = value as ComponentRenderable<unknown>;
       return runComponentRenderable(
         renderable,
-        { owner: getActiveOwnerContext()!, renderEffectScheduler: null },
+        { owner: getActiveOwnerContext()! },
         (result) => renderRenderableToString(result, parentNamespace),
       );
     }

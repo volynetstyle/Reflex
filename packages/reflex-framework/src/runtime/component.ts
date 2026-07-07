@@ -1,15 +1,12 @@
-import { runWithComponentHooks, type RenderEffectScheduler } from "../hooks";
-import { disposeOwnershipNode } from "../ownership/ownership.cleanup";
+import { runWithComponentExecution } from "../hooks";
 import {
-  createOwnershipNode,
-  runWithOwnershipNode,
+  usingOwnershipNode,
   type OwnerContext,
 } from "../ownership/ownership.scope";
 import type { ComponentRenderable, JSXRenderable } from "../types/renderable";
 
 export interface ComponentExecutionOptions {
   owner: OwnerContext;
-  renderEffectScheduler?: RenderEffectScheduler | null;
 }
 
 export function runComponentRenderable<P, Host, Result>(
@@ -17,20 +14,14 @@ export function runComponentRenderable<P, Host, Result>(
   options: ComponentExecutionOptions,
   consume: (value: JSXRenderable<Host>) => Result,
 ): Result {
-  const { owner, renderEffectScheduler } = options;
-  const node = createOwnershipNode();
+  const { owner } = options;
 
-  try {
-    return runWithOwnershipNode(owner, node, () =>
-      consume(
-        runWithComponentHooks(
-          { owner, node, renderEffectScheduler },
-          () => renderable.type(renderable.props),
-        ),
-      ),
+  return usingOwnershipNode(owner, (node) => {
+    const value = runWithComponentExecution(
+      { owner, node },
+      () => renderable.type(renderable.props),
     );
-  } catch (error) {
-    disposeOwnershipNode(node);
-    throw error;
-  }
+
+    return consume(value);
+  });
 }

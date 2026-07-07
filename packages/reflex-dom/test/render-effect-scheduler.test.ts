@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { RenderEffectPhase } from "@volynets/reflex-framework";
-import { createRenderEffectScheduler } from "../src/runtime/render-effect-scheduler";
+import {
+  RenderEffectPhase,
+  createRenderEffectScheduler,
+} from "../src/runtime/render-effect-scheduler";
 
 describe("DOM render effect scheduler", () => {
   it("flushes phases in render order", () => {

@@ -4,19 +4,17 @@ import {
   createScope,
   createComponentRenderable,
   disposeScope,
-  useComponentDidMount,
-  useComponentDidUnmount,
+  useMount,
+ useUnmount,
   useComputed,
   useEffect,
   useEffectOnce,
-  useEffectRender,
   useMemo,
   useSignal,
-  runWithComponentHooks,
+  runWithComponentExecution,
   runComponentRenderable,
   runInOwnershipScope,
   getHookOwner,
-  RenderEffectPhase,
 } from "../src";
 
 describe("framework hooks", () => {
@@ -84,76 +82,17 @@ describe("framework hooks", () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
-  it("schedules useEffectRender through the current host scheduler", () => {
-    const rt = createRuntime();
-    const owner = getHookOwner();
-    const root = createScope();
-    const tasks: Array<() => void> = [];
-    const phases: unknown[] = [];
-    const values: string[] = [];
-
-    runInOwnershipScope(owner, root, () => {
-      runWithComponentHooks(
-        {
-          owner,
-          node: root,
-          renderEffectScheduler: {
-            schedule(task, phase) {
-              tasks.push(task);
-              phases.push(phase);
-              return () => {};
-            },
-          },
-        },
-        () => {
-          useEffectRender(() => {
-            values.push("render");
-          });
-        },
-      );
-    });
-
-    expect(values).toEqual([]);
-    expect(tasks).toHaveLength(1);
-    expect(phases).toEqual([RenderEffectPhase.Render]);
-
-    tasks[0]!();
-    rt.flush();
-
-    expect(values).toEqual(["render"]);
-
-    disposeScope(root);
-  });
-
-  it("uses a no-op render scheduler when a host does not provide one", () => {
-    const owner = getHookOwner();
-    const root = createScope();
-    const values: string[] = [];
-
-    runInOwnershipScope(owner, root, () => {
-      runWithComponentHooks({ owner, node: root }, () => {
-        useEffectRender(() => {
-          values.push("render");
-        });
-      });
-    });
-
-    expect(values).toEqual([]);
-
-    disposeScope(root);
-  });
-
   it("supports mount and unmount lifecycle helpers inside ownership scopes", () => {
     const owner = getHookOwner();
     const root = createScope();
     const log: string[] = [];
 
     runInOwnershipScope(owner, root, () => {
-      useComponentDidMount(() => {
+      useMount(() => {
         log.push("mount");
       });
 
-      useComponentDidUnmount(() => {
+     useUnmount(() => {
         log.push("unmount");
       });
     });
@@ -173,7 +112,7 @@ describe("framework hooks", () => {
     let doubled: Computed<number>;
 
     runInOwnershipScope(owner, root, () => {
-      runWithComponentHooks({ owner, node: root }, () => {
+      runWithComponentExecution({ owner, node: root }, () => {
         doubled = useComputed(compute);
       });
     });
@@ -196,7 +135,7 @@ describe("framework hooks", () => {
     let tripled: Memo<number>;
 
     runInOwnershipScope(owner, root, () => {
-      runWithComponentHooks({ owner, node: root }, () => {
+      runWithComponentExecution({ owner, node: root }, () => {
         tripled = useMemo(compute);
       });
     });
@@ -222,7 +161,7 @@ describe("framework hooks", () => {
       useEffect(() => {
         effectSpy();
 
-        runWithComponentHooks({ owner, node: root }, () => {
+        runWithComponentExecution({ owner, node: root }, () => {
           useMemo(() => source() * 2);
         });
       });

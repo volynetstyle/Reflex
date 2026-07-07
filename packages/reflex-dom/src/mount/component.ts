@@ -13,10 +13,7 @@ export function mountComponent(
 
   runComponentRenderable(
     renderable,
-    {
-      owner: context.owner,
-      renderEffectScheduler: context.renderEffectScheduler,
-    },
+    { owner: context.owner },
     (value) => appendRenderableNodes(parent, value, ns),
   );
 }

@@ -3,11 +3,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, memo, signal } from "@volynets/reflex";
 import {
-  RenderEffectPhase,
   useEffect,
-  useEffectRender,
 } from "@volynets/reflex-framework";
-import { createDOMRenderer, createDOMRuntime, render } from "../src";
+import {
+  RenderEffectPhase,
+  createDOMRenderer,
+  createDOMRuntime,
+  render,
+  useEffectRender,
+} from "../src";
 
 describe("render lifecycle and reactive bindings", () => {
   beforeEach(() => {
