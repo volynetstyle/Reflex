@@ -56,6 +56,10 @@ const runtime = createRuntime({ effectStrategy: "flush" });
 | `"eager"` | automatically |
 
 Use `runtime.batch(fn)` or the exported `batch(fn)` to group related writes.
+Writes and invalidations remain synchronous, and reads inside the batch observe
+the latest values. A reactive batch only coalesces host-visible `settled`
+notifications. Effect timing remains a scheduler policy selected by
+`effectStrategy`.
 
 ## API
 

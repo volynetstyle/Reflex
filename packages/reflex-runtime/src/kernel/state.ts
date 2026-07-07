@@ -181,10 +181,6 @@ export function setReactiveBatchState(
   pendingReactiveSettled = pendingSettled;
 }
 
-export function hasPendingReactiveSettled(): boolean {
-  return pendingReactiveSettled;
-}
-
 export function isReactiveBatchActive(): boolean {
   return reactiveBatchDepth !== 0;
 }
