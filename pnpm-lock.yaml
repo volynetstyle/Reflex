@@ -139,20 +139,13 @@ importers:
         specifier: ^4.2.4
         version: 4.3.0
 
-  packages/reflex-dom:
-    dependencies:
-      '@volynets/reflex-framework':
-        specifier: workspace:^
-        version: link:../reflex-framework
-      '@volynets/reflex-runtime':
-        specifier: workspace:^
-        version: link:../reflex-runtime
+  packages/reflex-dom: {}
 
   packages/reflex-framework:
     dependencies:
       '@volynets/reflex-runtime':
-        specifier: workspace:^
-        version: link:../reflex-runtime
+        specifier: ^0.1.2
+        version: 0.1.2
 
   packages/reflex-runtime: {}
 
@@ -1090,6 +1083,9 @@ packages:
 
   '@vitest/utils@4.1.5':
     resolution: {integrity: sha512-76wdkrmfXfqGjueGgnb45ITPyUi1ycZ4IHgC2bhPDUfWHklY/q3MdLOAB+TF1e6xfl8NxNY0ZYaPCFNWSsw3Ug==}
+
+  '@volynets/reflex-runtime@0.1.2':
+    resolution: {integrity: sha512-fF1hmx4gQSOerlkyLCZtpRWkE9UU6HBc5PyUr6dp+U/wCLoelzuifbBsOKOEWeWh7nVH0J9fAkXggVGJgmFyFw==}
 
   JSONStream@1.3.5:
     resolution: {integrity: sha512-E+iruNOY8VV9s4JEbe1aNEm6MiszPRr/UfcHMz0TQh1BXSxHK+ASV1R6W4HpjBhSeS+54PIsAMCBmwD06LLsqQ==}
@@ -4078,6 +4074,8 @@ snapshots:
       '@vitest/pretty-format': 4.1.5
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.0
+
+  '@volynets/reflex-runtime@0.1.2': {}
 
   JSONStream@1.3.5:
     dependencies:

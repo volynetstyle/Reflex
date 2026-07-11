@@ -43,6 +43,8 @@ export function createEventDispatcher(
     flush: () => flushEventDispatcher(dispatcher),
     flushFirst: () => flushFirstEvent(dispatcher),
     emit<T>(source: EventSource<T>, value: T): void {
+      if (source.head === null) return;
+
       if (!dispatcher.flushing && queue.head === queue.tail) {
         dispatcher.firstSource = source as EventSource<unknown>;
         dispatcher.firstValue = value;

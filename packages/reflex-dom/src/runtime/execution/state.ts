@@ -29,7 +29,12 @@ export function createDOMExecutionContext(
       "root",
     ) as MountedRootStore,
     renderEffectScheduler: createRenderEffectScheduler((task) => {
-      runWithDOMExecutionContext(context, task);
+      const runtime = context.runtime;
+      if (runtime === null) {
+        runWithDOMExecutionContext(context, task);
+      } else {
+        runtime.run(() => runWithDOMExecutionContext(context, task));
+      }
     }),
   };
 

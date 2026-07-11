@@ -6,6 +6,7 @@ import { attachRef } from "../host/refs";
 import {
   getActiveDOMExecutionContext,
   registerDOMCleanup,
+  runDOMOperation,
 } from "../runtime/execution";
 import type { Ref } from "../types";
 
@@ -58,11 +59,13 @@ export function bindElementProperty(
   }
 
   if (isEventProp(name, value)) {
+    const context = getActiveDOMExecutionContext();
     registerDOMCleanup(
       attachEventListener(
         element,
         name,
         value as EventListenerOrEventListenerObject,
+        (invoke) => runDOMOperation(context, invoke),
       ),
     );
     return;

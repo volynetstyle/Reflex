@@ -260,6 +260,19 @@ function applyDefaultOptionSelectedState(
 export function isManagedFormProp(formElement: Element, name: string): boolean {
   switch (name) {
     case "value":
+      if (
+        formElement instanceof HTMLInputElement &&
+        (formElement.type === "checkbox" || formElement.type === "radio")
+      ) {
+        return false;
+      }
+      return (
+        formElement instanceof HTMLInputElement ||
+        formElement instanceof HTMLTextAreaElement ||
+        formElement instanceof HTMLSelectElement ||
+        formElement instanceof HTMLOptionElement
+      );
+
     case "defaultValue":
       return (
         formElement instanceof HTMLInputElement ||

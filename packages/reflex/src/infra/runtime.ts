@@ -10,30 +10,32 @@ import {
   untracked,
 } from "@volynets/reflex-runtime/internal";
 import type {
+  ReactiveNode,
   RuntimeContext as RuntimeExecutionContext,
   RuntimeHostHooks,
 } from "@volynets/reflex-runtime/internal";
 import { subscribeEvent } from "./event";
 import { createSource } from "./factory";
 import { createEventDispatcher } from "../policy";
-import { EffectSchedulerMode } from "../policy/scheduler/scheduler.constants";
+import { EffectSchedulerMode } from "@volynets/reflex-scheduler";
 import {
   hasPendingEffects,
   isContextSettled,
-} from "../policy/scheduler/scheduler.context";
-import { profileSchedulerPolicyCounter } from "../policy/scheduler/scheduler.counters";
+} from "@volynets/reflex-scheduler";
+import { profileSchedulerPolicyCounter } from "@volynets/reflex-scheduler";
 import {
   createSchedulerCore,
   enterSchedulerBatch,
   flushSchedulerQueue,
   leaveSchedulerBatch,
-} from "../policy/scheduler/scheduler.core";
+} from "@volynets/reflex-scheduler";
+import { tryEnqueue } from "@volynets/reflex-scheduler";
 import {
   enqueueEffectByPolicy,
   notifyEffectSchedulerSettled,
   resolveEffectSchedulerMode,
-} from "../policy/scheduler/scheduler.infra";
-import type { EffectStrategy } from "../policy/scheduler/scheduler.infra";
+} from "@volynets/reflex-scheduler";
+import type { EffectStrategy } from "@volynets/reflex-scheduler";
 
 type BatchFn = <T>(fn: () => T) => T;
 type EventFn = <T>() => EventSource<T>;
@@ -133,18 +135,35 @@ export function createRuntime({
     run(schedulerFlush);
   };
   const dispatcher = createEventDispatcher(runtimeBatch);
+  const externalSinkInvalidated = hooks?.sinkInvalidatedDispatcher;
+  const externalReactiveSettled = hooks?.reactiveSettledDispatcher;
+  const enqueueEffect =
+    schedulerMode === EffectSchedulerMode.Eager
+      ? (node: ReactiveNode): void => {
+          enqueueEffectByPolicy(schedulerCore, schedulerMode, node);
+        }
+      : (node: ReactiveNode): void => {
+          tryEnqueue(schedulerCore.queue, node);
+        };
+  const sinkInvalidatedDispatcher =
+    externalSinkInvalidated === undefined
+      ? enqueueEffect
+      : (node: ReactiveNode): void => {
+          enqueueEffect(node);
+          externalSinkInvalidated(node);
+        };
+  const reactiveSettledDispatcher =
+    schedulerMode === EffectSchedulerMode.Eager ||
+    externalReactiveSettled !== undefined
+      ? emitReactiveSettled
+      : undefined;
 
   resetRuntimeContext(execution);
 
   configureRuntimeContext(execution, {
     hooks: {
-      sinkInvalidatedDispatcher(node) {
-        enqueueEffectByPolicy(schedulerCore, schedulerMode, node);
-        hooks?.sinkInvalidatedDispatcher?.(node);
-      },
-      reactiveSettledDispatcher() {
-        emitReactiveSettled();
-      },
+      sinkInvalidatedDispatcher,
+      reactiveSettledDispatcher,
     },
   });
 

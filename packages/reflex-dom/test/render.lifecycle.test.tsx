@@ -1,15 +1,13 @@
 /** @jsxImportSource ../src */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { computed, memo, signal } from "@volynets/reflex";
-import {
-  useEffect,
-} from "@volynets/reflex-framework";
+import { computed, memo, signal } from "./reactivity";
 import {
   RenderEffectPhase,
   createDOMRenderer,
   createDOMRuntime,
   render,
+  useEffect,
   useEffectRender,
 } from "../src";
 

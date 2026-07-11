@@ -132,12 +132,15 @@ export function subscribeEvent<T>(
   source: EventSource<T>,
   fn: (value: T) => void,
 ): () => void {
-  const subscriber: EventSubscriber<T> = {
+  // Initialize the ownership slot with the rest of the hot subscriber fields
+  // so appendSubscriber does not transition the object to a second shape.
+  const subscriber: OwnedEventSubscriber<T> = {
     fn,
     next: null,
     prev: null,
     state: EventSubscriberState.Active,
     unlinkNext: null,
+    [EVENT_SUBSCRIBER_OWNER]: null,
   };
 
   appendSubscriber(source, subscriber);
@@ -152,31 +155,38 @@ export function emitEvent<T>(
   value: T,
   boundary: EventBoundary = identityBoundary,
 ): void {
-  boundary(() => {
-    const end = source.tail;
-    if (end === null) return;
+  if (boundary === identityBoundary) {
+    emitEventCore(source, value);
+    return;
+  }
 
-    ++source.dispatchDepth;
+  boundary(() => emitEventCore(source, value));
+}
 
-    try {
-      let node = source.head;
+function emitEventCore<T>(source: EventSource<T>, value: T): void {
+  const end = source.tail;
+  if (end === null) return;
 
-      while (node !== null) {
-        const current = node;
-        const next = current === end ? null : current.next;
+  ++source.dispatchDepth;
 
-        if ((current.state & EventSubscriberState.Active) !== 0) {
-          current.fn(value);
-        }
+  try {
+    let node = source.head;
 
-        node = next;
+    while (node !== null) {
+      const current = node;
+      const next = current === end ? null : current.next;
+
+      if ((current.state & EventSubscriberState.Active) !== 0) {
+        current.fn(value);
       }
-    } finally {
-      --source.dispatchDepth;
 
-      if (source.dispatchDepth === 0 && source.pendingHead !== null) {
-        flushPendingRemovals(source);
-      }
+      node = next;
     }
-  });
+  } finally {
+    --source.dispatchDepth;
+
+    if (source.dispatchDepth === 0 && source.pendingHead !== null) {
+      flushPendingRemovals(source);
+    }
+  }
 }

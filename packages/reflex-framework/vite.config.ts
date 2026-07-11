@@ -9,6 +9,10 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: "@runtime",
+        replacement: runtimeRoot,
+      },
+      {
         find: "@volynets/reflex-runtime/internal",
         replacement: resolve(runtimeRoot, "internal/index.ts"),
       },

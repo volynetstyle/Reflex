@@ -22,6 +22,9 @@
       "@volynets/reflex-runtime": [
         "../reflex-runtime/src/index.ts"
       ],
+      "@volynets/reflex-runtime/internal": [
+        "../reflex-runtime/src/internal/index.ts"
+      ],
       "@runtime/*": [
         "../reflex-runtime/src/*"
       ]

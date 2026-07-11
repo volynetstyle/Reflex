@@ -1,10 +1,9 @@
 /** @jsxImportSource ../src */
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { computed, memo, signal } from "@volynets/reflex";
-import { useEffect } from "@volynets/reflex-framework";
+import { computed, memo, signal } from "./reactivity";
 import type { JSXRenderable } from "../src";
-import { createDOMRuntime, render, Fragment } from "../src";
+import { createDOMRuntime, render, Fragment, useEffect } from "../src";
 
 describe("render", () => {
   beforeEach(() => {

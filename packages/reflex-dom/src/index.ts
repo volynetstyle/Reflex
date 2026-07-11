@@ -29,15 +29,21 @@ export { useEffectRender } from "./hooks/use-effect-render";
 export { Fragment, jsx, jsxDEV, jsxs } from "./runtime/jsx";
 
 // DOM runtime
-export { createApp } from "./runtime/app";
-// export {
-//   createDOMRuntime,
-//   hydrate,
-//   mount,
-//   render,
-//   resume,
-//   useDOMRenderer,
-// } from "./runtime/singleton";
+export { createApp, setupDOM } from "./runtime/app";
+export {
+  createDOMRuntime,
+  hydrate,
+  mount,
+  render,
+  resume,
+  useDOMRenderer,
+} from "./runtime/singleton";
+export { createDOMRenderer, type DOMRenderer } from "./runtime/renderer";
+export {
+  RenderEffectPhase,
+  type DOMRenderEffectScheduler,
+  type RenderEffectScheduler,
+} from "./runtime/render-effect-scheduler";
 
 // Server
 export { renderToString } from "./server";

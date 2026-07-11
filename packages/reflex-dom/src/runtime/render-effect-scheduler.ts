@@ -31,7 +31,6 @@ const renderEffectPhases: readonly RenderEffectPhase[] = [
   RenderEffectPhase.AfterRender,
 ];
 
-const NOOP_DISPOSE = () => {};
 
 export function createRenderEffectScheduler(
   runTask: RenderEffectTaskRunner = (task) => {
@@ -63,18 +62,20 @@ export function createRenderEffectScheduler(
       return;
     }
 
-    const tasks = queue.tasks;
-
-    queue.tasks = [];
-    queue.version++;
     queue.flushing = true;
 
     try {
-      for (let index = 0; index < tasks.length; index++) {
-        const task = tasks[index];
+      while (queue.tasks.length > 0) {
+        const tasks = queue.tasks;
+        queue.tasks = [];
+        queue.version++;
 
-        if (task !== undefined) {
-          runTask(task);
+        for (let index = 0; index < tasks.length; index++) {
+          const task = tasks[index];
+
+          if (task !== undefined) {
+            runTask(task);
+          }
         }
       }
     } finally {
@@ -110,3 +111,7 @@ export function createRenderEffectScheduler(
     },
   };
 }
+
+
+
+

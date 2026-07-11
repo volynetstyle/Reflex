@@ -42,7 +42,7 @@ export function createRuntimeContext(
     readTrackingStrategy: DEFAULT_READ_TRACKING_STRATEGY,
     sinkInvalidatedHook: undefined,
     reactiveSettledHook: undefined,
-  };
+  } satisfies  RuntimeContext;
   applyRuntimeContextOptions(context, options);
   return context;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createRuntime, signal } from "@volynets/reflex";
+import { createRuntimeHarness, createTestProducer } from "./runtime";
 import {
   createOwnerContext,
   createOwnedEffect,
@@ -12,8 +12,8 @@ import {
 
 describe("ownership effects", () => {
   it("registers owned effects created inside reactive scopes", () => {
-    const rt = createRuntime();
-    const [source, setSource] = signal("a");
+    const runtime = createRuntimeHarness();
+    const [source, setSource] = createTestProducer("a");
     const owner = createOwnerContext();
     const root = createScope();
     const log: string[] = [];
@@ -32,7 +32,7 @@ describe("ownership effects", () => {
     expect(log).toEqual(["run:a"]);
 
     setSource("b");
-    rt.flush();
+    runtime.flush();
 
     expect(log).toEqual(["run:a", "cleanup:a", "run:b"]);
 
@@ -41,14 +41,14 @@ describe("ownership effects", () => {
     expect(log).toEqual(["run:a", "cleanup:a", "run:b", "cleanup:b"]);
 
     setSource("c");
-    rt.flush();
+    runtime.flush();
 
     expect(log).toEqual(["run:a", "cleanup:a", "run:b", "cleanup:b"]);
   });
 
   it("does not start owned effects while scope disposal is in progress", () => {
-    const rt = createRuntime();
-    const [source, setSource] = signal(1);
+    const runtime = createRuntimeHarness();
+    const [source, setSource] = createTestProducer(1);
     const owner = createOwnerContext();
     const root = createScope();
     const spy = vi.fn(() => {
@@ -64,19 +64,19 @@ describe("ownership effects", () => {
     });
 
     disposeScope(root);
-    rt.flush();
+    runtime.flush();
 
     expect(spy).not.toHaveBeenCalled();
 
     setSource(2);
-    rt.flush();
+    runtime.flush();
 
     expect(spy).not.toHaveBeenCalled();
   });
 
   it("runs owned effects in scheduler FIFO order", () => {
-    const rt = createRuntime({ effectStrategy: "flush" });
-    const [source, setSource] = signal(1);
+    const runtime = createRuntimeHarness();
+    const [source, setSource] = createTestProducer(1);
     const owner = createOwnerContext();
     const root = createScope();
     const log: string[] = [];
@@ -95,14 +95,14 @@ describe("ownership effects", () => {
 
     log.length = 0;
     setSource(2);
-    rt.flush();
+    runtime.flush();
 
     expect(log).toEqual(["low:2", "high:2"]);
   });
 
   it("disposes an effect when its scope closes during the initial run", () => {
-    const rt = createRuntime();
-    const [source, setSource] = signal(1);
+    const runtime = createRuntimeHarness();
+    const [source, setSource] = createTestProducer(1);
     const owner = createOwnerContext();
     const root = createScope();
     const log: string[] = [];
@@ -118,7 +118,7 @@ describe("ownership effects", () => {
     expect(log).toEqual(["run:1", "cleanup"]);
 
     setSource(2);
-    rt.flush();
+    runtime.flush();
 
     expect(log).toEqual(["run:1", "cleanup"]);
   });

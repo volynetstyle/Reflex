@@ -1,93 +1,94 @@
 {
-  "name": "@volynets/reflex",
-  "version": "0.3.6",
-  "type": "module",
-  "description": "Public Reflex facade with a connected runtime",
-  "license": "MIT",
-  "main": "./dist/cjs/index.cjs",
-  "module": "./dist/esm/index.js",
-  "types": "./dist/globals.d.ts",
-  "sideEffects": false,
-  "exports": {
-    ".": {
-      "source": {
-        "types": "./src/index.ts",
-        "default": "./src/index.ts"
-      },
-      "types": "./dist/globals.d.ts",
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.cjs"
-    },
-    "./unstable": {
-      "source": {
-        "types": "./src/unstable/index.ts",
-        "default": "./src/unstable/index.ts"
-      },
-      "types": "./dist/unstable/index.d.ts",
-      "import": "./dist/esm/unstable/index.js",
-      "require": "./dist/cjs/unstable/index.cjs"
-    },
-    "./debug": {
-      "source": {
-        "types": "./src/debug/index.ts",
-        "default": "./src/debug/index.ts"
-      },
-      "types": "./dist/debug/index.d.ts",
-      "import": "./dist/dev/debug/index.js",
-      "require": "./dist/cjs/debug/index.cjs"
-    }
-  },
-  "files": [
-    "src",
-    "dist/cjs",
-    "dist/esm",
-    "dist/debug",
-    "dist/globals.d.ts",
-    "dist/unstable"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "scripts": {
-    "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
-    "build": "pnpm clean && pnpm build:ts && pnpm build:types && pnpm build:npm",
-    "build:all": "node ../../scripts/build-chain.mjs @volynets/reflex-runtime @volynets/reflex",
-    "prebuild:ts": "pnpm --filter @volynets/reflex-runtime build:ts",
-    "build:ts": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
-    "build:types": "rollup --silent -c rollup.dts.config.ts --configPlugin @rollup/plugin-swc && node ../../scripts/write-globals-dts.mjs . && node ./scripts/write-subpath-dts.mjs .",
-    "build:npm": "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc",
-    "build:clean": "pnpm build",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "test": "vitest run",
-    "bench": "vitest bench",
-    "bench:api": "pnpm --filter @volynets/reflex-runtime build && pnpm build && node --expose-gc bench/api-facade.jit.mjs",
-    "bench:events": "vitest bench bench/event-*.bench.ts",
-    "bench:events:dispatcher": "vitest bench bench/event-dispatcher.bench.ts",
-    "bench:events:operators": "vitest bench bench/event-operators.compare.bench.ts",
-    "bench:events:raw": "vitest bench bench/event-delivery.compare.bench.ts",
-    "bench:scheduler": "vitest bench bench/scheduler.bench.ts",
-    "bench:scheduler:integration": "vitest bench bench/scheduler.integration.bench.ts",
-    "bench:projection": "node ./bench/projection-compare.node.mjs",
-    "demo": "vite --config examples/mini-app/vite.config.ts",
-    "demo:build": "vite build --config examples/mini-app/vite.config.ts",
-    "demo:typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p examples/mini-app/tsconfig.json",
-    "dev": "node ../../node_modules/typescript/bin/tsc -w -p tsconfig.build.json",
-    "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
-    "typecheck:tests": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.type-tests.json",
-    "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm build:clean"
-  },
-  "devDependencies": {
-    "@volynets/reflex-dom": "workspace:*",
-    "@volynets/reflex-runtime": "workspace:*",
-    "@volynets/reflex-store": "workspace:*",
-    "alien-signals": "^3.2.1",
-    "effector": "^23.4.4",
-    "eventemitter3": "^5.0.4",
-    "mitt": "^3.0.1",
-    "most": "^1.9.0",
-    "nanoevents": "^9.1.0",
-    "rxjs": "^7.8.2",
-    "xstream": "^11.14.0"
-  }
+    "name":  "@volynets/reflex",
+    "version":  "0.3.6",
+    "type":  "module",
+    "description":  "Public Reflex facade with a connected runtime",
+    "license":  "MIT",
+    "main":  "./dist/cjs/index.cjs",
+    "module":  "./dist/esm/index.js",
+    "types":  "./dist/globals.d.ts",
+    "sideEffects":  false,
+    "exports":  {
+                    ".":  {
+                              "source":  {
+                                             "types":  "./src/index.ts",
+                                             "default":  "./src/index.ts"
+                                         },
+                              "types":  "./dist/globals.d.ts",
+                              "import":  "./dist/esm/index.js",
+                              "require":  "./dist/cjs/index.cjs"
+                          },
+                    "./unstable":  {
+                                       "source":  {
+                                                      "types":  "./src/unstable/index.ts",
+                                                      "default":  "./src/unstable/index.ts"
+                                                  },
+                                       "types":  "./dist/unstable/index.d.ts",
+                                       "import":  "./dist/esm/unstable/index.js",
+                                       "require":  "./dist/cjs/unstable/index.cjs"
+                                   },
+                    "./debug":  {
+                                    "source":  {
+                                                   "types":  "./src/debug/index.ts",
+                                                   "default":  "./src/debug/index.ts"
+                                               },
+                                    "types":  "./dist/debug/index.d.ts",
+                                    "import":  "./dist/dev/debug/index.js",
+                                    "require":  "./dist/cjs/debug/index.cjs"
+                                }
+                },
+    "files":  [
+                  "src",
+                  "dist/cjs",
+                  "dist/esm",
+                  "dist/debug",
+                  "dist/globals.d.ts",
+                  "dist/unstable"
+              ],
+    "publishConfig":  {
+                          "access":  "public"
+                      },
+    "scripts":  {
+                    "clean":  "node -e \"require(\u0027node:fs\u0027).rmSync(\u0027build\u0027,{recursive:true,force:true});require(\u0027node:fs\u0027).rmSync(\u0027dist\u0027,{recursive:true,force:true})\"",
+                    "build":  "pnpm clean \u0026\u0026 pnpm build:ts \u0026\u0026 pnpm build:types \u0026\u0026 pnpm build:npm",
+                    "build:all":  "node ../../scripts/build-chain.mjs @volynets/reflex-runtime @volynets/reflex",
+                    "prebuild:ts":  "pnpm --filter @volynets/reflex-runtime build:ts",
+                    "build:ts":  "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
+                    "build:types":  "rollup --silent -c rollup.dts.config.ts --configPlugin @rollup/plugin-swc \u0026\u0026 node ../../scripts/write-globals-dts.mjs . \u0026\u0026 node ./scripts/write-subpath-dts.mjs .",
+                    "build:npm":  "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc",
+                    "build:clean":  "pnpm build",
+                    "lint":  "eslint .",
+                    "lint:fix":  "eslint . --fix",
+                    "test":  "vitest run",
+                    "bench":  "vitest bench",
+                    "bench:api":  "pnpm --filter @volynets/reflex-runtime build \u0026\u0026 pnpm build \u0026\u0026 node --expose-gc bench/api-facade.jit.mjs",
+                    "bench:events":  "vitest bench bench/event-*.bench.ts",
+                    "bench:events:dispatcher":  "vitest bench bench/event-dispatcher.bench.ts",
+                    "bench:events:operators":  "vitest bench bench/event-operators.compare.bench.ts",
+                    "bench:events:raw":  "vitest bench bench/event-delivery.compare.bench.ts",
+                    "bench:scheduler":  "vitest bench bench/scheduler.bench.ts",
+                    "bench:scheduler:integration":  "vitest bench bench/scheduler.integration.bench.ts",
+                    "bench:projection":  "node ./bench/projection-compare.node.mjs",
+                    "demo":  "vite --config examples/mini-app/vite.config.ts",
+                    "demo:build":  "vite build --config examples/mini-app/vite.config.ts",
+                    "demo:typecheck":  "node ../../node_modules/typescript/bin/tsc --noEmit -p examples/mini-app/tsconfig.json",
+                    "dev":  "node ../../node_modules/typescript/bin/tsc -w -p tsconfig.build.json",
+                    "typecheck":  "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
+                    "typecheck:tests":  "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.type-tests.json",
+                    "prepublishOnly":  "pnpm lint \u0026\u0026 pnpm typecheck \u0026\u0026 pnpm build:clean"
+                },
+    "devDependencies":  {
+                            "@volynets/reflex-dom":  "workspace:*",
+                            "@volynets/reflex-runtime":  "workspace:*",
+                            "@volynets/reflex-store":  "workspace:*",
+                            "alien-signals":  "^3.2.1",
+                            "effector":  "^23.4.4",
+                            "eventemitter3":  "^5.0.4",
+                            "mitt":  "^3.0.1",
+                            "most":  "^1.9.0",
+                            "nanoevents":  "^9.1.0",
+                            "rxjs":  "^7.8.2",
+                            "xstream":  "^11.14.0",
+                            "@volynets/reflex-scheduler":  "workspace:*"
+                        }
 }

@@ -87,7 +87,8 @@ export function effectUnscheduled(
 export function effect(fn: WatcherFn): Destructor {
   devassertEffectFn(fn, "effect");
 
-  const node = createWatcher(wrapEffectFn(fn, "effect"));
+  const compute = __DEV__ ? wrapEffectFn(fn, "effect") : fn;
+  const node = createWatcher(compute);
   runWatcher(node);
 
   const disposer: Destructor = disposeWatcher.bind(null, node);

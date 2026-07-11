@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createRuntime, signal } from "@volynets/reflex";
+import { createRuntimeHarness, createTestProducer } from "./runtime";
 import {
   createScope,
   createComponentRenderable,
@@ -19,7 +19,7 @@ import {
 
 describe("framework hooks", () => {
   it("owns component execution and consumes its result inside the component node", () => {
-    createRuntime();
+    createRuntimeHarness();
     const owner = getHookOwner();
     const root = createScope();
     const log: string[] = [];
@@ -49,25 +49,25 @@ describe("framework hooks", () => {
   });
 
   it("exposes signal state through useSignal and reacts through useEffect", () => {
-    const rt = createRuntime();
-    const [count, setCount] = useSignal(1);
+    const runtime = createRuntimeHarness();
+    const [count, setCount] = runtime.run(() => useSignal(1));
     const values: number[] = [];
 
-    const dispose = useEffect(() => {
-      values.push(count());
-    });
+    const dispose = runtime.run(() =>
+      useEffect(() => {
+        values.push(count());
+      }),
+    );
 
     expect(values).toEqual([1]);
 
-    setCount(2);
-    rt.flush();
+    runtime.run(() => setCount(2));
 
     expect(values).toEqual([1, 2]);
 
     dispose();
 
-    setCount(3);
-    rt.flush();
+    runtime.run(() => setCount(3));
 
     expect(values).toEqual([1, 2]);
   });
@@ -107,7 +107,7 @@ describe("framework hooks", () => {
   it("keeps disposed computed hooks from recalculating", () => {
     const owner = getHookOwner();
     const root = createScope();
-    const [source, setSource] = signal(1);
+    const [source, setSource] = createTestProducer(1);
     const compute = vi.fn(() => source() * 2);
     let doubled: Computed<number>;
 
@@ -130,7 +130,7 @@ describe("framework hooks", () => {
   it("keeps disposed memo hooks on their last materialized value", () => {
     const owner = getHookOwner();
     const root = createScope();
-    const [source, setSource] = signal(1);
+    const [source, setSource] = createTestProducer(1);
     const compute = vi.fn(() => source() * 3);
     let tripled: Memo<number>;
 
@@ -151,10 +151,10 @@ describe("framework hooks", () => {
   });
 
   it("does not track useMemo warm-up in the active consumer", () => {
-    const rt = createRuntime();
+    const runtime = createRuntimeHarness();
     const owner = getHookOwner();
     const root = createScope();
-    const [source, setSource] = signal(1);
+    const [source, setSource] = createTestProducer(1);
     const effectSpy = vi.fn();
 
     runInOwnershipScope(owner, root, () => {
@@ -170,7 +170,7 @@ describe("framework hooks", () => {
     expect(effectSpy).toHaveBeenCalledTimes(1);
 
     setSource(2);
-    rt.flush();
+    runtime.flush();
 
     expect(effectSpy).toHaveBeenCalledTimes(1);
 

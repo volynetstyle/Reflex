@@ -1,7 +1,7 @@
 /** @jsxImportSource ../src */
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { signal } from "@volynets/reflex";
+import { signal } from "./reactivity";
 import { createDOMRuntime, render } from "../src";
 
 describe("render platform integrations", () => {

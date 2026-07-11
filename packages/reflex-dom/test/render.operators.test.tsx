@@ -1,9 +1,8 @@
 /** @jsxImportSource ../src */
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { signal } from "@volynets/reflex";
-import { useEffect } from "@volynets/reflex-framework";
-import { createDOMRuntime, For, Show, Switch, render } from "../src";
+import { signal } from "./reactivity";
+import { createDOMRuntime, For, Show, Switch, render, useEffect } from "../src";
 
 describe("render structural operators and leaf dataflow", () => {
   beforeEach(() => {

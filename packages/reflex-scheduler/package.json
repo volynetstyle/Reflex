@@ -1,0 +1,15 @@
+{
+  "name": "@volynets/reflex-scheduler",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Effect scheduler policies for Reflex runtimes",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": { ".": { "source": { "types": "./src/index.ts", "default": "./src/index.ts" }, "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist"],
+  "publishConfig": { "access": "public" },
+  "scripts": { "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"", "build": "pnpm clean && node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs dist", "lint": "eslint .", "test": "vitest run", "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.json" },
+  "dependencies": { "@volynets/reflex-runtime": "workspace:*" }
+}

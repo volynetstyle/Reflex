@@ -1,15 +1,15 @@
-# reflex-dom
+# @volynets/reflex-dom
 
-`reflex-dom` is the DOM renderer for Reflex.
+Standalone DOM renderer for Reflex.
 
-It turns JSX and renderable values into real DOM, but the important detail is
-that it does so with an explicit ownership tree. DOM nodes, reactive effects,
-event listeners, refs, and dynamic branch cleanups are all tied to lifecycle
-scopes, so mount, update, replace, and dispose stay deterministic.
+The published package contains the reactive runtime, framework ownership model,
+JSX runtime, DOM renderer, hydration, and host scheduler in one tree-shakeable
+ES module. Consumers do not need to install compatible versions of
+`@volynets/reflex-runtime` or `@volynets/reflex-framework`.
 
-## Quick Start
+## Setup
 
-Install the DOM renderer and use it as your JSX import source:
+Configure TypeScript to use the package JSX runtime:
 
 ```json
 {
@@ -20,363 +20,244 @@ Install the DOM renderer and use it as your JSX import source:
 }
 ```
 
-Then render directly:
+Create an application and render a component:
 
 ```tsx
-import { signal } from "@volynets/reflex";
+import { createApp, useSignal } from "@volynets/reflex-dom";
+
+function Counter() {
+  const [count, setCount] = useSignal(0);
+
+  return (
+    <button onClick={() => setCount((value) => value + 1)}>
+      count: {count}
+    </button>
+  );
+}
+
+const app = createApp();
+app.render(<Counter />, document.getElementById("app")!);
+```
+
+For the singleton-style API:
+
+```tsx
 import { render, setupDOM } from "@volynets/reflex-dom";
 
 setupDOM();
-
-const [count, setCount] = signal(0);
-
-render(
-  <button type="button" onClick={() => setCount((value) => value + 1)}>
-    count: {count}
-  </button>,
-  document.getElementById("app")!,
-);
+render(<main>Hello</main>, document.getElementById("app")!);
 ```
 
-For an isolated renderer, create an app:
+Use `createApp()` when multiple isolated renderers may coexist. DOM event
+handlers are restored into the runtime and ownership context of the renderer
+that mounted them, so updates from separate applications do not share queues.
 
-```tsx
-import { createApp } from "@volynets/reflex-dom";
+## Public entry points
 
-const app = createApp({
-  policy: {
-    priorityLevels: true,
-  },
-});
+Client rendering:
 
-app.render(<main>Hello Reflex</main>, document.getElementById("app")!);
-```
+- `createApp()` and `setupDOM()`
+- `createDOMRenderer()` and `createDOMRuntime()`
+- `render()` / `mount()`
+- `hydrate()` and `resume()`
 
-The low-level `createDOMRenderer()` API remains available for tests and
-advanced integrations, but application code should usually start with
-`setupDOM()`, `createApp()`, and `render()`.
+Server rendering and structure:
 
-## Documentation
-
-- English architecture overview: `README.md`
-- Russian developer onboarding: `docs/ONBOARDING.ru.md`
-
-## What This Package Is Responsible For
-
-| Area | Files | Responsibility |
-| --- | --- | --- |
-| Public runtime API | `src/runtime.ts`, `src/render.ts` | Create renderers, mount roots, replace previous roots, expose `render()` / `mount()` / JSX runtime |
-| Render dispatch | `src/mount/append.ts` | Walk renderable values and route them to element, component, operator, or text mounting |
-| Mount architecture | `src/mount/*` | Keep element binding, renderable classification, and slot primitives as explicit seams instead of burying them inside tree walkers |
-| DOM host writes | `src/host/*`, `src/bindings/*` | Apply props, styles, events, refs, namespaces, and reactive prop bindings |
-| Dynamic regions | `src/structure/content-slot.ts`, `src/mount/reactive-slot.ts` | Keep slots replaceable without leaking nested effects |
-| Structural operators | `src/mount/show.ts`, `src/mount/switch.ts`, `src/mount/for.ts` | Mount conditional and keyed-list branches |
-| List reconciliation | `src/reconcile/*` | Hold keyed and unkeyed diff logic outside operator mounting so list behavior is easier to reason about and extend |
-| Execution policies | `src/runtime/policies.ts` | Describe renderer scheduling intent and map it onto the current Reflex runtime options |
-| Ownership and cleanup | `reflex-framework/ownership` + DOM mount sites | Track who owns which subtree and dispose it in a predictable order |
-
-## Mental Model
-
-Think of `reflex-dom` as building two trees at the same time:
-
-1. The DOM tree that the browser sees.
-2. The ownership tree that Reflex uses for lifecycle and cleanup.
-
-The DOM tree answers:
-
-- What is currently mounted?
-- Where should nodes be inserted or moved?
-
-The ownership tree answers:
-
-- Who owns this effect?
-- Which cleanups belong to this component?
-- What should be disposed when a branch is replaced?
-
-That second tree is what keeps dynamic rendering safe.
-
-## Visual Architecture
-
-```text
-JSX / renderable value
-        |
-        v
-runtime.ts
-  - createDOMRenderer()
-  - jsx / jsxs / Fragment
-        |
-        v
-render.ts
-  - resolve previous root on container
-  - dispose old root if present
-  - create new root scope
-        |
-        v
-runInOwnershipScope(root)
-        |
-        v
-mount/append.ts
-  |- element -> mount/element.ts -> mount/element-binder.ts -> host/*
-  |- component -> mount/component.ts
-  |- accessor -> mount/reactive-slot.ts
-  |- Show/Switch/For -> mount/show.ts / switch.ts / for.ts
-  |                    \-> reconcile/keyed.ts
-  \- primitives -> text nodes
-        |
-        v
-reflex-framework/ownership/*
-  - scopes
-  - context
-  - cleanup registration
-  - subtree disposal
-  - ownership-bound effects used by DOM mounts
-```
-
-## End-to-End Lifecycle
-
-### 1. Root render
-
-`render(input, container)` eventually calls `renderWithRenderer()`.
-
-The root transaction is:
-
-1. Ensure the underlying Reflex runtime exists.
-2. Read the mounted root scope from the container.
-3. Dispose the previous root scope if the container is already mounted.
-4. Create a fresh root scope.
-5. Clear only the renderer-managed root range.
-6. Mount the new tree inside `runInOwnershipScope(rootScope, ...)`.
-7. Store the new root scope on the container.
-8. Return an idempotent dispose function.
-
-This makes every root render a clean ownership boundary.
-
-### 2. Mounting a subtree
-
-Inside the root scope, `mount/append.ts` dispatches by value shape:
-
-- Element renderables create real DOM elements and bind props/children.
-- Component renderables allocate a child ownership scope and mount the component
-  output inside it.
-- Accessors become dynamic ranges backed by a slot.
-- `Show`, `Switch`, and `For` allocate replaceable branch regions.
-- Strings, numbers, and `Node` instances are mounted directly.
-
-### 3. Reactive updates
-
-Reactive bindings are registered through `useEffect()`.
-
-That effect helper does two important things:
-
-- Captures the owner scope that was active during mount.
-- Restores that same owner during later reruns.
-
-As a result, updates still know which scope owns any nested work they trigger.
-
-Plain Reflex effects created during mount are captured by the current ownership
-scope because DOM mounts enter the tree through `runInOwnershipScope()`.
-
-An owned reaction skips DOM writes on its first tracking pass when the
-initial DOM was already produced during mount. Later reruns are allowed to patch
-the DOM.
-
-### 4. Branch replacement
-
-Dynamic regions are isolated through `ContentSlot` and child scopes.
-
-When a branch changes:
-
-1. The current slot state is disposed.
-2. DOM between the slot markers is cleared.
-3. A new subtree is mounted into a fresh scope.
-4. That new scope becomes the active state for the slot.
-
-This lets a branch be replaced without touching unrelated siblings.
-
-### 5. Disposal
-
-Disposal is always subtree-based and inside-out:
-
-1. Walk to the deepest mounted child scope.
-2. Run that node's cleanups in reverse registration order.
-3. Detach the node from the ownership tree.
-4. Continue with its next sibling or parent.
-5. Finish at the original root.
-
-The result:
-
-- children clean up before parents
-- repeated `dispose()` calls are safe
-- cleanup failures are isolated and logged without aborting the rest
-
-## Why Ownership Exists
-
-Without ownership, a renderer eventually loses track of which effects and
-subscriptions belong to which DOM branch.
-
-Typical failures look like this:
-
-- A conditional branch disappears, but its effect keeps running.
-- A component is replaced, but its event listener cleanup is forgotten.
-- A root render is replaced, but stale reactive bindings still observe signals.
-
-Ownership solves all three by making lifecycle explicit.
-
-## Why There Is No WeakMap For Mounted Roots
-
-Mounted root state is stored directly on the container through a private
-`Symbol`, not in a renderer-local `WeakMap`.
-
-That matters for two reasons:
-
-1. The container itself is the source of truth for what is mounted there.
-2. Different renderer instances can still see and dispose the previous root on
-   the same container.
-
-This is especially important for handoffs such as:
-
-```text
-rendererA.render(...) -> container owns root scope A
-rendererB.render(...) -> rendererB sees scope A on container and disposes it
-```
-
-With a renderer-local `WeakMap`, that cross-renderer handoff would be much
-harder to reason about.
-
-## Managed Root Ranges
-
-Mounted root state is not just a scope anymore. It is a managed render range:
-
-- a start anchor
-- an end anchor
-- a scope that owns everything between them
-
-That range model is what enables:
-
-- renderer handoff on the same container
-- non-destructive root replacement
-- basic `hydrate()` and `resume()`
-- coexistence with foreign DOM inside the same host container
-
-The important invariant is:
-
-- `reflex-dom` may clear its own range
-- `reflex-dom` must not blindly clear the whole container
-
-For the Russian walkthrough of that model, see `docs/ONBOARDING.ru.md`.
-
-## SSR, Hydration, Resume, and Portals
-
-The package now exposes four platform-facing entry points in addition to normal
-client rendering:
-
-- `render()`
-- `hydrate()`
-- `resume()`
 - `renderToString()`
+- `For`, `Show`, `Switch`, and `Portal`
 
-And one structural operator for out-of-tree mounting:
+Framework hooks:
 
-- `Portal`
+- `useSignal`, `useComputed`, and `useMemo`
+- `useEffect`, `useEffectOnce`, and `useEffectRender`
+- `useMount`, `useUnmount`, `useOwned`, and `useRef`
+- ownership context helpers
 
-Current intent:
+The `jsx-runtime` and `jsx-dev-runtime` package subpaths resolve to the same
+standalone module.
 
-- `renderToString()` produces baseline SSR HTML and marks dynamic slot regions
-  for hydration.
-- `hydrate()` tries to adopt matching DOM without recreating it.
-- `resume()` adopts an existing DOM subtree under renderer ownership without
-  rebuilding it.
-- `Portal` mounts children into another DOM target while keeping cleanup tied
-  to the original ownership tree.
+## Architecture
 
-These are still intentionally basic, but they already share the same ownership
-and managed-range model as client rendering.
+The renderer builds two related trees:
 
-## Ownership Deep Dive
+1. The browser DOM tree.
+2. An ownership tree that records components, effects, dynamic branches, event
+   listeners, refs, and cleanups.
 
-`reflex-dom` now consumes ownership from `reflex-framework`.
+```text
+JSX
+  -> framework renderables and ownership scopes
+  -> DOM mount dispatcher
+  -> elements / components / dynamic slots / structural operators
+  -> managed DOM ranges
+```
 
-The renderer is responsible for choosing where DOM mounts enter ownership
-scopes, but the ownership tree itself belongs to the platform-agnostic core.
+Ownership is platform-agnostic and lives in `reflex-framework`. DOM mounting
+selects the active owner and registers host resources against it. Disposing a
+branch walks its ownership subtree inside-out, runs cleanups, and removes only
+the DOM range owned by that branch.
 
-## Example Trace
+Mounted roots are stored on their host container under a private symbol. This
+allows one renderer to replace a root created by another renderer without a
+renderer-local `WeakMap`, while preserving unrelated foreign DOM.
 
-For the render below:
+## Runtime and host boundary
+
+`reflex-runtime` owns graph propagation and execution state. It does not own an
+effect policy or an asynchronous scheduler.
+
+When a source changes, runtime marks dependent watcher nodes dirty and calls
+host hooks. `reflex-dom` is the host and owns:
+
+- the watcher queue;
+- effect deduplication;
+- batching and flush policy;
+- error isolation;
+- coordination with DOM render effects.
+
+The host scheduler is implemented in `src/runtime/scheduler/` and follows the
+same scheduler model used by the `reflex` facade.
+
+### Scheduler guarantees
+
+- A power-of-two ring queue avoids repeated array shifting.
+- Runtime's `Scheduled` state bit prevents duplicate queue entries.
+- Scheduler phases are explicit: `Idle`, `Batching`, and `Flushing`.
+- Nested batches flush only after the outer boundary closes.
+- The scheduled bit is cleared before execution, allowing a watcher to enqueue
+  itself during a run.
+- Reentrant entries are drained in the same flush cycle.
+- If a watcher throws, the remaining queue is still drained and the first error
+  is rethrown afterward.
+- Abort and reset paths clear scheduled bits from unexecuted nodes.
+
+### Effect strategies
+
+Configure scheduling through `createApp()` or `createDOMRenderer()`:
 
 ```tsx
-render(
-  <App>
-    {() => show() ? <Panel value={count} /> : null}
-  </App>,
-  container,
-);
+const app = createApp({ effectStrategy: "eager" });
 ```
 
-The lifecycle looks like this:
+Available strategies:
+
+| Strategy | Behaviour |
+| --- | --- |
+| `eager` | Flushes pending watchers when the host becomes inactive or the outer batch exits. |
+| `sab` | Flushes at a settled outer batch boundary. |
+| `flush` | Defers automatic delivery to a microtask and also supports explicit `runtime.flush()`. |
+
+The default policy resolves to `eager`.
+
+## Effect ordering
+
+Reactive effects and DOM render effects use separate queues:
 
 ```text
-root scope
-\- App component scope
-   \- dynamic slot scope
-      \- Panel component scope
-         |- reactive prop effect
-         \- reactive text/range effect
+source write
+  -> runtime propagation
+  -> host sinkInvalidated hook
+  -> reactive watcher queue
+  -> watcher execution and DOM mutations
+  -> runtime settled notification
+  -> DOM render-effect queue
 ```
 
-When `show()` becomes `false`, only the slot branch is disposed:
+`useEffect()` creates an ownership-bound watcher. Its previous cleanup runs
+before a rerun and again when the owner is disposed.
+
+`useEffectRender()` is scheduled separately and runs only after reactive DOM
+work stabilizes. Render tasks are ordered by phase:
+
+1. `BeforeRender`
+2. `Render`
+3. `AfterRender`
+
+Tasks scheduled reentrantly for the active phase are drained without shifting
+the underlying queue.
+
+## Dynamic regions and disposal
+
+Accessors and structural operators mount into managed ranges bounded by
+anchors. Replacing a dynamic branch:
+
+1. disposes its current ownership scope;
+2. clears DOM between its anchors;
+3. creates a fresh branch scope;
+4. mounts the replacement into that scope.
+
+This prevents effects belonging to removed `Show`, `Switch`, or `For` branches
+from continuing to observe reactive sources.
+
+## SSR and hydration
+
+- `renderToString()` creates baseline HTML and dynamic slot markers.
+- `hydrate()` adopts matching server DOM and falls back to remounting mismatches.
+- `resume()` adopts existing DOM under renderer ownership without rebuilding it.
+- `Portal` mounts into another target while cleanup remains owned by the source
+  component tree.
+
+All paths share the same ownership, managed-range, and scheduling model.
+
+## Standalone build
+
+From the repository root:
+
+```powershell
+pnpm --filter @volynets/reflex-dom build
+```
+
+The pipeline:
+
+1. builds `reflex-runtime`;
+2. builds `reflex-framework`;
+3. emits DOM modules and declarations;
+4. bundles runtime, framework, and DOM with Rollup;
+5. minifies the production module with Terser;
+6. bundles declarations and removes intermediate JavaScript files.
+
+The published `dist` directory contains:
 
 ```text
-dispose(slot scope)
-  -> dispose(Panel component scope)
-     -> cleanup reactive text/range effect
-     -> cleanup reactive prop effect
-  -> remove DOM between slot markers
+dist/
+  index.js
+  index.d.ts
 ```
 
-The rest of the app remains mounted.
+Neither file contains external `@volynets/*` imports.
 
-## Extension Guidelines
+## Development commands
 
-If you add a new renderer feature, ask two questions first:
+```powershell
+# Unit and integration tests
+pnpm --filter @volynets/reflex-dom test
 
-1. Does this feature create work that must stop when a subtree disappears?
-2. Can this feature mount a nested subtree that should be independently
-   replaceable?
+# Type checking
+pnpm --filter @volynets/reflex-dom typecheck
 
-If the answer is yes:
+# Standalone production build
+pnpm --filter @volynets/reflex-dom build
 
-- register cleanup in the current owner scope
-- create a child scope for independently replaceable subtrees
+# Real-browser DOM mutation benchmark
+pnpm --filter @volynets/reflex-dom bench:mutations
+```
 
-If the answer is no:
+The mutation benchmark runs in a local Chromium-based browser and writes
+`bench/mutations.results.html`.
 
-- prefer plain DOM work with no extra scope allocation
+## Source map
 
-That is why `content-slot` allocates scopes for fallback subtrees, but not for
-plain text or borrowed DOM nodes.
+| Area | Location |
+| --- | --- |
+| Runtime host and policies | `src/runtime/options.ts`, `src/runtime/policies.ts` |
+| Reactive effect scheduler | `src/runtime/scheduler/` |
+| DOM render-effect scheduler | `src/runtime/render-effect-scheduler.ts` |
+| Runtime/DOM context bridge | `src/runtime/execution/` |
+| Ownership and hooks | `packages/reflex-framework/src/ownership/`, `src/hooks/` |
+| Mount dispatch | `src/mount/` |
+| DOM writes and bindings | `src/host/`, `src/bindings/` |
+| Dynamic ranges | `src/structure/` |
+| Reconciliation | `src/reconcile/` |
+| Hydration and SSR | `src/hydrate/`, `src/server/` |
 
-## Recent Architecture Lift
-
-The experimental `dom/` folder introduced a more explicit layered design. The
-working `src/` implementation now carries the portable parts of that design:
-
-- `src/mount/renderable.ts` centralizes renderable classification.
-- `src/mount/element-binder.ts` separates element setup from child mounting.
-- `src/reconcile/keyed.ts` owns keyed list diffing instead of keeping it inside `For`.
-- `src/runtime/policies.ts` gives renderer scheduling a named policy surface.
-
-That keeps the stable renderer behavior intact while making future features
-like alternate hosts, richer list strategies, or batched scheduling easier to
-add in one place.
-
-## Status
-
-The current implementation is covered by package tests for:
-
-- root replacement
-- nested component disposal order
-- effect cleanup on branch removal
-- dynamic operator behavior
-- renderer handoff on the same container
-
-For concrete lifecycle cases, see `test/render.lifecycle.test.tsx`.
+Russian developer onboarding is available in `docs/ONBOARDING.ru.md`.

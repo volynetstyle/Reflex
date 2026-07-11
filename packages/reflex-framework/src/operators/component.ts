@@ -1,4 +1,4 @@
-import type { AttributeKey } from "src/types/core";
+import type { AttributeKey } from "../types/core";
 import {
   COMPONENT_RENDERABLE,
   type Component,

@@ -1,75 +1,77 @@
 {
-  "name": "@volynets/reflex-dom",
-  "version": "0.1.0",
-  "type": "module",
-  "description": "DOM renderer for Reflex",
-  "license": "MIT",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "sideEffects": false,
-  "exports": {
-    ".": {
-      "source": {
-        "types": "./src/index.ts",
-        "default": "./src/index.ts"
-      },
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./jsx-runtime": {
-      "source": {
-        "types": "./src/jsx-runtime.ts",
-        "default": "./src/jsx-runtime.ts"
-      },
-      "types": "./dist/jsx-runtime.d.ts",
-      "import": "./dist/jsx-runtime.js"
-    },
-    "./jsx-dev-runtime": {
-      "source": {
-        "types": "./src/jsx-dev-runtime.ts",
-        "default": "./src/jsx-dev-runtime.ts"
-      },
-      "types": "./dist/jsx-dev-runtime.d.ts",
-      "import": "./dist/jsx-dev-runtime.js"
-    }
-  },
-  "files": [
-    "dist"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "scripts": {
-    "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
-    "build": "pnpm clean && node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs dist",
-    "bench:mutations": "powershell -NoProfile -ExecutionPolicy Bypass -File ./bench/run-mutations.ps1",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "test": "pnpm exec vitest run --config vite.config.ts",
-    "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
-    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build"
-  },
-  "dependencies": {
-    "@volynets/reflex-framework": "workspace:^",
-    "@volynets/reflex-runtime": "workspace:^"
-  },
-  "keywords": [
-    "dom",
-    "jsx",
-    "reactivity",
-    "renderer",
-    "reflex"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/volynetstyle/Reflex.git",
-    "directory": "packages/reflex-dom"
-  },
-  "homepage": "https://github.com/volynetstyle/Reflex/tree/main/packages/reflex-dom",
-  "bugs": {
-    "url": "https://github.com/volynetstyle/Reflex/issues"
-  },
-  "engines": {
-    "node": ">=20.19.0"
-  }
+    "name":  "@volynets/reflex-dom",
+    "version":  "0.0.6",
+    "type":  "module",
+    "description":  "DOM renderer for Reflex",
+    "license":  "MIT",
+    "main":  "./dist/index.js",
+    "types":  "./dist/index.d.ts",
+    "sideEffects":  false,
+    "exports":  {
+                    ".":  {
+                              "source":  {
+                                             "types":  "./src/index.ts",
+                                             "default":  "./src/index.ts"
+                                         },
+                              "types":  "./dist/index.d.ts",
+                              "import":  "./dist/index.js"
+                          },
+                    "./jsx-runtime":  {
+                                          "source":  {
+                                                         "types":  "./src/jsx-runtime.ts",
+                                                         "default":  "./src/jsx-runtime.ts"
+                                                     },
+                                          "types":  "./dist/index.d.ts",
+                                          "import":  "./dist/index.js"
+                                      },
+                    "./jsx-dev-runtime":  {
+                                              "source":  {
+                                                             "types":  "./src/jsx-dev-runtime.ts",
+                                                             "default":  "./src/jsx-dev-runtime.ts"
+                                                         },
+                                              "types":  "./dist/index.d.ts",
+                                              "import":  "./dist/index.js"
+                                          }
+                },
+    "files":  [
+                  "dist"
+              ],
+    "publishConfig":  {
+                          "access":  "public"
+                      },
+    "scripts":  {
+                    "clean":  "node -e \"require(\u0027node:fs\u0027).rmSync(\u0027build\u0027,{recursive:true,force:true});require(\u0027node:fs\u0027).rmSync(\u0027dist\u0027,{recursive:true,force:true})\"",
+                    "build:dependencies":  "pnpm --filter @volynets/reflex-runtime build \u0026\u0026 pnpm --filter @volynets/reflex-framework build",
+                    "build:modules":  "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json \u0026\u0026 node ../../scripts/fix-esm-specifiers.mjs dist",
+                    "build:bundle":  "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc \u0026\u0026 node ./scripts/finalize-standalone.mjs",
+                    "build":  "pnpm clean \u0026\u0026 pnpm build:dependencies \u0026\u0026 pnpm build:modules \u0026\u0026 pnpm build:bundle",
+                    "bench:mutations":  "powershell -NoProfile -ExecutionPolicy Bypass -File ./bench/run-mutations.ps1",
+                    "lint":  "eslint .",
+                    "lint:fix":  "eslint . --fix",
+                    "test":  "pnpm exec vitest run --config vite.config.ts",
+                    "typecheck":  "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
+                    "prepublishOnly":  "pnpm lint \u0026\u0026 pnpm test \u0026\u0026 pnpm typecheck \u0026\u0026 pnpm build"
+                },
+    "keywords":  [
+                     "dom",
+                     "jsx",
+                     "reactivity",
+                     "renderer",
+                     "reflex"
+                 ],
+    "repository":  {
+                       "type":  "git",
+                       "url":  "git+https://github.com/volynetstyle/Reflex.git",
+                       "directory":  "packages/reflex-dom"
+                   },
+    "homepage":  "https://github.com/volynetstyle/Reflex/tree/main/packages/reflex-dom",
+    "bugs":  {
+                 "url":  "https://github.com/volynetstyle/Reflex/issues"
+             },
+    "engines":  {
+                    "node":  "\u003e=20.19.0"
+                },
+    "dependencies":  {
+                         "@volynets/reflex-scheduler":  "workspace:*"
+                     }
 }

@@ -18,6 +18,11 @@ export function createDOMRuntime(options?: DOMRuntimeOptions): RuntimeInstance {
   return ensureDOMRuntime(context);
 }
 
+export function getActiveDOMRuntime(): RuntimeInstance {
+  const context = (activeExecutionContext ??= createDOMExecutionContext());
+  return ensureDOMRuntime(context);
+}
+
 export function render(
   input: JSXRenderable,
   container: ParentNode & Node,
