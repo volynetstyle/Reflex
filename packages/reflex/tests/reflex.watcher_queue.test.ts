@@ -5,7 +5,7 @@ import {
   createRingQueue,
   pushRingQueue,
   shiftRingQueue,
-} from "../src/policy/scheduler";
+} from "@volynets/reflex-scheduler";
 
 function createNodes(count: number) {
   return Array.from({ length: count }, () => createWatcherNode(() => {}));

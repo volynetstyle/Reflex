@@ -9,7 +9,7 @@ import { createWatcherNode } from "../src/infra/factory";
 import {
   createEffectScheduler,
   EffectSchedulerMode,
-} from "../src/policy/scheduler";
+} from "@volynets/reflex-scheduler";
 
 type TestNode = ReturnType<typeof createWatcherNode>;
 
