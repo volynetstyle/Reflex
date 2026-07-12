@@ -252,6 +252,32 @@ function createStableTracking(width: number): BenchCase {
   };
 }
 
+function createDistantDuplicateTracking(width: number): BenchCase {
+  resetRuntime();
+
+  const sources = Array.from({ length: width }, (_, index) =>
+    createProducer(index),
+  );
+  const root = createConsumer(() => {
+    let total = 0;
+
+    for (let index = 0; index < sources.length; index += 1) {
+      total += readProducer(sources[index]!);
+    }
+
+    return total + readProducer(sources[0]!);
+  });
+
+  blackhole(readConsumer(root));
+
+  return {
+    step(iteration) {
+      writeProducer(sources[1]!, iteration);
+      return readConsumer(root);
+    },
+  };
+}
+
 function createWatcherFanout(watcherCount: number): BenchCase {
   let scheduled = 0;
 
@@ -894,6 +920,42 @@ const scenarios: ComponentScenario[] = [
     group: "tracking",
     label: "tracking / stable order / width 128",
     create: () => createStableTracking(128),
+  },
+  {
+    id: "tracking.rotate-wide",
+    group: "tracking",
+    label: "tracking / rotate / width 128",
+    create: () => createDependencyPatternChurn(rotatePatterns(128)),
+  },
+  {
+    id: "tracking.swap-wide",
+    group: "tracking",
+    label: "tracking / swap adjacent / width 128",
+    create: () => createDependencyPatternChurn(adjacentSwapPatterns(128)),
+  },
+  {
+    id: "tracking.prefix-suffix-wide",
+    group: "tracking",
+    label: "tracking / prefix suffix / width 128",
+    create: () => createDependencyPatternChurn(prefixSuffixChurnPatterns(128)),
+  },
+  {
+    id: "tracking.oscillate-wide",
+    group: "tracking",
+    label: "tracking / oscillate / width 128",
+    create: () => createDependencyPatternChurn(oscillateABPatterns(128)),
+  },
+  {
+    id: "tracking.chaotic-wide",
+    group: "tracking",
+    label: "tracking / chaotic / width 128",
+    create: () => createDependencyPatternChurn(chaoticPatterns(128)),
+  },
+  {
+    id: "tracking.distant-duplicate-wide",
+    group: "tracking",
+    label: "tracking / distant duplicate / width 128",
+    create: () => createDistantDuplicateTracking(128),
   },
   {
     id: "watcher.fanout",
