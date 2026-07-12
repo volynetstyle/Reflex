@@ -192,9 +192,17 @@ The host decides:
 - when to execute watchers,
 - how invalidated sinks should be scheduled.
 
-Runtime hooks are notification points. They may enqueue work or request a host
-flush, but they must not synchronously execute watchers, read reactive values, or
-mutate the graph while the runtime is propagating, pulling, or recomputing.
+Runtime hooks have two distinct contracts:
+
+- `sinkInvalidatedDispatcher` runs during propagation. It is enqueue-only: it
+  must not execute watchers or access reactive graph state.
+- `reactiveSettledDispatcher` runs at an idle host boundary after propagation,
+  pull, and watcher work have settled. It may synchronously drain queued
+  watchers, which is how an eager scheduler delivers effects without a
+  microtask hop.
+
+Nested runtime hook calls are supported. The runtime restores the outer hook's
+validation context when an inner hook returns.
 
 Recommended scheduler shape:
 
@@ -236,7 +244,7 @@ configureRuntimeContext({
       pendingWatchers.add(watcher);
     },
     reactiveSettledDispatcher() {
-      scheduleFlush();
+      flushWatchers();
     },
   },
 });
@@ -254,20 +262,30 @@ queue.add(watcher);
 Allowed inside `reactiveSettledDispatcher`:
 
 ```ts
+flushWatchers();
+```
+
+```ts
 queueMicrotask(flushWatchers);
 requestAnimationFrame(flushWatchers);
 host.schedule(flushWatchers);
 ```
 
-Forbidden inside runtime hooks:
+Forbidden inside `sinkInvalidatedDispatcher`:
 
 ```ts
-runWatcher(watcher);
 readConsumer(node);
 readProducer(node);
 writeProducer(node, value);
-flushEffects();
 ```
+
+`reactiveSettledDispatcher` may run a synchronous watcher/effect drain. A
+watcher can in turn read or write reactive state; if that creates more work,
+Reflex delivers another settled checkpoint once the runtime is idle again.
+
+If a host hook throws, Reflex restores its propagation bookkeeping before
+rethrowing the original error. A subsequent write can therefore start a fresh
+propagation walk.
 
 In development validation builds, Reflex reports scheduler contract violations
 at the boundary where they happen:
@@ -275,7 +293,7 @@ at the boundary where they happen:
 ```txt
 [REFLEX_SCHEDULER_REENTRANT_FLUSH]
 
-Host scheduler executed runWatcher() synchronously from reactiveSettledDispatcher.
+Host scheduler executed runWatcher() synchronously from sinkInvalidatedDispatcher.
 ```
 
 Other scheduler policy errors include:

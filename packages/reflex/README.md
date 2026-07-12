@@ -49,17 +49,21 @@ latest value without flushing.
 const runtime = createRuntime({ effectStrategy: "flush" });
 ```
 
-| Strategy | Invalidated effects run |
-| --- | --- |
-| `"flush"` | when `runtime.flush()` is called |
-| `"sab"` | after the outermost batch settles |
-| `"eager"` | automatically |
+| Strategy  | Invalidated effects run                            |
+| --------- | -------------------------------------------------- |
+| `"flush"` | when `runtime.flush()` is called                   |
+| `"sab"`   | after the outermost batch settles                  |
+| `"eager"` | synchronously at the next runtime-settled boundary |
 
 Use `runtime.batch(fn)` or the exported `batch(fn)` to group related writes.
 Writes and invalidations remain synchronous, and reads inside the batch observe
 the latest values. A reactive batch only coalesces host-visible `settled`
 notifications. Effect timing remains a scheduler policy selected by
 `effectStrategy`.
+
+The eager strategy does not run an effect from the invalidation callback itself.
+It queues the effect during propagation and drains that queue once the runtime is
+settled; an effect that writes state produces another settled checkpoint.
 
 ## API
 
