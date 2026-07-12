@@ -1,24 +1,59 @@
 import { performance } from "node:perf_hooks";
 import {
-  ReactiveNode,
-  CONSUMER_CHANGED,
-  PRODUCER_INITIAL_STATE,
-  WATCHER_CHANGED,
   readConsumer,
   readProducer,
-  resetState,
   runWatcher,
-  setRuntimeContextOptions,
-  setInternalHooks,
   writeProducer,
 } from "../build/esm/index.js";
-import { linkEdge } from "../build/esm/kernel/shape/graph.js";
 import {
-  attachIncomingEdgeAfter,
-  detachIncomingEdge,
-} from "../build/esm/kernel/shape/graph/edgeList.js";
+  ReactiveNode,
+  CONSUMER_INITIAL_STATE,
+  PRODUCER_INITIAL_STATE,
+  WATCHER_INITIAL_STATE,
+} from "../build/esm/kernel/shape/index.js";
+import {
+  resetRuntimeContext,
+  configureRuntimeContext,
+} from "../build/esm/kernel/context.js";
+import { linkEdge } from "../build/esm/kernel/shape/graph/index.js";
 
 const UNINITIALIZED = Symbol("reflex.perf.uninitialized");
+
+// The fallback profiler models incoming-list reordering without changing the
+// outgoing half of an edge. These helpers mirror the internal move operation.
+function detachIncomingEdge(node, edge) {
+  const { prevIn, nextIn } = edge;
+
+  if (prevIn !== null) prevIn.nextIn = nextIn;
+  else node.firstIn = nextIn;
+
+  if (nextIn !== null) nextIn.prevIn = prevIn;
+  else node.lastIn = prevIn;
+
+  edge.prevIn = null;
+  edge.nextIn = null;
+}
+
+function attachIncomingEdgeAfter(node, edge, after) {
+  const nextIn = after === null ? node.firstIn : after.nextIn;
+  edge.prevIn = after;
+  edge.nextIn = nextIn;
+
+  if (nextIn !== null) nextIn.prevIn = edge;
+  else node.lastIn = edge;
+
+  if (after !== null) after.nextIn = edge;
+  else node.firstIn = edge;
+}
+
+function setInternalHooks(
+  sinkInvalidatedDispatcher,
+  reactiveSettledDispatcher,
+) {
+  configureRuntimeContext({
+    hooks: { sinkInvalidatedDispatcher, reactiveSettledDispatcher },
+  });
+}
 const DEFAULT_SAMPLES = 9;
 const childOrder = new Map([
   [
@@ -42,23 +77,23 @@ function producer(value) {
 }
 
 function consumer(compute) {
-  return new ReactiveNode(UNINITIALIZED, compute, CONSUMER_CHANGED);
+  return new ReactiveNode(UNINITIALIZED, compute, CONSUMER_INITIAL_STATE);
 }
 
 function watcher(compute) {
-  return new ReactiveNode(undefined, compute, WATCHER_CHANGED);
+  return new ReactiveNode(undefined, compute, WATCHER_INITIAL_STATE);
 }
 
 function withRuntime(fn) {
-  resetState();
+  resetRuntimeContext();
   setInternalHooks();
-  setRuntimeContextOptions();
+  configureRuntimeContext();
   try {
     return fn();
   } finally {
-    resetState();
+    resetRuntimeContext();
     setInternalHooks();
-    setRuntimeContextOptions();
+    configureRuntimeContext();
   }
 }
 
@@ -169,6 +204,42 @@ const benches = [
             readConsumerCleanFastPathCount: iterations * measured.samples,
             recomputeCount: iterations * measured.samples,
             trackReadCount: iterations * measured.samples * 2,
+          },
+        );
+      });
+    },
+  },
+  {
+    id: "api.computed.read.recompute.unchanged",
+    label: "unchanged",
+    group: "api",
+    parentId: "api.computed.read.recompute",
+    run() {
+      return withRuntime(() => {
+        const source = producer(0);
+        const stable = consumer(() => {
+          readProducer(source);
+          return 1;
+        });
+        readConsumer(stable);
+
+        let writes = 1;
+        const iterations = 200_000;
+        const measured = measure(() => {
+          writeProducer(source, writes++);
+          return readConsumer(stable);
+        }, iterations);
+
+        return result(
+          this.id,
+          this.label,
+          this.group,
+          this.parentId,
+          measured,
+          {
+            recomputeCount: iterations * measured.samples,
+            unchangedCount: iterations * measured.samples,
+            downstreamPropagationCount: 0,
           },
         );
       });
@@ -389,6 +460,60 @@ const benches = [
     },
   },
   {
+    id: "graph.pull.branch.32x8.4sources",
+    label: "32x8 - 4 sources",
+    group: "graph",
+    parentId: "graph.pull.branch",
+    run() {
+      return withRuntime(() => {
+        const sources = Array.from({ length: 4 }, (_, index) =>
+          producer(index),
+        );
+        const sinks = [];
+
+        for (let branch = 0; branch < 32; branch += 1) {
+          let node = consumer(() =>
+            sources.reduce((sum, source) => sum + readProducer(source), 0),
+          );
+
+          for (let depth = 1; depth < 8; depth += 1) {
+            const prev = node;
+            node = consumer(() => readConsumer(prev) + 1);
+          }
+
+          readConsumer(node);
+          sinks.push(node);
+        }
+
+        let writes = 1;
+        const iterations = 1_000;
+        const measured = measure((i) => {
+          writeProducer(sources[i & 3], writes++);
+
+          let value = 0;
+          for (const sink of sinks) value += readConsumer(sink);
+
+          return value;
+        }, iterations);
+
+        return result(
+          this.id,
+          this.label,
+          this.group,
+          this.parentId,
+          measured,
+          {
+            writeCount: iterations * measured.samples,
+            sinkReadCount: iterations * measured.samples * sinks.length,
+            branchCount: sinks.length,
+            branchDepth: 8,
+            sourceCount: sources.length,
+          },
+        );
+      });
+    },
+  },
+  {
     id: "api.effect.flush.1kWatchers",
     label: "1kWatchers",
     group: "api",
@@ -421,6 +546,77 @@ const benches = [
             watcherRunCount: measured.samples * watchers.length * 1000,
             queuePopCount: measured.samples * watchers.length * 1000,
             queueMaxSize: watchers.length,
+          },
+        );
+      });
+    },
+  },
+  {
+    id: "api.effect.nested.1to1",
+    label: "nested 1→1",
+    group: "api",
+    parentId: "api.effect.nested",
+    run() {
+      return withRuntime(() => {
+        const source = producer(0);
+        const target = producer(0);
+        const queue = [];
+        let head = 0;
+        let draining = false;
+        let invalidated = 0;
+        let outerWrites = 0;
+
+        const flush = () => {
+          if (draining) return;
+
+          draining = true;
+          try {
+            while (head < queue.length) runWatcher(queue[head++]);
+          } finally {
+            queue.length = 0;
+            head = 0;
+            draining = false;
+          }
+        };
+
+        setInternalHooks((node) => {
+          invalidated += 1;
+          queue.push(node);
+        }, flush);
+
+        const outer = watcher(() => {
+          writeProducer(target, readProducer(source));
+          outerWrites += 1;
+        });
+        const inner = watcher(() => readProducer(target));
+        runWatcher(outer);
+        runWatcher(inner);
+
+        invalidated = 0;
+        outerWrites = 0;
+        let writes = 1;
+        const iterations = 20_000;
+        const measured = measure(() => {
+          writeProducer(source, writes++);
+          return writes;
+        }, iterations);
+
+        // `measure` performs one warm-up pass before collecting its samples;
+        // `outerWrites` includes both, so it is the authoritative wave count.
+        const waves = outerWrites;
+        return result(
+          this.id,
+          this.label,
+          this.group,
+          this.parentId,
+          measured,
+          {
+            sourceWrites: waves,
+            outerEffectWrites: waves,
+            propagationWaves: waves * 2,
+            watcherInvalidations: invalidated,
+            expectedInvalidations: waves * 2,
+            watcherRuns: waves * 2,
           },
         );
       });
@@ -651,7 +847,7 @@ function trackReadBench(bench, getOrder, fanIn, options = {}) {
       return sum;
     });
 
-    setRuntimeContextOptions({
+    configureRuntimeContext({
       readTrackingStrategy: createInstrumentedFallback(counters, options),
     });
 
@@ -706,7 +902,7 @@ function trackReadMissAddEdgeBench(bench, fanIn) {
       return sum;
     });
 
-    setRuntimeContextOptions({
+    configureRuntimeContext({
       readTrackingStrategy: createInstrumentedFallback(counters),
     });
 
@@ -749,7 +945,7 @@ function trackReadDuplicateBench(bench, fanIn) {
       return sum;
     });
 
-    setRuntimeContextOptions({
+    configureRuntimeContext({
       readTrackingStrategy: createInstrumentedFallback(counters),
     });
 

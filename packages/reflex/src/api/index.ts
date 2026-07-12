@@ -1,7 +1,6 @@
 export { computed, memo } from "./derived";
 export {
   effect,
-  effectRanked,
   reaction,
   watch,
 } from "./effect";
@@ -10,5 +9,14 @@ export type {
   ReactionFn,
   Watch,
 } from "./effect";
-export { filter, hold, map, merge, scan, subscribeOnce } from "./event";
+export {
+  filter,
+  flatten,
+  hold,
+  map,
+  merge,
+  scan,
+  subscribeOnce,
+  switchMap,
+} from "./event";
 export { signal } from "./signal";

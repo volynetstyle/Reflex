@@ -1,39 +1,13 @@
-const FIRST = 1;
-const NEXT = 2;
-const BOTH = FIRST | NEXT;
-
-/**
- * TABLE[c]:
- * - bit 0 => valid as first char
- * - bit 1 => valid as subsequent char
- */
-const TABLE = new Uint8Array(256);
-
-// First char + subsequent char: A-Z, a-z, _, :
-for (let c = 65; c <= 90; c++) TABLE[c] = BOTH;
-for (let c = 97; c <= 122; c++) TABLE[c] = BOTH;
-TABLE[95] = BOTH; // _
-TABLE[58] = BOTH; // :
-
-// Subsequent char only: 0-9, -, ., ·
-for (let c = 48; c <= 57; c++) TABLE[c] = NEXT;
-TABLE[45] = NEXT; // -
-TABLE[46] = NEXT; // .
-TABLE[183] = NEXT; // ·
+const FIRST = 1 << 0;
+const NEXT = 1 << 1;
 
 /**
  * Validates whether an attribute name is safe according to the specified rules:
  * - Start character: A-Z, a-z, _, or :
  * - Name characters: Start characters plus 0-9, -, ., or \u00B7 (middle dot)
- * - Ensures maximal safety and performance for library usage.
  *
- * @param attributeName The attribute name to validate
- *
+ * @param name The attribute name to validate
  * @returns True if the attribute name is safe, false otherwise
- *
- *  Lookup tables for ASCII characters.
- * 1 = allowed, 0 = forbidden.
- * Length is exactly 256.
  */
 export function isAttributeName(name: string): boolean {
   const len = name.length;
@@ -50,3 +24,23 @@ export function isAttributeName(name: string): boolean {
 
   return true;
 }
+
+// Precomputed lookup table (256 entries): bit 0 = valid first char, bit 1 = valid subsequent char
+const TABLE = new Uint8Array([
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 0-15
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 16-31
+  0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,0, // 32-47 (45 '-' =2, 46 '.' =2)
+  2,2,2,2,2,2,2,2,2,2,3,0,0,0,0,0, // 48-63 (48-57 '0'-'9' =2, 58 ':' =3)
+  0,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3, // 64-79 (65-79 'A'-'O' =3)
+  3,3,3,3,3,3,3,3,3,3,3,0,0,0,0,3, // 80-95 (80-90 'P'-'Z' =3, 95 '_' =3)
+  0,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3, // 96-111 (97-111 'a'-'o' =3)
+  3,3,3,3,3,3,3,3,3,3,3,0,0,0,0,0, // 112-127 (112-122 'p'-'z' =3)
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 128-143
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 144-159
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 160-175
+  0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0, // 176-191 (183 '·' =2)
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 192-207
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 208-223
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 224-239
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 240-255
+]);

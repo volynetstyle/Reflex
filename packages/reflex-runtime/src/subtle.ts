@@ -1,5 +1,3 @@
-import type { ReactiveNode } from "./kernel";
-import { untracked } from "./protocol/utils/untracked";
 import { RUNTIME_DEBUG_PROTOCOL_VERSION } from "./debug/debug.protocol";
 import type {
   RuntimeDebugGraphIntegrity,
@@ -21,6 +19,8 @@ import type {
   State,
   Watcher,
 } from "./debug/subtle.internal";
+import type { ReactiveNode } from "./kernel";
+import { untracked } from "./protocol/utils/untracked";
 
 export type {
   Computed,

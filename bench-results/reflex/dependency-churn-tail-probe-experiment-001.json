@@ -1,0 +1,54 @@
+{
+  "capturedAt": "2026-06-16",
+  "command": "pnpm.cmd --filter @volynets/reflex exec vitest bench bench/dependency-churn.bench.ts",
+  "source": "packages/reflex/bench/dependency-churn.bench.ts",
+  "change": {
+    "name": "tail2/tail4 shortcut before bounded slow path",
+    "summary": "Probe last.prevIn, last.prevIn.prevIn, and last.prevIn.prevIn.prevIn before delegating to the slow path. Tail2 and tail4 hits move the found edge after the tracking cursor."
+  },
+  "profileHighlights": [
+    {
+      "scenario": "prefix_suffix_chaotic_1024",
+      "tail2Hits": 528,
+      "tail4Hits": 1055,
+      "tailHitPctOfReads": 0.3,
+      "slowPathBefore": 206161,
+      "slowPathAfter": 204578
+    },
+    {
+      "scenario": "oscillate_rotate_swap_1024",
+      "tail2Hits": 514,
+      "tail4Hits": 1025,
+      "tailHitPctOfReads": 0.29,
+      "slowPathBefore": 260105,
+      "slowPathAfter": 258566
+    },
+    {
+      "scenario": "oscillate_rotate_branch_1024",
+      "tail2Hits": 255,
+      "tail4Hits": 508,
+      "tailHitPctOfReads": 0.15,
+      "slowPathBefore": 130306,
+      "slowPathAfter": 129543
+    }
+  ],
+  "timingMeansMs": {
+    "static_1024": 0.5366,
+    "rotate_1024": 11.77,
+    "alt_ab_1024": 8.0007,
+    "swap_small_1024": 7.0814,
+    "prefix_suffix_chaotic_1024": 39.6927,
+    "mixed_1024": 12.8809,
+    "branch_half_1024": 15.4345,
+    "stable_then_drop_1024": 6.8578,
+    "oscillate_rotate_branch_1024": 35.7732,
+    "oscillate_rotate_swap_1024": 45.6758,
+    "branch_swap_1024": 17.3334,
+    "mixed_churn_1024": 19.9287
+  },
+  "verdict": {
+    "tailProbe": "reject",
+    "reason": "Tail2/tail4 hit-rate is below 0.3% of reads in pathological scenarios and does not materially reduce slowPath. The extra pointer checks appear to tax common paths more than they help oscillation cases.",
+    "nextStep": "Discard code changes. If probing continues, test lastSlowEdge cache or a consumer-local adaptive mode instead."
+  }
+}

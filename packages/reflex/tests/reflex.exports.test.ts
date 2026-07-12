@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import * as reflex from "../src";
 import * as api from "../src/api";
 import * as infra from "../src/infra";
-import * as policy from "../src/policy/scheduler";
 import * as d from "../src/policy";
 import * as unstable from "../src/unstable";
 import {
@@ -18,7 +17,6 @@ describe("Reactive system - exports", () => {
     expect(reflex.computed).toBe(api.computed);
     expect(reflex.memo).toBe(api.memo);
     expect(reflex.effect).toBe(api.effect);
-    expect(reflex.effectRanked).toBe(api.effectRanked);
     expect(reflex.subscribeOnce).toBe(api.subscribeOnce);
     expect(reflex.map).toBe(api.map);
     expect(reflex.filter).toBe(api.filter);
@@ -57,9 +55,7 @@ describe("Reactive system - exports", () => {
   });
 
   it("re-exports policy helpers from the policy barrel", () => {
-    expect(typeof policy.createEffectScheduler).toBe("function");
     expect(typeof d.EventDispatcher).toBe("function");
-    expect(typeof policy.resolveEffectSchedulerMode).toBe("function");
   });
 
   it("keeps unstable exports behind the unstable barrel", () => {

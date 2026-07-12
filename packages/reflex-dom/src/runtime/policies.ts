@@ -1,8 +1,4 @@
-import type { createRuntime } from "@volynets/reflex";
-
-type RuntimeEffectStrategy = NonNullable<
-  Parameters<typeof createRuntime>[0]
->["effectStrategy"];
+import type { EffectStrategy } from "@volynets/reflex-scheduler";
 
 export const enum ExecutionPolicy {
   Eager = "eager",
@@ -33,7 +29,7 @@ export function createDefaultPolicyConfig(): PolicyConfig {
 export function resolveEffectStrategy(
   policy: ExecutionPolicy = ExecutionPolicy.Eager,
   _priorityLevels = false,
-): RuntimeEffectStrategy {
+): EffectStrategy {
   if (policy === ExecutionPolicy.Eager) return "eager";
   if (policy === ExecutionPolicy.Batch) return "sab";
   return "flush";

@@ -1,0 +1,55 @@
+{
+  "capturedAt": "2026-06-16",
+  "command": "pnpm.cmd --filter @volynets/reflex exec vitest bench bench/dependency-churn.bench.ts",
+  "source": "packages/reflex/bench/dependency-churn.bench.ts",
+  "change": {
+    "name": "outgoing probe fanout profiling",
+    "summary": "Adds profiling-only fanout buckets for successful outgoing probe hits. The production bundle does not contain these fanout counters because the calls are gated by __PROFILE__."
+  },
+  "profileHighlights": [
+    {
+      "scenario": "swap_small_1024",
+      "hit1": 730,
+      "fanout1": 730,
+      "fanout2": 0,
+      "fanout4": 0,
+      "fanout8Plus": 0
+    },
+    {
+      "scenario": "prefix_suffix_chaotic_1024",
+      "hit1": 206161,
+      "fanout1": 206161,
+      "fanout2": 0,
+      "fanout4": 0,
+      "fanout8Plus": 0
+    },
+    {
+      "scenario": "mixed_1024",
+      "hit1": 63630,
+      "fanout1": 63630,
+      "fanout2": 0,
+      "fanout4": 0,
+      "fanout8Plus": 0
+    },
+    {
+      "scenario": "oscillate_rotate_branch_1024",
+      "hit1": 129795,
+      "fanout1": 129795,
+      "fanout2": 0,
+      "fanout4": 0,
+      "fanout8Plus": 0
+    },
+    {
+      "scenario": "oscillate_rotate_swap_1024",
+      "hit1": 260105,
+      "fanout1": 260105,
+      "fanout2": 0,
+      "fanout4": 0,
+      "fanout8Plus": 0
+    }
+  ],
+  "verdict": {
+    "producerFanoutSpecialization": "strong_candidate",
+    "reason": "All successful outgoing-probe hits in the dependency-churn suite are fanout1. The likely next experiment is an ultra-fast singleton producer branch using producer.firstOut === producer.lastOut."
+  }
+}

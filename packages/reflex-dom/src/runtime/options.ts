@@ -1,52 +1,107 @@
-import { createRuntime } from "@volynets/reflex";
-import { registerActiveOwnerCleanup } from "@volynets/reflex-framework";
+import {
+  configureRuntimeContext,
+  createRuntimeContext,
+  enterReactiveBatch,
+  getActiveRuntimeContext,
+  leaveReactiveBatch,
+  runWithRuntimeContext,
+  type RuntimeContext,
+  type RuntimeHostHooks,
+} from "@volynets/reflex-runtime/internal";
 import type { DOMRenderEffectScheduler } from "./render-effect-scheduler";
+import {
+  createEffectScheduler,
+  resolveEffectSchedulerMode,
+  type EffectStrategy,
+} from "@volynets/reflex-scheduler";
 import {
   createDefaultPolicyConfig,
   resolveEffectStrategy,
   type PolicyConfig,
 } from "./policies";
 
-export type RuntimeInstance = ReturnType<typeof createRuntime>;
+export interface RuntimeInstance {
+  readonly execution: RuntimeContext;
+  run<T>(fn: () => T): T;
+  batch<T>(fn: () => T): T;
+  flush(): void;
+}
 
-type CreateRuntimeOptions = NonNullable<Parameters<typeof createRuntime>[0]>;
-
-export interface DOMRuntimeOptions extends CreateRuntimeOptions {
+export interface DOMRuntimeOptions {
   policy?: Partial<PolicyConfig>;
+  effectStrategy?: EffectStrategy;
+  hooks?: RuntimeHostHooks;
 }
 
 export function createRendererRuntime(
   options: DOMRuntimeOptions = {},
   renderEffectScheduler?: DOMRenderEffectScheduler,
 ): RuntimeInstance {
-  const { policy, hooks, effectStrategy, ...runtimeOptions } = options;
-
-  const defaultPolicy = createDefaultPolicyConfig();
-
-  const resolvedEffectStrategy =
-    effectStrategy ??
+  const { policy, hooks } = options;
+  const defaults = createDefaultPolicyConfig();
+  const strategy =
+    options.effectStrategy ??
     resolveEffectStrategy(
-      policy?.effectPolicy ?? defaultPolicy.effectPolicy,
-      policy?.priorityLevels ?? defaultPolicy.priorityLevels,
+      policy?.effectPolicy ?? defaults.effectPolicy,
+      policy?.priorityLevels ?? defaults.priorityLevels,
     );
+  const scheduler = createEffectScheduler(resolveEffectSchedulerMode(strategy));
+  const execution = createRuntimeContext();
+  let reactiveSettled = false;
+  let microtaskPending = false;
 
-  return createRuntime({
-    ...runtimeOptions,
+  const run = <T>(fn: () => T): T => {
+    if (getActiveRuntimeContext() === execution) return fn();
+    return runWithRuntimeContext(execution, fn);
+  };
 
-    effectStrategy: resolvedEffectStrategy,
+  const flushRenderEffects = (): void => {
+    if (!reactiveSettled) return;
+    reactiveSettled = false;
+    renderEffectScheduler?.flush();
+  };
 
+  const flush = (): void => {
+    run(() => {
+      scheduler.flush();
+      flushRenderEffects();
+    });
+  };
+
+  const scheduleMicrotaskFlush = (): void => {
+    if (microtaskPending) return;
+    microtaskPending = true;
+    void Promise.resolve().then(() => {
+      microtaskPending = false;
+      flush();
+    });
+  };
+
+  const batch = <T>(fn: () => T): T =>
+    run(() => {
+      enterReactiveBatch();
+      try {
+        return scheduler.batch(fn);
+      } finally {
+        leaveReactiveBatch();
+        if (strategy === "flush") scheduleMicrotaskFlush();
+        else flushRenderEffects();
+      }
+    });
+
+  configureRuntimeContext(execution, {
     hooks: {
-      ...hooks,
-
-      reactiveSettledDispatcher() {
-        renderEffectScheduler?.flush();
-        hooks?.reactiveSettledDispatcher?.();
+      sinkInvalidatedDispatcher(node) {
+        scheduler.enqueue(node);
+        hooks?.sinkInvalidatedDispatcher?.(node);
       },
-
-      effectCleanupRegistrar(dispose) {
-        registerActiveOwnerCleanup(dispose);
-        hooks?.effectCleanupRegistrar?.(dispose);
+      reactiveSettledDispatcher() {
+        reactiveSettled = true;
+        scheduler.runtimeNotifySettled?.();
+        hooks?.reactiveSettledDispatcher?.();
       },
     },
   });
+
+  return { execution, run, batch, flush };
 }

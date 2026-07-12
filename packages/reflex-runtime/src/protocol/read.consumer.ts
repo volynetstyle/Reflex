@@ -1,18 +1,30 @@
-import type { ReactiveNode } from "../kernel";
+import { defaultContext } from "@runtime/kernel/config";
+import { flushPendingReactiveSettledIfIdle } from "@runtime/kernel/batch";
 import {
-  DIRTY_STATE,
-  defaultContext,
   currentConsumer,
+  pendingReactiveSettled,
   trackingEpoch,
-  trackReadResolved,
-  shouldRecomputeDirtyConsumer,
-} from "../kernel";
+} from "@runtime/kernel/state";
 import {
   devAssertConsumerCanStabilize,
   devRecordReadConsumer,
-} from "../kernel/dev";
-import { advance } from "../kernel/walkers/ensureFresh";
-import { LAZY } from "./utils/constants";
+} from "@runtime/kernel/dev";
+import { devAssertNoRuntimeHookReactiveRead } from "@runtime/kernel/execution";
+import {
+  Changed,
+  DIRTY_STATE,
+  Visited,
+  type ConsumerNode,
+} from "@runtime/kernel/shape";
+import { resolveTrackedRead } from "@runtime/kernel/shape/tracking";
+import { advance } from "@runtime/kernel/stages/second/advance";
+import { pull_iterator } from "@runtime/kernel/stages/second/pull_iterator";
+import {
+  profileRuntimeCounter,
+  profileRuntimeReadConsumerPath,
+} from "@runtime/profiling";
+
+import { LAZY, type ConsumerReadModeValue } from "./utils/constants";
 
 /**
  * Read a consumer in tracking mode.
@@ -27,30 +39,31 @@ import { LAZY } from "./utils/constants";
  * The fast-path intentionally stays here, with dirty stabilization isolated in
  * a local slow path so clean reads do not bounce through helper layers.
  */
-export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
+export function readConsumerLazy<T>(this: ConsumerNode<T>): T {
+  if (__DEV__) devAssertNoRuntimeHookReactiveRead();
+
+  profileRuntimeCounter("readConsumerCalls");
+  profileRuntimeCounter("readConsumerLazyCalls");
+
   // eslint-disable-next-line @typescript-eslint/no-this-alias
   const node = this;
   const state = node.state;
+  const isDirty = (state & DIRTY_STATE) !== 0;
 
-  const value =
-    (state & DIRTY_STATE) === 0
-      ? (node.payload as T)
-      : stabilizeDirtyConsumer<T>(node, state);
+  profileRuntimeReadConsumerPath(isDirty);
+
+  const value = isDirty ? stabilizeDirtyConsumer(node, state) : node.payload;
 
   const consumer = currentConsumer;
 
-  if (consumer !== null) {
-    trackReadResolved(node, consumer, trackingEpoch, true);
-  }
+  if (consumer === null) return value;
+
+  profileRuntimeCounter("readConsumerTracked");
+
+  resolveTrackedRead(node, consumer, trackingEpoch, true);
 
   if (__DEV__) {
-    devRecordReadConsumer(
-      node,
-      "lazy",
-      value,
-      defaultContext,
-      consumer ?? undefined,
-    );
+    devRecordReadConsumer(node, "lazy", value, defaultContext, consumer);
   }
 
   return value;
@@ -62,22 +75,44 @@ export function readConsumerLazy<T>(this: ReactiveNode<T>): T {
  * Clean nodes return immediately. Dirty nodes are stabilized without binding
  * the current `currentConsumer` to this read.
  */
-export function readConsumerEager<T>(node: ReactiveNode<T>): T {
-  const state = node.state;
+export function readConsumerEager<T>(node: ConsumerNode<T>): T {
+  if (__DEV__) devAssertNoRuntimeHookReactiveRead();
 
-  return (state & DIRTY_STATE) === 0
-    ? (node.payload as T)
-    : stabilizeDirtyConsumer<T>(node, state);
+  profileRuntimeCounter("readConsumerCalls");
+  profileRuntimeCounter("readConsumerEagerCalls");
+
+  const state = node.state;
+  const isDirty = (state & DIRTY_STATE) !== 0;
+
+  profileRuntimeReadConsumerPath(isDirty);
+
+  return !isDirty ? node.payload : stabilizeDirtyConsumer(node, state);
 }
 
-function stabilizeDirtyConsumer<T>(node: ReactiveNode<T>, state: number): T {
+const FORCE_RECOMPUTE_STATE = Changed | Visited;
+
+function stabilizeDirtyConsumer<T>(node: ConsumerNode<T>, state: number): T {
   if (__DEV__) devAssertConsumerCanStabilize(state);
 
-  if (!shouldRecomputeDirtyConsumer(node, state) || !advance(node)) {
+  if ((state & FORCE_RECOMPUTE_STATE) !== 0) {
+    profileRuntimeCounter("stabilizeForceAdvance");
+
+    if (!advance(node)) node.state &= ~DIRTY_STATE;
+    if (pendingReactiveSettled) flushPendingReactiveSettledIfIdle();
+    return node.payload;
+  }
+
+  const edge = node.firstIn;
+
+  profileRuntimeCounter("stabilizePullAdvance");
+
+  if (edge === null || !pull_iterator(node, edge) || !advance(node)) {
     node.state &= ~DIRTY_STATE;
   }
 
-  return node.payload as T;
+  if (pendingReactiveSettled) flushPendingReactiveSettledIfIdle();
+
+  return node.payload;
 }
 
 /**
@@ -116,13 +151,23 @@ const debugValue = readConsumer(doubled, ConsumerReadMode.eager)
  * @invariant In eager mode, no dependency edge is created
  * @cost O(1) + stabilization cost (depends on upstream changes)
  */
-export function readConsumer<T>(node: ReactiveNode<T>, mode: number = LAZY): T {
-  if ((mode & LAZY) === 0) {
+export function readConsumer<T>(
+  node: ConsumerNode<T>,
+  mode: ConsumerReadModeValue = LAZY,
+): T {
+  if (__DEV__) devAssertNoRuntimeHookReactiveRead();
+
+  profileRuntimeCounter("readConsumerCalls");
+
+  if (mode !== LAZY) {
+    profileRuntimeCounter("readConsumerEagerCalls");
+
     const state = node.state;
-    const value =
-      (state & DIRTY_STATE) === 0
-        ? (node.payload as T)
-        : stabilizeDirtyConsumer(node, state);
+    const isDirty = (state & DIRTY_STATE) !== 0;
+
+    profileRuntimeReadConsumerPath(isDirty);
+
+    const value = !isDirty ? node.payload : stabilizeDirtyConsumer(node, state);
 
     if (__DEV__) {
       devRecordReadConsumer(node, "eager", value, defaultContext);
@@ -131,15 +176,20 @@ export function readConsumer<T>(node: ReactiveNode<T>, mode: number = LAZY): T {
     return value;
   }
 
+  profileRuntimeCounter("readConsumerLazyCalls");
+
   const state = node.state;
-  const value =
-    (state & DIRTY_STATE) === 0
-      ? (node.payload as T)
-      : stabilizeDirtyConsumer(node, state);
+  const isDirty = (state & DIRTY_STATE) !== 0;
+
+  profileRuntimeReadConsumerPath(isDirty);
+
+  const value = !isDirty ? node.payload : stabilizeDirtyConsumer(node, state);
 
   const consumer = currentConsumer;
   if (consumer !== null) {
-    trackReadResolved(node, consumer, trackingEpoch, true);
+    profileRuntimeCounter("readConsumerTracked");
+
+    resolveTrackedRead(node, consumer, trackingEpoch, true);
   }
 
   if (__DEV__) {

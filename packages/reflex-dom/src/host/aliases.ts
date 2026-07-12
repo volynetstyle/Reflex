@@ -12,16 +12,9 @@ const SVG_ATTRIBUTE_ALIASES = {
   dominantBaseline: "dominant-baseline",
   fillOpacity: "fill-opacity",
   fillRule: "fill-rule",
-  gradientTransform: "gradientTransform",
-  gradientUnits: "gradientUnits",
   markerEnd: "marker-end",
   markerMid: "marker-mid",
   markerStart: "marker-start",
-  pathLength: "pathLength",
-  patternContentUnits: "patternContentUnits",
-  patternUnits: "patternUnits",
-  preserveAspectRatio: "preserveAspectRatio",
-  spreadMethod: "spreadMethod",
   stopColor: "stop-color",
   stopOpacity: "stop-opacity",
   strokeDasharray: "stroke-dasharray",
@@ -34,7 +27,18 @@ const SVG_ATTRIBUTE_ALIASES = {
   textAnchor: "text-anchor",
   transformOrigin: "transform-origin",
   vectorEffect: "vector-effect",
+
+  // SVG attributes that are already camelCase in the actual SVG spec.
+  // These are kept mostly for explicitness / React-like compatibility.
+  gradientTransform: "gradientTransform",
+  gradientUnits: "gradientUnits",
+  pathLength: "pathLength",
+  patternContentUnits: "patternContentUnits",
+  patternUnits: "patternUnits",
+  preserveAspectRatio: "preserveAspectRatio",
+  spreadMethod: "spreadMethod",
   viewBox: "viewBox",
+
   xlinkHref: "xlink:href",
   xmlnsXlink: "xmlns:xlink",
 } as const;
@@ -44,26 +48,40 @@ export const attributeAliases = {
   ...SVG_ATTRIBUTE_ALIASES,
 } as const;
 
-const cache = Object.create(null) as Record<string, string>;
+const cache = Object.assign(
+  Object.create(null),
+  attributeAliases,
+) as Record<string, string>;
 
 export function normalizeAttr(name: string): string {
   switch (name) {
+    case "class":
     case "className":
       return "class";
+
+    case "for":
     case "htmlFor":
       return "for";
+
+    case "accept-charset":
     case "acceptCharset":
       return "accept-charset";
+
+    case "http-equiv":
     case "httpEquiv":
       return "http-equiv";
+
+    case "crossorigin":
     case "crossOrigin":
       return "crossorigin";
-    default:
-      let v = cache[name];
-      if (v !== undefined) return v;
-
-      v = attributeAliases[name as keyof typeof attributeAliases] ?? name;
-      cache[name] = v;
-      return v;
   }
+
+  const cached = cache[name];
+
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  cache[name] = name;
+  return name;
 }

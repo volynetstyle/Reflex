@@ -24,7 +24,16 @@ export { batch, event, flush, createRuntime } from "../infra/runtime";
 /**
  * API
  */
-export { subscribeOnce, map, filter, merge, scan, hold } from "../api/event";
+export {
+  subscribeOnce,
+  map,
+  filter,
+  merge,
+  switchMap,
+  flatten,
+  scan,
+  hold,
+} from "../api/event";
 /**
  * API
  */
@@ -32,4 +41,3 @@ export { createModel, isModel, own } from "../infra/model";
 
 export * from "./optimistic";
 export * from "./resource";
-export * from "./reduction";

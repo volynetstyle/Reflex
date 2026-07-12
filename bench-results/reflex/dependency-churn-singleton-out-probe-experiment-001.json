@@ -1,0 +1,97 @@
+{
+  "capturedAt": "2026-06-16",
+  "command": "pnpm.cmd --filter @volynets/reflex exec vitest bench bench/dependency-churn.bench.ts",
+  "source": "packages/reflex/bench/dependency-churn.bench.ts",
+  "change": {
+    "name": "singleton outgoing lookup before suffix scan",
+    "summary": "After suffix head miss and before bounded incoming suffix scan, reuse the producer outgoing edge only when producer.firstOut === producer.lastOut and that singleton edge points to the current consumer."
+  },
+  "profileHighlights": [
+    {
+      "scenario": "swap_small_1024",
+      "calls": 730,
+      "hit": 730,
+      "noOut": 0,
+      "otherConsumer": 0,
+      "fanoutMany": 0,
+      "meanMs": 6.3517
+    },
+    {
+      "scenario": "prefix_suffix_chaotic_1024",
+      "calls": 206161,
+      "hit": 206161,
+      "noOut": 0,
+      "otherConsumer": 0,
+      "fanoutMany": 0,
+      "meanMs": 17.5279
+    },
+    {
+      "scenario": "mixed_1024",
+      "calls": 63630,
+      "hit": 63630,
+      "noOut": 0,
+      "otherConsumer": 0,
+      "fanoutMany": 0,
+      "meanMs": 9.0954
+    },
+    {
+      "scenario": "branch_half_1024",
+      "calls": 511,
+      "hit": 0,
+      "noOut": 511,
+      "otherConsumer": 0,
+      "fanoutMany": 0,
+      "meanMs": 9.7861
+    },
+    {
+      "scenario": "oscillate_rotate_branch_1024",
+      "calls": 130306,
+      "hit": 129795,
+      "noOut": 511,
+      "otherConsumer": 0,
+      "fanoutMany": 0,
+      "meanMs": 29.4885
+    },
+    {
+      "scenario": "oscillate_rotate_swap_1024",
+      "calls": 260105,
+      "hit": 260105,
+      "noOut": 0,
+      "otherConsumer": 0,
+      "fanoutMany": 0,
+      "meanMs": 29.1786
+    }
+  ],
+  "timingMeansMs": {
+    "static_1024": 0.5193,
+    "rotate_1024": 9.5371,
+    "alt_ab_1024": 7.1683,
+    "swap_small_1024": 6.3517,
+    "prefix_suffix_chaotic_1024": 17.5279,
+    "mixed_1024": 9.0954,
+    "branch_half_1024": 9.7861,
+    "stable_then_drop_1024": 5.9262,
+    "oscillate_rotate_branch_1024": 29.4885,
+    "oscillate_rotate_swap_1024": 29.1786,
+    "branch_swap_1024": 26.0645,
+    "mixed_churn_1024": 32.3339
+  },
+  "comparisonHighlights": {
+    "firstOutSecondOutProbeExperiment001": {
+      "prefix_suffix_chaotic_1024": 17.2429,
+      "mixed_1024": 9.3642,
+      "oscillate_rotate_branch_1024": 19.4824,
+      "oscillate_rotate_swap_1024": 19.3967
+    },
+    "singletonOutProbeExperiment001": {
+      "prefix_suffix_chaotic_1024": 17.5279,
+      "mixed_1024": 9.0954,
+      "oscillate_rotate_branch_1024": 29.4885,
+      "oscillate_rotate_swap_1024": 29.1786
+    }
+  },
+  "verdict": {
+    "singletonOutProbe": "mixed",
+    "reason": "Hit coverage matches the successful firstOut probe exactly in dependency-churn, confirming singleton producer out-degree. However this run regressed oscillate_rotate timings versus the earlier firstOut/secondOut snapshot, so it needs repeated A/B before replacing the current outgoing probe."
+  }
+}

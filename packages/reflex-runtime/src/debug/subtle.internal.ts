@@ -1,19 +1,15 @@
-import { getCurrentComputedInternal } from "../internal";
-import {
-  Watcher as WatcherFlag,
-  type ReactiveNode,
-} from "../kernel";
-import { untracked } from "../protocol";
+import { getCurrentComputedInternal } from "@runtime/internal";
 import {
   readPropagateStackStats,
   readShouldRecomputeStackStats,
   resetRuntimeWalkerStackStats,
   type RuntimeWalkerStackStats,
-} from "../kernel/walkers";
-import {
-  checkDebugGraphIntegrity,
-  snapshotDebugGraph,
-} from "./debug.graph";
+  type ReactiveNode,
+  Watcher as WatcherFlag,
+} from "@runtime/kernel";
+import { untracked } from "@runtime/protocol";
+
+import { checkDebugGraphIntegrity, snapshotDebugGraph } from "./debug.graph";
 import {
   snapshotDebugContext,
   labelDebugNode,
@@ -23,13 +19,6 @@ import {
   configureDebugContext,
   observeDebugContext,
 } from "./debug.impl";
-import type {
-  RuntimeDebugOptions,
-  RuntimeDebugContextSnapshot,
-  RuntimeDebugEvent,
-  RuntimeDebugListener,
-  RuntimeDebugNodeSnapshot,
-} from "./debug.types";
 import {
   type RuntimeDebugGraphEdgeSnapshot,
   type RuntimeDebugGraphIntegrity,
@@ -38,6 +27,13 @@ import {
   type RuntimeDebugSession,
 } from "./debug.protocol";
 import { createRuntimeDebugSession } from "./debug.session";
+import type {
+  RuntimeDebugOptions,
+  RuntimeDebugContextSnapshot,
+  RuntimeDebugEvent,
+  RuntimeDebugListener,
+  RuntimeDebugNodeSnapshot,
+} from "./debug.types";
 
 const noopUnsubscribe = () => {};
 const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
@@ -49,15 +45,23 @@ export type Watcher<T = unknown> = ReactiveNode<T> & { compute: () => T };
 export type RuntimeSubtleGraphOptions = RuntimeDebugGraphOptions;
 export type RuntimeSubtleGraphEdge = RuntimeDebugGraphEdgeSnapshot;
 export type RuntimeSubtleGraphSnapshot = RuntimeDebugGraphSnapshot;
-export type RuntimeSubtleGraphIssue = RuntimeDebugGraphIntegrity["issues"][number];
+export type RuntimeSubtleGraphIssue =
+  RuntimeDebugGraphIntegrity["issues"][number];
 export type RuntimeSubtleGraphIntegrity = RuntimeDebugGraphIntegrity;
 
 function isWatcherNode(node: ReactiveNode): node is Watcher {
   return (node.state & WatcherFlag) !== 0;
 }
 
-function isComputedNode(node: ReactiveNode | null | undefined): node is Computed {
-  return node !== null && node !== undefined && !isWatcherNode(node) && node.compute !== null;
+function isComputedNode(
+  node: ReactiveNode | null | undefined,
+): node is Computed {
+  return (
+    node !== null &&
+    node !== undefined &&
+    !isWatcherNode(node) &&
+    node.compute !== null
+  );
 }
 
 function collectSources(node: ReactiveNode): ReactiveNode[] {
@@ -83,7 +87,9 @@ function collectSinks(node: ReactiveNode): ReactiveNode[] {
 export interface RuntimeSubtle {
   readonly enabled: boolean;
   clearHistory(): void;
-  configure(options?: RuntimeDebugOptions): RuntimeDebugContextSnapshot | undefined;
+  configure(
+    options?: RuntimeDebugOptions,
+  ): RuntimeDebugContextSnapshot | undefined;
   context(): RuntimeDebugContextSnapshot | undefined;
   currentComputed(): Computed | undefined;
   history(): RuntimeDebugEvent[];
@@ -100,10 +106,12 @@ export interface RuntimeSubtle {
   observe(listener: RuntimeDebugListener): () => void;
   session(): RuntimeDebugSession;
   snapshot(node: ReactiveNode): RuntimeDebugNodeSnapshot | undefined;
-  stackStats(): {
-    shouldRecompute: RuntimeWalkerStackStats;
-    propagate: RuntimeWalkerStackStats;
-  } | undefined;
+  stackStats():
+    | {
+        shouldRecompute: RuntimeWalkerStackStats;
+        propagate: RuntimeWalkerStackStats;
+      }
+    | undefined;
   resetStackStats(): void;
   untrack<T>(cb: () => T): T;
 }

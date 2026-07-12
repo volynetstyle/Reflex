@@ -21,7 +21,7 @@ export {
   warmDisposableComputed,
 } from "./api/derived";
 export type { DisposableComputed } from "./api/derived";
-export { effect, effectRanked, reaction, watch } from "./api/effect";
+export { effect, reaction, watch } from "./api/effect";
 export type { Reaction, ReactionFn, Watch } from "./api/effect";
 /**
  * API
@@ -30,7 +30,16 @@ export { untracked, batch, event, flush, createRuntime } from "./infra/runtime";
 /**
  * API
  */
-export { subscribeOnce, map, filter, merge, scan, hold } from "./api/event";
+export {
+  subscribeOnce,
+  map,
+  filter,
+  merge,
+  switchMap,
+  flatten,
+  scan,
+  hold,
+} from "./api/event";
 /**
  * API
  */

@@ -1,47 +1,62 @@
-import type { ReactiveNode } from "../shape";
+import { defaultContext } from "@runtime/kernel/config";
 import {
-  clearNodeComputing,
-  GraphReductionEnabled,
-  markNodeComputing,
-} from "../shape";
-import { cleanupStaleSources } from "./tracking";
-import {
+  advanceTrackingEpoch,
   currentConsumer,
-  nextTrackingEpoch,
-  defaultContext,
-  graphReductionPolicy,
   setCurrentConsumer,
-} from "../context";
-import { observeGraphReductionRun } from "../reduction";
+} from "@runtime/kernel/state";
 import {
   devAssertExecutableNode,
   devRecordComputeError,
   devRecordComputeFinish,
   devRecordComputeStart,
-} from "../dev";
+} from "@runtime/kernel/dev";
+import {
+  enterRuntimePhase,
+  leaveRuntimePhase,
+  RuntimePhase,
+} from "@runtime/kernel/execution";
+import {
+  Computing,
+  Visited,
+  type ComputeFn,
+  type ReactiveNode,
+} from "@runtime/kernel/shape";
+import { cleanupUnvisitedSources } from "@runtime/kernel/shape/tracking";
 
-type NodeCompute = NonNullable<ReactiveNode["compute"]>;
+export function executeKnownNodeComputation<T>(
+  node: ReactiveNode<T>,
+  compute: ComputeFn<T>,
+): T {
+  if (!__DEV__) return executeComputation(node, compute);
 
-export function executeKnownNodeComputation(
-  node: ReactiveNode,
-  compute: NodeCompute,
-): unknown {
+  enterRuntimePhase(RuntimePhase.Recomputing);
+  try {
+    return executeComputation(node, compute);
+  } finally {
+    leaveRuntimePhase();
+  }
+}
+
+function executeComputation<T>(
+  node: ReactiveNode<T>,
+  compute: ComputeFn<T>,
+): T {
   const prevActive = currentConsumer;
 
   node.tailIn = null;
-  markNodeComputing(node);
-  nextTrackingEpoch();
+  node.state = (node.state & ~Visited) | Computing | Computing;
+  advanceTrackingEpoch();
   setCurrentConsumer(node);
 
   if (__DEV__) devRecordComputeStart(node, defaultContext);
 
-  let result: unknown;
+  let result: T;
 
   try {
-    result = compute();
+    result = compute!();
   } catch (error) {
     setCurrentConsumer(prevActive);
-    clearNodeComputing(node);
+    node.state &= ~(Computing | Computing);
 
     if (__DEV__) devRecordComputeError(node, error, defaultContext);
 
@@ -49,26 +64,26 @@ export function executeKnownNodeComputation(
   }
 
   setCurrentConsumer(prevActive);
-  clearNodeComputing(node);
+  node.state &= ~(Computing | Computing);
 
   if (node.tailIn !== node.lastIn) {
-    cleanupStaleSources(node);
+    cleanupUnvisitedSources(node);
   }
 
-  const reductionEnabled =
-    graphReductionPolicy.enabled || (node.state & GraphReductionEnabled) !== 0;
+  // const reductionEnabled =
+  //   graphReductionPolicy.enabled || (node.state & GraphReductionEnabled) !== 0;
 
-  if (reductionEnabled) {
-    observeGraphReductionRun(node, graphReductionPolicy, reductionEnabled);
-  }
+  // if (reductionEnabled) {
+  //   observeGraphReductionRun(node, graphReductionPolicy, reductionEnabled);
+  // }
 
   if (__DEV__) devRecordComputeFinish(node, result, defaultContext);
 
   return result;
 }
 
-export function executeNodeComputation(node: ReactiveNode): unknown {
+export function executeNodeComputation<T>(node: ReactiveNode<T>): T {
   if (__DEV__) devAssertExecutableNode(node);
 
-  return executeKnownNodeComputation(node, node.compute as NodeCompute);
+  return executeKnownNodeComputation(node, node.compute);
 }

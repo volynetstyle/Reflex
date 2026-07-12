@@ -22,6 +22,12 @@ export const VERIFIED_PURE_FUNCS = [
   "isScheduledState",
   "isSignalKind",
   "isEffectKind",
+  "profileRuntimeCounter",
+  "profileRuntimePushPath",
+  "profileRuntimePullPath",
+  "profileRuntimeReadConsumerPath",
+  "profilePushNode",
+  "profilePullNode",
 ] as const;
 
 /**

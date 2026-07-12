@@ -17,16 +17,55 @@ export {
   type RuntimeDebugSessionSnapshot,
 } from "./debug/debug.protocol";
 
+export type {
+  ConsumerNode,
+  ProducerNode,
+  ReactiveNode,
+  WatcherCleanup,
+  WatcherNode,
+  WatcherResult,
+} from "./kernel";
+
 export {
+  createProducer,
+  createConsumer,
+  createWatcher,
   readProducer,
   writeProducer,
   readConsumer,
   readConsumerLazy,
   readConsumerEager,
   ConsumerReadMode,
-  watcher,
   runWatcher,
   disposeWatcher,
   untracked,
 } from "./protocol";
-export type { ProducerComparator } from "./protocol";
+export type {
+  ConsumerReadModeValue,
+  ProducerComparator,
+  WatcherFn,
+} from "./protocol";
+
+export {
+  RuntimePhase,
+  readRuntimePhase,
+  readActiveRuntimeHook,
+} from "./kernel/execution";
+export type { RuntimeExecutionState } from "./kernel/execution";
+
+export {
+  configureRuntimeContext,
+  createRuntimeContext,
+  getActiveRuntimeContext,
+  resetRuntimeContext,
+  restoreRuntimeContextSnapshot,
+  runWithRuntimeContext,
+  snapshotRuntimeContext,
+} from "./kernel/context";
+export type {
+  RuntimeContext,
+  RuntimeContextOptions,
+  RuntimeContextSnapshot,
+  RuntimeHooks,
+  RuntimeHostHooks,
+} from "./kernel/context";

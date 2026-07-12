@@ -1,5 +1,6 @@
-import type { RuntimeDebugContext } from "../kernel/context";
-import type { ReactiveEdge, ReactiveNode } from "../kernel/shape";
+import type { RuntimeDebugContext } from "@runtime/kernel/config";
+import type { ReactiveEdge, ReactiveNode } from "@runtime/kernel/shape";
+
 import type {
   RuntimeDebugContextSnapshot,
   RuntimeDebugEvent,
@@ -46,9 +47,7 @@ interface RuntimeDebugImplementation {
   snapshotDebugContext(
     context: RuntimeDebugContext,
   ): RuntimeDebugContextSnapshot | undefined;
-  snapshotDebugNode(
-    node: ReactiveNode,
-  ): RuntimeDebugNodeSnapshot | undefined;
+  snapshotDebugNode(node: ReactiveNode): RuntimeDebugNodeSnapshot | undefined;
 }
 
 const noopUnsubscribe = () => {};

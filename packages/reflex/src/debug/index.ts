@@ -27,4 +27,25 @@ export {
   type RuntimeDebugSession,
   type RuntimeDebugSessionSnapshot,
   type RuntimeSubtle,
+  createRuntimeProfileSession,
+  diffRuntimeProfileCounters,
+  isRuntimeProfilingEnabled,
+  profileRuntime,
+  profileRuntimeAsync,
+  readRuntimeProfileCounters,
+  resetRuntimeProfileCounters,
+  runtimeProfileCounters,
+  setRuntimeProfilingEnabled,
+  snapshotRuntimeProfileCounters,
+  type RuntimeProfileCounterName,
+  type RuntimeProfileCounters,
+  type RuntimeProfileResult,
+  type RuntimeProfileSession,
 } from "@volynets/reflex-runtime/debug";
+
+export {
+  readSchedulerPolicyCounters,
+  resetSchedulerPolicyCounters,
+  setSchedulerPolicyCountersEnabled,
+  type SchedulerPolicyCounters,
+} from "@volynets/reflex-scheduler";

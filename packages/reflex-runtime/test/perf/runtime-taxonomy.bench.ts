@@ -3,15 +3,27 @@ import {
   createConsumer,
   createProducer,
   createWatcher,
+  configureRuntimeContext,
   disposeWatcher,
+  enterPropagationScope,
+  leavePropagationScope,
   readConsumer,
   readProducer,
   resetRuntime,
   runWatcher,
-  setInternalHooks,
   writeProducer,
   type ReactiveNode,
+  type RuntimeHooks,
 } from "../runtime.test_utils";
+
+function setInternalHooks(
+  sinkInvalidatedDispatcher: RuntimeHooks["sinkInvalidatedDispatcher"] = undefined,
+  reactiveSettledDispatcher: RuntimeHooks["reactiveSettledDispatcher"] = undefined,
+): void {
+  configureRuntimeContext({
+    hooks: { sinkInvalidatedDispatcher, reactiveSettledDispatcher },
+  });
+}
 
 const WARMUP_ITERATIONS = 100;
 const ITERATIONS = 1_000;
@@ -42,7 +54,8 @@ type Topology =
   | "deepDynamic"
   | "disposeChurn"
   | "selector"
-  | "effectLeaves";
+  | "effectLeaves"
+  | "broadPropagation";
 
 type Workload =
   | "empty"
@@ -54,7 +67,8 @@ type Workload =
   | "dynamicChurn"
   | "lifecycleChurn"
   | "partialReads"
-  | "updateOneKey";
+  | "updateOneKey"
+  | "batchedWritesReadTail";
 
 type ScenarioConfig = {
   pressure: Pressure;
@@ -834,6 +848,74 @@ function createEffectFlushFanout(width: number): BenchCase {
   };
 }
 
+function createBroadPropagationVerified(
+  width: number,
+  writes: number,
+): BenchCase {
+  resetRuntime();
+
+  const queue: ReactiveNode[] = [];
+  setInternalHooks((node) => {
+    queue.push(node);
+  });
+
+  const head = createProducer(0);
+  let last: ReactiveNode<number> = head;
+  let callCount = 0;
+
+  for (let index = 0; index < width; index += 1) {
+    const current = createConsumer(() => readProducer(head) + index);
+    const current2 = createConsumer(() => readConsumer(current) + 1);
+    const watcher = createWatcher(() => {
+      readConsumer(current2);
+      callCount += 1;
+    });
+
+    runWatcher(watcher);
+    last = current2;
+  }
+
+  function flushQueue(): number {
+    let flushed = 0;
+
+    while (queue.length > 0) {
+      runWatcher(queue.shift()!);
+      flushed += 1;
+    }
+
+    return flushed;
+  }
+
+  function writeBatched(value: number): void {
+    enterPropagationScope();
+    try {
+      writeProducer(head, value);
+    } finally {
+      leavePropagationScope();
+    }
+    flushQueue();
+  }
+
+  return {
+    step(iteration) {
+      let checksum = 0;
+      callCount = 0;
+
+      writeBatched(iteration);
+
+      for (let index = 0; index < writes; index += 1) {
+        writeBatched(index);
+        checksum ^= readConsumer(last) | 0;
+      }
+
+      return checksum ^ callCount;
+    },
+    dispose() {
+      setInternalHooks(undefined, undefined);
+    },
+  };
+}
+
 function createManyWritesReadOnce(batchSize: number, width: number): BenchCase {
   resetScenarioRuntime();
 
@@ -1121,6 +1203,31 @@ const scenarios: Scenario[] = [
     sinks: 1_024,
     fanout: 1_024,
     create: () => createEffectFlushFanoutVerified(1_024),
+  },
+  {
+    pressure: "scheduler",
+    topology: "broadPropagation",
+    workload: "batchedWritesReadTail",
+    size: "small",
+    label: "broad-propagation/batched-writes-read-tail/width-50-writes-50",
+    modeledWork: workModel({
+      writes: 51,
+      sinkReads: 50,
+      producerReads: 2_550,
+      consumerReads: 5_150,
+      computeRuns: 5_100,
+      recomputeCandidates: 5_100,
+      invalidated: 7_650,
+      edgeTraversals: 10_200,
+      scheduledWatchers: 2_550,
+      flushes: 2_550,
+    }),
+    nodes: 151,
+    sources: 1,
+    sinks: 50,
+    fanout: 50,
+    batchSize: 50,
+    create: () => createBroadPropagationVerified(50, 50),
   },
   {
     pressure: "scheduler",

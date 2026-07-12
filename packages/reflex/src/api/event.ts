@@ -1,10 +1,12 @@
-import {
-  readProducer,
-  writeProducer,
-} from "@volynets/reflex-runtime";
+import { readProducer, writeProducer } from "@volynets/reflex-runtime/internal";
 import type { Event } from "../infra/runtime";
 import { createAccumulator } from "../infra/factory";
 import { disposeNodeEvent } from "@volynets/reflex-runtime/internal";
+import {
+  emitEvent,
+  EventSource,
+  subscribeEvent,
+} from "../infra/event";
 
 type EventValue<E extends Event<unknown>> =
   E extends Event<infer T> ? T : never;
@@ -13,6 +15,35 @@ function createEvent<T>(
   subscribe: (fn: (value: T) => void) => Destructor,
 ): Event<T> {
   return { subscribe };
+}
+
+function createDerivedEvent<T>(
+  connect: (emit: (value: T) => void) => Destructor,
+): Event<T> {
+  const source = new EventSource<T>();
+  let subscriberCount = 0;
+  let disconnect: Destructor | undefined;
+
+  return createEvent((fn) => {
+    const unsubscribe = subscribeEvent(source, fn);
+    if (subscriberCount++ === 0) {
+      disconnect = connect((value) => emitEvent(source, value));
+    }
+    let active = true;
+
+    return () => {
+      if (!active) return;
+      active = false;
+
+      unsubscribe();
+
+      if (--subscriberCount !== 0) return;
+
+      const stop = disconnect;
+      disconnect = undefined;
+      stop?.();
+    };
+  });
 }
 
 /**
@@ -67,9 +98,9 @@ export function map<T, U>(
   source: Event<T>,
   project: (value: T) => U,
 ): Event<U> {
-  return createEvent((fn) =>
+  return createDerivedEvent((emit) =>
     source.subscribe((value) => {
-      fn(project(value));
+      emit(project(value));
     }),
   );
 }
@@ -89,10 +120,10 @@ export function filter<T>(
   source: Event<T>,
   predicate: (value: T) => boolean,
 ): Event<T> {
-  return createEvent((fn) =>
+  return createDerivedEvent((emit) =>
     source.subscribe((value) => {
       if (predicate(value)) {
-        fn(value);
+        emit(value);
       }
     }),
   );
@@ -107,10 +138,10 @@ export function filter<T>(
 export function merge<const Sources extends readonly Event<unknown>[]>(
   ...sources: Sources
 ): Event<EventValue<Sources[number]>> {
-  return createEvent((fn) => {
+  return createDerivedEvent((emit) => {
     const unsubscribers = sources.map((source) =>
       source.subscribe((value) => {
-        fn(value as EventValue<Sources[number]>);
+        emit(value as EventValue<Sources[number]>);
       }),
     );
 
@@ -120,6 +151,45 @@ export function merge<const Sources extends readonly Event<unknown>[]>(
       }
     };
   });
+}
+
+/**
+ * Projects each source value to an event stream and forwards values from the
+ * latest projected stream.
+ *
+ * Previous inner subscriptions are disposed as soon as a newer source event
+ * arrives. This is useful for event-sequence logic where a phase owns a
+ * temporary event dependency, such as listening to pointer moves only after a
+ * pointer-down event.
+ */
+export function switchMap<T, U>(
+  source: Event<T>,
+  project: (value: T) => Event<U>,
+): Event<U> {
+  return createDerivedEvent((emit) => {
+    let unsubscribeInner: Destructor | undefined;
+
+    const unsubscribeOuter = source.subscribe((value) => {
+      unsubscribeInner?.();
+      unsubscribeInner = project(value).subscribe(emit);
+    });
+
+    return () => {
+      unsubscribeInner?.();
+      unsubscribeInner = undefined;
+      unsubscribeOuter();
+    };
+  });
+}
+
+/**
+ * Flattens an event stream of event streams by forwarding values from the
+ * latest inner stream.
+ *
+ * Equivalent to `switchMap(source, (inner) => inner)`.
+ */
+export function flatten<T>(source: Event<Event<T>>): Event<T> {
+  return switchMap(source, (inner) => inner);
 }
 
 /**

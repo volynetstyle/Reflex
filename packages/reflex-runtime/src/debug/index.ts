@@ -1,4 +1,5 @@
 import "./debug_flag";
+
 import { runtimeDebugInstalled } from "./debug.install";
 
 void runtimeDebugInstalled;
@@ -32,3 +33,24 @@ export type {
   RuntimeDebugNodeSnapshot,
   RuntimeDebugOptions,
 } from "./debug.types";
+export {
+  createRuntimeProfileSession,
+  diffRuntimeProfileCounters,
+  isRuntimeProfilingEnabled,
+  profileRuntime,
+  profileRuntimeAsync,
+  readRuntimeProfileCounters,
+  readRuntimeProfileTopology,
+  resetRuntimeProfileCounters,
+  runtimeProfileCounters,
+  setRuntimeProfilingEnabled,
+  snapshotRuntimeProfileCounters,
+  snapshotRuntimeProfileTopology,
+  type RuntimeProfileCounterName,
+  type RuntimeProfileCounters,
+  type RuntimeProfileResult,
+  type RuntimeProfileSession,
+  type RuntimeProfileTopology,
+  type RuntimeProfileTopologyHotPath,
+  type RuntimeProfileTopologyWalker,
+} from "@runtime/profiling";

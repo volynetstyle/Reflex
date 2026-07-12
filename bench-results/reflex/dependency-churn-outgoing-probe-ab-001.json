@@ -1,0 +1,58 @@
+{
+  "capturedAt": "2026-06-16",
+  "command": "pnpm.cmd --filter @volynets/reflex exec vitest bench bench/dependency-churn.bench.ts",
+  "source": "packages/reflex/bench/dependency-churn.bench.ts",
+  "change": {
+    "name": "same-process outgoing probe A/B",
+    "summary": "Compares firstOut-only, singleton-only, singleton-guarded firstOut body, and firstOut with fanout counting inside one process and one harness using local readTrackingStrategy variants."
+  },
+  "variantMeansMs": [
+    {
+      "scenario": "prefix_suffix_chaotic_1024",
+      "firstOutOnly": 68.827,
+      "singletonOnly": 68.938,
+      "singletonGuardedFirstOutBody": 74.253,
+      "firstOutWithFanoutCounter": 71.811
+    },
+    {
+      "scenario": "mixed_1024",
+      "firstOutOnly": 58.67,
+      "singletonOnly": 58.863,
+      "singletonGuardedFirstOutBody": 58.393,
+      "firstOutWithFanoutCounter": 57.603
+    },
+    {
+      "scenario": "oscillate_rotate_branch_1024",
+      "firstOutOnly": 77.853,
+      "singletonOnly": 80.813,
+      "singletonGuardedFirstOutBody": 73.231,
+      "firstOutWithFanoutCounter": 86.145
+    },
+    {
+      "scenario": "oscillate_rotate_swap_1024",
+      "firstOutOnly": 74.361,
+      "singletonOnly": 69.14,
+      "singletonGuardedFirstOutBody": 72.437,
+      "firstOutWithFanoutCounter": 76.672
+    }
+  ],
+  "currentRuntimeTimingMeansMs": {
+    "static_1024": 0.673,
+    "rotate_1024": 8.0329,
+    "alt_ab_1024": 7.5944,
+    "swap_small_1024": 6.5938,
+    "prefix_suffix_chaotic_1024": 17.4354,
+    "mixed_1024": 10.3151,
+    "branch_half_1024": 10.3225,
+    "stable_then_drop_1024": 6.0777,
+    "oscillate_rotate_branch_1024": 19.985,
+    "oscillate_rotate_swap_1024": 19.8288,
+    "branch_swap_1024": 15.7965,
+    "mixed_churn_1024": 19.1243
+  },
+  "verdict": {
+    "runtimeCandidate": "firstOutOnly",
+    "singletonOnly": "diagnostic_only_for_now",
+    "reason": "Same-process A/B does not show a decisive singleton advantage. The simpler firstOut-only runtime candidate preserves the good production benchmark trend while singleton remains useful as proof that hits are fanout1 in this suite."
+  }
+}

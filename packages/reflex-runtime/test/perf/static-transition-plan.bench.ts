@@ -4,16 +4,26 @@ import {
   createProducer,
   createStaticTransitionPlan,
   createWatcher,
+  configureRuntimeContext,
   readConsumer,
   readProducer,
   resetRuntime,
   runWatcher,
-  setInternalHooks,
   writeProducer,
   writeStaticPlanSource,
   type ReactiveNode,
+  type RuntimeHooks,
   type StaticTransitionPlan,
 } from "../runtime.test_utils";
+
+function setInternalHooks(
+  sinkInvalidatedDispatcher: RuntimeHooks["sinkInvalidatedDispatcher"] = undefined,
+  reactiveSettledDispatcher: RuntimeHooks["reactiveSettledDispatcher"] = undefined,
+): void {
+  configureRuntimeContext({
+    hooks: { sinkInvalidatedDispatcher, reactiveSettledDispatcher },
+  });
+}
 
 const DEPTH = 64;
 const WARMUP_ITERATIONS = 1_000;

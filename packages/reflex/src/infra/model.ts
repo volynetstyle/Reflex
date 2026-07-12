@@ -1,4 +1,4 @@
-import { untracked } from "@volynets/reflex-runtime";
+import { untracked } from "@volynets/reflex-runtime/internal";
 import { batch } from "./runtime";
 import {
   createModelAction,
@@ -65,12 +65,12 @@ type ValidateModel<T> =
     : T extends Accessor<unknown>
       ? T
       : T extends PrimitiveModelValue
-      ? T
-      : T extends (...args: unknown[]) => unknown
-        ? InvalidModelValue
-        : T extends object
-          ? { [K in keyof T]: ValidateModel<T[K]> }
-          : InvalidModelValue;
+        ? T
+        : T extends (...args: unknown[]) => unknown
+          ? InvalidModelValue
+          : T extends object
+            ? { [K in keyof T]: ValidateModel<T[K]> }
+            : InvalidModelValue;
 
 export type Model<T> = ValidateModel<T> & DisposableLike;
 export type ModelShape<T extends object> = T & ValidateModel<T>;

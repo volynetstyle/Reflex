@@ -13,6 +13,10 @@
       ],
       "@volynets/reflex-framework/jsx-dev-runtime": [
         "../reflex-framework/dist/jsx-dev-runtime.d.ts"
+      ],
+      "@volynets/reflex-runtime": ["../reflex-runtime/dist/index.d.ts"]
+      ,"@volynets/reflex-runtime/internal": [
+        "../reflex-runtime/dist/esm/internal/index.d.ts"
       ]
     },
     "strict": true,

@@ -1,15 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   type RuntimeHostHooks,
-  enterPropagationScope,
-  getReactiveSettledHook,
-  leavePropagationScope,
-  emitSettledIfIdle,
-  saveContext,
-  restoreContext,
-  setHostHooks,
-  setReactiveSettledHook,
+  getActiveRuntimeContext,
+  snapshotRuntimeContext,
+  restoreRuntimeContextSnapshot,
+  configureRuntimeContext,
 } from "../../../src/kernel/context";
+import { reactiveSettledHook } from "../../../src/kernel/config";
+import {
+  emitSettledIfIdle,
+  enterPropagationScope,
+  leavePropagationScope,
+} from "../../../src/kernel/context.scope";
 
 /** Covers security-sensitive hook normalization and replacement behavior. */
 describe("Reactive runtime - security regressions", () => {
@@ -27,76 +29,75 @@ describe("Reactive runtime - security regressions", () => {
       value: settled,
     });
 
-    const previous = saveContext();
-    setHostHooks(payload);
+    const previous = snapshotRuntimeContext();
+    configureRuntimeContext({ hooks: payload });
     emitSettledIfIdle();
 
     expect(settled).toHaveBeenCalledTimes(1);
-    restoreContext(previous);
+    restoreRuntimeContextSnapshot(getActiveRuntimeContext(), previous);
   });
 
-  it("setHostHooks ignores inherited callbacks on replacement objects", () => {
+  it("configureRuntimeContext ignores inherited callbacks on replacement objects", () => {
     const previous = vi.fn();
     const inherited = vi.fn();
     const replacement = Object.create({
       reactiveSettledDispatcher: inherited,
     }) as RuntimeHostHooks;
 
-    const snapshot = saveContext();
-    setHostHooks({
-      reactiveSettledDispatcher: previous,
+    const snapshot = snapshotRuntimeContext();
+    configureRuntimeContext({
+      hooks: { reactiveSettledDispatcher: previous },
     });
-    setHostHooks(replacement);
+    configureRuntimeContext({ hooks: replacement });
     emitSettledIfIdle();
 
     expect(previous).not.toHaveBeenCalled();
     expect(inherited).not.toHaveBeenCalled();
-    expect(getReactiveSettledHook()).toBe(undefined);
-    restoreContext(snapshot);
+    expect(reactiveSettledHook).toBe(undefined);
+    restoreRuntimeContextSnapshot(getActiveRuntimeContext(), snapshot);
   });
 
   it("keeps global hook updates synchronized with cached callbacks", () => {
     const first = vi.fn();
     const second = vi.fn();
 
-    setReactiveSettledHook(first);
+    configureRuntimeContext({ hooks: { reactiveSettledDispatcher: first } });
     emitSettledIfIdle();
-    setReactiveSettledHook(second);
+    configureRuntimeContext({ hooks: { reactiveSettledDispatcher: second } });
     emitSettledIfIdle();
-    setReactiveSettledHook(undefined);
+    configureRuntimeContext({ hooks: {} });
     emitSettledIfIdle();
 
     expect(first).toHaveBeenCalledTimes(1);
     expect(second).toHaveBeenCalledTimes(1);
-    expect(getReactiveSettledHook()).toBe(undefined);
+    expect(reactiveSettledHook).toBe(undefined);
   });
 
   it("keeps default settled dispatch synchronized with direct hook updates", () => {
-    const previous = getReactiveSettledHook();
+    const previous = reactiveSettledHook;
     const first = vi.fn();
     const second = vi.fn();
 
     try {
-      setReactiveSettledHook(first);
+      configureRuntimeContext({ hooks: { reactiveSettledDispatcher: first } });
       enterPropagationScope();
       leavePropagationScope();
 
-      setReactiveSettledHook(second);
+      configureRuntimeContext({ hooks: { reactiveSettledDispatcher: second } });
       enterPropagationScope();
       leavePropagationScope();
 
-      setReactiveSettledHook(undefined);
+      configureRuntimeContext({ hooks: {} });
       enterPropagationScope();
       leavePropagationScope();
     } finally {
-      setReactiveSettledHook(previous);
+      configureRuntimeContext({
+        hooks: { reactiveSettledDispatcher: previous },
+      });
     }
 
     expect(first).toHaveBeenCalledTimes(1);
     expect(second).toHaveBeenCalledTimes(1);
-    expect(getReactiveSettledHook()).toBe(previous);
+    expect(reactiveSettledHook).toBe(previous);
   });
 });
-
-
-

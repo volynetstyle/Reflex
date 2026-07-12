@@ -1,32 +1,21 @@
 import {
-  type OwnerContext,
-} from "@volynets/reflex-framework";
-import {
   hydrateWithDOMExecution,
   resumeWithDOMExecution,
 } from "../hydrate/hydration";
 import { renderWithDOMExecution } from "./render";
 import type { Cleanup, JSXRenderable } from "../types";
-import {
-  type DOMRuntimeOptions,
-  type RuntimeInstance,
-} from "./options";
-import type { MountedRootStore } from "./root-store";
+import type { DOMRuntimeOptions } from "./options";
 import type { DOMRenderEffectScheduler } from "./render-effect-scheduler";
 import {
   createDOMExecutionContext,
   ensureDOMRuntime,
-  runWithDOMExecutionContext,
+  runDOMOperation,
   type DOMExecutionContext,
 } from "./execution";
 
 export interface DOMRenderer {
-  execution: DOMExecutionContext;
-  runtime: RuntimeInstance | null;
-  owner: OwnerContext;
-  mountedRoots: MountedRootStore;
-  renderEffectScheduler: DOMRenderEffectScheduler;
-  ensureRuntime(): RuntimeInstance;
+  readonly execution: DOMExecutionContext;
+  readonly renderEffectScheduler: DOMRenderEffectScheduler;
   hydrate(input: JSXRenderable, container: ParentNode & Node): Cleanup;
   render(input: JSXRenderable, container: ParentNode & Node): Cleanup;
   mount(input: JSXRenderable, container: ParentNode & Node): Cleanup;
@@ -35,57 +24,28 @@ export interface DOMRenderer {
 
 export function createDOMRenderer(options?: DOMRuntimeOptions): DOMRenderer {
   const execution = createDOMExecutionContext(options);
-
-  function runRendererOperation<T>(fn: () => T): T {
-    const runtime = ensureDOMRuntime(execution);
-    return runtime.batch(() => runWithDOMExecutionContext(execution, fn));
-  }
+  const render = (input: JSXRenderable, container: ParentNode & Node) =>
+    runDOMOperation(execution, () =>
+      renderWithDOMExecution(input, container),
+    );
 
   const renderer: DOMRenderer = {
     execution,
-    get runtime() {
-      return execution.runtime;
-    },
-    set runtime(runtime) {
-      execution.runtime = runtime;
-    },
-    get owner() {
-      return execution.owner;
-    },
-    set owner(owner) {
-      execution.owner = owner;
-    },
-    get mountedRoots() {
-      return execution.mountedRoots;
-    },
-    set mountedRoots(mountedRoots) {
-      execution.mountedRoots = mountedRoots;
-    },
-    get renderEffectScheduler() {
-      return execution.renderEffectScheduler;
-    },
-    set renderEffectScheduler(renderEffectScheduler) {
-      execution.renderEffectScheduler = renderEffectScheduler;
-    },
-    ensureRuntime() {
-      return ensureDOMRuntime(execution);
-    },
+    renderEffectScheduler: execution.renderEffectScheduler,
     hydrate(input, container) {
-      return runRendererOperation(() =>
+      return runDOMOperation(execution, () =>
         hydrateWithDOMExecution(input, container),
       );
     },
-    render(input, container) {
-      return runRendererOperation(() => renderWithDOMExecution(input, container));
-    },
-    mount(input, container) {
-      return runRendererOperation(() => renderWithDOMExecution(input, container));
-    },
+    render,
+    mount: render,
     resume(container) {
-      return runRendererOperation(() => resumeWithDOMExecution(container));
+      return runDOMOperation(execution, () =>
+        resumeWithDOMExecution(container),
+      );
     },
   };
 
-  renderer.ensureRuntime();
+  ensureDOMRuntime(execution);
   return renderer;
 }

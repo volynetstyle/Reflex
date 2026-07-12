@@ -13,5 +13,4 @@ export class OwnershipNode {
 
   context: OwnershipContextRecord | null = null;
   cleanups: CleanupList | null = null;
-  hookSlots: unknown[] | null = null;
 }

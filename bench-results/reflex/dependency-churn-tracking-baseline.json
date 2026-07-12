@@ -1,0 +1,239 @@
+{
+  "capturedAt": "2026-06-16",
+  "command": "pnpm.cmd --filter @volynets/reflex exec vitest bench bench/dependency-churn.bench.ts",
+  "source": "packages/reflex/bench/dependency-churn.bench.ts",
+  "notes": [
+    "Tracking route profile uses the dev runtime profiling path and keeps the normal timing benchmark on the production facade.",
+    "Slow-path scan is bounded by the current suffix reconciliation cutoff of 32 edges.",
+    "Adaptive indexing should be considered only for consumers with high slowPath frequency, high found rate, and high 256+ distance rate."
+  ],
+  "trackingRoutes": [
+    {
+      "scenario": "static_1024",
+      "reads": 1025,
+      "trackingAppendAfterCursor": { "count": 1024, "pct": 99.9 },
+      "trackingInitialCreate": { "count": 1, "pct": 0.1 }
+    },
+    {
+      "scenario": "rotate_1024",
+      "reads": 524800,
+      "trackingAppendAfterCursor": { "count": 1024, "pct": 0.2 },
+      "trackingInitialCreate": { "count": 1, "pct": 0.0 },
+      "trackingNextHit": { "count": 511, "pct": 0.1 },
+      "trackingOneHopReorder": { "count": 522753, "pct": 99.61 },
+      "trackingInitialFirstHit": { "count": 511, "pct": 0.1 }
+    },
+    {
+      "scenario": "alt_ab_1024",
+      "reads": 524800,
+      "trackingAppendAfterCursor": { "count": 1024, "pct": 0.2 },
+      "trackingInitialCreate": { "count": 1, "pct": 0.0 },
+      "trackingNextHit": { "count": 511, "pct": 0.1 },
+      "trackingOneHopReorder": { "count": 511, "pct": 0.1 },
+      "trackingInitialFirstHit": { "count": 511, "pct": 0.1 },
+      "trackingTwoHopReorder": { "count": 511, "pct": 0.1 },
+      "trackingLastEdgeShortcut": { "count": 521731, "pct": 99.42 }
+    },
+    {
+      "scenario": "swap_small_1024",
+      "reads": 524800,
+      "trackingAppendAfterCursor": { "count": 1024, "pct": 0.2 },
+      "trackingInitialCreate": { "count": 1, "pct": 0.0 },
+      "trackingNextHit": { "count": 517158, "pct": 98.54 },
+      "trackingOneHopReorder": { "count": 5222, "pct": 1.0 },
+      "trackingInitialFirstHit": { "count": 511, "pct": 0.1 },
+      "trackingTwoHopReorder": { "count": 154, "pct": 0.03 },
+      "trackingSlowPath": { "count": 730, "pct": 0.14 },
+      "slowPathScan": {
+        "avg": 6.1,
+        "p95": 8,
+        "p99": 8,
+        "max": 32,
+        "found": { "count": 2, "pct": 0.27 },
+        "notFound": { "count": 728, "pct": 99.73 },
+        "distance33To63": { "count": 0, "pct": 0.0 },
+        "distance64To127": { "count": 0, "pct": 0.0 },
+        "distance128To255": { "count": 0, "pct": 0.0 },
+        "distance256Plus": { "count": 2, "pct": 0.27 }
+      }
+    },
+    {
+      "scenario": "prefix_suffix_chaotic_1024",
+      "reads": 524800,
+      "trackingAppendAfterCursor": { "count": 1024, "pct": 0.2 },
+      "trackingInitialCreate": { "count": 1, "pct": 0.0 },
+      "trackingNextHit": { "count": 145488, "pct": 27.72 },
+      "trackingOneHopReorder": { "count": 1331, "pct": 0.25 },
+      "trackingInitialFirstHit": { "count": 511, "pct": 0.1 },
+      "trackingTwoHopReorder": { "count": 1253, "pct": 0.24 },
+      "trackingLastEdgeShortcut": { "count": 169031, "pct": 32.21 },
+      "trackingSlowPath": { "count": 206161, "pct": 39.28 },
+      "slowPathScan": {
+        "avg": 30.0,
+        "p95": 32,
+        "p99": 32,
+        "max": 32,
+        "found": { "count": 177248, "pct": 85.98 },
+        "notFound": { "count": 28913, "pct": 14.02 },
+        "distance33To63": { "count": 28408, "pct": 13.78 },
+        "distance64To127": { "count": 43985, "pct": 21.34 },
+        "distance128To255": { "count": 52155, "pct": 25.3 },
+        "distance256Plus": { "count": 52700, "pct": 25.56 }
+      }
+    },
+    {
+      "scenario": "mixed_1024",
+      "reads": 524800,
+      "trackingAppendAfterCursor": { "count": 1024, "pct": 0.2 },
+      "trackingInitialCreate": { "count": 1, "pct": 0.0 },
+      "trackingNextHit": { "count": 459571, "pct": 87.57 },
+      "trackingInitialFirstHit": { "count": 511, "pct": 0.1 },
+      "trackingLastEdgeShortcut": { "count": 63, "pct": 0.01 },
+      "trackingSlowPath": { "count": 63630, "pct": 12.12 },
+      "slowPathScan": {
+        "avg": 14.0,
+        "p95": 14,
+        "p99": 14,
+        "max": 14,
+        "found": { "count": 0, "pct": 0.0 },
+        "notFound": { "count": 63630, "pct": 100.0 },
+        "distance33To63": { "count": 0, "pct": 0.0 },
+        "distance64To127": { "count": 0, "pct": 0.0 },
+        "distance128To255": { "count": 0, "pct": 0.0 },
+        "distance256Plus": { "count": 0, "pct": 0.0 }
+      }
+    },
+    {
+      "scenario": "branch_half_1024",
+      "reads": 524800,
+      "trackingAppendAfterCursor": { "count": 262145, "pct": 49.95 },
+      "trackingInitialCreate": { "count": 1, "pct": 0.0 },
+      "trackingNextHit": { "count": 261632, "pct": 49.85 },
+      "trackingInitialFirstHit": { "count": 511, "pct": 0.1 },
+      "trackingSlowPath": { "count": 511, "pct": 0.1 },
+      "slowPathScan": {
+        "avg": 32.0,
+        "p95": 32,
+        "p99": 32,
+        "max": 32,
+        "found": { "count": 0, "pct": 0.0 },
+        "notFound": { "count": 511, "pct": 100.0 },
+        "distance33To63": { "count": 0, "pct": 0.0 },
+        "distance64To127": { "count": 0, "pct": 0.0 },
+        "distance128To255": { "count": 0, "pct": 0.0 },
+        "distance256Plus": { "count": 0, "pct": 0.0 }
+      }
+    },
+    {
+      "scenario": "stable_then_drop_1024",
+      "reads": 524800,
+      "trackingAppendAfterCursor": { "count": 1024, "pct": 0.2 },
+      "trackingInitialCreate": { "count": 1, "pct": 0.0 },
+      "trackingNextHit": { "count": 523264, "pct": 99.71 },
+      "trackingInitialFirstHit": { "count": 511, "pct": 0.1 }
+    },
+    {
+      "scenario": "oscillate_rotate_branch_1024",
+      "reads": 524800,
+      "trackingAppendAfterCursor": { "count": 327425, "pct": 62.39 },
+      "trackingInitialCreate": { "count": 1, "pct": 0.0 },
+      "trackingNextHit": { "count": 65792, "pct": 12.54 },
+      "trackingInitialFirstHit": { "count": 511, "pct": 0.1 },
+      "trackingTwoHopReorder": { "count": 510, "pct": 0.1 },
+      "trackingLastEdgeShortcut": { "count": 255, "pct": 0.05 },
+      "trackingSlowPath": { "count": 130306, "pct": 24.83 },
+      "slowPathScan": {
+        "avg": 31.2,
+        "p95": 32,
+        "p99": 32,
+        "max": 32,
+        "found": { "count": 122865, "pct": 94.29 },
+        "notFound": { "count": 7441, "pct": 5.71 },
+        "distance33To63": { "count": 7440, "pct": 5.71 },
+        "distance64To127": { "count": 13344, "pct": 10.24 },
+        "distance128To255": { "count": 20544, "pct": 15.77 },
+        "distance256Plus": { "count": 81537, "pct": 62.57 }
+      }
+    },
+    {
+      "scenario": "oscillate_rotate_swap_1024",
+      "reads": 524800,
+      "trackingAppendAfterCursor": { "count": 1024, "pct": 0.2 },
+      "trackingInitialCreate": { "count": 1, "pct": 0.0 },
+      "trackingNextHit": { "count": 259589, "pct": 49.46 },
+      "trackingOneHopReorder": { "count": 1787, "pct": 0.34 },
+      "trackingInitialFirstHit": { "count": 511, "pct": 0.1 },
+      "trackingTwoHopReorder": { "count": 1270, "pct": 0.24 },
+      "trackingLastEdgeShortcut": { "count": 513, "pct": 0.1 },
+      "trackingSlowPath": { "count": 260105, "pct": 49.56 },
+      "slowPathScan": {
+        "avg": 31.2,
+        "p95": 32,
+        "p99": 32,
+        "max": 32,
+        "found": { "count": 245505, "pct": 94.39 },
+        "notFound": { "count": 14600, "pct": 5.61 },
+        "distance33To63": { "count": 15608, "pct": 6.0 },
+        "distance64To127": { "count": 29696, "pct": 11.42 },
+        "distance128To255": { "count": 53247, "pct": 20.47 },
+        "distance256Plus": { "count": 146954, "pct": 56.5 }
+      }
+    },
+    {
+      "scenario": "branch_swap_1024",
+      "reads": 524800,
+      "trackingAppendAfterCursor": { "count": 523777, "pct": 99.81 },
+      "trackingInitialCreate": { "count": 1, "pct": 0.0 },
+      "trackingInitialFirstHit": { "count": 511, "pct": 0.1 },
+      "trackingSlowPath": { "count": 511, "pct": 0.1 },
+      "slowPathScan": {
+        "avg": 32.0,
+        "p95": 32,
+        "p99": 32,
+        "max": 32,
+        "found": { "count": 0, "pct": 0.0 },
+        "notFound": { "count": 511, "pct": 100.0 },
+        "distance33To63": { "count": 0, "pct": 0.0 },
+        "distance64To127": { "count": 0, "pct": 0.0 },
+        "distance128To255": { "count": 0, "pct": 0.0 },
+        "distance256Plus": { "count": 0, "pct": 0.0 }
+      }
+    },
+    {
+      "scenario": "mixed_churn_1024",
+      "reads": 524800,
+      "trackingAppendAfterCursor": { "count": 523436, "pct": 99.74 },
+      "trackingInitialCreate": { "count": 1, "pct": 0.0 },
+      "trackingInitialFirstHit": { "count": 511, "pct": 0.1 },
+      "trackingTwoHopReorder": { "count": 341, "pct": 0.06 },
+      "trackingSlowPath": { "count": 511, "pct": 0.1 },
+      "slowPathScan": {
+        "avg": 32.0,
+        "p95": 32,
+        "p99": 32,
+        "max": 32,
+        "found": { "count": 0, "pct": 0.0 },
+        "notFound": { "count": 511, "pct": 100.0 },
+        "distance33To63": { "count": 0, "pct": 0.0 },
+        "distance64To127": { "count": 0, "pct": 0.0 },
+        "distance128To255": { "count": 0, "pct": 0.0 },
+        "distance256Plus": { "count": 0, "pct": 0.0 }
+      }
+    }
+  ],
+  "candidateIndexedModeTriggers": {
+    "slowPathPctMin": 20,
+    "foundRateMin": 80,
+    "distance256PlusRateMin": 50,
+    "matchingScenarios": [
+      "oscillate_rotate_branch_1024",
+      "oscillate_rotate_swap_1024"
+    ],
+    "borderlineScenarios": ["prefix_suffix_chaotic_1024"]
+  },
+  "verdict": {
+    "defaultFullIndex": "reject",
+    "adaptiveIndexedConsumerMode": "investigate",
+    "reason": "Common paths are already handled by next/append/one-hop/two-hop/last-edge fast paths. Pathological oscillation scenarios show high slowPath found rate with many producers beyond distance 256, so list scanning deeper is not the right next optimization."
+  }
+}

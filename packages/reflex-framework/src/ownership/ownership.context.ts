@@ -1,17 +1,15 @@
 import type { OwnershipNode } from "./ownership.node";
 import type { OwnerContext } from "./ownership.scope";
 
-type ContextId = symbol;
 type ContextTarget = OwnerContext | OwnershipNode;
 const MISSING_CONTEXT = Symbol("ownership-context.missing");
 
 export interface OwnershipContextRecord {
   readonly parent: OwnershipContextRecord | null;
-  readonly values: Map<ContextId, unknown>;
+  readonly values: Map<OwnershipContext<unknown>, unknown>;
 }
 
 export interface OwnershipContext<T = unknown> {
-  readonly id: ContextId;
   readonly defaultValue: T | undefined;
   readonly hasDefaultValue: boolean;
 }
@@ -22,7 +20,6 @@ export function createContext<T>(
   defaultValue?: T,
 ): OwnershipContext<T | undefined> {
   return Object.freeze({
-    id: Symbol("ownership-context"),
     defaultValue,
     hasDefaultValue: arguments.length !== 0,
   });
@@ -33,12 +30,12 @@ export function createContextLayer(
 ): OwnershipContextRecord {
   return Object.preventExtensions({
     parent,
-    values: new Map<ContextId, unknown>(),
+    values: new Map<OwnershipContext<unknown>, unknown>(),
   });
 }
 
 function resolveContextTarget(target: ContextTarget): OwnershipNode | null {
-  return "currentOwner" in target ? target.currentOwner : target;
+  return "currentNode" in target ? target.currentNode : target;
 }
 
 function ensureContextLayer(node: OwnershipNode): OwnershipContextRecord {
@@ -50,7 +47,7 @@ export function contextProvide<T>(
   context: OwnershipContext<T>,
   value: T,
 ): void {
-  ctx.values.set(context.id, value);
+  ctx.values.set(context, value);
 }
 
 export function provideContext<T>(
@@ -58,28 +55,26 @@ export function provideContext<T>(
   context: OwnershipContext<T>,
   value: T,
 ): void {
-  const scope = resolveContextTarget(target);
+  const node = resolveContextTarget(target);
 
-  if (scope === null) {
+  if (node === null) {
     return;
   }
 
-  contextProvide(ensureContextLayer(scope), context, value);
+  contextProvide(ensureContextLayer(node), context, value);
 }
 
 function lookupContextValue(
-  node: OwnershipNode,
-  id: ContextId,
+  contextRecord: OwnershipContextRecord | null,
+  context: OwnershipContext<unknown>,
 ): unknown | typeof MISSING_CONTEXT {
   for (
-    let current: OwnershipNode | null = node;
+    let current = contextRecord;
     current !== null;
     current = current.parent
   ) {
-    const ctx = current.context;
-
-    if (ctx !== null && ctx.values.has(id)) {
-      return ctx.values.get(id);
+    if (current.values.has(context)) {
+      return current.values.get(context);
     }
   }
 
@@ -90,7 +85,10 @@ export function contextLookup<T>(
   node: OwnershipNode,
   context: OwnershipContext<T>,
 ): T | undefined {
-  const value = lookupContextValue(node, context.id);
+  const value = lookupContextValue(
+    node.context ?? resolveParentContext(node),
+    context,
+  );
 
   if (value !== MISSING_CONTEXT) {
     return value as T;
@@ -103,28 +101,28 @@ export function useContext<T>(
   target: ContextTarget,
   context: OwnershipContext<T>,
 ): T | undefined {
-  const scope = resolveContextTarget(target);
+  const node = resolveContextTarget(target);
 
-  if (scope === null) {
+  if (node === null) {
     return context.hasDefaultValue ? context.defaultValue : undefined;
   }
 
-  return contextLookup(scope, context);
+  return contextLookup(node, context);
 }
 
 export function contextHasOwn(
   ctx: OwnershipContextRecord | null,
   context: OwnershipContext<unknown>,
 ): boolean {
-  return ctx !== null && ctx.values.has(context.id);
+  return ctx !== null && ctx.values.has(context);
 }
 
 export function hasOwnContext(
   target: ContextTarget,
   context: OwnershipContext<unknown>,
 ): boolean {
-  const scope = resolveContextTarget(target);
-  return scope !== null && contextHasOwn(scope.context, context);
+  const node = resolveContextTarget(target);
+  return node !== null && contextHasOwn(node.context, context);
 }
 
 export function resolveParentContext(

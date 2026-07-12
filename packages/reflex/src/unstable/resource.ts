@@ -2,14 +2,17 @@ import {
   Changed,
   disposeNode,
   emitSinkInvalidated,
-  type ReactiveNode,
+} from "@volynets/reflex-runtime/internal";
+import type {
+  ProducerNode,
+  WatcherNode,
 } from "@volynets/reflex-runtime/internal";
 import {
   disposeWatcher,
   readProducer,
   runWatcher,
   writeProducer,
-} from "@volynets/reflex-runtime";
+} from "@volynets/reflex-runtime/internal";
 import { createResourceStateNode, createWatcherNode } from "../infra/factory";
 
 /**
@@ -229,8 +232,8 @@ class ResourceCore<T, E = unknown> {
   error: E | undefined = undefined;
   token = 0;
   disposed = false;
-  watcher: ReactiveNode | null = null;
-  refetchNode: ReactiveNode<number> | null = null;
+  watcher: WatcherNode | null = null;
+  refetchNode: ProducerNode<number> | null = null;
 
   track(): void {
     readProducer(this.stateNode);

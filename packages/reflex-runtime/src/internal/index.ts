@@ -1,7 +1,4 @@
 export * from "./process";
-export * from "../protocol";
-export * from "../kernel";
-export {
-  CONSUMER_CHANGED as CONSUMER_INITIAL_STATE,
-  WATCHER_CHANGED as WATCHER_INITIAL_STATE,
-} from "../kernel";
+export * from "@runtime/kernel";
+export * from "@runtime/protocol";
+export { CONSUMER_INITIAL_STATE, WATCHER_INITIAL_STATE } from "@runtime/kernel";

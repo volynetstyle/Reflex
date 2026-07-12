@@ -1,0 +1,2560 @@
+{
+  "schemaVersion": 1,
+  "suite": "tracking-tier-route-substitution",
+  "generatedAt": "2026-06-30T10:54:22.200Z",
+  "config": {
+    "runs": 20,
+    "warmupPasses": 32,
+    "measuredPasses": 256,
+    "dependencies": 128,
+    "out": "bench-results/tracking-tier-factorial/route-substitution.json"
+  },
+  "note": "trackingSlowPath counts delegation; outgoingProbeHit1 identifies O(1) producer-side resolution inside it",
+  "scenarios": [
+    {
+      "id": "rotate-left",
+      "runs": {
+        "lastOn": [
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          }
+        ],
+        "lastOff": [
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 32512,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          }
+        ]
+      },
+      "totals": {
+        "lastOn": {
+          "trackingOneHopReorder": 650240,
+          "trackingTwoHopReorder": 0,
+          "trackingInitialLastEdgeShortcut": 0,
+          "trackingLastEdgeShortcut": 0,
+          "trackingOutgoingProbeHit1": 0,
+          "trackingOutgoingProbeMiss": 0,
+          "trackingSlowPath": 0
+        },
+        "lastOff": {
+          "trackingOneHopReorder": 650240,
+          "trackingTwoHopReorder": 0,
+          "trackingInitialLastEdgeShortcut": 0,
+          "trackingLastEdgeShortcut": 0,
+          "trackingOutgoingProbeHit1": 0,
+          "trackingOutgoingProbeMiss": 0,
+          "trackingSlowPath": 0
+        }
+      }
+    },
+    {
+      "id": "rotate-right",
+      "runs": {
+        "lastOn": [
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 256,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          }
+        ],
+        "lastOff": [
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 256,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 256
+            }
+          }
+        ]
+      },
+      "totals": {
+        "lastOn": {
+          "trackingOneHopReorder": 0,
+          "trackingTwoHopReorder": 0,
+          "trackingInitialLastEdgeShortcut": 0,
+          "trackingLastEdgeShortcut": 5120,
+          "trackingOutgoingProbeHit1": 0,
+          "trackingOutgoingProbeMiss": 0,
+          "trackingSlowPath": 0
+        },
+        "lastOff": {
+          "trackingOneHopReorder": 0,
+          "trackingTwoHopReorder": 0,
+          "trackingInitialLastEdgeShortcut": 0,
+          "trackingLastEdgeShortcut": 0,
+          "trackingOutgoingProbeHit1": 5120,
+          "trackingOutgoingProbeMiss": 0,
+          "trackingSlowPath": 5120
+        }
+      }
+    },
+    {
+      "id": "displacement-two",
+      "runs": {
+        "lastOn": [
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          }
+        ],
+        "lastOff": [
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 0,
+              "trackingTwoHopReorder": 32256,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          }
+        ]
+      },
+      "totals": {
+        "lastOn": {
+          "trackingOneHopReorder": 0,
+          "trackingTwoHopReorder": 645120,
+          "trackingInitialLastEdgeShortcut": 0,
+          "trackingLastEdgeShortcut": 0,
+          "trackingOutgoingProbeHit1": 0,
+          "trackingOutgoingProbeMiss": 0,
+          "trackingSlowPath": 0
+        },
+        "lastOff": {
+          "trackingOneHopReorder": 0,
+          "trackingTwoHopReorder": 645120,
+          "trackingInitialLastEdgeShortcut": 0,
+          "trackingLastEdgeShortcut": 0,
+          "trackingOutgoingProbeHit1": 0,
+          "trackingOutgoingProbeMiss": 0,
+          "trackingSlowPath": 0
+        }
+      }
+    },
+    {
+      "id": "conditional-branches",
+      "runs": {
+        "lastOn": [
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          }
+        ],
+        "lastOff": [
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 87,
+              "trackingTwoHopReorder": 0,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 32,
+              "trackingSlowPath": 32
+            }
+          }
+        ]
+      },
+      "totals": {
+        "lastOn": {
+          "trackingOneHopReorder": 1740,
+          "trackingTwoHopReorder": 0,
+          "trackingInitialLastEdgeShortcut": 0,
+          "trackingLastEdgeShortcut": 0,
+          "trackingOutgoingProbeHit1": 0,
+          "trackingOutgoingProbeMiss": 640,
+          "trackingSlowPath": 640
+        },
+        "lastOff": {
+          "trackingOneHopReorder": 1740,
+          "trackingTwoHopReorder": 0,
+          "trackingInitialLastEdgeShortcut": 0,
+          "trackingLastEdgeShortcut": 0,
+          "trackingOutgoingProbeHit1": 0,
+          "trackingOutgoingProbeMiss": 640,
+          "trackingSlowPath": 640
+        }
+      }
+    },
+    {
+      "id": "mixed-app-churn",
+      "runs": {
+        "lastOn": [
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 1856,
+              "trackingOutgoingProbeHit1": 0,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 0
+            }
+          }
+        ],
+        "lastOff": [
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          },
+          {
+            "trackingResolveCalls": 33024,
+            "routes": {
+              "trackingOneHopReorder": 128,
+              "trackingTwoHopReorder": 64,
+              "trackingInitialLastEdgeShortcut": 0,
+              "trackingLastEdgeShortcut": 0,
+              "trackingOutgoingProbeHit1": 1856,
+              "trackingOutgoingProbeMiss": 0,
+              "trackingSlowPath": 1856
+            }
+          }
+        ]
+      },
+      "totals": {
+        "lastOn": {
+          "trackingOneHopReorder": 2560,
+          "trackingTwoHopReorder": 1280,
+          "trackingInitialLastEdgeShortcut": 0,
+          "trackingLastEdgeShortcut": 37120,
+          "trackingOutgoingProbeHit1": 0,
+          "trackingOutgoingProbeMiss": 0,
+          "trackingSlowPath": 0
+        },
+        "lastOff": {
+          "trackingOneHopReorder": 2560,
+          "trackingTwoHopReorder": 1280,
+          "trackingInitialLastEdgeShortcut": 0,
+          "trackingLastEdgeShortcut": 0,
+          "trackingOutgoingProbeHit1": 37120,
+          "trackingOutgoingProbeMiss": 0,
+          "trackingSlowPath": 37120
+        }
+      }
+    }
+  ]
+}

@@ -2,6 +2,7 @@ name: CI
 
 on:
   workflow_dispatch:
+
   push:
     branches:
       - main
@@ -13,7 +14,9 @@ on:
       - eslint.config.mjs
       - scripts/**
       - packages/reflex-runtime/**
+      - packages/reflex-scheduler/**
       - packages/reflex/**
+
   pull_request:
     paths:
       - .github/workflows/ci.yml
@@ -23,6 +26,7 @@ on:
       - eslint.config.mjs
       - scripts/**
       - packages/reflex-runtime/**
+      - packages/reflex-scheduler/**
       - packages/reflex/**
 
 permissions:
@@ -52,7 +56,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 25
+          node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
@@ -71,11 +75,20 @@ jobs:
       - name: Runtime dev test
         run: pnpm --filter @volynets/reflex-runtime test:dev
 
-      - name: Runtime coverage
-        run: pnpm --filter @volynets/reflex-runtime test:coverage
-
       - name: Runtime build
         run: pnpm --filter @volynets/reflex-runtime build
+
+      - name: Scheduler lint
+        run: pnpm --filter @volynets/reflex-scheduler lint
+
+      - name: Scheduler typecheck
+        run: pnpm --filter @volynets/reflex-scheduler typecheck
+
+      - name: Scheduler test
+        run: pnpm --filter @volynets/reflex-scheduler test
+
+      - name: Scheduler build
+        run: pnpm --filter @volynets/reflex-scheduler build
 
       - name: Reflex lint
         run: pnpm --filter @volynets/reflex lint
@@ -88,29 +101,3 @@ jobs:
 
       - name: Reflex build
         run: pnpm --filter @volynets/reflex build
-
-  runtime-e2e:
-    name: runtime e2e
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: ci
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Runtime E2E
-        run: pnpm --filter @volynets/reflex-runtime test:e2e

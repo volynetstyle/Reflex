@@ -15,7 +15,9 @@ import type {
 
 interface RuntimeDebugSessionHost {
   clearHistory(): void;
-  configure(options?: RuntimeDebugOptions): RuntimeDebugContextSnapshot | undefined;
+  configure(
+    options?: RuntimeDebugOptions,
+  ): RuntimeDebugContextSnapshot | undefined;
   context(): RuntimeDebugContextSnapshot | undefined;
   history(): RuntimeDebugEvent[];
   observe(listener: RuntimeDebugListener): () => void;
@@ -77,10 +79,7 @@ export function createRuntimeDebugSession(
     },
 
     snapshot(options = {}) {
-      const snapshot = createRuntimeDebugSessionSnapshot(
-        host,
-        options.graph,
-      );
+      const snapshot = createRuntimeDebugSessionSnapshot(host, options.graph);
 
       emitMessage({
         protocolVersion: RUNTIME_DEBUG_PROTOCOL_VERSION,

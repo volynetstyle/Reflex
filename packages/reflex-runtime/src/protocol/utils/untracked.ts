@@ -1,4 +1,4 @@
-import { currentConsumer, setCurrentConsumer } from "../../kernel";
+import { currentConsumer, setCurrentConsumer } from "@runtime/kernel";
 
 /**
  * Execute a callback function without registering reactive dependencies.

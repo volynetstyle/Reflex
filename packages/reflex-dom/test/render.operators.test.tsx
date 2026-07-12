@@ -1,8 +1,8 @@
 /** @jsxImportSource ../src */
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { effect, signal } from "@volynets/reflex";
-import { createDOMRuntime, For, Show, Switch, render } from "../src";
+import { signal } from "./reactivity";
+import { createDOMRuntime, For, Show, Switch, render, useEffect } from "../src";
 
 describe("render structural operators and leaf dataflow", () => {
   beforeEach(() => {
@@ -59,7 +59,7 @@ describe("render structural operators and leaf dataflow", () => {
     const log: string[] = [];
 
     function Child() {
-      effect(() => {
+      useEffect(() => {
         log.push("run");
         return () => {
           log.push("cleanup");

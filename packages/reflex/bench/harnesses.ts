@@ -6,14 +6,24 @@ import {
   type WriteInput,
 } from "./shared";
 
-import * as AlienSignalsModule from "../../reflex-runtime/node_modules/alien-signals/esm/index.mjs";
+import * as AlienSignalsModule from "alien-signals";
 import { createRuntime, batch, flush, effect, memo, signal } from "../dist/esm";
-
-createRuntime({ effectStrategy: "sab" });
+import {
+  readRuntimeProfileCounters,
+  readSchedulerPolicyCounters,
+  resetRuntimeProfileCounters,
+  resetSchedulerPolicyCounters,
+  setRuntimeProfilingEnabled,
+  setSchedulerPolicyCountersEnabled,
+} from "../dist/esm/debug/index.js";
 
 export class ReflexHarness implements BenchHarness {
   readonly metrics = new HarnessMetrics();
   private readonly disposers: Array<() => void> = [];
+
+  constructor() {
+    createRuntime({ effectStrategy: "flush" });
+  }
 
   signal(
     initial: number,
@@ -45,6 +55,30 @@ export class ReflexHarness implements BenchHarness {
 
   resetRunMetrics(): void {
     this.metrics.resetRunMetrics();
+  }
+
+  resetPolicyCounters(): void {
+    resetSchedulerPolicyCounters();
+  }
+
+  setPolicyCountersEnabled(enabled: boolean): void {
+    setSchedulerPolicyCountersEnabled(enabled);
+  }
+
+  readPolicyCounters() {
+    return readSchedulerPolicyCounters();
+  }
+
+  resetRuntimeProfileCounters(): void {
+    resetRuntimeProfileCounters();
+  }
+
+  setRuntimeProfilingEnabled(enabled: boolean): void {
+    setRuntimeProfilingEnabled(enabled);
+  }
+
+  readRuntimeProfileCounters() {
+    return readRuntimeProfileCounters();
   }
 
   beginStep(now: number): void {
@@ -142,6 +176,22 @@ export class AlienHarness implements BenchHarness {
 
   resetRunMetrics(): void {
     this.metrics.resetRunMetrics();
+  }
+
+  resetPolicyCounters(): void {}
+
+  setPolicyCountersEnabled(_enabled: boolean): void {}
+
+  readPolicyCounters() {
+    return undefined;
+  }
+
+  resetRuntimeProfileCounters(): void {}
+
+  setRuntimeProfilingEnabled(_enabled: boolean): void {}
+
+  readRuntimeProfileCounters() {
+    return undefined;
   }
 
   beginStep(now: number): void {

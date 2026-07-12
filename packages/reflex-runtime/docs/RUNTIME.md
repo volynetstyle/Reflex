@@ -75,11 +75,10 @@ ConsumerReadMode                    // Enum: { lazy, eager }
 ### Execution Hooks
 
 ```ts
-setHooks(hooks)                     // Install host hooks on the active runtime context
-setRuntimeHooks(onInvalidated, onSettled) // Install runtime-owned hooks
-saveContext()                       // Snapshot runtime-global context state
-restoreContext(snapshot)            // Restore a saved runtime-global context state
-resetState()                        // Clear runtime-global tracking state
+configureRuntimeContext(options)    // Configure hooks and tracking on the active context
+snapshotRuntimeContext()            // Snapshot the active runtime context
+restoreRuntimeContextSnapshot(ctx, snapshot) // Restore a context snapshot
+resetRuntimeContext(ctx)            // Reset a runtime context
 ```
 
 ### Types
@@ -284,6 +283,35 @@ readConsumer(b);
 ```
 
 Contexts isolate scheduling hooks and propagation state, not graph ownership.
+
+---
+
+## Reactive Batch Boundary
+
+A reactive batch is a synchronous runtime notification boundary. Writes and
+graph invalidation happen immediately, and lazy consumers recompute on demand.
+Only host-visible `reactiveSettled` delivery is deferred until the outermost
+boundary has exited and runtime execution is idle.
+
+Runtime batching does not buffer writes, make reads stale, schedule or flush
+effects, own asynchronous timing, or know scheduler modes. Those decisions are
+host policy implemented through `sinkInvalidatedDispatcher` and
+`reactiveSettledDispatcher` hooks.
+
+The host may enter and leave the boundary, but it must not inspect settlement
+registers. `leaveReactiveBatch()` is the complete exit operation. When a public
+batch also opens a scheduler batch, the ordering contract is:
+
+```txt
+enter reactive boundary
+enter scheduler batch
+run user callback
+leave scheduler batch and apply scheduler policy
+leave reactive boundary and possibly emit settled
+```
+
+Closing scheduler policy first ensures the settled hook never observes the
+scheduler in its batching phase.
 Multiple contexts can reference the same nodes.
 
 ---
@@ -567,7 +595,7 @@ These invariants define the semantic contract:
    Once disposed, a node never participates in graph operations.
 
 6. **Hook wiring remains stable across calls unless explicitly replaced.**
-   Host hooks change only through `setHooks()` / `setRuntimeHooks()`.
+   Host hooks change only through `configureRuntimeContext()`.
 
 ---
 

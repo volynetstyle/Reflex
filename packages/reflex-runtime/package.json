@@ -1,20 +1,17 @@
 {
   "name": "@volynets/reflex-runtime",
-  "version": "0.2.0",
+  "version": "0.1.1",
   "type": "module",
-  "description": "Runtime / Universe / Laws for Reflex",
+  "description": "Low-level reactive runtime for deterministic dependency tracking and push/pull propagation.",
   "license": "MIT",
+  "author": "Andrii Volynets",
+  "sideEffects": false,
   "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/index.js",
-  "types": "./dist/globals.d.ts",
-  "sideEffects": false,
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "source": {
-        "types": "./src/index.ts",
-        "default": "./src/index.ts"
-      },
-      "types": "./dist/globals.d.ts",
+      "types": "./dist/index.d.ts",
       "import": {
         "development": "./dist/dev/index.js",
         "default": "./dist/esm/index.js"
@@ -22,18 +19,10 @@
       "require": "./dist/cjs/index.cjs"
     },
     "./debug": {
-      "source": {
-        "types": "./src/debug/index.ts",
-        "default": "./src/debug/index.ts"
-      },
       "types": "./dist/esm/debug/index.d.ts",
       "import": "./dist/dev/debug.js"
     },
     "./internal": {
-      "source": {
-        "types": "./src/internal/index.ts",
-        "default": "./src/internal/index.ts"
-      },
       "types": "./dist/esm/internal/index.d.ts",
       "import": {
         "development": "./dist/dev/internal.js",
@@ -46,19 +35,17 @@
     "dist/cjs",
     "dist/dev",
     "dist/esm",
-    "dist/globals.d.ts"
+    "dist/index.d.ts",
+    "README.md",
+    "LICENSE"
   ],
   "publishConfig": {
-    "access": "restricted"
-  },
-  "devDependencies": {
-    "@solidjs/signals": "^0.13.4",
-    "alien-signals": "^2.0.0"
+    "access": "public"
   },
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "dev": "vite",
-    "build:ts": "tsc -p tsconfig.build.json && node ../../scripts/write-globals-dts.mjs .",
+    "build:ts": "tsc -p tsconfig.build.json && node scripts/rewrite-build-aliases.mjs && node ../../scripts/write-index-dts.mjs .",
     "build:npm": "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc",
     "build:perf": "rollup --silent -c rollup.perf.config.ts --configPlugin @rollup/plugin-swc",
     "build": "pnpm clean && pnpm build:ts && pnpm build:npm",
@@ -73,6 +60,7 @@
     "bench": "pnpm build && vitest bench test/signal_beta.bench.ts",
     "bench:runtime": "vitest bench test/perf/runtime-taxonomy.bench.ts",
     "bench:runtime:json": "vitest bench test/perf/runtime-taxonomy.bench.ts --outputJson ../../bench-results/runtime/latest.raw.json",
+    "bench:push-pull": "vitest bench --config vite.dev.config.ts test/perf/push-pull-components.bench.ts",
     "bench:taxonomy": "pnpm bench:runtime",
     "bench:flame": "0x -- node dist/tests/ownership.run.js",
     "test:watch": "vitest",

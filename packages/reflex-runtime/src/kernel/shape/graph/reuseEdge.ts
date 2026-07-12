@@ -1,5 +1,7 @@
-import type { ReactiveEdge } from "../edge";
-import type ReactiveNode from "../node";
+import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
+import type ReactiveNode from "@runtime/kernel/shape/node";
+import { profileRuntimeCounter } from "@runtime/profiling";
+
 import {
   moveIncomingEdgeAfterUnchecked,
   moveLastIncomingEdgeAfterEdgeUnchecked,
@@ -8,6 +10,90 @@ import {
   moveNonHeadIncomingEdgeToFrontUnchecked,
 } from "./edgeList";
 import { linkEdge } from "./linkEdge";
+import { unlinkDetachedIncomingEdgeSequence } from "./sweepEdges";
+
+const EAGER_STALE_SUFFIX_CLEANUP_MIN = 32;
+
+function moveIncomingEdgeToPosition(
+  consumer: ReactiveNode,
+  edge: ReactiveEdge,
+  insertAfterEdge: ReactiveEdge | null,
+): void {
+  if (edge.prevIn === insertAfterEdge) return;
+
+  if (insertAfterEdge === null) {
+    if (edge.nextIn === null) {
+      moveLastIncomingEdgeToFrontUnchecked(consumer, edge);
+    } else {
+      moveNonHeadIncomingEdgeToFrontUnchecked(consumer, edge);
+    }
+  } else if (edge.prevIn === null) {
+    moveIncomingEdgeAfterUnchecked(consumer, edge, insertAfterEdge);
+  } else if (edge.nextIn === null) {
+    moveLastIncomingEdgeAfterEdgeUnchecked(consumer, edge, insertAfterEdge);
+  } else {
+    moveMiddleIncomingEdgeAfterEdgeUnchecked(consumer, edge, insertAfterEdge);
+  }
+}
+
+function findOutgoingEdgeToConsumer(
+  producer: ReactiveNode,
+  consumer: ReactiveNode,
+): ReactiveEdge | null {
+  for (let edge = producer.firstOut; edge !== null; edge = edge.nextOut) {
+    if (edge.to === consumer) return edge;
+  }
+
+  return null;
+}
+
+function tryResolveByFirstOutgoingEdge(
+  producer: ReactiveNode,
+  consumer: ReactiveNode,
+  insertAfterEdge: ReactiveEdge | null,
+  producerVersion: number,
+): ReactiveEdge | null {
+  const edge = producer.firstOut;
+
+  if (edge === null) {
+    profileRuntimeCounter("trackingOutgoingProbeMiss");
+    return null;
+  }
+
+  if (edge.to !== consumer) {
+    profileRuntimeCounter("trackingOutgoingProbeMiss");
+    return null;
+  }
+
+  if (edge.version === producerVersion) {
+    return null;
+  }
+
+  if (edge.prevIn !== insertAfterEdge) {
+    moveIncomingEdgeToPosition(consumer, edge, insertAfterEdge);
+  }
+
+  edge.version = producerVersion;
+  profileRuntimeCounter("trackingOutgoingProbeHit1");
+  return edge;
+}
+
+function detachIncomingSuffix(
+  consumer: ReactiveNode,
+  insertAfterEdge: ReactiveEdge | null,
+  suffixStartEdge: ReactiveEdge,
+): void {
+  if (insertAfterEdge === null) {
+    consumer.firstIn = null;
+    consumer.lastIn = null;
+  } else {
+    insertAfterEdge.nextIn = null;
+    consumer.lastIn = insertAfterEdge;
+  }
+
+  suffixStartEdge.prevIn = null;
+  unlinkDetachedIncomingEdgeSequence(suffixStartEdge);
+}
 
 /**
  * Resolve a producer -> consumer incoming edge relative to a known insertion
@@ -23,6 +109,10 @@ import { linkEdge } from "./linkEdge";
  *
  * R0: suffix head hit
  *     The expected suffix edge already points from the producer.
+ *
+ * R0.5: first outgoing edge hit
+ *     Before scanning the consumer suffix, check the producer's first outgoing
+ *     edge as the cheapest existing graph lookup.
  *
  * R1: suffix scan and reuse
  *     Search the remaining suffix for an existing producer edge and move it
@@ -44,9 +134,27 @@ export function reuseIncomingEdgeFromSuffixOrLink(
    * The first candidate in the suffix already matches the producer.
    * No list mutation is needed.
    */
-  if (suffixStartEdge?.from === producer) {
+  if (suffixStartEdge !== null && suffixStartEdge.from === producer) {
     suffixStartEdge.version = producerVersion;
     return suffixStartEdge;
+  }
+
+  /**
+   * R0.5: First outgoing edge hit.
+   *
+   * This is not an index and does not scan the producer's outgoing list.
+   * It only reuses the first outgoing edge when it already points to this
+   * consumer, which covers the fanout-1 pathological reorder cases cheaply.
+   */
+  if (producerVersion !== 0) {
+    const outgoingEdge = tryResolveByFirstOutgoingEdge(
+      producer,
+      consumer,
+      insertAfterEdge,
+      producerVersion,
+    );
+
+    if (outgoingEdge !== null) return outgoingEdge;
   }
 
   /**
@@ -55,12 +163,41 @@ export function reuseIncomingEdgeFromSuffixOrLink(
    * Start after the suffix head if it exists, otherwise scan from the
    * beginning of the incoming list.
    */
+  let scannedSuffixEdges = suffixStartEdge === null ? 0 : 1;
+
   for (
-    let candidateEdge = suffixStartEdge?.nextIn ?? consumer.firstIn;
-    candidateEdge;
+    let candidateEdge =
+      suffixStartEdge === null ? consumer.firstIn : suffixStartEdge.nextIn;
+    candidateEdge !== null;
     candidateEdge = candidateEdge.nextIn
   ) {
-    if (candidateEdge.from !== producer) continue;
+    scannedSuffixEdges += 1;
+
+    if (candidateEdge.from !== producer) {
+      if (
+        suffixStartEdge !== null &&
+        producerVersion !== 0 &&
+        scannedSuffixEdges === EAGER_STALE_SUFFIX_CLEANUP_MIN
+      ) {
+        const producerEdge = findOutgoingEdgeToConsumer(producer, consumer);
+
+        if (producerEdge === null) {
+          detachIncomingSuffix(consumer, insertAfterEdge, suffixStartEdge);
+          return linkEdge(producer, consumer, insertAfterEdge, producerVersion);
+        }
+
+        if (producerEdge.version !== producerVersion) {
+          if (producerEdge.prevIn !== insertAfterEdge) {
+            moveIncomingEdgeToPosition(consumer, producerEdge, insertAfterEdge);
+          }
+
+          producerEdge.version = producerVersion;
+          return producerEdge;
+        }
+      }
+
+      continue;
+    }
 
     /**
      * Reuse the existing edge.
@@ -69,31 +206,7 @@ export function reuseIncomingEdgeFromSuffixOrLink(
      * move it into the current tracked order.
      */
     if (candidateEdge.prevIn !== insertAfterEdge) {
-      if (insertAfterEdge === null) {
-        if (candidateEdge.nextIn === null) {
-          moveLastIncomingEdgeToFrontUnchecked(consumer, candidateEdge);
-        } else {
-          moveNonHeadIncomingEdgeToFrontUnchecked(consumer, candidateEdge);
-        }
-      } else if (candidateEdge.prevIn === null) {
-        moveIncomingEdgeAfterUnchecked(
-          consumer,
-          candidateEdge,
-          insertAfterEdge,
-        );
-      } else if (candidateEdge.nextIn === null) {
-        moveLastIncomingEdgeAfterEdgeUnchecked(
-          consumer,
-          candidateEdge,
-          insertAfterEdge,
-        );
-      } else {
-        moveMiddleIncomingEdgeAfterEdgeUnchecked(
-          consumer,
-          candidateEdge,
-          insertAfterEdge,
-        );
-      }
+      moveIncomingEdgeToPosition(consumer, candidateEdge, insertAfterEdge);
     }
 
     candidateEdge.version = producerVersion;
@@ -104,8 +217,18 @@ export function reuseIncomingEdgeFromSuffixOrLink(
    * R2: Suffix miss.
    *
    * The producer was not found in the reusable suffix, so this read introduces
-   * a new dependency edge.
+   * a new dependency edge. Once a full suffix scan misses, the previous suffix
+   * cannot contribute to the current tracked order anymore. Detach it eagerly
+   * so branch-swap/churn patterns pay one stale-suffix scan instead of one scan
+   * per newly introduced dependency.
    */
+  if (
+    suffixStartEdge !== null &&
+    scannedSuffixEdges >= EAGER_STALE_SUFFIX_CLEANUP_MIN
+  ) {
+    detachIncomingSuffix(consumer, insertAfterEdge, suffixStartEdge);
+  }
+
   return linkEdge(producer, consumer, insertAfterEdge, producerVersion);
 }
 

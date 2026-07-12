@@ -4,7 +4,7 @@ import {
   readProducer,
   untracked,
   writeProducer,
-} from "@volynets/reflex-runtime";
+} from "@volynets/reflex-runtime/internal";
 import { createComputedNode, createResourceStateNode } from "../infra/factory";
 import { batch } from "../infra/runtime";
 
@@ -95,9 +95,7 @@ class OptimisticCore<T> {
   set = (input: SetInput<T>): T => {
     const prev = this.peekVisible();
     const next =
-      typeof input === "function"
-        ? (input as (prev: T) => T)(prev)
-        : input;
+      typeof input === "function" ? (input as (prev: T) => T)(prev) : input;
 
     if (this.disposed) {
       return next;

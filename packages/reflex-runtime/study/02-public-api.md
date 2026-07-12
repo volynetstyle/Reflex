@@ -77,7 +77,7 @@ writeProducer(source, 10);
 2. при no-op write нічого не робить
 3. оновлює `payload`
 4. очищає dirty bits producer-а
-5. якщо є підписники, запускає `propagateChanged(firstOut)`
+5. якщо є підписники, запускає `propagate(firstOut)`
 
 Головна властивість:
 

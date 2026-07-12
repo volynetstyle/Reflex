@@ -37,7 +37,7 @@ export function createTerserPlugin(target: BuildTarget): Plugin | null {
       sequences: true,
       side_effects: true,
       switches: true,
-      toplevel: isModule,
+      toplevel: true,
       typeofs: false,
       unused: true,
 
@@ -64,7 +64,7 @@ export function createTerserPlugin(target: BuildTarget): Plugin | null {
     },
     mangle: {
       module: isModule,
-      toplevel: isModule,
+      toplevel: true,
       keep_classnames: true,
       // Hot release build: private helper function .name is not preserved,
       // because keeping every name blocks Terser from collapsing helper IIFEs.

@@ -21,6 +21,10 @@ const createPerfDomain = (input: string, file: string) => ({
       preventAssignment: true,
       values: {
         __DEV__: "false",
+        __PROFILE__: "true",
+        __TRACKING_ONE_HOP__: "true",
+        __TRACKING_TWO_HOP__: "true",
+        __TRACKING_LAST_EDGE__: "true",
       },
     }),
   ],
@@ -28,6 +32,5 @@ const createPerfDomain = (input: string, file: string) => ({
 
 export default [
   createPerfDomain("build/esm/index.js", "dist/perf.js"),
-  createPerfDomain("test/perf/walkers/walkers.jit.mjs", "dist/walkers.jit.js"),
   createPerfDomain("perf-tree/run.mjs", "dist/perf-tree.js"),
 ];

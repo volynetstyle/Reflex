@@ -4,8 +4,8 @@ import {
   DIRTY_STATE,
   Computing,
   disposeWatcher,
-  getCurrentConsumer,
-  getPropagationScopeDepth,
+  currentConsumer,
+  propagationScopeDepth,
   readConsumer,
   readProducer,
   runWatcher,
@@ -74,7 +74,7 @@ describe("Reactive runtime - resilience and recovery", () => {
     writeProducer(outerSource, 2);
 
     expect(invalidations).toEqual(["sibling", "nested", "inner"]);
-    expect(getPropagationScopeDepth()).toBe(0);
+    expect(propagationScopeDepth).toBe(0);
   });
 
   it("restores runtime bookkeeping when watcher computation throws", () => {
@@ -86,7 +86,7 @@ describe("Reactive runtime - resilience and recovery", () => {
     });
 
     expect(() => runWatcher(watcher)).toThrow(error);
-    expect(getCurrentConsumer()).toBeNull();
+    expect(currentConsumer).toBeNull();
     expect(watcher.state & Computing).toBe(0);
     expect(watcher.state & Computing).toBe(0);
   });

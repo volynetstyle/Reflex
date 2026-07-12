@@ -1,43 +1,73 @@
 import { describe, expect, it, vi } from "vitest";
-import { createRuntime, signal } from "@volynets/reflex";
+import { createRuntimeHarness, createTestProducer } from "./runtime";
 import {
   createScope,
+  createComponentRenderable,
   disposeScope,
-  useComponentDidMount,
-  useComponentDidUnmount,
+  useMount,
+ useUnmount,
   useComputed,
   useEffect,
   useEffectOnce,
-  useEffectRender,
   useMemo,
   useSignal,
-  runWithComponentHooks,
+  runWithComponentExecution,
+  runComponentRenderable,
   runInOwnershipScope,
   getHookOwner,
-  RenderEffectPhase,
 } from "../src";
 
 describe("framework hooks", () => {
+  it("owns component execution and consumes its result inside the component node", () => {
+    createRuntimeHarness();
+    const owner = getHookOwner();
+    const root = createScope();
+    const log: string[] = [];
+    let componentNode = root;
+
+    const renderable = createComponentRenderable(
+      () => {
+        componentNode = owner.currentNode!;
+        useEffect(() => () => log.push("cleanup"));
+        return "view";
+      },
+      {},
+    );
+
+    const result = runInOwnershipScope(owner, root, () =>
+      runComponentRenderable(renderable, { owner }, (value) => {
+        expect(owner.currentNode).toBe(componentNode);
+        return value;
+      }),
+    );
+
+    expect(result).toBe("view");
+    expect(componentNode.parent).toBe(root);
+
+    disposeScope(root);
+    expect(log).toEqual(["cleanup"]);
+  });
+
   it("exposes signal state through useSignal and reacts through useEffect", () => {
-    const rt = createRuntime();
-    const [count, setCount] = useSignal(1);
+    const runtime = createRuntimeHarness();
+    const [count, setCount] = runtime.run(() => useSignal(1));
     const values: number[] = [];
 
-    const dispose = useEffect(() => {
-      values.push(count());
-    });
+    const dispose = runtime.run(() =>
+      useEffect(() => {
+        values.push(count());
+      }),
+    );
 
     expect(values).toEqual([1]);
 
-    setCount(2);
-    rt.flush();
+    runtime.run(() => setCount(2));
 
     expect(values).toEqual([1, 2]);
 
     dispose();
 
-    setCount(3);
-    rt.flush();
+    runtime.run(() => setCount(3));
 
     expect(values).toEqual([1, 2]);
   });
@@ -52,76 +82,17 @@ describe("framework hooks", () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
-  it("schedules useEffectRender through the current host scheduler", () => {
-    const rt = createRuntime();
-    const owner = getHookOwner();
-    const root = createScope();
-    const tasks: Array<() => void> = [];
-    const phases: unknown[] = [];
-    const values: string[] = [];
-
-    runInOwnershipScope(owner, root, () => {
-      runWithComponentHooks(
-        {
-          owner,
-          scope: root,
-          renderEffectScheduler: {
-            schedule(task, phase) {
-              tasks.push(task);
-              phases.push(phase);
-              return () => {};
-            },
-          },
-        },
-        () => {
-          useEffectRender(() => {
-            values.push("render");
-          });
-        },
-      );
-    });
-
-    expect(values).toEqual([]);
-    expect(tasks).toHaveLength(1);
-    expect(phases).toEqual([RenderEffectPhase.Render]);
-
-    tasks[0]!();
-    rt.flush();
-
-    expect(values).toEqual(["render"]);
-
-    disposeScope(root);
-  });
-
-  it("uses a no-op render scheduler when a host does not provide one", () => {
-    const owner = getHookOwner();
-    const root = createScope();
-    const values: string[] = [];
-
-    runInOwnershipScope(owner, root, () => {
-      runWithComponentHooks({ owner, scope: root }, () => {
-        useEffectRender(() => {
-          values.push("render");
-        });
-      });
-    });
-
-    expect(values).toEqual([]);
-
-    disposeScope(root);
-  });
-
   it("supports mount and unmount lifecycle helpers inside ownership scopes", () => {
     const owner = getHookOwner();
     const root = createScope();
     const log: string[] = [];
 
     runInOwnershipScope(owner, root, () => {
-      useComponentDidMount(() => {
+      useMount(() => {
         log.push("mount");
       });
 
-      useComponentDidUnmount(() => {
+     useUnmount(() => {
         log.push("unmount");
       });
     });
@@ -136,12 +107,12 @@ describe("framework hooks", () => {
   it("keeps disposed computed hooks from recalculating", () => {
     const owner = getHookOwner();
     const root = createScope();
-    const [source, setSource] = signal(1);
+    const [source, setSource] = createTestProducer(1);
     const compute = vi.fn(() => source() * 2);
     let doubled: Computed<number>;
 
     runInOwnershipScope(owner, root, () => {
-      runWithComponentHooks({ owner, scope: root }, () => {
+      runWithComponentExecution({ owner, node: root }, () => {
         doubled = useComputed(compute);
       });
     });
@@ -159,12 +130,12 @@ describe("framework hooks", () => {
   it("keeps disposed memo hooks on their last materialized value", () => {
     const owner = getHookOwner();
     const root = createScope();
-    const [source, setSource] = signal(1);
+    const [source, setSource] = createTestProducer(1);
     const compute = vi.fn(() => source() * 3);
     let tripled: Memo<number>;
 
     runInOwnershipScope(owner, root, () => {
-      runWithComponentHooks({ owner, scope: root }, () => {
+      runWithComponentExecution({ owner, node: root }, () => {
         tripled = useMemo(compute);
       });
     });
@@ -180,17 +151,17 @@ describe("framework hooks", () => {
   });
 
   it("does not track useMemo warm-up in the active consumer", () => {
-    const rt = createRuntime();
+    const runtime = createRuntimeHarness();
     const owner = getHookOwner();
     const root = createScope();
-    const [source, setSource] = signal(1);
+    const [source, setSource] = createTestProducer(1);
     const effectSpy = vi.fn();
 
     runInOwnershipScope(owner, root, () => {
       useEffect(() => {
         effectSpy();
 
-        runWithComponentHooks({ owner, scope: root }, () => {
+        runWithComponentExecution({ owner, node: root }, () => {
           useMemo(() => source() * 2);
         });
       });
@@ -199,7 +170,7 @@ describe("framework hooks", () => {
     expect(effectSpy).toHaveBeenCalledTimes(1);
 
     setSource(2);
-    rt.flush();
+    runtime.flush();
 
     expect(effectSpy).toHaveBeenCalledTimes(1);
 

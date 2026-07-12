@@ -1,6 +1,6 @@
 {
   "name": "@volynets/reflex-framework",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "description": "Platform-agnostic JSX runtime and renderable model for Reflex",
   "license": "MIT",
@@ -45,11 +45,14 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "pnpm exec vitest run --config vite.config.ts",
+    "bench": "pnpm exec vitest bench --config vite.config.ts",
+    "bench:ownership": "pnpm exec vitest bench bench/ownership.bench.ts --config vite.config.ts",
+    "bench:ui": "pnpm exec vitest bench bench/ui-scenarios.bench.ts --config vite.config.ts",
     "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
     "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build"
   },
   "dependencies": {
-    "@volynets/reflex": "^0.3.5"
+    "@volynets/reflex-runtime": "^0.1.2"
   },
   "keywords": [
     "jsx",

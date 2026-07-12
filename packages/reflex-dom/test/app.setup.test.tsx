@@ -1,12 +1,13 @@
 /** @jsxImportSource ../src */
 
 import { describe, expect, it } from "vitest";
-import { signal } from "@volynets/reflex";
+import { signal } from "./reactivity";
 import { createApp, render, setupDOM } from "../src";
 
 describe("plug-and-play DOM setup", () => {
   it("creates an isolated app renderer", () => {
     const app = createApp();
+    app.use();
     const container = document.createElement("div");
     const [count, setCount] = signal(1);
 
@@ -22,6 +23,7 @@ describe("plug-and-play DOM setup", () => {
   it("keeps reactive updates bound to their app renderer", () => {
     const firstApp = createApp();
     const secondApp = createApp();
+    firstApp.use();
     const firstContainer = document.createElement("div");
     const secondContainer = document.createElement("div");
     const [showFirst, setShowFirst] = signal(false);

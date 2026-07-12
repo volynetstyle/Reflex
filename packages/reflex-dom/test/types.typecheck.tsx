@@ -2,7 +2,6 @@
 
 import { For, Portal, Show } from "../src";
 import { createContext, hasOwnContext, provideContext, useContext } from "../src";
-// @ts-expect-error reflex-dom should not re-export framework hooks
 import { useSignal } from "../src";
 
 void createContext;

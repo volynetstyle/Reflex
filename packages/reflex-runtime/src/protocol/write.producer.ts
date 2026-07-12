@@ -1,19 +1,19 @@
-import type { ReactiveNode } from "../kernel";
 import {
   defaultContext,
   enterPropagationScope,
   leavePropagationScope,
   emitSettledIfIdle,
-  propagateOnceChanged,
-  propagateInvalid,
-} from "../kernel";
-import { devRecordWriteProducer } from "../kernel/dev";
+  propagationScopeDepth,
+  type ProducerNode,
+} from "@runtime/kernel";
+import { devRecordWriteProducer } from "@runtime/kernel/dev";
+import { push_iterator } from "@runtime/kernel/stages/first/push_iterator";
+import { profileRuntimeCounter } from "@runtime/profiling";
+
 import {
-  getPropagateStackBase,
-  restorePropagateStackBase,
-} from "../kernel/walkers/propagationStack";
-import type { ProducerComparator } from "./utils/compare";
-import { compare as defaultComparator } from "./utils/compare";
+  compare as defaultComparator,
+  type ProducerComparator,
+} from "./utils/compare";
 
 /**
  * Write a new value to a producer (source) node.
@@ -64,15 +64,19 @@ const value = readConsumer(doubled)  // Now returns 10
  * @cost O(n) where n = number of subscribers reachable from this node
  */
 export function writeProducer<T>(
-  node: ReactiveNode<T>,
+  node: ProducerNode<T>,
   value: T,
   compare: ProducerComparator<T> = defaultComparator,
 ): void {
+  profileRuntimeCounter("writeCalls");
+
   const prev = node.payload;
 
   // Check if the value actually changed using stable comparison
   // This prevents false invalidation when setting to the same value
   if (compare(prev, value)) {
+    profileRuntimeCounter("writeSameValue");
+
     if (__DEV__) {
       devRecordWriteProducer(
         node,
@@ -90,6 +94,8 @@ export function writeProducer<T>(
   // Update the payload to the new value
   node.payload = value;
 
+  profileRuntimeCounter("writeChanged");
+
   if (__DEV__) {
     devRecordWriteProducer(node, true, value, prev, undefined, defaultContext);
   }
@@ -97,24 +103,23 @@ export function writeProducer<T>(
   const firstOut = node.firstOut;
 
   if (firstOut === null) {
-    emitSettledIfIdle();
+    profileRuntimeCounter("writeNoSubscribers");
+
+    if (propagationScopeDepth === 0) emitSettledIfIdle();
+    return;
+  }
+
+  if (propagationScopeDepth !== 0) {
+    profileRuntimeCounter("writeNestedPropagation");
+
+    push_iterator(firstOut);
     return;
   }
 
   enterPropagationScope();
-  const base = getPropagateStackBase();
-
-  try {
-    // Push phase: notify all subscribers depth-first, mark them dirty.
-    // Direct subscribers are promoted from Invalid to Changed.
-    // This tells them "definitely changed, don't verify, recompute"
-    const pendingInvalid = propagateOnceChanged(firstOut, base);
-
-    if (pendingInvalid !== null) {
-      propagateInvalid(pendingInvalid, getPropagateStackBase(), base);
-    }
-  } finally {
-    restorePropagateStackBase(base);
-    leavePropagationScope();
-  }
+  // Push phase: notify all subscribers depth-first, mark them dirty.
+  // Direct subscribers are promoted from Invalid to Changed.
+  // This tells them "definitely changed, don't verify, recompute"
+  push_iterator(firstOut);
+  leavePropagationScope();
 }

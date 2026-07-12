@@ -1,16 +1,13 @@
-import type ReactiveNode from "../node";
-import { clearGraphReductionState } from "../../reduction";
+import type ReactiveNode from "@runtime/kernel/shape/node";
+
 import { unlinkAllSources, unlinkAllSubscribers } from "./sweepEdges";
 
 export function disposeNode(node: ReactiveNode): void {
-  clearGraphReductionState(node);
-  node.tailIn = null;
   unlinkAllSources(node);
   unlinkAllSubscribers(node);
-  node.compute = null;
+
+  node.compute = undefined;
   node.payload = undefined;
 }
 
-export function disposeNodeEvent(node: ReactiveNode): void {
-  disposeNode(node);
-}
+export const disposeNodeEvent = disposeNode;

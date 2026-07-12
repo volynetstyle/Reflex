@@ -1,29 +1,35 @@
+// Operators
 export { For, Portal, Show, Switch } from "./operators";
 
+// Hooks and context
 export {
-  useComponentDidMount,
-  useComponentDidUnmount,
+  useRef,
+  // state
+  useSignal,
+  useComputed,
+  useMemo,
+
+  // side-effects
+  useEffect,
+  useEffectOnce,
+  // Lifecycle
+  useOwned,
+  useMount,
+  useUnmount,
+  // Contextual/Cross-component state
   useContext,
   createContext,
   provideContext,
   hasOwnContext,
-  useEffect,
-  useEffectOnce,
-  useEffectRender,
-  useRef,
   type UseEffectFn,
 } from "@volynets/reflex-framework";
+export { useEffectRender } from "./hooks/use-effect-render";
 
+// JSX runtime
 export { Fragment, jsx, jsxDEV, jsxs } from "./runtime/jsx";
 
-export { createDOMRenderer, type DOMRenderer } from "./runtime/renderer";
-
-export {
-  createApp,
-  setupDOM,
-  type ReflexDOMApp,
-} from "./runtime/app";
-
+// DOM runtime
+export { createApp, setupDOM } from "./runtime/app";
 export {
   createDOMRuntime,
   hydrate,
@@ -32,7 +38,14 @@ export {
   resume,
   useDOMRenderer,
 } from "./runtime/singleton";
+export { createDOMRenderer, type DOMRenderer } from "./runtime/renderer";
+export {
+  RenderEffectPhase,
+  type DOMRenderEffectScheduler,
+  type RenderEffectScheduler,
+} from "./runtime/render-effect-scheduler";
 
+// Server
 export { renderToString } from "./server";
 
 export type { DOMRuntimeOptions } from "./runtime/options";

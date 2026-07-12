@@ -5,7 +5,7 @@ import {
   createEffectScheduler,
   EffectSchedulerMode,
   resolveEffectSchedulerMode,
-} from "../src/policy/scheduler";
+} from "@volynets/reflex-scheduler";
 import { createEventDispatcher } from "../src/policy/event_dispatcher";
 import { Changed } from "@volynets/reflex-runtime";
 import type { EventSubscriber } from "../src/infra/event";

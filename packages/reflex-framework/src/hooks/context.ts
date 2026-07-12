@@ -3,86 +3,81 @@ import {
   runWithOwner,
   type OwnerContext,
   type OwnerHookState,
-  type Scope,
 } from "../ownership/ownership.scope";
+import type { OwnershipNode } from "../ownership/ownership.node";
 import { getHookOwner } from "./owner";
 
-export interface RenderEffectScheduler {
-  schedule(task: () => void, phase?: RenderEffectPhase): () => void;
-}
-
-export const RenderEffectPhase = Object.freeze({
-  BeforeRender: "before-render",
-  Render: "render",
-  AfterRender: "after-render",
-} as const);
-
-export type RenderEffectPhase =
-  (typeof RenderEffectPhase)[keyof typeof RenderEffectPhase];
-
-export const noopRenderEffectScheduler: RenderEffectScheduler = Object.freeze({
-  schedule() {
-    return () => {};
-  },
-});
-
-interface ComponentHookContext {
-  hookIndex: number;
+interface ComponentExecutionContext {
   owner: OwnerContext;
-  scope: Scope | null;
-  renderEffectScheduler: RenderEffectScheduler | null;
+  node: OwnershipNode | null;
 }
 
-interface ComponentHookOptions {
+interface ComponentExecutionOptions {
   owner?: OwnerContext;
-  scope?: Scope | null;
-  renderEffectScheduler?: RenderEffectScheduler | null;
+  node?: OwnershipNode | null;
 }
 
 function getCurrentHookState(): OwnerHookState {
   return (getActiveOwnerContext() ?? getHookOwner()).hookState;
 }
 
-function getCurrentHookContext(): ComponentHookContext | null {
-  return getCurrentHookState().currentHookContext as ComponentHookContext | null;
+function getCurrentComponentContext(): ComponentExecutionContext | null {
+  return getCurrentHookState()
+    .currentComponentContext as ComponentExecutionContext | null;
 }
 
-export function runWithComponentHooks<T>(fn: () => T): T;
-export function runWithComponentHooks<T>(
-  options: ComponentHookOptions,
+function resolveComponentOwner(
+  options: ComponentExecutionOptions | undefined,
+): OwnerContext {
+  return options?.owner ?? getActiveOwnerContext() ?? getHookOwner();
+}
+
+function resolveComponentNode(
+  options: ComponentExecutionOptions | undefined,
+  owner: OwnerContext,
+): OwnershipNode | null {
+  return options && "node" in options ? options.node ?? null : owner.currentNode;
+}
+
+export function runWithComponentExecution<T>(fn: () => T): T;
+
+export function runWithComponentExecution<T>(
+  options: ComponentExecutionOptions,
   fn: () => T,
 ): T;
-export function runWithComponentHooks<T>(
-  optionsOrFn: ComponentHookOptions | (() => T),
+
+export function runWithComponentExecution<T>(
+  optionsOrFn: ComponentExecutionOptions | (() => T),
   maybeFn?: () => T,
 ): T {
-  const fn = typeof optionsOrFn === "function" ? optionsOrFn : maybeFn;
+  const hasOptions = typeof optionsOrFn !== "function";
+  const options = hasOptions ? optionsOrFn : undefined;
+  const fn = hasOptions ? maybeFn : optionsOrFn;
 
   if (fn === undefined) {
-    throw new TypeError("runWithComponentHooks requires a callback");
+    throw new TypeError("runWithComponentExecution requires a callback");
   }
 
-  const options = typeof optionsOrFn === "function" ? undefined : optionsOrFn;
-  const owner = options?.owner ?? getActiveOwnerContext() ?? getHookOwner();
-  const scope = options?.scope ?? owner.currentOwner;
+  const owner = resolveComponentOwner(options);
+  const node = resolveComponentNode(options, owner);
   const hookState = owner.hookState;
-  const previousHookContext = hookState.currentHookContext;
 
-  return runWithOwner(owner, scope, () => {
-    hookState.currentHookContext = {
-      hookIndex: 0,
+  const previousComponentContext = hookState.currentComponentContext;
+  const previousExecutionDepth = hookState.componentExecutionDepth;
+
+  return runWithOwner(owner, node, () => {
+    hookState.currentComponentContext = {
       owner,
-      scope,
-      renderEffectScheduler:
-        options?.renderEffectScheduler ?? noopRenderEffectScheduler,
+      node,
     };
-    hookState.componentHookDepth++;
+
+    hookState.componentExecutionDepth = previousExecutionDepth + 1;
 
     try {
       return fn();
     } finally {
-      hookState.componentHookDepth--;
-      hookState.currentHookContext = previousHookContext;
+      hookState.componentExecutionDepth = previousExecutionDepth;
+      hookState.currentComponentContext = previousComponentContext;
     }
   });
 }
@@ -93,44 +88,37 @@ export function assertHookUsage(hookName: string): void {
   const hookState = getCurrentHookState();
 
   if (
-    hookState.componentHookDepth > 0 ||
+    hookState.componentExecutionDepth > 0 ||
     hookState.warnedHooks.has(hookName)
   ) {
     return;
   }
 
   hookState.warnedHooks.add(hookName);
+
   console.warn(
-    `${hookName}() should only be used while rendering a Reflex component.`,
+    `${hookName}() should only be used while executing a Reflex component.`,
   );
 }
 
 export function getCurrentHookOwner(): OwnerContext {
   return (
-    getCurrentHookContext()?.owner ?? getActiveOwnerContext() ?? getHookOwner()
+    getCurrentComponentContext()?.owner ??
+    getActiveOwnerContext() ??
+    getHookOwner()
   );
 }
 
-export function getCurrentHookScope(): Scope | null {
-  const owner = getCurrentHookOwner();
-  return getCurrentHookContext()?.scope ?? owner.currentOwner;
+export function getCurrentHookNode(): OwnershipNode | null {
+  const context = getCurrentComponentContext();
+
+  if (context !== null) {
+    return context.node;
+  }
+
+  return getCurrentHookOwner().currentNode;
 }
 
-export function isInsideComponentHooks(): boolean {
-  return getCurrentHookState().componentHookDepth > 0;
-}
-
-export function getCurrentRenderEffectScheduler(): RenderEffectScheduler {
-  return (
-    getCurrentHookContext()?.renderEffectScheduler ?? noopRenderEffectScheduler
-  );
-}
-
-export function consumeHookSlot(): number {
-  assertHookUsage("hook");
-
-  const currentHookContext = getCurrentHookContext();
-  if (currentHookContext === null) return 0;
-
-  return currentHookContext.hookIndex++;
+export function isInsideComponentExecution(): boolean {
+  return getCurrentHookState().componentExecutionDepth > 0;
 }

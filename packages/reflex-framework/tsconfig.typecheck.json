@@ -3,15 +3,23 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@volynets/reflex": [
-        "../reflex/src/index.ts",
-        "../reflex/dist/globals.d.ts"
-      ]
+      "@volynets/reflex-runtime": [
+        "../reflex-runtime/src/index.ts"
+      ],
+      "@volynets/reflex-runtime/internal": [
+        "../reflex-runtime/src/internal/index.ts"
+      ],
+      "@runtime/*": ["../reflex-runtime/src/*"]
     },
     "composite": false,
     "declaration": false,
     "declarationMap": false,
     "jsx": "react-jsx"
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "test/**/*.ts",
+    "../reflex-runtime/src/globals.d.ts"
+  ]
 }

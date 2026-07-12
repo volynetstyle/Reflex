@@ -1,0 +1,57 @@
+{
+  "capturedAt": "2026-06-16",
+  "command": "pnpm.cmd --filter @volynets/reflex exec vitest bench bench/dependency-churn.bench.ts",
+  "source": "packages/reflex/bench/dependency-churn.bench.ts",
+  "change": {
+    "name": "adaptive indexed tracking for far slow-path hits",
+    "summary": "Consumers build a local producer->incoming-edge index after repeated far slow-path hits. Suffix detach clears the index and applies a cooldown so append-heavy branch/churn shapes do not repeatedly rebuild it.",
+    "thresholds": {
+      "farHitThreshold": 64,
+      "detachCooldown": -1024
+    }
+  },
+  "profileHighlights": [
+    {
+      "scenario": "prefix_suffix_chaotic_1024",
+      "indexedModeEnabled": 1,
+      "indexedHit": 206068,
+      "indexedHitPctOfReads": 39.27
+    },
+    {
+      "scenario": "oscillate_rotate_swap_1024",
+      "indexedModeEnabled": 1,
+      "indexedHit": 252924,
+      "indexedHitPctOfReads": 48.19
+    },
+    {
+      "scenario": "oscillate_rotate_branch_1024",
+      "indexedModeEnabled": 0,
+      "indexedHit": 0,
+      "reason": "Detach cooldown prevents repeated index rebuilds for append-heavy branch topology."
+    }
+  ],
+  "timingMeansMs": {
+    "static_1024": 0.5898,
+    "rotate_1024": 6.8833,
+    "alt_ab_1024": 6.2043,
+    "swap_small_1024": 6.1497,
+    "prefix_suffix_chaotic_1024": 20.8914,
+    "mixed_1024": 11.9758,
+    "branch_half_1024": 7.0739,
+    "stable_then_drop_1024": 5.6646,
+    "oscillate_rotate_branch_1024": 28.4629,
+    "oscillate_rotate_swap_1024": 22.1167,
+    "branch_swap_1024": 9.4824,
+    "mixed_churn_1024": 12.0598
+  },
+  "validation": [
+    "pnpm.cmd --filter @volynets/reflex build:all",
+    "pnpm.cmd --filter @volynets/reflex-runtime test",
+    "pnpm.cmd --filter @volynets/reflex test"
+  ],
+  "verdict": {
+    "adaptiveIndexedConsumerMode": "promising",
+    "defaultFullIndex": "still reject",
+    "nextStep": "Repeat benchmark runs and compare variance-adjusted timing before promoting thresholds. Add explicit regression tests for cleanup/dispose/index invalidation if this experiment graduates."
+  }
+}

@@ -1,21 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { ReactiveNode, restoreContext, saveContext, setRuntimeContextOptions } from "../../runtime.test_utils";
+import {
+  ReactiveNode,
+  getActiveRuntimeContext,
+  restoreRuntimeContextSnapshot,
+  snapshotRuntimeContext,
+  configureRuntimeContext,
+} from "../../runtime.test_utils";
 import type { ReactiveNodeState } from "../../../src/kernel";
 import {
   Consumer,
   Producer,
-  ReactiveEdge,
   linkEdge,
-  moveIncomingEdgeAfter,
+  moveIncomingEdgeAfterUnchecked,
   moveLastIncomingEdgeAfterEdgeUnchecked,
   moveLastIncomingEdgeToFrontUnchecked,
   moveMiddleIncomingEdgeAfterEdgeUnchecked,
   moveNonHeadIncomingEdgeToFrontUnchecked,
   reuseIncomingEdgeFromSuffixOrCreate,
-  setTrackingEpoch,
+  keepNewestTrackingEpoch,
   trackRead,
   unlinkEdge,
 } from "../../../src/kernel";
+import type { ReactiveEdge } from "../../../src/kernel";
 import {
   expectGraphIntegrity,
   expectIncomingEdges,
@@ -25,6 +31,21 @@ import {
 
 function createNode(kind: ReactiveNodeState = Producer) {
   return new ReactiveNode(undefined, null, kind);
+}
+
+function createIncomingList() {
+  const a = createNode(Producer);
+  const b = createNode(Producer);
+  const c = createNode(Producer);
+  const d = createNode(Producer);
+  const target = createNode(Consumer);
+
+  const ab = linkEdge(a, target);
+  const bb = linkEdge(b, target);
+  const cb = linkEdge(c, target);
+  const db = linkEdge(d, target);
+
+  return { a, b, c, d, target, ab, bb, cb, db };
 }
 
 /** Covers low-level intrusive edge-list wiring and reuse invariants. */
@@ -52,7 +73,6 @@ describe("Reactive runtime - edge wiring", () => {
 
     const edge = linkEdge(source, target);
 
-    expect(edge).toBeInstanceOf(ReactiveEdge);
     expect(edge.from).toBe(source);
     expect(edge.to).toBe(target);
     expectOutgoingEdges(source, [edge]);
@@ -150,24 +170,6 @@ describe("Reactive runtime - edge wiring", () => {
     expectGraphIntegrity([a, b, c, target]);
   });
 
-  it("keeps no-op incoming edge moves structurally inert", () => {
-    const a = createNode(Producer);
-    const b = createNode(Producer);
-    const c = createNode(Producer);
-    const target = createNode(Consumer);
-
-    const ab = linkEdge(a, target);
-    const bb = linkEdge(b, target);
-    const cb = linkEdge(c, target);
-
-    moveIncomingEdgeAfter(target, bb, bb);
-    moveIncomingEdgeAfter(target, bb, ab);
-    moveIncomingEdgeAfter(target, ab, null);
-
-    expectIncomingEdges(target, [ab, bb, cb]);
-    expectGraphIntegrity([a, b, c, target]);
-  });
-
   it("moves middle and tail incoming edges through unchecked fast paths", () => {
     const a = createNode(Producer);
     const b = createNode(Producer);
@@ -194,6 +196,73 @@ describe("Reactive runtime - edge wiring", () => {
     expectGraphIntegrity([a, b, c, d, target]);
   });
 
+  it.each([
+    {
+      name: "A B C D, move C after A -> A C B D",
+      move({ target, ab, cb }: ReturnType<typeof createIncomingList>) {
+        moveMiddleIncomingEdgeAfterEdgeUnchecked(target, cb, ab);
+      },
+      expected({ ab, bb, cb, db }: ReturnType<typeof createIncomingList>) {
+        return [ab, cb, bb, db];
+      },
+    },
+    {
+      name: "A B C D, move D after A -> A D B C",
+      move({ target, ab, db }: ReturnType<typeof createIncomingList>) {
+        moveLastIncomingEdgeAfterEdgeUnchecked(target, db, ab);
+      },
+      expected({ ab, bb, cb, db }: ReturnType<typeof createIncomingList>) {
+        return [ab, db, bb, cb];
+      },
+    },
+    {
+      name: "A B C D, move D front -> D A B C",
+      move({ target, db }: ReturnType<typeof createIncomingList>) {
+        moveLastIncomingEdgeToFrontUnchecked(target, db);
+      },
+      expected({ ab, bb, cb, db }: ReturnType<typeof createIncomingList>) {
+        return [db, ab, bb, cb];
+      },
+    },
+    {
+      name: "A B C D, move B front -> B A C D",
+      move({ target, bb }: ReturnType<typeof createIncomingList>) {
+        moveNonHeadIncomingEdgeToFrontUnchecked(target, bb);
+      },
+      expected({ ab, bb, cb, db }: ReturnType<typeof createIncomingList>) {
+        return [bb, ab, cb, db];
+      },
+    },
+    {
+      name: "A B C D, move C after D -> A B D C",
+      move({ target, cb, db }: ReturnType<typeof createIncomingList>) {
+        moveMiddleIncomingEdgeAfterEdgeUnchecked(target, cb, db);
+      },
+      expected({ ab, bb, cb, db }: ReturnType<typeof createIncomingList>) {
+        return [ab, bb, db, cb];
+      },
+    },
+  ])("$name", ({ move, expected }) => {
+    const graph = createIncomingList();
+
+    move(graph);
+
+    expectIncomingEdges(graph.target, expected(graph));
+    expectGraphIntegrity([graph.a, graph.b, graph.c, graph.d, graph.target]);
+  });
+
+  it("keeps incoming edge moves inert for no-op caller shapes", () => {
+    const graph = createIncomingList();
+
+    moveIncomingEdgeAfterUnchecked(graph.target, graph.bb, graph.ab);
+    expectIncomingEdges(graph.target, [graph.ab, graph.bb, graph.cb, graph.db]);
+
+    moveIncomingEdgeAfterUnchecked(graph.target, graph.cb, graph.cb);
+    expectIncomingEdges(graph.target, [graph.ab, graph.bb, graph.cb, graph.db]);
+
+    expectGraphIntegrity([graph.a, graph.b, graph.c, graph.d, graph.target]);
+  });
+
   it("handles tiny suffix edge reuse before the execution-context fallback seam", () => {
     const a = createNode(Producer);
     const b = createNode(Producer);
@@ -209,8 +278,8 @@ describe("Reactive runtime - edge wiring", () => {
     const ab = linkEdge(a, target);
     const bb = linkEdge(b, target);
     const cb = linkEdge(c, target);
-    const snapshot = saveContext();
-    setRuntimeContextOptions({
+    const snapshot = snapshotRuntimeContext();
+    configureRuntimeContext({
       readTrackingStrategy(source, consumer, prev, nextExpected) {
         calls.push({ source, consumer, prev, nextExpected });
         return reuseIncomingEdgeFromSuffixOrCreate(
@@ -230,7 +299,7 @@ describe("Reactive runtime - edge wiring", () => {
     expecttailIn(target, cb);
     expectIncomingEdges(target, [ab, cb, bb]);
     expectGraphIntegrity([a, b, c, target]);
-    restoreContext(snapshot);
+    restoreRuntimeContextSnapshot(getActiveRuntimeContext(), snapshot);
   });
 
   it("routes full fallback edge reuse through the execution-context seam", () => {
@@ -254,8 +323,8 @@ describe("Reactive runtime - edge wiring", () => {
     const db = linkEdge(d, target);
     const eb = linkEdge(e, target);
     const fb = linkEdge(f, target);
-    const snapshot = saveContext();
-    setRuntimeContextOptions({
+    const snapshot = snapshotRuntimeContext();
+    configureRuntimeContext({
       readTrackingStrategy(source, consumer, prev, nextExpected) {
         calls.push({ source, consumer, prev, nextExpected });
         return reuseIncomingEdgeFromSuffixOrCreate(
@@ -280,7 +349,7 @@ describe("Reactive runtime - edge wiring", () => {
     expecttailIn(target, eb);
     expectIncomingEdges(target, [ab, eb, bb, cb, db, fb]);
     expectGraphIntegrity([a, b, c, d, e, f, target]);
-    restoreContext(snapshot);
+    restoreRuntimeContextSnapshot(getActiveRuntimeContext(), snapshot);
   });
 
   it("reuses the incoming tail before the execution-context fallback seam", () => {
@@ -294,13 +363,13 @@ describe("Reactive runtime - edge wiring", () => {
       prev: ReactiveEdge | null;
       nextExpected: ReactiveEdge | null;
     }> = [];
-    const snapshot = saveContext();
+    const snapshot = snapshotRuntimeContext();
 
     const ab = linkEdge(a, target);
     const bb = linkEdge(b, target);
     const cb = linkEdge(c, target);
 
-    setRuntimeContextOptions({
+    configureRuntimeContext({
       readTrackingStrategy(source, consumer, prev, nextExpected) {
         calls.push({ source, consumer, prev, nextExpected });
         return reuseIncomingEdgeFromSuffixOrCreate(
@@ -319,7 +388,90 @@ describe("Reactive runtime - edge wiring", () => {
     expecttailIn(target, cb);
     expectIncomingEdges(target, [ab, cb, bb]);
     expectGraphIntegrity([a, b, c, target]);
-    restoreContext(snapshot);
+    restoreRuntimeContextSnapshot(getActiveRuntimeContext(), snapshot);
+  });
+
+  it("keeps small stale suffixes reusable after a suffix miss", () => {
+    const target = createNode(Consumer);
+    const staleSources = Array.from({ length: 31 }, () => createNode(Producer));
+    const fresh = createNode(Producer);
+
+    for (const source of staleSources) {
+      linkEdge(source, target, target.lastIn);
+    }
+
+    const firstStaleEdge = target.firstIn;
+    const freshEdge = reuseIncomingEdgeFromSuffixOrCreate(
+      fresh,
+      target,
+      null,
+      firstStaleEdge,
+      1,
+    );
+
+    expectIncomingEdges(target, [
+      freshEdge,
+      ...staleSources.map((source) => source.firstOut),
+    ]);
+    for (const source of staleSources) {
+      expectOutgoingEdges(source, [source.firstOut]);
+    }
+    expectGraphIntegrity([target, fresh, ...staleSources]);
+  });
+
+  it("eagerly detaches large stale suffixes after a suffix miss", () => {
+    const target = createNode(Consumer);
+    const staleSources = Array.from({ length: 32 }, () => createNode(Producer));
+    const fresh = createNode(Producer);
+
+    for (const source of staleSources) {
+      linkEdge(source, target, target.lastIn);
+    }
+
+    const firstStaleEdge = target.firstIn;
+    const freshEdge = reuseIncomingEdgeFromSuffixOrCreate(
+      fresh,
+      target,
+      null,
+      firstStaleEdge,
+      1,
+    );
+
+    expectIncomingEdges(target, [freshEdge]);
+    for (const source of staleSources) {
+      expectOutgoingEdges(source, []);
+    }
+    expectGraphIntegrity([target, fresh, ...staleSources]);
+  });
+
+  it("eagerly detaches only the stale suffix after a retained prefix", () => {
+    const target = createNode(Consumer);
+    const retained = createNode(Producer);
+    const staleSources = Array.from({ length: 32 }, () => createNode(Producer));
+    const fresh = createNode(Producer);
+    const retainedEdge = linkEdge(retained, target);
+
+    for (const source of staleSources) {
+      linkEdge(source, target, target.lastIn);
+    }
+
+    const firstStaleEdge = retainedEdge.nextIn;
+    target.tailIn = retainedEdge;
+
+    const freshEdge = reuseIncomingEdgeFromSuffixOrCreate(
+      fresh,
+      target,
+      retainedEdge,
+      firstStaleEdge,
+      1,
+    );
+
+    expectIncomingEdges(target, [retainedEdge, freshEdge]);
+    expectOutgoingEdges(retained, [retainedEdge]);
+    for (const source of staleSources) {
+      expectOutgoingEdges(source, []);
+    }
+    expectGraphIntegrity([target, retained, fresh, ...staleSources]);
   });
 
   it("keeps prefix duplicate tracking reads structurally inert", () => {
@@ -332,9 +484,9 @@ describe("Reactive runtime - edge wiring", () => {
       prev: ReactiveEdge | null;
       nextExpected: ReactiveEdge | null;
     }> = [];
-    const snapshot = saveContext();
+    const snapshot = snapshotRuntimeContext();
 
-    setRuntimeContextOptions({
+    configureRuntimeContext({
       readTrackingStrategy(source, consumer, prev, nextExpected) {
         calls.push({ source, consumer, prev, nextExpected });
         return reuseIncomingEdgeFromSuffixOrCreate(
@@ -350,7 +502,7 @@ describe("Reactive runtime - edge wiring", () => {
     const bb = linkEdge(b, target, ab, 1);
 
     target.tailIn = ab;
-    setTrackingEpoch(2);
+    keepNewestTrackingEpoch(2);
 
     trackRead(b, target);
     trackRead(a, target);
@@ -363,28 +515,25 @@ describe("Reactive runtime - edge wiring", () => {
     expectOutgoingEdges(b, [bb]);
     expectGraphIntegrity([a, b, target]);
 
-    restoreContext(snapshot);
+    restoreRuntimeContextSnapshot(getActiveRuntimeContext(), snapshot);
   });
 
   it("does not roll back tracking stamps when restoring context", () => {
     const a = createNode(Producer);
     const target = createNode(Consumer);
-    const snapshot = saveContext();
+    const snapshot = snapshotRuntimeContext();
 
-    setTrackingEpoch(1);
-    const staleSnapshot = saveContext();
+    keepNewestTrackingEpoch(1);
+    const staleSnapshot = snapshotRuntimeContext();
     const edge = linkEdge(a, target, null, 1);
-    setTrackingEpoch(2);
-    restoreContext(staleSnapshot);
+    keepNewestTrackingEpoch(2);
+    restoreRuntimeContextSnapshot(getActiveRuntimeContext(), staleSnapshot);
     target.tailIn = null;
 
     trackRead(a, target);
 
     expecttailIn(target, edge);
     expectIncomingEdges(target, [edge]);
-    restoreContext(snapshot);
+    restoreRuntimeContextSnapshot(getActiveRuntimeContext(), snapshot);
   });
 });
-
-
-

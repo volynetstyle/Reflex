@@ -8,22 +8,17 @@ import {
   disposeNode,
   disposeWatcher,
   getActiveRuntimeContext,
-  nextTrackingEpoch,
-  resetRuntimeContextOptions,
-  restoreContext,
-  restoreRuntimeContext,
+  advanceTrackingEpoch,
+  resetRuntimeContext,
+  restoreRuntimeContextSnapshot,
   readConsumer,
   readProducer,
-  saveContext,
-  saveRuntimeContext,
+  snapshotRuntimeContext,
   runWatcher,
   setCurrentConsumer,
-  setHostHooks,
-  setInternalHooks,
-  setRuntimeContextOptions,
+  configureRuntimeContext,
   writeProducer,
 } from "../../runtime.test_utils";
-import { connect, disconnect } from "../../../src/kernel/shape/graph";
 import {
   createConsumer,
   createWatcher,
@@ -35,27 +30,27 @@ import {
   expectNotTracking,
   expectSources,
   expectSubscriber,
+  linkEdge,
   resetRuntime,
+  unlinkEdge,
 } from "../../runtime.test_utils";
 
-/** Covers disposal, connect/disconnect, and state-bit lifecycle characterization. */
+/** Covers disposal, explicit edge lifecycle, and state-bit characterization. */
 describe("Reactive runtime - lifecycle and state characterization", () => {
   beforeEach(() => {
     resetRuntime();
   });
 
-  it("connect is idempotent and disconnect removes the edge from future push invalidation", () => {
+  it("unlinkEdge removes a linked edge from future push invalidation", () => {
     const source = createProducer(1);
     const target = createConsumer(() => 0);
 
-    const first = connect(source, target);
-    const second = connect(source, target);
+    const edge = linkEdge(source, target);
 
-    expect(second).toBe(first);
     expectSources(target, [source]);
     expectSubscriber(source, target);
 
-    disconnect(source, target);
+    unlinkEdge(edge);
 
     expectSources(target, []);
     expectNoSubscriber(source, target);
@@ -198,24 +193,18 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
   it("configures hooks on the active runtime context", () => {
     const onSinkInvalidated = vi.fn();
     const onSettled = vi.fn();
-    const onCleanup = vi.fn();
-    const onInternalSinkInvalidated = vi.fn();
-    const onInternalSettled = vi.fn();
 
-    setHostHooks({
-      effectCleanupRegistrar: onCleanup,
-      reactiveSettledDispatcher: onSettled,
-      sinkInvalidatedDispatcher: onSinkInvalidated,
+    configureRuntimeContext({
+      hooks: {
+        reactiveSettledDispatcher: onSettled,
+        sinkInvalidatedDispatcher: onSinkInvalidated,
+      },
     });
-    setInternalHooks(onInternalSinkInvalidated, onInternalSettled);
 
     const context = getActiveRuntimeContext();
 
-    expect(context.hostEffectCleanupHook).toBe(onCleanup);
-    expect(context.hostReactiveSettledHook).toBe(onSettled);
-    expect(context.hostSinkInvalidatedHook).toBe(onSinkInvalidated);
-    expect(context.internalReactiveSettledHook).toBe(onInternalSettled);
-    expect(context.internalSinkInvalidatedHook).toBe(onInternalSinkInvalidated);
+    expect(context.reactiveSettledHook).toBe(onSettled);
+    expect(context.sinkInvalidatedHook).toBe(onSinkInvalidated);
   });
 
   it("configures hooks and options on an explicit runtime context", () => {
@@ -224,45 +213,32 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     const onSettled = vi.fn();
     const readTrackingStrategy = vi.fn();
 
-    setHostHooks(context, {
-      reactiveSettledDispatcher: onSettled,
-      sinkInvalidatedDispatcher: onSinkInvalidated,
-    });
-    setInternalHooks(context, onSinkInvalidated, onSettled);
-    setRuntimeContextOptions(context, {
-      graphReductionPolicy: {
-        enabled: true,
-        stableThreshold: 3,
+    configureRuntimeContext(context, {
+      hooks: {
+        reactiveSettledDispatcher: onSettled,
+        sinkInvalidatedDispatcher: onSinkInvalidated,
       },
+    });
+    configureRuntimeContext(context, {
       readTrackingStrategy,
     });
 
-    expect(context.hostSinkInvalidatedHook).toBe(onSinkInvalidated);
-    expect(context.hostReactiveSettledHook).toBe(onSettled);
-    expect(context.internalSinkInvalidatedHook).toBe(onSinkInvalidated);
-    expect(context.internalReactiveSettledHook).toBe(onSettled);
+    expect(context.sinkInvalidatedHook).toBe(onSinkInvalidated);
+    expect(context.reactiveSettledHook).toBe(onSettled);
     expect(context.readTrackingStrategy).toBe(readTrackingStrategy);
-    expect(context.graphReductionPolicy.enabled).toBe(true);
-    expect(context.graphReductionPolicy.stableThreshold).toBe(3);
   });
 
   it("resets runtime context options to defaults", () => {
     const context = createRuntimeContext();
     const readTrackingStrategy = vi.fn();
 
-    setRuntimeContextOptions(context, {
-      graphReductionPolicy: {
-        enabled: true,
-        stableThreshold: 7,
-      },
+    configureRuntimeContext(context, {
       readTrackingStrategy,
     });
 
-    resetRuntimeContextOptions(context);
+    resetRuntimeContext(context);
 
     expect(context.readTrackingStrategy).not.toBe(readTrackingStrategy);
-    expect(context.graphReductionPolicy.enabled).toBe(false);
-    expect(context.graphReductionPolicy.stableThreshold).not.toBe(7);
   });
 
   it("saves and restores runtime context snapshots without rolling epoch back", () => {
@@ -273,13 +249,13 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     context.trackingEpoch = 2;
     context.propagationScopeDepth = 1;
 
-    const snapshot = saveRuntimeContext(context);
+    const snapshot = snapshotRuntimeContext(context);
 
     context.currentConsumer = null;
     context.trackingEpoch = 5;
     context.propagationScopeDepth = 3;
 
-    restoreRuntimeContext(context, snapshot);
+    restoreRuntimeContextSnapshot(context, snapshot);
 
     expect(context.currentConsumer).toBe(consumer);
     expect(context.trackingEpoch).toBe(5);
@@ -288,17 +264,14 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
 
   it("saves and restores the active runtime context snapshot", () => {
     const context = getActiveRuntimeContext();
-    const snapshot = saveContext();
-    const epoch = nextTrackingEpoch();
+    const snapshot = snapshotRuntimeContext();
+    const epoch = advanceTrackingEpoch();
 
     setCurrentConsumer(createConsumer(() => 0));
 
-    restoreContext(snapshot);
+    restoreRuntimeContextSnapshot(context, snapshot);
 
     expect(context.currentConsumer).toBe(null);
     expect(context.trackingEpoch).toBe(epoch);
   });
 });
-
-
-

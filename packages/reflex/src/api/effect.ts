@@ -1,15 +1,14 @@
 import {
+  createWatcher,
   disposeWatcher,
   runWatcher,
   untracked,
-  watcher,
-} from "@volynets/reflex-runtime";
+} from "@volynets/reflex-runtime/internal";
+import type { WatcherFn } from "@volynets/reflex-runtime/internal";
 import {
-  getEffectCleanupHook,
   Scheduled,
   type ReactiveNode,
 } from "@volynets/reflex-runtime/internal";
-import { createWatcherNode, createWatcherRankedrNode } from "../infra/factory";
 import {
   devassertEffectFn,
   devassertReactionFn,
@@ -18,10 +17,6 @@ import {
   devassertSelectorReturn,
   wrapEffectFn,
 } from "./effect.dev";
-
-function registerEffectCleanup(dispose: Destructor): void {
-  getEffectCleanupHook()?.(dispose);
-}
 
 /**
  * Marks an effect watcher node as scheduled.
@@ -89,17 +84,14 @@ export function effectUnscheduled(
  * @see computed
  * @see memo
  */
-export function effect(fn: EffectFn): Destructor {
+export function effect(fn: WatcherFn): Destructor {
   devassertEffectFn(fn, "effect");
 
-  const node = createWatcherNode(wrapEffectFn(fn, "effect"));
-  const run = watcher.run;
-  const dispose = watcher.dispose;
+  const compute = __DEV__ ? wrapEffectFn(fn, "effect") : fn;
+  const node = createWatcher(compute);
+  runWatcher(node);
 
-  run(node);
-
-  const disposer: Destructor = dispose.bind(null, node);
-  registerEffectCleanup(disposer);
+  const disposer: Destructor = disposeWatcher.bind(null, node);
   return disposer;
 }
 
@@ -184,25 +176,4 @@ export function watch<T>(read: () => T): Watch<T> {
       return subscribeReaction(read, fn, "watch");
     },
   };
-}
-
-/**
- * @deprecated
- */
-export function effectRanked(
-  fn: EffectFn,
-  options: EffectOptions = {},
-): Destructor {
-  devassertEffectFn(fn, "effectRanked");
-
-  const node = createWatcherRankedrNode(
-    wrapEffectFn(fn, "effectRanked"),
-    options.priority ?? 0,
-  );
-
-  runWatcher(node);
-
-  const dispose = disposeWatcher.bind(null, node) as Destructor;
-  registerEffectCleanup(dispose);
-  return dispose;
 }

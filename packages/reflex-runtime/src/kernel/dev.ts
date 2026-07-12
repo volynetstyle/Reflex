@@ -1,5 +1,10 @@
-import { recordDebugEvent, collectDebugNodeRefs } from "../debug/debug.runtime";
-import { currentConsumer, type RuntimeDebugContext } from "./context";
+import {
+  recordDebugEvent,
+  collectDebugNodeRefs,
+} from "@runtime/debug/debug.runtime";
+
+import type { RuntimeDebugContext } from "./config";
+import { currentConsumer } from "./state";
 import { Computing, type ReactiveEdge } from "./shape";
 import type ReactiveNode from "./shape/node";
 
@@ -196,7 +201,9 @@ export function devAssertExecutableNode(node: ReactiveNode): void {
   if (!__DEV__) return;
 
   if (!node.compute) {
-    throw new Error("Cannot execute a reactive node without a compute function");
+    throw new Error(
+      "Cannot execute a reactive node without a compute function",
+    );
   }
 
   if ((node.state & Computing) !== 0) {

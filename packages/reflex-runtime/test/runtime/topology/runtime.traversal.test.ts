@@ -11,7 +11,6 @@ import {
   Consumer,
   Invalid,
   Visited,
-  shouldRecompute,
   Computing,
 } from "../../../src/kernel";
 import { linkEdge } from "../../../src/kernel/shape/graph";
@@ -396,8 +395,9 @@ describe("Reactive runtime - traversal invariants", () => {
     expectIncomingEdges(dep, []);
 
     dep.state |= Invalid;
+    root.state |= Invalid;
 
-    expect(shouldRecompute(root, root.state)).toBe(false);
+    expect(readConsumer(root)).toBe(2);
     expect(depSpy).toHaveBeenCalledTimes(2);
     expect(dep.state & Invalid).toBeFalsy();
   });
