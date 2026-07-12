@@ -86,19 +86,6 @@ export function resolveTrackedRead(
 
   if (cursorEdge !== null) {
     /**
-     * L0: Cursor hit.
-     *
-     * The current read resolves to the same dependency as the current cursor.
-     * This is the cheapest possible case.
-     */
-    if (cursorEdge.from === producer) {
-      cursorEdge.version = producerVersion;
-      profileRuntimeCounter("trackingCursorHit");
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
-      return true;
-    }
-
-    /**
      * L1: Sequential next-edge hit.
      *
      * The new read order matches the previous dependency order.
@@ -117,6 +104,20 @@ export function resolveTrackedRead(
         if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
         return true;
       }
+    }
+
+    /**
+     * L0: Cursor hit.
+     *
+     * Consecutive duplicate reads resolve to the current cursor. Sequential
+     * reads are checked first because they dominate stable dependency traces
+     * and otherwise pay an always-false cursor producer comparison.
+     */
+    if (cursorEdge.from === producer) {
+      cursorEdge.version = producerVersion;
+      profileRuntimeCounter("trackingCursorHit");
+      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+      return true;
     }
 
     /**
