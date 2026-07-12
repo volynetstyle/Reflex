@@ -35,9 +35,9 @@ export function leaveReactiveBatch(): void {
   flushPendingReactiveSettledIfIdle();
 }
 
-function flushPendingReactiveSettledIfIdle(): void {
-  if (isReactiveBatchActive()) return;
+export function flushPendingReactiveSettledIfIdle(): void {
   if (!pendingReactiveSettled) return;
+  if (isReactiveBatchActive()) return;
   if (!isRuntimeExecutionIdle()) return;
 
   clearReactiveSettledPending();

@@ -1,4 +1,5 @@
 import { defaultContext, emitSinkInvalidated } from "@runtime/kernel/config";
+import { abortPropagationScope } from "@runtime/kernel/context.scope";
 import { devRecordPropagate } from "@runtime/kernel/dev";
 import {
   enterRuntimePhase,
@@ -29,6 +30,15 @@ const propagateDepthStack: number[] | undefined = __PROFILE__
   ? new Array(512).fill(0)
   : undefined;
 let propagateStackHigh = 0;
+
+function resetPropagateStackAfterAbort(
+  stack: ReactiveEdge[],
+  base: number,
+  top: number,
+): void {
+  while (top !== base) stack[--top] = null!;
+  propagateStackHigh = base;
+}
 
 /**
  * Rare re-entrant tracking path. Keeping the backwards edge scan out of the
@@ -164,7 +174,13 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
       }
 
       propagateStackHigh = top;
-      emitSinkInvalidated(sub);
+      try {
+        emitSinkInvalidated(sub);
+      } catch (error) {
+        resetPropagateStackAfterAbort(stack, base, top);
+        abortPropagationScope();
+        throw error;
+      }
       continue;
     }
 
@@ -216,7 +232,13 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
           }
 
           propagateStackHigh = top;
-          emitSinkInvalidated(sub);
+          try {
+            emitSinkInvalidated(sub);
+          } catch (error) {
+            resetPropagateStackAfterAbort(stack, base, top);
+            abortPropagationScope();
+            throw error;
+          }
         } else {
           const child = sub.firstOut;
 

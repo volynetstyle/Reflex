@@ -41,7 +41,9 @@ export let readTrackingStrategy: ReadTrackingStrategy =
 // #region Runtime hooks
 
 export interface RuntimeHooks {
+  /** Enqueue-only invalidation notification; reactive execution is forbidden. */
   sinkInvalidatedDispatcher?(node: ReactiveNode): void;
+  /** Idle host boundary; synchronous scheduler drain is permitted. */
   reactiveSettledDispatcher?(): void;
 }
 

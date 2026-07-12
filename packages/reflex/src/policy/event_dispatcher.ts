@@ -5,8 +5,8 @@ import {
   createRingQueue,
   pushRingQueue,
   shiftRingQueue,
-} from "./scheduler/scheduler.queue";
-import type { RingQueue } from "./scheduler";
+} from "@volynets/reflex-scheduler";
+import type { RingQueue } from "@volynets/reflex-scheduler";
 
 type EventDispatchRecord = {
   source: EventSource<unknown>;

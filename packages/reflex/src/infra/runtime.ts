@@ -31,7 +31,6 @@ import {
 } from "@volynets/reflex-scheduler";
 import { tryEnqueue } from "@volynets/reflex-scheduler";
 import {
-  enqueueEffectByPolicy,
   notifyEffectSchedulerSettled,
   resolveEffectSchedulerMode,
 } from "@volynets/reflex-scheduler";
@@ -137,14 +136,11 @@ export function createRuntime({
   const dispatcher = createEventDispatcher(runtimeBatch);
   const externalSinkInvalidated = hooks?.sinkInvalidatedDispatcher;
   const externalReactiveSettled = hooks?.reactiveSettledDispatcher;
-  const enqueueEffect =
-    schedulerMode === EffectSchedulerMode.Eager
-      ? (node: ReactiveNode): void => {
-          enqueueEffectByPolicy(schedulerCore, schedulerMode, node);
-        }
-      : (node: ReactiveNode): void => {
-          tryEnqueue(schedulerCore.queue, node);
-        };
+  // Runtime invalidation hooks are enqueue-only. Eager delivery is owned by
+  // the subsequent reactive-settled boundary, never by the propagation hook.
+  const enqueueEffect = (node: ReactiveNode): void => {
+    tryEnqueue(schedulerCore.queue, node);
+  };
   const sinkInvalidatedDispatcher =
     externalSinkInvalidated === undefined
       ? enqueueEffect

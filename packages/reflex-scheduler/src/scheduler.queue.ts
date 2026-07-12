@@ -37,9 +37,10 @@ export function shiftRingQueue<T>(queue: RingQueue<T>): T | null {
   }
 
   const index = head & queue.mask;
-  const node = queue.ring[index]!;
+  const ring = queue.ring;
+  const node = ring[index]!;
 
-  queue.ring[index] = undefined;
+  ring[index] = undefined;
   queue.head = head + 1;
 
   return node;
@@ -52,12 +53,11 @@ function growRingQueue<T>(queue: RingQueue<T>): void {
   const head = queue.head;
   const tail = queue.tail;
   const size = tail - head;
-
   const nextCapacity = oldCapacity << 1;
   const next = new Array<T | undefined>(nextCapacity).fill(undefined);
 
-  for (let i = 0; i < size; ++i) {
-    next[i] = ring[(head + i) & oldMask];
+  for (let index = 0; index < size; ++index) {
+    next[index] = ring[(head + index) & oldMask];
   }
 
   queue.ring = next;

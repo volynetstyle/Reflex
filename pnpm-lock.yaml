@@ -87,6 +87,9 @@ importers:
       '@volynets/reflex-runtime':
         specifier: workspace:*
         version: link:../reflex-runtime
+      '@volynets/reflex-scheduler':
+        specifier: workspace:*
+        version: link:../reflex-scheduler
       '@volynets/reflex-store':
         specifier: workspace:*
         version: link:../reflex-store
@@ -139,7 +142,11 @@ importers:
         specifier: ^4.2.4
         version: 4.3.0
 
-  packages/reflex-dom: {}
+  packages/reflex-dom:
+    dependencies:
+      '@volynets/reflex-scheduler':
+        specifier: workspace:*
+        version: link:../reflex-scheduler
 
   packages/reflex-framework:
     dependencies:
@@ -148,6 +155,12 @@ importers:
         version: 0.1.2
 
   packages/reflex-runtime: {}
+
+  packages/reflex-scheduler:
+    dependencies:
+      '@volynets/reflex-runtime':
+        specifier: workspace:*
+        version: link:../reflex-runtime
 
   packages/reflex-store:
     dependencies:

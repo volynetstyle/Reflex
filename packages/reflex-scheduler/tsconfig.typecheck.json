@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "paths": {
+      "@runtime/*": ["../reflex-runtime/src/*"],
+      "@volynets/reflex-runtime": ["../reflex-runtime/src/index.ts"],
+      "@volynets/reflex-runtime/internal": [
+        "../reflex-runtime/src/internal/index.ts"
+      ]
+    }
+  },
+  "include": ["src", "../reflex-runtime/src/globals.d.ts"]
+}

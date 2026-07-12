@@ -8,10 +8,14 @@ import type { EffectScheduler } from "../scheduler.types";
 import { noopNotifySettled } from "../scheduler.types";
 import { profileSchedulerPolicyCounter } from "../scheduler.counters";
 
+const SCHEDULER_PROFILE_ENABLED =
+  typeof __PROFILE__ !== "undefined" && __PROFILE__;
+
 export function createFlushScheduler(): EffectScheduler {
   const core = createSchedulerCore();
+  const queue = core.queue;
   const enqueue = (node: ReactiveNode): void => {
-    tryEnqueue(core.queue, node);
+    tryEnqueue(queue, node);
   };
   const batch = <T>(fn: () => T): T => {
     if (++core.batchDepth === 1 && core.phase !== Flushing) {
@@ -21,7 +25,7 @@ export function createFlushScheduler(): EffectScheduler {
     try {
       return fn();
     } finally {
-      profileSchedulerPolicyCounter("batchExit");
+      if (SCHEDULER_PROFILE_ENABLED) profileSchedulerPolicyCounter("batchExit");
 
       if (--core.batchDepth === 0 && core.phase !== Flushing) {
         core.phase = Idle;

@@ -1,14 +1,26 @@
-import { runWatcher } from "@volynets/reflex-runtime/internal";
+import {
+  flushPendingReactiveSettledIfIdle,
+  pendingReactiveSettled,
+  runWatcherWithoutSettledCheckpoint,
+} from "@volynets/reflex-runtime/internal";
 import { profileSchedulerPolicyCounter } from "./scheduler.counters";
 import { UNSCHEDULE_MASK } from "./scheduler.constants";
 import type { WatcherQueue } from "./scheduler.types";
 
-export function cleanupQueuedNodesAfterAbort(queue: WatcherQueue): void {
+const SCHEDULER_PROFILE_ENABLED =
+  typeof __PROFILE__ !== "undefined" && __PROFILE__;
+
+export function cleanupQueuedNodesAfterAbort(
+  queue: WatcherQueue,
+  preserveCursor = false,
+): void {
   const ring = queue.ring;
   const mask = queue.mask;
-  let head = queue.head;
+  const cursor = queue.head;
+  let head = cursor;
+  const tail = queue.tail;
 
-  while (head !== queue.tail) {
+  while (head !== tail) {
     const index = head & mask;
     const node = ring[index]!;
 
@@ -17,8 +29,8 @@ export function cleanupQueuedNodesAfterAbort(queue: WatcherQueue): void {
     ++head;
   }
 
-  queue.head = 0;
-  queue.tail = 0;
+  queue.head = preserveCursor ? cursor : 0;
+  queue.tail = preserveCursor ? cursor : 0;
 }
 
 export function flushQueuedWatchers(
@@ -28,8 +40,8 @@ export function flushQueuedWatchers(
 ): unknown {
   let head = queue.head;
   let tail = queue.tail;
-  const ring = queue.ring;
-  const mask = queue.mask;
+  let ring = queue.ring;
+  let mask = queue.mask;
 
   while (head !== tail) {
     const index = head & mask;
@@ -42,15 +54,12 @@ export function flushQueuedWatchers(
     // Clear before running so a watcher may enqueue itself again.
     node.state &= UNSCHEDULE_MASK;
 
-    if (typeof node.compute !== "function") {
-      tail = queue.tail;
-      continue;
-    }
+    if (node.compute === undefined) continue;
 
-    profileSchedulerPolicyCounter("effectsRun");
+    if (SCHEDULER_PROFILE_ENABLED) profileSchedulerPolicyCounter("effectsRun");
 
     try {
-      runWatcher(node);
+      runWatcherWithoutSettledCheckpoint(node);
     } catch (error) {
       if (thrown === noThrow) {
         thrown = error;
@@ -58,9 +67,28 @@ export function flushQueuedWatchers(
     }
 
     tail = queue.tail;
+
+    // Enqueue may grow the ring while a watcher is running. Growth preserves
+    // logical cursors, so only the backing storage and mask need reloading.
+    if (ring !== queue.ring) {
+      ring = queue.ring;
+      mask = queue.mask;
+    }
   }
 
-  queue.tail = head;
+  // Keep cursors in the Smi range for long-lived schedulers. A successful
+  // drain has cleared every live slot, so normalizing is safe and also keeps
+  // subsequent enqueue indices near zero.
+  queue.head = 0;
+  queue.tail = 0;
+
+  if (pendingReactiveSettled) {
+    try {
+      flushPendingReactiveSettledIfIdle();
+    } catch (error) {
+      if (thrown === noThrow) thrown = error;
+    }
+  }
 
   return thrown;
 }

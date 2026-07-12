@@ -1,5 +1,10 @@
 import { defaultContext } from "@runtime/kernel/config";
-import { currentConsumer, trackingEpoch } from "@runtime/kernel/state";
+import { flushPendingReactiveSettledIfIdle } from "@runtime/kernel/batch";
+import {
+  currentConsumer,
+  pendingReactiveSettled,
+  trackingEpoch,
+} from "@runtime/kernel/state";
 import {
   devAssertConsumerCanStabilize,
   devRecordReadConsumer,
@@ -93,6 +98,7 @@ function stabilizeDirtyConsumer<T>(node: ConsumerNode<T>, state: number): T {
     profileRuntimeCounter("stabilizeForceAdvance");
 
     if (!advance(node)) node.state &= ~DIRTY_STATE;
+    if (pendingReactiveSettled) flushPendingReactiveSettledIfIdle();
     return node.payload;
   }
 
@@ -103,6 +109,8 @@ function stabilizeDirtyConsumer<T>(node: ConsumerNode<T>, state: number): T {
   if (edge === null || !pull_iterator(node, edge) || !advance(node)) {
     node.state &= ~DIRTY_STATE;
   }
+
+  if (pendingReactiveSettled) flushPendingReactiveSettledIfIdle();
 
   return node.payload;
 }

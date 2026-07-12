@@ -3,6 +3,7 @@ import {
   DIRTY_STATE,
   disposeWatcher,
   propagationScopeDepth,
+  readPropagateStackStats,
   emitSettledIfIdle,
   readConsumer,
   readProducer,
@@ -113,6 +114,64 @@ describe("Reactive runtime - hooks and resilience", () => {
     expect(settled).toHaveBeenCalledTimes(1);
     expect(outerWatcher.state & DIRTY_STATE).toBeTruthy();
     expect(innerWatcher.state & DIRTY_STATE).toBeTruthy();
+  });
+
+  it("unwinds propagation state when an invalidation hook throws", () => {
+    const source = createProducer(1);
+    const watcher = createWatcher(() => readProducer(source));
+    const failure = new Error("hook failed");
+
+    runWatcher(watcher);
+    resetRuntime({
+      sinkInvalidatedDispatcher() {
+        throw failure;
+      },
+    });
+
+    expect(() => writeProducer(source, 2)).toThrow(failure);
+    expect(propagationScopeDepth).toBe(0);
+    expect(readPropagateStackStats().propagate.current).toBe(0);
+
+    resetRuntime();
+    runWatcher(watcher);
+    expect(() => writeProducer(source, 3)).not.toThrow();
+    expect(propagationScopeDepth).toBe(0);
+  });
+
+  it("delivers settled after a watcher writes while tracking", () => {
+    const settled = vi.fn();
+    const target = createProducer(0);
+    const watcher = createWatcher(() => {
+      writeProducer(target, target.payload + 1);
+    });
+
+    resetRuntime({ reactiveSettledDispatcher: settled });
+    runWatcher(watcher);
+
+    expect(settled).toHaveBeenCalledTimes(1);
+    expect(propagationScopeDepth).toBe(0);
+  });
+
+  it("delivers settled after a dirty consumer writes while tracking", () => {
+    const settled = vi.fn();
+    const source = createProducer(1);
+    const target = createProducer(0);
+    const consumer = createConsumer(() => {
+      const value = readProducer(source);
+      writeProducer(target, value);
+      return value;
+    });
+
+    resetRuntime({ reactiveSettledDispatcher: settled });
+    expect(readConsumer(consumer)).toBe(1);
+    expect(settled).toHaveBeenCalledTimes(1);
+
+    settled.mockClear();
+    writeProducer(source, 2);
+    settled.mockClear();
+
+    expect(readConsumer(consumer)).toBe(2);
+    expect(settled).toHaveBeenCalledTimes(1);
   });
 
   // Pending: re-enable once hook-error propagation semantics are finalized.

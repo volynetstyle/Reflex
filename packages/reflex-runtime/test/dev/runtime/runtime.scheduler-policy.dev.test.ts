@@ -12,6 +12,7 @@ import {
   enterRuntimePhase,
   leaveReactiveBatch,
   leaveRuntimePhase,
+  readActiveRuntimeHook,
 } from "../../../src/internal";
 import {
   createConsumer,
@@ -176,6 +177,44 @@ describe("Reactive runtime - scheduler policy validation (dev)", () => {
     expect(readRuntimePhase().depth).toBe(0);
   });
 
+  it("restores the settled hook across nested invalidation hooks", () => {
+    const outerSource = createProducer(1);
+    const innerSource = createProducer(1);
+    const outerWatcher = createWatcher(() => readProducer(outerSource));
+    const innerWatcher = createWatcher(() => readProducer(innerSource));
+    const hooks: Array<string | null> = [];
+    let nested = false;
+
+    runWatcher(outerWatcher);
+    runWatcher(innerWatcher);
+
+    resetRuntime({
+      sinkInvalidatedDispatcher() {
+        hooks.push(readActiveRuntimeHook());
+      },
+      reactiveSettledDispatcher() {
+        hooks.push(readActiveRuntimeHook());
+        if (!nested) {
+          nested = true;
+          writeProducer(innerSource, 2);
+        }
+        hooks.push(readActiveRuntimeHook());
+      },
+    });
+
+    writeProducer(outerSource, 2);
+
+    expect(hooks).toEqual([
+      "sinkInvalidatedDispatcher",
+      "reactiveSettledDispatcher",
+      "sinkInvalidatedDispatcher",
+      "reactiveSettledDispatcher",
+      "reactiveSettledDispatcher",
+      "reactiveSettledDispatcher",
+    ]);
+    expect(readActiveRuntimeHook()).toBeNull();
+  });
+
   it("runs a benchmark-style queued scheduler without corrupting graph edges", () => {
     const scheduler = createBenchmarkStyleScheduler();
     const sources = [createProducer(1), createProducer(2), createProducer(3)];
@@ -211,7 +250,7 @@ describe("Reactive runtime - scheduler policy validation (dev)", () => {
     expect(readRuntimePhase().depth).toBe(0);
   });
 
-  it("reports scheduler reentrancy instead of late edge corruption for synchronous hook flushes", () => {
+  it("permits synchronous watcher flushes from the settled boundary", () => {
     const scheduler = createBenchmarkStyleScheduler(true);
     const source = createProducer(1);
     const derived = createConsumer(() => readProducer(source) + 1);
@@ -225,12 +264,12 @@ describe("Reactive runtime - scheduler policy validation (dev)", () => {
       scheduler.withBatch(() => {
         writeProducer(source, 2);
       });
-    }).toThrow(/REFLEX_SCHEDULER_REENTRANT_FLUSH/);
+    }).not.toThrow();
     expect(() => {
       scheduler.withBatch(() => {
         writeProducer(source, 3);
       });
-    }).not.toThrow(/Cannot read properties of undefined \(reading 'to'\)/);
+    }).not.toThrow();
     expect(readRuntimePhase().phase).toBe(RuntimePhase.Idle);
     expect(readRuntimePhase().depth).toBe(0);
   });

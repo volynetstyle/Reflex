@@ -52,7 +52,7 @@
                     "clean":  "node -e \"require(\u0027node:fs\u0027).rmSync(\u0027build\u0027,{recursive:true,force:true});require(\u0027node:fs\u0027).rmSync(\u0027dist\u0027,{recursive:true,force:true})\"",
                     "build":  "pnpm clean \u0026\u0026 pnpm build:ts \u0026\u0026 pnpm build:types \u0026\u0026 pnpm build:npm",
                     "build:all":  "node ../../scripts/build-chain.mjs @volynets/reflex-runtime @volynets/reflex",
-                    "prebuild:ts":  "pnpm --filter @volynets/reflex-runtime build:ts",
+                    "prebuild:ts":  "pnpm --filter @volynets/reflex-runtime build:ts && pnpm --filter @volynets/reflex-scheduler build",
                     "build:ts":  "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
                     "build:types":  "rollup --silent -c rollup.dts.config.ts --configPlugin @rollup/plugin-swc \u0026\u0026 node ../../scripts/write-globals-dts.mjs . \u0026\u0026 node ./scripts/write-subpath-dts.mjs .",
                     "build:npm":  "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc",

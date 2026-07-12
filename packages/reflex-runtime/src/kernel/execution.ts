@@ -26,6 +26,8 @@ const SCHEDULER_POLICY_ENABLED =
 
 const phaseStack: RuntimePhase[] = [];
 let activeRuntimeHook: string | null = null;
+const runtimeHookStack: Array<string | null> = [];
+let runtimeHookDepth = 0;
 
 export function enterRuntimePhase(phase: RuntimePhase): void {
   if (!SCHEDULER_POLICY_ENABLED) return;
@@ -79,12 +81,21 @@ export function readRuntimePhase(): RuntimeExecutionState {
 
 export function enterRuntimeHook(name: string): void {
   if (!SCHEDULER_POLICY_ENABLED) return;
+
+  runtimeHookStack[runtimeHookDepth++] = activeRuntimeHook;
   activeRuntimeHook = name;
 }
 
 export function leaveRuntimeHook(): void {
   if (!SCHEDULER_POLICY_ENABLED) return;
-  activeRuntimeHook = null;
+
+  if (runtimeHookDepth === 0) {
+    activeRuntimeHook = null;
+    return;
+  }
+
+  activeRuntimeHook = runtimeHookStack[--runtimeHookDepth] ?? null;
+  runtimeHookStack.length = runtimeHookDepth;
 }
 
 export function readActiveRuntimeHook(): string | null {
@@ -92,15 +103,20 @@ export function readActiveRuntimeHook(): string | null {
 }
 
 export function devAssertNoRuntimeHookWatcherExecution(): void {
-  if (!SCHEDULER_POLICY_ENABLED || activeRuntimeHook === null) return;
+  if (
+    !SCHEDULER_POLICY_ENABLED ||
+    activeRuntimeHook !== "sinkInvalidatedDispatcher"
+  ) {
+    return;
+  }
 
   throw new Error(
     [
       "[REFLEX_SCHEDULER_REENTRANT_FLUSH]",
       "",
-      `Host scheduler executed runWatcher() synchronously from ${activeRuntimeHook}.`,
+      "Host scheduler executed runWatcher() synchronously from sinkInvalidatedDispatcher.",
       "",
-      "Runtime hooks are notification points and must not directly execute watchers.",
+      "Invalidation hooks must enqueue work and return before executing watchers.",
       "",
       "Allowed:",
       "  enqueue watcher",
@@ -115,15 +131,20 @@ export function devAssertNoRuntimeHookWatcherExecution(): void {
 }
 
 export function devAssertNoRuntimeHookReactiveRead(): void {
-  if (!SCHEDULER_POLICY_ENABLED || activeRuntimeHook === null) return;
+  if (
+    !SCHEDULER_POLICY_ENABLED ||
+    activeRuntimeHook !== "sinkInvalidatedDispatcher"
+  ) {
+    return;
+  }
 
   throw new Error(
     [
       "[REFLEX_SCHEDULER_REACTIVE_READ_IN_HOOK]",
       "",
-      `Host scheduler performed a reactive read from ${activeRuntimeHook}.`,
+      "Host scheduler performed a reactive read from sinkInvalidatedDispatcher.",
       "",
-      "Runtime hooks are notification points and must not read reactive graph state.",
+      "Invalidation hooks must not read reactive graph state.",
     ].join("\n"),
   );
 }
@@ -158,6 +179,8 @@ export function resetRuntimeExecutionState(): void {
   runtimeExecutionState.depth = 0;
   phaseStack.length = 0;
   activeRuntimeHook = null;
+  runtimeHookDepth = 0;
+  runtimeHookStack.length = 0;
 }
 
 function assertPhaseNotActive(

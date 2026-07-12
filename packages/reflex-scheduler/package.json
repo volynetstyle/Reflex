@@ -7,9 +7,33 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "sideEffects": false,
-  "exports": { ".": { "source": { "types": "./src/index.ts", "default": "./src/index.ts" }, "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
-  "files": ["dist"],
-  "publishConfig": { "access": "public" },
-  "scripts": { "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"", "build": "pnpm clean && node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs dist", "lint": "eslint .", "test": "vitest run", "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.json" },
-  "dependencies": { "@volynets/reflex-runtime": "workspace:*" }
+  "exports": {
+    ".": {
+      "source": {
+        "types": "./src/index.ts",
+        "default": "./src/index.ts"
+      },
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "clean": "node -e \"const fs=require('node:fs');fs.rmSync('dist',{recursive:true,force:true});fs.rmSync('build',{recursive:true,force:true})\"",
+    "build": "pnpm clean && node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs dist",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "bench": "vitest bench",
+    "bench:full-graph": "vitest bench bench/full-graph.bench.ts",
+    "bench:hot-path": "vitest bench bench/hot-path.bench.ts",
+    "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json"
+  },
+  "dependencies": {
+    "@volynets/reflex-runtime": "workspace:*"
+  }
 }

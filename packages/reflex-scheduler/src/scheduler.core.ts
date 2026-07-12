@@ -7,20 +7,35 @@ import {
 import type { SchedulerCore, EffectNode } from "./scheduler.types";
 import { Flushing, Batching, Idle } from "./scheduler.constants";
 
+const SCHEDULER_PROFILE_ENABLED =
+  typeof __PROFILE__ !== "undefined" && __PROFILE__;
+
 const NO_THROW: unique symbol = Symbol("NO_THROW");
 
 export function flushSchedulerQueue(core: SchedulerCore): void {
   const queue = core.queue;
 
-  if (core.phase === Flushing) return;
-  profileSchedulerPolicyCounter("flushCalled");
-  profileSchedulerPolicyCounter("schedulerQueueChecked");
-  // !hasPendingEffects but in hot path
-  if (queue.head === queue.tail) {
-    profileSchedulerPolicyCounter("flushReturnedEmpty");
-    return;
+  if (SCHEDULER_PROFILE_ENABLED) {
+    if (core.phase === Flushing) return;
+    profileSchedulerPolicyCounter("flushCalled");
+    profileSchedulerPolicyCounter("schedulerQueueChecked");
+    if (queue.head === queue.tail) {
+      profileSchedulerPolicyCounter("flushReturnedEmpty");
+      return;
+    }
+  } else {
+    // Empty explicit flushes dominate the flush policy. Avoid touching core
+    // state unless there is actual work to drain.
+    if (queue.head === queue.tail || core.phase === Flushing) return;
   }
 
+  flushPendingSchedulerQueue(core);
+}
+
+/** Drains a queue already known to be non-empty and outside a flush phase. */
+export function flushPendingSchedulerQueue(core: SchedulerCore): void {
+  const queue = core.queue;
+  const previousPhase = core.phase;
   core.phase = Flushing;
   let thrown: unknown = NO_THROW;
 
@@ -31,7 +46,7 @@ export function flushSchedulerQueue(core: SchedulerCore): void {
       cleanupQueuedNodesAfterAbort(queue);
     }
 
-    core.phase = core.batchDepth > 0 ? Batching : Idle;
+    core.phase = previousPhase;
   }
 
   if (thrown !== NO_THROW) {
@@ -59,7 +74,12 @@ export function leaveSchedulerBatch(core: SchedulerCore): boolean {
 }
 
 export function resetSchedulerCore(core: SchedulerCore): void {
-  cleanupQueuedNodesAfterAbort(core.queue);
+  const activeBoundary = core.phase === Flushing || core.batchDepth > 0;
+
+  cleanupQueuedNodesAfterAbort(core.queue, activeBoundary);
+
+  if (activeBoundary) return;
+
   core.batchDepth = 0;
   core.phase = Idle;
 }

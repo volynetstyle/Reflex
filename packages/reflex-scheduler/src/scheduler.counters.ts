@@ -1,3 +1,6 @@
+const SCHEDULER_PROFILE_ENABLED =
+  typeof __PROFILE__ !== "undefined" && __PROFILE__;
+
 export interface SchedulerPolicyCounters {
   batchExit: number;
   flushCalled: number;
@@ -36,7 +39,7 @@ export function setSchedulerPolicyCountersEnabled(enabled: boolean): void {
 export function profileSchedulerPolicyCounter(
   name: SchedulerPolicyCounterName,
 ): void {
-  if (__PROFILE__ && schedulerPolicyCountersEnabled) {
+  if (SCHEDULER_PROFILE_ENABLED && schedulerPolicyCountersEnabled) {
     schedulerPolicyCounters[name] += 1;
   }
 }

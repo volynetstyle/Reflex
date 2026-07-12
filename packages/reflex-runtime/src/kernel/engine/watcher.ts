@@ -1,5 +1,10 @@
 import { defaultContext } from "@runtime/kernel/config";
-import { currentConsumer, setCurrentConsumer } from "@runtime/kernel/state";
+import { flushPendingReactiveSettledIfIdle } from "@runtime/kernel/batch";
+import {
+  currentConsumer,
+  pendingReactiveSettled,
+  setCurrentConsumer,
+} from "@runtime/kernel/state";
 import {
   devRecordWatcherCleanup,
   devRecordWatcherDispose,
@@ -49,6 +54,12 @@ function runCleanup(cleanup: WatcherCleanup): void {
 }
 
 export function runWatcher(node: WatcherNode): void {
+  runWatcherWithoutSettledCheckpoint(node);
+  if (pendingReactiveSettled) flushPendingReactiveSettledIfIdle();
+}
+
+/** Scheduler drain entry point; the caller owns one checkpoint after draining. */
+export function runWatcherWithoutSettledCheckpoint(node: WatcherNode): void {
   if (!__DEV__) {
     runWatcherCore(node);
     return;

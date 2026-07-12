@@ -5,6 +5,9 @@ import {
 import { profileSchedulerPolicyCounter } from "./scheduler.counters";
 import type { EffectNode, WatcherQueue } from "./scheduler.types";
 
+const SCHEDULER_PROFILE_ENABLED =
+  typeof __PROFILE__ !== "undefined" && __PROFILE__;
+
 /**
  * Marks an effect watcher node as scheduled.
  *
@@ -38,32 +41,35 @@ export function tryEnqueue(queue: WatcherQueue, node: ReactiveNode): boolean {
   node.state = state | Scheduled;
   let ring = queue.ring;
   const head = queue.head;
-  let tail = queue.tail;
-  const rl = ring.length;
-  const size = tail - head;
+  const tail = queue.tail;
 
-  if (size === rl) {
-    const oldCapacity = rl;
-    const oldMask = queue.mask;
-    const nextCapacity = oldCapacity << 1;
-    const next = new Array<EffectNode | undefined>(nextCapacity).fill(
-      undefined,
-    );
-
-    for (let i = 0; i < size; ++i) {
-      next[i] = ring[(head + i) & oldMask];
-    }
-
-    queue.ring = next;
-    queue.mask = nextCapacity - 1;
-    queue.head = 0;
-    queue.tail = size;
-    ring = next;
-    tail = size;
+  if (tail - head === ring.length) {
+    growWatcherQueue(queue, ring, head, tail);
+    ring = queue.ring;
   }
 
   ring[tail & queue.mask] = node as EffectNode;
   queue.tail = tail + 1;
-  profileSchedulerPolicyCounter("effectsScheduled");
+  if (SCHEDULER_PROFILE_ENABLED)
+    profileSchedulerPolicyCounter("effectsScheduled");
   return true;
+}
+
+function growWatcherQueue(
+  queue: WatcherQueue,
+  ring: Array<EffectNode | undefined>,
+  head: number,
+  tail: number,
+): void {
+  const oldMask = queue.mask;
+  const nextCapacity = ring.length << 1;
+  const nextMask = nextCapacity - 1;
+  const next = new Array<EffectNode | undefined>(nextCapacity).fill(undefined);
+
+  for (let index = head; index < tail; ++index) {
+    next[index & nextMask] = ring[index & oldMask];
+  }
+
+  queue.ring = next;
+  queue.mask = nextMask;
 }

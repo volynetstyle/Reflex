@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const packageRoot = fileURLToPath(new URL(".", import.meta.url));
 const runtimeRoot = resolve(packageRoot, "../reflex-runtime/src");
+const schedulerRoot = resolve(packageRoot, "../reflex-scheduler/src");
 
 export default defineConfig({
   resolve: {
@@ -15,6 +16,10 @@ export default defineConfig({
       {
         find: "@volynets/reflex-runtime/internal",
         replacement: resolve(runtimeRoot, "internal/index.ts"),
+      },
+      {
+        find: "@volynets/reflex-scheduler",
+        replacement: resolve(schedulerRoot, "index.ts"),
       },
       {
         find: "@volynets/reflex-runtime/debug",

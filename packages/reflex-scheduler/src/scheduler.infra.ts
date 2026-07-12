@@ -2,7 +2,10 @@ import type { ReactiveNode } from "@volynets/reflex-runtime/internal";
 
 import { EffectSchedulerMode } from "./scheduler.constants";
 import { hasPendingEffects, isRuntimeInactive } from "./scheduler.context";
-import { flushSchedulerQueue } from "./scheduler.core";
+import {
+  flushPendingSchedulerQueue,
+  flushSchedulerQueue,
+} from "./scheduler.core";
 import { tryEnqueue } from "./scheduler.enqueue";
 import type { EffectScheduler, SchedulerCore } from "./scheduler.types";
 import {
@@ -11,18 +14,22 @@ import {
   createFlushScheduler,
 } from "./variants";
 
-export type EffectStrategy = "flush" | "eager" | "sab";
+const SCHEDULER_PROFILE_ENABLED =
+  typeof __PROFILE__ !== "undefined" && __PROFILE__;
 
-const strategyMap: Record<EffectStrategy, EffectSchedulerMode> = {
-  eager: EffectSchedulerMode.Eager,
-  sab: EffectSchedulerMode.SAB,
-  flush: EffectSchedulerMode.Flush,
-};
+export type EffectStrategy = "flush" | "eager" | "sab";
 
 export function resolveEffectSchedulerMode(
   strategy?: EffectStrategy,
 ): EffectSchedulerMode {
-  return strategy ? strategyMap[strategy] : EffectSchedulerMode.Flush;
+  switch (strategy) {
+    case "eager":
+      return EffectSchedulerMode.Eager;
+    case "sab":
+      return EffectSchedulerMode.SAB;
+    default:
+      return EffectSchedulerMode.Flush;
+  }
 }
 
 /** Applies enqueue policy directly to scheduler state. */
@@ -38,7 +45,8 @@ export function enqueueEffectByPolicy(
     mode === EffectSchedulerMode.Eager &&
     isRuntimeInactive(core)
   ) {
-    flushSchedulerQueue(core);
+    if (SCHEDULER_PROFILE_ENABLED) flushSchedulerQueue(core);
+    else flushPendingSchedulerQueue(core);
   }
 }
 
@@ -47,12 +55,18 @@ export function notifyEffectSchedulerSettled(
   core: SchedulerCore,
   mode: EffectSchedulerMode,
 ): void {
-  if (
-    mode === EffectSchedulerMode.Eager &&
-    isRuntimeInactive(core) &&
-    hasPendingEffects(core)
-  ) {
-    flushSchedulerQueue(core);
+  if (mode !== EffectSchedulerMode.Eager) return;
+
+  if (SCHEDULER_PROFILE_ENABLED) {
+    if (isRuntimeInactive(core) && hasPendingEffects(core)) {
+      flushSchedulerQueue(core);
+    }
+    return;
+  }
+
+  const queue = core.queue;
+  if (queue.head !== queue.tail && isRuntimeInactive(core)) {
+    flushPendingSchedulerQueue(core);
   }
 }
 
