@@ -22,6 +22,29 @@ export type ReactiveReadable<T> = Accessor<T> & {
 
 export type Signal<T> = ReactiveReadable<T>;
 
+/**
+ * Unified read/write accessor for a signal.
+ *
+ * Zero-argument calls read the current value. Single-argument calls write
+ * either a literal value or a functional updater derived from the previous
+ * value, and return the value that was actually stored.
+ *
+ * ```ts
+ * const count = useSignal(0);
+ * count();                            // read
+ * count(10);                          // write
+ * count((previous) => previous + 1);  // functional update
+ * ```
+ *
+ * Note: to store `undefined` explicitly, use a functional update
+ * (`count(() => undefined)`) rather than `count(undefined)` — the latter
+ * is indistinguishable from a zero-argument read at the call boundary.
+ */
+export interface SignalAccessor<T> {
+  (): T;
+  (input: SetInput<T>): T;
+}
+
 export type Computed<T> = ReactiveReadable<T>;
 
 export type Memo<T> = ReactiveReadable<T>;
