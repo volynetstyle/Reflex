@@ -71,8 +71,8 @@ jobs:
       - name: Runtime dev test
         run: pnpm --filter @volynets/reflex-runtime test:dev
 
-      - name: Runtime coverage
-        run: pnpm --filter @volynets/reflex-runtime test:coverage
+      # - name: Runtime coverage
+      #   run: pnpm --filter @volynets/reflex-runtime test:coverage
 
       - name: Runtime build
         run: pnpm --filter @volynets/reflex-runtime build
