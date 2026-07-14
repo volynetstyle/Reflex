@@ -14,6 +14,10 @@ Unlike most reactive libraries, Reflex separates:
 
 The runtime owns graph semantics. The host owns execution policy.
 
+For the complete cross-package description of branch switching, read-tracking
+routes, dynamic topology classes, counters, and benchmark results, see the
+[dynamic dependencies guide](../../docs/dynamic-dependencies/README.md).
+
 ---
 
 ## Installation

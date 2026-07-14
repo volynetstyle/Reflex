@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "suite": "tracking-tier-route-substitution",
-  "generatedAt": "2026-06-30T10:54:22.200Z",
+  "generatedAt": "2026-07-14T15:17:42.341Z",
   "config": {
     "runs": 20,
     "warmupPasses": 32,

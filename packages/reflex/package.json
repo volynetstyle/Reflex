@@ -1,6 +1,6 @@
 {
   "name": "@volynets/reflex",
-  "version": "0.3.6",
+  "version": "1.0.0",
   "type": "module",
   "description": "Public Reflex facade with a connected runtime",
   "license": "MIT",
@@ -78,17 +78,6 @@
     "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm build:clean"
   },
   "devDependencies": {
-    "@volynets/reflex-dom": "workspace:*",
-    "@volynets/reflex-runtime": "workspace:*",
-    "@volynets/reflex-store": "workspace:*",
-    "@volynets/reflex-scheduler": "workspace:*",
-    "alien-signals": "^3.2.1",
-    "effector": "^23.4.4",
-    "eventemitter3": "^5.0.4",
-    "mitt": "^3.0.1",
-    "most": "^1.9.0",
-    "nanoevents": "^9.1.0",
-    "rxjs": "^7.8.2",
-    "xstream": "^11.14.0"
+    "@volynets/reflex-scheduler": "workspace:*"
   }
 }
