@@ -66,6 +66,7 @@
     "bench:events:dispatcher": "vitest bench bench/event-dispatcher.bench.ts",
     "bench:events:operators": "vitest bench bench/event-operators.compare.bench.ts",
     "bench:events:raw": "vitest bench bench/event-delivery.compare.bench.ts",
+    "bench:model": "vitest bench bench/model.bench.ts",
     "bench:scheduler": "vitest bench bench/scheduler.bench.ts",
     "bench:scheduler:integration": "vitest bench bench/scheduler.integration.bench.ts",
     "bench:projection": "node ./bench/projection-compare.node.mjs",

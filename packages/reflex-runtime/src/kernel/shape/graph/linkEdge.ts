@@ -8,6 +8,7 @@ export function linkEdge(
   version = 0,
 ): ReactiveEdge {
   const prevOut = from.lastOut;
+  const nextIn = after === null ? to.firstIn : after.nextIn;
 
   const edge: ReactiveEdge = {
     version: version | 0,
@@ -16,31 +17,58 @@ export function linkEdge(
     prevOut,
     nextOut: null,
     prevIn: after,
-    nextIn: null,
+    nextIn,
   };
+
+  if (prevOut === null) from.firstOut = edge;
+  else prevOut.nextOut = edge;
+
+  from.lastOut = edge;
+
+  if (after === null) to.firstIn = edge;
+  else after.nextIn = edge;
+
+  if (nextIn === null) to.lastIn = edge;
+  else nextIn.prevIn = edge;
+
+  return edge;
+}
+
+/**
+ * Links a new incoming edge directly after the current tracking cursor and
+ * advances the cursor to the inserted edge.
+ */
+export function linkEdgeAfterCursor(
+  from: ReactiveNode,
+  to: ReactiveNode,
+  version = 0,
+): ReactiveEdge {
+  const prevOut = from.lastOut;
+  const cursor = to.tailIn;
+  const nextIn = cursor === null ? to.firstIn : cursor.nextIn;
+
+  const edge: ReactiveEdge = {
+    version: version | 0,
+    from,
+    to,
+    prevOut,
+    nextOut: null,
+    prevIn: cursor,
+    nextIn,
+  } satisfies ReactiveEdge;
 
   if (prevOut !== null) prevOut.nextOut = edge;
   else from.firstOut = edge;
 
   from.lastOut = edge;
 
-  if (after === to.lastIn) {
-    if (after !== null) after.nextIn = edge;
-    else to.firstIn = edge;
-
-    to.lastIn = edge;
-    return edge;
-  }
-
-  const nextIn = after === null ? to.firstIn : after.nextIn;
-  edge.nextIn = nextIn;
+  if (cursor !== null) cursor.nextIn = edge;
+  else to.firstIn = edge;
 
   if (nextIn !== null) nextIn.prevIn = edge;
   else to.lastIn = edge;
 
-  if (after !== null) after.nextIn = edge;
-  else to.firstIn = edge;
-
+  to.tailIn = edge;
   return edge;
 }
 

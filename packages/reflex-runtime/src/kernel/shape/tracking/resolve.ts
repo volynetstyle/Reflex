@@ -1,11 +1,11 @@
 import { defaultContext, readTrackingStrategy } from "@runtime/kernel/config";
 import { devRecordTrackRead } from "@runtime/kernel/dev";
-import { linkEdge } from "@runtime/kernel/shape/graph";
 import {
   moveLastIncomingEdgeAfterEdgeUnchecked,
   moveLastIncomingEdgeToFrontUnchecked,
   moveTrackedIncomingEdgeAfterCursorUnchecked,
 } from "@runtime/kernel/shape/graph/edgeList";
+import { linkEdgeAfterCursor } from "@runtime/kernel/shape/graph/linkEdge";
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 import { profileRuntimeCounter } from "@runtime/profiling";
@@ -99,12 +99,7 @@ function resolveCursorTrackedReadMiss(
       firstProducerEdge === null ||
       (firstProducerEdge.nextOut === null && firstProducerEdge.to !== consumer)
     ) {
-      consumer.tailIn = linkEdge(
-        producer,
-        consumer,
-        cursorEdge,
-        producerVersion,
-      );
+      linkEdgeAfterCursor(producer, consumer, producerVersion);
 
       profileRuntimeCounter("trackingAppendAfterCursor");
       if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
@@ -136,7 +131,7 @@ function resolveCursorTrackedReadMiss(
       return true;
     }
 
-    consumer.tailIn = linkEdge(producer, consumer, cursorEdge, producerVersion);
+    linkEdgeAfterCursor(producer, consumer, producerVersion);
 
     profileRuntimeCounter("trackingAppendAfterCursor");
     if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
@@ -273,7 +268,7 @@ export function resolveTrackedRead(
   const firstIncomingEdge = consumer.firstIn;
 
   if (firstIncomingEdge === null) {
-    consumer.tailIn = linkEdge(producer, consumer, null, producerVersion);
+    linkEdgeAfterCursor(producer, consumer, producerVersion);
 
     profileRuntimeCounter("trackingInitialCreate");
     if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);

@@ -11,7 +11,10 @@ import {
 export { readModelValue } from "./modelValue";
 
 type Cleanup = () => void;
-type ModelState = { disposed: boolean };
+type ModelState = {
+  disposed: boolean;
+  cleanups: Cleanup[] | null;
+};
 
 const DISPOSE = Symbol.dispose;
 
@@ -108,24 +111,35 @@ function createAction<TArgs extends unknown[], TReturn>(
     ...args: TArgs
   ): TReturn {
     if (state.disposed) {
-      if (__DEV__) {
-        throw new Error(
-          "Cannot call a model action after the model was disposed.",
-        );
-      }
-      return undefined as TReturn;
+      return callDisposedAction();
     }
 
-    return batch(() => {
-      let result = undefined as TReturn;
-
-      untracked(() => {
-        result = fn.apply(this, args);
-      });
-
-      return result;
-    });
+    return batch(() => untracked(() => fn.apply(this, args)));
   });
+}
+
+function callDisposedAction<TReturn>(): TReturn {
+  if (__DEV__) {
+    throw new Error("Cannot call a model action after the model was disposed.");
+  }
+
+  return undefined as TReturn;
+}
+
+function rejectCleanupRegistration(): void {
+  if (__DEV__) {
+    throw new Error("Cannot register cleanup after the model was disposed.");
+  }
+}
+
+function disposeCleanups(cleanups: Cleanup[]): void {
+  for (let i = cleanups.length - 1; i >= 0; i--) {
+    try {
+      cleanups[i]!();
+    } catch (error) {
+      console.error("Error during model disposal:", error);
+    }
+  }
 }
 
 function validateModelShape(value: unknown, path = "model"): void {
@@ -256,8 +270,7 @@ export function createModel<TArgs extends unknown[], TModel extends object>(
   factory: CheckedModelFactory<TArgs, TModel>,
 ): ModelTuple<TArgs, TModel> {
   return function model(...args: TArgs): Model<TModel> {
-    const state: ModelState = { disposed: false };
-    let cleanups: Cleanup[] | null = null;
+    const state: ModelState = { disposed: false, cleanups: null };
 
     const ctx: ModelContext = {
       action(fn) {
@@ -266,15 +279,11 @@ export function createModel<TArgs extends unknown[], TModel extends object>(
 
       onDispose(fn) {
         if (state.disposed) {
-          if (__DEV__) {
-            throw new Error(
-              "Cannot register cleanup after the model was disposed.",
-            );
-          }
+          rejectCleanupRegistration();
           return;
         }
 
-        (cleanups ??= []).push(fn);
+        (state.cleanups ??= []).push(fn);
       },
 
       get disposed() {
@@ -292,21 +301,11 @@ export function createModel<TArgs extends unknown[], TModel extends object>(
       if (state.disposed) return;
       state.disposed = true;
 
-      const list = cleanups;
+      const list = state.cleanups;
       if (list === null) return;
 
-      for (let i = list.length - 1; i >= 0; i--) {
-        const cleanup = list[i];
-        if (!cleanup) continue;
-
-        try {
-          cleanup();
-        } catch (error) {
-          console.error("Error during model disposal:", error);
-        }
-      }
-
-      cleanups = null;
+      state.cleanups = null;
+      disposeCleanups(list);
     };
 
     const disposableModel = model as Model<TModel> & DisposableLike;
