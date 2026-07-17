@@ -1,10 +1,10 @@
 import {
   flushPendingReactiveSettledIfIdle,
   pendingReactiveSettled,
+  releaseWatcherSchedule,
   runWatcherWithoutSettledCheckpoint,
 } from "@volynets/reflex-runtime/internal";
 import { profileSchedulerPolicyCounter } from "./scheduler.counters";
-import { UNSCHEDULE_MASK } from "./scheduler.constants";
 import type { WatcherQueue } from "./scheduler.types";
 
 const SCHEDULER_PROFILE_ENABLED =
@@ -25,7 +25,7 @@ export function cleanupQueuedNodesAfterAbort(
     const node = ring[index]!;
 
     ring[index] = undefined;
-    node.state &= UNSCHEDULE_MASK;
+    releaseWatcherSchedule(node);
     ++head;
   }
 
@@ -52,7 +52,7 @@ export function flushQueuedWatchers(
     queue.head = head;
 
     // Clear before running so a watcher may enqueue itself again.
-    node.state &= UNSCHEDULE_MASK;
+    releaseWatcherSchedule(node);
 
     if (node.compute === undefined) continue;
 

@@ -6,8 +6,10 @@ import {
 } from "@volynets/reflex-runtime/internal";
 import type { WatcherFn } from "@volynets/reflex-runtime/internal";
 import {
-  Scheduled,
+  claimWatcherSchedule,
+  releaseWatcherSchedule,
   type ReactiveNode,
+  type WatcherNode,
 } from "@volynets/reflex-runtime/internal";
 import {
   devassertEffectFn,
@@ -27,7 +29,7 @@ import {
 export function effectScheduled(
   node: ReactiveNode<typeof undefined | Destructor>,
 ) {
-  node.state |= Scheduled;
+  claimWatcherSchedule(node as WatcherNode);
 }
 
 /**
@@ -39,7 +41,7 @@ export function effectScheduled(
 export function effectUnscheduled(
   node: ReactiveNode<typeof undefined | Destructor>,
 ) {
-  node.state &= ~Scheduled;
+  releaseWatcherSchedule(node as WatcherNode);
 }
 
 /**

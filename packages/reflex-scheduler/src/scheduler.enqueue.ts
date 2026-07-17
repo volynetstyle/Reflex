@@ -1,5 +1,6 @@
 import {
-  Scheduled,
+  claimWatcherSchedule,
+  releaseWatcherSchedule,
   type ReactiveNode,
 } from "@volynets/reflex-runtime/internal";
 import { profileSchedulerPolicyCounter } from "./scheduler.counters";
@@ -16,7 +17,7 @@ const SCHEDULER_PROFILE_ENABLED =
  */
 //
 export function effectScheduled(node: EffectNode) {
-  node.state = node.state | Scheduled;
+  claimWatcherSchedule(node);
 }
 
 /**
@@ -27,24 +28,26 @@ export function effectScheduled(node: EffectNode) {
  */
 //
 export function effectUnscheduled(node: EffectNode) {
-  node.state = node.state & ~Scheduled;
+  releaseWatcherSchedule(node);
 }
 
 //
 // STRAIGHT
 export function tryEnqueue(queue: WatcherQueue, node: ReactiveNode): boolean {
-  const state = node.state;
-  if ((state & Scheduled) !== 0) {
-    return false;
-  }
+  if (!claimWatcherSchedule(node as EffectNode)) return false;
 
-  node.state = state | Scheduled;
   let ring = queue.ring;
   const head = queue.head;
   const tail = queue.tail;
 
   if (tail - head === ring.length) {
-    growWatcherQueue(queue, ring, head, tail);
+    try {
+      growWatcherQueue(queue, ring, head, tail);
+    } catch (error) {
+      releaseWatcherSchedule(node as EffectNode);
+      throw error;
+    }
+
     ring = queue.ring;
   }
 

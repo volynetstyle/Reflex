@@ -23,6 +23,7 @@ import {
   disposeNode,
   Changed,
   Invalid,
+  Scheduled,
   Visited,
   type WatcherCleanup,
   type WatcherNode,
@@ -33,6 +34,21 @@ import { profileRuntimeCounter } from "@runtime/profiling";
 import { executeKnownNodeComputation } from "./watcher.execution";
 
 const FORCE_STABILIZATION_STATE = Changed | Visited;
+
+/** Claims ownership of this watcher for an external scheduler queue. */
+export function claimWatcherSchedule(node: WatcherNode): boolean {
+  const state = node.state;
+
+  if ((state & Scheduled) !== 0) return false;
+
+  node.state = state | Scheduled;
+  return true;
+}
+
+/** Releases ownership of this watcher from an external scheduler queue. */
+export function releaseWatcherSchedule(node: WatcherNode): void {
+  node.state &= ~Scheduled;
+}
 
 function runCleanup(cleanup: WatcherCleanup): void {
   profileRuntimeCounter("watcherCleanups");
