@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   existsSync,
@@ -10,6 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
+import { clearInterval, setInterval } from "node:timers";
 import { fileURLToPath } from "node:url";
 
 const args = process.argv.slice(2);
@@ -21,6 +22,10 @@ const tscBin = resolve(repoRoot, "node_modules/typescript/bin/tsc");
 const rollupBin = resolve(repoRoot, "node_modules/rollup/dist/bin/rollup");
 const supportsColor =
   process.env.NO_COLOR === undefined &&
+  process.env.TERM !== "dumb" &&
+  process.stdout.isTTY === true;
+const supportsDashboard =
+  process.env.CI === undefined &&
   process.env.TERM !== "dumb" &&
   process.stdout.isTTY === true;
 
@@ -81,6 +86,7 @@ const packageConfigs = new Map([
 ]);
 
 const color = {
+  blue: (value) => paint("34", value),
   bold: (value) => paint("1", value),
   cyan: (value) => paint("36", value),
   dim: (value) => paint("2", value),
@@ -94,8 +100,14 @@ function paint(code, value) {
   return `\x1b[${code}m${value}\x1b[0m`;
 }
 
-function elapsedMs(startedAt) {
-  return `${Math.round(Number(process.hrtime.bigint() - startedAt) / 1_000_000)} ms`;
+function elapsedMilliseconds(startedAt) {
+  return Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+}
+
+function formatDuration(milliseconds) {
+  if (milliseconds < 1_000) return `${Math.round(milliseconds)}ms`;
+  if (milliseconds < 10_000) return `${(milliseconds / 1_000).toFixed(1)}s`;
+  return `${(milliseconds / 1_000).toFixed(0)}s`;
 }
 
 function readCache() {
@@ -177,19 +189,45 @@ function cleanPackage(cwd) {
   return { status: 0 };
 }
 
-function runTsc(project) {
-  return (cwd) =>
-    spawnSync(process.execPath, [tscBin, "-p", project], {
+function runCommand(command, commandArgs, cwd) {
+  return new Promise((resolveCommand) => {
+    const output = [];
+    let settled = false;
+    const child = spawn(command, commandArgs, {
       cwd,
       env: process.env,
       shell: false,
-      stdio: "inherit",
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
     });
+
+    const capture = (chunk) => output.push(chunk);
+    child.stdout.on("data", capture);
+    child.stderr.on("data", capture);
+    child.on("error", (error) => {
+      if (settled) return;
+      settled = true;
+      resolveCommand({ status: 1, error, output: Buffer.concat(output) });
+    });
+    child.on("close", (status, signal) => {
+      if (settled) return;
+      settled = true;
+      resolveCommand({
+        status: status ?? 1,
+        signal,
+        output: Buffer.concat(output),
+      });
+    });
+  });
+}
+
+function runTsc(project) {
+  return (cwd) => runCommand(process.execPath, [tscBin, "-p", project], cwd);
 }
 
 function runRollup(config) {
   return (cwd) =>
-    spawnSync(
+    runCommand(
       process.execPath,
       [
         rollupBin,
@@ -199,114 +237,323 @@ function runRollup(config) {
         "--configPlugin",
         "@rollup/plugin-swc",
       ],
-      { cwd, env: process.env, shell: false, stdio: "inherit" },
+      cwd,
     );
 }
 
 function runNodeScript(script, scriptArgs) {
   return (cwd) =>
-    spawnSync(process.execPath, [resolve(repoRoot, script), ...scriptArgs], {
+    runCommand(
+      process.execPath,
+      [resolve(repoRoot, script), ...scriptArgs],
       cwd,
-      env: process.env,
-      shell: false,
-      stdio: "inherit",
-    });
+    );
 }
 
 function runPackageNodeScript(script, scriptArgs) {
   return (cwd) =>
-    spawnSync(process.execPath, [resolve(cwd, script), ...scriptArgs], {
-      cwd,
-      env: process.env,
-      shell: false,
-      stdio: "inherit",
-    });
+    runCommand(process.execPath, [resolve(cwd, script), ...scriptArgs], cwd);
 }
 
-function printHeader() {
-  console.log("");
-  console.log(`${color.cyan("|")} ${color.bold("Reflex build")}`);
-  console.log(
-    `${color.cyan("|")} packages ${color.green(String(packages.length))}`,
-  );
-  console.log(
-    `${color.cyan("L")} mode     ${color.dim(force ? "force" : "incremental")}`,
-  );
+function displayName(packageName) {
+  const prefix = "@volynets/reflex-";
+  if (packageName.startsWith(prefix)) return packageName.slice(prefix.length);
+  return packageName.split("/").at(-1);
 }
 
-function runPhase(cwd, phaseName, phase) {
-  const startedAt = process.hrtime.bigint();
-  console.log(`${color.cyan("|")} ${phaseName}`);
-  let result;
-  try {
-    result = phase(cwd);
-  } catch (error) {
-    console.log(
-      `${color.red("L")} ${phaseName} failed ${color.dim(elapsedMs(startedAt))}`,
-    );
-    console.error(
-      `${color.red("|")} ${error instanceof Error ? error.message : String(error)}`,
-    );
-    process.exitCode = 1;
-    return false;
+function statusSymbol(status) {
+  switch (status) {
+    case "building":
+    case "running":
+      return color.blue("▶");
+    case "completed":
+      return color.green("✓");
+    case "cached":
+      return color.yellow("⚡");
+    case "failed":
+      return color.red("✖");
+    default:
+      return color.dim("□");
   }
-  if (result.status !== 0) {
-    console.log(
-      `${color.red("L")} ${phaseName} failed ${color.dim(elapsedMs(startedAt))}`,
-    );
-    if (result.error)
-      console.error(`${color.red("|")} ${result.error.message}`);
-    process.exitCode = result.status ?? 1;
-    return false;
-  }
-  console.log(
-    `${color.cyan("L")} ${phaseName} ok ${color.dim(elapsedMs(startedAt))}`,
-  );
-  return true;
 }
 
-function runPackage(packageName, index, cache, fingerprints) {
-  const startedAt = process.hrtime.bigint();
-  const config = packageConfigs.get(packageName);
-  if (!config) {
-    console.error(
-      `${color.red("|")} Unknown package in build chain: ${packageName}`,
-    );
-    process.exitCode = 1;
-    return false;
-  }
+function createBuildState() {
+  return {
+    startedAt: process.hrtime.bigint(),
+    packages: packages.map((packageName) => {
+      const config = packageConfigs.get(packageName);
+      return {
+        name: packageName,
+        label: displayName(packageName),
+        config,
+        state: "pending",
+        startedAt: undefined,
+        duration: undefined,
+        phases: config.phases.map(([name, run]) => ({
+          name,
+          run,
+          state: "pending",
+          startedAt: undefined,
+          duration: undefined,
+        })),
+      };
+    }),
+  };
+}
 
-  const fingerprint = packageFingerprint(packageName, config, fingerprints);
-  fingerprints.set(packageName, fingerprint);
-  console.log("");
-  console.log(
-    `${color.cyan("|")} step ${color.green(`${index + 1}/${packages.length}`)} ${color.bold(packageName)}`,
+function buildProgress(state) {
+  const total = state.packages.reduce(
+    (count, packageState) => count + packageState.phases.length,
+    0,
   );
-
-  if (
-    !force &&
-    cache.packages[packageName]?.fingerprint === fingerprint &&
-    outputsExist(config)
-  ) {
-    console.log(
-      `${color.yellow("L")} cached  ${color.dim(fingerprint.slice(0, 12))}`,
+  const completed = state.packages.reduce((count, packageState) => {
+    if (["completed", "cached"].includes(packageState.state)) {
+      return count + packageState.phases.length;
+    }
+    return (
+      count +
+      packageState.phases.filter((phase) => phase.state === "completed").length
     );
-    return true;
-  }
+  }, 0);
+  return total === 0 ? 100 : Math.round((completed / total) * 100);
+}
 
-  for (const [phaseName, phase] of config.phases) {
-    if (!runPhase(config.cwd, phaseName, phase)) {
-      console.log(
-        `${color.red("L")} failed  ${color.dim(elapsedMs(startedAt))}`,
-      );
-      return false;
+function buildCounts(state) {
+  const count = (status) =>
+    state.packages.filter((packageState) => packageState.state === status)
+      .length;
+  return {
+    built: count("completed"),
+    building: count("building"),
+    cached: count("cached"),
+    failed: count("failed"),
+    pending: count("pending"),
+  };
+}
+
+function currentDuration(item) {
+  if (item.duration !== undefined) return item.duration;
+  if (item.startedAt !== undefined) return elapsedMilliseconds(item.startedAt);
+  return undefined;
+}
+
+function renderProgressBar(percent) {
+  const width = Math.max(12, Math.min(31, (process.stdout.columns ?? 80) - 10));
+  const complete = Math.round((width * percent) / 100);
+  return `${color.green("━".repeat(complete))}${color.dim("━".repeat(width - complete))} ${String(percent).padStart(3)}%`;
+}
+
+function renderDashboard(state) {
+  const counts = buildCounts(state);
+  const finished = counts.built + counts.cached;
+  const labelWidth = Math.max(
+    7,
+    ...state.packages.map((packageState) => packageState.label.length),
+  );
+  const lines = [
+    `${color.cyan(color.bold("@reflex-build"))} ${color.dim(`[${finished}/${state.packages.length}]`)}`,
+    "",
+  ];
+
+  for (const packageState of state.packages) {
+    const duration = currentDuration(packageState);
+    const suffix =
+      packageState.state === "cached"
+        ? color.dim("cached")
+        : duration === undefined
+          ? ""
+          : color.dim(formatDuration(duration));
+    const packageLabel = packageState.label.padEnd(labelWidth);
+    const styledLabel =
+      packageState.state === "pending"
+        ? color.dim(packageLabel)
+        : packageState.state === "building"
+          ? color.bold(packageLabel)
+          : packageLabel;
+    lines.push(
+      `${statusSymbol(packageState.state)} ${styledLabel}${suffix ? `  ${suffix}` : ""}`,
+    );
+
+    if (["building", "failed"].includes(packageState.state)) {
+      for (const phase of packageState.phases) {
+        const phaseDuration = currentDuration(phase);
+        const phaseSuffix =
+          phaseDuration === undefined
+            ? ""
+            : ` ${color.dim(formatDuration(phaseDuration))}`;
+        const phaseLabel =
+          phase.state === "pending"
+            ? color.dim(phase.name)
+            : phase.state === "running"
+              ? color.blue(phase.name)
+              : phase.name;
+        lines.push(
+          `    ${statusSymbol(phase.state)} ${phaseLabel}${phaseSuffix}`,
+        );
+      }
     }
   }
 
-  cache.packages[packageName] = { fingerprint };
+  const percent = buildProgress(state);
+  lines.push(
+    "",
+    renderProgressBar(percent),
+    "",
+    `Built:    ${counts.built}`,
+    `Cached:   ${counts.cached}`,
+    `Building: ${counts.building}`,
+    `Pending:  ${counts.pending}`,
+  );
+  if (counts.failed > 0) lines.push(`Failed:   ${counts.failed}`);
+  lines.push(
+    "",
+    `${color.dim("Total:")} ${formatDuration(elapsedMilliseconds(state.startedAt))}`,
+  );
+  return lines.join("\n");
+}
+
+function createRenderer(state) {
+  let renderedLines = 0;
+  let timer;
+  let stopped = false;
+
+  function render() {
+    if (!supportsDashboard || stopped) return;
+    const output = renderDashboard(state);
+    const lines = output.split("\n");
+    if (renderedLines > 0) {
+      process.stdout.write(`\x1b[${renderedLines}A\r`);
+    }
+    process.stdout.write(
+      `${lines.map((line) => `\x1b[2K${line}`).join("\n")}\n\x1b[0J`,
+    );
+    renderedLines = lines.length;
+  }
+
+  return {
+    start() {
+      if (supportsDashboard) {
+        process.stdout.write("\x1b[?25l");
+        render();
+        timer = setInterval(render, 100);
+      } else {
+        console.log(`@reflex-build [${state.packages.length} packages]`);
+      }
+    },
+    update(message) {
+      if (supportsDashboard) render();
+      else console.log(message);
+    },
+    stop() {
+      if (stopped) return;
+      if (timer !== undefined) clearInterval(timer);
+      if (supportsDashboard) {
+        render();
+        process.stdout.write("\x1b[?25h");
+      } else {
+        const counts = buildCounts(state);
+        const failureSummary =
+          counts.failed > 0 ? ` · ${counts.failed} failed` : "";
+        console.log("");
+        console.log(
+          `${buildProgress(state)}% complete · ${counts.built} built · ${counts.cached} cached · ${counts.pending} pending${failureSummary}`,
+        );
+        console.log(
+          `Total: ${formatDuration(elapsedMilliseconds(state.startedAt))}`,
+        );
+      }
+      stopped = true;
+    },
+  };
+}
+
+async function runPhase(packageState, phase, renderer) {
+  phase.state = "running";
+  phase.startedAt = process.hrtime.bigint();
+  renderer.update(`▶ ${packageState.label} › ${phase.name}`);
+
+  let result;
+  try {
+    result = await phase.run(packageState.config.cwd);
+  } catch (error) {
+    result = { status: 1, error, output: Buffer.alloc(0) };
+  }
+
+  phase.duration = elapsedMilliseconds(phase.startedAt);
+  if (result.status !== 0) {
+    phase.state = "failed";
+    renderer.update(`✖ ${packageState.label} › ${phase.name}`);
+    return result;
+  }
+
+  phase.state = "completed";
+  renderer.update(
+    `✓ ${packageState.label} › ${phase.name} ${formatDuration(phase.duration)}`,
+  );
+  return undefined;
+}
+
+async function runPackage(packageState, cache, fingerprints, renderer) {
+  const fingerprint = packageFingerprint(
+    packageState.name,
+    packageState.config,
+    fingerprints,
+  );
+  fingerprints.set(packageState.name, fingerprint);
+
+  if (
+    !force &&
+    cache.packages[packageState.name]?.fingerprint === fingerprint &&
+    outputsExist(packageState.config)
+  ) {
+    packageState.state = "cached";
+    renderer.update(`⚡ ${packageState.label} cached`);
+    return undefined;
+  }
+
+  packageState.state = "building";
+  packageState.startedAt = process.hrtime.bigint();
+  renderer.update(`▶ ${packageState.label}`);
+
+  for (const phase of packageState.phases) {
+    const failure = await runPhase(packageState, phase, renderer);
+    if (failure !== undefined) {
+      packageState.state = "failed";
+      packageState.duration = elapsedMilliseconds(packageState.startedAt);
+      return { packageState, phase, result: failure };
+    }
+  }
+
+  packageState.state = "completed";
+  packageState.duration = elapsedMilliseconds(packageState.startedAt);
+  cache.packages[packageState.name] = { fingerprint };
   writeCache(cache);
-  console.log(`${color.cyan("L")} built   ${color.dim(elapsedMs(startedAt))}`);
-  return true;
+  renderer.update(
+    `✓ ${packageState.label} ${formatDuration(packageState.duration)}`,
+  );
+  return undefined;
+}
+
+function printFailure(failure) {
+  const { packageState, phase, result } = failure;
+  console.error("");
+  console.error(`${color.red("✖")} ${color.bold(phase.name)} failed`);
+  console.error(color.dim(packageState.name));
+
+  if (result.error) {
+    console.error("");
+    console.error(
+      result.error instanceof Error
+        ? result.error.message
+        : String(result.error),
+    );
+  }
+  const output = result.output?.toString("utf8").trimEnd();
+  if (output) {
+    console.error("");
+    process.stderr.write(`${output}\n`);
+  }
+  if (result.signal) console.error(`Process terminated by ${result.signal}.`);
 }
 
 if (packages.length === 0) {
@@ -337,13 +584,27 @@ for (const packageName of packages) {
   }
 }
 
-const startedAt = process.hrtime.bigint();
 const cache = readCache();
 const fingerprints = new Map();
-printHeader();
-for (let index = 0; index < packages.length; index += 1) {
-  if (!runPackage(packages[index], index, cache, fingerprints))
-    process.exit(process.exitCode);
+const state = createBuildState();
+const renderer = createRenderer(state);
+
+process.on("exit", () => {
+  if (supportsDashboard) process.stdout.write("\x1b[?25h");
+});
+
+renderer.start();
+let failure;
+try {
+  for (const packageState of state.packages) {
+    failure = await runPackage(packageState, cache, fingerprints, renderer);
+    if (failure !== undefined) break;
+  }
+} finally {
+  renderer.stop();
 }
-console.log("");
-console.log(`${color.green("L")} complete ${color.dim(elapsedMs(startedAt))}`);
+
+if (failure !== undefined) {
+  printFailure(failure);
+  process.exitCode = failure.result.status ?? 1;
+}
