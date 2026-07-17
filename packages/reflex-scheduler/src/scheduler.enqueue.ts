@@ -34,28 +34,44 @@ export function effectUnscheduled(node: EffectNode) {
 //
 // STRAIGHT
 export function tryEnqueue(queue: WatcherQueue, node: ReactiveNode): boolean {
-  if (!claimWatcherSchedule(node as EffectNode)) return false;
+  const watcher = node as EffectNode;
 
+  if (!claimWatcherSchedule(watcher)) return false;
+
+  try {
+    acceptClaimedWatcher(queue, watcher);
+  } catch (error) {
+    releaseWatcherSchedule(watcher);
+    throw error;
+  }
+
+  return true;
+}
+
+/**
+ * Materializes an already-owned schedule claim in the queue.
+ *
+ * Preconditions:
+ * - claimWatcherSchedule(node) has succeeded;
+ * - the claim has not already been accepted by another queue.
+ */
+export function acceptClaimedWatcher(
+  queue: WatcherQueue,
+  node: EffectNode,
+): void {
   let ring = queue.ring;
   const head = queue.head;
   const tail = queue.tail;
 
   if (tail - head === ring.length) {
-    try {
-      growWatcherQueue(queue, ring, head, tail);
-    } catch (error) {
-      releaseWatcherSchedule(node as EffectNode);
-      throw error;
-    }
-
+    growWatcherQueue(queue, ring, head, tail);
     ring = queue.ring;
   }
 
-  ring[tail & queue.mask] = node as EffectNode;
+  ring[tail & queue.mask] = node;
   queue.tail = tail + 1;
   if (SCHEDULER_PROFILE_ENABLED)
     profileSchedulerPolicyCounter("effectsScheduled");
-  return true;
 }
 
 function growWatcherQueue(

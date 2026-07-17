@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   Changed,
   Scheduled,
+  claimWatcherSchedule,
   createWatcher,
   runWatcher,
   type WatcherNode,
@@ -9,6 +10,7 @@ import {
 import {
   Batching,
   Idle,
+  acceptClaimedWatcher,
   createEagerScheduler,
   createFlushScheduler,
   createSabScheduler,
@@ -21,6 +23,21 @@ function enqueueChanged(scheduler: EffectScheduler, node: WatcherNode): void {
 }
 
 describe("scheduler re-entrant edge cases", () => {
+  it("accepts a schedule claim without repeating the ownership decision", () => {
+    const scheduler = createFlushScheduler();
+    let runs = 0;
+    const node = createWatcher(() => ++runs);
+
+    node.state |= Changed;
+    expect(claimWatcherSchedule(node)).toBe(true);
+    acceptClaimedWatcher(scheduler.core.queue, node);
+
+    expect(node.state & Scheduled).toBe(Scheduled);
+    scheduler.flush();
+    expect(runs).toBe(1);
+    expect(node.state & Scheduled).toBe(0);
+  });
+
   it("claims queue membership once across duplicate enqueue attempts", () => {
     const scheduler = createFlushScheduler();
     let runs = 0;
