@@ -132,6 +132,30 @@ export function moveLastIncomingEdgeAfterEdgeUnchecked(
 }
 
 /**
+ * Moves the physical incoming tail after the tracking cursor and advances it.
+ * All structural checks must be performed by the caller.
+ */
+export function moveLastIncomingEdgeAfterCursorUnchecked(
+  consumer: ReactiveNode,
+  cursorEdge: ReactiveEdge,
+  expectedNextEdge: ReactiveEdge,
+  lastIncomingEdge: ReactiveEdge,
+  previousLastEdge: ReactiveEdge,
+  producerVersion: number,
+): void {
+  previousLastEdge.nextIn = null;
+  consumer.lastIn = previousLastEdge;
+
+  lastIncomingEdge.prevIn = cursorEdge;
+  lastIncomingEdge.nextIn = expectedNextEdge;
+  lastIncomingEdge.version = producerVersion;
+
+  cursorEdge.nextIn = lastIncomingEdge;
+  expectedNextEdge.prevIn = lastIncomingEdge;
+  consumer.tailIn = lastIncomingEdge;
+}
+
+/**
  * Move the last incoming edge to the front.
  *
  * Preconditions:

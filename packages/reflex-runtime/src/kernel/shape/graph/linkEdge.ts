@@ -34,18 +34,41 @@ export function linkEdge(
   return edge;
 }
 
-/**
- * Links a new incoming edge directly after the current tracking cursor and
- * advances the cursor to the inserted edge.
- */
-export function linkEdgeAfterCursor(
+/** Links the first incoming edge during dependency tracking. */
+export function linkFirstTrackedEdgeUnchecked(
   from: ReactiveNode,
   to: ReactiveNode,
   version = 0,
 ): ReactiveEdge {
   const prevOut = from.lastOut;
-  const cursor = to.tailIn;
-  const nextIn = cursor === null ? to.firstIn : cursor.nextIn;
+
+  const edge: ReactiveEdge = {
+    version: version | 0,
+    from,
+    to,
+    prevOut,
+    nextOut: null,
+    prevIn: null,
+    nextIn: null,
+  } satisfies ReactiveEdge;
+
+  if (prevOut !== null) prevOut.nextOut = edge;
+  else from.firstOut = edge;
+
+  from.lastOut = edge;
+  to.firstIn = to.lastIn = to.tailIn = edge;
+
+  return edge;
+}
+
+/** Appends an incoming edge after a non-null tracking cursor at list tail. */
+export function appendTrackedEdgeAfterCursorUnchecked(
+  from: ReactiveNode,
+  to: ReactiveNode,
+  cursor: ReactiveEdge,
+  version = 0,
+): ReactiveEdge {
+  const prevOut = from.lastOut;
 
   const edge: ReactiveEdge = {
     version: version | 0,
@@ -54,21 +77,16 @@ export function linkEdgeAfterCursor(
     prevOut,
     nextOut: null,
     prevIn: cursor,
-    nextIn,
+    nextIn: null,
   } satisfies ReactiveEdge;
 
   if (prevOut !== null) prevOut.nextOut = edge;
   else from.firstOut = edge;
 
   from.lastOut = edge;
+  cursor.nextIn = edge;
+  to.lastIn = to.tailIn = edge;
 
-  if (cursor !== null) cursor.nextIn = edge;
-  else to.firstIn = edge;
-
-  if (nextIn !== null) nextIn.prevIn = edge;
-  else to.lastIn = edge;
-
-  to.tailIn = edge;
   return edge;
 }
 
