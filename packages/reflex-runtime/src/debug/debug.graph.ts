@@ -130,7 +130,7 @@ function collectEdgeListIntegrity(
         ? "duplicate-incoming-edge"
         : "duplicate-outgoing-edge";
     const prevCode =
-      direction === "in" ? "invalid-prev-in" : "invalid-prev-out";
+      direction === "in" ? "unknown-prev-in" : "unknown-prev-out";
 
     if (seen.has(edge)) {
       issues.push({
@@ -213,7 +213,7 @@ export function checkDebugGraphIntegrity(
 
     if (node.lastIn !== (incoming.at(-1) ?? null)) {
       issues.push({
-        code: "invalid-last-in",
+        code: "unknown-last-in",
         node: nodeSnapshot,
         message: "lastIn does not point to the final incoming edge.",
       });
@@ -221,7 +221,7 @@ export function checkDebugGraphIntegrity(
 
     if (node.lastOut !== (outgoing.at(-1) ?? null)) {
       issues.push({
-        code: "invalid-last-out",
+        code: "unknown-last-out",
         node: nodeSnapshot,
         message: "lastOut does not point to the final outgoing edge.",
       });
@@ -229,7 +229,7 @@ export function checkDebugGraphIntegrity(
 
     if (node.tailIn !== null && !incoming.includes(node.tailIn)) {
       issues.push({
-        code: "invalid-last-in-tail",
+        code: "unknown-last-in-tail",
         node: nodeSnapshot,
         edge: snapshotDebugGraphEdge(node.tailIn, snapshotNode),
         message: "tailIn does not belong to the incoming edge list.",

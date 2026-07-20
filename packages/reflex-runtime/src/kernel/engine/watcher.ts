@@ -22,7 +22,7 @@ import {
   DIRTY_STATE,
   disposeNode,
   Changed,
-  Invalid,
+  Unknown,
   Scheduled,
   Visited,
   type WatcherCleanup,
@@ -75,20 +75,17 @@ export function runWatcher(node: WatcherNode): void {
 }
 
 /** Scheduler drain entry point; the caller owns one checkpoint after draining. */
-export function runWatcherWithoutSettledCheckpoint(node: WatcherNode): void {
-  if (!__DEV__) {
-    runWatcherCore(node);
-    return;
-  }
-
-  devAssertNoRuntimeHookWatcherExecution();
-  enterRuntimePhase(RuntimePhase.WatcherExecution);
-  try {
-    runWatcherCore(node);
-  } finally {
-    leaveRuntimePhase();
-  }
-}
+export const runWatcherWithoutSettledCheckpoint = !__DEV__
+  ? runWatcherCore
+  : function (node: WatcherNode): void {
+      devAssertNoRuntimeHookWatcherExecution();
+      enterRuntimePhase(RuntimePhase.WatcherExecution);
+      try {
+        runWatcherCore(node);
+      } finally {
+        leaveRuntimePhase();
+      }
+    };
 
 function runWatcherCore(node: WatcherNode): void {
   profileRuntimeCounter("watcherRunCalls");
@@ -158,7 +155,7 @@ function runWatcherCore(node: WatcherNode): void {
   if ((node.state & Visited) === 0) {
     node.state &= ~DIRTY_STATE;
   } else {
-    node.state = (node.state & ~Changed) | Invalid;
+    node.state = (node.state & ~Changed) | Unknown;
   }
 
   if (__DEV__) devRecordWatcherFinish(node, hasCleanup, result, defaultContext);

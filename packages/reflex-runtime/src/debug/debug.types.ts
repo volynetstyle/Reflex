@@ -25,7 +25,7 @@ export type RuntimeDebugFlag =
   | "changed"
   | "computing"
   | "consumer"
-  | "invalid"
+  | "unknown"
   | "producer"
   | "scheduled"
   | "tracking"
@@ -41,8 +41,8 @@ export type RuntimeDebugNodeKind =
 export type RuntimeDebugDirtyState =
   | "changed"
   | "clean"
-  | "invalid"
-  | "invalid+changed";
+  | "unknown"
+  | "unknown+changed";
 
 export interface RuntimeDebugOptions {
   historyLimit?: number;

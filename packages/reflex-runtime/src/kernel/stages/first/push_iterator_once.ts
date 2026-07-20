@@ -7,7 +7,7 @@ import {
 } from "@runtime/kernel/execution";
 import {
   Changed,
-  Invalid,
+  Unknown,
   Watcher,
   type ReactiveEdge,
 } from "@runtime/kernel/shape";
@@ -23,7 +23,7 @@ function pushIteratorOnceCore(edge: ReactiveEdge | null): void {
     const state = sub.state;
 
     if ((state & Changed) === 0) {
-      sub.state = (state & ~Invalid) | Changed;
+      sub.state = (state & ~Unknown) | Changed;
 
       if (__PROFILE__) profileRuntimeCounter("pushOnceMarkedChanged");
       if (__DEV__) devRecordPropagate(current, sub.state, true, defaultContext);

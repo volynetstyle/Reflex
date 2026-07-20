@@ -153,7 +153,7 @@ function validateModelShape(value: unknown, path = "model"): void {
 
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new TypeError(
-      `Invalid ${path}: model values must be readable reactive values, model actions, or nested objects.`,
+      `Unknown ${path}: model values must be readable reactive values, model actions, or nested objects.`,
     );
   }
 

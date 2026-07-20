@@ -76,29 +76,17 @@ export function writeProducer<T>(
   // This prevents false invalidation when setting to the same value
   if (compare(prev, value)) {
     profileRuntimeCounter("writeSameValue");
+    devRecordWriteProducer(node, false, value, prev, undefined, defaultContext);
 
-    if (__DEV__) {
-      devRecordWriteProducer(
-        node,
-        false,
-        value,
-        prev,
-        undefined,
-        defaultContext,
-      );
-    }
     // Value didn't change, skip propagation
     return;
+  } else {
+    // Update the payload to the new value
+    node.payload = value;
   }
-
-  // Update the payload to the new value
-  node.payload = value;
 
   profileRuntimeCounter("writeChanged");
-
-  if (__DEV__) {
-    devRecordWriteProducer(node, true, value, prev, undefined, defaultContext);
-  }
+  devRecordWriteProducer(node, true, value, prev, undefined, defaultContext);
 
   const firstOut = node.firstOut;
 
@@ -118,7 +106,7 @@ export function writeProducer<T>(
 
   enterPropagationScope();
   // Push phase: notify all subscribers depth-first, mark them dirty.
-  // Direct subscribers are promoted from Invalid to Changed.
+  // Direct subscribers are promoted from Unknown to Changed.
   // This tells them "definitely changed, don't verify, recompute"
   push_iterator(firstOut);
   leavePropagationScope();

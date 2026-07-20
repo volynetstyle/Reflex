@@ -25,21 +25,24 @@ export function syncRuntimeContext(
   context: RuntimeContext,
   direction: "load" | "save",
 ): void {
-  if (direction === "load") {
-    setCurrentConsumer(context.currentConsumer);
-    setTrackingEpoch(context.trackingEpoch);
-    setPropagationScopeDepth(context.propagationScopeDepth);
-    setReactiveBatchState(context.batchDepth, context.pendingReactiveSettled);
-    restoreRuntimeConfiguration(context);
-    return;
+  switch (direction) {
+    case "load": {
+      setCurrentConsumer(context.currentConsumer);
+      setTrackingEpoch(context.trackingEpoch);
+      setPropagationScopeDepth(context.propagationScopeDepth);
+      setReactiveBatchState(context.batchDepth, context.pendingReactiveSettled);
+      restoreRuntimeConfiguration(context);
+      return;
+    }
+    case "save": {
+      context.currentConsumer = currentConsumer;
+      context.trackingEpoch = trackingEpoch;
+      context.propagationScopeDepth = propagationScopeDepth;
+      context.batchDepth = reactiveBatchDepth;
+      context.pendingReactiveSettled = pendingReactiveSettled;
+      Object.assign(context, saveRuntimeConfiguration());
+    }
   }
-
-  context.currentConsumer = currentConsumer;
-  context.trackingEpoch = trackingEpoch;
-  context.propagationScopeDepth = propagationScopeDepth;
-  context.batchDepth = reactiveBatchDepth;
-  context.pendingReactiveSettled = pendingReactiveSettled;
-  Object.assign(context, saveRuntimeConfiguration());
 }
 
 export function switchRuntimeContext(next: RuntimeContext): void {

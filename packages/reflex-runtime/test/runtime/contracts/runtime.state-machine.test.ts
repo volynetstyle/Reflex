@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   Changed,
   ConsumerReadMode,
-  Invalid,
+  Unknown,
   readConsumer,
   readProducer,
   runWatcher,
@@ -33,13 +33,13 @@ describe("Reactive runtime - state and read-mode matrices", () => {
       },
     },
     {
-      name: "transitive consumer subscriber becomes Invalid",
+      name: "transitive consumer subscriber becomes Unknown",
       build() {
         const source = createProducer(1);
         const middle = createConsumer(() => readProducer(source));
         const target = createConsumer(() => readConsumer(middle));
         readConsumer(target);
-        return { source, target, expected: Invalid };
+        return { source, target, expected: Unknown };
       },
     },
     {
@@ -60,7 +60,7 @@ describe("Reactive runtime - state and read-mode matrices", () => {
     writeProducer(source, 2);
 
     if (expected === Changed) expectChanged(target);
-    if (expected === Invalid) expectInvalid(target);
+    if (expected === Unknown) expectInvalid(target);
   });
 
   it.each([

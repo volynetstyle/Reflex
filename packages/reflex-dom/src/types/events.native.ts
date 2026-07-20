@@ -47,7 +47,7 @@ type GlobalNativeDOMEventPropMap = {
   onFormData: "formdata";
   onGotPointerCapture: "gotpointercapture";
   onInput: "input";
-  onInvalid: "invalid";
+  onInvalid: "unknown";
   onKeyDown: "keydown";
   onKeyPress: "keypress";
   onKeyUp: "keyup";

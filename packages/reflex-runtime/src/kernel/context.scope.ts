@@ -14,21 +14,20 @@ import {
 
 const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
 
-export function enterPropagationScope(): void {
-  profileRuntimeCounter("propagationScopesEntered");
-  profileRuntimeCounter("contextPropagationEnter");
-  enterPropagationScopeRegister();
-}
+export const enterPropagationScope = !__PROFILE__
+  ? enterPropagationScopeRegister
+  : function (): void {
+      profileRuntimeCounter("propagationScopesEntered");
+      profileRuntimeCounter("contextPropagationEnter");
+      enterPropagationScopeRegister();
+    };
 
 export function leavePropagationScope(): void {
   profileRuntimeCounter("propagationScopesLeft");
   profileRuntimeCounter("contextPropagationLeave");
 
   if (!leavePropagationScopeRegister()) {
-    if (
-      propagationScopeDepth === 0 &&
-      reactiveSettledHook !== undefined
-    ) {
+    if (propagationScopeDepth === 0 && reactiveSettledHook !== undefined) {
       markReactiveSettledPending();
     }
     return;
@@ -54,10 +53,7 @@ export function emitSettledIfIdle(): void {
 
   if (!IS_DEV && !__PROFILE__ && reactiveSettledHook === undefined) return;
   if (!isRuntimeExecutionIdle()) {
-    if (
-      propagationScopeDepth === 0 &&
-      reactiveSettledHook !== undefined
-    ) {
+    if (propagationScopeDepth === 0 && reactiveSettledHook !== undefined) {
       markReactiveSettledPending();
     }
     return;

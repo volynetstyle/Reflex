@@ -609,7 +609,7 @@ export function safeInlineIIFEPlugin(): Plugin {
         this.warn({
           code: "REFLEX_INLINE_IIFE_INVALID_OUTPUT",
           message:
-            "safe-inline-iife produced invalid JavaScript and skipped the transform.",
+            "safe-inline-iife produced unknown JavaScript and skipped the transform.",
           cause: error,
         });
         return null;

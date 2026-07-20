@@ -2,7 +2,7 @@
 // import {
 //   Changed,
 //   Consumer,
-//   Invalid,
+//   Unknown,
 //   linkEdge,
 //   ReactiveNode,
 //   Visited,
@@ -25,10 +25,10 @@
 //       expected: Consumer | Changed,
 //     },
 //     {
-//       name: "clean consumer promotes to Invalid",
+//       name: "clean consumer promotes to Unknown",
 //       initial: Consumer,
-//       promote: Invalid,
-//       expected: Consumer | Invalid,
+//       promote: Unknown,
+//       expected: Consumer | Unknown,
 //     },
 //     {
 //       name: "clean watcher promotes and keeps watcher bit",
@@ -57,8 +57,8 @@
 
 //   it.each([
 //     {
-//       name: "already Invalid",
-//       initial: Consumer | Invalid,
+//       name: "already Unknown",
+//       initial: Consumer | Unknown,
 //     },
 //     {
 //       name: "already Changed",
@@ -137,7 +137,7 @@
 //     );
 
 //     if (expectedChanged) {
-//       const expected = Consumer | Computing | Visited | Invalid;
+//       const expected = Consumer | Computing | Visited | Unknown;
 //       expect(nextState).toBe(expected);
 //       expect(subscriber.state).toBe(expected);
 //     } else {

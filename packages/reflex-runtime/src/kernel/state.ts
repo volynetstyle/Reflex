@@ -154,12 +154,12 @@ export let reactiveBatchDepth = 0;
 export let pendingReactiveSettled = false;
 
 export function enterReactiveBatchRegister(): void {
-  reactiveBatchDepth++;
+  ++reactiveBatchDepth;
 }
 
 export function leaveReactiveBatchRegister(): boolean {
   if (reactiveBatchDepth > 0) {
-    reactiveBatchDepth--;
+    --reactiveBatchDepth;
   }
 
   return reactiveBatchDepth === 0;

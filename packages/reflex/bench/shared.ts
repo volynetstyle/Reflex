@@ -628,7 +628,7 @@ function createRotatingDirtyWrites(
       const actual = root();
       if (actual !== expected) {
         throw new Error(
-          `[write-rotation:${mode}:${sourceCount}] invalid root: expected ${expected}, got ${actual}`,
+          `[write-rotation:${mode}:${sourceCount}] unknown root: expected ${expected}, got ${actual}`,
         );
       }
 
@@ -683,7 +683,7 @@ function createOuterBatchWrites(
       const actual = root();
       if (actual !== expected) {
         throw new Error(
-          `[outer-batch:${writeCount}] invalid root: expected ${expected}, got ${actual}`,
+          `[outer-batch:${writeCount}] unknown root: expected ${expected}, got ${actual}`,
         );
       }
     },
@@ -708,7 +708,7 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
   //         const actual = source();
   //         if (actual !== 1) {
   //           throw new Error(
-  //             `[write-same-value] invalid source: expected 1, got ${actual}`,
+  //             `[write-same-value] unknown source: expected 1, got ${actual}`,
   //           );
   //         }
   //       },
@@ -734,7 +734,7 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
   //         const actual = source();
   //         if (actual !== nextValue) {
   //           throw new Error(
-  //             `[write-changed-no-subscribers] invalid source: expected ${nextValue}, got ${actual}`,
+  //             `[write-changed-no-subscribers] unknown source: expected ${nextValue}, got ${actual}`,
   //           );
   //         }
   //       },
@@ -764,7 +764,7 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
   //         const expected = nextValue + 1;
   //         if (actual !== expected) {
   //           throw new Error(
-  //             `[write-changed-one-subscriber] invalid derived: expected ${expected}, got ${actual}`,
+  //             `[write-changed-one-subscriber] unknown derived: expected ${expected}, got ${actual}`,
   //           );
   //         }
   //       },
@@ -811,7 +811,7 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
   //         const actual = root();
   //         if (actual !== expected) {
   //           throw new Error(
-  //             `[write-changed-full-graph-subscribers] invalid root: expected ${expected}, got ${actual}`,
+  //             `[write-changed-full-graph-subscribers] unknown root: expected ${expected}, got ${actual}`,
   //           );
   //         }
   //       },
@@ -819,8 +819,8 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
   //   },
   // },
   // {
-  //   id: "write-changed-already-invalid-graph",
-  //   title: "Write changed value / already invalid graph",
+  //   id: "write-changed-already-unknown-graph",
+  //   title: "Write changed value / already unknown graph",
   //   sampleIterations: 30,
   //   bench: { iterations: 200, warmupIterations: 45 },
   //   build(harness) {
@@ -860,7 +860,7 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
   //         const actual = root();
   //         if (actual !== expected) {
   //           throw new Error(
-  //             `[write-changed-already-invalid-graph] invalid root: expected ${expected}, got ${actual}`,
+  //             `[write-changed-already-unknown-graph] unknown root: expected ${expected}, got ${actual}`,
   //           );
   //         }
   //         nextValue += 1;
@@ -888,7 +888,7 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
   //   },
   // },
   // {
-  //   id: "write-same-source-already-invalid",
+  //   id: "write-same-source-already-unknown",
   //   title: "Write dirty pattern / same source",
   //   sampleIterations: 30,
   //   bench: { iterations: 220, warmupIterations: 45 },
@@ -896,7 +896,7 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
   //     createRotatingDirtyWrites(harness, 32, "same", seed),
   // },
   // {
-  //   id: "write-rotating-4-sources-already-invalid",
+  //   id: "write-rotating-4-sources-already-unknown",
   //   title: "Write dirty pattern / rotating 4 sources",
   //   sampleIterations: 30,
   //   bench: { iterations: 220, warmupIterations: 45 },
@@ -904,7 +904,7 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
   //     createRotatingDirtyWrites(harness, 4, "rotate", seed),
   // },
   // {
-  //   id: "write-rotating-32-sources-already-invalid",
+  //   id: "write-rotating-32-sources-already-unknown",
   //   title: "Write dirty pattern / rotating 32 sources",
   //   sampleIterations: 30,
   //   bench: { iterations: 220, warmupIterations: 45 },
@@ -912,7 +912,7 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
   //     createRotatingDirtyWrites(harness, 32, "rotate", seed),
   // },
   // {
-  //   id: "write-random-32-sources-already-invalid",
+  //   id: "write-random-32-sources-already-unknown",
   //   title: "Write dirty pattern / random 32 sources",
   //   sampleIterations: 30,
   //   bench: { iterations: 220, warmupIterations: 45 },
@@ -1013,7 +1013,7 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
 
           if (actual !== expected) {
             throw new Error(
-              `[linear-chain] invalid tap at depth ${depth}: expected ${expected}, got ${actual}`,
+              `[linear-chain] unknown tap at depth ${depth}: expected ${expected}, got ${actual}`,
             );
           }
         }
@@ -1021,7 +1021,7 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
         const expectedTail = sourceValue + expectedPrefixSum(191);
         if (tailValue !== expectedTail) {
           throw new Error(
-            `[linear-chain] invalid tail: expected ${expectedTail}, got ${tailValue}`,
+            `[linear-chain] unknown tail: expected ${expectedTail}, got ${tailValue}`,
           );
         }
       };
@@ -1113,7 +1113,7 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
 
           if (actual !== expected) {
             throw new Error(
-              `[wide-fan-out] invalid tap at index ${index}: expected ${expected}, got ${actual}`,
+              `[wide-fan-out] unknown tap at index ${index}: expected ${expected}, got ${actual}`,
             );
           }
         }
@@ -1121,7 +1121,7 @@ const GRAPH_SCENARIOS: readonly ScenarioDefinition[] = [
         const expected = expectedAggregate(sourceValue);
         if (aggregateValue !== expected) {
           throw new Error(
-            `[wide-fan-out] invalid aggregate: expected ${expected}, got ${aggregateValue}`,
+            `[wide-fan-out] unknown aggregate: expected ${expected}, got ${aggregateValue}`,
           );
         }
       };

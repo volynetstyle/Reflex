@@ -1,0 +1,15 @@
+{
+  "name": "@volynets/reflex-build-dashboard-example",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "build": "node ../../../../node_modules/rollup/dist/bin/rollup --silent -c rollup.config.mjs --configPlugin @rollup/plugin-swc",
+    "typecheck": "node ../../../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.json",
+    "start": "node dist/script.js"
+  },
+  "dependencies": {
+    "@volynets/reflex-framework": "workspace:*"
+  },
+  "devDependencies": {}
+}

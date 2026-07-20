@@ -1,0 +1,35 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "jsx": "react-jsx",
+    "jsxImportSource": "@volynets/reflex-framework",
+    "moduleResolution": "bundler",
+    "rootDir": "../../..",
+    "composite": false,
+    "noEmit": true,
+    "paths": {
+      "@volynets/reflex-framework": ["../../src/index.ts"],
+      "@volynets/reflex-framework/jsx-runtime": [
+        "../../src/jsx-runtime.ts"
+      ],
+      "@volynets/reflex-framework/jsx-dev-runtime": [
+        "../../src/jsx-dev-runtime.ts"
+      ],
+      "@volynets/reflex-runtime": ["../../../reflex-runtime/src/index.ts"],
+      "@volynets/reflex-runtime/internal": [
+        "../../../reflex-runtime/src/internal/index.ts"
+      ],
+      "@runtime/*": ["../../../reflex-runtime/src/*"]
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.d.ts",
+    "../../src/**/*.ts",
+    "../../src/**/*.tsx",
+    "../../../reflex-runtime/src/**/*.ts",
+    "../../../reflex-runtime/src/**/*.d.ts"
+  ]
+}

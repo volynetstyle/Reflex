@@ -38,7 +38,7 @@ describe("Reactive runtime - same-value topology pruning", () => {
     counter.expectOnly({ shared: 1 });
   });
 
-  it("keeps sibling invalid subscribers dirty when shared recomputes same value", () => {
+  it("keeps sibling unknown subscribers dirty when shared recomputes same value", () => {
     const counter = createComputeCounter();
     const source = createProducer(1);
     const shared = createConsumer(

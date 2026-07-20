@@ -86,7 +86,7 @@ export function readConsumerEager<T>(node: ConsumerNode<T>): T {
 
   profileRuntimeReadConsumerPath(isDirty);
 
-  return !isDirty ? node.payload : stabilizeDirtyConsumer(node, state);
+  return isDirty ? stabilizeDirtyConsumer(node, state) : node.payload;
 }
 
 const FORCE_RECOMPUTE_STATE = Changed | Visited;
@@ -94,22 +94,18 @@ const FORCE_RECOMPUTE_STATE = Changed | Visited;
 function stabilizeDirtyConsumer<T>(node: ConsumerNode<T>, state: number): T {
   if (__DEV__) devAssertConsumerCanStabilize(state);
 
+  let stabilized: boolean;
+
   if ((state & FORCE_RECOMPUTE_STATE) !== 0) {
     profileRuntimeCounter("stabilizeForceAdvance");
-
-    if (!advance(node)) node.state &= ~DIRTY_STATE;
-    if (pendingReactiveSettled) flushPendingReactiveSettledIfIdle();
-    return node.payload;
+    stabilized = advance(node);
+  } else {
+    const edge = node.firstIn;
+    profileRuntimeCounter("stabilizePullAdvance");
+    stabilized = edge !== null && pull_iterator(node, edge) && advance(node);
   }
 
-  const edge = node.firstIn;
-
-  profileRuntimeCounter("stabilizePullAdvance");
-
-  if (edge === null || !pull_iterator(node, edge) || !advance(node)) {
-    node.state &= ~DIRTY_STATE;
-  }
-
+  if (!stabilized) node.state &= ~DIRTY_STATE;
   if (pendingReactiveSettled) flushPendingReactiveSettledIfIdle();
 
   return node.payload;

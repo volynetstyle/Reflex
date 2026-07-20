@@ -10,7 +10,7 @@ import {
   Changed,
   Computing,
   DIRTY_STATE,
-  Invalid,
+  Unknown,
   Visited,
   Watcher,
   type ReactiveEdge,
@@ -65,7 +65,7 @@ function markComputingSubscriber(
     }
   }
 
-  const next = state | Visited | Invalid;
+  const next = state | Visited | Unknown;
   sub.state = next;
   return next;
 }
@@ -110,7 +110,7 @@ function profilePushNode(
 /**
  * Push invalidation iterator:
  * - direct subscribers get Changed
- * - transitive subscribers get Invalid
+ * - transitive subscribers get Unknown
  */
 function pushIteratorCore(firstOut: ReactiveEdge | null): void {
   // if (firstOut === null) return;
@@ -159,7 +159,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
         (next & Changed) !== 0 ? "pushMarkedChanged" : "pushMarkedInvalid",
       );
       profilePushNode(
-        (next & Changed) !== 0 ? "direct.changed" : "direct.invalid",
+        (next & Changed) !== 0 ? "direct.changed" : "direct.unknown",
         sub,
         1,
         top - base,
@@ -197,7 +197,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
    * Phase 2:
    * Transitive DFS.
    *
-   * Everything below direct level gets Invalid.
+   * Everything below direct level gets Unknown.
    */
   while (top !== base) {
     let edge: ReactiveEdge | null = stack[--top]!;
@@ -212,7 +212,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
       let next = 0;
 
       if ((state & FAST_BLOCK_MASK) === 0) {
-        next = (state & ~Visited) | Invalid;
+        next = (state & ~Visited) | Unknown;
         sub.state = next;
       } else if ((state & Computing) !== 0) {
         next = markComputingSubscriber(edge, sub, state);
@@ -221,7 +221,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
       if (next !== 0) {
         if (__PROFILE__) {
           profileRuntimeCounter("pushMarkedInvalid");
-          profilePushNode("transitive.invalid", sub, depth, top - base);
+          profilePushNode("transitive.unknown", sub, depth, top - base);
         }
         if (__DEV__) devRecordPropagate(edge, next, false, defaultContext);
 

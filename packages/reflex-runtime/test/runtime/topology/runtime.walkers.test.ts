@@ -16,7 +16,7 @@ import {
 import {
   Changed,
   Consumer,
-  Invalid,
+  Unknown,
   Producer,
   propagate,
   Visited,
@@ -72,7 +72,7 @@ describe("Reactive runtime - walker invariants", () => {
     resetRuntime();
   });
 
-  it("propagate marks direct subscribers Changed and deeper descendants Invalid", () => {
+  it("propagate marks direct subscribers Changed and deeper descendants Unknown", () => {
     const source = createNode(Producer);
     const left = createNode(Consumer);
     const right = createNode(Consumer);
@@ -91,12 +91,12 @@ describe("Reactive runtime - walker invariants", () => {
     expectStates([
       [left, Consumer | Changed],
       [right, Consumer | Changed],
-      [leftLeaf, Consumer | Invalid],
-      [rightLeaf, Consumer | Invalid],
+      [leftLeaf, Consumer | Unknown],
+      [rightLeaf, Consumer | Unknown],
     ]);
   });
 
-  it("propagate keeps sibling continuation promote while child descent resets to Invalid", () => {
+  it("propagate keeps sibling continuation promote while child descent resets to Unknown", () => {
     const source = createNode(Producer);
     const left = createNode(Consumer);
     const right = createNode(Consumer);
@@ -112,7 +112,7 @@ describe("Reactive runtime - walker invariants", () => {
 
     expectStates([
       [left, Consumer | Changed],
-      [leftLeaf, Consumer | Invalid],
+      [leftLeaf, Consumer | Unknown],
       [right, Consumer | Changed],
     ]);
   });
@@ -158,10 +158,10 @@ describe("Reactive runtime - walker invariants", () => {
       [left, Consumer | Changed],
       [middle, Consumer | Changed],
       [right, Consumer | Changed],
-      [leftA, Consumer | Invalid],
-      [leftB, Consumer | Invalid],
-      [leftC, Consumer | Invalid],
-      [leftLeaf, Consumer | Invalid],
+      [leftA, Consumer | Unknown],
+      [leftB, Consumer | Unknown],
+      [leftC, Consumer | Unknown],
+      [leftLeaf, Consumer | Unknown],
     ]);
   });
 
@@ -183,7 +183,7 @@ describe("Reactive runtime - walker invariants", () => {
 
           for (let depth = 1; depth < levels.length; depth += 1) {
             for (const node of levels[depth] ?? []) {
-              expectState(node, Consumer | Invalid);
+              expectState(node, Consumer | Unknown);
             }
           }
         },
@@ -293,11 +293,11 @@ describe("Reactive runtime - walker invariants", () => {
 
     expect(nestedWrites).toBe(1);
     expect(outerLeft.state).toBe(Consumer | Changed);
-    expect(outerWatcher.state).toBe(Watcher | Invalid);
+    expect(outerWatcher.state).toBe(Watcher | Unknown);
     expect(outerRight.state).toBe(Consumer | Changed);
     expect(innerLeft.state).toBe(Consumer | Changed);
     expect(innerRight.state).toBe(Consumer | Changed);
-    expect(innerLeaf.state).toBe(Consumer | Invalid);
+    expect(innerLeaf.state).toBe(Consumer | Unknown);
   });
 
   it("keeps direct-phase resume stack intact across nested watcher writes", () => {
@@ -334,9 +334,9 @@ describe("Reactive runtime - walker invariants", () => {
     expect(nestedWrites).toBe(1);
     expect(outerBranch.state).toBe(Consumer | Changed);
     expect(directWatcher.state).toBe(Watcher | Changed);
-    expect(outerLeaf.state).toBe(Consumer | Invalid);
+    expect(outerLeaf.state).toBe(Consumer | Unknown);
     expect(innerBranch.state).toBe(Consumer | Changed);
-    expect(innerLeaf.state).toBe(Consumer | Invalid);
+    expect(innerLeaf.state).toBe(Consumer | Unknown);
   });
 
   it("propagate ignores stale tracked-prefix edges but still resumes sibling branches", () => {
@@ -377,11 +377,11 @@ describe("Reactive runtime - walker invariants", () => {
     });
 
     expect(() => propagate(source.firstOut!)).not.toThrow();
-    expect(tracked.state).toBe(Consumer | Computing | Visited | Invalid);
+    expect(tracked.state).toBe(Consumer | Computing | Visited | Unknown);
     expect(sibling.state).toBe(Consumer | Changed);
   });
 
-  it("keeps transitive slow-path subscribers Invalid when only Visited is set", () => {
+  it("keeps transitive slow-path subscribers Unknown when only Visited is set", () => {
     const source = createNode(Producer);
     const middle = createNode(Consumer);
     const leaf = createNode(Consumer | Visited);
@@ -393,10 +393,10 @@ describe("Reactive runtime - walker invariants", () => {
     propagate(source.firstOut!);
 
     expect(middle.state).toBe(Consumer | Changed);
-    expect(leaf.state).toBe(Consumer | Invalid);
+    expect(leaf.state).toBe(Consumer | Unknown);
   });
 
-  it("clears stale Visited on fast-path subscribers while preserving Changed and Invalid", () => {
+  it("clears stale Visited on fast-path subscribers while preserving Changed and Unknown", () => {
     const source = createNode(Producer);
     const middle = createNode(Consumer | Visited);
     const leaf = createNode(Consumer | Visited);
@@ -408,13 +408,13 @@ describe("Reactive runtime - walker invariants", () => {
     propagate(source.firstOut!);
 
     expect(middle.state).toBe(Consumer | Changed);
-    expect(leaf.state).toBe(Consumer | Invalid);
+    expect(leaf.state).toBe(Consumer | Unknown);
   });
 
-  it("propagateOnce upgrades only pure Invalid subscribers and notifies watchers once", () => {
+  it("propagateOnce upgrades only pure Unknown subscribers and notifies watchers once", () => {
     const source = createNode(Producer);
-    const consumer = createNode(Consumer | Invalid);
-    const watcher = createNode(Watcher | Invalid);
+    const consumer = createNode(Consumer | Unknown);
+    const watcher = createNode(Watcher | Unknown);
     const alreadyChangedWatcher = createNode(Watcher | Changed);
     const invalidated: string[] = [];
     resetRuntime({
@@ -436,9 +436,9 @@ describe("Reactive runtime - walker invariants", () => {
     expect(invalidated).toEqual(["watcher"]);
   });
 
-  it("propagateOnce preserves Visited while upgrading Invalid watchers to Changed", () => {
+  it("propagateOnce preserves Visited while upgrading Unknown watchers to Changed", () => {
     const source = createNode(Producer);
-    const watcher = createNode(Watcher | Invalid | Visited);
+    const watcher = createNode(Watcher | Unknown | Visited);
     const invalidated: ReactiveNode[] = [];
     resetRuntime({
       sinkInvalidatedDispatcher(node) {
@@ -545,7 +545,7 @@ describe("Reactive runtime - walker invariants", () => {
     expect(invalidated).toEqual(["direct", "left", "right"]);
   });
 
-  it("stabilizeDirtyConsumer clears Invalid when a dirty dependency recomputes to the same value", () => {
+  it("stabilizeDirtyConsumer clears Unknown when a dirty dependency recomputes to the same value", () => {
     const source = createProducer(1);
     const sharedSpy = vi.fn(() => {
       readProducer(source);
@@ -559,14 +559,14 @@ describe("Reactive runtime - walker invariants", () => {
     writeProducer(source, 2);
 
     expect(shared.state & Changed).toBeTruthy();
-    expect(root.state & Invalid).toBeTruthy();
+    expect(root.state & Unknown).toBeTruthy();
     expect(readConsumer(root)).toBe(11);
     expect(sharedSpy).toHaveBeenCalledTimes(2);
     expect(shared.state & DIRTY_STATE).toBe(0);
-    expect(root.state & Invalid).toBe(0);
+    expect(root.state & Unknown).toBe(0);
   });
 
-  it("stabilizeDirtyConsumer clears Invalid across a deep linear chain when the leaf recomputes same-as-current", () => {
+  it("stabilizeDirtyConsumer clears Unknown across a deep linear chain when the leaf recomputes same-as-current", () => {
     const source = createProducer(1);
     const leafSpy = vi.fn(() => {
       readProducer(source);
@@ -583,8 +583,8 @@ describe("Reactive runtime - walker invariants", () => {
     expect(readConsumer(root)).toBe(12);
     expect(leafSpy).toHaveBeenCalledTimes(2);
     expect(leaf.state & DIRTY_STATE).toBe(0);
-    expect(mid.state & Invalid).toBe(0);
-    expect(root.state & Invalid).toBe(0);
+    expect(mid.state & Unknown).toBe(0);
+    expect(root.state & Unknown).toBe(0);
   });
 
   it("stabilizeDirtyConsumer reuses deep branching stacks across repeated reads", () => {
@@ -605,7 +605,7 @@ describe("Reactive runtime - walker invariants", () => {
     }
   });
 
-  it("stabilizeDirtyConsumer promotes sibling invalid subscribers when a shared dependency is confirmed changed", () => {
+  it("stabilizeDirtyConsumer promotes sibling unknown subscribers when a shared dependency is confirmed changed", () => {
     const source = createProducer(1);
     const shared = createConsumer(() => readProducer(source) * 2);
     const left = createConsumer(() => readConsumer(shared) + 1);
@@ -617,15 +617,15 @@ describe("Reactive runtime - walker invariants", () => {
     writeProducer(source, 2);
 
     expect(shared.state & Changed).toBeTruthy();
-    expect(left.state & Invalid).toBeTruthy();
-    expect(right.state & Invalid).toBeTruthy();
+    expect(left.state & Unknown).toBeTruthy();
+    expect(right.state & Unknown).toBeTruthy();
     expect(readConsumer(left)).toBe(5);
     expect(left.state & DIRTY_STATE).toBe(0);
     expect(right.state & Changed).toBeTruthy();
-    expect(right.state & Invalid).toBeFalsy();
+    expect(right.state & Unknown).toBeFalsy();
   });
 
-  it("stabilizeDirtyConsumer does not promote sibling invalid subscribers when a shared dependency recomputes same-as-current", () => {
+  it("stabilizeDirtyConsumer does not promote sibling unknown subscribers when a shared dependency recomputes same-as-current", () => {
     const source = createProducer(1);
     const sharedSpy = vi.fn(() => {
       readProducer(source);
@@ -641,12 +641,12 @@ describe("Reactive runtime - walker invariants", () => {
     writeProducer(source, 2);
 
     expect(shared.state & Changed).toBeTruthy();
-    expect(left.state & Invalid).toBeTruthy();
-    expect(right.state & Invalid).toBeTruthy();
+    expect(left.state & Unknown).toBeTruthy();
+    expect(right.state & Unknown).toBeTruthy();
     expect(readConsumer(left)).toBe(11);
     expect(sharedSpy).toHaveBeenCalledTimes(2);
     expect(right.state & Changed).toBeFalsy();
-    expect(right.state & Invalid).toBeTruthy();
+    expect(right.state & Unknown).toBeTruthy();
   });
 
   it("stabilizeDirtyConsumer scans later branching siblings when the first dependency is already clean", () => {
@@ -664,7 +664,7 @@ describe("Reactive runtime - walker invariants", () => {
 
     writeProducer(rightSource, 20);
 
-    expect(root.state & Invalid).toBeTruthy();
+    expect(root.state & Unknown).toBeTruthy();
     expect(left.state & DIRTY_STATE).toBe(0);
     expect(right.state & Changed).toBeTruthy();
     expect(readConsumer(root)).toBe(23);
@@ -693,7 +693,7 @@ describe("Reactive runtime - walker invariants", () => {
 
     expect(left.state & Changed).toBeTruthy();
     expect(right.state & Changed).toBeTruthy();
-    expect(root.state & Invalid).toBeTruthy();
+    expect(root.state & Unknown).toBeTruthy();
     expect(readConsumer(root)).toBe(31);
     expect(leftSpy).toHaveBeenCalledTimes(2);
     expect(rightSpy).toHaveBeenCalledTimes(2);
@@ -724,9 +724,9 @@ describe("Reactive runtime - walker invariants", () => {
     writeProducer(rightSource, 20);
 
     expect(leaf.state & Changed).toBeTruthy();
-    expect(stable.state & Invalid).toBeTruthy();
+    expect(stable.state & Unknown).toBeTruthy();
     expect(right.state & Changed).toBeTruthy();
-    expect(root.state & Invalid).toBeTruthy();
+    expect(root.state & Unknown).toBeTruthy();
     expect(readConsumer(root)).toBe(31);
     expect(leafSpy).toHaveBeenCalledTimes(2);
     expect(stableSpy).toHaveBeenCalledTimes(2);
@@ -794,7 +794,7 @@ describe("Reactive runtime - walker invariants", () => {
     expect(outerRoot.state & DIRTY_STATE).toBe(0);
   });
 
-  it("stabilizeDirtyConsumer clears Invalid when only a later branching sibling recomputes same-as-current", () => {
+  it("stabilizeDirtyConsumer clears Unknown when only a later branching sibling recomputes same-as-current", () => {
     const leftSource = createProducer(1);
     const rightSource = createProducer(10);
     const leftSpy = vi.fn(() => readProducer(leftSource) + 1);
@@ -812,9 +812,9 @@ describe("Reactive runtime - walker invariants", () => {
 
     writeProducer(rightSource, 99);
 
-    expect(root.state & Invalid).toBeTruthy();
+    expect(root.state & Unknown).toBeTruthy();
     expect(readConsumer(root)).toBe(22);
-    expect(root.state & Invalid).toBeFalsy();
+    expect(root.state & Unknown).toBeFalsy();
     expect(leftSpy).toHaveBeenCalledTimes(1);
     expect(rightSpy).toHaveBeenCalledTimes(2);
   });

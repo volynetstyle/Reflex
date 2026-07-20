@@ -37,11 +37,11 @@ export interface RuntimeDebugGraphIssue {
     | "dangling-outgoing-edge"
     | "duplicate-incoming-edge"
     | "duplicate-outgoing-edge"
-    | "invalid-last-in"
-    | "invalid-last-in-tail"
-    | "invalid-last-out"
-    | "invalid-prev-in"
-    | "invalid-prev-out"
+    | "unknown-last-in"
+    | "unknown-last-in-tail"
+    | "unknown-last-out"
+    | "unknown-prev-in"
+    | "unknown-prev-out"
     | "mismatched-incoming-target"
     | "mismatched-outgoing-source";
   node: RuntimeDebugNodeSnapshot;

@@ -162,7 +162,7 @@ describe("Reactive runtime - subtle debug surface", () => {
 
     expect(integrity.ok).toBe(false);
     expect(integrity.issues.map((issue) => issue.code)).toContain(
-      "invalid-prev-out",
+      "unknown-prev-out",
     );
   });
 

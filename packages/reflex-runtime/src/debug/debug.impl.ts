@@ -7,7 +7,7 @@ import {
   Changed,
   Consumer,
   DIRTY_STATE,
-  Invalid,
+  Unknown,
   Producer,
   Visited,
   Scheduled,
@@ -77,9 +77,9 @@ function getDirtyState(state: number): RuntimeDebugDirtyState {
   const dirty = state & DIRTY_STATE;
 
   if (dirty === 0) return "clean";
-  if (dirty === Invalid) return "invalid";
+  if (dirty === Unknown) return "unknown";
   if (dirty === Changed) return "changed";
-  return "invalid+changed";
+  return "unknown+changed";
 }
 
 function getNodeKind(state: number): RuntimeDebugNodeKind {
@@ -95,7 +95,7 @@ function getFlags(state: number): RuntimeDebugFlag[] {
   if ((state & Producer) !== 0) flags.push("producer");
   if ((state & Consumer) !== 0) flags.push("consumer");
   if ((state & Watcher) !== 0) flags.push("watcher");
-  if ((state & Invalid) !== 0) flags.push("invalid");
+  if ((state & Unknown) !== 0) flags.push("unknown");
   if ((state & Changed) !== 0) flags.push("changed");
   if ((state & Visited) !== 0) flags.push("visited");
   if ((state & Computing) !== 0) flags.push("computing");
