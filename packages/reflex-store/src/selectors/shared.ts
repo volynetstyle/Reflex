@@ -6,7 +6,6 @@ export type Missing = typeof MISSING;
 
 export interface KeyedOptions<T> {
   equals?: (prev: T, next: T) => boolean;
-  priority?: number;
 }
 
 export interface ProjectionOptions<K, R> extends KeyedOptions<K> {
@@ -15,7 +14,6 @@ export interface ProjectionOptions<K, R> extends KeyedOptions<K> {
 
 export interface StoreProjectionOptions<T extends object> {
   clone?: (value: T) => T;
-  priority?: number;
 }
 
 export function sameValue<T>(prev: T, next: T): boolean {

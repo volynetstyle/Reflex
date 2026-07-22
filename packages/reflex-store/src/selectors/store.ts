@@ -1,6 +1,11 @@
 import { readProducer, writeProducer } from "@volynets/reflex-runtime";
+import {
+  createWatcher,
+  disposeWatcher,
+  runWatcher,
+} from "@volynets/reflex-runtime/internal";
 import type { Destructor } from "../types";
-import { createSignalNode, effectRanked } from "../internal/runtime";
+import { createSignalNode } from "../internal/runtime";
 import {
   cloneProjectionValue,
   isObject,
@@ -29,15 +34,14 @@ class StoreProjectionCore<T extends object> {
     this.root = this.createPathEntry(this.state);
     this.store = this.getProxy(this.root) as T;
 
-    this.dispose = effectRanked(
-      () => {
-        const draft = clone(this.state);
-        const result = fn(draft);
-        const nextState = (result === undefined ? draft : clone(result)) as T;
-        this.commit(nextState);
-      },
-      { priority: options.priority ?? 100 },
-    );
+    const watcher = createWatcher(() => {
+      const draft = clone(this.state);
+      const result = fn(draft);
+      const nextState = (result === undefined ? draft : clone(result)) as T;
+      this.commit(nextState);
+    });
+    runWatcher(watcher);
+    this.dispose = disposeWatcher.bind(null, watcher) as Destructor;
   }
 
   read(): T {
