@@ -45,3 +45,10 @@ export default defineConfig({
   plugins: [reflexStore()],
 });
 ```
+
+## Example
+
+See the runnable [task-board example](./examples/task-board/README.md) for an
+application-oriented implementation combining a compiled UI store, immutable
+domain state, keyed selectors, entity projections, derived store projections,
+and explicit application actions.

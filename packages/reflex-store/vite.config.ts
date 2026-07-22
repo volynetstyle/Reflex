@@ -1,14 +1,25 @@
 import { defineConfig } from "vitest/config";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import reflexStore from "./src/vite";
 
 const packageRoot = fileURLToPath(new URL(".", import.meta.url));
+const reflexRoot = resolve(packageRoot, "../reflex/src");
 const runtimeRoot = resolve(packageRoot, "../reflex-runtime/src");
 const schedulerRoot = resolve(packageRoot, "../reflex-scheduler/src");
 
 export default defineConfig({
+  plugins: [reflexStore()],
   resolve: {
     alias: [
+      {
+        find: /^@volynets\/reflex$/,
+        replacement: resolve(reflexRoot, "index.ts"),
+      },
+      {
+        find: /^@volynets\/reflex-store$/,
+        replacement: resolve(packageRoot, "src/index.ts"),
+      },
       {
         find: "@runtime",
         replacement: runtimeRoot,
@@ -39,7 +50,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
-    isolate: false,
+    isolate: true,
     pool: "forks",
   },
   esbuild: {
