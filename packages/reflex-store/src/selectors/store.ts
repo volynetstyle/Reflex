@@ -135,6 +135,14 @@ class StoreProjectionCore<T extends object> {
         prevObject === null ? undefined : prevObject[key as keyof typeof prevObject];
       const nextChild =
         nextObject === null ? undefined : nextObject[key as keyof typeof nextObject];
+
+      if (child.children.size === 0) {
+        if (!Object.is(prevChild, nextChild)) {
+          writeProducer(child.node, nextChild);
+        }
+        continue;
+      }
+
       this.diffEntry(child, prevChild, nextChild);
     }
   }
