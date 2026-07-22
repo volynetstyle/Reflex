@@ -2,6 +2,10 @@ export type { CompiledStore, StoreShape } from "./createStore";
 export { createStore } from "./createStore";
 export type {
   CompiledStoreDiagnostic,
+  CompiledStoreLoweringTarget,
+  CompiledStoreLoweringTargetOptions,
+  CompiledStorePathContext,
+  CompiledStoreTemporaryContext,
   CompiledStoreTransformOptions,
   CompiledStoreTransformResult,
 } from "./transform";

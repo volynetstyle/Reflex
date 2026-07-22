@@ -1,5 +1,9 @@
 export type {
   CompiledStoreDiagnostic,
+  CompiledStoreLoweringTarget,
+  CompiledStoreLoweringTargetOptions,
+  CompiledStorePathContext,
+  CompiledStoreTemporaryContext,
   CompiledStoreTransformOptions,
   CompiledStoreTransformResult,
 } from "./transform/index";

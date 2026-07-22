@@ -13,49 +13,40 @@ export function cleanupUnvisitedSources(node: ReactiveNode): void {
   profileRuntimeCounter("cleanupCalls");
 
   const tail = node.tailIn;
-  const staleHead = tail === null ? node.firstIn : tail.nextIn;
+  let edge = tail === null ? node.firstIn : tail.nextIn;
 
-  if (staleHead === null) {
+  if (edge === null) {
     profileRuntimeCounter("cleanupSkipped");
     return;
   }
 
   if (tail === null) {
-    node.firstIn = node.lastIn = null;
+    node.firstIn = null;
+    node.lastIn = null;
   } else {
     tail.nextIn = null;
     node.lastIn = tail;
   }
 
-  if (__DEV__) {
-    devRecordCleanupStaleSources(node, staleHead, defaultContext);
-  }
-
-  let edge: ReactiveEdge | null = staleHead;
+  devRecordCleanupStaleSources(node, edge, defaultContext);
 
   do {
     profileRuntimeCounter("cleanupEdgesDropped");
-
-    const nextIn: ReactiveEdge | null = edge.nextIn;
-
-    const from = edge.from;
+    const next: ReactiveEdge | null = edge.nextIn;
     const prevOut = edge.prevOut;
     const nextOut = edge.nextOut;
+    const from = edge.from;
 
-    if (prevOut !== null) {
-      prevOut.nextOut = nextOut;
-    } else {
-      from.firstOut = nextOut;
-    }
+    if (prevOut !== null) prevOut.nextOut = nextOut;
+    else from.firstOut = nextOut;
 
-    if (nextOut !== null) {
-      nextOut.prevOut = prevOut;
-    } else {
-      from.lastOut = prevOut;
-    }
+    if (nextOut !== null) nextOut.prevOut = prevOut;
+    else from.lastOut = prevOut;
 
-    edge.prevOut = edge.nextOut = edge.prevIn = edge.nextIn = null;
-
-    edge = nextIn;
+    edge.prevOut = null;
+    edge.nextOut = null;
+    edge.prevIn = null;
+    edge.nextIn = null;
+    edge = next;
   } while (edge !== null);
 }

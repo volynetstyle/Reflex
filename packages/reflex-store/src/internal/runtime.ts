@@ -1,27 +1,23 @@
 import {
+  createProducer,
+  createWatcher,
   disposeWatcher,
-  PRODUCER_INITIAL_STATE,
-  ReactiveNode,
   runWatcher,
-  WATCHER_INITIAL_STATE,
+  type ProducerNode,
+  type WatcherNode,
 } from "@volynets/reflex-runtime/internal";
 import type { Destructor, EffectFn, EffectOptions } from "../types";
 
-export function createSignalNode<T>(payload: T): ReactiveNode<T> {
-  return new ReactiveNode<T>(payload, null, PRODUCER_INITIAL_STATE);
+export function createSignalNode<T>(payload: T): ProducerNode<T> {
+  return createProducer(payload);
 }
 
 export function createWatcherRankedNode(
   compute: EffectFn,
   priority = 0,
-): ReactiveNode<void | Destructor> {
-  const node = new ReactiveNode<void | Destructor>(
-    undefined,
-    compute,
-    WATCHER_INITIAL_STATE,
-  );
-  (node as ReactiveNode<void | Destructor> & { priority?: number }).priority =
-    priority;
+): WatcherNode {
+  const node = createWatcher(compute);
+  (node as WatcherNode & { priority?: number }).priority = priority;
   return node;
 }
 

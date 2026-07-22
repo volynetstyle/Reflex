@@ -67,7 +67,7 @@
   },
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true});require('node:fs').rmSync('build',{recursive:true,force:true})\"",
-    "build": "pnpm clean && tsc -p tsconfig.build.json && node ../../../scripts/fix-esm-specifiers.mjs dist",
+    "build": "pnpm clean && tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs dist",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run --config vite.config.ts",
@@ -82,6 +82,11 @@
     "@volynets/reflex": "workspace:*",
     "vite": "^6.0.0"
   },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  },
   "keywords": [
     "reflex",
     "state",
@@ -92,9 +97,9 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/volynetstyle/Reflex.git",
-    "directory": "packages/@reflex/store"
+    "directory": "packages/reflex-store"
   },
-  "homepage": "https://github.com/volynetstyle/Reflex/tree/main/packages/@reflex/store",
+  "homepage": "https://github.com/volynetstyle/Reflex/tree/main/packages/reflex-store",
   "bugs": {
     "url": "https://github.com/volynetstyle/Reflex/issues"
   },

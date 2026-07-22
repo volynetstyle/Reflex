@@ -6,7 +6,9 @@ import reflexStore from "../src/vite";
 
 const testDir = dirname(fileURLToPath(import.meta.url));
 const fixtureRoot = resolve(testDir, "fixtures");
-const reflexSource = resolve(testDir, "../../../reflex/src/index.ts");
+const reflexSource = resolve(testDir, "../../reflex/src/index.ts");
+const runtimeSource = resolve(testDir, "../../reflex-runtime/src");
+const schedulerSource = resolve(testDir, "../../reflex-scheduler/src/index.ts");
 const storeSource = resolve(testDir, "../src/index.ts");
 
 const servers: ViteDevServer[] = [];
@@ -24,8 +26,15 @@ async function createStoreFixtureServer(): Promise<ViteDevServer> {
     plugins: [reflexStore()],
     resolve: {
       alias: {
+        "@runtime": runtimeSource,
         "@volynets/reflex": reflexSource,
-        "@reflex/store": storeSource,
+        "@volynets/reflex-runtime/internal": resolve(
+          runtimeSource,
+          "internal/index.ts",
+        ),
+        "@volynets/reflex-runtime": resolve(runtimeSource, "index.ts"),
+        "@volynets/reflex-scheduler": schedulerSource,
+        "@volynets/reflex-store": storeSource,
       },
     },
     server: {

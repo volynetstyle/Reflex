@@ -46,13 +46,15 @@ export function readConsumerLazy<T>(this: ConsumerNode<T>): T {
   profileRuntimeCounter("readConsumerLazyCalls");
 
   // eslint-disable-next-line @typescript-eslint/no-this-alias
-  const node = this;
-  const state = node.state;
+  const producer = this;
+  const state = producer.state;
   const isDirty = (state & DIRTY_STATE) !== 0;
 
   profileRuntimeReadConsumerPath(isDirty);
 
-  const value = isDirty ? stabilizeDirtyConsumer(node, state) : node.payload;
+  const value = isDirty
+    ? stabilizeDirtyConsumer(producer, state)
+    : producer.payload;
 
   const consumer = currentConsumer;
 
@@ -60,10 +62,10 @@ export function readConsumerLazy<T>(this: ConsumerNode<T>): T {
 
   profileRuntimeCounter("readConsumerTracked");
 
-  resolveTrackedRead(node, consumer, trackingEpoch, true);
+  resolveTrackedRead(producer, consumer, trackingEpoch, true);
 
   if (__DEV__) {
-    devRecordReadConsumer(node, "lazy", value, defaultContext, consumer);
+    devRecordReadConsumer(producer, "lazy", value, defaultContext, consumer);
   }
 
   return value;

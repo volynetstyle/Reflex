@@ -41,7 +41,7 @@ describe("reflexStoreVitePlugin", () => {
     const result = await transform.call(
       createPluginContext(),
       [
-        'import { createStore } from "@reflex/store";',
+        'import { createStore } from "@volynets/reflex-store";',
         "const state = createStore({ count: 0 });",
         "state.count += 1;",
       ].join("\n"),
@@ -80,6 +80,34 @@ describe("reflexStoreVitePlugin", () => {
     );
 
     expect((result as { code: string }).code).toContain("__reflex_signal(0)");
+  });
+
+  it("passes a custom lowering target to the compiler", async () => {
+    const transform = getTransform(
+      reflexStore({
+        loweringTarget: {
+          runtimeModule: "custom-runtime",
+          signal: { exportName: "cell", localName: "$cell" },
+          identifiers: {
+            read: ({ mangledPath }) => `$read_${mangledPath}`,
+          },
+        },
+      }),
+    );
+    const result = await transform.call(
+      createPluginContext(),
+      [
+        'import { createStore } from "@volynets/reflex-store";',
+        "const state = createStore({ count: 0 });",
+        "void state.count;",
+      ].join("\n"),
+      "src/app.ts",
+    );
+
+    expect((result as { code: string }).code).toContain(
+      'cell as $cell } from "custom-runtime"',
+    );
+    expect((result as { code: string }).code).toContain("$read_count()");
   });
 
   it("respects exclude filters", async () => {
