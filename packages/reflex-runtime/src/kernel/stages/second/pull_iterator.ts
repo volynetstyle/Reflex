@@ -6,6 +6,7 @@ import {
 } from "@runtime/kernel/execution";
 import {
   Changed,
+  Computing,
   Unknown,
   type ReactiveEdge,
   type ReactiveNode,
@@ -94,6 +95,14 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
       const dep = edge.from;
       const depState = dep.state;
+
+      if (__DEV__ && (depState & Computing) !== 0) {
+        high = base;
+        if (base === 0 && stack.length > STACK_TRIM_MIN_CAPACITY) {
+          stack.length = STACK_TRIM_MIN_CAPACITY;
+        }
+        throw new Error("Cycle detected while refreshing reactive graph");
+      }
 
       if ((depState & Changed) !== 0) {
         if (__PROFILE__) {

@@ -52,6 +52,41 @@ describe("Reactive runtime - graph regressions (dev)", () => {
     expectNoStaleCleanup(summary);
   });
 
+  it("rejects direct and indirect computed cycles", () => {
+    let direct!: ReturnType<typeof createConsumer<number>>;
+    direct = createConsumer(() => readConsumer(direct));
+
+    expect(() => readConsumer(direct)).toThrow(
+      "Cycle detected while refreshing reactive graph",
+    );
+
+    let left!: ReturnType<typeof createConsumer<number>>;
+    let right!: ReturnType<typeof createConsumer<number>>;
+    left = createConsumer(() => readConsumer(right));
+    right = createConsumer(() => readConsumer(left));
+
+    expect(() => readConsumer(left)).toThrow(
+      "Cycle detected while refreshing reactive graph",
+    );
+  });
+
+  it("rejects a cycle introduced by a dynamic dependency", () => {
+    const cyclic = createProducer(false);
+    let left!: ReturnType<typeof createConsumer<number>>;
+    let right!: ReturnType<typeof createConsumer<number>>;
+    left = createConsumer(() =>
+      readProducer(cyclic) ? readConsumer(right) : 1,
+    );
+    right = createConsumer(() => readConsumer(left) + 1);
+
+    expect(readConsumer(right)).toBe(2);
+    writeProducer(cyclic, true);
+
+    expect(() => readConsumer(left)).toThrow(
+      "Cycle detected while refreshing reactive graph",
+    );
+  });
+
   it("updates all branches in a wide fan-out graph", () => {
     const h = createHistoryHarness();
     const source = h.label(createProducer(1), "source");

@@ -38,6 +38,7 @@ import type { EffectStrategy } from "@volynets/reflex-scheduler";
 
 type BatchFn = <T>(fn: () => T) => T;
 type EventFn = <T>() => EventSource<T>;
+const NO_BATCH_ERROR: unique symbol = Symbol("NO_BATCH_ERROR");
 
 export interface RuntimeContext {
   readonly scope: "runtime";
@@ -91,30 +92,51 @@ export function createRuntime({
     enterReactiveBatch();
     enterSchedulerBatch(schedulerCore);
 
-    try {
-      return fn();
-    } finally {
-      profileSchedulerPolicyCounter("batchExit");
+    let result!: T;
+    let callbackError: unknown = NO_BATCH_ERROR;
 
+    try {
+      result = fn();
+    } catch (error) {
+      callbackError = error;
+    }
+
+    const exitErrors: unknown[] = [];
+    profileSchedulerPolicyCounter("batchExit");
+
+    try {
       const leftOuterSchedulerBatch = leaveSchedulerBatch(schedulerCore);
 
-      if (leftOuterSchedulerBatch) {
-        if (
-          schedulerMode === EffectSchedulerMode.Eager &&
-          hasPendingEffects(schedulerCore)
-        ) {
-          flushSchedulerQueue(schedulerCore);
-        } else if (
-          schedulerMode === EffectSchedulerMode.SAB &&
-          hasPendingEffects(schedulerCore) &&
-          isContextSettled()
-        ) {
-          flushSchedulerQueue(schedulerCore);
-        }
+      if (
+        leftOuterSchedulerBatch &&
+        ((schedulerMode === EffectSchedulerMode.Eager &&
+          hasPendingEffects(schedulerCore)) ||
+          (schedulerMode === EffectSchedulerMode.SAB &&
+            hasPendingEffects(schedulerCore) &&
+            isContextSettled()))
+      ) {
+        flushSchedulerQueue(schedulerCore);
       }
-
-      leaveReactiveBatch();
+    } catch (error) {
+      exitErrors.push(error);
+    } finally {
+      try {
+        leaveReactiveBatch();
+      } catch (error) {
+        exitErrors.push(error);
+      }
     }
+
+    if (callbackError !== NO_BATCH_ERROR) {
+      exitErrors.unshift(callbackError);
+    }
+
+    if (exitErrors.length === 1) throw exitErrors[0];
+    if (exitErrors.length > 1) {
+      throw new AggregateError(exitErrors, "Reactive batch failed");
+    }
+
+    return result;
   };
   const runtimeBatch = <T>(fn: () => T): T => {
     const runContextBatch = (): T => runBatch(fn);

@@ -22,6 +22,7 @@ import {
   DIRTY_STATE,
   disposeNode,
   Changed,
+  Computing,
   Unknown,
   Scheduled,
   Visited,
@@ -34,6 +35,16 @@ import { profileRuntimeCounter } from "@runtime/profiling";
 import { executeKnownNodeComputation } from "./watcher.execution";
 
 const FORCE_STABILIZATION_STATE = Changed | Visited;
+const WATCHER_TRANSIENT_STATE =
+  DIRTY_STATE | Visited | Computing | Scheduled;
+
+function recoverWatcherAfterError(node: WatcherNode): void {
+  // A failed lifecycle callback must not leave an unscheduled dirty watcher:
+  // such a node can no longer be invalidated and becomes a zombie. Keep its
+  // dependency set as a conservative retry set, but return it to an idle
+  // state so the next source change can schedule it again.
+  node.state &= ~WATCHER_TRANSIENT_STATE;
+}
 
 /** Claims ownership of this watcher for an external scheduler queue. */
 export function claimWatcherSchedule(node: WatcherNode): boolean {
@@ -132,7 +143,12 @@ function runWatcherCore(node: WatcherNode): void {
   node.state &= ~Visited;
 
   if (prevCleanup !== null) {
-    runCleanup(prevCleanup);
+    try {
+      runCleanup(prevCleanup);
+    } catch (error) {
+      recoverWatcherAfterError(node);
+      throw error;
+    }
     if (__DEV__) devRecordWatcherCleanup(node, defaultContext);
 
     if (node.compute === undefined) {
@@ -144,7 +160,20 @@ function runWatcherCore(node: WatcherNode): void {
     }
   }
 
-  const result = executeKnownNodeComputation(node, compute);
+  let result: ReturnType<typeof compute>;
+
+  try {
+    result = executeKnownNodeComputation(node, compute);
+  } catch (error) {
+    recoverWatcherAfterError(node);
+    throw error;
+  }
+
+  if (node.compute === undefined) {
+    node.payload = undefined;
+    node.state &= ~WATCHER_TRANSIENT_STATE;
+    return;
+  }
 
   const hasCleanup = typeof result === "function";
 
@@ -168,6 +197,7 @@ export function disposeWatcher(node: WatcherNode): void {
   const cleanup = typeof payload === "function" ? payload : null;
 
   disposeNode(node);
+  node.state &= ~WATCHER_TRANSIENT_STATE;
 
   if (cleanup !== null) {
     runCleanup(cleanup);

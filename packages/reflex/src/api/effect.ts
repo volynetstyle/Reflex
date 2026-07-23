@@ -91,7 +91,16 @@ export function effect(fn: WatcherFn): Destructor {
 
   const compute = __DEV__ ? wrapEffectFn(fn, "effect") : fn;
   const node = createWatcher(compute);
-  runWatcher(node);
+
+  try {
+    runWatcher(node);
+  } catch (error) {
+    // The initial run may already have linked reactive sources. Since no
+    // disposer can be returned on failure, roll the partially created watcher
+    // back before propagating the user error.
+    disposeWatcher(node);
+    throw error;
+  }
 
   const disposer: Destructor = disposeWatcher.bind(null, node);
   return disposer;

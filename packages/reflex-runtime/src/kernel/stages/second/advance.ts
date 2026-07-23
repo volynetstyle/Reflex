@@ -89,6 +89,8 @@ function advanceCore(
   const prev = node.payload;
 
   if (compare(prev, next)) {
+    node.state = resolvedState;
+
     if (__PROFILE__) profileRuntimeCounter("advanceUnchanged");
 
     if (__DEV__) devRecordRecompute(node, false, next, prev, defaultContext);
