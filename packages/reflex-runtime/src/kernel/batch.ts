@@ -32,7 +32,13 @@ export function enterReactiveBatch(): void {
  */
 export function leaveReactiveBatch(): void {
   leaveReactiveBatchRegister();
-  flushPendingReactiveSettledIfIdle();
+
+  if (!pendingReactiveSettled) return;
+  if (isReactiveBatchActive()) return;
+  if (!isRuntimeExecutionIdle()) return;
+
+  clearReactiveSettledPending();
+  emitReactiveSettled();
 }
 
 export function flushPendingReactiveSettledIfIdle(): void {

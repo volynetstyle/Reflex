@@ -80,10 +80,8 @@ export function writeProducer<T>(
 
     // Value didn't change, skip propagation
     return;
-  } else {
-    // Update the payload to the new value
-    node.payload = value;
-  }
+  } // Update the payload to the new value
+  node.payload = value;
 
   profileRuntimeCounter("writeChanged");
   devRecordWriteProducer(node, true, value, prev, undefined, defaultContext);
