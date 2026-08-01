@@ -15,7 +15,7 @@ import {
   syncRuntimeContext,
 } from "./context.switch";
 import { resetRuntimeExecutionState } from "./execution";
-import { runtimeState, trackingEpoch } from "./state";
+import { trackingEpoch } from "./state";
 
 export { createRuntimeContext, getActiveRuntimeContext };
 export type {

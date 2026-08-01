@@ -29,6 +29,7 @@ export function isPayload(value: unknown): boolean {
 
   // Avoid stack overflow, because JavaScript and deep trees are, of course, "made for each other".
   const stack: unknown[] = [value];
+  const visited = new WeakSet<object>();
 
   while (stack.length !== 0) {
     const current = stack.pop();
@@ -39,6 +40,9 @@ export function isPayload(value: unknown): boolean {
     if (typeof current !== "object" || current === null) {
       return false;
     }
+
+    if (visited.has(current)) continue;
+    visited.add(current);
 
     if (Array.isArray(current)) {
       for (let i = 0; i < current.length; i++) {

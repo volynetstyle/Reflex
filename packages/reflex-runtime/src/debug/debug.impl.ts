@@ -192,7 +192,12 @@ function emitToListeners(
   event: RuntimeDebugEvent,
 ): void {
   for (const listener of [...listeners]) {
-    listener(event);
+    // Debug observers must not be able to interrupt runtime bookkeeping.
+    try {
+      listener(event);
+    } catch {
+      // Observer failures are intentionally isolated from the reactive runtime.
+    }
   }
 }
 

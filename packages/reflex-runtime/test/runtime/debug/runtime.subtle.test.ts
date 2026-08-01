@@ -9,6 +9,7 @@ import {
   runWatcher,
   subtle,
   untracked,
+  writeProducer,
 } from "../../runtime.test_utils";
 import {
   createConsumer,
@@ -190,6 +191,22 @@ describe("Reactive runtime - subtle debug surface", () => {
 
     unsubscribe();
     session.destroy();
+  });
+
+  it("isolates observer failures from propagation", () => {
+    const source = createProducer(1);
+    const watcher = createWatcher(() => readProducer(source));
+    const listenerFailure = new Error("debug listener failed");
+
+    runWatcher(watcher);
+    const unsubscribe = debugSubtle.observe(() => {
+      throw listenerFailure;
+    });
+
+    expect(() => writeProducer(source, 2)).not.toThrow();
+
+    unsubscribe();
+    expect(() => writeProducer(source, 3)).not.toThrow();
   });
 
   it("matches the standalone untracked helper", () => {

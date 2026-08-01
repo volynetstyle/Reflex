@@ -70,6 +70,13 @@ describe("Reactive runtime - graph regressions (dev)", () => {
     );
   });
 
+  it("accepts cyclic plain-object producer payloads", () => {
+    const payload: { self?: unknown } = {};
+    payload.self = payload;
+
+    expect(() => createProducer(payload)).not.toThrow();
+  });
+
   it("rejects a cycle introduced by a dynamic dependency", () => {
     const cyclic = createProducer(false);
     let left!: ReturnType<typeof createConsumer<number>>;
