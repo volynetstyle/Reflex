@@ -72,6 +72,12 @@ readProducer(node);
 writeProducer(node, value);
 ```
 
+### Do not dispose watchers
+
+```ts
+disposeWatcher(node);
+```
+
 ### Do not flush effects synchronously
 
 ```ts

@@ -15,6 +15,7 @@ import {
 } from "@runtime/kernel/dev";
 import {
   devAssertNoRuntimeHookWatcherExecution,
+  devAssertNoRuntimeHookTopologyMutation,
   enterRuntimePhase,
   leaveRuntimePhase,
   RuntimePhase,
@@ -194,6 +195,8 @@ function runWatcherCore(node: WatcherNode): void {
 }
 
 export function disposeWatcher(node: WatcherNode): void {
+  if (__DEV__) devAssertNoRuntimeHookTopologyMutation();
+
   profileRuntimeCounter("watcherDisposals");
 
   const payload = node.payload;

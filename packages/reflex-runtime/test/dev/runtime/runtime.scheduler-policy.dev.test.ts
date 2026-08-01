@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   RuntimePhase,
+  RuntimeExecutionError,
+  disposeWatcher,
   readConsumer,
   readProducer,
   readRuntimePhase,
@@ -102,7 +104,7 @@ describe("Reactive runtime - scheduler policy validation (dev)", () => {
     });
 
     expect(() => writeProducer(source, 2)).toThrow(
-      /REFLEX_SCHEDULER_REENTRANT_FLUSH/,
+      RuntimeExecutionError.SchedulerReentrantFlush.code,
     );
     expect(readRuntimePhase().phase).toBe(RuntimePhase.Idle);
     expect(readRuntimePhase().depth).toBe(0);
@@ -123,7 +125,29 @@ describe("Reactive runtime - scheduler policy validation (dev)", () => {
     });
 
     expect(() => writeProducer(source, 2)).toThrow(
-      /REFLEX_SCHEDULER_REACTIVE_READ_IN_HOOK/,
+      RuntimeExecutionError.SchedulerReactiveReadInHook.code,
+    );
+    expect(readRuntimePhase().phase).toBe(RuntimePhase.Idle);
+    expect(readRuntimePhase().depth).toBe(0);
+  });
+
+  it("rejects watcher disposal from an invalidation hook", () => {
+    const source = createProducer(1);
+    let watcher!: ReturnType<typeof createWatcher>;
+
+    watcher = createWatcher(() => {
+      readProducer(source);
+    });
+    runWatcher(watcher);
+
+    resetRuntime({
+      onNodeInvalidated(node) {
+        disposeWatcher(node as typeof watcher);
+      },
+    });
+
+    expect(() => writeProducer(source, 2)).toThrow(
+      RuntimeExecutionError.SchedulerTopologyMutationInHook.code,
     );
     expect(readRuntimePhase().phase).toBe(RuntimePhase.Idle);
     expect(readRuntimePhase().depth).toBe(0);

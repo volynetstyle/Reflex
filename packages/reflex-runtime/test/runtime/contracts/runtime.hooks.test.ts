@@ -194,40 +194,6 @@ describe("Reactive runtime - hooks and resilience", () => {
     expect(watcher.state & DIRTY_STATE).toBe(0);
   });
 
-  it("tolerates nodes becoming dead in the middle of propagation", () => {
-    const invalidated: string[] = [];
-    let left!: ReturnType<typeof createWatcher>;
-    let right!: ReturnType<typeof createWatcher>;
-
-    resetRuntime({
-      onNodeInvalidated(node) {
-        if (node === left) {
-          invalidated.push("left");
-          disposeWatcher(right);
-          return;
-        }
-
-        if (node === right) {
-          invalidated.push("right");
-        }
-      },
-    });
-
-    const source = createProducer(1);
-    left = createWatcher(() => {
-      readProducer(source);
-    });
-    right = createWatcher(() => {
-      readProducer(source);
-    });
-
-    runWatcher(left);
-    runWatcher(right);
-
-    expect(() => writeProducer(source, 2)).not.toThrow();
-    expect(invalidated).toEqual(["left"]);
-    expect(right.state & DIRTY_STATE).toBe(0);
-  });
 });
 
 

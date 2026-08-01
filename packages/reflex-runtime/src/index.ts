@@ -48,6 +48,7 @@ export type {
 
 export {
   RuntimePhase,
+  RuntimeExecutionError,
   readRuntimePhase,
   readActiveRuntimeHook,
 } from "./kernel/execution";

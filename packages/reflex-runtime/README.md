@@ -281,6 +281,7 @@ Forbidden inside `onNodeInvalidated`:
 readConsumer(node);
 readProducer(node);
 writeProducer(node, value);
+disposeWatcher(node);
 ```
 
 `onRuntimeIdle` may run a synchronous watcher/effect drain. A
