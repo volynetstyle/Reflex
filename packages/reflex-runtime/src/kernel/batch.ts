@@ -1,14 +1,13 @@
 import { profileRuntimeCounter } from "@runtime/profiling";
 
-import { emitReactiveSettled } from "./config";
+import { emitRuntimeIdle } from "./config";
 import {
-  clearReactiveSettledPending,
+  clearRuntimeIdlePending,
   enterReactiveBatchRegister,
-  isReactiveBatchActive,
-  isRuntimeExecutionIdle,
   leaveReactiveBatchRegister,
-  markReactiveSettledPending,
-  pendingReactiveSettled,
+  markRuntimeIdlePending,
+  RuntimeState,
+  runtimeState,
 } from "./state";
 
 /**
@@ -32,33 +31,27 @@ export function enterReactiveBatch(): void {
  */
 export function leaveReactiveBatch(): void {
   leaveReactiveBatchRegister();
-
-  if (!pendingReactiveSettled) return;
-  if (isReactiveBatchActive()) return;
-  if (!isRuntimeExecutionIdle()) return;
-
-  clearReactiveSettledPending();
-  emitReactiveSettled();
+  flushPendingRuntimeIdle();
 }
 
-export function flushPendingReactiveSettledIfIdle(): void {
-  if (!pendingReactiveSettled) return;
-  if (isReactiveBatchActive()) return;
-  if (!isRuntimeExecutionIdle()) return;
+export function flushPendingRuntimeIdle(): void {
+  if (runtimeState !== RuntimeState.IdlePending) return;
 
-  clearReactiveSettledPending();
-  emitReactiveSettled();
+  clearRuntimeIdlePending();
+  emitRuntimeIdle();
 }
 
-export function emitReactiveSettledWithBatching(): void {
-  if (isReactiveBatchActive()) {
-    markReactiveSettledPending();
+export function emitRuntimeIdleWithBatching(): void {
+  if ((runtimeState & RuntimeState.Batching) !== RuntimeState.Idle) {
+    markRuntimeIdlePending();
     profileRuntimeCounter("contextSettledDeferred");
     return;
   }
 
   // A batch can end while propagation/tracking is still active. The next idle
   // checkpoint owns delivery of that deferred notification.
-  if (pendingReactiveSettled) clearReactiveSettledPending();
-  emitReactiveSettled();
+  if ((runtimeState & RuntimeState.IdlePending) !== RuntimeState.Idle) {
+    clearRuntimeIdlePending();
+  }
+  emitRuntimeIdle();
 }

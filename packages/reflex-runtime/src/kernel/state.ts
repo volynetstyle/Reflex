@@ -1,5 +1,28 @@
 import type { ReactiveNode } from "./shape";
 
+export const enum RuntimeState {
+  Idle = 0,
+  Tracking = 1 << 0,
+  Propagating = 1 << 1,
+  Batching = 1 << 2,
+  IdlePending = 1 << 3,
+}
+
+const EXECUTION_ACTIVE = RuntimeState.Tracking | RuntimeState.Propagating;
+
+/**
+ * Compact runtime lifecycle register. `Idle` is exactly zero.
+ */
+export let runtimeState = RuntimeState.Idle;
+
+export function setRuntimeState(state: number): void {
+  runtimeState = state;
+}
+
+function setRuntimeStateFlag(flag: RuntimeState, enabled: boolean): void {
+  runtimeState = enabled ? runtimeState | flag : runtimeState & ~flag;
+}
+
 /**
  * Runtime execution registers.
  *
@@ -22,6 +45,7 @@ export let currentConsumer: ReactiveNode | null = null;
  */
 export function setCurrentConsumer(consumer: ReactiveNode | null): void {
   currentConsumer = consumer;
+  setRuntimeStateFlag(RuntimeState.Tracking, consumer !== null);
 }
 
 /**
@@ -34,6 +58,7 @@ export function enterConsumerTracking(
 ): ReactiveNode | null {
   const previousConsumer = currentConsumer;
   currentConsumer = consumer;
+  setRuntimeStateFlag(RuntimeState.Tracking, true);
   trackingEpoch = (trackingEpoch + 1) >>> 0 || 1;
   return previousConsumer;
 }
@@ -45,6 +70,7 @@ export function restoreConsumerTracking(
   previousConsumer: ReactiveNode | null,
 ): void {
   currentConsumer = previousConsumer;
+  setRuntimeStateFlag(RuntimeState.Tracking, previousConsumer !== null);
 }
 
 // #endregion
@@ -110,6 +136,7 @@ export let propagationScopeDepth = 0;
  */
 export function setPropagationScopeDepth(depth: number): void {
   propagationScopeDepth = depth < 0 ? 0 : depth;
+  setRuntimeStateFlag(RuntimeState.Propagating, propagationScopeDepth !== 0);
 }
 
 /**
@@ -117,6 +144,7 @@ export function setPropagationScopeDepth(depth: number): void {
  */
 export function enterPropagationScopeRegister(): void {
   propagationScopeDepth++;
+  setRuntimeStateFlag(RuntimeState.Propagating, true);
 }
 
 /**
@@ -129,14 +157,15 @@ export function leavePropagationScopeRegister(): boolean {
     propagationScopeDepth--;
   }
 
-  return propagationScopeDepth === 0 && currentConsumer === null;
+  setRuntimeStateFlag(RuntimeState.Propagating, propagationScopeDepth !== 0);
+  return (runtimeState & EXECUTION_ACTIVE) === RuntimeState.Idle;
 }
 
 /**
  * Whether runtime execution is currently idle.
  */
 export function isRuntimeExecutionIdle(): boolean {
-  return propagationScopeDepth === 0 && currentConsumer === null;
+  return (runtimeState & EXECUTION_ACTIVE) === RuntimeState.Idle;
 }
 
 // #endregion
@@ -149,12 +178,12 @@ export function isRuntimeExecutionIdle(): boolean {
 export let reactiveBatchDepth = 0;
 
 /**
- * Whether a settled notification was deferred while inside a batch.
+ * Whether runtime work, batching, or an idle notification is pending.
+ * `RuntimeState.Idle` (zero) means the runtime has no active lifecycle state.
  */
-export let pendingReactiveSettled = false;
-
 export function enterReactiveBatchRegister(): void {
   ++reactiveBatchDepth;
+  setRuntimeStateFlag(RuntimeState.Batching, true);
 }
 
 export function leaveReactiveBatchRegister(): boolean {
@@ -162,27 +191,28 @@ export function leaveReactiveBatchRegister(): boolean {
     --reactiveBatchDepth;
   }
 
+  setRuntimeStateFlag(RuntimeState.Batching, reactiveBatchDepth !== 0);
   return reactiveBatchDepth === 0;
 }
 
-export function markReactiveSettledPending(): void {
-  pendingReactiveSettled = true;
+export function markRuntimeIdlePending(): void {
+  setRuntimeStateFlag(RuntimeState.IdlePending, true);
 }
 
-export function clearReactiveSettledPending(): void {
-  pendingReactiveSettled = false;
+export function clearRuntimeIdlePending(): void {
+  setRuntimeStateFlag(RuntimeState.IdlePending, false);
 }
 
 export function setReactiveBatchState(
   batchDepth: number,
-  pendingSettled: boolean,
+  state: number,
 ): void {
   reactiveBatchDepth = batchDepth < 0 ? 0 : batchDepth;
-  pendingReactiveSettled = pendingSettled;
+  setRuntimeState(state);
 }
 
 export function isReactiveBatchActive(): boolean {
-  return reactiveBatchDepth !== 0;
+  return (runtimeState & RuntimeState.Batching) !== RuntimeState.Idle;
 }
 
 // #endregion

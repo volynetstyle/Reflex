@@ -36,7 +36,7 @@ describe("Reactive runtime - resilience and recovery", () => {
     let nestedWriteTriggered = false;
 
     resetRuntime({
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         if (node === nestedWatcher) {
           invalidations.push("nested");
           if (!nestedWriteTriggered) {

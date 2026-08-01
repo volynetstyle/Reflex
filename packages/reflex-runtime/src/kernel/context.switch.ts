@@ -5,7 +5,6 @@ import {
 import { createRuntimeContext, type RuntimeContext } from "./context.model";
 import {
   currentConsumer,
-  pendingReactiveSettled,
   propagationScopeDepth,
   reactiveBatchDepth,
   setCurrentConsumer,
@@ -13,6 +12,7 @@ import {
   setReactiveBatchState,
   setTrackingEpoch,
   trackingEpoch,
+  runtimeState,
 } from "./state";
 
 let activeRuntimeContext = createRuntimeContext();
@@ -30,7 +30,7 @@ export function syncRuntimeContext(
       setCurrentConsumer(context.currentConsumer);
       setTrackingEpoch(context.trackingEpoch);
       setPropagationScopeDepth(context.propagationScopeDepth);
-      setReactiveBatchState(context.batchDepth, context.pendingReactiveSettled);
+      setReactiveBatchState(context.batchDepth, context.runtimeState);
       restoreRuntimeConfiguration(context);
       return;
     }
@@ -39,7 +39,7 @@ export function syncRuntimeContext(
       context.trackingEpoch = trackingEpoch;
       context.propagationScopeDepth = propagationScopeDepth;
       context.batchDepth = reactiveBatchDepth;
-      context.pendingReactiveSettled = pendingReactiveSettled;
+      context.runtimeState = runtimeState;
       Object.assign(context, saveRuntimeConfiguration());
     }
   }

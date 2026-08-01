@@ -204,7 +204,7 @@ class EngineContext {
 
 Потрібен для:
 
-- коректного `onReactiveSettled`
+- коректного `onRuntimeIdle`
 - host hooks без фальшивих settled-сигналів у середині propagation cascade
 
 ### `cleanupRegistrar`
@@ -217,7 +217,7 @@ class EngineContext {
 Поточні host hooks:
 
 - `onEffectInvalidated`
-- `onReactiveSettled`
+- `onRuntimeIdle`
 
 ## 9. Чому модель така компактна
 

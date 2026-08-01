@@ -65,10 +65,10 @@ function createBenchmarkStyleScheduler(flushSynchronouslyFromHook = false) {
   }
 
   resetRuntime({
-    sinkInvalidatedDispatcher(watcher) {
+    onNodeInvalidated(watcher) {
       pendingWatchers.add(watcher as RuntimeWatcher);
     },
-    reactiveSettledDispatcher() {
+    onRuntimeIdle() {
       scheduleWatcherFlush();
     },
   });
@@ -96,7 +96,7 @@ describe("Reactive runtime - scheduler policy validation (dev)", () => {
     runWatcher(watcher);
 
     resetRuntime({
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         runWatcher(node as typeof watcher);
       },
     });
@@ -117,7 +117,7 @@ describe("Reactive runtime - scheduler policy validation (dev)", () => {
     runWatcher(watcher);
 
     resetRuntime({
-      sinkInvalidatedDispatcher() {
+      onNodeInvalidated() {
         readProducer(source);
       },
     });
@@ -163,7 +163,7 @@ describe("Reactive runtime - scheduler policy validation (dev)", () => {
     runWatcher(innerWatcher);
 
     resetRuntime({
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         if (node === outerWatcher) {
           writeProducer(innerSource, 2);
         }
@@ -189,10 +189,10 @@ describe("Reactive runtime - scheduler policy validation (dev)", () => {
     runWatcher(innerWatcher);
 
     resetRuntime({
-      sinkInvalidatedDispatcher() {
+      onNodeInvalidated() {
         hooks.push(readActiveRuntimeHook());
       },
-      reactiveSettledDispatcher() {
+      onRuntimeIdle() {
         hooks.push(readActiveRuntimeHook());
         if (!nested) {
           nested = true;
@@ -205,12 +205,12 @@ describe("Reactive runtime - scheduler policy validation (dev)", () => {
     writeProducer(outerSource, 2);
 
     expect(hooks).toEqual([
-      "sinkInvalidatedDispatcher",
-      "reactiveSettledDispatcher",
-      "sinkInvalidatedDispatcher",
-      "reactiveSettledDispatcher",
-      "reactiveSettledDispatcher",
-      "reactiveSettledDispatcher",
+      "onNodeInvalidated",
+      "onRuntimeIdle",
+      "onNodeInvalidated",
+      "onRuntimeIdle",
+      "onRuntimeIdle",
+      "onRuntimeIdle",
     ]);
     expect(readActiveRuntimeHook()).toBeNull();
   });

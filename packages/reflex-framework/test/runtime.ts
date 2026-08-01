@@ -33,7 +33,7 @@ export function createRuntimeHarness(): TestRuntimeHost {
   };
   configureRuntimeContext({
     hooks: {
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         const watcher = node as WatcherNode;
         if (!queued.has(watcher)) {
           queued.add(watcher);

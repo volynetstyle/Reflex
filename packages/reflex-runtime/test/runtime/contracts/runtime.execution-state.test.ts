@@ -9,7 +9,7 @@ import {
   configureRuntimeContext,
 } from "../../../src/kernel/context";
 import { switchRuntimeContext } from "../../../src/kernel/context.switch";
-import { emitSinkInvalidated } from "../../../src/kernel/config";
+import { emitNodeInvalidated } from "../../../src/kernel/config";
 import {
   emitSettledIfIdle,
   enterPropagationScope,
@@ -125,10 +125,10 @@ describe("execution state", () => {
     const node = createConsumer(() => 1);
 
     configureRuntimeContext({
-      hooks: { sinkInvalidatedDispatcher: () => order.push("runtime") },
+      hooks: { onNodeInvalidated: () => order.push("runtime") },
     });
 
-    emitSinkInvalidated(node);
+    emitNodeInvalidated(node);
 
     expect(order).toEqual(["runtime"]);
   });
@@ -136,7 +136,7 @@ describe("execution state", () => {
   it("does not dispatch settled while propagationDepth > 0", () => {
     const settled = vi.fn();
 
-    configureRuntimeContext({ hooks: { reactiveSettledDispatcher: settled } });
+    configureRuntimeContext({ hooks: { onRuntimeIdle: settled } });
     enterPropagationScope();
     emitSettledIfIdle();
 
@@ -147,7 +147,7 @@ describe("execution state", () => {
     const settled = vi.fn();
     const consumer = createConsumer(() => 1);
 
-    configureRuntimeContext({ hooks: { reactiveSettledDispatcher: settled } });
+    configureRuntimeContext({ hooks: { onRuntimeIdle: settled } });
     setCurrentConsumer(consumer);
     emitSettledIfIdle();
 
@@ -157,7 +157,7 @@ describe("execution state", () => {
   it("dispatches settled after leaving outermost propagation", () => {
     const settled = vi.fn();
 
-    configureRuntimeContext({ hooks: { reactiveSettledDispatcher: settled } });
+    configureRuntimeContext({ hooks: { onRuntimeIdle: settled } });
     enterPropagationScope();
     enterPropagationScope();
     leavePropagationScope();

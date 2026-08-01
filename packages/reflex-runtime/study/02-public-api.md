@@ -143,7 +143,7 @@ disposeWatcher(watcher);
 runtime.resetState();
 runtime.setHooks({
   onEffectInvalidated(node) { ... },
-  onReactiveSettled() { ... },
+  onRuntimeIdle() { ... },
 });
 ```
 
@@ -157,7 +157,7 @@ Host може:
 - запустити його одразу
 - логувати invalidation
 
-### `onReactiveSettled`
+### `onRuntimeIdle`
 
 Викликається, коли:
 

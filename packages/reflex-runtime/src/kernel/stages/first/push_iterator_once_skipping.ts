@@ -1,4 +1,4 @@
-import { defaultContext, emitSinkInvalidated } from "@runtime/kernel/config";
+import { defaultContext, emitNodeInvalidated } from "@runtime/kernel/config";
 import { devRecordPropagate } from "@runtime/kernel/dev";
 import {
   enterRuntimePhase,
@@ -37,7 +37,7 @@ function pushIteratorOnceSkippingCore(
       if (__DEV__) devRecordPropagate(current, sub.state, true, defaultContext);
 
       if ((state & Watcher) !== 0) {
-        emitSinkInvalidated(sub);
+        emitNodeInvalidated(sub);
       }
     } else {
       if (__PROFILE__) profileRuntimeCounter("pushOnceAlreadyChangedSkipped");
@@ -63,7 +63,7 @@ function pushIteratorOnceSkippingCore(
       if (__DEV__) devRecordPropagate(current, sub.state, true, defaultContext);
 
       if ((state & Watcher) !== 0) {
-        emitSinkInvalidated(sub);
+        emitNodeInvalidated(sub);
       }
     } else if (__PROFILE__) {
       profileRuntimeCounter("pushOnceAlreadyChangedSkipped");

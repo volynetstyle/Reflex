@@ -56,7 +56,7 @@ function createDirectController(): DrainController {
 
   configureRuntimeContext({
     hooks: {
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         queue.push(node);
       },
     },
@@ -92,10 +92,10 @@ function createSchedulerController(
 
   configureRuntimeContext({
     hooks: {
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         scheduler.enqueue(node);
       },
-      reactiveSettledDispatcher() {
+      onRuntimeIdle() {
         scheduler.runtimeNotifySettled?.();
       },
     },

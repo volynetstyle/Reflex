@@ -1,4 +1,4 @@
-import { defaultContext, emitSinkInvalidated } from "@runtime/kernel/config";
+import { defaultContext, emitNodeInvalidated } from "@runtime/kernel/config";
 import { abortPropagationScope } from "@runtime/kernel/context.scope";
 import { devRecordPropagate } from "@runtime/kernel/dev";
 import {
@@ -175,7 +175,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
 
       propagateStackHigh = top;
       try {
-        emitSinkInvalidated(sub);
+        emitNodeInvalidated(sub);
       } catch (error) {
         resetPropagateStackAfterAbort(stack, base, top);
         abortPropagationScope();
@@ -233,7 +233,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
 
           propagateStackHigh = top;
           try {
-            emitSinkInvalidated(sub);
+            emitNodeInvalidated(sub);
           } catch (error) {
             resetPropagateStackAfterAbort(stack, base, top);
             abortPropagationScope();

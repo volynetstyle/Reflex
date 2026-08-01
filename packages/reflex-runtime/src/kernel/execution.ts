@@ -103,10 +103,7 @@ export function readActiveRuntimeHook(): string | null {
 }
 
 export function devAssertNoRuntimeHookWatcherExecution(): void {
-  if (
-    !SCHEDULER_POLICY_ENABLED ||
-    activeRuntimeHook !== "sinkInvalidatedDispatcher"
-  ) {
+  if (!SCHEDULER_POLICY_ENABLED || activeRuntimeHook !== "onNodeInvalidated") {
     return;
   }
 
@@ -114,7 +111,7 @@ export function devAssertNoRuntimeHookWatcherExecution(): void {
     [
       "[REFLEX_SCHEDULER_REENTRANT_FLUSH]",
       "",
-      "Host scheduler executed runWatcher() synchronously from sinkInvalidatedDispatcher.",
+      "Host scheduler executed runWatcher() synchronously from onNodeInvalidated.",
       "",
       "Invalidation hooks must enqueue work and return before executing watchers.",
       "",
@@ -131,10 +128,7 @@ export function devAssertNoRuntimeHookWatcherExecution(): void {
 }
 
 export function devAssertNoRuntimeHookReactiveRead(): void {
-  if (
-    !SCHEDULER_POLICY_ENABLED ||
-    activeRuntimeHook !== "sinkInvalidatedDispatcher"
-  ) {
+  if (!SCHEDULER_POLICY_ENABLED || activeRuntimeHook !== "onNodeInvalidated") {
     return;
   }
 
@@ -142,7 +136,7 @@ export function devAssertNoRuntimeHookReactiveRead(): void {
     [
       "[REFLEX_SCHEDULER_REACTIVE_READ_IN_HOOK]",
       "",
-      "Host scheduler performed a reactive read from sinkInvalidatedDispatcher.",
+      "Host scheduler performed a reactive read from onNodeInvalidated.",
       "",
       "Invalidation hooks must not read reactive graph state.",
     ].join("\n"),

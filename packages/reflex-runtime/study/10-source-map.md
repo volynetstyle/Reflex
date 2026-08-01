@@ -250,7 +250,7 @@ Pull-side walker.
 Тут видно:
 
 - `onEffectInvalidated`
-- `onReactiveSettled`
+- `onRuntimeIdle`
 - nested propagation через hooks
 
 ## Perf harness

@@ -32,11 +32,11 @@ function runWithReactiveBatch<T>(fn: () => T): T {
 }
 
 function setInternalHooks(
-  sinkInvalidatedDispatcher: RuntimeHooks["sinkInvalidatedDispatcher"] = undefined,
-  reactiveSettledDispatcher: RuntimeHooks["reactiveSettledDispatcher"] = undefined,
+  onNodeInvalidated: RuntimeHooks["onNodeInvalidated"] = undefined,
+  onRuntimeIdle: RuntimeHooks["onRuntimeIdle"] = undefined,
 ): void {
   configureRuntimeContext({
-    hooks: { sinkInvalidatedDispatcher, reactiveSettledDispatcher },
+    hooks: { onNodeInvalidated, onRuntimeIdle },
   });
 }
 
@@ -282,7 +282,7 @@ function createWatcherFanout(watcherCount: number): BenchCase {
   let scheduled = 0;
 
   resetRuntime({
-    sinkInvalidatedDispatcher() {
+    onNodeInvalidated() {
       scheduled += 1;
     },
   });
@@ -315,7 +315,7 @@ function createMixedWatcherComputedFanout(
   let scheduled = 0;
 
   resetRuntime({
-    sinkInvalidatedDispatcher() {
+    onNodeInvalidated() {
       scheduled += 1;
     },
   });
@@ -575,7 +575,7 @@ function createWriteSettledSuppressed(): BenchCase {
   let scopeOpen = true;
 
   resetRuntime({
-    reactiveSettledDispatcher() {
+    onRuntimeIdle() {
       blackhole(1);
     },
   });
@@ -601,7 +601,7 @@ function createWriteSettledEmitted(): BenchCase {
   let settled = 0;
 
   resetRuntime({
-    reactiveSettledDispatcher() {
+    onRuntimeIdle() {
       settled += 1;
     },
   });
@@ -639,7 +639,7 @@ function createWatcherScheduledOnly(width: number): BenchCase {
   let scheduled = 0;
 
   resetRuntime({
-    sinkInvalidatedDispatcher() {
+    onNodeInvalidated() {
       scheduled += 1;
     },
   });
@@ -1483,7 +1483,7 @@ function formatSchedulerRow(
     settledChecks: counters.contextSettledChecks,
     settledEmits: counters.contextSettledEmits,
     settledDeferred: counters.contextSettledDeferred,
-    sinkInvalidated: counters.sinkInvalidatedEmits,
+    nodeInvalidated: counters.nodeInvalidatedEmits,
     watcherRuns: counters.watcherRunCalls,
     watcherExecutions: counters.watcherExecutions,
     pushEvents: row.push.total,

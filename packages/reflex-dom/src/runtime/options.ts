@@ -47,7 +47,7 @@ export function createRendererRuntime(
     );
   const scheduler = createEffectScheduler(resolveEffectSchedulerMode(strategy));
   const execution = createRuntimeContext();
-  let reactiveSettled = false;
+  let runtimeIdle = false;
   let microtaskPending = false;
 
   const run = <T>(fn: () => T): T => {
@@ -56,8 +56,8 @@ export function createRendererRuntime(
   };
 
   const flushRenderEffects = (): void => {
-    if (!reactiveSettled) return;
-    reactiveSettled = false;
+    if (!runtimeIdle) return;
+    runtimeIdle = false;
     renderEffectScheduler?.flush();
   };
 
@@ -91,14 +91,14 @@ export function createRendererRuntime(
 
   configureRuntimeContext(execution, {
     hooks: {
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         scheduler.enqueue(node);
-        hooks?.sinkInvalidatedDispatcher?.(node);
+        hooks?.onNodeInvalidated?.(node);
       },
-      reactiveSettledDispatcher() {
-        reactiveSettled = true;
+      onRuntimeIdle() {
+        runtimeIdle = true;
         scheduler.runtimeNotifySettled?.();
-        hooks?.reactiveSettledDispatcher?.();
+        hooks?.onRuntimeIdle?.();
       },
     },
   });

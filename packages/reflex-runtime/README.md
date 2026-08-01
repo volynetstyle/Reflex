@@ -198,9 +198,9 @@ The host decides:
 
 Runtime hooks have two distinct contracts:
 
-- `sinkInvalidatedDispatcher` runs during propagation. It is enqueue-only: it
+- `onNodeInvalidated` runs during propagation. It is enqueue-only: it
   must not execute watchers or access reactive graph state.
-- `reactiveSettledDispatcher` runs at an idle host boundary after propagation,
+- `onRuntimeIdle` runs at an idle host boundary after propagation,
   pull, and watcher work have settled. It may synchronously drain queued
   watchers, which is how an eager scheduler delivers effects without a
   microtask hop.
@@ -244,10 +244,10 @@ function scheduleFlush() {
 
 configureRuntimeContext({
   hooks: {
-    sinkInvalidatedDispatcher(watcher) {
+    onNodeInvalidated(watcher) {
       pendingWatchers.add(watcher);
     },
-    reactiveSettledDispatcher() {
+    onRuntimeIdle() {
       flushWatchers();
     },
   },
@@ -257,13 +257,13 @@ configureRuntimeContext({
 flushWatchers();
 ```
 
-Allowed inside `sinkInvalidatedDispatcher`:
+Allowed inside `onNodeInvalidated`:
 
 ```ts
 queue.add(watcher);
 ```
 
-Allowed inside `reactiveSettledDispatcher`:
+Allowed inside `onRuntimeIdle`:
 
 ```ts
 flushWatchers();
@@ -275,7 +275,7 @@ requestAnimationFrame(flushWatchers);
 host.schedule(flushWatchers);
 ```
 
-Forbidden inside `sinkInvalidatedDispatcher`:
+Forbidden inside `onNodeInvalidated`:
 
 ```ts
 readConsumer(node);
@@ -283,7 +283,7 @@ readProducer(node);
 writeProducer(node, value);
 ```
 
-`reactiveSettledDispatcher` may run a synchronous watcher/effect drain. A
+`onRuntimeIdle` may run a synchronous watcher/effect drain. A
 watcher can in turn read or write reactive state; if that creates more work,
 Reflex delivers another settled checkpoint once the runtime is idle again.
 
@@ -297,7 +297,7 @@ at the boundary where they happen:
 ```txt
 [REFLEX_SCHEDULER_REENTRANT_FLUSH]
 
-Host scheduler executed runWatcher() synchronously from sinkInvalidatedDispatcher.
+Host scheduler executed runWatcher() synchronously from onNodeInvalidated.
 ```
 
 Other scheduler policy errors include:

@@ -6,7 +6,7 @@ import {
   restoreRuntimeContextSnapshot,
   configureRuntimeContext,
 } from "../../../src/kernel/context";
-import { reactiveSettledHook } from "../../../src/kernel/config";
+import { runtimeIdleHook } from "../../../src/kernel/config";
 import {
   emitSettledIfIdle,
   enterPropagationScope,
@@ -24,7 +24,7 @@ describe("Reactive runtime - security regressions", () => {
       enumerable: true,
       value: { polluted: true },
     });
-    Object.defineProperty(payload, "reactiveSettledDispatcher", {
+    Object.defineProperty(payload, "onRuntimeIdle", {
       enumerable: true,
       value: settled,
     });
@@ -41,19 +41,19 @@ describe("Reactive runtime - security regressions", () => {
     const previous = vi.fn();
     const inherited = vi.fn();
     const replacement = Object.create({
-      reactiveSettledDispatcher: inherited,
+      onRuntimeIdle: inherited,
     }) as RuntimeHostHooks;
 
     const snapshot = snapshotRuntimeContext();
     configureRuntimeContext({
-      hooks: { reactiveSettledDispatcher: previous },
+      hooks: { onRuntimeIdle: previous },
     });
     configureRuntimeContext({ hooks: replacement });
     emitSettledIfIdle();
 
     expect(previous).not.toHaveBeenCalled();
     expect(inherited).not.toHaveBeenCalled();
-    expect(reactiveSettledHook).toBe(undefined);
+    expect(runtimeIdleHook).toBe(undefined);
     restoreRuntimeContextSnapshot(getActiveRuntimeContext(), snapshot);
   });
 
@@ -61,29 +61,29 @@ describe("Reactive runtime - security regressions", () => {
     const first = vi.fn();
     const second = vi.fn();
 
-    configureRuntimeContext({ hooks: { reactiveSettledDispatcher: first } });
+    configureRuntimeContext({ hooks: { onRuntimeIdle: first } });
     emitSettledIfIdle();
-    configureRuntimeContext({ hooks: { reactiveSettledDispatcher: second } });
+    configureRuntimeContext({ hooks: { onRuntimeIdle: second } });
     emitSettledIfIdle();
     configureRuntimeContext({ hooks: {} });
     emitSettledIfIdle();
 
     expect(first).toHaveBeenCalledTimes(1);
     expect(second).toHaveBeenCalledTimes(1);
-    expect(reactiveSettledHook).toBe(undefined);
+    expect(runtimeIdleHook).toBe(undefined);
   });
 
   it("keeps default settled dispatch synchronized with direct hook updates", () => {
-    const previous = reactiveSettledHook;
+    const previous = runtimeIdleHook;
     const first = vi.fn();
     const second = vi.fn();
 
     try {
-      configureRuntimeContext({ hooks: { reactiveSettledDispatcher: first } });
+      configureRuntimeContext({ hooks: { onRuntimeIdle: first } });
       enterPropagationScope();
       leavePropagationScope();
 
-      configureRuntimeContext({ hooks: { reactiveSettledDispatcher: second } });
+      configureRuntimeContext({ hooks: { onRuntimeIdle: second } });
       enterPropagationScope();
       leavePropagationScope();
 
@@ -92,12 +92,12 @@ describe("Reactive runtime - security regressions", () => {
       leavePropagationScope();
     } finally {
       configureRuntimeContext({
-        hooks: { reactiveSettledDispatcher: previous },
+        hooks: { onRuntimeIdle: previous },
       });
     }
 
     expect(first).toHaveBeenCalledTimes(1);
     expect(second).toHaveBeenCalledTimes(1);
-    expect(reactiveSettledHook).toBe(previous);
+    expect(runtimeIdleHook).toBe(previous);
   });
 });

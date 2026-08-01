@@ -17,11 +17,11 @@ import {
 } from "../runtime.test_utils";
 
 function setInternalHooks(
-  sinkInvalidatedDispatcher: RuntimeHooks["sinkInvalidatedDispatcher"] = undefined,
-  reactiveSettledDispatcher: RuntimeHooks["reactiveSettledDispatcher"] = undefined,
+  onNodeInvalidated: RuntimeHooks["onNodeInvalidated"] = undefined,
+  onRuntimeIdle: RuntimeHooks["onRuntimeIdle"] = undefined,
 ): void {
   configureRuntimeContext({
-    hooks: { sinkInvalidatedDispatcher, reactiveSettledDispatcher },
+    hooks: { onNodeInvalidated, onRuntimeIdle },
   });
 }
 

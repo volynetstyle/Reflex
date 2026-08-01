@@ -26,7 +26,7 @@ describe("Reactive runtime - hooks and resilience", () => {
   it("replaces settled hooks instead of retaining stale callbacks", () => {
     const settled = vi.fn();
 
-    resetRuntime({ reactiveSettledDispatcher: settled });
+    resetRuntime({ onRuntimeIdle: settled });
     emitSettledIfIdle();
 
     expect(settled).toHaveBeenCalledTimes(1);
@@ -41,7 +41,7 @@ describe("Reactive runtime - hooks and resilience", () => {
     const phases: string[] = [];
 
     resetRuntime({
-      reactiveSettledDispatcher() {
+      onRuntimeIdle() {
         phases.push("settled");
       },
     });
@@ -65,7 +65,7 @@ describe("Reactive runtime - hooks and resilience", () => {
   it("settles after leaf-only producer fanout propagation", () => {
     const settled = vi.fn();
 
-    resetRuntime({ reactiveSettledDispatcher: settled });
+    resetRuntime({ onRuntimeIdle: settled });
 
     const source = createProducer(1);
     const left = createConsumer(() => readProducer(source) + 1);
@@ -88,12 +88,12 @@ describe("Reactive runtime - hooks and resilience", () => {
     let innerWatcher!: ReturnType<typeof createWatcher>;
 
     resetRuntime({
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         if (node === outerWatcher) {
           writeProducer(innerSource, 2);
         }
       },
-      reactiveSettledDispatcher: settled,
+      onRuntimeIdle: settled,
     });
 
     const outerSource = createProducer(1);
@@ -123,7 +123,7 @@ describe("Reactive runtime - hooks and resilience", () => {
 
     runWatcher(watcher);
     resetRuntime({
-      sinkInvalidatedDispatcher() {
+      onNodeInvalidated() {
         throw failure;
       },
     });
@@ -145,7 +145,7 @@ describe("Reactive runtime - hooks and resilience", () => {
       writeProducer(target, target.payload + 1);
     });
 
-    resetRuntime({ reactiveSettledDispatcher: settled });
+    resetRuntime({ onRuntimeIdle: settled });
     runWatcher(watcher);
 
     expect(settled).toHaveBeenCalledTimes(1);
@@ -162,7 +162,7 @@ describe("Reactive runtime - hooks and resilience", () => {
       return value;
     });
 
-    resetRuntime({ reactiveSettledDispatcher: settled });
+    resetRuntime({ onRuntimeIdle: settled });
     expect(readConsumer(consumer)).toBe(1);
     expect(settled).toHaveBeenCalledTimes(1);
 
@@ -200,7 +200,7 @@ describe("Reactive runtime - hooks and resilience", () => {
     let right!: ReturnType<typeof createWatcher>;
 
     resetRuntime({
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         if (node === left) {
           invalidated.push("left");
           disposeWatcher(right);

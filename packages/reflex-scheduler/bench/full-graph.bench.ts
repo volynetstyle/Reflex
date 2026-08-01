@@ -28,7 +28,7 @@ type FullGraph = ReturnType<typeof createFullGraph>;
 function createFullGraph() {
   const scheduler = createFlushScheduler();
   configureRuntimeContext({
-    hooks: { sinkInvalidatedDispatcher: scheduler.enqueue },
+    hooks: { onNodeInvalidated: scheduler.enqueue },
   });
   const sources = Array.from({ length: SOURCE_COUNT }, (_, index) =>
     createProducer(index),

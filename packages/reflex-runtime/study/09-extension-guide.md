@@ -56,7 +56,7 @@
 - `activeComputed`
 - `propagationDepth`
 - `onEffectInvalidated`
-- `onReactiveSettled`
+- `onRuntimeIdle`
 
 Це природний seam для:
 

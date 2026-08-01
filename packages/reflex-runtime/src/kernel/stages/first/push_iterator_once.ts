@@ -1,4 +1,4 @@
-import { defaultContext, emitSinkInvalidated } from "@runtime/kernel/config";
+import { defaultContext, emitNodeInvalidated } from "@runtime/kernel/config";
 import { devRecordPropagate } from "@runtime/kernel/dev";
 import {
   enterRuntimePhase,
@@ -29,7 +29,7 @@ function pushIteratorOnceCore(edge: ReactiveEdge | null): void {
       if (__DEV__) devRecordPropagate(current, sub.state, true, defaultContext);
 
       if ((state & Watcher) !== 0) {
-        emitSinkInvalidated(sub);
+        emitNodeInvalidated(sub);
       }
     } else {
       if (__PROFILE__) profileRuntimeCounter("pushOnceAlreadyChangedSkipped");

@@ -93,7 +93,7 @@ describe("Reactive runtime - traversal invariants", () => {
   it("coalesces repeated push invalidations across committed writes", () => {
     let invalidations = 0;
     resetRuntime({
-      sinkInvalidatedDispatcher() {
+      onNodeInvalidated() {
         invalidations += 1;
       },
     });
@@ -172,7 +172,7 @@ describe("Reactive runtime - traversal invariants", () => {
   it("surfaces Unknown -> Changed promotion to the host when the host does not dedupe", () => {
     let invalidations = 0;
     resetRuntime({
-      sinkInvalidatedDispatcher() {
+      onNodeInvalidated() {
         invalidations += 1;
       },
     });

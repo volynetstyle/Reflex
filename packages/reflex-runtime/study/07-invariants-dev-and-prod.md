@@ -138,7 +138,7 @@ Push-side walker має лише:
 Це стосується і correctness, і perf:
 мертві вузли не повинні висіти phantom links.
 
-## 11. `onReactiveSettled` не повинен стріляти завчасно
+## 11. `onRuntimeIdle` не повинен стріляти завчасно
 
 `runtime.maybeNotifySettled()` має викликати hook лише коли:
 

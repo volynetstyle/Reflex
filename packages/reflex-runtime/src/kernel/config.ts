@@ -42,18 +42,18 @@ export let readTrackingStrategy: ReadTrackingStrategy =
 
 export interface RuntimeHooks {
   /** Enqueue-only invalidation notification; reactive execution is forbidden. */
-  sinkInvalidatedDispatcher?(node: ReactiveNode): void;
+  onNodeInvalidated?(node: ReactiveNode): void;
   /** Idle host boundary; synchronous scheduler drain is permitted. */
-  reactiveSettledDispatcher?(): void;
+  onRuntimeIdle?(): void;
 }
 
 export type RuntimeHostHooks = RuntimeHooks;
 
-export type SinkInvalidatedHook = RuntimeHooks["sinkInvalidatedDispatcher"];
-export type ReactiveSettledHook = RuntimeHooks["reactiveSettledDispatcher"];
+export type NodeInvalidatedHook = RuntimeHooks["onNodeInvalidated"];
+export type RuntimeIdleHook = RuntimeHooks["onRuntimeIdle"];
 
-export let sinkInvalidatedHook: SinkInvalidatedHook = undefined;
-export let reactiveSettledHook: ReactiveSettledHook = undefined;
+export let nodeInvalidatedHook: NodeInvalidatedHook = undefined;
+export let runtimeIdleHook: RuntimeIdleHook = undefined;
 
 // #endregion
 
@@ -61,8 +61,8 @@ export let reactiveSettledHook: ReactiveSettledHook = undefined;
 
 export interface RuntimeConfiguration {
   readTrackingStrategy: ReadTrackingStrategy;
-  sinkInvalidatedHook: SinkInvalidatedHook;
-  reactiveSettledHook: ReactiveSettledHook;
+  nodeInvalidatedHook: NodeInvalidatedHook;
+  runtimeIdleHook: RuntimeIdleHook;
 }
 
 export interface RuntimeConfigurationOptions {
@@ -72,8 +72,8 @@ export interface RuntimeConfigurationOptions {
 export function saveRuntimeConfiguration(): RuntimeConfiguration {
   return {
     readTrackingStrategy,
-    sinkInvalidatedHook,
-    reactiveSettledHook,
+    nodeInvalidatedHook,
+    runtimeIdleHook,
   };
 }
 
@@ -83,22 +83,22 @@ export function restoreRuntimeConfiguration(
   readTrackingStrategy =
     configuration.readTrackingStrategy ?? DEFAULT_READ_TRACKING_STRATEGY;
 
-  sinkInvalidatedHook = configuration.sinkInvalidatedHook;
-  reactiveSettledHook = configuration.reactiveSettledHook;
+  nodeInvalidatedHook = configuration.nodeInvalidatedHook;
+  runtimeIdleHook = configuration.runtimeIdleHook;
 }
 
 // #endregion
 
 // #region Hook emitters
 
-export function emitSinkInvalidated(node: ReactiveNode): void {
-  profileRuntimeCounter("sinkInvalidatedEmits");
+export function emitNodeInvalidated(node: ReactiveNode): void {
+  profileRuntimeCounter("nodeInvalidatedEmits");
 
   if (IS_DEV) {
     recordDebugEvent(defaultContext, "watcher:invalidated", { node });
   }
 
-  const hook = sinkInvalidatedHook;
+  const hook = nodeInvalidatedHook;
   if (hook === undefined) return;
 
   if (!__DEV__) {
@@ -110,11 +110,11 @@ export function emitSinkInvalidated(node: ReactiveNode): void {
   const phaseBefore = before.phase;
   const depthBefore = before.depth;
 
-  enterRuntimeHook("sinkInvalidatedDispatcher");
+  enterRuntimeHook("onNodeInvalidated");
   try {
     hook(node);
     devAssertRuntimeHookDidNotReenter(
-      "sinkInvalidatedDispatcher",
+      "onNodeInvalidated",
       phaseBefore,
       depthBefore,
     );
@@ -123,9 +123,9 @@ export function emitSinkInvalidated(node: ReactiveNode): void {
   }
 }
 
-export function emitReactiveSettled(): void {
+export function emitRuntimeIdle(): void {
   profileRuntimeCounter("contextSettledEmits");
-  const hook = reactiveSettledHook;
+  const hook = runtimeIdleHook;
   if (hook === undefined) return;
 
   if (!__DEV__) {
@@ -137,11 +137,11 @@ export function emitReactiveSettled(): void {
   const phaseBefore = before.phase;
   const depthBefore = before.depth;
 
-  enterRuntimeHook("reactiveSettledDispatcher");
+  enterRuntimeHook("onRuntimeIdle");
   try {
     hook();
     devAssertRuntimeHookDidNotReenter(
-      "reactiveSettledDispatcher",
+      "onRuntimeIdle",
       phaseBefore,
       depthBefore,
     );

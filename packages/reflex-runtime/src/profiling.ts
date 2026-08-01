@@ -79,7 +79,7 @@ export interface RuntimeProfileCounters {
   contextSettledChecks: number;
   contextSettledEmits: number;
   contextSettledDeferred: number;
-  sinkInvalidatedEmits: number;
+  nodeInvalidatedEmits: number;
 }
 
 export type RuntimeProfileCounterName = keyof RuntimeProfileCounters;
@@ -207,7 +207,7 @@ const COUNTER_NAMES = [
   "contextSettledChecks",
   "contextSettledEmits",
   "contextSettledDeferred",
-  "sinkInvalidatedEmits",
+  "nodeInvalidatedEmits",
 ] as const satisfies readonly RuntimeProfileCounterName[];
 
 function createCounters(): RuntimeProfileCounters {

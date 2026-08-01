@@ -199,7 +199,7 @@ describe("Reactive runtime - walker invariants", () => {
     const watcher = createNode(Watcher);
     const invalidated: ReactiveNode[] = [];
     resetRuntime({
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         invalidated.push(node);
       },
     });
@@ -224,7 +224,7 @@ describe("Reactive runtime - walker invariants", () => {
     let parent = source;
 
     resetRuntime({
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         invalidated.push(node);
       },
     });
@@ -264,7 +264,7 @@ describe("Reactive runtime - walker invariants", () => {
     let nestedWrites = 0;
 
     resetRuntime({
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         if (node !== outerWatcher) return;
         nestedWrites += 1;
         writeProducer(innerSource, 1);
@@ -306,7 +306,7 @@ describe("Reactive runtime - walker invariants", () => {
     let nestedWrites = 0;
 
     resetRuntime({
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         if (node !== directWatcher) return;
         nestedWrites += 1;
         writeProducer(innerSource, 1);
@@ -418,7 +418,7 @@ describe("Reactive runtime - walker invariants", () => {
     const alreadyChangedWatcher = createNode(Watcher | Changed);
     const invalidated: string[] = [];
     resetRuntime({
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         if (node === watcher) invalidated.push("watcher");
         if (node === alreadyChangedWatcher) invalidated.push("already-changed");
       },
@@ -441,7 +441,7 @@ describe("Reactive runtime - walker invariants", () => {
     const watcher = createNode(Watcher | Unknown | Visited);
     const invalidated: ReactiveNode[] = [];
     resetRuntime({
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         invalidated.push(node);
       },
     });
@@ -476,7 +476,7 @@ describe("Reactive runtime - walker invariants", () => {
     const invalidated: ReactiveNode[] = [];
 
     resetRuntime({
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         invalidated.push(node);
       },
     });
@@ -515,7 +515,7 @@ describe("Reactive runtime - walker invariants", () => {
     let right!: ReactiveNode;
 
     resetRuntime({
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         if (node === direct) invalidated.push("direct");
         if (node === left) invalidated.push("left");
         if (node === right) invalidated.push("right");
@@ -825,7 +825,7 @@ describe("Reactive runtime - walker invariants", () => {
     const snapshot = snapshotRuntimeContext();
     configureRuntimeContext({
       hooks: {
-        sinkInvalidatedDispatcher(node) {
+        onNodeInvalidated(node) {
           invalidatedA.push(node);
         },
       },

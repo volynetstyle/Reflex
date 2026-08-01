@@ -6,7 +6,7 @@ describe("batch reactive settled deferral", () => {
     let settled = 0;
     createRuntime({
       hooks: {
-        reactiveSettledDispatcher() {
+        onRuntimeIdle() {
           settled += 1;
         },
       },
@@ -21,7 +21,7 @@ describe("batch reactive settled deferral", () => {
     let settled = 0;
     createRuntime({
       hooks: {
-        reactiveSettledDispatcher() {
+        onRuntimeIdle() {
           settled += 1;
         },
       },
@@ -51,7 +51,7 @@ describe("batch reactive settled deferral", () => {
     let settled = 0;
     createRuntime({
       hooks: {
-        reactiveSettledDispatcher() {
+        onRuntimeIdle() {
           settled += 1;
         },
       },
@@ -73,7 +73,7 @@ describe("batch reactive settled deferral", () => {
     let settled = 0;
     createRuntime({
       hooks: {
-        reactiveSettledDispatcher() {
+        onRuntimeIdle() {
           settled += 1;
         },
       },
@@ -99,7 +99,7 @@ describe("batch reactive settled deferral", () => {
     const runtime = createRuntime({
       effectStrategy: "sab",
       hooks: {
-        reactiveSettledDispatcher() {
+        onRuntimeIdle() {
           events.push("settled");
         },
       },
@@ -122,7 +122,7 @@ describe("batch reactive settled deferral", () => {
     const runtime = createRuntime({
       effectStrategy: "eager",
       hooks: {
-        reactiveSettledDispatcher() {
+        onRuntimeIdle() {
           settled += 1;
         },
       },
@@ -176,7 +176,7 @@ describe("batch reactive settled deferral", () => {
     let settled = 0;
     const runtime = createRuntime({
       hooks: {
-        reactiveSettledDispatcher() {
+        onRuntimeIdle() {
           settled += 1;
           if (shouldThrow) throw new Error("settled failed");
         },

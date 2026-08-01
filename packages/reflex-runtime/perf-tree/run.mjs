@@ -47,11 +47,11 @@ function attachIncomingEdgeAfter(node, edge, after) {
 }
 
 function setInternalHooks(
-  sinkInvalidatedDispatcher,
-  reactiveSettledDispatcher,
+  onNodeInvalidated,
+  onRuntimeIdle,
 ) {
   configureRuntimeContext({
-    hooks: { sinkInvalidatedDispatcher, reactiveSettledDispatcher },
+    hooks: { onNodeInvalidated, onRuntimeIdle },
   });
 }
 const DEFAULT_SAMPLES = 9;

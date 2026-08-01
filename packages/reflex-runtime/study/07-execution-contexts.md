@@ -16,7 +16,7 @@ class ExecutionContext {
   // Текущий узел в процессе вычисления (для trackRead)
   activeComputed: ReactiveNode | null = null;
 
-  // Глубина каскада инвалидаций (для onReactiveSettled)
+  // Глубина каскада инвалидаций (для onRuntimeIdle)
   propagationDepth = 0;
 
 
@@ -340,7 +340,7 @@ runtime.setHooks({
   onEffectInvalidated(node) {
     pending.push(node);
   },
-  onReactiveSettled() {
+  onRuntimeIdle() {
     console.log("Реактивная работа завершена");
   }
 });
@@ -436,7 +436,7 @@ const app1Context = createExecutionContext({
   onEffectInvalidated(node) {
     scheduleEffectFor(app1, node);
   },
-  onReactiveSettled() {
+  onRuntimeIdle() {
     flushEffectsFor(app1);
   }
 });
@@ -477,7 +477,7 @@ class CustomScheduler {
   constructor() {
     this.context = createExecutionContext({
       onEffectInvalidated: (node) => this.scheduleEffect(node),
-      onReactiveSettled: () => this.onSettled()
+      onRuntimeIdle: () => this.onSettled()
     });
   }
 
@@ -519,7 +519,7 @@ class CustomScheduler {
 ## 8. Ключевые инварианты
 
 ✅ Контекст изолирует `activeComputed` (для trackRead)  
-✅ Контекст изолирует `propagationDepth` (для onReactiveSettled)  
+✅ Контекст изолирует `propagationDepth` (для onRuntimeIdle)
 ✅ Контекст изолирует hooks (для scheduling)  
 ✅ Контекст НЕ изолирует сами реактивные узлы (ReactiveNode)  
 

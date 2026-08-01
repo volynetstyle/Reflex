@@ -107,13 +107,13 @@ while (pending.length) {
 - від'єднаний від джерел
 - більше не повинен інвалідовуватися
 
-## 7. `onReactiveSettled`
+## 7. `onRuntimeIdle`
 
 Другий важливий hook:
 
 ```ts
 const ctx = createExecutionContext({
-  onReactiveSettled() {
+  onRuntimeIdle() {
     // host signal: reactive burst is done
   },
 });
@@ -154,7 +154,7 @@ kernel не тягне на собі всі execution стратегії.
 - cleanup рівно один раз на dispose
 - коректне відновлення `activeComputed`
 - коректне зняття `Computing` і `Computing` навіть якщо compute кинув помилку
-- `onReactiveSettled` тільки після outermost completion
+- `onRuntimeIdle` тільки після outermost completion
 
 ## 10. Чому це хороший seam
 

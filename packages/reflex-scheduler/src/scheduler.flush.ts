@@ -1,7 +1,8 @@
 import {
-  flushPendingReactiveSettledIfIdle,
-  pendingReactiveSettled,
+  flushPendingRuntimeIdle,
   releaseWatcherSchedule,
+  RuntimeState,
+  runtimeState,
   runWatcherWithoutSettledCheckpoint,
 } from "@volynets/reflex-runtime/internal";
 import { profileSchedulerPolicyCounter } from "./scheduler.counters";
@@ -82,9 +83,9 @@ export function flushQueuedWatchers(
   queue.head = 0;
   queue.tail = 0;
 
-  if (pendingReactiveSettled) {
+  if ((runtimeState & RuntimeState.IdlePending) !== RuntimeState.Idle) {
     try {
-      flushPendingReactiveSettledIfIdle();
+      flushPendingRuntimeIdle();
     } catch (error) {
       if (thrown === noThrow) thrown = error;
     }

@@ -1,8 +1,9 @@
 import { defaultContext } from "@runtime/kernel/config";
-import { flushPendingReactiveSettledIfIdle } from "@runtime/kernel/batch";
+import { flushPendingRuntimeIdle } from "@runtime/kernel/batch";
 import {
   currentConsumer,
-  pendingReactiveSettled,
+  RuntimeState,
+  runtimeState,
   setCurrentConsumer,
 } from "@runtime/kernel/state";
 import {
@@ -82,7 +83,9 @@ function runCleanup(cleanup: WatcherCleanup): void {
 
 export function runWatcher(node: WatcherNode): void {
   runWatcherWithoutSettledCheckpoint(node);
-  if (pendingReactiveSettled) flushPendingReactiveSettledIfIdle();
+  if ((runtimeState & RuntimeState.IdlePending) !== RuntimeState.Idle) {
+    flushPendingRuntimeIdle();
+  }
 }
 
 /** Scheduler drain entry point; the caller owns one checkpoint after draining. */

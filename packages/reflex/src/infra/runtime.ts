@@ -81,10 +81,10 @@ export function createRuntime({
   const schedulerCore = createSchedulerCore();
   const schedulerFlush = (): void => flushSchedulerQueue(schedulerCore);
   const run = <T>(fn: () => T): T => runWithRuntimeContext(execution, fn);
-  const emitReactiveSettled = (): void => {
+  const emitRuntimeIdle = (): void => {
     profileSchedulerPolicyCounter("settleCalled");
     notifyEffectSchedulerSettled(schedulerCore, schedulerMode);
-    hooks?.reactiveSettledDispatcher?.();
+    hooks?.onRuntimeIdle?.();
   };
   const runBatch = <T>(fn: () => T): T => {
     // Public batching composes two independent boundaries. Close scheduler
@@ -156,32 +156,32 @@ export function createRuntime({
     run(schedulerFlush);
   };
   const dispatcher = createEventDispatcher(runtimeBatch);
-  const externalSinkInvalidated = hooks?.sinkInvalidatedDispatcher;
-  const externalReactiveSettled = hooks?.reactiveSettledDispatcher;
+  const externalNodeInvalidated = hooks?.onNodeInvalidated;
+  const externalRuntimeIdle = hooks?.onRuntimeIdle;
   // Runtime invalidation hooks are enqueue-only. Eager delivery is owned by
   // the subsequent reactive-settled boundary, never by the propagation hook.
   const enqueueEffect = (node: ReactiveNode): void => {
     tryEnqueue(schedulerCore.queue, node);
   };
-  const sinkInvalidatedDispatcher =
-    externalSinkInvalidated === undefined
+  const onNodeInvalidated =
+    externalNodeInvalidated === undefined
       ? enqueueEffect
       : (node: ReactiveNode): void => {
           enqueueEffect(node);
-          externalSinkInvalidated(node);
+          externalNodeInvalidated(node);
         };
-  const reactiveSettledDispatcher =
+  const onRuntimeIdle =
     schedulerMode === EffectSchedulerMode.Eager ||
-    externalReactiveSettled !== undefined
-      ? emitReactiveSettled
+    externalRuntimeIdle !== undefined
+      ? emitRuntimeIdle
       : undefined;
 
   resetRuntimeContext(execution);
 
   configureRuntimeContext(execution, {
     hooks: {
-      sinkInvalidatedDispatcher,
-      reactiveSettledDispatcher,
+      onNodeInvalidated,
+      onRuntimeIdle,
     },
   });
 

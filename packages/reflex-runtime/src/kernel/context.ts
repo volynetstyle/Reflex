@@ -15,7 +15,7 @@ import {
   syncRuntimeContext,
 } from "./context.switch";
 import { resetRuntimeExecutionState } from "./execution";
-import { trackingEpoch } from "./state";
+import { runtimeState, trackingEpoch } from "./state";
 
 export { createRuntimeContext, getActiveRuntimeContext };
 export type {
@@ -70,10 +70,10 @@ export function resetRuntimeContext(
   context.trackingEpoch = 0;
   context.propagationScopeDepth = 0;
   context.batchDepth = 0;
-  context.pendingReactiveSettled = false;
+  context.runtimeState = 0;
   context.readTrackingStrategy = DEFAULT_READ_TRACKING_STRATEGY;
-  context.sinkInvalidatedHook = undefined;
-  context.reactiveSettledHook = undefined;
+  context.nodeInvalidatedHook = undefined;
+  context.runtimeIdleHook = undefined;
 
   if (context === getActiveRuntimeContext()) {
     resetRuntimeExecutionState();
@@ -91,20 +91,20 @@ export function snapshotRuntimeContext(
     trackingEpoch,
     propagationScopeDepth,
     batchDepth,
-    pendingReactiveSettled,
+    runtimeState,
     readTrackingStrategy,
-    sinkInvalidatedHook,
-    reactiveSettledHook,
+    nodeInvalidatedHook,
+    runtimeIdleHook,
   } = context;
   return {
     currentConsumer,
     trackingEpoch,
     propagationScopeDepth,
     batchDepth,
-    pendingReactiveSettled,
+    runtimeState,
     readTrackingStrategy,
-    sinkInvalidatedHook,
-    reactiveSettledHook,
+    nodeInvalidatedHook,
+    runtimeIdleHook,
   };
 }
 

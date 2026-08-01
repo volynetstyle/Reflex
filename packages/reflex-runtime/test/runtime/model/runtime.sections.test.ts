@@ -263,7 +263,7 @@ describe("Reactive runtime - section model coverage", () => {
           });
 
           resetRuntime({
-            sinkInvalidatedDispatcher(node) {
+            onNodeInvalidated(node) {
               const hit = watchers.find((entry) => entry.watcher === node);
               if (hit) invalidated.push(hit.label);
             },
@@ -295,7 +295,7 @@ describe("Reactive runtime - section model coverage", () => {
           });
           const invalidated = vi.fn();
 
-          resetRuntime({ sinkInvalidatedDispatcher: invalidated });
+          resetRuntime({ onNodeInvalidated: invalidated });
           runWatcher(watcher);
           disposeWatcher(watcher);
           writeProducer(source, 2);
