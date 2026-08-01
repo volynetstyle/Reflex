@@ -1,8 +1,12 @@
 import "./debug_flag";
 
-import { runtimeDebugInstalled } from "./debug.install";
+import {
+  collectDebugNodeRefs,
+  recordDebugEvent,
+} from "./debug.impl";
+import { installRuntimeDebug } from "./debug.runtime";
 
-void runtimeDebugInstalled;
+installRuntimeDebug({ collectDebugNodeRefs, recordDebugEvent });
 
 export { subtle, type RuntimeSubtle } from "./subtle.internal";
 export {

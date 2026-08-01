@@ -29,6 +29,7 @@ import type {
   RuntimeDebugNodeSnapshot,
   RuntimeDebugOptions,
 } from "./debug.types";
+import type { RuntimeDebugEventInput } from "./debug.runtime";
 
 const DEFAULT_HISTORY_LIMIT = 250;
 
@@ -38,14 +39,6 @@ interface RuntimeDebugState {
   history: RuntimeDebugEvent[];
   historyLimit: number;
   listeners: Set<RuntimeDebugListener>;
-}
-
-interface RuntimeDebugEventInput {
-  consumer?: ReactiveNode;
-  detail?: Record<string, unknown>;
-  node?: ReactiveNode;
-  source?: ReactiveNode;
-  target?: ReactiveNode;
 }
 
 const contextStates = new WeakMap<object, RuntimeDebugState>();
