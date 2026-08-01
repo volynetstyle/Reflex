@@ -32,8 +32,8 @@ export function createTerserPlugin(target: BuildTarget): Plugin | null {
       negate_iife: false,
       passes: 3,
       pure_funcs: [...VERIFIED_PURE_FUNCS],
-      reduce_funcs: true,
-      reduce_vars: true,
+      reduce_funcs: false,
+      reduce_vars: false,
       sequences: true,
       side_effects: true,
       switches: true,
@@ -41,14 +41,14 @@ export function createTerserPlugin(target: BuildTarget): Plugin | null {
       typeofs: false,
       unused: true,
 
-      // Enabled only for local variable/function compaction. This does not mangle
-      // object property names and is needed to avoid helper-call/IIFE leftovers.
-      collapse_vars: true,
+      // Keep named helpers instead of synthesizing inline IIFEs. The runtime's
+      // hot paths are already expressed as direct functions.
+      collapse_vars: false,
       drop_console: false,
       hoist_funs: false,
       hoist_props: false,
       hoist_vars: false,
-      inline: 3,
+      inline: false,
       keep_infinity: true,
       pure_getters: false,
       unsafe: false,
@@ -66,8 +66,7 @@ export function createTerserPlugin(target: BuildTarget): Plugin | null {
       module: isModule,
       toplevel: true,
       keep_classnames: true,
-      // Hot release build: private helper function .name is not preserved,
-      // because keeping every name blocks Terser from collapsing helper IIFEs.
+      // Hot release build: private helper function .name is not preserved.
       // Public object/class property names are still preserved: property mangling is off.
       keep_fnames: false,
       safari10: true,
