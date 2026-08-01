@@ -80,7 +80,10 @@ importers:
         version: 4.1.5(@types/node@26.1.2)(@vitest/coverage-v8@4.1.5)(jsdom@29.1.1)(vite@6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4))
 
   packages/reflex:
-    devDependencies:
+    dependencies:
+      '@volynets/reflex-runtime':
+        specifier: workspace:*
+        version: link:../reflex-runtime
       '@volynets/reflex-scheduler':
         specifier: workspace:*
         version: link:../reflex-scheduler

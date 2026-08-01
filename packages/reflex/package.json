@@ -78,7 +78,8 @@
     "typecheck:tests": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.type-tests.json",
     "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm build:clean"
   },
-  "devDependencies": {
+  "dependencies": {
+    "@volynets/reflex-runtime": "workspace:*",
     "@volynets/reflex-scheduler": "workspace:*"
   }
 }
