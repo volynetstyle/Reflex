@@ -6,8 +6,10 @@ export type ModelActionBrand = {
   readonly [MODEL_ACTION_TYPE]: true;
 };
 
-export type ModelAction<TArgs extends unknown[] = unknown[], TReturn = unknown> =
-  ((...args: TArgs) => TReturn) & ModelActionBrand;
+export type ModelAction<
+  TArgs extends unknown[] = unknown[],
+  TReturn = unknown,
+> = ((...args: TArgs) => TReturn) & ModelActionBrand;
 
 export function createModelAction<TArgs extends unknown[], TReturn>(
   fn: (...args: TArgs) => TReturn,
@@ -22,20 +24,24 @@ export function isModelActionValue(
   return typeof value === "function" && modelActions.has(value);
 }
 
-export function isModelReadableValue(value: unknown): value is Accessor<unknown> {
+export function isModelReadableValue(
+  value: unknown,
+): value is Accessor<unknown> {
   return (
     typeof value === "function" &&
     value.length === 0 &&
-    !isModelActionValue(value)
+    !modelActions.has(value)
   );
 }
 
 export function readModelValue<T>(
   value: T,
 ): T extends Accessor<infer TValue> ? TValue : T {
-  return (isModelReadableValue(value) ? value() : value) as T extends Accessor<
-    infer TValue
-  >
-    ? TValue
-    : T;
+  return (
+    typeof value === "function" &&
+    value.length === 0 &&
+    !modelActions.has(value)
+      ? value()
+      : value
+  ) as T extends Accessor<infer TValue> ? TValue : T;
 }

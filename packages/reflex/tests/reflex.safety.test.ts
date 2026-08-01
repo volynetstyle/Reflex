@@ -67,4 +67,46 @@ describe("Reactive system - safety and robustness", () => {
 
     expect(seen).toEqual([1, 2, 3]);
   });
+
+  it("rolls back a watcher whose initial effect run throws", () => {
+    const rt = createRuntime();
+    const [source, setSource] = signal(0);
+    let runs = 0;
+
+    expect(() =>
+      effect(() => {
+        source();
+        runs += 1;
+        throw new Error("initial effect failed");
+      }),
+    ).toThrow("initial effect failed");
+
+    setSource(1);
+    rt.flush();
+    expect(runs).toBe(1);
+  });
+
+  it("reschedules an effect after its cleanup throws", () => {
+    const rt = createRuntime();
+    const [source, setSource] = signal(0);
+    let runs = 0;
+    let throwCleanup = true;
+
+    effect(() => {
+      source();
+      runs += 1;
+      return () => {
+        if (throwCleanup) throw new Error("cleanup failed");
+      };
+    });
+
+    setSource(1);
+    expect(() => rt.flush()).toThrow("cleanup failed");
+
+    throwCleanup = false;
+    setSource(2);
+    rt.flush();
+    expect(runs).toBe(2);
+  });
+
 });

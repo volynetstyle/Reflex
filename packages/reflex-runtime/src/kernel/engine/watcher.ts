@@ -1,8 +1,9 @@
 import { defaultContext } from "@runtime/kernel/config";
-import { flushPendingReactiveSettledIfIdle } from "@runtime/kernel/batch";
+import { flushPendingRuntimeIdle } from "@runtime/kernel/batch";
 import {
   currentConsumer,
-  pendingReactiveSettled,
+  RuntimeState,
+  runtimeState,
   setCurrentConsumer,
 } from "@runtime/kernel/state";
 import {
@@ -14,6 +15,7 @@ import {
 } from "@runtime/kernel/dev";
 import {
   devAssertNoRuntimeHookWatcherExecution,
+  devAssertNoRuntimeHookTopologyMutation,
   enterRuntimePhase,
   leaveRuntimePhase,
   RuntimePhase,
@@ -22,7 +24,9 @@ import {
   DIRTY_STATE,
   disposeNode,
   Changed,
-  Invalid,
+  Computing,
+  Unknown,
+  Scheduled,
   Visited,
   type WatcherCleanup,
   type WatcherNode,
@@ -33,6 +37,31 @@ import { profileRuntimeCounter } from "@runtime/profiling";
 import { executeKnownNodeComputation } from "./watcher.execution";
 
 const FORCE_STABILIZATION_STATE = Changed | Visited;
+const WATCHER_TRANSIENT_STATE =
+  DIRTY_STATE | Visited | Computing | Scheduled;
+
+function recoverWatcherAfterError(node: WatcherNode): void {
+  // A failed lifecycle callback must not leave an unscheduled dirty watcher:
+  // such a node can no longer be invalidated and becomes a zombie. Keep its
+  // dependency set as a conservative retry set, but return it to an idle
+  // state so the next source change can schedule it again.
+  node.state &= ~WATCHER_TRANSIENT_STATE;
+}
+
+/** Claims ownership of this watcher for an external scheduler queue. */
+export function claimWatcherSchedule(node: WatcherNode): boolean {
+  const state = node.state;
+
+  if ((state & Scheduled) !== 0) return false;
+
+  node.state = state | Scheduled;
+  return true;
+}
+
+/** Releases ownership of this watcher from an external scheduler queue. */
+export function releaseWatcherSchedule(node: WatcherNode): void {
+  node.state &= ~Scheduled;
+}
 
 function runCleanup(cleanup: WatcherCleanup): void {
   profileRuntimeCounter("watcherCleanups");
@@ -55,24 +84,23 @@ function runCleanup(cleanup: WatcherCleanup): void {
 
 export function runWatcher(node: WatcherNode): void {
   runWatcherWithoutSettledCheckpoint(node);
-  if (pendingReactiveSettled) flushPendingReactiveSettledIfIdle();
+  if ((runtimeState & RuntimeState.IdlePending) !== RuntimeState.Idle) {
+    flushPendingRuntimeIdle();
+  }
 }
 
 /** Scheduler drain entry point; the caller owns one checkpoint after draining. */
-export function runWatcherWithoutSettledCheckpoint(node: WatcherNode): void {
-  if (!__DEV__) {
-    runWatcherCore(node);
-    return;
-  }
-
-  devAssertNoRuntimeHookWatcherExecution();
-  enterRuntimePhase(RuntimePhase.WatcherExecution);
-  try {
-    runWatcherCore(node);
-  } finally {
-    leaveRuntimePhase();
-  }
-}
+export const runWatcherWithoutSettledCheckpoint = !__DEV__
+  ? runWatcherCore
+  : function (node: WatcherNode): void {
+      devAssertNoRuntimeHookWatcherExecution();
+      enterRuntimePhase(RuntimePhase.WatcherExecution);
+      try {
+        runWatcherCore(node);
+      } finally {
+        leaveRuntimePhase();
+      }
+    };
 
 function runWatcherCore(node: WatcherNode): void {
   profileRuntimeCounter("watcherRunCalls");
@@ -119,7 +147,12 @@ function runWatcherCore(node: WatcherNode): void {
   node.state &= ~Visited;
 
   if (prevCleanup !== null) {
-    runCleanup(prevCleanup);
+    try {
+      runCleanup(prevCleanup);
+    } catch (error) {
+      recoverWatcherAfterError(node);
+      throw error;
+    }
     if (__DEV__) devRecordWatcherCleanup(node, defaultContext);
 
     if (node.compute === undefined) {
@@ -131,7 +164,20 @@ function runWatcherCore(node: WatcherNode): void {
     }
   }
 
-  const result = executeKnownNodeComputation(node, compute);
+  let result: ReturnType<typeof compute>;
+
+  try {
+    result = executeKnownNodeComputation(node, compute);
+  } catch (error) {
+    recoverWatcherAfterError(node);
+    throw error;
+  }
+
+  if (node.compute === undefined) {
+    node.payload = undefined;
+    node.state &= ~WATCHER_TRANSIENT_STATE;
+    return;
+  }
 
   const hasCleanup = typeof result === "function";
 
@@ -142,19 +188,22 @@ function runWatcherCore(node: WatcherNode): void {
   if ((node.state & Visited) === 0) {
     node.state &= ~DIRTY_STATE;
   } else {
-    node.state = (node.state & ~Changed) | Invalid;
+    node.state = (node.state & ~Changed) | Unknown;
   }
 
   if (__DEV__) devRecordWatcherFinish(node, hasCleanup, result, defaultContext);
 }
 
 export function disposeWatcher(node: WatcherNode): void {
+  if (__DEV__) devAssertNoRuntimeHookTopologyMutation();
+
   profileRuntimeCounter("watcherDisposals");
 
   const payload = node.payload;
   const cleanup = typeof payload === "function" ? payload : null;
 
   disposeNode(node);
+  node.state &= ~WATCHER_TRANSIENT_STATE;
 
   if (cleanup !== null) {
     runCleanup(cleanup);

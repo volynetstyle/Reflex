@@ -1,5 +1,14 @@
-import "./debug/dev_flag";
+import "../debug/dev_flag";
 export { subtle, type RuntimeSubtle } from "./subtle";
+export type {
+  RuntimeDiagnosticErrorCode,
+  RuntimeDiagnosticJson,
+  RuntimeDiagnosticResult,
+  RuntimeDiagnostics,
+  RuntimeMcpAdapter,
+  RuntimeMcpToolDefinition,
+  RuntimeMcpToolResponse,
+} from "./subtle";
 export {
   RUNTIME_DEBUG_PROTOCOL_VERSION,
   type RuntimeDebugCommand,
@@ -15,7 +24,7 @@ export {
   type RuntimeDebugProtocolVersion,
   type RuntimeDebugSession,
   type RuntimeDebugSessionSnapshot,
-} from "./debug/debug.protocol";
+} from "../debug/debug.protocol";
 
 export type {
   ConsumerNode,
@@ -48,6 +57,7 @@ export type {
 
 export {
   RuntimePhase,
+  RuntimeExecutionError,
   readRuntimePhase,
   readActiveRuntimeHook,
 } from "./kernel/execution";

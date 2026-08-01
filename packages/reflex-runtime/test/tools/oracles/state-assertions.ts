@@ -4,7 +4,7 @@ import {
   Changed,
   Computing,
   DIRTY_STATE,
-  Invalid,
+  Unknown,
   Visited,
   Computing,
 } from "../../../src/internal";
@@ -14,7 +14,7 @@ export function expectChanged(node: ReactiveNode): void {
 }
 
 export function expectInvalid(node: ReactiveNode): void {
-  expect(node.state & Invalid).toBeTruthy();
+  expect(node.state & Unknown).toBeTruthy();
 }
 
 export function expectNotChanged(node: ReactiveNode): void {
@@ -22,7 +22,7 @@ export function expectNotChanged(node: ReactiveNode): void {
 }
 
 export function expectNotInvalid(node: ReactiveNode): void {
-  expect(node.state & Invalid).toBe(0);
+  expect(node.state & Unknown).toBe(0);
 }
 
 export function expectDirty(node: ReactiveNode): void {

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   RuntimePhase,
+  RuntimeExecutionError,
+  disposeWatcher,
   readConsumer,
   readProducer,
   readRuntimePhase,
@@ -65,10 +67,10 @@ function createBenchmarkStyleScheduler(flushSynchronouslyFromHook = false) {
   }
 
   resetRuntime({
-    sinkInvalidatedDispatcher(watcher) {
+    onNodeInvalidated(watcher) {
       pendingWatchers.add(watcher as RuntimeWatcher);
     },
-    reactiveSettledDispatcher() {
+    onRuntimeIdle() {
       scheduleWatcherFlush();
     },
   });
@@ -96,13 +98,13 @@ describe("Reactive runtime - scheduler policy validation (dev)", () => {
     runWatcher(watcher);
 
     resetRuntime({
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         runWatcher(node as typeof watcher);
       },
     });
 
     expect(() => writeProducer(source, 2)).toThrow(
-      /REFLEX_SCHEDULER_REENTRANT_FLUSH/,
+      RuntimeExecutionError.SchedulerReentrantFlush.code,
     );
     expect(readRuntimePhase().phase).toBe(RuntimePhase.Idle);
     expect(readRuntimePhase().depth).toBe(0);
@@ -117,13 +119,35 @@ describe("Reactive runtime - scheduler policy validation (dev)", () => {
     runWatcher(watcher);
 
     resetRuntime({
-      sinkInvalidatedDispatcher() {
+      onNodeInvalidated() {
         readProducer(source);
       },
     });
 
     expect(() => writeProducer(source, 2)).toThrow(
-      /REFLEX_SCHEDULER_REACTIVE_READ_IN_HOOK/,
+      RuntimeExecutionError.SchedulerReactiveReadInHook.code,
+    );
+    expect(readRuntimePhase().phase).toBe(RuntimePhase.Idle);
+    expect(readRuntimePhase().depth).toBe(0);
+  });
+
+  it("rejects watcher disposal from an invalidation hook", () => {
+    const source = createProducer(1);
+    let watcher!: ReturnType<typeof createWatcher>;
+
+    watcher = createWatcher(() => {
+      readProducer(source);
+    });
+    runWatcher(watcher);
+
+    resetRuntime({
+      onNodeInvalidated(node) {
+        disposeWatcher(node as typeof watcher);
+      },
+    });
+
+    expect(() => writeProducer(source, 2)).toThrow(
+      RuntimeExecutionError.SchedulerTopologyMutationInHook.code,
     );
     expect(readRuntimePhase().phase).toBe(RuntimePhase.Idle);
     expect(readRuntimePhase().depth).toBe(0);
@@ -163,7 +187,7 @@ describe("Reactive runtime - scheduler policy validation (dev)", () => {
     runWatcher(innerWatcher);
 
     resetRuntime({
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         if (node === outerWatcher) {
           writeProducer(innerSource, 2);
         }
@@ -189,10 +213,10 @@ describe("Reactive runtime - scheduler policy validation (dev)", () => {
     runWatcher(innerWatcher);
 
     resetRuntime({
-      sinkInvalidatedDispatcher() {
+      onNodeInvalidated() {
         hooks.push(readActiveRuntimeHook());
       },
-      reactiveSettledDispatcher() {
+      onRuntimeIdle() {
         hooks.push(readActiveRuntimeHook());
         if (!nested) {
           nested = true;
@@ -205,12 +229,12 @@ describe("Reactive runtime - scheduler policy validation (dev)", () => {
     writeProducer(outerSource, 2);
 
     expect(hooks).toEqual([
-      "sinkInvalidatedDispatcher",
-      "reactiveSettledDispatcher",
-      "sinkInvalidatedDispatcher",
-      "reactiveSettledDispatcher",
-      "reactiveSettledDispatcher",
-      "reactiveSettledDispatcher",
+      "onNodeInvalidated",
+      "onRuntimeIdle",
+      "onNodeInvalidated",
+      "onRuntimeIdle",
+      "onRuntimeIdle",
+      "onRuntimeIdle",
     ]);
     expect(readActiveRuntimeHook()).toBeNull();
   });

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   Computing,
   DIRTY_STATE,
+  Scheduled,
   Computing,
   disposeWatcher,
   currentConsumer,
@@ -35,7 +36,7 @@ describe("Reactive runtime - resilience and recovery", () => {
     let nestedWriteTriggered = false;
 
     resetRuntime({
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         if (node === nestedWatcher) {
           invalidations.push("nested");
           if (!nestedWriteTriggered) {
@@ -89,6 +90,72 @@ describe("Reactive runtime - resilience and recovery", () => {
     expect(currentConsumer).toBeNull();
     expect(watcher.state & Computing).toBe(0);
     expect(watcher.state & Computing).toBe(0);
+    expect(watcher.state & DIRTY_STATE).toBe(0);
+    expect(watcher.state & Scheduled).toBe(0);
+  });
+
+  it("allows a watcher computation to retry after a later invalidation", () => {
+    const source = createProducer(0);
+    let shouldThrow = false;
+    const seen: number[] = [];
+    const watcher = createWatcher(() => {
+      const value = readProducer(source);
+      if (shouldThrow) throw new Error("watcher failed");
+      seen.push(value);
+    });
+
+    runWatcher(watcher);
+    shouldThrow = true;
+    writeProducer(source, 1);
+    expect(() => runWatcher(watcher)).toThrow("watcher failed");
+    expect(watcher.state & (DIRTY_STATE | Computing | Scheduled)).toBe(0);
+
+    shouldThrow = false;
+    writeProducer(source, 2);
+    runWatcher(watcher);
+    expect(seen).toEqual([0, 2]);
+  });
+
+  it("allows a watcher to retry after cleanup throws", () => {
+    const source = createProducer(0);
+    let throwCleanup = true;
+    const seen: number[] = [];
+    const watcher = createWatcher(() => {
+      seen.push(readProducer(source));
+      return () => {
+        if (throwCleanup) throw new Error("cleanup failed");
+      };
+    });
+
+    runWatcher(watcher);
+    writeProducer(source, 1);
+    expect(() => runWatcher(watcher)).toThrow("cleanup failed");
+    expect(watcher.state & (DIRTY_STATE | Computing | Scheduled)).toBe(0);
+
+    throwCleanup = false;
+    writeProducer(source, 2);
+    runWatcher(watcher);
+    expect(seen).toEqual([0, 2]);
+  });
+
+  it("is terminal and idempotent when dispose cleanup throws", () => {
+    const source = createProducer(0);
+    const cleanup = vi.fn(() => {
+      throw new Error("cleanup failed");
+    });
+    const watcher = createWatcher(() => {
+      readProducer(source);
+      return cleanup;
+    });
+
+    runWatcher(watcher);
+    expect(() => disposeWatcher(watcher)).toThrow("cleanup failed");
+    expect(watcher.compute).toBeUndefined();
+    expect(watcher.firstIn).toBeNull();
+    expect(watcher.state & (DIRTY_STATE | Computing | Scheduled)).toBe(0);
+
+    expect(() => disposeWatcher(watcher)).not.toThrow();
+    expect(cleanup).toHaveBeenCalledTimes(1);
   });
 
   it("keeps cleanup disposal reentrancy safe", () => {

@@ -6,7 +6,10 @@ import reflexStore from "../src/vite";
 
 const testDir = dirname(fileURLToPath(import.meta.url));
 const fixtureRoot = resolve(testDir, "fixtures");
-const reflexSource = resolve(testDir, "../../../reflex/src/index.ts");
+const taskBoardRoot = resolve(testDir, "../examples/task-board");
+const reflexSource = resolve(testDir, "../../reflex/src/index.ts");
+const runtimeSource = resolve(testDir, "../../reflex-runtime/src");
+const schedulerSource = resolve(testDir, "../../reflex-scheduler/src/index.ts");
 const storeSource = resolve(testDir, "../src/index.ts");
 
 const servers: ViteDevServer[] = [];
@@ -15,17 +18,26 @@ afterEach(async () => {
   await Promise.all(servers.splice(0).map((server) => server.close()));
 });
 
-async function createStoreFixtureServer(): Promise<ViteDevServer> {
+async function createStoreFixtureServer(
+  root = fixtureRoot,
+): Promise<ViteDevServer> {
   const server = await createServer({
     appType: "custom",
     configFile: false,
     logLevel: "silent",
-    root: fixtureRoot,
+    root,
     plugins: [reflexStore()],
     resolve: {
       alias: {
+        "@runtime": runtimeSource,
         "@volynets/reflex": reflexSource,
-        "@reflex/store": storeSource,
+        "@volynets/reflex-runtime/internal": resolve(
+          runtimeSource,
+          "internal/index.ts",
+        ),
+        "@volynets/reflex-runtime": resolve(runtimeSource, "index.ts"),
+        "@volynets/reflex-scheduler": schedulerSource,
+        "@volynets/reflex-store": storeSource,
       },
     },
     server: {
@@ -62,5 +74,23 @@ describe("reflex store Vite plugin user DX", () => {
     ).rejects.toThrow(
       "Dynamic compiled-store access is not supported in phase 1.",
     );
+  });
+
+  it("runs the task-board application example", async () => {
+    const server = await createStoreFixtureServer(taskBoardRoot);
+    const mod = await server.ssrLoadModule("/src/task-board.ts");
+
+    expect(mod.runTaskBoardScenario()).toEqual({
+      activeTask: "Add audit log",
+      completed: 1,
+      isSelected: true,
+      renders: [
+        "all|3|1|Design checkout",
+        "active|1|1|Add audit log",
+        "active|2|1|Add audit log",
+      ],
+      total: 3,
+      visible: 2,
+    });
   });
 });

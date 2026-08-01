@@ -156,7 +156,7 @@ Reactive effects and DOM render effects use separate queues:
 ```text
 source write
   -> runtime propagation
-  -> host sinkInvalidated hook
+  -> host nodeInvalidated hook
   -> reactive watcher queue
   -> watcher execution and DOM mutations
   -> runtime settled notification

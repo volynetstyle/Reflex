@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["examples/task-board/src/**/*.ts", "bench/**/*.ts"],
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "baseUrl": ".",
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true,
+    "paths": {
+      "@volynets/reflex-store": ["./src/index.ts"]
+    },
+    "rootDir": "."
+  }
+}

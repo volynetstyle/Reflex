@@ -1,5 +1,6 @@
 import {
   DIRTY_STATE,
+  createWatcher,
   readProducer,
   type ReactiveNode,
   runWatcher,
@@ -7,10 +8,7 @@ import {
   writeProducer,
 } from "@volynets/reflex-runtime/internal";
 import type { Accessor } from "../types";
-import {
-  createSignalNode,
-  createWatcherRankedNode,
-} from "../internal/runtime";
+import { createSignalNode } from "../internal/runtime";
 import {
   getMissing,
   type KeyedOptions,
@@ -33,11 +31,10 @@ class SelectorCore<T> {
   constructor(
     private readonly source: Accessor<T>,
     private readonly equals: (prev: T, next: T) => boolean,
-    priority: number,
   ) {
-    const watcher = createWatcherRankedNode(() => {
+    const watcher = createWatcher(() => {
       this.sync();
-    }, priority);
+    });
     this.watcher = watcher;
     runWatcher(watcher);
   }
@@ -98,11 +95,10 @@ class KeyedProjectionCore<T, K, R> {
     private readonly project: (value: T) => R,
     private readonly equals: (prev: K, next: K) => boolean,
     private readonly fallback: R | undefined,
-    priority: number,
   ) {
-    const watcher = createWatcherRankedNode(() => {
+    const watcher = createWatcher(() => {
       this.sync();
-    }, priority);
+    });
     this.watcher = watcher;
     runWatcher(watcher);
   }
@@ -167,7 +163,6 @@ export function createSelector<T>(
   const core = new SelectorCore(
     source,
     options.equals ?? sameValue<T>,
-    options.priority ?? 100,
   );
   return core.read;
 }
@@ -184,7 +179,6 @@ export function createKeyedProjection<T, K, R>(
     project,
     options.equals ?? sameValue<K>,
     options.fallback,
-    options.priority ?? 100,
   );
   return core.read;
 }

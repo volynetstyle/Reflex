@@ -76,6 +76,10 @@ Most application code should depend on `@volynets/reflex`. The lower-level
 `@volynets/reflex-runtime` package is intended for renderer, scheduler, and
 tooling integrations.
 
+The shared implementation guide, topology taxonomy, counters, and benchmark
+results for conditional computations live in the
+[dynamic dependencies guide](../../docs/dynamic-dependencies/README.md).
+
 ## License
 
 [MIT](https://github.com/volynetstyle/Reflex/blob/main/LICENSE)

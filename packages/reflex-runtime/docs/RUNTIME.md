@@ -175,7 +175,7 @@ Semantics:
 - **Effect container:** Executes user code with side effects
 - **Host-scheduled:** Runs only when host calls `runWatcher()`
 - **Cleanup support:** May return a cleanup function
-- **Invalidation signals:** Runtime signals dirty state through `onSinkInvalidated` hook
+- **Invalidation signals:** Runtime signals dirty state through `onNodeInvalidated` hook
 
 Guarantee:
 
@@ -239,10 +239,10 @@ An `ExecutionContext` does **not** own:
 ```ts
 // Create a new context with hooks
 setHooks({
-  onSinkInvalidated(node) {
+  onNodeInvalidated(node) {
     pendingWatchers.push(node);
   },
-  onReactiveSettled() {
+  onRuntimeIdle() {
     console.log("Graph is idle");
   },
 });
@@ -250,14 +250,14 @@ setHooks({
 
 ### Hook Semantics
 
-**`onSinkInvalidated(node)`**
+**`onNodeInvalidated(node)`**
 
 - **When:** Fires synchronously during propagation when a sink node becomes dirty
 - **What:** Signals that the sink node needs execution
 - **Does not:** Run the node for you
 - **Typical use:** Queue the node for later execution by host scheduler
 
-**`onReactiveSettled()`**
+**`onRuntimeIdle()`**
 
 - **When:** Fires when the context reaches quiescence
   - Conditions: `propagationDepth === 0` AND `activeComputed === null`
@@ -276,7 +276,7 @@ readConsumer(b);           // Uses default context
 
 // Option B: Explicit context (isolation, custom hooks)
 setHooks({
-  onSinkInvalidated(node) { /* custom logic */ },
+  onNodeInvalidated(node) { /* custom logic */ },
 });
 readProducer(a);
 readConsumer(b);
@@ -290,13 +290,13 @@ Contexts isolate scheduling hooks and propagation state, not graph ownership.
 
 A reactive batch is a synchronous runtime notification boundary. Writes and
 graph invalidation happen immediately, and lazy consumers recompute on demand.
-Only host-visible `reactiveSettled` delivery is deferred until the outermost
+Only host-visible `runtimeIdle` delivery is deferred until the outermost
 boundary has exited and runtime execution is idle.
 
 Runtime batching does not buffer writes, make reads stale, schedule or flush
 effects, own asynchronous timing, or know scheduler modes. Those decisions are
-host policy implemented through `sinkInvalidatedDispatcher` and
-`reactiveSettledDispatcher` hooks.
+host policy implemented through `onNodeInvalidated` and
+`onRuntimeIdle` hooks.
 
 The host may enter and leave the boundary, but it must not inspect settlement
 registers. `leaveReactiveBatch()` is the complete exit operation. When a public
@@ -358,7 +358,7 @@ Multiple contexts can reference the same nodes.
 ```ts
 writeProducer(count, 5, Object.is, ctx);  // Invalidates subscribers
 // At this point, derived consumers are marked dirty but not recomputed
-// Sink nodes are queued via onSinkInvalidated hook
+// Sink nodes are queued via onNodeInvalidated hook
 
 readConsumer(derived, ctx);               // Now the consumer recomputes
 ```
@@ -410,7 +410,7 @@ enum ConsumerReadMode {
 
 **Returns:** `void` (intentionally).
 
-The absence of a return value is deliberate: watcher scheduling is a **host responsibility**. The runtime only signals "this node is dirty" via `onSinkInvalidated`.
+The absence of a return value is deliberate: watcher scheduling is a **host responsibility**. The runtime only signals "this node is dirty" via `onNodeInvalidated`.
 
 **Example:**
 
@@ -419,7 +419,7 @@ The absence of a return value is deliberate: watcher scheduling is a **host resp
 const pending: ReactiveNode[] = [];
 
 setHooks({
-  onSinkInvalidated(node) {
+  onNodeInvalidated(node) {
     pending.push(node);
   },
 });
@@ -619,7 +619,7 @@ import {
 const pending: ReactiveNode[] = [];
 
 setHooks({
-  onSinkInvalidated(node) {
+  onNodeInvalidated(node) {
     if (!pending.includes(node)) {
       pending.push(node);
     }
@@ -644,7 +644,7 @@ runWatcher(effect);
 
 // Step 2: Mutation
 writeProducer(left, 10, Object.is, ctx);
-// At this point: effect is queued via onSinkInvalidated
+// At this point: effect is queued via onNodeInvalidated
 
 // Step 3: Host drains pending effects
 while (pending.length > 0) {
@@ -692,7 +692,7 @@ The runtime provides:
 - **Deterministic propagation:** Push invalidation, pull stabilization
 - **Composable hooks:** Host integrates custom execution policies via contexts
 
-Use `onSinkInvalidated` as the invalidation hook name.
+Use `onNodeInvalidated` as the invalidation hook name.
 
 For deeper algorithm details, see:
 

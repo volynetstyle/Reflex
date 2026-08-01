@@ -18,11 +18,7 @@ export function scanProducerInTrackedPrefix(
 ): PrefixScanResult {
   let edge = cursorEdge.prevIn;
 
-  for (
-    let scanned = 0;
-    edge !== null && scanned < PrefixScanLimit;
-    scanned += 1
-  ) {
+  for (let scanned = 0; edge !== null && scanned < PrefixScanLimit; ++scanned) {
     if (edge.from === producer) return PrefixHit;
     edge = edge.prevIn;
   }
@@ -40,7 +36,9 @@ export function hasProducerEdgeInCurrentPassUnchecked(
   producerVersion: number,
 ): boolean {
   for (let edge = producer.firstOut; edge !== null; edge = edge.nextOut) {
-    if (edge.to === consumer && edge.version === producerVersion) return true;
+    if (edge.to === consumer && edge.version === producerVersion) {
+      return true;
+    }
   }
 
   return false;

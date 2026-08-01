@@ -4,7 +4,7 @@ import {
   createRuntime,
   effect,
   signal,
-} from "../../../reflex/tests/reflex.test_utils";
+} from "../../reflex/tests/reflex.test_utils";
 import {
   createKeyedProjection,
   createProjection,

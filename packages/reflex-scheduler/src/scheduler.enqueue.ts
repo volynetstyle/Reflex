@@ -1,5 +1,6 @@
 import {
-  Scheduled,
+  claimWatcherSchedule,
+  releaseWatcherSchedule,
   type ReactiveNode,
 } from "@volynets/reflex-runtime/internal";
 import { profileSchedulerPolicyCounter } from "./scheduler.counters";
@@ -16,7 +17,7 @@ const SCHEDULER_PROFILE_ENABLED =
  */
 //
 export function effectScheduled(node: EffectNode) {
-  node.state = node.state | Scheduled;
+  claimWatcherSchedule(node);
 }
 
 /**
@@ -27,18 +28,37 @@ export function effectScheduled(node: EffectNode) {
  */
 //
 export function effectUnscheduled(node: EffectNode) {
-  node.state = node.state & ~Scheduled;
+  releaseWatcherSchedule(node);
 }
 
 //
 // STRAIGHT
 export function tryEnqueue(queue: WatcherQueue, node: ReactiveNode): boolean {
-  const state = node.state;
-  if ((state & Scheduled) !== 0) {
-    return false;
+  const watcher = node as EffectNode;
+
+  if (!claimWatcherSchedule(watcher)) return false;
+
+  try {
+    acceptClaimedWatcher(queue, watcher);
+  } catch (error) {
+    releaseWatcherSchedule(watcher);
+    throw error;
   }
 
-  node.state = state | Scheduled;
+  return true;
+}
+
+/**
+ * Materializes an already-owned schedule claim in the queue.
+ *
+ * Preconditions:
+ * - claimWatcherSchedule(node) has succeeded;
+ * - the claim has not already been accepted by another queue.
+ */
+export function acceptClaimedWatcher(
+  queue: WatcherQueue,
+  node: EffectNode,
+): void {
   let ring = queue.ring;
   const head = queue.head;
   const tail = queue.tail;
@@ -48,11 +68,10 @@ export function tryEnqueue(queue: WatcherQueue, node: ReactiveNode): boolean {
     ring = queue.ring;
   }
 
-  ring[tail & queue.mask] = node as EffectNode;
+  ring[tail & queue.mask] = node;
   queue.tail = tail + 1;
   if (SCHEDULER_PROFILE_ENABLED)
     profileSchedulerPolicyCounter("effectsScheduled");
-  return true;
 }
 
 function growWatcherQueue(

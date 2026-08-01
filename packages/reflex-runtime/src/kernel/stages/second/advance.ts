@@ -39,7 +39,6 @@ import { compare } from "@runtime/protocol";
  * The active pull walker owns the current parent edge; this only propagates
  * side-fanout that existed before recompute.
  */
-
 function advanceCore(
   node: ReactiveNode,
   skipOutEdge: ReactiveEdge | null = null,
@@ -88,15 +87,18 @@ function advanceCore(
   if (__DEV__) devRecordComputeFinish(node, next, defaultContext);
 
   const prev = node.payload;
-  node.payload = next;
-  node.state = resolvedState;
 
   if (compare(prev, next)) {
+    node.state = resolvedState;
+
     if (__PROFILE__) profileRuntimeCounter("advanceUnchanged");
 
     if (__DEV__) devRecordRecompute(node, false, next, prev, defaultContext);
     return false;
   }
+
+  node.payload = next;
+  node.state = resolvedState;
 
   if (__PROFILE__) profileRuntimeCounter("advanceChanged");
 

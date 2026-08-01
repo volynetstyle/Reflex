@@ -1,10 +1,14 @@
 import { readProducer, writeProducer } from "@volynets/reflex-runtime";
+import {
+  createWatcher,
+  disposeWatcher,
+  runWatcher,
+} from "@volynets/reflex-runtime/internal";
 import type { Destructor } from "../types";
-import { createSignalNode, effectRanked } from "../internal/runtime";
+import { createSignalNode } from "../internal/runtime";
 import {
   cloneProjectionValue,
   isObject,
-  readProjectionPath,
   type StoreProjectionOptions,
 } from "./shared";
 
@@ -28,17 +32,16 @@ class StoreProjectionCore<T extends object> {
     const clone = options.clone ?? cloneProjectionValue<T>;
     this.state = clone(seed as T);
     this.root = this.createPathEntry(this.state);
-    this.store = this.getProxy(this.root, []) as T;
+    this.store = this.getProxy(this.root) as T;
 
-    this.dispose = effectRanked(
-      () => {
-        const draft = clone(this.state);
-        const result = fn(draft);
-        const nextState = (result === undefined ? draft : clone(result)) as T;
-        this.commit(nextState);
-      },
-      { priority: options.priority ?? 100 },
-    );
+    const watcher = createWatcher(() => {
+      const draft = clone(this.state);
+      const result = fn(draft);
+      const nextState = (result === undefined ? draft : clone(result)) as T;
+      this.commit(nextState);
+    });
+    runWatcher(watcher);
+    this.dispose = disposeWatcher.bind(null, watcher) as Destructor;
   }
 
   read(): T {
@@ -56,53 +59,42 @@ class StoreProjectionCore<T extends object> {
     };
   }
 
-  private ensurePathEntry(path: readonly PropertyKey[]): PathEntry {
-    let entry = this.root;
+  private ensureChild(entry: PathEntry, key: PropertyKey): PathEntry {
+    let child = entry.children.get(key);
+    if (child !== undefined) return child;
 
-    for (let index = 0; index < path.length; ++index) {
-      const key = path[index]!;
-      let nextEntry = entry.children.get(key);
-      if (nextEntry === undefined) {
-        nextEntry = this.createPathEntry(
-          readProjectionPath(this.state, path.slice(0, index + 1)),
-        );
-        entry.children.set(key, nextEntry);
-      }
-      entry = nextEntry;
-    }
-
-    return entry;
+    const parent = entry.node.payload;
+    child = this.createPathEntry(
+      isObject(parent) ? parent[key as keyof typeof parent] : undefined,
+    );
+    entry.children.set(key, child);
+    return child;
   }
 
-  private readPath(path: readonly PropertyKey[]): unknown {
-    const entry = this.ensurePathEntry(path);
-    return readProducer(entry.node);
-  }
-
-  private getProxy(entry: PathEntry, path: readonly PropertyKey[]): object {
+  private getProxy(entry: PathEntry): object {
     const cached = this.proxyCache.get(entry);
     if (cached !== undefined) return cached;
 
     const proxy = new Proxy(Object.create(null), {
       get: (_target, prop) => {
         if (prop === Symbol.toStringTag) return "ProjectionStore";
-        const nextPath = [...path, prop];
-        const value = this.readPath(nextPath);
+        const child = this.ensureChild(entry, prop);
+        const value = readProducer(child.node);
         if (!isObject(value)) {
           return value;
         }
-        return this.getProxy(this.ensurePathEntry(nextPath), nextPath);
+        return this.getProxy(child);
       },
       has: (_target, prop) => {
-        const parent = this.readPath(path);
+        const parent = readProducer(entry.node);
         return isObject(parent) && prop in parent;
       },
       ownKeys: () => {
-        const value = this.readPath(path);
+        const value = readProducer(entry.node);
         return isObject(value) ? Reflect.ownKeys(value) : [];
       },
       getOwnPropertyDescriptor: (_target, prop) => {
-        const value = this.readPath(path);
+        const value = readProducer(entry.node);
         if (!isObject(value) || !(prop in value)) {
           return undefined;
         }
@@ -139,15 +131,22 @@ class StoreProjectionCore<T extends object> {
 
     if (entry.children.size === 0) return;
 
+    const prevObject = isObject(prevValue) ? prevValue : null;
+    const nextObject = isObject(nextValue) ? nextValue : null;
+
     for (const [key, child] of entry.children) {
       const prevChild =
-        isObject(prevValue) && key in prevValue
-          ? prevValue[key as keyof typeof prevValue]
-          : undefined;
+        prevObject === null ? undefined : prevObject[key as keyof typeof prevObject];
       const nextChild =
-        isObject(nextValue) && key in nextValue
-          ? nextValue[key as keyof typeof nextValue]
-          : undefined;
+        nextObject === null ? undefined : nextObject[key as keyof typeof nextObject];
+
+      if (child.children.size === 0) {
+        if (!Object.is(prevChild, nextChild)) {
+          writeProducer(child.node, nextChild);
+        }
+        continue;
+      }
+
       this.diffEntry(child, prevChild, nextChild);
     }
   }

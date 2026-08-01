@@ -9,7 +9,7 @@ contract at zero runtime cost.
 
 ## Allowed
 
-### sinkInvalidatedDispatcher
+### onNodeInvalidated
 
 ```ts
 queue.add(node);
@@ -22,7 +22,7 @@ scheduler.enqueue(node);
 This hook is enqueue-only. It must return before a watcher runs or reactive
 graph state is read.
 
-### reactiveSettledDispatcher
+### onRuntimeIdle
 
 ```ts
 queueMicrotask(flush);
@@ -40,7 +40,7 @@ host.schedule(flush);
 flush(); // may synchronously call runWatcher for queued work
 ```
 
-`reactiveSettledDispatcher` runs when propagation, pull, and watcher work are
+`onRuntimeIdle` runs when propagation, pull, and watcher work are
 idle. A synchronous drain may read or write reactive state through its watchers.
 If it creates more work, the runtime emits a new settled checkpoint after it is
 idle again.
@@ -48,7 +48,7 @@ idle again.
 Nested runtime hook calls are valid. The runtime restores the enclosing hook's
 validation context when an inner hook returns.
 
-## Forbidden from `sinkInvalidatedDispatcher`
+## Forbidden from `onNodeInvalidated`
 
 ### Do not run watchers synchronously
 
@@ -72,6 +72,12 @@ readProducer(node);
 writeProducer(node, value);
 ```
 
+### Do not dispose watchers
+
+```ts
+disposeWatcher(node);
+```
+
 ### Do not flush effects synchronously
 
 ```ts
@@ -85,7 +91,7 @@ This is forbidden when it immediately runs watchers from the invalidation hook.
 `REFLEX_SCHEDULER_REENTRANT_FLUSH`
 
 The host scheduler called `runWatcher(...)` synchronously from
-`sinkInvalidatedDispatcher`.
+`onNodeInvalidated`.
 
 `REFLEX_SCHEDULER_REACTIVE_READ_IN_HOOK`
 

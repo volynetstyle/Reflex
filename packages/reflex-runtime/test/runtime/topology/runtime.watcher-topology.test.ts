@@ -31,7 +31,7 @@ describe("Reactive runtime - watcher topology invalidation cardinality", () => {
     });
 
     resetRuntime({
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         const hit = watchers.find((entry) => entry.watcher === node);
         if (hit) invalidated.push(hit.label);
       },
@@ -62,7 +62,7 @@ describe("Reactive runtime - watcher topology invalidation cardinality", () => {
     });
 
     resetRuntime({
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         if (node === left) invalidated.push("left");
         if (node === right) invalidated.push("right");
       },
@@ -85,7 +85,7 @@ describe("Reactive runtime - watcher topology invalidation cardinality", () => {
     let nestedWriteTriggered = false;
 
     resetRuntime({
-      sinkInvalidatedDispatcher(node) {
+      onNodeInvalidated(node) {
         if (node === outerWatcher) {
           invalidated.push("outer");
           if (!nestedWriteTriggered) {
@@ -125,7 +125,7 @@ describe("Reactive runtime - watcher topology invalidation cardinality", () => {
     });
 
     resetRuntime({
-      sinkInvalidatedDispatcher() {
+      onNodeInvalidated() {
         invalidations += 1;
       },
     });

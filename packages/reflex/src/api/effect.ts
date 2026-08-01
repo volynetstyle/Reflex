@@ -6,8 +6,10 @@ import {
 } from "@volynets/reflex-runtime/internal";
 import type { WatcherFn } from "@volynets/reflex-runtime/internal";
 import {
-  Scheduled,
+  claimWatcherSchedule,
+  releaseWatcherSchedule,
   type ReactiveNode,
+  type WatcherNode,
 } from "@volynets/reflex-runtime/internal";
 import {
   devassertEffectFn,
@@ -27,7 +29,7 @@ import {
 export function effectScheduled(
   node: ReactiveNode<typeof undefined | Destructor>,
 ) {
-  node.state |= Scheduled;
+  claimWatcherSchedule(node as WatcherNode);
 }
 
 /**
@@ -39,7 +41,7 @@ export function effectScheduled(
 export function effectUnscheduled(
   node: ReactiveNode<typeof undefined | Destructor>,
 ) {
-  node.state &= ~Scheduled;
+  releaseWatcherSchedule(node as WatcherNode);
 }
 
 /**
@@ -89,7 +91,16 @@ export function effect(fn: WatcherFn): Destructor {
 
   const compute = __DEV__ ? wrapEffectFn(fn, "effect") : fn;
   const node = createWatcher(compute);
-  runWatcher(node);
+
+  try {
+    runWatcher(node);
+  } catch (error) {
+    // The initial run may already have linked reactive sources. Since no
+    // disposer can be returned on failure, roll the partially created watcher
+    // back before propagating the user error.
+    disposeWatcher(node);
+    throw error;
+  }
 
   const disposer: Destructor = disposeWatcher.bind(null, node);
   return disposer;

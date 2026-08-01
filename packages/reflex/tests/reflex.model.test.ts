@@ -154,10 +154,10 @@ describe("Reactive system - model actions", () => {
     createRuntime();
 
     const model = createModel(() => ({
-      invalid: () => 123,
+      unknown: () => 123,
     }))();
 
-    expect(model.invalid()).toBe(123);
+    expect(model.unknown()).toBe(123);
   });
 
   it("returns undefined when calling an action after disposal in production mode", () => {

@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   Changed,
+  Computing,
   ConsumerReadMode,
-  Invalid,
+  DIRTY_STATE,
+  Unknown,
+  Visited,
   readConsumer,
   readProducer,
   runWatcher,
@@ -22,6 +25,54 @@ import {
 
 /** Covers state-bit and read-mode matrices across the main subscriber kinds. */
 describe("Reactive runtime - state and read-mode matrices", () => {
+  const TRANSIENT_RECOMPUTE_STATE = Computing | Visited | DIRTY_STATE;
+
+  it.each([
+    {
+      name: "changed refresh",
+      next: 2,
+    },
+    {
+      name: "unchanged refresh",
+      next: 1,
+    },
+  ])("clears transient state after a successful $name", ({ next }) => {
+    resetRuntime();
+    const source = createProducer(1);
+    const derived = createConsumer(() => readProducer(source));
+
+    expect(readConsumer(derived)).toBe(1);
+    expect(derived.state & TRANSIENT_RECOMPUTE_STATE).toBe(0);
+
+    writeProducer(source, next);
+    expect(readConsumer(derived)).toBe(next);
+    expect(derived.state & TRANSIENT_RECOMPUTE_STATE).toBe(0);
+  });
+
+  it("propagates a later change after an unchanged dynamic refresh", () => {
+    resetRuntime();
+    const selector = createProducer(0);
+    const left = createProducer(1);
+    const right = createProducer(1);
+    const selected = createConsumer(() =>
+      readProducer(selector) % 2 === 0
+        ? readProducer(left)
+        : readProducer(right),
+    );
+    const downstream = createConsumer(() => readConsumer(selected) + 1);
+
+    expect(readConsumer(downstream)).toBe(2);
+
+    writeProducer(selector, 1);
+    expect(readConsumer(downstream)).toBe(2);
+    expect(selected.state & TRANSIENT_RECOMPUTE_STATE).toBe(0);
+
+    writeProducer(right, 2);
+    expect(readConsumer(downstream)).toBe(3);
+    expect(selected.state & TRANSIENT_RECOMPUTE_STATE).toBe(0);
+    expect(downstream.state & TRANSIENT_RECOMPUTE_STATE).toBe(0);
+  });
+
   it.each([
     {
       name: "direct consumer subscriber becomes Changed",
@@ -33,13 +84,13 @@ describe("Reactive runtime - state and read-mode matrices", () => {
       },
     },
     {
-      name: "transitive consumer subscriber becomes Invalid",
+      name: "transitive consumer subscriber becomes Unknown",
       build() {
         const source = createProducer(1);
         const middle = createConsumer(() => readProducer(source));
         const target = createConsumer(() => readConsumer(middle));
         readConsumer(target);
-        return { source, target, expected: Invalid };
+        return { source, target, expected: Unknown };
       },
     },
     {
@@ -60,7 +111,7 @@ describe("Reactive runtime - state and read-mode matrices", () => {
     writeProducer(source, 2);
 
     if (expected === Changed) expectChanged(target);
-    if (expected === Invalid) expectInvalid(target);
+    if (expected === Unknown) expectInvalid(target);
   });
 
   it.each([

@@ -85,6 +85,37 @@ the generated accessors/writers:
 - `state.user.name = "Bob"` -> `__write_user_name("Bob")`
 - `state.count++` -> temp-based read/modify/write lowering
 
+## Custom lowering target
+
+`compileStore` and the Vite plugin accept `loweringTarget`. Every symbol in the
+canonical target can be replaced while the current Reflex lowering remains the
+default:
+
+```ts
+compileStore(source, "store.ts", {
+  loweringTarget: {
+    runtimeModule: "my-runtime",
+    model: {
+      exportName: "defineState",
+      localName: "$model",
+      actionMethod: "transaction",
+    },
+    signal: { exportName: "cell", localName: "$cell" },
+    identifiers: {
+      context: "$context",
+      value: "$value",
+      read: ({ path }) => `$read_${path.join("_")}`,
+      set: ({ mangledPath }) => `$set_${mangledPath}`,
+      write: ({ mangledPath }) => `$write_${mangledPath}`,
+      temporary: ({ label, index }) => `$${label}_${index}`,
+    },
+  },
+});
+```
+
+All fields are optional. The top-level `runtimeModule` remains a compatibility
+shorthand; `loweringTarget.runtimeModule` takes precedence.
+
 ## Runtime contract
 
 `createStore(...)` in this folder is intentionally a compile-only stub. If it

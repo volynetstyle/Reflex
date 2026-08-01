@@ -9,7 +9,7 @@ import {
 import {
   Changed,
   Consumer,
-  Invalid,
+  Unknown,
   Visited,
   Computing,
 } from "../../../src/kernel";
@@ -77,14 +77,14 @@ describe("Reactive runtime - traversal invariants", () => {
 
     expect(source.state & DIRTY_STATE).toBe(0);
     expect(mid.state & Changed).toBeTruthy();
-    expect(mid.state & Invalid).toBeFalsy();
-    expect(leaf.state & Invalid).toBeTruthy();
+    expect(mid.state & Unknown).toBeFalsy();
+    expect(leaf.state & Unknown).toBeTruthy();
     expect(leaf.state & Changed).toBeFalsy();
 
     expect(readProducer(source)).toBe(2);
     expect(mid.state & Changed).toBeTruthy();
-    expect(mid.state & Invalid).toBeFalsy();
-    expect(leaf.state & Invalid).toBeTruthy();
+    expect(mid.state & Unknown).toBeFalsy();
+    expect(leaf.state & Unknown).toBeTruthy();
     expect(leaf.state & Changed).toBeFalsy();
     expect(midSpy).toHaveBeenCalledTimes(1);
     expect(leafSpy).toHaveBeenCalledTimes(1);
@@ -93,7 +93,7 @@ describe("Reactive runtime - traversal invariants", () => {
   it("coalesces repeated push invalidations across committed writes", () => {
     let invalidations = 0;
     resetRuntime({
-      sinkInvalidatedDispatcher() {
+      onNodeInvalidated() {
         invalidations += 1;
       },
     });
@@ -141,7 +141,7 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(target.state & Computing).toBeTruthy();
     expect(target.state & Visited).toBeTruthy();
     expect(target.state & Changed).toBeFalsy();
-    expect(target.state & Invalid).toBeTruthy();
+    expect(target.state & Unknown).toBeTruthy();
   });
 
   it("treats tailIn as the tracked-prefix boundary while computing", () => {
@@ -166,13 +166,13 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(target.state & Computing).toBeTruthy();
     expect(target.state & Visited).toBeTruthy();
     expect(target.state & Changed).toBeFalsy();
-    expect(target.state & Invalid).toBeTruthy();
+    expect(target.state & Unknown).toBeTruthy();
   });
 
-  it("surfaces Invalid -> Changed promotion to the host when the host does not dedupe", () => {
+  it("surfaces Unknown -> Changed promotion to the host when the host does not dedupe", () => {
     let invalidations = 0;
     resetRuntime({
-      sinkInvalidatedDispatcher() {
+      onNodeInvalidated() {
         invalidations += 1;
       },
     });
@@ -190,7 +190,7 @@ describe("Reactive runtime - traversal invariants", () => {
     writeProducer(source, 2);
 
     expect(invalidations).toBe(1);
-    expect(watcher.state & Invalid).toBeTruthy();
+    expect(watcher.state & Unknown).toBeTruthy();
     expect(watcher.state & Changed).toBeFalsy();
 
     expect(readConsumer(shared)).toBe(4);
@@ -205,7 +205,7 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(invalidations).toBe(3);
   });
 
-  it("preserves outer dirty-check traversal when recompute reads another invalid consumer", () => {
+  it("preserves outer dirty-check traversal when recompute reads another unknown consumer", () => {
     const source = createProducer(1);
     const nestedSource = createProducer(10);
     const nested = createConsumer(() => readProducer(nestedSource) * 2);
@@ -238,12 +238,12 @@ describe("Reactive runtime - traversal invariants", () => {
 
     runWatcher(watcher);
     expect(seen).toEqual([0]);
-    expect(watcher.state & Invalid).toBeTruthy();
+    expect(watcher.state & Unknown).toBeTruthy();
     expect(watcher.state & Visited).toBeTruthy();
 
     runWatcher(watcher);
     expect(seen).toEqual([0, 1]);
-    expect(watcher.state & Invalid).toBeTruthy();
+    expect(watcher.state & Unknown).toBeTruthy();
 
     runWatcher(watcher);
     expect(seen).toEqual([0, 1, 2]);
@@ -269,7 +269,7 @@ describe("Reactive runtime - traversal invariants", () => {
 
     expect(seen).toEqual([0]);
     expect(watcher.state & Computing).toBeFalsy();
-    expect(watcher.state & Invalid).toBeTruthy();
+    expect(watcher.state & Unknown).toBeTruthy();
     expect(watcher.state & Visited).toBeTruthy();
   });
 
@@ -366,7 +366,7 @@ describe("Reactive runtime - traversal invariants", () => {
       expect(incomingEdges(watcher), entry.name).toEqual(initialEdges);
 
       if (entry.reentrant) {
-        expect(watcher.state & Invalid, entry.name).toBeTruthy();
+        expect(watcher.state & Unknown, entry.name).toBeTruthy();
         expect(watcher.state & Visited, entry.name).toBeTruthy();
 
         runWatcher(watcher);
@@ -385,7 +385,7 @@ describe("Reactive runtime - traversal invariants", () => {
     }
   });
 
-  it("recomputes invalid consumers even when their dependency list is empty", () => {
+  it("recomputes unknown consumers even when their dependency list is empty", () => {
     const depSpy = vi.fn(() => 1);
     const dep = createConsumer(depSpy);
     const root = createConsumer(() => readConsumer(dep) + 1);
@@ -394,12 +394,12 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(depSpy).toHaveBeenCalledTimes(1);
     expectIncomingEdges(dep, []);
 
-    dep.state |= Invalid;
-    root.state |= Invalid;
+    dep.state |= Unknown;
+    root.state |= Unknown;
 
     expect(readConsumer(root)).toBe(2);
     expect(depSpy).toHaveBeenCalledTimes(2);
-    expect(dep.state & Invalid).toBeFalsy();
+    expect(dep.state & Unknown).toBeFalsy();
   });
 
   it("keeps eager stale-source unlink as the default behavior", () => {

@@ -1,11 +1,14 @@
 import { defaultContext, readTrackingStrategy } from "@runtime/kernel/config";
 import { devRecordTrackRead } from "@runtime/kernel/dev";
-import { linkEdge } from "@runtime/kernel/shape/graph";
 import {
-  moveLastIncomingEdgeAfterEdgeUnchecked,
+  moveLastIncomingEdgeAfterCursorUnchecked,
   moveLastIncomingEdgeToFrontUnchecked,
   moveTrackedIncomingEdgeAfterCursorUnchecked,
 } from "@runtime/kernel/shape/graph/edgeList";
+import {
+  appendTrackedEdgeAfterCursorUnchecked,
+  linkFirstTrackedEdgeUnchecked,
+} from "@runtime/kernel/shape/graph/linkEdge";
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 import { profileRuntimeCounter } from "@runtime/profiling";
@@ -99,7 +102,7 @@ function resolveCursorTrackedReadMiss(
       firstProducerEdge === null ||
       (firstProducerEdge.nextOut === null && firstProducerEdge.to !== consumer)
     ) {
-      consumer.tailIn = linkEdge(
+      appendTrackedEdgeAfterCursorUnchecked(
         producer,
         consumer,
         cursorEdge,
@@ -136,7 +139,12 @@ function resolveCursorTrackedReadMiss(
       return true;
     }
 
-    consumer.tailIn = linkEdge(producer, consumer, cursorEdge, producerVersion);
+    appendTrackedEdgeAfterCursorUnchecked(
+      producer,
+      consumer,
+      cursorEdge,
+      producerVersion,
+    );
 
     profileRuntimeCounter("trackingAppendAfterCursor");
     if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
@@ -179,18 +187,22 @@ function resolveCursorTrackedReadMiss(
     const lastIncomingEdge = consumer.lastIn!;
 
     if (lastIncomingEdge.from === producer) {
-      profileRuntimeCounter("trackingLastEdgeShortcut");
-      moveLastIncomingEdgeAfterEdgeUnchecked(
-        consumer,
-        lastIncomingEdge,
-        cursorEdge,
-      );
+      const previousLastEdge = lastIncomingEdge.prevIn!;
 
-      lastIncomingEdge.version = producerVersion;
-      consumer.tailIn = lastIncomingEdge;
+      if (previousLastEdge !== cursorEdge) {
+        profileRuntimeCounter("trackingLastEdgeShortcut");
+        moveLastIncomingEdgeAfterCursorUnchecked(
+          consumer,
+          cursorEdge,
+          expectedNextEdge,
+          lastIncomingEdge,
+          previousLastEdge,
+          producerVersion,
+        );
 
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
-      return true;
+        if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+        return true;
+      }
     }
   }
 
@@ -273,7 +285,7 @@ export function resolveTrackedRead(
   const firstIncomingEdge = consumer.firstIn;
 
   if (firstIncomingEdge === null) {
-    consumer.tailIn = linkEdge(producer, consumer, null, producerVersion);
+    linkFirstTrackedEdgeUnchecked(producer, consumer, producerVersion);
 
     profileRuntimeCounter("trackingInitialCreate");
     if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);

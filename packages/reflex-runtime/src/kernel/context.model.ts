@@ -1,11 +1,11 @@
 import {
   DEFAULT_READ_TRACKING_STRATEGY,
   type ReadTrackingStrategy,
-  type ReactiveSettledHook,
+  type RuntimeIdleHook,
   type RuntimeConfiguration,
   type RuntimeConfigurationOptions,
   type RuntimeHooks,
-  type SinkInvalidatedHook,
+  type NodeInvalidatedHook,
 } from "./config";
 import type { ReactiveNode } from "./shape";
 
@@ -21,7 +21,7 @@ export interface RuntimeContext extends RuntimeConfiguration {
   trackingEpoch: number;
   propagationScopeDepth: number;
   batchDepth: number;
-  pendingReactiveSettled: boolean;
+  runtimeState: number;
 }
 
 export type RuntimeContextSnapshot = Omit<
@@ -38,10 +38,10 @@ export function createRuntimeContext(
     trackingEpoch: 0,
     propagationScopeDepth: 0,
     batchDepth: 0,
-    pendingReactiveSettled: false,
+    runtimeState: 0,
     readTrackingStrategy: DEFAULT_READ_TRACKING_STRATEGY,
-    sinkInvalidatedHook: undefined,
-    reactiveSettledHook: undefined,
+    nodeInvalidatedHook: undefined,
+    runtimeIdleHook: undefined,
   } satisfies  RuntimeContext;
   applyRuntimeContextOptions(context, options);
   return context;
@@ -67,13 +67,13 @@ export function applyRuntimeContextOptions(
 
   if ("hooks" in options) {
     const hooks = options.hooks ?? {};
-    context.sinkInvalidatedHook = ownFunction<SinkInvalidatedHook>(
+    context.nodeInvalidatedHook = ownFunction<NodeInvalidatedHook>(
       hooks,
-      "sinkInvalidatedDispatcher",
+      "onNodeInvalidated",
     );
-    context.reactiveSettledHook = ownFunction<ReactiveSettledHook>(
+    context.runtimeIdleHook = ownFunction<RuntimeIdleHook>(
       hooks,
-      "reactiveSettledDispatcher",
+      "onRuntimeIdle",
     );
   }
 }

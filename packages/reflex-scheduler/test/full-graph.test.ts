@@ -22,8 +22,8 @@ const SOURCE_COUNT = 32;
 function createGraph(scheduler: EffectScheduler) {
   configureRuntimeContext({
     hooks: {
-      sinkInvalidatedDispatcher: scheduler.enqueue,
-      reactiveSettledDispatcher: scheduler.runtimeNotifySettled,
+      onNodeInvalidated: scheduler.enqueue,
+      onRuntimeIdle: scheduler.runtimeNotifySettled,
     },
   });
 

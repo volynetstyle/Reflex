@@ -2,8 +2,6 @@ import type { Plugin, RollupOptions } from "rollup";
 import replace from "@rollup/plugin-replace";
 import terser from "@rollup/plugin-terser";
 import resolve from "@rollup/plugin-node-resolve";
-import swc from "@rollup/plugin-swc";
-import constEnum from "rollup-plugin-const-enum";
 import {
   createBuildReporter,
   reportRollupWarning,
@@ -52,12 +50,13 @@ const JIT_SAFE_COMPRESS = {
   drop_debugger: true,
   evaluate: true,
   hoist_props: true,
-  inline: 1,
+  inline: false,
   module: true,
   pure_getters: true,
   pure_funcs: [...PURE_FUNCS],
   reduce_funcs: false,
-  reduce_vars: true,
+  reduce_vars: false,
+  collapse_vars: false,
   passes: 2,
   side_effects: true,
   toplevel: true,
@@ -85,10 +84,6 @@ const ENTRIES: ReadonlyArray<BuildEntry> = [
   },
 ];
 
-function compactPlugins(plugins: Array<Plugin | undefined | false>): Plugin[] {
-  return plugins.filter((plugin): plugin is Plugin => Boolean(plugin));
-}
-
 function loggerPlugin(target: BuildTarget, entry: BuildEntry): Plugin {
   const name = `${target.name}:${entry.outputPath}`;
   return createBuildReporter("@volynets/reflex", name);
@@ -111,19 +106,6 @@ function replacePlugin(target: BuildTarget): Plugin {
   });
 }
 
-function swcPlugin(target: BuildTarget): Plugin | undefined {
-  if (target.dev) return undefined;
-
-  return swc({
-    swc: {
-      jsc: {
-        target: "es2022",
-        parser: { syntax: "ecmascript" },
-      },
-      module: { type: "es6" },
-    },
-  });
-}
 function terserPlugin(target: BuildTarget): Plugin | undefined {
   if (target.dev) return undefined;
 
@@ -148,14 +130,16 @@ function terserPlugin(target: BuildTarget): Plugin | undefined {
 }
 
 function createPlugins(target: BuildTarget, entry: BuildEntry): Plugin[] {
-  return compactPlugins([
+  const plugins: Plugin[] = [
     loggerPlugin(target, entry),
     resolvePlugin(),
     replacePlugin(target),
-    constEnum(),
-    swcPlugin(target),
-    terserPlugin(target),
-  ]);
+  ];
+
+  const minifier = terserPlugin(target);
+  if (minifier !== undefined) plugins.push(minifier);
+
+  return plugins;
 }
 
 function createConfig(target: BuildTarget, entry: BuildEntry): RollupOptions {

@@ -83,7 +83,7 @@ function createReflexFixtures(runtime) {
       scheduler.flush(noop);
       configureRuntimeContext({
         hooks: {
-          sinkInvalidatedDispatcher(node) {
+          onNodeInvalidated(node) {
             scheduler.enqueue(node);
           },
         },

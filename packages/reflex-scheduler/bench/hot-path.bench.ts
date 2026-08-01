@@ -13,6 +13,7 @@ import {
   createFlushScheduler,
   createRingQueue,
   createSabScheduler,
+  acceptClaimedWatcher,
   flushQueuedWatchers,
   pushRingQueue,
   shiftRingQueue,
@@ -105,6 +106,30 @@ describe("scheduler hot path", () => {
         for (let index = 0; index < OPERATION_COUNT; ++index) {
           nodes[index]!.state |= Scheduled;
         }
+      },
+    },
+  );
+
+  bench(
+    "acceptClaimed stable capacity / 1024",
+    () => {
+      queue.head = 0;
+      queue.tail = 0;
+
+      for (let index = 0; index < OPERATION_COUNT; ++index) {
+        acceptClaimedWatcher(queue, nodes[index]!);
+      }
+    },
+    {
+      ...OPTIONS,
+      setup() {
+        nodes = createWatchers();
+        queue = createRingQueue<WatcherNode>();
+        for (let index = 0; index < OPERATION_COUNT; ++index) {
+          nodes[index]!.state |= Scheduled;
+          pushRingQueue(queue, nodes[index]!);
+        }
+        queue.head = queue.tail;
       },
     },
   );

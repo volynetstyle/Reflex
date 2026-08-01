@@ -1,6 +1,6 @@
 {
   "name": "@volynets/reflex-runtime",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "type": "module",
   "description": "Low-level reactive runtime for deterministic dependency tracking and push/pull propagation.",
   "license": "MIT",
@@ -55,6 +55,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:dev": "vitest run --config vite.dev.config.ts",
+    "check:architecture": "node scripts/check-architecture-contract.mjs",
     "pretest:e2e": "pnpm build",
     "test:e2e": "node test/mjs/runtime.e2e.mjs",
     "bench": "pnpm build && vitest bench test/signal_beta.bench.ts",
@@ -69,8 +70,11 @@
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build",
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build && pnpm check:architecture",
     "release": "changeset version && pnpm install && changeset publish",
     "prepare": "husky"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2"
   }
 }

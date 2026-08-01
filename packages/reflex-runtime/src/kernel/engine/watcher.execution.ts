@@ -23,19 +23,16 @@ import {
 } from "@runtime/kernel/shape";
 import { cleanupUnvisitedSources } from "@runtime/kernel/shape/tracking";
 
-export function executeKnownNodeComputation<T>(
-  node: ReactiveNode<T>,
-  compute: ComputeFn<T>,
-): T {
-  if (!__DEV__) return executeComputation(node, compute);
-
-  enterRuntimePhase(RuntimePhase.Recomputing);
-  try {
-    return executeComputation(node, compute);
-  } finally {
-    leaveRuntimePhase();
-  }
-}
+export const executeKnownNodeComputation = !__DEV__
+  ? executeComputation
+  : function <T>(node: ReactiveNode<T>, compute: ComputeFn<T>): T {
+      enterRuntimePhase(RuntimePhase.Recomputing);
+      try {
+        return executeComputation(node, compute);
+      } finally {
+        leaveRuntimePhase();
+      }
+    };
 
 function executeComputation<T>(
   node: ReactiveNode<T>,

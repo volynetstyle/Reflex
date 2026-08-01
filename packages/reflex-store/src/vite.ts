@@ -3,6 +3,7 @@ import {
   CompiledStoreTransformError,
   compileStore,
   type CompiledStoreDiagnostic,
+  type CompiledStoreLoweringTargetOptions,
 } from "./store/transform";
 
 type Selector = string | RegExp | readonly (string | RegExp)[];
@@ -31,9 +32,11 @@ export interface ReflexStoreVitePluginOptions {
    * @default "@volynets/reflex"
    */
   runtimeModule?: string;
+  /** Customize the runtime primitives and every generated identifier. */
+  loweringTarget?: CompiledStoreLoweringTargetOptions;
   /**
    * Compile bare `createStore({ ... })` calls even when the file does not
-   * import `createStore` from `@reflex/store`.
+   * import `createStore` from `@volynets/reflex-store`.
    *
    * The default keeps the plugin conservative and avoids touching unrelated
    * libraries that also expose a `createStore` function.
@@ -52,7 +55,7 @@ export interface ReflexStoreVitePluginOptions {
 const DEFAULT_INCLUDE = /\.[cm]?[jt]sx?$/;
 const DEFAULT_EXCLUDE = /\/node_modules\//;
 const STORE_IMPORT_RE =
-  /from\s*["']@reflex\/store(?:\/(?:store|compiled-store))?["']/;
+  /from\s*["'](?:@volynets\/reflex-store|@reflex\/store)(?:\/(?:store|compiled-store))?["']/;
 
 export function reflexStoreVitePlugin(
   options: ReflexStoreVitePluginOptions = {},
@@ -80,6 +83,7 @@ export function reflexStoreVitePlugin(
         const result = compileStore(code, normalizedId, {
           importRuntime: true,
           onDiagnostic: diagnostics === "error" ? "throw" : "collect",
+          loweringTarget: options.loweringTarget,
           runtimeModule: options.runtimeModule,
         });
 

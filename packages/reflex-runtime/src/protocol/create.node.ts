@@ -8,6 +8,8 @@ import {
   type WatcherCleanup,
   type WatcherNode,
 } from "@runtime/kernel";
+import { defaultContext } from "@runtime/kernel/config";
+import { devRecordNodeCreated } from "@runtime/kernel/dev";
 
 /**
  * Callback function for a reactive effect (watcher).
@@ -26,12 +28,15 @@ export type WatcherFn = () => void | WatcherCleanup;
  * @example
  * const count = createProducer(0);
  */
-export const createProducer = <T>(payload: T): ProducerNode<T> =>
-  new ReactiveNode<T>(
+export const createProducer = <T>(payload: T): ProducerNode<T> => {
+  const node = new ReactiveNode<T>(
     payload,
     undefined,
     PRODUCER_INITIAL_STATE,
   ) as ProducerNode<T>;
+  if (__DEV__) devRecordNodeCreated(node, defaultContext);
+  return node;
+};
 
 /**
  * Creates a Computed node whose value depends on other reactive nodes.
@@ -45,12 +50,15 @@ export const createProducer = <T>(payload: T): ProducerNode<T> =>
  * @example
  * const doubled = createConsumer(() => count.get() * 2);
  */
-export const createConsumer = <T>(callback: () => T): ConsumerNode<T> =>
-  new ReactiveNode<T>(
+export const createConsumer = <T>(callback: () => T): ConsumerNode<T> => {
+  const node = new ReactiveNode<T>(
     undefined as T,
     callback,
     CONSUMER_INITIAL_STATE,
   ) as ConsumerNode<T>;
+  if (__DEV__) devRecordNodeCreated(node, defaultContext);
+  return node;
+};
 
 /**
  * Creates a Watcher node (Effect) used to execute side effects.
@@ -63,5 +71,12 @@ export const createConsumer = <T>(callback: () => T): ConsumerNode<T> =>
  * @example
  * const logger = createWatcher(() => console.log(count.get()));
  */
-export const createWatcher = (callback: WatcherFn): WatcherNode =>
-  new ReactiveNode(undefined, callback, WATCHER_INITIAL_STATE) as WatcherNode;
+export const createWatcher = (callback: WatcherFn): WatcherNode => {
+  const node = new ReactiveNode(
+    undefined,
+    callback,
+    WATCHER_INITIAL_STATE,
+  ) as WatcherNode;
+  if (__DEV__) devRecordNodeCreated(node, defaultContext);
+  return node;
+};

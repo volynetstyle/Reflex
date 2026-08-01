@@ -191,40 +191,40 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
   });
 
   it("configures hooks on the active runtime context", () => {
-    const onSinkInvalidated = vi.fn();
+    const onNodeInvalidated = vi.fn();
     const onSettled = vi.fn();
 
     configureRuntimeContext({
       hooks: {
-        reactiveSettledDispatcher: onSettled,
-        sinkInvalidatedDispatcher: onSinkInvalidated,
+        onRuntimeIdle: onSettled,
+        onNodeInvalidated: onNodeInvalidated,
       },
     });
 
     const context = getActiveRuntimeContext();
 
-    expect(context.reactiveSettledHook).toBe(onSettled);
-    expect(context.sinkInvalidatedHook).toBe(onSinkInvalidated);
+    expect(context.runtimeIdleHook).toBe(onSettled);
+    expect(context.nodeInvalidatedHook).toBe(onNodeInvalidated);
   });
 
   it("configures hooks and options on an explicit runtime context", () => {
     const context = createRuntimeContext();
-    const onSinkInvalidated = vi.fn();
+    const onNodeInvalidated = vi.fn();
     const onSettled = vi.fn();
     const readTrackingStrategy = vi.fn();
 
     configureRuntimeContext(context, {
       hooks: {
-        reactiveSettledDispatcher: onSettled,
-        sinkInvalidatedDispatcher: onSinkInvalidated,
+        onRuntimeIdle: onSettled,
+        onNodeInvalidated: onNodeInvalidated,
       },
     });
     configureRuntimeContext(context, {
       readTrackingStrategy,
     });
 
-    expect(context.sinkInvalidatedHook).toBe(onSinkInvalidated);
-    expect(context.reactiveSettledHook).toBe(onSettled);
+    expect(context.nodeInvalidatedHook).toBe(onNodeInvalidated);
+    expect(context.runtimeIdleHook).toBe(onSettled);
     expect(context.readTrackingStrategy).toBe(readTrackingStrategy);
   });
 

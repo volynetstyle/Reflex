@@ -21,7 +21,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    exclude: ["test/dev/**/*.dev.test.ts"],
+    exclude: ["**/node_modules/**", "test/dev/**/*.dev.test.ts"],
     isolate: false,
     pool: "forks",
     coverage: {
@@ -31,9 +31,9 @@ export default defineConfig({
         "src/**/*.d.ts",
         "src/**/index.ts",
         "src/subtle.ts",
-        "src/debug/**",
-        "src/debug/debug.types.ts",
-        "src/debug/dev_flag.ts",
+        "debug/**",
+        "debug/debug.types.ts",
+        "debug/dev_flag.ts",
         "src/internal/process.ts",
         "src/kernel/dev.ts",
         "src/kernel/reduction/types.ts",

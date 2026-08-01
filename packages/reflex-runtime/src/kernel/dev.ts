@@ -1,7 +1,7 @@
 import {
   recordDebugEvent,
   collectDebugNodeRefs,
-} from "@runtime/debug/debug.runtime";
+} from "../../debug/debug.runtime";
 
 import type { RuntimeDebugContext } from "./config";
 import { currentConsumer } from "./state";
@@ -43,6 +43,14 @@ export function devRecordTrackRead(
     consumer,
     source,
   });
+}
+
+export function devRecordNodeCreated(
+  node: ReactiveNode,
+  context: RuntimeDebugContext,
+): void {
+  if (!__DEV__) return;
+  recordDebugEvent(context, "node:create", { node });
 }
 
 export function devRecordCleanupStaleSources(

@@ -8,6 +8,62 @@ export const RuntimePhase = {
 
 export type RuntimePhase = (typeof RuntimePhase)[keyof typeof RuntimePhase];
 
+export const RuntimeExecutionError = {
+  NestedPull: {
+    code: "REFLEX_NESTED_PULL",
+    message: [
+      "A reactive consumer attempted to start a pull walk while another pull walk was already active.",
+      "",
+      "This usually indicates:",
+      "- synchronous effect execution",
+      "- scheduler reentrancy",
+      "- runtime hook misuse",
+    ].join("\n"),
+  },
+  NestedPropagation: {
+    code: "REFLEX_NESTED_PROPAGATION",
+    message:
+      "A reactive producer attempted to start propagation while another propagation walk was already active.",
+  },
+  SchedulerReentrantFlush: {
+    code: "REFLEX_SCHEDULER_REENTRANT_FLUSH",
+    message: [
+      "Host scheduler executed runWatcher() synchronously from onNodeInvalidated.",
+      "",
+      "Invalidation hooks must enqueue work and return before executing watchers.",
+      "",
+      "Allowed:",
+      "  enqueue watcher",
+      "  schedule host flush",
+      "",
+      "Forbidden:",
+      "  runWatcher(...)",
+      "  readConsumer(...)",
+      "  pull_iterator(...)",
+    ].join("\n"),
+  },
+  SchedulerReactiveReadInHook: {
+    code: "REFLEX_SCHEDULER_REACTIVE_READ_IN_HOOK",
+    message: [
+      "Host scheduler performed a reactive read from onNodeInvalidated.",
+      "",
+      "Invalidation hooks must not read reactive graph state.",
+    ].join("\n"),
+  },
+  SchedulerTopologyMutationInHook: {
+    code: "REFLEX_SCHEDULER_TOPOLOGY_MUTATION_IN_HOOK",
+    message: [
+      "Host scheduler attempted to dispose a watcher from onNodeInvalidated.",
+      "",
+      "Invalidation hooks must only enqueue work and return.",
+      "Schedule disposal from onRuntimeIdle or another host boundary.",
+    ].join("\n"),
+  },
+  HostHookReenteredRuntime: {
+    code: "REFLEX_HOST_HOOK_REENTERED_RUNTIME",
+  },
+} as const;
+
 export interface RuntimeExecutionState {
   phase: RuntimePhase;
   depth: number;
@@ -35,21 +91,12 @@ export function enterRuntimePhase(phase: RuntimePhase): void {
   if (phase === RuntimePhase.Pulling) {
     assertCurrentPhaseIsNot(
       RuntimePhase.Pulling,
-      "REFLEX_NESTED_PULL",
-      [
-        "A reactive consumer attempted to start a pull walk while another pull walk was already active.",
-        "",
-        "This usually indicates:",
-        "- synchronous effect execution",
-        "- scheduler reentrancy",
-        "- runtime hook misuse",
-      ].join("\n"),
+      RuntimeExecutionError.NestedPull,
     );
   } else if (phase === RuntimePhase.Propagating) {
     assertPhaseNotActive(
       RuntimePhase.Propagating,
-      "REFLEX_NESTED_PROPAGATION",
-      "A reactive producer attempted to start propagation while another propagation walk was already active.",
+      RuntimeExecutionError.NestedPropagation,
     );
   }
 
@@ -103,49 +150,28 @@ export function readActiveRuntimeHook(): string | null {
 }
 
 export function devAssertNoRuntimeHookWatcherExecution(): void {
-  if (
-    !SCHEDULER_POLICY_ENABLED ||
-    activeRuntimeHook !== "sinkInvalidatedDispatcher"
-  ) {
+  if (!SCHEDULER_POLICY_ENABLED || activeRuntimeHook !== "onNodeInvalidated") {
     return;
   }
 
-  throw new Error(
-    [
-      "[REFLEX_SCHEDULER_REENTRANT_FLUSH]",
-      "",
-      "Host scheduler executed runWatcher() synchronously from sinkInvalidatedDispatcher.",
-      "",
-      "Invalidation hooks must enqueue work and return before executing watchers.",
-      "",
-      "Allowed:",
-      "  enqueue watcher",
-      "  schedule host flush",
-      "",
-      "Forbidden:",
-      "  runWatcher(...)",
-      "  readConsumer(...)",
-      "  pull_iterator(...)",
-    ].join("\n"),
-  );
+  throwRuntimeExecutionError(RuntimeExecutionError.SchedulerReentrantFlush);
 }
 
 export function devAssertNoRuntimeHookReactiveRead(): void {
-  if (
-    !SCHEDULER_POLICY_ENABLED ||
-    activeRuntimeHook !== "sinkInvalidatedDispatcher"
-  ) {
+  if (!SCHEDULER_POLICY_ENABLED || activeRuntimeHook !== "onNodeInvalidated") {
     return;
   }
 
-  throw new Error(
-    [
-      "[REFLEX_SCHEDULER_REACTIVE_READ_IN_HOOK]",
-      "",
-      "Host scheduler performed a reactive read from sinkInvalidatedDispatcher.",
-      "",
-      "Invalidation hooks must not read reactive graph state.",
-    ].join("\n"),
+  throwRuntimeExecutionError(RuntimeExecutionError.SchedulerReactiveReadInHook);
+}
+
+export function devAssertNoRuntimeHookTopologyMutation(): void {
+  if (!SCHEDULER_POLICY_ENABLED || activeRuntimeHook !== "onNodeInvalidated") {
+    return;
+  }
+
+  throwRuntimeExecutionError(
+    RuntimeExecutionError.SchedulerTopologyMutationInHook,
   );
 }
 
@@ -163,15 +189,14 @@ export function devAssertRuntimeHookDidNotReenter(
     return;
   }
 
-  throw new Error(
-    [
-      "[REFLEX_HOST_HOOK_REENTERED_RUNTIME]",
-      "",
+  throwRuntimeExecutionError({
+    code: RuntimeExecutionError.HostHookReenteredRuntime.code,
+    message: [
       `Host hook ${hookName} changed runtime execution phase while it was running.`,
       "",
       "Runtime hooks must enqueue work and return before watchers or reactive reads execute.",
     ].join("\n"),
-  );
+  });
 }
 
 export function resetRuntimeExecutionState(): void {
@@ -185,20 +210,18 @@ export function resetRuntimeExecutionState(): void {
 
 function assertPhaseNotActive(
   phase: RuntimePhase,
-  code: string,
-  message: string,
+  error: RuntimeExecutionErrorDefinition,
 ): void {
   if (!isPhaseActive(phase)) {
     return;
   }
 
-  throw new Error(`[${code}]\n\n${message}`);
+  throwRuntimeExecutionError(error);
 }
 
 function assertCurrentPhaseIsNot(
   phase: RuntimePhase,
-  code: string,
-  message: string,
+  error: RuntimeExecutionErrorDefinition,
 ): void {
   if (
     runtimeExecutionState.phase !== phase ||
@@ -207,7 +230,18 @@ function assertCurrentPhaseIsNot(
     return;
   }
 
-  throw new Error(`[${code}]\n\n${message}`);
+  throwRuntimeExecutionError(error);
+}
+
+type RuntimeExecutionErrorDefinition = {
+  code: string;
+  message: string;
+};
+
+function throwRuntimeExecutionError(
+  error: RuntimeExecutionErrorDefinition,
+): never {
+  throw new Error(`[${error.code}]\n\n${error.message}`);
 }
 
 function isPhaseActive(phase: RuntimePhase): boolean {

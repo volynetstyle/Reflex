@@ -1,6 +1,6 @@
 {
   "name": "@volynets/reflex",
-  "version": "0.3.6",
+  "version": "1.0.0",
   "type": "module",
   "description": "Public Reflex facade with a connected runtime",
   "license": "MIT",
@@ -51,7 +51,7 @@
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "pnpm clean && pnpm build:ts && pnpm build:types && pnpm build:npm",
-    "build:all": "node ../../scripts/build-chain.mjs @volynets/reflex-runtime @volynets/reflex",
+    "build:all": "node ../../scripts/build-chain.mjs @volynets/reflex-runtime @volynets/reflex-scheduler @volynets/reflex",
     "prebuild:ts": "pnpm --filter @volynets/reflex-runtime build:ts && pnpm --filter @volynets/reflex-scheduler build",
     "build:ts": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
     "build:types": "rollup --silent -c rollup.dts.config.ts --configPlugin @rollup/plugin-swc && node ../../scripts/write-globals-dts.mjs . && node ./scripts/write-subpath-dts.mjs .",
@@ -66,6 +66,7 @@
     "bench:events:dispatcher": "vitest bench bench/event-dispatcher.bench.ts",
     "bench:events:operators": "vitest bench bench/event-operators.compare.bench.ts",
     "bench:events:raw": "vitest bench bench/event-delivery.compare.bench.ts",
+    "bench:model": "vitest bench bench/model.bench.ts",
     "bench:scheduler": "vitest bench bench/scheduler.bench.ts",
     "bench:scheduler:integration": "vitest bench bench/scheduler.integration.bench.ts",
     "bench:projection": "node ./bench/projection-compare.node.mjs",
@@ -78,17 +79,6 @@
     "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm build:clean"
   },
   "devDependencies": {
-    "@volynets/reflex-dom": "workspace:*",
-    "@volynets/reflex-runtime": "workspace:*",
-    "@volynets/reflex-store": "workspace:*",
-    "@volynets/reflex-scheduler": "workspace:*",
-    "alien-signals": "^3.2.1",
-    "effector": "^23.4.4",
-    "eventemitter3": "^5.0.4",
-    "mitt": "^3.0.1",
-    "most": "^1.9.0",
-    "nanoevents": "^9.1.0",
-    "rxjs": "^7.8.2",
-    "xstream": "^11.14.0"
+    "@volynets/reflex-scheduler": "workspace:*"
   }
 }

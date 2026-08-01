@@ -286,7 +286,7 @@ The [`./transform.ts`](./transform.ts) entrypoint delegates to the dedicated
 [`./transform/`](./transform/) module, which implements the phase-1 compiler:
 
 - it recognizes `createStore({ ... })` declarations
-- it erases direct `createStore` imports from `@reflex/store`
+- it erases direct `createStore` imports from `@volynets/reflex-store`
 - it emits a Reflex runtime import for `createModel` and `signal`
 - it materializes per-leaf signal readers and model-action writers
 - it lowers the store binding to a model object with nested getters/setters

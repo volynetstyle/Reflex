@@ -173,8 +173,8 @@ The runtime uses precise terminology consistently:
 | **Stabilization** | Pull phase: lazy verification and recomputation |
 | **Host** | Consumer of the runtime; responsible for scheduling |
 | **Execution Context** | Runtime environment: owns hooks, tracking state |
-| **onSinkInvalidated** | Hook: signals when a sink node becomes dirty |
-| **onReactiveSettled** | Hook: signals when graph reaches quiescence |
+| **onNodeInvalidated** | Hook: signals when a sink node becomes dirty |
+| **onRuntimeIdle** | Hook: signals when graph reaches quiescence |
 
 ---
 

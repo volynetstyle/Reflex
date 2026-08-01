@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { createModel } from "../../../reflex/src/infra/model";
-import { signal } from "../../../reflex/src/api/signal";
-import { createRuntime, effect } from "../../../reflex/tests/reflex.test_utils";
+import { createModel } from "../../reflex/src/infra/model";
+import { signal } from "../../reflex/src/api/signal";
+import { createRuntime, effect } from "../../reflex/tests/reflex.test_utils";
 import {
   CompiledStoreTransformError,
   compileStore,
@@ -78,6 +78,57 @@ describe("transformCompiledStore", () => {
     expect(result.code).toContain("return __prev_");
     expect(result.code).toContain("const __next_");
     expect(result.code).toContain("return __next_");
+  });
+
+  it("fully customizes the canonical lowering target", () => {
+    const seenPaths: string[] = [];
+    const result = compileStore(
+      [
+        "const state = createStore({ user: { name: 'Ada' }, count: 0 });",
+        "state.user.name = 'Grace';",
+        "state.count += 1;",
+      ].join("\n"),
+      "custom-target.ts",
+      {
+        loweringTarget: {
+          runtimeModule: "custom-runtime",
+          model: {
+            exportName: "defineState",
+            localName: "$model",
+            actionMethod: "with-action",
+          },
+          signal: {
+            exportName: "cell",
+            localName: "$cell",
+          },
+          identifiers: {
+            context: "$context",
+            value: "$value",
+            read: ({ path }) => {
+              seenPaths.push(path.join("."));
+              return `$get_${path.join("_")}`;
+            },
+            set: ({ mangledPath }) => `$set_${mangledPath}`,
+            write: ({ mangledPath }) => `$commit_${mangledPath}`,
+            temporary: ({ index, label }) => `$temp_${label}_${index}`,
+          },
+        },
+      },
+    );
+
+    expect(result.code).toContain(
+      'import { defineState as $model, cell as $cell } from "custom-runtime";',
+    );
+    expect(result.code).toContain(
+      "const [$get_user_name, $set_user_name] = $cell('Ada')",
+    );
+    expect(result.code).toContain(
+      '$commit_user_name = $context["with-action"](($value)=>',
+    );
+    expect(result.code).toContain("$commit_user_name('Grace')");
+    expect(result.code).toContain("const $temp_rhs_");
+    expect(result.code).toContain("$commit_count($temp_next_");
+    expect(seenPaths).toContain("user.name");
   });
 
   it("runs compiled store code with model getters, setters, and hot-path writes", () => {

@@ -6,7 +6,8 @@ import {
 } from "@runtime/kernel/execution";
 import {
   Changed,
-  Invalid,
+  Computing,
+  Unknown,
   type ReactiveEdge,
   type ReactiveNode,
 } from "@runtime/kernel/shape";
@@ -68,8 +69,8 @@ function profilePullNode(
  *
  * Semantics:
  * - scans incoming dependency edges;
- * - descends into Invalid dependencies with their own inputs;
- * - refreshes Changed / Invalid leaves through advance();
+ * - descends into Unknown dependencies with their own inputs;
+ * - refreshes Changed / Unknown leaves through advance();
  * - bubbles confirmed changes upward;
  * - resumes siblings only while the current branch remains stable.
  */
@@ -95,6 +96,14 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
       const dep = edge.from;
       const depState = dep.state;
 
+      if (__DEV__ && (depState & Computing) !== 0) {
+        high = base;
+        if (base === 0 && stack.length > STACK_TRIM_MIN_CAPACITY) {
+          stack.length = STACK_TRIM_MIN_CAPACITY;
+        }
+        throw new Error("Cycle detected while refreshing reactive graph");
+      }
+
       if ((depState & Changed) !== 0) {
         if (__PROFILE__) {
           profileRuntimeCounter("pullChangedDeps");
@@ -118,7 +127,7 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
         }
 
         changed = advance(dep, edge);
-      } else if ((depState & Invalid) !== 0) {
+      } else if ((depState & Unknown) !== 0) {
         if (__PROFILE__) profileRuntimeCounter("pullInvalidDeps");
 
         const firstIn = dep.firstIn;
@@ -127,7 +136,7 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
           if (__PROFILE__) {
             profileRuntimeCounter("pullDescents");
             profilePullNode(
-              "dep.invalid.descend",
+              "dep.unknown.descend",
               dep,
               top - base + 1,
               top - base,
@@ -151,7 +160,7 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
         if (__PROFILE__) {
           profileRuntimeCounter("pullAdvanceCalls");
           profilePullNode(
-            "dep.invalid.leaf.advance",
+            "dep.unknown.leaf.advance",
             dep,
             top - base + 1,
             top - base,
@@ -258,7 +267,7 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
       high = top;
 
       const parentEdge = stack[top]!;
-      node.state &= ~Invalid;
+      node.state &= ~Unknown;
       node = parentEdge.to;
 
       const sibling = parentEdge.nextIn;
@@ -280,7 +289,7 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
     }
 
     if (!changed) {
-      node.state &= ~Invalid;
+      node.state &= ~Unknown;
     }
 
     high = base;
