@@ -1,4 +1,4 @@
-import { recordDebugEvent } from "@runtime/debug/debug.runtime";
+import { recordDebugEvent } from "../../debug/debug.runtime";
 import { profileRuntimeCounter } from "@runtime/profiling";
 
 import {

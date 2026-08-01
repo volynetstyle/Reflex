@@ -8,6 +8,7 @@ export type RuntimeDebugEventType =
   | "context:optimizations"
   | "context:leave-propagation"
   | "context:settled"
+  | "node:create"
   | "propagate"
   | "read:consumer"
   | "read:producer"

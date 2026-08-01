@@ -1,1 +1,1 @@
-export * from "./debug/index";
+export * from "../debug/index";

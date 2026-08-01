@@ -1,17 +1,20 @@
 import type { BuildTarget } from "./types.ts";
 
 export const INDEX_AND_INTERNAL_INPUT = {
-  index: "build/esm/index.js",
-  internal: "build/esm/internal/index.js",
+  index: "build/esm/src/index.js",
+  internal: "build/esm/src/internal/index.js",
 } as const;
 
 export const INDEX_AND_DEBUG_INPUT = {
-  index: "build/esm/index.js",
-  internal: "build/esm/internal/index.js",
+  index: "build/esm/src/index.js",
+  internal: "build/esm/src/internal/index.js",
   debug: "build/esm/debug/index.js",
 } as const;
 
-export const EXTERNALS = ["vitest", "expect-type"] as const;
+export const EXTERNALS = [
+  "vitest",
+  "expect-type",
+] as const;
 
 export const TARGETS: readonly BuildTarget[] = [
   {

@@ -1,24 +1,24 @@
-import { RUNTIME_DEBUG_PROTOCOL_VERSION } from "./debug/debug.protocol";
+import { RUNTIME_DEBUG_PROTOCOL_VERSION } from "../debug/debug.protocol";
 import type {
   RuntimeDebugGraphIntegrity,
   RuntimeDebugGraphSnapshot,
   RuntimeDebugSession,
   RuntimeDebugSessionSnapshot,
-} from "./debug/debug.protocol";
+} from "../debug/debug.protocol";
 import type {
   RuntimeDebugContextSnapshot,
   RuntimeDebugEvent,
   RuntimeDebugListener,
   RuntimeDebugNodeSnapshot,
   RuntimeDebugOptions,
-} from "./debug/debug.types";
+} from "../debug/debug.types";
 import type {
   Computed,
   RuntimeSubtle,
   RuntimeSubtleGraphOptions,
   State,
   Watcher,
-} from "./debug/subtle.internal";
+} from "../debug/subtle.internal";
 import type { ReactiveNode } from "./kernel";
 import { untracked } from "./protocol/utils/untracked";
 
@@ -32,7 +32,16 @@ export type {
   RuntimeSubtleGraphSnapshot,
   State,
   Watcher,
-} from "./debug/subtle.internal";
+} from "../debug/subtle.internal";
+export type {
+  RuntimeDiagnosticErrorCode,
+  RuntimeDiagnosticJson,
+  RuntimeDiagnosticResult,
+  RuntimeDiagnostics,
+  RuntimeMcpAdapter,
+  RuntimeMcpToolDefinition,
+  RuntimeMcpToolResponse,
+} from "../debug/diagnostics.types";
 export type {
   RuntimeDebugContextSnapshot,
   RuntimeDebugEvent,

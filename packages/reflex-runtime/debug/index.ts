@@ -1,14 +1,15 @@
 import "./debug_flag";
 
-import {
-  collectDebugNodeRefs,
-  recordDebugEvent,
-} from "./debug.impl";
+import { collectDebugNodeRefs, recordDebugEvent } from "./debug.impl";
 import { installRuntimeDebug } from "./debug.runtime";
 
 installRuntimeDebug({ collectDebugNodeRefs, recordDebugEvent });
 
-export { subtle, type RuntimeSubtle } from "./subtle.internal";
+export {
+  subtle,
+  type RuntimeDebugSubtle,
+  type RuntimeSubtle,
+} from "./subtle.internal";
 export {
   RUNTIME_DEBUG_PROTOCOL_VERSION,
   type RuntimeDebugCommand,
@@ -37,6 +38,15 @@ export type {
   RuntimeDebugNodeSnapshot,
   RuntimeDebugOptions,
 } from "./debug.types";
+export type {
+  RuntimeDiagnosticErrorCode,
+  RuntimeDiagnosticJson,
+  RuntimeDiagnosticResult,
+  RuntimeDiagnostics,
+  RuntimeMcpAdapter,
+  RuntimeMcpToolDefinition,
+  RuntimeMcpToolResponse,
+} from "./diagnostics.types";
 export {
   createRuntimeProfileSession,
   diffRuntimeProfileCounters,

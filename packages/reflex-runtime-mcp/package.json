@@ -1,0 +1,38 @@
+{
+  "name": "@volynets/reflex-runtime-mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Official MCP protocol boundary for Reflex runtime diagnostics.",
+  "license": "MIT",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "reflex-runtime-mcp": "dist/entrypoint.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "smoke": "pnpm build && node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.0.0",
+    "@volynets/reflex-runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "2.0.0",
+    "@types/node": "^26.1.2",
+    "typescript": "^5.9.3"
+  }
+}

@@ -34,6 +34,12 @@ import type {
   RuntimeDebugListener,
   RuntimeDebugNodeSnapshot,
 } from "./debug.types";
+import { createRuntimeDiagnostics } from "./diagnostics";
+import type {
+  RuntimeDiagnostics,
+  RuntimeMcpAdapter,
+} from "./diagnostics.types";
+import { createRuntimeMcpAdapter } from "./tool-catalog";
 
 const noopUnsubscribe = () => {};
 const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
@@ -116,6 +122,11 @@ export interface RuntimeSubtle {
   untrack<T>(cb: () => T): T;
 }
 
+export interface RuntimeDebugSubtle extends RuntimeSubtle {
+  diagnostics(): RuntimeDiagnostics;
+  mcp(): RuntimeMcpAdapter;
+}
+
 export type {
   RuntimeDebugContextSnapshot,
   RuntimeDebugEvent,
@@ -124,7 +135,7 @@ export type {
   RuntimeDebugOptions,
 };
 
-export const subtle: RuntimeSubtle = {
+export const subtle: RuntimeDebugSubtle = {
   enabled: IS_DEV,
 
   untrack(cb) {
@@ -170,6 +181,14 @@ export const subtle: RuntimeSubtle = {
   label(node, label) {
     if (!IS_DEV) return node;
     return labelDebugNode(node, label);
+  },
+
+  diagnostics() {
+    return createRuntimeDiagnostics(this);
+  },
+
+  mcp() {
+    return createRuntimeMcpAdapter(this.diagnostics());
   },
 
   snapshot(node) {

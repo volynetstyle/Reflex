@@ -4,8 +4,16 @@ import path from "node:path";
 const packageRoot = path.resolve(import.meta.dirname, "..");
 
 const outputs = [
-  { root: path.join(packageRoot, "build/esm"), extension: ".js" },
-  { root: path.join(packageRoot, "dist/esm"), extension: ".d.ts" },
+  {
+    root: path.join(packageRoot, "build/esm"),
+    aliasRoot: path.join(packageRoot, "build/esm/src"),
+    extension: ".js",
+  },
+  {
+    root: path.join(packageRoot, "dist/esm"),
+    aliasRoot: path.join(packageRoot, "dist/esm/src"),
+    extension: ".d.ts",
+  },
 ];
 
 function collectFiles(directory, extension, files = []) {
@@ -27,13 +35,13 @@ function resolveAlias(root, specifier, extension) {
   throw new Error(`Cannot resolve build alias: ${specifier}`);
 }
 
-for (const { root, extension } of outputs) {
+for (const { root, aliasRoot, extension } of outputs) {
   for (const file of collectFiles(root, extension)) {
     const source = readFileSync(file, "utf8");
     const rewritten = source.replace(
       /(["'])(@runtime\/[^"']+)\1/g,
       (_, quote, specifier) => {
-        const target = resolveAlias(root, specifier, extension);
+        const target = resolveAlias(aliasRoot, specifier, extension);
         let relative = path
           .relative(path.dirname(file), target)
           .replaceAll("\\", "/");

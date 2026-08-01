@@ -27,6 +27,6 @@
     "exactOptionalPropertyTypes": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "alien"],
+  "include": ["src", "debug", "alien"],
   "exclude": ["dist"]
 }

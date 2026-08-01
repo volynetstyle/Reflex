@@ -43,6 +43,7 @@ interface RuntimeDebugState {
 
 const contextStates = new WeakMap<object, RuntimeDebugState>();
 const nodeIds = new WeakMap<ReactiveNode, number>();
+const nodesById = new Map<number, WeakRef<ReactiveNode>>();
 const nodeLabels = new WeakMap<ReactiveNode, string>();
 const invalidContextKey = {};
 const invalidNodeIds = new Map<unknown, number>();
@@ -136,7 +137,26 @@ function ensureNodeId(node: ReactiveNode): number {
 
   const id = nextNodeId++;
   nodeIds.set(node, id);
+  nodesById.set(id, new WeakRef(node));
   return id;
+}
+
+export function findDebugNode(id: number): ReactiveNode | undefined {
+  const node = nodesById.get(id)?.deref();
+  if (node === undefined) nodesById.delete(id);
+  return node;
+}
+
+export function listDebugNodes(): ReactiveNode[] {
+  const nodes: ReactiveNode[] = [];
+
+  for (const [id, reference] of nodesById) {
+    const node = reference.deref();
+    if (node === undefined) nodesById.delete(id);
+    else nodes.push(node);
+  }
+
+  return nodes;
 }
 
 function createNodeRef(node: ReactiveNode): RuntimeDebugNodeRef {
@@ -296,7 +316,7 @@ export function snapshotDebugNode(
   return {
     ...createNodeRef(node),
     payload: node.payload,
-    hasCompute: node.compute !== null,
+    hasCompute: node.compute !== undefined,
     inDegree: sources.length,
     sources,
     subscribers,

@@ -12,7 +12,7 @@
         "../@reflex/runtime/dist/globals.d.ts"
       ],
       "@volynets/reflex-runtime/debug": [
-        "../reflex-runtime/src/debug/index.ts",
+        "../reflex-runtime/debug/index.ts",
         "../reflex-runtime/dist/esm/debug/index.d.ts"
       ],
       "@volynets/reflex-runtime/internal": [
