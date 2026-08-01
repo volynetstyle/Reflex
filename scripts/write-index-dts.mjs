@@ -132,7 +132,7 @@ if (existsSync(bundledTypesPath)) {
   bundledGlobalBlocks.push(...extracted.globalBlocks);
   bundledModuleText = extracted.remainder;
 } else {
-  bundledModuleText = 'export * from "./esm/index.js";';
+  bundledModuleText = 'export * from "./esm/src/index.js";';
 }
 
 const runtimeDevMarker = "const __DEV__: boolean;";

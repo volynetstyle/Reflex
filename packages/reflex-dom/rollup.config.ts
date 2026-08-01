@@ -29,13 +29,16 @@ function workspacePackages(types = false): Plugin {
     ],
     [
       "@volynets/reflex-runtime",
-      resolve(runtimeDist, types ? "index.d.ts" : "esm/index.js"),
+      resolve(
+        runtimeDist,
+        types ? "esm/src/index.d.ts" : "esm/index.js",
+      ),
     ],
     [
       "@volynets/reflex-runtime/internal",
       resolve(
         runtimeDist,
-        types ? "esm/internal/index.d.ts" : "esm/internal.js",
+        types ? "esm/src/internal/index.d.ts" : "esm/internal.js",
       ),
     ],
   ]);

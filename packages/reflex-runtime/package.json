@@ -8,10 +8,10 @@
   "sideEffects": false,
   "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/index.js",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/esm/src/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/esm/src/index.d.ts",
       "import": {
         "development": "./dist/dev/index.js",
         "default": "./dist/esm/index.js"
@@ -23,7 +23,7 @@
       "import": "./dist/dev/debug.js"
     },
     "./internal": {
-      "types": "./dist/esm/internal/index.d.ts",
+      "types": "./dist/esm/src/internal/index.d.ts",
       "import": {
         "development": "./dist/dev/internal.js",
         "default": "./dist/esm/internal.js"

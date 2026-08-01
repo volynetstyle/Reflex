@@ -17,7 +17,7 @@
       ],
       "@volynets/reflex-runtime/internal": [
         "../reflex-runtime/src/internal/index.ts",
-        "../reflex-runtime/dist/esm/internal/index.d.ts"
+        "../reflex-runtime/dist/esm/src/internal/index.d.ts"
       ]
     }
   },
