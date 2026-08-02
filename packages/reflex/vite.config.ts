@@ -23,7 +23,7 @@ export default defineConfig({
       },
       {
         find: "@volynets/reflex-runtime/debug",
-        replacement: resolve(runtimeRoot, "debug/index.ts"),
+        replacement: resolve(packageRoot, "../reflex-runtime/debug/index.ts"),
       },
       {
         find: "@volynets/reflex-runtime",
