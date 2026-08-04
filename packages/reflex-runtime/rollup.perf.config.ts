@@ -31,6 +31,6 @@ const createPerfDomain = (input: string, file: string) => ({
 });
 
 export default [
-  createPerfDomain("build/esm/index.js", "dist/perf.js"),
-  createPerfDomain("perf-tree/run.mjs", "dist/perf-tree.js"),
+  createPerfDomain("build/esm/src/index.js", "dist/perf.js"),
+  createPerfDomain("perf/perf-tree/run.mjs", "dist/perf-tree.js"),
 ];

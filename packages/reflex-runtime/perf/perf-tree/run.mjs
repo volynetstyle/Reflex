@@ -4,18 +4,18 @@ import {
   readProducer,
   runWatcher,
   writeProducer,
-} from "../build/esm/index.js";
+} from "../../build/esm/src/index.js";
 import {
   ReactiveNode,
   CONSUMER_INITIAL_STATE,
   PRODUCER_INITIAL_STATE,
   WATCHER_INITIAL_STATE,
-} from "../build/esm/kernel/shape/index.js";
+} from "../../build/esm/src/kernel/shape/index.js";
 import {
   resetRuntimeContext,
   configureRuntimeContext,
-} from "../build/esm/kernel/context.js";
-import { linkEdge } from "../build/esm/kernel/shape/graph/index.js";
+} from "../../build/esm/src/kernel/context.js";
+import { linkEdge } from "../../build/esm/src/kernel/shape/graph/index.js";
 
 const UNINITIALIZED = Symbol("reflex.perf.uninitialized");
 
@@ -46,10 +46,7 @@ function attachIncomingEdgeAfter(node, edge, after) {
   else node.firstIn = edge;
 }
 
-function setInternalHooks(
-  onNodeInvalidated,
-  onRuntimeIdle,
-) {
+function setInternalHooks(onNodeInvalidated, onRuntimeIdle) {
   configureRuntimeContext({
     hooks: { onNodeInvalidated, onRuntimeIdle },
   });

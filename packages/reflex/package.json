@@ -62,6 +62,8 @@
     "test": "vitest run",
     "bench": "vitest bench",
     "bench:api": "pnpm --filter @volynets/reflex-runtime build && pnpm build && node --expose-gc bench/api-facade.jit.mjs",
+    "bench:api:memory": "pnpm build && node --expose-gc bench/api-callback-memory/run.mjs",
+    "bench:api:memory:json": "pnpm build && node --expose-gc bench/api-callback-memory/run.mjs --json",
     "bench:events": "vitest bench bench/event-*.bench.ts",
     "bench:events:dispatcher": "vitest bench bench/event-dispatcher.bench.ts",
     "bench:events:operators": "vitest bench bench/event-operators.compare.bench.ts",
