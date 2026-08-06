@@ -45,7 +45,7 @@ function executeComputation<T>(
   advanceTrackingEpoch();
   setCurrentConsumer(node);
 
-  if (__DEV__) devRecordComputeStart(node, defaultContext);
+  devRecordComputeStart(node, defaultContext);
 
   let result: T;
 
@@ -55,7 +55,7 @@ function executeComputation<T>(
     setCurrentConsumer(prevActive);
     node.state &= ~Computing;
 
-    if (__DEV__) devRecordComputeError(node, error, defaultContext);
+    devRecordComputeError(node, error, defaultContext);
 
     throw error;
   }
@@ -74,13 +74,13 @@ function executeComputation<T>(
   //   observeGraphReductionRun(node, graphReductionPolicy, reductionEnabled);
   // }
 
-  if (__DEV__) devRecordComputeFinish(node, result, defaultContext);
+  devRecordComputeFinish(node, result, defaultContext);
 
   return result;
 }
 
 export function executeNodeComputation<T>(node: ReactiveNode<T>): T {
-  if (__DEV__) devAssertExecutableNode(node);
+  devAssertExecutableNode(node);
 
   return executeKnownNodeComputation(node, node.compute);
 }

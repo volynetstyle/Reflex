@@ -28,6 +28,41 @@ export const VERIFIED_PURE_FUNCS = [
   "profileRuntimeReadConsumerPath",
   "profilePushNode",
   "profilePullNode",
+
+  // Development-only assertions and diagnostics. Their implementations are
+  // compile-time no-ops in production (`__DEV__ === false`), so Terser may
+  // remove both the calls and the now-unused helper declarations.
+  "devAssertTrackReadAlive",
+  "devRecordTrackRead",
+  "devRecordNodeCreated",
+  "devRecordCleanupStaleSources",
+  "devAssertRecomputeAlive",
+  "devAssertReadDeadProducer",
+  "devAssertReadDeadConsumer",
+  "devAssertConsumerCanStabilize",
+  "devRecordReadProducer",
+  "devRecordReadConsumer",
+  "devAssertWriteAlive",
+  "devRecordWriteProducer",
+  "devAssertShouldRecomputeAlive",
+  "devAssertPropagateAlive",
+  "devAssertExecutableNode",
+  "devAssertIncomingEdge",
+  "devAssertRefreshEdge",
+  "devRecordComputeStart",
+  "devRecordComputeError",
+  "devRecordComputeFinish",
+  "devRecordWatcherSkip",
+  "devRecordWatcherStart",
+  "devRecordWatcherCleanup",
+  "devRecordWatcherFinish",
+  "devRecordWatcherDispose",
+  "devRecordWatcherInvalidated",
+  "devRecordPropagate",
+  "devAssertNoRuntimeHookWatcherExecution",
+  "devAssertNoRuntimeHookReactiveRead",
+  "devAssertNoRuntimeHookTopologyMutation",
+  "devAssertRuntimeHookDidNotReenter",
 ] as const;
 
 /**

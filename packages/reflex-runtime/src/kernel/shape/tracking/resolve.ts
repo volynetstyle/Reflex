@@ -34,7 +34,7 @@ function resolveTrackedReadSlow(
     return false;
   }
 
-  if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+  devRecordTrackRead(defaultContext, consumer, producer);
   profileRuntimeCounter("trackingSlowPath");
 
   consumer.tailIn = readTrackingStrategy(
@@ -69,7 +69,7 @@ function resolveInitialTrackedReadMiss(
       lastIncomingEdge.version = producerVersion;
       consumer.tailIn = lastIncomingEdge;
 
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+      devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
   }
@@ -110,7 +110,7 @@ function resolveCursorTrackedReadMiss(
       );
 
       profileRuntimeCounter("trackingAppendAfterCursor");
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+      devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -118,7 +118,7 @@ function resolveCursorTrackedReadMiss(
     // already in the tracked prefix.
     if (firstProducerEdge.nextOut === null) {
       profileRuntimeCounter("trackingPrefixDuplicate");
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+      devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -135,7 +135,7 @@ function resolveCursorTrackedReadMiss(
         ))
     ) {
       profileRuntimeCounter("trackingPrefixDuplicate");
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+      devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -147,7 +147,7 @@ function resolveCursorTrackedReadMiss(
     );
 
     profileRuntimeCounter("trackingAppendAfterCursor");
-    if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+    devRecordTrackRead(defaultContext, consumer, producer);
     return true;
   }
 
@@ -156,7 +156,7 @@ function resolveCursorTrackedReadMiss(
   if (lookahead1Edge !== null) {
     if (__TRACKING_ONE_HOP__ && lookahead1Edge.from === producer) {
       profileRuntimeCounter("trackingOneHopReorder");
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+      devRecordTrackRead(defaultContext, consumer, producer);
 
       return moveTrackedIncomingEdgeAfterCursorUnchecked(
         consumer,
@@ -171,7 +171,7 @@ function resolveCursorTrackedReadMiss(
 
       if (lookahead2Edge !== null && lookahead2Edge.from === producer) {
         profileRuntimeCounter("trackingTwoHopReorder");
-        if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+        devRecordTrackRead(defaultContext, consumer, producer);
 
         return moveTrackedIncomingEdgeAfterCursorUnchecked(
           consumer,
@@ -200,7 +200,7 @@ function resolveCursorTrackedReadMiss(
           producerVersion,
         );
 
-        if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+        devRecordTrackRead(defaultContext, consumer, producer);
         return true;
       }
     }
@@ -219,7 +219,7 @@ function resolveCursorTrackedReadMiss(
       ))
   ) {
     profileRuntimeCounter("trackingPrefixDuplicate");
-    if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+    devRecordTrackRead(defaultContext, consumer, producer);
     return true;
   }
 
@@ -259,7 +259,7 @@ export function resolveTrackedRead(
       consumer.tailIn = expectedNextEdge;
 
       profileRuntimeCounter("trackingNextHit");
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+      devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -268,7 +268,7 @@ export function resolveTrackedRead(
       cursorEdge.version = producerVersion;
 
       profileRuntimeCounter("trackingCursorHit");
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+      devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -288,7 +288,7 @@ export function resolveTrackedRead(
     linkFirstTrackedEdgeUnchecked(producer, consumer, producerVersion);
 
     profileRuntimeCounter("trackingInitialCreate");
-    if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+    devRecordTrackRead(defaultContext, consumer, producer);
     return true;
   }
 
@@ -297,7 +297,7 @@ export function resolveTrackedRead(
     consumer.tailIn = firstIncomingEdge;
 
     profileRuntimeCounter("trackingInitialFirstHit");
-    if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+    devRecordTrackRead(defaultContext, consumer, producer);
     return true;
   }
 

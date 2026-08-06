@@ -43,9 +43,9 @@ function advanceCore(
   node: ReactiveNode,
   skipOutEdge: ReactiveEdge | null = null,
 ): boolean {
-  if (__PROFILE__) profileRuntimeCounter("advanceCalls");
+  profileRuntimeCounter("advanceCalls");
 
-  if (__DEV__) devAssertExecutableNode(node);
+  devAssertExecutableNode(node);
 
   const compute = node.compute as NonNullable<typeof node.compute>;
   node.tailIn = null;
@@ -55,19 +55,19 @@ function advanceCore(
 
   const prevActive = enterConsumerTracking(node);
 
-  if (__DEV__) devRecordComputeStart(node, defaultContext);
+  devRecordComputeStart(node, defaultContext);
 
   let next: unknown;
 
   try {
-    if (__PROFILE__) profileRuntimeCounter("advanceComputeRuns");
+    profileRuntimeCounter("advanceComputeRuns");
 
     next = compute();
   } catch (error) {
     restoreConsumerTracking(prevActive);
     node.state = computingState & ~Computing;
 
-    if (__DEV__) devRecordComputeError(node, error, defaultContext);
+    devRecordComputeError(node, error, defaultContext);
 
     throw error;
   }
@@ -76,43 +76,43 @@ function advanceCore(
 
   const resolvedState = computingState & ~(Computing | DIRTY_STATE);
 
-  if (__PROFILE__) profileRuntimeCounter("advanceCleanupChecks");
+  profileRuntimeCounter("advanceCleanupChecks");
 
   if (node.tailIn !== node.lastIn) {
     node.state = computingState & ~Computing;
-    if (__PROFILE__) profileRuntimeCounter("advanceCleanupRuns");
+    profileRuntimeCounter("advanceCleanupRuns");
     cleanupUnvisitedSources(node);
   }
 
-  if (__DEV__) devRecordComputeFinish(node, next, defaultContext);
+  devRecordComputeFinish(node, next, defaultContext);
 
   const prev = node.payload;
 
   if (compare(prev, next)) {
     node.state = resolvedState;
 
-    if (__PROFILE__) profileRuntimeCounter("advanceUnchanged");
+    profileRuntimeCounter("advanceUnchanged");
 
-    if (__DEV__) devRecordRecompute(node, false, next, prev, defaultContext);
+    devRecordRecompute(node, false, next, prev, defaultContext);
     return false;
   }
 
   node.payload = next;
   node.state = resolvedState;
 
-  if (__PROFILE__) profileRuntimeCounter("advanceChanged");
+  profileRuntimeCounter("advanceChanged");
 
-  if (__DEV__) devRecordRecompute(node, true, next, prev, defaultContext);
+  devRecordRecompute(node, true, next, prev, defaultContext);
 
   const firstOut = node.firstOut;
 
   if (firstOut !== null) {
-    if (__PROFILE__) profileRuntimeCounter("advancePropagateCalls");
+    profileRuntimeCounter("advancePropagateCalls");
 
-    if (__DEV__) devAssertRefreshEdge(node, firstOut);
+    devAssertRefreshEdge(node, firstOut);
     if (skipOutEdge !== null) {
       if (firstOut !== skipOutEdge || skipOutEdge.nextOut !== null) {
-        if (__PROFILE__) profileRuntimeCounter("advancePropagateSkippedEdge");
+    profileRuntimeCounter("advancePropagateSkippedEdge");
         push_iterator_once_skipping(firstOut, skipOutEdge);
       }
     } else {

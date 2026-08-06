@@ -33,7 +33,7 @@ const computed = createConsumer(() => {
  * @cost O(1) for value access + O(k) for dependency tracking (k = cursor distance)
  */
 export function readProducer<T>(node: ProducerNode<T>): T {
-  if (__DEV__) devAssertNoRuntimeHookReactiveRead();
+  devAssertNoRuntimeHookReactiveRead();
 
   profileRuntimeCounter("readProducerCalls");
 
@@ -46,7 +46,7 @@ export function readProducer<T>(node: ProducerNode<T>): T {
     resolveTrackedRead(node, consumer, trackingEpoch, true);
   }
 
-  if (__DEV__) devRecordReadProducer(node, value, defaultContext);
+  devRecordReadProducer(node, value, defaultContext);
 
   return value;
 }

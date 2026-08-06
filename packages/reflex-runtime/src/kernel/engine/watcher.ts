@@ -110,7 +110,7 @@ function runWatcherCore(node: WatcherNode): void {
   if ((state & DIRTY_STATE) === 0) {
     profileRuntimeCounter("watcherCleanSkips");
 
-    if (__DEV__) devRecordWatcherSkip(node, "clean", defaultContext);
+    devRecordWatcherSkip(node, "clean", defaultContext);
     return;
   }
 
@@ -121,7 +121,7 @@ function runWatcherCore(node: WatcherNode): void {
       profileRuntimeCounter("watcherStableSkips");
 
       node.state &= ~DIRTY_STATE;
-      if (__DEV__) devRecordWatcherSkip(node, "stable", defaultContext);
+      devRecordWatcherSkip(node, "stable", defaultContext);
       return;
     }
   }
@@ -130,7 +130,7 @@ function runWatcherCore(node: WatcherNode): void {
     profileRuntimeCounter("watcherDisposedSkips");
 
     node.state &= ~DIRTY_STATE;
-    if (__DEV__) devRecordWatcherSkip(node, "stable", defaultContext);
+      devRecordWatcherSkip(node, "stable", defaultContext);
     return;
   }
 
@@ -153,7 +153,7 @@ function runWatcherCore(node: WatcherNode): void {
       recoverWatcherAfterError(node);
       throw error;
     }
-    if (__DEV__) devRecordWatcherCleanup(node, defaultContext);
+    devRecordWatcherCleanup(node, defaultContext);
 
     if (node.compute === undefined) {
       node.state &= ~DIRTY_STATE;
@@ -191,11 +191,11 @@ function runWatcherCore(node: WatcherNode): void {
     node.state = (node.state & ~Changed) | Unknown;
   }
 
-  if (__DEV__) devRecordWatcherFinish(node, hasCleanup, result, defaultContext);
+  devRecordWatcherFinish(node, hasCleanup, result, defaultContext);
 }
 
 export function disposeWatcher(node: WatcherNode): void {
-  if (__DEV__) devAssertNoRuntimeHookTopologyMutation();
+  devAssertNoRuntimeHookTopologyMutation();
 
   profileRuntimeCounter("watcherDisposals");
 
@@ -211,5 +211,5 @@ export function disposeWatcher(node: WatcherNode): void {
 
   node.payload = undefined;
 
-  if (__DEV__) devRecordWatcherDispose(node, cleanup !== null, defaultContext);
+  devRecordWatcherDispose(node, cleanup !== null, defaultContext);
 }

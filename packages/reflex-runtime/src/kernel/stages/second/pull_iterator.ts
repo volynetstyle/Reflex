@@ -75,7 +75,7 @@ function profilePullNode(
  * - resumes siblings only while the current branch remains stable.
  */
 function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
-  if (__PROFILE__) profileRuntimeCounter("pullCalls");
+  profileRuntimeCounter("pullCalls");
 
   const base = high;
   let top = base;
@@ -91,7 +91,7 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
         profilePullNode("node.changed", node, top - base, top - base);
       changed = true;
     } else {
-      if (__PROFILE__) profileRuntimeCounter("pullEdgesVisited");
+      profileRuntimeCounter("pullEdgesVisited");
 
       const dep = edge.from;
       const depState = dep.state;
@@ -128,7 +128,7 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
         changed = advance(dep, edge);
       } else if ((depState & Unknown) !== 0) {
-        if (__PROFILE__) profileRuntimeCounter("pullInvalidDeps");
+        profileRuntimeCounter("pullInvalidDeps");
 
         const firstIn = dep.firstIn;
 

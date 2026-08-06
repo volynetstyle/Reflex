@@ -21,7 +21,7 @@ function pushIteratorOnceSkippingCore(
   edge: ReactiveEdge | null,
   skip: ReactiveEdge,
 ): void {
-  if (__PROFILE__) profileRuntimeCounter("pushOnceCalls");
+  profileRuntimeCounter("pushOnceCalls");
 
   // Split around `skip` so the hot suffix only tests its termination pointer
   // instead of checking `skip` for every remaining edge.
@@ -29,7 +29,7 @@ function pushIteratorOnceSkippingCore(
     // Preserve the old no-op behavior when a foreign skip edge is supplied.
     if (current === null) return;
 
-    if (__PROFILE__) profileRuntimeCounter("pushOnceEdgesVisited");
+    profileRuntimeCounter("pushOnceEdgesVisited");
 
     const sub = current.to;
     const state = sub.state;
@@ -37,8 +37,8 @@ function pushIteratorOnceSkippingCore(
     if ((state & Changed) === 0) {
       sub.state = (state & ~Unknown) | Changed;
 
-      if (__PROFILE__) profileRuntimeCounter("pushOnceMarkedChanged");
-      if (__DEV__) devRecordPropagate(current, sub.state, true, defaultContext);
+      profileRuntimeCounter("pushOnceMarkedChanged");
+      devRecordPropagate(current, sub.state, true, defaultContext);
 
       if ((state & Watcher) !== 0 && nodeInvalidatedHook) {
         if (__DEV__) emitNodeInvalidated(sub);
@@ -46,18 +46,18 @@ function pushIteratorOnceSkippingCore(
         if (!__DEV__)nodeInvalidatedHook(sub);
       }
     } else {
-      if (__PROFILE__) profileRuntimeCounter("pushOnceAlreadyChangedSkipped");
+      profileRuntimeCounter("pushOnceAlreadyChangedSkipped");
     }
   }
 
-  if (__PROFILE__) profileRuntimeCounter("pushOnceSkippedEdges");
+  profileRuntimeCounter("pushOnceSkippedEdges");
 
   for (
     let current = skip.nextOut;
     current !== null;
     current = current.nextOut
   ) {
-    if (__PROFILE__) profileRuntimeCounter("pushOnceEdgesVisited");
+    profileRuntimeCounter("pushOnceEdgesVisited");
 
     const sub = current.to;
     const state = sub.state;
@@ -65,15 +65,15 @@ function pushIteratorOnceSkippingCore(
     if ((state & Changed) === 0) {
       sub.state = (state & ~Unknown) | Changed;
 
-      if (__PROFILE__) profileRuntimeCounter("pushOnceMarkedChanged");
-      if (__DEV__) devRecordPropagate(current, sub.state, true, defaultContext);
+      profileRuntimeCounter("pushOnceMarkedChanged");
+      devRecordPropagate(current, sub.state, true, defaultContext);
 
       if ((state & Watcher) !== 0 && nodeInvalidatedHook) {
         if (__DEV__) emitNodeInvalidated(sub);
 
        if (!__DEV__) nodeInvalidatedHook!(sub);
       }
-    } else if (__PROFILE__) {
+    } else {
       profileRuntimeCounter("pushOnceAlreadyChangedSkipped");
     }
   }

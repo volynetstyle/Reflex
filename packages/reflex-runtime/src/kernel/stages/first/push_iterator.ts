@@ -45,36 +45,6 @@ function resetPropagateStackAfterAbort(
   propagateStackHigh = base;
 }
 
-/**
- * Rare re-entrant tracking path. Keeping the backwards edge scan out of the
- * common clean/already-dirty loops leaves Maglev and TurboFan with a much
- * smaller hot control-flow graph.
- */
-function markComputingSubscriber(
-  edge: ReactiveEdge,
-  sub: ReactiveNode<unknown>,
-  state: number,
-): number {
-  if (__PROFILE__) profileRuntimeCounter("pushComputingChecked");
-
-  const tail = sub.tailIn;
-  if (tail === null) return 0;
-
-  if (edge !== tail) {
-    for (
-      let current = edge.prevIn;
-      current !== null;
-      current = current.prevIn
-    ) {
-      if (current === tail) return 0;
-    }
-  }
-
-  const next = state | Visited | Unknown;
-  sub.state = next;
-  return next;
-}
-
 function countIn(edge: ReactiveEdge | null): number {
   let count = 0;
 
@@ -113,6 +83,33 @@ function profilePushNode(
 }
 
 /**
+ * Rare re-entrant tracking path. Keeping the backwards edge scan out of the
+ * common clean/already-dirty loops leaves Maglev and TurboFan with a much
+ * smaller hot control-flow graph.
+ */
+function markComputingSubscriber(
+  edge: ReactiveEdge,
+  sub: ReactiveNode<unknown>,
+  state: number,
+): number {
+  profileRuntimeCounter("pushComputingChecked");
+
+  const tail = sub.tailIn;
+  if (tail === null) return 0;
+
+  if (edge !== tail) {
+    for (
+      let current = edge.prevIn;
+      current !== null;
+      current = current.prevIn
+    ) {
+      if (current === tail) return 0;
+    }
+  }
+
+  return (sub.state = state | Visited | Unknown);
+}
+/**
  * Push invalidation iterator:
  * - direct subscribers get Changed
  * - transitive subscribers get Unknown
@@ -120,9 +117,11 @@ function profilePushNode(
 function pushIteratorCore(firstOut: ReactiveEdge | null): void {
   // if (firstOut === null) return;
 
-  if (__PROFILE__) profileRuntimeCounter("pushCalls");
+  profileRuntimeCounter("pushCalls");
 
   const stack = propagateStack;
+  // [ outer live stack ][ nested live stack ][ free capacity ]
+  // 0                  base                top
   const base = propagateStackHigh;
   let top = base;
 
@@ -137,7 +136,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
     edge !== null;
     edge = edge.nextOut
   ) {
-    if (__PROFILE__) profileRuntimeCounter("pushDirectEdgesVisited");
+    profileRuntimeCounter("pushDirectEdgesVisited");
 
     const sub: ReactiveNode<unknown> = edge.to;
     const state = sub.state;
@@ -170,7 +169,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
         top - base,
       );
     }
-    if (__DEV__) devRecordPropagate(edge, next, true, defaultContext);
+    devRecordPropagate(edge, next, true, defaultContext);
 
     if ((next & Watcher) !== 0 && emitNodeInvalidated) {
       if (__PROFILE__) {
@@ -191,7 +190,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
 
     const child = sub.firstOut;
     if (child !== null) {
-      if (__PROFILE__) profileRuntimeCounter("pushChildBranchesQueued");
+      profileRuntimeCounter("pushChildBranchesQueued");
 
       if (__PROFILE__) propagateDepthStack![top] = 2;
       stack[top++] = child;
@@ -211,7 +210,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
     let depth = __PROFILE__ ? propagateDepthStack![top]! : 0;
 
     while (edge !== null) {
-      if (__PROFILE__) profileRuntimeCounter("pushTransitiveEdgesVisited");
+      profileRuntimeCounter("pushTransitiveEdgesVisited");
 
       const sub: ReactiveNode<unknown> = edge.to;
       const state = sub.state;
@@ -230,7 +229,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
           profileRuntimeCounter("pushMarkedInvalid");
           profilePushNode("transitive.unknown", sub, depth, top - base);
         }
-        if (__DEV__) devRecordPropagate(edge, next, false, defaultContext);
+        devRecordPropagate(edge, next, false, defaultContext);
 
         if ((next & Watcher) !== 0 && nodeInvalidatedHook) {
           if (__PROFILE__) {
@@ -255,7 +254,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
             const sibling = edge.nextOut;
 
             if (sibling !== null) {
-              if (__PROFILE__) profileRuntimeCounter("pushChildBranchesQueued");
+              profileRuntimeCounter("pushChildBranchesQueued");
 
               if (__PROFILE__) propagateDepthStack![top] = depth;
               stack[top++] = sibling;
