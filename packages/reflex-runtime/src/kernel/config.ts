@@ -33,7 +33,8 @@ export type ReadTrackingStrategy = (
 export const DEFAULT_READ_TRACKING_STRATEGY: ReadTrackingStrategy =
   reuseIncomingEdgeFromSuffixOrCreate;
 
-export let readTrackingStrategy: ReadTrackingStrategy =
+// eslint-disable-next-line no-var
+export var readTrackingStrategy: ReadTrackingStrategy =
   DEFAULT_READ_TRACKING_STRATEGY;
 
 // #endregion
@@ -52,8 +53,15 @@ export type RuntimeHostHooks = RuntimeHooks;
 export type NodeInvalidatedHook = RuntimeHooks["onNodeInvalidated"];
 export type RuntimeIdleHook = RuntimeHooks["onRuntimeIdle"];
 
-export let nodeInvalidatedHook: NodeInvalidatedHook = undefined;
-export let runtimeIdleHook: RuntimeIdleHook = undefined;
+// eslint-disable-next-line no-var
+export var nodeInvalidatedHook: NodeInvalidatedHook = undefined;
+
+// eslint-disable-next-line no-var
+export var CAN_CALL_EMIT_NODE_INVALIDATED_HOOK =
+  nodeInvalidatedHook !== undefined;
+
+// eslint-disable-next-line no-var
+export var runtimeIdleHook: RuntimeIdleHook = undefined;
 
 // #endregion
 
@@ -69,12 +77,12 @@ export interface RuntimeConfigurationOptions {
   readTrackingStrategy?: ReadTrackingStrategy;
 }
 
-export function saveRuntimeConfiguration(): RuntimeConfiguration {
-  return {
-    readTrackingStrategy,
-    nodeInvalidatedHook,
-    runtimeIdleHook,
-  };
+export function saveRuntimeConfiguration(
+  configuration: RuntimeConfiguration,
+): void {
+  configuration.readTrackingStrategy = readTrackingStrategy;
+  configuration.nodeInvalidatedHook = nodeInvalidatedHook;
+  configuration.runtimeIdleHook = runtimeIdleHook;
 }
 
 export function restoreRuntimeConfiguration(
@@ -91,37 +99,45 @@ export function restoreRuntimeConfiguration(
 
 // #region Hook emitters
 
-export function emitNodeInvalidated(node: ReactiveNode): void {
-  profileRuntimeCounter("nodeInvalidatedEmits");
+// eslint-disable-next-line no-var
+export var emitNodeInvalidated = !__DEV__
+  ? (node: ReactiveNode) => {
+      const hook = nodeInvalidatedHook;
+      if (hook === undefined) return;
 
-  if (IS_DEV) {
-    recordDebugEvent(defaultContext, "watcher:invalidated", { node });
-  }
+      hook(node);
+    }
+  : function (node: ReactiveNode): void {
+      profileRuntimeCounter("nodeInvalidatedEmits");
 
-  const hook = nodeInvalidatedHook;
-  if (hook === undefined) return;
+      if (IS_DEV) {
+        recordDebugEvent(defaultContext, "watcher:invalidated", { node });
+      }
 
-  if (!__DEV__) {
-    hook(node);
-    return;
-  }
+      const hook = nodeInvalidatedHook;
+      if (hook === undefined) return;
 
-  const before = readRuntimePhase();
-  const phaseBefore = before.phase;
-  const depthBefore = before.depth;
+      if (!__DEV__) {
+        hook(node);
+        return;
+      }
 
-  enterRuntimeHook("onNodeInvalidated");
-  try {
-    hook(node);
-    devAssertRuntimeHookDidNotReenter(
-      "onNodeInvalidated",
-      phaseBefore,
-      depthBefore,
-    );
-  } finally {
-    leaveRuntimeHook();
-  }
-}
+      const before = readRuntimePhase();
+      const phaseBefore = before.phase;
+      const depthBefore = before.depth;
+
+      enterRuntimeHook("onNodeInvalidated");
+      try {
+        hook(node);
+        devAssertRuntimeHookDidNotReenter(
+          "onNodeInvalidated",
+          phaseBefore,
+          depthBefore,
+        );
+      } finally {
+        leaveRuntimeHook();
+      }
+    };
 
 export function emitRuntimeIdle(): void {
   profileRuntimeCounter("contextSettledEmits");

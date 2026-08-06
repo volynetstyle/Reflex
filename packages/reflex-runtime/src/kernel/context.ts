@@ -86,6 +86,7 @@ export function snapshotRuntimeContext(
 ): RuntimeContextSnapshot {
   if (context === getActiveRuntimeContext())
     syncRuntimeContext(context, "save");
+
   const {
     currentConsumer,
     trackingEpoch,
@@ -116,9 +117,14 @@ export function restoreRuntimeContextSnapshot(
     context === getActiveRuntimeContext()
       ? trackingEpoch
       : context.trackingEpoch;
-  Object.assign(context, snapshot, {
-    trackingEpoch: Math.max(snapshot.trackingEpoch, currentEpoch),
-  });
+  context.currentConsumer = snapshot.currentConsumer;
+  context.trackingEpoch = Math.max(snapshot.trackingEpoch, currentEpoch);
+  context.propagationScopeDepth = snapshot.propagationScopeDepth;
+  context.batchDepth = snapshot.batchDepth;
+  context.runtimeState = snapshot.runtimeState;
+  context.readTrackingStrategy = snapshot.readTrackingStrategy;
+  context.nodeInvalidatedHook = snapshot.nodeInvalidatedHook;
+  context.runtimeIdleHook = snapshot.runtimeIdleHook;
   if (context === getActiveRuntimeContext())
     syncRuntimeContext(context, "load");
 }

@@ -1,4 +1,8 @@
-import { defaultContext, emitNodeInvalidated } from "@runtime/kernel/config";
+import {
+  defaultContext,
+  emitNodeInvalidated,
+  nodeInvalidatedHook,
+} from "@runtime/kernel/config";
 import { abortPropagationScope } from "@runtime/kernel/context.scope";
 import { devRecordPropagate } from "@runtime/kernel/dev";
 import {
@@ -26,6 +30,7 @@ import {
 const FAST_BLOCK_MASK = DIRTY_STATE | Computing;
 
 const propagateStack: ReactiveEdge[] = new Array(512).fill(null);
+const MAX_RETAINED_PROPAGATE_STACK = 512;
 const propagateDepthStack: number[] | undefined = __PROFILE__
   ? new Array(512).fill(0)
   : undefined;
@@ -167,7 +172,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
     }
     if (__DEV__) devRecordPropagate(edge, next, true, defaultContext);
 
-    if ((next & Watcher) !== 0) {
+    if ((next & Watcher) !== 0 && emitNodeInvalidated) {
       if (__PROFILE__) {
         profileRuntimeCounter("pushWatchersInvalidated");
         profilePushNode("direct.watcher", sub, 1, top - base);
@@ -200,7 +205,9 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
    * Everything below direct level gets Unknown.
    */
   while (top !== base) {
-    let edge: ReactiveEdge | null = stack[--top]!;
+    const index = --top;
+    let edge: ReactiveEdge | null = stack[index]!;
+    stack[index] = null!;
     let depth = __PROFILE__ ? propagateDepthStack![top]! : 0;
 
     while (edge !== null) {
@@ -225,7 +232,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
         }
         if (__DEV__) devRecordPropagate(edge, next, false, defaultContext);
 
-        if ((next & Watcher) !== 0) {
+        if ((next & Watcher) !== 0 && nodeInvalidatedHook) {
           if (__PROFILE__) {
             profileRuntimeCounter("pushWatchersInvalidated");
             profilePushNode("transitive.watcher", sub, depth, top - base);
@@ -233,10 +240,12 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
 
           propagateStackHigh = top;
           try {
-            emitNodeInvalidated(sub);
+            if (__DEV__) emitNodeInvalidated(sub);
+            if (!__DEV__) nodeInvalidatedHook(sub);
           } catch (error) {
             resetPropagateStackAfterAbort(stack, base, top);
-            abortPropagationScope();
+
+            if (__DEV__) abortPropagationScope();
             throw error;
           }
         } else {
@@ -269,6 +278,9 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
   }
 
   propagateStackHigh = base;
+  if (base === 0 && stack.length > MAX_RETAINED_PROPAGATE_STACK) {
+    stack.length = MAX_RETAINED_PROPAGATE_STACK;
+  }
 }
 
 export const push_iterator: (firstOut: ReactiveEdge | null) => void = __DEV__

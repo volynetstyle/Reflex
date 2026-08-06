@@ -211,6 +211,7 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
         high = top;
 
         const parentEdge = stack[top]!;
+        stack[top] = null!;
         if (__PROFILE__) {
           profileRuntimeCounter("pullChangedBubbles");
           profileRuntimeCounter("pullAdvanceCalls");
@@ -267,6 +268,7 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
       high = top;
 
       const parentEdge = stack[top]!;
+      stack[top] = null!;
       node.state &= ~Unknown;
       node = parentEdge.to;
 

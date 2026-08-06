@@ -23,6 +23,20 @@ describe("Reactive runtime - graph regressions (dev)", () => {
     expect(subtle.enabled).toBe(true);
   });
 
+  it("reports a stable runtime error for an excessively deep cold chain", () => {
+    const source = createProducer(0);
+    let current = createConsumer(() => readProducer(source));
+
+    for (let i = 0; i < 1_100; i++) {
+      const previous = current;
+      current = createConsumer(() => readConsumer(previous) + 1);
+    }
+
+    expect(() => readConsumer(current)).toThrow(
+      /REFLEX_RECOMPUTE_DEPTH_EXCEEDED/,
+    );
+  });
+
   it("updates a linear chain transitively", () => {
     const h = createHistoryHarness();
     const source = h.label(createProducer(1), "source");

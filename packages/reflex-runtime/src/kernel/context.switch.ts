@@ -40,7 +40,7 @@ export function syncRuntimeContext(
       context.propagationScopeDepth = propagationScopeDepth;
       context.batchDepth = reactiveBatchDepth;
       context.runtimeState = runtimeState;
-      Object.assign(context, saveRuntimeConfiguration());
+      saveRuntimeConfiguration(context);
     }
   }
 }

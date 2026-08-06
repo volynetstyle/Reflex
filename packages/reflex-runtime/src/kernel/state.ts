@@ -1,3 +1,4 @@
+/* eslint-disable no-var */
 import type { ReactiveNode } from "./shape";
 
 export const enum RuntimeState {
@@ -13,7 +14,7 @@ const EXECUTION_ACTIVE = RuntimeState.Tracking | RuntimeState.Propagating;
 /**
  * Compact runtime lifecycle register. `Idle` is exactly zero.
  */
-export let runtimeState = RuntimeState.Idle;
+export var runtimeState = RuntimeState.Idle;
 
 export function setRuntimeState(state: number): void {
   runtimeState = state;
@@ -38,7 +39,7 @@ function setRuntimeStateFlag(flag: RuntimeState, enabled: boolean): void {
  *
  * `null` means dependency tracking is disabled.
  */
-export let currentConsumer: ReactiveNode | null = null;
+export var currentConsumer: ReactiveNode | null = null;
 
 /**
  * Replace the active dependency-tracking consumer.
@@ -58,7 +59,7 @@ export function enterConsumerTracking(
 ): ReactiveNode | null {
   const previousConsumer = currentConsumer;
   currentConsumer = consumer;
-  setRuntimeStateFlag(RuntimeState.Tracking, true);
+  runtimeState |= RuntimeState.Tracking;
   trackingEpoch = (trackingEpoch + 1) >>> 0 || 1;
   return previousConsumer;
 }
@@ -70,7 +71,11 @@ export function restoreConsumerTracking(
   previousConsumer: ReactiveNode | null,
 ): void {
   currentConsumer = previousConsumer;
-  setRuntimeStateFlag(RuntimeState.Tracking, previousConsumer !== null);
+  if (previousConsumer === null) {
+    runtimeState &= ~RuntimeState.Tracking;
+  } else {
+    runtimeState |= RuntimeState.Tracking;
+  }
 }
 
 // #endregion
@@ -83,7 +88,7 @@ export function restoreConsumerTracking(
  * Used to mark reads during a tracking pass.
  * Wraps around safely and skips zero.
  */
-export let trackingEpoch = 0;
+export var trackingEpoch = 0;
 
 /**
  * Replace the tracking epoch.
@@ -127,7 +132,7 @@ export function isNewerEpoch(a: number, b: number): boolean {
  *
  * Non-zero means the runtime is inside invalidation / propagation work.
  */
-export let propagationScopeDepth = 0;
+export var propagationScopeDepth = 0;
 
 /**
  * Replace propagation depth.
@@ -144,7 +149,7 @@ export function setPropagationScopeDepth(depth: number): void {
  */
 export function enterPropagationScopeRegister(): void {
   propagationScopeDepth++;
-  setRuntimeStateFlag(RuntimeState.Propagating, true);
+  runtimeState |= RuntimeState.Propagating;
 }
 
 /**
@@ -157,7 +162,9 @@ export function leavePropagationScopeRegister(): boolean {
     propagationScopeDepth--;
   }
 
-  setRuntimeStateFlag(RuntimeState.Propagating, propagationScopeDepth !== 0);
+  if (propagationScopeDepth === 0) {
+    runtimeState &= ~RuntimeState.Propagating;
+  }
   return (runtimeState & EXECUTION_ACTIVE) === RuntimeState.Idle;
 }
 
@@ -175,7 +182,7 @@ export function isRuntimeExecutionIdle(): boolean {
 /**
  * Current reactive batch nesting depth.
  */
-export let reactiveBatchDepth = 0;
+export var reactiveBatchDepth = 0;
 
 /**
  * Whether runtime work, batching, or an idle notification is pending.
@@ -183,7 +190,7 @@ export let reactiveBatchDepth = 0;
  */
 export function enterReactiveBatchRegister(): void {
   ++reactiveBatchDepth;
-  setRuntimeStateFlag(RuntimeState.Batching, true);
+  runtimeState |= RuntimeState.Batching;
 }
 
 export function leaveReactiveBatchRegister(): boolean {
@@ -191,7 +198,9 @@ export function leaveReactiveBatchRegister(): boolean {
     --reactiveBatchDepth;
   }
 
-  setRuntimeStateFlag(RuntimeState.Batching, reactiveBatchDepth !== 0);
+  if (reactiveBatchDepth === 0) {
+    runtimeState &= ~RuntimeState.Batching;
+  }
   return reactiveBatchDepth === 0;
 }
 

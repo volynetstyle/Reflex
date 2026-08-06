@@ -41,7 +41,7 @@ function executeComputation<T>(
   const prevActive = currentConsumer;
 
   node.tailIn = null;
-  node.state = (node.state & ~Visited) | Computing | Computing;
+  node.state = (node.state & ~Visited) | Computing;
   advanceTrackingEpoch();
   setCurrentConsumer(node);
 
@@ -53,7 +53,7 @@ function executeComputation<T>(
     result = compute!();
   } catch (error) {
     setCurrentConsumer(prevActive);
-    node.state &= ~(Computing | Computing);
+    node.state &= ~Computing;
 
     if (__DEV__) devRecordComputeError(node, error, defaultContext);
 
@@ -61,7 +61,7 @@ function executeComputation<T>(
   }
 
   setCurrentConsumer(prevActive);
-  node.state &= ~(Computing | Computing);
+  node.state &= ~Computing;
 
   if (node.tailIn !== node.lastIn) {
     cleanupUnvisitedSources(node);

@@ -1,4 +1,8 @@
-import { defaultContext, emitNodeInvalidated } from "@runtime/kernel/config";
+import {
+  defaultContext,
+  emitNodeInvalidated,
+  nodeInvalidatedHook,
+} from "@runtime/kernel/config";
 import { devRecordPropagate } from "@runtime/kernel/dev";
 import {
   enterRuntimePhase,
@@ -28,8 +32,10 @@ function pushIteratorOnceCore(edge: ReactiveEdge | null): void {
       if (__PROFILE__) profileRuntimeCounter("pushOnceMarkedChanged");
       if (__DEV__) devRecordPropagate(current, sub.state, true, defaultContext);
 
-      if ((state & Watcher) !== 0) {
-        emitNodeInvalidated(sub);
+      if ((state & Watcher) !== 0 && nodeInvalidatedHook) {
+        if (__DEV__) emitNodeInvalidated(sub);
+
+        if (!__DEV__)nodeInvalidatedHook!(sub);
       }
     } else {
       if (__PROFILE__) profileRuntimeCounter("pushOnceAlreadyChangedSkipped");

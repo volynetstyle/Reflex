@@ -62,6 +62,10 @@ export const RuntimeExecutionError = {
   HostHookReenteredRuntime: {
     code: "REFLEX_HOST_HOOK_REENTERED_RUNTIME",
   },
+  RecomputeDepthExceeded: {
+    code: "REFLEX_RECOMPUTE_DEPTH_EXCEEDED",
+    message: "Reactive computation depth exceeded the development safety limit.",
+  },
 } as const;
 
 export interface RuntimeExecutionState {
@@ -84,6 +88,8 @@ const phaseStack: RuntimePhase[] = [];
 let activeRuntimeHook: string | null = null;
 const runtimeHookStack: Array<string | null> = [];
 let runtimeHookDepth = 0;
+const MAX_RECOMPUTE_DEPTH = 1_024;
+let recomputeDepth = 0;
 
 export function enterRuntimePhase(phase: RuntimePhase): void {
   if (!SCHEDULER_POLICY_ENABLED) return;
@@ -98,6 +104,12 @@ export function enterRuntimePhase(phase: RuntimePhase): void {
       RuntimePhase.Propagating,
       RuntimeExecutionError.NestedPropagation,
     );
+  } else if (phase === RuntimePhase.Recomputing) {
+    if (recomputeDepth >= MAX_RECOMPUTE_DEPTH) {
+      const error = RuntimeExecutionError.RecomputeDepthExceeded;
+      throw new Error(`${error.code}: ${error.message}`);
+    }
+    recomputeDepth += 1;
   }
 
   phaseStack[runtimeExecutionState.depth] = runtimeExecutionState.phase;
@@ -107,6 +119,10 @@ export function enterRuntimePhase(phase: RuntimePhase): void {
 
 export function leaveRuntimePhase(): void {
   if (!SCHEDULER_POLICY_ENABLED) return;
+
+  if (runtimeExecutionState.phase === RuntimePhase.Recomputing) {
+    recomputeDepth -= 1;
+  }
 
   if (runtimeExecutionState.depth > 0) {
     runtimeExecutionState.depth--;
@@ -202,6 +218,7 @@ export function devAssertRuntimeHookDidNotReenter(
 export function resetRuntimeExecutionState(): void {
   runtimeExecutionState.phase = RuntimePhase.Idle;
   runtimeExecutionState.depth = 0;
+  recomputeDepth = 0;
   phaseStack.length = 0;
   activeRuntimeHook = null;
   runtimeHookDepth = 0;
