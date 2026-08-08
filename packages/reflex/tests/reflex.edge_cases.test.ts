@@ -4,8 +4,8 @@ import { computed, createRuntime, effect, signal } from "./reflex.test_utils";
 describe("Reactive system - edge cases", () => {
   it("keeps cleanup reads untracked so they do not create ghost reruns", () => {
     const rt = createRuntime();
-    const [source, setSource] = signal(1);
-    const [cleanupSource, setCleanupSource] = signal(10);
+    const source = signal(1);
+    const cleanupSource = signal(10);
     const cleanupDerivedSpy = vi.fn(() => cleanupSource() * 2);
     const cleanupDerived = computed(cleanupDerivedSpy);
     const log: string[] = [];
@@ -19,13 +19,13 @@ describe("Reactive system - edge cases", () => {
       };
     });
 
-    setSource(2);
+    source.set(2);
     rt.flush();
 
     expect(log).toEqual(["run:1", "cleanup:20", "run:2"]);
     expect(cleanupDerivedSpy).toHaveBeenCalledTimes(1);
 
-    setCleanupSource(11);
+    cleanupSource.set(11);
     rt.flush();
 
     expect(log).toEqual(["run:1", "cleanup:20", "run:2"]);
@@ -33,7 +33,7 @@ describe("Reactive system - edge cases", () => {
 
   it("eager effects observe stabilized derived values without fractional reruns", () => {
     createRuntime({ effectStrategy: "eager" });
-    const [source, setSource] = signal(1);
+    const source = signal(1);
     const doubled = computed(() => source() * 2);
     const snapshots: string[] = [];
 
@@ -43,36 +43,36 @@ describe("Reactive system - edge cases", () => {
 
     expect(snapshots).toEqual(["1->2"]);
 
-    setSource(2);
+    source.set(2);
 
     expect(snapshots).toEqual(["1->2", "2->4"]);
   });
 
   it("drops stale dynamic dependencies after branch switches", () => {
-    const [flag, setFlag] = signal(true);
-    const [left, setLeft] = signal(1);
-    const [right, setRight] = signal(10);
+    const flag = signal(true);
+    const left = signal(1);
+    const right = signal(10);
     const selectSpy = vi.fn(() => (flag() ? left() : right()));
     const selected = computed(selectSpy);
 
     expect(selected()).toBe(1);
     expect(selectSpy).toHaveBeenCalledTimes(1);
 
-    setFlag(false);
+    flag.set(false);
     expect(selected()).toBe(10);
     expect(selectSpy).toHaveBeenCalledTimes(2);
 
-    setLeft(2);
+    left.set(2);
     expect(selected()).toBe(10);
     expect(selectSpy).toHaveBeenCalledTimes(2);
 
-    setRight(20);
+    right.set(20);
     expect(selected()).toBe(20);
     expect(selectSpy).toHaveBeenCalledTimes(3);
   });
 
   it("recomputes the bottom of a diamond graph only once per source change", () => {
-    const [source, setSource] = signal(1);
+    const source = signal(1);
     const leftSpy = vi.fn(() => source() + 1);
     const rightSpy = vi.fn(() => source() * 2);
     const left = computed(leftSpy);
@@ -85,7 +85,7 @@ describe("Reactive system - edge cases", () => {
     expect(rightSpy).toHaveBeenCalledTimes(1);
     expect(totalSpy).toHaveBeenCalledTimes(1);
 
-    setSource(2);
+    source.set(2);
 
     expect(total()).toBe(7);
     expect(leftSpy).toHaveBeenCalledTimes(2);
@@ -95,7 +95,7 @@ describe("Reactive system - edge cases", () => {
 
   it("ignores same-value writes for effects and their cleanups", () => {
     const rt = createRuntime();
-    const [source, setSource] = signal(1);
+    const source = signal(1);
     const cleanup = vi.fn();
     const spy = vi.fn(() => {
       source();
@@ -104,7 +104,7 @@ describe("Reactive system - edge cases", () => {
 
     effect(spy);
 
-    setSource((prev: number) => prev);
+    source.set((prev: number) => prev);
     rt.flush();
 
     expect(spy).toHaveBeenCalledTimes(1);
@@ -113,7 +113,7 @@ describe("Reactive system - edge cases", () => {
 
   it("stabilizes re-entrant effects that write to their own source", () => {
     const rt = createRuntime({ effectStrategy: "flush" });
-    const [count, setCount] = signal(0);
+    const count = signal(0);
     const seen: number[] = [];
 
     effect(() => {
@@ -121,7 +121,7 @@ describe("Reactive system - edge cases", () => {
       seen.push(value);
 
       if (value < 2) {
-        setCount(value + 1);
+        count.set(value + 1);
       }
     });
 
@@ -133,7 +133,7 @@ describe("Reactive system - edge cases", () => {
 
   it("skips scheduled reruns for effects disposed earlier in the same flush", () => {
     const rt = createRuntime();
-    const [source, setSource] = signal(0);
+    const source = signal(0);
     const cleanup = vi.fn();
     const spy = vi.fn(() => {
       source();
@@ -150,13 +150,13 @@ describe("Reactive system - edge cases", () => {
 
     disposeWatched = effect(spy);
 
-    setSource(1);
+    source.set(1);
     rt.flush();
 
     expect(spy).toHaveBeenCalledTimes(1);
     expect(cleanup).toHaveBeenCalledTimes(1);
 
-    setSource(2);
+    source.set(2);
     rt.flush();
 
     expect(spy).toHaveBeenCalledTimes(1);
@@ -165,7 +165,7 @@ describe("Reactive system - edge cases", () => {
 
   it("keeps sibling effects fresh when one effect is disposed during computed stabilization", () => {
     createRuntime({ effectStrategy: "eager" });
-    const [source, setSource] = signal(0);
+    const source = signal(0);
     let disposeFirst!: Destructor;
     let secondValue = -1;
     let thirdValue = -1;
@@ -193,7 +193,7 @@ describe("Reactive system - edge cases", () => {
     expect(secondValue).toBe(0);
     expect(thirdValue).toBe(0);
 
-    setSource(1);
+    source.set(1);
 
     expect(secondValue).toBe(1);
     expect(thirdValue).toBe(1);
@@ -201,16 +201,16 @@ describe("Reactive system - edge cases", () => {
 
   it("flush effects observe one consistent snapshot after multiple writes", () => {
     const rt = createRuntime();
-    const [left, setLeft] = signal(1);
-    const [right, setRight] = signal(10);
+    const left = signal(1);
+    const right = signal(10);
     const snapshots: string[] = [];
 
     effect(() => {
       snapshots.push(`${left()}:${right()}`);
     });
 
-    setLeft(2);
-    setRight(20);
+    left.set(2);
+    right.set(20);
 
     expect(snapshots).toEqual(["1:10"]);
 

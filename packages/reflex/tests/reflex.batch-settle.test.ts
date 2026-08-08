@@ -26,12 +26,12 @@ describe("batch reactive settled deferral", () => {
         },
       },
     });
-    const [, setValue] = signal(0);
+    const value = signal(0);
 
     batch(() => {
-      setValue(1);
-      setValue(2);
-      setValue(3);
+      value.set(1);
+      value.set(2);
+      value.set(3);
     });
 
     expect(settled).toBe(1);
@@ -39,10 +39,10 @@ describe("batch reactive settled deferral", () => {
 
   it("applies writes immediately and exposes fresh reads inside a batch", () => {
     createRuntime();
-    const [value, setValue] = signal(0);
+    const value = signal(0);
 
     batch(() => {
-      setValue(1);
+      value.set(1);
       expect(value()).toBe(1);
     });
   });
@@ -56,12 +56,12 @@ describe("batch reactive settled deferral", () => {
         },
       },
     });
-    const [, setValue] = signal(0);
+    const value = signal(0);
 
     batch(() => {
-      setValue(1);
+      value.set(1);
       batch(() => {
-        setValue(2);
+        value.set(2);
       });
       expect(settled).toBe(0);
     });
@@ -78,18 +78,18 @@ describe("batch reactive settled deferral", () => {
         },
       },
     });
-    const [, setValue] = signal(0);
+    const value = signal(0);
 
     expect(() => {
       batch(() => {
-        setValue(1);
+        value.set(1);
         throw new Error("boom");
       });
     }).toThrow("boom");
 
     expect(settled).toBe(1);
 
-    setValue(2);
+    value.set(2);
 
     expect(settled).toBe(2);
   });
@@ -104,7 +104,7 @@ describe("batch reactive settled deferral", () => {
         },
       },
     });
-    const [value, setValue] = signal(0);
+    const value = signal(0);
 
     effect(() => {
       value();
@@ -112,7 +112,7 @@ describe("batch reactive settled deferral", () => {
     });
     events.length = 0;
 
-    runtime.batch(() => setValue(1));
+    runtime.batch(() => value.set(1));
 
     expect(events).toEqual(["effect", "settled"]);
   });
@@ -127,25 +127,25 @@ describe("batch reactive settled deferral", () => {
         },
       },
     });
-    const [bad, setBad] = signal(0);
-    const [good, setGood] = signal(0);
+    const bad = signal(0);
+    const good = signal(0);
 
     effect(() => {
       if (bad() === 1) throw new Error("flush failed");
     });
     effect(() => good());
 
-    expect(() => runtime.batch(() => setBad(1))).toThrow("flush failed");
+    expect(() => runtime.batch(() => bad.set(1))).toThrow("flush failed");
     expect(runtime.ctx.execution.batchDepth).toBe(0);
 
     const before = settled;
-    setGood(1);
+    good.set(1);
     expect(settled).toBe(before + 1);
   });
 
   it("preserves callback and flush errors in lifecycle order", () => {
     const runtime = createRuntime({ effectStrategy: "eager" });
-    const [source, setSource] = signal(0);
+    const source = signal(0);
     const callbackError = new Error("callback failed");
     const flushError = new Error("flush failed");
 
@@ -156,7 +156,7 @@ describe("batch reactive settled deferral", () => {
     let thrown: unknown;
     try {
       runtime.batch(() => {
-        setSource(1);
+        source.set(1);
         throw callbackError;
       });
     } catch (error) {
@@ -182,14 +182,14 @@ describe("batch reactive settled deferral", () => {
         },
       },
     });
-    const [source, setSource] = signal(0);
+    const source = signal(0);
     effect(() => source());
 
-    expect(() => runtime.batch(() => setSource(1))).toThrow("settled failed");
+    expect(() => runtime.batch(() => source.set(1))).toThrow("settled failed");
     expect(runtime.ctx.execution.batchDepth).toBe(0);
 
     shouldThrow = false;
-    runtime.batch(() => setSource(2));
+    runtime.batch(() => source.set(2));
     expect(settled).toBe(2);
     expect(runtime.ctx.execution.batchDepth).toBe(0);
   });

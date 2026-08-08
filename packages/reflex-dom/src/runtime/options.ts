@@ -10,7 +10,7 @@ import {
 } from "@volynets/reflex-runtime/internal";
 import type { DOMRenderEffectScheduler } from "./render-effect-scheduler";
 import {
-  createEffectScheduler,
+  createRuntimeSchedulerBinding,
   resolveEffectSchedulerMode,
   type EffectStrategy,
 } from "@volynets/reflex-scheduler";
@@ -45,8 +45,11 @@ export function createRendererRuntime(
       policy?.effectPolicy ?? defaults.effectPolicy,
       policy?.priorityLevels ?? defaults.priorityLevels,
     );
-  const scheduler = createEffectScheduler(resolveEffectSchedulerMode(strategy));
   const execution = createRuntimeContext();
+  const scheduler = createRuntimeSchedulerBinding(
+    resolveEffectSchedulerMode(strategy),
+    execution,
+  );
   let runtimeIdle = false;
   let microtaskPending = false;
 
@@ -92,14 +95,16 @@ export function createRendererRuntime(
   configureRuntimeContext(execution, {
     hooks: {
       onNodeInvalidated(node) {
-        scheduler.enqueue(node);
+        scheduler.onNodeInvalidated(node);
         hooks?.onNodeInvalidated?.(node);
       },
       onRuntimeIdle() {
         runtimeIdle = true;
-        scheduler.runtimeNotifySettled?.();
         hooks?.onRuntimeIdle?.();
       },
+    },
+    scheduler: {
+      onHostFlush: scheduler.onHostFlush,
     },
   });
 

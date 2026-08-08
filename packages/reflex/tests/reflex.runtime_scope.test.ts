@@ -1,23 +1,19 @@
 import { describe, expect, it } from "vitest";
-import {
-  createRuntime,
-  effect,
-  signal,
-} from "../src";
+import { createRuntime, effect, flush, signal } from "../src";
 
 describe("Reactive system - runtime", () => {
   it("routes top-level helpers through the latest runtime", () => {
     const first = createRuntime({ effectStrategy: "flush" });
     const second = createRuntime({ effectStrategy: "flush" });
 
-    const [count, setCount] = signal(0);
+    const count = signal(0);
     const seen: number[] = [];
 
     effect(() => {
       seen.push(count());
     });
 
-    setCount(1);
+    count.set(1);
     first.flush();
 
     expect(seen).toEqual([0]);
@@ -29,7 +25,7 @@ describe("Reactive system - runtime", () => {
 
   it("retargets top-level effects when a new default runtime is created", () => {
     const firstDefault = createRuntime({ effectStrategy: "flush" });
-    const [count, setCount] = signal(0);
+    const count = signal(0);
     const seen: number[] = [];
 
     effect(() => {
@@ -40,12 +36,28 @@ describe("Reactive system - runtime", () => {
 
     const secondDefault = createRuntime({ effectStrategy: "flush" });
 
-    setCount(1);
+    count.set(1);
     firstDefault.flush();
 
     expect(seen).toEqual([0]);
 
     secondDefault.flush();
+
+    expect(seen).toEqual([0, 1]);
+  });
+
+  it("keeps queued work reachable when the default runtime is replaced", () => {
+    createRuntime({ effectStrategy: "flush" });
+    const count = signal(0);
+    const seen: number[] = [];
+
+    effect(() => {
+      seen.push(count());
+    });
+    count.set(1);
+
+    createRuntime({ effectStrategy: "flush" });
+    flush();
 
     expect(seen).toEqual([0, 1]);
   });
@@ -69,7 +81,7 @@ describe("Reactive system - runtime", () => {
         },
       },
     });
-    const [firstCount, setFirstCount] = first.batch(() => signal(0));
+    const firstCount = first.batch(() => signal(0));
 
     const second = createRuntime({
       effectStrategy: "flush",
@@ -79,7 +91,7 @@ describe("Reactive system - runtime", () => {
         },
       },
     });
-    const [secondCount, setSecondCount] = second.batch(() => signal(0));
+    const secondCount = second.batch(() => signal(0));
 
     first.batch(() => {
       effect(() => {
@@ -96,14 +108,14 @@ describe("Reactive system - runtime", () => {
     secondSettled.length = 0;
 
     first.batch(() => {
-      setFirstCount(1);
+      firstCount.set(1);
     });
 
     expect(firstSettled).toEqual(["first"]);
     expect(secondSettled).toEqual([]);
 
     second.batch(() => {
-      setSecondCount(1);
+      secondCount.set(1);
     });
 
     expect(firstSettled).toEqual(["first"]);

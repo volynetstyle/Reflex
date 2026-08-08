@@ -7,6 +7,7 @@ export const enum RuntimeState {
   Propagating = 1 << 1,
   Batching = 1 << 2,
   IdlePending = 1 << 3,
+  HostWorkPending = 1 << 4,
 }
 
 const EXECUTION_ACTIVE = RuntimeState.Tracking | RuntimeState.Propagating;
@@ -212,10 +213,15 @@ export function clearRuntimeIdlePending(): void {
   setRuntimeStateFlag(RuntimeState.IdlePending, false);
 }
 
-export function setReactiveBatchState(
-  batchDepth: number,
-  state: number,
-): void {
+export function markHostWorkPending(): void {
+  runtimeState |= RuntimeState.HostWorkPending;
+}
+
+export function clearHostWorkPending(): void {
+  runtimeState &= ~RuntimeState.HostWorkPending;
+}
+
+export function setReactiveBatchState(batchDepth: number, state: number): void {
   reactiveBatchDepth = batchDepth < 0 ? 0 : batchDepth;
   setRuntimeState(state);
 }

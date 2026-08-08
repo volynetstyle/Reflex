@@ -1,14 +1,19 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   Changed,
+  RuntimeState,
   Scheduled,
+  createRuntimeContext,
   createWatcher,
   resetRuntimeContext,
+  runtimeState,
   setPropagationScopeDepth,
   type WatcherNode,
 } from "@volynets/reflex-runtime/internal";
 import {
   Idle,
+  EffectSchedulerMode,
+  createRuntimeSchedulerBinding,
   createEagerScheduler,
   createFlushScheduler,
   createSabScheduler,
@@ -26,6 +31,41 @@ afterEach(() => {
 });
 
 describe("scheduler policies", () => {
+  it("clears a requested host drain after an explicit flush", () => {
+    const scheduler = createRuntimeSchedulerBinding(EffectSchedulerMode.Eager);
+    const node = createWatcher(() => undefined);
+
+    node.state |= Changed;
+    scheduler.onNodeInvalidated(node);
+    expect(runtimeState & RuntimeState.HostWorkPending).toBe(
+      RuntimeState.HostWorkPending,
+    );
+
+    scheduler.flush();
+    expect(runtimeState & RuntimeState.HostWorkPending).toBe(0);
+  });
+
+  it("evaluates SAB settling against its bound runtime context", () => {
+    const context = createRuntimeContext();
+    context.propagationScopeDepth = 1;
+    const scheduler = createRuntimeSchedulerBinding(
+      EffectSchedulerMode.SAB,
+      context,
+    );
+    let runs = 0;
+    const node = createWatcher(() => ++runs);
+
+    scheduler.batch(() => {
+      node.state |= Changed;
+      scheduler.onNodeInvalidated(node);
+    });
+
+    expect(runs).toBe(0);
+    context.propagationScopeDepth = 0;
+    scheduler.batch(() => undefined);
+    expect(runs).toBe(1);
+  });
+
   it("keeps flush-policy work deferred across a batch", () => {
     const scheduler = createFlushScheduler();
     let runs = 0;

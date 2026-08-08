@@ -12,7 +12,6 @@ import { profileRuntimeCounter } from "@runtime/profiling";
 
 import {
   compare as defaultComparator,
-  type ProducerComparator,
 } from "./utils/compare";
 
 /**
@@ -66,7 +65,6 @@ const value = readConsumer(doubled)  // Now returns 10
 export function writeProducer<T>(
   node: ProducerNode<T>,
   value: T,
-  compare: ProducerComparator<T> = defaultComparator,
 ): void {
   profileRuntimeCounter("writeCalls");
 
@@ -74,7 +72,7 @@ export function writeProducer<T>(
 
   // Check if the value actually changed using stable comparison
   // This prevents false invalidation when setting to the same value
-  if (compare(prev, value)) {
+  if (defaultComparator(prev, value)) {
     profileRuntimeCounter("writeSameValue");
     devRecordWriteProducer(node, false, value, prev, undefined, defaultContext);
 

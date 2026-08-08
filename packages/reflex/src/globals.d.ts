@@ -147,7 +147,7 @@ type WritableReadable<T> = WritableReadable<T>;
  *
  * Writable, readable,  reactive value.
  */
-type Signal<T> = WritableReadable<T>;
+type Signal<T> = Accessor<T> & Writable<T>;
 
 /**
  * Cached derived value.

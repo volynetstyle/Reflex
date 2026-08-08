@@ -13,7 +13,7 @@ import { Scheduled } from "@volynets/reflex-runtime";
 describe("Reactive system - effects", () => {
   it("runs once immediately and reruns after flush", () => {
     const rt = createRuntime();
-    const [source, setSource] = signal(1);
+    const source = signal(1);
     const cleanup = vi.fn();
     const spy = vi.fn(() => {
       source();
@@ -24,7 +24,7 @@ describe("Reactive system - effects", () => {
 
     expect(spy).toHaveBeenCalledTimes(1);
 
-    setSource(2);
+    source.set(2);
     expect(spy).toHaveBeenCalledTimes(1);
 
     rt.flush();
@@ -34,14 +34,14 @@ describe("Reactive system - effects", () => {
     scope();
     expect(cleanup).toHaveBeenCalledTimes(2);
 
-    setSource(3);
+    source.set(3);
     rt.flush();
     expect(spy).toHaveBeenCalledTimes(2);
   });
 
   it("flushes eagerly when runtime uses eager strategy", () => {
     createRuntime({ effectStrategy: "eager" });
-    const [source, setSource] = signal(1);
+    const source = signal(1);
     const spy = vi.fn(() => {
       source();
     });
@@ -49,7 +49,7 @@ describe("Reactive system - effects", () => {
     effect(spy);
     expect(spy).toHaveBeenCalledTimes(1);
 
-    setSource(2);
+    source.set(2);
     expect(spy).toHaveBeenCalledTimes(2);
   });
 
@@ -57,7 +57,7 @@ describe("Reactive system - effects", () => {
     const rt = createRuntime({
       effectStrategy: "sab",
     });
-    const [source, setSource] = signal(1);
+    const source = signal(1);
     const spy = vi.fn(() => {
       source();
     });
@@ -66,7 +66,7 @@ describe("Reactive system - effects", () => {
     expect(spy).toHaveBeenCalledTimes(1);
 
     rt.batch(() => {
-      setSource(2);
+      source.set(2);
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
@@ -75,7 +75,7 @@ describe("Reactive system - effects", () => {
 
   it("reruns after transitive memo invalidation on flush", () => {
     const rt = createRuntime();
-    const [source, setSource] = signal(1);
+    const source = signal(1);
     const inner = memo(() => source() + 1);
     const outer = memo(() => inner() + 1);
     const spy = vi.fn(() => {
@@ -85,7 +85,7 @@ describe("Reactive system - effects", () => {
     effect(spy);
     expect(spy).toHaveBeenCalledTimes(1);
 
-    setSource(2);
+    source.set(2);
     expect(spy).toHaveBeenCalledTimes(1);
 
     rt.flush();
@@ -94,7 +94,7 @@ describe("Reactive system - effects", () => {
 
   it("propagates through long linear chains without dropping updates", () => {
     const rt = createRuntime();
-    const [source, setSource] = signal(73);
+    const source = signal(73);
     const tapValues = new Map<number, number>();
 
     let current = source;
@@ -121,7 +121,7 @@ describe("Reactive system - effects", () => {
 
     rt.flush();
 
-    setSource(75);
+    source.set(75);
     rt.flush();
 
     for (const depth of [47, 95, 143, 191]) {
@@ -131,7 +131,7 @@ describe("Reactive system - effects", () => {
 
   it("callable scope disposes the effect", () => {
     const rt = createRuntime();
-    const [source, setSource] = signal(1);
+    const source = signal(1);
     const cleanup = vi.fn();
     const spy = vi.fn(() => {
       source();
@@ -143,7 +143,7 @@ describe("Reactive system - effects", () => {
 
     expect(cleanup).toHaveBeenCalledTimes(1);
 
-    setSource(2);
+    source.set(2);
     rt.flush();
     expect(spy).toHaveBeenCalledTimes(1);
   });
@@ -158,13 +158,13 @@ describe("Reactive system - effects", () => {
         },
       },
     });
-    const [source, setSource] = signal(1);
+    const source = signal(1);
 
     effect(() => {
       source();
     });
 
-    setSource(2);
+    source.set(2);
     expect(invalidations).toBe(1);
 
     rt.flush();
@@ -183,27 +183,27 @@ describe("Reactive system - effects", () => {
 
   it("subscribes to watched selector changes with previous value", () => {
     const rt = createRuntime();
-    const [name, setName] = signal("Ada");
+    const name = signal("Ada");
     const spy = vi.fn();
 
     const stop = watch(() => name()).subscribe(spy);
 
     expect(spy).not.toHaveBeenCalled();
 
-    setName("Grace");
+    name.set("Grace");
     rt.flush();
 
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy).toHaveBeenLastCalledWith("Grace", "Ada");
 
-    setName("Katherine");
+    name.set("Katherine");
     rt.flush();
 
     expect(spy).toHaveBeenCalledTimes(2);
     expect(spy).toHaveBeenLastCalledWith("Katherine", "Grace");
 
     stop();
-    setName("Margaret");
+    name.set("Margaret");
     rt.flush();
 
     expect(spy).toHaveBeenCalledTimes(2);
@@ -211,12 +211,12 @@ describe("Reactive system - effects", () => {
 
   it("subscribes to reaction selector changes with previous value", () => {
     const rt = createRuntime();
-    const [name, setName] = signal("Ada");
+    const name = signal("Ada");
     const spy = vi.fn();
 
     const stop = reaction(() => name()).subscribe(spy);
 
-    setName("Grace");
+    name.set("Grace");
     rt.flush();
 
     expect(spy).toHaveBeenCalledTimes(1);
@@ -227,20 +227,20 @@ describe("Reactive system - effects", () => {
 
   it("does not track reads inside reaction subscribers", () => {
     const rt = createRuntime();
-    const [source, setSource] = signal(0);
-    const [incidental, setIncidental] = signal("a");
+    const source = signal(0);
+    const incidental = signal("a");
     const spy = vi.fn(() => {
       incidental();
     });
 
     reaction(() => source()).subscribe(spy);
 
-    setIncidental("b");
+    incidental.set("b");
     rt.flush();
 
     expect(spy).not.toHaveBeenCalled();
 
-    setSource(1);
+    source.set(1);
     rt.flush();
 
     expect(spy).toHaveBeenCalledTimes(1);
@@ -249,7 +249,7 @@ describe("Reactive system - effects", () => {
 
   it("#48 disposes nested reactions during propagation", () => {
     createRuntime({ effectStrategy: "eager" });
-    const [source, setSource] = signal(0);
+    const source = signal(0);
     const innerSpy = vi.fn();
     let disposeInner: Destructor | undefined;
 
@@ -263,9 +263,9 @@ describe("Reactive system - effects", () => {
       }
     });
 
-    setSource(1);
-    setSource(2);
-    setSource(3);
+    source.set(1);
+    source.set(2);
+    source.set(3);
 
     expect(innerSpy).toHaveBeenCalledTimes(0);
   });

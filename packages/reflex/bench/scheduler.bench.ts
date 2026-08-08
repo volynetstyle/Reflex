@@ -245,9 +245,9 @@ describe("scheduler: public runtime effect strategies", () => {
   function setupRuntime(strategy: "flush" | "sab" | "eager") {
     resetRuntimeContext();
     rt = createRuntime({ effectStrategy: strategy });
-    const [source, writeSource] = signal(0);
+    const source = signal(0);
 
-    setSource = writeSource as Setter;
+    setSource = source.set as Setter;
     checksum = 0;
     disposers = new Array(MANY_EFFECT_COUNT);
 

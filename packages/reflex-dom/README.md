@@ -26,10 +26,10 @@ Create an application and render a component:
 import { createApp, useSignal } from "@volynets/reflex-dom";
 
 function Counter() {
-  const [count, setCount] = useSignal(0);
+  const count = useSignal(0);
 
   return (
-    <button onClick={() => setCount((value) => value + 1)}>
+    <button onClick={() => count((value) => value + 1)}>
       count: {count}
     </button>
   );

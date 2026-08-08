@@ -5,9 +5,13 @@ import {
   propagationScopeDepth,
   readPropagateStackStats,
   emitSettledIfIdle,
+  configureRuntimeContext,
+  enterReactiveBatch,
   readConsumer,
   readProducer,
+  leaveReactiveBatch,
   runWatcher,
+  requestHostFlush,
   writeProducer,
 } from "../../../src/internal";
 import {
@@ -35,6 +39,50 @@ describe("Reactive runtime - hooks and resilience", () => {
     emitSettledIfIdle();
 
     expect(settled).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs the host flush hook only after work is requested", () => {
+    const events: string[] = [];
+
+    configureRuntimeContext({
+      hooks: {
+        onRuntimeIdle() {
+          events.push("idle");
+        },
+      },
+      scheduler: {
+        onHostFlush() {
+          events.push("flush");
+        },
+      },
+    });
+
+    emitSettledIfIdle();
+    expect(events).toEqual(["idle"]);
+
+    requestHostFlush();
+    emitSettledIfIdle();
+    expect(events).toEqual(["idle", "flush", "idle"]);
+
+    emitSettledIfIdle();
+    expect(events).toEqual(["idle", "flush", "idle", "idle"]);
+  });
+
+  it("defers requested host work to the outer batch boundary", () => {
+    const flush = vi.fn();
+
+    configureRuntimeContext({
+      scheduler: { onHostFlush: flush },
+    });
+
+    enterReactiveBatch();
+    requestHostFlush();
+    emitSettledIfIdle();
+
+    expect(flush).not.toHaveBeenCalled();
+
+    leaveReactiveBatch();
+    expect(flush).toHaveBeenCalledTimes(1);
   });
 
   it("does not fire settled for plain recomputes without propagation", () => {
@@ -193,8 +241,4 @@ describe("Reactive runtime - hooks and resilience", () => {
     expect(cleanup).toHaveBeenCalledTimes(2);
     expect(watcher.state & DIRTY_STATE).toBe(0);
   });
-
 });
-
-
-

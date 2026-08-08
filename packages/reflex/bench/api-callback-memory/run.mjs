@@ -96,7 +96,7 @@ function makeIndexedCallback(readSource, index) {
 
 function createGraph(kind, variant, count) {
   const runtime = createRuntime({ effectStrategy: "flush" });
-  const [readSource, setSource] = signal(0);
+  const readSource = signal(0);
   const sharedState = { value: 0, callback: null };
   const state = { checksum: 0 };
   sharedState.callback = () => readSource();
@@ -124,7 +124,6 @@ function createGraph(kind, variant, count) {
   return {
     runtime,
     readSource,
-    setSource,
     sharedState,
     state,
     nodes,
@@ -158,7 +157,7 @@ function measurePropagation(kind, variant, count, trials) {
   const graphs = Array.from({ length: trials }, () => {
     const graph = createGraph(kind, variant, count);
     if (kind === "computed") readComputedGraph(graph);
-    graph.setSource(1);
+    graph.readSource.set(1);
     return graph;
   });
   const elapsed = measureTrials(trials, (trial) => {
@@ -171,7 +170,7 @@ function measurePropagation(kind, variant, count, trials) {
 function measureDisposal(variant, count, trials) {
   const graphs = Array.from({ length: trials }, () => {
     const graph = createGraph("effects", variant, count);
-    graph.setSource(1);
+    graph.readSource.set(1);
     executeEffects(graph);
     return graph;
   });
@@ -203,7 +202,7 @@ function runChild(options) {
     const graph = createGraph(kind, variant, count);
     if (kind === "computed") readComputedGraph(graph);
     else {
-      graph.setSource(1);
+      graph.readSource.set(1);
       executeEffects(graph);
     }
     graph.nodes.length = 0;
@@ -227,7 +226,7 @@ function runChild(options) {
 
   let nextValue = 1;
   const writeMs = measureTrials(trials, () => {
-    graph.setSource(nextValue);
+    graph.readSource.set(nextValue);
     nextValue += 1;
   });
   const finalSourceValue = nextValue - 1;

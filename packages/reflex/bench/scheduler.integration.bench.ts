@@ -14,10 +14,10 @@ import {
   createWatcherNode,
 } from "../src/infra/factory";
 import {
-  createEffectScheduler,
+  createRuntimeSchedulerBinding,
   EffectSchedulerMode,
-  type EffectScheduler,
-} from "../src/policy/scheduler";
+  type RuntimeSchedulerBinding,
+} from "@volynets/reflex-scheduler";
 import { blackhole } from "./shared";
 
 const WATCHER_COUNT = 512;
@@ -88,17 +88,16 @@ function createSchedulerController(
   label: Exclude<SchedulerVariant, "runtime-direct">,
   mode: EffectSchedulerMode,
 ): DrainController {
-  const scheduler: EffectScheduler = createEffectScheduler(mode);
+  const scheduler: RuntimeSchedulerBinding =
+    createRuntimeSchedulerBinding(mode);
 
   configureRuntimeContext({
     hooks: {
       onNodeInvalidated(node) {
-        scheduler.enqueue(node);
-      },
-      onRuntimeIdle() {
-        scheduler.runtimeNotifySettled?.();
+        scheduler.onNodeInvalidated(node);
       },
     },
+    scheduler: { onHostFlush: scheduler.onHostFlush },
   });
 
   return {
@@ -110,8 +109,8 @@ function createSchedulerController(
       scheduler.flush();
     },
     dispose() {
-      scheduler.reset();
-      configureRuntimeContext({ hooks: {} });
+      scheduler.flush();
+      configureRuntimeContext({ hooks: {}, scheduler: {} });
     },
   };
 }

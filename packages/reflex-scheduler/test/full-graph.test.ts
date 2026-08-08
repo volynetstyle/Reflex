@@ -11,19 +11,20 @@ import {
   writeProducer,
 } from "@volynets/reflex-runtime/internal";
 import {
-  createEagerScheduler,
-  createFlushScheduler,
-  createSabScheduler,
-  type EffectScheduler,
+  createRuntimeSchedulerBinding,
+  EffectSchedulerMode,
+  type RuntimeSchedulerBinding,
 } from "../src";
 
 const SOURCE_COUNT = 32;
 
-function createGraph(scheduler: EffectScheduler) {
+function createGraph(scheduler: RuntimeSchedulerBinding) {
   configureRuntimeContext({
     hooks: {
-      onNodeInvalidated: scheduler.enqueue,
-      onRuntimeIdle: scheduler.runtimeNotifySettled,
+      onNodeInvalidated: scheduler.onNodeInvalidated,
+    },
+    scheduler: {
+      onHostFlush: scheduler.onHostFlush,
     },
   });
 
@@ -59,12 +60,12 @@ function createGraph(scheduler: EffectScheduler) {
 afterEach(() => resetRuntimeContext());
 
 describe.each([
-  ["flush", createFlushScheduler],
-  ["eager", createEagerScheduler],
-  ["sab", createSabScheduler],
-] as const)("%s scheduler full graph", (_name, createScheduler) => {
+  ["flush", EffectSchedulerMode.Flush],
+  ["eager", EffectSchedulerMode.Eager],
+  ["sab", EffectSchedulerMode.SAB],
+] as const)("%s scheduler full graph", (_name, mode) => {
   it("dedupes writes from one source inside an outer batch", () => {
-    const scheduler = createScheduler();
+    const scheduler = createRuntimeSchedulerBinding(mode);
     const graph = createGraph(scheduler);
     const initialRuns = graph.effectRuns();
 
@@ -80,7 +81,7 @@ describe.each([
   });
 
   it("keeps the graph correct for rotating dirty sources", () => {
-    const scheduler = createScheduler();
+    const scheduler = createRuntimeSchedulerBinding(mode);
     const graph = createGraph(scheduler);
 
     for (let iteration = 0; iteration < SOURCE_COUNT * 2; iteration += 1) {
@@ -92,7 +93,7 @@ describe.each([
   });
 
   it("allows a final pull read while watcher work is still queued", () => {
-    const scheduler = createScheduler();
+    const scheduler = createRuntimeSchedulerBinding(mode);
     const graph = createGraph(scheduler);
 
     graph.write(0, 500);

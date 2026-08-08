@@ -35,7 +35,14 @@ export function leaveReactiveBatch(): void {
 }
 
 export function flushPendingRuntimeIdle(): void {
-  if (runtimeState !== RuntimeState.IdlePending) return;
+  const blockingState =
+    RuntimeState.Tracking | RuntimeState.Propagating | RuntimeState.Batching;
+
+  if (
+    (runtimeState & RuntimeState.IdlePending) === RuntimeState.Idle ||
+    (runtimeState & blockingState) !== RuntimeState.Idle
+  )
+    return;
 
   clearRuntimeIdlePending();
   emitRuntimeIdle();

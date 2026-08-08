@@ -116,13 +116,13 @@ describe("Reactive system - unstable optimistic invariants", () => {
 
   it("restores the latest derived fallback once the optimistic layer clears", async () => {
     createRuntime();
-    const [source, setSource] = signal(1);
+    const source = signal(1);
     const [state, setState] = optimistic<number>(() => source() + 1);
     const task = deferred<void>();
 
     const pending = transition(async () => {
       setState(99);
-      setSource(4);
+      source.set(4);
 
       expect(state()).toBe(99);
 
@@ -196,13 +196,13 @@ describe("Reactive system - unstable optimistic invariants", () => {
 
   it("keeps showing the override while the base changes underneath it", async () => {
     createRuntime();
-    const [base, setBase] = signal(1);
+    const base = signal(1);
     const [state, setState] = optimistic(() => base());
     const task = deferred<void>();
 
     const pending = transition(async () => {
       setState(5);
-      setBase(2);
+      base.set(2);
 
       expect(state()).toBe(5);
 
@@ -219,7 +219,7 @@ describe("Reactive system - unstable optimistic invariants", () => {
 
   it("does not emit an extra notification when the base catches up to the active override", async () => {
     const rt = createRuntime();
-    const [base, setBase] = signal(1);
+    const base = signal(1);
     const [state, setState] = optimistic(() => base());
     const task = deferred<void>();
     const seen: number[] = [];
@@ -234,7 +234,7 @@ describe("Reactive system - unstable optimistic invariants", () => {
 
       expect(seen).toEqual([1, 5]);
 
-      setBase(5);
+      base.set(5);
       rt.flush();
 
       expect(state()).toBe(5);
@@ -320,5 +320,4 @@ describe("Reactive system - unstable optimistic invariants", () => {
 
     expect(state()).toBe(0);
   });
-
 });

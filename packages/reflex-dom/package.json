@@ -41,7 +41,7 @@
                       },
     "scripts":  {
                     "clean":  "node -e \"require(\u0027node:fs\u0027).rmSync(\u0027build\u0027,{recursive:true,force:true});require(\u0027node:fs\u0027).rmSync(\u0027dist\u0027,{recursive:true,force:true})\"",
-                    "build:dependencies":  "pnpm --filter @volynets/reflex-runtime build \u0026\u0026 pnpm --filter @volynets/reflex-framework build",
+                    "build:dependencies":  "pnpm --filter @volynets/reflex-runtime build \u0026\u0026 pnpm --filter @volynets/reflex-scheduler build \u0026\u0026 pnpm --filter @volynets/reflex-framework build",
                     "build:modules":  "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json \u0026\u0026 node ../../scripts/fix-esm-specifiers.mjs dist",
                     "build:bundle":  "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc \u0026\u0026 node ./scripts/finalize-standalone.mjs",
                     "build":  "pnpm clean \u0026\u0026 pnpm build:dependencies \u0026\u0026 pnpm build:modules \u0026\u0026 pnpm build:bundle",

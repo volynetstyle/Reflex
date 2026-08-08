@@ -158,8 +158,8 @@ function cycleStatus(status: DemoTaskStatus): DemoTaskStatus {
 }
 
 const createOwnershipModel = createModel((ctx) => {
-  const [beat, setBeat] = signal(0);
-  own(ctx, createHeartbeat(setBeat) as { [Symbol.dispose](): void });
+  const beat = signal(0);
+  own(ctx, createHeartbeat(beat.set) as { [Symbol.dispose](): void });
 
   const badge = memo(() => `Owned heartbeat / ${beat()} ticks`);
 
@@ -167,7 +167,7 @@ const createOwnershipModel = createModel((ctx) => {
     badge,
     beat,
     ping: ctx.action(() => {
-      setBeat((value) => value + 1);
+      beat.set((value) => value + 1);
     }),
   };
 });
@@ -184,18 +184,14 @@ export function createDemoApp() {
     ownership[Symbol.dispose]!();
   });
 
-  const [tasks, setTasks] = signal([...demoTasks]);
-  const [selectedId, setSelectedId] = signal(demoTasks[0]?.id ?? "");
-  const [filterMode, setFilterMode] = signal<DemoFilterMode>("all");
-  const [searchQuery, setSearchQuery] = signal("");
-  const [editorValue, setEditorValue] = signal(demoTasks[0]?.title ?? "");
-  const [flushCount, setFlushCount] = signal(0);
-  const [firstSystemTrace, setFirstSystemTrace] = signal(
-    "Waiting for the first scheduled trace.",
-  );
-  const [saveState, setSaveState] = signal<"idle" | "saving" | "settled">(
-    "idle",
-  );
+  const tasks = signal([...demoTasks]);
+  const selectedId = signal(demoTasks[0]?.id ?? "");
+  const filterMode = signal<DemoFilterMode>("all");
+  const searchQuery = signal("");
+  const editorValue = signal(demoTasks[0]?.title ?? "");
+  const flushCount = signal(0);
+  const firstSystemTrace = signal("Waiting for the first scheduled trace.");
+  const saveState = signal<"idle" | "saving" | "settled">("idle");
 
   const commandBus = event<ActivityDraft>();
   const systemBus = event<ActivityDraft>();
@@ -225,7 +221,7 @@ export function createDemoApp() {
       [createActivity(nextActivityId++, draft), ...feed].slice(0, 18),
   );
   const stopSystemProbe = subscribeOnce(systemLabels, (label) => {
-    setFirstSystemTrace(label);
+    firstSystemTrace.set(label);
   });
 
   registerCleanup(disposeLatestLabel);
@@ -411,8 +407,8 @@ export function createDemoApp() {
 
   function selectTask(id: string): void {
     const next = tasks().find((task) => task.id === id);
-    setSelectedId(id);
-    setEditorValue(next?.title ?? "");
+    selectedId.set(id);
+    editorValue.set(next?.title ?? "");
 
     logCommand({
       kind: "command",
@@ -423,7 +419,7 @@ export function createDemoApp() {
   }
 
   function setFilter(mode: DemoFilterMode): void {
-    setFilterMode(mode);
+    filterMode.set(mode);
     logCommand({
       kind: "command",
       label: `Filter switched to ${mode}`,
@@ -433,7 +429,7 @@ export function createDemoApp() {
   }
 
   function updateSearch(value: string): void {
-    setSearchQuery(value);
+    searchQuery.set(value);
     logCommand({
       kind: "command",
       label: `Search changed to ${value || "empty"}`,
@@ -447,7 +443,7 @@ export function createDemoApp() {
     if (!current) return;
 
     const nextStatus = cycleStatus(current.status);
-    setTasks((entries) =>
+    tasks.set((entries) =>
       entries.map((task) =>
         task.id === current.id ? { ...task, status: nextStatus } : task,
       ),
@@ -463,9 +459,9 @@ export function createDemoApp() {
 
   function runBatchScenario(): void {
     batch(() => {
-      setFilterMode("focus");
-      setSearchQuery("sync");
-      setTasks((entries) =>
+      filterMode.set("focus");
+      searchQuery.set("sync");
+      tasks.set((entries) =>
         entries.map((task, index) =>
           index === 0
             ? {
@@ -498,7 +494,7 @@ export function createDemoApp() {
   }
 
   function flushScheduler(): void {
-    setFlushCount((count) => count + 1);
+    flushCount.set((count) => count + 1);
     flush();
 
     systemBus.emit({
@@ -516,7 +512,7 @@ export function createDemoApp() {
     }
 
     const nextTitle = editorValue().trim() || current.title;
-    setSaveState("saving");
+    saveState.set("saving");
 
     logCommand({
       kind: "save",
@@ -531,7 +527,7 @@ export function createDemoApp() {
         reactiveTools.setOptimisticTitle(nextTitle);
         await wait(900);
 
-        setTasks((entries) =>
+        tasks.set((entries) =>
           entries.map((task) =>
             task.id === current.id
               ? {
@@ -543,7 +539,7 @@ export function createDemoApp() {
           ),
         );
 
-        setSaveState("settled");
+        saveState.set("settled");
         logCommand({
           kind: "save",
           label: `Committed ${current.id}`,
@@ -553,7 +549,7 @@ export function createDemoApp() {
         });
 
         await Promise.resolve();
-        setSaveState("idle");
+        saveState.set("idle");
       }),
     );
   }
@@ -592,7 +588,7 @@ export function createDemoApp() {
     runBatchScenario,
     saveSelectedTitle,
     selectTask,
-    setEditorValue,
+    setEditorValue: editorValue.set,
     setFilterMode: setFilter,
     setSearchQuery: updateSearch,
   };

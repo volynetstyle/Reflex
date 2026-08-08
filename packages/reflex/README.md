@@ -26,14 +26,14 @@ npm install @volynets/reflex
 import { computed, createRuntime, effect, signal } from "@volynets/reflex";
 
 const runtime = createRuntime();
-const [count, setCount] = signal(0);
+const count = signal(0);
 const doubled = computed(() => count() * 2);
 
 const stop = effect(() => {
   console.log(doubled());
 });
 
-setCount(1);
+count.set(1);
 runtime.flush(); // logs 2
 
 stop();

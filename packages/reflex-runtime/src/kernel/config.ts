@@ -7,6 +7,12 @@ import {
   leaveRuntimeHook,
   readRuntimePhase,
 } from "./execution";
+import {
+  clearHostWorkPending,
+  markHostWorkPending,
+  RuntimeState,
+  runtimeState,
+} from "./state";
 import type { ReactiveEdge, ReactiveNode } from "./shape";
 import { reuseIncomingEdgeFromSuffixOrCreate } from "./shape/graph";
 
@@ -48,10 +54,16 @@ export interface RuntimeHooks {
   onRuntimeIdle?(): void;
 }
 
+export interface RuntimeSchedulerHooks {
+  /** Synchronous host drain requested by an enqueue-only invalidation hook. */
+  onHostFlush?(): void;
+}
+
 export type RuntimeHostHooks = RuntimeHooks;
 
 export type NodeInvalidatedHook = RuntimeHooks["onNodeInvalidated"];
 export type RuntimeIdleHook = RuntimeHooks["onRuntimeIdle"];
+export type HostFlushHook = RuntimeSchedulerHooks["onHostFlush"];
 
 // eslint-disable-next-line no-var
 export var nodeInvalidatedHook: NodeInvalidatedHook = undefined;
@@ -63,6 +75,9 @@ export var CAN_CALL_EMIT_NODE_INVALIDATED_HOOK =
 // eslint-disable-next-line no-var
 export var runtimeIdleHook: RuntimeIdleHook = undefined;
 
+// eslint-disable-next-line no-var
+export var hostFlushHook: HostFlushHook = undefined;
+
 // #endregion
 
 // #region Runtime configuration
@@ -71,6 +86,7 @@ export interface RuntimeConfiguration {
   readTrackingStrategy: ReadTrackingStrategy;
   nodeInvalidatedHook: NodeInvalidatedHook;
   runtimeIdleHook: RuntimeIdleHook;
+  hostFlushHook: HostFlushHook;
 }
 
 export interface RuntimeConfigurationOptions {
@@ -83,6 +99,7 @@ export function saveRuntimeConfiguration(
   configuration.readTrackingStrategy = readTrackingStrategy;
   configuration.nodeInvalidatedHook = nodeInvalidatedHook;
   configuration.runtimeIdleHook = runtimeIdleHook;
+  configuration.hostFlushHook = hostFlushHook;
 }
 
 export function restoreRuntimeConfiguration(
@@ -93,6 +110,7 @@ export function restoreRuntimeConfiguration(
 
   nodeInvalidatedHook = configuration.nodeInvalidatedHook;
   runtimeIdleHook = configuration.runtimeIdleHook;
+  hostFlushHook = configuration.hostFlushHook;
 }
 
 // #endregion
@@ -141,9 +159,32 @@ export var emitNodeInvalidated = !__DEV__
 
 export function emitRuntimeIdle(): void {
   profileRuntimeCounter("contextSettledEmits");
+
+  if ((runtimeState & RuntimeState.HostWorkPending) !== RuntimeState.Idle) {
+    const flush = hostFlushHook;
+
+    try {
+      if (flush !== undefined) callIdleHostHook("onHostFlush", flush);
+    } finally {
+      clearHostWorkPending();
+    }
+  }
+
   const hook = runtimeIdleHook;
   if (hook === undefined) return;
 
+  callIdleHostHook("onRuntimeIdle", hook);
+}
+
+export function requestHostFlush(): void {
+  markHostWorkPending();
+}
+
+export function cancelHostFlushRequest(): void {
+  clearHostWorkPending();
+}
+
+function callIdleHostHook(name: string, hook: () => void): void {
   if (!__DEV__) {
     hook();
     return;
@@ -153,14 +194,10 @@ export function emitRuntimeIdle(): void {
   const phaseBefore = before.phase;
   const depthBefore = before.depth;
 
-  enterRuntimeHook("onRuntimeIdle");
+  enterRuntimeHook(name);
   try {
     hook();
-    devAssertRuntimeHookDidNotReenter(
-      "onRuntimeIdle",
-      phaseBefore,
-      depthBefore,
-    );
+    devAssertRuntimeHookDidNotReenter(name, phaseBefore, depthBefore);
   } finally {
     leaveRuntimeHook();
   }

@@ -10,51 +10,51 @@ describe("Reactive system - basic correctness", () => {
   });
 
   it("returns the initial signal value", () => {
-    const [value] = signal(42);
+    const value = signal(42);
     expect(value()).toBe(42);
+    expect(Array.isArray(value)).toBe(false);
+    expect(Symbol.iterator in value).toBe(false);
   });
 
   it("derives computed values from signals", () => {
-    const [value] = signal(7);
+    const value = signal(7);
     const double = computed(() => value() * 2);
 
     expect(double()).toBe(14);
   });
 
   it("updates computed values after a signal write", () => {
-    const [count, setCount] = signal(1);
+    const count = signal(1);
     const next = computed(() => count() + 1);
 
     expect(next()).toBe(2);
-    setCount(10);
+    count.set(10);
     expect(next()).toBe(11);
   });
 
   it("supports updater functions", () => {
-    const [count, setCount] = signal(2);
+    const count = signal(2);
 
-    setCount((prev: number) => prev + 3);
+    count.set((prev: number) => prev + 3);
 
-    // new: set count return nothing
-    // expect(setCount((prev) => prev + 3)).toBe(5);
     expect(count()).toBe(5);
   });
 
   it("allows empty writes when undefined is part of the signal type", () => {
-    const [value, setValue] = signal<number | undefined>(1);
+    const value = signal<number | undefined>(1);
 
-    expect(setValue()).toBeUndefined();
+    expect(value.set()).toBeUndefined();
     expect(value()).toBeUndefined();
   });
 
   it("keeps only the last of multiple writes before the next read", () => {
-    const [value, setValue] = signal(0);
+    const value = signal(0);
     const view = computed(() => value());
 
-    setValue(1);
-    setValue(7);
-    setValue(3);
-    setValue(8);
+    value.set(1);
+    value.set(7);
+    value.set(3);
+    value.set(8);
 
     expect(view()).toBe(8);
   });

@@ -292,12 +292,12 @@ export function transition<T>(fn: () => T | PromiseLike<T>): T | Promise<T> {
  *
  * createRuntime();
  *
- * const [serverCount, setServerCount] = signal(1);
+ * const serverCount = signal(1);
  * const [count, setCount] = optimistic(() => serverCount());
  *
  * await transition(async () => {
  *   setCount(99);
- *   setServerCount(2);
+ *   serverCount.set(2);
  *
  *   console.log(count()); // 99
  *   await Promise.resolve();

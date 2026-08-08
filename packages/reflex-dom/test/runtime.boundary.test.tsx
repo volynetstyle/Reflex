@@ -11,8 +11,10 @@ describe("runtime / DOM boundary", () => {
     const rightContainer = document.createElement("div");
 
     function Counter() {
-      const [count, setCount] = useSignal(0);
-      return <button onClick={() => setCount((value) => value + 1)}>{count}</button>;
+      const count = useSignal(0);
+      return (
+        <button onClick={() => count((value) => value + 1)}>{count}</button>
+      );
     }
 
     left.render(<Counter />, leftContainer);
@@ -29,12 +31,12 @@ describe("runtime / DOM boundary", () => {
     const log: string[] = [];
 
     function View() {
-      const [count, setCount] = useSignal(0);
+      const count = useSignal(0);
       useEffectRender(() => {
         count();
         log.push(container.textContent ?? "");
       });
-      return <button onClick={() => setCount(1)}>{count}</button>;
+      return <button onClick={() => count(1)}>{count}</button>;
     }
 
     app.render(<View />, container);

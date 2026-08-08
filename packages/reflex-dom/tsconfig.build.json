@@ -12,10 +12,11 @@
       ],
       "@volynets/reflex-runtime": [
         "../reflex-runtime/dist/esm/src/index.d.ts"
-      ]
-      ,"@volynets/reflex-runtime/internal": [
+      ],
+      "@volynets/reflex-runtime/internal": [
         "../reflex-runtime/dist/esm/src/internal/index.d.ts"
-      ]
+      ],
+      "@volynets/reflex-scheduler": ["../reflex-scheduler/dist/index.d.ts"]
     },
     "rootDir": "src",
     "outDir": "dist",

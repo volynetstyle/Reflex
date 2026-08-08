@@ -28,7 +28,11 @@ export function leavePropagationScope(): void {
   profileRuntimeCounter("contextPropagationLeave");
 
   if (!leavePropagationScopeRegister()) {
-    if (propagationScopeDepth === 0 && runtimeIdleHook !== undefined) {
+    if (
+      propagationScopeDepth === 0 &&
+      (runtimeIdleHook !== undefined ||
+        (runtimeState & RuntimeState.HostWorkPending) !== RuntimeState.Idle)
+    ) {
       markRuntimeIdlePending();
     }
     return;
@@ -37,7 +41,13 @@ export function leavePropagationScope(): void {
   // Low-level runtimes commonly have no host settlement hook. Keep profile
   // counters and development debug events intact while avoiding the batching
   // dispatcher on the production no-hook path.
-  if (!IS_DEV && !__PROFILE__ && runtimeIdleHook === undefined) return;
+  if (
+    !IS_DEV &&
+    !__PROFILE__ &&
+    runtimeIdleHook === undefined &&
+    (runtimeState & RuntimeState.HostWorkPending) === RuntimeState.Idle
+  )
+    return;
 
   emitRuntimeIdleWithBatching();
 }
@@ -52,12 +62,22 @@ export function abortPropagationScope(): void {
 export function emitSettledIfIdle(): void {
   profileRuntimeCounter("contextSettledChecks");
 
-  if (!IS_DEV && !__PROFILE__ && runtimeIdleHook === undefined) return;
+  if (
+    !IS_DEV &&
+    !__PROFILE__ &&
+    runtimeIdleHook === undefined &&
+    (runtimeState & RuntimeState.HostWorkPending) === RuntimeState.Idle
+  )
+    return;
   if (
     (runtimeState & (RuntimeState.Tracking | RuntimeState.Propagating)) !==
     RuntimeState.Idle
   ) {
-    if (propagationScopeDepth === 0 && runtimeIdleHook !== undefined) {
+    if (
+      propagationScopeDepth === 0 &&
+      (runtimeIdleHook !== undefined ||
+        (runtimeState & RuntimeState.HostWorkPending) !== RuntimeState.Idle)
+    ) {
       markRuntimeIdlePending();
     }
     return;

@@ -1,4 +1,4 @@
-import { alienVariant, reflexVariant } from "./harnesses";
+import { reflexVariant } from "./harnesses";
 import { registerBenchFile } from "./shared";
 
 registerBenchFile("reflex", [reflexVariant]);

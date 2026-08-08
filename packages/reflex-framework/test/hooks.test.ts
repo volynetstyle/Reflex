@@ -50,7 +50,7 @@ describe("framework hooks", () => {
 
   it("exposes signal state through useSignal and reacts through useEffect", () => {
     const runtime = createRuntimeHarness();
-    const [count, setCount] = runtime.run(() => useSignal(1));
+    const count = runtime.run(() => useSignal(1));
     const values: number[] = [];
 
     const dispose = runtime.run(() =>
@@ -61,13 +61,13 @@ describe("framework hooks", () => {
 
     expect(values).toEqual([1]);
 
-    runtime.run(() => setCount(2));
+    runtime.run(() => count(2));
 
     expect(values).toEqual([1, 2]);
 
     dispose();
 
-    runtime.run(() => setCount(3));
+    runtime.run(() => count(3));
 
     expect(values).toEqual([1, 2]);
   });
