@@ -13,6 +13,8 @@
     "bench:tracking-factorial": "pnpm --filter @volynets/reflex-runtime build:ts && pnpm --filter @volynets/reflex-runtime exec rollup --silent -c rollup.tracking-factorial.config.ts --configPlugin @rollup/plugin-swc && node scripts/compare-tracking-tiers-factorial.mjs",
     "bench:tracking-tier-profile": "pnpm --filter @volynets/reflex-runtime build:ts && pnpm --filter @volynets/reflex-runtime exec rollup --silent -c rollup.tracking-tier-profile.config.ts --configPlugin @rollup/plugin-swc && node scripts/profile-tracking-tier-substitution.mjs",
     "bench:compare": "pnpm exec ts-node --esm scripts/compare-benchmark-results.ts",
+    "bench:quality-gate": "pnpm exec ts-node --esm scripts/benchmark-quality-gate.ts",
+    "bench:history": "pnpm exec ts-node --esm scripts/benchmark-history.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "pnpm -r typecheck",

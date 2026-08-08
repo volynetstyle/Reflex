@@ -1,33 +1,42 @@
-name: Runtime Benchmarks
+name: Benchmark Quality Gate
 
 on:
   workflow_dispatch:
+    inputs:
+      base:
+        description: Baseline revision
+        required: false
+        default: main
   pull_request:
     paths:
       - .github/workflows/runtime-benchmarks.yml
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
-      - scripts/collect-benchmark-results.ts
-      - scripts/compare-benchmark-results.ts
+      - scripts/benchmark-quality-gate.ts
+      - scripts/benchmark-history.ts
       - packages/reflex-runtime/**
+      - packages/reflex-scheduler/**
+      - packages/reflex/**
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - .github/workflows/runtime-benchmarks.yml
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
-      - scripts/collect-benchmark-results.ts
-      - scripts/compare-benchmark-results.ts
+      - scripts/benchmark-quality-gate.ts
+      - scripts/benchmark-history.ts
       - packages/reflex-runtime/**
+      - packages/reflex-scheduler/**
+      - packages/reflex/**
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
-  group: runtime-benchmarks-${{ github.event.pull_request.number || github.ref }}
+  group: benchmarks-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 defaults:
@@ -35,39 +44,229 @@ defaults:
     shell: bash
 
 jobs:
-  bench:
-    name: runtime taxonomy
+  benchmark:
+    name: ${{ matrix.suite }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: reflex-runtime
+            package: "@volynets/reflex-runtime"
+            files: test/perf/runtime-taxonomy.bench.ts
+            protocol: packages/reflex-runtime/test/perf/runtime-taxonomy.bench.ts packages/reflex-runtime/test/runtime.test_utils.ts packages/reflex-runtime/vite.config.ts
+          - suite: reflex-scheduler
+            package: "@volynets/reflex-scheduler"
+            files: bench/hot-path.bench.ts bench/full-graph.bench.ts
+            protocol: packages/reflex-scheduler/bench/hot-path.bench.ts packages/reflex-scheduler/bench/full-graph.bench.ts packages/reflex-scheduler/vite.config.ts
+          - suite: reflex
+            package: "@volynets/reflex"
+            files: bench/reflex.bench.ts
+            protocol: packages/reflex/bench/reflex.bench.ts packages/reflex/bench/shared.ts packages/reflex/bench/harnesses.ts packages/reflex/vite.config.ts
 
     steps:
-      - name: Checkout
+      - name: Resolve revisions
+        id: revisions
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_REPOSITORY_ID: ${{ github.event.pull_request.head.repo.id }}
+          PUSH_BASE: ${{ github.event.before }}
+          DISPATCH_BASE: ${{ inputs.base }}
+          REPOSITORY_ID: ${{ github.repository_id }}
+        run: |
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            echo "base=$PR_BASE" >> "$GITHUB_OUTPUT"
+            echo "head=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+            echo "scope=$PR_HEAD_REPOSITORY_ID:pr-$PR_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "head_repository_id=$PR_HEAD_REPOSITORY_ID" >> "$GITHUB_OUTPUT"
+          elif [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "base=$DISPATCH_BASE" >> "$GITHUB_OUTPUT"
+            echo "head=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+            echo "scope=$REPOSITORY_ID:branch-$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+            echo "head_repository_id=$REPOSITORY_ID" >> "$GITHUB_OUTPUT"
+          elif [[ "$EVENT_NAME" == "push" && ! "$PUSH_BASE" =~ ^0+$ ]]; then
+            echo "base=$PUSH_BASE" >> "$GITHUB_OUTPUT"
+            echo "head=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+            echo "scope=$REPOSITORY_ID:branch-$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+            echo "head_repository_id=$REPOSITORY_ID" >> "$GITHUB_OUTPUT"
+          else
+            echo "Cannot determine a baseline for event $EVENT_NAME"
+            exit 1
+          fi
+
+      - name: Checkout base
         uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.revisions.outputs.base }}
+          path: base
+
+      - name: Checkout head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.revisions.outputs.head }}
+          path: head
+
+      - name: Read head commit timestamp
+        id: commit
+        working-directory: head
+        run: echo "timestamp=$(git show -s --format=%cI HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Verify fixed benchmark protocol
+        id: protocol
+        env:
+          PROTOCOL_FILES: ${{ matrix.protocol }}
+        run: |
+          for file in $PROTOCOL_FILES; do
+            if ! cmp --silent "base/$file" "head/$file"; then
+              echo "Benchmark protocol changed between base and head: $file"
+              echo "Performance comparison requires an identical workload and harness."
+              exit 1
+            fi
+          done
+          protocol_hash=$(
+            for file in $PROTOCOL_FILES; do
+              git -C head hash-object "$file"
+            done | sha256sum | cut -d ' ' -f 1
+          )
+          echo "hash=$protocol_hash" >> "$GITHUB_OUTPUT"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          package_json_file: head/package.json
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
+          cache-dependency-path: |
+            base/pnpm-lock.yaml
+            head/pnpm-lock.yaml
 
-      - name: Install dependencies
+      - name: Install base dependencies
+        working-directory: base
         run: pnpm install --frozen-lockfile
 
-      - name: Collect runtime benchmark JSON
-        run: pnpm bench:runtime:json
+      - name: Install head dependencies
+        working-directory: head
+        run: pnpm install --frozen-lockfile
 
-      - name: Compare runtime benchmark JSON
-        run: pnpm bench:compare
+      - name: Read tool versions
+        id: tools
+        run: |
+          base_vitest=$(cd base && pnpm --filter '${{ matrix.package }}' exec vitest --version)
+          head_vitest=$(cd head && pnpm --filter '${{ matrix.package }}' exec vitest --version)
+          if [[ "$base_vitest" != "$head_vitest" ]]; then
+            echo "Vitest version differs between base and head: $base_vitest != $head_vitest"
+            exit 1
+          fi
+          echo "vitest=$head_vitest" >> "$GITHUB_OUTPUT"
+          echo "pnpm=$(pnpm --version)" >> "$GITHUB_OUTPUT"
 
-      - name: Upload runtime benchmark artifacts
+      - name: Benchmark B1
+        working-directory: base
+        run: >-
+          pnpm --filter '${{ matrix.package }}' exec vitest bench
+          ${{ matrix.files }}
+          --outputJson '../artifacts/${{ matrix.suite }}/base-1.raw.json'
+
+      - name: Benchmark H1
+        working-directory: head
+        run: >-
+          pnpm --filter '${{ matrix.package }}' exec vitest bench
+          ${{ matrix.files }}
+          --outputJson '../artifacts/${{ matrix.suite }}/head-1.raw.json'
+
+      - name: Benchmark H2
+        working-directory: head
+        run: >-
+          pnpm --filter '${{ matrix.package }}' exec vitest bench
+          ${{ matrix.files }}
+          --outputJson '../artifacts/${{ matrix.suite }}/head-2.raw.json'
+
+      - name: Benchmark B2
+        working-directory: base
+        run: >-
+          pnpm --filter '${{ matrix.package }}' exec vitest bench
+          ${{ matrix.files }}
+          --outputJson '../artifacts/${{ matrix.suite }}/base-2.raw.json'
+
+      - name: Evaluate quality gate
+        id: gate
+        working-directory: head
+        continue-on-error: true
+        run: >-
+          pnpm bench:quality-gate --
+          --suite '${{ matrix.suite }}'
+          --base-commit '${{ steps.revisions.outputs.base }}'
+          --head-commit '${{ steps.revisions.outputs.head }}'
+          --head-timestamp '${{ steps.commit.outputs.timestamp }}'
+          --workflow-run-id '${{ github.run_id }}'
+          --scope '${{ steps.revisions.outputs.scope }}'
+          --protocol-hash '${{ steps.protocol.outputs.hash }}'
+          --vitest-version '${{ steps.tools.outputs.vitest }}'
+          --pnpm-version '${{ steps.tools.outputs.pnpm }}'
+          --base-files '../artifacts/${{ matrix.suite }}/base-1.raw.json,../artifacts/${{ matrix.suite }}/base-2.raw.json'
+          --head-files '../artifacts/${{ matrix.suite }}/head-1.raw.json,../artifacts/${{ matrix.suite }}/head-2.raw.json'
+          --json '../artifacts/${{ matrix.suite }}/summary.json'
+          --markdown '../artifacts/${{ matrix.suite }}/summary.md'
+          --chart '../artifacts/${{ matrix.suite }}/chart.svg'
+          --threshold 0.20
+          --anomaly-threshold 0.50
+          --max-rme 0.10
+          --max-log-ratio-mad 0.10
+          --min-samples 20
+
+      - name: Add job summary
+        if: always() && hashFiles(format('artifacts/{0}/summary.md', matrix.suite)) != ''
+        run: cat 'artifacts/${{ matrix.suite }}/summary.md' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Download previous benchmark artifacts
+        if: always() && hashFiles(format('artifacts/{0}/summary.json', matrix.suite)) != ''
+        working-directory: head
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARTIFACT_PREFIX: benchmarks-${{ matrix.suite }}-
+          CURRENT_BRANCH: ${{ github.head_ref || github.ref_name }}
+          CURRENT_HEAD_REPOSITORY_ID: ${{ steps.revisions.outputs.head_repository_id }}
+        run: |
+          mkdir -p ../history
+          gh api --paginate "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" \
+            --jq '.artifacts[] | select(.expired == false) | [.workflow_run.id, .name, .workflow_run.head_branch, .workflow_run.head_repository_id] | @tsv' |
+            awk -v prefix="$ARTIFACT_PREFIX" -v branch="$CURRENT_BRANCH" -v repo="$CURRENT_HEAD_REPOSITORY_ID" '$2 ~ "^" prefix && $3 == branch && $4 == repo { print $1 "\t" $2 }' |
+            head -n 60 > ../history/artifacts.tsv
+          while IFS=$'\t' read -r run_id artifact_name; do
+            [[ -z "$run_id" ]] && continue
+            gh run download "$run_id" --name "$artifact_name" --dir "../history/$run_id" || true
+          done < ../history/artifacts.tsv
+
+      - name: Build benchmark history graph
+        if: always() && hashFiles(format('artifacts/{0}/summary.json', matrix.suite)) != ''
+        working-directory: head
+        run: >-
+          pnpm bench:history --
+          --suite '${{ matrix.suite }}'
+          --scope '${{ steps.revisions.outputs.scope }}'
+          --current '../artifacts/${{ matrix.suite }}/summary.json'
+          --history-dir '../history'
+          --json '../artifacts/${{ matrix.suite }}/history.json'
+          --chart '../artifacts/${{ matrix.suite }}/history.svg'
+          --timezone 'Europe/Kyiv'
+
+      - name: Upload benchmark artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: runtime-benchmarks-${{ github.sha }}
-          path: |
-            bench-results/runtime/latest.json
-            bench-results/runtime/latest.raw.json
+          name: benchmarks-${{ matrix.suite }}-${{ steps.revisions.outputs.head }}
+          path: artifacts/${{ matrix.suite }}/
           if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce quality gate
+        if: steps.gate.outcome == 'failure'
+        run: exit 1
