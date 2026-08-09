@@ -72,7 +72,11 @@ export function attachEventListener(
   el: Element,
   name: string,
   handler: EventListenerOrEventListenerObject,
-  dispatch?: (invoke: () => void) => void,
+  dispatch?: (
+    handler: EventListenerOrEventListenerObject,
+    receiver: Element,
+    event: Event,
+  ) => void,
 ): () => void {
   const event = resolveEventName(name);
   const options = getEventListenerOptions(handler);
@@ -82,11 +86,11 @@ export function attachEventListener(
       : isEventListenerObject(handler)
         ? {
             handleEvent(event: Event) {
-              dispatch(() => handler.handleEvent(event));
+              dispatch(handler, el, event);
             },
           }
         : function (this: Element, event: Event) {
-            dispatch(() => handler.call(this, event));
+            dispatch(handler, this, event);
           };
 
   el.addEventListener(event, listener, options);

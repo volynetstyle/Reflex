@@ -3,7 +3,6 @@ import {
   createOwnedEffect,
   getCurrentHookNode,
   getCurrentHookOwner,
-  runWithOwner,
   type Cleanup,
   type EffectCallback,
   type EffectCleanup,
@@ -21,9 +20,7 @@ export function useEffectRender(callback: EffectCallback): EffectCleanup {
 
   const cancelScheduledTask = scheduler.schedule(() => {
     if (disposed) return;
-    const effect = runWithOwner(owner, node, () =>
-      createOwnedEffect(owner, node, callback),
-    );
+    const effect = createOwnedEffect(owner, node, callback);
     if (disposed) effect();
     else disposeEffect = effect;
   }, RenderEffectPhase.Render);

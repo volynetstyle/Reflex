@@ -1,6 +1,9 @@
 import type { Cleanup, JSXRenderable } from "../types";
 import type { DOMRenderer } from "./renderer";
-import { hydrateWithDOMExecution, resumeWithDOMExecution } from "../hydrate/hydration";
+import {
+  hydrateWithDOMExecution,
+  resumeWithDOMExecution,
+} from "../hydrate/hydration";
 import type { DOMRuntimeOptions, RuntimeInstance } from "./options";
 import { renderWithDOMExecution } from "./render";
 import {
@@ -28,9 +31,7 @@ export function render(
   container: ParentNode & Node,
 ): Cleanup {
   const context = (activeExecutionContext ??= createDOMExecutionContext());
-  return runDOMOperation(context, () =>
-    renderWithDOMExecution(input, container),
-  );
+  return runDOMOperation(context, renderWithDOMExecution, input, container);
 }
 
 export function hydrate(
@@ -38,16 +39,14 @@ export function hydrate(
   container: ParentNode & Node,
 ): Cleanup {
   const context = (activeExecutionContext ??= createDOMExecutionContext());
-  return runDOMOperation(context, () =>
-    hydrateWithDOMExecution(input, container),
-  );
+  return runDOMOperation(context, hydrateWithDOMExecution, input, container);
 }
 
 export const mount = render;
 
 export function resume(container: ParentNode & Node): Cleanup {
   const context = (activeExecutionContext ??= createDOMExecutionContext());
-  return runDOMOperation(context, () => resumeWithDOMExecution(container));
+  return runDOMOperation(context, resumeWithDOMExecution, container);
 }
 
 export function useDOMRenderer(renderer: DOMRenderer | null) {

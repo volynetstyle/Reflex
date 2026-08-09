@@ -25,6 +25,43 @@ describe("runtime / DOM boundary", () => {
     expect(rightContainer.textContent).toBe("0");
   });
 
+  it("restores scoped operation slots across reentrant renderer events", () => {
+    const left = createApp();
+    const right = createApp();
+    const leftContainer = document.createElement("div");
+    const rightContainer = document.createElement("div");
+    let rightButton!: HTMLButtonElement;
+
+    function Right() {
+      const count = useSignal(0);
+      return (
+        <button onClick={() => count((value) => value + 1)}>{count}</button>
+      );
+    }
+
+    function Left() {
+      const count = useSignal(0);
+      return (
+        <button
+          onClick={() => {
+            rightButton.click();
+            count((value) => value + 1);
+          }}
+        >
+          {count}
+        </button>
+      );
+    }
+
+    right.render(<Right />, rightContainer);
+    rightButton = rightContainer.querySelector("button")!;
+    left.render(<Left />, leftContainer);
+    leftContainer.querySelector("button")!.click();
+
+    expect(leftContainer.textContent).toBe("1");
+    expect(rightContainer.textContent).toBe("1");
+  });
+
   it("runs render effects after reactive DOM stabilization", () => {
     const app = createApp();
     const container = document.createElement("div");
