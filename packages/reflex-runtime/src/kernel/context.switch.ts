@@ -1,7 +1,4 @@
-import {
-  restoreRuntimeConfiguration,
-  saveRuntimeConfiguration,
-} from "./config";
+import { loadRuntimeConfiguration } from "./config";
 import { createRuntimeContext, type RuntimeContext } from "./context.model";
 import {
   currentConsumer,
@@ -31,7 +28,7 @@ export function syncRuntimeContext(
       setTrackingEpoch(context.trackingEpoch);
       setPropagationScopeDepth(context.propagationScopeDepth);
       setReactiveBatchState(context.batchDepth, context.runtimeState);
-      restoreRuntimeConfiguration(context);
+      loadRuntimeConfiguration(context);
       return;
     }
     case "save": {
@@ -40,7 +37,6 @@ export function syncRuntimeContext(
       context.propagationScopeDepth = propagationScopeDepth;
       context.batchDepth = reactiveBatchDepth;
       context.runtimeState = runtimeState;
-      saveRuntimeConfiguration(context);
     }
   }
 }

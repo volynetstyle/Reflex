@@ -69,10 +69,6 @@ export type HostFlushHook = RuntimeSchedulerHooks["onHostFlush"];
 export var nodeInvalidatedHook: NodeInvalidatedHook = undefined;
 
 // eslint-disable-next-line no-var
-export var CAN_CALL_EMIT_NODE_INVALIDATED_HOOK =
-  nodeInvalidatedHook !== undefined;
-
-// eslint-disable-next-line no-var
 export var runtimeIdleHook: RuntimeIdleHook = undefined;
 
 // eslint-disable-next-line no-var
@@ -93,21 +89,10 @@ export interface RuntimeConfigurationOptions {
   readTrackingStrategy?: ReadTrackingStrategy;
 }
 
-export function saveRuntimeConfiguration(
+export function loadRuntimeConfiguration(
   configuration: RuntimeConfiguration,
 ): void {
-  configuration.readTrackingStrategy = readTrackingStrategy;
-  configuration.nodeInvalidatedHook = nodeInvalidatedHook;
-  configuration.runtimeIdleHook = runtimeIdleHook;
-  configuration.hostFlushHook = hostFlushHook;
-}
-
-export function restoreRuntimeConfiguration(
-  configuration: RuntimeConfiguration,
-): void {
-  readTrackingStrategy =
-    configuration.readTrackingStrategy ?? DEFAULT_READ_TRACKING_STRATEGY;
-
+  readTrackingStrategy = configuration.readTrackingStrategy;
   nodeInvalidatedHook = configuration.nodeInvalidatedHook;
   runtimeIdleHook = configuration.runtimeIdleHook;
   hostFlushHook = configuration.hostFlushHook;

@@ -50,6 +50,14 @@ export function createRendererRuntime(
     resolveEffectSchedulerMode(strategy),
     execution,
   );
+  const externalNodeInvalidated = hooks?.onNodeInvalidated;
+  const onNodeInvalidated =
+    externalNodeInvalidated === undefined
+      ? scheduler.onNodeInvalidated
+      : (node: Parameters<typeof scheduler.onNodeInvalidated>[0]): void => {
+          scheduler.onNodeInvalidated(node);
+          externalNodeInvalidated(node);
+        };
   let runtimeIdle = false;
   let microtaskPending = false;
 
@@ -94,10 +102,7 @@ export function createRendererRuntime(
 
   configureRuntimeContext(execution, {
     hooks: {
-      onNodeInvalidated(node) {
-        scheduler.onNodeInvalidated(node);
-        hooks?.onNodeInvalidated?.(node);
-      },
+      onNodeInvalidated,
       onRuntimeIdle() {
         runtimeIdle = true;
         hooks?.onRuntimeIdle?.();
