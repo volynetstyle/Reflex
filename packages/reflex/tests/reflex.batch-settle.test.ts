@@ -94,6 +94,37 @@ describe("batch reactive settled deferral", () => {
     expect(settled).toBe(2);
   });
 
+  it("keeps the outer batch active after a caught nested batch error", () => {
+    const runtime = createRuntime({ effectStrategy: "sab" });
+    const value = signal(0);
+    const seen: number[] = [];
+
+    effect(() => {
+      seen.push(value());
+    });
+    seen.length = 0;
+
+    runtime.batch(() => {
+      value.set(1);
+      try {
+        runtime.batch(() => {
+          value.set(2);
+          throw new Error("nested failure");
+        });
+      } catch (error) {
+        expect(error).toEqual(new Error("nested failure"));
+      }
+      value.set(3);
+      expect(seen).toEqual([]);
+    });
+
+    expect(seen).toEqual([3]);
+    expect(runtime.ctx.execution.batchDepth).toBe(0);
+
+    runtime.batch(() => value.set(4));
+    expect(seen).toEqual([3, 4]);
+  });
+
   it("closes and flushes scheduler policy before emitting settled", () => {
     const events: string[] = [];
     const runtime = createRuntime({

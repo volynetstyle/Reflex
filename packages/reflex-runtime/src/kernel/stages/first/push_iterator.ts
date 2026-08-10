@@ -146,6 +146,9 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
     if ((state & FAST_BLOCK_MASK) === 0) {
       next = (state & ~Visited) | Changed;
       sub.state = next;
+    } else if ((state & Unknown) !== 0 && (state & Watcher) === 0) {
+      next = (state & ~(Unknown | Visited)) | Changed;
+      sub.state = next;
     } else if ((state & Computing) !== 0) {
       next = markComputingSubscriber(edge, sub, state);
     }

@@ -124,6 +124,25 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(invalidations).toBe(1);
   });
 
+  it("promotes an unknown consumer when a later direct source changes", () => {
+    const indirectSource = createProducer(1);
+    const directSource = createProducer(10);
+    const indirect = createConsumer(() => readProducer(indirectSource));
+    const target = createConsumer(
+      () => readProducer(directSource) + readConsumer(indirect),
+    );
+
+    expect(readConsumer(target)).toBe(11);
+
+    writeProducer(indirectSource, 2);
+    expect(target.state & Unknown).toBeTruthy();
+    expect(target.state & Changed).toBeFalsy();
+
+    writeProducer(directSource, 20);
+    expect(target.state & Changed).toBeTruthy();
+    expect(target.state & Unknown).toBeFalsy();
+  });
+
   it("ignores invalidation from edges outside the current tracked prefix", () => {
     const tracked = createProducer(1);
     const stale = createProducer(2);

@@ -218,4 +218,32 @@ describe("Reactive system - edge cases", () => {
 
     expect(snapshots).toEqual(["1:10", "2:20"]);
   });
+
+  it("reactivates a computed after its last observer is disposed", () => {
+    const rt = createRuntime();
+    const source = signal(1);
+    const derived = computed(() => source() * 2);
+    const firstValues: number[] = [];
+    const secondValues: number[] = [];
+
+    const stopFirst = effect(() => {
+      firstValues.push(derived());
+    });
+    expect(firstValues).toEqual([2]);
+
+    stopFirst();
+    source.set(2);
+    rt.flush();
+    expect(firstValues).toEqual([2]);
+
+    effect(() => {
+      secondValues.push(derived());
+    });
+    expect(secondValues).toEqual([4]);
+
+    source.set(3);
+    rt.flush();
+    expect(firstValues).toEqual([2]);
+    expect(secondValues).toEqual([4, 6]);
+  });
 });
