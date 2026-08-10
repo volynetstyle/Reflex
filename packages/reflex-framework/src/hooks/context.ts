@@ -103,13 +103,19 @@ export function assertHookUsage(hookName: string): void {
 
 export function getCurrentHookOwner(): OwnerContext {
   return (
-    getCurrentComponentContext()?.owner ??
     getActiveOwnerContext() ??
+    getCurrentComponentContext()?.owner ??
     getHookOwner()
   );
 }
 
 export function getCurrentHookNode(): OwnershipNode | null {
+  const activeOwner = getActiveOwnerContext();
+
+  if (activeOwner !== null) {
+    return activeOwner.currentNode;
+  }
+
   const context = getCurrentComponentContext();
 
   if (context !== null) {

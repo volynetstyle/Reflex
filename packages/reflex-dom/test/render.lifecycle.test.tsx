@@ -287,6 +287,57 @@ describe("render lifecycle and reactive bindings", () => {
     expect(log).toEqual(["inner", "outer"]);
   });
 
+  it("replaces effects nested inside a component effect", () => {
+    const container = document.createElement("div");
+    const [enabled, setEnabled] = signal(true);
+    const [value, setValue] = signal(1);
+    const log: string[] = [];
+
+    function Child() {
+      useEffect(() => {
+        log.push(`outer:${enabled()}`);
+
+        if (enabled()) {
+          useEffect(() => {
+            const current = value();
+            log.push(`inner:${current}`);
+            return () => log.push(`inner:cleanup:${current}`);
+          });
+        }
+
+        return () => log.push("outer:cleanup");
+      });
+
+      return <span>child</span>;
+    }
+
+    const dispose = render(<Child />, container);
+    expect(log).toEqual(["outer:true", "inner:1"]);
+
+    log.length = 0;
+    setValue(2);
+    expect(log).toEqual(["inner:cleanup:1", "inner:2"]);
+
+    log.length = 0;
+    setEnabled(false);
+    expect(log).toEqual([
+      "inner:cleanup:2",
+      "outer:cleanup",
+      "outer:false",
+    ]);
+
+    log.length = 0;
+    setValue(3);
+    expect(log).toEqual([]);
+
+    setEnabled(true);
+    expect(log).toEqual(["outer:cleanup", "outer:true", "inner:3"]);
+
+    log.length = 0;
+    dispose();
+    expect(log).toEqual(["inner:cleanup:3", "outer:cleanup"]);
+  });
+
   it("cleans up the previous tree when another renderer mounts into the same container", () => {
     const container = document.createElement("div");
     const [source, setSource] = signal("a");
