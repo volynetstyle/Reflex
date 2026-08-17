@@ -12,9 +12,11 @@ import { RenderEffectPhase } from "../runtime/render-effect-scheduler";
 
 export function useEffectRender(callback: EffectCallback): EffectCleanup {
   assertHookUsage("useEffectRender");
+
   const scheduler = getActiveDOMExecutionContext().renderEffectScheduler;
   const owner = getCurrentHookOwner();
   const node = getCurrentHookNode();
+  
   let disposed = false;
   let disposeEffect: Cleanup | null = null;
 

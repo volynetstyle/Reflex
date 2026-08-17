@@ -1,0 +1,27 @@
+{
+  "name": "@reflex-lab/reactivity-bench",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Process-isolated Alien Signals vs Reflex workloads derived from Vue PR #12349",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && rollup --silent -c rollup.instrumented.config.ts --configPlugin @rollup/plugin-swc && node scripts/instrument-alien.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "bench": "node --expose-gc dist/src/cli.js",
+    "bench:smoke": "node --expose-gc dist/src/cli.js --smoke",
+    "bench:instrumented": "node dist/src/instrument-cli.js",
+    "contracts": "vitest run test/lifecycle.contract.test.ts"
+  },
+  "dependencies": {
+    "@volynets/reflex": "workspace:*",
+    "alien-signals": "3.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-replace": "^6.0.3",
+    "@rollup/plugin-swc": "^0.4.0",
+    "rollup": "^4.54.0"
+  }
+}

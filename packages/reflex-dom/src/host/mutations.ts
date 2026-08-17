@@ -1,4 +1,7 @@
-// Bench note:
+const SPREAD_ARG_SAFE_LIMIT = 16_000;
+const DOCUMENT_POSITION_PRECEDING = 2;
+const DOCUMENT_POSITION_FOLLOWING = 4;
+
 // In Edge/Chromium 150, Range-based move/clear variants were slower than
 // manual sibling walks across both short and long ranges. The cost also
 // increased with startIndex; at startIndex=9000 even an almost empty Range
@@ -24,11 +27,6 @@
 // of case where two structurally similar-looking approaches diverge in
 // opposite directions depending on shape - don't trust either version
 // without profiling both against your actual node-count distributions.
-//
-// Recommended: run both the default and the *ViaRange variant through your
-// existing bench harness (pre-registered contract, CPU-pinned, Holm-Bonferroni)
-// before picking one. They're exported separately for exactly that reason.
-
 export function insertBefore(anchor: Node, nodes: readonly Node[]): void {
   const length = nodes.length;
   if (length === 0) return;
@@ -56,13 +54,9 @@ export function insertBefore(anchor: Node, nodes: readonly Node[]): void {
   const ao = anchor.ownerDocument;
   if (ao === null) return;
   const frag = ao.createDocumentFragment();
-  for (let i = 0; i < length; i++) frag.appendChild(nodes[i]!);
+  for (let i = 0; i < length; ++i) frag.appendChild(nodes[i]!);
   parent.insertBefore(frag, anchor);
 }
-
-const SPREAD_ARG_SAFE_LIMIT = 16_000;
-const DOCUMENT_POSITION_PRECEDING = 2;
-const DOCUMENT_POSITION_FOLLOWING = 4;
 
 export function moveRangeBefore(start: Node, end: Node, anchor: Node): void {
   const parent = start.parentNode;
@@ -130,4 +124,3 @@ export function clearBetween(start: Node, end: Node): void {
     node = next;
   }
 }
-

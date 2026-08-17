@@ -24,10 +24,10 @@ describe("transformCompiledStore", () => {
     );
     expect(result.code).not.toContain('from "@reflex/store"');
     expect(result.code).toContain(
-      'const [__read_user_name, __set_user_name] = __reflex_signal("Alice");',
+      'const __read_user_name = __reflex_signal("Alice");',
     );
     expect(result.code).toContain(
-      "const [__read_count, __set_count] = __reflex_signal(0);",
+      "const __read_count = __reflex_signal(0);",
     );
     expect(result.code).toContain(
       "const state = __reflex_createModel((ctx)=>",
@@ -120,7 +120,7 @@ describe("transformCompiledStore", () => {
       'import { defineState as $model, cell as $cell } from "custom-runtime";',
     );
     expect(result.code).toContain(
-      "const [$get_user_name, $set_user_name] = $cell('Ada')",
+      "const $get_user_name = $cell('Ada')",
     );
     expect(result.code).toContain(
       '$commit_user_name = $context["with-action"](($value)=>',

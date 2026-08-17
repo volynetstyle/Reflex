@@ -69,6 +69,9 @@
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true});require('node:fs').rmSync('build',{recursive:true,force:true})\"",
     "build": "pnpm clean && tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs dist",
+    "bench": "vitest bench --config vite.config.ts bench/semantic-workloads.bench.ts",
+    "bench:full": "vitest bench --mode full --config vite.config.ts bench/semantic-workloads.bench.ts",
+    "bench:metrics": "vitest run --config vite.metrics.config.ts tests/semantic-workloads.metrics.test.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run --config vite.config.ts",

@@ -1,7 +1,6 @@
 import { beforeEach, bench, describe } from "vitest";
 import {
   boardActions,
-  setTasks,
   summary,
   taskById,
   tasks,
@@ -50,7 +49,7 @@ for (const size of [10, 100, 1_000, 10_000]) {
 
     const ensureCollection = () => {
       if (tasks().length === size) return;
-      setTasks(scaledTasks);
+      tasks.set(scaledTasks);
       boardActions.select(`T-${size - 1}`);
       boardActions.flush();
     };

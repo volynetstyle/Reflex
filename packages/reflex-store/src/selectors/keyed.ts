@@ -2,7 +2,6 @@ import {
   DIRTY_STATE,
   createWatcher,
   readProducer,
-  type ReactiveNode,
   runWatcher,
   untracked,
   writeProducer,
@@ -22,149 +21,63 @@ type ProjectionSignalNode<R> = ReturnType<
   typeof createSignalNode<R | undefined>
 >;
 
-class SelectorCore<T> {
-  private readonly keyed = new Map<T, BooleanSignalNode>();
-  private current: T | Missing = getMissing();
-  private currentNode: BooleanSignalNode | null = null;
-  private readonly watcher: ReactiveNode;
+type KeyEntry<K, N> = { key: K; node: N };
 
-  constructor(
-    private readonly source: Accessor<T>,
-    private readonly equals: (prev: T, next: T) => boolean,
-  ) {
-    const watcher = createWatcher(() => {
-      this.sync();
-    });
-    this.watcher = watcher;
-    runWatcher(watcher);
-  }
+function createKeyRegistry<K, N>(
+  equals: (prev: K, next: K) => boolean,
+  createNode: () => N,
+): (key: K) => KeyEntry<K, N> {
+  const identityKeys = equals === sameValue<K>;
+  const keyed = new Map<K, KeyEntry<K, N>>();
+  const entries: Array<KeyEntry<K, N>> = [];
 
-  read = (key: T): boolean => {
-    if ((this.watcher.state & DIRTY_STATE) !== 0) {
-      this.sync(untracked(this.source));
+  return (key) => {
+    if (identityKeys) {
+      const existing = keyed.get(key);
+      if (existing !== undefined) return existing;
+      const entry = { key, node: createNode() };
+      keyed.set(key, entry);
+      return entry;
     }
 
-    const current = this.current;
-    if (current !== getMissing() && this.equals(current, key)) {
-      return readProducer(this.currentNode ?? this.ensureKeyNode(key));
+    for (let index = 0; index < entries.length; index++) {
+      const entry = entries[index]!;
+      if (equals(entry.key, key)) return entry;
     }
 
-    return readProducer(this.ensureKeyNode(key));
+    const entry = { key, node: createNode() };
+    entries.push(entry);
+    return entry;
   };
-
-  private sync(next: T = this.source()): void {
-    const prev = this.current;
-
-    if (prev !== getMissing() && this.equals(prev, next)) {
-      return;
-    }
-
-    const prevNode = this.currentNode;
-    const nextNode = this.ensureKeyNode(next);
-    this.current = next;
-    this.currentNode = nextNode;
-
-    if (prevNode !== null) {
-      writeProducer(prevNode, false);
-    }
-
-    writeProducer(nextNode, true);
-  }
-
-  private ensureKeyNode(key: T): BooleanSignalNode {
-    const existing = this.keyed.get(key);
-    if (existing !== undefined) return existing;
-
-    const node = createSignalNode(
-      this.current !== getMissing() && this.equals(this.current, key),
-    );
-    this.keyed.set(key, node);
-    return node;
-  }
-}
-
-class KeyedProjectionCore<T, K, R> {
-  private readonly keyed = new Map<K, ProjectionSignalNode<R>>();
-  private currentKey: K | Missing = getMissing();
-  private currentNode: ProjectionSignalNode<R> | null = null;
-  private readonly watcher: ReactiveNode;
-
-  constructor(
-    private readonly source: Accessor<T>,
-    private readonly keyOf: (value: T) => K,
-    private readonly project: (value: T) => R,
-    private readonly equals: (prev: K, next: K) => boolean,
-    private readonly fallback: R | undefined,
-  ) {
-    const watcher = createWatcher(() => {
-      this.sync();
-    });
-    this.watcher = watcher;
-    runWatcher(watcher);
-  }
-
-  read = (key: K): R | undefined => {
-    if ((this.watcher.state & DIRTY_STATE) !== 0) {
-      this.sync(untracked(this.source));
-    }
-
-    const currentKey = this.currentKey;
-    if (currentKey !== getMissing() && this.equals(currentKey, key)) {
-      return readProducer(this.currentNode ?? this.ensureKeyNode(key));
-    }
-
-    return readProducer(this.ensureKeyNode(key));
-  };
-
-  private sync(nextValue: T = this.source()): void {
-    const nextKey = this.keyOf(nextValue);
-    const prevKey = this.currentKey;
-    const nextProjection = this.project(nextValue);
-
-    if (prevKey !== getMissing() && this.equals(prevKey, nextKey)) {
-      const currentNode = this.currentNode ?? this.ensureKeyNode(nextKey);
-      this.currentNode = currentNode;
-      writeProducer(currentNode, nextProjection);
-      return;
-    }
-
-    const prevNode = this.currentNode;
-    const nextNode = this.ensureKeyNode(nextKey);
-    this.currentKey = nextKey;
-    this.currentNode = nextNode;
-
-    if (prevNode !== null) {
-      writeProducer(prevNode, this.fallback);
-    }
-
-    writeProducer(nextNode, nextProjection);
-  }
-
-  private ensureKeyNode(key: K): ProjectionSignalNode<R> {
-    const existing = this.keyed.get(key);
-    if (existing !== undefined) return existing;
-
-    const node = createSignalNode(
-      this.currentKey !== getMissing() &&
-        this.currentNode !== null &&
-        this.equals(this.currentKey, key)
-        ? this.currentNode.payload
-        : this.fallback,
-    );
-    this.keyed.set(key, node);
-    return node;
-  }
 }
 
 export function createSelector<T>(
   source: Accessor<T>,
   options: KeyedOptions<T> = {},
 ): (key: T) => boolean {
-  const core = new SelectorCore(
-    source,
-    options.equals ?? sameValue<T>,
-  );
-  return core.read;
+  const equals = options.equals ?? sameValue<T>;
+  let current: T | Missing = getMissing();
+  let currentEntry: KeyEntry<T, BooleanSignalNode> | null = null;
+  const ensureKey = createKeyRegistry(equals, () => createSignalNode(false));
+
+  const sync = (next: T = source()): void => {
+    if (current !== getMissing() && equals(current, next)) return;
+
+    const previous = currentEntry;
+    const nextEntry = ensureKey(next);
+    current = next;
+    currentEntry = nextEntry;
+    if (previous !== null) writeProducer(previous.node, false);
+    writeProducer(nextEntry.node, true);
+  };
+
+  const watcher = createWatcher(() => sync());
+  runWatcher(watcher);
+
+  return (key) => {
+    if ((watcher.state & DIRTY_STATE) !== 0) sync(untracked(source));
+    return readProducer(ensureKey(key).node);
+  };
 }
 
 export function createKeyedProjection<T, K, R>(
@@ -173,12 +86,47 @@ export function createKeyedProjection<T, K, R>(
   project: (value: T) => R,
   options: ProjectionOptions<K, R> = {},
 ): (key: K) => R | undefined {
-  const core = new KeyedProjectionCore(
-    source,
-    keyOf,
-    project,
-    options.equals ?? sameValue<K>,
-    options.fallback,
+  const keyEquals = options.keyEquals ?? sameValue<K>;
+  const valueEquals = options.equals ?? sameValue<R>;
+  const fallback = options.fallback;
+  let currentKey: K | Missing = getMissing();
+  let currentEntry: KeyEntry<K, ProjectionSignalNode<R>> | null = null;
+  const ensureKey = createKeyRegistry(keyEquals, () =>
+    createSignalNode<R | undefined>(fallback),
   );
-  return core.read;
+
+  const writeValue = (node: ProjectionSignalNode<R>, value: R | undefined) => {
+    if (
+      value !== undefined &&
+      node.payload !== undefined &&
+      valueEquals(node.payload, value)
+    )
+      return;
+    writeProducer(node, value);
+  };
+
+  const sync = (nextValue: T = source()): void => {
+    const nextKey = keyOf(nextValue);
+    const nextProjection = project(nextValue);
+
+    if (currentKey !== getMissing() && keyEquals(currentKey, nextKey)) {
+      writeValue(currentEntry!.node, nextProjection);
+      return;
+    }
+
+    const previous = currentEntry;
+    const nextEntry = ensureKey(nextKey);
+    currentKey = nextKey;
+    currentEntry = nextEntry;
+    if (previous !== null) writeValue(previous.node, fallback);
+    writeValue(nextEntry.node, nextProjection);
+  };
+
+  const watcher = createWatcher(() => sync());
+  runWatcher(watcher);
+
+  return (key) => {
+    if ((watcher.state & DIRTY_STATE) !== 0) sync(untracked(source));
+    return readProducer(ensureKey(key).node);
+  };
 }

@@ -9,7 +9,7 @@ import {
 const runtime = createRuntime({ effectStrategy: "flush" });
 
 for (const subscriberCount of [2, 100, 1_000]) {
-  const [selected, setSelected] = signal(0);
+  const selected = signal(0);
   const isSelected = createSelector(selected);
   const stops = Array.from({ length: subscriberCount }, (_, key) =>
     effect(() => {
@@ -20,13 +20,13 @@ for (const subscriberCount of [2, 100, 1_000]) {
 
   describe(`selector hot path: ${subscriberCount} keys`, () => {
     bench("transition previous -> next", () => {
-      setSelected(next);
+      selected.set(next);
       next ^= 1;
       runtime.flush();
     });
 
     bench("same-key no-op", () => {
-      setSelected(next ^ 1);
+      selected.set(next ^ 1);
       runtime.flush();
     });
   });
@@ -35,7 +35,7 @@ for (const subscriberCount of [2, 100, 1_000]) {
 }
 
 {
-  const [source, setSource] = signal({ id: 0, value: 0 });
+  const source = signal({ id: 0, value: 0 });
   const projected = createKeyedProjection(
     source,
     (value) => value.id,
@@ -52,7 +52,7 @@ for (const subscriberCount of [2, 100, 1_000]) {
   describe("keyed projection hot path", () => {
     bench("same key, changed projected value", () => {
       value++;
-      setSource({ id: value & 1, value });
+      source.set({ id: value & 1, value });
       runtime.flush();
     });
 
@@ -66,7 +66,7 @@ for (const subscriberCount of [2, 100, 1_000]) {
 }
 
 {
-  const [source, setSource] = signal({ hot: 0, stable: 1 });
+  const source = signal({ hot: 0, stable: 1 });
   const store = createStoreProjection(
     (draft: { hot: number; stable: number }) => {
       const value = source();
@@ -81,7 +81,7 @@ for (const subscriberCount of [2, 100, 1_000]) {
 
   describe("store projection hot path", () => {
     bench("one changed, one stable field", () => {
-      setSource({ hot: ++hot, stable: 1 });
+      source.set({ hot: ++hot, stable: 1 });
       runtime.flush();
     });
 

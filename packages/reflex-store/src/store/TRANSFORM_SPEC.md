@@ -36,16 +36,16 @@ The intended runtime target is:
 
 ```ts
 const state = createModel((ctx) => {
-  const [__user_name, __set_user_name] = signal("Alice");
-  const [__count, __set_count] = signal(0);
+  const __user_name = signal("Alice");
+  const __count = signal(0);
 
   const __write_user_name = ctx.action((value: string) => {
-    __set_user_name(value);
+    __user_name.set(value);
     return value;
   });
 
   const __write_count = ctx.action((value: number) => {
-    __set_count(value);
+    __count.set(value);
     return value;
   });
 

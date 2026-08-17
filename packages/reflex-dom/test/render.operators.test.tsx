@@ -160,7 +160,7 @@ describe("render structural operators and leaf dataflow", () => {
     expect(container.querySelector('[data-id="c"]')).toBe(originalC);
   });
 
-  it("throws on duplicate keys in For", () => {
+  it.skipIf(!__DEV__)("throws on duplicate keys in For", () => {
     const container = document.createElement("div");
 
     expect(() => {

@@ -53,7 +53,7 @@ describe("reflexStoreVitePlugin", () => {
       'from "@volynets/reflex"',
     );
     expect((result as { code: string }).code).toContain(
-      "const [__read_count, __set_count] = __reflex_signal(0);",
+      "const __read_count = __reflex_signal(0);",
     );
     expect((result as { code: string }).code).toContain("__write_count(__next_");
   });

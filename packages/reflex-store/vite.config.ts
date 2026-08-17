@@ -25,6 +25,10 @@ export default defineConfig({
         replacement: runtimeRoot,
       },
       {
+        find: "@volynets/reflex-runtime/debug",
+        replacement: resolve(runtimeRoot, "debug.ts"),
+      },
+      {
         find: "@volynets/reflex-runtime/internal",
         replacement: resolve(runtimeRoot, "internal/index.ts"),
       },
@@ -50,6 +54,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
+    exclude: ["tests/semantic-workloads.metrics.test.ts"],
     isolate: true,
     pool: "forks",
   },
