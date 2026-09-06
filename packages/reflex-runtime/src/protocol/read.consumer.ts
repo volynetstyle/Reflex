@@ -62,7 +62,7 @@ export function readConsumerLazy<T>(this: ConsumerNode<T>): T {
   if (consumer === null) return value;
 
   profileRuntimeCounter("readConsumerTracked");
-  resolveTrackedRead(producer, consumer, trackingEpoch, true);
+  resolveTrackedRead(producer, consumer, consumer.tailIn?.version ?? trackingEpoch, true);
   devRecordReadConsumer(producer, "lazy", value, defaultContext, consumer);
 
   return value;
@@ -186,7 +186,7 @@ export function readConsumer<T>(
   if (consumer !== null) {
     profileRuntimeCounter("readConsumerTracked");
 
-    resolveTrackedRead(node, consumer, trackingEpoch, true);
+    resolveTrackedRead(node, consumer, consumer.tailIn?.version ?? trackingEpoch, true);
   }
 
   devRecordReadConsumer(

@@ -82,6 +82,7 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
   let top = base;
   let changed = false;
 
+  try {
   scan: while (true) {
     /**
      * If the current node is already Changed, the current dependency edge
@@ -98,10 +99,6 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
       const depState = dep.state;
 
       if (__DEV__ && (depState & Computing) !== 0) {
-        high = base;
-        if (base === 0 && stack.length > STACK_TRIM_MIN_CAPACITY) {
-          stack.length = STACK_TRIM_MIN_CAPACITY;
-        }
         throw new Error("Cycle detected while refreshing reactive graph");
       }
 
@@ -314,6 +311,14 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
       stack.length = STACK_TRIM_MIN_CAPACITY;
     }
     return changed;
+  }
+  } catch (error) {
+    while (top !== base) stack[--top] = null!;
+    high = base;
+    if (base === 0 && stack.length > STACK_TRIM_MIN_CAPACITY) {
+      stack.length = STACK_TRIM_MIN_CAPACITY;
+    }
+    throw error;
   }
 }
 

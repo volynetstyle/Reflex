@@ -1,156 +1,85 @@
-# Disposal Protocol
+# Disposal and cleanup
 
-This runtime uses a strict disposal contract.
+This describes the current runtime's eager teardown. There is no `Disposed`
+bit, liveness register, or ownership-scope shutdown barrier in this package.
 
-The goal is simple: once a node or scope starts dying, the graph must stop
-treating it as a live participant immediately.
+## Generic teardown
 
-## Core Rules
+`disposeNode` in `src/kernel/shape/graph/disposeNode.ts` unlinks all incoming
+edges, unlinks all outgoing edges, then clears `compute` and `payload`.
 
-1. Dead is terminal.
+Incoming teardown clears `firstIn/lastIn/tailIn`. Outgoing teardown repairs
+subscribers' incoming lists and rewinds a cursor that pointed at a removed
+edge. Removed edges have all four list links cleared.
 
-Once `Disposed` is set, the node never becomes live again. There is no reuse,
-reactivation, or temporary death state.
+Generic teardown does not normalize state flags and does not invoke a
+function-valued payload. With no intervening mutation, repeating teardown is
+harmless. This does not make arbitrary later reads, writes, or manual links
+inert: graph entry points have no universal dead-node guard.
 
-2. Dead nodes do not participate in graph operations.
+## Watcher teardown before user cleanup
 
-After disposal starts, graph entry points must not:
+`disposeWatcher` in `src/kernel/engine/watcher.ts`:
 
-- track the node
-- invalidate it
-- recompute it
-- schedule it
-- attach new dependencies to it
+1. Captures the function-valued cleanup payload, if present.
+2. Performs generic teardown.
+3. Clears `Changed | Unknown | Visited | Computing | Scheduled`.
+4. Invokes captured cleanup outside parent tracking.
+5. Leaves payload undefined and records successful disposal in debug mode.
 
-Allowed behavior is limited to:
+The callback and payload are already cleared before cleanup runs. Recursive
+disposal therefore cannot invoke the same saved cleanup again. If cleanup
+throws, graph teardown and flag clearing remain effective; the exception
+propagates and the success debug event is not emitted. Repeating disposal does
+not retry that cleanup.
 
-- idempotent ignore / early return
-- internal teardown of existing graph links
+## Rerun cleanup
 
-3. All graph entry points are dead-safe.
+When a dirty watcher needs execution, its previous payload is cleared before
+old cleanup runs. Cleanup runs with no active consumer, preventing incidental
+reads from attaching to a parent computation. The previous consumer is restored
+even when cleanup throws.
 
-If a dead node reaches a public runtime path, production behavior must stay
-safe and inert. Development builds may assert, but production should early
-return instead of corrupting the graph.
+The watcher checks `compute` again after cleanup, because cleanup may dispose
+it. It also checks after the callback, preventing a returned cleanup payload
+from being stored on a watcher disposed during that callback.
 
-4. Dispose is idempotent.
+These checks do not stop arbitrary JavaScript still running inside the
+callback from making further reads or writes. The runtime stores one cleanup
+payload per watcher; it does not impose a separate ownership-tree LIFO order.
 
-Repeated disposal must not rerun teardown logic or recreate side effects.
+## Failure and topology
 
-5. Mark dead before teardown.
+Rerun cleanup/callback failure clears watcher dirty, execution, and schedule
+bits so a later source invalidation can schedule a retry using the remaining
+graph. Computed callback failure instead leaves `Changed` so a later read
+retries the callback, including when failure occurred during pull bubbling.
 
-The state barrier happens first. External cleanup runs only after the node or
-scope is already invalid for new graph participation.
+Neither failure policy rolls topology back. Reads may already have linked,
+reordered, or stamped edges. Eager reconciliation can abandon an old suffix
+before the callback succeeds. The remaining graph is not guaranteed to contain
+every dependency from the previous successful execution. Final stale cleanup
+does not run after a callback throw.
 
-6. Queued or delayed work checks liveness before commit.
+## Scheduling and active walks
 
-Schedulers, event deliveries, cleanups, async continuations, and deferred
-callbacks must verify that their target is still live before mutating graph
-state or committing payload.
+`Scheduled` represents host queue ownership, not liveness. The host owns
+queue entries, release of claims, and watcher execution timing.
 
-7. Disposal is reentrancy-safe.
+Eager unlinking alone does not establish arbitrary mid-traversal disposal
+safety: walkers retain edge continuations, and unlink clears edge links.
+The development scheduler policy rejects watcher disposal from
+`onNodeInvalidated` when `__DEV__ && __PROFILE__` is enabled. Production has
+no universal terminal-state barrier.
 
-If disposal re-enters the same node or scope while teardown is already in
-progress, the nested call must be harmless. The runtime uses terminal
-`Disposed` / `closing` barriers plus idempotent early returns for this.
+Post-disposal reads are not specified as universally inert. Stronger ownership
+contracts in callers are outside this package.
 
-8. This runtime chooses eager detach.
+## Characterization
 
-When a node is disposed, both directions of graph connectivity are torn down:
-
-- incoming edges are removed
-- outgoing edges are removed
-- the node becomes unreachable from future graph traversal
-
-This is the single disposal model for runtime nodes. We do not rely on
-"eventual unlink" for correctness.
-
-9. Half-detached visibility is not a valid live state.
-
-Physical edge unlink may be performed incrementally inside the disposal routine,
-but the algorithmic barrier is the dead mark that happens first.
-
-That means:
-
-- public graph entry points must treat the node as dead before detach completes
-- no algorithm may rely on observing a partially detached node as still live
-- traversal must tolerate one side of an edge disappearing before the other
-
-10. Active graph algorithms tolerate death mid-traversal.
-
-Propagation, pull verification, scheduler flushes, and cleanup paths must
-remain correct if a node becomes dead during the walk itself.
-
-The intended behavior is:
-
-- skip dead work
-- continue safely when possible
-- never corrupt traversal invariants trying to "finish honestly"
-
-11. Dead nodes emit no new observable graph effects.
-
-Disposed nodes do not start new computations, do not publish fresh downstream
-invalidation, and do not accept new cleanup registrations.
-
-12. Scope disposal uses a shutdown barrier.
-
-Ownership scopes follow the same ordering:
-
-- mark the whole subtree as `closing`
-- reject new children / cleanups / owned effects
-- dispose inside-out
-- mark each scope fully disposed
-
-13. Correctness wins races.
-
-If disposal collides with queued work, stale work is dropped. We prefer doing
-nothing over letting dead state mutate the graph one last time.
-
-## Forbidden Behavior
-
-The following is explicitly forbidden:
-
-- reactivating a dead node
-- writing to a dead node
-- tracking from or into a dead node
-- recomputing a dead node
-- registering cleanup after scope closing starts
-- creating owned effects inside a closing or disposed scope
-- committing stale queued or async results after the target died
-
-## Runtime Mapping
-
-The protocol is enforced by the current implementation in these places:
-
-- `src/reactivity/shape/methods/connect.ts`
-  `disposeNode()` marks terminal death and eagerly detaches both incoming and
-  outgoing graph edges.
-- `src/api/read.ts`
-  dead reads do not retrack or reactivate disposed nodes.
-- `src/api/write.ts`
-  dead producers reject writes.
-- `src/api/watcher.ts`
-  watcher reruns stop if disposal happens during cleanup, and dead watchers do
-  not commit new cleanup payloads.
-- `src/reactivity/walkers/*`
-  propagation and pull verification stay inert on dead input, including
-  mid-traversal disposal races.
-
-The ownership shutdown barrier lives in:
-
-- `packages/reflex-dom/src/ownership/ownership.cleanup.ts`
-- `packages/reflex-dom/src/ownership/ownership.scope.ts`
-- `packages/reflex-dom/src/ownership/ownership.effect.ts`
-
-## Dev Assertions Worth Keeping
-
-These checks are intentionally useful in debug builds:
-
-- `track into dead consumer`
-- `track from dead source`
-- `recompute dead node`
-- `write into dead node`
-- `register cleanup into disposed scope`
-- `useEffect in disposed scope`
-
-Production behavior should remain safe even when callers violate the protocol.
+- `test/runtime/contracts/runtime.lifecycle.test.ts`: eager teardown and
+  cleanup outside parent tracking.
+- `test/runtime/contracts/runtime.resilience.test.ts`: callback/cleanup
+  failure, retry after later invalidation, and recursive disposal.
+- `test/runtime/topology/runtime.graph-utilities.test.ts`: reciprocal unlink.
+- `test/dev/runtime/runtime.scheduler-policy.dev.test.ts`: hook policy.

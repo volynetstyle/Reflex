@@ -28,29 +28,13 @@ export function unlinkDetachedIncomingEdgeSequence(
  * Cold-path traversal that tears down every source connection.
  */
 export function unlinkAllSources(node: ReactiveNode): void {
-  let edge = node.firstIn;
+  const edge = node.firstIn;
 
   node.firstIn = null;
   node.lastIn = null;
   node.tailIn = null;
 
-  while (edge !== null) {
-    const nextIn = edge.nextIn;
-    const { from, prevOut, nextOut } = edge;
-
-    if (prevOut !== null) prevOut.nextOut = nextOut;
-    else from.firstOut = nextOut;
-
-    if (nextOut !== null) nextOut.prevOut = prevOut;
-    else from.lastOut = prevOut;
-
-    edge.prevOut = null;
-    edge.nextOut = null;
-    edge.prevIn = null;
-    edge.nextIn = null;
-
-    edge = nextIn;
-  }
+  unlinkDetachedIncomingEdgeSequence(edge);
 }
 
 /**

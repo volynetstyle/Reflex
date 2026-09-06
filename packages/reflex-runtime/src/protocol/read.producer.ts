@@ -43,7 +43,7 @@ export function readProducer<T>(node: ProducerNode<T>): T {
   // Register this read as a dependency if there's an active computation
   if (consumer !== null) {
     profileRuntimeCounter("readProducerTracked");
-    resolveTrackedRead(node, consumer, trackingEpoch, true);
+    resolveTrackedRead(node, consumer, consumer.tailIn?.version ?? trackingEpoch, true);
   }
 
   devRecordReadProducer(node, value, defaultContext);

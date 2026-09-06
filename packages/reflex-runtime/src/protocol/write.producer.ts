@@ -1,6 +1,7 @@
 import {
   defaultContext,
   enterPropagationScope,
+  abortPropagationScope,
   leavePropagationScope,
   emitSettledIfIdle,
   propagationScopeDepth,
@@ -104,6 +105,11 @@ export function writeProducer<T>(
   // Push phase: notify all subscribers depth-first, mark them dirty.
   // Direct subscribers are promoted from Unknown to Changed.
   // This tells them "definitely changed, don't verify, recompute"
-  push_iterator(firstOut);
+  try {
+    push_iterator(firstOut);
+  } catch (error) {
+    abortPropagationScope();
+    throw error;
+  }
   leavePropagationScope();
 }

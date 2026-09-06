@@ -241,4 +241,88 @@ describe("Reactive runtime - hooks and resilience", () => {
     expect(cleanup).toHaveBeenCalledTimes(2);
     expect(watcher.state & DIRTY_STATE).toBe(0);
   });
+  it.each(["direct", "transitive"] as const)(
+    "unwinds a %s invalidation-hook exception without rolling back the write",
+    (placement) => {
+      // The shared debug test barrel can set the globals at import time.
+      // Exercise the production branches regardless of that side effect.
+      vi.stubGlobal("__DEV__", false);
+      vi.stubGlobal("__PROFILE__", false);
+      try {
+      const source = createProducer(1);
+      const middle = createConsumer(() => readProducer(source) * 2);
+      const watcher = createWatcher(() => {
+        if (placement === "direct") readProducer(source);
+        else readConsumer(middle);
+      });
+      const settled = vi.fn();
+      const failure = new Error("invalidation failed");
+      let shouldThrow = true;
+      resetRuntime({
+        onNodeInvalidated() {
+          if (shouldThrow) throw failure;
+        },
+        onRuntimeIdle: settled,
+      });
+      runWatcher(watcher);
+      settled.mockClear();
+
+      const entryDepth = propagationScopeDepth;
+      expect(() => writeProducer(source, 2)).toThrow(failure);
+      expect(readProducer(source)).toBe(2);
+      expect(propagationScopeDepth).toBe(entryDepth);
+      // An aborted wave is not a completed idle notification.
+      expect(settled).not.toHaveBeenCalled();
+
+      shouldThrow = false;
+      runWatcher(watcher);
+      settled.mockClear();
+      expect(() => writeProducer(source, 3)).not.toThrow();
+      expect(propagationScopeDepth).toBe(entryDepth);
+      expect(settled).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    },
+  );
+  it("preserves an outer propagation scope when its hook catches a nested write failure", () => {
+    vi.stubGlobal("__DEV__", false);
+    vi.stubGlobal("__PROFILE__", false);
+    try {
+      const outerSource = createProducer(1);
+      const innerSource = createProducer(1);
+      const outerWatcher = createWatcher(() => { readProducer(outerSource); });
+      const sibling = createWatcher(() => { readProducer(outerSource); });
+      const innerWatcher = createWatcher(() => { readProducer(innerSource); });
+      const failure = new Error("inner hook failed");
+      const settled = vi.fn();
+      const seen: string[] = [];
+      resetRuntime({
+        onNodeInvalidated(node) {
+          if (node === innerWatcher) throw failure;
+          if (node === outerWatcher) {
+            const entryDepth = propagationScopeDepth;
+            expect(entryDepth).toBe(1);
+            expect(() => writeProducer(innerSource, 2)).toThrow(failure);
+            expect(propagationScopeDepth).toBe(entryDepth);
+            seen.push("outer");
+          } else if (node === sibling) {
+            expect(propagationScopeDepth).toBe(1);
+            seen.push("sibling");
+          }
+        },
+        onRuntimeIdle: settled,
+      });
+      runWatcher(outerWatcher);
+      runWatcher(sibling);
+      runWatcher(innerWatcher);
+      settled.mockClear();
+      writeProducer(outerSource, 2);
+      expect(seen).toEqual(["outer", "sibling"]);
+      expect(propagationScopeDepth).toBe(0);
+      expect(settled).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

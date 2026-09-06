@@ -3,7 +3,6 @@ import {
   emitNodeInvalidated,
   nodeInvalidatedHook,
 } from "@runtime/kernel/config";
-import { abortPropagationScope } from "@runtime/kernel/context.scope";
 import { devRecordPropagate } from "@runtime/kernel/dev";
 import {
   enterRuntimePhase,
@@ -186,7 +185,6 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
         emitNodeInvalidated(sub);
       } catch (error) {
         resetPropagateStackAfterAbort(stack, base, top);
-        abortPropagationScope();
         throw error;
       }
       continue;
@@ -247,8 +245,6 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
             if (!__DEV__) nodeInvalidatedHook(sub);
           } catch (error) {
             resetPropagateStackAfterAbort(stack, base, top);
-
-            if (__DEV__) abortPropagationScope();
             throw error;
           }
         } else {

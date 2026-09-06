@@ -17,8 +17,10 @@ import {
   RuntimePhase,
 } from "@runtime/kernel/execution";
 import {
+  Changed,
   Computing,
   DIRTY_STATE,
+  Unknown,
   Visited,
   type ReactiveEdge,
   type ReactiveNode,
@@ -65,7 +67,9 @@ function advanceCore(
     next = compute();
   } catch (error) {
     restoreConsumerTracking(prevActive);
-    node.state = computingState & ~Computing;
+    // A failed pull-bubble computation may have entered as Unknown after its
+    // dependencies already stabilized. Retrying must execute the callback.
+    node.state = (computingState & ~(Computing | Unknown)) | Changed;
 
     devRecordComputeError(node, error, defaultContext);
 

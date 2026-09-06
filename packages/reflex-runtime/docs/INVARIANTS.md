@@ -1,508 +1,175 @@
-# Runtime Invariants — Engineering Contract
+# Runtime invariants
 
-This document specifies the invariants that must hold for `@reflex/runtime` to function correctly. For each invariant, we specify:
+This contract describes the current intrusive graph and execution model.
+Source and executable characterization take precedence over historical names
+or stronger guarantees in older documentation.
 
-- **Definition:** What must be true
-- **Where enforced:** Which code maintains it
-- **How it breaks:** What bugs occur if violated
-- **Tested by:** Which tests verify it
+## 1. Bidirectional edges
 
----
+At graph-operation boundaries, each dependency edge occurs in its producer's
+outgoing list and its consumer's incoming list. Neighbor links are reciprocal,
+endpoints have null boundary links, and tracking represents each
+producer/consumer pair once.
 
-## 1. Bidirectional Edge Consistency
+Moves change incoming order without changing outgoing membership. Pointer
+updates inside an operation are not atomic. In particular, the debug event in
+`cleanupUnvisitedSources` occurs after the incoming suffix is cut but before
+its outgoing memberships are removed. It observes an intermediate state.
 
-### Definition
+Graph operations live in `src/kernel/shape/graph/`. Tracking chooses when
+reconciliation and pruning occur.
 
-Every dependency edge must exist in **both directions**:
+## 2. Dirty and execution flags
 
-- Forward: in source node's `firstOut`/`lastOut` chain
-- Backward: in subscriber node's `firstIn`/`lastIn` chain
+Normal inactive computed nodes are clean, `Unknown`, or `Changed`.
+`Changed` forces computation; `Unknown` normally requires lazy validation.
+An unchanged derived value can suppress downstream recomputation.
 
-```ts
-// If there's an edge source → subscriber
-// Then BOTH must be true:
-source.firstOut → ... → edge → ... → source.lastOut
-subscriber.firstIn → ... → edge → ... → subscriber.lastIn
-```
+The dirty bits are not globally exclusive. A watcher starts with
+`Changed | Unknown | Watcher | Consumer`. Computing invalidation can also
+combine both dirty bits.
 
-### Where Enforced
+`Visited` records invalidation during execution. A watcher may finish with
+`Unknown | Visited`, retaining a rerun obligation. Stabilization uses
+`Changed | Visited` as its force mask; this is not a general DFS visited set.
 
-- **Creation:** `trackRead()` in `src/reactivity/engine/trackingContext.ts`
-- **Removal:** Edge unlinking in `src/reactivity/walkers/recomputeBranch.ts`
-- **Verification:** Tests use `subtle.snapshot()` to inspect edge chains
+`Computing` marks callback evaluation and changes the interpretation of the
+incoming prefix. The computing-subscriber path ignores an empty prefix and
+edges beyond `tailIn`; accepted invalidation adds `Visited | Unknown`.
+Preserve push branch order: direct promotion of an unknown non-watcher is
+checked before the computing-subscriber branch.
 
-### How It Breaks
+`Scheduled` represents host queue ownership. It is independent of freshness;
+successful execution does not automatically release a claim.
 
-If you unlink an edge from one direction but not the other:
+Definitions and transitions: `src/kernel/shape/meta.ts`,
+`src/kernel/stages/`, and `src/kernel/engine/watcher.ts`.
 
-- **Symptom 1:** Graph traversal visits wrong nodes or misses nodes
-- **Symptom 2:** Propagation reaches unintended consumers or misses invalidations
-- **Symptom 3:** Cleanup doesn't find nodes, leaving dangling references
-- **Symptom 4:** Memory leaks (circular references don't get collected)
+## 3. Pruning and failure
 
-### Example Violation
+Successful computation removes the incoming suffix after `tailIn`.
+Reconciliation may eagerly abandon a suffix during a read, before computation
+succeeds. Later reads may recreate abandoned dependencies.
 
-```ts
-// WRONG: unlink only from forward
-edge.prev.next = edge.next;
-edge.next.prev = edge.prev;
-// DON'T unlink from subscriber's incoming
+Throws do not undo links, moves, stamps, or eager removal. Final stale cleanup
+is skipped on callback failure. Computed failure leaves `Changed` to force
+retry; watcher callback/cleanup failure clears transient flags so a later
+invalidation can schedule it again using the remaining graph. That graph is
+not an old-plus-new dependency transaction.
 
-// Result: subscriber.firstIn still points to removed edge
-// Later: propagation traverses a dead edge
-```
+## 4. Cursor and tracking stamp
 
-### Tested By
+`lastIn` is the physical incoming tail. `tailIn` is the last accepted edge
+of the current tracked prefix. Computation resets the cursor to null while
+retaining the old list.
 
-- `tests/runtime.traversal.test.ts` — edge chain integrity
-- `tests/runtime.semantic.test.ts` — graph correctness across operations
-- Development assertions in `src/reactivity/shape/edge.ts`
+Head and expected-next hits advance the cursor. Recognized prefix duplicates
+do not. Reorders move an existing edge after the cursor; new dependencies link
+there. Cleanup removes the unmatched suffix.
 
----
+`edge.version` is a tracking stamp, not a source-value revision. Runtime reads
+extending a prefix use its cursor edge's stamp, even after nested computation
+advances the global `trackingEpoch`. A first read uses the current epoch.
+The explicit resolver API still accepts its supplied version.
 
-## 2. Changed vs. Invalid Semantics
+The 32-edge prefix limit bounds only that local scan. Incoming suffix and
+outgoing membership searches may traverse complete lists. The eager suffix
+threshold is not a global reconciliation work bound.
 
-### Definition
+## 5. Disposal
 
-| State | Meaning | Action on Read |
-|-------|---------|---|
-| `Changed` | Direct upstream definitely changed | Always recompute |
-| `Invalid` | Transitive upstream may have changed | Verify via `shouldRecompute()` |
-| Clean | No invalidation | Return cached value |
+`disposeNode` eagerly removes both adjacency directions and clears executable
+data. It does not set a terminal-state bit or normalize arbitrary flags.
+Generic post-disposal reads/writes are not specified as inert.
 
-```ts
-// After writeProducer:
-direct_subscriber.state |= Changed    // Direct: definitely changed
-transitive_subscriber.state |= Invalid // Transitive: maybe changed
-```
+`disposeWatcher` clears transient flags and invokes captured cleanup after
+teardown. See [DISPOSE.md](./DISPOSE.md).
 
-### Where Enforced
+## 6. Cleanup ordering
 
-- **Propagation:** `src/reactivity/walkers/propagateChange.ts` — marks `Changed` vs. `Invalid`
-- **Stabilization:** `src/reactivity/walkers/recomputeNode.ts` — decides recompute strategy
+Old watcher cleanup precedes rerun computation, with the payload cleared before
+cleanup and tracking temporarily disabled. The callback is checked again after
+cleanup because cleanup may dispose the watcher.
 
-### How It Breaks
+Disposal clears graph/executable data before cleanup, making recursive disposal
+and throwing cleanup unable to repeat the saved cleanup. The runtime stores
+one cleanup payload per watcher, not an ownership-tree cleanup stack.
 
-Confusing these causes:
+## 7. Push and lazy pull
 
-- **If you always recompute on `Invalid`:**
-  - Performance regression: expensive unnecessary recomputation
-  - Correctness may still be OK (but wasteful)
+Source writes use `Object.is`, commit synchronously, then invalidate. Equal
+writes return without propagation.
 
-- **If you skip recompute on `Changed`:**
-  - **Correctness bug:** stale values returned
-  - Consumer sees outdated payload
-  - Cascade invalidations use wrong data
+Push first handles immediate outgoing edges, then transitive DFS continuations.
+Direct consumers become `Changed`; newly invalidated descendants become
+`Unknown`. Dirty state suppresses repeated descendant expansion. This is not
+a general topological sort across all edges in a DAG.
 
-### Example Violation
+Pull descends through unknown dependencies and advances dirty dependencies.
+Confirmed changes bubble; stable branches resume incoming siblings. Changed
+derived results promote immediate subscribers through one-level push. The
+active pull edge may be skipped because its continuation is already owned by
+the walker.
 
-```ts
-// WRONG: treat Changed the same as Invalid
-if (node.state & (Changed | Invalid)) {
-  // Do expensive verification instead of immediate recompute
-  if (shouldRecompute(node)) {
-    recompute(node);
-  }
-}
-// Result: first-level consumers don't update after direct producer change
-```
+An exception does not roll back source commits or completed recomputations, and
+does not defer or transactionally complete the aborted propagation wave.
 
-### Tested By
+## 8. Nested execution and stack lifetime
 
-- `tests/runtime.semantic.test.ts` — stale-value detection
-- `tests/runtime.walkers.test.ts` — propagation token validation
-- Performance benchmarks should show no regression
+Push and pull retain explicit reusable stacks. `base` is the invocation entry
+slice, `top` its live continuation frontier, and `high` publishes occupied
+storage before reentrant calls. Every exit restores the entry base and releases
+only this invocation's abandoned references, preserving outer continuations.
 
----
+Producer writes that open propagation scopes own their abort path. A nested
+write borrows the existing scope; if its exception is caught by the outer
+callback, it must not clear that outer scope.
 
-## 3. Stale Dependency Pruning
+Nested computation restores the active consumer. Cleanup and `untracked`
+temporarily clear it and restore it on throws.
 
-### Definition
+Production nested writes are synchronous, not queued behind the outer wave.
+DEV scheduler policy, enabled by `__DEV__ && __PROFILE__`, rejects nested
+propagation and direct nested pull while permitting pull through intervening
+recomputation. Phase restoration is distinct from stack/register restoration.
 
-After a consumer recomputes, edges for reads that did **not** occur must be unlinked.
+## 9. Execution contexts
 
-```ts
-// Before recompute: deps = [A, B, C]
-// During recompute: code reads [A, B] only
-// After recompute: deps = [A, B], edge to C unlinked
+Contexts isolate runtime registers/configuration, not graph ownership. Several
+contexts can access the same node flags, payloads, and edges.
 
-// Later: C.write() does NOT invalidate this consumer
-```
+Context switching copies live module registers and configuration to/from saved
+context objects. `runWithRuntimeContext` restores the previous context in a
+finally block. Traversal storage remains shared and is protected by invocation
+slices.
 
-### Where Enforced
+Implementation: `src/kernel/context*.ts`, `src/kernel/state.ts`, and
+`src/kernel/config.ts`.
 
-- **Dependency recording:** `src/reactivity/engine/trackingContext.ts`
-- **Recompute orchestration:** `src/reactivity/walkers/recomputeNode.ts`
-- **Stale cleanup:** `src/reactivity/walkers/recomputeBranch.ts` — `unlinkStaleSuffix()`
+## 10. Host scheduling
 
-### How It Breaks
+Push updates watcher state before calling `onNodeInvalidated`. The runtime
+does not own a watcher queue or asynchronous timing. The host claims, queues,
+releases, and runs watchers.
 
-If stale edges persist:
+Unknown-to-changed promotion can notify again; queue deduplication is the
+host's responsibility. Invalidation is distinct from `onRuntimeIdle` and
+requested `onHostFlush` delivery. Batching defers idle delivery, not commits.
 
-- **Symptom 1:** Ghost invalidations — consumer marked dirty from unrelated branches
-- **Symptom 2:** Memory leak — circular references through stale edges
-- **Symptom 3:** Overcounting — dependent chains think they're affected when they're not
+DEV policy forbids reactive reads, watcher execution, and watcher disposal from
+the invalidation hook, while permitting host execution at the idle boundary.
+It does not introduce a production liveness mechanism.
 
-### Example Violation
+## Validation
 
-```ts
-// WRONG: mark new deps but don't unlink old ones
-for (const dep of newDeps) {
-  createEdge(dep, consumer);
-}
-// Missing: unlinkStaleSuffix(consumer);
+Use `test/runtime/contracts/` for state, cleanup, hooks, recovery, and contexts;
+`test/runtime/topology/` for reciprocal lists, duplicate reads, dynamic
+branches, stabilization, and continuation lifetime; and `test/dev/runtime/`
+for development policy and debug observation order.
 
-// Result: consumer still has edge to oldDep
-// Later: oldDep.write() invalidates consumer even though it doesn't read it
-```
+Run production and development configurations separately. Shared debug test
+imports may set `__DEV__`; production-branch tests must account for that.
+Test presence is not a claim that a checkout passes.
 
-### Tested By
-
-- `tests/runtime.semantic.test.ts` — branch switching scenarios
-- `tests/runtime.walkers.test.ts` — dependency lifecycle
-- Regression: `tests/runtime.walkers_reggression.dev.test.ts`
-
----
-
-## 4. depsTail Cursor Validity
-
-### Definition
-
-`depsTail` is a cursor used to reuse edges from previous executions.
-
-```ts
-// Before recompute:
-node.firstIn = edge0 → edge1 → edge2 → node.lastIn
-node.depsTail = edge0 (cursor)
-
-// During recompute: if we read depsTail's source again, reuse it
-// After recompute: depsTail points to last reused edge, unlink everything after
-
-depsTail = old_edge0
-unlink: old_edge1, old_edge2 (stale suffix)
-```
-
-### Where Enforced
-
-- **Initialization:** `src/reactivity/engine/trackingContext.ts` — set depsTail at recompute start
-- **Reuse:** `trackRead()` checks if depsTail's source matches
-- **Cleanup:** `src/reactivity/walkers/recomputeBranch.ts` — unlink from depsTail to lastIn
-
-### How It Breaks
-
-Incorrect cursor management causes:
-
-- **Symptom 1:** Edges added but never used (waste of memory)
-- **Symptom 2:** Stale edges not cleaned (unrelated invalidations)
-- **Symptom 3:** Performance regression (O(n²) instead of O(n) edge processing)
-
-### Example Violation
-
-```ts
-// WRONG: forget to update depsTail after reusing an edge
-if (depsTail && depsTail.from.id === readDep.id) {
-  // Reuse edge, but don't advance cursor
-  // depsTail stays at same edge
-}
-// Result: same edge gets reprocessed on every read
-// Later: duplicate edges exist
-```
-
-### Tested By
-
-- `tests/runtime.semantic.test.ts` — edge reuse patterns
-- Performance benchmarks — `tracking-cleanup-matrix.jit.mjs`
-
----
-
-## 5. Disposal is Terminal
-
-### Definition
-
-Once a node is marked `Disposed`, it:
-
-- Never participates in graph operations
-- Never executes user code
-- Never receives new edges
-- Only participates in cleanup/unlinking
-
-```ts
-if (node.state & Disposed) {
-  // All entry points must early-return or no-op
-  return; // readProducer, readConsumer, writeProducer, runWatcher, etc.
-}
-```
-
-### Where Enforced
-
-- **Disposal entry point:** `disposeNode()` in `src/reactivity/index.ts`
-- **Graph entry points:** Each operation checks `if (isDisposedNode(node)) return`
-- **Propagation:** Disposed nodes don't participate in `propagate()`
-
-### How It Breaks
-
-If a disposed node reactivates or participates:
-
-- **Symptom 1:** Dangling cleanup functions execute unexpectedly
-- **Symptom 2:** Circular references keep nodes alive
-- **Symptom 3:** Effects fire after component unmount
-- **Symptom 4:** Double-cleanup (cleanup runs twice)
-
-### Example Violation
-
-```ts
-// WRONG: allow read after disposal
-node.state |= Disposed;
-node.compute = null;
-
-// Later, someone calls readConsumer:
-if (node.state & Disposed) {
-  // DON'T do this:
-  recompute(node);  // compute is null, will crash
-}
-// Correct:
-if (node.state & Disposed) {
-  return node.payload;  // return cached value only
-}
-```
-
-### Tested By
-
-- `tests/runtime.lifecycle.test.ts` — disposal semantics
-- `tests/runtime.test_utils.ts` — disposal verification helpers
-- DISPOSE.md tests
-
----
-
-## 6. Cleanup Ordering
-
-### Definition
-
-For each watcher:
-
-1. **On rerun:** Previous cleanup executes **before** new compute
-2. **On disposal:** Cleanup executes exactly once
-3. **Order:** Nested cleanups execute in LIFO order (innermost first)
-
-```ts
-watcher.cleanup?();     // Run old cleanup FIRST
-watcher.compute();      // Then run new compute
-watcher.cleanup = result; // Store new cleanup
-```
-
-### Where Enforced
-
-- **Watcher execution:** `runWatcher()` in `src/api/watcher.ts`
-- **Disposal:** `disposeWatcher()` in same file
-
-### How It Breaks
-
-Wrong cleanup order causes:
-
-- **Symptom 1:** Resource double-release (cleanup-then-recompute violates this)
-- **Symptom 2:** State inconsistency (new cleanup expects old state)
-- **Symptom 3:** Observable side effects in wrong order
-
-### Example Violation
-
-```ts
-// WRONG: run new compute before old cleanup
-watcher.compute();         // new compute runs
-result = watcher.cleanup;  // then old cleanup
-watcher.cleanup = result;
-
-// Effect: old cleanup sees new state, can corrupt it
-```
-
-### Tested By
-
-- `tests/runtime.lifecycle.test.ts` — cleanup sequencing
-- DISPOSE.md — detailed cleanup protocol tests
-
----
-
-## 7. Propagation Topological Order
-
-### Definition
-
-No node receives invalidation before its **direct upstream dependencies**.
-
-```ts
-// If: source → A → B
-// Then: propagate must reach source first, then A, then B
-// NOT: B before A
-```
-
-### Where Enforced
-
-- **Linear traversal:** `src/reactivity/walkers/propagateChange.ts` — walk via edge chain
-- **No priority queues:** Runtime doesn't reorder subscribers
-
-### How It Breaks
-
-Violating topological order causes:
-
-- **Symptom 1:** Cascading recomputation in wrong order
-- **Symptom 2:** `shouldRecompute()` makes wrong decision (upstream not yet invalidated)
-- **Symptom 3:** Stale values temporarily visible
-
-### Example Violation
-
-```ts
-// WRONG: reorder propagation by priority
-let toProcess = [B, A, source];  // wrong order
-for (const node of toProcess) {
-  propagateToSubscribers(node);
-}
-// Result: B processed before A, which hasn't processed source yet
-```
-
-### Tested By
-
-- `tests/traversal-order.jit.mjs` — topological order verification
-- `tests/runtime.semantic.test.ts` — correctness across configurations
-
----
-
-## 8. Re-entrancy Safety
-
-### Definition
-
-If `writeProducer()` is called during a compute or propagation:
-
-1. Current wave completes
-2. New invalidations are queued
-3. No infinite loops or state corruption
-
-```ts
-const derived = new ReactiveNode(undefined, () => {
-  const val = readProducer(source);
-  if (val > 10) {
-    writeProducer(other, 99);  // <-- Re-entrance
-  }
-  return val;
-});
-```
-
-### Where Enforced
-
-- **Visited tracking:** `src/reactivity/walkers/propagateOnce.ts`
-- **Propagation depth:** `context.propagationDepth` prevents nested waves
-- **Queue handling:** New invalidations deferred until depth === 0
-
-### How It Breaks
-
-Incorrect re-entrancy handling causes:
-
-- **Symptom 1:** Infinite loops (mutual re-entrancy)
-- **Symptom 2:** State corruption (propagation mid-flight)
-- **Symptom 3:** Visited bit not cleared (subsequent propagations marked visited)
-
-### Tested By
-
-- `tests/runtime.semantic.test.ts` — re-entrancy scenarios
-- `tests/runtime.hooks.test.ts` — context propagation depth
-
----
-
-## 9. Context Isolation
-
-### Definition
-
-Operations in one context don't affect another context.
-
-```ts
-const ctx1 = createExecutionContext({ ... });
-const ctx2 = createExecutionContext({ ... });
-
-readConsumer(node, ctx1);  // affects ctx1's tracking
-readConsumer(node, ctx2);  // doesn't affect ctx1
-```
-
-### Where Enforced
-
-- **Context parameter:** All operations accept `context?`
-- **Default context:** Fallback to shared default if omitted
-- **Computing storage:** Per-context cleanup, activeComputed, etc.
-
-### How It Breaks
-
-Context leakage causes:
-
-- **Symptom 1:** Operations in one "world" affect another
-- **Symptom 2:** Hooks fire unexpectedly in wrong context
-- **Symptom 3:** Cleanup runs at wrong time
-
-### Tested By
-
-- `tests/runtime.connect.test.ts` — multi-context scenarios
-- Integration tests with custom contexts
-
----
-
-## 10. No Immediate Watcher Execution
-
-### Definition
-
-When a watcher is invalidated via propagation, it **does not execute immediately**.
-
-Instead:
-1. `onEffectInvalidated(node)` hook fires (host decides what to do)
-2. Watcher is marked `Invalid`
-3. Host calls `runWatcher()` when appropriate
-
-```ts
-writeProducer(source, newValue);  // Invalidates watcher
-// Watcher.compute() is NOT called here
-// Only onEffectInvalidated hook fires
-
-// Later, host decides:
-runWatcher(watcher);  // NOW it executes
-```
-
-### Where Enforced
-
-- **Propagation:** `src/reactivity/walkers/propagateChange.ts` — stops at watcher, emits hook
-- **No auto-execution:** `src/api/watcher.ts` — `runWatcher()` is host-called
-
-### How It Breaks
-
-Auto-executing watchers causes:
-
-- **Symptom 1:** Lost host control over scheduling
-- **Symptom 2:** Effects can't batch or defer
-- **Symptom 3:** Nondeterministic execution (depends on propagation order)
-
-### Tested By
-
-- `tests/runtime.semantic.test.ts` — effect scheduling
-- `tests/runtime.hooks.test.ts` — hook invocation timing
-
----
-
-## Summary Table
-
-| # | Invariant | Enforced By | Broken If | Test |
-|-|-|-|-|-|
-| 1 | Bidirectional edges | Edge creation/removal | Graph traversal wrong | traversal.test |
-| 2 | Changed vs. Invalid | propagate + recompute | Stale values | semantic.test |
-| 3 | Stale pruning | recomputeBranch.ts | Ghost invalidations | semantic.test |
-| 4 | depsTail cursor | trackingContext.ts | Performance regression | perf benchmarks |
-| 5 | Disposal terminal | All entry points | Effects post-disposal | lifecycle.test |
-| 6 | Cleanup order | runWatcher, disposeWatcher | Resource leaks | lifecycle.test |
-| 7 | Topological order | propagateChange.ts | Cascading recompute wrong | traversal-order.jit |
-| 8 | Re-entrancy safe | propagateOnce + depth | Infinite loops | semantic.test |
-| 9 | Context isolation | Context parameter | Cross-context leakage | connect.test |
-| 10 | No immediate watchers | propagate hook | Lost host control | semantic.test |
-
----
-
-## Before Modifying the Runtime
-
-1. **Read this document** in full
-2. **Run tests:** `pnpm test` to see current invariants
-3. **Map your changes** against invariants 1–10
-4. **Add test cases** that verify your change doesn't violate them
-5. **Run regression:** `pnpm test -- regression` to catch slips
-
-See [study/README.md](../study/README.md) and [MAINTENANCE.md](./MAINTENANCE.md) for detailed maintenance guidelines.
+Use non-profile production timing for performance claims. Structural profiling
+adds work to traversal.

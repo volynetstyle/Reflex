@@ -12,5 +12,5 @@ export function trackRead(
   consumer = currentConsumer,
 ): void {
   if (consumer === null) return;
-  resolveTrackedRead(source, consumer, trackingEpoch, true);
+  resolveTrackedRead(source, consumer, consumer.tailIn?.version ?? trackingEpoch, true);
 }
