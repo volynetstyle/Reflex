@@ -21,6 +21,8 @@ function moveIncomingEdgeToPosition(
 ): void {
   if (edge.prevIn === insertAfterEdge) return;
 
+  profileRuntimeCounter("trackingEdgeMoved");
+
   if (insertAfterEdge === null) {
     if (edge.nextIn === null) {
       moveLastIncomingEdgeToFrontUnchecked(consumer, edge);
@@ -83,6 +85,8 @@ function detachIncomingSuffix(
   insertAfterEdge: ReactiveEdge | null,
   suffixStartEdge: ReactiveEdge,
 ): void {
+  profileRuntimeCounter("trackingSuffixEagerDetach");
+
   if (insertAfterEdge === null) {
     consumer.firstIn = null;
     consumer.lastIn = null;
@@ -136,6 +140,7 @@ export function reuseIncomingEdgeFromSuffixOrLink(
    */
   if (suffixStartEdge !== null && suffixStartEdge.from === producer) {
     suffixStartEdge.version = producerVersion;
+    profileRuntimeCounter("trackingSuffixHeadHit");
     return suffixStartEdge;
   }
 
@@ -172,6 +177,7 @@ export function reuseIncomingEdgeFromSuffixOrLink(
     candidateEdge = candidateEdge.nextIn
   ) {
     scannedSuffixEdges += 1;
+    profileRuntimeCounter("trackingSuffixEdgesScanned");
 
     if (candidateEdge.from !== producer) {
       if (
@@ -183,6 +189,7 @@ export function reuseIncomingEdgeFromSuffixOrLink(
 
         if (producerEdge === null) {
           detachIncomingSuffix(consumer, insertAfterEdge, suffixStartEdge);
+          profileRuntimeCounter("trackingSuffixLinkNew");
           return linkEdge(producer, consumer, insertAfterEdge, producerVersion);
         }
 
@@ -210,6 +217,7 @@ export function reuseIncomingEdgeFromSuffixOrLink(
     }
 
     candidateEdge.version = producerVersion;
+    profileRuntimeCounter("trackingSuffixReuseHit");
     return candidateEdge;
   }
 
@@ -229,6 +237,7 @@ export function reuseIncomingEdgeFromSuffixOrLink(
     detachIncomingSuffix(consumer, insertAfterEdge, suffixStartEdge);
   }
 
+  profileRuntimeCounter("trackingSuffixLinkNew");
   return linkEdge(producer, consumer, insertAfterEdge, producerVersion);
 }
 

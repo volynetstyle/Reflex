@@ -1,0 +1,257 @@
+[
+  {
+    "key": "churnByWidth.w32.c0",
+    "sweep": "churnByWidth",
+    "axis": "churnRate",
+    "axisValue": 0,
+    "secondaryAxis": "width",
+    "secondaryValue": 32,
+    "iterations": 300,
+    "nsPerOpMedian": 118324.99999999226,
+    "nsPerOpTrials": [
+      119591.33333332527,
+      118324.99999999226,
+      113957.33333333435,
+      111576.66666666046,
+      121848.66666667708
+    ]
+  },
+  {
+    "key": "churnByWidth.w32.c0.01",
+    "sweep": "churnByWidth",
+    "axis": "churnRate",
+    "axisValue": 0.01,
+    "secondaryAxis": "width",
+    "secondaryValue": 32,
+    "iterations": 300,
+    "nsPerOpMedian": 112478.0000000222,
+    "nsPerOpTrials": [
+      112478.0000000222,
+      111255.33333329561,
+      114633.3333333314,
+      110117.6666666773,
+      113357.6666667068
+    ]
+  },
+  {
+    "key": "churnByWidth.w32.c0.1",
+    "sweep": "churnByWidth",
+    "axis": "churnRate",
+    "axisValue": 0.1,
+    "secondaryAxis": "width",
+    "secondaryValue": 32,
+    "iterations": 300,
+    "nsPerOpMedian": 119854.33333335094,
+    "nsPerOpTrials": [
+      120912.00000000147,
+      117273.33333333567,
+      122959.66666667178,
+      119634.66666667955,
+      119854.33333335094
+    ]
+  },
+  {
+    "key": "churnByWidth.w32.c0.5",
+    "sweep": "churnByWidth",
+    "axis": "churnRate",
+    "axisValue": 0.5,
+    "secondaryAxis": "width",
+    "secondaryValue": 32,
+    "iterations": 300,
+    "nsPerOpMedian": 125587.00000003834,
+    "nsPerOpTrials": [
+      124691.66666667054,
+      118521.66666663832,
+      128285.66666668242,
+      126810.00000001708,
+      125587.00000003834
+    ]
+  },
+  {
+    "key": "churnByWidth.w32.c1",
+    "sweep": "churnByWidth",
+    "axis": "churnRate",
+    "axisValue": 1,
+    "secondaryAxis": "width",
+    "secondaryValue": 32,
+    "iterations": 300,
+    "nsPerOpMedian": 121785.99999999277,
+    "nsPerOpTrials": [
+      122524.66666662562,
+      124051.33333333652,
+      121785.99999999277,
+      118792.00000000614,
+      119027.33333331223
+    ]
+  },
+  {
+    "key": "churnByWidth.w128.c0",
+    "sweep": "churnByWidth",
+    "axis": "churnRate",
+    "axisValue": 0,
+    "secondaryAxis": "width",
+    "secondaryValue": 128,
+    "iterations": 300,
+    "nsPerOpMedian": 459151.66666668176,
+    "nsPerOpTrials": [
+      424731.33333332953,
+      425884.66666663106,
+      561390.0000000043,
+      481012.6666666474,
+      459151.66666668176
+    ]
+  },
+  {
+    "key": "churnByWidth.w128.c0.01",
+    "sweep": "churnByWidth",
+    "axis": "churnRate",
+    "axisValue": 0.01,
+    "secondaryAxis": "width",
+    "secondaryValue": 128,
+    "iterations": 300,
+    "nsPerOpMedian": 492064.6666666532,
+    "nsPerOpTrials": [
+      511684.33333334787,
+      492064.6666666532,
+      455500.33333332976,
+      438575.33333338023,
+      530024.6666666741
+    ]
+  },
+  {
+    "key": "churnByWidth.w128.c0.1",
+    "sweep": "churnByWidth",
+    "axis": "churnRate",
+    "axisValue": 0.1,
+    "secondaryAxis": "width",
+    "secondaryValue": 128,
+    "iterations": 300,
+    "nsPerOpMedian": 913155.666666668,
+    "nsPerOpTrials": [
+      909034.6666666544,
+      949656.3333333568,
+      911208.333333343,
+      921570.0000000166,
+      913155.666666668
+    ]
+  },
+  {
+    "key": "churnByWidth.w128.c0.5",
+    "sweep": "churnByWidth",
+    "axis": "churnRate",
+    "axisValue": 0.5,
+    "secondaryAxis": "width",
+    "secondaryValue": 128,
+    "iterations": 300,
+    "nsPerOpMedian": 915415.3333333671,
+    "nsPerOpTrials": [
+      915703.0000000183,
+      915415.3333333671,
+      910656.0000000172,
+      915126.333333319,
+      917094.6666666714
+    ]
+  },
+  {
+    "key": "churnByWidth.w128.c1",
+    "sweep": "churnByWidth",
+    "axis": "churnRate",
+    "axisValue": 1,
+    "secondaryAxis": "width",
+    "secondaryValue": 128,
+    "iterations": 300,
+    "nsPerOpMedian": 919437.9999999849,
+    "nsPerOpTrials": [
+      941295.0000000031,
+      919437.9999999849,
+      907358.6666666961,
+      915388.6666666464,
+      922091.3333333252
+    ]
+  },
+  {
+    "key": "churnByWidth.w512.c0",
+    "sweep": "churnByWidth",
+    "axis": "churnRate",
+    "axisValue": 0,
+    "secondaryAxis": "width",
+    "secondaryValue": 512,
+    "iterations": 80,
+    "nsPerOpMedian": 3446068.7500000857,
+    "nsPerOpTrials": [
+      3438804.9999999567,
+      3444113.749999997,
+      3451102.499999979,
+      3446068.7500000857,
+      3467501.2499999865
+    ]
+  },
+  {
+    "key": "churnByWidth.w512.c0.01",
+    "sweep": "churnByWidth",
+    "axis": "churnRate",
+    "axisValue": 0.01,
+    "secondaryAxis": "width",
+    "secondaryValue": 512,
+    "iterations": 80,
+    "nsPerOpMedian": 3488681.250000081,
+    "nsPerOpTrials": [
+      3466845.000000103,
+      3499368.7500000307,
+      3488681.250000081,
+      3492845.0000001253,
+      3445478.7500000745
+    ]
+  },
+  {
+    "key": "churnByWidth.w512.c0.1",
+    "sweep": "churnByWidth",
+    "axis": "churnRate",
+    "axisValue": 0.1,
+    "secondaryAxis": "width",
+    "secondaryValue": 512,
+    "iterations": 80,
+    "nsPerOpMedian": 3469308.7499999823,
+    "nsPerOpTrials": [
+      3472559.9999999763,
+      3481051.2500000186,
+      3469308.7499999823,
+      3468842.5000000284,
+      3468976.250000014
+    ]
+  },
+  {
+    "key": "churnByWidth.w512.c0.5",
+    "sweep": "churnByWidth",
+    "axis": "churnRate",
+    "axisValue": 0.5,
+    "secondaryAxis": "width",
+    "secondaryValue": 512,
+    "iterations": 80,
+    "nsPerOpMedian": 3545193.7499999986,
+    "nsPerOpTrials": [
+      3545193.7499999986,
+      3535369.9999999665,
+      3549536.249999983,
+      3574383.750000016,
+      3532258.7500000736
+    ]
+  },
+  {
+    "key": "churnByWidth.w512.c1",
+    "sweep": "churnByWidth",
+    "axis": "churnRate",
+    "axisValue": 1,
+    "secondaryAxis": "width",
+    "secondaryValue": 512,
+    "iterations": 80,
+    "nsPerOpMedian": 3517408.749999959,
+    "nsPerOpTrials": [
+      3543882.500000109,
+      3502334.999999948,
+      3496803.7500000717,
+      3517408.749999959,
+      3524843.7500000363
+    ]
+  }
+]

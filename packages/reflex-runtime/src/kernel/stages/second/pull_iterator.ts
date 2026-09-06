@@ -19,6 +19,7 @@ import {
 import {
   isRuntimeProfilingEnabled,
   profileRuntimeCounter,
+  profileRuntimeCounterBy,
   profileRuntimePullPath,
 } from "@runtime/profiling";
 
@@ -250,6 +251,13 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
       if (changed) {
         high = base;
         if (base === 0 && stack.length > STACK_TRIM_MIN_CAPACITY) {
+          if (__PROFILE__) {
+            profileRuntimeCounter("pullStackTrimEvents");
+            profileRuntimeCounterBy(
+              "pullStackTrimExcess",
+              stack.length - STACK_TRIM_MIN_CAPACITY,
+            );
+          }
           stack.length = STACK_TRIM_MIN_CAPACITY;
         }
         return true;
@@ -296,6 +304,13 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
     high = base;
     if (base === 0 && stack.length > STACK_TRIM_MIN_CAPACITY) {
+      if (__PROFILE__) {
+        profileRuntimeCounter("pullStackTrimEvents");
+        profileRuntimeCounterBy(
+          "pullStackTrimExcess",
+          stack.length - STACK_TRIM_MIN_CAPACITY,
+        );
+      }
       stack.length = STACK_TRIM_MIN_CAPACITY;
     }
     return changed;

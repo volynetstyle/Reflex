@@ -1,0 +1,77 @@
+[
+  {
+    "key": "semanticFixedFanout1024.0",
+    "sweep": "semanticFixedFanout1024",
+    "axis": "semanticRatio",
+    "axisValue": 0,
+    "iterations": 150,
+    "nsPerOpMedian": 9775213.333333377,
+    "nsPerOpTrials": [
+      10197904.666666873,
+      9775213.333333377,
+      9853095.333333671,
+      9680455.333333617,
+      9711145.333333407
+    ]
+  },
+  {
+    "key": "semanticFixedFanout1024.0.25",
+    "sweep": "semanticFixedFanout1024",
+    "axis": "semanticRatio",
+    "axisValue": 0.25,
+    "iterations": 150,
+    "nsPerOpMedian": 10660881.999999983,
+    "nsPerOpTrials": [
+      10739968.000000032,
+      10640471.999999912,
+      10773301.333333366,
+      10660881.999999983,
+      10348004.000000266
+    ]
+  },
+  {
+    "key": "semanticFixedFanout1024.0.5",
+    "sweep": "semanticFixedFanout1024",
+    "axis": "semanticRatio",
+    "axisValue": 0.5,
+    "iterations": 150,
+    "nsPerOpMedian": 11662515.333333286,
+    "nsPerOpTrials": [
+      11625754.666666422,
+      11664087.999999756,
+      11736316.66666673,
+      11494310.666666523,
+      11662515.333333286
+    ]
+  },
+  {
+    "key": "semanticFixedFanout1024.0.75",
+    "sweep": "semanticFixedFanout1024",
+    "axis": "semanticRatio",
+    "axisValue": 0.75,
+    "iterations": 150,
+    "nsPerOpMedian": 12460305.33333309,
+    "nsPerOpTrials": [
+      12460305.33333309,
+      11975308.000000272,
+      12428631.333333518,
+      12493682.666666573,
+      12555612.666666664
+    ]
+  },
+  {
+    "key": "semanticFixedFanout1024.1",
+    "sweep": "semanticFixedFanout1024",
+    "axis": "semanticRatio",
+    "axisValue": 1,
+    "iterations": 150,
+    "nsPerOpMedian": 13401750.666666776,
+    "nsPerOpTrials": [
+      13401750.666666776,
+      13651569.333333367,
+      13335592.666666877,
+      13528673.333333183,
+      13316125.999999931
+    ]
+  }
+]

@@ -1,0 +1,122 @@
+[
+  {
+    "key": "fanout.1",
+    "sweep": "fanout",
+    "axis": "fanout",
+    "axisValue": 1,
+    "iterations": 300,
+    "nsPerOpMedian": 22460.66666666593,
+    "nsPerOpTrials": [
+      22460.66666666593,
+      23225.33333333316,
+      22179.666666664467,
+      22187.000000000502,
+      25671.66666667011
+    ]
+  },
+  {
+    "key": "fanout.4",
+    "sweep": "fanout",
+    "axis": "fanout",
+    "axisValue": 4,
+    "iterations": 300,
+    "nsPerOpMedian": 76387.33333333221,
+    "nsPerOpTrials": [
+      82934.66666666669,
+      105370.33333333359,
+      76387.33333333221,
+      73192.33333333614,
+      59880.99999999879
+    ]
+  },
+  {
+    "key": "fanout.16",
+    "sweep": "fanout",
+    "axis": "fanout",
+    "axisValue": 16,
+    "iterations": 300,
+    "nsPerOpMedian": 210883.3333333314,
+    "nsPerOpTrials": [
+      210976.33333333457,
+      210883.3333333314,
+      207021.33333333523,
+      205459.66666666573,
+      216615.3333333326
+    ]
+  },
+  {
+    "key": "fanout.64",
+    "sweep": "fanout",
+    "axis": "fanout",
+    "axisValue": 64,
+    "iterations": 300,
+    "nsPerOpMedian": 821156.3333333348,
+    "nsPerOpTrials": [
+      815451.9999999987,
+      825999.9999999977,
+      799763.3333333336,
+      821156.3333333348,
+      838214.3333333321
+    ]
+  },
+  {
+    "key": "fanout.192",
+    "sweep": "fanout",
+    "axis": "fanout",
+    "axisValue": 192,
+    "iterations": 300,
+    "nsPerOpMedian": 2459886,
+    "nsPerOpTrials": [
+      2363609.333333334,
+      2404689.6666666665,
+      2518714,
+      2459886,
+      2595793.999999999
+    ]
+  },
+  {
+    "key": "fanout.512",
+    "sweep": "fanout",
+    "axis": "fanout",
+    "axisValue": 512,
+    "iterations": 80,
+    "nsPerOpMedian": 6722933.749999993,
+    "nsPerOpTrials": [
+      6722933.749999993,
+      6543058.75,
+      6980966.250000028,
+      6860552.499999994,
+      6652978.750000011
+    ]
+  },
+  {
+    "key": "fanout.1024",
+    "sweep": "fanout",
+    "axis": "fanout",
+    "axisValue": 1024,
+    "iterations": 30,
+    "nsPerOpMedian": 13020706.666666593,
+    "nsPerOpTrials": [
+      13158663.333333366,
+      13595173.333333272,
+      13020706.666666593,
+      12608103.333333323,
+      12602090.000000073
+    ]
+  },
+  {
+    "key": "fanout.2048",
+    "sweep": "fanout",
+    "axis": "fanout",
+    "axisValue": 2048,
+    "iterations": 30,
+    "nsPerOpMedian": 26389593.33333332,
+    "nsPerOpTrials": [
+      26082373.333333332,
+      26389593.33333332,
+      25616753.333333325,
+      26481683.333333302,
+      27665056.666666593
+    ]
+  }
+]

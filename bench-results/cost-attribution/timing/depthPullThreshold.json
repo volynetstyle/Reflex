@@ -1,0 +1,272 @@
+[
+  {
+    "key": "depthPullThreshold.192",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 192,
+    "iterations": 300,
+    "nsPerOpMedian": 3577686.666666608,
+    "nsPerOpTrials": [
+      3497868.0000000168,
+      3577686.666666608,
+      3601417.3333334234,
+      3589592.999999974,
+      3556363.3333332837
+    ]
+  },
+  {
+    "key": "depthPullThreshold.224",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 224,
+    "iterations": 300,
+    "nsPerOpMedian": 4087897.9999999865,
+    "nsPerOpTrials": [
+      4087897.9999999865,
+      4074241.000000038,
+      4089933.3333332716,
+      4113793.333333257,
+      4077977.0000000526
+    ]
+  },
+  {
+    "key": "depthPullThreshold.240",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 240,
+    "iterations": 300,
+    "nsPerOpMedian": 4375449.333333332,
+    "nsPerOpTrials": [
+      4393513.666666597,
+      4364655.333333358,
+      4388325.66666669,
+      4370413.666666621,
+      4375449.333333332
+    ]
+  },
+  {
+    "key": "depthPullThreshold.248",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 248,
+    "iterations": 300,
+    "nsPerOpMedian": 4521499.3333333405,
+    "nsPerOpTrials": [
+      4527484.6666667145,
+      4521499.3333333405,
+      4548040.000000037,
+      4507863.333333322,
+      4513884.333333311
+    ]
+  },
+  {
+    "key": "depthPullThreshold.252",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 252,
+    "iterations": 300,
+    "nsPerOpMedian": 4632637.333333356,
+    "nsPerOpTrials": [
+      4591663.333333369,
+      4622745.666666694,
+      4632637.333333356,
+      4638543.666666664,
+      4685518.333333312
+    ]
+  },
+  {
+    "key": "depthPullThreshold.254",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 254,
+    "iterations": 300,
+    "nsPerOpMedian": 4644268.333333312,
+    "nsPerOpTrials": [
+      4619267.666666613,
+      4644268.333333312,
+      4648247.333333323,
+      4638827.666666669,
+      4662011.666666658
+    ]
+  },
+  {
+    "key": "depthPullThreshold.255",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 255,
+    "iterations": 300,
+    "nsPerOpMedian": 4653772.666666676,
+    "nsPerOpTrials": [
+      4650024.6666666735,
+      4653772.666666676,
+      4665527.666666603,
+      4644518.33333335,
+      4670969.666666642
+    ]
+  },
+  {
+    "key": "depthPullThreshold.256",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 256,
+    "iterations": 80,
+    "nsPerOpMedian": 4667502.4999996815,
+    "nsPerOpTrials": [
+      4661968.750000233,
+      4667502.4999996815,
+      4701259.99999982,
+      4662247.500000012,
+      4701381.250000122
+    ]
+  },
+  {
+    "key": "depthPullThreshold.257",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 257,
+    "iterations": 80,
+    "nsPerOpMedian": 4715557.500000068,
+    "nsPerOpTrials": [
+      4715557.500000068,
+      4732613.750000019,
+      4670294.999999897,
+      4694525.000000067,
+      4872087.499999907
+    ]
+  },
+  {
+    "key": "depthPullThreshold.258",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 258,
+    "iterations": 80,
+    "nsPerOpMedian": 4718718.749999971,
+    "nsPerOpTrials": [
+      4729675.000000134,
+      4686792.499999865,
+      4718718.749999971,
+      4752941.250000004,
+      4717568.749999919
+    ]
+  },
+  {
+    "key": "depthPullThreshold.260",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 260,
+    "iterations": 80,
+    "nsPerOpMedian": 4747201.250000217,
+    "nsPerOpTrials": [
+      4747201.250000217,
+      4763496.250000025,
+      4746771.250000166,
+      4786603.749999994,
+      4715783.7499999
+    ]
+  },
+  {
+    "key": "depthPullThreshold.264",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 264,
+    "iterations": 80,
+    "nsPerOpMedian": 4862977.500000125,
+    "nsPerOpTrials": [
+      4848663.750000196,
+      4812091.249999867,
+      4870974.9999998165,
+      4889639.999999781,
+      4862977.500000125
+    ]
+  },
+  {
+    "key": "depthPullThreshold.272",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 272,
+    "iterations": 80,
+    "nsPerOpMedian": 5034822.500000155,
+    "nsPerOpTrials": [
+      5044707.500000004,
+      5017745.000000286,
+      5034822.500000155,
+      4994031.250000263,
+      5060217.499999998
+    ]
+  },
+  {
+    "key": "depthPullThreshold.288",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 288,
+    "iterations": 80,
+    "nsPerOpMedian": 5259463.750000214,
+    "nsPerOpTrials": [
+      5238997.499999823,
+      5259463.750000214,
+      5245967.499999824,
+      5324551.25000015,
+      5266473.750000296
+    ]
+  },
+  {
+    "key": "depthPullThreshold.320",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 320,
+    "iterations": 80,
+    "nsPerOpMedian": 5845276.249999734,
+    "nsPerOpTrials": [
+      5845276.249999734,
+      5833298.750000177,
+      5815607.499999897,
+      5883531.249999942,
+      5888441.24999996
+    ]
+  },
+  {
+    "key": "depthPullThreshold.384",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 384,
+    "iterations": 80,
+    "nsPerOpMedian": 7050552.500000049,
+    "nsPerOpTrials": [
+      7018908.7499999,
+      7145194.999999876,
+      7111634.99999966,
+      7050552.500000049,
+      6996451.249999883
+    ]
+  },
+  {
+    "key": "depthPullThreshold.448",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 448,
+    "iterations": 80,
+    "nsPerOpMedian": 8218096.2499998715,
+    "nsPerOpTrials": [
+      8225410.000000192,
+      8218096.2499998715,
+      8252446.250000139,
+      8208043.75000007,
+      8181842.499999766
+    ]
+  },
+  {
+    "key": "depthPullThreshold.512",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 512,
+    "iterations": 80,
+    "nsPerOpMedian": 4818300.00000009,
+    "nsPerOpTrials": [
+      9291334.99999989,
+      4584938.749999856,
+      4634629.999999743,
+      5297780.000000058,
+      4818300.00000009
+    ]
+  }
+]

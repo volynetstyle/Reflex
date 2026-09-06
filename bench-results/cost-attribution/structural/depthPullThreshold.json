@@ -1,0 +1,4952 @@
+[
+  {
+    "key": "depthPullThreshold.192",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 192,
+    "iterations": 300,
+    "counters": {
+      "writeCalls": 300,
+      "writeSameValue": 0,
+      "writeChanged": 300,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 300,
+      "propagationScopesLeft": 300,
+      "pushCalls": 300,
+      "pushDirectEdgesVisited": 300,
+      "pushTransitiveEdgesVisited": 57300,
+      "pushMarkedChanged": 300,
+      "pushMarkedInvalid": 57300,
+      "pushAlreadyDirtySkipped": 0,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 300,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 300,
+      "pullEdgesVisited": 57300,
+      "pullChangedDeps": 300,
+      "pullInvalidDeps": 57000,
+      "pullCleanDeps": 0,
+      "pullDescents": 57000,
+      "pullAdvanceCalls": 57300,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 57000,
+      "advanceCalls": 57600,
+      "advanceComputeRuns": 57600,
+      "advanceChanged": 57600,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 57600,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 57300,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 300,
+      "readProducerTracked": 300,
+      "readConsumerCalls": 57600,
+      "readConsumerLazyCalls": 57600,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 57300,
+      "readConsumerDirtyPath": 300,
+      "readConsumerTracked": 57300,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 300,
+      "trackingResolveCalls": 57600,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 57600,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 300,
+      "contextPropagationLeave": 300,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 300,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 57600,
+        "maxDepth": 192,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 57600
+        },
+        "fanOut": {
+          "0": 300,
+          "1": 57300
+        },
+        "depth": {
+          "1": 300,
+          "2-3": 600,
+          "4-7": 1200,
+          "8-15": 2400,
+          "16-31": 4800,
+          "32-63": 9600,
+          "32+": 38700
+        },
+        "branch": {
+          "direct.changed": 300,
+          "transitive.unknown": 57300
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 300,
+          "transitive.unknown|d:2-3|in:1|out:1": 600,
+          "transitive.unknown|d:4-7|in:1|out:1": 1200,
+          "transitive.unknown|d:8-15|in:1|out:1": 2400,
+          "transitive.unknown|d:16-31|in:1|out:1": 4800,
+          "transitive.unknown|d:32-63|in:1|out:1": 9600,
+          "transitive.unknown|d:32+|in:1|out:1": 38400,
+          "transitive.unknown|d:32+|in:1|out:0": 300
+        },
+        "hotPaths": [
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:1",
+            "count": 38400
+          },
+          {
+            "path": "transitive.unknown|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "transitive.unknown|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "transitive.unknown|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "transitive.unknown|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:0",
+            "count": 300
+          }
+        ]
+      },
+      "pull": {
+        "total": 114300,
+        "maxDepth": 191,
+        "maxStack": 190,
+        "fanIn": {
+          "1": 114300
+        },
+        "fanOut": {
+          "1": 114300
+        },
+        "depth": {
+          "1": 600,
+          "2-3": 1200,
+          "4-7": 2400,
+          "8-15": 4800,
+          "16-31": 9600,
+          "32-63": 19200,
+          "32+": 76500
+        },
+        "branch": {
+          "dep.unknown.descend": 57000,
+          "dep.changed.advance": 300,
+          "bubble.changed.advance": 57000
+        },
+        "shape": {
+          "dep.unknown.descend|d:1|in:1|out:1": 300,
+          "dep.unknown.descend|d:2-3|in:1|out:1": 600,
+          "dep.unknown.descend|d:4-7|in:1|out:1": 1200,
+          "dep.unknown.descend|d:8-15|in:1|out:1": 2400,
+          "dep.unknown.descend|d:16-31|in:1|out:1": 4800,
+          "dep.unknown.descend|d:32-63|in:1|out:1": 9600,
+          "dep.unknown.descend|d:32+|in:1|out:1": 38100,
+          "dep.changed.advance|d:32+|in:1|out:1": 300,
+          "bubble.changed.advance|d:32+|in:1|out:1": 38100,
+          "bubble.changed.advance|d:32-63|in:1|out:1": 9600,
+          "bubble.changed.advance|d:16-31|in:1|out:1": 4800,
+          "bubble.changed.advance|d:8-15|in:1|out:1": 2400,
+          "bubble.changed.advance|d:4-7|in:1|out:1": 1200,
+          "bubble.changed.advance|d:2-3|in:1|out:1": 600,
+          "bubble.changed.advance|d:1|in:1|out:1": 300
+        },
+        "hotPaths": [
+          {
+            "path": "dep.unknown.descend|d:32+|in:1|out:1",
+            "count": 38100
+          },
+          {
+            "path": "bubble.changed.advance|d:32+|in:1|out:1",
+            "count": 38100
+          },
+          {
+            "path": "dep.unknown.descend|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "bubble.changed.advance|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "dep.unknown.descend|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "bubble.changed.advance|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "dep.unknown.descend|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "bubble.changed.advance|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "dep.unknown.descend|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "bubble.changed.advance|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "dep.unknown.descend|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "bubble.changed.advance|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "dep.unknown.descend|d:1|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "dep.changed.advance|d:32+|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "bubble.changed.advance|d:1|in:1|out:1",
+            "count": 300
+          }
+        ]
+      }
+    }
+  },
+  {
+    "key": "depthPullThreshold.224",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 224,
+    "iterations": 300,
+    "counters": {
+      "writeCalls": 300,
+      "writeSameValue": 0,
+      "writeChanged": 300,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 300,
+      "propagationScopesLeft": 300,
+      "pushCalls": 300,
+      "pushDirectEdgesVisited": 300,
+      "pushTransitiveEdgesVisited": 66900,
+      "pushMarkedChanged": 300,
+      "pushMarkedInvalid": 66900,
+      "pushAlreadyDirtySkipped": 0,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 300,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 300,
+      "pullEdgesVisited": 66900,
+      "pullChangedDeps": 300,
+      "pullInvalidDeps": 66600,
+      "pullCleanDeps": 0,
+      "pullDescents": 66600,
+      "pullAdvanceCalls": 66900,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 66600,
+      "advanceCalls": 67200,
+      "advanceComputeRuns": 67200,
+      "advanceChanged": 67200,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 67200,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 66900,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 300,
+      "readProducerTracked": 300,
+      "readConsumerCalls": 67200,
+      "readConsumerLazyCalls": 67200,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 66900,
+      "readConsumerDirtyPath": 300,
+      "readConsumerTracked": 66900,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 300,
+      "trackingResolveCalls": 67200,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 67200,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 300,
+      "contextPropagationLeave": 300,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 300,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 67200,
+        "maxDepth": 224,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 67200
+        },
+        "fanOut": {
+          "0": 300,
+          "1": 66900
+        },
+        "depth": {
+          "1": 300,
+          "2-3": 600,
+          "4-7": 1200,
+          "8-15": 2400,
+          "16-31": 4800,
+          "32-63": 9600,
+          "32+": 48300
+        },
+        "branch": {
+          "direct.changed": 300,
+          "transitive.unknown": 66900
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 300,
+          "transitive.unknown|d:2-3|in:1|out:1": 600,
+          "transitive.unknown|d:4-7|in:1|out:1": 1200,
+          "transitive.unknown|d:8-15|in:1|out:1": 2400,
+          "transitive.unknown|d:16-31|in:1|out:1": 4800,
+          "transitive.unknown|d:32-63|in:1|out:1": 9600,
+          "transitive.unknown|d:32+|in:1|out:1": 48000,
+          "transitive.unknown|d:32+|in:1|out:0": 300
+        },
+        "hotPaths": [
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:1",
+            "count": 48000
+          },
+          {
+            "path": "transitive.unknown|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "transitive.unknown|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "transitive.unknown|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "transitive.unknown|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:0",
+            "count": 300
+          }
+        ]
+      },
+      "pull": {
+        "total": 133500,
+        "maxDepth": 223,
+        "maxStack": 222,
+        "fanIn": {
+          "1": 133500
+        },
+        "fanOut": {
+          "1": 133500
+        },
+        "depth": {
+          "1": 600,
+          "2-3": 1200,
+          "4-7": 2400,
+          "8-15": 4800,
+          "16-31": 9600,
+          "32-63": 19200,
+          "32+": 95700
+        },
+        "branch": {
+          "dep.unknown.descend": 66600,
+          "dep.changed.advance": 300,
+          "bubble.changed.advance": 66600
+        },
+        "shape": {
+          "dep.unknown.descend|d:1|in:1|out:1": 300,
+          "dep.unknown.descend|d:2-3|in:1|out:1": 600,
+          "dep.unknown.descend|d:4-7|in:1|out:1": 1200,
+          "dep.unknown.descend|d:8-15|in:1|out:1": 2400,
+          "dep.unknown.descend|d:16-31|in:1|out:1": 4800,
+          "dep.unknown.descend|d:32-63|in:1|out:1": 9600,
+          "dep.unknown.descend|d:32+|in:1|out:1": 47700,
+          "dep.changed.advance|d:32+|in:1|out:1": 300,
+          "bubble.changed.advance|d:32+|in:1|out:1": 47700,
+          "bubble.changed.advance|d:32-63|in:1|out:1": 9600,
+          "bubble.changed.advance|d:16-31|in:1|out:1": 4800,
+          "bubble.changed.advance|d:8-15|in:1|out:1": 2400,
+          "bubble.changed.advance|d:4-7|in:1|out:1": 1200,
+          "bubble.changed.advance|d:2-3|in:1|out:1": 600,
+          "bubble.changed.advance|d:1|in:1|out:1": 300
+        },
+        "hotPaths": [
+          {
+            "path": "dep.unknown.descend|d:32+|in:1|out:1",
+            "count": 47700
+          },
+          {
+            "path": "bubble.changed.advance|d:32+|in:1|out:1",
+            "count": 47700
+          },
+          {
+            "path": "dep.unknown.descend|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "bubble.changed.advance|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "dep.unknown.descend|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "bubble.changed.advance|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "dep.unknown.descend|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "bubble.changed.advance|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "dep.unknown.descend|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "bubble.changed.advance|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "dep.unknown.descend|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "bubble.changed.advance|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "dep.unknown.descend|d:1|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "dep.changed.advance|d:32+|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "bubble.changed.advance|d:1|in:1|out:1",
+            "count": 300
+          }
+        ]
+      }
+    }
+  },
+  {
+    "key": "depthPullThreshold.240",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 240,
+    "iterations": 300,
+    "counters": {
+      "writeCalls": 300,
+      "writeSameValue": 0,
+      "writeChanged": 300,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 300,
+      "propagationScopesLeft": 300,
+      "pushCalls": 300,
+      "pushDirectEdgesVisited": 300,
+      "pushTransitiveEdgesVisited": 71700,
+      "pushMarkedChanged": 300,
+      "pushMarkedInvalid": 71700,
+      "pushAlreadyDirtySkipped": 0,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 300,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 300,
+      "pullEdgesVisited": 71700,
+      "pullChangedDeps": 300,
+      "pullInvalidDeps": 71400,
+      "pullCleanDeps": 0,
+      "pullDescents": 71400,
+      "pullAdvanceCalls": 71700,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 71400,
+      "advanceCalls": 72000,
+      "advanceComputeRuns": 72000,
+      "advanceChanged": 72000,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 72000,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 71700,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 300,
+      "readProducerTracked": 300,
+      "readConsumerCalls": 72000,
+      "readConsumerLazyCalls": 72000,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 71700,
+      "readConsumerDirtyPath": 300,
+      "readConsumerTracked": 71700,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 300,
+      "trackingResolveCalls": 72000,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 72000,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 300,
+      "contextPropagationLeave": 300,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 300,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 72000,
+        "maxDepth": 240,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 72000
+        },
+        "fanOut": {
+          "0": 300,
+          "1": 71700
+        },
+        "depth": {
+          "1": 300,
+          "2-3": 600,
+          "4-7": 1200,
+          "8-15": 2400,
+          "16-31": 4800,
+          "32-63": 9600,
+          "32+": 53100
+        },
+        "branch": {
+          "direct.changed": 300,
+          "transitive.unknown": 71700
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 300,
+          "transitive.unknown|d:2-3|in:1|out:1": 600,
+          "transitive.unknown|d:4-7|in:1|out:1": 1200,
+          "transitive.unknown|d:8-15|in:1|out:1": 2400,
+          "transitive.unknown|d:16-31|in:1|out:1": 4800,
+          "transitive.unknown|d:32-63|in:1|out:1": 9600,
+          "transitive.unknown|d:32+|in:1|out:1": 52800,
+          "transitive.unknown|d:32+|in:1|out:0": 300
+        },
+        "hotPaths": [
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:1",
+            "count": 52800
+          },
+          {
+            "path": "transitive.unknown|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "transitive.unknown|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "transitive.unknown|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "transitive.unknown|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:0",
+            "count": 300
+          }
+        ]
+      },
+      "pull": {
+        "total": 143100,
+        "maxDepth": 239,
+        "maxStack": 238,
+        "fanIn": {
+          "1": 143100
+        },
+        "fanOut": {
+          "1": 143100
+        },
+        "depth": {
+          "1": 600,
+          "2-3": 1200,
+          "4-7": 2400,
+          "8-15": 4800,
+          "16-31": 9600,
+          "32-63": 19200,
+          "32+": 105300
+        },
+        "branch": {
+          "dep.unknown.descend": 71400,
+          "dep.changed.advance": 300,
+          "bubble.changed.advance": 71400
+        },
+        "shape": {
+          "dep.unknown.descend|d:1|in:1|out:1": 300,
+          "dep.unknown.descend|d:2-3|in:1|out:1": 600,
+          "dep.unknown.descend|d:4-7|in:1|out:1": 1200,
+          "dep.unknown.descend|d:8-15|in:1|out:1": 2400,
+          "dep.unknown.descend|d:16-31|in:1|out:1": 4800,
+          "dep.unknown.descend|d:32-63|in:1|out:1": 9600,
+          "dep.unknown.descend|d:32+|in:1|out:1": 52500,
+          "dep.changed.advance|d:32+|in:1|out:1": 300,
+          "bubble.changed.advance|d:32+|in:1|out:1": 52500,
+          "bubble.changed.advance|d:32-63|in:1|out:1": 9600,
+          "bubble.changed.advance|d:16-31|in:1|out:1": 4800,
+          "bubble.changed.advance|d:8-15|in:1|out:1": 2400,
+          "bubble.changed.advance|d:4-7|in:1|out:1": 1200,
+          "bubble.changed.advance|d:2-3|in:1|out:1": 600,
+          "bubble.changed.advance|d:1|in:1|out:1": 300
+        },
+        "hotPaths": [
+          {
+            "path": "dep.unknown.descend|d:32+|in:1|out:1",
+            "count": 52500
+          },
+          {
+            "path": "bubble.changed.advance|d:32+|in:1|out:1",
+            "count": 52500
+          },
+          {
+            "path": "dep.unknown.descend|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "bubble.changed.advance|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "dep.unknown.descend|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "bubble.changed.advance|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "dep.unknown.descend|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "bubble.changed.advance|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "dep.unknown.descend|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "bubble.changed.advance|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "dep.unknown.descend|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "bubble.changed.advance|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "dep.unknown.descend|d:1|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "dep.changed.advance|d:32+|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "bubble.changed.advance|d:1|in:1|out:1",
+            "count": 300
+          }
+        ]
+      }
+    }
+  },
+  {
+    "key": "depthPullThreshold.248",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 248,
+    "iterations": 300,
+    "counters": {
+      "writeCalls": 300,
+      "writeSameValue": 0,
+      "writeChanged": 300,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 300,
+      "propagationScopesLeft": 300,
+      "pushCalls": 300,
+      "pushDirectEdgesVisited": 300,
+      "pushTransitiveEdgesVisited": 74100,
+      "pushMarkedChanged": 300,
+      "pushMarkedInvalid": 74100,
+      "pushAlreadyDirtySkipped": 0,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 300,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 300,
+      "pullEdgesVisited": 74100,
+      "pullChangedDeps": 300,
+      "pullInvalidDeps": 73800,
+      "pullCleanDeps": 0,
+      "pullDescents": 73800,
+      "pullAdvanceCalls": 74100,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 73800,
+      "advanceCalls": 74400,
+      "advanceComputeRuns": 74400,
+      "advanceChanged": 74400,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 74400,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 74100,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 300,
+      "readProducerTracked": 300,
+      "readConsumerCalls": 74400,
+      "readConsumerLazyCalls": 74400,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 74100,
+      "readConsumerDirtyPath": 300,
+      "readConsumerTracked": 74100,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 300,
+      "trackingResolveCalls": 74400,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 74400,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 300,
+      "contextPropagationLeave": 300,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 300,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 74400,
+        "maxDepth": 248,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 74400
+        },
+        "fanOut": {
+          "0": 300,
+          "1": 74100
+        },
+        "depth": {
+          "1": 300,
+          "2-3": 600,
+          "4-7": 1200,
+          "8-15": 2400,
+          "16-31": 4800,
+          "32-63": 9600,
+          "32+": 55500
+        },
+        "branch": {
+          "direct.changed": 300,
+          "transitive.unknown": 74100
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 300,
+          "transitive.unknown|d:2-3|in:1|out:1": 600,
+          "transitive.unknown|d:4-7|in:1|out:1": 1200,
+          "transitive.unknown|d:8-15|in:1|out:1": 2400,
+          "transitive.unknown|d:16-31|in:1|out:1": 4800,
+          "transitive.unknown|d:32-63|in:1|out:1": 9600,
+          "transitive.unknown|d:32+|in:1|out:1": 55200,
+          "transitive.unknown|d:32+|in:1|out:0": 300
+        },
+        "hotPaths": [
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:1",
+            "count": 55200
+          },
+          {
+            "path": "transitive.unknown|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "transitive.unknown|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "transitive.unknown|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "transitive.unknown|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:0",
+            "count": 300
+          }
+        ]
+      },
+      "pull": {
+        "total": 147900,
+        "maxDepth": 247,
+        "maxStack": 246,
+        "fanIn": {
+          "1": 147900
+        },
+        "fanOut": {
+          "1": 147900
+        },
+        "depth": {
+          "1": 600,
+          "2-3": 1200,
+          "4-7": 2400,
+          "8-15": 4800,
+          "16-31": 9600,
+          "32-63": 19200,
+          "32+": 110100
+        },
+        "branch": {
+          "dep.unknown.descend": 73800,
+          "dep.changed.advance": 300,
+          "bubble.changed.advance": 73800
+        },
+        "shape": {
+          "dep.unknown.descend|d:1|in:1|out:1": 300,
+          "dep.unknown.descend|d:2-3|in:1|out:1": 600,
+          "dep.unknown.descend|d:4-7|in:1|out:1": 1200,
+          "dep.unknown.descend|d:8-15|in:1|out:1": 2400,
+          "dep.unknown.descend|d:16-31|in:1|out:1": 4800,
+          "dep.unknown.descend|d:32-63|in:1|out:1": 9600,
+          "dep.unknown.descend|d:32+|in:1|out:1": 54900,
+          "dep.changed.advance|d:32+|in:1|out:1": 300,
+          "bubble.changed.advance|d:32+|in:1|out:1": 54900,
+          "bubble.changed.advance|d:32-63|in:1|out:1": 9600,
+          "bubble.changed.advance|d:16-31|in:1|out:1": 4800,
+          "bubble.changed.advance|d:8-15|in:1|out:1": 2400,
+          "bubble.changed.advance|d:4-7|in:1|out:1": 1200,
+          "bubble.changed.advance|d:2-3|in:1|out:1": 600,
+          "bubble.changed.advance|d:1|in:1|out:1": 300
+        },
+        "hotPaths": [
+          {
+            "path": "dep.unknown.descend|d:32+|in:1|out:1",
+            "count": 54900
+          },
+          {
+            "path": "bubble.changed.advance|d:32+|in:1|out:1",
+            "count": 54900
+          },
+          {
+            "path": "dep.unknown.descend|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "bubble.changed.advance|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "dep.unknown.descend|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "bubble.changed.advance|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "dep.unknown.descend|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "bubble.changed.advance|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "dep.unknown.descend|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "bubble.changed.advance|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "dep.unknown.descend|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "bubble.changed.advance|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "dep.unknown.descend|d:1|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "dep.changed.advance|d:32+|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "bubble.changed.advance|d:1|in:1|out:1",
+            "count": 300
+          }
+        ]
+      }
+    }
+  },
+  {
+    "key": "depthPullThreshold.252",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 252,
+    "iterations": 300,
+    "counters": {
+      "writeCalls": 300,
+      "writeSameValue": 0,
+      "writeChanged": 300,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 300,
+      "propagationScopesLeft": 300,
+      "pushCalls": 300,
+      "pushDirectEdgesVisited": 300,
+      "pushTransitiveEdgesVisited": 75300,
+      "pushMarkedChanged": 300,
+      "pushMarkedInvalid": 75300,
+      "pushAlreadyDirtySkipped": 0,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 300,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 300,
+      "pullEdgesVisited": 75300,
+      "pullChangedDeps": 300,
+      "pullInvalidDeps": 75000,
+      "pullCleanDeps": 0,
+      "pullDescents": 75000,
+      "pullAdvanceCalls": 75300,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 75000,
+      "advanceCalls": 75600,
+      "advanceComputeRuns": 75600,
+      "advanceChanged": 75600,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 75600,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 75300,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 300,
+      "readProducerTracked": 300,
+      "readConsumerCalls": 75600,
+      "readConsumerLazyCalls": 75600,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 75300,
+      "readConsumerDirtyPath": 300,
+      "readConsumerTracked": 75300,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 300,
+      "trackingResolveCalls": 75600,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 75600,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 300,
+      "contextPropagationLeave": 300,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 300,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 75600,
+        "maxDepth": 252,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 75600
+        },
+        "fanOut": {
+          "0": 300,
+          "1": 75300
+        },
+        "depth": {
+          "1": 300,
+          "2-3": 600,
+          "4-7": 1200,
+          "8-15": 2400,
+          "16-31": 4800,
+          "32-63": 9600,
+          "32+": 56700
+        },
+        "branch": {
+          "direct.changed": 300,
+          "transitive.unknown": 75300
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 300,
+          "transitive.unknown|d:2-3|in:1|out:1": 600,
+          "transitive.unknown|d:4-7|in:1|out:1": 1200,
+          "transitive.unknown|d:8-15|in:1|out:1": 2400,
+          "transitive.unknown|d:16-31|in:1|out:1": 4800,
+          "transitive.unknown|d:32-63|in:1|out:1": 9600,
+          "transitive.unknown|d:32+|in:1|out:1": 56400,
+          "transitive.unknown|d:32+|in:1|out:0": 300
+        },
+        "hotPaths": [
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:1",
+            "count": 56400
+          },
+          {
+            "path": "transitive.unknown|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "transitive.unknown|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "transitive.unknown|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "transitive.unknown|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:0",
+            "count": 300
+          }
+        ]
+      },
+      "pull": {
+        "total": 150300,
+        "maxDepth": 251,
+        "maxStack": 250,
+        "fanIn": {
+          "1": 150300
+        },
+        "fanOut": {
+          "1": 150300
+        },
+        "depth": {
+          "1": 600,
+          "2-3": 1200,
+          "4-7": 2400,
+          "8-15": 4800,
+          "16-31": 9600,
+          "32-63": 19200,
+          "32+": 112500
+        },
+        "branch": {
+          "dep.unknown.descend": 75000,
+          "dep.changed.advance": 300,
+          "bubble.changed.advance": 75000
+        },
+        "shape": {
+          "dep.unknown.descend|d:1|in:1|out:1": 300,
+          "dep.unknown.descend|d:2-3|in:1|out:1": 600,
+          "dep.unknown.descend|d:4-7|in:1|out:1": 1200,
+          "dep.unknown.descend|d:8-15|in:1|out:1": 2400,
+          "dep.unknown.descend|d:16-31|in:1|out:1": 4800,
+          "dep.unknown.descend|d:32-63|in:1|out:1": 9600,
+          "dep.unknown.descend|d:32+|in:1|out:1": 56100,
+          "dep.changed.advance|d:32+|in:1|out:1": 300,
+          "bubble.changed.advance|d:32+|in:1|out:1": 56100,
+          "bubble.changed.advance|d:32-63|in:1|out:1": 9600,
+          "bubble.changed.advance|d:16-31|in:1|out:1": 4800,
+          "bubble.changed.advance|d:8-15|in:1|out:1": 2400,
+          "bubble.changed.advance|d:4-7|in:1|out:1": 1200,
+          "bubble.changed.advance|d:2-3|in:1|out:1": 600,
+          "bubble.changed.advance|d:1|in:1|out:1": 300
+        },
+        "hotPaths": [
+          {
+            "path": "dep.unknown.descend|d:32+|in:1|out:1",
+            "count": 56100
+          },
+          {
+            "path": "bubble.changed.advance|d:32+|in:1|out:1",
+            "count": 56100
+          },
+          {
+            "path": "dep.unknown.descend|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "bubble.changed.advance|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "dep.unknown.descend|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "bubble.changed.advance|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "dep.unknown.descend|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "bubble.changed.advance|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "dep.unknown.descend|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "bubble.changed.advance|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "dep.unknown.descend|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "bubble.changed.advance|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "dep.unknown.descend|d:1|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "dep.changed.advance|d:32+|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "bubble.changed.advance|d:1|in:1|out:1",
+            "count": 300
+          }
+        ]
+      }
+    }
+  },
+  {
+    "key": "depthPullThreshold.254",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 254,
+    "iterations": 300,
+    "counters": {
+      "writeCalls": 300,
+      "writeSameValue": 0,
+      "writeChanged": 300,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 300,
+      "propagationScopesLeft": 300,
+      "pushCalls": 300,
+      "pushDirectEdgesVisited": 300,
+      "pushTransitiveEdgesVisited": 75900,
+      "pushMarkedChanged": 300,
+      "pushMarkedInvalid": 75900,
+      "pushAlreadyDirtySkipped": 0,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 300,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 300,
+      "pullEdgesVisited": 75900,
+      "pullChangedDeps": 300,
+      "pullInvalidDeps": 75600,
+      "pullCleanDeps": 0,
+      "pullDescents": 75600,
+      "pullAdvanceCalls": 75900,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 75600,
+      "advanceCalls": 76200,
+      "advanceComputeRuns": 76200,
+      "advanceChanged": 76200,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 76200,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 75900,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 300,
+      "readProducerTracked": 300,
+      "readConsumerCalls": 76200,
+      "readConsumerLazyCalls": 76200,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 75900,
+      "readConsumerDirtyPath": 300,
+      "readConsumerTracked": 75900,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 300,
+      "trackingResolveCalls": 76200,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 76200,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 300,
+      "contextPropagationLeave": 300,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 300,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 76200,
+        "maxDepth": 254,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 76200
+        },
+        "fanOut": {
+          "0": 300,
+          "1": 75900
+        },
+        "depth": {
+          "1": 300,
+          "2-3": 600,
+          "4-7": 1200,
+          "8-15": 2400,
+          "16-31": 4800,
+          "32-63": 9600,
+          "32+": 57300
+        },
+        "branch": {
+          "direct.changed": 300,
+          "transitive.unknown": 75900
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 300,
+          "transitive.unknown|d:2-3|in:1|out:1": 600,
+          "transitive.unknown|d:4-7|in:1|out:1": 1200,
+          "transitive.unknown|d:8-15|in:1|out:1": 2400,
+          "transitive.unknown|d:16-31|in:1|out:1": 4800,
+          "transitive.unknown|d:32-63|in:1|out:1": 9600,
+          "transitive.unknown|d:32+|in:1|out:1": 57000,
+          "transitive.unknown|d:32+|in:1|out:0": 300
+        },
+        "hotPaths": [
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:1",
+            "count": 57000
+          },
+          {
+            "path": "transitive.unknown|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "transitive.unknown|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "transitive.unknown|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "transitive.unknown|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:0",
+            "count": 300
+          }
+        ]
+      },
+      "pull": {
+        "total": 151500,
+        "maxDepth": 253,
+        "maxStack": 252,
+        "fanIn": {
+          "1": 151500
+        },
+        "fanOut": {
+          "1": 151500
+        },
+        "depth": {
+          "1": 600,
+          "2-3": 1200,
+          "4-7": 2400,
+          "8-15": 4800,
+          "16-31": 9600,
+          "32-63": 19200,
+          "32+": 113700
+        },
+        "branch": {
+          "dep.unknown.descend": 75600,
+          "dep.changed.advance": 300,
+          "bubble.changed.advance": 75600
+        },
+        "shape": {
+          "dep.unknown.descend|d:1|in:1|out:1": 300,
+          "dep.unknown.descend|d:2-3|in:1|out:1": 600,
+          "dep.unknown.descend|d:4-7|in:1|out:1": 1200,
+          "dep.unknown.descend|d:8-15|in:1|out:1": 2400,
+          "dep.unknown.descend|d:16-31|in:1|out:1": 4800,
+          "dep.unknown.descend|d:32-63|in:1|out:1": 9600,
+          "dep.unknown.descend|d:32+|in:1|out:1": 56700,
+          "dep.changed.advance|d:32+|in:1|out:1": 300,
+          "bubble.changed.advance|d:32+|in:1|out:1": 56700,
+          "bubble.changed.advance|d:32-63|in:1|out:1": 9600,
+          "bubble.changed.advance|d:16-31|in:1|out:1": 4800,
+          "bubble.changed.advance|d:8-15|in:1|out:1": 2400,
+          "bubble.changed.advance|d:4-7|in:1|out:1": 1200,
+          "bubble.changed.advance|d:2-3|in:1|out:1": 600,
+          "bubble.changed.advance|d:1|in:1|out:1": 300
+        },
+        "hotPaths": [
+          {
+            "path": "dep.unknown.descend|d:32+|in:1|out:1",
+            "count": 56700
+          },
+          {
+            "path": "bubble.changed.advance|d:32+|in:1|out:1",
+            "count": 56700
+          },
+          {
+            "path": "dep.unknown.descend|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "bubble.changed.advance|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "dep.unknown.descend|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "bubble.changed.advance|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "dep.unknown.descend|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "bubble.changed.advance|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "dep.unknown.descend|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "bubble.changed.advance|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "dep.unknown.descend|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "bubble.changed.advance|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "dep.unknown.descend|d:1|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "dep.changed.advance|d:32+|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "bubble.changed.advance|d:1|in:1|out:1",
+            "count": 300
+          }
+        ]
+      }
+    }
+  },
+  {
+    "key": "depthPullThreshold.255",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 255,
+    "iterations": 300,
+    "counters": {
+      "writeCalls": 300,
+      "writeSameValue": 0,
+      "writeChanged": 300,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 300,
+      "propagationScopesLeft": 300,
+      "pushCalls": 300,
+      "pushDirectEdgesVisited": 300,
+      "pushTransitiveEdgesVisited": 76200,
+      "pushMarkedChanged": 300,
+      "pushMarkedInvalid": 76200,
+      "pushAlreadyDirtySkipped": 0,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 300,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 300,
+      "pullEdgesVisited": 76200,
+      "pullChangedDeps": 300,
+      "pullInvalidDeps": 75900,
+      "pullCleanDeps": 0,
+      "pullDescents": 75900,
+      "pullAdvanceCalls": 76200,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 75900,
+      "advanceCalls": 76500,
+      "advanceComputeRuns": 76500,
+      "advanceChanged": 76500,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 76500,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 76200,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 300,
+      "readProducerTracked": 300,
+      "readConsumerCalls": 76500,
+      "readConsumerLazyCalls": 76500,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 76200,
+      "readConsumerDirtyPath": 300,
+      "readConsumerTracked": 76200,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 300,
+      "trackingResolveCalls": 76500,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 76500,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 300,
+      "contextPropagationLeave": 300,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 300,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 76500,
+        "maxDepth": 255,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 76500
+        },
+        "fanOut": {
+          "0": 300,
+          "1": 76200
+        },
+        "depth": {
+          "1": 300,
+          "2-3": 600,
+          "4-7": 1200,
+          "8-15": 2400,
+          "16-31": 4800,
+          "32-63": 9600,
+          "32+": 57600
+        },
+        "branch": {
+          "direct.changed": 300,
+          "transitive.unknown": 76200
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 300,
+          "transitive.unknown|d:2-3|in:1|out:1": 600,
+          "transitive.unknown|d:4-7|in:1|out:1": 1200,
+          "transitive.unknown|d:8-15|in:1|out:1": 2400,
+          "transitive.unknown|d:16-31|in:1|out:1": 4800,
+          "transitive.unknown|d:32-63|in:1|out:1": 9600,
+          "transitive.unknown|d:32+|in:1|out:1": 57300,
+          "transitive.unknown|d:32+|in:1|out:0": 300
+        },
+        "hotPaths": [
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:1",
+            "count": 57300
+          },
+          {
+            "path": "transitive.unknown|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "transitive.unknown|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "transitive.unknown|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "transitive.unknown|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:0",
+            "count": 300
+          }
+        ]
+      },
+      "pull": {
+        "total": 152100,
+        "maxDepth": 254,
+        "maxStack": 253,
+        "fanIn": {
+          "1": 152100
+        },
+        "fanOut": {
+          "1": 152100
+        },
+        "depth": {
+          "1": 600,
+          "2-3": 1200,
+          "4-7": 2400,
+          "8-15": 4800,
+          "16-31": 9600,
+          "32-63": 19200,
+          "32+": 114300
+        },
+        "branch": {
+          "dep.unknown.descend": 75900,
+          "dep.changed.advance": 300,
+          "bubble.changed.advance": 75900
+        },
+        "shape": {
+          "dep.unknown.descend|d:1|in:1|out:1": 300,
+          "dep.unknown.descend|d:2-3|in:1|out:1": 600,
+          "dep.unknown.descend|d:4-7|in:1|out:1": 1200,
+          "dep.unknown.descend|d:8-15|in:1|out:1": 2400,
+          "dep.unknown.descend|d:16-31|in:1|out:1": 4800,
+          "dep.unknown.descend|d:32-63|in:1|out:1": 9600,
+          "dep.unknown.descend|d:32+|in:1|out:1": 57000,
+          "dep.changed.advance|d:32+|in:1|out:1": 300,
+          "bubble.changed.advance|d:32+|in:1|out:1": 57000,
+          "bubble.changed.advance|d:32-63|in:1|out:1": 9600,
+          "bubble.changed.advance|d:16-31|in:1|out:1": 4800,
+          "bubble.changed.advance|d:8-15|in:1|out:1": 2400,
+          "bubble.changed.advance|d:4-7|in:1|out:1": 1200,
+          "bubble.changed.advance|d:2-3|in:1|out:1": 600,
+          "bubble.changed.advance|d:1|in:1|out:1": 300
+        },
+        "hotPaths": [
+          {
+            "path": "dep.unknown.descend|d:32+|in:1|out:1",
+            "count": 57000
+          },
+          {
+            "path": "bubble.changed.advance|d:32+|in:1|out:1",
+            "count": 57000
+          },
+          {
+            "path": "dep.unknown.descend|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "bubble.changed.advance|d:32-63|in:1|out:1",
+            "count": 9600
+          },
+          {
+            "path": "dep.unknown.descend|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "bubble.changed.advance|d:16-31|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "dep.unknown.descend|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "bubble.changed.advance|d:8-15|in:1|out:1",
+            "count": 2400
+          },
+          {
+            "path": "dep.unknown.descend|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "bubble.changed.advance|d:4-7|in:1|out:1",
+            "count": 1200
+          },
+          {
+            "path": "dep.unknown.descend|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "bubble.changed.advance|d:2-3|in:1|out:1",
+            "count": 600
+          },
+          {
+            "path": "dep.unknown.descend|d:1|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "dep.changed.advance|d:32+|in:1|out:1",
+            "count": 300
+          },
+          {
+            "path": "bubble.changed.advance|d:1|in:1|out:1",
+            "count": 300
+          }
+        ]
+      }
+    }
+  },
+  {
+    "key": "depthPullThreshold.256",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 256,
+    "iterations": 80,
+    "counters": {
+      "writeCalls": 80,
+      "writeSameValue": 0,
+      "writeChanged": 80,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 80,
+      "propagationScopesLeft": 80,
+      "pushCalls": 80,
+      "pushDirectEdgesVisited": 80,
+      "pushTransitiveEdgesVisited": 20400,
+      "pushMarkedChanged": 80,
+      "pushMarkedInvalid": 20400,
+      "pushAlreadyDirtySkipped": 0,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 80,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 80,
+      "pullEdgesVisited": 20400,
+      "pullChangedDeps": 80,
+      "pullInvalidDeps": 20320,
+      "pullCleanDeps": 0,
+      "pullDescents": 20320,
+      "pullAdvanceCalls": 20400,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 20320,
+      "advanceCalls": 20480,
+      "advanceComputeRuns": 20480,
+      "advanceChanged": 20480,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 20480,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 20400,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 80,
+      "readProducerTracked": 80,
+      "readConsumerCalls": 20480,
+      "readConsumerLazyCalls": 20480,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 20400,
+      "readConsumerDirtyPath": 80,
+      "readConsumerTracked": 20400,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 80,
+      "trackingResolveCalls": 20480,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 20480,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 80,
+      "contextPropagationLeave": 80,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 80,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 20480,
+        "maxDepth": 256,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 20480
+        },
+        "fanOut": {
+          "0": 80,
+          "1": 20400
+        },
+        "depth": {
+          "1": 80,
+          "2-3": 160,
+          "4-7": 320,
+          "8-15": 640,
+          "16-31": 1280,
+          "32-63": 2560,
+          "32+": 15440
+        },
+        "branch": {
+          "direct.changed": 80,
+          "transitive.unknown": 20400
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 80,
+          "transitive.unknown|d:2-3|in:1|out:1": 160,
+          "transitive.unknown|d:4-7|in:1|out:1": 320,
+          "transitive.unknown|d:8-15|in:1|out:1": 640,
+          "transitive.unknown|d:16-31|in:1|out:1": 1280,
+          "transitive.unknown|d:32-63|in:1|out:1": 2560,
+          "transitive.unknown|d:32+|in:1|out:1": 15360,
+          "transitive.unknown|d:32+|in:1|out:0": 80
+        },
+        "hotPaths": [
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:1",
+            "count": 15360
+          },
+          {
+            "path": "transitive.unknown|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "transitive.unknown|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "transitive.unknown|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "transitive.unknown|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:0",
+            "count": 80
+          }
+        ]
+      },
+      "pull": {
+        "total": 40720,
+        "maxDepth": 255,
+        "maxStack": 254,
+        "fanIn": {
+          "1": 40720
+        },
+        "fanOut": {
+          "1": 40720
+        },
+        "depth": {
+          "1": 160,
+          "2-3": 320,
+          "4-7": 640,
+          "8-15": 1280,
+          "16-31": 2560,
+          "32-63": 5120,
+          "32+": 30640
+        },
+        "branch": {
+          "dep.unknown.descend": 20320,
+          "dep.changed.advance": 80,
+          "bubble.changed.advance": 20320
+        },
+        "shape": {
+          "dep.unknown.descend|d:1|in:1|out:1": 80,
+          "dep.unknown.descend|d:2-3|in:1|out:1": 160,
+          "dep.unknown.descend|d:4-7|in:1|out:1": 320,
+          "dep.unknown.descend|d:8-15|in:1|out:1": 640,
+          "dep.unknown.descend|d:16-31|in:1|out:1": 1280,
+          "dep.unknown.descend|d:32-63|in:1|out:1": 2560,
+          "dep.unknown.descend|d:32+|in:1|out:1": 15280,
+          "dep.changed.advance|d:32+|in:1|out:1": 80,
+          "bubble.changed.advance|d:32+|in:1|out:1": 15280,
+          "bubble.changed.advance|d:32-63|in:1|out:1": 2560,
+          "bubble.changed.advance|d:16-31|in:1|out:1": 1280,
+          "bubble.changed.advance|d:8-15|in:1|out:1": 640,
+          "bubble.changed.advance|d:4-7|in:1|out:1": 320,
+          "bubble.changed.advance|d:2-3|in:1|out:1": 160,
+          "bubble.changed.advance|d:1|in:1|out:1": 80
+        },
+        "hotPaths": [
+          {
+            "path": "dep.unknown.descend|d:32+|in:1|out:1",
+            "count": 15280
+          },
+          {
+            "path": "bubble.changed.advance|d:32+|in:1|out:1",
+            "count": 15280
+          },
+          {
+            "path": "dep.unknown.descend|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "bubble.changed.advance|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "dep.unknown.descend|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "bubble.changed.advance|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "dep.unknown.descend|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "bubble.changed.advance|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "dep.unknown.descend|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "bubble.changed.advance|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "dep.unknown.descend|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "bubble.changed.advance|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "dep.unknown.descend|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "dep.changed.advance|d:32+|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "bubble.changed.advance|d:1|in:1|out:1",
+            "count": 80
+          }
+        ]
+      }
+    }
+  },
+  {
+    "key": "depthPullThreshold.257",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 257,
+    "iterations": 80,
+    "counters": {
+      "writeCalls": 80,
+      "writeSameValue": 0,
+      "writeChanged": 80,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 80,
+      "propagationScopesLeft": 80,
+      "pushCalls": 80,
+      "pushDirectEdgesVisited": 80,
+      "pushTransitiveEdgesVisited": 20480,
+      "pushMarkedChanged": 80,
+      "pushMarkedInvalid": 20480,
+      "pushAlreadyDirtySkipped": 0,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 80,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 80,
+      "pullEdgesVisited": 20480,
+      "pullChangedDeps": 80,
+      "pullInvalidDeps": 20400,
+      "pullCleanDeps": 0,
+      "pullDescents": 20400,
+      "pullAdvanceCalls": 20480,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 20400,
+      "advanceCalls": 20560,
+      "advanceComputeRuns": 20560,
+      "advanceChanged": 20560,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 20560,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 20480,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 80,
+      "readProducerTracked": 80,
+      "readConsumerCalls": 20560,
+      "readConsumerLazyCalls": 20560,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 20480,
+      "readConsumerDirtyPath": 80,
+      "readConsumerTracked": 20480,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 80,
+      "trackingResolveCalls": 20560,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 20560,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 80,
+      "contextPropagationLeave": 80,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 80,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 20560,
+        "maxDepth": 257,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 20560
+        },
+        "fanOut": {
+          "0": 80,
+          "1": 20480
+        },
+        "depth": {
+          "1": 80,
+          "2-3": 160,
+          "4-7": 320,
+          "8-15": 640,
+          "16-31": 1280,
+          "32-63": 2560,
+          "32+": 15520
+        },
+        "branch": {
+          "direct.changed": 80,
+          "transitive.unknown": 20480
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 80,
+          "transitive.unknown|d:2-3|in:1|out:1": 160,
+          "transitive.unknown|d:4-7|in:1|out:1": 320,
+          "transitive.unknown|d:8-15|in:1|out:1": 640,
+          "transitive.unknown|d:16-31|in:1|out:1": 1280,
+          "transitive.unknown|d:32-63|in:1|out:1": 2560,
+          "transitive.unknown|d:32+|in:1|out:1": 15440,
+          "transitive.unknown|d:32+|in:1|out:0": 80
+        },
+        "hotPaths": [
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:1",
+            "count": 15440
+          },
+          {
+            "path": "transitive.unknown|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "transitive.unknown|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "transitive.unknown|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "transitive.unknown|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:0",
+            "count": 80
+          }
+        ]
+      },
+      "pull": {
+        "total": 40880,
+        "maxDepth": 256,
+        "maxStack": 255,
+        "fanIn": {
+          "1": 40880
+        },
+        "fanOut": {
+          "1": 40880
+        },
+        "depth": {
+          "1": 160,
+          "2-3": 320,
+          "4-7": 640,
+          "8-15": 1280,
+          "16-31": 2560,
+          "32-63": 5120,
+          "32+": 30800
+        },
+        "branch": {
+          "dep.unknown.descend": 20400,
+          "dep.changed.advance": 80,
+          "bubble.changed.advance": 20400
+        },
+        "shape": {
+          "dep.unknown.descend|d:1|in:1|out:1": 80,
+          "dep.unknown.descend|d:2-3|in:1|out:1": 160,
+          "dep.unknown.descend|d:4-7|in:1|out:1": 320,
+          "dep.unknown.descend|d:8-15|in:1|out:1": 640,
+          "dep.unknown.descend|d:16-31|in:1|out:1": 1280,
+          "dep.unknown.descend|d:32-63|in:1|out:1": 2560,
+          "dep.unknown.descend|d:32+|in:1|out:1": 15360,
+          "dep.changed.advance|d:32+|in:1|out:1": 80,
+          "bubble.changed.advance|d:32+|in:1|out:1": 15360,
+          "bubble.changed.advance|d:32-63|in:1|out:1": 2560,
+          "bubble.changed.advance|d:16-31|in:1|out:1": 1280,
+          "bubble.changed.advance|d:8-15|in:1|out:1": 640,
+          "bubble.changed.advance|d:4-7|in:1|out:1": 320,
+          "bubble.changed.advance|d:2-3|in:1|out:1": 160,
+          "bubble.changed.advance|d:1|in:1|out:1": 80
+        },
+        "hotPaths": [
+          {
+            "path": "dep.unknown.descend|d:32+|in:1|out:1",
+            "count": 15360
+          },
+          {
+            "path": "bubble.changed.advance|d:32+|in:1|out:1",
+            "count": 15360
+          },
+          {
+            "path": "dep.unknown.descend|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "bubble.changed.advance|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "dep.unknown.descend|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "bubble.changed.advance|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "dep.unknown.descend|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "bubble.changed.advance|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "dep.unknown.descend|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "bubble.changed.advance|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "dep.unknown.descend|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "bubble.changed.advance|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "dep.unknown.descend|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "dep.changed.advance|d:32+|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "bubble.changed.advance|d:1|in:1|out:1",
+            "count": 80
+          }
+        ]
+      }
+    }
+  },
+  {
+    "key": "depthPullThreshold.258",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 258,
+    "iterations": 80,
+    "counters": {
+      "writeCalls": 80,
+      "writeSameValue": 0,
+      "writeChanged": 80,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 80,
+      "propagationScopesLeft": 80,
+      "pushCalls": 80,
+      "pushDirectEdgesVisited": 80,
+      "pushTransitiveEdgesVisited": 20560,
+      "pushMarkedChanged": 80,
+      "pushMarkedInvalid": 20560,
+      "pushAlreadyDirtySkipped": 0,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 80,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 80,
+      "pullEdgesVisited": 20560,
+      "pullChangedDeps": 80,
+      "pullInvalidDeps": 20480,
+      "pullCleanDeps": 0,
+      "pullDescents": 20480,
+      "pullAdvanceCalls": 20560,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 20480,
+      "advanceCalls": 20640,
+      "advanceComputeRuns": 20640,
+      "advanceChanged": 20640,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 20640,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 20560,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 80,
+      "readProducerTracked": 80,
+      "readConsumerCalls": 20640,
+      "readConsumerLazyCalls": 20640,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 20560,
+      "readConsumerDirtyPath": 80,
+      "readConsumerTracked": 20560,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 80,
+      "trackingResolveCalls": 20640,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 20640,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 80,
+      "contextPropagationLeave": 80,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 80,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 20640,
+        "maxDepth": 258,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 20640
+        },
+        "fanOut": {
+          "0": 80,
+          "1": 20560
+        },
+        "depth": {
+          "1": 80,
+          "2-3": 160,
+          "4-7": 320,
+          "8-15": 640,
+          "16-31": 1280,
+          "32-63": 2560,
+          "32+": 15600
+        },
+        "branch": {
+          "direct.changed": 80,
+          "transitive.unknown": 20560
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 80,
+          "transitive.unknown|d:2-3|in:1|out:1": 160,
+          "transitive.unknown|d:4-7|in:1|out:1": 320,
+          "transitive.unknown|d:8-15|in:1|out:1": 640,
+          "transitive.unknown|d:16-31|in:1|out:1": 1280,
+          "transitive.unknown|d:32-63|in:1|out:1": 2560,
+          "transitive.unknown|d:32+|in:1|out:1": 15520,
+          "transitive.unknown|d:32+|in:1|out:0": 80
+        },
+        "hotPaths": [
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:1",
+            "count": 15520
+          },
+          {
+            "path": "transitive.unknown|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "transitive.unknown|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "transitive.unknown|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "transitive.unknown|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:0",
+            "count": 80
+          }
+        ]
+      },
+      "pull": {
+        "total": 41040,
+        "maxDepth": 257,
+        "maxStack": 256,
+        "fanIn": {
+          "1": 41040
+        },
+        "fanOut": {
+          "1": 41040
+        },
+        "depth": {
+          "1": 160,
+          "2-3": 320,
+          "4-7": 640,
+          "8-15": 1280,
+          "16-31": 2560,
+          "32-63": 5120,
+          "32+": 30960
+        },
+        "branch": {
+          "dep.unknown.descend": 20480,
+          "dep.changed.advance": 80,
+          "bubble.changed.advance": 20480
+        },
+        "shape": {
+          "dep.unknown.descend|d:1|in:1|out:1": 80,
+          "dep.unknown.descend|d:2-3|in:1|out:1": 160,
+          "dep.unknown.descend|d:4-7|in:1|out:1": 320,
+          "dep.unknown.descend|d:8-15|in:1|out:1": 640,
+          "dep.unknown.descend|d:16-31|in:1|out:1": 1280,
+          "dep.unknown.descend|d:32-63|in:1|out:1": 2560,
+          "dep.unknown.descend|d:32+|in:1|out:1": 15440,
+          "dep.changed.advance|d:32+|in:1|out:1": 80,
+          "bubble.changed.advance|d:32+|in:1|out:1": 15440,
+          "bubble.changed.advance|d:32-63|in:1|out:1": 2560,
+          "bubble.changed.advance|d:16-31|in:1|out:1": 1280,
+          "bubble.changed.advance|d:8-15|in:1|out:1": 640,
+          "bubble.changed.advance|d:4-7|in:1|out:1": 320,
+          "bubble.changed.advance|d:2-3|in:1|out:1": 160,
+          "bubble.changed.advance|d:1|in:1|out:1": 80
+        },
+        "hotPaths": [
+          {
+            "path": "dep.unknown.descend|d:32+|in:1|out:1",
+            "count": 15440
+          },
+          {
+            "path": "bubble.changed.advance|d:32+|in:1|out:1",
+            "count": 15440
+          },
+          {
+            "path": "dep.unknown.descend|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "bubble.changed.advance|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "dep.unknown.descend|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "bubble.changed.advance|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "dep.unknown.descend|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "bubble.changed.advance|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "dep.unknown.descend|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "bubble.changed.advance|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "dep.unknown.descend|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "bubble.changed.advance|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "dep.unknown.descend|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "dep.changed.advance|d:32+|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "bubble.changed.advance|d:1|in:1|out:1",
+            "count": 80
+          }
+        ]
+      }
+    }
+  },
+  {
+    "key": "depthPullThreshold.260",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 260,
+    "iterations": 80,
+    "counters": {
+      "writeCalls": 80,
+      "writeSameValue": 0,
+      "writeChanged": 80,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 80,
+      "propagationScopesLeft": 80,
+      "pushCalls": 80,
+      "pushDirectEdgesVisited": 80,
+      "pushTransitiveEdgesVisited": 20720,
+      "pushMarkedChanged": 80,
+      "pushMarkedInvalid": 20720,
+      "pushAlreadyDirtySkipped": 0,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 80,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 80,
+      "pullEdgesVisited": 20720,
+      "pullChangedDeps": 80,
+      "pullInvalidDeps": 20640,
+      "pullCleanDeps": 0,
+      "pullDescents": 20640,
+      "pullAdvanceCalls": 20720,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 20640,
+      "advanceCalls": 20800,
+      "advanceComputeRuns": 20800,
+      "advanceChanged": 20800,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 20800,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 20720,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 80,
+      "readProducerTracked": 80,
+      "readConsumerCalls": 20800,
+      "readConsumerLazyCalls": 20800,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 20720,
+      "readConsumerDirtyPath": 80,
+      "readConsumerTracked": 20720,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 80,
+      "trackingResolveCalls": 20800,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 20800,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 80,
+      "contextPropagationLeave": 80,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 80,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 80,
+      "pullStackTrimExcess": 160
+    },
+    "topology": {
+      "push": {
+        "total": 20800,
+        "maxDepth": 260,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 20800
+        },
+        "fanOut": {
+          "0": 80,
+          "1": 20720
+        },
+        "depth": {
+          "1": 80,
+          "2-3": 160,
+          "4-7": 320,
+          "8-15": 640,
+          "16-31": 1280,
+          "32-63": 2560,
+          "32+": 15760
+        },
+        "branch": {
+          "direct.changed": 80,
+          "transitive.unknown": 20720
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 80,
+          "transitive.unknown|d:2-3|in:1|out:1": 160,
+          "transitive.unknown|d:4-7|in:1|out:1": 320,
+          "transitive.unknown|d:8-15|in:1|out:1": 640,
+          "transitive.unknown|d:16-31|in:1|out:1": 1280,
+          "transitive.unknown|d:32-63|in:1|out:1": 2560,
+          "transitive.unknown|d:32+|in:1|out:1": 15680,
+          "transitive.unknown|d:32+|in:1|out:0": 80
+        },
+        "hotPaths": [
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:1",
+            "count": 15680
+          },
+          {
+            "path": "transitive.unknown|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "transitive.unknown|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "transitive.unknown|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "transitive.unknown|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:0",
+            "count": 80
+          }
+        ]
+      },
+      "pull": {
+        "total": 41360,
+        "maxDepth": 259,
+        "maxStack": 258,
+        "fanIn": {
+          "1": 41360
+        },
+        "fanOut": {
+          "1": 41360
+        },
+        "depth": {
+          "1": 160,
+          "2-3": 320,
+          "4-7": 640,
+          "8-15": 1280,
+          "16-31": 2560,
+          "32-63": 5120,
+          "32+": 31280
+        },
+        "branch": {
+          "dep.unknown.descend": 20640,
+          "dep.changed.advance": 80,
+          "bubble.changed.advance": 20640
+        },
+        "shape": {
+          "dep.unknown.descend|d:1|in:1|out:1": 80,
+          "dep.unknown.descend|d:2-3|in:1|out:1": 160,
+          "dep.unknown.descend|d:4-7|in:1|out:1": 320,
+          "dep.unknown.descend|d:8-15|in:1|out:1": 640,
+          "dep.unknown.descend|d:16-31|in:1|out:1": 1280,
+          "dep.unknown.descend|d:32-63|in:1|out:1": 2560,
+          "dep.unknown.descend|d:32+|in:1|out:1": 15600,
+          "dep.changed.advance|d:32+|in:1|out:1": 80,
+          "bubble.changed.advance|d:32+|in:1|out:1": 15600,
+          "bubble.changed.advance|d:32-63|in:1|out:1": 2560,
+          "bubble.changed.advance|d:16-31|in:1|out:1": 1280,
+          "bubble.changed.advance|d:8-15|in:1|out:1": 640,
+          "bubble.changed.advance|d:4-7|in:1|out:1": 320,
+          "bubble.changed.advance|d:2-3|in:1|out:1": 160,
+          "bubble.changed.advance|d:1|in:1|out:1": 80
+        },
+        "hotPaths": [
+          {
+            "path": "dep.unknown.descend|d:32+|in:1|out:1",
+            "count": 15600
+          },
+          {
+            "path": "bubble.changed.advance|d:32+|in:1|out:1",
+            "count": 15600
+          },
+          {
+            "path": "dep.unknown.descend|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "bubble.changed.advance|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "dep.unknown.descend|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "bubble.changed.advance|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "dep.unknown.descend|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "bubble.changed.advance|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "dep.unknown.descend|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "bubble.changed.advance|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "dep.unknown.descend|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "bubble.changed.advance|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "dep.unknown.descend|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "dep.changed.advance|d:32+|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "bubble.changed.advance|d:1|in:1|out:1",
+            "count": 80
+          }
+        ]
+      }
+    }
+  },
+  {
+    "key": "depthPullThreshold.264",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 264,
+    "iterations": 80,
+    "counters": {
+      "writeCalls": 80,
+      "writeSameValue": 0,
+      "writeChanged": 80,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 80,
+      "propagationScopesLeft": 80,
+      "pushCalls": 80,
+      "pushDirectEdgesVisited": 80,
+      "pushTransitiveEdgesVisited": 21040,
+      "pushMarkedChanged": 80,
+      "pushMarkedInvalid": 21040,
+      "pushAlreadyDirtySkipped": 0,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 80,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 80,
+      "pullEdgesVisited": 21040,
+      "pullChangedDeps": 80,
+      "pullInvalidDeps": 20960,
+      "pullCleanDeps": 0,
+      "pullDescents": 20960,
+      "pullAdvanceCalls": 21040,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 20960,
+      "advanceCalls": 21120,
+      "advanceComputeRuns": 21120,
+      "advanceChanged": 21120,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 21120,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 21040,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 80,
+      "readProducerTracked": 80,
+      "readConsumerCalls": 21120,
+      "readConsumerLazyCalls": 21120,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 21040,
+      "readConsumerDirtyPath": 80,
+      "readConsumerTracked": 21040,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 80,
+      "trackingResolveCalls": 21120,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 21120,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 80,
+      "contextPropagationLeave": 80,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 80,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 80,
+      "pullStackTrimExcess": 480
+    },
+    "topology": {
+      "push": {
+        "total": 21120,
+        "maxDepth": 264,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 21120
+        },
+        "fanOut": {
+          "0": 80,
+          "1": 21040
+        },
+        "depth": {
+          "1": 80,
+          "2-3": 160,
+          "4-7": 320,
+          "8-15": 640,
+          "16-31": 1280,
+          "32-63": 2560,
+          "32+": 16080
+        },
+        "branch": {
+          "direct.changed": 80,
+          "transitive.unknown": 21040
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 80,
+          "transitive.unknown|d:2-3|in:1|out:1": 160,
+          "transitive.unknown|d:4-7|in:1|out:1": 320,
+          "transitive.unknown|d:8-15|in:1|out:1": 640,
+          "transitive.unknown|d:16-31|in:1|out:1": 1280,
+          "transitive.unknown|d:32-63|in:1|out:1": 2560,
+          "transitive.unknown|d:32+|in:1|out:1": 16000,
+          "transitive.unknown|d:32+|in:1|out:0": 80
+        },
+        "hotPaths": [
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:1",
+            "count": 16000
+          },
+          {
+            "path": "transitive.unknown|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "transitive.unknown|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "transitive.unknown|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "transitive.unknown|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:0",
+            "count": 80
+          }
+        ]
+      },
+      "pull": {
+        "total": 42000,
+        "maxDepth": 263,
+        "maxStack": 262,
+        "fanIn": {
+          "1": 42000
+        },
+        "fanOut": {
+          "1": 42000
+        },
+        "depth": {
+          "1": 160,
+          "2-3": 320,
+          "4-7": 640,
+          "8-15": 1280,
+          "16-31": 2560,
+          "32-63": 5120,
+          "32+": 31920
+        },
+        "branch": {
+          "dep.unknown.descend": 20960,
+          "dep.changed.advance": 80,
+          "bubble.changed.advance": 20960
+        },
+        "shape": {
+          "dep.unknown.descend|d:1|in:1|out:1": 80,
+          "dep.unknown.descend|d:2-3|in:1|out:1": 160,
+          "dep.unknown.descend|d:4-7|in:1|out:1": 320,
+          "dep.unknown.descend|d:8-15|in:1|out:1": 640,
+          "dep.unknown.descend|d:16-31|in:1|out:1": 1280,
+          "dep.unknown.descend|d:32-63|in:1|out:1": 2560,
+          "dep.unknown.descend|d:32+|in:1|out:1": 15920,
+          "dep.changed.advance|d:32+|in:1|out:1": 80,
+          "bubble.changed.advance|d:32+|in:1|out:1": 15920,
+          "bubble.changed.advance|d:32-63|in:1|out:1": 2560,
+          "bubble.changed.advance|d:16-31|in:1|out:1": 1280,
+          "bubble.changed.advance|d:8-15|in:1|out:1": 640,
+          "bubble.changed.advance|d:4-7|in:1|out:1": 320,
+          "bubble.changed.advance|d:2-3|in:1|out:1": 160,
+          "bubble.changed.advance|d:1|in:1|out:1": 80
+        },
+        "hotPaths": [
+          {
+            "path": "dep.unknown.descend|d:32+|in:1|out:1",
+            "count": 15920
+          },
+          {
+            "path": "bubble.changed.advance|d:32+|in:1|out:1",
+            "count": 15920
+          },
+          {
+            "path": "dep.unknown.descend|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "bubble.changed.advance|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "dep.unknown.descend|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "bubble.changed.advance|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "dep.unknown.descend|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "bubble.changed.advance|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "dep.unknown.descend|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "bubble.changed.advance|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "dep.unknown.descend|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "bubble.changed.advance|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "dep.unknown.descend|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "dep.changed.advance|d:32+|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "bubble.changed.advance|d:1|in:1|out:1",
+            "count": 80
+          }
+        ]
+      }
+    }
+  },
+  {
+    "key": "depthPullThreshold.272",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 272,
+    "iterations": 80,
+    "counters": {
+      "writeCalls": 80,
+      "writeSameValue": 0,
+      "writeChanged": 80,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 80,
+      "propagationScopesLeft": 80,
+      "pushCalls": 80,
+      "pushDirectEdgesVisited": 80,
+      "pushTransitiveEdgesVisited": 21680,
+      "pushMarkedChanged": 80,
+      "pushMarkedInvalid": 21680,
+      "pushAlreadyDirtySkipped": 0,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 80,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 80,
+      "pullEdgesVisited": 21680,
+      "pullChangedDeps": 80,
+      "pullInvalidDeps": 21600,
+      "pullCleanDeps": 0,
+      "pullDescents": 21600,
+      "pullAdvanceCalls": 21680,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 21600,
+      "advanceCalls": 21760,
+      "advanceComputeRuns": 21760,
+      "advanceChanged": 21760,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 21760,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 21680,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 80,
+      "readProducerTracked": 80,
+      "readConsumerCalls": 21760,
+      "readConsumerLazyCalls": 21760,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 21680,
+      "readConsumerDirtyPath": 80,
+      "readConsumerTracked": 21680,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 80,
+      "trackingResolveCalls": 21760,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 21760,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 80,
+      "contextPropagationLeave": 80,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 80,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 80,
+      "pullStackTrimExcess": 1120
+    },
+    "topology": {
+      "push": {
+        "total": 21760,
+        "maxDepth": 272,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 21760
+        },
+        "fanOut": {
+          "0": 80,
+          "1": 21680
+        },
+        "depth": {
+          "1": 80,
+          "2-3": 160,
+          "4-7": 320,
+          "8-15": 640,
+          "16-31": 1280,
+          "32-63": 2560,
+          "32+": 16720
+        },
+        "branch": {
+          "direct.changed": 80,
+          "transitive.unknown": 21680
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 80,
+          "transitive.unknown|d:2-3|in:1|out:1": 160,
+          "transitive.unknown|d:4-7|in:1|out:1": 320,
+          "transitive.unknown|d:8-15|in:1|out:1": 640,
+          "transitive.unknown|d:16-31|in:1|out:1": 1280,
+          "transitive.unknown|d:32-63|in:1|out:1": 2560,
+          "transitive.unknown|d:32+|in:1|out:1": 16640,
+          "transitive.unknown|d:32+|in:1|out:0": 80
+        },
+        "hotPaths": [
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:1",
+            "count": 16640
+          },
+          {
+            "path": "transitive.unknown|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "transitive.unknown|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "transitive.unknown|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "transitive.unknown|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:0",
+            "count": 80
+          }
+        ]
+      },
+      "pull": {
+        "total": 43280,
+        "maxDepth": 271,
+        "maxStack": 270,
+        "fanIn": {
+          "1": 43280
+        },
+        "fanOut": {
+          "1": 43280
+        },
+        "depth": {
+          "1": 160,
+          "2-3": 320,
+          "4-7": 640,
+          "8-15": 1280,
+          "16-31": 2560,
+          "32-63": 5120,
+          "32+": 33200
+        },
+        "branch": {
+          "dep.unknown.descend": 21600,
+          "dep.changed.advance": 80,
+          "bubble.changed.advance": 21600
+        },
+        "shape": {
+          "dep.unknown.descend|d:1|in:1|out:1": 80,
+          "dep.unknown.descend|d:2-3|in:1|out:1": 160,
+          "dep.unknown.descend|d:4-7|in:1|out:1": 320,
+          "dep.unknown.descend|d:8-15|in:1|out:1": 640,
+          "dep.unknown.descend|d:16-31|in:1|out:1": 1280,
+          "dep.unknown.descend|d:32-63|in:1|out:1": 2560,
+          "dep.unknown.descend|d:32+|in:1|out:1": 16560,
+          "dep.changed.advance|d:32+|in:1|out:1": 80,
+          "bubble.changed.advance|d:32+|in:1|out:1": 16560,
+          "bubble.changed.advance|d:32-63|in:1|out:1": 2560,
+          "bubble.changed.advance|d:16-31|in:1|out:1": 1280,
+          "bubble.changed.advance|d:8-15|in:1|out:1": 640,
+          "bubble.changed.advance|d:4-7|in:1|out:1": 320,
+          "bubble.changed.advance|d:2-3|in:1|out:1": 160,
+          "bubble.changed.advance|d:1|in:1|out:1": 80
+        },
+        "hotPaths": [
+          {
+            "path": "dep.unknown.descend|d:32+|in:1|out:1",
+            "count": 16560
+          },
+          {
+            "path": "bubble.changed.advance|d:32+|in:1|out:1",
+            "count": 16560
+          },
+          {
+            "path": "dep.unknown.descend|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "bubble.changed.advance|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "dep.unknown.descend|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "bubble.changed.advance|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "dep.unknown.descend|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "bubble.changed.advance|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "dep.unknown.descend|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "bubble.changed.advance|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "dep.unknown.descend|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "bubble.changed.advance|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "dep.unknown.descend|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "dep.changed.advance|d:32+|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "bubble.changed.advance|d:1|in:1|out:1",
+            "count": 80
+          }
+        ]
+      }
+    }
+  },
+  {
+    "key": "depthPullThreshold.288",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 288,
+    "iterations": 80,
+    "counters": {
+      "writeCalls": 80,
+      "writeSameValue": 0,
+      "writeChanged": 80,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 80,
+      "propagationScopesLeft": 80,
+      "pushCalls": 80,
+      "pushDirectEdgesVisited": 80,
+      "pushTransitiveEdgesVisited": 22960,
+      "pushMarkedChanged": 80,
+      "pushMarkedInvalid": 22960,
+      "pushAlreadyDirtySkipped": 0,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 80,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 80,
+      "pullEdgesVisited": 22960,
+      "pullChangedDeps": 80,
+      "pullInvalidDeps": 22880,
+      "pullCleanDeps": 0,
+      "pullDescents": 22880,
+      "pullAdvanceCalls": 22960,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 22880,
+      "advanceCalls": 23040,
+      "advanceComputeRuns": 23040,
+      "advanceChanged": 23040,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 23040,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 22960,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 80,
+      "readProducerTracked": 80,
+      "readConsumerCalls": 23040,
+      "readConsumerLazyCalls": 23040,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 22960,
+      "readConsumerDirtyPath": 80,
+      "readConsumerTracked": 22960,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 80,
+      "trackingResolveCalls": 23040,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 23040,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 80,
+      "contextPropagationLeave": 80,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 80,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 80,
+      "pullStackTrimExcess": 2400
+    },
+    "topology": {
+      "push": {
+        "total": 23040,
+        "maxDepth": 288,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 23040
+        },
+        "fanOut": {
+          "0": 80,
+          "1": 22960
+        },
+        "depth": {
+          "1": 80,
+          "2-3": 160,
+          "4-7": 320,
+          "8-15": 640,
+          "16-31": 1280,
+          "32-63": 2560,
+          "32+": 18000
+        },
+        "branch": {
+          "direct.changed": 80,
+          "transitive.unknown": 22960
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 80,
+          "transitive.unknown|d:2-3|in:1|out:1": 160,
+          "transitive.unknown|d:4-7|in:1|out:1": 320,
+          "transitive.unknown|d:8-15|in:1|out:1": 640,
+          "transitive.unknown|d:16-31|in:1|out:1": 1280,
+          "transitive.unknown|d:32-63|in:1|out:1": 2560,
+          "transitive.unknown|d:32+|in:1|out:1": 17920,
+          "transitive.unknown|d:32+|in:1|out:0": 80
+        },
+        "hotPaths": [
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:1",
+            "count": 17920
+          },
+          {
+            "path": "transitive.unknown|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "transitive.unknown|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "transitive.unknown|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "transitive.unknown|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:0",
+            "count": 80
+          }
+        ]
+      },
+      "pull": {
+        "total": 45840,
+        "maxDepth": 287,
+        "maxStack": 286,
+        "fanIn": {
+          "1": 45840
+        },
+        "fanOut": {
+          "1": 45840
+        },
+        "depth": {
+          "1": 160,
+          "2-3": 320,
+          "4-7": 640,
+          "8-15": 1280,
+          "16-31": 2560,
+          "32-63": 5120,
+          "32+": 35760
+        },
+        "branch": {
+          "dep.unknown.descend": 22880,
+          "dep.changed.advance": 80,
+          "bubble.changed.advance": 22880
+        },
+        "shape": {
+          "dep.unknown.descend|d:1|in:1|out:1": 80,
+          "dep.unknown.descend|d:2-3|in:1|out:1": 160,
+          "dep.unknown.descend|d:4-7|in:1|out:1": 320,
+          "dep.unknown.descend|d:8-15|in:1|out:1": 640,
+          "dep.unknown.descend|d:16-31|in:1|out:1": 1280,
+          "dep.unknown.descend|d:32-63|in:1|out:1": 2560,
+          "dep.unknown.descend|d:32+|in:1|out:1": 17840,
+          "dep.changed.advance|d:32+|in:1|out:1": 80,
+          "bubble.changed.advance|d:32+|in:1|out:1": 17840,
+          "bubble.changed.advance|d:32-63|in:1|out:1": 2560,
+          "bubble.changed.advance|d:16-31|in:1|out:1": 1280,
+          "bubble.changed.advance|d:8-15|in:1|out:1": 640,
+          "bubble.changed.advance|d:4-7|in:1|out:1": 320,
+          "bubble.changed.advance|d:2-3|in:1|out:1": 160,
+          "bubble.changed.advance|d:1|in:1|out:1": 80
+        },
+        "hotPaths": [
+          {
+            "path": "dep.unknown.descend|d:32+|in:1|out:1",
+            "count": 17840
+          },
+          {
+            "path": "bubble.changed.advance|d:32+|in:1|out:1",
+            "count": 17840
+          },
+          {
+            "path": "dep.unknown.descend|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "bubble.changed.advance|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "dep.unknown.descend|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "bubble.changed.advance|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "dep.unknown.descend|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "bubble.changed.advance|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "dep.unknown.descend|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "bubble.changed.advance|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "dep.unknown.descend|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "bubble.changed.advance|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "dep.unknown.descend|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "dep.changed.advance|d:32+|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "bubble.changed.advance|d:1|in:1|out:1",
+            "count": 80
+          }
+        ]
+      }
+    }
+  },
+  {
+    "key": "depthPullThreshold.320",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 320,
+    "iterations": 80,
+    "counters": {
+      "writeCalls": 80,
+      "writeSameValue": 0,
+      "writeChanged": 80,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 80,
+      "propagationScopesLeft": 80,
+      "pushCalls": 80,
+      "pushDirectEdgesVisited": 80,
+      "pushTransitiveEdgesVisited": 25520,
+      "pushMarkedChanged": 80,
+      "pushMarkedInvalid": 25520,
+      "pushAlreadyDirtySkipped": 0,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 80,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 80,
+      "pullEdgesVisited": 25520,
+      "pullChangedDeps": 80,
+      "pullInvalidDeps": 25440,
+      "pullCleanDeps": 0,
+      "pullDescents": 25440,
+      "pullAdvanceCalls": 25520,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 25440,
+      "advanceCalls": 25600,
+      "advanceComputeRuns": 25600,
+      "advanceChanged": 25600,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 25600,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 25520,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 80,
+      "readProducerTracked": 80,
+      "readConsumerCalls": 25600,
+      "readConsumerLazyCalls": 25600,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 25520,
+      "readConsumerDirtyPath": 80,
+      "readConsumerTracked": 25520,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 80,
+      "trackingResolveCalls": 25600,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 25600,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 80,
+      "contextPropagationLeave": 80,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 80,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 80,
+      "pullStackTrimExcess": 4960
+    },
+    "topology": {
+      "push": {
+        "total": 25600,
+        "maxDepth": 320,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 25600
+        },
+        "fanOut": {
+          "0": 80,
+          "1": 25520
+        },
+        "depth": {
+          "1": 80,
+          "2-3": 160,
+          "4-7": 320,
+          "8-15": 640,
+          "16-31": 1280,
+          "32-63": 2560,
+          "32+": 20560
+        },
+        "branch": {
+          "direct.changed": 80,
+          "transitive.unknown": 25520
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 80,
+          "transitive.unknown|d:2-3|in:1|out:1": 160,
+          "transitive.unknown|d:4-7|in:1|out:1": 320,
+          "transitive.unknown|d:8-15|in:1|out:1": 640,
+          "transitive.unknown|d:16-31|in:1|out:1": 1280,
+          "transitive.unknown|d:32-63|in:1|out:1": 2560,
+          "transitive.unknown|d:32+|in:1|out:1": 20480,
+          "transitive.unknown|d:32+|in:1|out:0": 80
+        },
+        "hotPaths": [
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:1",
+            "count": 20480
+          },
+          {
+            "path": "transitive.unknown|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "transitive.unknown|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "transitive.unknown|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "transitive.unknown|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:0",
+            "count": 80
+          }
+        ]
+      },
+      "pull": {
+        "total": 50960,
+        "maxDepth": 319,
+        "maxStack": 318,
+        "fanIn": {
+          "1": 50960
+        },
+        "fanOut": {
+          "1": 50960
+        },
+        "depth": {
+          "1": 160,
+          "2-3": 320,
+          "4-7": 640,
+          "8-15": 1280,
+          "16-31": 2560,
+          "32-63": 5120,
+          "32+": 40880
+        },
+        "branch": {
+          "dep.unknown.descend": 25440,
+          "dep.changed.advance": 80,
+          "bubble.changed.advance": 25440
+        },
+        "shape": {
+          "dep.unknown.descend|d:1|in:1|out:1": 80,
+          "dep.unknown.descend|d:2-3|in:1|out:1": 160,
+          "dep.unknown.descend|d:4-7|in:1|out:1": 320,
+          "dep.unknown.descend|d:8-15|in:1|out:1": 640,
+          "dep.unknown.descend|d:16-31|in:1|out:1": 1280,
+          "dep.unknown.descend|d:32-63|in:1|out:1": 2560,
+          "dep.unknown.descend|d:32+|in:1|out:1": 20400,
+          "dep.changed.advance|d:32+|in:1|out:1": 80,
+          "bubble.changed.advance|d:32+|in:1|out:1": 20400,
+          "bubble.changed.advance|d:32-63|in:1|out:1": 2560,
+          "bubble.changed.advance|d:16-31|in:1|out:1": 1280,
+          "bubble.changed.advance|d:8-15|in:1|out:1": 640,
+          "bubble.changed.advance|d:4-7|in:1|out:1": 320,
+          "bubble.changed.advance|d:2-3|in:1|out:1": 160,
+          "bubble.changed.advance|d:1|in:1|out:1": 80
+        },
+        "hotPaths": [
+          {
+            "path": "dep.unknown.descend|d:32+|in:1|out:1",
+            "count": 20400
+          },
+          {
+            "path": "bubble.changed.advance|d:32+|in:1|out:1",
+            "count": 20400
+          },
+          {
+            "path": "dep.unknown.descend|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "bubble.changed.advance|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "dep.unknown.descend|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "bubble.changed.advance|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "dep.unknown.descend|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "bubble.changed.advance|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "dep.unknown.descend|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "bubble.changed.advance|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "dep.unknown.descend|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "bubble.changed.advance|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "dep.unknown.descend|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "dep.changed.advance|d:32+|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "bubble.changed.advance|d:1|in:1|out:1",
+            "count": 80
+          }
+        ]
+      }
+    }
+  },
+  {
+    "key": "depthPullThreshold.384",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 384,
+    "iterations": 80,
+    "counters": {
+      "writeCalls": 80,
+      "writeSameValue": 0,
+      "writeChanged": 80,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 80,
+      "propagationScopesLeft": 80,
+      "pushCalls": 80,
+      "pushDirectEdgesVisited": 80,
+      "pushTransitiveEdgesVisited": 30640,
+      "pushMarkedChanged": 80,
+      "pushMarkedInvalid": 30640,
+      "pushAlreadyDirtySkipped": 0,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 80,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 80,
+      "pullEdgesVisited": 30640,
+      "pullChangedDeps": 80,
+      "pullInvalidDeps": 30560,
+      "pullCleanDeps": 0,
+      "pullDescents": 30560,
+      "pullAdvanceCalls": 30640,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 30560,
+      "advanceCalls": 30720,
+      "advanceComputeRuns": 30720,
+      "advanceChanged": 30720,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 30720,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 30640,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 80,
+      "readProducerTracked": 80,
+      "readConsumerCalls": 30720,
+      "readConsumerLazyCalls": 30720,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 30640,
+      "readConsumerDirtyPath": 80,
+      "readConsumerTracked": 30640,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 80,
+      "trackingResolveCalls": 30720,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 30720,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 80,
+      "contextPropagationLeave": 80,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 80,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 80,
+      "pullStackTrimExcess": 10080
+    },
+    "topology": {
+      "push": {
+        "total": 30720,
+        "maxDepth": 384,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 30720
+        },
+        "fanOut": {
+          "0": 80,
+          "1": 30640
+        },
+        "depth": {
+          "1": 80,
+          "2-3": 160,
+          "4-7": 320,
+          "8-15": 640,
+          "16-31": 1280,
+          "32-63": 2560,
+          "32+": 25680
+        },
+        "branch": {
+          "direct.changed": 80,
+          "transitive.unknown": 30640
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 80,
+          "transitive.unknown|d:2-3|in:1|out:1": 160,
+          "transitive.unknown|d:4-7|in:1|out:1": 320,
+          "transitive.unknown|d:8-15|in:1|out:1": 640,
+          "transitive.unknown|d:16-31|in:1|out:1": 1280,
+          "transitive.unknown|d:32-63|in:1|out:1": 2560,
+          "transitive.unknown|d:32+|in:1|out:1": 25600,
+          "transitive.unknown|d:32+|in:1|out:0": 80
+        },
+        "hotPaths": [
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:1",
+            "count": 25600
+          },
+          {
+            "path": "transitive.unknown|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "transitive.unknown|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "transitive.unknown|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "transitive.unknown|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:0",
+            "count": 80
+          }
+        ]
+      },
+      "pull": {
+        "total": 61200,
+        "maxDepth": 383,
+        "maxStack": 382,
+        "fanIn": {
+          "1": 61200
+        },
+        "fanOut": {
+          "1": 61200
+        },
+        "depth": {
+          "1": 160,
+          "2-3": 320,
+          "4-7": 640,
+          "8-15": 1280,
+          "16-31": 2560,
+          "32-63": 5120,
+          "32+": 51120
+        },
+        "branch": {
+          "dep.unknown.descend": 30560,
+          "dep.changed.advance": 80,
+          "bubble.changed.advance": 30560
+        },
+        "shape": {
+          "dep.unknown.descend|d:1|in:1|out:1": 80,
+          "dep.unknown.descend|d:2-3|in:1|out:1": 160,
+          "dep.unknown.descend|d:4-7|in:1|out:1": 320,
+          "dep.unknown.descend|d:8-15|in:1|out:1": 640,
+          "dep.unknown.descend|d:16-31|in:1|out:1": 1280,
+          "dep.unknown.descend|d:32-63|in:1|out:1": 2560,
+          "dep.unknown.descend|d:32+|in:1|out:1": 25520,
+          "dep.changed.advance|d:32+|in:1|out:1": 80,
+          "bubble.changed.advance|d:32+|in:1|out:1": 25520,
+          "bubble.changed.advance|d:32-63|in:1|out:1": 2560,
+          "bubble.changed.advance|d:16-31|in:1|out:1": 1280,
+          "bubble.changed.advance|d:8-15|in:1|out:1": 640,
+          "bubble.changed.advance|d:4-7|in:1|out:1": 320,
+          "bubble.changed.advance|d:2-3|in:1|out:1": 160,
+          "bubble.changed.advance|d:1|in:1|out:1": 80
+        },
+        "hotPaths": [
+          {
+            "path": "dep.unknown.descend|d:32+|in:1|out:1",
+            "count": 25520
+          },
+          {
+            "path": "bubble.changed.advance|d:32+|in:1|out:1",
+            "count": 25520
+          },
+          {
+            "path": "dep.unknown.descend|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "bubble.changed.advance|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "dep.unknown.descend|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "bubble.changed.advance|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "dep.unknown.descend|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "bubble.changed.advance|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "dep.unknown.descend|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "bubble.changed.advance|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "dep.unknown.descend|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "bubble.changed.advance|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "dep.unknown.descend|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "dep.changed.advance|d:32+|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "bubble.changed.advance|d:1|in:1|out:1",
+            "count": 80
+          }
+        ]
+      }
+    }
+  },
+  {
+    "key": "depthPullThreshold.448",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 448,
+    "iterations": 80,
+    "counters": {
+      "writeCalls": 80,
+      "writeSameValue": 0,
+      "writeChanged": 80,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 80,
+      "propagationScopesLeft": 80,
+      "pushCalls": 80,
+      "pushDirectEdgesVisited": 80,
+      "pushTransitiveEdgesVisited": 35760,
+      "pushMarkedChanged": 80,
+      "pushMarkedInvalid": 35760,
+      "pushAlreadyDirtySkipped": 0,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 80,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 80,
+      "pullEdgesVisited": 35760,
+      "pullChangedDeps": 80,
+      "pullInvalidDeps": 35680,
+      "pullCleanDeps": 0,
+      "pullDescents": 35680,
+      "pullAdvanceCalls": 35760,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 35680,
+      "advanceCalls": 35840,
+      "advanceComputeRuns": 35840,
+      "advanceChanged": 35840,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 35840,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 35760,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 80,
+      "readProducerTracked": 80,
+      "readConsumerCalls": 35840,
+      "readConsumerLazyCalls": 35840,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 35760,
+      "readConsumerDirtyPath": 80,
+      "readConsumerTracked": 35760,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 80,
+      "trackingResolveCalls": 35840,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 35840,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 80,
+      "contextPropagationLeave": 80,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 80,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 80,
+      "pullStackTrimExcess": 15200
+    },
+    "topology": {
+      "push": {
+        "total": 35840,
+        "maxDepth": 448,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 35840
+        },
+        "fanOut": {
+          "0": 80,
+          "1": 35760
+        },
+        "depth": {
+          "1": 80,
+          "2-3": 160,
+          "4-7": 320,
+          "8-15": 640,
+          "16-31": 1280,
+          "32-63": 2560,
+          "32+": 30800
+        },
+        "branch": {
+          "direct.changed": 80,
+          "transitive.unknown": 35760
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 80,
+          "transitive.unknown|d:2-3|in:1|out:1": 160,
+          "transitive.unknown|d:4-7|in:1|out:1": 320,
+          "transitive.unknown|d:8-15|in:1|out:1": 640,
+          "transitive.unknown|d:16-31|in:1|out:1": 1280,
+          "transitive.unknown|d:32-63|in:1|out:1": 2560,
+          "transitive.unknown|d:32+|in:1|out:1": 30720,
+          "transitive.unknown|d:32+|in:1|out:0": 80
+        },
+        "hotPaths": [
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:1",
+            "count": 30720
+          },
+          {
+            "path": "transitive.unknown|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "transitive.unknown|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "transitive.unknown|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "transitive.unknown|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:0",
+            "count": 80
+          }
+        ]
+      },
+      "pull": {
+        "total": 71440,
+        "maxDepth": 447,
+        "maxStack": 446,
+        "fanIn": {
+          "1": 71440
+        },
+        "fanOut": {
+          "1": 71440
+        },
+        "depth": {
+          "1": 160,
+          "2-3": 320,
+          "4-7": 640,
+          "8-15": 1280,
+          "16-31": 2560,
+          "32-63": 5120,
+          "32+": 61360
+        },
+        "branch": {
+          "dep.unknown.descend": 35680,
+          "dep.changed.advance": 80,
+          "bubble.changed.advance": 35680
+        },
+        "shape": {
+          "dep.unknown.descend|d:1|in:1|out:1": 80,
+          "dep.unknown.descend|d:2-3|in:1|out:1": 160,
+          "dep.unknown.descend|d:4-7|in:1|out:1": 320,
+          "dep.unknown.descend|d:8-15|in:1|out:1": 640,
+          "dep.unknown.descend|d:16-31|in:1|out:1": 1280,
+          "dep.unknown.descend|d:32-63|in:1|out:1": 2560,
+          "dep.unknown.descend|d:32+|in:1|out:1": 30640,
+          "dep.changed.advance|d:32+|in:1|out:1": 80,
+          "bubble.changed.advance|d:32+|in:1|out:1": 30640,
+          "bubble.changed.advance|d:32-63|in:1|out:1": 2560,
+          "bubble.changed.advance|d:16-31|in:1|out:1": 1280,
+          "bubble.changed.advance|d:8-15|in:1|out:1": 640,
+          "bubble.changed.advance|d:4-7|in:1|out:1": 320,
+          "bubble.changed.advance|d:2-3|in:1|out:1": 160,
+          "bubble.changed.advance|d:1|in:1|out:1": 80
+        },
+        "hotPaths": [
+          {
+            "path": "dep.unknown.descend|d:32+|in:1|out:1",
+            "count": 30640
+          },
+          {
+            "path": "bubble.changed.advance|d:32+|in:1|out:1",
+            "count": 30640
+          },
+          {
+            "path": "dep.unknown.descend|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "bubble.changed.advance|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "dep.unknown.descend|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "bubble.changed.advance|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "dep.unknown.descend|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "bubble.changed.advance|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "dep.unknown.descend|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "bubble.changed.advance|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "dep.unknown.descend|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "bubble.changed.advance|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "dep.unknown.descend|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "dep.changed.advance|d:32+|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "bubble.changed.advance|d:1|in:1|out:1",
+            "count": 80
+          }
+        ]
+      }
+    }
+  },
+  {
+    "key": "depthPullThreshold.512",
+    "sweep": "depthPullThreshold",
+    "axis": "depth",
+    "axisValue": 512,
+    "iterations": 80,
+    "counters": {
+      "writeCalls": 80,
+      "writeSameValue": 0,
+      "writeChanged": 80,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 80,
+      "propagationScopesLeft": 80,
+      "pushCalls": 80,
+      "pushDirectEdgesVisited": 80,
+      "pushTransitiveEdgesVisited": 40880,
+      "pushMarkedChanged": 80,
+      "pushMarkedInvalid": 40880,
+      "pushAlreadyDirtySkipped": 0,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 80,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 80,
+      "pullEdgesVisited": 40880,
+      "pullChangedDeps": 80,
+      "pullInvalidDeps": 40800,
+      "pullCleanDeps": 0,
+      "pullDescents": 40800,
+      "pullAdvanceCalls": 40880,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 40800,
+      "advanceCalls": 40960,
+      "advanceComputeRuns": 40960,
+      "advanceChanged": 40960,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 40960,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 40880,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 80,
+      "readProducerTracked": 80,
+      "readConsumerCalls": 40960,
+      "readConsumerLazyCalls": 40960,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 40880,
+      "readConsumerDirtyPath": 80,
+      "readConsumerTracked": 40880,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 80,
+      "trackingResolveCalls": 40960,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 40960,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 80,
+      "contextPropagationLeave": 80,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 80,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 80,
+      "pullStackTrimExcess": 20320
+    },
+    "topology": {
+      "push": {
+        "total": 40960,
+        "maxDepth": 512,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 40960
+        },
+        "fanOut": {
+          "0": 80,
+          "1": 40880
+        },
+        "depth": {
+          "1": 80,
+          "2-3": 160,
+          "4-7": 320,
+          "8-15": 640,
+          "16-31": 1280,
+          "32-63": 2560,
+          "32+": 35920
+        },
+        "branch": {
+          "direct.changed": 80,
+          "transitive.unknown": 40880
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 80,
+          "transitive.unknown|d:2-3|in:1|out:1": 160,
+          "transitive.unknown|d:4-7|in:1|out:1": 320,
+          "transitive.unknown|d:8-15|in:1|out:1": 640,
+          "transitive.unknown|d:16-31|in:1|out:1": 1280,
+          "transitive.unknown|d:32-63|in:1|out:1": 2560,
+          "transitive.unknown|d:32+|in:1|out:1": 35840,
+          "transitive.unknown|d:32+|in:1|out:0": 80
+        },
+        "hotPaths": [
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:1",
+            "count": 35840
+          },
+          {
+            "path": "transitive.unknown|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "transitive.unknown|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "transitive.unknown|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "transitive.unknown|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "transitive.unknown|d:32+|in:1|out:0",
+            "count": 80
+          }
+        ]
+      },
+      "pull": {
+        "total": 81680,
+        "maxDepth": 511,
+        "maxStack": 510,
+        "fanIn": {
+          "1": 81680
+        },
+        "fanOut": {
+          "1": 81680
+        },
+        "depth": {
+          "1": 160,
+          "2-3": 320,
+          "4-7": 640,
+          "8-15": 1280,
+          "16-31": 2560,
+          "32-63": 5120,
+          "32+": 71600
+        },
+        "branch": {
+          "dep.unknown.descend": 40800,
+          "dep.changed.advance": 80,
+          "bubble.changed.advance": 40800
+        },
+        "shape": {
+          "dep.unknown.descend|d:1|in:1|out:1": 80,
+          "dep.unknown.descend|d:2-3|in:1|out:1": 160,
+          "dep.unknown.descend|d:4-7|in:1|out:1": 320,
+          "dep.unknown.descend|d:8-15|in:1|out:1": 640,
+          "dep.unknown.descend|d:16-31|in:1|out:1": 1280,
+          "dep.unknown.descend|d:32-63|in:1|out:1": 2560,
+          "dep.unknown.descend|d:32+|in:1|out:1": 35760,
+          "dep.changed.advance|d:32+|in:1|out:1": 80,
+          "bubble.changed.advance|d:32+|in:1|out:1": 35760,
+          "bubble.changed.advance|d:32-63|in:1|out:1": 2560,
+          "bubble.changed.advance|d:16-31|in:1|out:1": 1280,
+          "bubble.changed.advance|d:8-15|in:1|out:1": 640,
+          "bubble.changed.advance|d:4-7|in:1|out:1": 320,
+          "bubble.changed.advance|d:2-3|in:1|out:1": 160,
+          "bubble.changed.advance|d:1|in:1|out:1": 80
+        },
+        "hotPaths": [
+          {
+            "path": "dep.unknown.descend|d:32+|in:1|out:1",
+            "count": 35760
+          },
+          {
+            "path": "bubble.changed.advance|d:32+|in:1|out:1",
+            "count": 35760
+          },
+          {
+            "path": "dep.unknown.descend|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "bubble.changed.advance|d:32-63|in:1|out:1",
+            "count": 2560
+          },
+          {
+            "path": "dep.unknown.descend|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "bubble.changed.advance|d:16-31|in:1|out:1",
+            "count": 1280
+          },
+          {
+            "path": "dep.unknown.descend|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "bubble.changed.advance|d:8-15|in:1|out:1",
+            "count": 640
+          },
+          {
+            "path": "dep.unknown.descend|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "bubble.changed.advance|d:4-7|in:1|out:1",
+            "count": 320
+          },
+          {
+            "path": "dep.unknown.descend|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "bubble.changed.advance|d:2-3|in:1|out:1",
+            "count": 160
+          },
+          {
+            "path": "dep.unknown.descend|d:1|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "dep.changed.advance|d:32+|in:1|out:1",
+            "count": 80
+          },
+          {
+            "path": "bubble.changed.advance|d:1|in:1|out:1",
+            "count": 80
+          }
+        ]
+      }
+    }
+  }
+]

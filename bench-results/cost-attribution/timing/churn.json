@@ -1,0 +1,77 @@
+[
+  {
+    "key": "churn.0",
+    "sweep": "churn",
+    "axis": "churnRate",
+    "axisValue": 0,
+    "iterations": 300,
+    "nsPerOpMedian": 830809.3333333334,
+    "nsPerOpTrials": [
+      452816.33333334565,
+      450473.66666668194,
+      830809.3333333334,
+      888247.9999999971,
+      885227.6666666633
+    ]
+  },
+  {
+    "key": "churn.0.01",
+    "sweep": "churn",
+    "axis": "churnRate",
+    "axisValue": 0.01,
+    "iterations": 300,
+    "nsPerOpMedian": 918147.666666652,
+    "nsPerOpTrials": [
+      944205.3333333508,
+      930218.3333333475,
+      918147.666666652,
+      911870.33333333,
+      916777.0000000017
+    ]
+  },
+  {
+    "key": "churn.0.1",
+    "sweep": "churn",
+    "axis": "churnRate",
+    "axisValue": 0.1,
+    "iterations": 300,
+    "nsPerOpMedian": 910557.9999999949,
+    "nsPerOpTrials": [
+      930071.0000000012,
+      910396.3333333377,
+      962293.9999999895,
+      907506.666666668,
+      910557.9999999949
+    ]
+  },
+  {
+    "key": "churn.0.5",
+    "sweep": "churn",
+    "axis": "churnRate",
+    "axisValue": 0.5,
+    "iterations": 300,
+    "nsPerOpMedian": 917500.333333325,
+    "nsPerOpTrials": [
+      917500.333333325,
+      918629.33333335,
+      910695.999999977,
+      921377.0000000175,
+      917210.3333333508
+    ]
+  },
+  {
+    "key": "churn.1",
+    "sweep": "churn",
+    "axis": "churnRate",
+    "axisValue": 1,
+    "iterations": 300,
+    "nsPerOpMedian": 910954.9999999823,
+    "nsPerOpTrials": [
+      907037.6666666804,
+      914843.6666666627,
+      911712.6666666688,
+      902170.3333333425,
+      910954.9999999823
+    ]
+  }
+]

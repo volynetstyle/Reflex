@@ -24,6 +24,7 @@ import { readRuntimeWalkerStackStats } from "@runtime/kernel/stages/stackStats";
 import {
   isRuntimeProfilingEnabled,
   profileRuntimeCounter,
+  profileRuntimeCounterBy,
   profileRuntimePushPath,
 } from "@runtime/profiling";
 
@@ -281,6 +282,13 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
 
   propagateStackHigh = base;
   if (base === 0 && stack.length > MAX_RETAINED_PROPAGATE_STACK) {
+    if (__PROFILE__) {
+      profileRuntimeCounter("pushStackTrimEvents");
+      profileRuntimeCounterBy(
+        "pushStackTrimExcess",
+        stack.length - MAX_RETAINED_PROPAGATE_STACK,
+      );
+    }
     stack.length = MAX_RETAINED_PROPAGATE_STACK;
   }
 }

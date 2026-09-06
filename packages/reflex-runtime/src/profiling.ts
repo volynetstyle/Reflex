@@ -62,6 +62,12 @@ export interface RuntimeProfileCounters {
   trackingSlowPathBlocked: number;
   trackingOutgoingProbeHit1: number;
   trackingOutgoingProbeMiss: number;
+  trackingSuffixHeadHit: number;
+  trackingSuffixReuseHit: number;
+  trackingSuffixLinkNew: number;
+  trackingSuffixEdgesScanned: number;
+  trackingEdgeMoved: number;
+  trackingSuffixEagerDetach: number;
   cleanupCalls: number;
   cleanupSkipped: number;
   cleanupEdgesDropped: number;
@@ -80,6 +86,10 @@ export interface RuntimeProfileCounters {
   contextSettledEmits: number;
   contextSettledDeferred: number;
   nodeInvalidatedEmits: number;
+  pushStackTrimEvents: number;
+  pushStackTrimExcess: number;
+  pullStackTrimEvents: number;
+  pullStackTrimExcess: number;
 }
 
 export type RuntimeProfileCounterName = keyof RuntimeProfileCounters;
@@ -190,6 +200,12 @@ const COUNTER_NAMES = [
   "trackingSlowPathBlocked",
   "trackingOutgoingProbeHit1",
   "trackingOutgoingProbeMiss",
+  "trackingSuffixHeadHit",
+  "trackingSuffixReuseHit",
+  "trackingSuffixLinkNew",
+  "trackingSuffixEdgesScanned",
+  "trackingEdgeMoved",
+  "trackingSuffixEagerDetach",
   "cleanupCalls",
   "cleanupSkipped",
   "cleanupEdgesDropped",
@@ -208,6 +224,10 @@ const COUNTER_NAMES = [
   "contextSettledEmits",
   "contextSettledDeferred",
   "nodeInvalidatedEmits",
+  "pushStackTrimEvents",
+  "pushStackTrimExcess",
+  "pullStackTrimEvents",
+  "pullStackTrimExcess",
 ] as const satisfies readonly RuntimeProfileCounterName[];
 
 function createCounters(): RuntimeProfileCounters {
@@ -349,6 +369,15 @@ export function isRuntimeProfilingEnabled(): boolean {
 export function profileRuntimeCounter(name: RuntimeProfileCounterName): void {
   if (__PROFILE__ && runtimeProfileCountersEnabled) {
     runtimeProfileCounters[name] += 1;
+  }
+}
+
+export function profileRuntimeCounterBy(
+  name: RuntimeProfileCounterName,
+  amount: number,
+): void {
+  if (__PROFILE__ && runtimeProfileCountersEnabled) {
+    runtimeProfileCounters[name] += amount;
   }
 }
 
