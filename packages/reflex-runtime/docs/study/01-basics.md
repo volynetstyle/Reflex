@@ -79,7 +79,7 @@ producer -> consumer -> watcher
 - `Computing` - вузол зараз перебудовує dependency prefix
 - `Visited` - walker marker для спеціальних re-entrancy випадків
 - `Computing` - вузол зараз виконує `compute`
-- `Disposed` - вузол більше не бере участі в графі
+- teardown не має окремого біта стану: `disposeNode()` відчіпляє ребра і очищає виконувані дані
 
 Ключова маска:
 

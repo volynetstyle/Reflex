@@ -18,7 +18,7 @@ The resolver is intentionally shaped like a cache hierarchy:
 ```txt
 L0-L5: consumer-side optimistic locality
 L6:    producer-side direct locality
-L7:    bounded suffix reconciliation
+L7:    suffix reconciliation
 ```
 
 The goal is to keep the common path branch-light and pointer-local, while still
@@ -141,14 +141,16 @@ This tier is deliberately tiny. It is not an outgoing scan, not a `Map`, not a
 `WeakMap`, and not an adaptive index. It uses an existing graph pointer as a
 direct lookup opportunity.
 
-### L7: Bounded Suffix Reconciliation
+### L7: Suffix Reconciliation
 
 The resolver reconciles the remaining incoming suffix.
 
-If all optimistic locality tiers miss, the runtime performs bounded suffix
-reconciliation: it scans a limited number of incoming edges after the cursor,
-reuses and moves a matching edge when found, or links a new edge when no reusable
-edge is found within the budget.
+If all optimistic locality tiers miss, the runtime scans incoming edges after
+the cursor, reuses and moves a matching edge when found, or links a new edge
+when the search misses. The scan can reach the end of the suffix. The local
+prefix and lookahead limits do not bound this reconciliation tier, and its
+producer-side membership fallback can scan the producer's complete outgoing
+list.
 
 This tier used to be described as the slow path. A more precise name is suffix
 reconciliation:
@@ -160,7 +162,7 @@ otherwise link a new edge and let cleanup remove stale suffix edges
 ```
 
 The term matters because this path is not just "slow". It is the repair tier
-that preserves edge reuse under bounded cost.
+that preserves edge reuse without an auxiliary membership structure.
 
 ## Terminology
 

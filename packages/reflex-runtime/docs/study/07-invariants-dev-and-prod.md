@@ -127,13 +127,13 @@ Push-side walker має лише:
 - тягнути scheduler policy
 - доводити same-as-current
 
-## 10. Disposed вузли перестають брати участь у графі
+## 10. Teardown відчіпляє вузли від графа
 
 Після `disposeNode()` або `disposeWatcher()`:
 
-- `Disposed` виставлений
-- входи відчеплені
-- вузол більше не бере участі в push/pull
+- окремий `Disposed` біт не виставляється
+- вхідні й вихідні ребра відчеплені
+- executable data очищені; generic API не гарантує універсальної terminal-state поведінки
 
 Це стосується і correctness, і perf:
 мертві вузли не повинні висіти phantom links.

@@ -130,9 +130,9 @@ disposeWatcher(watcher);
 
 Робить:
 
-- `Disposed`
-- unlink від джерел
-- виклик cleanup
+- teardown без окремого `Disposed` біта
+- unlink від джерел і споживачів
+- cleanup викликає `disposeWatcher()`, а не generic `disposeNode()`
 - очищення `payload`
 
 ## 6. `runtime`

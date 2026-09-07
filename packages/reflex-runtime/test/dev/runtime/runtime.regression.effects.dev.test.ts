@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { subtle } from "../../../src/debug";
+import { configureRuntimeContext } from "../../../src/kernel/context";
 import { readConsumer, readProducer, runWatcher, writeProducer } from "../../../src";
 import {
   createConsumer,
@@ -21,6 +22,8 @@ describe("Reactive runtime - effect regressions (dev)", () => {
 
   it("coalesces multiple source writes into one computed effect observation", () => {
     const h = createHistoryHarness();
+    // Transitive watcher notification is gated by an installed host hook.
+    configureRuntimeContext({ hooks: { onNodeInvalidated() {} } });
     const a = h.label(createProducer(1), "a");
     const b = h.label(createProducer(2), "b");
     const c = h.label(createProducer(3), "c");
@@ -51,6 +54,8 @@ describe("Reactive runtime - effect regressions (dev)", () => {
 
   it("keeps many sources into one computed plus effect coherent", () => {
     const h = createHistoryHarness();
+    // Transitive watcher notification is gated by an installed host hook.
+    configureRuntimeContext({ hooks: { onNodeInvalidated() {} } });
     const sources = Array.from({ length: 128 }, (_, index) =>
       h.label(createProducer(index), `source:${index}`),
     );
@@ -90,6 +95,8 @@ describe("Reactive runtime - effect regressions (dev)", () => {
 
   it("keeps many sources into one direct effect coherent", () => {
     const h = createHistoryHarness();
+    // Transitive watcher notification is gated by an installed host hook.
+    configureRuntimeContext({ hooks: { onNodeInvalidated() {} } });
     const sources = Array.from({ length: 128 }, (_, index) =>
       h.label(createProducer(index), `source:${index}`),
     );

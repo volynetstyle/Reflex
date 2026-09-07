@@ -1,5 +1,6 @@
 import { defaultContext } from "@runtime/kernel/config";
 import { devRecordCleanupStaleSources } from "@runtime/kernel/dev";
+import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import { unlinkDetachedIncomingEdgeSequence } from "@runtime/kernel/shape/graph/sweepEdges";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 import { profileRuntimeCounter } from "@runtime/profiling";
@@ -33,7 +34,7 @@ export function cleanupUnvisitedSources(node: ReactiveNode): void {
   // Preserve the existing counter without making the shared graph sweep
   // interpret why its caller removed this sequence. Absent in production.
   if (__PROFILE__) {
-    for (let current = edge; current !== null; current = current.nextIn) {
+    for (let current: ReactiveEdge | null = edge; current !== null; current = current.nextIn) {
       profileRuntimeCounter("cleanupEdgesDropped");
     }
   }

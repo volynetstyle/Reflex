@@ -64,7 +64,7 @@ Push-side walker іде по outgoing edges.
 
 Він:
 
-- пропускає вже dirty або disposed вузли
+- пропускає вузли, для яких поточний dirty-стан уже достатній
 - ставить `Changed` або `Invalid`
 - окремо обробляє tracking case
 - повідомляє watcher invalidation через hook

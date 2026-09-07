@@ -8,7 +8,7 @@ export default defineConfig({
     transform(code, id) {
       // Expose existing lexical state only in the test transform. No runtime
       // fields, counters, callbacks, or production exports are introduced.
-      if (id.replaceAll("\\", "/").endsWith("/src/kernel/stages/second/pull_iterator.ts")) {
+      if (id.replace(/\\/g, "/").endsWith("/src/kernel/stages/second/pull_iterator.ts")) {
         return code + "\nexport { stack as testPullStack, high as testPullHigh };\n";
       }
     },

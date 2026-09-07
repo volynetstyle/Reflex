@@ -167,7 +167,7 @@ The runtime uses precise terminology consistently:
 | **Dirty/Invalid** | Node needs recomputation (bit flags: `Invalid`, `Changed`) |
 | **Changed** | Direct upstream definitely changed → recompute always |
 | **Invalid** | Transitive change possible → verify before recomputing |
-| **Disposed** | Terminal state; no further graph participation |
+| **Teardown** | Eager edge removal and executable-data clearing; no terminal state bit |
 | **Edge** | Directed dependency link (bidirectional structure) |
 | **Propagation** | Push phase: cheap invalidation pass |
 | **Stabilization** | Pull phase: lazy verification and recomputation |
