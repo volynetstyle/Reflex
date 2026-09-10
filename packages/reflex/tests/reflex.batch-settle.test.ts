@@ -2,6 +2,63 @@ import { describe, expect, it } from "vitest";
 import { batch, createRuntime, effect, signal } from "../src";
 
 describe("batch reactive settled deferral", () => {
+  it("preserves all three lifecycle failures, including thrown undefined", () => {
+    const flushError = new Error("flush failed");
+    const idleError = new Error("idle failed");
+    let fail = false;
+    const runtime = createRuntime({
+      effectStrategy: "eager",
+      hooks: {
+        onRuntimeIdle() {
+          if (fail) throw idleError;
+        },
+      },
+    });
+    const source = signal(0);
+    const stop = effect(() => {
+      source();
+      if (fail) throw flushError;
+    });
+    fail = true;
+    let thrown: unknown;
+    try {
+      runtime.batch(() => {
+        source.set(1);
+        throw undefined;
+      });
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(AggregateError);
+    expect((thrown as AggregateError).errors).toEqual([
+      undefined,
+      flushError,
+      idleError,
+    ]);
+    fail = false;
+    expect(
+      runtime.batch(() => {
+        source.set(2);
+        return 42;
+      }),
+    ).toBe(42);
+    stop();
+  });
+
+  it("rethrows a lone undefined callback error", () => {
+    const runtime = createRuntime();
+    const errors: unknown[] = [];
+    try {
+      runtime.batch(() => {
+        throw undefined;
+      });
+    } catch (error) {
+      errors.push(error);
+    }
+    expect(errors).toEqual([undefined]);
+    expect(runtime.batch(() => 42)).toBe(42);
+  });
+
   it("does not emit settled for an empty batch", () => {
     let settled = 0;
     createRuntime({
@@ -164,7 +221,9 @@ describe("batch reactive settled deferral", () => {
     effect(() => {
       if (bad() === 1) throw new Error("flush failed");
     });
-    effect(() => good());
+    effect(() => {
+      good();
+    });
 
     expect(() => runtime.batch(() => bad.set(1))).toThrow("flush failed");
     expect(runtime.ctx.execution.batchDepth).toBe(0);
@@ -214,7 +273,9 @@ describe("batch reactive settled deferral", () => {
       },
     });
     const source = signal(0);
-    effect(() => source());
+    effect(() => {
+      source();
+    });
 
     expect(() => runtime.batch(() => source.set(1))).toThrow("settled failed");
     expect(runtime.ctx.execution.batchDepth).toBe(0);

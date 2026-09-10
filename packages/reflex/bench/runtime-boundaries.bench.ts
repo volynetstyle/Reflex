@@ -1,6 +1,7 @@
 import { bench, describe } from "vitest";
 import { resetRuntimeContext } from "@volynets/reflex-runtime/internal";
 
+import { effect } from "../src/api/effect";
 import { signal } from "../src/api/signal";
 import { createRuntime, type Runtime } from "../src/infra/runtime";
 import { blackhole } from "./shared";
@@ -104,3 +105,53 @@ describe("runtime boundaries", () => {
     },
   );
 });
+
+// Keep empty drains and a single watcher separate from graph traversal costs.
+// These cases exercise the public facade and its connected scheduler together.
+for (const strategy of ["flush", "eager", "sab"] as const) {
+  describe(`connected scheduler boundary | ${strategy}`, () => {
+    let runtime: Runtime;
+    bench(
+      "empty flush / 1024",
+      () => {
+        for (let index = 0; index < OPERATIONS; ++index) runtime.flush();
+      },
+      {
+        setup() {
+          resetRuntimeContext();
+          runtime = createRuntime({ effectStrategy: strategy });
+        },
+      },
+    );
+
+    let setValue: Setter;
+    let next = 0;
+    let seen = 0;
+    let stop: () => void;
+    bench(
+      "single watcher write+flush / 1024",
+      () => {
+        for (let index = 0; index < OPERATIONS; ++index) {
+          setValue(++next);
+          runtime.flush();
+        }
+        blackhole(seen);
+      },
+      {
+        setup() {
+          resetRuntimeContext();
+          runtime = createRuntime({ effectStrategy: strategy });
+          const value = signal(0);
+          setValue = value.set;
+          next = seen = 0;
+          stop = effect(() => {
+            seen = value();
+          });
+        },
+        teardown() {
+          stop();
+        },
+      },
+    );
+  });
+}

@@ -1,0 +1,213 @@
+{
+  "node": "v25.2.0",
+  "cpu": "12th Gen Intel(R) Core(TM) i5-1235U",
+  "baselineCommit": "27392771c60eaaa0e7caf5ae23c469559e3bb661",
+  "baselineOverrides": [
+    "packages/reflex/src/infra/runtime.ts",
+    "packages/reflex-scheduler/src/scheduler.binding.ts"
+  ],
+  "method": "Vitest source benchmarks; only the two adapter files are loaded from HEAD for baseline, all other code is identical. Runs are sequential in before/after/after/before order. Repeated means include OS/GC outliers; not a production application speedup claim.",
+  "command": "pnpm --filter @volynets/reflex exec vitest bench --run bench/runtime-boundaries.bench.ts -t \"connected scheduler boundary\"",
+  "runs": {
+    "before": [
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | flush",
+        "name": "empty flush / 1024",
+        "meanMillisecondsPer1024Operations": 0.07689835460556557,
+        "relativeMarginOfErrorPercent": 0.5640598715486086,
+        "samples": 6503,
+        "operationsPerSecond": 13316279.720839271
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | flush",
+        "name": "single watcher write+flush / 1024",
+        "meanMillisecondsPer1024Operations": 1.3524062162162107,
+        "relativeMarginOfErrorPercent": 0.9454350535113142,
+        "samples": 370,
+        "operationsPerSecond": 757168.9539145774
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | eager",
+        "name": "empty flush / 1024",
+        "meanMillisecondsPer1024Operations": 0.07694119095245769,
+        "relativeMarginOfErrorPercent": 0.33479455555077886,
+        "samples": 6499,
+        "operationsPerSecond": 13308865.996534083
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | eager",
+        "name": "single watcher write+flush / 1024",
+        "meanMillisecondsPer1024Operations": 1.8026496402877707,
+        "relativeMarginOfErrorPercent": 1.3234195397998325,
+        "samples": 278,
+        "operationsPerSecond": 568052.7025964574
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | sab",
+        "name": "empty flush / 1024",
+        "meanMillisecondsPer1024Operations": 0.07610838660578219,
+        "relativeMarginOfErrorPercent": 0.7031021677678437,
+        "samples": 6570,
+        "operationsPerSecond": 13454496.221342886
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | sab",
+        "name": "single watcher write+flush / 1024",
+        "meanMillisecondsPer1024Operations": 1.3232544973544997,
+        "relativeMarginOfErrorPercent": 1.258174176619443,
+        "samples": 378,
+        "operationsPerSecond": 773849.6276016589
+      }
+    ],
+    "after": [
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | flush",
+        "name": "empty flush / 1024",
+        "meanMillisecondsPer1024Operations": 0.04366907423580842,
+        "relativeMarginOfErrorPercent": 0.2988390600949848,
+        "samples": 11450,
+        "operationsPerSecond": 23449088.809863646
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | flush",
+        "name": "single watcher write+flush / 1024",
+        "meanMillisecondsPer1024Operations": 1.3465639784946306,
+        "relativeMarginOfErrorPercent": 1.3047411214644118,
+        "samples": 372,
+        "operationsPerSecond": 760454.0269559001
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | eager",
+        "name": "empty flush / 1024",
+        "meanMillisecondsPer1024Operations": 0.07923089843130966,
+        "relativeMarginOfErrorPercent": 0.4244996017758987,
+        "samples": 6311,
+        "operationsPerSecond": 12924250.769259812
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | eager",
+        "name": "single watcher write+flush / 1024",
+        "meanMillisecondsPer1024Operations": 1.8745588014981291,
+        "relativeMarginOfErrorPercent": 1.300977035470689,
+        "samples": 267,
+        "operationsPerSecond": 546261.8719570863
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | sab",
+        "name": "empty flush / 1024",
+        "meanMillisecondsPer1024Operations": 0.045626845515097735,
+        "relativeMarginOfErrorPercent": 0.32859763809644177,
+        "samples": 10959,
+        "operationsPerSecond": 22442927.80795382
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | sab",
+        "name": "single watcher write+flush / 1024",
+        "meanMillisecondsPer1024Operations": 1.295992746113971,
+        "relativeMarginOfErrorPercent": 0.9427273749466302,
+        "samples": 386,
+        "operationsPerSecond": 790127.8792419631
+      }
+    ],
+    "after-repeat": [
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | flush",
+        "name": "empty flush / 1024",
+        "meanMillisecondsPer1024Operations": 0.04425251792194043,
+        "relativeMarginOfErrorPercent": 0.2982732178871693,
+        "samples": 11299,
+        "operationsPerSecond": 23139926.225357223
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | flush",
+        "name": "single watcher write+flush / 1024",
+        "meanMillisecondsPer1024Operations": 1.3686057377049128,
+        "relativeMarginOfErrorPercent": 4.368491356146661,
+        "samples": 366,
+        "operationsPerSecond": 748206.7127069039
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | eager",
+        "name": "empty flush / 1024",
+        "meanMillisecondsPer1024Operations": 0.09371287481259429,
+        "relativeMarginOfErrorPercent": 2.85331387550114,
+        "samples": 5336,
+        "operationsPerSecond": 10926993.778045772
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | eager",
+        "name": "single watcher write+flush / 1024",
+        "meanMillisecondsPer1024Operations": 1.7265772413793017,
+        "relativeMarginOfErrorPercent": 0.5115869379991803,
+        "samples": 290,
+        "operationsPerSecond": 593080.9091297662
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | sab",
+        "name": "empty flush / 1024",
+        "meanMillisecondsPer1024Operations": 0.05094200285247975,
+        "relativeMarginOfErrorPercent": 0.5258264184650658,
+        "samples": 9816,
+        "operationsPerSecond": 20101290.53946598
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | sab",
+        "name": "single watcher write+flush / 1024",
+        "meanMillisecondsPer1024Operations": 1.2713555837563404,
+        "relativeMarginOfErrorPercent": 0.738407833539835,
+        "samples": 394,
+        "operationsPerSecond": 805439.4955143038
+      }
+    ],
+    "before-repeat": [
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | flush",
+        "name": "empty flush / 1024",
+        "meanMillisecondsPer1024Operations": 0.10199143381603228,
+        "relativeMarginOfErrorPercent": 14.205070551286584,
+        "samples": 4903,
+        "operationsPerSecond": 10040058.872464199
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | flush",
+        "name": "single watcher write+flush / 1024",
+        "meanMillisecondsPer1024Operations": 1.4559351744185998,
+        "relativeMarginOfErrorPercent": 2.469893258841769,
+        "samples": 344,
+        "operationsPerSecond": 703328.017615149
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | eager",
+        "name": "empty flush / 1024",
+        "meanMillisecondsPer1024Operations": 0.0783630622159525,
+        "relativeMarginOfErrorPercent": 0.28355348831205424,
+        "samples": 6381,
+        "operationsPerSecond": 13067381.123750197
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | eager",
+        "name": "single watcher write+flush / 1024",
+        "meanMillisecondsPer1024Operations": 1.806739711191337,
+        "relativeMarginOfErrorPercent": 0.7273428237728706,
+        "samples": 277,
+        "operationsPerSecond": 566766.753205856
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | sab",
+        "name": "empty flush / 1024",
+        "meanMillisecondsPer1024Operations": 0.08162616715638332,
+        "relativeMarginOfErrorPercent": 0.5280170911000579,
+        "samples": 6126,
+        "operationsPerSecond": 12544996.72927398
+      },
+      {
+        "group": "bench/runtime-boundaries.bench.ts > connected scheduler boundary | sab",
+        "name": "single watcher write+flush / 1024",
+        "meanMillisecondsPer1024Operations": 1.3892352777778114,
+        "relativeMarginOfErrorPercent": 1.1407714953047967,
+        "samples": 360,
+        "operationsPerSecond": 737096.1682156292
+      }
+    ]
+  }
+}

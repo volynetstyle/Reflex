@@ -5,7 +5,6 @@ import {
   leaveReactiveBatch,
   runWithRuntimeContext,
   switchRuntimeContext,
-  configureRuntimeContext,
   untracked,
 } from "@volynets/reflex-runtime/internal";
 import type {
@@ -24,7 +23,6 @@ import type { EffectStrategy } from "@volynets/reflex-scheduler";
 
 type BatchFn = <T>(fn: () => T) => T;
 type EventFn = <T>() => EventSource<T>;
-const NO_BATCH_ERROR: unique symbol = Symbol("NO_BATCH_ERROR");
 
 export interface RuntimeContext {
   readonly scope: "runtime";
@@ -73,55 +71,49 @@ export function createRuntime({
     });
   }
 
-  const execution = createRuntimeContext();
+  const execution = createRuntimeContext({
+    hooks: { onRuntimeIdle: hooks?.onRuntimeIdle },
+  });
   const ctx: RuntimeContext = { scope: "runtime", execution };
   const schedulerMode = resolveEffectSchedulerMode(effectStrategy);
   const scheduler = createRuntimeSchedulerBinding(schedulerMode, execution);
-  const run = <T>(fn: () => T): T => runWithRuntimeContext(execution, fn);
   const runBatch = <T>(fn: () => T): T => {
     // Public batching composes two independent boundaries. Close scheduler
     // policy first so a settled hook never observes it in Batching phase.
     enterReactiveBatch();
     scheduler.enterBatch();
 
-    let result!: T;
-    let callbackError: unknown = NO_BATCH_ERROR;
+    let errors: unknown[] | undefined;
 
     try {
-      result = fn();
+      return fn();
     } catch (error) {
-      callbackError = error;
-    }
-
-    let exitErrors: unknown[] | undefined;
-
-    try {
-      scheduler.leaveBatch();
-    } catch (error) {
-      (exitErrors ??= []).push(error);
+      errors = [error];
+      throw error;
     } finally {
+      try {
+        scheduler.leaveBatch();
+      } catch (error) {
+        (errors ??= []).push(error);
+      }
       try {
         leaveReactiveBatch();
       } catch (error) {
-        (exitErrors ??= []).push(error);
+        (errors ??= []).push(error);
+      }
+
+      if (errors !== undefined) {
+        if (errors.length === 1) throw errors[0];
+        throw new AggregateError(errors, "Reactive batch failed");
       }
     }
-
-    if (callbackError !== NO_BATCH_ERROR) {
-      if (exitErrors === undefined) throw callbackError;
-      exitErrors.unshift(callbackError);
-    }
-
-    if (exitErrors === undefined) return result;
-    if (exitErrors.length === 1) throw exitErrors[0];
-    throw new AggregateError(exitErrors, "Reactive batch failed");
   };
   const runtimeBatch = <T>(fn: () => T): T => {
     if (getActiveRuntimeContext() === execution) {
       return runBatch(fn);
     }
 
-    return run(() => runBatch(fn));
+    return runWithRuntimeContext(execution, () => runBatch(fn));
   };
   const flush = (): void => {
     if (getActiveRuntimeContext() === execution) {
@@ -129,35 +121,26 @@ export function createRuntime({
       return;
     }
 
-    run(scheduler.flush);
+    runWithRuntimeContext(execution, scheduler.flush);
   };
   const dispatcher = createEventDispatcher(runtimeBatch);
   const externalNodeInvalidated = hooks?.onNodeInvalidated;
-  const externalRuntimeIdle = hooks?.onRuntimeIdle;
   // Runtime invalidation hooks are enqueue-only. Eager delivery is owned by
   // the subsequent reactive-settled boundary, never by the propagation hook.
   const enqueueEffect = scheduler.onNodeInvalidated;
-  const onNodeInvalidated =
+  execution.nodeInvalidatedHook =
     externalNodeInvalidated === undefined
       ? enqueueEffect
       : (node: ReactiveNode): void => {
           enqueueEffect(node);
           externalNodeInvalidated(node);
         };
-  const onRuntimeIdle = externalRuntimeIdle;
 
-  configureRuntimeContext(execution, {
-    hooks: {
-      onNodeInvalidated,
-      onRuntimeIdle,
-    },
-    scheduler: {
-      onHostFlush: scheduler.onHostFlush,
-    },
-  });
+  // The new context is still inactive; install the trusted scheduler hooks
+  // before its first load, without another configuration/normalization pass.
+  execution.hostFlushHook = scheduler.onHostFlush;
 
   switchRuntimeContext(execution);
-  // activeContext = ctx;
   batch = runBatch;
   activeEvent = function <T>() {
     const source = createSource<T>();

@@ -11,12 +11,16 @@ import { profileSchedulerPolicyCounter } from "./scheduler.counters";
 import {
   createSchedulerCore,
   enterSchedulerBatch,
+  flushPendingSchedulerQueue,
   flushSchedulerQueue,
   leaveSchedulerBatch,
 } from "./scheduler.core";
 import { tryEnqueue } from "./scheduler.enqueue";
 import { notifyEffectSchedulerSettled } from "./scheduler.infra";
 import type { SchedulerCore } from "./scheduler.types";
+
+const SCHEDULER_PROFILE_ENABLED =
+  typeof __PROFILE__ !== "undefined" && __PROFILE__;
 
 export interface RuntimeSchedulerBinding {
   readonly mode: EffectSchedulerMode;
@@ -37,44 +41,62 @@ export function createRuntimeSchedulerBinding(
   const core = createSchedulerCore();
   const queue = core.queue;
 
-  const flush = (): void => {
-    try {
-      flushSchedulerQueue(core);
-    } finally {
-      cancelHostFlushRequest();
-    }
-  };
-
-  const onNodeInvalidated = (node: ReactiveNode): void => {
-    if (
-      tryEnqueue(queue, node) &&
-      mode === EffectSchedulerMode.Eager &&
-      core.batchDepth === 0
-    ) {
-      requestHostFlush();
-    }
-  };
-
-  const onHostFlush =
-    mode === EffectSchedulerMode.Eager
-      ? (): void => {
+  // Select policy once. Deferred schedulers never request a host drain, so
+  // their enqueue/flush paths need neither eager checks nor host flag writes.
+  const eager = mode === EffectSchedulerMode.Eager;
+  const flush = eager
+    ? (): void => {
+        try {
+          flushSchedulerQueue(core);
+        } finally {
+          cancelHostFlushRequest();
+        }
+      }
+    : (): void => flushSchedulerQueue(core);
+  const onNodeInvalidated = eager
+    ? (node: ReactiveNode): void => {
+        if (tryEnqueue(queue, node) && core.batchDepth === 0) {
+          requestHostFlush();
+        }
+      }
+    : (node: ReactiveNode): void => {
+        tryEnqueue(queue, node);
+      };
+  const onHostFlush = eager
+    ? (): void => {
+        if (SCHEDULER_PROFILE_ENABLED)
           profileSchedulerPolicyCounter("settleCalled");
-          notifyEffectSchedulerSettled(core, mode);
+        notifyEffectSchedulerSettled(core, mode);
+      }
+    : undefined;
+
+  // Outer batch exit already establishes a non-flushing phase. Drain the
+  // known pending queue without repeating the explicit-flush guards.
+  const drainBatch = eager
+    ? (): void => {
+        try {
+          if (SCHEDULER_PROFILE_ENABLED) flushSchedulerQueue(core);
+          else flushPendingSchedulerQueue(core);
+        } finally {
+          cancelHostFlushRequest();
+        }
+      }
+    : mode === EffectSchedulerMode.SAB
+      ? (): void => {
+          if (isContextSettled(context)) {
+            if (SCHEDULER_PROFILE_ENABLED) flushSchedulerQueue(core);
+            else flushPendingSchedulerQueue(core);
+          }
         }
       : undefined;
-
   const leaveBatch = (): void => {
-    profileSchedulerPolicyCounter("batchExit");
-
-    if (!leaveSchedulerBatch(core)) return;
-
+    if (SCHEDULER_PROFILE_ENABLED) profileSchedulerPolicyCounter("batchExit");
     if (
-      (mode === EffectSchedulerMode.Eager && hasPendingEffects(core)) ||
-      (mode === EffectSchedulerMode.SAB &&
-        hasPendingEffects(core) &&
-        isContextSettled(context))
+      leaveSchedulerBatch(core) &&
+      drainBatch !== undefined &&
+      hasPendingEffects(core)
     ) {
-      flush();
+      drainBatch();
     }
   };
 

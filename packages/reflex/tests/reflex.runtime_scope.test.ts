@@ -1,7 +1,43 @@
+import { Scheduled } from "@volynets/reflex-runtime/internal";
 import { describe, expect, it } from "vitest";
 import { createRuntime, effect, flush, signal } from "../src";
 
 describe("Reactive system - runtime", () => {
+  it.each(["flush", "eager", "sab"] as const)(
+    "installs scheduler and external hooks together for %s",
+    (effectStrategy) => {
+      const events: string[] = [];
+      const runtime = createRuntime({
+        effectStrategy,
+        hooks: {
+          onNodeInvalidated(node) {
+            expect(node.state & Scheduled).toBe(Scheduled);
+            events.push("invalidated");
+          },
+          onRuntimeIdle() {
+            events.push("idle");
+          },
+        },
+      });
+      const source = signal(0);
+      const stop = effect(() => {
+        source();
+        events.push("effect");
+      });
+      events.length = 0;
+
+      runtime.batch(() => source.set(1));
+      expect(events).toEqual(
+        effectStrategy === "flush"
+          ? ["invalidated", "idle"]
+          : ["invalidated", "effect", "idle"],
+      );
+      runtime.flush();
+      expect(events.filter((event) => event === "effect")).toHaveLength(1);
+      stop();
+    },
+  );
+
   it("routes top-level helpers through the latest runtime", () => {
     const first = createRuntime({ effectStrategy: "flush" });
     const second = createRuntime({ effectStrategy: "flush" });
