@@ -88,13 +88,11 @@ export function moveNonHeadIncomingEdgeToFrontUnchecked(
   if (next !== null) next.prevIn = prev;
   else to.lastIn = prev;
 
-  const first = to.firstIn;
+  const first = to.firstIn!;
 
   edge.prevIn = null;
   edge.nextIn = first;
-
-  if (first !== null) first.prevIn = edge;
-  else to.lastIn = edge;
+  first.prevIn = edge;
 
   to.firstIn = edge;
 }
@@ -120,13 +118,12 @@ export function moveLastIncomingEdgeAfterEdgeUnchecked(
   prev.nextIn = null;
   to.lastIn = prev;
 
-  const insertNext = after.nextIn;
+  const insertNext = after.nextIn!;
 
   edge.prevIn = after;
   edge.nextIn = insertNext;
 
-  if (insertNext !== null) insertNext.prevIn = edge;
-  else to.lastIn = edge;
+  insertNext.prevIn = edge;
 
   after.nextIn = edge;
 }
@@ -171,13 +168,11 @@ export function moveLastIncomingEdgeToFrontUnchecked(
   prev.nextIn = null;
   to.lastIn = prev;
 
-  const first = to.firstIn;
+  const first = to.firstIn!;
 
   edge.prevIn = null;
   edge.nextIn = first;
-
-  if (first !== null) first.prevIn = edge;
-  else to.lastIn = edge;
+  first.prevIn = edge;
 
   to.firstIn = edge;
 }
@@ -200,45 +195,6 @@ export function moveLastIncomingEdgeToFrontUnchecked(
  * - movedEdge !== cursorEdge.nextIn
  * - all edges belong to consumer's incoming list
  *
- * Resolves a tracked producer read against a consumer's incoming dependency list.
- *
- * The resolver keeps the consumer's dependency graph stable across recomputations
- * while allowing the read order to change between tracking passes.
- *
- * `consumer.tailIn` acts as the current-pass tracking cursor:
- * it points to the last incoming edge that has already been matched during
- * the current dependency collection.
- *
- * The function is intentionally layered from cheapest to most general cases:
- *
- * - cursor hit
- * - next-edge hit
- * - append-only growth
- * - bounded local reorder
- * - last-edge shortcut
- * - duplicate-prefix guard
- * - full strategy fallback
- *
- * This lets stable dependency shapes stay on a cheap O(1) path while dynamic
- * shapes can still be reconciled by the configured tracking strategy.
- *
- * Important invariants:
- *
- * - retained dependencies should reuse existing edges;
- * - reordering must not create duplicate edges;
- * - already-tracked prefix dependencies must not be appended again;
- * - new dependencies are linked after the current cursor;
- * - unresolved dynamic cases are delegated to `readTrackingStrategy`;
- * - `tailIn` is advanced only when the current read is represented.
- *
- * This function does not perform full graph validation. The caller is expected
- * to run it only during dependency tracking for `consumer`.
- *
- * @param producer The node currently being read.
- * @param consumer The tracked consumer collecting dependencies.
- * @param producerVersion Version recorded on the matched edge.
- * @param allowSlowPath Whether unresolved cases may use the general strategy.
- * @returns `true` if the read was resolved; `false` only when slow path is disabled.
  */
 export function moveTrackedIncomingEdgeAfterCursorUnchecked(
   consumer: ReactiveNode,

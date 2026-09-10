@@ -116,7 +116,22 @@ scan limit reached
 If the prefix scan reaches its limit, the resolver can still use current-pass
 edge information from the producer side to avoid appending a duplicate.
 
-This tier is a correctness guard first and a performance optimization second.
+Before the bounded scan, structural proofs avoid unnecessary traversal:
+
+- With an unvisited suffix, an empty outgoing list (or a sole edge to another
+  consumer) proves absence. A matching incoming head with the requested nonzero
+  version proves prefix membership, even beyond the scan limit.
+- With the cursor at the physical tail, a matching current-version outgoing
+  edge must belong to the visited prefix. Probe the outgoing tail first, then
+  at most four outgoing edges. A complete probe without this consumer proves
+  absence; an incomplete probe falls back to the original membership check.
+- The incoming scan visits four links per loop iteration but retains exactly
+  the same 32-edge limit and three-way result.
+
+Zero versions and inconclusive version checks still use bounded traversal.
+These shortcuts do not change the cursor, edge versions, tracking events,
+strategy calls, or the handling of distant zero-version reads. They use only
+existing graph links and add no node fields or membership allocations.
 
 ### L6: Producer-Side Direct Probe
 
@@ -166,16 +181,16 @@ that preserves edge reuse without an auxiliary membership structure.
 
 ## Terminology
 
-| Old term | Preferred term |
-| --- | --- |
-| `nextHit` | sequential locality |
-| `oneHopReorder` | adjacent reorder locality |
-| `twoHopReorder` | bounded adjacent reorder |
-| `lastEdgeShortcut` | tail locality |
-| `slowPath` | suffix reconciliation |
-| `outgoingProbe` | producer-side direct probe |
-| `appendAfterCursor` | append locality |
-| `prefixDuplicate` | prefix membership guard |
+| Old term            | Preferred term             |
+| ------------------- | -------------------------- |
+| `nextHit`           | sequential locality        |
+| `oneHopReorder`     | adjacent reorder locality  |
+| `twoHopReorder`     | bounded adjacent reorder   |
+| `lastEdgeShortcut`  | tail locality              |
+| `slowPath`          | suffix reconciliation      |
+| `outgoingProbe`     | producer-side direct probe |
+| `appendAfterCursor` | append locality            |
+| `prefixDuplicate`   | prefix membership guard    |
 
 ## Core Invariants
 
@@ -202,3 +217,27 @@ treated as a separate specialized mode, justified by profiling data, and kept
 out of the default hot path until it proves that the graph itself cannot provide
 enough locality.
 
+## Comparing tracking and graph performance
+
+The comparison script snapshots the compiled internal entrypoint with production
+flags and tree shaking. It alternates independent Node processes for baseline
+and candidate, with 10,000 warmup passes, 20,000 measured passes and nine samples
+per variant. Dependency orders are prepared outside the timed loop. Results
+include raw samples, Node version and CPU information.
+
+Run from the repository root, saving the baseline before editing the runtime:
+
+```sh
+pnpm --filter @volynets/reflex-runtime build:ts
+node scripts/compare-tracking-graph.mjs --save baseline
+# Apply the runtime changes, then rebuild.
+pnpm --filter @volynets/reflex-runtime build:ts
+node scripts/compare-tracking-graph.mjs --save candidate
+node scripts/compare-tracking-graph.mjs baseline candidate
+```
+
+Snapshots and the report are written to the ignored `temp/tracking-graph/`
+folder. Workloads cover stable and duplicate reads, random reorder, shared
+producer appends, incoming-edge moves, direct and scanned edge reuse, and an
+end-to-end consumer recomputation. Interpret individual timings alongside the
+unchanged stable-tracking and generic-move controls.

@@ -14,10 +14,8 @@ import type ReactiveNode from "@runtime/kernel/shape/node";
 import { profileRuntimeCounter } from "@runtime/profiling";
 
 import {
-  hasProducerEdgeInCurrentPassUnchecked,
-  PrefixHit,
-  PrefixScanLimitReached,
-  scanProducerInTrackedPrefix,
+  hasProducerInCompletedPrefix,
+  hasProducerInTrackedPrefix,
 } from "./prefix";
 
 /** Cold fallback shared by cursor and initial misses. */
@@ -122,17 +120,13 @@ function resolveCursorTrackedReadMiss(
       return true;
     }
 
-    const prefixResult = scanProducerInTrackedPrefix(producer, cursorEdge);
-
     if (
-      prefixResult === PrefixHit ||
-      (prefixResult === PrefixScanLimitReached &&
-        producerVersion !== 0 &&
-        hasProducerEdgeInCurrentPassUnchecked(
-          producer,
-          consumer,
-          producerVersion,
-        ))
+      hasProducerInCompletedPrefix(
+        producer,
+        consumer,
+        cursorEdge,
+        producerVersion,
+      )
     ) {
       profileRuntimeCounter("trackingPrefixDuplicate");
       devRecordTrackRead(defaultContext, consumer, producer);
@@ -206,17 +200,8 @@ function resolveCursorTrackedReadMiss(
     }
   }
 
-  const prefixResult = scanProducerInTrackedPrefix(producer, cursorEdge);
-
   if (
-    prefixResult === PrefixHit ||
-    (prefixResult === PrefixScanLimitReached &&
-      producerVersion !== 0 &&
-      hasProducerEdgeInCurrentPassUnchecked(
-        producer,
-        consumer,
-        producerVersion,
-      ))
+    hasProducerInTrackedPrefix(producer, consumer, cursorEdge, producerVersion)
   ) {
     profileRuntimeCounter("trackingPrefixDuplicate");
     devRecordTrackRead(defaultContext, consumer, producer);
