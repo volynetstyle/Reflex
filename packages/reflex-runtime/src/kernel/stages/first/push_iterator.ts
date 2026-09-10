@@ -98,12 +98,19 @@ function markComputingSubscriber(
   if (tail === null) return 0;
 
   if (edge !== tail) {
-    for (
-      let current = edge.prevIn;
-      current !== null;
-      current = current.prevIn
-    ) {
+    let current = edge.prevIn;
+    while (current !== null) {
       if (current === tail) return 0;
+      current = current.prevIn;
+      if (current === null) break;
+      if (current === tail) return 0;
+      current = current.prevIn;
+      if (current === null) break;
+      if (current === tail) return 0;
+      current = current.prevIn;
+      if (current === null) break;
+      if (current === tail) return 0;
+      current = current.prevIn;
     }
   }
 
@@ -174,18 +181,23 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
     }
     devRecordPropagate(edge, next, true, defaultContext);
 
-    if ((next & Watcher) !== 0 && emitNodeInvalidated) {
+    if ((next & Watcher) !== 0) {
       if (__PROFILE__) {
         profileRuntimeCounter("pushWatchersInvalidated");
         profilePushNode("direct.watcher", sub, 1, top - base);
       }
 
-      propagateStackHigh = top;
-      try {
-        emitNodeInvalidated(sub);
-      } catch (error) {
-        resetPropagateStackAfterAbort(stack, base, top);
-        throw error;
+      // Direct watchers always cut off descent. Production can omit the
+      // no-op emitter when no hook is installed; development retains events.
+      if (__DEV__ || nodeInvalidatedHook !== undefined) {
+        propagateStackHigh = top;
+        try {
+          if (__DEV__) emitNodeInvalidated(sub);
+          if (!__DEV__) nodeInvalidatedHook!(sub);
+        } catch (error) {
+          resetPropagateStackAfterAbort(stack, base, top);
+          throw error;
+        }
       }
       continue;
     }

@@ -176,6 +176,42 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
             profilePullNode("dep.clean", dep, top - base + 1, top - base);
           }
 
+          // Adjacent clean dependencies cannot call user code or change the
+          // parent. Keep this scan in the clean arm so dirty descent/advance
+          // retains its original control flow and continuation lifetime.
+          for (
+            let sibling = edge.nextIn;
+            sibling !== null;
+            sibling = edge.nextIn
+          ) {
+            if (__PROFILE__) {
+              profileRuntimeCounter("pullStableSiblingScans");
+              profilePullNode(
+                "sibling.stable",
+                sibling.from,
+                top - base + 1,
+                top - base,
+              );
+            }
+            const cleanDep = sibling.from;
+            const cleanState = cleanDep.state;
+            edge = sibling;
+            if ((cleanState & (Changed | Unknown)) !== 0) continue scan;
+
+            profileRuntimeCounter("pullEdgesVisited");
+            if (__DEV__ && (cleanState & Computing) !== 0) {
+              throw new Error("Cycle detected while refreshing reactive graph");
+            }
+            if (__PROFILE__) {
+              profileRuntimeCounter("pullCleanDeps");
+              profilePullNode(
+                "dep.clean",
+                cleanDep,
+                top - base + 1,
+                top - base,
+              );
+            }
+          }
           changed = false;
         }
       }
