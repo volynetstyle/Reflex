@@ -129,7 +129,14 @@ export function reuseIncomingEdgeFromSuffixOrLink(
    */
   if (producerVersion !== 0) {
     const edge = producer.firstOut;
-    if (edge === null || edge.to !== consumer) {
+    if (edge === null) {
+      // No outgoing edges proves absence from this consumer. Keep the suffix:
+      // subsequent reads may still reuse it before final stale cleanup.
+      profileRuntimeCounter("trackingOutgoingProbeMiss");
+      profileRuntimeCounter("trackingSuffixLinkNew");
+      return linkEdge(producer, consumer, insertAfterEdge, producerVersion);
+    }
+    if (edge.to !== consumer) {
       profileRuntimeCounter("trackingOutgoingProbeMiss");
     } else if (edge.version !== producerVersion) {
       moveIncomingEdgeToPosition(consumer, edge, insertAfterEdge);

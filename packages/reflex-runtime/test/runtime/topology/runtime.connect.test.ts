@@ -9,6 +9,7 @@ import {
 import type { ReactiveNodeState } from "../../../src/kernel";
 import {
   Consumer,
+  cleanupUnvisitedSources,
   Producer,
   linkEdge,
   moveIncomingEdgeAfterUnchecked,
@@ -423,6 +424,9 @@ describe("Reactive runtime - edge wiring", () => {
     const target = createNode(Consumer);
     const staleSources = Array.from({ length: 32 }, () => createNode(Producer));
     const fresh = createNode(Producer);
+    // A nonempty outgoing list retains coverage of the general fallback policy.
+    const other = createNode(Consumer);
+    linkEdge(fresh, other);
 
     for (const source of staleSources) {
       linkEdge(source, target, target.lastIn);
@@ -441,7 +445,7 @@ describe("Reactive runtime - edge wiring", () => {
     for (const source of staleSources) {
       expectOutgoingEdges(source, []);
     }
-    expectGraphIntegrity([target, fresh, ...staleSources]);
+    expectGraphIntegrity([target, fresh, other, ...staleSources]);
   });
 
   it("eagerly detaches only the stale suffix after a retained prefix", () => {
@@ -449,6 +453,9 @@ describe("Reactive runtime - edge wiring", () => {
     const retained = createNode(Producer);
     const staleSources = Array.from({ length: 32 }, () => createNode(Producer));
     const fresh = createNode(Producer);
+    // A nonempty outgoing list retains coverage of the general fallback policy.
+    const other = createNode(Consumer);
+    linkEdge(fresh, other);
     const retainedEdge = linkEdge(retained, target);
 
     for (const source of staleSources) {
@@ -471,8 +478,50 @@ describe("Reactive runtime - edge wiring", () => {
     for (const source of staleSources) {
       expectOutgoingEdges(source, []);
     }
-    expectGraphIntegrity([target, retained, fresh, ...staleSources]);
+    expectGraphIntegrity([target, retained, fresh, other, ...staleSources]);
   });
+
+  it.each([0, 1, 16, 31, 32, 33, 64])(
+    "preserves a fresh producer's %i-edge suffix for later reads and final cleanup",
+    (size) => {
+      for (const hasPrefix of [false, true]) {
+        const target = createNode(Consumer);
+        const prefix = createNode(Producer);
+        const prefixEdge = hasPrefix ? linkEdge(prefix, target, null, 1) : null;
+        const sources = Array.from({ length: size }, () =>
+          createNode(Producer),
+        );
+        const oldEdges = sources.map((source) => linkEdge(source, target));
+        const fresh = createNode(Producer);
+        const edge = reuseIncomingEdgeFromSuffixOrCreate(
+          fresh,
+          target,
+          prefixEdge,
+          oldEdges[0] ?? null,
+          1,
+        );
+        target.tailIn = edge;
+        expectIncomingEdges(target, [
+          ...(prefixEdge === null ? [] : [prefixEdge]),
+          edge,
+          ...oldEdges,
+        ]);
+        // Read some old dependencies, leaving the rest genuinely stale.
+        const reused = Math.floor(size / 2);
+        for (let i = 0; i < reused; ++i) trackRead(sources[i]!, target);
+        cleanupUnvisitedSources(target);
+        expectIncomingEdges(target, [
+          ...(prefixEdge === null ? [] : [prefixEdge]),
+          edge,
+          ...oldEdges.slice(0, reused),
+        ]);
+        for (let i = 0; i < size; ++i) {
+          expectOutgoingEdges(sources[i]!, i < reused ? [oldEdges[i]!] : []);
+        }
+        expectGraphIntegrity([target, prefix, fresh, ...sources]);
+      }
+    },
+  );
 
   it("keeps prefix duplicate tracking reads structurally inert", () => {
     const a = createNode(Producer);
