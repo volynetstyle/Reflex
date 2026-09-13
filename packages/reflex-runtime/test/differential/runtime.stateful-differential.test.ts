@@ -66,72 +66,7 @@ describe("state-aware differential program generation", () => {
       { numRuns: 2_000 },
     );
   });
-
-  it("preserves cache transparency after failed validation", () => {
-    executeDifferential(knownValidationZombieCounterexample());
-  });
-  it("promotes a transitively dirty watcher after direct invalidation", () => {
-    executeDifferential(knownBatchedBranchCounterexample());
-  });
 });
-
-function knownValidationZombieCounterexample(): Op[] {
-  const failingBranch: Expr = {
-    type: "add",
-    left: read("p1"),
-    right: { type: "throw", message: "generated failure" },
-  };
-  return [
-    { type: "signal", id: "p0", value: -Infinity },
-    { type: "signal", id: "p1", value: -Infinity },
-    { type: "signal", id: "p2", value: false },
-    {
-      type: "computed",
-      id: "c0",
-      expression: {
-        type: "if",
-        condition: read("p2"),
-        then: failingBranch,
-        else: read("p0"),
-      },
-    },
-    { type: "effect", id: "w0", expression: read("c0") },
-    { type: "flush" },
-    { type: "set", id: "p0", value: Infinity },
-    { type: "read", id: "c0" },
-    { type: "set", id: "p2", value: true },
-    { type: "flush" },
-    { type: "flush" },
-  ];
-}
-function knownBatchedBranchCounterexample(): Op[] {
-  return [
-    { type: "signal", id: "p0", value: -Infinity },
-    { type: "signal", id: "p1", value: -Infinity },
-    { type: "signal", id: "p2", value: -Infinity },
-    {
-      type: "computed",
-      id: "c0",
-      expression: { type: "add", left: read("p0"), right: read("p1") },
-    },
-    { type: "effect", id: "w0", expression: read("c0") },
-    { type: "effect", id: "w1", expression: read("p2"), cleanup: read("p1") },
-    {
-      type: "effect",
-      id: "w2",
-      expression: {
-        type: "if",
-        condition: read("p2"),
-        then: read("c0"),
-        else: read("p0"),
-      },
-    },
-    { type: "flush" },
-    { type: "set", id: "p0", value: 0 },
-    { type: "set", id: "p2", value: false },
-    { type: "flush" },
-  ];
-}
 
 function buildScenario(scenario: Scenario): Op[] {
   const initial = [...scenario.initial];

@@ -54,14 +54,25 @@ export interface Observation {
   effects: EffectEvent[];
 }
 
-interface Machine {
+export interface Machine {
   execute(op: Op): Observation;
+}
+
+export interface SpecRuntimePort {
+  createProducer<T>(value: T): SpecProducer<T>;
+  createComputed<T>(compute: () => T): SpecComputed<T>;
+  createWatcher(compute: () => void | (() => void)): SpecWatcher;
+  readProducer<T>(node: SpecProducer<T>): T;
+  writeProducer<T>(node: SpecProducer<T>, value: T): void;
+  readComputed<T>(node: SpecComputed<T>): T;
+  runWatcher(node: SpecWatcher): void;
+  disposeWatcher(node: SpecWatcher): void;
 }
 
 type AnySpecNode = SpecProducer<Value> | SpecComputed<Value> | SpecWatcher;
 
 export class SpecMachine implements Machine {
-  private readonly runtime = new SpecRuntime();
+  constructor(private readonly runtime: SpecRuntimePort = new SpecRuntime()) {}
   private readonly nodes = new Map<NodeId, AnySpecNode>();
   private readonly watchers = new Map<NodeId, SpecWatcher>();
   private effects: EffectEvent[] = [];
