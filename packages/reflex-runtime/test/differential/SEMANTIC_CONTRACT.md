@@ -149,3 +149,8 @@ classification counts, severity, consequences, and negative evidence.
 An active-divergence test passing means that the known mismatch was reproduced;
 it does not declare the production behavior correct. After a runtime fix, the
 entry moves to historical-faults.ts and its active count must disappear.
+
+After failed watcher validation or computation, confirmed Changed evidence must
+survive cold recovery. A watcher with a committed dependency change cannot
+become Clean before executing. Unknown is retained only when no semantic change
+has yet been confirmed.

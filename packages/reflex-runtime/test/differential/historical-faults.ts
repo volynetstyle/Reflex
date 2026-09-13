@@ -80,4 +80,45 @@ export const historicalFaults: readonly HistoricalFault[] = [
       { type: "flush" },
     ],
   },
+  {
+    id: "lost-watcher-invalidation-after-validation-recovery",
+    faultClass: "watcher retry / cross-dependency invalidation",
+    fixedBy: "pending cold-path recovery commit",
+    discoveredBy: "causal action permutation differential exploration",
+    program: [
+      { type: "signal", id: "changeSource", value: false },
+      { type: "signal", id: "failGate", value: false },
+      {
+        type: "computed",
+        id: "changed",
+        expression: read("changeSource"),
+      },
+      {
+        type: "computed",
+        id: "failing",
+        expression: {
+          type: "if",
+          condition: read("failGate"),
+          then: { type: "throw", message: "dependency failure" },
+          else: { type: "constant", value: false },
+        },
+      },
+      {
+        type: "effect",
+        id: "watcher",
+        expression: {
+          type: "equal",
+          left: read("failing"),
+          right: read("changed"),
+        },
+      },
+      { type: "flush" },
+      { type: "set", id: "failGate", value: true },
+      { type: "set", id: "changeSource", value: true },
+      { type: "read", id: "changed" },
+      { type: "flush" },
+      { type: "set", id: "failGate", value: false },
+      { type: "flush" },
+    ],
+  },
 ];

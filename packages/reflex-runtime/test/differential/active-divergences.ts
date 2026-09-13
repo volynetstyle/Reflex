@@ -1,9 +1,7 @@
 import type { Expr, Observation, Op } from "./harness";
 
 export interface ActiveDivergence {
-  id:
-    | "cleanup-before-validation-completes"
-    | "lost-watcher-invalidation-after-validation-recovery";
+  id: "cleanup-before-validation-completes";
   boundary: string;
   severity: "high" | "critical";
   consequence: string;
@@ -56,57 +54,6 @@ export const activeDivergences: readonly ActiveDivergence[] = [
       { type: "set", id: "fallback", value: true },
       { type: "read", id: "computed" },
       { type: "set", id: "condition", value: true },
-      { type: "flush" },
-    ],
-  },
-  {
-    id: "lost-watcher-invalidation-after-validation-recovery",
-    boundary: "watcher retry / cross-dependency invalidation",
-    severity: "critical",
-    consequence:
-      "A recovered watcher misses a real dependency change and leaves its external state stale.",
-    discoveredBy: "causal action permutation over dependency validation order",
-    operationIndex: 11,
-    expected: {
-      effects: [{ effect: "watcher", phase: "run", value: false }],
-    },
-    actual: { effects: [] },
-    program: [
-      { type: "signal", id: "changeSource", value: false },
-      { type: "signal", id: "failGate", value: false },
-      {
-        type: "computed",
-        id: "changed",
-        expression: read("changeSource"),
-      },
-      {
-        type: "computed",
-        id: "failing",
-        expression: {
-          type: "if",
-          condition: read("failGate"),
-          then: {
-            type: "throw",
-            message: "dependency failure",
-          },
-          else: { type: "constant", value: false },
-        },
-      },
-      {
-        type: "effect",
-        id: "watcher",
-        expression: {
-          type: "equal",
-          left: read("failing"),
-          right: read("changed"),
-        },
-      },
-      { type: "flush" },
-      { type: "set", id: "failGate", value: true },
-      { type: "set", id: "changeSource", value: true },
-      { type: "read", id: "changed" },
-      { type: "flush" },
-      { type: "set", id: "failGate", value: false },
       { type: "flush" },
     ],
   },

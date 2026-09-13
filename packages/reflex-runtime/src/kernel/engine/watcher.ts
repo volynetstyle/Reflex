@@ -52,7 +52,8 @@ function recoverWatcherAfterError(node: WatcherNode): void {
  * state so an explicit later run retries validation from the beginning.
  */
 function recoverWatcherAfterValidationError(node: WatcherNode): void {
-  node.state = (node.state & ~WATCHER_TRANSIENT_STATE) | Unknown;
+  const retryState = (node.state & Changed) !== 0 ? Changed : Unknown;
+  node.state = (node.state & ~WATCHER_TRANSIENT_STATE) | retryState;
 }
 /**
  * A watcher callback can fail because a nested reactive read failed. That is
@@ -160,6 +161,10 @@ function runWatcherCore(node: WatcherNode): void {
       devRecordWatcherSkip(node, "stable", defaultContext);
       return;
     }
+
+    // Validation confirmed a semantic change. Preserve that committed fact
+    // across a callback failure so cold recovery cannot demote it to Unknown.
+    node.state = (node.state & ~Unknown) | Changed;
   }
 
   if (node.compute === undefined) {

@@ -42,7 +42,7 @@ This is distinct from the historical validation-history-dependence regression:
 that case retries while the failure remains active. This class loses a separate
 pending change across a failure/recovery boundary.
 
-Exact executable witnesses live in active-divergences.ts.
+Exact executable witnesses live in active-divergences.ts and historical-faults.ts.
 
 ## Negative evidence
 
@@ -57,3 +57,20 @@ No additional divergence class was observed in this bound for:
 
 These are bounded negative results, not proofs for arbitrary graphs or action
 lengths.
+
+## Post-fix result
+
+The cold-path recovery fix preserves confirmed Changed evidence after validation
+or watcher computation failure. It adds no node fields, edge metadata,
+allocations, or dependency scans to the successful path.
+
+| Metric                                              | Value |
+| --------------------------------------------------- | ----: |
+| Generated adversarial programs                      |   776 |
+| Programs with a differential finding                |     3 |
+| Unclassified findings                               |     0 |
+| cleanup-before-validation-completes                 |     3 |
+| lost-watcher-invalidation-after-validation-recovery |     0 |
+
+The resolved Critical witness moved to the historical catalog. The cleanup
+timing class remains active and is not hidden by the new baseline.
