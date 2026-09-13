@@ -323,11 +323,12 @@ export class MutantRuntime {
   }
 
   private dependenciesChanged(dependencies: DependencySnapshot): boolean {
+    let changed = false;
     for (const [dependency, observedVersion] of dependencies) {
       if (dependency.kind === "computed") this.stabilize(dependency);
-      if (dependency.version !== observedVersion) return true;
+      if (dependency.version !== observedVersion) changed = true;
     }
-    return false;
+    return changed;
   }
 
   private stabilize<T>(node: SpecComputed<T>): void {

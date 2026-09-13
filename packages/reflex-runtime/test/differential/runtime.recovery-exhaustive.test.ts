@@ -15,26 +15,15 @@ import {
 describe("failure recovery differential exploration", () => {
   const programs = enumerateRecoveryPrograms();
 
-  it("records active divergences across the recovery language", () => {
+  it("checks every program in the recovery language", () => {
     const report = exploreRecoveryDifferential(programs);
 
     expect(report.language).toEqual(defaultRecoveryLanguage);
     expect(programs).toHaveLength(18_660);
     expect(report.canonicalPrograms).toBe(programs.length);
     expect(report.executedPrograms).toBe(programs.length);
-    expect(report.divergences).toBe(8);
-    expect(report.firstDivergence).toMatchObject({
-      operationIndex: 8,
-      operation: { type: "flush" },
-      expected: {
-        error: { name: "Error", message: "bounded failure" },
-        effects: [],
-      },
-      actual: {
-        error: { name: "Error", message: "bounded failure" },
-        effects: [{ effect: "watcher", phase: "cleanup", value: true }],
-      },
-    });
+    expect(report.divergences).toBe(0);
+    expect(report.firstDivergence).toBeUndefined();
   });
 
   it("propagates infected failure state to observable behavior", () => {

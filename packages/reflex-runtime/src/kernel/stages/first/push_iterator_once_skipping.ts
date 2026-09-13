@@ -37,7 +37,10 @@ function pushIteratorOnceSkippingCore(
     const state = sub.state;
 
     if ((state & Changed) === 0) {
-      sub.state = (state & ~Unknown) | Changed;
+      sub.state =
+        (state & Watcher) !== 0
+          ? state | Changed
+          : (state & ~Unknown) | Changed;
 
       if (__PROFILE__)
         observeRuntimeProjection?.(
@@ -81,7 +84,10 @@ function pushIteratorOnceSkippingCore(
     const state = sub.state;
 
     if ((state & Changed) === 0) {
-      sub.state = (state & ~Unknown) | Changed;
+      sub.state =
+        (state & Watcher) !== 0
+          ? state | Changed
+          : (state & ~Unknown) | Changed;
 
       if (__PROFILE__)
         observeRuntimeProjection?.(

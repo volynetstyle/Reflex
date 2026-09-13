@@ -60,17 +60,18 @@ lengths.
 
 ## Post-fix result
 
-The cold-path recovery fix preserves confirmed Changed evidence after validation
-or watcher computation failure. It adds no node fields, edge metadata,
-allocations, or dependency scans to the successful path.
+The watcher-state fix preserves confirmed Changed evidence after validation or
+watcher computation failure. It adds no node fields, edge metadata, or
+allocations. Full dependency validation is confined to the `Unknown` cold path;
+the direct `Changed` execution path retains its existing traversal shape.
 
 | Metric                                              | Value |
 | --------------------------------------------------- | ----: |
 | Generated adversarial programs                      |   776 |
-| Programs with a differential finding                |     3 |
+| Programs with a differential finding                |     0 |
 | Unclassified findings                               |     0 |
-| cleanup-before-validation-completes                 |     3 |
+| cleanup-before-validation-completes                 |     0 |
 | lost-watcher-invalidation-after-validation-recovery |     0 |
 
-The resolved Critical witness moved to the historical catalog. The cleanup
-timing class remains active and is not hidden by the new baseline.
+Both minimized witnesses moved to the historical catalog. The post-fix corpus
+contains no known or unclassified differential mismatch within this bound.

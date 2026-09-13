@@ -4,6 +4,12 @@ import { activeDivergences } from "./active-divergences";
 import { DifferentialError, executeDifferential } from "./harness";
 
 describe("active differential divergences", () => {
+  if (activeDivergences.length === 0) {
+    it("has no known active divergence", () => {
+      expect(activeDivergences).toEqual([]);
+    });
+  }
+
   for (const divergence of activeDivergences) {
     it("reproduces " + divergence.id, () => {
       resetRuntimeContext();

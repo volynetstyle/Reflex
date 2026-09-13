@@ -313,13 +313,12 @@ describe("Reactive runtime - traversal invariants", () => {
       {
         name: "prefix",
         mutate: "prefix",
-        expectedAfterNestedRun: [1, 22, 10],
+        expectedAfterNestedRun: [2, 22, 10],
         expectedFinalRuns: [
           [1, 20, 10],
-          [1, 22, 10],
           [2, 22, 10],
         ],
-        reentrant: true,
+        reentrant: false,
       },
       {
         name: "suffix",
@@ -440,6 +439,3 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(hasSubscriber(right, target)).toBe(true);
   });
 });
-
-
-

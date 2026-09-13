@@ -8,10 +8,18 @@ semantics.
 
 ## Watcher rerun
 
+Watcher state has two orthogonal obligations: `Unknown` requires dependency
+validation, while `Changed` requires execution after validation. Therefore
+`Unknown | Changed` validates first and then executes even when validation finds
+all dependency versions unchanged.
+
+`Visited` on entry records invalidation during the previous watcher callback.
+The runtime normalizes it to the pending `Changed` obligation before validation.
+
 A watcher rerun has the following observable order:
 
-1. Validate the previously committed dependencies.
-2. If none changed, do nothing.
+1. Validate every previously committed dependency before lifecycle begins.
+2. If none changed and no `Changed` obligation is pending, do nothing.
 3. Consume the previous cleanup before invoking it.
 4. Execute that cleanup with dependency tracking disabled.
 5. Execute the watcher computation with dependency tracking enabled.
@@ -30,9 +38,11 @@ conservative retry-trigger set, baselined at the failure. A plain flush is a
 no-op; a later change to that retry set permits another attempt.
 
 If dependency validation throws while pulling a computed dependency, validation
-has not committed and the watcher remains pending. A later explicit flush may
-retry the same validation. Its result must not depend on whether that computed
-was independently stabilized earlier in the operation trace.
+has not committed and the watcher remains `Unknown`. No cleanup or computation
+may begin until every committed dependency validates successfully. Any pending
+or already confirmed `Changed` evidence survives the failure. A later explicit
+flush may retry the same validation. Its result must not depend on whether that
+computed was independently stabilized earlier in the operation trace.
 
 ## Failed computations
 
@@ -44,6 +54,8 @@ was independently stabilized earlier in the operation trace.
 - **W3** A watcher whose cleanup or computation failed is not retried by a plain flush, but remains retryable after a conservative retry trigger changes.
 - **V1** Failed dependency validation does not make the watcher clean and remains retryable by an explicit flush.
 - **V2** Validation retry behavior is independent of prior reads and pull traversal history.
+- **V3** Validation covers the complete committed dependency snapshot before watcher lifecycle begins.
+- **V4** `Unknown` and `Changed` are orthogonal for watchers; recovery preserves both outstanding obligations.
 
 These rules express the transaction boundary: evaluation and validation are not
 commitment. Errors are compared by normalized `name` and `message`. Stack traces
@@ -135,9 +147,9 @@ frozen in RECOVERY_BASELINE.md.
 
 This layer is deliberately independent of mutant IDs. It converts failure
 infection into later observable behavior and raises the combined holdout result
-to 6/6. It also exposes an active Reflex cleanup-timing divergence. That
-divergence is recorded explicitly rather than treated as proof of equivalence;
-after a runtime fix its minimized witness belongs in the historical catalog.
+to 6/6. It exposed a Reflex cleanup-timing divergence whose minimized witness
+now lives in the historical catalog. The unchanged 18,660-program language has
+zero post-fix divergences.
 
 ## Active divergence classification
 
@@ -150,7 +162,11 @@ An active-divergence test passing means that the known mismatch was reproduced;
 it does not declare the production behavior correct. After a runtime fix, the
 entry moves to historical-faults.ts and its active count must disappear.
 
-After failed watcher validation or computation, confirmed Changed evidence must
-survive cold recovery. A watcher with a committed dependency change cannot
-become Clean before executing. Unknown is retained only when no semantic change
-has yet been confirmed.
+The active catalog is currently empty. The 776-program adversarial corpus has no
+post-fix mismatch in this bound.
+
+After failed watcher validation or computation, confirmed `Changed` evidence
+must survive cold recovery. A watcher with a committed dependency change cannot
+become clean before executing. `Unknown` remains set until the complete
+committed dependency snapshot validates successfully; it is not replaced by
+`Changed` for watchers.

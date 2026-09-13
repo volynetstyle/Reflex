@@ -30,7 +30,11 @@
  *
  * Notes:
  *
- *  - `Unknown` and `Changed` are mutually exclusive dirty states.
+ *  - For computed nodes, `Unknown` and `Changed` are normally exclusive.
+ *  - For watchers, they are orthogonal pending facts: `Unknown` requires
+ *    dependency validation before lifecycle work, while `Changed` requires
+ *    execution after validation succeeds. `Unknown | Changed` preserves both
+ *    obligations when a confirmed change is followed by another invalidation.
  *  - Producers commit immediately on write and normally do not participate
  *    in pull-walk verification.
  *  - `Visited`, `Computing` and similar flags are transient execution markers

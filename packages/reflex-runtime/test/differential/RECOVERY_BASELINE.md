@@ -59,3 +59,18 @@ should then move to the historical fault catalog.
 
 The recovery result extends rather than rewrites BOUNDED_BASELINE.md. The older
 27,061-program baseline still describes its original non-throwing language.
+
+## Post-fix result
+
+The watcher validation fix reduces this corpus to zero divergences without
+changing its language or bounds:
+
+| Metric                   |   Value |
+| ------------------------ | ------: |
+| Canonical programs       |  18,660 |
+| Executed programs        |  18,660 |
+| Executed operations      | 164,220 |
+| Differential divergences |       0 |
+| Combined holdout score   |     6/6 |
+
+The minimized cleanup-timing witness now lives in the historical fault catalog.

@@ -57,10 +57,8 @@ describe("adversarial differential classification", () => {
       unclassified,
     }).toEqual({
       programs: 776,
-      findings: 3,
-      counts: {
-        "cleanup-before-validation-completes": 3,
-      },
+      findings: 0,
+      counts: {},
       unclassified: [],
     });
   });

@@ -411,7 +411,7 @@ describe("Reactive runtime - walker invariants", () => {
     expect(leaf.state).toBe(Consumer | Unknown);
   });
 
-  it("propagateOnce upgrades only pure Unknown subscribers and notifies watchers once", () => {
+  it("propagateOnce preserves Unknown on watchers and notifies them once", () => {
     const source = createNode(Producer);
     const consumer = createNode(Consumer | Unknown);
     const watcher = createNode(Watcher | Unknown);
@@ -431,12 +431,12 @@ describe("Reactive runtime - walker invariants", () => {
     push_iterator_once(source.firstOut);
 
     expect(consumer.state).toBe(Consumer | Changed);
-    expect(watcher.state).toBe(Watcher | Changed);
+    expect(watcher.state).toBe(Watcher | Unknown | Changed);
     expect(alreadyChangedWatcher.state).toBe(Watcher | Changed);
     expect(invalidated).toEqual(["watcher"]);
   });
 
-  it("propagateOnce preserves Visited while upgrading Unknown watchers to Changed", () => {
+  it("propagateOnce preserves Unknown and Visited while marking watchers Changed", () => {
     const source = createNode(Producer);
     const watcher = createNode(Watcher | Unknown | Visited);
     const invalidated: ReactiveNode[] = [];
@@ -450,7 +450,7 @@ describe("Reactive runtime - walker invariants", () => {
 
     push_iterator_once(source.firstOut);
 
-    expect(watcher.state).toBe(Watcher | Changed | Visited);
+    expect(watcher.state).toBe(Watcher | Unknown | Changed | Visited);
     expect(invalidated).toEqual([watcher]);
   });
 

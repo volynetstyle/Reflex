@@ -36,7 +36,6 @@ import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 import { executeKnownNodeComputation } from "./watcher.execution";
 
-const FORCE_STABILIZATION_STATE = Changed | Visited;
 const WATCHER_TRANSIENT_STATE = DIRTY_STATE | Visited | Computing | Scheduled;
 
 function recoverWatcherAfterError(node: WatcherNode): void {
@@ -52,7 +51,7 @@ function recoverWatcherAfterError(node: WatcherNode): void {
  * state so an explicit later run retries validation from the beginning.
  */
 function recoverWatcherAfterValidationError(node: WatcherNode): void {
-  const retryState = (node.state & Changed) !== 0 ? Changed : Unknown;
+  const retryState = (node.state & Changed) | Unknown;
   node.state = (node.state & ~WATCHER_TRANSIENT_STATE) | retryState;
 }
 /**
@@ -141,32 +140,45 @@ function runWatcherCore(node: WatcherNode): void {
     return;
   }
 
-  if ((state & FORCE_STABILIZATION_STATE) === 0) {
+  if ((state & Unknown) !== 0) {
     const edge = node.firstIn;
+    // Visited records invalidation during the previous callback. Normalize
+    // that execution obligation before validation clears traversal markers.
+    const pendingChanged = (state & (Changed | Visited)) !== 0 ? Changed : 0;
+    let changed = false;
 
-    let changed: boolean;
+    // pull_iterator treats Changed on its root as permission to bypass
+    // validation. For watchers Changed is instead an orthogonal promise to
+    // execute after validation, so preserve it locally during the pull.
+    node.state = state & ~Changed;
 
     try {
-      changed = edge !== null && pull_iterator(node, edge);
+      if (edge !== null) {
+        while (pull_iterator(node, edge)) {
+          changed = true;
+          // pull_iterator stops at the first confirmed change. Watcher
+          // lifecycle requires the remaining committed dependencies to
+          // validate successfully before cleanup may begin.
+          node.state = (node.state & ~Changed) | Unknown;
+        }
+      }
     } catch (error) {
+      node.state |= pendingChanged | (changed ? Changed : 0);
       recoverWatcherAfterValidationError(node);
       throw error;
     }
 
-    if (!changed) {
+    if (changed) node.state |= Changed;
+    node.state = (node.state | pendingChanged) & ~Unknown;
+
+    if ((node.state & Changed) === 0) {
       if (__PROFILE__)
         observeRuntimeProjection?.("projection.semantic.watcher.stable.skip");
 
-      node.state &= ~DIRTY_STATE;
       devRecordWatcherSkip(node, "stable", defaultContext);
       return;
     }
-
-    // Validation confirmed a semantic change. Preserve that committed fact
-    // across a callback failure so cold recovery cannot demote it to Unknown.
-    node.state = (node.state & ~Unknown) | Changed;
   }
-
   if (node.compute === undefined) {
     if (__PROFILE__)
       observeRuntimeProjection?.("projection.semantic.watcher.disposed.skip");
