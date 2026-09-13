@@ -158,6 +158,11 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
       sub.state = next;
     } else if ((state & Computing) !== 0) {
       next = markComputingSubscriber(edge, sub, state);
+    } else if ((state & Unknown) !== 0) {
+      // Cold merge: an already scheduled watcher learned that one of its
+      // direct dependencies definitely changed.
+      next = (state & ~Visited) | Changed;
+      sub.state = next;
     }
 
     if (next === 0) {
@@ -186,6 +191,10 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
         profileRuntimeCounter("pushWatchersInvalidated");
         profilePushNode("direct.watcher", sub, 1, top - base);
       }
+      // A watcher that was already transitively Unknown still needs promotion
+      // to Changed when a direct dependency changes. It is already owned by
+      // the scheduler, though, so do not emit a duplicate invalidation.
+      if ((state & (Unknown | Computing)) === Unknown) continue;
 
       // Direct watchers always cut off descent. Production can omit the
       // no-op emitter when no hook is installed; development retains events.

@@ -42,7 +42,7 @@ export function flushPendingSchedulerQueue(core: SchedulerCore): void {
   try {
     thrown = flushQueuedWatchers(queue, thrown, NO_THROW);
   } finally {
-    if (queue.head !== queue.tail) {
+    if (queue.head !== queue.tail && thrown === NO_THROW) {
       cleanupQueuedNodesAfterAbort(queue);
     }
 

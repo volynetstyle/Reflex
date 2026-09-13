@@ -47,6 +47,31 @@ function recoverWatcherAfterError(node: WatcherNode): void {
   // state so the next source change can schedule it again.
   node.state &= ~WATCHER_TRANSIENT_STATE;
 }
+/**
+ * Pull validation failed before watcher lifecycle execution began. Preserve
+ * committed dependencies and cleanup, but canonicalize transient traversal
+ * state so an explicit later run retries validation from the beginning.
+ */
+function recoverWatcherAfterValidationError(node: WatcherNode): void {
+  node.state = (node.state & ~WATCHER_TRANSIENT_STATE) | Unknown;
+}
+
+/**
+ * A watcher callback can fail because a nested reactive read failed. That is
+ * semantically an incomplete validation, even when a warmed cache promoted
+ * the watcher to Changed and selected the direct execution path. Detect this
+ * only after an exception; successful watcher execution pays no scan cost.
+ */
+function recoverWatcherAfterComputationError(node: WatcherNode): void {
+  for (let edge = node.firstIn; edge !== null; edge = edge.nextIn) {
+    if ((edge.from.state & DIRTY_STATE) !== 0) {
+      recoverWatcherAfterValidationError(node);
+      return;
+    }
+  }
+
+  recoverWatcherAfterError(node);
+}
 
 /** Claims ownership of this watcher for an external scheduler queue. */
 export function claimWatcherSchedule(node: WatcherNode): boolean {
@@ -117,7 +142,16 @@ function runWatcherCore(node: WatcherNode): void {
   if ((state & FORCE_STABILIZATION_STATE) === 0) {
     const edge = node.firstIn;
 
-    if (edge === null || !pull_iterator(node, edge)) {
+    let changed: boolean;
+
+    try {
+      changed = edge !== null && pull_iterator(node, edge);
+    } catch (error) {
+      recoverWatcherAfterValidationError(node);
+      throw error;
+    }
+
+    if (!changed) {
       profileRuntimeCounter("watcherStableSkips");
 
       node.state &= ~DIRTY_STATE;
@@ -169,7 +203,7 @@ function runWatcherCore(node: WatcherNode): void {
   try {
     result = executeKnownNodeComputation(node, compute);
   } catch (error) {
-    recoverWatcherAfterError(node);
+    recoverWatcherAfterComputationError(node);
     throw error;
   }
 
