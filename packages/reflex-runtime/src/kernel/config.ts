@@ -1,5 +1,5 @@
 import { recordDebugEvent } from "../../debug/debug.runtime";
-import { profileRuntimeCounter } from "@runtime/profiling";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 import {
   devAssertRuntimeHookDidNotReenter,
@@ -111,7 +111,8 @@ export var emitNodeInvalidated = !__DEV__
       hook(node);
     }
   : function (node: ReactiveNode): void {
-      profileRuntimeCounter("nodeInvalidatedEmits");
+      if (__PROFILE__)
+        observeRuntimeProjection?.("projection.semantic.node.invalidated.emit");
 
       if (IS_DEV) {
         recordDebugEvent(defaultContext, "watcher:invalidated", { node });
@@ -143,7 +144,8 @@ export var emitNodeInvalidated = !__DEV__
     };
 
 export function emitRuntimeIdle(): void {
-  profileRuntimeCounter("contextSettledEmits");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.context.settled.emit");
 
   if ((runtimeState & RuntimeState.HostWorkPending) !== RuntimeState.Idle) {
     const flush = hostFlushHook;

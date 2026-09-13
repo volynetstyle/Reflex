@@ -1,6 +1,6 @@
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import type ReactiveNode from "@runtime/kernel/shape/node";
-import { profileRuntimeCounter } from "@runtime/profiling";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 import { linkEdge } from "./linkEdge";
 import { unlinkDetachedIncomingEdgeSequence } from "./sweepEdges";
@@ -15,7 +15,8 @@ function moveIncomingEdgeToPosition(
   const prev = edge.prevIn;
   if (prev === insertAfterEdge) return;
 
-  profileRuntimeCounter("trackingEdgeMoved");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.tracking.edge.move");
   const next = edge.nextIn;
 
   if (insertAfterEdge === null) {
@@ -61,7 +62,8 @@ function detachIncomingSuffix(
   insertAfterEdge: ReactiveEdge | null,
   suffixStartEdge: ReactiveEdge,
 ): void {
-  profileRuntimeCounter("trackingSuffixEagerDetach");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.tracking.suffix.detach");
 
   if (insertAfterEdge === null) {
     consumer.firstIn = null;
@@ -116,7 +118,10 @@ export function reuseIncomingEdgeFromSuffixOrLink(
    */
   if (suffixStartEdge !== null && suffixStartEdge.from === producer) {
     suffixStartEdge.version = producerVersion;
-    profileRuntimeCounter("trackingSuffixHeadHit");
+    if (__PROFILE__)
+      observeRuntimeProjection?.(
+        "projection.semantic.tracking.suffix.head-hit",
+      );
     return suffixStartEdge;
   }
 
@@ -132,16 +137,28 @@ export function reuseIncomingEdgeFromSuffixOrLink(
     if (edge === null) {
       // No outgoing edges proves absence from this consumer. Keep the suffix:
       // subsequent reads may still reuse it before final stale cleanup.
-      profileRuntimeCounter("trackingOutgoingProbeMiss");
-      profileRuntimeCounter("trackingSuffixLinkNew");
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.tracking.outgoing.probe-miss",
+        );
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.tracking.suffix.link-new",
+        );
       return linkEdge(producer, consumer, insertAfterEdge, producerVersion);
     }
     if (edge.to !== consumer) {
-      profileRuntimeCounter("trackingOutgoingProbeMiss");
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.tracking.outgoing.probe-miss",
+        );
     } else if (edge.version !== producerVersion) {
       moveIncomingEdgeToPosition(consumer, edge, insertAfterEdge);
       edge.version = producerVersion;
-      profileRuntimeCounter("trackingOutgoingProbeHit1");
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.tracking.outgoing.probe-hit",
+        );
       return edge;
     }
   }
@@ -182,7 +199,10 @@ function reconcileIncomingSuffix(
     candidateEdge = candidateEdge.nextIn
   ) {
     scannedSuffixEdges += 1;
-    profileRuntimeCounter("trackingSuffixEdgesScanned");
+    if (__PROFILE__)
+      observeRuntimeProjection?.(
+        "projection.semantic.tracking.suffix.edge-scan",
+      );
 
     if (candidateEdge.from !== producer) {
       if (scannedSuffixEdges === outgoingProbeAt) {
@@ -190,7 +210,10 @@ function reconcileIncomingSuffix(
 
         if (producerEdge === null) {
           detachIncomingSuffix(consumer, insertAfterEdge, suffixStartEdge!);
-          profileRuntimeCounter("trackingSuffixLinkNew");
+          if (__PROFILE__)
+            observeRuntimeProjection?.(
+              "projection.semantic.tracking.suffix.link-new",
+            );
           return linkEdge(producer, consumer, insertAfterEdge, producerVersion);
         }
 
@@ -218,7 +241,8 @@ function reconcileIncomingSuffix(
     }
 
     candidateEdge.version = producerVersion;
-    profileRuntimeCounter("trackingSuffixReuseHit");
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.tracking.suffix.reuse");
     return candidateEdge;
   }
 
@@ -238,7 +262,8 @@ function reconcileIncomingSuffix(
     detachIncomingSuffix(consumer, insertAfterEdge, suffixStartEdge);
   }
 
-  profileRuntimeCounter("trackingSuffixLinkNew");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.tracking.suffix.link-new");
   return linkEdge(producer, consumer, insertAfterEdge, producerVersion);
 }
 

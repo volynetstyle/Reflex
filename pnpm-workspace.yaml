@@ -1,4 +1,5 @@
 packages:
+- 'third-party/*'
 - 'lab/*'
 - 'packages/*'
 - "packages/@reflex/*"

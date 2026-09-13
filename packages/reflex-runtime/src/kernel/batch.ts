@@ -1,4 +1,4 @@
-import { profileRuntimeCounter } from "@runtime/profiling";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 import { emitRuntimeIdle } from "./config";
 import {
@@ -51,7 +51,8 @@ export function flushPendingRuntimeIdle(): void {
 export function emitRuntimeIdleWithBatching(): void {
   if ((runtimeState & RuntimeState.Batching) !== RuntimeState.Idle) {
     markRuntimeIdlePending();
-    profileRuntimeCounter("contextSettledDeferred");
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.context.settled.defer");
     return;
   }
 

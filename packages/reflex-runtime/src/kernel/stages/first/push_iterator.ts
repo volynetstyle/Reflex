@@ -3,7 +3,6 @@ import {
   emitNodeInvalidated,
   nodeInvalidatedHook,
 } from "@runtime/kernel/config";
-import { devRecordPropagate } from "@runtime/kernel/dev";
 import {
   enterRuntimePhase,
   leaveRuntimePhase,
@@ -20,12 +19,13 @@ import {
   type ReactiveNode,
 } from "@runtime/kernel/shape";
 import { readRuntimeWalkerStackStats } from "@runtime/kernel/stages/stackStats";
+import { isRuntimeProfilingEnabled } from "@runtime/profiling";
 import {
-  isRuntimeProfilingEnabled,
-  profileRuntimeCounter,
-  profileRuntimeCounterBy,
-  profileRuntimePushPath,
-} from "@runtime/profiling";
+  observeRuntimeProjection,
+  observeRuntimeProjectionAmount,
+  observeRuntimePushPath,
+} from "@runtime/kernel/projection";
+import { observeRuntimePropagate } from "@runtime/kernel/projection.propagate";
 
 const FAST_BLOCK_MASK = DIRTY_STATE | Computing;
 
@@ -72,13 +72,14 @@ function profilePushNode(
   stackDepth: number,
 ): void {
   if (__PROFILE__ && isRuntimeProfilingEnabled()) {
-    profileRuntimePushPath(
-      branch,
-      depth,
-      countIn(sub.firstIn),
-      countOut(sub.firstOut),
-      stackDepth,
-    );
+    if (__PROFILE__)
+      observeRuntimePushPath?.(
+        branch,
+        depth,
+        countIn(sub.firstIn),
+        countOut(sub.firstOut),
+        stackDepth,
+      );
   }
 }
 
@@ -92,7 +93,10 @@ function markComputingSubscriber(
   sub: ReactiveNode<unknown>,
   state: number,
 ): number {
-  profileRuntimeCounter("pushComputingChecked");
+  if (__PROFILE__)
+    observeRuntimeProjection?.(
+      "projection.semantic.push.subscriber.computing.check",
+    );
 
   const tail = sub.tailIn;
   if (tail === null) return 0;
@@ -124,7 +128,8 @@ function markComputingSubscriber(
 function pushIteratorCore(firstOut: ReactiveEdge | null): void {
   // if (firstOut === null) return;
 
-  profileRuntimeCounter("pushCalls");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.push.invoke");
 
   const stack = propagateStack;
   // [ outer live stack ][ nested live stack ][ free capacity ]
@@ -143,7 +148,8 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
     edge !== null;
     edge = edge.nextOut
   ) {
-    profileRuntimeCounter("pushDirectEdgesVisited");
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.push.edge.direct.visit");
 
     const sub: ReactiveNode<unknown> = edge.to;
     const state = sub.state;
@@ -167,16 +173,22 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
 
     if (next === 0) {
       if (__PROFILE__) {
-        profileRuntimeCounter("pushAlreadyDirtySkipped");
+        if (__PROFILE__)
+          observeRuntimeProjection?.(
+            "projection.semantic.push.subscriber.dirty.skip",
+          );
         profilePushNode("direct.skip", sub, 1, top - base);
       }
       continue;
     }
 
     if (__PROFILE__) {
-      profileRuntimeCounter(
-        (next & Changed) !== 0 ? "pushMarkedChanged" : "pushMarkedInvalid",
-      );
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          (next & Changed) !== 0
+            ? "projection.semantic.push.subscriber.changed.mark"
+            : "projection.semantic.push.subscriber.invalid.mark",
+        );
       profilePushNode(
         (next & Changed) !== 0 ? "direct.changed" : "direct.unknown",
         sub,
@@ -184,13 +196,23 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
         top - base,
       );
     }
-    devRecordPropagate(edge, next, true, defaultContext);
+    if (__DEV__)
+      observeRuntimePropagate?.({
+        edge: edge,
+        nextState: next,
+        immediate: true,
+        context: defaultContext,
+      });
 
     if ((next & Watcher) !== 0) {
       if (__PROFILE__) {
-        profileRuntimeCounter("pushWatchersInvalidated");
+        if (__PROFILE__)
+          observeRuntimeProjection?.(
+            "projection.semantic.push.watcher.invalidate",
+          );
         profilePushNode("direct.watcher", sub, 1, top - base);
       }
+
       // A watcher that was already transitively Unknown still needs promotion
       // to Changed when a direct dependency changes. It is already owned by
       // the scheduler, though, so do not emit a duplicate invalidation.
@@ -213,7 +235,8 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
 
     const child = sub.firstOut;
     if (child !== null) {
-      profileRuntimeCounter("pushChildBranchesQueued");
+      if (__PROFILE__)
+        observeRuntimeProjection?.("projection.semantic.push.frontier.enqueue");
 
       if (__PROFILE__) propagateDepthStack![top] = 2;
       stack[top++] = child;
@@ -233,7 +256,10 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
     let depth = __PROFILE__ ? propagateDepthStack![top]! : 0;
 
     while (edge !== null) {
-      profileRuntimeCounter("pushTransitiveEdgesVisited");
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.push.edge.transitive.visit",
+        );
 
       const sub: ReactiveNode<unknown> = edge.to;
       const state = sub.state;
@@ -249,14 +275,26 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
 
       if (next !== 0) {
         if (__PROFILE__) {
-          profileRuntimeCounter("pushMarkedInvalid");
+          if (__PROFILE__)
+            observeRuntimeProjection?.(
+              "projection.semantic.push.subscriber.invalid.mark",
+            );
           profilePushNode("transitive.unknown", sub, depth, top - base);
         }
-        devRecordPropagate(edge, next, false, defaultContext);
+        if (__DEV__)
+          observeRuntimePropagate?.({
+            edge: edge,
+            nextState: next,
+            immediate: false,
+            context: defaultContext,
+          });
 
         if ((next & Watcher) !== 0 && nodeInvalidatedHook) {
           if (__PROFILE__) {
-            profileRuntimeCounter("pushWatchersInvalidated");
+            if (__PROFILE__)
+              observeRuntimeProjection?.(
+                "projection.semantic.push.watcher.invalidate",
+              );
             profilePushNode("transitive.watcher", sub, depth, top - base);
           }
 
@@ -275,7 +313,10 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
             const sibling = edge.nextOut;
 
             if (sibling !== null) {
-              profileRuntimeCounter("pushChildBranchesQueued");
+              if (__PROFILE__)
+                observeRuntimeProjection?.(
+                  "projection.semantic.push.frontier.enqueue",
+                );
 
               if (__PROFILE__) propagateDepthStack![top] = depth;
               stack[top++] = sibling;
@@ -288,7 +329,10 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
         }
       } else {
         if (__PROFILE__) {
-          profileRuntimeCounter("pushAlreadyDirtySkipped");
+          if (__PROFILE__)
+            observeRuntimeProjection?.(
+              "projection.semantic.push.subscriber.dirty.skip",
+            );
           profilePushNode("transitive.skip", sub, depth, top - base);
         }
       }
@@ -300,11 +344,13 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
   propagateStackHigh = base;
   if (base === 0 && stack.length > MAX_RETAINED_PROPAGATE_STACK) {
     if (__PROFILE__) {
-      profileRuntimeCounter("pushStackTrimEvents");
-      profileRuntimeCounterBy(
-        "pushStackTrimExcess",
-        stack.length - MAX_RETAINED_PROPAGATE_STACK,
-      );
+      if (__PROFILE__)
+        observeRuntimeProjection?.("projection.semantic.push.stack.trim");
+      if (__PROFILE__)
+        observeRuntimeProjectionAmount?.(
+          "projection.semantic.push.stack.trim.excess",
+          stack.length - MAX_RETAINED_PROPAGATE_STACK,
+        );
     }
     stack.length = MAX_RETAINED_PROPAGATE_STACK;
   }

@@ -21,9 +21,9 @@ import { resolveTrackedRead } from "@runtime/kernel/shape/tracking";
 import { advance } from "@runtime/kernel/stages/second/advance";
 import { pull_iterator } from "@runtime/kernel/stages/second/pull_iterator";
 import {
-  profileRuntimeCounter,
-  profileRuntimeReadConsumerPath,
-} from "@runtime/profiling";
+  observeRuntimeProjection,
+  observeRuntimeReadConsumerPath,
+} from "@runtime/kernel/projection";
 
 import { LAZY, type ConsumerReadModeValue } from "./utils/constants";
 
@@ -43,15 +43,17 @@ import { LAZY, type ConsumerReadModeValue } from "./utils/constants";
 export function readConsumerLazy<T>(this: ConsumerNode<T>): T {
   devAssertNoRuntimeHookReactiveRead();
 
-  profileRuntimeCounter("readConsumerCalls");
-  profileRuntimeCounter("readConsumerLazyCalls");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.read.consumer.invoke");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.read.consumer.lazy");
 
   // eslint-disable-next-line @typescript-eslint/no-this-alias
   const producer = this;
   const state = producer.state;
   const isDirty = (state & DIRTY_STATE) !== 0;
 
-  profileRuntimeReadConsumerPath(isDirty);
+  if (__PROFILE__) observeRuntimeReadConsumerPath?.(isDirty);
 
   const value = isDirty
     ? stabilizeDirtyConsumer(producer, state)
@@ -61,8 +63,14 @@ export function readConsumerLazy<T>(this: ConsumerNode<T>): T {
 
   if (consumer === null) return value;
 
-  profileRuntimeCounter("readConsumerTracked");
-  resolveTrackedRead(producer, consumer, consumer.tailIn?.version ?? trackingEpoch, true);
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.read.consumer.track");
+  resolveTrackedRead(
+    producer,
+    consumer,
+    consumer.tailIn?.version ?? trackingEpoch,
+    true,
+  );
   devRecordReadConsumer(producer, "lazy", value, defaultContext, consumer);
 
   return value;
@@ -76,13 +84,15 @@ export function readConsumerLazy<T>(this: ConsumerNode<T>): T {
  */
 export function readConsumerEager<T>(node: ConsumerNode<T>): T {
   devAssertNoRuntimeHookReactiveRead();
-  profileRuntimeCounter("readConsumerCalls");
-  profileRuntimeCounter("readConsumerEagerCalls");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.read.consumer.invoke");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.read.consumer.eager");
 
   const state = node.state;
   const isDirty = (state & DIRTY_STATE) !== 0;
 
-  profileRuntimeReadConsumerPath(isDirty);
+  if (__PROFILE__) observeRuntimeReadConsumerPath?.(isDirty);
   return isDirty ? stabilizeDirtyConsumer(node, state) : node.payload;
 }
 
@@ -94,11 +104,17 @@ function stabilizeDirtyConsumer<T>(node: ConsumerNode<T>, state: number): T {
   let stabilized: boolean;
 
   if ((state & FORCE_RECOMPUTE_STATE) !== 0) {
-    profileRuntimeCounter("stabilizeForceAdvance");
+    if (__PROFILE__)
+      observeRuntimeProjection?.(
+        "projection.semantic.read.stabilize.force-advance",
+      );
     stabilized = advance(node);
   } else {
     const edge = node.firstIn;
-    profileRuntimeCounter("stabilizePullAdvance");
+    if (__PROFILE__)
+      observeRuntimeProjection?.(
+        "projection.semantic.read.stabilize.pull-advance",
+      );
     // A node is considered newest if it:
     // - has producers,
     // - all top-level dependencies are checked,... and
@@ -156,15 +172,17 @@ export function readConsumer<T>(
 ): T {
   devAssertNoRuntimeHookReactiveRead();
 
-  profileRuntimeCounter("readConsumerCalls");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.read.consumer.invoke");
 
   if (mode !== LAZY) {
-    profileRuntimeCounter("readConsumerEagerCalls");
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.read.consumer.eager");
 
     const state = node.state;
     const isDirty = (state & DIRTY_STATE) !== 0;
 
-    profileRuntimeReadConsumerPath(isDirty);
+    if (__PROFILE__) observeRuntimeReadConsumerPath?.(isDirty);
 
     const value = !isDirty ? node.payload : stabilizeDirtyConsumer(node, state);
 
@@ -173,20 +191,27 @@ export function readConsumer<T>(
     return value;
   }
 
-  profileRuntimeCounter("readConsumerLazyCalls");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.read.consumer.lazy");
 
   const state = node.state;
   const isDirty = (state & DIRTY_STATE) !== 0;
 
-  profileRuntimeReadConsumerPath(isDirty);
+  if (__PROFILE__) observeRuntimeReadConsumerPath?.(isDirty);
 
   const value = !isDirty ? node.payload : stabilizeDirtyConsumer(node, state);
 
   const consumer = currentConsumer;
   if (consumer !== null) {
-    profileRuntimeCounter("readConsumerTracked");
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.read.consumer.track");
 
-    resolveTrackedRead(node, consumer, consumer.tailIn?.version ?? trackingEpoch, true);
+    resolveTrackedRead(
+      node,
+      consumer,
+      consumer.tailIn?.version ?? trackingEpoch,
+      true,
+    );
   }
 
   devRecordReadConsumer(

@@ -30,7 +30,7 @@ import {
   push_iterator_once,
   push_iterator_once_skipping,
 } from "@runtime/kernel/stages/first";
-import { profileRuntimeCounter } from "@runtime/profiling";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
 import { compare } from "@runtime/protocol";
 
 /**
@@ -45,7 +45,8 @@ function advanceCore(
   node: ReactiveNode,
   skipOutEdge: ReactiveEdge | null = null,
 ): boolean {
-  profileRuntimeCounter("advanceCalls");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.advance.invoke");
 
   devAssertExecutableNode(node);
 
@@ -62,7 +63,8 @@ function advanceCore(
   let next: unknown;
 
   try {
-    profileRuntimeCounter("advanceComputeRuns");
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.advance.compute.run");
 
     next = compute();
   } catch (error) {
@@ -80,11 +82,13 @@ function advanceCore(
 
   const resolvedState = computingState & ~(Computing | DIRTY_STATE);
 
-  profileRuntimeCounter("advanceCleanupChecks");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.advance.cleanup.check");
 
   if (node.tailIn !== node.lastIn) {
     node.state = computingState & ~Computing;
-    profileRuntimeCounter("advanceCleanupRuns");
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.advance.cleanup.run");
     cleanupUnvisitedSources(node);
   }
 
@@ -95,7 +99,8 @@ function advanceCore(
   if (compare(prev, next)) {
     node.state = resolvedState;
 
-    profileRuntimeCounter("advanceUnchanged");
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.advance.value.unchanged");
 
     devRecordRecompute(node, false, next, prev, defaultContext);
     return false;
@@ -104,19 +109,26 @@ function advanceCore(
   node.payload = next;
   node.state = resolvedState;
 
-  profileRuntimeCounter("advanceChanged");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.advance.value.changed");
 
   devRecordRecompute(node, true, next, prev, defaultContext);
 
   const firstOut = node.firstOut;
 
   if (firstOut !== null) {
-    profileRuntimeCounter("advancePropagateCalls");
+    if (__PROFILE__)
+      observeRuntimeProjection?.(
+        "projection.semantic.advance.propagate.invoke",
+      );
 
     devAssertRefreshEdge(node, firstOut);
     if (skipOutEdge !== null) {
       if (firstOut !== skipOutEdge || skipOutEdge.nextOut !== null) {
-    profileRuntimeCounter("advancePropagateSkippedEdge");
+        if (__PROFILE__)
+          observeRuntimeProjection?.(
+            "projection.semantic.advance.propagate.skip-edge",
+          );
         push_iterator_once_skipping(firstOut, skipOutEdge);
       }
     } else {

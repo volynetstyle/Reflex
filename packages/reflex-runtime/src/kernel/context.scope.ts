@@ -1,5 +1,5 @@
 import { recordDebugEvent } from "../../debug/debug.runtime";
-import { profileRuntimeCounter } from "@runtime/profiling";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 import { emitRuntimeIdleWithBatching } from "./batch";
 import { defaultContext, runtimeIdleHook } from "./config";
@@ -18,14 +18,24 @@ const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
 export const enterPropagationScope = !__PROFILE__
   ? enterPropagationScopeRegister
   : function (): void {
-      profileRuntimeCounter("propagationScopesEntered");
-      profileRuntimeCounter("contextPropagationEnter");
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.context.propagation.scope-enter",
+        );
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.context.propagation.enter",
+        );
       enterPropagationScopeRegister();
     };
 
 export function leavePropagationScope(): void {
-  profileRuntimeCounter("propagationScopesLeft");
-  profileRuntimeCounter("contextPropagationLeave");
+  if (__PROFILE__)
+    observeRuntimeProjection?.(
+      "projection.semantic.context.propagation.scope-leave",
+    );
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.context.propagation.leave");
 
   if (!leavePropagationScopeRegister()) {
     if (
@@ -54,13 +64,18 @@ export function leavePropagationScope(): void {
 
 /** Leaves an aborted propagation scope without publishing a settled event. */
 export function abortPropagationScope(): void {
-  profileRuntimeCounter("propagationScopesLeft");
-  profileRuntimeCounter("contextPropagationLeave");
+  if (__PROFILE__)
+    observeRuntimeProjection?.(
+      "projection.semantic.context.propagation.scope-leave",
+    );
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.context.propagation.leave");
   setPropagationScopeDepth(0);
 }
 
 export function emitSettledIfIdle(): void {
-  profileRuntimeCounter("contextSettledChecks");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.context.settled.check");
 
   if (
     !IS_DEV &&

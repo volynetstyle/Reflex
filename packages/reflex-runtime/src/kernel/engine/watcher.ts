@@ -32,13 +32,12 @@ import {
   type WatcherNode,
 } from "@runtime/kernel/shape";
 import { pull_iterator } from "@runtime/kernel/stages/second/pull_iterator";
-import { profileRuntimeCounter } from "@runtime/profiling";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 import { executeKnownNodeComputation } from "./watcher.execution";
 
 const FORCE_STABILIZATION_STATE = Changed | Visited;
-const WATCHER_TRANSIENT_STATE =
-  DIRTY_STATE | Visited | Computing | Scheduled;
+const WATCHER_TRANSIENT_STATE = DIRTY_STATE | Visited | Computing | Scheduled;
 
 function recoverWatcherAfterError(node: WatcherNode): void {
   // A failed lifecycle callback must not leave an unscheduled dirty watcher:
@@ -55,7 +54,6 @@ function recoverWatcherAfterError(node: WatcherNode): void {
 function recoverWatcherAfterValidationError(node: WatcherNode): void {
   node.state = (node.state & ~WATCHER_TRANSIENT_STATE) | Unknown;
 }
-
 /**
  * A watcher callback can fail because a nested reactive read failed. That is
  * semantically an incomplete validation, even when a warmed cache promoted
@@ -89,7 +87,8 @@ export function releaseWatcherSchedule(node: WatcherNode): void {
 }
 
 function runCleanup(cleanup: WatcherCleanup): void {
-  profileRuntimeCounter("watcherCleanups");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.watcher.cleanup");
 
   const prevActive = currentConsumer;
 
@@ -128,12 +127,14 @@ export const runWatcherWithoutSettledCheckpoint = !__DEV__
     };
 
 function runWatcherCore(node: WatcherNode): void {
-  profileRuntimeCounter("watcherRunCalls");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.watcher.run");
 
   const state = node.state;
 
   if ((state & DIRTY_STATE) === 0) {
-    profileRuntimeCounter("watcherCleanSkips");
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.watcher.clean.skip");
 
     devRecordWatcherSkip(node, "clean", defaultContext);
     return;
@@ -152,7 +153,8 @@ function runWatcherCore(node: WatcherNode): void {
     }
 
     if (!changed) {
-      profileRuntimeCounter("watcherStableSkips");
+      if (__PROFILE__)
+        observeRuntimeProjection?.("projection.semantic.watcher.stable.skip");
 
       node.state &= ~DIRTY_STATE;
       devRecordWatcherSkip(node, "stable", defaultContext);
@@ -161,15 +163,17 @@ function runWatcherCore(node: WatcherNode): void {
   }
 
   if (node.compute === undefined) {
-    profileRuntimeCounter("watcherDisposedSkips");
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.watcher.disposed.skip");
 
     node.state &= ~DIRTY_STATE;
-      devRecordWatcherSkip(node, "stable", defaultContext);
+    devRecordWatcherSkip(node, "stable", defaultContext);
     return;
   }
 
   const compute = node.compute;
-  profileRuntimeCounter("watcherExecutions");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.watcher.execute");
 
   const payload = node.payload;
   const prevCleanup = typeof payload === "function" ? payload : null;
@@ -231,7 +235,8 @@ function runWatcherCore(node: WatcherNode): void {
 export function disposeWatcher(node: WatcherNode): void {
   devAssertNoRuntimeHookTopologyMutation();
 
-  profileRuntimeCounter("watcherDisposals");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.watcher.dispose");
 
   const payload = node.payload;
   const cleanup = typeof payload === "function" ? payload : null;

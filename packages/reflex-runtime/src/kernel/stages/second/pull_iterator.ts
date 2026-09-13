@@ -16,12 +16,12 @@ import {
   readRuntimeWalkerStackStats,
   STACK_TRIM_MIN_CAPACITY,
 } from "@runtime/kernel/stages/stackStats";
+import { isRuntimeProfilingEnabled } from "@runtime/profiling";
 import {
-  isRuntimeProfilingEnabled,
-  profileRuntimeCounter,
-  profileRuntimeCounterBy,
-  profileRuntimePullPath,
-} from "@runtime/profiling";
+  observeRuntimeProjection,
+  observeRuntimeProjectionAmount,
+  observeRuntimePullPath,
+} from "@runtime/kernel/projection";
 
 import { advance } from "./advance";
 
@@ -55,13 +55,14 @@ function profilePullNode(
   stackDepth: number,
 ): void {
   if (__PROFILE__ && isRuntimeProfilingEnabled()) {
-    profileRuntimePullPath(
-      branch,
-      depth,
-      countIn(node.firstIn),
-      countOut(node.firstOut),
-      stackDepth,
-    );
+    if (__PROFILE__)
+      observeRuntimePullPath?.(
+        branch,
+        depth,
+        countIn(node.firstIn),
+        countOut(node.firstOut),
+        stackDepth,
+      );
   }
 }
 
@@ -76,7 +77,8 @@ function profilePullNode(
  * - resumes siblings only while the current branch remains stable.
  */
 function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
-  profileRuntimeCounter("pullCalls");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.pull.invoke");
 
   const base = high;
   let top = base;
@@ -93,7 +95,8 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
           profilePullNode("node.changed", node, top - base, top - base);
         changed = true;
       } else {
-        profileRuntimeCounter("pullEdgesVisited");
+        if (__PROFILE__)
+          observeRuntimeProjection?.("projection.semantic.pull.edge.visit");
 
         const dep = edge.from;
         const depState = dep.state;
@@ -104,8 +107,14 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
         if ((depState & Changed) !== 0) {
           if (__PROFILE__) {
-            profileRuntimeCounter("pullChangedDeps");
-            profileRuntimeCounter("pullAdvanceCalls");
+            if (__PROFILE__)
+              observeRuntimeProjection?.(
+                "projection.semantic.pull.dependency.changed",
+              );
+            if (__PROFILE__)
+              observeRuntimeProjection?.(
+                "projection.semantic.pull.advance.invoke",
+              );
             profilePullNode(
               "dep.changed.advance",
               dep,
@@ -126,13 +135,17 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
           changed = advance(dep, edge);
         } else if ((depState & Unknown) !== 0) {
-          profileRuntimeCounter("pullInvalidDeps");
+          if (__PROFILE__)
+            observeRuntimeProjection?.(
+              "projection.semantic.pull.dependency.invalid",
+            );
 
           const firstIn = dep.firstIn;
 
           if (firstIn !== null) {
             if (__PROFILE__) {
-              profileRuntimeCounter("pullDescents");
+              if (__PROFILE__)
+                observeRuntimeProjection?.("projection.semantic.pull.descend");
               profilePullNode(
                 "dep.unknown.descend",
                 dep,
@@ -156,7 +169,10 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
           high = top;
 
           if (__PROFILE__) {
-            profileRuntimeCounter("pullAdvanceCalls");
+            if (__PROFILE__)
+              observeRuntimeProjection?.(
+                "projection.semantic.pull.advance.invoke",
+              );
             profilePullNode(
               "dep.unknown.leaf.advance",
               dep,
@@ -172,7 +188,10 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
           changed = advance(dep, edge);
         } else {
           if (__PROFILE__) {
-            profileRuntimeCounter("pullCleanDeps");
+            if (__PROFILE__)
+              observeRuntimeProjection?.(
+                "projection.semantic.pull.dependency.clean",
+              );
             profilePullNode("dep.clean", dep, top - base + 1, top - base);
           }
 
@@ -185,7 +204,10 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
             sibling = edge.nextIn
           ) {
             if (__PROFILE__) {
-              profileRuntimeCounter("pullStableSiblingScans");
+              if (__PROFILE__)
+                observeRuntimeProjection?.(
+                  "projection.semantic.pull.sibling.stable-scan",
+                );
               profilePullNode(
                 "sibling.stable",
                 sibling.from,
@@ -198,12 +220,16 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
             edge = sibling;
             if ((cleanState & (Changed | Unknown)) !== 0) continue scan;
 
-            profileRuntimeCounter("pullEdgesVisited");
+            if (__PROFILE__)
+              observeRuntimeProjection?.("projection.semantic.pull.edge.visit");
             if (__DEV__ && (cleanState & Computing) !== 0) {
               throw new Error("Cycle detected while refreshing reactive graph");
             }
             if (__PROFILE__) {
-              profileRuntimeCounter("pullCleanDeps");
+              if (__PROFILE__)
+                observeRuntimeProjection?.(
+                  "projection.semantic.pull.dependency.clean",
+                );
               profilePullNode(
                 "dep.clean",
                 cleanDep,
@@ -225,7 +251,10 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
         if (sibling !== null) {
           if (__PROFILE__) {
-            profileRuntimeCounter("pullStableSiblingScans");
+            if (__PROFILE__)
+              observeRuntimeProjection?.(
+                "projection.semantic.pull.sibling.stable-scan",
+              );
             profilePullNode(
               "sibling.stable",
               sibling.from,
@@ -247,8 +276,14 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
           const parentEdge = stack[top]!;
           stack[top] = null!;
           if (__PROFILE__) {
-            profileRuntimeCounter("pullChangedBubbles");
-            profileRuntimeCounter("pullAdvanceCalls");
+            if (__PROFILE__)
+              observeRuntimeProjection?.(
+                "projection.semantic.pull.changed.bubble",
+              );
+            if (__PROFILE__)
+              observeRuntimeProjection?.(
+                "projection.semantic.pull.advance.invoke",
+              );
             profilePullNode(
               "bubble.changed.advance",
               node,
@@ -264,7 +299,10 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
             if (sibling !== null) {
               if (__PROFILE__) {
-                profileRuntimeCounter("pullStableSiblingScans");
+                if (__PROFILE__)
+                  observeRuntimeProjection?.(
+                    "projection.semantic.pull.sibling.stable-scan",
+                  );
                 profilePullNode(
                   "sibling.after-bubble",
                   sibling.from,
@@ -307,7 +345,10 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
         if (sibling !== null) {
           if (__PROFILE__) {
-            profileRuntimeCounter("pullStableSiblingScans");
+            if (__PROFILE__)
+              observeRuntimeProjection?.(
+                "projection.semantic.pull.sibling.stable-scan",
+              );
             profilePullNode(
               "sibling.after-stable-pop",
               sibling.from,
@@ -333,11 +374,13 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
     if (base === 0 && stack.length > STACK_TRIM_MIN_CAPACITY) {
       if (__PROFILE__) {
-        profileRuntimeCounter("pullStackTrimEvents");
-        profileRuntimeCounterBy(
-          "pullStackTrimExcess",
-          stack.length - STACK_TRIM_MIN_CAPACITY,
-        );
+        if (__PROFILE__)
+          observeRuntimeProjection?.("projection.semantic.pull.stack.trim");
+        if (__PROFILE__)
+          observeRuntimeProjectionAmount?.(
+            "projection.semantic.pull.stack.trim.excess",
+            stack.length - STACK_TRIM_MIN_CAPACITY,
+          );
       }
 
       stack.length = STACK_TRIM_MIN_CAPACITY;

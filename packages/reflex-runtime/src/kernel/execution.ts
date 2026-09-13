@@ -64,7 +64,8 @@ export const RuntimeExecutionError = {
   },
   RecomputeDepthExceeded: {
     code: "REFLEX_RECOMPUTE_DEPTH_EXCEEDED",
-    message: "Reactive computation depth exceeded the development safety limit.",
+    message:
+      "Reactive computation depth exceeded the development safety limit.",
   },
 } as const;
 

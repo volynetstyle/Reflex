@@ -7,7 +7,7 @@ import {
 import { devRecordReadProducer } from "@runtime/kernel/dev";
 import { devAssertNoRuntimeHookReactiveRead } from "@runtime/kernel/execution";
 import { resolveTrackedRead } from "@runtime/kernel/shape/tracking";
-import { profileRuntimeCounter } from "@runtime/profiling";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 /**
  * Read the value of a producer (source) node.
@@ -35,15 +35,22 @@ const computed = createConsumer(() => {
 export function readProducer<T>(node: ProducerNode<T>): T {
   devAssertNoRuntimeHookReactiveRead();
 
-  profileRuntimeCounter("readProducerCalls");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.read.producer.invoke");
 
   const value = node.payload;
   const consumer = currentConsumer;
 
   // Register this read as a dependency if there's an active computation
   if (consumer !== null) {
-    profileRuntimeCounter("readProducerTracked");
-    resolveTrackedRead(node, consumer, consumer.tailIn?.version ?? trackingEpoch, true);
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.read.producer.track");
+    resolveTrackedRead(
+      node,
+      consumer,
+      consumer.tailIn?.version ?? trackingEpoch,
+      true,
+    );
   }
 
   devRecordReadProducer(node, value, defaultContext);

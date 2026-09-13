@@ -1,4 +1,4 @@
-import { profileRuntimeCounter } from "@runtime/profiling";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 import { DEFAULT_READ_TRACKING_STRATEGY } from "./config";
 import {
@@ -29,11 +29,13 @@ export function runWithRuntimeContext<T>(
   context: RuntimeContext,
   fn: () => T,
 ): T {
-  profileRuntimeCounter("contextRunCalls");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.context.run");
   const previous = getActiveRuntimeContext();
   if (previous === context) return fn();
 
-  profileRuntimeCounter("contextSwitches");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.context.switch");
   switchRuntimeContext(context);
   try {
     return fn();

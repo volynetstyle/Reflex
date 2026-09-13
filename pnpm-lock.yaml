@@ -88,9 +88,21 @@ importers:
         specifier: 3.2.1
         version: 3.2.1
     devDependencies:
+      '@rollup/plugin-node-resolve':
+        specifier: ^16.0.3
+        version: 16.0.3(rollup@4.60.3)
+      '@rollup/plugin-replace':
+        specifier: ^6.0.3
+        version: 6.0.3(rollup@4.60.3)
+      '@rollup/plugin-swc':
+        specifier: ^0.4.0
+        version: 0.4.0(@swc/core@1.15.33)(rollup@4.60.3)
       '@types/node':
         specifier: ^26.1.2
         version: 26.1.2
+      rollup:
+        specifier: ^4.54.0
+        version: 4.60.3
 
   packages/reflex:
     dependencies:
@@ -153,6 +165,12 @@ importers:
       '@types/node':
         specifier: ^26.1.2
         version: 26.1.2
+      '@volynets/algorithm-projection':
+        specifier: workspace:*
+        version: link:../../third-party/algorithm-projection
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
 
   packages/reflex-runtime-mcp:
     dependencies:
@@ -202,6 +220,25 @@ importers:
       vite:
         specifier: ^6.0.0
         version: 6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4)
+
+  third-party/algorithm-projection:
+    dependencies:
+      eslint:
+        specifier: ^9.0.0
+        version: 9.39.4(jiti@2.7.0)
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.0.0
+        version: 8.59.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+    devDependencies:
+      '@types/node':
+        specifier: ^26.1.2
+        version: 26.1.2
+      vitest:
+        specifier: ^4.0.0
+        version: 4.1.5(@types/node@26.1.2)(@vitest/browser-playwright@4.1.5)(@vitest/coverage-v8@4.1.5)(jsdom@29.1.1)(vite@6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4))
 
 packages:
 

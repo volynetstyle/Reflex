@@ -32,7 +32,11 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    exclude: ["**/node_modules/**", "test/dev/**/*.dev.test.ts"],
+    exclude: [
+      "**/node_modules/**",
+      "test/dev/**/*.dev.test.ts",
+      "test/projection/**/*.test.ts",
+    ],
     isolate: false,
     pool: "forks",
     coverage: {
