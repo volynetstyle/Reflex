@@ -146,19 +146,22 @@ describe("Reactive system - unstable resource protocol", () => {
 
   it("tracks a reactive source and ignores stale async resolutions", async () => {
     const rt = createRuntime();
-    const [id, setId] = signal(1);
+    const id = signal(1);
     const pending = new Map<number, ReturnType<typeof deferred<string>>>();
 
-    const user = resource(() => id(), (nextId) => {
-      const task = deferred<string>();
-      pending.set(nextId, task);
-      return task.promise;
-    });
+    const user = resource(
+      () => id(),
+      (nextId) => {
+        const task = deferred<string>();
+        pending.set(nextId, task);
+        return task.promise;
+      },
+    );
 
     expect(user.status()).toBe("pending");
     expect(user.token()).toBe(1);
 
-    setId(2);
+    id.set(2);
     rt.flush();
 
     expect(user.status()).toBe("pending");

@@ -17,8 +17,10 @@ import {
   RuntimePhase,
 } from "@runtime/kernel/execution";
 import {
+  Changed,
   Computing,
   DIRTY_STATE,
+  Unknown,
   Visited,
   type ReactiveEdge,
   type ReactiveNode,
@@ -28,7 +30,7 @@ import {
   push_iterator_once,
   push_iterator_once_skipping,
 } from "@runtime/kernel/stages/first";
-import { profileRuntimeCounter } from "@runtime/profiling";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
 import { compare } from "@runtime/protocol";
 
 /**
@@ -43,9 +45,10 @@ function advanceCore(
   node: ReactiveNode,
   skipOutEdge: ReactiveEdge | null = null,
 ): boolean {
-  if (__PROFILE__) profileRuntimeCounter("advanceCalls");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.advance.invoke");
 
-  if (__DEV__) devAssertExecutableNode(node);
+  devAssertExecutableNode(node);
 
   const compute = node.compute as NonNullable<typeof node.compute>;
   node.tailIn = null;
@@ -55,19 +58,22 @@ function advanceCore(
 
   const prevActive = enterConsumerTracking(node);
 
-  if (__DEV__) devRecordComputeStart(node, defaultContext);
+  devRecordComputeStart(node, defaultContext);
 
   let next: unknown;
 
   try {
-    if (__PROFILE__) profileRuntimeCounter("advanceComputeRuns");
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.advance.compute.run");
 
     next = compute();
   } catch (error) {
     restoreConsumerTracking(prevActive);
-    node.state = computingState & ~Computing;
+    // A failed pull-bubble computation may have entered as Unknown after its
+    // dependencies already stabilized. Retrying must execute the callback.
+    node.state = (computingState & ~(Computing | Unknown)) | Changed;
 
-    if (__DEV__) devRecordComputeError(node, error, defaultContext);
+    devRecordComputeError(node, error, defaultContext);
 
     throw error;
   }
@@ -76,43 +82,53 @@ function advanceCore(
 
   const resolvedState = computingState & ~(Computing | DIRTY_STATE);
 
-  if (__PROFILE__) profileRuntimeCounter("advanceCleanupChecks");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.advance.cleanup.check");
 
   if (node.tailIn !== node.lastIn) {
     node.state = computingState & ~Computing;
-    if (__PROFILE__) profileRuntimeCounter("advanceCleanupRuns");
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.advance.cleanup.run");
     cleanupUnvisitedSources(node);
   }
 
-  if (__DEV__) devRecordComputeFinish(node, next, defaultContext);
+  devRecordComputeFinish(node, next, defaultContext);
 
   const prev = node.payload;
 
   if (compare(prev, next)) {
     node.state = resolvedState;
 
-    if (__PROFILE__) profileRuntimeCounter("advanceUnchanged");
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.advance.value.unchanged");
 
-    if (__DEV__) devRecordRecompute(node, false, next, prev, defaultContext);
+    devRecordRecompute(node, false, next, prev, defaultContext);
     return false;
   }
 
   node.payload = next;
   node.state = resolvedState;
 
-  if (__PROFILE__) profileRuntimeCounter("advanceChanged");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.advance.value.changed");
 
-  if (__DEV__) devRecordRecompute(node, true, next, prev, defaultContext);
+  devRecordRecompute(node, true, next, prev, defaultContext);
 
   const firstOut = node.firstOut;
 
   if (firstOut !== null) {
-    if (__PROFILE__) profileRuntimeCounter("advancePropagateCalls");
+    if (__PROFILE__)
+      observeRuntimeProjection?.(
+        "projection.semantic.advance.propagate.invoke",
+      );
 
-    if (__DEV__) devAssertRefreshEdge(node, firstOut);
+    devAssertRefreshEdge(node, firstOut);
     if (skipOutEdge !== null) {
       if (firstOut !== skipOutEdge || skipOutEdge.nextOut !== null) {
-        if (__PROFILE__) profileRuntimeCounter("advancePropagateSkippedEdge");
+        if (__PROFILE__)
+          observeRuntimeProjection?.(
+            "projection.semantic.advance.propagate.skip-edge",
+          );
         push_iterator_once_skipping(firstOut, skipOutEdge);
       }
     } else {

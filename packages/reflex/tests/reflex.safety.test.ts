@@ -5,7 +5,7 @@ import { computed, createRuntime, effect, signal } from "./reflex.test_utils";
 describe("Reactive system - safety and robustness", () => {
   it("restores the active consumer after a thrown compute", () => {
     const rt = createRuntime();
-    const [source] = signal(1);
+    const source = signal(1);
     const boom = computed(() => {
       source();
       throw new Error("boom");
@@ -20,7 +20,7 @@ describe("Reactive system - safety and robustness", () => {
 
   it("keeps other computeds usable after one compute throws", () => {
     createRuntime();
-    const [source, setSource] = signal(1);
+    const source = signal(1);
     const boom = computed(() => {
       if (source() === 2) {
         throw new Error("unstable");
@@ -33,15 +33,15 @@ describe("Reactive system - safety and robustness", () => {
     expect(boom()).toBe(1);
     expect(stable()).toBe(10);
 
-    setSource(2);
+    source.set(2);
     expect(() => boom()).toThrow("unstable");
     expect(stable()).toBe(20);
   });
 
   it("keeps unaffected effects schedulable after another effect throws during flush", () => {
     const rt = createRuntime();
-    const [badSource, setBadSource] = signal(1);
-    const [goodSource, setGoodSource] = signal(1);
+    const badSource = signal(1);
+    const goodSource = signal(1);
     const seen: number[] = [];
 
     effect(() => {
@@ -56,13 +56,13 @@ describe("Reactive system - safety and robustness", () => {
 
     expect(seen).toEqual([1]);
 
-    setBadSource(2);
-    setGoodSource(2);
+    badSource.set(2);
+    goodSource.set(2);
 
     expect(() => rt.flush()).toThrow("effect boom");
     expect(seen).toEqual([1, 2]);
 
-    setGoodSource(3);
+    goodSource.set(3);
     rt.flush();
 
     expect(seen).toEqual([1, 2, 3]);
@@ -70,7 +70,7 @@ describe("Reactive system - safety and robustness", () => {
 
   it("rolls back a watcher whose initial effect run throws", () => {
     const rt = createRuntime();
-    const [source, setSource] = signal(0);
+    const source = signal(0);
     let runs = 0;
 
     expect(() =>
@@ -81,14 +81,14 @@ describe("Reactive system - safety and robustness", () => {
       }),
     ).toThrow("initial effect failed");
 
-    setSource(1);
+    source.set(1);
     rt.flush();
     expect(runs).toBe(1);
   });
 
   it("reschedules an effect after its cleanup throws", () => {
     const rt = createRuntime();
-    const [source, setSource] = signal(0);
+    const source = signal(0);
     let runs = 0;
     let throwCleanup = true;
 
@@ -100,13 +100,12 @@ describe("Reactive system - safety and robustness", () => {
       };
     });
 
-    setSource(1);
+    source.set(1);
     expect(() => rt.flush()).toThrow("cleanup failed");
 
     throwCleanup = false;
-    setSource(2);
+    source.set(2);
     rt.flush();
     expect(runs).toBe(2);
   });
-
 });

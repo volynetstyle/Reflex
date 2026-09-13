@@ -10,15 +10,11 @@ import {
 } from "@volynets/reflex-runtime/internal";
 import type { DOMRenderEffectScheduler } from "./render-effect-scheduler";
 import {
-  createEffectScheduler,
+  createRuntimeSchedulerBinding,
   resolveEffectSchedulerMode,
   type EffectStrategy,
 } from "@volynets/reflex-scheduler";
-import {
-  createDefaultPolicyConfig,
-  resolveEffectStrategy,
-  type PolicyConfig,
-} from "./policies";
+import { resolveEffectStrategy, type PolicyConfig } from "./policies";
 
 export interface RuntimeInstance {
   readonly execution: RuntimeContext;
@@ -38,17 +34,34 @@ export function createRendererRuntime(
   renderEffectScheduler?: DOMRenderEffectScheduler,
 ): RuntimeInstance {
   const { policy, hooks } = options;
-  const defaults = createDefaultPolicyConfig();
   const strategy =
     options.effectStrategy ??
-    resolveEffectStrategy(
-      policy?.effectPolicy ?? defaults.effectPolicy,
-      policy?.priorityLevels ?? defaults.priorityLevels,
-    );
-  const scheduler = createEffectScheduler(resolveEffectSchedulerMode(strategy));
+    resolveEffectStrategy(policy?.effectPolicy, policy?.priorityLevels);
   const execution = createRuntimeContext();
+  const scheduler = createRuntimeSchedulerBinding(
+    resolveEffectSchedulerMode(strategy),
+    execution,
+  );
+  const externalNodeInvalidated = hooks?.onNodeInvalidated;
+  const onNodeInvalidated =
+    externalNodeInvalidated === undefined
+      ? scheduler.onNodeInvalidated
+      : (node: Parameters<typeof scheduler.onNodeInvalidated>[0]): void => {
+          scheduler.onNodeInvalidated(node);
+          externalNodeInvalidated(node);
+        };
   let runtimeIdle = false;
   let microtaskPending = false;
+  const externalRuntimeIdle = hooks?.onRuntimeIdle;
+  const onRuntimeIdle =
+    externalRuntimeIdle === undefined
+      ? (): void => {
+          runtimeIdle = true;
+        }
+      : (): void => {
+          runtimeIdle = true;
+          externalRuntimeIdle();
+        };
 
   const run = <T>(fn: () => T): T => {
     if (getActiveRuntimeContext() === execution) return fn();
@@ -61,20 +74,21 @@ export function createRendererRuntime(
     renderEffectScheduler?.flush();
   };
 
-  const flush = (): void => {
-    run(() => {
-      scheduler.flush();
-      flushRenderEffects();
-    });
+  const flushWithinRuntime = (): void => {
+    scheduler.flush();
+    flushRenderEffects();
+  };
+  const flush = (): void => run(flushWithinRuntime);
+
+  const flushScheduledMicrotask = (): void => {
+    microtaskPending = false;
+    flush();
   };
 
   const scheduleMicrotaskFlush = (): void => {
     if (microtaskPending) return;
     microtaskPending = true;
-    void Promise.resolve().then(() => {
-      microtaskPending = false;
-      flush();
-    });
+    void Promise.resolve().then(flushScheduledMicrotask);
   };
 
   const batch = <T>(fn: () => T): T =>
@@ -91,15 +105,11 @@ export function createRendererRuntime(
 
   configureRuntimeContext(execution, {
     hooks: {
-      onNodeInvalidated(node) {
-        scheduler.enqueue(node);
-        hooks?.onNodeInvalidated?.(node);
-      },
-      onRuntimeIdle() {
-        runtimeIdle = true;
-        scheduler.runtimeNotifySettled?.();
-        hooks?.onRuntimeIdle?.();
-      },
+      onNodeInvalidated,
+      onRuntimeIdle,
+    },
+    scheduler: {
+      onHostFlush: scheduler.onHostFlush,
     },
   });
 

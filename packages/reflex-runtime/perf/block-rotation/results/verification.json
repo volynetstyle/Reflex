@@ -1,0 +1,14 @@
+[
+  {
+    "variant": "move",
+    "primitiveCases": 36,
+    "failureCases": 1442,
+    "lifecycleCases": 5
+  },
+  {
+    "variant": "rotate",
+    "primitiveCases": 36,
+    "failureCases": 1442,
+    "lifecycleCases": 5
+  }
+]

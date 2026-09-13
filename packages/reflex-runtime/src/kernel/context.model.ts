@@ -5,6 +5,7 @@ import {
   type RuntimeConfiguration,
   type RuntimeConfigurationOptions,
   type RuntimeHooks,
+  type RuntimeSchedulerHooks,
   type NodeInvalidatedHook,
 } from "./config";
 import type { ReactiveNode } from "./shape";
@@ -13,6 +14,7 @@ const RUNTIME_CONTEXT_BRAND: unique symbol = Symbol("RuntimeContext");
 
 export interface RuntimeContextOptions extends RuntimeConfigurationOptions {
   hooks?: RuntimeHooks;
+  scheduler?: RuntimeSchedulerHooks;
 }
 
 export interface RuntimeContext extends RuntimeConfiguration {
@@ -42,7 +44,8 @@ export function createRuntimeContext(
     readTrackingStrategy: DEFAULT_READ_TRACKING_STRATEGY,
     nodeInvalidatedHook: undefined,
     runtimeIdleHook: undefined,
-  } satisfies  RuntimeContext;
+    hostFlushHook: undefined,
+  } satisfies RuntimeContext;
   applyRuntimeContextOptions(context, options);
   return context;
 }
@@ -76,6 +79,14 @@ export function applyRuntimeContextOptions(
       "onRuntimeIdle",
     );
   }
+
+  if ("scheduler" in options) {
+    const scheduler = options.scheduler ?? {};
+    context.hostFlushHook = ownFunction<RuntimeConfiguration["hostFlushHook"]>(
+      scheduler,
+      "onHostFlush",
+    );
+  }
 }
 
 function asFunction<T>(value: unknown): T | undefined {
@@ -83,10 +94,11 @@ function asFunction<T>(value: unknown): T | undefined {
 }
 
 function ownFunction<T>(
-  hooks: RuntimeHooks,
-  name: keyof RuntimeHooks,
+  hooks: RuntimeHooks | RuntimeSchedulerHooks,
+  name: keyof RuntimeHooks | keyof RuntimeSchedulerHooks,
 ): T | undefined {
+  const values = hooks as Record<PropertyKey, unknown>;
   return Object.prototype.hasOwnProperty.call(hooks, name)
-    ? asFunction<T>(hooks[name])
+    ? asFunction<T>(values[name])
     : undefined;
 }

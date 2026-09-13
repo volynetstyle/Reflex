@@ -1,5 +1,6 @@
 export * from "./variants";
 export * from "./scheduler.constants";
+export * from "./scheduler.binding";
 export * from "./scheduler.context";
 export * from "./scheduler.counters";
 export * from "./scheduler.core";

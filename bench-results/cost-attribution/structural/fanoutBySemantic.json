@@ -1,0 +1,2669 @@
+[
+  {
+    "key": "fanoutBySemantic.f16.s0",
+    "sweep": "fanoutBySemantic",
+    "axis": "semanticRatio",
+    "axisValue": 0,
+    "secondaryAxis": "fanout",
+    "secondaryValue": 16,
+    "iterations": 300,
+    "counters": {
+      "writeCalls": 300,
+      "writeSameValue": 0,
+      "writeChanged": 300,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 300,
+      "propagationScopesLeft": 300,
+      "pushCalls": 300,
+      "pushDirectEdgesVisited": 4800,
+      "pushTransitiveEdgesVisited": 4800,
+      "pushMarkedChanged": 4800,
+      "pushMarkedInvalid": 300,
+      "pushAlreadyDirtySkipped": 4500,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 4800,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 300,
+      "pullEdgesVisited": 4800,
+      "pullChangedDeps": 4800,
+      "pullInvalidDeps": 0,
+      "pullCleanDeps": 0,
+      "pullDescents": 0,
+      "pullAdvanceCalls": 4800,
+      "pullStableSiblingScans": 4500,
+      "pullChangedBubbles": 0,
+      "advanceCalls": 4800,
+      "advanceComputeRuns": 4800,
+      "advanceChanged": 0,
+      "advanceUnchanged": 4800,
+      "advanceCleanupChecks": 4800,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 0,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 4800,
+      "readProducerTracked": 4800,
+      "readConsumerCalls": 300,
+      "readConsumerLazyCalls": 300,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 0,
+      "readConsumerDirtyPath": 300,
+      "readConsumerTracked": 0,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 300,
+      "trackingResolveCalls": 4800,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 4800,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 300,
+      "contextPropagationLeave": 300,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 300,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 9600,
+        "maxDepth": 2,
+        "maxStack": 15,
+        "fanIn": {
+          "1": 4800,
+          "16-31": 4800
+        },
+        "fanOut": {
+          "0": 4800,
+          "1": 4800
+        },
+        "depth": {
+          "1": 4800,
+          "2-3": 4800
+        },
+        "branch": {
+          "direct.changed": 4800,
+          "transitive.unknown": 300,
+          "transitive.skip": 4500
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 4800,
+          "transitive.unknown|d:2-3|in:16-31|out:0": 300,
+          "transitive.skip|d:2-3|in:16-31|out:0": 4500
+        },
+        "hotPaths": [
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "transitive.skip|d:2-3|in:16-31|out:0",
+            "count": 4500
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:16-31|out:0",
+            "count": 300
+          }
+        ]
+      },
+      "pull": {
+        "total": 9300,
+        "maxDepth": 1,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 9300
+        },
+        "fanOut": {
+          "1": 9300
+        },
+        "depth": {
+          "1": 9300
+        },
+        "branch": {
+          "dep.changed.advance": 4800,
+          "sibling.stable": 4500
+        },
+        "shape": {
+          "dep.changed.advance|d:1|in:1|out:1": 4800,
+          "sibling.stable|d:1|in:1|out:1": 4500
+        },
+        "hotPaths": [
+          {
+            "path": "dep.changed.advance|d:1|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "sibling.stable|d:1|in:1|out:1",
+            "count": 4500
+          }
+        ]
+      }
+    },
+    "observedRatio": 0,
+    "ratioDeviation": 0
+  },
+  {
+    "key": "fanoutBySemantic.f16.s0.25",
+    "sweep": "fanoutBySemantic",
+    "axis": "semanticRatio",
+    "axisValue": 0.25,
+    "secondaryAxis": "fanout",
+    "secondaryValue": 16,
+    "iterations": 300,
+    "counters": {
+      "writeCalls": 300,
+      "writeSameValue": 0,
+      "writeChanged": 300,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 300,
+      "propagationScopesLeft": 300,
+      "pushCalls": 300,
+      "pushDirectEdgesVisited": 4800,
+      "pushTransitiveEdgesVisited": 4800,
+      "pushMarkedChanged": 4800,
+      "pushMarkedInvalid": 300,
+      "pushAlreadyDirtySkipped": 4500,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 4800,
+      "pushOnceCalls": 1125,
+      "pushOnceEdgesVisited": 1125,
+      "pushOnceMarkedChanged": 75,
+      "pushOnceAlreadyChangedSkipped": 1050,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 300,
+      "pullEdgesVisited": 3675,
+      "pullChangedDeps": 3675,
+      "pullInvalidDeps": 0,
+      "pullCleanDeps": 0,
+      "pullDescents": 0,
+      "pullAdvanceCalls": 3675,
+      "pullStableSiblingScans": 3375,
+      "pullChangedBubbles": 0,
+      "advanceCalls": 4875,
+      "advanceComputeRuns": 4875,
+      "advanceChanged": 1275,
+      "advanceUnchanged": 3600,
+      "advanceCleanupChecks": 4875,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 1200,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 4800,
+      "readProducerTracked": 4800,
+      "readConsumerCalls": 1500,
+      "readConsumerLazyCalls": 1500,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 75,
+      "readConsumerDirtyPath": 1425,
+      "readConsumerTracked": 1200,
+      "stabilizeForceAdvance": 1125,
+      "stabilizePullAdvance": 300,
+      "trackingResolveCalls": 6000,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 1125,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 4875,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 300,
+      "contextPropagationLeave": 300,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 300,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 9600,
+        "maxDepth": 2,
+        "maxStack": 15,
+        "fanIn": {
+          "1": 4800,
+          "16-31": 4800
+        },
+        "fanOut": {
+          "0": 4800,
+          "1": 4800
+        },
+        "depth": {
+          "1": 4800,
+          "2-3": 4800
+        },
+        "branch": {
+          "direct.changed": 4800,
+          "transitive.unknown": 300,
+          "transitive.skip": 4500
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 4800,
+          "transitive.unknown|d:2-3|in:16-31|out:0": 300,
+          "transitive.skip|d:2-3|in:16-31|out:0": 4500
+        },
+        "hotPaths": [
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "transitive.skip|d:2-3|in:16-31|out:0",
+            "count": 4500
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:16-31|out:0",
+            "count": 300
+          }
+        ]
+      },
+      "pull": {
+        "total": 7050,
+        "maxDepth": 1,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 7050
+        },
+        "fanOut": {
+          "1": 7050
+        },
+        "depth": {
+          "1": 7050
+        },
+        "branch": {
+          "dep.changed.advance": 3675,
+          "sibling.stable": 3375
+        },
+        "shape": {
+          "dep.changed.advance|d:1|in:1|out:1": 3675,
+          "sibling.stable|d:1|in:1|out:1": 3375
+        },
+        "hotPaths": [
+          {
+            "path": "dep.changed.advance|d:1|in:1|out:1",
+            "count": 3675
+          },
+          {
+            "path": "sibling.stable|d:1|in:1|out:1",
+            "count": 3375
+          }
+        ]
+      }
+    },
+    "observedRatio": 0.25,
+    "ratioDeviation": 0
+  },
+  {
+    "key": "fanoutBySemantic.f16.s0.5",
+    "sweep": "fanoutBySemantic",
+    "axis": "semanticRatio",
+    "axisValue": 0.5,
+    "secondaryAxis": "fanout",
+    "secondaryValue": 16,
+    "iterations": 300,
+    "counters": {
+      "writeCalls": 300,
+      "writeSameValue": 0,
+      "writeChanged": 300,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 300,
+      "propagationScopesLeft": 300,
+      "pushCalls": 300,
+      "pushDirectEdgesVisited": 4800,
+      "pushTransitiveEdgesVisited": 4800,
+      "pushMarkedChanged": 4800,
+      "pushMarkedInvalid": 300,
+      "pushAlreadyDirtySkipped": 4500,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 4800,
+      "pushOnceCalls": 2250,
+      "pushOnceEdgesVisited": 2250,
+      "pushOnceMarkedChanged": 150,
+      "pushOnceAlreadyChangedSkipped": 2100,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 300,
+      "pullEdgesVisited": 2550,
+      "pullChangedDeps": 2550,
+      "pullInvalidDeps": 0,
+      "pullCleanDeps": 0,
+      "pullDescents": 0,
+      "pullAdvanceCalls": 2550,
+      "pullStableSiblingScans": 2250,
+      "pullChangedBubbles": 0,
+      "advanceCalls": 4950,
+      "advanceComputeRuns": 4950,
+      "advanceChanged": 2550,
+      "advanceUnchanged": 2400,
+      "advanceCleanupChecks": 4950,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 2400,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 4800,
+      "readProducerTracked": 4800,
+      "readConsumerCalls": 2700,
+      "readConsumerLazyCalls": 2700,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 150,
+      "readConsumerDirtyPath": 2550,
+      "readConsumerTracked": 2400,
+      "stabilizeForceAdvance": 2250,
+      "stabilizePullAdvance": 300,
+      "trackingResolveCalls": 7200,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 2250,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 4950,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 300,
+      "contextPropagationLeave": 300,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 300,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 9600,
+        "maxDepth": 2,
+        "maxStack": 15,
+        "fanIn": {
+          "1": 4800,
+          "16-31": 4800
+        },
+        "fanOut": {
+          "0": 4800,
+          "1": 4800
+        },
+        "depth": {
+          "1": 4800,
+          "2-3": 4800
+        },
+        "branch": {
+          "direct.changed": 4800,
+          "transitive.unknown": 300,
+          "transitive.skip": 4500
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 4800,
+          "transitive.unknown|d:2-3|in:16-31|out:0": 300,
+          "transitive.skip|d:2-3|in:16-31|out:0": 4500
+        },
+        "hotPaths": [
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "transitive.skip|d:2-3|in:16-31|out:0",
+            "count": 4500
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:16-31|out:0",
+            "count": 300
+          }
+        ]
+      },
+      "pull": {
+        "total": 4800,
+        "maxDepth": 1,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 4800
+        },
+        "fanOut": {
+          "1": 4800
+        },
+        "depth": {
+          "1": 4800
+        },
+        "branch": {
+          "dep.changed.advance": 2550,
+          "sibling.stable": 2250
+        },
+        "shape": {
+          "dep.changed.advance|d:1|in:1|out:1": 2550,
+          "sibling.stable|d:1|in:1|out:1": 2250
+        },
+        "hotPaths": [
+          {
+            "path": "dep.changed.advance|d:1|in:1|out:1",
+            "count": 2550
+          },
+          {
+            "path": "sibling.stable|d:1|in:1|out:1",
+            "count": 2250
+          }
+        ]
+      }
+    },
+    "observedRatio": 0.5,
+    "ratioDeviation": 0
+  },
+  {
+    "key": "fanoutBySemantic.f16.s0.75",
+    "sweep": "fanoutBySemantic",
+    "axis": "semanticRatio",
+    "axisValue": 0.75,
+    "secondaryAxis": "fanout",
+    "secondaryValue": 16,
+    "iterations": 300,
+    "counters": {
+      "writeCalls": 300,
+      "writeSameValue": 0,
+      "writeChanged": 300,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 300,
+      "propagationScopesLeft": 300,
+      "pushCalls": 300,
+      "pushDirectEdgesVisited": 4800,
+      "pushTransitiveEdgesVisited": 4800,
+      "pushMarkedChanged": 4800,
+      "pushMarkedInvalid": 300,
+      "pushAlreadyDirtySkipped": 4500,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 4800,
+      "pushOnceCalls": 3375,
+      "pushOnceEdgesVisited": 3375,
+      "pushOnceMarkedChanged": 225,
+      "pushOnceAlreadyChangedSkipped": 3150,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 300,
+      "pullEdgesVisited": 1425,
+      "pullChangedDeps": 1425,
+      "pullInvalidDeps": 0,
+      "pullCleanDeps": 0,
+      "pullDescents": 0,
+      "pullAdvanceCalls": 1425,
+      "pullStableSiblingScans": 1125,
+      "pullChangedBubbles": 0,
+      "advanceCalls": 5025,
+      "advanceComputeRuns": 5025,
+      "advanceChanged": 3825,
+      "advanceUnchanged": 1200,
+      "advanceCleanupChecks": 5025,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 3600,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 4800,
+      "readProducerTracked": 4800,
+      "readConsumerCalls": 3900,
+      "readConsumerLazyCalls": 3900,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 225,
+      "readConsumerDirtyPath": 3675,
+      "readConsumerTracked": 3600,
+      "stabilizeForceAdvance": 3375,
+      "stabilizePullAdvance": 300,
+      "trackingResolveCalls": 8400,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 3375,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 5025,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 300,
+      "contextPropagationLeave": 300,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 300,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 9600,
+        "maxDepth": 2,
+        "maxStack": 15,
+        "fanIn": {
+          "1": 4800,
+          "16-31": 4800
+        },
+        "fanOut": {
+          "0": 4800,
+          "1": 4800
+        },
+        "depth": {
+          "1": 4800,
+          "2-3": 4800
+        },
+        "branch": {
+          "direct.changed": 4800,
+          "transitive.unknown": 300,
+          "transitive.skip": 4500
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 4800,
+          "transitive.unknown|d:2-3|in:16-31|out:0": 300,
+          "transitive.skip|d:2-3|in:16-31|out:0": 4500
+        },
+        "hotPaths": [
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "transitive.skip|d:2-3|in:16-31|out:0",
+            "count": 4500
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:16-31|out:0",
+            "count": 300
+          }
+        ]
+      },
+      "pull": {
+        "total": 2550,
+        "maxDepth": 1,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 2550
+        },
+        "fanOut": {
+          "1": 2550
+        },
+        "depth": {
+          "1": 2550
+        },
+        "branch": {
+          "dep.changed.advance": 1425,
+          "sibling.stable": 1125
+        },
+        "shape": {
+          "dep.changed.advance|d:1|in:1|out:1": 1425,
+          "sibling.stable|d:1|in:1|out:1": 1125
+        },
+        "hotPaths": [
+          {
+            "path": "dep.changed.advance|d:1|in:1|out:1",
+            "count": 1425
+          },
+          {
+            "path": "sibling.stable|d:1|in:1|out:1",
+            "count": 1125
+          }
+        ]
+      }
+    },
+    "observedRatio": 0.75,
+    "ratioDeviation": 0
+  },
+  {
+    "key": "fanoutBySemantic.f16.s1",
+    "sweep": "fanoutBySemantic",
+    "axis": "semanticRatio",
+    "axisValue": 1,
+    "secondaryAxis": "fanout",
+    "secondaryValue": 16,
+    "iterations": 300,
+    "counters": {
+      "writeCalls": 300,
+      "writeSameValue": 0,
+      "writeChanged": 300,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 300,
+      "propagationScopesLeft": 300,
+      "pushCalls": 300,
+      "pushDirectEdgesVisited": 4800,
+      "pushTransitiveEdgesVisited": 4800,
+      "pushMarkedChanged": 4800,
+      "pushMarkedInvalid": 300,
+      "pushAlreadyDirtySkipped": 4500,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 4800,
+      "pushOnceCalls": 4500,
+      "pushOnceEdgesVisited": 4500,
+      "pushOnceMarkedChanged": 300,
+      "pushOnceAlreadyChangedSkipped": 4200,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 300,
+      "pullEdgesVisited": 300,
+      "pullChangedDeps": 300,
+      "pullInvalidDeps": 0,
+      "pullCleanDeps": 0,
+      "pullDescents": 0,
+      "pullAdvanceCalls": 300,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 0,
+      "advanceCalls": 5100,
+      "advanceComputeRuns": 5100,
+      "advanceChanged": 5100,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 5100,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 4800,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 4800,
+      "readProducerTracked": 4800,
+      "readConsumerCalls": 5100,
+      "readConsumerLazyCalls": 5100,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 300,
+      "readConsumerDirtyPath": 4800,
+      "readConsumerTracked": 4800,
+      "stabilizeForceAdvance": 4500,
+      "stabilizePullAdvance": 300,
+      "trackingResolveCalls": 9600,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 4500,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 5100,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 300,
+      "contextPropagationLeave": 300,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 300,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 9600,
+        "maxDepth": 2,
+        "maxStack": 15,
+        "fanIn": {
+          "1": 4800,
+          "16-31": 4800
+        },
+        "fanOut": {
+          "0": 4800,
+          "1": 4800
+        },
+        "depth": {
+          "1": 4800,
+          "2-3": 4800
+        },
+        "branch": {
+          "direct.changed": 4800,
+          "transitive.unknown": 300,
+          "transitive.skip": 4500
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 4800,
+          "transitive.unknown|d:2-3|in:16-31|out:0": 300,
+          "transitive.skip|d:2-3|in:16-31|out:0": 4500
+        },
+        "hotPaths": [
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 4800
+          },
+          {
+            "path": "transitive.skip|d:2-3|in:16-31|out:0",
+            "count": 4500
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:16-31|out:0",
+            "count": 300
+          }
+        ]
+      },
+      "pull": {
+        "total": 300,
+        "maxDepth": 1,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 300
+        },
+        "fanOut": {
+          "1": 300
+        },
+        "depth": {
+          "1": 300
+        },
+        "branch": {
+          "dep.changed.advance": 300
+        },
+        "shape": {
+          "dep.changed.advance|d:1|in:1|out:1": 300
+        },
+        "hotPaths": [
+          {
+            "path": "dep.changed.advance|d:1|in:1|out:1",
+            "count": 300
+          }
+        ]
+      }
+    },
+    "observedRatio": 1,
+    "ratioDeviation": 0
+  },
+  {
+    "key": "fanoutBySemantic.f192.s0",
+    "sweep": "fanoutBySemantic",
+    "axis": "semanticRatio",
+    "axisValue": 0,
+    "secondaryAxis": "fanout",
+    "secondaryValue": 192,
+    "iterations": 300,
+    "counters": {
+      "writeCalls": 300,
+      "writeSameValue": 0,
+      "writeChanged": 300,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 300,
+      "propagationScopesLeft": 300,
+      "pushCalls": 300,
+      "pushDirectEdgesVisited": 57600,
+      "pushTransitiveEdgesVisited": 57600,
+      "pushMarkedChanged": 57600,
+      "pushMarkedInvalid": 300,
+      "pushAlreadyDirtySkipped": 57300,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 57600,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 300,
+      "pullEdgesVisited": 57600,
+      "pullChangedDeps": 57600,
+      "pullInvalidDeps": 0,
+      "pullCleanDeps": 0,
+      "pullDescents": 0,
+      "pullAdvanceCalls": 57600,
+      "pullStableSiblingScans": 57300,
+      "pullChangedBubbles": 0,
+      "advanceCalls": 57600,
+      "advanceComputeRuns": 57600,
+      "advanceChanged": 0,
+      "advanceUnchanged": 57600,
+      "advanceCleanupChecks": 57600,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 0,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 57600,
+      "readProducerTracked": 57600,
+      "readConsumerCalls": 300,
+      "readConsumerLazyCalls": 300,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 0,
+      "readConsumerDirtyPath": 300,
+      "readConsumerTracked": 0,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 300,
+      "trackingResolveCalls": 57600,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 57600,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 300,
+      "contextPropagationLeave": 300,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 300,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 115200,
+        "maxDepth": 2,
+        "maxStack": 191,
+        "fanIn": {
+          "1": 57600,
+          "64+": 57600
+        },
+        "fanOut": {
+          "0": 57600,
+          "1": 57600
+        },
+        "depth": {
+          "1": 57600,
+          "2-3": 57600
+        },
+        "branch": {
+          "direct.changed": 57600,
+          "transitive.unknown": 300,
+          "transitive.skip": 57300
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 57600,
+          "transitive.unknown|d:2-3|in:64+|out:0": 300,
+          "transitive.skip|d:2-3|in:64+|out:0": 57300
+        },
+        "hotPaths": [
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 57600
+          },
+          {
+            "path": "transitive.skip|d:2-3|in:64+|out:0",
+            "count": 57300
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:64+|out:0",
+            "count": 300
+          }
+        ]
+      },
+      "pull": {
+        "total": 114900,
+        "maxDepth": 1,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 114900
+        },
+        "fanOut": {
+          "1": 114900
+        },
+        "depth": {
+          "1": 114900
+        },
+        "branch": {
+          "dep.changed.advance": 57600,
+          "sibling.stable": 57300
+        },
+        "shape": {
+          "dep.changed.advance|d:1|in:1|out:1": 57600,
+          "sibling.stable|d:1|in:1|out:1": 57300
+        },
+        "hotPaths": [
+          {
+            "path": "dep.changed.advance|d:1|in:1|out:1",
+            "count": 57600
+          },
+          {
+            "path": "sibling.stable|d:1|in:1|out:1",
+            "count": 57300
+          }
+        ]
+      }
+    },
+    "observedRatio": 0,
+    "ratioDeviation": 0
+  },
+  {
+    "key": "fanoutBySemantic.f192.s0.25",
+    "sweep": "fanoutBySemantic",
+    "axis": "semanticRatio",
+    "axisValue": 0.25,
+    "secondaryAxis": "fanout",
+    "secondaryValue": 192,
+    "iterations": 300,
+    "counters": {
+      "writeCalls": 300,
+      "writeSameValue": 0,
+      "writeChanged": 300,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 300,
+      "propagationScopesLeft": 300,
+      "pushCalls": 300,
+      "pushDirectEdgesVisited": 57600,
+      "pushTransitiveEdgesVisited": 57600,
+      "pushMarkedChanged": 57600,
+      "pushMarkedInvalid": 300,
+      "pushAlreadyDirtySkipped": 57300,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 57600,
+      "pushOnceCalls": 14325,
+      "pushOnceEdgesVisited": 14325,
+      "pushOnceMarkedChanged": 75,
+      "pushOnceAlreadyChangedSkipped": 14250,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 300,
+      "pullEdgesVisited": 43275,
+      "pullChangedDeps": 43275,
+      "pullInvalidDeps": 0,
+      "pullCleanDeps": 0,
+      "pullDescents": 0,
+      "pullAdvanceCalls": 43275,
+      "pullStableSiblingScans": 42975,
+      "pullChangedBubbles": 0,
+      "advanceCalls": 57675,
+      "advanceComputeRuns": 57675,
+      "advanceChanged": 14475,
+      "advanceUnchanged": 43200,
+      "advanceCleanupChecks": 57675,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 14400,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 57600,
+      "readProducerTracked": 57600,
+      "readConsumerCalls": 14700,
+      "readConsumerLazyCalls": 14700,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 75,
+      "readConsumerDirtyPath": 14625,
+      "readConsumerTracked": 14400,
+      "stabilizeForceAdvance": 14325,
+      "stabilizePullAdvance": 300,
+      "trackingResolveCalls": 72000,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 14325,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 57675,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 300,
+      "contextPropagationLeave": 300,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 300,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 115200,
+        "maxDepth": 2,
+        "maxStack": 191,
+        "fanIn": {
+          "1": 57600,
+          "64+": 57600
+        },
+        "fanOut": {
+          "0": 57600,
+          "1": 57600
+        },
+        "depth": {
+          "1": 57600,
+          "2-3": 57600
+        },
+        "branch": {
+          "direct.changed": 57600,
+          "transitive.unknown": 300,
+          "transitive.skip": 57300
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 57600,
+          "transitive.unknown|d:2-3|in:64+|out:0": 300,
+          "transitive.skip|d:2-3|in:64+|out:0": 57300
+        },
+        "hotPaths": [
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 57600
+          },
+          {
+            "path": "transitive.skip|d:2-3|in:64+|out:0",
+            "count": 57300
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:64+|out:0",
+            "count": 300
+          }
+        ]
+      },
+      "pull": {
+        "total": 86250,
+        "maxDepth": 1,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 86250
+        },
+        "fanOut": {
+          "1": 86250
+        },
+        "depth": {
+          "1": 86250
+        },
+        "branch": {
+          "dep.changed.advance": 43275,
+          "sibling.stable": 42975
+        },
+        "shape": {
+          "dep.changed.advance|d:1|in:1|out:1": 43275,
+          "sibling.stable|d:1|in:1|out:1": 42975
+        },
+        "hotPaths": [
+          {
+            "path": "dep.changed.advance|d:1|in:1|out:1",
+            "count": 43275
+          },
+          {
+            "path": "sibling.stable|d:1|in:1|out:1",
+            "count": 42975
+          }
+        ]
+      }
+    },
+    "observedRatio": 0.25,
+    "ratioDeviation": 0
+  },
+  {
+    "key": "fanoutBySemantic.f192.s0.5",
+    "sweep": "fanoutBySemantic",
+    "axis": "semanticRatio",
+    "axisValue": 0.5,
+    "secondaryAxis": "fanout",
+    "secondaryValue": 192,
+    "iterations": 300,
+    "counters": {
+      "writeCalls": 300,
+      "writeSameValue": 0,
+      "writeChanged": 300,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 300,
+      "propagationScopesLeft": 300,
+      "pushCalls": 300,
+      "pushDirectEdgesVisited": 57600,
+      "pushTransitiveEdgesVisited": 57600,
+      "pushMarkedChanged": 57600,
+      "pushMarkedInvalid": 300,
+      "pushAlreadyDirtySkipped": 57300,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 57600,
+      "pushOnceCalls": 28650,
+      "pushOnceEdgesVisited": 28650,
+      "pushOnceMarkedChanged": 150,
+      "pushOnceAlreadyChangedSkipped": 28500,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 300,
+      "pullEdgesVisited": 28950,
+      "pullChangedDeps": 28950,
+      "pullInvalidDeps": 0,
+      "pullCleanDeps": 0,
+      "pullDescents": 0,
+      "pullAdvanceCalls": 28950,
+      "pullStableSiblingScans": 28650,
+      "pullChangedBubbles": 0,
+      "advanceCalls": 57750,
+      "advanceComputeRuns": 57750,
+      "advanceChanged": 28950,
+      "advanceUnchanged": 28800,
+      "advanceCleanupChecks": 57750,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 28800,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 57600,
+      "readProducerTracked": 57600,
+      "readConsumerCalls": 29100,
+      "readConsumerLazyCalls": 29100,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 150,
+      "readConsumerDirtyPath": 28950,
+      "readConsumerTracked": 28800,
+      "stabilizeForceAdvance": 28650,
+      "stabilizePullAdvance": 300,
+      "trackingResolveCalls": 86400,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 28650,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 57750,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 300,
+      "contextPropagationLeave": 300,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 300,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 115200,
+        "maxDepth": 2,
+        "maxStack": 191,
+        "fanIn": {
+          "1": 57600,
+          "64+": 57600
+        },
+        "fanOut": {
+          "0": 57600,
+          "1": 57600
+        },
+        "depth": {
+          "1": 57600,
+          "2-3": 57600
+        },
+        "branch": {
+          "direct.changed": 57600,
+          "transitive.unknown": 300,
+          "transitive.skip": 57300
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 57600,
+          "transitive.unknown|d:2-3|in:64+|out:0": 300,
+          "transitive.skip|d:2-3|in:64+|out:0": 57300
+        },
+        "hotPaths": [
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 57600
+          },
+          {
+            "path": "transitive.skip|d:2-3|in:64+|out:0",
+            "count": 57300
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:64+|out:0",
+            "count": 300
+          }
+        ]
+      },
+      "pull": {
+        "total": 57600,
+        "maxDepth": 1,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 57600
+        },
+        "fanOut": {
+          "1": 57600
+        },
+        "depth": {
+          "1": 57600
+        },
+        "branch": {
+          "dep.changed.advance": 28950,
+          "sibling.stable": 28650
+        },
+        "shape": {
+          "dep.changed.advance|d:1|in:1|out:1": 28950,
+          "sibling.stable|d:1|in:1|out:1": 28650
+        },
+        "hotPaths": [
+          {
+            "path": "dep.changed.advance|d:1|in:1|out:1",
+            "count": 28950
+          },
+          {
+            "path": "sibling.stable|d:1|in:1|out:1",
+            "count": 28650
+          }
+        ]
+      }
+    },
+    "observedRatio": 0.5,
+    "ratioDeviation": 0
+  },
+  {
+    "key": "fanoutBySemantic.f192.s0.75",
+    "sweep": "fanoutBySemantic",
+    "axis": "semanticRatio",
+    "axisValue": 0.75,
+    "secondaryAxis": "fanout",
+    "secondaryValue": 192,
+    "iterations": 300,
+    "counters": {
+      "writeCalls": 300,
+      "writeSameValue": 0,
+      "writeChanged": 300,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 300,
+      "propagationScopesLeft": 300,
+      "pushCalls": 300,
+      "pushDirectEdgesVisited": 57600,
+      "pushTransitiveEdgesVisited": 57600,
+      "pushMarkedChanged": 57600,
+      "pushMarkedInvalid": 300,
+      "pushAlreadyDirtySkipped": 57300,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 57600,
+      "pushOnceCalls": 42975,
+      "pushOnceEdgesVisited": 42975,
+      "pushOnceMarkedChanged": 225,
+      "pushOnceAlreadyChangedSkipped": 42750,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 300,
+      "pullEdgesVisited": 14625,
+      "pullChangedDeps": 14625,
+      "pullInvalidDeps": 0,
+      "pullCleanDeps": 0,
+      "pullDescents": 0,
+      "pullAdvanceCalls": 14625,
+      "pullStableSiblingScans": 14325,
+      "pullChangedBubbles": 0,
+      "advanceCalls": 57825,
+      "advanceComputeRuns": 57825,
+      "advanceChanged": 43425,
+      "advanceUnchanged": 14400,
+      "advanceCleanupChecks": 57825,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 43200,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 57600,
+      "readProducerTracked": 57600,
+      "readConsumerCalls": 43500,
+      "readConsumerLazyCalls": 43500,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 225,
+      "readConsumerDirtyPath": 43275,
+      "readConsumerTracked": 43200,
+      "stabilizeForceAdvance": 42975,
+      "stabilizePullAdvance": 300,
+      "trackingResolveCalls": 100800,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 42975,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 57825,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 300,
+      "contextPropagationLeave": 300,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 300,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 115200,
+        "maxDepth": 2,
+        "maxStack": 191,
+        "fanIn": {
+          "1": 57600,
+          "64+": 57600
+        },
+        "fanOut": {
+          "0": 57600,
+          "1": 57600
+        },
+        "depth": {
+          "1": 57600,
+          "2-3": 57600
+        },
+        "branch": {
+          "direct.changed": 57600,
+          "transitive.unknown": 300,
+          "transitive.skip": 57300
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 57600,
+          "transitive.unknown|d:2-3|in:64+|out:0": 300,
+          "transitive.skip|d:2-3|in:64+|out:0": 57300
+        },
+        "hotPaths": [
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 57600
+          },
+          {
+            "path": "transitive.skip|d:2-3|in:64+|out:0",
+            "count": 57300
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:64+|out:0",
+            "count": 300
+          }
+        ]
+      },
+      "pull": {
+        "total": 28950,
+        "maxDepth": 1,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 28950
+        },
+        "fanOut": {
+          "1": 28950
+        },
+        "depth": {
+          "1": 28950
+        },
+        "branch": {
+          "dep.changed.advance": 14625,
+          "sibling.stable": 14325
+        },
+        "shape": {
+          "dep.changed.advance|d:1|in:1|out:1": 14625,
+          "sibling.stable|d:1|in:1|out:1": 14325
+        },
+        "hotPaths": [
+          {
+            "path": "dep.changed.advance|d:1|in:1|out:1",
+            "count": 14625
+          },
+          {
+            "path": "sibling.stable|d:1|in:1|out:1",
+            "count": 14325
+          }
+        ]
+      }
+    },
+    "observedRatio": 0.75,
+    "ratioDeviation": 0
+  },
+  {
+    "key": "fanoutBySemantic.f192.s1",
+    "sweep": "fanoutBySemantic",
+    "axis": "semanticRatio",
+    "axisValue": 1,
+    "secondaryAxis": "fanout",
+    "secondaryValue": 192,
+    "iterations": 300,
+    "counters": {
+      "writeCalls": 300,
+      "writeSameValue": 0,
+      "writeChanged": 300,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 300,
+      "propagationScopesLeft": 300,
+      "pushCalls": 300,
+      "pushDirectEdgesVisited": 57600,
+      "pushTransitiveEdgesVisited": 57600,
+      "pushMarkedChanged": 57600,
+      "pushMarkedInvalid": 300,
+      "pushAlreadyDirtySkipped": 57300,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 57600,
+      "pushOnceCalls": 57300,
+      "pushOnceEdgesVisited": 57300,
+      "pushOnceMarkedChanged": 300,
+      "pushOnceAlreadyChangedSkipped": 57000,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 300,
+      "pullEdgesVisited": 300,
+      "pullChangedDeps": 300,
+      "pullInvalidDeps": 0,
+      "pullCleanDeps": 0,
+      "pullDescents": 0,
+      "pullAdvanceCalls": 300,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 0,
+      "advanceCalls": 57900,
+      "advanceComputeRuns": 57900,
+      "advanceChanged": 57900,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 57900,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 57600,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 57600,
+      "readProducerTracked": 57600,
+      "readConsumerCalls": 57900,
+      "readConsumerLazyCalls": 57900,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 300,
+      "readConsumerDirtyPath": 57600,
+      "readConsumerTracked": 57600,
+      "stabilizeForceAdvance": 57300,
+      "stabilizePullAdvance": 300,
+      "trackingResolveCalls": 115200,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 57300,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 57900,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 300,
+      "contextPropagationLeave": 300,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 300,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 0,
+      "pushStackTrimExcess": 0,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 115200,
+        "maxDepth": 2,
+        "maxStack": 191,
+        "fanIn": {
+          "1": 57600,
+          "64+": 57600
+        },
+        "fanOut": {
+          "0": 57600,
+          "1": 57600
+        },
+        "depth": {
+          "1": 57600,
+          "2-3": 57600
+        },
+        "branch": {
+          "direct.changed": 57600,
+          "transitive.unknown": 300,
+          "transitive.skip": 57300
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 57600,
+          "transitive.unknown|d:2-3|in:64+|out:0": 300,
+          "transitive.skip|d:2-3|in:64+|out:0": 57300
+        },
+        "hotPaths": [
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 57600
+          },
+          {
+            "path": "transitive.skip|d:2-3|in:64+|out:0",
+            "count": 57300
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:64+|out:0",
+            "count": 300
+          }
+        ]
+      },
+      "pull": {
+        "total": 300,
+        "maxDepth": 1,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 300
+        },
+        "fanOut": {
+          "1": 300
+        },
+        "depth": {
+          "1": 300
+        },
+        "branch": {
+          "dep.changed.advance": 300
+        },
+        "shape": {
+          "dep.changed.advance|d:1|in:1|out:1": 300
+        },
+        "hotPaths": [
+          {
+            "path": "dep.changed.advance|d:1|in:1|out:1",
+            "count": 300
+          }
+        ]
+      }
+    },
+    "observedRatio": 1,
+    "ratioDeviation": 0
+  },
+  {
+    "key": "fanoutBySemantic.f1024.s0",
+    "sweep": "fanoutBySemantic",
+    "axis": "semanticRatio",
+    "axisValue": 0,
+    "secondaryAxis": "fanout",
+    "secondaryValue": 1024,
+    "iterations": 30,
+    "counters": {
+      "writeCalls": 30,
+      "writeSameValue": 0,
+      "writeChanged": 30,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 30,
+      "propagationScopesLeft": 30,
+      "pushCalls": 30,
+      "pushDirectEdgesVisited": 30720,
+      "pushTransitiveEdgesVisited": 30720,
+      "pushMarkedChanged": 30720,
+      "pushMarkedInvalid": 30,
+      "pushAlreadyDirtySkipped": 30690,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 30720,
+      "pushOnceCalls": 0,
+      "pushOnceEdgesVisited": 0,
+      "pushOnceMarkedChanged": 0,
+      "pushOnceAlreadyChangedSkipped": 0,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 30,
+      "pullEdgesVisited": 30720,
+      "pullChangedDeps": 30720,
+      "pullInvalidDeps": 0,
+      "pullCleanDeps": 0,
+      "pullDescents": 0,
+      "pullAdvanceCalls": 30720,
+      "pullStableSiblingScans": 30690,
+      "pullChangedBubbles": 0,
+      "advanceCalls": 30720,
+      "advanceComputeRuns": 30720,
+      "advanceChanged": 0,
+      "advanceUnchanged": 30720,
+      "advanceCleanupChecks": 30720,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 0,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 30720,
+      "readProducerTracked": 30720,
+      "readConsumerCalls": 30,
+      "readConsumerLazyCalls": 30,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 0,
+      "readConsumerDirtyPath": 30,
+      "readConsumerTracked": 0,
+      "stabilizeForceAdvance": 0,
+      "stabilizePullAdvance": 30,
+      "trackingResolveCalls": 30720,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 0,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 30720,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 30,
+      "contextPropagationLeave": 30,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 30,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 30,
+      "pushStackTrimExcess": 15360,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 61440,
+        "maxDepth": 2,
+        "maxStack": 1023,
+        "fanIn": {
+          "1": 30720,
+          "64+": 30720
+        },
+        "fanOut": {
+          "0": 30720,
+          "1": 30720
+        },
+        "depth": {
+          "1": 30720,
+          "2-3": 30720
+        },
+        "branch": {
+          "direct.changed": 30720,
+          "transitive.unknown": 30,
+          "transitive.skip": 30690
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 30720,
+          "transitive.unknown|d:2-3|in:64+|out:0": 30,
+          "transitive.skip|d:2-3|in:64+|out:0": 30690
+        },
+        "hotPaths": [
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 30720
+          },
+          {
+            "path": "transitive.skip|d:2-3|in:64+|out:0",
+            "count": 30690
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:64+|out:0",
+            "count": 30
+          }
+        ]
+      },
+      "pull": {
+        "total": 61410,
+        "maxDepth": 1,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 61410
+        },
+        "fanOut": {
+          "1": 61410
+        },
+        "depth": {
+          "1": 61410
+        },
+        "branch": {
+          "dep.changed.advance": 30720,
+          "sibling.stable": 30690
+        },
+        "shape": {
+          "dep.changed.advance|d:1|in:1|out:1": 30720,
+          "sibling.stable|d:1|in:1|out:1": 30690
+        },
+        "hotPaths": [
+          {
+            "path": "dep.changed.advance|d:1|in:1|out:1",
+            "count": 30720
+          },
+          {
+            "path": "sibling.stable|d:1|in:1|out:1",
+            "count": 30690
+          }
+        ]
+      }
+    },
+    "observedRatio": 0,
+    "ratioDeviation": 0
+  },
+  {
+    "key": "fanoutBySemantic.f1024.s0.25",
+    "sweep": "fanoutBySemantic",
+    "axis": "semanticRatio",
+    "axisValue": 0.25,
+    "secondaryAxis": "fanout",
+    "secondaryValue": 1024,
+    "iterations": 30,
+    "counters": {
+      "writeCalls": 30,
+      "writeSameValue": 0,
+      "writeChanged": 30,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 30,
+      "propagationScopesLeft": 30,
+      "pushCalls": 30,
+      "pushDirectEdgesVisited": 30720,
+      "pushTransitiveEdgesVisited": 30720,
+      "pushMarkedChanged": 30720,
+      "pushMarkedInvalid": 30,
+      "pushAlreadyDirtySkipped": 30690,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 30720,
+      "pushOnceCalls": 7161,
+      "pushOnceEdgesVisited": 7161,
+      "pushOnceMarkedChanged": 7,
+      "pushOnceAlreadyChangedSkipped": 7154,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 30,
+      "pullEdgesVisited": 23559,
+      "pullChangedDeps": 23559,
+      "pullInvalidDeps": 0,
+      "pullCleanDeps": 0,
+      "pullDescents": 0,
+      "pullAdvanceCalls": 23559,
+      "pullStableSiblingScans": 23529,
+      "pullChangedBubbles": 0,
+      "advanceCalls": 30727,
+      "advanceComputeRuns": 30727,
+      "advanceChanged": 7175,
+      "advanceUnchanged": 23552,
+      "advanceCleanupChecks": 30727,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 7168,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 30720,
+      "readProducerTracked": 30720,
+      "readConsumerCalls": 7198,
+      "readConsumerLazyCalls": 7198,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 7,
+      "readConsumerDirtyPath": 7191,
+      "readConsumerTracked": 7168,
+      "stabilizeForceAdvance": 7161,
+      "stabilizePullAdvance": 30,
+      "trackingResolveCalls": 37888,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 7161,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 30727,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 30,
+      "contextPropagationLeave": 30,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 30,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 30,
+      "pushStackTrimExcess": 15360,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 61440,
+        "maxDepth": 2,
+        "maxStack": 1023,
+        "fanIn": {
+          "1": 30720,
+          "64+": 30720
+        },
+        "fanOut": {
+          "0": 30720,
+          "1": 30720
+        },
+        "depth": {
+          "1": 30720,
+          "2-3": 30720
+        },
+        "branch": {
+          "direct.changed": 30720,
+          "transitive.unknown": 30,
+          "transitive.skip": 30690
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 30720,
+          "transitive.unknown|d:2-3|in:64+|out:0": 30,
+          "transitive.skip|d:2-3|in:64+|out:0": 30690
+        },
+        "hotPaths": [
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 30720
+          },
+          {
+            "path": "transitive.skip|d:2-3|in:64+|out:0",
+            "count": 30690
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:64+|out:0",
+            "count": 30
+          }
+        ]
+      },
+      "pull": {
+        "total": 47088,
+        "maxDepth": 1,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 47088
+        },
+        "fanOut": {
+          "1": 47088
+        },
+        "depth": {
+          "1": 47088
+        },
+        "branch": {
+          "dep.changed.advance": 23559,
+          "sibling.stable": 23529
+        },
+        "shape": {
+          "dep.changed.advance|d:1|in:1|out:1": 23559,
+          "sibling.stable|d:1|in:1|out:1": 23529
+        },
+        "hotPaths": [
+          {
+            "path": "dep.changed.advance|d:1|in:1|out:1",
+            "count": 23559
+          },
+          {
+            "path": "sibling.stable|d:1|in:1|out:1",
+            "count": 23529
+          }
+        ]
+      }
+    },
+    "observedRatio": 0.23333333333333334,
+    "ratioDeviation": 0.016666666666666663
+  },
+  {
+    "key": "fanoutBySemantic.f1024.s0.5",
+    "sweep": "fanoutBySemantic",
+    "axis": "semanticRatio",
+    "axisValue": 0.5,
+    "secondaryAxis": "fanout",
+    "secondaryValue": 1024,
+    "iterations": 30,
+    "counters": {
+      "writeCalls": 30,
+      "writeSameValue": 0,
+      "writeChanged": 30,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 30,
+      "propagationScopesLeft": 30,
+      "pushCalls": 30,
+      "pushDirectEdgesVisited": 30720,
+      "pushTransitiveEdgesVisited": 30720,
+      "pushMarkedChanged": 30720,
+      "pushMarkedInvalid": 30,
+      "pushAlreadyDirtySkipped": 30690,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 30720,
+      "pushOnceCalls": 14322,
+      "pushOnceEdgesVisited": 14322,
+      "pushOnceMarkedChanged": 14,
+      "pushOnceAlreadyChangedSkipped": 14308,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 30,
+      "pullEdgesVisited": 16398,
+      "pullChangedDeps": 16398,
+      "pullInvalidDeps": 0,
+      "pullCleanDeps": 0,
+      "pullDescents": 0,
+      "pullAdvanceCalls": 16398,
+      "pullStableSiblingScans": 16368,
+      "pullChangedBubbles": 0,
+      "advanceCalls": 30734,
+      "advanceComputeRuns": 30734,
+      "advanceChanged": 14350,
+      "advanceUnchanged": 16384,
+      "advanceCleanupChecks": 30734,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 14336,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 30720,
+      "readProducerTracked": 30720,
+      "readConsumerCalls": 14366,
+      "readConsumerLazyCalls": 14366,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 14,
+      "readConsumerDirtyPath": 14352,
+      "readConsumerTracked": 14336,
+      "stabilizeForceAdvance": 14322,
+      "stabilizePullAdvance": 30,
+      "trackingResolveCalls": 45056,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 14322,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 30734,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 30,
+      "contextPropagationLeave": 30,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 30,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 30,
+      "pushStackTrimExcess": 15360,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 61440,
+        "maxDepth": 2,
+        "maxStack": 1023,
+        "fanIn": {
+          "1": 30720,
+          "64+": 30720
+        },
+        "fanOut": {
+          "0": 30720,
+          "1": 30720
+        },
+        "depth": {
+          "1": 30720,
+          "2-3": 30720
+        },
+        "branch": {
+          "direct.changed": 30720,
+          "transitive.unknown": 30,
+          "transitive.skip": 30690
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 30720,
+          "transitive.unknown|d:2-3|in:64+|out:0": 30,
+          "transitive.skip|d:2-3|in:64+|out:0": 30690
+        },
+        "hotPaths": [
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 30720
+          },
+          {
+            "path": "transitive.skip|d:2-3|in:64+|out:0",
+            "count": 30690
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:64+|out:0",
+            "count": 30
+          }
+        ]
+      },
+      "pull": {
+        "total": 32766,
+        "maxDepth": 1,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 32766
+        },
+        "fanOut": {
+          "1": 32766
+        },
+        "depth": {
+          "1": 32766
+        },
+        "branch": {
+          "dep.changed.advance": 16398,
+          "sibling.stable": 16368
+        },
+        "shape": {
+          "dep.changed.advance|d:1|in:1|out:1": 16398,
+          "sibling.stable|d:1|in:1|out:1": 16368
+        },
+        "hotPaths": [
+          {
+            "path": "dep.changed.advance|d:1|in:1|out:1",
+            "count": 16398
+          },
+          {
+            "path": "sibling.stable|d:1|in:1|out:1",
+            "count": 16368
+          }
+        ]
+      }
+    },
+    "observedRatio": 0.4666666666666667,
+    "ratioDeviation": 0.033333333333333326
+  },
+  {
+    "key": "fanoutBySemantic.f1024.s0.75",
+    "sweep": "fanoutBySemantic",
+    "axis": "semanticRatio",
+    "axisValue": 0.75,
+    "secondaryAxis": "fanout",
+    "secondaryValue": 1024,
+    "iterations": 30,
+    "counters": {
+      "writeCalls": 30,
+      "writeSameValue": 0,
+      "writeChanged": 30,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 30,
+      "propagationScopesLeft": 30,
+      "pushCalls": 30,
+      "pushDirectEdgesVisited": 30720,
+      "pushTransitiveEdgesVisited": 30720,
+      "pushMarkedChanged": 30720,
+      "pushMarkedInvalid": 30,
+      "pushAlreadyDirtySkipped": 30690,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 30720,
+      "pushOnceCalls": 22506,
+      "pushOnceEdgesVisited": 22506,
+      "pushOnceMarkedChanged": 22,
+      "pushOnceAlreadyChangedSkipped": 22484,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 30,
+      "pullEdgesVisited": 8214,
+      "pullChangedDeps": 8214,
+      "pullInvalidDeps": 0,
+      "pullCleanDeps": 0,
+      "pullDescents": 0,
+      "pullAdvanceCalls": 8214,
+      "pullStableSiblingScans": 8184,
+      "pullChangedBubbles": 0,
+      "advanceCalls": 30742,
+      "advanceComputeRuns": 30742,
+      "advanceChanged": 22550,
+      "advanceUnchanged": 8192,
+      "advanceCleanupChecks": 30742,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 22528,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 30720,
+      "readProducerTracked": 30720,
+      "readConsumerCalls": 22558,
+      "readConsumerLazyCalls": 22558,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 22,
+      "readConsumerDirtyPath": 22536,
+      "readConsumerTracked": 22528,
+      "stabilizeForceAdvance": 22506,
+      "stabilizePullAdvance": 30,
+      "trackingResolveCalls": 53248,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 22506,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 30742,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 30,
+      "contextPropagationLeave": 30,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 30,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 30,
+      "pushStackTrimExcess": 15360,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 61440,
+        "maxDepth": 2,
+        "maxStack": 1023,
+        "fanIn": {
+          "1": 30720,
+          "64+": 30720
+        },
+        "fanOut": {
+          "0": 30720,
+          "1": 30720
+        },
+        "depth": {
+          "1": 30720,
+          "2-3": 30720
+        },
+        "branch": {
+          "direct.changed": 30720,
+          "transitive.unknown": 30,
+          "transitive.skip": 30690
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 30720,
+          "transitive.unknown|d:2-3|in:64+|out:0": 30,
+          "transitive.skip|d:2-3|in:64+|out:0": 30690
+        },
+        "hotPaths": [
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 30720
+          },
+          {
+            "path": "transitive.skip|d:2-3|in:64+|out:0",
+            "count": 30690
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:64+|out:0",
+            "count": 30
+          }
+        ]
+      },
+      "pull": {
+        "total": 16398,
+        "maxDepth": 1,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 16398
+        },
+        "fanOut": {
+          "1": 16398
+        },
+        "depth": {
+          "1": 16398
+        },
+        "branch": {
+          "dep.changed.advance": 8214,
+          "sibling.stable": 8184
+        },
+        "shape": {
+          "dep.changed.advance|d:1|in:1|out:1": 8214,
+          "sibling.stable|d:1|in:1|out:1": 8184
+        },
+        "hotPaths": [
+          {
+            "path": "dep.changed.advance|d:1|in:1|out:1",
+            "count": 8214
+          },
+          {
+            "path": "sibling.stable|d:1|in:1|out:1",
+            "count": 8184
+          }
+        ]
+      }
+    },
+    "observedRatio": 0.7333333333333333,
+    "ratioDeviation": 0.01666666666666672
+  },
+  {
+    "key": "fanoutBySemantic.f1024.s1",
+    "sweep": "fanoutBySemantic",
+    "axis": "semanticRatio",
+    "axisValue": 1,
+    "secondaryAxis": "fanout",
+    "secondaryValue": 1024,
+    "iterations": 30,
+    "counters": {
+      "writeCalls": 30,
+      "writeSameValue": 0,
+      "writeChanged": 30,
+      "writeNoSubscribers": 0,
+      "writeNestedPropagation": 0,
+      "propagationScopesEntered": 30,
+      "propagationScopesLeft": 30,
+      "pushCalls": 30,
+      "pushDirectEdgesVisited": 30720,
+      "pushTransitiveEdgesVisited": 30720,
+      "pushMarkedChanged": 30720,
+      "pushMarkedInvalid": 30,
+      "pushAlreadyDirtySkipped": 30690,
+      "pushComputingChecked": 0,
+      "pushWatchersInvalidated": 0,
+      "pushChildBranchesQueued": 30720,
+      "pushOnceCalls": 30690,
+      "pushOnceEdgesVisited": 30690,
+      "pushOnceMarkedChanged": 30,
+      "pushOnceAlreadyChangedSkipped": 30660,
+      "pushOnceSkippedEdges": 0,
+      "pullCalls": 30,
+      "pullEdgesVisited": 30,
+      "pullChangedDeps": 30,
+      "pullInvalidDeps": 0,
+      "pullCleanDeps": 0,
+      "pullDescents": 0,
+      "pullAdvanceCalls": 30,
+      "pullStableSiblingScans": 0,
+      "pullChangedBubbles": 0,
+      "advanceCalls": 30750,
+      "advanceComputeRuns": 30750,
+      "advanceChanged": 30750,
+      "advanceUnchanged": 0,
+      "advanceCleanupChecks": 30750,
+      "advanceCleanupRuns": 0,
+      "advancePropagateCalls": 30720,
+      "advancePropagateSkippedEdge": 0,
+      "readProducerCalls": 30720,
+      "readProducerTracked": 30720,
+      "readConsumerCalls": 30750,
+      "readConsumerLazyCalls": 30750,
+      "readConsumerEagerCalls": 0,
+      "readConsumerCleanFastPath": 30,
+      "readConsumerDirtyPath": 30720,
+      "readConsumerTracked": 30720,
+      "stabilizeForceAdvance": 30690,
+      "stabilizePullAdvance": 30,
+      "trackingResolveCalls": 61440,
+      "trackingCursorHit": 0,
+      "trackingNextHit": 30690,
+      "trackingAppendAfterCursor": 0,
+      "trackingPrefixDuplicate": 0,
+      "trackingOneHopReorder": 0,
+      "trackingTwoHopReorder": 0,
+      "trackingLastEdgeShortcut": 0,
+      "trackingInitialCreate": 0,
+      "trackingInitialFirstHit": 30750,
+      "trackingInitialLastEdgeShortcut": 0,
+      "trackingSlowPath": 0,
+      "trackingSlowPathBlocked": 0,
+      "trackingOutgoingProbeHit1": 0,
+      "trackingOutgoingProbeMiss": 0,
+      "trackingSuffixHeadHit": 0,
+      "trackingSuffixReuseHit": 0,
+      "trackingSuffixLinkNew": 0,
+      "trackingSuffixEdgesScanned": 0,
+      "trackingEdgeMoved": 0,
+      "trackingSuffixEagerDetach": 0,
+      "cleanupCalls": 0,
+      "cleanupSkipped": 0,
+      "cleanupEdgesDropped": 0,
+      "watcherRunCalls": 0,
+      "watcherCleanSkips": 0,
+      "watcherStableSkips": 0,
+      "watcherDisposedSkips": 0,
+      "watcherExecutions": 0,
+      "watcherCleanups": 0,
+      "watcherDisposals": 0,
+      "contextRunCalls": 0,
+      "contextSwitches": 0,
+      "contextPropagationEnter": 30,
+      "contextPropagationLeave": 30,
+      "contextSettledChecks": 0,
+      "contextSettledEmits": 30,
+      "contextSettledDeferred": 0,
+      "nodeInvalidatedEmits": 0,
+      "pushStackTrimEvents": 30,
+      "pushStackTrimExcess": 15360,
+      "pullStackTrimEvents": 0,
+      "pullStackTrimExcess": 0
+    },
+    "topology": {
+      "push": {
+        "total": 61440,
+        "maxDepth": 2,
+        "maxStack": 1023,
+        "fanIn": {
+          "1": 30720,
+          "64+": 30720
+        },
+        "fanOut": {
+          "0": 30720,
+          "1": 30720
+        },
+        "depth": {
+          "1": 30720,
+          "2-3": 30720
+        },
+        "branch": {
+          "direct.changed": 30720,
+          "transitive.unknown": 30,
+          "transitive.skip": 30690
+        },
+        "shape": {
+          "direct.changed|d:1|in:1|out:1": 30720,
+          "transitive.unknown|d:2-3|in:64+|out:0": 30,
+          "transitive.skip|d:2-3|in:64+|out:0": 30690
+        },
+        "hotPaths": [
+          {
+            "path": "direct.changed|d:1|in:1|out:1",
+            "count": 30720
+          },
+          {
+            "path": "transitive.skip|d:2-3|in:64+|out:0",
+            "count": 30690
+          },
+          {
+            "path": "transitive.unknown|d:2-3|in:64+|out:0",
+            "count": 30
+          }
+        ]
+      },
+      "pull": {
+        "total": 30,
+        "maxDepth": 1,
+        "maxStack": 0,
+        "fanIn": {
+          "1": 30
+        },
+        "fanOut": {
+          "1": 30
+        },
+        "depth": {
+          "1": 30
+        },
+        "branch": {
+          "dep.changed.advance": 30
+        },
+        "shape": {
+          "dep.changed.advance|d:1|in:1|out:1": 30
+        },
+        "hotPaths": [
+          {
+            "path": "dep.changed.advance|d:1|in:1|out:1",
+            "count": 30
+          }
+        ]
+      }
+    },
+    "observedRatio": 1,
+    "ratioDeviation": 0
+  }
+]

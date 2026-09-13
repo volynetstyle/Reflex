@@ -115,3 +115,18 @@ logs/
 temp/
 tmp/
 lab/
+
+# Version the isolated cross-framework benchmark package, but not its outputs.
+!lab/
+lab/*
+!lab/reactivity-bench/
+!lab/reactivity-bench/**
+lab/reactivity-bench/dist/
+lab/reactivity-bench/node_modules/
+lab/reactivity-bench/results/
+lab/reactivity-bench/.tmp/
+
+#--------------------------------------------------------
+# Labs
+#--------------------------------------------------------
+packages/*.lab/

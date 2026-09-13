@@ -2,6 +2,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
   Consumer,
+  cleanupUnvisitedSources,
   Producer,
   ReactiveNode,
   linkEdge,
@@ -173,5 +174,27 @@ describe("Reactive runtime - graph utility model", () => {
     for (const producer of stale) expectOutgoingEdges(producer, []);
     for (const edge of staleEdges) expectDetached(edge);
     expectGraphIntegrity([target, retained, ...stale]);
+  });
+  it.each([0, 1, 3])("prunes after a prefix of %i without disturbing other subscribers", (prefixLength) => {
+    const target = createNode(Consumer);
+    const before = createNode(Consumer);
+    const after = createNode(Consumer);
+    const producers = Array.from({ length: 3 }, () => createNode(Producer));
+    const beforeEdges = producers.map((producer) => linkEdge(producer, before));
+    const edges = producers.map((producer) => linkEdge(producer, target));
+    const afterEdges = producers.map((producer) => linkEdge(producer, after));
+    target.tailIn = edges[prefixLength - 1] ?? null;
+
+    cleanupUnvisitedSources(target);
+
+    expectIncomingEdges(target, edges.slice(0, prefixLength));
+    expecttailIn(target, edges[prefixLength - 1] ?? null);
+    for (let index = 0; index < producers.length; index++) {
+      expectOutgoingEdges(producers[index]!, index < prefixLength
+        ? [beforeEdges[index], edges[index], afterEdges[index]]
+        : [beforeEdges[index], afterEdges[index]]);
+      if (index >= prefixLength) expectDetached(edges[index]!);
+    }
+    expectGraphIntegrity([...producers, target, before, after]);
   });
 });

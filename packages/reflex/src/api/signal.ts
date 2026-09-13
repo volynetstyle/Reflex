@@ -12,9 +12,9 @@ import {
 /**
  * Creates writable reactive state.
  *
- * `signal` returns a tuple containing a tracked read accessor and a setter.
- * Reading the accessor inside `computed()`, `memo()`, or `effect()` registers
- * a dependency. Writing through the setter updates the stored value
+ * `signal` returns a tracked callable accessor with `.set`.
+ * Reading it inside `computed()`, `memo()`, or `effect()` registers
+ * a dependency. Writing through `.set` updates the stored value
  * synchronously and invalidates downstream reactive consumers only when the
  * value actually changes.
  *
@@ -25,21 +25,19 @@ import {
  * @param options - Optional development diagnostics. `options.name` is used
  * only in development builds when formatting setter error messages.
  *
- * @returns A readonly tuple:
- * - `value` - tracked accessor that returns the current signal value.
- * - `setValue` - setter that accepts either a direct value or an updater
- *   function receiving the previous value.
+ * @returns A tracked accessor. Call it to read and call `.set` with either a
+ * direct value or an updater function receiving the previous value.
  *
  * @example
  * ```ts
  * createRuntime();
  *
- * const [count, setCount] = signal(0);
+ * const count = signal(0);
  *
  * console.log(count()); // 0
  *
- * setCount(1);
- * setCount((prev) => prev + 1);
+ * count.set(1);
+ * count.set((prev) => prev + 1);
  *
  * console.log(count()); // 2
  * ```
@@ -47,7 +45,7 @@ import {
  * @remarks
  * - Reads are synchronous and always return the latest committed value.
  * - Same-value writes do not invalidate downstream computed values or effects.
- * - Calling `setValue()` with no argument is only valid when `T` includes
+ * - Calling `.set()` with no argument is only valid when `T` includes
  *   `undefined`.
  * - In typical app code, call `createRuntime()` during setup before building
  *   the rest of the reactive graph.
@@ -57,12 +55,13 @@ import {
  * @see effect
  */
 
-export function signal<T>(initialValue: T): readonly [Signal<T>, Setter<T>] {
+export function signal<T>(initialValue: T): Signal<T> {
   const node = createProducer(initialValue);
+  const read = (() => readProducer(node)) as Signal<T>;
 
-  const read = (): T => readProducer(node);
+  read.set = setter.bind(node) as Setter<T>;
 
-  return [read as Signal<T>, setter.bind(node) as Setter<T>] as const;
+  return read;
 }
 
 function setter<T>(this: ProducerNode<T>, input: SetInput<T>) {

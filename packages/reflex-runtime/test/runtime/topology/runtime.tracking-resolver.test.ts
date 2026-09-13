@@ -16,6 +16,12 @@ import {
   resetRuntime,
 } from "../../runtime.test_utils";
 
+import { createConsumer, createProducer } from "../../../src/protocol/create.node";
+import { readConsumer } from "../../../src/protocol/read.consumer";
+import { readProducer } from "../../../src/protocol/read.producer";
+import { writeProducer } from "../../../src/protocol/write.producer";
+import { incomingEdges, outgoingEdges } from "../../tools/graph/graph-inspector";
+
 function createProducerNode(): ReactiveNode {
   return new ReactiveNode(undefined, null, Producer);
 }
@@ -211,5 +217,64 @@ describe("Reactive runtime - tracking resolver matrix", () => {
     expect(repeatedEdge.version).toBe(currentVersion);
     expectOutgoingEdges(repeated, [unrelatedEdge, repeatedEdge]);
     expectGraphIntegrity([repeated, otherTarget, target, ...middleSources]);
+  });
+  it("retains a distant duplicate edge across a dirty nested computation", () => {
+    const a = createProducer(1);
+    const middleSources = Array.from({ length: 34 }, () => createProducer(1));
+    const nestedSource = createProducer(10);
+    const nested = createConsumer(() => readProducer(nestedSource));
+    const unrelated = createConsumer(() => readProducer(a));
+
+    // Multiple outgoing edges prevent the sole-subscriber shortcut from
+    // concealing a failed distant-prefix membership check.
+    expect(readConsumer(unrelated)).toBe(1);
+    expect(readConsumer(nested)).toBe(10);
+
+    const outer = createConsumer(() => {
+      let value = readProducer(a);
+      for (const source of middleSources) value += readProducer(source);
+      value += readConsumer(nested);
+      return value + readProducer(a);
+    });
+    const nodes = [a, ...middleSources, nestedSource, nested, unrelated, outer];
+
+    expect(readConsumer(outer)).toBe(46);
+    const retainedEdge = incomingEdges(outer).find((edge) => edge.from === a);
+    expect(retainedEdge).toBeDefined();
+
+    const verifyTopology = () => {
+      const incoming = incomingEdges(outer);
+      const incomingMatches = incoming.filter((edge) => edge.from === a);
+      const outgoingMatches = outgoingEdges(a).filter((edge) => edge.to === outer);
+      expect(incomingMatches).toHaveLength(1);
+      expect(outgoingMatches).toHaveLength(1);
+      expect(incomingMatches[0]).toBe(retainedEdge);
+      expect(outgoingMatches[0]).toBe(retainedEdge);
+      expect(outer.tailIn).toBe(outer.lastIn);
+      expectGraphIntegrity(nodes);
+      for (const node of nodes) {
+        for (const edge of incomingEdges(node)) {
+          expect(outgoingEdges(edge.from)).toContain(edge);
+        }
+        for (const edge of outgoingEdges(node)) {
+          expect(incomingEdges(edge.to)).toContain(edge);
+        }
+      }
+    };
+    verifyTopology();
+
+    writeProducer(nestedSource, 20);
+    // Direct invalidation forces outer computation before pull can refresh
+    // nested, so nested advances its tracking epoch inside the outer pass.
+    writeProducer(a, 2);
+    expect(readConsumer(outer)).toBe(58);
+    verifyTopology();
+
+    // Re-execute the same dependency trace with nested already clean.
+    writeProducer(a, 3);
+    expect(readConsumer(outer)).toBe(60);
+    verifyTopology();
+    expect(readConsumer(outer)).toBe(60);
+    verifyTopology();
   });
 });

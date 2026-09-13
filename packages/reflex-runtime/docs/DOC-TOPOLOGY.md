@@ -26,7 +26,7 @@ This document defines the role of each documentation file and the canonical read
   - Public exports (API surface)
   - Node kinds and their exact behavior (Producer, Consumer, Watcher)
   - Execution context model and hooks
-  - Observable invariants (e.g., dirty-state model, disposal terminal state)
+  - Observable invariants (e.g., dirty-state model, eager graph teardown)
   - State constants and their meanings
   - ExecutionContext semantics
   - Debug surface
@@ -40,8 +40,8 @@ This document defines the role of each documentation file and the canonical read
 - **Audience:** Maintainers extending runtime, hosts managing lifetimes
 - **Purpose:** Single source of truth for node disposal and cleanup semantics
 - **Content:**
-  - Core disposal rules (dead is terminal, no reactivation)
-  - Graph entry point behavior with disposed nodes
+  - Core teardown rules (edges and executable data are cleared eagerly)
+  - Graph entry point behavior after teardown
   - Cleanup ordering guarantees
   - Watcher cleanup and reachability
   - Integration with dynamic dependencies

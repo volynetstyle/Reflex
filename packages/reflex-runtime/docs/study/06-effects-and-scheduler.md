@@ -72,7 +72,7 @@ while (pending.length) {
 
 `runWatcher(node, context)` робить:
 
-1. пропускає `Disposed`
+1. пропускає watcher без `compute` після teardown
 2. якщо вузол не dirty або `shouldRecompute(node) === false`, просто чистить dirty state
 3. інакше дістає попередній cleanup
 4. скидає `payload` у `UNINITIALIZED`

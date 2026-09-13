@@ -1,5 +1,8 @@
-import { defaultContext, emitNodeInvalidated } from "@runtime/kernel/config";
-import { devRecordPropagate } from "@runtime/kernel/dev";
+import {
+  defaultContext,
+  emitNodeInvalidated,
+  nodeInvalidatedHook,
+} from "@runtime/kernel/config";
 import {
   enterRuntimePhase,
   leaveRuntimePhase,
@@ -11,13 +14,15 @@ import {
   Watcher,
   type ReactiveEdge,
 } from "@runtime/kernel/shape";
-import { profileRuntimeCounter } from "@runtime/profiling";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
+import { observeRuntimePropagate } from "@runtime/kernel/projection.propagate";
 
 function pushIteratorOnceSkippingCore(
   edge: ReactiveEdge | null,
   skip: ReactiveEdge,
 ): void {
-  if (__PROFILE__) profileRuntimeCounter("pushOnceCalls");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.push-once.invoke");
 
   // Split around `skip` so the hot suffix only tests its termination pointer
   // instead of checking `skip` for every remaining edge.
@@ -25,48 +30,87 @@ function pushIteratorOnceSkippingCore(
     // Preserve the old no-op behavior when a foreign skip edge is supplied.
     if (current === null) return;
 
-    if (__PROFILE__) profileRuntimeCounter("pushOnceEdgesVisited");
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.push-once.edge.visit");
 
     const sub = current.to;
     const state = sub.state;
 
     if ((state & Changed) === 0) {
-      sub.state = (state & ~Unknown) | Changed;
+      sub.state =
+        (state & Watcher) !== 0
+          ? state | Changed
+          : (state & ~Unknown) | Changed;
 
-      if (__PROFILE__) profileRuntimeCounter("pushOnceMarkedChanged");
-      if (__DEV__) devRecordPropagate(current, sub.state, true, defaultContext);
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.push-once.subscriber.changed.mark",
+        );
+      if (__DEV__)
+        observeRuntimePropagate?.({
+          edge: current,
+          nextState: sub.state,
+          immediate: true,
+          context: defaultContext,
+        });
 
-      if ((state & Watcher) !== 0) {
-        emitNodeInvalidated(sub);
+      if ((state & Watcher) !== 0 && nodeInvalidatedHook) {
+        if (__DEV__) emitNodeInvalidated(sub);
+
+        if (!__DEV__) nodeInvalidatedHook(sub);
       }
     } else {
-      if (__PROFILE__) profileRuntimeCounter("pushOnceAlreadyChangedSkipped");
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.push-once.subscriber.changed.skip",
+        );
     }
   }
 
-  if (__PROFILE__) profileRuntimeCounter("pushOnceSkippedEdges");
+  if (__PROFILE__)
+    observeRuntimeProjection?.(
+      "projection.semantic.push-once.edge.explicit-skip",
+    );
 
   for (
     let current = skip.nextOut;
     current !== null;
     current = current.nextOut
   ) {
-    if (__PROFILE__) profileRuntimeCounter("pushOnceEdgesVisited");
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.push-once.edge.visit");
 
     const sub = current.to;
     const state = sub.state;
 
     if ((state & Changed) === 0) {
-      sub.state = (state & ~Unknown) | Changed;
+      sub.state =
+        (state & Watcher) !== 0
+          ? state | Changed
+          : (state & ~Unknown) | Changed;
 
-      if (__PROFILE__) profileRuntimeCounter("pushOnceMarkedChanged");
-      if (__DEV__) devRecordPropagate(current, sub.state, true, defaultContext);
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.push-once.subscriber.changed.mark",
+        );
+      if (__DEV__)
+        observeRuntimePropagate?.({
+          edge: current,
+          nextState: sub.state,
+          immediate: true,
+          context: defaultContext,
+        });
 
-      if ((state & Watcher) !== 0) {
-        emitNodeInvalidated(sub);
+      if ((state & Watcher) !== 0 && nodeInvalidatedHook) {
+        if (__DEV__) emitNodeInvalidated(sub);
+
+        if (!__DEV__) nodeInvalidatedHook!(sub);
       }
-    } else if (__PROFILE__) {
-      profileRuntimeCounter("pushOnceAlreadyChangedSkipped");
+    } else {
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.push-once.subscriber.changed.skip",
+        );
     }
   }
 }

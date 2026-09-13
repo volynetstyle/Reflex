@@ -11,12 +11,14 @@ import { createRuntime } from "./reflex.test_utils";
 describe("Reactive system - model actions", () => {
   it("reads model readable values without invoking model actions", () => {
     createRuntime();
-    const [count] = signal(1);
+    const count = signal(1);
 
     const createTestModel = createModel((ctx) => ({
       count,
       save: ctx.action(() => {
-        throw new Error("action should not be invoked while reading a model value");
+        throw new Error(
+          "action should not be invoked while reading a model value",
+        );
       }),
     }));
 
@@ -28,13 +30,13 @@ describe("Reactive system - model actions", () => {
 
   it("runs model actions untracked", () => {
     const rt = createRuntime();
-    const [source, setSource] = signal(1);
+    const source = signal(1);
     const snapshots: number[] = [];
 
     const createTestModel = createModel((ctx) => ({
       source,
       act: ctx.action(() => source()),
-      retarget: ctx.action((value: number) => setSource(value)),
+      retarget: ctx.action((value: number) => source.set(value)),
     }));
 
     const model = createTestModel();
@@ -53,14 +55,14 @@ describe("Reactive system - model actions", () => {
 
   it("couple writes applies inside action in order (flush)", () => {
     const rt = createRuntime({ effectStrategy: "flush" });
-    const [count, setCount] = signal(0);
+    const count = signal(0);
     const seen: number[] = [];
 
     const createCounterModel = createModel((ctx) => ({
       count,
       bumpTwice: ctx.action(() => {
-        setCount(1);
-        setCount(2);
+        count.set(1);
+        count.set(2);
       }),
     }));
 
@@ -82,14 +84,14 @@ describe("Reactive system - model actions", () => {
 
   it("keeps model actions atomic for eager effects", () => {
     const rt = createRuntime({ effectStrategy: "eager" });
-    const [count, setCount] = signal(0);
+    const count = signal(0);
     const seen: number[] = [];
 
     const createCounterModel = createModel((ctx) => ({
       count,
       bumpTwice: ctx.action(() => {
-        setCount(1);
-        setCount(2);
+        count.set(1);
+        count.set(2);
       }),
     }));
 
@@ -113,14 +115,14 @@ describe("Reactive system - model actions", () => {
     createRuntime();
 
     const createCounterModel = createModel((ctx, v: number = 0) => {
-      const [count, setCount] = signal(1);
+      const count = signal(1);
       const doubled = computed(() => count() * 2);
 
       return {
         count,
         nested: {
           doubled,
-          inc: ctx.action(() => setCount((value: number) => value * v)),
+          inc: ctx.action(() => count.set((value: number) => value * v)),
         },
       };
     });
@@ -139,7 +141,7 @@ describe("Reactive system - model actions", () => {
 
   it("allows effect values returned from a model factory in production mode", () => {
     createRuntime();
-    const [count] = signal(1);
+    const count = signal(1);
 
     const model = createModel(() => ({
       stop: effect(() => {

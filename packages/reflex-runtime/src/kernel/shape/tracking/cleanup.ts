@@ -1,8 +1,9 @@
 import { defaultContext } from "@runtime/kernel/config";
 import { devRecordCleanupStaleSources } from "@runtime/kernel/dev";
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
+import { unlinkDetachedIncomingEdgeSequence } from "@runtime/kernel/shape/graph/sweepEdges";
 import type ReactiveNode from "@runtime/kernel/shape/node";
-import { profileRuntimeCounter } from "@runtime/profiling";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 /**
  * Suffix cleanup over the consumer's incoming edges after recompute.
@@ -10,13 +11,15 @@ import { profileRuntimeCounter } from "@runtime/profiling";
  * Everything after tailIn belongs to the old dependency list and is unlinked.
  */
 export function cleanupUnvisitedSources(node: ReactiveNode): void {
-  profileRuntimeCounter("cleanupCalls");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.cleanup.invoke");
 
   const tail = node.tailIn;
-  let edge = tail === null ? node.firstIn : tail.nextIn;
+  const edge = tail === null ? node.firstIn : tail.nextIn;
 
   if (edge === null) {
-    profileRuntimeCounter("cleanupSkipped");
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.cleanup.skip");
     return;
   }
 
@@ -30,23 +33,17 @@ export function cleanupUnvisitedSources(node: ReactiveNode): void {
 
   devRecordCleanupStaleSources(node, edge, defaultContext);
 
-  do {
-    profileRuntimeCounter("cleanupEdgesDropped");
-    const next: ReactiveEdge | null = edge.nextIn;
-    const prevOut = edge.prevOut;
-    const nextOut = edge.nextOut;
-    const from = edge.from;
-
-    if (prevOut !== null) prevOut.nextOut = nextOut;
-    else from.firstOut = nextOut;
-
-    if (nextOut !== null) nextOut.prevOut = prevOut;
-    else from.lastOut = prevOut;
-
-    edge.prevOut = null;
-    edge.nextOut = null;
-    edge.prevIn = null;
-    edge.nextIn = null;
-    edge = next;
-  } while (edge !== null);
+  // Preserve the existing counter without making the shared graph sweep
+  // interpret why its caller removed this sequence. Absent in production.
+  if (__PROFILE__) {
+    for (
+      let current: ReactiveEdge | null = edge;
+      current !== null;
+      current = current.nextIn
+    ) {
+      if (__PROFILE__)
+        observeRuntimeProjection?.("projection.semantic.cleanup.edge.drop");
+    }
+  }
+  unlinkDetachedIncomingEdgeSequence(edge);
 }

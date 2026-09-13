@@ -59,13 +59,13 @@ export function effectUnscheduled(
  * @example
  * ```ts
  * const rt = createRuntime();
- * const [count, setCount] = signal(0);
+ * const count = signal(0);
  *
  * const stop = effect(() => {
  *   console.log(count());
  * });
  *
- * setCount(1);
+ * count.set(1);
  * rt.flush();
  *
  * stop();

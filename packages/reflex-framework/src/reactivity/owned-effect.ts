@@ -4,11 +4,15 @@ import {
   disposeWatcher,
   runWatcher,
 } from "@volynets/reflex-runtime";
-import { addCleanup } from "../ownership/ownership.cleanup";
+import {
+  addCleanup,
+  disposeOwnershipNode,
+} from "../ownership/ownership.cleanup";
 import { isShuttingDown } from "../ownership/ownership.meta";
 import type { OwnershipNode } from "../ownership/ownership.node";
 import {
   runWithOwner,
+  usingOwnershipNode,
   type OwnerContext,
 } from "../ownership/ownership.scope";
 
@@ -29,7 +33,18 @@ export function createOwnedEffect(
     return noopCleanup;
   }
 
-  const watcher = createWatcher(() => runWithOwner(owner, node, fn));
+  const watcher = createWatcher(() =>
+    runWithOwner(owner, node, () =>
+      usingOwnershipNode(owner, (executionNode) => {
+        const cleanup = fn();
+        if (cleanup !== undefined) {
+          if (isShuttingDown(executionNode)) cleanup();
+          else addCleanup(executionNode, cleanup);
+        }
+        return () => disposeOwnershipNode(executionNode);
+      }),
+    ),
+  );
 
   try {
     runWatcher(watcher);

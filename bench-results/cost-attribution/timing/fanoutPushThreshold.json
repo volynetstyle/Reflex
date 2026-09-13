@@ -1,0 +1,287 @@
+[
+  {
+    "key": "fanoutPushThreshold.384",
+    "sweep": "fanoutPushThreshold",
+    "axis": "fanout",
+    "axisValue": 384,
+    "iterations": 80,
+    "nsPerOpMedian": 4902315.000000089,
+    "nsPerOpTrials": [
+      4933537.499999875,
+      5038073.749999603,
+      4791668.750000099,
+      4828976.250000414,
+      4902315.000000089
+    ]
+  },
+  {
+    "key": "fanoutPushThreshold.448",
+    "sweep": "fanoutPushThreshold",
+    "axis": "fanout",
+    "axisValue": 448,
+    "iterations": 80,
+    "nsPerOpMedian": 5834818.749999977,
+    "nsPerOpTrials": [
+      5693747.499999882,
+      6052874.999999767,
+      5795817.499999976,
+      5834818.749999977,
+      8935367.499999847
+    ]
+  },
+  {
+    "key": "fanoutPushThreshold.480",
+    "sweep": "fanoutPushThreshold",
+    "axis": "fanout",
+    "axisValue": 480,
+    "iterations": 80,
+    "nsPerOpMedian": 12784709.999999905,
+    "nsPerOpTrials": [
+      12494915.000000037,
+      13067101.249999542,
+      12626185.000000259,
+      12784709.999999905,
+      12938886.249999631
+    ]
+  },
+  {
+    "key": "fanoutPushThreshold.496",
+    "sweep": "fanoutPushThreshold",
+    "axis": "fanout",
+    "axisValue": 496,
+    "iterations": 80,
+    "nsPerOpMedian": 13096140.000000013,
+    "nsPerOpTrials": [
+      13336332.499999844,
+      13018557.499999586,
+      12896628.749999944,
+      13096140.000000013,
+      13113078.74999984
+    ]
+  },
+  {
+    "key": "fanoutPushThreshold.504",
+    "sweep": "fanoutPushThreshold",
+    "axis": "fanout",
+    "axisValue": 504,
+    "iterations": 80,
+    "nsPerOpMedian": 13322927.499999788,
+    "nsPerOpTrials": [
+      13304524.999999557,
+      13791122.499999618,
+      13322927.499999788,
+      13323372.499999823,
+      13171563.749999769
+    ]
+  },
+  {
+    "key": "fanoutPushThreshold.508",
+    "sweep": "fanoutPushThreshold",
+    "axis": "fanout",
+    "axisValue": 508,
+    "iterations": 80,
+    "nsPerOpMedian": 13294891.250000365,
+    "nsPerOpTrials": [
+      13271847.500000149,
+      13288954.999999987,
+      13298520.00000028,
+      13294891.250000365,
+      13446663.750000153
+    ]
+  },
+  {
+    "key": "fanoutPushThreshold.510",
+    "sweep": "fanoutPushThreshold",
+    "axis": "fanout",
+    "axisValue": 510,
+    "iterations": 80,
+    "nsPerOpMedian": 13386637.49999978,
+    "nsPerOpTrials": [
+      13386637.49999978,
+      13501738.749999639,
+      13520899.999999529,
+      13354643.750000104,
+      13308441.250000034
+    ]
+  },
+  {
+    "key": "fanoutPushThreshold.511",
+    "sweep": "fanoutPushThreshold",
+    "axis": "fanout",
+    "axisValue": 511,
+    "iterations": 80,
+    "nsPerOpMedian": 13326402.500000404,
+    "nsPerOpTrials": [
+      13372672.500000045,
+      13407519.999999931,
+      13298121.24999953,
+      13326402.500000404,
+      13266993.750000257
+    ]
+  },
+  {
+    "key": "fanoutPushThreshold.512",
+    "sweep": "fanoutPushThreshold",
+    "axis": "fanout",
+    "axisValue": 512,
+    "iterations": 80,
+    "nsPerOpMedian": 13285982.499999955,
+    "nsPerOpTrials": [
+      13285982.499999955,
+      13467674.999999871,
+      13368993.749999937,
+      13222318.749999976,
+      13097653.74999988
+    ]
+  },
+  {
+    "key": "fanoutPushThreshold.513",
+    "sweep": "fanoutPushThreshold",
+    "axis": "fanout",
+    "axisValue": 513,
+    "iterations": 80,
+    "nsPerOpMedian": 13279416.250000212,
+    "nsPerOpTrials": [
+      13244648.750000488,
+      13279416.250000212,
+      13479406.249999737,
+      13374339.999999939,
+      13252641.250000305
+    ]
+  },
+  {
+    "key": "fanoutPushThreshold.514",
+    "sweep": "fanoutPushThreshold",
+    "axis": "fanout",
+    "axisValue": 514,
+    "iterations": 80,
+    "nsPerOpMedian": 13281911.250000121,
+    "nsPerOpTrials": [
+      13281911.250000121,
+      13317107.499999838,
+      13249775.000000227,
+      13703447.50000004,
+      6418197.499999951
+    ]
+  },
+  {
+    "key": "fanoutPushThreshold.516",
+    "sweep": "fanoutPushThreshold",
+    "axis": "fanout",
+    "axisValue": 516,
+    "iterations": 80,
+    "nsPerOpMedian": 6737011.250000069,
+    "nsPerOpTrials": [
+      7023577.499999374,
+      6697566.250000091,
+      6737011.250000069,
+      6920922.499999869,
+      6722230.000000127
+    ]
+  },
+  {
+    "key": "fanoutPushThreshold.520",
+    "sweep": "fanoutPushThreshold",
+    "axis": "fanout",
+    "axisValue": 520,
+    "iterations": 80,
+    "nsPerOpMedian": 6772654.99999994,
+    "nsPerOpTrials": [
+      6771518.749999814,
+      6799441.2499996545,
+      6798117.50000008,
+      6772654.99999994,
+      6710528.75000023
+    ]
+  },
+  {
+    "key": "fanoutPushThreshold.528",
+    "sweep": "fanoutPushThreshold",
+    "axis": "fanout",
+    "axisValue": 528,
+    "iterations": 80,
+    "nsPerOpMedian": 6750403.7499995325,
+    "nsPerOpTrials": [
+      6756902.500000434,
+      6750403.7499995325,
+      6732108.750000043,
+      6904956.250000397,
+      6717078.749999928
+    ]
+  },
+  {
+    "key": "fanoutPushThreshold.544",
+    "sweep": "fanoutPushThreshold",
+    "axis": "fanout",
+    "axisValue": 544,
+    "iterations": 80,
+    "nsPerOpMedian": 7053236.249999464,
+    "nsPerOpTrials": [
+      7016979.999999603,
+      7037841.249999474,
+      7053236.249999464,
+      7476453.749999928,
+      7301603.7499997765
+    ]
+  },
+  {
+    "key": "fanoutPushThreshold.576",
+    "sweep": "fanoutPushThreshold",
+    "axis": "fanout",
+    "axisValue": 576,
+    "iterations": 80,
+    "nsPerOpMedian": 7586106.250000012,
+    "nsPerOpTrials": [
+      7621233.7500001015,
+      7535553.749999963,
+      7586106.250000012,
+      7751213.749999443,
+      7395561.250000173
+    ]
+  },
+  {
+    "key": "fanoutPushThreshold.640",
+    "sweep": "fanoutPushThreshold",
+    "axis": "fanout",
+    "axisValue": 640,
+    "iterations": 80,
+    "nsPerOpMedian": 8327847.500000644,
+    "nsPerOpTrials": [
+      8327847.500000644,
+      8097364.999999991,
+      8398488.750000251,
+      8326341.249999678,
+      8362500
+    ]
+  },
+  {
+    "key": "fanoutPushThreshold.768",
+    "sweep": "fanoutPushThreshold",
+    "axis": "fanout",
+    "axisValue": 768,
+    "iterations": 80,
+    "nsPerOpMedian": 10147102.499999892,
+    "nsPerOpTrials": [
+      10278534.999999829,
+      10193957.500000397,
+      9996470.000000408,
+      10147102.499999892,
+      10056853.750000302
+    ]
+  },
+  {
+    "key": "fanoutPushThreshold.1024",
+    "sweep": "fanoutPushThreshold",
+    "axis": "fanout",
+    "axisValue": 1024,
+    "iterations": 30,
+    "nsPerOpMedian": 13326450.000000961,
+    "nsPerOpTrials": [
+      13250630.000000818,
+      13269003.333333725,
+      13596826.66666728,
+      13453766.66666707,
+      13326450.000000961
+    ]
+  }
+]

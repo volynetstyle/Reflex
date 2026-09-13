@@ -70,7 +70,7 @@ Use this map to find the right place:
 3. **Read the relevant docs:**
    - If: wrong invalidation → check INVARIANTS #2 (Changed vs. Invalid)
    - If: stale edges → check INVARIANTS #3 (Pruning)
-   - If: disposed participation → check INVARIANTS #5 (Disposal terminal)
+   - If: post-teardown participation → check INVARIANTS #5 (Eager teardown)
 4. **Locate the bug** using the invariant as a guide
 5. **Implement fix** minimally (don't refactor while fixing)
 6. **Test:** Verify your test now passes; run full suite
@@ -132,7 +132,7 @@ pnpm test -- runtime.walkers_reggression.dev.test.ts
 
 Tests specific invariants:
 - Bidirectional edge consistency
-- Disposal terminal state
+- Eager graph teardown
 - Dynamic dependency pruning
 
 **When to add:** When fixing a specific bug (to prevent reoccurrence)
@@ -189,15 +189,15 @@ edge.to.firstIn = edge;  // <-- this too!
 
 **Check INVARIANTS.md #3 and #4**
 
-### Pitfall 4: Disposed Nodes Still Participate
+### Pitfall 4: Assuming Teardown Adds a Liveness State
 
 **Symptom:** Effects fire after component unmount
 
 **Prevention:**
 
-- Every public operation: check `if (isDisposedNode(node)) return early`
-- In `propagate()`: skip disposed nodes
-- In cleanup: fully unlink disposed nodes
+- Treat `disposeNode()` as eager graph teardown, not a state transition
+- Use `disposeWatcher()` when watcher cleanup must run
+- Keep lifecycle ownership outside the generic graph node
 
 **Check INVARIANTS.md #5**
 
@@ -435,7 +435,7 @@ Avoid circular dependencies. If adding a new file, fit it into this hierarchy.
 |-----------|--------|
 | Test fails mysteriously | Run with `--reporter=verbose`, check invariants |
 | Performance regressed | Run benchmark, profile with DevTools |
-| Disposed node behavior wrong | Review [DISPOSE.md](./DISPOSE.md) |
+| Post-teardown behavior wrong | Review [DISPOSE.md](./DISPOSE.md) |
 | Watcher not executing | Check `onEffectInvalidated` hook firing |
 | Circular reference leak | Check bidirectional edges (INVARIANTS #1) |
 | Stale values appearing | Check `shouldRecompute()` logic (INVARIANTS #2) |

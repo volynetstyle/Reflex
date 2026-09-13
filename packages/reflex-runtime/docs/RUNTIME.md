@@ -1,701 +1,217 @@
-# Reflex Runtime — Public Contract
+# Reflex runtime contract
 
-This document specifies the **observable behavior** and **stable guarantees** of `@reflex/runtime` as it exists today.
+`@volynets/reflex-runtime` provides producer, computed-consumer, and watcher
+primitives over an intrusive bidirectional graph. It owns invalidation and
+lazy stabilization; the host owns watcher scheduling.
 
-It is the authoritative source for:
+This document describes the current implementation. See
+[INVARIANTS.md](./INVARIANTS.md) for graph and execution obligations,
+[DISPOSE.md](./DISPOSE.md) for teardown, and
+[tracking](../src/kernel/shape/tracking/README.md) for dependency resolution.
 
-- Public API surface and semantics
-- Node kinds and their exact behavior
-- Execution context and hooks
-- Observable invariants
-- What is safe to depend on when extending the runtime
+## Public operations
 
-**Do not rely on implementation details not mentioned here.**
-
-See related documents:
-
-- [`README.md`](./README.md) — mental model and quick start
-- [`DISPOSE.md`](./DISPOSE.md) — disposal and cleanup semantics
-- [`DOC-TOPOLOGY.md`](./DOC-TOPOLOGY.md) — documentation structure
-- [`study/`](./study/) — detailed walkthroughs for maintainers
-- [`src/reactivity/walkers/README.md`](./src/reactivity/walkers/README.md) — algorithm reference
-
----
-
-## What This Package Is
-
-`@reflex/runtime` is a **low-level reactive graph engine**.
-
-It does **not** provide:
-
-- `flush()` API
-- Built-in scheduler
-- Singleton runtime export
-- Signal/computed/effect convenience factories
-- Event-emitter style public API
-
-Instead, it exports:
-
-- Primitives: `ReactiveNode`, read/write operations, watcher execution
-- Context management with host hooks
-- State constants and disposal utilities
-- Debug introspection surface
-
----
-
-## Public Exports
-
-### Core Operations
+The package root exports these creation and execution operations:
 
 ```ts
-readProducer(node, context?)        // Return producer payload, track if reading
-writeProducer(node, value, compare?, context?)  // Write to producer, invalidate subscribers
-readConsumer(node, mode?, context?) // Stabilize consumer, return derived value
-runWatcher(node)                    // Execute watcher node if dirty
-disposeWatcher(node)                // Dispose watcher node and run cleanup
-untracked(fn, context?)             // Execute function without tracking
+createProducer(payload)
+createConsumer(callback)
+createWatcher(callback)
+readProducer(node)
+writeProducer(node, value)
+readConsumer(node, mode?) // ConsumerReadMode.lazy is the default
+readConsumerLazy.call(node)
+readConsumerEager(node)
+runWatcher(node)
+disposeWatcher(node)
+untracked(callback)
 ```
 
-### Node Utilities
+Read/write operations use the active runtime context; they do not take an
+optional context argument. Equality is `Object.is`; `writeProducer` does not
+take a comparator argument.
+
+`ReactiveNode` is exported as a type from the root. The constructor, graph
+primitives, state constants, `disposeNode`, and scheduler integration
+operations are available through the internal surface.
+
+## Producers
+
+A producer stores its committed payload and has `compute === undefined`.
+Reading returns the payload and tracks a dependency if a consumer is active.
+
+An equal write returns immediately. A changed write commits the payload,
+then synchronously pushes invalidation. The producer normally remains clean;
+the write does not set a producer dirty token. Direct consumer subscribers
+become `Changed`, while newly invalidated transitive descendants become
+`Unknown`.
+
+The runtime does not itself run computed callbacks or watcher effects in push.
+Host hooks execute synchronously and can perform operations permitted by their
+configuration; therefore "no user code executes during a write" is not a
+contract.
+
+If a hook throws, the committed payload is retained. The write unwinds the
+propagation scope it opened, but does not roll back or finish the aborted wave.
+
+## Computed consumers and reads
 
-```ts
-ReactiveNode                        // Constructor: new ReactiveNode(payload, compute, state)
-isDisposedNode(node)                // Check if node is disposed
-disposeNode(node)                   // Generic disposal (any node kind)
-disposeNodeEvent(node)              // Alias of disposeNode()
-```
+A consumer starts `Changed` with an undefined cached payload. Its first read
+executes its callback and tracks dependencies. Clean reads reuse the cache.
 
-### Type Utilities
-
-```ts
-ProducerComparator                  // Type: (prev, next) => boolean
-ConsumerReadMode                    // Enum: { lazy, eager }
-```
-
-### Execution Hooks
-
-```ts
-configureRuntimeContext(options)    // Configure hooks and tracking on the active context
-snapshotRuntimeContext()            // Snapshot the active runtime context
-restoreRuntimeContextSnapshot(ctx, snapshot) // Restore a context snapshot
-resetRuntimeContext(ctx)            // Reset a runtime context
-```
-
-### Types
-
-```ts
-type ExecutionContext               // Execution environment: owns hooks, propagation state
-type ExecutionContextOptions        // Runtime options for tracking fallback
-type EngineHooks                    // Hook definitions
-```
-
-### State Constants
-
-```ts
-DIRTY_STATE                         // Union: Invalid | Changed
-PRODUCER_INITIAL_STATE              // Factory state for new producers (clean)
-PRODUCER_CHANGED                    // Token: direct write changed this producer
-PRODUCER_DIRTY                      // Combined: producer is dirty
-CONSUMER_INITIAL_STATE              // Factory state: alias of CONSUMER_CHANGED (dirty)
-CONSUMER_CHANGED                    // Token: propagation marked as definitely stale
-CONSUMER_DIRTY                      // Combined: consumer is dirty
-WATCHER_INITIAL_STATE               // Factory state: alias of WATCHER_CHANGED (dirty)
-WATCHER_CHANGED                     // Token: propagation marked as definitely stale
-WALKER_STATE                        // Bitmask: transient walker execution flags
-ReactiveNodeState                   // Enum of all state constants
-```
-
----
-
-## Core Node Model
-
-All reactive behavior is built from `ReactiveNode` with three distinct roles.
-
-### Producer
-
-**Mutable source state.**
-
-```ts
-const count = new ReactiveNode(0, null, PRODUCER_INITIAL_STATE);
-```
-
-Semantics:
-
-- **Holds state:** Stores committed payload directly in `node.payload`
-- **No computation:** `compute` parameter is always `null`
-- **On write:** Marks direct subscribers as `Changed`, others as `Invalid`
-- **Lifetime:** Can exist indefinitely; writes repeatedly during execution
-- **Read:** `readProducer(node)` returns `node.payload` immediately
-
-Key invariant:
-
-- A producer never recomputes
-- A producer never depends on other nodes
-- Producer writes are immediate and push invalidation synchronously
-
-### Consumer
-
-**Pure derived value.**
-
-```ts
-const doubled = new ReactiveNode(undefined, () => {
-  return readProducer(count) * 2;
-}, CONSUMER_INITIAL_STATE);
-```
-
-Semantics:
-
-- **Computes lazily:** Only on explicit `readConsumer()` if dirty
-- **Caches result:** Stores payload after computation
-- **Tracks dependencies:** Reads during `compute()` create edges
-- **Dynamic deps:** Can add/remove dependencies on each recompute
-- **Owned by host:** No automatic scheduling
-
-Important:
-
-- `compute()` is **pure**: should not perform side effects
-- Edges are tracked during execution, pruned afterward
-- Stale dependencies are removed after recompute
-- A consumer read returns the latest stable value
-
-### Watcher
-
-**Effect-like sink.**
-
-```ts
-const effect = new ReactiveNode(null, () => {
-  console.log(readConsumer(doubled));
-  return () => console.log("cleanup");
-}, WATCHER_INITIAL_STATE);
-```
-
-Semantics:
-
-- **No output value:** Does not produce payload for downstream
-- **Effect container:** Executes user code with side effects
-- **Host-scheduled:** Runs only when host calls `runWatcher()`
-- **Cleanup support:** May return a cleanup function
-- **Invalidation signals:** Runtime signals dirty state through `onNodeInvalidated` hook
-
-Guarantee:
-
-- Runtime invalidates watcher nodes but does not auto-execute them
-- Host owns the scheduler: "when does this run?"
-- Cleanup runs before next execution or before disposal
-
----
-
-## Node State and Initial Values
-
-State constants are intentionally asymmetric:
-
-| Constant | Value | Meaning |
-|----------|-------|---------|
-| `PRODUCER_INITIAL_STATE` | clean | Fresh producer is clean; no write needed yet |
-| `CONSUMER_INITIAL_STATE` | dirty | Fresh consumer is dirty; first read triggers execution |
-| `WATCHER_INITIAL_STATE` | dirty | Fresh watcher is dirty; first run executes the effect |
-
-**Why?** A fresh consumer or watcher has never executed, so the first access should definitely run the compute function.
-
-**Important:** These are intentionally **not** meant to be steady-state values in normal operation:
-
-- Producers stay clean until written
-- Consumers oscillate between clean (after read) and dirty (after invalidation)
-- Watchers stay clean until invalidated or explicitly dirtied
-
----
-
-## Execution Contexts
-
-Every public operation accepts an optional `ExecutionContext` as the last parameter.
-
-```ts
-readProducer(node, context?)
-readConsumer(node, mode?, context?)
-writeProducer(node, value, compare?, context?)
-runWatcher(node, context?)
-untracked(fn, context?)
-```
-
-If omitted, the default context is used.
-
-### Context Responsibilities
-
-An `ExecutionContext` owns:
-
-- **Active compute tracking:** Which node is currently executing?
-- **Propagation bookkeeping:** Transient state during invalidation waves
-- **Watcher cleanup storage:** Pending cleanup functions
-- **Host hooks:** Callbacks for invalidation and settling events
-
-An `ExecutionContext` does **not** own:
-
-- Graph nodes themselves (nodes are owned by the host)
-- Dependency edges (stored on nodes)
-- Producer payloads (stored on nodes)
-
-### Hook Integration
-
-```ts
-// Create a new context with hooks
-setHooks({
-  onNodeInvalidated(node) {
-    pendingWatchers.push(node);
-  },
-  onRuntimeIdle() {
-    console.log("Graph is idle");
-  },
-});
-```
-
-### Hook Semantics
-
-**`onNodeInvalidated(node)`**
-
-- **When:** Fires synchronously during propagation when a sink node becomes dirty
-- **What:** Signals that the sink node needs execution
-- **Does not:** Run the node for you
-- **Typical use:** Queue the node for later execution by host scheduler
-
-**`onRuntimeIdle()`**
-
-- **When:** Fires when the context reaches quiescence
-  - Conditions: `propagationDepth === 0` AND `activeComputed === null`
-  - Fired after reads, recomputes, or propagation completion
-- **What:** Signals "reactive graph is idle, now is a good time to batch actions"
-- **Typical use:** Post-update hooks, deferred work, client notifications
-
-### Practical Rule
-
-Use one context per reactive "world":
-
-```ts
-// Option A: Share default context (simple case)
-readProducer(a);           // Uses default context
-readConsumer(b);           // Uses default context
-
-// Option B: Explicit context (isolation, custom hooks)
-setHooks({
-  onNodeInvalidated(node) { /* custom logic */ },
-});
-readProducer(a);
-readConsumer(b);
-```
-
-Contexts isolate scheduling hooks and propagation state, not graph ownership.
-
----
-
-## Reactive Batch Boundary
-
-A reactive batch is a synchronous runtime notification boundary. Writes and
-graph invalidation happen immediately, and lazy consumers recompute on demand.
-Only host-visible `runtimeIdle` delivery is deferred until the outermost
-boundary has exited and runtime execution is idle.
-
-Runtime batching does not buffer writes, make reads stale, schedule or flush
-effects, own asynchronous timing, or know scheduler modes. Those decisions are
-host policy implemented through `onNodeInvalidated` and
-`onRuntimeIdle` hooks.
-
-The host may enter and leave the boundary, but it must not inspect settlement
-registers. `leaveReactiveBatch()` is the complete exit operation. When a public
-batch also opens a scheduler batch, the ordering contract is:
-
-```txt
-enter reactive boundary
-enter scheduler batch
-run user callback
-leave scheduler batch and apply scheduler policy
-leave reactive boundary and possibly emit settled
-```
-
-Closing scheduler policy first ensures the settled hook never observes the
-scheduler in its batching phase.
-Multiple contexts can reference the same nodes.
-
----
-
-## Public Operation Semantics
-
-### `readProducer(node, context?): any`
-
-**Returns:** `node.payload` immediately.
-
-**Computing:** If a computation is currently active in `context`, this read creates a dependency edge.
-
-**Execution:** Does not stabilize anything; never runs user code.
-
-**Guarantee:** Always returns the current committed state instantly.
-
-### `writeProducer(node, value, compare?, context?): void`
-
-**Commits:** New state to `node.payload`.
-
-**Comparison:** Uses `compare(previous, value)` to decide if payload changed.
-- Default: `Object.is`
-- Custom comparator: e.g., `(a, b) => a === b` or deep equals
-
-**Propagation:** If changed, immediately invalidates reachable subscribers.
-
-**Semantics:**
-
-1. Compare: `changed = !compare(node.payload, value)`
-2. Return early if not changed
-3. Commit: `node.payload = value`
-4. Propagate: Mark direct subscribers `Changed`, deeper nodes `Invalid`
-
-**Important consequences:**
-
-- Producer writes are **immediate**
-- Propagation is **synchronous**
-- No consumer compute runs during this call
-- No sink compute runs during this call
-- Sink invalidation hooks **may** run during propagation (queueing for execution)
-
-**Typical flow:**
-
-```ts
-writeProducer(count, 5, Object.is, ctx);  // Invalidates subscribers
-// At this point, derived consumers are marked dirty but not recomputed
-// Sink nodes are queued via onNodeInvalidated hook
-
-readConsumer(derived, ctx);               // Now the consumer recomputes
-```
-
-### `readConsumer(node, mode?, context?): any`
-
-**Returns:** Stable derived value.
-
-**Stabilization:** Before returning:
-- If node is clean, return cached payload
-- If node is `Changed`, recompute immediately
-- If node is `Invalid`, verify if upstream actually affects this node
-
-**Read modes:**
-
-```ts
-enum ConsumerReadMode {
-  lazy = 1 << 0,    // Default: stabilize + track to active outer computation
-  eager = 1 << 1,   // Stabilize only; do not create dependency edge
-}
-```
-
-**`lazy` mode (default):**
-- Stabilizes the consumer
-- If an outer computation is active, this consumer becomes a dependency
-- Use when: "I need this value AND it should affect my parent"
-
-**`eager` mode:**
-- Stabilizes the consumer
-- Does not subscribe the active outer computation
-- Use when: "I need this value but shouldn't create a dependency" (e.g., probing, prewarming)
-
-**Guarantee:** Returns the latest stable value after stabilization completes.
-
-### `runWatcher(node): void`
-
-**Executes** the watcher node if dirty.
-
-**Behavior:**
-
-- **Disposed:** No-op (idempotent)
-- **Clean:** No-op
-- **Dirty with no real change:** Clears dirtiness, returns
-- **Dirty with real change:**
-  1. Run previous cleanup (if any)
-  2. Clear dirty state
-  3. Execute compute function
-  4. If compute returns a function, store it as next cleanup
-
-**Returns:** `void` (intentionally).
-
-The absence of a return value is deliberate: watcher scheduling is a **host responsibility**. The runtime only signals "this node is dirty" via `onNodeInvalidated`.
-
-**Example:**
-
-```ts
-// Host controls when to run queued watchers
-const pending: ReactiveNode[] = [];
-
-setHooks({
-  onNodeInvalidated(node) {
-    pending.push(node);
-  },
-});
-
-// Later, in host's event loop:
-while (pending.length > 0) {
-  runWatcher(pending.shift()!);
-}
-```
-
-### `disposeWatcher(node): void`
-
-**Disposes** the watcher node and runs its last cleanup.
-
-**Steps:**
-1. Check if already disposed (idempotent)
-2. Run previous cleanup function (if any)
-3. Mark node `Disposed`
-4. Unlink all graph edges
-5. Clear compute function
-6. Reset payload
-
-**Guarantee:** Safe to call multiple times; only runs cleanup once.
-
-### `disposeNode(node)` and `disposeNodeEvent(node)`
-
-**Generic low-level disposal** for any node kind.
-
-Currently, `disposeNodeEvent` is an alias of `disposeNode`.
-
-**Semantics:** Mark node `Disposed`, eagerly detach edges, block further participation.
-
-(For detailed disposal semantics, see [`DISPOSE.md`](./DISPOSE.md).)
-
-### `untracked(fn, context?): ReturnType<fn>`
-
-**Runs** `fn` with dependency tracking temporarily disabled.
-
-**Effect:** `context.activeComputed` is cleared during execution; reads inside `fn` do not create edges.
-
-**Use case:** "I want to read a value but not depend on it."
-
-```ts
-const sum = new ReactiveNode(undefined, () => {
-  const a = readProducer(valueA);  // This is tracked
-  const hidden = untracked(() => {
-    return readProducer(debug);    // This is NOT tracked
-  }, ctx);
-  return a + hidden;
-}, CONSUMER_INITIAL_STATE);
-```
-
----
-
-## Dirty-State Model
-
-State is tracked as a bitmask. Important bits:
-
-```ts
-enum ReactiveNodeState {
-  Producer = 1 << 0,
-  Consumer = 1 << 1,
-  Watcher = 1 << 2,
-  Invalid = 1 << 3,
-  Changed = 1 << 4,
-  Visited = 1 << 5,
-  Disposed = 1 << 6,
-  Computing = 1 << 7,
-  Scheduled = 1 << 8,
-  Computing = 1 << 9,
-}
-```
-
-### Observable Dirty Bits in Normal Flow
-
-- **`Changed`:** Direct upstream dependency definitely changed
-- **`Invalid`:** Something upstream may have changed; verify on pull
-- **`Disposed`:** Terminal state; node no longer participates
-
-### Transient Bits (Not for Public Reliance)
-
-- **`Computing`:** Temporarily set during compute function execution
-- **`Visited`:** Temporary re-entrancy marker in internal walkers
-- **`Scheduled`:** Exists in enum; not actively used in current public flow
-
-### Important Clarification
-
-Exported state constants like `PRODUCER_CHANGED`, `CONSUMER_DIRTY`, etc. are mainly for **tests and tooling**:
-
-- **NOT** all exported constants are normal steady-state values
-- Producers typically stay **clean** after writes (not dirty)
-- These are useful for internal verification, not public policy
-
-```ts
-// Example: you should NOT write code like this
-if (node.state & PRODUCER_DIRTY) {
-  // This check is rarely useful in practice
-}
-
-// Instead, use high-level operations
-readConsumer(derived);  // Handles all state transitions internally
-```
-
----
-
-## Internal Mechanics You Can Rely On
-
-The runtime implements a bidirectional dependency graph.
-
-### Graph Structure
-
-Each node maintains:
-
-- **Outgoing edges:** `firstOut`, `lastOut` → subscribers
-- **Incoming edges:** `firstIn`, `lastIn` → sources
-- **Dependency reuse:** `depsTail` → cursor for incremental tracking
-
-### Observable Consequences
-
-#### 1. Push Invalidation, Pull Recomputation
-
-Writes push dirtiness through the graph **immediately**.
-Reads pull the graph back to a stable value **on demand**.
-
-**Benefits:**
-
-- Writes are cheap (no computation)
-- Unread consumers stay lazy
-- Watcher execution policy stays host-controlled
-
-#### 2. Dynamic Dependencies Pruned After Recompute
-
-If a consumer stops reading one branch and starts another:
-
-1. Recompute executes, creates new edges, old edges are loose
-2. After recompute completes, stale edges are cleaned up
-3. Later writes from the old branch no longer invalidate this consumer
-
-#### 3. Edge Consistency
-
-Every dependency edge exists in **both directions**:
-
-- Source → Subscriber (in source's `firstOut`/`lastOut`)
-- Subscriber → Source (in subscriber's `firstIn`/`lastIn`)
-
-If extending the runtime with custom graph mutations, keep both views in sync.
-
-#### 4. Disposal Eagerly Detaches
-
-Disposing a node removes it from its sources and detaches subscribers.
-Future invalidation through that path stops immediately.
-
----
-
-## Observable Invariants
-
-These invariants define the semantic contract:
-
-1. **A consumer executes at most once per stabilization.**
-   Once `readConsumer()` returns, the consumer is guaranteed stable.
-
-2. **A producer write never triggers immediate consumer recomputation.**
-   Only `readConsumer()` or `runWatcher()` can trigger compute.
-
-3. **Propagation order is topologically consistent.**
-   No node receives invalidation before its sources.
-
-4. **Cleanup runs before next execution of the same watcher.**
-   If `runWatcher()` is called while the watcher is already dirty, cleanup from
-   the previous execution runs first.
-
-5. **Disposed nodes are terminal.**
-   Once disposed, a node never participates in graph operations.
-
-6. **Hook wiring remains stable across calls unless explicitly replaced.**
-   Host hooks change only through `configureRuntimeContext()`.
-
----
-
-## Minimal End-to-End Example
+Dirty reads force recomputation for `Changed | Visited`; otherwise they
+validate unknown dependencies with the pull walker. An unchanged derived
+result can stop recomputation of downstream consumers. Equality is applied
+after dependency reconciliation, so an unchanged result can still replace
+the dependency topology.
+
+Lazy reads register the final dependency edge after stabilization. Eager reads
+stabilize without registering that final edge; internal reads made by a dirty
+computed callback still collect that computed node's dependencies.
+`untracked` temporarily clears the active consumer and restores it on exit,
+including throws.
+
+A failed callback leaves `Changed` so a subsequent read retries it. This is
+necessary even when the callback was entered from an unknown pull-bubble node
+whose upstream dependencies already stabilized. Failed computation does not
+roll back dependency mutations.
+
+Computed completion uses its captured entry state, while watcher completion
+preserves live reentrant flags. The runtime does not promise that arbitrary
+self-mutating computed callbacks converge through automatic repeated execution.
+
+## Tracking and graph mutation
+
+An edge has producer/consumer endpoints, doubly linked incoming/outgoing
+membership, and the existing `version` tracking stamp.
+
+`lastIn` is the physical incoming tail. During a callback, `tailIn` bounds
+the dependencies already read. The old unmatched suffix remains available for
+reuse until it is pruned or eagerly abandoned.
+
+Reads can reuse an expected edge, recognize a duplicate, move an existing
+edge after the cursor, or link a new edge. A runtime read extending a prefix
+uses the cursor edge's tracking stamp. Nested computation may advance
+`trackingEpoch` without changing that already-accepted prefix's stamp.
+
+Successful computation removes remaining unmatched edges. Eager suffix
+reconciliation can remove old dependencies earlier, during a read. A callback
+throw does not reverse links, moves, stamps, or eager removal, and does not
+guarantee retention of the entire previous dependency set.
+
+Local prefix and lookahead limits do not globally bound reconciliation:
+suffix scans and outgoing membership probes may traverse full lists.
+
+## Flags
+
+| Flag | Current meaning |
+| --- | --- |
+| `Unknown` | Upstream may have changed; usually validate before recomputing. |
+| `Changed` | Execute without first proving upstream change. |
+| `Visited` | Invalidation during execution; may survive watcher completion as a rerun obligation. |
+| `Computing` | Callback active; propagation interprets the active incoming prefix accordingly. |
+| `Watcher` | Watcher role. |
+| `Scheduled` | Host queue ownership, claimed and released separately from execution. |
+
+`DIRTY_STATE = Unknown | Changed`. Dirty bits are not globally exclusive:
+`WATCHER_INITIAL_STATE = Changed | Unknown | Watcher | Consumer`, and
+computing invalidation can also combine them.
+
+Producer/consumer DEV role constants currently share a bit and are zero in
+production. Do not infer a reliable role distinction from those bits alone.
+There is no terminal disposal bit.
+
+## Watchers and host scheduling
+
+A watcher callback returns void or one cleanup function. The runtime marks
+watchers dirty and may call `onNodeInvalidated`; it does not create a queue or
+select asynchronous timing.
+
+`runWatcher` skips clean or proven-stable work. When execution is necessary,
+it runs previous cleanup before the callback, outside parent tracking.
+Cleanup may dispose the watcher, so executable data is checked again afterward.
+
+After successful execution, a watcher without new `Visited` is cleaned.
+With `Visited`, it retains `Unknown | Visited` so a subsequent run executes.
+The host still owns queue delivery. Unknown-to-changed promotion can emit
+another invalidation; the host owns deduplication.
+
+Internal `claimWatcherSchedule` and `releaseWatcherSchedule` operate on
+`Scheduled`. Successful watcher execution does not release a claim.
+Callback/cleanup failure clears transient flags, including the claim, so later
+invalidation can schedule again using the remaining dependencies.
+
+## Disposal
+
+Generic `disposeNode` unlinks incoming and outgoing edges, then clears
+`compute` and `payload`. It leaves node flags unchanged and does not invoke
+cleanup. It is graph teardown, not universal terminal-state enforcement.
+
+`disposeWatcher` captures cleanup, tears down the graph and executable data,
+clears transient flags, then invokes cleanup. Throwing or recursive cleanup
+cannot repeat that captured cleanup through a second disposal.
+
+Post-disposal reads/writes are not guaranteed inert, and eager unlinking does
+not establish arbitrary mid-traversal disposal safety. See
+[DISPOSE.md](./DISPOSE.md).
+
+## Contexts, batching, and nesting
+
+`createRuntimeContext` creates saved registers and configuration.
+`runWithRuntimeContext(context, callback)` activates them and restores the
+previous context in a finally block. Configuration, reset, snapshot, and
+restore operate on active or explicitly supplied contexts.
+
+Contexts isolate registers/configuration, not graph ownership. Different
+contexts can access the same node flags, payloads, and edges. Module registers
+are synchronized with saved context objects at the existing boundaries.
+Traversal stacks remain shared and protect nested invocations with
+`base/top/high` slices.
+
+Source commits and nested production writes are synchronous. A nested write
+borrows an existing propagation scope. Its failure must not clear an outer
+scope when the caller catches the exception.
+
+Reactive batches defer idle notification. Host work is requested separately;
+`onHostFlush` and `onRuntimeIdle` belong to idle delivery, not graph
+invalidation. A host combining scheduler and reactive batches closes scheduler
+policy before leaving the reactive batch.
+
+The scheduler validation policy is enabled by `__DEV__ && __PROFILE__`.
+It rejects reactive reads, watcher execution/disposal from invalidation hooks,
+nested propagation, and direct nested pull. It permits pull through an
+intervening recomputation and watcher execution at the idle boundary.
+Production does not add a queue-only or liveness policy.
+
+## Example
 
 ```ts
 import {
-  ConsumerReadMode,
-  CONSUMER_INITIAL_STATE,
-  PRODUCER_INITIAL_STATE,
-  ReactiveNode,
-  WATCHER_INITIAL_STATE,
-  setHooks,
-  readConsumer,
-  readProducer,
-  runWatcher,
-  writeProducer,
-} from "@reflex/runtime";
+  createProducer, createConsumer, createWatcher,
+  readProducer, readConsumer, writeProducer, runWatcher, disposeWatcher,
+} from "@volynets/reflex-runtime";
 
-// Host scheduler queue
-const pending: ReactiveNode[] = [];
-
-setHooks({
-  onNodeInvalidated(node) {
-    if (!pending.includes(node)) {
-      pending.push(node);
-    }
-  },
+const count = createProducer(1);
+const doubled = createConsumer(() => readProducer(count) * 2);
+const watcher = createWatcher(() => {
+  console.log(readConsumer(doubled));
 });
 
-// Create nodes
-const left = new ReactiveNode(1, null, PRODUCER_INITIAL_STATE);
-const right = new ReactiveNode(2, null, PRODUCER_INITIAL_STATE);
-
-const sum = new ReactiveNode(undefined, () => {
-  return readProducer(left, ctx) + readProducer(right, ctx);
-}, CONSUMER_INITIAL_STATE);
-
-const effect = new ReactiveNode(null, () => {
-  console.log(`Sum: ${readConsumer(sum, ConsumerReadMode.lazy, ctx)}`);
-}, WATCHER_INITIAL_STATE);
-
-// Step 1: First effect execution (establishes tracking)
-runWatcher(effect);
-// Output: "Sum: 3"
-
-// Step 2: Mutation
-writeProducer(left, 10, Object.is, ctx);
-// At this point: effect is queued via onNodeInvalidated
-
-// Step 3: Host drains pending effects
-while (pending.length > 0) {
-  runWatcher(pending.shift()!);
-}
-// Output: "Sum: 12"
+runWatcher(watcher);       // 2; establish dependencies
+writeProducer(count, 3);   // commit and invalidate
+runWatcher(watcher);       // 6; host chooses when to execute
+disposeWatcher(watcher);
 ```
 
----
+## Debugging and validation
 
-## Debug API: `@reflex/runtime/debug`
+The debug entry point provides observation and graph diagnostics. Production
+behavior must not depend on it; see [architecture-contract.md](./architecture-contract.md).
 
-Import `subtle` from `@reflex/runtime/debug`:
+The cleanup debug event is observable after the incoming cut and before
+outgoing unlink. Debug listeners may therefore see that intermediate state.
+Listener exceptions are isolated from runtime bookkeeping.
 
-```ts
-import { subtle } from "@reflex/runtime/debug";
-```
-
-Useful for introspection:
-
-- `subtle.enabled` → Is debug mode active?
-- `subtle.label(node, label)` → Name a node
-- `subtle.snapshot(node)` → Capture node state
-- `subtle.context(ctx?)` → Get context info
-- `subtle.history(ctx?)` → Get execution history
-- `subtle.observe(listener, ctx?)` → Watch events
-- `subtle.clearHistory(ctx?)` → Clear recorded events
-- `subtle.configure(options?, ctx?)` → Configure debug behavior
-
-**Important:** In production builds, `subtle` becomes a no-op or returns empty/undefined.
-
-**Do not** rely on `subtle` for runtime behavior; it is a **debugging aid only**.
-
----
-
-## Summary
-
-The runtime provides:
-
-- **Explicit node kinds:** Producer (source), Consumer (derived), Watcher (sink)
-- **Lazy evaluation:** Consumers recompute on demand, not automatically
-- **Host-controlled scheduling:** Watcher nodes are invalidated but not auto-executed
-- **Observable dirty states:** Changed vs. Invalid; Disposed is terminal
-- **Dynamic dependencies:** Tracked per-compute, pruned afterward
-- **Deterministic propagation:** Push invalidation, pull stabilization
-- **Composable hooks:** Host integrates custom execution policies via contexts
-
-Use `onNodeInvalidated` as the invalidation hook name.
-
-For deeper algorithm details, see:
-
-- [`src/reactivity/walkers/README.md`](./src/reactivity/walkers/README.md) — push/pull phases, fanout, re-entrancy
-- [`study/04-read-and-write-paths.md`](./study/04-read-and-write-paths.md) — detailed control flow
-- [`study/07-invariants-dev-and-prod.md`](./study/07-invariants-dev-and-prod.md) — design invariants and enforcement
+Tests and benchmarks must distinguish ordinary production execution from
+debug/profile execution. Profiling adds counters and graph-degree walks;
+profiled timing is not production timing.

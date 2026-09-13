@@ -399,7 +399,7 @@ class ResourceCore<T, E = unknown> {
  * import { resource } from "@volynets/reflex/unstable";
  *
  * const rt = createRuntime();
- * const [userId, setUserId] = signal(1);
+ * const userId = signal(1);
  *
  * const user = resource(() => userId(), async (id) => {
  *   await Promise.resolve();
@@ -408,7 +408,7 @@ class ResourceCore<T, E = unknown> {
  *
  * console.log(user.status()); // "pending"
  *
- * setUserId(2);
+ * userId.set(2);
  * rt.flush();
  * ```
  *

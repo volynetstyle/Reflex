@@ -44,7 +44,7 @@ function setPlainAttribute(el: Element, name: string, value: unknown): void {
   if (value === true) {
     el.setAttribute(name, "");
   } else {
-    el.setAttribute(name, String(normalizeURLAttr(name, value)));
+    el.setAttribute(name, normalizeURLAttr(name, value) + "");
   }
 }
 
@@ -63,11 +63,7 @@ export function setAttr(
     if (remove) {
       el.removeAttributeNS(XLINK_NS, "href");
     } else {
-      el.setAttributeNS(
-        XLINK_NS,
-        "href",
-        String(normalizeURLAttr(name, value)),
-      );
+      el.setAttributeNS(XLINK_NS, "href", normalizeURLAttr(name, value) + "");
     }
 
     return value;

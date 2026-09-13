@@ -75,7 +75,7 @@ Follow this sequence for a complete understanding:
 ### Invariants (Know What Can't Break)
 
 8. **[07-invariants-dev-and-prod.md](./07-invariants-dev-and-prod.md)** `🔄 Needs Refresh`
-   - Critical invariants (bidirectional edges, disposal terminal, etc.)
+   - Critical invariants (bidirectional edges, eager teardown, etc.)
    - Development assertions vs. production behavior
    - Invariant enforcement in tests
    - Regression patterns
@@ -181,7 +181,7 @@ pnpm test -- runtime.walkers_reggression.dev.test.ts
 
 - **Bidirectional edge inconsistency** → graph traversal visits wrong nodes
 - **Stale dependency persistence** → unrelated branches still invalidate
-- **Disposal not terminal** → disposed nodes still execute
+- **Incomplete teardown** → detached nodes retain graph edges or executable data
 - **Cleanup ordering wrong** → new cleanup runs before old cleanup
 - **Dynamic dependency not pruned** → previous read still tracked
 

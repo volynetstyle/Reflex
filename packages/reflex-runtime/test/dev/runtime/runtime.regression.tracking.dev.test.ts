@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { subtle } from "../../../src/debug";
+import { observeDebugContext } from "../../../debug/debug.impl";
+import { defaultContext } from "../../../src/kernel/config";
+import { cleanupUnvisitedSources, linkEdge } from "../../../src/kernel/shape";
+import { profileRuntime } from "../../../src/profiling";
 import { readConsumer, readProducer, writeProducer } from "../../../src";
 import {
   createConsumer,
@@ -80,5 +84,40 @@ describe("Reactive runtime - tracking regressions (dev)", () => {
     expect(summary.trackReads.length).toBe(128);
     expect(summary.recomputes.length).toBe(1);
     expectNoStaleCleanup(summary);
+  });
+  it("observes the incoming cut before outgoing unlink and preserves cleanup counts", () => {
+    const retained = createProducer(1);
+    const stale = createProducer(2);
+    const target = createConsumer(() => 0);
+    const keptEdge = linkEdge(retained, target);
+    const removedEdge = linkEdge(stale, target);
+    target.tailIn = keptEdge;
+    const observations: boolean[][] = [];
+    const stop = observeDebugContext(defaultContext, (event) => {
+      if (event.type !== "cleanup:stale-sources") return;
+      // Capture observations; listener assertion errors would be swallowed.
+      observations.push([
+        target.firstIn === keptEdge,
+        target.lastIn === keptEdge,
+        target.tailIn === keptEdge,
+        keptEdge.nextIn === null,
+        stale.firstOut === removedEdge,
+        stale.lastOut === removedEdge,
+        removedEdge.prevIn === keptEdge,
+      ]);
+    });
+    try {
+      const { counters } = profileRuntime(() => cleanupUnvisitedSources(target));
+      expect(observations).toEqual([[true, true, true, true, true, true, true]]);
+      expect(counters.cleanupEdgesDropped).toBe(1);
+      expect(stale.firstOut).toBeNull();
+      expect(stale.lastOut).toBeNull();
+      expect(removedEdge.prevIn).toBeNull();
+      expect(removedEdge.nextIn).toBeNull();
+      expect(removedEdge.prevOut).toBeNull();
+      expect(removedEdge.nextOut).toBeNull();
+    } finally {
+      stop();
+    }
   });
 });

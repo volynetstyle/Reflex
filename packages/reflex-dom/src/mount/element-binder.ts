@@ -4,9 +4,9 @@ import type { Namespace } from "../host/namespace";
 import { applyProp } from "../host/props";
 import { attachRef } from "../host/refs";
 import {
+  dispatchDOMEvent,
   getActiveDOMExecutionContext,
   registerDOMCleanup,
-  runDOMOperation,
 } from "../runtime/execution";
 import type { Ref } from "../types";
 
@@ -65,7 +65,8 @@ export function bindElementProperty(
         element,
         name,
         value as EventListenerOrEventListenerObject,
-        (invoke) => runDOMOperation(context, invoke),
+        (handler, receiver, event) =>
+          dispatchDOMEvent(context, handler, receiver, event),
       ),
     );
     return;
@@ -88,12 +89,6 @@ export function bindElementProps(
   getActiveDOMExecutionContext();
 
   for (const name in props) {
-    bindElementProperty(
-      element,
-      name,
-      props[name],
-      namespace,
-      bindingPhase,
-    );
+    bindElementProperty(element, name, props[name], namespace, bindingPhase);
   }
 }

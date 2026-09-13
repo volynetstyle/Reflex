@@ -30,7 +30,7 @@ const INITIAL_TASKS: readonly Task[] = [
   { id: "T-103", title: "Ship billing", assignee: "Ada", status: "done" },
 ];
 
-export const [tasks, setTasks] = signal<readonly Task[]>(INITIAL_TASKS);
+export const tasks = signal<readonly Task[]>(INITIAL_TASKS);
 
 const ui = createStore({
   filter: {
@@ -146,13 +146,13 @@ export const boardActions = {
 
       const nextTasks = currentTasks.slice();
       nextTasks[index] = { ...task, status };
-      setTasks(nextTasks);
+      tasks.set(nextTasks);
       return;
     }
   },
 
   reset() {
-    setTasks(INITIAL_TASKS);
+    tasks.set(INITIAL_TASKS);
     ui.filter.status = "all";
     ui.filter.query = "";
     ui.selection.taskId = "T-101";

@@ -34,7 +34,7 @@ export const createProducer = <T>(payload: T): ProducerNode<T> => {
     undefined,
     PRODUCER_INITIAL_STATE,
   ) as ProducerNode<T>;
-  if (__DEV__) devRecordNodeCreated(node, defaultContext);
+  devRecordNodeCreated(node, defaultContext);
   return node;
 };
 
@@ -56,7 +56,7 @@ export const createConsumer = <T>(callback: () => T): ConsumerNode<T> => {
     callback,
     CONSUMER_INITIAL_STATE,
   ) as ConsumerNode<T>;
-  if (__DEV__) devRecordNodeCreated(node, defaultContext);
+  devRecordNodeCreated(node, defaultContext);
   return node;
 };
 
@@ -77,6 +77,6 @@ export const createWatcher = (callback: WatcherFn): WatcherNode => {
     callback,
     WATCHER_INITIAL_STATE,
   ) as WatcherNode;
-  if (__DEV__) devRecordNodeCreated(node, defaultContext);
+  devRecordNodeCreated(node, defaultContext);
   return node;
 };

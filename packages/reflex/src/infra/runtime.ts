@@ -4,9 +4,7 @@ import {
   getActiveRuntimeContext,
   leaveReactiveBatch,
   runWithRuntimeContext,
-  resetRuntimeContext,
   switchRuntimeContext,
-  configureRuntimeContext,
   untracked,
 } from "@volynets/reflex-runtime/internal";
 import type {
@@ -17,28 +15,14 @@ import type {
 import { subscribeEvent } from "./event";
 import { createSource } from "./factory";
 import { createEventDispatcher } from "../policy";
-import { EffectSchedulerMode } from "@volynets/reflex-scheduler";
 import {
-  hasPendingEffects,
-  isContextSettled,
-} from "@volynets/reflex-scheduler";
-import { profileSchedulerPolicyCounter } from "@volynets/reflex-scheduler";
-import {
-  createSchedulerCore,
-  enterSchedulerBatch,
-  flushSchedulerQueue,
-  leaveSchedulerBatch,
-} from "@volynets/reflex-scheduler";
-import { tryEnqueue } from "@volynets/reflex-scheduler";
-import {
-  notifyEffectSchedulerSettled,
+  createRuntimeSchedulerBinding,
   resolveEffectSchedulerMode,
 } from "@volynets/reflex-scheduler";
 import type { EffectStrategy } from "@volynets/reflex-scheduler";
 
 type BatchFn = <T>(fn: () => T) => T;
 type EventFn = <T>() => EventSource<T>;
-const NO_BATCH_ERROR: unique symbol = Symbol("NO_BATCH_ERROR");
 
 export interface RuntimeContext {
   readonly scope: "runtime";
@@ -50,6 +34,11 @@ let activeEvent: EventFn = (() => {
   throw new Error("Runtime has not been created");
 }) as EventFn;
 let activeFlush: () => void = () => {};
+let activeHasPending: () => boolean = () => false;
+const retiredPendingSchedulers: Array<{
+  flush: () => void;
+  hasPending: () => boolean;
+}> = [];
 
 export interface RuntimeOptions {
   hooks?: RuntimeHostHooks;
@@ -75,118 +64,83 @@ export function createRuntime({
   hooks,
   effectStrategy,
 }: RuntimeOptions = {}): Runtime {
-  const execution = createRuntimeContext();
+  if (activeHasPending()) {
+    retiredPendingSchedulers.push({
+      flush: activeFlush,
+      hasPending: activeHasPending,
+    });
+  }
+
+  const execution = createRuntimeContext({
+    hooks: { onRuntimeIdle: hooks?.onRuntimeIdle },
+  });
   const ctx: RuntimeContext = { scope: "runtime", execution };
   const schedulerMode = resolveEffectSchedulerMode(effectStrategy);
-  const schedulerCore = createSchedulerCore();
-  const schedulerFlush = (): void => flushSchedulerQueue(schedulerCore);
-  const run = <T>(fn: () => T): T => runWithRuntimeContext(execution, fn);
-  const emitRuntimeIdle = (): void => {
-    profileSchedulerPolicyCounter("settleCalled");
-    notifyEffectSchedulerSettled(schedulerCore, schedulerMode);
-    hooks?.onRuntimeIdle?.();
-  };
+  const scheduler = createRuntimeSchedulerBinding(schedulerMode, execution);
   const runBatch = <T>(fn: () => T): T => {
     // Public batching composes two independent boundaries. Close scheduler
     // policy first so a settled hook never observes it in Batching phase.
     enterReactiveBatch();
-    enterSchedulerBatch(schedulerCore);
+    scheduler.enterBatch();
 
-    let result!: T;
-    let callbackError: unknown = NO_BATCH_ERROR;
-
-    try {
-      result = fn();
-    } catch (error) {
-      callbackError = error;
-    }
-
-    const exitErrors: unknown[] = [];
-    profileSchedulerPolicyCounter("batchExit");
+    let errors: unknown[] | undefined;
 
     try {
-      const leftOuterSchedulerBatch = leaveSchedulerBatch(schedulerCore);
-
-      if (
-        leftOuterSchedulerBatch &&
-        ((schedulerMode === EffectSchedulerMode.Eager &&
-          hasPendingEffects(schedulerCore)) ||
-          (schedulerMode === EffectSchedulerMode.SAB &&
-            hasPendingEffects(schedulerCore) &&
-            isContextSettled()))
-      ) {
-        flushSchedulerQueue(schedulerCore);
-      }
+      return fn();
     } catch (error) {
-      exitErrors.push(error);
+      errors = [error];
+      throw error;
     } finally {
+      try {
+        scheduler.leaveBatch();
+      } catch (error) {
+        (errors ??= []).push(error);
+      }
       try {
         leaveReactiveBatch();
       } catch (error) {
-        exitErrors.push(error);
+        (errors ??= []).push(error);
+      }
+
+      if (errors !== undefined) {
+        if (errors.length === 1) throw errors[0];
+        throw new AggregateError(errors, "Reactive batch failed");
       }
     }
-
-    if (callbackError !== NO_BATCH_ERROR) {
-      exitErrors.unshift(callbackError);
-    }
-
-    if (exitErrors.length === 1) throw exitErrors[0];
-    if (exitErrors.length > 1) {
-      throw new AggregateError(exitErrors, "Reactive batch failed");
-    }
-
-    return result;
   };
   const runtimeBatch = <T>(fn: () => T): T => {
-    const runContextBatch = (): T => runBatch(fn);
-
     if (getActiveRuntimeContext() === execution) {
-      return runContextBatch();
+      return runBatch(fn);
     }
 
-    return run(runContextBatch);
+    return runWithRuntimeContext(execution, () => runBatch(fn));
   };
   const flush = (): void => {
     if (getActiveRuntimeContext() === execution) {
-      schedulerFlush();
+      scheduler.flush();
       return;
     }
 
-    run(schedulerFlush);
+    runWithRuntimeContext(execution, scheduler.flush);
   };
   const dispatcher = createEventDispatcher(runtimeBatch);
   const externalNodeInvalidated = hooks?.onNodeInvalidated;
-  const externalRuntimeIdle = hooks?.onRuntimeIdle;
   // Runtime invalidation hooks are enqueue-only. Eager delivery is owned by
   // the subsequent reactive-settled boundary, never by the propagation hook.
-  const enqueueEffect = (node: ReactiveNode): void => {
-    tryEnqueue(schedulerCore.queue, node);
-  };
-  const onNodeInvalidated =
+  const enqueueEffect = scheduler.onNodeInvalidated;
+  execution.nodeInvalidatedHook =
     externalNodeInvalidated === undefined
       ? enqueueEffect
       : (node: ReactiveNode): void => {
           enqueueEffect(node);
           externalNodeInvalidated(node);
         };
-  const onRuntimeIdle =
-    schedulerMode === EffectSchedulerMode.Eager ||
-    externalRuntimeIdle !== undefined
-      ? emitRuntimeIdle
-      : undefined;
 
-  resetRuntimeContext(execution);
-
-  configureRuntimeContext(execution, {
-    hooks: {
-      onNodeInvalidated,
-      onRuntimeIdle,
-    },
-  });
+  // The new context is still inactive; install the trusted scheduler hooks
+  // before its first load, without another configuration/normalization pass.
+  execution.hostFlushHook = scheduler.onHostFlush;
 
   switchRuntimeContext(execution);
-  // activeContext = ctx;
   batch = runBatch;
   activeEvent = function <T>() {
     const source = createSource<T>();
@@ -201,6 +155,7 @@ export function createRuntime({
     };
   };
   activeFlush = flush;
+  activeHasPending = scheduler.hasPending;
 
   return {
     ctx,
@@ -212,6 +167,13 @@ export function createRuntime({
 
 export const event: EventFn = <T>() => activeEvent<T>();
 
-export const flush = (): void => activeFlush();
+export const flush = (): void => {
+  while (retiredPendingSchedulers.length !== 0) {
+    const retired = retiredPendingSchedulers.shift()!;
+    if (retired.hasPending()) retired.flush();
+  }
+
+  activeFlush();
+};
 
 export { untracked };

@@ -11,13 +11,11 @@ import {
 } from "@runtime/kernel/shape/graph/linkEdge";
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import type ReactiveNode from "@runtime/kernel/shape/node";
-import { profileRuntimeCounter } from "@runtime/profiling";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 import {
-  hasProducerEdgeInCurrentPassUnchecked,
-  PrefixHit,
-  PrefixScanLimitReached,
-  scanProducerInTrackedPrefix,
+  hasProducerInCompletedPrefix,
+  hasProducerInTrackedPrefix,
 } from "./prefix";
 
 /** Cold fallback shared by cursor and initial misses. */
@@ -30,12 +28,16 @@ function resolveTrackedReadSlow(
   allowSlowPath: boolean,
 ): boolean {
   if (!allowSlowPath) {
-    profileRuntimeCounter("trackingSlowPathBlocked");
+    if (__PROFILE__)
+      observeRuntimeProjection?.(
+        "projection.semantic.tracking.slow-path.blocked",
+      );
     return false;
   }
 
-  if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
-  profileRuntimeCounter("trackingSlowPath");
+  devRecordTrackRead(defaultContext, consumer, producer);
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.tracking.slow-path");
 
   consumer.tailIn = readTrackingStrategy(
     producer,
@@ -63,13 +65,16 @@ function resolveInitialTrackedReadMiss(
     const lastIncomingEdge = consumer.lastIn!;
 
     if (lastIncomingEdge.from === producer) {
-      profileRuntimeCounter("trackingInitialLastEdgeShortcut");
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.tracking.initial.last-edge-shortcut",
+        );
       moveLastIncomingEdgeToFrontUnchecked(consumer, lastIncomingEdge);
 
       lastIncomingEdge.version = producerVersion;
       consumer.tailIn = lastIncomingEdge;
 
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+      devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
   }
@@ -109,33 +114,38 @@ function resolveCursorTrackedReadMiss(
         producerVersion,
       );
 
-      profileRuntimeCounter("trackingAppendAfterCursor");
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.tracking.cursor.append",
+        );
+      devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
     // With the cursor at lastIn, a sole edge to this consumer is necessarily
     // already in the tracked prefix.
     if (firstProducerEdge.nextOut === null) {
-      profileRuntimeCounter("trackingPrefixDuplicate");
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.tracking.prefix.duplicate",
+        );
+      devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
-    const prefixResult = scanProducerInTrackedPrefix(producer, cursorEdge);
-
     if (
-      prefixResult === PrefixHit ||
-      (prefixResult === PrefixScanLimitReached &&
-        producerVersion !== 0 &&
-        hasProducerEdgeInCurrentPassUnchecked(
-          producer,
-          consumer,
-          producerVersion,
-        ))
+      hasProducerInCompletedPrefix(
+        producer,
+        consumer,
+        cursorEdge,
+        producerVersion,
+      )
     ) {
-      profileRuntimeCounter("trackingPrefixDuplicate");
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.tracking.prefix.duplicate",
+        );
+      devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -146,8 +156,9 @@ function resolveCursorTrackedReadMiss(
       producerVersion,
     );
 
-    profileRuntimeCounter("trackingAppendAfterCursor");
-    if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.tracking.cursor.append");
+    devRecordTrackRead(defaultContext, consumer, producer);
     return true;
   }
 
@@ -155,8 +166,11 @@ function resolveCursorTrackedReadMiss(
 
   if (lookahead1Edge !== null) {
     if (__TRACKING_ONE_HOP__ && lookahead1Edge.from === producer) {
-      profileRuntimeCounter("trackingOneHopReorder");
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.tracking.reorder.one-hop",
+        );
+      devRecordTrackRead(defaultContext, consumer, producer);
 
       return moveTrackedIncomingEdgeAfterCursorUnchecked(
         consumer,
@@ -170,8 +184,11 @@ function resolveCursorTrackedReadMiss(
       const lookahead2Edge = lookahead1Edge.nextIn;
 
       if (lookahead2Edge !== null && lookahead2Edge.from === producer) {
-        profileRuntimeCounter("trackingTwoHopReorder");
-        if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+        if (__PROFILE__)
+          observeRuntimeProjection?.(
+            "projection.semantic.tracking.reorder.two-hop",
+          );
+        devRecordTrackRead(defaultContext, consumer, producer);
 
         return moveTrackedIncomingEdgeAfterCursorUnchecked(
           consumer,
@@ -190,7 +207,10 @@ function resolveCursorTrackedReadMiss(
       const previousLastEdge = lastIncomingEdge.prevIn!;
 
       if (previousLastEdge !== cursorEdge) {
-        profileRuntimeCounter("trackingLastEdgeShortcut");
+        if (__PROFILE__)
+          observeRuntimeProjection?.(
+            "projection.semantic.tracking.last-edge.shortcut",
+          );
         moveLastIncomingEdgeAfterCursorUnchecked(
           consumer,
           cursorEdge,
@@ -200,26 +220,20 @@ function resolveCursorTrackedReadMiss(
           producerVersion,
         );
 
-        if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+        devRecordTrackRead(defaultContext, consumer, producer);
         return true;
       }
     }
   }
 
-  const prefixResult = scanProducerInTrackedPrefix(producer, cursorEdge);
-
   if (
-    prefixResult === PrefixHit ||
-    (prefixResult === PrefixScanLimitReached &&
-      producerVersion !== 0 &&
-      hasProducerEdgeInCurrentPassUnchecked(
-        producer,
-        consumer,
-        producerVersion,
-      ))
+    hasProducerInTrackedPrefix(producer, consumer, cursorEdge, producerVersion)
   ) {
-    profileRuntimeCounter("trackingPrefixDuplicate");
-    if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+    if (__PROFILE__)
+      observeRuntimeProjection?.(
+        "projection.semantic.tracking.prefix.duplicate",
+      );
+    devRecordTrackRead(defaultContext, consumer, producer);
     return true;
   }
 
@@ -246,7 +260,8 @@ export function resolveTrackedRead(
   producerVersion: number,
   allowSlowPath: boolean,
 ): boolean {
-  profileRuntimeCounter("trackingResolveCalls");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.tracking.resolve");
 
   const cursorEdge = consumer.tailIn;
 
@@ -258,8 +273,9 @@ export function resolveTrackedRead(
       expectedNextEdge.version = producerVersion;
       consumer.tailIn = expectedNextEdge;
 
-      profileRuntimeCounter("trackingNextHit");
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+      if (__PROFILE__)
+        observeRuntimeProjection?.("projection.semantic.tracking.next.hit");
+      devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -267,8 +283,9 @@ export function resolveTrackedRead(
     if (cursorEdge.from === producer) {
       cursorEdge.version = producerVersion;
 
-      profileRuntimeCounter("trackingCursorHit");
-      if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+      if (__PROFILE__)
+        observeRuntimeProjection?.("projection.semantic.tracking.cursor.hit");
+      devRecordTrackRead(defaultContext, consumer, producer);
       return true;
     }
 
@@ -287,8 +304,9 @@ export function resolveTrackedRead(
   if (firstIncomingEdge === null) {
     linkFirstTrackedEdgeUnchecked(producer, consumer, producerVersion);
 
-    profileRuntimeCounter("trackingInitialCreate");
-    if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.tracking.initial.create");
+    devRecordTrackRead(defaultContext, consumer, producer);
     return true;
   }
 
@@ -296,8 +314,11 @@ export function resolveTrackedRead(
     firstIncomingEdge.version = producerVersion;
     consumer.tailIn = firstIncomingEdge;
 
-    profileRuntimeCounter("trackingInitialFirstHit");
-    if (__DEV__) devRecordTrackRead(defaultContext, consumer, producer);
+    if (__PROFILE__)
+      observeRuntimeProjection?.(
+        "projection.semantic.tracking.initial.first-hit",
+      );
+    devRecordTrackRead(defaultContext, consumer, producer);
     return true;
   }
 

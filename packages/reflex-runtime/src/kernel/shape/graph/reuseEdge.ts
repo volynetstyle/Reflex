@@ -1,14 +1,7 @@
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import type ReactiveNode from "@runtime/kernel/shape/node";
-import { profileRuntimeCounter } from "@runtime/profiling";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
-import {
-  moveIncomingEdgeAfterUnchecked,
-  moveLastIncomingEdgeAfterEdgeUnchecked,
-  moveLastIncomingEdgeToFrontUnchecked,
-  moveMiddleIncomingEdgeAfterEdgeUnchecked,
-  moveNonHeadIncomingEdgeToFrontUnchecked,
-} from "./edgeList";
 import { linkEdge } from "./linkEdge";
 import { unlinkDetachedIncomingEdgeSequence } from "./sweepEdges";
 
@@ -19,21 +12,38 @@ function moveIncomingEdgeToPosition(
   edge: ReactiveEdge,
   insertAfterEdge: ReactiveEdge | null,
 ): void {
-  if (edge.prevIn === insertAfterEdge) return;
+  const prev = edge.prevIn;
+  if (prev === insertAfterEdge) return;
+
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.tracking.edge.move");
+  const next = edge.nextIn;
 
   if (insertAfterEdge === null) {
-    if (edge.nextIn === null) {
-      moveLastIncomingEdgeToFrontUnchecked(consumer, edge);
-    } else {
-      moveNonHeadIncomingEdgeToFrontUnchecked(consumer, edge);
-    }
-  } else if (edge.prevIn === null) {
-    moveIncomingEdgeAfterUnchecked(consumer, edge, insertAfterEdge);
-  } else if (edge.nextIn === null) {
-    moveLastIncomingEdgeAfterEdgeUnchecked(consumer, edge, insertAfterEdge);
-  } else {
-    moveMiddleIncomingEdgeAfterEdgeUnchecked(consumer, edge, insertAfterEdge);
+    // prev is non-null: an existing head already returned above.
+    prev!.nextIn = next;
+    if (next !== null) next.prevIn = prev;
+    else consumer.lastIn = prev;
+    const first = consumer.firstIn!;
+    edge.prevIn = null;
+    edge.nextIn = first;
+    first.prevIn = edge;
+    consumer.firstIn = edge;
+    return;
   }
+  // Preserve the generic primitive's head self-move no-op.
+  if (prev === null && edge === insertAfterEdge) return;
+  if (prev !== null) prev.nextIn = next;
+  else consumer.firstIn = next;
+  if (next !== null) next.prevIn = prev;
+  else consumer.lastIn = prev;
+
+  const insertNext = insertAfterEdge.nextIn;
+  edge.prevIn = insertAfterEdge;
+  edge.nextIn = insertNext;
+  if (insertNext !== null) insertNext.prevIn = edge;
+  else consumer.lastIn = edge;
+  insertAfterEdge.nextIn = edge;
 }
 
 function findOutgoingEdgeToConsumer(
@@ -47,42 +57,14 @@ function findOutgoingEdgeToConsumer(
   return null;
 }
 
-function tryResolveByFirstOutgoingEdge(
-  producer: ReactiveNode,
-  consumer: ReactiveNode,
-  insertAfterEdge: ReactiveEdge | null,
-  producerVersion: number,
-): ReactiveEdge | null {
-  const edge = producer.firstOut;
-
-  if (edge === null) {
-    profileRuntimeCounter("trackingOutgoingProbeMiss");
-    return null;
-  }
-
-  if (edge.to !== consumer) {
-    profileRuntimeCounter("trackingOutgoingProbeMiss");
-    return null;
-  }
-
-  if (edge.version === producerVersion) {
-    return null;
-  }
-
-  if (edge.prevIn !== insertAfterEdge) {
-    moveIncomingEdgeToPosition(consumer, edge, insertAfterEdge);
-  }
-
-  edge.version = producerVersion;
-  profileRuntimeCounter("trackingOutgoingProbeHit1");
-  return edge;
-}
-
 function detachIncomingSuffix(
   consumer: ReactiveNode,
   insertAfterEdge: ReactiveEdge | null,
   suffixStartEdge: ReactiveEdge,
 ): void {
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.tracking.suffix.detach");
+
   if (insertAfterEdge === null) {
     consumer.firstIn = null;
     consumer.lastIn = null;
@@ -136,6 +118,10 @@ export function reuseIncomingEdgeFromSuffixOrLink(
    */
   if (suffixStartEdge !== null && suffixStartEdge.from === producer) {
     suffixStartEdge.version = producerVersion;
+    if (__PROFILE__)
+      observeRuntimeProjection?.(
+        "projection.semantic.tracking.suffix.head-hit",
+      );
     return suffixStartEdge;
   }
 
@@ -147,16 +133,53 @@ export function reuseIncomingEdgeFromSuffixOrLink(
    * consumer, which covers the fanout-1 pathological reorder cases cheaply.
    */
   if (producerVersion !== 0) {
-    const outgoingEdge = tryResolveByFirstOutgoingEdge(
-      producer,
-      consumer,
-      insertAfterEdge,
-      producerVersion,
-    );
-
-    if (outgoingEdge !== null) return outgoingEdge;
+    const edge = producer.firstOut;
+    if (edge === null) {
+      // No outgoing edges proves absence from this consumer. Keep the suffix:
+      // subsequent reads may still reuse it before final stale cleanup.
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.tracking.outgoing.probe-miss",
+        );
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.tracking.suffix.link-new",
+        );
+      return linkEdge(producer, consumer, insertAfterEdge, producerVersion);
+    }
+    if (edge.to !== consumer) {
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.tracking.outgoing.probe-miss",
+        );
+    } else if (edge.version !== producerVersion) {
+      moveIncomingEdgeToPosition(consumer, edge, insertAfterEdge);
+      edge.version = producerVersion;
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.tracking.outgoing.probe-hit",
+        );
+      return edge;
+    }
   }
 
+  return /* @__NOINLINE__ */ reconcileIncomingSuffix(
+    producer,
+    consumer,
+    insertAfterEdge,
+    suffixStartEdge,
+    producerVersion,
+  );
+}
+
+/** Full scans and eager detachment stay out of the direct-reuse hot path. */
+function reconcileIncomingSuffix(
+  producer: ReactiveNode,
+  consumer: ReactiveNode,
+  insertAfterEdge: ReactiveEdge | null,
+  suffixStartEdge: ReactiveEdge | null,
+  producerVersion: number,
+): ReactiveEdge {
   /**
    * R1: Suffix scan.
    *
@@ -164,6 +187,10 @@ export function reuseIncomingEdgeFromSuffixOrLink(
    * beginning of the incoming list.
    */
   let scannedSuffixEdges = suffixStartEdge === null ? 0 : 1;
+  const outgoingProbeAt =
+    suffixStartEdge !== null && producerVersion !== 0
+      ? EAGER_STALE_SUFFIX_CLEANUP_MIN
+      : -1;
 
   for (
     let candidateEdge =
@@ -172,17 +199,21 @@ export function reuseIncomingEdgeFromSuffixOrLink(
     candidateEdge = candidateEdge.nextIn
   ) {
     scannedSuffixEdges += 1;
+    if (__PROFILE__)
+      observeRuntimeProjection?.(
+        "projection.semantic.tracking.suffix.edge-scan",
+      );
 
     if (candidateEdge.from !== producer) {
-      if (
-        suffixStartEdge !== null &&
-        producerVersion !== 0 &&
-        scannedSuffixEdges === EAGER_STALE_SUFFIX_CLEANUP_MIN
-      ) {
+      if (scannedSuffixEdges === outgoingProbeAt) {
         const producerEdge = findOutgoingEdgeToConsumer(producer, consumer);
 
         if (producerEdge === null) {
-          detachIncomingSuffix(consumer, insertAfterEdge, suffixStartEdge);
+          detachIncomingSuffix(consumer, insertAfterEdge, suffixStartEdge!);
+          if (__PROFILE__)
+            observeRuntimeProjection?.(
+              "projection.semantic.tracking.suffix.link-new",
+            );
           return linkEdge(producer, consumer, insertAfterEdge, producerVersion);
         }
 
@@ -210,6 +241,8 @@ export function reuseIncomingEdgeFromSuffixOrLink(
     }
 
     candidateEdge.version = producerVersion;
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.tracking.suffix.reuse");
     return candidateEdge;
   }
 
@@ -229,6 +262,8 @@ export function reuseIncomingEdgeFromSuffixOrLink(
     detachIncomingSuffix(consumer, insertAfterEdge, suffixStartEdge);
   }
 
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.tracking.suffix.link-new");
   return linkEdge(producer, consumer, insertAfterEdge, producerVersion);
 }
 

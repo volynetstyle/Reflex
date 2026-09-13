@@ -41,11 +41,11 @@ function executeComputation<T>(
   const prevActive = currentConsumer;
 
   node.tailIn = null;
-  node.state = (node.state & ~Visited) | Computing | Computing;
+  node.state = (node.state & ~Visited) | Computing;
   advanceTrackingEpoch();
   setCurrentConsumer(node);
 
-  if (__DEV__) devRecordComputeStart(node, defaultContext);
+  devRecordComputeStart(node, defaultContext);
 
   let result: T;
 
@@ -53,15 +53,15 @@ function executeComputation<T>(
     result = compute!();
   } catch (error) {
     setCurrentConsumer(prevActive);
-    node.state &= ~(Computing | Computing);
+    node.state &= ~Computing;
 
-    if (__DEV__) devRecordComputeError(node, error, defaultContext);
+    devRecordComputeError(node, error, defaultContext);
 
     throw error;
   }
 
   setCurrentConsumer(prevActive);
-  node.state &= ~(Computing | Computing);
+  node.state &= ~Computing;
 
   if (node.tailIn !== node.lastIn) {
     cleanupUnvisitedSources(node);
@@ -74,13 +74,13 @@ function executeComputation<T>(
   //   observeGraphReductionRun(node, graphReductionPolicy, reductionEnabled);
   // }
 
-  if (__DEV__) devRecordComputeFinish(node, result, defaultContext);
+  devRecordComputeFinish(node, result, defaultContext);
 
   return result;
 }
 
 export function executeNodeComputation<T>(node: ReactiveNode<T>): T {
-  if (__DEV__) devAssertExecutableNode(node);
+  devAssertExecutableNode(node);
 
   return executeKnownNodeComputation(node, node.compute);
 }

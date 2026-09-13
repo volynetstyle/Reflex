@@ -252,7 +252,7 @@ function createCompiledStoreStatements(
   for (const leaf of binding.leaves) {
     const names = getLeafNames(leaf, state);
     lines.push(
-      `const [${names.read}, ${names.set}] = ` +
+      `const ${names.read} = ` +
         `${signal.localName}(${printExpression(leaf.initial)});`,
     );
     lines.push(`let ${names.write};`);
@@ -267,7 +267,7 @@ function createCompiledStoreStatements(
     const names = getLeafNames(leaf, state);
     const action = formatMemberAccess(identifiers.context, model.actionMethod);
     lines.push(`  ${names.write} = ${action}((${identifiers.value}) => {`);
-    lines.push(`    ${names.set}(${identifiers.value});`);
+    lines.push(`    ${names.read}.set(${identifiers.value});`);
     lines.push(`    return ${identifiers.value};`);
     lines.push(`  });`);
   }

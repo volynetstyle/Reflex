@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { readConsumer, readProducer, writeProducer } from "../../../src";
+import { readConsumer, readProducer, runWatcher, writeProducer } from "../../../src";
 import { subtle } from "../../../src/debug";
 import {
   createConsumer,
   createProducer,
+  createWatcher,
   resetRuntimeContext,
 } from "../../runtime.test_utils";
 
@@ -32,6 +33,30 @@ describe.skipIf(!subtle.enabled)(
       expect(stats?.shouldRecompute.peak).toBeGreaterThanOrEqual(256);
       expect(stats?.shouldRecompute.current).toBe(0);
       expect(stats?.shouldRecompute.capacity).toBe(256);
+    });
+
+    it("bounds propagation stack capacity after a deep branched walk", () => {
+      resetRuntimeContext();
+      subtle.resetStackStats();
+
+      const source = createProducer(0);
+      let current = createConsumer(() => readProducer(source));
+
+      for (let i = 0; i < 520; i++) {
+        const previous = current;
+        const side = createWatcher(() => {
+          readConsumer(previous);
+        });
+        runWatcher(side);
+        current = createConsumer(() => readConsumer(previous) + 1);
+      }
+
+      expect(readConsumer(current)).toBe(520);
+      writeProducer(source, 1);
+
+      const stats = subtle.stackStats();
+      expect(stats?.propagate.current).toBe(0);
+      expect(stats?.propagate.capacity).toBe(512);
     });
 
     it("keeps debug history bounded under sustained runtime events", () => {

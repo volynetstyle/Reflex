@@ -1,0 +1,62 @@
+[
+  {
+    "key": "locality.stable",
+    "sweep": "locality",
+    "axis": "locality",
+    "axisValue": "stable",
+    "iterations": 300,
+    "nsPerOpMedian": 428278.66666668945,
+    "nsPerOpTrials": [
+      451896.0000000273,
+      432104.99999996193,
+      425509.66666666983,
+      424806.3333333024,
+      428278.66666668945
+    ]
+  },
+  {
+    "key": "locality.permutation",
+    "sweep": "locality",
+    "axis": "locality",
+    "axisValue": "permutation",
+    "iterations": 300,
+    "nsPerOpMedian": 421000.00000000966,
+    "nsPerOpTrials": [
+      421000.00000000966,
+      436131.00000002305,
+      419730.66666667967,
+      414689.66666667257,
+      429984.99999996665
+    ]
+  },
+  {
+    "key": "locality.distant-reuse",
+    "sweep": "locality",
+    "axis": "locality",
+    "axisValue": "distant-reuse",
+    "iterations": 300,
+    "nsPerOpMedian": 421385.0000000093,
+    "nsPerOpTrials": [
+      461453.66666663904,
+      421385.0000000093,
+      414705.33333330724,
+      421226.666666674,
+      439452.33333332
+    ]
+  },
+  {
+    "key": "locality.duplicate-reads",
+    "sweep": "locality",
+    "axis": "locality",
+    "axisValue": "duplicate-reads",
+    "iterations": 300,
+    "nsPerOpMedian": 432484.0000000161,
+    "nsPerOpTrials": [
+      432484.0000000161,
+      432790.3333332991,
+      430803.3333333151,
+      444240.0000000392,
+      430176.3333333171
+    ]
+  }
+]

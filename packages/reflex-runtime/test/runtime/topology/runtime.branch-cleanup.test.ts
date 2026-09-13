@@ -141,6 +141,66 @@ describe("Reactive runtime - branch cleanup matrix", () => {
     expectGraphIntegrity([selector, left, right, total]);
   });
 
+  it("inserts a dependency between retained prefix and suffix edges", () => {
+    const enabled = createProducer(false);
+    const left = createProducer(1);
+    const middle = createProducer(10);
+    const right = createProducer(100);
+    const total = createConsumer(() => {
+      const leftValue = readProducer(left);
+      const middleValue = readProducer(enabled) ? readProducer(middle) : 0;
+      const rightValue = readProducer(right);
+      return leftValue + middleValue + rightValue;
+    });
+
+    expect(readConsumer(total)).toBe(101);
+    expectSources(total, [left, enabled, right]);
+
+    writeProducer(enabled, true);
+
+    expect(readConsumer(total)).toBe(111);
+    expectSources(total, [left, enabled, middle, right]);
+    expectSubscriber(left, total);
+    expectSubscriber(middle, total);
+    expectSubscriber(right, total);
+    expectGraphIntegrity([enabled, left, middle, right, total]);
+  });
+
+  it("commits dynamic dependencies after a failed retracking attempt recovers", () => {
+    const useRight = createProducer(false);
+    const left = createProducer(1);
+    const right = createProducer(10);
+    let shouldThrow = true;
+    let calls = 0;
+    const selected = createConsumer(() => {
+      calls += 1;
+      if (!readProducer(useRight)) return readProducer(left);
+
+      const value = readProducer(right);
+      if (shouldThrow) throw new Error("failed branch");
+      return value;
+    });
+
+    expect(readConsumer(selected)).toBe(1);
+    writeProducer(useRight, true);
+    expect(() => readConsumer(selected)).toThrow("failed branch");
+
+    shouldThrow = false;
+    expect(readConsumer(selected)).toBe(10);
+    expectSources(selected, [useRight, right]);
+    expectNoSubscriber(left, selected);
+
+    const callsAfterRecovery = calls;
+    writeProducer(left, 2);
+    expect(readConsumer(selected)).toBe(10);
+    expect(calls).toBe(callsAfterRecovery);
+
+    writeProducer(right, 20);
+    expect(readConsumer(selected)).toBe(20);
+    expect(calls).toBe(callsAfterRecovery + 1);
+    expectGraphIntegrity([useRight, left, right, selected]);
+  });
+
   it("reorders retained dependencies while cleaning stale subscriptions", () => {
     const selector = createProducer(0);
     const left = createProducer(10);

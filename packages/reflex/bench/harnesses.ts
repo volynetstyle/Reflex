@@ -1,34 +1,20 @@
 import {
-  blackhole,
   type BenchHarness,
+  type BenchSignal,
   type BenchVariant,
-  HarnessMetrics,
-  type WriteInput,
 } from "./shared";
 
 import { createRuntime, batch, flush, effect, memo, signal } from "../dist/esm";
-import {
-  readRuntimeProfileCounters,
-  readSchedulerPolicyCounters,
-  resetRuntimeProfileCounters,
-  resetSchedulerPolicyCounters,
-  setRuntimeProfilingEnabled,
-  setSchedulerPolicyCountersEnabled,
-} from "../dist/esm/debug/index.js";
 
 export class ReflexHarness implements BenchHarness {
-  readonly metrics = new HarnessMetrics();
   private readonly disposers: Array<() => void> = [];
 
   constructor() {
     createRuntime({ effectStrategy: "flush" });
   }
 
-  signal(
-    initial: number,
-    _label?: string,
-  ): readonly [() => number, (value: WriteInput) => void] {
-    return signal(initial) as any;
+  signal(initial: number, _label?: string): BenchSignal {
+    return signal(initial);
   }
 
   memo(fn: () => number, _label?: string): () => number {
@@ -50,42 +36,6 @@ export class ReflexHarness implements BenchHarness {
 
   flush(): void {
     flush();
-  }
-
-  resetRunMetrics(): void {
-    this.metrics.resetRunMetrics();
-  }
-
-  resetPolicyCounters(): void {
-    resetSchedulerPolicyCounters();
-  }
-
-  setPolicyCountersEnabled(enabled: boolean): void {
-    setSchedulerPolicyCountersEnabled(enabled);
-  }
-
-  readPolicyCounters() {
-    return readSchedulerPolicyCounters();
-  }
-
-  resetRuntimeProfileCounters(): void {
-    resetRuntimeProfileCounters();
-  }
-
-  setRuntimeProfilingEnabled(enabled: boolean): void {
-    setRuntimeProfilingEnabled(enabled);
-  }
-
-  readRuntimeProfileCounters() {
-    return readRuntimeProfileCounters();
-  }
-
-  beginStep(now: number): void {
-    this.metrics.beginStep(now);
-  }
-
-  endStep(wallTimeMs: number) {
-    return this.metrics.endStep(wallTimeMs);
   }
 
   dispose(): void {

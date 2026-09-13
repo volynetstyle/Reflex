@@ -1,0 +1,15 @@
+  const skippedHead = cursorEdge.nextIn!;
+  const skippedTail = movedEdge.prevIn!;
+  const physicalTail = consumer.lastIn!;
+
+  // All endpoints are captured before writes; no callbacks inside this splice.
+  cursorEdge.nextIn = movedEdge;
+  movedEdge.prevIn = cursorEdge;
+  physicalTail.nextIn = skippedHead;
+  skippedHead.prevIn = physicalTail;
+  skippedTail.nextIn = null;
+  consumer.lastIn = skippedTail;
+
+  movedEdge.version = producerVersion;
+  consumer.tailIn = movedEdge;
+  return true;

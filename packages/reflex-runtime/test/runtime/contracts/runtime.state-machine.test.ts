@@ -73,6 +73,25 @@ describe("Reactive runtime - state and read-mode matrices", () => {
     expect(downstream.state & TRANSIENT_RECOMPUTE_STATE).toBe(0);
   });
 
+  it("keeps a visited-only subscriber on the re-entrant invalidation path", () => {
+    resetRuntime();
+    const source = createProducer(1);
+    const middle = createConsumer(() => readProducer(source));
+    const target = createConsumer(() => readConsumer(middle));
+
+    expect(readConsumer(target)).toBe(1);
+    expect(target.state & Computing).toBe(0);
+
+    // Characterize the state that the propagation walker must handle even
+    // when Computing has already been cleared.
+    target.state |= Visited;
+
+    writeProducer(source, 2);
+
+    expect(target.state & Unknown).toBeTruthy();
+    expect(target.state & Changed).toBe(0);
+  });
+
   it.each([
     {
       name: "direct consumer subscriber becomes Changed",

@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "seed": 20260910,
+  "cases": 175,
+  "modes": {
+    "prod": {
+      "steps": 2476,
+      "sha256": "5bb867fe1682fe75ab648b193dd9c2c7dc06facfe9fea37ac641745b67886cb4"
+    },
+    "dev": {
+      "steps": 2476,
+      "sha256": "b45bba6378fbfd4acbb6c2ab77ddf270d425d493dd062729d9c7b786222797cb"
+    }
+  },
+  "reference": {
+    "sources": {
+      "index.ts": "54453f9aceb6ff58f34daa29663b2702c22586bb4ab534ba9733441e3a6dd4e5",
+      "stackStats.ts": "bf911158c3bc471d2b51c9c12b4bbb419214829f36f6e7253db5d2390c9e3e8e",
+      "first/index.ts": "55506d029b75601b83f6766482b5e30ea8f382a7ecaadb7b5071b1d7e1accc64",
+      "first/push_iterator.ts": "29556da0d93556a4d6c45c01f7f01c053cff24407a95fb33c157de83873d2745",
+      "first/push_iterator_once.ts": "48e10a378cfd198d93a2be1651230553714396562c5b41ec459a130d56c5d5a8",
+      "first/push_iterator_once_skipping.ts": "5e2821f3a8362e01b8e9561a1533c559338ed7691fdaf5b3d33fdffa01408bb9",
+      "second/advance.ts": "5404efa3096142e3b8b1354a5f58b448c7fb85af796c65ea474dba7d758c4c61",
+      "second/index.ts": "5336fd5dea335bdaf8a589bae8f406b67acb388d3857a4c1be7d81192f003ec7",
+      "second/pull_iterator.ts": "b5223246cac00015e4cb2d53cbc1c2aeaca0d909664f1e546396b9eb5ac62f4f"
+    }
+  }
+}

@@ -1,6 +1,7 @@
 import {
   defaultContext,
   enterPropagationScope,
+  abortPropagationScope,
   leavePropagationScope,
   emitSettledIfIdle,
   propagationScopeDepth,
@@ -8,12 +9,9 @@ import {
 } from "@runtime/kernel";
 import { devRecordWriteProducer } from "@runtime/kernel/dev";
 import { push_iterator } from "@runtime/kernel/stages/first/push_iterator";
-import { profileRuntimeCounter } from "@runtime/profiling";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
-import {
-  compare as defaultComparator,
-  type ProducerComparator,
-} from "./utils/compare";
+import { compare as defaultComparator } from "./utils/compare";
 
 /**
  * Write a new value to a producer (source) node.
@@ -63,19 +61,17 @@ const value = readConsumer(doubled)  // Now returns 10
  * @invariant Subscribers are marked with Changed state (will recompute when read)
  * @cost O(n) where n = number of subscribers reachable from this node
  */
-export function writeProducer<T>(
-  node: ProducerNode<T>,
-  value: T,
-  compare: ProducerComparator<T> = defaultComparator,
-): void {
-  profileRuntimeCounter("writeCalls");
+export function writeProducer<T>(node: ProducerNode<T>, value: T): void {
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.write.invoke");
 
   const prev = node.payload;
 
   // Check if the value actually changed using stable comparison
   // This prevents false invalidation when setting to the same value
-  if (compare(prev, value)) {
-    profileRuntimeCounter("writeSameValue");
+  if (defaultComparator(prev, value)) {
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.write.value.same");
     devRecordWriteProducer(node, false, value, prev, undefined, defaultContext);
 
     // Value didn't change, skip propagation
@@ -83,20 +79,25 @@ export function writeProducer<T>(
   } // Update the payload to the new value
   node.payload = value;
 
-  profileRuntimeCounter("writeChanged");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.write.value.changed");
   devRecordWriteProducer(node, true, value, prev, undefined, defaultContext);
 
   const firstOut = node.firstOut;
 
   if (firstOut === null) {
-    profileRuntimeCounter("writeNoSubscribers");
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.write.subscribers.empty");
 
     if (propagationScopeDepth === 0) emitSettledIfIdle();
     return;
   }
 
   if (propagationScopeDepth !== 0) {
-    profileRuntimeCounter("writeNestedPropagation");
+    if (__PROFILE__)
+      observeRuntimeProjection?.(
+        "projection.semantic.write.propagation.nested",
+      );
 
     push_iterator(firstOut);
     return;
@@ -106,6 +107,11 @@ export function writeProducer<T>(
   // Push phase: notify all subscribers depth-first, mark them dirty.
   // Direct subscribers are promoted from Unknown to Changed.
   // This tells them "definitely changed, don't verify, recompute"
-  push_iterator(firstOut);
+  try {
+    push_iterator(firstOut);
+  } catch (error) {
+    abortPropagationScope();
+    throw error;
+  }
   leavePropagationScope();
 }

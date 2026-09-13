@@ -1,4 +1,5 @@
 import {
+  DIRTY_STATE,
   flushPendingRuntimeIdle,
   releaseWatcherSchedule,
   RuntimeState,
@@ -6,6 +7,7 @@ import {
   runWatcherWithoutSettledCheckpoint,
 } from "@volynets/reflex-runtime/internal";
 import { profileSchedulerPolicyCounter } from "./scheduler.counters";
+import { tryEnqueue } from "./scheduler.enqueue";
 import type { WatcherQueue } from "./scheduler.types";
 
 const SCHEDULER_PROFILE_ENABLED =
@@ -43,6 +45,7 @@ export function flushQueuedWatchers(
   let tail = queue.tail;
   let ring = queue.ring;
   let mask = queue.mask;
+  let validationRetries: WatcherQueue["ring"] | undefined;
 
   while (head !== tail) {
     const index = head & mask;
@@ -65,6 +68,13 @@ export function flushQueuedWatchers(
       if (thrown === noThrow) {
         thrown = error;
       }
+
+      // A failed dependency validation remains dirty and must be retryable by
+      // the next explicit drain, not recursively in this one. Callback and
+      // cleanup failures recover to clean and do not enter this cold branch.
+      if ((node.state & DIRTY_STATE) !== 0) {
+        (validationRetries ??= []).push(node);
+      }
     }
 
     tail = queue.tail;
@@ -82,6 +92,12 @@ export function flushQueuedWatchers(
   // subsequent enqueue indices near zero.
   queue.head = 0;
   queue.tail = 0;
+
+  if (validationRetries !== undefined) {
+    for (const node of validationRetries) {
+      if (node !== undefined) tryEnqueue(queue, node);
+    }
+  }
 
   if ((runtimeState & RuntimeState.IdlePending) !== RuntimeState.Idle) {
     try {

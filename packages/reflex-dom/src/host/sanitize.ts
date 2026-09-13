@@ -12,13 +12,11 @@ function toAsciiLower(code: number): number {
   return code >= 0x41 && code <= 0x5a ? code + 0x20 : code;
 }
 
-// ---------------------------------------------------------------
 // Blocked scheme tokens.
 // Defense-in-depth: javascript: is the primary XSS vector via URL
 // attributes (href/src/action/formaction/...). vbscript: is a legacy
 // IE-only executable scheme still resolved by some embedders
 // (Electron/webviews, old WebView controls), so it is blocked too.
-// ---------------------------------------------------------------
 const JAVASCRIPT_PROTOCOL = [0x6a, 0x61, 0x76, 0x61, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x3a] as const; // "javascript:"
 const VBSCRIPT_PROTOCOL = [0x76, 0x62, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x3a] as const; // "vbscript:"
 

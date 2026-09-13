@@ -12,7 +12,7 @@ describe("Reactive system - memoization", () => {
 
   it("does not recompute on repeated clean reads", () => {
     const spy = vi.fn((n: number) => n * 10);
-    const [value] = signal(4);
+    const value = signal(4);
     const tenX = computed(() => spy(value()));
 
     expect(tenX()).toBe(40);
@@ -23,17 +23,17 @@ describe("Reactive system - memoization", () => {
 
   it("does not recompute when a signal is written with the same value", () => {
     const spy = vi.fn((n: number) => n);
-    const [source, setSource] = signal(100);
+    const source = signal(100);
     const derived = computed(() => spy(source()));
 
     expect(derived()).toBe(100);
-    setSource(100);
+    source.set(100);
     expect(derived()).toBe(100);
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it("warms memo once and reuses the cached value on reads", () => {
-    const [source] = signal(5);
+    const source = signal(5);
     const spy = vi.fn(() => source() * 2);
     const warmed = memo(spy);
 

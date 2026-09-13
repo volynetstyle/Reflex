@@ -8,7 +8,9 @@ export interface KeyedOptions<T> {
   equals?: (prev: T, next: T) => boolean;
 }
 
-export interface ProjectionOptions<K, R> extends KeyedOptions<K> {
+export interface ProjectionOptions<K, R> {
+  keyEquals?: (prev: K, next: K) => boolean;
+  equals?: (prev: R, next: R) => boolean;
   fallback?: R;
 }
 

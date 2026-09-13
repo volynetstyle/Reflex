@@ -3,8 +3,13 @@ import {
   Changed,
   Scheduled,
   claimWatcherSchedule,
+  createConsumer,
+  createProducer,
   createWatcher,
+  readConsumer,
+  readProducer,
   runWatcher,
+  writeProducer,
   type WatcherNode,
 } from "@volynets/reflex-runtime/internal";
 import {
@@ -146,6 +151,32 @@ describe("scheduler re-entrant edge cases", () => {
     });
   });
 
+  it("defers failed dependency validation until the next explicit drain", () => {
+    const scheduler = createFlushScheduler();
+    const source = createProducer(-Infinity);
+    const gate = createProducer(false);
+    const dependency = createConsumer(() => {
+      if (readProducer(gate)) throw new Error("validation failed");
+      return readProducer(source);
+    });
+    const watcher = createWatcher(() => {
+      readConsumer(dependency);
+    });
+
+    enqueueChanged(scheduler, watcher);
+    scheduler.flush();
+
+    writeProducer(source, Infinity);
+    readConsumer(dependency);
+    writeProducer(gate, true);
+    scheduler.enqueue(watcher);
+
+    expect(() => scheduler.flush()).toThrow("validation failed");
+    expect(scheduler.core.queue.head).not.toBe(scheduler.core.queue.tail);
+    expect(watcher.state & Scheduled).toBe(Scheduled);
+
+    expect(() => scheduler.flush()).toThrow("validation failed");
+  });
   it("continues after watcher errors and rethrows the first error", () => {
     const scheduler = createFlushScheduler();
     const firstError = new Error("first");

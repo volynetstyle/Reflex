@@ -30,12 +30,12 @@ export interface DisposableComputed<T> {
  * ```ts
  * createRuntime();
  *
- * const [count, setCount] = signal(1);
+ * const count = signal(1);
  * const doubled = computed(() => count() * 2);
  *
  * console.log(doubled()); // 2
  *
- * setCount(2);
+ * count.set(2);
  *
  * console.log(doubled()); // 4
  * ```
@@ -79,12 +79,12 @@ export function computed<T>(fn: () => T): Computed<T> {
  * ```ts
  * createRuntime();
  *
- * const [price, setPrice] = signal(100);
+ * const price = signal(100);
  * const total = memo(() => price() * 1.2);
  *
  * console.log(total()); // 120
  *
- * setPrice(200);
+ * price.set(200);
  *
  * console.log(total()); // 240
  * ```

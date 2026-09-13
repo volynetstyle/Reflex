@@ -1,4 +1,4 @@
-import { profileRuntimeCounter } from "@runtime/profiling";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 import { emitRuntimeIdle } from "./config";
 import {
@@ -35,7 +35,14 @@ export function leaveReactiveBatch(): void {
 }
 
 export function flushPendingRuntimeIdle(): void {
-  if (runtimeState !== RuntimeState.IdlePending) return;
+  const blockingState =
+    RuntimeState.Tracking | RuntimeState.Propagating | RuntimeState.Batching;
+
+  if (
+    (runtimeState & RuntimeState.IdlePending) === RuntimeState.Idle ||
+    (runtimeState & blockingState) !== RuntimeState.Idle
+  )
+    return;
 
   clearRuntimeIdlePending();
   emitRuntimeIdle();
@@ -44,7 +51,8 @@ export function flushPendingRuntimeIdle(): void {
 export function emitRuntimeIdleWithBatching(): void {
   if ((runtimeState & RuntimeState.Batching) !== RuntimeState.Idle) {
     markRuntimeIdlePending();
-    profileRuntimeCounter("contextSettledDeferred");
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.context.settled.defer");
     return;
   }
 

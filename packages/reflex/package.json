@@ -83,5 +83,8 @@
   "dependencies": {
     "@volynets/reflex-runtime": "workspace:*",
     "@volynets/reflex-scheduler": "workspace:*"
+  },
+  "devDependencies": {
+    "reactive-framework-test-suite": "0.0.2"
   }
 }

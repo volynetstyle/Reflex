@@ -25,24 +25,23 @@ export interface DOMRenderer {
 export function createDOMRenderer(options?: DOMRuntimeOptions): DOMRenderer {
   const execution = createDOMExecutionContext(options);
   const render = (input: JSXRenderable, container: ParentNode & Node) =>
-    runDOMOperation(execution, () =>
-      renderWithDOMExecution(input, container),
-    );
+    runDOMOperation(execution, renderWithDOMExecution, input, container);
 
   const renderer: DOMRenderer = {
     execution,
     renderEffectScheduler: execution.renderEffectScheduler,
     hydrate(input, container) {
-      return runDOMOperation(execution, () =>
-        hydrateWithDOMExecution(input, container),
+      return runDOMOperation(
+        execution,
+        hydrateWithDOMExecution,
+        input,
+        container,
       );
     },
     render,
     mount: render,
     resume(container) {
-      return runDOMOperation(execution, () =>
-        resumeWithDOMExecution(container),
-      );
+      return runDOMOperation(execution, resumeWithDOMExecution, container);
     },
   };
 

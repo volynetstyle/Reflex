@@ -15,7 +15,7 @@ import {
 describe("Reactive system - unstable selector/projection", () => {
   it("createSelector reruns only the previously selected and next selected keys", () => {
     const rt = createRuntime();
-    const [selected, setSelected] = signal("a");
+    const selected = signal("a");
     const isSelected = createSelector(selected);
     const seen: string[] = [];
 
@@ -31,7 +31,7 @@ describe("Reactive system - unstable selector/projection", () => {
 
     expect(seen).toEqual(["a:true", "b:false", "c:false"]);
 
-    setSelected("b");
+    selected.set("b");
     rt.flush();
 
     expect(seen).toEqual([
@@ -42,7 +42,7 @@ describe("Reactive system - unstable selector/projection", () => {
       "b:true",
     ]);
 
-    setSelected("c");
+    selected.set("c");
     rt.flush();
 
     expect(seen).toEqual([
@@ -58,7 +58,7 @@ describe("Reactive system - unstable selector/projection", () => {
 
   it("createProjection updates only the active key and the previously active key", () => {
     const rt = createRuntime();
-    const [source, setSource] = signal({ id: "a", label: "one" });
+    const source = signal({ id: "a", label: "one" });
     const projectLabel = createKeyedProjection(
       source,
       (value) => value.id,
@@ -78,7 +78,7 @@ describe("Reactive system - unstable selector/projection", () => {
 
     expect(seen).toEqual(["a:one", "b:undefined", "c:undefined"]);
 
-    setSource({ id: "a", label: "two" });
+    source.set({ id: "a", label: "two" });
     rt.flush();
 
     expect(seen).toEqual([
@@ -88,7 +88,7 @@ describe("Reactive system - unstable selector/projection", () => {
       "a:two",
     ]);
 
-    setSource({ id: "b", label: "three" });
+    source.set({ id: "b", label: "three" });
     rt.flush();
 
     expect(seen).toEqual([
@@ -103,7 +103,7 @@ describe("Reactive system - unstable selector/projection", () => {
 
   it("can be composed through computed without tracking the whole source as one dependency", () => {
     createRuntime({ effectStrategy: "eager" });
-    const [selected, setSelected] = signal(1);
+    const selected = signal(1);
     const isSelected = createSelector(selected);
     let runs = 0;
 
@@ -115,18 +115,18 @@ describe("Reactive system - unstable selector/projection", () => {
     expect(branch()).toBe("other");
     expect(runs).toBe(1);
 
-    setSelected(3);
+    selected.set(3);
     expect(branch()).toBe("other");
     expect(runs).toBe(1);
 
-    setSelected(2);
+    selected.set(2);
     expect(branch()).toBe("two");
     expect(runs).toBe(2);
   });
 
   it("integrates with flush scheduling", () => {
     const rt = createRuntime({ effectStrategy: "flush" });
-    const [selected, setSelected] = signal("a");
+    const selected = signal("a");
     const isSelected = createSelector(selected);
     const seen: string[] = [];
 
@@ -136,15 +136,34 @@ describe("Reactive system - unstable selector/projection", () => {
 
     expect(seen).toEqual(["view:other"]);
 
-    setSelected("b");
+    selected.set("b");
     rt.flush();
 
     expect(seen).toEqual(["view:other", "view:b"]);
   });
 
+  it("shares one semantic key node when custom equality is used", () => {
+    const rt = createRuntime();
+    const selected = signal({ id: 1 });
+    const isSelected = createSelector(selected, {
+      equals: (left, right) => left.id === right.id,
+    });
+    const seen: boolean[] = [];
+
+    effect(() => {
+      seen.push(isSelected({ id: 1 }));
+    });
+
+    selected.set({ id: 2 });
+    rt.flush();
+
+    expect(seen).toEqual([true, false]);
+    expect(isSelected({ id: 2 })).toBe(true);
+  });
+
   it("updates same-key projections before views observe them", () => {
     const rt = createRuntime({ effectStrategy: "flush" });
-    const [source, setSource] = signal({ id: "a", label: "one" });
+    const source = signal({ id: "a", label: "one" });
     const labels = createProjection(
       source,
       (value) => value.id,
@@ -160,18 +179,45 @@ describe("Reactive system - unstable selector/projection", () => {
 
     expect(seen).toEqual(["one"]);
 
-    setSource({ id: "a", label: "two" });
+    source.set({ id: "a", label: "two" });
     rt.flush();
 
     expect(seen).toEqual(["one", "two"]);
+  });
+
+  it("supports semantic equality at the projected-value boundary", () => {
+    const rt = createRuntime();
+    const source = signal({ id: "a", version: 1, label: "one" });
+    const labels = createProjection(
+      source,
+      (value) => value.id,
+      (value) => ({ version: value.version, label: value.label }),
+      {
+        equals: (left, right) => left.version === right.version,
+      },
+    );
+    let runs = 0;
+
+    effect(() => {
+      void labels("a");
+      runs++;
+    });
+
+    source.set({ id: "a", version: 1, label: "equivalent" });
+    rt.flush();
+    expect(runs).toBe(1);
+
+    source.set({ id: "a", version: 2, label: "changed" });
+    rt.flush();
+    expect(runs).toBe(2);
   });
 });
 
 describe("Store-style projection", () => {
   it("derives a mutable draft from reactive sources", () => {
     const rt = createRuntime();
-    const [first, setFirst] = signal("Ada");
-    const [last, setLast] = signal("Lovelace");
+    const first = signal("Ada");
+    const last = signal("Lovelace");
     const user = createProjection<{ fullName: string; initials: string }>(
       (draft) => {
         draft.fullName = `${first()} ${last()}`;
@@ -187,7 +233,7 @@ describe("Store-style projection", () => {
 
     expect(seen).toEqual(["Ada Lovelace|AL"]);
 
-    setLast("Byron");
+    last.set("Byron");
     rt.flush();
 
     expect(seen).toEqual(["Ada Lovelace|AL", "Ada Byron|AB"]);
@@ -195,7 +241,7 @@ describe("Store-style projection", () => {
 
   it("can replace the projected store by returning a new object", () => {
     const rt = createRuntime();
-    const [count, setCount] = signal(1);
+    const count = signal(1);
     const stats = createStoreProjection(
       () => ({
         count: count(),
@@ -207,7 +253,7 @@ describe("Store-style projection", () => {
     expect(stats.count).toBe(1);
     expect(stats.doubled).toBe(2);
 
-    setCount(3);
+    count.set(3);
     rt.flush();
 
     expect(stats.count).toBe(3);
@@ -216,7 +262,7 @@ describe("Store-style projection", () => {
 
   it("tracks nested property reads through the store proxy", () => {
     const rt = createRuntime();
-    const [theme, setTheme] = signal("light");
+    const theme = signal("light");
     const settings = createProjection<{ ui: { theme: string; density: string } }>(
       (draft) => {
         draft.ui = { theme: theme(), density: "compact" };
@@ -231,7 +277,7 @@ describe("Store-style projection", () => {
 
     expect(seen).toEqual(["light"]);
 
-    setTheme("dark");
+    theme.set("dark");
     rt.flush();
 
     expect(seen).toEqual(["light", "dark"]);
@@ -239,7 +285,7 @@ describe("Store-style projection", () => {
 
   it("updates only affected record keys for store projections", () => {
     const rt = createRuntime();
-    const [payload, setPayload] = signal<{ ids: number[]; labels: string[] }>({
+    const payload = signal<{ ids: number[]; labels: string[] }>({
       ids: [0, 1],
       labels: ["zero", "one"],
     });
@@ -274,12 +320,12 @@ describe("Store-style projection", () => {
 
     expect(seen).toEqual({ 0: 1, 1: 1, 2: 1 });
 
-    setPayload({ ids: [1, 2], labels: ["one-next", "two"] });
+    payload.set({ ids: [1, 2], labels: ["one-next", "two"] });
     rt.flush();
 
     expect(seen).toEqual({ 0: 2, 1: 2, 2: 2 });
 
-    setPayload({ ids: [1, 2], labels: ["one-final", "two"] });
+    payload.set({ ids: [1, 2], labels: ["one-final", "two"] });
     rt.flush();
 
     expect(seen).toEqual({ 0: 2, 1: 3, 2: 2 });
@@ -289,7 +335,7 @@ describe("Store-style projection", () => {
 describe("Projection basics", () => {
   it("should observe key changes", () => {
     const rt = createRuntime();
-    const [source, setSource] = signal(0);
+    const source = signal(0);
     const selected = createProjection(
       source,
       (value) => value,
@@ -313,7 +359,7 @@ describe("Projection basics", () => {
     expect(effect1).toHaveBeenCalledTimes(1);
     expect(effect2).toHaveBeenCalledTimes(1);
 
-    setSource(1);
+    source.set(1);
     rt.flush();
 
     expect(memo0()).toBe(false);
@@ -324,7 +370,7 @@ describe("Projection basics", () => {
     expect(effect1).toHaveBeenCalledTimes(2);
     expect(effect2).toHaveBeenCalledTimes(1);
 
-    setSource(2);
+    source.set(2);
     rt.flush();
 
     expect(memo0()).toBe(false);
@@ -335,7 +381,7 @@ describe("Projection basics", () => {
     expect(effect1).toHaveBeenCalledTimes(3);
     expect(effect2).toHaveBeenCalledTimes(2);
 
-    setSource(-1);
+    source.set(-1);
     rt.flush();
 
     expect(memo0()).toBe(false);
@@ -350,7 +396,7 @@ describe("Projection basics", () => {
   it("should not self track", () => {
     const rt = createRuntime();
     const spy = vi.fn();
-    const [bar, setBar] = signal("foo");
+    const bar = signal("foo");
     const projection = createProjection(
       bar,
       (value) => value,
@@ -368,7 +414,7 @@ describe("Projection basics", () => {
     expect(bazView()).toBe(undefined);
     expect(spy).toHaveBeenCalledTimes(1);
 
-    setBar("baz");
+    bar.set("baz");
     rt.flush();
 
     expect(fooView()).toBe(undefined);
@@ -378,7 +424,7 @@ describe("Projection basics", () => {
 
   it("should work for chained projections", () => {
     const rt = createRuntime();
-    const [x, setX] = signal(1);
+    const x = signal(1);
     const tmp = vi.fn();
 
     const a = createProjection(x, () => "v", (value) => value, { fallback: 0 });
@@ -400,7 +446,7 @@ describe("Projection basics", () => {
     expect(tmp).toBeCalledWith(1, undefined);
 
     tmp.mockReset();
-    setX(2);
+    x.set(2);
     rt.flush();
 
     expect(tmp).toBeCalledTimes(1);
@@ -409,7 +455,7 @@ describe("Projection basics", () => {
 
   it("should fork a signal values", () => {
     const rt = createRuntime();
-    const [x, setX] = signal<{ v: number; y?: number }>({ v: 1 });
+    const x = signal<{ v: number; y?: number }>({ v: 1 });
     const tmp = vi.fn();
     const projection = createProjection(
       x,
@@ -436,7 +482,7 @@ describe("Projection basics", () => {
     expect(tmp).toHaveBeenNthCalledWith(2, undefined, undefined);
     tmp.mockReset();
 
-    setX({ v: 2 });
+    x.set({ v: 2 });
     rt.flush();
 
     expect(tmp).toBeCalledTimes(2);
@@ -444,7 +490,7 @@ describe("Projection basics", () => {
     expect(tmp).toHaveBeenNthCalledWith(2, undefined, undefined);
     tmp.mockReset();
 
-    setX({ v: 2, y: 3 });
+    x.set({ v: 2, y: 3 });
     rt.flush();
 
     expect(tmp).toBeCalledTimes(2);
@@ -457,7 +503,7 @@ describe("Projection basics", () => {
 describe("selection with projections", () => {
   it("simple selection", () => {
     const rt = createRuntime();
-    const [selected, setSelected] = signal<number | undefined>(undefined);
+    const selected = signal<number | undefined>(undefined);
     const counts = Array.from({ length: 100 }, () => 0);
     const list: Array<string> = [];
 
@@ -478,25 +524,25 @@ describe("selection with projections", () => {
 
     expect(list[3]).toBe("no");
 
-    setSelected(3);
+    selected.set(3);
     rt.flush();
     views[3]!();
     expect(list[3]).toBe("selected");
     expect(counts[3]).toBe(2);
 
-    setSelected(6);
+    selected.set(6);
     rt.flush();
     views[3]!();
     views[6]!();
     expect(list[3]).toBe("no");
     expect(list[6]).toBe("selected");
 
-    setSelected(undefined);
+    selected.set(undefined);
     rt.flush();
     views[6]!();
     expect(list[6]).toBe("no");
 
-    setSelected(5);
+    selected.set(5);
     rt.flush();
     views[5]!();
     expect(list[5]).toBe("selected");
@@ -504,7 +550,7 @@ describe("selection with projections", () => {
 
   it("double selection", () => {
     const rt = createRuntime();
-    const [selected, setSelected] = signal<number | undefined>(undefined);
+    const selected = signal<number | undefined>(undefined);
     let count = 0;
     const list: Array<string>[] = [];
 
@@ -536,7 +582,7 @@ describe("selection with projections", () => {
     expect(list[3][1]).toBe("non");
     count = 0;
 
-    setSelected(3);
+    selected.set(3);
     rt.flush();
     firstViews[3]!();
     secondViews[3]!();
@@ -545,7 +591,7 @@ describe("selection with projections", () => {
     expect(list[3][1]).toBe("oui");
 
     count = 0;
-    setSelected(6);
+    selected.set(6);
     rt.flush();
     firstViews[3]!();
     secondViews[3]!();

@@ -114,7 +114,6 @@ interface ReactiveEdge {
 - `Invalid`
 - `Changed`
 - `Visited`
-- `Disposed`
 - `Computing`
 - `Scheduled`
 - `Computing`
@@ -156,7 +155,6 @@ WALKER_STATE = Visited | Computing
 
 ### Lifecycle bits
 
-- `Disposed`
 - `Computing`
 - `Scheduled`
 
@@ -173,7 +171,8 @@ WALKER_STATE = Visited | Computing
 - `markNodeComputing()`
 - `clearNodeComputing()`
 - `clearDirtyState()`
-- `isDisposedNode()`
+
+Окремого `isDisposedNode()` немає: generic teardown не створює стан живучості.
 
 Ідея проста:
 

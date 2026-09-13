@@ -1,4 +1,4 @@
-import { profileRuntimeCounter } from "@runtime/profiling";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 import { DEFAULT_READ_TRACKING_STRATEGY } from "./config";
 import {
@@ -29,11 +29,13 @@ export function runWithRuntimeContext<T>(
   context: RuntimeContext,
   fn: () => T,
 ): T {
-  profileRuntimeCounter("contextRunCalls");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.context.run");
   const previous = getActiveRuntimeContext();
   if (previous === context) return fn();
 
-  profileRuntimeCounter("contextSwitches");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.context.switch");
   switchRuntimeContext(context);
   try {
     return fn();
@@ -74,6 +76,7 @@ export function resetRuntimeContext(
   context.readTrackingStrategy = DEFAULT_READ_TRACKING_STRATEGY;
   context.nodeInvalidatedHook = undefined;
   context.runtimeIdleHook = undefined;
+  context.hostFlushHook = undefined;
 
   if (context === getActiveRuntimeContext()) {
     resetRuntimeExecutionState();
@@ -86,6 +89,7 @@ export function snapshotRuntimeContext(
 ): RuntimeContextSnapshot {
   if (context === getActiveRuntimeContext())
     syncRuntimeContext(context, "save");
+
   const {
     currentConsumer,
     trackingEpoch,
@@ -95,6 +99,7 @@ export function snapshotRuntimeContext(
     readTrackingStrategy,
     nodeInvalidatedHook,
     runtimeIdleHook,
+    hostFlushHook,
   } = context;
   return {
     currentConsumer,
@@ -105,6 +110,7 @@ export function snapshotRuntimeContext(
     readTrackingStrategy,
     nodeInvalidatedHook,
     runtimeIdleHook,
+    hostFlushHook,
   };
 }
 
@@ -116,9 +122,15 @@ export function restoreRuntimeContextSnapshot(
     context === getActiveRuntimeContext()
       ? trackingEpoch
       : context.trackingEpoch;
-  Object.assign(context, snapshot, {
-    trackingEpoch: Math.max(snapshot.trackingEpoch, currentEpoch),
-  });
+  context.currentConsumer = snapshot.currentConsumer;
+  context.trackingEpoch = Math.max(snapshot.trackingEpoch, currentEpoch);
+  context.propagationScopeDepth = snapshot.propagationScopeDepth;
+  context.batchDepth = snapshot.batchDepth;
+  context.runtimeState = snapshot.runtimeState;
+  context.readTrackingStrategy = snapshot.readTrackingStrategy;
+  context.nodeInvalidatedHook = snapshot.nodeInvalidatedHook;
+  context.runtimeIdleHook = snapshot.runtimeIdleHook;
+  context.hostFlushHook = snapshot.hostFlushHook;
   if (context === getActiveRuntimeContext())
     syncRuntimeContext(context, "load");
 }
