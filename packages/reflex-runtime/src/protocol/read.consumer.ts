@@ -13,7 +13,7 @@ import {
 import { devAssertNoRuntimeHookReactiveRead } from "@runtime/kernel/execution";
 import {
   Changed,
-  DIRTY_STATE,
+  Both,
   Visited,
   type ConsumerNode,
 } from "@runtime/kernel/shape";
@@ -51,7 +51,7 @@ export function readConsumerLazy<T>(this: ConsumerNode<T>): T {
   // eslint-disable-next-line @typescript-eslint/no-this-alias
   const producer = this;
   const state = producer.state;
-  const isDirty = (state & DIRTY_STATE) !== 0;
+  const isDirty = (state & Both) !== 0;
 
   if (__PROFILE__) observeRuntimeReadConsumerPath?.(isDirty);
 
@@ -90,7 +90,7 @@ export function readConsumerEager<T>(node: ConsumerNode<T>): T {
     observeRuntimeProjection?.("projection.semantic.read.consumer.eager");
 
   const state = node.state;
-  const isDirty = (state & DIRTY_STATE) !== 0;
+  const isDirty = (state & Both) !== 0;
 
   if (__PROFILE__) observeRuntimeReadConsumerPath?.(isDirty);
   return isDirty ? stabilizeDirtyConsumer(node, state) : node.payload;
@@ -122,7 +122,7 @@ function stabilizeDirtyConsumer<T>(node: ConsumerNode<T>, state: number): T {
     stabilized = edge !== null && pull_iterator(node, edge) && advance(node);
   }
 
-  if (!stabilized) node.state &= ~DIRTY_STATE;
+  if (!stabilized) node.state &= ~Both;
   if ((runtimeState & RuntimeState.IdlePending) !== RuntimeState.Idle) {
     flushPendingRuntimeIdle();
   }
@@ -180,7 +180,7 @@ export function readConsumer<T>(
       observeRuntimeProjection?.("projection.semantic.read.consumer.eager");
 
     const state = node.state;
-    const isDirty = (state & DIRTY_STATE) !== 0;
+    const isDirty = (state & Both) !== 0;
 
     if (__PROFILE__) observeRuntimeReadConsumerPath?.(isDirty);
 
@@ -195,7 +195,7 @@ export function readConsumer<T>(
     observeRuntimeProjection?.("projection.semantic.read.consumer.lazy");
 
   const state = node.state;
-  const isDirty = (state & DIRTY_STATE) !== 0;
+  const isDirty = (state & Both) !== 0;
 
   if (__PROFILE__) observeRuntimeReadConsumerPath?.(isDirty);
 

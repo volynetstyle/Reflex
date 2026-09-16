@@ -3,7 +3,7 @@ import {
   Changed,
   Computing,
   ConsumerReadMode,
-  DIRTY_STATE,
+  Both,
   Unknown,
   Visited,
   readConsumer,
@@ -25,7 +25,7 @@ import {
 
 /** Covers state-bit and read-mode matrices across the main subscriber kinds. */
 describe("Reactive runtime - state and read-mode matrices", () => {
-  const TRANSIENT_RECOMPUTE_STATE = Computing | Visited | DIRTY_STATE;
+  const TRANSIENT_RECOMPUTE_STATE = Computing | Visited | Both;
 
   it.each([
     {

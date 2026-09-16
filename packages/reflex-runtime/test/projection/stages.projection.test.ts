@@ -236,8 +236,8 @@ describe("Reflex stage projection", () => {
         "(node.state & ~Visited) | Computing",
         "(computingState & ~(Computing | Unknown)) | Changed",
         "computingState & ~Computing",
-        "computingState & ~(Computing | DIRTY_STATE)",
-        "computingState & ~(Computing | DIRTY_STATE)",
+        "computingState & ~(Computing | Both)",
+        "computingState & ~(Computing | Both)",
       ]);
       expect(advance.cfg.exits).toHaveLength(3);
 

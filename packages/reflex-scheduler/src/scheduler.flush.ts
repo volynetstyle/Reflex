@@ -1,5 +1,5 @@
 import {
-  DIRTY_STATE,
+  Both,
   flushPendingRuntimeIdle,
   releaseWatcherSchedule,
   RuntimeState,
@@ -72,7 +72,7 @@ export function flushQueuedWatchers(
       // A failed dependency validation remains dirty and must be retryable by
       // the next explicit drain, not recursively in this one. Callback and
       // cleanup failures recover to clean and do not enter this cold branch.
-      if ((node.state & DIRTY_STATE) !== 0) {
+      if ((node.state & Both) !== 0) {
         (validationRetries ??= []).push(node);
       }
     }

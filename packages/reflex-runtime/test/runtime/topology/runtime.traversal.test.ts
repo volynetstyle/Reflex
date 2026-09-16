@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  DIRTY_STATE,
+  Both,
   readConsumer,
   readProducer,
   runWatcher,
@@ -75,7 +75,7 @@ describe("Reactive runtime - traversal invariants", () => {
 
     writeProducer(source, 2);
 
-    expect(source.state & DIRTY_STATE).toBe(0);
+    expect(source.state & Both).toBe(0);
     expect(mid.state & Changed).toBeTruthy();
     expect(mid.state & Unknown).toBeFalsy();
     expect(leaf.state & Unknown).toBeTruthy();
@@ -114,7 +114,7 @@ describe("Reactive runtime - traversal invariants", () => {
 
     expect(invalidations).toBe(1);
     expect(effectSpy).toHaveBeenCalledTimes(1);
-    expect(watcher.state & DIRTY_STATE).toBeTruthy();
+    expect(watcher.state & Both).toBeTruthy();
 
     runWatcher(watcher);
     expect(effectSpy).toHaveBeenCalledTimes(2);
@@ -218,7 +218,7 @@ describe("Reactive runtime - traversal invariants", () => {
 
     runWatcher(watcher);
     expect(effectSpy).toHaveBeenCalledTimes(2);
-    expect(watcher.state & DIRTY_STATE).toBe(0);
+    expect(watcher.state & Both).toBe(0);
 
     writeProducer(source, 3);
     expect(invalidations).toBe(3);
@@ -240,7 +240,7 @@ describe("Reactive runtime - traversal invariants", () => {
     writeProducer(nestedSource, 20);
 
     expect(readConsumer(root)).toBe(44);
-    expect(root.state & DIRTY_STATE).toBe(0);
+    expect(root.state & Both).toBe(0);
   });
 
   it("reruns a watcher after a tracked-prefix invalidation during its own execution", () => {
@@ -266,7 +266,7 @@ describe("Reactive runtime - traversal invariants", () => {
 
     runWatcher(watcher);
     expect(seen).toEqual([0, 1, 2]);
-    expect(watcher.state & DIRTY_STATE).toBe(0);
+    expect(watcher.state & Both).toBe(0);
   });
 
   it("keeps tracked invalidation after nested compute advances the global version", () => {
@@ -389,7 +389,7 @@ describe("Reactive runtime - traversal invariants", () => {
 
         runWatcher(watcher);
       } else {
-        expect(watcher.state & DIRTY_STATE, entry.name).toBe(0);
+        expect(watcher.state & Both, entry.name).toBe(0);
       }
 
       expect(runs, entry.name).toEqual(entry.expectedFinalRuns);
@@ -399,7 +399,7 @@ describe("Reactive runtime - traversal invariants", () => {
         b,
       ]);
       expect(incomingEdges(watcher), entry.name).toEqual(initialEdges);
-      expect(watcher.state & DIRTY_STATE, entry.name).toBe(0);
+      expect(watcher.state & Both, entry.name).toBe(0);
     }
   });
 

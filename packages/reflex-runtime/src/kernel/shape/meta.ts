@@ -1,50 +1,53 @@
 /**
- * Bit flags describing the lifecycle, role and execution state of a reactive node.
+ * Reactive node state is composed from independent flag groups:
  *
- * The flags are divided into independent groups:
+ *  - Evidence   : Unknown | Changed
+ *  - Execution  : Visited | Computing
+ *  - Scheduling : Scheduled
+ *  - Role       : Producer | Consumer | Watcher
  *
- *  - Role         : Producer / Consumer / Watcher
- *  - Dirty state  : Clean | Unknown | Changed
- *  - Execution    : Visited, Computing, Scheduled, ...
+ * Evidence forms a two-bit Boolean lattice:
+ *                 (Both)
+ *            Unknown | Changed
+ *             /             \
+ *        Unknown           Changed
+ *             \             /
+ *                  None
  *
- * Dirty-state semantics:
- *
- *  Clean
- *      The node is known to be up-to-date.
+ * `Unknown` and `Changed` are independent facts:
  *
  *  Unknown
- *      An upstream dependency may have changed.
- *      The node must verify whether recomputation is actually required
- *      (typically through `shouldRecompute()`).
+ *      At least one committed dependency still requires validation.
  *
  *  Changed
- *      An upstream change has already been confirmed.
- *      The node should recompute immediately without further verification.
+ *      At least one dependency has already proven that execution/recomputation
+ *      is required once validation succeeds.
  *
- * Information ordering:
+ * Evidence accumulated during propagation is monotonic:
  *
- *      Clean < Unknown < Changed
+ *      merge(a, b) = a | b
  *
- * where `Unknown` represents uncertainty and `Changed` represents confirmed
- * knowledge about an upstream change.
+ * and therefore commutative, associative and idempotent.
  *
- * Notes:
- *
- *  - For computed nodes, `Unknown` and `Changed` are normally exclusive.
- *  - For watchers, they are orthogonal pending facts: `Unknown` requires
- *    dependency validation before lifecycle work, while `Changed` requires
- *    execution after validation succeeds. `Unknown | Changed` preserves both
- *    obligations when a confirmed change is followed by another invalidation.
- *  - Producers commit immediately on write and normally do not participate
- *    in pull-walk verification.
- *  - `Visited`, `Computing` and similar flags are transient execution markers
- *    used only while propagating or evaluating the graph.
+ * Validation may later discharge `Unknown`; this is a separate operation from
+ * propagation-time evidence accumulation.
  */
-
-/** Upstream may have changed; verify before recomputing. */
+/**
+ * Bottom of semilattice.
+ */
+export const None = 0b00;
+/**
+ * Validation is required before execution/recomputation may proceed.
+ */
 export const Unknown = 1 << 0;
-/** Upstream change is confirmed; recompute immediately. */
+/**
+ * Execution/recomputation is definitely required.
+ * No further validation is needed to establish that fact.
+ */
 export const Changed = 1 << 1;
+export const Both = Unknown | Changed;
+
+// end of paragraph
 /** Node has already been visited during the current traversal. */
 export const Visited = 1 << 2;
 /** Node is currently being evaluated. */
@@ -65,12 +68,10 @@ export const Producer = __DEV__ ? 1 << 29 : 0;
  * as it is not required in the production environment
  * prod) under heavy use (hot path).
  */
-export const Consumer = __DEV__ ? 1 << 29 : 0;
+export const Consumer = __DEV__ ? 1 << 30 : 0;
 
 export type ReactiveNodeState = number;
 
-/** All dirty bits. In supported runtime flows this is either `Unknown` or `Changed`. */
-export const DIRTY_STATE = Unknown | Changed;
 /** Clean producer. Normal steady state for source nodes. */
 export const PRODUCER_INITIAL_STATE = Producer;
 /** Directly invalidated computed node: skip verification and recompute on read. */

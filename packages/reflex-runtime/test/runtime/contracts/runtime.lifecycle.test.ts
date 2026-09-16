@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   Changed,
-  DIRTY_STATE,
+  Both,
   Visited,
   Computing,
   createRuntimeContext,
@@ -55,7 +55,7 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     expectSources(target, []);
     expectNoSubscriber(source, target);
 
-    target.state &= ~DIRTY_STATE;
+    target.state &= ~Both;
     writeProducer(source, 2);
     expectClean(target);
   });

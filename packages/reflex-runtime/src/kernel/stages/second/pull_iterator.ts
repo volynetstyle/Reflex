@@ -77,8 +77,9 @@ function profilePullNode(
  * - resumes siblings only while the current branch remains stable.
  */
 function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
-  if (__PROFILE__)
+  if (__PROFILE__) {
     observeRuntimeProjection?.("projection.semantic.pull.invoke");
+  }
 
   const base = high;
   let top = base;
@@ -91,12 +92,14 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
        * does not need to be inspected. We are going to bubble anyway.
        */
       if ((node.state & Changed) !== 0) {
-        if (__PROFILE__)
+        if (__PROFILE__) {
           profilePullNode("node.changed", node, top - base, top - base);
+        }
         changed = true;
       } else {
-        if (__PROFILE__)
+        if (__PROFILE__) {
           observeRuntimeProjection?.("projection.semantic.pull.edge.visit");
+        }
 
         const dep = edge.from;
         const depState = dep.state;
@@ -135,11 +138,11 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
           changed = advance(dep, edge);
         } else if ((depState & Unknown) !== 0) {
-          if (__PROFILE__)
+          if (__PROFILE__) {
             observeRuntimeProjection?.(
               "projection.semantic.pull.dependency.invalid",
             );
-
+          }
           const firstIn = dep.firstIn;
 
           if (firstIn !== null) {
@@ -215,27 +218,37 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
                 top - base,
               );
             }
+
             const cleanDep = sibling.from;
             const cleanState = cleanDep.state;
             edge = sibling;
-            if ((cleanState & (Changed | Unknown)) !== 0) continue scan;
 
-            if (__PROFILE__)
-              observeRuntimeProjection?.("projection.semantic.pull.edge.visit");
-            if (__DEV__ && (cleanState & Computing) !== 0) {
-              throw new Error("Cycle detected while refreshing reactive graph");
+            if ((cleanState & (Changed | Unknown)) !== 0) {
+              continue scan;
             }
-            if (__PROFILE__) {
+
+            {
               if (__PROFILE__)
                 observeRuntimeProjection?.(
-                  "projection.semantic.pull.dependency.clean",
+                  "projection.semantic.pull.edge.visit",
                 );
-              profilePullNode(
-                "dep.clean",
-                cleanDep,
-                top - base + 1,
-                top - base,
-              );
+              if (__DEV__ && (cleanState & Computing) !== 0) {
+                throw new Error(
+                  "Cycle detected while refreshing reactive graph",
+                );
+              }
+              if (__PROFILE__) {
+                if (__PROFILE__)
+                  observeRuntimeProjection?.(
+                    "projection.semantic.pull.dependency.clean",
+                  );
+                profilePullNode(
+                  "dep.clean",
+                  cleanDep,
+                  top - base + 1,
+                  top - base,
+                );
+              }
             }
           }
           changed = false;

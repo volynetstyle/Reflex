@@ -21,7 +21,7 @@ import {
   RuntimePhase,
 } from "@runtime/kernel/execution";
 import {
-  DIRTY_STATE,
+  Both,
   disposeNode,
   Changed,
   Computing,
@@ -36,7 +36,7 @@ import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 import { executeKnownNodeComputation } from "./watcher.execution";
 
-const WATCHER_TRANSIENT_STATE = DIRTY_STATE | Visited | Computing | Scheduled;
+const WATCHER_TRANSIENT_STATE = Both | Visited | Computing | Scheduled;
 
 function recoverWatcherAfterError(node: WatcherNode): void {
   // A failed lifecycle callback must not leave an unscheduled dirty watcher:
@@ -62,7 +62,7 @@ function recoverWatcherAfterValidationError(node: WatcherNode): void {
  */
 function recoverWatcherAfterComputationError(node: WatcherNode): void {
   for (let edge = node.firstIn; edge !== null; edge = edge.nextIn) {
-    if ((edge.from.state & DIRTY_STATE) !== 0) {
+    if ((edge.from.state & Both) !== 0) {
       recoverWatcherAfterValidationError(node);
       return;
     }
@@ -132,7 +132,7 @@ function runWatcherCore(node: WatcherNode): void {
 
   const state = node.state;
 
-  if ((state & DIRTY_STATE) === 0) {
+  if ((state & Both) === 0) {
     if (__PROFILE__)
       observeRuntimeProjection?.("projection.semantic.watcher.clean.skip");
 
@@ -183,7 +183,7 @@ function runWatcherCore(node: WatcherNode): void {
     if (__PROFILE__)
       observeRuntimeProjection?.("projection.semantic.watcher.disposed.skip");
 
-    node.state &= ~DIRTY_STATE;
+    node.state &= ~Both;
     devRecordWatcherSkip(node, "stable", defaultContext);
     return;
   }
@@ -211,7 +211,7 @@ function runWatcherCore(node: WatcherNode): void {
     devRecordWatcherCleanup(node, defaultContext);
 
     if (node.compute === undefined) {
-      node.state &= ~DIRTY_STATE;
+      node.state &= ~Both;
       if (__DEV__) {
         devRecordWatcherFinish(node, false, undefined, defaultContext);
       }
@@ -241,7 +241,7 @@ function runWatcherCore(node: WatcherNode): void {
   }
 
   if ((node.state & Visited) === 0) {
-    node.state &= ~DIRTY_STATE;
+    node.state &= ~Both;
   } else {
     node.state = (node.state & ~Changed) | Unknown;
   }

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   Consumer,
-  DIRTY_STATE,
+  Both,
   Producer,
   ReactiveNode,
   createComputeCounter,
@@ -278,7 +278,7 @@ describe("Reactive runtime - section model coverage", () => {
 
           expect(invalidated).toEqual(["left", "right", "far"]);
           for (const { watcher } of watchers) {
-            expect(watcher.state & DIRTY_STATE).toBeTruthy();
+            expect(watcher.state & Both).toBeTruthy();
           }
           expectRuntimeSectionHealthy([
             source,

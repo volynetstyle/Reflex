@@ -6,7 +6,7 @@ import { currentConsumer, propagationScopeDepth } from "@runtime/kernel/state";
 import {
   Changed,
   Consumer,
-  DIRTY_STATE,
+  Both,
   Unknown,
   Producer,
   Visited,
@@ -68,7 +68,7 @@ function normalizeHistoryLimit(
 }
 
 function getDirtyState(state: number): RuntimeDebugDirtyState {
-  const dirty = state & DIRTY_STATE;
+  const dirty = state & Both;
 
   if (dirty === 0) return "clean";
   if (dirty === Unknown) return "unknown";

@@ -1,5 +1,5 @@
 import {
-  DIRTY_STATE,
+  Both,
   createWatcher,
   readProducer,
   runWatcher,
@@ -75,7 +75,7 @@ export function createSelector<T>(
   runWatcher(watcher);
 
   return (key) => {
-    if ((watcher.state & DIRTY_STATE) !== 0) sync(untracked(source));
+    if ((watcher.state & Both) !== 0) sync(untracked(source));
     return readProducer(ensureKey(key).node);
   };
 }
@@ -126,7 +126,7 @@ export function createKeyedProjection<T, K, R>(
   runWatcher(watcher);
 
   return (key) => {
-    if ((watcher.state & DIRTY_STATE) !== 0) sync(untracked(source));
+    if ((watcher.state & Both) !== 0) sync(untracked(source));
     return readProducer(ensureKey(key).node);
   };
 }

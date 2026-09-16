@@ -11,7 +11,7 @@ import {
 import {
   Changed,
   Computing,
-  DIRTY_STATE,
+  Both,
   Unknown,
   Visited,
   Watcher,
@@ -27,7 +27,7 @@ import {
 } from "@runtime/kernel/projection";
 import { observeRuntimePropagate } from "@runtime/kernel/projection.propagate";
 
-const FAST_BLOCK_MASK = DIRTY_STATE | Computing;
+const FAST_BLOCK_MASK = Both | Computing;
 
 const propagateStack: ReactiveEdge[] = new Array(512).fill(null);
 const MAX_RETAINED_PROPAGATE_STACK = 512;

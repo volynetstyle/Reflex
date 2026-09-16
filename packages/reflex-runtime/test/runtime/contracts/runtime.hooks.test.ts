@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  DIRTY_STATE,
+  Both,
   disposeWatcher,
   propagationScopeDepth,
   readPropagateStackStats,
@@ -160,8 +160,8 @@ describe("Reactive runtime - hooks and resilience", () => {
     writeProducer(outerSource, 2);
 
     expect(settled).toHaveBeenCalledTimes(1);
-    expect(outerWatcher.state & DIRTY_STATE).toBeTruthy();
-    expect(innerWatcher.state & DIRTY_STATE).toBeTruthy();
+    expect(outerWatcher.state & Both).toBeTruthy();
+    expect(innerWatcher.state & Both).toBeTruthy();
   });
 
   it("unwinds propagation state when an invalidation hook throws", () => {
@@ -239,7 +239,7 @@ describe("Reactive runtime - hooks and resilience", () => {
     disposeWatcher(watcher);
 
     expect(cleanup).toHaveBeenCalledTimes(2);
-    expect(watcher.state & DIRTY_STATE).toBe(0);
+    expect(watcher.state & Both).toBe(0);
   });
   it.each(["direct", "transitive"] as const)(
     "unwinds a %s invalidation-hook exception without rolling back the write",
