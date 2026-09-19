@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { SpecMachine, observationsEqual } from "./harness";
-import { mutationQualificationCorpus } from "./mutation-corpus";
+import { mutationQualificationCorpus } from "./mutant/mutation-corpus";
 import {
   formatMutationReport,
   qualifyMutationCorpus,
-} from "./mutation-qualification";
-import { MutantRuntime, semanticMutants } from "./mutant-runtime";
+} from "./mutant/mutation-qualification";
+import { MutantRuntime, semanticMutants } from "./mutant/mutant-runtime";
 
 describe("differential oracle mutation qualification", () => {
   it("keeps the inactive mutation host equivalent to SpecRuntime", () => {

@@ -1,11 +1,11 @@
-import type { HoldoutSemanticMutantId } from "./holdout-mutants";
+import type { HoldoutSemanticMutantId } from "./../holdout-mutants";
 import type {
   SpecCleanup,
   SpecComputation,
   SpecComputed,
   SpecProducer,
   SpecWatcher,
-} from "./spec-runtime";
+} from "./../spec-runtime";
 
 type Dependency = SpecProducer<unknown> | SpecComputed<unknown>;
 type DependencySnapshot = Map<Dependency, number>;

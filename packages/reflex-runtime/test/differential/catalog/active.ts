@@ -1,4 +1,4 @@
-import type { Observation, Op } from "./harness";
+import type { Observation, Op } from "../api";
 
 export interface ActiveDivergence {
   id: string;

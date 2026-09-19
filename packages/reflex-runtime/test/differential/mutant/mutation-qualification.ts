@@ -3,7 +3,7 @@ import {
   observationsEqual,
   type Observation,
   type Op,
-} from "./harness";
+} from "../harness";
 import {
   MutantRuntime,
   semanticMutants,

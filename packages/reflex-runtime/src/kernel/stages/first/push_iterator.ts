@@ -27,8 +27,6 @@ import {
 } from "@runtime/kernel/projection";
 import { observeRuntimePropagate } from "@runtime/kernel/projection.propagate";
 
-const FAST_BLOCK_MASK = Both | Computing;
-
 const propagateStack: ReactiveEdge[] = new Array(512).fill(null);
 const MAX_RETAINED_PROPAGATE_STACK = 512;
 const propagateDepthStack: number[] | undefined = __PROFILE__
@@ -156,7 +154,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
 
     let next = 0;
 
-    if ((state & FAST_BLOCK_MASK) === 0) {
+    if ((state & (Both | Computing)) === 0) {
       next = (state & ~Visited) | Changed;
       sub.state = next;
     } else if ((state & Unknown) !== 0 && (state & Watcher) === 0) {
@@ -266,7 +264,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
 
       let next = 0;
 
-      if ((state & FAST_BLOCK_MASK) === 0) {
+      if ((state & (Both | Computing)) === 0) {
         next = (state & ~Visited) | Unknown;
         sub.state = next;
       } else if ((state & Computing) !== 0) {

@@ -6,9 +6,18 @@ import {
   type Op,
   type Value,
 } from "./harness";
-import type { QualificationProgram } from "./mutation-qualification";
+import {
+  defaultBoundedLanguage,
+  boundedValueDomain,
+  type BoundedLanguage,
+} from "./catalog/bounded-language";
+import type { BoundedExhaustiveReport } from "./api/reports";
+export { defaultBoundedLanguage, boundedValueDomain } from "./catalog/bounded-language";
+export type { BoundedLanguage } from "./catalog/bounded-language";
+export type { BoundedExhaustiveReport } from "./api/reports";
+import type { QualificationProgram } from "./mutant/mutation-qualification";
 
-export interface BoundedLanguage {
+/* export interface BoundedLanguage {
   maxProducers: 1 | 2;
   maxComputeds: 0 | 1;
   maxWatchers: 0 | 1;
@@ -24,15 +33,15 @@ export const defaultBoundedLanguage: BoundedLanguage = {
   maxActions: 2,
   values: [false, true],
   expressionDepth: 2,
-};
+}; */
 
-export interface BoundedExhaustiveReport {
+/* export interface BoundedExhaustiveReport {
   language: BoundedLanguage;
   canonicalPrograms: number;
   executedPrograms: number;
   executedOperations: number;
   divergences: 0;
-}
+} */
 
 interface Topology {
   setup: Op[];
@@ -359,6 +368,3 @@ function stableHash(value: string): string {
 function read(id: NodeId): Expr {
   return { type: "read", id };
 }
-
-export const boundedValueDomain: readonly Value[] =
-  defaultBoundedLanguage.values;

@@ -1,4 +1,4 @@
-﻿import type { Expr, Op } from "./harness";
+﻿import type { Expr, Op } from "../harness";
 import type { QualificationProgram } from "./mutation-qualification";
 
 const read = (id: string): Expr => ({ type: "read", id });

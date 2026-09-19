@@ -36,6 +36,7 @@ export default defineConfig({
       "**/node_modules/**",
       "test/dev/**/*.dev.test.ts",
       "test/projection/**/*.test.ts",
+      "test/differential/watcher/runtime.watcher-evidence-*.test.ts",
     ],
     isolate: false,
     pool: "forks",

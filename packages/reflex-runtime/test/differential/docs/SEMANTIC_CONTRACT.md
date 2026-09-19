@@ -56,7 +56,9 @@ computed was independently stabilized earlier in the operation trace.
 - **V2** Validation retry behavior is independent of prior reads and pull traversal history.
 - **V3** Validation covers the complete committed dependency snapshot before watcher lifecycle begins.
 - **V4** `Unknown` and `Changed` are orthogonal for watchers; recovery preserves both outstanding obligations.
+- **V5** Watcher invalidation evidence accumulates monotonically within an unsettled propagation wave. For independent incoming obligations: merge(a, b) = a | b
 
+and therefore merge is commutative, associative and idempotent.
 These rules express the transaction boundary: evaluation and validation are not
 commitment. Errors are compared by normalized `name` and `message`. Stack traces
 and object identity are deliberately not observable.
@@ -86,6 +88,19 @@ not specified here: it must only be added after Reflex chooses a public contract
 for self-cycles and multi-node cycles. Scheduling/ownership and writes during
 execution likewise require explicit DSL operations and contract decisions before
 they become part of this oracle.
+
+## Metamorphic equivalences
+
+Under their stated preconditions:
+
+M1. Independent source-write permutation before the same
+    execution boundary does not change watcher lifecycle outcome.
+
+M2. Independent dependency-read permutation does not change
+    lifecycle outcome when exception precedence is unchanged.
+
+M3. Inserting a pure identity computed does not change
+    observable watcher lifecycle semantics.
 
 ## Oracle qualification
 

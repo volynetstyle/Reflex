@@ -7,12 +7,12 @@
  *  - Role       : Producer | Consumer | Watcher
  *
  * Evidence forms a two-bit Boolean lattice:
- *                 (Both)
- *            Unknown | Changed
- *             /             \
- *        Unknown           Changed
- *             \             /
- *                  None
+ *                  (Both)
+ *             Unknown | Changed
+ *              /            \
+ *           Unknown       Changed
+ *              \            /
+ *                   None
  *
  * `Unknown` and `Changed` are independent facts:
  *
@@ -31,7 +31,17 @@
  *
  * Validation may later discharge `Unknown`; this is a separate operation from
  * propagation-time evidence accumulation.
+ *
+ * Propagation-time evidence is monotonic:
+ *
+ * nextEvidence = currentEvidence | incomingEvidence
+ *
+ * It must never discard an already-known evidence bit.
+ *
+ * Resolution of evidence belongs to validation/evaluation stages,
+ * not to propagation merge.
  */
+
 /**
  * Bottom of semilattice.
  */
@@ -39,24 +49,31 @@ export const None = 0b00;
 /**
  * Validation is required before execution/recomputation may proceed.
  */
-export const Unknown = 1 << 0;
+export const Unknown = 1 << 0; // 1
 /**
  * Execution/recomputation is definitely required.
  * No further validation is needed to establish that fact.
  */
-export const Changed = 1 << 1;
-export const Both = Unknown | Changed;
+export const Changed = 1 << 1; // 2
+/**
+ * Top of semilattice.
+ */
+export const Both = Unknown | Changed; // =3
 
 // end of paragraph
 /** Node has already been visited during the current traversal. */
-export const Visited = 1 << 2;
+export const Visited = 1 << 2; // 4
 /** Node is currently being evaluated. */
-export const Computing = 1 << 3;
+export const Computing = 1 << 3; // 8
 /** Node performs side effects and has no output value. */
-export const Watcher = 1 << 4;
+export const Watcher = 1 << 4; // 16
 /** Watcher has been enqueued for execution. */
-export const Scheduled = 1 << 5;
+export const Scheduled = 1 << 5; // 32
+
 // ...
+// free powers include 29 and 30 in prod [6, 31*]
+// ...
+
 /**
  * Only available in the development environment (DEV),
  * Source node whose value is committed externally.
