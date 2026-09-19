@@ -2,17 +2,26 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  plugins: [{
-    name: "runtime-walker-test-state",
-    enforce: "pre",
-    transform(code, id) {
-      // Expose existing lexical state only in the test transform. No runtime
-      // fields, counters, callbacks, or production exports are introduced.
-      if (id.replace(/\\/g, "/").endsWith("/src/kernel/stages/second/pull_iterator.ts")) {
-        return code + "\nexport { stack as testPullStack, high as testPullHigh };\n";
-      }
+  plugins: [
+    {
+      name: "runtime-walker-test-state",
+      enforce: "pre",
+      transform(code, id) {
+        // Expose existing lexical state only in the test transform. No runtime
+        // fields, counters, callbacks, or production exports are introduced.
+        if (
+          id
+            .replace(/\\/g, "/")
+            .endsWith("/src/kernel/stages/second/pull_iterator.ts")
+        ) {
+          return (
+            code +
+            "\nexport { stack as testPullStack, high as testPullHigh };\n"
+          );
+        }
+      },
     },
-  }],
+  ],
   resolve: {
     alias: {
       "@runtime": fileURLToPath(new URL("./src", import.meta.url)),
@@ -36,7 +45,6 @@ export default defineConfig({
       "**/node_modules/**",
       "test/dev/**/*.dev.test.ts",
       "test/projection/**/*.test.ts",
-      "test/differential/watcher/runtime.watcher-evidence-*.test.ts",
     ],
     isolate: false,
     pool: "forks",

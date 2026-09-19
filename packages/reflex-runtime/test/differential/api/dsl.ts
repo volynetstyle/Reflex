@@ -1,8 +1,27 @@
-import type { Expr, NodeId, Value, Op, Program } from "./types";
+import type {
+  DifferentialCase,
+  Expr,
+  NodeId,
+  Value,
+  Op,
+  Program,
+} from "./types";
 
 type BinaryExprType = Extract<Expr, { left: Expr; right: Expr }>["type"];
 
 type IdOpType = Extract<Op, { id: NodeId }>["type"];
+
+export interface WatcherOptions {
+  readonly cleanup?: Expr;
+}
+
+export interface DifferentialCaseDefinition {
+  readonly id: string;
+  readonly family: string;
+  readonly faultModel?: string;
+  readonly operations: readonly Op[];
+  readonly meta?: Program["meta"];
+}
 
 const binary =
   (type: BinaryExprType) =>
@@ -53,11 +72,11 @@ export const op = {
     expression,
   }),
 
-  watcher: (id: NodeId, expression: Expr, cleanup?: Expr): Op => ({
+  watcher: (id: NodeId, expression: Expr, options?: WatcherOptions): Op => ({
     type: "effect",
     id,
     expression,
-    ...(cleanup !== undefined && { cleanup }),
+    ...(options?.cleanup !== undefined && { cleanup: options.cleanup }),
   }),
 
   set: (id: NodeId, value: Value): Op => ({
@@ -81,5 +100,22 @@ export function defineProgram(
     id,
     operations,
     ...(meta !== undefined && { meta }),
+  };
+}
+
+export function defineCase(
+  definition: DifferentialCaseDefinition,
+): DifferentialCase {
+  return {
+    id: definition.id,
+    family: definition.family,
+    ...(definition.faultModel !== undefined && {
+      faultModel: definition.faultModel,
+    }),
+    program: defineProgram(
+      definition.id,
+      definition.operations,
+      definition.meta,
+    ),
   };
 }

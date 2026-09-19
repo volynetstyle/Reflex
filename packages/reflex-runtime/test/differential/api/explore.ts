@@ -1,27 +1,17 @@
-import { SpecMachine, ReflexMachine } from "../harness";
-import { observationsEqual, DifferentialError } from "../internal/machine/eval";
-import { Op, Observation } from "./types";
+import { compare } from "./differential";
+import type { DifferentialCase, ExplorationReport } from "./types";
 
-export function executePrograms(
-  program: readonly Op[],
-): Observation[] {
-  const expectedMachine = new SpecMachine();
-  const actualMachine = new ReflexMachine();
+export function explore(cases: readonly DifferentialCase[]): ExplorationReport {
+  const results = cases.map((candidate) => ({
+    case: candidate,
+    result: compare(candidate.program),
+  }));
+  const divergent = results.filter(({ result }) => !result.equivalent).length;
 
-  return program.map((operation, index) => {
-    const expected = expectedMachine.execute(operation);
-    const actual = actualMachine.execute(operation);
-
-    if (!observationsEqual(actual, expected)) {
-      throw new DifferentialError(
-        index,
-        operation,
-        expected,
-        actual,
-        program.slice(0, index + 1),
-      );
-    }
-
-    return actual;
-  });
+  return {
+    total: results.length,
+    equivalent: results.length - divergent,
+    divergent,
+    results,
+  };
 }

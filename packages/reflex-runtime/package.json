@@ -80,7 +80,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && pnpm typecheck:differential",
+    "typecheck:differential": "tsc --noEmit -p test/differential/tsconfig.json",
     "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build && pnpm check:architecture",
     "release": "changeset version && pnpm install && changeset publish"
   },

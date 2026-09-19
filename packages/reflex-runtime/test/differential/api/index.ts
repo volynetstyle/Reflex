@@ -1,8 +1,22 @@
-export { defineProgram, expr, op } from "./dsl";
-export { runProgram, compareProgram, assertEquivalent } from "./run";
-export { explorePrograms } from "./explore";
-export { defineFault } from "./fault";
+export {
+  defineCase,
+  defineProgram,
+  expr,
+  op,
+  type DifferentialCaseDefinition,
+  type WatcherOptions,
+} from "./dsl";
+export { assertEquivalent, compare } from "./differential";
+export { explore } from "./explore";
+export {
+  compareTransformation,
+  type TransformationComparison,
+} from "./metamorphic";
 export type {
+  DifferentialCase,
+  DifferentialMismatch,
+  DifferentialResult,
+  ExplorationReport,
   Value,
   NodeId,
   Expr,
@@ -11,10 +25,7 @@ export type {
   Observation,
   EffectEvent,
   Machine,
-  RuntimeTarget,
-  ProgramTrace,
-  DifferentialMismatch,
-  DifferentialResult,
-  ExplorationReport,
-  DifferentialFault,
+  OperationAlignment,
+  TransformationMismatch,
+  TransformationResult,
 } from "./types";

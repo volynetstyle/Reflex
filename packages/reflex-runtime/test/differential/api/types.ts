@@ -46,3 +46,57 @@ export interface Observation {
 export interface Machine {
   execute(op: Op): Observation;
 }
+
+export interface DifferentialCase {
+  readonly id: string;
+  readonly family: string;
+  readonly faultModel?: string;
+  readonly program: Program;
+}
+
+export interface DifferentialMismatch {
+  readonly operationIndex: number;
+  readonly operation: Op;
+  readonly expected: Observation;
+  readonly actual: Observation;
+  readonly prefix: readonly Op[];
+}
+
+export interface DifferentialResult {
+  readonly program: Program;
+  readonly expected: readonly Observation[];
+  readonly actual: readonly Observation[];
+  readonly mismatch: DifferentialMismatch | undefined;
+  readonly equivalent: boolean;
+}
+
+export interface ExplorationReport {
+  readonly total: number;
+  readonly equivalent: number;
+  readonly divergent: number;
+  readonly results: readonly {
+    readonly case: DifferentialCase;
+    readonly result: DifferentialResult;
+  }[];
+}
+
+export interface OperationAlignment {
+  readonly base: number;
+  readonly transformed: number;
+}
+
+export interface TransformationMismatch {
+  readonly target: "spec" | "reflex";
+  readonly baseOperationIndex: number;
+  readonly transformedOperationIndex: number;
+  readonly base: Observation;
+  readonly transformed: Observation;
+}
+
+export interface TransformationResult {
+  readonly base: DifferentialResult;
+  readonly transformed: DifferentialResult;
+  readonly specEquivalent: boolean;
+  readonly reflexEquivalent: boolean;
+  readonly mismatches: readonly TransformationMismatch[];
+}

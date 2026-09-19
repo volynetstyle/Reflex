@@ -18,6 +18,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "pnpm -r typecheck",
+    "typecheck:differential": "pnpm --filter @volynets/reflex-runtime typecheck:differential",
     "release": "changeset version && pnpm install && changeset publish",
     "prepare": "husky"
   },
