@@ -138,4 +138,29 @@ export const mutationQualificationCorpus: readonly QualificationProgram[] = [
       { type: "flush" },
     ],
   },
+  {
+    name: "watcher validates the full committed frontier",
+    program: [
+      { type: "signal", id: "direct", value: 0 },
+      { type: "signal", id: "failGate", value: false },
+      {
+        type: "computed",
+        id: "failing",
+        expression: branch("failGate", fail("validation failure"), {
+          type: "constant",
+          value: 0,
+        }),
+      },
+      {
+        type: "effect",
+        id: "watcher",
+        expression: add(read("direct"), read("failing")),
+        cleanup: { type: "constant", value: "cleanup" },
+      },
+      { type: "flush" },
+      { type: "set", id: "direct", value: 1 },
+      { type: "set", id: "failGate", value: true },
+      { type: "flush" },
+    ],
+  },
 ];

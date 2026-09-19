@@ -3,9 +3,9 @@
 Prepared 2026-09-19 before adding the watcher-evidence differential suites.
 
 This document deliberately records a **readiness baseline**, not a passing
-semantic baseline. The working tree contains an unfinished change to
-`src/kernel/stages/second/pull_iterator.ts`; its result must not be frozen as
-the behavior of a release candidate.
+semantic baseline. Rechecked on clean HEAD `28601c3`: the differential failures
+below reproduce on committed code. The earlier run contained local changes,
+but that observation did not establish those changes as the cause.
 
 ## Contract under test
 
@@ -144,10 +144,137 @@ runtime.adversarial-exhaustive.test.ts:
   classification: cleanup-before-validation-completes
 ```
 
-This is intentionally **not** a baseline because the run includes the local
-`pull_iterator.ts` rewrite and the committed adversarial generator has grown
-without a corresponding frozen expected count. Before enabling the new
-watcher suite, establish a clean-worktree run and decide whether the 816-case
-generator is the intended language. Only then: define the missing case IDs,
-enable the suite in `vite.config.ts` (or give it a dedicated config/script),
-and freeze the resulting case and finding counts here.
+The same result was reproduced on clean HEAD `28601c3`. It is a reproducible
+failure baseline, not an accepted semantic difference. The committed generator
+has 40 added mixed-frontier programs, while its assertion still expects 776.
+Keep language size and semantic correctness as separate assertions: updating
+the count to 816 cannot resolve the 14 lifecycle differences.
+
+## Follow-up review of the proposed architecture
+
+The supplied analysis refers to `8c56acc`, `DIRTY_STATE`, and old catalog paths.
+Current HEAD is `28601c3`, the evidence mask is named `Both`, and historical
+records already contain `fixedBy: "8c56acc"`. No provenance replacement is
+needed for those records.
+
+### Role-specific transitions
+
+The Boolean algebra applies to watcher obligations during an unsettled wave.
+Ordinary computed invalidation has a different operational order:
+`Clean < Unknown < Changed`. A directly invalidated computed must recompute;
+it can discard its earlier uncertainty. Consequently a universal OR rule for
+all reactive nodes would change existing consumer semantics. The introductory
+comment in `meta.ts` currently states the rule too broadly.
+
+| Existing evidence | Arrival                 | Watcher result | Computed result                          |
+| ----------------- | ----------------------- | -------------- | ---------------------------------------- |
+| Unknown           | direct change           | Both           | Changed                                  |
+| Changed           | transitive invalidation | Both           | Changed                                  |
+| Both              | either obligation       | Both           | Test role-specific reachable transitions |
+
+These rows apply to non-computing nodes. Reentrant `Computing`/`Visited`
+transitions need their own cases and cannot be inferred from this table.
+Scheduler ownership is another observation: enriching an already notified
+watcher with `Unknown` must not emit a duplicate scheduling notification.
+
+Tests of `a | b` alone prove the model, not that the actual walkers implement
+it. Pair the finite model with real graph transitions through `push_iterator`,
+`push_iterator_once`, and the skipping variant. Observe evidence, appropriate
+preservation of other flags, and notification counts. Do not require execution
+flags such as `Visited` to remain unchanged when their stage explicitly clears
+them.
+
+### Full-frontier validator acceptance conditions
+
+A specialized watcher validator is a reasonable second change after the
+propagation defect has an executable witness and a focused repair. The supplied
+pseudocode is not yet exception-safe: if one `advance` returns true and a later
+dependency throws, its local `changed` result never reaches the caller. The
+confirmed execution obligation must be retained before unwinding. Existing
+watcher code handles this with `pendingChanged` and a catch path; preserve that
+semantic guarantee when replacing its restart loop.
+
+Additional obligations for that implementation:
+
+- Preserve execution already justified by an independently warmed dependency,
+  even when all dependencies inspected by the validator are now clean.
+- Validate every committed dependency before consuming cleanup; preserve the
+  original error precedence when more than one dependency throws.
+- Handle Unknown leaves and reentrant/Visited states under their existing
+  contracts. `Visited` alone is not proof that a node is an executable computed;
+  `advance` assumes an executable callback.
+- Respect `advance(dep, watcherEdge)` side-fanout behavior and keep sibling
+  watchers informed while avoiding redundant invalidation of the current edge.
+- Test retry after a partial successful validation followed by a throw, and
+  retry after a second failure. Cleanup preservation and eventual rerun are
+  separate assertions.
+- Treat removal of `recoverWatcherAfterComputationError` as a separate
+  hypothesis. A newly read dynamic dependency can still fail after committed
+  validation completed. Initial failure, partial reads, plain-flush suppression,
+  causal wake, and disposal need evidence before that recovery path is removed.
+
+The current oracle already has a dedicated watcher validator and an explicit
+`executionPending` obligation. Retain its version/snapshot representation;
+inspect it as an executable contract rather than transplanting production bits.
+
+### Metamorphic relations and qualification
+
+For each transformation T, first establish the relation on Spec observations,
+then assert the same relation on Reflex observations, and compare Reflex to Spec
+for each program. This distinguishes an invalid transformation from a runtime
+defect.
+
+Identity insertion adds a setup operation, so raw trace-array equality needs an
+explicit alignment of original operation boundaries. Ignore only the inserted,
+unobserved setup step; retain errors and ordered lifecycle events. Do not sort
+events to make traces match. Restrict read permutations to pure expressions
+with invariant values and exception precedence; floating-point addition is not
+generally associative. Restrict writes to independent sources before the same
+boundary with no intervening read or callback. Adding a stable computed is an
+equivalence only when its contribution to the observed result is neutral.
+
+Add `watcher-validation-stops-after-first-confirmed-change` to the development
+mutant cohort, scoped specifically to watcher validation. Require reach,
+infection, and an observable kill on a mixed direct/derived case. It is a known
+fault model, so it must not be reported as new holdout evidence. The executable
+mutation host currently lives in `mutant/mutant-runtime.ts`; the similarly named
+`internal/mutation/` files are empty scaffolding.
+
+### Harness issues to address before interpreting new results
+
+- In the adversarial classifier, the generic `sameError && actualCleanupOnly`
+  branch returns before the specialized watcher-evidence branch. The latter is
+  unreachable, and its family check also omits `watcher-evidence-frontier/`.
+  Classify known mechanisms using case provenance and witnesses; identical
+  cleanup symptoms alone do not prove identical causes.
+- `op.watcher` accepts an `Expr` as its third argument, but two historical
+  fixtures pass `{ cleanup: Expr }`. Audit and correct that mismatch before
+  treating a passing replay as proof of the intended cleanup behavior.
+  `tsconfig.json` currently excludes tests from its include list, so the normal
+  typecheck does not validate those DSL callers or missing watcher case types.
+- DSL `flush` directly runs watchers in insertion order and stops on the first
+  throw. It does not exercise default/eager/SAB scheduler queues. Scheduler
+  equivalence needs a separate integration adapter and an explicit batch
+  boundary; the current differential results cannot establish it.
+
+Implementation order: verify the DSL and classification boundary; freeze the
+minimal failing witness and role-specific transition expectations; repair only
+the propagation merge; enable the bounded and metamorphic watcher suites;
+qualify the new mutant; then evaluate specialized validation and recovery
+simplification as separate changes. Update structural projections and measure
+performance after semantic checks. No runtime changes were made for this review.
+
+## Implemented result
+
+The watcher language was isolated from the adversarial corpus and is now driven
+by the test-only evidence algebra. Before the propagation repair it reproduced
+`40 programs / 14 divergences`; the adversarial corpus returned to its original
+`776 / 0` boundary. The local watcher-specific transitive merge then reduced
+the watcher language to `40 / 0` without changing ordinary computed dominance.
+
+The executable checks now cover the four-element Boolean laws, correspondence
+with runtime bit values, both arrival orders, preservation of `Scheduled`, no
+duplicate invalidation notification, write/read permutations, identity-computed
+insertion, and a qualified
+`watcher-validation-stops-after-first-confirmed-change` mutant. Watcher frontier
+validation and recovery simplification remain separate future hypotheses.

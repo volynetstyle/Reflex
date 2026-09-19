@@ -14,16 +14,17 @@
  *              \            /
  *                   None
  *
- * `Unknown` and `Changed` are independent facts:
+ * For watchers, `Unknown` and `Changed` are independent obligations:
  *
  *  Unknown
  *      At least one committed dependency still requires validation.
  *
  *  Changed
- *      At least one dependency has already proven that execution/recomputation
- *      is required once validation succeeds.
+ *      At least one dependency has already proven that execution is required
+ *      once validation succeeds.
  *
- * Evidence accumulated during propagation is monotonic:
+ * Watcher evidence accumulated during one unsettled propagation wave is
+ * monotonic:
  *
  *      merge(a, b) = a | b
  *
@@ -32,14 +33,16 @@
  * Validation may later discharge `Unknown`; this is a separate operation from
  * propagation-time evidence accumulation.
  *
- * Propagation-time evidence is monotonic:
+ * Watcher propagation-time evidence is monotonic:
  *
  * nextEvidence = currentEvidence | incomingEvidence
  *
- * It must never discard an already-known evidence bit.
+ * It must never discard an already-known watcher obligation.
  *
- * Resolution of evidence belongs to validation/evaluation stages,
- * not to propagation merge.
+ * Ordinary computed nodes use the same bits as an ordered dirty state:
+ * a direct `Changed` supersedes `Unknown` because recomputation is already
+ * required. Resolution belongs to validation/evaluation stages, not watcher
+ * propagation merge.
  */
 
 /**
@@ -93,5 +96,5 @@ export type ReactiveNodeState = number;
 export const PRODUCER_INITIAL_STATE = Producer;
 /** Directly invalidated computed node: skip verification and recompute on read. */
 export const CONSUMER_INITIAL_STATE = Changed | Consumer;
-/** Computed node carrying either `Unknown` or `Changed`. */
+/** Watcher starts with both validation and initial-execution obligations. */
 export const WATCHER_INITIAL_STATE = Changed | Unknown | Watcher | Consumer;

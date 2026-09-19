@@ -5,7 +5,7 @@ import type {
   SpecComputed,
   SpecProducer,
   SpecWatcher,
-} from "./../spec-runtime";
+} from "../internal/machine/spec-runtime";
 
 type Dependency = SpecProducer<unknown> | SpecComputed<unknown>;
 type DependencySnapshot = Map<Dependency, number>;
@@ -48,6 +48,11 @@ export const semanticMutants = [
   {
     id: "cleanup-failure-retains-cleanup",
     description: "A throwing cleanup is retained and invoked again.",
+  },
+  {
+    id: "watcher-validation-stops-after-first-confirmed-change",
+    description:
+      "Watcher validation stops after one changed dependency instead of validating the complete committed frontier.",
   },
 ] as const;
 
@@ -104,6 +109,7 @@ export class MutantRuntime {
       initialized: false,
       dependencies: new Map(),
       retryDependencies: undefined,
+      executionPending: false,
     };
   }
 
@@ -145,7 +151,7 @@ export class MutantRuntime {
     } else if (node.initialized) {
       let changed: boolean;
       try {
-        changed = this.dependenciesChanged(node.dependencies);
+        changed = this.watcherDependenciesChanged(node.dependencies);
       } catch (error) {
         if (this.is("validation-failure-clears-pending")) {
           this.hit(true);
@@ -328,6 +334,27 @@ export class MutantRuntime {
       if (dependency.kind === "computed") this.stabilize(dependency);
       if (dependency.version !== observedVersion) changed = true;
     }
+    return changed;
+  }
+
+  private watcherDependenciesChanged(
+    dependencies: DependencySnapshot,
+  ): boolean {
+    let changed = false;
+
+    for (const [dependency, observedVersion] of dependencies) {
+      if (dependency.kind === "computed") this.stabilize(dependency);
+
+      if (dependency.version !== observedVersion) {
+        if (this.is("watcher-validation-stops-after-first-confirmed-change")) {
+          this.hit(true);
+          return true;
+        }
+
+        changed = true;
+      }
+    }
+
     return changed;
   }
 

@@ -269,6 +269,13 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
         sub.state = next;
       } else if ((state & Computing) !== 0) {
         next = markComputingSubscriber(edge, sub, state);
+      } else if ((state & (Watcher | Unknown)) === Watcher) {
+        // Watcher evidence is a pair of independent obligations. A direct
+        // Changed already delivered the execution obligation, but it does not
+        // prove that the rest of the committed frontier is valid. Preserve it
+        // while adding the transitive validation obligation.
+        next = (state & ~Visited) | Unknown;
+        sub.state = next;
       }
 
       if (next !== 0) {
@@ -287,7 +294,11 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
             context: defaultContext,
           });
 
-        if ((next & Watcher) !== 0 && nodeInvalidatedHook) {
+        if (
+          (next & Watcher) !== 0 &&
+          (state & Both) === 0 &&
+          nodeInvalidatedHook
+        ) {
           if (__PROFILE__) {
             if (__PROFILE__)
               observeRuntimeProjection?.(

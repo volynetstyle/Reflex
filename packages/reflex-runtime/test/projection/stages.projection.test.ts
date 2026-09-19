@@ -187,6 +187,7 @@ describe("Reflex stage projection", () => {
         "(state & ~(Unknown | Visited)) | Changed",
         "(state & ~Visited) | Changed",
         "(state & ~Visited) | Unknown",
+        "(state & ~Visited) | Unknown",
       ]);
 
       const once = project(
@@ -243,10 +244,10 @@ describe("Reflex stage projection", () => {
       const pushPlan = createInstrumentationPlan(push);
       expect(
         pushPlan.points.filter((point) => point.kind === "branch-outcome"),
-      ).toHaveLength(48);
+      ).toHaveLength(50);
       expect(
         pushPlan.points.filter((point) => point.kind === "state-transition"),
-      ).toHaveLength(4);
+      ).toHaveLength(5);
       expect(
         pushPlan.points.filter(
           (point) => point.kind === "stack-push" || point.kind === "stack-pop",
