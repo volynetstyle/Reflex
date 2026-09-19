@@ -87,39 +87,75 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
   try {
     scan: while (true) {
-      /**
-       * If the current node is already Changed, the current dependency edge
-       * does not need to be inspected. We are going to bubble anyway.
-       */
-      if ((node.state & Changed) !== 0) {
-        if (__PROFILE__) {
-          profilePullNode("node.changed", node, top - base, top - base);
+      while (true) {
+        const nodeState = node.state;
+
+        if ((nodeState & Changed) !== 0) {
+          if (__PROFILE__) {
+            profilePullNode("node.changed", node, top - base, top - base);
+          }
+          changed = true;
+          break;
         }
-        changed = true;
-      } else {
+
         if (__PROFILE__) {
           observeRuntimeProjection?.("projection.semantic.pull.edge.visit");
         }
 
         const dep = edge.from;
-        const depState = dep.state;
+        const state = dep.state;
 
-        if (__DEV__ && (depState & Computing) !== 0) {
+        if (__DEV__ && (state & Computing) !== 0) {
           throw new Error("Cycle detected while refreshing reactive graph");
         }
 
-        if ((depState & Changed) !== 0) {
+        const dirty = state & (Changed | Unknown);
+        const depChanged = (dirty & Changed) !== 0;
+
+        if (dirty !== 0) {
+          if (!depChanged) {
+            if (__PROFILE__) {
+              observeRuntimeProjection?.(
+                "projection.semantic.pull.dependency.invalid",
+              );
+            }
+
+            const firstIn = dep.firstIn;
+
+            if (firstIn !== null) {
+              if (__PROFILE__) {
+                observeRuntimeProjection?.("projection.semantic.pull.descend");
+                profilePullNode(
+                  "dep.unknown.descend",
+                  dep,
+                  top - base + 1,
+                  top - base,
+                );
+              }
+
+              stack[top++] = edge;
+
+              if (__DEV__) {
+                noteShouldRecomputeStackUsage(top);
+              }
+
+              node = dep;
+              edge = firstIn;
+              continue scan;
+            }
+          }
+
           if (__PROFILE__) {
-            if (__PROFILE__)
+            if (depChanged) {
               observeRuntimeProjection?.(
                 "projection.semantic.pull.dependency.changed",
               );
-            if (__PROFILE__)
-              observeRuntimeProjection?.(
-                "projection.semantic.pull.advance.invoke",
-              );
+            }
+            observeRuntimeProjection?.(
+              "projection.semantic.pull.advance.invoke",
+            );
             profilePullNode(
-              "dep.changed.advance",
+              depChanged ? "dep.changed.advance" : "dep.unknown.leaf.advance",
               dep,
               top - base + 1,
               top - base,
@@ -127,8 +163,8 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
           }
 
           /**
-           * advance() may re-enter pull walking, so expose only the active
-           * stack slice before calling it.
+           * advance() may re-enter pull walking, so publish this invocation's
+           * live continuation frontier before user code runs.
            */
           high = top;
 
@@ -136,138 +172,32 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
             devAssertRefreshEdge(dep, edge);
           }
 
-          changed = advance(dep, edge);
-        } else if ((depState & Unknown) !== 0) {
+          if (advance(dep, edge)) {
+            changed = true;
+            break;
+          }
+
+          /**
+           * Read the continuation only after advance(): user code may have
+           * mutated the incoming list. Reuse this one read for both the parent
+           * guard and the sibling transition.
+           */
+          const sibling = edge.nextIn;
+
+          if (sibling !== null && (node.state & Changed) !== 0) {
+            changed = true;
+            break;
+          }
+
+          if (sibling === null) {
+            changed = false;
+            break;
+          }
+
           if (__PROFILE__) {
             observeRuntimeProjection?.(
-              "projection.semantic.pull.dependency.invalid",
+              "projection.semantic.pull.sibling.stable-scan",
             );
-          }
-          const firstIn = dep.firstIn;
-
-          if (firstIn !== null) {
-            if (__PROFILE__) {
-              if (__PROFILE__)
-                observeRuntimeProjection?.("projection.semantic.pull.descend");
-              profilePullNode(
-                "dep.unknown.descend",
-                dep,
-                top - base + 1,
-                top - base,
-              );
-            }
-
-            stack[top] = edge;
-            top = top + 1;
-
-            if (__DEV__) {
-              noteShouldRecomputeStackUsage(top);
-            }
-
-            node = dep;
-            edge = firstIn;
-            continue scan;
-          }
-
-          high = top;
-
-          if (__PROFILE__) {
-            if (__PROFILE__)
-              observeRuntimeProjection?.(
-                "projection.semantic.pull.advance.invoke",
-              );
-            profilePullNode(
-              "dep.unknown.leaf.advance",
-              dep,
-              top - base + 1,
-              top - base,
-            );
-          }
-
-          if (__DEV__) {
-            devAssertRefreshEdge(dep, edge);
-          }
-
-          changed = advance(dep, edge);
-        } else {
-          if (__PROFILE__) {
-            if (__PROFILE__)
-              observeRuntimeProjection?.(
-                "projection.semantic.pull.dependency.clean",
-              );
-            profilePullNode("dep.clean", dep, top - base + 1, top - base);
-          }
-
-          // Adjacent clean dependencies cannot call user code or change the
-          // parent. Keep this scan in the clean arm so dirty descent/advance
-          // retains its original control flow and continuation lifetime.
-          for (
-            let sibling = edge.nextIn;
-            sibling !== null;
-            sibling = edge.nextIn
-          ) {
-            if (__PROFILE__) {
-              if (__PROFILE__)
-                observeRuntimeProjection?.(
-                  "projection.semantic.pull.sibling.stable-scan",
-                );
-              profilePullNode(
-                "sibling.stable",
-                sibling.from,
-                top - base + 1,
-                top - base,
-              );
-            }
-
-            const cleanDep = sibling.from;
-            const cleanState = cleanDep.state;
-            edge = sibling;
-
-            if ((cleanState & (Changed | Unknown)) !== 0) {
-              continue scan;
-            }
-
-            {
-              if (__PROFILE__)
-                observeRuntimeProjection?.(
-                  "projection.semantic.pull.edge.visit",
-                );
-              if (__DEV__ && (cleanState & Computing) !== 0) {
-                throw new Error(
-                  "Cycle detected while refreshing reactive graph",
-                );
-              }
-              if (__PROFILE__) {
-                if (__PROFILE__)
-                  observeRuntimeProjection?.(
-                    "projection.semantic.pull.dependency.clean",
-                  );
-                profilePullNode(
-                  "dep.clean",
-                  cleanDep,
-                  top - base + 1,
-                  top - base,
-                );
-              }
-            }
-          }
-          changed = false;
-        }
-      }
-
-      /**
-       * Stable branch: try the next dependency of the same parent before
-       * bubbling upward.
-       */
-      if (!changed) {
-        const sibling = edge.nextIn;
-
-        if (sibling !== null) {
-          if (__PROFILE__) {
-            if (__PROFILE__)
-              observeRuntimeProjection?.(
-                "projection.semantic.pull.sibling.stable-scan",
-              );
             profilePullNode(
               "sibling.stable",
               sibling.from,
@@ -277,26 +207,51 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
           }
 
           edge = sibling;
-          continue scan;
+          continue;
         }
+
+        if (__PROFILE__) {
+          observeRuntimeProjection?.(
+            "projection.semantic.pull.dependency.clean",
+          );
+          profilePullNode("dep.clean", dep, top - base + 1, top - base);
+        }
+
+        const sibling = edge.nextIn;
+        if (sibling === null) {
+          changed = false;
+          break;
+        }
+
+        if (__PROFILE__) {
+          observeRuntimeProjection?.(
+            "projection.semantic.pull.sibling.stable-scan",
+          );
+          profilePullNode(
+            "sibling.stable",
+            sibling.from,
+            top - base + 1,
+            top - base,
+          );
+        }
+
+        edge = sibling;
       }
 
-      if (changed) {
-        while (top !== base) {
-          top = top - 1;
-          high = top;
+      /** Bubble / stable-resume phase. */
+      while (top !== base) {
+        const parentEdge = stack[--top]!;
+        stack[top] = null!;
+        high = top;
 
-          const parentEdge = stack[top]!;
-          stack[top] = null!;
+        if (changed) {
           if (__PROFILE__) {
-            if (__PROFILE__)
-              observeRuntimeProjection?.(
-                "projection.semantic.pull.changed.bubble",
-              );
-            if (__PROFILE__)
-              observeRuntimeProjection?.(
-                "projection.semantic.pull.advance.invoke",
-              );
+            observeRuntimeProjection?.(
+              "projection.semantic.pull.changed.bubble",
+            );
+            observeRuntimeProjection?.(
+              "projection.semantic.pull.advance.invoke",
+            );
             profilePullNode(
               "bubble.changed.advance",
               node,
@@ -304,79 +259,41 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
               top - base,
             );
           }
+
           changed = advance(node, parentEdge);
-          node = parentEdge.to;
-
-          if (!changed) {
-            const sibling = parentEdge.nextIn;
-
-            if (sibling !== null) {
-              if (__PROFILE__) {
-                if (__PROFILE__)
-                  observeRuntimeProjection?.(
-                    "projection.semantic.pull.sibling.stable-scan",
-                  );
-                profilePullNode(
-                  "sibling.after-bubble",
-                  sibling.from,
-                  top - base + 1,
-                  top - base,
-                );
-              }
-
-              edge = sibling;
-              continue scan;
-            }
-
-            break;
-          }
+        } else {
+          node.state &= ~Unknown;
         }
 
-        if (changed) {
-          return true;
-        }
-      }
-
-      /**
-       * Stable bubble phase.
-       *
-       * Pop parent continuations until:
-       * - a stable parent has another sibling to scan;
-       * - or the root of this pull walk is reached.
-       */
-      while (top !== base) {
-        top = top - 1;
-        high = top;
-
-        const parentEdge = stack[top]!;
-        stack[top] = null!;
-
-        node.state &= ~Unknown;
         node = parentEdge.to;
 
-        const sibling = parentEdge.nextIn;
+        if (!changed) {
+          const sibling = parentEdge.nextIn;
 
-        if (sibling !== null) {
-          if (__PROFILE__) {
-            if (__PROFILE__)
+          if (sibling !== null) {
+            if (__PROFILE__) {
               observeRuntimeProjection?.(
                 "projection.semantic.pull.sibling.stable-scan",
               );
-            profilePullNode(
-              "sibling.after-stable-pop",
-              sibling.from,
-              top - base + 1,
-              top - base,
-            );
-          }
+              profilePullNode(
+                "sibling.after-stable-pop",
+                sibling.from,
+                top - base + 1,
+                top - base,
+              );
+            }
 
-          edge = sibling;
-          continue scan;
+            edge = sibling;
+            continue scan;
+          }
         }
       }
 
-      node.state &= ~Unknown;
-      return false;
+      if (!changed) {
+        node.state &= ~Unknown;
+      }
+
+      return changed;
     }
   } finally {
     while (top !== base) {

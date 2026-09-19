@@ -211,8 +211,7 @@ describe("Reflex stage projection", () => {
       const pull = project("second/pull_iterator.ts", "pullIteratorCore");
       expect(pull.loops.map((loop) => loop.condition)).toEqual([
         "true",
-        "sibling !== null",
-        "top !== base",
+        "true",
         "top !== base",
         "top !== base",
       ]);
