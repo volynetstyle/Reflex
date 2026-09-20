@@ -31,7 +31,7 @@ import {
   type WatcherCleanup,
   type WatcherNode,
 } from "@runtime/kernel/shape";
-import { validateDependencies } from "@runtime/kernel/stages/second/validate_dependencies";
+import { pull_frontier } from "@runtime/kernel/stages/second/pull_frontier";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 import { executeKnownNodeComputation } from "./watcher.execution";
@@ -142,7 +142,7 @@ function runWatcherCore(node: WatcherNode): void {
 
   if ((state & Unknown) !== 0) {
     const mustExecute = (state & (Changed | Visited)) !== 0;
-    const changed = validateDependencies(node, node.firstIn);
+    const changed = pull_frontier(node, node.firstIn);
     const invalidatedDuringValidation = (node.state & Visited) !== 0;
 
     if (!invalidatedDuringValidation) node.state &= ~Unknown;

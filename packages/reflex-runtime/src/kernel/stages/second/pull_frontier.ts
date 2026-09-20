@@ -44,7 +44,7 @@ import { pull_iterator } from "./pull_iterator";
  * strict bound без такого invarianta:
  *              O(D + Σ traversal(dep_i))
  */
-export function validateDependencies(
+export function pull_frontier(
   root: WatcherNode,
   firstEdge: ReactiveEdge | null,
 ): boolean {

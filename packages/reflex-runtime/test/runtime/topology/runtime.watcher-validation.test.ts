@@ -14,7 +14,7 @@ import {
   readProducer,
   releaseWatcherSchedule,
   runWatcher,
-  validateDependencies,
+  pull_frontier,
   writeProducer,
 } from "../../runtime.test_utils";
 import { resetRuntime } from "../../runtime.test_utils";
@@ -53,7 +53,7 @@ describe("Reactive runtime - transactional watcher validation", () => {
       invalidateDuringValidation = true;
       writeProducer(triggerSource, 1);
 
-      expect(validateDependencies(watcher, watcher.firstIn)).toBe(false);
+      expect(pull_frontier(watcher, watcher.firstIn)).toBe(false);
       expect(watcher.state & Unknown).toBe(Unknown);
       expect(watcher.state & Visited).toBe(Visited);
       expect(watcher.state & Computing).toBe(0);
@@ -108,7 +108,7 @@ describe("Reactive runtime - transactional watcher validation", () => {
     writeProducer(reentrantTrigger, 1);
     writeProducer(throwingSource, 1);
 
-    expect(() => validateDependencies(watcher, watcher.firstIn)).toThrow(
+    expect(() => pull_frontier(watcher, watcher.firstIn)).toThrow(
       "validation failed",
     );
     expect(watcher.state & Both).toBe(Both);
