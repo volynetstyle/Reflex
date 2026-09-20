@@ -66,6 +66,7 @@
     "bench:runtime:memory": "pnpm build:ts && pnpm build:perf && node --expose-gc perf/callback-memory/run.mjs",
     "bench:runtime:memory:json": "pnpm build:ts && pnpm build:perf && node --expose-gc perf/callback-memory/run.mjs --json",
     "bench:push-pull": "vitest bench --config vite.dev.config.ts test/perf/push-pull-components.bench.ts",
+    "bench:pull-wide": "vitest bench test/perf/pull-wide.bench.ts",
     "bench:taxonomy": "pnpm bench:runtime",
     "bench:cost-attribution:structural": "vitest run --config vite.cost-attribution.structural.config.ts",
     "bench:cost-attribution:timing": "vitest run --config vite.cost-attribution.timing.config.ts",
