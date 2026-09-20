@@ -3,12 +3,14 @@ import {
   Changed,
   Scheduled,
   claimWatcherSchedule,
+  configureRuntimeContext,
   createConsumer,
   createProducer,
   createWatcher,
   readConsumer,
   readProducer,
   runWatcher,
+  resetRuntimeContext,
   writeProducer,
   type WatcherNode,
 } from "@volynets/reflex-runtime/internal";
@@ -176,6 +178,73 @@ describe("scheduler re-entrant edge cases", () => {
     expect(watcher.state & Scheduled).toBe(Scheduled);
 
     expect(() => scheduler.flush()).toThrow("validation failed");
+  });
+
+  it("defers a validation failure that reclaims schedule ownership", () => {
+    resetRuntimeContext();
+    const scheduler = createFlushScheduler();
+    configureRuntimeContext({
+      hooks: {
+        onNodeInvalidated(node) {
+          scheduler.enqueue(node);
+        },
+      },
+    });
+
+    try {
+      const firstSource = createProducer(0);
+      const reentrantSource = createProducer(0);
+      const reentrantTrigger = createProducer(0);
+      const throwingSource = createProducer(0);
+      let invalidateDuringValidation = false;
+      let throwDuringValidation = false;
+      let throwingComputations = 0;
+
+      const first = createConsumer(() => readProducer(firstSource));
+      const reentrant = createConsumer(() => {
+        const value = readProducer(reentrantTrigger);
+        if (invalidateDuringValidation) {
+          invalidateDuringValidation = false;
+          writeProducer(reentrantSource, 1);
+        }
+        return value;
+      });
+      const throwing = createConsumer(() => {
+        throwingComputations += 1;
+        const value = readProducer(throwingSource);
+        if (throwDuringValidation) throw new Error("validation failed");
+        return value;
+      });
+      const watcher = createWatcher(() => {
+        readConsumer(first);
+        readConsumer(reentrant);
+        readConsumer(throwing);
+        readProducer(reentrantSource);
+      });
+
+      scheduler.enqueue(watcher);
+      scheduler.flush();
+
+      invalidateDuringValidation = true;
+      throwDuringValidation = true;
+      writeProducer(firstSource, 1);
+      writeProducer(reentrantTrigger, 1);
+      writeProducer(throwingSource, 1);
+
+      expect(() => scheduler.flush()).toThrow("validation failed");
+      expect(throwingComputations).toBe(2);
+      expect(scheduler.core.queue.head).not.toBe(scheduler.core.queue.tail);
+      expect(watcher.state & Scheduled).toBe(Scheduled);
+
+      throwDuringValidation = false;
+      scheduler.flush();
+
+      expect(throwingComputations).toBe(3);
+      expect(scheduler.core.queue.head).toBe(scheduler.core.queue.tail);
+      expect(watcher.state & Scheduled).toBe(0);
+    } finally {
+      resetRuntimeContext();
+    }
   });
   it("continues after watcher errors and rethrows the first error", () => {
     const scheduler = createFlushScheduler();

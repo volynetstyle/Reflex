@@ -5,6 +5,7 @@ import {
   RuntimeState,
   runtimeState,
   runWatcherWithoutSettledCheckpoint,
+  Scheduled,
 } from "@volynets/reflex-runtime/internal";
 import { profileSchedulerPolicyCounter } from "./scheduler.counters";
 import { tryEnqueue } from "./scheduler.enqueue";
@@ -12,6 +13,39 @@ import type { WatcherQueue } from "./scheduler.types";
 
 const SCHEDULER_PROFILE_ENABLED =
   typeof __PROFILE__ !== "undefined" && __PROFILE__;
+
+/**
+ * Remove a watcher that reclaimed this queue while it was being validated.
+ *
+ * This is an exception-only ownership repair. Keeping it out of the normal
+ * dequeue loop avoids taxing successful watcher execution.
+ */
+function detachQueuedValidationRetry(
+  queue: WatcherQueue,
+  node: WatcherQueue["ring"][number],
+): boolean {
+  if (node === undefined) return false;
+
+  const ring = queue.ring;
+  const mask = queue.mask;
+  const head = queue.head;
+  const tail = queue.tail;
+
+  for (let cursor = head; cursor !== tail; ++cursor) {
+    if (ring[cursor & mask] !== node) continue;
+
+    for (let index = cursor; index + 1 !== tail; ++index) {
+      ring[index & mask] = ring[(index + 1) & mask];
+    }
+
+    ring[(tail - 1) & mask] = undefined;
+    queue.tail = tail - 1;
+    releaseWatcherSchedule(node);
+    return true;
+  }
+
+  return false;
+}
 
 export function cleanupQueuedNodesAfterAbort(
   queue: WatcherQueue,
@@ -73,6 +107,9 @@ export function flushQueuedWatchers(
       // the next explicit drain, not recursively in this one. Callback and
       // cleanup failures recover to clean and do not enter this cold branch.
       if ((node.state & Both) !== 0) {
+        if ((node.state & Scheduled) !== 0) {
+          detachQueuedValidationRetry(queue, node);
+        }
         (validationRetries ??= []).push(node);
       }
     }
