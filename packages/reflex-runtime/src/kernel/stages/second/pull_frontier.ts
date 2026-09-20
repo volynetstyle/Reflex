@@ -8,16 +8,16 @@ import {
 } from "@runtime/kernel/shape";
 
 import { advance } from "./advance";
-import { pull_iterator } from "./pull_iterator";
+import { should_recompute } from "./pull_dependency";
 
 /**
  * Validate a watcher's complete committed dependency frontier.
  *
- * Unlike pull_iterator(), this operation is root-oriented: a confirmed change
- * is accumulated locally and does not stop validation of later root siblings.
+ * Unlike should_recompute(), this operation scans every root dependency: a
+ * confirmed change is accumulated and does not stop later root siblings.
  * The root's Changed bit is semantic execution evidence, never traversal
- * control. A validation-epoch marker lets propagation record invalidations
- * that would otherwise be hidden by an already-set Unknown bit.
+ * control. A validation epoch lets propagation record invalidations that would
+ * otherwise be hidden by an already-set Unknown bit.
  *
  * Preconditions:
  * - root has Unknown;
@@ -32,17 +32,12 @@ import { pull_iterator } from "./pull_iterator";
  * On failure it additionally commits any already-confirmed Changed evidence.
  * It always restores Computing and the previous incoming cursor. Orthogonal
  * state such as Scheduled remains owned by the scheduler boundary.
- * 
- * best case:   Θ(D)
- *              все deps clean
- * 
- * typical:     Θ(D + dirty slice)
- * 
- * worst case:  O(D + Vu + Eu)
- *              при memoized stabilization
- * 
- * strict bound без такого invarianta:
- *              O(D + Σ traversal(dep_i))
+ *
+ * Best case: O(D), with every dependency clean.
+ * Typical: O(D + dirty slice).
+ * With memoized stabilization: O(D + Vu + Eu).
+ * Without that invariant, the strict bound is
+ * O(D + sum(traversal(dependency))).
  */
 export function pull_frontier(
   root: WatcherNode,
@@ -66,6 +61,9 @@ export function pull_frontier(
   let completed = false;
 
   try {
+    // Fused exhaustive specialization of pull_dependency(). Keeping the three
+    // shallow states in this loop avoids a call per clean wide dependency; the
+    // shared stack machine is entered only for an Unknown dependency subtree.
     for (let edge = firstEdge; edge !== null; edge = edge.nextIn) {
       const dependency = edge.from;
       const state = dependency.state;
@@ -84,7 +82,7 @@ export function pull_frontier(
       const dependencyEdge = dependency.firstIn;
       if (
         dependencyEdge === null ||
-        pull_iterator(dependency, dependencyEdge)
+        should_recompute(dependency, dependencyEdge)
       ) {
         if (advance(dependency, edge)) confirmedChanged = true;
       }

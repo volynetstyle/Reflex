@@ -1,3 +1,3 @@
 export * from "./advance";
-export * from "./pull_iterator";
-export * from "./validate_dependencies";
+export * from "./pull_dependency";
+export * from "./pull_frontier";

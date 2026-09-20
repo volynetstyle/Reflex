@@ -12,6 +12,7 @@ import {
   Unknown,
   Visited,
   Computing,
+  pull_dependency,
 } from "../../../src/kernel";
 import { linkEdge } from "../../../src/kernel/shape/graph";
 import {
@@ -240,6 +241,59 @@ describe("Reactive runtime - traversal invariants", () => {
     writeProducer(nestedSource, 20);
 
     expect(readConsumer(root)).toBe(44);
+    expect(root.state & Both).toBe(0);
+  });
+
+  it("pulls one dependency branch without applying root sibling policy", () => {
+    const leftSource = createProducer(1);
+    const rightSource = createProducer(1);
+    const leftCompute = vi.fn(() => readProducer(leftSource));
+    const rightCompute = vi.fn(() => readProducer(rightSource));
+    const left = createConsumer(leftCompute);
+    const right = createConsumer(rightCompute);
+    const root = createConsumer(() => readConsumer(left) + readConsumer(right));
+
+    expect(readConsumer(root)).toBe(2);
+    const edges = incomingEdges(root);
+
+    writeProducer(rightSource, 2);
+    root.state |= Changed;
+
+    expect(pull_dependency(edges[0]!)).toBe(false);
+    expect(leftCompute).toHaveBeenCalledTimes(1);
+    expect(rightCompute).toHaveBeenCalledTimes(1);
+    expect(root.state & Both).toBe(Both);
+
+    expect(pull_dependency(edges[1]!)).toBe(true);
+    expect(rightCompute).toHaveBeenCalledTimes(2);
+    expect(root.state & Both).toBe(Both);
+  });
+
+  it("observes reentrant root evidence after a stable final dependency", () => {
+    const dependencySource = createProducer(0);
+    const rootSource = createProducer(0);
+    let invalidateRoot = false;
+
+    const dependencyCompute = vi.fn(() => {
+      readProducer(dependencySource);
+      if (invalidateRoot) writeProducer(rootSource, 1);
+      return 0;
+    });
+    const dependency = createConsumer(dependencyCompute);
+    const rootCompute = vi.fn(
+      () => readProducer(rootSource) + readConsumer(dependency),
+    );
+    const root = createConsumer(rootCompute);
+
+    expect(readConsumer(root)).toBe(0);
+    writeProducer(dependencySource, 1);
+    invalidateRoot = true;
+
+    // dependency is the final root edge. Its recomputation is value-stable,
+    // but it invalidates root through the earlier rootSource edge.
+    expect(readConsumer(root)).toBe(1);
+    expect(dependencyCompute).toHaveBeenCalledTimes(2);
+    expect(rootCompute).toHaveBeenCalledTimes(2);
     expect(root.state & Both).toBe(0);
   });
 

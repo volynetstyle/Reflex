@@ -66,31 +66,31 @@ function profilePullNode(
   }
 }
 
-/**
- * Pull dependency walker for dirty incoming dependency links.
- *
- * Semantics:
- * - scans incoming dependency edges;
- * - descends into Unknown dependencies with their own inputs;
- * - refreshes Changed / Unknown leaves through advance();
- * - bubbles confirmed changes upward;
- * - resumes siblings only while the current branch remains stable.
- */
-function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
-  if (__PROFILE__) {
-    observeRuntimeProjection?.("projection.semantic.pull.invoke");
-  }
-
+/** Walk an Unknown dependency that is known to have committed inputs. */
+function pullDependencyDeep(
+  parentEdge: ReactiveEdge,
+  node: ReactiveNode,
+  edge: ReactiveEdge,
+): boolean {
   const base = high;
   let top = base;
   let changed = false;
 
+  stack[top++] = parentEdge;
+
+  if (__DEV__) {
+    noteShouldRecomputeStackUsage(top);
+  }
+
   try {
-    scan: while (true) {
-      while (true) {
+    traverse: while (true) {
+      // Scan dependencies forward until the current branch either proves a
+      // change or exhausts its stable frontier.
+      descend: while (true) {
         const nodeState = node.state;
 
-        if ((nodeState & Changed) !== 0) {
+        // The outer consumer is policy context, not branch evidence.
+        if (top !== base && (nodeState & Changed) !== 0) {
           if (__PROFILE__) {
             profilePullNode("node.changed", node, top - base, top - base);
           }
@@ -141,7 +141,7 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
               node = dep;
               edge = firstIn;
-              continue scan;
+              continue descend;
             }
           }
 
@@ -176,51 +176,30 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
             changed = true;
             break;
           }
-
-          /**
-           * Read the continuation only after advance(): user code may have
-           * mutated the incoming list. Reuse this one read for both the parent
-           * guard and the sibling transition.
-           */
-          const sibling = edge.nextIn;
-
-          if (sibling !== null && (node.state & Changed) !== 0) {
-            changed = true;
-            break;
-          }
-
-          if (sibling === null) {
-            changed = false;
-            break;
-          }
-
-          if (__PROFILE__) {
-            observeRuntimeProjection?.(
-              "projection.semantic.pull.sibling.stable-scan",
-            );
-            profilePullNode(
-              "sibling.stable",
-              sibling.from,
-              top - base + 1,
-              top - base,
-            );
-          }
-
-          edge = sibling;
-          continue;
-        }
-
-        if (__PROFILE__) {
+        } else if (__PROFILE__) {
           observeRuntimeProjection?.(
             "projection.semantic.pull.dependency.clean",
           );
           profilePullNode("dep.clean", dep, top - base + 1, top - base);
         }
 
+        // A stable outer edge completes this branch. Internal stable edges may
+        // either expose reentrant evidence, resume a sibling, or finish a node.
+        if (top === base) {
+          changed = false;
+          break descend;
+        }
+
+        if ((node.state & Changed) !== 0) {
+          changed = true;
+          break descend;
+        }
+
+        // Read only after advance(): user code may have changed the topology.
         const sibling = edge.nextIn;
         if (sibling === null) {
           changed = false;
-          break;
+          break descend;
         }
 
         if (__PROFILE__) {
@@ -239,7 +218,9 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
       }
 
       /** Bubble / stable-resume phase. */
-      while (top !== base) {
+      // Propagate the branch result toward the outer edge. Stable parents may
+      // resume scanning at their next sibling.
+      unwind: while (top !== base) {
         const parentEdge = stack[--top]!;
         stack[top] = null!;
         high = top;
@@ -267,7 +248,7 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
 
         node = parentEdge.to;
 
-        if (!changed) {
+        if (!changed && top !== base) {
           const sibling = parentEdge.nextIn;
 
           if (sibling !== null) {
@@ -284,13 +265,9 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
             }
 
             edge = sibling;
-            continue scan;
+            continue traverse;
           }
         }
-      }
-
-      if (!changed) {
-        node.state &= ~Unknown;
       }
 
       return changed;
@@ -318,20 +295,130 @@ function pullIteratorCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
   }
 }
 
-export const pull_iterator: (
+/** Stabilize one causal dependency branch and return its edge-local proof. */
+function pullDependencyCore(edge: ReactiveEdge): boolean {
+  if (__PROFILE__) {
+    observeRuntimeProjection?.("projection.semantic.pull.edge.visit");
+  }
+
+  const dependency = edge.from;
+  const state = dependency.state;
+
+  if (__DEV__ && (state & Computing) !== 0) {
+    throw new Error("Cycle detected while refreshing reactive graph");
+  }
+
+  const dirty = state & (Changed | Unknown);
+
+  if (dirty === 0) {
+    if (__PROFILE__) {
+      observeRuntimeProjection?.("projection.semantic.pull.dependency.clean");
+      profilePullNode("dep.clean", dependency, 1, 0);
+    }
+    return false;
+  }
+
+  const dependencyChanged = (dirty & Changed) !== 0;
+  const firstIn = dependency.firstIn;
+
+  if (dependencyChanged || firstIn === null) {
+    if (__PROFILE__) {
+      if (dependencyChanged) {
+        observeRuntimeProjection?.(
+          "projection.semantic.pull.dependency.changed",
+        );
+      } else {
+        observeRuntimeProjection?.(
+          "projection.semantic.pull.dependency.invalid",
+        );
+      }
+      observeRuntimeProjection?.("projection.semantic.pull.advance.invoke");
+      profilePullNode(
+        dependencyChanged ? "dep.changed.advance" : "dep.unknown.leaf.advance",
+        dependency,
+        1,
+        0,
+      );
+    }
+
+    if (__DEV__) {
+      devAssertRefreshEdge(dependency, edge);
+    }
+
+    return advance(dependency, edge);
+  }
+
+  if (__PROFILE__) {
+    observeRuntimeProjection?.("projection.semantic.pull.dependency.invalid");
+    observeRuntimeProjection?.("projection.semantic.pull.descend");
+    profilePullNode("dep.unknown.descend", dependency, 1, 0);
+  }
+
+  return pullDependencyDeep(edge, dependency, firstIn);
+}
+
+/**
+ * Short-circuit consumer policy over dependency proofs.
+ * Root Changed is execution evidence; a fully stable frontier discharges
+ * root Unknown. Neither responsibility belongs to pullDependencyCore().
+ */
+function shouldRecomputeCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
+  if (__PROFILE__) {
+    observeRuntimeProjection?.("projection.semantic.pull.invoke");
+  }
+
+  if ((node.state & Changed) !== 0) return true;
+
+  while (true) {
+    if (pullDependencyCore(edge)) return true;
+
+    // Pull may run user code. Observe reentrant root evidence even when the
+    // current edge became the final edge during that call.
+    if ((node.state & Changed) !== 0) return true;
+
+    const sibling = edge.nextIn;
+    if (sibling === null) {
+      node.state &= ~Unknown;
+      return false;
+    }
+
+    if (__PROFILE__) {
+      observeRuntimeProjection?.(
+        "projection.semantic.pull.sibling.stable-scan",
+      );
+      profilePullNode("sibling.stable", sibling.from, 1, 0);
+    }
+
+    edge = sibling;
+  }
+}
+
+export const should_recompute: (
   node: ReactiveNode,
   edge: ReactiveEdge,
 ) => boolean = __DEV__
-  ? function pullIteratorDev(node, edge): boolean {
+  ? function shouldRecomputeDev(node, edge): boolean {
       enterRuntimePhase(RuntimePhase.Pulling);
 
       try {
-        return pullIteratorCore(node, edge);
+        return shouldRecomputeCore(node, edge);
       } finally {
         leaveRuntimePhase();
       }
     }
-  : pullIteratorCore;
+  : shouldRecomputeCore;
+
+export const pull_dependency: (edge: ReactiveEdge) => boolean = __DEV__
+  ? function pullDependencyDev(edge): boolean {
+      enterRuntimePhase(RuntimePhase.Pulling);
+
+      try {
+        return pullDependencyCore(edge);
+      } finally {
+        leaveRuntimePhase();
+      }
+    }
+  : pullDependencyCore;
 
 export function readShouldRecomputeStackStats(): {
   shouldRecompute: { current: number; peak: number; capacity: number };

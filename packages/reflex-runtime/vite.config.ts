@@ -12,7 +12,7 @@ export default defineConfig({
         if (
           id
             .replace(/\\/g, "/")
-            .endsWith("/src/kernel/stages/second/pull_iterator.ts")
+            .endsWith("/src/kernel/stages/second/pull_dependency.ts")
         ) {
           return (
             code +

@@ -19,7 +19,7 @@ import {
 } from "@runtime/kernel/shape";
 import { resolveTrackedRead } from "@runtime/kernel/shape/tracking";
 import { advance } from "@runtime/kernel/stages/second/advance";
-import { pull_iterator } from "@runtime/kernel/stages/second/pull_iterator";
+import { should_recompute } from "@runtime/kernel/stages/second/pull_dependency";
 import {
   observeRuntimeProjection,
   observeRuntimeReadConsumerPath,
@@ -119,7 +119,7 @@ function stabilizeDirtyConsumer<T>(node: ConsumerNode<T>, state: number): T {
     // - has producers,
     // - all top-level dependencies are checked,... and
     // - its eigenvalue is updated to the newest one.
-    stabilized = edge !== null && pull_iterator(node, edge) && advance(node);
+    stabilized = edge !== null && should_recompute(node, edge) && advance(node);
   }
 
   if (!stabilized) node.state &= ~Both;

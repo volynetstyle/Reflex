@@ -105,7 +105,7 @@ describe("Reflex stage projection", () => {
     { timeout: 30_000 },
     () => {
       const functions = stageFunctions();
-      expect(functions).toHaveLength(27);
+      expect(functions).toHaveLength(30);
       for (const fn of functions) {
         const projection = analyzeFile(fn.file, fn.name, { tsconfig });
         const expected = syntaxCounts(fn);
@@ -209,25 +209,42 @@ describe("Reflex stage projection", () => {
         skipping.structures.linkedTraversals.map((item) => item.termination),
       ).toEqual(["current === skip", "current === null"]);
 
-      const pull = project("second/pull_iterator.ts", "pullIteratorCore");
-      expect(pull.loops.map((loop) => loop.condition)).toEqual([
+      const pull = project("second/pull_dependency.ts", "shouldRecomputeCore");
+      expect(pull.loops.map((loop) => loop.condition)).toEqual(["true"]);
+      expect(pull.structures.stackCandidates).toEqual([]);
+      expect(pull.stateTransitions.map((transition) => transition.to)).toEqual([
+        "node.state & ~Unknown",
+      ]);
+
+      const pullDependency = project(
+        "second/pull_dependency.ts",
+        "pullDependencyCore",
+      );
+      expect(pullDependency.loops).toEqual([]);
+      expect(pullDependency.structures.stackCandidates).toEqual([]);
+      expect(pullDependency.stateTransitions).toEqual([]);
+
+      const pullDependencyDeep = project(
+        "second/pull_dependency.ts",
+        "pullDependencyDeep",
+      );
+      expect(pullDependencyDeep.loops.map((loop) => loop.condition)).toEqual([
         "true",
         "true",
         "top !== base",
         "top !== base",
       ]);
-      expect(pull.structures.stackCandidates).toEqual([
+      expect(pullDependencyDeep.structures.stackCandidates).toEqual([
         expect.objectContaining({
           storage: "stack",
           index: "top",
-          pushes: 1,
+          pushes: 2,
           pops: 2,
         }),
       ]);
-      expect(pull.stateTransitions.map((transition) => transition.to)).toEqual([
-        "node.state & ~Unknown",
-        "node.state & ~Unknown",
-      ]);
+      expect(
+        pullDependencyDeep.stateTransitions.map((transition) => transition.to),
+      ).toEqual(["node.state & ~Unknown"]);
 
       const advance = project("second/advance.ts", "advanceCore");
       expect(

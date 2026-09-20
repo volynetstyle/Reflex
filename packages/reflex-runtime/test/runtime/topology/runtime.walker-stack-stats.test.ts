@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import * as pullModule from "../../../src/kernel/stages/second/pull_iterator";
+import * as pullModule from "../../../src/kernel/stages/second/pull_dependency";
 import { createConsumer, createProducer } from "../../../src/protocol/create.node";
 import { readConsumer } from "../../../src/protocol/read.consumer";
 import { readProducer } from "../../../src/protocol/read.producer";
