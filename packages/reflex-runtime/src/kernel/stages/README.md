@@ -31,6 +31,10 @@ and development execution, including profiling and debug event order.
 - A `Changed` parent returns/bubbles a change without inspecting its edge.
   Otherwise inspect incoming dependencies in order, prioritizing `Changed`
   over `Unknown`. Development rejects computing dependencies as cycles.
+- Watcher dependency validation is a separate root-oriented operation. It
+  validates every committed root dependency, accumulates confirmed changes
+  locally, and reuses the existing computing-subscriber cursor protocol to
+  record a concurrent invalidation as `Visited` without changing push paths.
 - Advance changed dependencies and unknown leaves. Descend into unknown
   dependencies with inputs. Advance ancestors only after a confirmed change.
 - A stable result resumes the next sibling. Stable unwinding clears `Unknown`

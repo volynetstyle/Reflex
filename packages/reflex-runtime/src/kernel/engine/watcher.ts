@@ -31,7 +31,7 @@ import {
   type WatcherCleanup,
   type WatcherNode,
 } from "@runtime/kernel/shape";
-import { pull_iterator } from "@runtime/kernel/stages/second/pull_iterator";
+import { validateDependencies } from "@runtime/kernel/stages/second/validate_dependencies";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 import { executeKnownNodeComputation } from "./watcher.execution";
@@ -141,35 +141,12 @@ function runWatcherCore(node: WatcherNode): void {
   }
 
   if ((state & Unknown) !== 0) {
-    const edge = node.firstIn;
-    // Visited records invalidation during the previous callback. Normalize
-    // that execution obligation before validation clears traversal markers.
-    const pendingChanged = (state & (Changed | Visited)) !== 0 ? Changed : 0;
-    let changed = false;
+    const mustExecute = (state & (Changed | Visited)) !== 0;
+    const changed = validateDependencies(node, node.firstIn);
+    const invalidatedDuringValidation = (node.state & Visited) !== 0;
 
-    // pull_iterator treats Changed on its root as permission to bypass
-    // validation. For watchers Changed is instead an orthogonal promise to
-    // execute after validation, so preserve it locally during the pull.
-    node.state = state & ~Changed;
-
-    try {
-      if (edge !== null) {
-        while (pull_iterator(node, edge)) {
-          changed = true;
-          // pull_iterator stops at the first confirmed change. Watcher
-          // lifecycle requires the remaining committed dependencies to
-          // validate successfully before cleanup may begin.
-          node.state = (node.state & ~Changed) | Unknown;
-        }
-      }
-    } catch (error) {
-      node.state |= pendingChanged | (changed ? Changed : 0);
-      recoverWatcherAfterValidationError(node);
-      throw error;
-    }
-
-    if (changed) node.state |= Changed;
-    node.state = (node.state | pendingChanged) & ~Unknown;
+    if (!invalidatedDuringValidation) node.state &= ~Unknown;
+    if (mustExecute || changed) node.state |= Changed;
 
     if ((node.state & Changed) === 0) {
       if (__PROFILE__)

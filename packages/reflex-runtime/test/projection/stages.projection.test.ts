@@ -105,7 +105,7 @@ describe("Reflex stage projection", () => {
     { timeout: 30_000 },
     () => {
       const functions = stageFunctions();
-      expect(functions).toHaveLength(26);
+      expect(functions).toHaveLength(27);
       for (const fn of functions) {
         const projection = analyzeFile(fn.file, fn.name, { tsconfig });
         const expected = syntaxCounts(fn);

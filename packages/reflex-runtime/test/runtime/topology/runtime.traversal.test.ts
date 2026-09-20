@@ -269,6 +269,124 @@ describe("Reactive runtime - traversal invariants", () => {
     expect(watcher.state & Both).toBe(0);
   });
 
+  it("preserves a transitive invalidation that repeats Unknown during validation", () => {
+    const firstSource = createProducer(0);
+    const secondSource = createProducer(0);
+    let invalidateDuringValidation = false;
+
+    const first = createConsumer(() => {
+      readProducer(firstSource);
+      if (invalidateDuringValidation) {
+        invalidateDuringValidation = false;
+        writeProducer(secondSource, 1);
+      }
+      return 0;
+    });
+    const second = createConsumer(() => {
+      readProducer(secondSource);
+      return 0;
+    });
+    const effect = vi.fn(() => {
+      readConsumer(first);
+      readConsumer(second);
+    });
+    const watcher = createWatcher(effect);
+
+    runWatcher(watcher);
+    expect(effect).toHaveBeenCalledTimes(1);
+
+    invalidateDuringValidation = true;
+    writeProducer(firstSource, 1);
+    runWatcher(watcher);
+
+    expect(effect).toHaveBeenCalledTimes(1);
+    expect(watcher.state & Unknown).toBeTruthy();
+    expect(watcher.state & Visited).toBeTruthy();
+    expect(watcher.state & Changed).toBeFalsy();
+    expect(watcher.state & Computing).toBeFalsy();
+
+    runWatcher(watcher);
+
+    expect(effect).toHaveBeenCalledTimes(2);
+    expect(watcher.state & (Both | Visited | Computing)).toBe(0);
+  });
+
+  it("keeps change and reentrant evidence when a later dependency throws", () => {
+    const firstSource = createProducer(0);
+    const reentrantSource = createProducer(0);
+    const reentrantTrigger = createProducer(0);
+    const throwingSource = createProducer(0);
+    let invalidateDuringValidation = false;
+    let throwDuringValidation = false;
+
+    const first = createConsumer(() => readProducer(firstSource));
+    const reentrant = createConsumer(() => {
+      const value = readProducer(reentrantTrigger);
+      if (invalidateDuringValidation) {
+        invalidateDuringValidation = false;
+        writeProducer(reentrantSource, 1);
+      }
+      return value;
+    });
+    const throwing = createConsumer(() => {
+      const value = readProducer(throwingSource);
+      if (throwDuringValidation) throw new Error("validation failed");
+      return value;
+    });
+    const cleanup = vi.fn();
+    const effect = vi.fn(() => {
+      readConsumer(first);
+      readConsumer(reentrant);
+      readConsumer(throwing);
+      readProducer(reentrantSource);
+      return cleanup;
+    });
+    const watcher = createWatcher(effect);
+
+    runWatcher(watcher);
+
+    invalidateDuringValidation = true;
+    throwDuringValidation = true;
+    writeProducer(firstSource, 1);
+    writeProducer(reentrantTrigger, 1);
+    writeProducer(throwingSource, 1);
+
+    expect(() => runWatcher(watcher)).toThrow("validation failed");
+    expect(cleanup).not.toHaveBeenCalled();
+    expect(effect).toHaveBeenCalledTimes(1);
+    expect(watcher.state & Unknown).toBeTruthy();
+    expect(watcher.state & Changed).toBeTruthy();
+    expect(watcher.state & Visited).toBeTruthy();
+    expect(watcher.state & Computing).toBeFalsy();
+
+    throwDuringValidation = false;
+    runWatcher(watcher);
+
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(effect).toHaveBeenCalledTimes(2);
+    expect(watcher.state & (Both | Visited | Computing)).toBe(0);
+  });
+
+  it("validates every root sibling after the first confirmed change", () => {
+    const sources = [createProducer(0), createProducer(0), createProducer(0)];
+    const computes = sources.map((source) => vi.fn(() => readProducer(source)));
+    const dependencies = computes.map((compute) => createConsumer(compute));
+    const effect = vi.fn(() => {
+      for (const dependency of dependencies) readConsumer(dependency);
+    });
+    const watcher = createWatcher(effect);
+
+    runWatcher(watcher);
+    sources.forEach((source, index) => writeProducer(source, index + 1));
+    runWatcher(watcher);
+
+    expect(computes.map((compute) => compute.mock.calls.length)).toEqual([
+      2, 2, 2,
+    ]);
+    expect(effect).toHaveBeenCalledTimes(2);
+    expect(watcher.state & (Both | Visited | Computing)).toBe(0);
+  });
+
   it("keeps tracked invalidation after nested compute advances the global version", () => {
     const source = createProducer(0);
     const nestedSource = createProducer(10);
