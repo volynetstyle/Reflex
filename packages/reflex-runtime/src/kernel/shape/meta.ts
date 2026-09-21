@@ -70,8 +70,13 @@ export const Visited = 1 << 2; // 4
 export const Computing = 1 << 3; // 8
 /** Node performs side effects and has no output value. */
 export const Watcher = 1 << 4; // 16
+
+// <!-- Watcher -->
 /** Watcher has been enqueued for execution. */
 export const Scheduled = 1 << 5; // 32
+export const Disposed = 1 << 6; // 64
+
+// <!-- Watcher end -->
 
 // ...
 // free powers include 29 and 30 in prod [6, 31*]
@@ -97,4 +102,4 @@ export const PRODUCER_INITIAL_STATE = Producer;
 /** Directly invalidated computed node: skip verification and recompute on read. */
 export const CONSUMER_INITIAL_STATE = Changed | Consumer;
 /** Watcher starts with both validation and initial-execution obligations. */
-export const WATCHER_INITIAL_STATE = Changed | Unknown | Watcher | Consumer;
+export const WATCHER_INITIAL_STATE = Both | Watcher | Consumer;

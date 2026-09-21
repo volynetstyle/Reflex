@@ -57,8 +57,7 @@ export function pull_frontier(
     Computing |
     ((initialState & Visited) !== 0 ? Changed : 0);
 
-  let confirmedChanged = false;
-  let completed = false;
+  let changed = false;
 
   try {
     // Fused exhaustive specialization of pull_dependency(). Keeping the three
@@ -73,7 +72,7 @@ export function pull_frontier(
       }
 
       if ((state & Changed) !== 0) {
-        if (advance(dependency, edge)) confirmedChanged = true;
+        if (advance(dependency, edge)) changed = true;
         continue;
       }
 
@@ -84,18 +83,21 @@ export function pull_frontier(
         dependencyEdge === null ||
         should_recompute(dependency, dependencyEdge)
       ) {
-        if (advance(dependency, edge)) confirmedChanged = true;
+        if (advance(dependency, edge)) changed = true;
       }
     }
 
-    completed = true;
-    return confirmedChanged;
+    return changed;
+  } catch (error) {
+    // Earlier dependencies may already have committed new values.
+    // Preserve that monotonic evidence across the failed validation.
+    if (changed) root.state |= Changed;
+    throw error;
   } finally {
-    // Earlier dependencies may already have committed new values. Preserve
-    // that monotonic proof so a later successful retry still executes the
-    // watcher, while Unknown keeps the frontier retryable.
-    if (!completed && confirmedChanged) root.state |= Changed;
     root.state &= ~Computing;
-    if (root.compute !== undefined) root.tailIn = previousTail;
+
+    if (root.compute !== undefined) {
+      root.tailIn = previousTail;
+    }
   }
 }

@@ -142,7 +142,16 @@ function runWatcherCore(node: WatcherNode): void {
 
   if ((state & Unknown) !== 0) {
     const mustExecute = (state & (Changed | Visited)) !== 0;
-    const changed = pull_frontier(node, node.firstIn);
+
+    let changed: boolean;
+
+    try {
+      changed = pull_frontier(node, node.firstIn);
+    } catch (error) {
+      recoverWatcherAfterValidationError(node);
+      throw error;
+    }
+
     const invalidatedDuringValidation = (node.state & Visited) !== 0;
 
     if (!invalidatedDuringValidation) node.state &= ~Unknown;
@@ -156,6 +165,7 @@ function runWatcherCore(node: WatcherNode): void {
       return;
     }
   }
+
   if (node.compute === undefined) {
     if (__PROFILE__)
       observeRuntimeProjection?.("projection.semantic.watcher.disposed.skip");

@@ -5,6 +5,7 @@ import {
   RuntimePhase,
 } from "@runtime/kernel/execution";
 import {
+  Both,
   Changed,
   Computing,
   Unknown,
@@ -109,7 +110,7 @@ function pullDependencyDeep(
           throw new Error("Cycle detected while refreshing reactive graph");
         }
 
-        const dirty = state & (Changed | Unknown);
+        const dirty = state & Both;
         const depChanged = (dirty & Changed) !== 0;
 
         if (dirty !== 0) {
@@ -308,7 +309,7 @@ function pullDependencyCore(edge: ReactiveEdge): boolean {
     throw new Error("Cycle detected while refreshing reactive graph");
   }
 
-  const dirty = state & (Changed | Unknown);
+  const dirty = state & Both;
 
   if (dirty === 0) {
     if (__PROFILE__) {
@@ -426,3 +427,4 @@ export function readShouldRecomputeStackStats(): {
 } {
   return readRuntimeWalkerStackStats(high, stack.length, 0, 0);
 }
+ 
