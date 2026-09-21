@@ -15,6 +15,7 @@
     "bench:compare": "pnpm exec ts-node --esm scripts/compare-benchmark-results.ts",
     "bench:quality-gate": "pnpm exec ts-node --esm scripts/benchmark-quality-gate.ts",
     "bench:history": "pnpm exec ts-node --esm scripts/benchmark-history.ts",
+    "qualify:stages": "node scripts/qualify-stages.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "pnpm -r typecheck",

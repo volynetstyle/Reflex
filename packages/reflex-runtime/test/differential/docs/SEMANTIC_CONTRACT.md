@@ -6,6 +6,58 @@ reuse, or specialized traversal. The shared expression interpreter is outside
 the differential boundary; both machines receive exactly the same expression
 semantics.
 
+## Pull architecture and effect boundaries
+
+The production pull implementation has three semantic layers. Their boundary is
+an invariant; optimization may specialize within a layer but must not merge the
+responsibilities back into one universal walker.
+
+1. `shouldRecomputeCore` owns root/consumer policy. Root `Changed` is execution
+   evidence, and only a completely stable root frontier may discharge root
+   `Unknown`.
+2. `pullDependencyDirty` proves one dirty dependency edge. Its result is
+   edge-local and must not depend on the parent node's state. Its callers pass a
+   single observation of `edge.from` and `dependency.state`, with the explicit
+   precondition `state & Both !== 0`.
+3. `pullDependencyDeep` is the continuation machine for an `Unknown`
+   dependency with committed inputs. Its explicit stack stores dependency-edge
+   continuations and remains safe under nested/reentrant pull execution.
+
+Operations are classified by effects, not by their current JavaScript shape:
+
+- Inspecting a clean edge is a pure graph read. It cannot execute user code,
+  reenter the runtime, or mutate topology. Root handling may therefore advance
+  locally without a post-operation `Changed` barrier or generic dirty proof.
+- Dirty dependency proof may call `advance`, directly or while descending. It
+  is a reentrancy barrier: callers must observe root/parent evidence after the
+  proof and must read continuation links only after the barrier.
+- `advance`, watcher cleanup, watcher execution, runtime hooks, and any future
+  callback-bearing operation are effectful barriers unless a stronger contract
+  proves otherwise.
+
+The root path loads a dependency and its state once. A clean/dirty dispatcher
+must pass that observation into the dirty helper rather than reloading the same
+edge. Development cycle checks happen before clean classification.
+
+The reusable stack and its retention/trim policy are implementation policy, not
+pull semantics. Changes to retention must preserve owned-slice cleanup,
+reentrant isolation, exception cleanup, and the public stack-statistics
+contract, and must be qualified independently from traversal changes.
+
+### Runtime effect taxonomy
+
+The same classification governs future fast-path work outside pull:
+
+| Domain      | Effect classes                                   | Barrier rule                                                                                               |
+| ----------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| Tracking    | pure read / may relink / may recompute           | Only relink/recompute paths may invalidate cached topology observations; recompute is a user-code barrier. |
+| Propagation | merge evidence only / may schedule / may execute | Evidence merge is local; scheduling crosses ownership state; execution is a user-code barrier.             |
+| Watcher     | validate / cleanup / execute / commit            | Validation may pull; cleanup and execute run user code; commit publishes only successfully completed work. |
+
+A fast path may omit a barrier only when its effect class cannot produce the
+evidence or mutation guarded by that barrier. Benchmarks qualify the cost of a
+specialization; they do not replace this semantic proof.
+
 ## Watcher rerun
 
 Watcher state has two orthogonal obligations: `Unknown` requires dependency
@@ -57,6 +109,10 @@ computed was independently stabilized earlier in the operation trace.
 - **V3** Validation covers the complete committed dependency snapshot before watcher lifecycle begins.
 - **V4** `Unknown` and `Changed` are orthogonal for watchers; recovery preserves both outstanding obligations.
 - **V5** Watcher invalidation evidence accumulates monotonically within an unsettled propagation wave. For independent incoming obligations: merge(a, b) = a | b
+- **V6** If dependency validation fails after reentrant invalidation, the
+  watcher preserves `Visited` together with `Unknown` and any confirmed
+  `Changed` evidence. Recovery clears execution/scheduling ownership, not the
+  evidence required by the retry.
 
 and therefore merge is commutative, associative and idempotent.
 These rules express the transaction boundary: evaluation and validation are not
@@ -94,13 +150,13 @@ they become part of this oracle.
 Under their stated preconditions:
 
 M1. Independent source-write permutation before the same
-    execution boundary does not change watcher lifecycle outcome.
+execution boundary does not change watcher lifecycle outcome.
 
 M2. Independent dependency-read permutation does not change
-    lifecycle outcome when exception precedence is unchanged.
+lifecycle outcome when exception precedence is unchanged.
 
 M3. Inserting a pure identity computed does not change
-    observable watcher lifecycle semantics.
+observable watcher lifecycle semantics.
 
 ## Oracle qualification
 

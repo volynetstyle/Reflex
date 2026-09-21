@@ -118,9 +118,10 @@ function once(r, skip) {
 function cleanPull(r, width) {
   const target = node(r);
   for (let i = 0; i < width; i++) r.linkEdge(node(r), target);
+  const shouldRecompute = r.should_recompute ?? r.pull_iterator;
   return () => {
     target.state = r.Unknown;
-    return Number(r.pull_iterator(target, target.firstIn));
+    return Number(shouldRecompute(target, target.firstIn));
   };
 }
 function chain(r, depth, stable) {
@@ -158,6 +159,36 @@ function diamond(r, width, stable) {
     return r.readConsumer(root);
   };
 }
+function wide(r, width, position, stable) {
+  const sources = range(width).map(() => r.createProducer(0));
+  const leaves = sources.map((source, index) =>
+    r.createConsumer(() => {
+      const value = r.readProducer(source);
+      return stable && index === position ? 0 : value;
+    }),
+  );
+  const root = r.createConsumer(() => {
+    let total = 0;
+    for (const leaf of leaves) total += r.readConsumer(leaf);
+    return total;
+  });
+  r.readConsumer(root);
+  const shouldRecompute = r.should_recompute ?? r.pull_iterator;
+  const target = leaves[position];
+  let pass = 1;
+  const arm = () => {
+    root.state |= r.Unknown;
+    sources[position].payload = pass++;
+    target.state = (target.state & ~r.Unknown) | r.Changed;
+  };
+  arm();
+  return () => {
+    const changed = shouldRecompute(root, root.firstIn);
+    root.state &= ~(r.Changed | r.Unknown);
+    arm();
+    return Number(changed);
+  };
+}
 function advancing(r, width, unchanged, skip) {
   let value = 0;
   const source = r.createConsumer(() => value);
@@ -191,8 +222,14 @@ const scenarios = {
   "chain-changed-32": (r) => chain(r, 32, false),
   "chain-changed-256": (r) => chain(r, 256, false),
   "chain-stable-256": (r) => chain(r, 256, true),
+  "deep-changed-2000": (r) => chain(r, 2000, false),
+  "deep-stable-2000": (r) => chain(r, 2000, true),
   "diamond-changed-128": (r) => diamond(r, 128, false),
   "diamond-stable-128": (r) => diamond(r, 128, true),
+  "wide-dirty-first-4096": (r) => wide(r, 4096, 0, false),
+  "wide-dirty-middle-4096": (r) => wide(r, 4096, 2048, false),
+  "wide-dirty-last-4096": (r) => wide(r, 4096, 4095, false),
+  "wide-stable-last-4096": (r) => wide(r, 4096, 4095, true),
   "advance-unobserved": (r) => advancing(r, 0, false, false),
   "advance-unchanged": (r) => advancing(r, 1, true, false),
   "advance-one-parent": (r) => advancing(r, 1, false, true),
@@ -200,7 +237,7 @@ const scenarios = {
 };
 const iterations = 20000,
   warmup = 10000,
-  samples = 9;
+  samples = 15;
 if (before === "--measure") {
   const r = await import(
     pathToFileURL(resolve("temp/stages", after, "prod.mjs")).href
@@ -220,8 +257,55 @@ if (before === "--measure") {
   console.log(JSON.stringify(result));
   process.exit(0);
 }
+if (before === "--trace") {
+  const r = await import(
+    pathToFileURL(resolve("temp/stages", after, "prod.mjs")).href
+  );
+  const name = process.argv[4];
+  const setup = scenarios[name];
+  if (setup === undefined) throw new Error(`Unknown scenario: ${name}`);
+  r.resetRuntimeContext();
+  const step = setup(r);
+  const trace = [];
+  for (let i = 0; i < 16; i++) {
+    trace.push({
+      result: step(i),
+      pullStack: r.readShouldRecomputeStackStats().shouldRecompute,
+    });
+  }
+  console.log(JSON.stringify(trace));
+  process.exit(0);
+}
+if (before === "--inspect") {
+  const r = await import(
+    pathToFileURL(resolve("temp/stages", after, "dev.mjs")).href
+  );
+  const name = process.argv[4];
+  const setup = scenarios[name];
+  if (setup === undefined) throw new Error(`Unknown scenario: ${name}`);
+  r.resetRuntimeContext();
+  r.setRuntimeProfilingEnabled(false);
+  const step = setup(r);
+  for (let i = 0; i < 100; i++) step(i);
+  r.resetRuntimeProfileCounters();
+  r.setRuntimeProfilingEnabled(true);
+  const result = step(101);
+  console.log(
+    JSON.stringify({
+      result,
+      counters: r.readRuntimeProfileCounters(),
+      topology: r.readRuntimeProfileTopology(),
+      pullStack: r.readShouldRecomputeStackStats().shouldRecompute,
+    }),
+  );
+  process.exit(0);
+}
 const median = (values) =>
   [...values].sort((a, b) => a - b)[values.length >> 1];
+const percentile = (values, probability) => {
+  const ordered = [...values].sort((a, b) => a - b);
+  return ordered[Math.ceil((ordered.length - 1) * probability)];
+};
 const nodeFlags = ["--no-concurrent-recompilation"];
 const report = {
   node: process.version,
@@ -236,6 +320,7 @@ const report = {
   scenarios: {},
 };
 for (const name of Object.keys(scenarios)) {
+  if (process.argv[4] && name !== process.argv[4]) continue;
   const raw = [[], []];
   for (let sample = 0; sample < samples; sample++) {
     for (const index of sample % 2 === 0 ? [0, 1] : [1, 0]) {
@@ -261,6 +346,16 @@ for (const name of Object.keys(scenarios)) {
     baselineNs: baseline,
     candidateNs: candidate,
     speedup: baseline / candidate,
+    baselineDistributionNs: {
+      p75: percentile(raw[0], 0.75),
+      p95: percentile(raw[0], 0.95),
+      p99: percentile(raw[0], 0.99),
+    },
+    candidateDistributionNs: {
+      p75: percentile(raw[1], 0.75),
+      p95: percentile(raw[1], 0.95),
+      p99: percentile(raw[1], 0.99),
+    },
     raw,
   };
   console.log(
@@ -268,6 +363,9 @@ for (const name of Object.keys(scenarios)) {
   );
 }
 writeFileSync(
-  resolve("temp/stages", `${before}-vs-${after}.json`),
+  resolve(
+    "temp/stages",
+    `${before}-vs-${after}${process.argv[4] ? `-${process.argv[4]}` : ""}.json`,
+  ),
   JSON.stringify(report, null, 2) + "\n",
 );

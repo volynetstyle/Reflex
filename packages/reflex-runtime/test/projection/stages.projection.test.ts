@@ -105,7 +105,7 @@ describe("Reflex stage projection", () => {
     { timeout: 30_000 },
     () => {
       const functions = stageFunctions();
-      expect(functions).toHaveLength(30);
+      expect(functions).toHaveLength(31);
       for (const fn of functions) {
         const projection = analyzeFile(fn.file, fn.name, { tsconfig });
         const expected = syntaxCounts(fn);
@@ -218,7 +218,7 @@ describe("Reflex stage projection", () => {
 
       const pullDependency = project(
         "second/pull_dependency.ts",
-        "pullDependencyCore",
+        "pullDependencyDirty",
       );
       expect(pullDependency.loops).toEqual([]);
       expect(pullDependency.structures.stackCandidates).toEqual([]);

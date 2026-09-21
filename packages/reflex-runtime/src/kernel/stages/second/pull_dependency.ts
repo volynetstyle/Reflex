@@ -16,6 +16,7 @@ import {
   noteShouldRecomputeStackUsage,
   readRuntimeWalkerStackStats,
   STACK_TRIM_MIN_CAPACITY,
+  trimWalkerStackToFloorIfSparse,
 } from "@runtime/kernel/stages/stackStats";
 import { isRuntimeProfilingEnabled } from "@runtime/profiling";
 import {
@@ -79,8 +80,10 @@ function pullDependencyDeep(
 
   stack[top++] = parentEdge;
 
-  if (__DEV__) {
-    noteShouldRecomputeStackUsage(top);
+  {
+    if (__DEV__) {
+      noteShouldRecomputeStackUsage(top);
+    }
   }
 
   try {
@@ -92,22 +95,28 @@ function pullDependencyDeep(
 
         // The outer consumer is policy context, not branch evidence.
         if (top !== base && (nodeState & Changed) !== 0) {
-          if (__PROFILE__) {
-            profilePullNode("node.changed", node, top - base, top - base);
+          {
+            if (__PROFILE__) {
+              profilePullNode("node.changed", node, top - base, top - base);
+            }
           }
           changed = true;
           break;
         }
 
-        if (__PROFILE__) {
-          observeRuntimeProjection?.("projection.semantic.pull.edge.visit");
+        {
+          if (__PROFILE__) {
+            observeRuntimeProjection?.("projection.semantic.pull.edge.visit");
+          }
         }
 
         const dep = edge.from;
         const state = dep.state;
 
-        if (__DEV__ && (state & Computing) !== 0) {
-          throw new Error("Cycle detected while refreshing reactive graph");
+        {
+          if (__DEV__ && (state & Computing) !== 0) {
+            throw new Error("Cycle detected while refreshing reactive graph");
+          }
         }
 
         const dirty = state & Both;
@@ -115,29 +124,37 @@ function pullDependencyDeep(
 
         if (dirty !== 0) {
           if (!depChanged) {
-            if (__PROFILE__) {
-              observeRuntimeProjection?.(
-                "projection.semantic.pull.dependency.invalid",
-              );
+            {
+              if (__PROFILE__) {
+                observeRuntimeProjection?.(
+                  "projection.semantic.pull.dependency.invalid",
+                );
+              }
             }
 
             const firstIn = dep.firstIn;
 
             if (firstIn !== null) {
-              if (__PROFILE__) {
-                observeRuntimeProjection?.("projection.semantic.pull.descend");
-                profilePullNode(
-                  "dep.unknown.descend",
-                  dep,
-                  top - base + 1,
-                  top - base,
-                );
+              {
+                if (__PROFILE__) {
+                  observeRuntimeProjection?.(
+                    "projection.semantic.pull.descend",
+                  );
+                  profilePullNode(
+                    "dep.unknown.descend",
+                    dep,
+                    top - base + 1,
+                    top - base,
+                  );
+                }
               }
 
               stack[top++] = edge;
 
-              if (__DEV__) {
-                noteShouldRecomputeStackUsage(top);
+              {
+                if (__DEV__) {
+                  noteShouldRecomputeStackUsage(top);
+                }
               }
 
               node = dep;
@@ -146,21 +163,23 @@ function pullDependencyDeep(
             }
           }
 
-          if (__PROFILE__) {
-            if (depChanged) {
+          {
+            if (__PROFILE__) {
+              if (depChanged) {
+                observeRuntimeProjection?.(
+                  "projection.semantic.pull.dependency.changed",
+                );
+              }
               observeRuntimeProjection?.(
-                "projection.semantic.pull.dependency.changed",
+                "projection.semantic.pull.advance.invoke",
+              );
+              profilePullNode(
+                depChanged ? "dep.changed.advance" : "dep.unknown.leaf.advance",
+                dep,
+                top - base + 1,
+                top - base,
               );
             }
-            observeRuntimeProjection?.(
-              "projection.semantic.pull.advance.invoke",
-            );
-            profilePullNode(
-              depChanged ? "dep.changed.advance" : "dep.unknown.leaf.advance",
-              dep,
-              top - base + 1,
-              top - base,
-            );
           }
 
           /**
@@ -169,19 +188,22 @@ function pullDependencyDeep(
            */
           high = top;
 
-          if (__DEV__) {
-            devAssertRefreshEdge(dep, edge);
+          {
+            if (__DEV__) {
+              devAssertRefreshEdge(dep, edge);
+            }
           }
-
           if (advance(dep, edge)) {
             changed = true;
             break;
           }
         } else if (__PROFILE__) {
-          observeRuntimeProjection?.(
-            "projection.semantic.pull.dependency.clean",
-          );
-          profilePullNode("dep.clean", dep, top - base + 1, top - base);
+          {
+            observeRuntimeProjection?.(
+              "projection.semantic.pull.dependency.clean",
+            );
+            profilePullNode("dep.clean", dep, top - base + 1, top - base);
+          }
         }
 
         // A stable outer edge completes this branch. Internal stable edges may
@@ -203,16 +225,18 @@ function pullDependencyDeep(
           break descend;
         }
 
-        if (__PROFILE__) {
-          observeRuntimeProjection?.(
-            "projection.semantic.pull.sibling.stable-scan",
-          );
-          profilePullNode(
-            "sibling.stable",
-            sibling.from,
-            top - base + 1,
-            top - base,
-          );
+        {
+          if (__PROFILE__) {
+            observeRuntimeProjection?.(
+              "projection.semantic.pull.sibling.stable-scan",
+            );
+            profilePullNode(
+              "sibling.stable",
+              sibling.from,
+              top - base + 1,
+              top - base,
+            );
+          }
         }
 
         edge = sibling;
@@ -227,21 +251,22 @@ function pullDependencyDeep(
         high = top;
 
         if (changed) {
-          if (__PROFILE__) {
-            observeRuntimeProjection?.(
-              "projection.semantic.pull.changed.bubble",
-            );
-            observeRuntimeProjection?.(
-              "projection.semantic.pull.advance.invoke",
-            );
-            profilePullNode(
-              "bubble.changed.advance",
-              node,
-              top - base + 1,
-              top - base,
-            );
+          {
+            if (__PROFILE__) {
+              observeRuntimeProjection?.(
+                "projection.semantic.pull.changed.bubble",
+              );
+              observeRuntimeProjection?.(
+                "projection.semantic.pull.advance.invoke",
+              );
+              profilePullNode(
+                "bubble.changed.advance",
+                node,
+                top - base + 1,
+                top - base,
+              );
+            }
           }
-
           changed = advance(node, parentEdge);
         } else {
           node.state &= ~Unknown;
@@ -253,18 +278,19 @@ function pullDependencyDeep(
           const sibling = parentEdge.nextIn;
 
           if (sibling !== null) {
-            if (__PROFILE__) {
-              observeRuntimeProjection?.(
-                "projection.semantic.pull.sibling.stable-scan",
-              );
-              profilePullNode(
-                "sibling.after-stable-pop",
-                sibling.from,
-                top - base + 1,
-                top - base,
-              );
+            {
+              if (__PROFILE__) {
+                observeRuntimeProjection?.(
+                  "projection.semantic.pull.sibling.stable-scan",
+                );
+                profilePullNode(
+                  "sibling.after-stable-pop",
+                  sibling.from,
+                  top - base + 1,
+                  top - base,
+                );
+              }
             }
-
             edge = sibling;
             continue traverse;
           }
@@ -281,44 +307,40 @@ function pullDependencyDeep(
     high = base;
 
     if (base === 0 && stack.length > STACK_TRIM_MIN_CAPACITY) {
-      if (__PROFILE__) {
-        if (__PROFILE__)
-          observeRuntimeProjection?.("projection.semantic.pull.stack.trim");
-        if (__PROFILE__)
-          observeRuntimeProjectionAmount?.(
-            "projection.semantic.pull.stack.trim.excess",
-            stack.length - STACK_TRIM_MIN_CAPACITY,
-          );
+      {
+        if (__PROFILE__) {
+          if (__PROFILE__)
+            observeRuntimeProjection?.("projection.semantic.pull.stack.trim");
+          if (__PROFILE__)
+            observeRuntimeProjectionAmount?.(
+              "projection.semantic.pull.stack.trim.excess",
+              stack.length - STACK_TRIM_MIN_CAPACITY,
+            );
+        }
       }
-
-      stack.length = STACK_TRIM_MIN_CAPACITY;
+      trimWalkerStackToFloorIfSparse(stack);
     }
   }
 }
 
-/** Stabilize one causal dependency branch and return its edge-local proof. */
-function pullDependencyCore(edge: ReactiveEdge): boolean {
-  if (__PROFILE__) {
-    observeRuntimeProjection?.("projection.semantic.pull.edge.visit");
-  }
-
-  const dependency = edge.from;
-  const state = dependency.state;
-
-  if (__DEV__ && (state & Computing) !== 0) {
-    throw new Error("Cycle detected while refreshing reactive graph");
-  }
-
+/**
+ * Stabilize one dirty causal dependency branch and return its edge-local proof.
+ *
+ * Preconditions:
+ * - dependency === edge.from;
+ * - state === dependency.state as observed by the caller;
+ * - state & Both !== 0;
+ * - development callers already rejected Computing.
+ *
+ * The proof is independent of the parent node's state. It may run user code,
+ * so callers must treat the return boundary as a reentrancy barrier.
+ */
+function pullDependencyDirty(
+  edge: ReactiveEdge,
+  dependency: ReactiveNode,
+  state: number,
+): boolean {
   const dirty = state & Both;
-
-  if (dirty === 0) {
-    if (__PROFILE__) {
-      observeRuntimeProjection?.("projection.semantic.pull.dependency.clean");
-      profilePullNode("dep.clean", dependency, 1, 0);
-    }
-    return false;
-  }
-
   const dependencyChanged = (dirty & Changed) !== 0;
   const firstIn = dependency.firstIn;
 
@@ -358,10 +380,34 @@ function pullDependencyCore(edge: ReactiveEdge): boolean {
   return pullDependencyDeep(edge, dependency, firstIn);
 }
 
+/** Stabilize one causal dependency branch and return its edge-local proof. */
+function pullDependencyCore(edge: ReactiveEdge): boolean {
+  if (__PROFILE__) {
+    observeRuntimeProjection?.("projection.semantic.pull.edge.visit");
+  }
+
+  const dependency = edge.from;
+  const state = dependency.state;
+
+  if (__DEV__ && (state & Computing) !== 0) {
+    throw new Error("Cycle detected while refreshing reactive graph");
+  }
+
+  if ((state & Both) === 0) {
+    if (__PROFILE__) {
+      observeRuntimeProjection?.("projection.semantic.pull.dependency.clean");
+      profilePullNode("dep.clean", dependency, 1, 0);
+    }
+    return false;
+  }
+
+  return pullDependencyDirty(edge, dependency, state);
+}
+
 /**
  * Short-circuit consumer policy over dependency proofs.
  * Root Changed is execution evidence; a fully stable frontier discharges
- * root Unknown. Neither responsibility belongs to pullDependencyCore().
+ * root Unknown. Neither responsibility belongs to pullDependencyDirty().
  */
 function shouldRecomputeCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
   if (__PROFILE__) {
@@ -371,11 +417,29 @@ function shouldRecomputeCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
   if ((node.state & Changed) !== 0) return true;
 
   while (true) {
-    if (pullDependencyCore(edge)) return true;
+    if (__PROFILE__) {
+      observeRuntimeProjection?.("projection.semantic.pull.edge.visit");
+    }
 
-    // Pull may run user code. Observe reentrant root evidence even when the
-    // current edge became the final edge during that call.
-    if ((node.state & Changed) !== 0) return true;
+    const dependency = edge.from;
+    const state = dependency.state;
+
+    if (__DEV__ && (state & Computing) !== 0) {
+      throw new Error("Cycle detected while refreshing reactive graph");
+    }
+
+    if ((state & Both) === 0) {
+      if (__PROFILE__) {
+        observeRuntimeProjection?.("projection.semantic.pull.dependency.clean");
+        profilePullNode("dep.clean", dependency, 1, 0);
+      }
+    } else {
+      if (pullDependencyDirty(edge, dependency, state)) return true;
+
+      // Dirty proof may run user code. Observe reentrant root evidence even
+      // when the current edge became the final edge during that call.
+      if ((node.state & Changed) !== 0) return true;
+    }
 
     const sibling = edge.nextIn;
     if (sibling === null) {
@@ -427,4 +491,3 @@ export function readShouldRecomputeStackStats(): {
 } {
   return readRuntimeWalkerStackStats(high, stack.length, 0, 0);
 }
- 

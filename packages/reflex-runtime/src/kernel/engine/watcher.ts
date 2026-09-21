@@ -51,7 +51,7 @@ function recoverWatcherAfterError(node: WatcherNode): void {
  * state so an explicit later run retries validation from the beginning.
  */
 function recoverWatcherAfterValidationError(node: WatcherNode): void {
-  const retryState = (node.state & Changed) | Unknown;
+  const retryState = (node.state & (Changed | Visited)) | Unknown;
   node.state = (node.state & ~WATCHER_TRANSIENT_STATE) | retryState;
 }
 /**
