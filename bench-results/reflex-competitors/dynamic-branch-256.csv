@@ -1,0 +1,5 @@
+scenario,group,dimension,size,framework,successfulTrials,failedTrials,medianOpsPerSecond,medianNsPerOperation,medianP99Ns,medianP999Ns,medianRetainedBytesPerOperation,medianGcPauseMs,throughputVsReflex
+dynamic-branch,topology,branches,256,reflex,5,0,914801.4880770873,1093.1333333333334,2600,6500,0.7626666666666667,6.774799972772598,1
+dynamic-branch,topology,branches,256,alien,5,0,1233654.0833950161,810.6,2600,10700,1.2106666666666666,7.178800016641617,1.348548400361872
+dynamic-branch,topology,branches,256,solid2,5,0,418497.5936388366,2389.5,8200,41900,1.1786666666666668,6.777399986982346,0.4574736695264002
+dynamic-branch,topology,branches,256,vue,5,0,1014644.7052457131,985.5666666666667,3000,17200,4.248,7.640300005674362,1.1091419487942638

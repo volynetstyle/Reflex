@@ -1,0 +1,3 @@
+scenario,group,dimension,size,framework,successfulTrials,failedTrials,medianOpsPerSecond,medianNsPerOperation,medianP99Ns,medianP999Ns,medianRetainedHeapDeltaBytesPerOperation,medianGcPauseMs,throughputVsReflex
+changed-leaf,common-path,constant,1,reflex,1,0,181983.62147406733,5495,,,-11084.8,6.343299984931946,1
+changed-leaf,common-path,constant,1,reflex-e87bb66,1,0,92635.47938860583,10795,,,115.2,7.167600035667419,0.509031959240389

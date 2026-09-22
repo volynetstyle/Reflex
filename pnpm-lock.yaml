@@ -113,6 +113,15 @@ importers:
         specifier: workspace:*
         version: link:../reflex-scheduler
     devDependencies:
+      '@solidjs/signals':
+        specifier: 2.0.0-rc.9
+        version: 2.0.0-rc.9
+      '@vue/reactivity':
+        specifier: 3.5.43
+        version: 3.5.43
+      alien-signals:
+        specifier: 3.2.1
+        version: 3.2.1
       reactive-framework-test-suite:
         specifier: 0.0.2
         version: 0.0.2
@@ -851,6 +860,10 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@solidjs/signals@2.0.0-rc.9':
+    resolution: {integrity: sha512-o3pqiTgpH5NR2DstiKrt9s/6+0YOFtv+MfvLONwLsS247I+EWMMyTu9BkRcgd35UR5Pa1DM16lI1/5uaIMY6Gw==}
+    engines: {node: '>=22.12.0'}
+
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
@@ -1177,6 +1190,12 @@ packages:
 
   '@volynets/reflex-runtime@0.1.2':
     resolution: {integrity: sha512-fF1hmx4gQSOerlkyLCZtpRWkE9UU6HBc5PyUr6dp+U/wCLoelzuifbBsOKOEWeWh7nVH0J9fAkXggVGJgmFyFw==}
+
+  '@vue/reactivity@3.5.43':
+    resolution: {integrity: sha512-G/c9GyOZNI2jVaaS6OX1EF1SSFSv7H0ERqNTl4+DTFMlZmB5eVAB53aLQNam/7NL2NPtaDD7RdVrzf8uJzMuOA==}
+
+  '@vue/shared@3.5.43':
+    resolution: {integrity: sha512-uksS7YGMR5NZyr4JNq0Rp+QyLns0ueaz20KwzIPW9R0LH1Vnt4E+XUM29PNseEbf1www2gOuhuDi5AKOIXag9Q==}
 
   JSONStream@1.3.5:
     resolution: {integrity: sha512-E+iruNOY8VV9s4JEbe1aNEm6MiszPRr/UfcHMz0TQh1BXSxHK+ASV1R6W4HpjBhSeS+54PIsAMCBmwD06LLsqQ==}
@@ -3917,6 +3936,8 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.60.3':
     optional: true
 
+  '@solidjs/signals@2.0.0-rc.9': {}
+
   '@standard-schema/spec@1.1.0': {}
 
   '@swc/core-darwin-arm64@1.15.33':
@@ -4255,6 +4276,12 @@ snapshots:
       tinyrainbow: 3.1.0
 
   '@volynets/reflex-runtime@0.1.2': {}
+
+  '@vue/reactivity@3.5.43':
+    dependencies:
+      '@vue/shared': 3.5.43
+
+  '@vue/shared@3.5.43': {}
 
   JSONStream@1.3.5:
     dependencies:

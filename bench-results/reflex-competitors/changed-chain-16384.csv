@@ -1,0 +1,5 @@
+scenario,group,dimension,size,framework,successfulTrials,failedTrials,medianOpsPerSecond,medianNsPerOperation,medianP99Ns,medianP999Ns,medianRetainedBytesPerOperation,medianGcPauseMs,throughputVsReflex
+changed-chain,scaling,depth,16384,reflex,3,0,1166.6263208397377,857172.5,2161600,3806700,258.26666666666665,34.7464000582695,1
+changed-chain,scaling,depth,16384,alien,3,0,775.8147509537673,1288967.5,3531600,4086000,89.13333333333334,37.89309999346733,0.6650070696119181
+changed-chain,scaling,depth,16384,solid2,3,0,239.42260843749213,4176715,5300400,6432000,504.6666666666667,41.54660001397133,0.2052264758308862
+changed-chain,,,16384,vue,0,3,,,,,,,

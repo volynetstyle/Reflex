@@ -71,6 +71,16 @@
     "bench:model": "vitest bench bench/model.bench.ts",
     "bench:scheduler": "vitest bench bench/scheduler.bench.ts",
     "bench:scheduler:integration": "vitest bench bench/scheduler.integration.bench.ts",
+    "bench:competitors:prepare-e87bb66": "node bench/competitors/prepare-reflex-e87bb66.mjs",
+    "bench:competitors": "pnpm bench:competitors:prepare-e87bb66 && pnpm build:all && node --expose-gc bench/competitors/run.mjs",
+    "bench:competitors:smoke": "pnpm bench:competitors:prepare-e87bb66 && pnpm build:all && node --expose-gc bench/competitors/run.mjs --smoke",
+    "bench:competitors:contracts": "pnpm bench:competitors:prepare-e87bb66 && pnpm build:all && node bench/competitors/contracts.mjs",
+    "bench:competitors:claims": "node bench/competitors/claims.mjs",
+    "bench:effect-fanout:structural": "vitest run --config vite.effect-fanout-structural.config.ts",
+    "bench:effect-fanout:timing": "vitest run --config vite.effect-fanout-timing.config.ts",
+    "bench:effect-fanout:analyze": "node bench/effect-fanout-attribution/analyze.mjs",
+    "bench:hot-path:analyze": "node bench/effect-fanout-attribution/analyze-hot-path.mjs",
+    "bench:effect-fanout": "pnpm bench:effect-fanout:structural && pnpm bench:effect-fanout:timing && pnpm bench:effect-fanout:analyze",
     "bench:projection": "node ./bench/projection-compare.node.mjs",
     "demo": "vite --config examples/mini-app/vite.config.ts",
     "demo:build": "vite build --config examples/mini-app/vite.config.ts",
@@ -85,6 +95,9 @@
     "@volynets/reflex-scheduler": "workspace:*"
   },
   "devDependencies": {
+    "@solidjs/signals": "2.0.0-rc.9",
+    "@vue/reactivity": "3.5.43",
+    "alien-signals": "3.2.1",
     "reactive-framework-test-suite": "0.0.2"
   }
 }
