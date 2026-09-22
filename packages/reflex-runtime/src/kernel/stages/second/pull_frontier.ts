@@ -9,6 +9,7 @@ import {
 
 import { advance } from "./advance";
 import { should_recompute } from "./pull_dependency";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 /**
  * Validate a watcher's complete committed dependency frontier.
@@ -64,19 +65,40 @@ export function pull_frontier(
     // shallow states in this loop avoids a call per clean wide dependency; the
     // shared stack machine is entered only for an Unknown dependency subtree.
     for (let edge = firstEdge; edge !== null; edge = edge.nextIn) {
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.watcher.frontier.edge.visit",
+        );
+
       const dependency = edge.from;
       const state = dependency.state;
-
-      if (__DEV__ && (state & Computing) !== 0) {
-        throw new Error("Cycle detected while refreshing reactive graph");
+      {
+        if (__DEV__ && (state & Computing) !== 0) {
+          throw new Error("Cycle detected while refreshing reactive graph");
+        }
       }
 
       if ((state & Changed) !== 0) {
+        if (__PROFILE__)
+          observeRuntimeProjection?.(
+            "projection.semantic.watcher.frontier.dependency.changed",
+          );
         if (advance(dependency, edge)) changed = true;
         continue;
       }
 
-      if ((state & Unknown) === 0) continue;
+      if ((state & Unknown) === 0) {
+        if (__PROFILE__)
+          observeRuntimeProjection?.(
+            "projection.semantic.watcher.frontier.dependency.clean",
+          );
+        continue;
+      }
+
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.watcher.frontier.dependency.invalid",
+        );
 
       const dependencyEdge = dependency.firstIn;
       if (

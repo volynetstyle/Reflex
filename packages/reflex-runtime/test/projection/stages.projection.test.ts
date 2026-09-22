@@ -224,17 +224,14 @@ describe("Reflex stage projection", () => {
       expect(pullDependency.structures.stackCandidates).toEqual([]);
       expect(pullDependency.stateTransitions).toEqual([]);
 
-      const pullDependencyDeep = project(
-        "second/pull_dependency.ts",
-        "pullDependencyDeep",
-      );
-      expect(pullDependencyDeep.loops.map((loop) => loop.condition)).toEqual([
+      const pull_iterator = project("second/pull_iterator.ts", "pull_iterator");
+      expect(pull_iterator.loops.map((loop) => loop.condition)).toEqual([
         "true",
         "true",
         "top !== base",
         "top !== base",
       ]);
-      expect(pullDependencyDeep.structures.stackCandidates).toEqual([
+      expect(pull_iterator.structures.stackCandidates).toEqual([
         expect.objectContaining({
           storage: "stack",
           index: "top",
@@ -243,7 +240,7 @@ describe("Reflex stage projection", () => {
         }),
       ]);
       expect(
-        pullDependencyDeep.stateTransitions.map((transition) => transition.to),
+        pull_iterator.stateTransitions.map((transition) => transition.to),
       ).toEqual(["node.state & ~Unknown"]);
 
       const advance = project("second/advance.ts", "advanceCore");

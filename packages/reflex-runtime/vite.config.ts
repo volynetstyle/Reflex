@@ -9,15 +9,15 @@ export default defineConfig({
       transform(code, id) {
         // Expose existing lexical state only in the test transform. No runtime
         // fields, counters, callbacks, or production exports are introduced.
-        if (
-          id
-            .replace(/\\/g, "/")
-            .endsWith("/src/kernel/stages/second/pull_dependency.ts")
-        ) {
+        const normalizedId = id.replace(/\\/g, "/");
+        if (normalizedId.endsWith("/src/kernel/stages/second/pull_iterator.ts")) {
           return (
             code +
             "\nexport { stack as testPullStack, high as testPullHigh };\n"
           );
+        }
+        if (normalizedId.endsWith("/src/kernel/stages/second/pull_dependency.ts")) {
+          return code + "\nexport { testPullStack, testPullHigh } from './pull_iterator';\n";
         }
       },
     },

@@ -14,8 +14,10 @@ import { devAssertNoRuntimeHookReactiveRead } from "@runtime/kernel/execution";
 import {
   Changed,
   Both,
+  Computing,
   Visited,
   type ConsumerNode,
+  type ReactiveEdge,
 } from "@runtime/kernel/shape";
 import { resolveTrackedRead } from "@runtime/kernel/shape/tracking";
 import { advance } from "@runtime/kernel/stages/second/advance";
@@ -98,6 +100,33 @@ export function readConsumerEager<T>(node: ConsumerNode<T>): T {
 
 const FORCE_RECOMPUTE_STATE = Changed | Visited;
 
+/**
+ * Return the committed edge whose delivery is owned by the active tracking
+ * continuation, but only when it is the exact stable next read.
+ *
+ * This is a read-only proof: it does not advance the tracking cursor or commit
+ * a dependency before producer stabilization succeeds. Dynamic append,
+ * reorder and duplicate cases conservatively fall back to generic propagation.
+ */
+function ownedParentEdgeForStableRead(
+  producer: ConsumerNode<unknown>,
+): ReactiveEdge | null {
+  const consumer = currentConsumer;
+
+  if (
+    consumer === null ||
+    consumer === producer ||
+    (consumer.state & Computing) === 0
+  ) {
+    return null;
+  }
+
+  const cursor = consumer.tailIn;
+  const candidate = cursor === null ? consumer.firstIn : cursor.nextIn;
+
+  return candidate !== null && candidate.from === producer ? candidate : null;
+}
+
 function stabilizeDirtyConsumer<T>(node: ConsumerNode<T>, state: number): T {
   devAssertConsumerCanStabilize(state);
 
@@ -108,7 +137,7 @@ function stabilizeDirtyConsumer<T>(node: ConsumerNode<T>, state: number): T {
       observeRuntimeProjection?.(
         "projection.semantic.read.stabilize.force-advance",
       );
-    stabilized = advance(node);
+    stabilized = advance(node, ownedParentEdgeForStableRead(node));
   } else {
     const edge = node.firstIn;
     if (__PROFILE__)

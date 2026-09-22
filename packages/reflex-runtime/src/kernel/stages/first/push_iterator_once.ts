@@ -10,6 +10,7 @@ import {
 } from "@runtime/kernel/execution";
 import {
   Changed,
+  Scheduled,
   Unknown,
   Watcher,
   type ReactiveEdge,
@@ -47,6 +48,17 @@ function pushIteratorOnceCore(edge: ReactiveEdge | null): void {
         });
 
       if ((state & Watcher) !== 0 && nodeInvalidatedHook) {
+        // Scheduled is an ownership certificate: the host queue must already
+        // execute this watcher. Preserve the stronger Changed evidence above,
+        // but do not redeliver the same queue obligation.
+        if ((state & Scheduled) !== 0) {
+          if (__PROFILE__)
+            observeRuntimeProjection?.(
+              "projection.semantic.push-once.watcher.scheduled-delivery-skip",
+            );
+          continue;
+        }
+
         if (__DEV__) emitNodeInvalidated(sub);
 
         if (!__DEV__) nodeInvalidatedHook!(sub);

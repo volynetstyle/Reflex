@@ -28,6 +28,7 @@ import {
   Unknown,
   Scheduled,
   Visited,
+  WatcherCleanupPending,
   type WatcherCleanup,
   type WatcherNode,
 } from "@runtime/kernel/shape";
@@ -51,7 +52,10 @@ function recoverWatcherAfterError(node: WatcherNode): void {
  * state so an explicit later run retries validation from the beginning.
  */
 function recoverWatcherAfterValidationError(node: WatcherNode): void {
-  const retryState = (node.state & (Changed | Visited)) | Unknown;
+  // Scheduled belongs to the external queue, not to the failed traversal.
+  // Preserve it so the scheduler can identify and defer a reentrant queue
+  // entry instead of executing the same failed watcher twice in one drain.
+  const retryState = (node.state & (Changed | Visited | Scheduled)) | Unknown;
   node.state = (node.state & ~WATCHER_TRANSIENT_STATE) | retryState;
 }
 /**
@@ -73,16 +77,28 @@ function recoverWatcherAfterComputationError(node: WatcherNode): void {
 
 /** Claims ownership of this watcher for an external scheduler queue. */
 export function claimWatcherSchedule(node: WatcherNode): boolean {
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.watcher.schedule.attempt");
   const state = node.state;
 
-  if ((state & Scheduled) !== 0) return false;
+  if ((state & Scheduled) !== 0) {
+    if (__PROFILE__)
+      observeRuntimeProjection?.(
+        "projection.semantic.watcher.schedule.dedup-skip",
+      );
+    return false;
+  }
 
   node.state = state | Scheduled;
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.watcher.schedule.success");
   return true;
 }
 
 /** Releases ownership of this watcher from an external scheduler queue. */
 export function releaseWatcherSchedule(node: WatcherNode): void {
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.watcher.schedule.release");
   node.state &= ~Scheduled;
 }
 
@@ -146,6 +162,10 @@ function runWatcherCore(node: WatcherNode): void {
     let changed: boolean;
 
     try {
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.watcher.frontier.invoke",
+        );
       changed = pull_frontier(node, node.firstIn);
     } catch (error) {
       recoverWatcherAfterValidationError(node);
@@ -179,16 +199,24 @@ function runWatcherCore(node: WatcherNode): void {
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.watcher.execute");
 
-  const payload = node.payload;
-  const prevCleanup = typeof payload === "function" ? payload : null;
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.watcher.cleanup.check");
+  const prevCleanup =
+    (node.state & WatcherCleanupPending) !== 0
+      ? (node.payload as WatcherCleanup)
+      : null;
 
   if (__DEV__)
     devRecordWatcherStart(node, prevCleanup !== null, defaultContext);
 
-  node.payload = undefined;
   node.state &= ~Visited;
 
   if (prevCleanup !== null) {
+    // Clearing is only required when a cleanup is actually owned. The common
+    // no-cleanup watcher keeps an already-undefined payload and avoids a hot
+    // property store on every execution.
+    node.payload = undefined;
+    node.state &= ~WatcherCleanupPending;
     try {
       runCleanup(prevCleanup);
     } catch (error) {
@@ -225,6 +253,7 @@ function runWatcherCore(node: WatcherNode): void {
 
   if (hasCleanup) {
     node.payload = result;
+    node.state |= WatcherCleanupPending;
   }
 
   if ((node.state & Visited) === 0) {
@@ -234,6 +263,8 @@ function runWatcherCore(node: WatcherNode): void {
   }
 
   devRecordWatcherFinish(node, hasCleanup, result, defaultContext);
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.watcher.execute.exit");
 }
 
 export function disposeWatcher(node: WatcherNode): void {
@@ -242,11 +273,13 @@ export function disposeWatcher(node: WatcherNode): void {
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.watcher.dispose");
 
-  const payload = node.payload;
-  const cleanup = typeof payload === "function" ? payload : null;
+  const cleanup =
+    (node.state & WatcherCleanupPending) !== 0
+      ? (node.payload as WatcherCleanup)
+      : null;
 
   disposeNode(node);
-  node.state &= ~WATCHER_TRANSIENT_STATE;
+  node.state &= ~(WATCHER_TRANSIENT_STATE | WatcherCleanupPending);
 
   if (cleanup !== null) {
     runCleanup(cleanup);

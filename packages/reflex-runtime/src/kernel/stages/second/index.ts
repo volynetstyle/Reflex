@@ -1,3 +1,3 @@
-export * from "./advance";
+export { advance } from "./advance";
 export * from "./pull_dependency";
-export * from "./pull_frontier";
+export { pull_frontier } from "./pull_frontier";

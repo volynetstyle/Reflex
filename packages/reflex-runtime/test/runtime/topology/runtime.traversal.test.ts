@@ -65,6 +65,87 @@ describe("Reactive runtime - traversal invariants", () => {
     counter.expectNone();
   });
 
+  it("lets an active parent own its edge while preserving leaf side fanout", () => {
+    const source = createProducer(1);
+    const leaf = createConsumer(() => readProducer(source) * 2);
+    const parent = createConsumer(() => readConsumer(leaf) + 1);
+    const sideValues: number[] = [];
+    const side = createWatcher(() => {
+      sideValues.push(readConsumer(leaf));
+    });
+
+    expect(readConsumer(parent)).toBe(3);
+    runWatcher(side);
+    expect(sideValues).toEqual([2]);
+
+    writeProducer(source, 2);
+
+    // Recomputing leaf while parent is active may suppress only leaf->parent.
+    // The leaf->side watcher edge still receives Changed evidence.
+    expect(readConsumer(parent)).toBe(5);
+    runWatcher(side);
+    expect(sideValues).toEqual([2, 4]);
+    expect(parent.state & Both).toBe(0);
+    expect(side.state & Both).toBe(0);
+  });
+
+  it("observes a reentrant write through another parent edge", () => {
+    const firstSource = createProducer(0);
+    const leafSource = createProducer(0);
+    const parentSource = createProducer(0);
+    let reenter = false;
+    const first = createConsumer(() => readProducer(firstSource));
+    const leaf = createConsumer(() => {
+      const value = readProducer(leafSource);
+      if (reenter) {
+        reenter = false;
+        writeProducer(parentSource, value);
+      }
+      return value;
+    });
+    const parent = createConsumer(
+      () =>
+        readConsumer(first) + readConsumer(leaf) + readProducer(parentSource),
+    );
+
+    expect(readConsumer(parent)).toBe(0);
+
+    reenter = true;
+    writeProducer(firstSource, 1);
+    writeProducer(leafSource, 1);
+
+    expect(readConsumer(parent)).toBe(3);
+    expect(parent.state & Both).toBe(0);
+  });
+
+  it("keeps an active parent retryable when a later owned dependency throws", () => {
+    const firstSource = createProducer(0);
+    const lateSource = createProducer(0);
+    let throwLate = false;
+    const first = createConsumer(() => readProducer(firstSource));
+    const late = createConsumer(() => {
+      const value = readProducer(lateSource);
+      if (throwLate) throw new Error("late owned dependency failed");
+      return value;
+    });
+    const parent = createConsumer(
+      () => readConsumer(first) + readConsumer(late),
+    );
+
+    expect(readConsumer(parent)).toBe(0);
+    writeProducer(firstSource, 1);
+    writeProducer(lateSource, 2);
+    throwLate = true;
+
+    expect(() => readConsumer(parent)).toThrow("late owned dependency failed");
+    expect(parent.state & Changed).toBe(Changed);
+    expect(parent.state & Computing).toBe(0);
+
+    throwLate = false;
+    expect(readConsumer(parent)).toBe(3);
+    expect(parent.state & Both).toBe(0);
+  });
+
   it("marks only immediate subscribers changed when a producer writes", () => {
     const source = createProducer(1);
     const midSpy = vi.fn(() => readProducer(source) * 2);

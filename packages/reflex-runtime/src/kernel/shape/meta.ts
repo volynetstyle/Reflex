@@ -75,6 +75,8 @@ export const Watcher = 1 << 4; // 16
 /** Watcher has been enqueued for execution. */
 export const Scheduled = 1 << 5; // 32
 export const Disposed = 1 << 6; // 64
+/** Watcher payload owns a cleanup callback. */
+export const WatcherCleanupPending = 1 << 7; // 128
 
 // <!-- Watcher end -->
 

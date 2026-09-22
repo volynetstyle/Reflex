@@ -130,6 +130,10 @@ function advanceCore(
             "projection.semantic.advance.propagate.skip-edge",
           );
         push_iterator_once_skipping(firstOut, skipOutEdge);
+      } else if (__PROFILE__) {
+        observeRuntimeProjection?.(
+          "projection.semantic.advance.propagate.owned-edge-only-skip",
+        );
       }
     } else {
       push_iterator_once(firstOut);

@@ -10,6 +10,7 @@ import {
 } from "@runtime/kernel/execution";
 import {
   Changed,
+  Scheduled,
   Unknown,
   Watcher,
   type ReactiveEdge,
@@ -55,6 +56,14 @@ function pushIteratorOnceSkippingCore(
         });
 
       if ((state & Watcher) !== 0 && nodeInvalidatedHook) {
+        if ((state & Scheduled) !== 0) {
+          if (__PROFILE__)
+            observeRuntimeProjection?.(
+              "projection.semantic.push-once.watcher.scheduled-delivery-skip",
+            );
+          continue;
+        }
+
         if (__DEV__) emitNodeInvalidated(sub);
 
         if (!__DEV__) nodeInvalidatedHook(sub);
@@ -102,6 +111,14 @@ function pushIteratorOnceSkippingCore(
         });
 
       if ((state & Watcher) !== 0 && nodeInvalidatedHook) {
+        if ((state & Scheduled) !== 0) {
+          if (__PROFILE__)
+            observeRuntimeProjection?.(
+              "projection.semantic.push-once.watcher.scheduled-delivery-skip",
+            );
+          continue;
+        }
+
         if (__DEV__) emitNodeInvalidated(sub);
 
         if (!__DEV__) nodeInvalidatedHook!(sub);

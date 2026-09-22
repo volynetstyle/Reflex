@@ -88,11 +88,17 @@ export function flushQueuedWatchers(
     ring[index] = undefined;
     head += 1;
     queue.head = head;
+    if (SCHEDULER_PROFILE_ENABLED)
+      profileSchedulerPolicyCounter("queueDequeues");
 
     // Clear before running so a watcher may enqueue itself again.
     releaseWatcherSchedule(node);
 
-    if (node.compute === undefined) continue;
+    if (node.compute === undefined) {
+      if (SCHEDULER_PROFILE_ENABLED)
+        profileSchedulerPolicyCounter("disposedEffectsSkipped");
+      continue;
+    }
 
     if (SCHEDULER_PROFILE_ENABLED) profileSchedulerPolicyCounter("effectsRun");
 

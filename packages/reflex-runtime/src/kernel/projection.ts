@@ -18,6 +18,8 @@ export const legacyCounterProjection = {
   "projection.semantic.advance.propagate.invoke": "advancePropagateCalls",
   "projection.semantic.advance.propagate.skip-edge":
     "advancePropagateSkippedEdge",
+  "projection.semantic.advance.propagate.owned-edge-only-skip":
+    "advanceOwnedEdgeOnlySkipped",
   "projection.semantic.pull.invoke": "pullCalls",
   "projection.semantic.pull.edge.visit": "pullEdgesVisited",
   "projection.semantic.pull.dependency.changed": "pullChangedDeps",
@@ -46,6 +48,8 @@ export const legacyCounterProjection = {
   "projection.semantic.push-once.subscriber.changed.skip":
     "pushOnceAlreadyChangedSkipped",
   "projection.semantic.push-once.edge.explicit-skip": "pushOnceSkippedEdges",
+  "projection.semantic.push-once.watcher.scheduled-delivery-skip":
+    "pushOnceScheduledWatcherDeliverySkipped",
   "projection.semantic.write.invoke": "writeCalls",
   "projection.semantic.write.value.same": "writeSameValue",
   "projection.semantic.write.value.changed": "writeChanged",
@@ -73,10 +77,26 @@ export const legacyCounterProjection = {
   "projection.semantic.node.invalidated.emit": "nodeInvalidatedEmits",
   "projection.semantic.watcher.cleanup": "watcherCleanups",
   "projection.semantic.watcher.run": "watcherRunCalls",
+  "projection.semantic.watcher.schedule.attempt": "watcherScheduleAttempts",
+  "projection.semantic.watcher.schedule.success": "watcherScheduleSuccesses",
+  "projection.semantic.watcher.schedule.dedup-skip":
+    "watcherScheduleDedupSkipped",
+  "projection.semantic.watcher.schedule.release": "watcherScheduleReleases",
+  "projection.semantic.watcher.frontier.invoke": "watcherFrontierInvokes",
+  "projection.semantic.watcher.frontier.edge.visit":
+    "watcherFrontierEdgesVisited",
+  "projection.semantic.watcher.frontier.dependency.changed":
+    "watcherFrontierChangedDeps",
+  "projection.semantic.watcher.frontier.dependency.invalid":
+    "watcherFrontierInvalidDeps",
+  "projection.semantic.watcher.frontier.dependency.clean":
+    "watcherFrontierCleanDeps",
   "projection.semantic.watcher.clean.skip": "watcherCleanSkips",
   "projection.semantic.watcher.stable.skip": "watcherStableSkips",
   "projection.semantic.watcher.disposed.skip": "watcherDisposedSkips",
   "projection.semantic.watcher.execute": "watcherExecutions",
+  "projection.semantic.watcher.execute.exit": "watcherExecutionExits",
+  "projection.semantic.watcher.cleanup.check": "watcherCleanupChecks",
   "projection.semantic.watcher.dispose": "watcherDisposals",
   "projection.semantic.tracking.resolve": "trackingResolveCalls",
   "projection.semantic.tracking.slow-path": "trackingSlowPath",
@@ -105,6 +125,8 @@ export const legacyCounterProjection = {
   "projection.semantic.cleanup.invoke": "cleanupCalls",
   "projection.semantic.cleanup.skip": "cleanupSkipped",
   "projection.semantic.cleanup.edge.drop": "cleanupEdgesDropped",
+  "projection.semantic.compute.context.enter": "computeContextEnters",
+  "projection.semantic.compute.context.restore": "computeContextRestores",
 } as const satisfies Readonly<
   Record<`projection.semantic.${string}`, RuntimeProfileCounterName>
 >;
