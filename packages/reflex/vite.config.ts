@@ -47,6 +47,7 @@ export default defineConfig({
     environment: "node",
     isolate: false,
     pool: "forks",
+    include: ["tests/**/*.test.ts"],
     coverage: {
       provider: "v8",
       include: ["packages/reflex/src/**/*.ts"],

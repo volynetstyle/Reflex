@@ -1,0 +1,1016 @@
+[
+  {
+    "family": "width",
+    "width": 1,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 1,
+    "nsPerOperationMedian": 2162.949515905949,
+    "nsPerCallbackMedian": 2162.949515905949,
+    "nsPerOperationTrials": [
+      2082.6606191744318,
+      2159.5670752762403,
+      2251.544488472622,
+      2237.996244635191,
+      2162.949515905949
+    ]
+  },
+  {
+    "family": "width",
+    "width": 1,
+    "prewarmQueueCapacity": 1024,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 1,
+    "nsPerOperationMedian": 2192.426367461433,
+    "nsPerCallbackMedian": 2192.426367461433,
+    "nsPerOperationTrials": [
+      2157.0474137931033,
+      2268.9427612481877,
+      2198.5759493670857,
+      2192.426367461433,
+      2190.1698179271684
+    ]
+  },
+  {
+    "family": "width",
+    "width": 4,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 4,
+    "nsPerOperationMedian": 5068.037014563108,
+    "nsPerCallbackMedian": 1267.009253640777,
+    "nsPerOperationTrials": [
+      4999.640575079864,
+      5068.037014563108,
+      6033.862210424709,
+      5094.594869706853,
+      4962.678571428588
+    ]
+  },
+  {
+    "family": "width",
+    "width": 4,
+    "prewarmQueueCapacity": 1024,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 4,
+    "nsPerOperationMedian": 5043.6088709677415,
+    "nsPerCallbackMedian": 1260.9022177419354,
+    "nsPerOperationTrials": [
+      4994.31908945688,
+      4922.051886792435,
+      5043.6088709677415,
+      5275.983796296313,
+      5364.437071917824
+    ]
+  },
+  {
+    "family": "width",
+    "width": 8,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 8,
+    "nsPerOperationMedian": 8625.815590659346,
+    "nsPerCallbackMedian": 1078.2269488324182,
+    "nsPerOperationTrials": [
+      9263.960798816617,
+      8687.795138888847,
+      8625.815590659346,
+      8427.545362903227,
+      8539.156420764994
+    ]
+  },
+  {
+    "family": "width",
+    "width": 8,
+    "prewarmQueueCapacity": 1024,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 8,
+    "nsPerOperationMedian": 8654.80835635361,
+    "nsPerCallbackMedian": 1081.8510445442012,
+    "nsPerOperationTrials": [
+      9491.041666666692,
+      8453.201013513517,
+      8582.35997267759,
+      8654.80835635361,
+      8787.23665730335
+    ]
+  },
+  {
+    "family": "width",
+    "width": 16,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 16,
+    "nsPerOperationMedian": 15556.977103960413,
+    "nsPerCallbackMedian": 972.3110689975258,
+    "nsPerOperationTrials": [
+      15246.268203883572,
+      15527.07301980187,
+      15883.47537878777,
+      15556.977103960413,
+      15664.09374999992
+    ]
+  },
+  {
+    "family": "width",
+    "width": 16,
+    "prewarmQueueCapacity": 1024,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 16,
+    "nsPerOperationMedian": 15546.163366336585,
+    "nsPerCallbackMedian": 971.6352103960365,
+    "nsPerOperationTrials": [
+      15179.945388349546,
+      15309.071601941789,
+      15575.340346534667,
+      15546.163366336585,
+      15990.00318877557
+    ]
+  },
+  {
+    "family": "width",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 28589.801136363556,
+    "nsPerCallbackMedian": 893.4312855113611,
+    "nsPerOperationTrials": [
+      30403.33533653831,
+      28535.198863636422,
+      28589.801136363556,
+      28583.77840909105,
+      28644.00568181819
+    ]
+  },
+  {
+    "family": "width",
+    "width": 32,
+    "prewarmQueueCapacity": 1024,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 72213.42329545425,
+    "nsPerCallbackMedian": 2256.6694779829454,
+    "nsPerOperationTrials": [
+      71486.57670454512,
+      73934.80113636355,
+      71821.94602272706,
+      72213.42329545425,
+      72409.30397727202
+    ]
+  },
+  {
+    "family": "width",
+    "width": 64,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 64,
+    "nsPerOperationMedian": 138607.2916666663,
+    "nsPerCallbackMedian": 2165.738932291661,
+    "nsPerOperationTrials": [
+      137159.37499999834,
+      137955.85937500003,
+      139395.83333333398,
+      138912.63020833358,
+      138607.2916666663
+    ]
+  },
+  {
+    "family": "width",
+    "width": 64,
+    "prewarmQueueCapacity": 1024,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 64,
+    "nsPerOperationMedian": 138250.5208333337,
+    "nsPerCallbackMedian": 2160.164388020839,
+    "nsPerOperationTrials": [
+      139848.0468749999,
+      137478.25520833363,
+      138250.5208333337,
+      139169.0104166656,
+      138205.4687500016
+    ]
+  },
+  {
+    "family": "width",
+    "width": 128,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 128,
+    "nsPerOperationMedian": 270941.4062499983,
+    "nsPerCallbackMedian": 2116.729736328112,
+    "nsPerOperationTrials": [
+      270941.4062499983,
+      269169.0104166658,
+      271681.7708333347,
+      273033.5937500002,
+      268506.2499999968
+    ]
+  },
+  {
+    "family": "width",
+    "width": 128,
+    "prewarmQueueCapacity": 1024,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 128,
+    "nsPerOperationMedian": 269146.354166665,
+    "nsPerCallbackMedian": 2102.7058919270703,
+    "nsPerOperationTrials": [
+      268026.56249999756,
+      267127.6041666649,
+      269146.354166665,
+      271018.7500000008,
+      273871.3541666679
+    ]
+  },
+  {
+    "family": "width",
+    "width": 256,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 256,
+    "nsPerOperationMedian": 533090.1041666607,
+    "nsPerCallbackMedian": 2082.3832194010183,
+    "nsPerOperationTrials": [
+      538365.625000002,
+      538736.9791666666,
+      533090.1041666607,
+      529700.0000000006,
+      533032.2916666716
+    ]
+  },
+  {
+    "family": "width",
+    "width": 256,
+    "prewarmQueueCapacity": 1024,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 256,
+    "nsPerOperationMedian": 530731.770833332,
+    "nsPerCallbackMedian": 2073.170979817703,
+    "nsPerOperationTrials": [
+      533604.6875000022,
+      531427.6041666706,
+      528784.8958333351,
+      528667.7083333397,
+      530731.770833332
+    ]
+  },
+  {
+    "family": "body",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 71782.5284090917,
+    "nsPerCallbackMedian": 2243.2040127841155,
+    "nsPerOperationTrials": [
+      72825.3551136362,
+      71515.48295454611,
+      71782.5284090917,
+      72178.55113636321,
+      71745.66761363688
+    ]
+  },
+  {
+    "family": "body",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 4,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 72051.49147727303,
+    "nsPerCallbackMedian": 2251.609108664782,
+    "nsPerOperationTrials": [
+      71905.32670454466,
+      72051.49147727303,
+      71587.28693181873,
+      72271.66193181812,
+      72074.50284090814
+    ]
+  },
+  {
+    "family": "body",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 16,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 72563.84943181873,
+    "nsPerCallbackMedian": 2267.6202947443353,
+    "nsPerOperationTrials": [
+      72485.0852272735,
+      72204.33238636433,
+      73156.32102272735,
+      72861.78977272651,
+      72563.84943181873
+    ]
+  },
+  {
+    "family": "body",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 64,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 74690.92261904583,
+    "nsPerCallbackMedian": 2334.091331845182,
+    "nsPerOperationTrials": [
+      73922.37215909021,
+      75153.42261904747,
+      74613.9136904763,
+      75388.7648809539,
+      74690.92261904583
+    ]
+  },
+  {
+    "family": "body",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 256,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 83502.46710526371,
+    "nsPerCallbackMedian": 2609.452097039491,
+    "nsPerOperationTrials": [
+      83502.46710526371,
+      83747.6973684225,
+      84816.3651315812,
+      83389.47368421139,
+      83067.1052631589
+    ]
+  },
+  {
+    "family": "callback-shape",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 71059.94318181853,
+    "nsPerCallbackMedian": 2220.623224431829,
+    "nsPerOperationTrials": [
+      72250.85227272581,
+      70900.88315217342,
+      71059.94318181853,
+      70833.49184782522,
+      71206.46306818075
+    ]
+  },
+  {
+    "family": "callback-shape",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 71634.51704545568,
+    "nsPerCallbackMedian": 2238.57865767049,
+    "nsPerOperationTrials": [
+      71634.51704545568,
+      71199.99999999943,
+      71930.53977272775,
+      71486.00852272839,
+      71996.51988636385
+    ]
+  },
+  {
+    "family": "execution-topology",
+    "width": 8,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 8,
+    "nsPerOperationMedian": 21879.05815972218,
+    "nsPerCallbackMedian": 2734.8822699652724,
+    "nsPerOperationTrials": [
+      22034.352992957945,
+      22034.022887323674,
+      21828.45052083356,
+      21879.05815972218,
+      21632.14897260263
+    ]
+  },
+  {
+    "family": "execution-topology",
+    "width": 8,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "serial",
+    "callbacksPerOperation": 8,
+    "nsPerOperationMedian": 49986.03515625,
+    "nsPerCallbackMedian": 6248.25439453125,
+    "nsPerOperationTrials": [
+      50341.79687499929,
+      49986.03515625,
+      50032.71484375027,
+      49533.10546875045,
+      49920.94726562613
+    ]
+  },
+  {
+    "family": "execution-topology",
+    "width": 16,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 16,
+    "nsPerOperationMedian": 38605.37347561021,
+    "nsPerCallbackMedian": 2412.8358422256383,
+    "nsPerOperationTrials": [
+      38605.37347561021,
+      38681.47865853605,
+      38509.22256097602,
+      38784.83231707234,
+      38562.804878048744
+    ]
+  },
+  {
+    "family": "execution-topology",
+    "width": 16,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "serial",
+    "callbacksPerOperation": 16,
+    "nsPerOperationMedian": 99820.60546875004,
+    "nsPerCallbackMedian": 6238.787841796878,
+    "nsPerOperationTrials": [
+      100554.58984374965,
+      99303.71093749812,
+      100027.9296874993,
+      99820.60546875004,
+      98884.9609375002
+    ]
+  },
+  {
+    "family": "execution-topology",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 71666.05113636395,
+    "nsPerCallbackMedian": 2239.5640980113735,
+    "nsPerOperationTrials": [
+      71142.47159090714,
+      71666.05113636395,
+      73125.28409090904,
+      72111.15056818264,
+      71565.19886363423
+    ]
+  },
+  {
+    "family": "execution-topology",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "serial",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 201204.8828124975,
+    "nsPerCallbackMedian": 6287.652587890547,
+    "nsPerOperationTrials": [
+      201204.8828124975,
+      202362.8906249968,
+      198955.46875000035,
+      202108.98437500192,
+      198819.33593750035
+    ]
+  },
+  {
+    "family": "execution-topology",
+    "width": 64,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 64,
+    "nsPerOperationMedian": 137934.11458333084,
+    "nsPerCallbackMedian": 2155.2205403645444,
+    "nsPerOperationTrials": [
+      136170.83333333352,
+      138091.40624999828,
+      140711.45833333768,
+      137934.11458333084,
+      137216.40625000003
+    ]
+  },
+  {
+    "family": "execution-topology",
+    "width": 64,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "serial",
+    "callbacksPerOperation": 64,
+    "nsPerOperationMedian": 395357.0312500005,
+    "nsPerCallbackMedian": 6177.453613281258,
+    "nsPerOperationTrials": [
+      397799.218749995,
+      399604.68750000186,
+      393450.0000000014,
+      395357.0312500005,
+      392980.4687499967
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 8,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "claim-release",
+    "callbacksPerOperation": 8,
+    "nsPerOperationMedian": 1926.0198583744066,
+    "nsPerCallbackMedian": 240.75248229680082,
+    "nsPerOperationTrials": [
+      1900.3455346294268,
+      1966.2558962263945,
+      1926.0198583744066,
+      1923.6815805657504,
+      1943.767490671609
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 8,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "queue-roundtrip",
+    "callbacksPerOperation": 8,
+    "nsPerOperationMedian": 3849.7773341522816,
+    "nsPerCallbackMedian": 481.2221667690352,
+    "nsPerOperationTrials": [
+      3479.368055555546,
+      3849.7773341522816,
+      3824.946515892312,
+      3999.6563299232876,
+      3906.0902431420695
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 8,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "empty-wrapper",
+    "callbacksPerOperation": 8,
+    "nsPerOperationMedian": 8533.05876358698,
+    "nsPerCallbackMedian": 1066.6323454483725,
+    "nsPerOperationTrials": [
+      8390.399398395786,
+      8745.63547486022,
+      8443.19556451608,
+      8535.979959238884,
+      8533.05876358698
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 8,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "direct-source",
+    "callbacksPerOperation": 8,
+    "nsPerOperationMedian": 15758.265624999694,
+    "nsPerCallbackMedian": 1969.7832031249618,
+    "nsPerOperationTrials": [
+      15615.03712871298,
+      15758.265624999694,
+      15796.98547979805,
+      15867.897727272833,
+      15535.674504950195
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 8,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "scheduler-bypass",
+    "callbacksPerOperation": 8,
+    "nsPerOperationMedian": 15920.707070707485,
+    "nsPerCallbackMedian": 1990.0883838384357,
+    "nsPerOperationTrials": [
+      15920.707070707485,
+      16211.855670103456,
+      15956.186224489751,
+      15803.519570706863,
+      15842.077020202147
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 8,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "shared-derived",
+    "callbacksPerOperation": 8,
+    "nsPerOperationMedian": 21696.85359589017,
+    "nsPerCallbackMedian": 2712.1066994862713,
+    "nsPerOperationTrials": [
+      21758.181423611706,
+      21448.43749999992,
+      21628.232020547897,
+      21696.85359589017,
+      21773.74131944434
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 16,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "claim-release",
+    "callbacksPerOperation": 16,
+    "nsPerOperationMedian": 3906.429687500008,
+    "nsPerCallbackMedian": 244.1518554687505,
+    "nsPerOperationTrials": [
+      3992.187499999962,
+      3906.429687500008,
+      3939.668608312321,
+      3900.99360972565,
+      3860.6520061728556
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 16,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "queue-roundtrip",
+    "callbacksPerOperation": 16,
+    "nsPerOperationMedian": 7283.51017441852,
+    "nsPerCallbackMedian": 455.2193859011575,
+    "nsPerOperationTrials": [
+      7202.743375576267,
+      7136.313920454479,
+      7485.137559808718,
+      7283.51017441852,
+      7397.051886792437
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 16,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "empty-wrapper",
+    "callbacksPerOperation": 16,
+    "nsPerOperationMedian": 16622.95545212724,
+    "nsPerCallbackMedian": 1038.9347157579525,
+    "nsPerOperationTrials": [
+      16622.95545212724,
+      16695.046542553006,
+      16443.37565104159,
+      16719.913563829712,
+      16359.570312500202
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 16,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "direct-source",
+    "callbacksPerOperation": 16,
+    "nsPerOperationMedian": 29489.976415093995,
+    "nsPerCallbackMedian": 1843.1235259433747,
+    "nsPerOperationTrials": [
+      29244.18402777831,
+      29489.976415093995,
+      29622.081367924606,
+      29545.666273584862,
+      28822.954545454526
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 16,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "scheduler-bypass",
+    "callbacksPerOperation": 16,
+    "nsPerOperationMedian": 28966.23263888774,
+    "nsPerCallbackMedian": 1810.3895399304838,
+    "nsPerOperationTrials": [
+      29051.18634259275,
+      28733.06818181928,
+      28645.79545454572,
+      28966.23263888774,
+      29062.152777778803
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 16,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "shared-derived",
+    "callbacksPerOperation": 16,
+    "nsPerOperationMedian": 39722.34375000028,
+    "nsPerCallbackMedian": 2482.6464843750173,
+    "nsPerOperationTrials": [
+      39878.20312500219,
+      39722.34375000028,
+      40215.184294870945,
+      39656.24999999875,
+      39641.13281249979
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "claim-release",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 7654.161585366261,
+    "nsPerCallbackMedian": 239.19254954269564,
+    "nsPerOperationTrials": [
+      7604.687499999772,
+      7890.77418341695,
+      7582.0274758454425,
+      7746.1711014852835,
+      7654.161585366261
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "queue-roundtrip",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 13771.792763157808,
+    "nsPerCallbackMedian": 430.3685238486815,
+    "nsPerOperationTrials": [
+      13692.146739130412,
+      13896.377212389241,
+      13629.211956521945,
+      13963.364955357756,
+      13771.792763157808
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "empty-wrapper",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 32605.631510416326,
+    "nsPerCallbackMedian": 1018.9259847005102,
+    "nsPerOperationTrials": [
+      31948.724489796274,
+      32605.631510416326,
+      32788.704427083816,
+      32350.637755102147,
+      32786.9791666681
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "direct-source",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 56467.9687499969,
+    "nsPerCallbackMedian": 1764.6240234374031,
+    "nsPerOperationTrials": [
+      58024.594907406194,
+      56509.709821426666,
+      56436.272321426324,
+      56467.9687499969,
+      56455.803571428274
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "scheduler-bypass",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 55118.803879312945,
+    "nsPerCallbackMedian": 1722.4626212285295,
+    "nsPerOperationTrials": [
+      54158.78232758258,
+      55159.321120691886,
+      54245.905172416344,
+      55118.803879312945,
+      55228.556034480476
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "shared-derived",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 75888.69047618746,
+    "nsPerCallbackMedian": 2371.521577380858,
+    "nsPerOperationTrials": [
+      76451.78571429022,
+      75888.69047618746,
+      75659.82142857376,
+      75850.96726190732,
+      77034.15178571049
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 64,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "claim-release",
+    "callbacksPerOperation": 64,
+    "nsPerOperationMedian": 15621.271658415475,
+    "nsPerCallbackMedian": 244.0823696627418,
+    "nsPerOperationTrials": [
+      15858.175505049894,
+      15544.832920792294,
+      15485.133044554495,
+      15815.609217171563,
+      15621.271658415475
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 64,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "queue-roundtrip",
+    "callbacksPerOperation": 64,
+    "nsPerOperationMedian": 27046.363146551215,
+    "nsPerCallbackMedian": 422.59942416486274,
+    "nsPerOperationTrials": [
+      27847.28618421109,
+      27046.363146551215,
+      26437.08333333355,
+      26858.156779661516,
+      27090.975215516803
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 64,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "empty-wrapper",
+    "callbacksPerOperation": 64,
+    "nsPerOperationMedian": 64138.18750000246,
+    "nsPerCallbackMedian": 1002.1591796875384,
+    "nsPerOperationTrials": [
+      64577.68750000014,
+      63689.062500002365,
+      63975.562499999796,
+      64138.18750000246,
+      64149.437500000204
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 64,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "direct-source",
+    "callbacksPerOperation": 64,
+    "nsPerOperationMedian": 110119.06249999962,
+    "nsPerCallbackMedian": 1720.610351562494,
+    "nsPerOperationTrials": [
+      113703.12499999662,
+      110047.395833332,
+      110217.39583333481,
+      109776.8750000038,
+      110119.06249999962
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 64,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "scheduler-bypass",
+    "callbacksPerOperation": 64,
+    "nsPerOperationMedian": 106503.64583333005,
+    "nsPerCallbackMedian": 1664.119466145782,
+    "nsPerOperationTrials": [
+      106203.0208333302,
+      106591.66666666807,
+      107393.74999999806,
+      106503.64583333005,
+      105767.39583333014
+    ]
+  },
+  {
+    "family": "pipeline",
+    "width": 64,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "leg": "shared-derived",
+    "callbacksPerOperation": 64,
+    "nsPerOperationMedian": 148430.96590909062,
+    "nsPerCallbackMedian": 2319.233842329541,
+    "nsPerOperationTrials": [
+      149638.9204545494,
+      148990.48295454908,
+      148430.96590909062,
+      147011.64772727474,
+      148221.0227272741
+    ]
+  }
+]
