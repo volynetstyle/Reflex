@@ -20,6 +20,8 @@ export interface RuntimePort<P, C, W> {
 
   runWatcher(node: W): void;
   disposeWatcher(node: W): void;
+  enterBatch(): void;
+  leaveBatch(): void;
 }
 
 export type RuntimeNode<P, C, W> =
@@ -103,6 +105,14 @@ export class RuntimeMachine<P, C, W> implements Machine {
         for (const watcher of this.watchers.values()) {
           this.runtime.runWatcher(watcher);
         }
+        return;
+
+      case "enterBatch":
+        this.runtime.enterBatch();
+        return;
+
+      case "leaveBatch":
+        this.runtime.leaveBatch();
         return;
 
       case "dispose":

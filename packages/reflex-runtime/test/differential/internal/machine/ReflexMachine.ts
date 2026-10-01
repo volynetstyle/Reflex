@@ -10,6 +10,7 @@ import {
   runWatcher,
   writeProducer,
 } from "../../../../src";
+import { enterReactiveBatch, leaveReactiveBatch } from "../../../../src/internal";
 
 import type { Value } from "../../api";
 
@@ -34,6 +35,8 @@ export class ReflexMachine extends RuntimeMachine<
 
       runWatcher,
       disposeWatcher,
+      enterBatch: enterReactiveBatch,
+      leaveBatch: leaveReactiveBatch,
     } satisfies RuntimePort<ReflexProducer, ReflexComputed, ReflexWatcher>);
   }
 }

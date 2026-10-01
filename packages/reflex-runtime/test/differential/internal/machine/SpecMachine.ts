@@ -33,6 +33,10 @@ export class SpecMachine extends RuntimeMachine<
 
       runWatcher: (node) => runtime.runWatcher(node),
       disposeWatcher: (node) => runtime.disposeWatcher(node),
+      // The spec observes explicit flushes and values. Batch boundaries only
+      // defer Reflex's host idle notification, which is outside this oracle.
+      enterBatch: () => undefined,
+      leaveBatch: () => undefined,
     } satisfies RuntimePort<
       SpecProducer<Value>,
       SpecComputed<Value>,

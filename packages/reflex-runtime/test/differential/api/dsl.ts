@@ -89,6 +89,8 @@ export const op = {
   dispose: withId("dispose"),
 
   flush: (): Op => ({ type: "flush" }),
+  enterBatch: (): Op => ({ type: "enterBatch" }),
+  leaveBatch: (): Op => ({ type: "leaveBatch" }),
 };
 
 export function defineProgram(

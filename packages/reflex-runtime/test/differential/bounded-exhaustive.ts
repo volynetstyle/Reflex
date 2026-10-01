@@ -317,6 +317,8 @@ function renameOperation(
     case "dispose":
       return { ...operation, id };
     case "flush":
+    case "enterBatch":
+    case "leaveBatch":
       return operation;
   }
 }

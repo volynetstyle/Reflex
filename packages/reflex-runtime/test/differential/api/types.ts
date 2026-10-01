@@ -18,7 +18,7 @@ export type Op =
   | { type: "effect"; id: NodeId; expression: Expr; cleanup?: Expr }
   | { type: "set"; id: NodeId; value: Value }
   | { type: "read" | "dispose"; id: NodeId }
-  | { type: "flush" };
+  | { type: "flush" | "enterBatch" | "leaveBatch" };
 
 export interface Program {
   readonly id: string;
