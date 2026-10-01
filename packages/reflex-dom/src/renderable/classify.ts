@@ -2,35 +2,32 @@ import {
   RenderableKind,
   getTaggedRenderableKind,
   isEmptyRenderableValue,
-} from "../renderable/kind";
+  isTextRenderableValue,
+} from "./kind";
+import { isDOMNode } from "../host/document";
 
 function isIterableRenderableValue(value: unknown): value is Iterable<unknown> {
   return (
     Array.isArray(value) ||
     (typeof value === "object" &&
       value !== null &&
-      Symbol.iterator in value)
+      typeof (value as Iterable<unknown>)[Symbol.iterator] === "function")
   );
-}
-
-function isServerNodeValue(value: unknown): value is Node {
-  return typeof Node !== "undefined" && value instanceof Node;
 }
 
 function isAccessorRenderableValue(value: unknown): value is () => unknown {
   return typeof value === "function";
 }
 
-export function classifyServerRenderable(value: unknown): RenderableKind {
+export function classifyRenderable(value: unknown): RenderableKind {
   if (isEmptyRenderableValue(value)) {
     return RenderableKind.Empty;
   }
 
-  if (isIterableRenderableValue(value)) {
-    return RenderableKind.Array;
-  }
+  if (isTextRenderableValue(value)) return RenderableKind.Text;
+  if (Array.isArray(value)) return RenderableKind.Array;
 
-  if (isServerNodeValue(value)) {
+  if (isDOMNode(value)) {
     return RenderableKind.Node;
   }
 
@@ -38,5 +35,10 @@ export function classifyServerRenderable(value: unknown): RenderableKind {
     return RenderableKind.Accessor;
   }
 
-  return getTaggedRenderableKind(value) ?? RenderableKind.Text;
+  return (
+    getTaggedRenderableKind(value) ??
+    (isIterableRenderableValue(value)
+      ? RenderableKind.Array
+      : RenderableKind.Text)
+  );
 }

@@ -12,6 +12,7 @@ export type {
   RenderableRecord,
 } from "@volynets/reflex-framework";
 
+/** Values accepted as content by the DOM renderer. Strings are rendered as text. */
 export type JSXRenderable = FrameworkJSXRenderable<Node>;
 
 export type Component<P = Record<string, never>> = FrameworkComponent<P, Node>;

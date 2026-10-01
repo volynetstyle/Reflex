@@ -3,12 +3,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, memo, signal } from "./reactivity";
 import {
-  RenderEffectPhase,
   createDOMRenderer,
   createDOMRuntime,
   render,
   useEffect,
-  useEffectRender,
+  useMountedEffect,
 } from "../src";
 
 describe("render lifecycle and reactive bindings", () => {
@@ -36,7 +35,7 @@ describe("render lifecycle and reactive bindings", () => {
       return <span>{source}</span>;
     }
 
-    render(<div>{() => show() ? <Child /> : null}</div>, container);
+    render(<div>{() => (show() ? <Child /> : null)}</div>, container);
 
     expect(log).toEqual(["run:a"]);
 
@@ -122,12 +121,12 @@ describe("render lifecycle and reactive bindings", () => {
     expect(output?.getAttribute("data-label")).toBe("value:6");
   });
 
-  it("runs useEffectRender after the component DOM is mounted", () => {
+  it("runs useMountedEffect after the component DOM is mounted", () => {
     const container = document.createElement("div");
     const log: string[] = [];
 
     function Child() {
-      useEffectRender(() => {
+      useMountedEffect(() => {
         log.push(container.querySelector("span")?.textContent ?? "missing");
 
         return () => {
@@ -148,35 +147,26 @@ describe("render lifecycle and reactive bindings", () => {
     expect(log).toEqual(["render", "mounted", "cleanup"]);
   });
 
-  it("flushes render effect scheduler phases in render order", () => {
+  it("runs the renderer mount effects in FIFO order", () => {
     const renderer = createDOMRenderer();
     const log: string[] = [];
 
-    renderer.renderEffectScheduler.schedule(
-      () => log.push("after"),
-      RenderEffectPhase.AfterRender,
-    );
-    renderer.renderEffectScheduler.schedule(
-      () => log.push("render"),
-      RenderEffectPhase.Render,
-    );
-    renderer.renderEffectScheduler.schedule(
-      () => log.push("before"),
-      RenderEffectPhase.BeforeRender,
-    );
+    renderer.mountEffects.schedule(() => log.push("after"));
+    renderer.mountEffects.schedule(() => log.push("render"));
+    renderer.mountEffects.schedule(() => log.push("before"));
 
-    renderer.renderEffectScheduler.flush();
+    renderer.mountEffects.flush();
 
-    expect(log).toEqual(["before", "render", "after"]);
+    expect(log).toEqual(["after", "render", "before"]);
   });
 
-  it("runs useEffectRender after reactive DOM updates settle", () => {
+  it("runs useMountedEffect after reactive DOM updates settle", () => {
     const container = document.createElement("div");
     const [count, setCount] = signal(1);
     const log: string[] = [];
 
     function Child() {
-      useEffectRender(() => {
+      useMountedEffect(() => {
         count();
         log.push(container.querySelector("span")?.textContent ?? "missing");
       });
@@ -194,15 +184,17 @@ describe("render lifecycle and reactive bindings", () => {
     expect(log).toEqual(["1", "2"]);
   });
 
-  it("runs reactive useEffectRender updates in scheduler FIFO order", () => {
+  it("runs reactive useMountedEffect updates in scheduler FIFO order", () => {
     const container = document.createElement("div");
     const [count, setCount] = signal(1);
     const log: string[] = [];
 
     function Child() {
-      useEffectRender(() => {
+      useMountedEffect(() => {
         const value = count();
-        log.push(`render:${value}:${container.querySelector("span")?.textContent}`);
+        log.push(
+          `render:${value}:${container.querySelector("span")?.textContent}`,
+        );
       });
 
       useEffect(() => {
@@ -229,17 +221,21 @@ describe("render lifecycle and reactive bindings", () => {
 
     render(
       <div>
-        {() => show() ? <span data-value={attrSpy}>{textSpy}</span> : null}
+        {() => (show() ? <span data-value={attrSpy}>{textSpy}</span> : null)}
       </div>,
       container,
     );
 
     expect(container.querySelector("span")?.textContent).toBe("one");
-    expect(container.querySelector("span")?.getAttribute("data-value")).toBe("one");
+    expect(container.querySelector("span")?.getAttribute("data-value")).toBe(
+      "one",
+    );
 
     setValue("two");
     expect(container.querySelector("span")?.textContent).toBe("two");
-    expect(container.querySelector("span")?.getAttribute("data-value")).toBe("two");
+    expect(container.querySelector("span")?.getAttribute("data-value")).toBe(
+      "two",
+    );
 
     setShow(false);
     expect(container.querySelector("span")).toBeNull();
@@ -278,7 +274,10 @@ describe("render lifecycle and reactive bindings", () => {
       );
     }
 
-    const dispose = render(<section>{() => show() ? <Outer /> : null}</section>, container);
+    const dispose = render(
+      <section>{() => (show() ? <Outer /> : null)}</section>,
+      container,
+    );
 
     setShow(false);
     expect(log).toEqual(["inner", "outer"]);
@@ -320,11 +319,7 @@ describe("render lifecycle and reactive bindings", () => {
 
     log.length = 0;
     setEnabled(false);
-    expect(log).toEqual([
-      "inner:cleanup:2",
-      "outer:cleanup",
-      "outer:false",
-    ]);
+    expect(log).toEqual(["inner:cleanup:2", "outer:cleanup", "outer:false"]);
 
     log.length = 0;
     setValue(3);

@@ -1,3 +1,4 @@
+import { isHTMLElement } from "../host/document";
 import type { ElementInstance, ElementProps, ElementTag, Ref } from "../types";
 import { attachRef } from "../host/refs";
 import {
@@ -6,21 +7,23 @@ import {
   resolveNamespace,
   type Namespace,
 } from "../host/namespace";
-import { mountRenderRange } from "../structure/render-range";
+import { mountOwnedRange } from "../mount/range";
+
 import {
   createDOMOwnedReaction,
   registerDOMCleanup,
-} from "../runtime/execution";
+} from "../runtime/lifetime";
 import { bindElementProps } from "./element-binder";
 import { appendRenderableNodes } from "./append";
 
 function createElementInNamespace<Tag extends ElementTag>(
   tag: Tag,
   namespace: Namespace,
+  doc: Document,
 ): ElementInstance<Tag> {
   return (namespace === "html"
-    ? document.createElement(tag)
-    : document.createElementNS(
+    ? doc.createElement(tag)
+    : doc.createElementNS(
         namespace === "svg" ? SVG_NS : MATHML_NS,
         tag,
       )) as unknown as ElementInstance<Tag>;
@@ -65,7 +68,7 @@ function resolveElementShadowRoot(
 ): ShadowRoot | null {
   const shadowRootConfig = resolveShadowRootConfig(props);
 
-  if (shadowRootConfig === null || !(hostElement instanceof HTMLElement)) {
+  if (shadowRootConfig === null || !isHTMLElement(hostElement)) {
     return null;
   }
 
@@ -111,7 +114,7 @@ function mountShadowRootChildren(
   shadowRoot: ShadowRoot,
   shadowChildren: unknown,
 ): void {
-  const shadowRenderRange = mountRenderRange(shadowRoot, shadowChildren, "html");
+  const shadowRenderRange = mountOwnedRange(shadowRoot, shadowChildren, "html");
 
   registerDOMCleanup(() => {
     shadowRenderRange.destroy();
@@ -149,7 +152,7 @@ function bindElementInternalsReference(
   elementInternalsRef: unknown,
 ): void {
   if (
-    !(hostElement instanceof HTMLElement) ||
+    !isHTMLElement(hostElement) ||
     typeof hostElement.attachInternals !== "function"
   ) {
     return;
@@ -172,9 +175,10 @@ export function mountElement<Tag extends ElementTag>(
   tag: Tag,
   props: ElementProps<Tag>,
   parentNamespace: Namespace,
+  doc: Document,
 ): ElementInstance<Tag> {
   const elementNamespace = resolveNamespace(tag, parentNamespace);
-  const element = createElementInNamespace(tag, elementNamespace);
+  const element = createElementInNamespace(tag, elementNamespace, doc);
   const propsRecord = props as Record<string, unknown>;
   const shadowRoot = resolveElementShadowRoot(element, propsRecord);
 

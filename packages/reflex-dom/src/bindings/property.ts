@@ -1,7 +1,7 @@
 import type { Accessor } from "../types";
 import type { Namespace } from "../host/namespace";
 import { applyProp } from "../host/props";
-import { createDOMOwnedReaction } from "../runtime/execution";
+import { createDOMOwnedReaction } from "../runtime/lifetime";
 
 export function bindReactiveProp(
   el: Element,

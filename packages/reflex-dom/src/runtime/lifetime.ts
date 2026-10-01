@@ -4,32 +4,29 @@ import {
   runWithOwnershipNode,
   type OwnershipNode,
 } from "@volynets/reflex-framework";
-import {
-  getActiveDOMExecutionContext,
-  runWithDOMExecutionContext,
-} from "./state";
-import type { DOMExecutionContext } from "./types";
-import type { Cleanup } from "../../types";
+import { getDOMContext, withDOMContext } from "./context";
+import type { DOMContext } from "./context";
+import type { Cleanup } from "../types";
 
 export function runInDOMOwnershipNode<T>(
   node: OwnershipNode,
   fn: () => T,
-  context: DOMExecutionContext = getActiveDOMExecutionContext(),
+  context: DOMContext = getDOMContext(),
 ): T {
   return runWithOwnershipNode(context.owner, node, () =>
-    runWithDOMExecutionContext(context, fn),
+    withDOMContext(context, fn),
   );
 }
 
 export function createDOMOwnedReaction<T>(
   read: () => T,
   react: (value: T) => void | Cleanup,
-  context: DOMExecutionContext = getActiveDOMExecutionContext(),
+  context: DOMContext = getDOMContext(),
 ): Cleanup {
   let initialized = false;
 
   return createOwnedEffect(context.owner, context.owner.currentNode, () =>
-    runWithDOMExecutionContext(context, () => {
+    withDOMContext(context, () => {
       const value = read();
 
       if (!initialized) {
@@ -44,9 +41,9 @@ export function createDOMOwnedReaction<T>(
 
 export function registerDOMCleanup(
   fn: () => void,
-  context: DOMExecutionContext = getActiveDOMExecutionContext(),
+  context: DOMContext = getDOMContext(),
 ): void {
   registerCleanup(context.owner, () => {
-    runWithDOMExecutionContext(context, fn);
+    withDOMContext(context, fn);
   });
 }

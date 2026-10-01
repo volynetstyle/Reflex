@@ -17,9 +17,9 @@ import { resolveNamespace, type Namespace, URL_ATTRS } from "../host/namespace";
 import { sanitizeURL } from "../host/sanitize";
 import { isVoidTag } from "../host/tags";
 import { RenderableKind } from "../renderable/kind";
-import { wrapHydrationSlotMarkup } from "../hydrate/markers";
+import { wrapHydrationSlotMarkup } from "../renderable/markers";
 import type { StyleValue } from "../types";
-import { classifyServerRenderable } from "./renderable";
+import { classifyRenderable } from "../renderable/classify";
 import {
   createOwnerContext,
   createOwnershipNode,
@@ -89,7 +89,10 @@ function stringifyNodeValue(node: Node): string {
     return `<!--${node.data}-->`;
   }
 
-  if (typeof DocumentFragment !== "undefined" && node instanceof DocumentFragment) {
+  if (
+    typeof DocumentFragment !== "undefined" &&
+    node instanceof DocumentFragment
+  ) {
     let html = "";
     let child = node.firstChild;
 
@@ -105,7 +108,11 @@ function stringifyNodeValue(node: Node): string {
 }
 
 function resolveServerValue(name: string, value: unknown): unknown {
-  if (value === undefined || PLATFORM_PROPS.has(name) || isEventProp(name, value)) {
+  if (
+    value === undefined ||
+    PLATFORM_PROPS.has(name) ||
+    isEventProp(name, value)
+  ) {
     return undefined;
   }
 
@@ -177,7 +184,8 @@ function renderAttributes(
 }
 
 function resolveTextareaContent(props: Record<string, unknown>): string | null {
-  const value = resolveServerValue("value", props.value) ??
+  const value =
+    resolveServerValue("value", props.value) ??
     resolveServerValue("defaultValue", props.defaultValue);
 
   return value == null ? null : String(value);
@@ -221,7 +229,10 @@ function renderElementToString(
   return `<${renderable.tag}${attributes}>${childrenHtml}</${renderable.tag}>`;
 }
 
-function renderDynamicSlot(value: JSXRenderable | unknown, namespace: Namespace): string {
+function renderDynamicSlot(
+  value: JSXRenderable | unknown,
+  namespace: Namespace,
+): string {
   return wrapHydrationSlotMarkup(renderRenderableToString(value, namespace));
 }
 
@@ -229,7 +240,7 @@ function renderRenderableToString(
   value: JSXRenderable | unknown,
   parentNamespace: Namespace,
 ): string {
-  switch (classifyServerRenderable(value)) {
+  switch (classifyRenderable(value)) {
     case RenderableKind.Empty:
       return "";
 
@@ -298,6 +309,18 @@ function renderRenderableToString(
   }
 }
 
+/**
+ * Serializes a renderable tree to server HTML with markers understood by
+ * `hydrate`.
+ *
+ * @remarks
+ * **When to use:** to create SSR markup before sending HTML to the client for
+ * hydration.
+ * **When not to use:** to mutate browser DOM or produce static HTML without
+ * client markers; this renderer is designed for the SSR/hydration pair.
+ *
+ * @param renderable The root renderable value.
+ */
 export function renderToString(renderable: JSXRenderable): string {
   const owner = createOwnerContext();
   const root = createOwnershipNode();

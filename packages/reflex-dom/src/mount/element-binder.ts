@@ -1,13 +1,11 @@
+import { isHTMLTag } from "../host/document";
 import { bindReactiveProp } from "../bindings/property";
 import { isEventProp, attachEventListener } from "../host/events";
 import type { Namespace } from "../host/namespace";
 import { applyProp } from "../host/props";
 import { attachRef } from "../host/refs";
-import {
-  dispatchDOMEvent,
-  getActiveDOMExecutionContext,
-  registerDOMCleanup,
-} from "../runtime/execution";
+import { dispatchDOMEvent, getDOMContext } from "../runtime/context";
+import { registerDOMCleanup } from "../runtime/lifetime";
 import type { Ref } from "../types";
 
 type ElementBindingPhase = "initial" | "deferred";
@@ -24,7 +22,7 @@ function isPlatformManagedProp(name: string): boolean {
 
 function shouldBindPropAfterChildren(element: Element, name: string): boolean {
   return (
-    element instanceof HTMLSelectElement &&
+    isHTMLTag(element, "select") &&
     (name === "value" || name === "selectedIndex")
   );
 }
@@ -59,7 +57,7 @@ export function bindElementProperty(
   }
 
   if (isEventProp(name, value)) {
-    const context = getActiveDOMExecutionContext();
+    const context = getDOMContext();
     registerDOMCleanup(
       attachEventListener(
         element,
@@ -86,7 +84,7 @@ export function bindElementProps(
   namespace: Namespace,
   bindingPhase: ElementBindingPhase = "initial",
 ): void {
-  getActiveDOMExecutionContext();
+  getDOMContext();
 
   for (const name in props) {
     bindElementProperty(element, name, props[name], namespace, bindingPhase);

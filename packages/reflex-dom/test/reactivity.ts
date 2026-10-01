@@ -5,7 +5,7 @@ import {
   readProducer,
   writeProducer,
 } from "@volynets/reflex-runtime";
-import { getActiveDOMRuntime } from "../src/runtime/singleton";
+import { getActiveDOMRuntime } from "../src/client/default";
 
 export function signal<T>(initial: T) {
   const runtime = getActiveDOMRuntime();

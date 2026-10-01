@@ -1,11 +1,17 @@
+import { isDOMNode } from "../host/document";
 import { clearBetween } from "../host/mutations";
+import { createOwnedRange, type OwnedRange } from "./owned-range";
+import {
+  isEmptyRenderableValue,
+  isTextRenderableValue,
+} from "../renderable/kind";
 import {
   createOwnershipNode,
   disposeOwnershipNode,
   type OwnershipNode,
 } from "@volynets/reflex-framework";
 
-export type MountUnknown = (
+export type MountContent = (
   parent: Node,
   ownershipNode: OwnershipNode,
   value: unknown,
@@ -15,7 +21,7 @@ type ContentState =
   | { kind: "empty" }
   | { kind: "text"; node: Text; value: string }
   | { kind: "node"; node: Node }
-  | { kind: "mounted"; ownershipNode: OwnershipNode }
+  | { kind: "mounted"; range: OwnedRange }
   | { kind: "adopted" };
 
 export interface ContentSlot {
@@ -23,37 +29,19 @@ export interface ContentSlot {
   start: Comment;
   end: Comment;
   update(value: unknown): void;
-  dispose(): void;
   destroy(): void;
 }
 
-const NO_INITIAL_VALUE = Symbol("no-initial-value");
-
-function isEmptyValue(value: unknown): boolean {
-  return value == null || typeof value === "boolean";
-}
-
-function isTextValue(value: unknown): value is string | number | bigint {
-  return (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "bigint"
-  );
-}
-
 function isSingleNodeValue(value: unknown): value is Node {
-  return (
-    value instanceof Node && value.nodeType !== Node.DOCUMENT_FRAGMENT_NODE
-  );
+  return isDOMNode(value) && value.nodeType !== 11;
 }
 
 function createSlotController(
   doc: Document,
-  mountUnknown: MountUnknown,
+  mountUnknown: MountContent,
   start: Comment,
   end: Comment,
   initialState: ContentState,
-  initialValue: unknown | typeof NO_INITIAL_VALUE,
   fragment: DocumentFragment,
 ): ContentSlot {
   let destroyed = false;
@@ -74,10 +62,20 @@ function createSlotController(
     const ownershipNode = createOwnershipNode();
     const content = doc.createDocumentFragment();
 
-    mountUnknown(content, ownershipNode, value);
-    parent.insertBefore(content, end);
-
-    state = { kind: "mounted", ownershipNode };
+    try {
+      mountUnknown(content, ownershipNode, value);
+      parent.insertBefore(content, end);
+      state = {
+        kind: "mounted",
+        range: createOwnedRange(ownershipNode, {
+          startAnchor: start,
+          endAnchor: end,
+        }),
+      };
+    } catch (error) {
+      disposeOwnershipNode(ownershipNode);
+      throw error;
+    }
   }
 
   function clearCurrent(): void {
@@ -96,8 +94,10 @@ function createSlotController(
         return;
 
       case "mounted":
-        disposeOwnershipNode(state.ownershipNode);
-        break;
+        const range = state.range;
+        state = { kind: "empty" };
+        range.clear();
+        return;
 
       case "adopted":
         break;
@@ -111,29 +111,6 @@ function createSlotController(
     state = { kind: "empty" };
   }
 
-  function mountInitial(value: unknown): void {
-    if (isEmptyValue(value)) {
-      state = { kind: "empty" };
-      return;
-    }
-
-    if (isTextValue(value)) {
-      mountText(fragment, String(value));
-      return;
-    }
-
-    if (isSingleNodeValue(value)) {
-      mountNode(fragment, value);
-      return;
-    }
-
-    mountFallback(fragment, value);
-  }
-
-  if (initialValue !== NO_INITIAL_VALUE) {
-    mountInitial(initialValue);
-  }
-
   return {
     fragment,
     start,
@@ -145,12 +122,12 @@ function createSlotController(
       const parent = end.parentNode;
       if (parent === null) return;
 
-      if (isEmptyValue(value)) {
+      if (isEmptyRenderableValue(value)) {
         clearCurrent();
         return;
       }
 
-      if (isTextValue(value)) {
+      if (isTextRenderableValue(value)) {
         const next = String(value);
 
         if (state.kind === "text") {
@@ -180,25 +157,20 @@ function createSlotController(
       mountFallback(parent, value);
     },
 
-    dispose(): void {
-      if (destroyed) return;
-      clearCurrent();
-    },
-
     destroy(): void {
       if (destroyed) return;
 
+      destroyed = true;
       clearCurrent();
       start.remove();
       end.remove();
-      destroyed = true;
     },
   };
 }
 
 export function createContentSlot(
   doc: Document,
-  mountUnknown: MountUnknown,
+  mountUnknown: MountContent,
   initialValue: unknown,
 ): ContentSlot {
   const fragment = doc.createDocumentFragment();
@@ -208,20 +180,26 @@ export function createContentSlot(
   fragment.appendChild(start);
   fragment.appendChild(end);
 
-  return createSlotController(
+  const slot = createSlotController(
     doc,
     mountUnknown,
     start,
     end,
     { kind: "empty" },
-    initialValue,
     fragment,
   );
+  try {
+    slot.update(initialValue);
+    return slot;
+  } catch (error) {
+    slot.destroy();
+    throw error;
+  }
 }
 
 export function adoptContentSlot(
   doc: Document,
-  mountUnknown: MountUnknown,
+  mountUnknown: MountContent,
   start: Comment,
   end: Comment,
 ): ContentSlot {
@@ -235,7 +213,6 @@ export function adoptContentSlot(
     start,
     end,
     initialState,
-    NO_INITIAL_VALUE,
     fragment,
   );
 }

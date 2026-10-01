@@ -1,4 +1,7 @@
-import { isHydrationSlotEnd, isHydrationSlotStart } from "./markers";
+import {
+  isHydrationSlotEnd,
+  isHydrationSlotStart,
+} from "../renderable/markers";
 import { nextSiblingWithinBoundary } from "./cursor";
 import { failHydration } from "./error";
 
@@ -38,5 +41,3 @@ export function consumeHydrationSlot(
 
   failHydration();
 }
-
-export { consumeHydrationSlot as consumeHydrationSlsot };

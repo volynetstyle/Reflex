@@ -1,3 +1,4 @@
+import { isHTMLTag } from "./document";
 type TextEntryControl = HTMLInputElement | HTMLTextAreaElement;
 const TEXT_ENTRY_CONTROL_STATE: unique symbol = Symbol("TextEntryControlState");
 
@@ -9,7 +10,6 @@ interface TextEntryControlState {
   composing: boolean;
   pendingValue: string | null;
 }
-
 
 function ensureTextEntryControlState(
   controlElement: TextEntryControl,
@@ -261,35 +261,35 @@ export function isManagedFormProp(formElement: Element, name: string): boolean {
   switch (name) {
     case "value":
       if (
-        formElement instanceof HTMLInputElement &&
+        isHTMLTag(formElement, "input") &&
         (formElement.type === "checkbox" || formElement.type === "radio")
       ) {
         return false;
       }
       return (
-        formElement instanceof HTMLInputElement ||
-        formElement instanceof HTMLTextAreaElement ||
-        formElement instanceof HTMLSelectElement ||
-        formElement instanceof HTMLOptionElement
+        isHTMLTag(formElement, "input") ||
+        isHTMLTag(formElement, "textarea") ||
+        isHTMLTag(formElement, "select") ||
+        isHTMLTag(formElement, "option")
       );
 
     case "defaultValue":
       return (
-        formElement instanceof HTMLInputElement ||
-        formElement instanceof HTMLTextAreaElement ||
-        formElement instanceof HTMLOptionElement
+        isHTMLTag(formElement, "input") ||
+        isHTMLTag(formElement, "textarea") ||
+        isHTMLTag(formElement, "option")
       );
 
     case "checked":
     case "defaultChecked":
-      return formElement instanceof HTMLInputElement;
+      return isHTMLTag(formElement, "input");
 
     case "selectedIndex":
-      return formElement instanceof HTMLSelectElement;
+      return isHTMLTag(formElement, "select");
 
     case "selected":
     case "defaultSelected":
-      return formElement instanceof HTMLOptionElement;
+      return isHTMLTag(formElement, "option");
 
     default:
       return false;
@@ -301,7 +301,7 @@ export function applyManagedFormProp(
   name: string,
   value: unknown,
 ): unknown {
-  if (formElement instanceof HTMLInputElement) {
+  if (isHTMLTag(formElement, "input")) {
     switch (name) {
       case "value":
         if (formElement.type === "file") {
@@ -322,7 +322,7 @@ export function applyManagedFormProp(
     }
   }
 
-  if (formElement instanceof HTMLTextAreaElement) {
+  if (isHTMLTag(formElement, "textarea")) {
     switch (name) {
       case "value":
         return applyControlledTextValue(formElement, value);
@@ -331,7 +331,7 @@ export function applyManagedFormProp(
     }
   }
 
-  if (formElement instanceof HTMLSelectElement) {
+  if (isHTMLTag(formElement, "select")) {
     switch (name) {
       case "value":
         return applyControlledSelectValue(formElement, value);
@@ -340,7 +340,7 @@ export function applyManagedFormProp(
     }
   }
 
-  if (formElement instanceof HTMLOptionElement) {
+  if (isHTMLTag(formElement, "option")) {
     switch (name) {
       case "selected":
         return applyControlledOptionSelectedState(formElement, value);

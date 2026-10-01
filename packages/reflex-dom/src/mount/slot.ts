@@ -1,22 +1,23 @@
 import type { Namespace } from "../host/namespace";
+import { getDOMContext } from "../runtime/context";
 import {
   createDOMOwnedReaction,
-  getActiveDOMExecutionContext,
   registerDOMCleanup,
   runInDOMOwnershipNode,
-} from "../runtime/execution";
-import type { ContentSlot } from "./content-slot";
-import { adoptContentSlot, createContentSlot } from "./content-slot";
-import { appendRenderableNodes } from "../mount/append";
+} from "../runtime/lifetime";
+import type { ContentSlot } from "../structure/content-slot";
+import { adoptContentSlot, createContentSlot } from "../structure/content-slot";
+import { appendRenderableNodes } from "./append";
 
 export function createMountedSlot(
   value: unknown,
   ns: Namespace,
+  doc: Document,
 ): ContentSlot {
-  const context = getActiveDOMExecutionContext();
+  const context = getDOMContext();
 
   return createContentSlot(
-    document,
+    doc,
     (parent, ownershipNode, nextValue) => {
       runInDOMOwnershipNode(
         ownershipNode,
@@ -35,10 +36,10 @@ export function createHydratedSlot(
   end: Comment,
   ns: Namespace,
 ): ContentSlot {
-  const context = getActiveDOMExecutionContext();
+  const context = getDOMContext();
 
   return adoptContentSlot(
-    document,
+    start.ownerDocument,
     (parent, ownershipNode, nextValue) => {
       runInDOMOwnershipNode(
         ownershipNode,

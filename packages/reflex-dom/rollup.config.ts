@@ -9,6 +9,8 @@ import { dts } from "rollup-plugin-dts";
 const packageRoot = fileURLToPath(new URL(".", import.meta.url));
 const frameworkDist = resolve(packageRoot, "../reflex-framework/dist");
 const runtimeDist = resolve(packageRoot, "../reflex-runtime/dist");
+const runtimeModules = resolve(packageRoot, "../reflex-runtime/build/esm/src");
+const schedulerDist = resolve(packageRoot, "../reflex-scheduler/dist");
 
 function workspacePackages(types = false): Plugin {
   const entries = new Map([
@@ -29,23 +31,27 @@ function workspacePackages(types = false): Plugin {
     ],
     [
       "@volynets/reflex-runtime",
-      resolve(
-        runtimeDist,
-        types ? "esm/src/index.d.ts" : "esm/index.js",
-      ),
+      types
+        ? resolve(runtimeDist, "esm/src/index.d.ts")
+        : resolve(runtimeModules, "index.js"),
     ],
     [
       "@volynets/reflex-runtime/internal",
-      resolve(
-        runtimeDist,
-        types ? "esm/src/internal/index.d.ts" : "esm/internal.js",
-      ),
+      types
+        ? resolve(runtimeDist, "esm/src/internal/index.d.ts")
+        : resolve(runtimeModules, "internal/index.js"),
+    ],
+    [
+      "@volynets/reflex-scheduler",
+      resolve(schedulerDist, types ? "index.d.ts" : "index.js"),
     ],
   ]);
 
   return {
     name: "reflex-workspace-packages",
     resolveId(source) {
+      // Public/internal runtime entrypoints must share the same module graph.
+      // Bundling their standalone bundles embeds two independent runtime states.
       return entries.get(source) ?? null;
     },
   };
@@ -91,7 +97,10 @@ const javascript: RollupOptions = {
       module: true,
       ecma: 2022,
     }),
-    nodeResolve({ extensions: [".js"], exportConditions: ["import", "default"] }),
+    nodeResolve({
+      extensions: [".js"],
+      exportConditions: ["import", "default"],
+    }),
   ],
   external: [],
   onwarn: failOnUnresolvedImport,

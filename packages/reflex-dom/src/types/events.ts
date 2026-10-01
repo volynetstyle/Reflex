@@ -3,21 +3,26 @@ import type {
   NativeDOMEventPropMap,
 } from "./events.native";
 
+/** A DOM event whose `currentTarget` has the specified element type. */
 export type DOMEvent<T extends EventTarget, E extends Event = Event> = E & {
   readonly currentTarget: T;
 };
 
+/** Function handler for a DOM event with a typed event and `currentTarget`. */
 export type DOMEventHandler<T extends EventTarget, E extends Event = Event> = (
   event: DOMEvent<T, E>,
 ) => void;
 
+/** Listener object with `handleEvent` and standard listener registration options. */
 export interface DOMEventListenerObject<
   T extends EventTarget,
   E extends Event = Event,
 > extends AddEventListenerOptions {
+  /** Handles an event whose `currentTarget` is typed as `T`. */
   handleEvent(event: DOMEvent<T, E>): void;
 }
 
+/** An event prop may be a handler function or a listener object with options. */
 export type DOMEventHandlerProp<
   T extends EventTarget,
   E extends Event = Event,
@@ -28,6 +33,7 @@ type ResolveEvent<
   Name extends string,
 > = Name extends keyof Events ? Extract<Events[Name], Event> : Event;
 
+/** Maps native event names to their event types for a specific DOM element. */
 export type DOMEventMapFor<T extends Element> = T extends HTMLVideoElement
   ? HTMLVideoElementEventMap
   : T extends HTMLMediaElement
@@ -48,8 +54,7 @@ export type DOMEventMapFor<T extends Element> = T extends HTMLVideoElement
 
 type NativeDOMEventPropNameFor<Events extends object> =
   | {
-      [K in keyof NativeDOMEventPropMap]: NativeDOMEventPropMap[K] extends
-        keyof Events
+      [K in keyof NativeDOMEventPropMap]: NativeDOMEventPropMap[K] extends keyof Events
         ? K
         : never;
     }[keyof NativeDOMEventPropMap]
@@ -63,8 +68,11 @@ type NativeDOMEventProps<T extends Element, Events extends object> = {
 };
 
 // Custom event names are intentionally open-ended for user-defined DOM events.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type UnknownCustomDOMEventHandlerProp<T extends Element> = DOMEventHandlerProp<T, any>;
+type UnknownCustomDOMEventHandlerProp<T extends Element> = DOMEventHandlerProp<
+  T,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  any
+>;
 
 type CustomDOMEventProps<T extends Element, Events extends object> = {
   [K in keyof Events & string as `on:${K}`]?: DOMEventHandlerProp<
