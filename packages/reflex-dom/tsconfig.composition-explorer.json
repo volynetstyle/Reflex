@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.typecheck.json",
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "test/composition-explorer.test.ts",
+    "test/composition-explorer.api.test.tsx",
+    "test/composition-explorer.browser.test.ts",
+    "test/composition-explorer/**/*.ts",
+    "test/composition-explorer/**/*.tsx",
+    "../reflex-runtime/src/globals.d.ts"
+  ]
+}
