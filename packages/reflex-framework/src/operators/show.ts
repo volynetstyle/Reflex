@@ -5,8 +5,11 @@ import { type RenderValue, resolveRenderValue, toAccessor } from "./shared";
 export const SHOW_RENDERABLE = Symbol.for("reflex-dom.show");
 
 export interface ShowProps<T, Host = never> {
+  /** Static or reactive value tested using truthiness. */
   when: MaybeAccessor<T>;
+  /** Branch content, optionally a function receiving the non-null condition value. */
   children?: RenderValue<NonNullable<T>, Host>;
+  /** Content rendered when `when` is falsy. */
   fallback?: JSXRenderable<Host>;
 }
 
@@ -34,9 +37,7 @@ export function resolveShowValue<T, Host = never>(
 ): JSXRenderable<Host> {
   return value
     ? resolveRenderValue(
-        renderable.children as
-          | RenderValue<NonNullable<T>, Host>
-          | undefined,
+        renderable.children as RenderValue<NonNullable<T>, Host> | undefined,
         value as NonNullable<T>,
       )
     : renderable.fallback;

@@ -5,13 +5,18 @@ import { type RenderValue, resolveRenderValue, toAccessor } from "./shared";
 export const SWITCH_RENDERABLE = Symbol.for("reflex-dom.switch");
 
 export interface SwitchCase<T, Host = never> {
+  /** Exact value checked with `Object.is`, or a predicate tested against the switch value. */
   when: T | ((value: T) => boolean);
+  /** Content rendered for this case; a function receives the matched value. */
   children?: RenderValue<T, Host>;
 }
 
 export interface SwitchProps<T, Host = never> {
+  /** Static or reactive value passed to cases in order. */
   value: MaybeAccessor<T>;
+  /** Ordered cases; the first matching case is rendered. */
   cases: readonly SwitchCase<T, Host>[];
+  /** Content rendered when no case matches. */
   fallback?: JSXRenderable<Host>;
 }
 

@@ -41,10 +41,11 @@
   },
   "scripts": {
     "clean": "node ./scripts/clean.mjs",
-    "build": "node ./scripts/clean.mjs && node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs dist",
+    "build": "node ./scripts/clean.mjs && node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs dist && node ./scripts/ensure-disposable-reference.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test": "pnpm exec vitest run --config vite.config.ts",
+    "test": "pnpm exec vitest run --config vite.config.ts && pnpm test:dev",
+    "test:dev": "pnpm exec vitest run --config vite.lifecycle.dev.config.ts",
     "bench": "pnpm exec vitest bench --config vite.config.ts",
     "bench:ownership": "pnpm exec vitest bench bench/ownership.bench.ts --config vite.config.ts",
     "bench:ui": "pnpm exec vitest bench bench/ui-scenarios.bench.ts --config vite.config.ts",

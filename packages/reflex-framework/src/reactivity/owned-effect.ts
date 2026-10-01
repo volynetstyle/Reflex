@@ -18,7 +18,11 @@ import {
 
 export type OwnedEffectFn = () => void | Cleanup;
 
-/** @deprecated Use `OwnedEffectFn`. */
+/**
+ * Deprecated name for the callback type accepted by an owned effect.
+ *
+ * @deprecated Use `OwnedEffectFn`.
+ */
 export type UseEffectFn = OwnedEffectFn;
 
 const noopCleanup: Cleanup = () => {};

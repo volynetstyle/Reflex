@@ -5,9 +5,13 @@ import { toAccessor } from "./shared";
 export const FOR_RENDERABLE = Symbol.for("reflex-dom.for");
 
 export interface ForProps<T, Host = never> {
+  /** Static or reactive list source; nullish values behave like an empty list. */
   each: MaybeAccessor<readonly T[] | null | undefined>;
+  /** Stable, unique row identity used to preserve nodes and ownership across edits. */
   by: (item: T, index: number) => PropertyKey;
+  /** Creates the renderable for one item and receives its current index. */
   children: (item: T, index: number) => JSXRenderable<Host>;
+  /** Content rendered when the list is empty. */
   fallback?: JSXRenderable<Host>;
 }
 
