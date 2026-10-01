@@ -4,7 +4,7 @@
 
 import { parseSync, printSync } from "@swc/core";
 import type { Module, Program } from "@swc/core";
-import { stripQueryAndHash } from "./string-utils.js";
+import { isTypeScriptFile, stripQueryAndHash } from "./string-utils.js";
 import type { ReflexDOMTransformResult } from "./types.js";
 
 /**
@@ -15,7 +15,7 @@ import type { ReflexDOMTransformResult } from "./types.js";
  */
 export function parseJSXModule(code: string, id: string): Module {
   const cleanId = stripQueryAndHash(id);
-  const isTypeScript = /\.([cm]?ts)x$/i.test(cleanId);
+  const isTypeScript = isTypeScriptFile(cleanId);
 
   return parseSync(code, {
     syntax: isTypeScript ? "typescript" : "ecmascript",

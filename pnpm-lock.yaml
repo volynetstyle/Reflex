@@ -104,6 +104,8 @@ importers:
         specifier: ^4.54.0
         version: 4.60.3
 
+  lab/web-scheduler: {}
+
   packages/reflex:
     dependencies:
       '@volynets/reflex-runtime':
@@ -222,6 +224,10 @@ importers:
         version: 6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4)
 
   plugins/@vite/reflex-vite-plugin:
+    dependencies:
+      '@rollup/pluginutils':
+        specifier: ^5.3.0
+        version: 5.3.0(rollup@4.60.3)
     devDependencies:
       '@swc/core':
         specifier: ^1.15.18

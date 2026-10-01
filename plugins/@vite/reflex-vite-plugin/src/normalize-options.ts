@@ -2,6 +2,7 @@
  * Options normalization utilities for the Reflex Vite plugin
  */
 
+import { createFilter } from "@rollup/pluginutils";
 import type {
   ReflexDOMTransformOptions,
   ReflexModelTransformOptions,
@@ -25,8 +26,10 @@ export function normalizeDOMOptions(
   options: ReflexDOMTransformOptions = {},
 ): NormalizedDOMTransformOptions {
   return {
-    include: options.include ?? /\.[cm]?[jt]sx(?:$|\?)/,
-    exclude: options.exclude ?? /node_modules/,
+    filter: createFilter(
+      options.include ?? /\.[cm]?[jt]sx$/,
+      options.exclude ?? /node_modules/,
+    ),
     reactiveProps: options.reactiveProps ?? DEFAULT_REACTIVE_PROPS,
     model: normalizeModelOptions(options.model),
   };
