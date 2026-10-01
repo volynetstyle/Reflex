@@ -58,6 +58,7 @@
     "test:coverage": "vitest run --coverage",
     "test:dev": "vitest run --config vite.dev.config.ts",
     "check:architecture": "node scripts/check-architecture-contract.mjs",
+    "check:rules": "node scripts/check-rules-citations.mjs",
     "pretest:e2e": "pnpm build",
     "test:e2e": "node test/mjs/runtime.e2e.mjs",
     "bench": "pnpm build && vitest bench test/signal_beta.bench.ts",

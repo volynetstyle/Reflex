@@ -66,6 +66,9 @@ jobs:
       - name: Runtime lint
         run: pnpm --filter @volynets/reflex-runtime lint
 
+      - name: Runtime rule citations
+        run: pnpm --filter @volynets/reflex-runtime check:rules
+
       - name: Runtime typecheck
         run: pnpm --filter @volynets/reflex-runtime typecheck
 
