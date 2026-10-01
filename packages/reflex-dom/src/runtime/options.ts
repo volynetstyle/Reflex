@@ -49,6 +49,7 @@ export function createRendererRuntime(
     resolveEffectSchedulerMode(strategy),
     execution,
   );
+
   const run = <T>(fn: () => T): T => {
     if (getActiveRuntimeContext() === execution) return fn();
     return runWithRuntimeContext(execution, fn);

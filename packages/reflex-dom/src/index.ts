@@ -19,12 +19,12 @@ export {
   useMount,
   useOwned,
   useRef,
-  useSignal,
   useUnmount,
 } from "@volynets/reflex-framework";
 export type { UseEffectFn } from "@volynets/reflex-framework";
 
 export { useMountedEffect } from "./hooks/use-mounted-effect";
+export { useSignal } from "./hooks/use-signal";
 export { Fragment, jsx, jsxDEV, jsxs } from "./runtime/jsx";
 export { createApp, setupDOM } from "./client/app";
 export {

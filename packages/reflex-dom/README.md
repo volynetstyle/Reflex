@@ -50,6 +50,33 @@ Use `createApp()` when multiple isolated renderers may coexist. DOM event
 handlers are restored into the runtime and ownership context of the renderer
 that mounted them, so updates from separate applications do not share queues.
 
+The `useSignal()` exported by this package binds writes to the DOM runtime
+active when the signal is created. A setter captured by a timer or promise can
+be called directly:
+
+```ts
+const count = useSignal(0);
+
+setTimeout(() => count((value) => value + 1));
+```
+
+The accessor is mutable: call it with no argument to read, or pass a value or
+updater to write. `undefined` means a read; to store `undefined`, use an updater
+such as `count(() => undefined)`. Writes enter the captured runtime through
+`run()` without opening a batch. Delivery follows `effectStrategy`: `flush`
+coalesces writes into a microtask, `eager` settles synchronously, and `sab`
+waits for a settled batch boundary. Use `renderer.batch()` when several writes
+must form one transaction, or `renderer.flush()` when pending DOM work must be
+committed synchronously.
+Reactive reads of a DOM signal must run in the renderer that created it.
+Calling its setter while another renderer is active still routes the write to
+its owner; reading it inside another renderer's reactive computation throws,
+because that would attach a dependency to a different scheduler.
+
+The framework's `useSignal()` and raw runtime primitives leave execution
+boundaries to their caller. Outside a DOM context, including server rendering,
+this package's `useSignal()` delegates to the framework hook directly.
+
 ## Public entry points
 
 Client rendering:

@@ -9,9 +9,115 @@ import {
   useOwned,
   useSignal,
 } from "../src";
-import { getDOMContext, withDOMContext } from "../src/runtime/context";
+import {
+  getActiveDOMContext,
+  getDOMContext,
+  withDOMContext,
+} from "../src/runtime/context";
+
+describe("renderer automatic delivery", () => {
+  it("delivers reactive DOM updates automatically in flush mode", async () => {
+    const renderer = createDOMRenderer({ effectStrategy: "flush" });
+    const container = document.createElement("div");
+    let set!: (value: number) => void;
+    function View() {
+      const value = useSignal(0);
+      set = value;
+      return <p>{value}</p>;
+    }
+    const dispose = renderer.render(<View />, container);
+    try {
+      expect(container.textContent).toBe("0");
+      renderer.run(() => set(1));
+      expect(container.textContent).toBe("0");
+      await Promise.resolve();
+      expect(container.textContent).toBe("1");
+    } finally {
+      dispose();
+    }
+  });
+
+  it("delivers the final state after multiple writes without an explicit flush", async () => {
+    const renderer = createDOMRenderer({ effectStrategy: "flush" });
+    const container = document.createElement("div");
+    let set!: (value: number) => void;
+    function View() {
+      const value = useSignal(0);
+      set = value;
+      return <p>{value}</p>;
+    }
+    const dispose = renderer.render(<View />, container);
+    try {
+      renderer.run(() => set(1));
+      renderer.run(() => set(2));
+      renderer.run(() => set(3));
+      expect(container.textContent).toBe("0");
+      await Promise.resolve();
+      expect(container.textContent).toBe("3");
+    } finally {
+      dispose();
+    }
+  });
+
+  it("flushes synchronously and makes the pending host delivery harmless", async () => {
+    const renderer = createDOMRenderer({ effectStrategy: "flush" });
+    const container = document.createElement("div");
+    const effects: number[] = [];
+    let set!: (value: number) => void;
+    function View() {
+      const value = useSignal(0);
+      set = value;
+      useMountedEffect(() => {
+        effects.push(value());
+      });
+      return <p>{value}</p>;
+    }
+    const dispose = renderer.render(<View />, container);
+    try {
+      renderer.run(() => set(1));
+      expect(container.textContent).toBe("0");
+      renderer.flush();
+      expect(container.textContent).toBe("1");
+      expect(effects.at(-1)).toBe(1);
+      const deliveredEffects = [...effects];
+      await Promise.resolve();
+      expect(container.textContent).toBe("1");
+      expect(effects).toEqual(deliveredEffects);
+    } finally {
+      dispose();
+    }
+  });
+});
 
 describe("renderer ownership and document boundaries", () => {
+  it("restores the outer DOM context after a nested public render", () => {
+    const outer = createDOMRenderer();
+    const inner = createDOMRenderer();
+    const outerContainer = document.createElement("div");
+    const innerContainer = document.createElement("div");
+    let disposeInner!: () => void;
+    function Inner() {
+      expect(getDOMContext()).toBe(inner.execution);
+      return <span>inner</span>;
+    }
+    function Outer() {
+      expect(getDOMContext()).toBe(outer.execution);
+      disposeInner = inner.render(<Inner />, innerContainer);
+      expect(getDOMContext()).toBe(outer.execution);
+      return <span>outer</span>;
+    }
+    expect(getActiveDOMContext()).toBeNull();
+    const disposeOuter = outer.render(<Outer />, outerContainer);
+    try {
+      expect(getActiveDOMContext()).toBeNull();
+      expect(outerContainer.textContent).toBe("outer");
+      expect(innerContainer.textContent).toBe("inner");
+    } finally {
+      disposeOuter();
+      disposeInner();
+    }
+  });
+
   it("waits for deferred feedback before starting the next mounted effect", async () => {
     const renderer = createDOMRenderer({ effectStrategy: "flush" });
     const container = document.createElement("div");

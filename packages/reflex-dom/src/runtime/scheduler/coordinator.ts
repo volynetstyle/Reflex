@@ -110,6 +110,7 @@ export function createDOMSchedulerCoordinator(
         }
       });
     },
+    
     flush() {
       hostRequest = null;
       run(drain);

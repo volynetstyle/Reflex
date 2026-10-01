@@ -13,6 +13,7 @@ import {
   type OwnedRange,
 } from "../structure/owned-range";
 import { appendRenderableNodes } from "./append";
+
 export function mountOwnedRange(
   parent: Node,
   renderable: JSXRenderable | unknown,

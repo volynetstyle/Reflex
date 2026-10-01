@@ -5,7 +5,11 @@ import { createOwnedRange } from "../structure/owned-range";
 import type { Cleanup, JSXRenderable } from "../types";
 import type { DOMRuntimeOptions } from "../runtime/options";
 import type { MountEffects } from "../runtime/mount-effects";
-import { createDOMContext, type DOMContext } from "../runtime/context";
+import {
+  createDOMContext,
+  runDOMOperation,
+  type DOMContext,
+} from "../runtime/context";
 import { existingRootCleanup, replaceRoot } from "./roots";
 
 type Container = ParentNode & Node;
@@ -24,36 +28,51 @@ export interface DOMRenderer {
 
 export function createDOMRenderer(options?: DOMRuntimeOptions): DOMRenderer {
   const execution = createDOMContext(options);
+  const operation = (fn: () => Cleanup): Cleanup => {
+    let dispose: Cleanup | undefined;
+    try {
+      return runDOMOperation(execution, () => (dispose = fn()));
+    } catch (error) {
+      // Mounted effects can fail while the public operation's batch closes.
+      dispose?.();
+      throw error;
+    }
+  };
   const render = (input: JSXRenderable, container: Container) =>
-    replaceRoot(execution, container, (anchors) =>
-      mountOwnedRange(container, input, "html", anchors),
+    operation(() =>
+      replaceRoot(execution, container, (anchors) =>
+        mountOwnedRange(container, input, "html", anchors),
+      ),
     );
 
   return {
     execution,
     mountEffects: execution.mountEffects,
-    run: execution.runtime.run,
-    batch: execution.runtime.batch,
-    flush: execution.runtime.flush,
+    run: (fn) => execution.runtime.run(fn),
+    batch: (fn) => execution.runtime.batch(fn),
+    flush: () => execution.runtime.flush(),
     hydrate(input, container) {
-      return replaceRoot(
-        execution,
-        container,
-        (anchors) => hydrateRange(input, container, anchors),
-        true,
+      return operation(() =>
+        replaceRoot(
+          execution,
+          container,
+          (anchors) => hydrateRange(input, container, anchors),
+          true,
+        ),
       );
     },
     render,
     mount: render,
     resume(container) {
-      return (
-        existingRootCleanup(execution, container) ??
-        replaceRoot(
-          execution,
-          container,
-          (anchors) => createOwnedRange(createOwnershipNode(), anchors),
-          true,
-        )
+      return operation(
+        () =>
+          existingRootCleanup(execution, container) ??
+          replaceRoot(
+            execution,
+            container,
+            (anchors) => createOwnedRange(createOwnershipNode(), anchors),
+            true,
+          ),
       );
     },
   };
