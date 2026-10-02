@@ -1,8 +1,9 @@
 export {};
 
 declare global {
-  const console: {
+  interface Console {
     error(...data: unknown[]): void;
     warn(...data: unknown[]): void;
-  };
+  }
+  var console: Console;
 }

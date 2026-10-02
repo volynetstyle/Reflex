@@ -3,6 +3,7 @@
 import { addCleanup, disposeOwnershipNode } from "./ownership.cleanup";
 import { isShuttingDown } from "./ownership.meta";
 import { OwnershipNode } from "./ownership.node";
+import { getLifetimeSignal } from "./ownership.signal";
 import { adoptOwnershipNode } from "./ownership.tree";
 
 export interface DisposableResource {
@@ -123,6 +124,11 @@ export class LifecycleScope implements DisposableResource {
 
   get node(): OwnershipNode {
     return this.#node;
+  }
+
+  /** Lazily allocated cancellation signal for this scope's lifetime. */
+  get signal(): AbortSignal {
+    return getLifetimeSignal(this.#node);
   }
 
   get disposed(): boolean {
