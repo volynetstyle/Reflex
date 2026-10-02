@@ -320,4 +320,85 @@ describe("Reactive system - unstable optimistic invariants", () => {
 
     expect(state()).toBe(0);
   });
+
+  it("reconnects the base when authoritative truth equals the removed override", async () => {
+    const rt = createRuntime();
+    const base = signal(1);
+    const [view, setView] = optimistic(() => base());
+    const task = deferred<void>();
+    const seen: number[] = [];
+    const stop = effect(() => { seen.push(view()); });
+    const pending = transition(async () => {
+      setView(5);
+      rt.flush();
+      base.set(5);
+      rt.flush();
+      await task.promise;
+    });
+    task.resolve(); await pending; rt.flush();
+    expect(seen).toEqual([1, 5]);
+    base.set(6); rt.flush();
+    expect(seen).toEqual([1, 5, 6]);
+    stop();
+  });
+
+  it("binds a setter to its transition across await and overlapping operations", async () => {
+    const rt = createRuntime();
+    const [view, setView] = optimistic(0);
+    const a = deferred<void>();
+    const b = deferred<void>();
+    let bound!: typeof setView;
+    const first = transition(async (scope) => {
+      bound = scope.bind(setView);
+      await Promise.resolve();
+      bound(1);
+      await a.promise;
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(view()).toBe(1);
+    const second = transition(async (scope) => {
+      await Promise.resolve();
+      scope.run(() => setView(2));
+      await b.promise;
+    });
+    await Promise.resolve(); await Promise.resolve();
+    a.resolve(); await first; rt.flush();
+    expect(view()).toBe(2);
+    expect(() => bound(99)).toThrow("already settled");
+    b.resolve(); await second; rt.flush();
+    expect(view()).toBe(0);
+  });
+
+  it("releases an async scope on rejection", async () => {
+    createRuntime();
+    const [view, setView] = optimistic(0);
+    const failure = new Error("mutation failed");
+    await expect(transition(async (scope) => {
+      await Promise.resolve();
+      scope.run(() => setView(9));
+      expect(view()).toBe(9);
+      throw failure;
+    })).rejects.toBe(failure);
+    expect(view()).toBe(0);
+  });
+
+  it("honors custom equality while reconnecting the base", async () => {
+    const rt = createRuntime();
+    const base = signal({ count: 1 });
+    const [view, setView] = optimistic(() => base(), {
+      equals: (a, b) => a.count === b.count,
+    });
+    const task = deferred<void>();
+    const seen: number[] = [];
+    const stop = effect(() => { seen.push(view().count); });
+    const pending = transition(async () => { setView({ count: 2 }); await task.promise; });
+    rt.flush();
+    base.set({ count: 2 });
+    task.resolve(); await pending; rt.flush();
+    expect(seen).toEqual([1, 2]);
+    base.set({ count: 3 }); rt.flush();
+    expect(seen).toEqual([1, 2, 3]);
+    stop();
+  });
 });

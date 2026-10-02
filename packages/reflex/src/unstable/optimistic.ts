@@ -18,9 +18,31 @@ export interface OptimisticMemoOptions<T> extends OptimisticOptions<T> {
   lazy?: boolean;
 }
 
-class OptimisticTransition {
+/** Explicit ownership for writes in async continuations. */
+export interface OptimisticScope {
+  run<T>(fn: () => T): T;
+  bind<T>(setter: Setter<T>): Setter<T>;
+}
+
+class OptimisticTransition implements OptimisticScope {
   private readonly cleanups = new Set<() => void>();
   private finalized = false;
+
+  run<T>(fn: () => T): T {
+    if (this.finalized) throw new Error("The optimistic transition has already settled.");
+    const parent = activeTransition;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    activeTransition = this;
+    try {
+      return batch(fn);
+    } finally {
+      activeTransition = parent;
+    }
+  }
+
+  bind<T>(setter: Setter<T>): Setter<T> {
+    return ((input: SetInput<T>) => this.run(() => setter(input))) as Setter<T>;
+  }
 
   add(cleanup: () => void): void {
     if (this.finalized) {
@@ -38,9 +60,11 @@ class OptimisticTransition {
     const cleanups = [...this.cleanups];
     this.cleanups.clear();
 
-    for (let i = 0; i < cleanups.length; ++i) {
-      cleanups[i]?.();
-    }
+    batch(() => {
+      for (let i = 0; i < cleanups.length; ++i) {
+        cleanups[i]?.();
+      }
+    });
   }
 }
 
@@ -79,18 +103,23 @@ class OptimisticCore<T> {
   private activeOverride: OptimisticOverride<T> | null = null;
 
   private disposed = false;
+  private viewValue: { value: T } | undefined;
+  private readonly viewNode = createComputedNode(() => {
+    readProducer(this.stateNode);
+    const value = this.activeOverride ? this.activeOverride.value : this.base();
+    if (this.viewValue !== undefined && this.equals(this.viewValue.value, value)) {
+      return this.viewValue.value;
+    }
+    this.viewValue = { value };
+    return value;
+  });
 
   constructor(
     private readonly base: Accessor<T>,
     private readonly equals: (prev: T, next: T) => boolean,
   ) {}
 
-  read = (): T => {
-    readProducer(this.stateNode);
-
-    const override = this.activeOverride;
-    return override ? override.value : this.base();
-  };
+  read = readConsumerLazy.bind(this.viewNode) as Accessor<T>;
 
   set = (input: SetInput<T>): T => {
     const prev = this.peekVisible();
@@ -124,9 +153,8 @@ class OptimisticCore<T> {
       this.registerTransition(owner);
     }
 
-    if (!this.equals(prev, next)) {
-      this.bump();
-    }
+    // Ownership can change dependencies even when the visible value is equal.
+    this.bump();
 
     return next;
   };
@@ -166,13 +194,10 @@ class OptimisticCore<T> {
     const override = this.activeOverride;
     if (!override || override.owner !== owner) return;
 
-    const previous = override.value;
     this.activeOverride = null;
-
-    const next = this.peekBase();
-    if (!this.equals(previous, next)) {
-      this.bump();
-    }
+    // Revalidate the view to reconnect its base dependency. Its computed value
+    // suppresses downstream execution if the authoritative result caught up.
+    this.bump();
   }
 
   private dispose(): void {
@@ -218,9 +243,9 @@ class OptimisticCore<T> {
  * console.log(status()); // "idle"
  * ```
  */
-export function transition<T>(fn: () => T): T;
-export function transition<T>(fn: () => PromiseLike<T>): Promise<T>;
-export function transition<T>(fn: () => T | PromiseLike<T>): T | Promise<T> {
+export function transition<T>(fn: (scope: OptimisticScope) => PromiseLike<T>): Promise<T>;
+export function transition<T>(fn: (scope: OptimisticScope) => T): T;
+export function transition<T>(fn: (scope: OptimisticScope) => T | PromiseLike<T>): T | Promise<T> {
   const parent = activeTransition;
   const owner = new OptimisticTransition();
   activeTransition = owner;
@@ -228,7 +253,7 @@ export function transition<T>(fn: () => T | PromiseLike<T>): T | Promise<T> {
   let result: T | PromiseLike<T>;
 
   try {
-    result = batch(fn);
+    result = batch(() => fn(owner));
   } catch (error) {
     activeTransition = parent;
     owner.finalize();
@@ -237,9 +262,14 @@ export function transition<T>(fn: () => T | PromiseLike<T>): T | Promise<T> {
 
   activeTransition = parent;
 
-  if (!isPromiseLike(result)) {
+  try {
+    if (!isPromiseLike(result)) {
+      owner.finalize();
+      return result;
+    }
+  } catch (error) {
     owner.finalize();
-    return result;
+    throw error;
   }
 
   return Promise.resolve(result).then(
@@ -326,19 +356,25 @@ export function transition<T>(fn: () => T | PromiseLike<T>): T | Promise<T> {
  * microtask.
  * - Inside `transition(...)`, the active optimistic override stays visible until that
  * transition settles.
+ * - After `await`, use the callback's scope.run(...) or scope.bind(setter)
+ * to explicitly retain transition ownership.
  * - Multiple writes in the same owner update the same optimistic override.
  * - Newer owners take over older optimistic overrides instead of stacking.
  * - Function overloads fall back to the latest computed source value after the
  * optimistic override clears.
  */
 export function optimistic<T>(
-  value: T,
-  options?: OptimisticOptions<T>,
+  fn: () => T,
+  options?: OptimisticMemoOptions<T>,
 ): readonly [Accessor<T>, Setter<T>];
 export function optimistic<T>(
   fn: () => T,
   initialValue?: T,
   options?: OptimisticMemoOptions<T>,
+): readonly [Accessor<T>, Setter<T>];
+export function optimistic<T>(
+  value: T,
+  options?: OptimisticOptions<T>,
 ): readonly [Accessor<T>, Setter<T>];
 export function optimistic<T>(
   valueOrFn: T | (() => T),
