@@ -6,6 +6,7 @@ import {
   createOwnershipNode,
   disposeOwnershipNode,
   getActiveOwnerContext,
+  getLifetimeSignal,
   isShuttingDown,
   LifecycleHandle,
   runWithOwner,
@@ -49,6 +50,8 @@ type WrappedAction<F extends AnyFunction> = ModelAction<
 >;
 
 export interface ModelContext {
+  /** Lazily allocated cancellation signal for this model's lifetime. */
+  readonly signal: AbortSignal;
   /**
    * Wrap a read as a branded, read-only accessor. Dependencies are recorded by
    * the reactive computation that calls the returned accessor.
@@ -398,6 +401,9 @@ export function defineModel<Args extends unknown[], Shape extends object>(
     };
 
     const ctx: ModelContext = {
+      get signal() {
+        return getLifetimeSignal(node);
+      },
       read(read) {
         assertOpen();
         const view = (() => {

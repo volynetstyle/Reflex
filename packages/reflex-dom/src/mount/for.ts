@@ -11,6 +11,7 @@ import {
 } from "../runtime/lifetime";
 import type { ContentSlot } from "../structure/content-slot";
 import { createMountedSlot } from "../mount/slot";
+import { bindDOMRangeRef } from "./range-ref";
 
 interface ForRow<T> extends KeyedItem<T> {
   slot: ContentSlot;
@@ -135,6 +136,8 @@ export function mountFor(
     start.parentNode?.removeChild(start);
     end.parentNode?.removeChild(end);
   });
+
+  bindDOMRangeRef(renderable.ref, start, end);
 
   return fragment;
 }

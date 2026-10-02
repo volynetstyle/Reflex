@@ -20,6 +20,8 @@ export {
   useOwned,
   useRef,
   useUnmount,
+  useAbortSignal,
+  getLifetimeSignal,
 } from "@volynets/reflex-framework";
 export type { UseEffectFn } from "@volynets/reflex-framework";
 
@@ -39,6 +41,7 @@ export { createDOMRenderer, type DOMRenderer } from "./client/renderer";
 export type { DOMRuntimeOptions } from "./runtime/options";
 export type { MountEffects } from "./runtime/mount-effects";
 export { renderToString } from "./server";
+export { createDOMRangeHandle, type DOMRangeHandle } from "./host/range-handle";
 
 export type {
   CustomElementProps,

@@ -96,6 +96,7 @@ Framework hooks:
 - `useSignal`, `useComputed`, and `useMemo`
 - `useEffect`, `useEffectOnce`, and `useMountedEffect`
 - `useMount`, `useUnmount`, `useOwned`, and `useRef`
+- `useAbortSignal` and `getLifetimeSignal`
 - ownership context helpers
 
 Reusable models:
@@ -269,6 +270,95 @@ follows the documented
 [Rules of Hooks](https://react.dev/reference/rules/rules-of-hooks),
 [`useEffect` dependency model](https://react.dev/reference/react/useEffect), and
 [state-as-a-snapshot model](https://react.dev/learn/state-as-a-snapshot).
+
+## Lifetime cancellation
+
+`useAbortSignal()` returns the native cancellation signal of the current owner.
+Capture it during component setup for component lifetime, or inside `useEffect`
+for one effect execution. Effect reruns abort the preceding execution's signal;
+unmounting cancels all owned work. Calling the hook without an owner throws.
+Capture it before crossing an `await` boundary.
+
+```ts
+useEffect(() => {
+  const url = endpoint();
+  const signal = useAbortSignal();
+  void fetch(url, { signal })
+    .then(async (response) => {
+      const value = await response.json();
+      if (!signal.aborted) publish(value);
+    })
+    .catch((error) => {
+      if (!signal.aborted) reportError(error);
+    });
+});
+```
+
+For explicit ownership, `getLifetimeSignal(node)` returns the same lazily allocated
+signal on every call. A closed owner returns an aborted signal. Models expose the
+same mechanism as `ctx.signal`; it follows the model's lifetime, so repeated
+actions do not replace it. Cancellation is cooperative: guard publication when an
+operation may ignore its signal. See the framework's
+[lifetime signal contract](../reflex-framework/docs/lifetime-signals.md).
+
+## Structural DOM refs
+
+DOM `Show` and `For` accept a `Ref<DOMRangeHandle>` without adding a wrapper element.
+The handle stays the same while the branch changes or keyed rows move. Its methods
+read the current physical siblings between the structural anchors. Server rendering
+does not invoke refs; hydration attaches them to the adopted range.
+
+```tsx
+import { Show, useRef, type DOMRangeHandle } from "@volynets/reflex-dom";
+
+function Details() {
+  const range = useRef<DOMRangeHandle | null>(null);
+  return (
+    <Show when={true} ref={range}>
+      <button onClick={() => range.current?.focus()}>Focus this group</button>
+      <input />
+    </Show>
+  );
+}
+```
+
+| Method                     | Behavior                                                                                                  |
+| -------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `nodes()`                  | Snapshot of current top-level nodes, excluding the two boundary anchors. Internal anchors may be present. |
+| `focus(options?)`          | Focus the first focusable element in DOM order, including descendants.                                    |
+| `blur()`                   | Blur the active element only if it belongs to the range.                                                  |
+| `rects()`                  | Collect client rects for top-level elements and nonempty text nodes.                                      |
+| `scrollIntoView(options?)` | Scroll the first top-level element into view.                                                             |
+| `observe(observer)`        | Observe top-level elements with a `ResizeObserver` or `IntersectionObserver`; return idempotent cleanup.  |
+| `dispose()`                | Stop observations and empty the handle without removing its DOM.                                          |
+
+Observation membership updates asynchronously at `MutationObserver` checkpoints,
+including when nested content replaces top-level elements. Subscriptions to a handle
+share one mutation observer watching only its common parent's child list, so
+descendant and unrelated document mutations do not trigger membership scans. If
+the anchors lose their common parent, tracking temporarily watches their documents
+and detached or shadow roots to recover after reattachment. Moving both anchors
+to a new parent rebinds tracking at the next checkpoint. This tracking is allocated
+only when `observe()` is called. Cleanup unobserves this handle's targets without
+disconnecting the supplied observer. Multiple subscriptions to the same or
+overlapping handles and observer share targets. Reserve those targets for the
+handles while subscribed; independently observing the same target with that
+observer does not create a separate browser subscription.
+
+Run `pnpm --filter @volynets/reflex-dom bench:range` to measure snapshots, early
+focus and scroll target lookup, handle creation, and membership updates across
+100 observed ranges. These benchmarks use jsdom; scroll calls are stubbed to
+measure target lookup independently of browser scrolling and layout.
+
+Disposal clears object refs, invokes callback-ref cleanup, and calls the callback
+with `null`. A captured disposed handle returns no nodes or rects, and its other
+operations do nothing. The handle represents physical DOM membership; it does not
+include content mounted into a portal elsewhere.
+
+`createDOMRangeHandle(start, end)` creates the same view over explicit text or
+comment anchors. The caller must dispose this standalone handle. Detached or
+reversed boundary anchors produce an empty view. Observation requires a document
+with a browsing context providing `MutationObserver`.
 
 ## Architecture
 

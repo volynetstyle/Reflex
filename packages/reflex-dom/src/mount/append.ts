@@ -89,7 +89,7 @@ export function appendRenderableNodes(
       case RenderableKind.Show: {
         const r = current as ShowRenderable<unknown>;
         parent.appendChild(
-          mountReactiveSlot(r.when, (v) => resolveShowValue(r, v), ns, doc),
+          mountReactiveSlot(r.when, (v) => resolveShowValue(r, v), ns, doc, r.ref),
         );
         continue;
       }

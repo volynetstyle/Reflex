@@ -3,6 +3,8 @@ import {
   type ShowProps as FrameworkShowProps,
   type ShowRenderable as FrameworkShowRenderable,
 } from "@volynets/reflex-framework";
+import type { DOMRangeHandle } from "../host/range-handle";
+import type { Ref } from "../types/core";
 
 export { SHOW_RENDERABLE, resolveShowValue } from "@volynets/reflex-framework";
 
@@ -18,8 +20,12 @@ export { SHOW_RENDERABLE, resolveShowValue } from "@volynets/reflex-framework";
  *
  * @typeParam T The condition value type.
  */
-export type ShowProps<T> = FrameworkShowProps<T, Node>;
-export type ShowRenderable<T> = FrameworkShowRenderable<T, Node>;
+export type ShowProps<T> = FrameworkShowProps<T, Node> & {
+  ref?: Ref<DOMRangeHandle>;
+};
+export type ShowRenderable<T> = FrameworkShowRenderable<T, Node> & {
+  readonly ref?: Ref<DOMRangeHandle>;
+};
 
 /**
  * Shows one branch when `when` is truthy and `fallback` otherwise.
@@ -34,5 +40,6 @@ export type ShowRenderable<T> = FrameworkShowRenderable<T, Node>;
  * @typeParam T The condition value type.
  */
 export function Show<T>(props: ShowProps<T>): ShowRenderable<T> {
-  return createShowRenderable<T, Node>(props);
+  const renderable: ShowRenderable<T> = createShowRenderable<T, Node>(props);
+  return props.ref === undefined ? renderable : { ...renderable, ref: props.ref };
 }

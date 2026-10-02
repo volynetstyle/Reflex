@@ -3,6 +3,8 @@ import {
   type ForProps as FrameworkForProps,
   type ForRenderable as FrameworkForRenderable,
 } from "@volynets/reflex-framework";
+import type { DOMRangeHandle } from "../host/range-handle";
+import type { Ref } from "../types/core";
 
 export { FOR_RENDERABLE } from "@volynets/reflex-framework";
 
@@ -16,8 +18,12 @@ export { FOR_RENDERABLE } from "@volynets/reflex-framework";
  *
  * @typeParam T The list item type.
  */
-export type ForProps<T> = FrameworkForProps<T, Node>;
-export type ForRenderable<T> = FrameworkForRenderable<T, Node>;
+export type ForProps<T> = FrameworkForProps<T, Node> & {
+  ref?: Ref<DOMRangeHandle>;
+};
+export type ForRenderable<T> = FrameworkForRenderable<T, Node> & {
+  readonly ref?: Ref<DOMRangeHandle>;
+};
 
 /**
  * Renders a reactive list with stable identity for each item. The `by` key must
@@ -33,5 +39,6 @@ export type ForRenderable<T> = FrameworkForRenderable<T, Node>;
  * @typeParam T The list item type.
  */
 export function For<T>(props: ForProps<T>): ForRenderable<T> {
-  return createForRenderable<T, Node>(props);
+  const renderable: ForRenderable<T> = createForRenderable<T, Node>(props);
+  return props.ref === undefined ? renderable : { ...renderable, ref: props.ref };
 }

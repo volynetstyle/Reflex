@@ -8,6 +8,9 @@ import {
 import type { ContentSlot } from "../structure/content-slot";
 import { adoptContentSlot, createContentSlot } from "../structure/content-slot";
 import { appendRenderableNodes } from "./append";
+import { bindDOMRangeRef } from "./range-ref";
+import type { DOMRangeHandle } from "../host/range-handle";
+import type { Ref } from "../types";
 
 export function createMountedSlot(
   value: unknown,
@@ -74,7 +77,9 @@ export function hydrateReactiveSlot<T>(
   start: Comment,
   end: Comment,
   ns: Namespace,
+  ref?: Ref<DOMRangeHandle>,
 ): void {
   const slot = createHydratedSlot(start, end, ns);
   bindReactiveSlotLifecycle(slot, readValue, resolveValue);
+  bindDOMRangeRef(ref, start, end);
 }

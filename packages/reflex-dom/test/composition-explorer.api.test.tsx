@@ -200,12 +200,51 @@ function modelScenario() {
   expect(events).toEqual(["resource", "model"]);
 }
 
+function cancellationRangeScenario() {
+  const app = api.createApp();
+  const container = document.createElement("div");
+  let lifetime!: AbortSignal;
+  const ref = { current: null as api.DOMRangeHandle | null };
+  function View() {
+    lifetime = api.useAbortSignal();
+    expect(api.getLifetimeSignal(getActiveOwnerContext()!.currentNode!)).toBe(
+      lifetime,
+    );
+    return (
+      <api.Show when={true} ref={ref}>
+        <b>owned</b>
+      </api.Show>
+    );
+  }
+  const dispose = app.render(<View />, container);
+  const handle = ref.current!;
+  expect(Array.from(handle.nodes()).map((node) => node.textContent)).toEqual([
+    "owned",
+  ]);
+  expect(lifetime.aborted).toBe(false);
+  dispose();
+  expect(lifetime.aborted).toBe(true);
+  expect(handle.disposed).toBe(true);
+  expect(ref.current).toBeNull();
+
+  const start = document.createComment("start");
+  const end = document.createComment("end");
+  const text = document.createTextNode("standalone");
+  container.append(start, text, end);
+  const standalone = api.createDOMRangeHandle(start, end);
+  expect(Array.from(standalone.nodes())).toEqual([text]);
+  standalone.dispose();
+  expect(Array.from(standalone.nodes())).toEqual([]);
+  expect(container.textContent).toBe("standalone");
+}
+
 const scenarioRegistry = {
   structure: structureScenario,
   hooksContext: hooksContextScenario,
   jsxRuntime: jsxRuntimeScenario,
   client: clientScenario,
   model: modelScenario,
+  cancellationRange: cancellationRangeScenario,
 } as const;
 
 // Each public runtime export points to a function that Vitest executes below.
@@ -249,6 +288,9 @@ const scenarios = {
   isModelReadableValue: scenarioRegistry.model,
   own: scenarioRegistry.model,
   readModelValue: scenarioRegistry.model,
+  createDOMRangeHandle: scenarioRegistry.cancellationRange,
+  getLifetimeSignal: scenarioRegistry.cancellationRange,
+  useAbortSignal: scenarioRegistry.cancellationRange,
 } satisfies Record<
   keyof typeof api,
   (typeof scenarioRegistry)[keyof typeof scenarioRegistry]

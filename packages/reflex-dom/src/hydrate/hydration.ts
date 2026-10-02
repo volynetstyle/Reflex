@@ -151,6 +151,7 @@ function hydrateRenderableValue(
         slot.start,
         slot.end,
         parentNamespace,
+        renderable.ref,
       );
       return slot.next;
     }
@@ -177,6 +178,7 @@ function hydrateRenderableValue(
         slot.start,
         slot.end,
         parentNamespace,
+        renderable.ref,
       );
       return slot.next;
     }
