@@ -25,7 +25,6 @@ const EXTERNALS = ["vitest", "expect-type"] as const;
 
 const PURE_FUNCS = [
   "Object.freeze",
-  "Object.defineProperty",
   "hasState",
   "isDirtyState",
   "isPendingState",
@@ -74,19 +73,18 @@ const ENTRIES: ReadonlyArray<BuildEntry> = [
     input: "build/esm/index.js",
     outputPath: "index",
   },
-  // {
-  //   input: "build/esm/unstable/index.js",
-  //   outputPath: "unstable/index",
-  // },
+  {
+    input: "build/esm/unstable/index.js",
+    outputPath: "unstable/index",
+  },
   {
     input: "build/esm/debug/index.js",
     outputPath: "debug/index",
   },
 ];
 
-function loggerPlugin(target: BuildTarget, entry: BuildEntry): Plugin {
-  const name = `${target.name}:${entry.outputPath}`;
-  return createBuildReporter("@volynets/reflex", name);
+function loggerPlugin(target: BuildTarget): Plugin {
+  return createBuildReporter("@volynets/reflex", target.name);
 }
 
 function resolvePlugin(): Plugin {
@@ -129,9 +127,9 @@ function terserPlugin(target: BuildTarget): Plugin | undefined {
   });
 }
 
-function createPlugins(target: BuildTarget, entry: BuildEntry): Plugin[] {
+function createPlugins(target: BuildTarget): Plugin[] {
   const plugins: Plugin[] = [
-    loggerPlugin(target, entry),
+    loggerPlugin(target),
     resolvePlugin(),
     replacePlugin(target),
   ];
@@ -142,11 +140,13 @@ function createPlugins(target: BuildTarget, entry: BuildEntry): Plugin[] {
   return plugins;
 }
 
-function createConfig(target: BuildTarget, entry: BuildEntry): RollupOptions {
+function createConfig(target: BuildTarget): RollupOptions {
   const extension = target.format === "cjs" ? "cjs" : "js";
 
   return {
-    input: entry.input,
+    // Build the entries together so root and unstable share runtime state and
+    // live facade bindings instead of embedding independent reactive machines.
+    input: Object.fromEntries(ENTRIES.map((entry) => [entry.outputPath, entry.input])),
     logLevel: "silent",
     onwarn: reportRollupWarning,
 
@@ -160,7 +160,9 @@ function createConfig(target: BuildTarget, entry: BuildEntry): RollupOptions {
     },
 
     output: {
-      file: `dist/${target.outDir}/${entry.outputPath}.${extension}`,
+      dir: `dist/${target.outDir}`,
+      entryFileNames: `[name].${extension}`,
+      chunkFileNames: `chunks/[name]-[hash].${extension}`,
       format: target.format,
       exports: target.format === "cjs" ? "named" : undefined,
       sourcemap: target.dev,
@@ -170,11 +172,9 @@ function createConfig(target: BuildTarget, entry: BuildEntry): RollupOptions {
       },
     },
 
-    plugins: createPlugins(target, entry),
+    plugins: createPlugins(target),
     external: [...EXTERNALS],
   };
 }
 
-export default TARGETS.flatMap((target) =>
-  ENTRIES.map((entry) => createConfig(target, entry)),
-);
+export default TARGETS.map(createConfig);

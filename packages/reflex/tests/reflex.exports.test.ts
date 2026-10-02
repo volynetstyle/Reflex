@@ -9,6 +9,7 @@ import {
   transition,
 } from "../src/unstable/optimistic";
 import { resource } from "../src/unstable/resource";
+import { asyncDerived, read, currentOrUndefined, until } from "../src/unstable/async";
 import { createModel, isModel, own } from "../src/infra/model";
 
 describe("Reactive system - exports", () => {
@@ -32,6 +33,7 @@ describe("Reactive system - exports", () => {
     expect(reflex.event).toBe(infra.event);
     expect(reflex.flush).toBe(infra.flush);
     expect("resource" in reflex).toBe(false);
+    expect("asyncDerived" in reflex).toBe(false);
   });
 
   it("keeps global runtime aliases live after createRuntime()", () => {
@@ -62,6 +64,11 @@ describe("Reactive system - exports", () => {
     expect(unstable.optimistic).toBe(optimistic);
     expect(unstable.resource).toBe(resource);
     expect(unstable.transition).toBe(transition);
+    expect(unstable.asyncDerived).toBe(asyncDerived);
+    expect(unstable.read).toBe(read);
+    expect(unstable.currentOrUndefined).toBe(currentOrUndefined);
+    expect("current" in unstable).toBe(false);
+    expect(unstable.until).toBe(until);
     expect("createProjection" in unstable).toBe(false);
     expect("createSelector" in unstable).toBe(false);
   });

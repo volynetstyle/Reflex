@@ -15,6 +15,24 @@ When this document uses the words:
 - `Direction`: the statement describes the intended migration path, not a fully
   completed implementation.
 
+## Async runtime constraint
+
+> Async semantics may use the synchronous runtime, but must not alter synchronous
+> runtime semantics until the higher-level model demonstrates a correctness or
+> composition requirement that cannot be satisfied above it.
+
+Attempt identity, commit authority, dependency frontier, validation before
+publication, and wake notifications belong to the async layer first. Pending
+describes an evaluation's inability to produce fresh truth; it does not replace
+the last committed producer payload. Production `readProducer` remains an
+ordinary synchronous read.
+
+The isolated [async semantics experiment](packages/reflex/lab/async-semantics/README.md)
+compares the current source protocol, a consumer evaluation protocol, and a
+kernel read branch using a common corpus. Its kernel changes exist only in
+generated bundles. Results guide further experiments rather than establishing
+a new runtime or public API contract.
+
 ## Executive Summary
 
 Reflex is organized as a layered system:

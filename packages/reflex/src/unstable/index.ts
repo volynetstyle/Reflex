@@ -41,3 +41,4 @@ export { createModel, isModel, own } from "../infra/model";
 
 export * from "./optimistic";
 export * from "./resource";
+export * from "./async";

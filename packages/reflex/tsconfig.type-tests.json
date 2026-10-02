@@ -3,6 +3,7 @@
   "include": [
     "src",
     "tests/reflex.model.typecheck.ts",
+    "tests/reflex.async.typecheck.ts",
     "../reflex-runtime/src/globals.d.ts"
   ]
 }

@@ -21,7 +21,9 @@ for (const subpath of ["unstable", "debug"]) {
   const outputDir = join(packageDir, "dist", subpath);
   const outputPath = join(outputDir, "index.d.ts");
   const source = readFileSync(bundledPath, "utf8").trim();
-  const lines = ['/// <reference path="../globals.d.ts" />', ""];
+  const lines = ['/// <reference path="../globals.d.ts" />'];
+  if (subpath === "unstable") lines.push('/// <reference lib="dom" />');
+  lines.push("");
 
   if (source.length > 0) {
     lines.push(source);
