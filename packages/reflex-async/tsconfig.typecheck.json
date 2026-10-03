@@ -1,0 +1,28 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "customConditions": ["source"],
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "allowJs": true,
+    "paths": {
+      "@volynets/reflex-async": ["src/index.ts"],
+      "@runtime/*": ["../reflex-runtime/src/*"],
+      "@volynets/reflex-runtime/internal": [
+        "../reflex-runtime/src/internal/index.ts"
+      ],
+      "@volynets/reflex-scheduler": ["../reflex-scheduler/src/index.ts"],
+      "@volynets/reflex": ["../reflex/src/index.ts"],
+      "@volynets/reflex/unstable": ["../reflex/src/unstable/index.ts"]
+    }
+  },
+  "include": [
+    "src",
+    "tests",
+    "bench/**/*.ts",
+    "vite*.ts",
+    "../reflex-runtime/src/globals.d.ts"
+  ]
+}

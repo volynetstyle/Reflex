@@ -1,5 +1,5 @@
 ---
-"@volynets/reflex": patch
+"@volynets/reflex-async": patch
 ---
 
 Separate async source lifecycle, attempt authority, evaluation generations and

@@ -38,6 +38,12 @@ Public application-facing facade.
 - `scan` / `hold` / `subscribeOnce`
 - model contract: `docs/models.md`
 
+### `@volynets/reflex-async`
+
+Reactive async derivations with committed snapshots, cancelable attempts and
+validated dependency freshness. Includes contract tests, benchmarks and the
+async semantics labs. See [the package documentation](packages/reflex-async/README.md).
+
 ## Recommended Entry Point
 
 For application code, start with `@volynets/reflex`.

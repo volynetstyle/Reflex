@@ -173,7 +173,11 @@ function createConfig(target: BuildTarget): RollupOptions {
     },
 
     plugins: createPlugins(target),
-    external: [...EXTERNALS],
+    // Packages such as reflex-async must observe the same active runtime and graph.
+    external: (id) =>
+      id === "@volynets/reflex-runtime" ||
+      id.startsWith("@volynets/reflex-runtime/") ||
+      EXTERNALS.some((external) => id === external),
   };
 }
 

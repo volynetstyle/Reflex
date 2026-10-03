@@ -1,5 +1,5 @@
 ---
-"@volynets/reflex": patch
+"@volynets/reflex-async": patch
 ---
 
 Reduce async derivation validation allocations without changing the fresh-read,

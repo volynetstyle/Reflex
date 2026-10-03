@@ -1,0 +1,2713 @@
+{
+  "recordedAt": "2026-10-02T17:38:48.997Z",
+  "node": "v25.2.0",
+  "platform": "win32",
+  "cpu": "12th Gen Intel(R) Core(TM) i5-1235U",
+  "rounds": 0,
+  "samplesPerRound": 7,
+  "sourceHashes": {
+    "src/unstable/async.ts": "c8d42cd40a8fbea1c0e1c2d158ccc8d9fd652e7e84fd91e8cd894395f9839e3d",
+    "../reflex-runtime/src/protocol/read.producer.ts": "d2195a5d20f637dc68ec20666eaec65799982d6c00dde8b57e8411cc3e5ea2b5"
+  },
+  "experimentHashes": {
+    "async-spec-machine.ts": "e4ab84831058869a17f1a36eaa0772593ed30a0247e93f89a27954279abcf017",
+    "assertions.ts": "4b474bc021a4968bbe9617c79e15a36e3c81884e5c9435fbdb6d8eea22e2fb24",
+    "build.mjs": "1fb56ee3fa3afae386f22941689e9f9630de4da68556c2fc5705c12cd099b30a",
+    "correctness.ts": "9c9d47a017bada9722cdaa6b468ea957669db08135327ff075d65662ca8d6852",
+    "entry.ts": "0991ac8e4c789e5138d124ed8019cf021055ddf5c2199682d7617494f10455b8",
+    "evaluation.ts": "26d9dab9672f5c735f2a3dd3c50e3236317b01ac1071dad178813caa0fb6288f",
+    "frontier.ts": "a9b3af789a49a43c9aa9741f5766e1f309c06a7f64981c2f655f4100340b30b0",
+    "performance.mjs": "aa242341d0e4cf5307fd28f2071a3cb1b32d1844ff8eb7481b21e3351cbf1e95",
+    "pending-capture-machine.ts": "daa89d4edc2818a6e91f48ba50479aca259587a9569980c000b6e2f4b62e33f0",
+    "run.mjs": "10125480915c7000b23dc8eec5cfb8fbd3535a283b79179d4b9032acfc34cf44"
+  },
+  "bundleHashes": {
+    "A": "789d54c3c73b00b94af2f742be3024ca33d2028f5de31531fc63525c701afa7c",
+    "B1": "36f08c0ef8e5e9b7c477197f1fb4a2adcf669f21cf48bd544dd045e990a299f0",
+    "B2": "2a15bb01677efa8457b98a3566b756297cecb278db6c2e600b3df99396e9f220",
+    "B": "54ed3ec42db73dbff8367b84123158c0021e43b43a67a4892b1e8a811f8472de",
+    "B3": "fe1efad1e07cafeaaf86c6682c7af3cbe6db05b9866e54c590cecb13d3de5278",
+    "C": "6b2d7c544d3d0db9aba6aa3ba91097408a4a0767432fad614798951a3fea7e3c"
+  },
+  "correctness": {
+    "A": [
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "flush",
+        "passed": false,
+        "error": "Still blocked after settlement and 16 read retries"
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "flush",
+        "passed": false,
+        "error": "Unexpected value: expected 5, got blocked"
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "flush",
+        "passed": false,
+        "error": "must validate the hidden upstream before publishing: expected undefined, got [object Object]"
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "flush",
+        "passed": false,
+        "error": "diamond must validate the shared hidden source: expected undefined, got [object Object]"
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 deep frontiers, many cached consumers, and repeated reads",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 nested cached diamonds merge two async roots once each",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 drops 90 percent of a dynamic frontier while old roots are pending",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 keeps an attempt frontier snapshot when a cached frontier mutates",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 abandons a superseded attempt between collection and validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 rechecks authority when validating one dependency invalidates another",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 blocks publication when validation starts a dependency attempt",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 propagates a failure raised during publication validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "sab",
+        "passed": false,
+        "error": "Still blocked after settlement and 16 read retries"
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "sab",
+        "passed": false,
+        "error": "Unexpected value: expected 5, got blocked"
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "sab",
+        "passed": false,
+        "error": "must validate the hidden upstream before publishing: expected undefined, got [object Object]"
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "sab",
+        "passed": false,
+        "error": "diamond must validate the shared hidden source: expected undefined, got [object Object]"
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 deep frontiers, many cached consumers, and repeated reads",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 nested cached diamonds merge two async roots once each",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 drops 90 percent of a dynamic frontier while old roots are pending",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 keeps an attempt frontier snapshot when a cached frontier mutates",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 abandons a superseded attempt between collection and validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 rechecks authority when validating one dependency invalidates another",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 blocks publication when validation starts a dependency attempt",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 propagates a failure raised during publication validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "eager",
+        "passed": false,
+        "error": "Still blocked after settlement and 16 read retries"
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "eager",
+        "passed": false,
+        "error": "Unexpected value: expected 5, got blocked"
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "eager",
+        "passed": false,
+        "error": "An async derivation has no fresh result yet."
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "eager",
+        "passed": false,
+        "error": "An async derivation has no fresh result yet."
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 deep frontiers, many cached consumers, and repeated reads",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 nested cached diamonds merge two async roots once each",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 drops 90 percent of a dynamic frontier while old roots are pending",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 keeps an attempt frontier snapshot when a cached frontier mutates",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 abandons a superseded attempt between collection and validation",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 rechecks authority when validating one dependency invalidates another",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 blocks publication when validation starts a dependency attempt",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 propagates a failure raised during publication validation",
+        "strategy": "eager",
+        "passed": true
+      }
+    ],
+    "B1": [
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "flush",
+        "passed": false,
+        "error": "must validate the hidden upstream before publishing: expected undefined, got [object Object]"
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "flush",
+        "passed": false,
+        "error": "diamond must validate the shared hidden source: expected undefined, got [object Object]"
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 deep frontiers, many cached consumers, and repeated reads",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 nested cached diamonds merge two async roots once each",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 drops 90 percent of a dynamic frontier while old roots are pending",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 keeps an attempt frontier snapshot when a cached frontier mutates",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 abandons a superseded attempt between collection and validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 rechecks authority when validating one dependency invalidates another",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 blocks publication when validation starts a dependency attempt",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 propagates a failure raised during publication validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "sab",
+        "passed": false,
+        "error": "must validate the hidden upstream before publishing: expected undefined, got [object Object]"
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "sab",
+        "passed": false,
+        "error": "diamond must validate the shared hidden source: expected undefined, got [object Object]"
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 deep frontiers, many cached consumers, and repeated reads",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 nested cached diamonds merge two async roots once each",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 drops 90 percent of a dynamic frontier while old roots are pending",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 keeps an attempt frontier snapshot when a cached frontier mutates",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 abandons a superseded attempt between collection and validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 rechecks authority when validating one dependency invalidates another",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 blocks publication when validation starts a dependency attempt",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 propagates a failure raised during publication validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 deep frontiers, many cached consumers, and repeated reads",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 nested cached diamonds merge two async roots once each",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 drops 90 percent of a dynamic frontier while old roots are pending",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 keeps an attempt frontier snapshot when a cached frontier mutates",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 abandons a superseded attempt between collection and validation",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 rechecks authority when validating one dependency invalidates another",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 blocks publication when validation starts a dependency attempt",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 propagates a failure raised during publication validation",
+        "strategy": "eager",
+        "passed": true
+      }
+    ],
+    "B2": [
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 deep frontiers, many cached consumers, and repeated reads",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 nested cached diamonds merge two async roots once each",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 drops 90 percent of a dynamic frontier while old roots are pending",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 keeps an attempt frontier snapshot when a cached frontier mutates",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 abandons a superseded attempt between collection and validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 rechecks authority when validating one dependency invalidates another",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 blocks publication when validation starts a dependency attempt",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 propagates a failure raised during publication validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 deep frontiers, many cached consumers, and repeated reads",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 nested cached diamonds merge two async roots once each",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 drops 90 percent of a dynamic frontier while old roots are pending",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 keeps an attempt frontier snapshot when a cached frontier mutates",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 abandons a superseded attempt between collection and validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 rechecks authority when validating one dependency invalidates another",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 blocks publication when validation starts a dependency attempt",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 propagates a failure raised during publication validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 deep frontiers, many cached consumers, and repeated reads",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 nested cached diamonds merge two async roots once each",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 drops 90 percent of a dynamic frontier while old roots are pending",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 keeps an attempt frontier snapshot when a cached frontier mutates",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 abandons a superseded attempt between collection and validation",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 rechecks authority when validating one dependency invalidates another",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 blocks publication when validation starts a dependency attempt",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 propagates a failure raised during publication validation",
+        "strategy": "eager",
+        "passed": true
+      }
+    ],
+    "B": [
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 deep frontiers, many cached consumers, and repeated reads",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 nested cached diamonds merge two async roots once each",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 drops 90 percent of a dynamic frontier while old roots are pending",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 keeps an attempt frontier snapshot when a cached frontier mutates",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 abandons a superseded attempt between collection and validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 rechecks authority when validating one dependency invalidates another",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 blocks publication when validation starts a dependency attempt",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 propagates a failure raised during publication validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 deep frontiers, many cached consumers, and repeated reads",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 nested cached diamonds merge two async roots once each",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 drops 90 percent of a dynamic frontier while old roots are pending",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 keeps an attempt frontier snapshot when a cached frontier mutates",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 abandons a superseded attempt between collection and validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 rechecks authority when validating one dependency invalidates another",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 blocks publication when validation starts a dependency attempt",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 propagates a failure raised during publication validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 deep frontiers, many cached consumers, and repeated reads",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 nested cached diamonds merge two async roots once each",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 drops 90 percent of a dynamic frontier while old roots are pending",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 keeps an attempt frontier snapshot when a cached frontier mutates",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 abandons a superseded attempt between collection and validation",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 rechecks authority when validating one dependency invalidates another",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 blocks publication when validation starts a dependency attempt",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 propagates a failure raised during publication validation",
+        "strategy": "eager",
+        "passed": true
+      }
+    ],
+    "B3": [
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 deep frontiers, many cached consumers, and repeated reads",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 nested cached diamonds merge two async roots once each",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 drops 90 percent of a dynamic frontier while old roots are pending",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 keeps an attempt frontier snapshot when a cached frontier mutates",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 abandons a superseded attempt between collection and validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 rechecks authority when validating one dependency invalidates another",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 blocks publication when validation starts a dependency attempt",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 propagates a failure raised during publication validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 deep frontiers, many cached consumers, and repeated reads",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 nested cached diamonds merge two async roots once each",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 drops 90 percent of a dynamic frontier while old roots are pending",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 keeps an attempt frontier snapshot when a cached frontier mutates",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 abandons a superseded attempt between collection and validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 rechecks authority when validating one dependency invalidates another",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 blocks publication when validation starts a dependency attempt",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 propagates a failure raised during publication validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 deep frontiers, many cached consumers, and repeated reads",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 nested cached diamonds merge two async roots once each",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 drops 90 percent of a dynamic frontier while old roots are pending",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 keeps an attempt frontier snapshot when a cached frontier mutates",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 abandons a superseded attempt between collection and validation",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 rechecks authority when validating one dependency invalidates another",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 blocks publication when validation starts a dependency attempt",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 propagates a failure raised during publication validation",
+        "strategy": "eager",
+        "passed": true
+      }
+    ],
+    "C": [
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "flush",
+        "passed": false,
+        "error": "Still blocked after settlement and 16 read retries"
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "flush",
+        "passed": false,
+        "error": "Unexpected value: expected 5, got blocked"
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "flush",
+        "passed": false,
+        "error": "must validate the hidden upstream before publishing: expected undefined, got [object Object]"
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "flush",
+        "passed": false,
+        "error": "diamond must validate the shared hidden source: expected undefined, got [object Object]"
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 deep frontiers, many cached consumers, and repeated reads",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 nested cached diamonds merge two async roots once each",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 drops 90 percent of a dynamic frontier while old roots are pending",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 keeps an attempt frontier snapshot when a cached frontier mutates",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 abandons a superseded attempt between collection and validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 rechecks authority when validating one dependency invalidates another",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 blocks publication when validation starts a dependency attempt",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 propagates a failure raised during publication validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "sab",
+        "passed": false,
+        "error": "Still blocked after settlement and 16 read retries"
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "sab",
+        "passed": false,
+        "error": "Unexpected value: expected 5, got blocked"
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "sab",
+        "passed": false,
+        "error": "must validate the hidden upstream before publishing: expected undefined, got [object Object]"
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "sab",
+        "passed": false,
+        "error": "diamond must validate the shared hidden source: expected undefined, got [object Object]"
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 deep frontiers, many cached consumers, and repeated reads",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 nested cached diamonds merge two async roots once each",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 drops 90 percent of a dynamic frontier while old roots are pending",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 keeps an attempt frontier snapshot when a cached frontier mutates",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 abandons a superseded attempt between collection and validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 rechecks authority when validating one dependency invalidates another",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 blocks publication when validation starts a dependency attempt",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 propagates a failure raised during publication validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "eager",
+        "passed": false,
+        "error": "Still blocked after settlement and 16 read retries"
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "eager",
+        "passed": false,
+        "error": "Unexpected value: expected 5, got blocked"
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "eager",
+        "passed": false,
+        "error": "An async derivation has no fresh result yet."
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "eager",
+        "passed": false,
+        "error": "An async derivation has no fresh result yet."
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 deep frontiers, many cached consumers, and repeated reads",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 nested cached diamonds merge two async roots once each",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 drops 90 percent of a dynamic frontier while old roots are pending",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 keeps an attempt frontier snapshot when a cached frontier mutates",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 abandons a superseded attempt between collection and validation",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 rechecks authority when validating one dependency invalidates another",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 blocks publication when validation starts a dependency attempt",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 propagates a failure raised during publication validation",
+        "strategy": "eager",
+        "passed": true
+      }
+    ]
+  },
+  "exploration": [
+    {
+      "depth": 4,
+      "maxStates": 1200,
+      "oracleStates": 1129,
+      "transitions": 2054,
+      "replays": 1129,
+      "complete": true,
+      "captureMode": "direct",
+      "schedules": [
+        "flush"
+      ]
+    },
+    {
+      "depth": 4,
+      "maxStates": 1200,
+      "oracleStates": 1129,
+      "transitions": 2054,
+      "replays": 1129,
+      "complete": true,
+      "captureMode": "cached",
+      "schedules": [
+        "flush"
+      ]
+    },
+    {
+      "depth": 3,
+      "maxStates": 200,
+      "oracleStates": 41,
+      "transitions": 57,
+      "replays": 41,
+      "complete": true,
+      "captureMode": "pending",
+      "schedules": [
+        "flush"
+      ]
+    },
+    {
+      "depth": 4,
+      "maxStates": 1200,
+      "oracleStates": 1129,
+      "transitions": 2054,
+      "replays": 1129,
+      "complete": true,
+      "captureMode": "direct",
+      "schedules": [
+        "sab"
+      ]
+    },
+    {
+      "depth": 4,
+      "maxStates": 1200,
+      "oracleStates": 1129,
+      "transitions": 2054,
+      "replays": 1129,
+      "complete": true,
+      "captureMode": "cached",
+      "schedules": [
+        "sab"
+      ]
+    },
+    {
+      "depth": 3,
+      "maxStates": 200,
+      "oracleStates": 41,
+      "transitions": 57,
+      "replays": 41,
+      "complete": true,
+      "captureMode": "pending",
+      "schedules": [
+        "sab"
+      ]
+    },
+    {
+      "depth": 4,
+      "maxStates": 1200,
+      "oracleStates": 1129,
+      "transitions": 2054,
+      "replays": 1129,
+      "complete": true,
+      "captureMode": "direct",
+      "schedules": [
+        "eager"
+      ]
+    },
+    {
+      "depth": 4,
+      "maxStates": 1200,
+      "oracleStates": 1129,
+      "transitions": 2054,
+      "replays": 1129,
+      "complete": true,
+      "captureMode": "cached",
+      "schedules": [
+        "eager"
+      ]
+    },
+    {
+      "depth": 3,
+      "maxStates": 200,
+      "oracleStates": 41,
+      "transitions": 57,
+      "replays": 41,
+      "complete": true,
+      "captureMode": "pending",
+      "schedules": [
+        "eager"
+      ]
+    }
+  ],
+  "scenarios": [],
+  "runs": {
+    "A": [],
+    "B1": [],
+    "B2": [],
+    "B": [],
+    "B3": [],
+    "C": []
+  }
+}

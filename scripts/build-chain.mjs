@@ -85,6 +85,17 @@ const packageConfigs = new Map([
   ],
 ]);
 
+packageConfigs.set("@volynets/reflex-async", {
+  cwd: resolve(repoRoot, "packages/reflex-async"),
+  dependencies: ["@volynets/reflex-runtime"],
+  outputs: ["build/esm", "build/types", "dist/esm", "dist/cjs", "dist/index.d.ts"],
+  phases: [
+    ["clean", cleanPackage],
+    ["typescript", runTsc("tsconfig.build.json")],
+    ["bundle", runRollup("rollup.config.ts")],
+  ],
+});
+
 const color = {
   blue: (value) => paint("34", value),
   bold: (value) => paint("1", value),

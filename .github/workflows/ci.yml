@@ -16,6 +16,7 @@ on:
       - packages/reflex-runtime/**
       - packages/reflex-scheduler/**
       - packages/reflex/**
+      - packages/reflex-async/**
 
   pull_request:
     paths:
@@ -28,6 +29,7 @@ on:
       - packages/reflex-runtime/**
       - packages/reflex-scheduler/**
       - packages/reflex/**
+      - packages/reflex-async/**
 
 permissions:
   contents: read
@@ -104,3 +106,21 @@ jobs:
 
       - name: Reflex build
         run: pnpm --filter @volynets/reflex build
+
+      - name: Async lint
+        run: pnpm --filter @volynets/reflex-async lint
+
+      - name: Async typecheck
+        run: pnpm --filter @volynets/reflex-async typecheck && pnpm --filter @volynets/reflex-async typecheck:async:semantics
+
+      - name: Async test
+        run: pnpm --filter @volynets/reflex-async test
+
+      - name: Async production contracts
+        run: pnpm --filter @volynets/reflex-async test:async:production
+
+      - name: Async build
+        run: pnpm --filter @volynets/reflex-async build
+
+      - name: Async package contracts
+        run: pnpm --filter @volynets/reflex-async test:async:package && pnpm --filter @volynets/reflex-async typecheck:package

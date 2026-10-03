@@ -9,6 +9,7 @@ export default [
       "**/coverage/**",
       "**/dist/**",
       "**/node_modules/**",
+      "**/.cache/**",
       "**/.pnpm-store/**",
       "**/drafts/**",
       "**/bench/**",

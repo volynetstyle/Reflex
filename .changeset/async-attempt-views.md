@@ -1,5 +1,6 @@
 ---
 "@volynets/reflex": minor
+"@volynets/reflex-async": minor
 ---
 
 Add an unstable async derivation experiment with separate commits and cancelable

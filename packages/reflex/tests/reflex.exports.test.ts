@@ -9,7 +9,6 @@ import {
   transition,
 } from "../src/unstable/optimistic";
 import { resource } from "../src/unstable/resource";
-import { asyncDerived, read, currentOrUndefined, until } from "../src/unstable/async";
 import { createModel, isModel, own } from "../src/infra/model";
 
 describe("Reactive system - exports", () => {
@@ -64,11 +63,11 @@ describe("Reactive system - exports", () => {
     expect(unstable.optimistic).toBe(optimistic);
     expect(unstable.resource).toBe(resource);
     expect(unstable.transition).toBe(transition);
-    expect(unstable.asyncDerived).toBe(asyncDerived);
-    expect(unstable.read).toBe(read);
-    expect(unstable.currentOrUndefined).toBe(currentOrUndefined);
+    expect("asyncDerived" in unstable).toBe(false);
+    expect("read" in unstable).toBe(false);
+    expect("currentOrUndefined" in unstable).toBe(false);
     expect("current" in unstable).toBe(false);
-    expect(unstable.until).toBe(until);
+    expect("until" in unstable).toBe(false);
     expect("createProjection" in unstable).toBe(false);
     expect("createSelector" in unstable).toBe(false);
   });

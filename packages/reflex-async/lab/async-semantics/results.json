@@ -1,0 +1,5683 @@
+{
+  "recordedAt": "2026-10-02T14:48:30.257Z",
+  "node": "v25.2.0",
+  "platform": "win32",
+  "cpu": "12th Gen Intel(R) Core(TM) i5-1235U",
+  "rounds": 3,
+  "samplesPerRound": 7,
+  "sourceHashes": {
+    "src/unstable/async.ts": "c8d42cd40a8fbea1c0e1c2d158ccc8d9fd652e7e84fd91e8cd894395f9839e3d",
+    "../reflex-runtime/src/protocol/read.producer.ts": "d2195a5d20f637dc68ec20666eaec65799982d6c00dde8b57e8411cc3e5ea2b5"
+  },
+  "experimentHashes": {
+    "assertions.ts": "4b474bc021a4968bbe9617c79e15a36e3c81884e5c9435fbdb6d8eea22e2fb24",
+    "build.mjs": "b8f9e2ae0cc2b013aee3ffe95a1d50d60c0a673b152eaf66de86d41cc74e38a0",
+    "correctness.ts": "e306f57275bfc8428035ce9a21223fef5d91a0142186f93e08edb63cad4f09e8",
+    "entry.ts": "4ae7a5885c943f6a75313fca4171cbdca283ca23bc42a0d1bc173100fe1fe14f",
+    "evaluation.ts": "1c8af8e2699e38524ba6a0ba09895877238bd9149f0f32034c5c3ce0cc0a4cd4",
+    "frontier.ts": "cdbd9a7f3d686ec1b37a8451e64f3af3caf79eff18a38a6fe6b1c1ee22c28849",
+    "performance.mjs": "aa242341d0e4cf5307fd28f2071a3cb1b32d1844ff8eb7481b21e3351cbf1e95",
+    "run.mjs": "f6c35a33d13963934a2ef01837c5de4dcda7849c926cd680df668eac4b94d1b5"
+  },
+  "bundleHashes": {
+    "A": "36d5af56530b7646b75eb3f5756d5ac7eac4aba2074b80c4c27cc87f20e927c8",
+    "B1": "a9cfa55464e5c727d86efadb8ceab2ab643ac501a5ad840a1cbbdabf9053eb7e",
+    "B2": "842599cb089dc2e69e605cdf580af5421b53386604186ac0d1b8f2671f3a5c2c",
+    "B": "edd95c80fa7c11b7ff26d73d624a6581a0c5cf337c962cc23784eed54522b0da",
+    "B3": "362ebeb8bf358116fe9d81e911725c5d9760aba1d9f2fe4a699b7d1af9f3fc60",
+    "C": "ce4c4ff58176378161081124df0f62d2546c515bf5407291531184a31705b7d9"
+  },
+  "correctness": {
+    "A": [
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "flush",
+        "passed": false,
+        "error": "Still blocked after settlement and 16 read retries"
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "flush",
+        "passed": false,
+        "error": "Unexpected value: expected 5, got blocked"
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "flush",
+        "passed": false,
+        "error": "must validate the hidden upstream before publishing: expected undefined, got [object Object]"
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "flush",
+        "passed": false,
+        "error": "diamond must validate the shared hidden source: expected undefined, got [object Object]"
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "sab",
+        "passed": false,
+        "error": "Still blocked after settlement and 16 read retries"
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "sab",
+        "passed": false,
+        "error": "Unexpected value: expected 5, got blocked"
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "sab",
+        "passed": false,
+        "error": "must validate the hidden upstream before publishing: expected undefined, got [object Object]"
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "sab",
+        "passed": false,
+        "error": "diamond must validate the shared hidden source: expected undefined, got [object Object]"
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "eager",
+        "passed": false,
+        "error": "Still blocked after settlement and 16 read retries"
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "eager",
+        "passed": false,
+        "error": "Unexpected value: expected 5, got blocked"
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "eager",
+        "passed": false,
+        "error": "An async derivation has no fresh result yet."
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "eager",
+        "passed": false,
+        "error": "An async derivation has no fresh result yet."
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "eager",
+        "passed": true
+      }
+    ],
+    "B1": [
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "flush",
+        "passed": false,
+        "error": "must validate the hidden upstream before publishing: expected undefined, got [object Object]"
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "flush",
+        "passed": false,
+        "error": "diamond must validate the shared hidden source: expected undefined, got [object Object]"
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "sab",
+        "passed": false,
+        "error": "must validate the hidden upstream before publishing: expected undefined, got [object Object]"
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "sab",
+        "passed": false,
+        "error": "diamond must validate the shared hidden source: expected undefined, got [object Object]"
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "eager",
+        "passed": true
+      }
+    ],
+    "B2": [
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "eager",
+        "passed": true
+      }
+    ],
+    "B": [
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "eager",
+        "passed": true
+      }
+    ],
+    "B3": [
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "eager",
+        "passed": true
+      }
+    ],
+    "C": [
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "flush",
+        "passed": false,
+        "error": "Still blocked after settlement and 16 read retries"
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "flush",
+        "passed": false,
+        "error": "Unexpected value: expected 5, got blocked"
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "flush",
+        "passed": false,
+        "error": "must validate the hidden upstream before publishing: expected undefined, got [object Object]"
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "flush",
+        "passed": false,
+        "error": "diamond must validate the shared hidden source: expected undefined, got [object Object]"
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "flush",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "sab",
+        "passed": false,
+        "error": "Still blocked after settlement and 16 read retries"
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "sab",
+        "passed": false,
+        "error": "Unexpected value: expected 5, got blocked"
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "sab",
+        "passed": false,
+        "error": "must validate the hidden upstream before publishing: expected undefined, got [object Object]"
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "sab",
+        "passed": false,
+        "error": "diamond must validate the shared hidden source: expected undefined, got [object Object]"
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "sab",
+        "passed": true
+      },
+      {
+        "name": "sync -> async -> sync",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "async -> async",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dynamic branch",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "superseded attempt",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dependency changes while Promise resolves",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "block during validation",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "failure while stale commit exists",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "refresh while consumer validates",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "dispose during completion",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "nested pending",
+        "strategy": "eager",
+        "passed": false,
+        "error": "Still blocked after settlement and 16 read retries"
+      },
+      {
+        "name": "diamond async graph (B first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "diamond async graph (C first)",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "computed chain -> DOM effect boundary",
+        "strategy": "eager",
+        "passed": false,
+        "error": "Unexpected value: expected 5, got blocked"
+      },
+      {
+        "name": "cached async -> sync -> async frontier",
+        "strategy": "eager",
+        "passed": false,
+        "error": "An async derivation has no fresh result yet."
+      },
+      {
+        "name": "blocker is wake-up, not value",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "committed undefined is present",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached frontier dynamic removal",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "cached diamond frontier",
+        "strategy": "eager",
+        "passed": false,
+        "error": "An async derivation has no fresh result yet."
+      },
+      {
+        "name": "tagged source read matches throwing protocol",
+        "strategy": "eager",
+        "passed": true
+      },
+      {
+        "name": "B3 validates a shared diamond prerequisite once",
+        "strategy": "eager",
+        "passed": true
+      }
+    ]
+  },
+  "scenarios": [
+    {
+      "name": "pure sync signal read",
+      "variants": {
+        "A": {
+          "medianNs": 2.1262764930725098,
+          "rangeNs": [
+            1.1871516704559328,
+            2.284443378448492
+          ]
+        },
+        "B1": {
+          "medianNs": 2.165544033050533,
+          "rangeNs": [
+            2.0225584506988534,
+            2.3789286613464338
+          ]
+        },
+        "B2": {
+          "medianNs": 2.1291494369506876,
+          "rangeNs": [
+            2.0018219947814964,
+            2.2267103195190465
+          ]
+        },
+        "B": {
+          "medianNs": 2.159613370895386,
+          "rangeNs": [
+            2.0127534866332963,
+            2.2476553916931197
+          ]
+        },
+        "B3": {
+          "medianNs": 2.155351638793945,
+          "rangeNs": [
+            2.0098984241485605,
+            2.2436261177062984
+          ]
+        },
+        "C": {
+          "medianNs": 2.146196365356446,
+          "rangeNs": [
+            1.9845962524414058,
+            2.3185551166534437
+          ]
+        }
+      },
+      "deltasVsA": {
+        "B1": 1.8467748717515553,
+        "B2": 0.1351161943208279,
+        "B": 1.5678524374176828,
+        "B3": 1.3674207383735482,
+        "C": 0.9368429904970554
+      }
+    },
+    {
+      "name": "pure sync graph, zero async nodes",
+      "variants": {
+        "A": {
+          "medianNs": 42.14973449707038,
+          "rangeNs": [
+            37.5242233276367,
+            45.722579956054744
+          ]
+        },
+        "B1": {
+          "medianNs": 42.04120635986348,
+          "rangeNs": [
+            38.689994812011804,
+            47.99709320068364
+          ]
+        },
+        "B2": {
+          "medianNs": 44.346237182617095,
+          "rangeNs": [
+            40.94772338867226,
+            47.19734191894532
+          ]
+        },
+        "B": {
+          "medianNs": 42.48294830322278,
+          "rangeNs": [
+            39.67037200927723,
+            46.538543701172024
+          ]
+        },
+        "B3": {
+          "medianNs": 43.27201843261721,
+          "rangeNs": [
+            40.26069641113261,
+            48.4195709228516
+          ]
+        },
+        "C": {
+          "medianNs": 41.27197265624987,
+          "rangeNs": [
+            38.762855529785384,
+            66.36447906494111
+          ]
+        }
+      },
+      "deltasVsA": {
+        "B1": -0.25748237444873645,
+        "B2": 5.211189849130338,
+        "B": 0.7905478175089353,
+        "B3": 2.662612111174356,
+        "C": -2.0824848632949644
+      }
+    },
+    {
+      "name": "pure sync graph + dormant async support",
+      "variants": {
+        "A": {
+          "medianNs": 50.846099853515874,
+          "rangeNs": [
+            46.572685241699254,
+            61.23542785644535
+          ]
+        },
+        "B1": {
+          "medianNs": 49.28379058837884,
+          "rangeNs": [
+            46.730995178222415,
+            50.535583496093444
+          ]
+        },
+        "B2": {
+          "medianNs": 50.5922317504885,
+          "rangeNs": [
+            45.88527679443358,
+            53.39355468750003
+          ]
+        },
+        "B": {
+          "medianNs": 50.25596618652307,
+          "rangeNs": [
+            46.472358703613345,
+            58.00895690917952
+          ]
+        },
+        "B3": {
+          "medianNs": 50.35877227783231,
+          "rangeNs": [
+            46.28982543945304,
+            53.32107543945313
+          ]
+        },
+        "C": {
+          "medianNs": 51.45549774169915,
+          "rangeNs": [
+            46.65431976318352,
+            59.78164672851586
+          ]
+        }
+      },
+      "deltasVsA": {
+        "B1": -3.072623602671465,
+        "B2": -0.49928726836226955,
+        "B": -1.160627203842457,
+        "B3": -0.9584364918597932,
+        "C": 1.1985145172174638
+      }
+    },
+    {
+      "name": "ready async read",
+      "variants": {
+        "A": {
+          "medianNs": 12.195920944213903,
+          "rangeNs": [
+            9.819650650024414,
+            13.03014755249022
+          ]
+        },
+        "B1": {
+          "medianNs": 12.508201599121128,
+          "rangeNs": [
+            11.510801315307678,
+            15.560722351074213
+          ]
+        },
+        "B2": {
+          "medianNs": 12.828588485717724,
+          "rangeNs": [
+            11.95154190063478,
+            13.293266296386793
+          ]
+        },
+        "B": {
+          "medianNs": 12.644720077514675,
+          "rangeNs": [
+            11.901617050170866,
+            14.965200424194416
+          ]
+        },
+        "B3": {
+          "medianNs": 12.333488464355558,
+          "rangeNs": [
+            11.861801147460927,
+            13.66519927978511
+          ]
+        },
+        "C": {
+          "medianNs": 14.158487319946232,
+          "rangeNs": [
+            12.981653213500884,
+            15.928840637207102
+          ]
+        }
+      },
+      "deltasVsA": {
+        "B1": 2.560533610669058,
+        "B2": 5.187533966460944,
+        "B": 3.679911794719337,
+        "B3": 1.1279797628314547,
+        "C": 16.091989975250097
+      }
+    },
+    {
+      "name": "ready async read, tagged result",
+      "variants": {
+        "A": {
+          "medianNs": 14.047050476074164,
+          "rangeNs": [
+            11.840200424194325,
+            17.331933975219634
+          ]
+        },
+        "B1": {
+          "medianNs": 14.087533950805529,
+          "rangeNs": [
+            13.64483833312985,
+            17.965221405029286
+          ]
+        },
+        "B2": {
+          "medianNs": 14.439153671264613,
+          "rangeNs": [
+            13.341093063354595,
+            17.966842651367205
+          ]
+        },
+        "B": {
+          "medianNs": 14.465761184692498,
+          "rangeNs": [
+            13.686990737915051,
+            19.57960128784182
+          ]
+        },
+        "B3": {
+          "medianNs": 14.215278625488281,
+          "rangeNs": [
+            13.306379318237232,
+            18.519830703735444
+          ]
+        },
+        "C": {
+          "medianNs": 18.52154731750498,
+          "rangeNs": [
+            17.37685203552237,
+            20.505237579345607
+          ]
+        }
+      },
+      "deltasVsA": {
+        "B1": 0.28819911197954795,
+        "B2": 2.7913560633835877,
+        "B": 2.980773147583604,
+        "B3": 1.1976047904195486,
+        "C": 31.853639659457798
+      }
+    },
+    {
+      "name": "blocked async read",
+      "variants": {
+        "A": {
+          "medianNs": 135.79254150390685,
+          "rangeNs": [
+            127.26554870605422,
+            154.6714782714835
+          ]
+        },
+        "B1": {
+          "medianNs": 135.2813720703113,
+          "rangeNs": [
+            126.16653442382858,
+            154.79393005371142
+          ]
+        },
+        "B2": {
+          "medianNs": 135.45608520507818,
+          "rangeNs": [
+            128.18527221679713,
+            147.55096435546852
+          ]
+        },
+        "B": {
+          "medianNs": 132.8887939453134,
+          "rangeNs": [
+            125.35285949706945,
+            159.5180511474604
+          ]
+        },
+        "B3": {
+          "medianNs": 135.35766601562548,
+          "rangeNs": [
+            127.21900939941487,
+            155.04341125488313
+          ]
+        },
+        "C": {
+          "medianNs": 134.89990234374915,
+          "rangeNs": [
+            127.6184082031253,
+            141.16020202636568
+          ]
+        }
+      },
+      "deltasVsA": {
+        "B1": -0.3764341015598638,
+        "B2": -0.24777229669789014,
+        "B": -2.1383704336293663,
+        "B3": -0.3202499072961662,
+        "C": -0.6573550728719679
+      }
+    },
+    {
+      "name": "blocked async read, tagged result",
+      "variants": {
+        "A": {
+          "medianNs": 38.30146789550806,
+          "rangeNs": [
+            29.37469482421854,
+            42.329597473144545
+          ]
+        },
+        "B1": {
+          "medianNs": 38.44566345214892,
+          "rangeNs": [
+            28.76091003417916,
+            42.48600006103494
+          ]
+        },
+        "B2": {
+          "medianNs": 38.54980468750036,
+          "rangeNs": [
+            32.059860229492756,
+            43.330192565917486
+          ]
+        },
+        "B": {
+          "medianNs": 39.0525817871093,
+          "rangeNs": [
+            36.157608032226335,
+            42.23232269287124
+          ]
+        },
+        "B3": {
+          "medianNs": 36.7271423339843,
+          "rangeNs": [
+            29.59957122802663,
+            59.02462005615179
+          ]
+        },
+        "C": {
+          "medianNs": 40.807151794434134,
+          "rangeNs": [
+            37.25452423095684,
+            45.1160430908204
+          ]
+        }
+      },
+      "deltasVsA": {
+        "B1": 0.37647527513631207,
+        "B2": 0.6483740849562158,
+        "B": 1.9610577162483267,
+        "B3": -4.110353070067063,
+        "C": 6.542004880235774
+      }
+    },
+    {
+      "name": "99.9% ready reads, throw protocol",
+      "variants": {
+        "A": {
+          "medianNs": 16.668319702148285,
+          "rangeNs": [
+            14.728307723998936,
+            17.5811290740967
+          ]
+        },
+        "B1": {
+          "medianNs": 16.78285598754898,
+          "rangeNs": [
+            16.122579574584865,
+            17.576599121093714
+          ]
+        },
+        "B2": {
+          "medianNs": 17.28100776672353,
+          "rangeNs": [
+            16.452407836913896,
+            19.51136589050306
+          ]
+        },
+        "B": {
+          "medianNs": 16.82448387145996,
+          "rangeNs": [
+            16.242837905883864,
+            17.7081108093263
+          ]
+        },
+        "B3": {
+          "medianNs": 17.085218429565252,
+          "rangeNs": [
+            16.412782669067298,
+            17.92407035827639
+          ]
+        },
+        "C": {
+          "medianNs": 25.69718360900873,
+          "rangeNs": [
+            24.510335922241136,
+            29.736232757568253
+          ]
+        }
+      },
+      "deltasVsA": {
+        "B1": 0.687149559447997,
+        "B2": 3.6757638173707363,
+        "B": 0.9368920929177404,
+        "B3": 2.5011442956858865,
+        "C": 54.16781096235373
+      }
+    },
+    {
+      "name": "99.9% ready reads, tagged result",
+      "variants": {
+        "A": {
+          "medianNs": 19.302320480346808,
+          "rangeNs": [
+            17.651748657226527,
+            21.21157646179186
+          ]
+        },
+        "B1": {
+          "medianNs": 19.464111328124957,
+          "rangeNs": [
+            17.975568771362408,
+            21.921634674072244
+          ]
+        },
+        "B2": {
+          "medianNs": 20.139503479003896,
+          "rangeNs": [
+            18.816375732421797,
+            22.003841400146428
+          ]
+        },
+        "B": {
+          "medianNs": 19.866371154784968,
+          "rangeNs": [
+            18.882846832275323,
+            20.410299301147454
+          ]
+        },
+        "B3": {
+          "medianNs": 20.125913619995156,
+          "rangeNs": [
+            18.728828430175778,
+            22.07865715026869
+          ]
+        },
+        "C": {
+          "medianNs": 20.616149902343352,
+          "rangeNs": [
+            19.408273696899183,
+            20.970869064331062
+          ]
+        }
+      },
+      "deltasVsA": {
+        "B1": 0.8381937702406361,
+        "B2": 4.337214271773648,
+        "B": 2.9221910133160556,
+        "B3": 4.266808959507817,
+        "C": 6.806587960935873
+      }
+    },
+    {
+      "name": "async -> sync computed chain",
+      "variants": {
+        "A": {
+          "medianNs": 3.1181633472442387,
+          "rangeNs": [
+            1.4061391353607235,
+            4.439783096313506
+          ]
+        },
+        "B1": {
+          "medianNs": 4.413139820098899,
+          "rangeNs": [
+            4.1243076324462535,
+            4.539173841476443
+          ]
+        },
+        "B2": {
+          "medianNs": 5.7839930057525315,
+          "rangeNs": [
+            5.607742071151735,
+            6.020259857177741
+          ]
+        },
+        "B": {
+          "medianNs": 93.45477819442749,
+          "rangeNs": [
+            32.677674293518045,
+            100.18006563186643
+          ]
+        },
+        "B3": {
+          "medianNs": 5.923998355865498,
+          "rangeNs": [
+            5.421543121337916,
+            6.117570400238038
+          ]
+        },
+        "C": {
+          "medianNs": 3.086757659912149,
+          "rangeNs": [
+            2.341461181640616,
+            3.342217206954987
+          ]
+        }
+      },
+      "deltasVsA": {
+        "B1": 41.5301037387644,
+        "B2": 85.49358585926205,
+        "B": 2897.1097658184162,
+        "B3": 89.98357995263436,
+        "C": -1.0071854433105765
+      }
+    },
+    {
+      "name": "wide sync fanout with one async branch",
+      "variants": {
+        "A": {
+          "medianNs": 421.80633544922074,
+          "rangeNs": [
+            391.59851074219154,
+            829.9682617187513
+          ]
+        },
+        "B1": {
+          "medianNs": 483.5037231445266,
+          "rangeNs": [
+            458.9874267578037,
+            501.08947753906006
+          ]
+        },
+        "B2": {
+          "medianNs": 488.33770751953443,
+          "rangeNs": [
+            478.52020263670914,
+            509.5428466796864
+          ]
+        },
+        "B": {
+          "medianNs": 947.8744506835612,
+          "rangeNs": [
+            939.4317626952864,
+            962.562561035163
+          ]
+        },
+        "B3": {
+          "medianNs": 484.04693603515403,
+          "rangeNs": [
+            466.9601440429605,
+            739.1540527343782
+          ]
+        },
+        "C": {
+          "medianNs": 446.85211181640096,
+          "rangeNs": [
+            405.7998657226586,
+            462.66326904295664
+          ]
+        }
+      },
+      "deltasVsA": {
+        "B1": 14.62694666015354,
+        "B2": 15.772966520158649,
+        "B": 124.7179264564819,
+        "B3": 14.755729194927225,
+        "C": 5.937743049901489
+      }
+    },
+    {
+      "name": "async publication through warm sync chain",
+      "variants": {
+        "A": {
+          "medianNs": 359.9151611328108,
+          "rangeNs": [
+            348.63052368163534,
+            412.48397827148983
+          ]
+        },
+        "B1": {
+          "medianNs": 383.7196350097716,
+          "rangeNs": [
+            348.46496582031233,
+            505.3337097167959
+          ]
+        },
+        "B2": {
+          "medianNs": 487.90130615234546,
+          "rangeNs": [
+            465.74478149414426,
+            533.7707519531207
+          ]
+        },
+        "B": {
+          "medianNs": 640.984344482426,
+          "rangeNs": [
+            621.5522766113146,
+            738.9831542968794
+          ]
+        },
+        "B3": {
+          "medianNs": 465.2938842773444,
+          "rangeNs": [
+            452.01644897460704,
+            574.5162963867178
+          ]
+        },
+        "C": {
+          "medianNs": 376.4289855957004,
+          "rangeNs": [
+            363.13247680663795,
+            422.74703979491846
+          ]
+        }
+      },
+      "deltasVsA": {
+        "B1": 6.613912512614828,
+        "B2": 35.56008716518253,
+        "B": 78.09317686561667,
+        "B3": 29.278767477552357,
+        "C": 4.588254746177789
+      }
+    },
+    {
+      "name": "async publication through warm sync diamond",
+      "variants": {
+        "A": {
+          "medianNs": 357.5103759765608,
+          "rangeNs": [
+            334.7579956054711,
+            390.71044921874795
+          ]
+        },
+        "B1": {
+          "medianNs": 374.05776977538636,
+          "rangeNs": [
+            341.3543701171889,
+            495.8854675293015
+          ]
+        },
+        "B2": {
+          "medianNs": 523.1369018554727,
+          "rangeNs": [
+            497.238922119142,
+            591.2605285644523
+          ]
+        },
+        "B": {
+          "medianNs": 731.6955566406269,
+          "rangeNs": [
+            707.7713012695331,
+            870.8518981933588
+          ]
+        },
+        "B3": {
+          "medianNs": 494.6846008300754,
+          "rangeNs": [
+            462.0780944824196,
+            640.5113220214891
+          ]
+        },
+        "C": {
+          "medianNs": 373.1338500976497,
+          "rangeNs": [
+            352.6763916015668,
+            586.5028381347656
+          ]
+        }
+      },
+      "deltasVsA": {
+        "B1": 4.6285072855928755,
+        "B2": 46.32775354463301,
+        "B": 104.66414566065589,
+        "B3": 38.36929892700738,
+        "C": 4.370075715540422
+      }
+    }
+  ],
+  "iterations": {
+    "pure sync signal read": 16777216,
+    "pure sync graph, zero async nodes": 524288,
+    "pure sync graph + dormant async support": 524288,
+    "ready async read": 2097152,
+    "ready async read, tagged result": 2097152,
+    "blocked async read": 262144,
+    "blocked async read, tagged result": 524288,
+    "99.9% ready reads, throw protocol": 2097152,
+    "99.9% ready reads, tagged result": 2097152,
+    "async -> sync computed chain": 16777216,
+    "wide sync fanout with one async branch": 65536,
+    "async publication through warm sync chain": 131072,
+    "async publication through warm sync diamond": 131072
+  },
+  "runs": {
+    "A": [
+      [
+        {
+          "name": "pure sync signal read",
+          "iterations": 16777216,
+          "nsPerOp": [
+            1.1871516704559328,
+            1.2518286705017099,
+            1.2631952762603764,
+            1.3077795505523682,
+            1.3032913208007797,
+            1.2073457241058347,
+            1.2569427490234355
+          ]
+        },
+        {
+          "name": "pure sync graph, zero async nodes",
+          "iterations": 524288,
+          "nsPerOp": [
+            37.5242233276367,
+            43.26553344726554,
+            44.997024536132855,
+            43.772888183593594,
+            43.048477172851534,
+            38.91944885253901,
+            43.14136505126939
+          ]
+        },
+        {
+          "name": "pure sync graph + dormant async support",
+          "iterations": 524288,
+          "nsPerOp": [
+            49.92752075195302,
+            61.23542785644535,
+            51.82991027832037,
+            55.8794021606442,
+            50.3253936767578,
+            49.05261993408188,
+            52.821731567382834
+          ]
+        },
+        {
+          "name": "ready async read",
+          "iterations": 2097152,
+          "nsPerOp": [
+            10.305881500244167,
+            10.324478149414084,
+            9.868097305297834,
+            10.179710388183633,
+            10.445928573608398,
+            11.475276947021463,
+            9.819650650024414
+          ]
+        },
+        {
+          "name": "ready async read, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            12.226295471191406,
+            12.30087280273441,
+            12.111425399780268,
+            12.232208251953159,
+            11.840200424194325,
+            12.672519683837876,
+            12.744903564453049
+          ]
+        },
+        {
+          "name": "blocked async read",
+          "iterations": 262144,
+          "nsPerOp": [
+            147.68218994140602,
+            140.00892639160108,
+            142.7593231201167,
+            154.6714782714835,
+            136.846542358399,
+            142.51251220703114,
+            143.49441528320287
+          ]
+        },
+        {
+          "name": "blocked async read, tagged result",
+          "iterations": 524288,
+          "nsPerOp": [
+            38.972473144531335,
+            41.16802215576188,
+            38.30146789550806,
+            42.329597473144545,
+            38.32664489746094,
+            38.071060180664034,
+            38.28659057617239
+          ]
+        },
+        {
+          "name": "99.9% ready reads, throw protocol",
+          "iterations": 2097152,
+          "nsPerOp": [
+            15.487957000732576,
+            14.728307723998936,
+            16.454935073852496,
+            15.259695053100467,
+            15.561771392822322,
+            15.209388732910197,
+            16.0857200622558
+          ]
+        },
+        {
+          "name": "99.9% ready reads, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            17.651748657226527,
+            19.216108322143423,
+            18.568611145019414,
+            17.953062057495234,
+            18.950414657592766,
+            18.000459671020437,
+            17.909669876098583
+          ]
+        },
+        {
+          "name": "async -> sync computed chain",
+          "iterations": 16777216,
+          "nsPerOp": [
+            1.4061391353607235,
+            1.4366447925567816,
+            1.4204919338226398,
+            1.544296741485602,
+            1.5074133872985789,
+            1.5049815177917298,
+            1.4260947704315294
+          ]
+        },
+        {
+          "name": "wide sync fanout with one async branch",
+          "iterations": 65536,
+          "nsPerOp": [
+            393.58825683594165,
+            395.13854980468415,
+            720.5871582031259,
+            829.9682617187513,
+            401.5533447265657,
+            391.59851074219154,
+            396.62170410156847
+          ]
+        },
+        {
+          "name": "async publication through warm sync chain",
+          "iterations": 131072,
+          "nsPerOp": [
+            405.3565979003915,
+            362.9264831543008,
+            359.6420288085947,
+            348.63052368163534,
+            359.1117858886758,
+            354.86221313476426,
+            356.57119750976545
+          ]
+        },
+        {
+          "name": "async publication through warm sync diamond",
+          "iterations": 131072,
+          "nsPerOp": [
+            376.4602661132793,
+            368.97964477539125,
+            357.5103759765608,
+            357.25021362304625,
+            364.5706176757801,
+            334.7579956054711,
+            336.8324279785159
+          ]
+        }
+      ],
+      [
+        {
+          "name": "pure sync signal read",
+          "iterations": 16777216,
+          "nsPerOp": [
+            2.2231996059417765,
+            2.1383941173553476,
+            2.2517621517181365,
+            2.1262764930725098,
+            2.2377252578735387,
+            2.2249817848205535,
+            2.284443378448492
+          ]
+        },
+        {
+          "name": "pure sync graph, zero async nodes",
+          "iterations": 524288,
+          "nsPerOp": [
+            42.03319549560551,
+            42.14973449707038,
+            41.55673980712907,
+            44.67811584472643,
+            42.147254943847905,
+            44.053459167480575,
+            45.722579956054744
+          ]
+        },
+        {
+          "name": "pure sync graph + dormant async support",
+          "iterations": 524288,
+          "nsPerOp": [
+            50.85983276367171,
+            55.88436126708999,
+            51.94377899169931,
+            51.25484466552777,
+            50.61492919921891,
+            51.60999298095721,
+            50.846099853515874
+          ]
+        },
+        {
+          "name": "ready async read",
+          "iterations": 2097152,
+          "nsPerOp": [
+            12.594270706176763,
+            12.684011459350506,
+            12.84561157226564,
+            12.195920944213903,
+            13.03014755249022,
+            12.870597839355499,
+            12.442874908447218
+          ]
+        },
+        {
+          "name": "ready async read, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            13.997507095337044,
+            13.937807083129819,
+            14.463949203491131,
+            14.101934432983334,
+            14.047050476074164,
+            14.2225742340088,
+            14.399814605712972
+          ]
+        },
+        {
+          "name": "blocked async read",
+          "iterations": 262144,
+          "nsPerOp": [
+            141.324234008788,
+            142.7322387695315,
+            133.75167846679804,
+            137.0716094970699,
+            132.06977844238202,
+            134.70535278320256,
+            132.14683532714912
+          ]
+        },
+        {
+          "name": "blocked async read, tagged result",
+          "iterations": 524288,
+          "nsPerOp": [
+            37.19654083252002,
+            30.870628356933008,
+            29.43172454833963,
+            30.61218261718717,
+            30.063056945800817,
+            33.17451477050787,
+            29.37469482421854
+          ]
+        },
+        {
+          "name": "99.9% ready reads, throw protocol",
+          "iterations": 2097152,
+          "nsPerOp": [
+            17.436361312866143,
+            17.506361007690355,
+            17.47727394104011,
+            17.212629318237234,
+            16.423368453979567,
+            17.18459129333499,
+            17.11540222167963
+          ]
+        },
+        {
+          "name": "99.9% ready reads, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            20.45531272888202,
+            21.143102645874166,
+            20.98107337951665,
+            21.115589141845703,
+            20.720481872558462,
+            21.21157646179186,
+            19.739866256713885
+          ]
+        },
+        {
+          "name": "async -> sync computed chain",
+          "iterations": 16777216,
+          "nsPerOp": [
+            3.151637315750098,
+            3.1181633472442387,
+            4.439783096313506,
+            3.2762467861175564,
+            3.1605720520019496,
+            3.2064676284790266,
+            3.258228302001939
+          ]
+        },
+        {
+          "name": "wide sync fanout with one async branch",
+          "iterations": 65536,
+          "nsPerOp": [
+            425.53558349608943,
+            410.62011718749625,
+            402.94036865234915,
+            403.2165527343839,
+            402.1484374999995,
+            398.377990722662,
+            421.80633544922074
+          ]
+        },
+        {
+          "name": "async publication through warm sync chain",
+          "iterations": 131072,
+          "nsPerOp": [
+            385.17761230468653,
+            355.09567260742085,
+            355.9265136718684,
+            359.9151611328108,
+            356.69174194336017,
+            352.515411376951,
+            349.9992370605415
+          ]
+        },
+        {
+          "name": "async publication through warm sync diamond",
+          "iterations": 131072,
+          "nsPerOp": [
+            371.75979614257477,
+            384.5527648925762,
+            370.50476074218517,
+            339.3249511718724,
+            341.8281555175734,
+            345.35217285156654,
+            340.74249267578017
+          ]
+        }
+      ],
+      [
+        {
+          "name": "pure sync signal read",
+          "iterations": 16777216,
+          "nsPerOp": [
+            2.1589756011962904,
+            2.1089553833007857,
+            2.1757245063781756,
+            2.204179763793946,
+            2.1448016166687065,
+            2.1129071712493848,
+            2.0588040351867707
+          ]
+        },
+        {
+          "name": "pure sync graph, zero async nodes",
+          "iterations": 524288,
+          "nsPerOp": [
+            43.44596862792963,
+            39.54429626464853,
+            40.05718231201165,
+            39.24407958984374,
+            42.9166793823241,
+            40.32802581787134,
+            41.104316711425454
+          ]
+        },
+        {
+          "name": "pure sync graph + dormant async support",
+          "iterations": 524288,
+          "nsPerOp": [
+            53.81793975830053,
+            49.98531341552769,
+            49.683570861816605,
+            48.68984222412137,
+            49.20368194580088,
+            46.572685241699254,
+            49.099540710449006
+          ]
+        },
+        {
+          "name": "ready async read",
+          "iterations": 2097152,
+          "nsPerOp": [
+            11.622095108032212,
+            12.081766128539998,
+            12.842845916747995,
+            11.904954910278319,
+            12.433528900146397,
+            12.46161460876456,
+            12.633466720581087
+          ]
+        },
+        {
+          "name": "ready async read, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            13.305997848510765,
+            16.33248329162599,
+            16.68891906738291,
+            17.331933975219634,
+            16.651535034179627,
+            16.47596359252929,
+            16.255521774292134
+          ]
+        },
+        {
+          "name": "blocked async read",
+          "iterations": 262144,
+          "nsPerOp": [
+            135.4255676269539,
+            133.54949951172034,
+            127.26554870605422,
+            128.50074768066406,
+            127.67868041992266,
+            135.79254150390685,
+            128.54614257812486
+          ]
+        },
+        {
+          "name": "blocked async read, tagged result",
+          "iterations": 524288,
+          "nsPerOp": [
+            37.33806610107388,
+            41.37477874755803,
+            41.00456237792968,
+            42.15278625488254,
+            41.94221496582086,
+            41.85180664062569,
+            42.16251373291048
+          ]
+        },
+        {
+          "name": "99.9% ready reads, throw protocol",
+          "iterations": 2097152,
+          "nsPerOp": [
+            16.668319702148285,
+            16.693019866943292,
+            16.61424636840818,
+            17.534399032592816,
+            17.5811290740967,
+            16.06535911560054,
+            16.879606246948285
+          ]
+        },
+        {
+          "name": "99.9% ready reads, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            19.302320480346808,
+            19.172000885009755,
+            19.119691848754886,
+            18.777370452880813,
+            19.401979446410966,
+            19.41328048706047,
+            19.302940368652425
+          ]
+        },
+        {
+          "name": "async -> sync computed chain",
+          "iterations": 16777216,
+          "nsPerOp": [
+            3.280574083328221,
+            3.2143771648406734,
+            3.340119123458878,
+            3.0839800834655815,
+            2.99316048622128,
+            3.0235171318054235,
+            3.242892026901272
+          ]
+        },
+        {
+          "name": "wide sync fanout with one async branch",
+          "iterations": 65536,
+          "nsPerOp": [
+            457.27386474608835,
+            452.7114868164012,
+            447.1328735351499,
+            439.71862792969995,
+            436.3052368163978,
+            446.62322998047233,
+            467.04711914062614
+          ]
+        },
+        {
+          "name": "async publication through warm sync chain",
+          "iterations": 131072,
+          "nsPerOp": [
+            412.48397827148983,
+            379.14581298828523,
+            374.8085021972672,
+            394.4503784179681,
+            367.1241760253921,
+            375.93841552734096,
+            369.2939758300762
+          ]
+        },
+        {
+          "name": "async publication through warm sync diamond",
+          "iterations": 131072,
+          "nsPerOp": [
+            389.8956298828138,
+            390.71044921874795,
+            360.6529235839831,
+            350.9849548339883,
+            349.53384399413756,
+            361.0061645507798,
+            354.25872802734295
+          ]
+        }
+      ]
+    ],
+    "B1": [
+      [
+        {
+          "name": "pure sync signal read",
+          "iterations": 16777216,
+          "nsPerOp": [
+            2.3789286613464338,
+            2.023929357528689,
+            2.2411882877349867,
+            2.2195100784301776,
+            2.1696627140045153,
+            2.1787643432617165,
+            2.165538072586057
+          ]
+        },
+        {
+          "name": "pure sync graph, zero async nodes",
+          "iterations": 524288,
+          "nsPerOp": [
+            39.33238983154291,
+            39.30072784423837,
+            42.34771728515627,
+            41.136550903320355,
+            41.69845581054681,
+            41.973114013671605,
+            43.331146240234084
+          ]
+        },
+        {
+          "name": "pure sync graph + dormant async support",
+          "iterations": 524288,
+          "nsPerOp": [
+            46.829414367675554,
+            50.48370361328096,
+            49.28379058837884,
+            49.84741210937484,
+            49.49665069580063,
+            48.42567443847636,
+            48.872947692870945
+          ]
+        },
+        {
+          "name": "ready async read",
+          "iterations": 2097152,
+          "nsPerOp": [
+            12.410068511962947,
+            12.270736694335948,
+            11.687326431274398,
+            13.407373428344782,
+            12.90831565856933,
+            12.908124923706097,
+            12.497806549072306
+          ]
+        },
+        {
+          "name": "ready async read, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            13.867521286010758,
+            13.99683952331551,
+            14.069843292236188,
+            13.868618011474458,
+            13.918304443359327,
+            14.087533950805529,
+            14.52903747558589
+          ]
+        },
+        {
+          "name": "blocked async read",
+          "iterations": 262144,
+          "nsPerOp": [
+            148.3890533447267,
+            126.16653442382858,
+            138.9301300048825,
+            133.02345275878827,
+            129.71343994140628,
+            135.2813720703113,
+            128.10821533203003
+          ]
+        },
+        {
+          "name": "blocked async read, tagged result",
+          "iterations": 524288,
+          "nsPerOp": [
+            37.712287902832294,
+            38.76876831054692,
+            39.87007141113309,
+            39.00470733642601,
+            38.69895935058616,
+            38.44566345214892,
+            36.72027587890616
+          ]
+        },
+        {
+          "name": "99.9% ready reads, throw protocol",
+          "iterations": 2097152,
+          "nsPerOp": [
+            16.122579574584865,
+            16.645097732543874,
+            16.998100280761832,
+            17.526102066039996,
+            16.78285598754898,
+            16.946411132812578,
+            17.414188385009734
+          ]
+        },
+        {
+          "name": "99.9% ready reads, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            19.745016098022486,
+            19.392967224120913,
+            19.18940544128403,
+            19.16513442993162,
+            19.188451766967646,
+            19.516849517822212,
+            18.639612197875927
+          ]
+        },
+        {
+          "name": "async -> sync computed chain",
+          "iterations": 16777216,
+          "nsPerOp": [
+            4.438853263855026,
+            4.4368803501129275,
+            4.3400943279266295,
+            4.1243076324462535,
+            4.26967740058896,
+            4.453754425048819,
+            4.250299930572534
+          ]
+        },
+        {
+          "name": "wide sync fanout with one async branch",
+          "iterations": 65536,
+          "nsPerOp": [
+            458.9874267578037,
+            468.15185546875136,
+            469.52667236328796,
+            478.6407470703108,
+            483.9096069335913,
+            486.0870361328151,
+            479.64630126952346
+          ]
+        },
+        {
+          "name": "async publication through warm sync chain",
+          "iterations": 131072,
+          "nsPerOp": [
+            408.4892272949239,
+            377.28576660155807,
+            387.36038208007915,
+            383.7196350097716,
+            369.1352844238244,
+            372.9927062988275,
+            377.8129577636721
+          ]
+        },
+        {
+          "name": "async publication through warm sync diamond",
+          "iterations": 131072,
+          "nsPerOp": [
+            388.69094848632824,
+            379.9285888671858,
+            366.2864685058595,
+            366.3673400878947,
+            361.4746093750024,
+            374.05776977538636,
+            361.37466430664205
+          ]
+        }
+      ],
+      [
+        {
+          "name": "pure sync signal read",
+          "iterations": 16777216,
+          "nsPerOp": [
+            2.166146039962769,
+            2.069425582885742,
+            2.257478237152105,
+            2.202665805816652,
+            2.1506965160369833,
+            2.1295905113220166,
+            2.0225584506988534
+          ]
+        },
+        {
+          "name": "pure sync graph, zero async nodes",
+          "iterations": 524288,
+          "nsPerOp": [
+            38.689994812011804,
+            44.02694702148441,
+            41.11366271972671,
+            40.74630737304708,
+            42.04120635986348,
+            41.23897552490248,
+            43.55411529541028
+          ]
+        },
+        {
+          "name": "pure sync graph + dormant async support",
+          "iterations": 524288,
+          "nsPerOp": [
+            46.730995178222415,
+            49.13368225097645,
+            49.98912811279279,
+            47.70507812500028,
+            47.08709716796846,
+            46.989440917968686,
+            50.16002655029326
+          ]
+        },
+        {
+          "name": "ready async read",
+          "iterations": 2097152,
+          "nsPerOp": [
+            11.590147018432601,
+            11.522245407104498,
+            11.838197708129941,
+            12.508201599121128,
+            11.510801315307678,
+            11.799573898315426,
+            12.528038024902386
+          ]
+        },
+        {
+          "name": "ready async read, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            17.965221405029286,
+            16.91231727600094,
+            17.58170127868651,
+            17.70415306091323,
+            16.527128219604542,
+            16.463565826416083,
+            17.868137359619
+          ]
+        },
+        {
+          "name": "blocked async read",
+          "iterations": 262144,
+          "nsPerOp": [
+            154.79393005371142,
+            129.14505004882858,
+            133.94203186035264,
+            137.2169494628893,
+            134.81636047363298,
+            131.15997314453244,
+            137.04261779785148
+          ]
+        },
+        {
+          "name": "blocked async read, tagged result",
+          "iterations": 524288,
+          "nsPerOp": [
+            37.67108917236347,
+            39.77622985839886,
+            41.67976379394582,
+            41.80564880371107,
+            42.48600006103494,
+            41.69940948486276,
+            39.977455139159936
+          ]
+        },
+        {
+          "name": "99.9% ready reads, throw protocol",
+          "iterations": 2097152,
+          "nsPerOp": [
+            17.360734939575245,
+            16.50876998901367,
+            16.51811599731449,
+            16.443824768066442,
+            16.83883666992185,
+            17.34571456909182,
+            17.415094375610416
+          ]
+        },
+        {
+          "name": "99.9% ready reads, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            18.584442138671687,
+            17.975568771362408,
+            19.464111328124957,
+            18.885660171508775,
+            18.44687461853025,
+            19.7852611541747,
+            18.99828910827627
+          ]
+        },
+        {
+          "name": "async -> sync computed chain",
+          "iterations": 16777216,
+          "nsPerOp": [
+            4.347676038742054,
+            4.413139820098899,
+            4.3237924575806,
+            4.218679666519198,
+            4.470950365066553,
+            4.444086551666265,
+            4.516696929931607
+          ]
+        },
+        {
+          "name": "wide sync fanout with one async branch",
+          "iterations": 65536,
+          "nsPerOp": [
+            489.0960693359342,
+            496.8154907226546,
+            481.95495605468653,
+            476.5121459960886,
+            479.9514770507801,
+            484.86022949217886,
+            463.46588134764386
+          ]
+        },
+        {
+          "name": "async publication through warm sync chain",
+          "iterations": 131072,
+          "nsPerOp": [
+            408.170318603511,
+            505.3337097167959,
+            409.7061157226564,
+            408.7242126464899,
+            421.40426635742244,
+            406.52618408203165,
+            412.2261047363324
+          ]
+        },
+        {
+          "name": "async publication through warm sync diamond",
+          "iterations": 131072,
+          "nsPerOp": [
+            423.9044189453117,
+            495.8854675293015,
+            405.0704956054668,
+            407.88955688476904,
+            406.9122314453097,
+            402.4978637695298,
+            390.39993286132943
+          ]
+        }
+      ],
+      [
+        {
+          "name": "pure sync signal read",
+          "iterations": 16777216,
+          "nsPerOp": [
+            2.154767513275147,
+            2.149695158004757,
+            2.116340398788446,
+            2.2452473640441886,
+            2.165544033050533,
+            2.153599262237548,
+            2.175104618072511
+          ]
+        },
+        {
+          "name": "pure sync graph, zero async nodes",
+          "iterations": 524288,
+          "nsPerOp": [
+            41.636085510253885,
+            44.46582794189456,
+            47.99709320068364,
+            46.47789001464863,
+            45.814895629882685,
+            42.72289276123064,
+            42.952537536620866
+          ]
+        },
+        {
+          "name": "pure sync graph + dormant async support",
+          "iterations": 524288,
+          "nsPerOp": [
+            49.956893920898544,
+            50.535583496093444,
+            50.17070770263693,
+            50.53138732910144,
+            47.11971282959004,
+            48.0075836181643,
+            49.71084594726548
+          ]
+        },
+        {
+          "name": "ready async read",
+          "iterations": 2097152,
+          "nsPerOp": [
+            11.841964721679668,
+            12.836980819702159,
+            12.958192825317434,
+            12.576150894165039,
+            13.048315048217754,
+            15.560722351074213,
+            12.541866302490275
+          ]
+        },
+        {
+          "name": "ready async read, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            13.992786407470607,
+            13.934850692749052,
+            13.64483833312985,
+            14.62950706481933,
+            13.880443572997963,
+            13.89017105102525,
+            14.415121078491245
+          ]
+        },
+        {
+          "name": "blocked async read",
+          "iterations": 262144,
+          "nsPerOp": [
+            138.41361999511645,
+            138.12599182128938,
+            133.88519287109435,
+            142.41714477539017,
+            133.66622924804693,
+            140.971755981446,
+            137.08915710449256
+          ]
+        },
+        {
+          "name": "blocked async read, tagged result",
+          "iterations": 524288,
+          "nsPerOp": [
+            31.93798065185584,
+            34.22260284423849,
+            33.235549926757294,
+            29.752731323241626,
+            33.815765380859794,
+            33.05816650390602,
+            28.76091003417916
+          ]
+        },
+        {
+          "name": "99.9% ready reads, throw protocol",
+          "iterations": 2097152,
+          "nsPerOp": [
+            17.012119293212955,
+            16.43252372741694,
+            16.48097038269036,
+            16.55092239379887,
+            16.77169799804679,
+            17.576599121093714,
+            16.444349288940227
+          ]
+        },
+        {
+          "name": "99.9% ready reads, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            19.6140289306639,
+            21.560049057006832,
+            20.23444175720205,
+            20.988178253173935,
+            21.921634674072244,
+            20.982599258422734,
+            21.124935150146523
+          ]
+        },
+        {
+          "name": "async -> sync computed chain",
+          "iterations": 16777216,
+          "nsPerOp": [
+            4.539173841476443,
+            4.238343238830582,
+            4.444950819015468,
+            4.414647817611677,
+            4.179263114929192,
+            4.398357868194572,
+            4.5373678207397825
+          ]
+        },
+        {
+          "name": "wide sync fanout with one async branch",
+          "iterations": 65536,
+          "nsPerOp": [
+            483.5037231445266,
+            486.7889404296943,
+            501.08947753906006,
+            486.81030273436954,
+            484.2300415038997,
+            478.1570434570365,
+            487.8372192382852
+          ]
+        },
+        {
+          "name": "async publication through warm sync chain",
+          "iterations": 131072,
+          "nsPerOp": [
+            397.26028442382824,
+            378.5247802734412,
+            377.85644531250495,
+            376.2138366699211,
+            348.46496582031233,
+            351.5197753906213,
+            354.20684814453654
+          ]
+        },
+        {
+          "name": "async publication through warm sync diamond",
+          "iterations": 131072,
+          "nsPerOp": [
+            369.6937561035174,
+            399.78485107422523,
+            356.85348510741676,
+            349.92599487304597,
+            355.5160522460965,
+            344.377899169919,
+            341.3543701171889
+          ]
+        }
+      ]
+    ],
+    "B2": [
+      [
+        {
+          "name": "pure sync signal read",
+          "iterations": 16777216,
+          "nsPerOp": [
+            2.020508050918583,
+            2.1146893501281756,
+            2.1686375141143786,
+            2.151596546173096,
+            2.1625936031341597,
+            2.163302898406985,
+            2.1604537963867183
+          ]
+        },
+        {
+          "name": "pure sync graph, zero async nodes",
+          "iterations": 524288,
+          "nsPerOp": [
+            46.78764343261726,
+            47.19734191894532,
+            45.709419250488175,
+            46.300506591796925,
+            43.86405944824213,
+            43.91651153564432,
+            42.71755218505837
+          ]
+        },
+        {
+          "name": "pure sync graph + dormant async support",
+          "iterations": 524288,
+          "nsPerOp": [
+            53.39355468750003,
+            50.08907318115223,
+            51.64623260498023,
+            53.25279235839867,
+            49.91950988769526,
+            50.5922317504885,
+            51.44081115722671
+          ]
+        },
+        {
+          "name": "ready async read",
+          "iterations": 2097152,
+          "nsPerOp": [
+            13.25459480285647,
+            12.03665733337403,
+            13.19260597229001,
+            12.916231155395575,
+            12.930488586425739,
+            12.859964370727527,
+            12.050342559814494
+          ]
+        },
+        {
+          "name": "ready async read, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            14.439153671264613,
+            17.753219604492163,
+            17.109441757202177,
+            16.855859756469876,
+            16.86930656433108,
+            17.966842651367205,
+            17.521238327026243
+          ]
+        },
+        {
+          "name": "blocked async read",
+          "iterations": 262144,
+          "nsPerOp": [
+            147.55096435546852,
+            138.80386352538991,
+            134.8537445068354,
+            131.68983459472574,
+            131.7344665527336,
+            135.8432769775382,
+            134.6534729003892
+          ]
+        },
+        {
+          "name": "blocked async read, tagged result",
+          "iterations": 524288,
+          "nsPerOp": [
+            37.28485107421832,
+            40.69690704345749,
+            41.80507659912094,
+            42.756271362304716,
+            40.36750793456976,
+            43.330192565917486,
+            42.131042480468736
+          ]
+        },
+        {
+          "name": "99.9% ready reads, throw protocol",
+          "iterations": 2097152,
+          "nsPerOp": [
+            17.065191268920977,
+            17.55480766296377,
+            17.188882827758825,
+            17.134809494018505,
+            16.735458374023345,
+            17.563247680664126,
+            17.426586151123153
+          ]
+        },
+        {
+          "name": "99.9% ready reads, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            20.478677749633746,
+            19.50273513793947,
+            19.85220909118653,
+            18.816375732421797,
+            20.44010162353515,
+            19.47960853576668,
+            20.6043720245362
+          ]
+        },
+        {
+          "name": "async -> sync computed chain",
+          "iterations": 16777216,
+          "nsPerOp": [
+            5.666857957839955,
+            5.7839930057525315,
+            5.902916193008462,
+            5.90558648109438,
+            5.911779403686493,
+            5.781525373458826,
+            5.941927433013935
+          ]
+        },
+        {
+          "name": "wide sync fanout with one async branch",
+          "iterations": 65536,
+          "nsPerOp": [
+            490.5807495117209,
+            482.2723388671901,
+            487.3779296875047,
+            479.16107177733977,
+            479.5852661132749,
+            483.4045410156279,
+            486.16180419921994
+          ]
+        },
+        {
+          "name": "async publication through warm sync chain",
+          "iterations": 131072,
+          "nsPerOp": [
+            519.8539733886689,
+            482.22427368163625,
+            487.3382568359383,
+            473.9326477050734,
+            479.7882080078142,
+            465.74478149414426,
+            487.66860961914347
+          ]
+        },
+        {
+          "name": "async publication through warm sync diamond",
+          "iterations": 131072,
+          "nsPerOp": [
+            560.9748840331996,
+            527.9167175292962,
+            523.1369018554727,
+            510.9336853027363,
+            497.238922119142,
+            589.2158508300771,
+            591.2605285644523
+          ]
+        }
+      ],
+      [
+        {
+          "name": "pure sync signal read",
+          "iterations": 16777216,
+          "nsPerOp": [
+            2.176499366760251,
+            2.1286189556121844,
+            2.1291494369506876,
+            2.2267103195190465,
+            2.1545290946960476,
+            2.142292261123662,
+            2.0876765251159664
+          ]
+        },
+        {
+          "name": "pure sync graph, zero async nodes",
+          "iterations": 524288,
+          "nsPerOp": [
+            43.88427734375007,
+            41.476249694824205,
+            41.83883666992192,
+            46.03004455566392,
+            40.94772338867226,
+            41.498565673828146,
+            42.73815155029278
+          ]
+        },
+        {
+          "name": "pure sync graph + dormant async support",
+          "iterations": 524288,
+          "nsPerOp": [
+            50.14171600341809,
+            50.85945129394524,
+            45.88527679443358,
+            51.446342468261776,
+            48.174667358398366,
+            48.47488403320315,
+            52.1530151367188
+          ]
+        },
+        {
+          "name": "ready async read",
+          "iterations": 2097152,
+          "nsPerOp": [
+            12.428188323974561,
+            12.724399566650364,
+            12.990236282348663,
+            11.977481842041023,
+            13.293266296386793,
+            11.95154190063478,
+            12.522935867309592
+          ]
+        },
+        {
+          "name": "ready async read, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            14.566278457641639,
+            14.595222473144458,
+            14.27149772644052,
+            14.819860458374157,
+            13.712120056152445,
+            13.624477386474593,
+            13.828754425048926
+          ]
+        },
+        {
+          "name": "blocked async read",
+          "iterations": 262144,
+          "nsPerOp": [
+            137.55493164062557,
+            131.81648254394565,
+            135.30845642089827,
+            128.910827636719,
+            128.18527221679713,
+            134.87930297851648,
+            133.29010009765705
+          ]
+        },
+        {
+          "name": "blocked async read, tagged result",
+          "iterations": 524288,
+          "nsPerOp": [
+            38.60988616943319,
+            39.31255340576187,
+            38.54980468750036,
+            39.512825012207216,
+            37.42599487304744,
+            37.45727539062466,
+            39.2234802246089
+          ]
+        },
+        {
+          "name": "99.9% ready reads, throw protocol",
+          "iterations": 2097152,
+          "nsPerOp": [
+            17.95578002929685,
+            17.638301849365106,
+            17.165708541870117,
+            17.274141311645394,
+            17.523145675659226,
+            17.28100776672353,
+            17.362737655639847
+          ]
+        },
+        {
+          "name": "99.9% ready reads, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            20.740890502929854,
+            20.00861167907714,
+            19.482898712158214,
+            19.910430908203153,
+            20.139503479003896,
+            19.530630111694183,
+            18.96123886108397
+          ]
+        },
+        {
+          "name": "async -> sync computed chain",
+          "iterations": 16777216,
+          "nsPerOp": [
+            5.806398391723601,
+            5.651462078094501,
+            5.678772926330587,
+            5.756366252899201,
+            5.781036615371655,
+            5.833137035369824,
+            5.607742071151735
+          ]
+        },
+        {
+          "name": "wide sync fanout with one async branch",
+          "iterations": 65536,
+          "nsPerOp": [
+            507.090759277351,
+            487.77313232421795,
+            488.33770751953443,
+            478.52020263670914,
+            487.9425048828212,
+            491.7572021484323,
+            484.5870971679628
+          ]
+        },
+        {
+          "name": "async publication through warm sync chain",
+          "iterations": 131072,
+          "nsPerOp": [
+            532.9261779785169,
+            484.39178466796324,
+            485.5964660644488,
+            496.73080444335994,
+            498.80676269530716,
+            491.34521484374415,
+            515.5723571777307
+          ]
+        },
+        {
+          "name": "async publication through warm sync diamond",
+          "iterations": 131072,
+          "nsPerOp": [
+            582.557678222663,
+            531.5757751464881,
+            544.5976257324251,
+            530.1345825195342,
+            516.7816162109373,
+            518.2708740234382,
+            510.33248901367205
+          ]
+        }
+      ],
+      [
+        {
+          "name": "pure sync signal read",
+          "iterations": 16777216,
+          "nsPerOp": [
+            2.1116256713867205,
+            2.1269917488098113,
+            2.0018219947814964,
+            2.043986320495608,
+            2.0674407482147252,
+            2.031105756759647,
+            2.1857619285583456
+          ]
+        },
+        {
+          "name": "pure sync graph, zero async nodes",
+          "iterations": 524288,
+          "nsPerOp": [
+            46.18110656738291,
+            45.0353622436523,
+            45.73078155517573,
+            44.10991668701175,
+            44.346237182617095,
+            46.127510070800675,
+            45.658302307129055
+          ]
+        },
+        {
+          "name": "pure sync graph + dormant async support",
+          "iterations": 524288,
+          "nsPerOp": [
+            48.58493804931656,
+            49.5109558105466,
+            50.86574554443368,
+            51.08928680419957,
+            49.87392425537078,
+            51.18923187255857,
+            50.577735900878864
+          ]
+        },
+        {
+          "name": "ready async read",
+          "iterations": 2097152,
+          "nsPerOp": [
+            12.522268295288168,
+            12.265872955322305,
+            12.974834442138665,
+            11.969184875488311,
+            12.913513183593741,
+            12.828588485717724,
+            12.901163101196236
+          ]
+        },
+        {
+          "name": "ready async read, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            14.70942497253417,
+            14.282894134521532,
+            14.17078971862793,
+            13.713645935058747,
+            13.409519195556808,
+            13.341093063354595,
+            13.652181625366287
+          ]
+        },
+        {
+          "name": "blocked async read",
+          "iterations": 262144,
+          "nsPerOp": [
+            138.92211914062412,
+            140.01045227050867,
+            143.62449645996188,
+            136.4711761474603,
+            139.17388916015634,
+            135.45608520507818,
+            139.70756530761776
+          ]
+        },
+        {
+          "name": "blocked async read, tagged result",
+          "iterations": 524288,
+          "nsPerOp": [
+            38.17157745361361,
+            33.79344940185585,
+            34.61647033691385,
+            32.059860229492756,
+            33.59775543212897,
+            33.69007110595648,
+            35.203933715820085
+          ]
+        },
+        {
+          "name": "99.9% ready reads, throw protocol",
+          "iterations": 2097152,
+          "nsPerOp": [
+            19.51136589050306,
+            16.7948246002198,
+            17.46892929077137,
+            16.452407836913896,
+            16.662311553954915,
+            17.01292991638202,
+            17.840099334716754
+          ]
+        },
+        {
+          "name": "99.9% ready reads, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            21.518707275390483,
+            22.003841400146428,
+            20.4794406890869,
+            20.519399642944265,
+            21.6015338897705,
+            20.132875442504908,
+            20.288372039794837
+          ]
+        },
+        {
+          "name": "async -> sync computed chain",
+          "iterations": 16777216,
+          "nsPerOp": [
+            5.725157260894781,
+            6.020259857177741,
+            5.747759342193627,
+            5.760800838470462,
+            5.907088518142722,
+            5.975967645645112,
+            5.820882320404098
+          ]
+        },
+        {
+          "name": "wide sync fanout with one async branch",
+          "iterations": 65536,
+          "nsPerOp": [
+            503.7384033203113,
+            502.9129028320395,
+            506.3537597656265,
+            502.36206054687926,
+            491.856384277331,
+            498.5260009765652,
+            509.5428466796864
+          ]
+        },
+        {
+          "name": "async publication through warm sync chain",
+          "iterations": 131072,
+          "nsPerOp": [
+            501.7913818359393,
+            501.5243530273397,
+            493.06793212890165,
+            533.7707519531207,
+            483.7333679199168,
+            487.90130615234546,
+            473.8143920898427
+          ]
+        },
+        {
+          "name": "async publication through warm sync diamond",
+          "iterations": 131072,
+          "nsPerOp": [
+            546.6300964355464,
+            510.2714538574235,
+            510.59188842773887,
+            521.6926574707,
+            511.27243041992205,
+            517.422485351561,
+            523.7609863281284
+          ]
+        }
+      ]
+    ],
+    "B": [
+      [
+        {
+          "name": "pure sync signal read",
+          "iterations": 16777216,
+          "nsPerOp": [
+            2.0484149456024157,
+            2.0283460617065447,
+            2.0546615123748775,
+            2.1245300769805957,
+            2.1513938903808634,
+            2.1818637847900377,
+            2.1612346172332764
+          ]
+        },
+        {
+          "name": "pure sync graph, zero async nodes",
+          "iterations": 524288,
+          "nsPerOp": [
+            46.538543701172024,
+            41.362190246582024,
+            41.469192504882834,
+            39.74800109863294,
+            40.009498596191385,
+            45.59726715087898,
+            40.21129608154303
+          ]
+        },
+        {
+          "name": "pure sync graph + dormant async support",
+          "iterations": 524288,
+          "nsPerOp": [
+            46.84448242187489,
+            50.76084136962887,
+            52.04811096191442,
+            47.76229858398416,
+            47.02072143554677,
+            46.953582763671704,
+            46.472358703613345
+          ]
+        },
+        {
+          "name": "ready async read",
+          "iterations": 2097152,
+          "nsPerOp": [
+            12.273263931274442,
+            13.312244415283176,
+            11.901617050170866,
+            11.959218978881873,
+            12.259006500244169,
+            12.898969650268619,
+            12.039804458618248
+          ]
+        },
+        {
+          "name": "ready async read, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            13.901376724243137,
+            14.89715576171878,
+            14.164209365844751,
+            14.29491043090827,
+            14.276409149169972,
+            13.686990737915051,
+            14.395809173583986
+          ]
+        },
+        {
+          "name": "blocked async read",
+          "iterations": 262144,
+          "nsPerOp": [
+            146.06208801269497,
+            131.62307739257932,
+            132.54852294921835,
+            132.8887939453134,
+            130.80329895019497,
+            130.06706237792855,
+            126.18942260742179
+          ]
+        },
+        {
+          "name": "blocked async read, tagged result",
+          "iterations": 524288,
+          "nsPerOp": [
+            39.343261718749815,
+            38.42716217041051,
+            40.07949829101624,
+            36.157608032226335,
+            37.93125152587885,
+            39.607620239258054,
+            37.96043395996092
+          ]
+        },
+        {
+          "name": "99.9% ready reads, throw protocol",
+          "iterations": 2097152,
+          "nsPerOp": [
+            16.82448387145996,
+            16.795682907104567,
+            17.649888992309677,
+            17.29092597961427,
+            16.83340072631818,
+            16.841697692871,
+            16.703510284423732
+          ]
+        },
+        {
+          "name": "99.9% ready reads, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            20.288372039795057,
+            19.29106712341322,
+            20.118713378906254,
+            20.106554031372198,
+            18.882846832275323,
+            19.896602630615263,
+            19.822072982788068
+          ]
+        },
+        {
+          "name": "async -> sync computed chain",
+          "iterations": 16777216,
+          "nsPerOp": [
+            32.677674293518045,
+            57.85456895828243,
+            81.81058764457707,
+            85.6685519218445,
+            83.27597975730897,
+            93.29165816307071,
+            94.83516216278075
+          ]
+        },
+        {
+          "name": "wide sync fanout with one async branch",
+          "iterations": 65536,
+          "nsPerOp": [
+            959.6817016601922,
+            954.6722412109299,
+            953.0380249023751,
+            954.0100097656378,
+            953.4286499023326,
+            962.562561035163,
+            951.3519287109307
+          ]
+        },
+        {
+          "name": "async publication through warm sync chain",
+          "iterations": 131072,
+          "nsPerOp": [
+            738.9831542968794,
+            656.8672180175816,
+            651.1009216308428,
+            640.984344482426,
+            637.5747680664178,
+            650.2601623535331,
+            652.4955749511729
+          ]
+        },
+        {
+          "name": "async publication through warm sync diamond",
+          "iterations": 131072,
+          "nsPerOp": [
+            740.183258056637,
+            726.0879516601537,
+            870.8518981933588,
+            751.7822265624974,
+            789.9406433105605,
+            760.4064941406364,
+            737.2703552246118
+          ]
+        }
+      ],
+      [
+        {
+          "name": "pure sync signal read",
+          "iterations": 16777216,
+          "nsPerOp": [
+            2.1610558032989546,
+            2.1750926971435525,
+            2.08956003189087,
+            2.2476553916931197,
+            2.157050371170044,
+            2.184253931045534,
+            2.159613370895386
+          ]
+        },
+        {
+          "name": "pure sync graph, zero async nodes",
+          "iterations": 524288,
+          "nsPerOp": [
+            45.1951980590822,
+            42.423057556152315,
+            43.504333496093786,
+            45.58887481689454,
+            43.002700805664254,
+            45.47767639160151,
+            43.86005401611337
+          ]
+        },
+        {
+          "name": "pure sync graph + dormant async support",
+          "iterations": 524288,
+          "nsPerOp": [
+            51.9992828369141,
+            52.07824707031223,
+            56.80255889892573,
+            58.00895690917952,
+            54.78782653808596,
+            50.25596618652307,
+            51.868629455566285
+          ]
+        },
+        {
+          "name": "ready async read",
+          "iterations": 2097152,
+          "nsPerOp": [
+            12.263298034668004,
+            12.644720077514675,
+            13.282012939453097,
+            13.297271728515561,
+            12.338113784790051,
+            12.304544448852521,
+            12.840414047241229
+          ]
+        },
+        {
+          "name": "ready async read, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            14.465761184692498,
+            17.82069206237788,
+            17.806720733642674,
+            17.799377441406456,
+            17.763948440551857,
+            17.95077323913578,
+            18.05052757263199
+          ]
+        },
+        {
+          "name": "blocked async read",
+          "iterations": 262144,
+          "nsPerOp": [
+            142.5624847412113,
+            138.0897521972655,
+            131.95800781250037,
+            133.8272094726558,
+            128.96919250488318,
+            134.15260314941432,
+            135.34469604492213
+          ]
+        },
+        {
+          "name": "blocked async read, tagged result",
+          "iterations": 524288,
+          "nsPerOp": [
+            39.47334289550793,
+            39.03827667236289,
+            41.46556854248053,
+            39.27402496337832,
+            41.66545867919942,
+            42.23232269287124,
+            41.801834106444666
+          ]
+        },
+        {
+          "name": "99.9% ready reads, throw protocol",
+          "iterations": 2097152,
+          "nsPerOp": [
+            16.38612747192382,
+            17.155981063842614,
+            17.01664924621594,
+            17.128229141235217,
+            16.242837905883864,
+            16.715431213378853,
+            16.668128967285266
+          ]
+        },
+        {
+          "name": "99.9% ready reads, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            19.991350173950185,
+            19.12965774536132,
+            20.410299301147454,
+            19.863557815551733,
+            20.002079010009773,
+            20.240879058837802,
+            20.149469375610334
+          ]
+        },
+        {
+          "name": "async -> sync computed chain",
+          "iterations": 16777216,
+          "nsPerOp": [
+            34.370315074920676,
+            83.99254083633423,
+            98.37166666984561,
+            96.21108174324034,
+            96.23765945434573,
+            100.18006563186643,
+            96.05475664138783
+          ]
+        },
+        {
+          "name": "wide sync fanout with one async branch",
+          "iterations": 65536,
+          "nsPerOp": [
+            951.2588500976693,
+            939.4317626952864,
+            941.1956787109266,
+            946.0678100585707,
+            939.9490356445383,
+            944.4274902343785,
+            944.8776245117307
+          ]
+        },
+        {
+          "name": "async publication through warm sync chain",
+          "iterations": 131072,
+          "nsPerOp": [
+            700.8354187011678,
+            646.9612121582092,
+            621.5522766113146,
+            628.1181335449082,
+            627.8892517089796,
+            637.9798889160348,
+            624.466705322263
+          ]
+        },
+        {
+          "name": "async publication through warm sync diamond",
+          "iterations": 131072,
+          "nsPerOp": [
+            739.0075683593733,
+            731.6955566406269,
+            726.326751709,
+            725.2113342285094,
+            747.5494384765468,
+            746.9429016113415,
+            759.4161987304615
+          ]
+        }
+      ],
+      [
+        {
+          "name": "pure sync signal read",
+          "iterations": 16777216,
+          "nsPerOp": [
+            2.229243516922002,
+            2.115064859390261,
+            2.0127534866332963,
+            2.1761357784271174,
+            2.182775735855103,
+            2.190101146697996,
+            2.1450400352478023
+          ]
+        },
+        {
+          "name": "pure sync graph, zero async nodes",
+          "iterations": 524288,
+          "nsPerOp": [
+            40.63282012939438,
+            42.48294830322278,
+            43.121910095215036,
+            44.55413818359394,
+            39.67037200927723,
+            40.003585815429844,
+            40.70243835449213
+          ]
+        },
+        {
+          "name": "pure sync graph + dormant async support",
+          "iterations": 524288,
+          "nsPerOp": [
+            49.53861236572281,
+            56.347274780273615,
+            46.78096771240257,
+            47.23320007324252,
+            49.68070983886724,
+            49.51171874999997,
+            51.21078491210915
+          ]
+        },
+        {
+          "name": "ready async read",
+          "iterations": 2097152,
+          "nsPerOp": [
+            12.831926345825174,
+            14.965200424194416,
+            12.530851364135728,
+            12.88619041442873,
+            11.957645416259766,
+            13.247108459472608,
+            13.418436050415027
+          ]
+        },
+        {
+          "name": "ready async read, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            14.336824417114213,
+            14.34617042541525,
+            14.78514671325701,
+            19.57960128784182,
+            14.57123756408679,
+            14.395904541015604,
+            14.431762695312583
+          ]
+        },
+        {
+          "name": "blocked async read",
+          "iterations": 262144,
+          "nsPerOp": [
+            159.5180511474604,
+            125.35285949706945,
+            134.47113037109298,
+            143.4825897216798,
+            140.72380065918017,
+            127.19192504882793,
+            129.68788146972693
+          ]
+        },
+        {
+          "name": "blocked async read, tagged result",
+          "iterations": 524288,
+          "nsPerOp": [
+            38.96312713623073,
+            40.23284912109404,
+            36.845207214355675,
+            39.0525817871093,
+            37.567710876464965,
+            38.638496398925994,
+            36.93466186523425
+          ]
+        },
+        {
+          "name": "99.9% ready reads, throw protocol",
+          "iterations": 2097152,
+          "nsPerOp": [
+            17.383193969726502,
+            17.1271324157713,
+            16.263675689697205,
+            16.309404373169006,
+            16.321659088134894,
+            17.7081108093263,
+            16.519784927368107
+          ]
+        },
+        {
+          "name": "99.9% ready reads, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            20.052957534790178,
+            19.671583175659208,
+            19.786262512207003,
+            19.604730606079215,
+            19.68064308166496,
+            19.866371154784968,
+            19.35410499572768
+          ]
+        },
+        {
+          "name": "async -> sync computed chain",
+          "iterations": 16777216,
+          "nsPerOp": [
+            34.0224504470825,
+            78.14666628837584,
+            93.9410805702209,
+            97.67532348632808,
+            96.79576754570006,
+            93.45477819442749,
+            97.00407385826101
+          ]
+        },
+        {
+          "name": "wide sync fanout with one async branch",
+          "iterations": 65536,
+          "nsPerOp": [
+            956.2088012695647,
+            946.5652465820428,
+            945.7183837890959,
+            947.6425170898417,
+            947.8744506835612,
+            945.6069946289225,
+            953.8970947265412
+          ]
+        },
+        {
+          "name": "async publication through warm sync chain",
+          "iterations": 131072,
+          "nsPerOp": [
+            732.0625305175798,
+            635.8573913574083,
+            636.9827270507889,
+            637.7090454101619,
+            640.9950256347496,
+            647.8370666503919,
+            631.0707092285206
+          ]
+        },
+        {
+          "name": "async publication through warm sync diamond",
+          "iterations": 131072,
+          "nsPerOp": [
+            721.2432861327944,
+            707.9139709472715,
+            715.3343200683448,
+            710.3965759277243,
+            714.048767089831,
+            726.5342712402256,
+            707.7713012695331
+          ]
+        }
+      ]
+    ],
+    "B3": [
+      [
+        {
+          "name": "pure sync signal read",
+          "iterations": 16777216,
+          "nsPerOp": [
+            2.125954627990722,
+            2.2151350975036643,
+            2.1201908588409455,
+            2.1054327487945566,
+            2.219343185424808,
+            2.2436261177062984,
+            2.11275815963745
+          ]
+        },
+        {
+          "name": "pure sync graph, zero async nodes",
+          "iterations": 524288,
+          "nsPerOp": [
+            42.917823791503935,
+            43.73779296874998,
+            44.090843200683636,
+            40.3957366943361,
+            44.08264160156265,
+            42.913055419921584,
+            43.465423583984204
+          ]
+        },
+        {
+          "name": "pure sync graph + dormant async support",
+          "iterations": 524288,
+          "nsPerOp": [
+            49.39403533935506,
+            51.79405212402339,
+            52.85053253173801,
+            52.36377716064458,
+            51.388359069824524,
+            49.26433563232427,
+            51.51462554931624
+          ]
+        },
+        {
+          "name": "ready async read",
+          "iterations": 2097152,
+          "nsPerOp": [
+            13.440465927124011,
+            13.66519927978511,
+            12.513303756713814,
+            12.815523147583093,
+            12.844753265380872,
+            12.590503692626928,
+            12.468338012695378
+          ]
+        },
+        {
+          "name": "ready async read, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            14.245605468749977,
+            17.83318519592292,
+            17.463493347168136,
+            17.7061080932617,
+            18.519830703735444,
+            18.132448196411104,
+            17.909526824951264
+          ]
+        },
+        {
+          "name": "blocked async read",
+          "iterations": 262144,
+          "nsPerOp": [
+            155.04341125488313,
+            148.51837158203276,
+            145.16143798828062,
+            150.28457641601614,
+            145.06759643554724,
+            136.2964630126952,
+            134.12437438964884
+          ]
+        },
+        {
+          "name": "blocked async read, tagged result",
+          "iterations": 524288,
+          "nsPerOp": [
+            39.60819244384819,
+            38.19217681884715,
+            40.07110595703137,
+            40.03181457519576,
+            41.26853942871059,
+            39.99004364013594,
+            37.15057373046907
+          ]
+        },
+        {
+          "name": "99.9% ready reads, throw protocol",
+          "iterations": 2097152,
+          "nsPerOp": [
+            17.07677841186533,
+            17.1306610107422,
+            17.134523391723437,
+            17.085218429565252,
+            17.02480316162101,
+            17.92407035827639,
+            17.344141006469606
+          ]
+        },
+        {
+          "name": "99.9% ready reads, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            19.68793869018548,
+            19.542455673217905,
+            20.631122589111293,
+            19.979667663574215,
+            19.052791595458974,
+            20.125913619995156,
+            20.104885101318146
+          ]
+        },
+        {
+          "name": "async -> sync computed chain",
+          "iterations": 16777216,
+          "nsPerOp": [
+            5.889999866485584,
+            5.692243576049805,
+            5.952447652816765,
+            5.829006433486937,
+            6.008970737457269,
+            5.903398990631089,
+            5.866879224777227
+          ]
+        },
+        {
+          "name": "wide sync fanout with one async branch",
+          "iterations": 65536,
+          "nsPerOp": [
+            739.1540527343782,
+            567.1951293945293,
+            475.85449218751074,
+            479.3899536132823,
+            484.71069335938313,
+            477.44750976562443,
+            473.8677978515654
+          ]
+        },
+        {
+          "name": "async publication through warm sync chain",
+          "iterations": 131072,
+          "nsPerOp": [
+            574.5162963867178,
+            459.05838012695597,
+            462.7456665039012,
+            464.5950317382838,
+            466.8968200683549,
+            465.2938842773444,
+            476.47857666015955
+          ]
+        },
+        {
+          "name": "async publication through warm sync diamond",
+          "iterations": 131072,
+          "nsPerOp": [
+            494.6846008300754,
+            525.3555297851515,
+            546.6392517089886,
+            501.18179321288756,
+            496.30432128906085,
+            470.4788208007779,
+            486.8110656738242
+          ]
+        }
+      ],
+      [
+        {
+          "name": "pure sync signal read",
+          "iterations": 16777216,
+          "nsPerOp": [
+            2.0685434341430677,
+            2.033168077468873,
+            2.184301614761356,
+            2.1949708461761497,
+            2.165228128433228,
+            2.108901739120481,
+            2.0098984241485605
+          ]
+        },
+        {
+          "name": "pure sync graph, zero async nodes",
+          "iterations": 524288,
+          "nsPerOp": [
+            43.672561645507905,
+            40.86723327636717,
+            40.90099334716794,
+            43.61934661865235,
+            48.4195709228516,
+            44.50969696044929,
+            42.553901672363374
+          ]
+        },
+        {
+          "name": "pure sync graph + dormant async support",
+          "iterations": 524288,
+          "nsPerOp": [
+            46.46129608154278,
+            52.33478546142574,
+            46.28982543945304,
+            51.3265609741213,
+            50.04959106445295,
+            46.48857116699209,
+            46.34017944335966
+          ]
+        },
+        {
+          "name": "ready async read",
+          "iterations": 2097152,
+          "nsPerOp": [
+            12.175989151001028,
+            12.333488464355558,
+            12.110614776611419,
+            12.084627151489258,
+            12.094545364379886,
+            11.877059936523391,
+            12.432003021240314
+          ]
+        },
+        {
+          "name": "ready async read, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            14.51678276062011,
+            13.684368133544941,
+            13.824939727783065,
+            14.613246917724673,
+            13.684797286987218,
+            13.306379318237232,
+            13.404703140258755
+          ]
+        },
+        {
+          "name": "blocked async read",
+          "iterations": 262144,
+          "nsPerOp": [
+            143.4436798095698,
+            131.21528625488315,
+            129.63066101074304,
+            133.13789367675778,
+            127.24685668945301,
+            129.70085144043026,
+            127.21900939941487
+          ]
+        },
+        {
+          "name": "blocked async read, tagged result",
+          "iterations": 524288,
+          "nsPerOp": [
+            40.78216552734406,
+            37.523841857910014,
+            35.745429992676236,
+            35.32638549804713,
+            36.386108398438026,
+            35.10475158691358,
+            36.037445068359816
+          ]
+        },
+        {
+          "name": "99.9% ready reads, throw protocol",
+          "iterations": 2097152,
+          "nsPerOp": [
+            16.818714141845742,
+            16.49122238159186,
+            17.411756515502965,
+            17.157888412475597,
+            16.946554183959893,
+            17.34290122985837,
+            17.096757888793906
+          ]
+        },
+        {
+          "name": "99.9% ready reads, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            19.940948486328082,
+            19.703626632690437,
+            19.6925640106203,
+            19.27032470703128,
+            18.728828430175778,
+            20.13854980468751,
+            20.48130035400375
+          ]
+        },
+        {
+          "name": "async -> sync computed chain",
+          "iterations": 16777216,
+          "nsPerOp": [
+            5.421543121337916,
+            6.017309427261354,
+            5.93944191932676,
+            6.117570400238038,
+            5.994606018066401,
+            6.050717830657936,
+            6.09277486801152
+          ]
+        },
+        {
+          "name": "wide sync fanout with one async branch",
+          "iterations": 65536,
+          "nsPerOp": [
+            530.1132202148451,
+            485.39733886718284,
+            488.68560791016927,
+            490.975952148448,
+            488.23852539063574,
+            477.61383056640904,
+            482.1640014648354
+          ]
+        },
+        {
+          "name": "async publication through warm sync chain",
+          "iterations": 131072,
+          "nsPerOp": [
+            508.57467651367614,
+            464.08081054687136,
+            457.1807861328131,
+            481.275177001958,
+            475.5943298339893,
+            473.2093811035121,
+            459.56268310547165
+          ]
+        },
+        {
+          "name": "async publication through warm sync diamond",
+          "iterations": 131072,
+          "nsPerOp": [
+            554.9133300781217,
+            477.45590209961193,
+            494.39697265624835,
+            477.2018432617209,
+            470.5657958984366,
+            468.46008300781284,
+            484.5008850097657
+          ]
+        }
+      ],
+      [
+        {
+          "name": "pure sync signal read",
+          "iterations": 16777216,
+          "nsPerOp": [
+            2.1711170673370357,
+            2.184802293777466,
+            2.1350502967834473,
+            2.2021293640136728,
+            2.1523952484130824,
+            2.155351638793945,
+            2.1950662136077863
+          ]
+        },
+        {
+          "name": "pure sync graph, zero async nodes",
+          "iterations": 524288,
+          "nsPerOp": [
+            41.04080200195313,
+            43.27201843261721,
+            46.99935913085921,
+            43.551826477050604,
+            40.26069641113261,
+            41.89033508300794,
+            42.39273071289084
+          ]
+        },
+        {
+          "name": "pure sync graph + dormant async support",
+          "iterations": 524288,
+          "nsPerOp": [
+            53.32107543945313,
+            50.676155090332,
+            50.02346038818347,
+            50.35877227783231,
+            50.800895690917855,
+            49.31030273437479,
+            50.199127197265646
+          ]
+        },
+        {
+          "name": "ready async read",
+          "iterations": 2097152,
+          "nsPerOp": [
+            12.941837310791053,
+            12.328290939331039,
+            11.992740631103596,
+            11.869668960571254,
+            11.861801147460927,
+            11.95363998413078,
+            12.991094589233322
+          ]
+        },
+        {
+          "name": "ready async read, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            14.000415802002003,
+            13.537788391113233,
+            14.215278625488281,
+            13.389205932617248,
+            13.362360000610538,
+            13.388299942016564,
+            14.406156539916891
+          ]
+        },
+        {
+          "name": "blocked async read",
+          "iterations": 262144,
+          "nsPerOp": [
+            139.26086425781332,
+            134.5935821533209,
+            136.9792938232424,
+            132.75527954101537,
+            130.39779663085935,
+            139.76554870605457,
+            135.35766601562548
+          ]
+        },
+        {
+          "name": "blocked async read, tagged result",
+          "iterations": 524288,
+          "nsPerOp": [
+            59.02462005615179,
+            36.7271423339843,
+            29.59957122802663,
+            30.03387451171874,
+            30.121994018555107,
+            31.75392150878923,
+            32.72457122802715
+          ]
+        },
+        {
+          "name": "99.9% ready reads, throw protocol",
+          "iterations": 2097152,
+          "nsPerOp": [
+            17.651271820068445,
+            17.0010566711426,
+            16.486167907714876,
+            16.84899330139174,
+            16.412782669067298,
+            17.019605636596708,
+            17.146778106689542
+          ]
+        },
+        {
+          "name": "99.9% ready reads, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            21.617937088012688,
+            21.49324417114254,
+            21.686601638793835,
+            21.451997756958022,
+            21.502685546874975,
+            22.07865715026869,
+            20.687580108642464
+          ]
+        },
+        {
+          "name": "async -> sync computed chain",
+          "iterations": 16777216,
+          "nsPerOp": [
+            5.795961618423461,
+            6.013441085815413,
+            6.116443872451781,
+            5.669301748275756,
+            5.923998355865498,
+            5.669760704040534,
+            5.450344085693311
+          ]
+        },
+        {
+          "name": "wide sync fanout with one async branch",
+          "iterations": 65536,
+          "nsPerOp": [
+            484.04693603515403,
+            477.29644775390545,
+            499.3530273437602,
+            485.5300903320314,
+            481.14013671875233,
+            466.9601440429605,
+            474.9145507812469
+          ]
+        },
+        {
+          "name": "async publication through warm sync chain",
+          "iterations": 131072,
+          "nsPerOp": [
+            524.4567871093772,
+            456.1882019042951,
+            452.01644897460704,
+            481.4361572265599,
+            455.43060302734307,
+            461.6607666015557,
+            523.6724853515673
+          ]
+        },
+        {
+          "name": "async publication through warm sync diamond",
+          "iterations": 131072,
+          "nsPerOp": [
+            640.5113220214891,
+            585.6719970703111,
+            567.2088623046925,
+            486.1549377441418,
+            462.0780944824196,
+            510.8108520507776,
+            573.1483459472664
+          ]
+        }
+      ]
+    ],
+    "C": [
+      [
+        {
+          "name": "pure sync signal read",
+          "iterations": 16777216,
+          "nsPerOp": [
+            2.1243035793304452,
+            2.1465361118316686,
+            2.153640985488887,
+            2.101475000381468,
+            2.1704256534576385,
+            2.2758364677429177,
+            2.2252082824707045
+          ]
+        },
+        {
+          "name": "pure sync graph, zero async nodes",
+          "iterations": 524288,
+          "nsPerOp": [
+            40.25516510009755,
+            39.43424224853512,
+            38.85231018066417,
+            38.96083831787128,
+            40.641784667968736,
+            40.80390930175787,
+            41.64409637451164
+          ]
+        },
+        {
+          "name": "pure sync graph + dormant async support",
+          "iterations": 524288,
+          "nsPerOp": [
+            51.25179290771474,
+            52.35347747802738,
+            49.145889282226854,
+            50.22621154785172,
+            51.45549774169915,
+            54.416275024414105,
+            50.72002410888652
+          ]
+        },
+        {
+          "name": "ready async read",
+          "iterations": 2097152,
+          "nsPerOp": [
+            14.738798141479483,
+            15.17677307128905,
+            15.536689758300737,
+            15.928840637207102,
+            15.219116210937484,
+            15.304183959960927,
+            14.95914459228513
+          ]
+        },
+        {
+          "name": "ready async read, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            18.368911743163984,
+            20.505237579345607,
+            19.978094100951996,
+            19.467544555664023,
+            18.659639358520632,
+            18.42999458312976,
+            18.107652664184478
+          ]
+        },
+        {
+          "name": "blocked async read",
+          "iterations": 262144,
+          "nsPerOp": [
+            134.89990234374915,
+            130.67817687988267,
+            129.00695800781293,
+            137.80097961425818,
+            129.51698303222645,
+            132.42111206054722,
+            137.59994506835903
+          ]
+        },
+        {
+          "name": "blocked async read, tagged result",
+          "iterations": 524288,
+          "nsPerOp": [
+            38.568687438965235,
+            39.771270751953054,
+            42.165565490722216,
+            45.1160430908204,
+            42.93975830078206,
+            39.97783660888727,
+            42.50354766845762
+          ]
+        },
+        {
+          "name": "99.9% ready reads, throw protocol",
+          "iterations": 2097152,
+          "nsPerOp": [
+            25.91376304626465,
+            26.670360565185685,
+            26.100540161132656,
+            29.736232757568253,
+            25.81281661987291,
+            24.915599822998047,
+            25.76293945312502
+          ]
+        },
+        {
+          "name": "99.9% ready reads, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            20.74370384216309,
+            20.641183853149347,
+            20.616149902343352,
+            20.54309844970719,
+            20.693254470825067,
+            20.557832717895547,
+            20.36204338073727
+          ]
+        },
+        {
+          "name": "async -> sync computed chain",
+          "iterations": 16777216,
+          "nsPerOp": [
+            3.010994195938154,
+            2.994865179061889,
+            3.1611025333404394,
+            3.1064033508300652,
+            3.086757659912149,
+            2.9807984828949046,
+            3.2423853874206867
+          ]
+        },
+        {
+          "name": "wide sync fanout with one async branch",
+          "iterations": 65536,
+          "nsPerOp": [
+            415.60058593749505,
+            420.5841064453125,
+            405.99365234375574,
+            405.7998657226586,
+            450.2166748046876,
+            432.5469970703211,
+            416.0171508788973
+          ]
+        },
+        {
+          "name": "async publication through warm sync chain",
+          "iterations": 131072,
+          "nsPerOp": [
+            412.9356384277305,
+            386.2686157226555,
+            379.77294921874574,
+            371.9787597656274,
+            376.4289855957004,
+            363.13247680663795,
+            374.47662353515267
+          ]
+        },
+        {
+          "name": "async publication through warm sync diamond",
+          "iterations": 131072,
+          "nsPerOp": [
+            410.1631164550798,
+            380.9814453125046,
+            373.1338500976497,
+            363.4193420410173,
+            407.19909667968903,
+            386.49826049804574,
+            377.1057128906241
+          ]
+        }
+      ],
+      [
+        {
+          "name": "pure sync signal read",
+          "iterations": 16777216,
+          "nsPerOp": [
+            2.0512998104095455,
+            2.146196365356446,
+            2.117019891738891,
+            2.1619498729705846,
+            2.240246534347535,
+            2.1206140518188463,
+            2.3185551166534437
+          ]
+        },
+        {
+          "name": "pure sync graph, zero async nodes",
+          "iterations": 524288,
+          "nsPerOp": [
+            41.8367385864257,
+            42.462158203124915,
+            42.50965118408195,
+            40.533256530761626,
+            41.65897369384753,
+            38.762855529785384,
+            66.36447906494111
+          ]
+        },
+        {
+          "name": "pure sync graph + dormant async support",
+          "iterations": 524288,
+          "nsPerOp": [
+            46.65431976318352,
+            53.76949310302755,
+            50.378990173339815,
+            46.74739837646482,
+            50.44345855712874,
+            51.041793823242315,
+            53.415679931640305
+          ]
+        },
+        {
+          "name": "ready async read",
+          "iterations": 2097152,
+          "nsPerOp": [
+            13.834428787231419,
+            13.601922988891609,
+            14.20774459838872,
+            13.987350463867156,
+            14.29238319396967,
+            13.36421966552728,
+            13.980102539062445
+          ]
+        },
+        {
+          "name": "ready async read, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            18.350982666015494,
+            18.855381011962997,
+            18.385076522827024,
+            18.52154731750498,
+            18.35980415344231,
+            18.530702590942564,
+            18.59889030456541
+          ]
+        },
+        {
+          "name": "blocked async read",
+          "iterations": 262144,
+          "nsPerOp": [
+            138.0756378173819,
+            141.16020202636568,
+            133.88137817382795,
+            136.712265014648,
+            134.1114044189455,
+            137.96844482421787,
+            139.02015686035122
+          ]
+        },
+        {
+          "name": "blocked async read, tagged result",
+          "iterations": 524288,
+          "nsPerOp": [
+            37.25452423095684,
+            42.68283843994209,
+            40.72208404541037,
+            40.807151794434134,
+            41.863632202148764,
+            41.490173339843274,
+            40.99216461181648
+          ]
+        },
+        {
+          "name": "99.9% ready reads, throw protocol",
+          "iterations": 2097152,
+          "nsPerOp": [
+            25.745201110839766,
+            27.104473114013476,
+            25.666046142578182,
+            25.271892547607543,
+            25.69718360900873,
+            25.61068534851071,
+            26.46827697753919
+          ]
+        },
+        {
+          "name": "99.9% ready reads, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            19.408273696899183,
+            19.568109512329084,
+            19.750690460204872,
+            20.699262619018437,
+            20.864820480346637,
+            20.711040496826026,
+            20.847702026367212
+          ]
+        },
+        {
+          "name": "async -> sync computed chain",
+          "iterations": 16777216,
+          "nsPerOp": [
+            3.255319595336925,
+            3.342217206954987,
+            3.298449516296359,
+            3.2250106334686444,
+            3.1839370727538925,
+            3.257310390472384,
+            3.2989382743835844
+          ]
+        },
+        {
+          "name": "wide sync fanout with one async branch",
+          "iterations": 65536,
+          "nsPerOp": [
+            440.9881591796866,
+            433.22448730469256,
+            449.37896728515506,
+            442.1203613281244,
+            462.66326904295664,
+            443.629455566405,
+            446.85211181640096
+          ]
+        },
+        {
+          "name": "async publication through warm sync chain",
+          "iterations": 131072,
+          "nsPerOp": [
+            422.74703979491846,
+            385.66589355468886,
+            371.401977539064,
+            396.7330932617211,
+            372.7272033691442,
+            378.5285949707076,
+            374.7985839843704
+          ]
+        },
+        {
+          "name": "async publication through warm sync diamond",
+          "iterations": 131072,
+          "nsPerOp": [
+            395.95947265624875,
+            391.26129150390125,
+            376.05209350585756,
+            370.5368041992188,
+            366.9616699218739,
+            362.81280517577727,
+            365.29312133789375
+          ]
+        }
+      ],
+      [
+        {
+          "name": "pure sync signal read",
+          "iterations": 16777216,
+          "nsPerOp": [
+            1.9845962524414058,
+            2.0172178745269775,
+            2.2514998912811293,
+            2.152860164642329,
+            2.1373927593231214,
+            2.052897214889528,
+            1.9924998283386206
+          ]
+        },
+        {
+          "name": "pure sync graph, zero async nodes",
+          "iterations": 524288,
+          "nsPerOp": [
+            42.15431213378906,
+            43.993568420410114,
+            39.79606628417968,
+            42.09899902343751,
+            41.27197265624987,
+            39.5631790161134,
+            42.318344116210746
+          ]
+        },
+        {
+          "name": "pure sync graph + dormant async support",
+          "iterations": 524288,
+          "nsPerOp": [
+            49.850463867187436,
+            55.59558868408181,
+            54.29496765136689,
+            51.51710510253914,
+            54.23603057861303,
+            59.78164672851586,
+            54.613685607910085
+          ]
+        },
+        {
+          "name": "ready async read",
+          "iterations": 2097152,
+          "nsPerOp": [
+            14.158487319946232,
+            13.739204406738306,
+            13.369560241699224,
+            15.072154998779308,
+            13.887357711792015,
+            13.657522201538123,
+            12.981653213500884
+          ]
+        },
+        {
+          "name": "ready async read, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            17.410564422607433,
+            17.53606796264643,
+            18.969535827636793,
+            17.37685203552237,
+            17.421436309814336,
+            19.521379470825195,
+            19.439888000488246
+          ]
+        },
+        {
+          "name": "blocked async read",
+          "iterations": 262144,
+          "nsPerOp": [
+            139.764022827147,
+            128.93257141113196,
+            127.6184082031253,
+            128.81355285644483,
+            139.5988464355461,
+            131.14395141601565,
+            136.42654418945244
+          ]
+        },
+        {
+          "name": "blocked async read, tagged result",
+          "iterations": 524288,
+          "nsPerOp": [
+            37.971115112304595,
+            40.775680541992394,
+            43.03684234619083,
+            43.2016372680661,
+            39.45503234863232,
+            38.394355773925696,
+            39.8803710937503
+          ]
+        },
+        {
+          "name": "99.9% ready reads, throw protocol",
+          "iterations": 2097152,
+          "nsPerOp": [
+            25.387716293334954,
+            24.510335922241136,
+            24.731874465942425,
+            24.545717239379815,
+            24.934768676757773,
+            26.28364562988288,
+            24.540805816650366
+          ]
+        },
+        {
+          "name": "99.9% ready reads, tagged result",
+          "iterations": 2097152,
+          "nsPerOp": [
+            20.970869064331062,
+            20.6033706665039,
+            20.2372550964355,
+            20.31722068786615,
+            20.672369003296026,
+            19.897937774657898,
+            20.72005271911608
+          ]
+        },
+        {
+          "name": "async -> sync computed chain",
+          "iterations": 16777216,
+          "nsPerOp": [
+            2.3589789867401376,
+            2.348673343658444,
+            2.341461181640616,
+            2.362841367721535,
+            2.5619089603424237,
+            2.5266766548156574,
+            2.5442063808441038
+          ]
+        },
+        {
+          "name": "wide sync fanout with one async branch",
+          "iterations": 65536,
+          "nsPerOp": [
+            453.83605957030613,
+            458.11157226562096,
+            453.63464355469006,
+            461.30523681640886,
+            455.1742553711019,
+            447.729492187493,
+            454.3716430664008
+          ]
+        },
+        {
+          "name": "async publication through warm sync chain",
+          "iterations": 131072,
+          "nsPerOp": [
+            421.66671752930097,
+            386.5715026855482,
+            380.35278320312784,
+            371.1761474609401,
+            374.96032714844085,
+            372.68295288085676,
+            369.6884155273486
+          ]
+        },
+        {
+          "name": "async publication through warm sync diamond",
+          "iterations": 131072,
+          "nsPerOp": [
+            586.5028381347656,
+            368.6248779296852,
+            400.33264160156676,
+            369.7685241699222,
+            358.9576721191381,
+            369.40307617187864,
+            352.6763916015668
+          ]
+        }
+      ]
+    ]
+  }
+}

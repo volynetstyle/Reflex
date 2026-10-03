@@ -128,6 +128,16 @@ importers:
         specifier: 0.0.2
         version: 0.0.2
 
+  packages/reflex-async:
+    dependencies:
+      '@volynets/reflex-runtime':
+        specifier: workspace:*
+        version: link:../reflex-runtime
+    devDependencies:
+      '@volynets/reflex':
+        specifier: workspace:*
+        version: link:../reflex
+
   packages/reflex-devtools:
     dependencies:
       '@tailwindcss/vite':

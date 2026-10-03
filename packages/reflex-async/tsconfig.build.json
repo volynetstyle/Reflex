@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@volynets/reflex-runtime/internal": [
+        "../reflex-runtime/dist/esm/src/internal/index.d.ts"
+      ]
+    },
+    "rootDir": "src",
+    "declarationDir": "build/types",
+    "tsBuildInfoFile": "build/tsconfig.build.tsbuildinfo"
+  }
+}
