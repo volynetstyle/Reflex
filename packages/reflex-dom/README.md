@@ -3,9 +3,10 @@
 Standalone DOM renderer for Reflex.
 
 The published package contains the reactive runtime, framework ownership model,
-JSX runtime, DOM renderer, hydration, and host scheduler in one tree-shakeable
-ES module. Consumers do not need to install compatible versions of
-`@volynets/reflex-runtime` or `@volynets/reflex-framework`.
+JSX runtime, DOM renderer, hydration, and host scheduler in tree-shakeable
+ES modules with a shared runtime. Its published manifest has no dependencies,
+dev dependencies, peer dependencies, or optional dependencies. Consumers only
+install `@volynets/reflex-dom`.
 
 ## Setup
 
@@ -451,12 +452,13 @@ pnpm --filter @volynets/reflex-dom build
 
 The pipeline:
 
-1. builds `reflex-runtime`;
-2. builds `reflex-framework`;
-3. emits DOM modules and declarations;
-4. bundles runtime, framework, and DOM with Rollup;
-5. minifies the production module with Terser;
-6. bundles declarations and removes intermediate JavaScript files.
+1. builds `reflex-runtime`, `reflex-scheduler`, and `reflex-framework`;
+2. emits intermediate DOM modules and declarations into `build/esm`;
+3. bundles all three public entrypoints together with Rollup;
+4. minifies production JavaScript with Terser and bundles declarations;
+5. creates a publishable `dist` package with a dependency-free manifest,
+   README, and license;
+6. verifies module imports, runtime behavior, and JSX types outside the workspace.
 
 The published `dist` directory contains:
 
@@ -464,14 +466,37 @@ The published `dist` directory contains:
 dist/
   index.js
   index.d.ts
+  jsx-runtime.js
+  jsx-runtime.d.ts
+  jsx-dev-runtime.js
+  jsx-dev-runtime.d.ts
+  chunks/
+  package.json
+  README.md
+  LICENSE
 ```
 
-Neither file contains external `@volynets/*` imports.
+Every JavaScript and declaration import resolves within this package. The build
+fails if Rollup leaves any external dependency, including in declaration output.
 
-Both runtime entrypoints are bundled from one shared module graph, so framework
-effects and the DOM scheduler use the same runtime state. The build finishes with
-`test:standalone`, which checks events, reactive delivery, effects, disposal, SSR
-and hydration against the actual published module in all three strategies.
+The main entrypoint and both JSX entrypoints share the same module graph, so
+framework effects and the DOM scheduler use the same runtime state.
+`test:standalone` copies only the published package to an isolated temporary
+consumer. It checks events, reactive delivery, effects, lifetime cancellation,
+range refs, disposal, SSR, and hydration in all three strategies. It also checks
+the production and development JSX types under both TypeScript `NodeNext` and
+`Bundler` resolution, with `skipLibCheck: false`.
+
+Pack from the repository root:
+
+```powershell
+pnpm --dir packages/reflex-dom pack
+```
+
+`prepack` runs the complete build and verification before packing or publishing.
+pnpm publishes from `dist` through `publishConfig.directory`; workspace source
+conditions and development dependencies stay in the local manifest. For npm,
+build first and run `npm pack ./packages/reflex-dom/dist` from the repository root.
 
 ## Development commands
 

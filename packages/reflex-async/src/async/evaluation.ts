@@ -4,13 +4,12 @@ import { AsyncBlocker } from "./errors";
 import { AsyncFailureCapture, throwAsyncFailure } from "./failure";
 import {
   FrontierBuilder,
-  sameFrontierShape,
   inheritFrontier,
+  sameFrontierShape,
   withFrontierCollector,
   type EvaluationFrontier,
 } from "./frontier";
 
-// Ordinary exceptions still fail the sync computation without committing a generation.
 export type Evaluation<T> =
   | { readonly kind: "value"; readonly value: T }
   | { readonly kind: "blocked"; readonly blocker: AsyncBlocker }
@@ -29,27 +28,50 @@ export interface EvaluationMetrics {
   frontierChangedRecomputes: number;
 }
 
+// PERF IDEA: capture currently allocates a FrontierBuilder and
+// AsyncFailureCapture per generation. Reuse may be possible if their
+// state can be reset without aliasing retained generation state.
 export function captureEvaluation<T>(
   expression: () => T,
 ): EvaluatedGeneration<T> {
   const collector = new FrontierBuilder();
   const failureCapture = new AsyncFailureCapture();
+
   const evaluation = withFrontierCollector(collector, (): Evaluation<T> => {
     try {
-      return { kind: "value", value: failureCapture.run(expression) };
+      return {
+        kind: "value",
+        value: failureCapture.run(expression),
+      };
     } catch (error) {
-      if (failureCapture.matches(error)) return { kind: "error", error };
-      if (!(error instanceof AsyncBlocker)) throw error;
-      return { kind: "blocked", blocker: error };
+      if (failureCapture.matches(error)) {
+        return { kind: "error", error };
+      }
+
+      if (error instanceof AsyncBlocker) {
+        return { kind: "blocked", blocker: error };
+      }
+
+      throw error;
     }
   });
-  return { evaluation, frontier: collector.snapshot() };
+
+  return {
+    evaluation,
+    frontier: collector.snapshot(),
+  };
 }
 
 export function unwrap<T>(evaluation: Evaluation<T>): T {
-  if (evaluation.kind === "blocked") throw evaluation.blocker;
-  if (evaluation.kind === "error") throwAsyncFailure(evaluation.error);
-  return evaluation.value;
+  if (evaluation.kind === "value") {
+    return evaluation.value;
+  }
+
+  if (evaluation.kind === "blocked") {
+    throw evaluation.blocker;
+  }
+
+  throwAsyncFailure(evaluation.error);
 }
 
 function equalEvaluation<T>(
@@ -57,14 +79,47 @@ function equalEvaluation<T>(
   right: Evaluation<T>,
 ): boolean {
   if (left.kind !== right.kind) return false;
+
   switch (left.kind) {
     case "value":
-      return right.kind === "value" && Object.is(left.value, right.value);
+      return Object.is(left.value, (right as typeof left).value);
+
     case "blocked":
-      return right.kind === "blocked" && left.blocker === right.blocker;
+      return left.blocker === (right as typeof left).blocker;
+
     case "error":
-      return right.kind === "error" && Object.is(left.error, right.error);
+      return Object.is(left.error, (right as typeof left).error);
   }
+}
+
+function createProfiledEvaluation<T>(
+  expression: () => T,
+  metrics: EvaluationMetrics,
+): () => EvaluatedGeneration<T> {
+  let previous: EvaluatedGeneration<T> | undefined;
+
+  return () => {
+    const next = captureEvaluation(expression);
+
+    if (previous !== undefined) {
+      ++metrics.generationRecomputes;
+
+      const sameFrontier = sameFrontierShape(previous.frontier, next.frontier);
+
+      if (sameFrontier) {
+        ++metrics.frontierEqualRecomputes;
+
+        if (equalEvaluation(previous.evaluation, next.evaluation)) {
+          ++metrics.semanticEqualRecomputes;
+        }
+      } else {
+        ++metrics.frontierChangedRecomputes;
+      }
+    }
+
+    previous = next;
+    return next;
+  };
 }
 
 /** Internal adapter: establish the graph edge and inherit this generation before throwing. */
@@ -72,20 +127,13 @@ export function createEvaluatedComputed<T>(
   expression: () => T,
   metrics?: EvaluationMetrics,
 ): () => T {
-  let previous: EvaluatedGeneration<T> | undefined;
-  const node = createComputedNode(() => {
-    const next = captureEvaluation(expression);
-    if (metrics !== undefined && previous !== undefined) {
-      ++metrics.generationRecomputes;
-      const sameFrontier = sameFrontierShape(previous.frontier, next.frontier);
-      if (sameFrontier) ++metrics.frontierEqualRecomputes;
-      else ++metrics.frontierChangedRecomputes;
-      if (sameFrontier && equalEvaluation(previous.evaluation, next.evaluation))
-        ++metrics.semanticEqualRecomputes;
-    }
-    if (metrics !== undefined) previous = next;
-    return next;
-  });
+  const compute =
+    metrics === undefined
+      ? () => captureEvaluation(expression)
+      : createProfiledEvaluation(expression, metrics);
+
+  const node = createComputedNode(compute);
+
   const read = readConsumerLazy.bind(node) as () => EvaluatedGeneration<T>;
   return () => {
     const generation = read();

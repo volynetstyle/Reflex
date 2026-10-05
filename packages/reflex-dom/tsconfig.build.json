@@ -10,16 +10,14 @@
       "@volynets/reflex-framework/jsx-dev-runtime": [
         "../reflex-framework/dist/jsx-dev-runtime.d.ts"
       ],
-      "@volynets/reflex-runtime": [
-        "../reflex-runtime/dist/esm/src/index.d.ts"
-      ],
+      "@volynets/reflex-runtime": ["../reflex-runtime/dist/esm/src/index.d.ts"],
       "@volynets/reflex-runtime/internal": [
         "../reflex-runtime/dist/esm/src/internal/index.d.ts"
       ],
       "@volynets/reflex-scheduler": ["../reflex-scheduler/dist/index.d.ts"]
     },
     "rootDir": "src",
-    "outDir": "dist",
+    "outDir": "build/esm",
     "tsBuildInfoFile": "build/tsconfig.build.tsbuildinfo"
   }
 }

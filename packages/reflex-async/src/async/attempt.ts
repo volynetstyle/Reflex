@@ -1,24 +1,35 @@
-import { AsyncProtocolError } from "./errors";
+import { AsyncProtocolError, type AsyncBlocker } from "./errors";
 import {
   EMPTY_FRONTIER,
   materializeFrontier,
   type EvaluationFrontier,
   type PublicationFrontier,
 } from "./frontier";
-import type { AsyncBlocker } from "./errors";
-import type { AsyncAttempt, AsyncExecution } from "./types";
+import type {
+  AsyncAttempt,
+  AsyncCommit,
+  AsyncExecution,
+  AsyncSource,
+} from "./types";
 
 export class Attempt implements AsyncAttempt {
   readonly controller = new AbortController();
   readonly signal = this.controller.signal;
+
   frontier: EvaluationFrontier = EMPTY_FRONTIER;
+
   private materializedFrontier: PublicationFrontier | undefined;
+
   blocker: AsyncBlocker | undefined;
+
   // Cache one revision's notification; public reads promote it to a reusable blocker.
   readCache: Promise<void> | AsyncBlocker | undefined;
 
   constructor(
     readonly token: number,
+    // PERF IDEA: each Attempt captures a fresh `isCurrent` closure.
+    // If this becomes significant, consider replacing it with `owner + token`
+    // and checking the current token directly if this becomes measurable not by taste.
     private readonly isCurrent: () => boolean,
   ) {}
 
@@ -40,36 +51,50 @@ export class Attempt implements AsyncAttempt {
   }
 }
 
-let activeAsyncExecution: AsyncExecution | undefined;
+interface ExecutionHandle extends AsyncExecution {
+  readonly attempt: Attempt;
+}
+
+let activeAsyncExecution: ExecutionHandle | undefined;
+
+const PROTO_MESSAGE =
+  "Capture reactive async inputs before await; AsyncExecution.read/commit are synchronous.";
 
 /** This context controls handle lifetime only; dependency capture lives in frontier.ts. */
+function executionRead<T>(this: ExecutionHandle, source: AsyncSource<T>): T {
+  if (activeAsyncExecution !== this || !this.attempt.alive()) {
+    throw new AsyncProtocolError(PROTO_MESSAGE);
+  }
+
+  return source.read();
+}
+
+function executionCommit<T>(
+  this: ExecutionHandle,
+  source: AsyncSource<T>,
+): AsyncCommit<T> | undefined {
+  if (activeAsyncExecution !== this || !this.attempt.alive()) {
+    throw new AsyncProtocolError(PROTO_MESSAGE);
+  }
+
+  return source.commit();
+}
+
 export function withAsyncExecution<T>(
   attempt: Attempt,
   body: (execution: AsyncExecution) => T,
 ): T {
-  const checkLifetime = (): void => {
-    if (activeAsyncExecution !== execution || !attempt.alive()) {
-      throw new AsyncProtocolError(
-        "Capture reactive async inputs before await; AsyncExecution.read/commit are synchronous.",
-      );
-    }
-  };
+  const parent = activeAsyncExecution;
 
-  const execution: AsyncExecution = {
+  const execution: ExecutionHandle = {
     signal: attempt.signal,
     attempt,
-    read: (source) => {
-      checkLifetime();
-      return source.read();
-    },
-    commit: (source) => {
-      checkLifetime();
-      return source.commit();
-    },
+    read: executionRead,
+    commit: executionCommit,
   };
 
-  const parent = activeAsyncExecution;
   activeAsyncExecution = execution;
+
   try {
     return body(execution);
   } finally {

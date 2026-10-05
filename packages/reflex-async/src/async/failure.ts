@@ -1,22 +1,21 @@
 import { AsyncProtocolError } from "./errors";
 
-/** Internal control value: only AsyncSource failures may commit an error evaluation. */
-export class AsyncFailure {
-  constructor(readonly error: unknown) {}
-}
+const NO_FAILURE = Symbol("no async failure");
 
-interface FailureCaptureState {
-  failure?: AsyncFailure;
-}
+let activeFailureCapture: AsyncFailureCapture | undefined;
 
-let activeFailureCapture: FailureCaptureState | undefined;
 
+// Is it possible to merge this object with lifetime and remove class?
 export class AsyncFailureCapture {
-  private readonly state: FailureCaptureState = {};
+  private failure: unknown | typeof NO_FAILURE = NO_FAILURE;
 
   run<T>(expression: () => T): T {
+    this.failure = NO_FAILURE;
+
     const parent = activeFailureCapture;
-    activeFailureCapture = this.state;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    activeFailureCapture = this;
+
     try {
       return expression();
     } finally {
@@ -25,19 +24,21 @@ export class AsyncFailureCapture {
   }
 
   matches(error: unknown): boolean {
-    return (
-      this.state.failure !== undefined &&
-      Object.is(this.state.failure.error, error)
-    );
+    return this.failure !== NO_FAILURE && Object.is(this.failure, error);
+  }
+
+  /** @internal */
+  capture(error: unknown): void {
+    this.failure = error;
   }
 }
 
 export function throwAsyncFailure(error: unknown): never {
-  // User catch blocks must observe the original error, including primitives.
-  if (
-    activeFailureCapture !== undefined &&
-    !(error instanceof AsyncProtocolError)
-  )
-    activeFailureCapture.failure = new AsyncFailure(error);
+  const capture = activeFailureCapture;
+
+  if (capture !== undefined && !(error instanceof AsyncProtocolError)) {
+    capture.capture(error);
+  }
+
   throw error;
 }

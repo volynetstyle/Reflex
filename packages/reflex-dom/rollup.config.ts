@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import nodeResolve from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
 import terser from "@rollup/plugin-terser";
-import type { Plugin, RollupOptions, RollupWarning } from "rollup";
+import type { Plugin, RollupOptions } from "rollup";
 import { dts } from "rollup-plugin-dts";
 
 const packageRoot = fileURLToPath(new URL(".", import.meta.url));
@@ -57,21 +57,44 @@ function workspacePackages(types = false): Plugin {
   };
 }
 
-function failOnUnresolvedImport(warning: RollupWarning): void {
-  if (warning.code === "UNRESOLVED_IMPORT") {
-    throw new Error(warning.message);
-  }
+function standalone(): Plugin {
+  return {
+    name: "reflex-standalone",
+    generateBundle() {
+      for (const id of this.getModuleIds()) {
+        if (this.getModuleInfo(id)?.isExternal) {
+          this.error(
+            `Standalone output cannot depend on external module: ${id}`,
+          );
+        }
+      }
+    },
+  };
 }
 
+const entries = ["index", "jsx-runtime", "jsx-dev-runtime"];
+const onwarn: RollupOptions["onwarn"] = (warning, warn) => {
+  if (warning.code === "UNRESOLVED_IMPORT") throw new Error(warning.message);
+  warn(warning);
+};
+
 const javascript: RollupOptions = {
-  input: "dist/index.js",
+  input: Object.fromEntries(
+    entries.map((name) => [name, `build/esm/${name}.js`]),
+  ),
   output: {
-    file: "build/bundle/index.js",
+    dir: "build/bundle",
+    entryFileNames: "[name].js",
+    chunkFileNames: "chunks/[name]-[hash].js",
     format: "esm",
     sourcemap: false,
   },
   plugins: [
     workspacePackages(),
+    nodeResolve({
+      extensions: [".js"],
+      exportConditions: ["import", "default"],
+    }),
     replace({
       preventAssignment: true,
       values: {
@@ -97,13 +120,10 @@ const javascript: RollupOptions = {
       module: true,
       ecma: 2022,
     }),
-    nodeResolve({
-      extensions: [".js"],
-      exportConditions: ["import", "default"],
-    }),
+    standalone(),
   ],
   external: [],
-  onwarn: failOnUnresolvedImport,
+  onwarn,
   treeshake: {
     preset: "recommended",
     moduleSideEffects: false,
@@ -111,11 +131,33 @@ const javascript: RollupOptions = {
 };
 
 const declarations: RollupOptions = {
-  input: "dist/index.d.ts",
-  output: { file: "build/bundle/index.d.ts", format: "esm" },
-  plugins: [workspacePackages(true), dts()],
+  input: Object.fromEntries(
+    entries.map((name) => [name, `build/esm/${name}.d.ts`]),
+  ),
+  output: {
+    dir: "build/bundle",
+    entryFileNames: "[name].d.ts",
+    chunkFileNames: "chunks/[name]-[hash].d.ts",
+    format: "esm",
+  },
+  plugins: [
+    workspacePackages(true),
+    dts({ respectExternal: true }),
+    {
+      name: "reflex-declaration-libraries",
+      renderChunk(code) {
+        // Lifecycle APIs expose Symbol.dispose; retain its built-in library
+        // reference after declaration bundling for consumers targeting ES2022.
+        return {
+          code: `/// <reference lib="esnext.disposable" />\n${code}`,
+          map: null,
+        };
+      },
+    },
+    standalone(),
+  ],
   external: [],
-  onwarn: failOnUnresolvedImport,
+  onwarn,
 };
 
 export default [javascript, declarations];

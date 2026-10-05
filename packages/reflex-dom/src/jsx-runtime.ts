@@ -6,6 +6,9 @@ import type {
 
 export { Fragment, jsx, jsxs } from "@volynets/reflex-framework/jsx-runtime";
 
+// Preserve a distinct name when declaration bundling lifts imports into a chunk.
+type DOMIntrinsicElementMap = DOMIntrinsicElements;
+
 export namespace JSX {
   export type Element = JSXRenderable;
 
@@ -17,5 +20,5 @@ export namespace JSX {
 
   export type LibraryManagedAttributes<_, P> = P;
 
-  export type IntrinsicElements = DOMIntrinsicElements;
+  export type IntrinsicElements = DOMIntrinsicElementMap;
 }

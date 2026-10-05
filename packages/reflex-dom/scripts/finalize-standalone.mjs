@@ -1,27 +1,50 @@
-import { copyFile, readdir, rm } from "node:fs/promises";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { copyFile, cp, readFile, rm, writeFile } from "node:fs/promises";
 
-const dist = new URL("../dist/", import.meta.url);
-const bundle = new URL("../build/bundle/index.js", import.meta.url);
-const declarations = new URL("../build/bundle/index.d.ts", import.meta.url);
+const packageRoot = new URL("../", import.meta.url);
+const dist = new URL("dist/", packageRoot);
+const source = JSON.parse(
+  await readFile(new URL("package.json", packageRoot), "utf8"),
+);
 
-async function removeJavaScript(directory) {
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
-    const path = join(fileURLToPath(directory), entry.name);
-    if (entry.isDirectory()) {
-      await removeJavaScript(new URL(`${entry.name}/`, directory));
-    } else if (
-      entry.name.endsWith(".js") ||
-      entry.name.endsWith(".js.map") ||
-      entry.name.endsWith(".d.ts") ||
-      entry.name.endsWith(".d.ts.map")
-    ) {
-      await rm(path);
-    }
-  }
-}
+// Publish only public metadata. Build tooling and workspace dependencies stay local.
+const fields = [
+  "name",
+  "version",
+  "type",
+  "description",
+  "license",
+  "author",
+  "sideEffects",
+  "keywords",
+  "repository",
+  "homepage",
+  "bugs",
+  "engines",
+];
+const manifest = Object.fromEntries(
+  fields
+    .filter((field) => field in source)
+    .map((field) => [field, source[field]]),
+);
+manifest.main = "./index.js";
+manifest.types = "./index.d.ts";
+manifest.exports = Object.fromEntries(
+  Object.entries(source.exports).map(([subpath, entry]) => [
+    subpath,
+    {
+      types: entry.types.replace("./dist/", "./"),
+      import: entry.import.replace("./dist/", "./"),
+    },
+  ]),
+);
+manifest.files = ["*.js", "*.d.ts", "chunks", "README.md", "LICENSE"];
+manifest.publishConfig = { access: source.publishConfig.access };
 
-await removeJavaScript(dist);
-await copyFile(bundle, new URL("index.js", dist));
-await copyFile(declarations, new URL("index.d.ts", dist));
+await rm(dist, { recursive: true, force: true });
+await cp(new URL("build/bundle/", packageRoot), dist, { recursive: true });
+await writeFile(
+  new URL("package.json", dist),
+  `${JSON.stringify(manifest, null, 2)}\n`,
+);
+await copyFile(new URL("README.md", packageRoot), new URL("README.md", dist));
+await copyFile(new URL("../../LICENSE", packageRoot), new URL("LICENSE", dist));

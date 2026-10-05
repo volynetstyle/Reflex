@@ -1,111 +1,189 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
-import { JSDOM } from "jsdom";
-import * as dom from "../dist/index.js";
+import { execFile } from "node:child_process";
+import {
+  copyFile,
+  cp,
+  mkdtemp,
+  mkdir,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { promisify } from "node:util";
+import ts from "typescript";
 
-// Import the actual published artifact, with no Vite aliases or browser globals.
-for (const effectStrategy of ["eager", "sab", "flush"]) {
-  const window = new JSDOM("<!doctype html><main></main>").window;
-  const container = window.document.querySelector("main");
-  const renderer = dom.createDOMRenderer({ effectStrategy });
-  const log = [];
-  const rangeRef = { current: null };
-  let lifetime;
-  let set;
-  function Counter() {
-    lifetime = dom.useAbortSignal();
-    assert.equal(dom.useAbortSignal(), lifetime);
-    const value = dom.useSignal(0);
-    set = value;
-    dom.useMountedEffect(() => {
-      log.push(container.textContent);
-    });
-    return dom.Show({
-      when: true,
-      ref: rangeRef,
-      children: dom.jsx("button", {
-        children: value,
-        onClick: () => value((n) => n + 1),
-      }),
-    });
-  }
-
-  try {
-    const dispose = renderer.render(dom.jsx(Counter, {}), container);
-    const range = rangeRef.current;
-    assert.equal(lifetime.aborted, false);
-    assert.equal(
-      Array.from(range.nodes())[0],
-      container.querySelector("button"),
-    );
-    assert.equal(container.textContent, "0", `${effectStrategy}: initial DOM`);
-    assert.deepEqual(log, ["0"], `${effectStrategy}: mounted effect`);
-    container.querySelector("button").click();
-    if (effectStrategy === "flush") await Promise.resolve();
-    assert.equal(
-      container.textContent,
-      "1",
-      `${effectStrategy}: event delivery`,
-    );
-    renderer.batch(() => set(2));
-    renderer.flush();
-    assert.equal(
-      container.textContent,
-      "2",
-      `${effectStrategy}: explicit flush`,
-    );
-    dispose();
-    assert.equal(lifetime.aborted, true);
-    assert.equal(rangeRef.current, null);
-    assert.equal(range.disposed, true);
-    assert.deepEqual(Array.from(range.nodes()), []);
-    renderer.batch(() => set(3));
-    await Promise.resolve();
-    assert.equal(
-      container.childNodes.length,
-      0,
-      `${effectStrategy}: disposed bindings`,
-    );
-
-    const view = dom.jsx("p", { children: () => "server" });
-    container.innerHTML = dom.renderToString(view);
-    const paragraph = container.querySelector("p");
-    const cleanup = renderer.hydrate(view, container);
-    assert.equal(
-      container.querySelector("p"),
-      paragraph,
-      `${effectStrategy}: hydration identity`,
-    );
-    cleanup();
-
-    const start = window.document.createComment("start");
-    const end = window.document.createComment("end");
-    const text = window.document.createTextNode("range");
-    container.append(start, text, end);
-    const standaloneRange = dom.createDOMRangeHandle(start, end);
-    assert.deepEqual(Array.from(standaloneRange.nodes()), [text]);
-    standaloneRange.dispose();
-    assert.equal(container.textContent, "range");
-  } finally {
-    window.close();
-  }
-}
-
-assert.equal(
-  dom.renderToString(dom.jsx("span", { children: "<ok>" })),
-  "<span>&lt;ok&gt;</span>",
+const run = promisify(execFile);
+const require = createRequire(import.meta.url);
+// An optional directory also lets CI validate an extracted npm tarball.
+const dist = process.argv[2]
+  ? resolve(process.argv[2])
+  : fileURLToPath(new URL("../dist/", import.meta.url));
+const manifest = JSON.parse(await readFile(join(dist, "package.json"), "utf8"));
+const source = JSON.parse(
+  await readFile(new URL("../package.json", import.meta.url), "utf8"),
 );
-for (const name of ["index.js", "index.d.ts"]) {
-  const source = await readFile(
-    new URL(`../dist/${name}`, import.meta.url),
-    "utf8",
-  );
-  assert.doesNotMatch(
-    source,
-    /(?:from\s*|import\s*\()["']@volynets\//,
-    `${name}: external workspace dependency`,
+assert.equal(manifest.name, source.name);
+assert.equal(manifest.version, source.version);
+for (const field of [
+  "dependencies",
+  "devDependencies",
+  "peerDependencies",
+  "optionalDependencies",
+  "bundledDependencies",
+  "bundleDependencies",
+  "dependenciesMeta",
+  "peerDependenciesMeta",
+  "scripts",
+]) {
+  assert.equal(
+    field in manifest,
+    false,
+    `Published manifest must omit ${field}`,
   );
 }
-console.log(
-  "Standalone artifact passed: all delivery strategies, DOM events, effects, lifetime cancellation, range refs, disposal, SSR and hydration.",
-);
+assert.equal(manifest.publishConfig.directory, undefined);
+assert.deepEqual(Object.keys(manifest.exports), [
+  ".",
+  "./jsx-runtime",
+  "./jsx-dev-runtime",
+]);
+for (const entry of Object.values(manifest.exports)) {
+  assert.deepEqual(Object.keys(entry), ["types", "import"]);
+  await readFile(join(dist, entry.types));
+  await readFile(join(dist, entry.import));
+}
+
+async function checkModules(directory) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      await checkModules(path);
+      continue;
+    }
+    if (!/\.(?:js|d\.ts)$/.test(entry.name)) continue;
+    const content = await readFile(path, "utf8");
+    const info = ts.preProcessFile(content, true, entry.name.endsWith(".js"));
+    assert.deepEqual(
+      info.typeReferenceDirectives,
+      [],
+      `${path}: external type reference`,
+    );
+    for (const { fileName } of [
+      ...info.importedFiles,
+      ...info.referencedFiles,
+    ]) {
+      assert.match(
+        fileName,
+        /^\.\.?\//,
+        `${path}: external import ${fileName}`,
+      );
+      // Declaration imports use the corresponding JavaScript module specifier.
+      const resolvedName = entry.name.endsWith(".d.ts")
+        ? fileName.replace(/\.js$/, ".d.ts")
+        : fileName;
+      const target = resolve(dirname(path), resolvedName);
+      const local = relative(dist, target);
+      assert.ok(
+        !local.startsWith("..") && !isAbsolute(local),
+        `${path}: import escapes package`,
+      );
+      await readFile(target);
+    }
+    if (entry.name.endsWith(".js")) {
+      assert.doesNotMatch(
+        content,
+        /\b__(?:DEV|TEST|PROD|PROFILE|TRACKING_\w+)__\b/,
+        `${path}: build flag`,
+      );
+    }
+  }
+}
+await checkModules(dist);
+
+// No parent node_modules from the repository can satisfy missing package imports.
+const temporary = await mkdtemp(join(tmpdir(), "reflex-dom-standalone-"));
+assert.equal(dirname(temporary), resolve(tmpdir()));
+try {
+  const installed = join(
+    temporary,
+    "node_modules",
+    ...manifest.name.split("/"),
+  );
+  await mkdir(dirname(installed), { recursive: true });
+  await cp(dist, installed, { recursive: true });
+  await writeFile(
+    join(temporary, "package.json"),
+    '{"private":true,"type":"module"}\n',
+  );
+  await copyFile(
+    new URL("standalone-runtime.mjs", import.meta.url),
+    join(temporary, "runtime.mjs"),
+  );
+  await copyFile(
+    new URL("standalone-consumer.tsx", import.meta.url),
+    join(temporary, "consumer.tsx"),
+  );
+
+  const { stdout } = await run(
+    process.execPath,
+    [
+      "--conditions=source",
+      join(temporary, "runtime.mjs"),
+      pathToFileURL(require.resolve("jsdom")).href,
+    ],
+    { cwd: temporary },
+  );
+  process.stdout.write(stdout);
+
+  for (const [module, jsx] of [
+    ["NodeNext", "react-jsx"],
+    ["NodeNext", "react-jsxdev"],
+    ["ESNext", "react-jsx"],
+    ["ESNext", "react-jsxdev"],
+  ]) {
+    const config = {
+      compilerOptions: {
+        target: "ES2022",
+        lib: ["ES2022", "DOM", "DOM.Iterable"],
+        module,
+        moduleResolution: module === "NodeNext" ? "NodeNext" : "Bundler",
+        jsx,
+        jsxImportSource: manifest.name,
+        strict: true,
+        skipLibCheck: false,
+        types: [],
+        noEmit: true,
+      },
+      files: ["consumer.tsx"],
+    };
+    await writeFile(join(temporary, "tsconfig.json"), JSON.stringify(config));
+    try {
+      await run(
+        process.execPath,
+        [
+          require.resolve("typescript/bin/tsc"),
+          "-p",
+          join(temporary, "tsconfig.json"),
+        ],
+        {
+          cwd: temporary,
+        },
+      );
+    } catch (error) {
+      throw new Error(
+        `${module}/${jsx}: isolated consumer typecheck failed\n${error.stdout}${error.stderr}`,
+        { cause: error },
+      );
+    }
+  }
+  console.log(
+    "Standalone package passed: no dependencies, closed module graph, shared JSX runtime, strict JSX types (NodeNext and Bundler).",
+  );
+} finally {
+  await rm(temporary, { recursive: true, force: true });
+}

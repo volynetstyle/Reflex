@@ -1,6 +1,6 @@
 {
   "name": "@volynets/reflex-dom",
-  "version": "0.0.6",
+  "version": "1.0.0",
   "type": "module",
   "description": "DOM renderer for Reflex",
   "license": "MIT",
@@ -21,28 +21,30 @@
         "types": "./src/jsx-runtime.ts",
         "default": "./src/jsx-runtime.ts"
       },
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/jsx-runtime.d.ts",
+      "import": "./dist/jsx-runtime.js"
     },
     "./jsx-dev-runtime": {
       "source": {
         "types": "./src/jsx-dev-runtime.ts",
         "default": "./src/jsx-dev-runtime.ts"
       },
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/jsx-dev-runtime.d.ts",
+      "import": "./dist/jsx-dev-runtime.js"
     }
   },
   "files": [
     "dist"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "directory": "dist",
+    "linkDirectory": false
   },
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "build:dependencies": "pnpm --filter @volynets/reflex-runtime build && pnpm --filter @volynets/reflex-scheduler build && pnpm --filter @volynets/reflex-framework build",
-    "build:modules": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs dist",
+    "build:modules": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs build/esm",
     "build:bundle": "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc && node ./scripts/finalize-standalone.mjs",
     "build": "pnpm clean && pnpm build:dependencies && pnpm build:modules && pnpm build:bundle && pnpm test:standalone",
     "bench:keyed": "vitest bench --config vite.config.ts bench/keyed-reconciliation.bench.ts",
@@ -54,8 +56,9 @@
     "test": "pnpm exec vitest run --config vite.config.ts",
     "test:browser": "vitest run --config vite.browser.config.ts",
     "test:standalone": "node scripts/check-standalone.mjs",
+    "prepack": "pnpm build",
     "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
-    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build"
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck"
   },
   "keywords": [
     "dom",
@@ -76,11 +79,11 @@
   "engines": {
     "node": ">=20.19.0"
   },
-  "dependencies": {
-    "@volynets/reflex-scheduler": "workspace:*"
-  },
   "devDependencies": {
     "@vitest/browser-playwright": "4.1.5",
+    "@volynets/reflex-framework": "workspace:*",
+    "@volynets/reflex-runtime": "workspace:*",
+    "@volynets/reflex-scheduler": "workspace:*",
     "playwright": "^1.62.1"
   }
 }

@@ -163,17 +163,23 @@ importers:
         version: 4.3.0
 
   packages/reflex-dom:
-    dependencies:
-      '@volynets/reflex-scheduler':
-        specifier: workspace:*
-        version: link:../reflex-scheduler
     devDependencies:
       '@vitest/browser-playwright':
         specifier: 4.1.5
         version: 4.1.5(playwright@1.62.1)(vite@6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4))(vitest@4.1.5)
+      '@volynets/reflex-framework':
+        specifier: workspace:*
+        version: link:../reflex-framework
+      '@volynets/reflex-runtime':
+        specifier: workspace:*
+        version: link:../reflex-runtime
+      '@volynets/reflex-scheduler':
+        specifier: workspace:*
+        version: link:../reflex-scheduler
       playwright:
         specifier: ^1.62.1
         version: 1.62.1
+    publishDirectory: dist
 
   packages/reflex-framework:
     dependencies:
