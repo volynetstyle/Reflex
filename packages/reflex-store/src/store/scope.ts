@@ -4,7 +4,13 @@ import {
   type Synchronous,
 } from "@volynets/reflex-framework";
 import { batch } from "@volynets/reflex";
-import { untracked } from "@volynets/reflex-runtime/internal";
+import {
+  currentConsumer,
+  setCurrentConsumer,
+  untracked,
+} from "@volynets/reflex-runtime/internal";
+
+import type { StoreCell } from "./cell";
 
 type AnyFunction = (...args: never[]) => unknown;
 
@@ -13,6 +19,7 @@ export interface StoreScope {
   readonly signal: AbortSignal;
   own<T extends DisposableResource>(resource: T): T;
   action<F extends AnyFunction>(callback: Synchronous<F>): F;
+  writer<T>(cell: StoreCell<T>): (value: T) => T;
 }
 
 export type StoreScopeValue<T extends object> = T &
@@ -39,6 +46,31 @@ export function createStoreScope<T extends object>(
     own(resource) {
       assertOpen();
       return lifecycle.use(resource);
+    },
+    writer<T>(cell: StoreCell<T>): (value: T) => T {
+      assertOpen();
+      let pending!: T;
+      const commit = () => {
+        const previous = currentConsumer;
+        setCurrentConsumer(null);
+        try {
+          cell.set(pending);
+        } finally {
+          setCurrentConsumer(previous);
+        }
+      };
+      return (value) => {
+        assertOpen();
+        if (Object.is(cell.peek(), value)) return value;
+        const previous = pending;
+        pending = value;
+        try {
+          batch(commit);
+          return value;
+        } finally {
+          pending = previous;
+        }
+      };
     },
     action<F extends AnyFunction>(callback: Synchronous<F>): F {
       assertOpen();

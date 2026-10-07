@@ -68,6 +68,7 @@
     "build": "node scripts/build.mjs",
     "bench": "vitest bench --config vite.config.ts bench/semantic-workloads.bench.ts",
     "bench:full": "vitest bench --mode full --config vite.config.ts bench/semantic-workloads.bench.ts",
+  "bench:hot-paths": "node --expose-gc bench/hot-paths.node.mjs",
     "bench:metrics": "vitest run --config vite.metrics.config.ts tests/semantic-workloads.metrics.test.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

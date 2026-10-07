@@ -26,38 +26,48 @@ export function isPlain(value: unknown): value is Record<PropertyKey, unknown> {
 export function isStructural(
   value: unknown,
 ): value is Record<PropertyKey, unknown> {
-  return (
-    isPlain(value) && depthOf(value) !== "ref" && depthOf(value) !== "opaque"
-  );
+  return isPlain(value) && isStructuralDepth(depthOf(value));
+}
+
+function isStructuralDepth(depth: Depth): boolean {
+  return depth !== "ref" && depth !== "opaque";
 }
 
 /** Copy structural data, retaining explicit reference boundaries and foreign objects. */
 export function cloneValue<T>(value: T, seen = new Map<object, unknown>()): T {
-  if (!isStructural(value)) return value;
+  if (!isPlain(value)) return value;
+  const depth = depthOf(value);
+  if (!isStructuralDepth(depth)) return value;
   if (seen.has(value)) return seen.get(value) as T;
+  const array = Array.isArray(value);
   const result = (
-    Array.isArray(value) ? [] : Object.create(Object.getPrototypeOf(value))
+    array ? [] : Object.create(Object.getPrototypeOf(value))
   ) as Record<PropertyKey, unknown>;
   seen.set(value, result);
-  const depth = depthOf(value);
-  depths.set(result, depth);
+  if (depth !== "deep") depths.set(result, depth);
+  const output = {
+    configurable: true,
+    enumerable: true,
+    writable: true,
+    value: undefined as unknown,
+  };
   for (const key of Reflect.ownKeys(value)) {
-    if (Array.isArray(value) && key === "length") continue;
-    const descriptor = Object.getOwnPropertyDescriptor(value, key)!;
-    Object.defineProperty(result, key, {
-      configurable: true,
-      enumerable: descriptor.enumerable,
-      writable: true,
-      value: depth === "shallow" ? value[key] : cloneValue(value[key], seen),
-    });
+    if (array && key === "length") continue;
+    output.enumerable = Object.getOwnPropertyDescriptor(
+      value,
+      key,
+    )!.enumerable!;
+    output.value =
+      depth === "shallow" ? value[key] : cloneValue(value[key], seen);
+    Object.defineProperty(result, key, output);
   }
-  if (Array.isArray(value))
-    (result as unknown as unknown[]).length = value.length;
+  if (array) (result as unknown as unknown[]).length = value.length;
   return result as T;
 }
 
 export interface StoreControl {
   raw(): unknown;
+  snapshot?(data: unknown, copy: (value: unknown) => unknown): unknown;
   collect(): void;
   dispose(): void;
   paths?: readonly (readonly string[])[];
@@ -149,22 +159,33 @@ export function snapshot<T>(store: T): Snapshot<T> {
     }
     if (!isPlain(value) || depthOf(value) === "opaque") return value;
     if (seen.has(value)) return seen.get(value);
+    const array = Array.isArray(value);
     const result = (
-      Array.isArray(value) ? [] : Object.create(Object.getPrototypeOf(value))
+      array ? [] : Object.create(Object.getPrototypeOf(value))
     ) as Record<PropertyKey, unknown>;
     seen.set(value, result);
+    const output = { enumerable: true, value: undefined as unknown };
     for (const key of Reflect.ownKeys(value)) {
-      if (Array.isArray(value) && key === "length") continue;
-      Object.defineProperty(result, key, {
-        enumerable: Object.getOwnPropertyDescriptor(value, key)!.enumerable,
-        value: copy(value[key]),
-      });
+      if (array && key === "length") continue;
+      output.enumerable = Object.getOwnPropertyDescriptor(
+        value,
+        key,
+      )!.enumerable!;
+      output.value = copy(value[key]);
+      Object.defineProperty(result, key, output);
     }
-    if (Array.isArray(value))
-      (result as unknown as unknown[]).length = value.length;
+    if (array) (result as unknown as unknown[]).length = value.length;
     return Object.freeze(result);
   };
-  return untracked(() => copy(raw(store))) as Snapshot<T>;
+  return untracked(() => {
+    const control =
+      typeof store === "object" && store !== null
+        ? getStoreControl(store)
+        : undefined;
+    // Capture every cell before cloning user values, preserving point-in-time reads.
+    const data = control ? control.raw() : store;
+    return control?.snapshot ? control.snapshot(data, copy) : copy(data);
+  }) as Snapshot<T>;
 }
 
 export function disposeStore(store: object): void {

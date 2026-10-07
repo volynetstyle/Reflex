@@ -19,7 +19,7 @@ import type { KeyedOptions, ProjectionOptions } from "./shared";
 // Map uses SameValueZero. Preserve Object.is semantics for signed zero.
 const negativeZero = Symbol("negative zero");
 function identityKey<T>(key: T): T | typeof negativeZero {
-  return Object.is(key, -0) ? negativeZero : key;
+  return key === 0 && 1 / (key as number) === -Infinity ? negativeZero : key;
 }
 
 export function createSelector<T>(
@@ -27,6 +27,7 @@ export function createSelector<T>(
   options: KeyedOptions<T> = {},
 ): DisposableAccessor<T, boolean> {
   const equals = options.equals ?? Object.is;
+  const identityEquality = equals === Object.is;
   type Entry = { key: T; node: ReturnType<typeof createSignalNode<boolean>> };
   const entries = new Map<T | typeof negativeZero, Entry>();
   let watcher: WatcherNode | undefined;
@@ -35,19 +36,28 @@ export function createSelector<T>(
   let disposed = false;
 
   const lookup = (key: T): Entry | undefined => {
-    if (!options.equals) return entries.get(identityKey(key));
-    for (const entry of entries.values())
-      if (untracked(() => equals(entry.key, key))) return entry;
-    return undefined;
+    if (identityEquality) return entries.get(identityKey(key));
+    return untracked(() => {
+      for (const entry of entries.values())
+        if (equals(entry.key, key)) return entry;
+      return undefined;
+    });
   };
 
   const sync = (next: T): void => {
-    if (initialized && untracked(() => equals(current, next))) return;
+    if (
+      initialized &&
+      (identityEquality
+        ? Object.is(current, next)
+        : untracked(() => equals(current, next)))
+    )
+      return;
     const previous = initialized ? lookup(current) : undefined;
     current = next;
     initialized = true;
     const selected = lookup(next);
 
+    if (!previous && !selected) return;
     transaction(() => {
       if (previous) writeProducer(previous.node, false);
       if (selected) writeProducer(selected.node, true);
@@ -56,7 +66,10 @@ export function createSelector<T>(
 
   const read = (key: T): boolean => {
     if (disposed) throw new Error("Cannot read a disposed selector");
-    if (currentConsumer === null) return untracked(() => equals(source(), key));
+    if (currentConsumer === null)
+      return identityEquality
+        ? Object.is(source(), key)
+        : untracked(() => equals(source(), key));
     if (!watcher) {
       watcher = createWatcher(() => sync(source()));
       try {
@@ -75,7 +88,11 @@ export function createSelector<T>(
     if (!entry) {
       entry = {
         key,
-        node: createSignalNode(untracked(() => equals(current, key))),
+        node: createSignalNode(
+          identityEquality
+            ? Object.is(current, key)
+            : untracked(() => equals(current, key)),
+        ),
       };
       entries.set(identityKey(key), entry);
     }
@@ -119,15 +136,21 @@ export function createKeyedProjection<T, K, R>(
   const sourceValue = new Demand(source);
   const projected = new Demand(() => project(sourceValue.read()));
   const keys = new Observations<K | typeof negativeZero, R | undefined>(
-    (key) =>
-      keyEquals(
-        keyOf(sourceValue.read()),
-        (key === negativeZero ? -0 : key) as K,
-      )
-        ? projected.read()
-        : options.fallback,
-    (a, b) =>
-      a === undefined || b === undefined ? Object.is(a, b) : valueEquals(a, b),
+    (key) => {
+      const activeKey = keyOf(sourceValue.read());
+      const requestedKey = (key === negativeZero ? -0 : key) as K;
+      const matches =
+        keyEquals === Object.is
+          ? Object.is(activeKey, requestedKey)
+          : untracked(() => keyEquals(activeKey, requestedKey));
+      return matches ? projected.read() : options.fallback;
+    },
+    valueEquals === Object.is
+      ? Object.is
+      : (a, b) =>
+          a === undefined || b === undefined
+            ? Object.is(a, b)
+            : valueEquals(a, b),
     options.keyEquals
       ? (a, b) =>
           keyEquals(

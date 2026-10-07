@@ -3,6 +3,8 @@ import {
   currentConsumer,
   disposeNode,
   enterReactiveBatch,
+  getActiveRuntimeContext,
+  type RuntimeContext,
   leaveReactiveBatch,
   readProducer,
   untracked,
@@ -13,13 +15,23 @@ import { storeControls } from "./values";
 import { batch } from "@volynets/reflex";
 import { setStoreName } from "./internal/names";
 
+let transactionContext: RuntimeContext | undefined;
+
 /** Publish a synchronous logical action at one runtime batch boundary. */
 export function transaction<T>(action: () => T): T {
+  if (
+    transactionContext !== undefined &&
+    transactionContext === getActiveRuntimeContext()
+  )
+    return action();
   return batch(() => {
+    const previous = transactionContext;
+    transactionContext = getActiveRuntimeContext();
     enterReactiveBatch();
     try {
       return action();
     } finally {
+      transactionContext = previous;
       leaveReactiveBatch();
     }
   });
@@ -48,6 +60,13 @@ class Cells<K, V> {
     entry.value = value;
     writeProducer(entry.node, entry.node.payload + 1);
   }
+  clear(value: V): void {
+    for (const entry of this.nodes.values()) {
+      if (Object.is(entry.value, value)) continue;
+      entry.value = value;
+      writeProducer(entry.node, entry.node.payload + 1);
+    }
+  }
   collect(): void {
     for (const [key, { node }] of this.nodes) {
       if (node.firstOut !== null) continue;
@@ -72,9 +91,9 @@ export class ReactiveMap<K, V> implements Iterable<[K, V]> {
   private disposed = false;
   private readonly valuesByKey = new Cells<K, V | undefined>();
   private readonly existsByKey = new Cells<K, boolean>();
-  private readonly structure = new Cells<"size" | "keys" | "values", number>();
-  private keyVersion = 0;
-  private valueVersion = 0;
+  private sizeNode?: ProducerNode<number>;
+  private keysNode?: ProducerNode<number>;
+  private valuesNode?: ProducerNode<number>;
 
   constructor(
     private initial?:
@@ -105,7 +124,10 @@ export class ReactiveMap<K, V> implements Iterable<[K, V]> {
   }
 
   get size(): number {
-    return this.structure.read("size", this.backing().size);
+    const size = this.backing().size;
+    if (currentConsumer !== null)
+      readProducer((this.sizeNode ??= createProducer(size)));
+    return size;
   }
   get [Symbol.toStringTag](): string {
     return "ReactiveMap";
@@ -119,23 +141,34 @@ export class ReactiveMap<K, V> implements Iterable<[K, V]> {
 
   set(key: K, value: V): this {
     const data = this.backing();
-    const existed = data.has(key);
-    if (
-      existed &&
-      untracked(() => (this.options.equals ?? Object.is)(data.get(key)!, value))
-    )
-      return this;
+    const previous = data.get(key);
+    const existed = previous !== undefined || data.has(key);
+    if (existed) {
+      const equals = this.options.equals;
+      if (
+        equals == null || equals === Object.is
+          ? Object.is(previous, value)
+          : untracked(() => equals(previous!, value))
+      )
+        return this;
+    }
+    this.commitSet(data, key, value, existed);
+    return this;
+  }
+
+  private commitSet(data: Map<K, V>, key: K, value: V, existed: boolean): void {
     transaction(() => {
       data.set(key, value);
       this.valuesByKey.write(key, value);
       if (!existed) {
         this.existsByKey.write(key, true);
-        this.structure.write("size", data.size);
-        this.structure.write("keys", ++this.keyVersion);
+        if (this.sizeNode) writeProducer(this.sizeNode, data.size);
+        if (this.keysNode)
+          writeProducer(this.keysNode, this.keysNode.payload + 1);
       }
-      this.structure.write("values", ++this.valueVersion);
+      if (this.valuesNode)
+        writeProducer(this.valuesNode, this.valuesNode.payload + 1);
     });
-    return this;
   }
 
   delete(key: K): boolean {
@@ -145,9 +178,11 @@ export class ReactiveMap<K, V> implements Iterable<[K, V]> {
       data.delete(key);
       this.valuesByKey.write(key, undefined);
       this.existsByKey.write(key, false);
-      this.structure.write("size", data.size);
-      this.structure.write("keys", ++this.keyVersion);
-      this.structure.write("values", ++this.valueVersion);
+      if (this.sizeNode) writeProducer(this.sizeNode, data.size);
+      if (this.keysNode)
+        writeProducer(this.keysNode, this.keysNode.payload + 1);
+      if (this.valuesNode)
+        writeProducer(this.valuesNode, this.valuesNode.payload + 1);
     });
     return true;
   }
@@ -156,31 +191,34 @@ export class ReactiveMap<K, V> implements Iterable<[K, V]> {
     const data = this.backing();
     if (data.size === 0) return;
     transaction(() => {
-      const keys = Array.from(data.keys());
       data.clear();
-      for (const key of keys) {
-        this.valuesByKey.write(key, undefined);
-        this.existsByKey.write(key, false);
-      }
-      this.structure.write("size", 0);
-      this.structure.write("keys", ++this.keyVersion);
-      this.structure.write("values", ++this.valueVersion);
+      // Only materialized semantic locations need invalidation, even for a large map.
+      this.valuesByKey.clear(undefined);
+      this.existsByKey.clear(false);
+      if (this.sizeNode) writeProducer(this.sizeNode, 0);
+      if (this.keysNode)
+        writeProducer(this.keysNode, this.keysNode.payload + 1);
+      if (this.valuesNode)
+        writeProducer(this.valuesNode, this.valuesNode.payload + 1);
     });
   }
 
   keys(): MapIterator<K> {
     const data = this.backing();
-    this.structure.read("keys", this.keyVersion);
+    if (currentConsumer !== null)
+      readProducer((this.keysNode ??= createProducer(0)));
     return data.keys();
   }
   values(): MapIterator<V> {
     const data = this.backing();
-    this.structure.read("values", this.valueVersion);
+    if (currentConsumer !== null)
+      readProducer((this.valuesNode ??= createProducer(0)));
     return data.values();
   }
   entries(): MapIterator<[K, V]> {
     const data = this.backing();
-    this.structure.read("values", this.valueVersion);
+    if (currentConsumer !== null)
+      readProducer((this.valuesNode ??= createProducer(0)));
     return data.entries();
   }
   [Symbol.iterator](): MapIterator<[K, V]> {
@@ -191,24 +229,38 @@ export class ReactiveMap<K, V> implements Iterable<[K, V]> {
     thisArg?: unknown,
   ): void {
     const data = this.backing();
-    this.structure.read("values", this.valueVersion);
+    if (currentConsumer !== null)
+      readProducer((this.valuesNode ??= createProducer(0)));
     data.forEach((value, key) => callback.call(thisArg, value, key, this));
   }
 
   collect(): void {
     this.valuesByKey.collect();
     this.existsByKey.collect();
-    this.structure.collect();
+    if (this.sizeNode?.firstOut === null) {
+      disposeNode(this.sizeNode);
+      this.sizeNode = undefined;
+    }
+    if (this.keysNode?.firstOut === null) {
+      disposeNode(this.keysNode);
+      this.keysNode = undefined;
+    }
+    if (this.valuesNode?.firstOut === null) {
+      disposeNode(this.valuesNode);
+      this.valuesNode = undefined;
+    }
   }
   [Symbol.dispose](): void {
     this.dispose();
   }
-
   dispose(): void {
     this.disposed = true;
     this.valuesByKey.dispose();
     this.existsByKey.dispose();
-    this.structure.dispose();
+    if (this.sizeNode) disposeNode(this.sizeNode);
+    if (this.keysNode) disposeNode(this.keysNode);
+    if (this.valuesNode) disposeNode(this.valuesNode);
+    this.sizeNode = this.keysNode = this.valuesNode = undefined;
     this.data = undefined;
     this.initial = undefined;
   }

@@ -625,6 +625,22 @@ function createCompiledStoreStatements(
         "  " + identifiers.context + ".onDispose(" + names.read + ".dispose);",
       );
     }
+    if (
+      defaultScope &&
+      signal.exportName === "createStoreCell" &&
+      signal.runtimeModule === "@volynets/reflex-store/runtime/internal"
+    ) {
+      lines.push(
+        "  " +
+          names.write +
+          " = " +
+          identifiers.context +
+          ".writer(" +
+          names.read +
+          ");",
+      );
+      continue;
+    }
     lines.push(
       "  " + names.write + " = " + action + "((" + identifiers.value + ") => {",
     );
@@ -732,6 +748,11 @@ function createCompiledStoreStatements(
         "return " +
         createStoreDataSource(binding, state) +
         "; }," +
+        "snapshot: (data, copy) => { " +
+        guard +
+        "return " +
+        createStoreDataSource(binding, state, true) +
+        "; }," +
         "paths: " +
         JSON.stringify(binding.leaves.map((leaf) => leaf.parts)) +
         "," +
@@ -801,6 +822,7 @@ function rewriteStoreThis(node: any, binding: StoreBinding, root = true): any {
 function createStoreDataSource(
   binding: StoreBinding,
   state: TransformState,
+  snapshot = false,
 ): string {
   const root = createStoreTreeNode();
   for (const path of binding.branchPaths) {
@@ -813,14 +835,39 @@ function createStoreDataSource(
   }
   for (const leaf of binding.leaves) insertStoreLeaf(root, leaf.parts, leaf);
   const render = (node: StoreTreeNode): string => {
-    const entries = [...node.branches].map(
-      ([key, branch]) => formatObjectKey(key) + ": " + render(branch),
-    );
-    for (const [key, leaf] of node.leaves)
-      entries.push(
-        formatObjectKey(key) + ": " + getLeafNames(leaf, state).read + "()",
-      );
-    return "{" + entries.join(", ") + "}";
+    const entries = [...node.branches].map(([key, branch]) => ({
+      key,
+      value: render(branch),
+    }));
+    for (const [key, leaf] of node.leaves) {
+      let value = getLeafNames(leaf, state).read + "()";
+      if (snapshot) {
+        value = "data";
+        for (const part of leaf.parts) value = formatMemberAccess(value, part);
+        value = "copy(" + value + ")";
+      }
+      entries.push({ key, value });
+    }
+    if (snapshot) {
+      // Match Reflect.ownKeys ordering: array-index keys precede other strings.
+      const indexOf = (key: string) => {
+        const index = Number(key);
+        return Number.isInteger(index) &&
+          index >= 0 &&
+          index < 0xffffffff &&
+          String(index) === key
+          ? index
+          : Infinity;
+      };
+      entries.sort((a, b) => indexOf(a.key) - indexOf(b.key));
+    }
+    const object =
+      "{" +
+      entries
+        .map(({ key, value }) => formatObjectKey(key) + ": " + value)
+        .join(", ") +
+      "}";
+    return snapshot ? "Object.freeze(" + object + ")" : object;
   };
   return render(root);
 }

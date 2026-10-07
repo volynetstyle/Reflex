@@ -1,4 +1,4 @@
-import { createStoreProjection } from "./selectors/store";
+import { createDerivedProjection } from "./selectors/store";
 import { isPlain } from "./values";
 import type { StoreDisposable } from "./types";
 
@@ -10,14 +10,10 @@ export function derive<T extends object>(
   compute: () => T,
   options: { name?: string } = {},
 ): Readonly<T> & StoreDisposable {
-  return createStoreProjection<T>(
-    () => {
-      const value = compute();
-      if (!isPlain(value) || Array.isArray(value))
-        throw new TypeError("derive() must return a plain object");
-      return value;
-    },
-    {},
-    options,
-  );
+  return createDerivedProjection<T>(() => {
+    const value = compute();
+    if (!isPlain(value) || Array.isArray(value))
+      throw new TypeError("derive() must return a plain object");
+    return value;
+  }, options);
 }

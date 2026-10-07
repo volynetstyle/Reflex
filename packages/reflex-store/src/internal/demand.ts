@@ -4,6 +4,7 @@ import {
   currentConsumer,
   disposeNode,
   readConsumerLazy,
+  setCurrentConsumer,
   unlinkAllSources,
   untracked,
   type ConsumerNode,
@@ -43,7 +44,7 @@ export class Demand<T> {
 
 /** Retain tracked semantic locations until their owner's next collection boundary. */
 export class Observations<K, T> {
-  private readonly entries = new Map<K, ConsumerNode<T>>();
+  private entries?: Map<K, ConsumerNode<T>>;
   constructor(
     private readonly compute: (key: K) => T,
     private readonly equals: (a: T, b: T) => boolean = Object.is,
@@ -51,34 +52,46 @@ export class Observations<K, T> {
   ) {}
 
   read(key: K): T {
-    if (this.keyEquals) {
-      for (const known of this.entries.keys()) {
-        if (this.keyEquals(known, key)) {
-          key = known;
-          break;
+    if (this.keyEquals && this.entries) {
+      const previous = currentConsumer;
+      setCurrentConsumer(null);
+      try {
+        for (const known of this.entries.keys()) {
+          if (this.keyEquals(known, key)) {
+            key = known;
+            break;
+          }
         }
+      } finally {
+        setCurrentConsumer(previous);
       }
     }
-    let node = this.entries.get(key);
+    let node = this.entries?.get(key);
 
     if (!node) {
       if (currentConsumer === null) return this.compute(key);
       let initialized = false;
       let previous: T;
-      
+
       node = createConsumer(() => {
         const next = this.compute(key);
-        if (!initialized || !untracked(() => this.equals(previous, next)))
+        if (
+          !initialized ||
+          !(this.equals === Object.is
+            ? Object.is(previous, next)
+            : untracked(() => this.equals(previous, next)))
+        )
           previous = next;
         initialized = true;
         return previous;
       });
-      this.entries.set(key, node);
+      (this.entries ??= new Map()).set(key, node);
     }
     return readConsumerLazy.call(node) as T;
   }
 
   collect(): void {
+    if (!this.entries) return;
     for (const [key, node] of this.entries) {
       if (node.firstOut !== null) continue;
       this.entries.delete(key);
@@ -87,7 +100,8 @@ export class Observations<K, T> {
   }
 
   dispose(): void {
+    if (!this.entries) return;
     for (const node of this.entries.values()) disposeNode(node);
-    this.entries.clear();
+    this.entries = undefined;
   }
 }

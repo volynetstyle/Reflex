@@ -1,12 +1,19 @@
-import { untracked } from "@volynets/reflex-runtime/internal";
+import {
+  currentConsumer,
+  setCurrentConsumer,
+  untracked,
+} from "@volynets/reflex-runtime/internal";
 import { Demand, Observations } from "../internal/demand";
 import { cloneValue, depthOf, isStructural, storeControls } from "../values";
 import type { StoreDisposable } from "../types";
 import { storeName } from "../internal/names";
 import { readProjectionPath, type StoreProjectionOptions } from "./shared";
 
-const sameKeys = (a: readonly PropertyKey[], b: readonly PropertyKey[]) =>
-  a.length === b.length && a.every((key, index) => key === b[index]);
+const sameKeys = (a: readonly PropertyKey[], b: readonly PropertyKey[]) => {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+};
 
 class Projection<T extends object> {
   readonly state: Demand<T>;
@@ -17,21 +24,25 @@ class Projection<T extends object> {
     fn: (draft: T) => void | T,
     seed: Partial<T>,
     readonly options: StoreProjectionOptions<T>,
+    returnsValue = false,
   ) {
     const clone: (value: T) => T = options.clone ?? cloneValue;
     let initialSeed: Partial<T> | undefined = seed;
     let current: T;
     let initialized = false;
     this.state = new Demand(() => {
-      const draft = untracked(() =>
-        clone(initialized ? current : (initialSeed as T)),
-      );
+      const draft = returnsValue
+        ? (undefined as unknown as T)
+        : untracked(() => clone(initialized ? current : (initialSeed as T)));
       const result = fn(draft);
       const next =
         result === undefined ? draft : untracked(() => clone(result));
+      const equals = options.equals;
       if (
         !initialized ||
-        !untracked(() => (options.equals ?? Object.is)(current, next))
+        !(equals === undefined || equals === Object.is
+          ? Object.is(current, next)
+          : untracked(() => equals(current, next)))
       )
         current = next;
       initialSeed = undefined;
@@ -49,7 +60,8 @@ class Projection<T extends object> {
   read(path: readonly PropertyKey[]): unknown {
     if (this.disposed)
       throw new Error("Cannot read a disposed store projection");
-    return readProjectionPath(this.state.read(), path);
+    const value = this.state.read();
+    return path.length === 0 ? value : readProjectionPath(value, path);
   }
 
   collect(): void {
@@ -83,10 +95,10 @@ class View {
     PropertyKey,
     { array: boolean; view: WeakRef<View> }
   >();
-  private readonly values: Observations<PropertyKey, unknown>;
-  private readonly exists: Observations<PropertyKey, boolean>;
-  private readonly descriptors: Observations<PropertyKey, boolean | undefined>;
-  private readonly keys: Observations<undefined, readonly (string | symbol)[]>;
+  private values?: Observations<PropertyKey, unknown>;
+  private exists?: Observations<PropertyKey, boolean>;
+  private descriptors?: Observations<PropertyKey, boolean | undefined>;
+  private keys?: Observations<undefined, readonly (string | symbol)[]>;
 
   constructor(
     private readonly owner: ProjectionOwner,
@@ -102,46 +114,65 @@ class View {
       const value = parent();
       return value === undefined ? undefined : Reflect.get(value, key);
     };
-    this.values = new Observations((key) => this.wrap(key, get(key), parent()));
-    this.exists = new Observations((key) => {
+    const valueAt = (key: PropertyKey) => {
+      const value = parent();
+      return this.wrap(
+        key,
+        value === undefined ? undefined : Reflect.get(value, key),
+        value,
+      );
+    };
+    const existsAt = (key: PropertyKey) => {
       const value = parent();
       return value !== undefined && key in value;
-    });
-    this.descriptors = new Observations((key) => {
+    };
+    const descriptorAt = (key: PropertyKey) => {
       const value = parent();
       return value === undefined
         ? undefined
         : Object.getOwnPropertyDescriptor(value, key)?.enumerable;
-    });
-    this.keys = new Observations<undefined, readonly (string | symbol)[]>(
-      () => {
-        const value = parent();
-        return value === undefined ? [] : Reflect.ownKeys(value);
-      },
-      sameKeys,
-    );
+    };
+    const keysAt = () => {
+      const value = parent();
+      return value === undefined ? [] : Reflect.ownKeys(value);
+    };
+    const dispose = () => owner.dispose();
 
     this.proxy = new Proxy(array ? [] : Object.create(null), {
       get: (_target, key) => {
-        if (key === storeName) return this.owner.options.name;
-        if (key === Symbol.dispose) return () => this.owner.dispose();
-        // Navigating a structural object does not subscribe to its identity.
-        // The eventual leaf/exists/keys access owns the semantic dependency.
-        const value = untracked(() => get(key));
-        const container = untracked(parent);
+        if (key === storeName) return owner.options.name;
+        if (key === Symbol.dispose) return dispose;
+        // Inspect one parent snapshot without subscribing to structural identity.
+        const previous = currentConsumer;
+        let container: object | undefined;
+        let value: unknown;
+        setCurrentConsumer(null);
+        try {
+          container = parent();
+          value =
+            container === undefined ? undefined : Reflect.get(container, key);
+        } finally {
+          setCurrentConsumer(previous);
+        }
         if (this.shouldWrap(value, container))
           return this.child(key, Array.isArray(value));
-        return this.values.read(key);
+        return (this.values ??= new Observations(valueAt)).read(key);
       },
-      has: (_target, key) => this.exists.read(key),
+      has: (_target, key) =>
+        (this.exists ??= new Observations(existsAt)).read(key),
       ownKeys: () => {
-        const keys = this.keys.read(undefined);
+        const keys = (this.keys ??= new Observations<
+          undefined,
+          readonly (string | symbol)[]
+        >(keysAt, sameKeys)).read(undefined);
         return array && !keys.includes("length")
           ? [...keys, "length"]
           : [...keys];
       },
       getOwnPropertyDescriptor: (_target, key) => {
-        const enumerable = this.descriptors.read(key);
+        const enumerable = (this.descriptors ??= new Observations(
+          descriptorAt,
+        )).read(key);
         if (array && key === "length")
           return {
             configurable: false,
@@ -166,7 +197,7 @@ class View {
     storeControls.set(this.proxy, {
       raw: read,
       collect: () => owner.collect(),
-      dispose: () => owner.dispose(),
+      dispose,
     });
   }
 
@@ -198,19 +229,19 @@ class View {
   }
 
   collect(): void {
-    this.values.collect();
-    this.exists.collect();
-    this.descriptors.collect();
-    this.keys.collect();
+    this.values?.collect();
+    this.exists?.collect();
+    this.descriptors?.collect();
+    this.keys?.collect();
     for (const [key, entry] of this.children)
       if (!entry.view.deref()) this.children.delete(key);
   }
 
   dispose(): void {
-    this.values.dispose();
-    this.exists.dispose();
-    this.descriptors.dispose();
-    this.keys.dispose();
+    this.values?.dispose();
+    this.exists?.dispose();
+    this.descriptors?.dispose();
+    this.keys?.dispose();
     this.children.clear();
   }
 }
@@ -222,4 +253,13 @@ export function createStoreProjection<T extends object>(
 ): T & StoreDisposable {
   const owner = new Projection(fn, seed, options);
   return owner.view([], Array.isArray(seed)).proxy as T & StoreDisposable;
+}
+
+/** Pure-return derivations never consume a mutable draft of their previous state. */
+export function createDerivedProjection<T extends object>(
+  compute: () => T,
+  options: StoreProjectionOptions<T>,
+): T & StoreDisposable {
+  const owner = new Projection(compute, {}, options, true);
+  return owner.view([], false).proxy as T & StoreDisposable;
 }

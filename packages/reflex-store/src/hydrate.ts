@@ -1,7 +1,38 @@
 import { transaction } from "./collections";
-import { depthOf, getStoreControl, isPlain, type Snapshot } from "./values";
+import {
+  depthOf,
+  getStoreControl,
+  isPlain,
+  type Snapshot,
+  type StoreControl,
+} from "./values";
 import { untracked } from "@volynets/reflex-runtime/internal";
 import type { CompiledStore, StoreShape, StoreData } from "./store/createStore";
+
+type HydrationBranch = { path: readonly string[]; keys: ReadonlySet<string> };
+const hydrationShapes = new WeakMap<StoreControl, readonly HydrationBranch[]>();
+
+function hydrationShape(control: StoreControl): readonly HydrationBranch[] {
+  const cached = hydrationShapes.get(control);
+  if (cached) return cached;
+  const branches = control.branches!.map((path) => ({
+    path,
+    keys: new Set<string>(),
+  }));
+  const parents = new Map(
+    branches.map((branch) => [JSON.stringify(branch.path), branch]),
+  );
+  for (const candidates of [control.paths!, control.branches!]) {
+    for (const path of candidates) {
+      if (path.length === 0) continue;
+      parents
+        .get(JSON.stringify(path.slice(0, -1)))
+        ?.keys.add(path[path.length - 1]!);
+    }
+  }
+  hydrationShapes.set(control, branches);
+  return branches;
+}
 
 /** Restore all compiled data fields after validating the complete static schema. */
 export function hydrate<T extends StoreShape>(
@@ -12,36 +43,26 @@ export function hydrate<T extends StoreShape>(
   if (!control?.hydrate || !control.paths || !control.branches)
     throw new TypeError("hydrate() requires a compiled store");
   untracked(() => {
-    const values = new Map<string, unknown>();
-    const seen = new Map<object, unknown>();
-    for (const path of control.branches!) {
+    for (const { path, keys } of hydrationShape(control)) {
       const branch = readPath(data, path);
       if (!isPlain(branch) || Array.isArray(branch))
         throw new TypeError("Invalid hydration branch: " + path.join("."));
-      const expected = new Set<string>();
-      for (const candidate of [...control.paths!, ...control.branches!])
-        if (
-          candidate.length === path.length + 1 &&
-          path.every((key, index) => candidate[index] === key)
-        )
-          expected.add(candidate[path.length]!);
       const actual = Reflect.ownKeys(branch);
-      if (
-        actual.length !== expected.size ||
-        actual.some((key) => typeof key !== "string" || !expected.has(key))
-      )
+      if (actual.length !== keys.size)
         throw new TypeError(
           "Hydration data does not match the compiled store shape",
         );
+      for (const key of actual)
+        if (typeof key !== "string" || !keys.has(key))
+          throw new TypeError(
+            "Hydration data does not match the compiled store shape",
+          );
     }
-    for (const path of control.paths!)
-      values.set(
-        JSON.stringify(path),
-        restoreValue(readPath(data, path), seen),
-      );
-    const ordered = control.paths!.map((path) =>
-      values.get(JSON.stringify(path)),
-    );
+    const seen = new Map<object, unknown>();
+    const paths = control.paths!;
+    const ordered = new Array<unknown>(paths.length);
+    for (let i = 0; i < paths.length; i++)
+      ordered[i] = restoreValue(readPath(data, paths[i]!), seen);
     transaction(() => control.hydrate!(ordered));
   });
 }
@@ -53,7 +74,8 @@ function restoreValue(value: unknown, seen: Map<object, unknown>): unknown {
     depthOf(value) === "opaque"
   )
     return value;
-  if (seen.has(value)) return seen.get(value);
+  const cached = seen.get(value);
+  if (cached !== undefined) return cached;
   if (value instanceof Map) {
     const result = new Map();
     seen.set(value, result);
@@ -66,24 +88,27 @@ function restoreValue(value: unknown, seen: Map<object, unknown>): unknown {
     return result;
   }
   if (!isPlain(value)) return value;
+  const array = Array.isArray(value);
   const result = (
-    Array.isArray(value) ? [] : Object.create(Object.getPrototypeOf(value))
+    array ? [] : Object.create(Object.getPrototypeOf(value))
   ) as Record<PropertyKey, unknown>;
   seen.set(value, result);
+  const output = {
+    configurable: true,
+    writable: true,
+    enumerable: true,
+    value: undefined as unknown,
+  };
   for (const key of Reflect.ownKeys(value)) {
-    if (Array.isArray(value) && key === "length") continue;
+    if (array && key === "length") continue;
     const descriptor = Object.getOwnPropertyDescriptor(value, key)!;
     if (!("value" in descriptor))
       throw new TypeError("Hydration values must contain data properties");
-    Object.defineProperty(result, key, {
-      configurable: true,
-      writable: true,
-      enumerable: descriptor.enumerable,
-      value: restoreValue(descriptor.value, seen),
-    });
+    output.enumerable = descriptor.enumerable!;
+    output.value = restoreValue(descriptor.value, seen);
+    Object.defineProperty(result, key, output);
   }
-  if (Array.isArray(value))
-    (result as unknown as unknown[]).length = value.length;
+  if (array) (result as unknown as unknown[]).length = value.length;
   return result;
 }
 
