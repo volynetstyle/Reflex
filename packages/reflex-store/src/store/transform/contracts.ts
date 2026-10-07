@@ -1,4 +1,4 @@
-import type { Expression } from "@swc/core";
+import type { Expression } from "@swc/wasm";
 
 export type StoreLeafPath = {
   initial: Expression;
@@ -8,13 +8,30 @@ export type StoreLeafPath = {
   names?: { read: string; set: string; write: string };
 };
 
+export type StoreMethod = {
+  key: string;
+  fn: Expression;
+  internalName?: string;
+};
+
+export type StoreGetter = {
+  key: string;
+  fn: Expression;
+  internalName?: string;
+};
+
 export type StoreBinding = {
   name: string;
+  identifier: Expression;
+  displayName?: string;
+  needsFacade: boolean;
+  lifetimeName?: string;
   branchPaths: Set<string>;
   leafPaths: Map<string, StoreLeafPath>;
   leaves: StoreLeafPath[];
+  methods: StoreMethod[];
+  getters: StoreGetter[];
 };
-
 export interface CompiledStorePathContext {
   path: readonly string[];
   mangledPath: string;
@@ -78,6 +95,8 @@ export interface CompiledStoreTransformOptions {
    * `__reflex_signal` in scope manually.
    */
   importRuntime?: boolean;
+  /** Omit the facade when every store use lowers directly to a declared leaf. */
+  eraseFacade?: boolean;
   /** Runtime facade used by generated code. */
   runtimeModule?: string;
   /** Customize every runtime symbol emitted by the canonical lowering. */
@@ -99,6 +118,7 @@ export type TransformState = {
   diagnostics: CompiledStoreDiagnostic[];
   options: {
     importRuntime: boolean;
+    eraseFacade: boolean;
     onDiagnostic: "throw" | "collect";
   };
   target: CompiledStoreLoweringTarget;
@@ -106,6 +126,7 @@ export type TransformState = {
   tempCounter: number;
   identifiers: Set<string>;
   factoryNames: Set<string>;
+  computedName?: string;
 };
 
 export class CompiledStoreTransformError extends Error {

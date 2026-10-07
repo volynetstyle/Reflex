@@ -20,7 +20,7 @@ describe("transformCompiledStore", () => {
     const result = compileStore(source);
 
     expect(result.code).toContain(
-      'import { createModel as __reflex_createModel } from "@volynets/reflex";',
+      'import { createModel as __reflex_createModel } from "@volynets/reflex-store/runtime";',
     );
     expect(result.code).not.toContain('from "@reflex/store"');
     expect(result.code).toContain(

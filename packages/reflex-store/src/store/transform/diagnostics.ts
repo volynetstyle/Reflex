@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { bindingKey, memberRoot, pathKey } from "./bindings";
-import type { Module } from "@swc/core";
+import { bindingKey, memberRoot, pathKey, STORE_MODULES } from "./bindings";
+import type { Module } from "@swc/wasm";
 import { collectStaticMemberPath, visitNode } from "./ast";
 import type { DiagnosticCode, TransformState } from "./contracts";
 
@@ -10,12 +10,137 @@ export function scanUnsupportedStoreSyntax(
 ): void {
   if (state.stores.size === 0) return;
 
+  for (const store of state.stores.values()) {
+    for (const getter of store.getters) {
+      visitNode(getter.fn, (node) => {
+        if (
+          node.type === "CallExpression" &&
+          node.callee?.type === "MemberExpression"
+        ) {
+          const path = collectStaticMemberPath(node.callee);
+          const receiver = node.callee.object;
+          const receiverStore =
+            receiver?.type === "ThisExpression"
+              ? store
+              : path?.length === 2
+                ? state.stores.get(bindingKey(memberRoot(node.callee)))
+                : undefined;
+          const method =
+            receiver?.type === "ThisExpression"
+              ? node.callee.property?.value
+              : path?.[1];
+          if (
+            receiverStore?.methods.some((candidate) => candidate.key === method)
+          )
+            addDiagnostic(
+              state,
+              "unsupported-write",
+              "Compiled getters cannot call store actions.",
+            );
+        }
+
+        if (node.type === "AwaitExpression" || node.type === "YieldExpression")
+          addDiagnostic(
+            state,
+            "unsupported-write",
+            "Compiled getters must be pure synchronous computations.",
+          );
+        if (
+          node.type === "AssignmentExpression" ||
+          node.type === "UpdateExpression"
+        ) {
+          let root = node.left ?? node.argument;
+          while (root?.type === "MemberExpression") root = root.object;
+          if (
+            root?.type === "ThisExpression" ||
+            (root?.type === "Identifier" && state.stores.has(bindingKey(root)))
+          )
+            addDiagnostic(
+              state,
+              "unsupported-write",
+              "Compiled getters cannot write store state.",
+            );
+        }
+      });
+    }
+  }
+
+  const intrinsicNames = new Map<
+    string,
+    { arity: number; rootIndex: number }
+  >();
+  for (const item of program.body) {
+    if (
+      item.type !== "ImportDeclaration" ||
+      (!STORE_MODULES.has(item.source.value) &&
+        !["@volynets/reflex", "@volynets/reflex-store/runtime"].includes(
+          item.source.value,
+        ))
+    )
+      continue;
+    for (const specifier of item.specifiers) {
+      if (specifier.type !== "ImportSpecifier" || specifier.isTypeOnly)
+        continue;
+      const imported = specifier.imported?.value ?? specifier.local.value;
+      if (
+        ["snapshot", "hydrate", "getStoreName"].includes(imported) &&
+        STORE_MODULES.has(item.source.value)
+      )
+        intrinsicNames.set(bindingKey(specifier.local), {
+          arity: imported === "hydrate" ? 2 : 1,
+          rootIndex: 0,
+        });
+      if (
+        imported === "own" &&
+        ["@volynets/reflex", "@volynets/reflex-store/runtime"].includes(
+          item.source.value,
+        )
+      )
+        intrinsicNames.set(bindingKey(specifier.local), {
+          arity: 2,
+          rootIndex: 1,
+        });
+    }
+  }
+  const returnRoots = new Set<object>();
+  const collectReturned = (node: any): void => {
+    if (node?.type === "Identifier" && state.stores.has(bindingKey(node)))
+      returnRoots.add(node);
+    if (node?.type === "ObjectExpression") {
+      for (const property of node.properties)
+        collectReturned(
+          property.type === "KeyValueProperty" ? property.value : property,
+        );
+    }
+  };
+  visitNode(program, (node) => {
+    if (node.type === "ReturnStatement") collectReturned(node.argument);
+  });
+  const intrinsicRoots = new Set<object>();
+  visitNode(program, (node) => {
+    if (node.type !== "CallExpression" || node.callee?.type !== "Identifier")
+      return;
+    const intrinsic = intrinsicNames.get(bindingKey(node.callee));
+    const root = node.arguments?.[intrinsic?.rootIndex ?? 0]?.expression;
+    if (
+      intrinsic &&
+      node.arguments.length === intrinsic.arity &&
+      node.arguments.every((arg: any) => !arg.spread) &&
+      root?.type === "Identifier" &&
+      state.stores.has(bindingKey(root))
+    )
+      intrinsicRoots.add(root);
+  });
+
   visitNode(program, (node, parent) => {
     if (
       node.type === "Identifier" &&
       state.stores.has(bindingKey(node)) &&
+      !intrinsicRoots.has(node) &&
+      !returnRoots.has(node) &&
       !(parent?.type === "VariableDeclarator" && parent.id === node) &&
-      !(parent?.type === "MemberExpression" && parent.object === node)
+      !(parent?.type === "MemberExpression" && parent.object === node) &&
+      !(parent?.type === "ReturnStatement" && parent.argument === node)
     ) {
       addDiagnostic(state, "spread-reflection", REFLECTION_MESSAGE);
     }

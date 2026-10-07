@@ -9,13 +9,13 @@ export { createStoreProjection } from "./store";
 import { createKeyedProjection } from "./keyed";
 import { createStoreProjection } from "./store";
 import type { ProjectionOptions, StoreProjectionOptions } from "./shared";
-import type { Accessor, DisposableAccessor } from "../types";
+import type { Accessor, DisposableAccessor, StoreDisposable } from "../types";
 
 export function createProjection<T extends object>(
   fn: (draft: T) => void | T,
   seed: Partial<T>,
   options?: StoreProjectionOptions<T>,
-): T;
+): T & StoreDisposable;
 export function createProjection<T, K, R>(
   source: Accessor<T>,
   keyOf: (value: T) => K,

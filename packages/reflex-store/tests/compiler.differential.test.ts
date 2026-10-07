@@ -88,10 +88,12 @@ describe("compiled store / JavaScript differential semantics", () => {
       new Function(
         "__reflex_createModel",
         "__reflex_signal",
-        transformed + "return output;",
+        transformed.replace(
+          "export function createBoard",
+          "function createBoard",
+        ) + "\nreturn output;",
       )(createModel, createStoreCell),
     ).toEqual([22, 1, 7]);
-    expect(transformed).not.toContain("import");
   });
 
   it("does not recognize a local or foreign factory by spelling alone", () => {
@@ -103,6 +105,35 @@ describe("compiled store / JavaScript differential semantics", () => {
         "import {createStore} from 'foreign'; const state=createStore({count:1});",
       ).code,
     ).toContain("from 'foreign'");
+  });
+
+  it("compiles store factories inside reusable functions", () => {
+    const code = [
+      'import { createStore } from "@volynets/reflex-store";',
+      "export function createBoard(initial) {",
+      "  const state = createStore({ count: initial.count });",
+      "  state.count += 1;",
+      "  return state;",
+      "}",
+      "const first = createBoard({ count: 1 });",
+      "const second = createBoard({ count: 10 });",
+      "const output = [first.count, second.count];",
+    ].join("\n");
+    const transformed = compileStore(code, "function-local.js", {
+      importRuntime: false,
+    }).code;
+    const executable = transformed.replace(
+      "export function createBoard",
+      "function createBoard",
+    );
+    const output = new Function(
+      "__reflex_createModel",
+      "__reflex_signal",
+      executable + "\nreturn output;",
+    )(createModel, createStoreCell);
+
+    expect(output).toEqual([2, 11]);
+    expect(transformed).toContain("export function createBoard(initial)");
   });
 
   it("matches 200 generated programs containing assignments and updates", () => {
@@ -165,7 +196,7 @@ describe("compiled store / JavaScript differential semantics", () => {
     "const state=createStore({user:{name:'Ada'}}); state.user = {};",
     "const state=createStore({...base});",
     "const state=createStore({count:1,count:2});",
-    "const state=createStore({get count(){return 1}});",
+    "const state=createStore({set count(value){}});",
     "const state=createStore({__proto__: null});",
     "const state=createStore(data);",
     "import {createStore} from '@volynets/reflex-store'; function f(){return createStore({count:0});}",

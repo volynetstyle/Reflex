@@ -37,6 +37,11 @@ async function createStoreFixtureServer(
         ),
         "@volynets/reflex-runtime": resolve(runtimeSource, "index.ts"),
         "@volynets/reflex-scheduler": schedulerSource,
+        "@volynets/reflex-store/runtime/internal": resolve(
+          testDir,
+          "../src/runtime/internal.ts",
+        ),
+        "@volynets/reflex-store/runtime": resolve(testDir, "../src/runtime.ts"),
         "@volynets/reflex-store": storeSource,
       },
     },

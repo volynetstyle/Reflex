@@ -7,6 +7,8 @@ import {
   type ProducerNode,
 } from "@volynets/reflex-runtime/internal";
 
+import { setStoreName } from "../internal/names";
+
 export interface StoreCell<T> {
   (): T;
   set(value: T): void;
@@ -15,14 +17,17 @@ export interface StoreCell<T> {
 }
 
 /** Compiler target: a direct leaf address, materialized only by a tracked read. */
-export function createStoreCell<T>(initial: T): StoreCell<T> {
+export function createStoreCell<T>(
+  initial: T,
+  options: { name?: string } = {},
+): StoreCell<T> {
   let value = initial;
   let node: ProducerNode<number> | undefined;
   let disposed = false;
   const assertLive = () => {
     if (disposed) throw new Error("Cannot use a disposed store cell");
   };
-  return Object.assign(
+  const cell = Object.assign(
     () => {
       assertLive();
       if (currentConsumer === null) return value;
@@ -50,4 +55,6 @@ export function createStoreCell<T>(initial: T): StoreCell<T> {
       },
     },
   );
+  setStoreName(cell, options.name);
+  return cell;
 }

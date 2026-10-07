@@ -13,7 +13,7 @@ import {
   disposeStore,
   snapshot,
   transaction,
-} from "../src";
+} from "../src/advanced";
 
 const modes = ["flush", "eager", "sab"] as const;
 const operation = fc.record({

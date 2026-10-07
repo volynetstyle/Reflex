@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { printSync } from "@swc/core";
-import type { Expression, Program } from "@swc/core";
+import type { Expression, Program } from "@swc/wasm";
 import {
   collectStaticMemberPath,
   DUMMY_SPAN,
   parseModule,
+  printModule as printSync,
   visitNode,
 } from "./ast";
 import {
@@ -29,12 +29,14 @@ const STORE_MODULES = new Set([
   "@volynets/reflex-store",
   "@volynets/reflex-store/store",
   "@volynets/reflex-store/compiled-store",
+  "@volynets/reflex-store/advanced",
   "@reflex/store",
   "@reflex/store/store",
   "@reflex/store/compiled-store",
+  "@reflex/store/advanced",
 ]);
 
-const DEFAULT_RUNTIME_MODULE = "@volynets/reflex";
+const DEFAULT_RUNTIME_MODULE = "@volynets/reflex-store/runtime";
 
 const DEFAULT_LOWERING_TARGET: CompiledStoreLoweringTarget = {
   runtimeModule: DEFAULT_RUNTIME_MODULE,
@@ -44,7 +46,7 @@ const DEFAULT_LOWERING_TARGET: CompiledStoreLoweringTarget = {
     actionMethod: "action",
   },
   signal: {
-    runtimeModule: "@volynets/reflex-store",
+    runtimeModule: "@volynets/reflex-store/runtime/internal",
     exportName: "createStoreCell",
     localName: "__reflex_signal",
   },
@@ -74,6 +76,7 @@ export function compileStore(
     diagnostics,
     options: {
       importRuntime: options.importRuntime ?? true,
+      eraseFacade: options.eraseFacade ?? false,
       onDiagnostic: options.onDiagnostic ?? "throw",
     },
     target: resolveLoweringTarget(options),
@@ -99,7 +102,49 @@ export function compileStore(
     state.target.identifiers.value,
     state,
   );
+  const hasGetters = [...state.stores.values()].some(
+    (store) => store.getters.length > 0,
+  );
+  if (hasGetters) {
+    state.computedName = allocateName(
+      "__reflex_createDisposableComputed",
+      state,
+    );
+  }
+  const defaultModel =
+    state.target.runtimeModule === DEFAULT_RUNTIME_MODULE &&
+    state.target.model.exportName === "createModel";
+  if (!defaultModel) {
+    for (const store of state.stores.values()) {
+      if (store.methods.length > 0 || store.getters.length > 0) {
+        state.diagnostics.push({
+          code: "unsupported-shape",
+          message:
+            "Compiled store methods and getters require the default Reflex createModel lowering target.",
+        });
+      }
+    }
+  }
   scanUnsupportedStoreSyntax(ast, state);
+
+  for (const store of state.stores.values()) {
+    for (const member of [...store.methods, ...store.getters]) {
+      scanUnsupportedStoreSyntax(
+        {
+          ...ast,
+          body: [
+            ...ast.body.filter((item) => item.type === "ImportDeclaration"),
+            {
+              type: "ExpressionStatement",
+              span: DUMMY_SPAN,
+              expression: rewriteStoreThis(member.fn, store),
+            },
+          ],
+        } as any,
+        state,
+      );
+    }
+  }
 
   if (state.diagnostics.length > 0 && state.options.onDiagnostic === "throw") {
     throw new CompiledStoreTransformError(state.diagnostics);
@@ -182,8 +227,223 @@ function transformModuleItem(item: any, state: TransformState): any[] {
           expression: transformExpression(item.expression, state),
         },
       ];
+    case "FunctionDeclaration":
+      return [transformFunctionDeclaration(item, state)];
+    case "ExportDeclaration":
+      return [
+        {
+          ...item,
+          declaration:
+            item.declaration?.type === "FunctionDeclaration"
+              ? transformFunctionDeclaration(item.declaration, state)
+              : transformNestedFunctions(item.declaration, state),
+        },
+      ];
+    case "ExportDefaultDeclaration":
+      return [
+        {
+          ...item,
+          decl: transformNestedFunctions(item.decl, state),
+        },
+      ];
+    case "ExportDefaultExpression":
+      return [
+        {
+          ...item,
+          expression: transformExpression(item.expression, state),
+        },
+      ];
     default:
-      return [item];
+      return [transformNestedFunctions(item, state)];
+  }
+}
+
+function transformBlockStatement(block: any, state: TransformState): any {
+  return {
+    ...block,
+    stmts: (block.stmts ?? []).flatMap((statement: any) =>
+      transformStatement(statement, state),
+    ),
+  };
+}
+
+function transformFunctionDeclaration(
+  declaration: any,
+  state: TransformState,
+): any {
+  return {
+    ...declaration,
+    body: transformBlockStatement(declaration.body, state),
+  };
+}
+
+function transformNestedFunctions(node: any, state: TransformState): any {
+  if (node === null || typeof node !== "object") return node;
+  if (Array.isArray(node)) {
+    return node.map((child) => transformNestedFunctions(child, state));
+  }
+  if (node.type === "FunctionDeclaration") {
+    return transformFunctionDeclaration(node, state);
+  }
+  if (
+    node.type === "FunctionExpression" ||
+    node.type === "ArrowFunctionExpression"
+  ) {
+    return transformExpression(node, state);
+  }
+  if (node.type === "BlockStatement") {
+    return transformBlockStatement(node, state);
+  }
+
+  const transformed: Record<string, unknown> = { ...node };
+  for (const key of Object.keys(node)) {
+    if (key === "span" || key === "ctxt" || key === "type" || key === "raw") {
+      continue;
+    }
+    const value = node[key];
+    if (Array.isArray(value)) {
+      transformed[key] = value.map((child) =>
+        transformNestedFunctions(child, state),
+      );
+    } else if (value !== null && typeof value === "object") {
+      transformed[key] = transformNestedFunctions(value, state);
+    }
+  }
+  return transformed;
+}
+
+function transformSingleStatement(statement: any, state: TransformState): any {
+  const transformed = transformStatement(statement, state);
+  if (transformed.length === 1) return transformed[0];
+  return {
+    type: "BlockStatement",
+    span: statement.span,
+    ctxt: statement.ctxt,
+    stmts: transformed,
+  };
+}
+
+function transformStatement(statement: any, state: TransformState): any[] {
+  switch (statement?.type) {
+    case "VariableDeclaration":
+      return transformVariableDeclaration(statement, state);
+    case "ExpressionStatement":
+      return [
+        {
+          ...statement,
+          expression: transformExpression(statement.expression, state),
+        },
+      ];
+    case "ReturnStatement":
+    case "ThrowStatement":
+      return [
+        {
+          ...statement,
+          argument: statement.argument
+            ? transformExpression(statement.argument, state)
+            : statement.argument,
+        },
+      ];
+    case "BlockStatement":
+      return [transformBlockStatement(statement, state)];
+    case "FunctionDeclaration":
+      return [transformFunctionDeclaration(statement, state)];
+    case "IfStatement":
+      return [
+        {
+          ...statement,
+          test: transformExpression(statement.test, state),
+          consequent: transformSingleStatement(statement.consequent, state),
+          alternate: statement.alternate
+            ? transformSingleStatement(statement.alternate, state)
+            : statement.alternate,
+        },
+      ];
+    case "WhileStatement":
+    case "DoWhileStatement":
+      return [
+        {
+          ...statement,
+          test: transformExpression(statement.test, state),
+          body: transformSingleStatement(statement.body, state),
+        },
+      ];
+    case "ForStatement":
+      return [
+        {
+          ...statement,
+          init:
+            statement.init?.type === "VariableDeclaration"
+              ? (transformVariableDeclaration(statement.init, state)[0] ??
+                statement.init)
+              : statement.init
+                ? transformExpression(statement.init, state)
+                : statement.init,
+          test: statement.test
+            ? transformExpression(statement.test, state)
+            : statement.test,
+          update: statement.update
+            ? transformExpression(statement.update, state)
+            : statement.update,
+          body: transformSingleStatement(statement.body, state),
+        },
+      ];
+    case "ForInStatement":
+    case "ForOfStatement":
+      return [
+        {
+          ...statement,
+          right: transformExpression(statement.right, state),
+          body: transformSingleStatement(statement.body, state),
+        },
+      ];
+    case "LabeledStatement":
+      return [
+        {
+          ...statement,
+          body: transformSingleStatement(statement.body, state),
+        },
+      ];
+    case "WithStatement":
+      return [
+        {
+          ...statement,
+          object: transformExpression(statement.object, state),
+          body: transformSingleStatement(statement.body, state),
+        },
+      ];
+    case "TryStatement":
+      return [
+        {
+          ...statement,
+          block: transformBlockStatement(statement.block, state),
+          handler: statement.handler
+            ? {
+                ...statement.handler,
+                body: transformBlockStatement(statement.handler.body, state),
+              }
+            : statement.handler,
+          finalizer: statement.finalizer
+            ? transformBlockStatement(statement.finalizer, state)
+            : statement.finalizer,
+        },
+      ];
+    case "SwitchStatement":
+      return [
+        {
+          ...statement,
+          discriminant: transformExpression(statement.discriminant, state),
+          cases: (statement.cases ?? []).map((item: any) => ({
+            ...item,
+            test: item.test ? transformExpression(item.test, state) : item.test,
+            consequent: (item.consequent ?? []).flatMap((child: any) =>
+              transformStatement(child, state),
+            ),
+          })),
+        },
+      ];
+    default:
+      return [statement];
   }
 }
 
@@ -255,11 +515,27 @@ function transformVariableDeclarator(
 function insertRuntimeImport(body: any[], state: TransformState): any[] {
   const { model, runtimeModule, signal } = state.target;
   const signalModule = signal.runtimeModule ?? runtimeModule;
-  const source =
-    signalModule === runtimeModule
-      ? `import { ${model.exportName} as ${model.localName}, ${signal.exportName} as ${signal.localName} } from ${JSON.stringify(runtimeModule)};`
-      : `import { ${model.exportName} as ${model.localName} } from ${JSON.stringify(runtimeModule)};
-import { ${signal.exportName} as ${signal.localName} } from ${JSON.stringify(signalModule)};`;
+  const runtimeNames = [model.exportName + " as " + model.localName];
+  if (state.computedName)
+    runtimeNames.push("createDisposableComputed as " + state.computedName);
+  if (signalModule === runtimeModule)
+    runtimeNames.push(signal.exportName + " as " + signal.localName);
+  let source =
+    "import { " +
+    runtimeNames.join(", ") +
+    " } from " +
+    JSON.stringify(runtimeModule) +
+    ";";
+  if (signalModule !== runtimeModule) {
+    source +=
+      "\nimport { " +
+      signal.exportName +
+      " as " +
+      signal.localName +
+      " } from " +
+      JSON.stringify(signalModule) +
+      ";";
+  }
   const imports = parseModule(source, "compiled-store-runtime-import.ts").body;
   const insertIndex = body.findIndex(
     (item) => item.type !== "ImportDeclaration",
@@ -267,7 +543,6 @@ import { ${signal.exportName} as ${signal.localName} } from ${JSON.stringify(sig
   const index = insertIndex === -1 ? body.length : insertIndex;
   return [...body.slice(0, index), ...imports, ...body.slice(index)];
 }
-
 function createCompiledStoreStatements(
   binding: StoreBinding,
   kind: "const" | "let" | "var",
@@ -279,19 +554,53 @@ function createCompiledStoreStatements(
     state.target.runtimeModule === DEFAULT_RUNTIME_MODULE &&
     model.exportName === "createModel";
   const modelName = defaultModel ? nextTemp(state, "model") : binding.name;
+  const emitFacade =
+    defaultModel && (!state.options.eraseFacade || binding.needsFacade);
+
+  if (emitFacade) binding.lifetimeName ??= allocateName("__store_alive", state);
+
+  for (const method of binding.methods) {
+    method.internalName ??= allocateName(
+      "__store_method_" + method.key.replace(/[^A-Za-z0-9_$]/g, "_"),
+      state,
+    );
+  }
+  for (const getter of binding.getters) {
+    getter.internalName ??= allocateName(
+      "__store_getter_" + getter.key.replace(/[^A-Za-z0-9_$]/g, "_"),
+      state,
+    );
+  }
 
   for (const leaf of binding.leaves) {
     const names = getLeafNames(leaf, state);
     lines.push(
-      `const ${names.read} = ` +
-        `${signal.localName}(${printExpression(leaf.initial)});`,
+      "const " +
+        names.read +
+        " = " +
+        signal.localName +
+        "(" +
+        printExpression(leaf.initial) +
+        (binding.displayName && signal.exportName === "createStoreCell"
+          ? ", " +
+            JSON.stringify({
+              name: binding.displayName + "." + leaf.parts.join("."),
+            })
+          : "") +
+        ");",
     );
-    lines.push(`let ${names.write};`);
+    lines.push("let " + names.write + ";");
   }
 
   lines.push(
-    `${kind} ${modelName} = ${model.localName}` +
-      `((${identifiers.context}) => {`,
+    kind +
+      " " +
+      modelName +
+      " = " +
+      model.localName +
+      "((" +
+      identifiers.context +
+      ") => {",
   );
 
   for (const leaf of binding.leaves) {
@@ -299,31 +608,227 @@ function createCompiledStoreStatements(
     const action = formatMemberAccess(identifiers.context, model.actionMethod);
     if (
       signal.exportName === "createStoreCell" &&
-      signal.runtimeModule === "@volynets/reflex-store"
+      signal.runtimeModule === "@volynets/reflex-store/runtime/internal"
     ) {
-      lines.push(`  ${identifiers.context}.onDispose(${names.read}.dispose);`);
+      lines.push(
+        "  " + identifiers.context + ".onDispose(" + names.read + ".dispose);",
+      );
     }
-    lines.push(`  ${names.write} = ${action}((${identifiers.value}) => {`);
-    lines.push(`    ${names.read}.set(${identifiers.value});`);
-    lines.push(`    return ${identifiers.value};`);
-    lines.push(`  });`);
+    lines.push(
+      "  " + names.write + " = " + action + "((" + identifiers.value + ") => {",
+    );
+    lines.push("    " + names.read + ".set(" + identifiers.value + ");");
+    lines.push("    return " + identifiers.value + ";");
+    lines.push("  });");
+    if (defaultModel) {
+      const originalWriter = nextTemp(state, "writer");
+      lines.push("  const " + originalWriter + " = " + names.write + ";");
+      lines.push(
+        "  " +
+          names.write +
+          " = (" +
+          identifiers.value +
+          ") => { if (" +
+          identifiers.context +
+          ".disposed) throw new Error('Cannot write a disposed compiled store'); return " +
+          originalWriter +
+          "(" +
+          identifiers.value +
+          "); };",
+      );
+    }
   }
 
-  lines.push(
-    `  return ${defaultModel ? "{}" : createStoreObjectSource(binding, state)};`,
-  );
-  lines.push(`})();`);
-  if (defaultModel) {
-    const facade = createStoreObjectSource(binding, state);
-    const contents = facade.slice(1, -1).trim();
+  const action = formatMemberAccess(identifiers.context, model.actionMethod);
+  for (const method of binding.methods) {
+    const fn = transformExpression(rewriteStoreThis(method.fn, binding), state);
     lines.push(
-      `${kind} ${binding.name} = { ${contents}${contents ? "," : ""} dispose: ${modelName}.dispose };`,
+      "  const " +
+        method.internalName +
+        " = " +
+        action +
+        "(" +
+        printExpression(fn) +
+        ");",
+    );
+  }
+  for (const getter of binding.getters) {
+    if (!state.computedName) {
+      throw new Error("Missing generated computed import for store getter.");
+    }
+    const getterValue = nextTemp(state, "getter");
+    const fn = transformExpression(rewriteStoreThis(getter.fn, binding), state);
+    lines.push(
+      "  const " +
+        getterValue +
+        " = " +
+        state.computedName +
+        "(() => (" +
+        printExpression(fn) +
+        ").call(" +
+        binding.name +
+        "));",
+    );
+    lines.push(
+      "  " + identifiers.context + ".onDispose(" + getterValue + ".dispose);",
+    );
+    lines.push(
+      "  const " + getter.internalName + " = " + getterValue + ".read;",
     );
   }
 
+  lines.push(
+    "  return " +
+      (defaultModel
+        ? createStoreModelSource(binding, identifiers.context, emitFacade)
+        : createStoreObjectSource(binding, state)) +
+      ";",
+  );
+  lines.push("})();");
+  if (emitFacade) {
+    const facade = createStoreObjectSource(binding, state, modelName);
+    const contents = facade.slice(1, -1).trim();
+    lines.push(
+      kind +
+        " " +
+        binding.name +
+        " = { " +
+        contents +
+        (contents ? "," : "") +
+        " dispose: " +
+        modelName +
+        ".dispose, [Symbol.dispose]: " +
+        modelName +
+        "[Symbol.dispose] };",
+    );
+  }
+
+  if (emitFacade) {
+    if (binding.displayName)
+      lines.push(
+        "Object.defineProperty(" +
+          binding.name +
+          ", Symbol.for('@volynets/reflex-store/name'), { value: " +
+          JSON.stringify(binding.displayName) +
+          " });",
+      );
+    const guard =
+      "if (!" +
+      formatMemberAccess(modelName, binding.lifetimeName!) +
+      "()) throw new Error('Cannot use a disposed compiled store'); ";
+    const writes = binding.leaves
+      .map(
+        (leaf, index) =>
+          getLeafNames(leaf, state).write + "(values[" + index + "]);",
+      )
+      .join(" ");
+    const collects = binding.leaves
+      .map((leaf) => getLeafNames(leaf, state).read + ".collect();")
+      .join(" ");
+    lines.push(
+      "Object.defineProperty(" +
+        binding.name +
+        ", Symbol.for('@volynets/reflex-store/data/1'), { value: {" +
+        "raw: () => { " +
+        guard +
+        "return " +
+        createStoreDataSource(binding, state) +
+        "; }," +
+        "paths: " +
+        JSON.stringify(binding.leaves.map((leaf) => leaf.parts)) +
+        "," +
+        "branches: " +
+        JSON.stringify([
+          [],
+          ...[...binding.branchPaths].map((path) => JSON.parse(path)),
+        ]) +
+        "," +
+        "hydrate: (values) => { " +
+        guard +
+        writes +
+        " }," +
+        "collect: () => { " +
+        collects +
+        " }," +
+        "dispose: " +
+        binding.name +
+        ".dispose } });",
+    );
+  }
   return parseModule(lines.join("\n"), "compiled-store-lowering.ts").body;
 }
 
+function rewriteStoreThis(node: any, binding: StoreBinding, root = true): any {
+  if (!node || typeof node !== "object") return node;
+  if (Array.isArray(node))
+    return node.map((child) => rewriteStoreThis(child, binding, false));
+  if (node.type === "ThisExpression") return { ...binding.identifier };
+  if (
+    !root &&
+    [
+      "FunctionExpression",
+      "FunctionDeclaration",
+      "MethodProperty",
+      "GetterProperty",
+      "SetterProperty",
+      "ClassExpression",
+      "ClassDeclaration",
+    ].includes(node.type)
+  )
+    return node;
+  const result: any = { ...node };
+  for (const key of Object.keys(node)) {
+    if (!["span", "ctxt"].includes(key))
+      result[key] = rewriteStoreThis(node[key], binding, false);
+  }
+  return result;
+}
+
+function createStoreDataSource(
+  binding: StoreBinding,
+  state: TransformState,
+): string {
+  const root = createStoreTreeNode();
+  for (const path of binding.branchPaths) {
+    let branch = root;
+    for (const key of JSON.parse(path) as string[]) {
+      let next = branch.branches.get(key);
+      if (!next) branch.branches.set(key, (next = createStoreTreeNode()));
+      branch = next;
+    }
+  }
+  for (const leaf of binding.leaves) insertStoreLeaf(root, leaf.parts, leaf);
+  const render = (node: StoreTreeNode): string => {
+    const entries = [...node.branches].map(
+      ([key, branch]) => formatObjectKey(key) + ": " + render(branch),
+    );
+    for (const [key, leaf] of node.leaves)
+      entries.push(
+        formatObjectKey(key) + ": " + getLeafNames(leaf, state).read + "()",
+      );
+    return "{" + entries.join(", ") + "}";
+  };
+  return render(root);
+}
+
+function createStoreModelSource(
+  binding: StoreBinding,
+  context: string,
+  emitFacade: boolean,
+): string {
+  const members = [
+    ...(emitFacade
+      ? [binding.lifetimeName + ": () => !" + context + ".disposed"]
+      : []),
+    ...binding.methods.map(
+      (method) => method.internalName + ": " + method.internalName,
+    ),
+    ...binding.getters.map(
+      (getter) => getter.internalName + ": " + getter.internalName,
+    ),
+  ];
+  return members.length === 0 ? "{}" : "{ " + members.join(", ") + " }";
+}
 type StoreTreeNode = {
   branches: Map<string, StoreTreeNode>;
   leaves: Map<string, StoreLeafPath>;
@@ -332,6 +837,7 @@ type StoreTreeNode = {
 function createStoreObjectSource(
   binding: StoreBinding,
   state: TransformState,
+  modelName?: string,
 ): string {
   const root = createStoreTreeNode();
   for (const path of binding.branchPaths) {
@@ -350,9 +856,8 @@ function createStoreObjectSource(
     insertStoreLeaf(root, leaf.parts, leaf);
   }
 
-  return createStoreTreeObjectSource(root, state, 2);
+  return createStoreTreeObjectSource(root, state, 2, binding, modelName);
 }
-
 function createStoreTreeNode(): StoreTreeNode {
   return {
     branches: new Map(),
@@ -387,6 +892,8 @@ function createStoreTreeObjectSource(
   node: StoreTreeNode,
   state: TransformState,
   indent: number,
+  rootBinding?: StoreBinding,
+  modelName?: string,
 ): string {
   const pad = " ".repeat(indent);
   const childPad = " ".repeat(indent + 2);
@@ -394,11 +901,10 @@ function createStoreTreeObjectSource(
 
   for (const [key, branch] of node.branches) {
     entries.push(
-      `${childPad}${formatObjectKey(key)}: ${createStoreTreeObjectSource(
-        branch,
-        state,
-        indent + 2,
-      )}`,
+      childPad +
+        formatObjectKey(key) +
+        ": " +
+        createStoreTreeObjectSource(branch, state, indent + 2),
     );
   }
 
@@ -406,23 +912,61 @@ function createStoreTreeObjectSource(
     const names = getLeafNames(leaf, state);
     entries.push(
       [
-        `${childPad}get ${formatObjectKey(key)}() {`,
-        `${childPad}  return ${names.read}();`,
-        `${childPad}},`,
-        `${childPad}set ${formatObjectKey(key)}(${state.target.identifiers.value}) {`,
-        `${childPad}  ${names.write}(${state.target.identifiers.value});`,
-        `${childPad}}`,
+        childPad + "get " + formatObjectKey(key) + "() {",
+        childPad + "  return " + names.read + "();",
+        childPad + "},",
+        childPad +
+          "set " +
+          formatObjectKey(key) +
+          "(" +
+          state.target.identifiers.value +
+          ") {",
+        childPad +
+          "  " +
+          names.write +
+          "(" +
+          state.target.identifiers.value +
+          ");",
+        childPad + "}",
       ].join("\n"),
     );
+  }
+
+  if (rootBinding && modelName) {
+    for (const method of rootBinding.methods) {
+      entries.push(
+        childPad +
+          formatObjectKey(method.key) +
+          ": " +
+          "function (...args) { if (!" +
+          formatMemberAccess(modelName, rootBinding.lifetimeName!) +
+          "()) throw new Error('Cannot call a disposed compiled store'); return " +
+          formatMemberAccess(modelName, method.internalName!) +
+          ".apply(" +
+          rootBinding.name +
+          ", args); }",
+      );
+    }
+    for (const getter of rootBinding.getters) {
+      entries.push(
+        childPad +
+          "get " +
+          formatObjectKey(getter.key) +
+          "() { if (!" +
+          formatMemberAccess(modelName, rootBinding.lifetimeName!) +
+          "()) throw new Error('Cannot read a disposed compiled store'); return " +
+          formatMemberAccess(modelName, getter.internalName!) +
+          "(); }",
+      );
+    }
   }
 
   if (entries.length === 0) {
     return "{}";
   }
 
-  return `{\n${entries.join(",\n")}\n${pad}}`;
+  return "{\n" + entries.join(",\n") + "\n" + pad + "}";
 }
-
 function formatObjectKey(key: string): string {
   return isIdentifierName(key) ? key : JSON.stringify(key);
 }
@@ -479,7 +1023,23 @@ function transformExpression(
   node: Expression,
   state: TransformState,
 ): Expression {
-  let result = node;
+  if (node.type === "FunctionExpression") {
+    return {
+      ...node,
+      body: transformBlockStatement(node.body, state),
+    } as Expression;
+  }
+  if (node.type === "ArrowFunctionExpression") {
+    return {
+      ...node,
+      body:
+        (node.body as any).type === "BlockStatement"
+          ? transformBlockStatement(node.body, state)
+          : transformExpression(node.body as Expression, state),
+    } as Expression;
+  }
+
+  let result: Expression = node;
   const stack: TransformFrame[] = [
     {
       phase: "enter",
@@ -492,9 +1052,7 @@ function transformExpression(
 
   while (stack.length > 0) {
     const frame = stack.pop();
-    if (frame === undefined) {
-      continue;
-    }
+    if (frame === undefined) continue;
 
     if (frame.phase === "exit") {
       frame.assign(finalizeExpression(frame.node, frame.slots, state));
@@ -502,10 +1060,18 @@ function transformExpression(
     }
 
     const expression = frame.node;
-    const childCount = countTransformChildren(expression, state);
+    if (
+      expression.type === "FunctionExpression" ||
+      expression.type === "ArrowFunctionExpression"
+    ) {
+      frame.assign(transformExpression(expression, state));
+      continue;
+    }
 
+    const childCount = countTransformChildren(expression, state);
     if (childCount === 0) {
-      frame.assign(finalizeExpression(expression, EMPTY_SLOTS, state));
+      const withNestedFunctions = transformNestedFunctions(expression, state);
+      frame.assign(finalizeExpression(withNestedFunctions, EMPTY_SLOTS, state));
       continue;
     }
 

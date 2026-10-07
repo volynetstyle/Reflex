@@ -6,17 +6,13 @@ import {
   taskById,
 } from "../examples/task-board/src/task-board";
 
-describe("task board projections", () => {
+describe("task board derivations", () => {
   beforeEach(() => boardActions.reset());
 
-  it("materializes only the source's current keyed value", () => {
+  it("reads tasks by dynamic key", () => {
     expect(taskById("T-101")?.title).toBe("Design checkout");
-    expect(taskById("T-102")).toBeUndefined();
-
-    boardActions.select("T-102");
-    boardActions.flush();
-    expect(taskById("T-101")).toBeUndefined();
     expect(taskById("T-102")?.title).toBe("Add audit log");
+    expect(taskById("missing")).toBeUndefined();
   });
 
   it("invalidates only activeTitle when selection changes", () => {
@@ -28,11 +24,26 @@ describe("task board projections", () => {
       filterLabel: 0,
     };
     const stops = [
-      effect(() => { void summary.total; runs.total++; }),
-      effect(() => { void summary.visible; runs.visible++; }),
-      effect(() => { void summary.completed; runs.completed++; }),
-      effect(() => { void summary.activeTitle; runs.activeTitle++; }),
-      effect(() => { void summary.filterLabel; runs.filterLabel++; }),
+      effect(() => {
+        void summary.total;
+        runs.total++;
+      }),
+      effect(() => {
+        void summary.visible;
+        runs.visible++;
+      }),
+      effect(() => {
+        void summary.completed;
+        runs.completed++;
+      }),
+      effect(() => {
+        void summary.activeTitle;
+        runs.activeTitle++;
+      }),
+      effect(() => {
+        void summary.filterLabel;
+        runs.filterLabel++;
+      }),
     ];
     const baseline = { ...runs };
 
@@ -52,10 +63,22 @@ describe("task board projections", () => {
 
     const runs = { total: 0, visible: 0, completed: 0, activeTitle: 0 };
     const stops = [
-      effect(() => { void summary.total; runs.total++; }),
-      effect(() => { void summary.visible; runs.visible++; }),
-      effect(() => { void summary.completed; runs.completed++; }),
-      effect(() => { void summary.activeTitle; runs.activeTitle++; }),
+      effect(() => {
+        void summary.total;
+        runs.total++;
+      }),
+      effect(() => {
+        void summary.visible;
+        runs.visible++;
+      }),
+      effect(() => {
+        void summary.completed;
+        runs.completed++;
+      }),
+      effect(() => {
+        void summary.activeTitle;
+        runs.activeTitle++;
+      }),
     ];
     const baseline = { ...runs };
 

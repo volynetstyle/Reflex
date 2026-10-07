@@ -48,8 +48,9 @@ for (const size of [10, 100, 1_000, 10_000]) {
     }));
 
     const ensureCollection = () => {
-      if (tasks().length === size) return;
-      tasks.set(scaledTasks);
+      if (tasks.size === size) return;
+      tasks.clear();
+      for (const task of scaledTasks) tasks.set(task.id, task);
       boardActions.select(`T-${size - 1}`);
       boardActions.flush();
     };
@@ -74,7 +75,7 @@ for (const size of [10, 100, 1_000, 10_000]) {
 
     bench("task move + summary flush", () => {
       ensureCollection();
-      const current = tasks().at(-1)!;
+      const current = tasks.get("T-" + (size - 1))!;
       const nextStatus = current.status === "active" ? "backlog" : "active";
       boardActions.move(current.id, nextStatus);
       boardActions.flush();

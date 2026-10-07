@@ -1,8 +1,10 @@
-import { createRuntime, effect, signal } from "@volynets/reflex";
+import { createRuntime, effect } from "@volynets/reflex-store/runtime";
 import {
-  createProjection,
-  createSelector,
+  action,
   createStore,
+  derive,
+  reactiveMap,
+  selector,
 } from "@volynets/reflex-store";
 
 export type TaskStatus = "backlog" | "active" | "done";
@@ -30,7 +32,9 @@ const INITIAL_TASKS: readonly Task[] = [
   { id: "T-103", title: "Ship billing", assignee: "Ada", status: "done" },
 ];
 
-export const tasks = signal<readonly Task[]>(INITIAL_TASKS);
+export const tasks = reactiveMap<string, Task>(
+  INITIAL_TASKS.map((task) => [task.id, task] as const),
+);
 
 const ui = createStore({
   filter: {
@@ -49,113 +53,67 @@ const EMPTY_TASK: Readonly<Task> = Object.freeze({
   status: "backlog",
 });
 
-export const isTaskSelected = createSelector(() => ui.selection.taskId);
+export const isTaskSelected = selector(() => ui.selection.taskId);
 
-export const taskById = createProjection<Task, string, Task>(
-  () => {
-    const selectedTaskId = ui.selection.taskId;
-    const allTasks = tasks();
+export const taskById = (taskId: string): Task | undefined => tasks.get(taskId);
 
-    for (let index = 0; index < allTasks.length; index++) {
-      const task = allTasks[index]!;
+export const summary = derive<BoardSummary>(() => {
+  const allTasks = [...tasks.values()];
+  const status = ui.filter.status;
+  const normalizedQuery = ui.filter.query.trim().toLocaleLowerCase();
+  const selectedTask = tasks.get(ui.selection.taskId) ?? EMPTY_TASK;
 
-      if (task.id === selectedTaskId) {
-        return task;
-      }
+  let completed = 0;
+  let visible = 0;
+
+  for (const task of allTasks) {
+    if (task.status === "done") completed++;
+
+    if (
+      (status === "all" || task.status === status) &&
+      (normalizedQuery === "" ||
+        task.title.toLocaleLowerCase().includes(normalizedQuery))
+    ) {
+      visible++;
     }
+  }
 
-    return EMPTY_TASK;
-  },
-  (task: Task) => task.id,
-  (task: Task) => task,
-);
+  return {
+    total: allTasks.length,
+    completed,
+    visible,
+    activeTitle: selectedTask.title,
+    filterLabel:
+      normalizedQuery === "" ? status : status + ":" + normalizedQuery,
+  };
+});
 
-export const summary = createProjection<BoardSummary>(
-  (draft) => {
-    const allTasks = tasks();
-    const status = ui.filter.status;
-    const normalizedQuery = ui.filter.query.trim().toLocaleLowerCase();
-    const selectedTask = taskById(ui.selection.taskId);
-
-    let completed = 0;
-    let visible = 0;
-
-    for (let index = 0; index < allTasks.length; index++) {
-      const task = allTasks[index]!;
-
-      if (task.status === "done") {
-        completed++;
-      }
-
-      if (
-        (status === "all" || task.status === status) &&
-        (normalizedQuery === "" ||
-          task.title.toLocaleLowerCase().includes(normalizedQuery))
-      ) {
-        visible++;
-      }
-    }
-
-    draft.total = allTasks.length;
-    draft.completed = completed;
-    draft.visible = visible;
-    draft.activeTitle =
-      selectedTask === undefined ? EMPTY_TASK.title : selectedTask.title;
-    draft.filterLabel =
-      normalizedQuery === "" ? status : `${status}:${normalizedQuery}`;
-  },
-  {
-    total: 0,
-    visible: 0,
-    completed: 0,
-    activeTitle: EMPTY_TASK.title,
-    filterLabel: "all",
-  },
-);
+const resetBoard = action(() => {
+  tasks.clear();
+  for (const task of INITIAL_TASKS) tasks.set(task.id, task);
+  ui.filter.status = "all";
+  ui.filter.query = "";
+  ui.selection.taskId = "T-101";
+});
 
 export const boardActions = {
-  select(taskId: string) {
-    if (ui.selection.taskId !== taskId) {
-      ui.selection.taskId = taskId;
-    }
-  },
+  select: action((taskId: string) => {
+    if (ui.selection.taskId !== taskId) ui.selection.taskId = taskId;
+  }),
 
-  setFilter(status: TaskStatus | "all", query = "") {
-    if (ui.filter.status !== status) {
-      ui.filter.status = status;
-    }
+  setFilter: action((status: TaskStatus | "all", query = "") => {
+    if (ui.filter.status !== status) ui.filter.status = status;
+    if (ui.filter.query !== query) ui.filter.query = query;
+  }),
 
-    if (ui.filter.query !== query) {
-      ui.filter.query = query;
-    }
-  },
-
-  move(taskId: string, status: TaskStatus) {
-    const currentTasks = tasks();
-
-    for (let index = 0; index < currentTasks.length; index++) {
-      const task = currentTasks[index]!;
-
-      if (task.id !== taskId) {
-        continue;
-      }
-
-      if (task.status === status) {
-        return;
-      }
-
-      const nextTasks = currentTasks.slice();
-      nextTasks[index] = { ...task, status };
-      tasks.set(nextTasks);
-      return;
-    }
-  },
+  move: action((taskId: string, status: TaskStatus) => {
+    const task = tasks.get(taskId);
+    if (!task || task.status === status) return;
+    tasks.set(taskId, { ...task, status });
+  }),
 
   reset() {
-    tasks.set(INITIAL_TASKS);
-    ui.filter.status = "all";
-    ui.filter.query = "";
-    ui.selection.taskId = "T-101";
+    resetBoard();
     taskBoardRuntime.flush();
   },
 
@@ -169,7 +127,13 @@ export function runTaskBoardScenario() {
 
   const stop = effect(() => {
     renders.push(
-      `${summary.filterLabel}|${summary.visible}|${summary.completed}|${summary.activeTitle}`,
+      summary.filterLabel +
+        "|" +
+        summary.visible +
+        "|" +
+        summary.completed +
+        "|" +
+        summary.activeTitle,
     );
   });
 

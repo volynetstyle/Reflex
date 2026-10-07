@@ -23,8 +23,8 @@
     "allowImportingTsExtensions": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "isolatedModules": true,
-    "composite": true
+    "isolatedModules": false,
+    "composite": false
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["dist", "**/*.test.ts"]

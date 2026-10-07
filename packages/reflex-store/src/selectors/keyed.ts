@@ -13,7 +13,7 @@ import {
 import { createSignalNode } from "../internal/runtime";
 import { transaction } from "../collections";
 import { Demand, Observations } from "../internal/demand";
-import type { Accessor, DisposableAccessor } from "../types";
+import { withDispose, type Accessor, type DisposableAccessor } from "../types";
 import type { KeyedOptions, ProjectionOptions } from "./shared";
 
 // Map uses SameValueZero. Preserve Object.is semantics for signed zero.
@@ -47,7 +47,7 @@ export function createSelector<T>(
     current = next;
     initialized = true;
     const selected = lookup(next);
-   
+
     transaction(() => {
       if (previous) writeProducer(previous.node, false);
       if (selected) writeProducer(selected.node, true);
@@ -69,7 +69,7 @@ export function createSelector<T>(
     } else if ((watcher.state & Both) !== 0) {
       sync(untracked(source));
     }
-    
+
     let entry = lookup(key);
 
     if (!entry) {
@@ -82,27 +82,30 @@ export function createSelector<T>(
     return readProducer(entry.node);
   };
 
-  return Object.assign(read, {
-    collect() {
-      for (const [key, entry] of entries) {
-        if (entry.node.firstOut !== null) continue;
-        entries.delete(key);
-        disposeNode(entry.node);
-      }
-      if (entries.size === 0 && watcher) {
-        disposeWatcher(watcher);
+  return withDispose(
+    Object.assign(read, {
+      collect() {
+        for (const [key, entry] of entries) {
+          if (entry.node.firstOut !== null) continue;
+          entries.delete(key);
+          disposeNode(entry.node);
+        }
+        if (entries.size === 0 && watcher) {
+          disposeWatcher(watcher);
+          watcher = undefined;
+          initialized = false;
+        }
+      },
+      dispose() {
+        disposed = true;
+        if (watcher) disposeWatcher(watcher);
         watcher = undefined;
-        initialized = false;
-      }
-    },
-    dispose() {
-      disposed = true;
-      if (watcher) disposeWatcher(watcher);
-      watcher = undefined;
-      for (const entry of entries.values()) disposeNode(entry.node);
-      entries.clear();
-    },
-  });
+        for (const entry of entries.values()) disposeNode(entry.node);
+        entries.clear();
+      },
+    }),
+    options.name,
+  );
 }
 
 export function createKeyedProjection<T, K, R>(
@@ -133,16 +136,19 @@ export function createKeyedProjection<T, K, R>(
           )
       : undefined,
   );
-  return Object.assign((key: K) => keys.read(identityKey(key)), {
-    collect() {
-      keys.collect();
-      projected.collect();
-      sourceValue.collect();
-    },
-    dispose() {
-      keys.dispose();
-      projected.dispose();
-      sourceValue.dispose();
-    },
-  });
+  return withDispose(
+    Object.assign((key: K) => keys.read(identityKey(key)), {
+      collect() {
+        keys.collect();
+        projected.collect();
+        sourceValue.collect();
+      },
+      dispose() {
+        keys.dispose();
+        projected.dispose();
+        sourceValue.dispose();
+      },
+    }),
+    options.name,
+  );
 }

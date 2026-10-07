@@ -10,7 +10,7 @@ import {
   createProjection,
   createSelector,
   createStoreProjection,
-} from "../src";
+} from "../src/advanced";
 
 describe("Reactive system - unstable selector/projection", () => {
   it("createSelector reruns only the previously selected and next selected keys", () => {
@@ -34,13 +34,7 @@ describe("Reactive system - unstable selector/projection", () => {
     selected.set("b");
     rt.flush();
 
-    expect(seen).toEqual([
-      "a:true",
-      "b:false",
-      "c:false",
-      "a:false",
-      "b:true",
-    ]);
+    expect(seen).toEqual(["a:true", "b:false", "c:false", "a:false", "b:true"]);
 
     selected.set("c");
     rt.flush();
@@ -81,12 +75,7 @@ describe("Reactive system - unstable selector/projection", () => {
     source.set({ id: "a", label: "two" });
     rt.flush();
 
-    expect(seen).toEqual([
-      "a:one",
-      "b:undefined",
-      "c:undefined",
-      "a:two",
-    ]);
+    expect(seen).toEqual(["a:one", "b:undefined", "c:undefined", "a:two"]);
 
     source.set({ id: "b", label: "three" });
     rt.flush();
@@ -171,11 +160,9 @@ describe("Reactive system - unstable selector/projection", () => {
     );
     const seen: string[] = [];
 
-    effect(
-      () => {
-        seen.push(String(labels("a")));
-      },
-    );
+    effect(() => {
+      seen.push(String(labels("a")));
+    });
 
     expect(seen).toEqual(["one"]);
 
@@ -263,7 +250,9 @@ describe("Store-style projection", () => {
   it("tracks nested property reads through the store proxy", () => {
     const rt = createRuntime();
     const theme = signal("light");
-    const settings = createProjection<{ ui: { theme: string; density: string } }>(
+    const settings = createProjection<{
+      ui: { theme: string; density: string };
+    }>(
       (draft) => {
         draft.ui = { theme: theme(), density: "compact" };
       },
@@ -427,7 +416,12 @@ describe("Projection basics", () => {
     const x = signal(1);
     const tmp = vi.fn();
 
-    const a = createProjection(x, () => "v", (value) => value, { fallback: 0 });
+    const a = createProjection(
+      x,
+      () => "v",
+      (value) => value,
+      { fallback: 0 },
+    );
     const b = createProjection(
       () => a("v") ?? 0,
       () => "v",
@@ -497,7 +491,6 @@ describe("Projection basics", () => {
     expect(tmp).toHaveBeenNthCalledWith(1, 2, 2);
     expect(tmp).toHaveBeenNthCalledWith(2, 3, undefined);
   });
-
 });
 
 describe("selection with projections", () => {

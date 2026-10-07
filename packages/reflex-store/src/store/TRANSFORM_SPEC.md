@@ -1,94 +1,76 @@
-# Compiled Store Transform Contract
+# Compiled store transform contract
 
-The [package specification](../../SPECIFICATION.md) is normative. This document
-describes the current compiler frontend and lowering.
+## Recognition and declarations
 
-## Recognition and shape
+Recognize createStore imports from @volynets/reflex-store, /advanced, /store and
+/compiled-store, including aliases. Match binding identity, not text alone.
+The compiler API may recognize unresolved bare createStore calls; the Vite plugin
+requires a matching import unless compileBareCreateStore is enabled.
 
-- Direct top-level variable declarations initialized by named createStore imports,
-  including aliases, from supported store modules.
-- Low-level compileStore accepts bare calls; Vite gates them with
-  compileBareCreateStore.
-- Binding identity is the SWC resolved identifier/context pair. A shadowed name
-  is not the imported factory or the outer store.
-- Literal closed shape with unique static data properties and nested branches.
-  Initializers evaluate once in source order; empty branches survive.
-- Spread, shorthand, methods/accessors, duplicate/computed keys, **proto** and
-  reserved root lifecycle keys are errors.
-- Nested/export-wrapped declarations and factory escapes are phase-1 errors.
+Lexical module/function/block declarations are supported. Each execution of a
+local declaration allocates independent store resources. Inline return
+createStore(...) and loop-header declarations remain diagnosed.
 
-Internal path keys preserve segment boundaries. Generated identifiers are
-allocated against source identifiers and previously allocated names. Colliding
-path spellings or multiple stores cannot share cells accidentally.
+## Shape and boundaries
 
-## Default lowering
+Accept unique static data keys, root method declarations and root getter
+declarations. Literal data objects become branches. Imported leaf(value) and
+opaque(value) calls define one replaceable location. Preserve opaque marking.
+Optional options require a static name string.
 
-The compiler imports createModel from @volynets/reflex and createStoreCell from
-@volynets/reflex-store. A cell retains raw state without a producer until a
-tracked read. Writes to cold cells remain cold.
+Data initializers execute once in source order for each declaration execution.
+Data leaf reads are direct address calls. Producers materialize on tracked reads.
 
-Each leaf has a cell reader and an action writer. The writer commits a value and
-returns the assignment result. The default model owns cell disposal through
-ctx.onDispose. Its validated namespace is separate from the public getter/setter
-façade, so dev validation does not evaluate plain leaf values as model members.
-The façade exposes dispose().
+## Methods and getters
 
-Supported top-level expressions lower directly to cell reads/actions, with no
-Proxy or runtime path lookup. The façade preserves compatible accesses inside
-functions/control flow that are not directly lowered. It has not been eliminated
-through escape analysis.
+Root methods become bound ctx.action callbacks. Rewrite their store this
+references to the declaration binding, preserving lexical-arrow this and leaving
+nested ordinary function/class receivers intact. Lower static leaf reads/writes
+inside the callbacks as usual. Multi-write methods close one outer host/runtime
+batch.
 
-Custom lowering targets can override model/signal exports, imports, action method
-and generated identifiers. signal.runtimeModule optionally separates the signal
-import from the model import. Custom runtime targets retain their original
-signal export defaults; they own their materialization/lifecycle semantics.
+Root getters become owned createDisposableComputed accessors. Their this
+references lower to store locations. Clean reads cache; writes invalidate and
+pull reads compute current data. Getters cannot write store state or suspend.
+Async/generator methods, setters and nested methods/getters are unsupported.
 
-## Operators and order
+## Writes and JavaScript order
 
-Supported operations are static dot reads, =, +=, -=, ++ and --.
+Support =, +=, -=, prefix/postfix ++ and -- on declared data leaves.
+Evaluate the previous value before a compound RHS, evaluate the RHS once and
+then commit the result. Update operators preserve JavaScript ToNumeric,
+including strings, undefined, NaN, signed zero and BigInt. Exceptions before
+commit preserve the previous value; action exceptions close batches.
 
-Compound assignment reads the old value BEFORE evaluating the RHS:
+## Facade, ownership and extraction
 
-```ts
-const previous = read();
-const rhs = evaluateRhs();
-const next = previous + rhs;
-write(next);
-return next;
-```
+The generated facade contains data accessors, getter accessors, bound actions,
+dispose and Symbol.dispose. The model owns cells and computed getter resources.
+Static hidden control callbacks extract only data fields and restore values to
+known cells. Returning a facade (also within a factory return object) is supported.
 
-This order matters when the RHS writes the same leaf or throws. RHS executes
-once, and the outer write occurs only on successful evaluation.
+snapshot/hydrate imports are recognized intrinsic data boundaries. own(ctx, state)
+and getStoreName(state) are recognized ownership/diagnostic boundaries. Runtime
+snapshot invokes the generated extraction untracked, preserving structural graph
+semantics. Hydration validates the exact compiled branch/leaf schema before one
+batched write. Empty branches are represented explicitly.
 
-Updates apply a native operator to a local temporary:
+eraseFacade is opt-in. Omit a facade only if every use can lower to declared data
+cells and no method/getter/escape/lifecycle/data boundary needs the object.
 
-```ts
-let value = read();
-const result = value++; // or ++value / value-- / --value
-write(value);
-return result;
-```
+## Runtime and tooling
 
-This preserves ToNumeric, strings, BigInt, NaN and coercion exceptions.
-Replacing ++ with + 1 is incorrect.
+Default imports use @volynets/reflex-store/runtime and /runtime/internal.
+All published entrypoints share the embedded host/kernel. The Vite plugin aliases
+legacy Reflex and runtime imports to that same host/kernel.
 
-Suspending compound assignments (await/yield in RHS) are diagnosed because the
-synchronous IIFE lowering cannot preserve their continuation semantics.
+Custom data-only lowering targets may configure model/signal names and generated
+identifiers. Getter/method lowering requires the default bundled createModel host.
+The compiler includes portable SWC WASM and validates its normalized function AST
+before printing. Names are store metadata and never modify kernel hot paths.
 
 ## Diagnostics
 
-Dynamic/computed access, branch alias declarations, store-root escapes,
-reflection/destructuring, deletion, branch/root/unknown-member writes,
-unsupported assignment operators and optional chains on store values are errors.
-Unrelated optional chains and shadowed bindings are unaffected.
-
-With onDiagnostic: "collect", code is returned unchanged together with
-diagnostics. This is not a runtime fallback and must not erase imports or
-partially lower a rejected program.
-
-## Conformance
-
-compiler.differential.test.ts compares transformed code with ordinary
-JavaScript, including generated operation sequences, RHS side effects, coercion,
-errors, collisions and aliases. vite-user-dx.test.ts exercises actual plugin
-loading. Both production-style and **DEV** runtime configurations are tested.
+Diagnose unsupported shapes and mutations before erasure. Collect mode returns
+the original code when diagnostics exist. No partial transform is published for
+an unsupported source module.

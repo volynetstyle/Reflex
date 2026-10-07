@@ -1,4 +1,30 @@
-import type { Plugin, TransformResult } from "vite";
+import { fileURLToPath } from "node:url";
+type TransformResult = {
+  code: string;
+  map: null | {
+    version: 3;
+    sources: string[];
+    names: string[];
+    mappings: string;
+    sourcesContent?: (string | null)[];
+  };
+};
+export interface ReflexStorePlugin {
+  name: string;
+  enforce: "pre";
+  config():
+    | {
+        resolve: { alias: { find: RegExp; replacement: string }[] };
+        ssr: { noExternal: string[] };
+      }
+    | undefined;
+  transform(
+    this: DiagnosticReporter,
+    code: string,
+    id: string,
+  ): TransformResult | null;
+}
+
 import {
   CompiledStoreTransformError,
   compileStore,
@@ -32,6 +58,7 @@ export interface ReflexStoreVitePluginOptions {
    * @default "@volynets/reflex"
    */
   runtimeModule?: string;
+  eraseFacade?: boolean;
   /** Customize the runtime primitives and every generated identifier. */
   loweringTarget?: CompiledStoreLoweringTargetOptions;
   /**
@@ -55,11 +82,11 @@ export interface ReflexStoreVitePluginOptions {
 const DEFAULT_INCLUDE = /\.[cm]?[jt]sx?$/;
 const DEFAULT_EXCLUDE = /\/node_modules\//;
 const STORE_IMPORT_RE =
-  /from\s*["'](?:@volynets\/reflex-store|@reflex\/store)(?:\/(?:store|compiled-store))?["']/;
+  /from\s*["'](?:@volynets\/reflex-store|@reflex\/store)(?:\/(?:store|compiled-store|advanced))?["']/;
 
 export function reflexStoreVitePlugin(
   options: ReflexStoreVitePluginOptions = {},
-): Plugin {
+): ReflexStorePlugin {
   const include = options.include ?? DEFAULT_INCLUDE;
   const exclude = options.exclude ?? DEFAULT_EXCLUDE;
   const diagnostics = options.diagnostics ?? "error";
@@ -67,6 +94,36 @@ export function reflexStoreVitePlugin(
   return {
     name: "reflex-store",
     enforce: "pre",
+
+    config() {
+      // Source development already resolves the workspace kernel through aliases.
+      if (import.meta.url.endsWith(".ts")) return undefined;
+      return {
+        resolve: {
+          alias: [
+            {
+              find: /^@volynets\/reflex$/,
+              replacement: fileURLToPath(
+                new URL("./runtime.js", import.meta.url),
+              ),
+            },
+            {
+              find: /^@volynets\/reflex-runtime\/internal$/,
+              replacement: fileURLToPath(
+                new URL("./runtime/internal.js", import.meta.url),
+              ),
+            },
+            {
+              find: /^@volynets\/reflex-runtime$/,
+              replacement: fileURLToPath(
+                new URL("./runtime/core.js", import.meta.url),
+              ),
+            },
+          ],
+        },
+        ssr: { noExternal: ["@volynets/reflex", "@volynets/reflex-scheduler"] },
+      };
+    },
     transform(code, id) {
       const normalizedId = normalizeId(id);
       if (!matchesSelector(include, normalizedId)) {
@@ -82,6 +139,7 @@ export function reflexStoreVitePlugin(
       try {
         const result = compileStore(code, normalizedId, {
           importRuntime: true,
+          eraseFacade: options.eraseFacade,
           onDiagnostic: diagnostics === "error" ? "throw" : "collect",
           loweringTarget: options.loweringTarget,
           runtimeModule: options.runtimeModule,
@@ -106,7 +164,10 @@ export function reflexStoreVitePlugin(
 export { reflexStoreVitePlugin as reflexStore };
 export default reflexStoreVitePlugin;
 
-function shouldCompileCode(code: string, compileBareCreateStore: boolean): boolean {
+function shouldCompileCode(
+  code: string,
+  compileBareCreateStore: boolean,
+): boolean {
   if (!code.includes("createStore")) {
     return false;
   }

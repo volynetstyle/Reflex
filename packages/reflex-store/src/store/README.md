@@ -1,131 +1,55 @@
-# Experimental compiled store
+# Compiled static stores
 
-This directory is an isolated experiment for a compile-time store syntax that
-lowers into canonical Reflex runtime primitives.
-
-## Goal
-
-Allow author code like:
+The root createStore API requires the compiler. Import the plugin from
+@volynets/reflex-store/vite or use compileStore from /store.
 
 ```ts
-const state = createStore({
-  user: { name: "Alice" },
-  count: 0,
-});
+import {
+  createStore,
+  leaf,
+  opaque,
+  snapshot,
+  hydrate,
+} from "@volynets/reflex-store";
 
-state.user.name = "Bob";
-state.count++;
-```
-
-while compiling it to a lower-level form based on `createModel(...)`,
-`signal(...)`, and precomputed action-wrapped writers.
-
-## Semantic core: phase 1
-
-Supported:
-
-- static fields
-- fixed nested paths
-- static dot access only
-- leaf reads like `state.user.name`
-- assignments like `state.user.name = "Bob"`
-- update operators like `state.count++`, `++state.count`, `state.count += 1`
-
-Out of scope:
-
-- dynamic keys
-- spread/rest
-- reflection guarantees
-- aliasing nested branches
-- optional chaining
-- runtime schema walking
-
-## Lowering direction
-
-The intended canonical lowering target is:
-
-```ts
-const state = createModel((ctx) => {
-  const __user_name = signal("Alice");
-  const __count = signal(0);
-
-  const __write_user_name = ctx.action((value: string) => {
-    __user_name.set(value);
-    return value;
-  });
-
-  const __write_count = ctx.action((value: number) => {
-    __count.set(value);
-    return value;
-  });
-
-  return {
-    user: {
-      get name() {
-        return __user_name();
+export function createCounter() {
+  const state = createStore(
+    {
+      count: 0,
+      history: leaf<readonly number[]>([]),
+      engine: opaque(new Engine()),
+      get doubled() {
+        return this.count * 2;
       },
-      set name(value) {
-        __write_user_name(value);
+      increment() {
+        this.count++;
+        this.history = [...this.history, this.count];
       },
     },
-    get count() {
-      return __count();
-    },
-    set count(value) {
-      __write_count(value);
-    },
-  };
-})();
+    { name: "Counter" },
+  );
+  return state;
+}
 ```
 
-Hot-path optimization is expected to lower direct reads and writes further to
-the generated accessors/writers:
+Factories allocate independent cells, computed getters and action methods.
+Static data accesses lower to direct cell calls. Root methods are bound actions;
+getters are owned lazy computeds. Snapshot extraction excludes methods/getters.
+Hydration validates the complete data schema before batched restoration.
 
-- `state.user.name` -> `__user_name()`
-- `state.user.name = "Bob"` -> `__write_user_name("Bob")`
-- `state.count++` -> temp-based read/modify/write lowering
+The compiler accepts data properties with unique static keys. Literal objects
+form branches; leaf/opaque imports (including aliases) define single replaceable
+locations. Arrays use replacement semantics.
 
-## Custom lowering target
+Unsupported syntax is diagnosed: spreads, shorthand, **proto**, reserved lifecycle
+names, setter properties, nested methods/getters, async/generator methods, dynamic
+paths, branch aliases, delete, optional chaining, structural replacement and
+arbitrary root reflection. Getters must not write store state.
 
-`compileStore` and the Vite plugin accept `loweringTarget`. Every symbol in the
-canonical target can be replaced while the current Reflex lowering remains the
-default:
+Use eraseFacade to remove objects proven unnecessary for direct data-cell uses.
+Returned stores, computed getters, action methods and lifecycle/data boundaries
+retain their facade.
 
-```ts
-compileStore(source, "store.ts", {
-  loweringTarget: {
-    runtimeModule: "my-runtime",
-    model: {
-      exportName: "defineState",
-      localName: "$model",
-      actionMethod: "transaction",
-    },
-    signal: { exportName: "cell", localName: "$cell" },
-    identifiers: {
-      context: "$context",
-      value: "$value",
-      read: ({ path }) => `$read_${path.join("_")}`,
-      set: ({ mangledPath }) => `$set_${mangledPath}`,
-      write: ({ mangledPath }) => `$write_${mangledPath}`,
-      temporary: ({ label, index }) => `$${label}_${index}`,
-    },
-  },
-});
-```
-
-All fields are optional. The top-level `runtimeModule` remains a compatibility
-shorthand; `loweringTarget.runtimeModule` takes precedence.
-
-## Runtime contract
-
-`createStore(...)` in this folder is intentionally a compile-only stub. If it
-executes at runtime, the transform was not applied.
-
-## Current semantics
-
-See [the package specification](../../SPECIFICATION.md) and
-[the transform contract](./TRANSFORM_SPEC.md) for the supported subset.
-The default target uses lazy `createStoreCell` producers from this package and
-a headless `createModel` owner from Reflex. Aliases resolve by binding identity,
-identifiers are collision-free, and unsupported programs are never partially
-rewritten. `signal.runtimeModule` can override the signal import separately.
+The default lowering imports the bundled host from /runtime and cells from
+/runtime/internal. Custom model/signal lowering remains available for data-only
+stores through loweringTarget. See [TRANSFORM_SPEC.md](./TRANSFORM_SPEC.md).

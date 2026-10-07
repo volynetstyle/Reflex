@@ -1,5 +1,5 @@
 import { computed, createRuntime, effect, signal } from "@volynets/reflex";
-import { createKeyedProjection, createSelector } from "../src";
+import { createKeyedProjection, createSelector } from "../src/advanced";
 
 export type Strategy = "identity" | "deep" | "projection";
 
@@ -67,7 +67,8 @@ export function createEquivalentCascade(options: {
     metrics.producerRecomputes++;
     const parity = source() & 1;
     const value: Record<string, number> = { parity };
-    for (let index = 1; index < options.fields; index++) value[`f${index}`] = index;
+    for (let index = 1; index < options.fields; index++)
+      value[`f${index}`] = index;
     return value;
   };
 
@@ -84,7 +85,11 @@ export function createEquivalentCascade(options: {
     );
     read = () => value(0)!.parity!;
   } else {
-    const value = createKeyedProjection(makeValue, () => 0, (next) => next.parity);
+    const value = createKeyedProjection(
+      makeValue,
+      () => 0,
+      (next) => next.parity,
+    );
     read = () => value(0)!;
   }
 
@@ -191,12 +196,21 @@ export function createDynamicChurn(options: {
     const value = computed(derive);
     read = () => value().value;
   } else if (options.strategy === "deep") {
-    const value = createKeyedProjection(derive, () => 0, (next) => next, {
-      equals: (a, b) => deepEqualRecord(a, b, metrics),
-    });
+    const value = createKeyedProjection(
+      derive,
+      () => 0,
+      (next) => next,
+      {
+        equals: (a, b) => deepEqualRecord(a, b, metrics),
+      },
+    );
     read = () => value(0)!.value;
   } else {
-    const value = createKeyedProjection(derive, () => 0, (next) => next.value);
+    const value = createKeyedProjection(
+      derive,
+      () => 0,
+      (next) => next.value,
+    );
     read = () => value(0)!;
   }
   const stops = Array.from({ length: options.consumers }, () =>

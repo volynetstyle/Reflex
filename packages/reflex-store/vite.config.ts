@@ -17,6 +17,14 @@ export default defineConfig({
         replacement: resolve(reflexRoot, "index.ts"),
       },
       {
+        find: /^@volynets\/reflex-store\/runtime\/internal$/,
+        replacement: resolve(packageRoot, "src/runtime/internal.ts"),
+      },
+      {
+        find: /^@volynets\/reflex-store\/runtime$/,
+        replacement: resolve(packageRoot, "src/runtime.ts"),
+      },
+      {
         find: /^@volynets\/reflex-store$/,
         replacement: resolve(packageRoot, "src/index.ts"),
       },

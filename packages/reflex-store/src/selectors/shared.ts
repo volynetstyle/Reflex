@@ -5,16 +5,19 @@ type AnyRecord = Record<PropertyKey, unknown>;
 export type Missing = typeof MISSING;
 
 export interface KeyedOptions<T> {
+  name?: string;
   equals?: (prev: T, next: T) => boolean;
 }
 
 export interface ProjectionOptions<K, R> {
+  name?: string;
   keyEquals?: (prev: K, next: K) => boolean;
   equals?: (prev: R, next: R) => boolean;
   fallback?: R;
 }
 
 export interface StoreProjectionOptions<T extends object> {
+  name?: string;
   clone?: (value: T) => T;
   equals?: (previous: T, next: T) => boolean;
   depth?: "deep" | "shallow";

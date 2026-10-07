@@ -30,7 +30,7 @@ import {
   shallow,
   snapshot,
   transaction,
-} from "../src";
+} from "../src/advanced";
 
 function lowSignal<T>(value: T) {
   const node = createProducer(value);

@@ -1,6 +1,8 @@
 import { untracked } from "@volynets/reflex-runtime/internal";
 import { Demand, Observations } from "../internal/demand";
 import { cloneValue, depthOf, isStructural, storeControls } from "../values";
+import type { StoreDisposable } from "../types";
+import { storeName } from "../internal/names";
 import { readProjectionPath, type StoreProjectionOptions } from "./shared";
 
 const sameKeys = (a: readonly PropertyKey[], b: readonly PropertyKey[]) =>
@@ -68,7 +70,7 @@ class Projection<T extends object> {
 }
 
 interface ProjectionOwner {
-  readonly options: { depth?: "deep" | "shallow" };
+  readonly options: { depth?: "deep" | "shallow"; name?: string };
   read(path: readonly PropertyKey[]): unknown;
   view(path: readonly PropertyKey[], array: boolean): View;
   collect(): void;
@@ -121,6 +123,8 @@ class View {
 
     this.proxy = new Proxy(array ? [] : Object.create(null), {
       get: (_target, key) => {
+        if (key === storeName) return this.owner.options.name;
+        if (key === Symbol.dispose) return () => this.owner.dispose();
         // Navigating a structural object does not subscribe to its identity.
         // The eventual leaf/exists/keys access owns the semantic dependency.
         const value = untracked(() => get(key));
@@ -215,7 +219,7 @@ export function createStoreProjection<T extends object>(
   fn: (draft: T) => void | T,
   seed: Partial<T>,
   options: StoreProjectionOptions<T> = {},
-): T {
+): T & StoreDisposable {
   const owner = new Projection(fn, seed, options);
-  return owner.view([], Array.isArray(seed)).proxy as T;
+  return owner.view([], Array.isArray(seed)).proxy as T & StoreDisposable;
 }
