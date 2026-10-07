@@ -4,11 +4,16 @@ export type StoreShape = {
   [key: string]: StoreLeaf | StoreShape;
 };
 
-export type CompiledStore<TShape extends StoreShape> = {
+type CompiledBranch<TShape extends StoreShape> = {
   -readonly [K in keyof TShape]: TShape[K] extends StoreShape
-    ? CompiledStore<TShape[K]>
+    ? CompiledBranch<TShape[K]>
     : TShape[K];
 };
+
+export type CompiledStore<TShape extends StoreShape> =
+  CompiledBranch<TShape> & {
+    dispose(): void;
+  };
 
 /**
  * Declares a compile-time store shape for the experimental compiled-store

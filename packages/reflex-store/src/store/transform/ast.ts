@@ -58,13 +58,17 @@ export function getStaticPropertyKey(node: any): string | null {
   }
 }
 
-export function visitNode(node: any, visit: (node: any) => void): void {
+export function visitNode(
+  node: any,
+  visit: (node: any, parent?: any) => void,
+  parent?: any,
+): void {
   if (node === null || typeof node !== "object") {
     return;
   }
 
   if (typeof node.type === "string") {
-    visit(node);
+    visit(node, parent);
   }
 
   for (const key of Object.keys(node)) {
@@ -75,11 +79,11 @@ export function visitNode(node: any, visit: (node: any) => void): void {
     const value = node[key];
     if (Array.isArray(value)) {
       for (const child of value) {
-        visitNode(child, visit);
+        visitNode(child, visit, node);
       }
       continue;
     }
 
-    visitNode(value, visit);
+    visitNode(value, visit, node);
   }
 }

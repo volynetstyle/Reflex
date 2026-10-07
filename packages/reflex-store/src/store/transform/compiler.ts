@@ -1,8 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { printSync } from "@swc/core";
 import type { Expression, Program } from "@swc/core";
-import { collectStaticMemberPath, DUMMY_SPAN, parseModule } from "./ast";
-import { collectStoreBindings } from "./bindings";
+import {
+  collectStaticMemberPath,
+  DUMMY_SPAN,
+  parseModule,
+  visitNode,
+} from "./ast";
+import {
+  collectStoreBindings,
+  collectFactoryNames,
+  pathKey,
+  bindingKey,
+  memberRoot,
+} from "./bindings";
 import {
   CompiledStoreTransformError,
   type CompiledStoreTransformOptions,
@@ -33,7 +44,8 @@ const DEFAULT_LOWERING_TARGET: CompiledStoreLoweringTarget = {
     actionMethod: "action",
   },
   signal: {
-    exportName: "signal",
+    runtimeModule: "@volynets/reflex-store",
+    exportName: "createStoreCell",
     localName: "__reflex_signal",
   },
   identifiers: {
@@ -52,22 +64,49 @@ export function compileStore(
   options: CompiledStoreTransformOptions = {},
 ): CompiledStoreTransformResult {
   const ast = parseModule(code, id);
+  const identifiers = new Set<string>();
+  visitNode(ast, (node) => {
+    if (node.type === "Identifier") identifiers.add(node.value);
+  });
+  const factoryNames = collectFactoryNames(ast);
+  const diagnostics: CompiledStoreTransformResult["diagnostics"] = [];
   const state: TransformState = {
-    diagnostics: [],
+    diagnostics,
     options: {
       importRuntime: options.importRuntime ?? true,
       onDiagnostic: options.onDiagnostic ?? "throw",
     },
     target: resolveLoweringTarget(options),
-    stores: collectStoreBindings(ast),
+    stores: collectStoreBindings(ast, diagnostics),
     tempCounter: 0,
+    identifiers,
+    factoryNames,
   };
 
+  state.target.model.localName = allocateName(
+    state.target.model.localName,
+    state,
+  );
+  state.target.signal.localName = allocateName(
+    state.target.signal.localName,
+    state,
+  );
+  state.target.identifiers.context = allocateName(
+    state.target.identifiers.context,
+    state,
+  );
+  state.target.identifiers.value = allocateName(
+    state.target.identifiers.value,
+    state,
+  );
   scanUnsupportedStoreSyntax(ast, state);
 
   if (state.diagnostics.length > 0 && state.options.onDiagnostic === "throw") {
     throw new CompiledStoreTransformError(state.diagnostics);
   }
+
+  if (state.diagnostics.length > 0)
+    return { code, diagnostics: [...state.diagnostics], map: null };
 
   const transformed = transformProgram(ast, state) as Program;
   const output = printSync(transformed, {
@@ -90,7 +129,14 @@ function resolveLoweringTarget(
     runtimeModule:
       target?.runtimeModule ?? options.runtimeModule ?? DEFAULT_RUNTIME_MODULE,
     model: { ...DEFAULT_LOWERING_TARGET.model, ...target?.model },
-    signal: { ...DEFAULT_LOWERING_TARGET.signal, ...target?.signal },
+    signal: {
+      ...(target?.runtimeModule ||
+      options.runtimeModule ||
+      target?.signal?.exportName
+        ? { exportName: "signal", localName: "__reflex_signal" }
+        : DEFAULT_LOWERING_TARGET.signal),
+      ...target?.signal,
+    },
     identifiers: {
       ...DEFAULT_LOWERING_TARGET.identifiers,
       ...target?.identifiers,
@@ -126,7 +172,7 @@ function transformProgram(program: Program, state: TransformState): Program {
 function transformModuleItem(item: any, state: TransformState): any[] {
   switch (item.type) {
     case "ImportDeclaration":
-      return transformImportDeclaration(item);
+      return transformImportDeclaration(item, state);
     case "VariableDeclaration":
       return transformVariableDeclaration(item, state);
     case "ExpressionStatement":
@@ -141,13 +187,13 @@ function transformModuleItem(item: any, state: TransformState): any[] {
   }
 }
 
-function transformImportDeclaration(item: any): any[] {
+function transformImportDeclaration(item: any, state: TransformState): any[] {
   if (!STORE_MODULES.has(item.source?.value)) {
     return [item];
   }
 
   const specifiers = (item.specifiers ?? []).filter(
-    (specifier: any) => !isCreateStoreImportSpecifier(specifier),
+    (specifier: any) => !state.factoryNames.has(bindingKey(specifier.local)),
   );
 
   if (specifiers.length === 0) {
@@ -155,24 +201,6 @@ function transformImportDeclaration(item: any): any[] {
   }
 
   return [{ ...item, specifiers }];
-}
-
-function isCreateStoreImportSpecifier(specifier: any): boolean {
-  switch (specifier.type) {
-    case "ImportSpecifier": {
-      const imported = specifier.imported;
-      const importedName =
-        imported?.type === "Identifier" || imported?.type === "StringLiteral"
-          ? imported.value
-          : undefined;
-      return (importedName ?? specifier.local?.value) === "createStore";
-    }
-    case "ImportDefaultSpecifier":
-    case "ImportNamespaceSpecifier":
-      return specifier.local?.value === "createStore";
-    default:
-      return false;
-  }
 }
 
 function transformVariableDeclaration(item: any, state: TransformState): any[] {
@@ -194,7 +222,8 @@ function transformVariableDeclaration(item: any, state: TransformState): any[] {
   for (const declaration of item.declarations ?? []) {
     const name =
       declaration.id?.type === "Identifier" ? declaration.id.value : null;
-    const binding = name === null ? undefined : state.stores.get(name);
+    const binding =
+      name === null ? undefined : state.stores.get(bindingKey(declaration.id));
 
     if (binding === undefined) {
       pending.push(transformVariableDeclarator(declaration, state));
@@ -225,20 +254,18 @@ function transformVariableDeclarator(
 
 function insertRuntimeImport(body: any[], state: TransformState): any[] {
   const { model, runtimeModule, signal } = state.target;
-  const source = [
-    `import {`,
-    `  ${model.exportName} as ${model.localName},`,
-    `  ${signal.exportName} as ${signal.localName}`,
-    `} from ${JSON.stringify(runtimeModule)};`,
-  ].join("\n");
-  const runtimeImport = parseModule(source, "compiled-store-runtime-import.ts")
-    .body[0]!;
+  const signalModule = signal.runtimeModule ?? runtimeModule;
+  const source =
+    signalModule === runtimeModule
+      ? `import { ${model.exportName} as ${model.localName}, ${signal.exportName} as ${signal.localName} } from ${JSON.stringify(runtimeModule)};`
+      : `import { ${model.exportName} as ${model.localName} } from ${JSON.stringify(runtimeModule)};
+import { ${signal.exportName} as ${signal.localName} } from ${JSON.stringify(signalModule)};`;
+  const imports = parseModule(source, "compiled-store-runtime-import.ts").body;
   const insertIndex = body.findIndex(
     (item) => item.type !== "ImportDeclaration",
   );
   const index = insertIndex === -1 ? body.length : insertIndex;
-
-  return [...body.slice(0, index), runtimeImport, ...body.slice(index)];
+  return [...body.slice(0, index), ...imports, ...body.slice(index)];
 }
 
 function createCompiledStoreStatements(
@@ -248,6 +275,10 @@ function createCompiledStoreStatements(
 ): any[] {
   const lines: string[] = [];
   const { identifiers, model, signal } = state.target;
+  const defaultModel =
+    state.target.runtimeModule === DEFAULT_RUNTIME_MODULE &&
+    model.exportName === "createModel";
+  const modelName = defaultModel ? nextTemp(state, "model") : binding.name;
 
   for (const leaf of binding.leaves) {
     const names = getLeafNames(leaf, state);
@@ -259,21 +290,36 @@ function createCompiledStoreStatements(
   }
 
   lines.push(
-    `${kind} ${binding.name} = ${model.localName}` +
+    `${kind} ${modelName} = ${model.localName}` +
       `((${identifiers.context}) => {`,
   );
 
   for (const leaf of binding.leaves) {
     const names = getLeafNames(leaf, state);
     const action = formatMemberAccess(identifiers.context, model.actionMethod);
+    if (
+      signal.exportName === "createStoreCell" &&
+      signal.runtimeModule === "@volynets/reflex-store"
+    ) {
+      lines.push(`  ${identifiers.context}.onDispose(${names.read}.dispose);`);
+    }
     lines.push(`  ${names.write} = ${action}((${identifiers.value}) => {`);
     lines.push(`    ${names.read}.set(${identifiers.value});`);
     lines.push(`    return ${identifiers.value};`);
     lines.push(`  });`);
   }
 
-  lines.push(`  return ${createStoreObjectSource(binding, state)};`);
+  lines.push(
+    `  return ${defaultModel ? "{}" : createStoreObjectSource(binding, state)};`,
+  );
   lines.push(`})();`);
+  if (defaultModel) {
+    const facade = createStoreObjectSource(binding, state);
+    const contents = facade.slice(1, -1).trim();
+    lines.push(
+      `${kind} ${binding.name} = { ${contents}${contents ? "," : ""} dispose: ${modelName}.dispose };`,
+    );
+  }
 
   return parseModule(lines.join("\n"), "compiled-store-lowering.ts").body;
 }
@@ -288,6 +334,17 @@ function createStoreObjectSource(
   state: TransformState,
 ): string {
   const root = createStoreTreeNode();
+  for (const path of binding.branchPaths) {
+    let branch = root;
+    for (const key of JSON.parse(path) as string[]) {
+      let next = branch.branches.get(key);
+      if (!next) {
+        next = createStoreTreeNode();
+        branch.branches.set(key, next);
+      }
+      branch = next;
+    }
+  }
 
   for (const leaf of binding.leaves) {
     insertStoreLeaf(root, leaf.parts, leaf);
@@ -376,13 +433,24 @@ function formatMemberAccess(object: string, property: string): string {
     : `${object}[${JSON.stringify(property)}]`;
 }
 
+function allocateName(preferred: string, state: TransformState): string {
+  if (!isIdentifierName(preferred))
+    throw new Error("Invalid generated identifier: " + preferred);
+  let name = preferred;
+  let suffix = 0;
+  while (state.identifiers.has(name)) name = preferred + "_" + ++suffix;
+  state.identifiers.add(name);
+  return name;
+}
+
 function getLeafNames(leaf: StoreLeafPath, state: TransformState) {
+  if (leaf.names) return leaf.names;
   const context = { path: leaf.parts, mangledPath: leaf.mangled };
-  return {
-    read: state.target.identifiers.read(context),
-    set: state.target.identifiers.set(context),
-    write: state.target.identifiers.write(context),
-  };
+  return (leaf.names = {
+    read: allocateName(state.target.identifiers.read(context), state),
+    set: allocateName(state.target.identifiers.set(context), state),
+    write: allocateName(state.target.identifiers.write(context), state),
+  });
 }
 
 function printExpression(expression: Expression): string {
@@ -456,10 +524,13 @@ function transformExpression(
 
 function nextTemp(state: TransformState, label: string): string {
   state.tempCounter += 1;
-  return state.target.identifiers.temporary({
-    index: state.tempCounter,
-    label,
-  });
+  return allocateName(
+    state.target.identifiers.temporary({
+      index: state.tempCounter,
+      label,
+    }),
+    state,
+  );
 }
 
 function isIdentifierName(value: string): boolean {
@@ -480,12 +551,13 @@ function getLeafPathForMember(
     return null;
   }
 
-  const store = stores.get(root);
+  const rootNode = memberRoot(node);
+  const store = rootNode ? stores.get(bindingKey(rootNode)) : undefined;
   if (!store) {
     return null;
   }
 
-  return store.leafPaths.get(path.join(".")) ?? null;
+  return store.leafPaths.get(pathKey(path)) ?? null;
 }
 
 function getLeafPathForTarget(
@@ -529,12 +601,14 @@ function createCompoundAssignment(
   nextTempName: string,
   state: TransformState,
 ): Expression {
+  const previous = nextTemp(state, "previous");
   return createIIFE([
+    createConstDeclaration(previous, createReadCall(leaf, state)),
     createConstDeclaration(rhsTemp, right),
     createConstDeclaration(
       nextTempName,
       createBinaryExpression(
-        createReadCall(leaf, state),
+        createIdentifierExpression(previous),
         operator,
         createIdentifierExpression(rhsTemp),
       ),
@@ -553,37 +627,25 @@ function createUpdateExpressionLowering(
   prefix: boolean,
   state: TransformState,
 ): Expression {
-  if (prefix) {
-    return createIIFE([
-      createConstDeclaration(
-        tempName,
-        createBinaryExpression(
-          createReadCall(leaf, state),
-          operator,
-          createNumericLiteral(1),
-        ),
-      ),
-      createExpressionStatement(
-        createWriteCall(leaf, createIdentifierExpression(tempName), state),
-      ),
-      createReturnStatement(createIdentifierExpression(tempName)),
-    ]);
-  }
-
+  const declaration = createConstDeclaration(
+    tempName,
+    createReadCall(leaf, state),
+  );
+  declaration.kind = "let";
+  const result = nextTemp(state, "result");
   return createIIFE([
-    createConstDeclaration(tempName, createReadCall(leaf, state)),
+    declaration,
+    createConstDeclaration(result, {
+      type: "UpdateExpression",
+      span: DUMMY_SPAN,
+      operator: operator === "+" ? "++" : "--",
+      prefix,
+      argument: createIdentifierExpression(tempName),
+    } as Expression),
     createExpressionStatement(
-      createWriteCall(
-        leaf,
-        createBinaryExpression(
-          createIdentifierExpression(tempName),
-          operator,
-          createNumericLiteral(1),
-        ),
-        state,
-      ),
+      createWriteCall(leaf, createIdentifierExpression(tempName), state),
     ),
-    createReturnStatement(createIdentifierExpression(tempName)),
+    createReturnStatement(createIdentifierExpression(result)),
   ]);
 }
 
@@ -594,15 +656,6 @@ function createIdentifierExpression(name: string): Expression {
     ctxt: 0,
     value: name,
     optional: false,
-  } as any;
-}
-
-function createNumericLiteral(value: number): Expression {
-  return {
-    type: "NumericLiteral",
-    span: DUMMY_SPAN,
-    value,
-    raw: String(value),
   } as any;
 }
 

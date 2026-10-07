@@ -1,295 +1,94 @@
-# Compiled Store Transform Spec
+# Compiled Store Transform Contract
 
-This document defines phase-1 transform rules for the experimental
-`createStore(...)` API in [`./createStore.ts`](./createStore.ts).
+The [package specification](../../SPECIFICATION.md) is normative. This document
+describes the current compiler frontend and lowering.
 
-The goal is to support a zero-proxy production path by treating `createStore`
-as compile-time syntax sugar that lowers to canonical Reflex runtime
-primitives.
+## Recognition and shape
 
-## Scope
+- Direct top-level variable declarations initialized by named createStore imports,
+  including aliases, from supported store modules.
+- Low-level compileStore accepts bare calls; Vite gates them with
+  compileBareCreateStore.
+- Binding identity is the SWC resolved identifier/context pair. A shadowed name
+  is not the imported factory or the outer store.
+- Literal closed shape with unique static data properties and nested branches.
+  Initializers evaluate once in source order; empty branches survive.
+- Spread, shorthand, methods/accessors, duplicate/computed keys, **proto** and
+  reserved root lifecycle keys are errors.
+- Nested/export-wrapped declarations and factory escapes are phase-1 errors.
 
-The transform applies only to stores declared directly from a static object
-literal:
+Internal path keys preserve segment boundaries. Generated identifiers are
+allocated against source identifiers and previously allocated names. Colliding
+path spellings or multiple stores cannot share cells accidentally.
 
-```ts
-const state = createStore({
-  user: { name: "Alice" },
-  count: 0,
-});
-```
+## Default lowering
 
-Phase-1 constraints:
+The compiler imports createModel from @volynets/reflex and createStoreCell from
+@volynets/reflex-store. A cell retains raw state without a producer until a
+tracked read. Writes to cold cells remain cold.
 
-- only plain object literals
-- only statically known nested paths
-- only static dot access on the store root
-- no dynamic keys
-- no spread/rest guarantees
-- no reflection guarantees
-- no aliasing guarantees for nested branches
-- no optional chaining support
+Each leaf has a cell reader and an action writer. The writer commits a value and
+returns the assignment result. The default model owns cell disposal through
+ctx.onDispose. Its validated namespace is separate from the public getter/setter
+façade, so dev validation does not evaluate plain leaf values as model members.
+The façade exposes dispose().
 
-## Canonical lowering target
+Supported top-level expressions lower directly to cell reads/actions, with no
+Proxy or runtime path lookup. The façade preserves compatible accesses inside
+functions/control flow that are not directly lowered. It has not been eliminated
+through escape analysis.
 
-The intended runtime target is:
+Custom lowering targets can override model/signal exports, imports, action method
+and generated identifiers. signal.runtimeModule optionally separates the signal
+import from the model import. Custom runtime targets retain their original
+signal export defaults; they own their materialization/lifecycle semantics.
 
-```ts
-const state = createModel((ctx) => {
-  const __user_name = signal("Alice");
-  const __count = signal(0);
+## Operators and order
 
-  const __write_user_name = ctx.action((value: string) => {
-    __user_name.set(value);
-    return value;
-  });
+Supported operations are static dot reads, =, +=, -=, ++ and --.
 
-  const __write_count = ctx.action((value: number) => {
-    __count.set(value);
-    return value;
-  });
-
-  return {
-    user: {
-      get name() {
-        return __user_name();
-      },
-      set name(value) {
-        __write_user_name(value);
-      },
-    },
-    get count() {
-      return __count();
-    },
-    set count(value) {
-      __write_count(value);
-    },
-  };
-})();
-```
-
-Hot-path optimization may lower direct operations further:
-
-- `state.user.name` -> `__user_name()`
-- `state.user.name = "Bob"` -> `__write_user_name("Bob")`
-- `state.count++` -> temp-based read/modify/write lowering
-
-## Store model
-
-For each leaf path the transform materializes:
-
-- a read accessor id: `__read_<mangled_path>`
-- a write action id: `__write_<mangled_path>`
-
-Examples:
-
-- `user.name` -> `__read_user_name`, `__write_user_name`
-- `count` -> `__read_count`, `__write_count`
-
-The draft transform currently emits read calls such as `__read_count()` and
-write calls such as `__write_count(value)`.
-
-## Rule 1: read member access
-
-Supported input:
+Compound assignment reads the old value BEFORE evaluating the RHS:
 
 ```ts
-state.user.name
-state.count
-foo(state.user.name)
+const previous = read();
+const rhs = evaluateRhs();
+const next = previous + rhs;
+write(next);
+return next;
 ```
 
-Match conditions:
+This order matters when the RHS writes the same leaf or throws. RHS executes
+once, and the outer write occurs only on successful evaluation.
 
-- root identifier is a known compiled store binding
-- access chain is static dot access
-- full chain resolves to a known leaf path
-- expression is not being handled as an assignment/update target
-
-Lowering:
+Updates apply a native operator to a local temporary:
 
 ```ts
-state.user.name -> __read_user_name()
-state.count -> __read_count()
-foo(state.user.name) -> foo(__read_user_name())
+let value = read();
+const result = value++; // or ++value / value-- / --value
+write(value);
+return result;
 ```
 
-Unsupported in phase 1:
+This preserves ToNumeric, strings, BigInt, NaN and coercion exceptions.
+Replacing ++ with + 1 is incorrect.
 
-```ts
-state.user
-state["user"]
-state[key]
-const user = state.user
-user.name
-```
-
-## Rule 2: assignment
-
-Supported input:
-
-```ts
-state.user.name = "Bob"
-state.count = count + 1
-```
-
-Match conditions:
-
-- left side resolves to a known writable leaf path
-- operator is assignment-compatible
-
-### Plain assignment
-
-Lowering:
-
-```ts
-state.user.name = "Bob" -> __write_user_name("Bob")
-state.count = next -> __write_count(next)
-```
-
-The writer is expected to return the committed value so expression semantics can
-be preserved:
-
-```ts
-const next = (state.count = 5) -> const next = __write_count(5)
-```
-
-### Compound assignment
-
-Supported in phase 1:
-
-- `+=`
-- `-=`
-
-Lowering must:
-
-- read once
-- evaluate RHS once
-- write once
-- return the new value
-
-Example:
-
-```ts
-state.count += 2
-```
-
-becomes:
-
-```ts
-(() => {
-  const __rhs = 2;
-  const __next = __read_count() + __rhs;
-  __write_count(__next);
-  return __next;
-})()
-```
-
-## Rule 3: update operators
-
-Supported input:
-
-- `state.count++`
-- `state.count--`
-- `++state.count`
-- `--state.count`
-
-Match conditions:
-
-- operand resolves to a known numeric leaf path
-
-### Postfix
-
-Must preserve JS semantics:
-
-- read current value once
-- write updated value once
-- return previous value
-
-Example:
-
-```ts
-state.count++
-```
-
-becomes:
-
-```ts
-(() => {
-  const __prev = __read_count();
-  __write_count(__prev + 1);
-  return __prev;
-})()
-```
-
-### Prefix
-
-Must preserve JS semantics:
-
-- read current value once
-- write updated value once
-- return next value
-
-Example:
-
-```ts
-++state.count
-```
-
-becomes:
-
-```ts
-(() => {
-  const __next = __read_count() + 1;
-  __write_count(__next);
-  return __next;
-})()
-```
-
-## Evaluation guarantees
-
-The transform must preserve:
-
-- JS evaluation order
-- single evaluation of RHS expressions
-- postfix vs prefix return semantics
-- single read and single write per update operation
-
-For phase 1 the recommended shape is a temp-based IIFE or an equivalent
-single-evaluation block expression.
-
-## Unsupported constructs
-
-The transform should reject or skip:
-
-- `state[key]`
-- `state.user[key]`
-- `delete state.count`
-- `'count' in state`
-- `Object.keys(state)`
-- `{ ...state }`
-- `const { count } = state`
-- `const branch = state.user; branch.name = "Bob"`
-- `state.user?.name`
+Suspending compound assignments (await/yield in RHS) are diagnosed because the
+synchronous IIFE lowering cannot preserve their continuation semantics.
 
 ## Diagnostics
 
-Recommended diagnostics:
+Dynamic/computed access, branch alias declarations, store-root escapes,
+reflection/destructuring, deletion, branch/root/unknown-member writes,
+unsupported assignment operators and optional chains on store values are errors.
+Unrelated optional chains and shadowed bindings are unaffected.
 
-- `Dynamic compiled-store access is not supported in phase 1.`
-- `Aliasing nested compiled-store branches is not supported in phase 1.`
-- `Spread and reflection are not guaranteed for compiled stores in phase 1.`
+With onDiagnostic: "collect", code is returned unchanged together with
+diagnostics. This is not a runtime fallback and must not erase imports or
+partially lower a rejected program.
 
-## Notes on the phase-1 compiler
+## Conformance
 
-The [`./transform.ts`](./transform.ts) entrypoint delegates to the dedicated
-[`./transform/`](./transform/) module, which implements the phase-1 compiler:
-
-- it recognizes `createStore({ ... })` declarations
-- it erases direct `createStore` imports from `@volynets/reflex-store`
-- it emits a Reflex runtime import for `createModel` and `signal`
-- it materializes per-leaf signal readers and model-action writers
-- it lowers the store binding to a model object with nested getters/setters
-- it rewrites read member access to generated accessor calls
-- it rewrites `=`, `+=`, `-=`, `++`, and `--`
-- it rejects the phase-1 unsupported constructs with diagnostics
+compiler.differential.test.ts compares transformed code with ordinary
+JavaScript, including generated operation sequences, RHS side effects, coercion,
+errors, collisions and aliases. vite-user-dx.test.ts exercises actual plugin
+loading. Both production-style and **DEV** runtime configurations are tested.

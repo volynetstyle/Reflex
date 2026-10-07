@@ -66,6 +66,12 @@ describe("reflex store Vite plugin user DX", () => {
     });
   });
 
+  it("compiles an aliased factory through Vite SSR", async () => {
+    const server = await createStoreFixtureServer();
+    const mod = await server.ssrLoadModule("/store-plugin-alias.ts");
+    expect(mod.runAliasDemo()).toEqual({ before: 1, after: 3 });
+  });
+
   it("surfaces store compiler diagnostics during Vite module loading", async () => {
     const server = await createStoreFixtureServer();
 

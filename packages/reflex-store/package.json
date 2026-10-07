@@ -61,7 +61,8 @@
     "dist",
     "examples/task-board",
     "src/store/README.md",
-    "src/store/TRANSFORM_SPEC.md"
+    "src/store/TRANSFORM_SPEC.md",
+    "SPECIFICATION.md"
   ],
   "publishConfig": {
     "access": "public"
@@ -76,9 +77,12 @@
     "lint:fix": "eslint . --fix",
     "test": "vitest run --config vite.config.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc -p tsconfig.example.json",
-    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build"
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build",
+    "test:dev": "vitest run --config vite.dev.config.ts",
+    "test:differential": "vitest run --config vite.config.ts tests/compiler.differential.test.ts tests/runtime.differential.test.ts",
+    "test:integration": "vitest run --config vite.config.ts tests/store.integration.test.ts tests/vite-user-dx.test.ts tests/task-board"
   },
-  "dependencies": {
+  "devDependencies": {
     "@swc/core": "^1.15.18",
     "@volynets/reflex-runtime": "workspace:*"
   },

@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { bindingKey, memberRoot, pathKey } from "./bindings";
 import type { Module } from "@swc/core";
 import { collectStaticMemberPath, visitNode } from "./ast";
 import type { DiagnosticCode, TransformState } from "./contracts";
@@ -9,8 +10,51 @@ export function scanUnsupportedStoreSyntax(
 ): void {
   if (state.stores.size === 0) return;
 
-  visitNode(program, (node) => {
-    if (node.type === "MemberExpression") {
+  visitNode(program, (node, parent) => {
+    if (
+      node.type === "Identifier" &&
+      state.stores.has(bindingKey(node)) &&
+      !(parent?.type === "VariableDeclarator" && parent.id === node) &&
+      !(parent?.type === "MemberExpression" && parent.object === node)
+    ) {
+      addDiagnostic(state, "spread-reflection", REFLECTION_MESSAGE);
+    }
+    if (
+      node.type === "AssignmentExpression" ||
+      node.type === "UpdateExpression"
+    ) {
+      const target = node.left ?? node.argument;
+      if (isStoreMember(target, state) || isStoreRootOrBranch(target, state)) {
+        const parts = collectStaticMemberPath(target);
+        const root = memberRoot(target);
+        const store = root && state.stores.get(bindingKey(root));
+        if (
+          !parts ||
+          !store?.leafPaths.has(pathKey(parts.slice(1))) ||
+          (node.type === "AssignmentExpression" &&
+            !["=", "+=", "-="].includes(node.operator))
+        ) {
+          addDiagnostic(
+            state,
+            "unsupported-write",
+            "Only declared compiled-store leaves support =, +=, -=, ++ and --.",
+          );
+        }
+        if (node.type === "AssignmentExpression" && node.operator !== "=") {
+          visitNode(node.right, (child) => {
+            if (
+              child.type === "AwaitExpression" ||
+              child.type === "YieldExpression"
+            )
+              addDiagnostic(
+                state,
+                "unsupported-write",
+                "Suspending a compiled-store compound assignment is unsupported.",
+              );
+          });
+        }
+      }
+    } else if (node.type === "MemberExpression") {
       scanMemberExpression(node, state);
     } else if (node.type === "VariableDeclarator") {
       scanVariableDeclarator(node, state);
@@ -19,7 +63,10 @@ export function scanUnsupportedStoreSyntax(
         addDiagnostic(state, "spread-reflection", REFLECTION_MESSAGE);
       }
     } else if (node.type === "UnaryExpression" && node.operator === "delete") {
-      if (isStoreRootOrBranch(node.argument, state)) {
+      if (
+        isStoreMember(node.argument, state) ||
+        isStoreRootOrBranch(node.argument, state)
+      ) {
         addDiagnostic(
           state,
           "delete",
@@ -34,6 +81,7 @@ export function scanUnsupportedStoreSyntax(
       node.type === "OptionalChainingExpression" ||
       node.type === "OptChainExpression"
     ) {
+      if (!isStoreMember(node.base ?? node, state)) return;
       addDiagnostic(
         state,
         "optional-chain",
@@ -47,8 +95,12 @@ const REFLECTION_MESSAGE =
   "Spread and reflection are not guaranteed for compiled stores in phase 1.";
 
 function scanMemberExpression(node: any, state: TransformState): void {
-  const root = getMemberRootIdentifier(node);
-  if (root !== null && state.stores.has(root) && hasDynamicMemberAccess(node)) {
+  const root = memberRoot(node);
+  if (
+    root !== null &&
+    state.stores.has(bindingKey(root)) &&
+    hasDynamicMemberAccess(node)
+  ) {
     addDiagnostic(
       state,
       "dynamic-access",
@@ -58,9 +110,15 @@ function scanMemberExpression(node: any, state: TransformState): void {
 }
 
 function scanVariableDeclarator(node: any, state: TransformState): void {
-  if (node.id?.type === "ObjectPattern" && isStoreRootOrBranch(node.init, state)) {
+  if (
+    node.id?.type === "ObjectPattern" &&
+    isStoreRootOrBranch(node.init, state)
+  ) {
     addDiagnostic(state, "spread-reflection", REFLECTION_MESSAGE);
-  } else if (node.id?.type === "Identifier" && isStoreBranchMember(node.init, state)) {
+  } else if (
+    node.id?.type === "Identifier" &&
+    isStoreBranchMember(node.init, state)
+  ) {
     addDiagnostic(
       state,
       "branch-alias",
@@ -83,7 +141,10 @@ function scanCallExpression(node: any, state: TransformState): void {
         method === "getOwnPropertySymbols")) ||
     (root === "Reflect" && method === "ownKeys");
 
-  if (isReflection && isStoreRootOrBranch(node.arguments?.[0]?.expression, state)) {
+  if (
+    isReflection &&
+    isStoreRootOrBranch(node.arguments?.[0]?.expression, state)
+  ) {
     addDiagnostic(state, "spread-reflection", REFLECTION_MESSAGE);
   }
 }
@@ -101,7 +162,7 @@ function scanObjectExpression(node: any, state: TransformState): void {
 
 function isStoreRootOrBranch(node: any, state: TransformState): boolean {
   return node?.type === "Identifier"
-    ? state.stores.has(node.value)
+    ? state.stores.has(bindingKey(node))
     : isStoreBranchMember(node, state);
 }
 
@@ -112,13 +173,17 @@ function isStoreBranchMember(node: any, state: TransformState): boolean {
   const [root, ...path] = parts;
   if (root === undefined) return false;
 
-  return state.stores.get(root)?.branchPaths.has(path.join(".")) ?? false;
+  const rootNode = memberRoot(node);
+  return (
+    rootNode !== null &&
+    (state.stores.get(bindingKey(rootNode))?.branchPaths.has(pathKey(path)) ??
+      false)
+  );
 }
 
-function getMemberRootIdentifier(node: any): string | null {
-  let current = node;
-  while (current?.type === "MemberExpression") current = current.object;
-  return current?.type === "Identifier" ? current.value : null;
+function isStoreMember(node: any, state: TransformState): boolean {
+  const root = memberRoot(node);
+  return root !== null && state.stores.has(bindingKey(root));
 }
 
 function hasDynamicMemberAccess(node: any): boolean {
@@ -137,7 +202,8 @@ function addDiagnostic(
 ): void {
   if (
     !state.diagnostics.some(
-      (diagnostic) => diagnostic.code === code && diagnostic.message === message,
+      (diagnostic) =>
+        diagnostic.code === code && diagnostic.message === message,
     )
   ) {
     state.diagnostics.push({ code, message });

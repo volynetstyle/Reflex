@@ -33,7 +33,7 @@ separate concerns. It fixes these observable contracts:
 - keyed projection represents the currently materialized source key, not an
   arbitrary collection lookup;
 - summary subscribers run only for properties whose values changed;
-- projection reads remain scheduler-driven and are stale until `flush()`;
+- projection reads pull current values immediately; `flush()` delivers effects;
 - disposal is idempotent and prevents subsequent effect work;
 - real task moves preserve references for unaffected tasks.
 

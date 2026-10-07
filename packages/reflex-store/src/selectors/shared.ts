@@ -16,6 +16,8 @@ export interface ProjectionOptions<K, R> {
 
 export interface StoreProjectionOptions<T extends object> {
   clone?: (value: T) => T;
+  equals?: (previous: T, next: T) => boolean;
+  depth?: "deep" | "shallow";
 }
 
 export function sameValue<T>(prev: T, next: T): boolean {
@@ -30,23 +32,7 @@ export function isObject(value: unknown): value is AnyRecord {
   return typeof value === "object" && value !== null;
 }
 
-export function cloneProjectionValue<T>(value: T): T {
-  if (Array.isArray(value)) {
-    return value.map((item) => cloneProjectionValue(item)) as T;
-  }
-
-  if (!isObject(value)) {
-    return value;
-  }
-
-  const clone: AnyRecord = {};
-  const keys = Reflect.ownKeys(value);
-  for (let index = 0; index < keys.length; ++index) {
-    const key = keys[index]!;
-    clone[key] = cloneProjectionValue(value[key as keyof typeof value]);
-  }
-  return clone as T;
-}
+export { cloneValue as cloneProjectionValue } from "../values";
 
 export function readProjectionPath(
   value: unknown,

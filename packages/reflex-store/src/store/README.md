@@ -120,3 +120,12 @@ shorthand; `loweringTarget.runtimeModule` takes precedence.
 
 `createStore(...)` in this folder is intentionally a compile-only stub. If it
 executes at runtime, the transform was not applied.
+
+## Current semantics
+
+See [the package specification](../../SPECIFICATION.md) and
+[the transform contract](./TRANSFORM_SPEC.md) for the supported subset.
+The default target uses lazy `createStoreCell` producers from this package and
+a headless `createModel` owner from Reflex. Aliases resolve by binding identity,
+identifiers are collision-free, and unsupported programs are never partially
+rewritten. `signal.runtimeModule` can override the signal import separately.

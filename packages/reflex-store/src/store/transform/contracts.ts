@@ -5,6 +5,7 @@ export type StoreLeafPath = {
   mangled: string;
   path: string;
   parts: string[];
+  names?: { read: string; set: string; write: string };
 };
 
 export type StoreBinding = {
@@ -32,6 +33,8 @@ export interface CompiledStoreLoweringTarget {
     actionMethod: string;
   };
   signal: {
+    /** Defaults to runtimeModule for custom targets. */
+    runtimeModule?: string;
     exportName: string;
     localName: string;
   };
@@ -53,6 +56,9 @@ export type CompiledStoreLoweringTargetOptions = {
 };
 
 export type DiagnosticCode =
+  | "unsupported-shape"
+  | "unsupported-binding"
+  | "unsupported-write"
   | "dynamic-access"
   | "branch-alias"
   | "spread-reflection"
@@ -98,6 +104,8 @@ export type TransformState = {
   target: CompiledStoreLoweringTarget;
   stores: Map<string, StoreBinding>;
   tempCounter: number;
+  identifiers: Set<string>;
+  factoryNames: Set<string>;
 };
 
 export class CompiledStoreTransformError extends Error {
