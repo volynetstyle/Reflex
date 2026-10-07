@@ -7,7 +7,6 @@ import { dts } from "rollup-plugin-dts";
 import ts from "typescript";
 import { createRequire, builtinModules } from "node:module";
 import {
-  existsSync,
   readFileSync,
   writeFileSync,
   mkdirSync,
@@ -19,7 +18,6 @@ import { resolve, dirname, relative, join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const workspace = resolve(root, "../..");
 const output = resolve(root, "dist");
 if (dirname(output) !== root || !output.endsWith(sep + "dist"))
   throw new Error("Unsafe build output");
@@ -44,39 +42,6 @@ const entries = {
 const input = Object.fromEntries(
   Object.entries(entries).map(([name, file]) => [name, resolve(root, file)]),
 );
-const aliases = new Map([
-  ["@volynets/reflex", resolve(workspace, "packages/reflex/src/index.ts")],
-  [
-    "@volynets/reflex-runtime",
-    resolve(workspace, "packages/reflex-runtime/src/index.ts"),
-  ],
-  [
-    "@volynets/reflex-runtime/internal",
-    resolve(workspace, "packages/reflex-runtime/src/internal/index.ts"),
-  ],
-  [
-    "@volynets/reflex-scheduler",
-    resolve(workspace, "packages/reflex-scheduler/src/index.ts"),
-  ],
-]);
-function sourceAliases() {
-  return {
-    name: "embedded-sources",
-    resolveId(id) {
-      if (aliases.has(id)) return aliases.get(id);
-      if (id.startsWith("@runtime/")) {
-        const base = resolve(
-          workspace,
-          "packages/reflex-runtime/src",
-          id.slice(9),
-        );
-        if (existsSync(base + ".ts")) return base + ".ts";
-        if (existsSync(join(base, "index.ts"))) return join(base, "index.ts");
-      }
-      return null;
-    },
-  };
-}
 function portableWasm() {
   return {
     name: "portable-swc-asset",
@@ -92,7 +57,14 @@ function portableWasm() {
     },
   };
 }
-const external = (id) => id.startsWith("node:") || builtinModules.includes(id);
+const external = (id) =>
+  id.startsWith("node:") ||
+  builtinModules.includes(id) ||
+  [
+    "@volynets/reflex",
+    "@volynets/reflex-runtime",
+    "@volynets/reflex-scheduler",
+  ].some((name) => id === name || id.startsWith(name + "/"));
 const onwarn = (warning) => {
   if (warning.code === "UNRESOLVED_IMPORT") throw new Error(warning.message);
   if (
@@ -107,7 +79,6 @@ const bundle = await rollup({
   external,
   onwarn,
   plugins: [
-    sourceAliases(),
     portableWasm(),
     nodeResolve({
       extensions: [".ts", ".js", ".mjs", ".json"],
@@ -141,9 +112,6 @@ await bundle.write({
   chunkFileNames: "chunks/[name]-[hash].js",
   manualChunks(id) {
     if (id.includes("@swc/wasm")) return "swc";
-    const path = id.replaceAll("\\", "/");
-    if (/packages\/(reflex|reflex-runtime|reflex-scheduler)\//.test(path))
-      return "runtime";
   },
 });
 await bundle.close();
@@ -158,7 +126,6 @@ const typesBundle = await rollup({
   external,
   onwarn,
   plugins: [
-    sourceAliases(),
     dts({
       tsconfig: resolve(root, "tsconfig.json"),
       respectExternal: true,
@@ -178,7 +145,7 @@ await typesBundle.write({
 });
 await typesBundle.close();
 
-// The embedded host originally uses ambient aliases. Scope them to the package's
+// The host facade uses ambient aliases. Scope them to the package's
 // own type module so published declarations do not pollute consumer globals.
 const typeNames = [
   ...readFileSync(resolve(root, "src/runtime/types.ts"), "utf8").matchAll(
@@ -231,19 +198,14 @@ for (const file of declarations(output)) {
   writeFileSync(file, '/// <reference lib="esnext.disposable" />\n' + code);
 }
 mkdirSync(join(output, "licenses"), { recursive: true });
-for (const name of ["reflex", "reflex-runtime"])
-  copyFileSync(
-    resolve(workspace, "packages", name, "LICENSE"),
-    join(output, "licenses", name + ".txt"),
-  );
 copyFileSync(
   resolve(root, "licenses/SWC-APACHE-2.0.txt"),
   join(output, "licenses/SWC-APACHE-2.0.txt"),
 );
 writeFileSync(
   join(output, "licenses/NOTICE.txt"),
-  "Includes Reflex, Reflex Runtime and Reflex Scheduler (MIT), and SWC WebAssembly (Apache-2.0). Runtime dependencies are embedded; no additional packages are required.\n",
+  "Includes SWC WebAssembly (Apache-2.0). Reflex host and runtime are shared peer dependencies.\n",
 );
 process.stdout.write(
-  "Built self-contained runtime, compiler, plugin and declarations.\n",
+  "Built library, portable compiler, plugin and declarations with shared runtime imports.\n",
 );

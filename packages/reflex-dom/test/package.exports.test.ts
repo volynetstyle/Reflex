@@ -3,8 +3,13 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 function readPackageExports(): Record<string, unknown> {
-  const packageJson = readFileSync(resolve(process.cwd(), "package.json"), "utf8");
-  const parsed = JSON.parse(packageJson) as { exports?: Record<string, unknown> };
+  const packageJson = readFileSync(
+    resolve(process.cwd(), "package.json"),
+    "utf8",
+  );
+  const parsed = JSON.parse(packageJson) as {
+    exports?: Record<string, unknown>;
+  };
 
   return parsed.exports ?? {};
 }
@@ -15,6 +20,9 @@ describe("package exports", () => {
       ".",
       "./jsx-runtime",
       "./jsx-dev-runtime",
+      "./standalone",
+      "./standalone/jsx-runtime",
+      "./standalone/jsx-dev-runtime",
     ]);
   });
 });

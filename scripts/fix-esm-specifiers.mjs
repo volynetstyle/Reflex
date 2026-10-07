@@ -7,7 +7,7 @@ if (!targetDir) {
   throw new Error("Usage: node scripts/fix-esm-specifiers.mjs <dir>");
 }
 
-const fileExtensions = new Set([".js"]);
+const fileExtensions = new Set([".js", ".d.ts"]);
 
 function hasKnownExtension(specifier) {
   return (
@@ -20,13 +20,16 @@ function hasKnownExtension(specifier) {
 
 function resolveRuntimeSpecifier(filePath, specifier) {
   const resolvedPath = join(dirname(filePath), specifier);
-  const fileCandidate = specifier.endsWith(".js") ? resolvedPath : `${resolvedPath}.js`;
+  const extension = filePath.endsWith(".d.ts") ? ".d.ts" : ".js";
+  const fileCandidate = `${resolvedPath}${extension}`;
 
   try {
     if (statSync(fileCandidate).isFile()) {
       return specifier.endsWith(".js") ? specifier : `${specifier}.js`;
     }
-  } catch {}
+  } catch {
+    // Try the next file or directory layout.
+  }
 
   if (specifier.endsWith("/index.js")) {
     const collapsedSpecifier = specifier.slice(0, -"/index.js".length);
@@ -36,7 +39,9 @@ function resolveRuntimeSpecifier(filePath, specifier) {
       if (statSync(collapsedPath).isFile()) {
         return `${collapsedSpecifier}.js`;
       }
-    } catch {}
+    } catch {
+      // Try the next file or directory layout.
+    }
   }
 
   if (specifier.endsWith(".js")) {
@@ -47,14 +52,18 @@ function resolveRuntimeSpecifier(filePath, specifier) {
       if (statSync(directoryCandidate).isDirectory()) {
         return `${baseSpecifier}/index.js`;
       }
-    } catch {}
+    } catch {
+      // Try the next file or directory layout.
+    }
   }
 
   try {
     if (statSync(resolvedPath).isDirectory()) {
       return `${specifier}/index.js`;
     }
-  } catch {}
+  } catch {
+    // Try the next file or directory layout.
+  }
 
   return `${specifier}.js`;
 }

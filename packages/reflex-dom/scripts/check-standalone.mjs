@@ -32,7 +32,6 @@ assert.equal(manifest.version, source.version);
 for (const field of [
   "dependencies",
   "devDependencies",
-  "peerDependencies",
   "optionalDependencies",
   "bundledDependencies",
   "bundleDependencies",
@@ -51,7 +50,11 @@ assert.deepEqual(Object.keys(manifest.exports), [
   ".",
   "./jsx-runtime",
   "./jsx-dev-runtime",
+  "./standalone",
+  "./standalone/jsx-runtime",
+  "./standalone/jsx-dev-runtime",
 ]);
+assert.deepEqual(manifest.peerDependencies, source.peerDependencies);
 for (const entry of Object.values(manifest.exports)) {
   assert.deepEqual(Object.keys(entry), ["types", "import"]);
   await readFile(join(dist, entry.types));
@@ -103,7 +106,7 @@ async function checkModules(directory) {
     }
   }
 }
-await checkModules(dist);
+await checkModules(join(dist, "standalone"));
 
 // No parent node_modules from the repository can satisfy missing package imports.
 const temporary = await mkdtemp(join(tmpdir(), "reflex-dom-standalone-"));
@@ -153,7 +156,7 @@ try {
         module,
         moduleResolution: module === "NodeNext" ? "NodeNext" : "Bundler",
         jsx,
-        jsxImportSource: manifest.name,
+        jsxImportSource: manifest.name + "/standalone",
         strict: true,
         skipLibCheck: false,
         types: [],
@@ -182,7 +185,7 @@ try {
     }
   }
   console.log(
-    "Standalone package passed: no dependencies, closed module graph, shared JSX runtime, strict JSX types (NodeNext and Bundler).",
+    "Standalone entrypoint passed: no external imports, closed module graph, shared JSX runtime, strict JSX types (NodeNext and Bundler).",
   );
 } finally {
   await rm(temporary, { recursive: true, force: true });

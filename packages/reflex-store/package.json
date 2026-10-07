@@ -77,7 +77,7 @@
     "test:dev": "vitest run --config vite.dev.config.ts",
     "test:differential": "vitest run --config vite.config.ts tests/compiler.differential.test.ts tests/runtime.differential.test.ts",
     "test:integration": "vitest run --config vite.config.ts tests/store.integration.test.ts tests/vite-user-dx.test.ts tests/task-board",
-    "test:packed-runtime": "pnpm build && node scripts/packed-runtime-identity.mjs"
+    "test:packed-runtime": "pnpm --filter @volynets/reflex build:all && pnpm build && node scripts/packed-runtime-identity.mjs"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^29.0.3",
@@ -111,5 +111,9 @@
   },
   "engines": {
     "node": ">=20.19.0"
+  },
+  "peerDependencies": {
+    "@volynets/reflex": "^1.0.0",
+    "@volynets/reflex-runtime": "^1.0.0"
   }
 }

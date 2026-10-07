@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
-import * as dom from "@volynets/reflex-dom";
-import { Fragment, jsx, jsxs } from "@volynets/reflex-dom/jsx-runtime";
+import * as dom from "@volynets/reflex-dom/standalone";
+import {
+  Fragment,
+  jsx,
+  jsxs,
+} from "@volynets/reflex-dom/standalone/jsx-runtime";
 import {
   Fragment as DevFragment,
   jsxDEV,
-} from "@volynets/reflex-dom/jsx-dev-runtime";
+} from "@volynets/reflex-dom/standalone/jsx-dev-runtime";
 
 // The DOM test host is supplied by the harness; the renderer resolves only its
 // own files from an isolated node_modules, outside the workspace.

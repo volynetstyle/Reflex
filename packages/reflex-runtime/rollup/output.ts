@@ -7,7 +7,10 @@ export function createOutput(target: BuildTarget): OutputOptions {
     dir: `dist/${target.outDir}`,
     format: target.format,
     entryFileNames: target.format === "cjs" ? "[name].cjs" : "[name].js",
-    chunkFileNames: target.format === "cjs" ? "[name].cjs" : "[name].js",
+    chunkFileNames:
+      target.format === "cjs"
+        ? "chunks/[name]-[hash].cjs"
+        : "chunks/[name]-[hash].js",
     exports: target.format === "cjs" ? "named" : undefined,
     sourcemap: target.mode === "dev",
     generatedCode: GENERATED_CODE_OPTIONS,

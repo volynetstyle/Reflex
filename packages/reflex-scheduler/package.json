@@ -33,7 +33,10 @@
     "bench:hot-path": "vitest bench bench/hot-path.bench.ts",
     "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json"
   },
-  "dependencies": {
+  "peerDependencies": {
+    "@volynets/reflex-runtime": "^1.0.0"
+  },
+  "devDependencies": {
     "@volynets/reflex-runtime": "workspace:*"
   }
 }

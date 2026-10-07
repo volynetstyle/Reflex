@@ -28,9 +28,10 @@ Use `execution.read(source)` for fresh dependent values and
 `resolve()` follow replacement attempts. An owner `AbortSignal` or `dispose()`
 ends the source lifetime.
 
-The package exports ESM, CommonJS and TypeScript declarations. Its only production
-dependency is `@volynets/reflex-runtime`, kept external in both bundles so it
-shares execution state with `@volynets/reflex`.
+The package exports ESM, CommonJS and TypeScript declarations.
+`@volynets/reflex-runtime` is a peer dependency, kept external in both bundles
+so Async shares the application's kernel module identity with the Reflex facade,
+Store and DOM. Install a compatible runtime alongside this package.
 
 ## Migration
 

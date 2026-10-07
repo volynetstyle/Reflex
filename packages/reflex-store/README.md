@@ -1,10 +1,14 @@
 # Reflex Store
 
 Structured state, derived views and keyed collections with a compiler for static
-store shapes. The published package is self-contained: it has no dependencies,
-peer dependencies or optional dependencies. Its distribution includes the Reflex
-host, scheduler, one shared reactive kernel, SWC WebAssembly and the Vite plugin.
-Development dependencies are used to build and test the package.
+store shapes. The library distribution keeps the Reflex host and reactive kernel
+as external imports. `@volynets/reflex` and `@volynets/reflex-runtime` are peer
+dependencies, so Store, DOM and Async can share one application kernel.
+The distribution includes the portable SWC WebAssembly compiler and Vite plugin.
+
+```sh
+pnpm add @volynets/reflex-store @volynets/reflex @volynets/reflex-runtime
+```
 
 ## Application API
 
@@ -97,10 +101,10 @@ export default defineConfig({
 });
 ```
 
-The plugin routes `@volynets/reflex` and low-level runtime imports to the package's
-embedded host/kernel. This keeps existing Reflex imports on the same graph.
-Node applications can import their host APIs directly from
-`@volynets/reflex-store/runtime`.
+The plugin transforms stores while preserving application package resolution.
+It does not redirect host or kernel imports. `@volynets/reflex-store/runtime`,
+`/runtime/core` and `/runtime/internal` re-export the shared peer APIs; they do not
+contain a private host or kernel.
 
 The standalone compiler is exported from `@volynets/reflex-store/store`.
 It includes its portable WASM asset; installing a platform-specific native SWC
@@ -112,7 +116,7 @@ See [compiler rules](./src/store/TRANSFORM_SPEC.md).
 
 ## Ownership
 
-Use the embedded host's model ownership to dispose resources together:
+Use the shared host's model ownership to dispose resources together:
 
 ```ts
 import { createModel, own, signal } from "@volynets/reflex-store/runtime";

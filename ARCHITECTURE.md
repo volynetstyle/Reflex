@@ -15,6 +15,31 @@ When this document uses the words:
 - `Direction`: the statement describes the intended migration path, not a fully
   completed implementation.
 
+## Kernel module identity and package builds
+
+> Reflex ecosystem packages share one kernel module identity per realm;
+> packages contribute semantics, hosts create execution contexts.
+
+Library builds preserve imports of `@volynets/reflex-runtime` and its subpaths.
+Framework, scheduler, facade, Store, Async and DOM declare a compatible runtime
+peer and use the workspace runtime for development. The application resolves
+one compatible package instance with consistent module-format and development
+conditions; its bundler then sees one shared kernel graph. Runtime public and
+internal entrypoints are built together, sharing chunks in production ESM,
+development ESM and CJS. This identity is independent of the number of
+`RuntimeContext` instances created by hosts.
+
+The default DOM build also preserves framework and scheduler package imports.
+`@volynets/reflex-dom/standalone` is a separate closed composition unit containing
+its own kernel, framework and scheduler. Its JSX subpaths belong to that same
+standalone graph. Applications that compose independently installed ecosystem
+packages use the library entrypoints; standalone cannot share state with those
+packages merely because their runtime code has identical bytes.
+
+Artifact checks cover runtime public/internal identity across build modes,
+Store tarballs with shared peers, DOM/Store composition without source aliases,
+and the standalone JavaScript and declaration closure.
+
 ## Async runtime constraint
 
 > Async semantics may use the synchronous runtime, but must not alter synchronous

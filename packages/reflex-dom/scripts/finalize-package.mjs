@@ -20,6 +20,7 @@ const fields = [
   "homepage",
   "bugs",
   "engines",
+  "peerDependencies",
 ];
 const manifest = Object.fromEntries(
   fields
@@ -37,7 +38,14 @@ manifest.exports = Object.fromEntries(
     },
   ]),
 );
-manifest.files = ["*.js", "*.d.ts", "chunks", "README.md", "LICENSE"];
+manifest.files = [
+  "*.js",
+  "*.d.ts",
+  "chunks",
+  "standalone",
+  "README.md",
+  "LICENSE",
+];
 manifest.publishConfig = { access: source.publishConfig.access };
 
 await rm(dist, { recursive: true, force: true });

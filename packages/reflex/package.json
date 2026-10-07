@@ -91,13 +91,16 @@
     "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm build:clean"
   },
   "dependencies": {
-    "@volynets/reflex-runtime": "workspace:*",
     "@volynets/reflex-scheduler": "workspace:*"
   },
   "devDependencies": {
     "@solidjs/signals": "2.0.0-rc.9",
     "@vue/reactivity": "3.5.43",
     "alien-signals": "3.2.1",
-    "reactive-framework-test-suite": "0.0.2"
+    "reactive-framework-test-suite": "0.0.2",
+    "@volynets/reflex-runtime": "workspace:*"
+  },
+  "peerDependencies": {
+    "@volynets/reflex-runtime": "^1.0.0"
   }
 }

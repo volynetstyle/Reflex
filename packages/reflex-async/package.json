@@ -58,15 +58,16 @@
     "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build",
     "typecheck:package": "node ../../node_modules/typescript/bin/tsc -p tsconfig.consumer.json"
   },
-  "dependencies": {
-    "@volynets/reflex-runtime": "workspace:*"
-  },
   "devDependencies": {
-    "@volynets/reflex": "workspace:*"
+    "@volynets/reflex": "workspace:*",
+    "@volynets/reflex-runtime": "workspace:*"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/volynetstyle/Reflex.git",
     "directory": "packages/reflex-async"
+  },
+  "peerDependencies": {
+    "@volynets/reflex-runtime": "^1.0.0"
   }
 }

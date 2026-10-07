@@ -12,6 +12,13 @@ const runtimeDist = resolve(packageRoot, "../reflex-runtime/dist");
 const runtimeModules = resolve(packageRoot, "../reflex-runtime/build/esm/src");
 const schedulerDist = resolve(packageRoot, "../reflex-scheduler/dist");
 
+const external = (id: string) =>
+  [
+    "@volynets/reflex-runtime",
+    "@volynets/reflex-framework",
+    "@volynets/reflex-scheduler",
+  ].some((name) => id === name || id.startsWith(`${name}/`));
+
 function workspacePackages(types = false): Plugin {
   const entries = new Map([
     [
@@ -78,86 +85,95 @@ const onwarn: RollupOptions["onwarn"] = (warning, warn) => {
   warn(warning);
 };
 
-const javascript: RollupOptions = {
-  input: Object.fromEntries(
-    entries.map((name) => [name, `build/esm/${name}.js`]),
-  ),
-  output: {
-    dir: "build/bundle",
-    entryFileNames: "[name].js",
-    chunkFileNames: "chunks/[name]-[hash].js",
-    format: "esm",
-    sourcemap: false,
-  },
-  plugins: [
-    workspacePackages(),
-    nodeResolve({
-      extensions: [".js"],
-      exportConditions: ["import", "default"],
-    }),
-    replace({
-      preventAssignment: true,
-      values: {
-        __DEV__: "false",
-        __PROFILE__: "false",
-        __TEST__: "false",
-        __PROD__: "true",
-        __TRACKING_ONE_HOP__: "true",
-        __TRACKING_TWO_HOP__: "true",
-        __TRACKING_LAST_EDGE__: "true",
-      },
-    }),
-    terser({
-      compress: {
-        passes: 2,
-        module: true,
-        toplevel: true,
-        dead_code: true,
-        drop_debugger: true,
-      },
-      mangle: { module: true, toplevel: true },
-      format: { comments: false },
-      module: true,
-      ecma: 2022,
-    }),
-    standalone(),
-  ],
-  external: [],
-  onwarn,
-  treeshake: {
-    preset: "recommended",
-    moduleSideEffects: false,
-  },
-};
-
-const declarations: RollupOptions = {
-  input: Object.fromEntries(
-    entries.map((name) => [name, `build/esm/${name}.d.ts`]),
-  ),
-  output: {
-    dir: "build/bundle",
-    entryFileNames: "[name].d.ts",
-    chunkFileNames: "chunks/[name]-[hash].d.ts",
-    format: "esm",
-  },
-  plugins: [
-    workspacePackages(true),
-    dts({ respectExternal: true }),
-    {
-      name: "reflex-declaration-libraries",
-      renderChunk(code) {
-        // Lifecycle APIs expose Symbol.dispose; retain its built-in library
-        // reference after declaration bundling for consumers targeting ES2022.
-        return {
-          code: `/// <reference lib="esnext.disposable" />\n${code}`,
-          map: null,
-        };
-      },
+function javascript(isStandalone: boolean): RollupOptions {
+  return {
+    input: Object.fromEntries(
+      entries.map((name) => [name, `build/esm/${name}.js`]),
+    ),
+    output: {
+      dir: isStandalone ? "build/bundle/standalone" : "build/bundle",
+      entryFileNames: "[name].js",
+      chunkFileNames: "chunks/[name]-[hash].js",
+      format: "esm",
+      sourcemap: false,
     },
-    standalone(),
-  ],
-  external: [],
-  onwarn,
-};
+    plugins: [
+      ...(isStandalone ? [workspacePackages()] : []),
+      nodeResolve({
+        extensions: [".js"],
+        exportConditions: ["import", "default"],
+      }),
+      replace({
+        preventAssignment: true,
+        values: {
+          __DEV__: "false",
+          __PROFILE__: "false",
+          __TEST__: "false",
+          __PROD__: "true",
+          __TRACKING_ONE_HOP__: "true",
+          __TRACKING_TWO_HOP__: "true",
+          __TRACKING_LAST_EDGE__: "true",
+        },
+      }),
+      terser({
+        compress: {
+          passes: 2,
+          module: true,
+          toplevel: true,
+          dead_code: true,
+          drop_debugger: true,
+        },
+        mangle: { module: true, toplevel: true },
+        format: { comments: false },
+        module: true,
+        ecma: 2022,
+      }),
+      ...(isStandalone ? [standalone()] : []),
+    ],
+    external: isStandalone ? [] : external,
+    onwarn,
+    treeshake: {
+      preset: "recommended",
+      moduleSideEffects: false,
+    },
+  };
+}
 
-export default [javascript, declarations];
+function declarations(isStandalone: boolean): RollupOptions {
+  return {
+    input: Object.fromEntries(
+      entries.map((name) => [name, `build/esm/${name}.d.ts`]),
+    ),
+    output: {
+      dir: isStandalone ? "build/bundle/standalone" : "build/bundle",
+      entryFileNames: "[name].d.ts",
+      chunkFileNames: "chunks/[name]-[hash].d.ts",
+      format: "esm",
+    },
+    plugins: [
+      ...(isStandalone ? [workspacePackages(true)] : []),
+      dts({ respectExternal: true }),
+      {
+        name: "reflex-declaration-libraries",
+        renderChunk(code) {
+          // Lifecycle APIs expose Symbol.dispose; retain its built-in library
+          // reference after declaration bundling for consumers targeting ES2022.
+          return {
+            code: `/// <reference lib="esnext.disposable" />\n${code}`,
+            map: null,
+          };
+        },
+      },
+      ...(isStandalone ? [standalone()] : []),
+    ],
+    external: isStandalone ? [] : external,
+    onwarn,
+  };
+}
+
+export default [
+  javascript(false),
+  declarations(false),
+  javascript(true),
+  declarations(true),
+];

@@ -6,9 +6,9 @@ import {
   useSignal,
   type DOMRangeHandle,
   type JSXRenderable,
-} from "@volynets/reflex-dom";
-import type { JSX as ProductionJSX } from "@volynets/reflex-dom/jsx-runtime";
-import type { JSX as DevelopmentJSX } from "@volynets/reflex-dom/jsx-dev-runtime";
+} from "@volynets/reflex-dom/standalone";
+import type { JSX as ProductionJSX } from "@volynets/reflex-dom/standalone/jsx-runtime";
+import type { JSX as DevelopmentJSX } from "@volynets/reflex-dom/standalone/jsx-dev-runtime";
 
 function Counter() {
   const count = useSignal(0);

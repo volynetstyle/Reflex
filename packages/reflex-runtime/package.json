@@ -48,7 +48,7 @@
     "build:ts": "tsc -p tsconfig.build.json && node scripts/rewrite-build-aliases.mjs && node ../../scripts/write-index-dts.mjs .",
     "build:npm": "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc",
     "build:perf": "rollup --silent -c rollup.perf.config.ts --configPlugin @rollup/plugin-swc",
-    "build": "pnpm clean && pnpm build:ts && pnpm build:npm && pnpm check:projection-erasure",
+    "build": "pnpm clean && pnpm build:ts && pnpm build:npm && pnpm check:projection-erasure && pnpm check:identity",
     "check:projection-erasure": "node scripts/check-production-projection-erasure.mjs",
     "example:introspection": "pnpm build && node examples/introspection.phases.mjs",
     "bench:core": "pnpm build:perf && node --expose-gc dist/perf.js",
@@ -85,7 +85,8 @@
     "typecheck": "tsc --noEmit && pnpm typecheck:differential",
     "typecheck:differential": "tsc --noEmit -p test/differential/tsconfig.json",
     "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build && pnpm check:architecture",
-    "release": "changeset version && pnpm install && changeset publish"
+    "release": "changeset version && pnpm install && changeset publish",
+    "check:identity": "node scripts/check-module-identity.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",

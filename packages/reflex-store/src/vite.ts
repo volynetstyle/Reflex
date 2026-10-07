@@ -1,4 +1,3 @@
-import { fileURLToPath } from "node:url";
 type TransformResult = {
   code: string;
   map: null | {
@@ -12,12 +11,6 @@ type TransformResult = {
 export interface ReflexStorePlugin {
   name: string;
   enforce: "pre";
-  config():
-    | {
-        resolve: { alias: { find: RegExp; replacement: string }[] };
-        ssr: { noExternal: string[] };
-      }
-    | undefined;
   transform(
     this: DiagnosticReporter,
     code: string,
@@ -95,35 +88,6 @@ export function reflexStoreVitePlugin(
     name: "reflex-store",
     enforce: "pre",
 
-    config() {
-      // Source development already resolves the workspace kernel through aliases.
-      if (import.meta.url.endsWith(".ts")) return undefined;
-      return {
-        resolve: {
-          alias: [
-            {
-              find: /^@volynets\/reflex$/,
-              replacement: fileURLToPath(
-                new URL("./runtime.js", import.meta.url),
-              ),
-            },
-            {
-              find: /^@volynets\/reflex-runtime\/internal$/,
-              replacement: fileURLToPath(
-                new URL("./runtime/internal.js", import.meta.url),
-              ),
-            },
-            {
-              find: /^@volynets\/reflex-runtime$/,
-              replacement: fileURLToPath(
-                new URL("./runtime/core.js", import.meta.url),
-              ),
-            },
-          ],
-        },
-        ssr: { noExternal: ["@volynets/reflex", "@volynets/reflex-scheduler"] },
-      };
-    },
     transform(code, id) {
       const normalizedId = normalizeId(id);
       if (!matchesSelector(include, normalizedId)) {

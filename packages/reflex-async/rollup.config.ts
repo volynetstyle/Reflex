@@ -2,7 +2,9 @@ import type { RollupOptions } from "rollup";
 import { dts } from "rollup-plugin-dts";
 
 // The runtime stays external so async sources and facade signals share one graph.
-const external = (id: string) => id.startsWith("@volynets/reflex-runtime");
+const external = (id: string) =>
+  id === "@volynets/reflex-runtime" ||
+  id.startsWith("@volynets/reflex-runtime/");
 
 export default [
   {

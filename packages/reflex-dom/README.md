@@ -1,12 +1,25 @@
 # @volynets/reflex-dom
 
-Standalone DOM renderer for Reflex.
+DOM renderer for Reflex.
 
-The published package contains the reactive runtime, framework ownership model,
-JSX runtime, DOM renderer, hydration, and host scheduler in tree-shakeable
-ES modules with a shared runtime. Its published manifest has no dependencies,
-dev dependencies, peer dependencies, or optional dependencies. Consumers only
-install `@volynets/reflex-dom`.
+The default entrypoints are library builds. They keep the runtime, framework and
+scheduler as external imports, so DOM, Store and Async share the application's
+kernel module identity. Install compatible peers alongside the renderer:
+
+```sh
+pnpm add @volynets/reflex-dom @volynets/reflex-runtime @volynets/reflex-framework @volynets/reflex-scheduler
+```
+
+For an isolated application or CDN module, use
+`@volynets/reflex-dom/standalone`. It includes the runtime, framework, scheduler
+and renderer in one closed module graph. Use
+`jsxImportSource: "@volynets/reflex-dom/standalone"` and the corresponding
+`/standalone/jsx-runtime` or `/standalone/jsx-dev-runtime` entrypoint.
+The emitted `dist/standalone` directory has no external JavaScript or type imports
+and can be served directly. The npm manifest still declares peers for the library
+entrypoints. Use the library build when composing with separately installed
+Store, Async or framework packages; mixing them with standalone creates a second
+kernel and ownership graph.
 
 ## Setup
 
@@ -104,8 +117,8 @@ Reusable models:
 
 - `defineModel`, `ModelContext`, `Model`, and model capability helpers
 
-The `jsx-runtime` and `jsx-dev-runtime` package subpaths resolve to the same
-standalone module.
+Within each build mode, the JSX entrypoints share the same framework and runtime
+module graph as the corresponding renderer entrypoint.
 
 ## Practical hook patterns
 
@@ -442,7 +455,7 @@ full per-component activation inside every server-rendered dynamic branch.
 - The unused `policy` options were removed; use `effectStrategy`.
 - Internal file paths changed; no compatibility aliases are provided.
 
-## Standalone build
+## Library and standalone builds
 
 From the repository root:
 
@@ -454,11 +467,11 @@ The pipeline:
 
 1. builds `reflex-runtime`, `reflex-scheduler`, and `reflex-framework`;
 2. emits intermediate DOM modules and declarations into `build/esm`;
-3. bundles all three public entrypoints together with Rollup;
-4. minifies production JavaScript with Terser and bundles declarations;
-5. creates a publishable `dist` package with a dependency-free manifest,
-   README, and license;
-6. verifies module imports, runtime behavior, and JSX types outside the workspace.
+3. bundles the root and JSX entrypoints together for each build mode;
+4. minifies production JavaScript and bundles declarations, preserving peer
+   imports in the library build and embedding dependencies in standalone;
+5. creates a publishable `dist` package with peer metadata, README, and license;
+6. verifies the standalone module closure, behavior and JSX types outside the workspace.
 
 The published `dist` directory contains:
 
@@ -471,16 +484,26 @@ dist/
   jsx-dev-runtime.js
   jsx-dev-runtime.d.ts
   chunks/
+  standalone/
+    index.js
+    index.d.ts
+    jsx-runtime.js
+    jsx-runtime.d.ts
+    jsx-dev-runtime.js
+    jsx-dev-runtime.d.ts
+    chunks/
   package.json
   README.md
   LICENSE
 ```
 
-Every JavaScript and declaration import resolves within this package. The build
-fails if Rollup leaves any external dependency, including in declaration output.
+Library JavaScript and declarations preserve framework, scheduler and runtime
+package imports. Every standalone import resolves within `dist/standalone`;
+the build fails if standalone JavaScript or declarations leave an external dependency.
 
-The main entrypoint and both JSX entrypoints share the same module graph, so
-framework effects and the DOM scheduler use the same runtime state.
+Within each mode, the main and JSX entrypoints share one module graph.
+`test:library` checks the published library together with Store and shared peers,
+including reactive DOM updates, disposal and strict consumer JSX declarations.
 `test:standalone` copies only the published package to an isolated temporary
 consumer. It checks events, reactive delivery, effects, lifetime cancellation,
 range refs, disposal, SSR, and hydration in all three strategies. It also checks
@@ -510,7 +533,7 @@ pnpm --filter @volynets/reflex-dom test:browser
 # Type checking
 pnpm --filter @volynets/reflex-dom typecheck
 
-# Standalone production build
+# Library and standalone production builds
 pnpm --filter @volynets/reflex-dom build
 
 # Real-browser DOM mutation benchmark

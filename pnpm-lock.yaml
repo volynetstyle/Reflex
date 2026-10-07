@@ -108,9 +108,6 @@ importers:
 
   packages/reflex:
     dependencies:
-      '@volynets/reflex-runtime':
-        specifier: workspace:*
-        version: link:../reflex-runtime
       '@volynets/reflex-scheduler':
         specifier: workspace:*
         version: link:../reflex-scheduler
@@ -118,6 +115,9 @@ importers:
       '@solidjs/signals':
         specifier: 2.0.0-rc.9
         version: 2.0.0-rc.9
+      '@volynets/reflex-runtime':
+        specifier: workspace:*
+        version: link:../reflex-runtime
       '@vue/reactivity':
         specifier: 3.5.43
         version: 3.5.43
@@ -129,14 +129,13 @@ importers:
         version: 0.0.2
 
   packages/reflex-async:
-    dependencies:
-      '@volynets/reflex-runtime':
-        specifier: workspace:*
-        version: link:../reflex-runtime
     devDependencies:
       '@volynets/reflex':
         specifier: workspace:*
         version: link:../reflex
+      '@volynets/reflex-runtime':
+        specifier: workspace:*
+        version: link:../reflex-runtime
 
   packages/reflex-devtools:
     dependencies:
@@ -182,10 +181,10 @@ importers:
     publishDirectory: dist
 
   packages/reflex-framework:
-    dependencies:
+    devDependencies:
       '@volynets/reflex-runtime':
-        specifier: ^0.1.2
-        version: 0.1.2
+        specifier: workspace:*
+        version: link:../reflex-runtime
 
   packages/reflex-runtime:
     devDependencies:
@@ -219,7 +218,7 @@ importers:
         version: 5.9.3
 
   packages/reflex-scheduler:
-    dependencies:
+    devDependencies:
       '@volynets/reflex-runtime':
         specifier: workspace:*
         version: link:../reflex-runtime

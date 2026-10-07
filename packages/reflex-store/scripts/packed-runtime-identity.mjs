@@ -38,17 +38,30 @@ function pnpmRun(args, cwd) {
   return run(process.execPath, [pnpm, ...args], cwd);
 }
 try {
-  pnpmRun(["pack", "--pack-destination", scratch], packageRoot);
-  const archive = readdirSync(scratch).find((name) => name.endsWith(".tgz"));
-  assert(archive, "Missing packed tarball");
+  const dependencies = {};
+  for (const name of [
+    "reflex-runtime",
+    "reflex-scheduler",
+    "reflex",
+    "reflex-store",
+  ]) {
+    const cwd = resolve(packageRoot, "..", name);
+    pnpmRun(["pack", "--pack-destination", scratch], cwd);
+    const archive = readdirSync(scratch).find(
+      (file) =>
+        file.startsWith("volynets-" + name + "-") && file.endsWith(".tgz"),
+    );
+    assert(archive, "Missing tarball for " + name);
+    dependencies["@volynets/" + name] = "file:" + join(scratch, archive);
+  }
   writeFileSync(
     join(scratch, "package.json"),
     JSON.stringify({
       private: true,
       type: "module",
-      dependencies: {
-        "@volynets/reflex-store": "file:" + join(scratch, archive),
-      },
+      dependencies,
+      // Resolve unpublished workspace versions from the tarballs at every level.
+      pnpm: { overrides: dependencies },
     }),
   );
   pnpmRun(
@@ -64,19 +77,17 @@ try {
   const manifest = JSON.parse(
     readFileSync(join(installed, "package.json"), "utf8"),
   );
-  for (const name of [
-    "dependencies",
-    "peerDependencies",
-    "optionalDependencies",
-  ])
+  for (const name of ["dependencies", "optionalDependencies"])
     assert.equal(
       Object.keys(manifest[name] ?? {}).length,
       0,
       name + " must be empty",
     );
   assert(existsSync(join(installed, "dist/compiler/swc.wasm")));
-  assert(!existsSync(join(scratch, "node_modules/@volynets/reflex")));
-  assert(!existsSync(join(scratch, "node_modules/@volynets/reflex-runtime")));
+  assert.deepEqual(manifest.peerDependencies, {
+    "@volynets/reflex": "^1.0.0",
+    "@volynets/reflex-runtime": "^1.0.0",
+  });
   function files(directory) {
     return readdirSync(directory, { withFileTypes: true }).flatMap((entry) =>
       entry.isDirectory()
@@ -115,7 +126,10 @@ try {
       assert(
         id.startsWith(".") ||
           id.startsWith("node:") ||
-          builtinModules.includes(id),
+          builtinModules.includes(id) ||
+          Object.keys(manifest.peerDependencies).some(
+            (name) => id === name || id.startsWith(name + "/"),
+          ),
         "External dependency in " + file + ": " + id,
       );
   }
@@ -127,6 +141,9 @@ try {
       'import {writeFileSync} from "node:fs";',
       'import {createStore,reactiveMap,derive,selector,action,snapshot,hydrate} from "@volynets/reflex-store";',
       'import {createRuntime,effect,signal,createModel,own} from "@volynets/reflex-store/runtime";',
+      'import * as facade from "@volynets/reflex"; import * as core from "@volynets/reflex-runtime"; import * as internal from "@volynets/reflex-runtime/internal";',
+      'import * as storeCore from "@volynets/reflex-store/runtime/core";',
+      "assert.equal(createRuntime,facade.createRuntime);assert.equal(core.createProducer,internal.createProducer);assert.equal(storeCore.getActiveRuntimeContext,core.getActiveRuntimeContext);",
       'import {compileStore} from "@volynets/reflex-store/store";',
       'import plugin from "@volynets/reflex-store/vite";',
       'import {createStoreCell} from "@volynets/reflex-store/runtime/internal";',
@@ -143,8 +160,8 @@ try {
       "assert.deepEqual(snapshot(first),{a:4,b:5,items:[]});assert.equal(second.sum,0);end();",
       'const selected=signal("a");const model=createModel(ctx=>({map:own(ctx,map),view:own(ctx,view),selected:own(ctx,selector(selected))}))();',
       'model.dispose();assert.throws(()=>map.get("a"),/disposed/);first.dispose();second.dispose();',
-      'assert.equal(typeof createStoreCell,"function");assert.equal(plugin().config().resolve.alias.length,3);',
-      'runtime.flush();console.log("Standalone tarball: shared graph, compiler, WASM, actions, hydration and ownership passed.");',
+      'assert.equal(typeof createStoreCell,"function");assert.equal("config" in plugin(),false);',
+      'runtime.flush();console.log("Library tarballs: shared graph, compiler, WASM, actions, hydration and ownership passed.");',
     ].join("\n"),
   );
   process.stdout.write(run(process.execPath, ["run.mjs"], scratch));
@@ -178,7 +195,7 @@ try {
     await server.close();
   }
   process.stdout.write(
-    "Packed Vite integration routes legacy Reflex imports to the same embedded host.\n",
+    "Packed Vite integration preserves shared Reflex package imports.\n",
   );
 
   writeFileSync(
@@ -225,7 +242,7 @@ try {
     scratch,
   );
   process.stdout.write(
-    "Standalone consumer declarations passed with skipLibCheck=false and no dependency packages installed.\n",
+    "Library consumer declarations passed with skipLibCheck=false and shared peers installed.\n",
   );
 } finally {
   const absolute = resolve(scratch);
