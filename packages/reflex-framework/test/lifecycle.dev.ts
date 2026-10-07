@@ -15,6 +15,9 @@ describe("LifecycleScope development diagnostics", () => {
 
     parent.dispose();
     expect(() => parent.defer(() => {})).toThrow("lifecycle scope is closed");
+    expect(() => parent.use({ [Symbol.dispose]() {} })).toThrow(
+      "lifecycle scope is closed",
+    );
     expect(() => parent.own(new LifecycleScope())).toThrow(
       "lifecycle scope is closed",
     );
@@ -72,6 +75,7 @@ describe("LifecycleScope development diagnostics", () => {
     });
 
     expect(() => scope.handle(resource as never)).toThrow(failure);
+    expect(() => scope.use(resource as never)).toThrow(failure);
     expect(scope.node.firstChild).toBeNull();
     scope.defer(() => {});
     scope.dispose();

@@ -249,6 +249,9 @@ importers:
       '@volynets/reflex':
         specifier: workspace:^
         version: link:../reflex
+      '@volynets/reflex-framework':
+        specifier: workspace:*
+        version: link:../reflex-framework
       '@volynets/reflex-runtime':
         specifier: workspace:*
         version: link:../reflex-runtime

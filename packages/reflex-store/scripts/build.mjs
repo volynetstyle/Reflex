@@ -62,6 +62,7 @@ const external = (id) =>
   builtinModules.includes(id) ||
   [
     "@volynets/reflex",
+    "@volynets/reflex-framework",
     "@volynets/reflex-runtime",
     "@volynets/reflex-scheduler",
   ].some((name) => id === name || id.startsWith(name + "/"));

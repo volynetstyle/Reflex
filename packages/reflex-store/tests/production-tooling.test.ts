@@ -4,7 +4,7 @@ import { createRuntime, effect } from "@volynets/reflex";
 import { reactiveSet, getStoreName } from "../src/advanced";
 import { action, reactiveMap, derive, selector, snapshot } from "../src";
 import { createStoreCell } from "../src/store/cell";
-import { createModel } from "../../reflex/src/infra/model";
+import { createStoreScope } from "../src/store/scope";
 import { compileStore } from "../src/store";
 
 describe("collection and compiler production tooling", () => {
@@ -123,10 +123,10 @@ describe("collection and compiler production tooling", () => {
     expect(code).not.toContain("const state");
     createRuntime({ effectStrategy: "flush" });
     const result = new Function(
-      "__reflex_createModel",
+      "__reflex_createStoreScope",
       "__reflex_signal",
       code + "\nreturn result;",
-    )(createModel, createStoreCell);
+    )(createStoreScope, createStoreCell);
     expect(result).toBe(1);
 
     const escaped = compileStore(

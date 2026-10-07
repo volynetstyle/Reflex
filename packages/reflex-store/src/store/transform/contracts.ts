@@ -44,10 +44,12 @@ export interface CompiledStoreTemporaryContext {
 
 export interface CompiledStoreLoweringTarget {
   runtimeModule: string;
-  model: {
+  scope: {
     exportName: string;
     localName: string;
     actionMethod: string;
+    /** Legacy factory targets may return a zero-argument constructor. */
+    curried?: boolean;
   };
   signal: {
     /** Defaults to runtimeModule for custom targets. */
@@ -67,7 +69,9 @@ export interface CompiledStoreLoweringTarget {
 
 export type CompiledStoreLoweringTargetOptions = {
   runtimeModule?: string;
-  model?: Partial<CompiledStoreLoweringTarget["model"]>;
+  scope?: Partial<CompiledStoreLoweringTarget["scope"]>;
+  /** @deprecated Use scope. Legacy model targets are invoked as factories. */
+  model?: Partial<CompiledStoreLoweringTarget["scope"]>;
   signal?: Partial<CompiledStoreLoweringTarget["signal"]>;
   identifiers?: Partial<CompiledStoreLoweringTarget["identifiers"]>;
 };
@@ -91,13 +95,13 @@ export interface CompiledStoreTransformOptions {
   /**
    * Emits the runtime import needed by generated code.
    *
-   * Test harnesses can disable this and provide `__reflex_createModel` and
+   * Test harnesses can disable this and provide `__reflex_createStoreScope` and
    * `__reflex_signal` in scope manually.
    */
   importRuntime?: boolean;
   /** Omit the facade when every store use lowers directly to a declared leaf. */
   eraseFacade?: boolean;
-  /** Runtime facade used by generated code. */
+  /** Store scope module used by generated code. */
   runtimeModule?: string;
   /** Customize every runtime symbol emitted by the canonical lowering. */
   loweringTarget?: CompiledStoreLoweringTargetOptions;

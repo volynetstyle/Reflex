@@ -42,6 +42,7 @@ try {
   for (const name of [
     "reflex-runtime",
     "reflex-scheduler",
+    "reflex-framework",
     "reflex",
     "reflex-store",
   ]) {
@@ -87,6 +88,7 @@ try {
   assert.deepEqual(manifest.peerDependencies, {
     "@volynets/reflex": "^1.0.0",
     "@volynets/reflex-runtime": "^1.0.0",
+    "@volynets/reflex-framework": "^0.1.3",
   });
   function files(directory) {
     return readdirSync(directory, { withFileTypes: true }).flatMap((entry) =>
@@ -202,9 +204,13 @@ try {
     join(scratch, "consumer.ts"),
     [
       'import {createStore,leaf,snapshot,hydrate,derive,reactiveMap,selector} from "@volynets/reflex-store";',
-      'import {createRuntime,createModel,own,signal,type Signal} from "@volynets/reflex-store/runtime";',
+      'import {createRuntime,createModel,own,signal,createStoreScope,createStoreCell,type Signal} from "@volynets/reflex-store/runtime";',
       'import storePlugin from "@volynets/reflex-store/vite";',
       "createRuntime();",
+      "const scoped=createStoreScope(scope=>({cell:scope.own(createStoreCell(1)),increment:scope.action((amount:number)=>amount+1)}));",
+      "const incremented:number=scoped.increment(2);scoped[Symbol.dispose]();void incremented;",
+      "// @ts-expect-error scope actions cannot return promises",
+      "createStoreScope(scope=>({bad:scope.action(()=>Promise.resolve())}));",
       "const state=createStore({a:0,items:leaf<readonly {id:string}[]>([]),get sum(){return this.a*2},update(){this.a++}});",
       "const saved=snapshot(state);const value:number=saved.a;const items:readonly {readonly id:string}[]=saved.items;",
       "// @ts-expect-error actions are excluded from snapshot data",

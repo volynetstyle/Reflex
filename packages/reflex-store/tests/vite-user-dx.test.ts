@@ -31,6 +31,10 @@ async function createStoreFixtureServer(
       alias: {
         "@runtime": runtimeSource,
         "@volynets/reflex": reflexSource,
+        "@volynets/reflex-framework": resolve(
+          testDir,
+          "../../reflex-framework/src/index.ts",
+        ),
         "@volynets/reflex-runtime/internal": resolve(
           runtimeSource,
           "internal/index.ts",

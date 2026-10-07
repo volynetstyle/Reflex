@@ -15,8 +15,16 @@ child.defer(() => closeConnection());
 parent.dispose(); // child first, then parent; repeated disposal is inert
 ```
 
-For a raw object with `Symbol.dispose`, create one handle and pass that handle
-between scopes.
+For a resource whose lifetime belongs to this scope, `use()` creates and adopts
+a handle, returning the original value without modifying it:
+
+```ts
+const resource = scope.use(openResource());
+```
+
+`use()` delegates to the existing `handle()` and `own()` utilities. Each call
+creates a fresh handle. For a raw object shared between scopes, create one
+explicit handle and pass that handle between scopes.
 
 ```ts
 import { LifecycleHandle } from "@volynets/reflex-framework";

@@ -50,7 +50,7 @@ describe("reflexStoreVitePlugin", () => {
       'from "@volynets/reflex-store/runtime"',
     );
     expect((result as { code: string }).code).toContain(
-      "const __read_count = __reflex_signal(0);",
+      "__read_count = ctx.own(__reflex_signal(0));",
     );
     expect((result as { code: string }).code).toContain(
       "__write_count(__next_",

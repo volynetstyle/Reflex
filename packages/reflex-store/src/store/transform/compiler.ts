@@ -40,9 +40,9 @@ const DEFAULT_RUNTIME_MODULE = "@volynets/reflex-store/runtime";
 
 const DEFAULT_LOWERING_TARGET: CompiledStoreLoweringTarget = {
   runtimeModule: DEFAULT_RUNTIME_MODULE,
-  model: {
-    exportName: "createModel",
-    localName: "__reflex_createModel",
+  scope: {
+    exportName: "createStoreScope",
+    localName: "__reflex_createStoreScope",
     actionMethod: "action",
   },
   signal: {
@@ -86,8 +86,8 @@ export function compileStore(
     factoryNames,
   };
 
-  state.target.model.localName = allocateName(
-    state.target.model.localName,
+  state.target.scope.localName = allocateName(
+    state.target.scope.localName,
     state,
   );
   state.target.signal.localName = allocateName(
@@ -111,16 +111,16 @@ export function compileStore(
       state,
     );
   }
-  const defaultModel =
+  const defaultScope =
     state.target.runtimeModule === DEFAULT_RUNTIME_MODULE &&
-    state.target.model.exportName === "createModel";
-  if (!defaultModel) {
+    state.target.scope.exportName === "createStoreScope";
+  if (!defaultScope) {
     for (const store of state.stores.values()) {
       if (store.methods.length > 0 || store.getters.length > 0) {
         state.diagnostics.push({
           code: "unsupported-shape",
           message:
-            "Compiled store methods and getters require the default Reflex createModel lowering target.",
+            "Compiled store methods and getters require the default Store scope lowering target.",
         });
       }
     }
@@ -173,7 +173,12 @@ function resolveLoweringTarget(
   return {
     runtimeModule:
       target?.runtimeModule ?? options.runtimeModule ?? DEFAULT_RUNTIME_MODULE,
-    model: { ...DEFAULT_LOWERING_TARGET.model, ...target?.model },
+    scope: {
+      ...DEFAULT_LOWERING_TARGET.scope,
+      ...(target?.model ? { curried: true } : {}),
+      ...target?.model,
+      ...target?.scope,
+    },
     signal: {
       ...(target?.runtimeModule ||
       options.runtimeModule ||
@@ -513,9 +518,9 @@ function transformVariableDeclarator(
 }
 
 function insertRuntimeImport(body: any[], state: TransformState): any[] {
-  const { model, runtimeModule, signal } = state.target;
+  const { scope, runtimeModule, signal } = state.target;
   const signalModule = signal.runtimeModule ?? runtimeModule;
-  const runtimeNames = [model.exportName + " as " + model.localName];
+  const runtimeNames = [scope.exportName + " as " + scope.localName];
   if (state.computedName)
     runtimeNames.push("createDisposableComputed as " + state.computedName);
   if (signalModule === runtimeModule)
@@ -549,13 +554,13 @@ function createCompiledStoreStatements(
   state: TransformState,
 ): any[] {
   const lines: string[] = [];
-  const { identifiers, model, signal } = state.target;
-  const defaultModel =
+  const { identifiers, scope, signal } = state.target;
+  const defaultScope =
     state.target.runtimeModule === DEFAULT_RUNTIME_MODULE &&
-    model.exportName === "createModel";
-  const modelName = defaultModel ? nextTemp(state, "model") : binding.name;
+    scope.exportName === "createStoreScope";
+  const scopeName = defaultScope ? nextTemp(state, "scope") : binding.name;
   const emitFacade =
-    defaultModel && (!state.options.eraseFacade || binding.needsFacade);
+    defaultScope && (!state.options.eraseFacade || binding.needsFacade);
 
   if (emitFacade) binding.lifetimeName ??= allocateName("__store_alive", state);
 
@@ -575,19 +580,13 @@ function createCompiledStoreStatements(
   for (const leaf of binding.leaves) {
     const names = getLeafNames(leaf, state);
     lines.push(
-      "const " +
-        names.read +
-        " = " +
-        signal.localName +
-        "(" +
-        printExpression(leaf.initial) +
-        (binding.displayName && signal.exportName === "createStoreCell"
-          ? ", " +
-            JSON.stringify({
-              name: binding.displayName + "." + leaf.parts.join("."),
-            })
-          : "") +
-        ");",
+      defaultScope
+        ? "let " + names.read + ";"
+        : "const " +
+            names.read +
+            " = " +
+            createCellSource(leaf, binding, state) +
+            ";",
     );
     lines.push("let " + names.write + ";");
   }
@@ -595,9 +594,9 @@ function createCompiledStoreStatements(
   lines.push(
     kind +
       " " +
-      modelName +
+      scopeName +
       " = " +
-      model.localName +
+      scope.localName +
       "((" +
       identifiers.context +
       ") => {",
@@ -605,8 +604,20 @@ function createCompiledStoreStatements(
 
   for (const leaf of binding.leaves) {
     const names = getLeafNames(leaf, state);
-    const action = formatMemberAccess(identifiers.context, model.actionMethod);
+    const action = formatMemberAccess(identifiers.context, scope.actionMethod);
+    if (defaultScope) {
+      lines.push(
+        "  " +
+          names.read +
+          " = " +
+          identifiers.context +
+          ".own(" +
+          createCellSource(leaf, binding, state) +
+          ");",
+      );
+    }
     if (
+      !defaultScope &&
       signal.exportName === "createStoreCell" &&
       signal.runtimeModule === "@volynets/reflex-store/runtime/internal"
     ) {
@@ -620,26 +631,9 @@ function createCompiledStoreStatements(
     lines.push("    " + names.read + ".set(" + identifiers.value + ");");
     lines.push("    return " + identifiers.value + ";");
     lines.push("  });");
-    if (defaultModel) {
-      const originalWriter = nextTemp(state, "writer");
-      lines.push("  const " + originalWriter + " = " + names.write + ";");
-      lines.push(
-        "  " +
-          names.write +
-          " = (" +
-          identifiers.value +
-          ") => { if (" +
-          identifiers.context +
-          ".disposed) throw new Error('Cannot write a disposed compiled store'); return " +
-          originalWriter +
-          "(" +
-          identifiers.value +
-          "); };",
-      );
-    }
   }
 
-  const action = formatMemberAccess(identifiers.context, model.actionMethod);
+  const action = formatMemberAccess(identifiers.context, scope.actionMethod);
   for (const method of binding.methods) {
     const fn = transformExpression(rewriteStoreThis(method.fn, binding), state);
     lines.push(
@@ -670,7 +664,11 @@ function createCompiledStoreStatements(
         "));",
     );
     lines.push(
-      "  " + identifiers.context + ".onDispose(" + getterValue + ".dispose);",
+      "  " +
+        identifiers.context +
+        ".own({ [Symbol.dispose]: () => " +
+        getterValue +
+        ".dispose() });",
     );
     lines.push(
       "  const " + getter.internalName + " = " + getterValue + ".read;",
@@ -679,14 +677,14 @@ function createCompiledStoreStatements(
 
   lines.push(
     "  return " +
-      (defaultModel
-        ? createStoreModelSource(binding, identifiers.context, emitFacade)
+      (defaultScope
+        ? createStoreScopeSource(binding, identifiers.context, emitFacade)
         : createStoreObjectSource(binding, state)) +
       ";",
   );
-  lines.push("})();");
+  lines.push(scope.curried ? "})();" : "});");
   if (emitFacade) {
-    const facade = createStoreObjectSource(binding, state, modelName);
+    const facade = createStoreObjectSource(binding, state, scopeName);
     const contents = facade.slice(1, -1).trim();
     lines.push(
       kind +
@@ -696,9 +694,9 @@ function createCompiledStoreStatements(
         contents +
         (contents ? "," : "") +
         " dispose: " +
-        modelName +
+        scopeName +
         ".dispose, [Symbol.dispose]: " +
-        modelName +
+        scopeName +
         "[Symbol.dispose] };",
     );
   }
@@ -714,7 +712,7 @@ function createCompiledStoreStatements(
       );
     const guard =
       "if (!" +
-      formatMemberAccess(modelName, binding.lifetimeName!) +
+      formatMemberAccess(scopeName, binding.lifetimeName!) +
       "()) throw new Error('Cannot use a disposed compiled store'); ";
     const writes = binding.leaves
       .map(
@@ -756,6 +754,22 @@ function createCompiledStoreStatements(
     );
   }
   return parseModule(lines.join("\n"), "compiled-store-lowering.ts").body;
+}
+
+function createCellSource(
+  leaf: StoreLeafPath,
+  binding: StoreBinding,
+  state: TransformState,
+): string {
+  const signal = state.target.signal;
+  const options =
+    binding.displayName && signal.exportName === "createStoreCell"
+      ? ", " +
+        JSON.stringify({
+          name: binding.displayName + "." + leaf.parts.join("."),
+        })
+      : "";
+  return signal.localName + "(" + printExpression(leaf.initial) + options + ")";
 }
 
 function rewriteStoreThis(node: any, binding: StoreBinding, root = true): any {
@@ -811,7 +825,7 @@ function createStoreDataSource(
   return render(root);
 }
 
-function createStoreModelSource(
+function createStoreScopeSource(
   binding: StoreBinding,
   context: string,
   emitFacade: boolean,
@@ -837,7 +851,7 @@ type StoreTreeNode = {
 function createStoreObjectSource(
   binding: StoreBinding,
   state: TransformState,
-  modelName?: string,
+  scopeName?: string,
 ): string {
   const root = createStoreTreeNode();
   for (const path of binding.branchPaths) {
@@ -856,7 +870,7 @@ function createStoreObjectSource(
     insertStoreLeaf(root, leaf.parts, leaf);
   }
 
-  return createStoreTreeObjectSource(root, state, 2, binding, modelName);
+  return createStoreTreeObjectSource(root, state, 2, binding, scopeName);
 }
 function createStoreTreeNode(): StoreTreeNode {
   return {
@@ -893,7 +907,7 @@ function createStoreTreeObjectSource(
   state: TransformState,
   indent: number,
   rootBinding?: StoreBinding,
-  modelName?: string,
+  scopeName?: string,
 ): string {
   const pad = " ".repeat(indent);
   const childPad = " ".repeat(indent + 2);
@@ -932,16 +946,16 @@ function createStoreTreeObjectSource(
     );
   }
 
-  if (rootBinding && modelName) {
+  if (rootBinding && scopeName) {
     for (const method of rootBinding.methods) {
       entries.push(
         childPad +
           formatObjectKey(method.key) +
           ": " +
           "function (...args) { if (!" +
-          formatMemberAccess(modelName, rootBinding.lifetimeName!) +
+          formatMemberAccess(scopeName, rootBinding.lifetimeName!) +
           "()) throw new Error('Cannot call a disposed compiled store'); return " +
-          formatMemberAccess(modelName, method.internalName!) +
+          formatMemberAccess(scopeName, method.internalName!) +
           ".apply(" +
           rootBinding.name +
           ", args); }",
@@ -953,9 +967,9 @@ function createStoreTreeObjectSource(
           "get " +
           formatObjectKey(getter.key) +
           "() { if (!" +
-          formatMemberAccess(modelName, rootBinding.lifetimeName!) +
+          formatMemberAccess(scopeName, rootBinding.lifetimeName!) +
           "()) throw new Error('Cannot read a disposed compiled store'); return " +
-          formatMemberAccess(modelName, getter.internalName!) +
+          formatMemberAccess(scopeName, getter.internalName!) +
           "(); }",
       );
     }

@@ -45,7 +45,11 @@ commit preserve the previous value; action exceptions close batches.
 ## Facade, ownership and extraction
 
 The generated facade contains data accessors, getter accessors, bound actions,
-dispose and Symbol.dispose. The model owns cells and computed getter resources.
+dispose and Symbol.dispose. A Store scope owns cells and computed getter resources
+through Framework's LifecycleScope. Cells are allocated and adopted inside the
+scope setup callback, preserving initializer order. Setup failures roll back all
+resources already owned and rethrow the original cause. Actions reject terminal
+use in production and development; raw cells expose Symbol.dispose.
 Static hidden control callbacks extract only data fields and restore values to
 known cells. Returning a facade (also within a factory return object) is supported.
 
@@ -60,12 +64,17 @@ cells and no method/getter/escape/lifecycle/data boundary needs the object.
 
 ## Runtime and tooling
 
-Default imports use @volynets/reflex-store/runtime and /runtime/internal.
-All published entrypoints share the embedded host/kernel. The Vite plugin aliases
-legacy Reflex and runtime imports to that same host/kernel.
+Default imports use createStoreScope from @volynets/reflex-store/runtime and
+createStoreCell from /runtime/internal. The compiler does not call createModel
+or defineModel. The target delegates lifecycle policy to the shared Framework
+package, and keeps host/runtime imports external. The Vite plugin preserves
+application package resolution.
 
-Custom data-only lowering targets may configure model/signal names and generated
-identifiers. Getter/method lowering requires the default bundled createModel host.
+Custom data-only lowering targets configure scope/signal names and generated
+identifiers. Scope targets return the constructed value directly; curried: true
+supports factories returning a zero-argument constructor. The deprecated model
+option remains an alias with curried: true for existing custom targets.
+Getter/method lowering requires the default Store scope target.
 The compiler includes portable SWC WASM and validates its normalized function AST
 before printing. Names are store metadata and never modify kernel hot paths.
 

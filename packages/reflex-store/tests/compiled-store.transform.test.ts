@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createModel } from "../../reflex/src/infra/model";
+import { createStoreScope } from "../src/store/scope";
 import { createStoreCell as signal } from "../src/store/cell";
 import { createRuntime, effect } from "../../reflex/tests/reflex.test_utils";
 import {
@@ -20,14 +20,16 @@ describe("transformCompiledStore", () => {
     const result = compileStore(source);
 
     expect(result.code).toContain(
-      'import { createModel as __reflex_createModel } from "@volynets/reflex-store/runtime";',
+      'import { createStoreScope as __reflex_createStoreScope } from "@volynets/reflex-store/runtime";',
     );
     expect(result.code).not.toContain('from "@reflex/store"');
     expect(result.code).toContain(
-      'const __read_user_name = __reflex_signal("Alice");',
+      '__read_user_name = ctx.own(__reflex_signal("Alice"));',
     );
-    expect(result.code).toContain("const __read_count = __reflex_signal(0);");
-    expect(result.code).toContain("= __reflex_createModel((ctx)=>");
+    expect(result.code).toContain(
+      "__read_count = ctx.own(__reflex_signal(0));",
+    );
+    expect(result.code).toContain("= __reflex_createStoreScope((ctx)=>");
     expect(result.code).toContain("get name");
     expect(result.code).toContain("set name");
     expect(result.code).toContain("const name = __read_user_name()");
@@ -144,7 +146,7 @@ describe("transformCompiledStore", () => {
       importRuntime: false,
     });
     const run = new Function(
-      "__reflex_createModel",
+      "__reflex_createStoreScope",
       "__reflex_signal",
       "createRuntime",
       "effect",
@@ -158,7 +160,7 @@ return {
 };`,
     );
 
-    expect(run(createModel, signal, createRuntime, effect)).toEqual({
+    expect(run(createStoreScope, signal, createRuntime, effect)).toEqual({
       count: 4,
       name: "Bob",
       post: 2,

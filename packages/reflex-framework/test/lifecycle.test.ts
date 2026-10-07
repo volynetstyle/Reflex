@@ -133,6 +133,25 @@ describe("LifecycleScope over OwnershipNode", () => {
     expect(events).toEqual(["early", "sibling"]);
   });
 
+  it("uses a raw resource through one handle and the supplied cleanup runner", () => {
+    const scope = new LifecycleScope((fn) => {
+      events.push("enter");
+      return fn();
+    });
+    const events: string[] = [];
+    const resource = Object.freeze({
+      [Symbol.dispose]() {
+        expect(this).toBe(resource);
+        events.push("dispose");
+      },
+    });
+    expect(scope.use(resource)).toBe(resource);
+    expect(scope.node.firstChild?.parent).toBe(scope.node);
+    scope.dispose();
+    scope.dispose();
+    expect(events).toEqual(["enter", "dispose"]);
+  });
+
   it("accepts a frozen resource and captures its disposer only once", () => {
     const dispose = vi.fn();
     const resource = Object.freeze({ [Symbol.dispose]: dispose });

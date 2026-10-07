@@ -1,3 +1,4 @@
+import { createStoreScope } from "../src/store/scope";
 import { describe, expect, it } from "vitest";
 import {
   createModel,
@@ -33,7 +34,7 @@ function compileAndRun(body: string): any {
     importRuntime: false,
   }).code.replace(/import\s*\{[^}]*\}\s*from\s*["'][^"']*["'];?/g, "");
   return new Function(
-    "__reflex_createModel",
+    "__reflex_createStoreScope",
     "__reflex_signal",
     "__reflex_createDisposableComputed",
     "effect",
@@ -45,7 +46,7 @@ function compileAndRun(body: string): any {
     "createModel",
     output + "\nreturn output;",
   )(
-    createModel,
+    createStoreScope,
     createStoreCell,
     createDisposableComputed,
     effect,

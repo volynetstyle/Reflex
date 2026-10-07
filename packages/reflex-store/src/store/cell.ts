@@ -14,6 +14,7 @@ export interface StoreCell<T> {
   set(value: T): void;
   collect(): void;
   dispose(): void;
+  [Symbol.dispose](): void;
 }
 
 /** Compiler target: a direct leaf address, materialized only by a tracked read. */
@@ -46,6 +47,9 @@ export function createStoreCell<T>(
         if (!node || node.firstOut !== null) return;
         disposeNode(node);
         node = undefined;
+      },
+      [Symbol.dispose]() {
+        cell.dispose();
       },
       dispose() {
         disposed = true;

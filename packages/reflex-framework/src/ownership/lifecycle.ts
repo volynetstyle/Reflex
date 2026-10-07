@@ -157,6 +157,13 @@ export class LifecycleScope implements DisposableResource {
     return new LifecycleHandle(resource, this.#runCleanup);
   }
 
+  /** Own a raw resource through a fresh handle and return the original value. */
+  use<T extends DisposableResource>(resource: T): T {
+    this.assertOpen();
+    if (!this.disposed) this.own(this.handle(resource));
+    return resource;
+  }
+
   /** Exclusive ownership of a handle or nested scope, with idempotent adoption. */
   own<T extends LifecycleChild>(child: T): T {
     adoptOwnershipNode(this.#node, child.node);

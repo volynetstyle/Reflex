@@ -40,6 +40,21 @@ Artifact checks cover runtime public/internal identity across build modes,
 Store tarballs with shared peers, DOM/Store composition without source aliases,
 and the standalone JavaScript and declaration closure.
 
+## Store lifetime and model boundaries
+
+Compiled stores use a Store-specific `createStoreScope` compiler target. It
+provides resource ownership, synchronous untracked action batching, cancellation
+and disposal by composing the existing Framework `LifecycleScope`, handles and
+rollback policy. Cells and computed getters are adopted during setup so partial
+construction can be rolled back. Framework owns the lifecycle tree; Store owns
+its reactive execution policy and state semantics.
+
+Lifecycle is the shared infrastructure for Store and DOM. Store compilation
+does not depend on `createModel`, `defineModel`, model shape validation or
+capability brands. Applications may still use models to own stores and other
+resources. Moving the DOM model API to another package is an independent
+architectural change.
+
 ## Async runtime constraint
 
 > Async semantics may use the synchronous runtime, but must not alter synchronous

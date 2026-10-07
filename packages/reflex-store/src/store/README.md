@@ -50,6 +50,10 @@ Use eraseFacade to remove objects proven unnecessary for direct data-cell uses.
 Returned stores, computed getters, action methods and lifecycle/data boundaries
 retain their facade.
 
-The default lowering imports the bundled host from /runtime and cells from
-/runtime/internal. Custom model/signal lowering remains available for data-only
-stores through loweringTarget. See [TRANSFORM_SPEC.md](./TRANSFORM_SPEC.md).
+The default lowering imports createStoreScope from /runtime and cells from
+/runtime/internal. The scope uses the shared Framework LifecycleScope for resource
+ownership and rollback, and adds the Store action boundary. It has no model
+shape validation or capability brands. Custom scope/signal lowering remains
+available for data-only stores through loweringTarget; the legacy model option
+is a compatibility alias for curried factory targets.
+See [TRANSFORM_SPEC.md](./TRANSFORM_SPEC.md).

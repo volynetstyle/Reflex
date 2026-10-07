@@ -2,12 +2,14 @@
 
 Structured state, derived views and keyed collections with a compiler for static
 store shapes. The library distribution keeps the Reflex host and reactive kernel
-as external imports. `@volynets/reflex` and `@volynets/reflex-runtime` are peer
-dependencies, so Store, DOM and Async can share one application kernel.
+as external imports. `@volynets/reflex`, `@volynets/reflex-runtime` and
+`@volynets/reflex-framework` are peer dependencies. Framework supplies the
+shared lifecycle primitives, while Store, DOM and Async share the application's
+kernel module identity.
 The distribution includes the portable SWC WebAssembly compiler and Vite plugin.
 
 ```sh
-pnpm add @volynets/reflex-store @volynets/reflex @volynets/reflex-runtime
+pnpm add @volynets/reflex-store @volynets/reflex @volynets/reflex-runtime @volynets/reflex-framework
 ```
 
 ## Application API
@@ -115,6 +117,16 @@ retain the required facade.
 See [compiler rules](./src/store/TRANSFORM_SPEC.md).
 
 ## Ownership
+
+Compiled stores use `createStoreScope()` from `/runtime`. This thin compiler
+target delegates ownership, cancellation and rollback to Framework's
+`LifecycleScope`. It adds synchronous, untracked actions inside the host batch
+and exposes disposal through `dispose()` and `Symbol.dispose`. Cells are created
+and owned during setup; a failed initializer disposes earlier cells before
+rethrowing its original error. Computed getter resources share the same lifetime.
+
+Store compilation uses neither `createModel` nor `defineModel`. Models remain an
+optional way for application code to own a store alongside other resources.
 
 Use the shared host's model ownership to dispose resources together:
 

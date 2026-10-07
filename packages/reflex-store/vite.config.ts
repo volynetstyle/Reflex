@@ -13,6 +13,10 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: /^@volynets\/reflex-framework$/,
+        replacement: resolve(packageRoot, "../reflex-framework/src/index.ts"),
+      },
+      {
         find: /^@volynets\/reflex$/,
         replacement: resolve(reflexRoot, "index.ts"),
       },

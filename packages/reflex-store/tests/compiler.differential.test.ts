@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
-import { createModel } from "../../reflex/src/infra/model";
+import { createStoreScope } from "../src/store/scope";
 import { createRuntime } from "../../reflex/tests/reflex.test_utils";
 import { createStoreCell } from "../src/store/cell";
 import { compileStore } from "../src/store";
@@ -12,10 +12,10 @@ function execute(code: string, compiled: boolean) {
     : code;
   return new Function(
     "createStore",
-    "__reflex_createModel",
+    "__reflex_createStoreScope",
     "__reflex_signal",
     body + "\nreturn output;",
-  )((value: unknown) => value, createModel, createStoreCell);
+  )((value: unknown) => value, createStoreScope, createStoreCell);
 }
 function compare(code: string) {
   expect(execute(code, true)).toEqual(execute(code, false));
@@ -86,13 +86,13 @@ describe("compiled store / JavaScript differential semantics", () => {
     }).code;
     expect(
       new Function(
-        "__reflex_createModel",
+        "__reflex_createStoreScope",
         "__reflex_signal",
         transformed.replace(
           "export function createBoard",
           "function createBoard",
         ) + "\nreturn output;",
-      )(createModel, createStoreCell),
+      )(createStoreScope, createStoreCell),
     ).toEqual([22, 1, 7]);
   });
 
@@ -127,10 +127,10 @@ describe("compiled store / JavaScript differential semantics", () => {
       "function createBoard",
     );
     const output = new Function(
-      "__reflex_createModel",
+      "__reflex_createStoreScope",
       "__reflex_signal",
       executable + "\nreturn output;",
-    )(createModel, createStoreCell);
+    )(createStoreScope, createStoreCell);
 
     expect(output).toEqual([2, 11]);
     expect(transformed).toContain("export function createBoard(initial)");

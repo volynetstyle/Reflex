@@ -1,3 +1,4 @@
+import { createStoreScope } from "../src/store/scope";
 import { describe, expect, it } from "vitest";
 import { createModel } from "../../reflex/src/infra/model";
 import {
@@ -196,7 +197,7 @@ describe("static cell and application lifetimes", () => {
     expect(() => cell()).toThrow(/disposed/);
   });
 
-  it("disposes default compiled cells through the generated model lifetime", () => {
+  it("disposes default compiled cells through the generated Store scope lifetime", () => {
     createRuntime();
     const source = "const state=createStore({count:1}); state.count++;";
     const code = compileStore(source, "model.js", {
@@ -209,10 +210,10 @@ describe("static cell and application lifetimes", () => {
       return cell;
     };
     const model = new Function(
-      "__reflex_createModel",
+      "__reflex_createStoreScope",
       "__reflex_signal",
       code + "return state;",
-    )(createModel, factory);
+    )(createStoreScope, factory);
     expect(model.count).toBe(2);
     model.dispose();
     expect(() => cells[0]!()).toThrow(/disposed/);
