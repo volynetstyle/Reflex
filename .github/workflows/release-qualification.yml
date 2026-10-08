@@ -1,0 +1,78 @@
+name: Release qualification
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply_versions:
+        description: Apply the pending Changesets version plan before qualification
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-qualification-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  qualify:
+    name: versioned artifacts on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Record and apply the version plan
+        env:
+          APPLY_VERSIONS: ${{ inputs.apply_versions }}
+        run: |
+          mkdir -p artifacts/release
+          pnpm exec changeset status --output artifacts/release/version-plan.json
+          if [[ "$APPLY_VERSIONS" == true ]]; then
+            node -e 'const plan=require("./artifacts/release/version-plan.json");if(!plan.releases.length)throw new Error("A pending Changeset is required to prepare new release versions")'
+            pnpm release:version
+            pnpm install --lockfile-only --ignore-scripts
+            pnpm install --frozen-lockfile
+          fi
+      - name: Install Chromium on Linux
+        if: runner.os == 'Linux'
+        run: pnpm --filter @volynets/reflex-dom exec playwright install --with-deps chromium
+      - name: Install Chromium on Windows
+        if: runner.os == 'Windows'
+        run: pnpm --filter @volynets/reflex-dom exec playwright install chromium
+      - name: Qualify all current semantic and package gates
+        run: pnpm quality:check -- --phase release --output-dir artifacts/release-checks
+      - name: Qualify the exact versioned tarballs
+        run: pnpm test:consumer -- --output-dir artifacts/qualification
+      - name: Verify approved archive identities without publishing
+        run: |
+          qualification=$(find artifacts/qualification -name qualification.json -print -quit)
+          node tooling/configs/publish-qualified.mjs --qualification "$qualification" --quality-summary artifacts/release-checks/summary.json > artifacts/release/publication-verification.json
+          cp package.json pnpm-lock.yaml artifacts/release/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-qualified-${{ runner.os }}-${{ github.sha }}
+          path: |
+            artifacts/release/
+            artifacts/release-checks/
+            artifacts/qualification/
+          if-no-files-found: error
+          retention-days: 90

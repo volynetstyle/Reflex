@@ -14,47 +14,63 @@
         "types": "./src/index.ts",
         "default": "./src/index.ts"
       },
-      "types": "./dist/globals.d.ts",
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.cjs"
+      "import": {
+        "types": "./dist/globals.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/globals.d.cts",
+        "default": "./dist/cjs/index.cjs"
+      }
     },
     "./unstable": {
       "source": {
         "types": "./src/unstable/index.ts",
         "default": "./src/unstable/index.ts"
       },
-      "types": "./dist/unstable/index.d.ts",
-      "import": "./dist/esm/unstable/index.js",
-      "require": "./dist/cjs/unstable/index.cjs"
+      "import": {
+        "types": "./dist/unstable/index.d.ts",
+        "default": "./dist/esm/unstable/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/unstable/index.d.cts",
+        "default": "./dist/cjs/unstable/index.cjs"
+      }
     },
     "./debug": {
       "source": {
         "types": "./src/debug/index.ts",
         "default": "./src/debug/index.ts"
       },
-      "types": "./dist/debug/index.d.ts",
-      "import": "./dist/dev/debug/index.js",
-      "require": "./dist/cjs/debug/index.cjs"
+      "import": {
+        "types": "./dist/debug/index.d.ts",
+        "default": "./dist/dev/debug/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/debug/index.d.cts",
+        "default": "./dist/cjs/debug/index.cjs"
+      }
     }
   },
   "files": [
     "src",
     "dist/cjs",
     "dist/esm",
+    "dist/dev",
     "dist/debug",
     "dist/globals.d.ts",
-    "dist/unstable"
+    "dist/unstable",
+    "dist/global-types.d.ts"
   ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "clean": "node ../../tooling/build/clean.mjs .",
     "build": "pnpm clean && pnpm build:ts && pnpm build:types && pnpm build:npm",
-    "build:all": "node ../../scripts/build-chain.mjs @volynets/reflex-runtime @volynets/reflex-scheduler @volynets/reflex",
-    "prebuild:ts": "pnpm --filter @volynets/reflex-runtime build:ts && pnpm --filter @volynets/reflex-scheduler build",
+    "build:all": "node ../../tooling/build/run.mjs @volynets/reflex",
     "build:ts": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
-    "build:types": "rollup --silent -c rollup.dts.config.ts --configPlugin @rollup/plugin-swc && node ../../scripts/write-globals-dts.mjs . && node ./scripts/write-subpath-dts.mjs .",
+    "build:types": "rollup --silent -c rollup.dts.config.ts --configPlugin @rollup/plugin-swc && node ../../scripts/write-globals-dts.mjs . && node ./scripts/write-subpath-dts.mjs . && node ../../tooling/build/cjs-declarations.mjs . facade",
     "build:npm": "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc",
     "build:clean": "pnpm build",
     "lint": "eslint .",
@@ -88,7 +104,9 @@
     "dev": "node ../../node_modules/typescript/bin/tsc -w -p tsconfig.build.json",
     "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
     "typecheck:tests": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.type-tests.json",
-    "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm build:clean"
+    "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm check:artifacts",
+    "check:artifacts": "node ../../tooling/build/verify-artifacts.mjs --directory .",
+    "prepack": "pnpm check:artifacts"
   },
   "dependencies": {
     "@volynets/reflex-scheduler": "workspace:*"
@@ -102,5 +120,6 @@
   },
   "peerDependencies": {
     "@volynets/reflex-runtime": "^1.0.0"
-  }
+  },
+  "private": false
 }

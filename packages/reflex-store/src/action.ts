@@ -24,6 +24,8 @@ export function action<F extends (...args: any[]) => any>(
   ): ReturnType<F> {
     const previousReceiver = receiver;
     const previousArguments = arguments_;
+    // Reuse one executor frame while preserving receiver across recursive actions.
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     receiver = this;
     arguments_ = args;
     try {

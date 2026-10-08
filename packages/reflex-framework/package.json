@@ -34,13 +34,14 @@
     }
   },
   "files": [
+    "src",
     "dist"
   ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "clean": "node ./scripts/clean.mjs",
+    "clean": "node ../../tooling/build/clean.mjs .",
     "build": "node ./scripts/clean.mjs && node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs dist && node ./scripts/ensure-disposable-reference.mjs && node ./scripts/finalize-modules.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -51,7 +52,10 @@
     "bench:ui": "pnpm exec vitest bench bench/ui-scenarios.bench.ts --config vite.config.ts",
     "build:dashboard": "pnpm --dir examples/build-dashboard build",
     "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
-    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build"
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm check:artifacts",
+    "build:all": "node ../../tooling/build/run.mjs @volynets/reflex-framework",
+    "check:artifacts": "node ../../tooling/build/verify-artifacts.mjs --directory .",
+    "prepack": "pnpm check:artifacts"
   },
   "keywords": [
     "jsx",
@@ -77,5 +81,6 @@
   },
   "devDependencies": {
     "@volynets/reflex-runtime": "workspace:*"
-  }
+  },
+  "private": false
 }

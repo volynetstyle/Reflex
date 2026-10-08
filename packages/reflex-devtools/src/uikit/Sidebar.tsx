@@ -20,15 +20,15 @@ const navItems = [
 ] satisfies readonly NavItem[];
 
 const sidebarModel = createModel((ctx) => {
-  const [activeItem, setActiveItem] = signal("home");
-  const [isExpanded, setIsExpanded] = signal(false);
+  const activeItem = signal("home");
+  const isExpanded = signal(false);
 
   const selectItem = ctx.action((id: string) => {
-    setActiveItem(id);
+    activeItem.set(id);
   });
 
   const toggleExpanded = ctx.action(() => {
-    setIsExpanded((prev) => !prev);
+    isExpanded.set((prev) => !prev);
   });
 
   return {

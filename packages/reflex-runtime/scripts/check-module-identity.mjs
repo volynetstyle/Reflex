@@ -32,15 +32,20 @@ for (const development of [false, true]) {
     { cwd: new URL("../", import.meta.url), stdio: "pipe" },
   );
 }
-execFileSync(
-  process.execPath,
-  [
-    "-e",
-    'const assert = require("node:assert/strict"); const core = require("@volynets/reflex-runtime"); const internal = require("@volynets/reflex-runtime/internal");' +
-      check,
-  ],
-  { cwd: new URL("../", import.meta.url), stdio: "pipe" },
-);
+for (const development of [false, true]) {
+  execFileSync(
+    process.execPath,
+    [
+      ...(development ? ["--conditions=development"] : []),
+      "-e",
+      'const assert = require("node:assert/strict"); const core = require("@volynets/reflex-runtime"); const internal = require("@volynets/reflex-runtime/internal");' +
+        check +
+        (development ? 'assert.equal(typeof require("@volynets/reflex-runtime/debug").subtle.mcp, "function");' : ""),
+    ],
+    { cwd: new URL("../", import.meta.url), stdio: "pipe" },
+  );
+}
+
 console.log(
-  "Runtime entrypoints share one kernel in production ESM, development ESM and CJS.",
+  "Runtime entrypoints share one kernel in production/development ESM and production/development CJS.",
 );

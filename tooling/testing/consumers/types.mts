@@ -1,0 +1,10 @@
+import * as runtime from "@volynets/reflex-runtime";
+import * as internal from "@volynets/reflex-runtime/internal";
+import {createRuntime,signal,effect} from "@volynets/reflex";
+import {asyncDerived} from "@volynets/reflex-async";
+import {createStore} from "@volynets/reflex-store";
+import plugin from "@volynets/reflex-store/vite";
+const context=runtime.createRuntimeContext();
+runtime.runWithRuntimeContext(context,()=>internal.getActiveRuntimeContext());
+const host=createRuntime();const value=signal(1);const source=asyncDerived(()=>value());const stop=effect(()=>{value();});
+createStore({value:1});plugin();source.dispose();stop();host.flush();

@@ -1,0 +1,357 @@
+{
+  "schemaVersion": 1,
+  "note": "All currently protected Runtime differential/bounded/recovery suites remain in the PR test command. Split only after recorded timings and a reviewed budget.",
+  "packages": [
+    {
+      "id": "runtime",
+      "name": "@volynets/reflex-runtime",
+      "phase": "pr",
+      "buildDependencies": true,
+      "checks": [
+        {
+          "id": "lint",
+          "script": "lint"
+        },
+        {
+          "id": "check:rules",
+          "script": "check:rules"
+        },
+        {
+          "id": "typecheck",
+          "script": "typecheck"
+        },
+        {
+          "id": "test",
+          "script": "test"
+        },
+        {
+          "id": "test:dev",
+          "script": "test:dev"
+        },
+        {
+          "id": "test:projection",
+          "script": "test:projection"
+        },
+        {
+          "id": "check:architecture",
+          "script": "check:architecture"
+        },
+        {
+          "id": "test:e2e",
+          "script": "test:e2e"
+        }
+      ]
+    },
+    {
+      "id": "scheduler",
+      "name": "@volynets/reflex-scheduler",
+      "phase": "pr",
+      "buildDependencies": true,
+      "checks": [
+        {
+          "id": "lint",
+          "script": "lint"
+        },
+        {
+          "id": "typecheck",
+          "script": "typecheck"
+        },
+        {
+          "id": "test",
+          "script": "test"
+        }
+      ]
+    },
+    {
+      "id": "reflex",
+      "name": "@volynets/reflex",
+      "phase": "pr",
+      "buildDependencies": true,
+      "checks": [
+        {
+          "id": "lint",
+          "script": "lint"
+        },
+        {
+          "id": "typecheck",
+          "script": "typecheck"
+        },
+        {
+          "id": "typecheck:tests",
+          "script": "typecheck:tests"
+        },
+        {
+          "id": "test",
+          "script": "test"
+        }
+      ]
+    },
+    {
+      "id": "async",
+      "name": "@volynets/reflex-async",
+      "phase": "pr",
+      "buildDependencies": true,
+      "checks": [
+        {
+          "id": "lint",
+          "script": "lint"
+        },
+        {
+          "id": "typecheck",
+          "script": "typecheck"
+        },
+        {
+          "id": "typecheck:async:semantics",
+          "script": "typecheck:async:semantics"
+        },
+        {
+          "id": "test",
+          "script": "test"
+        },
+        {
+          "id": "test:async:production",
+          "script": "test:async:production"
+        },
+        {
+          "id": "test:async:package",
+          "script": "test:async:package"
+        },
+        {
+          "id": "typecheck:package",
+          "script": "typecheck:package"
+        }
+      ]
+    },
+    {
+      "id": "framework",
+      "name": "@volynets/reflex-framework",
+      "phase": "pr",
+      "buildDependencies": true,
+      "checks": [
+        {
+          "id": "lint",
+          "script": "lint"
+        },
+        {
+          "id": "typecheck",
+          "script": "typecheck"
+        },
+        {
+          "id": "test",
+          "script": "test"
+        },
+        {
+          "id": "build:dashboard",
+          "script": "build:dashboard"
+        },
+        {
+          "id": "dashboard:typecheck",
+          "args": [
+            "--dir",
+            "packages/reflex-framework/examples/build-dashboard",
+            "run",
+            "typecheck"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dom",
+      "name": "@volynets/reflex-dom",
+      "phase": "pr",
+      "buildDependencies": true,
+      "checks": [
+        {
+          "id": "lint",
+          "script": "lint"
+        },
+        {
+          "id": "typecheck",
+          "script": "typecheck"
+        },
+        {
+          "id": "test",
+          "script": "test"
+        },
+        {
+          "id": "test:browser",
+          "script": "test:browser"
+        },
+        {
+          "id": "test:standalone",
+          "script": "test:standalone"
+        },
+        {
+          "id": "test:library",
+          "script": "test:library"
+        }
+      ],
+      "requiresBrowser": true
+    },
+    {
+      "id": "store",
+      "name": "@volynets/reflex-store",
+      "phase": "pr",
+      "buildDependencies": true,
+      "checks": [
+        {
+          "id": "lint",
+          "script": "lint"
+        },
+        {
+          "id": "typecheck",
+          "script": "typecheck"
+        },
+        {
+          "id": "test",
+          "script": "test"
+        },
+        {
+          "id": "test:dev",
+          "script": "test:dev"
+        },
+        {
+          "id": "test:packed-runtime",
+          "script": "test:packed-runtime"
+        }
+      ]
+    },
+    {
+      "id": "mcp",
+      "name": "@volynets/reflex-runtime-mcp",
+      "phase": "pr",
+      "buildDependencies": true,
+      "checks": [
+        {
+          "id": "lint",
+          "args": [
+            "exec",
+            "eslint",
+            "packages/reflex-runtime-mcp"
+          ]
+        },
+        {
+          "id": "typecheck",
+          "script": "typecheck"
+        },
+        {
+          "id": "smoke",
+          "script": "smoke"
+        }
+      ]
+    },
+    {
+      "id": "vite-plugin",
+      "name": "@volynets/reflex-vite-plugin",
+      "phase": "pr",
+      "buildDependencies": true,
+      "checks": [
+        {
+          "id": "lint",
+          "args": [
+            "exec",
+            "eslint",
+            "plugins/@vite/reflex-vite-plugin"
+          ]
+        },
+        {
+          "id": "typecheck",
+          "script": "typecheck"
+        }
+      ]
+    },
+    {
+      "id": "algorithm-projection",
+      "name": "@volynets/algorithm-projection",
+      "phase": "pr",
+      "buildDependencies": true,
+      "checks": [
+        {
+          "id": "lint",
+          "args": [
+            "exec",
+            "eslint",
+            "third-party/algorithm-projection"
+          ]
+        },
+        {
+          "id": "typecheck",
+          "script": "typecheck"
+        },
+        {
+          "id": "test",
+          "script": "test"
+        }
+      ]
+    },
+    {
+      "id": "devtools",
+      "name": "reflex-devtools",
+      "phase": "pr",
+      "buildDependencies": true,
+      "checks": [
+        {
+          "id": "lint",
+          "args": [
+            "exec",
+            "eslint",
+            "packages/reflex-devtools"
+          ]
+        },
+        {
+          "id": "typecheck",
+          "script": "typecheck"
+        }
+      ]
+    },
+    {
+      "id": "reactivity-research",
+      "name": "@reflex-lab/reactivity-bench",
+      "phase": "deep",
+      "buildDependencies": true,
+      "checks": [
+        {
+          "id": "typecheck",
+          "script": "typecheck"
+        },
+        {
+          "id": "test",
+          "script": "test"
+        },
+        {
+          "id": "contracts",
+          "script": "contracts"
+        }
+      ]
+    },
+    {
+      "id": "mini-app",
+      "name": "@reflex-examples/mini-app",
+      "phase": "pr",
+      "buildDependencies": true,
+      "checks": [
+        {
+          "id": "typecheck",
+          "script": "typecheck"
+        }
+      ]
+    }
+  ],
+  "deepChecks": [
+    {
+      "package": "async",
+      "id": "test:async:semantics",
+      "script": "test:async:semantics"
+    },
+    {
+      "package": "async",
+      "id": "test:async:mutations",
+      "script": "test:async:mutations"
+    },
+    {
+      "package": "async",
+      "id": "test:async:production:mutations",
+      "script": "test:async:production:mutations"
+    }
+  ]
+}

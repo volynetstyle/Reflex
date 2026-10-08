@@ -18,25 +18,31 @@
     }
   },
   "files": [
+    "src",
     "dist"
   ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "clean": "node -e \"const fs=require('node:fs');fs.rmSync('dist',{recursive:true,force:true});fs.rmSync('build',{recursive:true,force:true})\"",
-    "build": "pnpm clean && node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs dist",
+    "clean": "node ../../tooling/build/clean.mjs .",
+    "build": "pnpm clean && node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs dist && node scripts/finalize-modules.mjs",
     "lint": "eslint .",
     "test": "vitest run",
     "bench": "vitest bench",
     "bench:full-graph": "vitest bench bench/full-graph.bench.ts",
     "bench:hot-path": "vitest bench bench/hot-path.bench.ts",
-    "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json"
+    "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
+    "build:all": "node ../../tooling/build/run.mjs @volynets/reflex-scheduler",
+    "check:artifacts": "node ../../tooling/build/verify-artifacts.mjs --directory .",
+    "prepack": "pnpm check:artifacts",
+    "prepublishOnly": "pnpm typecheck && pnpm check:artifacts"
   },
   "peerDependencies": {
     "@volynets/reflex-runtime": "^1.0.0"
   },
   "devDependencies": {
     "@volynets/reflex-runtime": "workspace:*"
-  }
+  },
+  "private": false
 }

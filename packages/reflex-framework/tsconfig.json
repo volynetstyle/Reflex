@@ -1,18 +1,23 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022"
+    ],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
-      "@volynets/reflex-runtime": ["../reflex-runtime/src/index.ts"],
+      "@volynets/reflex-runtime": [
+        "../reflex-runtime/src/index.ts"
+      ],
       "@volynets/reflex-runtime/internal": [
         "../reflex-runtime/src/internal/index.ts"
       ],
-      "@runtime/*": ["../reflex-runtime/src/*"]
+      "@runtime/*": [
+        "../reflex-runtime/src/*"
+      ]
     },
-    "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "useUnknownInCatchVariables": true,
@@ -21,7 +26,9 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "customConditions": ["source"],
+    "customConditions": [
+      "source"
+    ],
     "allowImportingTsExtensions": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
@@ -33,5 +40,8 @@
     "src/**/*.tsx",
     "../reflex-runtime/src/globals.d.ts"
   ],
-  "exclude": ["dist", "**/*.test.ts"]
+  "exclude": [
+    "dist",
+    "**/*.test.ts"
+  ]
 }

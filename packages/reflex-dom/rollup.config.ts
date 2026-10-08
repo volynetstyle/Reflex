@@ -1,3 +1,4 @@
+import { runtimeReplacements } from "../../tooling/configs/runtime-flags.ts";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import nodeResolve from "@rollup/plugin-node-resolve";
@@ -105,15 +106,7 @@ function javascript(isStandalone: boolean): RollupOptions {
       }),
       replace({
         preventAssignment: true,
-        values: {
-          __DEV__: "false",
-          __PROFILE__: "false",
-          __TEST__: "false",
-          __PROD__: "true",
-          __TRACKING_ONE_HOP__: "true",
-          __TRACKING_TWO_HOP__: "true",
-          __TRACKING_LAST_EDGE__: "true",
-        },
+        values: runtimeReplacements("production"),
       }),
       terser({
         compress: {

@@ -70,6 +70,7 @@ function resolveRuntimeSpecifier(filePath, specifier) {
 
 function rewriteRelativeSpecifiers(filePath, source) {
   const replacers = [
+    /(import\s*["'])(\.{1,2}\/[^"']+?)(["'])/g,
     /(from\s*["'])(\.{1,2}\/[^"']+?)(["'])/g,
     /(import\s*\(\s*["'])(\.{1,2}\/[^"']+?)(["'])/g,
   ];

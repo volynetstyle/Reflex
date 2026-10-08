@@ -1,0 +1,1249 @@
+{
+  "schemaVersion": 1,
+  "inventoryCommit": "f572742fc0cdcc8291fa0af53736af5e92472def",
+  "policy": "Existing tracked bytes retained in place. Ignored/untracked user work excluded. This inventory commit is not inferred as each original measurement commit.",
+  "artifacts": [
+    {
+      "path": "bench-results/cost-attribution/REPORT.md",
+      "bytes": 13685,
+      "sha256": "6984f8a63212cdad46e433f9ce1a40954311cf5af5d37f8114f4969123467f3b",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/cost-attribution/structural/churn.json",
+      "bytes": 21910,
+      "sha256": "40fa16f9eb0d7bfa74db561482b64736337edb493aed3dc61f1d56fbd263ec13",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/structural/churnByWidth.json",
+      "bytes": 66036,
+      "sha256": "a67f08536bbabd7f2de559c8d40dbc226098bc33faf5a6b49aab9c8c72a0edf6",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/structural/depth.json",
+      "bytes": 68025,
+      "sha256": "7466fa3398e401e0297e03b4c0a6963d838474adf519c4a646c781a63651c59e",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/structural/depthFineCliff.json",
+      "bytes": 162236,
+      "sha256": "828e8c9696337ddbaa84cc98ef0e6ee8dcede3c622589c415a12641a7338806d",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/structural/depthPullThreshold.json",
+      "bytes": 153459,
+      "sha256": "ca4a15e0914c3f3db0b6b2054b51c773345d8c21e88694f9516da7d38067a7f7",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/structural/fanin.json",
+      "bytes": 32160,
+      "sha256": "3d03d7776a7ccf94f63e3dc30b10102cfd4d084d97b5e0b484e1ad2a74b3bf83",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/structural/fanout.json",
+      "bytes": 38986,
+      "sha256": "91d0247939fda70d5e27d33647a5bbd6b1ea425f2768c5d409d45dd94611657e",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/structural/fanoutBySemantic.json",
+      "bytes": 78505,
+      "sha256": "5e5b640d638c1c11f0d703edbd844cc76e723bdaf5bdcd88dc669843188973ef",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/structural/fanoutPushThreshold.json",
+      "bytes": 93680,
+      "sha256": "71d6ef553e070f472a5b5ff3cd25766a9252e4b8d96dd3ef29bbd7fb064b9ee5",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/structural/locality.json",
+      "bytes": 16995,
+      "sha256": "de860fb852707722734402bafb9fbfe48f53876266d158b0a17d6fcea05e2f37",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/structural/semantic.json",
+      "bytes": 25792,
+      "sha256": "bb504e0b0f8bc37e30aab7a5d8e0fbdb8cd78bffde52b5d9c4b207d318ed07ed",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/structural/semanticFixedFanout1024.json",
+      "bytes": 26281,
+      "sha256": "406e0da494deb0f14cc000562516d2e38e2462fb88f7ebc8dc5efc2086efc822",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/structural/width.json",
+      "bytes": 20106,
+      "sha256": "0589e9d128d7b94413d86befe83b075ca93057b5e14a49f1ec0127fc8998f531",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/timing/churn.json",
+      "bytes": 1654,
+      "sha256": "d56cca1a612bf7914176163704e05bed807410e16d81f254d7d4088fbe02ec5a",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/timing/churnByWidth.json",
+      "bytes": 6196,
+      "sha256": "e6e1f30bb48fcfc648b5da3de7a386596de1b297c4404e6fb0633913f2c5f011",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/timing/depth.json",
+      "bytes": 3294,
+      "sha256": "c535ee177a97f3717b0a5492d720fdea0f933d275a6d44dc62929ac303f81ade",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/timing/depthFineCliff.json",
+      "bytes": 6659,
+      "sha256": "485e4a0918ae9091c0c1667d26ff5c6d93471ab272cf8db65628f7264425ef2f",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/timing/depthPullThreshold.json",
+      "bytes": 6384,
+      "sha256": "24bcc687d972bf3a12e1ff6884ce3052ceb0ef761bedd7dec93eb993ddd7e7ad",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/timing/fanin.json",
+      "bytes": 2635,
+      "sha256": "d304d07559da8b60cbb95784d15e80c880c0e88fd97315641a81e5c43b504262",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/timing/fanout.json",
+      "bytes": 2628,
+      "sha256": "1e5db084840e13be11fd084a47a7da7433ff2a8506c3a02b8b501b635d11af2e",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/timing/fanoutBySemantic.json",
+      "bytes": 6392,
+      "sha256": "f3b697dae4130dab4da14339e3e61b4939fbb519822816dc85f793a2013796fd",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/timing/fanoutPushThreshold.json",
+      "bytes": 6834,
+      "sha256": "03a84330ed12948da6b3ad8cba93c823354305df7428a0b1a1a4fd31ac577bdf",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/timing/locality.json",
+      "bytes": 1438,
+      "sha256": "a1534130ec5c8b8433fa18fad0e4131da5534f51d5df1d3577a3f4b2529bd2e0",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/timing/semantic.json",
+      "bytes": 1731,
+      "sha256": "036e65da2c7b3bb3ceabe92fb45eab8c0c05155f95f02d1a2e9e259d06d950a5",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/timing/semanticFixedFanout1024.json",
+      "bytes": 1886,
+      "sha256": "d10ea25245af21b92b9c2956574d5760cbc4eecd4d39c38da7ebeb8e62de96bf",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/cost-attribution/timing/width.json",
+      "bytes": 1658,
+      "sha256": "280916c9b8426a8ae251f516cdc44a2d6cd2f8076fdeebe2608a127f5b1cb78a",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/effect-fanout-attribution/HOT_PATH.md",
+      "bytes": 1987,
+      "sha256": "3b042b65cfffce05ae2946cd4c3c73995e88fc111276b3f8dfe9ea72e884d68f",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/effect-fanout-attribution/REPORT.md",
+      "bytes": 6742,
+      "sha256": "8b273ebf70c8b9bba4345a4847815976edb2a0894f26460dab11d9dc9b63c952",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/effect-fanout-attribution/structural.baseline.json",
+      "bytes": 67267,
+      "sha256": "11fe005d5ec3e61e722934709840c74e8080c4afb2e7959f661721d6d18f9157",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/effect-fanout-attribution/structural.json",
+      "bytes": 68049,
+      "sha256": "fa370ed403698f3ba579738e03a3ffa95581861f7357945b1317dbfe3ec35bf8",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/effect-fanout-attribution/timing.baseline.json",
+      "bytes": 14116,
+      "sha256": "835b5ee861ad1b75a4d1f3848593d0a93e121b370cd0a986f1d85b772fbf6b87",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/effect-fanout-attribution/timing.json",
+      "bytes": 25646,
+      "sha256": "05d8599c5fc75439e061d76a21cd5671d8931c2e04c92c944d2aad0bf23443bf",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/ownership/baseline.json",
+      "bytes": 8570,
+      "sha256": "ce68508b14815c8cb35c3c444eb284a8b6876872d8c77ac732929dc16463f0b3",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/ownership/context-record-chain.json",
+      "bytes": 9578,
+      "sha256": "8413755086025fb1dd655751c41f94ae7767d99a9d2cda4a2ef1ca7614464bc5",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/ownership/optimized.json",
+      "bytes": 8554,
+      "sha256": "2d440ca07099e6d7c3badcf557b3e9f66ffcc4cee1726b7ffdb9c231dccfe7f5",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/reflex-competitors/PRIORITY_FINDINGS.md",
+      "bytes": 3214,
+      "sha256": "1ed48bf1e380b4ff963811986dc3416cdaea9628b2aaf3dcdbae26209d237a47",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/adaptive-check.csv",
+      "bytes": 1391,
+      "sha256": "9200e82db79d59cc47c1d5bff2fd7e5bb8de69137fbbed3f24d9bb2150b6653d",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/adaptive-check.md",
+      "bytes": 1444,
+      "sha256": "96294e99828d42fab3c9f4ff7e0589ba9a3b9e8334df7a7fddb2c741d46c2a16",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/audit-topology.csv",
+      "bytes": 1377,
+      "sha256": "707b437230a38722ef8b79e3693ae2243340c5fba8b915023fac0c4f49e69bad",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/audit-topology.md",
+      "bytes": 1357,
+      "sha256": "d1406a6f57b90e392c18c64b1893407e8883185f755e8b86f827e82bef75ea96",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/audit-work.csv",
+      "bytes": 3237,
+      "sha256": "b16379036a8e2387cd6a3d542fa017dc41761551c2befe5ed7d5ec5169791fb5",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/audit-work.md",
+      "bytes": 2700,
+      "sha256": "840e9a14f57ddb28b0cf2c12988ebacac8056abeb55e115addb81bb7900d5cc1",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/changed-chain-16384.csv",
+      "bytes": 652,
+      "sha256": "bbb2db925724bd3347966895041206c3f8be34827360197ee9e2dce134ac3b8a",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/changed-chain-16384.md",
+      "bytes": 852,
+      "sha256": "db230df0e94984c10474dd0736fb2a9903ec8a0e3725e96ef99f8f13a1d13c05",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/changed-leaf-1.csv",
+      "bytes": 681,
+      "sha256": "356bdfe8f8883f80432f88ff9b9b257d7e22662f2205ad3d29ed979e25652673",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/changed-leaf-1.md",
+      "bytes": 811,
+      "sha256": "f03532fa0fc4fe318f9381106064eee33dbb9db83195c4e8be1eab8875a3c1fe",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/checksum-smoke.csv",
+      "bytes": 1043,
+      "sha256": "099129a80aa32ea59ede46e43acdda2fb7cb67f5e6c40876a2a7b9fa06983e11",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/checksum-smoke.md",
+      "bytes": 1307,
+      "sha256": "d44932b499c78b5232cc44242af4347b0938f7eedba5dca31f2086303365cc22",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/contracts-honest.md",
+      "bytes": 995,
+      "sha256": "25ad07fefe39c18bc70289ba971dd9b8970146e2be49a464b81658ec3fe383de",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/contracts-with-e87bb66.md",
+      "bytes": 927,
+      "sha256": "5234819ea4ac5e47c7f3bcdfabd9e9d9fa3d1deaa72ccedb2c760e51032fb219",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/dynamic-branch-256.csv",
+      "bytes": 750,
+      "sha256": "3ac21b5bb3f7dc11d4f9c9c4be871ebd6a18ddea4988c273cf2993adad055b2d",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/dynamic-branch-256.md",
+      "bytes": 831,
+      "sha256": "8ab7dbab3886a901a4967188592315effe1523383549e651dc9772e3547a2c45",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/effect-fanout-body-cost.csv",
+      "bytes": 6817,
+      "sha256": "32eac9ee617b9d589afccf5ded7f836717e5dd73d74400414a17a10327dd9e6d",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/effect-fanout-body-cost.md",
+      "bytes": 4542,
+      "sha256": "0ef45fa278478acc2fe1b270c99610eefaf37760cce9d9781e92297d3df27efe",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/effect-fanout-scheduled-ownership.csv",
+      "bytes": 11468,
+      "sha256": "4949ed184631f7ee46be864b78985cb47803e241444e85894d278483a1cd3852",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/effect-fanout-scheduled-ownership.md",
+      "bytes": 7345,
+      "sha256": "7e874d4889051111c3bc6402b5f13973010095ebccb955fab81aa1136ce684e2",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/equal-write-boundary-p0.csv",
+      "bytes": 2279,
+      "sha256": "908afd44e553bc35fb6bc6dd7e887c2a79819d13c4f4bab73789e6873ed77da2",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/equal-write-boundary-p0.md",
+      "bytes": 2049,
+      "sha256": "47a70e737f5aa14f43789f34364cfb04b1e39312df5862f1462d8edf456eb774",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/expanded-smoke-with-e87bb66.csv",
+      "bytes": 10434,
+      "sha256": "86d0b2766aa431f15fce8b1fb783df9180cece338fcf33e383c8c6c5961b978c",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/expanded-smoke-with-e87bb66.md",
+      "bytes": 8174,
+      "sha256": "2686f72afa008d904b742b39a1e1b0cf46acabeffbe2b139ddde0f8bdad8f61d",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/expanded-smoke.csv",
+      "bytes": 8234,
+      "sha256": "dd222e024938abb581ae0c25d0abde77e75c06a66f35de6d6c2e82c04f573a76",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/expanded-smoke.md",
+      "bytes": 6616,
+      "sha256": "303dba42c21930a823269117b5f0fcb6416b56b16e7e841f8d6279b7e79497ad",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/fanout-crossover.csv",
+      "bytes": 22338,
+      "sha256": "a5956c40ac5af3bd6634d7037d9c628b5db54fb0b19cb51e19c00bc38fd092f7",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/fanout-crossover.md",
+      "bytes": 13762,
+      "sha256": "3b3dfddd2ad6fe4def413a3fd937114e6b06797590aba0001e0fac5a81c28725",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/honest-full-smoke-v2.csv",
+      "bytes": 11945,
+      "sha256": "7e7d7b105662306695efcbf2b7fe26126030b4b679c8dd55329f93e3be69790d",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/honest-full-smoke-v2.md",
+      "bytes": 11156,
+      "sha256": "0d78b30439edca1c4d1e0e8db2250b1fbdefedce0707041b8f9c8cac990b3f35",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/honest-full-smoke.csv",
+      "bytes": 11953,
+      "sha256": "1749507e25d112f9c170e7f59ea9ae7cb92d838a52110732c6e6f60873a42eb6",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/honest-full-smoke.md",
+      "bytes": 11154,
+      "sha256": "5365890eb89920b3ba93b59e1b7dd6e8083c6f9a812a3a19b6c0e1d06f74e4d5",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/honest-representative-v2.csv",
+      "bytes": 3350,
+      "sha256": "986650477ca0c42b5998f577bcabe3de23470b714c7099bd76e12b397690a624",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/honest-representative-v2.md",
+      "bytes": 2684,
+      "sha256": "9f5da678fca6fd8ffb2b48846ee938516b6e75170c944fcfc50b37edec3f268b",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/honest-representative.csv",
+      "bytes": 5231,
+      "sha256": "d5253c8846cca0262f1beb6981d0e02c5f7752f5f1a5890c68ffc67216a5d38a",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/honest-representative.md",
+      "bytes": 9612,
+      "sha256": "d82c017112c0349b201a2585e96165dae9cda6ab7ab301a540812897e8b36eb7",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/honesty-smoke.csv",
+      "bytes": 5728,
+      "sha256": "e7445af5fce55fd30fa2ab952564e698f15bd6a38b4d973bfa02ff50881d2c12",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/honesty-smoke.md",
+      "bytes": 5495,
+      "sha256": "a117bca19db92cc2943e75d3a29c572a9f1800c6d21ecbb21bb10e029aa4e72e",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/hot-path-computed-baseline.csv",
+      "bytes": 811,
+      "sha256": "ba084035ce2d81e61ecd4621cdab136dd0c220e199a0794b63ab740cc743cedf",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/hot-path-computed-baseline.md",
+      "bytes": 887,
+      "sha256": "6f91a8c3a788fc9bb496a2ff93a94743eb4f48fd1a18408d11fb0c57747905d8",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/hot-path-computed-cleanup-bit-control.csv",
+      "bytes": 794,
+      "sha256": "76eb7a21b78748557a7f7323fb1a52db237d923af4278268db20095487902d42",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/hot-path-computed-cleanup-bit-control.md",
+      "bytes": 887,
+      "sha256": "f539e271dbeee954083346dd5f0d84d16c9ebfea54ff9544595b850544185f9a",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/hot-path-computed-object-is.csv",
+      "bytes": 799,
+      "sha256": "05df666de73701591693fe84dd952a638ccb8623f434b510d55a5ecabf265119",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/hot-path-computed-object-is.md",
+      "bytes": 887,
+      "sha256": "a8ec735807f18aaff3c31c24e6dcf1663e3c28d43490dfbf5a7654c8cd0acb6e",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/hot-path-computed-specialized.csv",
+      "bytes": 810,
+      "sha256": "fcdeb1eac259b85876a21da2d5a68674b6fcda21f7531a310407c4c6035fd2d2",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/hot-path-computed-specialized.md",
+      "bytes": 887,
+      "sha256": "dc260be57f28adcf006bd74a1ce5e713c5fa825a6da3ce2a86bae474cbb7490c",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/hot-path-watcher-baseline.csv",
+      "bytes": 1167,
+      "sha256": "7249c8c79db412576cdc6ad2810a002e888c68464124da5cb81a058044f6269b",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/hot-path-watcher-baseline.md",
+      "bytes": 1120,
+      "sha256": "df31b0eb7b3dc022b6687b54202e483e3bc82af98cbf6c434ccc71dbc0ff7d41",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/hot-path-watcher-cleanup-bit-repeat.csv",
+      "bytes": 1191,
+      "sha256": "4a44fe52a5f13ea43810b3d08aaa1ca12976c7e255b064400f31793d0f027785",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/hot-path-watcher-cleanup-bit-repeat.md",
+      "bytes": 1120,
+      "sha256": "3e5c1f30a4d5897828595bc5e016613217c655209df3dab4aaff758f9eee5304",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/hot-path-watcher-cleanup-bit.csv",
+      "bytes": 1177,
+      "sha256": "c7e573363625f389a937333ca04a859097f34c48427962fca96101d2b5057f3b",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/hot-path-watcher-cleanup-bit.md",
+      "bytes": 1120,
+      "sha256": "408d8bfdbe80017f61c914f80a40f94b274ec59cc4f1621917a766957baeaa6e",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/hot-path-watcher-fused-repeat.csv",
+      "bytes": 1176,
+      "sha256": "59496001e97703f45a5dc8cf9684c4d41966dea25289c26d1c2a7a949c6af6d8",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/hot-path-watcher-fused-repeat.md",
+      "bytes": 1120,
+      "sha256": "962dec3a33e5d64d0441a43482e60666875676eff0920dee2a545e7648f8e9c6",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/hot-path-watcher-specialized.csv",
+      "bytes": 1178,
+      "sha256": "58d833d512b4c5a59165530e575116fe5d45872f462a8632bdf7e09f25b52474",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/hot-path-watcher-specialized.md",
+      "bytes": 1120,
+      "sha256": "57b46ae39c3d05392382260fe2fe8c0020a3e7b4698e29425f9721c6bfda6f13",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/latest.csv",
+      "bytes": 63633,
+      "sha256": "6f882ac0613db934bd17c060d04f03afc7e97daa95f58aea16b49acc41601857",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/latest.md",
+      "bytes": 76976,
+      "sha256": "5210a1263da598cb64d5085c1d54623f332a929d1c5aa47cd026b4fbfc326978",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/new-scenarios-smoke.csv",
+      "bytes": 2740,
+      "sha256": "44bcde9399b161c9ace9c1878d5890c92a5e5e050dae61bd81e4c6e96ed93e5f",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/new-scenarios-smoke.md",
+      "bytes": 2342,
+      "sha256": "97a2b175186475aaad7dd52fae3965959988eea99f9376a25fd3e37a92375d00",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/owned-continuation-equal.csv",
+      "bytes": 1340,
+      "sha256": "8f72316538c85e304a1803c63ef9dbfd479ba903ffe583f62655183cf9ea36df",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/owned-continuation-equal.md",
+      "bytes": 1436,
+      "sha256": "1b96bdc3ef29ee4c8504ff52af3ee10a027361537ff8cffdb46c830541da3252",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/owned-continuation-p0.csv",
+      "bytes": 4270,
+      "sha256": "53169ed3a3be926ba72896f9d0f7256d531477e04a33fbaea284ef4203842e88",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/owned-continuation-p0.md",
+      "bytes": 3232,
+      "sha256": "aa78b8d0d8a98847c717ac1f3fb7077cb6aba8afc8a62643c5836477f41f4532",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/reflex-e87bb66-smoke.csv",
+      "bytes": 436,
+      "sha256": "f65b18a6436d53c07e849ced803c46b02d34f6798583b37ef9d237894bd27942",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/reflex-e87bb66-smoke.md",
+      "bytes": 649,
+      "sha256": "ff4a4bb41d96958f78939bd1e5126e06b64e41babeec289d5514e2b639c44b71",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/semantic-outcome-p0.csv",
+      "bytes": 3277,
+      "sha256": "00c8f3dbc0840af2adb1b804789fd1775b297279ac758656593b80830710ba93",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/semantic-outcome-p0.md",
+      "bytes": 2598,
+      "sha256": "452fcf9e70fe19bbed4b7b1146d3e7e24e37ae42cced251003add1fbd9fb14a6",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/semantic-outcome-smoke.csv",
+      "bytes": 2275,
+      "sha256": "23b402e892014507b3d284a24a5bb05e27db9bf4e169e6dc231514c27846173b",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/semantic-outcome-smoke.md",
+      "bytes": 2408,
+      "sha256": "eb7c49716266df6c9fda97360465834e421f4d572320cc90ad36bd1205e3b2b4",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex-competitors/task-board-256.csv",
+      "bytes": 719,
+      "sha256": "68ff66e14a1ea2ff41dc3a9bbc50ffec509ae9b2c9387b8eaecaac874cc3e780",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "bench-results/reflex-competitors/task-board-256.md",
+      "bytes": 816,
+      "sha256": "a3eaef0a008ca952510ace97ecdd3a298f0844e51d67695b5dd00858c8026691",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/reflex/dependency-churn-hot-branch-shape-001.json",
+      "bytes": 2261,
+      "sha256": "90947a3203ee88e7de6563e5b52ce0b349884a562ef8658864a320dc9f960a15",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/reflex/dependency-churn-indexed-experiment-001.json",
+      "bytes": 2126,
+      "sha256": "936ed26fb4651d9ff95a32399ac789f5d2cb5a411017626cd7c19e7f77c608b9",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/reflex/dependency-churn-no-far-reorder-experiment-001.json",
+      "bytes": 2065,
+      "sha256": "3bb57fc6f4048df3fcaf7ece4428cd33eb3e49611b6365f6280d147d0dff2850",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/reflex/dependency-churn-outgoing-probe-ab-001.json",
+      "bytes": 2170,
+      "sha256": "e2a40624bcf170c8aa2980b15768c15945397c598ce4676b91da48ddeb03ab0b",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/reflex/dependency-churn-outgoing-probe-experiment-001.json",
+      "bytes": 2167,
+      "sha256": "3458004e46258e011008bec8795b96ddc7822dca5cc47b2368818d4f19ce7bba",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/reflex/dependency-churn-outgoing-probe-fanout-001.json",
+      "bytes": 1648,
+      "sha256": "0e2552dc712e4c0e239702db62c381b4bd9b44c6578acbad360d6a19f54407ea",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/reflex/dependency-churn-outgoing-probe-merge-check-001.json",
+      "bytes": 3093,
+      "sha256": "f704e0a85106704b44035d42fd581548c740e5b699af378d0a492b2fdb02ba1c",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/reflex/dependency-churn-prefix-result-monomorphic-001.json",
+      "bytes": 2062,
+      "sha256": "818b6880db1bc45932f269b8620ef51208ebc3f90a248ebc86021d12970f15fe",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/reflex/dependency-churn-resolve-branch-shape-001.json",
+      "bytes": 2283,
+      "sha256": "d3f45b8adce005c5f88375765ad05dabc20e95a53b1f9a8cf487f0e250305384",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/reflex/dependency-churn-singleton-out-probe-experiment-001.json",
+      "bytes": 2997,
+      "sha256": "c2219f7c673a37df8d61a3064376066f27899a7c1bcdcf29a7351198436d4f8b",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/reflex/dependency-churn-skip-scan-experiment-001.json",
+      "bytes": 2281,
+      "sha256": "45ed6e11d723d63efe6b85843a0354dce5429dc4abd32de521ddda31080dc497",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/reflex/dependency-churn-tail-probe-experiment-001.json",
+      "bytes": 1990,
+      "sha256": "580802f0012770f551cf08bce29bf1f0ab9133751864ff60da42a260c1a6e1ef",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/reflex/dependency-churn-tight-hot-path-001.json",
+      "bytes": 1912,
+      "sha256": "2fe2d94a55c4d85e41c2fe640b5c53dfd6529777c7587ccf27edd17cb2e03a59",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/reflex/dependency-churn-tracking-baseline.json",
+      "bytes": 10124,
+      "sha256": "963a87c736192918fdc9bcc8a3361b06ea3392a095bcd19acd6e4ffc48a5de42",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/runtime-scheduler-boundary/latest.json",
+      "bytes": 9291,
+      "sha256": "b40c1f210f13a5968edf478808f16f8c0d80272a905a18d41d02c2c319a42ff2",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/runtime/latest-wide-fanout.json",
+      "bytes": 1665,
+      "sha256": "f9966505e3ea59029032db9e811c96ab36769eee3552af31c14acc38be5d7951",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/runtime/latest-wide-fanout.raw.json",
+      "bytes": 1375,
+      "sha256": "4a1a972e1f0dee8257d9e19a67c8d95307812e0f24d4acaf2ab05262967017e4",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/runtime/latest.json",
+      "bytes": 18544,
+      "sha256": "a73fb5cae0d27ab0ea2e05f5ab29678ecf387ead2f402673ffa2901da3201d80",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/runtime/latest.raw.json",
+      "bytes": 18253,
+      "sha256": "e2d2879dc7fcb533672302f9383fa8cbc1d4afb02aa8d60d9aa45d5b17695861",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/tracking-tier-factorial/README.md",
+      "bytes": 3059,
+      "sha256": "8f9d36d4467f7ee879c6ed41f5379b843ab43b26ac39fbf698b89ffa0f025690",
+      "role": "method-or-report"
+    },
+    {
+      "path": "bench-results/tracking-tier-factorial/latest.json",
+      "bytes": 111866,
+      "sha256": "0e89cc6be13b398c33be1cabb6ff86fa6eca9f4863772a1978b6aaf083c90e1f",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/tracking-tier-factorial/route-substitution.json",
+      "bytes": 90823,
+      "sha256": "ecf5d02c355e1e102c57b803d82ed8a138f3f49170cf076ada578845ad7ab5c7",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/work-amplification/churnRealDelta.json",
+      "bytes": 21457,
+      "sha256": "53afba1cc0ec8707002d7dfe942ddb39df94fc4e3694bb8448750deb76e28eea",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/work-amplification/churnZeroDelta.json",
+      "bytes": 20235,
+      "sha256": "a0781f00c83eb1738e86a21f9174870183cd265df01b6065b910acc9a8f3d3b5",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/work-amplification/depthControl.json",
+      "bytes": 66395,
+      "sha256": "c846d83cdfafa1e800d620860220ac2e38db304f4e0d227215b218fe65f65f27",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/work-amplification/fanoutSelectivity.json",
+      "bytes": 31861,
+      "sha256": "50b8dd28a5efa6699e6d867620cda34e05c61b01ff2386e819a3315923790521",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/work-amplification/fanoutSingleSink.json",
+      "bytes": 31500,
+      "sha256": "bcb99caef2b4d998c94a63a75cbba3515ebec4c0e8526323fc48ed6f69b6723c",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/work-amplification/locality.json",
+      "bytes": 16609,
+      "sha256": "4dd585f60e457f4685a4378cddf6dcdd16ea1da188693e251e2391623c7723b3",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/work-amplification/semanticStaggered.json",
+      "bytes": 20173,
+      "sha256": "d3ddaf585dea36793074ce375238f0ec72e677df86878653933fbbd291cfd256",
+      "role": "raw-data"
+    },
+    {
+      "path": "bench-results/work-amplification/width.json",
+      "bytes": 19650,
+      "sha256": "ae330f001f6963505f52200b2176c245f98d11c65fa6df2cd0bf60b410c8600c",
+      "role": "raw-data"
+    },
+    {
+      "path": "lab/add_benchmark.js",
+      "bytes": 1889,
+      "sha256": "67758e8ed41db2f6071ab2e0cf5054686ebe2924c2359a7e8049dd6bfa42c658",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/parse-v8-log.cjs",
+      "bytes": 5394,
+      "sha256": "c6bf6b0051049404b0c1b5544c6a890d3a9388894e7fa039912e2b1b2c579451",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/README.md",
+      "bytes": 2760,
+      "sha256": "19fd6331b7c3988b45f14b595e80a8e85ed135280b864bf7402799763f45d7f0",
+      "role": "method-or-report"
+    },
+    {
+      "path": "lab/reactivity-bench/package.json",
+      "bytes": 992,
+      "sha256": "73de3a97225e311723e07567f902a1fb1065075fb1cc91dcb11c5fd854a9383a",
+      "role": "raw-data"
+    },
+    {
+      "path": "lab/reactivity-bench/rollup.instrumented.config.ts",
+      "bytes": 1735,
+      "sha256": "dc48f8d29d4faf067035eacdd8a18bd064ccbc27e8a48a810208766dee6f9c57",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/scripts/instrument-alien.mjs",
+      "bytes": 2028,
+      "sha256": "0b37d82410f409eb06abc5bb049cbb4ed5a17c728ce92932c0eae2ca2923ac71",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/src/adapters/alien.ts",
+      "bytes": 889,
+      "sha256": "cbdc28a88b3ed8c82decea99756e4fcc3e6b62a15693953643d7b99ca705260a",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/src/adapters/index.ts",
+      "bytes": 306,
+      "sha256": "df143aafbfac1bf235afcc6edcaac5549954bd08178589d26dada2289963bb49",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/src/adapters/reflex.ts",
+      "bytes": 917,
+      "sha256": "416ff104b9c248996f15ea84f9401d2133978ac17dad18a1371c74dadea18090",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/src/cli.ts",
+      "bytes": 6493,
+      "sha256": "7ac7fb1b76ee9541e9f201fd54b0bb45c084f30695fb7c0f74f878072506654d",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/src/instrument-cli.ts",
+      "bytes": 1464,
+      "sha256": "7badd131fe41f9b6bb38051bd6a323616b2204ff54bea6330ccc3b5be2b8e3c7",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/src/instrument-worker.ts",
+      "bytes": 3104,
+      "sha256": "56670c8489e01ef5b2d588fd0c78f39e6a3e7f8a209de48860fe3cd8529b0f53",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/src/instrumented-modules.d.ts",
+      "bytes": 87,
+      "sha256": "bba3f5bbc385d9f8f4278858b23f86cca6717c2e3b771661010bed31a07651f0",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/src/instrumented/reflex-entry.ts",
+      "bytes": 1561,
+      "sha256": "6f9854a8e1295d42d652c9f95f3927cfc90270100d5e45cac3c4b0a760f3cc81",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/src/protocol.ts",
+      "bytes": 931,
+      "sha256": "649fdbc1f920fd4c7d52913289c9b248a6daa54f54d338bd8f58f21e2f52e4c8",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/src/types.ts",
+      "bytes": 1056,
+      "sha256": "cae79f6394040aac685f8a362dc5b0be6d8729313a229822a152d29fe7ae92b1",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/src/worker.ts",
+      "bytes": 4172,
+      "sha256": "1beba19145a3f73b8a69f4e591fb80b302a56f70a04026d00ebcc0e627a2ff70",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/src/workloads/corrected.ts",
+      "bytes": 3441,
+      "sha256": "e3c64f3502e16c2aa97cc20c0109955017a440188f7b605ccd3fa132993e5d09",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/src/workloads/diagnostic.ts",
+      "bytes": 2782,
+      "sha256": "8cca6c4d841d3fa11c5289b6d9645d86f08a1e79cc8e38d8b4b3dbd89866e998",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/src/workloads/helpers.ts",
+      "bytes": 1473,
+      "sha256": "4b0d65cc2c9c46fb7e922f4d915ef375be1e0a9139c9a5c085dc436233b634a9",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/src/workloads/index.ts",
+      "bytes": 898,
+      "sha256": "1e1136ff173475d4d87cf9b7c29daa7e0e2a15a2aa20536a94ce6f883dcd8198",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/src/workloads/vue-exact.ts",
+      "bytes": 9525,
+      "sha256": "45316408429841e96d48be1d51fae28ecc882fcee331017b3bef9db4f8715130",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/test/lifecycle.contract.test.ts",
+      "bytes": 4086,
+      "sha256": "8f3fb5b63d057191162ed1392c850ca549b10225661c9e8595325998544fcf2c",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/test/workloads.test.ts",
+      "bytes": 1080,
+      "sha256": "4710ca50391c61c63e1c0c0fb40d7eac51f3cf8f9655bd1d764989a3fc81c9d1",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/reactivity-bench/tsconfig.json",
+      "bytes": 402,
+      "sha256": "39fcfbd2815ec03317840cc632c0c9f83fb190096897baca4d2a18476bc6e799",
+      "role": "raw-data"
+    },
+    {
+      "path": "lab/reactivity-bench/vitest.config.ts",
+      "bytes": 404,
+      "sha256": "e7146eba7c0a94476fe74b063982ae95fbc4365054e42a146560fe26308c2fe8",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/test.ts",
+      "bytes": 5416,
+      "sha256": "d0951b3418ba6037a060e7f44247ff02cecd5be8572af0fc1cf8b44339ae1911",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/v8-inspector/decoder.ts",
+      "bytes": 1561,
+      "sha256": "c69078fb6cd2a964a582f21e587498e811ff6081a985d45d43ba3ee72b8eb035",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "lab/v8-native.ts",
+      "bytes": 13458,
+      "sha256": "7dc2762fa29f3481e4c3abc4fb7054e7a1629030d5eee1ebc573d0164ae156a2",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/.gitignore",
+      "bytes": 15,
+      "sha256": "f328eba57e206cb62855cab3835764d8bfadb6d50eff76fa66fd6bcc4ba2a7e0",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/INVARIANTS.md",
+      "bytes": 2583,
+      "sha256": "b1d1b9c5f4e595eb5517ff583dabad21b8562e113f00b952ad5f591b43120a43",
+      "role": "method-or-report"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/README.md",
+      "bytes": 10633,
+      "sha256": "e77df46883dff473352974d5e1755f7d5f1b6d889b1d9b1c91cba2bfdabbf909",
+      "role": "method-or-report"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/analyze.mjs",
+      "bytes": 6961,
+      "sha256": "dc81722318e7388a1071864fc58c8ba5089c9bd7f52a4430b488902e341e2832",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/build.mjs",
+      "bytes": 9993,
+      "sha256": "33ccb4eb445baad146d22f98fb8be60e36a55535248139a9e394c4e5bd57513d",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/model.mjs",
+      "bytes": 3775,
+      "sha256": "296a8f9baae06065bb9b630c8b41a97f4ca45c3491db49b725b3b89367a22a40",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/oracle.mjs",
+      "bytes": 8055,
+      "sha256": "b9a0ec88efbc4fdb2304b1ad7be96053394e80dffa3b21f23a2272434c2e7c5d",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/results/oracle.json",
+      "bytes": 416548,
+      "sha256": "e68f9568348959d7ee2be062f68aefd79f2777a4c8ba99bdc1f5be0b270eb49f",
+      "role": "raw-data"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/results/oracle.md",
+      "bytes": 1268,
+      "sha256": "124c4ee4c6e41dcbd85ac624d2d709401c01ba3892ba6a8189d5a3b29efb1646",
+      "role": "method-or-report"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/results/results-first.json",
+      "bytes": 2167975,
+      "sha256": "ffac099979a8c9475e7433ff0e79a2362a7c9c1ba0888acf72de8c5474702618",
+      "role": "raw-data"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/results/results.csv",
+      "bytes": 48828,
+      "sha256": "030807d1576b70b968be7a1a1cdf3f5b3f3d881763a07ab5cd5952408e0c2e6c",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/results/results.json",
+      "bytes": 2168271,
+      "sha256": "d061d4f36250befb9bc80acd38313dbfad0170ee088642fed70b4f0ea3abbc44",
+      "role": "raw-data"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/results/rotation-body.ts.txt",
+      "bytes": 508,
+      "sha256": "6279cd42fd197747451d30a6e0da9369bf7109382c83b6dfa31bc197c95395ff",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/results/summary.md",
+      "bytes": 28013,
+      "sha256": "a81bb6cc5916609e3f6d6aaa9ee15ebd69ca15c065d8a4446260c38dfb8b4ee7",
+      "role": "method-or-report"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/results/verification.json",
+      "bytes": 221,
+      "sha256": "afc55b00ee5a1f297fc754c690038ff51206421d70d106e928ad88e448f069b8",
+      "role": "raw-data"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/rotation-body.ts.txt",
+      "bytes": 508,
+      "sha256": "6279cd42fd197747451d30a6e0da9369bf7109382c83b6dfa31bc197c95395ff",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/run.mjs",
+      "bytes": 1694,
+      "sha256": "596cbb81a3b62085aa80604d21bce1bcba8a2c7df74f994ca02c89fd2e40652f",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/verify.mjs",
+      "bytes": 10598,
+      "sha256": "0cb44e59a10cfbd4d71bc5cdd725b85c77d61d6d91fdd0ac8c1d6ea28aee8c46",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/vitest.config.ts",
+      "bytes": 1768,
+      "sha256": "9c8c92def46d7ba5400a2ffcafecd4431b48b61ea2c4dd27417fca64a55bb8c2",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/block-rotation/worker.mjs",
+      "bytes": 9205,
+      "sha256": "aeab87750d2d5fa09c4ae8aed8331b839c5d495d625d8768723a788ea4ff1b57",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/callback-memory/run.mjs",
+      "bytes": 12782,
+      "sha256": "f007588078deb1ac0187a0aa643280fa30fc0b8eeb455896a52f8bd93052eca3",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/cost-attribution/analyze.mjs",
+      "bytes": 17141,
+      "sha256": "110d23451ae22424a028ba76ce4929358be03089426fe22d664e8edf765dfd07",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/node-allocation/README.md",
+      "bytes": 2374,
+      "sha256": "e2f8bad4de5980f79922238dcd28ccfbd3dc8ad2ea667633333aaee1dd23d3bb",
+      "role": "method-or-report"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/node-allocation/run.mjs",
+      "bytes": 5111,
+      "sha256": "76988244b818e6fad8ea95de04567198d703db56d632a313267f795edfb4bf6b",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/perf-tree/run.mjs",
+      "bytes": 30513,
+      "sha256": "6ec28f04e3acf6372699e824eca42ad820f92f20d43fa957bcbea70c623eb12a",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/suffix-preservation/.gitignore",
+      "bytes": 48,
+      "sha256": "7c2fe19e8dab5dcf4876c6bdac03135ca0846f06e99e36fca8713df63999cd63",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/suffix-preservation/README.md",
+      "bytes": 6819,
+      "sha256": "3b02a24fa8a61b463a8f2ab5e8f097eba9979264440acc0027fd1e78e60f4e69",
+      "role": "method-or-report"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/suffix-preservation/analyze.mjs",
+      "bytes": 6503,
+      "sha256": "d8f385e218064d7aa4e6a1cb6ff52562b704e084fdfca8bbf7262b5cefc501a5",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/suffix-preservation/results/results-first.json",
+      "bytes": 116628,
+      "sha256": "2a10b0a7db9e6f6c474443aa0597fa30ccdd63b80f033c1b5ad7798252bef191",
+      "role": "raw-data"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/suffix-preservation/results/results.csv",
+      "bytes": 19542,
+      "sha256": "cd313f2ac17ee85bc4730bc5308cf0e9fcf629214f1476aabc9cb5736c35304e",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/suffix-preservation/results/results.json",
+      "bytes": 116589,
+      "sha256": "ee04ea63c85254f12755cf7346fd951697cbb3ba2fea847c7a72798035e21402",
+      "role": "raw-data"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/suffix-preservation/results/runtime.patch",
+      "bytes": 1086,
+      "sha256": "ad78e33b54925e42ed205d5acc745123bfc2e1e4907a098c9ab43626545f66cd",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/suffix-preservation/results/summary.md",
+      "bytes": 13502,
+      "sha256": "5d650c72b321cd0323510947fe15f9a8b62580d86354c642c6ea7ae2dd053e8e",
+      "role": "method-or-report"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/suffix-preservation/run.mjs",
+      "bytes": 10986,
+      "sha256": "050c1211397518add0e2d7b7483e2efc2a37e6e149695d14932c9e6370e5c025",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/suffix-preservation/worker.mjs",
+      "bytes": 6230,
+      "sha256": "e9f6df7ad6e98f8c5ad4b70abdd76c761dcad7a7709534a94178980a7ec5a4d2",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "packages/reflex-runtime/perf/tracking-tier-profile.entry.mjs",
+      "bytes": 110,
+      "sha256": "0c976ba2dca0ea79bf72f60237154593f5f4db6da293b72353b6347877f8cd4f",
+      "role": "reproduction-source"
+    },
+    {
+      "path": "theory/01.MinimalCorrectesModel.pdf",
+      "bytes": 64127,
+      "sha256": "7a582cec6a4853d8ddff9d67f4a0aed37e9153dd4782c3a8b05035be405dd609",
+      "role": "theory"
+    },
+    {
+      "path": "theory/02.TraceMaintaince.pdf",
+      "bytes": 99735,
+      "sha256": "52b3326535055c9821746e15a29577fe19c7a35eaa3f17e8f4aa7f3a670a9327",
+      "role": "theory"
+    },
+    {
+      "path": "theory/Readme.md",
+      "bytes": 30,
+      "sha256": "4eadc2649fc78447b8a43acb7e6fde0bdb85bade0f9b7e20866d994ba96f4add",
+      "role": "method-or-report"
+    }
+  ]
+}

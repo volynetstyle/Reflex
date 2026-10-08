@@ -1,3 +1,4 @@
+import { selectRuntimeReplacements } from "../../tooling/configs/runtime-flags.ts";
 import type { Plugin, RollupOptions } from "rollup";
 import replace from "@rollup/plugin-replace";
 import terser from "@rollup/plugin-terser";
@@ -97,10 +98,7 @@ function resolvePlugin(): Plugin {
 function replacePlugin(target: BuildTarget): Plugin {
   return replace({
     preventAssignment: true,
-    values: {
-      __DEV__: JSON.stringify(target.dev),
-      __PROFILE__: JSON.stringify(target.dev),
-    },
+    values: selectRuntimeReplacements(target.dev ? "development" : "production", ["__DEV__", "__PROFILE__"]),
   });
 }
 

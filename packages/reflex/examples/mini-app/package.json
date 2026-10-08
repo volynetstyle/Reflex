@@ -1,0 +1,16 @@
+{
+  "name": "@reflex-examples/mini-app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build --config vite.config.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@volynets/reflex": "workspace:*",
+    "@volynets/reflex-runtime": "workspace:*",
+    "@volynets/reflex-dom": "workspace:*",
+    "@volynets/reflex-store": "workspace:*"
+  }
+}

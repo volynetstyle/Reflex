@@ -1,104 +1,66 @@
 # Reflex
 
-Reflex is a deterministic reactive runtime for building systems with explicit dataflow, scheduling, and ownership.
+Reflex is a layered reactive system for synchronous computation, scheduling, lifecycle ownership, stores, async work and DOM rendering.
 
-It is not a UI framework first. The runtime can power UI, simulation, orchestration, server workflows, and other reactive systems where control over execution matters.
+Application code normally starts with `@volynets/reflex`:
+
+```ts
+import { createRuntime, signal, computed, effect } from "@volynets/reflex";
+
+const runtime = createRuntime({ effectStrategy: "eager" });
+const count = signal(0);
+const doubled = computed(() => count() * 2);
+const stop = effect(() => { console.log(doubled()); });
+
+runtime.batch(() => {
+  count.set(1);
+  count.set(2);
+});
+runtime.flush();
+stop();
+```
 
 ## Packages
 
-### `@reflex/core`
+| Package | Responsibility |
+| --- | --- |
+| `@volynets/reflex-runtime` | Reactive kernel, execution contexts and separate diagnostics |
+| `@volynets/reflex-scheduler` | Host scheduling and effect delivery |
+| `@volynets/reflex` | Application-facing signals, computeds, effects, events and ownership |
+| `@volynets/reflex-framework` | Host-independent lifecycle, hooks and JSX meaning |
+| `@volynets/reflex-dom` | DOM rendering, SSR, hydration and a separate standalone composition |
+| `@volynets/reflex-store` | Store semantics, compiler, portable compiler assets and Vite transform |
+| `@volynets/reflex-async` | Attempts, pending state, commit authority and cancellation |
+| `@volynets/reflex-runtime-mcp` | Read-only diagnostic tools through the official MCP protocol SDK |
+| `@volynets/reflex-vite-plugin` | Application compilation tooling |
+| `@volynets/algorithm-projection` | Development instrumentation and projection tooling |
 
-Low-level reactive primitives and graph/ownership mechanics.
+Devtools and the mini-app example are private applications. The reactivity comparison lab is a private research workspace. Publication eligibility and build scopes are explicit in [the package registry](tooling/build/package-registry.mjs).
 
-- ownership model
-- reactive graph operations
-- scheduling-independent core logic
+## Development
 
-### `@reflex/runtime`
+Use Node specified by `.nvmrc` and **pnpm 9.0.0**.
 
-Runtime layer built on top of `@reflex/core`.
-
-- connected runtime behavior
-- reactive execution helpers
-- scheduler-oriented runtime APIs
-
-### `@volynets/reflex`
-
-Public application-facing facade.
-
-- `signal`
-- `computed`
-- `memo`
-- `effect`
-- `createModel`
-- `own`
-- `isModel`
-- `createRuntime`
-- `map` / `filter` / `merge`
-- `scan` / `hold` / `subscribeOnce`
-- model contract: `docs/models.md`
-
-### `@volynets/reflex-async`
-
-Reactive async derivations with committed snapshots, cancelable attempts and
-validated dependency freshness. Includes contract tests, benchmarks and the
-async semantics labs. See [the package documentation](packages/reflex-async/README.md).
-
-## Recommended Entry Point
-
-For application code, start with `@volynets/reflex`.
-
-```ts
-import {
-  createModel,
-  createRuntime,
-  effect,
-  signal,
-} from "@volynets/reflex";
-
-const rt = createRuntime();
-
-const [count, setCount] = signal(0);
-const createCounterModel = createModel((ctx) => ({
-  count,
-  inc: ctx.action(() => setCount((value) => value + 1)),
-}));
-
-const counter = createCounterModel();
-
-effect(() => {
-  console.log(counter.count());
-});
-
-counter.inc();
-rt.flush();
+```sh
+pnpm install --frozen-lockfile
+pnpm build
+pnpm test:tooling
+pnpm quality:check
+pnpm qualify
 ```
 
-## Architecture
+Chromium is required for browser checks:
 
-The repository is currently organized around three active layers:
+```sh
+pnpm --filter @volynets/reflex-dom exec playwright install chromium
+```
 
-1. `@reflex/core`
-2. `@reflex/runtime`
-3. `@volynets/reflex`
+On Linux CI, use `playwright install --with-deps chromium`. See the [development quickstart](docs/development/quickstart.md), [architecture](ARCHITECTURE.md), [package contracts](docs/contracts/package-contracts.md) and [release process](docs/development/release.md).
 
-There is also a DOM adapter in the repository as `reflex-dom`.
+Builds preserve a shared kernel within a supported module format and consistent conditions. DOM standalone contains a separate kernel. Mixed ESM/CJS state sharing is not promised; see the package contracts.
 
-### `reflex-dom`
-
-`reflex-dom` is the deterministic DOM renderer built on top of the Reflex
-runtime. Its architecture, render pipeline, ownership model, and lifecycle are
-documented here:
-
-- `packages/reflex-dom/README.md`
-- `packages/reflex-dom/docs/ONBOARDING.ru.md`
-
-## Philosophy
-
-- explicit runtime behavior over hidden scheduling
-- deterministic execution over convenience magic
-- clear layering between core logic and application-facing API
+Research results and negative evidence are preserved through [checksum manifests](experiments/README.md). Research is excluded from the default product build.
 
 ## License
 
-MIT
+[MIT](LICENSE).

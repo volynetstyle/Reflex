@@ -11,28 +11,43 @@
   "types": "./dist/esm/src/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/esm/src/index.d.ts",
       "import": {
+        "types": "./dist/esm/src/index.d.ts",
         "development": "./dist/dev/index.js",
         "default": "./dist/esm/index.js"
       },
-      "require": "./dist/cjs/index.cjs"
+      "require": {
+        "types": "./dist/cjs/types/src/index.d.cts",
+        "development": "./dist/cjs-dev/index.cjs",
+        "default": "./dist/cjs/index.cjs"
+      }
     },
     "./debug": {
-      "types": "./dist/esm/debug/index.d.ts",
-      "import": "./dist/dev/debug.js"
+      "import": {
+        "types": "./dist/esm/debug/index.d.ts",
+        "default": "./dist/dev/debug.js"
+      },
+      "require": {
+        "types": "./dist/cjs/types/debug/index.d.cts",
+        "default": "./dist/cjs-dev/debug.cjs"
+      }
     },
     "./internal": {
-      "types": "./dist/esm/src/internal/index.d.ts",
       "import": {
+        "types": "./dist/esm/src/internal/index.d.ts",
         "development": "./dist/dev/internal.js",
         "default": "./dist/esm/internal.js"
       },
-      "require": "./dist/cjs/internal.cjs"
+      "require": {
+        "types": "./dist/cjs/types/src/internal/index.d.cts",
+        "development": "./dist/cjs-dev/internal.cjs",
+        "default": "./dist/cjs/internal.cjs"
+      }
     }
   },
   "files": [
     "dist/cjs",
+    "dist/cjs-dev",
     "dist/dev",
     "dist/esm",
     "dist/index.d.ts",
@@ -43,12 +58,12 @@
     "access": "public"
   },
   "scripts": {
-    "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "clean": "node ../../tooling/build/clean.mjs .",
     "dev": "vite",
     "build:ts": "tsc -p tsconfig.build.json && node scripts/rewrite-build-aliases.mjs && node ../../scripts/write-index-dts.mjs .",
     "build:npm": "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc",
     "build:perf": "rollup --silent -c rollup.perf.config.ts --configPlugin @rollup/plugin-swc",
-    "build": "pnpm clean && pnpm build:ts && pnpm build:npm && pnpm check:projection-erasure && pnpm check:identity",
+    "build": "pnpm clean && pnpm build:ts && pnpm build:npm && pnpm build:types:cjs && pnpm check:projection-erasure && pnpm check:identity",
     "check:projection-erasure": "node scripts/check-production-projection-erasure.mjs",
     "example:introspection": "pnpm build && node examples/introspection.phases.mjs",
     "bench:core": "pnpm build:perf && node --expose-gc dist/perf.js",
@@ -84,13 +99,18 @@
     "format:fix": "prettier --write .",
     "typecheck": "tsc --noEmit && pnpm typecheck:differential",
     "typecheck:differential": "tsc --noEmit -p test/differential/tsconfig.json",
-    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build && pnpm check:architecture",
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm check:architecture && pnpm check:artifacts",
     "release": "changeset version && pnpm install && changeset publish",
-    "check:identity": "node scripts/check-module-identity.mjs"
+    "check:identity": "node scripts/check-module-identity.mjs",
+    "build:all": "node ../../tooling/build/run.mjs @volynets/reflex-runtime",
+    "check:artifacts": "node ../../tooling/build/verify-artifacts.mjs --directory .",
+    "prepack": "pnpm check:artifacts",
+    "build:types:cjs": "node ../../tooling/build/cjs-declarations.mjs . runtime"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",
     "@volynets/algorithm-projection": "workspace:*",
     "typescript": "^5.6.0"
-  }
+  },
+  "private": false
 }

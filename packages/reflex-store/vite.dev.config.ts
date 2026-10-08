@@ -5,5 +5,6 @@ export default mergeConfig(
   base,
   defineConfig({
     define: { __DEV__: true },
+      test: { name: "store/dev" },
   }),
 );

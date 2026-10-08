@@ -1,0 +1,1442 @@
+{
+  "schemaVersion": 1,
+  "kind": "structural-audit",
+  "auditDate": "2026-10-08",
+  "timezone": "Europe/Kiev",
+  "repository": {
+    "branch": "premain-refactor",
+    "commit": "f572742fc0cdcc8291fa0af53736af5e92472def",
+    "trackedFiles": 1092,
+    "workspacePatterns": [
+      "third-party/*",
+      "lab/*",
+      "packages/*",
+      "packages/@reflex/*",
+      "plugins/@vite/*"
+    ],
+    "trackedWorkspaceMembersExcludingRoot": 12,
+    "initialTrackedChanges": false,
+    "initialUntrackedPaths": [
+      "packages/reflex-store/bench/README.md",
+      "packages/reflex-store/bench/results/"
+    ],
+    "ignoredLocalMaterialsExcluded": [
+      "drafts/",
+      "untracked content of lab/"
+    ],
+    "lockfileSha256": "dd1109c485f7d7d163762658d99857ccda2a5fa6d212ecfd69f1765d877258c3"
+  },
+  "toolchain": {
+    "node": "v25.2.0",
+    "nvmrc": "v25.2.0",
+    "declaredPackageManager": "pnpm@9.0.0",
+    "executedPnpmVersion": null,
+    "installed": [
+      {
+        "name": "vitest",
+        "version": "4.1.5"
+      },
+      {
+        "name": "vite",
+        "version": "6.4.2"
+      },
+      {
+        "name": "typescript",
+        "version": "5.9.3"
+      },
+      {
+        "name": "rollup",
+        "version": "4.60.3"
+      },
+      {
+        "name": "@changesets/cli",
+        "version": "2.31.0"
+      },
+      {
+        "name": "jsdom",
+        "version": "29.1.1"
+      }
+    ],
+    "installedVersionsSource": "existing node_modules package manifests, not a fresh installation"
+  },
+  "trackedAreas": [
+    {
+      "prefix": "bench-results/",
+      "files": 139,
+      "bytes": 1993022
+    },
+    {
+      "prefix": "lab/",
+      "files": 29,
+      "bytes": 80304
+    },
+    {
+      "prefix": "drafts/",
+      "files": 0,
+      "bytes": 0
+    },
+    {
+      "prefix": "theory/",
+      "files": 3,
+      "bytes": 163892
+    },
+    {
+      "prefix": "packages/reflex-runtime/perf/",
+      "files": 36,
+      "bytes": 5263384
+    }
+  ],
+  "rootManifest": {
+    "name": "reflex-monorepo",
+    "private": true,
+    "version": "0.7.0",
+    "packageManager": "pnpm@9.0.0",
+    "scripts": {
+      "build": "pnpm -r build",
+      "test": "pnpm -r test",
+      "test:e2e:runtime": "pnpm --filter @volynets/reflex-runtime test:e2e",
+      "bench": "pnpm -r bench",
+      "bench:runtime": "pnpm --filter @volynets/reflex-runtime bench:runtime",
+      "bench:runtime:json": "pnpm exec ts-node --esm scripts/collect-benchmark-results.ts",
+      "bench:tracking-factorial": "pnpm --filter @volynets/reflex-runtime build:ts && pnpm --filter @volynets/reflex-runtime exec rollup --silent -c rollup.tracking-factorial.config.ts --configPlugin @rollup/plugin-swc && node scripts/compare-tracking-tiers-factorial.mjs",
+      "bench:tracking-tier-profile": "pnpm --filter @volynets/reflex-runtime build:ts && pnpm --filter @volynets/reflex-runtime exec rollup --silent -c rollup.tracking-tier-profile.config.ts --configPlugin @rollup/plugin-swc && node scripts/profile-tracking-tier-substitution.mjs",
+      "bench:compare": "pnpm exec ts-node --esm scripts/compare-benchmark-results.ts",
+      "bench:quality-gate": "pnpm exec ts-node --esm scripts/benchmark-quality-gate.ts",
+      "bench:history": "pnpm exec ts-node --esm scripts/benchmark-history.ts",
+      "qualify:stages": "node scripts/qualify-stages.mjs",
+      "lint": "eslint .",
+      "lint:fix": "eslint . --fix",
+      "typecheck": "pnpm -r typecheck",
+      "typecheck:differential": "pnpm --filter @volynets/reflex-runtime typecheck:differential",
+      "release": "changeset version && pnpm install && changeset publish",
+      "prepare": "husky"
+    },
+    "devDependencies": {
+      "0x": "^6.0.0",
+      "@changesets/cli": "^2.27.0",
+      "@eslint/js": "^9.0.0",
+      "@rollup/plugin-node-resolve": "^16.0.3",
+      "@rollup/plugin-replace": "^6.0.3",
+      "@rollup/plugin-swc": "^0.4.0",
+      "@rollup/plugin-terser": "^0.4.4",
+      "@swc/core": "^1.15.18",
+      "@vitest/coverage-v8": "^4.0.9",
+      "eslint": "^9.0.0",
+      "fast-check": "^4.3.0",
+      "husky": "^9.0.0",
+      "jsdom": "^29.0.1",
+      "lint-staged": "^15.0.0",
+      "prettier": "^3.3.0",
+      "rollup": "^4.54.0",
+      "rollup-plugin-const-enum": "^1.1.5",
+      "ts-node": "^10.9.2",
+      "typescript": "^5.6.0",
+      "typescript-eslint": "^8.0.0",
+      "vite": "^6.0.0",
+      "vitest": "^4.0.0"
+    },
+    "dependencies": {
+      "rollup-plugin-dts": "^6.4.1"
+    }
+  },
+  "packages": [
+    {
+      "path": "lab/reactivity-bench/package.json",
+      "name": "@reflex-lab/reactivity-bench",
+      "version": "0.0.0",
+      "private": true,
+      "scripts": {
+        "build": "tsc -p tsconfig.json && rollup --silent -c rollup.instrumented.config.ts --configPlugin @rollup/plugin-swc && node scripts/instrument-alien.mjs",
+        "typecheck": "tsc --noEmit -p tsconfig.json",
+        "test": "vitest run",
+        "bench": "node --expose-gc dist/src/cli.js",
+        "bench:smoke": "node --expose-gc dist/src/cli.js --smoke",
+        "bench:instrumented": "node dist/src/instrument-cli.js",
+        "contracts": "vitest run test/lifecycle.contract.test.ts"
+      },
+      "exports": null,
+      "main": null,
+      "module": null,
+      "types": null,
+      "type": "module",
+      "bin": null,
+      "sideEffects": null,
+      "workspaceMember": true,
+      "manifestSha256": "73de3a97225e311723e07567f902a1fb1065075fb1cc91dcb11c5fd854a9383a",
+      "dependencies": {
+        "@volynets/reflex": "workspace:*",
+        "alien-signals": "3.2.1"
+      },
+      "peerDependencies": {},
+      "devDependencies": {
+        "@types/node": "^26.1.2",
+        "@rollup/plugin-node-resolve": "^16.0.3",
+        "@rollup/plugin-replace": "^6.0.3",
+        "@rollup/plugin-swc": "^0.4.0",
+        "rollup": "^4.54.0"
+      },
+      "workspaceDevDependencies": {}
+    },
+    {
+      "path": "packages/reflex/package.json",
+      "name": "@volynets/reflex",
+      "version": "1.0.0",
+      "private": false,
+      "scripts": {
+        "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+        "build": "pnpm clean && pnpm build:ts && pnpm build:types && pnpm build:npm",
+        "build:all": "node ../../scripts/build-chain.mjs @volynets/reflex-runtime @volynets/reflex-scheduler @volynets/reflex",
+        "prebuild:ts": "pnpm --filter @volynets/reflex-runtime build:ts && pnpm --filter @volynets/reflex-scheduler build",
+        "build:ts": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
+        "build:types": "rollup --silent -c rollup.dts.config.ts --configPlugin @rollup/plugin-swc && node ../../scripts/write-globals-dts.mjs . && node ./scripts/write-subpath-dts.mjs .",
+        "build:npm": "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc",
+        "build:clean": "pnpm build",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "test": "vitest run",
+        "bench": "vitest bench",
+        "bench:api": "pnpm --filter @volynets/reflex-runtime build && pnpm build && node --expose-gc bench/api-facade.jit.mjs",
+        "bench:api:memory": "pnpm build && node --expose-gc bench/api-callback-memory/run.mjs",
+        "bench:api:memory:json": "pnpm build && node --expose-gc bench/api-callback-memory/run.mjs --json",
+        "bench:events": "vitest bench bench/event-*.bench.ts",
+        "bench:events:dispatcher": "vitest bench bench/event-dispatcher.bench.ts",
+        "bench:events:operators": "vitest bench bench/event-operators.compare.bench.ts",
+        "bench:events:raw": "vitest bench bench/event-delivery.compare.bench.ts",
+        "bench:model": "vitest bench bench/model.bench.ts",
+        "bench:scheduler": "vitest bench bench/scheduler.bench.ts",
+        "bench:scheduler:integration": "vitest bench bench/scheduler.integration.bench.ts",
+        "bench:competitors:prepare-e87bb66": "node bench/competitors/prepare-reflex-e87bb66.mjs",
+        "bench:competitors": "pnpm bench:competitors:prepare-e87bb66 && pnpm build:all && node --expose-gc bench/competitors/run.mjs",
+        "bench:competitors:smoke": "pnpm bench:competitors:prepare-e87bb66 && pnpm build:all && node --expose-gc bench/competitors/run.mjs --smoke",
+        "bench:competitors:contracts": "pnpm bench:competitors:prepare-e87bb66 && pnpm build:all && node bench/competitors/contracts.mjs",
+        "bench:competitors:claims": "node bench/competitors/claims.mjs",
+        "bench:effect-fanout:structural": "vitest run --config vite.effect-fanout-structural.config.ts",
+        "bench:effect-fanout:timing": "vitest run --config vite.effect-fanout-timing.config.ts",
+        "bench:effect-fanout:analyze": "node bench/effect-fanout-attribution/analyze.mjs",
+        "bench:hot-path:analyze": "node bench/effect-fanout-attribution/analyze-hot-path.mjs",
+        "bench:effect-fanout": "pnpm bench:effect-fanout:structural && pnpm bench:effect-fanout:timing && pnpm bench:effect-fanout:analyze",
+        "bench:projection": "node ./bench/projection-compare.node.mjs",
+        "demo": "vite --config examples/mini-app/vite.config.ts",
+        "demo:build": "vite build --config examples/mini-app/vite.config.ts",
+        "demo:typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p examples/mini-app/tsconfig.json",
+        "dev": "node ../../node_modules/typescript/bin/tsc -w -p tsconfig.build.json",
+        "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
+        "typecheck:tests": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.type-tests.json",
+        "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm build:clean"
+      },
+      "files": [
+        "src",
+        "dist/cjs",
+        "dist/esm",
+        "dist/debug",
+        "dist/globals.d.ts",
+        "dist/unstable"
+      ],
+      "publishConfig": {
+        "access": "public"
+      },
+      "exports": {
+        ".": {
+          "source": {
+            "types": "./src/index.ts",
+            "default": "./src/index.ts"
+          },
+          "types": "./dist/globals.d.ts",
+          "import": "./dist/esm/index.js",
+          "require": "./dist/cjs/index.cjs"
+        },
+        "./unstable": {
+          "source": {
+            "types": "./src/unstable/index.ts",
+            "default": "./src/unstable/index.ts"
+          },
+          "types": "./dist/unstable/index.d.ts",
+          "import": "./dist/esm/unstable/index.js",
+          "require": "./dist/cjs/unstable/index.cjs"
+        },
+        "./debug": {
+          "source": {
+            "types": "./src/debug/index.ts",
+            "default": "./src/debug/index.ts"
+          },
+          "types": "./dist/debug/index.d.ts",
+          "import": "./dist/dev/debug/index.js",
+          "require": "./dist/cjs/debug/index.cjs"
+        }
+      },
+      "main": "./dist/cjs/index.cjs",
+      "module": "./dist/esm/index.js",
+      "types": "./dist/globals.d.ts",
+      "type": "module",
+      "bin": null,
+      "sideEffects": false,
+      "workspaceMember": true,
+      "manifestSha256": "288826c07126eb7cdb3ab43651b31aadb69869ab7161a1347f3c20728587255e",
+      "dependencies": {
+        "@volynets/reflex-scheduler": "workspace:*"
+      },
+      "peerDependencies": {
+        "@volynets/reflex-runtime": "^1.0.0"
+      },
+      "devDependencies": {
+        "@solidjs/signals": "2.0.0-rc.9",
+        "@vue/reactivity": "3.5.43",
+        "alien-signals": "3.2.1",
+        "reactive-framework-test-suite": "0.0.2",
+        "@volynets/reflex-runtime": "workspace:*"
+      },
+      "workspaceDevDependencies": {
+        "@volynets/reflex-runtime": "workspace:*"
+      }
+    },
+    {
+      "path": "packages/reflex-async/package.json",
+      "name": "@volynets/reflex-async",
+      "version": "0.1.0",
+      "private": false,
+      "scripts": {
+        "clean": "node scripts/clean.mjs",
+        "build": "pnpm clean && pnpm build:ts && pnpm build:npm",
+        "build:all": "node ../../scripts/build-chain.mjs @volynets/reflex-runtime @volynets/reflex-async",
+        "build:ts": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
+        "build:npm": "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "test": "vitest run",
+        "test:coverage": "vitest run --coverage",
+        "test:async:package": "node scripts/check-package.mjs",
+        "test:async:bounded": "vitest run tests/reflex.async.bounded.test.ts",
+        "test:async:properties": "vitest run tests/reflex.async.property.test.ts tests/reflex.async.qualification.test.ts",
+        "test:async:production": "node lab/async-semantics/run.mjs --production-only",
+        "test:async:production:mutations": "node lab/async-semantics/qualify-b3-mutations.mjs --production",
+        "test:async:semantics": "node lab/async-semantics/run.mjs --correctness-only",
+        "test:async:semantics:mutations": "node lab/async-semantics/qualify-b3-mutations.mjs",
+        "bench:async:frontier": "node --expose-gc lab/async-frontier/bench.mjs",
+        "bench:async:consumption": "node --expose-gc lab/async-frontier/consumption-bench.mjs",
+        "bench:async:semantics": "node lab/async-semantics/run.mjs",
+        "typecheck:async:semantics": "node ../../node_modules/typescript/bin/tsc --noEmit -p lab/async-semantics/tsconfig.json",
+        "test:async:mutations": "node scripts/qualify-async-mutations.mjs",
+        "bench:async:baseline": "node bench/async-performance.node.mjs --capture-baseline",
+        "bench:async": "node bench/async-performance.node.mjs",
+        "bench": "vitest bench --run",
+        "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
+        "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build",
+        "typecheck:package": "node ../../node_modules/typescript/bin/tsc -p tsconfig.consumer.json"
+      },
+      "files": [
+        "src",
+        "dist",
+        "docs",
+        "README.md",
+        "LICENSE"
+      ],
+      "publishConfig": {
+        "access": "public"
+      },
+      "exports": {
+        ".": {
+          "source": {
+            "types": "./src/index.ts",
+            "default": "./src/index.ts"
+          },
+          "types": "./dist/index.d.ts",
+          "import": "./dist/esm/index.js",
+          "require": "./dist/cjs/index.cjs"
+        }
+      },
+      "main": "./dist/cjs/index.cjs",
+      "module": "./dist/esm/index.js",
+      "types": "./dist/index.d.ts",
+      "type": "module",
+      "bin": null,
+      "sideEffects": false,
+      "workspaceMember": true,
+      "manifestSha256": "b57aff6b010d624dba65c6e916b2edc4e26b17de5ad950b22d60dbd1a9e3b651",
+      "dependencies": {},
+      "peerDependencies": {
+        "@volynets/reflex-runtime": "^1.0.0"
+      },
+      "devDependencies": {
+        "@volynets/reflex": "workspace:*",
+        "@volynets/reflex-runtime": "workspace:*"
+      },
+      "workspaceDevDependencies": {
+        "@volynets/reflex": "workspace:*",
+        "@volynets/reflex-runtime": "workspace:*"
+      }
+    },
+    {
+      "path": "packages/reflex-devtools/package.json",
+      "name": "reflex-devtools",
+      "version": "0.0.1",
+      "private": false,
+      "scripts": {
+        "dev": "vite dev"
+      },
+      "exports": null,
+      "main": null,
+      "module": null,
+      "types": null,
+      "type": "module",
+      "bin": null,
+      "sideEffects": null,
+      "workspaceMember": true,
+      "manifestSha256": "8768a1184313c2efa4e1a2c6169639018ddd89754e6468e78c5e972a06e3720c",
+      "dependencies": {
+        "@volynets/reflex-runtime": "workspace:*",
+        "@volynets/reflex": "workspace:*",
+        "@volynets/reflex-dom": "workspace:*",
+        "@volynets/reflex-vite-plugin": "workspace:*",
+        "@tailwindcss/vite": "^4.2.4",
+        "cytoscape": "^3.33.2",
+        "tailwindcss": "^4.2.4"
+      },
+      "peerDependencies": {},
+      "devDependencies": {},
+      "workspaceDevDependencies": {}
+    },
+    {
+      "path": "packages/reflex-dom/package.json",
+      "name": "@volynets/reflex-dom",
+      "version": "1.0.0",
+      "private": false,
+      "engines": {
+        "node": ">=20.19.0"
+      },
+      "scripts": {
+        "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+        "build:dependencies": "pnpm --filter @volynets/reflex-runtime build && pnpm --filter @volynets/reflex-scheduler build && pnpm --filter @volynets/reflex-framework build",
+        "build:modules": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs build/esm",
+        "build:bundle": "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc && node ./scripts/finalize-package.mjs",
+        "build": "pnpm clean && pnpm build:dependencies && pnpm build:modules && pnpm build:bundle && pnpm test:standalone",
+        "bench:keyed": "vitest bench --config vite.config.ts bench/keyed-reconciliation.bench.ts",
+        "bench:boundary": "vitest bench --config vite.config.ts bench/scheduler-boundary.bench.ts --run",
+        "bench:range": "vitest bench --config vite.config.ts bench/range-handle.bench.ts --run",
+        "bench:mutations": "powershell -NoProfile -ExecutionPolicy Bypass -File ./bench/run-mutations.ps1",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "test": "pnpm exec vitest run --config vite.config.ts",
+        "test:browser": "vitest run --config vite.browser.config.ts",
+        "test:standalone": "node scripts/check-standalone.mjs",
+        "prepack": "pnpm build",
+        "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
+        "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck",
+        "test:library": "pnpm --filter @volynets/reflex build:all && pnpm --filter @volynets/reflex-store build && node scripts/check-library.mjs"
+      },
+      "files": [
+        "dist"
+      ],
+      "publishConfig": {
+        "access": "public",
+        "directory": "dist",
+        "linkDirectory": false
+      },
+      "exports": {
+        ".": {
+          "source": {
+            "types": "./src/index.ts",
+            "default": "./src/index.ts"
+          },
+          "types": "./dist/index.d.ts",
+          "import": "./dist/index.js"
+        },
+        "./jsx-runtime": {
+          "source": {
+            "types": "./src/jsx-runtime.ts",
+            "default": "./src/jsx-runtime.ts"
+          },
+          "types": "./dist/jsx-runtime.d.ts",
+          "import": "./dist/jsx-runtime.js"
+        },
+        "./jsx-dev-runtime": {
+          "source": {
+            "types": "./src/jsx-dev-runtime.ts",
+            "default": "./src/jsx-dev-runtime.ts"
+          },
+          "types": "./dist/jsx-dev-runtime.d.ts",
+          "import": "./dist/jsx-dev-runtime.js"
+        },
+        "./standalone": {
+          "types": "./dist/standalone/index.d.ts",
+          "import": "./dist/standalone/index.js"
+        },
+        "./standalone/jsx-runtime": {
+          "types": "./dist/standalone/jsx-runtime.d.ts",
+          "import": "./dist/standalone/jsx-runtime.js"
+        },
+        "./standalone/jsx-dev-runtime": {
+          "types": "./dist/standalone/jsx-dev-runtime.d.ts",
+          "import": "./dist/standalone/jsx-dev-runtime.js"
+        }
+      },
+      "main": "./dist/index.js",
+      "module": null,
+      "types": "./dist/index.d.ts",
+      "type": "module",
+      "bin": null,
+      "sideEffects": false,
+      "workspaceMember": true,
+      "manifestSha256": "22918d1676d6e21fd6a0771630ed8f80831602a34c23f3c747176aaace28d195",
+      "dependencies": {},
+      "peerDependencies": {
+        "@volynets/reflex-runtime": "^1.0.0",
+        "@volynets/reflex-framework": "^0.1.3",
+        "@volynets/reflex-scheduler": "^0.1.0"
+      },
+      "devDependencies": {
+        "@vitest/browser-playwright": "4.1.5",
+        "@volynets/reflex-framework": "workspace:*",
+        "@volynets/reflex-runtime": "workspace:*",
+        "@volynets/reflex-scheduler": "workspace:*",
+        "playwright": "^1.62.1"
+      },
+      "workspaceDevDependencies": {
+        "@volynets/reflex-framework": "workspace:*",
+        "@volynets/reflex-runtime": "workspace:*",
+        "@volynets/reflex-scheduler": "workspace:*"
+      }
+    },
+    {
+      "path": "packages/reflex-framework/examples/build-dashboard/package.json",
+      "name": "@volynets/reflex-build-dashboard-example",
+      "private": true,
+      "scripts": {
+        "build": "node ../../../../node_modules/rollup/dist/bin/rollup --silent -c rollup.config.mjs --configPlugin @rollup/plugin-swc",
+        "typecheck": "node ../../../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.json",
+        "start": "node dist/script.js"
+      },
+      "exports": null,
+      "main": null,
+      "module": null,
+      "types": null,
+      "type": "module",
+      "bin": null,
+      "sideEffects": false,
+      "workspaceMember": false,
+      "manifestSha256": "24d98cc4e9d2c25c53fe85d52b5b60a1eb515692914ec464d8142a70c389af41",
+      "dependencies": {
+        "@volynets/reflex-framework": "workspace:*"
+      },
+      "peerDependencies": {},
+      "devDependencies": {},
+      "workspaceDevDependencies": {}
+    },
+    {
+      "path": "packages/reflex-framework/package.json",
+      "name": "@volynets/reflex-framework",
+      "version": "0.1.3",
+      "private": false,
+      "engines": {
+        "node": ">=20.19.0"
+      },
+      "scripts": {
+        "clean": "node ./scripts/clean.mjs",
+        "build": "node ./scripts/clean.mjs && node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs dist && node ./scripts/ensure-disposable-reference.mjs && node ./scripts/finalize-modules.mjs",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "test": "pnpm exec vitest run --config vite.config.ts && pnpm test:dev",
+        "test:dev": "pnpm exec vitest run --config vite.lifecycle.dev.config.ts",
+        "bench": "pnpm exec vitest bench --config vite.config.ts",
+        "bench:ownership": "pnpm exec vitest bench bench/ownership.bench.ts --config vite.config.ts",
+        "bench:ui": "pnpm exec vitest bench bench/ui-scenarios.bench.ts --config vite.config.ts",
+        "build:dashboard": "pnpm --dir examples/build-dashboard build",
+        "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
+        "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build"
+      },
+      "files": [
+        "dist"
+      ],
+      "publishConfig": {
+        "access": "public"
+      },
+      "exports": {
+        ".": {
+          "source": {
+            "types": "./src/index.ts",
+            "default": "./src/index.ts"
+          },
+          "types": "./dist/index.d.ts",
+          "import": "./dist/index.js"
+        },
+        "./jsx-runtime": {
+          "source": {
+            "types": "./src/jsx-runtime.ts",
+            "default": "./src/jsx-runtime.ts"
+          },
+          "types": "./dist/jsx-runtime.d.ts",
+          "import": "./dist/jsx-runtime.js"
+        },
+        "./jsx-dev-runtime": {
+          "source": {
+            "types": "./src/jsx-dev-runtime.ts",
+            "default": "./src/jsx-dev-runtime.ts"
+          },
+          "types": "./dist/jsx-dev-runtime.d.ts",
+          "import": "./dist/jsx-dev-runtime.js"
+        }
+      },
+      "main": "./dist/index.js",
+      "module": null,
+      "types": "./dist/index.d.ts",
+      "type": "module",
+      "bin": null,
+      "sideEffects": false,
+      "workspaceMember": true,
+      "manifestSha256": "829beca563aa4c093fa318e2d2199ee97d48d8f817bacd5f0f6392b0fc1d15b2",
+      "dependencies": {},
+      "peerDependencies": {
+        "@volynets/reflex-runtime": "^1.0.0"
+      },
+      "devDependencies": {
+        "@volynets/reflex-runtime": "workspace:*"
+      },
+      "workspaceDevDependencies": {
+        "@volynets/reflex-runtime": "workspace:*"
+      }
+    },
+    {
+      "path": "packages/reflex-runtime/package.json",
+      "name": "@volynets/reflex-runtime",
+      "version": "1.0.0",
+      "private": false,
+      "scripts": {
+        "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+        "dev": "vite",
+        "build:ts": "tsc -p tsconfig.build.json && node scripts/rewrite-build-aliases.mjs && node ../../scripts/write-index-dts.mjs .",
+        "build:npm": "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc",
+        "build:perf": "rollup --silent -c rollup.perf.config.ts --configPlugin @rollup/plugin-swc",
+        "build": "pnpm clean && pnpm build:ts && pnpm build:npm && pnpm check:projection-erasure && pnpm check:identity",
+        "check:projection-erasure": "node scripts/check-production-projection-erasure.mjs",
+        "example:introspection": "pnpm build && node examples/introspection.phases.mjs",
+        "bench:core": "pnpm build:perf && node --expose-gc dist/perf.js",
+        "perf:tree": "pnpm build:ts && pnpm build:perf && node --expose-gc dist/perf-tree.js",
+        "test": "vitest run",
+        "test:projection": "vitest run --config vite.projection.config.ts",
+        "test:coverage": "vitest run --coverage",
+        "test:dev": "vitest run --config vite.dev.config.ts",
+        "check:architecture": "node scripts/check-architecture-contract.mjs",
+        "check:rules": "node scripts/check-rules-citations.mjs",
+        "pretest:e2e": "pnpm build",
+        "test:e2e": "node test/mjs/runtime.e2e.mjs",
+        "bench": "pnpm build && vitest bench test/signal_beta.bench.ts",
+        "bench:runtime": "vitest bench test/perf/runtime-taxonomy.bench.ts",
+        "bench:runtime:json": "vitest bench test/perf/runtime-taxonomy.bench.ts --outputJson ../../bench-results/runtime/latest.raw.json",
+        "bench:runtime:memory": "pnpm build:ts && pnpm build:perf && node --expose-gc perf/callback-memory/run.mjs",
+        "bench:runtime:memory:json": "pnpm build:ts && pnpm build:perf && node --expose-gc perf/callback-memory/run.mjs --json",
+        "bench:push-pull": "vitest bench --config vite.dev.config.ts test/perf/push-pull-components.bench.ts",
+        "bench:pull-wide": "vitest bench test/perf/pull-wide.bench.ts",
+        "bench:taxonomy": "pnpm bench:runtime",
+        "bench:cost-attribution:structural": "vitest run --config vite.cost-attribution.structural.config.ts",
+        "bench:cost-attribution:timing": "vitest run --config vite.cost-attribution.timing.config.ts",
+        "bench:cost-attribution:analyze": "node perf/cost-attribution/analyze.mjs",
+        "bench:cost-attribution": "pnpm bench:cost-attribution:structural && pnpm bench:cost-attribution:timing && pnpm bench:cost-attribution:analyze",
+        "bench:work-amplification:sweep": "vitest run --config vite.work-amplification.config.ts",
+        "bench:work-amplification:analyze": "node perf/work-amplification/analyze.mjs",
+        "bench:work-amplification": "pnpm bench:work-amplification:sweep && pnpm bench:work-amplification:analyze",
+        "bench:flame": "0x -- node dist/tests/ownership.run.js",
+        "test:watch": "vitest",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "format": "prettier --check .",
+        "format:fix": "prettier --write .",
+        "typecheck": "tsc --noEmit && pnpm typecheck:differential",
+        "typecheck:differential": "tsc --noEmit -p test/differential/tsconfig.json",
+        "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build && pnpm check:architecture",
+        "release": "changeset version && pnpm install && changeset publish",
+        "check:identity": "node scripts/check-module-identity.mjs"
+      },
+      "files": [
+        "dist/cjs",
+        "dist/dev",
+        "dist/esm",
+        "dist/index.d.ts",
+        "README.md",
+        "LICENSE"
+      ],
+      "publishConfig": {
+        "access": "public"
+      },
+      "exports": {
+        ".": {
+          "types": "./dist/esm/src/index.d.ts",
+          "import": {
+            "development": "./dist/dev/index.js",
+            "default": "./dist/esm/index.js"
+          },
+          "require": "./dist/cjs/index.cjs"
+        },
+        "./debug": {
+          "types": "./dist/esm/debug/index.d.ts",
+          "import": "./dist/dev/debug.js"
+        },
+        "./internal": {
+          "types": "./dist/esm/src/internal/index.d.ts",
+          "import": {
+            "development": "./dist/dev/internal.js",
+            "default": "./dist/esm/internal.js"
+          },
+          "require": "./dist/cjs/internal.cjs"
+        }
+      },
+      "main": "./dist/cjs/index.cjs",
+      "module": "./dist/esm/index.js",
+      "types": "./dist/esm/src/index.d.ts",
+      "type": "module",
+      "bin": null,
+      "sideEffects": false,
+      "workspaceMember": true,
+      "manifestSha256": "b3a3bc0a375952317f190b7457e8b0187b9833f8aebf274247d2ec664bb8b635",
+      "dependencies": {},
+      "peerDependencies": {},
+      "devDependencies": {
+        "@types/node": "^26.1.2",
+        "@volynets/algorithm-projection": "workspace:*",
+        "typescript": "^5.6.0"
+      },
+      "workspaceDevDependencies": {
+        "@volynets/algorithm-projection": "workspace:*"
+      }
+    },
+    {
+      "path": "packages/reflex-runtime-mcp/package.json",
+      "name": "@volynets/reflex-runtime-mcp",
+      "version": "1.0.0",
+      "private": false,
+      "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "typecheck": "tsc --noEmit -p tsconfig.json",
+        "smoke": "pnpm build && node scripts/smoke.mjs"
+      },
+      "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+      ],
+      "exports": {
+        ".": {
+          "types": "./dist/index.d.ts",
+          "import": "./dist/index.js"
+        }
+      },
+      "main": "./dist/index.js",
+      "module": null,
+      "types": "./dist/index.d.ts",
+      "type": "module",
+      "bin": {
+        "reflex-runtime-mcp": "dist/entrypoint.js"
+      },
+      "sideEffects": false,
+      "workspaceMember": true,
+      "manifestSha256": "554175b3d50d9b221068ea21e103f2d497532fe572a87339f4adb1dda7ea673d",
+      "dependencies": {
+        "@modelcontextprotocol/server": "2.0.0",
+        "@volynets/reflex-runtime": "workspace:*"
+      },
+      "peerDependencies": {},
+      "devDependencies": {
+        "@modelcontextprotocol/client": "2.0.0",
+        "@types/node": "^26.1.2",
+        "typescript": "^5.9.3"
+      },
+      "workspaceDevDependencies": {}
+    },
+    {
+      "path": "packages/reflex-scheduler/package.json",
+      "name": "@volynets/reflex-scheduler",
+      "version": "0.1.0",
+      "private": false,
+      "scripts": {
+        "clean": "node -e \"const fs=require('node:fs');fs.rmSync('dist',{recursive:true,force:true});fs.rmSync('build',{recursive:true,force:true})\"",
+        "build": "pnpm clean && node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs dist",
+        "lint": "eslint .",
+        "test": "vitest run",
+        "bench": "vitest bench",
+        "bench:full-graph": "vitest bench bench/full-graph.bench.ts",
+        "bench:hot-path": "vitest bench bench/hot-path.bench.ts",
+        "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json"
+      },
+      "files": [
+        "dist"
+      ],
+      "publishConfig": {
+        "access": "public"
+      },
+      "exports": {
+        ".": {
+          "source": {
+            "types": "./src/index.ts",
+            "default": "./src/index.ts"
+          },
+          "types": "./dist/index.d.ts",
+          "import": "./dist/index.js"
+        }
+      },
+      "main": "./dist/index.js",
+      "module": null,
+      "types": "./dist/index.d.ts",
+      "type": "module",
+      "bin": null,
+      "sideEffects": false,
+      "workspaceMember": true,
+      "manifestSha256": "174fdb4b96b75c649a3532b0f53d84ce971d59053b7e1fe7690b88f458f8fec1",
+      "dependencies": {},
+      "peerDependencies": {
+        "@volynets/reflex-runtime": "^1.0.0"
+      },
+      "devDependencies": {
+        "@volynets/reflex-runtime": "workspace:*"
+      },
+      "workspaceDevDependencies": {
+        "@volynets/reflex-runtime": "workspace:*"
+      }
+    },
+    {
+      "path": "packages/reflex-store/package.json",
+      "name": "@volynets/reflex-store",
+      "version": "0.0.1",
+      "private": false,
+      "engines": {
+        "node": ">=20.19.0"
+      },
+      "scripts": {
+        "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true});require('node:fs').rmSync('build',{recursive:true,force:true})\"",
+        "build": "node scripts/build.mjs",
+        "bench": "vitest bench --config vite.config.ts bench/semantic-workloads.bench.ts",
+        "bench:full": "vitest bench --mode full --config vite.config.ts bench/semantic-workloads.bench.ts",
+        "bench:hot-paths": "node --expose-gc bench/hot-paths.node.mjs",
+        "bench:metrics": "vitest run --config vite.metrics.config.ts tests/semantic-workloads.metrics.test.ts",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "test": "vitest run --config vite.config.ts",
+        "typecheck": "tsc --noEmit -p tsconfig.json && tsc -p tsconfig.example.json",
+        "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build",
+        "test:dev": "vitest run --config vite.dev.config.ts",
+        "test:differential": "vitest run --config vite.config.ts tests/compiler.differential.test.ts tests/runtime.differential.test.ts",
+        "test:integration": "vitest run --config vite.config.ts tests/store.integration.test.ts tests/vite-user-dx.test.ts tests/task-board",
+        "test:packed-runtime": "pnpm --filter @volynets/reflex build:all && pnpm --filter @volynets/reflex-framework build && pnpm build && node scripts/packed-runtime-identity.mjs"
+      },
+      "files": [
+        "dist",
+        "examples/task-board",
+        "src/store/README.md",
+        "src/store/TRANSFORM_SPEC.md",
+        "SPECIFICATION.md"
+      ],
+      "publishConfig": {
+        "access": "public"
+      },
+      "exports": {
+        ".": {
+          "types": "./dist/index.d.ts",
+          "import": "./dist/index.js"
+        },
+        "./advanced": {
+          "types": "./dist/advanced.d.ts",
+          "import": "./dist/advanced.js"
+        },
+        "./selectors": {
+          "types": "./dist/selectors/index.d.ts",
+          "import": "./dist/selectors/index.js"
+        },
+        "./selectors/shared": {
+          "types": "./dist/selectors/shared.d.ts",
+          "import": "./dist/selectors/shared.js"
+        },
+        "./store": {
+          "types": "./dist/store.d.ts",
+          "import": "./dist/store.js"
+        },
+        "./compiled-store": {
+          "types": "./dist/compiled-store.d.ts",
+          "import": "./dist/compiled-store.js"
+        },
+        "./vite": {
+          "types": "./dist/vite.d.ts",
+          "import": "./dist/vite.js"
+        },
+        "./runtime": {
+          "types": "./dist/runtime.d.ts",
+          "import": "./dist/runtime.js"
+        },
+        "./runtime/internal": {
+          "types": "./dist/runtime/internal.d.ts",
+          "import": "./dist/runtime/internal.js"
+        },
+        "./runtime/core": {
+          "types": "./dist/runtime/core.d.ts",
+          "import": "./dist/runtime/core.js"
+        },
+        "./runtime/types": {
+          "types": "./dist/runtime/types.d.ts",
+          "import": "./dist/runtime/types.js"
+        }
+      },
+      "main": "./dist/index.js",
+      "module": null,
+      "types": "./dist/index.d.ts",
+      "type": "module",
+      "bin": null,
+      "sideEffects": false,
+      "workspaceMember": true,
+      "manifestSha256": "e9e19abc3360e18db998e765dd5468dc8e89e0198e19c993a423c89d1cd2749f",
+      "dependencies": {},
+      "peerDependencies": {
+        "@volynets/reflex": "^1.0.0",
+        "@volynets/reflex-runtime": "^1.0.0",
+        "@volynets/reflex-framework": "^0.1.3"
+      },
+      "devDependencies": {
+        "@rollup/plugin-commonjs": "^29.0.3",
+        "@rollup/plugin-node-resolve": "^16.0.3",
+        "@rollup/plugin-replace": "^6.0.3",
+        "@rollup/plugin-swc": "^0.4.0",
+        "@swc/core": "^1.15.18",
+        "@swc/wasm": "^1.16.13",
+        "@types/node": "^26.1.2",
+        "@volynets/reflex": "workspace:^",
+        "@volynets/reflex-runtime": "workspace:*",
+        "@volynets/reflex-scheduler": "workspace:^",
+        "rollup": "^4.54.0",
+        "rollup-plugin-dts": "^6.4.1",
+        "@volynets/reflex-framework": "workspace:*"
+      },
+      "workspaceDevDependencies": {
+        "@volynets/reflex": "workspace:^",
+        "@volynets/reflex-runtime": "workspace:*",
+        "@volynets/reflex-scheduler": "workspace:^",
+        "@volynets/reflex-framework": "workspace:*"
+      }
+    },
+    {
+      "path": "plugins/@eslint/eslint-plugin-forbidden-imports/package.json",
+      "name": "@reflex/eslint-plugin-forbidden-imports",
+      "version": "0.1.0",
+      "private": false,
+      "scripts": {
+        "build": "tsc"
+      },
+      "files": [
+        "dist"
+      ],
+      "exports": null,
+      "main": "dist/index.js",
+      "module": null,
+      "types": "dist/index.d.ts",
+      "type": null,
+      "bin": null,
+      "sideEffects": null,
+      "workspaceMember": false,
+      "manifestSha256": "982ec5600acc35772206dec79c094325f40208b1b01c632b019df62ce626e2d4",
+      "dependencies": {},
+      "peerDependencies": {
+        "eslint": "^8.0.0"
+      },
+      "devDependencies": {
+        "@types/estree": "^1.0.8"
+      },
+      "workspaceDevDependencies": {}
+    },
+    {
+      "path": "plugins/@vite/reflex-vite-plugin/package.json",
+      "name": "@volynets/reflex-vite-plugin",
+      "version": "0.0.2",
+      "private": false,
+      "engines": {
+        "node": ">=20.19.0"
+      },
+      "scripts": {
+        "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+        "build": "pnpm clean && tsc -p tsconfig.json",
+        "typecheck": "tsc --noEmit -p tsconfig.json",
+        "prepublishOnly": "pnpm typecheck && pnpm build"
+      },
+      "files": [
+        "dist"
+      ],
+      "publishConfig": {
+        "access": "public"
+      },
+      "exports": {
+        ".": {
+          "source": {
+            "types": "./src/index.ts",
+            "default": "./src/index.ts"
+          },
+          "types": "./dist/index.d.ts",
+          "import": "./dist/index.js"
+        }
+      },
+      "main": null,
+      "module": null,
+      "types": null,
+      "type": "module",
+      "bin": null,
+      "sideEffects": null,
+      "workspaceMember": true,
+      "manifestSha256": "7fb1263af0ba4096aa9307fd91218505365fbceef2d92406dcead7ba25219332",
+      "dependencies": {
+        "@rollup/pluginutils": "^5.3.0"
+      },
+      "peerDependencies": {
+        "@swc/core": "^1.15.18",
+        "vite": "^6.0.0"
+      },
+      "devDependencies": {
+        "@swc/core": "^1.15.18",
+        "vite": "^6.0.0"
+      },
+      "workspaceDevDependencies": {}
+    },
+    {
+      "path": "third-party/algorithm-projection/package.json",
+      "name": "@volynets/algorithm-projection",
+      "version": "0.1.0",
+      "private": false,
+      "engines": {
+        "node": ">=20"
+      },
+      "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "typecheck": "tsc --noEmit -p tsconfig.json",
+        "test": "vitest run",
+        "cli": "node dist/cli.js"
+      },
+      "files": [
+        "dist",
+        "README.md"
+      ],
+      "publishConfig": {
+        "access": "public"
+      },
+      "exports": {
+        ".": {
+          "types": "./dist/index.d.ts",
+          "import": "./dist/index.js"
+        }
+      },
+      "main": "./dist/index.js",
+      "module": null,
+      "types": "./dist/index.d.ts",
+      "type": "module",
+      "bin": {
+        "algorithm-projection": "dist/cli.js"
+      },
+      "sideEffects": false,
+      "workspaceMember": true,
+      "manifestSha256": "35e4bbfe5bb6f43950f3d16a109be8bf22e7293b2445fd1aba50f0d5e7134c99",
+      "dependencies": {
+        "eslint": "^9.0.0",
+        "typescript": "^5.6.0",
+        "typescript-eslint": "^8.0.0"
+      },
+      "peerDependencies": {},
+      "devDependencies": {
+        "@types/node": "^26.1.2",
+        "vitest": "^4.0.0"
+      },
+      "workspaceDevDependencies": {}
+    }
+  ],
+  "scripts": [
+    {
+      "path": "scripts/benchmark-history.ts",
+      "callers": [
+        {
+          "path": ".github/workflows/runtime-benchmarks.yml",
+          "lines": [
+            17,
+            29
+          ]
+        },
+        {
+          "path": "package.json",
+          "lines": [
+            17
+          ]
+        }
+      ],
+      "referenceKind": "literal text mentions, not guaranteed executable callers",
+      "sha256": "2cf84a4b91e8452a9337ea1eaeebe04ce17fb08dece3275f5f23843072c776ba"
+    },
+    {
+      "path": "scripts/benchmark-quality-gate.ts",
+      "callers": [
+        {
+          "path": ".github/workflows/runtime-benchmarks.yml",
+          "lines": [
+            16,
+            28
+          ]
+        },
+        {
+          "path": "package.json",
+          "lines": [
+            16
+          ]
+        }
+      ],
+      "referenceKind": "literal text mentions, not guaranteed executable callers",
+      "sha256": "04e87ffca0edccf53359da37ab87b531a65078d5f1d737a9eb65f324014b6fd9"
+    },
+    {
+      "path": "scripts/build-chain.mjs",
+      "callers": [
+        {
+          "path": "packages/reflex-async/package.json",
+          "lines": [
+            35
+          ]
+        },
+        {
+          "path": "packages/reflex/package.json",
+          "lines": [
+            54
+          ]
+        }
+      ],
+      "referenceKind": "literal text mentions, not guaranteed executable callers",
+      "sha256": "327a4e49cf3488135f09b3c2300fd6c92461c1dfa5c33715ba4c4d6083ddfe15"
+    },
+    {
+      "path": "scripts/check-stages-semantics.mjs",
+      "callers": [
+        {
+          "path": "packages/reflex-runtime/src/kernel/stages/README.md",
+          "lines": [
+            79,
+            89,
+            90,
+            91
+          ]
+        },
+        {
+          "path": "scripts/qualify-stages.mjs",
+          "lines": [
+            26
+          ]
+        }
+      ],
+      "referenceKind": "literal text mentions, not guaranteed executable callers",
+      "sha256": "0c6fcc12b67f67f4db031afb8e6d5df860b1547c3555a48feff005c27053ab09"
+    },
+    {
+      "path": "scripts/collect-benchmark-results.ts",
+      "callers": [
+        {
+          "path": "package.json",
+          "lines": [
+            12
+          ]
+        }
+      ],
+      "referenceKind": "literal text mentions, not guaranteed executable callers",
+      "sha256": "4a64df9401ecb292fa61a9f383a797ef1452565c26bc4c2a4d73ac3f9f0a7073"
+    },
+    {
+      "path": "scripts/compare-benchmark-results.ts",
+      "callers": [
+        {
+          "path": "package.json",
+          "lines": [
+            15
+          ]
+        }
+      ],
+      "referenceKind": "literal text mentions, not guaranteed executable callers",
+      "sha256": "45204b5d5dd0a1bee49f58f7796db83a325414469dbab5bf8c5368aef5cbc097"
+    },
+    {
+      "path": "scripts/compare-stages.mjs",
+      "callers": [
+        {
+          "path": "packages/reflex-runtime/src/kernel/stages/README.md",
+          "lines": [
+            92
+          ]
+        },
+        {
+          "path": "scripts/qualify-stages.mjs",
+          "lines": [
+            25
+          ]
+        }
+      ],
+      "referenceKind": "literal text mentions, not guaranteed executable callers",
+      "sha256": "bff29e2d29cf7b3208fc806baacf1ab49af4511ee465c8eb557cd4b0374ee805"
+    },
+    {
+      "path": "scripts/compare-tracking-graph.mjs",
+      "callers": [
+        {
+          "path": "packages/reflex-runtime/src/kernel/shape/tracking/README.md",
+          "lines": [
+            240,
+            243,
+            244
+          ]
+        }
+      ],
+      "referenceKind": "literal text mentions, not guaranteed executable callers",
+      "sha256": "4976b4623794e3bc9625a368f685dea50d5c9a1f91158efc127ed872274e79cb"
+    },
+    {
+      "path": "scripts/compare-tracking-tiers-factorial.mjs",
+      "callers": [
+        {
+          "path": "docs/dynamic-dependencies/README.md",
+          "lines": [
+            366
+          ]
+        },
+        {
+          "path": "package.json",
+          "lines": [
+            13
+          ]
+        }
+      ],
+      "referenceKind": "literal text mentions, not guaranteed executable callers",
+      "sha256": "9e5ca95a869e0fdea89d177f618a2a91d2ea273fe252a509dda76d1f10923530"
+    },
+    {
+      "path": "scripts/fix-esm-specifiers.mjs",
+      "callers": [
+        {
+          "path": "packages/reflex-dom/package.json",
+          "lines": [
+            59
+          ]
+        },
+        {
+          "path": "packages/reflex-framework/examples/build-dashboard/src/model.ts",
+          "lines": [
+            152,
+            216
+          ]
+        },
+        {
+          "path": "packages/reflex-framework/package.json",
+          "lines": [
+            44
+          ]
+        },
+        {
+          "path": "packages/reflex-runtime/scripts/rewrite-build-aliases.mjs",
+          "lines": [
+            61
+          ]
+        },
+        {
+          "path": "packages/reflex-scheduler/package.json",
+          "lines": [
+            28
+          ]
+        },
+        {
+          "path": "scripts/build-chain.mjs",
+          "lines": [
+            62,
+            159
+          ]
+        }
+      ],
+      "referenceKind": "literal text mentions, not guaranteed executable callers",
+      "sha256": "379b75d17de1ec324341393461d07db7ef5352b049bb8d043e28818333690392"
+    },
+    {
+      "path": "scripts/profile-tracking-tier-substitution.mjs",
+      "callers": [
+        {
+          "path": "docs/dynamic-dependencies/README.md",
+          "lines": [
+            367
+          ]
+        },
+        {
+          "path": "package.json",
+          "lines": [
+            14
+          ]
+        }
+      ],
+      "referenceKind": "literal text mentions, not guaranteed executable callers",
+      "sha256": "42cbc7c69bd57fa4b622439306b6fd92f4d6a0a133e7a56da131932003479ca6"
+    },
+    {
+      "path": "scripts/qualify-stages.mjs",
+      "callers": [
+        {
+          "path": "package.json",
+          "lines": [
+            18
+          ]
+        },
+        {
+          "path": "packages/reflex-runtime/src/kernel/stages/README.md",
+          "lines": [
+            93
+          ]
+        }
+      ],
+      "referenceKind": "literal text mentions, not guaranteed executable callers",
+      "sha256": "a1d7d60a498dcb4c402392101ab3b982e87130f1927fa94257e428540bc60e2d"
+    },
+    {
+      "path": "scripts/rollup-build-reporter.ts",
+      "callers": [
+        {
+          "path": "packages/reflex-framework/examples/build-dashboard/src/model.ts",
+          "lines": [
+            217
+          ]
+        },
+        {
+          "path": "packages/reflex-runtime/rollup/config.ts",
+          "lines": [
+            2
+          ]
+        },
+        {
+          "path": "packages/reflex-runtime/rollup/plugins/index.ts",
+          "lines": [
+            4
+          ]
+        },
+        {
+          "path": "packages/reflex/rollup.config.ts",
+          "lines": [
+            8
+          ]
+        },
+        {
+          "path": "scripts/build-chain.mjs",
+          "lines": [
+            160
+          ]
+        }
+      ],
+      "referenceKind": "literal text mentions, not guaranteed executable callers",
+      "sha256": "28aed463103909b61dd46af0dafe60e70aa26762643e74ce6911f61d3b9d1aa1"
+    },
+    {
+      "path": "scripts/snapshot-stages.mjs",
+      "callers": [
+        {
+          "path": "packages/reflex-runtime/src/kernel/stages/README.md",
+          "lines": [
+            5,
+            78,
+            88
+          ]
+        }
+      ],
+      "referenceKind": "literal text mentions, not guaranteed executable callers",
+      "sha256": "8cfa029c0fd9159f1787a85f4d75809bcc32d82dd675921db4070807b814f7ac"
+    },
+    {
+      "path": "scripts/write-globals-dts.mjs",
+      "callers": [
+        {
+          "path": "packages/reflex-framework/examples/build-dashboard/src/model.ts",
+          "lines": [
+            138,
+            166,
+            215
+          ]
+        },
+        {
+          "path": "packages/reflex/package.json",
+          "lines": [
+            57
+          ]
+        },
+        {
+          "path": "scripts/build-chain.mjs",
+          "lines": [
+            46,
+            77,
+            158
+          ]
+        }
+      ],
+      "referenceKind": "literal text mentions, not guaranteed executable callers",
+      "sha256": "68029776919018e2361d6b89138b3b261d5c43d414cc8efbdf8bd73ac0eda27d"
+    },
+    {
+      "path": "scripts/write-index-dts.mjs",
+      "callers": [
+        {
+          "path": "packages/reflex-runtime/package.json",
+          "lines": [
+            48
+          ]
+        }
+      ],
+      "referenceKind": "literal text mentions, not guaranteed executable callers",
+      "sha256": "8a2968477ff222226d564bde367b13ea1ca221fe91af6541f1d4875924d1aad3"
+    }
+  ],
+  "executionBaseline": {
+    "status": "not_run",
+    "checks": {
+      "frozenInstall": "not_run",
+      "lint": "not_run",
+      "typecheck": "not_run",
+      "cleanBuild": "not_run",
+      "unitTests": "not_run",
+      "consumerInstall": "not_run",
+      "semanticQualification": "not_run",
+      "performanceQualification": "not_run"
+    }
+  },
+  "limitedProbes": [
+    {
+      "id": "reflex.pack.existing-dist.dry-run",
+      "kind": "limited-packaging-probe",
+      "package": "@volynets/reflex",
+      "status": "succeeded_with_contract_failure",
+      "environment": {
+        "node": "v25.2.0",
+        "npm": "11.6.2",
+        "os": "Windows"
+      },
+      "argv": [
+        "pack",
+        "--dry-run",
+        "--ignore-scripts",
+        "--json",
+        "--cache",
+        "<OS-temp>/reflex-build-contracts-npm-cache"
+      ],
+      "workingDirectory": "packages/reflex",
+      "existingDist": true,
+      "existingDistProvenance": "not_established",
+      "actualTarballCreated": false,
+      "cleanBuildPerformed": false,
+      "installationPerformed": false,
+      "result": {
+        "files": 36,
+        "packedBytes": 40457,
+        "unpackedBytes": 177937,
+        "shasum": "32ed7d399be8499daf152fe29ccaa1239966e73c",
+        "conditionalTargetsChecked": 16,
+        "conditionalTargetsPresent": 15,
+        "missingTargets": [
+          {
+            "export": "./debug",
+            "condition": "import",
+            "target": "./dist/dev/debug/index.js",
+            "presentOnDisk": true,
+            "presentInPackList": false
+          }
+        ]
+      }
+    }
+  ],
+  "limitations": [
+    "Literal script references require executable caller classification.",
+    "Unused/dead-code classifications are proposals, not deletion authorization.",
+    "Historical semantic and benchmark results were read, not reproduced.",
+    "Static snapshot is not a clean execution baseline."
+  ]
+}

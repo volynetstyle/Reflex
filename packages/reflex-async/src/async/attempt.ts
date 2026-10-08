@@ -61,8 +61,8 @@ const PROTO_MESSAGE =
   "Capture reactive async inputs before await; AsyncExecution.read/commit are synchronous.";
 
 /** This context controls handle lifetime only; dependency capture lives in frontier.ts. */
-function executionRead<T>(this: ExecutionHandle, source: AsyncSource<T>): T {
-  if (activeAsyncExecution !== this || !this.attempt.alive()) {
+function executionRead<T>(execution: ExecutionHandle, source: AsyncSource<T>): T {
+  if (activeAsyncExecution !== execution || !execution.attempt.alive()) {
     throw new AsyncProtocolError(PROTO_MESSAGE);
   }
 
@@ -70,10 +70,10 @@ function executionRead<T>(this: ExecutionHandle, source: AsyncSource<T>): T {
 }
 
 function executionCommit<T>(
-  this: ExecutionHandle,
+  execution: ExecutionHandle,
   source: AsyncSource<T>,
 ): AsyncCommit<T> | undefined {
-  if (activeAsyncExecution !== this || !this.attempt.alive()) {
+  if (activeAsyncExecution !== execution || !execution.attempt.alive()) {
     throw new AsyncProtocolError(PROTO_MESSAGE);
   }
 
@@ -89,8 +89,10 @@ export function withAsyncExecution<T>(
   const execution: ExecutionHandle = {
     signal: attempt.signal,
     attempt,
-    read: executionRead,
-    commit: executionCommit,
+    // Handles are routinely destructured by jobs. Authorization is lexical,
+    // never the call-site receiver; the synchronous active-handle guard remains.
+    read: (source) => executionRead(execution, source),
+    commit: (source) => executionCommit(execution, source),
   };
 
   activeAsyncExecution = execution;

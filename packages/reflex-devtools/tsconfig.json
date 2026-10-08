@@ -1,17 +1,24 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "customConditions": ["source"],
-    "strict": true,
+    "customConditions": [
+      "source"
+    ],
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "useUnknownInCatchVariables": true,
     "skipLibCheck": true,
     "jsx": "preserve",
     "jsxImportSource": "@volynets/reflex-dom",
-    "types": ["vite/client"]
+    "types": [
+      "vite/client"
+    ]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "vite.config.ts"
+  ]
 }

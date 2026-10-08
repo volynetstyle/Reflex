@@ -38,6 +38,13 @@ export const TARGETS: readonly BuildTarget[] = [
     format: "cjs",
     mode: "prod",
   },
+  {
+    input: INDEX_AND_DEBUG_INPUT,
+    name: "cjs-dev",
+    outDir: "cjs-dev",
+    format: "cjs",
+    mode: "dev",
+  },
 ] as const;
 
 export function isProd(target: BuildTarget): boolean {

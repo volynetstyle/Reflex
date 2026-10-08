@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Reflex benchmark evidence envelope",
+  "type": "object",
+  "required": [
+    "format",
+    "schemaVersion",
+    "runId",
+    "suite",
+    "createdAt",
+    "provenance",
+    "environment",
+    "build",
+    "protocol",
+    "validation",
+    "artifacts",
+    "dataKind",
+    "data"
+  ],
+  "properties": {
+    "format": {
+      "const": "reflex-benchmark-run"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "runId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "suite": {
+      "type": "object",
+      "required": [
+        "id",
+        "protocolHash"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "protocolHash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "status",
+        "unknownFields"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "complete",
+            "partial"
+          ]
+        },
+        "unknownFields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "required": [
+        "fingerprint"
+      ],
+      "properties": {
+        "fingerprint": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "build": {
+      "type": "object"
+    },
+    "protocol": {
+      "type": "object",
+      "required": [
+        "sampleDefinition"
+      ]
+    },
+    "validation": {
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "passed",
+            "failed",
+            "unverified"
+          ]
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "bytes",
+          "sha256"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    },
+    "dataKind": {
+      "enum": [
+        "normalized-runtime",
+        "vitest-raw",
+        "legacy-experiment"
+      ]
+    },
+    "data": {
+      "type": "object"
+    }
+  }
+}

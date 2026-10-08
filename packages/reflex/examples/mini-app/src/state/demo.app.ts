@@ -21,7 +21,7 @@ import {
   createProjection,
   createSelector,
   createStoreProjection,
-} from "@volynets/reflex-store";
+} from "@volynets/reflex-store/selectors";
 import {
   isPending,
   optimistic,
@@ -181,7 +181,7 @@ export function createDemoApp() {
   const ownership = createOwnershipModel();
   const ownershipModelFlag = isModel(ownership);
   registerCleanup(() => {
-    ownership[Symbol.dispose]!();
+    ownership.dispose();
   });
 
   const tasks = signal([...demoTasks]);

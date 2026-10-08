@@ -14,9 +14,14 @@
         "types": "./src/index.ts",
         "default": "./src/index.ts"
       },
-      "types": "./dist/index.d.ts",
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.cts",
+        "default": "./dist/cjs/index.cjs"
+      }
     }
   },
   "files": [
@@ -30,9 +35,9 @@
     "access": "public"
   },
   "scripts": {
-    "clean": "node scripts/clean.mjs",
-    "build": "pnpm clean && pnpm build:ts && pnpm build:npm",
-    "build:all": "node ../../scripts/build-chain.mjs @volynets/reflex-runtime @volynets/reflex-async",
+    "clean": "node ../../tooling/build/clean.mjs .",
+    "build": "pnpm clean && pnpm build:ts && pnpm build:npm && pnpm build:types:cjs",
+    "build:all": "node ../../tooling/build/run.mjs @volynets/reflex-async",
     "build:ts": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
     "build:npm": "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc",
     "lint": "eslint .",
@@ -55,8 +60,11 @@
     "bench:async": "node bench/async-performance.node.mjs",
     "bench": "vitest bench --run",
     "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
-    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build",
-    "typecheck:package": "node ../../node_modules/typescript/bin/tsc -p tsconfig.consumer.json"
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm check:artifacts",
+    "typecheck:package": "node ../../node_modules/typescript/bin/tsc -p tsconfig.consumer.json",
+    "check:artifacts": "node ../../tooling/build/verify-artifacts.mjs --directory .",
+    "prepack": "pnpm check:artifacts",
+    "build:types:cjs": "node ../../tooling/build/cjs-declarations.mjs . async"
   },
   "devDependencies": {
     "@volynets/reflex": "workspace:*",
@@ -69,5 +77,6 @@
   },
   "peerDependencies": {
     "@volynets/reflex-runtime": "^1.0.0"
-  }
+  },
+  "private": false
 }

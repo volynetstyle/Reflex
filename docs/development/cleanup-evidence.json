@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "baselineCommit": "f572742fc0cdcc8291fa0af53736af5e92472def",
+  "removed": [
+    {
+      "path": "config/vite.config.ts",
+      "classification": "unreferenced-template",
+      "executableReferences": [],
+      "replacement": "tooling/configs presets and explicit root projects",
+      "reason": "Not auto-discovered at root; no maintained script/config imports."
+    },
+    {
+      "path": "config/vitest.config.ts",
+      "classification": "unreferenced-template",
+      "executableReferences": [],
+      "replacement": "tooling/configs presets and explicit root projects",
+      "reason": "Not auto-discovered at root; no maintained script/config imports."
+    }
+  ],
+  "preserved": [
+    "ignored local labs/drafts",
+    "historical research raw data",
+    "legacy ESLint plugin pending role decision"
+  ]
+}

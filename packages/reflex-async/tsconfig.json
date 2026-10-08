@@ -1,10 +1,13 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022", "DOM", "ESNext.Disposable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "ESNext.Disposable"
+    ],
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "useUnknownInCatchVariables": true,
@@ -17,5 +20,7 @@
     "composite": true,
     "outDir": "build/esm"
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }

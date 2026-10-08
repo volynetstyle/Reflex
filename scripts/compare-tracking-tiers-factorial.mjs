@@ -317,7 +317,7 @@ const report = {
   commit: getCommit(),
   cpu: cpus()[0]?.model ?? null,
   config: options,
-  variants: VARIANTS.map(({ runtime, ...variant }) => variant),
+  variants: VARIANTS.map((variant) => Object.fromEntries(Object.entries(variant).filter(([key]) => key !== "runtime"))),
   scenarios,
 };
 const output = resolve(options.out);

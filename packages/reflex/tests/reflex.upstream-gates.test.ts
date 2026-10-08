@@ -71,6 +71,12 @@ function createFramework(effectStrategy: EffectStrategy): ReactiveFramework {
     untracked,
 
     run(fn) {
+      // Upstream capability probes can nest run(); retain the enclosing runtime.
+      if (runtime !== undefined) {
+        fn();
+        flushIfReady();
+        return;
+      }
       runtime = createRuntime({ effectStrategy });
       batchDepth = 0;
 

@@ -1,4 +1,5 @@
-import { fileURLToPath } from "node:url";
+import { runtimeFlags } from "../../tooling/configs/runtime-flags";
+import { sourceAliases, configRoot } from "../../tooling/configs/source-aliases";
 import { defineConfig } from "vitest/config";
 
 // Timing leg of the cost-attribution sweep (see test/perf/cost-attribution/).
@@ -6,24 +7,16 @@ import { defineConfig } from "vitest/config";
 // at runtime — so profileRuntimeCounter's guard branch is compiled out of
 // every hot-path call site rather than merely skipped.
 export default defineConfig({
+  root: configRoot(import.meta.url),
   resolve: {
-    alias: {
-      "@runtime": fileURLToPath(new URL("./src", import.meta.url)),
-    },
+    alias: sourceAliases("runtime"),
   },
-  define: {
-    __DEV__: false,
-    __PROFILE__: false,
-    __TRACKING_ONE_HOP__: true,
-    __TRACKING_TWO_HOP__: true,
-    __TRACKING_LAST_EDGE__: true,
-    __TEST__: true,
-    __PROD__: false,
-  },
+  define: runtimeFlags("source-test"),
   build: {
     lib: false,
   },
   test: {
+    name: "runtime/cost-attribution-timing",
     environment: "node",
     include: ["test/perf/cost-attribution/timing.sweep.ts"],
     isolate: false,

@@ -4,11 +4,9 @@ import {
   type Expr,
   type NodeId,
   type Op,
-  type Value,
 } from "./harness";
 import {
   defaultBoundedLanguage,
-  boundedValueDomain,
   type BoundedLanguage,
 } from "./catalog/bounded-language";
 import type { BoundedExhaustiveReport } from "./api/reports";

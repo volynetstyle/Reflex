@@ -1,16 +1,16 @@
 import { memo, signal } from "@volynets/reflex";
 import { useEffect } from "@volynets/reflex-dom";
-import { Button, Sidebar } from "./uikit";
+import { Button } from "./uikit";
 import RuntimeLayer from "./layer/Runtime";
 
 const useCounter = (initial: number) => {
-  const [count, setCount] = signal(initial);
+  const count = signal(initial);
 
   return {
     count,
-    inc: () => setCount((prev) => prev + 1),
-    dec: () => setCount((prev) => prev - 1),
-    res: () => setCount(initial),
+    inc: () => count.set((prev) => prev + 1),
+    dec: () => count.set((prev) => prev - 1),
+    res: () => count.set(initial),
   };
 };
 

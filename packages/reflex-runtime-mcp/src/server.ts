@@ -2,6 +2,7 @@ import {
   fromJsonSchema,
   McpServer,
   type JsonSchemaType,
+  type CallToolResult,
 } from "@modelcontextprotocol/server";
 
 import type { RuntimeMcpAdapter } from "@volynets/reflex-runtime/debug";
@@ -18,8 +19,18 @@ export function createReflexMcpServer(adapter: RuntimeMcpAdapter): McpServer {
       {
         description: tool.description,
         inputSchema: fromJsonSchema(tool.inputSchema as JsonSchemaType),
+        annotations: { readOnlyHint: true, destructiveHint: false },
       },
-      async (input) => adapter.call(tool.name, input),
+      async (input): Promise<CallToolResult> => {
+        const result = adapter.call(tool.name, input);
+        // The core diagnostic model stays SDK-independent and exposes readonly data.
+        // Adapt its immutable content tuple into the SDK's wire result at this boundary.
+        return {
+          content: result.content.map((item) => ({ ...item })),
+          isError: result.isError,
+          structuredContent: { ...result.structuredContent },
+        };
+      },
     );
   }
 

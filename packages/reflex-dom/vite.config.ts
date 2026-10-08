@@ -1,50 +1,20 @@
-import { defineConfig } from "vitest/config";
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { runtimeFlags } from "../../tooling/configs/runtime-flags";
+import { sourceAliases, configRoot } from "../../tooling/configs/source-aliases";
+import { configDefaults, defineConfig } from "vitest/config";
 
-const packageRoot = fileURLToPath(new URL(".", import.meta.url));
-const frameworkRoot = resolve(packageRoot, "../reflex-framework/src");
-const runtimeRoot = resolve(packageRoot, "../reflex-runtime/src");
 
 export default defineConfig({
+  root: configRoot(import.meta.url),
   resolve: {
-    alias: [
-      { find: "@runtime", replacement: runtimeRoot },
-      {
-        find: "@volynets/reflex-runtime/internal",
-        replacement: resolve(runtimeRoot, "internal/index.ts"),
-      },
-      {
-        find: "@volynets/reflex-runtime",
-        replacement: resolve(runtimeRoot, "index.ts"),
-      },
-      {
-        find: "@volynets/reflex-framework/jsx-dev-runtime",
-        replacement: resolve(frameworkRoot, "jsx-dev-runtime.ts"),
-      },
-      {
-        find: "@volynets/reflex-framework/jsx-runtime",
-        replacement: resolve(frameworkRoot, "jsx-runtime.ts"),
-      },
-      {
-        find: "@volynets/reflex-framework",
-        replacement: resolve(frameworkRoot, "index.ts"),
-      },
-    ],
+    alias: sourceAliases("dom"),
     conditions: ["source"],
   },
-  define: {
-    __DEV__: false,
-    __PROFILE__: false,
-    __TRACKING_ONE_HOP__: true,
-    __TRACKING_TWO_HOP__: true,
-    __TRACKING_LAST_EDGE__: true,
-    __TEST__: true,
-    __PROD__: false,
-  },
+  define: runtimeFlags("source-test"),
   test: {
+    name: "dom/jsdom",
     environment: "jsdom",
     include: ["test/**/*.test.{ts,tsx}"],
+    exclude: [...configDefaults.exclude, "test/**/*.browser.test.ts"],
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],

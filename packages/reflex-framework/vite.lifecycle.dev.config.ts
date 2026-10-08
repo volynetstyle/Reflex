@@ -8,5 +8,5 @@ const config = mergeConfig(
   }),
 );
 
-config.test = { ...config.test, include: ["test/lifecycle.dev.ts"] };
+config.test = { ...config.test, name: "framework/dev", include: ["test/lifecycle.dev.ts"] };
 export default config;

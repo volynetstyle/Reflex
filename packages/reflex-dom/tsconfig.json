@@ -1,13 +1,15 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "jsx": "react-jsx",
     "jsxImportSource": "./src",
     "paths": {
-      "@volynets/reflex-framework": ["../reflex-framework/dist/index.d.ts"],
+      "@volynets/reflex-framework": [
+        "../reflex-framework/dist/index.d.ts"
+      ],
       "@volynets/reflex-framework/jsx-runtime": [
         "../reflex-framework/dist/jsx-runtime.d.ts"
       ],
@@ -16,12 +18,11 @@
       ],
       "@volynets/reflex-runtime": [
         "../reflex-runtime/dist/esm/src/index.d.ts"
-      ]
-      ,"@volynets/reflex-runtime/internal": [
+      ],
+      "@volynets/reflex-runtime/internal": [
         "../reflex-runtime/dist/esm/src/internal/index.d.ts"
       ]
     },
-    "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "useUnknownInCatchVariables": true,
@@ -30,13 +31,21 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "customConditions": ["source"],
+    "customConditions": [
+      "source"
+    ],
     "allowImportingTsExtensions": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "composite": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["dist", "**/*.test.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ],
+  "exclude": [
+    "dist",
+    "**/*.test.ts"
+  ]
 }

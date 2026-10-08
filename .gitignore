@@ -124,3 +124,12 @@ tmp/
 # Labs
 #--------------------------------------------------------
 packages/*.lab/
+
+# Shared build sources are authored infrastructure, not package outputs.
+!/tooling/build/
+!/tooling/build/**
+
+# Qualification and isolated audit outputs
+/artifacts/
+/.tmp/
+/.cache/
