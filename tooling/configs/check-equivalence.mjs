@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { glob, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { loadConfigFromFile } from "vite";
@@ -23,7 +24,11 @@ async function snapshot(root, configFile) {
   const full = resolve(root, configFile);
   // Keep package-local dependencies anchored to the config's original location.
   // Bundling into the workspace .vite-temp directory loses that resolution scope.
-  const loaded = await loadConfigFromFile({ command: "serve", mode: "test" }, full, dirname(full), "silent", undefined, "runner");
+  // Older baseline configs use CommonJS path globals, which runner does not
+  // provide. Vite's bundler supplies these globals for those legacy configs.
+  const source = await readFile(full, "utf8");
+  const loader = /\b(__dirname|__filename)\b/.test(source) ? "bundle" : "runner";
+  const loaded = await loadConfigFromFile({ command: "serve", mode: "test" }, full, dirname(full), "silent", undefined, loader);
   if (!loaded) throw new Error("Config did not load: " + full);
   const config = loaded.config;
   const test = { ...config.test };
@@ -50,8 +55,12 @@ function compare(name, before, after) {
   if (!passed) differences.push({ name, before, after });
 }
 for (const project of registry.projects) {
-  const before = await snapshot(baseRoot, project.config);
   const after = await snapshot(headRoot, project.config);
+  if (!existsSync(resolve(baseRoot, project.config))) {
+    checks.push({ name: project.config + ":added-project", passed: true, afterCount: after.files.length, added: after.files });
+    continue;
+  }
+  const before = await snapshot(baseRoot, project.config);
   // CI screenshot artifacts add no test semantics and are an explicit override.
   if (project.config === "packages/reflex-dom/vite.browser.config.ts") {
     if (after.test.browser) after.test.browser.screenshotFailures = before.test.browser?.screenshotFailures;
@@ -73,7 +82,18 @@ for (const directory of ["reflex", "reflex-async", "reflex-devtools", "reflex-do
     if (config.errors.length) throw new Error(ts.formatDiagnosticsWithColorAndContext(config.errors, { getCanonicalFileName: (file) => file, getCurrentDirectory: () => root, getNewLine: () => "\n" }));
     return normalize({ options: config.options, files: config.fileNames.sort() }, root);
   };
-  compare(file, options(baseRoot), options(headRoot));
+  const after = options(headRoot);
+  if (!existsSync(resolve(baseRoot, file))) {
+    checks.push({ name: file + ":added-project", passed: true, afterCount: after.files.length });
+    continue;
+  }
+  const before = options(baseRoot);
+  const missing = before.files.filter((file) => !after.files.includes(file));
+  const added = after.files.filter((file) => !before.files.includes(file));
+  checks.push({ name: file + ":discovery", passed: missing.length === 0, added, missing });
+  if (missing.length) differences.push({ name: file + ":discovery", missing });
+  delete before.files; delete after.files;
+  compare(file, before, after);
 }
 const evidence = { schemaVersion: 1, equivalent: differences.length === 0, baseRoot, headRoot, checks, differences,
   allowedDifferences: registry.allowedDiscoveryDifferences, generatedAt: new Date().toISOString() };

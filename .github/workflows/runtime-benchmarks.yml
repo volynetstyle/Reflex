@@ -144,7 +144,9 @@ jobs:
       # built independently from each revision's own implementation.
       - name: Build base benchmark subjects
         working-directory: base
-        run: pnpm --filter '@volynets/reflex' build:all
+        run: |
+          pnpm --filter '@volynets/algorithm-projection' build
+          pnpm --filter '@volynets/reflex' build:all
 
       - name: Build head benchmark subjects
         working-directory: head
