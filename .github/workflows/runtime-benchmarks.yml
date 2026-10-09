@@ -146,7 +146,11 @@ jobs:
         working-directory: base
         run: |
           pnpm --filter '@volynets/algorithm-projection' build
-          pnpm --filter '@volynets/reflex' build:all
+          # Older revisions' build:all uses a Windows-only cleanup path guard.
+          # Build each package with its own scripts, in dependency order.
+          pnpm --filter '@volynets/reflex-runtime' build
+          pnpm --filter '@volynets/reflex-scheduler' build
+          pnpm --filter '@volynets/reflex' build
 
       - name: Build head benchmark subjects
         working-directory: head
