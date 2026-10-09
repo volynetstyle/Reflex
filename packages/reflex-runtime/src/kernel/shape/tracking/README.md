@@ -13,6 +13,14 @@ During a tracking pass, `consumer.tailIn` acts as the cursor for the last
 dependency that has already been matched in the current read order. A new read
 is resolved by walking a small hierarchy of locality tiers around that cursor.
 
+More generally, `tailIn` is the inclusive boundary of incoming dependencies
+that belong to the active consumer epoch. User computation advances that
+boundary one resolved read at a time. Watcher dependency validation starts from
+an already committed frontier, so it temporarily sets `tailIn = lastIn`: every
+committed edge belongs to the validation epoch and must be able to record a
+reentrant invalidation. Validation does not run read tracking or stale-suffix
+cleanup, so this broader cursor use cannot claim new reads or alter topology.
+
 The resolver is intentionally shaped like a cache hierarchy:
 
 ```txt

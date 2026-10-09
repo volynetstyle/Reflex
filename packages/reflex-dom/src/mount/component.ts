@@ -1,6 +1,6 @@
 import { runComponentRenderable } from "@volynets/reflex-framework";
 import { appendRenderableNodes } from "./append";
-import { getActiveDOMExecutionContext } from "../runtime/execution";
+import { getDOMContext } from "../runtime/context";
 import type { Namespace } from "../host/namespace";
 import type { ComponentRenderable } from "../types";
 
@@ -9,11 +9,9 @@ export function mountComponent(
   renderable: ComponentRenderable<unknown>,
   ns: Namespace,
 ): void {
-  const context = getActiveDOMExecutionContext();
+  const context = getDOMContext();
 
-  runComponentRenderable(
-    renderable,
-    { owner: context.owner },
-    (value) => appendRenderableNodes(parent, value, ns),
+  runComponentRenderable(renderable, { owner: context.owner }, (value) =>
+    appendRenderableNodes(parent, value, ns),
   );
 }

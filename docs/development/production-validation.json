@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "kind": "production-refactor-validation",
+  "baselineCommit": "f572742fc0cdcc8291fa0af53736af5e92472def",
+  "date": "2026-10-08",
+  "scope": {
+    "included": "Production monorepo infrastructure, package fixes, maintained application/API corrections and existing qualification",
+    "excluded": [
+      "Stellune",
+      "new late-stage holdout/grammar research",
+      "publication or deployment"
+    ]
+  },
+  "environment": {
+    "node": "v25.2.0",
+    "pnpm": "9.0.0",
+    "os": "Windows"
+  },
+  "checks": {
+    "frozenInstall": "passed",
+    "lint": "passed",
+    "tooling": {
+      "passed": 29,
+      "failed": 0
+    },
+    "quality": {
+      "status": "passed",
+      "packages": 12,
+      "requiredChecks": 61,
+      "reports": [
+        {
+          "package": "@volynets/algorithm-projection",
+          "id": "algorithm-projection",
+          "status": "passed",
+          "checks": 4
+        },
+        {
+          "package": "@volynets/reflex-async",
+          "id": "async",
+          "status": "passed",
+          "checks": 8
+        },
+        {
+          "package": "reflex-devtools",
+          "id": "devtools",
+          "status": "passed",
+          "checks": 3
+        },
+        {
+          "package": "@volynets/reflex-dom",
+          "id": "dom",
+          "status": "passed",
+          "checks": 7
+        },
+        {
+          "package": "@volynets/reflex-framework",
+          "id": "framework",
+          "status": "passed",
+          "checks": 6
+        },
+        {
+          "package": "@volynets/reflex-runtime-mcp",
+          "id": "mcp",
+          "status": "passed",
+          "checks": 4
+        },
+        {
+          "package": "@reflex-examples/mini-app",
+          "id": "mini-app",
+          "status": "passed",
+          "checks": 2
+        },
+        {
+          "package": "@volynets/reflex",
+          "id": "reflex",
+          "status": "passed",
+          "checks": 5
+        },
+        {
+          "package": "@volynets/reflex-runtime",
+          "id": "runtime",
+          "status": "passed",
+          "checks": 9
+        },
+        {
+          "package": "@volynets/reflex-scheduler",
+          "id": "scheduler",
+          "status": "passed",
+          "checks": 4
+        },
+        {
+          "package": "@volynets/reflex-store",
+          "id": "store",
+          "status": "passed",
+          "checks": 6
+        },
+        {
+          "package": "@volynets/reflex-vite-plugin",
+          "id": "vite-plugin",
+          "status": "passed",
+          "checks": 3
+        }
+      ],
+      "evidence": ".tmp/quality-approved/summary.json"
+    },
+    "configParity": {
+      "passed": 33,
+      "total": 33,
+      "status": "passed"
+    },
+    "consumer": {
+      "status": "passed",
+      "packages": 10,
+      "checks": 29,
+      "failed": [],
+      "qualification": ".tmp/qualification-approved/2026-10-08T18-28-24.551Z-20012/qualification.json",
+      "archiveHashes": [
+        {
+          "name": "@volynets/reflex-runtime",
+          "version": "1.0.0",
+          "sha256": "b8cf9b0c181377029abcfb82264b05f44f86ad6e2ac7b766369555f6e38618ec"
+        },
+        {
+          "name": "@volynets/reflex-scheduler",
+          "version": "0.1.0",
+          "sha256": "9daf71e5921a63314055c7356df4e0ff5378b4a0c3c40f443152fa7cda390825"
+        },
+        {
+          "name": "@volynets/reflex",
+          "version": "1.0.0",
+          "sha256": "6c490dfe8215eb8f1bf67769d691edf5f846bf19db84aa7cea664408bcb8c200"
+        },
+        {
+          "name": "@volynets/reflex-async",
+          "version": "0.1.0",
+          "sha256": "bbef780b015771ac56cff549eaeeb42b96af5116074b1456beb255d138a47491"
+        },
+        {
+          "name": "@volynets/reflex-framework",
+          "version": "0.1.3",
+          "sha256": "a49aa7f278db0fb9930d0b36baebbe31c765daf8a42f906bc5331a92e91ce6d5"
+        },
+        {
+          "name": "@volynets/reflex-dom",
+          "version": "1.0.0",
+          "sha256": "2f2afa96b70d3b20eae18d34faf656d97cb69f26f7cd177613ab0025309989b7"
+        },
+        {
+          "name": "@volynets/reflex-store",
+          "version": "0.0.1",
+          "sha256": "07a53c2834c4262d98a058479997ba347af176406dc59431a60c1fb679c8f849"
+        },
+        {
+          "name": "@volynets/reflex-runtime-mcp",
+          "version": "1.0.0",
+          "sha256": "5033596c267bd9c3168daac9b899dd01e2de736b09f7d0fafa7906657febc521"
+        },
+        {
+          "name": "@volynets/reflex-vite-plugin",
+          "version": "0.0.2",
+          "sha256": "b94918cd587346f69a1377adcf200d721f5dd7004b7de9dced9ae99541f93ef8"
+        },
+        {
+          "name": "@volynets/algorithm-projection",
+          "version": "0.1.0",
+          "sha256": "c6c20b943ccab1cf212d3afa36fe121661dadc1b07406042011a8071d1794115"
+        }
+      ]
+    },
+    "async": {
+      "unit": 128,
+      "production": 84,
+      "boundedExplorersComplete": 9
+    },
+    "research": {
+      "files": 207,
+      "bytes": 7500602,
+      "status": "checksum-identical"
+    },
+    "protocolMigration": "passed",
+    "publicationGuard": "verified_without_publishing"
+  },
+  "limitations": [
+    "GitHub-hosted Linux/Windows workflows are configured, not remotely executed in this session.",
+    "No numerical performance improvement or controlled twenty-pair campaign is claimed."
+  ],
+  "preservedUserFiles": [
+    "packages/reflex-store/bench/README.md",
+    "packages/reflex-store/bench/results/",
+    "ignored local lab/drafts"
+  ]
+}

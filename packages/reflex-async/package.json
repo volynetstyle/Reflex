@@ -1,0 +1,82 @@
+{
+  "name": "@volynets/reflex-async",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Reactive async derivations with cancelable attempts and validated publication over the Reflex runtime",
+  "license": "MIT",
+  "sideEffects": false,
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "source": {
+        "types": "./src/index.ts",
+        "default": "./src/index.ts"
+      },
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.cts",
+        "default": "./dist/cjs/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "src",
+    "dist",
+    "docs",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "clean": "node ../../tooling/build/clean.mjs .",
+    "build": "pnpm clean && pnpm build:ts && pnpm build:npm && pnpm build:types:cjs",
+    "build:all": "node ../../tooling/build/run.mjs @volynets/reflex-async",
+    "build:ts": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
+    "build:npm": "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:async:package": "node scripts/check-package.mjs",
+    "test:async:bounded": "vitest run tests/reflex.async.bounded.test.ts",
+    "test:async:properties": "vitest run tests/reflex.async.property.test.ts tests/reflex.async.qualification.test.ts",
+    "test:async:production": "node lab/async-semantics/run.mjs --production-only",
+    "test:async:production:mutations": "node lab/async-semantics/qualify-b3-mutations.mjs --production",
+    "test:async:semantics": "node lab/async-semantics/run.mjs --correctness-only",
+    "test:async:semantics:mutations": "node lab/async-semantics/qualify-b3-mutations.mjs",
+    "bench:async:frontier": "node --expose-gc lab/async-frontier/bench.mjs",
+    "bench:async:consumption": "node --expose-gc lab/async-frontier/consumption-bench.mjs",
+    "bench:async:semantics": "node lab/async-semantics/run.mjs",
+    "typecheck:async:semantics": "node ../../node_modules/typescript/bin/tsc --noEmit -p lab/async-semantics/tsconfig.json",
+    "test:async:mutations": "node scripts/qualify-async-mutations.mjs",
+    "bench:async:baseline": "node bench/async-performance.node.mjs --capture-baseline",
+    "bench:async": "node bench/async-performance.node.mjs",
+    "bench": "vitest bench --run",
+    "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm check:artifacts",
+    "typecheck:package": "node ../../node_modules/typescript/bin/tsc -p tsconfig.consumer.json",
+    "check:artifacts": "node ../../tooling/build/verify-artifacts.mjs --directory .",
+    "prepack": "pnpm check:artifacts",
+    "build:types:cjs": "node ../../tooling/build/cjs-declarations.mjs . async"
+  },
+  "devDependencies": {
+    "@volynets/reflex": "workspace:*",
+    "@volynets/reflex-runtime": "workspace:*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/volynetstyle/Reflex.git",
+    "directory": "packages/reflex-async"
+  },
+  "peerDependencies": {
+    "@volynets/reflex-runtime": "^1.0.0"
+  },
+  "private": false
+}

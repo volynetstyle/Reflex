@@ -1,0 +1,15 @@
+import {hydrate,createDOMRenderer} from "@volynets/reflex-dom";
+import {jsx} from "@volynets/reflex-dom/jsx-runtime";
+import {counterView} from "./view.mjs";
+import {signal,createRuntime} from "@volynets/reflex";
+import {make} from "./browser-store.js";
+createRuntime({effectStrategy:"eager"});
+const count=signal(0);const container=document.querySelector("#hydration");
+container.innerHTML=await (await fetch("/ssr-markup.txt")).text();
+const original=container.querySelector("button");
+const dispose=hydrate(counterView(count,()=>count.set(count()+1)),container);
+if(container.querySelector("button")!==original)throw new Error("Hydration recreated the SSR node.");
+const store=make();const renderer=createDOMRenderer({effectStrategy:"eager"});
+const disposeStore=renderer.render(jsx("p",{children:()=>store.sum}),document.querySelector("#compiled"));
+window.packedConsumer={click(){original.click();renderer.flush();return original.textContent;},update(){store.update();renderer.flush();return document.querySelector("#compiled").textContent;},dispose(){dispose();disposeStore();store.dispose();return container.childNodes.length+document.querySelector("#compiled").childNodes.length;}};
+window.packedConsumerReady=true;

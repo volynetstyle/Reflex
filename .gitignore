@@ -7,6 +7,8 @@ memory
 
 # Dependencies
 node_modules/
+.bench-worktrees/
+bench-results/reflex-competitors/*.json
 .pnpm-store/
 .pnp.*
 .pnp.cjs
@@ -114,19 +116,20 @@ drafts/
 logs/
 temp/
 tmp/
-lab/
-
-# Version the isolated cross-framework benchmark package, but not its outputs.
-!lab/
-lab/*
-!lab/reactivity-bench/
-!lab/reactivity-bench/**
-lab/reactivity-bench/dist/
-lab/reactivity-bench/node_modules/
-lab/reactivity-bench/results/
-lab/reactivity-bench/.tmp/
+# Local research and generated experiments. Existing tracked lab files remain
+# in history; new files under lab are ignored.
+/lab/
 
 #--------------------------------------------------------
 # Labs
 #--------------------------------------------------------
 packages/*.lab/
+
+# Shared build sources are authored infrastructure, not package outputs.
+!/tooling/build/
+!/tooling/build/**
+
+# Qualification and isolated audit outputs
+/artifacts/
+/.tmp/
+/.cache/

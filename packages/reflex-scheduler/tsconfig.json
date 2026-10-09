@@ -1,25 +1,32 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
-      "@volynets/reflex-runtime": ["../reflex-runtime/src/index.ts"],
+      "@volynets/reflex-runtime": [
+        "../reflex-runtime/src/index.ts"
+      ],
       "@volynets/reflex-runtime/internal": [
         "../reflex-runtime/src/internal/index.ts"
       ]
     },
-    "strict": true,
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "customConditions": ["source"],
+    "customConditions": [
+      "source"
+    ],
     "composite": true
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["dist"]
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "dist"
+  ]
 }

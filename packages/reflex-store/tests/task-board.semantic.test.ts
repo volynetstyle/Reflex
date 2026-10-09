@@ -39,10 +39,10 @@ describe("task board semantics", () => {
     stop();
   });
 
-  it("keeps projection reads scheduler-driven until flush", () => {
+  it("pulls fresh projection values before effects flush", () => {
     expect(summary.visible).toBe(3);
     boardActions.setFilter("done");
-    expect(summary.visible).toBe(3);
+    expect(summary.visible).toBe(1);
     boardActions.flush();
     expect(summary.visible).toBe(1);
   });

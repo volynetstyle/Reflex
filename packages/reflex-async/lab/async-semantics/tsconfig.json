@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.typecheck.json",
+  "compilerOptions": { "baseUrl": "../.." },
+  "include": [
+    "*.ts",
+    "../../src",
+    "../../tests/reflex.test_utils.ts",
+    "../../../reflex-runtime/src/globals.d.ts"
+  ]
+}

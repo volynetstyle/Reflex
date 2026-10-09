@@ -134,3 +134,7 @@ There is only shame in ego.
 
 **A Reflex contributor is not someone who writes code.  
 A Reflex contributor is someone who makes the space stronger.**
+
+## Development and release checks
+
+Use the [development quickstart](docs/development/quickstart.md), [package contracts](docs/contracts/package-contracts.md) and [release guide](docs/development/release.md). Keep configuration changes separate from runtime semantics, preserve failing seeds and use a fresh evidence directory for each validation attempt.

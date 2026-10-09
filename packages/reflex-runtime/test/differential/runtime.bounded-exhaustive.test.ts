@@ -5,11 +5,11 @@ import {
   verifyBoundedEquivalence,
 } from "./bounded-exhaustive";
 import { holdoutSemanticMutants } from "./holdout-mutants";
-import { mutationQualificationCorpus } from "./mutation-corpus";
+import { mutationQualificationCorpus } from "./mutant/mutation-corpus";
 import {
   formatMutationReport,
   qualifyMutationCorpus,
-} from "./mutation-qualification";
+} from "./mutant/mutation-qualification";
 
 describe("bounded exhaustive differential exploration", () => {
   const programs = enumerateBoundedPrograms();

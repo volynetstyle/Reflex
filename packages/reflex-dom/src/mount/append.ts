@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { ownerDocument } from "../host/document";
 import type {
   ForRenderable,
   PortalRenderable,
@@ -13,11 +13,8 @@ import type {
   JSXRenderable,
 } from "../types";
 import type { Namespace } from "../host/namespace";
-import {
-  RenderableKind,
-  getTaggedRenderableKind,
-  isTextRenderableValue,
-} from "../renderable/kind";
+import { RenderableKind } from "../renderable/kind";
+import { classifyRenderable } from "../renderable/classify";
 import { mountComponent } from "./component";
 import { mountReactiveSlot } from "./reactive";
 import { mountElement } from "./element";
@@ -42,14 +39,6 @@ function pushReverse(
   return top;
 }
 
-function mountSlot<T>(
-  accessor: () => T,
-  map: (value: T) => unknown,
-  ns: Namespace,
-): Node {
-  return mountReactiveSlot(accessor, map, ns);
-}
-
 export function appendRenderableNodes(
   parent: Node,
   value: JSXRenderable | unknown,
@@ -57,89 +46,75 @@ export function appendRenderableNodes(
 ): void {
   if (value == null || typeof value === "boolean") return;
 
-  const doc = parent.ownerDocument!;
+  const doc = ownerDocument(parent);
   const stack: unknown[] = [value];
   let top = 1;
 
   while (top) {
     const current = stack[--top];
 
-    if (current == null || typeof current === "boolean") continue;
-
-    if (isTextRenderableValue(current)) {
-      appendText(parent, doc, current);
-      continue;
-    }
-
-    if (Array.isArray(current)) {
-      top = pushReverse(stack, top, current);
-      continue;
-    }
-
-    if (typeof current === "function") {
-      parent.appendChild(mountSlot(current as () => unknown, identity, ns));
-      continue;
-    }
-
-    if (typeof current !== "object") {
-      appendText(parent, doc, current);
-      continue;
-    }
-
-    if (current instanceof parent.ownerDocument!.defaultView!.Node) {
-      parent.appendChild(current);
-      continue;
-    }
-
-    switch (getTaggedRenderableKind(current)) {
+    switch (classifyRenderable(current)) {
+      case RenderableKind.Empty:
+        continue;
+      case RenderableKind.Text:
+        appendText(parent, doc, current);
+        continue;
+      case RenderableKind.Array:
+        top = pushReverse(
+          stack,
+          top,
+          Array.isArray(current)
+            ? current
+            : Array.from(current as Iterable<unknown>),
+        );
+        continue;
+      case RenderableKind.Accessor:
+        parent.appendChild(
+          mountReactiveSlot(current as () => unknown, identity, ns, doc),
+        );
+        continue;
+      case RenderableKind.Node:
+        parent.appendChild(current as Node);
+        continue;
       case RenderableKind.Element: {
         const el = current as ElementRenderable<
           ElementTag,
           ElementProps<ElementTag>
         >;
 
-        parent.appendChild(mountElement(el.tag, el.props, ns));
+        parent.appendChild(mountElement(el.tag, el.props, ns, doc));
         continue;
       }
 
       case RenderableKind.Show: {
-        const r = current as ShowRenderable<any>;
+        const r = current as ShowRenderable<unknown>;
         parent.appendChild(
-          mountSlot(r.when, (v) => resolveShowValue(r, v), ns),
+          mountReactiveSlot(r.when, (v) => resolveShowValue(r, v), ns, doc, r.ref),
         );
         continue;
       }
 
       case RenderableKind.Switch: {
-        const r = current as SwitchRenderable<any>;
+        const r = current as SwitchRenderable<unknown>;
         parent.appendChild(
-          mountSlot(r.value, (v) => resolveSwitchValue(r, v), ns),
+          mountReactiveSlot(r.value, (v) => resolveSwitchValue(r, v), ns, doc),
         );
         continue;
       }
 
       case RenderableKind.For:
-        parent.appendChild(mountFor(current as ForRenderable<any>, ns));
+        parent.appendChild(
+          mountFor(current as ForRenderable<unknown>, ns, doc),
+        );
         continue;
 
       case RenderableKind.Portal:
-        parent.appendChild(mountPortal(current as PortalRenderable));
+        parent.appendChild(mountPortal(current as PortalRenderable, doc));
         continue;
 
       case RenderableKind.Component:
-        mountComponent(parent, current as ComponentRenderable<any>, ns);
+        mountComponent(parent, current as ComponentRenderable<unknown>, ns);
         continue;
     }
-
-    if (isIterable(current)) {
-      top = pushReverse(stack, top, Array.from(current));
-      continue;
-    }
-    
-    appendText(parent, doc, current);
   }
-}
-
-function isIterable(value: unknown): value is Iterable<unknown> {
-  return value != null && typeof (value as any)[Symbol.iterator] === "function";
 }

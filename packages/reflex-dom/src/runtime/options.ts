@@ -1,20 +1,19 @@
 import {
   configureRuntimeContext,
   createRuntimeContext,
-  enterReactiveBatch,
   getActiveRuntimeContext,
-  leaveReactiveBatch,
   runWithRuntimeContext,
   type RuntimeContext,
   type RuntimeHostHooks,
 } from "@volynets/reflex-runtime/internal";
-import type { DOMRenderEffectScheduler } from "./render-effect-scheduler";
+import type { MountEffects } from "./mount-effects";
 import {
   createRuntimeSchedulerBinding,
   resolveEffectSchedulerMode,
   type EffectStrategy,
 } from "@volynets/reflex-scheduler";
-import { resolveEffectStrategy, type PolicyConfig } from "./policies";
+import { createDOMSchedulerCoordinator } from "./scheduler/coordinator";
+import { createPromiseMicrotaskCarrier } from "./scheduler/host-carrier";
 
 export interface RuntimeInstance {
   readonly execution: RuntimeContext;
@@ -23,85 +22,61 @@ export interface RuntimeInstance {
   flush(): void;
 }
 
+/**
+ * Options for configuring a DOM runtime.
+ *
+ * @remarks
+ * `effectStrategy` selects eager, settled batch-boundary (`sab`), or microtask
+ * (`flush`) effect delivery. `hooks` adds host callbacks alongside renderer
+ * notifications. These options apply to the application's runtime, not to one
+ * render call or browser paint.
+ */
 export interface DOMRuntimeOptions {
-  policy?: Partial<PolicyConfig>;
+  /** Eager, settled batch-boundary (`sab`), or Promise-microtask (`flush`) effect delivery. */
   effectStrategy?: EffectStrategy;
+  /** Additional host callbacks, composed with renderer runtime notifications. */
   hooks?: RuntimeHostHooks;
 }
 
 export function createRendererRuntime(
   options: DOMRuntimeOptions = {},
-  renderEffectScheduler?: DOMRenderEffectScheduler,
+  mountEffects?: MountEffects,
 ): RuntimeInstance {
-  const { policy, hooks } = options;
-  const strategy =
-    options.effectStrategy ??
-    resolveEffectStrategy(policy?.effectPolicy, policy?.priorityLevels);
+  const { hooks } = options;
+  const strategy = options.effectStrategy ?? "eager";
   const execution = createRuntimeContext();
   const scheduler = createRuntimeSchedulerBinding(
     resolveEffectSchedulerMode(strategy),
     execution,
   );
-  const externalNodeInvalidated = hooks?.onNodeInvalidated;
-  const onNodeInvalidated =
-    externalNodeInvalidated === undefined
-      ? scheduler.onNodeInvalidated
-      : (node: Parameters<typeof scheduler.onNodeInvalidated>[0]): void => {
-          scheduler.onNodeInvalidated(node);
-          externalNodeInvalidated(node);
-        };
-  let runtimeIdle = false;
-  let microtaskPending = false;
-  const externalRuntimeIdle = hooks?.onRuntimeIdle;
-  const onRuntimeIdle =
-    externalRuntimeIdle === undefined
-      ? (): void => {
-          runtimeIdle = true;
-        }
-      : (): void => {
-          runtimeIdle = true;
-          externalRuntimeIdle();
-        };
 
   const run = <T>(fn: () => T): T => {
     if (getActiveRuntimeContext() === execution) return fn();
     return runWithRuntimeContext(execution, fn);
   };
 
-  const flushRenderEffects = (): void => {
-    if (!runtimeIdle) return;
-    runtimeIdle = false;
-    renderEffectScheduler?.flush();
-  };
-
-  const flushWithinRuntime = (): void => {
-    scheduler.flush();
-    flushRenderEffects();
-  };
-  const flush = (): void => run(flushWithinRuntime);
-
-  const flushScheduledMicrotask = (): void => {
-    microtaskPending = false;
-    flush();
-  };
-
-  const scheduleMicrotaskFlush = (): void => {
-    if (microtaskPending) return;
-    microtaskPending = true;
-    void Promise.resolve().then(flushScheduledMicrotask);
-  };
-
-  const batch = <T>(fn: () => T): T =>
-    run(() => {
-      enterReactiveBatch();
-      try {
-        return scheduler.batch(fn);
-      } finally {
-        leaveReactiveBatch();
-        if (strategy === "flush") scheduleMicrotaskFlush();
-        else flushRenderEffects();
-      }
-    });
+  const coordinator = createDOMSchedulerCoordinator(
+    scheduler,
+    mountEffects,
+    createPromiseMicrotaskCarrier(),
+    run,
+  );
+  const externalNodeInvalidated = hooks?.onNodeInvalidated;
+  const onNodeInvalidated =
+    externalNodeInvalidated === undefined
+      ? coordinator.onNodeInvalidated
+      : (node: Parameters<typeof coordinator.onNodeInvalidated>[0]): void => {
+          coordinator.onNodeInvalidated(node);
+          externalNodeInvalidated(node);
+        };
+  const externalRuntimeIdle = hooks?.onRuntimeIdle;
+  const onRuntimeIdle =
+    externalRuntimeIdle === undefined
+      ? coordinator.onRuntimeIdle
+      : (): void => {
+          coordinator.onRuntimeIdle();
+          externalRuntimeIdle();
+        };
 
   configureRuntimeContext(execution, {
     hooks: {
@@ -113,5 +88,10 @@ export function createRendererRuntime(
     },
   });
 
-  return { execution, run, batch, flush };
+  return {
+    execution,
+    run,
+    batch: coordinator.batch,
+    flush: coordinator.flush,
+  };
 }

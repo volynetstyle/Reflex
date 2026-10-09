@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "scope": "maintained source tests",
+  "projects": [
+    {
+      "config": "packages/reflex-runtime/vite.config.ts",
+      "root": "packages/reflex-runtime"
+    },
+    {
+      "config": "packages/reflex-runtime/vite.dev.config.ts",
+      "root": "packages/reflex-runtime"
+    },
+    {
+      "config": "packages/reflex-runtime/vite.projection.config.ts",
+      "root": "packages/reflex-runtime"
+    },
+    {
+      "config": "packages/reflex-scheduler/vite.config.ts",
+      "root": "packages/reflex-scheduler"
+    },
+    {
+      "config": "packages/reflex/vite.config.ts",
+      "root": "packages/reflex"
+    },
+    {
+      "config": "packages/reflex-framework/vite.config.ts",
+      "root": "packages/reflex-framework"
+    },
+    {
+      "config": "packages/reflex-framework/vite.lifecycle.dev.config.ts",
+      "root": "packages/reflex-framework"
+    },
+    {
+      "config": "packages/reflex-store/vite.config.ts",
+      "root": "packages/reflex-store"
+    },
+    {
+      "config": "packages/reflex-store/vite.dev.config.ts",
+      "root": "packages/reflex-store"
+    },
+    {
+      "config": "packages/reflex-async/vite.config.ts",
+      "root": "packages/reflex-async"
+    },
+    {
+      "config": "packages/reflex-dom/vite.config.ts",
+      "root": "packages/reflex-dom"
+    },
+    {
+      "config": "packages/reflex-dom/vite.browser.config.ts",
+      "root": "packages/reflex-dom"
+    }
+  ],
+  "intentionallySeparate": [
+    "Node artifact/consumer/protocol qualification",
+    "benchmark and instrumentation sweeps",
+    "compiler mutation runners",
+    "private research projects"
+  ],
+  "allowedDiscoveryDifferences": [
+    {
+      "config": "packages/reflex-dom/vite.config.ts",
+      "excluded": "test/**/*.browser.test.ts",
+      "reason": "Wrapper suites execute only in the Chromium project; ordinary jsdom suites are unchanged."
+    }
+  ]
+}

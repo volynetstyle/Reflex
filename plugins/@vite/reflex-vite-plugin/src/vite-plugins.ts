@@ -11,7 +11,7 @@ import {
   normalizeDOMPluginOptions,
   createJSXEsbuildOptions,
 } from "./normalize-options.js";
-import { transformReflexDOMJSX } from "./transform.js";
+import { createReflexDOMJSXTransformer } from "./transform.js";
 
 /**
  * Creates the Reflex DOM JSX reactive props Vite plugin
@@ -21,11 +21,13 @@ import { transformReflexDOMJSX } from "./transform.js";
 export function reflexDOMVitePlugin(
   options: ReflexDOMTransformOptions = {},
 ): Plugin {
+  const transform = createReflexDOMJSXTransformer(options);
+
   return {
     name: "reflex-dom-jsx-reactive-props",
     enforce: "pre",
     transform(code, id) {
-      return transformReflexDOMJSX(code, id, options);
+      return transform(code, id);
     },
   };
 }
@@ -59,7 +61,13 @@ export function reflex(options: ReflexPluginOptions = {}): Plugin[] {
   const domOptions = normalizeDOMPluginOptions(options.dom);
 
   if (domOptions !== null) {
-    plugins.push(reflexDOMVitePlugin(domOptions));
+    plugins.push(
+      reflexDOMVitePlugin({
+        ...domOptions,
+        include: domOptions.include ?? options.include,
+        exclude: domOptions.exclude ?? options.exclude,
+      }),
+    );
   }
 
   plugins.push(reflexJSXVitePlugin(options));

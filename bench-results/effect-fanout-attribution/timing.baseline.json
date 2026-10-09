@@ -1,0 +1,560 @@
+[
+  {
+    "family": "width",
+    "width": 1,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 1,
+    "nsPerOperationMedian": 2659.433460884353,
+    "nsPerCallbackMedian": 2659.433460884353,
+    "nsPerOperationTrials": [
+      2659.433460884353,
+      2560.653641571198,
+      2783.8106094306027,
+      2665.9497444633703,
+      2602.25665557405
+    ]
+  },
+  {
+    "family": "width",
+    "width": 1,
+    "prewarmQueueCapacity": 1024,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 1,
+    "nsPerOperationMedian": 2682.3032804459717,
+    "nsPerCallbackMedian": 2682.3032804459717,
+    "nsPerOperationTrials": [
+      2699.7274395509476,
+      2682.3032804459717,
+      2566.127873563223,
+      2705.960748269895,
+      2606.0260416666615
+    ]
+  },
+  {
+    "family": "width",
+    "width": 4,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 4,
+    "nsPerOperationMedian": 5975.047709923646,
+    "nsPerCallbackMedian": 1493.7619274809115,
+    "nsPerOperationTrials": [
+      6239.7970617529645,
+      5598.018973214281,
+      5798.524305555554,
+      6201.029265873026,
+      5975.047709923646
+    ]
+  },
+  {
+    "family": "width",
+    "width": 4,
+    "prewarmQueueCapacity": 1024,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 4,
+    "nsPerOperationMedian": 6399.8022959183645,
+    "nsPerCallbackMedian": 1599.9505739795911,
+    "nsPerOperationTrials": [
+      6192.996541501951,
+      6135.353842412446,
+      6771.996753246732,
+      6399.8022959183645,
+      7137.97802511416
+    ]
+  },
+  {
+    "family": "width",
+    "width": 8,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 8,
+    "nsPerOperationMedian": 10251.439950980372,
+    "nsPerCallbackMedian": 1281.4299938725464,
+    "nsPerOperationTrials": [
+      10378.011175496675,
+      11078.829225352123,
+      10084.062500000036,
+      10251.439950980372,
+      10050.417993630592
+    ]
+  },
+  {
+    "family": "width",
+    "width": 8,
+    "prewarmQueueCapacity": 1024,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 8,
+    "nsPerOperationMedian": 10062.620192307657,
+    "nsPerCallbackMedian": 1257.827524038457,
+    "nsPerOperationTrials": [
+      10062.620192307657,
+      10324.773848684232,
+      10585.08234797292,
+      10039.152644230817,
+      9692.910879629659
+    ]
+  },
+  {
+    "family": "width",
+    "width": 16,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 16,
+    "nsPerOperationMedian": 18400.716911764735,
+    "nsPerCallbackMedian": 1150.044806985296,
+    "nsPerOperationTrials": [
+      17868.501420454406,
+      18400.716911764735,
+      18445.643382352893,
+      17642.06460674157,
+      19006.268825301195
+    ]
+  },
+  {
+    "family": "width",
+    "width": 16,
+    "prewarmQueueCapacity": 1024,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 16,
+    "nsPerOperationMedian": 18975.508283132447,
+    "nsPerCallbackMedian": 1185.969267695778,
+    "nsPerOperationTrials": [
+      18975.508283132447,
+      18722.712053571417,
+      18246.63880813957,
+      19021.31024096379,
+      20077.98477564102
+    ]
+  },
+  {
+    "family": "width",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 74453.72023809547,
+    "nsPerCallbackMedian": 2326.6787574404834,
+    "nsPerOperationTrials": [
+      38479.07774390253,
+      34404.8573369563,
+      74453.72023809547,
+      78477.42187499946,
+      79484.76562499991
+    ]
+  },
+  {
+    "family": "width",
+    "width": 32,
+    "prewarmQueueCapacity": 1024,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 79159.60937499875,
+    "nsPerCallbackMedian": 2473.737792968711,
+    "nsPerOperationTrials": [
+      79151.25000000102,
+      79836.09374999929,
+      79159.60937499875,
+      80201.64062500044,
+      78855.85937499968
+    ]
+  },
+  {
+    "family": "width",
+    "width": 64,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 64,
+    "nsPerOperationMedian": 151181.8181818166,
+    "nsPerCallbackMedian": 2362.2159090908845,
+    "nsPerOperationTrials": [
+      151181.8181818166,
+      151374.71590908934,
+      150104.40340909202,
+      150439.20454545462,
+      151295.02840909222
+    ]
+  },
+  {
+    "family": "width",
+    "width": 64,
+    "prewarmQueueCapacity": 1024,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 64,
+    "nsPerOperationMedian": 150943.32386363682,
+    "nsPerCallbackMedian": 2358.4894353693253,
+    "nsPerOperationTrials": [
+      151653.1250000009,
+      150943.32386363682,
+      150869.17613636397,
+      150055.96590909094,
+      152184.51704545415
+    ]
+  },
+  {
+    "family": "width",
+    "width": 128,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 128,
+    "nsPerOperationMedian": 296188.80208333564,
+    "nsPerCallbackMedian": 2313.9750162760597,
+    "nsPerOperationTrials": [
+      297547.3958333339,
+      304043.7500000005,
+      296188.80208333564,
+      295536.1979166658,
+      294224.99999999726
+    ]
+  },
+  {
+    "family": "width",
+    "width": 128,
+    "prewarmQueueCapacity": 1024,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 128,
+    "nsPerOperationMedian": 301386.45833333064,
+    "nsPerCallbackMedian": 2354.5817057291456,
+    "nsPerOperationTrials": [
+      301386.45833333064,
+      294982.8125000001,
+      301791.92708333366,
+      301808.0729166712,
+      299696.6145833303
+    ]
+  },
+  {
+    "family": "width",
+    "width": 256,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 256,
+    "nsPerOperationMedian": 584010.4166666624,
+    "nsPerCallbackMedian": 2281.29069010415,
+    "nsPerOperationTrials": [
+      590942.1875000002,
+      583856.7708333357,
+      580869.7916666669,
+      607147.3958333324,
+      584010.4166666624
+    ]
+  },
+  {
+    "family": "width",
+    "width": 256,
+    "prewarmQueueCapacity": 1024,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 256,
+    "nsPerOperationMedian": 589387.4999999962,
+    "nsPerCallbackMedian": 2302.294921874985,
+    "nsPerOperationTrials": [
+      581901.5624999983,
+      590945.8333333362,
+      588560.4166666666,
+      593845.8333333377,
+      589387.4999999962
+    ]
+  },
+  {
+    "family": "body",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 80041.64062499939,
+    "nsPerCallbackMedian": 2501.301269531231,
+    "nsPerOperationTrials": [
+      78695.62500000029,
+      79365.31250000058,
+      80505.78124999958,
+      80141.4062500001,
+      80041.64062499939
+    ]
+  },
+  {
+    "family": "body",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 4,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 79043.28125000006,
+    "nsPerCallbackMedian": 2470.102539062502,
+    "nsPerOperationTrials": [
+      78590.15625000012,
+      79257.26562500017,
+      79043.28125000006,
+      78712.81249999953,
+      79071.4062500001
+    ]
+  },
+  {
+    "family": "body",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 16,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 78981.1718750002,
+    "nsPerCallbackMedian": 2468.1616210937564,
+    "nsPerOperationTrials": [
+      78582.18749999964,
+      78674.06250000073,
+      79409.68749999798,
+      78981.1718750002,
+      79629.29687500093
+    ]
+  },
+  {
+    "family": "body",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 64,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 81532.89062500164,
+    "nsPerCallbackMedian": 2547.9028320313014,
+    "nsPerOperationTrials": [
+      81532.89062500164,
+      81249.06250000095,
+      83375.24671052757,
+      81272.03125000051,
+      81684.68749999817
+    ]
+  },
+  {
+    "family": "body",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 256,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 91346.52777777951,
+    "nsPerCallbackMedian": 2854.5789930556098,
+    "nsPerOperationTrials": [
+      93053.49264705938,
+      91260.32986111139,
+      91346.52777777951,
+      91700.34722221961,
+      90314.4097222221
+    ]
+  },
+  {
+    "family": "callback-shape",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "shared",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 77737.72321428667,
+    "nsPerCallbackMedian": 2429.3038504464585,
+    "nsPerOperationTrials": [
+      78138.5937500005,
+      77737.72321428667,
+      77685.26785714261,
+      78459.06249999927,
+      77593.00595238084
+    ]
+  },
+  {
+    "family": "callback-shape",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 78711.95312499991,
+    "nsPerCallbackMedian": 2459.7485351562473,
+    "nsPerOperationTrials": [
+      78711.95312499991,
+      78192.8124999979,
+      78816.64062500135,
+      78684.14062499767,
+      81563.59374999908
+    ]
+  },
+  {
+    "family": "execution-topology",
+    "width": 8,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 8,
+    "nsPerOperationMedian": 23917.211174241886,
+    "nsPerCallbackMedian": 2989.6513967802357,
+    "nsPerOperationTrials": [
+      23917.211174241886,
+      23617.117537313203,
+      23851.775568182416,
+      23964.607007575916,
+      24027.201704545616
+    ]
+  },
+  {
+    "family": "execution-topology",
+    "width": 8,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "serial",
+    "callbacksPerOperation": 8,
+    "nsPerOperationMedian": 53065.88541666694,
+    "nsPerCallbackMedian": 6633.235677083368,
+    "nsPerOperationTrials": [
+      55908.203125,
+      53065.88541666694,
+      52315.677083331975,
+      53418.802083333125,
+      52264.63541666628
+    ]
+  },
+  {
+    "family": "execution-topology",
+    "width": 16,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 16,
+    "nsPerOperationMedian": 42699.95777027005,
+    "nsPerCallbackMedian": 2668.747360641878,
+    "nsPerOperationTrials": [
+      42890.20270270206,
+      42657.17905405449,
+      42658.5726351357,
+      42840.582770271045,
+      42699.95777027005
+    ]
+  },
+  {
+    "family": "execution-topology",
+    "width": 16,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "serial",
+    "callbacksPerOperation": 16,
+    "nsPerOperationMedian": 104013.5742187509,
+    "nsPerCallbackMedian": 6500.848388671931,
+    "nsPerOperationTrials": [
+      107272.91666666664,
+      103674.12109374996,
+      103878.12499999782,
+      104839.583333334,
+      104013.5742187509
+    ]
+  },
+  {
+    "family": "execution-topology",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 79335.39062499904,
+    "nsPerCallbackMedian": 2479.23095703122,
+    "nsPerOperationTrials": [
+      78912.73437500103,
+      78696.01562499895,
+      82428.04276315647,
+      79335.39062499904,
+      80287.50000000003
+    ]
+  },
+  {
+    "family": "execution-topology",
+    "width": 32,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "serial",
+    "callbacksPerOperation": 32,
+    "nsPerOperationMedian": 209112.8906250006,
+    "nsPerCallbackMedian": 6534.777832031269,
+    "nsPerOperationTrials": [
+      209112.8906250006,
+      208274.02343750378,
+      213647.85156250576,
+      209322.0703125027,
+      202876.3671874998
+    ]
+  },
+  {
+    "family": "execution-topology",
+    "width": 64,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "fanout",
+    "callbacksPerOperation": 64,
+    "nsPerOperationMedian": 150332.52840909094,
+    "nsPerCallbackMedian": 2348.945756392046,
+    "nsPerOperationTrials": [
+      150332.52840909094,
+      151114.06250000218,
+      149793.46590908707,
+      150026.84659090577,
+      151445.73863636362
+    ]
+  },
+  {
+    "family": "execution-topology",
+    "width": 64,
+    "prewarmQueueCapacity": 0,
+    "callbackMode": "closures",
+    "bodyIterations": 0,
+    "topology": "serial",
+    "callbacksPerOperation": 64,
+    "nsPerOperationMedian": 417900.000000003,
+    "nsPerCallbackMedian": 6529.687500000047,
+    "nsPerOperationTrials": [
+      412273.04687500064,
+      418371.48437500105,
+      423989.06249999866,
+      414871.0937499942,
+      417900.000000003
+    ]
+  }
+]

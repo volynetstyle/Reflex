@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 
 const packageRoot = path.resolve(import.meta.dirname, "..");
 
@@ -54,3 +55,9 @@ for (const { root, aliasRoot, extension } of outputs) {
     if (rewritten !== source) writeFileSync(file, rewritten);
   }
 }
+
+// Declarations must also resolve under strict NodeNext consumer settings.
+execFileSync(process.execPath, [
+  path.join(packageRoot, "../../scripts/fix-esm-specifiers.mjs"),
+  path.join(packageRoot, "dist/esm"),
+]);

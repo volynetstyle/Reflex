@@ -14,12 +14,12 @@ function collect(directory, files = []) {
   })) {
     const relative = path.join(directory, entry.name);
     if (entry.isDirectory()) collect(relative, files);
-    else if (entry.name.endsWith(".ts")) files.push(relative);
+    else files.push(relative);
   }
   return files;
 }
 
-for (const file of collect("src")) {
+for (const file of collect("src").filter((file) => file.endsWith(".ts"))) {
   const source = read(file).replace(
     /import\s+type[\s\S]*?from\s+["'][^"']+["'];/g,
     "",
@@ -36,13 +36,17 @@ for (const file of collect("src")) {
       "WeakRef",
     ]) {
       if (line.includes(forbidden)) {
-        failures.push(`core source ${file} contains forbidden reference: ${forbidden}`);
+        failures.push(
+          `core source ${file} contains forbidden reference: ${forbidden}`,
+        );
       }
     }
   }
 }
 
-for (const file of ["dist/esm/index.js", "dist/cjs/index.cjs"]) {
+for (const file of [...collect("dist/esm"), ...collect("dist/cjs")].filter(
+  (file) => /\.(?:js|cjs)$/.test(file),
+)) {
   const artifact = read(file);
   for (const forbidden of [
     "@modelcontextprotocol",

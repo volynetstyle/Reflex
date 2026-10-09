@@ -1,5 +1,5 @@
+import { isTextNode, isElementNode } from "../host/document";
 import type {
-  Cleanup,
   ComponentRenderable,
   ElementProps,
   ElementRenderable,
@@ -14,26 +14,25 @@ import type {
 } from "../operators";
 import { resolveShowValue, resolveSwitchValue } from "../operators";
 import { RenderableKind } from "../renderable/kind";
-import { classifyClientRenderable } from "../mount/renderable";
+import { classifyRenderable } from "../renderable/classify";
 import { bindElementProps } from "../mount/element-binder";
-import { hydrateReactiveSlot } from "../structure/reactive-slot";
+import { hydrateReactiveSlot } from "../mount/slot";
 import { mountPortal } from "../mount/portal";
+import { mountOwnedRange } from "../mount/range";
 import {
-  adoptExistingContentRange,
-  createRenderRangeMount,
-  mountRenderRange,
-  type MountedRenderRange,
-} from "../structure/render-range";
-import { isHydrationSlotEnd, isHydrationSlotStart } from "../hydrate/markers";
+  type RangeAnchors,
+  createOwnedRange,
+  type OwnedRange,
+} from "../structure/owned-range";
+import { consumeHydrationSlot } from "./slots";
+import { HydrationMismatch, failHydration } from "./error";
+import { nextSiblingWithinBoundary } from "./cursor";
 import {
   createOwnershipNode,
   runComponentRenderable,
 } from "@volynets/reflex-framework";
-import {
-  getActiveDOMExecutionContext,
-  runInDOMOwnershipNode,
-  runWithDOMExecutionContext,
-} from "../runtime/execution";
+import { getDOMContext } from "../runtime/context";
+import { runInDOMOwnershipNode } from "../runtime/lifetime";
 import {
   resolveNamespace,
   SVG_NS,
@@ -41,45 +40,8 @@ import {
   type Namespace,
 } from "../host/namespace";
 
-class HydrationMismatch extends Error {}
-
 function identity<T>(value: T): T {
   return value;
-}
-
-function failHydration(): never {
-  throw new HydrationMismatch();
-}
-
-function nextSiblingWithinBoundary(
-  node: Node,
-  boundary: Node | null,
-): Node | null {
-  const nextNode = node.nextSibling;
-  return nextNode === boundary ? null : nextNode;
-}
-
-function createRootCleanup(
-  container: ParentNode & Node,
-  rootMount: MountedRenderRange,
-): Cleanup {
-  const context = getActiveDOMExecutionContext();
-
-  const dispose = (() => {
-    runWithDOMExecutionContext(context, () => {
-      rootMount.clear();
-
-      if (context.mountedRoots.get(container) !== rootMount) {
-        return;
-      }
-
-      context.mountedRoots.unset(container);
-      rootMount.destroy();
-    });
-  }) as Cleanup;
-
-  dispose.dispose = dispose;
-  return dispose;
 }
 
 function resolveForHydrationValue(
@@ -93,42 +55,6 @@ function resolveForHydrationValue(
   }
 
   return nextItems.map((item, index) => renderable.children(item, index));
-}
-
-function consumeHydrationSlot(
-  currentNode: Node | null,
-  boundary: Node | null,
-): {
-  start: Comment;
-  end: Comment;
-  next: Node | null;
-} {
-  if (!isHydrationSlotStart(currentNode)) {
-    failHydration();
-  }
-
-  let depth = 1;
-  let cursor = currentNode.nextSibling;
-
-  while (cursor !== null && cursor !== boundary) {
-    if (isHydrationSlotStart(cursor)) {
-      depth++;
-    } else if (isHydrationSlotEnd(cursor)) {
-      depth--;
-
-      if (depth === 0) {
-        return {
-          start: currentNode,
-          end: cursor,
-          next: nextSiblingWithinBoundary(cursor, boundary),
-        };
-      }
-    }
-
-    cursor = cursor.nextSibling;
-  }
-
-  failHydration();
 }
 
 function expectedNamespaceUri(namespace: Namespace): string | null {
@@ -165,8 +91,9 @@ function hydrateRenderableValue(
   parentNamespace: Namespace,
   currentNode: Node | null,
   boundary: Node | null,
+  doc: Document,
 ): Node | null {
-  switch (classifyClientRenderable(value)) {
+  switch (classifyRenderable(value)) {
     case RenderableKind.Empty:
       return currentNode;
 
@@ -183,6 +110,7 @@ function hydrateRenderableValue(
           parentNamespace,
           cursor,
           boundary,
+          doc,
         );
       }
 
@@ -190,7 +118,7 @@ function hydrateRenderableValue(
     }
 
     case RenderableKind.Text: {
-      if (!(currentNode instanceof Text)) {
+      if (!isTextNode(currentNode)) {
         failHydration();
       }
 
@@ -223,6 +151,7 @@ function hydrateRenderableValue(
         slot.start,
         slot.end,
         parentNamespace,
+        renderable.ref,
       );
       return slot.next;
     }
@@ -249,17 +178,18 @@ function hydrateRenderableValue(
         slot.start,
         slot.end,
         parentNamespace,
+        renderable.ref,
       );
       return slot.next;
     }
 
     case RenderableKind.Portal:
-      mountPortal(value as PortalRenderable);
+      mountPortal(value as PortalRenderable, doc);
       return currentNode;
 
     case RenderableKind.Component: {
       const renderable = value as ComponentRenderable<unknown>;
-      const context = getActiveDOMExecutionContext();
+      const context = getDOMContext();
 
       return runComponentRenderable(
         renderable,
@@ -270,12 +200,13 @@ function hydrateRenderableValue(
             parentNamespace,
             currentNode,
             boundary,
+            doc,
           ),
       );
     }
 
     case RenderableKind.Element: {
-      if (!(currentNode instanceof Element)) {
+      if (!isElementNode(currentNode)) {
         failHydration();
       }
 
@@ -295,12 +226,7 @@ function hydrateRenderableValue(
       }
 
       const props = renderable.props as Record<string, unknown>;
-      bindElementProps(
-        currentNode,
-        props,
-        elementNamespace,
-        "initial",
-      );
+      bindElementProps(currentNode, props, elementNamespace, "initial");
 
       if (shouldHydrateLightDomChildren(renderable.tag, props)) {
         const remainingChild = hydrateRenderableValue(
@@ -308,6 +234,7 @@ function hydrateRenderableValue(
           elementNamespace,
           currentNode.firstChild,
           null,
+          doc,
         );
 
         if (remainingChild !== null) {
@@ -315,12 +242,7 @@ function hydrateRenderableValue(
         }
       }
 
-      bindElementProps(
-        currentNode,
-        props,
-        elementNamespace,
-        "deferred",
-      );
+      bindElementProps(currentNode, props, elementNamespace, "deferred");
 
       return nextSiblingWithinBoundary(currentNode, boundary);
     }
@@ -330,11 +252,11 @@ function hydrateRenderableValue(
   }
 }
 
-function hydrateManagedContainer(
+export function hydrateRange(
   renderable: JSXRenderable,
   container: ParentNode & Node,
-): MountedRenderRange {
-  const anchors = adoptExistingContentRange(container);
+  anchors: RangeAnchors,
+): OwnedRange {
   const ownershipNode = createOwnershipNode();
 
   try {
@@ -346,6 +268,7 @@ function hydrateManagedContainer(
           ? null
           : anchors.startAnchor.nextSibling,
         anchors.endAnchor,
+        anchors.startAnchor.ownerDocument,
       );
 
       if (remainingNode !== null) {
@@ -353,52 +276,16 @@ function hydrateManagedContainer(
       }
     });
 
-    return createRenderRangeMount(ownershipNode, anchors);
+    return createOwnedRange(ownershipNode, anchors);
   } catch (error) {
-    const failedHydrationMount = createRenderRangeMount(ownershipNode, anchors);
+    const failedHydrationMount = createOwnedRange(ownershipNode, anchors);
     failedHydrationMount.clear();
 
     if (!(error instanceof HydrationMismatch)) {
+      failedHydrationMount.destroy();
       throw error;
     }
 
-    return mountRenderRange(container, renderable, "html", anchors);
+    return mountOwnedRange(container, renderable, "html", anchors);
   }
-}
-
-export function resumeWithDOMExecution(
-  container: ParentNode & Node,
-): Cleanup {
-  const context = getActiveDOMExecutionContext();
-
-  const currentRoot = context.mountedRoots.get(container);
-  if (currentRoot !== undefined) {
-    return createRootCleanup(container, currentRoot);
-  }
-
-  const resumedRoot = createRenderRangeMount(
-    createOwnershipNode(),
-    adoptExistingContentRange(container),
-  );
-
-  context.mountedRoots.set(container, resumedRoot);
-  return createRootCleanup(container, resumedRoot);
-}
-
-export function hydrateWithDOMExecution(
-  renderable: JSXRenderable,
-  container: ParentNode & Node,
-): Cleanup {
-  const context = getActiveDOMExecutionContext();
-
-  const existingRoot = context.mountedRoots.get(container);
-  if (existingRoot !== undefined) {
-    existingRoot.destroy();
-    context.mountedRoots.unset(container);
-  }
-
-  const hydratedRoot = hydrateManagedContainer(renderable, container);
-  context.mountedRoots.set(container, hydratedRoot);
-  context.renderEffectScheduler.flush();
-  return createRootCleanup(container, hydratedRoot);
 }

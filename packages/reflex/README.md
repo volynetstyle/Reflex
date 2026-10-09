@@ -14,10 +14,15 @@ State writes are synchronous. Computed values update lazily on read. You choose
 when invalidated effects run: explicitly with `flush()`, after a batch, or
 immediately.
 
+Reactive async derivations are available in the separate
+[`@volynets/reflex-async`](../reflex-async/README.md) package. Import `asyncDerived`,
+`until` and async types from that package; `optimistic` and `transition` remain
+in `@volynets/reflex/unstable`.
+
 ## Install
 
 ```bash
-npm install @volynets/reflex
+npm install @volynets/reflex @volynets/reflex-runtime
 ```
 
 ## Quick start

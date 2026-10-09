@@ -1,35 +1,34 @@
-// Operators
 export { For, Portal, Show, Switch } from "./operators";
+export type {
+  ForProps,
+  PortalProps,
+  ShowProps,
+  SwitchCase,
+  SwitchProps,
+} from "./operators";
 
-// Hooks and context
 export {
-  useRef,
-  // state
-  useSignal,
+  createContext,
+  hasOwnContext,
+  provideContext,
   useComputed,
-  useMemo,
-
-  // side-effects
+  useContext,
   useEffect,
   useEffectOnce,
-  // Lifecycle
-  useOwned,
+  useMemo,
   useMount,
+  useOwned,
+  useRef,
   useUnmount,
-  // Contextual/Cross-component state
-  useContext,
-  createContext,
-  provideContext,
-  hasOwnContext,
-  type UseEffectFn,
+  useAbortSignal,
+  getLifetimeSignal,
 } from "@volynets/reflex-framework";
-export { useEffectRender } from "./hooks/use-effect-render";
+export type { UseEffectFn } from "@volynets/reflex-framework";
 
-// JSX runtime
+export { useMountedEffect } from "./hooks/use-mounted-effect";
+export { useSignal } from "./hooks/use-signal";
 export { Fragment, jsx, jsxDEV, jsxs } from "./runtime/jsx";
-
-// DOM runtime
-export { createApp, setupDOM } from "./runtime/app";
+export { createApp, setupDOM } from "./client/app";
 export {
   createDOMRuntime,
   hydrate,
@@ -37,18 +36,12 @@ export {
   render,
   resume,
   useDOMRenderer,
-} from "./runtime/singleton";
-export { createDOMRenderer, type DOMRenderer } from "./runtime/renderer";
-export {
-  RenderEffectPhase,
-  type DOMRenderEffectScheduler,
-  type RenderEffectScheduler,
-} from "./runtime/render-effect-scheduler";
-
-// Server
-export { renderToString } from "./server";
-
+} from "./client/default";
+export { createDOMRenderer, type DOMRenderer } from "./client/renderer";
 export type { DOMRuntimeOptions } from "./runtime/options";
+export type { MountEffects } from "./runtime/mount-effects";
+export { renderToString } from "./server";
+export { createDOMRangeHandle, type DOMRangeHandle } from "./host/range-handle";
 
 export type {
   CustomElementProps,
@@ -56,8 +49,8 @@ export type {
   DOMEvent,
   DOMEventHandler,
   DOMEventHandlerProp,
-  DOMEventMapFor,
   DOMEventListenerObject,
+  DOMEventMapFor,
   DOMProps,
   DOMPropsBase,
   ElementInstance,
@@ -75,11 +68,23 @@ export type {
   StyleObject,
   StyleValue,
 } from "./types";
-export type {
-  ForProps,
-  PortalProps,
-  ShowProps,
-  SwitchCase,
-  SwitchProps,
-} from "./operators";
 
+export {
+  defineModel,
+  isModel,
+  isModelActionValue,
+  isModelReadableValue,
+  own,
+  readModelValue,
+} from "./runtime/model";
+export type {
+  Model,
+  ModelAction,
+  ModelContext,
+  ModelFactory,
+  ModelHandle,
+  ModelOptions,
+  ModelReadable,
+  ModelSetup,
+  ModelValue,
+} from "./runtime/model";

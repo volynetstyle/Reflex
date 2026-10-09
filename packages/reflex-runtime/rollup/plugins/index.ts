@@ -1,3 +1,4 @@
+import { selectRuntimeReplacements } from "../../../../tooling/configs/runtime-flags.ts";
 import resolve from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
 import type { Plugin } from "rollup";
@@ -18,13 +19,7 @@ export function createPlugins(target: BuildTarget): Plugin[] {
     }),
     replace({
       preventAssignment: true,
-      values: {
-        __DEV__: JSON.stringify(target.mode === "dev"),
-        __PROFILE__: JSON.stringify(target.mode === "dev"),
-        __TRACKING_ONE_HOP__: "true",
-        __TRACKING_TWO_HOP__: "true",
-        __TRACKING_LAST_EDGE__: "true",
-      },
+      values: selectRuntimeReplacements(target.mode === "dev" ? "development" : "production", ["__DEV__", "__PROFILE__", "__TRACKING_ONE_HOP__", "__TRACKING_TWO_HOP__", "__TRACKING_LAST_EDGE__"]),
     }),
   ];
 

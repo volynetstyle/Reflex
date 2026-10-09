@@ -31,12 +31,21 @@ async function createStoreFixtureServer(
       alias: {
         "@runtime": runtimeSource,
         "@volynets/reflex": reflexSource,
+        "@volynets/reflex-framework": resolve(
+          testDir,
+          "../../reflex-framework/src/index.ts",
+        ),
         "@volynets/reflex-runtime/internal": resolve(
           runtimeSource,
           "internal/index.ts",
         ),
         "@volynets/reflex-runtime": resolve(runtimeSource, "index.ts"),
         "@volynets/reflex-scheduler": schedulerSource,
+        "@volynets/reflex-store/runtime/internal": resolve(
+          testDir,
+          "../src/runtime/internal.ts",
+        ),
+        "@volynets/reflex-store/runtime": resolve(testDir, "../src/runtime.ts"),
         "@volynets/reflex-store": storeSource,
       },
     },
@@ -64,6 +73,12 @@ describe("reflex store Vite plugin user DX", () => {
       seen: ["Alice:0:idle", "Bob:2:idle", "Bob:4:ready"],
       status: "ready",
     });
+  });
+
+  it("compiles an aliased factory through Vite SSR", async () => {
+    const server = await createStoreFixtureServer();
+    const mod = await server.ssrLoadModule("/store-plugin-alias.ts");
+    expect(mod.runAliasDemo()).toEqual({ before: 1, after: 3 });
   });
 
   it("surfaces store compiler diagnostics during Vite module loading", async () => {

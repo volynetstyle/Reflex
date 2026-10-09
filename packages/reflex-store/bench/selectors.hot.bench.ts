@@ -4,7 +4,7 @@ import {
   createKeyedProjection,
   createSelector,
   createStoreProjection,
-} from "../src";
+} from "../src/advanced";
 
 const runtime = createRuntime({ effectStrategy: "flush" });
 

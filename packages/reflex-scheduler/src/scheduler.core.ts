@@ -34,6 +34,7 @@ export function flushSchedulerQueue(core: SchedulerCore): void {
 
 /** Drains a queue already known to be non-empty and outside a flush phase. */
 export function flushPendingSchedulerQueue(core: SchedulerCore): void {
+  if (SCHEDULER_PROFILE_ENABLED) profileSchedulerPolicyCounter("flushPasses");
   const queue = core.queue;
   const previousPhase = core.phase;
   core.phase = Flushing;
@@ -47,6 +48,8 @@ export function flushPendingSchedulerQueue(core: SchedulerCore): void {
     }
 
     core.phase = previousPhase;
+    if (SCHEDULER_PROFILE_ENABLED)
+      profileSchedulerPolicyCounter("flushCompleted");
   }
 
   if (thrown !== NO_THROW) {

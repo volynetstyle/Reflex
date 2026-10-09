@@ -31,6 +31,10 @@ and development execution, including profiling and debug event order.
 - A `Changed` parent returns/bubbles a change without inspecting its edge.
   Otherwise inspect incoming dependencies in order, prioritizing `Changed`
   over `Unknown`. Development rejects computing dependencies as cycles.
+- Watcher dependency validation is a separate root-oriented operation. It
+  validates every committed root dependency, accumulates confirmed changes
+  locally, and reuses the existing computing-subscriber cursor protocol to
+  record a concurrent invalidation as `Visited` without changing push paths.
 - Advance changed dependencies and unknown leaves. Descend into unknown
   dependencies with inputs. Advance ancestors only after a confirmed change.
 - A stable result resumes the next sibling. Stable unwinding clears `Unknown`
@@ -86,7 +90,16 @@ node scripts/check-stages-semantics.mjs diff baseline candidate
 node scripts/check-stages-semantics.mjs stress baseline candidate
 node scripts/check-stages-semantics.mjs verify candidate
 node scripts/compare-stages.mjs baseline candidate
+node scripts/qualify-stages.mjs baseline candidate wide-dirty-last-4096
 ```
+
+The qualification command runs the semantic differential, a scenario-local
+trace comparison, production timing samples with p75/p95/p99, development
+profile counters/topology, stack statistics, and filtered V8 optimization/
+deoptimization output for the same named scenario. Its JSON report is written
+under `temp/stages/`. It supplements rather than replaces the full differential
+suite: the scenario trace is intentionally small, while the semantic gate owns
+complete graph-state equivalence.
 
 The standard gate covers 175 scenarios in each of production and development.
 The extended gate generates 2,327 scenarios per mode. Both compare operation
@@ -103,16 +116,18 @@ Mismatch details are written to `temp/stages/difference.json`.
 The selected push keeps the original two-phase traversal. Its direct watcher
 path avoids the no-op production emitter and calls an installed hook directly;
 development retains the original instrumentation. The computing-prefix scan
-visits four links per loop iteration. Pull scans adjacent clean dependencies
-inside its clean arm, avoiding repeated parent/dirty checks while preserving
-the original dirty descent, advance and unwind paths.
+visits four links per loop iteration. Pull separates root policy,
+single-edge dirty proof, and the deep continuation machine. Root traversal
+loads each dependency/state pair once: clean edges stay in the local root loop,
+while dirty edges enter `pullDependencyDirty` and perform the post-proof
+reentrancy barrier before reading their continuation.
 
 Experiments that outlined DFS, duplicated the hook-free traversal, merged skip
 loops or moved advance side-fanout into a helper were not retained. They either
 regressed other workloads or did not justify their additional code.
 
-The benchmark has 25 scenarios and uses a fresh Node process for each scenario
-and variant. It alternates baseline/candidate order over nine samples, with
+The benchmark uses a fresh Node process for each scenario
+and variant. It alternates baseline/candidate order over fifteen samples, with
 10,000 warmup and 20,000 measured passes. `--no-concurrent-recompilation`
 removes background optimizing-compiler timing from the measurement; reports
 include this flag, the CPU, Node version and every raw timing. Results measure

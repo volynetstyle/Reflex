@@ -40,12 +40,12 @@ for (const mode of ["prod", "dev"]) {
           return `export * from "${build}/src/internal/index.js";
           export * from "${build}/src/profiling.js";
           export { installRuntimeDebug } from "${build}/debug/debug.runtime.js";
-          export { testPullStack, testPullHigh } from "${build}/src/kernel/stages/second/pull_iterator.js";
+          export { testPullStack, testPullHigh } from "${build}/src/kernel/stages/second/pull_dependency.js";
           export { testPushStack, testPushHigh } from "${build}/src/kernel/stages/first/push_iterator.js";`;
         },
         transform(code, id) {
           const path = id.replaceAll("\\", "/");
-          if (path.endsWith("/stages/second/pull_iterator.js"))
+          if (path.endsWith("/stages/second/pull_dependency.js"))
             return (
               code +
               "\nexport { stack as testPullStack, high as testPullHigh };"

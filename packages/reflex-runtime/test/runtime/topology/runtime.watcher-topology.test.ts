@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
-  DIRTY_STATE,
+  Both,
   disposeWatcher,
   readConsumer,
   readProducer,
@@ -46,7 +46,7 @@ describe("Reactive runtime - watcher topology invalidation cardinality", () => {
 
     expect(invalidated).toEqual(["left", "right", "far"]);
     for (const { watcher } of watchers) {
-      expect(watcher.state & DIRTY_STATE).toBeTruthy();
+      expect(watcher.state & Both).toBeTruthy();
     }
   });
 

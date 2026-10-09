@@ -18,14 +18,7 @@ export function createConfig(target: BuildTarget): RollupOptions {
   };
 }
 
-function splitTargetInputs(target: BuildTarget): BuildTarget[] {
-  return Object.entries(target.input).map(([entryName, input]) => ({
-    ...target,
-    input: { [entryName]: input },
-    name: `${target.name}:${entryName}`,
-  }));
-}
-
 export function createRuntimeRollupConfig(): RollupOptions[] {
-  return TARGETS.flatMap(splitTargetInputs).map(createConfig);
+  // Public, internal and debug APIs must observe one kernel module graph.
+  return TARGETS.map(createConfig);
 }

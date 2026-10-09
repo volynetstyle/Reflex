@@ -14,47 +14,63 @@
         "types": "./src/index.ts",
         "default": "./src/index.ts"
       },
-      "types": "./dist/globals.d.ts",
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.cjs"
+      "import": {
+        "types": "./dist/globals.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/globals.d.cts",
+        "default": "./dist/cjs/index.cjs"
+      }
     },
     "./unstable": {
       "source": {
         "types": "./src/unstable/index.ts",
         "default": "./src/unstable/index.ts"
       },
-      "types": "./dist/unstable/index.d.ts",
-      "import": "./dist/esm/unstable/index.js",
-      "require": "./dist/cjs/unstable/index.cjs"
+      "import": {
+        "types": "./dist/unstable/index.d.ts",
+        "default": "./dist/esm/unstable/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/unstable/index.d.cts",
+        "default": "./dist/cjs/unstable/index.cjs"
+      }
     },
     "./debug": {
       "source": {
         "types": "./src/debug/index.ts",
         "default": "./src/debug/index.ts"
       },
-      "types": "./dist/debug/index.d.ts",
-      "import": "./dist/dev/debug/index.js",
-      "require": "./dist/cjs/debug/index.cjs"
+      "import": {
+        "types": "./dist/debug/index.d.ts",
+        "default": "./dist/dev/debug/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/debug/index.d.cts",
+        "default": "./dist/cjs/debug/index.cjs"
+      }
     }
   },
   "files": [
     "src",
     "dist/cjs",
     "dist/esm",
+    "dist/dev",
     "dist/debug",
     "dist/globals.d.ts",
-    "dist/unstable"
+    "dist/unstable",
+    "dist/global-types.d.ts"
   ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "clean": "node ../../tooling/build/clean.mjs .",
     "build": "pnpm clean && pnpm build:ts && pnpm build:types && pnpm build:npm",
-    "build:all": "node ../../scripts/build-chain.mjs @volynets/reflex-runtime @volynets/reflex-scheduler @volynets/reflex",
-    "prebuild:ts": "pnpm --filter @volynets/reflex-runtime build:ts && pnpm --filter @volynets/reflex-scheduler build",
+    "build:all": "node ../../tooling/build/run.mjs @volynets/reflex",
     "build:ts": "node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
-    "build:types": "rollup --silent -c rollup.dts.config.ts --configPlugin @rollup/plugin-swc && node ../../scripts/write-globals-dts.mjs . && node ./scripts/write-subpath-dts.mjs .",
+    "build:types": "rollup --silent -c rollup.dts.config.ts --configPlugin @rollup/plugin-swc && node ../../scripts/write-globals-dts.mjs . && node ./scripts/write-subpath-dts.mjs . && node ../../tooling/build/cjs-declarations.mjs . facade",
     "build:npm": "rollup --silent -c rollup.config.ts --configPlugin @rollup/plugin-swc",
     "build:clean": "pnpm build",
     "lint": "eslint .",
@@ -71,6 +87,16 @@
     "bench:model": "vitest bench bench/model.bench.ts",
     "bench:scheduler": "vitest bench bench/scheduler.bench.ts",
     "bench:scheduler:integration": "vitest bench bench/scheduler.integration.bench.ts",
+    "bench:competitors:prepare-e87bb66": "node bench/competitors/prepare-reflex-e87bb66.mjs",
+    "bench:competitors": "pnpm bench:competitors:prepare-e87bb66 && pnpm build:all && node --expose-gc bench/competitors/run.mjs",
+    "bench:competitors:smoke": "pnpm bench:competitors:prepare-e87bb66 && pnpm build:all && node --expose-gc bench/competitors/run.mjs --smoke",
+    "bench:competitors:contracts": "pnpm bench:competitors:prepare-e87bb66 && pnpm build:all && node bench/competitors/contracts.mjs",
+    "bench:competitors:claims": "node bench/competitors/claims.mjs",
+    "bench:effect-fanout:structural": "vitest run --config vite.effect-fanout-structural.config.ts",
+    "bench:effect-fanout:timing": "vitest run --config vite.effect-fanout-timing.config.ts",
+    "bench:effect-fanout:analyze": "node bench/effect-fanout-attribution/analyze.mjs",
+    "bench:hot-path:analyze": "node bench/effect-fanout-attribution/analyze-hot-path.mjs",
+    "bench:effect-fanout": "pnpm bench:effect-fanout:structural && pnpm bench:effect-fanout:timing && pnpm bench:effect-fanout:analyze",
     "bench:projection": "node ./bench/projection-compare.node.mjs",
     "demo": "vite --config examples/mini-app/vite.config.ts",
     "demo:build": "vite build --config examples/mini-app/vite.config.ts",
@@ -78,13 +104,22 @@
     "dev": "node ../../node_modules/typescript/bin/tsc -w -p tsconfig.build.json",
     "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
     "typecheck:tests": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.type-tests.json",
-    "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm build:clean"
+    "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm check:artifacts",
+    "check:artifacts": "node ../../tooling/build/verify-artifacts.mjs --directory .",
+    "prepack": "pnpm check:artifacts"
   },
   "dependencies": {
-    "@volynets/reflex-runtime": "workspace:*",
     "@volynets/reflex-scheduler": "workspace:*"
   },
   "devDependencies": {
-    "reactive-framework-test-suite": "0.0.2"
-  }
+    "@solidjs/signals": "2.0.0-rc.9",
+    "@vue/reactivity": "3.5.43",
+    "alien-signals": "3.2.1",
+    "reactive-framework-test-suite": "0.0.2",
+    "@volynets/reflex-runtime": "workspace:*"
+  },
+  "peerDependencies": {
+    "@volynets/reflex-runtime": "^1.0.0"
+  },
+  "private": false
 }

@@ -1,7 +1,7 @@
 /** @jsxImportSource ../src */
 
 import { describe, expect, it } from "vitest";
-import { createApp, useEffectRender, useSignal } from "../src";
+import { createApp, useMountedEffect, useSignal } from "../src";
 
 describe("runtime / DOM boundary", () => {
   it("keeps event-driven updates isolated between renderers", () => {
@@ -69,7 +69,7 @@ describe("runtime / DOM boundary", () => {
 
     function View() {
       const count = useSignal(0);
-      useEffectRender(() => {
+      useMountedEffect(() => {
         count();
         log.push(container.textContent ?? "");
       });
@@ -81,5 +81,31 @@ describe("runtime / DOM boundary", () => {
 
     container.querySelector("button")!.click();
     expect(log).toEqual(["0", "1"]);
+  });
+
+  it("commits render effects created by a reactive remount", () => {
+    const app = createApp();
+    const container = document.createElement("div");
+    const log: string[] = [];
+    let setVisible!: (value: boolean) => void;
+
+    function Child() {
+      useMountedEffect(() => {
+        log.push(container.textContent ?? "");
+      });
+      return <span>child</span>;
+    }
+
+    function Parent() {
+      const visible = useSignal(false);
+      setVisible = visible;
+      return <div>{() => visible() ? <Child /> : null}</div>;
+    }
+
+    app.render(<Parent />, container);
+    expect(log).toEqual([]);
+    app.renderer.execution.runtime!.run(() => setVisible(true));
+    expect(container.textContent).toBe("child");
+    expect(log).toEqual(["child"]);
   });
 });

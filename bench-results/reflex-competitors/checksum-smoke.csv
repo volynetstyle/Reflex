@@ -1,0 +1,6 @@
+scenario,group,dimension,size,framework,successfulTrials,failedTrials,comparableTrials,status,medianOpsPerSecond,medianAbsoluteDeviationOpsPerSecond,relativeMadPercent,medianNsPerOperation,medianP99Ns,medianP999Ns,medianSignalReadsPerOperation,medianSignalWritesPerOperation,medianComputedRunsPerOperation,medianEffectRunsPerOperation,medianRetainedHeapDeltaBytesPerOperation,medianGcPauseMs,pairedRatioTrials,throughputVsReflex
+changed-leaf,common-path,constant,1,reflex,1,0,1,smoke only,180668.47335140017,,,5535,,,1,1,0,1,112,4.44870001077652,0,
+changed-leaf,common-path,constant,1,reflex-e87bb66,1,0,1,smoke only,164473.68421052632,,,6080,,,1,1,0,1,672.4,5.395099997520447,0,
+changed-leaf,common-path,constant,1,alien,1,0,1,smoke only,260756.19295958278,,,3835,,,1,1,0,1,154,5.403200000524521,0,
+changed-leaf,common-path,constant,1,solid2,1,0,1,smoke only,87873.46221441125,,,11380,,,1,1,0,1,10050,5.717400014400482,0,
+changed-leaf,common-path,constant,1,vue,1,0,1,smoke only,235571.26030624265,,,4245,,,1,1,0,1,584.8,5.410100013017654,0,

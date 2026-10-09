@@ -1,25 +1,22 @@
 import { describe, expect, it } from "vitest";
-import {
-  RenderEffectPhase,
-  createRenderEffectScheduler,
-} from "../src/runtime/render-effect-scheduler";
+import { createMountEffects } from "../src/runtime/mount-effects";
 
 describe("DOM render effect scheduler", () => {
-  it("flushes phases in render order", () => {
-    const scheduler = createRenderEffectScheduler();
+  it("runs mount effects in FIFO order", () => {
+    const scheduler = createMountEffects();
     const log: string[] = [];
 
-    scheduler.schedule(() => log.push("after"), RenderEffectPhase.AfterRender);
-    scheduler.schedule(() => log.push("render"), RenderEffectPhase.Render);
-    scheduler.schedule(() => log.push("before"), RenderEffectPhase.BeforeRender);
+    scheduler.schedule(() => log.push("after"));
+    scheduler.schedule(() => log.push("render"));
+    scheduler.schedule(() => log.push("before"));
 
     scheduler.flush();
 
-    expect(log).toEqual(["before", "render", "after"]);
+    expect(log).toEqual(["after", "render", "before"]);
   });
 
   it("cancels pending tasks and drains reentrant tasks without shifting", () => {
-    const scheduler = createRenderEffectScheduler();
+    const scheduler = createMountEffects();
     const log: string[] = [];
 
     const cancel = scheduler.schedule(() => log.push("cancelled"));
@@ -30,7 +27,7 @@ describe("DOM render effect scheduler", () => {
       scheduler.schedule(() => log.push("second"));
     });
 
-    scheduler.flush(RenderEffectPhase.Render);
+    scheduler.flush();
 
     expect(log).toEqual(["first", "second"]);
   });

@@ -8,8 +8,8 @@ import type { Expression } from "@swc/core";
  * Options for the Reflex DOM JSX transform
  */
 export interface ReflexDOMTransformOptions {
-  include?: RegExp;
-  exclude?: RegExp;
+  include?: SelectorType;
+  exclude?: SelectorType;
   reactiveProps?: readonly string[];
   model?: boolean | ReflexModelTransformOptions;
 }
@@ -44,8 +44,7 @@ export interface NormalizedReflexModelTransformOptions {
  * Normalized DOM transform options for internal use
  */
 export interface NormalizedDOMTransformOptions {
-  include: RegExp;
-  exclude: RegExp;
+  filter: (id: string) => boolean;
   reactiveProps: readonly string[];
   model: NormalizedReflexModelTransformOptions | null;
 }

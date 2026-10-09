@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { parseSync } from "@swc/core";
-import type { Module } from "@swc/core";
+import { parseSync, printSync } from "@swc/wasm";
+import type { Module } from "@swc/wasm";
 
 export const DUMMY_SPAN = {
   start: 0,
@@ -11,12 +11,65 @@ export const DUMMY_SPAN = {
 export function parseModule(code: string, id: string): Module {
   const isTypeScript = /\.([cm]?ts)x?$/i.test(id);
 
-  return parseSync(code, {
-    syntax: isTypeScript ? "typescript" : "ecmascript",
-    tsx: /\.([cm]?ts)x$/i.test(id),
-    jsx: /\.([cm]?jsx)$/i.test(id),
-    target: "es2022",
-  });
+  return normalizeParsed(
+    parseSync(code, {
+      syntax: isTypeScript ? "typescript" : "ecmascript",
+      tsx: /\.([cm]?ts)x$/i.test(id),
+      jsx: /\.([cm]?jsx)$/i.test(id),
+      target: "es2022",
+    }),
+  ) as Module;
+}
+
+function normalizeParsed(node: any): any {
+  if (!node || typeof node !== "object") return node;
+  if (Array.isArray(node)) return node.map(normalizeParsed);
+  if (node.type === "FunctionBody") node.type = "BlockStatement";
+  for (const key of Object.keys(node)) {
+    if (key !== "span") node[key] = normalizeParsed(node[key]);
+  }
+  return node;
+}
+
+/** SWC WASM uses FunctionBody where the compiler's normalized AST uses blocks. */
+export function printModule(
+  program: any,
+  options: any,
+): { code: string; map?: string } {
+  const functionTypes = new Set([
+    "FunctionDeclaration",
+    "FunctionExpression",
+    "ArrowFunctionExpression",
+    "MethodProperty",
+    "GetterProperty",
+    "SetterProperty",
+    "ClassMethod",
+    "PrivateMethod",
+    "Constructor",
+  ]);
+  const convert = (node: any, parentType?: string, key?: string): any => {
+    if (!node || typeof node !== "object") return node;
+    if (Array.isArray(node))
+      return node.map((child) => convert(child, parentType, key));
+    const result: any = {};
+    for (const field of Object.keys(node))
+      result[field] = convert(node[field], node.type, field);
+    if (
+      node.type === "BlockStatement" &&
+      key === "body" &&
+      functionTypes.has(parentType!)
+    ) {
+      result.type = "FunctionBody";
+      delete result.ctxt;
+    }
+    if (
+      (node.type === "GetterProperty" || node.type === "SetterProperty") &&
+      result.function?.body
+    )
+      result.function.body.type = "FunctionBody";
+    return result;
+  };
+  return printSync(convert(program), options);
 }
 
 export function collectStaticMemberPath(node: any): string[] | null {
@@ -58,13 +111,17 @@ export function getStaticPropertyKey(node: any): string | null {
   }
 }
 
-export function visitNode(node: any, visit: (node: any) => void): void {
+export function visitNode(
+  node: any,
+  visit: (node: any, parent?: any) => void,
+  parent?: any,
+): void {
   if (node === null || typeof node !== "object") {
     return;
   }
 
   if (typeof node.type === "string") {
-    visit(node);
+    visit(node, parent);
   }
 
   for (const key of Object.keys(node)) {
@@ -75,11 +132,11 @@ export function visitNode(node: any, visit: (node: any) => void): void {
     const value = node[key];
     if (Array.isArray(value)) {
       for (const child of value) {
-        visitNode(child, visit);
+        visitNode(child, visit, node);
       }
       continue;
     }
 
-    visitNode(value, visit);
+    visitNode(value, visit, node);
   }
 }

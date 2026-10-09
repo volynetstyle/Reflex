@@ -106,6 +106,8 @@ export function createRuntimeSchedulerBinding(
     onNodeInvalidated,
     onHostFlush,
     batch<T>(fn: () => T): T {
+      if (SCHEDULER_PROFILE_ENABLED)
+        profileSchedulerPolicyCounter("batchEnter");
       enterSchedulerBatch(core);
       try {
         return fn();
@@ -114,6 +116,8 @@ export function createRuntimeSchedulerBinding(
       }
     },
     enterBatch() {
+      if (SCHEDULER_PROFILE_ENABLED)
+        profileSchedulerPolicyCounter("batchEnter");
       enterSchedulerBatch(core);
     },
     leaveBatch,

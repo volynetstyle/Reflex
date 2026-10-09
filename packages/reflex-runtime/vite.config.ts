@@ -1,36 +1,38 @@
-import { fileURLToPath } from "node:url";
+import { runtimeFlags } from "../../tooling/configs/runtime-flags";
+import { sourceAliases, configRoot } from "../../tooling/configs/source-aliases";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  plugins: [{
-    name: "runtime-walker-test-state",
-    enforce: "pre",
-    transform(code, id) {
-      // Expose existing lexical state only in the test transform. No runtime
-      // fields, counters, callbacks, or production exports are introduced.
-      if (id.replace(/\\/g, "/").endsWith("/src/kernel/stages/second/pull_iterator.ts")) {
-        return code + "\nexport { stack as testPullStack, high as testPullHigh };\n";
-      }
+  root: configRoot(import.meta.url),
+  plugins: [
+    {
+      name: "runtime-walker-test-state",
+      enforce: "pre",
+      transform(code, id) {
+        // Expose existing lexical state only in the test transform. No runtime
+        // fields, counters, callbacks, or production exports are introduced.
+        const normalizedId = id.replace(/\\/g, "/");
+        if (normalizedId.endsWith("/src/kernel/stages/second/pull_iterator.ts")) {
+          return (
+            code +
+            "\nexport { stack as testPullStack, high as testPullHigh };\n"
+          );
+        }
+        if (normalizedId.endsWith("/src/kernel/stages/second/pull_dependency.ts")) {
+          return code + "\nexport { testPullStack, testPullHigh } from './pull_iterator';\n";
+        }
+      },
     },
-  }],
+  ],
   resolve: {
-    alias: {
-      "@runtime": fileURLToPath(new URL("./src", import.meta.url)),
-    },
+    alias: sourceAliases("runtime"),
   },
-  define: {
-    __DEV__: false,
-    __PROFILE__: false,
-    __TRACKING_ONE_HOP__: true,
-    __TRACKING_TWO_HOP__: true,
-    __TRACKING_LAST_EDGE__: true,
-    __TEST__: true,
-    __PROD__: false,
-  },
+  define: runtimeFlags("source-test"),
   build: {
     lib: false,
   },
   test: {
+    name: "runtime/source",
     environment: "node",
     exclude: [
       "**/node_modules/**",

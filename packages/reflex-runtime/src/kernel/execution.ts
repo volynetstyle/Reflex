@@ -39,7 +39,7 @@ export const RuntimeExecutionError = {
       "Forbidden:",
       "  runWatcher(...)",
       "  readConsumer(...)",
-      "  pull_iterator(...)",
+      "  pull_dependency(...)",
     ].join("\n"),
   },
   SchedulerReactiveReadInHook: {

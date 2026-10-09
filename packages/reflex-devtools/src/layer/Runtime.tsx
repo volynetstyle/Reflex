@@ -1,5 +1,5 @@
 import { subtle, type RuntimeDebugMessage } from "@volynets/reflex/debug";
-import { useEffectRender, useRef } from "@volynets/reflex-dom";
+import { useMountedEffect, useRef } from "@volynets/reflex-dom";
 import {
   createRuntimeCytoscapeController,
   type RuntimeCytoscapeController,
@@ -24,7 +24,7 @@ const RuntimeLayer = () => {
   const layoutRef = useRef(new RuntimeLayoutComposer());
   const summaryRef = useRef<HTMLDivElement | null>(null);
 
-  useEffectRender(() => {
+  useMountedEffect(() => {
     const container = containerRef.current;
     if (container === null) return;
 
@@ -39,6 +39,7 @@ const RuntimeLayer = () => {
     const initialSnapshot = session.snapshot();
     const graph = buildGraph(initialSnapshot.history);
     let frame = 0;
+    const highlightTimers = new Set<number>();
     let controller: RuntimeCytoscapeController | null =
       createRuntimeCytoscapeController({
         container,
@@ -62,10 +63,11 @@ const RuntimeLayer = () => {
       if (message.type === "debug:event") {
         applyGraphEvent(graph, message.event);
         scheduleRender();
-        window.setTimeout(
-          () => controller?.highlight(message.event),
-          RUNTIME_INITIAL_HIGHLIGHT_DELAY_MS,
-        );
+        const timer = window.setTimeout(() => {
+          highlightTimers.delete(timer);
+          controller?.highlight(message.event);
+        }, RUNTIME_INITIAL_HIGHLIGHT_DELAY_MS);
+        highlightTimers.add(timer);
         return;
       }
 
@@ -93,6 +95,8 @@ const RuntimeLayer = () => {
       session.destroy();
       layoutRef.current.reset();
       if (frame !== 0) window.cancelAnimationFrame(frame);
+      for (const timer of highlightTimers) window.clearTimeout(timer);
+      highlightTimers.clear();
       controller?.destroy();
       controller = null;
     };

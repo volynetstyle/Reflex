@@ -1,0 +1,6 @@
+scenario,group,dimension,size,framework,successfulTrials,failedTrials,comparableTrials,status,medianOpsPerSecond,medianAbsoluteDeviationOpsPerSecond,relativeMadPercent,medianNsPerOperation,medianP99Ns,medianP999Ns,medianSignalReadsPerOperation,medianSignalWritesPerOperation,medianComputedRunsPerOperation,medianEffectRunsPerOperation,medianRetainedHeapDeltaBytesPerOperation,medianGcPauseMs,pairedRatioTrials,throughputVsReflex
+equal-leaf,common-path,constant,1,reflex,5,0,5,comparable,109396037.20792559,1047726.6145688891,0.9577372648129002,9.14109894217952,200,,0,1,0,0,1.7504,6.808799982070923,5,1
+equal-leaf,common-path,constant,1,reflex-e87bb66,5,0,5,comparable,107990560,1750528,1.6210009467494197,9.260068657853056,200,,0,1,0,0,1.7632,7.6549999713897705,5,0.9873198715887338
+equal-leaf,common-path,constant,1,alien,5,0,5,comparable,190503815.59694752,1010072.403052479,0.5302111140857715,5.249238693022919,200,,0,1,0,0,0.9968,7.456900000572205,5,1.7288841036701668
+equal-leaf,common-path,constant,1,solid2,5,0,5,comparable,77008517.98296404,270335.45932908356,0.35104617827976853,12.985576481568206,200,,0,1,0,0,-39.648,21.712700128555298,5,0.7040040583329221
+equal-leaf,common-path,constant,1,vue,5,0,5,comparable,569690656,2509312,0.44046922194911337,1.7553386025696023,200,,0,1,0,0,-1.6096,8.725600004196167,5,5.207598652931157

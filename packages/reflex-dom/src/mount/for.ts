@@ -1,13 +1,17 @@
 import type { Namespace } from "../host/namespace";
+import { untracked } from "@volynets/reflex-runtime";
+import { runWithOwner } from "@volynets/reflex-framework";
 import { moveRangeBefore } from "../host/mutations";
 import type { ForRenderable } from "../operators";
 import { reconcileKeyedList, type KeyedItem } from "../reconcile/keyed";
+import { getDOMContext } from "../runtime/context";
 import {
   createDOMOwnedReaction,
   registerDOMCleanup,
-} from "../runtime/execution";
+} from "../runtime/lifetime";
 import type { ContentSlot } from "../structure/content-slot";
-import { createMountedSlot } from "../structure/reactive-slot";
+import { createMountedSlot } from "../mount/slot";
+import { bindDOMRangeRef } from "./range-ref";
 
 interface ForRow<T> extends KeyedItem<T> {
   slot: ContentSlot;
@@ -16,8 +20,10 @@ interface ForRow<T> extends KeyedItem<T> {
 export function mountFor(
   renderable: ForRenderable<unknown>,
   ns: Namespace,
+  doc: Document,
 ): Node {
-  const doc = document;
+  const context = getDOMContext();
+  const rowOwner = context.owner.currentNode;
   const fragment = doc.createDocumentFragment();
   const start = doc.createComment("");
   const end = doc.createComment("");
@@ -48,7 +54,9 @@ export function mountFor(
     const row: ForRow<unknown> = {
       key,
       value: item,
-      slot: createMountedSlot(renderable.children(item, index), ns),
+      slot: runWithOwner(context.owner, rowOwner, () =>
+        createMountedSlot(renderable.children(item, index), ns, doc),
+      ),
     };
 
     parent.insertBefore(row.slot.fragment, before);
@@ -61,7 +69,9 @@ export function mountFor(
     }
 
     row.value = item;
-    row.slot.update(renderable.children(item, index));
+    runWithOwner(context.owner, rowOwner, () => {
+      row.slot.update(renderable.children(item, index));
+    });
   }
 
   function reconcile(
@@ -80,10 +90,14 @@ export function mountFor(
 
       if (renderable.fallback != null) {
         if (fallbackSlot === null) {
-          fallbackSlot = createMountedSlot(renderable.fallback, ns);
+          fallbackSlot = runWithOwner(context.owner, rowOwner, () =>
+            createMountedSlot(renderable.fallback, ns, doc),
+          );
           parent.insertBefore(fallbackSlot.fragment, end);
         } else {
-          fallbackSlot.update(renderable.fallback);
+          runWithOwner(context.owner, rowOwner, () => {
+            fallbackSlot!.update(renderable.fallback);
+          });
         }
       } else {
         destroyFallback();
@@ -110,7 +124,9 @@ export function mountFor(
     }).rows;
   }
 
-  reconcile(renderable.each());
+  // The list owns its dependency; mounting it inside another reactive slot
+  // must not subscribe that parent slot to the list as well.
+  untracked(() => reconcile(renderable.each()));
 
   createDOMOwnedReaction(renderable.each, reconcile);
 
@@ -120,6 +136,8 @@ export function mountFor(
     start.parentNode?.removeChild(start);
     end.parentNode?.removeChild(end);
   });
+
+  bindDOMRangeRef(renderable.ref, start, end);
 
   return fragment;
 }

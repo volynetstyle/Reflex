@@ -1,0 +1,34 @@
+import assert from "node:assert/strict";
+import { createRequire } from "node:module";
+const mode=process.argv[2];
+const require=createRequire(import.meta.url);
+const load=id=>mode.startsWith("cjs")?require(id):import(id);
+const core=await load("@volynets/reflex-runtime");
+const internal=await load("@volynets/reflex-runtime/internal");
+const facade=await load("@volynets/reflex");
+const unstable=await load("@volynets/reflex/unstable");
+const async=await load("@volynets/reflex-async");
+assert.equal(core.createProducer,internal.createProducer);
+assert.equal(core.getActiveRuntimeContext,internal.getActiveRuntimeContext);
+const outer=core.getActiveRuntimeContext();
+const context=core.createRuntimeContext();
+core.runWithRuntimeContext(context,()=>assert.equal(internal.getActiveRuntimeContext(),context));
+assert.equal(core.getActiveRuntimeContext(),outer);
+assert.equal("asyncDerived" in facade,false);
+assert.equal(typeof unstable.optimistic,"function");
+const runtime=facade.createRuntime({effectStrategy:"eager"});
+const id=facade.signal(1);
+const source=async.asyncDerived(()=>id());
+assert.equal(source.read(),1);
+id.set(2);runtime.flush();assert.equal(source.read(),2);
+let settle;
+const pending=async.asyncDerived(()=>new Promise(resolve=>{settle=resolve;}));
+assert.throws(()=>pending.read(),async.AsyncBlocker);
+settle(3);assert.equal(await pending.resolve(),3);
+pending.dispose();source.dispose();
+if(mode.endsWith("development")){
+ const debug=await load("@volynets/reflex/debug");
+ const runtimeDebug=await load("@volynets/reflex-runtime/debug");
+ assert.equal(typeof debug,"object");assert.equal(typeof runtimeDebug,"object");
+}
+console.log(mode+": installed runtime identity, facade/async invalidation and settlement passed.");

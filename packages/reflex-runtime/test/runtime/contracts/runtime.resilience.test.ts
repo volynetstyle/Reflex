@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   Computing,
-  DIRTY_STATE,
+  Both,
   Scheduled,
   Computing,
   disposeWatcher,
@@ -90,7 +90,7 @@ describe("Reactive runtime - resilience and recovery", () => {
     expect(currentConsumer).toBeNull();
     expect(watcher.state & Computing).toBe(0);
     expect(watcher.state & Computing).toBe(0);
-    expect(watcher.state & DIRTY_STATE).toBe(0);
+    expect(watcher.state & Both).toBe(0);
     expect(watcher.state & Scheduled).toBe(0);
   });
 
@@ -108,7 +108,7 @@ describe("Reactive runtime - resilience and recovery", () => {
     shouldThrow = true;
     writeProducer(source, 1);
     expect(() => runWatcher(watcher)).toThrow("watcher failed");
-    expect(watcher.state & (DIRTY_STATE | Computing | Scheduled)).toBe(0);
+    expect(watcher.state & (Both | Computing | Scheduled)).toBe(0);
 
     shouldThrow = false;
     writeProducer(source, 2);
@@ -130,7 +130,7 @@ describe("Reactive runtime - resilience and recovery", () => {
     runWatcher(watcher);
     writeProducer(source, 1);
     expect(() => runWatcher(watcher)).toThrow("cleanup failed");
-    expect(watcher.state & (DIRTY_STATE | Computing | Scheduled)).toBe(0);
+    expect(watcher.state & (Both | Computing | Scheduled)).toBe(0);
 
     throwCleanup = false;
     writeProducer(source, 2);
@@ -152,7 +152,7 @@ describe("Reactive runtime - resilience and recovery", () => {
     expect(() => disposeWatcher(watcher)).toThrow("cleanup failed");
     expect(watcher.compute).toBeUndefined();
     expect(watcher.firstIn).toBeNull();
-    expect(watcher.state & (DIRTY_STATE | Computing | Scheduled)).toBe(0);
+    expect(watcher.state & (Both | Computing | Scheduled)).toBe(0);
 
     expect(() => disposeWatcher(watcher)).not.toThrow();
     expect(cleanup).toHaveBeenCalledTimes(1);

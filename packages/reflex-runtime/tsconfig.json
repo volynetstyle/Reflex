@@ -1,13 +1,14 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
-      "@runtime/*": ["src/*"]
+      "@runtime/*": [
+        "src/*"
+      ]
     },
-    "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "useUnknownInCatchVariables": true,
@@ -27,6 +28,12 @@
     "exactOptionalPropertyTypes": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "debug", "alien"],
-  "exclude": ["dist"]
+  "include": [
+    "src",
+    "debug",
+    "alien"
+  ],
+  "exclude": [
+    "dist"
+  ]
 }

@@ -1,0 +1,446 @@
+{
+  "recordedAt": "2026-10-02T20:39:21.741Z",
+  "node": "v25.2.0",
+  "sourceHashes": {
+    "src/unstable/async.ts": "d571965b9f69c3a849b7fca63e2d7a237c159956b9a176ea3102ec3735b4fa6f",
+    "lab/async-semantics/baseline.ts": "e2b009f88f9334cc8e659368e38219969ae205ae9a1e9bccb7f99907e33bce91",
+    "src/unstable/async/source.ts": "7e106a3a1bc00a0dde28318e83e9bd19b68e5d0bac85fd7d5bd551559e1a5dd0",
+    "src/unstable/async/attempt.ts": "b0d6b05d27aa6d583cac52f0c6e8036d2b493cdf5736b0a1d567f1b4a8361fbd",
+    "src/unstable/async/frontier.ts": "02068a447a93e339fb77f0866a61053c6bfdb124f7f20ced674a496239a29e43",
+    "src/unstable/async/evaluation.ts": "09df85132caa9403ed9f68cbe2587bc76486b2b4890f6d9e1b88b98092fa2df4",
+    "src/unstable/async/errors.ts": "faaf5ca2eea76a01241e952c8b1b9054e35a26247ccbdc759f61f1e6ec59ff50",
+    "src/unstable/async/types.ts": "4d03382b821d1aee45a86b2e2cbd9c322c493f1465597f3c807d3447659aa787",
+    "src/unstable/async/wait.ts": "1883342c2c925cfc82f6f926aadffb0779f7c2c106aec93aef668ceb07beadd5",
+    "src/unstable/async/failure.ts": "fa8b48b27acbf7134eea4c5c6998b83da14fd56540882c9c377db1129f30dff6",
+    "../reflex-runtime/src/protocol/read.producer.ts": "d2195a5d20f637dc68ec20666eaec65799982d6c00dde8b57e8411cc3e5ea2b5"
+  },
+  "inputHashes": {
+    "lab/async-semantics/async-spec-machine.ts": "e4ab84831058869a17f1a36eaa0772593ed30a0247e93f89a27954279abcf017",
+    "lab/async-semantics/b3-mutations.mjs": "96f9f0e6f38e8ae4d7dae2c6282d45c710ab45a0c105fc24c1c42c157a7aa16a",
+    "lab/async-semantics/production-mutations.mjs": "239dd91cc71ea36281094c39d1f99a13aff5eb83a08ed2064ea202f6d1f825c6",
+    "lab/async-semantics/build.mjs": "c28b04241e316bb1688a50fb58292e1effa4225904a20efa7e5fe40cae3c5632",
+    "lab/async-semantics/entry.ts": "0299d35a3887b4ed76ddaa8263978149a929f78c347de4694166991171534384",
+    "lab/async-semantics/evaluation.ts": "26d9dab9672f5c735f2a3dd3c50e3236317b01ac1071dad178813caa0fb6288f",
+    "lab/async-semantics/frontier.ts": "a9b3af789a49a43c9aa9741f5766e1f309c06a7f64981c2f655f4100340b30b0",
+    "lab/async-semantics/qualify-b3-mutations.mjs": "533c91208ee471ae6b9bff52a95df1569707468586c1b355d5d3d90b263049b6",
+    "lab/async-semantics/pending-capture-machine.ts": "daa89d4edc2818a6e91f48ba50479aca259587a9569980c000b6e2f4b62e33f0"
+  },
+  "control": [
+    {
+      "captureMode": "direct",
+      "schedule": "flush",
+      "status": "survived",
+      "exploration": {
+        "depth": 4,
+        "maxStates": 1200,
+        "oracleStates": 1129,
+        "transitions": 2054,
+        "replays": 1129,
+        "complete": true,
+        "captureMode": "direct",
+        "schedules": [
+          "flush"
+        ]
+      }
+    },
+    {
+      "captureMode": "direct",
+      "schedule": "sab",
+      "status": "survived",
+      "exploration": {
+        "depth": 4,
+        "maxStates": 1200,
+        "oracleStates": 1129,
+        "transitions": 2054,
+        "replays": 1129,
+        "complete": true,
+        "captureMode": "direct",
+        "schedules": [
+          "sab"
+        ]
+      }
+    },
+    {
+      "captureMode": "direct",
+      "schedule": "eager",
+      "status": "survived",
+      "exploration": {
+        "depth": 4,
+        "maxStates": 1200,
+        "oracleStates": 1129,
+        "transitions": 2054,
+        "replays": 1129,
+        "complete": true,
+        "captureMode": "direct",
+        "schedules": [
+          "eager"
+        ]
+      }
+    },
+    {
+      "captureMode": "cached",
+      "schedule": "flush",
+      "status": "survived",
+      "exploration": {
+        "depth": 4,
+        "maxStates": 1200,
+        "oracleStates": 1129,
+        "transitions": 2054,
+        "replays": 1129,
+        "complete": true,
+        "captureMode": "cached",
+        "schedules": [
+          "flush"
+        ]
+      }
+    },
+    {
+      "captureMode": "cached",
+      "schedule": "sab",
+      "status": "survived",
+      "exploration": {
+        "depth": 4,
+        "maxStates": 1200,
+        "oracleStates": 1129,
+        "transitions": 2054,
+        "replays": 1129,
+        "complete": true,
+        "captureMode": "cached",
+        "schedules": [
+          "sab"
+        ]
+      }
+    },
+    {
+      "captureMode": "cached",
+      "schedule": "eager",
+      "status": "survived",
+      "exploration": {
+        "depth": 4,
+        "maxStates": 1200,
+        "oracleStates": 1129,
+        "transitions": 2054,
+        "replays": 1129,
+        "complete": true,
+        "captureMode": "cached",
+        "schedules": [
+          "eager"
+        ]
+      }
+    },
+    {
+      "captureMode": "pending",
+      "schedule": "flush",
+      "status": "survived",
+      "exploration": {
+        "depth": 3,
+        "maxStates": 200,
+        "oracleStates": 41,
+        "transitions": 57,
+        "replays": 41,
+        "complete": true,
+        "captureMode": "pending",
+        "schedules": [
+          "flush"
+        ]
+      }
+    },
+    {
+      "captureMode": "pending",
+      "schedule": "sab",
+      "status": "survived",
+      "exploration": {
+        "depth": 3,
+        "maxStates": 200,
+        "oracleStates": 41,
+        "transitions": 57,
+        "replays": 41,
+        "complete": true,
+        "captureMode": "pending",
+        "schedules": [
+          "sab"
+        ]
+      }
+    },
+    {
+      "captureMode": "pending",
+      "schedule": "eager",
+      "status": "survived",
+      "exploration": {
+        "depth": 3,
+        "maxStates": 200,
+        "oracleStates": 41,
+        "transitions": 57,
+        "replays": 41,
+        "complete": true,
+        "captureMode": "pending",
+        "schedules": [
+          "eager"
+        ]
+      }
+    }
+  ],
+  "results": [
+    {
+      "id": "live-frontier-reference",
+      "status": "killed",
+      "runs": [
+        {
+          "captureMode": "direct",
+          "schedule": "flush",
+          "status": "killed",
+          "witness": "flush: branch-next -> branch-next -> validate-oldest: unique frontier validations: expected 1, got 2"
+        }
+      ]
+    },
+    {
+      "id": "skip-post-validation-authority",
+      "status": "killed",
+      "runs": [
+        {
+          "captureMode": "direct",
+          "schedule": "flush",
+          "status": "killed",
+          "witness": "flush: validate-supersedes: target commit: value: expected undefined, got 1"
+        }
+      ]
+    },
+    {
+      "id": "duplicate-diamond-validation",
+      "status": "killed",
+      "runs": [
+        {
+          "captureMode": "direct",
+          "schedule": "flush",
+          "status": "killed",
+          "witness": "flush: validate-oldest: unique frontier validations: expected 1, got 2"
+        }
+      ]
+    },
+    {
+      "id": "publish-after-validation-blocker",
+      "status": "killed",
+      "runs": [
+        {
+          "captureMode": "direct",
+          "schedule": "flush",
+          "status": "killed",
+          "witness": "flush: refresh-a -> validate-oldest: target commit: value: expected undefined, got 1"
+        }
+      ]
+    },
+    {
+      "id": "retain-old-frontier",
+      "status": "killed",
+      "runs": [
+        {
+          "captureMode": "direct",
+          "schedule": "flush",
+          "status": "killed",
+          "witness": "flush: branch-next -> supersede -> validate-newest: unique frontier validations: expected 1, got 2"
+        }
+      ]
+    },
+    {
+      "id": "publish-obsolete-settlement",
+      "status": "killed",
+      "runs": [
+        {
+          "captureMode": "direct",
+          "schedule": "flush",
+          "status": "killed",
+          "witness": "flush: validate-supersedes: target commit: value: expected undefined, got 1"
+        }
+      ]
+    },
+    {
+      "id": "drop-hidden-frontier",
+      "status": "killed",
+      "runs": [
+        {
+          "captureMode": "direct",
+          "schedule": "flush",
+          "status": "survived",
+          "exploration": {
+            "depth": 4,
+            "maxStates": 1200,
+            "oracleStates": 1129,
+            "transitions": 2054,
+            "replays": 1129,
+            "complete": true,
+            "captureMode": "direct",
+            "schedules": [
+              "flush"
+            ]
+          }
+        },
+        {
+          "captureMode": "direct",
+          "schedule": "sab",
+          "status": "survived",
+          "exploration": {
+            "depth": 4,
+            "maxStates": 1200,
+            "oracleStates": 1129,
+            "transitions": 2054,
+            "replays": 1129,
+            "complete": true,
+            "captureMode": "direct",
+            "schedules": [
+              "sab"
+            ]
+          }
+        },
+        {
+          "captureMode": "direct",
+          "schedule": "eager",
+          "status": "survived",
+          "exploration": {
+            "depth": 4,
+            "maxStates": 1200,
+            "oracleStates": 1129,
+            "transitions": 2054,
+            "replays": 1129,
+            "complete": true,
+            "captureMode": "direct",
+            "schedules": [
+              "eager"
+            ]
+          }
+        },
+        {
+          "captureMode": "cached",
+          "schedule": "flush",
+          "status": "killed",
+          "witness": "flush: validate-oldest: unique frontier validations: expected 1, got 0"
+        }
+      ]
+    },
+    {
+      "id": "early-blocker-evaluation",
+      "status": "killed",
+      "runs": [
+        {
+          "captureMode": "direct",
+          "schedule": "flush",
+          "status": "survived",
+          "exploration": {
+            "depth": 4,
+            "maxStates": 1200,
+            "oracleStates": 1129,
+            "transitions": 2054,
+            "replays": 1129,
+            "complete": true,
+            "captureMode": "direct",
+            "schedules": [
+              "flush"
+            ]
+          }
+        },
+        {
+          "captureMode": "direct",
+          "schedule": "sab",
+          "status": "survived",
+          "exploration": {
+            "depth": 4,
+            "maxStates": 1200,
+            "oracleStates": 1129,
+            "transitions": 2054,
+            "replays": 1129,
+            "complete": true,
+            "captureMode": "direct",
+            "schedules": [
+              "sab"
+            ]
+          }
+        },
+        {
+          "captureMode": "direct",
+          "schedule": "eager",
+          "status": "survived",
+          "exploration": {
+            "depth": 4,
+            "maxStates": 1200,
+            "oracleStates": 1129,
+            "transitions": 2054,
+            "replays": 1129,
+            "complete": true,
+            "captureMode": "direct",
+            "schedules": [
+              "eager"
+            ]
+          }
+        },
+        {
+          "captureMode": "cached",
+          "schedule": "flush",
+          "status": "survived",
+          "exploration": {
+            "depth": 4,
+            "maxStates": 1200,
+            "oracleStates": 1129,
+            "transitions": 2054,
+            "replays": 1129,
+            "complete": true,
+            "captureMode": "cached",
+            "schedules": [
+              "flush"
+            ]
+          }
+        },
+        {
+          "captureMode": "cached",
+          "schedule": "sab",
+          "status": "survived",
+          "exploration": {
+            "depth": 4,
+            "maxStates": 1200,
+            "oracleStates": 1129,
+            "transitions": 2054,
+            "replays": 1129,
+            "complete": true,
+            "captureMode": "cached",
+            "schedules": [
+              "sab"
+            ]
+          }
+        },
+        {
+          "captureMode": "cached",
+          "schedule": "eager",
+          "status": "survived",
+          "exploration": {
+            "depth": 4,
+            "maxStates": 1200,
+            "oracleStates": 1129,
+            "transitions": 2054,
+            "replays": 1129,
+            "complete": true,
+            "captureMode": "cached",
+            "schedules": [
+              "eager"
+            ]
+          }
+        },
+        {
+          "captureMode": "pending",
+          "schedule": "flush",
+          "status": "killed",
+          "witness": "flush: pending capture: settle-root: target value: expected 2, got undefined"
+        }
+      ]
+    },
+    {
+      "id": "skip-publication-frontier",
+      "status": "killed",
+      "runs": [
+        {
+          "captureMode": "direct",
+          "schedule": "flush",
+          "status": "killed",
+          "witness": "flush: validate-oldest: unique frontier validations: expected 1, got 0"
+        }
+      ]
+    }
+  ]
+}

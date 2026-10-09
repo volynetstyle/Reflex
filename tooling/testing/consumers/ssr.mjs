@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import {writeFile} from "node:fs/promises";
+import {renderToString} from "@volynets/reflex-dom";
+import {createRuntime,signal} from "@volynets/reflex";
+import {counterView} from "./view.mjs";
+assert.equal(typeof globalThis.document,"undefined");assert.equal(typeof globalThis.window,"undefined");
+createRuntime({effectStrategy:"eager"});const count=signal(0);
+const html=renderToString(counterView(count,()=>count.set(count()+1)));
+assert.match(html,/<button/);assert.match(html,/count:/);
+await writeFile(new URL("./ssr-markup.txt",import.meta.url),html);
+console.log("Installed SSR works in Node without DOM globals.");

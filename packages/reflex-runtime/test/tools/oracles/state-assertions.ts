@@ -3,7 +3,7 @@ import type { ReactiveNode } from "../../../src/internal";
 import {
   Changed,
   Computing,
-  DIRTY_STATE,
+  Both,
   Unknown,
   Visited,
   Computing,
@@ -26,11 +26,11 @@ export function expectNotInvalid(node: ReactiveNode): void {
 }
 
 export function expectDirty(node: ReactiveNode): void {
-  expect(node.state & DIRTY_STATE).toBeTruthy();
+  expect(node.state & Both).toBeTruthy();
 }
 
 export function expectClean(node: ReactiveNode): void {
-  expect(node.state & DIRTY_STATE).toBe(0);
+  expect(node.state & Both).toBe(0);
 }
 
 export function expectTracking(node: ReactiveNode): void {

@@ -1,18 +1,18 @@
+import { sourceAliases } from "../../../../tooling/configs/source-aliases";
+import { applicationFlags, runtimeFlags } from "../../../../tooling/configs/runtime-flags";
 import { resolve } from "node:path";
 import { defineConfig } from "vite";
 
 const rootDir = __dirname;
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   root: rootDir,
   resolve: {
-    conditions: ["source"],
+    // Source execution needs a complete kernel graph; app builds consume package artifacts.
+    conditions: command === "serve" ? ["source"] : [],
+    alias: command === "serve" ? sourceAliases("application") : [],
   },
-  define: {
-    __DEV__: true,
-    __TEST__: false,
-    __PROD__: false,
-  },
+  define: command === "serve" ? runtimeFlags("development") : applicationFlags(),
   esbuild: {
     jsx: "automatic",
     jsxImportSource: "@volynets/reflex-dom",
@@ -25,4 +25,4 @@ export default defineConfig({
     outDir: resolve(rootDir, "dist"),
     emptyOutDir: true,
   },
-});
+}));

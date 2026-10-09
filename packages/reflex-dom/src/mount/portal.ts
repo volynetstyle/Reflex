@@ -1,16 +1,14 @@
 import type { PortalRenderable } from "../operators";
-import {
-  mountRenderRange,
-  type MountedRenderRange,
-} from "../structure/render-range";
+import { mountOwnedRange } from "../mount/range";
+import { type OwnedRange } from "../structure/owned-range";
 import {
   createDOMOwnedReaction,
   registerDOMCleanup,
-} from "../runtime/execution";
+} from "../runtime/lifetime";
 
-export function mountPortal(renderable: PortalRenderable): Node {
-  const placeholder = document.createTextNode("");
-  let activePortalRange: MountedRenderRange | null = null;
+export function mountPortal(renderable: PortalRenderable, doc: Document): Node {
+  const placeholder = doc.createTextNode("");
+  let activePortalRange: OwnedRange | null = null;
   let activeTarget: (ParentNode & Node) | null | undefined;
 
   function remountIntoTarget(
@@ -28,7 +26,11 @@ export function mountPortal(renderable: PortalRenderable): Node {
       return;
     }
 
-    activePortalRange = mountRenderRange(nextTarget, renderable.children, "html");
+    activePortalRange = mountOwnedRange(
+      nextTarget,
+      renderable.children,
+      "html",
+    );
   }
 
   remountIntoTarget(renderable.to());

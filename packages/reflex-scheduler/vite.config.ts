@@ -1,27 +1,14 @@
-import { resolve } from "node:path";
+import { runtimeFlags } from "../../tooling/configs/runtime-flags";
+import { sourceAliases, configRoot } from "../../tooling/configs/source-aliases";
 import { defineConfig } from "vitest/config";
 
-const runtimeRoot = resolve(__dirname, "../reflex-runtime/src");
 
 export default defineConfig({
+  root: configRoot(import.meta.url),
   resolve: {
-    alias: {
-      "@runtime": runtimeRoot,
-      "@volynets/reflex-runtime/internal": resolve(
-        runtimeRoot,
-        "internal/index.ts",
-      ),
-      "@volynets/reflex-runtime": resolve(runtimeRoot, "index.ts"),
-    },
+    alias: sourceAliases("scheduler"),
   },
-  define: {
-    __DEV__: false,
-    __PROFILE__: false,
-    __TRACKING_ONE_HOP__: true,
-    __TRACKING_TWO_HOP__: true,
-    __TRACKING_LAST_EDGE__: true,
-    __TEST__: true,
-    __PROD__: false,
-  },
-  test: { environment: "node", isolate: false },
+  define: runtimeFlags("source-test"),
+  test: {
+    name: "scheduler/source", environment: "node", isolate: false },
 });

@@ -84,6 +84,7 @@ function classifyFinding(finding: Finding): string | undefined {
   const expectedRun = finding.expected.effects.some(
     (event) => event.phase === "run",
   );
+
   if (
     expectedError === undefined &&
     actualError === undefined &&

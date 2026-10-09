@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import * as pullModule from "../../../src/kernel/stages/second/pull_iterator";
-import { createConsumer, createProducer } from "../../../src/protocol/create.node";
+import * as pullModule from "../../../src/kernel/stages/second/pull_dependency";
+import {
+  createConsumer,
+  createProducer,
+} from "../../../src/protocol/create.node";
 import { readConsumer } from "../../../src/protocol/read.consumer";
 import { readProducer } from "../../../src/protocol/read.producer";
 import { writeProducer } from "../../../src/protocol/write.producer";
@@ -17,7 +20,9 @@ import {
   noteShouldRecomputeStackUsage,
   readRuntimeWalkerStackStats,
   resetRuntimeWalkerStackStats,
+  STACK_TRIM_MIN_CAPACITY,
   trimWalkerStackIfSparse,
+  trimWalkerStackToFloorIfSparse,
 } from "../../../src/kernel/stages/stackStats";
 
 /** Covers debug-only stack-stat counters for walker storage management. */
@@ -34,6 +39,22 @@ describe("Reactive runtime - walker stack stats", () => {
     const sparse = Array.from({ length: 256 }, (_, index) => index);
     trimWalkerStackIfSparse(sparse, 64);
     expect(sparse).toHaveLength(64);
+  });
+
+  it("applies the pull retention floor independently of traversal", () => {
+    const retained = Array.from(
+      { length: STACK_TRIM_MIN_CAPACITY },
+      (_, index) => index,
+    );
+    trimWalkerStackToFloorIfSparse(retained);
+    expect(retained).toHaveLength(STACK_TRIM_MIN_CAPACITY);
+
+    const oversized = Array.from(
+      { length: STACK_TRIM_MIN_CAPACITY * 4 },
+      (_, index) => index,
+    );
+    trimWalkerStackToFloorIfSparse(oversized);
+    expect(oversized).toHaveLength(STACK_TRIM_MIN_CAPACITY);
   });
 
   it("reports zeroed stats for production builds", () => {
@@ -76,13 +97,19 @@ describe("Reactive runtime - walker stack stats", () => {
           shouldThrow = true;
           expect(() => readConsumer(root)).toThrow(failure);
           expect.soft(pullState.testPullHigh).toBe(base);
-          expect.soft(pullState.testPullStack.slice(base).every((edge) => edge == null)).toBe(true);
+          expect
+            .soft(
+              pullState.testPullStack.slice(base).every((edge) => edge == null),
+            )
+            .toBe(true);
           expect(currentConsumer).toBeNull();
 
           shouldThrow = false;
           expect(readConsumer(root)).toBe(value + 3);
           expect(pullState.testPullHigh).toBe(base);
-          expect(pullState.testPullStack.slice(base).every((edge) => edge == null)).toBe(true);
+          expect(
+            pullState.testPullStack.slice(base).every((edge) => edge == null),
+          ).toBe(true);
         }
       } finally {
         vi.unstubAllGlobals();
@@ -119,7 +146,11 @@ describe("Reactive runtime - walker stack stats", () => {
           for (let index = 0; index < base; index++) {
             expect(pullState.testPullStack[index]).toBe(outer[index]);
           }
-          expect.soft(pullState.testPullStack.slice(base).every((edge) => edge == null)).toBe(true);
+          expect
+            .soft(
+              pullState.testPullStack.slice(base).every((edge) => edge == null),
+            )
+            .toBe(true);
         }
         return value;
       });
@@ -134,7 +165,9 @@ describe("Reactive runtime - walker stack stats", () => {
       expect(readConsumer(root)).toBe(4);
       expect(caught).toBe(true);
       expect(pullState.testPullHigh).toBe(entryBase);
-      expect(pullState.testPullStack.slice(entryBase).every((edge) => edge == null)).toBe(true);
+      expect(
+        pullState.testPullStack.slice(entryBase).every((edge) => edge == null),
+      ).toBe(true);
       shouldThrow = false;
       expect(readConsumer(nestedRoot)).toBe(22);
     } finally {

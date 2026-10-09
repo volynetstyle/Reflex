@@ -8,7 +8,10 @@ import type {
   ReflexDOMTransformResult,
 } from "./types.js";
 import { normalizeDOMOptions } from "./normalize-options.js";
-import { shouldProcessFile, hasPotentialReactiveJSXExpression } from "./string-utils.js";
+import {
+  hasPotentialReactiveJSXExpression,
+  stripQueryAndHash,
+} from "./string-utils.js";
 import { parseJSXModule, printProgram } from "./parser.js";
 import { ReflexDOMJSXReactivePropsVisitor } from "./visitor.js";
 import { injectModelValueReadImport } from "./ast-utils.js";
@@ -27,7 +30,26 @@ export function transformReflexDOMJSX(
 ): ReflexDOMTransformResult | null {
   const options = normalizeDOMOptions(rawOptions);
 
-  if (!shouldProcessFile(id, options.include, options.exclude)) {
+  return transformWithOptions(code, id, options);
+}
+
+/** Creates a transformer with its file filter normalized once for a Vite plugin. */
+export function createReflexDOMJSXTransformer(
+  rawOptions: ReflexDOMTransformOptions = {},
+): (code: string, id: string) => ReflexDOMTransformResult | null {
+  const options = normalizeDOMOptions(rawOptions);
+
+  return (code, id) => transformWithOptions(code, id, options);
+}
+
+function transformWithOptions(
+  code: string,
+  id: string,
+  options: ReturnType<typeof normalizeDOMOptions>,
+): ReflexDOMTransformResult | null {
+  const cleanId = stripQueryAndHash(id);
+
+  if (!options.filter(cleanId)) {
     return null;
   }
 
@@ -35,19 +57,16 @@ export function transformReflexDOMJSX(
     return null;
   }
 
-  const ast = parseJSXModule(code, id);
+  const ast = parseJSXModule(code, cleanId);
   const visitor = new ReflexDOMJSXReactivePropsVisitor(
     new Set(options.reactiveProps),
     options.model,
   );
   let transformed = visitor.visitProgram(ast) as Program;
 
-  if (
-    options.model !== null &&
-    visitor.shouldInjectModelValueReadHelper()
-  ) {
+  if (options.model !== null && visitor.shouldInjectModelValueReadHelper()) {
     transformed = injectModelValueReadImport(transformed, options.model);
   }
 
-  return printProgram(transformed, id);
+  return printProgram(transformed, cleanId);
 }

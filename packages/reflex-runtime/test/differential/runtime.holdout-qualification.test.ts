@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { holdoutSemanticMutants } from "./holdout-mutants";
-import { mutationQualificationCorpus } from "./mutation-corpus";
+import { mutationQualificationCorpus } from "./mutant/mutation-corpus";
 import {
   formatMutationReport,
   qualifyMutationCorpus,
-} from "./mutation-qualification";
+} from "./mutant/mutation-qualification";
 
 describe("differential oracle holdout qualification", () => {
   it("measures an untuned cohort without requiring a perfect score", () => {

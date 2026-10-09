@@ -19,7 +19,7 @@ import {
 import {
   Changed,
   Computing,
-  DIRTY_STATE,
+  Both,
   Unknown,
   Visited,
   type ReactiveEdge,
@@ -80,7 +80,7 @@ function advanceCore(
 
   restoreConsumerTracking(prevActive);
 
-  const resolvedState = computingState & ~(Computing | DIRTY_STATE);
+  const resolvedState = computingState & ~(Computing | Both);
 
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.advance.cleanup.check");
@@ -130,6 +130,10 @@ function advanceCore(
             "projection.semantic.advance.propagate.skip-edge",
           );
         push_iterator_once_skipping(firstOut, skipOutEdge);
+      } else if (__PROFILE__) {
+        observeRuntimeProjection?.(
+          "projection.semantic.advance.propagate.owned-edge-only-skip",
+        );
       }
     } else {
       push_iterator_once(firstOut);

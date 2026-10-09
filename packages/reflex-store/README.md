@@ -1,83 +1,216 @@
-# @volynets/reflex-store
+# Reflex Store
 
-State management primitives for Reflex.
+Structured state, derived views and keyed collections with a compiler for static
+store shapes. The library distribution keeps the Reflex host and reactive kernel
+as external imports. `@volynets/reflex`, `@volynets/reflex-runtime` and
+`@volynets/reflex-framework` are peer dependencies. Framework supplies the
+shared lifecycle primitives, while Store, DOM and Async share the application's
+kernel module identity.
+The distribution includes the portable SWC WebAssembly compiler and Vite plugin.
 
-## Runtime selectors
+```sh
+pnpm add @volynets/reflex-store @volynets/reflex @volynets/reflex-runtime @volynets/reflex-framework
+```
+
+## Application API
+
+Start with `createStore`, `derive`, `selector`, `reactiveMap`, `action` and
+`snapshot`. Use `leaf`/`opaque` for reference boundaries and `hydrate` for
+restoring compiled data.
 
 ```ts
-import { createSelector, createProjection } from "@volynets/reflex-store";
+import { createRuntime, effect } from "@volynets/reflex-store/runtime";
+import {
+  createStore,
+  leaf,
+  derive,
+  selector,
+  reactiveMap,
+  action,
+  snapshot,
+  hydrate,
+} from "@volynets/reflex-store";
 
-const isSelected = createSelector(selectedId);
-const labels = createProjection(
-  activeEntity,
-  (entity) => entity.id,
-  (entity) => entity.label,
+createRuntime({ effectStrategy: "flush" });
+
+export function createBoard() {
+  const board = createStore(
+    {
+      filter: { status: "all", query: "" },
+      selection: { taskId: "T-101" },
+      pinned: leaf<readonly string[]>([]),
+
+      get filterLabel() {
+        const query = this.filter.query.trim().toLowerCase();
+        return query ? this.filter.status + ":" + query : this.filter.status;
+      },
+
+      setFilter(status: string, query = "") {
+        this.filter.status = status;
+        this.filter.query = query;
+      },
+    },
+    { name: "Board" },
+  );
+
+  return board;
+}
+
+const board = createBoard();
+const tasks = reactiveMap<string, { title: string; done: boolean }>();
+const isSelected = selector(() => board.selection.taskId);
+const summary = derive(
+  () => ({
+    total: tasks.size,
+    completed: [...tasks.values()].filter((task) => task.done).length,
+  }),
+  { name: "Summary" },
 );
+
+const addTasks = action(() => {
+  tasks.set("T-101", { title: "Design checkout", done: false });
+  tasks.set("T-102", { title: "Add audit log", done: true });
+});
+
+addTasks();
+console.log(summary.completed); // 1; pulls current data immediately
+const saved = snapshot(board); // frozen data; excludes methods and getters
+hydrate(board, saved); // validates the entire shape, then writes in one action
 ```
 
-Signals keep the runtime's `Object.is` change detection. A projection can opt
-into domain-specific equality at its semantic boundary:
+Every factory call creates independent state. Root methods become bound,
+synchronous actions; getters become owned lazy computeds. Static data reads and
+writes lower to direct cell calls. Getters must be pure and synchronous.
 
-```ts
-const permissions = createProjection(
-  activeUser,
-  (user) => user.id,
-  (user) => user.permissions,
-  { equals: shallowEqual },
-);
-```
+`derive` accepts a pure callback returning a plain object. Its property views
+are read-only. Dynamic entity IDs belong in `reactiveMap`; map values are
+reference boundaries, so replace an entry to publish an entity change.
 
-Use `keyEquals` only when projection keys themselves have domain-specific
-identity. `createSelector` continues to call its key comparator `equals`.
+`action` preserves callback parameters, return value and receiver. Related
+writes run untracked inside one scheduler/runtime batch. Direct reads see writes
+so far. Exceptions keep completed writes and close the batch; there is no rollback.
 
-## Store projections
+## Compiler and Vite
 
-```ts
-import { createStoreProjection } from "@volynets/reflex-store";
-
-const user = createStoreProjection(
-  (draft) => {
-    draft.fullName = `${first()} ${last()}`;
-  },
-  { fullName: "" },
-);
-```
-
-## Semantic workload benchmarks
-
-`pnpm bench` runs the small wall-time matrix. `pnpm bench:full` expands object
-size, fan-out, equivalence probability, downstream work, keyed locality, and
-dependency churn. `pnpm bench:metrics` runs the same graph scenarios with
-runtime profiling enabled and checks graph work independently of ops/sec.
-
-The harness reports source writes, producer and consumer executions, equality
-calls and fields visited, equivalent outputs, semantically affected nodes, and
-execution amplification. Runtime profiling additionally observes push/pull
-edges, dirty/scheduled nodes, watcher executions, and maximum propagation
-depth. Allocation and GC measurements remain a separate Node `--expose-gc`
-suite so instrumentation does not contaminate wall-time cases.
-
-## Compiled stores
-
-```ts
-import { createStore } from "@volynets/reflex-store";
-import { compileStore, transformCompiledStore } from "@volynets/reflex-store/store";
-```
-
-## Vite
+`createStore` requires the transform. The runtime stub throws if it executes.
 
 ```ts
 import { defineConfig } from "vite";
 import reflexStore from "@volynets/reflex-store/vite";
 
 export default defineConfig({
-  plugins: [reflexStore()],
+  plugins: [reflexStore({ eraseFacade: true })],
 });
 ```
 
-## Example
+The plugin transforms stores while preserving application package resolution.
+It does not redirect host or kernel imports. `@volynets/reflex-store/runtime`,
+`/runtime/core` and `/runtime/internal` re-export the shared peer APIs; they do not
+contain a private host or kernel.
 
-See the runnable [task-board example](./examples/task-board/README.md) for an
-application-oriented implementation combining a compiled UI store, immutable
-domain state, keyed selectors, entity projections, derived store projections,
-and explicit application actions.
+The standalone compiler is exported from `@volynets/reflex-store/store`.
+It includes its portable WASM asset; installing a platform-specific native SWC
+package is unnecessary. `eraseFacade` removes the object only when every use
+lowers to data cells. Factories, methods, getters, disposal and data extraction
+retain the required facade.
+
+See [compiler rules](./src/store/TRANSFORM_SPEC.md).
+
+## Ownership
+
+Compiled stores use `createStoreScope()` from `/runtime`. This thin compiler
+target delegates ownership, cancellation and rollback to Framework's
+`LifecycleScope`. It adds synchronous, untracked actions inside the host batch
+and exposes disposal through `dispose()` and `Symbol.dispose`. Cells are created
+and owned during setup; a failed initializer disposes earlier cells before
+rethrowing its original error. Computed getter resources share the same lifetime.
+
+Store compilation uses neither `createModel` nor `defineModel`. Models remain an
+optional way for application code to own a store alongside other resources.
+
+Use the shared host's model ownership to dispose resources together:
+
+```ts
+import { createModel, own, signal } from "@volynets/reflex-store/runtime";
+import { derive, reactiveMap, selector } from "@volynets/reflex-store";
+
+const createPanel = createModel((ctx) => {
+  const tasks = own(ctx, reactiveMap<string, { done: boolean }>());
+  const selectedId = signal("");
+  return {
+    tasks,
+    selected: own(ctx, selector(selectedId)),
+    summary: own(
+      ctx,
+      derive(() => ({ total: tasks.size })),
+    ),
+  };
+});
+```
+
+Maps, sets, selectors, keyed projections, structured views and compiled stores
+implement `Symbol.dispose`. They also support explicit terminal disposal. Compiled reads, methods, writes and
+restoration reject use after disposal.
+`collect` is available in the advanced API for long-lived structures with many
+previously observed keys.
+
+## Reference and data boundaries
+
+An object literal is a structural branch. `leaf(value)` is one replaceable
+location. `opaque(resource)` retains an external reference.
+
+```ts
+const state = createStore({
+  items: leaf<readonly Task[]>([]),
+  engine: opaque(new Engine()),
+});
+state.items = [...state.items, task];
+```
+
+Compiled arrays use replacement semantics. Array mutation does not publish
+fine-grained changes.
+
+Snapshots copy and freeze plain structural data, preserving cycles and shared
+references. Map/Set keys preserve identity. Opaque and foreign objects remain
+external references. Applications define encoding/exclusion for JSON, SSR
+persistence and external resources.
+
+Compiled hydration requires the full exact data shape, including empty branches.
+It rejects missing/extra fields and accessor properties before the first write,
+clones structural leaf data, and restores all fields in one action. Schema
+validation is structural; validate untrusted input value types in the application.
+
+## Advanced API
+
+`@volynets/reflex-store/advanced` preserves projection controls, depth markers,
+`raw`, `transaction`, lifecycle helpers and `createStoreCell`. It also exports:
+
+```ts
+import { reactiveSet, getStoreName } from "@volynets/reflex-store/advanced";
+
+const selectedIds = reactiveSet<string>([], { name: "Selected IDs" });
+selectedIds.add("T-101");
+console.log(getStoreName(selectedIds));
+```
+
+`ReactiveSet` follows native Set membership and iteration semantics.
+Resource names are optional store metadata and do not add runtime kernel hooks.
+The existing draft and keyed projection APIs remain available here.
+
+The [task board](./examples/task-board/README.md) demonstrates the basic API.
+The normative contract is in [SPECIFICATION.md](./SPECIFICATION.md).
+
+## Checks
+
+```sh
+pnpm --filter @volynets/reflex-store test
+pnpm --filter @volynets/reflex-store test:dev
+pnpm --filter @volynets/reflex-store typecheck
+pnpm --filter @volynets/reflex-store lint
+pnpm --filter @volynets/reflex-store test:packed-runtime
+```
+
+The packed test installs only this tarball in an empty offline project. It
+checks all published imports, WASM loading, one shared graph across entrypoints,
+the Vite plugin, factory isolation, batching, snapshots/hydration and consumer
+declarations with `skipLibCheck=false`.

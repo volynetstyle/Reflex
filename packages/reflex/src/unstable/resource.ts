@@ -295,7 +295,7 @@ class ResourceCore<T, E = unknown> {
   }
 
   resolve(token: number, value: T): boolean {
-    if (!this.isAlive(token)) return false;
+    if (!this.isAlive(token) || this.status !== "pending") return false;
     this.status = "resolved";
     this.value = value;
     this.error = undefined;
@@ -304,7 +304,7 @@ class ResourceCore<T, E = unknown> {
   }
 
   reject(token: number, error: E): boolean {
-    if (!this.isAlive(token)) return false;
+    if (!this.isAlive(token) || this.status !== "pending") return false;
     this.status = "rejected";
     this.error = error;
     this.bump();
@@ -326,12 +326,11 @@ class ResourceCore<T, E = unknown> {
 
     try {
       result = load(request);
+      this.settle(result, request);
     } catch (error) {
       request.reject(error as E);
       return;
     }
-
-    this.settle(result, request);
   }
 
   runSourceLoad<S>(sourceValue: S, load: ResourceLoader<S, T>): void {
@@ -340,12 +339,11 @@ class ResourceCore<T, E = unknown> {
 
     try {
       result = load(sourceValue, request);
+      this.settle(result, request);
     } catch (error) {
       request.reject(error as E);
       return;
     }
-
-    this.settle(result, request);
   }
 
   scheduleLoad(): void {

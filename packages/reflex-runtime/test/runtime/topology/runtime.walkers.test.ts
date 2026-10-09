@@ -1,7 +1,7 @@
 import fc from "fast-check";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  DIRTY_STATE,
+  Both,
   ReactiveNode,
   ReactiveNodeState,
   getActiveRuntimeContext,
@@ -562,7 +562,7 @@ describe("Reactive runtime - walker invariants", () => {
     expect(root.state & Unknown).toBeTruthy();
     expect(readConsumer(root)).toBe(11);
     expect(sharedSpy).toHaveBeenCalledTimes(2);
-    expect(shared.state & DIRTY_STATE).toBe(0);
+    expect(shared.state & Both).toBe(0);
     expect(root.state & Unknown).toBe(0);
   });
 
@@ -582,7 +582,7 @@ describe("Reactive runtime - walker invariants", () => {
 
     expect(readConsumer(root)).toBe(12);
     expect(leafSpy).toHaveBeenCalledTimes(2);
-    expect(leaf.state & DIRTY_STATE).toBe(0);
+    expect(leaf.state & Both).toBe(0);
     expect(mid.state & Unknown).toBe(0);
     expect(root.state & Unknown).toBe(0);
   });
@@ -620,7 +620,7 @@ describe("Reactive runtime - walker invariants", () => {
     expect(left.state & Unknown).toBeTruthy();
     expect(right.state & Unknown).toBeTruthy();
     expect(readConsumer(left)).toBe(5);
-    expect(left.state & DIRTY_STATE).toBe(0);
+    expect(left.state & Both).toBe(0);
     expect(right.state & Changed).toBeTruthy();
     expect(right.state & Unknown).toBeFalsy();
   });
@@ -665,7 +665,7 @@ describe("Reactive runtime - walker invariants", () => {
     writeProducer(rightSource, 20);
 
     expect(root.state & Unknown).toBeTruthy();
-    expect(left.state & DIRTY_STATE).toBe(0);
+    expect(left.state & Both).toBe(0);
     expect(right.state & Changed).toBeTruthy();
     expect(readConsumer(root)).toBe(23);
     expect(leftSpy).toHaveBeenCalledTimes(1);
@@ -764,7 +764,7 @@ describe("Reactive runtime - walker invariants", () => {
     writeProducer(rightSource, 20);
 
     expect(readConsumer(root)).toBe(21);
-    expect(root.state & DIRTY_STATE).toBe(0);
+    expect(root.state & Both).toBe(0);
   });
 
   it("preserves deep outer pull frames when a nested pull crosses the trim floor", () => {
@@ -791,7 +791,7 @@ describe("Reactive runtime - walker invariants", () => {
     writeProducer(nestedSource, 20);
 
     expect(readConsumer(outerRoot)).toBe(346);
-    expect(outerRoot.state & DIRTY_STATE).toBe(0);
+    expect(outerRoot.state & Both).toBe(0);
   });
 
   it("stabilizeDirtyConsumer clears Unknown when only a later branching sibling recomputes same-as-current", () => {

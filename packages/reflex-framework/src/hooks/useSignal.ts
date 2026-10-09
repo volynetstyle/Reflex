@@ -8,6 +8,17 @@ import { assertHookUsage } from "./context";
 
 const READ = Symbol("read");
 
+/**
+ * Creates a reactive value with read and write accessors.
+ *
+ * @remarks
+ * **When to use:** for state read by accessors, computations, and effects.
+ * **When not to use:** for a value derived from other signals; use
+ * `useComputed` or `useMemo` instead.
+ *
+ * @param initial The initial value, used when the node is created.
+ * @typeParam T The state type.
+ */
 export function useSignal<T>(initial: T): SignalAccessor<T> {
   assertHookUsage("useSignal");
 

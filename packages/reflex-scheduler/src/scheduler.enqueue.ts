@@ -3,7 +3,10 @@ import {
   releaseWatcherSchedule,
   type ReactiveNode,
 } from "@volynets/reflex-runtime/internal";
-import { profileSchedulerPolicyCounter } from "./scheduler.counters";
+import {
+  profileSchedulerPolicyCounter,
+  profileSchedulerPolicyMax,
+} from "./scheduler.counters";
 import type { EffectNode, WatcherQueue } from "./scheduler.types";
 
 const SCHEDULER_PROFILE_ENABLED =
@@ -36,7 +39,13 @@ export function effectUnscheduled(node: EffectNode) {
 export function tryEnqueue(queue: WatcherQueue, node: ReactiveNode): boolean {
   const watcher = node as EffectNode;
 
-  if (!claimWatcherSchedule(watcher)) return false;
+  if (SCHEDULER_PROFILE_ENABLED)
+    profileSchedulerPolicyCounter("scheduleAttempts");
+  if (!claimWatcherSchedule(watcher)) {
+    if (SCHEDULER_PROFILE_ENABLED)
+      profileSchedulerPolicyCounter("scheduleDedupSkipped");
+    return false;
+  }
 
   try {
     acceptClaimedWatcher(queue, watcher);
@@ -70,8 +79,12 @@ export function acceptClaimedWatcher(
 
   ring[tail & queue.mask] = node;
   queue.tail = tail + 1;
-  if (SCHEDULER_PROFILE_ENABLED)
+  if (SCHEDULER_PROFILE_ENABLED) {
     profileSchedulerPolicyCounter("effectsScheduled");
+    profileSchedulerPolicyCounter("queueEnqueues");
+    profileSchedulerPolicyMax("queuePeakDepth", queue.tail - queue.head);
+    profileSchedulerPolicyMax("queuePeakCapacity", queue.ring.length);
+  }
 }
 
 function growWatcherQueue(
@@ -84,6 +97,11 @@ function growWatcherQueue(
   const nextCapacity = ring.length << 1;
   const nextMask = nextCapacity - 1;
   const next = new Array<EffectNode | undefined>(nextCapacity).fill(undefined);
+
+  if (SCHEDULER_PROFILE_ENABLED) {
+    profileSchedulerPolicyCounter("queueGrows");
+    profileSchedulerPolicyMax("queuePeakCapacity", nextCapacity);
+  }
 
   for (let index = head; index < tail; ++index) {
     next[index & nextMask] = ring[index & oldMask];

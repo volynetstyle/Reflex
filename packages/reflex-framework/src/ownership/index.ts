@@ -6,3 +6,5 @@ export * from "./ownership.node";
 export * from "./ownership.scope";
 export * from "./ownership.tree";
 export * from "./ownership.mounted";
+export * from "./lifecycle";
+export * from "./ownership.signal";

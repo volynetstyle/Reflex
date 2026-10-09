@@ -5,10 +5,26 @@ import tseslint from "typescript-eslint";
 export default [
   {
     ignores: [
-      "**/build/**",
+      "build/**",
+      "packages/**/build/**",
+      "third-party/**/build/**",
+      "plugins/**/build/**",
+      "lab/**/build/**",
       "**/coverage/**",
       "**/dist/**",
       "**/node_modules/**",
+      "**/.cache/**",
+      "**/.tmp/**",
+      "**/.quality-baseline/**",
+      "packages/reflex-runtime/perf/*/results/**/*.mjs",
+      "**/artifacts/**",
+      "**/.bench-worktrees/**",
+      "temp/**",
+      "tmp/**",
+      "experiments/**/artifacts/**",
+      "experiments/**/results/**",
+      "experiments/**/generated/**",
+      "experiments/archive/**",
       "**/.pnpm-store/**",
       "**/drafts/**",
       "**/bench/**",
@@ -24,7 +40,12 @@ export default [
       ecmaVersion: "latest",
       sourceType: "module",
       globals: {
+        AbortController: "readonly",
+        AbortSignal: "readonly",
         Buffer: "readonly",
+        TextDecoder: "readonly",
+        TextEncoder: "readonly",
+        performance: "readonly",
         URL: "readonly",
         __dirname: "readonly",
         __filename: "readonly",
@@ -39,6 +60,10 @@ export default [
         setTimeout: "readonly",
       },
     },
+  },
+  {
+    files: ["tooling/testing/consumers/browser.mjs", "tooling/testing/run-browser.mjs"],
+    languageOptions: { globals: { document: "readonly", window: "readonly", fetch: "readonly", requestAnimationFrame: "readonly", cancelAnimationFrame: "readonly", HTMLElement: "readonly", Event: "readonly", CustomEvent: "readonly", Node: "readonly", location: "readonly" } },
   },
   ...tseslint.configs.recommended.map((cfg) => ({
     ...cfg,
@@ -62,6 +87,7 @@ export default [
       ],
     },
   },
+  { files: ["tooling/testing/consumers/types.cts"], rules: { "@typescript-eslint/no-require-imports": "off" } },
   {
     files: [
       "**/*.test.{ts,tsx,js,mjs,cjs}",

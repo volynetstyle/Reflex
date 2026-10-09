@@ -1,0 +1,5 @@
+scenario,group,dimension,size,framework,successfulTrials,failedTrials,comparableTrials,status,medianOpsPerSecond,medianAbsoluteDeviationOpsPerSecond,relativeMadPercent,medianNsPerOperation,medianP99Ns,medianP999Ns,medianSignalReadsPerOperation,medianSignalWritesPerOperation,medianComputedRunsPerOperation,medianEffectRunsPerOperation,medianRetainedHeapDeltaBytesPerOperation,medianGcPauseMs,pairedRatioTrials,throughputVsReflex
+effect-fanout,scheduler,observers,8,reflex,7,0,7,comparable,3686483.541669917,85334.26764614182,2.3147877016558382,271.261213754671,600,,1,1,1,8,-1.8373333333333333,8.72499993443489,7,1
+effect-fanout,scheduler,observers,16,reflex,7,0,7,comparable,1966836.8576513645,40556.94802698493,2.0620392519700244,508.43057781320925,900,,1,1,1,16,0.296,7.4896000027656555,7,1
+effect-fanout,scheduler,observers,32,reflex,7,0,7,comparable,1061930.9041779223,18366.85328146373,1.7295714070664654,941.6808533076216,1400,,1,1,1,32,1.7893333333333334,6.238099992275238,7,1
+effect-fanout,scheduler,observers,64,reflex,7,0,7,comparable,565626.8455559761,9033.414221785148,1.5970624967253562,1767.950032529064,2300,,1,1,1,64,2.3013333333333335,5.6513000428676605,7,1

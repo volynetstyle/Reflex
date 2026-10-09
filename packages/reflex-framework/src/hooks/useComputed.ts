@@ -42,6 +42,18 @@ interface GuardedReadable<T> {
   guarded: Computed<T>;
 }
 
+/**
+ * Creates a lazy reactive computation owned by the current component.
+ *
+ * @remarks
+ * **When to use:** for a derived value computed on read, tracking the
+ * dependencies actually read during that computation.
+ * **When not to use:** for side effects or when the first calculation must run
+ * immediately; use `useEffect` or `useMemo` instead.
+ *
+ * @param fn The computation; reactive reads inside it become dependencies.
+ * @typeParam T The result type.
+ */
 export function useComputed<T>(fn: () => T): Computed<T> {
   assertHookUsage("useComputed");
   assertHookUsage("useMemo");
@@ -53,6 +65,19 @@ export function useComputed<T>(fn: () => T): Computed<T> {
   return state.guarded;
 }
 
+/**
+ * Creates a warmed reactive computation owned by the current component. Its
+ * first calculation runs immediately; later values are computed lazily on read.
+ *
+ * @remarks
+ * **When to use:** when the initial calculation should run during creation and
+ * later values should remain reactive.
+ * **When not to use:** when eager initialization is unnecessary or the
+ * calculation has side effects; use `useComputed` for a pure lazy computation.
+ *
+ * @param fn A pure computation containing reactive reads.
+ * @typeParam T The result type.
+ */
 export function useMemo<T>(fn: () => T): Memo<T> {
   assertHookUsage("useMemo");
   const state = useOwned<GuardedReadable<T>>(

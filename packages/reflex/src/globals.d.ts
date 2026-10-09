@@ -128,19 +128,9 @@ interface SymbolDisposable {
 type Readable<T> = Accessor<T> & ValueReadable<T>;
 
 /**
- * Readable value with untracked read.
- */
-type Readable<T> = Readable<T> ;
-
-/**
  * Writable readable value.
  */
 type WritableReadable<T> = Readable<T> & Writable<T>;
-
-/**
- * Writable readable value with untracked read.
- */
-type WritableReadable<T> = WritableReadable<T>;
 
 /**
  * Signal.

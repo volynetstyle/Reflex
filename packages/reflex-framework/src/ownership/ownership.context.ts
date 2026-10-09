@@ -14,6 +14,18 @@ export interface OwnershipContext<T = unknown> {
   readonly hasDefaultValue: boolean;
 }
 
+/**
+ * Creates a unique context token with an optional default value.
+ *
+ * @remarks
+ * **When to use:** to provide a dependency through an ownership tree without
+ * threading props through every component.
+ * **When not to use:** for mutable reactive state by itself; store a signal or
+ * accessor in the context value when changes must notify consumers.
+ *
+ * @param defaultValue The value returned when no provider is found.
+ * @typeParam T The context value type.
+ */
 export function createContext<T>(): OwnershipContext<T | undefined>;
 export function createContext<T>(defaultValue: T): OwnershipContext<T>;
 export function createContext<T>(
@@ -50,6 +62,20 @@ export function contextProvide<T>(
   ctx.values.set(context, value);
 }
 
+/**
+ * Sets a context value on an owner or scope so descendants can inherit it.
+ *
+ * @remarks
+ * **When to use:** to configure a context for one ownership branch before its
+ * descendants read it.
+ * **When not to use:** to notify consumers when a plain value changes or
+ * without an ownership target; store a signal or accessor in the context value.
+ *
+ * @param target The owner or scope that provides the value.
+ * @param context The token created by `createContext`.
+ * @param value The value to provide.
+ * @typeParam T The context value type.
+ */
 export function provideContext<T>(
   target: ContextTarget,
   context: OwnershipContext<T>,
@@ -97,6 +123,20 @@ export function contextLookup<T>(
   return context.hasDefaultValue ? context.defaultValue : undefined;
 }
 
+/**
+ * Looks up a context value for the supplied owner or scope, including inherited
+ * values and the context's default value.
+ *
+ * @remarks
+ * **When to use:** when code has an explicit ownership target and needs its
+ * nearest provided value.
+ * **When not to use:** as a hook without a target argument; pass an owner or
+ * scope explicitly. Use `hasOwnContext` to check only the local value.
+ *
+ * @param target The owner or scope where lookup begins.
+ * @param context The token created by `createContext`.
+ * @typeParam T The context value type.
+ */
 export function useContext<T>(
   target: ContextTarget,
   context: OwnershipContext<T>,
@@ -117,6 +157,18 @@ export function contextHasOwn(
   return ctx !== null && ctx.values.has(context);
 }
 
+/**
+ * Checks whether a context value is set directly on an owner or scope.
+ * Values inherited from ancestors do not count as local values.
+ *
+ * @remarks
+ * **When to use:** to distinguish a local override from an inherited value.
+ * **When not to use:** to check whether a value is available at all; use
+ * `useContext`, which also searches ancestors and checks the default value.
+ *
+ * @param target The owner or scope to inspect.
+ * @param context The context token.
+ */
 export function hasOwnContext(
   target: ContextTarget,
   context: OwnershipContext<unknown>,

@@ -20,6 +20,7 @@ export interface RuntimeProfileCounters {
   pushOnceMarkedChanged: number;
   pushOnceAlreadyChangedSkipped: number;
   pushOnceSkippedEdges: number;
+  pushOnceScheduledWatcherDeliverySkipped: number;
   pullCalls: number;
   pullEdgesVisited: number;
   pullChangedDeps: number;
@@ -37,6 +38,7 @@ export interface RuntimeProfileCounters {
   advanceCleanupRuns: number;
   advancePropagateCalls: number;
   advancePropagateSkippedEdge: number;
+  advanceOwnedEdgeOnlySkipped: number;
   readProducerCalls: number;
   readProducerTracked: number;
   readConsumerCalls: number;
@@ -72,10 +74,21 @@ export interface RuntimeProfileCounters {
   cleanupSkipped: number;
   cleanupEdgesDropped: number;
   watcherRunCalls: number;
+  watcherScheduleAttempts: number;
+  watcherScheduleSuccesses: number;
+  watcherScheduleDedupSkipped: number;
+  watcherScheduleReleases: number;
+  watcherFrontierInvokes: number;
+  watcherFrontierEdgesVisited: number;
+  watcherFrontierChangedDeps: number;
+  watcherFrontierInvalidDeps: number;
+  watcherFrontierCleanDeps: number;
   watcherCleanSkips: number;
   watcherStableSkips: number;
   watcherDisposedSkips: number;
   watcherExecutions: number;
+  watcherExecutionExits: number;
+  watcherCleanupChecks: number;
   watcherCleanups: number;
   watcherDisposals: number;
   contextRunCalls: number;
@@ -86,6 +99,8 @@ export interface RuntimeProfileCounters {
   contextSettledEmits: number;
   contextSettledDeferred: number;
   nodeInvalidatedEmits: number;
+  computeContextEnters: number;
+  computeContextRestores: number;
   pushStackTrimEvents: number;
   pushStackTrimExcess: number;
   pullStackTrimEvents: number;
@@ -158,6 +173,7 @@ const COUNTER_NAMES = [
   "pushOnceMarkedChanged",
   "pushOnceAlreadyChangedSkipped",
   "pushOnceSkippedEdges",
+  "pushOnceScheduledWatcherDeliverySkipped",
   "pullCalls",
   "pullEdgesVisited",
   "pullChangedDeps",
@@ -175,6 +191,7 @@ const COUNTER_NAMES = [
   "advanceCleanupRuns",
   "advancePropagateCalls",
   "advancePropagateSkippedEdge",
+  "advanceOwnedEdgeOnlySkipped",
   "readProducerCalls",
   "readProducerTracked",
   "readConsumerCalls",
@@ -210,10 +227,21 @@ const COUNTER_NAMES = [
   "cleanupSkipped",
   "cleanupEdgesDropped",
   "watcherRunCalls",
+  "watcherScheduleAttempts",
+  "watcherScheduleSuccesses",
+  "watcherScheduleDedupSkipped",
+  "watcherScheduleReleases",
+  "watcherFrontierInvokes",
+  "watcherFrontierEdgesVisited",
+  "watcherFrontierChangedDeps",
+  "watcherFrontierInvalidDeps",
+  "watcherFrontierCleanDeps",
   "watcherCleanSkips",
   "watcherStableSkips",
   "watcherDisposedSkips",
   "watcherExecutions",
+  "watcherExecutionExits",
+  "watcherCleanupChecks",
   "watcherCleanups",
   "watcherDisposals",
   "contextRunCalls",
@@ -224,6 +252,8 @@ const COUNTER_NAMES = [
   "contextSettledEmits",
   "contextSettledDeferred",
   "nodeInvalidatedEmits",
+  "computeContextEnters",
+  "computeContextRestores",
   "pushStackTrimEvents",
   "pushStackTrimExcess",
   "pullStackTrimEvents",

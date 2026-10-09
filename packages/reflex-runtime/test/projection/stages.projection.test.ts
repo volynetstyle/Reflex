@@ -105,7 +105,7 @@ describe("Reflex stage projection", () => {
     { timeout: 30_000 },
     () => {
       const functions = stageFunctions();
-      expect(functions).toHaveLength(26);
+      expect(functions).toHaveLength(31);
       for (const fn of functions) {
         const projection = analyzeFile(fn.file, fn.name, { tsconfig });
         const expected = syntaxCounts(fn);
@@ -187,6 +187,7 @@ describe("Reflex stage projection", () => {
         "(state & ~(Unknown | Visited)) | Changed",
         "(state & ~Visited) | Changed",
         "(state & ~Visited) | Unknown",
+        "(state & ~Visited) | Unknown",
       ]);
 
       const once = project(
@@ -208,26 +209,39 @@ describe("Reflex stage projection", () => {
         skipping.structures.linkedTraversals.map((item) => item.termination),
       ).toEqual(["current === skip", "current === null"]);
 
-      const pull = project("second/pull_iterator.ts", "pullIteratorCore");
-      expect(pull.loops.map((loop) => loop.condition)).toEqual([
+      const pull = project("second/pull_dependency.ts", "shouldRecomputeCore");
+      expect(pull.loops.map((loop) => loop.condition)).toEqual(["true"]);
+      expect(pull.structures.stackCandidates).toEqual([]);
+      expect(pull.stateTransitions.map((transition) => transition.to)).toEqual([
+        "node.state & ~Unknown",
+      ]);
+
+      const pullDependency = project(
+        "second/pull_dependency.ts",
+        "pullDependencyDirty",
+      );
+      expect(pullDependency.loops).toEqual([]);
+      expect(pullDependency.structures.stackCandidates).toEqual([]);
+      expect(pullDependency.stateTransitions).toEqual([]);
+
+      const pull_iterator = project("second/pull_iterator.ts", "pull_iterator");
+      expect(pull_iterator.loops.map((loop) => loop.condition)).toEqual([
         "true",
-        "sibling !== null",
-        "top !== base",
+        "true",
         "top !== base",
         "top !== base",
       ]);
-      expect(pull.structures.stackCandidates).toEqual([
+      expect(pull_iterator.structures.stackCandidates).toEqual([
         expect.objectContaining({
           storage: "stack",
           index: "top",
-          pushes: 1,
+          pushes: 2,
           pops: 2,
         }),
       ]);
-      expect(pull.stateTransitions.map((transition) => transition.to)).toEqual([
-        "node.state & ~Unknown",
-        "node.state & ~Unknown",
-      ]);
+      expect(
+        pull_iterator.stateTransitions.map((transition) => transition.to),
+      ).toEqual(["node.state & ~Unknown"]);
 
       const advance = project("second/advance.ts", "advanceCore");
       expect(
@@ -236,18 +250,18 @@ describe("Reflex stage projection", () => {
         "(node.state & ~Visited) | Computing",
         "(computingState & ~(Computing | Unknown)) | Changed",
         "computingState & ~Computing",
-        "computingState & ~(Computing | DIRTY_STATE)",
-        "computingState & ~(Computing | DIRTY_STATE)",
+        "computingState & ~(Computing | Both)",
+        "computingState & ~(Computing | Both)",
       ]);
       expect(advance.cfg.exits).toHaveLength(3);
 
       const pushPlan = createInstrumentationPlan(push);
       expect(
         pushPlan.points.filter((point) => point.kind === "branch-outcome"),
-      ).toHaveLength(48);
+      ).toHaveLength(50);
       expect(
         pushPlan.points.filter((point) => point.kind === "state-transition"),
-      ).toHaveLength(4);
+      ).toHaveLength(5);
       expect(
         pushPlan.points.filter(
           (point) => point.kind === "stack-push" || point.kind === "stack-pop",

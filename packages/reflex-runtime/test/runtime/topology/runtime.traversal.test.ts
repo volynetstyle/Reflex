@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  DIRTY_STATE,
+  Both,
   readConsumer,
   readProducer,
   runWatcher,
@@ -12,6 +12,7 @@ import {
   Unknown,
   Visited,
   Computing,
+  pull_dependency,
 } from "../../../src/kernel";
 import { linkEdge } from "../../../src/kernel/shape/graph";
 import {
@@ -64,6 +65,87 @@ describe("Reactive runtime - traversal invariants", () => {
     counter.expectNone();
   });
 
+  it("lets an active parent own its edge while preserving leaf side fanout", () => {
+    const source = createProducer(1);
+    const leaf = createConsumer(() => readProducer(source) * 2);
+    const parent = createConsumer(() => readConsumer(leaf) + 1);
+    const sideValues: number[] = [];
+    const side = createWatcher(() => {
+      sideValues.push(readConsumer(leaf));
+    });
+
+    expect(readConsumer(parent)).toBe(3);
+    runWatcher(side);
+    expect(sideValues).toEqual([2]);
+
+    writeProducer(source, 2);
+
+    // Recomputing leaf while parent is active may suppress only leaf->parent.
+    // The leaf->side watcher edge still receives Changed evidence.
+    expect(readConsumer(parent)).toBe(5);
+    runWatcher(side);
+    expect(sideValues).toEqual([2, 4]);
+    expect(parent.state & Both).toBe(0);
+    expect(side.state & Both).toBe(0);
+  });
+
+  it("observes a reentrant write through another parent edge", () => {
+    const firstSource = createProducer(0);
+    const leafSource = createProducer(0);
+    const parentSource = createProducer(0);
+    let reenter = false;
+    const first = createConsumer(() => readProducer(firstSource));
+    const leaf = createConsumer(() => {
+      const value = readProducer(leafSource);
+      if (reenter) {
+        reenter = false;
+        writeProducer(parentSource, value);
+      }
+      return value;
+    });
+    const parent = createConsumer(
+      () =>
+        readConsumer(first) + readConsumer(leaf) + readProducer(parentSource),
+    );
+
+    expect(readConsumer(parent)).toBe(0);
+
+    reenter = true;
+    writeProducer(firstSource, 1);
+    writeProducer(leafSource, 1);
+
+    expect(readConsumer(parent)).toBe(3);
+    expect(parent.state & Both).toBe(0);
+  });
+
+  it("keeps an active parent retryable when a later owned dependency throws", () => {
+    const firstSource = createProducer(0);
+    const lateSource = createProducer(0);
+    let throwLate = false;
+    const first = createConsumer(() => readProducer(firstSource));
+    const late = createConsumer(() => {
+      const value = readProducer(lateSource);
+      if (throwLate) throw new Error("late owned dependency failed");
+      return value;
+    });
+    const parent = createConsumer(
+      () => readConsumer(first) + readConsumer(late),
+    );
+
+    expect(readConsumer(parent)).toBe(0);
+    writeProducer(firstSource, 1);
+    writeProducer(lateSource, 2);
+    throwLate = true;
+
+    expect(() => readConsumer(parent)).toThrow("late owned dependency failed");
+    expect(parent.state & Changed).toBe(Changed);
+    expect(parent.state & Computing).toBe(0);
+
+    throwLate = false;
+    expect(readConsumer(parent)).toBe(3);
+    expect(parent.state & Both).toBe(0);
+  });
+
   it("marks only immediate subscribers changed when a producer writes", () => {
     const source = createProducer(1);
     const midSpy = vi.fn(() => readProducer(source) * 2);
@@ -75,7 +157,7 @@ describe("Reactive runtime - traversal invariants", () => {
 
     writeProducer(source, 2);
 
-    expect(source.state & DIRTY_STATE).toBe(0);
+    expect(source.state & Both).toBe(0);
     expect(mid.state & Changed).toBeTruthy();
     expect(mid.state & Unknown).toBeFalsy();
     expect(leaf.state & Unknown).toBeTruthy();
@@ -114,7 +196,7 @@ describe("Reactive runtime - traversal invariants", () => {
 
     expect(invalidations).toBe(1);
     expect(effectSpy).toHaveBeenCalledTimes(1);
-    expect(watcher.state & DIRTY_STATE).toBeTruthy();
+    expect(watcher.state & Both).toBeTruthy();
 
     runWatcher(watcher);
     expect(effectSpy).toHaveBeenCalledTimes(2);
@@ -218,7 +300,7 @@ describe("Reactive runtime - traversal invariants", () => {
 
     runWatcher(watcher);
     expect(effectSpy).toHaveBeenCalledTimes(2);
-    expect(watcher.state & DIRTY_STATE).toBe(0);
+    expect(watcher.state & Both).toBe(0);
 
     writeProducer(source, 3);
     expect(invalidations).toBe(3);
@@ -240,7 +322,60 @@ describe("Reactive runtime - traversal invariants", () => {
     writeProducer(nestedSource, 20);
 
     expect(readConsumer(root)).toBe(44);
-    expect(root.state & DIRTY_STATE).toBe(0);
+    expect(root.state & Both).toBe(0);
+  });
+
+  it("pulls one dependency branch without applying root sibling policy", () => {
+    const leftSource = createProducer(1);
+    const rightSource = createProducer(1);
+    const leftCompute = vi.fn(() => readProducer(leftSource));
+    const rightCompute = vi.fn(() => readProducer(rightSource));
+    const left = createConsumer(leftCompute);
+    const right = createConsumer(rightCompute);
+    const root = createConsumer(() => readConsumer(left) + readConsumer(right));
+
+    expect(readConsumer(root)).toBe(2);
+    const edges = incomingEdges(root);
+
+    writeProducer(rightSource, 2);
+    root.state |= Changed;
+
+    expect(pull_dependency(edges[0]!)).toBe(false);
+    expect(leftCompute).toHaveBeenCalledTimes(1);
+    expect(rightCompute).toHaveBeenCalledTimes(1);
+    expect(root.state & Both).toBe(Both);
+
+    expect(pull_dependency(edges[1]!)).toBe(true);
+    expect(rightCompute).toHaveBeenCalledTimes(2);
+    expect(root.state & Both).toBe(Both);
+  });
+
+  it("observes reentrant root evidence after a stable final dependency", () => {
+    const dependencySource = createProducer(0);
+    const rootSource = createProducer(0);
+    let invalidateRoot = false;
+
+    const dependencyCompute = vi.fn(() => {
+      readProducer(dependencySource);
+      if (invalidateRoot) writeProducer(rootSource, 1);
+      return 0;
+    });
+    const dependency = createConsumer(dependencyCompute);
+    const rootCompute = vi.fn(
+      () => readProducer(rootSource) + readConsumer(dependency),
+    );
+    const root = createConsumer(rootCompute);
+
+    expect(readConsumer(root)).toBe(0);
+    writeProducer(dependencySource, 1);
+    invalidateRoot = true;
+
+    // dependency is the final root edge. Its recomputation is value-stable,
+    // but it invalidates root through the earlier rootSource edge.
+    expect(readConsumer(root)).toBe(1);
+    expect(dependencyCompute).toHaveBeenCalledTimes(2);
+    expect(rootCompute).toHaveBeenCalledTimes(2);
+    expect(root.state & Both).toBe(0);
   });
 
   it("reruns a watcher after a tracked-prefix invalidation during its own execution", () => {
@@ -266,7 +401,125 @@ describe("Reactive runtime - traversal invariants", () => {
 
     runWatcher(watcher);
     expect(seen).toEqual([0, 1, 2]);
-    expect(watcher.state & DIRTY_STATE).toBe(0);
+    expect(watcher.state & Both).toBe(0);
+  });
+
+  it("preserves a transitive invalidation that repeats Unknown during validation", () => {
+    const firstSource = createProducer(0);
+    const secondSource = createProducer(0);
+    let invalidateDuringValidation = false;
+
+    const first = createConsumer(() => {
+      readProducer(firstSource);
+      if (invalidateDuringValidation) {
+        invalidateDuringValidation = false;
+        writeProducer(secondSource, 1);
+      }
+      return 0;
+    });
+    const second = createConsumer(() => {
+      readProducer(secondSource);
+      return 0;
+    });
+    const effect = vi.fn(() => {
+      readConsumer(first);
+      readConsumer(second);
+    });
+    const watcher = createWatcher(effect);
+
+    runWatcher(watcher);
+    expect(effect).toHaveBeenCalledTimes(1);
+
+    invalidateDuringValidation = true;
+    writeProducer(firstSource, 1);
+    runWatcher(watcher);
+
+    expect(effect).toHaveBeenCalledTimes(1);
+    expect(watcher.state & Unknown).toBeTruthy();
+    expect(watcher.state & Visited).toBeTruthy();
+    expect(watcher.state & Changed).toBeFalsy();
+    expect(watcher.state & Computing).toBeFalsy();
+
+    runWatcher(watcher);
+
+    expect(effect).toHaveBeenCalledTimes(2);
+    expect(watcher.state & (Both | Visited | Computing)).toBe(0);
+  });
+
+  it("keeps change and reentrant evidence when a later dependency throws", () => {
+    const firstSource = createProducer(0);
+    const reentrantSource = createProducer(0);
+    const reentrantTrigger = createProducer(0);
+    const throwingSource = createProducer(0);
+    let invalidateDuringValidation = false;
+    let throwDuringValidation = false;
+
+    const first = createConsumer(() => readProducer(firstSource));
+    const reentrant = createConsumer(() => {
+      const value = readProducer(reentrantTrigger);
+      if (invalidateDuringValidation) {
+        invalidateDuringValidation = false;
+        writeProducer(reentrantSource, 1);
+      }
+      return value;
+    });
+    const throwing = createConsumer(() => {
+      const value = readProducer(throwingSource);
+      if (throwDuringValidation) throw new Error("validation failed");
+      return value;
+    });
+    const cleanup = vi.fn();
+    const effect = vi.fn(() => {
+      readConsumer(first);
+      readConsumer(reentrant);
+      readConsumer(throwing);
+      readProducer(reentrantSource);
+      return cleanup;
+    });
+    const watcher = createWatcher(effect);
+
+    runWatcher(watcher);
+
+    invalidateDuringValidation = true;
+    throwDuringValidation = true;
+    writeProducer(firstSource, 1);
+    writeProducer(reentrantTrigger, 1);
+    writeProducer(throwingSource, 1);
+
+    expect(() => runWatcher(watcher)).toThrow("validation failed");
+    expect(cleanup).not.toHaveBeenCalled();
+    expect(effect).toHaveBeenCalledTimes(1);
+    expect(watcher.state & Unknown).toBeTruthy();
+    expect(watcher.state & Changed).toBeTruthy();
+    expect(watcher.state & Visited).toBeTruthy();
+    expect(watcher.state & Computing).toBeFalsy();
+
+    throwDuringValidation = false;
+    runWatcher(watcher);
+
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(effect).toHaveBeenCalledTimes(2);
+    expect(watcher.state & (Both | Visited | Computing)).toBe(0);
+  });
+
+  it("validates every root sibling after the first confirmed change", () => {
+    const sources = [createProducer(0), createProducer(0), createProducer(0)];
+    const computes = sources.map((source) => vi.fn(() => readProducer(source)));
+    const dependencies = computes.map((compute) => createConsumer(compute));
+    const effect = vi.fn(() => {
+      for (const dependency of dependencies) readConsumer(dependency);
+    });
+    const watcher = createWatcher(effect);
+
+    runWatcher(watcher);
+    sources.forEach((source, index) => writeProducer(source, index + 1));
+    runWatcher(watcher);
+
+    expect(computes.map((compute) => compute.mock.calls.length)).toEqual([
+      2, 2, 2,
+    ]);
+    expect(effect).toHaveBeenCalledTimes(2);
+    expect(watcher.state & (Both | Visited | Computing)).toBe(0);
   });
 
   it("keeps tracked invalidation after nested compute advances the global version", () => {
@@ -389,7 +642,7 @@ describe("Reactive runtime - traversal invariants", () => {
 
         runWatcher(watcher);
       } else {
-        expect(watcher.state & DIRTY_STATE, entry.name).toBe(0);
+        expect(watcher.state & Both, entry.name).toBe(0);
       }
 
       expect(runs, entry.name).toEqual(entry.expectedFinalRuns);
@@ -399,7 +652,7 @@ describe("Reactive runtime - traversal invariants", () => {
         b,
       ]);
       expect(incomingEdges(watcher), entry.name).toEqual(initialEdges);
-      expect(watcher.state & DIRTY_STATE, entry.name).toBe(0);
+      expect(watcher.state & Both, entry.name).toBe(0);
     }
   });
 

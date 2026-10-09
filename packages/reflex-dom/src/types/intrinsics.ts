@@ -109,6 +109,7 @@ type MathMLAttributeName =
   | "mathcolor"
   | "mathsize"
   | "mathvariant";
+/** A custom element tag name containing the required hyphen. */
 type CustomElementTag = `${string}-${string}`;
 type TextControlValue = string | number | null | undefined;
 type SelectControlValue = TextControlValue | readonly string[];
@@ -170,6 +171,7 @@ type MathMLAttributeProps = {
   [K in MathMLAttributeName]?: MaybeAccessor<DOMAttributeValue>;
 };
 
+/** Props for Shadow DOM and custom-element platform features. */
 type PlatformProps = {
   shadowRoot?: true | ShadowRootInit;
   shadowChildren?: JSXRenderable;
@@ -205,33 +207,43 @@ type OptionControlProps = {
   defaultSelected?: MaybeAccessor<boolean | null | undefined>;
 };
 
+/**
+ * Common DOM props: children, class, style, ref, data-/aria- attributes, and
+ * platform props.
+ */
 export interface DOMPropsBase<T extends Element = Element>
-  extends RefAttributes<T>,
-    DataAttributes,
-    AriaAttributes,
-    PlatformProps {
+  extends RefAttributes<T>, DataAttributes, AriaAttributes, PlatformProps {
+  /** Renderable child content. */
   children?: JSXRenderable;
+  /** HTML/SVG class attribute; accepts static or reactive string values. */
   class?: MaybeAccessor<string | null | undefined>;
+  /** Alias for `class` supported for JSX/compiler ergonomics. */
   className?: MaybeAccessor<string | null | undefined>;
+  /** Inline style text or object, optionally supplied by an accessor. */
   style?: MaybeAccessor<StyleValue | null | undefined>;
 }
 
+/** Common typed DOM props and writable primitive properties for an `Element`. */
 export type DOMProps<T extends Element = Element> = DOMPropsBase<T> &
   NativePropertyProps<T>;
 
+/** HTML props: common props, native properties, aliases, and typed events. */
 export type HTMLProps<T extends HTMLElement = HTMLElement> = DOMProps<T> &
   HTMLAliasAttributeProps &
   DOMEventProps<T>;
 
+/** SVG props: common props, SVG attributes and aliases, and typed events. */
 export type SVGProps<T extends SVGElement = SVGElement> = DOMProps<T> &
   SVGAliasAttributeProps &
   SVGCoreAttributeProps &
   DOMEventProps<T>;
 
+/** MathML props: common props, supported MathML attributes, and typed events. */
 export type MathMLProps<T extends MathMLElement = MathMLElement> = DOMProps<T> &
   MathMLAttributeProps &
   DOMEventProps<T>;
 
+/** HTML props plus an open set of properties for a custom element. */
 export type CustomElementProps<T extends HTMLElement = HTMLElement> =
   HTMLProps<T> & {
     [name: string]: unknown;
@@ -279,17 +291,20 @@ export type CustomElementIntrinsicElements = {
   [Tag in CustomElementTag]: CustomElementProps<HTMLElement>;
 };
 
+/** Maps intrinsic JSX tag names to their corresponding props types. */
 export type IntrinsicElements = HTMLIntrinsicElements &
   SVGIntrinsicElements &
   MathMLIntrinsicElements &
   CustomElementIntrinsicElements;
 
+/** Union of supported HTML, SVG, MathML, and custom tag names. */
 export type ElementTag =
   | keyof HTMLIntrinsicElements
   | keyof SVGIntrinsicElements
   | keyof MathMLIntrinsicElements
   | CustomElementTag;
 
+/** Resolves the allowed props for a given JSX DOM tag. */
 export type ElementProps<Tag extends ElementTag> =
   Tag extends keyof HTMLIntrinsicElements
     ? HTMLIntrinsicElements[Tag]
@@ -301,6 +316,7 @@ export type ElementProps<Tag extends ElementTag> =
           ? CustomElementProps<HTMLElement>
           : never;
 
+/** Resolves the concrete DOM instance type for a supported tag name. */
 export type ElementInstance<Tag extends ElementTag> =
   Tag extends keyof HTMLElementTagNameMap
     ? HTMLElementTagNameMap[Tag]

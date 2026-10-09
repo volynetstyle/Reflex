@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TransformResult } from "vite";
-import {
-  reflexStore,
-  reflexStoreVitePlugin,
-} from "../src/vite";
+import { reflexStore, reflexStoreVitePlugin } from "../src/vite";
 
 type TransformHandler = (
   this: TransformContext,
@@ -50,12 +47,14 @@ describe("reflexStoreVitePlugin", () => {
 
     expect(result).not.toBeNull();
     expect((result as { code: string }).code).toContain(
-      'from "@volynets/reflex"',
+      'from "@volynets/reflex-store/runtime"',
     );
     expect((result as { code: string }).code).toContain(
-      "const __read_count = __reflex_signal(0);",
+      "__read_count = ctx.own(__reflex_signal(0));",
     );
-    expect((result as { code: string }).code).toContain("__write_count(__next_");
+    expect((result as { code: string }).code).toContain(
+      "__write_count(__next_",
+    );
   });
 
   it("skips bare createStore calls by default to avoid false positives", async () => {

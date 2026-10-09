@@ -1,8 +1,32 @@
 /** @jsxImportSource ../src */
 
 import { For, Portal, Show } from "../src";
-import { createContext, hasOwnContext, provideContext, useContext } from "../src";
+import {
+  createContext,
+  hasOwnContext,
+  provideContext,
+  useContext,
+} from "../src";
 import { useSignal } from "../src";
+import type { useAbortSignal, DOMRangeHandle } from "../src";
+
+const rangeRef = { current: null as DOMRangeHandle | null };
+<Show when={true} ref={rangeRef}>
+  <span />
+</Show>;
+<For
+  each={[1]}
+  by={(value) => value}
+  ref={(range) => {
+    range?.focus();
+  }}
+>
+  {(value) => <span>{value}</span>}
+</For>;
+// @ts-expect-error Structural refs receive a range, not an element.
+<Show when={true} ref={{ current: null as HTMLDivElement | null }} />;
+const abortSignal: AbortSignal = null! as ReturnType<typeof useAbortSignal>;
+void abortSignal;
 
 void createContext;
 void hasOwnContext;
@@ -104,9 +128,7 @@ const styleSheet = {} as CSSStyleSheet;
   <option value="b">B</option>
 </select>;
 
-<Show when={"ready"}>
-  {(value) => <span>{value.toUpperCase()}</span>}
-</Show>;
+<Show when={"ready"}>{(value) => <span>{value.toUpperCase()}</span>}</Show>;
 
 <For each={[{ id: "a", label: "A" }]} by={(item) => item.id}>
   {(item, index) => <li data-index={index}>{item.label}</li>}

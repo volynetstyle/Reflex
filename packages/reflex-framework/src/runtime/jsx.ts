@@ -8,6 +8,10 @@ import type {
   JSXRenderable,
 } from "../types/renderable";
 
+/**
+ * Transparent JSX wrapper that returns its children without creating an element.
+ * It ignores `key` and cannot receive DOM attributes or refs.
+ */
 export const Fragment = Symbol.for("reflex.fragment");
 
 export type FragmentType = typeof Fragment;
@@ -27,6 +31,15 @@ function normalizeProps<P>(props: P | null): P {
   return props ?? (EMPTY_PROPS as P);
 }
 
+/**
+ * Creates a renderable value for an element, component, or Fragment. The JSX
+ * compiler normally calls this function automatically.
+ *
+ * @remarks
+ * **When to use:** as the JSX runtime entry point configured for the compiler.
+ * **When not to use:** to render an application manually; use the renderer API
+ * (`createApp`) to mount content.
+ */
 export function jsx<Host = never>(
   type: FragmentType,
   props: FragmentProps<Host> | null,
@@ -76,6 +89,8 @@ export function jsx<P, Host>(
   );
 }
 
+/** JSX runtime entry point for static children; the implementation is `jsx`. */
 export const jsxs = jsx;
 
+/** Development JSX runtime entry point; it creates the same renderable as `jsx`. */
 export const jsxDEV: typeof jsx = jsx;

@@ -525,14 +525,15 @@ function directPullCase(r, mode, state) {
   dependency.state = state;
   parent.state = r.Unknown;
   const edge = r.linkEdge(dependency, parent);
+  const shouldRecompute = r.should_recompute ?? r.pull_iterator;
   trace.push(
-    e.capture("direct pull state", () => r.pull_iterator(parent, edge)),
+    e.capture("direct pull state", () => shouldRecompute(parent, edge)),
   );
   parent.state = r.Changed;
   dependency.state = r.Computing;
   trace.push(
     e.capture("changed parent skips computing dependency", () =>
-      r.pull_iterator(parent, edge),
+      shouldRecompute(parent, edge),
     ),
   );
   return trace;

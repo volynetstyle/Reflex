@@ -4,7 +4,9 @@
   "type": "module",
   "description": "",
   "scripts": {
-    "dev": "vite dev"
+    "dev": "vite dev",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "keywords": [],
   "author": "",
@@ -17,5 +19,6 @@
     "@tailwindcss/vite": "^4.2.4",
     "cytoscape": "^3.33.2",
     "tailwindcss": "^4.2.4"
-  }
+  },
+  "private": true
 }

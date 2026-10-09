@@ -65,7 +65,7 @@ importers:
         version: 1.1.7
       ts-node:
         specifier: ^10.9.2
-        version: 10.9.2(@swc/core@1.15.33)(@types/node@26.1.2)(typescript@5.9.3)
+        version: 10.9.2(@swc/core@1.15.33)(@swc/wasm@1.16.13)(@types/node@26.1.2)(typescript@5.9.3)
       typescript:
         specifier: ^5.6.0
         version: 5.9.3
@@ -104,18 +104,53 @@ importers:
         specifier: ^4.54.0
         version: 4.60.3
 
+  lab/web-scheduler: {}
+
   packages/reflex:
     dependencies:
-      '@volynets/reflex-runtime':
-        specifier: workspace:*
-        version: link:../reflex-runtime
       '@volynets/reflex-scheduler':
         specifier: workspace:*
         version: link:../reflex-scheduler
     devDependencies:
+      '@solidjs/signals':
+        specifier: 2.0.0-rc.9
+        version: 2.0.0-rc.9
+      '@volynets/reflex-runtime':
+        specifier: workspace:*
+        version: link:../reflex-runtime
+      '@vue/reactivity':
+        specifier: 3.5.43
+        version: 3.5.43
+      alien-signals:
+        specifier: 3.2.1
+        version: 3.2.1
       reactive-framework-test-suite:
         specifier: 0.0.2
         version: 0.0.2
+
+  packages/reflex/examples/mini-app:
+    dependencies:
+      '@volynets/reflex':
+        specifier: workspace:*
+        version: link:../..
+      '@volynets/reflex-dom':
+        specifier: workspace:*
+        version: link:../../../reflex-dom
+      '@volynets/reflex-runtime':
+        specifier: workspace:*
+        version: link:../../../reflex-runtime
+      '@volynets/reflex-store':
+        specifier: workspace:*
+        version: link:../../../reflex-store
+
+  packages/reflex-async:
+    devDependencies:
+      '@volynets/reflex':
+        specifier: workspace:*
+        version: link:../reflex
+      '@volynets/reflex-runtime':
+        specifier: workspace:*
+        version: link:../reflex-runtime
 
   packages/reflex-devtools:
     dependencies:
@@ -142,23 +177,29 @@ importers:
         version: 4.3.0
 
   packages/reflex-dom:
-    dependencies:
-      '@volynets/reflex-scheduler':
-        specifier: workspace:*
-        version: link:../reflex-scheduler
     devDependencies:
       '@vitest/browser-playwright':
         specifier: 4.1.5
         version: 4.1.5(playwright@1.62.1)(vite@6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4))(vitest@4.1.5)
+      '@volynets/reflex-framework':
+        specifier: workspace:*
+        version: link:../reflex-framework
+      '@volynets/reflex-runtime':
+        specifier: workspace:*
+        version: link:../reflex-runtime
+      '@volynets/reflex-scheduler':
+        specifier: workspace:*
+        version: link:../reflex-scheduler
       playwright:
         specifier: ^1.62.1
         version: 1.62.1
+    publishDirectory: dist
 
   packages/reflex-framework:
-    dependencies:
+    devDependencies:
       '@volynets/reflex-runtime':
-        specifier: ^0.1.2
-        version: 0.1.2
+        specifier: workspace:*
+        version: link:../reflex-runtime
 
   packages/reflex-runtime:
     devDependencies:
@@ -192,27 +233,58 @@ importers:
         version: 5.9.3
 
   packages/reflex-scheduler:
-    dependencies:
+    devDependencies:
       '@volynets/reflex-runtime':
         specifier: workspace:*
         version: link:../reflex-runtime
 
   packages/reflex-store:
-    dependencies:
+    devDependencies:
+      '@rollup/plugin-commonjs':
+        specifier: ^29.0.3
+        version: 29.0.3(rollup@4.60.3)
+      '@rollup/plugin-node-resolve':
+        specifier: ^16.0.3
+        version: 16.0.3(rollup@4.60.3)
+      '@rollup/plugin-replace':
+        specifier: ^6.0.3
+        version: 6.0.3(rollup@4.60.3)
+      '@rollup/plugin-swc':
+        specifier: ^0.4.0
+        version: 0.4.0(@swc/core@1.15.33)(rollup@4.60.3)
       '@swc/core':
         specifier: ^1.15.18
         version: 1.15.33
+      '@swc/wasm':
+        specifier: ^1.16.13
+        version: 1.16.13
+      '@types/node':
+        specifier: ^26.1.2
+        version: 26.1.2
       '@volynets/reflex':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../reflex
+      '@volynets/reflex-framework':
+        specifier: workspace:*
+        version: link:../reflex-framework
       '@volynets/reflex-runtime':
         specifier: workspace:*
         version: link:../reflex-runtime
-      vite:
-        specifier: ^6.0.0
-        version: 6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4)
+      '@volynets/reflex-scheduler':
+        specifier: workspace:^
+        version: link:../reflex-scheduler
+      rollup:
+        specifier: ^4.54.0
+        version: 4.60.3
+      rollup-plugin-dts:
+        specifier: ^6.4.1
+        version: 6.4.1(rollup@4.60.3)(typescript@5.9.3)
 
   plugins/@vite/reflex-vite-plugin:
+    dependencies:
+      '@rollup/pluginutils':
+        specifier: ^5.3.0
+        version: 5.3.0(rollup@4.60.3)
     devDependencies:
       '@swc/core':
         specifier: ^1.15.18
@@ -680,6 +752,15 @@ packages:
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
 
+  '@rollup/plugin-commonjs@29.0.3':
+    resolution: {integrity: sha512-ZaOxZceP7SOUW7Lqw5IRVweSQYWaeIPnXIGLiB690EBA3FGJTO40EEr2L5yZplJWsgTCogILRSpcAe7+U0Otdg==}
+    engines: {node: '>=16.0.0 || 14 >= 14.17'}
+    peerDependencies:
+      rollup: ^2.68.0||^3.0.0||^4.0.0
+    peerDependenciesMeta:
+      rollup:
+        optional: true
+
   '@rollup/plugin-node-resolve@16.0.3':
     resolution: {integrity: sha512-lUYM3UBGuM93CnMPG1YocWu7X802BrNF3jW2zny5gQyLQgRFJhV1Sq0Zi74+dh/6NBx1DxFC4b4GXg9wUCG5Qg==}
     engines: {node: '>=14.0.0'}
@@ -851,6 +932,10 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@solidjs/signals@2.0.0-rc.9':
+    resolution: {integrity: sha512-o3pqiTgpH5NR2DstiKrt9s/6+0YOFtv+MfvLONwLsS247I+EWMMyTu9BkRcgd35UR5Pa1DM16lI1/5uaIMY6Gw==}
+    engines: {node: '>=22.12.0'}
+
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
@@ -940,6 +1025,9 @@ packages:
 
   '@swc/types@0.1.26':
     resolution: {integrity: sha512-lyMwd7WGgG79RS7EERZV3T8wMdmPq3xwyg+1nmAM64kIhx5yl+juO2PYIHb7vTiPgPCj8LYjsNV2T5wiQHUEaw==}
+
+  '@swc/wasm@1.16.13':
+    resolution: {integrity: sha512-1zr3d94GE80vCqz/P/eZfoE8sxPkAZut5Z55Tdc57fTN/jwpCEN3ivQ2vR9geODgx7LCWwGktj4YbgFMkkNrAQ==}
 
   '@tailwindcss/node@4.3.0':
     resolution: {integrity: sha512-aFb4gUhFOgdh9AXo4IzBEOzBkkAxm9VigwDJnMIYv3lcfXCJVesNfbEaBl4BNgVRyid92AmdviqwBUBRKSeY3g==}
@@ -1177,6 +1265,12 @@ packages:
 
   '@volynets/reflex-runtime@0.1.2':
     resolution: {integrity: sha512-fF1hmx4gQSOerlkyLCZtpRWkE9UU6HBc5PyUr6dp+U/wCLoelzuifbBsOKOEWeWh7nVH0J9fAkXggVGJgmFyFw==}
+
+  '@vue/reactivity@3.5.43':
+    resolution: {integrity: sha512-G/c9GyOZNI2jVaaS6OX1EF1SSFSv7H0ERqNTl4+DTFMlZmB5eVAB53aLQNam/7NL2NPtaDD7RdVrzf8uJzMuOA==}
+
+  '@vue/shared@3.5.43':
+    resolution: {integrity: sha512-uksS7YGMR5NZyr4JNq0Rp+QyLns0ueaz20KwzIPW9R0LH1Vnt4E+XUM29PNseEbf1www2gOuhuDi5AKOIXag9Q==}
 
   JSONStream@1.3.5:
     resolution: {integrity: sha512-E+iruNOY8VV9s4JEbe1aNEm6MiszPRr/UfcHMz0TQh1BXSxHK+ASV1R6W4HpjBhSeS+54PIsAMCBmwD06LLsqQ==}
@@ -1439,6 +1533,9 @@ packages:
 
   commander@2.20.3:
     resolution: {integrity: sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==}
+
+  commondir@1.0.1:
+    resolution: {integrity: sha512-W9pAhw0ja1Edb5GVdIF1mjZw/ASI0AlShXM83UUGe2DVr5TdAPEA1OA8m/g8zWp9x6On7gqufY+FatDbC3MDQg==}
 
   concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
@@ -2098,6 +2195,9 @@ packages:
 
   is-potential-custom-element-name@1.0.1:
     resolution: {integrity: sha512-bCYeRA2rVibKZd+s2625gGnGF/t7DSqDs4dP7CrLA1m7jKWz6pps0LpYLJN8Q64HtmPKJ1hrN3nzPNKFEKOUiQ==}
+
+  is-reference@1.2.1:
+    resolution: {integrity: sha512-U82MsXXiFIrjCK4otLT+o2NA2Cd2g5MLoOVXUZjIOhLurrRxpEXzI8O0KZHr3IjLvlAH1kTPYSuqer5T9ZVBKQ==}
 
   is-regex@1.2.1:
     resolution: {integrity: sha512-MjYsKHO5O7mCsmRGxWcLWheFqN9DJ/2TmngvjKXihe6efViPqc274+Fx/4fYj/r03+ESvBdTXK0V6tA3rgez1g==}
@@ -3801,6 +3901,18 @@ snapshots:
 
   '@polka/url@1.0.0-next.29': {}
 
+  '@rollup/plugin-commonjs@29.0.3(rollup@4.60.3)':
+    dependencies:
+      '@rollup/pluginutils': 5.3.0(rollup@4.60.3)
+      commondir: 1.0.1
+      estree-walker: 2.0.2
+      fdir: 6.5.0(picomatch@4.0.4)
+      is-reference: 1.2.1
+      magic-string: 0.30.21
+      picomatch: 4.0.4
+    optionalDependencies:
+      rollup: 4.60.3
+
   '@rollup/plugin-node-resolve@16.0.3(rollup@4.60.3)':
     dependencies:
       '@rollup/pluginutils': 5.3.0(rollup@4.60.3)
@@ -3917,6 +4029,8 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.60.3':
     optional: true
 
+  '@solidjs/signals@2.0.0-rc.9': {}
+
   '@standard-schema/spec@1.1.0': {}
 
   '@swc/core-darwin-arm64@1.15.33':
@@ -3978,6 +4092,8 @@ snapshots:
   '@swc/types@0.1.26':
     dependencies:
       '@swc/counter': 0.1.3
+
+  '@swc/wasm@1.16.13': {}
 
   '@tailwindcss/node@4.3.0':
     dependencies:
@@ -4255,6 +4371,12 @@ snapshots:
       tinyrainbow: 3.1.0
 
   '@volynets/reflex-runtime@0.1.2': {}
+
+  '@vue/reactivity@3.5.43':
+    dependencies:
+      '@vue/shared': 3.5.43
+
+  '@vue/shared@3.5.43': {}
 
   JSONStream@1.3.5:
     dependencies:
@@ -4584,6 +4706,8 @@ snapshots:
   commander@13.1.0: {}
 
   commander@2.20.3: {}
+
+  commondir@1.0.1: {}
 
   concat-map@0.0.1: {}
 
@@ -5328,6 +5452,10 @@ snapshots:
   is-number@7.0.0: {}
 
   is-potential-custom-element-name@1.0.1: {}
+
+  is-reference@1.2.1:
+    dependencies:
+      '@types/estree': 1.0.9
 
   is-regex@1.2.1:
     dependencies:
@@ -6314,7 +6442,7 @@ snapshots:
     dependencies:
       typescript: 5.9.3
 
-  ts-node@10.9.2(@swc/core@1.15.33)(@types/node@26.1.2)(typescript@5.9.3):
+  ts-node@10.9.2(@swc/core@1.15.33)(@swc/wasm@1.16.13)(@types/node@26.1.2)(typescript@5.9.3):
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       '@tsconfig/node10': 1.0.12
@@ -6333,6 +6461,7 @@ snapshots:
       yn: 3.1.1
     optionalDependencies:
       '@swc/core': 1.15.33
+      '@swc/wasm': 1.16.13
 
   tty-browserify@0.0.1: {}
 

@@ -22,7 +22,11 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "cli": "node dist/cli.js"
+    "cli": "node dist/cli.js",
+    "check:artifacts": "node ../../tooling/build/verify-artifacts.mjs --directory .",
+    "build:all": "node ../../tooling/build/run.mjs @volynets/algorithm-projection",
+    "prepack": "pnpm check:artifacts",
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm check:artifacts"
   },
   "dependencies": {
     "eslint": "^9.0.0",
@@ -41,5 +45,6 @@
   },
   "bin": {
     "algorithm-projection": "dist/cli.js"
-  }
+  },
+  "private": false
 }

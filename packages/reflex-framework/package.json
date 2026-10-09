@@ -34,26 +34,28 @@
     }
   },
   "files": [
+    "src",
     "dist"
   ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "clean": "node ./scripts/clean.mjs",
-    "build": "node ./scripts/clean.mjs && node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs dist",
+    "clean": "node ../../tooling/build/clean.mjs .",
+    "build": "node ./scripts/clean.mjs && node ../../node_modules/typescript/bin/tsc -p tsconfig.build.json && node ../../scripts/fix-esm-specifiers.mjs dist && node ./scripts/ensure-disposable-reference.mjs && node ./scripts/finalize-modules.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test": "pnpm exec vitest run --config vite.config.ts",
+    "test": "pnpm exec vitest run --config vite.config.ts && pnpm test:dev",
+    "test:dev": "pnpm exec vitest run --config vite.lifecycle.dev.config.ts",
     "bench": "pnpm exec vitest bench --config vite.config.ts",
     "bench:ownership": "pnpm exec vitest bench bench/ownership.bench.ts --config vite.config.ts",
     "bench:ui": "pnpm exec vitest bench bench/ui-scenarios.bench.ts --config vite.config.ts",
     "build:dashboard": "pnpm --dir examples/build-dashboard build",
     "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.typecheck.json",
-    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build"
-  },
-  "dependencies": {
-    "@volynets/reflex-runtime": "^0.1.2"
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm check:artifacts",
+    "build:all": "node ../../tooling/build/run.mjs @volynets/reflex-framework",
+    "check:artifacts": "node ../../tooling/build/verify-artifacts.mjs --directory .",
+    "prepack": "pnpm check:artifacts"
   },
   "keywords": [
     "jsx",
@@ -73,5 +75,12 @@
   },
   "engines": {
     "node": ">=20.19.0"
-  }
+  },
+  "peerDependencies": {
+    "@volynets/reflex-runtime": "^1.0.0"
+  },
+  "devDependencies": {
+    "@volynets/reflex-runtime": "workspace:*"
+  },
+  "private": false
 }

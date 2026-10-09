@@ -5,9 +5,17 @@ import {
   type Expr,
   type Op,
 } from "./harness";
-import type { QualificationProgram } from "./mutation-qualification";
+import type { QualificationProgram } from "./mutant/mutation-qualification";
+import {
+  defaultRecoveryLanguage,
+  type RecoveryLanguage,
+} from "./catalog/recovery-language";
+import type { RecoveryDifferentialReport } from "./api/reports";
+export { defaultRecoveryLanguage } from "./catalog/recovery-language";
+export type { RecoveryLanguage } from "./catalog/recovery-language";
+export type { RecoveryDifferentialReport } from "./api/reports";
 
-export interface RecoveryLanguage {
+/* export interface RecoveryLanguage {
   maxContinuationActions: 4;
   values: readonly [false, true];
 }
@@ -15,16 +23,16 @@ export interface RecoveryLanguage {
 export const defaultRecoveryLanguage: RecoveryLanguage = {
   maxContinuationActions: 4,
   values: [false, true],
-};
+}; */
 
-export interface RecoveryDifferentialReport {
+/* export interface RecoveryDifferentialReport {
   language: RecoveryLanguage;
   canonicalPrograms: number;
   executedPrograms: number;
   executedOperations: number;
   divergences: number;
   firstDivergence?: DifferentialError;
-}
+} */
 
 /**
  * Enumerates continuations from a deliberately primed watcher/computed graph.

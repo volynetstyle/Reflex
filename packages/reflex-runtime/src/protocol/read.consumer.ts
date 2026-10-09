@@ -13,13 +13,15 @@ import {
 import { devAssertNoRuntimeHookReactiveRead } from "@runtime/kernel/execution";
 import {
   Changed,
-  DIRTY_STATE,
+  Both,
+  Computing,
   Visited,
   type ConsumerNode,
+  type ReactiveEdge,
 } from "@runtime/kernel/shape";
 import { resolveTrackedRead } from "@runtime/kernel/shape/tracking";
 import { advance } from "@runtime/kernel/stages/second/advance";
-import { pull_iterator } from "@runtime/kernel/stages/second/pull_iterator";
+import { should_recompute } from "@runtime/kernel/stages/second/pull_dependency";
 import {
   observeRuntimeProjection,
   observeRuntimeReadConsumerPath,
@@ -51,7 +53,7 @@ export function readConsumerLazy<T>(this: ConsumerNode<T>): T {
   // eslint-disable-next-line @typescript-eslint/no-this-alias
   const producer = this;
   const state = producer.state;
-  const isDirty = (state & DIRTY_STATE) !== 0;
+  const isDirty = (state & Both) !== 0;
 
   if (__PROFILE__) observeRuntimeReadConsumerPath?.(isDirty);
 
@@ -90,13 +92,40 @@ export function readConsumerEager<T>(node: ConsumerNode<T>): T {
     observeRuntimeProjection?.("projection.semantic.read.consumer.eager");
 
   const state = node.state;
-  const isDirty = (state & DIRTY_STATE) !== 0;
+  const isDirty = (state & Both) !== 0;
 
   if (__PROFILE__) observeRuntimeReadConsumerPath?.(isDirty);
   return isDirty ? stabilizeDirtyConsumer(node, state) : node.payload;
 }
 
 const FORCE_RECOMPUTE_STATE = Changed | Visited;
+
+/**
+ * Return the committed edge whose delivery is owned by the active tracking
+ * continuation, but only when it is the exact stable next read.
+ *
+ * This is a read-only proof: it does not advance the tracking cursor or commit
+ * a dependency before producer stabilization succeeds. Dynamic append,
+ * reorder and duplicate cases conservatively fall back to generic propagation.
+ */
+function ownedParentEdgeForStableRead(
+  producer: ConsumerNode<unknown>,
+): ReactiveEdge | null {
+  const consumer = currentConsumer;
+
+  if (
+    consumer === null ||
+    consumer === producer ||
+    (consumer.state & Computing) === 0
+  ) {
+    return null;
+  }
+
+  const cursor = consumer.tailIn;
+  const candidate = cursor === null ? consumer.firstIn : cursor.nextIn;
+
+  return candidate !== null && candidate.from === producer ? candidate : null;
+}
 
 function stabilizeDirtyConsumer<T>(node: ConsumerNode<T>, state: number): T {
   devAssertConsumerCanStabilize(state);
@@ -108,7 +137,7 @@ function stabilizeDirtyConsumer<T>(node: ConsumerNode<T>, state: number): T {
       observeRuntimeProjection?.(
         "projection.semantic.read.stabilize.force-advance",
       );
-    stabilized = advance(node);
+    stabilized = advance(node, ownedParentEdgeForStableRead(node));
   } else {
     const edge = node.firstIn;
     if (__PROFILE__)
@@ -119,10 +148,10 @@ function stabilizeDirtyConsumer<T>(node: ConsumerNode<T>, state: number): T {
     // - has producers,
     // - all top-level dependencies are checked,... and
     // - its eigenvalue is updated to the newest one.
-    stabilized = edge !== null && pull_iterator(node, edge) && advance(node);
+    stabilized = edge !== null && should_recompute(node, edge) && advance(node);
   }
 
-  if (!stabilized) node.state &= ~DIRTY_STATE;
+  if (!stabilized) node.state &= ~Both;
   if ((runtimeState & RuntimeState.IdlePending) !== RuntimeState.Idle) {
     flushPendingRuntimeIdle();
   }
@@ -180,7 +209,7 @@ export function readConsumer<T>(
       observeRuntimeProjection?.("projection.semantic.read.consumer.eager");
 
     const state = node.state;
-    const isDirty = (state & DIRTY_STATE) !== 0;
+    const isDirty = (state & Both) !== 0;
 
     if (__PROFILE__) observeRuntimeReadConsumerPath?.(isDirty);
 
@@ -195,7 +224,7 @@ export function readConsumer<T>(
     observeRuntimeProjection?.("projection.semantic.read.consumer.lazy");
 
   const state = node.state;
-  const isDirty = (state & DIRTY_STATE) !== 0;
+  const isDirty = (state & Both) !== 0;
 
   if (__PROFILE__) observeRuntimeReadConsumerPath?.(isDirty);
 

@@ -32,6 +32,7 @@ describe("Reactive system - exports", () => {
     expect(reflex.event).toBe(infra.event);
     expect(reflex.flush).toBe(infra.flush);
     expect("resource" in reflex).toBe(false);
+    expect("asyncDerived" in reflex).toBe(false);
   });
 
   it("keeps global runtime aliases live after createRuntime()", () => {
@@ -62,6 +63,11 @@ describe("Reactive system - exports", () => {
     expect(unstable.optimistic).toBe(optimistic);
     expect(unstable.resource).toBe(resource);
     expect(unstable.transition).toBe(transition);
+    expect("asyncDerived" in unstable).toBe(false);
+    expect("read" in unstable).toBe(false);
+    expect("currentOrUndefined" in unstable).toBe(false);
+    expect("current" in unstable).toBe(false);
+    expect("until" in unstable).toBe(false);
     expect("createProjection" in unstable).toBe(false);
     expect("createSelector" in unstable).toBe(false);
   });

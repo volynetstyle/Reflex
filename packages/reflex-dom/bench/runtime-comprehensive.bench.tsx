@@ -3,14 +3,13 @@
 import { bench, describe } from "vitest";
 import { For, useSignal } from "../src";
 import {
-  createDOMExecutionContext,
+  createDOMContext,
   dispatchDOMEvent,
-  ensureDOMRuntime,
   runDOMOperation,
-  runWithDOMExecutionContext,
-  type DOMExecutionContext,
-} from "../src/runtime/execution";
-import { createDOMRenderer, type DOMRenderer } from "../src/runtime/renderer";
+  withDOMContext,
+  type DOMContext,
+} from "../src/runtime/context";
+import { createDOMRenderer, type DOMRenderer } from "../src/client/renderer";
 
 const BOUNDARY_OPERATIONS = 1_024;
 const EVENT_OPERATIONS = 256;
@@ -25,20 +24,15 @@ function assertMultiple(value: number, divisor: number, label: string): void {
   }
 }
 
-function legacyRunDOMOperation<T>(
-  context: DOMExecutionContext,
-  fn: () => T,
-): T {
-  return ensureDOMRuntime(context).batch(() =>
-    runWithDOMExecutionContext(context, fn),
-  );
+function directContextBatch<T>(context: DOMContext, fn: () => T): T {
+  return context.runtime.batch(() => withDOMContext(context, fn));
 }
 
-describe("DOM execution boundary | before vs after", () => {
-  let context: DOMExecutionContext;
+describe("DOM execution boundary | boundary overhead", () => {
+  let context: DOMContext;
 
   bench(
-    "after | scoped globals",
+    "operation boundary",
     () => {
       for (let index = 0; index < BOUNDARY_OPERATIONS; ++index) {
         runDOMOperation(context, noop);
@@ -46,30 +40,28 @@ describe("DOM execution boundary | before vs after", () => {
     },
     {
       setup() {
-        context = createDOMExecutionContext();
-        ensureDOMRuntime(context);
+        context = createDOMContext();
       },
     },
   );
 
   bench(
-    "before | callback wrappers",
+    "direct context batch",
     () => {
       for (let index = 0; index < BOUNDARY_OPERATIONS; ++index) {
-        legacyRunDOMOperation(context, noop);
+        directContextBatch(context, noop);
       }
     },
     {
       setup() {
-        context = createDOMExecutionContext();
-        ensureDOMRuntime(context);
+        context = createDOMContext();
       },
     },
   );
 });
 
-describe("DOM event dispatch | before vs after", () => {
-  let context: DOMExecutionContext;
+describe("DOM event dispatch | boundary overhead", () => {
+  let context: DOMContext;
   let receiver: HTMLButtonElement;
   let event: Event;
   let handled = 0;
@@ -79,7 +71,7 @@ describe("DOM event dispatch | before vs after", () => {
   };
 
   bench(
-    "after | argument slots",
+    "DOM event boundary",
     () => {
       for (let index = 0; index < EVENT_OPERATIONS; ++index) {
         dispatchDOMEvent(context, handler, receiver, event);
@@ -87,8 +79,8 @@ describe("DOM event dispatch | before vs after", () => {
     },
     {
       setup() {
-        context = createDOMExecutionContext();
-        ensureDOMRuntime(context);
+        context = createDOMContext();
+
         receiver = document.createElement("button");
         event = new Event("click");
         handled = 0;
@@ -100,22 +92,22 @@ describe("DOM event dispatch | before vs after", () => {
   );
 
   bench(
-    "before | per-event invoke closure",
+    "direct event invocation",
     () => {
       for (let index = 0; index < EVENT_OPERATIONS; ++index) {
-        legacyRunDOMOperation(context, () => handler.call(receiver, event));
+        directContextBatch(context, () => handler.call(receiver, event));
       }
     },
     {
       setup() {
-        context = createDOMExecutionContext();
-        ensureDOMRuntime(context);
+        context = createDOMContext();
+
         receiver = document.createElement("button");
         event = new Event("click");
         handled = 0;
       },
       teardown() {
-        assertMultiple(handled, EVENT_OPERATIONS, "legacy event dispatch");
+        assertMultiple(handled, EVENT_OPERATIONS, "direct event invocation");
       },
     },
   );

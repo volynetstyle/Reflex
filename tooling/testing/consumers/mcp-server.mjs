@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import * as core from "@volynets/reflex-runtime";
+import * as internal from "@volynets/reflex-runtime/internal";
+import {subtle} from "@volynets/reflex-runtime/debug";
+import {createRuntime,signal,computed,effect} from "@volynets/reflex";
+import {serveRuntimeMcpStdio} from "@volynets/reflex-runtime-mcp";
+assert.equal(core.getActiveRuntimeContext,internal.getActiveRuntimeContext);
+assert.equal(subtle.enabled,true);
+const host=createRuntime({effectStrategy:"eager"});const value=signal(2);const total=computed(()=>value()*2);
+const observed=[];const stop=effect(()=>{observed.push(total());});host.flush();
+globalThis.packedDiagnosticGraph={host,value,total,stop,observed};
+serveRuntimeMcpStdio(subtle.mcp());

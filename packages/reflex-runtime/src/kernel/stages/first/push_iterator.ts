@@ -11,7 +11,7 @@ import {
 import {
   Changed,
   Computing,
-  DIRTY_STATE,
+  Both,
   Unknown,
   Visited,
   Watcher,
@@ -26,8 +26,6 @@ import {
   observeRuntimePushPath,
 } from "@runtime/kernel/projection";
 import { observeRuntimePropagate } from "@runtime/kernel/projection.propagate";
-
-const FAST_BLOCK_MASK = DIRTY_STATE | Computing;
 
 const propagateStack: ReactiveEdge[] = new Array(512).fill(null);
 const MAX_RETAINED_PROPAGATE_STACK = 512;
@@ -156,7 +154,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
 
     let next = 0;
 
-    if ((state & FAST_BLOCK_MASK) === 0) {
+    if ((state & (Both | Computing)) === 0) {
       next = (state & ~Visited) | Changed;
       sub.state = next;
     } else if ((state & Unknown) !== 0 && (state & Watcher) === 0) {
@@ -266,11 +264,18 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
 
       let next = 0;
 
-      if ((state & FAST_BLOCK_MASK) === 0) {
+      if ((state & (Both | Computing)) === 0) {
         next = (state & ~Visited) | Unknown;
         sub.state = next;
       } else if ((state & Computing) !== 0) {
         next = markComputingSubscriber(edge, sub, state);
+      } else if ((state & (Watcher | Unknown)) === Watcher) {
+        // Watcher evidence is a pair of independent obligations. A direct
+        // Changed already delivered the execution obligation, but it does not
+        // prove that the rest of the committed frontier is valid. Preserve it
+        // while adding the transitive validation obligation.
+        next = (state & ~Visited) | Unknown;
+        sub.state = next;
       }
 
       if (next !== 0) {
@@ -289,7 +294,11 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
             context: defaultContext,
           });
 
-        if ((next & Watcher) !== 0 && nodeInvalidatedHook) {
+        if (
+          (next & Watcher) !== 0 &&
+          (state & Both) === 0 &&
+          nodeInvalidatedHook
+        ) {
           if (__PROFILE__) {
             if (__PROFILE__)
               observeRuntimeProjection?.(

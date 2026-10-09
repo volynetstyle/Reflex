@@ -1,8 +1,7 @@
 import { defaultContext } from "@runtime/kernel/config";
 import {
-  advanceTrackingEpoch,
-  currentConsumer,
-  setCurrentConsumer,
+  enterConsumerTracking,
+  restoreConsumerTracking,
 } from "@runtime/kernel/state";
 import {
   devAssertExecutableNode,
@@ -22,6 +21,7 @@ import {
   type ReactiveNode,
 } from "@runtime/kernel/shape";
 import { cleanupUnvisitedSources } from "@runtime/kernel/shape/tracking";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 export const executeKnownNodeComputation = !__DEV__
   ? executeComputation
@@ -38,12 +38,11 @@ function executeComputation<T>(
   node: ReactiveNode<T>,
   compute: ComputeFn<T>,
 ): T {
-  const prevActive = currentConsumer;
-
   node.tailIn = null;
   node.state = (node.state & ~Visited) | Computing;
-  advanceTrackingEpoch();
-  setCurrentConsumer(node);
+  const prevActive = enterConsumerTracking(node);
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.compute.context.enter");
 
   devRecordComputeStart(node, defaultContext);
 
@@ -52,7 +51,9 @@ function executeComputation<T>(
   try {
     result = compute!();
   } catch (error) {
-    setCurrentConsumer(prevActive);
+    restoreConsumerTracking(prevActive);
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.compute.context.restore");
     node.state &= ~Computing;
 
     devRecordComputeError(node, error, defaultContext);
@@ -60,7 +61,9 @@ function executeComputation<T>(
     throw error;
   }
 
-  setCurrentConsumer(prevActive);
+  restoreConsumerTracking(prevActive);
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.compute.context.restore");
   node.state &= ~Computing;
 
   if (node.tailIn !== node.lastIn) {

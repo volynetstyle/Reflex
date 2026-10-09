@@ -44,6 +44,10 @@ export function runWithOwner<T>(
   node: OwnershipNode | null,
   fn: () => T,
 ): T {
+  if (owner.currentNode === node && activeOwnerContext === owner) {
+    return fn();
+  }
+
   const previousNode = owner.currentNode;
   const previousActiveOwnerContext = activeOwnerContext;
 

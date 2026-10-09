@@ -1,59 +1,89 @@
 /**
- * Bit flags describing the lifecycle, role and execution state of a reactive node.
+ * Reactive node state is composed from independent flag groups:
  *
- * The flags are divided into independent groups:
+ *  - Evidence   : Unknown | Changed
+ *  - Execution  : Visited | Computing
+ *  - Scheduling : Scheduled
+ *  - Role       : Producer | Consumer | Watcher
  *
- *  - Role         : Producer / Consumer / Watcher
- *  - Dirty state  : Clean | Unknown | Changed
- *  - Execution    : Visited, Computing, Scheduled, ...
+ * Evidence forms a two-bit Boolean lattice:
+ *                  (Both)
+ *             Unknown | Changed
+ *              /            \
+ *           Unknown       Changed
+ *              \            /
+ *                   None
  *
- * Dirty-state semantics:
- *
- *  Clean
- *      The node is known to be up-to-date.
+ * For watchers, `Unknown` and `Changed` are independent obligations:
  *
  *  Unknown
- *      An upstream dependency may have changed.
- *      The node must verify whether recomputation is actually required
- *      (typically through `shouldRecompute()`).
+ *      At least one committed dependency still requires validation.
  *
  *  Changed
- *      An upstream change has already been confirmed.
- *      The node should recompute immediately without further verification.
+ *      At least one dependency has already proven that execution is required
+ *      once validation succeeds.
  *
- * Information ordering:
+ * Watcher evidence accumulated during one unsettled propagation wave is
+ * monotonic:
  *
- *      Clean < Unknown < Changed
+ *      merge(a, b) = a | b
  *
- * where `Unknown` represents uncertainty and `Changed` represents confirmed
- * knowledge about an upstream change.
+ * and therefore commutative, associative and idempotent.
  *
- * Notes:
+ * Validation may later discharge `Unknown`; this is a separate operation from
+ * propagation-time evidence accumulation.
  *
- *  - For computed nodes, `Unknown` and `Changed` are normally exclusive.
- *  - For watchers, they are orthogonal pending facts: `Unknown` requires
- *    dependency validation before lifecycle work, while `Changed` requires
- *    execution after validation succeeds. `Unknown | Changed` preserves both
- *    obligations when a confirmed change is followed by another invalidation.
- *  - Producers commit immediately on write and normally do not participate
- *    in pull-walk verification.
- *  - `Visited`, `Computing` and similar flags are transient execution markers
- *    used only while propagating or evaluating the graph.
+ * Watcher propagation-time evidence is monotonic:
+ *
+ * nextEvidence = currentEvidence | incomingEvidence
+ *
+ * It must never discard an already-known watcher obligation.
+ *
+ * Ordinary computed nodes use the same bits as an ordered dirty state:
+ * a direct `Changed` supersedes `Unknown` because recomputation is already
+ * required. Resolution belongs to validation/evaluation stages, not watcher
+ * propagation merge.
  */
 
-/** Upstream may have changed; verify before recomputing. */
-export const Unknown = 1 << 0;
-/** Upstream change is confirmed; recompute immediately. */
-export const Changed = 1 << 1;
+/**
+ * Bottom of semilattice.
+ */
+export const None = 0b00;
+/**
+ * Validation is required before execution/recomputation may proceed.
+ */
+export const Unknown = 1 << 0; // 1
+/**
+ * Execution/recomputation is definitely required.
+ * No further validation is needed to establish that fact.
+ */
+export const Changed = 1 << 1; // 2
+/**
+ * Top of semilattice.
+ */
+export const Both = Unknown | Changed; // =3
+
+// end of paragraph
 /** Node has already been visited during the current traversal. */
-export const Visited = 1 << 2;
+export const Visited = 1 << 2; // 4
 /** Node is currently being evaluated. */
-export const Computing = 1 << 3;
+export const Computing = 1 << 3; // 8
 /** Node performs side effects and has no output value. */
-export const Watcher = 1 << 4;
+export const Watcher = 1 << 4; // 16
+
+// <!-- Watcher -->
 /** Watcher has been enqueued for execution. */
-export const Scheduled = 1 << 5;
+export const Scheduled = 1 << 5; // 32
+export const Disposed = 1 << 6; // 64
+/** Watcher payload owns a cleanup callback. */
+export const WatcherCleanupPending = 1 << 7; // 128
+
+// <!-- Watcher end -->
+
 // ...
+// free powers include 29 and 30 in prod [6, 31*]
+// ...
+
 /**
  * Only available in the development environment (DEV),
  * Source node whose value is committed externally.
@@ -65,15 +95,13 @@ export const Producer = __DEV__ ? 1 << 29 : 0;
  * as it is not required in the production environment
  * prod) under heavy use (hot path).
  */
-export const Consumer = __DEV__ ? 1 << 29 : 0;
+export const Consumer = __DEV__ ? 1 << 30 : 0;
 
 export type ReactiveNodeState = number;
 
-/** All dirty bits. In supported runtime flows this is either `Unknown` or `Changed`. */
-export const DIRTY_STATE = Unknown | Changed;
 /** Clean producer. Normal steady state for source nodes. */
 export const PRODUCER_INITIAL_STATE = Producer;
 /** Directly invalidated computed node: skip verification and recompute on read. */
 export const CONSUMER_INITIAL_STATE = Changed | Consumer;
-/** Computed node carrying either `Unknown` or `Changed`. */
-export const WATCHER_INITIAL_STATE = Changed | Unknown | Watcher | Consumer;
+/** Watcher starts with both validation and initial-execution obligations. */
+export const WATCHER_INITIAL_STATE = Both | Watcher | Consumer;

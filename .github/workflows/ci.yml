@@ -2,32 +2,12 @@ name: CI
 
 on:
   workflow_dispatch:
-
-  push:
-    branches:
-      - main
-    paths:
-      - .github/workflows/ci.yml
-      - package.json
-      - pnpm-lock.yaml
-      - pnpm-workspace.yaml
-      - eslint.config.mjs
-      - scripts/**
-      - packages/reflex-runtime/**
-      - packages/reflex-scheduler/**
-      - packages/reflex/**
-
   pull_request:
-    paths:
-      - .github/workflows/ci.yml
-      - package.json
-      - pnpm-lock.yaml
-      - pnpm-workspace.yaml
-      - eslint.config.mjs
-      - scripts/**
-      - packages/reflex-runtime/**
-      - packages/reflex-scheduler/**
-      - packages/reflex/**
+  push:
+    branches: [main]
+  merge_group:
+  schedule:
+    - cron: '20 1 * * *'
 
 permissions:
   contents: read
@@ -41,63 +21,226 @@ defaults:
     shell: bash
 
 jobs:
-  ci:
-    name: fast checks
+  registry:
+    name: required coverage registry
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      phase: ${{ steps.matrix.outputs.phase }}
+      consumer: ${{ steps.matrix.outputs.consumer }}
+      reuse: ${{ steps.matrix.outputs.reuse }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - id: matrix
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: node tooling/configs/ci-fingerprints.mjs >> "$GITHUB_OUTPUT"
+
+  static:
+    name: tooling and config contracts
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+      - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Checkout comparison baseline
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || github.sha }}
+          path: .quality-baseline
+      - name: Install comparison baseline dependencies
+        working-directory: .quality-baseline
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Tooling lint
+        run: pnpm exec eslint tooling config eslint.config.mjs vitest.config.ts
+      - name: Required aggregate rejection contracts
+        run: pnpm test:tooling
+      - name: Resolved config and discovery parity
+        run: pnpm check:configs -- --baseline-root .quality-baseline --output artifacts/config-equivalence.json
+      - name: No active semantic divergence
+        run: pnpm check:active-divergences
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: config-evidence
+          path: artifacts/config-equivalence.json
+          if-no-files-found: error
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+  quality:
+    name: ${{ matrix.id }} checks
+    needs: registry
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.registry.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore successful CI evidence
+        id: evidence
+        if: needs.registry.outputs.reuse == 'true'
+        uses: actions/cache/restore@v5
+        with:
+          path: artifacts/checks
+          key: ci-evidence-v1-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-${{ matrix.id }}-${{ needs.registry.outputs.phase }}-${{ matrix.fingerprint }}
+      - uses: pnpm/action-setup@v4
+        if: steps.evidence.outputs.cache-hit != 'true'
+        with:
+          version: 9.0.0
+      - uses: actions/setup-node@v4
+        if: steps.evidence.outputs.cache-hit != 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        if: steps.evidence.outputs.cache-hit != 'true'
+      - name: Install Chromium
+        if: matrix.browser && steps.evidence.outputs.cache-hit != 'true'
+        run: pnpm --filter @volynets/reflex-dom exec playwright install --with-deps chromium
+      - name: Run every registered prerequisite and check
+        if: steps.evidence.outputs.cache-hit != 'true'
+        env:
+          QUALITY_PACKAGE: ${{ matrix.package }}
+          QUALITY_PHASE: ${{ needs.registry.outputs.phase }}
+          QUALITY_FINGERPRINT: ${{ matrix.fingerprint }}
+        run: pnpm quality:check -- --package "$QUALITY_PACKAGE" --phase "$QUALITY_PHASE" --output-dir artifacts/checks
+      - name: Retain successful CI evidence
+        if: success() && needs.registry.outputs.reuse == 'true' && steps.evidence.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: artifacts/checks
+          key: ci-evidence-v1-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-${{ matrix.id }}-${{ needs.registry.outputs.phase }}-${{ matrix.fingerprint }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: checks-${{ matrix.id }}
+          path: |
+            artifacts/checks/
+            packages/reflex-dom/**/__screenshots__/**
+          if-no-files-found: error
+          retention-days: 30
 
-      - name: Runtime lint
-        run: pnpm --filter @volynets/reflex-runtime lint
+  consumer:
+    name: installed package composition
+    needs: registry
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore successful CI evidence
+        id: evidence
+        if: needs.registry.outputs.reuse == 'true'
+        uses: actions/cache/restore@v5
+        with:
+          path: artifacts/qualification
+          key: ci-evidence-v1-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-consumer-${{ needs.registry.outputs.consumer }}
+      - uses: pnpm/action-setup@v4
+        if: steps.evidence.outputs.cache-hit != 'true'
+        with:
+          version: 9.0.0
+      - uses: actions/setup-node@v4
+        if: steps.evidence.outputs.cache-hit != 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        if: steps.evidence.outputs.cache-hit != 'true'
+      - name: Install Chromium
+        if: steps.evidence.outputs.cache-hit != 'true'
+        run: pnpm --filter @volynets/reflex-dom exec playwright install --with-deps chromium
+      - name: Build, pack, install and qualify declared exports
+        if: steps.evidence.outputs.cache-hit != 'true'
+        run: pnpm test:consumer -- --output-dir artifacts/qualification
+      - name: Retain successful CI evidence
+        if: success() && needs.registry.outputs.reuse == 'true' && steps.evidence.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: artifacts/qualification
+          key: ci-evidence-v1-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-consumer-${{ needs.registry.outputs.consumer }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: consumer-evidence
+          path: artifacts/qualification/
+          if-no-files-found: error
+          retention-days: 90
 
-      - name: Runtime typecheck
-        run: pnpm --filter @volynets/reflex-runtime typecheck
+  required:
+    # Keep the former required status name while making it cover the entire matrix.
+    name: fast checks
+    if: always()
+    needs: [registry, static, quality, consumer]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: checks-*
+          path: artifacts/checks
+          merge-multiple: true
+      - name: Enforce complete evidence and successful required jobs
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          QUALITY_PHASE: ${{ needs.registry.outputs.phase || 'pr' }}
+        run: |
+          mkdir -p artifacts
+          printf '%s' "$NEEDS_JSON" > artifacts/needs.json
+          pnpm quality:aggregate -- --phase "$QUALITY_PHASE" --input-dir artifacts/checks --needs-json artifacts/needs.json --output artifacts/quality-summary.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: required-quality-evidence
+          path: artifacts/quality-summary.json
+          if-no-files-found: error
 
-      - name: Runtime test
-        run: pnpm --filter @volynets/reflex-runtime test
-
-      - name: Runtime dev test
-        run: pnpm --filter @volynets/reflex-runtime test:dev
-
-      - name: Runtime build
-        run: pnpm --filter @volynets/reflex-runtime build
-
-      - name: Scheduler lint
-        run: pnpm --filter @volynets/reflex-scheduler lint
-
-      - name: Scheduler typecheck
-        run: pnpm --filter @volynets/reflex-scheduler typecheck
-
-      - name: Scheduler test
-        run: pnpm --filter @volynets/reflex-scheduler test
-
-      - name: Scheduler build
-        run: pnpm --filter @volynets/reflex-scheduler build
-
-      - name: Reflex lint
-        run: pnpm --filter @volynets/reflex lint
-
-      - name: Reflex typecheck
-        run: pnpm --filter @volynets/reflex typecheck
-
-      - name: Reflex test
-        run: pnpm --filter @volynets/reflex test
-
-      - name: Reflex build
-        run: pnpm --filter @volynets/reflex build
+  platform:
+    name: clean consumer on Windows
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm --filter @volynets/reflex-dom exec playwright install chromium
+      - run: pnpm test:consumer -- --output-dir artifacts/platform-qualification
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-consumer-evidence
+          path: artifacts/platform-qualification/
+          if-no-files-found: error

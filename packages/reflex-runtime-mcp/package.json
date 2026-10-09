@@ -22,9 +22,15 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "pnpm clean && tsc -p tsconfig.json && node scripts/finalize-cli.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "smoke": "pnpm build && node scripts/smoke.mjs"
+    "smoke": "pnpm build:all && pnpm test",
+    "clean": "node ../../tooling/build/clean.mjs .",
+    "build:all": "node ../../tooling/build/run.mjs @volynets/reflex-runtime-mcp",
+    "check:artifacts": "node ../../tooling/build/verify-artifacts.mjs --directory .",
+    "prepack": "pnpm check:artifacts",
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm check:artifacts",
+    "test": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.0.0",
@@ -34,5 +40,9 @@
     "@modelcontextprotocol/client": "2.0.0",
     "@types/node": "^26.1.2",
     "typescript": "^5.9.3"
+  },
+  "private": false,
+  "publishConfig": {
+    "access": "public"
   }
 }

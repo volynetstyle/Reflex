@@ -7,3 +7,4 @@ export * from "./useEffect";
 export * from "./useOwned";
 export * from "./useRef";
 export * from "./useSignal";
+export * from "./useAbortSignal";

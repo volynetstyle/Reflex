@@ -19,6 +19,33 @@ function deferred<T>() {
 }
 
 describe("Reactive system - unstable resource protocol", () => {
+  it("accepts only one terminal settlement per manual request", () => {
+    createRuntime();
+    const source = resource<number>();
+    const first = source.start();
+    expect(first.resolve(1)).toBe(true);
+    expect(first.resolve(2)).toBe(false);
+    expect(first.reject("late")).toBe(false);
+    const second = source.start();
+    expect(second.reject("failure")).toBe(true);
+    expect(second.resolve(3)).toBe(false);
+    expect(source.value()).toBe(1);
+    source.dispose();
+  });
+
+  it("rejects a throwing then getter and synchronous then call", () => {
+    createRuntime();
+    const failure = new Error("broken thenable");
+    const getter = Object.defineProperty({}, "then", { get() { throw failure; } });
+    const first = resource(() => getter);
+    expect(first.status()).toBe("rejected");
+    expect(first.error()).toBe(failure);
+    const second = resource(() => ({ then() { throw failure; } }) as PromiseLike<number>);
+    expect(second.status()).toBe("rejected");
+    expect(second.error()).toBe(failure);
+    first.dispose(); second.dispose();
+  });
+
   it("tracks status, value, error, and token through a request lifecycle", () => {
     const user = resource<number, string>();
 

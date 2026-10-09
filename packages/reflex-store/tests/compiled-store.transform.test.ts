@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createModel } from "../../reflex/src/infra/model";
-import { signal } from "../../reflex/src/api/signal";
+import { createStoreScope } from "../src/store/scope";
+import { createStoreCell as signal } from "../src/store/cell";
 import { createRuntime, effect } from "../../reflex/tests/reflex.test_utils";
 import {
   CompiledStoreTransformError,
@@ -20,18 +20,16 @@ describe("transformCompiledStore", () => {
     const result = compileStore(source);
 
     expect(result.code).toContain(
-      'import { createModel as __reflex_createModel, signal as __reflex_signal } from "@volynets/reflex";',
+      'import { createStoreScope as __reflex_createStoreScope } from "@volynets/reflex-store/runtime";',
     );
     expect(result.code).not.toContain('from "@reflex/store"');
     expect(result.code).toContain(
-      'const __read_user_name = __reflex_signal("Alice");',
+      '__read_user_name = ctx.own(__reflex_signal("Alice"));',
     );
     expect(result.code).toContain(
-      "const __read_count = __reflex_signal(0);",
+      "__read_count = ctx.own(__reflex_signal(0));",
     );
-    expect(result.code).toContain(
-      "const state = __reflex_createModel((ctx)=>",
-    );
+    expect(result.code).toContain("= __reflex_createStoreScope((ctx)=>");
     expect(result.code).toContain("get name");
     expect(result.code).toContain("set name");
     expect(result.code).toContain("const name = __read_user_name()");
@@ -74,10 +72,10 @@ describe("transformCompiledStore", () => {
 
     const result = transformCompiledStore(source);
 
-    expect(result.code).toContain("const __prev_");
-    expect(result.code).toContain("return __prev_");
-    expect(result.code).toContain("const __next_");
-    expect(result.code).toContain("return __next_");
+    expect(result.code).toContain("let __prev_");
+    expect(result.code).toContain("return __result_");
+    expect(result.code).toContain("let __next_");
+    expect(result.code).toContain("return __result_");
   });
 
   it("fully customizes the canonical lowering target", () => {
@@ -119,9 +117,7 @@ describe("transformCompiledStore", () => {
     expect(result.code).toContain(
       'import { defineState as $model, cell as $cell } from "custom-runtime";',
     );
-    expect(result.code).toContain(
-      "const $get_user_name = $cell('Ada')",
-    );
+    expect(result.code).toContain("const $get_user_name = $cell('Ada')");
     expect(result.code).toContain(
       '$commit_user_name = $context["with-action"](($value)=>',
     );
@@ -137,7 +133,7 @@ describe("transformCompiledStore", () => {
       'const rt = createRuntime({ effectStrategy: "flush" });',
       "const seen = [];",
       "effect(() => {",
-      '  seen.push(`${state.user.name}:${state.count}`);',
+      "  seen.push(`${state.user.name}:${state.count}`);",
       "});",
       'state.user.name = "Bob";',
       "state.count += 2;",
@@ -150,7 +146,7 @@ describe("transformCompiledStore", () => {
       importRuntime: false,
     });
     const run = new Function(
-      "__reflex_createModel",
+      "__reflex_createStoreScope",
       "__reflex_signal",
       "createRuntime",
       "effect",
@@ -164,7 +160,7 @@ return {
 };`,
     );
 
-    expect(run(createModel, signal, createRuntime, effect)).toEqual({
+    expect(run(createStoreScope, signal, createRuntime, effect)).toEqual({
       count: 4,
       name: "Bob",
       post: 2,
@@ -177,8 +173,7 @@ return {
     const cases = [
       {
         source: "const state = createStore({ count: 0 }); state[key];",
-        message:
-          "Dynamic compiled-store access is not supported in phase 1.",
+        message: "Dynamic compiled-store access is not supported in phase 1.",
       },
       {
         source:
@@ -192,12 +187,14 @@ return {
           "Spread and reflection are not guaranteed for compiled stores in phase 1.",
       },
       {
-        source: "const state = createStore({ count: 0 }); const copy = { ...state };",
+        source:
+          "const state = createStore({ count: 0 }); const copy = { ...state };",
         message:
           "Spread and reflection are not guaranteed for compiled stores in phase 1.",
       },
       {
-        source: "const state = createStore({ count: 0 }); const { count } = state;",
+        source:
+          "const state = createStore({ count: 0 }); const { count } = state;",
         message:
           "Spread and reflection are not guaranteed for compiled stores in phase 1.",
       },

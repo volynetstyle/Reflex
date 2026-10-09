@@ -1,6 +1,6 @@
 packages:
-- 'third-party/*'
-- 'lab/*'
-- 'packages/*'
-- "packages/@reflex/*"
-- "plugins/@vite/*"
+  - 'packages/*'
+  - 'third-party/algorithm-projection'
+  - 'plugins/@vite/reflex-vite-plugin'
+  - 'lab/reactivity-bench'
+  - 'packages/reflex/examples/mini-app'
