@@ -21,7 +21,9 @@ const normalize = (value, root) => {
 };
 async function snapshot(root, configFile) {
   const full = resolve(root, configFile);
-  const loaded = await loadConfigFromFile({ command: "serve", mode: "test" }, full, dirname(full), "silent");
+  // Keep package-local dependencies anchored to the config's original location.
+  // Bundling into the workspace .vite-temp directory loses that resolution scope.
+  const loaded = await loadConfigFromFile({ command: "serve", mode: "test" }, full, dirname(full), "silent", undefined, "runner");
   if (!loaded) throw new Error("Config did not load: " + full);
   const config = loaded.config;
   const test = { ...config.test };

@@ -140,6 +140,16 @@ jobs:
         working-directory: head
         run: pnpm install --frozen-lockfile
 
+      # The facade harness imports dist/esm; qualify and run against artifacts
+      # built independently from each revision's own implementation.
+      - name: Build base benchmark subjects
+        working-directory: base
+        run: pnpm --filter '@volynets/reflex' build:all
+
+      - name: Build head benchmark subjects
+        working-directory: head
+        run: pnpm --filter '@volynets/reflex' build:all
+
       - name: Qualify one transitive protocol on both revisions
         id: protocol
         env:
