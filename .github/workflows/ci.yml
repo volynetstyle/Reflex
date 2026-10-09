@@ -27,6 +27,8 @@ jobs:
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
       phase: ${{ steps.matrix.outputs.phase }}
+      consumer: ${{ steps.matrix.outputs.consumer }}
+      reuse: ${{ steps.matrix.outputs.reuse }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -35,12 +37,7 @@ jobs:
       - id: matrix
         env:
           EVENT_NAME: ${{ github.event_name }}
-        run: |
-          phase=pr
-          if [[ "$EVENT_NAME" == schedule ]]; then phase=deep; fi
-          matrix=$(node tooling/configs/run-checks.mjs --list --phase "$phase")
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
-          echo "phase=$phase" >> "$GITHUB_OUTPUT"
+        run: node tooling/configs/ci-fingerprints.mjs >> "$GITHUB_OUTPUT"
 
   static:
     name: tooling and config contracts
@@ -91,23 +88,41 @@ jobs:
       matrix: ${{ fromJSON(needs.registry.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
+      - name: Restore successful CI evidence
+        id: evidence
+        if: needs.registry.outputs.reuse == 'true'
+        uses: actions/cache/restore@v5
+        with:
+          path: artifacts/checks
+          key: ci-evidence-v1-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-${{ matrix.id }}-${{ needs.registry.outputs.phase }}-${{ matrix.fingerprint }}
       - uses: pnpm/action-setup@v4
+        if: steps.evidence.outputs.cache-hit != 'true'
         with:
           version: 9.0.0
       - uses: actions/setup-node@v4
+        if: steps.evidence.outputs.cache-hit != 'true'
         with:
           node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+        if: steps.evidence.outputs.cache-hit != 'true'
       - name: Install Chromium
-        if: matrix.browser
+        if: matrix.browser && steps.evidence.outputs.cache-hit != 'true'
         run: pnpm --filter @volynets/reflex-dom exec playwright install --with-deps chromium
       - name: Run every registered prerequisite and check
+        if: steps.evidence.outputs.cache-hit != 'true'
         env:
           QUALITY_PACKAGE: ${{ matrix.package }}
           QUALITY_PHASE: ${{ needs.registry.outputs.phase }}
+          QUALITY_FINGERPRINT: ${{ matrix.fingerprint }}
         run: pnpm quality:check -- --package "$QUALITY_PACKAGE" --phase "$QUALITY_PHASE" --output-dir artifacts/checks
+      - name: Retain successful CI evidence
+        if: success() && needs.registry.outputs.reuse == 'true' && steps.evidence.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: artifacts/checks
+          key: ci-evidence-v1-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-${{ matrix.id }}-${{ needs.registry.outputs.phase }}-${{ matrix.fingerprint }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -120,23 +135,42 @@ jobs:
 
   consumer:
     name: installed package composition
+    needs: registry
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - name: Restore successful CI evidence
+        id: evidence
+        if: needs.registry.outputs.reuse == 'true'
+        uses: actions/cache/restore@v5
+        with:
+          path: artifacts/qualification
+          key: ci-evidence-v1-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-consumer-${{ needs.registry.outputs.consumer }}
       - uses: pnpm/action-setup@v4
+        if: steps.evidence.outputs.cache-hit != 'true'
         with:
           version: 9.0.0
       - uses: actions/setup-node@v4
+        if: steps.evidence.outputs.cache-hit != 'true'
         with:
           node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+        if: steps.evidence.outputs.cache-hit != 'true'
       - name: Install Chromium
+        if: steps.evidence.outputs.cache-hit != 'true'
         run: pnpm --filter @volynets/reflex-dom exec playwright install --with-deps chromium
       - name: Build, pack, install and qualify declared exports
+        if: steps.evidence.outputs.cache-hit != 'true'
         run: pnpm test:consumer -- --output-dir artifacts/qualification
+      - name: Retain successful CI evidence
+        if: success() && needs.registry.outputs.reuse == 'true' && steps.evidence.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: artifacts/qualification
+          key: ci-evidence-v1-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-consumer-${{ needs.registry.outputs.consumer }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:

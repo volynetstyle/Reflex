@@ -40,7 +40,7 @@ if (args.includes("--list")) {
   const output = artifactPath(argument(args, "--output-dir", "artifacts/checks"));
   if (await stat(join(output, entry.id + ".json")).then(() => true, (error) => { if (error.code === "ENOENT") return false; throw error; })) throw new Error("Evidence already exists; choose a fresh --output-dir to preserve every attempt.");
   await mkdir(join(output, entry.id), { recursive: true });
-  const report = { schemaVersion: 1, package: entry.name, id: entry.id, phase, node: process.version,
+  const report = { schemaVersion: 1, package: entry.name, id: entry.id, phase, node: process.version, inputFingerprint: process.env.QUALITY_FINGERPRINT,
     startedAt: new Date().toISOString(), requiredChecks: checksFor(entry, phase).map((check) => check.id), checks: [] };
   for (const check of checksFor(entry, phase)) {
     const filename = check.id.replace(/[^a-zA-Z0-9._-]/g, "_") + ".log";

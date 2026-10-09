@@ -38,6 +38,24 @@ test("complete required evidence passes", () => withFixture(async (directory) =>
   await aggregate(directory);
   assert.equal(JSON.parse(await readFile(join(directory, "summary.json"), "utf8")).status, "passed");
 }));
+
+test("cached evidence must match the current registry input fingerprints", () => withFixture(async (directory) => {
+  const include = selectedPackages("pr").map(entry => ({ id: entry.id, fingerprint: "input-" + entry.id }));
+  for (const entry of include) {
+    const file = join(directory, entry.id + ".json");
+    const report = JSON.parse(await readFile(file, "utf8"));
+    report.inputFingerprint = entry.fingerprint;
+    await writeFile(file, JSON.stringify(report));
+  }
+  const needs = join(directory, "needs.json");
+  await writeFile(needs, JSON.stringify({ registry: { result: "success", outputs: { matrix: JSON.stringify({ include }) } } }));
+  await aggregate(directory, ["--needs-json", needs]);
+  const file = join(directory, "runtime.json");
+  const report = JSON.parse(await readFile(file, "utf8"));
+  report.inputFingerprint = "stale-input";
+  await writeFile(file, JSON.stringify(report));
+  assert((await rejection(directory, ["--needs-json", needs])).failures.some(message => message.includes("runtime: evidence input fingerprint differs")));
+}));
 test("a missing package report cannot become a valid skip", () => withFixture(async (directory) => {
   await rm(join(directory, "runtime.json"));
   const summary = await rejection(directory);

@@ -8,6 +8,9 @@ const phase = argument(args, "--phase", "pr");
 await validateRegistry();
 const directory = artifactPath(argument(args, "--input-dir", "artifacts/checks"));
 const failures = [];
+const needsFile = argument(args, "--needs-json");
+const needs = needsFile ? JSON.parse(await readFile(resolve(repoRoot, needsFile), "utf8")) : null;
+const planned = needs?.registry?.outputs?.matrix ? JSON.parse(needs.registry.outputs.matrix).include : null;
 async function filesAt(path) {
   const result = [];
   try {
@@ -28,6 +31,10 @@ for (const entry of selectedPackages(phase)) {
   const matches = reports.filter((report) => report.id === entry.id);
   if (matches.length !== 1) { failures.push(entry.id + ": expected exactly one report, found " + matches.length); continue; }
   const report = matches[0];
+  if (planned) {
+    const input = planned.find(item => item.id === entry.id);
+    if (!input?.fingerprint || report.inputFingerprint !== input.fingerprint) failures.push(entry.id + ": evidence input fingerprint differs from current plan");
+  }
   if (report.package !== entry.name || report.phase !== phase || report.status !== "passed" || !report.completedAt) failures.push(entry.id + ": invalid or incomplete package verdict");
   const expected = checksFor(entry, phase).map((check) => check.id);
   if (JSON.stringify(report.requiredChecks) !== JSON.stringify(expected)) failures.push(entry.id + ": required check registry differs");
@@ -43,9 +50,7 @@ for (const entry of selectedPackages(phase)) {
     } catch { failures.push(entry.id + ": missing log for " + id); }
   }
 }
-const needsFile = argument(args, "--needs-json");
 if (needsFile) {
-  const needs = JSON.parse(await readFile(resolve(repoRoot, needsFile), "utf8"));
   for (const [name, result] of Object.entries(needs)) if (result.result !== "success") failures.push("Required job " + name + ": " + result.result);
 }
 const summary = { schemaVersion: 1, phase, status: failures.length ? "failed" : "passed", expectedPackages: selectedPackages(phase).map((entry) => entry.id), failures, generatedAt: new Date().toISOString() };
