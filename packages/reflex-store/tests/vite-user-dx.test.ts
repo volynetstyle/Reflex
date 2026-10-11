@@ -7,7 +7,6 @@ import reflexStore from "../src/vite";
 const testDir = dirname(fileURLToPath(import.meta.url));
 const fixtureRoot = resolve(testDir, "fixtures");
 const taskBoardRoot = resolve(testDir, "../examples/task-board");
-const reflexSource = resolve(testDir, "../../reflex/src/index.ts");
 const runtimeSource = resolve(testDir, "../../reflex-runtime/src");
 const schedulerSource = resolve(testDir, "../../reflex-scheduler/src/index.ts");
 const storeSource = resolve(testDir, "../src/index.ts");
@@ -30,7 +29,6 @@ async function createStoreFixtureServer(
     resolve: {
       alias: {
         "@runtime": runtimeSource,
-        "@volynets/reflex": reflexSource,
         "@volynets/reflex-framework": resolve(
           testDir,
           "../../reflex-framework/src/index.ts",

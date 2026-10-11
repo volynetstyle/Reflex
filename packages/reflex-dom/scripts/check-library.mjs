@@ -53,6 +53,7 @@ try {
     import assert from "node:assert/strict";
     import * as dom from "@volynets/reflex-dom";
     import * as framework from "@volynets/reflex-framework";
+    import { adoptOwnershipNode, LifecycleHandle, LifecycleScope, getLifetimeSignal, assertSynchronous } from "@volynets/reflex-framework";
     import * as core from "@volynets/reflex-runtime";
     import * as internal from "@volynets/reflex-runtime/internal";
     import { jsx } from "@volynets/reflex-dom/jsx-runtime";
@@ -61,6 +62,7 @@ try {
     const { JSDOM } = await import(process.argv[2]);
     assert.equal(core.createProducer, internal.createProducer);
     assert.equal(dom.useComputed, framework.useComputed);
+    for (const exported of [adoptOwnershipNode, LifecycleHandle, LifecycleScope, getLifetimeSignal, assertSynchronous]) assert.equal(typeof exported, "function");
     assert.equal(dom.jsx, jsx);
     assert.equal(dom.jsxDEV, jsxDEV);
     for (const effectStrategy of ["eager", "sab", "flush"]) {

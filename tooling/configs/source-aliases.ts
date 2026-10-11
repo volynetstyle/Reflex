@@ -42,7 +42,6 @@ export function sourceAliases(profile: SourceAliasProfile): Alias[] {
     }
     case "store": return [
       { find: /^@volynets\/reflex-framework$/, replacement: source("reflex-framework") },
-      { find: /^@volynets\/reflex$/, replacement: source("reflex") },
       { find: /^@volynets\/reflex-store\/runtime\/internal$/, replacement: source("reflex-store", "runtime/internal.ts") },
       { find: /^@volynets\/reflex-store\/runtime$/, replacement: source("reflex-store", "runtime.ts") },
       { find: /^@volynets\/reflex-store$/, replacement: source("reflex-store") },

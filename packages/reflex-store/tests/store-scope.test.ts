@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createRuntime, effect, signal } from "@volynets/reflex";
+import { createRuntime, effect, signal } from "./helpers/reactivity";
 import { createStoreScope, type StoreScope } from "../src/store/scope";
 import { createStoreCell } from "../src/store/cell";
 import { compileStore } from "../src/store";

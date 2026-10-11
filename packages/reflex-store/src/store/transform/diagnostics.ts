@@ -72,10 +72,7 @@ export function scanUnsupportedStoreSyntax(
   for (const item of program.body) {
     if (
       item.type !== "ImportDeclaration" ||
-      (!STORE_MODULES.has(item.source.value) &&
-        !["@volynets/reflex", "@volynets/reflex-store/runtime"].includes(
-          item.source.value,
-        ))
+      !STORE_MODULES.has(item.source.value)
     )
       continue;
     for (const specifier of item.specifiers) {
@@ -89,16 +86,6 @@ export function scanUnsupportedStoreSyntax(
         intrinsicNames.set(bindingKey(specifier.local), {
           arity: imported === "hydrate" ? 2 : 1,
           rootIndex: 0,
-        });
-      if (
-        imported === "own" &&
-        ["@volynets/reflex", "@volynets/reflex-store/runtime"].includes(
-          item.source.value,
-        )
-      )
-        intrinsicNames.set(bindingKey(specifier.local), {
-          arity: 2,
-          rootIndex: 1,
         });
     }
   }

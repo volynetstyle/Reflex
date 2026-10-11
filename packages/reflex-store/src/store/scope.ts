@@ -3,7 +3,7 @@ import {
   type DisposableResource,
   type Synchronous,
 } from "@volynets/reflex-framework";
-import { batch } from "@volynets/reflex";
+import { transaction as batch } from "../collections";
 import {
   currentConsumer,
   setCurrentConsumer,

@@ -261,9 +261,6 @@ importers:
       '@types/node':
         specifier: ^26.1.2
         version: 26.1.2
-      '@volynets/reflex':
-        specifier: workspace:^
-        version: link:../reflex
       '@volynets/reflex-framework':
         specifier: workspace:*
         version: link:../reflex-framework

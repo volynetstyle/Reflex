@@ -12,7 +12,6 @@ import {
   type ProducerNode,
 } from "@volynets/reflex-runtime/internal";
 import { storeControls } from "./values";
-import { batch } from "@volynets/reflex";
 import { setStoreName } from "./internal/names";
 
 let transactionContext: RuntimeContext | undefined;
@@ -24,17 +23,15 @@ export function transaction<T>(action: () => T): T {
     transactionContext === getActiveRuntimeContext()
   )
     return action();
-  return batch(() => {
-    const previous = transactionContext;
-    transactionContext = getActiveRuntimeContext();
-    enterReactiveBatch();
-    try {
-      return action();
-    } finally {
-      transactionContext = previous;
-      leaveReactiveBatch();
-    }
-  });
+  const previous = transactionContext;
+  transactionContext = getActiveRuntimeContext();
+  enterReactiveBatch();
+  try {
+    return action();
+  } finally {
+    transactionContext = previous;
+    leaveReactiveBatch();
+  }
 }
 
 class Cells<K, V> {

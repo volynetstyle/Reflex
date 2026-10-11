@@ -43,7 +43,6 @@ try {
     "reflex-runtime",
     "reflex-scheduler",
     "reflex-framework",
-    "reflex",
     "reflex-store",
   ]) {
     const cwd = resolve(packageRoot, "..", name);
@@ -85,10 +84,12 @@ try {
       name + " must be empty",
     );
   assert(existsSync(join(installed, "dist/compiler/swc.wasm")));
+  assert(existsSync(join(installed, "LICENSE")), "Missing MIT license");
+  assert(existsSync(join(installed, "dist/licenses/SWC-APACHE-2.0.txt")));
+  assert(existsSync(join(installed, "dist/licenses/NOTICE.txt")));
   assert.deepEqual(manifest.peerDependencies, {
-    "@volynets/reflex": "^1.0.0",
-    "@volynets/reflex-runtime": "^1.0.0",
-    "@volynets/reflex-framework": "^0.1.3",
+    "@volynets/reflex-runtime": "^1.0.1",
+    "@volynets/reflex-framework": "^0.1.4",
   });
   function files(directory) {
     return readdirSync(directory, { withFileTypes: true }).flatMap((entry) =>
@@ -136,16 +137,32 @@ try {
       );
   }
 
+  assert(!existsSync(join(scratch, "node_modules/@volynets/reflex")));
+  writeFileSync(
+    join(scratch, "reactivity.mjs"),
+    [
+      'import * as kernel from "@volynets/reflex-runtime/internal";',
+      'import {createRuntimeSchedulerBinding,resolveEffectSchedulerMode} from "@volynets/reflex-scheduler";',
+      'export function createRuntime({effectStrategy="eager"}={}){const context=kernel.createRuntimeContext();const scheduler=createRuntimeSchedulerBinding(resolveEffectSchedulerMode(effectStrategy),context);context.nodeInvalidatedHook=scheduler.onNodeInvalidated;context.hostFlushHook=scheduler.onHostFlush;kernel.switchRuntimeContext(context);return {flush:scheduler.flush};}',
+      "export function effect(fn){const node=kernel.createWatcher(fn);kernel.runWatcher(node);return ()=>kernel.disposeWatcher(node);}",
+    ].join("\n"),
+  );
   writeFileSync(
     join(scratch, "run.mjs"),
     [
       'import assert from "node:assert/strict";',
+      ...Object.keys(manifest.exports).map(
+        (entry) => `import ${JSON.stringify(manifest.name + entry.slice(1))};`,
+      ),
       'import {writeFileSync} from "node:fs";',
       'import {createStore,reactiveMap,derive,selector,action,snapshot,hydrate} from "@volynets/reflex-store";',
-      'import {createRuntime,effect,signal,createModel,own} from "@volynets/reflex-store/runtime";',
-      'import * as facade from "@volynets/reflex"; import * as core from "@volynets/reflex-runtime"; import * as internal from "@volynets/reflex-runtime/internal";',
+      'import {createStoreScope} from "@volynets/reflex-store/runtime";',
+      'import * as core from "@volynets/reflex-runtime"; import * as internal from "@volynets/reflex-runtime/internal";',
+      'import {createRuntime,effect} from "./reactivity.mjs";',
+      'import {Both,Unknown,Changed} from "@volynets/reflex-runtime/internal";',
+      "assert.equal(Unknown,1);assert.equal(Changed,2);assert.equal(Both,Unknown|Changed);assert.equal(Both,3);",
       'import * as storeCore from "@volynets/reflex-store/runtime/core";',
-      "assert.equal(createRuntime,facade.createRuntime);assert.equal(core.createProducer,internal.createProducer);assert.equal(storeCore.getActiveRuntimeContext,core.getActiveRuntimeContext);",
+      "assert.equal(core.createProducer,internal.createProducer);assert.equal(storeCore.getActiveRuntimeContext,core.getActiveRuntimeContext);",
       'import {compileStore} from "@volynets/reflex-store/store";',
       'import plugin from "@volynets/reflex-store/vite";',
       'import {createStoreCell} from "@volynets/reflex-store/runtime/internal";',
@@ -160,13 +177,24 @@ try {
       "const renders=[];const end=effect(()=>{renders.push(first.sum)});first.update();",
       "hydrate(first,{a:4,b:5,items:[]});assert.deepEqual(renders,[0,3,9]);",
       "assert.deepEqual(snapshot(first),{a:4,b:5,items:[]});assert.equal(second.sum,0);end();",
-      'const selected=signal("a");const model=createModel(ctx=>({map:own(ctx,map),view:own(ctx,view),selected:own(ctx,selector(selected))}))();',
+      'const selected=createStoreCell("a");const model=createStoreScope(ctx=>({map:ctx.own(map),view:ctx.own(view),selected:ctx.own(selector(selected))}));',
       'model.dispose();assert.throws(()=>map.get("a"),/disposed/);first.dispose();second.dispose();',
       'assert.equal(typeof createStoreCell,"function");assert.equal("config" in plugin(),false);',
       'runtime.flush();console.log("Library tarballs: shared graph, compiler, WASM, actions, hydration and ownership passed.");',
     ].join("\n"),
   );
-  process.stdout.write(run(process.execPath, ["run.mjs"], scratch));
+  for (const development of [false, true]) {
+    process.stdout.write(
+      `Packed ${development ? "development" : "production"} runtime/store contract:\n`,
+    );
+    process.stdout.write(
+      run(
+        process.execPath,
+        [...(development ? ["--conditions=development"] : []), "run.mjs"],
+        scratch,
+      ),
+    );
+  }
 
   const { createServer } = await import("vite");
   const { default: packedPlugin } = await import(
@@ -175,7 +203,7 @@ try {
   writeFileSync(
     join(scratch, "integration.ts"),
     [
-      'import {createRuntime,effect} from "@volynets/reflex";',
+      'import {createRuntime,effect} from "./reactivity.mjs";',
       'import {createStore,action} from "@volynets/reflex-store";',
       'export function run(){createRuntime({effectStrategy:"eager"});const state=createStore({a:0,b:0});',
       "const seen=[];const stop=effect(()=>{seen.push(state.a+state.b)});action(()=>{state.a=1;state.b=2})();stop();return seen;}",
@@ -204,9 +232,8 @@ try {
     join(scratch, "consumer.ts"),
     [
       'import {createStore,leaf,snapshot,hydrate,derive,reactiveMap,selector} from "@volynets/reflex-store";',
-      'import {createRuntime,createModel,own,signal,createStoreScope,createStoreCell,type Signal} from "@volynets/reflex-store/runtime";',
+      'import {createStoreScope,createStoreCell} from "@volynets/reflex-store/runtime";',
       'import storePlugin from "@volynets/reflex-store/vite";',
-      "createRuntime();",
       "const scoped=createStoreScope(scope=>({cell:scope.own(createStoreCell(1)),increment:scope.action((amount:number)=>amount+1)}));",
       "const incremented:number=scoped.increment(2);scoped[Symbol.dispose]();void incremented;",
       "// @ts-expect-error scope actions cannot return promises",
@@ -218,8 +245,8 @@ try {
       "// @ts-expect-error getters are excluded from snapshot data",
       "saved.sum;",
       "hydrate(state,{a:2,items:[]});",
-      'const source:Signal<string>=signal("a");',
-      "createModel(ctx=>({state:own(ctx,state),map:own(ctx,reactiveMap<string,number>()),selected:own(ctx,selector(source)),view:own(ctx,derive(()=>({value:source()})))}));",
+      'const source=createStoreCell("a");',
+      "createStoreScope(ctx=>({state:ctx.own(state),map:ctx.own(reactiveMap<string,number>()),selected:ctx.own(selector(source)),view:ctx.own(derive(()=>({value:source()})))}));",
       "storePlugin();void value;void items;",
     ].join("\n"),
   );

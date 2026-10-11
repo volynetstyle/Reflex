@@ -8,6 +8,7 @@ export function action<F extends (...args: any[]) => any>(
 ): F {
   if (Object.prototype.toString.call(callback) === "[object AsyncFunction]")
     throw new TypeError("action() requires a synchronous callback");
+
   let receiver: ThisParameterType<F>;
   let arguments_: Parameters<F>;
   // Reuse executors; save/restore the frame for recursion and eager re-entry.
@@ -17,7 +18,9 @@ export function action<F extends (...args: any[]) => any>(
       throw new TypeError("action() cannot return a promise");
     return result as ReturnType<F>;
   };
+  
   const execute = () => transaction(invoke);
+
   return function (
     this: ThisParameterType<F>,
     ...args: Parameters<F>

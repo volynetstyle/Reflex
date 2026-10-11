@@ -1,4 +1,9 @@
-import { computed, createRuntime, effect, signal } from "@volynets/reflex";
+import {
+  computed,
+  createRuntime,
+  effect,
+  signal,
+} from "../tests/helpers/reactivity";
 import { createKeyedProjection, createSelector } from "../src/advanced";
 
 export type Strategy = "identity" | "deep" | "projection";
