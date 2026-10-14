@@ -104,8 +104,6 @@ importers:
         specifier: ^4.54.0
         version: 4.60.3
 
-  lab/web-scheduler: {}
-
   packages/reflex:
     dependencies:
       '@volynets/reflex-scheduler':
@@ -127,21 +125,6 @@ importers:
       reactive-framework-test-suite:
         specifier: 0.0.2
         version: 0.0.2
-
-  packages/reflex/examples/mini-app:
-    dependencies:
-      '@volynets/reflex':
-        specifier: workspace:*
-        version: link:../..
-      '@volynets/reflex-dom':
-        specifier: workspace:*
-        version: link:../../../reflex-dom
-      '@volynets/reflex-runtime':
-        specifier: workspace:*
-        version: link:../../../reflex-runtime
-      '@volynets/reflex-store':
-        specifier: workspace:*
-        version: link:../../../reflex-store
 
   packages/reflex-async:
     devDependencies:
@@ -173,8 +156,8 @@ importers:
         specifier: ^3.33.2
         version: 3.33.3
       tailwindcss:
-        specifier: ^4.2.4
-        version: 4.3.0
+        specifier: ^4.3.3
+        version: 4.3.3
 
   packages/reflex-dom:
     devDependencies:
@@ -276,6 +259,21 @@ importers:
       rollup-plugin-dts:
         specifier: ^6.4.1
         version: 6.4.1(rollup@4.60.3)(typescript@5.9.3)
+
+  packages/reflex/examples/mini-app:
+    dependencies:
+      '@volynets/reflex':
+        specifier: workspace:*
+        version: link:../..
+      '@volynets/reflex-dom':
+        specifier: workspace:*
+        version: link:../../../reflex-dom
+      '@volynets/reflex-runtime':
+        specifier: workspace:*
+        version: link:../../../reflex-runtime
+      '@volynets/reflex-store':
+        specifier: workspace:*
+        version: link:../../../reflex-store
 
   plugins/@vite/reflex-vite-plugin:
     dependencies:
@@ -1260,9 +1258,6 @@ packages:
   '@vitest/utils@4.1.5':
     resolution: {integrity: sha512-76wdkrmfXfqGjueGgnb45ITPyUi1ycZ4IHgC2bhPDUfWHklY/q3MdLOAB+TF1e6xfl8NxNY0ZYaPCFNWSsw3Ug==}
 
-  '@volynets/reflex-runtime@0.1.2':
-    resolution: {integrity: sha512-fF1hmx4gQSOerlkyLCZtpRWkE9UU6HBc5PyUr6dp+U/wCLoelzuifbBsOKOEWeWh7nVH0J9fAkXggVGJgmFyFw==}
-
   '@vue/reactivity@3.5.43':
     resolution: {integrity: sha512-G/c9GyOZNI2jVaaS6OX1EF1SSFSv7H0ERqNTl4+DTFMlZmB5eVAB53aLQNam/7NL2NPtaDD7RdVrzf8uJzMuOA==}
 
@@ -1805,6 +1800,7 @@ packages:
   eslint@9.39.4:
     resolution: {integrity: sha512-XoMjdBOwe/esVgEvLmNsD3IRHkm7fbKIUGvrleloJXUZgDHig2IPWNniv+GwjyJXzuNqVjlr5+4yVUZjycJwfQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -3080,6 +3076,9 @@ packages:
   tailwindcss@4.3.0:
     resolution: {integrity: sha512-y6nxMGB1nMW9R6k96e5gdIFzcfL/gTJRNaqGes1YvkLnPVXzWgbqFF2yLC0T8G774n24cx3Pe8XrKoniCOAH+Q==}
 
+  tailwindcss@4.3.3:
+    resolution: {integrity: sha512-gOhV3P7ufE62QDGg1zVaTgCR+EtPv92k2nIhVcVKcLmxT1sUBsQGhnZj175j+MqRt4zLF7ic+sCYjfhxMxj7YQ==}
+
   tapable@2.3.3:
     resolution: {integrity: sha512-uxc/zpqFg6x7C8vOE7lh6Lbda8eEL9zmVm/PLeTPBRhh1xCgdWaQ+J1CUieGpIfm2HdtsUpRv+HshiasBMcc6A==}
     engines: {node: '>=6'}
@@ -4282,7 +4281,7 @@ snapshots:
 
   '@vitest/browser-playwright@4.1.5(playwright@1.62.1)(vite@6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4))(vitest@4.1.5)':
     dependencies:
-      '@vitest/browser': 4.1.5(vite@6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4))(vitest@4.1.5(@types/node@26.1.2)(@vitest/browser-playwright@4.1.5)(@vitest/coverage-v8@4.1.5)(jsdom@29.1.1)(vite@6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4)))
+      '@vitest/browser': 4.1.5(vite@6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4))(vitest@4.1.5)
       '@vitest/mocker': 4.1.5(vite@6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4))
       playwright: 1.62.1
       tinyrainbow: 3.1.0
@@ -4293,7 +4292,7 @@ snapshots:
       - utf-8-validate
       - vite
 
-  '@vitest/browser@4.1.5(vite@6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4))(vitest@4.1.5(@types/node@26.1.2)(@vitest/browser-playwright@4.1.5)(@vitest/coverage-v8@4.1.5)(jsdom@29.1.1)(vite@6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4)))':
+  '@vitest/browser@4.1.5(vite@6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4))(vitest@4.1.5)':
     dependencies:
       '@blazediff/core': 1.9.1
       '@vitest/mocker': 4.1.5(vite@6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4))
@@ -4324,7 +4323,7 @@ snapshots:
       tinyrainbow: 3.1.0
       vitest: 4.1.5(@types/node@26.1.2)(@vitest/browser-playwright@4.1.5)(@vitest/coverage-v8@4.1.5)(jsdom@29.1.1)(vite@6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4))
     optionalDependencies:
-      '@vitest/browser': 4.1.5(vite@6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4))(vitest@4.1.5(@types/node@26.1.2)(@vitest/browser-playwright@4.1.5)(@vitest/coverage-v8@4.1.5)(jsdom@29.1.1)(vite@6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4)))
+      '@vitest/browser': 4.1.5(vite@6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4))(vitest@4.1.5)
 
   '@vitest/expect@4.1.5':
     dependencies:
@@ -4366,8 +4365,6 @@ snapshots:
       '@vitest/pretty-format': 4.1.5
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.0
-
-  '@volynets/reflex-runtime@0.1.2': {}
 
   '@vue/reactivity@3.5.43':
     dependencies:
@@ -6356,6 +6353,8 @@ snapshots:
   tachyons@4.12.0: {}
 
   tailwindcss@4.3.0: {}
+
+  tailwindcss@4.3.3: {}
 
   tapable@2.3.3: {}
 
