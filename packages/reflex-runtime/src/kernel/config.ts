@@ -24,8 +24,6 @@ export const defaultContext: RuntimeDebugContext = {
   scope: "runtime",
 };
 
-const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
-
 // #region Read tracking strategy
 
 export type ReadTrackingStrategy = (
@@ -114,7 +112,7 @@ export var emitNodeInvalidated = !__DEV__
       if (__PROFILE__)
         observeRuntimeProjection?.("projection.semantic.node.invalidated.emit");
 
-      if (IS_DEV) {
+      if (__DEV__) {
         recordDebugEvent(defaultContext, "watcher:invalidated", { node });
       }
 
