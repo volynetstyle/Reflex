@@ -36,12 +36,14 @@ jobs:
       consumer: ${{ steps.matrix.outputs.consumer }}
       reuse: ${{ steps.matrix.outputs.reuse }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
+          # No pnpm in this job; setup-node would otherwise cache it from packageManager.
+          package-manager-cache: false
       - id: matrix
         env:
           EVENT_NAME: ${{ github.event_name }}
@@ -52,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
       - name: actionlint
@@ -67,12 +69,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-workspace
       - name: Checkout comparison baseline
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           ref: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || github.sha }}
           path: .quality-baseline
@@ -88,7 +90,7 @@ jobs:
         run: pnpm check:configs -- --baseline-root .quality-baseline --output artifacts/config-equivalence.json
       - name: No active semantic divergence
         run: pnpm check:active-divergences
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: config-evidence
@@ -105,7 +107,7 @@ jobs:
       max-parallel: 4
       matrix: ${{ fromJSON(needs.registry.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
       - name: Restore successful CI evidence
@@ -132,7 +134,7 @@ jobs:
         with:
           path: artifacts/checks
           key: ci-evidence-${{ env.EVIDENCE_CACHE_VERSION }}-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-${{ matrix.id }}-${{ needs.registry.outputs.phase }}-${{ matrix.fingerprint }}
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: checks-${{ matrix.id }}
@@ -148,7 +150,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
       - name: Restore successful CI evidence
@@ -171,7 +173,7 @@ jobs:
         with:
           path: artifacts/qualification
           key: ci-evidence-${{ env.EVIDENCE_CACHE_VERSION }}-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-consumer-${{ needs.registry.outputs.consumer }}
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: consumer-evidence
@@ -187,14 +189,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
       # The aggregator uses only Node built-ins; no workspace install needed.
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+          # No pnpm in this job; setup-node would otherwise cache it from packageManager.
+          package-manager-cache: false
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           pattern: checks-*
           path: artifacts/checks
@@ -207,29 +211,53 @@ jobs:
           mkdir -p artifacts
           printf '%s' "$NEEDS_JSON" > artifacts/needs.json
           node tooling/configs/aggregate-checks.mjs --phase "$QUALITY_PHASE" --input-dir artifacts/checks --needs-json artifacts/needs.json --output artifacts/quality-summary.json
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: required-quality-evidence
           path: artifacts/quality-summary.json
           if-no-files-found: error
 
+  # Release publication qualifies Windows too; nightly keeps it from rotting.
   platform:
     name: clean consumer on Windows
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'schedule'
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-workspace
         with:
           chromium: "true"
       - run: pnpm test:consumer -- --output-dir artifacts/platform-qualification
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: windows-consumer-evidence
           path: artifacts/platform-qualification/
           if-no-files-found: error
+
+  # A failed nightly run has no pull request to block, so it opens (or
+  # comments on) a tracking issue instead of failing silently.
+  nightly-report:
+    name: report nightly failure
+    needs: [required, platform]
+    if: always() && github.event_name == 'schedule' && (needs.required.result != 'success' || needs.platform.result != 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Nightly CI is failing"
+          number=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$title\" in:title" --json number --jq '.[0].number')
+          if [[ -n "$number" ]]; then
+            gh issue comment "$number" --repo "$GITHUB_REPOSITORY" --body "Still failing: $RUN_URL"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "The scheduled deep run failed: $RUN_URL"
+          fi

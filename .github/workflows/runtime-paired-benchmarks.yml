@@ -1,4 +1,4 @@
-name: Runtime Benchmarks
+name: Runtime paired benchmarks
 
 # Paired in-process comparison of two production runtime bundles
 # (packages/reflex-runtime/docs/performance/BENCHMARK_PROTOCOL.md).
@@ -8,8 +8,10 @@ name: Runtime Benchmarks
 # fails the job. A job fails only when the harness produces no report.
 #
 # Modes:
-#   compare    candidate = the pushed commit (or HEAD), baseline = the commit
-#              before the push (or the input, or HEAD^). Default.
+#   compare    pull request: the PR base against the merge result, so the
+#              verdict covers the whole change, not only its last push.
+#              push to main: the previous head of main against the new one.
+#              dispatch: the input baseline (default HEAD^) against HEAD.
 #   calibrate  A/A: both sides are built from the same commit; any faster,
 #              slower or invalid verdict flags the method on this runner.
 #
@@ -37,21 +39,23 @@ on:
         description: Parallel jobs; wall time scales with workloads per shard
         required: false
         default: "9"
-  push:
-    branches: [premain-refactor]
-    paths:
-      - .github/workflows/runtime-calibration.yml
+  pull_request:
+    paths: &runtime-paths
+      - .github/workflows/runtime-paired-benchmarks.yml
       - packages/reflex-runtime/src/**
       - packages/reflex-runtime/bench/**
       - packages/reflex-runtime/scripts/build-baseline-oracle.mjs
       - packages/reflex-runtime/rollup/terser-options.ts
       - packages/reflex-runtime/rollup/optimization.ts
+  push:
+    branches: [main]
+    paths: *runtime-paths
 
 permissions:
   contents: read
 
 concurrency:
-  group: runtime-benchmarks-${{ github.ref }}
+  group: runtime-paired-benchmarks-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 defaults:
@@ -69,7 +73,7 @@ jobs:
       mode: ${{ steps.resolve.outputs.mode }}
       shards: ${{ steps.shards.outputs.matrix }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -78,6 +82,7 @@ jobs:
           MODE: ${{ inputs.mode || 'compare' }}
           INPUT_BASELINE: ${{ inputs.baseline }}
           BEFORE: ${{ github.event.before }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           commit() { git rev-parse --verify --quiet "$1^{commit}"; }
           required() {
@@ -89,7 +94,9 @@ jobs:
           else
             candidate=$(required HEAD)
             baseline=""
-            if [[ -n "$INPUT_BASELINE" ]]; then
+            if [[ -n "$PR_BASE" ]]; then
+              baseline=$(required "$PR_BASE")
+            elif [[ -n "$INPUT_BASELINE" ]]; then
               baseline=$(required "$INPUT_BASELINE")
             fi
             # The previous head of a push, unless it was force-pushed away.
@@ -114,14 +121,15 @@ jobs:
   bench:
     name: shard ${{ matrix.shard }}
     needs: refs
-    runs-on: ubuntu-latest
+    # Pinned image: a runner image change is not a code change.
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.refs.outputs.shards) }}
     steps:
       # Shallow: build-baseline-oracle.mjs fetches each compared commit itself.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
 
@@ -164,7 +172,7 @@ jobs:
             --title "Shard $SHARD: $LABEL" \
             --mode "$MODE"
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: runtime-benchmarks-${{ matrix.shard }}

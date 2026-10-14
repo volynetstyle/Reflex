@@ -4,6 +4,11 @@
   "type": "module",
   "description": "Official MCP protocol boundary for Reflex runtime diagnostics.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/volynetstyle/Reflex.git",
+    "directory": "packages/reflex-runtime-mcp"
+  },
   "sideEffects": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

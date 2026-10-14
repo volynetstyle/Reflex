@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
@@ -57,15 +57,33 @@ if (args.includes("--publish")) {
   if (!npmCli) throw new Error("Cannot locate npm CLI; set REFLEX_NPM_CLI.");
   const output = resolve(argument(args, "--output-dir", "artifacts/publication"), new Date().toISOString().replaceAll(":", "-") + "-" + process.pid);
   await mkdir(output, { recursive: true });
+  // Registry versions are immutable, so a rerun after a partial failure, or a
+  // release that bumps only some packages, must skip what is already there.
+  const registryIntegrity = (entry) => {
+    const view = spawnSync(process.execPath, [npmCli, "view", entry.name + "@" + entry.version, "dist.integrity"], { cwd: output, encoding: "utf8", windowsHide: true });
+    if (view.status === 0) return view.stdout.trim() || null;
+    if (/E404|404 Not Found/.test(view.stderr)) return null;
+    throw new Error("Cannot query the registry for " + entry.name + "@" + entry.version + ":\n" + view.stderr);
+  };
   result.status = "running";
   for (const entry of archives) {
     // Recheck immediately before the side effect to forbid artifact drift.
-    if (createHash("sha256").update(await readFile(entry.file)).digest("hex") !== entry.sha256) throw new Error("Archive changed before publish: " + entry.name);
+    const bytes = await readFile(entry.file);
+    if (createHash("sha256").update(bytes).digest("hex") !== entry.sha256) throw new Error("Archive changed before publish: " + entry.name);
+    const published = registryIntegrity(entry);
+    if (published) {
+      const identical = published === "sha512-" + createHash("sha512").update(bytes).digest("base64");
+      // A different archive under a published version means unreleased changes
+      // without a version bump; it is reported, never overwritten or tagged.
+      result.attempts.push({ name: entry.name, version: entry.version, sha256: entry.sha256, status: identical ? "already-published" : "version-taken", completedAt: new Date().toISOString() });
+      await writeFile(join(output, "publication.json"), JSON.stringify(result, null, 2) + "\n");
+      continue;
+    }
     const code = await new Promise((done) => {
       const child = spawn(process.execPath, [npmCli, "publish", entry.file, "--ignore-scripts", "--access", entry.access, "--tag", tag], { cwd: output, windowsHide: true, stdio: "inherit" });
       child.once("error", () => done(-1)); child.once("close", (code) => done(code));
     });
-    result.attempts.push({ name: entry.name, sha256: entry.sha256, exitCode: code, completedAt: new Date().toISOString() });
+    result.attempts.push({ name: entry.name, version: entry.version, sha256: entry.sha256, status: code === 0 ? "published" : "failed", exitCode: code, completedAt: new Date().toISOString() });
     result.status = code === 0 ? "running" : "failed";
     await writeFile(join(output, "publication.json"), JSON.stringify(result, null, 2) + "\n");
     if (code !== 0) throw new Error("Publication failed; previous attempts remain recorded: " + entry.name);
