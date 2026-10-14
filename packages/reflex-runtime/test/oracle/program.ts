@@ -111,6 +111,15 @@ export interface Program {
 
 export type ObservationLevel = "strict" | "observable";
 
+/** Whether a program moves the tracking clock directly (an `epoch` operation). */
+export function touchesEpoch(ops: readonly Op[]): boolean {
+  return ops.some(
+    (op) =>
+      op.kind === "epoch" ||
+      ((op.kind === "batch" || op.kind === "context") && touchesEpoch(op.ops)),
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Generator
 
@@ -384,10 +393,35 @@ function describeError(error: unknown): string {
 const STRICT_MASK = 0b1111_1111; // Unknown..WatcherCleanupPending
 const OBSERVABLE_MASK = 0b0010_0011; // Unknown | Changed | Scheduled
 
+/**
+ * Algorithm-independent invariants, checked after every top-level operation
+ * when `interpret` runs with `{ invariants: true }`. They do not depend on how
+ * tracking reconciles edges, so an implementation and a baseline that share a
+ * defect still cannot agree on a violation:
+ *
+ * - integrity: every incoming edge is in its source's outgoing list and the
+ *   reverse, and no source appears twice in a node's incoming list;
+ * - exact dependencies: a node whose last execution returned has exactly the
+ *   incoming sources it read with tracking during that execution, in order of
+ *   first read. Disposing a node unlinks its edges, during or after that
+ *   execution; a later read of a disposed producer links it again. A node
+ *   disposed after its execution started has no incoming sources, except
+ *   one disposed during its own execution: reads after the disposal link
+ *   again and nothing unlinks them (F14, open), so it is not checked. A read is tracked when it runs with the
+ *   node as `currentConsumer`, outside `untracked`, and is not an eager
+ *   consumer read. A failed execution leaves the set unspecified.
+ *
+ * A violation is appended to the trace as `invariant:<detail>`.
+ */
+export interface InterpretOptions {
+  invariants?: boolean;
+}
+
 export function interpret(
   rt: RuntimeModule,
   program: Program,
   level: ObservationLevel = "strict",
+  options: InterpretOptions = {},
 ): string[] {
   const { spec } = program;
   const trace: string[] = [];
@@ -397,6 +431,24 @@ export function interpret(
   let budget = CALLBACK_BUDGET;
   let hookCalls = 0;
   const queues = { A: [] as Node[], B: [] as Node[] };
+  const checking = options.invariants === true;
+  // Invariant bookkeeping only; never affects the trace otherwise.
+  // Expected incoming sources of each running execution, in first-read order.
+  const tracked = new Map<Node, number[]>();
+  // Event clock ordering executions against disposals.
+  let clock = 0;
+  const committed = new Map<
+    number,
+    { reads: number[]; start: number; end: number }
+  >();
+  const goneAt = new Map<number, number>();
+  const dispose = (id: number) => {
+    goneAt.set(id, ++clock);
+    for (const reads of tracked.values()) {
+      const at = reads.indexOf(id);
+      if (at !== -1) reads.splice(at, 1);
+    }
+  };
 
   rt.resetRuntimeContext();
   const contextA = rt.getActiveRuntimeContext();
@@ -445,7 +497,36 @@ export function interpret(
             node,
             mode === "eager" ? rt.ConsumerReadMode.eager : undefined,
           );
-    return valueOf(mode === "untracked" ? rt.untracked(read) : read());
+    const reader = checking ? rt.currentConsumer : null;
+    const value = valueOf(mode === "untracked" ? rt.untracked(read) : read());
+    if (
+      reader !== null &&
+      mode !== "untracked" &&
+      (id < spec.producers || mode !== "eager")
+    ) {
+      const reads = tracked.get(reader);
+      if (reads !== undefined && !reads.includes(id)) reads.push(id);
+    }
+    return value;
+  };
+
+  /** Runs a node's computation, recording its tracked reads on success. */
+  const execution = <T>(id: number, compute: () => T): T => {
+    if (!checking) return compute();
+    const node = nodes[id]!;
+    const reads: number[] = [];
+    const start = ++clock;
+    tracked.set(node, reads);
+    try {
+      const result = compute();
+      committed.set(id, { reads, start, end: ++clock });
+      return result;
+    } catch (error) {
+      committed.delete(id);
+      throw error;
+    } finally {
+      tracked.delete(node);
+    }
   };
 
   const performAction = (action: NestedAction): void => {
@@ -460,6 +541,7 @@ export function interpret(
         return;
       case "dispose": {
         const id = spec.producers + spec.consumers.length + action.watcher;
+        dispose(id);
         rt.disposeWatcher(nodes[id]!);
         return;
       }
@@ -503,14 +585,16 @@ export function interpret(
   }
   spec.consumers.forEach((consumer, index) => {
     const id = spec.producers + index;
-    const node = rt.createConsumer(() => runCallback("c", id, consumer));
+    const node = rt.createConsumer(() =>
+      execution(id, () => runCallback("c", id, consumer)),
+    );
     ids.set(node, id);
     nodes.push(node);
   });
   spec.watchers.forEach((watcher, index) => {
     const id = spec.producers + spec.consumers.length + index;
     const node = rt.createWatcher(() => {
-      const sum = runCallback("w", id, watcher);
+      const sum = execution(id, () => runCallback("w", id, watcher));
       const cleanup = watcher.cleanup;
       if (cleanup === undefined) return;
       return () => {
@@ -605,6 +689,7 @@ export function interpret(
         return;
       case "dispose":
         disposed.add(op.node);
+        dispose(op.node);
         if (isWatcher(op.node)) rt.disposeWatcher(nodes[op.node]!);
         else rt.disposeNode(nodes[op.node]!);
         return;
@@ -639,7 +724,57 @@ export function interpret(
     }
   };
 
-  for (const op of program.ops) step(op, "A");
+  const checkInvariants = (): void => {
+    nodes.forEach((node, id) => {
+      const sources: number[] = [];
+      for (let e = node.firstIn; e !== null; e = e.nextIn) {
+        let found = false;
+        for (let o = e.from.firstOut; o !== null; o = o.nextOut)
+          if (o === e) found = true;
+        if (e.to !== node || !found)
+          trace.push(`invariant:${id}:incoming edge missing from source list`);
+        sources.push(ids.get(e.from)!);
+      }
+      for (let e = node.firstOut; e !== null; e = e.nextOut) {
+        let found = false;
+        for (let i = e.to.firstIn; i !== null; i = i.nextIn)
+          if (i === e) found = true;
+        if (e.from !== node || !found)
+          trace.push(`invariant:${id}:outgoing edge missing from target list`);
+      }
+      if (new Set(sources).size !== sources.length)
+        trace.push(`invariant:${id}:duplicate source in [${sources}]`);
+      const last = committed.get(id);
+      const removedAt = goneAt.get(id);
+      if (
+        removedAt !== undefined &&
+        last !== undefined &&
+        removedAt > last.start &&
+        removedAt < last.end
+      )
+        return; // F14
+      let expected: number[];
+      if (
+        removedAt !== undefined &&
+        (last === undefined || removedAt > last.start)
+      )
+        expected = [];
+      else if (last === undefined) return;
+      else
+        expected = last.reads.filter(
+          (source) => !((goneAt.get(source) ?? 0) > last.end),
+        );
+      if (expected.join() !== sources.join())
+        trace.push(
+          `invariant:${id}:sources [${sources}] but last execution read [${expected}]`,
+        );
+    });
+  };
+
+  for (const op of program.ops) {
+    step(op, "A");
+    if (checking) checkInvariants();
+  }
   trace.push(
     `end:consumer=${rt.currentConsumer === null ? "null" : "leaked"}:active=${
       rt.getActiveRuntimeContext() === contextA ? "A" : "other"
