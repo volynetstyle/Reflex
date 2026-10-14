@@ -1,0 +1,4 @@
+# Pipeline, release and quality-gate definitions need an owner's review.
+/.github/            @volynetstyle
+/tooling/configs/    @volynetstyle
+/.changeset/config.json @volynetstyle

@@ -1,0 +1,47 @@
+name: Release
+
+# Continuous delivery, step 1 of 2: keep a "Version Packages" pull request in
+# sync with the pending Changesets on main. Merging it commits the versions
+# and changelogs; publication then runs from that exact commit through the
+# "Release qualification" workflow (publish: true), behind the npm environment.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .changeset/**
+      - packages/*/package.json
+      - packages/*/CHANGELOG.md
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  version:
+    name: version pull request
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: ./.github/actions/setup-workspace
+      - name: Open or update the version pull request
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        with:
+          # The lockfile refresh keeps workspace ranges consistent with new versions.
+          version: pnpm release:version:ci
+          title: "chore(release): version packages"
+          commit: "chore(release): version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
