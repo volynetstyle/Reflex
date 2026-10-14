@@ -42,9 +42,15 @@ export function createOwnedEffect(
     return noopCleanup;
   }
 
-  const watcher = createWatcher(() =>
-    runWithOwner(owner, node, () =>
+  let closed = false;
+  let currentRun: OwnershipNode | null = null;
+
+  const watcher = createWatcher(() => {
+    // Logical close: a queued or re-validated run of a closed effect is inert.
+    if (closed) return;
+    return runWithOwner(owner, node, () =>
       usingOwnershipNode(owner, (executionNode) => {
+        currentRun = executionNode;
         const cleanup = fn();
         if (cleanup !== undefined) {
           if (isShuttingDown(executionNode)) cleanup();
@@ -59,8 +65,8 @@ export function createOwnedEffect(
         return () =>
           runInOwnerDomain(owner, () => disposeOwnershipNode(executionNode));
       }),
-    ),
-  );
+    );
+  });
 
   try {
     runInOwnerDomain(owner, () => runWatcher(watcher));
@@ -69,7 +75,22 @@ export function createOwnedEffect(
     throw error;
   }
 
-  const dispose: Cleanup = () => disposeWatcher(watcher);
+  const domain = owner.domain;
+  const dispose: Cleanup =
+    domain == null
+      ? () => disposeWatcher(watcher)
+      : () => {
+          if (closed) return;
+          closed = true;
+          // Phase 1, synchronous: user cleanups keep their established order.
+          const run = currentRun;
+          currentRun = null;
+          if (run !== null) {
+            runInOwnerDomain(owner, () => disposeOwnershipNode(run));
+          }
+          // Phase 2: graph unlink at the domain's next safe point (L2).
+          domain.teardown(() => disposeWatcher(watcher));
+        };
 
   if (node !== null) {
     if (isShuttingDown(node)) {

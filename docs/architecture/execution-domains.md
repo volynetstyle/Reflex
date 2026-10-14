@@ -145,6 +145,25 @@ owner `OwnershipNode` on the handle, never on the reactive node.
   Release checks run in every build. Type brands and handles cannot stop code
   that holds raw nodes; this is a correctness aid, not isolation.
 
+## Two-phase disposal (PR-06)
+
+Disposal of a managed effect has two phases:
+
+1. **Logical close, synchronous.** The effect is marked closed (a queued or
+   re-validated run becomes inert) and its current run's ownership cleanups
+   run immediately, in their established LIFO order and in the owner's
+   domain/environment.
+2. **Physical unlink, at a safe point.** `disposeWatcher` is handed to
+   `domain.teardown()`: it runs now when no managed entry of the domain is on
+   the stack, otherwise at the outermost managed exit, so no active push/pull
+   continuation loses its edges.
+
+Safe points are defined by the domain's managed entry depth only, not by
+`currentConsumer === null` (a pull walk may be active with no consumer).
+Teardown errors are reported (default `console.error`, as ownership cleanup
+does) and draining continues. Owners without a domain keep the previous
+eager teardown.
+
 ## Forbidden operations
 
 - Adding `owner`/`realm`/domain fields to `ReactiveNode`, or changing

@@ -383,3 +383,41 @@ describe("render lifecycle and reactive bindings", () => {
     expect(container.textContent).toBe("keep me");
   });
 });
+
+describe("render lifecycle - two-phase effect teardown (L2)", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    createDOMRuntime();
+  });
+
+  it("runs cleanup synchronously on unmount and unlinks at the safe point", async () => {
+    const { createProducer, readProducer } = await import(
+      "@volynets/reflex-runtime"
+    );
+    const container = document.createElement("div");
+    const [show, setShow] = signal(true);
+    const raw = createProducer(0);
+    const log: string[] = [];
+    let linkedDuringCleanup: boolean | undefined;
+
+    function Child() {
+      useEffect(() => {
+        log.push(`run:${readProducer(raw)}`);
+        return () => {
+          linkedDuringCleanup = raw.firstOut !== null;
+          log.push("cleanup");
+        };
+      });
+      return <span />;
+    }
+
+    render(<div>{() => (show() ? <Child /> : null)}</div>, container);
+    expect(raw.firstOut).not.toBeNull();
+
+    setShow(false);
+
+    expect(log).toEqual(["run:0", "cleanup"]);
+    expect(linkedDuringCleanup).toBe(true);
+    expect(raw.firstOut).toBeNull();
+  });
+});
