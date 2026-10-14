@@ -216,6 +216,62 @@ export function devAssertRuntimeHookDidNotReenter(
   });
 }
 
+/**
+ * Diagnostic execution state saved with an inactive execution context.
+ * `null` is the idle frame. Only populated when the scheduler policy is on.
+ */
+export interface RuntimeExecutionFrame {
+  readonly phase: RuntimePhase;
+  readonly phases: readonly RuntimePhase[];
+  readonly hook: string | null;
+  readonly hooks: readonly (string | null)[];
+  readonly recomputeDepth: number;
+}
+
+export const RUNTIME_EXECUTION_FRAMES_ENABLED = SCHEDULER_POLICY_ENABLED;
+
+/** Captures the live diagnostic state; `null` when it is idle. */
+export function saveRuntimeExecutionFrame(): RuntimeExecutionFrame | null {
+  if (!SCHEDULER_POLICY_ENABLED) return null;
+  if (
+    runtimeExecutionState.depth === 0 &&
+    runtimeHookDepth === 0 &&
+    activeRuntimeHook === null &&
+    recomputeDepth === 0
+  ) {
+    return null;
+  }
+
+  return {
+    phase: runtimeExecutionState.phase,
+    phases: phaseStack.slice(0, runtimeExecutionState.depth),
+    hook: activeRuntimeHook,
+    hooks: runtimeHookStack.slice(0, runtimeHookDepth),
+    recomputeDepth,
+  };
+}
+
+/** Replaces the live diagnostic state with a saved frame. */
+export function loadRuntimeExecutionFrame(
+  frame: RuntimeExecutionFrame | null,
+): void {
+  if (!SCHEDULER_POLICY_ENABLED) return;
+  if (frame === null) {
+    resetRuntimeExecutionState();
+    return;
+  }
+
+  runtimeExecutionState.phase = frame.phase;
+  runtimeExecutionState.depth = frame.phases.length;
+  phaseStack.length = 0;
+  phaseStack.push(...frame.phases);
+  activeRuntimeHook = frame.hook;
+  runtimeHookDepth = frame.hooks.length;
+  runtimeHookStack.length = 0;
+  runtimeHookStack.push(...frame.hooks);
+  recomputeDepth = frame.recomputeDepth;
+}
+
 export function resetRuntimeExecutionState(): void {
   runtimeExecutionState.phase = RuntimePhase.Idle;
   runtimeExecutionState.depth = 0;

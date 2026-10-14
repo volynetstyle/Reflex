@@ -28,6 +28,9 @@ export type {
 } from "./context.model";
 export type { RuntimeHooks, RuntimeHostHooks } from "./config";
 
+/** Contexts whose continuation is suspended below the active one. */
+const suspendedContexts: RuntimeContext[] = [];
+
 export function runWithRuntimeContext<T>(
   context: RuntimeContext,
   fn: () => T,
@@ -40,11 +43,18 @@ export function runWithRuntimeContext<T>(
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.context.switch");
   switchRuntimeContext(context);
+  suspendedContexts.push(previous);
   try {
     return fn();
   } finally {
+    suspendedContexts.pop();
     switchRuntimeContext(previous);
   }
+}
+
+/** Whether `context` has a continuation suspended by a nested context entry. */
+export function isRuntimeContextSuspended(context: RuntimeContext): boolean {
+  return suspendedContexts.includes(context);
 }
 
 export function configureRuntimeContext(
@@ -69,9 +79,22 @@ export function configureRuntimeContext(
   if (context === getActiveRuntimeContext()) loadRuntimeConfiguration(context);
 }
 
+/**
+ * Hard reset of a context's registers and configuration.
+ *
+ * Resetting the active context is a recovery tool: the caller asserts that no
+ * continuation of that context will resume. Resetting a context suspended
+ * below the active one is rejected, because its continuation will resume.
+ */
 export function resetRuntimeContext(
   context: RuntimeContext = getActiveRuntimeContext(),
 ): void {
+  if (isRuntimeContextSuspended(context)) {
+    throw new Error(
+      "Cannot reset a runtime context while its execution is suspended by a nested context.",
+    );
+  }
+
   context.currentConsumer = null;
   context.trackingEpoch = 0;
   context.propagationScopeDepth = 0;
@@ -81,6 +104,7 @@ export function resetRuntimeContext(
   context.nodeInvalidatedHook = undefined;
   context.runtimeIdleHook = undefined;
   context.hostFlushHook = undefined;
+  context.executionFrame = null;
 
   if (context === getActiveRuntimeContext()) {
     resetRuntimeExecutionState();

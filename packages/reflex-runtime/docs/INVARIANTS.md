@@ -158,7 +158,18 @@ an arbitrarily old snapshot epoch is ambiguous under wraparound.
 never reloads execution registers (`currentConsumer`, depths, `runtimeState`)
 from the saved object, whose copies are stale while the context is active.
 
-Contracts: `test/runtime/contracts/runtime.context-registers.test.ts`.
+DEV+PROFILE diagnostic state (phase stack, active hook stack, recompute depth)
+belongs to the context that entered it. A switch saves it into the outgoing
+context's `executionFrame` and loads the incoming one, so independent contexts
+never see each other's phases or hooks. Production builds skip this entirely.
+
+`resetRuntimeContext` rejects a context whose continuation is suspended below
+the active one by `runWithRuntimeContext`. Resetting the active context is a
+recovery tool; the caller asserts none of its continuations will resume.
+
+Contracts: `test/runtime/contracts/runtime.context-registers.test.ts`,
+`test/runtime/topology/runtime.domain-walkers.test.ts`,
+`test/dev/runtime/runtime.domain-isolation.dev.test.ts`.
 
 Implementation: `src/kernel/context*.ts`, `src/kernel/state.ts`, and
 `src/kernel/config.ts`.
