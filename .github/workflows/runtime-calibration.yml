@@ -1,0 +1,108 @@
+name: Runtime Benchmark Calibration
+
+# Paired in-process comparison of two production runtime bundles
+# (packages/reflex-runtime/docs/performance/BENCHMARK_PROTOCOL.md).
+# With the default candidate equal to the pinned baseline sources this is
+# the A/A calibration: no workload may come out faster, slower or invalid.
+
+on:
+  workflow_dispatch:
+    inputs:
+      baseline:
+        description: Baseline commit (default test/oracle/baseline-commit.txt)
+        required: false
+        default: ""
+      replicates:
+        description: Replicates per workload
+        required: false
+        default: "24"
+  push:
+    branches: [premain-refactor]
+    paths:
+      - .github/workflows/runtime-calibration.yml
+      - packages/reflex-runtime/bench/**
+      - packages/reflex-runtime/scripts/build-baseline-oracle.mjs
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runtime-calibration-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  calibrate:
+    name: level ${{ matrix.level }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - level: A
+            workloads: '^A\.'
+          - level: B
+            workloads: '^B\.'
+          - level: C
+            workloads: '^C\.'
+          - level: D-E
+            workloads: '^[DE]\.'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The baseline bundle is built from `git archive <commit>`.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Paired comparison
+        id: compare
+        working-directory: packages/reflex-runtime
+        continue-on-error: true
+        env:
+          BASELINE: ${{ inputs.baseline }}
+          REPLICATES: ${{ inputs.replicates || '24' }}
+        run: |
+          baseline_args=()
+          [[ -n "$BASELINE" ]] && baseline_args=(--baseline "$BASELINE")
+          node bench/compare.mjs "${baseline_args[@]}" \
+            --workloads '${{ matrix.workloads }}' \
+            --family 25 \
+            --replicates "$REPLICATES" \
+            --out "$GITHUB_WORKSPACE/artifacts/compare-${{ matrix.level }}.json" \
+            | tee "$GITHUB_WORKSPACE/artifacts-table.md"
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "### Level ${{ matrix.level }}"
+            echo
+            node -p 'const r=require("./artifacts/compare-${{ matrix.level }}.json"); `${r.environment.cpu} ×${r.environment.cpuCount}, Node ${r.environment.node}, bundles identical: ${r.sides.baseline.bundleSha256 === r.sides.candidate.bundleSha256}`' || true
+            echo
+            cat artifacts-table.md || true
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: runtime-calibration-${{ matrix.level }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Enforce verdicts
+        if: steps.compare.outcome == 'failure'
+        run: exit 1
