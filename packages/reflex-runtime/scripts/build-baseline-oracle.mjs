@@ -20,6 +20,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -59,6 +60,8 @@ const pinned = readFileSync(
 const commit = fromSource ? "working-tree" : (option("--commit") ?? pinned);
 
 // Shallow clones (CI checkouts) lack the pinned commit; fetch just that one.
+// Test workers build in parallel, so a fetch can lose the shallow.lock race
+// to a sibling: retry until the commit appears, whoever fetched it.
 const hasCommit = (ref) => {
   try {
     execFileSync("git", ["cat-file", "-e", `${ref}^{commit}`], {
@@ -71,10 +74,24 @@ const hasCommit = (ref) => {
   }
 };
 if (!fromSource && !hasCommit(commit) && /^[0-9a-f]{40}$/.test(commit)) {
-  execFileSync("git", ["fetch", "--no-tags", "--depth=1", "origin", commit], {
-    cwd: repoRoot,
-    stdio: ["ignore", "ignore", "inherit"],
-  });
+  for (let attempt = 1; !hasCommit(commit); attempt += 1) {
+    try {
+      execFileSync(
+        "git",
+        ["fetch", "--no-tags", "--depth=1", "origin", commit],
+        { cwd: repoRoot, stdio: ["ignore", "ignore", "pipe"] },
+      );
+    } catch (error) {
+      if (hasCommit(commit)) break;
+      if (attempt >= 20) throw error;
+      Atomics.wait(
+        new Int32Array(new SharedArrayBuffer(4)),
+        0,
+        0,
+        250 * attempt,
+      );
+    }
+  }
 }
 
 const resolvedCommit = fromSource
@@ -96,9 +113,12 @@ const label =
         .update(JSON.stringify(mutations))
         .digest("hex")
         .slice(0, 8));
-const out = path.resolve(
+const target = path.resolve(
   option("--out") ?? path.join(packageRoot, ".cache/oracle", label),
 );
+// Callers treat an existing runtime.mjs as complete, and test workers build
+// concurrently: stage beside the target, then publish by atomic rename.
+const out = `${target}.staging-${process.pid}`;
 
 const work = mkdtempSync(path.join(tmpdir(), "reflex-oracle-"));
 try {
@@ -242,7 +262,14 @@ try {
       2,
     )}\n`,
   );
-  process.stdout.write(`${path.relative(packageRoot, out)}\n`);
+  mkdirSync(target, { recursive: true });
+  renameSync(
+    path.join(out, "manifest.json"),
+    path.join(target, "manifest.json"),
+  );
+  renameSync(path.join(out, "runtime.mjs"), path.join(target, "runtime.mjs"));
+  process.stdout.write(`${path.relative(packageRoot, target)}\n`);
 } finally {
   rmSync(work, { recursive: true, force: true });
+  rmSync(out, { recursive: true, force: true });
 }
