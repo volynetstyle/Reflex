@@ -18,11 +18,29 @@ import {
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 import { observeRuntimePropagate } from "@runtime/kernel/projection.propagate";
 
-function pushIteratorOnceCore(edge: ReactiveEdge | null): void {
+/**
+ * One-step propagation after a recompute changed a value: every direct
+ * subscriber without `Changed` gains it (computeds drop `Unknown`, watchers
+ * keep it). `skip` is the edge owned by the active pull walker, whose target
+ * learns the result from the walker itself; `null` skips nothing, and an
+ * edge outside this list skips nothing either.
+ */
+function pushIteratorOnceCore(
+  edge: ReactiveEdge | null,
+  skip: ReactiveEdge | null,
+): void {
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.push-once.invoke");
 
   for (let current = edge; current !== null; current = current.nextOut) {
+    if (current === skip) {
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.push-once.edge.explicit-skip",
+        );
+      continue;
+    }
+
     if (__PROFILE__)
       observeRuntimeProjection?.("projection.semantic.push-once.edge.visit");
 
@@ -72,14 +90,26 @@ function pushIteratorOnceCore(edge: ReactiveEdge | null): void {
   }
 }
 
-export const push_iterator_once: (edge: ReactiveEdge | null) => void = __DEV__
-  ? function pushIteratorOnceDev(edge): void {
+export const push_iterator_once: (
+  edge: ReactiveEdge | null,
+  skip?: ReactiveEdge | null,
+) => void = __DEV__
+  ? function pushIteratorOnceDev(edge, skip = null): void {
       enterRuntimePhase(RuntimePhase.Propagating);
 
       try {
-        pushIteratorOnceCore(edge);
+        pushIteratorOnceCore(edge, skip);
       } finally {
         leaveRuntimePhase();
       }
     }
-  : pushIteratorOnceCore;
+  : (pushIteratorOnceCore as (
+      edge: ReactiveEdge | null,
+      skip?: ReactiveEdge | null,
+    ) => void);
+
+/** Same walk with a mandatory owned edge; kept for the internal API. */
+export const push_iterator_once_skipping: (
+  edge: ReactiveEdge | null,
+  skip: ReactiveEdge,
+) => void = push_iterator_once;

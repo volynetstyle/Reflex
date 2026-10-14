@@ -105,7 +105,7 @@ describe("Reflex stage projection", () => {
     { timeout: 30_000 },
     () => {
       const functions = stageFunctions();
-      expect(functions).toHaveLength(31);
+      expect(functions).toHaveLength(29);
       for (const fn of functions) {
         const projection = analyzeFile(fn.file, fn.name, { tsconfig });
         const expected = syntaxCounts(fn);
@@ -190,24 +190,18 @@ describe("Reflex stage projection", () => {
         "(state & ~Visited) | Unknown",
       ]);
 
+      // One walk serves both the plain and the owned-edge-skipping
+      // propagation: a single traversal to null with the skip as a branch.
       const once = project(
         "first/push_iterator_once.ts",
         "pushIteratorOnceCore",
       );
-      expect(once.structures.linkedTraversals[0]).toEqual(
+      expect(once.structures.linkedTraversals).toEqual([
         expect.objectContaining({
           continuation: "current.nextOut",
           termination: "current === null",
         }),
-      );
-
-      const skipping = project(
-        "first/push_iterator_once_skipping.ts",
-        "pushIteratorOnceSkippingCore",
-      );
-      expect(
-        skipping.structures.linkedTraversals.map((item) => item.termination),
-      ).toEqual(["current === skip", "current === null"]);
+      ]);
 
       const pull = project("second/pull_dependency.ts", "shouldRecomputeCore");
       expect(pull.loops.map((loop) => loop.condition)).toEqual(["true"]);

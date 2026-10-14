@@ -26,10 +26,7 @@ import {
   type ReactiveNode,
 } from "@runtime/kernel/shape";
 import { cleanupUnvisitedSources } from "@runtime/kernel/shape/tracking";
-import {
-  push_iterator_once,
-  push_iterator_once_skipping,
-} from "@runtime/kernel/stages/first";
+import { push_iterator_once } from "@runtime/kernel/stages/first";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 import { compare } from "@runtime/protocol";
 
@@ -123,20 +120,18 @@ function advanceCore(
       );
 
     devAssertRefreshEdge(node, firstOut);
-    if (skipOutEdge !== null) {
-      if (firstOut !== skipOutEdge || skipOutEdge.nextOut !== null) {
-        if (__PROFILE__)
-          observeRuntimeProjection?.(
-            "projection.semantic.advance.propagate.skip-edge",
-          );
-        push_iterator_once_skipping(firstOut, skipOutEdge);
-      } else if (__PROFILE__) {
+    if (skipOutEdge === null) {
+      push_iterator_once(firstOut, null);
+    } else if (firstOut !== skipOutEdge || skipOutEdge.nextOut !== null) {
+      if (__PROFILE__)
         observeRuntimeProjection?.(
-          "projection.semantic.advance.propagate.owned-edge-only-skip",
+          "projection.semantic.advance.propagate.skip-edge",
         );
-      }
-    } else {
-      push_iterator_once(firstOut);
+      push_iterator_once(firstOut, skipOutEdge);
+    } else if (__PROFILE__) {
+      observeRuntimeProjection?.(
+        "projection.semantic.advance.propagate.owned-edge-only-skip",
+      );
     }
   }
 
