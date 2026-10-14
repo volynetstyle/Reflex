@@ -144,11 +144,12 @@ Results are written as JSON with provenance (`.cache/bench/*.json`); the PR
 tier uploads them as artifacts rather than comparing against a stored
 historical number, so hardware changes never masquerade as regressions.
 
-The hosted workflow `.github/workflows/runtime-calibration.yml` is the
-screening tier on GitHub runners. In `compare` mode it measures a push
-against the commit before it (or a chosen baseline against HEAD); in
-`calibrate` mode it builds both sides from one commit (A/A). Both sides are
-always built from commits. It runs `compare.mjs --fail-on none` and turns
+The hosted workflow `.github/workflows/runtime-paired-benchmarks.yml` is the
+screening tier on GitHub runners. In `compare` mode it measures a pull
+request's base against its merge result, a push to main against the previous
+head of main, or a chosen baseline against HEAD; in `calibrate` mode it
+builds both sides from one commit (A/A). Both sides are always built from
+commits, in balanced parallel shards (`bench/shards.mjs`). It runs `compare.mjs --fail-on none` and turns
 the report into a job summary and annotations with `bench/ci-report.mjs`:
 `slower`, `invalid` and `error` become warnings, `faster` a notice, and in
 A/A any decisive verdict flags the method on that runner. The job fails only

@@ -4,6 +4,11 @@
   "type": "module",
   "description": "Static TypeScript algorithm projection into a typed, serializable IR.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/volynetstyle/Reflex.git",
+    "directory": "third-party/algorithm-projection"
+  },
   "author": "Andrii Volynets",
   "sideEffects": false,
   "main": "./dist/index.js",

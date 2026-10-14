@@ -1,25 +1,24 @@
 name: Release
 
-# Continuous delivery, step 1 of 2: keep a "Version Packages" pull request in
-# sync with the pending Changesets on main. Merging it commits the versions
-# and changelogs; publication then runs from that exact commit through the
-# "Release qualification" workflow (publish: true), behind the npm environment.
+# Continuous delivery from main. Every push to main runs two independent tracks:
+#
+#   version   Pending changesets keep a "chore(release): version packages" pull
+#             request up to date. Merging it commits versions and changelogs.
+#   publish   When main holds versions npm does not have (release-plan.mjs),
+#             the exact tarballs are qualified on Linux and Windows, then wait
+#             for approval in the "npm" environment and are published byte for
+#             byte with provenance, and tagged name@version on that commit.
+#
+# Publication is idempotent: versions already on npm are skipped, so a rerun
+# after a partial failure finishes the release instead of failing on it.
 
 on:
   push:
     branches: [main]
-    paths:
-      - .changeset/**
-      - packages/*/package.json
-      - packages/*/CHANGELOG.md
+  workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
-
-concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: false
+  contents: read
 
 defaults:
   run:
@@ -30,13 +29,18 @@ jobs:
     name: version pull request
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    concurrency:
+      group: release-version
+      cancel-in-progress: true
     permissions:
       contents: write
       pull-requests: write
+      actions: write # dispatch CI for the version pull request
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       - uses: ./.github/actions/setup-workspace
       - name: Open or update the version pull request
+        id: changesets
         uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
           # The lockfile refresh keeps workspace ranges consistent with new versions.
@@ -45,3 +49,114 @@ jobs:
           commit: "chore(release): version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Pushes made with GITHUB_TOKEN start no workflows, so the version pull
+      # request would never get its required "fast checks". A dispatch is the
+      # exception: its checks attach to the branch head and satisfy the rule.
+      - name: Run CI on the version pull request
+        if: steps.changesets.outputs.hasChangesets == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref changeset-release/main
+
+  plan:
+    name: release plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      publish: ${{ steps.plan.outputs.publish }}
+      unpublished: ${{ steps.plan.outputs.unpublished }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - id: plan
+        run: node tooling/configs/release-plan.mjs | tee -a "$GITHUB_OUTPUT"
+
+  qualify:
+    name: qualify on ${{ matrix.os }}
+    needs: plan
+    if: needs.plan.outputs.publish == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          chromium: "true"
+      - name: Qualify all semantic and package gates
+        run: pnpm quality:check -- --phase release --output-dir artifacts/release-checks
+      - name: Qualify the exact tarballs
+        run: pnpm test:consumer -- --output-dir artifacts/qualification
+      - name: Verify archive identities without publishing
+        run: |
+          qualification=$(find artifacts/qualification -name qualification.json -print -quit)
+          node tooling/configs/publish-qualified.mjs --qualification "$qualification" --quality-summary artifacts/release-checks/summary.json > artifacts/release-checks/publication-verification.json
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: always()
+        with:
+          name: release-qualified-${{ runner.os }}-${{ github.sha }}
+          path: |
+            artifacts/release-checks/
+            artifacts/qualification/
+          if-no-files-found: error
+          retention-days: 90
+
+  publish:
+    name: publish to npm
+    needs: [plan, qualify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Waits here for an npm environment reviewer; a newer release replaces a
+    # pending one, and a running publication is never cancelled.
+    concurrency:
+      group: release-publish
+      cancel-in-progress: false
+    environment: npm
+    permissions:
+      contents: write # name@version tags
+      id-token: write # npm provenance
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: release-qualified-Linux-${{ github.sha }}
+          path: artifacts
+      - name: Publish the qualified archives
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "true"
+        run: |
+          qualification=$(find artifacts/qualification -name qualification.json -print -quit)
+          node tooling/configs/publish-qualified.mjs --publish \
+            --qualification "$qualification" \
+            --quality-summary artifacts/release-checks/summary.json \
+            --output-dir artifacts/publication > /dev/null
+      - name: Tag and summarize the release
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          node tooling/configs/release-tags.mjs artifacts/publication
+          git push origin --tags
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: always()
+        with:
+          name: publication-${{ github.sha }}
+          path: artifacts/publication/
+          if-no-files-found: warn
+          retention-days: 365

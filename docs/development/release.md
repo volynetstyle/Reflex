@@ -16,7 +16,7 @@ pnpm qualify --output-dir artifacts/qualification
 
 Choose the successful unique `qualification.json` and preserve its tarballs, logs, consumer lock and checksums. Pack-only evidence is insufficient.
 
-The manual release-qualification workflow performs this process on Linux and Windows and uploads evidence. It does not publish.
+In CI this is automated by `.github/workflows/release.yml`: changesets on main keep a version pull request up to date; once its versions are on main and missing from npm, the workflow qualifies the tarballs on Linux and Windows and waits for approval in the `npm` environment before publishing. See `.github/README.md`.
 
 ## Verify the exact archives
 
@@ -36,6 +36,6 @@ The convenience `release:publish` command should use the same verification tool;
 
 ## Failure recovery
 
-A partial publication remains recorded. Inspect already published versions before continuing. Published versions are immutable; restoration requires a new corrective version rather than replacing a previous archive. Do not discard a failed attempt or rerun until a random green result appears.
+A partial publication remains recorded. Publication is idempotent: versions npm already has are skipped (`already-published` when the archive is byte-identical, `version-taken` when it differs), so rerunning the publish job resumes the release. Published versions are immutable; restoration requires a new corrective version rather than replacing a previous archive. Do not discard a failed attempt or rerun until a random green result appears.
 
 Access, versioning and supported peer ranges are explicit package contracts. Private Devtools and research workspaces are excluded.

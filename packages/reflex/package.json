@@ -4,6 +4,11 @@
   "type": "module",
   "description": "Public Reflex facade with a connected runtime",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/volynetstyle/Reflex.git",
+    "directory": "packages/reflex"
+  },
   "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/index.js",
   "types": "./dist/globals.d.ts",

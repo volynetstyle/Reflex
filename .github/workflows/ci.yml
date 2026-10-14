@@ -42,6 +42,8 @@ jobs:
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
+          # No pnpm in this job; setup-node would otherwise cache it from packageManager.
+          package-manager-cache: false
       - id: matrix
         env:
           EVENT_NAME: ${{ github.event_name }}
@@ -194,6 +196,8 @@ jobs:
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
+          # No pnpm in this job; setup-node would otherwise cache it from packageManager.
+          package-manager-cache: false
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           pattern: checks-*
@@ -214,9 +218,10 @@ jobs:
           path: artifacts/quality-summary.json
           if-no-files-found: error
 
+  # Release publication qualifies Windows too; nightly keeps it from rotting.
   platform:
     name: clean consumer on Windows
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'schedule'
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
@@ -233,3 +238,26 @@ jobs:
           name: windows-consumer-evidence
           path: artifacts/platform-qualification/
           if-no-files-found: error
+
+  # A failed nightly run has no pull request to block, so it opens (or
+  # comments on) a tracking issue instead of failing silently.
+  nightly-report:
+    name: report nightly failure
+    needs: [required, platform]
+    if: always() && github.event_name == 'schedule' && (needs.required.result != 'success' || needs.platform.result != 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Nightly CI is failing"
+          number=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$title\" in:title" --json number --jq '.[0].number')
+          if [[ -n "$number" ]]; then
+            gh issue comment "$number" --repo "$GITHUB_REPOSITORY" --body "Still failing: $RUN_URL"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "The scheduled deep run failed: $RUN_URL"
+          fi

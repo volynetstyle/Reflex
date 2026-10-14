@@ -4,6 +4,11 @@
   "type": "module",
   "description": "Effect scheduler policies for Reflex runtimes",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/volynetstyle/Reflex.git",
+    "directory": "packages/reflex-scheduler"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "sideEffects": false,
