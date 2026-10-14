@@ -34,11 +34,20 @@ Implementation: `bench/workloads.mjs` (specification), `bench/worker.mjs`
    order removes the bias but leaves bimodal noise, so every comparison runs
    in both orientations and the replicate's estimate is their mean, which
    cancels the effect exactly. The effect is reported per workload.
-7. **Every comparison carries its own negative control.** Each replicate runs
+7. **JIT outcomes are made deterministic.** V8 optimizes on a background
+   thread, so the feedback a function is compiled with depends on thread
+   timing, and one workload lands in two or three code shapes across
+   processes: ±10% modes on fan-out/fan-in, occasional 2× outliers on
+   single-edge workloads in the first CI calibration. Comparison workers
+   run with `--predictable` (synchronous compilation, single-threaded GC),
+   which collapsed a local A/A spread of ±13% to ±1.8%. Steady-state code
+   is still TurboFan output; `--no-predictable` measures the default
+   concurrent configuration when compilation behavior itself is the subject.
+8. **Every comparison carries its own negative control.** Each replicate runs
    A-vs-B and A-vs-A' (baseline against itself), both in both orientations.
    If the control detects a difference, the method is biased for that
    workload and the comparison is invalid.
-8. **No single score.** Results are reported per workload and level; a
+9. **No single score.** Results are reported per workload and level; a
    regression in one class is never averaged away by gains elsewhere.
 
 ## Workload levels

@@ -4,6 +4,7 @@
 //        [--workloads <regex>] [--replicates 24] [--threshold 0.03]
 //        [--seed 1] [--samples 25] [--out <file.json>] [--quick]
 //        [--family <n>]   multiplicity family size when running a shard
+//        [--no-predictable]  measure with V8's default concurrent compilation
 //
 // Protocol (docs/performance/BENCHMARK_PROTOCOL.md):
 //  1. Build both sides as production bundles with the same toolchain/flags.
@@ -39,6 +40,13 @@ const option = (name, fallback) => {
   return index === -1 ? fallback : args[index + 1];
 };
 const quick = args.includes("--quick");
+// V8 compiles optimized code on a background thread, so which feedback a
+// function is optimized with depends on thread timing; the same workload
+// then lands in one of two or three code shapes per process (±10% modes on
+// fan-out and fan-in). --predictable compiles synchronously and runs GC on
+// one thread, which collapses those modes; --no-predictable measures the
+// default concurrent configuration instead.
+const v8Flags = args.includes("--no-predictable") ? [] : ["--predictable"];
 const baselineRef =
   option("--baseline") ??
   readFileSync(
@@ -96,6 +104,7 @@ function worker(bundle, id, mode, extra = []) {
     process.execPath,
     [
       "--expose-gc",
+      ...v8Flags,
       path.join(packageRoot, "bench/worker.mjs"),
       bundle,
       id,
@@ -318,6 +327,7 @@ const report = {
     threshold,
     seed: Number(option("--seed", 1)),
     family,
+    v8Flags,
   },
   verification,
   results,
