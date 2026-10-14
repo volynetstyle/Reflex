@@ -164,6 +164,23 @@ Teardown errors are reported (default `console.error`, as ownership cleanup
 does) and draining continues. Owners without a domain keep the previous
 eager teardown.
 
+## Async authority (PR-07)
+
+- `AsyncCore` captures the active runtime context and, when it belongs to
+  one, its execution domain. Attempt tokens and `attempt.alive()` remain the
+  commit authority.
+- The domain's `signal` is a lifetime: closing the domain disposes the
+  source synchronously (before user abort listeners of the attempt run), so a
+  completion that settles later, or in the same turn, cannot publish (L1).
+  A source created in a closed domain starts disposed.
+- Every completion/publish/dispose enters the captured domain through
+  `domain.run`, so invalidations reach that domain's scheduler only and
+  teardown waits for its safe point. A closed domain is entered by register
+  bank only.
+- Tracking never spans `await` (A1); there is no implicit async context.
+  Explicit binding (`bindManaged`) is the portable way to restore a domain
+  and owner in a continuation.
+
 ## Forbidden operations
 
 - Adding `owner`/`realm`/domain fields to `ReactiveNode`, or changing

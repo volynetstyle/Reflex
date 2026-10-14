@@ -4,7 +4,9 @@ import {
   Both,
   disposeWatcher,
   enterReactiveBatch,
+  ExecutionDomainState,
   getActiveRuntimeContext,
+  getExecutionDomain,
   leaveReactiveBatch,
   readConsumerLazy,
   readProducer,
@@ -66,6 +68,8 @@ export class AsyncCore<T> implements AsyncSource<T>, FreshnessDependency {
   readonly [FRONTIER_STATE]: FreshnessDependency[typeof FRONTIER_STATE] =
     createFreshnessState();
   private readonly runtime = getActiveRuntimeContext();
+  /** The captured execution domain; its closure revokes commit authority. */
+  private readonly domain = getExecutionDomain(this.runtime);
   private readonly commitNode = createAccumulator<AsyncCommit<T> | undefined>(
     undefined,
   );
@@ -88,10 +92,12 @@ export class AsyncCore<T> implements AsyncSource<T>, FreshnessDependency {
     private readonly job: AsyncJob<T>,
     private readonly options: AsyncOptions,
   ) {
-    if (options.signal?.aborted) {
+    const domainSignal = this.domain?.signal;
+    if (options.signal?.aborted || domainSignal?.aborted) {
       this.dispose();
     } else {
       options.signal?.addEventListener("abort", this.onAbort, { once: true });
+      domainSignal?.addEventListener("abort", this.onAbort, { once: true });
       this.ensure();
     }
   }
@@ -99,14 +105,21 @@ export class AsyncCore<T> implements AsyncSource<T>, FreshnessDependency {
   private readonly onAbort = (): void => this.dispose();
 
   private within<R>(fn: () => R): R {
-    return runWithRuntimeContext(this.runtime, () => {
+    const body = (): R => {
       enterReactiveBatch();
       try {
         return fn();
       } finally {
         leaveReactiveBatch();
       }
-    });
+    };
+    // Completions enter the captured domain as managed work, so teardown it
+    // requests waits for the domain's safe point. A closed domain is entered
+    // by register bank only; its hooks are detached.
+    const domain = this.domain;
+    return domain !== undefined && domain.state !== ExecutionDomainState.Closed
+      ? domain.run(body)
+      : runWithRuntimeContext(this.runtime, body);
   }
 
   ensure(): void {
@@ -274,6 +287,8 @@ export class AsyncCore<T> implements AsyncSource<T>, FreshnessDependency {
       this.activeAttempt = undefined;
       this.outcome = { kind: "disposed" };
       this.options.signal?.removeEventListener("abort", this.onAbort);
+      if (this.domain !== undefined && !this.domain.closed)
+        this.domain.signal.removeEventListener("abort", this.onAbort);
       disposeWatcher(this.watcher);
       this.frontier = EMPTY_FRONTIER;
       this.pulledFrontier = undefined;
