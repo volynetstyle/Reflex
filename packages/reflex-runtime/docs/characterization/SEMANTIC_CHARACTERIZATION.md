@@ -1,0 +1,122 @@
+# Reflex runtime: semantic characterization
+
+**Baseline:** `39587e93fab8` (`test/oracle/baseline-commit.txt`). Every claim
+below is about that commit unless marked otherwise. Optimization work compares
+against a frozen bundle of it (`test/oracle`).
+
+## 1. Sources of truth and how they are used
+
+| Class                     | Source                                                                                                                                     | Status                                                                                                                                                      |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A. Documented contract    | `test/differential/docs/SEMANTIC_CONTRACT.md` (C1–C3, W1–W3, V1–V6, M1–M3), `docs/INVARIANTS.md`, `docs/RULES.md` (R1–R8), public API docs | Binding. Checked by the Spec/Reflex differential suites.                                                                                                    |
+| B. Observed behavior      | Frozen baseline bundle + generated corpus (`test/oracle`)                                                                                  | Binding for optimizations: semantics-preserving changes must reproduce it exactly, including regions the contract leaves open. Not automatically "correct". |
+| C. Implementation detail  | Walker stacks and trimming, edge reuse strategy, fast/slow path split, PROFILE/DEV instrumentation, module layout                          | Free to change if B is preserved.                                                                                                                           |
+| D. Hidden preconditions   | §5                                                                                                                                         | Must be preserved or replaced by an equivalent argument before touching the code that relies on them.                                                       |
+| E. Historical workarounds | §6 findings                                                                                                                                | Candidates for removal after proof.                                                                                                                         |
+
+When documentation and code disagree, the disagreement is recorded (§6); it is
+not silently resolved in either direction.
+
+## 2. State space
+
+### Flags (`src/kernel/shape/meta.ts`)
+
+| Bit   | Name                    | Group      | Meaning                                                              |
+| ----- | ----------------------- | ---------- | -------------------------------------------------------------------- |
+| 0     | `Unknown`               | evidence   | validation required                                                  |
+| 1     | `Changed`               | evidence   | execution/recompute required                                         |
+| 2     | `Visited`               | execution  | invalidated during execution (watchers); force marker with `Changed` |
+| 3     | `Computing`             | execution  | callback (or watcher frontier validation) active                     |
+| 4     | `Watcher`               | role       | sink node                                                            |
+| 5     | `Scheduled`             | scheduling | host queue owns the watcher                                          |
+| 6     | `Disposed`              | —          | **defined, never used** (F2)                                         |
+| 7     | `WatcherCleanupPending` | watcher    | payload is an owned cleanup                                          |
+| 29/30 | `Producer`/`Consumer`   | role       | DEV only; 0 in production                                            |
+
+### Reachable flag sets at quiescent observation points
+
+Census over 3000 generated programs (all families, both host protocols), at
+every snapshot (between top-level operations):
+
+| Role     | Observed sets                                                                                                         |
+| -------- | --------------------------------------------------------------------------------------------------------------------- |
+| Producer | `clean` only (125 884 observations)                                                                                   |
+| Consumer | `clean`, `Changed`, `Unknown` only (1.17 M observations). Never `Unknown\|Changed`, `Visited` or `Computing` at rest. |
+| Watcher  | 21 sets over `{Unknown, Changed, Visited, Watcher, Scheduled, CleanupPending}`; `Computing` never at rest.            |
+
+Inside callbacks a consumer additionally carries `Computing`, and the
+computing-subscriber path may add `Visited | Unknown` (discarded for computeds,
+F1).
+
+## 3. Transitions
+
+| Operation                                | Effect on subscribers / node                                                                                                                                                                                                                                                                                                                                                               | Code                                                            |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| `writeProducer` (value differs)          | Direct subscribers: clean → `Changed`; non-watcher `Unknown` → `Changed` (drops `Unknown`); watcher `Unknown` → `Unknown\|Changed`; `Computing` → computing path. Transitive: clean → `Unknown`; watcher with only `Changed` gains `Unknown`. Watchers cut descent and receive one `onNodeInvalidated` unless already `Unknown` (direct phase) or already dirty (transitive phase).        | `protocol/write.producer.ts`, `stages/first/push_iterator.ts`   |
+| `writeProducer` (equal by `Object.is`)   | Nothing; settled check if idle.                                                                                                                                                                                                                                                                                                                                                            | same                                                            |
+| Computing subscriber hit                 | If the edge lies in the tracked prefix (at or before `tailIn`): `Visited\|Unknown`; otherwise nothing.                                                                                                                                                                                                                                                                                     | `markComputingSubscriber`                                       |
+| `advance` (recompute)                    | Clears `Visited`, sets `Computing`, tracks reads, prunes the unvisited suffix on success; on equal value → state from _pre-compute_ evidence minus `Both`; on change → payload, same state, then one-step push: subscribers without `Changed` gain `Changed` (watchers keep `Unknown`), skipping the edge owned by the active pull walker. Failure → `Changed`, prior topology edits kept. | `stages/second/advance.ts`, `push_iterator_once*.ts`            |
+| `readConsumer` clean                     | Returns payload; tracks the edge if a consumer is active.                                                                                                                                                                                                                                                                                                                                  | `protocol/read.consumer.ts`                                     |
+| `readConsumer` dirty, `Changed\|Visited` | `advance(node, ownedParentEdge)`.                                                                                                                                                                                                                                                                                                                                                          | `stabilizeDirtyConsumer`                                        |
+| `readConsumer` dirty, `Unknown` only     | `should_recompute` over incoming edges; recompute only if a dependency changed; otherwise clear `Unknown`. No inputs → treated as clean.                                                                                                                                                                                                                                                   | same, `pull_dependency.ts`, `pull_iterator.ts`                  |
+| `runWatcher`                             | Clean → no-op. `Unknown` → validate the committed frontier; `Changed\|Visited` on entry force execution. Then cleanup (untracked), compute (tracked), commit cleanup, finish with `Visited` → `Unknown` (rerun obligation) else clean.                                                                                                                                                     | `engine/watcher.ts`, `pull_frontier.ts`, `watcher.execution.ts` |
+| `disposeWatcher`                         | Generic unlink, clear transient flags and `CleanupPending`, then run the captured cleanup.                                                                                                                                                                                                                                                                                                 | `engine/watcher.ts`                                             |
+| `disposeNode`                            | Unlink both directions, clear `compute`/`payload`; flags untouched. Later reads are unspecified (they throw `compute is not a function` for consumers).                                                                                                                                                                                                                                    | `shape/graph/disposeNode.ts`                                    |
+| Context switch                           | Save outgoing registers and DEV frame, load incoming; epoch only moves forward.                                                                                                                                                                                                                                                                                                            | `kernel/context*.ts`                                            |
+
+## 4. Invariant inventory
+
+Each invariant lists its evidence: **P** proof sketch, **T** targeted test,
+**O** oracle/census.
+
+| Id  | Invariant                                                                                                                                                                                     | Evidence                                                   |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ----------------------------- |
+| I1  | A producer never carries evidence bits. Push only marks `edge.to`; no supported operation links an edge into a producer.                                                                      | P, O (census)                                              |
+| I2  | At rest a consumer is exactly one of `clean`, `Unknown`, `Changed`. Direct push replaces `Unknown` by `Changed`; transitive push only marks clean nodes; `advance` and validation clear both. | P, O                                                       |
+| I3  | `Computing` and `Visited` never survive a completed top-level operation on a consumer.                                                                                                        | O                                                          |
+| I4  | Watcher evidence within one unsettled wave merges by `                                                                                                                                        | ` (V5).                                                    | T (`watcher/algebra.test.ts`) |
+| I5  | `cleanupUnvisitedSources` always receives a non-empty suffix: both callers require `tailIn !== lastIn`.                                                                                       | P (F4)                                                     |
+| I6  | Every slow-path entry of `resolveTrackedRead` follows a failed check of the same expected edge, so the default strategy's suffix-head hit (R0) is unreachable through it.                     | P (F5), O (never hit)                                      |
+| I7  | In-tree callers of `resolveTrackedRead` always pass `allowSlowPath = true`.                                                                                                                   | P (F3)                                                     |
+| I8  | Validation never re-delivers its own watcher: the pull walker passes the owned parent edge to `advance`, which skips it.                                                                      | T (probe), P                                               |
+| I9  | Walker stacks restore their high-water mark and clear owned slots on every exit, including throws and nested domains.                                                                         | T (`runtime.walker-stack-stats`, `runtime.domain-walkers`) |
+| I10 | The tracking epoch is monotonic across context switches (one kernel clock).                                                                                                                   | T (`runtime.context-registers`)                            |
+
+## 5. Hidden preconditions
+
+| Id  | Precondition                                                                                                                                                                                                  | Relied on by                                                                                                                                                                                                                                                             |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| H1  | `advanceCore` derives the final state of a computed from its **pre-compute** evidence and discards marks set during compute.                                                                                  | The pull read path (`should_recompute` → `advance(node)` without a skip edge) marks the reading, computing consumer `Changed` through `push_iterator_once`; that mark is harmless only because H1 discards it. Changing F1 requires also skipping the reader edge there. |
+| H2  | Hosts either claim watchers (`Scheduled`) or tolerate duplicate deliveries. Write-time push suppresses re-delivery to an already-`Unknown` watcher; advance-time push suppresses it for `Scheduled` watchers. | Scheduler dedup, oracle host protocols                                                                                                                                                                                                                                   |
+| H3  | Graphs are acyclic. Cycle detection exists only in DEV.                                                                                                                                                       | Pull walkers terminate                                                                                                                                                                                                                                                   |
+| H4  | Invalidation hooks enqueue only (DEV-enforced). Production tolerates nested writes from hooks (`write.propagation.nested`), propagating synchronously inside the outer wave.                                  | Push re-entrance via the shared stack                                                                                                                                                                                                                                    |
+
+## 6. Findings
+
+| Id  | Kind                            | Finding                                                                                                                                                                                                                                                                                                                                                                                        | Action                                                                              |
+| --- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| F1  | Defect candidate, contract open | A write to an already-read dependency during a computed's own evaluation is lost: the computed stays clean with a stale value (`c` returns `0` while its source is `1`). `INVARIANTS.md` §2 says accepted invalidation "adds `Visited \| Unknown`", which holds for watchers but is overwritten for computeds (H1). The semantic contract explicitly leaves writes during execution undecided. | Owner decision. Not changed by optimization work; the oracle pins current behavior. |
+| F2  | Dead code                       | `Disposed` (bit 6) is exported and never read or written; `DISPOSE.md` states there is no disposed bit.                                                                                                                                                                                                                                                                                        | Removal candidate (internal export).                                                |
+| F3  | Dead parameter                  | `allowSlowPath = false` is reachable only from one direct resolver test.                                                                                                                                                                                                                                                                                                                       | Simplification candidate.                                                           |
+| F4  | Unreachable branch              | Empty-suffix early exit in `cleanupUnvisitedSources`.                                                                                                                                                                                                                                                                                                                                          | Simplification candidate (keep as DEV assertion).                                   |
+| F5  | Unreachable via API             | Suffix-head hit (R0) in the default tracking strategy.                                                                                                                                                                                                                                                                                                                                         | Keep: strategies are public.                                                        |
+| F6  | DEV asymmetry                   | Direct-phase watcher invalidation emits a DEV debug event without a hook; the transitive phase requires a hook. DEV diagnostics only.                                                                                                                                                                                                                                                          | Record.                                                                             |
+| F7  | Duplication                     | `countIn`/`countOut` exist twice (PROFILE only).                                                                                                                                                                                                                                                                                                                                               | Cleanup candidate.                                                                  |
+| F8  | Refuted suspicion               | Validation does not re-deliver its own watcher (I8).                                                                                                                                                                                                                                                                                                                                           | None.                                                                               |
+
+## 7. Coverage
+
+The oracle corpus reaches 102 of the 109 `projection.semantic.*` branch events
+(`test/oracle/branch-coverage.json`). Unreached: 4 DEV-only or path-observer
+events, and F3/F4/F5. All 8 seeded single-fault mutants are killed within 2000
+seeds.
+
+## 8. Build-mode differences
+
+| Behavior                                           | Production | DEV                                  | PROFILE   |
+| -------------------------------------------------- | ---------- | ------------------------------------ | --------- |
+| Phase stacks, hook reentry checks, cycle detection | off        | on (with PROFILE: scheduler policy)  | —         |
+| Producer/Consumer role bits                        | 0          | set                                  | 0         |
+| Debug events, devRecord\*                          | off        | on                                   | —         |
+| Projection events                                  | off        | —                                    | on        |
+| Kernel decisions                                   | identical  | identical except cycle/policy throws | identical |
