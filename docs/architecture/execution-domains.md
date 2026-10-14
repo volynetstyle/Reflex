@@ -197,5 +197,6 @@ eager teardown.
 ## Related
 
 - [Observational equivalence](./observational-equivalence.md)
+- [Domain ports](./domain-ports.md)
 - [Execution domain baseline](./execution-domains.baseline.json)
 - `packages/reflex-runtime/docs/INVARIANTS.md` §9 (register bank, epoch clock)

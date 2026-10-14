@@ -16,3 +16,13 @@ export {
   type OwnedSignal,
   type OwnedValue,
 } from "./lifetime";
+export {
+  createPort,
+  PortClosedError,
+  PortOverflowError,
+  PortTopologyError,
+  type DomainPort,
+  type PortEndpoint,
+  type PortMessage,
+  type PortOptions,
+} from "./port";
