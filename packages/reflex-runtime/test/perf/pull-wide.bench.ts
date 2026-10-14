@@ -7,11 +7,11 @@ import {
   type ReactiveEdge,
   type ReactiveNode,
 } from "../../src/kernel/shape";
-import { pull_frontier } from "../../src/kernel/stages/second/pull_frontier";
+import { pull_frontier } from "../../src/kernel/stages/stabilization/pull_frontier";
 import {
   pull_dependency,
   should_recompute,
-} from "../../src/kernel/stages/second/pull_dependency";
+} from "../../src/kernel/stages/stabilization/pull_dependency";
 import {
   createConsumer,
   createProducer,

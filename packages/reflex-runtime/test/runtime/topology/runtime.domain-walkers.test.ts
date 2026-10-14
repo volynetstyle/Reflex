@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import * as pullModule from "../../../src/kernel/stages/second/pull_dependency";
+import * as pullModule from "../../../src/kernel/stages/stabilization/pull_dependency";
 import {
   createConsumer,
   createProducer,

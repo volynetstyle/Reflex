@@ -26,7 +26,7 @@ import {
   type ReactiveNode,
 } from "@runtime/kernel/shape";
 import { cleanupUnvisitedSources } from "@runtime/kernel/shape/tracking";
-import { push_iterator_once } from "@runtime/kernel/stages/first";
+import { push_iterator_once } from "@runtime/kernel/stages/propagation";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 import { compare } from "@runtime/protocol";
 

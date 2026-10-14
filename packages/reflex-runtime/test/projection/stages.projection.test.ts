@@ -161,7 +161,7 @@ describe("Reflex stage projection", () => {
     "matches the push, push-once, pull and advance flow landmarks",
     { timeout: 30_000 },
     () => {
-      const push = project("first/push_iterator.ts", "pushIteratorCore");
+      const push = project("propagation/push_iterator.ts", "pushIteratorCore");
       expect(push.loops.map((loop) => loop.condition)).toEqual([
         "edge !== null",
         "top !== base",
@@ -193,7 +193,7 @@ describe("Reflex stage projection", () => {
       // One walk serves both the plain and the owned-edge-skipping
       // propagation: a single traversal to null with the skip as a branch.
       const once = project(
-        "first/push_iterator_once.ts",
+        "propagation/push_iterator_once.ts",
         "pushIteratorOnceCore",
       );
       expect(once.structures.linkedTraversals).toEqual([
@@ -203,7 +203,7 @@ describe("Reflex stage projection", () => {
         }),
       ]);
 
-      const pull = project("second/pull_dependency.ts", "shouldRecomputeCore");
+      const pull = project("stabilization/pull_dependency.ts", "shouldRecomputeCore");
       expect(pull.loops.map((loop) => loop.condition)).toEqual(["true"]);
       expect(pull.structures.stackCandidates).toEqual([]);
       expect(pull.stateTransitions.map((transition) => transition.to)).toEqual([
@@ -211,14 +211,14 @@ describe("Reflex stage projection", () => {
       ]);
 
       const pullDependency = project(
-        "second/pull_dependency.ts",
+        "stabilization/pull_dependency.ts",
         "pullDependencyDirty",
       );
       expect(pullDependency.loops).toEqual([]);
       expect(pullDependency.structures.stackCandidates).toEqual([]);
       expect(pullDependency.stateTransitions).toEqual([]);
 
-      const pull_iterator = project("second/pull_iterator.ts", "pull_iterator");
+      const pull_iterator = project("stabilization/pull_iterator.ts", "pull_iterator");
       expect(pull_iterator.loops.map((loop) => loop.condition)).toEqual([
         "true",
         "true",
@@ -237,7 +237,7 @@ describe("Reflex stage projection", () => {
         pull_iterator.stateTransitions.map((transition) => transition.to),
       ).toEqual(["node.state & ~Unknown"]);
 
-      const advance = project("second/advance.ts", "advanceCore");
+      const advance = project("stabilization/advance.ts", "advanceCore");
       expect(
         advance.stateTransitions.map((transition) => transition.to),
       ).toEqual([

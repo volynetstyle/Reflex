@@ -74,7 +74,7 @@ its cost and inlining behavior need the normal runtime performance review.
 
 The evidence loss described by this test family is a push-boundary concern,
 not a reason to redesign watcher execution first. In
-`src/kernel/stages/first/push_iterator.ts`, direct subscribers are handled in
+`src/kernel/stages/propagation/push_iterator.ts`, direct subscribers are handled in
 phase 1 and transitive subscribers in phase 2. A watcher that receives direct
 `Changed` first already has non-clean evidence when phase 2 arrives; phase 2
 therefore does not add its later transitive `Unknown`. The reverse arrival

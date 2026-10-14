@@ -75,7 +75,7 @@ Baseline in-memory trace `selector, alternatingDependency, stable[0..63]`: on th
 
 ### 4. INFERENCE: callers prove nonempty stale cleanup
 
-**Location:** `stages/second/advance.ts`, `engine/watcher.execution.ts`, `shape/tracking/cleanup.ts`.
+**Location:** `stages/stabilization/advance.ts`, `engine/watcher.execution.ts`, `shape/tracking/cleanup.ts`.
 
 **Proof:** Callers require `tailIn !== lastIn`. Null tail then implies nonempty list; non-null non-last tail has non-null nextIn. Cleanup's empty-edge test is false.
 
@@ -99,7 +99,7 @@ Baseline in-memory trace `selector, alternatingDependency, stable[0..63]`: on th
 
 ### 6. FACT: saturated writes still scan direct fanout
 
-**Location:** `stages/first/push_iterator.ts`, direct loop.
+**Location:** `stages/propagation/push_iterator.ts`, direct loop.
 
 **Observed:** Every unequal write scans outgoing edges before dirty cutoff. Without reads, topology changes, or reentrant execution, directly Changed ordinary consumers remain blocked on later writes.
 

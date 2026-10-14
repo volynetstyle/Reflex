@@ -238,7 +238,7 @@ function renderInteractionSweep(name, rows) {
 // --- Stack-capacity threshold investigation ------------------------------
 //
 // Directly reports the new pushStackTrim*/pullStackTrim* counters (see
-// src/kernel/stages/first/push_iterator.ts and .../second/pull_dependency.ts)
+// src/kernel/stages/propagation/push_iterator.ts and .../stabilization/pull_dependency.ts)
 // against ns/op, instead of going through the generic bucket table — the
 // question here is specifically "does the trim/regrow event rate explain the
 // timing cliff", which the generic buckets don't surface directly.

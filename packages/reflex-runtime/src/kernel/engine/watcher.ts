@@ -32,7 +32,7 @@ import {
   type WatcherCleanup,
   type WatcherNode,
 } from "@runtime/kernel/shape";
-import { pull_frontier } from "@runtime/kernel/stages/second/pull_frontier";
+import { pull_frontier } from "@runtime/kernel/stages/stabilization/pull_frontier";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 import { executeKnownNodeComputation } from "./watcher.execution";

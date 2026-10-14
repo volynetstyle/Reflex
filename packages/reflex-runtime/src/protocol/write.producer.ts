@@ -8,7 +8,7 @@ import {
   type ProducerNode,
 } from "@runtime/kernel";
 import { devRecordWriteProducer } from "@runtime/kernel/dev";
-import { push_iterator } from "@runtime/kernel/stages/first/push_iterator";
+import { push_iterator } from "@runtime/kernel/stages/propagation/push_iterator";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 import { compare as defaultComparator } from "./utils/compare";

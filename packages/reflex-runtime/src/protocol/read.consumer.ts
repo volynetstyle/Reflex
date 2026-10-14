@@ -19,8 +19,8 @@ import {
   type ReactiveEdge,
 } from "@runtime/kernel/shape";
 import { resolveTrackedRead } from "@runtime/kernel/shape/tracking";
-import { advance } from "@runtime/kernel/stages/second/advance";
-import { should_recompute } from "@runtime/kernel/stages/second/pull_dependency";
+import { advance } from "@runtime/kernel/stages/stabilization/advance";
+import { should_recompute } from "@runtime/kernel/stages/stabilization/pull_dependency";
 import {
   observeRuntimeProjection,
   observeRuntimeReadConsumerPath,
