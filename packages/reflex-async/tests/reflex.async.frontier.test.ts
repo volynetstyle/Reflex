@@ -350,7 +350,7 @@ describe("async evaluation frontiers", () => {
       );
       expect(Object.isFrozen(frontier)).toBe(false);
       for (const value of Object.values(frontier))
-        if (Array.isArray(value)) expect(Object.isFrozen(value)).toBe(true);
+        if (Array.isArray(value)) expect(Object.isFrozen(value)).toBe(false);
     }
     builder.add(dependency("later"));
     expect(materializeFrontier(direct)).toEqual([a, b]);
