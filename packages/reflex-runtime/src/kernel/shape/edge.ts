@@ -15,7 +15,7 @@ export const createReactiveEdge = (
   from: ReactiveNode,
   to: ReactiveNode,
 ): ReactiveEdge => ({
-  version: version | 0,
+  version: version >>> 0,
   from,
   to,
   prevOut: null,
