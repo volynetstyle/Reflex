@@ -55,9 +55,10 @@ try{
   await writeFile(join(fixture,"package.json"),JSON.stringify({name:"reflex-qualified-consumer",version:"0.0.0",private:true,type:"module",dependencies:{...dependencies,...tools},pnpm:{overrides}},null,2)+"\n");
   await command("consumer.install",process.execPath,[pnpm,"install",...(config.offline?["--offline"]:[]),"--ignore-scripts","--strict-peer-dependencies","--config.node-linker=isolated","--store-dir",resolve(repoRoot,".pnpm-store"),"--cache-dir",resolve(repoRoot,".cache/pnpm"),"--fetch-retries=0","--fetch-timeout=20000"],fixture);
   const consumerLock=await readFile(join(fixture,"pnpm-lock.yaml"));await writeFile(join(output,"consumer-lock.yaml"),consumerLock);summary.consumerLockSha256=createHash("sha256").update(consumerLock).digest("hex");await save();
-  for(const file of ["identity.mjs","composition.mjs","ssr.mjs","types.mts","types.cts","browser.mjs","index.html","mcp-server.mjs","view.mjs"]){await writeFile(join(fixture,file),await readFile(new URL("./consumers/"+file,import.meta.url)));}
+  for(const file of ["identity.mjs","composition.mjs","domains.mjs","ssr.mjs","types.mts","types.cts","browser.mjs","index.html","mcp-server.mjs","view.mjs"]){await writeFile(join(fixture,file),await readFile(new URL("./consumers/"+file,import.meta.url)));}
   for(const mode of ["esm","esm-development","cjs","cjs-development"]){await command("consumer.identity."+mode,process.execPath,[...(mode.endsWith("development")?["--conditions=development"]:[]),join(fixture,"identity.mjs"),mode],fixture);}
   for(const mode of ["production","development"]){await command("consumer.composition."+mode,process.execPath,[...(mode==="development"?["--conditions=development"]:[]),join(fixture,"composition.mjs")],fixture);}
+  for(const mode of ["production","development"]){await command("consumer.domains."+mode,process.execPath,[...(mode==="development"?["--conditions=development"]:[]),join(fixture,"domains.mjs")],fixture);}
   await command("consumer.ssr",process.execPath,[join(fixture,"ssr.mjs")],fixture);
   const standalone=await readFile(join(repoRoot,"packages/reflex-dom/scripts/standalone-consumer.tsx"),"utf8");
   await writeFile(join(fixture,"standalone.tsx"),standalone);

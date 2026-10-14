@@ -80,6 +80,8 @@
     "bench:runtime": "vitest bench test/perf/runtime-taxonomy.bench.ts",
     "bench:runtime:json": "vitest bench test/perf/runtime-taxonomy.bench.ts --outputJson ../../bench-results/runtime/latest.raw.json",
     "bench:runtime:memory": "pnpm build:ts && pnpm build:perf && node --expose-gc perf/callback-memory/run.mjs",
+    "bench:domains": "vitest bench test/perf/domain-boundary.bench.ts --run",
+    "check:domain-retention": "node --expose-gc perf/domain-retention/run.mjs && node --expose-gc --conditions=development perf/domain-retention/run.mjs",
     "bench:runtime:memory:json": "pnpm build:ts && pnpm build:perf && node --expose-gc perf/callback-memory/run.mjs --json",
     "bench:push-pull": "vitest bench --config vite.dev.config.ts test/perf/push-pull-components.bench.ts",
     "bench:pull-wide": "vitest bench test/perf/pull-wide.bench.ts",

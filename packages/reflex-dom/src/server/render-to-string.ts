@@ -28,6 +28,7 @@ import {
   runComponentRenderable,
   runWithOwnershipNode,
 } from "@volynets/reflex-framework";
+import { createExecutionDomain } from "@volynets/reflex-runtime/internal";
 
 const PLATFORM_PROPS = new Set<string>([
   "elementInternals",
@@ -322,14 +323,23 @@ function renderRenderableToString(
  * @param renderable The root renderable value.
  */
 export function renderToString(renderable: JSXRenderable): string {
-  const owner = createOwnerContext();
+  // Each request renders in its own execution domain. Closing it at the end
+  // disposes request-scoped work, including pending async sources.
+  const domain = createExecutionDomain();
+  const owner = createOwnerContext(domain);
   const root = createOwnershipNode();
 
   try {
-    return runWithOwnershipNode(owner, root, () =>
-      renderRenderableToString(renderable, "html"),
+    return domain.run(() =>
+      runWithOwnershipNode(owner, root, () =>
+        renderRenderableToString(renderable, "html"),
+      ),
     );
   } finally {
-    disposeOwnershipNode(root);
+    try {
+      domain.run(() => disposeOwnershipNode(root));
+    } finally {
+      domain.close();
+    }
   }
 }
