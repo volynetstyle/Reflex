@@ -41,9 +41,12 @@ export function createDOMContext(options?: DOMRuntimeOptions): DOMContext {
   const mountEffects = createMountEffects((task) =>
     context.runtime.run(() => withDOMContext(context, task)),
   );
+  const runtime = createRendererRuntime(options, mountEffects);
   const context: DOMContext = {
-    runtime: createRendererRuntime(options, mountEffects),
-    owner: createOwnerContext(),
+    runtime,
+    // The owner tree lives in the renderer's domain; owner changes never
+    // switch domains.
+    owner: createOwnerContext(runtime.domain),
     mountEffects,
   };
   return context;

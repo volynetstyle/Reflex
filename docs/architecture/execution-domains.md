@@ -96,6 +96,31 @@ managed entry points only.
 | Cross-domain reactive edge via managed API       | Rejected (DEV) / unsupported   |
 | Cross-domain value transfer                      | Ports only                     |
 
+## Ownership integration (PR-04)
+
+- `OwnerContext.domain` associates an existing owner tree with its domain.
+  This is the only link; `OwnershipNode` is unchanged and runtime knows
+  nothing about owners.
+- `runManaged(owner, node, fn)` = `domain.run(() => runWithOwner(owner, node,
+  fn))`. Owner changes inside one domain never reload the register bank, and
+  `runWithOwner` never resets tracking.
+- Owned effects run, re-run and clean up in their owner's domain, with the
+  run's owner/environment restored, wherever creation or disposal starts.
+  `registerCleanup` callbacks also run in the owner's domain.
+- `bindManaged(fn)` captures domain + owner + node for callbacks invoked later
+  from outside (events, timers, async continuations). Plain reactive
+  callbacks are not wrapped and keep their cost.
+- Raw writes are attributed to the *active* domain: writing another domain's
+  node from a foreign context uses the foreign scheduler. Write through the
+  owning domain's managed entry or a bound writer.
+
+### Provider semantics
+
+Context providers are setup-time values. `provideContext` mutates the
+provider layer for later lookups only; it notifies nobody, and consumers that
+already looked a value up keep it. A value that must change observably is
+provided as an accessor (signal) and read reactively.
+
 ## Forbidden operations
 
 - Adding `owner`/`realm`/domain fields to `ReactiveNode`, or changing

@@ -15,6 +15,7 @@ import {
   usingOwnershipNode,
   type OwnerContext,
 } from "../ownership/ownership.scope";
+import { runInOwnerDomain } from "../domain/enter";
 
 export type OwnedEffectFn = () => void | Cleanup;
 
@@ -36,6 +37,10 @@ export function createOwnedEffect(
     if (__DEV__) throw new Error("createOwnedEffect in disposed node");
     return noopCleanup;
   }
+  if (owner.domain?.closed) {
+    if (__DEV__) throw new Error("createOwnedEffect in a closed domain");
+    return noopCleanup;
+  }
 
   const watcher = createWatcher(() =>
     runWithOwner(owner, node, () =>
@@ -43,15 +48,22 @@ export function createOwnedEffect(
         const cleanup = fn();
         if (cleanup !== undefined) {
           if (isShuttingDown(executionNode)) cleanup();
-          else addCleanup(executionNode, cleanup);
+          // Cleanup sees the run's environment, wherever disposal starts.
+          else
+            addCleanup(executionNode, () =>
+              runInOwnerDomain(owner, () =>
+                runWithOwner(owner, executionNode, cleanup),
+              ),
+            );
         }
-        return () => disposeOwnershipNode(executionNode);
+        return () =>
+          runInOwnerDomain(owner, () => disposeOwnershipNode(executionNode));
       }),
     ),
   );
 
   try {
-    runWatcher(watcher);
+    runInOwnerDomain(owner, () => runWatcher(watcher));
   } catch (error) {
     disposeWatcher(watcher);
     throw error;

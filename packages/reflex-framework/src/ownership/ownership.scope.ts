@@ -1,3 +1,5 @@
+import type { ExecutionDomain } from "@volynets/reflex-runtime";
+import { runInDomain } from "../domain/enter";
 import { addCleanup, disposeOwnershipNode } from "./ownership.cleanup";
 import { isShuttingDown } from "./ownership.meta";
 import { OwnershipNode } from "./ownership.node";
@@ -12,6 +14,11 @@ export interface OwnerHookState {
 export interface OwnerContext {
   currentNode: OwnershipNode | null;
   hookState: OwnerHookState;
+  /**
+   * The execution domain this owner tree lives in. Owner changes never switch
+   * domains; managed entry points enter this domain first (see runManaged).
+   */
+  readonly domain?: ExecutionDomain | null;
 }
 
 let activeOwnerContext: OwnerContext | null = null;
@@ -24,10 +31,13 @@ function createOwnerHookState(): OwnerHookState {
   };
 }
 
-export function createOwnerContext(): OwnerContext {
+export function createOwnerContext(
+  domain: ExecutionDomain | null = null,
+): OwnerContext {
   return Object.preventExtensions({
     currentNode: null,
     hookState: createOwnerHookState(),
+    domain,
   });
 }
 
@@ -120,5 +130,7 @@ export function registerCleanup(owner: OwnerContext, fn: () => void): void {
     throw new Error("register cleanup into disposed OwnershipNode");
   }
 
-  addCleanup(node, fn);
+  // Cleanup runs in the owner's domain wherever disposal starts (S1).
+  const domain = owner.domain;
+  addCleanup(node, domain == null ? fn : () => runInDomain(domain, fn));
 }
