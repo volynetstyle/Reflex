@@ -1,33 +1,49 @@
-name: Runtime Benchmark Calibration
+name: Runtime Benchmarks
 
 # Paired in-process comparison of two production runtime bundles
 # (packages/reflex-runtime/docs/performance/BENCHMARK_PROTOCOL.md).
-# With the default candidate equal to the pinned baseline sources this is
-# the A/A calibration: no workload may come out faster, slower or invalid.
+#
+# Hosted runners are the screening tier of the protocol: every verdict is
+# reported in the job summary, as annotations and as JSON artifacts, and none
+# fails the job. A job fails only when the harness produces no report.
+#
+# Modes:
+#   compare    candidate = the pushed commit (or HEAD), baseline = the commit
+#              before the push (or the input, or HEAD^). Default.
+#   calibrate  A/A: both sides are built from the same commit; any faster,
+#              slower or invalid verdict flags the method on this runner.
 
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: compare (baseline vs HEAD) or calibrate (A/A)
+        type: choice
+        options: [compare, calibrate]
+        default: compare
       baseline:
-        description: Baseline commit (default test/oracle/baseline-commit.txt)
+        description: Baseline ref (compare; default the parent of HEAD) or the calibrated ref (calibrate; default HEAD)
         required: false
         default: ""
       replicates:
-        description: Replicates per workload
+        description: Replicates per workload (24 qualifies a family of 25)
         required: false
         default: "24"
   push:
     branches: [premain-refactor]
     paths:
       - .github/workflows/runtime-calibration.yml
+      - packages/reflex-runtime/src/**
       - packages/reflex-runtime/bench/**
       - packages/reflex-runtime/scripts/build-baseline-oracle.mjs
+      - packages/reflex-runtime/rollup/terser-options.ts
+      - packages/reflex-runtime/rollup/optimization.ts
 
 permissions:
   contents: read
 
 concurrency:
-  group: runtime-calibration-${{ github.ref }}
+  group: runtime-benchmarks-${{ github.ref }}
   cancel-in-progress: true
 
 defaults:
@@ -35,10 +51,56 @@ defaults:
     shell: bash
 
 jobs:
-  calibrate:
-    name: level ${{ matrix.level }}
+  refs:
+    name: resolve refs
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    outputs:
+      baseline: ${{ steps.resolve.outputs.baseline }}
+      candidate: ${{ steps.resolve.outputs.candidate }}
+      mode: ${{ steps.resolve.outputs.mode }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: resolve
+        env:
+          MODE: ${{ inputs.mode || 'compare' }}
+          INPUT_BASELINE: ${{ inputs.baseline }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          commit() { git rev-parse --verify --quiet "$1^{commit}"; }
+          required() {
+            commit "$1" || { echo "::error::unknown ref '$1'" >&2; exit 1; }
+          }
+          if [[ "$MODE" == calibrate ]]; then
+            baseline=$(required "${INPUT_BASELINE:-HEAD}")
+            candidate=$baseline
+          else
+            candidate=$(required HEAD)
+            baseline=""
+            if [[ -n "$INPUT_BASELINE" ]]; then
+              baseline=$(required "$INPUT_BASELINE")
+            fi
+            # The previous head of a push, unless it was force-pushed away.
+            if [[ -z "$baseline" && -n "$BEFORE" && "$BEFORE" != 0000000000000000000000000000000000000000 ]]; then
+              baseline=$(commit "$BEFORE" || true)
+            fi
+            if [[ -z "$baseline" ]]; then
+              baseline=$(required HEAD^)
+            fi
+          fi
+          {
+            echo "mode=$MODE"
+            echo "baseline=$baseline"
+            echo "candidate=$candidate"
+          } >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE baseline=$baseline candidate=$candidate"
+
+  bench:
+    name: level ${{ matrix.level }}
+    needs: refs
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
     strategy:
       fail-fast: false
       matrix:
@@ -54,7 +116,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # The baseline bundle is built from `git archive <commit>`.
+          # Both bundles are built from `git archive <commit>`.
           fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
@@ -68,41 +130,39 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Paired comparison
-        id: compare
         working-directory: packages/reflex-runtime
-        continue-on-error: true
         env:
-          BASELINE: ${{ inputs.baseline }}
+          BASELINE: ${{ needs.refs.outputs.baseline }}
+          CANDIDATE: ${{ needs.refs.outputs.candidate }}
           REPLICATES: ${{ inputs.replicates || '24' }}
+        # Verdicts never set the exit code here (--fail-on none); a crash
+        # still does, and the report step then records the missing report.
+        continue-on-error: true
         run: |
-          baseline_args=()
-          [[ -n "$BASELINE" ]] && baseline_args=(--baseline "$BASELINE")
-          node bench/compare.mjs "${baseline_args[@]}" \
+          mkdir -p "$GITHUB_WORKSPACE/artifacts"
+          node bench/compare.mjs \
+            --baseline "$BASELINE" \
+            --candidate "$CANDIDATE" \
             --workloads '${{ matrix.workloads }}' \
             --family 25 \
             --replicates "$REPLICATES" \
+            --fail-on none \
             --out "$GITHUB_WORKSPACE/artifacts/compare-${{ matrix.level }}.json" \
-            | tee "$GITHUB_WORKSPACE/artifacts-table.md"
+            2> >(tee "$GITHUB_WORKSPACE/artifacts/compare-${{ matrix.level }}.log" >&2)
 
-      - name: Job summary
+      - name: Report
         if: always()
+        working-directory: packages/reflex-runtime
         run: |
-          {
-            echo "### Level ${{ matrix.level }}"
-            echo
-            node -p 'const r=require("./artifacts/compare-${{ matrix.level }}.json"); `${r.environment.cpu} ×${r.environment.cpuCount}, Node ${r.environment.node}, bundles identical: ${r.sides.baseline.bundleSha256 === r.sides.candidate.bundleSha256}`' || true
-            echo
-            cat artifacts-table.md || true
-          } >> "$GITHUB_STEP_SUMMARY"
+          node bench/ci-report.mjs \
+            "$GITHUB_WORKSPACE/artifacts/compare-${{ matrix.level }}.json" \
+            --title "Level ${{ matrix.level }}" \
+            --mode "${{ needs.refs.outputs.mode }}"
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: runtime-calibration-${{ matrix.level }}
+          name: runtime-benchmarks-${{ matrix.level }}
           path: artifacts/
           if-no-files-found: warn
           retention-days: 30
-
-      - name: Enforce verdicts
-        if: steps.compare.outcome == 'failure'
-        run: exit 1
