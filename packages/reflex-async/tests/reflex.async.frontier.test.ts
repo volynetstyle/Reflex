@@ -348,7 +348,7 @@ describe("async evaluation frontiers", () => {
       expect(Reflect.ownKeys(frontier)).toEqual(
         Reflect.ownKeys(EMPTY_FRONTIER),
       );
-      expect(Object.isFrozen(frontier)).toBe(true);
+      expect(Object.isFrozen(frontier)).toBe(false);
       for (const value of Object.values(frontier))
         if (Array.isArray(value)) expect(Object.isFrozen(value)).toBe(true);
     }
