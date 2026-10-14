@@ -76,6 +76,20 @@ const shuffle = (items) => {
 };
 
 function build(ref) {
+  // `bundle:<dir>`: a prebuilt directory with runtime.mjs and manifest.json,
+  // e.g. the reference adapter from bench/reference/build.mjs.
+  if (ref.startsWith("bundle:")) {
+    const dir = path.resolve(packageRoot, ref.slice("bundle:".length));
+    const bundle = path.join(dir, "runtime.mjs");
+    return {
+      ref,
+      bundle,
+      manifest: JSON.parse(
+        readFileSync(path.join(dir, "manifest.json"), "utf8"),
+      ),
+      sha256: createHash("sha256").update(readFileSync(bundle)).digest("hex"),
+    };
+  }
   const flags = ["--production"];
   if (ref === "source")
     flags.push(
