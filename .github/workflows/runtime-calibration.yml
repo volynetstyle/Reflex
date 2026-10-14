@@ -12,6 +12,10 @@ name: Runtime Benchmarks
 #              before the push (or the input, or HEAD^). Default.
 #   calibrate  A/A: both sides are built from the same commit; any faster,
 #              slower or invalid verdict flags the method on this runner.
+#
+# Workloads run in balanced shards (bench/shards.mjs): every pair process
+# costs about the same fixed warm-up, so wall time is set by the largest
+# shard. Each shard keeps the whole family size for its intervals.
 
 on:
   workflow_dispatch:
@@ -29,6 +33,10 @@ on:
         description: Replicates per workload (24 qualifies a family of 25)
         required: false
         default: "24"
+      shards:
+        description: Parallel jobs; wall time scales with workloads per shard
+        required: false
+        default: "9"
   push:
     branches: [premain-refactor]
     paths:
@@ -52,12 +60,14 @@ defaults:
 
 jobs:
   refs:
-    name: resolve refs
+    name: resolve refs and shards
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       baseline: ${{ steps.resolve.outputs.baseline }}
       candidate: ${{ steps.resolve.outputs.candidate }}
       mode: ${{ steps.resolve.outputs.mode }}
+      shards: ${{ steps.shards.outputs.matrix }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -96,40 +106,26 @@ jobs:
             echo "candidate=$candidate"
           } >> "$GITHUB_OUTPUT"
           echo "mode=$MODE baseline=$baseline candidate=$candidate"
+      - id: shards
+        env:
+          SHARDS: ${{ inputs.shards || '9' }}
+        run: echo "matrix=$(node packages/reflex-runtime/bench/shards.mjs --shards "$SHARDS")" >> "$GITHUB_OUTPUT"
 
   bench:
-    name: level ${{ matrix.level }}
+    name: shard ${{ matrix.shard }}
     needs: refs
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 60
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - level: A
-            workloads: '^A\.'
-          - level: B
-            workloads: '^B\.'
-          - level: C
-            workloads: '^C\.'
-          - level: D-E
-            workloads: '^[DE]\.'
+      matrix: ${{ fromJSON(needs.refs.outputs.shards) }}
     steps:
+      # Shallow: build-baseline-oracle.mjs fetches each compared commit itself.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-          # Both bundles are built from `git archive <commit>`.
-          fetch-depth: 0
 
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
 
       - name: Paired comparison
         working-directory: packages/reflex-runtime
@@ -137,6 +133,9 @@ jobs:
           BASELINE: ${{ needs.refs.outputs.baseline }}
           CANDIDATE: ${{ needs.refs.outputs.candidate }}
           REPLICATES: ${{ inputs.replicates || '24' }}
+          WORKLOADS: ${{ matrix.workloads }}
+          FAMILY: ${{ matrix.family }}
+          SHARD: ${{ matrix.shard }}
         # Verdicts never set the exit code here (--fail-on none); a crash
         # still does, and the report step then records the missing report.
         continue-on-error: true
@@ -145,26 +144,30 @@ jobs:
           node bench/compare.mjs \
             --baseline "$BASELINE" \
             --candidate "$CANDIDATE" \
-            --workloads '${{ matrix.workloads }}' \
-            --family 25 \
+            --workloads "$WORKLOADS" \
+            --family "$FAMILY" \
             --replicates "$REPLICATES" \
             --fail-on none \
-            --out "$GITHUB_WORKSPACE/artifacts/compare-${{ matrix.level }}.json" \
-            2> >(tee "$GITHUB_WORKSPACE/artifacts/compare-${{ matrix.level }}.log" >&2)
+            --out "$GITHUB_WORKSPACE/artifacts/compare-$SHARD.json" \
+            2> >(tee "$GITHUB_WORKSPACE/artifacts/compare-$SHARD.log" >&2)
 
       - name: Report
         if: always()
         working-directory: packages/reflex-runtime
+        env:
+          SHARD: ${{ matrix.shard }}
+          LABEL: ${{ matrix.label }}
+          MODE: ${{ needs.refs.outputs.mode }}
         run: |
           node bench/ci-report.mjs \
-            "$GITHUB_WORKSPACE/artifacts/compare-${{ matrix.level }}.json" \
-            --title "Level ${{ matrix.level }}" \
-            --mode "${{ needs.refs.outputs.mode }}"
+            "$GITHUB_WORKSPACE/artifacts/compare-$SHARD.json" \
+            --title "Shard $SHARD: $LABEL" \
+            --mode "$MODE"
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
-          name: runtime-benchmarks-${{ matrix.level }}
+          name: runtime-benchmarks-${{ matrix.shard }}
           path: artifacts/
           if-no-files-found: warn
           retention-days: 30
