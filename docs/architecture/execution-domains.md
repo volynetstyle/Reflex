@@ -121,6 +121,30 @@ provider layer for later lookups only; it notifies nobody, and consumers that
 already looked a value up keep it. A value that must change observably is
 provided as an accessor (signal) and read reactively.
 
+## Lifetime and borrowing (PR-05)
+
+Managed values (`createOwnedSignal`, `createOwnedComputed`) record their
+owner `OwnershipNode` on the handle, never on the reactive node.
+
+| Reader scope vs owner             | Without agreement | With `lease()` / `transfer()` |
+| --------------------------------- | ----------------- | ----------------------------- |
+| Same scope or descendant          | Allowed           | —                             |
+| Sibling                           | `BorrowError`     | Allowed                       |
+| Ancestor (longer-lived) of owner  | `BorrowError`     | Allowed                       |
+| Other execution domain            | Use a port        | `transfer()` rejected         |
+
+- When the owner closes with no lease, the handle is released: reads and
+  writes throw `ReleasedResourceError`, and the graph node is unlinked at the
+  owner domain's next safe point.
+- With leases outstanding the value stays live until the last lease ends
+  (explicit `end()` or the borrower closing).
+- `transfer()` moves ownership inside one domain; the old owner's closure no
+  longer releases it.
+- Managed writes run in the owner's domain.
+- The borrow check runs in development builds only, at the handle's read.
+  Release checks run in every build. Type brands and handles cannot stop code
+  that holds raw nodes; this is a correctness aid, not isolation.
+
 ## Forbidden operations
 
 - Adding `owner`/`realm`/domain fields to `ReactiveNode`, or changing
