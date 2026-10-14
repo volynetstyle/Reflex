@@ -27,6 +27,8 @@ export type { Reaction, ReactionFn, Watch } from "./api/effect";
  * API
  */
 export { untracked, batch, event, flush, createRuntime } from "./infra/runtime";
+export type { Runtime, RuntimeOptions } from "./infra/runtime";
+export type { ExecutionDomain } from "@volynets/reflex-runtime";
 /**
  * API
  */

@@ -1,12 +1,16 @@
 import {
   createConsumer,
   createProducer,
+  getActiveRuntimeContext,
   readConsumer,
   readProducer,
   writeProducer,
   type ReactiveNode,
 } from "@volynets/reflex-runtime";
-import { disposeNode } from "@volynets/reflex-runtime/internal";
+import {
+  currentConsumer,
+  disposeNode,
+} from "@volynets/reflex-runtime/internal";
 import { addCleanup } from "../ownership/ownership.cleanup";
 import { isShuttingDown } from "../ownership/ownership.meta";
 import type { OwnershipNode } from "../ownership/ownership.node";
@@ -18,7 +22,7 @@ import { runInDomain } from "./enter";
 
 /**
  * Lifetime rule (O2): absent an explicit lease, the owner of a producer must
- * outlive every scope that keeps a live dependency on it. An ancestor-owned
+ * outlive every scope that keeps a live (tracked) dependency on it. An ancestor-owned
  * (or same-scope) producer may be read by descendants; a sibling- or
  * child-owned producer read by a longer-lived scope needs `lease()` or
  * `transfer()`.
@@ -88,6 +92,20 @@ function hasLease(lifetime: Lifetime, reader: OwnershipNode | null): boolean {
 }
 
 function assertBorrow(lifetime: Lifetime): void {
+  // Only tracked reads keep a live dependency; untracked snapshot reads are
+  // always allowed.
+  if (currentConsumer === null) return;
+
+  // G1/G2: a tracked read from another domain would create a hidden
+  // cross-domain edge.
+  const domain = lifetime.owner.domain;
+  if (domain != null && getActiveRuntimeContext() !== domain.context) {
+    throw new BorrowError(
+      "A reactive computation read a value owned by another execution domain. " +
+        "Cross-domain values travel through ports.",
+    );
+  }
+
   const reader = getActiveOwnerContext()?.currentNode ?? null;
   if (reader === null || isAncestorOrSelf(lifetime.node, reader)) return;
   if (hasLease(lifetime, reader)) return;

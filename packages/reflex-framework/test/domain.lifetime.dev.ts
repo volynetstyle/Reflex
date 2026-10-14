@@ -4,6 +4,7 @@ import {
   createExecutionDomain,
   readConsumer,
   runWatcher,
+  untracked,
   type WatcherNode,
 } from "@volynets/reflex-runtime";
 import {
@@ -46,7 +47,10 @@ function setup() {
   // Enter an existing scope without re-parenting it.
   const inScope = <T>(node: OwnershipNode, fn: () => T): T =>
     runManaged(root.owner, node, fn);
-  return { domain, root, scope, inScope };
+  // A tracked read: the only kind that keeps a live dependency.
+  const track = <T>(node: OwnershipNode, read: () => T): T =>
+    inScope(node, () => readConsumer(createConsumer(read)));
+  return { domain, root, scope, inScope, track };
 }
 
 describe("borrow and lifetime rules (O2, DEV)", () => {
@@ -65,35 +69,37 @@ describe("borrow and lifetime rules (O2, DEV)", () => {
     expect(seen).toEqual([1, 2]);
   });
 
-  it("rejects a sibling-owned read", () => {
-    const { root, scope, inScope } = setup();
+  it("rejects a tracked sibling-owned read", () => {
+    const { root, scope, inScope, track } = setup();
     const left = scope();
     const right = scope();
     const signal = inScope(left, () => createOwnedSignal(root.owner, 1));
 
-    expect(() => inScope(right, () => signal())).toThrow(BorrowError);
+    expect(() => track(right, () => signal())).toThrow(BorrowError);
+    // An untracked snapshot keeps no dependency and is always allowed.
+    expect(inScope(right, () => signal())).toBe(1);
   });
 
-  it("rejects a child-owned read from the parent", () => {
-    const { root, scope, inScope } = setup();
+  it("rejects a tracked child-owned read from the parent", () => {
+    const { root, scope, inScope, track } = setup();
     const child = scope();
     const signal = inScope(child, () => createOwnedSignal(root.owner, 1));
 
-    expect(() => root.run(() => signal())).toThrow(BorrowError);
+    expect(() => track(root.node, () => signal())).toThrow(BorrowError);
   });
 
   it("allows a leased read and keeps the value live until the lease ends", () => {
-    const { root, scope, inScope } = setup();
+    const { root, scope, inScope, track } = setup();
     const left = scope();
     const right = scope();
     const signal = inScope(left, () => createOwnedSignal(root.owner, 7));
     const end = lease(signal, right);
 
-    expect(inScope(right, () => signal())).toBe(7);
+    expect(track(right, () => signal())).toBe(7);
 
     disposeOwnershipNode(left);
     expect(isReleased(signal)).toBe(false);
-    expect(inScope(right, () => signal())).toBe(7);
+    expect(track(right, () => signal())).toBe(7);
 
     end();
     expect(isReleased(signal)).toBe(true);
@@ -114,15 +120,16 @@ describe("borrow and lifetime rules (O2, DEV)", () => {
   });
 
   it("moves ownership with transfer()", () => {
-    const { root, scope, inScope } = setup();
+    const { root, scope, inScope, track } = setup();
     const child = scope();
     const signal = inScope(child, () => createOwnedSignal(root.owner, 3));
+    expect(() => track(root.node, () => signal())).toThrow(BorrowError);
 
     root.run(() => transfer(signal, root.owner));
     disposeOwnershipNode(child);
 
     expect(isReleased(signal)).toBe(false);
-    expect(root.run(() => signal())).toBe(3);
+    expect(track(root.node, () => signal())).toBe(3);
   });
 
   it("refuses to transfer across domains", () => {
@@ -196,5 +203,17 @@ describe("borrow and lifetime rules (O2, DEV)", () => {
 
     expect(linkedInside).toBe(true);
     expect(probe.firstIn).toBeNull();
+  });
+});
+
+describe("cross-domain reads of owned values (G1/G2, DEV)", () => {
+  it("rejects a tracked read from another domain and allows a snapshot", () => {
+    const a = createManagedRoot(createExecutionDomain());
+    const b = createManagedRoot(createExecutionDomain());
+    const value = a.run(() => createOwnedSignal(a.owner, 1));
+    const reader = createConsumer(() => value());
+
+    expect(() => b.run(() => readConsumer(reader))).toThrow(BorrowError);
+    expect(b.run(() => untracked(() => value()))).toBe(1);
   });
 });

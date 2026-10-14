@@ -20,6 +20,19 @@ const check = `
     assert.equal(internal.currentConsumer, null);
   });
   assert.equal(internal.getActiveRuntimeContext(), outer);
+  // Execution domains share the same registry and kernel through both entries.
+  assert.equal(core.createExecutionDomain, internal.createExecutionDomain);
+  const a = core.createExecutionDomain();
+  const b = internal.createExecutionDomain();
+  assert.equal(internal.getExecutionDomain(a.context), a);
+  assert.equal(core.getExecutionDomain(b.context), b);
+  a.run(() => {
+    assert.equal(internal.getActiveExecutionDomain(), a);
+    b.run(() => assert.equal(core.getActiveRuntimeContext(), b.context));
+    assert.equal(internal.getActiveRuntimeContext(), a.context);
+  });
+  a.close();
+  assert.equal(internal.getExecutionDomain(a.context).closed, true);
 `;
 for (const development of [false, true]) {
   const source =

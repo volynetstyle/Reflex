@@ -318,6 +318,56 @@ docs/runtime/scheduler-contract.md
 
 ---
 
+## Execution Domains
+
+Several independent reactive applications can share one kernel. Each
+**execution domain** owns a register bank, host hooks, one scheduler and a
+managed entry depth; nodes are not tagged with a domain.
+
+```ts
+import {
+  createExecutionDomain,
+  createProducer,
+  createWatcher,
+  readProducer,
+  runWatcher,
+  writeProducer,
+} from "@volynets/reflex-runtime";
+
+const queue = [];
+const app = createExecutionDomain({
+  scheduler: {
+    onNodeInvalidated: (node) => queue.push(node), // enqueue only
+    flush: () => {
+      while (queue.length) runWatcher(queue.shift());
+    },
+  },
+});
+
+const count = app.run(() => createProducer(0));
+app.run(() => runWatcher(createWatcher(() => console.log(readProducer(count)))));
+
+app.batch(() => writeProducer(count, 1));
+app.flush(); // runs inside `app`, using only `app`'s queue
+app.close(); // logical close now, teardown at the next safe point
+```
+
+| Surface | Use for | Guarantees |
+| ------- | ------- | ---------- |
+| **Managed**: `createExecutionDomain`, `domain.run/batch/flush/teardown/close`, `createSchedulerDomain` (scheduler), `runManaged`, `bindManaged`, `createOwnedSignal` (framework) | Independent apps, SSR requests, renderers | Per-domain scheduling, register/phase isolation, safe-point teardown, async completion authority |
+| **Raw**: `createProducer`, `readProducer`, `writeProducer`, `runWatcher`, `runWithRuntimeContext`, … | Trusted low-level code | Operate under the *active* context; reading or writing another domain's nodes from here is unchecked |
+
+- `domain.run(fn)` enters the domain; a nested entry into the already active
+  domain does not reload registers.
+- Raw writes are attributed to the active domain. Write another domain's
+  nodes through that domain's entry point.
+- Values cross domains only explicitly: an untracked snapshot read, or a
+  port (`reflex-framework`), never a reactive edge.
+- `domain.teardown(fn)` runs graph teardown now at depth zero, otherwise at
+  the outermost managed exit.
+- Domains are not a security boundary. See
+  `docs/architecture/execution-domains.md` in the repository.
+
 ## Untracked Reads
 
 Reads may be performed without dependency registration.

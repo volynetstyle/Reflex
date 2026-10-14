@@ -141,6 +141,9 @@ owner `OwnershipNode` on the handle, never on the reactive node.
 - `transfer()` moves ownership inside one domain; the old owner's closure no
   longer releases it.
 - Managed writes run in the owner's domain.
+- Only tracked reads (inside a computation) keep a live dependency, so only
+  they are checked; an untracked snapshot read is always allowed. A tracked
+  read of a value owned by another domain is rejected (G1/G2).
 - The borrow check runs in development builds only, at the handle's read.
   Release checks run in every build. Type brands and handles cannot stop code
   that holds raw nodes; this is a correctness aid, not isolation.
