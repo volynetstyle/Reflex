@@ -7,6 +7,7 @@
 //   node scripts/build-baseline-oracle.mjs --commit <sha>  any commit
 //   node scripts/build-baseline-oracle.mjs --source        current working tree (sanity)
 //   ... --mutate "<file>::<search>::<replace>"             seeded mutant (oracle qualification)
+//   ... --production                                       production flags, minified
 //   ... --profile                                          PROFILE build exposing
 //                                                          setRuntimeProjectionObserver
 //   ... --out <dir>                                        output directory
@@ -37,6 +38,8 @@ const option = (name) => {
 };
 const fromSource = args.includes("--source");
 const profile = args.includes("--profile");
+// Production flags and minification, for performance comparison bundles.
+const production = args.includes("--production");
 const mutations = args
   .map((arg, index) => (arg === "--mutate" ? args[index + 1] : undefined))
   .filter(Boolean)
@@ -60,6 +63,7 @@ const resolvedCommit = fromSource
 const label =
   resolvedCommit.slice(0, 12) +
   (profile ? "-profile" : "") +
+  (production ? "-production" : "") +
   (mutations.length === 0
     ? ""
     : "-mutant-" +
@@ -146,8 +150,8 @@ try {
     __TRACKING_ONE_HOP__: "true",
     __TRACKING_TWO_HOP__: "true",
     __TRACKING_LAST_EDGE__: "true",
-    __TEST__: "true",
-    __PROD__: "false",
+    __TEST__: production ? "false" : "true",
+    __PROD__: production ? "true" : "false",
   };
 
   mkdirSync(out, { recursive: true });
@@ -171,6 +175,7 @@ try {
     define: flags,
     plugins: [aliasPlugin],
     outfile: path.join(out, "runtime.mjs"),
+    minify: production,
     logLevel: "error",
   });
 
@@ -182,6 +187,7 @@ try {
         commit: resolvedCommit,
         mutations,
         profile,
+        production,
         flags,
         esbuild: esbuild.version,
         bundleSha256: createHash("sha256").update(bundle).digest("hex"),
