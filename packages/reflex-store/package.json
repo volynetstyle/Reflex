@@ -91,7 +91,7 @@
     "@volynets/reflex-runtime": "workspace:*",
     "@volynets/reflex-scheduler": "workspace:^",
     "rollup": "^4.54.0",
-    "rollup-plugin-dts": "^6.4.1",
+    "rollup-plugin-dts": "^6.5.1",
     "@volynets/reflex-framework": "workspace:*"
   },
   "keywords": [
