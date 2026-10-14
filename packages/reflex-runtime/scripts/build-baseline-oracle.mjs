@@ -57,6 +57,26 @@ const pinned = readFileSync(
   "utf8",
 ).trim();
 const commit = fromSource ? "working-tree" : (option("--commit") ?? pinned);
+
+// Shallow clones (CI checkouts) lack the pinned commit; fetch just that one.
+const hasCommit = (ref) => {
+  try {
+    execFileSync("git", ["cat-file", "-e", `${ref}^{commit}`], {
+      cwd: repoRoot,
+      stdio: "ignore",
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};
+if (!fromSource && !hasCommit(commit) && /^[0-9a-f]{40}$/.test(commit)) {
+  execFileSync("git", ["fetch", "--no-tags", "--depth=1", "origin", commit], {
+    cwd: repoRoot,
+    stdio: ["ignore", "ignore", "inherit"],
+  });
+}
+
 const resolvedCommit = fromSource
   ? "working-tree"
   : execFileSync("git", ["rev-parse", commit], {
