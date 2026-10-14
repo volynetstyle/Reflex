@@ -5,6 +5,7 @@
 //        [--seed 1] [--samples 25] [--out <file.json>] [--quick]
 //        [--family <n>]   multiplicity family size when running a shard
 //        [--no-predictable]  measure with V8's default concurrent compilation
+//        [--fail-on slower,invalid,error|none]  verdicts that set exit code 1
 //
 // Protocol (docs/performance/BENCHMARK_PROTOCOL.md):
 //  1. Build both sides as production bundles with the same toolchain/flags.
@@ -21,6 +22,8 @@
 //  5. Verdicts use a pre-declared practical threshold. A control interval
 //     that excludes zero means the method itself sees a difference between
 //     identical builds, and the workload's comparison is invalid.
+//  6. A worker that crashes or times out is retried once; a second failure
+//     gives that workload the verdict "error" and the run continues.
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -60,6 +63,10 @@ const threshold = Number(option("--threshold", 0.03));
 const samples = Number(option("--samples", quick ? 15 : 25));
 let seed = Number(option("--seed", 1)) >>> 0 || 1;
 const memoryRuns = Number(option("--memory-runs", 5));
+const failOnOption = option("--fail-on", "slower,invalid,error");
+const failOn = new Set(
+  failOnOption === "none" ? [] : failOnOption.split(",").filter(Boolean),
+);
 
 const random = () => {
   seed ^= seed << 13;
@@ -114,6 +121,17 @@ function build(ref) {
 }
 
 function worker(bundle, id, mode, extra = []) {
+  try {
+    return workerOnce(bundle, id, mode, extra);
+  } catch (first) {
+    process.stderr.write(
+      `  retry ${id} ${mode}: ${first.message.split("\n")[0]}\n`,
+    );
+    return workerOnce(bundle, id, mode, extra);
+  }
+}
+
+function workerOnce(bundle, id, mode, extra) {
   const result = spawnSync(
     process.execPath,
     [
@@ -129,7 +147,10 @@ function worker(bundle, id, mode, extra = []) {
     { encoding: "utf8", windowsHide: true, timeout: 120_000 },
   );
   if (result.status !== 0) {
-    throw new Error(`worker ${id} ${mode} failed:\n${result.stderr}`);
+    const cause = result.error?.message ?? `exit ${result.status}`;
+    throw new Error(
+      `worker ${id} ${mode} failed (${cause}):\n${result.stderr}`,
+    );
   }
   return JSON.parse(result.stdout.trim().split("\n").at(-1));
 }
@@ -146,10 +167,17 @@ process.stderr.write(
 
 // 1. Semantic verification.
 const verification = {};
+// Workloads whose worker failed twice; they get the verdict "error".
+const errors = {};
 for (const w of selected) {
-  const a = worker(sides.A.bundle, w.id, "verify").value;
-  const b = worker(sides.B.bundle, w.id, "verify").value;
-  verification[w.id] = { baseline: a, candidate: b, equal: a === b };
+  try {
+    const a = worker(sides.A.bundle, w.id, "verify").value;
+    const b = worker(sides.B.bundle, w.id, "verify").value;
+    verification[w.id] = { baseline: a, candidate: b, equal: a === b };
+  } catch (error) {
+    errors[w.id] = error.message;
+    verification[w.id] = { equal: false, error: error.message };
+  }
 }
 
 // 2. Randomized schedule of paired processes: A vs B and A vs A'.
@@ -181,6 +209,22 @@ function pair(workload, other, swapped) {
 
 blocks.forEach((block, index) => {
   if (!verification[block.workload].equal) return;
+  if (errors[block.workload] !== undefined) return;
+  try {
+    measureBlock(block);
+  } catch (error) {
+    errors[block.workload] = error.message;
+    process.stderr.write(`  error ${block.workload}: worker failed twice\n`);
+  }
+  if ((index + 1) % 10 === 0) {
+    const elapsed = (Date.now() - started) / 1000;
+    process.stderr.write(
+      `  ${index + 1}/${blocks.length} blocks, ${elapsed.toFixed(0)}s\n`,
+    );
+  }
+});
+
+function measureBlock(block) {
   // The build loaded first into a process runs measurably faster or slower
   // than the second (1-3% on the CI calibration, sign depending on the
   // workload). Every comparison therefore runs in both orientations and the
@@ -207,13 +251,7 @@ blocks.forEach((block, index) => {
     B: combine(processes["B+"], processes["B-"]),
     C: combine(processes["C+"], processes["C-"]),
   });
-  if ((index + 1) % 10 === 0) {
-    const elapsed = (Date.now() - started) / 1000;
-    process.stderr.write(
-      `  ${index + 1}/${blocks.length} blocks, ${elapsed.toFixed(0)}s\n`,
-    );
-  }
-});
+}
 
 // 3. Statistics and verdicts.
 // A shard of a larger run passes the whole family size (--family) so its
@@ -234,6 +272,15 @@ function summarize(logRatios) {
 
 const results = timed.map((w) => {
   const verified = verification[w.id];
+  if (errors[w.id] !== undefined) {
+    return {
+      id: w.id,
+      level: w.level,
+      verdict: "error",
+      reason: "worker failed twice",
+      error: errors[w.id],
+    };
+  }
   if (!verified.equal) {
     return {
       id: w.id,
@@ -284,7 +331,16 @@ const results = timed.map((w) => {
 // metadata, cache growth) cancel between a short and a long run, and only
 // memory that grows with the number of cycles remains.
 const memoryCycles = [2000, 8000];
-const memoryResults = memory.map((w) => {
+const memoryResults = memory.flatMap((w) => {
+  try {
+    return [measureMemory(w)];
+  } catch (error) {
+    errors[w.id] = error.message;
+    return [];
+  }
+});
+
+function measureMemory(w) {
   const measure = (bundle) => {
     const slopes = Array.from({ length: memoryRuns }, () => {
       const [short, long] = memoryCycles.map((cycles) =>
@@ -309,7 +365,7 @@ const memoryResults = memory.map((w) => {
     baselineSlopes: baseline.slopes,
     candidateSlopes: candidate.slopes,
   };
-});
+}
 
 const report = {
   schemaVersion: 1,
@@ -342,8 +398,10 @@ const report = {
     seed: Number(option("--seed", 1)),
     family,
     v8Flags,
+    failOn: [...failOn],
   },
   verification,
+  errors,
   results,
   memory: memoryResults,
   runs,
@@ -365,8 +423,8 @@ const lines = [
   `| workload | baseline ns/op | Δ median | 95% interval | control Δ | position | pair noise | verdict |`,
   `| --- | ---: | ---: | --- | ---: | ---: | ---: | --- |`,
   ...results.map((r) =>
-    r.verdict === "invalid" && r.candidate === undefined
-      ? `| ${r.id} | | | | | | | invalid (${r.reason}) |`
+    r.candidate === undefined
+      ? `| ${r.id} | | | | | | | ${r.verdict} (${r.reason}) |`
       : `| ${r.id} | ${r.baselineNsPerOp.toFixed(2)} | ${pct(r.candidate.medianDelta)} | [${pct(r.candidate.lower)}, ${pct(r.candidate.upper)}] | ${pct(r.control.medianDelta)} | ${pct(r.positionEffect)} | ${(r.pairNoise * 100).toFixed(1)}% | ${r.verdict} |`,
   ),
   ...memoryResults.map(
@@ -377,8 +435,9 @@ const lines = [
 process.stdout.write(
   `${lines.join("\n")}\n\nReport: ${path.relative(repoRoot, out)}\n`,
 );
-process.exitCode = results.some(
-  (r) => r.verdict === "slower" || r.verdict === "invalid",
-)
-  ? 1
-  : 0;
+const memoryErrors = memory.filter((w) => errors[w.id] !== undefined);
+process.exitCode =
+  results.some((r) => failOn.has(r.verdict)) ||
+  (failOn.has("error") && memoryErrors.length !== 0)
+    ? 1
+    : 0;
