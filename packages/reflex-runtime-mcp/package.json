@@ -37,8 +37,8 @@
     "@volynets/reflex-runtime": "workspace:*"
   },
   "devDependencies": {
-    "@modelcontextprotocol/client": "2.0.0",
-    "@types/node": "^26.1.2",
+    "@modelcontextprotocol/client": "2.3.1",
+    "@types/node": "^26.6.5",
     "typescript": "^5.9.3"
   },
   "private": false,
