@@ -1,24 +1,16 @@
 import {
-  createRuntimeContext,
-  enterReactiveBatch,
-  getActiveRuntimeContext,
-  leaveReactiveBatch,
-  runWithRuntimeContext,
   switchRuntimeContext,
   untracked,
 } from "@volynets/reflex-runtime/internal";
 import type {
-  ReactiveNode,
+  ExecutionDomain,
   RuntimeContext as RuntimeExecutionContext,
   RuntimeHostHooks,
 } from "@volynets/reflex-runtime/internal";
 import { subscribeEvent } from "./event";
 import { createSource } from "./factory";
 import { createEventDispatcher } from "../policy";
-import {
-  createRuntimeSchedulerBinding,
-  resolveEffectSchedulerMode,
-} from "@volynets/reflex-scheduler";
+import { createSchedulerDomain } from "@volynets/reflex-scheduler";
 import type { EffectStrategy } from "@volynets/reflex-scheduler";
 
 type BatchFn = <T>(fn: () => T) => T;
@@ -58,6 +50,8 @@ export interface Runtime {
   event<T>(): EventSource<T>;
   flush(): void;
   readonly ctx: RuntimeContext;
+  /** The isolated execution domain backing this runtime. */
+  readonly domain: ExecutionDomain;
 }
 
 export function createRuntime({
@@ -71,77 +65,17 @@ export function createRuntime({
     });
   }
 
-  const execution = createRuntimeContext({
-    hooks: { onRuntimeIdle: hooks?.onRuntimeIdle },
+  // One scheduler per domain (S1): hooks, queue and flush all belong to it.
+  const { domain, scheduler } = createSchedulerDomain({
+    hooks,
+    effectStrategy,
   });
+  const execution = domain.context;
   const ctx: RuntimeContext = { scope: "runtime", execution };
-  const schedulerMode = resolveEffectSchedulerMode(effectStrategy);
-  const scheduler = createRuntimeSchedulerBinding(schedulerMode, execution);
-  const runBatch = <T>(fn: () => T): T => {
-    // Public batching composes two independent boundaries. Close scheduler
-    // policy first so a settled hook never observes it in Batching phase.
-    enterReactiveBatch();
-    scheduler.enterBatch();
-
-    let errors: unknown[] | undefined;
-
-    try {
-      return fn();
-    } catch (error) {
-      errors = [error];
-      throw error;
-    } finally {
-      try {
-        scheduler.leaveBatch();
-      } catch (error) {
-        (errors ??= []).push(error);
-      }
-      try {
-        leaveReactiveBatch();
-      } catch (error) {
-        (errors ??= []).push(error);
-      }
-
-      if (errors !== undefined) {
-        if (errors.length === 1) throw errors[0];
-        throw new AggregateError(errors, "Reactive batch failed");
-      }
-    }
-  };
-  const runtimeBatch = <T>(fn: () => T): T => {
-    if (getActiveRuntimeContext() === execution) {
-      return runBatch(fn);
-    }
-
-    return runWithRuntimeContext(execution, () => runBatch(fn));
-  };
-  const flush = (): void => {
-    if (getActiveRuntimeContext() === execution) {
-      scheduler.flush();
-      return;
-    }
-
-    runWithRuntimeContext(execution, scheduler.flush);
-  };
-  const dispatcher = createEventDispatcher(runtimeBatch);
-  const externalNodeInvalidated = hooks?.onNodeInvalidated;
-  // Runtime invalidation hooks are enqueue-only. Eager delivery is owned by
-  // the subsequent reactive-settled boundary, never by the propagation hook.
-  const enqueueEffect = scheduler.onNodeInvalidated;
-  execution.nodeInvalidatedHook =
-    externalNodeInvalidated === undefined
-      ? enqueueEffect
-      : (node: ReactiveNode): void => {
-          enqueueEffect(node);
-          externalNodeInvalidated(node);
-        };
-
-  // The new context is still inactive; install the trusted scheduler hooks
-  // before its first load, without another configuration/normalization pass.
-  execution.hostFlushHook = scheduler.onHostFlush;
+  const dispatcher = createEventDispatcher(domain.batch);
 
   switchRuntimeContext(execution);
-  batch = runBatch;
+  batch = domain.batch;
   activeEvent = function <T>() {
     const source = createSource<T>();
 
@@ -154,14 +88,15 @@ export function createRuntime({
       },
     };
   };
-  activeFlush = flush;
+  activeFlush = domain.flush;
   activeHasPending = scheduler.hasPending;
 
   return {
     ctx,
-    batch: runtimeBatch,
+    domain,
+    batch: domain.batch,
     event: activeEvent,
-    flush,
+    flush: domain.flush,
   };
 }
 

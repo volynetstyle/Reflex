@@ -10,3 +10,4 @@ export * from "./scheduler.infra";
 export * from "./scheduler.instance";
 export * from "./scheduler.queue";
 export * from "./scheduler.types";
+export * from "./scheduler.domain";

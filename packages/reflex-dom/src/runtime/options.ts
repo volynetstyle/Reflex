@@ -1,13 +1,12 @@
 import {
-  configureRuntimeContext,
-  createRuntimeContext,
-  getActiveRuntimeContext,
-  runWithRuntimeContext,
+  createExecutionDomain,
+  type ExecutionDomain,
   type RuntimeContext,
   type RuntimeHostHooks,
 } from "@volynets/reflex-runtime/internal";
 import type { MountEffects } from "./mount-effects";
 import {
+  cleanupQueuedNodesAfterAbort,
   createRuntimeSchedulerBinding,
   resolveEffectSchedulerMode,
   type EffectStrategy,
@@ -17,6 +16,8 @@ import { createPromiseMicrotaskCarrier } from "./scheduler/host-carrier";
 
 export interface RuntimeInstance {
   readonly execution: RuntimeContext;
+  /** The isolated execution domain backing this renderer runtime. */
+  readonly domain: ExecutionDomain;
   run<T>(fn: () => T): T;
   batch<T>(fn: () => T): T;
   flush(): void;
@@ -42,56 +43,43 @@ export function createRendererRuntime(
   options: DOMRuntimeOptions = {},
   mountEffects?: MountEffects,
 ): RuntimeInstance {
-  const { hooks } = options;
   const strategy = options.effectStrategy ?? "eager";
-  const execution = createRuntimeContext();
-  const scheduler = createRuntimeSchedulerBinding(
-    resolveEffectSchedulerMode(strategy),
-    execution,
-  );
 
-  const run = <T>(fn: () => T): T => {
-    if (getActiveRuntimeContext() === execution) return fn();
-    return runWithRuntimeContext(execution, fn);
-  };
-
-  const coordinator = createDOMSchedulerCoordinator(
-    scheduler,
-    mountEffects,
-    createPromiseMicrotaskCarrier(),
-    run,
-  );
-  const externalNodeInvalidated = hooks?.onNodeInvalidated;
-  const onNodeInvalidated =
-    externalNodeInvalidated === undefined
-      ? coordinator.onNodeInvalidated
-      : (node: Parameters<typeof coordinator.onNodeInvalidated>[0]): void => {
-          coordinator.onNodeInvalidated(node);
-          externalNodeInvalidated(node);
-        };
-  const externalRuntimeIdle = hooks?.onRuntimeIdle;
-  const onRuntimeIdle =
-    externalRuntimeIdle === undefined
-      ? coordinator.onRuntimeIdle
-      : (): void => {
-          coordinator.onRuntimeIdle();
-          externalRuntimeIdle();
-        };
-
-  configureRuntimeContext(execution, {
-    hooks: {
-      onNodeInvalidated,
-      onRuntimeIdle,
-    },
-    scheduler: {
-      onHostFlush: scheduler.onHostFlush,
+  // The coordinator is this domain's scheduler: invalidations, microtask
+  // resume, batches and flushes all execute inside the domain (S1).
+  const domain = createExecutionDomain({
+    hooks: options.hooks,
+    scheduler(context) {
+      const scheduler = createRuntimeSchedulerBinding(
+        resolveEffectSchedulerMode(strategy),
+        context,
+      );
+      const coordinator = createDOMSchedulerCoordinator(
+        scheduler,
+        mountEffects,
+        createPromiseMicrotaskCarrier(),
+        (fn) => domain.run(fn),
+      );
+      return {
+        onNodeInvalidated: coordinator.onNodeInvalidated,
+        onRuntimeIdle: coordinator.onRuntimeIdle,
+        onHostFlush: scheduler.onHostFlush,
+        batch: coordinator.batch,
+        flush: coordinator.flush,
+        hasPending: scheduler.hasPending,
+        release() {
+          coordinator.cancel();
+          cleanupQueuedNodesAfterAbort(scheduler.core.queue);
+        },
+      };
     },
   });
 
   return {
-    execution,
-    run,
-    batch: coordinator.batch,
-    flush: coordinator.flush,
+    execution: domain.context,
+    domain,
+    run: domain.run,
+    batch: domain.batch,
+    flush: domain.flush,
   };
 }
