@@ -70,7 +70,7 @@ there. Cleanup removes the unmatched suffix.
 `edge.version` is a tracking stamp, not a source-value revision. Runtime reads
 extending a prefix use its cursor edge's stamp, even after nested computation
 advances the global `trackingEpoch`. A first read uses the current epoch.
-The explicit resolver API still accepts its supplied version.
+`resolveTrackedRead` derives the stamp itself; callers cannot supply one.
 
 The 32-edge prefix limit bounds only that local scan. Incoming suffix and
 outgoing membership searches may traverse complete lists. The eager suffix

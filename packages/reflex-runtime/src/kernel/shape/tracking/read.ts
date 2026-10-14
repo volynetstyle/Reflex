@@ -1,4 +1,4 @@
-import { currentConsumer, trackingEpoch } from "@runtime/kernel/state";
+import { currentConsumer } from "@runtime/kernel/state";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 
 import { resolveTrackedRead } from "./resolve";
@@ -12,10 +12,5 @@ export function trackRead(
   consumer = currentConsumer,
 ): void {
   if (consumer === null) return;
-  resolveTrackedRead(
-    source,
-    consumer,
-    consumer.tailIn?.version ?? trackingEpoch,
-    true,
-  );
+  resolveTrackedRead(source, consumer);
 }

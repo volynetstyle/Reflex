@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   Consumer,
@@ -7,6 +7,7 @@ import {
   configureRuntimeContext,
   linkEdge,
   resolveTrackedRead,
+  setTrackingEpoch,
 } from "../../../src/kernel";
 import {
   expectGraphIntegrity,
@@ -16,11 +17,17 @@ import {
   resetRuntime,
 } from "../../runtime.test_utils";
 
-import { createConsumer, createProducer } from "../../../src/protocol/create.node";
+import {
+  createConsumer,
+  createProducer,
+} from "../../../src/protocol/create.node";
 import { readConsumer } from "../../../src/protocol/read.consumer";
 import { readProducer } from "../../../src/protocol/read.producer";
 import { writeProducer } from "../../../src/protocol/write.producer";
-import { incomingEdges, outgoingEdges } from "../../tools/graph/graph-inspector";
+import {
+  incomingEdges,
+  outgoingEdges,
+} from "../../tools/graph/graph-inspector";
 
 function createProducerNode(): ReactiveNode {
   return new ReactiveNode(undefined, null, Producer);
@@ -54,9 +61,11 @@ describe("Reactive runtime - tracking resolver matrix", () => {
     );
     const [firstEdge, expectedEdge, lookaheadEdge, movedEdge, lastEdge] = edges;
 
+    // The cursor was accepted in this pass, so it carries the pass stamp.
     target.tailIn = firstEdge!;
+    firstEdge!.version = 17;
 
-    expect(resolveTrackedRead(sources[3]!, target, 17, true)).toBe(true);
+    resolveTrackedRead(sources[3]!, target);
     expectIncomingEdges(target, [
       firstEdge!,
       movedEdge!,
@@ -81,8 +90,10 @@ describe("Reactive runtime - tracking resolver matrix", () => {
     const [firstEdge, secondEdge, thirdEdge, movedEdge] = edges;
 
     expecttailIn(target, null);
+    // A first read stamps with the current epoch.
+    setTrackingEpoch(23);
 
-    expect(resolveTrackedRead(sources[3]!, target, 23, true)).toBe(true);
+    resolveTrackedRead(sources[3]!, target);
     expectIncomingEdges(target, [
       movedEdge!,
       firstEdge!,
@@ -113,8 +124,9 @@ describe("Reactive runtime - tracking resolver matrix", () => {
         : null;
 
       target.tailIn = retainedEdge;
+      retainedEdge.version = 29;
 
-      expect(resolveTrackedRead(appended, target, 29, true)).toBe(true);
+      resolveTrackedRead(appended, target);
 
       const appendedEdge = target.tailIn!;
       expect(appendedEdge).not.toBe(retainedEdge);
@@ -131,26 +143,6 @@ describe("Reactive runtime - tracking resolver matrix", () => {
     },
   );
 
-  it("leaves the graph untouched when an unresolved read blocks slow path", () => {
-    const sources = Array.from({ length: 6 }, createProducerNode);
-    const target = createConsumerNode();
-    const edges = sources.map((source) =>
-      linkEdge(source, target, target.lastIn, 7),
-    );
-    const strategy = vi.fn(() => edges[4]!);
-
-    configureRuntimeContext({ readTrackingStrategy: strategy });
-    target.tailIn = edges[0]!;
-
-    expect(resolveTrackedRead(sources[4]!, target, 31, false)).toBe(false);
-    expect(strategy).not.toHaveBeenCalled();
-    expectIncomingEdges(target, edges);
-    expecttailIn(target, edges[0]!);
-    expect(edges[4]!.version).toBe(7);
-    expectOutgoingEdges(sources[4]!, [edges[4]!]);
-    expectGraphIntegrity([...sources, target]);
-  });
-
   it("dedupes a sole outgoing edge from the end-of-list cursor", () => {
     forbidSlowPath();
 
@@ -160,20 +152,15 @@ describe("Reactive runtime - tracking resolver matrix", () => {
     const repeatedEdge = linkEdge(repeated, target, null, 7);
     const trailingEdge = linkEdge(trailing, target, repeatedEdge, 7);
     const currentVersion = 37;
+    setTrackingEpoch(currentVersion);
 
-    expect(resolveTrackedRead(repeated, target, currentVersion, true)).toBe(
-      true,
-    );
-    expect(resolveTrackedRead(trailing, target, currentVersion, true)).toBe(
-      true,
-    );
+    resolveTrackedRead(repeated, target);
+    resolveTrackedRead(trailing, target);
     expecttailIn(target, trailingEdge);
     expect(trailingEdge.nextIn).toBeNull();
     expectOutgoingEdges(repeated, [repeatedEdge]);
 
-    expect(resolveTrackedRead(repeated, target, currentVersion, true)).toBe(
-      true,
-    );
+    resolveTrackedRead(repeated, target);
     expectIncomingEdges(target, [repeatedEdge, trailingEdge]);
     expecttailIn(target, trailingEdge);
     expect(repeatedEdge.version).toBe(currentVersion);
@@ -195,23 +182,16 @@ describe("Reactive runtime - tracking resolver matrix", () => {
     );
     const initialEdges = [repeatedEdge, ...middleEdges];
     const currentVersion = 41;
+    setTrackingEpoch(currentVersion);
 
-    expect(resolveTrackedRead(repeated, target, currentVersion, true)).toBe(
-      true,
-    );
-    for (const source of middleSources) {
-      expect(resolveTrackedRead(source, target, currentVersion, true)).toBe(
-        true,
-      );
-    }
+    resolveTrackedRead(repeated, target);
+    for (const source of middleSources) resolveTrackedRead(source, target);
 
     const trackedTail = middleEdges.at(-1)!;
     expecttailIn(target, trackedTail);
     expect(repeatedEdge.version).toBe(currentVersion);
 
-    expect(resolveTrackedRead(repeated, target, currentVersion, true)).toBe(
-      true,
-    );
+    resolveTrackedRead(repeated, target);
     expectIncomingEdges(target, initialEdges);
     expecttailIn(target, trackedTail);
     expect(repeatedEdge.version).toBe(currentVersion);
@@ -245,7 +225,9 @@ describe("Reactive runtime - tracking resolver matrix", () => {
     const verifyTopology = () => {
       const incoming = incomingEdges(outer);
       const incomingMatches = incoming.filter((edge) => edge.from === a);
-      const outgoingMatches = outgoingEdges(a).filter((edge) => edge.to === outer);
+      const outgoingMatches = outgoingEdges(a).filter(
+        (edge) => edge.to === outer,
+      );
       expect(incomingMatches).toHaveLength(1);
       expect(outgoingMatches).toHaveLength(1);
       expect(incomingMatches[0]).toBe(retainedEdge);

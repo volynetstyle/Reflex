@@ -1,4 +1,5 @@
 import { defaultContext, readTrackingStrategy } from "@runtime/kernel/config";
+import { trackingEpoch } from "@runtime/kernel/state";
 import { devRecordTrackRead } from "@runtime/kernel/dev";
 import {
   moveLastIncomingEdgeAfterCursorUnchecked,
@@ -25,16 +26,7 @@ function resolveTrackedReadSlow(
   cursorEdge: ReactiveEdge | null,
   nextExpectedEdge: ReactiveEdge | null,
   producerVersion: number,
-  allowSlowPath: boolean,
-): boolean {
-  if (!allowSlowPath) {
-    if (__PROFILE__)
-      observeRuntimeProjection?.(
-        "projection.semantic.tracking.slow-path.blocked",
-      );
-    return false;
-  }
-
+): void {
   devRecordTrackRead(defaultContext, consumer, producer);
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.tracking.slow-path");
@@ -46,8 +38,6 @@ function resolveTrackedReadSlow(
     nextExpectedEdge,
     producerVersion,
   );
-
-  return true;
 }
 
 /**
@@ -59,8 +49,7 @@ function resolveInitialTrackedReadMiss(
   consumer: ReactiveNode,
   firstIncomingEdge: ReactiveEdge,
   producerVersion: number,
-  allowSlowPath: boolean,
-): boolean {
+): void {
   if (__TRACKING_LAST_EDGE__) {
     const lastIncomingEdge = consumer.lastIn!;
 
@@ -75,17 +64,16 @@ function resolveInitialTrackedReadMiss(
       consumer.tailIn = lastIncomingEdge;
 
       devRecordTrackRead(defaultContext, consumer, producer);
-      return true;
+      return;
     }
   }
 
-  return resolveTrackedReadSlow(
+  resolveTrackedReadSlow(
     producer,
     consumer,
     null,
     firstIncomingEdge,
     producerVersion,
-    allowSlowPath,
   );
 }
 
@@ -96,8 +84,7 @@ function resolveCursorTrackedReadMiss(
   cursorEdge: ReactiveEdge,
   expectedNextEdge: ReactiveEdge | null,
   producerVersion: number,
-  allowSlowPath: boolean,
-): boolean {
+): void {
   if (expectedNextEdge === null) {
     const firstProducerEdge = producer.firstOut;
 
@@ -119,7 +106,7 @@ function resolveCursorTrackedReadMiss(
           "projection.semantic.tracking.cursor.append",
         );
       devRecordTrackRead(defaultContext, consumer, producer);
-      return true;
+      return;
     }
 
     // With the cursor at lastIn, a sole edge to this consumer is necessarily
@@ -130,7 +117,7 @@ function resolveCursorTrackedReadMiss(
           "projection.semantic.tracking.prefix.duplicate",
         );
       devRecordTrackRead(defaultContext, consumer, producer);
-      return true;
+      return;
     }
 
     if (
@@ -146,7 +133,7 @@ function resolveCursorTrackedReadMiss(
           "projection.semantic.tracking.prefix.duplicate",
         );
       devRecordTrackRead(defaultContext, consumer, producer);
-      return true;
+      return;
     }
 
     appendTrackedEdgeAfterCursorUnchecked(
@@ -159,7 +146,7 @@ function resolveCursorTrackedReadMiss(
     if (__PROFILE__)
       observeRuntimeProjection?.("projection.semantic.tracking.cursor.append");
     devRecordTrackRead(defaultContext, consumer, producer);
-    return true;
+    return;
   }
 
   const lookahead1Edge = expectedNextEdge.nextIn;
@@ -172,12 +159,13 @@ function resolveCursorTrackedReadMiss(
         );
       devRecordTrackRead(defaultContext, consumer, producer);
 
-      return moveTrackedIncomingEdgeAfterCursorUnchecked(
+      moveTrackedIncomingEdgeAfterCursorUnchecked(
         consumer,
         cursorEdge,
         lookahead1Edge,
         producerVersion,
       );
+      return;
     }
 
     if (__TRACKING_TWO_HOP__) {
@@ -190,12 +178,13 @@ function resolveCursorTrackedReadMiss(
           );
         devRecordTrackRead(defaultContext, consumer, producer);
 
-        return moveTrackedIncomingEdgeAfterCursorUnchecked(
+        moveTrackedIncomingEdgeAfterCursorUnchecked(
           consumer,
           cursorEdge,
           lookahead2Edge,
           producerVersion,
         );
+        return;
       }
     }
   }
@@ -221,7 +210,7 @@ function resolveCursorTrackedReadMiss(
         );
 
         devRecordTrackRead(defaultContext, consumer, producer);
-        return true;
+        return;
       }
     }
   }
@@ -234,21 +223,24 @@ function resolveCursorTrackedReadMiss(
         "projection.semantic.tracking.prefix.duplicate",
       );
     devRecordTrackRead(defaultContext, consumer, producer);
-    return true;
+    return;
   }
 
-  return resolveTrackedReadSlow(
+  resolveTrackedReadSlow(
     producer,
     consumer,
     cursorEdge,
     expectedNextEdge,
     producerVersion,
-    allowSlowPath,
   );
 }
 
 /**
- * Resolve a tracked producer read against a consumer's incoming edge list.
+ * Record a read of `producer` by the tracking consumer `consumer`.
+ *
+ * The pass stamp is derived here, not supplied: a read extending the tracked
+ * prefix uses the cursor edge's stamp (nested computation may have advanced
+ * the epoch since), and the first read of a pass uses the current epoch.
  *
  * Stable dependency traces stay entirely in this small function. Dynamic
  * append/reorder/duplicate reconciliation is isolated in cold helpers so V8
@@ -257,15 +249,14 @@ function resolveCursorTrackedReadMiss(
 export function resolveTrackedRead(
   producer: ReactiveNode,
   consumer: ReactiveNode,
-  producerVersion: number,
-  allowSlowPath: boolean,
-): boolean {
+): void {
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.tracking.resolve");
 
   const cursorEdge = consumer.tailIn;
 
   if (cursorEdge !== null) {
+    const producerVersion = cursorEdge.version;
     const expectedNextEdge = cursorEdge.nextIn;
 
     // Stable traces overwhelmingly advance to the next existing edge.
@@ -276,29 +267,29 @@ export function resolveTrackedRead(
       if (__PROFILE__)
         observeRuntimeProjection?.("projection.semantic.tracking.next.hit");
       devRecordTrackRead(defaultContext, consumer, producer);
-      return true;
+      return;
     }
 
-    // Consecutive duplicate reads remain represented by the current cursor.
+    // Consecutive duplicate reads remain represented by the current cursor,
+    // which already carries this pass's stamp.
     if (cursorEdge.from === producer) {
-      cursorEdge.version = producerVersion;
-
       if (__PROFILE__)
         observeRuntimeProjection?.("projection.semantic.tracking.cursor.hit");
       devRecordTrackRead(defaultContext, consumer, producer);
-      return true;
+      return;
     }
 
-    return /* @__NOINLINE__ */ resolveCursorTrackedReadMiss(
+    /* @__NOINLINE__ */ resolveCursorTrackedReadMiss(
       producer,
       consumer,
       cursorEdge,
       expectedNextEdge,
       producerVersion,
-      allowSlowPath,
     );
+    return;
   }
 
+  const producerVersion = trackingEpoch;
   const firstIncomingEdge = consumer.firstIn;
 
   if (firstIncomingEdge === null) {
@@ -307,7 +298,7 @@ export function resolveTrackedRead(
     if (__PROFILE__)
       observeRuntimeProjection?.("projection.semantic.tracking.initial.create");
     devRecordTrackRead(defaultContext, consumer, producer);
-    return true;
+    return;
   }
 
   if (firstIncomingEdge.from === producer) {
@@ -319,14 +310,13 @@ export function resolveTrackedRead(
         "projection.semantic.tracking.initial.first-hit",
       );
     devRecordTrackRead(defaultContext, consumer, producer);
-    return true;
+    return;
   }
 
-  return /* @__NOINLINE__ */ resolveInitialTrackedReadMiss(
+  /* @__NOINLINE__ */ resolveInitialTrackedReadMiss(
     producer,
     consumer,
     firstIncomingEdge,
     producerVersion,
-    allowSlowPath,
   );
 }
