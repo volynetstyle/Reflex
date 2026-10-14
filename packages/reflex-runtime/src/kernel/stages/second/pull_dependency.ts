@@ -16,7 +16,7 @@ import {
 
 import { advance } from "./advance";
 import { pull_iterator } from "./pull_iterator";
-import { profilePullNode } from "./utils";
+import { profilePullNode } from "../profile";
 
 /**
  * Stabilize a dirty dependency using caller-observed state.

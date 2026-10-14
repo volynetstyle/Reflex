@@ -18,7 +18,7 @@ import {
   trimWalkerStackToFloorIfSparse,
 } from "../stackStats";
 import { advance } from "./advance";
-import { profilePullNode } from "./utils";
+import { profilePullNode } from "../profile";
 
 const stack: ReactiveEdge[] = [];
 let high = 0;

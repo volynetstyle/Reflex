@@ -19,12 +19,11 @@ import {
   type ReactiveNode,
 } from "@runtime/kernel/shape";
 import { readRuntimeWalkerStackStats } from "@runtime/kernel/stages/stackStats";
-import { isRuntimeProfilingEnabled } from "@runtime/profiling";
 import {
   observeRuntimeProjection,
   observeRuntimeProjectionAmount,
-  observeRuntimePushPath,
 } from "@runtime/kernel/projection";
+import { profilePushNode } from "@runtime/kernel/stages/profile";
 import { observeRuntimePropagate } from "@runtime/kernel/projection.propagate";
 
 const propagateStack: ReactiveEdge[] = new Array(512).fill(null);
@@ -41,44 +40,6 @@ function resetPropagateStackAfterAbort(
 ): void {
   while (top !== base) stack[--top] = null!;
   propagateStackHigh = base;
-}
-
-function countIn(edge: ReactiveEdge | null): number {
-  let count = 0;
-
-  for (let current = edge; current !== null; current = current.nextIn) {
-    count += 1;
-  }
-
-  return count;
-}
-
-function countOut(edge: ReactiveEdge | null): number {
-  let count = 0;
-
-  for (let current = edge; current !== null; current = current.nextOut) {
-    count += 1;
-  }
-
-  return count;
-}
-
-function profilePushNode(
-  branch: string,
-  sub: ReactiveNode<unknown>,
-  depth: number,
-  stackDepth: number,
-): void {
-  if (__PROFILE__ && isRuntimeProfilingEnabled()) {
-    if (__PROFILE__)
-      observeRuntimePushPath?.(
-        branch,
-        depth,
-        countIn(sub.firstIn),
-        countOut(sub.firstOut),
-        stackDepth,
-      );
-  }
 }
 
 /**
