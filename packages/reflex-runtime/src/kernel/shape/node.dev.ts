@@ -7,6 +7,12 @@ export type Primitive =
   | null
   | undefined;
 
+export type ReactivePayload =
+  | Primitive
+  | Function
+  | readonly ReactivePayload[]
+  | { readonly [key: string]: ReactivePayload };
+
 export function isPrimitive(value: unknown): value is Primitive {
   return (
     value === null ||
@@ -19,15 +25,11 @@ export function isPrimitive(value: unknown): value is Primitive {
   );
 }
 
-export function isPayload(value: unknown): boolean {
+export function isPayload(value: unknown): value is ReactivePayload {
   if (isPrimitive(value)) return true;
   if (typeof value === "function") return true;
+  if (typeof value !== "object" || value === null) return false;
 
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  // Avoid stack overflow, because JavaScript and deep trees are, of course, "made for each other".
   const stack: unknown[] = [value];
   const visited = new WeakSet<object>();
 
@@ -36,7 +38,6 @@ export function isPayload(value: unknown): boolean {
 
     if (isPrimitive(current)) continue;
     if (typeof current === "function") continue;
-
     if (typeof current !== "object" || current === null) {
       return false;
     }
@@ -53,8 +54,6 @@ export function isPayload(value: unknown): boolean {
 
     const proto = Object.getPrototypeOf(current);
 
-    // Only allow plain objects.
-    // Date, Map, Set, class instances, DOM nodes, and other miracles of the JavaScript runtime are excluded.
     if (proto !== Object.prototype && proto !== null) {
       return false;
     }

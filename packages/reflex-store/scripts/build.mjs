@@ -4,7 +4,6 @@ import commonjs from "@rollup/plugin-commonjs";
 import swc from "@rollup/plugin-swc";
 import replace from "@rollup/plugin-replace";
 import { dts } from "rollup-plugin-dts";
-import ts from "typescript";
 import { createRequire, builtinModules } from "node:module";
 import {
   readFileSync,
@@ -14,7 +13,7 @@ import {
   readdirSync,
   rmSync,
 } from "node:fs";
-import { resolve, dirname, relative, join, sep } from "node:path";
+import { resolve, dirname, join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -37,7 +36,6 @@ const entries = {
   runtime: "src/runtime.ts",
   "runtime/internal": "src/runtime/internal.ts",
   "runtime/core": "src/runtime/core.ts",
-  "runtime/types": "src/runtime/types.ts",
 };
 const input = Object.fromEntries(
   Object.entries(entries).map(([name, file]) => [name, resolve(root, file)]),
@@ -61,7 +59,6 @@ const external = (id) =>
   id.startsWith("node:") ||
   builtinModules.includes(id) ||
   [
-    "@volynets/reflex",
     "@volynets/reflex-framework",
     "@volynets/reflex-runtime",
     "@volynets/reflex-scheduler",
@@ -146,13 +143,6 @@ await typesBundle.write({
 });
 await typesBundle.close();
 
-// The host facade uses ambient aliases. Scope them to the package's
-// own type module so published declarations do not pollute consumer globals.
-const typeNames = [
-  ...readFileSync(resolve(root, "src/runtime/types.ts"), "utf8").matchAll(
-    /export (?:type|interface) (\w+)/g,
-  ),
-].map((match) => match[1]);
 function declarations(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) =>
     entry.isDirectory()
@@ -163,39 +153,7 @@ function declarations(directory) {
   );
 }
 for (const file of declarations(output)) {
-  if (file === join(output, "runtime/types.d.ts")) continue;
-  let code = readFileSync(file, "utf8");
-  const ast = ts.createSourceFile(file, code, ts.ScriptTarget.Latest, true);
-  const declared = new Set();
-  for (const statement of ast.statements) {
-    if (statement.name && ts.isIdentifier(statement.name))
-      declared.add(statement.name.text);
-    if (
-      ts.isImportDeclaration(statement) &&
-      statement.importClause?.namedBindings &&
-      ts.isNamedImports(statement.importClause.namedBindings)
-    )
-      for (const binding of statement.importClause.namedBindings.elements)
-        declared.add(binding.name.text);
-  }
-  const missing = typeNames.filter(
-    (name) =>
-      !declared.has(name) && new RegExp("\\b" + name + "\\b").test(code),
-  );
-  if (missing.length) {
-    let target = relative(
-      dirname(file),
-      join(output, "runtime/types.js"),
-    ).replaceAll("\\", "/");
-    if (!target.startsWith(".")) target = "./" + target;
-    code =
-      "import type { " +
-      missing.join(", ") +
-      " } from " +
-      JSON.stringify(target) +
-      ";\n" +
-      code;
-  }
+  const code = readFileSync(file, "utf8");
   writeFileSync(file, '/// <reference lib="esnext.disposable" />\n' + code);
 }
 mkdirSync(join(output, "licenses"), { recursive: true });

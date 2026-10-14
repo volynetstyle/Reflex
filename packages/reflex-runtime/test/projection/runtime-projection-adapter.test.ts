@@ -54,6 +54,9 @@ describe("runtime projection compatibility", () => {
       "pullStackTrimExcess",
       "readConsumerDirtyPath",
       "readConsumerCleanFastPath",
+      // Retired: the tracking slow path can no longer be blocked (F3), so the
+      // counter stays 0. Kept for RuntimeProfileCounters compatibility.
+      "trackingSlowPathBlocked",
     ]);
     expect(adapted).toEqual(new Set(Object.keys(runtimeProfileCounters)));
   });

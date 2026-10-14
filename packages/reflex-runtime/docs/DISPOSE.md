@@ -75,6 +75,12 @@ no universal terminal-state barrier.
 Post-disposal reads are not specified as universally inert. Stronger ownership
 contracts in callers are outside this package.
 
+Execution domains (`src/domain`) add a safe-point queue above this teardown:
+`domain.teardown(fn)` runs `fn` immediately at managed depth zero and
+otherwise at the outermost managed exit. `reflex-framework` uses it to defer
+`disposeWatcher` of owned effects while running their user cleanups
+synchronously. The kernel teardown itself is unchanged.
+
 ## Characterization
 
 - `test/runtime/contracts/runtime.lifecycle.test.ts`: eager teardown and

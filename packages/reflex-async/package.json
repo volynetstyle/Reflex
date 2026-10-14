@@ -45,6 +45,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:async:package": "node scripts/check-package.mjs",
+    "test:async:wait-memory": "node --expose-gc scripts/check-wait-memory.mjs",
     "test:async:bounded": "vitest run tests/reflex.async.bounded.test.ts",
     "test:async:properties": "vitest run tests/reflex.async.property.test.ts tests/reflex.async.qualification.test.ts",
     "test:async:production": "node lab/async-semantics/run.mjs --production-only",
@@ -76,7 +77,7 @@
     "directory": "packages/reflex-async"
   },
   "peerDependencies": {
-    "@volynets/reflex-runtime": "^1.0.0"
+    "@volynets/reflex-runtime": "^1.0.1"
   },
   "private": false
 }

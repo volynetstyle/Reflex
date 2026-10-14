@@ -1,13 +1,18 @@
 import { loadRuntimeConfiguration } from "./config";
 import { createRuntimeContext, type RuntimeContext } from "./context.model";
 import {
+  loadRuntimeExecutionFrame,
+  RUNTIME_EXECUTION_FRAMES_ENABLED,
+  saveRuntimeExecutionFrame,
+} from "./execution";
+import {
   currentConsumer,
+  keepNewestTrackingEpoch,
   propagationScopeDepth,
   reactiveBatchDepth,
   setCurrentConsumer,
   setPropagationScopeDepth,
   setReactiveBatchState,
-  setTrackingEpoch,
   trackingEpoch,
   runtimeState,
 } from "./state";
@@ -25,7 +30,9 @@ export function syncRuntimeContext(
   switch (direction) {
     case "load": {
       setCurrentConsumer(context.currentConsumer);
-      setTrackingEpoch(context.trackingEpoch);
+      // One kernel-wide clock: edges are shared by every context and stamped
+      // with pass epochs, so a load may only move the epoch forward.
+      keepNewestTrackingEpoch(context.trackingEpoch);
       setPropagationScopeDepth(context.propagationScopeDepth);
       setReactiveBatchState(context.batchDepth, context.runtimeState);
       loadRuntimeConfiguration(context);
@@ -45,6 +52,12 @@ export function switchRuntimeContext(next: RuntimeContext): void {
   if (next === activeRuntimeContext) return;
 
   syncRuntimeContext(activeRuntimeContext, "save");
+  if (RUNTIME_EXECUTION_FRAMES_ENABLED) {
+    // Diagnostic phases belong to the domain that entered them (E2).
+    activeRuntimeContext.executionFrame = saveRuntimeExecutionFrame();
+    loadRuntimeExecutionFrame(next.executionFrame);
+    next.executionFrame = null;
+  }
   activeRuntimeContext = next;
   syncRuntimeContext(next, "load");
 }

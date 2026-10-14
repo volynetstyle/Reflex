@@ -69,6 +69,11 @@ the fresh commit, throws `AsyncBlocker`, or throws the latest error. The caller
 can distinguish initial loading from revalidation without a lifecycle enum.
 `pending(expression)` catches only blockers; ordinary errors propagate.
 
+`error()` is a convenience projection: it returns `undefined` both when no data
+failure is present and when the job actually threw `undefined`. Use `read()` or
+`resolve()` to distinguish those cases; they preserve and throw/reject the original
+failure. A previous successful commit may remain present after a later failure.
+
 `currentOrUndefined()` is intentionally a convenience projection: absence and
 a committed value of `undefined` have the same result. Use `commit()` for
 semantic decisions. The synchronous execution handle provides `commit(source)`

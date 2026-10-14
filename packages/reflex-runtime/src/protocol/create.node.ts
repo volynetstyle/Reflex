@@ -7,6 +7,7 @@ import {
   type ProducerNode,
   type WatcherCleanup,
   type WatcherNode,
+  type WatcherResult,
 } from "@runtime/kernel";
 import { defaultContext } from "@runtime/kernel/config";
 import { devRecordNodeCreated } from "@runtime/kernel/dev";
@@ -72,7 +73,7 @@ export const createConsumer = <T>(callback: () => T): ConsumerNode<T> => {
  * const logger = createWatcher(() => console.log(count.get()));
  */
 export const createWatcher = (callback: WatcherFn): WatcherNode => {
-  const node = new ReactiveNode(
+  const node = new ReactiveNode<WatcherResult>(
     undefined,
     callback,
     WATCHER_INITIAL_STATE,

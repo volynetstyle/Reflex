@@ -4,7 +4,6 @@ import {
   currentConsumer,
   RuntimeState,
   runtimeState,
-  trackingEpoch,
 } from "@runtime/kernel/state";
 import {
   devAssertConsumerCanStabilize,
@@ -20,8 +19,8 @@ import {
   type ReactiveEdge,
 } from "@runtime/kernel/shape";
 import { resolveTrackedRead } from "@runtime/kernel/shape/tracking";
-import { advance } from "@runtime/kernel/stages/second/advance";
-import { should_recompute } from "@runtime/kernel/stages/second/pull_dependency";
+import { advance } from "@runtime/kernel/stages/stabilization/advance";
+import { should_recompute } from "@runtime/kernel/stages/stabilization/pull_dependency";
 import {
   observeRuntimeProjection,
   observeRuntimeReadConsumerPath,
@@ -67,12 +66,7 @@ export function readConsumerLazy<T>(this: ConsumerNode<T>): T {
 
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.read.consumer.track");
-  resolveTrackedRead(
-    producer,
-    consumer,
-    consumer.tailIn?.version ?? trackingEpoch,
-    true,
-  );
+  resolveTrackedRead(producer, consumer);
   devRecordReadConsumer(producer, "lazy", value, defaultContext, consumer);
 
   return value;
@@ -235,12 +229,7 @@ export function readConsumer<T>(
     if (__PROFILE__)
       observeRuntimeProjection?.("projection.semantic.read.consumer.track");
 
-    resolveTrackedRead(
-      node,
-      consumer,
-      consumer.tailIn?.version ?? trackingEpoch,
-      true,
-    );
+    resolveTrackedRead(node, consumer);
   }
 
   devRecordReadConsumer(

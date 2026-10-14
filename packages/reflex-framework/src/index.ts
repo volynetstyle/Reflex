@@ -10,6 +10,7 @@ export {
 } from "./ownership/ownership.context";
 export * from "./ownership";
 export * from "./reactivity";
+export * from "./domain";
 export * from "./hooks";
 export { Fragment, jsx, jsxDEV, jsxs } from "./runtime/jsx";
 export * from "./runtime/component";

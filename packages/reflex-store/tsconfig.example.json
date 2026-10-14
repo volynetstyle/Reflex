@@ -1,6 +1,6 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["examples/task-board/src/**/*.ts", "bench/**/*.ts"],
+  "include": ["src/globals.d.ts", "examples/task-board/src/**/*.ts", "bench/**/*.ts"],
   "compilerOptions": {
     "allowImportingTsExtensions": true,
     "baseUrl": ".",

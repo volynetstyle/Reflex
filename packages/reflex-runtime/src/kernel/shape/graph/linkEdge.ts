@@ -11,7 +11,7 @@ export function linkEdge(
   const nextIn = after === null ? to.firstIn : after.nextIn;
 
   const edge: ReactiveEdge = {
-    version: version | 0,
+    version,
     from,
     to,
     prevOut,
@@ -43,7 +43,7 @@ export function linkFirstTrackedEdgeUnchecked(
   const prevOut = from.lastOut;
 
   const edge: ReactiveEdge = {
-    version: version | 0,
+    version,
     from,
     to,
     prevOut,
@@ -71,7 +71,7 @@ export function appendTrackedEdgeAfterCursorUnchecked(
   const prevOut = from.lastOut;
 
   const edge: ReactiveEdge = {
-    version: version | 0,
+    version,
     from,
     to,
     prevOut,

@@ -70,7 +70,7 @@ there. Cleanup removes the unmatched suffix.
 `edge.version` is a tracking stamp, not a source-value revision. Runtime reads
 extending a prefix use its cursor edge's stamp, even after nested computation
 advances the global `trackingEpoch`. A first read uses the current epoch.
-The explicit resolver API still accepts its supplied version.
+`resolveTrackedRead` derives the stamp itself; callers cannot supply one.
 
 The 32-edge prefix limit bounds only that local scan. Incoming suffix and
 outgoing membership searches may traverse complete lists. The eager suffix
@@ -142,6 +142,35 @@ Context switching copies live module registers and configuration to/from saved
 context objects. `runWithRuntimeContext` restores the previous context in a
 finally block. Traversal storage remains shared and is protected by invocation
 slices.
+
+`trackingEpoch` is one kernel-wide clock, not a per-context register. Edges are
+shared and stamped with pass epochs, so the clock only moves forward and
+never repeats a value: a repeated stamp would let a stale edge pose as a
+current-pass membership proof and drop a dependency (F13). A context load
+keeps the newer epoch, `setTrackingEpoch` only moves it forward, a reset does
+not rewind it, and it does not wrap (exact for 2^53 passes).
+
+`snapshotRuntimeContext` is a register-bank checkpoint. Restoring it is legal at
+a quiescent boundary of that context, or to unwind to a checkpoint taken by an
+enclosing frame still on the stack. Restore never touches the epoch, which
+only moves forward.
+
+`configureRuntimeContext` on the active context reloads configuration only. It
+never reloads execution registers (`currentConsumer`, depths, `runtimeState`)
+from the saved object, whose copies are stale while the context is active.
+
+DEV+PROFILE diagnostic state (phase stack, active hook stack, recompute depth)
+belongs to the context that entered it. A switch saves it into the outgoing
+context's `executionFrame` and loads the incoming one, so independent contexts
+never see each other's phases or hooks. Production builds skip this entirely.
+
+`resetRuntimeContext` rejects a context whose continuation is suspended below
+the active one by `runWithRuntimeContext`. Resetting the active context is a
+recovery tool; the caller asserts none of its continuations will resume.
+
+Contracts: `test/runtime/contracts/runtime.context-registers.test.ts`,
+`test/runtime/topology/runtime.domain-walkers.test.ts`,
+`test/dev/runtime/runtime.domain-isolation.dev.test.ts`.
 
 Implementation: `src/kernel/context*.ts`, `src/kernel/state.ts`, and
 `src/kernel/config.ts`.

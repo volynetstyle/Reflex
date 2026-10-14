@@ -63,5 +63,73 @@
       "excluded": "test/**/*.browser.test.ts",
       "reason": "Wrapper suites execute only in the Chromium project; ordinary jsdom suites are unchanged."
     }
+  ],
+  "approvedDifferences": [
+    {
+      "config": "packages/reflex-store/vite.config.ts",
+      "path": "resolve.alias",
+      "removed": [
+        {
+          "find": {
+            "regexp": "^@volynets\\/reflex$",
+            "flags": ""
+          },
+          "replacement": "<repo>/packages/reflex/src/index.ts"
+        }
+      ],
+      "reason": "No reflex-store source or test imports @volynets/reflex; the shared store alias profile dropped it (082d4e3)."
+    },
+    {
+      "config": "packages/reflex-store/vite.dev.config.ts",
+      "path": "resolve.alias",
+      "removed": [
+        {
+          "find": {
+            "regexp": "^@volynets\\/reflex$",
+            "flags": ""
+          },
+          "replacement": "<repo>/packages/reflex/src/index.ts"
+        }
+      ],
+      "reason": "No reflex-store source or test imports @volynets/reflex; the shared store alias profile dropped it (082d4e3)."
+    },
+    {
+      "config": "packages/reflex-framework/vite.lifecycle.dev.config.ts",
+      "path": "test.include",
+      "to": [
+        "test/**/*.dev.ts"
+      ],
+      "reason": "Development-only framework suites (domain.lifetime, domain.port) run beside lifecycle.dev.ts (6d89a55)."
+    },
+    {
+      "config": "packages/reflex-devtools/tsconfig.json",
+      "missing": [
+        "<repo>/packages/reflex-devtools/src/data-structures/RingHistory.ts"
+      ],
+      "reason": "RingHistory.ts was deleted from devtools source (c867d76)."
+    },
+    {
+      "config": "packages/reflex-runtime/tsconfig.json",
+      "missing": [
+        "<repo>/packages/reflex-runtime/src/kernel/stages/first/index.ts",
+        "<repo>/packages/reflex-runtime/src/kernel/stages/first/push_iterator.ts",
+        "<repo>/packages/reflex-runtime/src/kernel/stages/first/push_iterator_once.ts",
+        "<repo>/packages/reflex-runtime/src/kernel/stages/first/push_iterator_once_skipping.ts",
+        "<repo>/packages/reflex-runtime/src/kernel/stages/second/advance.ts",
+        "<repo>/packages/reflex-runtime/src/kernel/stages/second/index.ts",
+        "<repo>/packages/reflex-runtime/src/kernel/stages/second/pull_dependency.ts",
+        "<repo>/packages/reflex-runtime/src/kernel/stages/second/pull_frontier.ts",
+        "<repo>/packages/reflex-runtime/src/kernel/stages/second/pull_iterator.ts",
+        "<repo>/packages/reflex-runtime/src/kernel/stages/second/utils.ts"
+      ],
+      "reason": "Stage directories renamed after propagation and stabilization (53b1367)."
+    },
+    {
+      "config": "packages/reflex-store/tsconfig.json",
+      "missing": [
+        "<repo>/packages/reflex-store/src/runtime/types.ts"
+      ],
+      "reason": "src/runtime/types.ts was deleted from store source (c867d76)."
+    }
   ]
 }

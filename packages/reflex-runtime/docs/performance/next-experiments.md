@@ -19,7 +19,7 @@
 моделью, а внутреннее состояние — с текущими topology contracts.
 
 **Точка входа.** `test/runtime/topology/runtime.watcher-validation.test.ts`,
-`src/kernel/stages/second/pull_frontier.ts`. Существующий тест уже покрывает
+`src/kernel/stages/stabilization/pull_frontier.ts`. Существующий тест уже покрывает
 запись в committed edge во время валидации; новый сценарий должен проверить
 именно _ранее валидированное_ ребро и наблюдаемый повторный запуск.
 
@@ -73,7 +73,7 @@ visits по direct/transitive edges, вызовы host hook, scheduler claims и
 число watcher runs. Для сравнения использовать тот же порядок и количество
 записей, включая interleaved reads и reentrant writes.
 
-**Точка входа.** `src/kernel/stages/first/push_iterator.ts`,
+**Точка входа.** `src/kernel/stages/propagation/push_iterator.ts`,
 `src/kernel/batch.ts`, существующие perf fixtures topology.
 
 **Решение.** Epoch допускается лишь если сокращает доказанную повторную работу,

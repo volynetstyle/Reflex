@@ -8,6 +8,7 @@ import {
   type RuntimeSchedulerHooks,
   type NodeInvalidatedHook,
 } from "./config";
+import type { RuntimeExecutionFrame } from "./execution";
 import type { ReactiveNode } from "./shape";
 
 const RUNTIME_CONTEXT_BRAND: unique symbol = Symbol("RuntimeContext");
@@ -24,11 +25,13 @@ export interface RuntimeContext extends RuntimeConfiguration {
   propagationScopeDepth: number;
   batchDepth: number;
   runtimeState: number;
+  /** DEV+PROFILE diagnostic phase/hook state saved while inactive. */
+  executionFrame: RuntimeExecutionFrame | null;
 }
 
 export type RuntimeContextSnapshot = Omit<
   RuntimeContext,
-  typeof RUNTIME_CONTEXT_BRAND
+  typeof RUNTIME_CONTEXT_BRAND | "executionFrame"
 >;
 
 export function createRuntimeContext(
@@ -41,6 +44,7 @@ export function createRuntimeContext(
     propagationScopeDepth: 0,
     batchDepth: 0,
     runtimeState: 0,
+    executionFrame: null,
     readTrackingStrategy: DEFAULT_READ_TRACKING_STRATEGY,
     nodeInvalidatedHook: undefined,
     runtimeIdleHook: undefined,

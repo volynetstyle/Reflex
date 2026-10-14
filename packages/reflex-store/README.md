@@ -1,16 +1,20 @@
 # Reflex Store
 
 Structured state, derived views and keyed collections with a compiler for static
-store shapes. The library distribution keeps the Reflex host and reactive kernel
-as external imports. `@volynets/reflex`, `@volynets/reflex-runtime` and
+store shapes. The library distribution uses the shared reactive kernel and
+lifecycle primitives. `@volynets/reflex-runtime` and
 `@volynets/reflex-framework` are peer dependencies. Framework supplies the
 shared lifecycle primitives, while Store, DOM and Async share the application's
 kernel module identity.
 The distribution includes the portable SWC WebAssembly compiler and Vite plugin.
 
 ```sh
-pnpm add @volynets/reflex-store @volynets/reflex @volynets/reflex-runtime @volynets/reflex-framework
+pnpm add @volynets/reflex-store @volynets/reflex-runtime@^1.0.1 @volynets/reflex-framework
 ```
+
+Requires Node.js 20.19 or newer for the compiler and Vite plugin. Published
+entrypoints use ES modules. The compiler and its SWC WASM asset are included;
+consumers do not need to install SWC separately.
 
 ## Application API
 
@@ -19,7 +23,6 @@ Start with `createStore`, `derive`, `selector`, `reactiveMap`, `action` and
 restoring compiled data.
 
 ```ts
-import { createRuntime, effect } from "@volynets/reflex-store/runtime";
 import {
   createStore,
   leaf,
@@ -30,8 +33,6 @@ import {
   snapshot,
   hydrate,
 } from "@volynets/reflex-store";
-
-createRuntime({ effectStrategy: "flush" });
 
 export function createBoard() {
   const board = createStore(
@@ -104,9 +105,10 @@ export default defineConfig({
 ```
 
 The plugin transforms stores while preserving application package resolution.
-It does not redirect host or kernel imports. `@volynets/reflex-store/runtime`,
-`/runtime/core` and `/runtime/internal` re-export the shared peer APIs; they do not
-contain a private host or kernel.
+`@volynets/reflex-store/runtime` exports the compiler's cell, scope and owned
+computed primitives. `/runtime/core` and `/runtime/internal` re-export the shared
+kernel. Application runtime setup and effect scheduling belong to the consumer;
+the task-board example includes explicit kernel/scheduler wiring.
 
 The standalone compiler is exported from `@volynets/reflex-store/store`.
 It includes its portable WASM asset; installing a platform-specific native SWC
@@ -125,27 +127,27 @@ and exposes disposal through `dispose()` and `Symbol.dispose`. Cells are created
 and owned during setup; a failed initializer disposes earlier cells before
 rethrowing its original error. Computed getter resources share the same lifetime.
 
-Store compilation uses neither `createModel` nor `defineModel`. Models remain an
-optional way for application code to own a store alongside other resources.
+Store compilation uses store scopes for ownership and disposal.
 
-Use the shared host's model ownership to dispose resources together:
+Use a store scope to dispose resources together:
 
 ```ts
-import { createModel, own, signal } from "@volynets/reflex-store/runtime";
+import {
+  createStoreScope,
+  createStoreCell,
+} from "@volynets/reflex-store/runtime";
 import { derive, reactiveMap, selector } from "@volynets/reflex-store";
 
-const createPanel = createModel((ctx) => {
-  const tasks = own(ctx, reactiveMap<string, { done: boolean }>());
-  const selectedId = signal("");
-  return {
-    tasks,
-    selected: own(ctx, selector(selectedId)),
-    summary: own(
-      ctx,
-      derive(() => ({ total: tasks.size })),
-    ),
-  };
-});
+const createPanel = () =>
+  createStoreScope((ctx) => {
+    const tasks = ctx.own(reactiveMap<string, { done: boolean }>());
+    const selectedId = ctx.own(createStoreCell(""));
+    return {
+      tasks,
+      selected: ctx.own(selector(selectedId)),
+      summary: ctx.own(derive(() => ({ total: tasks.size }))),
+    };
+  });
 ```
 
 Maps, sets, selectors, keyed projections, structured views and compiled stores
@@ -210,7 +212,27 @@ pnpm --filter @volynets/reflex-store lint
 pnpm --filter @volynets/reflex-store test:packed-runtime
 ```
 
-The packed test installs only this tarball in an empty offline project. It
-checks all published imports, WASM loading, one shared graph across entrypoints,
+The packed test installs the Store and its Reflex peer tarballs in an empty
+offline project. It checks all published imports, WASM loading, one shared graph across entrypoints,
 the Vite plugin, factory isolation, batching, snapshots/hydration and consumer
 declarations with `skipLibCheck=false`.
+
+## Release preparation
+
+Run from the repository root with workspace dependencies installed:
+
+```sh
+pnpm --filter @volynets/reflex-store check:release
+pnpm --dir packages/reflex-store pack --pack-destination ../../artifacts/npm
+```
+
+`check:release` builds Store and its workspace dependencies, runs lint, production
+and development tests, checks types and artifacts, and verifies an isolated
+installation of the packed packages. `prepublishOnly` runs the same checks.
+`prepack` rebuilds Store and checks its output before creating a tarball.
+
+The package contains the MIT license and the Apache-2.0 license for the bundled
+SWC compiler. Publish compatible versions of the required Reflex peers before
+releasing Store. The repository release workflow uses `pnpm release:qualify`
+and publishes the verified tarballs through `pnpm release:publish` with the
+qualification and quality-summary paths required by that command.

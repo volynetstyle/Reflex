@@ -1,4 +1,4 @@
-import { createRuntime, effect } from "@volynets/reflex";
+import { createRuntime, effect } from "../helpers/reactivity";
 import { createStore } from "@reflex/store";
 
 const runtime = createRuntime({ effectStrategy: "flush" });

@@ -15,7 +15,7 @@ export const createReactiveEdge = (
   from: ReactiveNode,
   to: ReactiveNode,
 ): ReactiveEdge => ({
-  version: version | 0,
+  version,
   from,
   to,
   prevOut: null,
@@ -23,6 +23,3 @@ export const createReactiveEdge = (
   prevIn: null,
   nextIn: null,
 }); // Order matters!
-
-export const clearReactiveEdgeLinks = (edge: ReactiveEdge): void =>
-  void (edge.prevOut = edge.prevIn = edge.nextIn = null);

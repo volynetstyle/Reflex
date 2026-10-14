@@ -1,0 +1,173 @@
+name: Runtime Benchmarks
+
+# Paired in-process comparison of two production runtime bundles
+# (packages/reflex-runtime/docs/performance/BENCHMARK_PROTOCOL.md).
+#
+# Hosted runners are the screening tier of the protocol: every verdict is
+# reported in the job summary, as annotations and as JSON artifacts, and none
+# fails the job. A job fails only when the harness produces no report.
+#
+# Modes:
+#   compare    candidate = the pushed commit (or HEAD), baseline = the commit
+#              before the push (or the input, or HEAD^). Default.
+#   calibrate  A/A: both sides are built from the same commit; any faster,
+#              slower or invalid verdict flags the method on this runner.
+#
+# Workloads run in balanced shards (bench/shards.mjs): every pair process
+# costs about the same fixed warm-up, so wall time is set by the largest
+# shard. Each shard keeps the whole family size for its intervals.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: compare (baseline vs HEAD) or calibrate (A/A)
+        type: choice
+        options: [compare, calibrate]
+        default: compare
+      baseline:
+        description: Baseline ref (compare; default the parent of HEAD) or the calibrated ref (calibrate; default HEAD)
+        required: false
+        default: ""
+      replicates:
+        description: Replicates per workload (24 qualifies a family of 25)
+        required: false
+        default: "24"
+      shards:
+        description: Parallel jobs; wall time scales with workloads per shard
+        required: false
+        default: "9"
+  push:
+    branches: [premain-refactor]
+    paths:
+      - .github/workflows/runtime-calibration.yml
+      - packages/reflex-runtime/src/**
+      - packages/reflex-runtime/bench/**
+      - packages/reflex-runtime/scripts/build-baseline-oracle.mjs
+      - packages/reflex-runtime/rollup/terser-options.ts
+      - packages/reflex-runtime/rollup/optimization.ts
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runtime-benchmarks-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  refs:
+    name: resolve refs and shards
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      baseline: ${{ steps.resolve.outputs.baseline }}
+      candidate: ${{ steps.resolve.outputs.candidate }}
+      mode: ${{ steps.resolve.outputs.mode }}
+      shards: ${{ steps.shards.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - id: resolve
+        env:
+          MODE: ${{ inputs.mode || 'compare' }}
+          INPUT_BASELINE: ${{ inputs.baseline }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          commit() { git rev-parse --verify --quiet "$1^{commit}"; }
+          required() {
+            commit "$1" || { echo "::error::unknown ref '$1'" >&2; exit 1; }
+          }
+          if [[ "$MODE" == calibrate ]]; then
+            baseline=$(required "${INPUT_BASELINE:-HEAD}")
+            candidate=$baseline
+          else
+            candidate=$(required HEAD)
+            baseline=""
+            if [[ -n "$INPUT_BASELINE" ]]; then
+              baseline=$(required "$INPUT_BASELINE")
+            fi
+            # The previous head of a push, unless it was force-pushed away.
+            if [[ -z "$baseline" && -n "$BEFORE" && "$BEFORE" != 0000000000000000000000000000000000000000 ]]; then
+              baseline=$(commit "$BEFORE" || true)
+            fi
+            if [[ -z "$baseline" ]]; then
+              baseline=$(required HEAD^)
+            fi
+          fi
+          {
+            echo "mode=$MODE"
+            echo "baseline=$baseline"
+            echo "candidate=$candidate"
+          } >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE baseline=$baseline candidate=$candidate"
+      - id: shards
+        env:
+          SHARDS: ${{ inputs.shards || '9' }}
+        run: echo "matrix=$(node packages/reflex-runtime/bench/shards.mjs --shards "$SHARDS")" >> "$GITHUB_OUTPUT"
+
+  bench:
+    name: shard ${{ matrix.shard }}
+    needs: refs
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.refs.outputs.shards) }}
+    steps:
+      # Shallow: build-baseline-oracle.mjs fetches each compared commit itself.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-workspace
+
+      - name: Paired comparison
+        working-directory: packages/reflex-runtime
+        env:
+          BASELINE: ${{ needs.refs.outputs.baseline }}
+          CANDIDATE: ${{ needs.refs.outputs.candidate }}
+          REPLICATES: ${{ inputs.replicates || '24' }}
+          WORKLOADS: ${{ matrix.workloads }}
+          FAMILY: ${{ matrix.family }}
+          SHARD: ${{ matrix.shard }}
+        # Verdicts never set the exit code here (--fail-on none); a crash
+        # still does, and the report step then records the missing report.
+        continue-on-error: true
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/artifacts"
+          node bench/compare.mjs \
+            --baseline "$BASELINE" \
+            --candidate "$CANDIDATE" \
+            --workloads "$WORKLOADS" \
+            --family "$FAMILY" \
+            --replicates "$REPLICATES" \
+            --fail-on none \
+            --out "$GITHUB_WORKSPACE/artifacts/compare-$SHARD.json" \
+            2> >(tee "$GITHUB_WORKSPACE/artifacts/compare-$SHARD.log" >&2)
+
+      - name: Report
+        if: always()
+        working-directory: packages/reflex-runtime
+        env:
+          SHARD: ${{ matrix.shard }}
+          LABEL: ${{ matrix.label }}
+          MODE: ${{ needs.refs.outputs.mode }}
+        run: |
+          node bench/ci-report.mjs \
+            "$GITHUB_WORKSPACE/artifacts/compare-$SHARD.json" \
+            --title "Shard $SHARD: $LABEL" \
+            --mode "$MODE"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: runtime-benchmarks-${{ matrix.shard }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 30

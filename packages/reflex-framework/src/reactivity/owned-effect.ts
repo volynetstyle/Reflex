@@ -15,6 +15,7 @@ import {
   usingOwnershipNode,
   type OwnerContext,
 } from "../ownership/ownership.scope";
+import { runInOwnerDomain } from "../domain/enter";
 
 export type OwnedEffectFn = () => void | Cleanup;
 
@@ -36,28 +37,60 @@ export function createOwnedEffect(
     if (__DEV__) throw new Error("createOwnedEffect in disposed node");
     return noopCleanup;
   }
+  if (owner.domain?.closed) {
+    if (__DEV__) throw new Error("createOwnedEffect in a closed domain");
+    return noopCleanup;
+  }
 
-  const watcher = createWatcher(() =>
-    runWithOwner(owner, node, () =>
+  let closed = false;
+  let currentRun: OwnershipNode | null = null;
+
+  const watcher = createWatcher(() => {
+    // Logical close: a queued or re-validated run of a closed effect is inert.
+    if (closed) return;
+    return runWithOwner(owner, node, () =>
       usingOwnershipNode(owner, (executionNode) => {
+        currentRun = executionNode;
         const cleanup = fn();
         if (cleanup !== undefined) {
           if (isShuttingDown(executionNode)) cleanup();
-          else addCleanup(executionNode, cleanup);
+          // Cleanup sees the run's environment, wherever disposal starts.
+          else
+            addCleanup(executionNode, () =>
+              runInOwnerDomain(owner, () =>
+                runWithOwner(owner, executionNode, cleanup),
+              ),
+            );
         }
-        return () => disposeOwnershipNode(executionNode);
+        return () =>
+          runInOwnerDomain(owner, () => disposeOwnershipNode(executionNode));
       }),
-    ),
-  );
+    );
+  });
 
   try {
-    runWatcher(watcher);
+    runInOwnerDomain(owner, () => runWatcher(watcher));
   } catch (error) {
     disposeWatcher(watcher);
     throw error;
   }
 
-  const dispose: Cleanup = () => disposeWatcher(watcher);
+  const domain = owner.domain;
+  const dispose: Cleanup =
+    domain == null
+      ? () => disposeWatcher(watcher)
+      : () => {
+          if (closed) return;
+          closed = true;
+          // Phase 1, synchronous: user cleanups keep their established order.
+          const run = currentRun;
+          currentRun = null;
+          if (run !== null) {
+            runInOwnerDomain(owner, () => disposeOwnershipNode(run));
+          }
+          // Phase 2: graph unlink at the domain's next safe point (L2).
+          domain.teardown(() => disposeWatcher(watcher));
+        };
 
   if (node !== null) {
     if (isShuttingDown(node)) {

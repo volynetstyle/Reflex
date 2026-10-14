@@ -1,4 +1,4 @@
-import { createRuntime, effect } from "@volynets/reflex-store/runtime";
+import { createRuntime, effect } from "./reactivity";
 import {
   action,
   createStore,

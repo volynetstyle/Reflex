@@ -48,7 +48,7 @@ export interface ReflexStoreVitePluginOptions {
   /**
    * Runtime module used by generated code.
    *
-   * @default "@volynets/reflex"
+   * @default "@volynets/reflex-store/runtime"
    */
   runtimeModule?: string;
   eraseFacade?: boolean;

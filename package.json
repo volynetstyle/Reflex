@@ -37,6 +37,7 @@
     "check:configs": "node tooling/configs/check-equivalence.mjs",
     "test:projects": "vitest run --config vitest.config.ts",
     "release:version": "changeset version",
+    "release:version:ci": "changeset version && pnpm install --lockfile-only --ignore-scripts",
     "release:qualify": "pnpm quality:check && pnpm qualify",
     "release:publish": "node tooling/configs/publish-qualified.mjs --publish",
     "test:product": "node tooling/build/run.mjs --scope product test",

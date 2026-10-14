@@ -1,0 +1,25 @@
+version: 2
+updates:
+  # Workflow and composite actions are pinned to commit SHAs; this keeps the
+  # pins current with their version comments.
+  - package-ecosystem: github-actions
+    directories: ["/", "/.github/actions/*"]
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      tooling:
+        dependency-type: development
+        update-types: [minor, patch]
+    commit-message:
+      prefix: chore

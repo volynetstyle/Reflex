@@ -20,7 +20,10 @@ commit records and helper functions retain their contracts.
 An evaluation frontier is an immutable proof graph of freshness handles for async
 sources. It does not contain ordinary runtime nodes. Composition stores references
 to inherited frontiers; empty and singleton frontiers need no wrapper. A source
-read records its handle in the current collector; the execution context separately
+read records its handle in the current collector; terminal errors use a cached
+observation handle for the exact outcome seen by that read. The observation shares
+its source's identity and traversal cell, so inherited owner-cycle checks and
+joined-graph deduplication still recognize the source. The execution context separately
 enforces `read`/`commit` lifetime before `await`. Nested source executions install
 their own collector and restore the parent on exit.
 
@@ -70,7 +73,10 @@ the attempt survives that freshness checkpoint, its proof graph is materialized
 once into a readonly, distinct publication vector in capture order. Materialization
 is a pure traversal; its result is cached by the attempt, with no global table or
 cache on dependency handles. Independent attempts own independent vectors. Validation
-probes each source in that vector once for pending, failure or disposal. These
+probes each source in that vector once for pending, failure or disposal. An error
+observation accepts only its original terminal outcome, allowing a caught fallback
+or transformed error to publish. A successful read still rejects a new upstream
+failure. Ordinary successful and pending reads allocate no observation handle. These
 probes run untracked and use already-pulled source state. A final watcher
 checkpoint detects invalidation caused during validation. Authority is checked
 before and after validation and immediately before publication.
@@ -101,6 +107,16 @@ The adapter is intentionally internal; ordinary `computed` and framework hooks
 continue to use their existing contracts. Composing cached synchronous consumers
 with async sources requires the evaluated adapter until a separate facade change
 integrates it. No runtime node layout, graph protocol or scheduler changes are needed.
+
+Async rejections containing a blocker for a source absent from the captured
+frontier become protocol errors. This prevents uncaptured reads after `await`
+from creating attempts with no reactive wake edge. Synchronous blocking reads
+inside async functions still capture their source and retry normally.
+
+Abortable waits share one Promise reaction per pending notification and keep
+individual continuations in a removable listener set. Abort removes the waiter
+and its abort listener. Settlement drains the set and removes the shared entry;
+waits without a signal retain the direct Promise path.
 
 ## Reproduction
 

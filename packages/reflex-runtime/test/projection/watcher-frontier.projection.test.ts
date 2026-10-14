@@ -12,7 +12,7 @@ import {
   resetRuntime,
   runWatcher,
 } from "../runtime.test_utils";
-import { pull_frontier } from "../../src/kernel/stages/second/pull_frontier";
+import { pull_frontier } from "../../src/kernel/stages/stabilization/pull_frontier";
 
 it("profiles the complete V3 watcher frontier after an early confirmed change", () => {
   const width = 128;

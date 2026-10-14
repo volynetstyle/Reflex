@@ -1,13 +1,11 @@
 import { createStoreScope } from "../src/store/scope";
 import { describe, expect, it } from "vitest";
 import {
-  createModel,
   createDisposableComputed,
   createRuntime,
   effect,
-  own,
   signal,
-} from "@volynets/reflex";
+} from "./helpers/reactivity";
 import { compileStore } from "../src/store";
 import { createStoreCell } from "../src/store/cell";
 import {
@@ -26,7 +24,6 @@ import { createKeyedProjection, createProjection } from "../src/advanced";
 function compileAndRun(body: string): any {
   const source =
     'import { createStore, snapshot, hydrate, leaf, opaque } from "@volynets/reflex-store";\n' +
-    'import {own, createModel} from "@volynets/reflex-store/runtime";\n' +
     "function run(){\n" +
     body +
     "\n}\nconst output=run();";
@@ -42,8 +39,6 @@ function compileAndRun(body: string): any {
     "hydrate",
     "leaf",
     "opaque",
-    "own",
-    "createModel",
     output + "\nreturn output;",
   )(
     createStoreScope,
@@ -54,8 +49,6 @@ function compileAndRun(body: string): any {
     hydrate,
     leaf,
     opaque,
-    own,
-    createModel,
   );
 }
 
@@ -152,12 +145,13 @@ describe("production store contracts", () => {
 
   it("registers compiled stores directly with a parent owner", () => {
     createRuntime({ effectStrategy: "flush" });
-    const model = compileAndRun(
+    const state = compileAndRun(
       [
-        "const factory=createModel(ctx=>{const state=createStore({count:0,increment(){this.count++}});",
-        "own(ctx,state);return {state};});return factory();",
+        "const state=createStore({count:0,increment(){this.count++}});",
+        "return state;",
       ].join("\n"),
     );
+    const model = createStoreScope((ctx) => ({ state: ctx.own(state) }));
     model.state.increment();
     expect(model.state.count).toBe(1);
     model.dispose();
@@ -168,27 +162,22 @@ describe("production store contracts", () => {
   it("owns every runtime resource through Symbol.dispose", () => {
     createRuntime({ effectStrategy: "flush" });
     const source = signal("a");
-    const model = createModel((ctx) => {
-      const map = own(ctx, reactiveMap([["a", 1]]));
-      const selected = own(ctx, selector(source));
-      const view = own(
-        ctx,
-        derive(() => ({ value: map.get("a") })),
-      );
-      const keyed = own(
-        ctx,
+    const model = createStoreScope((ctx) => {
+      const map = ctx.own(reactiveMap([["a", 1]]));
+      const selected = ctx.own(selector(source));
+      const view = ctx.own(derive(() => ({ value: map.get("a") })));
+      const keyed = ctx.own(
         createKeyedProjection(
           source,
           (id) => id,
           (id) => id,
         ),
       );
-      const draft = own(
-        ctx,
+      const draft = ctx.own(
         createProjection<{ value: number }>(() => ({ value: 1 }), {}),
       );
       return { map, selected, view, keyed, draft };
-    })();
+    });
     expect(model.view.value).toBe(1);
     model.dispose();
     model[Symbol.dispose]();

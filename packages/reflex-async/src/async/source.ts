@@ -4,7 +4,9 @@ import {
   Both,
   disposeWatcher,
   enterReactiveBatch,
+  ExecutionDomainState,
   getActiveRuntimeContext,
+  getExecutionDomain,
   leaveReactiveBatch,
   readConsumerLazy,
   readProducer,
@@ -27,8 +29,10 @@ import {
   EMPTY_FRONTIER,
   FRONTIER_STATE,
   createFreshnessState,
+  containsDependency,
   FrontierBuilder,
   forEachDependency,
+  hasFrontierCollector,
   recordFreshnessDependency,
   withFrontierCollector,
   type EvaluationFrontier,
@@ -47,8 +51,8 @@ import type {
 
 type Outcome =
   | { readonly kind: "ready" }
-  | { readonly kind: "failure"; readonly error: unknown }
-  | { readonly kind: "disposed" };
+  | { readonly kind: "failure"; readonly error: unknown; observation?: FreshnessDependency }
+  | { readonly kind: "disposed"; observation?: FreshnessDependency };
 
 type Result<T> =
   | { readonly kind: "value"; readonly value: T }
@@ -64,6 +68,8 @@ export class AsyncCore<T> implements AsyncSource<T>, FreshnessDependency {
   readonly [FRONTIER_STATE]: FreshnessDependency[typeof FRONTIER_STATE] =
     createFreshnessState();
   private readonly runtime = getActiveRuntimeContext();
+  /** The captured execution domain; its closure revokes commit authority. */
+  private readonly domain = getExecutionDomain(this.runtime);
   private readonly commitNode = createAccumulator<AsyncCommit<T> | undefined>(
     undefined,
   );
@@ -86,10 +92,12 @@ export class AsyncCore<T> implements AsyncSource<T>, FreshnessDependency {
     private readonly job: AsyncJob<T>,
     private readonly options: AsyncOptions,
   ) {
-    if (options.signal?.aborted) {
+    const domainSignal = this.domain?.signal;
+    if (options.signal?.aborted || domainSignal?.aborted) {
       this.dispose();
     } else {
       options.signal?.addEventListener("abort", this.onAbort, { once: true });
+      domainSignal?.addEventListener("abort", this.onAbort, { once: true });
       this.ensure();
     }
   }
@@ -97,14 +105,21 @@ export class AsyncCore<T> implements AsyncSource<T>, FreshnessDependency {
   private readonly onAbort = (): void => this.dispose();
 
   private within<R>(fn: () => R): R {
-    return runWithRuntimeContext(this.runtime, () => {
+    const body = (): R => {
       enterReactiveBatch();
       try {
         return fn();
       } finally {
         leaveReactiveBatch();
       }
-    });
+    };
+    // Completions enter the captured domain as managed work, so teardown it
+    // requests waits for the domain's safe point. A closed domain is entered
+    // by register bank only; its hooks are detached.
+    const domain = this.domain;
+    return domain !== undefined && domain.state !== ExecutionDomainState.Closed
+      ? domain.run(body)
+      : runWithRuntimeContext(this.runtime, body);
   }
 
   ensure(): void {
@@ -196,14 +211,32 @@ export class AsyncCore<T> implements AsyncSource<T>, FreshnessDependency {
   };
 
   private readFreshCommit(): AsyncCommit<T> | undefined {
-    recordFreshnessDependency(this);
-    this.ensure();
+    if (hasFrontierCollector()) this.ensureObservedRead();
+    else this.ensure();
     readProducer(this.stateNode);
     if (this.outcome.kind === "disposed")
       throwAsyncFailure(new AsyncDisposedError());
     if (this.activeAttempt !== undefined) return undefined;
     if (this.outcome.kind === "failure") throwAsyncFailure(this.outcome.error);
     return readProducer(this.commitNode);
+  }
+
+  private ensureObservedRead(): void {
+    try {
+      this.ensure();
+    } finally {
+      const outcome = this.outcome;
+      // Successful and pending reads retain the existing source handle. Only
+      // terminal errors need a witness, shared by all reads of this outcome.
+      const observation = outcome.kind !== "ready"
+        ? (outcome.observation ??= {
+            [FRONTIER_STATE]: this[FRONTIER_STATE],
+            ensure: () => this.ensure(),
+            validate: () => this.validate(outcome),
+          })
+        : this;
+      recordFreshnessDependency(this, observation);
+    }
   }
 
   readonly read = (): T => {
@@ -254,6 +287,8 @@ export class AsyncCore<T> implements AsyncSource<T>, FreshnessDependency {
       this.activeAttempt = undefined;
       this.outcome = { kind: "disposed" };
       this.options.signal?.removeEventListener("abort", this.onAbort);
+      if (this.domain !== undefined && !this.domain.closed)
+        this.domain.signal.removeEventListener("abort", this.onAbort);
       disposeWatcher(this.watcher);
       this.frontier = EMPTY_FRONTIER;
       this.pulledFrontier = undefined;
@@ -355,6 +390,18 @@ export class AsyncCore<T> implements AsyncSource<T>, FreshnessDependency {
 
   private finish(attempt: Attempt, result: Result<T>): void {
     if (!attempt.alive()) return;
+    if (
+      result.kind === "error" && result.error instanceof AsyncBlocker &&
+      (!(result.error.source instanceof AsyncCore) ||
+        !containsDependency(attempt.frontier, result.error.source))
+    ) {
+      result = {
+        kind: "error",
+        error: new AsyncProtocolError(
+          "Capture blocking async reads before await; the blocked source was not captured by this attempt.",
+        ),
+      };
+    }
     this.within(() => this.complete(attempt, result, true));
   }
 
@@ -415,8 +462,9 @@ export class AsyncCore<T> implements AsyncSource<T>, FreshnessDependency {
   }
 
   /** Publication probes already-pulled truth; they must not capture reactive edges. */
-  validate(): void {
-    if (this.outcome.kind === "disposed") throw new AsyncDisposedError();
+  validate(observedFailure?: Outcome): void {
+    if (this.outcome.kind === "disposed" && this.outcome !== observedFailure)
+      throw new AsyncDisposedError();
     if (this.activeAttempt !== undefined) {
       const attempt = this.activeAttempt;
       if (!(attempt.readCache instanceof AsyncBlocker)) {
@@ -424,7 +472,10 @@ export class AsyncCore<T> implements AsyncSource<T>, FreshnessDependency {
       }
       throw attempt.readCache;
     }
-    if (this.outcome.kind === "failure") throw this.outcome.error;
+    // Accept only the failure this read observed, preserving user catch results.
+    // A previously successful read must still reject a newly failed upstream.
+    if (this.outcome.kind === "failure" && this.outcome !== observedFailure)
+      throw this.outcome.error;
   }
 
   private publish(attempt: Attempt, result: Result<T>): void {

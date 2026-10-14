@@ -55,6 +55,8 @@ Reports preserve raw samples, ranges, source/bundle/benchmark hashes and host
 details. They are microbenchmarks, not browser or request-latency measurements.
 
 `REFLEX_ASYNC_BENCH_ROUNDS` selects 1–10 rounds.
+`REFLEX_ASYNC_BENCH_DIR` selects a package-relative snapshot/report directory,
+allowing independent reviews to preserve existing baselines.
 `REFLEX_ASYNC_BENCH_CASE` filters by scenario-name substring; focused runs write
 separate reports, so they do not replace the full comparison.
 

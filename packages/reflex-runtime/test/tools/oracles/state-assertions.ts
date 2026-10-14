@@ -6,7 +6,6 @@ import {
   Both,
   Unknown,
   Visited,
-  Computing,
 } from "../../../src/internal";
 
 export function expectChanged(node: ReactiveNode): void {

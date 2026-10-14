@@ -1,5 +1,5 @@
 import { bench, describe } from "vitest";
-import { createRuntime, effect, signal } from "@volynets/reflex";
+import { createRuntime, effect, signal } from "../tests/helpers/reactivity";
 import {
   createKeyedProjection,
   createSelector,

@@ -15,6 +15,10 @@
         "../reflex-runtime/debug/index.ts",
         "../reflex-runtime/dist/esm/debug/index.d.ts"
       ],
+      "@volynets/reflex-scheduler": [
+        "../reflex-scheduler/src/index.ts",
+        "../reflex-scheduler/dist/index.d.ts"
+      ],
       "@volynets/reflex-runtime/internal": [
         "../reflex-runtime/src/internal/index.ts",
         "../reflex-runtime/dist/esm/src/internal/index.d.ts"

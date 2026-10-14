@@ -100,7 +100,6 @@ export const legacyCounterProjection = {
   "projection.semantic.watcher.dispose": "watcherDisposals",
   "projection.semantic.tracking.resolve": "trackingResolveCalls",
   "projection.semantic.tracking.slow-path": "trackingSlowPath",
-  "projection.semantic.tracking.slow-path.blocked": "trackingSlowPathBlocked",
   "projection.semantic.tracking.cursor.hit": "trackingCursorHit",
   "projection.semantic.tracking.next.hit": "trackingNextHit",
   "projection.semantic.tracking.cursor.append": "trackingAppendAfterCursor",

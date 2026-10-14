@@ -79,3 +79,16 @@ export type {
   RuntimeHooks,
   RuntimeHostHooks,
 } from "./kernel/context";
+
+export {
+  createExecutionDomain,
+  ExecutionDomainClosedError,
+  ExecutionDomainState,
+  getActiveExecutionDomain,
+  getExecutionDomain,
+} from "./domain";
+export type {
+  ExecutionDomain,
+  ExecutionDomainOptions,
+  ExecutionDomainScheduler,
+} from "./domain";

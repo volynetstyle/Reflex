@@ -14,24 +14,32 @@ permissions:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # Superseded PR runs are noise; main and nightly runs are evidence.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
     shell: bash
 
+env:
+  # Part of every evidence cache key: bump to invalidate all retained evidence.
+  EVIDENCE_CACHE_VERSION: v1
+
 jobs:
   registry:
     name: required coverage registry
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
       phase: ${{ steps.matrix.outputs.phase }}
       consumer: ${{ steps.matrix.outputs.consumer }}
       reuse: ${{ steps.matrix.outputs.reuse }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
       - id: matrix
@@ -39,26 +47,36 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
         run: node tooling/configs/ci-fingerprints.mjs >> "$GITHUB_OUTPUT"
 
+  workflows:
+    name: workflow lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: actionlint
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+        run: |
+          bash <(curl -fsSL "https://raw.githubusercontent.com/rhysd/actionlint/v${ACTIONLINT_VERSION}/scripts/download-actionlint.bash") "$ACTIONLINT_VERSION"
+          ./actionlint -color
+
   static:
     name: tooling and config contracts
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          version: 9.0.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
       - name: Checkout comparison baseline
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || github.sha }}
           path: .quality-baseline
+          persist-credentials: false
       - name: Install comparison baseline dependencies
         working-directory: .quality-baseline
         run: pnpm install --frozen-lockfile --ignore-scripts
@@ -70,7 +88,7 @@ jobs:
         run: pnpm check:configs -- --baseline-root .quality-baseline --output artifacts/config-equivalence.json
       - name: No active semantic divergence
         run: pnpm check:active-divergences
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: config-evidence
@@ -87,29 +105,20 @@ jobs:
       max-parallel: 4
       matrix: ${{ fromJSON(needs.registry.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: Restore successful CI evidence
         id: evidence
         if: needs.registry.outputs.reuse == 'true'
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: artifacts/checks
-          key: ci-evidence-v1-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-${{ matrix.id }}-${{ needs.registry.outputs.phase }}-${{ matrix.fingerprint }}
-      - uses: pnpm/action-setup@v4
+          key: ci-evidence-${{ env.EVIDENCE_CACHE_VERSION }}-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-${{ matrix.id }}-${{ needs.registry.outputs.phase }}-${{ matrix.fingerprint }}
+      - uses: ./.github/actions/setup-workspace
         if: steps.evidence.outputs.cache-hit != 'true'
         with:
-          version: 9.0.0
-      - uses: actions/setup-node@v4
-        if: steps.evidence.outputs.cache-hit != 'true'
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-        if: steps.evidence.outputs.cache-hit != 'true'
-      - name: Install Chromium
-        if: matrix.browser && steps.evidence.outputs.cache-hit != 'true'
-        run: pnpm --filter @volynets/reflex-dom exec playwright install --with-deps chromium
+          chromium: ${{ matrix.browser && 'true' || 'false' }}
       - name: Run every registered prerequisite and check
         if: steps.evidence.outputs.cache-hit != 'true'
         env:
@@ -119,11 +128,11 @@ jobs:
         run: pnpm quality:check -- --package "$QUALITY_PACKAGE" --phase "$QUALITY_PHASE" --output-dir artifacts/checks
       - name: Retain successful CI evidence
         if: success() && needs.registry.outputs.reuse == 'true' && steps.evidence.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: artifacts/checks
-          key: ci-evidence-v1-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-${{ matrix.id }}-${{ needs.registry.outputs.phase }}-${{ matrix.fingerprint }}
-      - uses: actions/upload-artifact@v4
+          key: ci-evidence-${{ env.EVIDENCE_CACHE_VERSION }}-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-${{ matrix.id }}-${{ needs.registry.outputs.phase }}-${{ matrix.fingerprint }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: checks-${{ matrix.id }}
@@ -139,39 +148,30 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: Restore successful CI evidence
         id: evidence
         if: needs.registry.outputs.reuse == 'true'
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: artifacts/qualification
-          key: ci-evidence-v1-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-consumer-${{ needs.registry.outputs.consumer }}
-      - uses: pnpm/action-setup@v4
+          key: ci-evidence-${{ env.EVIDENCE_CACHE_VERSION }}-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-consumer-${{ needs.registry.outputs.consumer }}
+      - uses: ./.github/actions/setup-workspace
         if: steps.evidence.outputs.cache-hit != 'true'
         with:
-          version: 9.0.0
-      - uses: actions/setup-node@v4
-        if: steps.evidence.outputs.cache-hit != 'true'
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-        if: steps.evidence.outputs.cache-hit != 'true'
-      - name: Install Chromium
-        if: steps.evidence.outputs.cache-hit != 'true'
-        run: pnpm --filter @volynets/reflex-dom exec playwright install --with-deps chromium
+          chromium: "true"
       - name: Build, pack, install and qualify declared exports
         if: steps.evidence.outputs.cache-hit != 'true'
         run: pnpm test:consumer -- --output-dir artifacts/qualification
       - name: Retain successful CI evidence
         if: success() && needs.registry.outputs.reuse == 'true' && steps.evidence.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: artifacts/qualification
-          key: ci-evidence-v1-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-consumer-${{ needs.registry.outputs.consumer }}
-      - uses: actions/upload-artifact@v4
+          key: ci-evidence-${{ env.EVIDENCE_CACHE_VERSION }}-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-consumer-${{ needs.registry.outputs.consumer }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: consumer-evidence
@@ -183,20 +183,18 @@ jobs:
     # Keep the former required status name while making it cover the entire matrix.
     name: fast checks
     if: always()
-    needs: [registry, static, quality, consumer]
+    needs: [registry, workflows, static, quality, consumer]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          version: 9.0.0
-      - uses: actions/setup-node@v4
+          persist-credentials: false
+      # The aggregator uses only Node built-ins; no workspace install needed.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: checks-*
           path: artifacts/checks
@@ -208,8 +206,8 @@ jobs:
         run: |
           mkdir -p artifacts
           printf '%s' "$NEEDS_JSON" > artifacts/needs.json
-          pnpm quality:aggregate -- --phase "$QUALITY_PHASE" --input-dir artifacts/checks --needs-json artifacts/needs.json --output artifacts/quality-summary.json
-      - uses: actions/upload-artifact@v4
+          node tooling/configs/aggregate-checks.mjs --phase "$QUALITY_PHASE" --input-dir artifacts/checks --needs-json artifacts/needs.json --output artifacts/quality-summary.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: required-quality-evidence
@@ -221,24 +219,15 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     timeout-minutes: 45
-    defaults:
-      run:
-        shell: pwsh
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          version: 9.0.0
-      - uses: actions/setup-node@v4
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - name: Install Chromium
-        run: pnpm --filter @volynets/reflex-dom exec playwright install chromium
+          chromium: "true"
       - run: pnpm test:consumer -- --output-dir artifacts/platform-qualification
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: windows-consumer-evidence

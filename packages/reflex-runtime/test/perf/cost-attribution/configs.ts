@@ -193,9 +193,9 @@ function fanoutBySemanticSweep(): SweepConfig[] {
 
 // --- Stack-capacity threshold investigation ------------------------------
 //
-// src/kernel/stages/second/pull_dependency.ts forcibly truncates its explicit
+// src/kernel/stages/stabilization/pull_dependency.ts forcibly truncates its explicit
 // walker stack back to STACK_TRIM_MIN_CAPACITY (256) after every top-level
-// call whose usage exceeded it. src/kernel/stages/first/push_iterator.ts
+// call whose usage exceeded it. src/kernel/stages/propagation/push_iterator.ts
 // does the analogous thing to its own `propagateStack` at
 // MAX_RETAINED_PROPAGATE_STACK (512). Both are separate arrays, separate
 // thresholds, on separate sides of the runtime (pull vs. push). These two

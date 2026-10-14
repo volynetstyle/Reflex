@@ -15,6 +15,8 @@ export interface DOMSchedulerCoordinator {
   onRuntimeIdle(): void;
   batch<T>(fn: () => T): T;
   flush(): void;
+  /** Forgets a pending host resume; a late microtask then does nothing. */
+  cancel(): void;
 }
 
 export function createDOMSchedulerCoordinator(
@@ -110,10 +112,13 @@ export function createDOMSchedulerCoordinator(
         }
       });
     },
-    
+
     flush() {
       hostRequest = null;
       run(drain);
+    },
+    cancel() {
+      hostRequest = null;
     },
   };
 }

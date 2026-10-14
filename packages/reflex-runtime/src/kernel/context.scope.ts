@@ -13,8 +13,6 @@ import {
   setPropagationScopeDepth,
 } from "./state";
 
-const IS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
-
 export const enterPropagationScope = !__PROFILE__
   ? enterPropagationScopeRegister
   : function (): void {
@@ -52,7 +50,7 @@ export function leavePropagationScope(): void {
   // counters and development debug events intact while avoiding the batching
   // dispatcher on the production no-hook path.
   if (
-    !IS_DEV &&
+    !__DEV__ &&
     !__PROFILE__ &&
     runtimeIdleHook === undefined &&
     (runtimeState & RuntimeState.HostWorkPending) === RuntimeState.Idle
@@ -78,7 +76,7 @@ export function emitSettledIfIdle(): void {
     observeRuntimeProjection?.("projection.semantic.context.settled.check");
 
   if (
-    !IS_DEV &&
+    !__DEV__ &&
     !__PROFILE__ &&
     runtimeIdleHook === undefined &&
     (runtimeState & RuntimeState.HostWorkPending) === RuntimeState.Idle
@@ -98,6 +96,6 @@ export function emitSettledIfIdle(): void {
     return;
   }
 
-  if (IS_DEV) recordDebugEvent(defaultContext, "context:settled");
+  if (__DEV__) recordDebugEvent(defaultContext, "context:settled");
   emitRuntimeIdleWithBatching();
 }

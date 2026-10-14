@@ -119,7 +119,7 @@
     "@volynets/reflex-runtime": "workspace:*"
   },
   "peerDependencies": {
-    "@volynets/reflex-runtime": "^1.0.0"
+    "@volynets/reflex-runtime": "^1.0.1"
   },
   "private": false
 }

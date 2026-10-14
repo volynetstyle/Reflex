@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { effect } from "@volynets/reflex";
+import { effect } from "./helpers/reactivity";
 import {
   boardActions,
   summary,

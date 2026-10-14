@@ -44,17 +44,22 @@ describe.skipIf(!subtle.enabled)(
 
       for (let i = 0; i < 520; i++) {
         const previous = current;
-        const side = createWatcher(() => {
-          readConsumer(previous);
-        });
-        runWatcher(side);
         current = createConsumer(() => readConsumer(previous) + 1);
+        // Subscribe the chain before the side watcher, so the walk descends
+        // first and keeps every side edge as a pending sibling frame.
+        readConsumer(current);
+        runWatcher(
+          createWatcher(() => {
+            readConsumer(previous);
+          }),
+        );
       }
 
       expect(readConsumer(current)).toBe(520);
       writeProducer(source, 1);
 
       const stats = subtle.stackStats();
+      expect(stats?.propagate.peak).toBeGreaterThan(512);
       expect(stats?.propagate.current).toBe(0);
       expect(stats?.propagate.capacity).toBe(512);
     });

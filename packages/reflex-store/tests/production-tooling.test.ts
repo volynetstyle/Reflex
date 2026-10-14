@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
-import { createRuntime, effect } from "@volynets/reflex";
+import { createRuntime, effect } from "./helpers/reactivity";
 import { reactiveSet, getStoreName } from "../src/advanced";
 import { action, reactiveMap, derive, selector, snapshot } from "../src";
 import { createStoreCell } from "../src/store/cell";

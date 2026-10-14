@@ -173,14 +173,15 @@ describe("execution state", () => {
     const context = createRuntimeContext();
 
     switchRuntimeContext(context);
-    keepNewestTrackingEpoch(1);
+    const base = trackingEpoch;
+    keepNewestTrackingEpoch(base + 1);
     const snapshot = snapshotRuntimeContext(context);
 
-    keepNewestTrackingEpoch(3);
+    keepNewestTrackingEpoch(base + 3);
     restoreRuntimeContextSnapshot(context, snapshot);
 
-    expect(trackingEpoch).toBe(3);
-    expect(context.trackingEpoch).toBe(3);
+    expect(trackingEpoch).toBe(base + 3);
+    expect(context.trackingEpoch).toBe(base + 3);
   });
 
   it("resets active mirrors when active state is reset", () => {
@@ -190,12 +191,14 @@ describe("execution state", () => {
     switchRuntimeContext(context);
     setCurrentConsumer(consumer);
     enterPropagationScope();
-    keepNewestTrackingEpoch(2);
+    const epoch = trackingEpoch + 2;
+    keepNewestTrackingEpoch(epoch);
 
     resetRuntimeContext(context);
 
     expect(currentConsumer).toBe(null);
     expect(propagationScopeDepth).toBe(0);
-    expect(trackingEpoch).toBe(0);
+    // The clock is kernel-wide and never rewound (F13).
+    expect(trackingEpoch).toBe(epoch);
   });
 });

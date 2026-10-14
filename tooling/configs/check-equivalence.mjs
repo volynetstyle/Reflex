@@ -49,7 +49,25 @@ async function snapshot(root, configFile) {
     esbuild: config.esbuild, build: config.build, test,
     files: files.filter((file) => configFile !== "packages/reflex-dom/vite.config.ts" || !file.endsWith(".browser.test.ts")).sort() }, root);
 }
+// Approved differences pin the head value, so any further drift fails again.
+const approvals = registry.approvedDifferences ?? [];
+const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+const approvedFor = (name) => approvals.filter((approval) => approval.config === name);
+function applyApprovals(name, before, after) {
+  for (const approval of approvedFor(name).filter((entry) => entry.path)) {
+    const keys = approval.path.split("."), last = keys.pop();
+    const parent = (value) => keys.reduce((node, key) => node?.[key], value);
+    const from = parent(before)?.[last], to = parent(after)?.[last];
+    const expected = approval.removed ? from?.filter((entry) => !approval.removed.some((removed) => same(removed, entry))) : approval.to;
+    if (parent(before) && same(expected, to)) parent(before)[last] = to;
+  }
+}
+const unapprovedMissing = (name, missing) => {
+  const approved = new Set(approvedFor(name).flatMap((approval) => approval.missing ?? []));
+  return missing.filter((file) => !approved.has(file));
+};
 function compare(name, before, after) {
+  applyApprovals(name, before, after);
   const passed = JSON.stringify(before) === JSON.stringify(after);
   checks.push({ name, passed, beforeSha256: createHash("sha256").update(JSON.stringify(before)).digest("hex"), afterSha256: createHash("sha256").update(JSON.stringify(after)).digest("hex") });
   if (!passed) differences.push({ name, before, after });
@@ -65,7 +83,7 @@ for (const project of registry.projects) {
   if (project.config === "packages/reflex-dom/vite.browser.config.ts") {
     if (after.test.browser) after.test.browser.screenshotFailures = before.test.browser?.screenshotFailures;
   }
-  const missing = before.files.filter((file) => !after.files.includes(file));
+  const missing = unapprovedMissing(project.config, before.files.filter((file) => !after.files.includes(file)));
   const added = after.files.filter((file) => !before.files.includes(file));
   checks.push({ name: project.config + ":discovery", passed: missing.length === 0, beforeCount: before.files.length, afterCount: after.files.length, added, missing });
   if (missing.length) differences.push({ name: project.config + ":discovery", missing });
@@ -88,7 +106,7 @@ for (const directory of ["reflex", "reflex-async", "reflex-devtools", "reflex-do
     continue;
   }
   const before = options(baseRoot);
-  const missing = before.files.filter((file) => !after.files.includes(file));
+  const missing = unapprovedMissing(file, before.files.filter((file) => !after.files.includes(file)));
   const added = after.files.filter((file) => !before.files.includes(file));
   checks.push({ name: file + ":discovery", passed: missing.length === 0, added, missing });
   if (missing.length) differences.push({ name: file + ":discovery", missing });
@@ -96,7 +114,7 @@ for (const directory of ["reflex", "reflex-async", "reflex-devtools", "reflex-do
   compare(file, before, after);
 }
 const evidence = { schemaVersion: 1, equivalent: differences.length === 0, baseRoot, headRoot, checks, differences,
-  allowedDifferences: registry.allowedDiscoveryDifferences, generatedAt: new Date().toISOString() };
+  allowedDifferences: registry.allowedDiscoveryDifferences, approvedDifferences: approvals, generatedAt: new Date().toISOString() };
 await mkdir(dirname(output), { recursive: true });
 await writeFile(output, JSON.stringify(evidence, null, 2) + "\n");
 console.log("Config equivalence: " + checks.filter((check) => check.passed).length + "/" + checks.length + " checks; " + output);

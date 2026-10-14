@@ -1,6 +1,9 @@
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
-import { DEFAULT_READ_TRACKING_STRATEGY } from "./config";
+import {
+  DEFAULT_READ_TRACKING_STRATEGY,
+  loadRuntimeConfiguration,
+} from "./config";
 import {
   applyRuntimeContextOptions,
   createRuntimeContext,
@@ -25,6 +28,9 @@ export type {
 } from "./context.model";
 export type { RuntimeHooks, RuntimeHostHooks } from "./config";
 
+/** Contexts whose continuation is suspended below the active one. */
+const suspendedContexts: RuntimeContext[] = [];
+
 export function runWithRuntimeContext<T>(
   context: RuntimeContext,
   fn: () => T,
@@ -37,11 +43,18 @@ export function runWithRuntimeContext<T>(
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.context.switch");
   switchRuntimeContext(context);
+  suspendedContexts.push(previous);
   try {
     return fn();
   } finally {
+    suspendedContexts.pop();
     switchRuntimeContext(previous);
   }
+}
+
+/** Whether `context` has a continuation suspended by a nested context entry. */
+export function isRuntimeContextSuspended(context: RuntimeContext): boolean {
+  return suspendedContexts.includes(context);
 }
 
 export function configureRuntimeContext(
@@ -61,13 +74,27 @@ export function configureRuntimeContext(
     context,
     explicitContext ? maybeOptions : contextOrOptions,
   );
-  if (context === getActiveRuntimeContext())
-    syncRuntimeContext(context, "load");
+  // Configuration only: the active execution registers are live and the
+  // context object holds stale copies of them until the next save.
+  if (context === getActiveRuntimeContext()) loadRuntimeConfiguration(context);
 }
 
+/**
+ * Hard reset of a context's registers and configuration.
+ *
+ * Resetting the active context is a recovery tool: the caller asserts that no
+ * continuation of that context will resume. Resetting a context suspended
+ * below the active one is rejected, because its continuation will resume.
+ */
 export function resetRuntimeContext(
   context: RuntimeContext = getActiveRuntimeContext(),
 ): void {
+  if (isRuntimeContextSuspended(context)) {
+    throw new Error(
+      "Cannot reset a runtime context while its execution is suspended by a nested context.",
+    );
+  }
+
   context.currentConsumer = null;
   context.trackingEpoch = 0;
   context.propagationScopeDepth = 0;
@@ -77,9 +104,12 @@ export function resetRuntimeContext(
   context.nodeInvalidatedHook = undefined;
   context.runtimeIdleHook = undefined;
   context.hostFlushHook = undefined;
+  context.executionFrame = null;
 
   if (context === getActiveRuntimeContext()) {
     resetRuntimeExecutionState();
+    // The clock is not rewound: nodes and edges survive a reset, and a
+    // repeated stamp would pose as a current-pass proof (F13).
     syncRuntimeContext(context, "load");
   }
 }
@@ -114,16 +144,20 @@ export function snapshotRuntimeContext(
   };
 }
 
+/**
+ * Restores a register-bank checkpoint taken by `snapshotRuntimeContext`.
+ *
+ * Legal at a quiescent boundary of `context`, or to unwind to a checkpoint
+ * taken by an enclosing frame that is still on the stack. The tracking epoch
+ * is never restored: it is the kernel-wide clock and only moves forward.
+ */
 export function restoreRuntimeContextSnapshot(
   context: RuntimeContext,
   snapshot: RuntimeContextSnapshot,
 ): void {
-  const currentEpoch =
-    context === getActiveRuntimeContext()
-      ? trackingEpoch
-      : context.trackingEpoch;
+  const active = context === getActiveRuntimeContext();
+  if (active) context.trackingEpoch = trackingEpoch;
   context.currentConsumer = snapshot.currentConsumer;
-  context.trackingEpoch = Math.max(snapshot.trackingEpoch, currentEpoch);
   context.propagationScopeDepth = snapshot.propagationScopeDepth;
   context.batchDepth = snapshot.batchDepth;
   context.runtimeState = snapshot.runtimeState;
@@ -131,6 +165,5 @@ export function restoreRuntimeContextSnapshot(
   context.nodeInvalidatedHook = snapshot.nodeInvalidatedHook;
   context.runtimeIdleHook = snapshot.runtimeIdleHook;
   context.hostFlushHook = snapshot.hostFlushHook;
-  if (context === getActiveRuntimeContext())
-    syncRuntimeContext(context, "load");
+  if (active) syncRuntimeContext(context, "load");
 }

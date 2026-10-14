@@ -1,12 +1,30 @@
 name: Release qualification
 
+# Continuous delivery, step 2 of 2. Qualifies the exact tarballs on Linux and
+# Windows and, when asked, publishes the Linux-qualified archives byte for
+# byte (tooling/configs/publish-qualified.mjs never rebuilds or repacks).
+#
+# Publication rules:
+#   - only from main, only versions already committed (apply_versions: false);
+#   - only after both platforms qualified;
+#   - only through the "npm" environment (configure required reviewers and
+#     the NPM_TOKEN secret on it in the repository settings).
+
 on:
   workflow_dispatch:
     inputs:
       apply_versions:
-        description: Apply the pending Changesets version plan before qualification
+        description: Apply the pending Changesets version plan before qualification (dry run; cannot publish)
         type: boolean
         default: true
+      publish:
+        description: Publish the qualified archives to npm (requires apply_versions = false and ref = main)
+        type: boolean
+        default: false
+      dist_tag:
+        description: npm dist-tag for publication
+        type: string
+        default: latest
 
 permissions:
   contents: read
@@ -20,8 +38,31 @@ defaults:
     shell: bash
 
 jobs:
+  preflight:
+    name: release preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Reject publication of uncommitted or off-main versions
+        if: inputs.publish
+        env:
+          APPLY_VERSIONS: ${{ inputs.apply_versions }}
+          REF: ${{ github.ref }}
+          DIST_TAG: ${{ inputs.dist_tag }}
+        run: |
+          if [[ "$APPLY_VERSIONS" == true ]]; then
+            echo "::error::publish requires apply_versions=false: merge the version pull request first"; exit 1
+          fi
+          if [[ "$REF" != refs/heads/main ]]; then
+            echo "::error::publish runs only from main (got $REF)"; exit 1
+          fi
+          if [[ ! "$DIST_TAG" =~ ^[a-zA-Z][a-zA-Z0-9._-]*$ ]]; then
+            echo "::error::invalid dist-tag '$DIST_TAG'"; exit 1
+          fi
+
   qualify:
     name: versioned artifacts on ${{ matrix.os }}
+    needs: preflight
     strategy:
       fail-fast: false
       matrix:
@@ -29,16 +70,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          version: 9.0.0
-      - uses: actions/setup-node@v4
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
+          chromium: "true"
       - name: Record and apply the version plan
         env:
           APPLY_VERSIONS: ${{ inputs.apply_versions }}
@@ -47,16 +84,9 @@ jobs:
           pnpm exec changeset status --output artifacts/release/version-plan.json
           if [[ "$APPLY_VERSIONS" == true ]]; then
             node -e 'const plan=require("./artifacts/release/version-plan.json");if(!plan.releases.length)throw new Error("A pending Changeset is required to prepare new release versions")'
-            pnpm release:version
-            pnpm install --lockfile-only --ignore-scripts
+            pnpm release:version:ci
             pnpm install --frozen-lockfile
           fi
-      - name: Install Chromium on Linux
-        if: runner.os == 'Linux'
-        run: pnpm --filter @volynets/reflex-dom exec playwright install --with-deps chromium
-      - name: Install Chromium on Windows
-        if: runner.os == 'Windows'
-        run: pnpm --filter @volynets/reflex-dom exec playwright install chromium
       - name: Qualify all current semantic and package gates
         run: pnpm quality:check -- --phase release --output-dir artifacts/release-checks
       - name: Qualify the exact versioned tarballs
@@ -66,7 +96,7 @@ jobs:
           qualification=$(find artifacts/qualification -name qualification.json -print -quit)
           node tooling/configs/publish-qualified.mjs --qualification "$qualification" --quality-summary artifacts/release-checks/summary.json > artifacts/release/publication-verification.json
           cp package.json pnpm-lock.yaml artifacts/release/
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: release-qualified-${{ runner.os }}-${{ github.sha }}
@@ -76,3 +106,51 @@ jobs:
             artifacts/qualification/
           if-no-files-found: error
           retention-days: 90
+
+  publish:
+    name: publish to npm
+    needs: qualify
+    if: inputs.publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: npm
+    permissions:
+      contents: write # release tags
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-qualified-Linux-${{ github.sha }}
+          path: artifacts
+      - name: Publish the qualified archives
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DIST_TAG: ${{ inputs.dist_tag }}
+        run: |
+          qualification=$(find artifacts/qualification -name qualification.json -print -quit)
+          node tooling/configs/publish-qualified.mjs --publish \
+            --qualification "$qualification" \
+            --quality-summary artifacts/release-checks/summary.json \
+            --tag "$DIST_TAG" \
+            --output-dir artifacts/publication
+      - name: Tag the published versions
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          qualification=$(realpath "$(find artifacts/qualification -name qualification.json -print -quit)")
+          node -e 'for (const p of require(process.argv[1]).packages) console.log(p.name + "@" + p.version)' "$qualification" |
+            while read -r tag; do
+              git rev-parse -q --verify "refs/tags/$tag" >/dev/null || git tag "$tag"
+            done
+          git push origin --tags
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: publication-${{ github.sha }}
+          path: artifacts/publication/
+          if-no-files-found: warn
+          retention-days: 365

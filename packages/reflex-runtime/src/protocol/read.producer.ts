@@ -1,7 +1,6 @@
 import {
   currentConsumer,
   defaultContext,
-  trackingEpoch,
   type ProducerNode,
 } from "@runtime/kernel";
 import { devRecordReadProducer } from "@runtime/kernel/dev";
@@ -45,12 +44,7 @@ export function readProducer<T>(node: ProducerNode<T>): T {
   if (consumer !== null) {
     if (__PROFILE__)
       observeRuntimeProjection?.("projection.semantic.read.producer.track");
-    resolveTrackedRead(
-      node,
-      consumer,
-      consumer.tailIn?.version ?? trackingEpoch,
-      true,
-    );
+    resolveTrackedRead(node, consumer);
   }
 
   devRecordReadProducer(node, value, defaultContext);

@@ -4,7 +4,6 @@ const NO_FAILURE = Symbol("no async failure");
 
 let activeFailureCapture: AsyncFailureCapture | undefined;
 
-
 // Is it possible to merge this object with lifetime and remove class?
 export class AsyncFailureCapture {
   private failure: unknown | typeof NO_FAILURE = NO_FAILURE;

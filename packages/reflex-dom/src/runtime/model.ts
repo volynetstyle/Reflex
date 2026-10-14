@@ -390,7 +390,8 @@ export function defineModel<Args extends unknown[], Shape extends object>(
       domContext?.runtime.batch ??
       getDefaultDOMRuntime().batch;
     const activeOwner = getActiveOwnerContext();
-    const owner = activeOwner ?? createOwnerContext();
+    const owner =
+      activeOwner ?? createOwnerContext(domContext?.runtime.domain ?? null);
     const ownerNode = activeOwner?.currentNode ?? null;
     const node = createOwnershipNode();
     const runCleanup = <T>(fn: () => T): T => runBatch(() => untracked(fn));
