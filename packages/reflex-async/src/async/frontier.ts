@@ -1,14 +1,5 @@
 import { AsyncProtocolError } from "./errors";
 
-/** Freshness handles belong to async sources, never to ordinary reactive nodes. */
-export interface FreshnessDependency {
-  /** Intrusive scratch cell, allocated with the source rather than during a walk. */
-  readonly [FRONTIER_STATE]: FrontierState;
-  ensure(): void;
-  /** Check the already-pulled source without recording a reactive edge. */
-  validate(): void;
-}
-
 export const FRONTIER_STATE: unique symbol = Symbol("reflex.frontier");
 const Leaf = 0;
 const Empty = 1 << 0;
@@ -44,6 +35,15 @@ interface FrontierNode {
   readonly entries: readonly EvaluationFrontier[];
 }
 
+/** Freshness handles belong to async sources, never to ordinary reactive nodes. */
+export interface FreshnessDependency {
+  /** Intrusive scratch cell, allocated with the source rather than during a walk. */
+  readonly [FRONTIER_STATE]: FrontierState;
+  ensure(): void;
+  /** Check the already-pulled source without recording a reactive edge. */
+  validate(): void;
+}
+
 /** Shared, immutable proof expression produced while evaluating async work. */
 export type EvaluationFrontier = FreshnessDependency | FrontierNode;
 
@@ -58,19 +58,21 @@ function createFrontier(
   // updates and avoiding any traversal of the children's transitive graphs.
   let min = Infinity;
   let max = 0;
+
   for (let i = 0; i < entries.length; ++i) {
     const state = entries[i]![FRONTIER_STATE];
     if (state.min < min) min = state.min;
     if (state.max > max) max = state.max;
   }
-  return Object.freeze({
+
+  return {
     [FRONTIER_STATE]: { bits, visit: 0, min, max },
-    entries: Object.freeze(entries),
-  });
+    entries: entries,
+  };
 }
 
 export const EMPTY_FRONTIER: EvaluationFrontier = createFrontier(Empty, []);
-const EMPTY_PUBLICATION_FRONTIER: PublicationFrontier = Object.freeze([]);
+const EMPTY_PUBLICATION_FRONTIER: PublicationFrontier = [];
 
 function isFrontierNode(
   frontier: EvaluationFrontier,
@@ -183,24 +185,36 @@ function walkFrontier(
   }
 }
 
-function containsDependency(
+export function containsDependency(
   frontier: EvaluationFrontier,
   target: FreshnessDependency,
 ): boolean {
-  if (frontier === target) return true;
+  if (
+    frontier === target ||
+    frontier[FRONTIER_STATE] === target[FRONTIER_STATE]
+  )
+    return true;
+
   const id = target[FRONTIER_STATE].min;
   const rootState = frontier[FRONTIER_STATE];
+
   if (id < rootState.min || id > rootState.max || !isFrontierNode(frontier))
     return false;
-  if (rootState.bits & Direct) return frontier.entries.includes(target);
+  if (rootState.bits & Direct) return containsSource(frontier.entries, target);
+
   const base = high;
   let top = base;
   const visitedBase = visitedHigh;
   const walk = beginWalk();
+
   let current: EvaluationFrontier = frontier;
   try {
     while (true) {
-      if (current === target) return true;
+      if (
+        current === target ||
+        current[FRONTIER_STATE] === target[FRONTIER_STATE]
+      )
+        return true;
       const state = current[FRONTIER_STATE];
       if (
         id >= state.min &&
@@ -211,7 +225,7 @@ function containsDependency(
         const entries: readonly EvaluationFrontier[] = (current as FrontierNode)
           .entries;
         if (state.bits & Direct) {
-          if (entries.includes(target)) return true;
+          if (containsSource(entries, target)) return true;
         } else if (state.bits & Composite) {
           for (let i = entries.length - 1; i > 0; --i)
             stack[top++] = entries[i]!;
@@ -227,6 +241,17 @@ function containsDependency(
   } finally {
     releaseWalk(base, top, visitedBase);
   }
+}
+
+/** Failure observations share their source's identity and visitation cell. */
+function containsSource(
+  entries: readonly EvaluationFrontier[],
+  target: FreshnessDependency,
+): boolean {
+  if (entries.includes(target)) return true;
+  const state = target[FRONTIER_STATE];
+  for (const entry of entries) if (entry[FRONTIER_STATE] === state) return true;
+  return false;
 }
 
 /** Pure conversion to distinct leaves in capture order; the caller owns memoization. */
@@ -276,9 +301,12 @@ export function sameFrontierShape(
   if (left === right) return true;
   if (!isFrontierNode(left) || !isFrontierNode(right)) return false;
   if (left[FRONTIER_STATE].bits !== right[FRONTIER_STATE].bits) return false;
+
   const a = left.entries;
   const b = right.entries;
+
   if (a.length !== b.length) return false;
+
   for (let i = 0; i < a.length; ++i) if (a[i] !== b[i]) return false;
   return true;
 }
@@ -291,9 +319,11 @@ export class FrontierBuilder {
 
   constructor(private readonly owner?: FreshnessDependency) {}
 
-  add(dependency: FreshnessDependency): void {
+  add(dependency: FreshnessDependency, observation = dependency): void {
     if (dependency === this.owner)
       throw new AsyncProtocolError("Cyclic async derivation dependency.");
+
+    dependency = observation;
 
     const directSet = this.directSet;
     if (directSet !== undefined) {
@@ -345,6 +375,10 @@ export class FrontierBuilder {
 // Computed evaluations and async bodies collect independently of execution API lifetime.
 let activeFrontierCollector: FrontierBuilder | undefined;
 
+export function hasFrontierCollector(): boolean {
+  return activeFrontierCollector !== undefined;
+}
+
 export function withFrontierCollector<T>(
   collector: FrontierBuilder,
   expression: () => T,
@@ -360,8 +394,9 @@ export function withFrontierCollector<T>(
 
 export function recordFreshnessDependency(
   dependency: FreshnessDependency,
+  observation = dependency,
 ): void {
-  activeFrontierCollector?.add(dependency);
+  activeFrontierCollector?.add(dependency, observation);
 }
 
 export function inheritFrontier(frontier: EvaluationFrontier): void {

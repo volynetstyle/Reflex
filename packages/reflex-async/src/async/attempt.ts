@@ -17,9 +17,7 @@ export class Attempt implements AsyncAttempt {
   readonly signal = this.controller.signal;
 
   frontier: EvaluationFrontier = EMPTY_FRONTIER;
-
   private materializedFrontier: PublicationFrontier | undefined;
-
   blocker: AsyncBlocker | undefined;
 
   // Cache one revision's notification; public reads promote it to a reusable blocker.
@@ -27,7 +25,7 @@ export class Attempt implements AsyncAttempt {
 
   constructor(
     readonly token: number,
-    // PERF IDEA: each Attempt captures a fresh `isCurrent` closure.
+    // TODO MAYBE: PERF IDEA: each Attempt captures a fresh `isCurrent` closure.
     // If this becomes significant, consider replacing it with `owner + token`
     // and checking the current token directly if this becomes measurable not by taste.
     private readonly isCurrent: () => boolean,
@@ -61,7 +59,10 @@ const PROTO_MESSAGE =
   "Capture reactive async inputs before await; AsyncExecution.read/commit are synchronous.";
 
 /** This context controls handle lifetime only; dependency capture lives in frontier.ts. */
-function executionRead<T>(execution: ExecutionHandle, source: AsyncSource<T>): T {
+function executionRead<T>(
+  execution: ExecutionHandle,
+  source: AsyncSource<T>,
+): T {
   if (activeAsyncExecution !== execution || !execution.attempt.alive()) {
     throw new AsyncProtocolError(PROTO_MESSAGE);
   }

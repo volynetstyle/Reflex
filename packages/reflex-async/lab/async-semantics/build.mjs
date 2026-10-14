@@ -251,8 +251,8 @@ function productionInstrumentation() {
       );
       return replaceOnce(
         source,
-        "  validate(): void {",
-        "  validate(): void {\n    recordPublicationValidation();",
+        "  validate(observedFailure?: Outcome): void {",
+        "  validate(observedFailure?: Outcome): void {\n    recordPublicationValidation();",
       );
     },
   };

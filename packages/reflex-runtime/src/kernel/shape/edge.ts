@@ -23,6 +23,3 @@ export const createReactiveEdge = (
   prevIn: null,
   nextIn: null,
 }); // Order matters!
-
-export const clearReactiveEdgeLinks = (edge: ReactiveEdge): void =>
-  void (edge.prevOut = edge.prevIn = edge.nextIn = null);

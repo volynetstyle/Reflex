@@ -94,6 +94,7 @@ const control = run("control", [
   "tests/reflex.async.property.test.ts",
   "tests/reflex.async.qualification.test.ts",
   "tests/reflex.async.frontier.test.ts",
+  "tests/reflex.async.review.test.ts",
 ]);
 if (control.status !== "passed")
   throw new Error(
@@ -135,6 +136,7 @@ const summary = {
     "tests/reflex.async.frontier.test.ts": hash(
       "tests/reflex.async.frontier.test.ts",
     ),
+    "tests/reflex.async.review.test.ts": hash("tests/reflex.async.review.test.ts"),
     "scripts/async-mutations.mjs": hash("scripts/async-mutations.mjs"),
     "scripts/qualify-async-mutations.mjs": hash(
       "scripts/qualify-async-mutations.mjs",

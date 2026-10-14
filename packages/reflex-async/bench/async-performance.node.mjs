@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const packageRoot = fileURLToPath(new URL("../", import.meta.url));
-const outputDir = resolve(packageRoot, ".cache/async-performance");
+const outputDir = resolve(packageRoot, process.env.REFLEX_ASYNC_BENCH_DIR ?? ".cache/async-performance");
 const baselineDir = resolve(outputDir, "baseline");
 const sourceFile = resolve(packageRoot, "src/index.ts");
 const scenarioFilter = process.env.REFLEX_ASYNC_BENCH_CASE;
@@ -158,6 +158,19 @@ async function worker(buildDir) {
     run(count) { for (let i = 0; i < count; ++i) new AbortController().abort(); return count; },
     close() {},
   }));
+  add("cancel resolve waiters / drain", () => {
+    const source = asyncDerived(() => new Promise(() => {}));
+    return { async run(count) {
+      const waits = [];
+      for (let i = 0; i < count; ++i) {
+        const controller = new AbortController();
+        waits.push(source.resolve({ signal: controller.signal }).catch(() => {}));
+        controller.abort();
+      }
+      await Promise.all(waits);
+      return count;
+    }, close() { source.dispose(); } };
+  });
   add("cross-runtime fulfilled read", () => {
     const source = asyncDerived(() => 1);
     createRuntime();

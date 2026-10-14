@@ -28,10 +28,27 @@ Use `execution.read(source)` for fresh dependent values and
 `resolve()` follow replacement attempts. An owner `AbortSignal` or `dispose()`
 ends the source lifetime.
 
+Catch blocks can publish a fallback for an observed source failure. If that
+source changes before async publication, the derivation is validated again.
+A pending read still blocks publication. A blocking direct `source.read()` after
+`await` without a captured dependency rejects with `AsyncProtocolError`.
+
+Capture fresh sources directly in each async job. A warmed ordinary `computed`
+does not forward hidden async freshness dependencies; the evaluated-computed
+adapter is currently internal. Keep shared transformations as pure functions:
+
+```ts
+const project = (value: number) => value * 2;
+const child = asyncDerived(({ read }) => project(read(root)));
+```
+
 The package exports ESM, CommonJS and TypeScript declarations.
 `@volynets/reflex-runtime` is a peer dependency, kept external in both bundles
 so Async shares the application's kernel module identity with the Reflex facade,
 Store and DOM. Install a compatible runtime alongside this package.
+Use the same module format for these packages in a reactive graph. Mixing an
+ESM facade with CommonJS async (or the reverse) loads separate runtime instances
+and is unsupported.
 
 ## Migration
 
@@ -56,6 +73,8 @@ pnpm --filter @volynets/reflex-async bench
 property contracts. `test:async:mutations` qualifies the contract witnesses;
 `test:async:production` checks production semantics against independent oracles.
 `test:async:semantics` and the lab mutation scripts compare isolated variants.
+`test:async:wait-memory` verifies that cancelled waiter signals are collected
+while their source remains pending, including `until()` and nested blockers.
 
 After building `@volynets/reflex` and this package, run `test:async:package` to
 check ESM and CommonJS exports and shared runtime behavior. `typecheck:package`

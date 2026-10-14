@@ -24,6 +24,27 @@ function dependency(id: string): FreshnessDependency & { readonly id: string } {
 }
 
 describe("async evaluation frontiers", () => {
+  it("recognizes and deduplicates failure observations by their source identity", () => {
+    const source = dependency("source");
+    const other = dependency("other");
+    const observation: FreshnessDependency = {
+      [FRONTIER_STATE]: source[FRONTIER_STATE],
+      ensure: source.ensure,
+      validate: source.validate,
+    };
+    const direct = new FrontierBuilder();
+    direct.add(source, observation);
+    direct.add(other);
+    const composite = new FrontierBuilder();
+    composite.merge(direct.snapshot());
+    composite.merge(source);
+    for (const proof of [observation, direct.snapshot(), composite.snapshot()]) {
+      expect(() => new FrontierBuilder(source).merge(proof)).toThrow(AsyncProtocolError);
+    }
+    expect(() => new FrontierBuilder(source).add(source, observation)).toThrow(AsyncProtocolError);
+    expect(materializeFrontier(composite.snapshot())).toEqual([observation, other]);
+  });
+
   it("matches an ordered union oracle across repeated and reentrant DAG walks", () => {
     fc.assert(
       fc.property(
