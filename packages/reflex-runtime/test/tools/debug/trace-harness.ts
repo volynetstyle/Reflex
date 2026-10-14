@@ -183,7 +183,7 @@ export function expectTraceRecomputed(
   summary: EventSummary,
   labels: string[],
 ): void {
-  const actual = summary.recomputes.map((entry) => entry.split(":")[0]);
+  const actual = summary.recomputes.map((entry) => entry.split(":")[0]!);
   expectSetEqual(actual, labels);
 }
 

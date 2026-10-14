@@ -6,7 +6,7 @@ import {
   readProducer,
   writeProducer,
 } from "../../../src/internal";
-import type { ReactiveNode } from "../../../src/internal";
+import type { ProducerNode, ReactiveNode } from "../../../src/internal";
 import { createConsumer, createProducer } from "../fixtures/node-factory";
 import {
   expectGraphIntegrity,
@@ -191,12 +191,15 @@ export function interleave<T>(left: T[], right: T[], offset: number): T[] {
   const length = Math.max(left.length, right.length);
 
   for (let index = 0; index < length; index += 1) {
+    const leftEntry = left[index];
+    const rightEntry = right[index];
+
     if ((index + offset) % 3 === 0) {
-      if (right[index] !== undefined) output.push(right[index]);
-      if (left[index] !== undefined) output.push(left[index]);
+      if (rightEntry !== undefined) output.push(rightEntry);
+      if (leftEntry !== undefined) output.push(leftEntry);
     } else {
-      if (left[index] !== undefined) output.push(left[index]);
-      if (right[index] !== undefined) output.push(right[index]);
+      if (leftEntry !== undefined) output.push(leftEntry);
+      if (rightEntry !== undefined) output.push(rightEntry);
     }
   }
 
@@ -205,7 +208,7 @@ export function interleave<T>(left: T[], right: T[], offset: number): T[] {
 
 function sumPattern(
   pattern: number[],
-  sources: ReactiveNode<number>[],
+  sources: ProducerNode<number>[],
 ): number {
   let total = 0;
 

@@ -4,7 +4,7 @@ import {
   readProducer,
   writeProducer,
 } from "../../../src/internal";
-import type { ReactiveNode } from "../../../src/internal";
+import type { ProducerNode, ReactiveNode } from "../../../src/internal";
 import { createConsumer, createProducer } from "../fixtures/node-factory";
 import { expectRuntimeSectionHealthy } from "./runtime-model";
 
@@ -32,10 +32,10 @@ export type RecomputedSnapshot = {
 };
 
 type ReactiveRow = {
-  alive: ReactiveNode<boolean>;
-  group: ReactiveNode<number>;
-  order: ReactiveNode<number>;
-  value: ReactiveNode<number>;
+  alive: ProducerNode<boolean>;
+  group: ProducerNode<number>;
+  order: ProducerNode<number>;
+  value: ProducerNode<number>;
 };
 
 /**
