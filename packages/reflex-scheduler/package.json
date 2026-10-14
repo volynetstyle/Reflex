@@ -1,6 +1,6 @@
 {
   "name": "@volynets/reflex-scheduler",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "type": "module",
   "description": "Effect scheduler policies for Reflex runtimes",
   "license": "MIT",
@@ -44,7 +44,7 @@
     "prepublishOnly": "pnpm typecheck && pnpm check:artifacts"
   },
   "peerDependencies": {
-    "@volynets/reflex-runtime": "^1.0.1"
+    "@volynets/reflex-runtime": "^1.1.0"
   },
   "devDependencies": {
     "@volynets/reflex-runtime": "workspace:*"

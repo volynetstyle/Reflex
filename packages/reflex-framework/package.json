@@ -1,6 +1,6 @@
 {
   "name": "@volynets/reflex-framework",
-  "version": "0.1.4",
+  "version": "1.0.0",
   "type": "module",
   "description": "Platform-agnostic JSX runtime and renderable model for Reflex",
   "license": "MIT",
@@ -77,7 +77,7 @@
     "node": ">=20.19.0"
   },
   "peerDependencies": {
-    "@volynets/reflex-runtime": "^1.0.1"
+    "@volynets/reflex-runtime": "^1.1.0"
   },
   "devDependencies": {
     "@volynets/reflex-runtime": "workspace:*"
