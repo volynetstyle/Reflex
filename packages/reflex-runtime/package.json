@@ -105,7 +105,9 @@
     "build:all": "node ../../tooling/build/run.mjs @volynets/reflex-runtime",
     "check:artifacts": "node ../../tooling/build/verify-artifacts.mjs --directory .",
     "prepack": "pnpm check:artifacts",
-    "build:types:cjs": "node ../../tooling/build/cjs-declarations.mjs . runtime"
+    "build:types:cjs": "node ../../tooling/build/cjs-declarations.mjs . runtime",
+    "check:domain-baseline": "node scripts/record-domain-baseline.mjs --check",
+    "record:domain-baseline": "node scripts/record-domain-baseline.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",
