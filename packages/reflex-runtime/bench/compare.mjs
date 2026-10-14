@@ -51,7 +51,7 @@ const replicates = Number(option("--replicates", quick ? 12 : 24));
 const threshold = Number(option("--threshold", 0.03));
 const samples = Number(option("--samples", quick ? 15 : 25));
 let seed = Number(option("--seed", 1)) >>> 0 || 1;
-const memoryRuns = Number(option("--memory-runs", 3));
+const memoryRuns = Number(option("--memory-runs", 5));
 
 const random = () => {
   seed ^= seed << 13;
@@ -139,8 +139,7 @@ const runs = {};
 const started = Date.now();
 
 /** One pair process of A against `other`; the ratio is oriented as other/A. */
-function pair(workload, other) {
-  const swapped = random() < 0.5;
+function pair(workload, other, swapped) {
   const [x, y] = swapped ? [other, sides.A.bundle] : [sides.A.bundle, other];
   const result = worker(x, workload, "pair", [y, "--samples", String(samples)]);
   const logRatios = swapped
@@ -159,18 +158,31 @@ function pair(workload, other) {
 
 blocks.forEach((block, index) => {
   if (!verification[block.workload].equal) return;
-  const order = shuffle(["B", "C"]);
-  const detail = {};
-  for (const role of order) {
-    detail[role] = pair(
-      block.workload,
-      role === "B" ? sides.B.bundle : sides.A.bundle,
-    );
+  // The build loaded first into a process runs measurably faster or slower
+  // than the second (1-3% on the CI calibration, sign depending on the
+  // workload). Every comparison therefore runs in both orientations and the
+  // replicate's estimate is their mean, which cancels the position effect
+  // exactly instead of turning it into bimodal noise.
+  const order = shuffle(["B+", "B-", "C+", "C-"]);
+  const processes = {};
+  for (const slot of order) {
+    const other = slot[0] === "B" ? sides.B.bundle : sides.A.bundle;
+    processes[slot] = pair(block.workload, other, slot[1] === "-");
   }
+  const combine = (forward, reverse) => ({
+    logRatio: (forward.logRatio + reverse.logRatio) / 2,
+    positionEffect: (forward.logRatio - reverse.logRatio) / 2,
+    pairMad: (forward.pairMad + reverse.pairMad) / 2,
+    baselineNs: (forward.baselineNs + reverse.baselineNs) / 2,
+    otherNs: (forward.otherNs + reverse.otherNs) / 2,
+    gcCount: forward.gcCount + reverse.gcCount,
+    processes: [forward, reverse],
+  });
   (runs[block.workload] ??= []).push({
     replicate: block.replicate,
     order,
-    ...detail,
+    B: combine(processes["B+"], processes["B-"]),
+    C: combine(processes["C+"], processes["C-"]),
   });
   if ((index + 1) % 10 === 0) {
     const elapsed = (Date.now() - started) / 1000;
@@ -238,26 +250,41 @@ const results = timed.map((w) => {
     candidate,
     control,
     pairNoise: noise,
+    positionEffect: Math.exp(median(list.map((r) => r.B.positionEffect))) - 1,
     verdict,
     reason,
     replicates: list.length,
   };
 });
 
+// Retention is the slope of heap growth over cycles: one-time costs (JIT
+// metadata, cache growth) cancel between a short and a long run, and only
+// memory that grows with the number of cycles remains.
+const memoryCycles = [2000, 8000];
 const memoryResults = memory.map((w) => {
-  const measure = (bundle) =>
-    median(
-      Array.from(
-        { length: memoryRuns },
-        () => worker(bundle, w.id, "memory").bytesPerStep,
-      ),
-    );
+  const measure = (bundle) => {
+    const slopes = Array.from({ length: memoryRuns }, () => {
+      const [short, long] = memoryCycles.map((cycles) =>
+        worker(bundle, w.id, "memory", ["--cycles", String(cycles)]),
+      );
+      return (
+        (long.bytesPerStep * long.cycles - short.bytesPerStep * short.cycles) /
+        (long.cycles - short.cycles)
+      );
+    });
+    return { median: median(slopes), slopes };
+  };
+  const baseline = measure(sides.A.bundle);
+  const candidate = measure(sides.B.bundle);
   return {
     id: w.id,
     level: w.level,
     verified: verification[w.id].equal,
-    baselineBytesPerStep: measure(sides.A.bundle),
-    candidateBytesPerStep: measure(sides.B.bundle),
+    cycles: memoryCycles,
+    baselineBytesPerStep: baseline.median,
+    candidateBytesPerStep: candidate.median,
+    baselineSlopes: baseline.slopes,
+    candidateSlopes: candidate.slopes,
   };
 });
 
@@ -311,16 +338,16 @@ writeFileSync(out, `${JSON.stringify(report, null, 2)}\n`);
 const pct = (v) =>
   v == null ? "  n/a " : `${(v * 100).toFixed(1).padStart(5)}%`;
 const lines = [
-  `| workload | baseline ns/op | Δ median | 95% interval | control Δ | pair noise | verdict |`,
-  `| --- | ---: | ---: | --- | ---: | ---: | --- |`,
+  `| workload | baseline ns/op | Δ median | 95% interval | control Δ | position | pair noise | verdict |`,
+  `| --- | ---: | ---: | --- | ---: | ---: | ---: | --- |`,
   ...results.map((r) =>
     r.verdict === "invalid" && r.candidate === undefined
-      ? `| ${r.id} | | | | | | invalid (${r.reason}) |`
-      : `| ${r.id} | ${r.baselineNsPerOp.toFixed(2)} | ${pct(r.candidate.medianDelta)} | [${pct(r.candidate.lower)}, ${pct(r.candidate.upper)}] | ${pct(r.control.medianDelta)} | ${(r.pairNoise * 100).toFixed(1)}% | ${r.verdict} |`,
+      ? `| ${r.id} | | | | | | | invalid (${r.reason}) |`
+      : `| ${r.id} | ${r.baselineNsPerOp.toFixed(2)} | ${pct(r.candidate.medianDelta)} | [${pct(r.candidate.lower)}, ${pct(r.candidate.upper)}] | ${pct(r.control.medianDelta)} | ${pct(r.positionEffect)} | ${(r.pairNoise * 100).toFixed(1)}% | ${r.verdict} |`,
   ),
   ...memoryResults.map(
     (m) =>
-      `| ${m.id} (bytes/step) | ${m.baselineBytesPerStep.toFixed(1)} | ${m.candidateBytesPerStep.toFixed(1)} | | | | memory |`,
+      `| ${m.id} (bytes/step) | ${m.baselineBytesPerStep.toFixed(1)} | ${m.candidateBytesPerStep.toFixed(1)} | | | | | memory |`,
   ),
 ];
 process.stdout.write(

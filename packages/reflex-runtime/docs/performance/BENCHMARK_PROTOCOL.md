@@ -28,11 +28,17 @@ Implementation: `bench/workloads.mjs` (specification), `bench/worker.mjs`
    would see two `step` targets, go polymorphic and stop inlining, which
    slowed a 2 ns read to 4 ns and produced 12% bimodal artefacts before it
    was isolated.
-6. **Every comparison carries its own negative control.** Each replicate runs
-   one A-vs-B process and one A-vs-A' process (baseline against itself) in
-   random order. If the control detects a difference, the method is biased
-   for that workload and the comparison is invalid.
-7. **No single score.** Results are reported per workload and level; a
+6. **Position is balanced, not randomized.** The build loaded first into a
+   process runs systematically faster or slower than the second (1–3% on
+   the CI calibration, with a workload-dependent sign). Randomizing the
+   order removes the bias but leaves bimodal noise, so every comparison runs
+   in both orientations and the replicate's estimate is their mean, which
+   cancels the effect exactly. The effect is reported per workload.
+7. **Every comparison carries its own negative control.** Each replicate runs
+   A-vs-B and A-vs-A' (baseline against itself), both in both orientations.
+   If the control detects a difference, the method is biased for that
+   workload and the comparison is invalid.
+8. **No single score.** Results are reported per workload and level; a
    regression in one class is never averaged away by gains elsewhere.
 
 ## Workload levels
@@ -66,18 +72,22 @@ families are compared as slopes across sizes, not as single numbers.
 numbers and profiling, never for A/B claims.
 
 Memory workloads run `200` warm-up steps, three forced GCs, `N` steps and three
-forced GCs again, reporting `Δheap / N`. Values are compared across sizes of `N`
-before being read as retention; JIT metadata growth is not a leak.
+forced GCs again, reporting `Δheap / N`. A single `Δheap / N` mixes one-time
+costs (JIT metadata, cache growth) with retention: identical bundles read 36
+and 42 B/step on the CI calibration. Retention is therefore the slope between
+`N = 2000` and `N = 8000` in separate processes, median of 5 runs per side;
+one-time costs cancel and only memory that grows with cycles remains.
 
 ## Comparison procedure (compare)
 
 1. Build both sides; record commits, flags, bundle SHA-256, Node/V8, CPU.
 2. Verify every workload on both sides.
-3. Shuffle `workload × replicate` blocks; inside each block run the A-vs-B
-   and A-vs-A' processes in random order, and randomize which build runs as
-   X in each process (seeded; the seed is recorded).
+3. Shuffle `workload × replicate` blocks; inside each block run four
+   processes in random order (seeded; the seed is recorded): A-vs-B and
+   A-vs-A', each with A loaded first and with A loaded second.
 4. Each process contributes the median of its pair log ratios, oriented as
-   `log(other/A)`.
+   `log(other/A)`; a replicate's estimate is the mean of its two
+   orientations.
 5. Report the median ratio and the exact order-statistic 95% interval of the
    median with a Bonferroni correction over the workload family
    (`tooling/benchmarks/statistics.mjs`).
