@@ -2,12 +2,12 @@ import { loadRuntimeConfiguration } from "./config";
 import { createRuntimeContext, type RuntimeContext } from "./context.model";
 import {
   currentConsumer,
+  keepNewestTrackingEpoch,
   propagationScopeDepth,
   reactiveBatchDepth,
   setCurrentConsumer,
   setPropagationScopeDepth,
   setReactiveBatchState,
-  setTrackingEpoch,
   trackingEpoch,
   runtimeState,
 } from "./state";
@@ -25,7 +25,9 @@ export function syncRuntimeContext(
   switch (direction) {
     case "load": {
       setCurrentConsumer(context.currentConsumer);
-      setTrackingEpoch(context.trackingEpoch);
+      // One kernel-wide clock: edges are shared by every context and stamped
+      // with pass epochs, so a load may only move the epoch forward.
+      keepNewestTrackingEpoch(context.trackingEpoch);
       setPropagationScopeDepth(context.propagationScopeDepth);
       setReactiveBatchState(context.batchDepth, context.runtimeState);
       loadRuntimeConfiguration(context);

@@ -143,6 +143,23 @@ context objects. `runWithRuntimeContext` restores the previous context in a
 finally block. Traversal storage remains shared and is protected by invocation
 slices.
 
+`trackingEpoch` is one kernel-wide clock, not a per-context register. Edges are
+shared and stamped with pass epochs, so a context load only moves the epoch
+forward (uint32 wraparound ordering); a rewind would let a stale stamp pose as
+a current-pass membership proof and drop a dependency. Only a full reset of
+the active context rewinds it to zero.
+
+`snapshotRuntimeContext` is a register-bank checkpoint. Restoring it is legal at
+a quiescent boundary of that context, or to unwind to a checkpoint taken by an
+enclosing frame still on the stack. Restore never touches the epoch: comparing
+an arbitrarily old snapshot epoch is ambiguous under wraparound.
+
+`configureRuntimeContext` on the active context reloads configuration only. It
+never reloads execution registers (`currentConsumer`, depths, `runtimeState`)
+from the saved object, whose copies are stale while the context is active.
+
+Contracts: `test/runtime/contracts/runtime.context-registers.test.ts`.
+
 Implementation: `src/kernel/context*.ts`, `src/kernel/state.ts`, and
 `src/kernel/config.ts`.
 

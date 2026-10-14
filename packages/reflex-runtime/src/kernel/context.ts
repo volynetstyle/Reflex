@@ -1,6 +1,9 @@
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
-import { DEFAULT_READ_TRACKING_STRATEGY } from "./config";
+import {
+  DEFAULT_READ_TRACKING_STRATEGY,
+  loadRuntimeConfiguration,
+} from "./config";
 import {
   applyRuntimeContextOptions,
   createRuntimeContext,
@@ -15,7 +18,7 @@ import {
   syncRuntimeContext,
 } from "./context.switch";
 import { resetRuntimeExecutionState } from "./execution";
-import { trackingEpoch } from "./state";
+import { setTrackingEpoch, trackingEpoch } from "./state";
 
 export { createRuntimeContext, getActiveRuntimeContext };
 export type {
@@ -61,8 +64,9 @@ export function configureRuntimeContext(
     context,
     explicitContext ? maybeOptions : contextOrOptions,
   );
-  if (context === getActiveRuntimeContext())
-    syncRuntimeContext(context, "load");
+  // Configuration only: the active execution registers are live and the
+  // context object holds stale copies of them until the next save.
+  if (context === getActiveRuntimeContext()) loadRuntimeConfiguration(context);
 }
 
 export function resetRuntimeContext(
@@ -81,6 +85,8 @@ export function resetRuntimeContext(
   if (context === getActiveRuntimeContext()) {
     resetRuntimeExecutionState();
     syncRuntimeContext(context, "load");
+    // Full kernel reset is the only operation allowed to rewind the clock.
+    setTrackingEpoch(0);
   }
 }
 
@@ -114,16 +120,21 @@ export function snapshotRuntimeContext(
   };
 }
 
+/**
+ * Restores a register-bank checkpoint taken by `snapshotRuntimeContext`.
+ *
+ * Legal at a quiescent boundary of `context`, or to unwind to a checkpoint
+ * taken by an enclosing frame that is still on the stack. The tracking epoch
+ * is never restored: it is the kernel-wide clock, and any comparison with an
+ * arbitrarily old snapshot epoch is ambiguous under uint32 wraparound.
+ */
 export function restoreRuntimeContextSnapshot(
   context: RuntimeContext,
   snapshot: RuntimeContextSnapshot,
 ): void {
-  const currentEpoch =
-    context === getActiveRuntimeContext()
-      ? trackingEpoch
-      : context.trackingEpoch;
+  const active = context === getActiveRuntimeContext();
+  if (active) context.trackingEpoch = trackingEpoch;
   context.currentConsumer = snapshot.currentConsumer;
-  context.trackingEpoch = Math.max(snapshot.trackingEpoch, currentEpoch);
   context.propagationScopeDepth = snapshot.propagationScopeDepth;
   context.batchDepth = snapshot.batchDepth;
   context.runtimeState = snapshot.runtimeState;
@@ -131,6 +142,5 @@ export function restoreRuntimeContextSnapshot(
   context.nodeInvalidatedHook = snapshot.nodeInvalidatedHook;
   context.runtimeIdleHook = snapshot.runtimeIdleHook;
   context.hostFlushHook = snapshot.hostFlushHook;
-  if (context === getActiveRuntimeContext())
-    syncRuntimeContext(context, "load");
+  if (active) syncRuntimeContext(context, "load");
 }
