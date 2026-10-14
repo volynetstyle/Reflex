@@ -144,15 +144,16 @@ finally block. Traversal storage remains shared and is protected by invocation
 slices.
 
 `trackingEpoch` is one kernel-wide clock, not a per-context register. Edges are
-shared and stamped with pass epochs, so a context load only moves the epoch
-forward (uint32 wraparound ordering); a rewind would let a stale stamp pose as
-a current-pass membership proof and drop a dependency. Only a full reset of
-the active context rewinds it to zero.
+shared and stamped with pass epochs, so the clock only moves forward and
+never repeats a value: a repeated stamp would let a stale edge pose as a
+current-pass membership proof and drop a dependency (F13). A context load
+keeps the newer epoch, `setTrackingEpoch` only moves it forward, a reset does
+not rewind it, and it does not wrap (exact for 2^53 passes).
 
 `snapshotRuntimeContext` is a register-bank checkpoint. Restoring it is legal at
 a quiescent boundary of that context, or to unwind to a checkpoint taken by an
-enclosing frame still on the stack. Restore never touches the epoch: comparing
-an arbitrarily old snapshot epoch is ambiguous under wraparound.
+enclosing frame still on the stack. Restore never touches the epoch, which
+only moves forward.
 
 `configureRuntimeContext` on the active context reloads configuration only. It
 never reloads execution registers (`currentConsumer`, depths, `runtimeState`)

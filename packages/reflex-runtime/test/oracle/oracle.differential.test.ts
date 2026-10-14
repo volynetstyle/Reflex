@@ -7,6 +7,7 @@ import {
   interpret,
   programSize,
   shrink,
+  touchesEpoch,
   type ObservationLevel,
   type Program,
   type RuntimeModule,
@@ -16,7 +17,25 @@ import {
  * Baseline differential oracle: the implementation under test must produce the
  * same observation trace as the frozen baseline bundle for every generated
  * program. Reproduce a failure with ORACLE_SEED=<seed>.
+ *
+ * One divergence is allowed, and only where the baseline is demonstrably
+ * wrong: F13. The baseline's clock rewinds and wraps, so in a program with an
+ * `epoch` operation a pass can repeat a stamp still carried by a live edge
+ * and the baseline drops a dependency. A divergence is accepted only for such
+ * a program, only if the baseline trace violates the algorithm-independent
+ * invariants and the candidate trace does not.
  */
+const violates = (rt: RuntimeModule, program: Program): boolean =>
+  interpret(rt, program, "strict", { invariants: true }).some((entry) =>
+    entry.startsWith("invariant:"),
+  );
+
+const isF13Correction = (program: Program): boolean =>
+  touchesEpoch(program.ops) &&
+  violates(baseline, program) &&
+  !violates(candidate, program);
+
+let corrected = 0;
 const candidate = candidateModule as unknown as RuntimeModule;
 const SEEDS = Number(process.env.ORACLE_SEEDS ?? 2_000);
 const FIRST_SEED = Number(process.env.ORACLE_SEED ?? 1);
@@ -39,6 +58,10 @@ function report(
       interpret(candidate, p, level),
     ) !== null;
   if (!fails(program)) return null;
+  if (isF13Correction(program)) {
+    corrected++;
+    return null;
+  }
   const minimal = shrink(program, fails);
   const mismatch = firstMismatch(
     interpret(baseline, minimal, level),

@@ -61,7 +61,7 @@ export function enterConsumerTracking(
   const previousConsumer = currentConsumer;
   currentConsumer = consumer;
   runtimeState |= RuntimeState.Tracking;
-  trackingEpoch = (trackingEpoch + 1) >>> 0 || 1;
+  trackingEpoch++;
   return previousConsumer;
 }
 
@@ -84,44 +84,43 @@ export function restoreConsumerTracking(
 // #region Tracking epoch register
 
 /**
- * Monotonic dependency-tracking epoch.
+ * Kernel-wide dependency-tracking clock: every tracking pass takes the next
+ * value as its stamp, and edges keep the stamp of the pass that accepted them.
  *
- * Used to mark reads during a tracking pass.
- * Wraps around safely and skips zero.
+ * The clock only moves forward and never repeats a value, so a stamp on a live
+ * edge can never belong to a later pass (F13). It counts integers from 0; 0 is
+ * never a pass stamp. Exactness holds for 2^53 passes (Number.MAX_SAFE_INTEGER),
+ * beyond any realistic process lifetime.
  */
 export var trackingEpoch = 0;
 
 /**
- * Replace the tracking epoch.
- *
- * Mostly useful for context restore / tests.
+ * Move the clock forward to `epoch`. A value at or below the current epoch is
+ * ignored: rewinding would let a stale stamp pose as a current-pass proof.
  */
 export function setTrackingEpoch(epoch: number): void {
-  trackingEpoch = epoch >>> 0;
+  if (epoch > trackingEpoch) trackingEpoch = epoch;
 }
 
 /**
  * Advance the tracking epoch and return the new value.
  */
 export function advanceTrackingEpoch(): number {
-  trackingEpoch = (trackingEpoch + 1) >>> 0 || 1;
-  return trackingEpoch;
+  return ++trackingEpoch;
 }
 
 /**
- * Keep the newest epoch according to uint32 wraparound ordering.
+ * Keep the newest of the current epoch and `epoch` (context loads).
  */
 export function keepNewestTrackingEpoch(epoch: number): void {
-  if (((epoch - trackingEpoch) | 0) > 0) {
-    trackingEpoch = epoch;
-  }
+  if (epoch > trackingEpoch) trackingEpoch = epoch;
 }
 
 /**
- * Compare two uint32-style epochs.
+ * Whether epoch `a` is later than epoch `b`.
  */
 export function isNewerEpoch(a: number, b: number): boolean {
-  return ((a - b) | 0) > 0;
+  return a > b;
 }
 
 // #endregion

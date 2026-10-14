@@ -9,6 +9,7 @@ import {
   resetRuntimeContext,
   runWatcher,
   setTrackingEpoch,
+  trackingEpoch,
   writeProducer,
   configureRuntimeContext,
 } from "../runtime.test_utils";
@@ -28,18 +29,25 @@ import {
  * p38 is neither the next edge, one or two edges further, nor the last edge,
  * so the read reaches the stamp fallback. Each route below makes the second
  * pass reuse the first pass's stamp.
- *
- * `it.fails` records the defective behavior; the fix turns these into `it`.
+
  */
-/** Moves the clock so that the consumer's next pass gets `stale` (with the defect). */
-type Route = (stale: number, advanceBy: (passes: number) => void) => void;
+/**
+ * Moves the clock so that, with a rewinding or wrapping clock, the consumer's
+ * next pass would get `stale` again. The operations are the same for any
+ * clock; only a monotonic clock keeps the next stamp new.
+ */
+interface Clock {
+  advanceBy(passes: number): void;
+  advanceTo(epoch: number): void;
+}
+type Route = (stale: number, clock: Clock) => void;
 
 const routes: Array<[string, Route]> = [
   [
     "resetRuntimeContext rewinds the clock while nodes survive",
-    (stale, advanceBy) => {
+    (stale, clock) => {
       resetRuntimeContext();
-      advanceBy(stale - 1);
+      clock.advanceTo(stale - 1);
     },
   ],
   [
@@ -50,10 +58,13 @@ const routes: Array<[string, Route]> = [
   ],
   [
     "the clock passes 2^32",
-    (stale, advanceBy) => {
-      // 15 passes reach 2^32 - 1; a wrapping clock then restarts at 1.
-      setTrackingEpoch(0xfffffff0);
-      advanceBy(15 + stale - 1);
+    (stale, clock) => {
+      // 16 below the next multiple of 2^32: 15 passes reach it, where a uint32
+      // clock restarts at 1 and meets `stale` again `stale mod 2^32` later.
+      let wrap = 2 ** 32 * (Math.floor(trackingEpoch / 2 ** 32) + 1);
+      if (wrap - trackingEpoch < 64) wrap += 2 ** 32;
+      setTrackingEpoch(wrap - 16);
+      clock.advanceBy(15 + (stale % 2 ** 32) - 1);
     },
   ],
 ];
@@ -90,14 +101,19 @@ function scenario(route: Route) {
   const stale = consumer.firstIn!.version;
 
   // Each unrelated recompute is exactly one tracking pass.
-  const advanceBy = (passes: number) => {
-    for (let i = 0; i < passes; i++) {
-      writeProducer(ticker, i + 1);
-      readConsumer(spin);
-    }
+  let tick = 0;
+  const pass = () => {
+    writeProducer(ticker, ++tick);
+    readConsumer(spin);
   };
-
-  route(stale, advanceBy);
+  route(stale, {
+    advanceBy(passes) {
+      for (let i = 0; i < passes; i++) pass();
+    },
+    advanceTo(epoch) {
+      while (trackingEpoch < epoch) pass();
+    },
+  });
   configureRuntimeContext({
     hooks: { onNodeInvalidated: (node) => void notified.push(node) },
   });
@@ -113,7 +129,7 @@ function scenario(route: Route) {
 }
 
 describe("F13: a repeated pass stamp", () => {
-  it.fails.each(routes)(
+  it.each(routes)(
     "keeps every dependency read in the pass (%s)",
     (_, route) => {
       const { sources, mode, consumer } = scenario(route);
@@ -132,7 +148,7 @@ describe("F13: a repeated pass stamp", () => {
     },
   );
 
-  it.fails.each(routes)(
+  it.each(routes)(
     "invalidates and recomputes after a write to the colliding source (%s)",
     (_, route) => {
       const { sources, consumer, watcher, notified, seen, runs } =

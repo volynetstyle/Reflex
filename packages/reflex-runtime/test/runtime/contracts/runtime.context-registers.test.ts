@@ -120,10 +120,21 @@ describe("Reactive runtime - execution register bank contract", () => {
   });
 
   describe("tracking epoch", () => {
-    it("wraps around and skips zero", () => {
+    it("passes 2^32 without wrapping or repeating a value", () => {
       setTrackingEpoch(0xffffffff);
+      const epoch = trackingEpoch;
 
-      expect(advanceTrackingEpoch()).toBe(1);
+      expect(advanceTrackingEpoch()).toBe(epoch + 1);
+      expect(trackingEpoch).toBeGreaterThan(0xffffffff);
+    });
+
+    it("never moves backwards through setTrackingEpoch", () => {
+      const epoch = advanceTrackingEpoch();
+
+      setTrackingEpoch(epoch - 1);
+      setTrackingEpoch(0);
+
+      expect(trackingEpoch).toBe(epoch);
     });
 
     it("is never rewound by entering a fresh context", () => {
@@ -152,33 +163,29 @@ describe("Reactive runtime - execution register bank contract", () => {
       });
     });
 
-    it("orders epochs across uint32 wraparound on context switch", () => {
+    it("keeps the newer epoch when a context saved an older one", () => {
       const stale = createRuntimeContext();
-      stale.trackingEpoch = 0xfffffff0;
-      setTrackingEpoch(0xfffffffe);
+      stale.trackingEpoch = trackingEpoch;
       advanceTrackingEpoch();
       advanceTrackingEpoch();
-      const wrapped = trackingEpoch;
-
-      expect(wrapped).toBe(1);
+      const current = trackingEpoch;
 
       runWithRuntimeContext(stale, () => {
-        expect(trackingEpoch).toBe(wrapped);
+        expect(trackingEpoch).toBe(current);
       });
     });
 
-    it("restores snapshots without rewinding across wraparound", () => {
+    it("restores snapshots without rewinding the clock", () => {
       const context = getActiveRuntimeContext();
-      setTrackingEpoch(0xfffffff0);
       const snapshot = snapshotRuntimeContext(context);
 
-      setTrackingEpoch(0xffffffff);
       advanceTrackingEpoch();
       advanceTrackingEpoch();
+      const current = trackingEpoch;
 
       restoreRuntimeContextSnapshot(context, snapshot);
 
-      expect(trackingEpoch).toBe(2);
+      expect(trackingEpoch).toBe(current);
     });
 
     it("keeps dependencies when two contexts would reach the same epoch", () => {
@@ -421,13 +428,15 @@ describe("Reactive runtime - execution register bank contract", () => {
   });
 
   describe("resetRuntimeContext", () => {
-    it("still resets the active tracking epoch explicitly", () => {
+    it("does not rewind the tracking epoch", () => {
       advanceTrackingEpoch();
-      advanceTrackingEpoch();
+      const epoch = advanceTrackingEpoch();
 
+      // Nodes and edges survive a reset; a rewound clock would let their
+      // stamps pose as current-pass proofs (F13).
       resetRuntimeContext();
 
-      expect(trackingEpoch).toBe(0);
+      expect(trackingEpoch).toBe(epoch);
     });
   });
 });

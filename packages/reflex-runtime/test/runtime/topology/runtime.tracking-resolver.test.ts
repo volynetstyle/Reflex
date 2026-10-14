@@ -8,6 +8,7 @@ import {
   linkEdge,
   resolveTrackedRead,
   setTrackingEpoch,
+  trackingEpoch,
 } from "../../../src/kernel";
 import {
   expectGraphIntegrity,
@@ -91,7 +92,8 @@ describe("Reactive runtime - tracking resolver matrix", () => {
 
     expecttailIn(target, null);
     // A first read stamps with the current epoch.
-    setTrackingEpoch(23);
+    const epoch = trackingEpoch + 23;
+    setTrackingEpoch(epoch);
 
     resolveTrackedRead(sources[3]!, target);
     expectIncomingEdges(target, [
@@ -101,7 +103,7 @@ describe("Reactive runtime - tracking resolver matrix", () => {
       thirdEdge!,
     ]);
     expecttailIn(target, movedEdge!);
-    expect(movedEdge!.version).toBe(23);
+    expect(movedEdge!.version).toBe(epoch);
     expectOutgoingEdges(sources[3]!, [movedEdge!]);
     expectGraphIntegrity([...sources, target]);
   });
@@ -151,7 +153,7 @@ describe("Reactive runtime - tracking resolver matrix", () => {
     const target = createConsumerNode();
     const repeatedEdge = linkEdge(repeated, target, null, 7);
     const trailingEdge = linkEdge(trailing, target, repeatedEdge, 7);
-    const currentVersion = 37;
+    const currentVersion = trackingEpoch + 37;
     setTrackingEpoch(currentVersion);
 
     resolveTrackedRead(repeated, target);
@@ -181,7 +183,7 @@ describe("Reactive runtime - tracking resolver matrix", () => {
       linkEdge(source, target, target.lastIn, 5),
     );
     const initialEdges = [repeatedEdge, ...middleEdges];
-    const currentVersion = 41;
+    const currentVersion = trackingEpoch + 41;
     setTrackingEpoch(currentVersion);
 
     resolveTrackedRead(repeated, target);

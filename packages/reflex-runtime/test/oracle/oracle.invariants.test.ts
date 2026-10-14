@@ -6,7 +6,6 @@ import {
   interpret,
   programSize,
   shrink,
-  touchesEpoch,
   type Program,
   type RuntimeModule,
 } from "./program";
@@ -34,11 +33,10 @@ beforeAll(async () => {
 }, 120_000);
 
 describe("algorithm-independent invariants", () => {
-  it("hold on every generated program outside the F13 area", () => {
+  it("hold on every generated program", () => {
     const count = ONLY_ONE ? 1 : SEEDS;
     for (let seed = FIRST_SEED; seed < FIRST_SEED + count; seed++) {
       const program = generateProgram(seed);
-      if (touchesEpoch(program.ops)) continue;
       if (violations(candidate, program).length === 0) continue;
       const minimal = shrink(
         program,

@@ -18,7 +18,7 @@ import {
   syncRuntimeContext,
 } from "./context.switch";
 import { resetRuntimeExecutionState } from "./execution";
-import { setTrackingEpoch, trackingEpoch } from "./state";
+import { trackingEpoch } from "./state";
 
 export { createRuntimeContext, getActiveRuntimeContext };
 export type {
@@ -108,9 +108,9 @@ export function resetRuntimeContext(
 
   if (context === getActiveRuntimeContext()) {
     resetRuntimeExecutionState();
+    // The clock is not rewound: nodes and edges survive a reset, and a
+    // repeated stamp would pose as a current-pass proof (F13).
     syncRuntimeContext(context, "load");
-    // Full kernel reset is the only operation allowed to rewind the clock.
-    setTrackingEpoch(0);
   }
 }
 
@@ -149,8 +149,7 @@ export function snapshotRuntimeContext(
  *
  * Legal at a quiescent boundary of `context`, or to unwind to a checkpoint
  * taken by an enclosing frame that is still on the stack. The tracking epoch
- * is never restored: it is the kernel-wide clock, and any comparison with an
- * arbitrarily old snapshot epoch is ambiguous under uint32 wraparound.
+ * is never restored: it is the kernel-wide clock and only moves forward.
  */
 export function restoreRuntimeContextSnapshot(
   context: RuntimeContext,
