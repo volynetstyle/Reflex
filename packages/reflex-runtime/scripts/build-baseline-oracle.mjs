@@ -7,7 +7,8 @@
 //   node scripts/build-baseline-oracle.mjs --commit <sha>  any commit
 //   node scripts/build-baseline-oracle.mjs --source        current working tree (sanity)
 //   ... --mutate "<file>::<search>::<replace>"             seeded mutant (oracle qualification)
-//   ... --production                                       production flags, minified
+//   ... --production                                       production flags, minified like dist
+//   ... --readable                                         production without identifier mangling
 //   ... --profile                                          PROFILE build exposing
 //                                                          setRuntimeProjectionObserver
 //   ... --out <dir>                                        output directory
@@ -25,6 +26,7 @@ import {
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 const packageRoot = path.resolve(import.meta.dirname, "..");
 const repoRoot = path.resolve(packageRoot, "../..");
@@ -40,6 +42,8 @@ const fromSource = args.includes("--source");
 const profile = args.includes("--profile");
 // Production flags and minification, for performance comparison bundles.
 const production = args.includes("--production");
+// Production bundle with original identifiers, for CPU profiles.
+const readable = args.includes("--readable");
 const mutations = args
   .map((arg, index) => (arg === "--mutate" ? args[index + 1] : undefined))
   .filter(Boolean)
@@ -64,6 +68,7 @@ const label =
   resolvedCommit.slice(0, 12) +
   (profile ? "-profile" : "") +
   (production ? "-production" : "") +
+  (readable ? "-readable" : "") +
   (mutations.length === 0
     ? ""
     : "-mutant-" +
@@ -175,9 +180,29 @@ try {
     define: flags,
     plugins: [aliasPlugin],
     outfile: path.join(out, "runtime.mjs"),
-    minify: production,
+    minify: false,
     logLevel: "error",
   });
+
+  if (production) {
+    // The published build minifies with Terser (rollup/terser-options.ts),
+    // whose pure_funcs list removes DEV assertion calls that esbuild keeps.
+    // Benchmark bundles must run the code that ships.
+    const { createRuntimeTerserOptions } = await import(
+      pathToFileURL(path.join(packageRoot, "rollup/terser-options.ts")).href
+    );
+    const { minify } = createRequire(require.resolve("@rollup/plugin-terser"))(
+      "terser",
+    );
+    const options = createRuntimeTerserOptions(true);
+    if (readable) {
+      options.mangle = false;
+      options.format = { ...options.format, beautify: true };
+    }
+    const bundlePath = path.join(out, "runtime.mjs");
+    const minified = await minify(readFileSync(bundlePath, "utf8"), options);
+    writeFileSync(bundlePath, minified.code);
+  }
 
   const bundle = readFileSync(path.join(out, "runtime.mjs"));
   writeFileSync(
@@ -190,6 +215,7 @@ try {
         production,
         flags,
         esbuild: esbuild.version,
+        minifier: production ? "terser (rollup/terser-options.ts)" : "none",
         bundleSha256: createHash("sha256").update(bundle).digest("hex"),
       },
       null,

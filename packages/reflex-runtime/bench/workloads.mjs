@@ -20,12 +20,13 @@ function hostQueue(rt) {
     hooks: { onNodeInvalidated: (node) => void queue.push(node) },
   });
   return {
+    // FIFO drain by index: Array#shift is O(queue) and dominated the
+    // 256-watcher wave profile. Watchers enqueued during the drain are
+    // appended and still run in order.
     flush() {
       let runs = 0;
-      while (queue.length !== 0) {
-        rt.runWatcher(queue.shift());
-        runs++;
-      }
+      for (; runs < queue.length; runs++) rt.runWatcher(queue[runs]);
+      queue.length = 0;
       return runs;
     },
   };
@@ -578,19 +579,25 @@ export const workloads = [
       const shared = range(4).map((k) => rt.createProducer(k));
       let sink = 0;
       return {
+        // Plain loops: Array.from({ length }) takes V8's generic iterable
+        // path and was the largest self-time item of this step.
         step(i) {
-          const computeds = range(8).map((k) =>
-            rt.createConsumer(() => rt.readProducer(shared[k & 3]) + k),
-          );
-          const watchers = range(4).map((k) => {
+          const computeds = new Array(8);
+          for (let k = 0; k < 8; k++) {
+            computeds[k] = rt.createConsumer(
+              () => rt.readProducer(shared[k & 3]) + k,
+            );
+          }
+          const watchers = new Array(4);
+          for (let k = 0; k < 4; k++) {
             const w = rt.createWatcher(() => {
               sink +=
                 rt.readConsumer(computeds[k]) +
                 rt.readConsumer(computeds[k + 4]);
             });
             rt.runWatcher(w);
-            return w;
-          });
+            watchers[k] = w;
+          }
           rt.writeProducer(shared[i & 3], i);
           host.flush();
           for (const w of watchers) rt.disposeWatcher(w);
