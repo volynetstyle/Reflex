@@ -42,14 +42,19 @@ export function pull_iterator(
   }
 
   try {
+    // Invariant: top > base whenever `descend` runs. The parent edge is
+    // pushed before the first iteration, descend only pushes, and unwind
+    // resumes a sibling only while frames remain. `node` is therefore always
+    // an intermediate dependency, never the policy root (parentEdge.to).
     traverse: while (true) {
       // Scan dependencies forward until the current branch either proves a
       // change or exhausts its stable frontier.
       descend: while (true) {
         const nodeState = node.state;
 
-        // The outer consumer is policy context, not branch evidence.
-        if (top !== base && (nodeState & Changed) !== 0) {
+        // Reentrant evidence: user code under an earlier sibling may have
+        // marked this node Changed through another path.
+        if ((nodeState & Changed) !== 0) {
           {
             if (__PROFILE__) {
               profilePullNode("node.changed", node, top - base, top - base);
@@ -161,13 +166,8 @@ export function pull_iterator(
           }
         }
 
-        // A stable outer edge completes this branch. Internal stable edges may
-        // either expose reentrant evidence, resume a sibling, or finish a node.
-        if (top === base) {
-          changed = false;
-          break descend;
-        }
-
+        // A stable edge may expose reentrant evidence, resume a sibling, or
+        // finish the node.
         if ((node.state & Changed) !== 0) {
           changed = true;
           break descend;
