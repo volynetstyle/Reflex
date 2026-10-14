@@ -8,6 +8,7 @@ import type {
   ConsumerNode,
   ProducerNode,
   WatcherNode,
+  WatcherResult,
 } from "@volynets/reflex-runtime/internal";
 import { EventSource as RuntimeEventSource } from "./event";
 
@@ -42,7 +43,7 @@ export const createComputedNode = <T>(fn: () => T): ConsumerNode<T> => {
 };
 
 export const createWatcherNode = (compute: EffectFn): WatcherNode =>
-  new RuntimeReactiveNode(
+  new RuntimeReactiveNode<WatcherResult>(
     undefined,
     compute,
     WATCHER_INITIAL_STATE,

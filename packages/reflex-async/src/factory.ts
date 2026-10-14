@@ -6,6 +6,7 @@ import {
   type ConsumerNode,
   type ProducerNode,
   type WatcherNode,
+  type WatcherResult,
 } from "@volynets/reflex-runtime/internal";
 
 // Keep the node shapes used by async sources independent of the Reflex facade.
@@ -27,4 +28,8 @@ export const createComputedNode = <T>(compute: () => T): ConsumerNode<T> =>
   ) as ConsumerNode<T>;
 
 export const createWatcherNode = (compute: () => void): WatcherNode =>
-  new ReactiveNode(undefined, compute, WATCHER_INITIAL_STATE) as WatcherNode;
+  new ReactiveNode<WatcherResult>(
+    undefined,
+    compute,
+    WATCHER_INITIAL_STATE,
+  ) as WatcherNode;
