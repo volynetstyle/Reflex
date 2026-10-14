@@ -1,6 +1,6 @@
 {
   "name": "@reflex-lab/reactivity-bench",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "description": "Process-isolated Alien Signals vs Reflex workloads derived from Vue PR #12349",
