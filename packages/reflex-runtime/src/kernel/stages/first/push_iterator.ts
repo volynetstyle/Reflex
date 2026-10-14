@@ -18,7 +18,10 @@ import {
   type ReactiveEdge,
   type ReactiveNode,
 } from "@runtime/kernel/shape";
-import { readRuntimeWalkerStackStats } from "@runtime/kernel/stages/stackStats";
+import {
+  noteResumeEdgeStackUsage,
+  readRuntimeWalkerStackStats,
+} from "@runtime/kernel/stages/stackStats";
 import {
   observeRuntimeProjection,
   observeRuntimeProjectionAmount,
@@ -199,6 +202,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
 
       if (__PROFILE__) propagateDepthStack![top] = 2;
       stack[top++] = child;
+      if (__DEV__) noteResumeEdgeStackUsage(top);
     }
   }
 
@@ -290,6 +294,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
 
               if (__PROFILE__) propagateDepthStack![top] = depth;
               stack[top++] = sibling;
+              if (__DEV__) noteResumeEdgeStackUsage(top);
             }
 
             edge = child;

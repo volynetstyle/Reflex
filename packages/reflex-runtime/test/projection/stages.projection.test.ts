@@ -252,7 +252,7 @@ describe("Reflex stage projection", () => {
       const pushPlan = createInstrumentationPlan(push);
       expect(
         pushPlan.points.filter((point) => point.kind === "branch-outcome"),
-      ).toHaveLength(50);
+      ).toHaveLength(54);
       expect(
         pushPlan.points.filter((point) => point.kind === "state-transition"),
       ).toHaveLength(5);
