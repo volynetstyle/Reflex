@@ -108,7 +108,9 @@ export function pull_frontier(
         dependencyEdge === null ||
         should_recompute(dependency, dependencyEdge) === true
       ) {
-        if (advance(dependency, edge) === true) changed = true;
+        if (advance(dependency, edge) === true) {
+          changed = true;
+        }
       }
     }
 

@@ -28,7 +28,8 @@ function createConfig(entry: DtsEntry): RollupOptions {
       file: entry.output,
       format: "es",
     },
-    plugins: [dts()],
+    // Inline workspace package declarations so dist types have no dependencies.
+    plugins: [dts({ respectExternal: true, tsconfig: "tsconfig.json" })],
   };
 }
 
