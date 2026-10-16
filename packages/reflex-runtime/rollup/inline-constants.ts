@@ -47,7 +47,8 @@ export interface SourceFile {
 }
 
 const UNEVALUABLE = Symbol("unevaluable");
-type Evaluated = ConstantValue | typeof UNEVALUABLE;
+// Strings occur only as intermediate values (`typeof __DEV__ !== "undefined"`).
+type Evaluated = ConstantValue | string | typeof UNEVALUABLE;
 
 function evaluateWith(
   lookup: (name: string) => Evaluated | undefined,
@@ -55,6 +56,11 @@ function evaluateWith(
   const evaluate = (node: ts.Expression): Evaluated => {
     if (ts.isParenthesizedExpression(node)) return evaluate(node.expression);
     if (ts.isNumericLiteral(node)) return Number(node.text.replace(/_/g, ""));
+    if (ts.isStringLiteral(node)) return node.text;
+    if (ts.isTypeOfExpression(node)) {
+      const value = evaluate(node.expression);
+      return value === UNEVALUABLE ? value : typeof value;
+    }
     if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
     if (node.kind === ts.SyntaxKind.FalseKeyword) return false;
     if (ts.isIdentifier(node)) return lookup(node.text) ?? UNEVALUABLE;
@@ -82,6 +88,14 @@ function evaluateWith(
       const left = evaluate(node.left);
       const right = evaluate(node.right);
       if (left === UNEVALUABLE || right === UNEVALUABLE) return UNEVALUABLE;
+      switch (node.operatorToken.kind) {
+        case ts.SyntaxKind.EqualsEqualsEqualsToken:
+          return left === right;
+        case ts.SyntaxKind.ExclamationEqualsEqualsToken:
+          return left !== right;
+      }
+      if (typeof left === "string" || typeof right === "string")
+        return UNEVALUABLE;
       const a = Number(left);
       const b = Number(right);
       switch (node.operatorToken.kind) {
@@ -188,7 +202,10 @@ export function collectConstants(
   const table = new Map<string, ConstantValue>();
   for (const { name } of declarations) {
     const value = values.get(name);
-    if (value !== undefined && value !== UNEVALUABLE && !ambiguous.has(name))
+    if (
+      (typeof value === "number" || typeof value === "boolean") &&
+      !ambiguous.has(name)
+    )
       table.set(name, value);
   }
   for (const name of STATE_FLAG_NAMES.slice(0, 5))
