@@ -77,6 +77,16 @@ settled; an effect that writes state produces another settled checkpoint.
 - Events: `event`, `map`, `filter`, `merge`, `switchMap`, `flatten`, `scan`, `hold`
 - Models: `createModel`, `own`, `isModel`
 
+### Lifetime of computeds
+
+`computed()` and `memo()` have no dispose: their dependency links last as long
+as their sources. Use them for values that live as long as the state they read.
+A computed created per item, request or component and then dropped is not
+garbage-collected while its sources are alive. Create scoped computeds with
+`createDisposableComputed()` and call `dispose()`, or let a lifecycle owner
+(`useComputed` in `@volynets/reflex-framework`) dispose them. Effects are always
+disposed with the destructor `effect()` returns.
+
 Most application code should depend on `@volynets/reflex`. The lower-level
 `@volynets/reflex-runtime` package is intended for renderer, scheduler, and
 tooling integrations.

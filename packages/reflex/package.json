@@ -105,6 +105,7 @@
     "bench:hot-path:analyze": "node bench/effect-fanout-attribution/analyze-hot-path.mjs",
     "bench:effect-fanout": "pnpm bench:effect-fanout:structural && pnpm bench:effect-fanout:timing && pnpm bench:effect-fanout:analyze",
     "bench:projection": "node ./bench/projection-compare.node.mjs",
+    "bench:liveness": "node bench/liveness/run.mjs",
     "demo": "vite --config examples/mini-app/vite.config.ts",
     "demo:build": "vite build --config examples/mini-app/vite.config.ts",
     "demo:typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p examples/mini-app/tsconfig.json",
@@ -119,6 +120,8 @@
     "@volynets/reflex-scheduler": "workspace:*"
   },
   "devDependencies": {
+    "@angular/core": "22.2.0",
+    "@preact/signals-core": "1.14.4",
     "@solidjs/signals": "2.0.0-rc.9",
     "@vue/reactivity": "3.5.43",
     "alien-signals": "3.2.1",

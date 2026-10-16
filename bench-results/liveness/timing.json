@@ -1,0 +1,4399 @@
+{
+  "meta": {
+    "date": "2026-10-15T15:50:48.066Z",
+    "node": "v25.2.0",
+    "trials": 5,
+    "frameworks": {
+      "reflex": "Reflex (facade, working tree)",
+      "angular": "@angular/core 22.2.0 primitives/signals",
+      "preact": "@preact/signals-core 1.14.4"
+    },
+    "dag": {
+      "producers": 64,
+      "layers": 4,
+      "width": 512,
+      "fanIn": 3,
+      "watchers": 256,
+      "readsPerWatcher": 3,
+      "unrelated": 64
+    }
+  },
+  "timing": [
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 0,
+      "param": "toggleShare=1,writesPerCycle=0",
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "nsPerOpMedian": 96613.33333333318,
+          "nsPerOpMin": 93199.99999999974,
+          "nsPerOpMax": 182573.33333333366
+        }
+      ],
+      "retainedHeapMedian": 1441456
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 0,
+      "param": "toggleShare=1,writesPerCycle=0",
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "nsPerOpMedian": 488509.9999999999,
+          "nsPerOpMin": 449616.66666666674,
+          "nsPerOpMax": 564613.3333333334
+        }
+      ],
+      "retainedHeapMedian": 1781376
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 0,
+      "param": "toggleShare=1,writesPerCycle=0",
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "nsPerOpMedian": 332273.33333333366,
+          "nsPerOpMin": 323440.0000000003,
+          "nsPerOpMax": 342090.0000000003
+        }
+      ],
+      "retainedHeapMedian": 1611192
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 1,
+      "param": "toggleShare=1,writesPerCycle=1",
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "nsPerOpMedian": 197426.66666666698,
+          "nsPerOpMin": 178249.99999999988,
+          "nsPerOpMax": 224800
+        }
+      ],
+      "retainedHeapMedian": 1422392
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 1,
+      "param": "toggleShare=1,writesPerCycle=1",
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "nsPerOpMedian": 910399.9999999999,
+          "nsPerOpMin": 828589.9999999998,
+          "nsPerOpMax": 1551476.6666666665
+        }
+      ],
+      "retainedHeapMedian": 1816096
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 1,
+      "param": "toggleShare=1,writesPerCycle=1",
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "nsPerOpMedian": 440590.00000000023,
+          "nsPerOpMin": 415790.00000000023,
+          "nsPerOpMax": 703053.3333333334
+        }
+      ],
+      "retainedHeapMedian": 1628104
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 2,
+      "param": "toggleShare=1,writesPerCycle=10",
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "nsPerOpMedian": 322706.66666666634,
+          "nsPerOpMin": 311186.6666666667,
+          "nsPerOpMax": 561336.6666666664
+        }
+      ],
+      "retainedHeapMedian": 1456648
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 2,
+      "param": "toggleShare=1,writesPerCycle=10",
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "nsPerOpMedian": 1121270.0000000002,
+          "nsPerOpMin": 976746.6666666669,
+          "nsPerOpMax": 2580956.666666666
+        }
+      ],
+      "retainedHeapMedian": 1831248
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 2,
+      "param": "toggleShare=1,writesPerCycle=10",
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "nsPerOpMedian": 533036.6666666667,
+          "nsPerOpMin": 497033.3333333334,
+          "nsPerOpMax": 759963.3333333329
+        }
+      ],
+      "retainedHeapMedian": 1628256
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 3,
+      "param": "toggleShare=0.25,writesPerCycle=1",
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "nsPerOpMedian": 169856.66666666692,
+          "nsPerOpMin": 161760.00000000006,
+          "nsPerOpMax": 231526.6666666664
+        }
+      ],
+      "retainedHeapMedian": 1403480
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 3,
+      "param": "toggleShare=0.25,writesPerCycle=1",
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "nsPerOpMedian": 333093.3333333334,
+          "nsPerOpMin": 319680.00000000006,
+          "nsPerOpMax": 475840.0000000004
+        }
+      ],
+      "retainedHeapMedian": 1832088
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 3,
+      "param": "toggleShare=0.25,writesPerCycle=1",
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "nsPerOpMedian": 186986.66666666666,
+          "nsPerOpMin": 177279.9999999999,
+          "nsPerOpMax": 300593.33333333314
+        }
+      ],
+      "retainedHeapMedian": 1634928
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 0,
+      "param": "readsPerUnrelatedWrite=0",
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "nsPerOpMedian": 48.87000000000015,
+          "nsPerOpMin": 41.969999999999885,
+          "nsPerOpMax": 62.145000000000294
+        }
+      ],
+      "retainedHeapMedian": 1318584
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 0,
+      "param": "readsPerUnrelatedWrite=0",
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "nsPerOpMedian": 71.12000000000052,
+          "nsPerOpMin": 57.88500000000028,
+          "nsPerOpMax": 149.43000000000026
+        }
+      ],
+      "retainedHeapMedian": 1556288
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 0,
+      "param": "readsPerUnrelatedWrite=0",
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "nsPerOpMedian": 59.86499999999992,
+          "nsPerOpMin": 49.45999999999984,
+          "nsPerOpMax": 76.29500000000036
+        }
+      ],
+      "retainedHeapMedian": 1531920
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 1,
+      "param": "readsPerUnrelatedWrite=100",
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "nsPerOpMedian": 60.28500000000036,
+          "nsPerOpMin": 57.47999999999961,
+          "nsPerOpMax": 62.819999999999965
+        }
+      ],
+      "retainedHeapMedian": 1334584
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 1,
+      "param": "readsPerUnrelatedWrite=100",
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "nsPerOpMedian": 872.9650000000007,
+          "nsPerOpMin": 801.5300000000004,
+          "nsPerOpMax": 929.5450000000002
+        }
+      ],
+      "retainedHeapMedian": 1523864
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 1,
+      "param": "readsPerUnrelatedWrite=100",
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "nsPerOpMedian": 420.5849999999998,
+          "nsPerOpMin": 411.2850000000002,
+          "nsPerOpMax": 515.1350000000001
+        }
+      ],
+      "retainedHeapMedian": 1500352
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 2,
+      "param": "readsPerUnrelatedWrite=10",
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "nsPerOpMedian": 87.47499999999988,
+          "nsPerOpMin": 71.72000000000054,
+          "nsPerOpMax": 94.37499999999943
+        }
+      ],
+      "retainedHeapMedian": 1339112
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 2,
+      "param": "readsPerUnrelatedWrite=10",
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "nsPerOpMedian": 1922.1300000000008,
+          "nsPerOpMin": 1807.345,
+          "nsPerOpMax": 1942.8800000000003
+        }
+      ],
+      "retainedHeapMedian": 1542768
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 2,
+      "param": "readsPerUnrelatedWrite=10",
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "nsPerOpMedian": 786.7249999999998,
+          "nsPerOpMin": 723.4900000000002,
+          "nsPerOpMax": 1000.45
+        }
+      ],
+      "retainedHeapMedian": 1511792
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 3,
+      "param": "readsPerUnrelatedWrite=1",
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "nsPerOpMedian": 129.97000000000014,
+          "nsPerOpMin": 119.06000000000034,
+          "nsPerOpMax": 199.42999999999955
+        }
+      ],
+      "retainedHeapMedian": 1308072
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 3,
+      "param": "readsPerUnrelatedWrite=1",
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "nsPerOpMedian": 2770.155,
+          "nsPerOpMin": 2609.155,
+          "nsPerOpMax": 3111.78
+        }
+      ],
+      "retainedHeapMedian": 1539664
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 3,
+      "param": "readsPerUnrelatedWrite=1",
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "nsPerOpMedian": 813.6450000000003,
+          "nsPerOpMin": 750.535,
+          "nsPerOpMax": 864.3900000000002
+        }
+      ],
+      "retainedHeapMedian": 1512640
+    },
+    {
+      "framework": "reflex",
+      "workload": "dormant-writes",
+      "paramIndex": 0,
+      "param": "dormantWrites=100",
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "nsPerOpMedian": 77899.99999999964,
+          "nsPerOpMin": 66699.99999999732,
+          "nsPerOpMax": 100999.9999999991
+        },
+        {
+          "name": "dormant-write",
+          "ops": 100,
+          "nsPerOpMedian": 1392.9999999999154,
+          "nsPerOpMin": 1366.0000000000139,
+          "nsPerOpMax": 1796.9999999999686
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "nsPerOpMedian": 656599.9999999974,
+          "nsPerOpMin": 652900.0000000024,
+          "nsPerOpMax": 831599.9999999945
+        }
+      ],
+      "retainedHeapMedian": 1453840
+    },
+    {
+      "framework": "angular",
+      "workload": "dormant-writes",
+      "paramIndex": 0,
+      "param": "dormantWrites=100",
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "nsPerOpMedian": 484700.00000000367,
+          "nsPerOpMin": 448999.9999999981,
+          "nsPerOpMax": 608600.0000000098
+        },
+        {
+          "name": "dormant-write",
+          "ops": 100,
+          "nsPerOpMedian": 396.99999999996294,
+          "nsPerOpMin": 378.99999999993383,
+          "nsPerOpMax": 497.0000000000141
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "nsPerOpMedian": 1040999.9999999969,
+          "nsPerOpMin": 1007799.9999999889,
+          "nsPerOpMax": 1639399.9999999949
+        }
+      ],
+      "retainedHeapMedian": 1819992
+    },
+    {
+      "framework": "preact",
+      "workload": "dormant-writes",
+      "paramIndex": 0,
+      "param": "dormantWrites=100",
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "nsPerOpMedian": 265299.99999999633,
+          "nsPerOpMin": 253500.0000000025,
+          "nsPerOpMax": 325000.00000000285
+        },
+        {
+          "name": "dormant-write",
+          "ops": 100,
+          "nsPerOpMedian": 293.9999999999543,
+          "nsPerOpMin": 284.00000000004866,
+          "nsPerOpMax": 306.00000000006844
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "nsPerOpMedian": 701000.0000000076,
+          "nsPerOpMin": 699399.9999999971,
+          "nsPerOpMax": 704399.9999999925
+        }
+      ],
+      "retainedHeapMedian": 1657904
+    },
+    {
+      "framework": "reflex",
+      "workload": "dormant-writes",
+      "paramIndex": 1,
+      "param": "dormantWrites=10000",
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "nsPerOpMedian": 85899.9999999952,
+          "nsPerOpMin": 72400.00000000179,
+          "nsPerOpMax": 121799.99999999325
+        },
+        {
+          "name": "dormant-write",
+          "ops": 10000,
+          "nsPerOpMedian": 269.3100000000001,
+          "nsPerOpMin": 256.1700000000002,
+          "nsPerOpMax": 281.7000000000007
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "nsPerOpMedian": 531100.0000000092,
+          "nsPerOpMin": 489900.00000000576,
+          "nsPerOpMax": 753000.0000000001
+        }
+      ],
+      "retainedHeapMedian": 1436408
+    },
+    {
+      "framework": "angular",
+      "workload": "dormant-writes",
+      "paramIndex": 1,
+      "param": "dormantWrites=10000",
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "nsPerOpMedian": 461200.0000000052,
+          "nsPerOpMin": 450199.9999999953,
+          "nsPerOpMax": 549400.0000000057
+        },
+        {
+          "name": "dormant-write",
+          "ops": 10000,
+          "nsPerOpMedian": 117.9000000000002,
+          "nsPerOpMin": 113.62000000000023,
+          "nsPerOpMax": 120.90000000000033
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "nsPerOpMedian": 1014099.9999999991,
+          "nsPerOpMin": 928100.0000000006,
+          "nsPerOpMax": 1056700.0000000065
+        }
+      ],
+      "retainedHeapMedian": 1822312
+    },
+    {
+      "framework": "preact",
+      "workload": "dormant-writes",
+      "paramIndex": 1,
+      "param": "dormantWrites=10000",
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "nsPerOpMedian": 310199.9999999947,
+          "nsPerOpMin": 255099.99999999878,
+          "nsPerOpMax": 495800.0000000027
+        },
+        {
+          "name": "dormant-write",
+          "ops": 10000,
+          "nsPerOpMedian": 90.03000000000014,
+          "nsPerOpMin": 86.11999999999966,
+          "nsPerOpMax": 105.21999999999991
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "nsPerOpMedian": 646500.0000000031,
+          "nsPerOpMin": 612300.0000000048,
+          "nsPerOpMax": 661799.9999999995
+        }
+      ],
+      "retainedHeapMedian": 1662176
+    }
+  ],
+  "samples": [
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 2898399.9999999953,
+          "nsPerOp": 96613.33333333318
+        }
+      ],
+      "builtHeap": 1471880,
+      "retainedHeap": 1452112,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 7936,
+        "sink": 202397
+      },
+      "trial": 0
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 16938400,
+          "nsPerOp": 564613.3333333334
+        }
+      ],
+      "builtHeap": 1764088,
+      "retainedHeap": 1792760,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 7936,
+        "sink": 202397
+      },
+      "trial": 0
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 10238200.000000006,
+          "nsPerOp": 341273.33333333355
+        }
+      ],
+      "builtHeap": 1627776,
+      "retainedHeap": 1611648,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 7936,
+        "sink": 202397
+      },
+      "trial": 0
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 27311999.999999996,
+          "nsPerOp": 910399.9999999999
+        }
+      ],
+      "builtHeap": 1805024,
+      "retainedHeap": 1816096,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7936,
+        "sink": 371160
+      },
+      "trial": 0
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 21091600,
+          "nsPerOp": 703053.3333333334
+        }
+      ],
+      "builtHeap": 1631776,
+      "retainedHeap": 1628248,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7936,
+        "sink": 371160
+      },
+      "trial": 0
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 6744000,
+          "nsPerOp": 224800
+        }
+      ],
+      "builtHeap": 1482512,
+      "retainedHeap": 1430672,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7936,
+        "sink": 371160
+      },
+      "trial": 0
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 22798899.99999999,
+          "nsPerOp": 759963.3333333329
+        }
+      ],
+      "builtHeap": 1647704,
+      "retainedHeap": 1650536,
+      "mismatches": 0,
+      "stats": {
+        "computes": 43987,
+        "effectRuns": 7936,
+        "sink": 985597
+      },
+      "trial": 0
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 13056999.999999989,
+          "nsPerOp": 435233.33333333296
+        }
+      ],
+      "builtHeap": 1424088,
+      "retainedHeap": 1452624,
+      "mismatches": 0,
+      "stats": {
+        "computes": 43987,
+        "effectRuns": 7936,
+        "sink": 985597
+      },
+      "trial": 0
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 34259900.000000015,
+          "nsPerOp": 1141996.6666666672
+        }
+      ],
+      "builtHeap": 1805216,
+      "retainedHeap": 1820760,
+      "mismatches": 0,
+      "stats": {
+        "computes": 43987,
+        "effectRuns": 7936,
+        "sink": 985597
+      },
+      "trial": 0
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 6945799.999999992,
+          "nsPerOp": 231526.6666666664
+        }
+      ],
+      "builtHeap": 1420552,
+      "retainedHeap": 1437072,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7749,
+        "sink": 339769
+      },
+      "trial": 0
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 14275200.000000013,
+          "nsPerOp": 475840.0000000004
+        }
+      ],
+      "builtHeap": 1810920,
+      "retainedHeap": 1868520,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7749,
+        "sink": 339769
+      },
+      "trial": 0
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 9017799.999999994,
+          "nsPerOp": 300593.33333333314
+        }
+      ],
+      "builtHeap": 1661872,
+      "retainedHeap": 1634928,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7749,
+        "sink": 339769
+      },
+      "trial": 0
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 1422400.0000000102,
+          "nsPerOp": 71.12000000000052
+        }
+      ],
+      "builtHeap": 1562456,
+      "retainedHeap": 1569856,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 163920
+      },
+      "trial": 0
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 1270899.9999999974,
+          "nsPerOp": 63.544999999999874
+        }
+      ],
+      "builtHeap": 1548288,
+      "retainedHeap": 1521824,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 163920
+      },
+      "trial": 0
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 977400.0000000029,
+          "nsPerOp": 48.87000000000015
+        }
+      ],
+      "builtHeap": 1310040,
+      "retainedHeap": 1314928,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 163920
+      },
+      "trial": 0
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 9668300.000000002,
+          "nsPerOp": 483.4150000000001
+        }
+      ],
+      "builtHeap": 1517520,
+      "retainedHeap": 1503752,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 173634
+      },
+      "trial": 0
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 1196700.000000007,
+          "nsPerOp": 59.83500000000035
+        }
+      ],
+      "builtHeap": 1350536,
+      "retainedHeap": 1337392,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 173634
+      },
+      "trial": 0
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 18590900.000000004,
+          "nsPerOp": 929.5450000000002
+        }
+      ],
+      "builtHeap": 1536632,
+      "retainedHeap": 1538336,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 173634
+      },
+      "trial": 0
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 1838000.0000000081,
+          "nsPerOp": 91.9000000000004
+        }
+      ],
+      "builtHeap": 1347808,
+      "retainedHeap": 1321080,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 203621
+      },
+      "trial": 0
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 38727199.999999985,
+          "nsPerOp": 1936.3599999999992
+        }
+      ],
+      "builtHeap": 1535880,
+      "retainedHeap": 1541920,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 203621
+      },
+      "trial": 0
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 20009000,
+          "nsPerOp": 1000.45
+        }
+      ],
+      "builtHeap": 1507744,
+      "retainedHeap": 1511144,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 203621
+      },
+      "trial": 0
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 56245200.000000015,
+          "nsPerOp": 2812.2600000000007
+        }
+      ],
+      "builtHeap": 1531512,
+      "retainedHeap": 1539744,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 45982
+      },
+      "trial": 0
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 16272900.000000007,
+          "nsPerOp": 813.6450000000003
+        }
+      ],
+      "builtHeap": 1505600,
+      "retainedHeap": 1512640,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 45982
+      },
+      "trial": 0
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 3988599.999999991,
+          "nsPerOp": 199.42999999999955
+        }
+      ],
+      "builtHeap": 1288360,
+      "retainedHeap": 1306496,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 45982
+      },
+      "trial": 0
+    },
+    {
+      "framework": "preact",
+      "workload": "dormant-writes",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 265299.99999999633,
+          "nsPerOp": 265299.99999999633
+        },
+        {
+          "name": "dormant-write",
+          "ops": 100,
+          "ns": 29899.999999997817,
+          "nsPerOp": 298.9999999999782
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 699399.9999999971,
+          "nsPerOp": 699399.9999999971
+        }
+      ],
+      "builtHeap": 1643208,
+      "retainedHeap": 1658048,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3773,
+        "effectRuns": 512,
+        "sink": 328602
+      },
+      "trial": 0
+    },
+    {
+      "framework": "reflex",
+      "workload": "dormant-writes",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 100999.9999999991,
+          "nsPerOp": 100999.9999999991
+        },
+        {
+          "name": "dormant-write",
+          "ops": 100,
+          "ns": 179699.99999999686,
+          "nsPerOp": 1796.9999999999686
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 831599.9999999945,
+          "nsPerOp": 831599.9999999945
+        }
+      ],
+      "builtHeap": 987784,
+      "retainedHeap": 980360,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3773,
+        "effectRuns": 512,
+        "sink": 328602
+      },
+      "trial": 0
+    },
+    {
+      "framework": "angular",
+      "workload": "dormant-writes",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 608600.0000000098,
+          "nsPerOp": 608600.0000000098
+        },
+        {
+          "name": "dormant-write",
+          "ops": 100,
+          "ns": 49700.00000000141,
+          "nsPerOp": 497.0000000000141
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 1639399.9999999949,
+          "nsPerOp": 1639399.9999999949
+        }
+      ],
+      "builtHeap": 1296456,
+      "retainedHeap": 1310816,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3773,
+        "effectRuns": 512,
+        "sink": 328602
+      },
+      "trial": 0
+    },
+    {
+      "framework": "reflex",
+      "workload": "dormant-writes",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 98500.00000000137,
+          "nsPerOp": 98500.00000000137
+        },
+        {
+          "name": "dormant-write",
+          "ops": 10000,
+          "ns": 2817000.0000000075,
+          "nsPerOp": 281.7000000000007
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 714399.9999999977,
+          "nsPerOp": 714399.9999999977
+        }
+      ],
+      "builtHeap": 1399848,
+      "retainedHeap": 1427824,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3781,
+        "effectRuns": 512,
+        "sink": 925751
+      },
+      "trial": 0
+    },
+    {
+      "framework": "angular",
+      "workload": "dormant-writes",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 450199.9999999953,
+          "nsPerOp": 450199.9999999953
+        },
+        {
+          "name": "dormant-write",
+          "ops": 10000,
+          "ns": 1179000.000000002,
+          "nsPerOp": 117.9000000000002
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 1014300.0000000057,
+          "nsPerOp": 1014300.0000000057
+        }
+      ],
+      "builtHeap": 1801360,
+      "retainedHeap": 1822312,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3781,
+        "effectRuns": 512,
+        "sink": 925751
+      },
+      "trial": 0
+    },
+    {
+      "framework": "preact",
+      "workload": "dormant-writes",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 316700.0000000115,
+          "nsPerOp": 316700.0000000115
+        },
+        {
+          "name": "dormant-write",
+          "ops": 10000,
+          "ns": 916499.9999999992,
+          "nsPerOp": 91.64999999999992
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 661799.9999999995,
+          "nsPerOp": 661799.9999999995
+        }
+      ],
+      "builtHeap": 1648816,
+      "retainedHeap": 1671080,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3781,
+        "effectRuns": 512,
+        "sink": 925751
+      },
+      "trial": 0
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 14412999.999999996,
+          "nsPerOp": 480433.3333333332
+        }
+      ],
+      "builtHeap": 1779208,
+      "retainedHeap": 1779744,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 7936,
+        "sink": 202397
+      },
+      "trial": 1
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 10262700.00000001,
+          "nsPerOp": 342090.0000000003
+        }
+      ],
+      "builtHeap": 1627752,
+      "retainedHeap": 1611336,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 7936,
+        "sink": 202397
+      },
+      "trial": 1
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 2886300.0000000056,
+          "nsPerOp": 96210.00000000019
+        }
+      ],
+      "builtHeap": 1480192,
+      "retainedHeap": 1433984,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 7936,
+        "sink": 202397
+      },
+      "trial": 1
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 13551299.999999998,
+          "nsPerOp": 451709.99999999994
+        }
+      ],
+      "builtHeap": 1631728,
+      "retainedHeap": 1628104,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7936,
+        "sink": 371160
+      },
+      "trial": 1
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 5829499.999999996,
+          "nsPerOp": 194316.66666666654
+        }
+      ],
+      "builtHeap": 1438928,
+      "retainedHeap": 1432576,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7936,
+        "sink": 371160
+      },
+      "trial": 1
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 46544299.99999999,
+          "nsPerOp": 1551476.6666666665
+        }
+      ],
+      "builtHeap": 1805024,
+      "retainedHeap": 1815896,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7936,
+        "sink": 371160
+      },
+      "trial": 1
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 16840099.999999993,
+          "nsPerOp": 561336.6666666664
+        }
+      ],
+      "builtHeap": 1437544,
+      "retainedHeap": 1464816,
+      "mismatches": 0,
+      "stats": {
+        "computes": 43987,
+        "effectRuns": 7936,
+        "sink": 985597
+      },
+      "trial": 1
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 77428699.99999999,
+          "nsPerOp": 2580956.666666666
+        }
+      ],
+      "builtHeap": 1805216,
+      "retainedHeap": 1824640,
+      "mismatches": 0,
+      "stats": {
+        "computes": 43987,
+        "effectRuns": 7936,
+        "sink": 985597
+      },
+      "trial": 1
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 15363099.999999989,
+          "nsPerOp": 512103.33333333296
+        }
+      ],
+      "builtHeap": 1613480,
+      "retainedHeap": 1616496,
+      "mismatches": 0,
+      "stats": {
+        "computes": 43987,
+        "effectRuns": 7936,
+        "sink": 985597
+      },
+      "trial": 1
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 9590400.000000002,
+          "nsPerOp": 319680.00000000006
+        }
+      ],
+      "builtHeap": 1792016,
+      "retainedHeap": 1843704,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7749,
+        "sink": 339769
+      },
+      "trial": 1
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 5682499.999999991,
+          "nsPerOp": 189416.66666666637
+        }
+      ],
+      "builtHeap": 1658560,
+      "retainedHeap": 1630568,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7749,
+        "sink": 339769
+      },
+      "trial": 1
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 5580799.999999996,
+          "nsPerOp": 186026.66666666654
+        }
+      ],
+      "builtHeap": 1382792,
+      "retainedHeap": 1399312,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7749,
+        "sink": 339769
+      },
+      "trial": 1
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 1197299.9999999984,
+          "nsPerOp": 59.86499999999992
+        }
+      ],
+      "builtHeap": 1536520,
+      "retainedHeap": 1542584,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 163920
+      },
+      "trial": 1
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 1042499.9999999898,
+          "nsPerOp": 52.12499999999949
+        }
+      ],
+      "builtHeap": 1331984,
+      "retainedHeap": 1319296,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 163920
+      },
+      "trial": 1
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 1926699.9999999967,
+          "nsPerOp": 96.33499999999984
+        }
+      ],
+      "builtHeap": 1562464,
+      "retainedHeap": 1546472,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 163920
+      },
+      "trial": 1
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 1239499.9999999925,
+          "nsPerOp": 61.974999999999625
+        }
+      ],
+      "builtHeap": 1348224,
+      "retainedHeap": 1318864,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 173634
+      },
+      "trial": 1
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 17473700.000000007,
+          "nsPerOp": 873.6850000000004
+        }
+      ],
+      "builtHeap": 1522160,
+      "retainedHeap": 1524008,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 173634
+      },
+      "trial": 1
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 10302700.000000002,
+          "nsPerOp": 515.1350000000001
+        }
+      ],
+      "builtHeap": 1517520,
+      "retainedHeap": 1503752,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 173634
+      },
+      "trial": 1
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 38857600.00000001,
+          "nsPerOp": 1942.8800000000003
+        }
+      ],
+      "builtHeap": 1536728,
+      "retainedHeap": 1542768,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 203621
+      },
+      "trial": 1
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 15734499.999999996,
+          "nsPerOp": 786.7249999999998
+        }
+      ],
+      "builtHeap": 1507824,
+      "retainedHeap": 1511712,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 203621
+      },
+      "trial": 1
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 1477199.9999999963,
+          "nsPerOp": 73.85999999999981
+        }
+      ],
+      "builtHeap": 1350152,
+      "retainedHeap": 1340096,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 203621
+      },
+      "trial": 1
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 17287800.000000004,
+          "nsPerOp": 864.3900000000002
+        }
+      ],
+      "builtHeap": 1521272,
+      "retainedHeap": 1512664,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 45982
+      },
+      "trial": 1
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 2442300.000000003,
+          "nsPerOp": 122.11500000000014
+        }
+      ],
+      "builtHeap": 1302520,
+      "retainedHeap": 1302360,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 45982
+      },
+      "trial": 1
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 55403100.00000001,
+          "nsPerOp": 2770.155
+        }
+      ],
+      "builtHeap": 1531512,
+      "retainedHeap": 1539744,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 45982
+      },
+      "trial": 1
+    },
+    {
+      "framework": "reflex",
+      "workload": "dormant-writes",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 77899.99999999964,
+          "nsPerOp": 77899.99999999964
+        },
+        {
+          "name": "dormant-write",
+          "ops": 100,
+          "ns": 136600.0000000014,
+          "nsPerOp": 1366.0000000000139
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 656400.000000005,
+          "nsPerOp": 656400.000000005
+        }
+      ],
+      "builtHeap": 1443480,
+      "retainedHeap": 1454192,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3773,
+        "effectRuns": 512,
+        "sink": 328602
+      },
+      "trial": 1
+    },
+    {
+      "framework": "angular",
+      "workload": "dormant-writes",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 484700.00000000367,
+          "nsPerOp": 484700.00000000367
+        },
+        {
+          "name": "dormant-write",
+          "ops": 100,
+          "ns": 39899.99999998872,
+          "nsPerOp": 398.9999999998872
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 1061900.0000000086,
+          "nsPerOp": 1061900.0000000086
+        }
+      ],
+      "builtHeap": 1817856,
+      "retainedHeap": 1837032,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3773,
+        "effectRuns": 512,
+        "sink": 328602
+      },
+      "trial": 1
+    },
+    {
+      "framework": "preact",
+      "workload": "dormant-writes",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 325000.00000000285,
+          "nsPerOp": 325000.00000000285
+        },
+        {
+          "name": "dormant-write",
+          "ops": 100,
+          "ns": 29399.99999999543,
+          "nsPerOp": 293.9999999999543
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 703299.9999999987,
+          "nsPerOp": 703299.9999999987
+        }
+      ],
+      "builtHeap": 1643280,
+      "retainedHeap": 1655248,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3773,
+        "effectRuns": 512,
+        "sink": 328602
+      },
+      "trial": 1
+    },
+    {
+      "framework": "angular",
+      "workload": "dormant-writes",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 511200.0000000023,
+          "nsPerOp": 511200.0000000023
+        },
+        {
+          "name": "dormant-write",
+          "ops": 10000,
+          "ns": 1136200.0000000023,
+          "nsPerOp": 113.62000000000023
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 1056700.0000000065,
+          "nsPerOp": 1056700.0000000065
+        }
+      ],
+      "builtHeap": 1798064,
+      "retainedHeap": 1810032,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3781,
+        "effectRuns": 512,
+        "sink": 925751
+      },
+      "trial": 1
+    },
+    {
+      "framework": "preact",
+      "workload": "dormant-writes",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 255099.99999999878,
+          "nsPerOp": 255099.99999999878
+        },
+        {
+          "name": "dormant-write",
+          "ops": 10000,
+          "ns": 1052199.999999999,
+          "nsPerOp": 105.21999999999991
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 633899.999999997,
+          "nsPerOp": 633899.999999997
+        }
+      ],
+      "builtHeap": 1656352,
+      "retainedHeap": 1662176,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3781,
+        "effectRuns": 512,
+        "sink": 925751
+      },
+      "trial": 1
+    },
+    {
+      "framework": "reflex",
+      "workload": "dormant-writes",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 84000.00000000319,
+          "nsPerOp": 84000.00000000319
+        },
+        {
+          "name": "dormant-write",
+          "ops": 10000,
+          "ns": 2653199.999999998,
+          "nsPerOp": 265.3199999999998
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 489900.00000000576,
+          "nsPerOp": 489900.00000000576
+        }
+      ],
+      "builtHeap": 1412592,
+      "retainedHeap": 1436408,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3781,
+        "effectRuns": 512,
+        "sink": 925751
+      },
+      "trial": 1
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 9915999.999999996,
+          "nsPerOp": 330533.3333333332
+        }
+      ],
+      "builtHeap": 1621320,
+      "retainedHeap": 1604880,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 7936,
+        "sink": 202397
+      },
+      "trial": 2
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 2795999.999999992,
+          "nsPerOp": 93199.99999999974
+        }
+      ],
+      "builtHeap": 1489088,
+      "retainedHeap": 1441456,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 7936,
+        "sink": 202397
+      },
+      "trial": 2
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 14655299.999999996,
+          "nsPerOp": 488509.9999999999
+        }
+      ],
+      "builtHeap": 1779400,
+      "retainedHeap": 1781376,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 7936,
+        "sink": 202397
+      },
+      "trial": 2
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 5922800.000000009,
+          "nsPerOp": 197426.66666666698
+        }
+      ],
+      "builtHeap": 1468512,
+      "retainedHeap": 1415688,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7936,
+        "sink": 371160
+      },
+      "trial": 2
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 25439200,
+          "nsPerOp": 847973.3333333334
+        }
+      ],
+      "builtHeap": 1805120,
+      "retainedHeap": 1843544,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7936,
+        "sink": 371160
+      },
+      "trial": 2
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 12473700.000000007,
+          "nsPerOp": 415790.00000000023
+        }
+      ],
+      "builtHeap": 1616184,
+      "retainedHeap": 1596416,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7936,
+        "sink": 371160
+      },
+      "trial": 2
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 33638100.00000001,
+          "nsPerOp": 1121270.0000000002
+        }
+      ],
+      "builtHeap": 1805216,
+      "retainedHeap": 1831248,
+      "mismatches": 0,
+      "stats": {
+        "computes": 43987,
+        "effectRuns": 7936,
+        "sink": 985597
+      },
+      "trial": 2
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 15991100.000000004,
+          "nsPerOp": 533036.6666666667
+        }
+      ],
+      "builtHeap": 1624568,
+      "retainedHeap": 1627584,
+      "mismatches": 0,
+      "stats": {
+        "computes": 43987,
+        "effectRuns": 7936,
+        "sink": 985597
+      },
+      "trial": 2
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 9335600,
+          "nsPerOp": 311186.6666666667
+        }
+      ],
+      "builtHeap": 1425608,
+      "retainedHeap": 1456648,
+      "mismatches": 0,
+      "stats": {
+        "computes": 43987,
+        "effectRuns": 7936,
+        "sink": 985597
+      },
+      "trial": 2
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 5609600,
+          "nsPerOp": 186986.66666666666
+        }
+      ],
+      "builtHeap": 1649520,
+      "retainedHeap": 1630968,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7749,
+        "sink": 339769
+      },
+      "trial": 2
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 4852800.000000002,
+          "nsPerOp": 161760.00000000006
+        }
+      ],
+      "builtHeap": 1382848,
+      "retainedHeap": 1398984,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7749,
+        "sink": 339769
+      },
+      "trial": 2
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 9688499.99999999,
+          "nsPerOp": 322949.9999999997
+        }
+      ],
+      "builtHeap": 1791560,
+      "retainedHeap": 1832088,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7749,
+        "sink": 339769
+      },
+      "trial": 2
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 880300.0000000054,
+          "nsPerOp": 44.01500000000027
+        }
+      ],
+      "builtHeap": 1327296,
+      "retainedHeap": 1318584,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 163920
+      },
+      "trial": 2
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 1232599.999999991,
+          "nsPerOp": 61.62999999999955
+        }
+      ],
+      "builtHeap": 1562456,
+      "retainedHeap": 1569856,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 163920
+      },
+      "trial": 2
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 989199.9999999967,
+          "nsPerOp": 49.45999999999984
+        }
+      ],
+      "builtHeap": 1548288,
+      "retainedHeap": 1531920,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 163920
+      },
+      "trial": 2
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 17459300.000000015,
+          "nsPerOp": 872.9650000000007
+        }
+      ],
+      "builtHeap": 1494472,
+      "retainedHeap": 1496216,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 173634
+      },
+      "trial": 2
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 8379199.999999997,
+          "nsPerOp": 418.95999999999987
+        }
+      ],
+      "builtHeap": 1514120,
+      "retainedHeap": 1500352,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 173634
+      },
+      "trial": 2
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 1205700.0000000072,
+          "nsPerOp": 60.28500000000036
+        }
+      ],
+      "builtHeap": 1331936,
+      "retainedHeap": 1338336,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 173634
+      },
+      "trial": 2
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 16887500.000000004,
+          "nsPerOp": 844.3750000000002
+        }
+      ],
+      "builtHeap": 1523416,
+      "retainedHeap": 1511792,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 203621
+      },
+      "trial": 2
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 1887499.9999999886,
+          "nsPerOp": 94.37499999999943
+        }
+      ],
+      "builtHeap": 1350152,
+      "retainedHeap": 1321352,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 203621
+      },
+      "trial": 2
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 38442600.000000015,
+          "nsPerOp": 1922.1300000000008
+        }
+      ],
+      "builtHeap": 1549752,
+      "retainedHeap": 1541920,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 203621
+      },
+      "trial": 2
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 2599400.000000003,
+          "nsPerOp": 129.97000000000014
+        }
+      ],
+      "builtHeap": 1340080,
+      "retainedHeap": 1325600,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 45982
+      },
+      "trial": 2
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 62235600.00000001,
+          "nsPerOp": 3111.78
+        }
+      ],
+      "builtHeap": 1530664,
+      "retainedHeap": 1538896,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 45982
+      },
+      "trial": 2
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 17036000,
+          "nsPerOp": 851.8
+        }
+      ],
+      "builtHeap": 1504752,
+      "retainedHeap": 1511824,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 45982
+      },
+      "trial": 2
+    },
+    {
+      "framework": "angular",
+      "workload": "dormant-writes",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 499700.00000000425,
+          "nsPerOp": 499700.00000000425
+        },
+        {
+          "name": "dormant-write",
+          "ops": 100,
+          "ns": 37899.999999993386,
+          "nsPerOp": 378.99999999993383
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 1025100.000000009,
+          "nsPerOp": 1025100.000000009
+        }
+      ],
+      "builtHeap": 1803072,
+      "retainedHeap": 1819992,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3773,
+        "effectRuns": 512,
+        "sink": 328602
+      },
+      "trial": 2
+    },
+    {
+      "framework": "preact",
+      "workload": "dormant-writes",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 323399.9999999924,
+          "nsPerOp": 323399.9999999924
+        },
+        {
+          "name": "dormant-write",
+          "ops": 100,
+          "ns": 28400.000000004868,
+          "nsPerOp": 284.00000000004866
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 701000.0000000076,
+          "nsPerOp": 701000.0000000076
+        }
+      ],
+      "builtHeap": 1643280,
+      "retainedHeap": 1657904,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3773,
+        "effectRuns": 512,
+        "sink": 328602
+      },
+      "trial": 2
+    },
+    {
+      "framework": "reflex",
+      "workload": "dormant-writes",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 81400.00000000214,
+          "nsPerOp": 81400.00000000214
+        },
+        {
+          "name": "dormant-write",
+          "ops": 100,
+          "ns": 168099.9999999955,
+          "nsPerOp": 1680.999999999955
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 656599.9999999974,
+          "nsPerOp": 656599.9999999974
+        }
+      ],
+      "builtHeap": 1439544,
+      "retainedHeap": 1450256,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3773,
+        "effectRuns": 512,
+        "sink": 328602
+      },
+      "trial": 2
+    },
+    {
+      "framework": "preact",
+      "workload": "dormant-writes",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 300399.9999999962,
+          "nsPerOp": 300399.9999999962
+        },
+        {
+          "name": "dormant-write",
+          "ops": 10000,
+          "ns": 871399.9999999942,
+          "nsPerOp": 87.13999999999942
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 646500.0000000031,
+          "nsPerOp": 646500.0000000031
+        }
+      ],
+      "builtHeap": 1641992,
+      "retainedHeap": 1659760,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3781,
+        "effectRuns": 512,
+        "sink": 925751
+      },
+      "trial": 2
+    },
+    {
+      "framework": "reflex",
+      "workload": "dormant-writes",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 121799.99999999325,
+          "nsPerOp": 121799.99999999325
+        },
+        {
+          "name": "dormant-write",
+          "ops": 10000,
+          "ns": 2561700.000000002,
+          "nsPerOp": 256.1700000000002
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 521399.9999999999,
+          "nsPerOp": 521399.9999999999
+        }
+      ],
+      "builtHeap": 1394224,
+      "retainedHeap": 1427536,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3781,
+        "effectRuns": 512,
+        "sink": 925751
+      },
+      "trial": 2
+    },
+    {
+      "framework": "angular",
+      "workload": "dormant-writes",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 461200.0000000052,
+          "nsPerOp": 461200.0000000052
+        },
+        {
+          "name": "dormant-write",
+          "ops": 10000,
+          "ns": 1209000.0000000033,
+          "nsPerOp": 120.90000000000033
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 1014099.9999999991,
+          "nsPerOp": 1014099.9999999991
+        }
+      ],
+      "builtHeap": 1815608,
+      "retainedHeap": 1827688,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3781,
+        "effectRuns": 512,
+        "sink": 925751
+      },
+      "trial": 2
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 5477200.00000001,
+          "nsPerOp": 182573.33333333366
+        }
+      ],
+      "builtHeap": 1461224,
+      "retainedHeap": 1428408,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 7936,
+        "sink": 202397
+      },
+      "trial": 3
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 15133899.999999996,
+          "nsPerOp": 504463.3333333332
+        }
+      ],
+      "builtHeap": 1779008,
+      "retainedHeap": 1810128,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 7936,
+        "sink": 202397
+      },
+      "trial": 3
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 9968200.00000001,
+          "nsPerOp": 332273.33333333366
+        }
+      ],
+      "builtHeap": 1623816,
+      "retainedHeap": 1607280,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 7936,
+        "sink": 202397
+      },
+      "trial": 3
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 28276200.00000002,
+          "nsPerOp": 942540.0000000006
+        }
+      ],
+      "builtHeap": 1805120,
+      "retainedHeap": 1816128,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7936,
+        "sink": 371160
+      },
+      "trial": 3
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 13217700.000000007,
+          "nsPerOp": 440590.00000000023
+        }
+      ],
+      "builtHeap": 1658504,
+      "retainedHeap": 1628208,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7936,
+        "sink": 371160
+      },
+      "trial": 3
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 5347499.999999996,
+          "nsPerOp": 178249.99999999988
+        }
+      ],
+      "builtHeap": 1473720,
+      "retainedHeap": 1418400,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7936,
+        "sink": 371160
+      },
+      "trial": 3
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 16434299.999999993,
+          "nsPerOp": 547809.9999999998
+        }
+      ],
+      "builtHeap": 1647968,
+      "retainedHeap": 1650968,
+      "mismatches": 0,
+      "stats": {
+        "computes": 43987,
+        "effectRuns": 7936,
+        "sink": 985597
+      },
+      "trial": 3
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 9393000,
+          "nsPerOp": 313100
+        }
+      ],
+      "builtHeap": 1469904,
+      "retainedHeap": 1465936,
+      "mismatches": 0,
+      "stats": {
+        "computes": 43987,
+        "effectRuns": 7936,
+        "sink": 985597
+      },
+      "trial": 3
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 29302400.000000007,
+          "nsPerOp": 976746.6666666669
+        }
+      ],
+      "builtHeap": 1805216,
+      "retainedHeap": 1831272,
+      "mismatches": 0,
+      "stats": {
+        "computes": 43987,
+        "effectRuns": 7936,
+        "sink": 985597
+      },
+      "trial": 3
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 5095700.000000007,
+          "nsPerOp": 169856.66666666692
+        }
+      ],
+      "builtHeap": 1413584,
+      "retainedHeap": 1430104,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7749,
+        "sink": 339769
+      },
+      "trial": 3
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 9992800.000000002,
+          "nsPerOp": 333093.3333333334
+        }
+      ],
+      "builtHeap": 1797648,
+      "retainedHeap": 1808184,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7749,
+        "sink": 339769
+      },
+      "trial": 3
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 5383700.000000005,
+          "nsPerOp": 179456.66666666683
+        }
+      ],
+      "builtHeap": 1666728,
+      "retainedHeap": 1635368,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7749,
+        "sink": 339769
+      },
+      "trial": 3
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 1157700.0000000056,
+          "nsPerOp": 57.88500000000028
+        }
+      ],
+      "builtHeap": 1541560,
+      "retainedHeap": 1556288,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 163920
+      },
+      "trial": 3
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 996899.9999999966,
+          "nsPerOp": 49.84499999999983
+        }
+      ],
+      "builtHeap": 1533960,
+      "retainedHeap": 1538160,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 163920
+      },
+      "trial": 3
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 839399.9999999977,
+          "nsPerOp": 41.969999999999885
+        }
+      ],
+      "builtHeap": 1317776,
+      "retainedHeap": 1316936,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 163920
+      },
+      "trial": 3
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 8225700.000000004,
+          "nsPerOp": 411.2850000000002
+        }
+      ],
+      "builtHeap": 1514120,
+      "retainedHeap": 1500352,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 173634
+      },
+      "trial": 3
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 1149599.9999999923,
+          "nsPerOp": 57.47999999999961
+        }
+      ],
+      "builtHeap": 1351544,
+      "retainedHeap": 1315496,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 173634
+      },
+      "trial": 3
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 16030600.000000007,
+          "nsPerOp": 801.5300000000004
+        }
+      ],
+      "builtHeap": 1522160,
+      "retainedHeap": 1523864,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 173634
+      },
+      "trial": 3
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 1749499.9999999977,
+          "nsPerOp": 87.47499999999988
+        }
+      ],
+      "builtHeap": 1317408,
+      "retainedHeap": 1339112,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 203621
+      },
+      "trial": 3
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 36146900,
+          "nsPerOp": 1807.345
+        }
+      ],
+      "builtHeap": 1535880,
+      "retainedHeap": 1548280,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 203621
+      },
+      "trial": 3
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 14469800.000000006,
+          "nsPerOp": 723.4900000000002
+        }
+      ],
+      "builtHeap": 1524264,
+      "retainedHeap": 1512640,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 203621
+      },
+      "trial": 3
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 53083000.000000015,
+          "nsPerOp": 2654.1500000000005
+        }
+      ],
+      "builtHeap": 1530664,
+      "retainedHeap": 1538896,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 45982
+      },
+      "trial": 3
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 15010700,
+          "nsPerOp": 750.535
+        }
+      ],
+      "builtHeap": 1505600,
+      "retainedHeap": 1512640,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 45982
+      },
+      "trial": 3
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 2381200.000000007,
+          "nsPerOp": 119.06000000000034
+        }
+      ],
+      "builtHeap": 1295368,
+      "retainedHeap": 1311656,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 45982
+      },
+      "trial": 3
+    },
+    {
+      "framework": "preact",
+      "workload": "dormant-writes",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 253500.0000000025,
+          "nsPerOp": 253500.0000000025
+        },
+        {
+          "name": "dormant-write",
+          "ops": 100,
+          "ns": 29200.000000003,
+          "nsPerOp": 292.00000000003
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 700599.9999999943,
+          "nsPerOp": 700599.9999999943
+        }
+      ],
+      "builtHeap": 1657240,
+      "retainedHeap": 1653304,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3773,
+        "effectRuns": 512,
+        "sink": 328602
+      },
+      "trial": 3
+    },
+    {
+      "framework": "reflex",
+      "workload": "dormant-writes",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 67599.99999999878,
+          "nsPerOp": 67599.99999999878
+        },
+        {
+          "name": "dormant-write",
+          "ops": 100,
+          "ns": 139299.99999999153,
+          "nsPerOp": 1392.9999999999154
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 706299.9999999988,
+          "nsPerOp": 706299.9999999988
+        }
+      ],
+      "builtHeap": 1461264,
+      "retainedHeap": 1453840,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3773,
+        "effectRuns": 512,
+        "sink": 328602
+      },
+      "trial": 3
+    },
+    {
+      "framework": "angular",
+      "workload": "dormant-writes",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 455200.00000000495,
+          "nsPerOp": 455200.00000000495
+        },
+        {
+          "name": "dormant-write",
+          "ops": 100,
+          "ns": 38599.9999999882,
+          "nsPerOp": 385.999999999882
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 1007799.9999999889,
+          "nsPerOp": 1007799.9999999889
+        }
+      ],
+      "builtHeap": 1804248,
+      "retainedHeap": 1818656,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3773,
+        "effectRuns": 512,
+        "sink": 328602
+      },
+      "trial": 3
+    },
+    {
+      "framework": "reflex",
+      "workload": "dormant-writes",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 85899.9999999952,
+          "nsPerOp": 85899.9999999952
+        },
+        {
+          "name": "dormant-write",
+          "ops": 10000,
+          "ns": 2710899.9999999953,
+          "nsPerOp": 271.0899999999995
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 531100.0000000092,
+          "nsPerOp": 531100.0000000092
+        }
+      ],
+      "builtHeap": 1438904,
+      "retainedHeap": 1456424,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3781,
+        "effectRuns": 512,
+        "sink": 925751
+      },
+      "trial": 3
+    },
+    {
+      "framework": "angular",
+      "workload": "dormant-writes",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 549400.0000000057,
+          "nsPerOp": 549400.0000000057
+        },
+        {
+          "name": "dormant-write",
+          "ops": 10000,
+          "ns": 1188399.9999999872,
+          "nsPerOp": 118.83999999999872
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 928100.0000000006,
+          "nsPerOp": 928100.0000000006
+        }
+      ],
+      "builtHeap": 1802936,
+      "retainedHeap": 1821640,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3781,
+        "effectRuns": 512,
+        "sink": 925751
+      },
+      "trial": 3
+    },
+    {
+      "framework": "preact",
+      "workload": "dormant-writes",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 310199.9999999947,
+          "nsPerOp": 310199.9999999947
+        },
+        {
+          "name": "dormant-write",
+          "ops": 10000,
+          "ns": 861199.9999999966,
+          "nsPerOp": 86.11999999999966
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 612300.0000000048,
+          "nsPerOp": 612300.0000000048
+        }
+      ],
+      "builtHeap": 1637984,
+      "retainedHeap": 1654968,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3781,
+        "effectRuns": 512,
+        "sink": 925751
+      },
+      "trial": 3
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 13488500.000000002,
+          "nsPerOp": 449616.66666666674
+        }
+      ],
+      "builtHeap": 1777704,
+      "retainedHeap": 1778216,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 7936,
+        "sink": 202397
+      },
+      "trial": 4
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 9703200.00000001,
+          "nsPerOp": 323440.0000000003
+        }
+      ],
+      "builtHeap": 1627440,
+      "retainedHeap": 1611192,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 7936,
+        "sink": 202397
+      },
+      "trial": 4
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 3284300.000000002,
+          "nsPerOp": 109476.66666666673
+        }
+      ],
+      "builtHeap": 1489088,
+      "retainedHeap": 1441456,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 7936,
+        "sink": 202397
+      },
+      "trial": 4
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 12709999.999999994,
+          "nsPerOp": 423666.66666666645
+        }
+      ],
+      "builtHeap": 1617800,
+      "retainedHeap": 1598216,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7936,
+        "sink": 371160
+      },
+      "trial": 4
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 6376100.000000008,
+          "nsPerOp": 212536.66666666695
+        }
+      ],
+      "builtHeap": 1439408,
+      "retainedHeap": 1422392,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7936,
+        "sink": 371160
+      },
+      "trial": 4
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 24857699.999999993,
+          "nsPerOp": 828589.9999999998
+        }
+      ],
+      "builtHeap": 1805120,
+      "retainedHeap": 1815888,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7936,
+        "sink": 371160
+      },
+      "trial": 4
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 9681199.99999999,
+          "nsPerOp": 322706.66666666634
+        }
+      ],
+      "builtHeap": 1430832,
+      "retainedHeap": 1436176,
+      "mismatches": 0,
+      "stats": {
+        "computes": 43987,
+        "effectRuns": 7936,
+        "sink": 985597
+      },
+      "trial": 4
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 29384000.000000015,
+          "nsPerOp": 979466.6666666672
+        }
+      ],
+      "builtHeap": 1805216,
+      "retainedHeap": 1831248,
+      "mismatches": 0,
+      "stats": {
+        "computes": 43987,
+        "effectRuns": 7936,
+        "sink": 985597
+      },
+      "trial": 4
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 14911000.000000002,
+          "nsPerOp": 497033.3333333334
+        }
+      ],
+      "builtHeap": 1625240,
+      "retainedHeap": 1628256,
+      "mismatches": 0,
+      "stats": {
+        "computes": 43987,
+        "effectRuns": 7936,
+        "sink": 985597
+      },
+      "trial": 4
+    },
+    {
+      "framework": "angular",
+      "workload": "observer-toggle",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 10080399.999999998,
+          "nsPerOp": 336013.33333333326
+        }
+      ],
+      "builtHeap": 1795832,
+      "retainedHeap": 1830688,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7749,
+        "sink": 339769
+      },
+      "trial": 4
+    },
+    {
+      "framework": "preact",
+      "workload": "observer-toggle",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 5318399.999999997,
+          "nsPerOp": 177279.9999999999
+        }
+      ],
+      "builtHeap": 1663144,
+      "retainedHeap": 1635152,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7749,
+        "sink": 339769
+      },
+      "trial": 4
+    },
+    {
+      "framework": "reflex",
+      "workload": "observer-toggle",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "cycle",
+          "ops": 30,
+          "ns": 4993700.000000004,
+          "nsPerOp": 166456.6666666668
+        }
+      ],
+      "builtHeap": 1386960,
+      "retainedHeap": 1403480,
+      "mismatches": 0,
+      "stats": {
+        "computes": 17363,
+        "effectRuns": 7749,
+        "sink": 339769
+      },
+      "trial": 4
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 1525900.0000000072,
+          "nsPerOp": 76.29500000000036
+        }
+      ],
+      "builtHeap": 1509216,
+      "retainedHeap": 1529528,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 163920
+      },
+      "trial": 4
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 1242900.0000000058,
+          "nsPerOp": 62.145000000000294
+        }
+      ],
+      "builtHeap": 1317328,
+      "retainedHeap": 1320312,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 163920
+      },
+      "trial": 4
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 2988600.000000005,
+          "nsPerOp": 149.43000000000026
+        }
+      ],
+      "builtHeap": 1549384,
+      "retainedHeap": 1546512,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 163920
+      },
+      "trial": 4
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 1256399.9999999993,
+          "nsPerOp": 62.819999999999965
+        }
+      ],
+      "builtHeap": 1322712,
+      "retainedHeap": 1334584,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 173634
+      },
+      "trial": 4
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 16385199.999999998,
+          "nsPerOp": 819.2599999999999
+        }
+      ],
+      "builtHeap": 1494472,
+      "retainedHeap": 1496216,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 173634
+      },
+      "trial": 4
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 8411699.999999996,
+          "nsPerOp": 420.5849999999998
+        }
+      ],
+      "builtHeap": 1499560,
+      "retainedHeap": 1485720,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 173634
+      },
+      "trial": 4
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 36289499.99999999,
+          "nsPerOp": 1814.4749999999997
+        }
+      ],
+      "builtHeap": 1536728,
+      "retainedHeap": 1549128,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 203621
+      },
+      "trial": 4
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 15258000.00000001,
+          "nsPerOp": 762.9000000000004
+        }
+      ],
+      "builtHeap": 1508672,
+      "retainedHeap": 1512560,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 203621
+      },
+      "trial": 4
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 2,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 1434400.0000000107,
+          "nsPerOp": 71.72000000000054
+        }
+      ],
+      "builtHeap": 1317432,
+      "retainedHeap": 1339112,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 203621
+      },
+      "trial": 4
+    },
+    {
+      "framework": "preact",
+      "workload": "standalone-reads",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 15414800,
+          "nsPerOp": 770.74
+        }
+      ],
+      "builtHeap": 1521192,
+      "retainedHeap": 1512640,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 45982
+      },
+      "trial": 4
+    },
+    {
+      "framework": "reflex",
+      "workload": "standalone-reads",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 2644599.9999999967,
+          "nsPerOp": 132.22999999999985
+        }
+      ],
+      "builtHeap": 1337136,
+      "retainedHeap": 1308072,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 45982
+      },
+      "trial": 4
+    },
+    {
+      "framework": "angular",
+      "workload": "standalone-reads",
+      "paramIndex": 3,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "read",
+          "ops": 20000,
+          "ns": 52183100.00000001,
+          "nsPerOp": 2609.155
+        }
+      ],
+      "builtHeap": 1545384,
+      "retainedHeap": 1539664,
+      "mismatches": 0,
+      "stats": {
+        "computes": 1964,
+        "effectRuns": 0,
+        "sink": 45982
+      },
+      "trial": 4
+    },
+    {
+      "framework": "reflex",
+      "workload": "dormant-writes",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 66699.99999999732,
+          "nsPerOp": 66699.99999999732
+        },
+        {
+          "name": "dormant-write",
+          "ops": 100,
+          "ns": 138199.99999999767,
+          "nsPerOp": 1381.9999999999768
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 652900.0000000024,
+          "nsPerOp": 652900.0000000024
+        }
+      ],
+      "builtHeap": 1443248,
+      "retainedHeap": 1453960,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3773,
+        "effectRuns": 512,
+        "sink": 328602
+      },
+      "trial": 4
+    },
+    {
+      "framework": "angular",
+      "workload": "dormant-writes",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 448999.9999999981,
+          "nsPerOp": 448999.9999999981
+        },
+        {
+          "name": "dormant-write",
+          "ops": 100,
+          "ns": 39699.9999999963,
+          "nsPerOp": 396.99999999996294
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 1040999.9999999969,
+          "nsPerOp": 1040999.9999999969
+        }
+      ],
+      "builtHeap": 1814312,
+      "retainedHeap": 1833488,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3773,
+        "effectRuns": 512,
+        "sink": 328602
+      },
+      "trial": 4
+    },
+    {
+      "framework": "preact",
+      "workload": "dormant-writes",
+      "paramIndex": 0,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 263700.00000000006,
+          "nsPerOp": 263700.00000000006
+        },
+        {
+          "name": "dormant-write",
+          "ops": 100,
+          "ns": 30600.000000006843,
+          "nsPerOp": 306.00000000006844
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 704399.9999999925,
+          "nsPerOp": 704399.9999999925
+        }
+      ],
+      "builtHeap": 1649184,
+      "retainedHeap": 1661152,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3773,
+        "effectRuns": 512,
+        "sink": 328602
+      },
+      "trial": 4
+    },
+    {
+      "framework": "angular",
+      "workload": "dormant-writes",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 457799.9999999918,
+          "nsPerOp": 457799.9999999918
+        },
+        {
+          "name": "dormant-write",
+          "ops": 10000,
+          "ns": 1137799.9999999986,
+          "nsPerOp": 113.77999999999986
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 978400.0000000077,
+          "nsPerOp": 978400.0000000077
+        }
+      ],
+      "builtHeap": 1809544,
+      "retainedHeap": 1829720,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3781,
+        "effectRuns": 512,
+        "sink": 925751
+      },
+      "trial": 4
+    },
+    {
+      "framework": "preact",
+      "workload": "dormant-writes",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 495800.0000000027,
+          "nsPerOp": 495800.0000000027
+        },
+        {
+          "name": "dormant-write",
+          "ops": 10000,
+          "ns": 900300.0000000014,
+          "nsPerOp": 90.03000000000014
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 652199.9999999935,
+          "nsPerOp": 652199.9999999935
+        }
+      ],
+      "builtHeap": 1649656,
+      "retainedHeap": 1670744,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3781,
+        "effectRuns": 512,
+        "sink": 925751
+      },
+      "trial": 4
+    },
+    {
+      "framework": "reflex",
+      "workload": "dormant-writes",
+      "paramIndex": 1,
+      "seed": 1,
+      "phases": [
+        {
+          "name": "deactivate",
+          "ops": 1,
+          "ns": 72400.00000000179,
+          "nsPerOp": 72400.00000000179
+        },
+        {
+          "name": "dormant-write",
+          "ops": 10000,
+          "ns": 2693100.000000001,
+          "nsPerOp": 269.3100000000001
+        },
+        {
+          "name": "reactivate",
+          "ops": 1,
+          "ns": 753000.0000000001,
+          "nsPerOp": 753000.0000000001
+        }
+      ],
+      "builtHeap": 1429608,
+      "retainedHeap": 1442560,
+      "mismatches": 0,
+      "stats": {
+        "computes": 3781,
+        "effectRuns": 512,
+        "sink": 925751
+      },
+      "trial": 4
+    }
+  ]
+}

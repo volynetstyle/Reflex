@@ -1,0 +1,4469 @@
+{
+  "meta": {
+    "date": "2026-10-15T13:48:43.740Z",
+    "node": "v25.2.0",
+    "flags": "profile-test (__PROFILE__=true, __DEV__=false)"
+  },
+  "churn": [
+    {
+      "experiment": "A",
+      "options": {
+        "variant": "managed",
+        "cycles": 10000,
+        "window": 200,
+        "checkpoints": 20,
+        "probeWrites": 32
+      },
+      "baselineHeapBytes": 12896376,
+      "checkpoints": [
+        {
+          "cycle": 0,
+          "mounted": 0,
+          "unmounted": 0,
+          "heapBytes": 21744,
+          "retainedObjects": 0,
+          "releasedObjects": 0,
+          "graph": {
+            "nodes": 7,
+            "producers": 4,
+            "consumers": 2,
+            "watchers": 1,
+            "edges": 5,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 12362.499999994725,
+            "pushEdgesPerWrite": 2.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 1.5,
+            "pushDirtySkipsPerWrite": 0,
+            "pullEdgesPerWrite": 0.5,
+            "computeRunsPerWrite": 1.5,
+            "watcherRunsPerWrite": 1,
+            "frontierEdgesPerWrite": 1
+          },
+          "cycleNs": 0
+        },
+        {
+          "cycle": 500,
+          "mounted": 200,
+          "unmounted": 300,
+          "heapBytes": 1507016,
+          "retainedObjects": 0,
+          "releasedObjects": 1500,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 883768.7500000015,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 790466.1999999998
+        },
+        {
+          "cycle": 1000,
+          "mounted": 200,
+          "unmounted": 800,
+          "heapBytes": 1741920,
+          "retainedObjects": 0,
+          "releasedObjects": 4000,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 833759.3749999997,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 930688.6
+        },
+        {
+          "cycle": 1500,
+          "mounted": 200,
+          "unmounted": 1300,
+          "heapBytes": 1766120,
+          "retainedObjects": 0,
+          "releasedObjects": 6500,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 870109.3749999984,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 903233.4000000001
+        },
+        {
+          "cycle": 2000,
+          "mounted": 200,
+          "unmounted": 1800,
+          "heapBytes": 1774584,
+          "retainedObjects": 0,
+          "releasedObjects": 9000,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 883296.8749999992,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 924703.5999999999
+        },
+        {
+          "cycle": 2500,
+          "mounted": 200,
+          "unmounted": 2300,
+          "heapBytes": 1775640,
+          "retainedObjects": 0,
+          "releasedObjects": 11500,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 936812.5000000021,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 948106.8000000005
+        },
+        {
+          "cycle": 3000,
+          "mounted": 200,
+          "unmounted": 2800,
+          "heapBytes": 1775808,
+          "retainedObjects": 0,
+          "releasedObjects": 14000,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 960993.7500000001,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 976042.9999999997
+        },
+        {
+          "cycle": 3500,
+          "mounted": 200,
+          "unmounted": 3300,
+          "heapBytes": 1815592,
+          "retainedObjects": 0,
+          "releasedObjects": 16500,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 855050.0000000056,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 944023.5999999986
+        },
+        {
+          "cycle": 4000,
+          "mounted": 200,
+          "unmounted": 3800,
+          "heapBytes": 1816904,
+          "retainedObjects": 0,
+          "releasedObjects": 19000,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 856437.4999999984,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 903723.2000000003
+        },
+        {
+          "cycle": 4500,
+          "mounted": 200,
+          "unmounted": 4300,
+          "heapBytes": 1817632,
+          "retainedObjects": 0,
+          "releasedObjects": 21500,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 855218.7500000059,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 918557.6000000001
+        },
+        {
+          "cycle": 5000,
+          "mounted": 200,
+          "unmounted": 4800,
+          "heapBytes": 1818160,
+          "retainedObjects": 0,
+          "releasedObjects": 24000,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 853453.1250000157,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 916621.0000000009
+        },
+        {
+          "cycle": 5500,
+          "mounted": 200,
+          "unmounted": 5300,
+          "heapBytes": 1814760,
+          "retainedObjects": 0,
+          "releasedObjects": 26500,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 869887.5000000044,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 923235.6
+        },
+        {
+          "cycle": 6000,
+          "mounted": 200,
+          "unmounted": 5800,
+          "heapBytes": 1815696,
+          "retainedObjects": 0,
+          "releasedObjects": 29000,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 2093656.249999981,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1812602.3999999997
+        },
+        {
+          "cycle": 6500,
+          "mounted": 200,
+          "unmounted": 6300,
+          "heapBytes": 1815976,
+          "retainedObjects": 0,
+          "releasedObjects": 31500,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 2098074.9999999944,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 2212142.199999999
+        },
+        {
+          "cycle": 7000,
+          "mounted": 200,
+          "unmounted": 6800,
+          "heapBytes": 1815488,
+          "retainedObjects": 0,
+          "releasedObjects": 34000,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 2079778.1250000184,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 2206720.400000002
+        },
+        {
+          "cycle": 7500,
+          "mounted": 200,
+          "unmounted": 7300,
+          "heapBytes": 1815592,
+          "retainedObjects": 0,
+          "releasedObjects": 36500,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 2102787.5000000335,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 2215749
+        },
+        {
+          "cycle": 8000,
+          "mounted": 200,
+          "unmounted": 7800,
+          "heapBytes": 1819104,
+          "retainedObjects": 0,
+          "releasedObjects": 39000,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 2166928.1250000265,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 2252216.400000001
+        },
+        {
+          "cycle": 8500,
+          "mounted": 200,
+          "unmounted": 8300,
+          "heapBytes": 1824888,
+          "retainedObjects": 0,
+          "releasedObjects": 41500,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 2083215.6249999797,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 2198623.7999999975
+        },
+        {
+          "cycle": 9000,
+          "mounted": 200,
+          "unmounted": 8800,
+          "heapBytes": 1825352,
+          "retainedObjects": 0,
+          "releasedObjects": 44000,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 2107124.9999999963,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 2217630.400000002
+        },
+        {
+          "cycle": 9500,
+          "mounted": 200,
+          "unmounted": 9300,
+          "heapBytes": 1826792,
+          "retainedObjects": 0,
+          "releasedObjects": 46500,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 2069512.4999999735,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 2233022.000000004
+        },
+        {
+          "cycle": 10000,
+          "mounted": 200,
+          "unmounted": 9800,
+          "heapBytes": 1827864,
+          "retainedObjects": 0,
+          "releasedObjects": 49000,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 2091706.2500000156,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 2161103.9999999995
+        }
+      ]
+    },
+    {
+      "experiment": "control",
+      "options": {
+        "variant": "raw-manual-dispose",
+        "cycles": 10000,
+        "window": 200,
+        "checkpoints": 20,
+        "probeWrites": 32
+      },
+      "baselineHeapBytes": 13591864,
+      "checkpoints": [
+        {
+          "cycle": 0,
+          "mounted": 0,
+          "unmounted": 0,
+          "heapBytes": 544,
+          "retainedObjects": 0,
+          "releasedObjects": 0,
+          "graph": {
+            "nodes": 7,
+            "producers": 4,
+            "consumers": 2,
+            "watchers": 1,
+            "edges": 5,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 13853.124999968713,
+            "pushEdgesPerWrite": 2.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 1.5,
+            "pushDirtySkipsPerWrite": 0,
+            "pullEdgesPerWrite": 0.5,
+            "computeRunsPerWrite": 1.5,
+            "watcherRunsPerWrite": 1,
+            "frontierEdgesPerWrite": 1
+          },
+          "cycleNs": 0
+        },
+        {
+          "cycle": 500,
+          "mounted": 200,
+          "unmounted": 300,
+          "heapBytes": 544008,
+          "retainedObjects": 0,
+          "releasedObjects": 1200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1713812.4999999036,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1431992.2000000004
+        },
+        {
+          "cycle": 1000,
+          "mounted": 200,
+          "unmounted": 800,
+          "heapBytes": 654224,
+          "retainedObjects": 0,
+          "releasedObjects": 3200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1701900.0000000233,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1783557.0000000007
+        },
+        {
+          "cycle": 1500,
+          "mounted": 200,
+          "unmounted": 1300,
+          "heapBytes": 654304,
+          "retainedObjects": 0,
+          "releasedObjects": 5200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1691071.8749999206,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1793179.1999999986
+        },
+        {
+          "cycle": 2000,
+          "mounted": 200,
+          "unmounted": 1800,
+          "heapBytes": 655376,
+          "retainedObjects": 0,
+          "releasedObjects": 7200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1703900.0000000896,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1789107.4000000006
+        },
+        {
+          "cycle": 2500,
+          "mounted": 200,
+          "unmounted": 2300,
+          "heapBytes": 655512,
+          "retainedObjects": 0,
+          "releasedObjects": 9200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1687950.0000000007,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1793689.5999999978
+        },
+        {
+          "cycle": 3000,
+          "mounted": 200,
+          "unmounted": 2800,
+          "heapBytes": 686312,
+          "retainedObjects": 0,
+          "releasedObjects": 11200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1733318.7500000803,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1778919.0000000016
+        },
+        {
+          "cycle": 3500,
+          "mounted": 200,
+          "unmounted": 3300,
+          "heapBytes": 686368,
+          "retainedObjects": 0,
+          "releasedObjects": 13200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1724421.8749999618,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1801173.999999999
+        },
+        {
+          "cycle": 4000,
+          "mounted": 200,
+          "unmounted": 3800,
+          "heapBytes": 687440,
+          "retainedObjects": 0,
+          "releasedObjects": 15200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1704496.875000018,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1778562.4000000027
+        },
+        {
+          "cycle": 4500,
+          "mounted": 200,
+          "unmounted": 4300,
+          "heapBytes": 687544,
+          "retainedObjects": 0,
+          "releasedObjects": 17200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1702646.8750000277,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1812035.1999999983
+        },
+        {
+          "cycle": 5000,
+          "mounted": 200,
+          "unmounted": 4800,
+          "heapBytes": 692592,
+          "retainedObjects": 0,
+          "releasedObjects": 19200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1675465.6249999015,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1780241.2000000041
+        },
+        {
+          "cycle": 5500,
+          "mounted": 200,
+          "unmounted": 5300,
+          "heapBytes": 693136,
+          "retainedObjects": 0,
+          "releasedObjects": 21200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1683937.4999999562,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1771228.4
+        },
+        {
+          "cycle": 6000,
+          "mounted": 200,
+          "unmounted": 5800,
+          "heapBytes": 693272,
+          "retainedObjects": 0,
+          "releasedObjects": 23200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1682115.6249999376,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1770046.7999999963
+        },
+        {
+          "cycle": 6500,
+          "mounted": 200,
+          "unmounted": 6300,
+          "heapBytes": 694184,
+          "retainedObjects": 0,
+          "releasedObjects": 25200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1696140.6249999981,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1776665.6000000075
+        },
+        {
+          "cycle": 7000,
+          "mounted": 200,
+          "unmounted": 6800,
+          "heapBytes": 705072,
+          "retainedObjects": 0,
+          "releasedObjects": 27200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1695503.1249999593,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1776186.0000000014
+        },
+        {
+          "cycle": 7500,
+          "mounted": 200,
+          "unmounted": 7300,
+          "heapBytes": 713016,
+          "retainedObjects": 0,
+          "releasedObjects": 29200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1701424.999999972,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1778601.3999999994
+        },
+        {
+          "cycle": 8000,
+          "mounted": 200,
+          "unmounted": 7800,
+          "heapBytes": 715120,
+          "retainedObjects": 0,
+          "releasedObjects": 31200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1713846.875000172,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1773251.1999999988
+        },
+        {
+          "cycle": 8500,
+          "mounted": 200,
+          "unmounted": 8300,
+          "heapBytes": 715256,
+          "retainedObjects": 0,
+          "releasedObjects": 33200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1691003.124999952,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1773338.4000000078
+        },
+        {
+          "cycle": 9000,
+          "mounted": 200,
+          "unmounted": 8800,
+          "heapBytes": 716608,
+          "retainedObjects": 0,
+          "releasedObjects": 35200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1690921.874999958,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1772907.800000001
+        },
+        {
+          "cycle": 9500,
+          "mounted": 200,
+          "unmounted": 9300,
+          "heapBytes": 722032,
+          "retainedObjects": 0,
+          "releasedObjects": 37200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1691353.1249999779,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1774177.800000005
+        },
+        {
+          "cycle": 10000,
+          "mounted": 200,
+          "unmounted": 9800,
+          "heapBytes": 722168,
+          "retainedObjects": 0,
+          "releasedObjects": 39200,
+          "graph": {
+            "nodes": 807,
+            "producers": 204,
+            "consumers": 402,
+            "watchers": 201,
+            "edges": 1205,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1694446.8750000396,
+            "pushEdgesPerWrite": 702.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 701.5,
+            "pushDirtySkipsPerWrite": 100,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1773497.7999999975
+        }
+      ]
+    },
+    {
+      "experiment": "B",
+      "options": {
+        "variant": "raw-dispose-watcher",
+        "cycles": 10000,
+        "window": 200,
+        "checkpoints": 20,
+        "probeWrites": 32
+      },
+      "baselineHeapBytes": 13730160,
+      "checkpoints": [
+        {
+          "cycle": 0,
+          "mounted": 0,
+          "unmounted": 0,
+          "heapBytes": 480,
+          "retainedObjects": 0,
+          "releasedObjects": 0,
+          "graph": {
+            "nodes": 7,
+            "producers": 4,
+            "consumers": 2,
+            "watchers": 1,
+            "edges": 5,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 9725.00000011678,
+            "pushEdgesPerWrite": 2.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 1.5,
+            "pushDirtySkipsPerWrite": 0,
+            "pullEdgesPerWrite": 0.5,
+            "computeRunsPerWrite": 1.5,
+            "watcherRunsPerWrite": 1,
+            "frontierEdgesPerWrite": 1
+          },
+          "cycleNs": 0
+        },
+        {
+          "cycle": 500,
+          "mounted": 200,
+          "unmounted": 300,
+          "heapBytes": 696056,
+          "retainedObjects": 900,
+          "releasedObjects": 1200,
+          "graph": {
+            "nodes": 1707,
+            "producers": 504,
+            "consumers": 1002,
+            "watchers": 201,
+            "edges": 2705,
+            "deadNodes": 900,
+            "deadEdges": 1500
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1896215.6249999679,
+            "pushEdgesPerWrite": 1152.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 1151.5,
+            "pushDirtySkipsPerWrite": 550,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 1484709.7999999968
+        },
+        {
+          "cycle": 1000,
+          "mounted": 200,
+          "unmounted": 800,
+          "heapBytes": 1272272,
+          "retainedObjects": 2400,
+          "releasedObjects": 3200,
+          "graph": {
+            "nodes": 3207,
+            "producers": 1004,
+            "consumers": 2002,
+            "watchers": 201,
+            "edges": 5205,
+            "deadNodes": 2400,
+            "deadEdges": 4000
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 2302140.6250002203,
+            "pushEdgesPerWrite": 1902.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 1901.5,
+            "pushDirtySkipsPerWrite": 1300,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 2202122.1999999983
+        },
+        {
+          "cycle": 1500,
+          "mounted": 200,
+          "unmounted": 1300,
+          "heapBytes": 1764600,
+          "retainedObjects": 3900,
+          "releasedObjects": 5200,
+          "graph": {
+            "nodes": 4707,
+            "producers": 1504,
+            "consumers": 3002,
+            "watchers": 201,
+            "edges": 7705,
+            "deadNodes": 3900,
+            "deadEdges": 6500
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 2476334.374999851,
+            "pushEdgesPerWrite": 2652.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 2651.5,
+            "pushDirtySkipsPerWrite": 2050,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 2629665.200000003
+        },
+        {
+          "cycle": 2000,
+          "mounted": 200,
+          "unmounted": 1800,
+          "heapBytes": 2413624,
+          "retainedObjects": 5400,
+          "releasedObjects": 7200,
+          "graph": {
+            "nodes": 6207,
+            "producers": 2004,
+            "consumers": 4002,
+            "watchers": 201,
+            "edges": 10205,
+            "deadNodes": 5400,
+            "deadEdges": 9000
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 2811875.0000001,
+            "pushEdgesPerWrite": 3402.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 3401.5,
+            "pushDirtySkipsPerWrite": 2800,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 3057621.2000000086
+        },
+        {
+          "cycle": 2500,
+          "mounted": 200,
+          "unmounted": 2300,
+          "heapBytes": 2928568,
+          "retainedObjects": 6900,
+          "releasedObjects": 9200,
+          "graph": {
+            "nodes": 7707,
+            "producers": 2504,
+            "consumers": 5002,
+            "watchers": 201,
+            "edges": 12705,
+            "deadNodes": 6900,
+            "deadEdges": 11500
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 3121346.874999972,
+            "pushEdgesPerWrite": 4152.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 4151.5,
+            "pushDirtySkipsPerWrite": 3550,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 3444845.6000000006
+        },
+        {
+          "cycle": 3000,
+          "mounted": 200,
+          "unmounted": 2800,
+          "heapBytes": 3447064,
+          "retainedObjects": 8400,
+          "releasedObjects": 11200,
+          "graph": {
+            "nodes": 9207,
+            "producers": 3004,
+            "consumers": 6002,
+            "watchers": 201,
+            "edges": 15205,
+            "deadNodes": 8400,
+            "deadEdges": 14000
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 3396703.124999931,
+            "pushEdgesPerWrite": 4902.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 4901.5,
+            "pushDirtySkipsPerWrite": 4300,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 3851360.0000000005
+        },
+        {
+          "cycle": 3500,
+          "mounted": 200,
+          "unmounted": 3300,
+          "heapBytes": 4237472,
+          "retainedObjects": 9900,
+          "releasedObjects": 13200,
+          "graph": {
+            "nodes": 10707,
+            "producers": 3504,
+            "consumers": 7002,
+            "watchers": 201,
+            "edges": 17705,
+            "deadNodes": 9900,
+            "deadEdges": 16500
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 3719168.750000108,
+            "pushEdgesPerWrite": 5652.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 5651.5,
+            "pushDirtySkipsPerWrite": 5050,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 4252453.800000003
+        },
+        {
+          "cycle": 4000,
+          "mounted": 200,
+          "unmounted": 3800,
+          "heapBytes": 4726544,
+          "retainedObjects": 11400,
+          "releasedObjects": 15200,
+          "graph": {
+            "nodes": 12207,
+            "producers": 4004,
+            "consumers": 8002,
+            "watchers": 201,
+            "edges": 20205,
+            "deadNodes": 11400,
+            "deadEdges": 19000
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 4052984.3750000508,
+            "pushEdgesPerWrite": 6402.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 6401.5,
+            "pushDirtySkipsPerWrite": 5800,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 4664231.599999999
+        },
+        {
+          "cycle": 4500,
+          "mounted": 200,
+          "unmounted": 4300,
+          "heapBytes": 5219968,
+          "retainedObjects": 12900,
+          "releasedObjects": 17200,
+          "graph": {
+            "nodes": 13707,
+            "producers": 4504,
+            "consumers": 9002,
+            "watchers": 201,
+            "edges": 22705,
+            "deadNodes": 12900,
+            "deadEdges": 21500
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 4363962.499999844,
+            "pushEdgesPerWrite": 7152.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 7151.5,
+            "pushDirtySkipsPerWrite": 6550,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 5114056.200000007
+        },
+        {
+          "cycle": 5000,
+          "mounted": 200,
+          "unmounted": 4800,
+          "heapBytes": 5707984,
+          "retainedObjects": 14400,
+          "releasedObjects": 19200,
+          "graph": {
+            "nodes": 15207,
+            "producers": 5004,
+            "consumers": 10002,
+            "watchers": 201,
+            "edges": 25205,
+            "deadNodes": 14400,
+            "deadEdges": 24000
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 4689559.375000045,
+            "pushEdgesPerWrite": 7902.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 7901.5,
+            "pushDirtySkipsPerWrite": 7300,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 5522055.999999997
+        },
+        {
+          "cycle": 5500,
+          "mounted": 200,
+          "unmounted": 5300,
+          "heapBytes": 6262656,
+          "retainedObjects": 15900,
+          "releasedObjects": 21200,
+          "graph": {
+            "nodes": 16707,
+            "producers": 5504,
+            "consumers": 11002,
+            "watchers": 201,
+            "edges": 27705,
+            "deadNodes": 15900,
+            "deadEdges": 26500
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 4962349.999999788,
+            "pushEdgesPerWrite": 8652.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 8651.5,
+            "pushDirtySkipsPerWrite": 8050,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 5942709.000000003
+        },
+        {
+          "cycle": 6000,
+          "mounted": 200,
+          "unmounted": 5800,
+          "heapBytes": 6750792,
+          "retainedObjects": 17400,
+          "releasedObjects": 23200,
+          "graph": {
+            "nodes": 18207,
+            "producers": 6004,
+            "consumers": 12002,
+            "watchers": 201,
+            "edges": 30205,
+            "deadNodes": 17400,
+            "deadEdges": 29000
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 5313728.125000125,
+            "pushEdgesPerWrite": 9402.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 9401.5,
+            "pushDirtySkipsPerWrite": 8800,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 6356403.8
+        },
+        {
+          "cycle": 6500,
+          "mounted": 200,
+          "unmounted": 6300,
+          "heapBytes": 7246432,
+          "retainedObjects": 18900,
+          "releasedObjects": 25200,
+          "graph": {
+            "nodes": 19707,
+            "producers": 6504,
+            "consumers": 13002,
+            "watchers": 201,
+            "edges": 32705,
+            "deadNodes": 18900,
+            "deadEdges": 31500
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 6280699.999999797,
+            "pushEdgesPerWrite": 10152.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 10151.5,
+            "pushDirtySkipsPerWrite": 9550,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 6999104.599999991
+        },
+        {
+          "cycle": 7000,
+          "mounted": 200,
+          "unmounted": 6800,
+          "heapBytes": 7734568,
+          "retainedObjects": 20400,
+          "releasedObjects": 27200,
+          "graph": {
+            "nodes": 21207,
+            "producers": 7004,
+            "consumers": 14002,
+            "watchers": 201,
+            "edges": 35205,
+            "deadNodes": 20400,
+            "deadEdges": 34000
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 5958421.875000113,
+            "pushEdgesPerWrite": 10902.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 10901.5,
+            "pushDirtySkipsPerWrite": 10300,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 7450951.800000009
+        },
+        {
+          "cycle": 7500,
+          "mounted": 200,
+          "unmounted": 7300,
+          "heapBytes": 8747928,
+          "retainedObjects": 21900,
+          "releasedObjects": 29200,
+          "graph": {
+            "nodes": 22707,
+            "producers": 7504,
+            "consumers": 15002,
+            "watchers": 201,
+            "edges": 37705,
+            "deadNodes": 21900,
+            "deadEdges": 36500
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 6234396.874999675,
+            "pushEdgesPerWrite": 11652.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 11651.5,
+            "pushDirtySkipsPerWrite": 11050,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 7737402.199999982
+        },
+        {
+          "cycle": 8000,
+          "mounted": 200,
+          "unmounted": 7800,
+          "heapBytes": 9327928,
+          "retainedObjects": 23400,
+          "releasedObjects": 31200,
+          "graph": {
+            "nodes": 24207,
+            "producers": 8004,
+            "consumers": 16002,
+            "watchers": 201,
+            "edges": 40205,
+            "deadNodes": 23400,
+            "deadEdges": 39000
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 6956937.500000095,
+            "pushEdgesPerWrite": 12402.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 12401.5,
+            "pushDirtySkipsPerWrite": 11800,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 8338289.600000018
+        },
+        {
+          "cycle": 8500,
+          "mounted": 200,
+          "unmounted": 8300,
+          "heapBytes": 9816000,
+          "retainedObjects": 24900,
+          "releasedObjects": 33200,
+          "graph": {
+            "nodes": 25707,
+            "producers": 8504,
+            "consumers": 17002,
+            "watchers": 201,
+            "edges": 42705,
+            "deadNodes": 24900,
+            "deadEdges": 41500
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 6969562.500000393,
+            "pushEdgesPerWrite": 13152.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 13151.5,
+            "pushDirtySkipsPerWrite": 12550,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 8644638.999999996
+        },
+        {
+          "cycle": 9000,
+          "mounted": 200,
+          "unmounted": 8800,
+          "heapBytes": 10307080,
+          "retainedObjects": 26400,
+          "releasedObjects": 35200,
+          "graph": {
+            "nodes": 27207,
+            "producers": 9004,
+            "consumers": 18002,
+            "watchers": 201,
+            "edges": 45205,
+            "deadNodes": 26400,
+            "deadEdges": 44000
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 7301328.1249995995,
+            "pushEdgesPerWrite": 13902.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 13901.5,
+            "pushDirtySkipsPerWrite": 13300,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 9037283.599999994
+        },
+        {
+          "cycle": 9500,
+          "mounted": 200,
+          "unmounted": 9300,
+          "heapBytes": 10796152,
+          "retainedObjects": 27900,
+          "releasedObjects": 37200,
+          "graph": {
+            "nodes": 28707,
+            "producers": 9504,
+            "consumers": 19002,
+            "watchers": 201,
+            "edges": 47705,
+            "deadNodes": 27900,
+            "deadEdges": 46500
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 7734240.624999984,
+            "pushEdgesPerWrite": 14652.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 14651.5,
+            "pushDirtySkipsPerWrite": 14050,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 9660044.599999994
+        },
+        {
+          "cycle": 10000,
+          "mounted": 200,
+          "unmounted": 9800,
+          "heapBytes": 11285272,
+          "retainedObjects": 29400,
+          "releasedObjects": 39200,
+          "graph": {
+            "nodes": 30207,
+            "producers": 10004,
+            "consumers": 20002,
+            "watchers": 201,
+            "edges": 50205,
+            "deadNodes": 29400,
+            "deadEdges": 49000
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 8058540.62499975,
+            "pushEdgesPerWrite": 15402.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 15401.5,
+            "pushDirtySkipsPerWrite": 14800,
+            "pullEdgesPerWrite": 100.5,
+            "computeRunsPerWrite": 401.5,
+            "watcherRunsPerWrite": 201,
+            "frontierEdgesPerWrite": 201
+          },
+          "cycleNs": 9997573.199999984
+        }
+      ]
+    },
+    {
+      "experiment": "B",
+      "options": {
+        "variant": "raw-no-dispose",
+        "cycles": 2500,
+        "window": 200,
+        "checkpoints": 20,
+        "probeWrites": 32
+      },
+      "baselineHeapBytes": 13762088,
+      "checkpoints": [
+        {
+          "cycle": 0,
+          "mounted": 0,
+          "unmounted": 0,
+          "heapBytes": 496,
+          "retainedObjects": 0,
+          "releasedObjects": 0,
+          "graph": {
+            "nodes": 7,
+            "producers": 4,
+            "consumers": 2,
+            "watchers": 1,
+            "edges": 5,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 10028.125000189902,
+            "pushEdgesPerWrite": 2.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 1.5,
+            "pushDirtySkipsPerWrite": 0,
+            "pullEdgesPerWrite": 0.5,
+            "computeRunsPerWrite": 1.5,
+            "watcherRunsPerWrite": 1,
+            "frontierEdgesPerWrite": 1
+          },
+          "cycleNs": 0
+        },
+        {
+          "cycle": 125,
+          "mounted": 125,
+          "unmounted": 0,
+          "heapBytes": 206352,
+          "retainedObjects": 0,
+          "releasedObjects": 0,
+          "graph": {
+            "nodes": 507,
+            "producers": 129,
+            "consumers": 252,
+            "watchers": 126,
+            "edges": 755,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1047871.8750000553,
+            "pushEdgesPerWrite": 440,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 439,
+            "pushDirtySkipsPerWrite": 62.5,
+            "pullEdgesPerWrite": 63,
+            "computeRunsPerWrite": 251.5,
+            "watcherRunsPerWrite": 126,
+            "frontierEdgesPerWrite": 126
+          },
+          "cycleNs": 566118.4000000358
+        },
+        {
+          "cycle": 250,
+          "mounted": 200,
+          "unmounted": 50,
+          "heapBytes": 426104,
+          "retainedObjects": 200,
+          "releasedObjects": 200,
+          "graph": {
+            "nodes": 1007,
+            "producers": 254,
+            "consumers": 502,
+            "watchers": 251,
+            "edges": 1505,
+            "deadNodes": 200,
+            "deadEdges": 300
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 2076631.250000446,
+            "pushEdgesPerWrite": 877.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 876.5,
+            "pushDirtySkipsPerWrite": 125,
+            "pullEdgesPerWrite": 125.5,
+            "computeRunsPerWrite": 501.5,
+            "watcherRunsPerWrite": 251,
+            "frontierEdgesPerWrite": 251
+          },
+          "cycleNs": 1619923.2000000775
+        },
+        {
+          "cycle": 375,
+          "mounted": 200,
+          "unmounted": 175,
+          "heapBytes": 636280,
+          "retainedObjects": 700,
+          "releasedObjects": 700,
+          "graph": {
+            "nodes": 1507,
+            "producers": 379,
+            "consumers": 752,
+            "watchers": 376,
+            "edges": 2255,
+            "deadNodes": 700,
+            "deadEdges": 1050
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 3125778.12499967,
+            "pushEdgesPerWrite": 1315,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 1314,
+            "pushDirtySkipsPerWrite": 187.5,
+            "pullEdgesPerWrite": 188,
+            "computeRunsPerWrite": 751.5,
+            "watcherRunsPerWrite": 376,
+            "frontierEdgesPerWrite": 376
+          },
+          "cycleNs": 2676591.999999946
+        },
+        {
+          "cycle": 500,
+          "mounted": 200,
+          "unmounted": 300,
+          "heapBytes": 807152,
+          "retainedObjects": 1200,
+          "releasedObjects": 1200,
+          "graph": {
+            "nodes": 2007,
+            "producers": 504,
+            "consumers": 1002,
+            "watchers": 501,
+            "edges": 3005,
+            "deadNodes": 1200,
+            "deadEdges": 1800
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 4223484.374999771,
+            "pushEdgesPerWrite": 1752.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 1751.5,
+            "pushDirtySkipsPerWrite": 250,
+            "pullEdgesPerWrite": 250.5,
+            "computeRunsPerWrite": 1001.5,
+            "watcherRunsPerWrite": 501,
+            "frontierEdgesPerWrite": 501
+          },
+          "cycleNs": 3744520.79999994
+        },
+        {
+          "cycle": 625,
+          "mounted": 200,
+          "unmounted": 425,
+          "heapBytes": 980408,
+          "retainedObjects": 1700,
+          "releasedObjects": 1700,
+          "graph": {
+            "nodes": 2507,
+            "producers": 629,
+            "consumers": 1252,
+            "watchers": 626,
+            "edges": 3755,
+            "deadNodes": 1700,
+            "deadEdges": 2550
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 5253040.624999812,
+            "pushEdgesPerWrite": 2190,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 2189,
+            "pushDirtySkipsPerWrite": 312.5,
+            "pullEdgesPerWrite": 313,
+            "computeRunsPerWrite": 1251.5,
+            "watcherRunsPerWrite": 626,
+            "frontierEdgesPerWrite": 626
+          },
+          "cycleNs": 4806920.000000042
+        },
+        {
+          "cycle": 750,
+          "mounted": 200,
+          "unmounted": 550,
+          "heapBytes": 1221232,
+          "retainedObjects": 2200,
+          "releasedObjects": 2200,
+          "graph": {
+            "nodes": 3007,
+            "producers": 754,
+            "consumers": 1502,
+            "watchers": 751,
+            "edges": 4505,
+            "deadNodes": 2200,
+            "deadEdges": 3300
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 6352312.499999698,
+            "pushEdgesPerWrite": 2627.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 2626.5,
+            "pushDirtySkipsPerWrite": 375,
+            "pullEdgesPerWrite": 375.5,
+            "computeRunsPerWrite": 1501.5,
+            "watcherRunsPerWrite": 751,
+            "frontierEdgesPerWrite": 751
+          },
+          "cycleNs": 5885693.599999999
+        },
+        {
+          "cycle": 875,
+          "mounted": 200,
+          "unmounted": 675,
+          "heapBytes": 1388576,
+          "retainedObjects": 2700,
+          "releasedObjects": 2700,
+          "graph": {
+            "nodes": 3507,
+            "producers": 879,
+            "consumers": 1752,
+            "watchers": 876,
+            "edges": 5255,
+            "deadNodes": 2700,
+            "deadEdges": 4050
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 7380021.874999784,
+            "pushEdgesPerWrite": 3065,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 3064,
+            "pushDirtySkipsPerWrite": 437.5,
+            "pullEdgesPerWrite": 438,
+            "computeRunsPerWrite": 1751.5,
+            "watcherRunsPerWrite": 876,
+            "frontierEdgesPerWrite": 876
+          },
+          "cycleNs": 6994150.400000042
+        },
+        {
+          "cycle": 1000,
+          "mounted": 200,
+          "unmounted": 800,
+          "heapBytes": 1578848,
+          "retainedObjects": 3200,
+          "releasedObjects": 3200,
+          "graph": {
+            "nodes": 4007,
+            "producers": 1004,
+            "consumers": 2002,
+            "watchers": 1001,
+            "edges": 6005,
+            "deadNodes": 3200,
+            "deadEdges": 4800
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 8580084.374999842,
+            "pushEdgesPerWrite": 3502.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 3501.5,
+            "pushDirtySkipsPerWrite": 500,
+            "pullEdgesPerWrite": 500.5,
+            "computeRunsPerWrite": 2001.5,
+            "watcherRunsPerWrite": 1001,
+            "frontierEdgesPerWrite": 1001
+          },
+          "cycleNs": 8061313.599999994
+        },
+        {
+          "cycle": 1125,
+          "mounted": 200,
+          "unmounted": 925,
+          "heapBytes": 1746192,
+          "retainedObjects": 3700,
+          "releasedObjects": 3700,
+          "graph": {
+            "nodes": 4507,
+            "producers": 1129,
+            "consumers": 2252,
+            "watchers": 1126,
+            "edges": 6755,
+            "deadNodes": 3700,
+            "deadEdges": 5550
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 9569471.87500009,
+            "pushEdgesPerWrite": 3940,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 3939,
+            "pushDirtySkipsPerWrite": 562.5,
+            "pullEdgesPerWrite": 563,
+            "computeRunsPerWrite": 2251.5,
+            "watcherRunsPerWrite": 1126,
+            "frontierEdgesPerWrite": 1126
+          },
+          "cycleNs": 9143520.000000019
+        },
+        {
+          "cycle": 1250,
+          "mounted": 200,
+          "unmounted": 1050,
+          "heapBytes": 1914928,
+          "retainedObjects": 4200,
+          "releasedObjects": 4200,
+          "graph": {
+            "nodes": 5007,
+            "producers": 1254,
+            "consumers": 2502,
+            "watchers": 1251,
+            "edges": 7505,
+            "deadNodes": 4200,
+            "deadEdges": 6300
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 10582271.87500006,
+            "pushEdgesPerWrite": 4377.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 4376.5,
+            "pushDirtySkipsPerWrite": 625,
+            "pullEdgesPerWrite": 625.5,
+            "computeRunsPerWrite": 2501.5,
+            "watcherRunsPerWrite": 1251,
+            "frontierEdgesPerWrite": 1251
+          },
+          "cycleNs": 10148236.000000034
+        },
+        {
+          "cycle": 1375,
+          "mounted": 200,
+          "unmounted": 1175,
+          "heapBytes": 2229952,
+          "retainedObjects": 4700,
+          "releasedObjects": 4700,
+          "graph": {
+            "nodes": 5507,
+            "producers": 1379,
+            "consumers": 2752,
+            "watchers": 1376,
+            "edges": 8255,
+            "deadNodes": 4700,
+            "deadEdges": 7050
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 11657368.749999933,
+            "pushEdgesPerWrite": 4815,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 4814,
+            "pushDirtySkipsPerWrite": 687.5,
+            "pullEdgesPerWrite": 688,
+            "computeRunsPerWrite": 2751.5,
+            "watcherRunsPerWrite": 1376,
+            "frontierEdgesPerWrite": 1376
+          },
+          "cycleNs": 11275469.599999953
+        },
+        {
+          "cycle": 1500,
+          "mounted": 200,
+          "unmounted": 1300,
+          "heapBytes": 2397296,
+          "retainedObjects": 5200,
+          "releasedObjects": 5200,
+          "graph": {
+            "nodes": 6007,
+            "producers": 1504,
+            "consumers": 3002,
+            "watchers": 1501,
+            "edges": 9005,
+            "deadNodes": 5200,
+            "deadEdges": 7800
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 12682609.375000084,
+            "pushEdgesPerWrite": 5252.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 5251.5,
+            "pushDirtySkipsPerWrite": 750,
+            "pullEdgesPerWrite": 750.5,
+            "computeRunsPerWrite": 3001.5,
+            "watcherRunsPerWrite": 1501,
+            "frontierEdgesPerWrite": 1501
+          },
+          "cycleNs": 12891845.6
+        },
+        {
+          "cycle": 1625,
+          "mounted": 200,
+          "unmounted": 1425,
+          "heapBytes": 2564640,
+          "retainedObjects": 5700,
+          "releasedObjects": 5700,
+          "graph": {
+            "nodes": 6507,
+            "producers": 1629,
+            "consumers": 3252,
+            "watchers": 1626,
+            "edges": 9755,
+            "deadNodes": 5700,
+            "deadEdges": 8550
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 13718550.00000005,
+            "pushEdgesPerWrite": 5690,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 5689,
+            "pushDirtySkipsPerWrite": 812.5,
+            "pullEdgesPerWrite": 813,
+            "computeRunsPerWrite": 3251.5,
+            "watcherRunsPerWrite": 1626,
+            "frontierEdgesPerWrite": 1626
+          },
+          "cycleNs": 13366258.400000049
+        },
+        {
+          "cycle": 1750,
+          "mounted": 200,
+          "unmounted": 1550,
+          "heapBytes": 2738168,
+          "retainedObjects": 6200,
+          "releasedObjects": 6200,
+          "graph": {
+            "nodes": 7007,
+            "producers": 1754,
+            "consumers": 3502,
+            "watchers": 1751,
+            "edges": 10505,
+            "deadNodes": 6200,
+            "deadEdges": 9300
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 14729124.99999984,
+            "pushEdgesPerWrite": 6127.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 6126.5,
+            "pushDirtySkipsPerWrite": 875,
+            "pullEdgesPerWrite": 875.5,
+            "computeRunsPerWrite": 3501.5,
+            "watcherRunsPerWrite": 1751,
+            "frontierEdgesPerWrite": 1751
+          },
+          "cycleNs": 14444898.399999946
+        },
+        {
+          "cycle": 1875,
+          "mounted": 200,
+          "unmounted": 1675,
+          "heapBytes": 2932320,
+          "retainedObjects": 6700,
+          "releasedObjects": 6700,
+          "graph": {
+            "nodes": 7507,
+            "producers": 1879,
+            "consumers": 3752,
+            "watchers": 1876,
+            "edges": 11255,
+            "deadNodes": 6700,
+            "deadEdges": 10050
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 16766331.249999894,
+            "pushEdgesPerWrite": 6565,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 6564,
+            "pushDirtySkipsPerWrite": 937.5,
+            "pullEdgesPerWrite": 938,
+            "computeRunsPerWrite": 3751.5,
+            "watcherRunsPerWrite": 1876,
+            "frontierEdgesPerWrite": 1876
+          },
+          "cycleNs": 15894388.800000073
+        },
+        {
+          "cycle": 2000,
+          "mounted": 200,
+          "unmounted": 1800,
+          "heapBytes": 3099664,
+          "retainedObjects": 7200,
+          "releasedObjects": 7200,
+          "graph": {
+            "nodes": 8007,
+            "producers": 2004,
+            "consumers": 4002,
+            "watchers": 2001,
+            "edges": 12005,
+            "deadNodes": 7200,
+            "deadEdges": 10800
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 17506968.74999994,
+            "pushEdgesPerWrite": 7002.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 7001.5,
+            "pushDirtySkipsPerWrite": 1000,
+            "pullEdgesPerWrite": 1000.5,
+            "computeRunsPerWrite": 4001.5,
+            "watcherRunsPerWrite": 2001,
+            "frontierEdgesPerWrite": 2001
+          },
+          "cycleNs": 17425607.19999997
+        },
+        {
+          "cycle": 2125,
+          "mounted": 200,
+          "unmounted": 1925,
+          "heapBytes": 3271248,
+          "retainedObjects": 7700,
+          "releasedObjects": 7700,
+          "graph": {
+            "nodes": 8507,
+            "producers": 2129,
+            "consumers": 4252,
+            "watchers": 2126,
+            "edges": 12755,
+            "deadNodes": 7700,
+            "deadEdges": 11550
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 18689306.24999939,
+            "pushEdgesPerWrite": 7440,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 7439,
+            "pushDirtySkipsPerWrite": 1062.5,
+            "pullEdgesPerWrite": 1063,
+            "computeRunsPerWrite": 4251.5,
+            "watcherRunsPerWrite": 2126,
+            "frontierEdgesPerWrite": 2126
+          },
+          "cycleNs": 18541259.999999776
+        },
+        {
+          "cycle": 2250,
+          "mounted": 200,
+          "unmounted": 2050,
+          "heapBytes": 3438800,
+          "retainedObjects": 8200,
+          "releasedObjects": 8200,
+          "graph": {
+            "nodes": 9007,
+            "producers": 2254,
+            "consumers": 4502,
+            "watchers": 2251,
+            "edges": 13505,
+            "deadNodes": 8200,
+            "deadEdges": 12300
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 20190068.750000138,
+            "pushEdgesPerWrite": 7877.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 7876.5,
+            "pushDirtySkipsPerWrite": 1125,
+            "pullEdgesPerWrite": 1125.5,
+            "computeRunsPerWrite": 4501.5,
+            "watcherRunsPerWrite": 2251,
+            "frontierEdgesPerWrite": 2251
+          },
+          "cycleNs": 19536582.399999954
+        },
+        {
+          "cycle": 2375,
+          "mounted": 200,
+          "unmounted": 2175,
+          "heapBytes": 3606144,
+          "retainedObjects": 8700,
+          "releasedObjects": 8700,
+          "graph": {
+            "nodes": 9507,
+            "producers": 2379,
+            "consumers": 4752,
+            "watchers": 2376,
+            "edges": 14255,
+            "deadNodes": 8700,
+            "deadEdges": 13050
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 20873199.999999996,
+            "pushEdgesPerWrite": 8315,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 8314,
+            "pushDirtySkipsPerWrite": 1187.5,
+            "pullEdgesPerWrite": 1188,
+            "computeRunsPerWrite": 4751.5,
+            "watcherRunsPerWrite": 2376,
+            "frontierEdgesPerWrite": 2376
+          },
+          "cycleNs": 20949934.399999913
+        },
+        {
+          "cycle": 2500,
+          "mounted": 200,
+          "unmounted": 2300,
+          "heapBytes": 3773488,
+          "retainedObjects": 9200,
+          "releasedObjects": 9200,
+          "graph": {
+            "nodes": 10007,
+            "producers": 2504,
+            "consumers": 5002,
+            "watchers": 2501,
+            "edges": 15005,
+            "deadNodes": 9200,
+            "deadEdges": 13800
+          },
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 21759496.874999966,
+            "pushEdgesPerWrite": 8752.5,
+            "pushDirectEdgesPerWrite": 1,
+            "pushTransitiveEdgesPerWrite": 8751.5,
+            "pushDirtySkipsPerWrite": 1250,
+            "pullEdgesPerWrite": 1250.5,
+            "computeRunsPerWrite": 5001.5,
+            "watcherRunsPerWrite": 2501,
+            "frontierEdgesPerWrite": 2501
+          },
+          "cycleNs": 21845682.40000005
+        }
+      ]
+    }
+  ],
+  "dag": [
+    {
+      "experiment": "C",
+      "options": {
+        "variant": "retain",
+        "seed": 24301,
+        "producers": 64,
+        "layers": 4,
+        "width": 512,
+        "fanIn": 3,
+        "watchers": 4096,
+        "readsPerWatcher": 3,
+        "removalSteps": 32,
+        "probeWrites": 32
+      },
+      "baselineHeapBytes": 13471088,
+      "buildHeapBytes": 3527568,
+      "checkpoints": [
+        {
+          "step": 0,
+          "liveWatchers": 4096,
+          "heapBytes": 3529360,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 6195,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 4096,
+            "edges": 18350,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 22796115.6249994,
+            "pushEdgesPerWrite": 8258.28125,
+            "pushDirectEdgesPerWrite": 24.25,
+            "pushTransitiveEdgesPerWrite": 8234.03125,
+            "pushDirtySkipsPerWrite": 3730.4375,
+            "pullEdgesPerWrite": 302.5,
+            "computeRunsPerWrite": 653.34375,
+            "watcherRunsPerWrite": 3874.5,
+            "frontierEdgesPerWrite": 11616.9375
+          }
+        },
+        {
+          "step": 1,
+          "liveWatchers": 3968,
+          "heapBytes": 3508752,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 6067,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 3968,
+            "edges": 17966,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 21392146.874999527,
+            "pushEdgesPerWrite": 7971.34375,
+            "pushDirectEdgesPerWrite": 24.9375,
+            "pushTransitiveEdgesPerWrite": 7946.40625,
+            "pushDirtySkipsPerWrite": 3583.6875,
+            "pullEdgesPerWrite": 310.21875,
+            "computeRunsPerWrite": 654.5625,
+            "watcherRunsPerWrite": 3733.09375,
+            "frontierEdgesPerWrite": 11192.65625
+          }
+        },
+        {
+          "step": 2,
+          "liveWatchers": 3840,
+          "heapBytes": 3445472,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 5939,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 3840,
+            "edges": 17583,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 21623509.37500014,
+            "pushEdgesPerWrite": 7258.8125,
+            "pushDirectEdgesPerWrite": 22.5,
+            "pushTransitiveEdgesPerWrite": 7236.3125,
+            "pushDirtySkipsPerWrite": 3132.96875,
+            "pullEdgesPerWrite": 289.03125,
+            "computeRunsPerWrite": 606.40625,
+            "watcherRunsPerWrite": 3519.4375,
+            "frontierEdgesPerWrite": 10552.59375
+          }
+        },
+        {
+          "step": 3,
+          "liveWatchers": 3712,
+          "heapBytes": 3391720,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 5811,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 3712,
+            "edges": 17199,
+            "deadNodes": 2,
+            "deadEdges": 5
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 20448043.750000577,
+            "pushEdgesPerWrite": 6907.75,
+            "pushDirectEdgesPerWrite": 22.3125,
+            "pushTransitiveEdgesPerWrite": 6885.4375,
+            "pushDirtySkipsPerWrite": 2929.8125,
+            "pullEdgesPerWrite": 287.40625,
+            "computeRunsPerWrite": 592.75,
+            "watcherRunsPerWrite": 3385.15625,
+            "frontierEdgesPerWrite": 10150.03125
+          }
+        },
+        {
+          "step": 4,
+          "liveWatchers": 3584,
+          "heapBytes": 3329832,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 5683,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 3584,
+            "edges": 16815,
+            "deadNodes": 2,
+            "deadEdges": 5
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 19943046.87500062,
+            "pushEdgesPerWrite": 7008.625,
+            "pushDirectEdgesPerWrite": 22.90625,
+            "pushTransitiveEdgesPerWrite": 6985.71875,
+            "pushDirtySkipsPerWrite": 3031.65625,
+            "pullEdgesPerWrite": 307.5,
+            "computeRunsPerWrite": 626.3125,
+            "watcherRunsPerWrite": 3350.625,
+            "frontierEdgesPerWrite": 10046.75
+          }
+        },
+        {
+          "step": 5,
+          "liveWatchers": 3456,
+          "heapBytes": 3276512,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 5555,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 3456,
+            "edges": 16432,
+            "deadNodes": 6,
+            "deadEdges": 17
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 19321865.6250001,
+            "pushEdgesPerWrite": 6773.875,
+            "pushDirectEdgesPerWrite": 22.9375,
+            "pushTransitiveEdgesPerWrite": 6750.9375,
+            "pushDirtySkipsPerWrite": 2921.21875,
+            "pullEdgesPerWrite": 294.5,
+            "computeRunsPerWrite": 620.90625,
+            "watcherRunsPerWrite": 3231.625,
+            "frontierEdgesPerWrite": 9690.15625
+          }
+        },
+        {
+          "step": 6,
+          "liveWatchers": 3328,
+          "heapBytes": 3210968,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 5427,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 3328,
+            "edges": 16048,
+            "deadNodes": 7,
+            "deadEdges": 20
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 19216590.62500021,
+            "pushEdgesPerWrite": 6709,
+            "pushDirectEdgesPerWrite": 22.9375,
+            "pushTransitiveEdgesPerWrite": 6686.0625,
+            "pushDirtySkipsPerWrite": 2960.8125,
+            "pullEdgesPerWrite": 295.1875,
+            "computeRunsPerWrite": 635.96875,
+            "watcherRunsPerWrite": 3112.1875,
+            "frontierEdgesPerWrite": 9331.625
+          }
+        },
+        {
+          "step": 7,
+          "liveWatchers": 3200,
+          "heapBytes": 3159752,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 5299,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 3200,
+            "edges": 15664,
+            "deadNodes": 8,
+            "deadEdges": 23
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 19014787.50000024,
+            "pushEdgesPerWrite": 6625.28125,
+            "pushDirectEdgesPerWrite": 23.65625,
+            "pushTransitiveEdgesPerWrite": 6601.625,
+            "pushDirtySkipsPerWrite": 2957.59375,
+            "pullEdgesPerWrite": 306.09375,
+            "computeRunsPerWrite": 655.03125,
+            "watcherRunsPerWrite": 3012.625,
+            "frontierEdgesPerWrite": 9033.1875
+          }
+        },
+        {
+          "step": 8,
+          "liveWatchers": 3072,
+          "heapBytes": 3096720,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 5171,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 3072,
+            "edges": 15280,
+            "deadNodes": 8,
+            "deadEdges": 23
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 16978384.375000134,
+            "pushEdgesPerWrite": 6377.15625,
+            "pushDirectEdgesPerWrite": 23.3125,
+            "pushTransitiveEdgesPerWrite": 6353.84375,
+            "pushDirtySkipsPerWrite": 2850.1875,
+            "pullEdgesPerWrite": 299.9375,
+            "computeRunsPerWrite": 653.25,
+            "watcherRunsPerWrite": 2873.71875,
+            "frontierEdgesPerWrite": 8616.1875
+          }
+        },
+        {
+          "step": 9,
+          "liveWatchers": 2944,
+          "heapBytes": 3036496,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 5043,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 2944,
+            "edges": 14898,
+            "deadNodes": 10,
+            "deadEdges": 29
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 16262237.500000084,
+            "pushEdgesPerWrite": 5782.96875,
+            "pushDirectEdgesPerWrite": 22.59375,
+            "pushTransitiveEdgesPerWrite": 5760.375,
+            "pushDirtySkipsPerWrite": 2439.0625,
+            "pullEdgesPerWrite": 290.09375,
+            "computeRunsPerWrite": 607.71875,
+            "watcherRunsPerWrite": 2736.125,
+            "frontierEdgesPerWrite": 8205.125
+          }
+        },
+        {
+          "step": 10,
+          "liveWatchers": 2816,
+          "heapBytes": 2974152,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 4915,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 2816,
+            "edges": 14514,
+            "deadNodes": 12,
+            "deadEdges": 35
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 16550243.749999937,
+            "pushEdgesPerWrite": 5575.6875,
+            "pushDirectEdgesPerWrite": 23.15625,
+            "pushTransitiveEdgesPerWrite": 5552.53125,
+            "pushDirtySkipsPerWrite": 2345.25,
+            "pullEdgesPerWrite": 296.875,
+            "computeRunsPerWrite": 610.53125,
+            "watcherRunsPerWrite": 2619.84375,
+            "frontierEdgesPerWrite": 7856.71875
+          }
+        },
+        {
+          "step": 11,
+          "liveWatchers": 2688,
+          "heapBytes": 2911464,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 4787,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 2688,
+            "edges": 14131,
+            "deadNodes": 13,
+            "deadEdges": 38
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 15295128.124999791,
+            "pushEdgesPerWrite": 5351.625,
+            "pushDirectEdgesPerWrite": 22.9375,
+            "pushTransitiveEdgesPerWrite": 5328.6875,
+            "pushDirtySkipsPerWrite": 2267.71875,
+            "pullEdgesPerWrite": 294.59375,
+            "computeRunsPerWrite": 610.75,
+            "watcherRunsPerWrite": 2473.125,
+            "frontierEdgesPerWrite": 7416.9375
+          }
+        },
+        {
+          "step": 12,
+          "liveWatchers": 2560,
+          "heapBytes": 2860992,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 4659,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 2560,
+            "edges": 13747,
+            "deadNodes": 13,
+            "deadEdges": 38
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 14320990.624999467,
+            "pushEdgesPerWrite": 5291.28125,
+            "pushDirectEdgesPerWrite": 23.96875,
+            "pushTransitiveEdgesPerWrite": 5267.3125,
+            "pushDirtySkipsPerWrite": 2266.09375,
+            "pullEdgesPerWrite": 303.96875,
+            "computeRunsPerWrite": 630.34375,
+            "watcherRunsPerWrite": 2394.84375,
+            "frontierEdgesPerWrite": 7182.03125
+          }
+        },
+        {
+          "step": 13,
+          "liveWatchers": 2432,
+          "heapBytes": 2798256,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 4531,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 2432,
+            "edges": 13363,
+            "deadNodes": 16,
+            "deadEdges": 47
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 14423721.87500041,
+            "pushEdgesPerWrite": 4826.3125,
+            "pushDirectEdgesPerWrite": 23.0625,
+            "pushTransitiveEdgesPerWrite": 4803.25,
+            "pushDirtySkipsPerWrite": 2019.09375,
+            "pullEdgesPerWrite": 287.625,
+            "computeRunsPerWrite": 595.25,
+            "watcherRunsPerWrite": 2211.90625,
+            "frontierEdgesPerWrite": 6633.34375
+          }
+        },
+        {
+          "step": 14,
+          "liveWatchers": 2304,
+          "heapBytes": 2735080,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 4403,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 2304,
+            "edges": 12979,
+            "deadNodes": 18,
+            "deadEdges": 53
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 13324565.625000104,
+            "pushEdgesPerWrite": 4902.96875,
+            "pushDirectEdgesPerWrite": 23.59375,
+            "pushTransitiveEdgesPerWrite": 4879.375,
+            "pushDirtySkipsPerWrite": 2112.96875,
+            "pullEdgesPerWrite": 303.6875,
+            "computeRunsPerWrite": 635.125,
+            "watcherRunsPerWrite": 2154.8125,
+            "frontierEdgesPerWrite": 6462.09375
+          }
+        },
+        {
+          "step": 15,
+          "liveWatchers": 2176,
+          "heapBytes": 2672152,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 4275,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 2176,
+            "edges": 12595,
+            "deadNodes": 21,
+            "deadEdges": 62
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 12687256.250000246,
+            "pushEdgesPerWrite": 4632.25,
+            "pushDirectEdgesPerWrite": 23.53125,
+            "pushTransitiveEdgesPerWrite": 4608.71875,
+            "pushDirtySkipsPerWrite": 1977.25,
+            "pullEdgesPerWrite": 299.34375,
+            "computeRunsPerWrite": 629.28125,
+            "watcherRunsPerWrite": 2025.65625,
+            "frontierEdgesPerWrite": 6074.625
+          }
+        },
+        {
+          "step": 16,
+          "liveWatchers": 2048,
+          "heapBytes": 2613760,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 4147,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 2048,
+            "edges": 12211,
+            "deadNodes": 22,
+            "deadEdges": 65
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 12192631.249999978,
+            "pushEdgesPerWrite": 4369.34375,
+            "pushDirectEdgesPerWrite": 23.53125,
+            "pushTransitiveEdgesPerWrite": 4345.8125,
+            "pushDirtySkipsPerWrite": 1837.09375,
+            "pullEdgesPerWrite": 302.84375,
+            "computeRunsPerWrite": 623.90625,
+            "watcherRunsPerWrite": 1908.3125,
+            "frontierEdgesPerWrite": 5722.40625
+          }
+        },
+        {
+          "step": 17,
+          "liveWatchers": 1920,
+          "heapBytes": 2550648,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 4019,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 1920,
+            "edges": 11827,
+            "deadNodes": 22,
+            "deadEdges": 65
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 11386465.62500071,
+            "pushEdgesPerWrite": 4012.25,
+            "pushDirectEdgesPerWrite": 22.875,
+            "pushTransitiveEdgesPerWrite": 3989.375,
+            "pushDirtySkipsPerWrite": 1651.5625,
+            "pullEdgesPerWrite": 292.90625,
+            "computeRunsPerWrite": 598.84375,
+            "watcherRunsPerWrite": 1761.8125,
+            "frontierEdgesPerWrite": 5283.0625
+          }
+        },
+        {
+          "step": 18,
+          "liveWatchers": 1792,
+          "heapBytes": 2487680,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 3891,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 1792,
+            "edges": 11443,
+            "deadNodes": 24,
+            "deadEdges": 71
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 10795009.374999609,
+            "pushEdgesPerWrite": 3728.8125,
+            "pushDirectEdgesPerWrite": 21.75,
+            "pushTransitiveEdgesPerWrite": 3707.0625,
+            "pushDirtySkipsPerWrite": 1492.21875,
+            "pullEdgesPerWrite": 290.46875,
+            "computeRunsPerWrite": 587.59375,
+            "watcherRunsPerWrite": 1648.96875,
+            "frontierEdgesPerWrite": 4944.59375
+          }
+        },
+        {
+          "step": 19,
+          "liveWatchers": 1664,
+          "heapBytes": 2424688,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 3763,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 1664,
+            "edges": 11059,
+            "deadNodes": 26,
+            "deadEdges": 77
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 10062709.37499994,
+            "pushEdgesPerWrite": 3689.625,
+            "pushDirectEdgesPerWrite": 23.09375,
+            "pushTransitiveEdgesPerWrite": 3666.53125,
+            "pushDirtySkipsPerWrite": 1528.71875,
+            "pullEdgesPerWrite": 298.75,
+            "computeRunsPerWrite": 618.21875,
+            "watcherRunsPerWrite": 1542.59375,
+            "frontierEdgesPerWrite": 4625.375
+          }
+        },
+        {
+          "step": 20,
+          "liveWatchers": 1536,
+          "heapBytes": 2361768,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 3635,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 1536,
+            "edges": 10675,
+            "deadNodes": 28,
+            "deadEdges": 83
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 9576900.000000022,
+            "pushEdgesPerWrite": 3526.46875,
+            "pushDirectEdgesPerWrite": 23.71875,
+            "pushTransitiveEdgesPerWrite": 3502.75,
+            "pushDirtySkipsPerWrite": 1459.9375,
+            "pullEdgesPerWrite": 303.53125,
+            "computeRunsPerWrite": 630.09375,
+            "watcherRunsPerWrite": 1436.375,
+            "frontierEdgesPerWrite": 4306.8125
+          }
+        },
+        {
+          "step": 21,
+          "liveWatchers": 1408,
+          "heapBytes": 2298704,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 3507,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 1408,
+            "edges": 10291,
+            "deadNodes": 30,
+            "deadEdges": 89
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 8904818.750000231,
+            "pushEdgesPerWrite": 3339.21875,
+            "pushDirectEdgesPerWrite": 24,
+            "pushTransitiveEdgesPerWrite": 3315.21875,
+            "pushDirtySkipsPerWrite": 1381.71875,
+            "pullEdgesPerWrite": 309.65625,
+            "computeRunsPerWrite": 631.8125,
+            "watcherRunsPerWrite": 1325.625,
+            "frontierEdgesPerWrite": 3974.34375
+          }
+        },
+        {
+          "step": 22,
+          "liveWatchers": 1280,
+          "heapBytes": 2235376,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 3379,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 1280,
+            "edges": 9908,
+            "deadNodes": 36,
+            "deadEdges": 107
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 8043625.000000248,
+            "pushEdgesPerWrite": 2948.46875,
+            "pushDirectEdgesPerWrite": 22.71875,
+            "pushTransitiveEdgesPerWrite": 2925.75,
+            "pushDirtySkipsPerWrite": 1176.8125,
+            "pullEdgesPerWrite": 287.6875,
+            "computeRunsPerWrite": 597.34375,
+            "watcherRunsPerWrite": 1174.125,
+            "frontierEdgesPerWrite": 3521.03125
+          }
+        },
+        {
+          "step": 23,
+          "liveWatchers": 1152,
+          "heapBytes": 2172368,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 3251,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 1152,
+            "edges": 9524,
+            "deadNodes": 38,
+            "deadEdges": 113
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 7691018.749999785,
+            "pushEdgesPerWrite": 2729.28125,
+            "pushDirectEdgesPerWrite": 22.71875,
+            "pushTransitiveEdgesPerWrite": 2706.5625,
+            "pushDirtySkipsPerWrite": 1071.28125,
+            "pullEdgesPerWrite": 292.1875,
+            "computeRunsPerWrite": 595.9375,
+            "watcherRunsPerWrite": 1062,
+            "frontierEdgesPerWrite": 3184.5625
+          }
+        },
+        {
+          "step": 24,
+          "liveWatchers": 1024,
+          "heapBytes": 2109304,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 3123,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 1024,
+            "edges": 9140,
+            "deadNodes": 42,
+            "deadEdges": 125
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 7518159.375000323,
+            "pushEdgesPerWrite": 2561.25,
+            "pushDirectEdgesPerWrite": 22.84375,
+            "pushTransitiveEdgesPerWrite": 2538.40625,
+            "pushDirtySkipsPerWrite": 1010.34375,
+            "pullEdgesPerWrite": 289.5625,
+            "computeRunsPerWrite": 604.78125,
+            "watcherRunsPerWrite": 946,
+            "frontierEdgesPerWrite": 2836.5625
+          }
+        },
+        {
+          "step": 25,
+          "liveWatchers": 896,
+          "heapBytes": 2005328,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 2995,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 896,
+            "edges": 8756,
+            "deadNodes": 47,
+            "deadEdges": 140
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 6603756.250000515,
+            "pushEdgesPerWrite": 2393,
+            "pushDirectEdgesPerWrite": 22.375,
+            "pushTransitiveEdgesPerWrite": 2370.625,
+            "pushDirtySkipsPerWrite": 937.65625,
+            "pullEdgesPerWrite": 293.1875,
+            "computeRunsPerWrite": 616.65625,
+            "watcherRunsPerWrite": 838.53125,
+            "frontierEdgesPerWrite": 2514.125
+          }
+        },
+        {
+          "step": 26,
+          "liveWatchers": 768,
+          "heapBytes": 1941640,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 2867,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 768,
+            "edges": 8372,
+            "deadNodes": 60,
+            "deadEdges": 179
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 5635078.125000291,
+            "pushEdgesPerWrite": 2141.40625,
+            "pushDirectEdgesPerWrite": 22.625,
+            "pushTransitiveEdgesPerWrite": 2118.78125,
+            "pushDirtySkipsPerWrite": 825.3125,
+            "pullEdgesPerWrite": 292.875,
+            "computeRunsPerWrite": 600.53125,
+            "watcherRunsPerWrite": 715.15625,
+            "frontierEdgesPerWrite": 2143.96875
+          }
+        },
+        {
+          "step": 27,
+          "liveWatchers": 640,
+          "heapBytes": 1878984,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 2739,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 640,
+            "edges": 7988,
+            "deadNodes": 71,
+            "deadEdges": 212
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 5194300.000000112,
+            "pushEdgesPerWrite": 2005.375,
+            "pushDirectEdgesPerWrite": 24.28125,
+            "pushTransitiveEdgesPerWrite": 1981.09375,
+            "pushDirtySkipsPerWrite": 785.5625,
+            "pullEdgesPerWrite": 295.78125,
+            "computeRunsPerWrite": 618.71875,
+            "watcherRunsPerWrite": 600.75,
+            "frontierEdgesPerWrite": 1800.65625
+          }
+        },
+        {
+          "step": 28,
+          "liveWatchers": 512,
+          "heapBytes": 1815768,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 2611,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 512,
+            "edges": 7604,
+            "deadNodes": 102,
+            "deadEdges": 305
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 4422493.750000285,
+            "pushEdgesPerWrite": 1771.09375,
+            "pushDirectEdgesPerWrite": 24.03125,
+            "pushTransitiveEdgesPerWrite": 1747.0625,
+            "pushDirtySkipsPerWrite": 688.6875,
+            "pullEdgesPerWrite": 291.25,
+            "computeRunsPerWrite": 599.46875,
+            "watcherRunsPerWrite": 481.96875,
+            "frontierEdgesPerWrite": 1444.5
+          }
+        },
+        {
+          "step": 29,
+          "liveWatchers": 384,
+          "heapBytes": 1732160,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 2483,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 384,
+            "edges": 7220,
+            "deadNodes": 158,
+            "deadEdges": 472
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 3989781.2500003055,
+            "pushEdgesPerWrite": 1584.375,
+            "pushDirectEdgesPerWrite": 24.34375,
+            "pushTransitiveEdgesPerWrite": 1560.03125,
+            "pushDirtySkipsPerWrite": 635.03125,
+            "pullEdgesPerWrite": 294.46875,
+            "computeRunsPerWrite": 584.375,
+            "watcherRunsPerWrite": 363.25,
+            "frontierEdgesPerWrite": 1088.3125
+          }
+        },
+        {
+          "step": 30,
+          "liveWatchers": 256,
+          "heapBytes": 1669352,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 2355,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 256,
+            "edges": 6838,
+            "deadNodes": 245,
+            "deadEdges": 733
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 3100946.874999863,
+            "pushEdgesPerWrite": 1235.1875,
+            "pushDirectEdgesPerWrite": 23.3125,
+            "pushTransitiveEdgesPerWrite": 1211.875,
+            "pushDirtySkipsPerWrite": 501.71875,
+            "pullEdgesPerWrite": 284.5625,
+            "computeRunsPerWrite": 492.4375,
+            "watcherRunsPerWrite": 238.3125,
+            "frontierEdgesPerWrite": 714.9375
+          }
+        },
+        {
+          "step": 31,
+          "liveWatchers": 128,
+          "heapBytes": 1596104,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 2227,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 128,
+            "edges": 6454,
+            "deadNodes": 480,
+            "deadEdges": 1437
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 2127309.3749996405,
+            "pushEdgesPerWrite": 946.0625,
+            "pushDirectEdgesPerWrite": 22.46875,
+            "pushTransitiveEdgesPerWrite": 923.59375,
+            "pushDirtySkipsPerWrite": 457.0625,
+            "pullEdgesPerWrite": 245.90625,
+            "computeRunsPerWrite": 364,
+            "watcherRunsPerWrite": 117.6875,
+            "frontierEdgesPerWrite": 353.0625
+          }
+        },
+        {
+          "step": 32,
+          "liveWatchers": 0,
+          "heapBytes": 1519528,
+          "peakHeapBytes": 3529360,
+          "graph": {
+            "nodes": 2099,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 0,
+            "edges": 6070,
+            "deadNodes": 2035,
+            "deadEdges": 6070
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 12612.50000061409,
+            "pushEdgesPerWrite": 144.28125,
+            "pushDirectEdgesPerWrite": 23.25,
+            "pushTransitiveEdgesPerWrite": 121.03125,
+            "pushDirtySkipsPerWrite": 100.0625,
+            "pullEdgesPerWrite": 0,
+            "computeRunsPerWrite": 0,
+            "watcherRunsPerWrite": 0,
+            "frontierEdgesPerWrite": 0
+          }
+        }
+      ]
+    },
+    {
+      "experiment": "C",
+      "options": {
+        "variant": "oracle-prune",
+        "seed": 24301,
+        "producers": 64,
+        "layers": 4,
+        "width": 512,
+        "fanIn": 3,
+        "watchers": 4096,
+        "readsPerWatcher": 3,
+        "removalSteps": 32,
+        "probeWrites": 32
+      },
+      "baselineHeapBytes": 13561280,
+      "buildHeapBytes": 3476304,
+      "checkpoints": [
+        {
+          "step": 0,
+          "liveWatchers": 4096,
+          "heapBytes": 3476808,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 6195,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 4096,
+            "edges": 18350,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 21166337.49999983,
+            "pushEdgesPerWrite": 8258.28125,
+            "pushDirectEdgesPerWrite": 24.25,
+            "pushTransitiveEdgesPerWrite": 8234.03125,
+            "pushDirtySkipsPerWrite": 3730.4375,
+            "pullEdgesPerWrite": 302.5,
+            "computeRunsPerWrite": 653.34375,
+            "watcherRunsPerWrite": 3874.5,
+            "frontierEdgesPerWrite": 11616.9375
+          }
+        },
+        {
+          "step": 1,
+          "liveWatchers": 3968,
+          "heapBytes": 3470416,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 6067,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 3968,
+            "edges": 17966,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 20847174.99999988,
+            "pushEdgesPerWrite": 7971.34375,
+            "pushDirectEdgesPerWrite": 24.9375,
+            "pushTransitiveEdgesPerWrite": 7946.40625,
+            "pushDirtySkipsPerWrite": 3583.6875,
+            "pullEdgesPerWrite": 310.21875,
+            "computeRunsPerWrite": 654.5625,
+            "watcherRunsPerWrite": 3733.09375,
+            "frontierEdgesPerWrite": 11192.65625
+          }
+        },
+        {
+          "step": 2,
+          "liveWatchers": 3840,
+          "heapBytes": 3428200,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 5939,
+            "producers": 64,
+            "consumers": 2035,
+            "watchers": 3840,
+            "edges": 17583,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 20870203.125000443,
+            "pushEdgesPerWrite": 7258.8125,
+            "pushDirectEdgesPerWrite": 22.5,
+            "pushTransitiveEdgesPerWrite": 7236.3125,
+            "pushDirtySkipsPerWrite": 3132.96875,
+            "pullEdgesPerWrite": 289.03125,
+            "computeRunsPerWrite": 606.40625,
+            "watcherRunsPerWrite": 3519.4375,
+            "frontierEdgesPerWrite": 10552.59375
+          }
+        },
+        {
+          "step": 3,
+          "liveWatchers": 3712,
+          "heapBytes": 3371072,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 5809,
+            "producers": 64,
+            "consumers": 2033,
+            "watchers": 3712,
+            "edges": 17194,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 2,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 19995937.499999855,
+            "pushEdgesPerWrite": 6907.59375,
+            "pushDirectEdgesPerWrite": 22.3125,
+            "pushTransitiveEdgesPerWrite": 6885.28125,
+            "pushDirtySkipsPerWrite": 2929.6875,
+            "pullEdgesPerWrite": 287.40625,
+            "computeRunsPerWrite": 592.75,
+            "watcherRunsPerWrite": 3385.15625,
+            "frontierEdgesPerWrite": 10150.03125
+          }
+        },
+        {
+          "step": 4,
+          "liveWatchers": 3584,
+          "heapBytes": 3304616,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 5681,
+            "producers": 64,
+            "consumers": 2033,
+            "watchers": 3584,
+            "edges": 16810,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 19284793.750000063,
+            "pushEdgesPerWrite": 7008.53125,
+            "pushDirectEdgesPerWrite": 22.875,
+            "pushTransitiveEdgesPerWrite": 6985.65625,
+            "pushDirtySkipsPerWrite": 3031.59375,
+            "pullEdgesPerWrite": 307.5,
+            "computeRunsPerWrite": 626.3125,
+            "watcherRunsPerWrite": 3350.625,
+            "frontierEdgesPerWrite": 10046.75
+          }
+        },
+        {
+          "step": 5,
+          "liveWatchers": 3456,
+          "heapBytes": 3230400,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 5549,
+            "producers": 64,
+            "consumers": 2029,
+            "watchers": 3456,
+            "edges": 16415,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 4,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 18993050.00000004,
+            "pushEdgesPerWrite": 6772.9375,
+            "pushDirectEdgesPerWrite": 22.875,
+            "pushTransitiveEdgesPerWrite": 6750.0625,
+            "pushDirtySkipsPerWrite": 2920.40625,
+            "pullEdgesPerWrite": 294.5,
+            "computeRunsPerWrite": 620.90625,
+            "watcherRunsPerWrite": 3231.625,
+            "frontierEdgesPerWrite": 9690.15625
+          }
+        },
+        {
+          "step": 6,
+          "liveWatchers": 3328,
+          "heapBytes": 3180352,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 5420,
+            "producers": 64,
+            "consumers": 2028,
+            "watchers": 3328,
+            "edges": 16028,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 1,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 17818253.12500041,
+            "pushEdgesPerWrite": 6708.0625,
+            "pushDirectEdgesPerWrite": 22.84375,
+            "pushTransitiveEdgesPerWrite": 6685.21875,
+            "pushDirtySkipsPerWrite": 2959.90625,
+            "pullEdgesPerWrite": 295.1875,
+            "computeRunsPerWrite": 635.96875,
+            "watcherRunsPerWrite": 3112.1875,
+            "frontierEdgesPerWrite": 9331.625
+          }
+        },
+        {
+          "step": 7,
+          "liveWatchers": 3200,
+          "heapBytes": 3116880,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 5291,
+            "producers": 64,
+            "consumers": 2027,
+            "watchers": 3200,
+            "edges": 15641,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 1,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 17902293.749999445,
+            "pushEdgesPerWrite": 6624.03125,
+            "pushDirectEdgesPerWrite": 23.53125,
+            "pushTransitiveEdgesPerWrite": 6600.5,
+            "pushDirtySkipsPerWrite": 2956.375,
+            "pullEdgesPerWrite": 306.09375,
+            "computeRunsPerWrite": 655.03125,
+            "watcherRunsPerWrite": 3012.625,
+            "frontierEdgesPerWrite": 9033.1875
+          }
+        },
+        {
+          "step": 8,
+          "liveWatchers": 3072,
+          "heapBytes": 3053944,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 5163,
+            "producers": 64,
+            "consumers": 2027,
+            "watchers": 3072,
+            "edges": 15257,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 16680865.62499957,
+            "pushEdgesPerWrite": 6376.15625,
+            "pushDirectEdgesPerWrite": 23.125,
+            "pushTransitiveEdgesPerWrite": 6353.03125,
+            "pushDirtySkipsPerWrite": 2849.1875,
+            "pullEdgesPerWrite": 299.9375,
+            "computeRunsPerWrite": 653.25,
+            "watcherRunsPerWrite": 2873.71875,
+            "frontierEdgesPerWrite": 8616.1875
+          }
+        },
+        {
+          "step": 9,
+          "liveWatchers": 2944,
+          "heapBytes": 2989544,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 5033,
+            "producers": 64,
+            "consumers": 2025,
+            "watchers": 2944,
+            "edges": 14869,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 2,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 16741965.625000376,
+            "pushEdgesPerWrite": 5781.5625,
+            "pushDirectEdgesPerWrite": 22.40625,
+            "pushTransitiveEdgesPerWrite": 5759.15625,
+            "pushDirtySkipsPerWrite": 2437.71875,
+            "pullEdgesPerWrite": 290.09375,
+            "computeRunsPerWrite": 607.71875,
+            "watcherRunsPerWrite": 2736.125,
+            "frontierEdgesPerWrite": 8205.125
+          }
+        },
+        {
+          "step": 10,
+          "liveWatchers": 2816,
+          "heapBytes": 2926120,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 4903,
+            "producers": 64,
+            "consumers": 2023,
+            "watchers": 2816,
+            "edges": 14479,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 2,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 16210093.749999942,
+            "pushEdgesPerWrite": 5573.9375,
+            "pushDirectEdgesPerWrite": 22.90625,
+            "pushTransitiveEdgesPerWrite": 5551.03125,
+            "pushDirtySkipsPerWrite": 2343.5625,
+            "pullEdgesPerWrite": 296.875,
+            "computeRunsPerWrite": 610.53125,
+            "watcherRunsPerWrite": 2619.84375,
+            "frontierEdgesPerWrite": 7856.71875
+          }
+        },
+        {
+          "step": 11,
+          "liveWatchers": 2688,
+          "heapBytes": 2862920,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 4774,
+            "producers": 64,
+            "consumers": 2022,
+            "watchers": 2688,
+            "edges": 14093,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 1,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 15101315.625000097,
+            "pushEdgesPerWrite": 5349.75,
+            "pushDirectEdgesPerWrite": 22.71875,
+            "pushTransitiveEdgesPerWrite": 5327.03125,
+            "pushDirtySkipsPerWrite": 2265.875,
+            "pullEdgesPerWrite": 294.59375,
+            "computeRunsPerWrite": 610.75,
+            "watcherRunsPerWrite": 2473.125,
+            "frontierEdgesPerWrite": 7416.9375
+          }
+        },
+        {
+          "step": 12,
+          "liveWatchers": 2560,
+          "heapBytes": 2799312,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 4646,
+            "producers": 64,
+            "consumers": 2022,
+            "watchers": 2560,
+            "edges": 13709,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 14382021.874999737,
+            "pushEdgesPerWrite": 5289.375,
+            "pushDirectEdgesPerWrite": 23.8125,
+            "pushTransitiveEdgesPerWrite": 5265.5625,
+            "pushDirtySkipsPerWrite": 2264.1875,
+            "pullEdgesPerWrite": 303.96875,
+            "computeRunsPerWrite": 630.34375,
+            "watcherRunsPerWrite": 2394.84375,
+            "frontierEdgesPerWrite": 7182.03125
+          }
+        },
+        {
+          "step": 13,
+          "liveWatchers": 2432,
+          "heapBytes": 2735344,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 4515,
+            "producers": 64,
+            "consumers": 2019,
+            "watchers": 2432,
+            "edges": 13316,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 3,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 14127803.125000356,
+            "pushEdgesPerWrite": 4823.9375,
+            "pushDirectEdgesPerWrite": 22.71875,
+            "pushTransitiveEdgesPerWrite": 4801.21875,
+            "pushDirtySkipsPerWrite": 2016.78125,
+            "pullEdgesPerWrite": 287.625,
+            "computeRunsPerWrite": 595.25,
+            "watcherRunsPerWrite": 2211.90625,
+            "frontierEdgesPerWrite": 6633.34375
+          }
+        },
+        {
+          "step": 14,
+          "liveWatchers": 2304,
+          "heapBytes": 2671376,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 4385,
+            "producers": 64,
+            "consumers": 2017,
+            "watchers": 2304,
+            "edges": 12926,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 2,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 13067900.00000001,
+            "pushEdgesPerWrite": 4900.71875,
+            "pushDirectEdgesPerWrite": 23.3125,
+            "pushTransitiveEdgesPerWrite": 4877.40625,
+            "pushDirtySkipsPerWrite": 2110.78125,
+            "pullEdgesPerWrite": 303.6875,
+            "computeRunsPerWrite": 635.125,
+            "watcherRunsPerWrite": 2154.8125,
+            "frontierEdgesPerWrite": 6462.09375
+          }
+        },
+        {
+          "step": 15,
+          "liveWatchers": 2176,
+          "heapBytes": 2607744,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 4254,
+            "producers": 64,
+            "consumers": 2014,
+            "watchers": 2176,
+            "edges": 12533,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 3,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 12404346.874999646,
+            "pushEdgesPerWrite": 4629,
+            "pushDirectEdgesPerWrite": 23.21875,
+            "pushTransitiveEdgesPerWrite": 4605.78125,
+            "pushDirtySkipsPerWrite": 1974.0625,
+            "pullEdgesPerWrite": 299.34375,
+            "computeRunsPerWrite": 629.28125,
+            "watcherRunsPerWrite": 2025.65625,
+            "frontierEdgesPerWrite": 6074.625
+          }
+        },
+        {
+          "step": 16,
+          "liveWatchers": 2048,
+          "heapBytes": 2544960,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 4125,
+            "producers": 64,
+            "consumers": 2013,
+            "watchers": 2048,
+            "edges": 12146,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 1,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 11905281.249999462,
+            "pushEdgesPerWrite": 4365.59375,
+            "pushDirectEdgesPerWrite": 23.125,
+            "pushTransitiveEdgesPerWrite": 4342.46875,
+            "pushDirtySkipsPerWrite": 1833.375,
+            "pullEdgesPerWrite": 302.84375,
+            "computeRunsPerWrite": 623.90625,
+            "watcherRunsPerWrite": 1908.3125,
+            "frontierEdgesPerWrite": 5722.40625
+          }
+        },
+        {
+          "step": 17,
+          "liveWatchers": 1920,
+          "heapBytes": 2482040,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 3997,
+            "producers": 64,
+            "consumers": 2013,
+            "watchers": 1920,
+            "edges": 11762,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 0,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 11198712.50000051,
+            "pushEdgesPerWrite": 4008.3125,
+            "pushDirectEdgesPerWrite": 22.28125,
+            "pushTransitiveEdgesPerWrite": 3986.03125,
+            "pushDirtySkipsPerWrite": 1647.65625,
+            "pullEdgesPerWrite": 292.90625,
+            "computeRunsPerWrite": 598.84375,
+            "watcherRunsPerWrite": 1761.8125,
+            "frontierEdgesPerWrite": 5283.0625
+          }
+        },
+        {
+          "step": 18,
+          "liveWatchers": 1792,
+          "heapBytes": 2418240,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 3867,
+            "producers": 64,
+            "consumers": 2011,
+            "watchers": 1792,
+            "edges": 11372,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 2,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 10604590.625000129,
+            "pushEdgesPerWrite": 3725.5,
+            "pushDirectEdgesPerWrite": 21.15625,
+            "pushTransitiveEdgesPerWrite": 3704.34375,
+            "pushDirtySkipsPerWrite": 1488.9375,
+            "pullEdgesPerWrite": 290.46875,
+            "computeRunsPerWrite": 587.59375,
+            "watcherRunsPerWrite": 1648.96875,
+            "frontierEdgesPerWrite": 4944.59375
+          }
+        },
+        {
+          "step": 19,
+          "liveWatchers": 1664,
+          "heapBytes": 2354368,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 3737,
+            "producers": 64,
+            "consumers": 2009,
+            "watchers": 1664,
+            "edges": 10982,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 2,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 9882290.624999769,
+            "pushEdgesPerWrite": 3685.78125,
+            "pushDirectEdgesPerWrite": 22.5,
+            "pushTransitiveEdgesPerWrite": 3663.28125,
+            "pushDirtySkipsPerWrite": 1524.96875,
+            "pullEdgesPerWrite": 298.75,
+            "computeRunsPerWrite": 618.21875,
+            "watcherRunsPerWrite": 1542.59375,
+            "frontierEdgesPerWrite": 4625.375
+          }
+        },
+        {
+          "step": 20,
+          "liveWatchers": 1536,
+          "heapBytes": 2290592,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 3607,
+            "producers": 64,
+            "consumers": 2007,
+            "watchers": 1536,
+            "edges": 10592,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 2,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 9394103.125000583,
+            "pushEdgesPerWrite": 3521.6875,
+            "pushDirectEdgesPerWrite": 23.0625,
+            "pushTransitiveEdgesPerWrite": 3498.625,
+            "pushDirtySkipsPerWrite": 1455.21875,
+            "pullEdgesPerWrite": 303.53125,
+            "computeRunsPerWrite": 630.09375,
+            "watcherRunsPerWrite": 1436.375,
+            "frontierEdgesPerWrite": 4306.8125
+          }
+        },
+        {
+          "step": 21,
+          "liveWatchers": 1408,
+          "heapBytes": 2226696,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 3477,
+            "producers": 64,
+            "consumers": 2005,
+            "watchers": 1408,
+            "edges": 10202,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 2,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 8786675.000000287,
+            "pushEdgesPerWrite": 3333.09375,
+            "pushDirectEdgesPerWrite": 23.1875,
+            "pushTransitiveEdgesPerWrite": 3309.90625,
+            "pushDirtySkipsPerWrite": 1375.65625,
+            "pullEdgesPerWrite": 309.65625,
+            "computeRunsPerWrite": 631.8125,
+            "watcherRunsPerWrite": 1325.625,
+            "frontierEdgesPerWrite": 3974.34375
+          }
+        },
+        {
+          "step": 22,
+          "liveWatchers": 1280,
+          "heapBytes": 2160960,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 3343,
+            "producers": 64,
+            "consumers": 1999,
+            "watchers": 1280,
+            "edges": 9801,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 6,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 7972656.25,
+            "pushEdgesPerWrite": 2939.875,
+            "pushDirectEdgesPerWrite": 21.96875,
+            "pushTransitiveEdgesPerWrite": 2917.90625,
+            "pushDirtySkipsPerWrite": 1168.40625,
+            "pullEdgesPerWrite": 287.6875,
+            "computeRunsPerWrite": 597.34375,
+            "watcherRunsPerWrite": 1174.125,
+            "frontierEdgesPerWrite": 3521.03125
+          }
+        },
+        {
+          "step": 23,
+          "liveWatchers": 1152,
+          "heapBytes": 2097080,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 3213,
+            "producers": 64,
+            "consumers": 1997,
+            "watchers": 1152,
+            "edges": 9411,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 2,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 7571221.874999537,
+            "pushEdgesPerWrite": 2720.96875,
+            "pushDirectEdgesPerWrite": 22.09375,
+            "pushTransitiveEdgesPerWrite": 2698.875,
+            "pushDirtySkipsPerWrite": 1063.03125,
+            "pullEdgesPerWrite": 292.1875,
+            "computeRunsPerWrite": 595.9375,
+            "watcherRunsPerWrite": 1062,
+            "frontierEdgesPerWrite": 3184.5625
+          }
+        },
+        {
+          "step": 24,
+          "liveWatchers": 1024,
+          "heapBytes": 2032368,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 3081,
+            "producers": 64,
+            "consumers": 1993,
+            "watchers": 1024,
+            "edges": 9015,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 4,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 7114884.375000657,
+            "pushEdgesPerWrite": 2549.1875,
+            "pushDirectEdgesPerWrite": 22.03125,
+            "pushTransitiveEdgesPerWrite": 2527.15625,
+            "pushDirtySkipsPerWrite": 998.40625,
+            "pullEdgesPerWrite": 289.5625,
+            "computeRunsPerWrite": 604.78125,
+            "watcherRunsPerWrite": 946,
+            "frontierEdgesPerWrite": 2836.5625
+          }
+        },
+        {
+          "step": 25,
+          "liveWatchers": 896,
+          "heapBytes": 1926248,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 2948,
+            "producers": 64,
+            "consumers": 1988,
+            "watchers": 896,
+            "edges": 8616,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 5,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 6586009.374999776,
+            "pushEdgesPerWrite": 2379.53125,
+            "pushDirectEdgesPerWrite": 21.78125,
+            "pushTransitiveEdgesPerWrite": 2357.75,
+            "pushDirtySkipsPerWrite": 924.34375,
+            "pullEdgesPerWrite": 293.1875,
+            "computeRunsPerWrite": 616.65625,
+            "watcherRunsPerWrite": 838.53125,
+            "frontierEdgesPerWrite": 2514.125
+          }
+        },
+        {
+          "step": 26,
+          "liveWatchers": 768,
+          "heapBytes": 1858728,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 2807,
+            "producers": 64,
+            "consumers": 1975,
+            "watchers": 768,
+            "edges": 8193,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 13,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 5606184.37499943,
+            "pushEdgesPerWrite": 2118.96875,
+            "pushDirectEdgesPerWrite": 21.96875,
+            "pushTransitiveEdgesPerWrite": 2097,
+            "pushDirtySkipsPerWrite": 803.28125,
+            "pullEdgesPerWrite": 292.875,
+            "computeRunsPerWrite": 600.53125,
+            "watcherRunsPerWrite": 715.15625,
+            "frontierEdgesPerWrite": 2143.96875
+          }
+        },
+        {
+          "step": 27,
+          "liveWatchers": 640,
+          "heapBytes": 1791440,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 2668,
+            "producers": 64,
+            "consumers": 1964,
+            "watchers": 640,
+            "edges": 7776,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 11,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 5204853.125000227,
+            "pushEdgesPerWrite": 1972.1875,
+            "pushDirectEdgesPerWrite": 23.21875,
+            "pushTransitiveEdgesPerWrite": 1948.96875,
+            "pushDirtySkipsPerWrite": 752.71875,
+            "pullEdgesPerWrite": 295.78125,
+            "computeRunsPerWrite": 618.71875,
+            "watcherRunsPerWrite": 600.75,
+            "frontierEdgesPerWrite": 1800.65625
+          }
+        },
+        {
+          "step": 28,
+          "liveWatchers": 512,
+          "heapBytes": 1715400,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 2509,
+            "producers": 64,
+            "consumers": 1933,
+            "watchers": 512,
+            "edges": 7299,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 31,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 5348640.625000371,
+            "pushEdgesPerWrite": 1712.1875,
+            "pushDirectEdgesPerWrite": 23.0625,
+            "pushTransitiveEdgesPerWrite": 1689.125,
+            "pushDirtySkipsPerWrite": 630.75,
+            "pullEdgesPerWrite": 291.25,
+            "computeRunsPerWrite": 599.46875,
+            "watcherRunsPerWrite": 481.96875,
+            "frontierEdgesPerWrite": 1444.5
+          }
+        },
+        {
+          "step": 29,
+          "liveWatchers": 384,
+          "heapBytes": 1611096,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 2325,
+            "producers": 64,
+            "consumers": 1877,
+            "watchers": 384,
+            "edges": 6748,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 56,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 3892068.7500003623,
+            "pushEdgesPerWrite": 1480.78125,
+            "pushDirectEdgesPerWrite": 23.78125,
+            "pushTransitiveEdgesPerWrite": 1457,
+            "pushDirtySkipsPerWrite": 533.15625,
+            "pullEdgesPerWrite": 294.46875,
+            "computeRunsPerWrite": 584.375,
+            "watcherRunsPerWrite": 363.25,
+            "frontierEdgesPerWrite": 1088.3125
+          }
+        },
+        {
+          "step": 30,
+          "liveWatchers": 256,
+          "heapBytes": 1517240,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 2110,
+            "producers": 64,
+            "consumers": 1790,
+            "watchers": 256,
+            "edges": 6105,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 87,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 2938549.99999985,
+            "pushEdgesPerWrite": 1078.15625,
+            "pushDirectEdgesPerWrite": 22.3125,
+            "pushTransitiveEdgesPerWrite": 1055.84375,
+            "pushDirtySkipsPerWrite": 347.40625,
+            "pullEdgesPerWrite": 284.5625,
+            "computeRunsPerWrite": 492.4375,
+            "watcherRunsPerWrite": 238.3125,
+            "frontierEdgesPerWrite": 714.9375
+          }
+        },
+        {
+          "step": 31,
+          "liveWatchers": 128,
+          "heapBytes": 1345920,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 1747,
+            "producers": 64,
+            "consumers": 1555,
+            "watchers": 128,
+            "edges": 5017,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 235,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 1926196.8749997322,
+            "pushEdgesPerWrite": 676.75,
+            "pushDirectEdgesPerWrite": 21.15625,
+            "pushTransitiveEdgesPerWrite": 655.59375,
+            "pushDirtySkipsPerWrite": 195.0625,
+            "pullEdgesPerWrite": 245.90625,
+            "computeRunsPerWrite": 364,
+            "watcherRunsPerWrite": 117.6875,
+            "frontierEdgesPerWrite": 353.0625
+          }
+        },
+        {
+          "step": 32,
+          "liveWatchers": 0,
+          "heapBytes": 648712,
+          "peakHeapBytes": 3476808,
+          "graph": {
+            "nodes": 64,
+            "producers": 64,
+            "consumers": 0,
+            "watchers": 0,
+            "edges": 0,
+            "deadNodes": 0,
+            "deadEdges": 0
+          },
+          "pruned": 1555,
+          "write": {
+            "writes": 32,
+            "nsPerWrite": 3168.7499995314283,
+            "pushEdgesPerWrite": 0,
+            "pushDirectEdgesPerWrite": 0,
+            "pushTransitiveEdgesPerWrite": 0,
+            "pushDirtySkipsPerWrite": 0,
+            "pullEdgesPerWrite": 0,
+            "computeRunsPerWrite": 0,
+            "watcherRunsPerWrite": 0,
+            "frontierEdgesPerWrite": 0
+          }
+        }
+      ]
+    }
+  ]
+}

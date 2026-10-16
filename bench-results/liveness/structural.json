@@ -1,0 +1,1028 @@
+[
+  {
+    "framework": "reflex",
+    "workload": "observer-toggle",
+    "paramIndex": 0,
+    "param": "toggleShare=1,writesPerCycle=0",
+    "setup": {
+      "linkAlloc": 6184,
+      "subscribe": 6184,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "cycle",
+        "ops": 30,
+        "counters": {
+          "linkAlloc": 23040,
+          "subscribe": 23040,
+          "unsubscribe": 23040,
+          "pollVisits": 0,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 7680
+      }
+    ],
+    "sink": 202397
+  },
+  {
+    "framework": "angular",
+    "workload": "observer-toggle",
+    "paramIndex": 0,
+    "param": "toggleShare=1,writesPerCycle=0",
+    "setup": {
+      "linkAlloc": 6198,
+      "subscribe": 6198,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "cycle",
+        "ops": 30,
+        "counters": {
+          "linkAlloc": 23040,
+          "subscribe": 185940,
+          "unsubscribe": 185940,
+          "pollVisits": 0,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 7680
+      }
+    ],
+    "sink": 202397
+  },
+  {
+    "framework": "preact",
+    "workload": "observer-toggle",
+    "paramIndex": 0,
+    "param": "toggleShare=1,writesPerCycle=0",
+    "setup": {
+      "linkAlloc": 6184,
+      "subscribe": 6184,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "cycle",
+        "ops": 30,
+        "counters": {
+          "linkAlloc": 23040,
+          "subscribe": 185520,
+          "unsubscribe": 185520,
+          "pollVisits": 0,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 7680
+      }
+    ],
+    "sink": 202397
+  },
+  {
+    "framework": "reflex",
+    "workload": "observer-toggle",
+    "paramIndex": 1,
+    "param": "toggleShare=1,writesPerCycle=1",
+    "setup": {
+      "linkAlloc": 6184,
+      "subscribe": 6184,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "cycle",
+        "ops": 30,
+        "counters": {
+          "linkAlloc": 23040,
+          "subscribe": 23040,
+          "unsubscribe": 23040,
+          "pollVisits": 8696,
+          "notifyVisits": 32529
+        },
+        "computes": 15399,
+        "effectRuns": 7680
+      }
+    ],
+    "sink": 371160
+  },
+  {
+    "framework": "angular",
+    "workload": "observer-toggle",
+    "paramIndex": 1,
+    "param": "toggleShare=1,writesPerCycle=1",
+    "setup": {
+      "linkAlloc": 6198,
+      "subscribe": 6198,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "cycle",
+        "ops": 30,
+        "counters": {
+          "linkAlloc": 23040,
+          "subscribe": 185940,
+          "unsubscribe": 185940,
+          "pollVisits": 144734,
+          "notifyVisits": 0
+        },
+        "computes": 15399,
+        "effectRuns": 7680
+      }
+    ],
+    "sink": 371160
+  },
+  {
+    "framework": "preact",
+    "workload": "observer-toggle",
+    "paramIndex": 1,
+    "param": "toggleShare=1,writesPerCycle=1",
+    "setup": {
+      "linkAlloc": 6184,
+      "subscribe": 6184,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "cycle",
+        "ops": 30,
+        "counters": {
+          "linkAlloc": 23040,
+          "subscribe": 185520,
+          "unsubscribe": 185520,
+          "pollVisits": 144375,
+          "notifyVisits": 0
+        },
+        "computes": 15399,
+        "effectRuns": 7680
+      }
+    ],
+    "sink": 371160
+  },
+  {
+    "framework": "reflex",
+    "workload": "observer-toggle",
+    "paramIndex": 2,
+    "param": "toggleShare=1,writesPerCycle=10",
+    "setup": {
+      "linkAlloc": 6184,
+      "subscribe": 6184,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "cycle",
+        "ops": 30,
+        "counters": {
+          "linkAlloc": 23040,
+          "subscribe": 23040,
+          "unsubscribe": 23040,
+          "pollVisits": 10043,
+          "notifyVisits": 146728
+        },
+        "computes": 42023,
+        "effectRuns": 7680
+      }
+    ],
+    "sink": 985597
+  },
+  {
+    "framework": "angular",
+    "workload": "observer-toggle",
+    "paramIndex": 2,
+    "param": "toggleShare=1,writesPerCycle=10",
+    "setup": {
+      "linkAlloc": 6198,
+      "subscribe": 6198,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "cycle",
+        "ops": 30,
+        "counters": {
+          "linkAlloc": 23040,
+          "subscribe": 185940,
+          "unsubscribe": 185940,
+          "pollVisits": 95469,
+          "notifyVisits": 0
+        },
+        "computes": 42023,
+        "effectRuns": 7680
+      }
+    ],
+    "sink": 985597
+  },
+  {
+    "framework": "preact",
+    "workload": "observer-toggle",
+    "paramIndex": 2,
+    "param": "toggleShare=1,writesPerCycle=10",
+    "setup": {
+      "linkAlloc": 6184,
+      "subscribe": 6184,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "cycle",
+        "ops": 30,
+        "counters": {
+          "linkAlloc": 23040,
+          "subscribe": 185520,
+          "unsubscribe": 185520,
+          "pollVisits": 95284,
+          "notifyVisits": 0
+        },
+        "computes": 42023,
+        "effectRuns": 7680
+      }
+    ],
+    "sink": 985597
+  },
+  {
+    "framework": "reflex",
+    "workload": "observer-toggle",
+    "paramIndex": 3,
+    "param": "toggleShare=0.25,writesPerCycle=1",
+    "setup": {
+      "linkAlloc": 6184,
+      "subscribe": 6184,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "cycle",
+        "ops": 30,
+        "counters": {
+          "linkAlloc": 5760,
+          "subscribe": 5760,
+          "unsubscribe": 5760,
+          "pollVisits": 25276,
+          "notifyVisits": 49514
+        },
+        "computes": 15399,
+        "effectRuns": 7493
+      }
+    ],
+    "sink": 339769
+  },
+  {
+    "framework": "angular",
+    "workload": "observer-toggle",
+    "paramIndex": 3,
+    "param": "toggleShare=0.25,writesPerCycle=1",
+    "setup": {
+      "linkAlloc": 6198,
+      "subscribe": 6198,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "cycle",
+        "ops": 30,
+        "counters": {
+          "linkAlloc": 5760,
+          "subscribe": 12030,
+          "unsubscribe": 12030,
+          "pollVisits": 38162,
+          "notifyVisits": 30343
+        },
+        "computes": 15399,
+        "effectRuns": 7493
+      }
+    ],
+    "sink": 339769
+  },
+  {
+    "framework": "preact",
+    "workload": "observer-toggle",
+    "paramIndex": 3,
+    "param": "toggleShare=0.25,writesPerCycle=1",
+    "setup": {
+      "linkAlloc": 6184,
+      "subscribe": 6184,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "cycle",
+        "ops": 30,
+        "counters": {
+          "linkAlloc": 5760,
+          "subscribe": 12030,
+          "unsubscribe": 12030,
+          "pollVisits": 38162,
+          "notifyVisits": 30307
+        },
+        "computes": 15399,
+        "effectRuns": 7493
+      }
+    ],
+    "sink": 339769
+  },
+  {
+    "framework": "reflex",
+    "workload": "standalone-reads",
+    "paramIndex": 0,
+    "param": "readsPerUnrelatedWrite=0",
+    "setup": {
+      "linkAlloc": 5856,
+      "subscribe": 5856,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "read",
+        "ops": 20000,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 0,
+          "pollVisits": 0,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      }
+    ],
+    "sink": 163920
+  },
+  {
+    "framework": "angular",
+    "workload": "standalone-reads",
+    "paramIndex": 0,
+    "param": "readsPerUnrelatedWrite=0",
+    "setup": {
+      "linkAlloc": 5870,
+      "subscribe": 0,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "read",
+        "ops": 20000,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 0,
+          "pollVisits": 0,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      }
+    ],
+    "sink": 163920
+  },
+  {
+    "framework": "preact",
+    "workload": "standalone-reads",
+    "paramIndex": 0,
+    "param": "readsPerUnrelatedWrite=0",
+    "setup": {
+      "linkAlloc": 5856,
+      "subscribe": 0,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "read",
+        "ops": 20000,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 0,
+          "pollVisits": 0,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      }
+    ],
+    "sink": 163920
+  },
+  {
+    "framework": "reflex",
+    "workload": "standalone-reads",
+    "paramIndex": 1,
+    "param": "readsPerUnrelatedWrite=100",
+    "setup": {
+      "linkAlloc": 5856,
+      "subscribe": 5856,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "read",
+        "ops": 20000,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 0,
+          "pollVisits": 0,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      }
+    ],
+    "sink": 173634
+  },
+  {
+    "framework": "angular",
+    "workload": "standalone-reads",
+    "paramIndex": 1,
+    "param": "readsPerUnrelatedWrite=100",
+    "setup": {
+      "linkAlloc": 5870,
+      "subscribe": 0,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "read",
+        "ops": 20000,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 0,
+          "pollVisits": 667285,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      }
+    ],
+    "sink": 173634
+  },
+  {
+    "framework": "preact",
+    "workload": "standalone-reads",
+    "paramIndex": 1,
+    "param": "readsPerUnrelatedWrite=100",
+    "setup": {
+      "linkAlloc": 5856,
+      "subscribe": 0,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "read",
+        "ops": 20000,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 0,
+          "pollVisits": 665178,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      }
+    ],
+    "sink": 173634
+  },
+  {
+    "framework": "reflex",
+    "workload": "standalone-reads",
+    "paramIndex": 2,
+    "param": "readsPerUnrelatedWrite=10",
+    "setup": {
+      "linkAlloc": 5856,
+      "subscribe": 5856,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "read",
+        "ops": 20000,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 0,
+          "pollVisits": 0,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      }
+    ],
+    "sink": 203621
+  },
+  {
+    "framework": "angular",
+    "workload": "standalone-reads",
+    "paramIndex": 2,
+    "param": "readsPerUnrelatedWrite=10",
+    "setup": {
+      "linkAlloc": 5870,
+      "subscribe": 0,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "read",
+        "ops": 20000,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 0,
+          "pollVisits": 1857072,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      }
+    ],
+    "sink": 203621
+  },
+  {
+    "framework": "preact",
+    "workload": "standalone-reads",
+    "paramIndex": 2,
+    "param": "readsPerUnrelatedWrite=10",
+    "setup": {
+      "linkAlloc": 5856,
+      "subscribe": 0,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "read",
+        "ops": 20000,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 0,
+          "pollVisits": 1849375,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      }
+    ],
+    "sink": 203621
+  },
+  {
+    "framework": "reflex",
+    "workload": "standalone-reads",
+    "paramIndex": 3,
+    "param": "readsPerUnrelatedWrite=1",
+    "setup": {
+      "linkAlloc": 5856,
+      "subscribe": 5856,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "read",
+        "ops": 20000,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 0,
+          "pollVisits": 0,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      }
+    ],
+    "sink": 45982
+  },
+  {
+    "framework": "angular",
+    "workload": "standalone-reads",
+    "paramIndex": 3,
+    "param": "readsPerUnrelatedWrite=1",
+    "setup": {
+      "linkAlloc": 5870,
+      "subscribe": 0,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "read",
+        "ops": 20000,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 0,
+          "pollVisits": 2317712,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      }
+    ],
+    "sink": 45982
+  },
+  {
+    "framework": "preact",
+    "workload": "standalone-reads",
+    "paramIndex": 3,
+    "param": "readsPerUnrelatedWrite=1",
+    "setup": {
+      "linkAlloc": 5856,
+      "subscribe": 0,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "read",
+        "ops": 20000,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 0,
+          "pollVisits": 2307673,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      }
+    ],
+    "sink": 45982
+  },
+  {
+    "framework": "reflex",
+    "workload": "dormant-writes",
+    "paramIndex": 0,
+    "param": "dormantWrites=100",
+    "setup": {
+      "linkAlloc": 6184,
+      "subscribe": 6184,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "deactivate",
+        "ops": 1,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 768,
+          "pollVisits": 0,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      },
+      {
+        "name": "dormant-write",
+        "ops": 100,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 0,
+          "pollVisits": 0,
+          "notifyVisits": 6178
+        },
+        "computes": 0,
+        "effectRuns": 0
+      },
+      {
+        "name": "reactivate",
+        "ops": 1,
+        "counters": {
+          "linkAlloc": 768,
+          "subscribe": 768,
+          "unsubscribe": 0,
+          "pollVisits": 175,
+          "notifyVisits": 2660
+        },
+        "computes": 1809,
+        "effectRuns": 256
+      }
+    ],
+    "sink": 328602
+  },
+  {
+    "framework": "angular",
+    "workload": "dormant-writes",
+    "paramIndex": 0,
+    "param": "dormantWrites=100",
+    "setup": {
+      "linkAlloc": 6198,
+      "subscribe": 6198,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "deactivate",
+        "ops": 1,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 6198,
+          "pollVisits": 0,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      },
+      {
+        "name": "dormant-write",
+        "ops": 100,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 0,
+          "pollVisits": 0,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      },
+      {
+        "name": "reactivate",
+        "ops": 1,
+        "counters": {
+          "linkAlloc": 768,
+          "subscribe": 6198,
+          "unsubscribe": 0,
+          "pollVisits": 1932,
+          "notifyVisits": 0
+        },
+        "computes": 1809,
+        "effectRuns": 256
+      }
+    ],
+    "sink": 328602
+  },
+  {
+    "framework": "preact",
+    "workload": "dormant-writes",
+    "paramIndex": 0,
+    "param": "dormantWrites=100",
+    "setup": {
+      "linkAlloc": 6184,
+      "subscribe": 6184,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "deactivate",
+        "ops": 1,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 6184,
+          "pollVisits": 0,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      },
+      {
+        "name": "dormant-write",
+        "ops": 100,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 0,
+          "pollVisits": 0,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      },
+      {
+        "name": "reactivate",
+        "ops": 1,
+        "counters": {
+          "linkAlloc": 768,
+          "subscribe": 6184,
+          "unsubscribe": 0,
+          "pollVisits": 1932,
+          "notifyVisits": 0
+        },
+        "computes": 1809,
+        "effectRuns": 256
+      }
+    ],
+    "sink": 328602
+  },
+  {
+    "framework": "reflex",
+    "workload": "dormant-writes",
+    "paramIndex": 1,
+    "param": "dormantWrites=10000",
+    "setup": {
+      "linkAlloc": 6184,
+      "subscribe": 6184,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "deactivate",
+        "ops": 1,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 768,
+          "pollVisits": 0,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      },
+      {
+        "name": "dormant-write",
+        "ops": 10000,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 0,
+          "pollVisits": 0,
+          "notifyVisits": 224906
+        },
+        "computes": 0,
+        "effectRuns": 0
+      },
+      {
+        "name": "reactivate",
+        "ops": 1,
+        "counters": {
+          "linkAlloc": 768,
+          "subscribe": 768,
+          "unsubscribe": 0,
+          "pollVisits": 173,
+          "notifyVisits": 2677
+        },
+        "computes": 1817,
+        "effectRuns": 256
+      }
+    ],
+    "sink": 925751
+  },
+  {
+    "framework": "angular",
+    "workload": "dormant-writes",
+    "paramIndex": 1,
+    "param": "dormantWrites=10000",
+    "setup": {
+      "linkAlloc": 6198,
+      "subscribe": 6198,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "deactivate",
+        "ops": 1,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 6198,
+          "pollVisits": 0,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      },
+      {
+        "name": "dormant-write",
+        "ops": 10000,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 0,
+          "pollVisits": 0,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      },
+      {
+        "name": "reactivate",
+        "ops": 1,
+        "counters": {
+          "linkAlloc": 768,
+          "subscribe": 6198,
+          "unsubscribe": 0,
+          "pollVisits": 1817,
+          "notifyVisits": 0
+        },
+        "computes": 1817,
+        "effectRuns": 256
+      }
+    ],
+    "sink": 925751
+  },
+  {
+    "framework": "preact",
+    "workload": "dormant-writes",
+    "paramIndex": 1,
+    "param": "dormantWrites=10000",
+    "setup": {
+      "linkAlloc": 6184,
+      "subscribe": 6184,
+      "unsubscribe": 0,
+      "pollVisits": 0,
+      "notifyVisits": 0
+    },
+    "phases": [
+      {
+        "name": "deactivate",
+        "ops": 1,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 6184,
+          "pollVisits": 0,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      },
+      {
+        "name": "dormant-write",
+        "ops": 10000,
+        "counters": {
+          "linkAlloc": 0,
+          "subscribe": 0,
+          "unsubscribe": 0,
+          "pollVisits": 0,
+          "notifyVisits": 0
+        },
+        "computes": 0,
+        "effectRuns": 0
+      },
+      {
+        "name": "reactivate",
+        "ops": 1,
+        "counters": {
+          "linkAlloc": 768,
+          "subscribe": 6184,
+          "unsubscribe": 0,
+          "pollVisits": 1817,
+          "notifyVisits": 0
+        },
+        "computes": 1817,
+        "effectRuns": 256
+      }
+    ],
+    "sink": 925751
+  }
+]
