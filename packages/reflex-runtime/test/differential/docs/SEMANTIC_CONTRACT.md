@@ -65,8 +65,11 @@ validation, while `Changed` requires execution after validation. Therefore
 `Unknown | Changed` validates first and then executes even when validation finds
 all dependency versions unchanged.
 
-`Visited` on entry records invalidation during the previous watcher callback.
-The runtime normalizes it to the pending `Changed` obligation before validation.
+`Visited` on entry records a direct dependency invalidated after the previous
+run read it; it is execution evidence, normalized to the pending `Changed`
+obligation before validation. `Revalidate` records a dependency reached only
+through a computed during the previous run; it is validation evidence only
+and is discharged by the next validation (see L2).
 
 A watcher rerun has the following observable order:
 
@@ -103,7 +106,7 @@ computed was independently stabilized earlier in the operation trace.
 - **C3** A failed computed evaluation remains retryable through its previously committed dependency snapshot.
 - **W1** A watcher's previous cleanup is consumed before reevaluation starts.
 - **W2** A failed watcher computation does not install partially collected semantic dependencies or a new cleanup; partial reads live only in a separate retry-trigger set.
-- **W3** A watcher whose cleanup or computation failed is not retried by a plain flush, but remains retryable after a conservative retry trigger changes.
+- **W3** A watcher whose cleanup or computation failed is not retried by a plain flush, but remains retryable after a conservative retry trigger changes. A write performed by the failing cleanup or computation is such a change (L5).
 - **V1** Failed dependency validation does not make the watcher clean and remains retryable by an explicit flush.
 - **V2** Validation retry behavior is independent of prior reads and pull traversal history.
 - **V3** Validation covers the complete committed dependency snapshot before watcher lifecycle begins.
@@ -142,8 +145,48 @@ computeds, multiple watchers, and dispose/rerun sequences.
 Generated programs are acyclic by construction. Cycle behavior is intentionally
 not specified here: it must only be added after Reflex chooses a public contract
 for self-cycles and multi-node cycles. Scheduling/ownership and writes during
-execution likewise require explicit DSL operations and contract decisions before
-they become part of this oracle.
+execution likewise require explicit DSL operations before they become part of
+this oracle. For watchers the contract decision is made (L1-L5 below) and is
+checked by the liveness oracles listed there; for computeds it is open (F1).
+
+## Reentrant invalidation and delivery
+
+A write performed while a watcher validates or executes can invalidate that
+same watcher, directly or through computeds. Recording the invalidation is not
+enough: the obligation must reach a later run.
+
+- **L1 Delivery.** A watcher that ends a run, or a stable validation, with a
+  retained validation or execution obligation is handed to the host again,
+  unless the host already owns it (`Scheduled`). A retained obligation that no
+  later run can discharge is a liveness defect, not a valid state.
+- **L2 Evidence kinds.** A dependency the watcher read directly and that
+  changed afterwards (`Visited`) is execution evidence. A dependency reached
+  only through a computed (`Revalidate`) is validation evidence: the next run
+  validates and executes only when validation confirms a change or other
+  execution evidence is pending. Confirmed `Changed` evidence is never
+  weakened to validation evidence.
+- **L3 Exact cutoff.** When validation confirms no change and no execution
+  evidence is pending, the watcher does not execute: a write-back that leaves
+  every observed computed equal adds zero runs.
+- **L4 Quiescence.** For a program whose side effects are finite, once the host
+  has drained to quiescence, every live watcher whose last attempt succeeded
+  has observed the current values of everything it read. Final signal values
+  may depend on effect order when effects race to write one signal; the
+  property does not, so no scheduling order is specified.
+- **L5 Failure retry.** A failing cleanup or computation that dirtied a
+  committed dependency leaves the watcher retryable; the host retries it on a
+  later drain, never recursively within the failing one.
+
+Open region: a computed invalidated during its own evaluation (F1) commits a
+value computed before the write and stays clean, so watchers reading it may
+miss the write. Its semantics (rejection, convergence or a bounded policy) is
+an owner decision; until then programs in that region are outside L1 and L4.
+
+Evidence: `reflex.reentrant-liveness.test.ts` (L1-L3, dynamic topology),
+`reflex.recovery-liveness.test.ts` (L5), `reflex.liveness-oracle.test.ts`
+(L4 over generated programs, all effect strategies), and the liveness
+invariant of `test/oracle` (L1 after every operation, reachability at
+quiescence), which detects the pre-fix baseline.
 
 ## Metamorphic equivalences
 
