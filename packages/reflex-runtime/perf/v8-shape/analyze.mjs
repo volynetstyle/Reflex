@@ -58,6 +58,7 @@ function parse(text) {
       current.smiChecks = 0;
       current.overflowChecks = 0;
       current.mapChecks = 0;
+      current.truthinessChecks = 0;
       inCode = true;
       continue;
     }
@@ -84,6 +85,9 @@ function parse(text) {
     if (/deopt reason '(not a Smi|Smi)'/.test(line)) current.smiChecks++;
     if (/deopt reason 'overflow'/.test(line)) current.overflowChecks++;
     if (/deopt reason 'wrong map'/.test(line)) current.mapChecks++;
+    // Generic ToBoolean of a value of unknown type compares it with each
+    // falsy root; the empty-string compare marks one such sequence.
+    if (/\(root \(empty_string\)\)/.test(line)) current.truthinessChecks++;
   }
   const deopts = [];
   for (const match of text.matchAll(
@@ -131,6 +135,7 @@ for (const workload of timed) {
           smiChecks: f.smiChecks,
           overflowChecks: f.overflowChecks,
           mapChecks: f.mapChecks,
+          truthinessChecks: f.truthinessChecks,
         },
       ]),
     ),
@@ -142,13 +147,13 @@ if (out) writeFileSync(out, JSON.stringify(report, null, 2));
 
 // Totals per workload: what the optimized code of that workload contains.
 const total = (w) => {
-  const sum = { instructions: 0, cellConstants: 0, cellFunctions: 0, contextLoads: 0, callTargetChecks: 0, smiChecks: 0, overflowChecks: 0, mapChecks: 0, deopts: w.deopts.length };
+  const sum = { instructions: 0, cellConstants: 0, cellFunctions: 0, contextLoads: 0, callTargetChecks: 0, smiChecks: 0, overflowChecks: 0, mapChecks: 0, truthinessChecks: 0, deopts: w.deopts.length };
   for (const f of Object.values(w.functions))
     for (const key of Object.keys(sum)) if (key !== "deopts") sum[key] += f[key];
   return sum;
 };
 const other = compareTo ? JSON.parse(readFileSync(compareTo, "utf8")) : null;
-const keys = ["instructions", "cellConstants", "cellFunctions", "contextLoads", "callTargetChecks", "smiChecks", "overflowChecks", "mapChecks", "deopts"];
+const keys = ["instructions", "cellConstants", "cellFunctions", "contextLoads", "callTargetChecks", "smiChecks", "overflowChecks", "mapChecks", "truthinessChecks", "deopts"];
 console.log(["workload", ...keys].join("\t"));
 for (const [id, w] of Object.entries(report.workloads)) {
   const t = total(w);
