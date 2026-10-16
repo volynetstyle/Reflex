@@ -352,6 +352,11 @@
       "package": "async",
       "id": "test:async:production:mutations",
       "script": "test:async:production:mutations"
+    },
+    {
+      "package": "reflex",
+      "id": "test:liveness:extended",
+      "script": "test:liveness:extended"
     }
   ]
 }

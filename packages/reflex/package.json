@@ -81,6 +81,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
+    "test:liveness:smoke": "vitest run tests/reflex.liveness-oracle.test.ts --mode liveness-smoke",
+    "test:liveness:extended": "vitest run tests/reflex.liveness-oracle.test.ts --mode liveness-extended",
     "bench": "vitest bench",
     "bench:api": "pnpm --filter @volynets/reflex-runtime build && pnpm build && node --expose-gc bench/api-facade.jit.mjs",
     "bench:api:memory": "pnpm build && node --expose-gc bench/api-callback-memory/run.mjs",
