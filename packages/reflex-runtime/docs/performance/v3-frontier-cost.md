@@ -1,14 +1,16 @@
-# V3: стоимость полного validation frontier
+# V3: the cost of the full validation frontier
 
-V3 — гарантия: до cleanup и запуска watcher callback runtime проверяет
-**весь committed dependency frontier**. Это не вариант eager effect и не
-общая стоимость scheduler: V3 находится в `pull_frontier()`.
+V3 is a guarantee: before the cleanup and the watcher callback run, the
+runtime validates **the whole committed dependency frontier**. It is not an
+eager-effect variant and not a general scheduler cost: V3 lives in
+`pull_frontier()`.
 
-Этот документ разделяет доказанные затраты, архитектурные следствия и
-гипотезы. Он не превращает число профильных событий в «процент CPU»: для
-такого вывода нужна отдельная калибровка стоимости каждого события.
+This document separates proven costs, architectural consequences and
+hypotheses. It does not turn a count of profile events into a "CPU
+percentage": that conclusion needs a separate calibration of the cost of each
+event.
 
-## Модель цены
+## Cost model
 
 ```text
 write / push invalidation
@@ -17,65 +19,67 @@ write / push invalidation
 watcher Unknown
           |
           v
-pull_frontier (V3): полный root frontier
-  clean root        -> один shallow state check
+pull_frontier (V3): the whole root frontier
+  clean root        -> one shallow state check
   Changed root      -> advance
   Unknown subtree   -> should_recompute / deep pull
           |
           v
-только затем cleanup и watcher callback
+only then cleanup and the watcher callback
 ```
 
-Строгая граница V3 равна `O(D + dirty slice)`, где `D` — число committed
-root dependencies watcher. Если dirty dependency требует deep validation,
-к ней добавляется её pull traversal. Ранний confirmed change **не** разрешает
-закончить обход: поздний dependency может выбросить ошибку, а lifecycle уже
-необратим. Это проверяется контрактом V3 и independent spec-runtime.
+The strict bound of V3 is `O(D + dirty slice)`, where `D` is the number of the
+watcher's committed root dependencies. A dirty dependency that needs deep
+validation adds its pull traversal. An early confirmed change does **not**
+allow the walk to stop: a later dependency may throw, and the lifecycle is
+irreversible once started. This is checked by the V3 contract and the
+independent spec runtime.
 
-Профильные счётчики `watcherFrontierEdgesVisited`,
-`watcherFrontier{Changed,Invalid,Clean}Deps` изолируют именно этот участок.
-Тест `watcher-frontier.projection.test.ts` фиксирует ключевой инвариант:
-при изменённом первом root из 128 обход всё равно посещает 128 root edges
-(1 changed, 127 clean).
+The profile counters `watcherFrontierEdgesVisited` and
+`watcherFrontier{Changed,Invalid,Clean}Deps` isolate exactly this region. The
+test `watcher-frontier.projection.test.ts` pins the key invariant: with the
+first of 128 roots changed, the walk still visits 128 root edges (1 changed,
+127 clean).
 
-## Что дала semantic decomposition
+## What the semantic decomposition achieved
 
-| Компонент            | Наблюдение                                                                                                                                                                               | Вывод                                                                                                                   |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| V3 root frontier     | Для clean root `pull_frontier` выполняет fused shallow loop, не входит в generic deep walker и не делает call на каждый clean edge.                                                      | Семантическая гарантия изолирована: плата за неё — предсказуемый линейный scan, а не branch в push hot path.            |
-| Clean path           | В external comparative probe clean-edge был почти паритетным с Alien (разрыв около 6.5%).                                                                                                | Decomposition не добавила заметного common-path налога. Это внешний сигнал, а не доказательство cost share.             |
-| Стабильный tracking  | В sweep `locality` при width=128 все режимы лежат в 421–432 µs/op; dominant bucket — `trackingFast`, reconciliation не появляется.                                                       | Cursor/next fast path держит стабильный dependency set локальным даже при permutation и duplicate reads.                |
-| Equality shielding   | В `semantic` при росте semantic-change ratio 0 -> 1 generic `pull` уменьшается с 255 до 1 events/op: подтверждённые изменения не заставляют повторно deep-validate уже известный result. | Разделение Changed/Unknown срезает pull work там, где есть подтверждённое evidence. Однако это переносит работу в push. |
-| Reentrancy ownership | V3 использует `Computing + tailIn` и существующий push protocol для epoch-local invalidation.                                                                                            | Гарантия reentrancy не размазывает дополнительный state/branch по обычной propagation path.                             |
+| Component            | Observation                                                                                                                                                                               | Conclusion                                                                                                              |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| V3 root frontier     | For a clean root, `pull_frontier` runs a fused shallow loop, does not enter the generic deep walker and makes no call per clean edge.                                                     | The semantic guarantee is isolated: it costs a predictable linear scan, not a branch on the push hot path.              |
+| Clean path           | In an external comparative probe the clean edge was nearly at parity with Alien (a gap of about 6.5%).                                                                                    | The decomposition added no noticeable common-path tax. This is an external signal, not proof of a cost share.           |
+| Stable tracking      | In the `locality` sweep at width=128 all modes lie within 421-432 µs/op; the dominant bucket is `trackingFast`, and reconciliation does not appear.                                       | The cursor/next fast path keeps a stable dependency set local even under permutation and duplicate reads.               |
+| Equality shielding   | In `semantic`, as the semantic-change ratio grows from 0 to 1, generic `pull` falls from 255 to 1 events/op: confirmed changes do not force a repeated deep validation of a known result. | Separating Changed from Unknown cuts pull work where there is confirmed evidence. It moves that work into push, though. |
+| Reentrancy ownership | V3 uses `Computing + tailIn` and the existing push protocol for epoch-local invalidation.                                                                                                 | The reentrancy guarantee does not spread extra state or branches over the ordinary propagation path.                    |
 
-## Где цена остаётся и нужна specialization
+## Where cost remains and specialization is needed
 
-| Приоритет | Компонент                          | Данные из `bench-results/cost-attribution/REPORT.md`                                                                                                                                                                        | Следующий узкий шаг                                                                                                                                                                                         |
-| --------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P0        | Высокий fan-out / push             | До specialization: `6143 = 2048 direct + 2048 transitive + 2047 push-once`. После передачи stable committed edge как owned continuation: `4096 = 2048 direct + 2048 transitive`, `push-once=0`, `owned-edge elisions=2048`. | Structural duplication устранена. Новый timing leg даёт 9.83 ms/op на fanout=2048, но старые 26.39 ms/op не являются paired A/B; точный throughput uplift ещё требует чередующегося baseline/candidate run. |
-| P1        | `advance()` / equal-result path    | Recompute без downstream propagation отделяет enter/compute/restore/cleanup-check/compare/state-commit от fan-out.                                                                                                          | Добавить paired changed-vs-equal probe с одинаковой topology и counters `advance*`, tracking, cleanup. Только затем сжимать этот path.                                                                      |
-| P2        | Большой fan-in / dependency width  | fanin=2048: trackingFast 2,048 events/op, 6.89 ms/op; width=2048: 2,048, 7.17 ms/op.                                                                                                                                        | Специализировать stable wide read-set: data layout/edge iteration и bulk cursor reuse. Здесь нет доказательства algorithmic duplication — это mechanical задача.                                            |
-| P3        | Широкий watcher frontier (цена V3) | Семантически неизбежен `O(D)` root scan. Предыдущий `pull-wide` timing probe даёт противоречивый head-change результат, поэтому его нельзя использовать как доказательство ускорения.                                       | Собирать timing вместе с новыми V3 counters и проверять `frontierEdgesVisited == D` для clean/head/tail/equality. Сравнивать только одинаковый обход.                                                       |
-| P4        | Глубокий dirty path                | depth=512: advance 1,024 events/op, pull 1,021, 4.82 ms/op.                                                                                                                                                                 | Расследовать примерно `2D`, но после high-fan-out: глубина сейчас не является самым плохим customer-shaped path.                                                                                            |
-| P5        | Dynamic dependency maintenance     | `churn` при width=128: trackingFast ~128, reconcile растёт 0 -> 22.39 events/op. Timing около 0.83–0.92 ms/op и шумен.                                                                                                      | Не оптимизировать вслепую: добавить allocation/reuse, detach, edge-move и cache-miss counters; затем выделить common churn shape из competitor `dynamic-branch`, `reorder`, `window-churn`.                 |
-| P5        | Stack capacity                     | Pull trim начинается около depth=259, push trim около fanout=513. В fine sweep нет устойчивого timing cliff именно на onset.                                                                                                | Это hygiene, не primary bottleneck: измерить retained capacity/GC прежде изменения thresholds.                                                                                                              |
+| Priority | Component                          | Data from `bench-results/cost-attribution/REPORT.md`                                                                                                                                                                                 | Next narrow step                                                                                                                                                                                                  |
+| -------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P0       | High fan-out / push                | Before specialization: `6143 = 2048 direct + 2048 transitive + 2047 push-once`. After passing the stable committed edge as an owned continuation: `4096 = 2048 direct + 2048 transitive`, `push-once=0`, `owned-edge elisions=2048`. | The structural duplication is gone. The new timing leg gives 9.83 ms/op at fanout=2048, but the old 26.39 ms/op is not a paired A/B; the exact throughput gain still needs an alternating baseline/candidate run. |
+| P1       | `advance()` / equal-result path    | A recompute without downstream propagation separates enter/compute/restore/cleanup-check/compare/state-commit from fan-out.                                                                                                          | Add a paired changed-vs-equal probe with the same topology and the `advance*`, tracking and cleanup counters. Only then compress this path.                                                                       |
+| P2       | Large fan-in / dependency width    | fanin=2048: trackingFast 2,048 events/op, 6.89 ms/op; width=2048: 2,048, 7.17 ms/op.                                                                                                                                                 | Specialize the stable wide read set: data layout, edge iteration and bulk cursor reuse. There is no evidence of algorithmic duplication here; it is a mechanical task.                                            |
+| P3       | Wide watcher frontier (cost of V3) | The `O(D)` root scan is semantically unavoidable. The earlier `pull-wide` timing probe gives a contradictory head-change result, so it cannot be used as evidence of a speedup.                                                      | Collect timing together with the new V3 counters and check `frontierEdgesVisited == D` for clean/head/tail/equality. Compare only identical walks.                                                                |
+| P4       | Deep dirty path                    | depth=512: advance 1,024 events/op, pull 1,021, 4.82 ms/op.                                                                                                                                                                          | Investigate the roughly `2D`, but after high fan-out: depth is not currently the worst customer-shaped path.                                                                                                      |
+| P5       | Dynamic dependency maintenance     | `churn` at width=128: trackingFast ~128, reconcile grows 0 -> 22.39 events/op. Timing around 0.83-0.92 ms/op and noisy.                                                                                                              | Do not optimize blind: add allocation/reuse, detach, edge-move and cache-miss counters; then extract the common churn shape from the competitor `dynamic-branch`, `reorder` and `window-churn` workloads.         |
+| P5       | Stack capacity                     | Pull trimming starts around depth=259, push trimming around fanout=513. The fine sweep shows no stable timing cliff exactly at the onset.                                                                                            | This is hygiene, not a primary bottleneck: measure retained capacity and GC before changing thresholds.                                                                                                           |
 
-## Практическое решение
+## Practical decision
 
-1. Считать V3 успешной semantic decomposition на common path: она делает
-   обязательство явным и удерживает его в `pull_frontier`, вместо того чтобы
-   платить за него на каждой push operation.
-2. Не обещать «V3 быстрее» по одному aggregate benchmark. V3 покупает
-   корректную exhaustive validation; её базовая цена пропорциональна ширине
-   committed watcher frontier и не должна быть скрыта ранним exit.
-3. Повторная push-доставка в shared root устранена через правило **active
-   continuation owns its stable committed edge**. Следующий P0 — подтвердить
-   выигрыш paired A/B и проверить, можно ли безопасно сократить оставшиеся
-   transitive already-dirty visits. После этого идут **equal-result advance
-   path** и **wide read-set layout**. V3 frontier и deep walker пока
-   исследовательские направления; churn требует ещё instrumented evidence.
+1. Treat V3 as a successful semantic decomposition on the common path: it
+   makes the obligation explicit and keeps it in `pull_frontier` instead of
+   paying for it on every push operation.
+2. Do not promise "V3 is faster" from one aggregate benchmark. V3 buys a
+   correct exhaustive validation; its base cost is proportional to the width
+   of the committed watcher frontier and must not be hidden by an early exit.
+3. Repeated push delivery into a shared root is removed by the rule **an
+   active continuation owns its stable committed edge**. The next P0 is to
+   confirm the gain with a paired A/B and to check whether the remaining
+   transitive already-dirty visits can be cut safely. After that come the
+   **equal-result advance path** and the **wide read-set layout**. The V3
+   frontier and the deep walker remain research directions; churn needs more
+   instrumented evidence.
 
-## Воспроизводимость
+## Reproducibility
 
 ```sh
 pnpm --filter @volynets/reflex-runtime test:projection
@@ -83,6 +87,6 @@ pnpm --filter @volynets/reflex-runtime bench:cost-attribution
 pnpm --filter @volynets/reflex-runtime bench:pull-wide
 ```
 
-`bench:pull-wide` сейчас — diagnostic timing probe. Его результат становится
-артефактом для решения только вместе с profile-run, который подтверждает
-число реально просмотренных V3 root edges.
+`bench:pull-wide` is currently a diagnostic timing probe. Its result becomes
+an input to a decision only together with a profile run that confirms how many
+V3 root edges were actually visited.
