@@ -62,7 +62,7 @@ Implementation: `bench/workloads.mjs` (specification), `bench/worker.mjs`
    If the control detects a difference, the method is biased for that
    workload and the comparison is invalid.
 10. **No single score.** Results are reported per workload and level; a
-   regression in one class is never averaged away by gains elsewhere.
+    regression in one class is never averaged away by gains elsewhere.
 
 ## Workload levels
 
