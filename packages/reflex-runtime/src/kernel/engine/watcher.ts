@@ -124,6 +124,30 @@ function runCleanup(cleanup: WatcherCleanup): void {
   }
 }
 
+/**
+ * Cold path, stable exit of a validation that retained Unknown. A direct
+ * Visited was already delivered by push. A transitive Revalidate was not:
+ * push does not emit to a dirty watcher. Hand that obligation to the host
+ * unless a queue already owns this watcher.
+ */
+function deliverRetainedValidation(node: WatcherNode): void {
+  if ((node.state & (Revalidate | Visited | Scheduled)) === Revalidate)
+    emitNodeInvalidated(node);
+}
+
+/**
+ * Cold path, completion of an execution invalidated during itself. Visited
+ * keeps an execution obligation; Revalidate keeps only validation. Push
+ * delivered Visited when it was recorded; Revalidate must be delivered here,
+ * since later pushes merge into the retained Unknown silently.
+ */
+function retainAfterExecution(node: WatcherNode): void {
+  const undelivered =
+    (node.state & (Revalidate | Visited | Scheduled)) === Revalidate;
+  node.state = (node.state & ~(Changed | Revalidate)) | Unknown;
+  if (undelivered) emitNodeInvalidated(node);
+}
+
 export function runWatcher(node: WatcherNode): void {
   runWatcherWithoutSettledCheckpoint(node);
   if ((runtimeState & RuntimeState.IdlePending) !== RuntimeState.Idle) {
@@ -185,11 +209,7 @@ function runWatcherCore(node: WatcherNode): void {
         observeRuntimeProjection?.("projection.semantic.watcher.stable.skip");
 
       devRecordWatcherSkip(node, "stable", defaultContext);
-      // A direct Visited was already delivered by push. A transitive
-      // Revalidate was not: push does not emit to a dirty watcher. Hand that
-      // obligation to the host unless a queue already owns this watcher.
-      if ((node.state & (Revalidate | Visited | Scheduled)) === Revalidate)
-        emitNodeInvalidated(node);
+      if (invalidatedDuringValidation) deliverRetainedValidation(node);
       return;
     }
   }
@@ -269,13 +289,7 @@ function runWatcherCore(node: WatcherNode): void {
   if ((node.state & (Visited | Revalidate)) === 0) {
     node.state &= ~Both;
   } else {
-    // Visited keeps an execution obligation; Revalidate keeps only validation.
-    // Push delivered Visited when it was recorded; Revalidate must be delivered
-    // here, since later pushes merge into the retained Unknown silently.
-    const undelivered =
-      (node.state & (Revalidate | Visited | Scheduled)) === Revalidate;
-    node.state = (node.state & ~(Changed | Revalidate)) | Unknown;
-    if (undelivered) emitNodeInvalidated(node);
+    retainAfterExecution(node);
   }
 
   devRecordWatcherFinish(node, hasCleanup, result, defaultContext);
