@@ -130,7 +130,7 @@ function shouldRecomputeCore(node: ReactiveNode, edge: ReactiveEdge): boolean {
         profilePullNode("dep.clean", dependency, 1, 0);
       }
     } else {
-      if (pullDependencyDirty(edge, dependency, state)) return true;
+      if (pullDependencyDirty(edge, dependency, state) === true) return true;
 
       // Dirty proof may run user code. Observe reentrant root evidence even
       // when the current edge became the final edge during that call.

@@ -202,14 +202,14 @@ function runWatcherCore(node: WatcherNode): void {
       (node.state & (Visited | Revalidate)) !== 0;
 
     if (!invalidatedDuringValidation) node.state &= ~Unknown;
-    if (mustExecute || changed) node.state |= Changed;
+    if (mustExecute || changed === true) node.state |= Changed;
 
     if ((node.state & Changed) === 0) {
       if (__PROFILE__)
         observeRuntimeProjection?.("projection.semantic.watcher.stable.skip");
 
       devRecordWatcherSkip(node, "stable", defaultContext);
-      if (invalidatedDuringValidation) deliverRetainedValidation(node);
+      if ((node.state & Revalidate) !== 0) deliverRetainedValidation(node);
       return;
     }
   }

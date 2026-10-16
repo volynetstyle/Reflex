@@ -35,7 +35,7 @@ export function leavePropagationScope(): void {
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.context.propagation.leave");
 
-  if (!leavePropagationScopeRegister()) {
+  if (leavePropagationScopeRegister() !== true) {
     if (
       propagationScopeDepth === 0 &&
       (runtimeIdleHook !== undefined ||

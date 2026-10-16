@@ -267,7 +267,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
         if (
           (next & Watcher) !== 0 &&
           (state & Both) === 0 &&
-          nodeInvalidatedHook
+          nodeInvalidatedHook !== undefined
         ) {
           if (__PROFILE__) {
             if (__PROFILE__)

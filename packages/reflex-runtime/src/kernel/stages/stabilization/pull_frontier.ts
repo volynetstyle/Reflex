@@ -86,7 +86,7 @@ export function pull_frontier(
           observeRuntimeProjection?.(
             "projection.semantic.watcher.frontier.dependency.changed",
           );
-        if (advance(dependency, edge)) changed = true;
+        if (advance(dependency, edge) === true) changed = true;
         continue;
       }
 
@@ -106,9 +106,9 @@ export function pull_frontier(
       const dependencyEdge = dependency.firstIn;
       if (
         dependencyEdge === null ||
-        should_recompute(dependency, dependencyEdge)
+        should_recompute(dependency, dependencyEdge) === true
       ) {
-        if (advance(dependency, edge)) changed = true;
+        if (advance(dependency, edge) === true) changed = true;
       }
     }
 
