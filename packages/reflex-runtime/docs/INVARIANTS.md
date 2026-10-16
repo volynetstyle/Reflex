@@ -29,13 +29,18 @@ The dirty bits are not globally exclusive. A watcher starts with
 `Changed | Unknown | Watcher | Consumer`. Computing invalidation can also
 combine both dirty bits.
 
-`Visited` records invalidation during execution. A watcher may finish with
-`Unknown | Visited`, retaining a rerun obligation. Stabilization uses
+`Visited` records direct invalidation during execution. A watcher may finish
+with `Unknown | Visited`, retaining an execution obligation. Stabilization uses
 `Changed | Visited` as its force mask; this is not a general DFS visited set.
+`Revalidate` records transitive invalidation of a running watcher. It retains
+only a validation obligation and is never part of the force mask. A watcher
+that keeps `Unknown` after running must be delivered by `runWatcherCore`
+itself unless `Scheduled` is held: `Unknown` is not `Scheduled`.
 
 `Computing` marks callback evaluation and changes the interpretation of the
 incoming prefix. The computing-subscriber path ignores an empty prefix and
-edges beyond `tailIn`; accepted invalidation adds `Visited | Unknown`.
+edges beyond `tailIn`; accepted invalidation adds `Visited | Unknown`, or
+`Revalidate | Unknown` for a watcher reached transitively.
 Preserve push branch order: direct promotion of an unknown non-watcher is
 checked before the computing-subscriber branch.
 

@@ -23,7 +23,7 @@ inert: graph entry points have no universal dead-node guard.
 
 1. Captures the function-valued cleanup payload, if present.
 2. Performs generic teardown.
-3. Clears `Changed | Unknown | Visited | Computing | Scheduled`.
+3. Clears `Changed | Unknown | Visited | Revalidate | Computing | Scheduled`.
 4. Invokes captured cleanup outside parent tracking.
 5. Leaves payload undefined and records successful disposal in debug mode.
 

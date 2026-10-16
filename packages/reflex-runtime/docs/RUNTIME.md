@@ -108,7 +108,8 @@ suffix scans and outgoing membership probes may traverse full lists.
 | --- | --- |
 | `Unknown` | Upstream may have changed; usually validate before recomputing. |
 | `Changed` | Execute without first proving upstream change. |
-| `Visited` | Invalidation during execution; may survive watcher completion as a rerun obligation. |
+| `Visited` | Invalidation during execution; on a watcher, direct-edge evidence that may survive completion as an execution obligation. |
+| `Revalidate` | Watcher only: transitive invalidation during its validation or execution; survives as a validation obligation. |
 | `Computing` | Callback active; propagation interprets the active incoming prefix accordingly. |
 | `Watcher` | Watcher role. |
 | `Scheduled` | Host queue ownership, claimed and released separately from execution. |
@@ -131,9 +132,12 @@ select asynchronous timing.
 it runs previous cleanup before the callback, outside parent tracking.
 Cleanup may dispose the watcher, so executable data is checked again afterward.
 
-After successful execution, a watcher without new `Visited` is cleaned.
-With `Visited`, it retains `Unknown | Visited` so a subsequent run executes.
-The host still owns queue delivery. Unknown-to-changed promotion can emit
+After successful execution, a watcher without new `Visited` or `Revalidate`
+is cleaned. With `Visited`, it retains `Unknown | Visited` so a subsequent run
+executes; with only `Revalidate`, it retains `Unknown` so a subsequent run
+validates. In both cases, and when validation itself retains `Unknown`, the
+runtime emits `onNodeInvalidated` unless `Scheduled` is held. The host still
+owns queue delivery. Unknown-to-changed promotion can emit
 another invalidation; the host owns deduplication.
 
 Internal `claimWatcherSchedule` and `releaseWatcherSchedule` operate on

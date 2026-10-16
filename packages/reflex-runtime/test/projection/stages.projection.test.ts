@@ -187,6 +187,8 @@ describe("Reflex stage projection", () => {
         "(state & ~(Unknown | Visited)) | Changed",
         "(state & ~Visited) | Changed",
         "(state & ~Visited) | Unknown",
+        // Transitive invalidation of a computing watcher (F15).
+        "state | Unknown | Revalidate",
         "(state & ~Visited) | Unknown",
       ]);
 
@@ -249,13 +251,15 @@ describe("Reflex stage projection", () => {
       ]);
       expect(advance.cfg.exits).toHaveLength(3);
 
+      // The computing-watcher Revalidate branch (F15) adds one two-outcome
+      // branch and one state transition to the push plan.
       const pushPlan = createInstrumentationPlan(push);
       expect(
         pushPlan.points.filter((point) => point.kind === "branch-outcome"),
-      ).toHaveLength(54);
+      ).toHaveLength(56);
       expect(
         pushPlan.points.filter((point) => point.kind === "state-transition"),
-      ).toHaveLength(5);
+      ).toHaveLength(6);
       expect(
         pushPlan.points.filter(
           (point) => point.kind === "stack-push" || point.kind === "stack-pop",

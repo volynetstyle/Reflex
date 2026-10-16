@@ -120,6 +120,31 @@ export function touchesEpoch(ops: readonly Op[]): boolean {
   );
 }
 
+/**
+ * F1 domain: some consumer's nested action writes a producer that consumer
+ * reads, directly or through other consumers. Such a consumer can be
+ * invalidated during its own evaluation (F1, open), so liveness is not
+ * required of the program.
+ */
+export function selfInvalidates(spec: GraphSpec): boolean {
+  const memo = new Map<number, Set<number>>();
+  const reach = (id: number): Set<number> => {
+    if (id < spec.producers) return new Set([id]);
+    const known = memo.get(id);
+    if (known !== undefined) return known;
+    const out = new Set<number>();
+    memo.set(id, out); // cycle guard
+    for (const read of spec.consumers[id - spec.producers]?.reads ?? [])
+      for (const producer of reach(read.node)) out.add(producer);
+    return out;
+  };
+  return spec.consumers.some(
+    (consumer, index) =>
+      consumer.action?.kind === "write" &&
+      reach(spec.producers + index).has(consumer.action.producer),
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Generator
 
@@ -410,8 +435,16 @@ const OBSERVABLE_MASK = 0b0010_0011; // Unknown | Changed | Scheduled
  *   again and nothing unlinks them (F14, open), so it is not checked. A read is tracked when it runs with the
  *   node as `currentConsumer`, outside `untracked`, and is not an eager
  *   consumer read. A failed execution leaves the set unspecified.
+ * - liveness, for a live watcher whose last attempt executed and did not
+ *   throw: after every operation, a dirty one is in a host queue (delivery,
+ *   F15); at quiescence (a flush op drained both queues), a clean one has no
+ *   dirty source (reachability: push stops at a dirty node, F16). A flush
+ *   cap drops host deliveries and ends liveness checking. Watchers
+ *   that never ran or last failed are left to host retry policy, which this
+ *   host does not implement.
  *
- * A violation is appended to the trace as `invariant:<detail>`.
+ * A violation is appended to the trace as `invariant:<detail>`; liveness
+ * violations as `invariant:liveness:<detail>`.
  */
 export interface InterpretOptions {
   invariants?: boolean;
@@ -510,6 +543,21 @@ export function interpret(
     return value;
   };
 
+  // Liveness bookkeeping: nodes with a completed execution, and watchers whose
+  // last runWatcher attempt threw.
+  const executed = new Set<number>();
+  const failed = new Set<number>();
+  const runWatcher = (node: Node): void => {
+    const id = ids.get(node)!;
+    try {
+      rt.runWatcher(node);
+    } catch (error) {
+      failed.add(id);
+      throw error;
+    }
+    failed.delete(id);
+  };
+
   /** Runs a node's computation, recording its tracked reads on success. */
   const execution = <T>(id: number, compute: () => T): T => {
     if (!checking) return compute();
@@ -520,6 +568,7 @@ export function interpret(
     try {
       const result = compute();
       committed.set(id, { reads, start, end: ++clock });
+      executed.add(id);
       return result;
     } catch (error) {
       committed.delete(id);
@@ -620,15 +669,39 @@ export function interpret(
       if (++runs > FLUSH_CAP) {
         trace.push(`flush-cap:${name}`);
         queue.length = 0;
-        return;
+        return false;
       }
       const node = queue.shift()!;
       if (spec.host === "claim") {
         rt.releaseWatcherSchedule(node);
         if (disposed.has(ids.get(node)!)) continue;
       }
-      rt.runWatcher(node);
+      runWatcher(node);
     }
+    return true;
+  };
+
+  const DIRTY = 0b11; // Unknown | Changed, fixed by the baseline.
+  // A flush cap drops queued deliveries on the host side; liveness is no longer
+  // the runtime's obligation for the rest of the program.
+  let capped = false;
+  const checkLiveness = (quiescent: boolean): void => {
+    if (capped) return;
+    nodes.forEach((node, id) => {
+      if (!isWatcher(id) || disposed.has(id)) return;
+      if (!executed.has(id) || failed.has(id)) return;
+      if ((node.state & DIRTY) !== 0) {
+        if (!queues.A.includes(node) && !queues.B.includes(node))
+          trace.push(`invariant:liveness:${id}:dirty watcher without delivery`);
+        return;
+      }
+      if (!quiescent) return;
+      for (let e = node.firstIn; e !== null; e = e.nextIn)
+        if ((e.from.state & DIRTY) !== 0)
+          trace.push(
+            `invariant:liveness:${id}:clean watcher behind dirty source ${ids.get(e.from)}`,
+          );
+    });
   };
 
   const snapshot = () => {
@@ -680,10 +753,12 @@ export function interpret(
         trace.push(`read:${op.node}=${readNode(op.node, op.mode)}`);
         return;
       case "flush":
-        flush(context);
+        if (!flush(context)) capped = true;
+        else if (checking && queues.A.length + queues.B.length === 0)
+          checkLiveness(true);
         return;
       case "run":
-        rt.runWatcher(
+        runWatcher(
           nodes[spec.producers + spec.consumers.length + op.watcher]!,
         );
         return;
@@ -773,7 +848,10 @@ export function interpret(
 
   for (const op of program.ops) {
     step(op, "A");
-    if (checking) checkInvariants();
+    if (checking) {
+      checkInvariants();
+      checkLiveness(false);
+    }
   }
   trace.push(
     `end:consumer=${rt.currentConsumer === null ? "null" : "leaked"}:active=${

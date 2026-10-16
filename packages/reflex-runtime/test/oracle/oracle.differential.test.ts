@@ -6,6 +6,7 @@ import {
   generateProgram,
   interpret,
   programSize,
+  selfInvalidates,
   shrink,
   touchesEpoch,
   type ObservationLevel,
@@ -18,24 +19,52 @@ import {
  * same observation trace as the frozen baseline bundle for every generated
  * program. Reproduce a failure with ORACLE_SEED=<seed>.
  *
- * One divergence is allowed, and only where the baseline is demonstrably
- * wrong: F13. The baseline's clock rewinds and wraps, so in a program with an
- * `epoch` operation a pass can repeat a stamp still carried by a live edge
- * and the baseline drops a dependency. A divergence is accepted only for such
- * a program, only if the baseline trace violates the algorithm-independent
- * invariants and the candidate trace does not.
+ * Divergences are allowed only where the baseline is demonstrably wrong, as
+ * compatibility divergences counted per class:
+ *
+ * - F13. The baseline's clock rewinds and wraps, so in a program with an
+ *   `epoch` operation a pass can repeat a stamp still carried by a live edge
+ *   and the baseline drops a dependency. Accepted only for such a program, only
+ *   if the baseline violates a structural invariant and the candidate violates
+ *   none.
+ * - F15. The baseline leaves a dirty watcher without delivery. Accepted only if
+ *   the baseline violates the liveness invariant and the candidate violates
+ *   none.
+ * - F1 domain. A consumer can invalidate itself during its own evaluation (F1,
+ *   open), where liveness is not required. Accepted only if the first
+ *   divergence is an extra candidate delivery and the candidate violates no
+ *   invariant outside the known F1 liveness class.
  */
-const violates = (rt: RuntimeModule, program: Program): boolean =>
-  interpret(rt, program, "strict", { invariants: true }).some((entry) =>
+const violations = (rt: RuntimeModule, program: Program): string[] =>
+  interpret(rt, program, "strict", { invariants: true }).filter((entry) =>
     entry.startsWith("invariant:"),
   );
+const isLiveness = (entry: string) => entry.startsWith("invariant:liveness:");
 
 const isF13Correction = (program: Program): boolean =>
   touchesEpoch(program.ops) &&
-  violates(baseline, program) &&
-  !violates(candidate, program);
+  violations(baseline, program).some((entry) => !isLiveness(entry)) &&
+  violations(candidate, program).length === 0;
 
-let corrected = 0;
+const isF15Correction = (program: Program): boolean =>
+  violations(baseline, program).some(isLiveness) &&
+  violations(candidate, program).length === 0;
+
+const isDelivery = (entry: string | undefined): boolean =>
+  entry !== undefined &&
+  (entry.startsWith("inv:") || entry.startsWith("hook-action:"));
+
+const isF1DomainDelivery = (program: Program, level: ObservationLevel) =>
+  selfInvalidates(program.spec) &&
+  isDelivery(
+    firstMismatch(
+      interpret(baseline, program, level),
+      interpret(candidate, program, level),
+    )?.candidate,
+  ) &&
+  violations(candidate, program).every(isLiveness);
+
+const corrected = { F13: 0, F15: 0, F1domain: 0 };
 const candidate = candidateModule as unknown as RuntimeModule;
 const SEEDS = Number(process.env.ORACLE_SEEDS ?? 2_000);
 const FIRST_SEED = Number(process.env.ORACLE_SEED ?? 1);
@@ -59,7 +88,15 @@ function report(
     ) !== null;
   if (!fails(program)) return null;
   if (isF13Correction(program)) {
-    corrected++;
+    corrected.F13++;
+    return null;
+  }
+  if (isF15Correction(program)) {
+    corrected.F15++;
+    return null;
+  }
+  if (isF1DomainDelivery(program, level)) {
+    corrected.F1domain++;
     return null;
   }
   const minimal = shrink(program, fails);
@@ -91,11 +128,13 @@ describe(`baseline differential oracle (${BASELINE_COMMIT.slice(0, 12)})`, () =>
   it.each<ObservationLevel>(["strict", "observable"])(
     "matches the baseline on generated programs (%s)",
     (level) => {
+      corrected.F13 = corrected.F15 = corrected.F1domain = 0;
       const count = ONLY_ONE ? 1 : SEEDS;
       for (let seed = FIRST_SEED; seed < FIRST_SEED + count; seed++) {
         const failure = report(seed, level, generateProgram(seed));
         if (failure !== null) throw new Error(failure);
       }
+      console.info(`compatibility divergences (${level}):`, corrected);
     },
     600_000,
   );

@@ -8,7 +8,7 @@ file and literal still exist; reviewers must verify the rule's meaning.
 | ID  | Rule                                                                                                          | Source                                                                                                                                                                                                     | Check                                                                                            | Contract                                                          |
 | --- | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
 | R1  | Validate the complete committed watcher frontier before lifecycle work.                                       | `src/kernel/stages/stabilization/pull_frontier.ts::for (let edge = firstEdge`                                                                                                                              | `test/projection/watcher-frontier.projection.test.ts::profiles the complete V3 watcher frontier` | `docs/INVARIANTS.md::Pull descends through unknown dependencies`  |
-| R2  | A nested write through a committed watcher dependency during validation retains a later execution obligation. | `src/kernel/stages/stabilization/pull_frontier.ts::validation epoch` `src/kernel/stages/propagation/push_iterator.ts::markComputingSubscriber` `src/kernel/engine/watcher.ts::invalidatedDuringValidation` | `test/differential/runtime.reentrant-write.test.ts::retains the wake`                            | `docs/INVARIANTS.md::Computing invalidation can also`             |
+| R2  | Reentrant invalidation during a watcher epoch retains and delivers a validation obligation; execution needs execution evidence. | `src/kernel/stages/stabilization/pull_frontier.ts::validation epoch` `src/kernel/stages/propagation/push_iterator.ts::markComputingSubscriber` `src/kernel/engine/watcher.ts::invalidatedDuringValidation` | `test/differential/runtime.reentrant-write.test.ts::retains the wake`                            | `docs/INVARIANTS.md::Computing invalidation can also`             |
 | R3  | A dependency membership epoch is not a producer value epoch; `edge.version` cannot prove value freshness.     | `src/kernel/shape/tracking/resolve.ts::const producerVersion = cursorEdge.version`                                                                                                                         | `test/differential/runtime.tracking-stamp.test.ts::does not confuse a tracking stamp`            | `docs/INVARIANTS.md::edge.version`                                |
 | R4  | Failed tracking may leave partial graph reconciliation and must retry safely.                                 | `src/kernel/shape/graph/reuseEdge.ts::reconcileIncomingSuffix`                                                                                                                                             | `test/differential/runtime.next-experiments.test.ts::retries changed dependency layouts`         | `docs/INVARIANTS.md::Throws do not undo links`                    |
 | R5  | Writes commit immediately inside a batch; the outer exit delivers pending settlement once.                    | `src/kernel/batch.ts::leaveReactiveBatch`                                                                                                                                                                  | `test/differential/runtime.batch-boundary.test.ts::empty and equal-write batches`                | `docs/INVARIANTS.md::Source writes use`                           |
@@ -19,15 +19,34 @@ file and literal still exist; reviewers must verify the rule's meaning.
 These checks guard current semantics while the generation, layout, notify epoch,
 and settlement experiments remain independent implementation candidates.
 
-## R2: why the committed-frontier wake is retained
+## R2: why the committed-frontier wake is retained and delivered
+
+Reentrant invalidation during watcher validation preserves a subsequent
+validation obligation. Execution is required only when a direct change or a
+confirmed dependency change provides execution evidence.
 
 `pull_frontier` temporarily sets `Computing` and extends `tailIn` across the
-watcher's complete committed frontier; it also makes `Visited` available as the
-current validation pass's invalidation marker. A nested producer write reaching
-one of those edges enters `markComputingSubscriber`, which records
-`Visited | Unknown` even when `Unknown` was already set. `pull_frontier` restores
-the cursor and clears `Computing`, but preserves that marker; `runWatcherCore`
-therefore retains `Unknown` and the next run treats `Visited` as an execution
-obligation. A dedicated missed-wake latch is unnecessary for this committed
-watcher-frontier case. This proof does not cover a new uncommitted edge or an
-arbitrary host callback that violates the scheduler protocol.
+watcher's complete committed frontier; the watcher callback does the same for
+its active prefix. A nested producer write reaching one of those edges enters
+`markComputingSubscriber`. A direct edge records `Visited | Unknown`: the
+watcher read the written producer, so `Visited` is execution evidence and
+`pull_frontier` converts it to `Changed` on entry to the next pass. A
+transitive edge records `Revalidate | Unknown` instead: a computed between the
+write and the watcher may still recompute to an equal value, so the next pass
+validates and equality cutoff decides. `Revalidate` on entry is discharged by
+that pass; only an invalidation recorded during the pass requests another.
+
+Retaining the obligation is not enough. While the watcher keeps `Unknown`,
+later pushes merge into it without emitting, so `runWatcherCore` emits
+`onNodeInvalidated` itself on both exits that retain `Unknown` (stable skip
+after validation, and completion after execution) unless the host already owns
+`Scheduled`. Lifecycle errors keep `Unknown` whenever a dependency is still
+dirty, because an idle watcher behind a dirty computed is unreachable by push.
+
+Convergence: `Revalidate` alone never runs the callback, so a feedback write
+that leaves every observed computed equal terminates after one extra
+validation. A callback that produces an unbounded sequence of distinct observed
+values is a program-level cycle; the runtime does not detect it.
+
+This proof does not cover an arbitrary host callback that violates the
+scheduler protocol.

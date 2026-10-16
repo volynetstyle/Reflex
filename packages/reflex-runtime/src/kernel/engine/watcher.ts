@@ -1,4 +1,4 @@
-import { defaultContext } from "@runtime/kernel/config";
+import { defaultContext, emitNodeInvalidated } from "@runtime/kernel/config";
 import { flushPendingRuntimeIdle } from "@runtime/kernel/batch";
 import {
   currentConsumer,
@@ -28,6 +28,7 @@ import {
   Unknown,
   Scheduled,
   Visited,
+  Revalidate,
   WatcherCleanupPending,
   type WatcherCleanup,
   type WatcherNode,
@@ -37,7 +38,8 @@ import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 import { executeKnownNodeComputation } from "./watcher.execution";
 
-const WATCHER_TRANSIENT_STATE = Both | Visited | Computing | Scheduled;
+const WATCHER_TRANSIENT_STATE =
+  Both | Visited | Computing | Scheduled | Revalidate;
 
 function recoverWatcherAfterError(node: WatcherNode): void {
   // A failed lifecycle callback must not leave an unscheduled dirty watcher:
@@ -172,7 +174,8 @@ function runWatcherCore(node: WatcherNode): void {
       throw error;
     }
 
-    const invalidatedDuringValidation = (node.state & Visited) !== 0;
+    const invalidatedDuringValidation =
+      (node.state & (Visited | Revalidate)) !== 0;
 
     if (!invalidatedDuringValidation) node.state &= ~Unknown;
     if (mustExecute || changed) node.state |= Changed;
@@ -182,6 +185,11 @@ function runWatcherCore(node: WatcherNode): void {
         observeRuntimeProjection?.("projection.semantic.watcher.stable.skip");
 
       devRecordWatcherSkip(node, "stable", defaultContext);
+      // A direct Visited was already delivered by push. A transitive
+      // Revalidate was not: push does not emit to a dirty watcher. Hand that
+      // obligation to the host unless a queue already owns this watcher.
+      if ((node.state & (Revalidate | Visited | Scheduled)) === Revalidate)
+        emitNodeInvalidated(node);
       return;
     }
   }
@@ -209,7 +217,7 @@ function runWatcherCore(node: WatcherNode): void {
   if (__DEV__)
     devRecordWatcherStart(node, prevCleanup !== null, defaultContext);
 
-  node.state &= ~Visited;
+  node.state &= ~(Visited | Revalidate);
 
   if (prevCleanup !== null) {
     // Clearing is only required when a cleanup is actually owned. The common
@@ -258,10 +266,16 @@ function runWatcherCore(node: WatcherNode): void {
     node.state |= WatcherCleanupPending;
   }
 
-  if ((node.state & Visited) === 0) {
+  if ((node.state & (Visited | Revalidate)) === 0) {
     node.state &= ~Both;
   } else {
-    node.state = (node.state & ~Changed) | Unknown;
+    // Visited keeps an execution obligation; Revalidate keeps only validation.
+    // Push delivered Visited when it was recorded; Revalidate must be delivered
+    // here, since later pushes merge into the retained Unknown silently.
+    const undelivered =
+      (node.state & (Revalidate | Visited | Scheduled)) === Revalidate;
+    node.state = (node.state & ~(Changed | Revalidate)) | Unknown;
+    if (undelivered) emitNodeInvalidated(node);
   }
 
   devRecordWatcherFinish(node, hasCleanup, result, defaultContext);
