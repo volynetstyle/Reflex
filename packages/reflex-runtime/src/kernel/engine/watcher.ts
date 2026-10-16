@@ -220,7 +220,9 @@ function runWatcherCore(node: WatcherNode): void {
     try {
       runCleanup(prevCleanup);
     } catch (error) {
-      recoverWatcherAfterError(node);
+      // A cleanup may write through a dependency before failing. Idle recovery
+      // would then hide that dirty upstream from every later push.
+      recoverWatcherAfterComputationError(node);
       throw error;
     }
     devRecordWatcherCleanup(node, defaultContext);
