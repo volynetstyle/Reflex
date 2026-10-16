@@ -1,7 +1,11 @@
 # Disposal and cleanup
 
-This describes the current runtime's eager teardown. There is no `Disposed`
-bit, liveness register, or ownership-scope shutdown barrier in this package.
+Owner of teardown and cleanup ordering. This describes the current runtime's eager teardown. There is no `Disposed`
+bit or ownership-scope shutdown barrier in this package, and by design no
+liveness register: dependency subscriptions are retained until disposal, not
+until the last observer leaves. Disposal is therefore the only way a consumer
+leaves the graph; see [RUNTIME.md](./RUNTIME.md#dependency-retention) and
+[lifetime vs liveness](./performance/lifetime-liveness.md).
 
 ## Generic teardown
 
@@ -48,32 +52,24 @@ These checks do not stop arbitrary JavaScript still running inside the
 callback from making further reads or writes. The runtime stores one cleanup
 payload per watcher; it does not impose a separate ownership-tree LIFO order.
 
-## Failure and topology
+## Failure
 
-Rerun cleanup/callback failure clears watcher dirty, execution, and schedule
-bits so a later source invalidation can schedule a retry using the remaining
-graph. Computed callback failure instead leaves `Changed` so a later read
-retries the callback, including when failure occurred during pull bubbling.
+A throwing cleanup or callback does not roll topology back; recovery restores
+flags only, and the remaining graph is not guaranteed to contain every
+dependency of the previous successful execution. The recovery states (and
+when a failed watcher stays retryable) are owned by
+[INVARIANTS.md §3](./INVARIANTS.md#3-pruning-and-failure).
 
-Neither failure policy rolls topology back. Reads may already have linked,
-reordered, or stamped edges. Eager reconciliation can abandon an old suffix
-before the callback succeeds. The remaining graph is not guaranteed to contain
-every dependency from the previous successful execution. Final stale cleanup
-does not run after a callback throw.
-
-## Scheduling and active walks
-
-`Scheduled` represents host queue ownership, not liveness. The host owns
-queue entries, release of claims, and watcher execution timing.
+## Active walks
 
 Eager unlinking alone does not establish arbitrary mid-traversal disposal
-safety: walkers retain edge continuations, and unlink clears edge links.
-The development scheduler policy rejects watcher disposal from
-`onNodeInvalidated` when `__DEV__ && __PROFILE__` is enabled. Production has
-no universal terminal-state barrier.
-
-Post-disposal reads are not specified as universally inert. Stronger ownership
-contracts in callers are outside this package.
+safety: walkers retain edge continuations, and unlink clears edge links. The
+development scheduler policy therefore rejects watcher disposal from
+`onNodeInvalidated`
+([RUNTIME.md](./RUNTIME.md#development-scheduler-policy)); production has no
+universal terminal-state barrier. Post-disposal reads are not specified as
+universally inert; stronger ownership contracts in callers are outside this
+package.
 
 Execution domains (`src/domain`) add a safe-point queue above this teardown:
 `domain.teardown(fn)` runs `fn` immediately at managed depth zero and

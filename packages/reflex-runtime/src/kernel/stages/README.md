@@ -2,7 +2,7 @@
 
 This contract records the behavior of the existing implementation before stage
 optimization. Snapshot bundles and source hashes are produced by
-`scripts/snapshot-stages.mjs`; the differential suite observes both production
+the repository-level `scripts/snapshot-stages.mjs`; the differential suite observes both production
 and development execution, including profiling and debug event order.
 
 ## Push
@@ -71,7 +71,8 @@ and development execution, including profiling and debug event order.
 
 ## Reproducing the semantic gate
 
-Before changing stages, compile and save an independent reference bundle:
+Before changing stages, compile and save an independent reference bundle. Run
+from the repository root, where `scripts/` lives:
 
 ```sh
 pnpm --filter @volynets/reflex-runtime build:ts
