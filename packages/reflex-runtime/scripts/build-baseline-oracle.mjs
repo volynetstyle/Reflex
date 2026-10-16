@@ -188,6 +188,34 @@ try {
     },
   };
 
+  // The published production build inlines node state flags
+  // (rollup/inline-state-flags.ts). Benchmark bundles must run the code that
+  // ships, so production builds apply the same transform to every revision,
+  // each with the flag values of its own meta.ts.
+  const plugins = [aliasPlugin];
+  let inlinedFlags = 0;
+  if (production) {
+    const { inlineStateFlags, readStateFlags } = await import(
+      pathToFileURL(path.join(packageRoot, "rollup/inline-state-flags.ts")).href
+    );
+    const stateFlags = readStateFlags(
+      readFileSync(path.join(sources, "kernel/shape/meta.ts"), "utf8"),
+    );
+    plugins.push({
+      name: "inline-state-flags",
+      setup(build) {
+        build.onLoad({ filter: /\.ts$/ }, (args) => {
+          if (!args.path.startsWith(sources)) return undefined;
+          const code = readFileSync(args.path, "utf8");
+          const result = inlineStateFlags(code, args.path, stateFlags);
+          if (result === null) return undefined;
+          inlinedFlags += result.replaced;
+          return { contents: result.code, loader: "ts" };
+        });
+      },
+    });
+  }
+
   // Same compile-time flags as the source test configuration.
   const flags = {
     __DEV__: "false",
@@ -218,11 +246,14 @@ try {
     platform: "neutral",
     target: "es2022",
     define: flags,
-    plugins: [aliasPlugin],
+    plugins,
     outfile: path.join(out, "runtime.mjs"),
     minify: false,
     logLevel: "error",
   });
+
+  if (production && inlinedFlags === 0)
+    throw new Error("inline-state-flags: no state flag reference was inlined");
 
   if (production) {
     // The published build minifies with Terser (rollup/terser-options.ts),
@@ -256,6 +287,7 @@ try {
         flags,
         esbuild: esbuild.version,
         minifier: production ? "terser (rollup/terser-options.ts)" : "none",
+        inlinedStateFlags: inlinedFlags,
         bundleSha256: createHash("sha256").update(bundle).digest("hex"),
       },
       null,

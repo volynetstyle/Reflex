@@ -5,6 +5,7 @@ import type { Plugin } from "rollup";
 import { createBuildReporter } from "../../../../scripts/rollup-build-reporter.ts";
 import type { BuildTarget } from "../types.ts";
 import { createTerserPlugin } from "./terser.ts";
+import { createInlineStateFlagsPlugin } from "./inline-state-flags.ts";
 
 function pushIfPresent(plugins: Plugin[], plugin: Plugin | null): void {
   if (plugin !== null) plugins.push(plugin);
@@ -22,6 +23,10 @@ export function createPlugins(target: BuildTarget): Plugin[] {
       values: selectRuntimeReplacements(target.mode === "dev" ? "development" : "production", ["__DEV__", "__PROFILE__", "__TRACKING_ONE_HOP__", "__TRACKING_TWO_HOP__", "__TRACKING_LAST_EDGE__"]),
     }),
   ];
+
+  // Production only: dev bundles ship source maps, which this text transform
+  // does not maintain, and are not the measured hot path.
+  if (target.mode !== "dev") plugins.push(createInlineStateFlagsPlugin());
 
   pushIfPresent(plugins, createTerserPlugin(target));
 
