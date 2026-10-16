@@ -199,7 +199,7 @@ function runWatcherCore(node: WatcherNode): void {
     }
 
     const invalidatedDuringValidation =
-      (node.state & (Visited | Revalidate)) !== 0;
+      (node.state & 260) !== 0; // DIAG: 260 === Visited | Revalidate
 
     if (!invalidatedDuringValidation) node.state &= ~Unknown;
     if (mustExecute || changed) node.state |= Changed;
@@ -237,7 +237,7 @@ function runWatcherCore(node: WatcherNode): void {
   if (__DEV__)
     devRecordWatcherStart(node, prevCleanup !== null, defaultContext);
 
-  node.state &= ~(Visited | Revalidate);
+  node.state &= ~260; // DIAG: Visited | Revalidate
 
   if (prevCleanup !== null) {
     // Clearing is only required when a cleanup is actually owned. The common
@@ -286,7 +286,7 @@ function runWatcherCore(node: WatcherNode): void {
     node.state |= WatcherCleanupPending;
   }
 
-  if ((node.state & (Visited | Revalidate)) === 0) {
+  if ((node.state & 260) === 0) { // DIAG: Visited | Revalidate
     node.state &= ~Both;
   } else {
     retainAfterExecution(node);

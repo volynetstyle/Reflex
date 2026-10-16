@@ -57,7 +57,7 @@ export function pull_frontier(
   // invalidation recorded during this epoch may request another one.
   root.tailIn = root.lastIn;
   root.state =
-    (initialState & ~(Visited | Revalidate)) |
+    (initialState & ~260) | // DIAG: Visited | Revalidate
     Computing |
     ((initialState & Visited) !== 0 ? Changed : 0);
 
