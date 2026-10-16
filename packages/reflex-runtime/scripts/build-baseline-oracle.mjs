@@ -188,34 +188,6 @@ try {
     },
   };
 
-  // The published production build inlines node state flags
-  // (rollup/inline-state-flags.ts). Benchmark bundles must run the code that
-  // ships, so production builds apply the same transform to every revision,
-  // each with the flag values of its own meta.ts.
-  const plugins = [aliasPlugin];
-  let inlinedFlags = 0;
-  if (production) {
-    const { inlineStateFlags, readStateFlags } = await import(
-      pathToFileURL(path.join(packageRoot, "rollup/inline-state-flags.ts")).href
-    );
-    const stateFlags = readStateFlags(
-      readFileSync(path.join(sources, "kernel/shape/meta.ts"), "utf8"),
-    );
-    plugins.push({
-      name: "inline-state-flags",
-      setup(build) {
-        build.onLoad({ filter: /\.ts$/ }, (args) => {
-          if (!args.path.startsWith(sources)) return undefined;
-          const code = readFileSync(args.path, "utf8");
-          const result = inlineStateFlags(code, args.path, stateFlags);
-          if (result === null) return undefined;
-          inlinedFlags += result.replaced;
-          return { contents: result.code, loader: "ts" };
-        });
-      },
-    });
-  }
-
   // Same compile-time flags as the source test configuration.
   const flags = {
     __DEV__: "false",
@@ -226,6 +198,36 @@ try {
     __TEST__: production ? "false" : "true",
     __PROD__: production ? "true" : "false",
   };
+
+  // The published production build inlines compile-time constants
+  // (rollup/inline-constants.ts). Benchmark bundles must run the code that
+  // ships, so production builds apply the same transform to every revision,
+  // each with the constants of its own sources and the defines above.
+  const plugins = [aliasPlugin];
+  let inlinedConstants = 0;
+  if (production) {
+    const { collectConstants, inlineConstants } = await import(
+      pathToFileURL(path.join(packageRoot, "rollup/inline-constants.ts")).href
+    );
+    const { readRuntimeSources } = await import(
+      pathToFileURL(path.join(packageRoot, "rollup/plugins/inline-constants.ts"))
+        .href
+    );
+    const table = collectConstants(readRuntimeSources(sources), flags);
+    plugins.push({
+      name: "inline-constants",
+      setup(build) {
+        build.onLoad({ filter: /.ts$/ }, (args) => {
+          if (!args.path.startsWith(sources)) return undefined;
+          const code = readFileSync(args.path, "utf8");
+          const result = inlineConstants(code, args.path, table);
+          if (result === null) return undefined;
+          inlinedConstants += result.replaced;
+          return { contents: result.code, loader: "ts" };
+        });
+      },
+    });
+  }
 
   mkdirSync(out, { recursive: true });
   await esbuild.build({
@@ -252,8 +254,8 @@ try {
     logLevel: "error",
   });
 
-  if (production && inlinedFlags === 0)
-    throw new Error("inline-state-flags: no state flag reference was inlined");
+  if (production && inlinedConstants === 0)
+    throw new Error("inline-constants: no constant reference was inlined");
 
   if (production) {
     // The published build minifies with Terser (rollup/terser-options.ts),
@@ -287,7 +289,7 @@ try {
         flags,
         esbuild: esbuild.version,
         minifier: production ? "terser (rollup/terser-options.ts)" : "none",
-        inlinedStateFlags: inlinedFlags,
+        inlinedConstants,
         bundleSha256: createHash("sha256").update(bundle).digest("hex"),
       },
       null,

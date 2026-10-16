@@ -5,13 +5,16 @@ import type { Plugin } from "rollup";
 import { createBuildReporter } from "../../../../scripts/rollup-build-reporter.ts";
 import type { BuildTarget } from "../types.ts";
 import { createTerserPlugin } from "./terser.ts";
-import { createInlineStateFlagsPlugin } from "./inline-state-flags.ts";
+import { createInlineConstantsPlugin } from "./inline-constants.ts";
 
 function pushIfPresent(plugins: Plugin[], plugin: Plugin | null): void {
   if (plugin !== null) plugins.push(plugin);
 }
 
+const REPLACED_FLAGS = ["__DEV__", "__PROFILE__", "__TRACKING_ONE_HOP__", "__TRACKING_TWO_HOP__", "__TRACKING_LAST_EDGE__"] as const;
+
 export function createPlugins(target: BuildTarget): Plugin[] {
+  const flags = selectRuntimeReplacements(target.mode === "dev" ? "development" : "production", REPLACED_FLAGS);
   const plugins: Plugin[] = [
     createBuildReporter("@volynets/reflex-runtime", target.name),
     resolve({
@@ -20,13 +23,14 @@ export function createPlugins(target: BuildTarget): Plugin[] {
     }),
     replace({
       preventAssignment: true,
-      values: selectRuntimeReplacements(target.mode === "dev" ? "development" : "production", ["__DEV__", "__PROFILE__", "__TRACKING_ONE_HOP__", "__TRACKING_TWO_HOP__", "__TRACKING_LAST_EDGE__"]),
+      values: flags,
     }),
   ];
 
   // Production only: dev bundles ship source maps, which this text transform
-  // does not maintain, and are not the measured hot path.
-  if (target.mode !== "dev") plugins.push(createInlineStateFlagsPlugin());
+  // does not maintain, and are not the measured hot path. Constants are
+  // evaluated with the same compile-time flags the replace step applies.
+  if (target.mode !== "dev") plugins.push(createInlineConstantsPlugin(flags));
 
   pushIfPresent(plugins, createTerserPlugin(target));
 
