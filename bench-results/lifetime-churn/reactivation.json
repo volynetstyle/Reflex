@@ -1,0 +1,2249 @@
+{
+  "meta": {
+    "date": "2026-10-15T14:38:44.340Z",
+    "node": "v25.2.0",
+    "flags": "profile-test (__PROFILE__=true, __DEV__=false)"
+  },
+  "reactivation": [
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "retain",
+        "mix": "shared",
+        "sleepWrites": 0,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 220400.00000007846,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 1529
+      },
+      "sleep": {
+        "ns": 1400.0000000275274,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 1387500.0000000454,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 512,
+        "edgesCreated": 1529,
+        "edgesRemoved": 0
+      },
+      "totalWork": 3058,
+      "totalNs": 1609300.0000001513,
+      "sleepingHeapBytes": 1373920,
+      "peakHeapBytes": 1600736,
+      "sleepingRegionEdges": 1510,
+      "resultIdentityKept": 1,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-conservative",
+        "mix": "shared",
+        "sleepWrites": 0,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 368533.3333332892,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 1833.3333334036677,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 3065333.333333304,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 6536,
+      "totalNs": 3435699.999999997,
+      "sleepingHeapBytes": 841778.6666666666,
+      "peakHeapBytes": 1194416,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-oracle",
+        "mix": "shared",
+        "sleepWrites": 0,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 407466.66666655074,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 1166.6666667527654,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 1945266.6666667636,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 512,
+        "edgesCreated": 3039,
+        "edgesRemoved": 0
+      },
+      "totalWork": 6078,
+      "totalNs": 2353900.000000067,
+      "sleepingHeapBytes": 953709.3333333334,
+      "peakHeapBytes": 1170040,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 1,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "dispose-recreate",
+        "mix": "shared",
+        "sleepWrites": 0,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 336666.6666665879,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 666.6666668024845,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2896233.333333233,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 6536,
+      "totalNs": 3233566.666666623,
+      "sleepingHeapBytes": 723056,
+      "peakHeapBytes": 1169440,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "retain",
+        "mix": "shared",
+        "sleepWrites": 1,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 195733.33333361614,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 1529
+      },
+      "sleep": {
+        "ns": 3527333.33333299,
+        "pushEdges": 1772,
+        "pullEdges": 1524.6666666666667,
+        "computes": 162.66666666666666,
+        "watcherRuns": 486.6666666666667,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2577500.0000001756,
+        "pushEdges": 0,
+        "pullEdges": 93.66666666666667,
+        "computes": 301.6666666666667,
+        "watcherRuns": 512,
+        "edgesCreated": 1529,
+        "edgesRemoved": 0
+      },
+      "totalWork": 6912.666666666668,
+      "totalNs": 6300566.6666667815,
+      "sleepingHeapBytes": 1046922.6666666666,
+      "peakHeapBytes": 1292424,
+      "sleepingRegionEdges": 1510,
+      "resultIdentityKept": 0.005208333333333333,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-conservative",
+        "mix": "shared",
+        "sleepWrites": 1,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 333933.3333333343,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 3284333.333333355,
+        "pushEdges": 1214,
+        "pullEdges": 1524.6666666666667,
+        "computes": 162.66666666666666,
+        "watcherRuns": 486.6666666666667,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2845666.6666667536,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 9437.333333333334,
+      "totalNs": 6463933.333333443,
+      "sleepingHeapBytes": 790829.3333333334,
+      "peakHeapBytes": 1149336,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-oracle",
+        "mix": "shared",
+        "sleepWrites": 1,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 346799.9999996512,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 3171066.666666472,
+        "pushEdges": 1214,
+        "pullEdges": 1524.6666666666667,
+        "computes": 162.66666666666666,
+        "watcherRuns": 486.6666666666667,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 3233566.6666670777,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 301.6666666666667,
+        "watcherRuns": 512,
+        "edgesCreated": 3039,
+        "edgesRemoved": 0
+      },
+      "totalWork": 9281,
+      "totalNs": 6751433.333333201,
+      "sleepingHeapBytes": 927498.6666666666,
+      "peakHeapBytes": 1136712,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0.005208333333333333,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "dispose-recreate",
+        "mix": "shared",
+        "sleepWrites": 1,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 416100.0000000664,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 2874633.333333501,
+        "pushEdges": 1214,
+        "pullEdges": 1524.6666666666667,
+        "computes": 162.66666666666666,
+        "watcherRuns": 486.6666666666667,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2757433.333333514,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 9437.333333333334,
+      "totalNs": 6048166.666667081,
+      "sleepingHeapBytes": 744365.3333333334,
+      "peakHeapBytes": 1190008,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "retain",
+        "mix": "shared",
+        "sleepWrites": 10,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 170866.6666663703,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 1529
+      },
+      "sleep": {
+        "ns": 24770400.000000034,
+        "pushEdges": 12797.666666666666,
+        "pullEdges": 14759.666666666666,
+        "computes": 1524,
+        "watcherRuns": 4724,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2603766.6666667666,
+        "pushEdges": 0,
+        "pullEdges": 51,
+        "computes": 471.6666666666667,
+        "watcherRuns": 512,
+        "edgesCreated": 1529,
+        "edgesRemoved": 0
+      },
+      "totalWork": 32662,
+      "totalNs": 27545033.333333172,
+      "sleepingHeapBytes": 977762.6666666666,
+      "peakHeapBytes": 1205056,
+      "sleepingRegionEdges": 1510,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-conservative",
+        "mix": "shared",
+        "sleepWrites": 10,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 403733.333333245,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 23946999.99999981,
+        "pushEdges": 11515,
+        "pullEdges": 14759.666666666666,
+        "computes": 1524,
+        "watcherRuns": 4724,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2467299.9999999474,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 34334.666666666664,
+      "totalNs": 26818033.333333004,
+      "sleepingHeapBytes": 855728,
+      "peakHeapBytes": 1198272,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-oracle",
+        "mix": "shared",
+        "sleepWrites": 10,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 699366.6666664165,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 24089933.333333045,
+        "pushEdges": 11515,
+        "pullEdges": 14759.666666666666,
+        "computes": 1524,
+        "watcherRuns": 4724,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 3158633.333332849,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 471.6666666666667,
+        "watcherRuns": 512,
+        "edgesCreated": 3039,
+        "edgesRemoved": 0
+      },
+      "totalWork": 34348.33333333333,
+      "totalNs": 27947933.33333231,
+      "sleepingHeapBytes": 989026.6666666666,
+      "peakHeapBytes": 1197368,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "dispose-recreate",
+        "mix": "shared",
+        "sleepWrites": 10,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 377300.0000001048,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 26245233.3333343,
+        "pushEdges": 11515,
+        "pullEdges": 14759.666666666666,
+        "computes": 1524,
+        "watcherRuns": 4724,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2694333.333333513,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 34334.666666666664,
+      "totalNs": 29316866.666667916,
+      "sleepingHeapBytes": 789258.6666666666,
+      "peakHeapBytes": 1233592,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "retain",
+        "mix": "shared",
+        "sleepWrites": 100,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 240666.66666719053,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 1529
+      },
+      "sleep": {
+        "ns": 236778333.33333424,
+        "pushEdges": 120841.33333333333,
+        "pullEdges": 147466,
+        "computes": 15649.666666666666,
+        "watcherRuns": 47153.333333333336,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2427866.666666281,
+        "pushEdges": 0,
+        "pullEdges": 40,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 1529,
+        "edgesRemoved": 0
+      },
+      "totalWork": 287553,
+      "totalNs": 239446866.6666677,
+      "sleepingHeapBytes": 1042066.6666666666,
+      "peakHeapBytes": 1278824,
+      "sleepingRegionEdges": 1510,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-conservative",
+        "mix": "shared",
+        "sleepWrites": 100,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 320266.666666915,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 226081066.66666695,
+        "pushEdges": 117422,
+        "pullEdges": 147466,
+        "computes": 15649.666666666666,
+        "watcherRuns": 47153.333333333336,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2190033.333333,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 287073.6666666667,
+      "totalNs": 228591366.66666687,
+      "sleepingHeapBytes": 934149.3333333334,
+      "peakHeapBytes": 1274792,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-oracle",
+        "mix": "shared",
+        "sleepWrites": 100,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 363299.99999967794,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 228182300.0000004,
+        "pushEdges": 117422,
+        "pullEdges": 147466,
+        "computes": 15649.666666666666,
+        "watcherRuns": 47153.333333333336,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2567733.3333339146,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 3039,
+        "edgesRemoved": 0
+      },
+      "totalWork": 287113.6666666667,
+      "totalNs": 231113333.33333397,
+      "sleepingHeapBytes": 1025936,
+      "peakHeapBytes": 1236816,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "dispose-recreate",
+        "mix": "shared",
+        "sleepWrites": 100,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 297100.00000098563,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 240972566.66666666,
+        "pushEdges": 117422,
+        "pullEdges": 147466,
+        "computes": 15649.666666666666,
+        "watcherRuns": 47153.333333333336,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2393366.6666665277,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 287073.6666666667,
+      "totalNs": 243663033.33333418,
+      "sleepingHeapBytes": 854805.3333333334,
+      "peakHeapBytes": 1302360,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "retain",
+        "mix": "shared",
+        "sleepWrites": 1000,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 158566.66666635041,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 1529
+      },
+      "sleep": {
+        "ns": 2286375099.9999995,
+        "pushEdges": 1195998,
+        "pullEdges": 1476542,
+        "computes": 156571.66666666666,
+        "watcherRuns": 472088,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2363733.333334191,
+        "pushEdges": 0,
+        "pullEdges": 40,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 1529,
+        "edgesRemoved": 0
+      },
+      "totalWork": 2832707.6666666665,
+      "totalNs": 2288897400,
+      "sleepingHeapBytes": 1108176,
+      "peakHeapBytes": 1327896,
+      "sleepingRegionEdges": 1510,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-conservative",
+        "mix": "shared",
+        "sleepWrites": 1000,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 365733.3333333857,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 2277105066.6666675,
+        "pushEdges": 1172056.6666666667,
+        "pullEdges": 1476542,
+        "computes": 156571.66666666666,
+        "watcherRuns": 472088,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2441933.333336541,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 2811706.3333333335,
+      "totalNs": 2279912733.3333373,
+      "sleepingHeapBytes": 944485.3333333334,
+      "peakHeapBytes": 1281984,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-oracle",
+        "mix": "shared",
+        "sleepWrites": 1000,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 372066.6666680093,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 2260767766.6666665,
+        "pushEdges": 1172056.6666666667,
+        "pullEdges": 1476542,
+        "computes": 156571.66666666666,
+        "watcherRuns": 472088,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2470133.333333554,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 3039,
+        "edgesRemoved": 0
+      },
+      "totalWork": 2811746.3333333335,
+      "totalNs": 2263609966.666668,
+      "sleepingHeapBytes": 1084821.3333333333,
+      "peakHeapBytes": 1291400,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "dispose-recreate",
+        "mix": "shared",
+        "sleepWrites": 1000,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 353500.0000022895,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 2253813599.9999995,
+        "pushEdges": 1172056.6666666667,
+        "pullEdges": 1476542,
+        "computes": 156571.66666666666,
+        "watcherRuns": 472088,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2612800.0000026077,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 2811706.3333333335,
+      "totalNs": 2256779900.0000043,
+      "sleepingHeapBytes": 866410.6666666666,
+      "peakHeapBytes": 1303744,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "retain",
+        "mix": "foreign",
+        "sleepWrites": 0,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 212733.33333374467,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 1529
+      },
+      "sleep": {
+        "ns": 1933.3333329996094,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 1691633.3333356306,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 512,
+        "edgesCreated": 1529,
+        "edgesRemoved": 0
+      },
+      "totalWork": 3058,
+      "totalNs": 1906300.0000023749,
+      "sleepingHeapBytes": 852562.6666666666,
+      "peakHeapBytes": 1075352,
+      "sleepingRegionEdges": 1510,
+      "resultIdentityKept": 1,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-conservative",
+        "mix": "foreign",
+        "sleepWrites": 0,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 675466.6666674893,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 733.3333342103288,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2759000.0000006207,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 6536,
+      "totalNs": 3435200.0000023204,
+      "sleepingHeapBytes": 761920,
+      "peakHeapBytes": 1109656,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-oracle",
+        "mix": "foreign",
+        "sleepWrites": 0,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 392733.33333646104,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 599.9999969693212,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 1764866.6666694528,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 512,
+        "edgesCreated": 3039,
+        "edgesRemoved": 0
+      },
+      "totalWork": 6078,
+      "totalNs": 2158200.0000028834,
+      "sleepingHeapBytes": 883874.6666666666,
+      "peakHeapBytes": 1106056,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 1,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "dispose-recreate",
+        "mix": "foreign",
+        "sleepWrites": 0,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 410900.0000025844,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 599.9999993946403,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 3128233.333331688,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 6536,
+      "totalNs": 3539733.333333667,
+      "sleepingHeapBytes": 653162.6666666666,
+      "peakHeapBytes": 1109536,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "retain",
+        "mix": "foreign",
+        "sleepWrites": 1,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 159966.66666372525,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 1529
+      },
+      "sleep": {
+        "ns": 3138000.000001436,
+        "pushEdges": 1203.6666666666667,
+        "pullEdges": 1525,
+        "computes": 156,
+        "watcherRuns": 487.6666666666667,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 1826833.3333350408,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 512,
+        "edgesCreated": 1529,
+        "edgesRemoved": 0
+      },
+      "totalWork": 5942.666666666667,
+      "totalNs": 5124800.000000202,
+      "sleepingHeapBytes": 925576,
+      "peakHeapBytes": 1166544,
+      "sleepingRegionEdges": 1510,
+      "resultIdentityKept": 1,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-conservative",
+        "mix": "foreign",
+        "sleepWrites": 1,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 340700.0000006519,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 3208166.666670877,
+        "pushEdges": 1203.6666666666667,
+        "pullEdges": 1525,
+        "computes": 156,
+        "watcherRuns": 487.6666666666667,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2653466.6666654325,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 9420.666666666668,
+      "totalNs": 6202333.333336961,
+      "sleepingHeapBytes": 765210.6666666666,
+      "peakHeapBytes": 1111584,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-oracle",
+        "mix": "foreign",
+        "sleepWrites": 1,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 387100.00000234385,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 3097400.000001168,
+        "pushEdges": 1203.6666666666667,
+        "pullEdges": 1525,
+        "computes": 156,
+        "watcherRuns": 487.6666666666667,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 1925866.6666670858,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 512,
+        "edgesCreated": 3039,
+        "edgesRemoved": 0
+      },
+      "totalWork": 8962.666666666668,
+      "totalNs": 5410366.666670597,
+      "sleepingHeapBytes": 910101.3333333334,
+      "peakHeapBytes": 1123832,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 1,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "dispose-recreate",
+        "mix": "foreign",
+        "sleepWrites": 1,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 339933.33333152503,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 3149533.333334451,
+        "pushEdges": 1203.6666666666667,
+        "pullEdges": 1525,
+        "computes": 156,
+        "watcherRuns": 487.6666666666667,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 3038033.3333329572,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 9420.666666666668,
+      "totalNs": 6527499.999998933,
+      "sleepingHeapBytes": 697794.6666666666,
+      "peakHeapBytes": 1160288,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "retain",
+        "mix": "foreign",
+        "sleepWrites": 10,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 259966.66666712068,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 1529
+      },
+      "sleep": {
+        "ns": 31415300.000000577,
+        "pushEdges": 12054.666666666666,
+        "pullEdges": 15091.666666666666,
+        "computes": 1574,
+        "watcherRuns": 4823,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 1579766.6666670314,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 512,
+        "edgesCreated": 1529,
+        "edgesRemoved": 0
+      },
+      "totalWork": 31778.333333333332,
+      "totalNs": 33255033.333334733,
+      "sleepingHeapBytes": 1003733.3333333334,
+      "peakHeapBytes": 1243904,
+      "sleepingRegionEdges": 1510,
+      "resultIdentityKept": 1,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-conservative",
+        "mix": "foreign",
+        "sleepWrites": 10,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 342399.9999989367,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 25823366.666668635,
+        "pushEdges": 12054.666666666666,
+        "pullEdges": 15091.666666666666,
+        "computes": 1574,
+        "watcherRuns": 4823,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2784000.0000045015,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 35256.33333333333,
+      "totalNs": 28949766.666672073,
+      "sleepingHeapBytes": 842738.6666666666,
+      "peakHeapBytes": 1189072,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-oracle",
+        "mix": "foreign",
+        "sleepWrites": 10,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 376699.9999982848,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 24303800.0000015,
+        "pushEdges": 12054.666666666666,
+        "pullEdges": 15091.666666666666,
+        "computes": 1574,
+        "watcherRuns": 4823,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 1818466.6666663059,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 512,
+        "edgesCreated": 3039,
+        "edgesRemoved": 0
+      },
+      "totalWork": 34798.33333333333,
+      "totalNs": 26498966.666666094,
+      "sleepingHeapBytes": 975365.3333333334,
+      "peakHeapBytes": 1185040,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 1,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "dispose-recreate",
+        "mix": "foreign",
+        "sleepWrites": 10,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 352400.000000974,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 25561800.000000704,
+        "pushEdges": 12054.666666666666,
+        "pullEdges": 15091.666666666666,
+        "computes": 1574,
+        "watcherRuns": 4823,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2699166.666670256,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 35256.33333333333,
+      "totalNs": 28613366.66667193,
+      "sleepingHeapBytes": 736178.6666666666,
+      "peakHeapBytes": 1186920,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "retain",
+        "mix": "foreign",
+        "sleepWrites": 100,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 168633.33333215755,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 1529
+      },
+      "sleep": {
+        "ns": 222120233.3333325,
+        "pushEdges": 114791.33333333333,
+        "pullEdges": 145195.33333333334,
+        "computes": 15049.666666666666,
+        "watcherRuns": 46365.666666666664,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 1308266.6666668956,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 512,
+        "edgesCreated": 1529,
+        "edgesRemoved": 0
+      },
+      "totalWork": 278094.3333333334,
+      "totalNs": 223597133.33333156,
+      "sleepingHeapBytes": 1018146.6666666666,
+      "peakHeapBytes": 1235576,
+      "sleepingRegionEdges": 1510,
+      "resultIdentityKept": 1,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-conservative",
+        "mix": "foreign",
+        "sleepWrites": 100,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 319700.000002437,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 216754566.6666677,
+        "pushEdges": 114791.33333333333,
+        "pullEdges": 145195.33333333334,
+        "computes": 15049.666666666666,
+        "watcherRuns": 46365.666666666664,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2234599.999996135,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 281572.3333333334,
+      "totalNs": 219308866.66666627,
+      "sleepingHeapBytes": 894053.3333333334,
+      "peakHeapBytes": 1267832,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-oracle",
+        "mix": "foreign",
+        "sleepWrites": 100,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 360733.3333347924,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 219980433.33333528,
+        "pushEdges": 114791.33333333333,
+        "pullEdges": 145195.33333333334,
+        "computes": 15049.666666666666,
+        "watcherRuns": 46365.666666666664,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 1619833.3333304618,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 512,
+        "edgesCreated": 3039,
+        "edgesRemoved": 0
+      },
+      "totalWork": 281114.3333333334,
+      "totalNs": 221961000.00000054,
+      "sleepingHeapBytes": 1010517.3333333334,
+      "peakHeapBytes": 1216184,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 1,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "dispose-recreate",
+        "mix": "foreign",
+        "sleepWrites": 100,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 382833.3333270469,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 222702566.66666925,
+        "pushEdges": 114791.33333333333,
+        "pullEdges": 145195.33333333334,
+        "computes": 15049.666666666666,
+        "watcherRuns": 46365.666666666664,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2503766.6666661003,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 281572.3333333334,
+      "totalNs": 225589166.6666624,
+      "sleepingHeapBytes": 810282.6666666666,
+      "peakHeapBytes": 1267320,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "retain",
+        "mix": "foreign",
+        "sleepWrites": 1000,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 193666.66667337995,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 1529
+      },
+      "sleep": {
+        "ns": 2205011300.0000033,
+        "pushEdges": 1148597.3333333333,
+        "pullEdges": 1439690,
+        "computes": 150907.33333333334,
+        "watcherRuns": 459637,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 1451166.6666706635,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 512,
+        "edgesCreated": 1529,
+        "edgesRemoved": 0
+      },
+      "totalWork": 2742252.6666666665,
+      "totalNs": 2206656133.3333473,
+      "sleepingHeapBytes": 1086512,
+      "peakHeapBytes": 1299408,
+      "sleepingRegionEdges": 1510,
+      "resultIdentityKept": 1,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-conservative",
+        "mix": "foreign",
+        "sleepWrites": 1000,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 315133.3333322934,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 2255701833.3333354,
+        "pushEdges": 1148597.3333333333,
+        "pullEdges": 1439690,
+        "computes": 150907.33333333334,
+        "watcherRuns": 459637,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 3243833.333336321,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 2745730.6666666665,
+      "totalNs": 2259260800.000004,
+      "sleepingHeapBytes": 950472,
+      "peakHeapBytes": 1288960,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "suspend-oracle",
+        "mix": "foreign",
+        "sleepWrites": 1000,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 397566.66667138535,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 2238589699.999992,
+        "pushEdges": 1148597.3333333333,
+        "pullEdges": 1439690,
+        "computes": 150907.33333333334,
+        "watcherRuns": 459637,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 1707800.0000037719,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 512,
+        "edgesCreated": 3039,
+        "edgesRemoved": 0
+      },
+      "totalWork": 2745272.6666666665,
+      "totalNs": 2240695066.666667,
+      "sleepingHeapBytes": 1079776,
+      "peakHeapBytes": 1282680,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 1,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    },
+    {
+      "experiment": "D",
+      "options": {
+        "variant": "dispose-recreate",
+        "mix": "foreign",
+        "sleepWrites": 1000,
+        "seed": 53456,
+        "sharedProducers": 16,
+        "foreignProducers": 48,
+        "layers": 4,
+        "width": 128,
+        "fanIn": 3,
+        "watchers": 512,
+        "readsPerWatcher": 3,
+        "cycles": 3
+      },
+      "deactivate": {
+        "ns": 313333.33333410945,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 0,
+        "watcherRuns": 0,
+        "edgesCreated": 0,
+        "edgesRemoved": 3039
+      },
+      "sleep": {
+        "ns": 2204025366.6666737,
+        "pushEdges": 1148597.3333333333,
+        "pullEdges": 1439690,
+        "computes": 150907.33333333334,
+        "watcherRuns": 459637,
+        "edgesCreated": 0,
+        "edgesRemoved": 0
+      },
+      "reactivate": {
+        "ns": 2187266.6666701357,
+        "pushEdges": 0,
+        "pullEdges": 0,
+        "computes": 498,
+        "watcherRuns": 512,
+        "edgesCreated": 2999,
+        "edgesRemoved": 0
+      },
+      "totalWork": 2745730.6666666665,
+      "totalNs": 2206525966.666678,
+      "sleepingHeapBytes": 867136,
+      "peakHeapBytes": 1297424,
+      "sleepingRegionEdges": 0,
+      "resultIdentityKept": 0,
+      "activeRegionEdges": {
+        "min": 1510,
+        "max": 1510
+      },
+      "checkedValues": 4096,
+      "mismatches": 0
+    }
+  ]
+}

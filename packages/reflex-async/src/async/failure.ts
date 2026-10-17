@@ -2,7 +2,8 @@ import { AsyncProtocolError } from "./errors";
 
 const NO_FAILURE = Symbol("no async failure");
 
-let activeFailureCapture: AsyncFailureCapture | undefined;
+// eslint-disable-next-line no-var
+var activeFailureCapture: AsyncFailureCapture | undefined;
 
 // Is it possible to merge this object with lifetime and remove class?
 export class AsyncFailureCapture {
@@ -14,7 +15,7 @@ export class AsyncFailureCapture {
     const parent = activeFailureCapture;
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     activeFailureCapture = this;
-
+    
     try {
       return expression();
     } finally {
@@ -41,3 +42,7 @@ export function throwAsyncFailure(error: unknown): never {
 
   throw error;
 }
+
+
+
+

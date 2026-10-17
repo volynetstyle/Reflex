@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reflex performance trend</title>
+<style>
+:root {
+  --bg: #ffffff; --panel: #f7f7f8; --text: #1d1d1f; --muted: #6b6b73; --grid: #e4e4e8;
+  --line: #2f6fdb; --band: rgba(47, 111, 219, 0.16); --point: #2f6fdb; --bound: #9a9aa3;
+  --bad: #d23c3c; --good: #1f9d55; --accent: #2f6fdb;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111114; --panel: #1b1b20; --text: #ececf1; --muted: #9a9aa6; --grid: #2b2b33;
+    --line: #6f9cff; --band: rgba(111, 156, 255, 0.18); --point: #6f9cff; --bound: #70707c;
+    --bad: #ff6b6b; --good: #4cd38a; --accent: #6f9cff;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { padding: 20px 16px 8px; max-width: 1200px; margin: 0 auto; }
+h1 { font-size: 20px; margin: 0 0 4px; }
+.lede { color: var(--muted); margin: 0; max-width: 72ch; }
+nav { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px; max-width: 1200px; margin: 0 auto; }
+nav button { border: 1px solid var(--grid); background: var(--panel); color: var(--text); border-radius: 999px; padding: 4px 12px; cursor: pointer; font: inherit; }
+nav button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+nav input[type=search] { flex: 1 1 200px; min-width: 0; border: 1px solid var(--grid); background: var(--panel); color: var(--text); border-radius: 8px; padding: 5px 10px; font: inherit; }
+nav label { color: var(--muted); display: flex; gap: 6px; align-items: center; }
+main { max-width: 1200px; margin: 0 auto; padding: 0 16px 32px; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 520px), 1fr)); }
+.card { background: var(--panel); border-radius: 12px; padding: 12px 12px 6px; min-width: 0; }
+.card h2 { font-size: 13px; font-weight: 600; margin: 0 0 2px; overflow-wrap: anywhere; }
+.meta { color: var(--muted); font-size: 12px; margin: 0 0 6px; }
+.flag { color: var(--bad); font-weight: 600; }
+svg { width: 100%; height: auto; display: block; overflow: visible; }
+svg text { fill: var(--muted); font-size: 10px; }
+.tip { position: fixed; pointer-events: none; background: var(--text); color: var(--bg); padding: 6px 8px; border-radius: 6px; font-size: 12px; white-space: pre; opacity: 0; transition: opacity 80ms; z-index: 2; }
+.empty { color: var(--muted); padding: 32px 16px; text-align: center; grid-column: 1 / -1; }
+footer { max-width: 1200px; margin: 0 auto; padding: 0 16px 24px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Reflex performance trend</h1>
+  <p class="lede">Each value is the median paired process ratio of a commit against a fixed anchor, measured in the same CI job. Lower is faster. Left of the divider: daily medians with the p25–p75 band. Right: individual commits of the recent window. Dashed lines: historical baseline and its regression boundary.</p>
+</header>
+<nav id="nav"></nav>
+<main id="charts"><p class="empty">Loading…</p></main>
+<footer id="footer"></footer>
+<div class="tip" id="tip"></div>
+<script>
+const repo = (() => {
+  const owner = location.hostname.endsWith(".github.io") ? location.hostname.split(".")[0] : "volynetstyle";
+  const name = location.pathname.split("/").filter(Boolean)[0] || "Reflex";
+  return "https://github.com/" + owner + "/" + name;
+})();
+const pct = log => (Math.expm1(log) * 100).toFixed(1) + "%";
+const short = sha => sha.slice(0, 8);
+const tip = document.getElementById("tip");
+const state = { suite: null, query: "", flagged: false, index: null, data: {} };
+try { const saved = JSON.parse(localStorage.getItem("trend-view") || "{}"); Object.assign(state, { suite: saved.suite ?? null, flagged: !!saved.flagged }); } catch {}
+const remember = () => { try { localStorage.setItem("trend-view", JSON.stringify({ suite: state.suite, flagged: state.flagged })); } catch {} };
+
+function el(tag, attrs = {}, children = []) {
+  const ns = ["svg", "line", "path", "circle", "text", "rect", "g", "title"].includes(tag) ? "http://www.w3.org/2000/svg" : null;
+  const node = ns ? document.createElementNS(ns, tag) : document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs)) if (value != null) key.startsWith("on") ? node.addEventListener(key.slice(2), value) : node.setAttribute(key, value);
+  for (const child of [].concat(children)) node.append(child);
+  return node;
+}
+function showTip(event, text) { tip.textContent = text; tip.style.opacity = 1; tip.style.left = Math.min(event.clientX + 12, innerWidth - tip.offsetWidth - 8) + "px"; tip.style.top = (event.clientY + 12) + "px"; }
+const hideTip = () => { tip.style.opacity = 0; };
+
+function flaggedPoints(segment) {
+  const b = segment.boundary;
+  return b ? segment.recent.filter(p => (p.lower ?? p.value) > b.upper) : [];
+}
+
+function chart(series) {
+  const segment = series.segments.at(-1);
+  const daily = segment.daily, recent = segment.recent, b = segment.boundary;
+  const W = 520, H = 210, L = 46, R = 8, T = 10, B = 26, plotW = W - L - R, plotH = H - T - B;
+  const values = [...daily.flatMap(d => [d.p25, d.p75, d.median]), ...recent.flatMap(p => [p.value, p.lower ?? p.value, p.upper ?? p.value])];
+  if (b) values.push(b.upper, b.lower, b.center);
+  let lo = Math.min(...values), hi = Math.max(...values);
+  const pad = Math.max((hi - lo) * 0.12, 0.01); lo -= pad; hi += pad;
+  const y = v => T + plotH - (v - lo) / (hi - lo) * plotH;
+  const dailyW = daily.length ? plotW * Math.min(0.55, Math.max(0.25, daily.length / (daily.length + recent.length))) : 0;
+  const xd = i => L + (daily.length === 1 ? dailyW / 2 : i / (daily.length - 1) * (dailyW - 12) + 6);
+  const xr = i => L + dailyW + (recent.length === 1 ? (plotW - dailyW) / 2 : 8 + i / (recent.length - 1) * (plotW - dailyW - 16));
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": series.id + " trend" });
+  for (let i = 0; i <= 4; ++i) {
+    const v = lo + (hi - lo) * i / 4;
+    svg.append(el("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: "var(--grid)" }));
+    svg.append(el("text", { x: L - 6, y: y(v) + 3, "text-anchor": "end" }, pct(v)));
+  }
+  if (b) for (const [v, dash] of [[b.center, "2 3"], [b.upper, "6 4"], [b.lower, "6 4"]]) svg.append(el("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: "var(--bound)", "stroke-dasharray": dash }));
+  if (daily.length) {
+    const band = daily.map((d, i) => `${xd(i)},${y(d.p75)}`).concat([...daily].reverse().map((d, j) => `${xd(daily.length - 1 - j)},${y(d.p25)}`));
+    svg.append(el("path", { d: "M" + band.join("L") + "Z", fill: "var(--band)" }));
+    svg.append(el("path", { d: "M" + daily.map((d, i) => `${xd(i)},${y(d.median)}`).join("L"), fill: "none", stroke: "var(--line)", "stroke-width": 1.6 }));
+    daily.forEach((d, i) => svg.append(el("circle", { cx: xd(i), cy: y(d.median), r: 6, fill: "transparent",
+      onmousemove: e => showTip(e, `${d.day} · ${d.n} commits\nmedian ${pct(d.median)}  p25–p75 ${pct(d.p25)} … ${pct(d.p75)}\n${short(d.firstSha)} … ${short(d.lastSha)}`), onmouseleave: hideTip,
+      onclick: () => open(`${repo}/compare/${d.firstSha}~1...${d.lastSha}`, "_blank") })));
+    svg.append(el("line", { x1: L + dailyW, x2: L + dailyW, y1: T, y2: T + plotH, stroke: "var(--grid)", "stroke-width": 2 }));
+    svg.append(el("text", { x: L + 2, y: H - 8 }, daily[0].day));
+    svg.append(el("text", { x: L + dailyW - 4, y: H - 8, "text-anchor": "end" }, "daily"));
+  }
+  svg.append(el("text", { x: W - R, y: H - 8, "text-anchor": "end" }, `${recent.length} recent commits`));
+  recent.forEach((p, i) => {
+    const bad = b && (p.lower ?? p.value) > b.upper, good = b && (p.upper ?? p.value) < b.lower;
+    const color = bad ? "var(--bad)" : good ? "var(--good)" : "var(--point)";
+    if (p.lower != null && p.upper != null) svg.append(el("line", { x1: xr(i), x2: xr(i), y1: y(p.lower), y2: y(p.upper), stroke: color, "stroke-width": 1.2 }));
+    svg.append(el("circle", { cx: xr(i), cy: y(p.value), r: bad ? 3.6 : 2.8, fill: color, style: "cursor:pointer",
+      onmousemove: e => showTip(e, `${short(p.sha)} · ${new Date(p.measuredAt).toLocaleString()}\n${pct(p.value)} vs ${short(segment.reference)}` + (p.lower != null ? `  [${pct(p.lower)}, ${pct(p.upper)}]` : "") + (bad ? "\nabove boundary" : good ? "\nbelow boundary" : "")),
+      onmouseleave: hideTip, onclick: () => open(`${repo}/commit/${p.sha}`, "_blank") }));
+  });
+  return svg;
+}
+
+function render() {
+  const nav = document.getElementById("nav"), charts = document.getElementById("charts");
+  nav.replaceChildren(
+    ...state.index.suites.map(name => el("button", { "aria-pressed": String(name === state.suite), onclick: () => { state.suite = name; remember(); load(); } }, name)),
+    el("input", { type: "search", placeholder: "Filter scenarios", value: state.query, oninput: e => { state.query = e.target.value; draw(); } }),
+    el("label", {}, [el("input", { type: "checkbox", ...(state.flagged ? { checked: "" } : {}), onchange: e => { state.flagged = e.target.checked; remember(); draw(); } }), "Only above boundary"]),
+  );
+  function draw() {
+    const suite = state.data[state.suite];
+    const list = Object.values(suite.scenarios).sort((a, b) => a.id.localeCompare(b.id))
+      .filter(s => s.id.toLowerCase().includes(state.query.toLowerCase()))
+      .filter(s => !state.flagged || flaggedPoints(s.segments.at(-1)).length);
+    charts.replaceChildren(...(list.length ? list.map(s => {
+      const segment = s.segments.at(-1), flagged = flaggedPoints(segment).length, b = segment.boundary;
+      return el("section", { class: "card" }, [
+        el("h2", {}, s.id),
+        el("p", { class: "meta" }, [
+          `vs anchor ${short(segment.reference)}` + (b ? ` · baseline ${pct(b.center)}, boundary ${pct(b.upper)} (n=${b.n})` : " · building history") + (s.segments.length > 1 ? ` · ${s.segments.length - 1} earlier unbridged segment(s)` : ""),
+          flagged ? el("span", { class: "flag" }, ` · ${flagged} above boundary`) : "",
+        ]),
+        chart(s),
+      ]);
+    }) : [el("p", { class: "empty" }, "No scenarios match.")]));
+    const anchors = suite.anchors.map(a => `${short(a.anchor)} since ${a.since.slice(0, 10)}${a.bridged ? " (bridged)" : ""}`).join(" → ");
+    document.getElementById("footer").textContent = `Anchors: ${anchors}. Data generated ${new Date(state.index.generatedAt).toLocaleString()}; commits stay individual for ${state.index.recentDays} days.`;
+  }
+  draw();
+}
+
+async function load() {
+  if (!state.data[state.suite]) state.data[state.suite] = await (await fetch(`data/${encodeURIComponent(state.suite)}.json`)).json();
+  render();
+}
+(async () => {
+  try {
+    state.index = await (await fetch("data/index.json")).json();
+    if (!state.index.suites.length) throw new Error("No measurements yet.");
+    if (!state.index.suites.includes(state.suite)) state.suite = state.index.suites[0];
+    await load();
+  } catch (error) {
+    document.getElementById("charts").replaceChildren(el("p", { class: "empty" }, "No trend data: " + error.message));
+  }
+})();
+</script>
+</body>
+</html>

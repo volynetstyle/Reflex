@@ -117,6 +117,10 @@
           "script": "test:async:package"
         },
         {
+          "id": "test:async:wait-memory",
+          "script": "test:async:wait-memory"
+        },
+        {
           "id": "typecheck:package",
           "script": "typecheck:package"
         }
@@ -352,6 +356,11 @@
       "package": "async",
       "id": "test:async:production:mutations",
       "script": "test:async:production:mutations"
+    },
+    {
+      "package": "reflex",
+      "id": "test:liveness:extended",
+      "script": "test:liveness:extended"
     }
   ]
 }

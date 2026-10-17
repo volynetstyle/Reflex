@@ -22,6 +22,8 @@ flowchart BT
 
 The kernel owns reactive execution, dependency graph invariants and runtime contexts. Scheduling remains host-controlled. Framework owns lifecycle trees and host-independent renderable meaning; DOM owns browser materialization, events, props, ranges and hydration.
 
+Reflex intentionally retains dependency subscriptions for live owned computations. Dormant propagation is bounded by dirty-state cutoff rather than by dynamically disconnecting inactive dependency cones. Lifetime, not observation, decides when a computation leaves the graph: owned computations are unlinked when their owner closes, and raw computations stay linked until they are disposed explicitly. The measured cost of this choice, including the workloads where dynamic liveness wins, is in [lifetime vs liveness](packages/reflex-runtime/docs/performance/lifetime-liveness.md).
+
 Store uses a Store-specific compiler target built on Framework lifecycle ownership. Its synchronous untracked actions, cancellation, rollback and disposal do not depend on model shape validation. Models may own stores; they are not a prerequisite for store compilation.
 
 Async composes the synchronous kernel. Attempt identity, validation, commit authority, pending state and stale settlement belong to the async layer. Async operations do not redefine ordinary synchronous producer reads.

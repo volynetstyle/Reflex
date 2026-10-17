@@ -131,7 +131,7 @@ function stabilizeDirtyConsumer<T>(node: ConsumerNode<T>, state: number): T {
       observeRuntimeProjection?.(
         "projection.semantic.read.stabilize.force-advance",
       );
-    stabilized = advance(node, ownedParentEdgeForStableRead(node));
+    stabilized = advance(node, ownedParentEdgeForStableRead(node)) === true;
   } else {
     const edge = node.firstIn;
     if (__PROFILE__)
@@ -142,7 +142,10 @@ function stabilizeDirtyConsumer<T>(node: ConsumerNode<T>, state: number): T {
     // - has producers,
     // - all top-level dependencies are checked,... and
     // - its eigenvalue is updated to the newest one.
-    stabilized = edge !== null && should_recompute(node, edge) && advance(node);
+    stabilized =
+      edge !== null &&
+      should_recompute(node, edge) === true &&
+      advance(node) === true;
   }
 
   if (!stabilized) node.state &= ~Both;

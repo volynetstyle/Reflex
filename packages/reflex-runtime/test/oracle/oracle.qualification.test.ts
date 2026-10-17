@@ -43,8 +43,8 @@ const MUTANTS: Mutant[] = [
   {
     id: "write-skip-equality",
     file: "src/protocol/write.producer.ts",
-    search: "if (defaultComparator(prev, value)) {",
-    replace: "if (false && defaultComparator(prev, value)) {",
+    search: "if (defaultComparator(prev, value) === true) {",
+    replace: "if (false && defaultComparator(prev, value) === true) {",
     expected: "killed",
   },
   {

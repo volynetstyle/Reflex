@@ -65,7 +65,7 @@ function pushIteratorOnceCore(
           context: defaultContext,
         });
 
-      if ((state & Watcher) !== 0 && nodeInvalidatedHook) {
+      if ((state & Watcher) !== 0 && nodeInvalidatedHook !== undefined) {
         // Scheduled is an ownership certificate: the host queue must already
         // execute this watcher. Preserve the stronger Changed evidence above,
         // but do not redeliver the same queue obligation.

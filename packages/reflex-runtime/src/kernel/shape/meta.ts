@@ -77,6 +77,12 @@ export const Scheduled = 1 << 5; // 32
 export const Disposed = 1 << 6; // 64
 /** Watcher payload owns a cleanup callback. */
 export const WatcherCleanupPending = 1 << 7; // 128
+/**
+ * Transitive invalidation reached a watcher during its own validation or
+ * execution epoch. It retains a validation obligation only: unlike Visited, it
+ * is never execution evidence.
+ */
+export const Revalidate = 1 << 8; // 256
 
 // <!-- Watcher end -->
 

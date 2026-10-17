@@ -104,20 +104,23 @@ importers:
         specifier: ^4.54.0
         version: 4.60.3
 
-  lab/web-scheduler: {}
-
   packages/reflex:
-    dependencies:
-      '@volynets/reflex-scheduler':
-        specifier: workspace:*
-        version: link:../reflex-scheduler
     devDependencies:
+      '@angular/core':
+        specifier: 22.2.0
+        version: 22.2.0(rxjs@7.8.2)
+      '@preact/signals-core':
+        specifier: 1.14.4
+        version: 1.14.4
       '@solidjs/signals':
         specifier: 2.0.0-rc.9
         version: 2.0.0-rc.9
       '@volynets/reflex-runtime':
         specifier: workspace:*
         version: link:../reflex-runtime
+      '@volynets/reflex-scheduler':
+        specifier: workspace:*
+        version: link:../reflex-scheduler
       '@vue/reactivity':
         specifier: 3.5.43
         version: 3.5.43
@@ -127,21 +130,6 @@ importers:
       reactive-framework-test-suite:
         specifier: 0.0.2
         version: 0.0.2
-
-  packages/reflex/examples/mini-app:
-    dependencies:
-      '@volynets/reflex':
-        specifier: workspace:*
-        version: link:../..
-      '@volynets/reflex-dom':
-        specifier: workspace:*
-        version: link:../../../reflex-dom
-      '@volynets/reflex-runtime':
-        specifier: workspace:*
-        version: link:../../../reflex-runtime
-      '@volynets/reflex-store':
-        specifier: workspace:*
-        version: link:../../../reflex-store
 
   packages/reflex-async:
     devDependencies:
@@ -218,9 +206,6 @@ importers:
       '@modelcontextprotocol/server':
         specifier: 2.0.0
         version: 2.0.0
-      '@volynets/reflex-runtime':
-        specifier: workspace:*
-        version: link:../reflex-runtime
     devDependencies:
       '@modelcontextprotocol/client':
         specifier: 2.0.0
@@ -228,6 +213,9 @@ importers:
       '@types/node':
         specifier: ^26.1.2
         version: 26.1.2
+      '@volynets/reflex-runtime':
+        specifier: workspace:*
+        version: link:../reflex-runtime
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -277,6 +265,21 @@ importers:
         specifier: ^6.4.1
         version: 6.4.1(rollup@4.60.3)(typescript@5.9.3)
 
+  packages/reflex/examples/mini-app:
+    dependencies:
+      '@volynets/reflex':
+        specifier: workspace:*
+        version: link:../..
+      '@volynets/reflex-dom':
+        specifier: workspace:*
+        version: link:../../../reflex-dom
+      '@volynets/reflex-runtime':
+        specifier: workspace:*
+        version: link:../../../reflex-runtime
+      '@volynets/reflex-store':
+        specifier: workspace:*
+        version: link:../../../reflex-store
+
   plugins/@vite/reflex-vite-plugin:
     dependencies:
       '@rollup/pluginutils':
@@ -315,6 +318,19 @@ packages:
     resolution: {integrity: sha512-4JrGHSPTaoEL3MZiKYH5BlNv67X2F48FmR3dKJZOoR/Z1CLVtVOwUb/n4PMf7B+sP9RPz+X50EbIFuwtfYguRQ==}
     engines: {node: '>=8.5.0'}
     hasBin: true
+
+  '@angular/core@22.2.0':
+    resolution: {integrity: sha512-VhAgJ4GCdGgAy9+zADpSyEM9gt4pKg6+cqNeK3RBNeF3M3B8y7AWfD/nYRdM3Xzi152Pu+ipgFFNHpupCLTsvQ==}
+    engines: {node: ^22.22.3 || ^24.15.0 || >=26.0.0}
+    peerDependencies:
+      '@angular/compiler': 22.2.0
+      rxjs: ^6.5.3 || ^7.4.0
+      zone.js: ~0.15.0 || ~0.16.0
+    peerDependenciesMeta:
+      '@angular/compiler':
+        optional: true
+      zone.js:
+        optional: true
 
   '@asamuzakjp/css-color@5.1.11':
     resolution: {integrity: sha512-KVw6qIiCTUQhByfTd78h2yD1/00waTmm9uy/R7Ck/ctUyAPj+AEDLkQIdJW0T8+qGgj3j5bpNKK7Q3G+LedJWg==}
@@ -748,6 +764,9 @@ packages:
 
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
+
+  '@preact/signals-core@1.14.4':
+    resolution: {integrity: sha512-HNB6HYeYKhQbJ1aKl+YRjrS4+QWHLKX6qKoUsfS/m0vqzsVaEBiZiaKbG/e+NKk2ch5ALQr/ihWaMHxiCuuWHA==}
 
   '@rollup/plugin-commonjs@29.0.3':
     resolution: {integrity: sha512-ZaOxZceP7SOUW7Lqw5IRVweSQYWaeIPnXIGLiB690EBA3FGJTO40EEr2L5yZplJWsgTCogILRSpcAe7+U0Otdg==}
@@ -1259,9 +1278,6 @@ packages:
 
   '@vitest/utils@4.1.5':
     resolution: {integrity: sha512-76wdkrmfXfqGjueGgnb45ITPyUi1ycZ4IHgC2bhPDUfWHklY/q3MdLOAB+TF1e6xfl8NxNY0ZYaPCFNWSsw3Ug==}
-
-  '@volynets/reflex-runtime@0.1.2':
-    resolution: {integrity: sha512-fF1hmx4gQSOerlkyLCZtpRWkE9UU6HBc5PyUr6dp+U/wCLoelzuifbBsOKOEWeWh7nVH0J9fAkXggVGJgmFyFw==}
 
   '@vue/reactivity@3.5.43':
     resolution: {integrity: sha512-G/c9GyOZNI2jVaaS6OX1EF1SSFSv7H0ERqNTl4+DTFMlZmB5eVAB53aLQNam/7NL2NPtaDD7RdVrzf8uJzMuOA==}
@@ -1805,6 +1821,7 @@ packages:
   eslint@9.39.4:
     resolution: {integrity: sha512-XoMjdBOwe/esVgEvLmNsD3IRHkm7fbKIUGvrleloJXUZgDHig2IPWNniv+GwjyJXzuNqVjlr5+4yVUZjycJwfQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -2858,6 +2875,9 @@ packages:
   run-parallel@1.2.0:
     resolution: {integrity: sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==}
 
+  rxjs@7.8.2:
+    resolution: {integrity: sha512-dhKf903U/PQZY6boNNtAGdWbG85WAbjT/1xYoZIC7FAY0yWapOBQVsVrDl58W86//e1VpMNBtRV4MaXfdMySFA==}
+
   safe-buffer@5.1.2:
     resolution: {integrity: sha512-Gd2UZBJDkXlY7GbJxfsE8/nvKkUEU1G38c1siN6QP6a9PT9MmHB8GnpscSmMJSoF8LOIrt8ud/wPtojys4G6+g==}
 
@@ -3174,6 +3194,9 @@ packages:
       '@swc/wasm':
         optional: true
 
+  tslib@2.8.1:
+    resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
+
   tty-browserify@0.0.1:
     resolution: {integrity: sha512-C3TaO7K81YvjCgQH9Q1S3R3P3BtN3RIM8n+OvX4il1K1zgE8ZhI0op7kClgkxtutIE8hQrcrHBXvIheqKUUCxw==}
 
@@ -3449,6 +3472,11 @@ snapshots:
       which: 2.0.2
     transitivePeerDependencies:
       - supports-color
+
+  '@angular/core@22.2.0(rxjs@7.8.2)':
+    dependencies:
+      rxjs: 7.8.2
+      tslib: 2.8.1
 
   '@asamuzakjp/css-color@5.1.11':
     dependencies:
@@ -3897,6 +3925,8 @@ snapshots:
       fastq: 1.20.1
 
   '@polka/url@1.0.0-next.29': {}
+
+  '@preact/signals-core@1.14.4': {}
 
   '@rollup/plugin-commonjs@29.0.3(rollup@4.60.3)':
     dependencies:
@@ -4366,8 +4396,6 @@ snapshots:
       '@vitest/pretty-format': 4.1.5
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.0
-
-  '@volynets/reflex-runtime@0.1.2': {}
 
   '@vue/reactivity@3.5.43':
     dependencies:
@@ -6136,6 +6164,10 @@ snapshots:
     dependencies:
       queue-microtask: 1.2.3
 
+  rxjs@7.8.2:
+    dependencies:
+      tslib: 2.8.1
+
   safe-buffer@5.1.2: {}
 
   safe-buffer@5.2.1: {}
@@ -6459,6 +6491,8 @@ snapshots:
     optionalDependencies:
       '@swc/core': 1.15.33
       '@swc/wasm': 1.16.13
+
+  tslib@2.8.1: {}
 
   tty-browserify@0.0.1: {}
 

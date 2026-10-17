@@ -69,7 +69,7 @@ export function writeProducer<T>(node: ProducerNode<T>, value: T): void {
 
   // Check if the value actually changed using stable comparison
   // This prevents false invalidation when setting to the same value
-  if (defaultComparator(prev, value)) {
+  if (defaultComparator(prev, value) === true) {
     if (__PROFILE__)
       observeRuntimeProjection?.("projection.semantic.write.value.same");
     devRecordWriteProducer(node, false, value, prev, undefined, defaultContext);

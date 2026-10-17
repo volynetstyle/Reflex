@@ -43,12 +43,26 @@ Implementation: `bench/workloads.mjs` (specification), `bench/worker.mjs`
    which collapsed a local A/A spread of ±13% to ±1.8%. Steady-state code
    is still TurboFan output; `--no-predictable` measures the default
    concurrent configuration when compilation behavior itself is the subject.
-8. **Every comparison carries its own negative control.** Each replicate runs
+8. **Placement is randomized, not fixed.** Determinism has a cost: under
+   `--predictable` a given build gets the same code and heap placement in
+   every process, so a placement effect of that build (alignment of a hot
+   loop, cache-set conflicts) is a fixed bias, and replication narrows the
+   interval around it instead of averaging it. Two builds with identical
+   machine code for `A.track.reorder-8` measured +4.7% [3.8, 5.6] apart on
+   the CI runner, and the A-vs-A' control cannot see this, since it repeats
+   one build. Each pair process therefore gets a `--layout-seed`: before
+   loading each side, and again before tiering each side up alone, the
+   worker compiles a random amount of throwaway optimized code and retains
+   a random amount of heap, so each side's hot code and data land at an
+   independent random offset. Placement effects become variance of the
+   replicates and widen the interval honestly. `--no-layout` restores the
+   fixed placement for comparison with earlier runs.
+9. **Every comparison carries its own negative control.** Each replicate runs
    A-vs-B and A-vs-A' (baseline against itself), both in both orientations.
    If the control detects a difference, the method is biased for that
    workload and the comparison is invalid.
-9. **No single score.** Results are reported per workload and level; a
-   regression in one class is never averaged away by gains elsewhere.
+10. **No single score.** Results are reported per workload and level; a
+    regression in one class is never averaged away by gains elsewhere.
 
 ## Workload levels
 
@@ -69,12 +83,15 @@ families are compared as slopes across sizes, not as single numbers.
 `bench/worker.mjs <X> <id> pair <Y>` is the comparison mode:
 
 1. Load each side's bundle and workload module as private instances; `setup`
-   builds both graphs outside the measured region and stabilizes them.
-2. Calibrate one batch size so a sample of either side takes about 2 ms.
-3. Warm up both sides alternately, 300 ms each (past V8's optimizing tiers).
-4. Three forced GCs, then `samples` pairs in an X Y / Y X alternating order;
+   builds both graphs outside the measured region and stabilizes them. With
+   `--layout-seed`, each load is preceded by a random shift of code and heap.
+2. With `--layout-seed`, tier each side up alone for 300 ms, each behind its
+   own independent random shift, so the sides' hot code is placed independently.
+3. Calibrate one batch size so a sample of either side takes about 2 ms.
+4. Warm up both sides alternately, 300 ms each (past V8's optimizing tiers).
+5. Three forced GCs, then `samples` pairs in an X Y / Y X alternating order;
    each pair yields `log(tY/tX)`. GC events during sampling are recorded.
-5. Results are folded into a sink returned by the process, so the work cannot
+6. Results are folded into a sink returned by the process, so the work cannot
    be eliminated.
 
 `time` mode runs the same loop for one side and is used for absolute

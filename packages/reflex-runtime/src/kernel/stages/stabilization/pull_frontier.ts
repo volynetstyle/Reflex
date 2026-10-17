@@ -1,6 +1,7 @@
 import {
   Changed,
   Computing,
+  Revalidate,
   Unknown,
   Visited,
   type ReactiveEdge,
@@ -52,9 +53,11 @@ export function pull_frontier(
   // validation epoch's invalidation marker. Computing plus the committed tail
   // deliberately reuses push's existing rare reentrant-subscriber path, so
   // validation adds no branch to propagation hot paths.
+  // Revalidate on entry is discharged by this pass itself; only a reentrant
+  // invalidation recorded during this epoch may request another one.
   root.tailIn = root.lastIn;
   root.state =
-    (initialState & ~Visited) |
+    (initialState & ~(Visited | Revalidate)) |
     Computing |
     ((initialState & Visited) !== 0 ? Changed : 0);
 
@@ -83,7 +86,7 @@ export function pull_frontier(
           observeRuntimeProjection?.(
             "projection.semantic.watcher.frontier.dependency.changed",
           );
-        if (advance(dependency, edge)) changed = true;
+        if (advance(dependency, edge) === true) changed = true;
         continue;
       }
 
@@ -103,9 +106,11 @@ export function pull_frontier(
       const dependencyEdge = dependency.firstIn;
       if (
         dependencyEdge === null ||
-        should_recompute(dependency, dependencyEdge)
+        should_recompute(dependency, dependencyEdge) === true
       ) {
-        if (advance(dependency, edge)) changed = true;
+        if (advance(dependency, edge) === true) {
+          changed = true;
+        }
       }
     }
 

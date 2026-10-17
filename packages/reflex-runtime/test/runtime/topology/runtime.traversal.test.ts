@@ -11,6 +11,7 @@ import {
   Consumer,
   Unknown,
   Visited,
+  Revalidate,
   Computing,
   pull_dependency,
 } from "../../../src/kernel";
@@ -434,16 +435,54 @@ describe("Reactive runtime - traversal invariants", () => {
     writeProducer(firstSource, 1);
     runWatcher(watcher);
 
+    // Transitive evidence retains a validation obligation, not an execution
+    // obligation.
     expect(effect).toHaveBeenCalledTimes(1);
     expect(watcher.state & Unknown).toBeTruthy();
-    expect(watcher.state & Visited).toBeTruthy();
+    expect(watcher.state & Revalidate).toBeTruthy();
+    expect(watcher.state & Visited).toBeFalsy();
     expect(watcher.state & Changed).toBeFalsy();
     expect(watcher.state & Computing).toBeFalsy();
 
     runWatcher(watcher);
 
+    // `second` recomputes to an equal value: equality cutoff skips execution.
+    expect(effect).toHaveBeenCalledTimes(1);
+    expect(watcher.state & (Both | Visited | Revalidate | Computing)).toBe(0);
+  });
+
+  it("executes after revalidation confirms a transitive change", () => {
+    const firstSource = createProducer(0);
+    const secondSource = createProducer(0);
+    let invalidateDuringValidation = false;
+
+    const first = createConsumer(() => {
+      readProducer(firstSource);
+      if (invalidateDuringValidation) {
+        invalidateDuringValidation = false;
+        writeProducer(secondSource, 1);
+      }
+      return 0;
+    });
+    const second = createConsumer(() => readProducer(secondSource));
+    const effect = vi.fn(() => {
+      readConsumer(second);
+      readConsumer(first);
+    });
+    const watcher = createWatcher(effect);
+
+    runWatcher(watcher);
+    invalidateDuringValidation = true;
+    writeProducer(firstSource, 1);
+    runWatcher(watcher);
+
+    expect(effect).toHaveBeenCalledTimes(1);
+    expect(watcher.state & Revalidate).toBeTruthy();
+
+    runWatcher(watcher);
+
     expect(effect).toHaveBeenCalledTimes(2);
-    expect(watcher.state & (Both | Visited | Computing)).toBe(0);
+    expect(watcher.state & (Both | Visited | Revalidate | Computing)).toBe(0);
   });
 
   it("keeps change and reentrant evidence when a later dependency throws", () => {

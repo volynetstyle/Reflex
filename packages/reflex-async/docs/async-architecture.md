@@ -27,6 +27,14 @@ joined-graph deduplication still recognize the source. The execution context sep
 enforces `read`/`commit` lifetime before `await`. Nested source executions install
 their own collector and restore the parent on exit.
 
+A proof holds one obligation per source, keyed by its freshness state. Direct
+capture and composite traversal use the same key, and the first observation in
+capture order represents the source. Observations of one source share `ensure()`
+and differ only in which outcome `validate()` accepts. Outcomes are never reused,
+so a later observation means the source has already left every earlier outcome,
+and checking the first is as strong as checking all of them. Regrouping a proof
+through inheritance or nesting therefore cannot add, drop or weaken a check.
+
 `createEvaluatedComputed` is an internal adapter. It caches one
 `EvaluatedGeneration<T>` containing both an evaluation and an evaluation frontier.
 Every recomputation uses a new collector. Its accessor establishes the normal
@@ -73,10 +81,16 @@ the attempt survives that freshness checkpoint, its proof graph is materialized
 once into a readonly, distinct publication vector in capture order. Materialization
 is a pure traversal; its result is cached by the attempt, with no global table or
 cache on dependency handles. Independent attempts own independent vectors. Validation
-probes each source in that vector once for pending, failure or disposal. An error
-observation accepts only its original terminal outcome, allowing a caught fallback
-or transformed error to publish. A successful read still rejects a new upstream
-failure. Ordinary successful and pending reads allocate no observation handle. These
+probes each source in that vector once for pending, failure or disposal.
+Validation checks status, not values: value freshness comes from the reactive
+edges and the watcher checkpoints around it. A source handle accepts a ready
+source and rejects pending, failure and disposal. An error observation also
+accepts the exact failure or disposal it observed, so a caught fallback or
+transformed error can publish. It accepts a later ready outcome as the source
+handle does; that change has already invalidated the consumer through its
+reactive edge. A different failure or a disposal it did not observe is
+rejected, and a pending source blocks. Ordinary successful and pending reads
+allocate no observation handle. These
 probes run untracked and use already-pulled source state. A final watcher
 checkpoint detects invalidation caused during validation. Authority is checked
 before and after validation and immediately before publication.
@@ -94,7 +108,10 @@ settlement.
 Frontier nodes carry a private symbol brand, so a dependency's own `kind` property
 cannot be confused with a proof node. The representation laws are:
 
-- Materialization returns distinct leaves in their first capture order.
+- Materialization returns one leaf per source state, the first observation in
+  capture order.
+- Regrouping a proof (direct capture, inheritance, nesting, repeated
+  inheritance) changes neither its leaves nor their validation results.
 - A captured proof's leaves stay stable throughout its lifetime; each attempt
   retains the same publication vector across retries.
 - Effectful validation changes neither the captured proof nor its vector.

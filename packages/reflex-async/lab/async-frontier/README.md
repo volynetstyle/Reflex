@@ -34,7 +34,10 @@ The walker uses unique epochs so ordinary walks do not journal or clear visited
 marks. Nested walks journal and restore marks to preserve suspended traversals,
 including when a callback throws or an owner search exits early. Scratch stacks
 release references and retain bounded capacity after the outer walk finishes.
-DFS descends directly into the first child, pushing only pending siblings.
+DFS scans each composite in place through a cursor frame (entries plus next
+index), so pending work is bounded by composite nesting, not by sibling width.
+A single remaining sibling is stored directly, and a proof in tail position
+needs no frame, which keeps prefix-first chains as cheap as a sibling stack.
 Publication vectors remain independently owned by their callers; the change
 does not retain flattened transitive dependency vectors on every DAG node.
 
@@ -73,6 +76,37 @@ Direct-only materialization of 256 leaves was essentially unchanged (1,152 vs
 of building summaries. The large owner-search gain applies when the range
 rejects the owner; it is not a general constant-time membership guarantee.
 Raw samples and source hashes are in `.cache/frontier-walker/report-weakmap.json`.
+
+### Obligation identity, capture normalization and cursor frames
+
+Capture keys obligations by freshness state, the same key the composite walk
+uses, so regrouping a proof cannot change its obligations: the first
+observation of a source represents the rest (see `FrontierBuilder`). While every
+direct entry is a canonical source handle, state equality is reference
+equality and the builtin `includes` stays exact; only failure witnesses switch
+a builder to the state-keyed scan. `merge` records singleton proofs as direct
+reads, and skips a proof that was just merged (A ⋆ A = A), including its owner
+search.
+
+Comparison with the preceding sibling-stack walker (`REFLEX_WALKER_BASELINE=pre-cursor`),
+Node 25.2.0, Windows, i5-1235U, medians of three isolated process pairs:
+
+| Workload                                    | Before, ns/op | After, ns/op | Speedup |
+| ------------------------------------------- | ------------: | -----------: | ------: |
+| Wide materialize, 4096 direct proofs        |        28,212 |       11,587 |   2.43x |
+| Wide callbacks, 4096 direct proofs          |        28,718 |       11,569 |   2.48x |
+| Repeated inherit, 16 owner-checked reads    |       505,108 |       24,180 |   20.9x |
+| Wide merge of 4096 leaf proofs (now Direct) |        28,368 |          204 |    139x |
+| Deep materialize, 2048 nodes                |        24,916 |       21,950 |   1.14x |
+| Capture + materialize, 16 leaves            |           257 |          263 |   0.98x |
+| Capture + materialize, 64 leaves            |         1,915 |        2,116 |   0.90x |
+| Capture owner-checked chain, 256            |        22,479 |       28,714 |   0.78x |
+
+The 64-leaf case pays for a Set keyed by state. In isolated per-scenario
+processes, chain capture is unchanged and chain materialization is about 10%
+slower (one cursor branch per level); the larger in-suite gap was not
+reproduced in isolation. The `deep` fixture starts from a composite because
+A ⋆ A normalization collapses `build([shared, shared])` to `shared`.
 
 ## Representation experiments
 

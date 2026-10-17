@@ -1,6 +1,6 @@
 {
   "name": "@volynets/reflex",
-  "version": "1.0.0",
+  "version": "2.0.1",
   "type": "module",
   "description": "Public Reflex facade with a connected runtime",
   "license": "MIT",
@@ -81,6 +81,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
+    "test:liveness:smoke": "vitest run tests/reflex.liveness-oracle.test.ts --mode liveness-smoke",
+    "test:liveness:extended": "vitest run tests/reflex.liveness-oracle.test.ts --mode liveness-extended",
     "bench": "vitest bench",
     "bench:api": "pnpm --filter @volynets/reflex-runtime build && pnpm build && node --expose-gc bench/api-facade.jit.mjs",
     "bench:api:memory": "pnpm build && node --expose-gc bench/api-callback-memory/run.mjs",
@@ -97,6 +99,7 @@
     "bench:competitors:smoke": "pnpm bench:competitors:prepare-e87bb66 && pnpm build:all && node --expose-gc bench/competitors/run.mjs --smoke",
     "bench:competitors:contracts": "pnpm bench:competitors:prepare-e87bb66 && pnpm build:all && node bench/competitors/contracts.mjs",
     "bench:competitors:claims": "node bench/competitors/claims.mjs",
+    "bench:liveness": "node bench/liveness/run.mjs",
     "bench:effect-fanout:structural": "vitest run --config vite.effect-fanout-structural.config.ts",
     "bench:effect-fanout:timing": "vitest run --config vite.effect-fanout-timing.config.ts",
     "bench:effect-fanout:analyze": "node bench/effect-fanout-attribution/analyze.mjs",
@@ -113,15 +116,15 @@
     "check:artifacts": "node ../../tooling/build/verify-artifacts.mjs --directory .",
     "prepack": "pnpm check:artifacts"
   },
-  "dependencies": {
-    "@volynets/reflex-scheduler": "workspace:*"
-  },
   "devDependencies": {
+    "@angular/core": "22.2.0",
+    "@preact/signals-core": "1.14.4",
     "@solidjs/signals": "2.0.0-rc.9",
+    "@volynets/reflex-runtime": "workspace:*",
+    "@volynets/reflex-scheduler": "workspace:*",
     "@vue/reactivity": "3.5.43",
     "alien-signals": "3.2.1",
-    "reactive-framework-test-suite": "0.0.2",
-    "@volynets/reflex-runtime": "workspace:*"
+    "reactive-framework-test-suite": "0.0.2"
   },
   "peerDependencies": {
     "@volynets/reflex-runtime": "^1.0.1"

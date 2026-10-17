@@ -28,7 +28,13 @@ function createConfig(entry: DtsEntry): RollupOptions {
       file: entry.output,
       format: "es",
     },
-    plugins: [dts()],
+    // Runtime declarations stay imports of the peer package, so types such as
+    // Runtime and nodes keep one identity across the facade and extensions.
+    // Scheduler declarations are inlined along with its code.
+    external: (id) =>
+      id === "@volynets/reflex-runtime" ||
+      id.startsWith("@volynets/reflex-runtime/"),
+    plugins: [dts({ respectExternal: true, tsconfig: "tsconfig.json" })],
   };
 }
 

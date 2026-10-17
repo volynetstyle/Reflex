@@ -1,8 +1,12 @@
 # Runtime invariants
 
-This contract describes the current intrusive graph and execution model.
-Source and executable characterization take precedence over historical names
-or stronger guarantees in older documentation.
+The internal state model of the intrusive graph and its execution: what the
+kernel maintains at operation boundaries, independent of the public API. The
+public contract is [RUNTIME.md](./RUNTIME.md); observable lifecycle rules are
+formalized in
+[SEMANTIC_CONTRACT.md](../test/differential/docs/SEMANTIC_CONTRACT.md);
+[RULES.md](./RULES.md) links the load-bearing rules to code and checks.
+Source and executable characterization take precedence over this text.
 
 ## 1. Bidirectional edges
 
@@ -19,31 +23,56 @@ its outgoing memberships are removed. It observes an intermediate state.
 Graph operations live in `src/kernel/shape/graph/`. Tracking chooses when
 reconciliation and pruning occur.
 
-## 2. Dirty and execution flags
+## 2. State flags
 
-Normal inactive computed nodes are clean, `Unknown`, or `Changed`.
-`Changed` forces computation; `Unknown` normally requires lazy validation.
-An unchanged derived value can suppress downstream recomputation.
+Defined in `src/kernel/shape/meta.ts`; production builds inline them as
+literals (`rollup/inline-constants.ts`).
+
+| Flag         | Meaning                                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `Unknown`    | Upstream may have changed; validate before recomputing.                                                             |
+| `Changed`    | Recompute or execute without first proving an upstream change.                                                      |
+| `Visited`    | Direct invalidation during execution; on a watcher, execution evidence that may survive completion.                 |
+| `Revalidate` | Watcher only: transitive invalidation during its validation or execution; survives as a validation obligation only. |
+| `Computing`  | Callback active; propagation interprets the active incoming prefix accordingly.                                     |
+| `Watcher`    | Watcher role.                                                                                                       |
+| `Scheduled`  | Host queue ownership, claimed and released separately from execution.                                               |
+
+`Both = Unknown | Changed` is the dirty mask. Normal inactive computed nodes are
+clean, `Unknown`, or `Changed`. `Changed` forces computation; `Unknown`
+normally requires lazy validation. An unchanged derived value can suppress
+downstream recomputation.
 
 The dirty bits are not globally exclusive. A watcher starts with
 `Changed | Unknown | Watcher | Consumer`. Computing invalidation can also
-combine both dirty bits.
+combine both dirty bits. Producer/consumer DEV role constants share a bit and
+are zero in production; do not infer a role from them. There is no terminal
+disposal bit.
 
-`Visited` records invalidation during execution. A watcher may finish with
-`Unknown | Visited`, retaining a rerun obligation. Stabilization uses
-`Changed | Visited` as its force mask; this is not a general DFS visited set.
+`Visited` and `Revalidate` are the two kinds of reentrant evidence.
+Stabilization uses `Changed | Visited` as its force mask; this is not a general
+DFS visited set. `Revalidate` is never part of the force mask: the next pass
+validates, and equality cutoff decides whether to execute. A validation pass
+discharges an entry `Revalidate`; only invalidation recorded during that pass
+requests another.
 
 `Computing` marks callback evaluation and changes the interpretation of the
 incoming prefix. The computing-subscriber path ignores an empty prefix and
-edges beyond `tailIn`; accepted invalidation adds `Visited | Unknown`.
-Preserve push branch order: direct promotion of an unknown non-watcher is
-checked before the computing-subscriber branch.
+edges beyond `tailIn`; accepted invalidation adds `Visited | Unknown`, or
+`Revalidate | Unknown` for a watcher reached transitively. Preserve push branch
+order: direct promotion of an unknown non-watcher is checked before the
+computing-subscriber branch.
 
 `Scheduled` represents host queue ownership. It is independent of freshness;
-successful execution does not automatically release a claim.
+successful execution does not automatically release a claim. `Unknown` is not
+`Scheduled`: a watcher that keeps `Unknown` after a run or a stable validation
+is delivered by `runWatcherCore` itself (`deliverRetainedValidation`,
+`retainAfterExecution`) unless `Scheduled` is held, because later pushes merge
+into a retained `Unknown` without notifying (contract L1).
 
-Definitions and transitions: `src/kernel/shape/meta.ts`,
-`src/kernel/stages/`, and `src/kernel/engine/watcher.ts`.
+Transitions: `src/kernel/stages/` and `src/kernel/engine/watcher.ts`; the
+transition table is characterized in
+[SEMANTIC_CHARACTERIZATION.md](./characterization/SEMANTIC_CHARACTERIZATION.md).
 
 ## 3. Pruning and failure
 
@@ -52,10 +81,17 @@ Reconciliation may eagerly abandon a suffix during a read, before computation
 succeeds. Later reads may recreate abandoned dependencies.
 
 Throws do not undo links, moves, stamps, or eager removal. Final stale cleanup
-is skipped on callback failure. Computed failure leaves `Changed` to force
-retry; watcher callback/cleanup failure clears transient flags so a later
-invalidation can schedule it again using the remaining graph. That graph is
-not an old-plus-new dependency transaction.
+is skipped on callback failure. The remaining graph is not an old-plus-new
+dependency transaction. Recovery restores flags only:
+
+| Failure                     | Resulting state                                                                                                |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Computed callback           | `Changed`, so the next read retries, also after a failure during pull bubbling.                                |
+| Watcher validation          | `Unknown` plus the retained `Changed`, `Visited` and `Scheduled`; a later run retries validation.              |
+| Watcher callback or cleanup | As validation failure when a dependency is still dirty (the failing step may have written it); otherwise idle. |
+
+A failed watcher is never retried recursively inside the failing drain; a host
+retries a still-dirty watcher on a later drain (contract L5, W3).
 
 ## 4. Cursor and tracking stamp
 
@@ -74,28 +110,17 @@ advances the global `trackingEpoch`. A first read uses the current epoch.
 
 The 32-edge prefix limit bounds only that local scan. Incoming suffix and
 outgoing membership searches may traverse complete lists. The eager suffix
-threshold is not a global reconciliation work bound.
+threshold is not a global reconciliation work bound. Algorithm details:
+[tracking](../src/kernel/shape/tracking/README.md).
 
-## 5. Disposal
+## 5. Disposal and cleanup
 
-`disposeNode` eagerly removes both adjacency directions and clears executable
-data. It does not set a terminal-state bit or normalize arbitrary flags.
-Generic post-disposal reads/writes are not specified as inert.
+Teardown and cleanup ordering are owned by [DISPOSE.md](./DISPOSE.md). The
+invariants it maintains: disposal removes both adjacency directions and clears
+executable data without a terminal bit; old cleanup precedes a rerun and runs
+untracked; a captured cleanup cannot run twice.
 
-`disposeWatcher` clears transient flags and invokes captured cleanup after
-teardown. See [DISPOSE.md](./DISPOSE.md).
-
-## 6. Cleanup ordering
-
-Old watcher cleanup precedes rerun computation, with the payload cleared before
-cleanup and tracking temporarily disabled. The callback is checked again after
-cleanup because cleanup may dispose the watcher.
-
-Disposal clears graph/executable data before cleanup, making recursive disposal
-and throwing cleanup unable to repeat the saved cleanup. The runtime stores
-one cleanup payload per watcher, not an ownership-tree cleanup stack.
-
-## 7. Push and lazy pull
+## 6. Push and lazy pull
 
 Source writes use `Object.is`, commit synchronously, then invalidate. Equal
 writes return without propagation.
@@ -109,12 +134,13 @@ Pull descends through unknown dependencies and advances dirty dependencies.
 Confirmed changes bubble; stable branches resume incoming siblings. Changed
 derived results promote immediate subscribers through one-level push. The
 active pull edge may be skipped because its continuation is already owned by
-the walker.
+the walker. Layering of the pull machine:
+[stabilization](../src/kernel/stages/stabilization/README.md).
 
 An exception does not roll back source commits or completed recomputations, and
 does not defer or transactionally complete the aborted propagation wave.
 
-## 8. Nested execution and stack lifetime
+## 7. Nested execution and stack lifetime
 
 Push and pull retain explicit reusable stacks. `base` is the invocation entry
 slice, `top` its live continuation frontier, and `high` publishes occupied
@@ -126,14 +152,13 @@ write borrows the existing scope; if its exception is caught by the outer
 callback, it must not clear that outer scope.
 
 Nested computation restores the active consumer. Cleanup and `untracked`
-temporarily clear it and restore it on throws.
+temporarily clear it and restore it on throws. Production nested writes are
+synchronous, not queued behind the outer wave; the DEV scheduler policy that
+rejects some nestings is part of the host contract in
+[RUNTIME.md](./RUNTIME.md#development-scheduler-policy). Phase restoration is
+distinct from stack/register restoration.
 
-Production nested writes are synchronous, not queued behind the outer wave.
-DEV scheduler policy, enabled by `__DEV__ && __PROFILE__`, rejects nested
-propagation and direct nested pull while permitting pull through intervening
-recomputation. Phase restoration is distinct from stack/register restoration.
-
-## 9. Execution contexts
+## 8. Execution contexts
 
 Contexts isolate runtime registers/configuration, not graph ownership. Several
 contexts can access the same node flags, payloads, and edges.
@@ -170,35 +195,29 @@ recovery tool; the caller asserts none of its continuations will resume.
 
 Contracts: `test/runtime/contracts/runtime.context-registers.test.ts`,
 `test/runtime/topology/runtime.domain-walkers.test.ts`,
-`test/dev/runtime/runtime.domain-isolation.dev.test.ts`.
+`test/dev/runtime/runtime.domain-isolation.dev.test.ts`. Implementation:
+`src/kernel/context*.ts`, `src/kernel/state.ts`, and `src/kernel/config.ts`.
 
-Implementation: `src/kernel/context*.ts`, `src/kernel/state.ts`, and
-`src/kernel/config.ts`.
-
-## 10. Host scheduling
+## 9. Host scheduling
 
 Push updates watcher state before calling `onNodeInvalidated`. The runtime
 does not own a watcher queue or asynchronous timing. The host claims, queues,
-releases, and runs watchers.
-
-Unknown-to-changed promotion can notify again; queue deduplication is the
-host's responsibility. Invalidation is distinct from `onRuntimeIdle` and
-requested `onHostFlush` delivery. Batching defers idle delivery, not commits.
-
-DEV policy forbids reactive reads, watcher execution, and watcher disposal from
-the invalidation hook, while permitting host execution at the idle boundary.
-It does not introduce a production liveness mechanism.
+releases, and runs watchers. Unknown-to-changed promotion can notify again;
+queue deduplication is the host's responsibility. Invalidation is distinct
+from `onRuntimeIdle` and requested `onHostFlush` delivery. Batching defers idle
+delivery, not commits. The host-facing rules are in
+[RUNTIME.md](./RUNTIME.md#watchers-and-host-scheduling).
 
 ## Validation
 
 Use `test/runtime/contracts/` for state, cleanup, hooks, recovery, and contexts;
 `test/runtime/topology/` for reciprocal lists, duplicate reads, dynamic
 branches, stabilization, and continuation lifetime; and `test/dev/runtime/`
-for development policy and debug observation order.
+for development policy and debug observation order. The algorithm-independent
+oracle (`test/oracle`) checks edge integrity, exact dependency sets and
+liveness after every generated operation.
 
 Run production and development configurations separately. Shared debug test
 imports may set `__DEV__`; production-branch tests must account for that.
-Test presence is not a claim that a checkout passes.
-
-Use non-profile production timing for performance claims. Structural profiling
+Use non-profile production timing for performance claims; structural profiling
 adds work to traversal.

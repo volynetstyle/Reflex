@@ -1,146 +1,157 @@
-# Следующие эксперименты Reflex
+# Next Reflex experiments
 
-Это очередь независимых проверок, а не список изменений, которые нужно сразу
-слить в runtime. Для perf-вариантов сначала фиксируются baseline и профиль
-конкретного участка, затем один механизм меняется в изолированном варианте.
-Сравнение включает одинаковую семантическую работу, распределение времени
-(mean, p95, p99), аллокации и повторные запуски в новых процессах.
+This is a queue of independent checks, not a list of changes to merge into
+the runtime right away. For performance variants, the baseline and a profile
+of the specific region are recorded first; then one mechanism is changed in an
+isolated variant. The comparison covers identical semantic work, the time
+distribution (mean, p95, p99), allocations, and repeated runs in fresh
+processes.
 
 ## 1. Nested validated dependency write
 
-**Вопрос.** Не теряет ли watcher повторный запуск, если вложенное вычисление при
-`pull_frontier()` записывает в уже проверенную зависимость того же watcher?
+**Question.** Does a watcher lose a rerun when a nested computation during
+`pull_frontier()` writes into an already validated dependency of the same
+watcher?
 
-**Проверка.** Построить watcher с ранней и поздней committed dependency. Во время
-валидации поздней зависимости вложенная callback пишет в раннюю. Переставить
-зависимости, проверить `Changed`, `Unknown`, `Visited`, состояние scheduler claim,
-число запусков и конечное значение. Повторить с исключением после записи и с
-несколькими вложенными записями. Сравнить публичное поведение с независимой
-моделью, а внутреннее состояние — с текущими topology contracts.
+**Check.** Build a watcher with an early and a late committed dependency.
+While the late dependency is validated, a nested callback writes into the
+early one. Swap the dependencies; check `Changed`, `Unknown`, `Visited`, the
+state of the scheduler claim, the number of runs and the final value. Repeat
+with an exception after the write and with several nested writes. Compare the
+public behavior with an independent model, and the internal state with the
+current topology contracts.
 
-**Точка входа.** `test/runtime/topology/runtime.watcher-validation.test.ts`,
-`src/kernel/stages/stabilization/pull_frontier.ts`. Существующий тест уже покрывает
-запись в committed edge во время валидации; новый сценарий должен проверить
-именно _ранее валидированное_ ребро и наблюдаемый повторный запуск.
+**Entry point.** `test/runtime/topology/runtime.watcher-validation.test.ts`,
+`src/kernel/stages/stabilization/pull_frontier.ts`. The existing test already
+covers a write into a committed edge during validation; the new scenario must
+check specifically an _already validated_ edge and an observable rerun.
 
-**Решение.** Если запуск теряется, сначала сохранить воспроизводящий тест, затем
-исправить протокол reentrant invalidation. Если тест проходит, зафиксировать
-инвариант и не менять hot path.
+**Decision.** If the run is lost, first keep the reproducing test, then fix
+the reentrant invalidation protocol. If the test passes, record the invariant
+and leave the hot path alone.
 
 ## 2. Generation as universal validation witness
 
-**Вопрос.** Может ли generation доказать актуальность dependency и заменить часть
-проверок при reconciliation без изменения порядка или семантики retry?
+**Question.** Can a generation prove that a dependency is current and replace
+part of the reconciliation checks without changing order or retry semantics?
 
-**Проверка.** Сначала перечислить, какую именно истину доказывает каждый stamp.
-`edge.version` сейчас является stamp tracking pass, а не ревизией значения
-producer. Отдельно исследовать доказательство актуальности value и membership;
-прогнать static, branch switch, reorder, duplicate read, nested tracking,
-exception/retry и wraparound epoch. Считать число обходов, branches и bytes/node.
+**Check.** First list exactly which truth each stamp proves. `edge.version` is
+currently a tracking-pass stamp, not a revision of the producer's value.
+Investigate the proof of value freshness and of membership separately; run
+static, branch switch, reorder, duplicate read, nested tracking,
+exception/retry and epoch wraparound. Count walks, branches and bytes/node.
 
-**Точка входа.** `src/kernel/shape/tracking/`,
+**Entry point.** `src/kernel/shape/tracking/`,
 `src/kernel/shape/graph/reuseEdge.ts`, `src/kernel/state.ts`.
 
-**Решение.** Принимать расширение только при доказанном инварианте для всех
-перечисленных переходов и выигрыше на изолированном workload. Общий stamp,
-который смешивает membership и value freshness, не считать доказательством.
+**Decision.** Accept an extension only with an invariant proven for all the
+listed transitions and a gain on an isolated workload. A shared stamp that
+mixes membership and value freshness does not count as proof.
 
 ## 3. Node hot/cold split
 
-**Вопрос.** Какие поля `ReactiveNode` реально нужны producer, consumer и watcher
-на горячем пути, и уменьшит ли разнесение память и стоимость создания без
-нестабильных property access sites?
+**Question.** Which `ReactiveNode` fields do producers, consumers and watchers
+actually need on the hot path, and would splitting them reduce memory and
+creation cost without unstable property-access sites?
 
-**Проверка.** Снять baseline bytes/node (с удержанием графа и после GC), создание,
-write, pull, watcher run и p99. Профилировать IC/deopt отдельно для одинаковых и
-смешанных ролей. Сравнить текущую полную форму с одним узким альтернативным
-layout, сохраняя одинаковый порядок инициализации полей внутри каждой формы.
+**Check.** Record baseline bytes/node (with the graph retained and after GC),
+creation, write, pull, watcher run and p99. Profile IC/deopt separately for
+uniform and mixed roles. Compare the current full shape with one narrow
+alternative layout, keeping the same field initialization order within each
+shape.
 
-**Точка входа.** `src/kernel/shape/node.ts` и `test/dev/runtime/runtime.memory.dev.test.ts`.
+**Entry point.** `src/kernel/shape/node.ts` and
+`test/dev/runtime/runtime.memory.dev.test.ts`.
 
-**Решение.** Оставлять split, только если выигрыш в памяти/создании подтверждён
-и mixed-role accesses не портят update и propagation. Не смешивать этот опыт с
-изменениями state machine.
+**Decision.** Keep a split only if the memory/creation gain is confirmed and
+mixed-role accesses do not hurt update and propagation. Do not mix this
+experiment with state-machine changes.
 
 ## 4. Notify epoch / repeated staged writes
 
-**Вопрос.** Сколько повторной работы делает push при нескольких изменённых
-записях внутри одного batch, когда получатели уже invalidated?
+**Question.** How much repeated work does push do for several changed writes
+inside one batch when the receivers are already invalidated?
 
-**Проверка.** Матрица: один producer с повторными записями, независимые producers
-с общими descendants, direct watcher fan-out, разные ширины и глубины. Считать
-visits по direct/transitive edges, вызовы host hook, scheduler claims и итоговое
-число watcher runs. Для сравнения использовать тот же порядок и количество
-записей, включая interleaved reads и reentrant writes.
+**Check.** A matrix: one producer with repeated writes, independent producers
+with shared descendants, direct watcher fan-out, various widths and depths.
+Count visits over direct/transitive edges, host hook calls, scheduler claims
+and the final number of watcher runs. Compare with the same order and number
+of writes, including interleaved reads and reentrant writes.
 
-**Точка входа.** `src/kernel/stages/propagation/push_iterator.ts`,
-`src/kernel/batch.ts`, существующие perf fixtures topology.
+**Entry point.** `src/kernel/stages/propagation/push_iterator.ts`,
+`src/kernel/batch.ts`, the existing topology perf fixtures.
 
-**Решение.** Epoch допускается лишь если сокращает доказанную повторную работу,
-не скрывает новую запись после read и не меняет immediate invalidation contract.
+**Decision.** An epoch is acceptable only if it removes proven repeated work,
+does not hide a new write after a read, and does not change the immediate
+invalidation contract.
 
 ## 5. `settleFast()`
 
-**Вопрос.** Какую долю стоимости простого batch создают общие runtime и host
-settlement checks?
+**Question.** What share of the cost of a simple batch comes from the general
+runtime and host settlement checks?
 
-**Проверка.** Изолировать empty batch, equal write + batch/flush, changed write
-без subscribers и один watcher. Измерить отдельно runtime boundary, scheduler
-queue и DOM coordinator; сравнить paired trials с равными work counters. Уже
-зафиксированный ориентир — около 4 ns для same-write boundary gap, но он
-сам по себе не доказывает, что отдельная fast path окупится.
+**Check.** Isolate an empty batch, an equal write + batch/flush, a changed
+write without subscribers, and one watcher. Measure the runtime boundary, the
+scheduler queue and the DOM coordinator separately; compare paired trials with
+equal work counters. The reference point already recorded is about 4 ns for
+the same-write boundary gap, but that alone does not prove that a separate
+fast path pays off.
 
-**Точка входа.** `src/kernel/batch.ts`,
+**Entry point.** `src/kernel/batch.ts`,
 `packages/reflex-dom/bench/scheduler-boundary.bench.ts`,
-`bench-results/reflex-competitors/PRIORITY_FINDINGS.md` (пути от корня репозитория).
+`bench-results/reflex-competitors/PRIORITY_FINDINGS.md` (paths from the
+repository root).
 
-**Решение.** Оставлять специализацию только при стабильном абсолютном выигрыше
-выше шума без регрессии p99 и без обхода host-visible settlement semantics.
+**Decision.** Keep a specialization only with a stable absolute gain above
+noise, no p99 regression, and no bypass of host-visible settlement semantics.
 
-## 6. `RULES.md` и generated citation checker
+## 6. `RULES.md` and a generated citation checker
 
-Это отдельная correctness-задача. Создать короткий индекс действующих правил:
-rule ID, формулировка, исходный код, тест и подробный документ. Генератор
-проверяет, что указанные file paths, anchors и test names существуют; CI
-запускает checker. Текст правила остаётся предметом review: checker подтверждает
-ссылки, а не семантическую истинность правила.
+This is a separate correctness task. Create a short index of the rules in
+force: rule ID, statement, source code, test and detailed document. A
+generator checks that the cited file paths, anchors and test names exist; CI
+runs the checker. The rule text remains a subject of review: the checker
+confirms the references, not the semantic truth of the rule.
 
-Начать с правил про reentrant validation, committed frontier, tracking stamp,
-partial reconciliation on throw, scheduler ownership и runtime/host boundary.
-Опорные документы: `docs/INVARIANTS.md`, `docs/RUNTIME.md`,
-`docs/architecture-contract.md` и topology/differential tests.
+Start with the rules on reentrant validation, the committed frontier, the
+tracking stamp, partial reconciliation on throw, scheduler ownership and the
+runtime/host boundary. Reference documents: `docs/INVARIANTS.md`,
+`docs/RUNTIME.md`, `docs/architecture-contract.md` and the
+topology/differential tests.
 
-## Порядок
+## Order
 
-1. Correctness-сценарий из пункта 1.
-2. `RULES.md` и checker: они закрепят инварианты до оптимизаций.
-3. Измерительные пробы пунктов 4 и 5; менять код лишь при повторённом выигрыше.
-4. Пункты 3 и 2 после профиля памяти/IC и формального разбора stamp semantics.
+1. The correctness scenario of item 1.
+2. `RULES.md` and the checker: they pin the invariants before optimizations.
+3. The measurement probes of items 4 and 5; change code only on a repeated
+   gain.
+4. Items 3 and 2 after a memory/IC profile and a formal analysis of stamp
+   semantics.
 
-Пункты 2–5 лучше держать отдельными вариантами: изменение node layout, stamp,
-push epoch и settle path одновременно не позволит приписать результат одному
-механизму.
+Keep items 2-5 as separate variants: changing node layout, stamp, push epoch
+and settle path at once would make it impossible to attribute a result to one
+mechanism.
 
-## Проверенный baseline (2026-09-30)
+## Verified baseline (2026-09-30)
 
-| Направление            | Наблюдение                                                                                                                                                                                                                                                                                                                             | Статус решения                                                                                                                             |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Nested validated write | Отдельный output oracle прошёл для записи в раннее/позднее committed ребро, двух последовательных вложенных записей и исключения после записи.                                                                                                                                                                                         | Missed wake в этих сценариях не воспроизведён; тесты сохраняются как regression gate.                                                      |
-| Generation             | Перестановки, повторные чтения, замена ветки и retry совпали с независимым SpecMachine. При изменённом значении producer `edge.version` остался прежним до нового tracking pass; переход `0xffffffff → 1` проверен.                                                                                                                    | Текущий tracking stamp не может быть универсальным свидетельством свежести значения. Альтернативная схема generation пока не испытывалась. |
-| Node hot/cold split    | Mixed-role differential cases прошли на ширине 1, 2, 8 и 32; shape contract подтвердил стабильный набор полей каждой роли до и после исполнения. Existing callback-memory workload с 10 000 узлов дал 193 B/node для consumers и 192 B/node для watchers при `no-item-capture`; величина включает граф, callback и удержанные объекты. | Семантический baseline есть; стоимость отдельного layout и IC stability ещё не измерены, решение о split не принято.                       |
-| Repeated staged writes | Projection на ширине 8 и 32: три изменённые записи посетили `3 × width` прямых рёбер, `width` транзитивных рёбер и дали `width` уведомлений watcher. Чтение между записями снова открыло транзитивную работу.                                                                                                                          | Повторная direct fan-out работа подтверждена; epoch-вариант должен сохранить случай с interleaved read.                                    |
-| Settlement boundary    | Independent trace проверил пустой/equal batch, немедленный commit, одну host delivery и одно settlement. Однократный DOM benchmark текущей ветки: empty eager ~1.80 M ops/s, empty flush ~1.82 M ops/s, один eager watcher update ~0.44 M ops/s.                                                                                       | Это baseline без paired candidate; абсолютный выигрыш `settleFast()` не установлен.                                                        |
-| Rules citations        | `pnpm check:rules` проверил 8 правил и 24 цитаты; запуск добавлен в CI.                                                                                                                                                                                                                                                                | Checker готов; смысл правила по-прежнему проверяется review.                                                                               |
+| Direction              | Observation                                                                                                                                                                                                                                                                                                                                                          | Decision status                                                                                                                       |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Nested validated write | A separate output oracle passed for a write into an early/late committed edge, two consecutive nested writes, and an exception after the write.                                                                                                                                                                                                                      | A missed wake was not reproduced in these scenarios; the tests are kept as a regression gate.                                         |
+| Generation             | Permutations, repeated reads, branch replacement and retry matched the independent SpecMachine. When the producer's value changed, `edge.version` stayed the same until a new tracking pass; the `0xffffffff → 1` transition was checked.                                                                                                                            | The current tracking stamp cannot be a universal witness of value freshness. An alternative generation scheme has not been tried yet. |
+| Node hot/cold split    | Mixed-role differential cases passed at widths 1, 2, 8 and 32; the shape contract confirmed a stable field set for each role before and after execution. The existing callback-memory workload with 10,000 nodes gave 193 B/node for consumers and 192 B/node for watchers with `no-item-capture`; the figure includes the graph, the callback and retained objects. | A semantic baseline exists; the cost of a separate layout and IC stability have not been measured; no decision on a split.            |
+| Repeated staged writes | Projection at widths 8 and 32: three changed writes visited `3 × width` direct edges and `width` transitive edges and produced `width` watcher notifications. A read between the writes reopened the transitive work.                                                                                                                                                | Repeated direct fan-out work is confirmed; an epoch variant must preserve the interleaved-read case.                                  |
+| Settlement boundary    | An independent trace checked an empty/equal batch, the immediate commit, one host delivery and one settlement. A one-off DOM benchmark of the current branch: empty eager ~1.80 M ops/s, empty flush ~1.82 M ops/s, one eager watcher update ~0.44 M ops/s.                                                                                                          | This is a baseline without a paired candidate; the absolute gain of `settleFast()` is not established.                                |
+| Rules citations        | `pnpm check:rules` checked 8 rules and 24 citations; the run was added to CI.                                                                                                                                                                                                                                                                                        | The checker is ready; the meaning of a rule is still checked in review.                                                               |
 
-Проверки: `pnpm test` (49 файлов, 298 passed, 1 skipped),
-`pnpm test:projection` (6 файлов, 13 passed), `pnpm check:rules`,
-`pnpm typecheck`, `pnpm test:dev` (7 файлов, 32 passed). `pnpm lint` пока
-падает на 34 существующих ошибках в generated `perf/*/results/*.mjs` и
-`test/differential/bounded-exhaustive.ts`; новые файлы проходят адресный ESLint.
+Checks: `pnpm test` (49 files, 298 passed, 1 skipped), `pnpm test:projection`
+(6 files, 13 passed), `pnpm check:rules`, `pnpm typecheck`, `pnpm test:dev`
+(7 files, 32 passed). `pnpm lint` still fails on 34 existing errors in the
+generated `perf/*/results/*.mjs` and `test/differential/bounded-exhaustive.ts`;
+the new files pass targeted ESLint.
 
-Память: из `packages/reflex-runtime` — `pnpm build:perf`, затем
+Memory: from `packages/reflex-runtime`, `pnpm build:perf`, then
 `node --expose-gc perf/callback-memory/run.mjs --count=10000 --trials=5 --variant=no-item-capture --json`.
-DOM boundary: из `packages/reflex-dom` —
+DOM boundary: from `packages/reflex-dom`,
 `pnpm exec vitest bench --config vite.config.ts bench/scheduler-boundary.bench.ts --run`.
 
 ## P0–P3: follow-up (2026-09-30)
@@ -197,3 +208,12 @@ failure/recreation. A second generated suite uses an independent output oracle
 for nested writes during validation, with an optional throw after the write.
 The spec observes explicit reads and flushes; batch entries/exits themselves
 have no value event in that oracle.
+
+## Addendum (2026-10-16)
+
+Item 1 and the P1 proof covered writes through a committed edge read
+directly by the watcher. A transitive variant (a write reaching the watcher
+only through a computed, during validation or execution) did lose delivery:
+F15 in [SEMANTIC_CHARACTERIZATION.md](../characterization/SEMANTIC_CHARACTERIZATION.md),
+fixed by the `Revalidate` obligation and stated as contract rules L1-L5 in
+[SEMANTIC_CONTRACT.md](../../test/differential/docs/SEMANTIC_CONTRACT.md).

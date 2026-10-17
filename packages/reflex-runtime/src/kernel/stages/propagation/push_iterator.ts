@@ -15,6 +15,7 @@ import {
   Unknown,
   Visited,
   Watcher,
+  Revalidate,
   type ReactiveEdge,
   type ReactiveNode,
 } from "@runtime/kernel/shape";
@@ -234,6 +235,10 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
         sub.state = next;
       } else if ((state & Computing) !== 0) {
         next = markComputingSubscriber(edge, sub, state);
+        // Transitive evidence proves only that a running watcher's validation
+        // may be stale. Record Revalidate instead of the Visited execution marker.
+        if (next !== 0 && (state & Watcher) !== 0)
+          next = sub.state = state | Unknown | Revalidate;
       } else if ((state & (Watcher | Unknown)) === Watcher) {
         // Watcher evidence is a pair of independent obligations. A direct
         // Changed already delivered the execution obligation, but it does not
@@ -262,7 +267,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
         if (
           (next & Watcher) !== 0 &&
           (state & Both) === 0 &&
-          nodeInvalidatedHook
+          nodeInvalidatedHook !== undefined
         ) {
           if (__PROFILE__) {
             if (__PROFILE__)

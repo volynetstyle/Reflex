@@ -1,0 +1,4 @@
+{
+  "commit": "138b1eba407b83f7d1a9ffad0cc2c36e0522c635",
+  "note": "Fixed reference for the performance trend. Re-anchor only to a main commit that the trend has already measured against this anchor; its point bridges the series."
+}

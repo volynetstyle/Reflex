@@ -1,4 +1,4 @@
-import { defaultContext } from "@runtime/kernel/config";
+import { defaultContext, emitNodeInvalidated } from "@runtime/kernel/config";
 import { flushPendingRuntimeIdle } from "@runtime/kernel/batch";
 import {
   currentConsumer,
@@ -28,6 +28,7 @@ import {
   Unknown,
   Scheduled,
   Visited,
+  Revalidate,
   WatcherCleanupPending,
   type WatcherCleanup,
   type WatcherNode,
@@ -37,7 +38,8 @@ import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 import { executeKnownNodeComputation } from "./watcher.execution";
 
-const WATCHER_TRANSIENT_STATE = Both | Visited | Computing | Scheduled;
+const WATCHER_TRANSIENT_STATE =
+  Both | Visited | Computing | Scheduled | Revalidate;
 
 function recoverWatcherAfterError(node: WatcherNode): void {
   // A failed lifecycle callback must not leave an unscheduled dirty watcher:
@@ -122,6 +124,30 @@ function runCleanup(cleanup: WatcherCleanup): void {
   }
 }
 
+/**
+ * Cold path, stable exit of a validation that retained Unknown. A direct
+ * Visited was already delivered by push. A transitive Revalidate was not:
+ * push does not emit to a dirty watcher. Hand that obligation to the host
+ * unless a queue already owns this watcher.
+ */
+function deliverRetainedValidation(node: WatcherNode): void {
+  if ((node.state & (Revalidate | Visited | Scheduled)) === Revalidate)
+    emitNodeInvalidated(node);
+}
+
+/**
+ * Cold path, completion of an execution invalidated during itself. Visited
+ * keeps an execution obligation; Revalidate keeps only validation. Push
+ * delivered Visited when it was recorded; Revalidate must be delivered here,
+ * since later pushes merge into the retained Unknown silently.
+ */
+function retainAfterExecution(node: WatcherNode): void {
+  const undelivered =
+    (node.state & (Revalidate | Visited | Scheduled)) === Revalidate;
+  node.state = (node.state & ~(Changed | Revalidate)) | Unknown;
+  if (undelivered) emitNodeInvalidated(node);
+}
+
 export function runWatcher(node: WatcherNode): void {
   runWatcherWithoutSettledCheckpoint(node);
   if ((runtimeState & RuntimeState.IdlePending) !== RuntimeState.Idle) {
@@ -172,16 +198,18 @@ function runWatcherCore(node: WatcherNode): void {
       throw error;
     }
 
-    const invalidatedDuringValidation = (node.state & Visited) !== 0;
+    const invalidatedDuringValidation =
+      (node.state & (Visited | Revalidate)) !== 0;
 
     if (!invalidatedDuringValidation) node.state &= ~Unknown;
-    if (mustExecute || changed) node.state |= Changed;
+    if (mustExecute || changed === true) node.state |= Changed;
 
     if ((node.state & Changed) === 0) {
       if (__PROFILE__)
         observeRuntimeProjection?.("projection.semantic.watcher.stable.skip");
 
       devRecordWatcherSkip(node, "stable", defaultContext);
+      if ((node.state & Revalidate) !== 0) deliverRetainedValidation(node);
       return;
     }
   }
@@ -209,7 +237,7 @@ function runWatcherCore(node: WatcherNode): void {
   if (__DEV__)
     devRecordWatcherStart(node, prevCleanup !== null, defaultContext);
 
-  node.state &= ~Visited;
+  node.state &= ~(Visited | Revalidate);
 
   if (prevCleanup !== null) {
     // Clearing is only required when a cleanup is actually owned. The common
@@ -220,7 +248,9 @@ function runWatcherCore(node: WatcherNode): void {
     try {
       runCleanup(prevCleanup);
     } catch (error) {
-      recoverWatcherAfterError(node);
+      // A cleanup may write through a dependency before failing. Idle recovery
+      // would then hide that dirty upstream from every later push.
+      recoverWatcherAfterComputationError(node);
       throw error;
     }
     devRecordWatcherCleanup(node, defaultContext);
@@ -256,10 +286,10 @@ function runWatcherCore(node: WatcherNode): void {
     node.state |= WatcherCleanupPending;
   }
 
-  if ((node.state & Visited) === 0) {
+  if ((node.state & (Visited | Revalidate)) === 0) {
     node.state &= ~Both;
   } else {
-    node.state = (node.state & ~Changed) | Unknown;
+    retainAfterExecution(node);
   }
 
   devRecordWatcherFinish(node, hasCleanup, result, defaultContext);

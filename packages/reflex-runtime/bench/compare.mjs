@@ -5,6 +5,7 @@
 //        [--seed 1] [--samples 25] [--out <file.json>] [--quick]
 //        [--family <n>]   multiplicity family size when running a shard
 //        [--no-predictable]  measure with V8's default concurrent compilation
+//        [--no-layout]  keep a build's placement fixed across processes
 //        [--fail-on slower,invalid,error|none]  verdicts that set exit code 1
 //
 // Protocol (docs/performance/BENCHMARK_PROTOCOL.md):
@@ -22,7 +23,13 @@
 //  5. Verdicts use a pre-declared practical threshold. A control interval
 //     that excludes zero means the method itself sees a difference between
 //     identical builds, and the workload's comparison is invalid.
-//  6. A worker that crashes or times out is retried once; a second failure
+//  6. Placement is randomized per process (--layout-seed, see bench/worker.mjs):
+//     each side tiers up alone behind an independent random shift of code
+//     and heap, so a build's placement effect becomes variance across
+//     replicates instead of a fixed bias that replication would narrow.
+//     Under --predictable two builds with identical machine code otherwise
+//     measure several percent apart on the CI runner.
+//  7. A worker that crashes or times out is retried once; a second failure
 //     gives that workload the verdict "error" and the run continues.
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -50,6 +57,7 @@ const quick = args.includes("--quick");
 // one thread, which collapses those modes; --no-predictable measures the
 // default concurrent configuration instead.
 const v8Flags = args.includes("--no-predictable") ? [] : ["--predictable"];
+const randomizeLayout = !args.includes("--no-layout");
 const baselineRef =
   option("--baseline") ??
   readFileSync(
@@ -192,7 +200,15 @@ const started = Date.now();
 /** One pair process of A against `other`; the ratio is oriented as other/A. */
 function pair(workload, other, swapped) {
   const [x, y] = swapped ? [other, sides.A.bundle] : [sides.A.bundle, other];
-  const result = worker(x, workload, "pair", [y, "--samples", String(samples)]);
+  const layout = randomizeLayout
+    ? ["--layout-seed", String(1 + Math.floor(random() * 0x7ffffffe))]
+    : [];
+  const result = worker(x, workload, "pair", [
+    y,
+    "--samples",
+    String(samples),
+    ...layout,
+  ]);
   const logRatios = swapped
     ? result.logRatios.map((v) => -v)
     : result.logRatios;
@@ -398,6 +414,7 @@ const report = {
     seed: Number(option("--seed", 1)),
     family,
     v8Flags,
+    randomizeLayout,
     failOn: [...failOn],
   },
   verification,

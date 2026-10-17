@@ -155,7 +155,7 @@ export function pull_iterator(
                 devAssertRefreshEdge(dep, edge);
               }
             }
-            if (advance(dep, edge)) {
+            if (advance(dep, edge) === true) {
               changed = true;
               break descend;
             }

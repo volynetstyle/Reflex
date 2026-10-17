@@ -4,6 +4,10 @@ Reactive async derivations over the synchronous Reflex runtime. Sources keep
 successful commits separate from cancelable attempts, validate dependency
 freshness before publication, and ignore superseded results.
 
+```bash
+npm install @volynets/reflex-async @volynets/reflex @volynets/reflex-runtime
+```
+
 ```ts
 import { createRuntime, signal } from "@volynets/reflex";
 import { asyncDerived, until } from "@volynets/reflex-async";
@@ -54,7 +58,8 @@ and is unsupported.
 
 Import async APIs and types from `@volynets/reflex-async` instead of
 `@volynets/reflex/unstable`. `optimistic` and `transition` remain in
-`@volynets/reflex/unstable`. The async API is experimental.
+`@volynets/reflex/unstable`. Before 1.0, a minor release may change the async
+API; patch releases keep it.
 
 ## Development
 

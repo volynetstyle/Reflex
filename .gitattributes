@@ -1,0 +1,4 @@
+# The repository stores LF. Keep checkouts LF on every platform: lab builders
+# and mutation runners anchor source transforms on "\n", and Windows release
+# qualification must see the same bytes as Linux.
+* text=auto eol=lf

@@ -1,5 +1,6 @@
 import { selectRuntimeReplacements } from "../../tooling/configs/runtime-flags.ts";
-import type { Plugin, RollupOptions } from "rollup";
+import { resolve as resolvePath } from "node:path";
+import type { GetManualChunk, Plugin, RollupOptions } from "rollup";
 import replace from "@rollup/plugin-replace";
 import terser from "@rollup/plugin-terser";
 import resolve from "@rollup/plugin-node-resolve";
@@ -84,14 +85,40 @@ const ENTRIES: ReadonlyArray<BuildEntry> = [
   },
 ];
 
+// Fold everything reachable from the root entry into index.[ext], so the
+// runtime, scheduler and facade ship as one file and subpath entries import it
+// instead of a shared hashed chunk.
+function rootManualChunks(): GetManualChunk {
+  const rootEntry = resolvePath(ENTRIES[0]!.input);
+  let rootModules: Set<string> | undefined;
+
+  return (id, { getModuleInfo }) => {
+    if (rootModules === undefined) {
+      rootModules = new Set();
+      const pending = [rootEntry];
+
+      while (pending.length > 0) {
+        const current = pending.pop()!;
+        if (rootModules.has(current)) continue;
+        rootModules.add(current);
+        pending.push(...(getModuleInfo(current)?.importedIds ?? []));
+      }
+    }
+
+    return rootModules.has(id) ? ENTRIES[0]!.outputPath : undefined;
+  };
+}
+
 function loggerPlugin(target: BuildTarget): Plugin {
   return createBuildReporter("@volynets/reflex", target.name);
 }
 
-function resolvePlugin(): Plugin {
+function resolvePlugin(target: BuildTarget): Plugin {
   return resolve({
     extensions: [".js"],
-    exportConditions: ["import", "default"],
+    exportConditions: target.dev
+      ? ["development", "import", "default"]
+      : ["import", "default"],
   });
 }
 
@@ -128,7 +155,7 @@ function terserPlugin(target: BuildTarget): Plugin | undefined {
 function createPlugins(target: BuildTarget): Plugin[] {
   const plugins: Plugin[] = [
     loggerPlugin(target),
-    resolvePlugin(),
+    resolvePlugin(target),
     replacePlugin(target),
   ];
 
@@ -145,6 +172,8 @@ function createConfig(target: BuildTarget): RollupOptions {
     // Build the entries together so root and unstable share runtime state and
     // live facade bindings instead of embedding independent reactive machines.
     input: Object.fromEntries(ENTRIES.map((entry) => [entry.outputPath, entry.input])),
+    // Lets the root entry chunk carry the extra exports its subpaths import.
+    preserveEntrySignatures: "allow-extension",
     logLevel: "silent",
     onwarn: reportRollupWarning,
 
@@ -161,6 +190,7 @@ function createConfig(target: BuildTarget): RollupOptions {
       dir: `dist/${target.outDir}`,
       entryFileNames: `[name].${extension}`,
       chunkFileNames: `chunks/[name]-[hash].${extension}`,
+      manualChunks: rootManualChunks(),
       format: target.format,
       exports: target.format === "cjs" ? "named" : undefined,
       sourcemap: target.dev,
@@ -171,7 +201,10 @@ function createConfig(target: BuildTarget): RollupOptions {
     },
 
     plugins: createPlugins(target),
-    // Packages such as reflex-async must observe the same active runtime and graph.
+    // The runtime is a peer: packages such as reflex-async, reflex-store and
+    // reflex-dom import it directly and must observe the same active runtime
+    // and graph. Inlining it here would give them a second kernel. The
+    // scheduler keeps no shared state and is inlined with its declarations.
     external: (id) =>
       id === "@volynets/reflex-runtime" ||
       id.startsWith("@volynets/reflex-runtime/") ||

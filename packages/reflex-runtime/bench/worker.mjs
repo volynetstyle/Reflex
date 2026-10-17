@@ -27,8 +27,51 @@ const option = (name, fallback) => {
 if (typeof globalThis.gc !== "function")
   throw new Error("Run with --expose-gc.");
 
+/**
+ * Layout randomization (--layout-seed). Under --predictable a given build
+ * gets the same code and heap placement in every process, so a placement
+ * effect of a build (alignment of a hot loop, cache-set conflicts) is a fixed
+ * bias that replication narrows instead of averaging: two builds with
+ * identical machine code measured 4-5% apart on the CI runner. Before each
+ * side loads, the worker therefore compiles a random amount of throwaway
+ * optimized code and retains a random amount of heap, both drawn from a
+ * per-process seed, so the side's code and data land at independent random
+ * offsets and placement effects become variance of the replicates.
+ */
+const layoutSeed = option("--layout-seed", 0) >>> 0;
+let layoutState = layoutSeed || 1;
+const layoutRandom = () => {
+  layoutState ^= layoutState << 13;
+  layoutState ^= layoutState >>> 17;
+  layoutState ^= layoutState << 5;
+  return (layoutState >>> 0) / 0x100000000;
+};
+const layoutBallast = [];
+let layoutSink = 0;
+
+function shiftLayout(side) {
+  if (layoutSeed === 0) return;
+  // Code space: optimized throwaway functions of random size and count.
+  const functions = 1 + Math.floor(layoutRandom() * 6);
+  for (let f = 0; f < functions; f++) {
+    const terms = 1 + Math.floor(layoutRandom() * 160);
+    let body = "let a = x | 0;";
+    for (let t = 0; t < terms; t++)
+      body += `a = (a * ${(t % 7) + 3} + ${t}) ^ (a >>> ${(t % 5) + 1});`;
+    // The tag defeats V8's compilation cache across sides and processes.
+    const fn = new Function("x", `// layout ${side} ${layoutSeed} ${f}\n${body} return a;`);
+    for (let i = 0; i < 20_000; i++) layoutSink = (layoutSink + fn(i)) | 0;
+  }
+  // Heap: retained ballast of random size (0-512 KiB of small objects).
+  const objects = Math.floor(layoutRandom() * 16_384);
+  const ballast = new Array(objects);
+  for (let i = 0; i < objects; i++) ballast[i] = { a: i, b: side };
+  layoutBallast.push(ballast);
+}
+
 /** Load a runtime bundle and a private workload module instance for one side. */
 async function loadSide(bundlePath, side) {
+  shiftLayout(side);
   const rt = await import(`${pathToFileURL(bundlePath).href}?side=${side}`);
   const { findWorkload } = await import(
     new URL(`./workloads.mjs?side=${side}`, import.meta.url).href
@@ -110,6 +153,20 @@ if (mode === "pair") {
   const y = await loadSide(other, "y");
   const batchX = runner(x.workload, x.rt, "x");
   const batchY = runner(y.workload, y.rt, "y");
+  if (layoutSeed !== 0) {
+    // Hot code is compiled during warm-up, where the sides alternate: a shift
+    // applied only at load would move both sides together and keep their
+    // relative placement fixed. Tier each side up alone, behind its own
+    // independent random shift, before the joint warm-up below.
+    for (const [batch, side] of [
+      [batchX, "x"],
+      [batchY, "y"],
+    ]) {
+      shiftLayout(`${side}-code`);
+      const start = process.hrtime.bigint();
+      while (Number(process.hrtime.bigint() - start) < warmupNs) batch(64);
+    }
+  }
   // One batch size for both sides keeps each pair's halves equally long.
   const n = Math.max(calibrate(batchX, sampleNs), calibrate(batchY, sampleNs));
 

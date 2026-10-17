@@ -22,7 +22,7 @@ export function setRuntimeState(state: number): void {
 }
 
 function setRuntimeStateFlag(flag: RuntimeState, enabled: boolean): void {
-  runtimeState = enabled ? runtimeState | flag : runtimeState & ~flag;
+  runtimeState = enabled === true ? runtimeState | flag : runtimeState & ~flag;
 }
 
 /**
