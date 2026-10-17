@@ -108,6 +108,38 @@ method and migration identity. For a direct fixed-reference trend use
 measured against that same base and declare `anchorCommit`. Arbitrary edge ratios
 are never multiplied into a purported fixed-anchor trend.
 
+## Anchored trend
+
+`trend.mjs` keeps a long-lived history on the `bench-data` branch and publishes
+it to GitHub Pages (`.github/workflows/benchmark-trend.yml`). Every main push and
+pull request measures HEAD against the fixed anchor in `anchor.json` in one job,
+so a point is a same-machine median paired process log-ratio and stays
+comparable when hosted-runner hardware changes. Edge ratios are never chained.
+
+```sh
+node tooling/benchmarks/trend.mjs judge  --store DIR --summary summary.json
+node tooling/benchmarks/trend.mjs ingest --store DIR --summary summary.json [--recent-days 14]
+node tooling/benchmarks/trend.mjs site   --store DIR --out site
+```
+
+- **Cohort:** suite, protocol hash, anchor, Node major and Vitest version. A
+  protocol or toolchain change starts a new cohort.
+- **Two time scales:** points from the last 14 days stay per commit for
+  causality. Older days compact to the median, p25 and p75 of their commits,
+  with the first and last commit of the day; compaction never rewrites a day.
+- **Baseline and boundary:** the median of the newest point of the last 20
+  commits (topped up with daily medians), robust spread 1.4826·MAD, boundary
+  `center ± max(3·spread, log 1.03)` in log space.
+- **Verdict:** a run exceeds the boundary only by its own evidence: the lower
+  interval bound when it has one, its median otherwise. One exceeding commit is
+  a `candidate`; a second consecutive one is a `regression`. A shift that lasts
+  becomes the new baseline after about half the window. Verdicts are reported as
+  warnings and in the job summary; they do not block.
+- **Re-anchoring:** set `anchor.json` to a main commit that the trend already
+  measured against the current anchor. That point bridges the cohorts, so the
+  page keeps one series expressed against the oldest anchor. Without such a
+  point, the page starts a new segment.
+
 ## Retention and metric definitions
 
 `experiments/artifacts.manifest.json` retains the existing 207 tracked research

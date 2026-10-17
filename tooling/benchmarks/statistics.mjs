@@ -18,3 +18,9 @@ export function medianInterval(samples, { confidence = 0.95, familySize = 1 } = 
   }
   return { lower: lowerIndex < 0 ? null : sorted[lowerIndex], upper: lowerIndex < 0 ? null : sorted[n - lowerIndex - 1], confidence, familySize, independentUnits: n, method: "exact-binomial-median-order-statistics-bonferroni", assumptions: ["independent process pairs", "fixed sample budget", "fixed scenario family", "exchangeable log-ratio distribution"] };
 }
+/** Linear-interpolated quantile (type 7) of finite samples. */
+export function quantile(numbers, q) {
+  if (!numbers.length || numbers.some(n => !Number.isFinite(n)) || !(q >= 0 && q <= 1)) throw new Error("Quantile requires finite samples and 0 <= q <= 1");
+  const sorted = [...numbers].sort((a, b) => a - b), position = (sorted.length - 1) * q, low = Math.floor(position), high = Math.ceil(position);
+  return sorted[low] + (sorted[high] - sorted[low]) * (position - low);
+}
