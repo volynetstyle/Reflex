@@ -9,7 +9,7 @@ import { spawnSync } from "node:child_process";
 import { packagesInScope, readPackage } from "../build/package-registry.mjs";
 
 const unpublished = [];
-for (const entry of packagesInScope("publish")) {
+for (const entry of packagesInScope("release")) {
   const { version } = await readPackage(entry);
   const spec = entry.name + "@" + version;
   const view = spawnSync("npm", ["view", spec, "version"], { encoding: "utf8", shell: process.platform === "win32" });

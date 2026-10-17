@@ -14,6 +14,7 @@ const report = JSON.parse(await readFile(filename, "utf8"));
 if (report.schemaVersion !== 1 || report.kind !== "release-qualification" || report.status !== "passed" || report.consumerQualification !== "passed" || report.packOnly || !report.completedAt) throw new Error("Full successful consumer qualification is required.");
 if (!Array.isArray(report.checks) || report.checks.length === 0 || report.checks.some((check) => check.status !== "passed" || check.exitCode !== 0)) throw new Error("Qualification contains incomplete or failed checks.");
 const expected = packagesInScope("publish").map((entry) => entry.name).sort();
+const released = new Set(packagesInScope("release").map((entry) => entry.name));
 const actual = report.packages.map((entry) => entry.name).sort();
 if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error("Qualified package set differs from the declared publication registry.");
 for (const check of report.checks) {
@@ -67,6 +68,11 @@ if (args.includes("--publish")) {
   };
   result.status = "running";
   for (const entry of archives) {
+    // Qualified with the rest, but held back from npm by the registry.
+    if (!released.has(entry.name)) {
+      result.attempts.push({ name: entry.name, version: entry.version, sha256: entry.sha256, status: "held", completedAt: new Date().toISOString() });
+      continue;
+    }
     // Recheck immediately before the side effect to forbid artifact drift.
     const bytes = await readFile(entry.file);
     if (createHash("sha256").update(bytes).digest("hex") !== entry.sha256) throw new Error("Archive changed before publish: " + entry.name);
