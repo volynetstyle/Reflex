@@ -22,7 +22,7 @@ in `@volynets/reflex/unstable`.
 ## Install
 
 ```bash
-npm install @volynets/reflex
+npm install @volynets/reflex @volynets/reflex-runtime
 ```
 
 ## Quick start

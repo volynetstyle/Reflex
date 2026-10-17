@@ -201,9 +201,14 @@ function createConfig(target: BuildTarget): RollupOptions {
     },
 
     plugins: createPlugins(target),
-    // Self-contained artifact: @volynets/reflex-runtime and
-    // @volynets/reflex-scheduler are inlined, nothing is resolved at install time.
-    external: (id) => EXTERNALS.some((external) => id === external),
+    // The runtime is a peer: packages such as reflex-async, reflex-store and
+    // reflex-dom import it directly and must observe the same active runtime
+    // and graph. Inlining it here would give them a second kernel. The
+    // scheduler keeps no shared state and is inlined with its declarations.
+    external: (id) =>
+      id === "@volynets/reflex-runtime" ||
+      id.startsWith("@volynets/reflex-runtime/") ||
+      EXTERNALS.some((external) => id === external),
   };
 }
 
