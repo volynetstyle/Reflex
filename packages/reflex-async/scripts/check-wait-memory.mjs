@@ -38,12 +38,15 @@ try {
   ]) {
     const signals = await cancelledSignals(method, target);
     // WeakRef targets are retained until the end of the current job. Start
-    // separate jobs before GC and before each observation.
-    for (let round = 0; round < 8; ++round) {
+    // separate jobs before GC and before each observation. A few signals can
+    // survive several rounds after the last abort, so poll with a bound: a
+    // retaining path never reaches zero.
+    let retained = signals.length;
+    for (let round = 0; round < 64 && retained !== 0; ++round) {
       await setImmediate();
       globalThis.gc();
+      retained = signals.filter((signal) => signal.deref() !== undefined).length;
     }
-    const retained = signals.filter((signal) => signal.deref() !== undefined).length;
     assert.equal(retained, 0, `${label}: cancelled waiter signals retained by a live pending source`);
     assert.equal(source.attempt().alive(), true);
     console.log(`${label}: collected all ${signals.length} cancelled waiter signals while the source stays pending`);

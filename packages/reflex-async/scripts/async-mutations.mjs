@@ -10,8 +10,8 @@ export const asyncMutations = [
   {
     id: "reverse-frontier-capture-order",
     target: "/src/async/frontier.ts",
-    from: "for (let i = entries.length - 1; i > 0; --i)",
-    to: "for (let i = 1; i < entries.length; ++i)",
+    from: "if (next !== entries.length) entry = entries[next++]!;",
+    to: "if (next !== entries.length) entry = entries[entries.length - 1 - next++]!;",
     occurrences: 2,
     tests: ["tests/reflex.async.frontier.test.ts"],
   },
@@ -38,6 +38,20 @@ export const asyncMutations = [
     testName: "publishes caught failures",
   },
   {
+    id: "witness-accepts-any-failure",
+    target: "/src/async/source.ts",
+    from: 'if (this.outcome.kind === "failure" && this.outcome !== observedFailure)',
+    to: 'if (this.outcome.kind === "failure" && observedFailure === undefined)',
+    tests: ["tests/reflex.async.review.test.ts"],
+  },
+  {
+    id: "witness-rejects-ready",
+    target: "/src/async/source.ts",
+    from: "    // Accept only the failure this read observed, preserving user catch results.",
+    to: '    if (observedFailure !== undefined && this.outcome.kind === "ready") throw new Error("ready");',
+    tests: ["tests/reflex.async.review.test.ts"],
+  },
+  {
     id: "rematerialize-publication-retry",
     target: "/src/async/attempt.ts",
     from: "return (this.materializedFrontier ??= materializeFrontier(this.frontier));",
@@ -47,8 +61,15 @@ export const asyncMutations = [
   {
     id: "skip-inherited-owner-check",
     target: "/src/async/frontier.ts",
-    from: "this.owner !== undefined && containsDependency(frontier, this.owner)",
+    from: "owner !== undefined && containsDependency(frontier, owner)",
     to: "false",
+    tests: ["tests/reflex.async.frontier.test.ts"],
+  },
+  {
+    id: "reference-keyed-direct-capture",
+    target: "/src/async/frontier.ts",
+    from: "if (direct[i]![FRONTIER_STATE] === state) return;",
+    to: "if (direct[i] === observation) return;",
     tests: ["tests/reflex.async.frontier.test.ts"],
   },
   {

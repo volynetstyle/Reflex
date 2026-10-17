@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { AsyncBlocker, AsyncDisposedError, AsyncProtocolError, asyncDerived, until } from "../src";
-import { createEvaluatedComputed } from "../src/async/evaluation";
+import type { AsyncCore } from "../src";
+import { captureEvaluation, createEvaluatedComputed } from "../src/async/evaluation";
+import { FRONTIER_STATE, materializeFrontier } from "../src/async/frontier";
 import { waitForChange } from "../src/async/wait";
 import { createRuntime, signal } from "./reflex.test_utils";
 
@@ -106,7 +108,7 @@ describe("async review regressions", () => {
     const upstream = asyncDerived(() => { if (failure) throw new Error("new failure"); return 7; });
     const task = deferred<number>();
     const downstream = asyncDerived(({ read }) => { read(upstream); return task.promise; });
-    const validate = vi.spyOn(upstream as import("../src").AsyncCore<number>, "validate").mockImplementation(() => {
+    const validate = vi.spyOn(upstream as AsyncCore<number>, "validate").mockImplementation(() => {
       failure = true;
       upstream.refresh();
       throw new Error("new failure");
@@ -202,5 +204,85 @@ describe("async review regressions", () => {
     const resolved = expect(source.resolve({ signal: controller.signal })).rejects.toBeInstanceOf(AsyncDisposedError);
     source.dispose();
     await resolved;
+  });
+});
+
+describe("caught failure witnesses", () => {
+  // A witness checks its source's status, like the source handle itself: not
+  // pending, not disposed, and no failure other than the one observed. Value
+  // freshness comes from reactive edges, so a ready source is accepted.
+  it("accepts the observed failure or ready, and rejects pending, another failure and disposal", () => {
+    createRuntime();
+    const failure = new Error("first");
+    const task = deferred<number>();
+    let mode: "fail" | "other" | "ready" | "pending" = "fail";
+    const source = asyncDerived<number>(() => {
+      if (mode === "fail") throw failure;
+      if (mode === "other") throw new Error("second");
+      return mode === "pending" ? task.promise : 1;
+    });
+    try {
+      const generation = captureEvaluation(() => { try { return source.read(); } catch (error) { return error; } });
+      expect(generation.evaluation).toEqual({ kind: "value", value: failure });
+      const [witness, ...rest] = materializeFrontier(generation.frontier);
+      expect(rest).toEqual([]);
+      expect(witness).not.toBe(source);
+      expect(witness![FRONTIER_STATE]).toBe((source as AsyncCore<number>)[FRONTIER_STATE]);
+      expect(() => witness!.validate()).not.toThrow();
+      mode = "ready"; source.refresh();
+      expect(() => witness!.validate()).not.toThrow();
+      mode = "pending"; source.refresh();
+      expect(() => witness!.validate()).toThrow(AsyncBlocker);
+      mode = "other"; source.refresh();
+      expect(() => witness!.validate()).toThrow("second");
+      source.dispose();
+      expect(() => witness!.validate()).toThrow(AsyncDisposedError);
+    } finally { source.dispose(); }
+  });
+
+  describe.each(["flush", "sab", "eager"] as const)("%s", (effectStrategy) => {
+    it.each(["ready", "pending", "disposed"] as const)(
+      "supersedes an in-flight fallback when its observed source becomes %s", async (next) => {
+        const runtime = createRuntime({ effectStrategy });
+        const failure = new Error("offline");
+        const mode = signal<"fail" | "ready" | "pending">("fail");
+        const settle = deferred<number>();
+        const upstream = asyncDerived<number>(() => {
+          const current = mode();
+          if (current === "fail") throw failure;
+          return current === "pending" ? settle.promise : 7;
+        });
+        const gate = deferred<void>();
+        const observed: unknown[] = [];
+        const downstream = asyncDerived(({ read }) => {
+          let value: unknown;
+          try { value = read(upstream); } catch (caught) {
+            if (caught instanceof AsyncBlocker) throw caught;
+            value = caught;
+          }
+          observed.push(value);
+          return gate.promise.then(() => value);
+        });
+        try {
+          const obsolete = downstream.attempt()!;
+          expect(observed).toEqual([failure]);
+          if (next === "disposed") upstream.dispose();
+          else mode.set(next);
+          runtime.flush();
+          gate.resolve();
+          await gate.promise;
+          await Promise.resolve();
+          downstream.attempt();
+          expect(obsolete.alive()).toBe(false);
+          if (next === "pending") settle.resolve(7);
+          const result = await downstream.resolve();
+          if (next === "disposed") expect(result).toBeInstanceOf(AsyncDisposedError);
+          else expect(result).toBe(7);
+          // The fallback for the old failure was never published.
+          expect(downstream.commit()).toMatchObject({ version: 1 });
+          expect(downstream.commit()!.token).not.toBe(obsolete.token);
+        } finally { downstream.dispose(); upstream.dispose(); runtime.flush(); }
+      },
+    );
   });
 });

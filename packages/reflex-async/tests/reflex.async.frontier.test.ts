@@ -23,6 +23,14 @@ function dependency(id: string): FreshnessDependency & { readonly id: string } {
   };
 }
 
+function alias(source: FreshnessDependency): FreshnessDependency {
+  return {
+    [FRONTIER_STATE]: source[FRONTIER_STATE],
+    ensure: source.ensure,
+    validate: source.validate,
+  };
+}
+
 describe("async evaluation frontiers", () => {
   it("recognizes and deduplicates failure observations by their source identity", () => {
     const source = dependency("source");
@@ -56,27 +64,37 @@ describe("async evaluation frontiers", () => {
           const leaves = Array.from({ length: 8 }, (_, i) =>
             Object.freeze(dependency(String(i))),
           );
-          const proofs: EvaluationFrontier[] = [EMPTY_FRONTIER, ...leaves];
+          // Failure-style witnesses share their source's state: the oracle keys
+          // obligations by state and keeps the first observation of each.
+          const observations = [...leaves, ...leaves.map(alias)];
+          const sourceOf = new Map(
+            leaves.map((leaf) => [leaf[FRONTIER_STATE], leaf] as const),
+          );
+          const proofs: EvaluationFrontier[] = [EMPTY_FRONTIER, ...observations];
           const unions: FreshnessDependency[][] = [
             [],
-            ...leaves.map((leaf) => [leaf]),
+            ...observations.map((observation) => [observation]),
           ];
           for (const entries of nodes) {
             const builder = new FrontierBuilder();
-            const expected = new Set<FreshnessDependency>();
+            const expected = new Map<object, FreshnessDependency>();
+            const observe = (observation: FreshnessDependency) => {
+              const state = observation[FRONTIER_STATE];
+              if (!expected.has(state)) expected.set(state, observation);
+            };
             for (const entry of entries) {
               if (entry % 3 === 0) {
-                const leaf = leaves[entry % leaves.length]!;
-                builder.add(leaf);
-                expected.add(leaf);
+                const observation = observations[entry % observations.length]!;
+                builder.add(sourceOf.get(observation[FRONTIER_STATE])!, observation);
+                observe(observation);
               } else {
                 const index = entry % proofs.length;
                 builder.merge(proofs[index]!);
-                for (const leaf of unions[index]!) expected.add(leaf);
+                for (const observation of unions[index]!) observe(observation);
               }
             }
             const proof = builder.snapshot();
-            const union = [...expected];
+            const union = [...expected.values()];
             proofs.push(proof);
             unions.push(union);
             expect(materializeFrontier(proof)).toEqual(union);
@@ -86,7 +104,8 @@ describe("async evaluation frontiers", () => {
               if (leaf !== union[0]) return;
               expect(materializeFrontier(proof)).toEqual(union);
               // Early searches and failed callbacks must preserve outer marks.
-              expect(() => new FrontierBuilder(leaf).merge(proof)).toThrow(
+              const owner = sourceOf.get(leaf[FRONTIER_STATE])!;
+              expect(() => new FrontierBuilder(owner).merge(proof)).toThrow(
                 AsyncProtocolError,
               );
               expect(() =>
@@ -99,7 +118,8 @@ describe("async evaluation frontiers", () => {
             expect(materializeFrontier(proof)).toEqual(union);
             for (const leaf of leaves) {
               const merge = () => new FrontierBuilder(leaf).merge(proof);
-              if (expected.has(leaf)) expect(merge).toThrow(AsyncProtocolError);
+              if (expected.has(leaf[FRONTIER_STATE]))
+                expect(merge).toThrow(AsyncProtocolError);
               else expect(merge).not.toThrow();
             }
           }
@@ -107,6 +127,100 @@ describe("async evaluation frontiers", () => {
       ),
       { seed: 0x46524f4e, numRuns: 100 },
     );
+  });
+
+  it("keeps one obligation per source state regardless of proof grouping", () => {
+    const source = dependency("source");
+    const failure = alias(source);
+    const other = dependency("other");
+    const direct = new FrontierBuilder();
+    direct.add(source);
+    direct.add(source, failure);
+    direct.add(other);
+    const proof = direct.snapshot();
+    const grouped = new FrontierBuilder();
+    grouped.merge(proof);
+    grouped.add(other);
+    const regrouped = grouped.snapshot();
+
+    for (const frontier of [proof, regrouped]) {
+      expect(materializeFrontier(frontier)).toEqual([source, other]);
+      const visited: FreshnessDependency[] = [];
+      forEachDependency(frontier, (leaf) => visited.push(leaf));
+      expect(visited).toEqual([source, other]);
+    }
+    // Merging a singleton witness records the source's first observation.
+    const leafOnly = new FrontierBuilder();
+    leafOnly.merge(failure);
+    leafOnly.merge(source);
+    leafOnly.add(other);
+    expect(materializeFrontier(leafOnly.snapshot())).toEqual([failure, other]);
+    expect(() => new FrontierBuilder(source).merge(failure)).toThrow(
+      AsyncProtocolError,
+    );
+
+    // A canonical read after a witness, below and above Set promotion.
+    for (const width of [4, 40]) {
+      const sources = Array.from({ length: width }, (_, i) => dependency(String(i)));
+      const witnesses = sources.map(alias);
+      const builder = new FrontierBuilder();
+      builder.add(sources[0]!, witnesses[0]!);
+      for (const leaf of sources) builder.add(leaf);
+      for (let i = 0; i < width; ++i) builder.add(sources[i]!, witnesses[i]!);
+      expect(materializeFrontier(builder.snapshot())).toEqual([
+        witnesses[0],
+        ...sources.slice(1),
+      ]);
+    }
+  });
+
+  it("collapses repeated inheritance of one proof without repeating the owner search", () => {
+    const leaves = Array.from({ length: 4 }, (_, i) => dependency(String(i)));
+    const inner = new FrontierBuilder();
+    for (const leaf of leaves) inner.add(leaf);
+    const outer = new FrontierBuilder();
+    outer.merge(inner.snapshot());
+    outer.add(leaves[0]!);
+    const proof = outer.snapshot();
+
+    const owner = dependency("owner");
+    const repeated = new FrontierBuilder(owner);
+    for (let i = 0; i < 64; ++i) repeated.merge(proof);
+    expect(repeated.snapshot()).toBe(proof);
+
+    // Non-adjacent repetition stays ordered and distinct.
+    const between = dependency("between");
+    const split = new FrontierBuilder();
+    split.merge(proof);
+    split.add(between);
+    split.merge(proof);
+    expect(materializeFrontier(split.snapshot())).toEqual([...leaves, between]);
+  });
+
+  it("visits wide and tail-nested composites in capture order", () => {
+    const leaves = Array.from({ length: 1024 }, (_, i) => dependency(String(i)));
+    const wide = new FrontierBuilder();
+    for (const leaf of leaves) {
+      const single = new FrontierBuilder();
+      single.add(leaf);
+      const nested = new FrontierBuilder();
+      nested.merge(single.snapshot());
+      nested.merge(EMPTY_FRONTIER);
+      wide.merge(nested.snapshot());
+    }
+    expect(materializeFrontier(wide.snapshot())).toEqual(leaves);
+
+    let tail: EvaluationFrontier = EMPTY_FRONTIER;
+    for (let i = leaves.length - 1; i >= 0; --i) {
+      const builder = new FrontierBuilder();
+      builder.add(leaves[i]!);
+      builder.merge(tail);
+      tail = builder.snapshot();
+    }
+    expect(materializeFrontier(tail)).toEqual(leaves);
+    const visited: FreshnessDependency[] = [];
+    forEachDependency(tail, (leaf) => visited.push(leaf));
+    expect(visited).toEqual(leaves);
   });
 
   it("returns independent publication vectors for direct and composite proofs", () => {

@@ -58,10 +58,17 @@ if (process.argv.includes("--worker")) {
   const diamond = build(
     Array.from({ length: 64 }, (_, i) => build([shared, leaves[i]])),
   );
-  let deep = shared;
+  // Start from a composite so A ⋆ A normalization cannot collapse the chain.
+  let deep = build([shared, leaves[0]]);
   for (let i = 0; i < 2048; ++i) deep = build([deep, shared]);
   const wide = build(
     Array.from({ length: 4096 }, (_, i) => leaves[i % leaves.length]),
+  );
+  const pairs = Array.from({ length: 128 }, (_, i) =>
+    build([leaves[2 * i], leaves[2 * i + 1]], true),
+  );
+  const wideProofs = build(
+    Array.from({ length: 4096 }, (_, i) => pairs[i % pairs.length]),
   );
   const absent = leaf();
   for (const [proof, expected] of [
@@ -69,6 +76,7 @@ if (process.argv.includes("--worker")) {
     [diamond, [...new Set([...sharedLeaves, ...leaves.slice(0, 64)])]],
     [deep, sharedLeaves],
     [wide, leaves],
+    [wideProofs, leaves],
   ]) {
     assert.deepEqual(materializeFrontier(proof), expected);
     const visited = [];
@@ -101,6 +109,24 @@ if (process.argv.includes("--worker")) {
       "wide materialize / 4096 entries",
       () => {
         sink += materializeFrontier(wide).length;
+      },
+    ],
+    [
+      "wide materialize / 4096 direct proofs",
+      () => {
+        sink += materializeFrontier(wideProofs).length;
+      },
+    ],
+    [
+      "wide callbacks / 4096 direct proofs",
+      () => forEachDependency(wideProofs, visit),
+    ],
+    [
+      "repeated inherit / 16 owner-checked reads",
+      () => {
+        const builder = new FrontierBuilder(leaves[1]);
+        for (let i = 0; i < 16; ++i) builder.merge(deep);
+        sink += builder.snapshot() === deep;
       },
     ],
     [

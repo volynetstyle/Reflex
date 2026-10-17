@@ -283,7 +283,7 @@ source files nor the oracle file are edited. The transform requires the expected
 number of exact anchors (both validation paths for dependency pull);
 import/compile failures do not count as a killed mutant.
 
-All thirteen qualification mutants are detected by assertion failures. The
+All seventeen qualification mutants are detected by assertion failures. The
 original seven lifecycle/oracle mutations are:
 
 | Mutation                                            | Witness                                                              |
@@ -307,6 +307,15 @@ Six representation mutations exercise the frontier laws:
 | Rematerialize a retry vector            | One attempt no longer retains the same vector     |
 | Skip inherited owner detection          | A hidden owner cycle passes capture               |
 
+Four mutations exercise failure witnesses and obligation identity:
+
+| Mutation                                    | Witness                                                        |
+| ------------------------------------------- | -------------------------------------------------------------- |
+| Validate a witness as a plain source handle | A caught fallback is rejected with the failure it handled      |
+| Accept any failure through a witness        | A witness accepts a different failure of its source            |
+| Reject a ready source through a witness     | A witness no longer accepts its source after recovery          |
+| Deduplicate direct capture by reference     | Direct capture and regrouped proofs disagree on a source alias |
+
 The differential mutants shrink to
 `["switch-and-late-settle", "refresh", "refresh", "refresh"]` under the current
 minimum length of four. The first event is already sufficient to expose the
@@ -316,7 +325,7 @@ counterexample.
 
 The runner writes `.cache/async-mutations/report.json` with control/mutant
 results, witnesses, counterexamples, replay metadata and source hashes. These
-thirteen targeted mutations qualify the listed invariants; they do not measure
+seventeen targeted mutations qualify the listed invariants; they do not measure
 an unrestricted mutation score or prove the entire oracle correct.
 
 The allocation optimizations and production comparison procedure are described

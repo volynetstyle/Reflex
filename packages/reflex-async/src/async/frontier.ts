@@ -82,7 +82,17 @@ function isFrontierNode(
 
 // Walks reuse stack storage. Only reentrant walks journal visitation changes:
 // a top-level walk leaves its epoch behind and the next walk simply ignores it.
-const stack: (EvaluationFrontier | undefined)[] = [];
+// A frame suspends a composite scan: its entries and the next index, so wide
+// proofs are scanned in place rather than copied sibling by sibling. A single
+// remaining sibling is stored directly (cursor SIBLING), which keeps chains
+// that inherit their prefix first as cheap as a sibling stack.
+const stack: (
+  | readonly EvaluationFrontier[]
+  | EvaluationFrontier
+  | undefined
+)[] = [];
+const cursors: number[] = [];
+const SIBLING = -1;
 let high = 0;
 const visitedStates: (FrontierState | undefined)[] = [];
 const previousVisits: Walk[] = [];
@@ -122,7 +132,10 @@ function releaseWalk(base: number, top: number, visitedBase: number): void {
   }
 
   if (--depth === 0) {
-    if (stack.length > MAX_RETAINED_STACK) stack.length = STACK_TRIM_FLOOR;
+    if (stack.length > MAX_RETAINED_STACK) {
+      stack.length = STACK_TRIM_FLOOR;
+      cursors.length = STACK_TRIM_FLOOR;
+    }
     if (visitedStates.length > MAX_RETAINED_STACK) {
       visitedStates.length = STACK_TRIM_FLOOR;
       previousVisits.length = STACK_TRIM_FLOOR;
@@ -140,45 +153,59 @@ function walkFrontier(
   let top = base;
   const visitedBase = visitedHigh;
   const walk = beginWalk();
-  let current: EvaluationFrontier = frontier;
+  // The DAG is acyclic, so the root needs no visitation mark of its own.
+  let entries: readonly EvaluationFrontier[] = frontier.entries;
+  let next = 0;
 
   try {
     while (true) {
-      const state = current[FRONTIER_STATE];
-      if (visitState(state, walk)) {
-        if (state.bits === Leaf) {
-          const dependency = current as FreshnessDependency;
+      let entry: EvaluationFrontier;
+      if (next !== entries.length) entry = entries[next++]!;
+      else {
+        if (top === base) break;
+        const saved = stack[--top]!;
+        stack[top] = undefined;
+        const cursor = cursors[top]!;
+        if (cursor === SIBLING) entry = saved as EvaluationFrontier;
+        else {
+          entries = saved as readonly EvaluationFrontier[];
+          next = cursor;
+          continue;
+        }
+      }
+      const state = entry[FRONTIER_STATE];
+      if (!visitState(state, walk)) continue;
+      if (state.bits === Leaf) {
+        const dependency = entry as FreshnessDependency;
+        if (dependencies !== undefined) dependencies.push(dependency);
+        else if (callback !== undefined) {
+          high = top;
+          callback(dependency);
+        }
+      } else if (state.bits & Direct) {
+        const leaves = (entry as FrontierNode)
+          .entries as readonly FreshnessDependency[];
+        for (let i = 0; i < leaves.length; ++i) {
+          const dependency = leaves[i]!;
+          if (!visitState(dependency[FRONTIER_STATE], walk)) continue;
           if (dependencies !== undefined) dependencies.push(dependency);
           else if (callback !== undefined) {
             high = top;
             callback(dependency);
           }
-        } else if (state.bits & Direct) {
-          const entries = (current as FrontierNode)
-            .entries as readonly FreshnessDependency[];
-          for (let i = 0; i < entries.length; ++i) {
-            const dependency = entries[i]!;
-            if (!visitState(dependency[FRONTIER_STATE], walk)) continue;
-            if (dependencies !== undefined) dependencies.push(dependency);
-            else if (callback !== undefined) {
-              high = top;
-              callback(dependency);
-            }
-          }
-        } else if (state.bits & Composite) {
-          const entries: readonly EvaluationFrontier[] = (
-            current as FrontierNode
-          ).entries;
-          // Descend into the first child directly; only siblings need stack slots.
-          for (let i = entries.length - 1; i > 0; --i)
-            stack[top++] = entries[i]!;
-          current = entries[0]!;
-          continue;
         }
+      } else if (state.bits & Composite) {
+        const remaining = entries.length - next;
+        if (remaining === 1) {
+          stack[top] = entries[next]!;
+          cursors[top++] = SIBLING;
+        } else if (remaining !== 0) {
+          stack[top] = entries;
+          cursors[top++] = next;
+        }
+        entries = (entry as FrontierNode).entries;
+        next = 0;
       }
-      if (top === base) break;
-      current = stack[--top]!;
-      stack[top] = undefined;
     }
   } finally {
     releaseWalk(base, top, visitedBase);
@@ -206,36 +233,51 @@ export function containsDependency(
   let top = base;
   const visitedBase = visitedHigh;
   const walk = beginWalk();
+  const targetState = target[FRONTIER_STATE];
+  let entries: readonly EvaluationFrontier[] = frontier.entries;
+  let next = 0;
 
-  let current: EvaluationFrontier = frontier;
   try {
     while (true) {
-      if (
-        current === target ||
-        current[FRONTIER_STATE] === target[FRONTIER_STATE]
-      )
-        return true;
-      const state = current[FRONTIER_STATE];
-      if (
-        id >= state.min &&
-        id <= state.max &&
-        state.bits !== Leaf &&
-        visitState(state, walk)
-      ) {
-        const entries: readonly EvaluationFrontier[] = (current as FrontierNode)
-          .entries;
-        if (state.bits & Direct) {
-          if (containsSource(entries, target)) return true;
-        } else if (state.bits & Composite) {
-          for (let i = entries.length - 1; i > 0; --i)
-            stack[top++] = entries[i]!;
-          current = entries[0]!;
+      let entry: EvaluationFrontier;
+      if (next !== entries.length) entry = entries[next++]!;
+      else {
+        if (top === base) break;
+        const saved = stack[--top]!;
+        stack[top] = undefined;
+        const cursor = cursors[top]!;
+        if (cursor === SIBLING) entry = saved as EvaluationFrontier;
+        else {
+          entries = saved as readonly EvaluationFrontier[];
+          next = cursor;
           continue;
         }
       }
-      if (top === base) break;
-      current = stack[--top]!;
-      stack[top] = undefined;
+      const state = entry[FRONTIER_STATE];
+      if (state === targetState) return true;
+      // Leaves of other sources and out-of-range proofs are pruned unvisited.
+      if (
+        state.bits === Leaf ||
+        id < state.min ||
+        id > state.max ||
+        !visitState(state, walk)
+      )
+        continue;
+      if (state.bits & Direct) {
+        if (containsSource((entry as FrontierNode).entries, target))
+          return true;
+      } else if (state.bits & Composite) {
+        const remaining = entries.length - next;
+        if (remaining === 1) {
+          stack[top] = entries[next]!;
+          cursors[top++] = SIBLING;
+        } else if (remaining !== 0) {
+          stack[top] = entries;
+          cursors[top++] = next;
+        }
+        entries = (entry as FrontierNode).entries;
+        next = 0;
+      }
     }
     return false;
   } finally {
@@ -248,9 +290,9 @@ function containsSource(
   entries: readonly EvaluationFrontier[],
   target: FreshnessDependency,
 ): boolean {
-  if (entries.includes(target)) return true;
   const state = target[FRONTIER_STATE];
-  for (const entry of entries) if (entry[FRONTIER_STATE] === state) return true;
+  for (let i = 0; i < entries.length; ++i)
+    if (entries[i]![FRONTIER_STATE] === state) return true;
   return false;
 }
 
@@ -311,49 +353,95 @@ export function sameFrontierShape(
   return true;
 }
 
+/**
+ * One obligation per freshness state; the first observation represents it.
+ * Observations of one source share `ensure()` and differ only in which outcome
+ * `validate()` accepts. Outcomes never recur, so a later observation implies the
+ * source left every earlier outcome, and the first check is exactly as strong
+ * as checking all of them. Direct capture and composite walks share this key.
+ */
 export class FrontierBuilder {
   private direct: FreshnessDependency[] | undefined = undefined;
-  private directSet: Set<FreshnessDependency> | undefined = undefined;
+  private directSet: Set<FrontierState> | undefined = undefined;
   private parts: EvaluationFrontier[] | undefined = undefined;
   private inheritedCount = 0;
+  /** Set once `direct` may hold a witness other than its source's own handle. */
+  private aliased = false;
 
   constructor(private readonly owner?: FreshnessDependency) {}
 
+  /** `dependency` is the source's canonical handle; `observation` its witness. */
   add(dependency: FreshnessDependency, observation = dependency): void {
     if (dependency === this.owner)
       throw new AsyncProtocolError("Cyclic async derivation dependency.");
+    if (
+      observation === dependency &&
+      !this.aliased &&
+      this.directSet === undefined
+    ) {
+      // While every direct entry is a canonical handle, state equality is
+      // reference equality and the builtin search stays exact.
+      const direct = (this.direct ??= []);
+      if (direct.includes(observation)) return;
+      if (direct.length < 16) {
+        direct.push(observation);
+        this.parts?.push(observation);
+        return;
+      }
+    }
+    this.record(observation, observation === dependency);
+  }
 
-    dependency = observation;
-
+  private record(observation: FreshnessDependency, canonical: boolean): void {
+    const state = observation[FRONTIER_STATE];
     const directSet = this.directSet;
     if (directSet !== undefined) {
       const size = directSet.size;
-      directSet.add(dependency);
+      directSet.add(state);
       if (directSet.size === size) return;
-      this.direct!.push(dependency);
+      this.direct!.push(observation);
     } else {
       const direct = (this.direct ??= []);
-      if (direct.includes(dependency)) return;
+      for (let i = 0; i < direct.length; ++i)
+        if (direct[i]![FRONTIER_STATE] === state) return;
       // Linear lookup wins for small packed vectors; promote only when the
       // frontier is wide enough to amortize a Set allocation.
       if (direct.length >= 16) {
-        this.directSet = new Set(direct);
-        this.directSet.add(dependency);
+        const states = new Set<FrontierState>();
+        for (let i = 0; i < direct.length; ++i)
+          states.add(direct[i]![FRONTIER_STATE]);
+        this.directSet = states.add(state);
       }
-      direct.push(dependency);
+      direct.push(observation);
     }
-
-    this.parts?.push(dependency);
+    if (!canonical) this.aliased = true;
+    this.parts?.push(observation);
   }
 
   merge(frontier: EvaluationFrontier): void {
     if (frontier === EMPTY_FRONTIER) return;
-    if (this.owner !== undefined && containsDependency(frontier, this.owner)) {
+    const owner = this.owner;
+    if (!isFrontierNode(frontier)) {
+      // A singleton proof is one observation: capture deduplicates it, and
+      // captures of only leaves keep the Direct fast paths.
+      if (
+        owner !== undefined &&
+        frontier[FRONTIER_STATE] === owner[FRONTIER_STATE]
+      )
+        throw new AsyncProtocolError("Cyclic async derivation dependency.");
+      this.record(frontier, false);
+      return;
+    }
+
+    // Repeated reads of one cached evaluation inherit the same immutable
+    // proof. A ⋆ A = A, and its owner search has already passed.
+    const parts = this.parts;
+    if (parts !== undefined && parts[parts.length - 1] === frontier) return;
+    if (owner !== undefined && containsDependency(frontier, owner)) {
       throw new AsyncProtocolError("Cyclic async derivation dependency.");
     }
 
-    const parts = (this.parts ??= this.direct?.slice() ?? []);
-    parts.push(frontier);
+    (this.parts ??= this.direct?.slice() ?? []).push(frontier);
     ++this.inheritedCount;
   }
 
