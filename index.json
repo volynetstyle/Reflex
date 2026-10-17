@@ -1,0 +1,47 @@
+{
+ "schemaVersion": 1,
+ "cohorts": [
+  {
+   "id": "4ce43f82cd094991",
+   "identity": {
+    "suite": "reflex",
+    "protocolHash": "269b4ea19ecc5b0d784ebefb1ddbbca7a8f08a8dd1688dcea049d558d88cd349",
+    "anchorCommit": "138b1eba407b83f7d1a9ffad0cc2c36e0522c635",
+    "node": "24",
+    "vitest": "vitest/4.1.5 linux-x64 node-v24.21.0"
+   },
+   "createdAt": "2026-10-17T18:36:01.146Z",
+   "bridge": null,
+   "recent": 1,
+   "days": 0
+  },
+  {
+   "id": "e52e6bd9caca030d",
+   "identity": {
+    "suite": "reflex-scheduler",
+    "protocolHash": "f7871d6e300ca4a618babcd2161942fdb3ce9a591381a25ecd4507246f836e74",
+    "anchorCommit": "138b1eba407b83f7d1a9ffad0cc2c36e0522c635",
+    "node": "24",
+    "vitest": "vitest/4.1.5 linux-x64 node-v24.21.0"
+   },
+   "createdAt": "2026-10-17T18:36:24.396Z",
+   "bridge": null,
+   "recent": 1,
+   "days": 0
+  },
+  {
+   "id": "8c4521978f7df073",
+   "identity": {
+    "suite": "reflex-runtime",
+    "protocolHash": "11bd8a0bb0613658c239b9c999acdd6daf3682531bcef22d16f7cd4b09e033d9",
+    "anchorCommit": "138b1eba407b83f7d1a9ffad0cc2c36e0522c635",
+    "node": "24",
+    "vitest": "vitest/4.1.5 linux-x64 node-v24.21.0"
+   },
+   "createdAt": "2026-10-17T18:51:38.961Z",
+   "bridge": null,
+   "recent": 1,
+   "days": 0
+  }
+ ]
+}
