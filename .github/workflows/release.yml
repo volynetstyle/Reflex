@@ -127,11 +127,16 @@ jobs:
       id-token: write # npm provenance
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
-          package-manager-cache: false
+          cache: pnpm
           registry-url: https://registry.npmjs.org
+      # Archive verification parses the packed JavaScript with TypeScript.
+      # No lifecycle scripts run: the archives are already built and qualified.
+      - name: Install verification tooling
+        run: pnpm install --frozen-lockfile --ignore-scripts
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: release-qualified-Linux-${{ github.sha }}
