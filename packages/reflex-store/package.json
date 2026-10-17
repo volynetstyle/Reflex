@@ -1,6 +1,6 @@
 {
   "name": "@volynets/reflex-store",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "type": "module",
   "description": "State management primitives for Reflex",
   "license": "MIT",
@@ -115,7 +115,7 @@
   },
   "peerDependencies": {
     "@volynets/reflex-runtime": "^1.0.1",
-    "@volynets/reflex-framework": "^0.1.4"
+    "@volynets/reflex-framework": "^0.2.0"
   },
   "private": false
 }
