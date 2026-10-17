@@ -87,10 +87,18 @@ try {
   assert(existsSync(join(installed, "LICENSE")), "Missing MIT license");
   assert(existsSync(join(installed, "dist/licenses/SWC-APACHE-2.0.txt")));
   assert(existsSync(join(installed, "dist/licenses/NOTICE.txt")));
-  assert.deepEqual(manifest.peerDependencies, {
-    "@volynets/reflex-runtime": "^1.0.1",
-    "@volynets/reflex-framework": "^0.1.4",
-  });
+  // The packed manifest keeps the source peers verbatim; release versioning
+  // moves the ranges, so they are read from the source rather than pinned here.
+  const sourcePeers = JSON.parse(
+    readFileSync(join(packageRoot, "package.json"), "utf8"),
+  ).peerDependencies;
+  assert.deepEqual(
+    Object.keys(sourcePeers).sort(),
+    ["@volynets/reflex-framework", "@volynets/reflex-runtime"],
+  );
+  for (const range of Object.values(sourcePeers))
+    assert.match(range, /^\^\d+\.\d+\.\d+$/, "peers must be caret ranges");
+  assert.deepEqual(manifest.peerDependencies, sourcePeers);
   function files(directory) {
     return readdirSync(directory, { withFileTypes: true }).flatMap((entry) =>
       entry.isDirectory()
