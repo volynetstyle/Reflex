@@ -133,7 +133,6 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-          registry-url: https://registry.npmjs.org
       # Archive verification parses the packed JavaScript with TypeScript.
       # No lifecycle scripts run: the archives are already built and qualified.
       - name: Install verification tooling
@@ -172,12 +171,11 @@ jobs:
         with:
           subject-path: artifacts/qualification/*/tarballs/*.tgz
           sbom-path: artifacts/sbom.spdx.json
+      # Every released package trusts this workflow and the npm environment on
+      # npmjs.com (npm trust github), so npm exchanges the job's OIDC token for
+      # a short-lived publish credential. No long-lived npm token exists.
       - name: Publish the qualified archives
         env:
-          # npm prefers OIDC trusted publishing when the package trusts this
-          # workflow on npmjs.com; the token is the fallback until every
-          # package is configured, then the secret can be deleted.
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: "true"
         run: |
           qualification=$(find artifacts/qualification -name qualification.json -print -quit)
