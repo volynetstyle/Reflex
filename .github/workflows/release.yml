@@ -124,20 +124,59 @@ jobs:
     environment: npm
     permissions:
       contents: write # name@version tags
-      id-token: write # npm provenance
+      id-token: write # npm trusted publishing and provenance
+      attestations: write # build provenance and SBOM attestations
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
-          package-manager-cache: false
+          cache: pnpm
           registry-url: https://registry.npmjs.org
+      # Archive verification parses the packed JavaScript with TypeScript.
+      # No lifecycle scripts run: the archives are already built and qualified.
+      - name: Install verification tooling
+        run: pnpm install --frozen-lockfile --ignore-scripts
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: release-qualified-Linux-${{ github.sha }}
           path: artifacts
+      # Trusted publishing (OIDC) needs npm >= 11.5.1; pin it instead of relying
+      # on the npm bundled with the runner's Node.
+      # The publisher locates npm next to the node binary, where -g installs.
+      - name: Install npm with trusted publishing
+        run: npm install --global npm@11.21.1
+      - name: Unpack the exact archives for the SBOM
+        run: |
+          mkdir -p artifacts/sbom-source
+          for archive in artifacts/qualification/*/tarballs/*.tgz; do
+            name=$(basename "$archive" .tgz)
+            mkdir -p "artifacts/sbom-source/$name"
+            tar -xzf "$archive" -C "artifacts/sbom-source/$name"
+          done
+      - name: Generate the SBOM of the published packages
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          path: artifacts/sbom-source
+          format: spdx-json
+          output-file: artifacts/sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+      - name: Attest build provenance of the archives
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: artifacts/qualification/*/tarballs/*.tgz
+      - name: Attest the SBOM of the archives
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-path: artifacts/qualification/*/tarballs/*.tgz
+          sbom-path: artifacts/sbom.spdx.json
       - name: Publish the qualified archives
         env:
+          # npm prefers OIDC trusted publishing when the package trusts this
+          # workflow on npmjs.com; the token is the fallback until every
+          # package is configured, then the secret can be deleted.
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: "true"
         run: |
@@ -157,6 +196,8 @@ jobs:
         if: always()
         with:
           name: publication-${{ github.sha }}
-          path: artifacts/publication/
+          path: |
+            artifacts/publication/
+            artifacts/sbom.spdx.json
           if-no-files-found: warn
           retention-days: 365
