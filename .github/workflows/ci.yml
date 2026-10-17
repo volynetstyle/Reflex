@@ -3,6 +3,8 @@ name: CI
 on:
   workflow_dispatch:
   pull_request:
+    # Labels gate overrides such as runtime-bundle-change, so re-check on them.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches: [main]
   merge_group:
@@ -181,11 +183,69 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+  # The core's machine code is the accepted performance baseline: the production
+  # runtime bundle must stay byte-identical unless a reviewer approves a change.
+  runtime-bundle:
+    name: runtime bundle identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+      - name: Compare the production bundle with the base
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
+          PUSH_BASE: ${{ github.event.before }}
+          APPROVED: ${{ contains(github.event.pull_request.labels.*.name, 'runtime-bundle-change') }}
+        run: |
+          case "$EVENT_NAME" in
+            pull_request) base=$PR_BASE ;;
+            merge_group) base=$QUEUE_BASE ;;
+            push) base=$PUSH_BASE ;;
+            *) base=$(git rev-parse HEAD~1) ;;
+          esac
+          # A new branch or a force push has no comparable predecessor.
+          if [[ -z "$base" || "$base" =~ ^0+$ ]] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then base=$(git rev-parse HEAD~1); fi
+          flags=()
+          # Pushes to main already passed this check, approved or not, as a pull request.
+          if [[ "$APPROVED" == "true" || "$EVENT_NAME" == "push" ]]; then flags+=(--allow-change); fi
+          mkdir -p artifacts
+          node tooling/configs/runtime-bundle-identity.mjs --base "$base" --head "$(git rev-parse HEAD)" --output artifacts/runtime-bundle.json "${flags[@]}"
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: always()
+        with:
+          name: runtime-bundle-identity
+          path: artifacts/runtime-bundle.json
+          if-no-files-found: warn
+
+  # New or changed dependencies with known vulnerabilities or a disallowed
+  # license fail the pull request.
+  dependency-review:
+    name: dependency review
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        if: github.event_name == 'pull_request'
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        if: github.event_name == 'pull_request'
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-2.0-only, GPL-3.0-only, AGPL-3.0-only, AGPL-3.0-or-later, SSPL-1.0
+          comment-summary-in-pr: never
+
   required:
     # Keep the former required status name while making it cover the entire matrix.
     name: fast checks
     if: always()
-    needs: [registry, workflows, static, quality, consumer]
+    needs: [registry, workflows, static, quality, consumer, runtime-bundle, dependency-review]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
