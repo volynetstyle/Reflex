@@ -97,7 +97,9 @@ jobs:
       - name: Install the harness
         working-directory: ${{ runner.temp }}/jfb
         run: |
-          npm ci
+          # The root lock carries lint plugins with conflicting eslint peers;
+          # the harness only needs cross-env from it.
+          npm ci --legacy-peer-deps
           npm run install-webdriver-ts
           npm run install-server
 
