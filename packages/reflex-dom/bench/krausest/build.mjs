@@ -45,5 +45,14 @@ await build({
 
 mkdirSync(resolve(outDir), { recursive: true });
 writeFileSync(join(resolve(outDir), "package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+// The server lists only directories with both a manifest and a lock file.
+const lock = {
+  name: manifest.name,
+  version: manifest.version,
+  lockfileVersion: 3,
+  requires: true,
+  packages: { "": { name: manifest.name, version: manifest.version } },
+};
+writeFileSync(join(resolve(outDir), "package-lock.json"), `${JSON.stringify(lock, null, 2)}\n`);
 
 console.log(`reflex-dom ${version} -> ${resolve(outDir)}`);
