@@ -643,6 +643,9 @@ pnpm --filter @volynets/reflex-dom build
 # Real-browser DOM mutation benchmark
 pnpm --filter @volynets/reflex-dom bench:mutations
 
+# js-framework-benchmark methodology, reflex-dom vs. vanilla (see bench/js-framework)
+pnpm --filter @volynets/reflex-dom bench:js-framework
+
 # Runtime / scheduler / DOM boundary microbenchmarks
 pnpm --filter @volynets/reflex-dom bench:boundary
 ```

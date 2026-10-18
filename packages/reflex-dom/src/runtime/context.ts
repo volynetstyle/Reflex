@@ -14,6 +14,15 @@ export interface DOMContext {
   readonly runtime: RuntimeInstance;
   readonly owner: OwnerContext;
   readonly mountEffects: MountEffects;
+  /**
+   * Runs an element's event listener as a DOM operation of this context. One
+   * function per context, shared by every listener the context binds.
+   */
+  readonly dispatchEvent: (
+    handler: EventListenerOrEventListenerObject,
+    receiver: EventTarget,
+    event: Event,
+  ) => void;
 }
 
 let activeContext: DOMContext | null = null;
@@ -48,6 +57,8 @@ export function createDOMContext(options?: DOMRuntimeOptions): DOMContext {
     // switch domains.
     owner: createOwnerContext(runtime.domain),
     mountEffects,
+    dispatchEvent: (handler, receiver, event) =>
+      dispatchDOMEvent(context, handler, receiver, event),
   };
   return context;
 }

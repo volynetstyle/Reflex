@@ -1,0 +1,17 @@
+{
+  "name": "js-framework-benchmark-reflex-dom",
+  "version": "1.0.0",
+  "private": true,
+  "description": "reflex-dom entry, built outside the official repository by ../build.mjs",
+  "js-framework-benchmark": {
+    "frameworkVersion": "",
+    "customURL": "/dist",
+    "frameworkHomeURL": "https://github.com/volynetstyle/Reflex",
+    "language": "TypeScript"
+  },
+  "scripts": {
+    "dev": "exit 0",
+    "build-prod": "exit 0"
+  },
+  "license": "MIT"
+}

@@ -14,6 +14,7 @@ import {
   createDOMOwnedReaction,
   registerDOMCleanup,
 } from "../runtime/lifetime";
+import { isTextRenderableValue } from "../renderable/kind";
 import { bindElementProps } from "./element-binder";
 import { appendRenderableNodes } from "./append";
 
@@ -182,18 +183,30 @@ export function mountElement<Tag extends ElementTag>(
   const element = createElementInNamespace(tag, elementNamespace, doc);
   const propsRecord = props as Record<string, unknown>;
   const shadowRoot = resolveElementShadowRoot(element, propsRecord);
+  const isSelect = elementNamespace === "html" && tag === "select";
 
-  bindElementProps(element, propsRecord, elementNamespace, "initial");
+  bindElementProps(element, propsRecord, elementNamespace, "initial", isSelect);
 
-  if (shouldMountLightDomChildren(tag, propsRecord)) {
-    appendRenderableNodes(
-      element,
-      propsRecord.children,
-      resolveChildNamespace(tag, elementNamespace),
-    );
+  const children = propsRecord.children;
+
+  if (children != null && shouldMountLightDomChildren(tag, propsRecord)) {
+    if (isTextRenderableValue(children)) {
+      // A single static text child: one native call instead of creating and
+      // appending a text node.
+      element.textContent = String(children);
+    } else {
+      appendRenderableNodes(
+        element,
+        children,
+        resolveChildNamespace(tag, elementNamespace),
+        doc,
+      );
+    }
   }
 
-  bindElementProps(element, propsRecord, elementNamespace, "deferred");
+  if (isSelect) {
+    bindElementProps(element, propsRecord, elementNamespace, "deferred", true);
+  }
 
   if (shadowRoot !== null) {
     if (propsRecord.shadowRootRef !== undefined) {

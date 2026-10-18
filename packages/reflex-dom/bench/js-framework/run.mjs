@@ -1,0 +1,717 @@
+// Local js-framework-benchmark harness for reflex-dom vs. vanilla JS.
+//
+// Reproduces the keyed CPU benchmarks of js-framework-benchmark
+// (webdriver-ts/src/benchmarksCommon.ts + benchmarksPlaywright.ts): the same
+// init/warmup and run steps, CPU throttling factors and DOM conditions, with
+// durations computed from a Chrome trace by the port in ./timeline.mjs. Memory
+// and bundle-size benchmarks follow the same steps; see README.md for the
+// documented deviations.
+//
+//   node bench/js-framework/run.mjs [options]
+//
+//   --frameworks=vanillajs,reflex-dom   frameworks to compare (first = baseline)
+//   --benchmarks=01,04                  benchmark id prefixes (default: all)
+//   --count=15                          CPU iterations per benchmark
+//   --mem-count=1                       memory iterations per benchmark
+//   --no-throttle                       disable CPU throttling
+//   --no-memory / --no-size             skip memory / size benchmarks
+//   --headed                            run a visible browser window
+//   --skip-build                        reuse .build/
+//   --keep-traces                       write Chrome traces to results/traces
+
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
+import { cpus, platform, release } from "node:os";
+import { dirname, extname, join, normalize, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { brotliCompressSync, constants as zlibConstants, gzipSync } from "node:zlib";
+import { chromium } from "playwright";
+import { buildApps, buildRoot, frameworks } from "./build.mjs";
+import {
+  CPU_BENCHMARK_WEIGHTS,
+  studentTTest,
+  summarize,
+  weightedGeometricMean,
+} from "./stats.mjs";
+import { computeCPUResult } from "./timeline.mjs";
+
+const benchRoot = dirname(fileURLToPath(import.meta.url));
+const resultsRoot = join(benchRoot, "results");
+
+// ---------------------------------------------------------------------------
+// Options
+// ---------------------------------------------------------------------------
+
+function parseOptions(argv) {
+  const options = {
+    frameworks: ["vanillajs", "reflex-dom"],
+    benchmarks: [],
+    count: 15,
+    memCount: 1,
+    throttle: true,
+    memory: true,
+    size: true,
+    headed: false,
+    build: true,
+    keepTraces: false,
+  };
+
+  for (const arg of argv) {
+    const [key, value] = arg.replace(/^--/, "").split("=");
+    switch (key) {
+      case "frameworks":
+        options.frameworks = value.split(",").filter(Boolean);
+        break;
+      case "benchmarks":
+        options.benchmarks = value.split(",").filter(Boolean);
+        break;
+      case "count":
+        options.count = Number(value);
+        break;
+      case "mem-count":
+        options.memCount = Number(value);
+        break;
+      case "no-throttle":
+        options.throttle = false;
+        break;
+      case "no-memory":
+        options.memory = false;
+        break;
+      case "no-size":
+        options.size = false;
+        break;
+      case "headed":
+        options.headed = true;
+        break;
+      case "skip-build":
+        options.build = false;
+        break;
+      case "keep-traces":
+        options.keepTraces = true;
+        break;
+      default:
+        throw new Error(`Unknown option ${arg}`);
+    }
+  }
+
+  for (const name of options.frameworks) {
+    if (!(name in frameworks)) throw new Error(`Unknown framework "${name}".`);
+  }
+
+  return options;
+}
+
+// ---------------------------------------------------------------------------
+// Page helpers. Conditions are polled from Node, never with timers or
+// requestAnimationFrame inside the page: in-page polling adds TimerFire /
+// FireAnimationFrame events that move the measured end to a later commit.
+// ---------------------------------------------------------------------------
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const td = (row, column) => `tbody>tr:nth-of-type(${row})>td:nth-of-type(${column})`;
+
+async function waitFor(page, description, predicate, arg, timeout = 60_000) {
+  const deadline = Date.now() + timeout;
+  for (;;) {
+    if (await page.evaluate(predicate, arg)) return;
+    if (Date.now() > deadline) throw new Error(`Timed out waiting for ${description}`);
+    await sleep(2);
+  }
+}
+
+const waitExists = (page, selector) =>
+  waitFor(page, `${selector} to exist`, (s) => document.querySelector(s) !== null, selector);
+
+const waitGone = (page, selector) =>
+  waitFor(page, `${selector} to disappear`, (s) => document.querySelector(s) === null, selector);
+
+const waitText = (page, selector, text) =>
+  waitFor(
+    page,
+    `${selector} to contain "${text}"`,
+    ([s, t]) => document.querySelector(s)?.textContent?.includes(t) === true,
+    [selector, String(text)],
+  );
+
+const waitClass = (page, selector, className) =>
+  waitFor(
+    page,
+    `${selector} to have class ${className}`,
+    ([s, c]) => document.querySelector(s)?.classList.contains(c) === true,
+    [selector, className],
+  );
+
+const waitCount = (page, selector, count) =>
+  waitFor(
+    page,
+    `${count} × ${selector}`,
+    ([s, n]) => document.querySelectorAll(s).length === n,
+    [selector, count],
+  );
+
+const click = (page, selector) => page.click(selector);
+
+async function createAndClear(page, warmupCount) {
+  await waitExists(page, "#run");
+  for (let i = 0; i < warmupCount; i++) {
+    await click(page, "#run");
+    await waitText(page, td(1, 1), i * 1000 + 1);
+    await click(page, "#clear");
+    await waitGone(page, td(1000, 1));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Benchmarks (ids, warmups and throttling from benchmarksCommon.ts)
+// ---------------------------------------------------------------------------
+
+const cpuBenchmarks = [
+  {
+    id: "01_run1k",
+    label: "create rows",
+    description: "creating 1,000 rows",
+    warmupCount: 5,
+    slowdown: 1,
+    async init(page) {
+      await createAndClear(page, this.warmupCount);
+    },
+    async run(page) {
+      await click(page, "#run");
+      await waitText(page, td(1000, 1), (this.warmupCount + 1) * 1000);
+    },
+  },
+  {
+    id: "02_replace1k",
+    label: "replace all rows",
+    description: "updating all 1,000 rows",
+    warmupCount: 5,
+    slowdown: 1,
+    async init(page) {
+      await waitExists(page, "#run");
+      for (let i = 0; i < this.warmupCount; i++) {
+        await click(page, "#run");
+        await waitText(page, td(1, 1), i * 1000 + 1);
+      }
+    },
+    async run(page) {
+      await click(page, "#run");
+      await waitText(page, td(1, 1), this.warmupCount * 1000 + 1);
+    },
+  },
+  {
+    id: "03_update10th1k_x16",
+    label: "partial update",
+    description: "updating every 10th row for 1,000 rows",
+    warmupCount: 3,
+    slowdown: 4,
+    async init(page) {
+      await waitExists(page, "#run");
+      await click(page, "#run");
+      await waitExists(page, td(1000, 1));
+      for (let i = 0; i < this.warmupCount; i++) {
+        await click(page, "#update");
+        await waitText(page, `${td(991, 2)}>a`, " !!!".repeat(i + 1));
+      }
+    },
+    async run(page) {
+      await click(page, "#update");
+      await waitText(page, `${td(991, 2)}>a`, " !!!".repeat(this.warmupCount + 1));
+    },
+  },
+  {
+    id: "04_select1k",
+    label: "select row",
+    description: "highlighting a selected row",
+    warmupCount: 5,
+    additionalRuns: 10,
+    slowdown: 4,
+    async init(page) {
+      await waitExists(page, "#run");
+      await click(page, "#run");
+      await waitText(page, td(1000, 1), 1000);
+      await click(page, `${td(5, 2)}>a`);
+      await waitClass(page, "tbody>tr:nth-of-type(5)", "danger");
+      await waitCount(page, "tbody>tr.danger", 1);
+    },
+    async run(page) {
+      await click(page, `${td(2, 2)}>a`);
+      await waitClass(page, "tbody>tr:nth-of-type(2)", "danger");
+    },
+  },
+  {
+    id: "05_swap1k",
+    label: "swap rows",
+    description: "swap 2 rows for table with 1,000 rows",
+    warmupCount: 5,
+    slowdown: 4,
+    async init(page) {
+      await waitExists(page, "#run");
+      await click(page, "#run");
+      await waitExists(page, td(1000, 1));
+      for (let i = 0; i <= this.warmupCount; i++) {
+        await click(page, "#swaprows");
+        await waitText(page, td(999, 1), i % 2 === 0 ? 2 : 999);
+      }
+    },
+    async run(page) {
+      const odd = (this.warmupCount + 2) % 2 === 1;
+      await click(page, "#swaprows");
+      await waitText(page, td(999, 1), odd ? 2 : 999);
+      await waitText(page, td(2, 1), odd ? 999 : 2);
+    },
+  },
+  {
+    id: "06_remove-one-1k",
+    label: "remove row",
+    description: "removing one row",
+    warmupCount: 5,
+    slowdown: 2,
+    async init(page) {
+      const skip = 4;
+      const warm = this.warmupCount;
+      await waitExists(page, "#run");
+      await click(page, "#run");
+      await waitExists(page, td(1000, 1));
+      for (let i = 0; i < warm; i++) {
+        const row = warm - i + skip;
+        await waitText(page, td(row, 1), row);
+        await click(page, `${td(row, 3)}>a>span:nth-of-type(1)`);
+        await waitText(page, td(row, 1), skip + warm + 1);
+      }
+      await waitText(page, td(skip + 1, 1), skip + warm + 1);
+      await waitText(page, td(skip, 1), skip);
+
+      await waitText(page, td(skip + 2, 1), skip + warm + 2);
+      await click(page, `${td(skip + 2, 3)}>a>span:nth-of-type(1)`);
+      await waitText(page, td(skip + 2, 1), skip + warm + 3);
+    },
+    async run(page) {
+      await click(page, `${td(4, 3)}>a>span:nth-of-type(1)`);
+      await waitText(page, td(4, 1), 4 + this.warmupCount + 1);
+    },
+  },
+  {
+    id: "07_create10k",
+    label: "create many rows",
+    description: "creating 10,000 rows",
+    warmupCount: 5,
+    slowdown: 1,
+    async init(page) {
+      await createAndClear(page, this.warmupCount);
+    },
+    async run(page) {
+      await click(page, "#runlots");
+      await waitExists(page, `${td(10000, 2)}>a`);
+    },
+  },
+  {
+    id: "08_create1k-after1k_x2",
+    label: "append rows to large table",
+    description: "appending 1,000 to a table of 1,000 rows",
+    warmupCount: 5,
+    slowdown: 1,
+    async init(page) {
+      await createAndClear(page, this.warmupCount);
+      await click(page, "#run");
+      await waitExists(page, td(1000, 1));
+    },
+    async run(page) {
+      await click(page, "#add");
+      await waitExists(page, td(2000, 1));
+    },
+  },
+  {
+    id: "09_clear1k_x8",
+    label: "clear rows",
+    description: "clearing a table with 1,000 rows",
+    warmupCount: 5,
+    slowdown: 4,
+    async init(page) {
+      await createAndClear(page, this.warmupCount);
+      await click(page, "#run");
+      await waitText(page, td(1, 1), this.warmupCount * 1000 + 1);
+    },
+    async run(page) {
+      await click(page, "#clear");
+      await waitGone(page, td(1000, 1));
+    },
+  },
+];
+
+const memoryBenchmarks = [
+  {
+    id: "21_ready-memory",
+    label: "ready memory",
+    description: "memory usage after page load",
+    async run() {},
+  },
+  {
+    id: "22_run-memory",
+    label: "run memory",
+    description: "memory usage after adding 1,000 rows",
+    async run(page) {
+      await click(page, "#run");
+      await waitExists(page, `${td(1, 2)}>a`);
+    },
+  },
+  {
+    id: "25_run-clear-memory",
+    label: "creating/clearing 1k rows (5 cycles)",
+    description: "memory usage after creating and clearing 1,000 rows 5 times",
+    async run(page) {
+      for (let i = 0; i < 5; i++) {
+        await click(page, "#run");
+        await waitText(page, td(1000, 1), 1000 * (i + 1));
+        await click(page, "#clear");
+        await waitGone(page, td(1000, 1));
+      }
+    },
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Infrastructure
+// ---------------------------------------------------------------------------
+
+const CONTENT_TYPES = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+};
+
+function startServer(root) {
+  const server = createServer((request, response) => {
+    const url = new URL(request.url, "http://localhost");
+    let path = normalize(join(root, decodeURIComponent(url.pathname)));
+    if (!path.startsWith(root)) {
+      response.writeHead(403).end();
+      return;
+    }
+    if (url.pathname.endsWith("/")) path = join(path, "index.html");
+    try {
+      const body = readFileSync(path);
+      response
+        .writeHead(200, {
+          "content-type": CONTENT_TYPES[extname(path)] ?? "application/octet-stream",
+          "cache-control": "no-store",
+        })
+        .end(body);
+    } catch {
+      response.writeHead(404).end();
+    }
+  });
+
+  return new Promise((resolvePromise) => {
+    server.listen(0, "127.0.0.1", () => resolvePromise(server));
+  });
+}
+
+// Chrome flags used by js-framework-benchmark's runner.
+const CHROME_ARGS = [
+  "--js-flags=--expose-gc",
+  "--enable-precise-memory-info",
+  "--no-first-run",
+  "--disable-extensions",
+  "--disable-default-apps",
+  "--disable-background-timer-throttling",
+  "--disable-renderer-backgrounding",
+  "--disable-backgrounding-occluded-windows",
+  "--window-size=1000,800",
+];
+
+const TRACE_CATEGORIES = [
+  "devtools.timeline",
+  "disabled-by-default-devtools.timeline",
+  "blink.user_timing",
+  "v8.execute",
+];
+
+async function openPage(browser, baseURL, framework) {
+  const context = await browser.newContext({ viewport: { width: 1000, height: 800 } });
+  const page = await context.newPage();
+  const cdp = await context.newCDPSession(page);
+  await page.goto(`${baseURL}/${framework}/`, { waitUntil: "load" });
+  return { context, page, cdp };
+}
+
+async function measureCPU(browser, baseURL, framework, benchmark, options, iteration) {
+  const { context, page, cdp } = await openPage(browser, baseURL, framework);
+  try {
+    await benchmark.init(page);
+
+    const slowdown = options.throttle ? benchmark.slowdown : 1;
+    if (slowdown > 1) await cdp.send("Emulation.setCPUThrottlingRate", { rate: slowdown });
+
+    await browser.startTracing(page, { categories: TRACE_CATEGORIES });
+    await benchmark.run(page);
+    // Let the frame that renders the change commit before stopping the trace.
+    await sleep(100);
+    const trace = JSON.parse((await browser.stopTracing()).toString("utf8"));
+
+    if (slowdown > 1) await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+
+    if (options.keepTraces) {
+      const dir = join(resultsRoot, "traces");
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, `${framework}_${benchmark.id}_${iteration}.json`), JSON.stringify(trace));
+    }
+
+    return computeCPUResult(trace);
+  } finally {
+    await context.close();
+  }
+}
+
+async function measureMemory(browser, baseURL, framework, benchmark) {
+  const { context, page, cdp } = await openPage(browser, baseURL, framework);
+  try {
+    await waitExists(page, "#run");
+    await benchmark.run(page);
+    await sleep(100);
+    for (let i = 0; i < 3; i++) await cdp.send("HeapProfiler.collectGarbage");
+    const { usedSize } = await cdp.send("Runtime.getHeapUsage");
+    return usedSize / 1024 / 1024;
+  } finally {
+    await context.close();
+  }
+}
+
+function measureSize(framework) {
+  const assets = join(buildRoot, framework, "assets");
+  const scripts = readdirSync(assets).filter((file) => file.endsWith(".js"));
+  const source = Buffer.concat(scripts.map((file) => readFileSync(join(assets, file))));
+  return {
+    uncompressed: source.length / 1024,
+    gzip: gzipSync(source, { level: 9 }).length / 1024,
+    brotli: brotliCompressSync(source, {
+      params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 11 },
+    }).length / 1024,
+  };
+}
+
+/** Interleaves frameworks per iteration (A,B then B,A) so drift is shared. */
+const orderFor = (names, iteration) => (iteration % 2 === 0 ? names : [...names].reverse());
+
+const selectBenchmarks = (list, prefixes) =>
+  prefixes.length === 0 ? list : list.filter((b) => prefixes.some((p) => b.id.startsWith(p)));
+
+// ---------------------------------------------------------------------------
+// Reporting
+// ---------------------------------------------------------------------------
+
+const fmt = (value, digits = 1) => (Number.isFinite(value) ? value.toFixed(digits) : "—");
+
+function report(results, options) {
+  const names = options.frameworks;
+  const [baseline] = names;
+  const lines = [];
+  const header = (cells) => `| ${cells.join(" | ")} |`;
+  const separator = (count) => `|${" --- |".repeat(count)}`;
+
+  lines.push(`# js-framework-benchmark (local) — ${names.join(" vs ")}`, "");
+  lines.push(
+    `${results.environment.browser} · ${results.environment.os} · ${results.environment.cpu}`,
+    "",
+    `CPU: ${options.count} iterations (+ additional runs where the original has them), ` +
+      `throttling ${options.throttle ? "on" : "off"}. Values are mean ± 95% CI in ms; ` +
+      `factors are relative to ${baseline}; p from Student's t-test (undecided above 0.05).`,
+    "",
+  );
+
+  if (results.cpu.length > 0) {
+    const others = names.slice(1);
+    lines.push(
+      header([
+        "benchmark",
+        ...names,
+        ...others.map((n) => `${n} / ${baseline}`),
+        ...others.map((n) => `p (${n})`),
+      ]),
+      separator(1 + names.length + others.length * 2),
+    );
+
+    const factorsVsFastest = Object.fromEntries(names.map((n) => [n, {}]));
+
+    for (const row of results.cpu) {
+      const stats = names.map((n) => row.frameworks[n]?.total);
+      const fastest = Math.min(...stats.map((s) => s?.mean ?? Infinity));
+      names.forEach((n, i) => {
+        if (stats[i]) factorsVsFastest[n][row.id] = stats[i].mean / fastest;
+      });
+
+      const base = stats[0];
+      lines.push(
+        header([
+          `${row.label} (${row.id}${row.slowdown > 1 ? `, ${row.slowdown}× slowdown` : ""})`,
+          ...stats.map((s) => (s ? `${fmt(s.mean)} ± ${fmt(s.ci)}` : "—")),
+          ...stats.slice(1).map((s) => (s && base ? `**${fmt(s.mean / base.mean, 2)}**` : "—")),
+          ...stats.slice(1).map((s) => (s && base ? fmt(studentTTest(base, s), 3) : "—")),
+        ]),
+      );
+    }
+
+    lines.push(
+      header([
+        "weighted geometric mean (factor vs. fastest)",
+        ...names.map((n) => fmt(weightedGeometricMean(factorsVsFastest[n], CPU_BENCHMARK_WEIGHTS), 2)),
+        ...names.slice(1).map(() => ""),
+        ...names.slice(1).map(() => ""),
+      ]),
+      "",
+      "Script / paint breakdown (mean ms):",
+      "",
+      header(["benchmark", ...names.flatMap((n) => [`${n} script`, `${n} paint`])]),
+      separator(1 + names.length * 2),
+    );
+
+    for (const row of results.cpu) {
+      lines.push(
+        header([
+          row.id,
+          ...names.flatMap((n) => [
+            fmt(row.frameworks[n]?.script.mean),
+            fmt(row.frameworks[n]?.paint.mean),
+          ]),
+        ]),
+      );
+    }
+    lines.push("");
+  }
+
+  if (results.memory.length > 0) {
+    lines.push(header(["memory (MB, JS heap after GC)", ...names]), separator(1 + names.length));
+    for (const row of results.memory) {
+      lines.push(header([`${row.label} (${row.id})`, ...names.map((n) => fmt(row.frameworks[n]?.mean, 2))]));
+    }
+    lines.push("");
+  }
+
+  if (results.size) {
+    lines.push(header(["size (kB)", ...names]), separator(1 + names.length));
+    for (const key of ["uncompressed", "gzip", "brotli"]) {
+      lines.push(header([key, ...names.map((n) => fmt(results.size[n][key], 1))]));
+    }
+    lines.push("");
+  }
+
+  if (results.errors.length > 0) {
+    lines.push(`Dropped iterations: ${results.errors.length} (see JSON for details).`, "");
+  }
+
+  return lines.join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+
+const options = parseOptions(process.argv.slice(2));
+
+if (options.build) {
+  console.log(`Building ${options.frameworks.join(", ")}…`);
+  await buildApps(options.frameworks);
+}
+
+const server = await startServer(resolve(buildRoot));
+const baseURL = `http://127.0.0.1:${server.address().port}`;
+const browser = await chromium.launch({
+  channel: "chromium",
+  headless: !options.headed,
+  args: CHROME_ARGS,
+});
+
+const results = {
+  environment: {
+    browser: `Chromium ${browser.version()}${options.headed ? "" : " (headless)"}`,
+    os: `${platform()} ${release()}`,
+    cpu: `${cpus()[0]?.model ?? "unknown CPU"} × ${cpus().length}`,
+    node: process.version,
+    date: new Date().toISOString(),
+  },
+  options,
+  cpu: [],
+  memory: [],
+  size: null,
+  errors: [],
+};
+
+try {
+  for (const benchmark of selectBenchmarks(cpuBenchmarks, options.benchmarks)) {
+    const iterations = options.count + (benchmark.additionalRuns ?? 0);
+    const samples = Object.fromEntries(
+      options.frameworks.map((n) => [n, { total: [], script: [], paint: [] }]),
+    );
+
+    for (let i = 0; i < iterations; i++) {
+      for (const framework of orderFor(options.frameworks, i)) {
+        try {
+          const result = await measureCPU(browser, baseURL, framework, benchmark, options, i);
+          samples[framework].total.push(result.total);
+          samples[framework].script.push(result.script);
+          samples[framework].paint.push(result.paint);
+        } catch (error) {
+          results.errors.push({ benchmark: benchmark.id, framework, iteration: i, error: String(error) });
+          console.warn(`  dropped ${framework} ${benchmark.id} #${i}: ${error}`);
+        }
+      }
+      process.stdout.write(`\r${benchmark.id}: ${i + 1}/${iterations}`);
+    }
+    process.stdout.write("\n");
+
+    results.cpu.push({
+      id: benchmark.id,
+      label: benchmark.label,
+      description: benchmark.description,
+      slowdown: options.throttle ? benchmark.slowdown : 1,
+      frameworks: Object.fromEntries(
+        options.frameworks.map((n) => [
+          n,
+          {
+            total: summarize(samples[n].total),
+            script: summarize(samples[n].script),
+            paint: summarize(samples[n].paint),
+          },
+        ]),
+      ),
+    });
+  }
+
+  if (options.memory) {
+    for (const benchmark of selectBenchmarks(memoryBenchmarks, options.benchmarks)) {
+      const samples = Object.fromEntries(options.frameworks.map((n) => [n, []]));
+      for (let i = 0; i < options.memCount; i++) {
+        for (const framework of orderFor(options.frameworks, i)) {
+          try {
+            samples[framework].push(await measureMemory(browser, baseURL, framework, benchmark));
+          } catch (error) {
+            results.errors.push({ benchmark: benchmark.id, framework, iteration: i, error: String(error) });
+          }
+        }
+      }
+      console.log(`${benchmark.id}: done`);
+      results.memory.push({
+        id: benchmark.id,
+        label: benchmark.label,
+        description: benchmark.description,
+        frameworks: Object.fromEntries(options.frameworks.map((n) => [n, summarize(samples[n])])),
+      });
+    }
+  }
+
+  if (options.size) {
+    results.size = Object.fromEntries(options.frameworks.map((n) => [n, measureSize(n)]));
+  }
+} finally {
+  await browser.close();
+  server.close();
+}
+
+mkdirSync(resultsRoot, { recursive: true });
+const stamp = results.environment.date.replace(/[:.]/g, "-");
+const markdown = report(results, options);
+writeFileSync(join(resultsRoot, `${stamp}.json`), JSON.stringify(results, null, 2));
+writeFileSync(join(resultsRoot, `${stamp}.md`), markdown);
+writeFileSync(join(resultsRoot, "latest.md"), markdown);
+
+console.log(`\n${markdown}`);
+console.log(`Results: ${join(resultsRoot, `${stamp}.json`)}`);

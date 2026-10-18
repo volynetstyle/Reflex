@@ -92,13 +92,19 @@ function isColonEvent(name: string): boolean {
   return name.length > 3 && name.charCodeAt(2) === COLON;
 }
 
-function resolveEventName(name: string): string {
-  if (isColonEvent(name)) return name.slice(3);
+const resolvedEventNames: Record<string, string> = Object.create(null);
 
-  return (
-    EVENT_ALIASES[name as keyof typeof EVENT_ALIASES] ??
-    name.slice(2).toLowerCase()
-  );
+function resolveEventName(name: string): string {
+  const cached = resolvedEventNames[name];
+  if (cached !== undefined) return cached;
+
+  const resolved = isColonEvent(name)
+    ? name.slice(3)
+    : (EVENT_ALIASES[name as keyof typeof EVENT_ALIASES] ??
+      name.slice(2).toLowerCase());
+
+  resolvedEventNames[name] = resolved;
+  return resolved;
 }
 
 function isEventListenerObject(value: unknown): value is EventListenerObject {
