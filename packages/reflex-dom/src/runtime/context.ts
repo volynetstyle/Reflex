@@ -87,7 +87,7 @@ export function runDOMOperation<A extends unknown[], T>(
 export function dispatchDOMEvent(
   context: DOMContext,
   handler: EventListenerOrEventListenerObject,
-  receiver: Element,
+  receiver: EventTarget,
   event: Event,
 ): void {
   runDOMOperation(context, () => {

@@ -1,9 +1,10 @@
 import { isHTMLElement } from "../host/document";
-import type { ElementInstance, ElementProps, ElementTag, Ref } from "../types";
+import type { ElementInstance, ElementTag, Ref } from "../types";
 import { attachRef } from "../host/refs";
 import {
   MATHML_NS,
   SVG_NS,
+  resolveChildNamespace,
   resolveNamespace,
   type Namespace,
 } from "../host/namespace";
@@ -173,7 +174,7 @@ function bindElementInternalsReference(
 
 export function mountElement<Tag extends ElementTag>(
   tag: Tag,
-  props: ElementProps<Tag>,
+  props: Record<string, unknown>,
   parentNamespace: Namespace,
   doc: Document,
 ): ElementInstance<Tag> {
@@ -185,7 +186,11 @@ export function mountElement<Tag extends ElementTag>(
   bindElementProps(element, propsRecord, elementNamespace, "initial");
 
   if (shouldMountLightDomChildren(tag, propsRecord)) {
-    appendRenderableNodes(element, propsRecord.children, elementNamespace);
+    appendRenderableNodes(
+      element,
+      propsRecord.children,
+      resolveChildNamespace(tag, elementNamespace),
+    );
   }
 
   bindElementProps(element, propsRecord, elementNamespace, "deferred");

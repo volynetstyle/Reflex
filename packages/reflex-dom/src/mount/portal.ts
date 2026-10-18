@@ -1,4 +1,5 @@
 import type { PortalRenderable } from "../operators";
+import { resolveContainerNamespace } from "../host/namespace";
 import { mountOwnedRange } from "../mount/range";
 import { type OwnedRange } from "../structure/owned-range";
 import {
@@ -29,7 +30,7 @@ export function mountPortal(renderable: PortalRenderable, doc: Document): Node {
     activePortalRange = mountOwnedRange(
       nextTarget,
       renderable.children,
-      "html",
+      resolveContainerNamespace(nextTarget),
     );
   }
 

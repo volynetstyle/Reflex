@@ -7,7 +7,6 @@ import type {
 } from "../operators";
 import type {
   ComponentRenderable,
-  ElementProps,
   ElementRenderable,
   ElementTag,
   JSXRenderable,
@@ -77,10 +76,7 @@ export function appendRenderableNodes(
         parent.appendChild(current as Node);
         continue;
       case RenderableKind.Element: {
-        const el = current as ElementRenderable<
-          ElementTag,
-          ElementProps<ElementTag>
-        >;
+        const el = current as ElementRenderable<ElementTag, Record<string, unknown>>;
 
         parent.appendChild(mountElement(el.tag, el.props, ns, doc));
         continue;

@@ -1,7 +1,6 @@
 import { isTextNode, isElementNode } from "../host/document";
 import type {
   ComponentRenderable,
-  ElementProps,
   ElementRenderable,
   ElementTag,
   JSXRenderable,
@@ -34,6 +33,8 @@ import {
 import { getDOMContext } from "../runtime/context";
 import { runInDOMOwnershipNode } from "../runtime/lifetime";
 import {
+  resolveChildNamespace,
+  resolveContainerNamespace,
   resolveNamespace,
   SVG_NS,
   MATHML_NS,
@@ -210,10 +211,7 @@ function hydrateRenderableValue(
         failHydration();
       }
 
-      const renderable = value as ElementRenderable<
-        ElementTag,
-        ElementProps<ElementTag>
-      >;
+      const renderable = value as ElementRenderable<ElementTag, Record<string, unknown>>;
       const elementNamespace = resolveNamespace(
         renderable.tag,
         parentNamespace,
@@ -231,7 +229,7 @@ function hydrateRenderableValue(
       if (shouldHydrateLightDomChildren(renderable.tag, props)) {
         const remainingChild = hydrateRenderableValue(
           props.children,
-          elementNamespace,
+          resolveChildNamespace(renderable.tag, elementNamespace),
           currentNode.firstChild,
           null,
           doc,
@@ -263,7 +261,7 @@ export function hydrateRange(
     runInDOMOwnershipNode(ownershipNode, () => {
       const remainingNode = hydrateRenderableValue(
         renderable,
-        "html",
+        resolveContainerNamespace(container),
         anchors.startAnchor.nextSibling === anchors.endAnchor
           ? null
           : anchors.startAnchor.nextSibling,
@@ -286,6 +284,11 @@ export function hydrateRange(
       throw error;
     }
 
-    return mountOwnedRange(container, renderable, "html", anchors);
+    return mountOwnedRange(
+      container,
+      renderable,
+      resolveContainerNamespace(container),
+      anchors,
+    );
   }
 }

@@ -56,7 +56,7 @@ export function bindElementProperty(
     return;
   }
 
-  if (isEventProp(name, value)) {
+  if (isEventProp(name, value, element)) {
     const context = getDOMContext();
     registerDOMCleanup(
       attachEventListener(

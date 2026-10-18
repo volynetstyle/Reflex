@@ -1,5 +1,6 @@
 import { createOwnershipNode } from "@volynets/reflex-framework";
 import { hydrateRange } from "../hydrate/hydration";
+import { resolveContainerNamespace } from "../host/namespace";
 import { mountOwnedRange } from "../mount/range";
 import { createOwnedRange } from "../structure/owned-range";
 import type { Cleanup, JSXRenderable } from "../types";
@@ -41,7 +42,12 @@ export function createDOMRenderer(options?: DOMRuntimeOptions): DOMRenderer {
   const render = (input: JSXRenderable, container: Container) =>
     operation(() =>
       replaceRoot(execution, container, (anchors) =>
-        mountOwnedRange(container, input, "html", anchors),
+        mountOwnedRange(
+          container,
+          input,
+          resolveContainerNamespace(container),
+          anchors,
+        ),
       ),
     );
 

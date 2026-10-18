@@ -2,6 +2,18 @@ import type { Namespace } from "./namespace";
 import { XLINK_NS, URL_ATTRS } from "./namespace";
 import { sanitizeURL } from "./sanitize";
 
+/** Whether `name` is an `aria-*` attribute. */
+export function isAriaAttr(name: string): boolean {
+  return (
+    name.length > 5 &&
+    name.charCodeAt(0) === 97 &&
+    name.charCodeAt(1) === 114 &&
+    name.charCodeAt(2) === 105 &&
+    name.charCodeAt(3) === 97 &&
+    name.charCodeAt(4) === 45
+  );
+}
+
 function isAriaOrDataAttr(name: string): boolean {
   if (name.length <= 5) return false;
 
@@ -56,6 +68,13 @@ export function setAttr(
   prev?: unknown,
 ): unknown {
   if (value === prev) return prev;
+
+  // ARIA true/false states are the tokens "true"/"false"; an empty or missing
+  // attribute means "not set", not false.
+  if (typeof value === "boolean" && isAriaAttr(name)) {
+    el.setAttribute(name, value ? "true" : "false");
+    return value;
+  }
 
   const remove = value == null || value === false;
 

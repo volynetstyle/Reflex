@@ -1,6 +1,5 @@
 import type {
   ComponentRenderable,
-  ElementProps,
   ElementRenderable,
   ElementTag,
   JSXRenderable,
@@ -11,9 +10,15 @@ import type {
   SwitchRenderable,
 } from "../operators";
 import { resolveShowValue, resolveSwitchValue } from "../operators";
+import { isAriaAttr } from "../host/attr";
 import { isEventProp } from "../host/events";
 import { normalizeAttr } from "../host/aliases";
-import { resolveNamespace, type Namespace, URL_ATTRS } from "../host/namespace";
+import {
+  resolveChildNamespace,
+  resolveNamespace,
+  type Namespace,
+  URL_ATTRS,
+} from "../host/namespace";
 import { sanitizeURL } from "../host/sanitize";
 import { isVoidTag } from "../host/tags";
 import { RenderableKind } from "../renderable/kind";
@@ -40,6 +45,54 @@ const PLATFORM_PROPS = new Set<string>([
   "shadowRootRef",
 ]);
 
+/** Client-side properties with no content attribute; never serialized. */
+const PROPERTY_ONLY_PROPS = new Set<string>([
+  "currentTime",
+  "defaultPlaybackRate",
+  "indeterminate",
+  "playbackRate",
+  "preservesPitch",
+  "scrollLeft",
+  "scrollTop",
+  "selectedIndex",
+  "selectionDirection",
+  "selectionEnd",
+  "selectionStart",
+  "valueAsNumber",
+  "volume",
+]);
+
+/**
+ * Properties that reflect a differently named content attribute. The
+ * controlled prop of the same attribute (`value`, `checked`, ...) wins.
+ */
+const REFLECTED_DEFAULT_PROPS: Record<string, string | undefined> = {
+  defaultChecked: "checked",
+  defaultMuted: "muted",
+  defaultSelected: "selected",
+  defaultValue: "value",
+};
+
+/** Boolean properties that reflect enumerated attributes, as [true, false]. */
+const ENUMERATED_BOOLEAN_PROPS: Record<
+  string,
+  readonly [string, string] | undefined
+> = {
+  autocorrect: ["on", "off"],
+  draggable: ["true", "false"],
+  spellcheck: ["true", "false"],
+  translate: ["yes", "no"],
+};
+
+interface SelectFrame {
+  readonly values: ReadonlySet<string>;
+  readonly multiple: boolean;
+  matched: boolean;
+}
+
+/** The `<select>` whose options are being serialized, if it has a `value`. */
+let activeSelect: SelectFrame | null = null;
+
 function escapeHtml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
@@ -49,6 +102,29 @@ function escapeHtml(value: string): string {
 
 function escapeAttribute(value: string): string {
   return escapeHtml(value).replaceAll('"', "&quot;");
+}
+
+/**
+ * CSS property name for a style key: custom and dashed names are kept, and
+ * CSSOM camel-cased (`backgroundColor`), webkit-cased (`webkitLineClamp`)
+ * and `cssFloat` names are converted to their dashed form.
+ */
+function toCSSPropertyName(key: string): string {
+  if (key.charCodeAt(0) === 45) return key;
+  if (key === "cssFloat") return "float";
+
+  const dashed = key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+  return dashed.startsWith("webkit-") ? `-${dashed}` : dashed;
+}
+
+/** `aria-*` attribute name for an ARIA reflection property (`ariaLabel`). */
+function toAriaAttributeName(name: string): string | null {
+  return name.length > 4 &&
+    name.startsWith("aria") &&
+    name.charCodeAt(4) >= 65 &&
+    name.charCodeAt(4) <= 90
+    ? `aria-${name.slice(4).toLowerCase()}`
+    : null;
 }
 
 function stringifyStyleValue(style: StyleValue): string {
@@ -66,12 +142,7 @@ function stringifyStyleValue(style: StyleValue): string {
       continue;
     }
 
-    const cssName =
-      key.charCodeAt(0) === 45 && key.charCodeAt(1) === 45
-        ? key
-        : key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-
-    entries.push(`${cssName}:${String(currentValue)}`);
+    entries.push(`${toCSSPropertyName(key)}:${String(currentValue)}`);
   }
 
   return entries.join(";");
@@ -137,6 +208,21 @@ function renderAttributes(
     }
 
     const resolvedValue = resolveServerValue(name, props[name]);
+
+    if (typeof resolvedValue === "boolean" && isAriaAttr(name)) {
+      attributes += ` ${name}="${resolvedValue ? "true" : "false"}"`;
+      continue;
+    }
+
+    if (namespace !== "svg") {
+      const enumerated = ENUMERATED_BOOLEAN_PROPS[name];
+
+      if (enumerated !== undefined && typeof resolvedValue === "boolean") {
+        attributes += ` ${name}="${enumerated[resolvedValue ? 0 : 1]}"`;
+        continue;
+      }
+    }
+
     if (resolvedValue == null || resolvedValue === false) {
       continue;
     }
@@ -159,7 +245,29 @@ function renderAttributes(
       continue;
     }
 
-    const attributeName = normalizeAttr(name);
+    let attributeName: string;
+
+    if (namespace === "svg") {
+      attributeName = normalizeAttr(name);
+    } else {
+      // `<select>` has no value attribute; options are marked instead.
+      if (PROPERTY_ONLY_PROPS.has(name) || (tag === "select" && name === "value")) {
+        continue;
+      }
+
+      const reflected = REFLECTED_DEFAULT_PROPS[name];
+
+      if (reflected !== undefined) {
+        if (resolveServerValue(reflected, props[reflected]) != null) {
+          continue;
+        }
+
+        attributeName = reflected;
+      } else {
+        attributeName = toAriaAttributeName(name) ?? normalizeAttr(name);
+      }
+    }
+
     const normalizedValue =
       URL_ATTRS.has(attributeName) && typeof resolvedValue === "string"
         ? sanitizeURL(resolvedValue)
@@ -205,12 +313,38 @@ function resolveForServerValue(
 }
 
 function renderElementToString(
-  renderable: ElementRenderable<ElementTag, ElementProps<ElementTag>>,
+  renderable: ElementRenderable<ElementTag, Record<string, unknown>>,
   parentNamespace: Namespace,
 ): string {
   const namespace = resolveNamespace(renderable.tag, parentNamespace);
+  const childNamespace = resolveChildNamespace(renderable.tag, namespace);
   const props = renderable.props as Record<string, unknown>;
-  const attributes = renderAttributes(renderable.tag, props, namespace);
+  let attributes = renderAttributes(renderable.tag, props, namespace);
+
+  if (
+    namespace === "html" &&
+    renderable.tag === "option" &&
+    activeSelect !== null &&
+    !/ selected(?:[ =]|$)/.test(attributes) &&
+    selectsOption(activeSelect, props)
+  ) {
+    attributes += " selected";
+  }
+
+  if (namespace === "html" && renderable.tag === "select") {
+    const previousSelect = activeSelect;
+    activeSelect = createSelectFrame(props);
+
+    try {
+      const childrenHtml = renderRenderableToString(
+        props.children,
+        childNamespace,
+      );
+      return `<select${attributes}>${childrenHtml}</select>`;
+    } finally {
+      activeSelect = previousSelect;
+    }
+  }
 
   if (isVoidTag(renderable.tag)) {
     return `<${renderable.tag}${attributes}>`;
@@ -221,13 +355,89 @@ function renderElementToString(
     const childrenHtml =
       textareaContent !== null
         ? escapeHtml(textareaContent)
-        : renderRenderableToString(props.children, namespace);
+        : renderRenderableToString(props.children, childNamespace);
 
     return `<${renderable.tag}${attributes}>${childrenHtml}</${renderable.tag}>`;
   }
 
-  const childrenHtml = renderRenderableToString(props.children, namespace);
+  const childrenHtml = renderRenderableToString(props.children, childNamespace);
   return `<${renderable.tag}${attributes}>${childrenHtml}</${renderable.tag}>`;
+}
+
+/** Mirrors `applyControlledSelectValue` in `host/forms.ts`. */
+function createSelectFrame(props: Record<string, unknown>): SelectFrame | null {
+  const value = resolveServerValue("value", props.value);
+
+  if (value == null) {
+    return null;
+  }
+
+  const multiple = resolveServerValue("multiple", props.multiple) === true;
+  const values = Array.isArray(value)
+    ? value.map((entry) => String(entry))
+    : [String(value)];
+
+  return {
+    values: new Set(multiple || values[0] !== "" ? values : []),
+    multiple,
+    matched: false,
+  };
+}
+
+function collectOptionText(children: unknown): string | null {
+  const resolved = resolveServerValue("children", children);
+
+  if (resolved == null || typeof resolved === "boolean") return "";
+  if (typeof resolved === "string") return resolved;
+  if (typeof resolved === "number" || typeof resolved === "bigint") {
+    return String(resolved);
+  }
+
+  if (Array.isArray(resolved)) {
+    let text = "";
+
+    for (const child of resolved) {
+      const childText = collectOptionText(child);
+      if (childText === null) return null;
+      text += childText;
+    }
+
+    return text;
+  }
+
+  return null;
+}
+
+/** An option's value: its `value`, else its text with whitespace collapsed. */
+function resolveOptionValue(props: Record<string, unknown>): string | null {
+  const value = resolveServerValue("value", props.value);
+
+  if (value != null) {
+    return String(value);
+  }
+
+  const text = collectOptionText(props.children);
+  return text === null
+    ? null
+    : text.replace(/[\t\n\f\r ]+/g, " ").trim();
+}
+
+function selectsOption(
+  frame: SelectFrame,
+  props: Record<string, unknown>,
+): boolean {
+  if (!frame.multiple && frame.matched) {
+    return false;
+  }
+
+  const optionValue = resolveOptionValue(props);
+
+  if (optionValue === null || !frame.values.has(optionValue)) {
+    return false;
+  }
+
+  frame.matched = true;
+  return true;
 }
 
 function renderDynamicSlot(
@@ -304,7 +514,7 @@ function renderRenderableToString(
 
     case RenderableKind.Element:
       return renderElementToString(
-        value as ElementRenderable<ElementTag, ElementProps<ElementTag>>,
+        value as ElementRenderable<ElementTag, Record<string, unknown>>,
         parentNamespace,
       );
   }
