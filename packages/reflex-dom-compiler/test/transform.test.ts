@@ -238,6 +238,66 @@ describe("prop semantics", () => {
   });
 });
 
+describe("dynamic children (holes)", () => {
+  const greet = component(`jsxs("div", { class: "greet", children: ["hello ", name(), jsx("b", { children: "!" })] })`);
+
+  it("marks the hole in the template and hands its value to the renderer", () => {
+    const { region, code } = only(greet);
+    expect(region).toMatchObject({ strategy: "template", static: false, holes: 1, nodes: 4 });
+    expect(code).toContain(`_template("<div class=\\"greet\\">hello <!----><b>!</b></div>")`);
+    expect(code).toContain("if (!_acceptsHoles(h)) return null;");
+    expect(code).toContain("hole(r, m0, h[0], false);");
+  });
+
+  it("evaluates the hole where the region is created, once", () => {
+    const { code } = only(greet);
+    expect(code).toMatch(/function App\(\) \{\s+return _compiled\(_create, _fallback, \[name\(\)\]\);/);
+    expect(code.match(/name\(\)/g)).toHaveLength(1);
+  });
+
+  it("builds the fallback from the evaluated values", () => {
+    const { code } = only(greet);
+    expect(code).toMatch(/function _fallback\(_h\) \{\s+return jsxs\("div", \{[\s\S]*children: \["hello ", _h\[0\]/);
+  });
+
+  it("emits native markers too", () => {
+    const { code } = only(greet, { strategy: "native" });
+    expect(code).toContain(`const m0 = d.createComment("");`);
+    expect(code).toContain(`e0.append("hello ", m0, e1);`);
+    expect(code).toContain("hole(e0, m0, h[0], false);");
+  });
+
+  it("marks a scalar child and holes in nested elements", () => {
+    const scalar = only(component(`jsx("p", { children: props.title })`));
+    expect(scalar.code).toContain("hole(r, m0, h[0], true);");
+    const nested = only(component(`jsxs("ul", { children: [jsx("li", { children: "a" }), jsx("li", { children: () => count() })] })`));
+    expect(nested.region).toMatchObject({ strategy: "template", holes: 1 });
+    expect(nested.code).toContain("const p0 = r.childNodes[1];");
+    expect(nested.code).toContain("hole(p0, m0, h[0], true);");
+  });
+
+  it("keeps a unique fallback parameter when the factory is named h", () => {
+    const { code } = compile(
+      `${RENDER}function App() { return h("p", { children: x }); }\nrender(h(App, {}), root);`,
+      {},
+      `import { jsx as h } from "@volynets/reflex-dom/jsx-runtime";\n`,
+    );
+    expect(code).toMatch(/function _fallback\(_h\) \{\s+return h\("p", \{\s+children: _h\[0\]/);
+  });
+
+  it("leaves more than one hole to the runtime, compiling static islands", () => {
+    const { report } = compile(component(`jsxs("li", { children: [a(), jsx("span", { children: "x" }), b()] })`));
+    expect(report.regions[0]).toMatchObject({ tag: "li", strategy: "runtime", holes: 2, reason: "2 dynamic children (at most 1 per region)" });
+    expect(report.regions[1]).toMatchObject({ tag: "span", strategy: "template" });
+  });
+
+  it("does not treat element children or props as holes", () => {
+    expect(only(component(`jsx("p", { id: x(), children: "a" })`)).region.reason).toBe(`dynamic prop "id"`);
+    const { report } = compile(component(`jsx("p", { children: jsx(Card, {}) })`));
+    expect(report.regions[0]!.reason).toBe("component boundary <Card>");
+  });
+});
+
 describe("text topology and parser context", () => {
   it.each([
     [`jsx("p", { children: ["a", "b"] })`, "parser changed text"],

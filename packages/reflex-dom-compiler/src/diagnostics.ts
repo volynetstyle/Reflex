@@ -9,6 +9,8 @@ export interface RegionReport {
   readonly column: number | null;
   /** Every prop and child is a literal, so building the subtree runs no user code. */
   readonly static: boolean;
+  /** Dynamic children whose values the renderer mounts at markers. */
+  readonly holes: number;
   readonly strategy: RegionStrategy;
   /** DOM nodes (elements and texts) the region creates; 0 when not static. */
   readonly nodes: number;
@@ -44,7 +46,7 @@ export function summarizeReport(report: CompilerReport): ReportSummary {
     else if (region.strategy === "native") native++;
     else runtime++;
 
-    if (region.static) {
+    if (region.static || region.holes > 0) {
       staticNodes += region.nodes;
       if (region.strategy !== "runtime") compiledNodes += region.nodes;
     }
@@ -76,7 +78,8 @@ export function formatReport(report: CompilerReport): string {
       `  Static: ${region.static ? "yes" : "no"}`,
       `  Strategy: ${region.strategy}`,
     );
-    if (region.static) lines.push(`  Nodes: ${region.nodes}`);
+    if (region.static || region.holes > 0) lines.push(`  Nodes: ${region.nodes}`);
+    if (region.holes > 0) lines.push(`  Dynamic children: ${region.holes}`);
     if (region.reason !== null) lines.push(`  Reason: ${region.reason}`);
   }
 

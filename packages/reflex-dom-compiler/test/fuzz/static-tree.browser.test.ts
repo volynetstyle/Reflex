@@ -21,5 +21,6 @@ describe("generated static trees (browser)", () => {
     );
     expect(coverage.template).toBeGreaterThan(0);
     expect(coverage.native).toBeGreaterThan(0);
+    expect(coverage.holes).toBeGreaterThan(0);
   }, 300_000);
 });

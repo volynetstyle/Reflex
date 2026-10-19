@@ -15,6 +15,7 @@ describe("generated static trees (jsdom)", () => {
     // The generator must keep exercising every strategy.
     expect(coverage.template).toBeGreaterThan(0);
     expect(coverage.native).toBeGreaterThan(0);
+    expect(coverage.holes).toBeGreaterThan(0);
     expect(coverage.runtime).toBeGreaterThan(0);
   }, 120_000);
 });

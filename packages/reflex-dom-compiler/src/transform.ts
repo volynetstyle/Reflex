@@ -1,6 +1,7 @@
 import {
   transformSync,
   types as t,
+  type NodePath,
   type PluginObj,
   type PluginPass,
 } from "@babel/core";
@@ -13,7 +14,7 @@ import {
 } from "./classify";
 import type { CompilerReport, RegionReport, RegionStrategy } from "./diagnostics";
 import { emitNative } from "./emit-native";
-import { emitTemplate, verifyTemplate } from "./emit-template";
+import { emitTemplate, emitTemplateCreate, verifyTemplate } from "./emit-template";
 import { countNodes, type StaticElement } from "./model";
 
 export interface ReflexDOMCompilerOptions {
@@ -58,6 +59,9 @@ export const DEFAULT_RUNTIME_MODULE = "@volynets/reflex-dom-compiler/runtime";
  */
 export const AUTO_TEMPLATE_MIN_NODES = 8;
 
+/** Dynamic children per region: see `acceptsHoles` for why only one. */
+export const MAX_HOLES = 1;
+
 const PRAGMA_OFF = /@reflex-dom-compiler\s+off\b/;
 
 interface Emitted {
@@ -90,7 +94,7 @@ export function reflexDOMCompiler(
         const hoisted: t.Statement[] = [];
         const helpers = new Map<string, t.Identifier>();
 
-        const helper = (name: "compiled" | "template") => {
+        const helper = (name: "compiled" | "template" | "acceptsHoles") => {
           let id = helpers.get(name);
           if (id === undefined) {
             id = program.scope.generateUidIdentifier(name);
@@ -99,7 +103,7 @@ export function reflexDOMCompiler(
           return id;
         };
 
-        const choose = (element: StaticElement, nodes: number): Emitted & { create: t.Identifier } => {
+        const choose = (element: StaticElement, nodes: number, holes: number): Emitted & { create: t.Identifier } => {
           const templateReason = strategy === "native" ? null : verifyTemplate(element);
           let chosen: Emitted;
 
@@ -109,13 +113,17 @@ export function reflexDOMCompiler(
             chosen = { strategy: "native", reason: `below the auto template heuristic (${nodes} < ${threshold} nodes)` };
           } else chosen = { strategy: "template", reason: null };
 
+          const accepts = holes > 0 ? helper("acceptsHoles") : null;
           if (chosen.strategy === "template") {
             const id = program.scope.generateUidIdentifier("tpl");
             hoisted.push(emitTemplate(element, id, helper("template")));
-            return { ...chosen, create: id };
+            if (accepts === null) return { ...chosen, create: id };
+            const create = program.scope.generateUidIdentifier("create");
+            hoisted.push(emitTemplateCreate(element, create, id, accepts));
+            return { ...chosen, create };
           }
           const id = program.scope.generateUidIdentifier("create");
-          hoisted.push(emitNative(element, id));
+          hoisted.push(emitNative(element, id, accepts));
           return { ...chosen, create: id };
         };
 
@@ -134,29 +142,53 @@ export function reflexDOMCompiler(
                 column: start === undefined ? null : start.column + 1,
               };
 
-              const result = classifyElement(path, config);
+              const holes: NodePath<t.Expression>[] = [];
+              const result = classifyElement(path, config, holes);
               if (!result.ok) {
-                // Children may still hold static regions of their own.
-                regions.push({ ...base, static: false, strategy: "runtime", nodes: 0, reason: result.reason });
+                // Children may still hold regions of their own.
+                regions.push({ ...base, static: false, holes: 0, strategy: "runtime", nodes: 0, reason: result.reason });
                 return;
               }
 
               const nodes = countNodes(result.element);
+              const shape = { static: holes.length === 0, holes: holes.length, nodes };
+              if (holes.length > MAX_HOLES) {
+                regions.push({
+                  ...base,
+                  ...shape,
+                  strategy: "runtime",
+                  reason: `${holes.length} dynamic children (at most ${MAX_HOLES} per region)`,
+                });
+                return;
+              }
+
               const use = consumption(path, config);
               if (!use.consumed) {
-                regions.push({ ...base, static: true, strategy: "runtime", nodes, reason: use.reason });
+                regions.push({ ...base, ...shape, strategy: "runtime", reason: use.reason });
                 path.skip();
                 return;
               }
 
-              const emitted = choose(result.element, nodes);
+              const emitted = choose(result.element, nodes, holes.length);
               const fallback = program.scope.generateUidIdentifier("fallback");
+              const args: t.Expression[] = [emitted.create, fallback];
+              const params: t.Identifier[] = [];
+              if (holes.length > 0) {
+                // Each hole expression stays where the region is evaluated
+                // (same scope, same order); the fallback receives its value.
+                const values = program.scope.generateUidIdentifier("h");
+                args.push(t.arrayExpression(holes.map((hole) => hole.node)));
+                holes.forEach((hole, index) =>
+                  hole.replaceWith(t.memberExpression(t.identifier(values.name), t.numericLiteral(index), true)),
+                );
+                params.push(values);
+              }
               hoisted.push(
-                t.functionDeclaration(fallback, [], t.blockStatement([t.returnStatement(path.node)])),
+                t.functionDeclaration(fallback, params, t.blockStatement([t.returnStatement(path.node)])),
               );
-              path.replaceWith(t.callExpression(helper("compiled"), [emitted.create, fallback]));
+              path.replaceWith(t.callExpression(helper("compiled"), args));
               path.skip();
-              regions.push({ ...base, static: true, strategy: emitted.strategy, nodes, reason: emitted.reason });
+              regions.push({ ...base, ...shape, strategy: emitted.strategy, reason: emitted.reason });
             },
           });
         }

@@ -206,9 +206,15 @@ function checkCallShape(call: NodePath<t.CallExpression>): string | null {
   return null;
 }
 
+/**
+ * Classifies a host element call. With `holes`, dynamic child expressions
+ * become holes appended to it in evaluation order (document order); without,
+ * they make the element non-static.
+ */
 export function classifyElement(
   call: NodePath<t.CallExpression>,
   config: ClassifyConfig,
+  holes?: NodePath<t.Expression>[],
 ): ElementResult {
   const type = callType(call, config);
   if (type.kind !== "host") {
@@ -242,7 +248,7 @@ export function classifyElement(
   const children: StaticNode[] = [];
   const childrenPath = props.get("children");
   if (childrenPath !== undefined) {
-    const reason = collectChildren(childrenPath, true, children, config);
+    const reason = collectChildren(childrenPath, true, children, config, holes);
     if (reason !== null) return { ok: false, reason };
   }
 
@@ -263,6 +269,7 @@ function collectChildren(
   scalar: boolean,
   out: StaticNode[],
   config: ClassifyConfig,
+  holes: NodePath<t.Expression>[] | undefined,
 ): string | null {
   const path = unwrap(input)!;
   const literal = evaluateLiteral(path);
@@ -279,7 +286,7 @@ function collectChildren(
     for (const element of path.get("elements")) {
       if (element.node === null) return "sparse children array";
       if (element.isSpreadElement()) return "spread children";
-      const reason = collectChildren(element as NodePath, false, out, config);
+      const reason = collectChildren(element as NodePath, false, out, config, holes);
       if (reason !== null) return reason;
     }
     return null;
@@ -299,16 +306,21 @@ function collectChildren(
       const children = props.get("children");
       return children === undefined
         ? null
-        : collectChildren(children, scalar, out, config);
+        : collectChildren(children, scalar, out, config, holes);
     }
 
-    const result = classifyElement(path, config);
+    const result = classifyElement(path, config, holes);
     if (!result.ok) return result.reason;
     out.push(result.element);
     return null;
   }
 
-  return "dynamic child expression";
+  if (holes === undefined || !path.isExpression()) return "dynamic child expression";
+  // Evaluated where it stands when the region is created; the renderer
+  // mounts its value (`input`, before unwrapping, is what gets replaced).
+  out.push({ type: "hole", index: holes.length, scalar });
+  holes.push(input as NodePath<t.Expression>);
+  return null;
 }
 
 // ---------------------------------------------------------------------------

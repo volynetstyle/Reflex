@@ -10,7 +10,9 @@ import { evaluate, mountApp } from "../harness/dom";
 
 const HEADER =
   `import { jsx, Fragment } from "@volynets/reflex-dom/jsx-runtime";\n` +
-  `import { render } from "@volynets/reflex-dom";\n`;
+  `import { render } from "@volynets/reflex-dom";\n` +
+  // Opaque to the compiler: a call is a dynamic child, i.e. a hole.
+  `const val = (x) => x;\n`;
 
 const CHARS = ["a", "b", " ", "&", "<", ">", '"', "'", "\n", "\r", "\t", " ", "é", "😀", "="];
 const text = fc.array(fc.constantFrom(...CHARS), { maxLength: 5 }).map((chars) => chars.join(""));
@@ -23,6 +25,19 @@ const literalChild = fc.oneof(
   { weight: 4, arbitrary: str },
   { weight: 1, arbitrary: num },
   { weight: 1, arbitrary: fc.oneof(bool, nil) },
+);
+
+/**
+ * Dynamic children: text, empty and accessor values take the marker path;
+ * element and array values must make create() decline before building.
+ */
+const holeChild = fc.oneof(
+  { weight: 3, arbitrary: str.map((s) => `val(${s})`) },
+  { weight: 1, arbitrary: fc.oneof(num, nil, bool).map((v) => `val(${v})`) },
+  { weight: 2, arbitrary: str.map((s) => `() => ${s}`) },
+  { weight: 1, arbitrary: fc.constant(`() => jsx("i", { children: "accessor element" })`) },
+  { weight: 1, arbitrary: fc.constant(`val(jsx("b", { children: "element value" }))`) },
+  { weight: 1, arbitrary: str.map((s) => `val([${s}, "x"])`) },
 );
 
 const TAGS = [
@@ -73,6 +88,7 @@ const { element } = fc.letrec<{ node: string; element: string; fragment: string 
   node: fc.oneof(
     { depthSize: "small", withCrossShrink: true },
     { weight: 3, arbitrary: literalChild },
+    { weight: 1, arbitrary: holeChild },
     { weight: 3, arbitrary: tie("element") },
     { weight: 1, arbitrary: tie("fragment") },
   ),
@@ -113,10 +129,12 @@ export interface Coverage {
   template: number;
   native: number;
   runtime: number;
+  /** Compiled regions with a dynamic child. */
+  holes: number;
 }
 
 export function newCoverage(): Coverage {
-  return { samples: 0, template: 0, native: 0, runtime: 0 };
+  return { samples: 0, template: 0, native: 0, runtime: 0, holes: 0 };
 }
 
 /**
@@ -130,7 +148,10 @@ export async function checkSample(code: string, compile: Compile, coverage: Cove
   for (const variant of ["native", "template", "auto"] as const) {
     const { body, report } = await compile(code, variant);
     if (variant === "template") {
-      for (const region of report!.regions) coverage[region.strategy]++;
+      for (const region of report!.regions) {
+        coverage[region.strategy]++;
+        if (region.holes > 0 && region.strategy !== "runtime") coverage.holes++;
+      }
     }
     const mounted = mountApp(evaluate(body).default);
     let disposeTrace: unknown = null;

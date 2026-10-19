@@ -7,6 +7,7 @@ export {
   DEFAULT_OPERATOR_SOURCES,
   DEFAULT_RUNTIME_MODULE,
   AUTO_TEMPLATE_MIN_NODES,
+  MAX_HOLES,
   type ReflexDOMCompilerOptions,
   type TransformResult,
 } from "./transform";
