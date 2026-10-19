@@ -1,8 +1,9 @@
 # @volynets/reflex-dom-compiler (experimental prototype)
 
 A Babel plugin that runs **after** the regular JSX lowering and replaces
-provably static host element subtrees (`jsx("section", {...})` whose props and
-children are all literals) with specialized DOM construction:
+host element subtrees whose props are literals (`jsx("section", {...})`), with
+at most one dynamic child, by specialized DOM construction. The browser builds
+the structure; the dynamic child is handed to reflex-dom's own binding:
 
 - **template**: the subtree's HTML is parsed once into a `<template>` on first
   mount, then each mount is one `doc.importNode(root, true)`;
@@ -104,13 +105,14 @@ the emitters only print the normalized tree (`src/model.ts`).
 ### What the strict proof costs
 
 On the repo's mini-app (`packages/reflex/examples/mini-app`, 11 files) **no
-region compiles**: of 108 host regions, 84 are not static, and the 24 static
-ones (78 nodes) all fail the consumer proof. 17 of them sit in helpers called
-directly or passed as values, 3 are stored in objects, 3 are returned from
-functions with unknown callers, and 1 is a child of a component. Exported
-components never reach the check there, because their roots are dynamic.
-That is the intended trade-off: undercompile rather than guess. Provable ways
-to recover coverage are listed under "Ideas".
+region compiles**. With holes, more regions qualify structurally, and the
+consumer proof becomes the main blocker: of 100 host regions, 54 fail it (38
+inside functions referenced other than as a JSX type, 8 returned from
+functions with unknown callers, 4 stored in objects, and others). 26 stop at
+a component boundary, 9 have more than one dynamic child, and 12 use props or
+elements without verified semantics. Before holes, 24 static regions failed
+the proof. That is the intended trade-off: undercompile rather than guess.
+Provable ways to recover coverage are listed under "Ideas".
 
 ## Compiled-region protocol
 
@@ -120,32 +122,82 @@ knows this protocol and nothing about the compiler:
 
 | situation | renderer calls |
 |---|---|
-| client mount, HTML namespace | `create(doc)` with the mount document |
+| client mount, HTML namespace | `create(doc, mountHole)` with the mount document |
 | client mount, any other namespace | `fallback()` |
-| `create` returns `null` (unsupported environment, refused before any observable DOM mutation) | `fallback()` |
+| `create` returns `null` (unsupported environment or hole value, refused before any observable DOM mutation) | `fallback()` |
 | hydration | `fallback()` |
 | SSR (`renderToString`) | `fallback()` |
 
 Exceptions from `create` propagate like any mount error. reflex-dom tests the
 protocol with hand-written regions (`test/render.compiled-protocol.test.tsx`).
 
-The generated code imports two helpers from
-`@volynets/reflex-dom-compiler/runtime` (~500 bytes minified):
+The generated code imports its helpers from
+`@volynets/reflex-dom-compiler/runtime` (~500 bytes gzipped):
 
 ```ts
-compiled(create, fallback)
-// { kind: Symbol.for("reflex-dom.compiled"), create(doc), fallback() }
-// A fresh object per evaluation, like the jsx() call it replaces.
+compiled(create, fallback, holes?)
+// A CompiledRegion { kind: Symbol.for("reflex-dom.compiled"), create, fallback }:
+// one fresh object per evaluation, like the jsx() call it replaces, carrying
+// the hole values computed at that moment.
 
 template(html)
 // (doc) => Node | null. Parses lazily on first mount in the mount document's
 // realm, then imports a deep copy per mount; null for non-HTML documents.
+
+acceptsHoles(values)
+// Whether the renderer can mount these values at markers (below).
 ```
 
 `fallback()` returns the original `jsx(...)` tree, hoisted into a module-level
-function. It only contains literals, so evaluating it later observes nothing.
-Hoisted templates are inserted before the first non-import statement, so a
-region mounted during module evaluation finds them initialized.
+function that receives the evaluated hole values. Its own content is literals,
+so evaluating it later observes nothing. Hoisted templates are inserted before
+the first non-import statement, so a region mounted during module evaluation
+finds them initialized.
+
+## Dynamic children (holes)
+
+A child expression that is not a literal, an array or a `jsx(...)` call (for
+example `{name()}`, `{props.title}`, `{item}`, `{() => count()}`) becomes a
+**hole**:
+
+```js
+// <div class="greet">hello {name()}<b>!</b></div>
+const _tpl = _template('<div class="greet">hello <!----><b>!</b></div>');
+function _create(d, hole, h) {
+  if (!_acceptsHoles(h)) return null;   // decided before any node exists
+  const r = _tpl(d);
+  if (r === null) return null;
+  const m0 = r.childNodes[1];
+  hole(r, m0, h[0], false);             // the renderer mounts the value
+  return r;
+}
+function App() {
+  return _compiled(_create, _fallback, [name()]);
+}
+```
+
+- **Timing.** The expression stays where the region is evaluated, in the same
+  scope and the same order (document order is evaluation order for nested
+  `jsx()` arguments). The fallback receives the value instead of
+  re-evaluating it.
+- **The renderer owns change.** `mountHole` is reflex-dom's
+  `mountCompiledHole`: text through the array or `textContent` rule
+  (`scalar`), empty values as nothing, accessors through the element text
+  binding (`mountElementChildAccessor`, now with an insertion point), then the
+  marker is removed. The compiler does not touch reactivity.
+- **Exactness.** A hole is mounted after the region's later static siblings
+  already exist, which differs from the element path's sequential build only
+  if user code could look at the region meanwhile. Text and empty values run
+  no code. An accessor's `read()` holds no reference into the region, and
+  structural content mounts into a fragment first (as in the runtime). So
+  `acceptsHoles` admits exactly text, empty values and accessors. An element,
+  component or array value runs user code while the region is half built, so
+  `create` declines before building and `fallback()` mounts it.
+- **One hole per region** (`MAX_HOLES`). With two, an accessor whose first
+  value is structural could expose a ref that the second accessor's `read()`
+  uses to observe the half-built region. Regions with more holes stay on the
+  runtime, and their static islands (children without holes) still compile.
+- Props are never holes; a dynamic prop keeps the element on the runtime.
 
 **Trusted Types / CSP.** The template is parsed in the mount document's own
 realm. Under `require-trusted-types-for 'script'` the parse is refused (a
@@ -166,7 +218,7 @@ with `playwright install firefox webkit`).
 - `test/semantics.conformance.*`: the prop tables against the real runtime,
   per engine (above). A mutation check confirmed it fails in all four
   environments if `type` is put back.
-- `test/differential/`: 12 fixtures compiled by the real JSX pipeline
+- `test/differential/`: 13 fixtures compiled by the real JSX pipeline
   (esbuild) into `baseline`, `native`, `template` and `auto`, mounted through
   their own `render` entry point in independent containers, in the main
   document and in a detached document (jsdom) or an iframe document (browsers).
@@ -174,12 +226,18 @@ with `playwright install firefox webkit`).
   boundaries, reflected properties, `ownerDocument`, `innerHTML`, and the
   **MutationObserver records** of mount and dispose, as seen by one observer
   installed on the container before mount. The records must be non-empty.
-  The plan's negative corpus must compile nothing.
+  The plan's negative corpus must compile nothing. `holes.tsx` covers every
+  kind of hole value, including those that must decline at runtime.
 - `test/fuzz/`: fast-check generates lowered `jsx(...)` trees with hostile tags,
-  every prop form and parser-hostile text, and compares the same observations,
-  mutation records included. 300 runs in jsdom (`REFLEX_FUZZ_RUNS`), 150 per
-  browser. At 5000 runs it found the two divergences fixed above; 25,000
-  further runs found nothing.
+  every prop form, parser-hostile text and holes of every value kind, and
+  compares the same observations, mutation records included. 300 runs in
+  jsdom (`REFLEX_FUZZ_RUNS`), 150 per browser; it also asserts that regions
+  with holes were compiled. At 5000 runs it found the two prop divergences
+  fixed above; 40,000 further runs (15,000 with holes) found nothing.
+- `test/holes.reactive.*`: one reactive hole between static siblings driven
+  through text, number, empty, structural and back. It compares the DOM,
+  per-update MutationObserver records and Text node identity with the baseline,
+  including a structural first value.
 - `test/bridge.test.ts`: SSR and hydration through `fallback()` (server nodes
   adopted), XML documents, parse-once templates, fresh nodes per mount, a
   refused template parse.
@@ -197,57 +255,71 @@ exactly like the runtime's element.
 `pnpm bench` (`-- --browsers=chromium --quick` for a short, non-comparable
 run). Each instance is one row of reflex-dom's `For` whose callback returns
 the scenario tree: the provable way to mount many instances. Pages are bundled
-from source with production flags.
+from source with production flags, and every scenario runs in a fresh page.
 
 The corpus (scenarios, `page.ts`, `run.ts`) and the full-run parameters are
 pinned by hash in `bench/corpus.lock.json`. A changed corpus aborts the run
 unless `--refreeze` accepts it. `bench/results/latest.{md,json}` record the
 commit, a dirty flag and the corpus hash.
 
-Results: commit `7346064`, clean, corpus `ce272b63da26`, Windows 10, headless
+Results: commit `feaf054`, clean, corpus `d66481ec83f3` (adds `row`: 10 static
+nodes and one reactive text, the `For` item accessor), Windows 10, headless
 Playwright builds of Chromium 151, Firefox 153 and WebKit 26.5. Ratios are
 variant ÷ baseline reflex-dom, median of 11 samples; lower is faster.
 
-| | tiny (2 nodes) | profile (5) | card (18) | article (40) |
-|---|---:|---:|---:|---:|
-| **Warm mount, 1000 rows: native** | | | | |
-| Chromium | 0.88 | 0.88 | 0.81 | 0.77 |
-| Firefox | 0.88 | 1.00 | 1.01 | 1.06 |
-| WebKit | 0.83 | 0.92 | 0.89 | 0.78 |
-| **Warm mount, 1000 rows: template** | | | | |
-| Chromium | 0.79 | 0.64 | 0.51 | 0.50 |
-| Firefox | 0.75 | 0.67 | 0.46 | 0.50 |
-| WebKit | 0.67 | 0.58 | 0.41 | 0.29 |
-| **Cold first mount: template** (includes the parse) | | | | |
-| Chromium | 1.64 | 1.62 | 1.32 | 1.22 |
-| Firefox | 1.14 | 0.89 | 0.63 | 1.12 |
-| WebKit | 1.50 | 1.00 | 1.00 | 0.90 |
-| **Mounts until template beats native** | | | | |
-| Chromium | ~46 | ~10 | ~4 | ~3 |
-| Firefox | 1 | 1 | 1 | ~2 |
-| WebKit | ~15 | 1 | 1 | ~2 |
+| | tiny (2 nodes) | profile (5) | **row (10 + hole)** | card (18) | article (40) |
+|---|---:|---:|---:|---:|---:|
+| **Warm mount, 1000 rows: native** | | | | | |
+| Chromium | 0.94 | 0.80 | 0.92 | 0.86 | 0.70 |
+| Firefox | 1.00 | 1.14 | 1.06 | 0.94 | 1.07 |
+| WebKit | 1.00 | 0.92 | 0.90 | 0.82 | 0.83 |
+| **Warm mount, 1000 rows: template** | | | | | |
+| Chromium | 0.87 | 0.59 | 0.73 | 0.53 | 0.47 |
+| Firefox | 0.71 | 0.64 | 0.69 | 0.47 | 0.49 |
+| WebKit | 0.80 | 0.58 | 0.67 | 0.40 | 0.31 |
+| **Cold first mount: template** (includes the parse) | | | | | |
+| Chromium | 1.87 | 1.65 | 1.65 | 1.51 | 1.26 |
+| Firefox | 1.14 | 1.00 | 1.00 | 0.68 | 0.59 |
+| WebKit | 1.33 | 1.33 | 1.50 | 1.29 | 1.00 |
+| **Mounts until template beats native** | | | | | |
+| Chromium | ~101 | ~10 | ~7 | ~4 | ~3 |
+| Firefox | 1 | 1 | 1 | 1 | 1 |
+| WebKit | ~15 | ~5 | ~3 | ~3 | 1 |
 
-- **Template is the strategy that pays**: 1.5–3.4× faster than the baseline
-  per row at 5+ nodes. Native only removes reflex-dom's per-prop and per-child
-  dispatch: up to ~23% in Chromium and WebKit, and parity in Firefox, where
-  the DOM calls dominate. Every row also pays `For`'s per-row ownership, so
-  these ratios are lower than the first, region-only measurement (0.22–0.46
-  for template at 18+ nodes, superseded methodology).
-- **Retained JS heap** while mounted (Chromium, per row): baseline 154 / 200 /
-  301 / 415 bytes, native 125 / 158 / 284 / 441, template 125 / 125 / 125 /
-  102. A cloned template creates a JS wrapper for its root only. This covers
-  the JS heap, not DOM or native memory. The first measurement's "48–56 B vs
-  1.2–2.5 KB" overstated the gap: the render root held the whole input
-  descriptor array, and baseline descriptors carry full props trees. Residual
-  heap after dispose is not reported: `bench/memory-probe.ts` reproduces the
-  same per-cycle growth with plain DOM code and no Reflex.
+- **Templates still pay with a dynamic child.** `row` mounts 1.4–1.5× faster
+  as a template in every engine (Chromium 5.30 → 3.85 µs, Firefox 12.0 →
+  8.25 µs, WebKit 9.75 → 6.50 µs per row). The ratio is smaller than for
+  static trees of the same size because every variant pays the same reactive
+  binding per row; the static structure is what the template removes.
+- **Template is the strategy that pays**: 1.6–3.2× faster than the baseline
+  for static trees of 5+ nodes. Native only removes reflex-dom's per-prop and
+  per-child dispatch: up to 30% in Chromium and WebKit, parity in Firefox,
+  where the DOM calls dominate. Every row also pays `For`'s per-row
+  ownership, so these ratios are lower than the first, region-only
+  measurement (0.22–0.46 for template at 18+ nodes, superseded methodology).
+- **Retained JS heap** while mounted (Chromium, per row): baseline 245 / 486 /
+  1753 / 774 / 905 bytes, native 222 / 254 / 1232 / 382 / 540, template 222 /
+  222 / 1199 / 222 / 199 (tiny, profile, row, card, article). A cloned template
+  creates a JS wrapper for its root only. This covers the JS heap, not DOM or
+  native memory. These numbers rose for every variant with the merged
+  `For`/text-binding commit (`aaed287`; card baseline was 301 bytes before).
+- **Retention after dispose, a runtime finding.** In Chromium, after forced
+  GC, every mount/dispose cycle of 10,000 `row` rows leaves about 11 MB
+  behind, roughly 1.1 KB per row, **in all variants, baseline included**, and
+  the growth is linear over 30 cycles. It reproduces on the merge commit before
+  any hole code (335 MB vs 343 MB after 30 cycles). Static `card` rows grew
+  from about 2.2 to 3.3 MB per cycle with the same commit. Plain DOM code shows
+  about 16 bytes per wrapped element (`bench/memory-probe.ts`), two orders of
+  magnitude less, so this looks like reflex-dom retaining per-row binding or
+  ownership state. It made Firefox's tab crash when all scenarios shared one
+  page, hence one page per scenario.
 - **Size.** Each compiled region keeps its `jsx(...)` source as the fallback.
-  Gzipped app bundles grow by +56 / +85 / +259 / +381 bytes (native) and
-  +201 / +219 / +350 / +395 bytes (template, helper included).
+  Gzipped app bundles grow by +93 / +123 / +269 / +286 / +410 bytes (native)
+  and +237 / +265 / +400 / +382 / +423 bytes (template, helper included).
 - **Caveats.** Firefox and WebKit expose a 1 ms timer here. Cold samples batch
-  300 mounts, so they move in ~3.3 µs steps (Firefox's article cold value is
-  noisy). "Cold" is the first mount of a freshly evaluated region in a warm
-  runtime: region preparation, not page start-up.
+  300 mounts, so they move in ~3.3 µs steps. "Cold" is the first mount of a
+  freshly evaluated region in a warm runtime: region preparation, not page
+  start-up.
 
 ### `AUTO_TEMPLATE_MIN_NODES = 8` is a steady-state heuristic
 
@@ -260,8 +332,8 @@ C_native(n, m)   = m·N(n)
 template wins when m > P(n) / (N(n) − K(n))
 ```
 
-The data give pieces of that function. At 18+ nodes m ≤ 4 in every engine. At
-5 nodes Chromium needs ~10 mounts, and at 2 nodes ~46. A 30-node region mounted
+The data give pieces of that function. At 10+ nodes m ≤ 7 in every engine (≤ 4
+from 18 nodes). At 5 nodes Chromium needs ~10 mounts, and at 2 nodes ~101. A 30-node region mounted
 once can lose with a template; an 8-node row mounted 10,000 times wins
 decisively. The number 8 is not proven; it only orders the measured cases.
 
@@ -278,7 +350,8 @@ decisively. The number 8 is not proven; it only orders the measured cases.
 - **Recovering coverage provably.** Options: a whole-program view in a bundler
   plugin (all importers of an exported component), or a descriptor that stays
   observable (`kind`/`tag`/lazy `props`) and drops to the runtime once
-  inspected. Both cost more than they are worth until dynamic slots exist.
+  inspected. With holes in place, this is now the main lever on real code:
+  54 of the mini-app's 100 regions stop at the consumer proof.
 - **Client-only builds** that erase the fallback (no SSR or hydration), or
   `browser-compiled` / `universal-compiled` conditional exports.
 
@@ -302,8 +375,9 @@ decisively. The number 8 is not proven; it only orders the measured cases.
 
 ## Not done yet
 
-- Stage 4: dynamic slots inside static templates. The next experiment is a
-  single dynamic text slot handed to reflex-dom's existing binding.
+- More than one hole per region (needs a proof that no accessor can expose
+  the half-built region to another), dynamic props, and control-flow holes
+  (`Show`/`For` as children).
 - The integration-level keyed 1k/10k benchmark.
 - Lifecycle, event and ref rows of the differential matrix: those props are
   rejected, so for now the tests assert that they stay on the runtime.

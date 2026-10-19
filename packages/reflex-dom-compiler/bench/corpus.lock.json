@@ -1,14 +1,15 @@
 {
   "version": 1,
-  "frozenAt": "73460648b8dccdbe188f5fa0708f96804b1be128",
-  "corpusHash": "ce272b63da261260941a694e70ba3fd3bdd587039379a6ac557f62b5e6cfdc7b",
+  "frozenAt": "feaf05432de0c2d56fc962edd50a6c1d8e597fdf",
+  "corpusHash": "d66481ec83f366ecff8c6c76ca1829b04aa20b7a4e5c3038cb2de15a24b64308",
   "files": {
     "bench/scenarios/article.tsx": "d5351320f653a219310f0fd5674d585ac9ce00f6d91c445f5321bef3a1dc901f",
     "bench/scenarios/card.tsx": "542a909d468e080073f62ab076878aca7b040dd16149a8b256b9e4a5ed7bba54",
     "bench/scenarios/profile.tsx": "571a742b5c643f54dcaf54e922886e14a4cd7cc34b3f138b90c120e078235901",
+    "bench/scenarios/row.tsx": "39282f0d334b83a3ea5a753b4bedbea65748b4e25074336af006c90720af6fdd",
     "bench/scenarios/tiny.tsx": "d5fb65c6898f915b942f55d4b6537b5e4e52b485d03f7062cb6744a6320dc199",
     "bench/page.ts": "ec8779957f2bdc664ba09a019e67c69cdfd4957dc5bae184a383373f4ed1249a",
-    "bench/run.ts": "443d934e6c20dd8af1082f261de3dff09c5c96792ed1ae4ad10658bf4f8f2d71"
+    "bench/run.ts": "fa2ec25225251fc57fc08642661098ebd2e67fc8f5aed17f8f32a05e19ed6d0c"
   },
   "parameters": {
     "counts": [
