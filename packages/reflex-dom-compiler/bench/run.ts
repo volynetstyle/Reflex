@@ -2,18 +2,22 @@
  * DOM compiler benchmark: baseline reflex-dom vs compiled native-tree vs
  * compiled template, in Chromium, Firefox and WebKit.
  *
- *   pnpm bench                       # all engines
+ *   pnpm bench                       # all engines, frozen corpus
  *   pnpm bench -- --browsers=chromium --quick
+ *   pnpm bench -- --refreeze         # accept a changed corpus or harness
  *
- * Run from the package directory. Writes bench/results/latest.{json,md}.
+ * Each instance is one row of reflex-dom's `For` whose callback returns the
+ * scenario tree. Run from the package directory. Writes
+ * bench/results/latest.{json,md}.
  */
+import { execSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 import { build, transform, type Plugin } from "esbuild";
 import { chromium, firefox, webkit, type BrowserType } from "playwright";
 import { runtimeFlags } from "../../../tooling/configs/runtime-flags";
-import { countNodes } from "../src/model";
 import { transformReflexDOM } from "../src/transform";
 import { toFunctionBody } from "../test/harness/compile.node";
 import type { BenchInput, Measurement } from "./page";
@@ -133,14 +137,8 @@ for (const scenario of scenarios) {
   for (const variant of VARIANTS) {
     const code = scenario.modules[variant];
     const moduleOnly = (await transform(code, { minify: true, format: "esm", target: "es2022" })).code;
-    const app = await bundle({
-      stdin: {
-        contents: `${code}\nimport { render as __r } from "@volynets/reflex-dom";\n__r(App(), document.body);`,
-        resolveDir: root,
-        loader: "js",
-      },
-      format: "esm",
-    });
+    // The scenario's default export renders it, so the module is a complete app.
+    const app = await bundle({ stdin: { contents: code, resolveDir: root, loader: "js" }, format: "esm" });
     sizes[scenario.name]![variant] = { module: size(moduleOnly), app: size(app) };
   }
 }
@@ -160,6 +158,53 @@ const input: BenchInput = {
   memoryCount: 10000,
   memoryRounds: Number(args.get("memory-rounds") ?? 5),
 };
+
+// --- Frozen corpus -------------------------------------------------------------
+// Scenarios and harness are pinned by hash, so results stay comparable across
+// commits. Changing either is a deliberate act: `--refreeze`.
+
+const sha256 = (text: string) =>
+  createHash("sha256").update(text.replace(/\r\n/g, "\n")).digest("hex");
+const corpusFiles = [
+  ...readdirSync(scenarioDir).filter((f) => f.endsWith(".tsx")).sort().map((f) => `bench/scenarios/${f}`),
+  "bench/page.ts",
+  "bench/run.ts",
+];
+const fileHashes = Object.fromEntries(corpusFiles.map((f) => [f, sha256(readFileSync(join(root, f), "utf8"))]));
+const corpusHash = sha256(JSON.stringify(fileHashes));
+const parameters = {
+  counts: input.counts,
+  samples: input.samples,
+  coldBatch: input.coldBatch,
+  memoryCount: input.memoryCount,
+  memoryRounds: input.memoryRounds,
+};
+const git = (command: string) => execSync(`git ${command}`, { cwd: root, encoding: "utf8" }).trim();
+const commit = git("rev-parse HEAD");
+// Uncommitted changes in anything measured; results and the lock are outputs.
+const dirty =
+  git(
+    `status --porcelain -- . ":!bench/results" ":!bench/corpus.lock.json" ` +
+      `../reflex-dom ../reflex-framework ../reflex-runtime ../reflex-scheduler`,
+  ) !== "";
+const lockPath = join(root, "bench/corpus.lock.json");
+
+if (args.has("refreeze")) {
+  if (quick) throw new Error("Freeze the corpus with full-run parameters, not --quick");
+  writeFileSync(lockPath, `${JSON.stringify({ version: 1, frozenAt: commit, corpusHash, files: fileHashes, parameters }, null, 2)}\n`);
+  console.log(`Corpus frozen: ${corpusHash.slice(0, 12)}`);
+} else {
+  if (!existsSync(lockPath)) throw new Error("No frozen corpus: run with --refreeze");
+  const lock = JSON.parse(readFileSync(lockPath, "utf8"));
+  const changed = corpusFiles.filter((f) => lock.files[f] !== fileHashes[f]);
+  const removed = Object.keys(lock.files).filter((f) => !(f in fileHashes));
+  if (changed.length + removed.length > 0) {
+    throw new Error(`Benchmark corpus changed (${[...changed, ...removed].join(", ")}); rerun with --refreeze to accept`);
+  }
+  if (!quick && JSON.stringify(lock.parameters) !== JSON.stringify(parameters)) {
+    throw new Error(`Parameters differ from the frozen corpus: ${JSON.stringify(lock.parameters)}`);
+  }
+}
 
 const engines: Record<string, BrowserType> = { chromium, firefox, webkit };
 interface MemoryResult {
@@ -220,6 +265,10 @@ mkdirSync(resultsDir, { recursive: true });
 const report = {
   date: new Date().toISOString(),
   quick,
+  commit,
+  dirty,
+  corpusHash,
+  methodology: "one reflex-dom For row per instance; the callback returns the scenario tree",
   scenarios: scenarios.map((s) => ({ name: s.name, nodes: s.nodes })),
   sizes,
   helperSize,
@@ -231,7 +280,11 @@ const fmt = (us: number) => (us >= 100 ? us.toFixed(0) : us >= 10 ? us.toFixed(1
 const lines: string[] = [
   `# DOM compiler benchmark`,
   ``,
-  `${report.date}${quick ? " (quick)" : ""}. Median µs per mounted instance; ratio is variant / baseline (lower is faster).`,
+  `${report.date}${quick ? " (quick, not comparable)" : ""}. ` +
+    `Commit \`${commit.slice(0, 10)}\`${dirty ? " + uncommitted changes" : ""}, corpus \`${corpusHash.slice(0, 12)}\`.`,
+  ``,
+  "Each instance is one row of reflex-dom's `For` whose callback returns the scenario tree. " +
+    "Median µs per mounted instance; ratio is variant / baseline (lower is faster).",
   ``,
 ];
 
@@ -293,4 +346,3 @@ for (const scenario of scenarios) {
 
 writeFileSync(join(resultsDir, "latest.md"), `${lines.join("\n")}\n`);
 console.log(lines.join("\n"));
-void countNodes;

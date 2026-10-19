@@ -14,12 +14,24 @@ const MODULES: Record<string, unknown> = {
   "@volynets/reflex-dom-compiler/runtime": compilerRuntime,
 };
 
-type App = () => unknown;
+/** A scenario entry: renders one For row per key into the container. */
+type App = (container: Element, keys: readonly number[]) => () => void;
 
 function evaluate(body: string): App {
   const exports: Record<string, unknown> = {};
   new Function("__require", "__exports", body)((name: string) => MODULES[name], exports);
   return exports.default as App;
+}
+
+const keysCache = new Map<number, number[]>();
+/** Row keys, built outside every timed section. */
+function keysFor(count: number): number[] {
+  let keys = keysCache.get(count);
+  if (keys === undefined) {
+    keys = Array.from({ length: count }, (_, index) => index);
+    keysCache.set(count, keys);
+  }
+  return keys;
 }
 
 export interface BenchInput {
@@ -64,14 +76,10 @@ function timeMount(app: App, count: number, withDispose: boolean): number {
   const batch = Math.max(1, Math.round(4000 / count));
   const targets = containers(batch);
   const disposers: (() => void)[] = [];
-  const lists = targets.map(() => Array.from({ length: count }));
+  const keys = keysFor(count);
 
   const start = performance.now();
-  for (let b = 0; b < batch; b++) {
-    const list = lists[b]!;
-    for (let i = 0; i < count; i++) list[i] = app();
-    disposers.push(render(list as never, targets[b]!));
-  }
+  for (let b = 0; b < batch; b++) disposers.push(app(targets[b]!, keys));
   if (withDispose) for (const dispose of disposers) dispose();
   const elapsed = performance.now() - start;
 
@@ -85,7 +93,8 @@ function timeCold(body: string, batch: number): number {
   const targets = containers(batch);
   const disposers: (() => void)[] = [];
   const start = performance.now();
-  for (let i = 0; i < batch; i++) disposers.push(render(apps[i]!() as never, targets[i]!));
+  const one = keysFor(1);
+  for (let i = 0; i < batch; i++) disposers.push(apps[i]!(targets[i]!, one));
   const elapsed = performance.now() - start;
   clear(targets, disposers);
   return (elapsed * 1000) / batch;
@@ -173,14 +182,13 @@ export function memory(body: string, count: number, rounds: number) {
   if (heap() === null) return null;
   const app = evaluate(body);
   timeMount(app, 100, true); // prepare templates and warm the code paths
+  const keys = keysFor(count); // allocated before the first measurement
   const retained: number[] = [];
   const residual: number[] = [];
   for (let round = 0; round < rounds; round++) {
     const before = heap()!;
     const [target] = containers(1);
-    let list: unknown[] | null = Array.from({ length: count }, () => app());
-    const dispose = render(list as never, target!);
-    list = null;
+    const dispose = app(target!, keys);
     const mounted = heap()!;
     dispose();
     target!.remove();
