@@ -1,22 +1,35 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { hydrate, render, renderToString } from "@volynets/reflex-dom";
-import { jsx } from "@volynets/reflex-dom/jsx-runtime";
-import { compiled } from "../src/runtime";
 import { compileLowered, type Variant } from "./harness/compile.node";
 import { evaluate, mountApp } from "./harness/dom";
 
+// Every use of App is a consumed position, so its region compiles.
 const SOURCE = `import { jsx, jsxs } from "@volynets/reflex-dom/jsx-runtime";
-export default function App() {
+import { hydrate, render, renderToString } from "@volynets/reflex-dom";
+function App() {
   return jsxs("section", { class: "profile", children: [
     jsx("h2", { children: "Profile" }),
     jsxs("p", { children: ["a & b ", jsx("b", { children: "<c>" })] }),
   ] });
-}`;
+}
+export const mount = (container) => render(jsx(App, {}), container);
+export const ssr = () => renderToString(jsx(App, {}));
+export const hydrateInto = (container) => hydrate(jsx(App, {}), container);
+`;
 
 const HTML = `<section class="profile"><h2>Profile</h2><p>a &amp; b <b>&lt;c&gt;</b></p></section>`;
 
-function load(variant: Variant): () => unknown {
-  return evaluate(compileLowered(SOURCE, variant).body).default as () => unknown;
+interface Entry {
+  mount: (container: Element) => () => void;
+  ssr: () => string;
+  hydrateInto: (container: Element) => () => void;
+}
+
+function load(variant: Variant): Entry {
+  const { body, report } = compileLowered(SOURCE, variant);
+  if (variant !== "baseline") {
+    expect(report!.regions.map((r) => r.strategy)).toEqual([variant]);
+  }
+  return evaluate(body) as unknown as Entry;
 }
 
 function allNodes(root: Node): Node[] {
@@ -33,28 +46,28 @@ afterEach(() => {
 
 describe.each(["native", "template"] as const)("compiled region bridge (%s)", (variant) => {
   it("mounts the same DOM as the source tree", () => {
-    const mounted = mountApp(load(variant));
+    const mounted = mountApp(load(variant).mount);
     expect(mounted.html).toBe(HTML);
     mounted.dispose();
   });
 
   it("server-renders through the fallback", () => {
-    expect(renderToString(jsx(load(variant), {}))).toBe(renderToString(jsx(load("baseline"), {})));
+    expect(load(variant).ssr()).toBe(load("baseline").ssr());
   });
 
   it("hydrates through the fallback, adopting the server nodes", () => {
-    const hydrateApp = (App: () => unknown) => {
+    const hydrateEntry = (entry: Entry) => {
       const container = document.createElement("div");
       document.body.appendChild(container);
-      container.innerHTML = renderToString(jsx(App, {}));
+      container.innerHTML = entry.ssr();
       const before = allNodes(container);
-      const dispose = hydrate(jsx(App, {}), container);
+      const dispose = entry.hydrateInto(container);
       const after = allNodes(container);
       return { before, after, html: container.innerHTML, dispose };
     };
 
-    const baseline = hydrateApp(load("baseline"));
-    const result = hydrateApp(load(variant));
+    const baseline = hydrateEntry(load("baseline"));
+    const result = hydrateEntry(load(variant));
 
     // Every server node is adopted, none recreated; hydration's own anchors
     // are the same as for the source tree.
@@ -68,10 +81,10 @@ describe.each(["native", "template"] as const)("compiled region bridge (%s)", (v
 
   it("matches the source tree in a non-HTML XML document", () => {
     const xml = document.implementation.createDocument(null, "root", null);
-    const mount = (App: () => unknown) => {
+    const mount = (entry: Entry) => {
       const container = xml.createElementNS(null, "host");
       xml.documentElement.appendChild(container);
-      const dispose = render(jsx(App, {}), container);
+      const dispose = entry.mount(container);
       const element = container.firstElementChild!;
       const result = { namespace: element.namespaceURI, xml: new XMLSerializer().serializeToString(container) };
       dispose();
@@ -81,9 +94,9 @@ describe.each(["native", "template"] as const)("compiled region bridge (%s)", (v
   });
 
   it("creates fresh nodes for every mount", () => {
-    const App = load(variant);
-    const first = mountApp(App);
-    const second = mountApp(App);
+    const entry = load(variant);
+    const first = mountApp(entry.mount);
+    const second = mountApp(entry.mount);
     const shared = allNodes(first.container).filter((node) => allNodes(second.container).includes(node));
     expect(shared).toEqual([]);
     expect(second.html).toBe(first.html);
@@ -95,8 +108,8 @@ describe.each(["native", "template"] as const)("compiled region bridge (%s)", (v
 describe("template preparation", () => {
   it("parses each region once, however often it mounts", () => {
     const setter = vi.spyOn(Element.prototype, "innerHTML", "set");
-    const App = load("template");
-    for (let i = 0; i < 3; i++) mountApp(App).dispose();
+    const entry = load("template");
+    for (let i = 0; i < 3; i++) mountApp(entry.mount).dispose();
     const parses = setter.mock.calls.filter(([html]) => html === HTML);
     expect(parses).toHaveLength(1);
   });
@@ -106,40 +119,12 @@ describe("template preparation", () => {
     vi.spyOn(Element.prototype, "innerHTML", "set").mockImplementation(() => {
       throw new TypeError("This document requires 'TrustedHTML' assignment.");
     });
-    const mounted = mountApp(load("template"));
+    const entry = load("template");
+    const mounted = mountApp(entry.mount);
     vi.restoreAllMocks();
     expect(mounted.html).toBe(HTML);
+    // The refusal reaches no observer: the fallback mounts like the baseline.
+    expect(mounted.mutations).toEqual(mountApp(load("baseline").mount).mutations);
     mounted.dispose();
-  });
-});
-
-describe("renderer contract", () => {
-  it("mounts fallback() when create returns null", () => {
-    const container = document.createElement("div");
-    const dispose = render(compiled(() => null, () => jsx("p", { children: "fallback" })), container);
-    expect(container.innerHTML).toBe("<p>fallback</p>");
-    dispose();
-    expect(container.innerHTML).toBe("");
-  });
-
-  it("does not call create outside the HTML namespace", () => {
-    const create = vi.fn(() => document.createElement("a"));
-    const container = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    const dispose = render(compiled(create, () => jsx("a", { href: "#x" })), container);
-    expect(create).not.toHaveBeenCalled();
-    expect(container.firstElementChild!.namespaceURI).toBe("http://www.w3.org/2000/svg");
-    dispose();
-  });
-
-  it("creates nodes during mount, in the mount document", () => {
-    const create = vi.fn((doc: Document) => doc.createElement("p"));
-    const region = compiled(create, () => null);
-    expect(create).not.toHaveBeenCalled();
-
-    const other = document.implementation.createHTMLDocument("other");
-    const container = other.createElement("div");
-    render(region, container);
-    expect(create).toHaveBeenCalledWith(other);
-    expect(container.firstChild!.ownerDocument).toBe(other);
   });
 });

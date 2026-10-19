@@ -8,7 +8,9 @@ import { expect } from "vitest";
 import type { CompilerReport } from "../../src/diagnostics";
 import { evaluate, mountApp } from "../harness/dom";
 
-const HEADER = `import { jsx, Fragment } from "@volynets/reflex-dom/jsx-runtime";\n`;
+const HEADER =
+  `import { jsx, Fragment } from "@volynets/reflex-dom/jsx-runtime";\n` +
+  `import { render } from "@volynets/reflex-dom";\n`;
 
 const CHARS = ["a", "b", " ", "&", "<", ">", '"', "'", "\n", "\r", "\t", " ", "é", "😀", "="];
 const text = fc.array(fc.constantFrom(...CHARS), { maxLength: 5 }).map((chars) => chars.join(""));
@@ -26,6 +28,7 @@ const literalChild = fc.oneof(
 const TAGS = [
   "div", "span", "p", "section", "a", "b", "em", "ul", "ol", "li", "h1", "h2",
   "button", "label", "img", "br", "hr", "small", "strong", "nav", "details", "summary",
+  "fieldset", "legend",
   // Hostile: parser-sensitive, foreign or unsupported.
   "table", "tr", "td", "select", "option", "pre", "textarea", "my-el", "svg", "input",
 ];
@@ -49,6 +52,9 @@ const ATTRIBUTES: Record<string, fc.Arbitrary<string>> = {
   alt: str,
   type: fc.constantFrom('"button"', '"submit"', '"bogus"'),
   htmlFor: str,
+  for: fc.oneof(str, nil),
+  crossOrigin: fc.constantFrom('"anonymous"', '"use-credentials"'),
+  crossorigin: fc.oneof(fc.constantFrom('"anonymous"'), nil),
   target: str,
   style: fc.constant('"color: red"'),
   tabIndex: fc.constant("1"),
@@ -91,7 +97,10 @@ const { element } = fc.letrec<{ node: string; element: string; fragment: string 
 
 /** A module whose `App` returns one generated element. */
 export const staticModule = element.map(
-  (root) => `${HEADER}export default function App() {\n  return ${root};\n}\n`,
+  (root) =>
+    `${HEADER}function App() {\n  return ${root};\n}\n` +
+    // The renderer is provably App's only caller.
+    `export default (container) => render(jsx(App, {}), container);\n`,
 );
 
 export type Compile = (
@@ -110,26 +119,29 @@ export function newCoverage(): Coverage {
   return { samples: 0, template: 0, native: 0, runtime: 0 };
 }
 
-/** Every compiled variant must mount exactly the baseline DOM. */
+/**
+ * Every compiled variant must mount exactly the baseline DOM, with the same
+ * MutationObserver records for mount and dispose.
+ */
 export async function checkSample(code: string, compile: Compile, coverage: Coverage): Promise<void> {
   const baseline = mountApp(evaluate((await compile(code, "baseline")).body).default);
+  const baselineDispose = baseline.dispose();
   coverage.samples++;
-  try {
-    for (const variant of ["native", "template", "auto"] as const) {
-      const { body, report } = await compile(code, variant);
-      if (variant === "template") {
-        for (const region of report!.regions) coverage[region.strategy]++;
-      }
-      const mounted = mountApp(evaluate(body).default);
-      try {
-        expect(mounted.snapshot, `${variant} DOM`).toEqual(baseline.snapshot);
-        expect(mounted.html, `${variant} innerHTML`).toBe(baseline.html);
-      } finally {
-        mounted.dispose();
-      }
+  for (const variant of ["native", "template", "auto"] as const) {
+    const { body, report } = await compile(code, variant);
+    if (variant === "template") {
+      for (const region of report!.regions) coverage[region.strategy]++;
     }
-  } finally {
-    baseline.dispose();
+    const mounted = mountApp(evaluate(body).default);
+    let disposeTrace: unknown = null;
+    try {
+      expect(mounted.snapshot, `${variant} DOM`).toEqual(baseline.snapshot);
+      expect(mounted.html, `${variant} innerHTML`).toBe(baseline.html);
+      expect(mounted.mutations, `${variant} mount mutations`).toEqual(baseline.mutations);
+    } finally {
+      disposeTrace = mounted.dispose();
+    }
+    expect(disposeTrace, `${variant} dispose mutations`).toEqual(baselineDispose);
   }
 }
 

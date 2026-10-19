@@ -32,28 +32,35 @@ function compiledRegions(report: CompilerReport | null): number {
   return report?.regions.filter((r) => r.strategy !== "runtime").length ?? 0;
 }
 
-/** Mounts every variant of a fixture and compares each with the baseline. */
+/**
+ * Mounts every variant of a fixture and compares each with the baseline: the
+ * final DOM, and the MutationObserver records of mount and dispose.
+ */
 export function checkFixture(name: string, doc: Document = document): void {
   const baseline = mountApp(moduleOf(variants.baseline, name).default, doc);
-  try {
-    for (const variant of ["native", "template", "auto"] as const) {
-      const module = moduleOf(variants[variant], name);
-      expect(compiledRegions(module.__report), `${name}/${variant} compiled regions`)
-        .toBeGreaterThanOrEqual(module.minCompiled);
-      if (module.minCompiled === 0) {
-        expect(compiledRegions(module.__report), `${name}/${variant} must not compile`).toBe(0);
-      }
+  const baselineDispose = baseline.dispose();
+  // The trace comparison must not be vacuous.
+  expect(baseline.mutations.length, `${name} mount records`).toBeGreaterThan(0);
+  expect(baselineDispose.length, `${name} dispose records`).toBeGreaterThan(0);
 
-      const mounted = mountApp(module.default, doc);
-      try {
-        expect(mounted.snapshot, `${name}/${variant} DOM`).toEqual(baseline.snapshot);
-        expect(mounted.html, `${name}/${variant} innerHTML`).toBe(baseline.html);
-      } finally {
-        mounted.dispose();
-        expect(mounted.container.childNodes.length).toBe(0);
-      }
+  for (const variant of ["native", "template", "auto"] as const) {
+    const module = moduleOf(variants[variant], name);
+    expect(compiledRegions(module.__report), `${name}/${variant} compiled regions`)
+      .toBeGreaterThanOrEqual(module.minCompiled);
+    if (module.minCompiled === 0) {
+      expect(compiledRegions(module.__report), `${name}/${variant} must not compile`).toBe(0);
     }
-  } finally {
-    baseline.dispose();
+
+    const mounted = mountApp(module.default, doc);
+    let disposeTrace: unknown = null;
+    try {
+      expect(mounted.snapshot, `${name}/${variant} DOM`).toEqual(baseline.snapshot);
+      expect(mounted.html, `${name}/${variant} innerHTML`).toBe(baseline.html);
+      expect(mounted.mutations, `${name}/${variant} mount mutations`).toEqual(baseline.mutations);
+    } finally {
+      disposeTrace = mounted.dispose();
+      expect(mounted.container.childNodes.length).toBe(0);
+    }
+    expect(disposeTrace, `${name}/${variant} dispose mutations`).toEqual(baselineDispose);
   }
 }

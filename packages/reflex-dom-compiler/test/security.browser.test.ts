@@ -10,16 +10,20 @@ declare module "vitest/browser" {
 }
 
 const SOURCE = `import { jsx, jsxs } from "@volynets/reflex-dom/jsx-runtime";
-export default function App() {
+import { render } from "@volynets/reflex-dom";
+function App() {
   return jsxs("section", { class: "card", children: [
     jsx("h2", { children: "Title" }),
     jsx("p", { children: "<not markup> & text" }),
   ] });
-}`;
+}
+export default (container) => render(jsx(App, {}), container);`;
 
 async function load(variant: "baseline" | "native" | "template") {
   // A fresh evaluation: template regions have not been prepared yet.
-  return evaluate((await commands.compileLowered(SOURCE, variant)).body).default;
+  const { body, report } = await commands.compileLowered(SOURCE, variant);
+  if (variant !== "baseline") expect(report!.regions.map((r) => r.strategy)).toEqual([variant]);
+  return evaluate(body).default;
 }
 
 async function trustedTypesFrame(): Promise<{ doc: Document; violations: string[]; remove(): void }> {

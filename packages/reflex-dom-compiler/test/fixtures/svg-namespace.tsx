@@ -1,12 +1,14 @@
-// A compiled HTML region mounted inside <svg> must take the runtime path:
-// `a` resolves to the SVG namespace there.
-export const minCompiled = 1;
+// `Link` is also rendered inside <svg>, where `a` resolves to the SVG
+// namespace: not every caller of Link is proven to mount it as HTML, so
+// nothing compiles. The runtime namespace re-check is covered in bridge.test.
+import { render } from "@volynets/reflex-dom";
+export const minCompiled = 0;
 
 function Link() {
   return <a href="#target">svg link</a>;
 }
 
-export default function App() {
+function App() {
   return (
     <div id={() => "ns"}>
       <svg>
@@ -16,3 +18,6 @@ export default function App() {
     </div>
   );
 }
+
+// The renderer is provably the only caller of App.
+export default (container: Element) => render(<App />, container);

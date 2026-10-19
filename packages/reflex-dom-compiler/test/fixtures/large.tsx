@@ -1,7 +1,8 @@
-// A larger static region, above the template threshold of `auto`.
+// A larger static region, above the auto template heuristic.
+import { render } from "@volynets/reflex-dom";
 export const minCompiled = 1;
 
-export default function App() {
+function App() {
   return (
     <article class="post">
       <header>
@@ -31,3 +32,6 @@ export default function App() {
     </article>
   );
 }
+
+// The renderer is provably the only caller of App.
+export default (container: Element) => render(<App />, container);

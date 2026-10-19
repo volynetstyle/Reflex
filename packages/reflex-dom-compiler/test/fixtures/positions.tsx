@@ -1,5 +1,6 @@
 // Consumed positions: returns through conditionals and logical operators,
 // arrow bodies. Escaping positions stay on the runtime.
+import { render } from "@volynets/reflex-dom";
 export const minCompiled = 3;
 
 const flag = true as boolean;
@@ -15,7 +16,7 @@ function Wrapper(props: { children?: unknown }) {
   return <section>{props.children as never}</section>;
 }
 
-export default function App() {
+function App() {
   return (
     <div id={() => "positions"}>
       {flag ? <p>yes</p> : <p>no</p>}
@@ -29,3 +30,6 @@ export default function App() {
     </div>
   );
 }
+
+// The renderer is provably the only caller of App.
+export default (container: Element) => render(<App />, container);

@@ -4,8 +4,9 @@ export {
   transformReflexDOM,
   DEFAULT_FACTORY_SOURCES,
   DEFAULT_RENDER_SOURCES,
+  DEFAULT_OPERATOR_SOURCES,
   DEFAULT_RUNTIME_MODULE,
-  DEFAULT_TEMPLATE_THRESHOLD,
+  AUTO_TEMPLATE_MIN_NODES,
   type ReflexDOMCompilerOptions,
   type TransformResult,
 } from "./transform";

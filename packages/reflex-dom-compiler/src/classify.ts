@@ -1,15 +1,16 @@
 import { types as t, type NodePath } from "@babel/core";
 import type { StaticAttribute, StaticElement, StaticNode } from "./model";
+import { rejectTag, staticAttribute, textOf, type Literal } from "./semantics";
 
 type Binding = NonNullable<ReturnType<NodePath["scope"]["getBinding"]>>;
 
 export interface ClassifyConfig {
   /** Modules whose `jsx`/`jsxs`/`jsxDEV`/`Fragment` exports are the Reflex JSX factory. */
   readonly factorySources: ReadonlySet<string>;
-  /** Modules whose `render`/`mount` exports mount a renderable. */
+  /** Modules whose `render`/`mount`/`hydrate`/`renderToString` render their first argument. */
   readonly renderSources: ReadonlySet<string>;
-  /** Treat functions with a PascalCase name as components (their return value is mounted). */
-  readonly assumePascalCaseComponents: boolean;
+  /** Modules whose `For` export mounts what its `children` callback returns. */
+  readonly operatorSources: ReadonlySet<string>;
 }
 
 export type ElementResult =
@@ -25,7 +26,8 @@ export type CallType =
 // Binding resolution: the callee must be the real factory import, not a name.
 
 const FACTORY_EXPORTS = new Set(["jsx", "jsxs", "jsxDEV"]);
-const RENDER_EXPORTS = new Set(["render", "mount"]);
+const RENDER_EXPORTS = new Set(["render", "mount", "hydrate", "renderToString"]);
+const FOR_EXPORTS = new Set(["For"]);
 
 function importedName(
   binding: Binding | undefined,
@@ -83,15 +85,7 @@ export function callType(
 }
 
 // ---------------------------------------------------------------------------
-// Literals: the only values a static region may contain.
-
-type Literal =
-  | { readonly kind: "string"; readonly value: string }
-  | { readonly kind: "number"; readonly value: number }
-  | { readonly kind: "bigint"; readonly value: string }
-  | { readonly kind: "boolean"; readonly value: boolean }
-  | { readonly kind: "null" }
-  | { readonly kind: "undefined" };
+// Literal evaluation over the AST; their DOM meaning lives in semantics.ts.
 
 function unwrap(path: NodePath | undefined): NodePath | undefined {
   let current = path;
@@ -149,19 +143,6 @@ function evaluateLiteral(input: NodePath | undefined): Literal | null {
   return null;
 }
 
-/** `String(value)` exactly as the runtime computes it. */
-function textOf(literal: Literal): string | null {
-  switch (literal.kind) {
-    case "string":
-      return literal.value;
-    case "number":
-      return String(literal.value);
-    case "bigint":
-      return literal.value;
-    default:
-      return null;
-  }
-}
 
 /** Arguments `jsxDEV` adds after the key: source locations and `this`. */
 function isInert(path: NodePath): boolean {
@@ -184,136 +165,6 @@ function isInert(path: NodePath): boolean {
   return false;
 }
 
-// ---------------------------------------------------------------------------
-// Elements. The supported set excludes every element whose DOM construction
-// differs from `createElement` + attributes + children in reflex-dom: form
-// controls (managed properties), parser-special elements, tables, foreign
-// namespaces and custom elements.
-
-const COMPILABLE_TAGS = new Set([
-  "a", "abbr", "address", "article", "aside", "b", "bdi", "bdo", "blockquote",
-  "br", "button", "cite", "code", "dd", "del", "details", "dfn", "div", "dl",
-  "dt", "em", "fieldset", "figcaption", "figure", "footer", "h1", "h2", "h3",
-  "h4", "h5", "h6", "header", "hgroup", "hr", "i", "img", "ins", "kbd", "label",
-  "legend", "li", "main", "mark", "menu", "nav", "ol", "p", "q", "rp", "rt",
-  "ruby", "s", "samp", "search", "section", "small", "span", "strong", "sub",
-  "summary", "sup", "time", "u", "ul", "var", "wbr",
-]);
-
-const TABLE_TAGS = new Set([
-  "table", "caption", "colgroup", "col", "thead", "tbody", "tfoot", "tr", "td", "th",
-]);
-const FORM_TAGS = new Set([
-  "input", "select", "textarea", "option", "optgroup", "datalist", "form",
-  "output", "progress", "meter",
-]);
-
-export function rejectTag(tag: string): string | null {
-  if (COMPILABLE_TAGS.has(tag)) return null;
-  if (tag.includes("-")) return `custom element <${tag}>`;
-  if (tag === "svg" || tag === "math") return `foreign namespace <${tag}>`;
-  if (TABLE_TAGS.has(tag)) return `table parsing context <${tag}>`;
-  if (FORM_TAGS.has(tag)) return `form control semantics <${tag}>`;
-  return `unsupported element <${tag}>`;
-}
-
-// ---------------------------------------------------------------------------
-// Props. A prop compiles only when its static value has one DOM effect in every
-// engine: the attribute it ends up as. reflex-dom assigns many names through
-// DOM properties (`name in element`), so a name is listed only where property
-// and attribute paths store the same string, independently of the tag.
-
-const ATTRIBUTE_ALIASES: Readonly<Record<string, string>> = {
-  className: "class",
-  htmlFor: "for",
-  crossOrigin: "crossorigin",
-};
-
-/** Reflected `DOMString` attributes, plus attribute-only names. */
-const STRING_ATTRIBUTES = new Set([
-  "id", "title", "lang", "dir", "role", "slot", "alt", "target", "rel", "type",
-  "name", "download", "datetime", "for", "loading", "decoding", "crossorigin",
-]);
-/** Reflected booleans: only `true` (present) and absence agree across paths. */
-const BOOLEAN_ATTRIBUTES = new Set(["disabled", "hidden", "inert"]);
-/** Sanitized by reflex-dom at runtime; compiled only when unchanged by it. */
-const URL_ATTRIBUTES = new Set(["href", "src"]);
-
-const DATA_OR_ARIA = /^(data|aria)-[a-z0-9._-]+$/;
-
-type AttributeResult =
-  | { readonly kind: "omit" }
-  | { readonly kind: "set"; readonly attribute: StaticAttribute }
-  | { readonly kind: "reject"; readonly reason: string };
-
-const OMIT: AttributeResult = { kind: "omit" };
-
-function set(name: string, value: string): AttributeResult {
-  return { kind: "set", attribute: { name, value } };
-}
-
-function reject(reason: string): AttributeResult {
-  return { kind: "reject", reason };
-}
-
-function isAbsent(literal: Literal): boolean {
-  return (
-    literal.kind === "null" ||
-    literal.kind === "undefined" ||
-    (literal.kind === "boolean" && !literal.value)
-  );
-}
-
-function staticAttribute(prop: string, literal: Literal | null): AttributeResult {
-  // reflex-dom skips undefined props before looking at their names.
-  if (literal?.kind === "undefined") return OMIT;
-  if (prop === "key") return literal === null ? reject(`dynamic prop "key"`) : OMIT;
-  if (prop === "ref") return reject("ref");
-  if (prop.startsWith("on")) return reject(`event prop "${prop}"`);
-  if (prop === "style") return reject("style is normalized through CSSOM");
-  if (literal === null) return reject(`dynamic prop "${prop}"`);
-
-  const name = ATTRIBUTE_ALIASES[prop] ?? prop;
-  const text = textOf(literal);
-
-  if (name === "class") {
-    if (text !== null) return set(name, text);
-    if (literal.kind === "boolean" && literal.value) return set(name, "true");
-    return OMIT;
-  }
-
-  if (DATA_OR_ARIA.test(name)) {
-    if (text !== null) return set(name, text);
-    if (literal.kind === "boolean") {
-      if (name.startsWith("aria-")) return set(name, literal.value ? "true" : "false");
-      return literal.value ? set(name, "") : OMIT;
-    }
-    return OMIT;
-  }
-
-  if (BOOLEAN_ATTRIBUTES.has(name)) {
-    if (literal.kind === "boolean" && literal.value) return set(name, "");
-    if (isAbsent(literal)) return OMIT;
-    return reject(`non-boolean value for "${name}"`);
-  }
-
-  if (URL_ATTRIBUTES.has(name)) {
-    if (isAbsent(literal)) return OMIT;
-    if (literal.kind !== "string") return reject(`non-string URL "${name}"`);
-    if (sanitizeURL(literal.value) !== literal.value) {
-      return reject(`URL "${name}" is sanitized at runtime`);
-    }
-    return set(name, literal.value);
-  }
-
-  if (STRING_ATTRIBUTES.has(name)) {
-    if (text !== null) return set(name, text);
-    if (isAbsent(literal)) return OMIT;
-    return reject(`boolean value for "${name}"`);
-  }
-
-  return reject(`prop "${prop}" has no verified static semantics`);
-}
 
 function propName(property: NodePath<t.ObjectProperty>): string | null {
   const key = property.node.key;
@@ -374,15 +225,18 @@ export function classifyElement(
   if (typeof props === "string") return { ok: false, reason: props };
 
   const attributes: StaticAttribute[] = [];
+  // Every attribute the runtime writes or removes, so one alias cannot
+  // silently undo another (`className: "a", class: false`).
+  const written = new Set<string>();
   for (const [prop, valuePath] of props) {
     if (prop === "children") continue;
     const result = staticAttribute(prop, evaluateLiteral(valuePath));
     if (result.kind === "reject") return { ok: false, reason: result.reason };
-    if (result.kind === "omit") continue;
-    if (attributes.some((existing) => existing.name === result.attribute.name)) {
-      return { ok: false, reason: `conflicting aliases for "${result.attribute.name}"` };
-    }
-    attributes.push(result.attribute);
+    if (result.kind === "skip") continue;
+    const name = result.kind === "set" ? result.attribute.name : result.name;
+    if (written.has(name)) return { ok: false, reason: `conflicting aliases for "${name}"` };
+    written.add(name);
+    if (result.kind === "set") attributes.push(result.attribute);
   }
 
   const children: StaticNode[] = [];
@@ -474,50 +328,93 @@ function escapes(reason: string): Consumption {
   return { consumed: false, reason: `descriptor escapes: ${reason}` };
 }
 
-function functionName(fn: NodePath<t.Function>): string | null {
-  const node = fn.node;
-  if ((t.isFunctionDeclaration(node) || t.isFunctionExpression(node)) && node.id) {
-    return node.id.name;
-  }
+/** The binding a function is declared as: `function F` or `const F = ...`. */
+function functionBinding(fn: NodePath<t.Function>): Binding | undefined {
   const parent = fn.parentPath;
   if (parent?.isVariableDeclarator() && t.isIdentifier(parent.node.id)) {
-    return parent.node.id.name;
+    return parent.scope.getBinding(parent.node.id.name);
   }
-  return null;
+  if (fn.isFunctionDeclaration() && fn.node.id) {
+    return parent!.scope.getBinding(fn.node.id.name);
+  }
+  return undefined;
 }
 
-function functionBinding(fn: NodePath<t.Function>): Binding | undefined {
-  const name = functionName(fn);
-  if (name === null) return undefined;
-  return fn.isFunctionDeclaration() || fn.parentPath?.isVariableDeclarator()
-    ? fn.parentPath!.scope.getBinding(name)
-    : fn.scope.getBinding(name);
+function isExportedDeclaration(binding: Binding): boolean {
+  const declaration = binding.path.isVariableDeclarator()
+    ? binding.path.parentPath
+    : binding.path;
+  const owner = declaration?.parentPath;
+  return owner?.isExportNamedDeclaration() === true || owner?.isExportDefaultDeclaration() === true;
 }
 
-function isComponentFunction(fn: NodePath<t.Function>, config: ClassifyConfig): boolean {
-  if (fn.isObjectMethod() || fn.isClassMethod() || fn.isClassPrivateMethod()) return false;
-  const name = functionName(fn);
-  if (config.assumePascalCaseComponents && name !== null && /^[A-Z]/.test(name)) {
-    return true;
-  }
-  const binding = functionBinding(fn);
+/** `jsx(For, props)` with `For` imported from a reflex-dom module. */
+function isForCall(path: NodePath | null, config: ClassifyConfig): path is NodePath<t.CallExpression> {
   return (
-    binding !== undefined &&
-    binding.referencePaths.some((reference) => {
-      const call = reference.parentPath;
-      return (
-        call !== null &&
-        reference.key === 0 &&
-        reference.listKey === "arguments" &&
-        isFactoryCall(call, config)
-      );
-    })
+    path !== null &&
+    isFactoryCall(path, config) &&
+    resolvesTo(path.get("arguments")[0] as NodePath, config.operatorSources, FOR_EXPORTS)
   );
+}
+
+/** The factory call whose props object holds `property` as prop `name`. */
+function propOwner(property: NodePath, name: string, config: ClassifyConfig): NodePath<t.CallExpression> | null {
+  if (!property.isObjectProperty() || propName(property) !== name) return null;
+  const props = property.parentPath;
+  const owner = props.parentPath;
+  return props.isObjectExpression() && props.key === 1 && owner !== null && isFactoryCall(owner, config)
+    ? owner
+    : null;
+}
+
+/**
+ * Whether the value `fn` returns reaches the renderer and nothing else. Names
+ * prove nothing; callers do. Two kinds of caller are known:
+ *
+ * - `For` (from reflex-dom) mounts what its `children` callback returns, so
+ *   the callback's result is consumed when the `jsx(For, ...)` call is;
+ * - the renderer calls a component, so a function whose every reference is
+ *   the type argument of a consumed `jsx(F, ...)` call has only the renderer
+ *   as caller. An exported or reassigned binding has unknown callers.
+ */
+function functionConsumption(
+  fn: NodePath<t.Function>,
+  config: ClassifyConfig,
+  visiting: Set<t.Node>,
+): Consumption {
+  const forCall = propOwner(fn.parentPath!, "children", config);
+  if (forCall !== null && isForCall(forCall, config)) {
+    return consumption(forCall, config, visiting);
+  }
+
+  const binding = functionBinding(fn);
+  if (binding === undefined) return escapes("returned from a function with unknown callers");
+  const name = binding.identifier.name;
+  if (!binding.constant) return escapes(`"${name}" is reassigned`);
+  if (isExportedDeclaration(binding)) return escapes(`"${name}" is exported, so its callers are unknown`);
+  if (binding.referencePaths.length === 0) return escapes(`"${name}" is never rendered`);
+  if (visiting.has(fn.node)) return escapes(`"${name}" renders itself`);
+
+  visiting.add(fn.node);
+  try {
+    for (const reference of binding.referencePaths) {
+      const call = reference.parentPath;
+      if (call === null || reference.key !== 0 || reference.listKey !== "arguments" || !isFactoryCall(call, config)) {
+        return escapes(`"${name}" is used outside a JSX component position`);
+      }
+      const use = consumption(call, config, visiting);
+      if (!use.consumed) return escapes(`a <${name}> element escapes (${use.reason})`);
+    }
+  } finally {
+    visiting.delete(fn.node);
+  }
+  return CONSUMED;
 }
 
 export function consumption(
   call: NodePath<t.CallExpression>,
   config: ClassifyConfig,
+  visiting: Set<t.Node> = new Set(),
 ): Consumption {
   let path: NodePath = call;
 
@@ -543,14 +440,20 @@ export function consumption(
     if (parent.isReturnStatement()) {
       const fn = parent.getFunctionParent();
       if (fn === null) return escapes("return outside a function");
-      return isComponentFunction(fn, config) ? CONSUMED : escapes("returned from a non-component function");
+      return functionConsumption(fn, config, visiting);
     }
 
     if (parent.isArrowFunctionExpression() && path.key === "body") {
-      return isComponentFunction(parent, config) ? CONSUMED : escapes("returned from a non-component function");
+      return functionConsumption(parent, config, visiting);
     }
 
     if (parent.isObjectProperty() && path.key === "value") {
+      // `For` mounts its `fallback` as is.
+      const forCall = propOwner(parent, "fallback", config);
+      if (forCall !== null && isForCall(forCall, config)) {
+        path = forCall;
+        continue;
+      }
       const props = parent.parentPath;
       const owner = props.parentPath;
       if (
@@ -590,33 +493,4 @@ export function consumption(
     if (parent.isCallExpression() || parent.isNewExpression()) return escapes("passed as an argument");
     return escapes(`used in ${parent.type}`);
   }
-}
-
-// ---------------------------------------------------------------------------
-// Port of reflex-dom's `sanitizeURL`: a compiled URL must be one the runtime
-// would leave unchanged.
-
-const BLOCKED_PROTOCOLS = ["javascript:", "vbscript:"];
-
-function sanitizeURL(url: string): string {
-  let start = 0;
-  while (start < url.length && url.charCodeAt(start) <= 0x20) start++;
-
-  for (const protocol of BLOCKED_PROTOCOLS) {
-    let index = start;
-    let matched = 0;
-    while (matched < protocol.length && index < url.length) {
-      const code = url.charCodeAt(index);
-      if (code === 0x09 || code === 0x0a || code === 0x0d) {
-        index++;
-        continue;
-      }
-      const lower = code >= 0x41 && code <= 0x5a ? code + 0x20 : code;
-      if (lower !== protocol.charCodeAt(matched)) break;
-      index++;
-      matched++;
-    }
-    if (matched === protocol.length) return "about:blank";
-  }
-  return url;
 }

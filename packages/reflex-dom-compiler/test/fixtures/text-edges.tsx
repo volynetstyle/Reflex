@@ -1,8 +1,9 @@
 // Text node boundaries: empty strings, adjacency, numbers, bigint, skipped
 // values and characters the HTML parser would reinterpret.
+import { render } from "@volynets/reflex-dom";
 export const minCompiled = 6;
 
-export default function App() {
+function App() {
   return (
     <div id={() => "text-edges"}>
       <p>{""}</p>
@@ -17,3 +18,6 @@ export default function App() {
     </div>
   );
 }
+
+// The renderer is provably the only caller of App.
+export default (container: Element) => render(<App />, container);

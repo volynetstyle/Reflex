@@ -1,8 +1,9 @@
 // Trees the DOM API builds but the HTML parser restructures. Template must
 // back off to native; native must equal the runtime.
+import { render } from "@volynets/reflex-dom";
 export const minCompiled = 6;
 
-export default function App() {
+function App() {
   return (
     <main id={() => "parser"}>
       <p>
@@ -22,3 +23,6 @@ export default function App() {
     </main>
   );
 }
+
+// The renderer is provably the only caller of App.
+export default (container: Element) => render(<App />, container);

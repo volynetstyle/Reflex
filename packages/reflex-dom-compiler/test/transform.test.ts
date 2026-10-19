@@ -15,7 +15,11 @@ function only(body: string, options?: ReflexDOMCompilerOptions, header?: string)
   return { region: report.regions[0]!, code };
 }
 
-const component = (expr: string) => `export function App() { return ${expr}; }`;
+const RENDER = `import { For, render } from "@volynets/reflex-dom";\n`;
+
+/** A component whose only caller is provably the renderer. */
+const component = (expr: string) =>
+  `${RENDER}function App() { return ${expr}; }\nrender(jsx(App, {}), root);`;
 
 describe("lowering", () => {
   const profile = component(
@@ -46,7 +50,7 @@ describe("lowering", () => {
   });
 
   it("places helpers after the imports, before any user code", () => {
-    const { code } = compile(`const early = App();\n${profile}`, {}, IMPORT + `import { other } from "x";\n`);
+    const { code } = compile(`const early = other();\n${profile}`, {}, IMPORT + `import { other } from "x";\n`);
     const helperImport = code.indexOf(`from "@volynets/reflex-dom-compiler/runtime"`);
     expect(helperImport).toBeGreaterThan(code.indexOf(`from "x"`));
     expect(code.indexOf("const _tpl")).toBeGreaterThan(helperImport);
@@ -57,7 +61,7 @@ describe("lowering", () => {
     const { region } = only(
       component(`jsxDEV("p", { children: "dev" }, void 0, false, { fileName: "a.tsx", lineNumber: 1 }, this)`),
       {},
-      `import { jsxDEV } from "@volynets/reflex-dom/jsx-dev-runtime";\n`,
+      IMPORT + `import { jsxDEV } from "@volynets/reflex-dom/jsx-dev-runtime";\n`,
     );
     expect(region.strategy).toBe("template");
   });
@@ -111,11 +115,29 @@ describe("evaluation timing", () => {
 describe("escape analysis", () => {
   it.each([
     [`const saved = jsx("p", {});\n${component("saved")}`, "stored in a variable"],
-    [`function helper() { return jsx("p", {}); }`, "returned from a non-component function"],
+    [`function helper() { return jsx("p", {}); }`, `"helper" is never rendered`],
     [component(`jsx(Card, { children: jsx("p", {}) })`), "children of component <Card>"],
     [component(`jsx(Card, { header: jsx("p", {}) })`), "stored in an object"],
     [component(`wrap(jsx("p", {}))`), "passed as an argument"],
     [component(`[jsx("p", {})].map(x => x)`), "used in MemberExpression"],
+    // Components: names prove nothing, only callers do.
+    [`export function App() { return jsx("p", {}); }`, `"App" is exported, so its callers are unknown`],
+    [`export const App = () => jsx("p", {});`, `"App" is exported`],
+    [`export default () => jsx("p", {});`, "unknown callers"],
+    [`${component(`jsx("p", {})`)}\nApp();`, `"App" is used outside a JSX component position`],
+    [`${component(`jsx("p", {})`)}\nexport { App };`, `"App" is used outside a JSX component position`],
+    [`function App() { return jsx("p", {}); }\nexport const view = jsx(App, {});`, `a <App> element escapes`],
+    [`${RENDER}let App = () => jsx("p", {});\nApp = other;\nrender(jsx(App, {}), root);`, `"App" is reassigned`],
+    [
+      `${RENDER}function App() { return flag ? jsx("p", {}) : jsx("div", { id: x(), children: jsx(App, {}) }); }\nrender(jsx(App, {}), root);`,
+      `"App" renders itself`,
+    ],
+    // For: only reflex-dom's, and only when the For element is consumed.
+    [`${RENDER}export const list = jsx(For, { each: items, by: k, children: () => jsx("p", {}) });`, "stored in a variable"],
+    [
+      `import { For } from "elsewhere";\nimport { render } from "@volynets/reflex-dom";\nrender(jsx(For, { each: items, by: k, children: () => jsx("p", {}) }), root);`,
+      "unknown callers",
+    ],
   ])("keeps escaping descriptors on the runtime: %s", (body, reason) => {
     const region = compile(body).report.regions.find((r) => r.tag === "p")!;
     expect(region).toMatchObject({ static: true, strategy: "runtime" });
@@ -128,17 +150,17 @@ describe("escape analysis", () => {
     component(`[jsx("p", {}), "text"]`),
     component(`jsx(Fragment, { children: jsx("p", {}) })`),
     component(`jsx("div", { id: dynamic(), children: jsx("p", {}) })`),
-    `export const App = () => jsx("p", {});`,
+    `${RENDER}const App = () => jsx("p", {});\nrender(jsx(App, {}), root);`,
     `function card() { return jsx("p", {}); }\n${component(`jsx(card, {})`)}`,
-    `import { render } from "@volynets/reflex-dom";\nrender(jsx("p", {}), root);`,
+    `${RENDER}render(jsx("p", {}), root);`,
+    `${RENDER}render(jsx(For, { each: items, by: k, children: (item) => jsx("p", {}) }), root);`,
+    `${RENDER}render(jsx(For, { each: items, by: k, children: function (item) { return jsx("p", {}); } }), root);`,
+    `${RENDER}render(jsx(For, { each: items, by: k, fallback: jsx("p", {}), children: () => null }), root);`,
+    component(`jsx(For, { each: items, by: k, children: () => jsx("p", {}) })`),
   ])("compiles consumed positions: %s", (body) => {
     const region = compile(body).report.regions.find((r) => r.tag === "p")!;
+    expect(region.reason).toBeNull();
     expect(region.strategy).toBe("template");
-  });
-
-  it("can stop trusting the PascalCase convention", () => {
-    const region = compile(component(`jsx("p", {})`), { assumePascalCaseComponents: false }).report.regions[0]!;
-    expect(region.strategy).toBe("runtime");
   });
 });
 
@@ -177,6 +199,12 @@ describe("prop semantics", () => {
     [`id: true`, `boolean value for "id"`],
     [`width: 10`, `prop "width"`],
     [`class: "a", className: "b"`, "conflicting aliases"],
+    // Fuzz regression: the later `false` removes what `className` set.
+    [`className: "", class: false`, "conflicting aliases"],
+    [`htmlFor: "f", for: null`, "conflicting aliases"],
+    // Fuzz/conformance regression: fieldset.type is getter-only, button.type
+    // normalizes in jsdom.
+    [`type: "button"`, `prop "type"`],
     [`...rest`, "spread props"],
     [`["id"]: "x"`, "computed prop name"],
     [`get id() { return "x"; }`, "accessor or method"],
@@ -236,17 +264,17 @@ describe("text topology and parser context", () => {
 });
 
 describe("strategy selection", () => {
-  it("uses native below the auto threshold and template above it", () => {
+  it("uses native below the auto heuristic and template above it", () => {
     const small = only(component(`jsx("p", { children: "x" })`), { strategy: "auto" }).region;
-    expect(small).toMatchObject({ strategy: "native", reason: "below template threshold (2 < 8 nodes)" });
+    expect(small).toMatchObject({ strategy: "native", reason: "below the auto template heuristic (2 < 8 nodes)" });
 
     const items = Array.from({ length: 4 }, (_, i) => `jsx("li", { children: "${i}" })`).join(", ");
     const large = only(component(`jsx("ul", { children: [${items}] })`), { strategy: "auto" }).region;
     expect(large).toMatchObject({ strategy: "template", nodes: 9 });
   });
 
-  it("respects a custom threshold", () => {
-    const { region } = only(component(`jsx("p", { children: "x" })`), { strategy: "auto", templateThreshold: 2 });
+  it("respects a custom minimum", () => {
+    const { region } = only(component(`jsx("p", { children: "x" })`), { strategy: "auto", autoTemplateMinNodes: 2 });
     expect(region.strategy).toBe("template");
   });
 });

@@ -22,15 +22,17 @@ export interface ReflexDOMCompilerOptions {
   /**
    * `native`: direct DOM calls only (Trusted Types / strict CSP friendly).
    * `template`: HTML templates wherever the parser reproduces the tree.
-   * `auto`: templates for regions of at least `templateThreshold` nodes.
+   * `auto`: templates for regions of at least `autoTemplateMinNodes` nodes.
    */
   readonly strategy?: "auto" | "template" | "native";
-  readonly templateThreshold?: number;
+  /** Overrides `AUTO_TEMPLATE_MIN_NODES` for `strategy: "auto"`. */
+  readonly autoTemplateMinNodes?: number;
   readonly factorySources?: readonly string[];
   readonly renderSources?: readonly string[];
   /** Module the generated code imports its helpers from. */
   readonly runtimeModule?: string;
-  readonly assumePascalCaseComponents?: boolean;
+  /** Modules whose `For` mounts its `children` callback results. */
+  readonly operatorSources?: readonly string[];
   readonly onReport?: (report: CompilerReport) => void;
 }
 
@@ -43,12 +45,18 @@ export const DEFAULT_FACTORY_SOURCES = [
   "@volynets/reflex-framework/jsx-dev-runtime",
 ];
 export const DEFAULT_RENDER_SOURCES = ["@volynets/reflex-dom"];
+export const DEFAULT_OPERATOR_SOURCES = ["@volynets/reflex-dom"];
 export const DEFAULT_RUNTIME_MODULE = "@volynets/reflex-dom-compiler/runtime";
 /**
- * Below this many nodes `auto` emits native code. Provisional: see the
- * benchmark README for the measured break-even per engine.
+ * Steady-state heuristic, not a proven bound. Region size predicts how much a
+ * clone saves per mount, not how often the region mounts: for n nodes and m
+ * mounts a template costs P(n) + m·K(n) (parse once, clone per mount) and
+ * native code m·N(n), so the template wins once m > P(n) / (N(n) − K(n)).
+ * Measured: m ≤ 4 at 18 nodes in every engine, m ≈ 14 at 5 nodes in
+ * Chromium (README, Benchmarks). Multiplicity information (`For` rows) should
+ * replace it.
  */
-export const DEFAULT_TEMPLATE_THRESHOLD = 8;
+export const AUTO_TEMPLATE_MIN_NODES = 8;
 
 const PRAGMA_OFF = /@reflex-dom-compiler\s+off\b/;
 
@@ -64,10 +72,10 @@ export function reflexDOMCompiler(
   const config: ClassifyConfig = {
     factorySources: new Set(options.factorySources ?? DEFAULT_FACTORY_SOURCES),
     renderSources: new Set(options.renderSources ?? DEFAULT_RENDER_SOURCES),
-    assumePascalCaseComponents: options.assumePascalCaseComponents ?? true,
+    operatorSources: new Set(options.operatorSources ?? DEFAULT_OPERATOR_SOURCES),
   };
   const strategy = options.strategy ?? "auto";
-  const threshold = options.templateThreshold ?? DEFAULT_TEMPLATE_THRESHOLD;
+  const threshold = options.autoTemplateMinNodes ?? AUTO_TEMPLATE_MIN_NODES;
   const runtimeModule = options.runtimeModule ?? DEFAULT_RUNTIME_MODULE;
 
   return {
@@ -98,7 +106,7 @@ export function reflexDOMCompiler(
           if (strategy === "native") chosen = { strategy: "native", reason: null };
           else if (templateReason !== null) chosen = { strategy: "native", reason: templateReason };
           else if (strategy === "auto" && nodes < threshold) {
-            chosen = { strategy: "native", reason: `below template threshold (${nodes} < ${threshold} nodes)` };
+            chosen = { strategy: "native", reason: `below the auto template heuristic (${nodes} < ${threshold} nodes)` };
           } else chosen = { strategy: "template", reason: null };
 
           if (chosen.strategy === "template") {
@@ -154,16 +162,16 @@ export function reflexDOMCompiler(
         }
 
         if (helpers.size > 0) {
-          const imports = program.get("body").filter((statement) => statement.isImportDeclaration());
           const declaration = t.importDeclaration(
             [...helpers].map(([name, local]) => t.importSpecifier(local, t.identifier(name))),
             t.stringLiteral(runtimeModule),
           );
-          const [inserted] =
-            imports.length > 0
-              ? imports[imports.length - 1]!.insertAfter(declaration)
-              : program.unshiftContainer("body", declaration);
-          inserted!.insertAfter(hoisted);
+          // Before the first statement that runs: user code may mount a
+          // region during module evaluation, and `const _tpl` must be
+          // initialized by then. Imports later in the file are hoisted anyway.
+          const firstCode = program.get("body").find((statement) => !statement.isImportDeclaration());
+          if (firstCode === undefined) program.pushContainer("body", [declaration, ...hoisted]);
+          else firstCode.insertBefore([declaration, ...hoisted]);
         }
 
         const report: CompilerReport = { filename, disabled, regions };

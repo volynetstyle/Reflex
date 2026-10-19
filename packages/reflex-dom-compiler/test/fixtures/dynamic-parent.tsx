@@ -1,9 +1,10 @@
 // A dynamic parent stays on the runtime; its static children compile.
+import { render } from "@volynets/reflex-dom";
 export const minCompiled = 3;
 
 const label = () => "live";
 
-export default function App() {
+function App() {
   return (
     <ul id={() => "list"} class="items">
       <li>first</li>
@@ -15,3 +16,6 @@ export default function App() {
     </ul>
   );
 }
+
+// The renderer is provably the only caller of App.
+export default (container: Element) => render(<App />, container);

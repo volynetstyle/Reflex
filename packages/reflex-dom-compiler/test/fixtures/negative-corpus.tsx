@@ -1,9 +1,10 @@
 // The plan's negative corpus: every region here must stay on the runtime.
+import { render } from "@volynets/reflex-dom";
 export const minCompiled = 0;
 
 const callback = () => {};
 
-export default function App() {
+function App() {
   return (
     <div id={() => "negative"}>
       <table>
@@ -29,3 +30,6 @@ export default function App() {
     </div>
   );
 }
+
+// The renderer is provably the only caller of App.
+export default (container: Element) => render(<App />, container);
