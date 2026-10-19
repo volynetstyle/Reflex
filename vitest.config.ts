@@ -17,7 +17,9 @@ export default defineConfig({
       "packages/reflex-store/vite.dev.config.ts",
       "packages/reflex-async/vite.config.ts",
       "packages/reflex-dom/vite.config.ts",
-      "packages/reflex-dom/vite.browser.config.ts"
+      "packages/reflex-dom/vite.browser.config.ts",
+      "packages/reflex-dom-compiler/vite.config.ts",
+      "packages/reflex-dom-compiler/vite.browser.config.ts"
 ],
     reporters: ["default"],
     coverage: {

@@ -10,10 +10,13 @@
     "./runtime": "./src/runtime.ts"
   },
   "scripts": {
+    "lint": "eslint .",
     "test": "vitest run --config vite.config.ts",
     "test:browser": "vitest run --config vite.browser.config.ts",
+    "test:browser:matrix": "vitest run --config vite.browser.matrix.config.ts",
+    "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.json",
     "bench": "node bench/run-ts.mjs bench/run.ts",
-    "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.json"
+    "bench:memory-probe": "node bench/run-ts.mjs bench/memory-probe.ts"
   },
   "dependencies": {
     "@babel/core": "^7.29.0",
