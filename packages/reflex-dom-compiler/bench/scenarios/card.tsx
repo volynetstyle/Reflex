@@ -18,7 +18,7 @@ export default (container: Element, keys: readonly number[]) =>
             <li>beta</li>
           </ul>
           <footer>
-            <button type="button" disabled>Save</button>
+            <button name="save" disabled>Save</button>
             <a href="/more">More</a>
           </footer>
         </div>
