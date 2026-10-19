@@ -1,7 +1,4 @@
 {
-  "$comment": "Reference frameworks run next to reflex-dom on the same runner. The fastest entries of the official table plus its neighbours around the estimated place of reflex-dom, so that the local measurements can be mapped onto the official machine. Every shard also runs keyed/vanillajs and keyed/reflex-dom.",
-  "shards": [
-    ["keyed/vanillajs-lite", "keyed/sonnet", "keyed/doohtml", "keyed/mikado", "keyed/alien-signals", "keyed/solid", "keyed/ivi", "keyed/gxt"],
-    ["keyed/bobril", "keyed/dark", "keyed/dlightjs", "keyed/ui5-webcomponents", "keyed/owl", "keyed/drift", "keyed/react-classes", "keyed/mithril"]
-  ]
+  "$comment": "Reference frameworks run next to reflex-dom on the same runner. Every shard always runs keyed/vanillajs and keyed/reflex-dom; list further frameworks of the release's build.zip here to add anchors (one array per parallel shard).",
+  "shards": [[]]
 }

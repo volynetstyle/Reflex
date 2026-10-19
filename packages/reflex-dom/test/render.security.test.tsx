@@ -67,7 +67,7 @@ describe("renderToString security and server behavior", () => {
             { when: "b", children: "B" },
           ]}
         />
-        <For each={[1, 2]}>{(item) => <em>{item}</em>}</For>
+        <For each={[1, 2]}>{(item) => <em>{item()}</em>}</For>
         <Portal to={document.body}>
           <strong>ignored</strong>
         </Portal>

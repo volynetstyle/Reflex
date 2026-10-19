@@ -37,8 +37,8 @@ describe("For rows", () => {
           by={(item) => item.id}
         >
           {(item) => (
-            <li class={() => (selected() === item.id ? "on" : null)}>
-              {item.label}
+            <li class={() => (selected() === item().id ? "on" : null)}>
+              {item().label}
             </li>
           )}
         </For>
@@ -62,7 +62,7 @@ describe("For rows", () => {
     render(
       <ul>
         <For each={items(1, 2, 3)} by={(item) => item.id}>
-          {(item) => <li>{item.label}</li>}
+          {(item) => <li>{item().label}</li>}
         </For>
       </ul>,
       container,
@@ -88,7 +88,7 @@ describe("For rows", () => {
     render(
       <ul>
         <For each={rows} by={(item) => item.id}>
-          {(item) => <Row item={item} />}
+          {(item) => <Row item={item()} />}
         </For>
       </ul>,
       container,
@@ -115,7 +115,7 @@ describe("For rows", () => {
       <ul>
         <li>before</li>
         <For each={rows} by={(item) => item.id}>
-          {(item) => <li>{item.label}</li>}
+          {(item) => <li>{item().label}</li>}
         </For>
         <li>after</li>
       </ul>,
@@ -140,9 +140,9 @@ describe("For rows", () => {
         <For each={rows} by={(item) => item.id}>
           {(item) => [
             <Show when={visible}>
-              <b>{item.id}</b>
+              <b>{item().id}</b>
             </Show>,
-            <span>{item.label}</span>,
+            <span>{() => item().label}</span>,
             () => (visible() ? "!" : ""),
           ]}
         </For>
@@ -150,7 +150,8 @@ describe("For rows", () => {
       container,
     );
     const root = container.querySelector("div")!;
-    const labels = () => Array.from(root.querySelectorAll("span"), (n) => n.textContent);
+    const labels = () =>
+      Array.from(root.querySelectorAll("span"), (n) => n.textContent);
 
     setRows(items(3, 1, 2));
     expect(labels()).toEqual(["item 3", "item 1", "item 2"]);
@@ -174,7 +175,7 @@ describe("For rows", () => {
     render(
       <p>
         <For each={rows} by={(item) => item.id}>
-          {(item) => (item.id === 2 ? null : item.label)}
+          {(item) => (item().id === 2 ? null : item().label)}
         </For>
       </p>,
       container,
@@ -188,15 +189,21 @@ describe("For rows", () => {
     expect(paragraph.textContent).toBe("item 3item 1");
   });
 
-  it("unmounts the previous content of an updated row before mounting the next", () => {
+  it("keeps the row, its DOM and its state when the item object changes", () => {
     const container = document.createElement("div");
-    const [rows, setRows] = signal(items(1));
+    const [rows, setRows] = signal(items(1, 2));
     const events: string[] = [];
 
-    function Row(props: { item: Item }) {
-      events.push(`mount ${props.item.label}`);
-      useUnmount(() => events.push(`unmount ${props.item.label}`));
-      return <li>{props.item.label}</li>;
+    function Row(props: { item: () => Item }) {
+      const id = props.item().id;
+      events.push(`mount ${id}`);
+      useUnmount(() => events.push(`unmount ${id}`));
+      return (
+        <li>
+          <input />
+          <span>{() => props.item().label}</span>
+        </li>
+      );
     }
 
     render(
@@ -207,10 +214,115 @@ describe("For rows", () => {
       </ul>,
       container,
     );
+    const list = container.querySelector("ul")!;
+    const first = list.children[0]!;
+    first.querySelector("input")!.value = "typed";
+
+    setRows([
+      { id: 1, label: "one" },
+      { id: 2, label: "item 2" },
+    ]);
+
+    expect(events).toEqual(["mount 1", "mount 2"]);
+    expect(list.children[0]).toBe(first);
+    expect(first.querySelector("input")!.value).toBe("typed");
+    expect(texts(list)).toEqual(["one", "item 2"]);
+
+    setRows([
+      { id: 2, label: "two" },
+      { id: 1, label: "uno" },
+    ]);
+
+    expect(events).toEqual(["mount 1", "mount 2"]);
+    expect(list.children[1]).toBe(first);
+    expect(texts(list)).toEqual(["two", "uno"]);
+
+    setRows(items(2));
+    expect(events).toEqual(["mount 1", "mount 2", "unmount 1"]);
+  });
+
+  it("passes the current index to rows that read it", () => {
+    const container = document.createElement("div");
+    const a = { id: 1, label: "a" };
+    const b = { id: 2, label: "b" };
+    const c = { id: 3, label: "c" };
+    const [rows, setRows] = signal([a, b, c]);
+    let mounts = 0;
+
+    render(
+      <ul>
+        <For each={rows} by={(item) => item.id}>
+          {(item, index) => {
+            mounts++;
+            return (
+              <li>
+                {item().label}:{index}
+              </li>
+            );
+          }}
+        </For>
+      </ul>,
+      container,
+    );
+    const list = container.querySelector("ul")!;
+
+    setRows([c, a, b]);
+    expect(texts(list)).toEqual(["c:0", "a:1", "b:2"]);
+
+    setRows([{ id: 0, label: "z" }, c, a, b]);
+    expect(texts(list)).toEqual(["z:0", "c:1", "a:2", "b:3"]);
+
+    setRows([a]);
+    expect(texts(list)).toEqual(["a:0"]);
+    expect(mounts).toBe(4);
+  });
+
+  it("reads untracked item values once, at mount", () => {
+    const container = document.createElement("div");
+    const [rows, setRows] = signal(items(1));
+
+    render(
+      <ul>
+        <For each={rows} by={(item) => item.id}>
+          {(item) => <li>{item().label}</li>}
+        </For>
+      </ul>,
+      container,
+    );
 
     setRows([{ id: 1, label: "next" }]);
 
-    expect(events).toEqual(["mount item 1", "unmount item 1", "mount next"]);
-    expect(texts(container.querySelector("ul")!)).toEqual(["next"]);
+    expect(texts(container.querySelector("ul")!)).toEqual(["item 1"]);
+  });
+
+  it("tracks reads after an untracked read of the same row", () => {
+    const container = document.createElement("div");
+    const [rows, setRows] = signal(items(1));
+
+    render(
+      <ul>
+        <For each={rows} by={(item) => item.id}>
+          {(item, index) => (
+            <li>
+              <b>{item().label}</b>
+              <i>{index()}</i>
+              <span>{() => item().label}</span>
+              <s>{index}</s>
+            </li>
+          )}
+        </For>
+      </ul>,
+      container,
+    );
+    const row = () => container.querySelector("li")!;
+
+    setRows([{ id: 0, label: "zero" }, { id: 1, label: "one" }]);
+
+    const second = container.querySelectorAll("li")[1]!;
+    expect(second.querySelector("b")!.textContent).toBe("item 1");
+    expect(second.querySelector("i")!.textContent).toBe("0");
+    expect(second.querySelector("span")!.textContent).toBe("one");
+    expect(second.querySelector("s")!.textContent).toBe("1");
+    expect(row().querySelector("span")!.textContent).toBe("zero");
   });
 });

@@ -17,6 +17,7 @@ import { RenderableKind } from "../renderable/kind";
 import { classifyRenderable } from "../renderable/classify";
 import { mountComponent } from "./component";
 import { mountReactiveSlot } from "./reactive";
+import { mountElementChildAccessor } from "./text-binding";
 import { mountElement } from "./element";
 import { mountFor } from "./for";
 import { mountPortal } from "./portal";
@@ -89,6 +90,15 @@ function appendClassified(
       appendText(parent, doc, current);
       return;
     case RenderableKind.Accessor:
+      if (parent.nodeType === 1) {
+        mountElementChildAccessor(
+          parent as Element,
+          current as () => unknown,
+          ns,
+          doc,
+        );
+        return;
+      }
       parent.appendChild(
         mountReactiveSlot(current as () => unknown, identity, ns, doc),
       );

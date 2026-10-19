@@ -1,5 +1,12 @@
 import type { Namespace } from "../host/namespace";
-import { untracked } from "@volynets/reflex-runtime";
+import {
+  createProducer,
+  readProducer,
+  untracked,
+  writeProducer,
+  type ProducerNode,
+} from "@volynets/reflex-runtime";
+import { currentConsumer } from "@volynets/reflex-runtime/internal";
 import {
   createOwnershipNode,
   disposeOwnershipNode,
@@ -21,18 +28,61 @@ import { appendRenderableNodes } from "./append";
 import { bindDOMRangeRef } from "./range-ref";
 
 /**
- * A mounted row: its ownership node and the first and last top-level nodes of
- * its content.
+ * A mounted row: its ownership node, the first and last top-level nodes of its
+ * content, and its current item and index.
  *
  * Top-level nodes produced by `appendRenderableNodes` are never replaced while
  * they are mounted (dynamic content lives between the anchors of nested
  * slots), so they bound the row for moves and removal without anchors of its
  * own. Empty content is represented by an empty text node.
+ *
+ * The renderer receives the item and the index as accessors. A row keeps its
+ * DOM and ownership while its key stays in the list: a new item object or a
+ * new position only writes the producers behind the accessors. A producer is
+ * created on the first tracked read, so values read only at mount, or an index
+ * that is never read, cost nothing on updates and reorders.
  */
 interface ForRow<T> extends KeyedItem<T> {
+  index: number;
   owner: OwnershipNode;
   first: Node;
   last: Node;
+  itemNode: ProducerNode<T> | null;
+  indexNode: ProducerNode<number> | null;
+  readonly item: () => T;
+  readonly position: () => number;
+}
+
+function createRow<T>(
+  key: PropertyKey,
+  value: T,
+  index: number,
+  owner: OwnershipNode,
+): ForRow<T> {
+  const row: ForRow<T> = {
+    key,
+    value,
+    index,
+    owner,
+    first: null!,
+    last: null!,
+    itemNode: null,
+    indexNode: null,
+    item: () => {
+      const node = row.itemNode;
+      if (node !== null) return readProducer(node);
+      // An untracked read cannot observe later values: no producer needed.
+      if (currentConsumer === null) return row.value;
+      return readProducer((row.itemNode = createProducer(row.value)));
+    },
+    position: () => {
+      const node = row.indexNode;
+      if (node !== null) return readProducer(node);
+      if (currentConsumer === null) return row.index;
+      return readProducer((row.indexNode = createProducer(row.index)));
+    },
+  };
+  return row;
 }
 
 function removeRowNodes(row: ForRow<unknown>): void {
@@ -68,14 +118,14 @@ export function mountFor(
   let rows: ForRow<unknown>[] = [];
   let fallbackSlot: ContentSlot | null = null;
 
-  let pendingItem: unknown;
-  let pendingIndex = 0;
+  let pendingRow: ForRow<unknown> | null = null;
   let pendingTarget: Node = scratch;
 
   const mountPending = (): void => {
+    const row = pendingRow!;
     appendRenderableNodes(
       pendingTarget,
-      renderable.children(pendingItem, pendingIndex),
+      renderable.children(row.item, row.position),
       ns,
     );
   };
@@ -89,9 +139,9 @@ export function mountFor(
   ): ForRow<unknown> {
     const rowNode = createOwnershipNode();
     const previousLast = target.lastChild;
+    const row = createRow(key, item, index, rowNode);
 
-    pendingItem = item;
-    pendingIndex = index;
+    pendingRow = row;
     pendingTarget = target;
 
     try {
@@ -103,7 +153,7 @@ export function mountFor(
       disposeOwnershipNode(rowNode);
       throw error;
     } finally {
-      pendingItem = undefined;
+      pendingRow = null;
     }
 
     let first =
@@ -114,7 +164,9 @@ export function mountFor(
       target.appendChild(first);
     }
 
-    return { key, value: item, owner: rowNode, first, last: target.lastChild! };
+    row.first = first;
+    row.last = target.lastChild!;
+    return row;
   }
 
   function destroyRow(row: ForRow<unknown>): void {
@@ -172,19 +224,14 @@ export function mountFor(
         parent.insertBefore(scratch, before);
       },
       update: (row, item, index) => {
-        if (row.value === item) return;
-
-        // Same order as a slot update: the old content is disposed before the
-        // new content mounts.
-        const next = row.last.nextSibling;
-        destroyRow(row);
-        const replacement = mountRowInto(scratch, item, row.key, index);
-        parent.insertBefore(scratch, next);
-
-        row.value = item;
-        row.owner = replacement.owner;
-        row.first = replacement.first;
-        row.last = replacement.last;
+        if (row.value !== item) {
+          row.value = item;
+          if (row.itemNode !== null) writeProducer(row.itemNode, item);
+        }
+        if (row.index !== index) {
+          row.index = index;
+          if (row.indexNode !== null) writeProducer(row.indexNode, index);
+        }
       },
       move: (row, before) => {
         if (row.first === row.last) {

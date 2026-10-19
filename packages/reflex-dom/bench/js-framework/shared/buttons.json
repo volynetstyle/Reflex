@@ -1,0 +1,42 @@
+[
+  [
+    "refreshone",
+    "Refresh, 1 change"
+  ],
+  [
+    "refresh10th",
+    "Refresh, every 10th"
+  ],
+  [
+    "moveforward",
+    "Move 999 to 2"
+  ],
+  [
+    "movebackward",
+    "Move 2 to 999"
+  ],
+  [
+    "reverse",
+    "Reverse"
+  ],
+  [
+    "interleave",
+    "Interleave"
+  ],
+  [
+    "replacehalf",
+    "Replace half"
+  ],
+  [
+    "updateall",
+    "Update all"
+  ],
+  [
+    "prepend",
+    "Prepend 1,000"
+  ],
+  [
+    "remove10th",
+    "Remove every 10th"
+  ]
+]

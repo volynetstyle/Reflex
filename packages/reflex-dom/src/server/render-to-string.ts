@@ -310,7 +310,12 @@ function resolveForServerValue(
     return renderable.fallback;
   }
 
-  return items.map((item, index) => renderable.children(item, index));
+  return items.map((item, index) =>
+    renderable.children(
+      () => item,
+      () => index,
+    ),
+  );
 }
 
 function renderElementToString(
