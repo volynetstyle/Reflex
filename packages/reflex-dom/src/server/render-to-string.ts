@@ -22,6 +22,7 @@ import {
 import { sanitizeURL } from "../host/sanitize";
 import { isVoidTag } from "../host/tags";
 import { RenderableKind } from "../renderable/kind";
+import type { CompiledDOMRenderable } from "../renderable/compiled";
 import { wrapHydrationSlotMarkup } from "../renderable/markers";
 import type { StyleValue } from "../types";
 import { classifyRenderable } from "../renderable/classify";
@@ -515,6 +516,12 @@ function renderRenderableToString(
     case RenderableKind.Element:
       return renderElementToString(
         value as ElementRenderable<ElementTag, Record<string, unknown>>,
+        parentNamespace,
+      );
+
+    case RenderableKind.Compiled:
+      return renderRenderableToString(
+        (value as CompiledDOMRenderable).fallback(),
         parentNamespace,
       );
   }

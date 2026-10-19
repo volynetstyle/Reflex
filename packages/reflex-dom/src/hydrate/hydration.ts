@@ -13,6 +13,7 @@ import type {
 } from "../operators";
 import { resolveShowValue, resolveSwitchValue } from "../operators";
 import { RenderableKind } from "../renderable/kind";
+import type { CompiledDOMRenderable } from "../renderable/compiled";
 import { classifyRenderable } from "../renderable/classify";
 import { bindElementProps } from "../mount/element-binder";
 import { hydrateReactiveSlot } from "../mount/slot";
@@ -247,6 +248,17 @@ function hydrateRenderableValue(
 
     case RenderableKind.Node:
       failHydration();
+
+    // Hydration adopts server nodes instead of creating them, so a compiled
+    // region hydrates through its source tree.
+    case RenderableKind.Compiled:
+      return hydrateRenderableValue(
+        (value as CompiledDOMRenderable).fallback(),
+        parentNamespace,
+        currentNode,
+        boundary,
+        doc,
+      );
   }
 }
 

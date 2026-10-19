@@ -12,6 +12,7 @@ import type {
   JSXRenderable,
 } from "../types";
 import type { Namespace } from "../host/namespace";
+import type { CompiledDOMRenderable } from "../renderable/compiled";
 import { RenderableKind } from "../renderable/kind";
 import { classifyRenderable } from "../renderable/classify";
 import { mountComponent } from "./component";
@@ -132,5 +133,13 @@ function appendClassified(
     case RenderableKind.Component:
       mountComponent(parent, current as ComponentRenderable<unknown>, ns);
       return;
+    case RenderableKind.Compiled: {
+      const r = current as CompiledDOMRenderable;
+      // Compiled regions are HTML-only; other namespaces mount the source tree.
+      const node = ns === "html" ? r.create(doc) : null;
+      if (node !== null) parent.appendChild(node);
+      else appendRenderableNodes(parent, r.fallback(), ns, doc);
+      return;
+    }
   }
 }
