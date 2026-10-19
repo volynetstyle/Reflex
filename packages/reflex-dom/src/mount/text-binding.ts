@@ -22,12 +22,16 @@ import { createMountedSlot } from "./slot";
  * Only for children of an element: the Text node is replaced when the content
  * becomes structural, so it must not be a boundary another region tracks
  * (`For` rows and slots mount their top-level content into fragments).
+ *
+ * The first run inserts before `before` (`null` appends); later runs only
+ * replace what the first run inserted.
  */
 export function mountElementChildAccessor(
   parent: Element,
   read: () => unknown,
   ns: Namespace,
   doc: Document,
+  before: Node | null = null,
 ): void {
   const context = getDOMContext();
   let text: Text | null = null;
@@ -47,7 +51,8 @@ export function mountElementChildAccessor(
 
         if (text === null) {
           text = doc.createTextNode(next);
-          parent.appendChild(text);
+          parent.insertBefore(text, before);
+          before = null;
         } else if (next !== current) {
           text.data = next;
         }
@@ -59,7 +64,8 @@ export function mountElementChildAccessor(
       slot = createMountedSlot(value, ns, doc);
 
       if (text === null) {
-        parent.appendChild(slot.fragment);
+        parent.insertBefore(slot.fragment, before);
+        before = null;
       } else {
         text.parentNode?.replaceChild(slot.fragment, text);
         text = null;

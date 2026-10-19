@@ -1,15 +1,17 @@
 /** @jsxImportSource ../src */
 import { describe, expect, it, vi } from "vitest";
-import { hydrate, render, renderToString } from "../src";
+import { createDOMRuntime, hydrate, render, renderToString } from "../src";
+import { signal } from "./reactivity";
 import {
   COMPILED_DOM_RENDERABLE,
   type CompiledDOMRenderable,
+  type CompiledHoleMount,
 } from "../src/renderable/compiled";
 
 // The renderer's side of the compiled-region protocol, with hand-written
 // regions: no compiler involved.
 
-function region(create: (doc: Document) => Node | null): CompiledDOMRenderable & {
+function region(create: (doc: Document, mountHole: CompiledHoleMount) => Node | null): CompiledDOMRenderable & {
   create: ReturnType<typeof vi.fn>;
   fallback: ReturnType<typeof vi.fn>;
 } {
@@ -35,7 +37,7 @@ describe("compiled region protocol", () => {
     const dispose = render(r, container);
 
     expect(r.create).toHaveBeenCalledTimes(1);
-    expect(r.create).toHaveBeenCalledWith(other);
+    expect(r.create).toHaveBeenCalledWith(other, expect.any(Function));
     expect(r.fallback).not.toHaveBeenCalled();
     expect(container.innerHTML).toBe(`<p class="r">region</p>`);
     dispose();
@@ -90,5 +92,73 @@ describe("compiled region protocol", () => {
     expect(r.create).not.toHaveBeenCalled();
     expect(r.fallback).toHaveBeenCalled();
     expect(container.querySelector("p")).toBe(serverParagraph);
+  });
+});
+
+// A region with one dynamic child: <p>[static] [hole] [static]</p>.
+function holeRegion(value: unknown, scalar = false) {
+  return region((doc, mountHole) => {
+    const p = doc.createElement("p");
+    const marker = doc.createComment("");
+    if (scalar) p.append(marker);
+    else p.append("a", marker, "b");
+    mountHole(p, marker, value, scalar);
+    return p;
+  });
+}
+
+describe("compiled region holes", () => {
+  const html = (value: unknown, scalar = false) => {
+    const container = document.createElement("div");
+    render(holeRegion(value, scalar), container);
+    return container.innerHTML;
+  };
+  const texts = (value: unknown, scalar = false) => {
+    const container = document.createElement("div");
+    render(holeRegion(value, scalar), container);
+    return Array.from(container.querySelector("p")!.childNodes, (node) => [node.nodeType, node.nodeValue]);
+  };
+
+  it("mounts text at the marker and removes it", () => {
+    expect(html("x")).toBe("<p>axb</p>");
+    expect(html(5)).toBe("<p>a5b</p>");
+    expect(html(2n)).toBe("<p>a2b</p>");
+  });
+
+  it("follows the array rules for text and empty values", () => {
+    expect(texts("")).toEqual([[3, "a"], [3, ""], [3, "b"]]);
+    expect(texts(null)).toEqual([[3, "a"], [3, "b"]]);
+    expect(texts(false)).toEqual([[3, "a"], [3, "b"]]);
+  });
+
+  it("follows the textContent rule for a scalar child", () => {
+    expect(texts("x", true)).toEqual([[3, "x"]]);
+    expect(texts("", true)).toEqual([]);
+    expect(texts(undefined, true)).toEqual([]);
+  });
+
+  it("binds accessors in place and updates them", () => {
+    createDOMRuntime();
+    const [name, setName] = signal("one");
+    const container = document.createElement("div");
+    render(holeRegion(name), container);
+    const text = container.querySelector("p")!.childNodes[1];
+    expect(container.innerHTML).toBe("<p>aoneb</p>");
+    setName("two");
+    expect(container.innerHTML).toBe("<p>atwob</p>");
+    expect(container.querySelector("p")!.childNodes[1]).toBe(text);
+  });
+
+  it("mounts structural accessor values at the marker", () => {
+    createDOMRuntime();
+    const container = document.createElement("div");
+    render(holeRegion(() => <i>s</i>), container);
+    expect(container.innerHTML).toContain("<i>s</i>");
+    expect(container.innerHTML.indexOf("a")).toBeLessThan(container.innerHTML.indexOf("<i>"));
+    expect(container.innerHTML.endsWith("b</p>")).toBe(true);
+  });
+
+  it("rejects values the region should have routed to fallback()", () => {
+    expect(() => html({ kind: Symbol("other") })).toThrow("Unsupported compiled hole value");
   });
 });

@@ -18,6 +18,7 @@ import { classifyRenderable } from "../renderable/classify";
 import { mountComponent } from "./component";
 import { mountReactiveSlot } from "./reactive";
 import { mountElementChildAccessor } from "./text-binding";
+import { mountCompiledHole } from "./compiled-hole";
 import { mountElement } from "./element";
 import { mountFor } from "./for";
 import { mountPortal } from "./portal";
@@ -146,7 +147,7 @@ function appendClassified(
     case RenderableKind.Compiled: {
       const r = current as CompiledDOMRenderable;
       // Compiled regions are HTML-only; other namespaces mount the source tree.
-      const node = ns === "html" ? r.create(doc) : null;
+      const node = ns === "html" ? r.create(doc, mountCompiledHole) : null;
       if (node !== null) parent.appendChild(node);
       else appendRenderableNodes(parent, r.fallback(), ns, doc);
       return;
