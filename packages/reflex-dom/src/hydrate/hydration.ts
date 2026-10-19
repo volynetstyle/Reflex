@@ -55,7 +55,12 @@ function resolveForHydrationValue(
     return renderable.fallback;
   }
 
-  return nextItems.map((item, index) => renderable.children(item, index));
+  return nextItems.map((item, index) =>
+    renderable.children(
+      () => item,
+      () => index,
+    ),
+  );
 }
 
 function expectedNamespaceUri(namespace: Namespace): string | null {

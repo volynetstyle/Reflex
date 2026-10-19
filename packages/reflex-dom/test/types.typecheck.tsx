@@ -152,7 +152,7 @@ void useSignal;
 <Show when={"ready"}>{(value) => <span>{value.toUpperCase()}</span>}</Show>;
 
 <For each={[{ id: "a", label: "A" }]} by={(item) => item.id}>
-  {(item, index) => <li data-index={index}>{item.label}</li>}
+  {(item, index) => <li data-index={index}>{() => item().label}</li>}
 </For>;
 
 const portalTarget = document.createElement("div");

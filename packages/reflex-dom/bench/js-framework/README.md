@@ -11,8 +11,8 @@ pnpm --filter @volynets/reflex-dom bench:js-framework
 ```
 
 Results are printed as a Markdown table and written to `results/<timestamp>.json`,
-`results/<timestamp>.md` and `results/latest.md`. A full run takes about
-10 minutes.
+`results/<timestamp>.md` and `results/latest.md`. A full run (both suites,
+diagnostics, memory and size) takes about 25 minutes.
 
 | option | meaning |
 | --- | --- |
@@ -25,6 +25,8 @@ Results are printed as a Markdown table and written to `results/<timestamp>.json
 | `--headed` | visible browser window instead of new headless Chromium |
 | `--skip-build` | reuse `.build/` |
 | `--keep-traces` | write each Chrome trace to `results/traces/` |
+| `--suite=all` | `krausest` (the nine official benchmarks), `extended` (below) or `all` |
+| `--no-diagnose` | skip the untimed DOM mutation / allocation pass |
 
 ## Layout
 
@@ -32,12 +34,70 @@ Results are printed as a Markdown table and written to `results/<timestamp>.json
 apps/vanillajs/      reference implementation (keyed/vanillajs semantics)
 apps/reflex-dom/     idiomatic reflex-dom implementation
 shared/data.js       canonical row data generator (ids from 1, adjective/colour/noun)
+shared/ops.js        data transformations of the extended scenarios
+shared/buttons.json  ids and titles of the extended scenario buttons
 shared/main.css      layout-relevant subset of the official stylesheet
 build.mjs            Vite production build of every app into .build/
 run.mjs              Playwright harness: benchmarks, tracing, throttling, reporting
 timeline.mjs         port of webdriver-ts/src/timeline.ts
 stats.mjs            mean / CI / t-test / weighted geometric mean
 ```
+
+## Extended scenarios
+
+The nine official benchmarks are operations a hand-written page knows exactly,
+so vanilla does the minimum by construction. The extended suite adds
+operations where that is not given, to find where reflex-dom's generic work
+pays off and where it costs. Ids `10`–`19`, each with its own throttling:
+
+| id | operation | kind | vanilla implementation |
+| --- | --- | --- | --- |
+| 10_refresh-one-1k | new objects for all rows, one label differs | snapshot | `applySnapshot` |
+| 11_refresh-10th-1k | new objects, every 10th label differs | snapshot | `applySnapshot` |
+| 12_move-forward-1k | row 999 moves to position 2 | snapshot | `applySnapshot` |
+| 13_move-backward-1k | row 2 moves to position 999 | snapshot | `applySnapshot` |
+| 14_reverse-1k | reversed order | snapshot | `applySnapshot` |
+| 15_interleave-1k | even positions, then odd positions | snapshot | `applySnapshot` |
+| 16_replace-half-1k | every second row is a new row | snapshot | `applySnapshot` |
+| 17_update-all-1k | every label changes | direct | one text write per row |
+| 18_prepend1k-to-1k | 1,000 rows before 1,000 rows | direct | one fragment insert |
+| 19_remove-10th-1k | every 10th row removed | direct | 100 `remove()` calls |
+
+- **Snapshot**: the handler receives a new array of new row objects, as data
+  reloaded from a server, without a description of the change. Vanilla applies
+  it with `applySnapshot` (`apps/vanillajs/main.js`), the reconciliation a
+  hand-written page would use without a diff library: rows looked up by id,
+  labels compared before writing, removed rows deleted, and the order restored
+  by one cursor walk that moves every row it finds out of place. That walk is
+  optimal for a row moved forward and moves almost every row for a row moved
+  backward; reflex-dom's keyed reconciliation (longest increasing subsequence)
+  moves one row in both cases.
+- **Direct**: the handler knows the change and vanilla applies exactly it.
+- reflex-dom implements every scenario the same way: `rows(op(current))`.
+- An optimal hand-written implementation can always perform the same DOM
+  operations as reflex-dom; these scenarios compare reflex-dom with the
+  straightforward one.
+
+The harness mirrors each operation on row ids (`modelOperations` in
+`run.mjs`) and waits until probe rows, the row count and label markers match.
+Each scenario warms up on its own table (five create/clear cycles, five runs
+of the operation) and measures on a fresh table of 1,000 rows.
+
+## Diagnostics
+
+In addition to total / script / paint, every CPU result has:
+
+- **Phases** from the same trace window: GC (`MinorGC`, `MajorGC`), style
+  recalculation, layout, paint (pre-paint, paint, layerize), commit, and the
+  number of layouts and style recalculations.
+- **DOM work** from one extra, untimed page per benchmark and framework (a
+  `MutationObserver` on the table slows the page): top-level nodes inserted,
+  removed and moved, anchor comments inserted, text and attribute writes (and
+  how many left the value unchanged), and JS heap growth without a forced GC.
+
+The report adds a section per compared framework, "Where … is ahead of …",
+with ratios in total and by phase and the lists of benchmarks where it is
+faster, indistinguishable or slower (t-test on totals, p < 0.05).
 
 ## Methodology taken from js-framework-benchmark
 

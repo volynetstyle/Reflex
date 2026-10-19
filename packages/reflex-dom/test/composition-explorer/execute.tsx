@@ -296,7 +296,7 @@ export async function execute(
           by={(item) => item.id}
           fallback={<span data-state="off">off</span>}
         >
-          {(item) => <Row item={item} read={read} />}
+          {(item) => <Row item={item()} read={read} />}
         </For>
       );
     } else if (program.consumer === "portal") {

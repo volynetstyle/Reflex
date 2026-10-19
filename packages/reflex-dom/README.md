@@ -522,6 +522,22 @@ Replacing a complex dynamic branch disposes its owner, clears its range, and mou
 new content under a fresh owner. Text values update in place. Keyed moves preserve
 row identity and ownership; removed rows release effects, listeners and refs.
 
+`For` renders each key once. Its renderer receives the item and the index as
+accessors; a new item object with the same key, or a new position, updates what
+reads them and keeps the row's DOM, state and effects:
+
+```tsx
+<For each={rows} by={(row) => row.id}>
+  {(row, index) => (
+    <li>
+      {index}: {() => row().label}
+    </li>
+  )}
+</For>
+```
+
+A value read without an accessor (`{row().label}`) is read once, at mount.
+
 `renderToString()` emits HTML with dynamic slot markers. `hydrate()` adopts matching
 DOM and remounts mismatches. `resume()` takes ownership of existing content without
 attaching JSX behavior. A portal belongs to its source component even when its DOM
@@ -532,6 +548,11 @@ full per-component activation inside every server-rendered dynamic branch.
 
 ## Migration
 
+- `For` renderers receive accessors: `children(item: () => T, index: () => number)`
+  instead of `children(item: T, index: number)`. A row is no longer recreated
+  when its item is replaced by a new object with the same key; read changing
+  fields through an accessor (`{() => item().label}`). The index is the current
+  position, also after reorders (it used to be the position at mount).
 - `useEffectRender` became `useMountedEffect`.
 - `renderer.renderEffectScheduler` became `renderer.mountEffects`.
 - Render effect phases and phase-based scheduler types were removed; the queue

@@ -29,6 +29,26 @@ const PAINT_EVENT_NAMES = new Set([
   "PrePaint",
 ]);
 
+// Diagnostic phases (not part of js-framework-benchmark): each is the union of
+// its slices inside the measured window, so nested slices count once.
+const PHASES = {
+  gc: new Set(["MinorGC", "MajorGC"]),
+  style: new Set(["UpdateLayoutTree"]),
+  layout: new Set(["Layout"]),
+  paint: new Set(["PrePaint", "Paint", "Layerize"]),
+  commit: new Set(["Commit"]),
+};
+
+function countEvents(traceEvents, name, tsStart, tsEnd, pid) {
+  let count = 0;
+  for (const e of traceEvents) {
+    if (e.ph === "X" && e.pid === pid && e.name === name && e.ts >= tsStart && e.ts <= tsEnd) {
+      count++;
+    }
+  }
+  return count;
+}
+
 const COMPLETE_EVENT_TYPES = {
   Layout: "layout",
   FunctionCall: "functioncall",
@@ -152,9 +172,20 @@ export function computeCPUResult(trace) {
     }
   }
 
+  const phase = (names) => sliceDuration(traceEvents, names, click.ts, commit.end, click.pid, false);
+
   return {
     total,
     script: sliceDuration(traceEvents, JS_EVENT_NAMES, click.ts, commit.end, click.pid, true),
     paint: sliceDuration(traceEvents, PAINT_EVENT_NAMES, click.ts, commit.end, click.pid, false),
+    phases: {
+      gc: phase(PHASES.gc),
+      style: phase(PHASES.style),
+      layout: phase(PHASES.layout),
+      paint: phase(PHASES.paint),
+      commit: phase(PHASES.commit),
+      layouts: countEvents(traceEvents, "Layout", click.ts, commit.end, click.pid),
+      styleRecalcs: countEvents(traceEvents, "UpdateLayoutTree", click.ts, commit.end, click.pid),
+    },
   };
 }

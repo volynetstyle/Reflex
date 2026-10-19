@@ -25,12 +25,12 @@ export function ConsoleSection(props: { model: DemoModel }) {
         <div class="console-list">
           <For each={model.activityFeed} by={(entry) => entry.id}>
             {(entry) => (
-              <article class={() => `log-entry tone-${entry.tone}`}>
+              <article class={() => `log-entry tone-${entry().tone}`}>
                 <div class="log-topline">
-                  <strong>{entry.label}</strong>
-                  <span>{entry.timestamp}</span>
+                  <strong>{() => entry().label}</strong>
+                  <span>{() => entry().timestamp}</span>
                 </div>
-                <p>{entry.detail}</p>
+                <p>{() => entry().detail}</p>
               </article>
             )}
           </For>

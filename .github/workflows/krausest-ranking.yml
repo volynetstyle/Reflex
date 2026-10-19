@@ -3,12 +3,13 @@ name: krausest ranking
 # Places reflex-dom in the official js-framework-benchmark tables
 # (packages/reflex-dom/bench/krausest/README.md).
 #
-# The official harness of a tagged release runs reflex-dom next to anchor
-# frameworks from that release's prebuilt build.zip (anchors.json), on macOS
-# arm64 runners with the release's Chrome. Nothing is sent to the official
-# repository. The rank job maps the local measurements onto the official
-# results of the release through the anchors and computes the places in the
-# CPU, memory and size tables.
+# The official harness of a tagged release runs reflex-dom next to vanillajs
+# from that release's prebuilt build.zip, plus any anchor frameworks listed in
+# anchors.json (none by default), on macOS arm64 runners with the release's
+# Chrome. Nothing is sent to the official repository. The rank job maps the
+# local measurements onto the official results of the release through the
+# measured reference frameworks and computes the places in the CPU, memory and
+# size tables.
 
 on:
   workflow_dispatch:

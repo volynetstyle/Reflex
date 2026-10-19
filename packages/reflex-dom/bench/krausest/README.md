@@ -14,10 +14,11 @@ Workflow: `.github/workflows/krausest-ranking.yml` (manual dispatch; inputs
    milestone (Chrome for Testing), the release's harness (`webdriver-ts`,
    puppeteer runner, official settings: 15 CPU iterations, warmups, CPU
    throttling, headed browser) and its server with the official stylesheet.
-2. Anchor frameworks come prebuilt from the release's `build.zip`
-   (`anchors.json`): the fastest entries of the official table and the
-   neighbours of reflex-dom's estimated place. Every shard also runs
-   `keyed/vanillajs` and `keyed/reflex-dom`.
+2. Every shard runs `keyed/vanillajs` (prebuilt, from the release's
+   `build.zip`) and `keyed/reflex-dom`. By default nothing else: the run
+   compares reflex-dom with vanilla only. Further reference frameworks of the
+   release can be listed in `anchors.json` (one array per parallel shard); with
+   vanillajs as the only anchor the ranking uses the ratio model.
 3. `build.mjs` builds reflex-dom into `frameworks/keyed/reflex-dom` of the
    checkout: the application of `../js-framework`, a page that loads the
    official stylesheet.
@@ -50,7 +51,10 @@ node rank.mjs --official <checkout>/webdriver-ts-results/src/results.ts \
 ## Limits
 
 - The place of an entry that is not in the official run is an estimate. Its
-  quality is shown by the fit error and by the anchors' order on the runner.
+  quality is shown by the fit error and by the anchors' order on the runner;
+  with vanillajs alone it is a plain rescaling through one framework (the run
+  of 2026-10-18 with 17 anchors placed reflex-dom at about 125/197 in CPU,
+  88 in memory and 113 in size).
 - Startup metrics (`30_startup`, Lighthouse) are not run; the size table's
   first paint is calibrated like the CPU benchmarks.
 - Hosted runners are shared virtual machines. Anchors in the same shard are
