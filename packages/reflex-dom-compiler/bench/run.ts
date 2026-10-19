@@ -233,9 +233,20 @@ for (const name of browserNames) {
 
   process.stdout.write(`${name}: timing... `);
   const started = Date.now();
-  const tab = await openPage();
-  const timing = await tab.evaluate((data) => (globalThis as any).__bench.run(data), input);
-  await tab.close();
+  // One fresh page per scenario: no scenario inherits another's heap, GC
+  // pressure or JIT state (and a long run cannot exhaust one tab).
+  const timing = { results: [] as Measurement[], timerResolutionUs: 0, userAgent: "" };
+  for (const scenario of input.scenarios) {
+    const tab = await openPage();
+    const part = await tab.evaluate(
+      (data) => (globalThis as any).__bench.run(data),
+      { ...input, scenarios: [scenario] },
+    );
+    await tab.close();
+    timing.results.push(...part.results);
+    timing.timerResolutionUs = part.timerResolutionUs;
+    timing.userAgent = part.userAgent;
+  }
 
   // Memory needs a clean heap: one fresh page per scenario and variant.
   const memory: MemoryResult[] = [];
