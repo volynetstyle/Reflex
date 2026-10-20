@@ -52,7 +52,7 @@ export const frameworks = {
   },
 };
 
-export async function buildApps(names) {
+export async function buildApps(names, { compiler = false } = {}) {
   for (const name of names) {
     const framework = frameworks[name];
     if (framework === undefined) {
@@ -66,7 +66,7 @@ export async function buildApps(names) {
     }
 
     await build({
-      configFile: false,
+      configFile: compiler && name === "reflex-dom" ? join(benchRoot, "compiler.config.ts") : false,
       root: join(benchRoot, "apps", name),
       base: "./",
       logLevel: "warn",

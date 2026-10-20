@@ -8,6 +8,8 @@ to the official repository.
 ```sh
 pnpm --filter @volynets/reflex-dom build   # the app uses dist/standalone
 pnpm --filter @volynets/reflex-dom bench:js-framework
+# Enable reflex-dom-compiler for reflex-dom only (vanillajs is unchanged):
+pnpm --filter @volynets/reflex-dom bench:js-framework -- --compiler --frameworks=vanillajs,reflex-dom
 ```
 
 Results are printed as a Markdown table and written to `results/<timestamp>.json`,
@@ -24,9 +26,15 @@ diagnostics, memory and size) takes about 25 minutes.
 | `--no-memory`, `--no-size` | skip memory or size benchmarks |
 | `--headed` | visible browser window instead of new headless Chromium |
 | `--skip-build` | reuse `.build/` |
+| `--compiler` | enable reflex-dom-compiler (`auto`) for reflex-dom; compiler coverage and rejection reasons are stored in the JSON result and `.build/reflex-dom/compiler-report.json` |
 | `--keep-traces` | write each Chrome trace to `results/traces/` |
 | `--suite=all` | `krausest` (the nine official benchmarks), `extended` (below) or `all` |
 | `--no-diagnose` | skip the untimed DOM mutation / allocation pass |
+
+`--compiler` refuses to start measurements if no DOM region compiled. Its
+coverage report identifies both the compiled regions and the reasons the
+remaining regions stay on the runtime; enabling the plugin does not mean the
+whole row was compiled.
 
 ## Layout
 

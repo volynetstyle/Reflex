@@ -19,6 +19,7 @@
 //   --no-memory / --no-size             skip memory / size benchmarks
 //   --headed                            run a visible browser window
 //   --skip-build                        reuse .build/
+//   --compiler                          compile reflex-dom with the DOM compiler
 //   --keep-traces                       write Chrome traces to results/traces
 
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -55,6 +56,7 @@ function parseOptions(argv) {
     size: true,
     headed: false,
     build: true,
+    compiler: false,
     keepTraces: false,
     suite: "all",
     diagnose: true,
@@ -89,6 +91,9 @@ function parseOptions(argv) {
         break;
       case "skip-build":
         options.build = false;
+        break;
+      case "compiler":
+        options.compiler = true;
         break;
       case "keep-traces":
         options.keepTraces = true;
@@ -985,6 +990,15 @@ function report(results, options) {
     "",
   );
 
+  if (results.compiler) {
+    const summary = results.compiler.summary;
+    lines.push(
+      `reflex-dom compiler: auto; ${summary.template} template, ${summary.native} native, ` +
+        `${summary.runtime} runtime regions.`,
+      "",
+    );
+  }
+
   const others = names.slice(1);
   const suiteTitles = {
     krausest: "js-framework-benchmark keyed suite",
@@ -1083,7 +1097,14 @@ const options = parseOptions(process.argv.slice(2));
 
 if (options.build) {
   console.log(`Building ${options.frameworks.join(", ")}…`);
-  await buildApps(options.frameworks);
+  await buildApps(options.frameworks, { compiler: options.compiler });
+}
+
+const compilerReport = options.compiler && options.frameworks.includes("reflex-dom")
+  ? JSON.parse(readFileSync(join(buildRoot, "reflex-dom", "compiler-report.json"), "utf8"))
+  : null;
+if (compilerReport && compilerReport.summary.template + compilerReport.summary.native === 0) {
+  throw new Error("--compiler produced no compiled DOM regions; inspect .build/reflex-dom/compiler-report.json before benchmarking.");
 }
 
 const server = await startServer(resolve(buildRoot));
@@ -1103,6 +1124,7 @@ const results = {
     date: new Date().toISOString(),
   },
   options,
+  compiler: compilerReport,
   cpu: [],
   memory: [],
   size: null,
