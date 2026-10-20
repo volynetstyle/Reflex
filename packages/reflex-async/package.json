@@ -77,7 +77,7 @@
     "directory": "packages/reflex-async"
   },
   "peerDependencies": {
-    "@volynets/reflex-runtime": "^1.0.1"
+    "@volynets/reflex-runtime": "workspace:^"
   },
   "private": false
 }

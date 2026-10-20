@@ -45,8 +45,11 @@ for (const [name, manifest] of manifests) {
     }
     for (const [peer, range] of Object.entries(manifest.peerDependencies ?? {})) {
       if (!internal.has(peer)) continue;
+      // pnpm packs workspace:^ as ^<workspace version>, so the published floor
+      // always follows the release instead of a hand-edited range.
+      assert.equal(range, "workspace:^", name + " peer " + peer + " must use workspace:^");
       const version = manifests.get(peer).version;
-      assert.ok(satisfiesCaret(version, range), name + " peer " + peer + "@" + range + " must accept the workspace version " + version);
+      assert.ok(satisfiesCaret(version, "^" + version), name + " peer " + peer + " has a non-semver workspace version " + version);
       assert.equal(manifest.devDependencies?.[peer], "workspace:*", name + " must link its peer " + peer + " from the workspace for builds and tests");
     }
   });
