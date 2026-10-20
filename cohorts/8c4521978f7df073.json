@@ -124,6 +124,120 @@
      "valid": true
     }
    }
+  },
+  {
+   "sha": "e5b6f8bc94e9f8b01d3aab8e7c2b46cdd2981cd3",
+   "measuredAt": "2026-10-20T13:54:19.976Z",
+   "commitTimestamp": "2026-10-20T16:38:10+03:00",
+   "runId": "39432114855:1",
+   "qualification": "screening-only",
+   "scenarios": {
+    "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | harness | baseline/empty-harness/deterministic-counter > measure | empty": {
+     "logRatio": 0.0032286168489403383,
+     "mad": 0.0032997735440181497,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | propagation | dense-layered/write-read-all/32x4-fanin4-update12 > measure | w=4 sr=1 pr=32 cr=544 runs=129 cand=129 inv=128 edge=640": {
+     "logRatio": 0.000527443790249574,
+     "mad": 0.007568556851026952,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | propagation | wide-fanout/write-read-all/fanout-1024 > measure | w=1 sr=1 pr=1024 cr=1024 runs=1025 cand=1025 inv=1025 edge=2049": {
+     "logRatio": 0.02363816945537165,
+     "mad": 0.019824859202804086,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | scheduler | broad-propagation/batched-writes-read-tail/width-50-writes-50 > measure | w=51 sr=50 pr=2550 cr=5150 runs=5100 cand=5100 inv=7650 edge=10200 sched=2550 flush=2550": {
+     "logRatio": 0.017099705853628917,
+     "mad": 0.00823080857192276,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | scheduler | dispose-churn/create-dispose-watchers/count-1024 > measure | w=1 pr=1024 runs=1024 edge=2048 add=1024 drop=1024 wc=1024 wd=1024": {
+     "logRatio": 0.01177947072519192,
+     "mad": 0.01291970362286151,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | scheduler | effect-leaves/effect-flush/watchers-1024 > measure | w=1 pr=1024 inv=1024 edge=1024 sched=1024 flush=1024": {
+     "logRatio": 0.014853450579821707,
+     "mad": 0.00841982592633556,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | selectivity | layered/partial-read/64x4-read12-update6 > measure | w=4 sr=1 pr=64 cr=264 runs=33 cand=33 inv=32 edge=96": {
+     "logRatio": 0.014621676592938398,
+     "mad": 0.009055998065557033,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | selectivity | selector/update-one-key/entities-4096-active1 > measure | w=2 sr=1 pr=2 cr=1 runs=2 cand=2 inv=2 edge=4": {
+     "logRatio": 0.01759782166110687,
+     "mad": 0.0002961425795118648,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | stabilization | diamond/write-read-sink/repeated-256 > measure | w=1 sr=1 pr=256 cr=1024 runs=1025 cand=1025 inv=1025 edge=2049": {
+     "logRatio": -0.0014723372877831252,
+     "mad": 0.013252789864056615,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | stabilization | linear/hot-read/depth-1000 > measure | sr=1": {
+     "logRatio": 0.009955647918907198,
+     "mad": 0.02581804557565507,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | stabilization | linear/write-read-tail/depth-1000 > measure | w=1 sr=1 pr=1 cr=999 runs=1000 cand=1000 inv=1000 edge=1999": {
+     "logRatio": 0.03943296514779342,
+     "mad": 0.027890533965585735,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | stabilization | wide-fanin/many-writes-read-once/sources-1024-batch-32 > measure | w=32 sr=1 pr=1024 runs=1 cand=1 inv=1 edge=1056": {
+     "logRatio": 0.008715029092324194,
+     "mad": 0.007706793633996502,
+     "lower": null,
+     "upper": null,
+     "valid": false
+    },
+    "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | stabilization | wide-fanin/write-read-one/fanin-1024 > measure | w=1 sr=1 pr=1024 runs=1 cand=1 inv=1 edge=1025": {
+     "logRatio": 0.023432833320016992,
+     "mad": 0.01856535617148744,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | tracking | deep-dynamic/churn/depth-512-toggle50 > measure | w=1 sr=1 pr=512 cr=1534 runs=1535 cand=1535 inv=1535 edge=3069 add=512 drop=512": {
+     "logRatio": 0.01570218854699179,
+     "mad": 0.001240547869008242,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "test/perf/runtime-taxonomy.bench.ts > runtime taxonomy | tracking | dynamic-branch/churn/deps-512-toggle50 > measure | w=2 sr=1 pr=513 runs=1 cand=1 inv=1 edge=1025 add=512 drop=512": {
+     "logRatio": 0.00101496457391972,
+     "mad": 0.014555705700291181,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    }
+   }
   }
  ],
  "daily": []

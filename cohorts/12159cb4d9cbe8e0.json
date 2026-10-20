@@ -1,0 +1,81 @@
+{
+ "schemaVersion": 1,
+ "id": "12159cb4d9cbe8e0",
+ "identity": {
+  "suite": "reflex",
+  "protocolHash": "269b4ea19ecc5b0d784ebefb1ddbbca7a8f08a8dd1688dcea049d558d88cd349",
+  "anchorCommit": "138b1eba407b83f7d1a9ffad0cc2c36e0522c635",
+  "node": "24",
+  "vitest": "vitest/4.1.5 linux-x64 node-v24.22.0"
+ },
+ "createdAt": "2026-10-20T13:39:23.758Z",
+ "bridge": null,
+ "recent": [
+  {
+   "sha": "e5b6f8bc94e9f8b01d3aab8e7c2b46cdd2981cd3",
+   "measuredAt": "2026-10-20T13:39:23.758Z",
+   "commitTimestamp": "2026-10-20T16:38:10+03:00",
+   "runId": "39432114855:1",
+   "qualification": "screening-only",
+   "scenarios": {
+    "bench/reflex.bench.ts > reflex: Diamond / shared deps > reflex-signals": {
+     "logRatio": 0.013718622017188752,
+     "mad": 0.004964622514147544,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Dynamic deps > reflex-signals": {
+     "logRatio": 0.003731932548049724,
+     "mad": 0.0054350408119732425,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Linear chain > reflex-signals": {
+     "logRatio": -0.027984338429843936,
+     "mad": 0.00609657887230383,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Many effects from one source > reflex-signals": {
+     "logRatio": 0.08439253114448231,
+     "mad": 0.02441896398118923,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Many sources into one computed -> effect > reflex-signals": {
+     "logRatio": -0.00995190713037189,
+     "mad": 0.003666578411450782,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Many sources into one computed/effect > reflex-signals": {
+     "logRatio": -0.029788269566086427,
+     "mad": 0.00741620106241167,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Many sources into one direct effect > reflex-signals": {
+     "logRatio": -0.051851122126661334,
+     "mad": 0.007087599803683363,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Wide fan-out > reflex-signals": {
+     "logRatio": -0.013100343213456076,
+     "mad": 0.011215795282288651,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    }
+   }
+  }
+ ],
+ "daily": []
+}
