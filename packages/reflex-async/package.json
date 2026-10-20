@@ -1,6 +1,6 @@
 {
   "name": "@volynets/reflex-async",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Reactive async derivations with cancelable attempts and validated publication over the Reflex runtime",
   "license": "MIT",
