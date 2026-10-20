@@ -114,8 +114,8 @@
     "node": ">=20.19.0"
   },
   "peerDependencies": {
-    "@volynets/reflex-runtime": "^1.0.1",
-    "@volynets/reflex-framework": "^0.2.0"
+    "@volynets/reflex-runtime": "workspace:^",
+    "@volynets/reflex-framework": "workspace:^"
   },
   "private": false
 }

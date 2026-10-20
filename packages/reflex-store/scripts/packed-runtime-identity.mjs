@@ -87,8 +87,8 @@ try {
   assert(existsSync(join(installed, "LICENSE")), "Missing MIT license");
   assert(existsSync(join(installed, "dist/licenses/SWC-APACHE-2.0.txt")));
   assert(existsSync(join(installed, "dist/licenses/NOTICE.txt")));
-  // The packed manifest keeps the source peers verbatim; release versioning
-  // moves the ranges, so they are read from the source rather than pinned here.
+  // Source peers are workspace:^; packing turns each into a caret range on the
+  // peer's workspace version, so the expectation is derived, not pinned here.
   const sourcePeers = JSON.parse(
     readFileSync(join(packageRoot, "package.json"), "utf8"),
   ).peerDependencies;
@@ -96,9 +96,16 @@ try {
     Object.keys(sourcePeers).sort(),
     ["@volynets/reflex-framework", "@volynets/reflex-runtime"],
   );
-  for (const range of Object.values(sourcePeers))
-    assert.match(range, /^\^\d+\.\d+\.\d+$/, "peers must be caret ranges");
-  assert.deepEqual(manifest.peerDependencies, sourcePeers);
+  const packedPeers = {};
+  for (const [name, range] of Object.entries(sourcePeers)) {
+    assert.equal(range, "workspace:^", "peers must use workspace:^");
+    const directory = name.slice("@volynets/".length);
+    const { version } = JSON.parse(
+      readFileSync(join(packageRoot, "..", directory, "package.json"), "utf8"),
+    );
+    packedPeers[name] = "^" + version;
+  }
+  assert.deepEqual(manifest.peerDependencies, packedPeers);
   function files(directory) {
     return readdirSync(directory, { withFileTypes: true }).flatMap((entry) =>
       entry.isDirectory()

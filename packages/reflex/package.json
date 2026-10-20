@@ -127,7 +127,7 @@
     "reactive-framework-test-suite": "0.0.2"
   },
   "peerDependencies": {
-    "@volynets/reflex-runtime": "^1.0.1"
+    "@volynets/reflex-runtime": "workspace:^"
   },
   "private": false
 }
