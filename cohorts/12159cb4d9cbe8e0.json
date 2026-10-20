@@ -75,6 +75,71 @@
      "valid": true
     }
    }
+  },
+  {
+   "sha": "659e579d6af6958c470bde501ef6c2f60f739a2b",
+   "measuredAt": "2026-10-20T13:56:21.953Z",
+   "commitTimestamp": "2026-10-20T16:53:09+03:00",
+   "runId": "39434298808:1",
+   "qualification": "screening-only",
+   "scenarios": {
+    "bench/reflex.bench.ts > reflex: Diamond / shared deps > reflex-signals": {
+     "logRatio": 0.00907772295859182,
+     "mad": 0.016908250709709916,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Dynamic deps > reflex-signals": {
+     "logRatio": -0.005154627068725695,
+     "mad": 0.00615950231803793,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Linear chain > reflex-signals": {
+     "logRatio": -0.00932961092039264,
+     "mad": 0.04195229274838091,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Many effects from one source > reflex-signals": {
+     "logRatio": 0.05819544998318175,
+     "mad": 0.009059707830081747,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Many sources into one computed -> effect > reflex-signals": {
+     "logRatio": 0.019112755593781453,
+     "mad": 0.008479873580946443,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Many sources into one computed/effect > reflex-signals": {
+     "logRatio": -0.028975671347373187,
+     "mad": 0.052718586201715156,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Many sources into one direct effect > reflex-signals": {
+     "logRatio": 0.005853552193892322,
+     "mad": 0.03238443196341308,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Wide fan-out > reflex-signals": {
+     "logRatio": -0.018567452232621268,
+     "mad": 0.0147688889652733,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    }
+   }
   }
  ],
  "daily": []
