@@ -99,7 +99,7 @@ function advanceCore(
     if (__PROFILE__)
       observeRuntimeProjection?.("projection.semantic.advance.value.unchanged");
 
-    devRecordRecompute(node, false, next, prev, defaultContext);
+    if (__DEV__) devRecordRecompute(node, false, next, prev, defaultContext);
     return false;
   }
 
@@ -109,7 +109,7 @@ function advanceCore(
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.advance.value.changed");
 
-  devRecordRecompute(node, true, next, prev, defaultContext);
+  if (__DEV__) devRecordRecompute(node, true, next, prev, defaultContext);
 
   const firstOut = node.firstOut;
 
