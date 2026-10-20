@@ -29,7 +29,7 @@ export function pull_iterator(
   node: ReactiveNode,
   edge: ReactiveEdge,
 ): boolean {
-  const base = high;
+  const base = high | 0;
   let top = base;
   let changed = false;
 

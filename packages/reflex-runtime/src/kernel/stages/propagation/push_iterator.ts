@@ -97,7 +97,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
   const stack = propagateStack;
   // [ outer live stack ][ nested live stack ][ free capacity ]
   // 0                  base                top
-  const base = propagateStackHigh;
+  const base = propagateStackHigh | 0;
   let top = base;
 
   /**
