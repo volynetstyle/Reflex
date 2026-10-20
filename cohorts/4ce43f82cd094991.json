@@ -75,6 +75,71 @@
      "valid": true
     }
    }
+  },
+  {
+   "sha": "4e69b4cff43eff4c72e6541e4456a5d8f1b77ee3",
+   "measuredAt": "2026-10-20T16:54:11.749Z",
+   "commitTimestamp": "2026-10-20T19:53:12+03:00",
+   "runId": "39461353097:1",
+   "qualification": "screening-only",
+   "scenarios": {
+    "bench/reflex.bench.ts > reflex: Diamond / shared deps > reflex-signals": {
+     "logRatio": -0.008935913422440236,
+     "mad": 0.007899721972493109,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Dynamic deps > reflex-signals": {
+     "logRatio": -0.0030599790846554333,
+     "mad": 0.010586046994685244,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Linear chain > reflex-signals": {
+     "logRatio": -0.031406952954496754,
+     "mad": 0.0019910194812465514,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Many effects from one source > reflex-signals": {
+     "logRatio": 0.06124140904416584,
+     "mad": 0.014794945057153196,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Many sources into one computed -> effect > reflex-signals": {
+     "logRatio": 0.021917635364237912,
+     "mad": 0.028401994472946973,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Many sources into one computed/effect > reflex-signals": {
+     "logRatio": -0.010057183555702318,
+     "mad": 0.0051968378962699135,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Many sources into one direct effect > reflex-signals": {
+     "logRatio": -0.0040034339820697665,
+     "mad": 0.035640660475282776,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Wide fan-out > reflex-signals": {
+     "logRatio": -0.03175812230019072,
+     "mad": 0.0220694221071476,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    }
+   }
   }
  ],
  "daily": []
