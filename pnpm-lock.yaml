@@ -219,6 +219,9 @@ importers:
       playwright:
         specifier: ^1.62.1
         version: 1.62.1
+      vite:
+        specifier: ^6.0.0
+        version: 6.4.2(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.8.4)
 
   packages/reflex-framework:
     devDependencies:

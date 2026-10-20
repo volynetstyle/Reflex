@@ -9,7 +9,7 @@ export interface ClassifyConfig {
   readonly factorySources: ReadonlySet<string>;
   /** Modules whose `render`/`mount`/`hydrate`/`renderToString` render their first argument. */
   readonly renderSources: ReadonlySet<string>;
-  /** Modules whose `For` export mounts what its `children` callback returns. */
+  /** Modules whose For/Show/Switch/Portal exports consume rendered branches. */
   readonly operatorSources: ReadonlySet<string>;
 }
 
@@ -27,7 +27,11 @@ export type CallType =
 
 const FACTORY_EXPORTS = new Set(["jsx", "jsxs", "jsxDEV"]);
 const RENDER_EXPORTS = new Set(["render", "mount", "hydrate", "renderToString"]);
-const FOR_EXPORTS = new Set(["For"]);
+const APP_FACTORIES = new Set(["createApp", "setupDOM"]);
+const APP_RENDER_METHODS = new Set(["render", "mount", "hydrate"]);
+const CHILD_OPERATORS = new Set(["For", "Show", "Portal"]);
+const FALLBACK_OPERATORS = new Set(["For", "Show", "Switch"]);
+const SWITCH_EXPORTS = new Set(["Switch"]);
 
 function importedName(
   binding: Binding | undefined,
@@ -54,9 +58,74 @@ function resolvesTo(
   sources: ReadonlySet<string>,
   names: ReadonlySet<string>,
 ): boolean {
-  if (!path.isIdentifier()) return false;
-  const name = importedName(path.scope.getBinding(path.node.name), sources);
-  return name !== null && names.has(name);
+  if (path.isIdentifier()) {
+    const name = importedName(path.scope.getBinding(path.node.name), sources);
+    return name !== null && names.has(name);
+  }
+  if (!path.isMemberExpression()) return false;
+  const object = path.get("object"), property = path.get("property");
+  const name = !path.node.computed && property.isIdentifier() ? property.node.name
+    : property.isStringLiteral() ? property.node.value : null;
+  if (name === null || !names.has(name) || !object.isIdentifier()) return false;
+  const binding = object.scope.getBinding(object.node.name);
+  if (binding?.kind !== "module" || !binding.path.isImportNamespaceSpecifier()) return false;
+  const declaration = binding.path.parentPath;
+  return declaration.isImportDeclaration() && declaration.node.importKind !== "type" && sources.has(declaration.node.source.value);
+}
+
+function appMethod(callee: NodePath<t.MemberExpression>): string | null {
+  const property = callee.get("property");
+  return !callee.node.computed && property.isIdentifier()
+    ? property.node.name
+    : property.isStringLiteral() ? property.node.value : null;
+}
+
+/** Frozen app results remain known through const aliases, including exports. */
+function isFrozenApp(value: NodePath, config: ClassifyConfig, seen = new Set<t.Node>()): boolean {
+  if (value.isCallExpression()) return resolvesTo(value.get("callee") as NodePath, config.renderSources, APP_FACTORIES);
+  if (!value.isIdentifier()) return false;
+  const binding = value.scope.getBinding(value.node.name);
+  if (!binding?.constant || binding.kind !== "const" || !binding.path.isVariableDeclarator() ||
+    !binding.path.get("id").isIdentifier() || seen.has(binding.path.node)) return false;
+  // Keep explicit writes conservative, even though a genuine app is frozen.
+  if (binding.referencePaths.some(ref => {
+    const member = ref.parentPath;
+    if (!member?.isMemberExpression() || member.node.object !== ref.node) return false;
+    const use = member.parentPath;
+    return (use?.isAssignmentExpression() && use.node.left === member.node) ||
+      use?.isUpdateExpression() || (use?.isUnaryExpression() && use.node.operator === "delete");
+  })) return false;
+  seen.add(binding.path.node);
+  const init = binding.path.get("init");
+  return init.node !== null && isFrozenApp(init as NodePath, config, seen);
+}
+
+function isRenderCallee(callee: NodePath, config: ClassifyConfig, seen = new Set<t.Node>()): boolean {
+  if (resolvesTo(callee, config.renderSources, RENDER_EXPORTS)) return true;
+  if (callee.isMemberExpression()) {
+    const method = appMethod(callee);
+    return method !== null && APP_RENDER_METHODS.has(method) && isFrozenApp(callee.get("object"), config);
+  }
+  if (!callee.isIdentifier()) return false;
+  const binding = callee.scope.getBinding(callee.node.name);
+  if (!binding?.constant || binding.kind !== "const" || !binding.path.isVariableDeclarator() || seen.has(binding.path.node)) return false;
+  seen.add(binding.path.node);
+  const init = binding.path.get("init");
+  if (init.node === null) return false;
+  const pattern = binding.path.get("id");
+  if (pattern.isObjectPattern()) {
+    return isFrozenApp(init as NodePath, config) && pattern.get("properties").some(property => {
+      if (!property.isObjectProperty() || !t.isIdentifier(property.node.value, { name: callee.node.name })) return false;
+      const key = property.node.key;
+      const name = !property.node.computed && t.isIdentifier(key) ? key.name : t.isStringLiteral(key) ? key.value : null;
+      return name !== null && APP_RENDER_METHODS.has(name);
+    });
+  }
+  return pattern.isIdentifier() && isRenderCallee(init as NodePath, config, seen);
+}
+
+function isRenderCall(call: NodePath<t.CallExpression>, config: ClassifyConfig): boolean {
+  return isRenderCallee(call.get("callee") as NodePath, config);
 }
 
 export function isFactoryCall(
@@ -87,7 +156,7 @@ export function callType(
 // ---------------------------------------------------------------------------
 // Literal evaluation over the AST; their DOM meaning lives in semantics.ts.
 
-function unwrap(path: NodePath | undefined): NodePath | undefined {
+export function unwrap(path: NodePath | undefined): NodePath | undefined {
   let current = path;
   while (
     current !== undefined &&
@@ -109,7 +178,7 @@ function isGlobalUndefined(path: NodePath): boolean {
   );
 }
 
-function evaluateLiteral(input: NodePath | undefined): Literal | null {
+export function evaluateLiteral(input: NodePath | undefined): Literal | null {
   const path = unwrap(input);
   if (path === undefined) return null;
   const node = path.node;
@@ -175,7 +244,7 @@ function propName(property: NodePath<t.ObjectProperty>): string | null {
 }
 
 /** Static props by name, in source order; a reason string when not static. */
-function readProps(
+export function readProps(
   call: NodePath<t.CallExpression>,
 ): Map<string, NodePath> | string {
   const props = new Map<string, NodePath>();
@@ -194,7 +263,7 @@ function readProps(
   return props;
 }
 
-function checkCallShape(call: NodePath<t.CallExpression>): string | null {
+export function checkCallShape(call: NodePath<t.CallExpression>): string | null {
   const args = call.get("arguments") as NodePath[];
   const key = args[2];
   if (key !== undefined && evaluateLiteral(key)?.kind !== "undefined") {
@@ -360,12 +429,13 @@ function isExportedDeclaration(binding: Binding): boolean {
   return owner?.isExportNamedDeclaration() === true || owner?.isExportDefaultDeclaration() === true;
 }
 
-/** `jsx(For, props)` with `For` imported from a reflex-dom module. */
-function isForCall(path: NodePath | null, config: ClassifyConfig): path is NodePath<t.CallExpression> {
+/** A trusted operator with plain literal props, without inspecting getters. */
+function isRenderOperatorCall(path: NodePath | null, config: ClassifyConfig, names = CHILD_OPERATORS): path is NodePath<t.CallExpression> {
   return (
     path !== null &&
     isFactoryCall(path, config) &&
-    resolvesTo(path.get("arguments")[0] as NodePath, config.operatorSources, FOR_EXPORTS)
+    typeof readProps(path) !== "string" &&
+    resolvesTo(path.get("arguments")[0] as NodePath, config.operatorSources, names)
   );
 }
 
@@ -379,12 +449,29 @@ function propOwner(property: NodePath, name: string, config: ClassifyConfig): No
     : null;
 }
 
+/** Props whose values (or callback results) are consumed by an operator. */
+function renderedPropOwner(property: NodePath, config: ClassifyConfig): NodePath<t.CallExpression> | null {
+  const children = propOwner(property, "children", config);
+  if (isRenderOperatorCall(children, config)) return children;
+  const fallback = propOwner(property, "fallback", config);
+  if (isRenderOperatorCall(fallback, config, FALLBACK_OPERATORS)) return fallback;
+  if (!property.isObjectProperty() || propName(property) !== "children") return null;
+  const caseObject = property.parentPath;
+  const cases = caseObject.parentPath;
+  if (!caseObject.isObjectExpression() || !cases?.isArrayExpression()) return null;
+  // A case getter could call/inspect this.children before it is rendered.
+  if (!caseObject.get("properties").every(prop => prop.isObjectProperty() &&
+    propName(prop) !== null && propName(prop) !== "__proto__")) return null;
+  const owner = cases.parentPath === null ? null : propOwner(cases.parentPath, "cases", config);
+  return isRenderOperatorCall(owner, config, SWITCH_EXPORTS) ? owner : null;
+}
+
 /**
  * Whether the value `fn` returns reaches the renderer and nothing else. Names
- * prove nothing; callers do. Two kinds of caller are known:
+ * prove nothing; callers do. Known callers are:
  *
- * - `For` (from reflex-dom) mounts what its `children` callback returns, so
- *   the callback's result is consumed when the `jsx(For, ...)` call is;
+ * - trusted operators mount their rendered branches and callback results;
+ * - the renderer invokes accessors used exclusively as rendered content;
  * - the renderer calls a component, so a function whose every reference is
  *   the type argument of a consumed `jsx(F, ...)` call has only the renderer
  *   as caller. An exported or reassigned binding has unknown callers.
@@ -394,13 +481,29 @@ function functionConsumption(
   config: ClassifyConfig,
   visiting: Set<t.Node>,
 ): Consumption {
-  const forCall = propOwner(fn.parentPath!, "children", config);
-  if (forCall !== null && isForCall(forCall, config)) {
-    return consumption(forCall, config, visiting);
+  // A named expression can call itself without appearing in the outer
+  // binding's references, and inspect the returned descriptor before mount.
+  if (fn.isFunctionExpression() && fn.node.id != null &&
+    (fn.scope.getBinding(fn.node.id.name)?.referencePaths.length ?? 0) > 0) {
+    return escapes("named function has unproven self references");
+  }
+  const operator = renderedPropOwner(fn.parentPath!, config);
+  if (operator !== null) {
+    return consumption(operator, config, visiting);
   }
 
   const binding = functionBinding(fn);
-  if (binding === undefined) return escapes("returned from a function with unknown callers");
+  if (binding === undefined) {
+    if (visiting.has(fn.node)) return escapes("recursive accessor");
+    visiting.add(fn.node);
+    try {
+      const parent = fn.parentPath;
+      // An inline component type or an accessor used only as rendered content.
+      const use = parent !== null && fn.key === 0 && fn.listKey === "arguments" && isFactoryCall(parent, config)
+        ? consumption(parent, config, visiting) : consumption(fn, config, visiting);
+      return use.consumed ? CONSUMED : escapes("returned from a function with unknown callers");
+    } finally { visiting.delete(fn.node); }
+  }
   const name = binding.identifier.name;
   if (!binding.constant) return escapes(`"${name}" is reassigned`);
   if (isExportedDeclaration(binding)) return escapes(`"${name}" is exported, so its callers are unknown`);
@@ -411,10 +514,9 @@ function functionConsumption(
   try {
     for (const reference of binding.referencePaths) {
       const call = reference.parentPath;
-      if (call === null || reference.key !== 0 || reference.listKey !== "arguments" || !isFactoryCall(call, config)) {
-        return escapes(`"${name}" is used outside a JSX component position`);
-      }
-      const use = consumption(call, config, visiting);
+      const componentPosition = call !== null && reference.key === 0 && reference.listKey === "arguments" && isFactoryCall(call, config);
+      const use = consumption(componentPosition ? call : reference, config, visiting);
+      if (!componentPosition && !use.consumed) return escapes(`"${name}" is used outside a JSX component position`);
       if (!use.consumed) return escapes(`a <${name}> element escapes (${use.reason})`);
     }
   } finally {
@@ -424,7 +526,7 @@ function functionConsumption(
 }
 
 export function consumption(
-  call: NodePath<t.CallExpression>,
+  call: NodePath,
   config: ClassifyConfig,
   visiting: Set<t.Node> = new Set(),
 ): Consumption {
@@ -460,10 +562,9 @@ export function consumption(
     }
 
     if (parent.isObjectProperty() && path.key === "value") {
-      // `For` mounts its `fallback` as is.
-      const forCall = propOwner(parent, "fallback", config);
-      if (forCall !== null && isForCall(forCall, config)) {
-        path = forCall;
+      const operator = renderedPropOwner(parent, config);
+      if (operator !== null) {
+        path = operator;
         continue;
       }
       const props = parent.parentPath;
@@ -475,6 +576,9 @@ export function consumption(
         props.key === 1 &&
         isFactoryCall(owner, config)
       ) {
+        // Getters/methods/prototype tricks can inspect `this.children` before
+        // mounting. Only ordinary literal props prove a renderer-only child.
+        if (typeof readProps(owner) === "string") return escapes("children of opaque props");
         const type = callType(owner, config);
         if (type.kind === "component") {
           return escapes(`children of component <${type.name}>`);
@@ -496,12 +600,27 @@ export function consumption(
       parent.isCallExpression() &&
       path.key === 0 &&
       path.listKey === "arguments" &&
-      resolvesTo(parent.get("callee") as NodePath, config.renderSources, RENDER_EXPORTS)
+      isRenderCall(parent, config)
     ) {
       return CONSUMED;
     }
 
-    if (parent.isVariableDeclarator()) return escapes("stored in a variable");
+    if (parent.isVariableDeclarator()) {
+      const id = parent.get("id");
+      const binding = id.isIdentifier() ? parent.scope.getBinding(id.node.name) : undefined;
+      if (path.key !== "init" || binding?.kind !== "const" || !binding.constant ||
+        isExportedDeclaration(binding) || binding.referencePaths.length === 0 || visiting.has(parent.node)) {
+        return escapes("stored in a variable with unproven consumers");
+      }
+      visiting.add(parent.node);
+      try {
+        for (const reference of binding.referencePaths) {
+          const use = consumption(reference, config, visiting);
+          if (!use.consumed) return escapes(`stored in a variable (${use.reason})`);
+        }
+        return CONSUMED;
+      } finally { visiting.delete(parent.node); }
+    }
     if (parent.isCallExpression() || parent.isNewExpression()) return escapes("passed as an argument");
     return escapes(`used in ${parent.type}`);
   }

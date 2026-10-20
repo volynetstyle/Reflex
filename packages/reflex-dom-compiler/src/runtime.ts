@@ -10,7 +10,15 @@ const COMPILED_DOM_RENDERABLE = Symbol.for("reflex-dom.compiled");
 /** reflex-dom's `CompiledHoleMount`: mounts a hole value at its marker. */
 export type HoleMount = (parent: Element, marker: Node, value: unknown, scalar: boolean) => void;
 
-type Create = (doc: Document, mountHole: HoleMount, holes: readonly unknown[] | undefined) => Node | null;
+/** Structural copy of reflex-dom's internal ordered mount capability. */
+export interface DOMMount {
+  readonly version: 1;
+  prop(element: Element, name: string, value: unknown): void;
+  props(element: Element, props: Record<string, unknown>): void;
+  child(parent: Element, value: unknown, scalar: boolean): void;
+}
+
+type Create = (doc: Document, mountHole: HoleMount, holes: readonly unknown[] | undefined, mount?: DOMMount) => Node | null;
 type Fallback = (holes: readonly unknown[] | undefined) => JSXRenderable;
 
 /**
@@ -28,8 +36,8 @@ export class CompiledRegion {
     private readonly holes: readonly unknown[] | undefined,
   ) {}
 
-  create(doc: Document, mountHole: HoleMount): Node | null {
-    return this.build(doc, mountHole, this.holes);
+  create(doc: Document, mountHole: HoleMount, mount?: DOMMount): Node | null {
+    return this.build(doc, mountHole, this.holes, mount);
   }
 
   fallback(): JSXRenderable {

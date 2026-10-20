@@ -1,4 +1,4 @@
-// A dynamic parent stays on the runtime; its static children compile.
+// A dynamic parent and its static children form one ordered native region.
 import { render } from "@volynets/reflex-dom";
 export const minCompiled = 3;
 

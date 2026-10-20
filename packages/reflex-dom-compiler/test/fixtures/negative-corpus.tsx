@@ -1,6 +1,7 @@
-// The plan's negative corpus: every region here must stay on the runtime.
+// Former negative corpus: bind props through runtime and preserve foreign,
+// custom and form content as opaque children of the compiled native region.
 import { render } from "@volynets/reflex-dom";
-export const minCompiled = 0;
+export const minCompiled = 1;
 
 const callback = () => {};
 

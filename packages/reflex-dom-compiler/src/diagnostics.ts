@@ -7,12 +7,14 @@ export interface RegionReport {
   readonly tag: string;
   readonly line: number | null;
   readonly column: number | null;
-  /** Every prop and child is a literal, so building the subtree runs no user code. */
+  /** No captured values or runtime bindings are needed. */
   readonly static: boolean;
-  /** Dynamic children whose values the renderer mounts at markers. */
+  /** Dynamic/opaque children mounted inline or at template markers. */
   readonly holes: number;
+  /** Props delegated to runtime binding by an ordered native region. */
+  readonly bindings?: number;
   readonly strategy: RegionStrategy;
-  /** DOM nodes (elements and texts) the region creates; 0 when not static. */
+  /** Generated elements and texts; opaque children/holes are excluded. */
   readonly nodes: number;
   /** Why the region is not compiled, or why a weaker strategy was chosen. */
   readonly reason: string | null;
@@ -46,7 +48,7 @@ export function summarizeReport(report: CompilerReport): ReportSummary {
     else if (region.strategy === "native") native++;
     else runtime++;
 
-    if (region.static || region.holes > 0) {
+    if (region.static || region.holes > 0 || (region.bindings ?? 0) > 0) {
       staticNodes += region.nodes;
       if (region.strategy !== "runtime") compiledNodes += region.nodes;
     }
@@ -78,8 +80,9 @@ export function formatReport(report: CompilerReport): string {
       `  Static: ${region.static ? "yes" : "no"}`,
       `  Strategy: ${region.strategy}`,
     );
-    if (region.static || region.holes > 0) lines.push(`  Nodes: ${region.nodes}`);
+    if (region.static || region.holes > 0 || region.bindings) lines.push(`  Nodes: ${region.nodes}`);
     if (region.holes > 0) lines.push(`  Dynamic children: ${region.holes}`);
+    if (region.bindings) lines.push(`  Runtime props: ${region.bindings}`);
     if (region.reason !== null) lines.push(`  Reason: ${region.reason}`);
   }
 

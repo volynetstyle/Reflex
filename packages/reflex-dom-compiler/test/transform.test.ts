@@ -101,9 +101,9 @@ describe("evaluation timing", () => {
   it("never moves user expressions", () => {
     const body = component(`jsx("div", { id: makeId(), children: () => value() })`);
     const { region, code } = only(body);
-    expect(region).toMatchObject({ static: false, strategy: "runtime", reason: `dynamic prop "id"` });
-    expect(code).toContain(`id: makeId()`);
-    expect(code).not.toContain("_compiled");
+    expect(region).toMatchObject({ static: false, strategy: "native", bindings: 1 });
+    expect(code.match(/makeId\(\)/g)).toHaveLength(1);
+    expect(code).toContain('[makeId(), () => value()]');
   });
 
   it("allocates a fresh descriptor per evaluation", () => {
@@ -114,7 +114,131 @@ describe("evaluation timing", () => {
 
 describe("escape analysis", () => {
   it.each([
-    [`const saved = jsx("p", {});\n${component("saved")}`, "stored in a variable"],
+    `jsx(Show, { when: value, children: () => jsx("p", {}), fallback: jsx("i", {}) })`,
+    `jsx("section", { children: jsx(Show, { when: value, children: jsx("p", {}) }) })`,
+    `jsx(Switch, { value, cases: [{ when: 1, children: () => jsx("p", {}) }], fallback: jsx("i", {}) })`,
+    `jsx("section", { children: jsx(Switch, { value, cases: [{ when: 1, children: jsx("p", {}) }] }) })`,
+    `jsx(Portal, { to: target, children: () => jsx("p", {}) })`,
+    `jsx("section", { children: jsx(Portal, { to: target, children: jsx("p", {}) }) })`,
+  ])("proves the rendered branches of trusted operators: %s", expr => {
+    const { report } = compile(`render(${expr}, root)`, {}, IMPORT + 'import { Show, Switch, Portal, render } from "@volynets/reflex-dom";');
+    expect(report.regions.find(r => r.tag === "p")!.strategy).not.toBe("runtime");
+  });
+
+  it("retains compiled islands inside an opaque form child of a native region", () => {
+    const { report } = compile(component(`jsx("section", { ref: callback, children: jsx("form", { children: jsx("p", { children: "form island" }) }) })`));
+    expect(report.regions.find(r => r.tag === "p")!.strategy).not.toBe("runtime");
+  });
+
+  it("keeps Switch cases with inspecting getters opaque", () => {
+    const { report } = compile(`render(jsx(Switch, { value: 1, cases: [{ get when() { inspect(this.children().props); return 1; }, children: () => jsx("p", {}) }] }), root)`, {},
+      IMPORT + 'import { Switch, render } from "@volynets/reflex-dom";');
+    expect(report.regions.find(r => r.tag === "p")!.strategy).toBe("runtime");
+  });
+  it.each([
+    `const view = jsx("p", { children: "saved" }); const alias = view; render(alias, root);`,
+    `const view = jsx("p", {}); function App() { return jsx("div", { children: view }); } render(jsx(App, {}), root);`,
+    `function App() { return jsx("div", { children: jsx(Child, {}) }); } function Child() { return jsx("p", {}); } render(jsx(App, {}), root);`,
+    `const view = jsx("p", { children: "saved" }); render(view, a); render(view, b);`,
+    `function App() { const view = jsx("p", {}); return jsx("div", { children: view }); } render(jsx(App, {}), root);`,
+    `function App() { return jsx("div", { children: () => jsx("p", {}) }); } render(jsx(App, {}), root);`,
+    `const content = () => jsx("p", {}); render(jsx("div", { children: content }), root);`,
+    `render(jsx(() => jsx("p", {}), {}), root);`,
+  ])("proves render-only const descriptors and accessors: %s", body => {
+    const { report } = compile(body, {}, IMPORT + RENDER);
+    expect(report.regions.some(r => r.tag === "p" && r.strategy !== "runtime")).toBe(true);
+  });
+
+  it.each([
+    `const view = jsx("p", {}); inspect(view); render(view, root);`,
+    `const view = jsx("p", {}); const alias = view; alias.props.id = "changed"; render(view, root);`,
+    `export const view = jsx("p", {}); render(view, root);`,
+    `let view = jsx("p", {}); view = other; render(view, root);`,
+    `const content = () => jsx("p", {}); inspect(content()); render(content, root);`,
+    `render(jsx("div", { children: jsx("p", {}), get title() { return this.children.tag; } }), root);`,
+    `const content = function self() { if (flag) inspect(self().props); return jsx("p", {}); }; render(content, root);`,
+    `render(jsx("div", { children: function self() { if (flag) inspect(self().props); return jsx("p", {}); } }), root);`,
+    `render(jsx(For, { get each() { inspect(this.children().props); return []; }, by: x => x, children: () => jsx("p", {}) }), root);`,
+  ])("preserves escaping descriptors/accessors: %s", body => {
+    const { report } = compile(body, {}, IMPORT + RENDER);
+    expect(report.regions.find(r => r.tag === "p")!.strategy).toBe("runtime");
+  });
+
+  it.each([
+    'const app = createApp(); app.render(VIEW, root);',
+    'const app = setupDOM(); app.mount(VIEW, root);',
+    'const app = createApp(); const alias = app; alias.hydrate(VIEW, root);',
+    'const { render: draw } = createApp(); draw(VIEW, root);',
+    'const app = createApp(); const draw = app.render; const alias = draw; alias(VIEW, root);',
+  ])("proves frozen app aliases and bound render methods: %s", consumer => {
+    const { report } = transformReflexDOM(IMPORT + 'import { createApp, setupDOM } from "@volynets/reflex-dom";\n' + consumer.replace('VIEW', 'jsx("p", { children: "safe" })'));
+    expect(report.regions[0]!.strategy).not.toBe("runtime");
+  });
+
+  it("resolves real namespace imports for factories, app entry points and For", () => {
+    const { report } = transformReflexDOM(`
+      import * as DOM from "@volynets/reflex-dom";
+      import * as JSX from "@volynets/reflex-dom/jsx-runtime";
+      const app = DOM.createApp();
+      function App() { return JSX.jsx(DOM.For, { each: items, by: x => x,
+        children: () => JSX.jsx("p", { children: "row" }) }); }
+      app.render(JSX.jsx(App, {}), root);
+    `);
+    expect(report.regions.some(r => r.tag === "p" && r.strategy !== "runtime")).toBe(true);
+  });
+
+  it.each([
+    'let app = createApp(); app = other; app.render(VIEW, root);',
+    'const app = unknown(); app.render(VIEW, root);',
+    'const { render: draw } = other; draw(VIEW, root);',
+    'const app = createApp(); let draw = app.render; draw = other; draw(VIEW, root);',
+  ])("rejects unproven app/method aliases: %s", consumer => {
+    const { report } = transformReflexDOM(IMPORT + 'import { createApp } from "@volynets/reflex-dom";\n' + consumer.replace('VIEW', 'jsx("p", { children: "escape" })'));
+    expect(report.regions[0]!.strategy).toBe("runtime");
+  });
+
+  it("does not trust a local object or shadowed namespace with render/factory names", () => {
+    const { report } = transformReflexDOM(IMPORT + `
+      import * as DOM from "@volynets/reflex-dom";
+      function run(DOM) { DOM.render(jsx("p", {}), root); }
+      const local = { render: custom }; local.render(jsx("b", {}), root);
+    `);
+    expect(report.regions.every(r => r.strategy === "runtime")).toBe(true);
+  });
+
+  it.each(["render", "mount", "hydrate"])("accepts fresh createApp().%s consumers and import aliases", method => {
+    const { code, report } = transformReflexDOM(`
+      import { createApp as app } from "@volynets/reflex-dom";
+      import { jsx } from "@volynets/reflex-dom/jsx-runtime";
+      function App() { return jsx("p", { children: "app" }); }
+      app().${method}(jsx(App, {}), root);
+    `);
+    expect(report.regions[0]!.strategy).not.toBe("runtime");
+    expect(code).toContain("_compiled");
+  });
+
+  it("recognizes standalone factories, For and createApp consumers", () => {
+    const { report } = transformReflexDOM(`
+      import { createApp, For } from "@volynets/reflex-dom/standalone";
+      import { jsx } from "@volynets/reflex-dom/standalone/jsx-runtime";
+      function App() { return jsx(For, { each: items, by: x => x, children: () => jsx("span", { children: "row" }) }); }
+      createApp().render(jsx(App, {}), root);
+    `);
+    expect(report.regions.some(region => region.tag === "span" && region.strategy !== "runtime")).toBe(true);
+  });
+
+  it.each([
+    `import { createApp } from "other"; createApp().render(VIEW, root);`,
+    `function createApp() { return renderer; } createApp().render(VIEW, root);`,
+    `import { createApp } from "@volynets/reflex-dom"; function call(createApp) { createApp().render(VIEW, root); }`,
+    `import { createApp } from "@volynets/reflex-dom"; createApp().unknown(VIEW, root);`,
+    `import { createApp } from "@volynets/reflex-dom"; const app = createApp(); app.render = custom; app.render(VIEW, root);`,
+  ])("does not infer renderer ownership from an unproven member call: %s", consumer => {
+    const { report } = transformReflexDOM(IMPORT + consumer.replace("VIEW", 'jsx("p", { children: "escape" })'));
+    expect(report.regions[0]!.strategy).toBe("runtime");
+  });
+
+  it.each([
     [`function helper() { return jsx("p", {}); }`, `"helper" is never rendered`],
     [component(`jsx(Card, { children: jsx("p", {}) })`), "children of component <Card>"],
     [component(`jsx(Card, { header: jsx("p", {}) })`), "stored in an object"],
@@ -149,7 +273,6 @@ describe("escape analysis", () => {
     component(`flag && jsx("p", {})`),
     component(`[jsx("p", {}), "text"]`),
     component(`jsx(Fragment, { children: jsx("p", {}) })`),
-    component(`jsx("div", { id: dynamic(), children: jsx("p", {}) })`),
     `${RENDER}const App = () => jsx("p", {});\nrender(jsx(App, {}), root);`,
     `function card() { return jsx("p", {}); }\n${component(`jsx(card, {})`)}`,
     `${RENDER}render(jsx("p", {}), root);`,
@@ -166,7 +289,6 @@ describe("escape analysis", () => {
 
 describe("negative corpus from the plan", () => {
   it.each([
-    [`jsx("table", { children: jsx("tr", { children: jsx("td", { children: "Hello" }) }) })`, "table", "table parsing context"],
     [`jsx("select", { value: "b", children: [jsx("option", { value: "a", children: "A" })] })`, "select", "form control"],
     [`jsx("my-element", { ref: callback })`, "my-element", "custom element"],
     [`jsx("svg", { children: jsx("foreignObject", { children: jsx("div", { children: "Hello" }) }) })`, "div", "inside <svg>"],
@@ -208,10 +330,15 @@ describe("prop semantics", () => {
     [`...rest`, "spread props"],
     [`["id"]: "x"`, "computed prop name"],
     [`get id() { return "x"; }`, "accessor or method"],
-  ])("rejects %s", (props, reason) => {
+  ])("uses the renderer for %s", (props, reason) => {
     const { region } = attrs(props);
-    expect(region.strategy).toBe("runtime");
-    expect(region.reason).toContain(reason);
+    if (["spread props", "computed prop name", "accessor or method"].includes(reason)) {
+      expect(region.strategy).toBe("runtime");
+      expect(region.reason).toContain(reason);
+    } else {
+      expect(region.strategy).toBe("native");
+      expect(region.bindings).toBeGreaterThan(0);
+    }
   });
 
   it("maps static values the way reflex-dom applies them", () => {
@@ -285,20 +412,24 @@ describe("dynamic children (holes)", () => {
     expect(code).toMatch(/function _fallback\(_h\) \{\s+return h\("p", \{\s+children: _h\[0\]/);
   });
 
-  it("leaves more than one hole to the runtime, compiling static islands", () => {
+  it("mounts multiple holes in order inside one native region", () => {
     const { report } = compile(component(`jsxs("li", { children: [a(), jsx("span", { children: "x" }), b()] })`));
-    expect(report.regions[0]).toMatchObject({ tag: "li", strategy: "runtime", holes: 2, reason: "2 dynamic children (at most 1 per region)" });
-    expect(report.regions[1]).toMatchObject({ tag: "span", strategy: "template" });
+    expect(report.regions).toMatchObject([{ tag: "li", strategy: "native", holes: 2, nodes: 3 }]);
   });
 
-  it("does not treat element children or props as holes", () => {
-    expect(only(component(`jsx("p", { id: x(), children: "a" })`)).region.reason).toBe(`dynamic prop "id"`);
+  it("delegates props and opaque component children to ordered mount operations", () => {
+    expect(only(component(`jsx("p", { id: x(), children: "a" })`)).region).toMatchObject({ strategy: "native", bindings: 1 });
     const { report } = compile(component(`jsx("p", { children: jsx(Card, {}) })`));
-    expect(report.regions[0]!.reason).toBe("component boundary <Card>");
+    expect(report.regions[0]).toMatchObject({ strategy: "native", holes: 1 });
   });
 });
 
 describe("text topology and parser context", () => {
+  it("compiles a complete table template only when its topology is preserved", () => {
+    expect(only(component(`jsx("table", { children: jsx("tbody", { children: jsx("tr", { children: jsx("td", { children: "cell" }) }) }) })`)).region.strategy).toBe("template");
+    expect(only(component(`jsx("table", { children: jsx("tr", { children: jsx("td", { children: "cell" }) }) })`)).region).toMatchObject({ strategy: "native", reason: expect.stringContaining("parser context") });
+    expect(only(component(`jsx("tr", { children: jsx("td", { children: "cell" }) })`)).region.strategy).toBe("template");
+  });
   it.each([
     [`jsx("p", { children: ["a", "b"] })`, "parser changed text"],
     [`jsx("p", { children: ["", "x"] })`, "parser"],
@@ -362,10 +493,9 @@ describe("diagnostics", () => {
     );
     const text = formatReport(report);
     expect(text).toContain("Region #1 <div>");
-    expect(text).toContain(`Reason: dynamic prop "id"`);
+    expect(text).toContain(`Runtime props: 1`);
     expect(text).toContain("Strategy: native");
-    expect(text).toContain("Reason: parser context");
-    expect(text).toContain("Reason: table parsing context <table>");
-    expect(summarizeReport(report)).toMatchObject({ regions: 3, native: 1, runtime: 2, staticCoverage: 1 });
+    expect(text).toContain("Reason: ordered runtime props and children");
+    expect(summarizeReport(report)).toMatchObject({ regions: 1, native: 1, runtime: 0, staticCoverage: 1 });
   });
 });

@@ -29,7 +29,9 @@ function moduleOf(glob: Glob, name: string): FixtureModule {
 }
 
 function compiledRegions(report: CompilerReport | null): number {
-  return report?.regions.filter((r) => r.strategy !== "runtime").length ?? 0;
+  // Maximal ordered regions merge former islands. Count generated DOM nodes
+  // so the coverage assertion remains meaningful across region merging.
+  return report?.regions.filter((r) => r.strategy !== "runtime").reduce((n, r) => n + r.nodes, 0) ?? 0;
 }
 
 /**

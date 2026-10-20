@@ -1,7 +1,7 @@
 /**
  * The DOM a region produces, normalized to exactly the nodes and attributes
  * `reflex-dom` would create for it. Emitters only print this tree; every
- * semantic decision is made while building it in `classify.ts`.
+ * semantic decision is made in `classify.ts` and `ordered.ts`.
  */
 export type StaticNode = StaticElement | StaticText | StaticHole;
 
@@ -12,6 +12,10 @@ export interface StaticElement {
   /** In the order `reflex-dom` applies them, which is the props order. */
   readonly attributes: readonly StaticAttribute[];
   readonly children: readonly StaticNode[];
+  /** Ordered native regions delegate these props to the renderer. */
+  readonly bindings?: readonly { readonly name: string; readonly index: number }[];
+  /** A literal scalar child uses textContent, even when a ref added children. */
+  readonly scalarChildren?: boolean;
 }
 
 export interface StaticAttribute {
@@ -27,7 +31,7 @@ export interface StaticText {
 
 /**
  * A dynamic child: an expression evaluated when the region is created, whose
- * value the renderer mounts at a marker (reflex-dom's `CompiledHoleMount`).
+ * value the renderer mounts at a marker, or inline in an ordered native plan.
  */
 export interface StaticHole {
   readonly type: "hole";
@@ -42,7 +46,10 @@ export function countNodes(node: StaticNode): number {
   if (node.type === "text") return 1;
   if (node.type === "hole") return 0;
   let count = 1;
-  for (const child of node.children) count += countNodes(child);
+  for (const child of node.children) {
+    if (node.scalarChildren && child.type === "text" && child.value === "") continue;
+    count += countNodes(child);
+  }
   return count;
 }
 

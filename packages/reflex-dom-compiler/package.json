@@ -7,7 +7,8 @@
   "license": "MIT",
   "exports": {
     ".": "./src/index.ts",
-    "./runtime": "./src/runtime.ts"
+    "./runtime": "./src/runtime.ts",
+    "./vite": "./src/vite.ts"
   },
   "scripts": {
     "lint": "eslint .",
@@ -16,6 +17,7 @@
     "test:browser:matrix": "vitest run --config vite.browser.matrix.config.ts",
     "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.json",
     "bench": "node bench/run-ts.mjs bench/run.ts",
+    "bench:ordered": "node bench/ordered-native.mjs",
     "bench:memory-probe": "node bench/run-ts.mjs bench/memory-probe.ts"
   },
   "dependencies": {
@@ -31,6 +33,15 @@
     "@volynets/reflex-runtime": "workspace:*",
     "@volynets/reflex-scheduler": "workspace:*",
     "esbuild": "0.25.12",
-    "playwright": "^1.62.1"
+    "playwright": "^1.62.1",
+    "vite": "^6.0.0"
+  },
+  "peerDependencies": {
+    "vite": "^6.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
   }
 }

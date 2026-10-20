@@ -8,6 +8,7 @@ export {
   DEFAULT_RUNTIME_MODULE,
   AUTO_TEMPLATE_MIN_NODES,
   MAX_HOLES,
+  MAX_TEMPLATE_HOLES,
   type ReflexDOMCompilerOptions,
   type TransformResult,
 } from "./transform";

@@ -33,7 +33,7 @@ export function textOf(literal: Literal): string | null {
 // ---------------------------------------------------------------------------
 // Elements. The supported set excludes every element whose DOM construction
 // differs from `createElement` + attributes + children in reflex-dom: form
-// controls (managed properties), parser-special elements, tables, foreign
+// controls (managed properties), parser-special elements, foreign
 // namespaces and custom elements.
 
 export const COMPILABLE_TAGS: ReadonlySet<string> = new Set([
@@ -44,9 +44,6 @@ export const COMPILABLE_TAGS: ReadonlySet<string> = new Set([
   "legend", "li", "main", "mark", "menu", "nav", "ol", "p", "q", "rp", "rt",
   "ruby", "s", "samp", "search", "section", "small", "span", "strong", "sub",
   "summary", "sup", "time", "u", "ul", "var", "wbr",
-]);
-
-const TABLE_TAGS = new Set([
   "table", "caption", "colgroup", "col", "thead", "tbody", "tfoot", "tr", "td", "th",
 ]);
 const FORM_TAGS = new Set([
@@ -58,7 +55,6 @@ export function rejectTag(tag: string): string | null {
   if (COMPILABLE_TAGS.has(tag)) return null;
   if (tag.includes("-")) return `custom element <${tag}>`;
   if (tag === "svg" || tag === "math") return `foreign namespace <${tag}>`;
-  if (TABLE_TAGS.has(tag)) return `table parsing context <${tag}>`;
   if (FORM_TAGS.has(tag)) return `form control semantics <${tag}>`;
   return `unsupported element <${tag}>`;
 }
