@@ -11,7 +11,18 @@ import { devRecordWriteProducer } from "@runtime/kernel/dev";
 import { push_iterator } from "@runtime/kernel/stages/propagation/push_iterator";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
-import { compare as defaultComparator } from "./utils/compare";
+/**
+ * `Object.is` semantics as strict comparisons, for the write path only.
+ * TurboFan specializes these from this site's feedback, where `Object.is`
+ * with operands of unknown type calls the SameValue builtin. Recompute
+ * keeps `compare`: a comparator shared with it would share one feedback
+ * vector and inlining budget across both paths.
+ */
+function sameWrittenValue(a: unknown, b: unknown): boolean {
+  return a === b
+    ? a !== 0 || 1 / (a as number) === 1 / (b as number)
+    : a !== a && b !== b;
+}
 
 /**
  * Write a new value to a producer (source) node.
@@ -69,7 +80,7 @@ export function writeProducer<T>(node: ProducerNode<T>, value: T): void {
 
   // Check if the value actually changed using stable comparison
   // This prevents false invalidation when setting to the same value
-  if (defaultComparator(prev, value) === true) {
+  if (sameWrittenValue(prev, value) === true) {
     if (__PROFILE__)
       observeRuntimeProjection?.("projection.semantic.write.value.same");
     devRecordWriteProducer(node, false, value, prev, undefined, defaultContext);
