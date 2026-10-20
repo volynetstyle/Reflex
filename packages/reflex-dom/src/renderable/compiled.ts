@@ -10,7 +10,7 @@ import type { JSXRenderable } from "../types";
  *
  * | situation                                  | renderer calls             |
  * | ------------------------------------------ | -------------------------- |
- * | client mount, HTML namespace               | `create(doc, mountHole)`   |
+ * | client mount, HTML namespace               | `create(doc, mountHole, mount)` |
  * | client mount, any other namespace          | `fallback()`               |
  * | `create` returns `null`                    | `fallback()`               |
  * | hydration                                  | `fallback()`               |
@@ -19,11 +19,11 @@ import type { JSXRenderable } from "../types";
  * `fallback()` must describe the same DOM as `create`, so either path is
  * semantically valid wherever the renderer picks it.
  *
- * A region may contain dynamic children ("holes"): values computed when the
- * region was created, which the region does not build itself. It marks each
- * position with a node and hands the value to `mountHole`, so the renderer
- * owns everything that changes. Static structure comes from the region,
- * change from Reflex.
+ * A region captures dynamic values at descriptor creation. Template plans
+ * mount a single guarded child at a marker. Ordered native plans use `mount`
+ * to bind props before children and append children one by one, preserving
+ * observable ref/effect/component order. Reactivity and ownership stay with
+ * the renderer. Ordered plans decline before DOM work without version 1.
  */
 export const COMPILED_DOM_RENDERABLE = Symbol.for("reflex-dom.compiled");
 
@@ -41,6 +41,14 @@ export type CompiledHoleMount = (
   scalar: boolean,
 ) => void;
 
+/** Ordered mount operations shared by generated native regions. */
+export interface CompiledDOMMount {
+  readonly version: 1;
+  prop(element: Element, name: string, value: unknown): void;
+  props(element: Element, props: Record<string, unknown>): void;
+  child(parent: Element, value: unknown, scalar: boolean): void;
+}
+
 export interface CompiledDOMRenderable {
   readonly kind: typeof COMPILED_DOM_RENDERABLE;
   /**
@@ -52,11 +60,11 @@ export interface CompiledDOMRenderable {
    * renderer then mounts `fallback()`. Exceptions propagate like any mount
    * error.
    */
-  create(doc: Document, mountHole: CompiledHoleMount): Node | null;
+  create(doc: Document, mountHole: CompiledHoleMount, mount?: CompiledDOMMount): Node | null;
   /**
    * The equivalent uncompiled renderable, built from the same hole values.
-   * Evaluating it runs no user code: the region's own content is literals and
-   * its hole values were computed when the region was created.
+   * Evaluating it runs no user expressions again: dynamic values were
+   * captured when the region was created.
    */
   fallback(): JSXRenderable;
 }

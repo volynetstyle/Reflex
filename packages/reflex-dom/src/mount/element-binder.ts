@@ -72,6 +72,17 @@ function bindProperty(
   applyProp(element, name, value, namespace, undefined);
 }
 
+/** One known prop, without allocating a props object or enumerating it. */
+export function bindElementProp(
+  element: Element,
+  name: string,
+  value: unknown,
+  namespace: Namespace,
+): void {
+  if (value === undefined || name === "children" || name === "key" || isPlatformManagedProp(name)) return;
+  bindProperty(getDOMContext(), element, name, value, namespace);
+}
+
 export function bindElementProps(
   element: Element,
   props: Record<string, unknown>,

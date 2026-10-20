@@ -37,7 +37,7 @@ describe("compiled region protocol", () => {
     const dispose = render(r, container);
 
     expect(r.create).toHaveBeenCalledTimes(1);
-    expect(r.create).toHaveBeenCalledWith(other, expect.any(Function));
+    expect(r.create).toHaveBeenCalledWith(other, expect.any(Function), expect.objectContaining({ version: 1 }));
     expect(r.fallback).not.toHaveBeenCalled();
     expect(container.innerHTML).toBe(`<p class="r">region</p>`);
     dispose();
