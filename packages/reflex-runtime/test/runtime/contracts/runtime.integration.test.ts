@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  activeTracking,
   claimWatcherSchedule,
   configureRuntimeContext,
   createRuntimeContext,
@@ -41,18 +42,19 @@ describe("Reactive runtime - integration contract", () => {
     resetRuntime();
   });
 
-  it("isTracking follows dependency collection, not context", () => {
+  it("isTracking and activeTracking follow dependency collection, not context", () => {
     const source = createProducer(1);
     const seen: boolean[] = [];
     const computed = createConsumer(() => {
-      seen.push(isTracking());
-      untracked(() => seen.push(isTracking()));
+      seen.push(isTracking(), activeTracking !== null);
+      untracked(() => seen.push(isTracking(), activeTracking !== null));
       return readProducer(source);
     });
 
     expect(isTracking()).toBe(false);
+    expect(activeTracking).toBeNull();
     readConsumer(computed);
-    expect(seen).toEqual([true, false]);
+    expect(seen).toEqual([true, true, false, false]);
   });
 
   it("isContextSettled answers for active and saved contexts", () => {

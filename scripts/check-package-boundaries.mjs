@@ -30,6 +30,7 @@ const INTEGRATION_SURFACE = new Set([
   "untracked",
   // Execution observation
   "isTracking",
+  "activeTracking",
   "isContextSettled",
   "hasPendingValidation",
   // Graph lifetime
@@ -84,6 +85,21 @@ const FORBIDDEN_FIELDS = new Set([
   "propagationScopeDepth",
   "runtimeState",
 ]);
+
+const TRACKING_TOKEN = "activeTracking";
+
+function isNullComparison(node) {
+  const parent = node.parent;
+  if (!ts.isBinaryExpression(parent)) return false;
+  const op = parent.operatorToken.kind;
+  if (
+    op !== ts.SyntaxKind.EqualsEqualsEqualsToken &&
+    op !== ts.SyntaxKind.ExclamationEqualsEqualsToken
+  )
+    return false;
+  const other = parent.left === node ? parent.right : parent.left;
+  return other.kind === ts.SyntaxKind.NullKeyword;
+}
 
 function* sourceFiles(dir) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -157,6 +173,16 @@ function checkFile(file) {
       /ReactiveNode$/.test(node.expression.text)
     ) {
       report(file, node, sf, "nodes are created through runtime factories");
+    }
+
+    // The tracking token is opaque: it may only be compared with null.
+    if (
+      ts.isIdentifier(node) &&
+      node.text === TRACKING_TOKEN &&
+      !ts.isImportSpecifier(node.parent) &&
+      !isNullComparison(node)
+    ) {
+      report(file, node, sf, "`activeTracking` may only be compared with null");
     }
 
     if (

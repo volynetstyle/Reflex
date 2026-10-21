@@ -1,7 +1,7 @@
 import {
   createProducer,
   disposeNodeIfUnobserved,
-  isTracking,
+  activeTracking,
   disposeNode,
   readProducer,
   writeProducer,
@@ -29,7 +29,7 @@ export function createStoreCell<T>(
   let disposed = false;
   const cell = (() => {
     if (disposed) throw new Error("Cannot use a disposed store cell");
-    if (!isTracking()) return value;
+    if (activeTracking === null) return value;
     readProducer((node ??= createProducer(0)));
     return value;
   }) as StoreCell<T>;

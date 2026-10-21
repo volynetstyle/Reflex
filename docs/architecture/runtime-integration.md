@@ -39,7 +39,7 @@ a sibling reinterprets it.
    had no operation, the runtime gained one
    (`packages/reflex-runtime/src/protocol/integration.ts`, documented in
    [RUNTIME.md](../../packages/reflex-runtime/docs/RUNTIME.md#integration-contract)):
-   `isTracking`, `isContextSettled`, `hasObservers`,
+   `isTracking`, `activeTracking`, `isContextSettled`, `hasObservers`,
    `disposeNodeIfUnobserved`, `suspendConsumerIfUnobserved`,
    `hasPendingValidation`, `takeScheduledWatcher`,
    `shouldRetryWatcherAfterFailure`, `invalidateWatcher`.
@@ -71,9 +71,16 @@ a sibling reinterprets it.
     `flushPendingRuntimeIdle` cost about 4% per flush; `settleRuntimeIdle`
     keeps the pending test inline. Afterwards every scheduler hot-path
     effect is within two run-to-run standard deviations of the baseline.
-  - Store: `isTracking()` costs about 0.2 ns per read: `cell/read` +12% and
-    `keyed/materialized-read` +14% (7 of 7 pairs slower); every other case is
-    within noise. This cost is open.
+  - Store: `isTracking()` cost about 0.2 ns per read (`cell/read` +12%, 7 of 7
+    pairs slower), the call itself even when inlined. Store hot paths test the
+    opaque `activeTracking` token instead: the live binding of the tracking
+    register, which siblings may only compare with `null` (enforced by
+    `check:package-boundaries`). It names the intent "a computation is
+    tracking" and grants no node access and no write. `untracked` closures
+    inside `Observations.read` and the projection proxy handler
+    context-allocated their locals on every call (`keyed/materialized-read`
+    +20%); they were moved out of those functions. Afterwards no store case is
+    consistently slower than `main`.
   - Facade and Async factories compile to the same `new ReactiveNode` in
     production; the development node record is erased.
     The runtime kernel itself is unchanged; its paired CI comparison

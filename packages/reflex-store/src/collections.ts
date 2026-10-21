@@ -1,7 +1,7 @@
 import {
   createProducer,
   disposeNodeIfUnobserved,
-  isTracking,
+  activeTracking,
   disposeNode,
   enterReactiveBatch,
   getActiveRuntimeContext,
@@ -43,7 +43,7 @@ class Cells<K, V> {
     { node: ProducerNode<number>; value: V }
   >();
   read(key: K, value: V): V {
-    if (!isTracking()) return value;
+    if (activeTracking === null) return value;
     let entry = this.nodes.get(key);
     if (!entry) {
       entry = { node: createProducer(0), value };
@@ -122,7 +122,8 @@ export class ReactiveMap<K, V> implements Iterable<[K, V]> {
 
   get size(): number {
     const size = this.backing().size;
-    if (isTracking()) readProducer((this.sizeNode ??= createProducer(size)));
+    if (activeTracking !== null)
+      readProducer((this.sizeNode ??= createProducer(size)));
     return size;
   }
   get [Symbol.toStringTag](): string {
@@ -201,17 +202,20 @@ export class ReactiveMap<K, V> implements Iterable<[K, V]> {
 
   keys(): MapIterator<K> {
     const data = this.backing();
-    if (isTracking()) readProducer((this.keysNode ??= createProducer(0)));
+    if (activeTracking !== null)
+      readProducer((this.keysNode ??= createProducer(0)));
     return data.keys();
   }
   values(): MapIterator<V> {
     const data = this.backing();
-    if (isTracking()) readProducer((this.valuesNode ??= createProducer(0)));
+    if (activeTracking !== null)
+      readProducer((this.valuesNode ??= createProducer(0)));
     return data.values();
   }
   entries(): MapIterator<[K, V]> {
     const data = this.backing();
-    if (isTracking()) readProducer((this.valuesNode ??= createProducer(0)));
+    if (activeTracking !== null)
+      readProducer((this.valuesNode ??= createProducer(0)));
     return data.entries();
   }
   [Symbol.iterator](): MapIterator<[K, V]> {
@@ -222,7 +226,8 @@ export class ReactiveMap<K, V> implements Iterable<[K, V]> {
     thisArg?: unknown,
   ): void {
     const data = this.backing();
-    if (isTracking()) readProducer((this.valuesNode ??= createProducer(0)));
+    if (activeTracking !== null)
+      readProducer((this.valuesNode ??= createProducer(0)));
     data.forEach((value, key) => callback.call(thisArg, value, key, this));
   }
 

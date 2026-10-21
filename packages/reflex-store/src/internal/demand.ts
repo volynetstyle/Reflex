@@ -1,7 +1,7 @@
 import {
   createConsumer,
   disposeNodeIfUnobserved,
-  isTracking,
+  activeTracking,
   disposeNode,
   readConsumerLazy,
   suspendConsumerIfUnobserved,
@@ -38,6 +38,21 @@ export class Demand<T> {
   }
 }
 
+// Kept out of `Observations.read`: a closure there would context-allocate its
+// locals on every read, including reads that never compare keys.
+function canonicalKey<K>(
+  entries: Map<K, unknown>,
+  keyEquals: (a: K, b: K) => boolean,
+  key: K,
+): K {
+  return untracked(() => {
+    for (const known of entries.keys()) {
+      if (keyEquals(known, key)) return known;
+    }
+    return key;
+  });
+}
+
 /** Retain tracked semantic locations until their owner's next collection boundary. */
 export class Observations<K, T> {
   private entries?: Map<K, ConsumerNode<T>>;
@@ -48,21 +63,12 @@ export class Observations<K, T> {
   ) {}
 
   read(key: K): T {
-    const keyEquals = this.keyEquals;
-    const entries = this.entries;
-    if (keyEquals && entries) {
-      const requested = key;
-      key = untracked(() => {
-        for (const known of entries.keys()) {
-          if (keyEquals(known, requested)) return known;
-        }
-        return requested;
-      });
-    }
+    if (this.keyEquals && this.entries)
+      key = canonicalKey(this.entries, this.keyEquals, key);
     let node = this.entries?.get(key);
 
     if (!node) {
-      if (!isTracking()) return this.compute(key);
+      if (activeTracking === null) return this.compute(key);
       let initialized = false;
       let previous: T;
 

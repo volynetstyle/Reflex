@@ -2,7 +2,7 @@ import {
   createWatcher,
   disposeNodeIfUnobserved,
   hasPendingValidation,
-  isTracking,
+  activeTracking,
   disposeNode,
   disposeWatcher,
   readProducer,
@@ -67,7 +67,7 @@ export function createSelector<T>(
 
   const read = (key: T): boolean => {
     if (disposed) throw new Error("Cannot read a disposed selector");
-    if (!isTracking())
+    if (activeTracking === null)
       return identityEquality
         ? Object.is(source(), key)
         : untracked(() => equals(source(), key));

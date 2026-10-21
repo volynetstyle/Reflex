@@ -139,13 +139,11 @@ class View {
         if (key === storeName) return owner.options.name;
         if (key === Symbol.dispose) return dispose;
         // Inspect one parent snapshot without subscribing to structural identity.
-        let value: unknown;
-        const container = untracked(() => {
-          const snapshot = parent();
-          value =
-            snapshot === undefined ? undefined : Reflect.get(snapshot, key);
-          return snapshot;
-        });
+        // The snapshot is plain data; only `parent()` needs to be untracked.
+        // Passing `parent` itself keeps this handler free of a closure.
+        const container = untracked(parent);
+        const value =
+          container === undefined ? undefined : Reflect.get(container, key);
         if (this.shouldWrap(value, container))
           return this.child(key, Array.isArray(value));
         return (this.values ??= new Observations(valueAt)).read(key);

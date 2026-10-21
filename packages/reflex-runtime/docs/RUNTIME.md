@@ -162,6 +162,7 @@ The semantic operations it adds:
 | Operation                              | Answer or effect                                                                                                                                    |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `isTracking()`                         | A reactive computation is collecting dependencies now; false inside `untracked`.                                                                    |
+| `activeTracking`                       | Live binding that is non-null exactly while `isTracking()` is true. For hot paths that cannot afford a call; compare it with `null` only.           |
 | `isContextSettled(context?)`           | The context is outside propagation and tracked evaluation, whether it is active or saved.                                                           |
 | `hasObservers(node)`                   | Some consumer depends on the node.                                                                                                                  |
 | `disposeNodeIfUnobserved(node)`        | Disposes the node when nothing observes it; returns whether it did.                                                                                 |

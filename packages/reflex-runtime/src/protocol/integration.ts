@@ -27,6 +27,14 @@ import { observeRuntimeProjection } from "@runtime/kernel/projection";
  * `scripts/check-package-boundaries.mjs` at the repository root.
  */
 
+/**
+ * Opaque tracking token: non-null exactly while a reactive computation is
+ * collecting dependencies. It is the live binding of the tracking register,
+ * so hot paths test it without a call. Siblings may only compare it with
+ * `null` (enforced by check:package-boundaries); it is not a node handle.
+ */
+export { currentConsumer as activeTracking };
+
 /** True while a reactive computation is collecting dependencies. */
 export function isTracking(): boolean {
   return currentConsumer !== null;
