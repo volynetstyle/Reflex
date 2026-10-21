@@ -2,7 +2,13 @@
 
 import { beforeEach, describe, expect, it } from "vitest";
 import { signal } from "./reactivity";
-import { createDOMRuntime, render } from "../src";
+import {
+  Portal,
+  createDOMRuntime,
+  hydrate,
+  render,
+  renderToString,
+} from "../src";
 
 describe("render platform integrations", () => {
   beforeEach(() => {
@@ -123,6 +129,74 @@ describe("render platform integrations", () => {
     expect(math?.namespaceURI).toBe("http://www.w3.org/1998/Math/MathML");
     expect(mi?.namespaceURI).toBe("http://www.w3.org/1998/Math/MathML");
     expect(container.textContent).toBe("x+1");
+  });
+
+  it("keeps tags shared with SVG in the HTML namespace outside svg", () => {
+    const container = document.createElement("div");
+
+    render(
+      <div>
+        <a href="/license">license</a>
+        <title>t</title>
+        <style>{""}</style>
+        <svg>
+          <a href="#x">
+            <title>svg</title>
+          </a>
+        </svg>
+      </div>,
+      container,
+    );
+
+    const HTML_NS = "http://www.w3.org/1999/xhtml";
+    const SVG_NS = "http://www.w3.org/2000/svg";
+    const [htmlLink, svgLink] = container.querySelectorAll("a");
+    const [htmlTitle, svgTitle] = container.querySelectorAll("title");
+
+    expect(htmlLink?.namespaceURI).toBe(HTML_NS);
+    expect(htmlLink).toBeInstanceOf(HTMLAnchorElement);
+    expect(htmlTitle?.namespaceURI).toBe(HTML_NS);
+    expect(container.querySelector("style")?.namespaceURI).toBe(HTML_NS);
+    expect(svgLink?.namespaceURI).toBe(SVG_NS);
+    expect(svgTitle?.namespaceURI).toBe(SVG_NS);
+  });
+
+  it("switches foreignObject children back to HTML on mount and hydration", () => {
+    const view = (
+      <svg>
+        <foreignObject>
+          <p>inside</p>
+        </foreignObject>
+      </svg>
+    );
+    const mounted = document.createElement("div");
+    render(view, mounted);
+    expect(mounted.querySelector("p")?.namespaceURI).toBe(
+      "http://www.w3.org/1999/xhtml",
+    );
+
+    const hydrated = document.createElement("div");
+    hydrated.innerHTML = renderToString(view);
+    const serverParagraph = hydrated.querySelector("p");
+    hydrate(view, hydrated);
+    expect(hydrated.querySelector("p")).toBe(serverParagraph);
+  });
+
+  it("mounts portal and root children in the namespace of an SVG target", () => {
+    const SVG_NS = "http://www.w3.org/2000/svg";
+    const portalTarget = document.createElementNS(SVG_NS, "svg");
+    const rootTarget = document.createElementNS(SVG_NS, "g");
+
+    render(
+      <Portal to={() => portalTarget}>
+        <a href="#x" />
+      </Portal>,
+      document.createElement("div"),
+    );
+    render(<title>t</title>, rootTarget);
+
+    expect(portalTarget.querySelector("a")?.namespaceURI).toBe(SVG_NS);
+    expect(rootTarget.querySelector("title")?.namespaceURI).toBe(SVG_NS);
   });
 
   it("keeps controlled input value in sync without dropping caret position", () => {
