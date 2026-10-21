@@ -1,9 +1,9 @@
 import {
-  flushPendingRuntimeIdle,
-  isWatcherDisposed,
   releaseWatcherSchedule,
   runWatcherWithoutSettledCheckpoint,
+  settleRuntimeIdle,
   shouldRetryWatcherAfterFailure,
+  takeScheduledWatcher,
 } from "@volynets/reflex-runtime/internal";
 import { profileSchedulerPolicyCounter } from "./scheduler.counters";
 import { tryEnqueue } from "./scheduler.enqueue";
@@ -89,10 +89,9 @@ export function flushQueuedWatchers(
     if (SCHEDULER_PROFILE_ENABLED)
       profileSchedulerPolicyCounter("queueDequeues");
 
-    // Clear before running so a watcher may enqueue itself again.
-    releaseWatcherSchedule(node);
-
-    if (isWatcherDisposed(node)) {
+    // Release before running so a watcher may enqueue itself again; a watcher
+    // disposed while queued is skipped.
+    if (!takeScheduledWatcher(node)) {
       if (SCHEDULER_PROFILE_ENABLED)
         profileSchedulerPolicyCounter("disposedEffectsSkipped");
       continue;
@@ -143,7 +142,7 @@ export function flushQueuedWatchers(
   // The runtime owns the idle-pending check; this is a no-op when nothing is
   // pending or execution is still active.
   try {
-    flushPendingRuntimeIdle();
+    settleRuntimeIdle();
   } catch (error) {
     if (thrown === noThrow) thrown = error;
   }

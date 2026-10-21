@@ -10,7 +10,43 @@ const load = (entry) =>
   import(pathToFileURL(resolve(packageRoot, "dist", entry)).href);
 const api = await load("index.js");
 const advanced = await load("advanced.js");
-const host = await load("runtime.js");
+// The store does not own a host runtime; wire the package's own kernel and
+// scheduler like tests/helpers/reactivity.ts, so each side measures its build.
+const fromPackage = (specifier, entry) =>
+  import(
+    pathToFileURL(
+      resolve(packageRoot, "node_modules", specifier, "dist", entry),
+    ).href
+  );
+const kernel = await fromPackage("@volynets/reflex-runtime", "esm/internal.js");
+const scheduling = await fromPackage("@volynets/reflex-scheduler", "index.js");
+const host = { ...(await load("runtime.js")) };
+host.createRuntime = ({ effectStrategy = "eager" } = {}) => {
+  const context = kernel.createRuntimeContext();
+  const scheduler = scheduling.createRuntimeSchedulerBinding(
+    scheduling.resolveEffectSchedulerMode(effectStrategy),
+    context,
+  );
+  context.nodeInvalidatedHook = scheduler.onNodeInvalidated;
+  context.hostFlushHook = scheduler.onHostFlush;
+  kernel.switchRuntimeContext(context);
+  return { flush: scheduler.flush };
+};
+host.effect = (fn) => {
+  const node = kernel.createWatcher(fn);
+  kernel.runWatcher(node);
+  return () => kernel.disposeWatcher(node);
+};
+host.signal = (initial) => {
+  const cell = host.createStoreCell(initial);
+  return Object.assign(() => cell(), {
+    set(value) {
+      const next = typeof value === "function" ? value(cell.peek()) : value;
+      cell.set(next);
+      return next;
+    },
+  });
+};
 const compiler = await load("store.js");
 let checksum = 0;
 const cases = [];

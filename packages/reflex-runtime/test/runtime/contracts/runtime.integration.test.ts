@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  claimWatcherSchedule,
   configureRuntimeContext,
   createRuntimeContext,
   disposeNodeIfUnobserved,
@@ -10,10 +11,10 @@ import {
   invalidateWatcher,
   isContextSettled,
   isTracking,
-  isWatcherDisposed,
   leavePropagationScope,
   readConsumer,
   readProducer,
+  takeScheduledWatcher,
   runWithRuntimeContext,
   shouldRetryWatcherAfterFailure,
   suspendConsumerIfUnobserved,
@@ -106,7 +107,7 @@ describe("Reactive runtime - integration contract", () => {
     expect(disposeNodeIfUnobserved(lone)).toBe(true);
   });
 
-  it("reports pending validation and disposal of watchers", () => {
+  it("reports pending validation and skips disposed scheduled watchers", () => {
     const source = createProducer(1);
     const watcher = createWatcher(() => {
       readProducer(source);
@@ -119,9 +120,13 @@ describe("Reactive runtime - integration contract", () => {
     runWatcher(watcher);
     expect(hasPendingValidation(watcher)).toBe(false);
 
-    expect(isWatcherDisposed(watcher)).toBe(false);
+    expect(claimWatcherSchedule(watcher)).toBe(true);
+    expect(takeScheduledWatcher(watcher)).toBe(true);
+    // Ownership was released: the watcher can be claimed again.
+    expect(claimWatcherSchedule(watcher)).toBe(true);
     disposeWatcher(watcher);
-    expect(isWatcherDisposed(watcher)).toBe(true);
+    expect(takeScheduledWatcher(watcher)).toBe(false);
+    expect(claimWatcherSchedule(watcher)).toBe(true);
   });
 
   it("does not request a retry after a callback failure", () => {

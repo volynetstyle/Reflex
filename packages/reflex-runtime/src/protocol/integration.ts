@@ -1,11 +1,15 @@
 import {
   Both,
+  Scheduled,
   CONSUMER_INITIAL_STATE,
   Changed,
   currentConsumer,
   emitNodeInvalidated,
+  flushPendingRuntimeIdle,
   getActiveRuntimeContext,
   propagationScopeDepth,
+  RuntimeState,
+  runtimeState,
   unlinkAllSources,
   disposeNode,
   type ConsumerNode,
@@ -13,6 +17,7 @@ import {
   type RuntimeContext,
   type WatcherNode,
 } from "@runtime/kernel";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 /**
  * Runtime integration contract: semantic operations for sibling packages
@@ -77,9 +82,17 @@ export function hasPendingValidation(node: ReactiveNode): boolean {
   return (node.state & Both) !== 0;
 }
 
-/** True when a watcher was disposed and must not run again. */
-export function isWatcherDisposed(node: WatcherNode): boolean {
-  return node.compute === undefined;
+/**
+ * Scheduler dequeue step: releases queue ownership, so the watcher may enqueue
+ * itself again while it runs, and returns whether it is still live. A watcher
+ * disposed while queued answers false and must be skipped. This replaces the
+ * `releaseWatcherSchedule` call of a drain, so the dequeue costs no extra call.
+ */
+export function takeScheduledWatcher(node: WatcherNode): boolean {
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.watcher.schedule.release");
+  node.state &= ~Scheduled;
+  return node.compute !== undefined;
 }
 
 /**
@@ -98,4 +111,14 @@ export function shouldRetryWatcherAfterFailure(node: WatcherNode): boolean {
 export function invalidateWatcher(node: WatcherNode): void {
   node.state |= Changed;
   emitNodeInvalidated(node);
+}
+
+/**
+ * Delivers a deferred reactive-settled notification when one is pending and
+ * execution is idle. The pending test stays inline so a drain that settles
+ * nothing pays no call into the idle path.
+ */
+export function settleRuntimeIdle(): void {
+  if ((runtimeState & RuntimeState.IdlePending) !== RuntimeState.Idle)
+    flushPendingRuntimeIdle();
 }

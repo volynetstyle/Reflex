@@ -167,7 +167,7 @@ The semantic operations it adds:
 | `disposeNodeIfUnobserved(node)`        | Disposes the node when nothing observes it; returns whether it did.                                                                                 |
 | `suspendConsumerIfUnobserved(node)`    | Unlinks sources and drops the cached value of an unobserved consumer, keeping its computation; the next read evaluates.                             |
 | `hasPendingValidation(node)`           | The node holds an invalidation it has not validated.                                                                                                |
-| `isWatcherDisposed(node)`              | The watcher was disposed and must not run.                                                                                                          |
+| `takeScheduledWatcher(node)`           | Scheduler dequeue step: releases queue ownership and answers whether the watcher is still live; a watcher disposed while queued answers false.      |
 | `shouldRetryWatcherAfterFailure(node)` | After a throwing run: a failed dependency validation left the watcher dirty and it needs a later retry. Callback and cleanup failures answer false. |
 | `invalidateWatcher(node)`              | The next run executes the callback; the host is notified through `onNodeInvalidated`.                                                               |
 

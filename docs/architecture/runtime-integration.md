@@ -41,7 +41,7 @@ a sibling reinterprets it.
    [RUNTIME.md](../../packages/reflex-runtime/docs/RUNTIME.md#integration-contract)):
    `isTracking`, `isContextSettled`, `hasObservers`,
    `disposeNodeIfUnobserved`, `suspendConsumerIfUnobserved`,
-   `hasPendingValidation`, `isWatcherDisposed`,
+   `hasPendingValidation`, `takeScheduledWatcher`,
    `shouldRetryWatcherAfterFailure`, `invalidateWatcher`.
    Checking for observers and changing topology is one operation.
 3. The permitted surface is an allowlist in
@@ -61,12 +61,23 @@ a sibling reinterprets it.
 
 - **Performance.** No node field, kernel branch or lookup is added (H1 in
   [execution-domains.md](./execution-domains.md)). The new operations are
-  monomorphic one-line functions over existing fields. Store and DOM pay a
-  call instead of a live-binding read on `isTracking()`; the Store proxy read
-  and scope writer pay one `untracked` call per access. Scheduler validation
-  retries now scan the queue for a re-claimed watcher unconditionally; that
-  scan runs only after a throwing validation. These need the paired benchmark
-  gate before release.
+  monomorphic one-line functions over existing fields. A boundary call costs
+  a module cell load and a call-target check even when V8 inlines it, and
+  inside the large scheduler drain loop small helpers were not inlined at
+  all. Local paired measurements (Node v25.2.0, win32 x64, against `main`):
+  - Scheduler: per-watcher `isWatcherDisposed` cost +45% on the disposed
+    drain; it was replaced by `takeScheduledWatcher`, which folds the liveness
+    answer into the release call the drain already made. An unconditional
+    `flushPendingRuntimeIdle` cost about 4% per flush; `settleRuntimeIdle`
+    keeps the pending test inline. Afterwards every scheduler hot-path
+    effect is within two run-to-run standard deviations of the baseline.
+  - Store: `isTracking()` costs about 0.2 ns per read: `cell/read` +12% and
+    `keyed/materialized-read` +14% (7 of 7 pairs slower); every other case is
+    within noise. This cost is open.
+  - Facade and Async factories compile to the same `new ReactiveNode` in
+    production; the development node record is erased.
+    The runtime kernel itself is unchanged; its paired CI comparison
+    (`runtime-paired-benchmarks.yml`) covers placement effects of the new code.
 - **Diagnostics.** Reflex and Async nodes now go through the runtime
   factories, so development builds record their creation like other nodes.
 - **Not done here.** `RuntimeContext` still carries its register fields as
