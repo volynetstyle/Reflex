@@ -119,7 +119,7 @@ describe("render structural operators and leaf dataflow", () => {
     render(
       <ul>
         <For each={items} by={(item) => item.id}>
-          {(item) => <li data-id={item.id}>{item.label}</li>}
+          {(item) => <li data-id={item().id}>{item().label}</li>}
         </For>
       </ul>,
       container,
@@ -144,7 +144,7 @@ describe("render structural operators and leaf dataflow", () => {
     render(
       <ul>
         <For each={items} by={(item) => item.id}>
-          {(item) => <li data-id={item.id}>{item.label}</li>}
+          {(item) => <li data-id={item().id}>{item().label}</li>}
         </For>
       </ul>,
       container,

@@ -2,6 +2,8 @@ const ON_0 = 111; // o
 const ON_1 = 110; // n
 const COLON = 58; // :
 
+const noop = (): void => {};
+
 const EVENT_ALIASES = {
   onClick: "click",
   onInput: "input",
@@ -19,6 +21,65 @@ const EVENT_ALIASES = {
   onDblClick: "dblclick",
 } as const;
 
+const UPPER_A = 65;
+const UPPER_Z = 90;
+const HTML_NS = "http://www.w3.org/1999/xhtml";
+
+/**
+ * Events that `<body>` and `<frameset>` forward to their `Window`: the HTML
+ * "Window-reflecting body element event handler set" and `WindowEventHandlers`.
+ * They are dispatched at `Window`, so a listener on the element would never run.
+ */
+const WINDOW_FORWARDED_EVENTS: Record<string, true> = Object.assign(
+  Object.create(null) as Record<string, true>,
+  {
+    afterprint: true,
+    beforeprint: true,
+    beforeunload: true,
+    blur: true,
+    error: true,
+    focus: true,
+    gamepadconnected: true,
+    gamepaddisconnected: true,
+    hashchange: true,
+    languagechange: true,
+    load: true,
+    message: true,
+    messageerror: true,
+    offline: true,
+    online: true,
+    pagehide: true,
+    pagereveal: true,
+    pageshow: true,
+    pageswap: true,
+    popstate: true,
+    rejectionhandled: true,
+    resize: true,
+    scroll: true,
+    storage: true,
+    unhandledrejection: true,
+    unload: true,
+  },
+);
+
+function isWindowReflectingElement(el: Element): boolean {
+  return (
+    el.namespaceURI === HTML_NS &&
+    (el.localName === "body" || el.localName === "frameset")
+  );
+}
+
+/**
+ * Target that receives `event` for a listener declared on `el`: the element
+ * itself, or its `Window` for window-forwarded events on `<body>`/`<frameset>`
+ * (`null` when the document has no `Window`).
+ */
+function resolveListenerTarget(el: Element, event: string): EventTarget | null {
+  return WINDOW_FORWARDED_EVENTS[event] === true && isWindowReflectingElement(el)
+    ? el.ownerDocument.defaultView
+    : el;
+}
+
 function isOnPrefix(name: string): boolean {
   return (
     name.length > 2 &&
@@ -31,13 +92,19 @@ function isColonEvent(name: string): boolean {
   return name.length > 3 && name.charCodeAt(2) === COLON;
 }
 
-function resolveEventName(name: string): string {
-  if (isColonEvent(name)) return name.slice(3);
+const resolvedEventNames: Record<string, string> = Object.create(null);
 
-  return (
-    EVENT_ALIASES[name as keyof typeof EVENT_ALIASES] ??
-    name.slice(2).toLowerCase()
-  );
+function resolveEventName(name: string): string {
+  const cached = resolvedEventNames[name];
+  if (cached !== undefined) return cached;
+
+  const resolved = isColonEvent(name)
+    ? name.slice(3)
+    : (EVENT_ALIASES[name as keyof typeof EVENT_ALIASES] ??
+      name.slice(2).toLowerCase());
+
+  resolvedEventNames[name] = resolved;
+  return resolved;
 }
 
 function isEventListenerObject(value: unknown): value is EventListenerObject {
@@ -61,10 +128,34 @@ function getEventListenerOptions(
     : undefined;
 }
 
-export function isEventProp(name: string, value: unknown): boolean {
+/**
+ * Whether `name`/`value` declare an event listener.
+ *
+ * `on:name` and `onName` (uppercase after `on`) are always events. A lowercase
+ * `onname` is an event only when it is a native event handler property of
+ * `element` (`onclick`); otherwise it is an ordinary prop, so custom-element
+ * props such as `onboarding` can take accessors. Without an element (server
+ * rendering) lowercase names are treated as events.
+ */
+export function isEventProp(
+  name: string,
+  value: unknown,
+  element?: Element,
+): boolean {
+  if (
+    !isOnPrefix(name) ||
+    !(typeof value === "function" || isEventListenerObject(value))
+  ) {
+    return false;
+  }
+
+  const third = name.charCodeAt(2);
+
   return (
-    isOnPrefix(name) &&
-    (typeof value === "function" || isEventListenerObject(value))
+    third === COLON ||
+    (third >= UPPER_A && third <= UPPER_Z) ||
+    element === undefined ||
+    name in element
   );
 }
 
@@ -74,11 +165,17 @@ export function attachEventListener(
   handler: EventListenerOrEventListenerObject,
   dispatch?: (
     handler: EventListenerOrEventListenerObject,
-    receiver: Element,
+    receiver: EventTarget,
     event: Event,
   ) => void,
 ): () => void {
   const event = resolveEventName(name);
+  const target = resolveListenerTarget(el, event);
+
+  if (target === null) {
+    return noop;
+  }
+
   const options = getEventListenerOptions(handler);
   const listener =
     dispatch === undefined
@@ -86,16 +183,16 @@ export function attachEventListener(
       : isEventListenerObject(handler)
         ? {
             handleEvent(event: Event) {
-              dispatch(handler, el, event);
+              dispatch(handler, target, event);
             },
           }
-        : function (this: Element, event: Event) {
+        : function (this: EventTarget, event: Event) {
             dispatch(handler, this, event);
           };
 
-  el.addEventListener(event, listener, options);
+  target.addEventListener(event, listener, options);
 
   return () => {
-    el.removeEventListener(event, listener, options);
+    target.removeEventListener(event, listener, options);
   };
 }

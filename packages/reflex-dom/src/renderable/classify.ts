@@ -2,7 +2,6 @@ import {
   RenderableKind,
   getTaggedRenderableKind,
   isEmptyRenderableValue,
-  isTextRenderableValue,
 } from "./kind";
 import { isDOMNode } from "../host/document";
 
@@ -15,30 +14,33 @@ function isIterableRenderableValue(value: unknown): value is Iterable<unknown> {
   );
 }
 
-function isAccessorRenderableValue(value: unknown): value is () => unknown {
-  return typeof value === "function";
-}
-
 export function classifyRenderable(value: unknown): RenderableKind {
-  if (isEmptyRenderableValue(value)) {
-    return RenderableKind.Empty;
+  switch (typeof value) {
+    case "string":
+    case "number":
+    case "bigint":
+      return RenderableKind.Text;
+    case "function":
+      return RenderableKind.Accessor;
+    case "object":
+      break;
+    default:
+      return isEmptyRenderableValue(value)
+        ? RenderableKind.Empty
+        : RenderableKind.Text;
   }
 
-  if (isTextRenderableValue(value)) return RenderableKind.Text;
+  if (value === null) return RenderableKind.Empty;
   if (Array.isArray(value)) return RenderableKind.Array;
 
-  if (isDOMNode(value)) {
-    return RenderableKind.Node;
-  }
+  // Renderable records are the common case; check their tag before the
+  // DOM-node brand check, which reads native properties.
+  const tagged = getTaggedRenderableKind(value);
+  if (tagged !== undefined) return tagged;
 
-  if (isAccessorRenderableValue(value)) {
-    return RenderableKind.Accessor;
-  }
+  if (isDOMNode(value)) return RenderableKind.Node;
 
-  return (
-    getTaggedRenderableKind(value) ??
-    (isIterableRenderableValue(value)
-      ? RenderableKind.Array
-      : RenderableKind.Text)
-  );
+  return isIterableRenderableValue(value)
+    ? RenderableKind.Array
+    : RenderableKind.Text;
 }

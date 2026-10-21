@@ -1,72 +1,66 @@
-import { isHTMLTag } from "../host/document";
+import { addCleanup } from "@volynets/reflex-framework";
 import { bindReactiveProp } from "../bindings/property";
 import { isEventProp, attachEventListener } from "../host/events";
 import type { Namespace } from "../host/namespace";
 import { applyProp } from "../host/props";
 import { attachRef } from "../host/refs";
-import { dispatchDOMEvent, getDOMContext } from "../runtime/context";
+import { getDOMContext, type DOMContext } from "../runtime/context";
 import { registerDOMCleanup } from "../runtime/lifetime";
 import type { Ref } from "../types";
 
 type ElementBindingPhase = "initial" | "deferred";
 
+/** Props consumed by `mountElement` itself (Shadow DOM and internals). */
 function isPlatformManagedProp(name: string): boolean {
-  return (
-    name === "shadowRoot" ||
-    name === "shadowChildren" ||
-    name === "shadowRootRef" ||
-    name === "shadowAdoptedStyleSheets" ||
-    name === "elementInternals"
-  );
+  switch (name) {
+    case "shadowRoot":
+    case "shadowChildren":
+    case "shadowRootRef":
+    case "shadowAdoptedStyleSheets":
+    case "elementInternals":
+      return true;
+    default:
+      return false;
+  }
 }
 
-function shouldBindPropAfterChildren(element: Element, name: string): boolean {
-  return (
-    isHTMLTag(element, "select") &&
-    (name === "value" || name === "selectedIndex")
-  );
+/**
+ * `<select>` value props are bound after the options exist: assigning them
+ * earlier would select nothing.
+ */
+function isDeferredSelectProp(name: string): boolean {
+  return name === "value" || name === "selectedIndex";
 }
 
-function isSkippedElementProp(name: string, value: unknown): boolean {
-  return name === "children" || name === "key" || value === undefined;
+function isSelectElement(element: Element, namespace: Namespace): boolean {
+  return namespace === "html" && element.localName === "select";
 }
 
-export function bindElementProperty(
+function bindProperty(
+  context: DOMContext,
   element: Element,
   name: string,
   value: unknown,
   namespace: Namespace,
-  bindingPhase: ElementBindingPhase = "initial",
 ): void {
-  if (isSkippedElementProp(name, value)) {
-    return;
-  }
-
-  if (isPlatformManagedProp(name)) {
-    return;
-  }
-
-  const bindAfterChildren = shouldBindPropAfterChildren(element, name);
-  if ((bindingPhase === "deferred") !== bindAfterChildren) {
-    return;
-  }
-
   if (name === "ref") {
-    registerDOMCleanup(attachRef(element, value as Ref<Element> | undefined));
+    registerDOMCleanup(
+      attachRef(element, value as Ref<Element> | undefined),
+      context,
+    );
     return;
   }
 
-  if (isEventProp(name, value)) {
-    const context = getDOMContext();
-    registerDOMCleanup(
-      attachEventListener(
-        element,
-        name,
-        value as EventListenerOrEventListenerObject,
-        (handler, receiver, event) =>
-          dispatchDOMEvent(context, handler, receiver, event),
-      ),
+  if (isEventProp(name, value, element)) {
+    const remove = attachEventListener(
+      element,
+      name,
+      value as EventListenerOrEventListenerObject,
+      context.dispatchEvent,
     );
+    // Removing a listener needs neither the DOM context nor the domain.
+    const node = context.owner.currentNode;
+    if (node !== null) addCleanup(node, remove);
     return;
   }
 
@@ -78,15 +72,43 @@ export function bindElementProperty(
   applyProp(element, name, value, namespace, undefined);
 }
 
+/** One known prop, without allocating a props object or enumerating it. */
+export function bindElementProp(
+  element: Element,
+  name: string,
+  value: unknown,
+  namespace: Namespace,
+): void {
+  if (value === undefined || name === "children" || name === "key" || isPlatformManagedProp(name)) return;
+  bindProperty(getDOMContext(), element, name, value, namespace);
+}
+
 export function bindElementProps(
   element: Element,
   props: Record<string, unknown>,
   namespace: Namespace,
   bindingPhase: ElementBindingPhase = "initial",
+  isSelect: boolean = isSelectElement(element, namespace),
 ): void {
-  getDOMContext();
+  const context = getDOMContext();
+
+  const deferredPhase = bindingPhase === "deferred";
+
+  if (deferredPhase && !isSelect) return;
 
   for (const name in props) {
-    bindElementProperty(element, name, props[name], namespace, bindingPhase);
+    const value = props[name];
+
+    if (
+      value === undefined ||
+      name === "children" ||
+      name === "key" ||
+      isPlatformManagedProp(name) ||
+      deferredPhase !== (isSelect && isDeferredSelectProp(name))
+    ) {
+      continue;
+    }
+
+    bindProperty(context, element, name, value, namespace);
   }
 }

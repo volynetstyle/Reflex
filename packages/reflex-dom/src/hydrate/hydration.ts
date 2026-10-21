@@ -1,7 +1,6 @@
 import { isTextNode, isElementNode } from "../host/document";
 import type {
   ComponentRenderable,
-  ElementProps,
   ElementRenderable,
   ElementTag,
   JSXRenderable,
@@ -14,6 +13,7 @@ import type {
 } from "../operators";
 import { resolveShowValue, resolveSwitchValue } from "../operators";
 import { RenderableKind } from "../renderable/kind";
+import type { CompiledDOMRenderable } from "../renderable/compiled";
 import { classifyRenderable } from "../renderable/classify";
 import { bindElementProps } from "../mount/element-binder";
 import { hydrateReactiveSlot } from "../mount/slot";
@@ -34,6 +34,8 @@ import {
 import { getDOMContext } from "../runtime/context";
 import { runInDOMOwnershipNode } from "../runtime/lifetime";
 import {
+  resolveChildNamespace,
+  resolveContainerNamespace,
   resolveNamespace,
   SVG_NS,
   MATHML_NS,
@@ -54,7 +56,12 @@ function resolveForHydrationValue(
     return renderable.fallback;
   }
 
-  return nextItems.map((item, index) => renderable.children(item, index));
+  return nextItems.map((item, index) =>
+    renderable.children(
+      () => item,
+      () => index,
+    ),
+  );
 }
 
 function expectedNamespaceUri(namespace: Namespace): string | null {
@@ -210,10 +217,7 @@ function hydrateRenderableValue(
         failHydration();
       }
 
-      const renderable = value as ElementRenderable<
-        ElementTag,
-        ElementProps<ElementTag>
-      >;
+      const renderable = value as ElementRenderable<ElementTag, Record<string, unknown>>;
       const elementNamespace = resolveNamespace(
         renderable.tag,
         parentNamespace,
@@ -231,7 +235,7 @@ function hydrateRenderableValue(
       if (shouldHydrateLightDomChildren(renderable.tag, props)) {
         const remainingChild = hydrateRenderableValue(
           props.children,
-          elementNamespace,
+          resolveChildNamespace(renderable.tag, elementNamespace),
           currentNode.firstChild,
           null,
           doc,
@@ -249,6 +253,17 @@ function hydrateRenderableValue(
 
     case RenderableKind.Node:
       failHydration();
+
+    // Hydration adopts server nodes instead of creating them, so a compiled
+    // region hydrates through its source tree.
+    case RenderableKind.Compiled:
+      return hydrateRenderableValue(
+        (value as CompiledDOMRenderable).fallback(),
+        parentNamespace,
+        currentNode,
+        boundary,
+        doc,
+      );
   }
 }
 
@@ -263,7 +278,7 @@ export function hydrateRange(
     runInDOMOwnershipNode(ownershipNode, () => {
       const remainingNode = hydrateRenderableValue(
         renderable,
-        "html",
+        resolveContainerNamespace(container),
         anchors.startAnchor.nextSibling === anchors.endAnchor
           ? null
           : anchors.startAnchor.nextSibling,
@@ -286,6 +301,11 @@ export function hydrateRange(
       throw error;
     }
 
-    return mountOwnedRange(container, renderable, "html", anchors);
+    return mountOwnedRange(
+      container,
+      renderable,
+      resolveContainerNamespace(container),
+      anchors,
+    );
   }
 }

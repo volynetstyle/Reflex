@@ -1,7 +1,7 @@
 import type { Accessor } from "../types";
 import type { Namespace } from "../host/namespace";
 import { applyProp } from "../host/props";
-import { createDOMOwnedReaction } from "../runtime/lifetime";
+import { createDOMOwnedBinding } from "../runtime/lifetime";
 
 export function bindReactiveProp(
   el: Element,
@@ -9,9 +9,9 @@ export function bindReactiveProp(
   acc: Accessor<unknown>,
   ns: Namespace,
 ) {
-  let previousValue = applyProp(el, name, acc(), ns, undefined);
+  let previousValue: unknown;
 
-  createDOMOwnedReaction(acc, (nextValue) => {
+  createDOMOwnedBinding(acc, (nextValue) => {
     previousValue = applyProp(el, name, nextValue, ns, previousValue);
   });
 }

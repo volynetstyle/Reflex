@@ -1,0 +1,48 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "noUncheckedIndexedAccess": true,
+    "customConditions": [
+      "source"
+    ],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "node",
+      "vite/client"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@volynets/reflex-runtime": [
+        "../reflex-runtime/src/index.ts"
+      ],
+      "@volynets/reflex-runtime/internal": [
+        "../reflex-runtime/src/internal/index.ts"
+      ],
+      "@runtime/*": [
+        "../reflex-runtime/src/*"
+      ]
+    }
+  },
+  "include": [
+    "src",
+    "test",
+    "bench/*.ts",
+    "*.config.ts",
+    "../reflex-runtime/src/globals.d.ts",
+    "../reflex-dom/src/globals.d.ts",
+    "../reflex-framework/src/globals.ts",
+    "../reflex-scheduler/src/globals.d.ts"
+  ],
+  "exclude": [
+    "test/fixtures",
+    "bench/scenarios"
+  ]
+}

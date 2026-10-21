@@ -5,11 +5,15 @@ import { setAttr } from "./attr";
 import { applyStyle } from "./styles";
 import { normalizeAttr } from "./aliases";
 
-function applyClass(el: Element, value: unknown): unknown {
+function applyClass(el: Element, value: unknown, ns: Namespace): unknown {
   if (value == null || value === false) {
     el.removeAttribute("class");
-  } else {
+  } else if (ns === "svg") {
+    // SVGElement.className is an SVGAnimatedString.
     el.setAttribute("class", String(value));
+  } else {
+    // Element.className reflects the attribute and is cheaper to set.
+    el.className = String(value);
   }
 
   return value;
@@ -55,7 +59,7 @@ export function applyProp(
   switch (name) {
     case "class":
     case "className":
-      return applyClass(el, value);
+      return applyClass(el, value, ns);
 
     case "style":
       return applyStyle(el, value as StyleValue, prev as StyleValue);

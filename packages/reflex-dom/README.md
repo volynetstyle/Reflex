@@ -374,6 +374,90 @@ comment anchors. The caller must dispose this standalone handle. Detached or
 reversed boundary anchors produce an empty view. Observation requires a document
 with a browsing context providing `MutationObserver`.
 
+## JSX typing
+
+The JSX types require TypeScript 5.1 or newer (`JSX.ElementType`). A component
+may return anything renderable: elements, strings, numbers, arrays, accessors or
+`null`.
+
+```tsx
+import type {
+  Component,
+  ComponentProps,
+  PropsWithChildren,
+} from "@volynets/reflex-dom";
+
+const Panel = (props: PropsWithChildren<{ title: string }>) => (
+  <section aria-label={props.title}>{props.children}</section>
+);
+
+type ButtonProps = ComponentProps<"button">;
+type PanelProps = ComponentProps<typeof Panel>;
+```
+
+The types describe what the renderer actually writes to the DOM:
+
+- **HTML and MathML props** are the element's writable properties
+  (`tabIndex`, `readOnly`, `htmlFor`) plus the content attributes that have no
+  such property: `part`, `exportparts`, microdata, `form`, `list`,
+  `popovertarget`, `command`/`commandfor`, `closedby`, `sandbox`, `blocking`,
+  and the HTML spellings `for`, `accept-charset`, `http-equiv` and
+  `crossorigin` on the elements that define them. Properties that would
+  replace rendered children or inject markup (`innerHTML`, `textContent`,
+  `text`, ...) are not props.
+- **SVG props** are SVG 2 attribute names exactly as specified (`stroke-width`,
+  `viewBox`, `stdDeviation`) plus the camelCase aliases the renderer rewrites
+  (`strokeWidth`, `xlinkHref`). The renderer writes every SVG name as an
+  attribute, so interface properties such as `tabIndex` are not SVG props; use
+  `tabindex`.
+- **ARIA** attributes are typed per WAI-ARIA 1.2/1.3. True/false states accept
+  booleans, which are written as `"true"`/`"false"` (`false` does not remove an
+  `aria-*` attribute; `null`/`undefined` does). Prefer `aria-*` over
+  reflection properties such as `ariaLabel`. `role` accepts ARIA, Graphics-ARIA
+  and DPUB-ARIA roles with optional fallbacks.
+- **Content models**: void elements (`img`, `input`, `br`, ...) take no
+  children; `title`, `textarea`, `script` and `style` take text only.
+- **Shadow DOM** props (`shadowRoot`, `shadowChildren`, ...) are accepted only
+  on valid shadow hosts (custom elements, `div`, `span`, `section`, ...);
+  `elementInternals` only on custom elements. Custom elements registered in
+  `HTMLElementTagNameMap` get the typed props of their class.
+- **Styles** accept camelCase (`backgroundColor`), dashed (`background-color`,
+  `-webkit-line-clamp`) and custom (`--accent`) property names.
+
+### Events
+
+`onName` props are typed from the element's event map; the handler receives the
+event with `currentTarget` typed as the element and is called with `this` bound
+to it. A listener object may set `capture`, `once` and `passive`; `signal` is
+not forwarded.
+
+Event types follow the defining specifications where TypeScript's DOM library
+differs: element `error`, `abort` and `resize` events are plain `Event`s,
+`pointerrawupdate` is a `PointerEvent`, and `command`,
+`contentvisibilityautostatechange`, `scrollsnapchange` and
+`scrollsnapchanging` are typed.
+
+As with the HTML event handler attributes, `<body>` and `<frameset>` forward
+`Window` events (`onBeforeUnload`, `onHashChange`, `onPopState`, ...) and
+`onBlur`, `onError`, `onFocus`, `onLoad`, `onResize` and `onScroll` to their
+`Window`; those handlers receive `Window` as `currentTarget`. Other elements do
+not have window event props.
+
+A lowercase `onname` prop is an event listener only when the element has a
+native `onname` handler property (`onclick`); otherwise it is an ordinary prop,
+so custom-element props such as `onboarding` can take accessors.
+
+`on:name` keeps the event name's case (`on:beginEvent` for SVG animations) and
+also accepts custom events. Declare their types once:
+
+```ts
+declare module "@volynets/reflex-dom" {
+  interface DOMCustomEventMap {
+    "widget-ready": CustomEvent<{ id: string }>;
+  }
+}
+```
+
 ## Architecture
 
 The renderer manages DOM regions with explicit resource ownership. Three structures
@@ -438,6 +522,22 @@ Replacing a complex dynamic branch disposes its owner, clears its range, and mou
 new content under a fresh owner. Text values update in place. Keyed moves preserve
 row identity and ownership; removed rows release effects, listeners and refs.
 
+`For` renders each key once. Its renderer receives the item and the index as
+accessors; a new item object with the same key, or a new position, updates what
+reads them and keeps the row's DOM, state and effects:
+
+```tsx
+<For each={rows} by={(row) => row.id}>
+  {(row, index) => (
+    <li>
+      {index}: {() => row().label}
+    </li>
+  )}
+</For>
+```
+
+A value read without an accessor (`{row().label}`) is read once, at mount.
+
 `renderToString()` emits HTML with dynamic slot markers. `hydrate()` adopts matching
 DOM and remounts mismatches. `resume()` takes ownership of existing content without
 attaching JSX behavior. A portal belongs to its source component even when its DOM
@@ -448,12 +548,37 @@ full per-component activation inside every server-rendered dynamic branch.
 
 ## Migration
 
+- `For` renderers receive accessors: `children(item: () => T, index: () => number)`
+  instead of `children(item: T, index: number)`. A row is no longer recreated
+  when its item is replaced by a new object with the same key; read changing
+  fields through an accessor (`{() => item().label}`). The index is the current
+  position, also after reorders (it used to be the position at mount).
 - `useEffectRender` became `useMountedEffect`.
 - `renderer.renderEffectScheduler` became `renderer.mountEffects`.
 - Render effect phases and phase-based scheduler types were removed; the queue
   contract is `MountEffects`, with FIFO scheduling and no browser-phase claim.
 - The unused `policy` options were removed; use `effectStrategy`.
 - Internal file paths changed; no compatibility aliases are provided.
+- JSX types are stricter (see [JSX typing](#jsx-typing)): `htmlFor`,
+  `acceptCharset`, `httpEquiv` and `crossOrigin` are only accepted on the
+  elements that define them; SVG elements no longer accept interface property
+  names; void elements reject children; element `onError` receives `Event`;
+  listener objects no longer accept `signal`; window events are only props on
+  `<body>`/`<frameset>`.
+- `<a>`, `<script>`, `<style>` and `<title>` outside `<svg>` are now HTML
+  elements (they were created in the SVG namespace). Children of
+  `foreignObject`, SVG `desc`/`title` and MathML token elements are HTML, and
+  content rendered into an SVG or MathML container or portal target takes that
+  namespace.
+- Window event props on `<body>`/`<frameset>` listen on `Window`.
+- `aria-*={false}` writes `"false"` instead of removing the attribute.
+- Lowercase `on*` props that are not native handler properties are ordinary
+  props.
+- `renderToString` writes `defaultValue`/`defaultChecked`/`defaultSelected`/
+  `defaultMuted` as `value`/`checked`/`selected`/`muted`, `translate`,
+  `draggable`, `spellcheck` and `autocorrect` as keywords, marks the options
+  of a controlled `<select>` as `selected`, omits property-only props such as
+  `indeterminate`, and converts `webkit*`/`cssFloat` style keys correctly.
 
 ## Library and standalone builds
 
@@ -538,6 +663,9 @@ pnpm --filter @volynets/reflex-dom build
 
 # Real-browser DOM mutation benchmark
 pnpm --filter @volynets/reflex-dom bench:mutations
+
+# js-framework-benchmark methodology, reflex-dom vs. vanilla (see bench/js-framework)
+pnpm --filter @volynets/reflex-dom bench:js-framework
 
 # Runtime / scheduler / DOM boundary microbenchmarks
 pnpm --filter @volynets/reflex-dom bench:boundary

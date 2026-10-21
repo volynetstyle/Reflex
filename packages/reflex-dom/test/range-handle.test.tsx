@@ -392,7 +392,7 @@ describe("DOM range handles", () => {
           <b>shown</b>
         </Show>
         <For each={items} by={(item) => item} ref={forRef}>
-          {(item) => <i>{item}</i>}
+          {(item) => <i>{item()}</i>}
         </For>
       </>
     );
