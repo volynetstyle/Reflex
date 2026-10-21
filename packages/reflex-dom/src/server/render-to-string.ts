@@ -10,8 +10,9 @@ import type {
   SwitchRenderable,
 } from "../operators";
 import { resolveShowValue, resolveSwitchValue } from "../operators";
-import { isAriaAttr } from "../host/attr";
+import { ENUMERATED_BOOLEAN_ATTRS, isAriaAttr } from "../host/attr";
 import { isEventProp } from "../host/events";
+import { isContentProp, isTextOnlyElement } from "../host/content";
 import { normalizeAttr } from "../host/aliases";
 import {
   resolveChildNamespace,
@@ -21,7 +22,7 @@ import {
 } from "../host/namespace";
 import { sanitizeURL } from "../host/sanitize";
 import { isVoidTag } from "../host/tags";
-import { RenderableKind } from "../renderable/kind";
+import { RenderableKind, isTextRenderableValue } from "../renderable/kind";
 import type { CompiledDOMRenderable } from "../renderable/compiled";
 import { wrapHydrationSlotMarkup } from "../renderable/markers";
 import type { StyleValue } from "../types";
@@ -74,17 +75,6 @@ const REFLECTED_DEFAULT_PROPS: Record<string, string | undefined> = {
   defaultValue: "value",
 };
 
-/** Boolean properties that reflect enumerated attributes, as [true, false]. */
-const ENUMERATED_BOOLEAN_PROPS: Record<
-  string,
-  readonly [string, string] | undefined
-> = {
-  autocorrect: ["on", "off"],
-  draggable: ["true", "false"],
-  spellcheck: ["true", "false"],
-  translate: ["yes", "no"],
-};
-
 interface SelectFrame {
   readonly values: ReadonlySet<string>;
   readonly multiple: boolean;
@@ -106,16 +96,35 @@ function escapeAttribute(value: string): string {
 }
 
 /**
+ * Raw text of a `<script>` or `<style>`, which the parser does not unescape.
+ * An end tag in the text would close the element early, and `<!--<script>`
+ * would keep a later `</script>` from closing it; both are rewritten with
+ * escapes that keep the meaning: `\u0073` in JavaScript strings, regular
+ * expressions and JSON, and `\/` in CSS.
+ */
+function escapeRawText(tag: string, text: string): string {
+  return tag === "script"
+    ? text.replace(
+        /(<\/?)(s)(cript)/gi,
+        (_match, open: string, s: string, rest: string) =>
+          `${open}${s === "s" ? "\\u0073" : "\\u0053"}${rest}`,
+      )
+    : text.replace(/<\/(style)/gi, "<\\/$1");
+}
+
+/**
  * CSS property name for a style key: custom and dashed names are kept, and
- * CSSOM camel-cased (`backgroundColor`), webkit-cased (`webkitLineClamp`)
- * and `cssFloat` names are converted to their dashed form.
+ * CSSOM camel-cased (`backgroundColor`), vendor-cased (`webkitLineClamp`,
+ * `msTransform`, `MozAppearance`) and `cssFloat` names are converted to their dashed form.
  */
 function toCSSPropertyName(key: string): string {
   if (key.charCodeAt(0) === 45) return key;
   if (key === "cssFloat") return "float";
 
   const dashed = key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-  return dashed.startsWith("webkit-") ? `-${dashed}` : dashed;
+  return dashed.startsWith("webkit-") || dashed.startsWith("ms-")
+    ? `-${dashed}`
+    : dashed;
 }
 
 /** `aria-*` attribute name for an ARIA reflection property (`ariaLabel`). */
@@ -216,7 +225,7 @@ function renderAttributes(
     }
 
     if (namespace !== "svg") {
-      const enumerated = ENUMERATED_BOOLEAN_PROPS[name];
+      const enumerated = ENUMERATED_BOOLEAN_ATTRS[name];
 
       if (enumerated !== undefined && typeof resolvedValue === "boolean") {
         attributes += ` ${name}="${enumerated[resolvedValue ? 0 : 1]}"`;
@@ -225,6 +234,11 @@ function renderAttributes(
     }
 
     if (resolvedValue == null || resolvedValue === false) {
+      continue;
+    }
+
+    // The client assigns these as properties; they are serialized as content.
+    if (namespace !== "svg" && isContentProp(name)) {
       continue;
     }
 
@@ -301,6 +315,97 @@ function resolveTextareaContent(props: Record<string, unknown>): string | null {
   return value == null ? null : String(value);
 }
 
+/**
+ * Content set through `innerHTML`, `textContent` or `innerText`, in prop
+ * order: each assignment replaces the previous content, as on the client.
+ */
+function renderContentProps(
+  props: Record<string, unknown>,
+  namespace: Namespace,
+): string {
+  let html = "";
+
+  if (namespace === "svg") return html;
+
+  for (const name in props) {
+    if (!isContentProp(name)) continue;
+
+    const value = resolveServerValue(name, props[name]);
+
+    if (value == null || value === false) {
+      html = "";
+    } else {
+      html = name === "innerHTML" ? String(value) : escapeHtml(String(value));
+    }
+  }
+
+  return html;
+}
+
+/**
+ * Text that the children of a text-only element produce on the client,
+ * without hydration markers. Elements contribute no text.
+ */
+function renderTextContent(value: JSXRenderable | unknown): string {
+  switch (classifyRenderable(value)) {
+    case RenderableKind.Text:
+      return String(value);
+
+    case RenderableKind.Array: {
+      const items = Array.isArray(value)
+        ? value
+        : Array.from(value as Iterable<unknown>);
+      let text = "";
+
+      for (let index = 0; index < items.length; index++) {
+        text += renderTextContent(items[index]);
+      }
+
+      return text;
+    }
+
+    case RenderableKind.Accessor:
+      return renderTextContent((value as () => unknown)());
+
+    case RenderableKind.Show: {
+      const renderable = value as ShowRenderable<unknown>;
+      return renderTextContent(resolveShowValue(renderable, renderable.when()));
+    }
+
+    case RenderableKind.Switch: {
+      const renderable = value as SwitchRenderable<unknown>;
+      return renderTextContent(
+        resolveSwitchValue(renderable, renderable.value()),
+      );
+    }
+
+    case RenderableKind.For:
+      return renderTextContent(
+        resolveForServerValue(value as ForRenderable<unknown>),
+      );
+
+    case RenderableKind.Component: {
+      const renderable = value as ComponentRenderable<unknown>;
+      return runComponentRenderable(
+        renderable,
+        { owner: getActiveOwnerContext()! },
+        renderTextContent,
+      );
+    }
+
+    case RenderableKind.Compiled:
+      return renderTextContent((value as CompiledDOMRenderable).fallback());
+
+    case RenderableKind.Node: {
+      const node = value as Node;
+      return node.nodeType === 3 ? (node as Text).data : "";
+    }
+
+    default:
+      return "";
+  }
+}
+
 function resolveForServerValue(
   renderable: ForRenderable<unknown>,
 ): JSXRenderable {
@@ -356,18 +461,25 @@ function renderElementToString(
     return `<${renderable.tag}${attributes}>`;
   }
 
-  if (renderable.tag === "textarea") {
-    const textareaContent = resolveTextareaContent(props);
-    const childrenHtml =
-      textareaContent !== null
-        ? escapeHtml(textareaContent)
-        : renderRenderableToString(props.children, childNamespace);
+  // As on the client, a static scalar child replaces content props.
+  const content = isTextRenderableValue(props.children)
+    ? ""
+    : renderContentProps(props, namespace);
 
-    return `<${renderable.tag}${attributes}>${childrenHtml}</${renderable.tag}>`;
+  if (isTextOnlyElement(renderable.tag, namespace)) {
+    const text =
+      (renderable.tag === "textarea" ? resolveTextareaContent(props) : null) ??
+      renderTextContent(props.children);
+    const textHtml =
+      renderable.tag === "script" || renderable.tag === "style"
+        ? escapeRawText(renderable.tag, text)
+        : escapeHtml(text);
+
+    return `<${renderable.tag}${attributes}>${content}${textHtml}</${renderable.tag}>`;
   }
 
   const childrenHtml = renderRenderableToString(props.children, childNamespace);
-  return `<${renderable.tag}${attributes}>${childrenHtml}</${renderable.tag}>`;
+  return `<${renderable.tag}${attributes}>${content}${childrenHtml}</${renderable.tag}>`;
 }
 
 /** Mirrors `applyControlledSelectValue` in `host/forms.ts`. */

@@ -75,8 +75,9 @@ export const ATTRIBUTE_ALIASES: Readonly<Record<string, string>> = {
  * Reflected `DOMString` attributes, plus attribute-only names. Verified for
  * every compilable tag and a value corpus against the runtime in jsdom,
  * Chromium, Firefox and WebKit (`test/semantics.conformance.*`). `type` is
- * absent: `fieldset.type` is getter-only, so reflex-dom's property assignment
- * throws there, and jsdom normalizes `button.type` to "submit".
+ * absent: `fieldset.type` is getter-only, so reflex-dom writes the attribute
+ * there and the property elsewhere, and jsdom normalizes `button.type` to
+ * "submit".
  */
 export const STRING_ATTRIBUTES: ReadonlySet<string> = new Set([
   "id", "title", "lang", "dir", "role", "slot", "alt", "target", "rel",

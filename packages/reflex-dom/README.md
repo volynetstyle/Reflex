@@ -404,10 +404,16 @@ The types describe what the renderer actually writes to the DOM:
   and the HTML spellings `for`, `accept-charset`, `http-equiv` and
   `crossorigin` on the elements that define them. Properties that would
   replace rendered children or inject markup (`innerHTML`, `textContent`,
-  `text`, ...) are not props.
+  `text`, ...) are not props. A value the property would coerce is written
+  to the content attribute instead (`width="50%"`, `hidden="until-found"`,
+  `download={true}` as an empty attribute), as are read-only properties
+  (`form`, `list`); `draggable`, `spellcheck`, `translate` and `autocorrect`
+  booleans are written as their tokens, identically by `render` and
+  `renderToString`.
 - **SVG props** are SVG 2 attribute names exactly as specified (`stroke-width`,
   `viewBox`, `stdDeviation`) plus the camelCase aliases the renderer rewrites
-  (`strokeWidth`, `xlinkHref`). The renderer writes every SVG name as an
+  (`strokeWidth`, `clipPath`, `fontSize`, every other presentation attribute,
+  `xlinkHref`). The renderer writes every SVG name as an
   attribute, so interface properties such as `tabIndex` are not SVG props; use
   `tabindex`.
 - **ARIA** attributes are typed per WAI-ARIA 1.2/1.3. True/false states accept

@@ -86,6 +86,14 @@ type NonAttributeProperty =
   | "textContent"
   | `aria${string}`;
 
+/**
+ * Writable properties whose content attribute takes values the property type
+ * does not: they are typed as attributes (`HTMLGlobalAttributes`,
+ * `HTMLElementAttributeMap`), and the renderer writes such values to the
+ * attribute.
+ */
+type WidenedAttributeProperty = "download" | "hidden";
+
 type WritablePrimitiveKeys<T> = Exclude<
   {
     [K in WritableKeys<T>]: T[K] extends AnyFn
@@ -94,7 +102,7 @@ type WritablePrimitiveKeys<T> = Exclude<
         ? K
         : never;
   }[WritableKeys<T>],
-  NonAttributeProperty
+  NonAttributeProperty | WidenedAttributeProperty
 >;
 
 /** Writable primitive properties of `T`, assigned as properties by the renderer. */
@@ -163,6 +171,8 @@ type HTMLTag = keyof HTMLElementTagNameMap;
 
 /** HTML global attributes that have no writable primitive property. */
 interface HTMLGlobalAttributes {
+  /** Hides the element; `"until-found"` until find-in-page or a fragment reveals it. */
+  hidden?: AttributeProp<boolean | "until-found" | null | undefined>;
   /** Shadow parts exposed by this element. */
   part?: AttributeProp;
   /** Shadow parts of this host re-exported to the outer tree. */
@@ -179,6 +189,11 @@ type CrossOriginValue = "" | "anonymous" | "use-credentials";
 interface CrossOriginAttribute {
   /** HTML-native spelling of `crossOrigin`. */
   crossorigin?: KeywordAttribute<CrossOriginValue>;
+}
+
+interface DownloadAttribute {
+  /** Downloads the target; a string names the file, `true` keeps its name. */
+  download?: AttributeProp<string | boolean | null | undefined>;
 }
 
 interface FormOwnerAttribute {
@@ -207,10 +222,12 @@ type InvokerCommand =
 /**
  * Content attributes, per element, that have no writable primitive property
  * on the element interface (token lists, element references, and features
- * newer than TypeScript's DOM library). Attributes with such a property are
- * typed from the interface instead.
+ * newer than TypeScript's DOM library), or whose values the property type
+ * does not cover. Other attributes are typed from the interface.
  */
 export interface HTMLElementAttributeMap {
+  a: DownloadAttribute;
+  area: DownloadAttribute;
   audio: CrossOriginAttribute;
   button: FormOwnerAttribute &
     PopoverInvokerAttributes & {

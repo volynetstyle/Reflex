@@ -341,6 +341,18 @@ const buttonRef = { current: null as HTMLButtonElement | null };
 // @ts-expect-error unknown `http-equiv` keyword
 <meta http-equiv="cache-control" />;
 
+// Attributes whose values the property type does not cover.
+<div hidden={true} />;
+<div hidden="until-found" />;
+<details hidden={() => "until-found" as const} />;
+<a href="/report.pdf" download />;
+<a href="/report.pdf" download="report.pdf" />;
+<area href="/report.pdf" download={false} />;
+// @ts-expect-error `hidden` takes a boolean or "until-found"
+<div hidden="yes" />;
+// @ts-expect-error `download` is defined on a and area only
+<div download />;
+
 // Global attributes.
 <div
   part="label"
@@ -483,8 +495,10 @@ const styleSheet = {} as CSSStyleSheet;
 
 // @ts-expect-error SVG names are written as attributes; the attribute is `tabindex`
 <svg tabIndex={0} />;
-// @ts-expect-error `clipPath` is not an alias; use `clip-path`
-<path clipPath="url(#c)" />;
+// Presentation attributes accept their CSS camelCase spelling.
+<path clipPath="url(#c)" fontSize={12} pointerEvents="none" />;
+// @ts-expect-error aliases are camelCase; there is no PascalCase spelling
+<path ClipPath="url(#c)" />;
 // @ts-expect-error unknown SVG camelCase props should be rejected
 <circle frobnicate="x" />;
 // @ts-expect-error SVG keyword attributes do not accept `true`
