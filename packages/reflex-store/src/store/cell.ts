@@ -1,6 +1,7 @@
 import {
   createProducer,
-  currentConsumer,
+  disposeNodeIfUnobserved,
+  isTracking,
   disposeNode,
   readProducer,
   writeProducer,
@@ -28,7 +29,7 @@ export function createStoreCell<T>(
   let disposed = false;
   const cell = (() => {
     if (disposed) throw new Error("Cannot use a disposed store cell");
-    if (currentConsumer === null) return value;
+    if (!isTracking()) return value;
     readProducer((node ??= createProducer(0)));
     return value;
   }) as StoreCell<T>;
@@ -43,8 +44,7 @@ export function createStoreCell<T>(
     if (node) writeProducer(node, node.payload + 1);
   };
   cell.collect = () => {
-    if (!node || node.firstOut !== null) return;
-    disposeNode(node);
+    if (!node || !disposeNodeIfUnobserved(node)) return;
     node = undefined;
   };
   cell[Symbol.dispose] = () => cell.dispose();

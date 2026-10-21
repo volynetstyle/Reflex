@@ -1,8 +1,4 @@
-import {
-  currentConsumer,
-  setCurrentConsumer,
-  untracked,
-} from "@volynets/reflex-runtime/internal";
+import { untracked } from "@volynets/reflex-runtime/internal";
 import { Demand, Observations } from "../internal/demand";
 import { cloneValue, depthOf, isStructural, storeControls } from "../values";
 import type { StoreDisposable } from "../types";
@@ -143,17 +139,13 @@ class View {
         if (key === storeName) return owner.options.name;
         if (key === Symbol.dispose) return dispose;
         // Inspect one parent snapshot without subscribing to structural identity.
-        const previous = currentConsumer;
-        let container: object | undefined;
         let value: unknown;
-        setCurrentConsumer(null);
-        try {
-          container = parent();
+        const container = untracked(() => {
+          const snapshot = parent();
           value =
-            container === undefined ? undefined : Reflect.get(container, key);
-        } finally {
-          setCurrentConsumer(previous);
-        }
+            snapshot === undefined ? undefined : Reflect.get(snapshot, key);
+          return snapshot;
+        });
         if (this.shouldWrap(value, container))
           return this.child(key, Array.isArray(value));
         return (this.values ??= new Observations(valueAt)).read(key);

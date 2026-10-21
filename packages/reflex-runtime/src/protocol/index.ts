@@ -6,3 +6,4 @@ export * from "./watcher";
 export * from "./utils/compare";
 export * from "./utils/constants";
 export * from "./utils/untracked";
+export * from "./integration";

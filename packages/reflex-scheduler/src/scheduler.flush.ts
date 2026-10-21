@@ -1,11 +1,9 @@
 import {
-  Both,
   flushPendingRuntimeIdle,
+  isWatcherDisposed,
   releaseWatcherSchedule,
-  RuntimeState,
-  runtimeState,
   runWatcherWithoutSettledCheckpoint,
-  Scheduled,
+  shouldRetryWatcherAfterFailure,
 } from "@volynets/reflex-runtime/internal";
 import { profileSchedulerPolicyCounter } from "./scheduler.counters";
 import { tryEnqueue } from "./scheduler.enqueue";
@@ -94,7 +92,7 @@ export function flushQueuedWatchers(
     // Clear before running so a watcher may enqueue itself again.
     releaseWatcherSchedule(node);
 
-    if (node.compute === undefined) {
+    if (isWatcherDisposed(node)) {
       if (SCHEDULER_PROFILE_ENABLED)
         profileSchedulerPolicyCounter("disposedEffectsSkipped");
       continue;
@@ -112,10 +110,10 @@ export function flushQueuedWatchers(
       // A failed dependency validation remains dirty and must be retryable by
       // the next explicit drain, not recursively in this one. Callback and
       // cleanup failures recover to clean and do not enter this cold branch.
-      if ((node.state & Both) !== 0) {
-        if ((node.state & Scheduled) !== 0) {
-          detachQueuedValidationRetry(queue, node);
-        }
+      // A watcher that did not reclaim the queue while validating is absent from
+      // it, so the detach scan finds nothing.
+      if (shouldRetryWatcherAfterFailure(node)) {
+        detachQueuedValidationRetry(queue, node);
         (validationRetries ??= []).push(node);
       }
     }
@@ -142,12 +140,12 @@ export function flushQueuedWatchers(
     }
   }
 
-  if ((runtimeState & RuntimeState.IdlePending) !== RuntimeState.Idle) {
-    try {
-      flushPendingRuntimeIdle();
-    } catch (error) {
-      if (thrown === noThrow) thrown = error;
-    }
+  // The runtime owns the idle-pending check; this is a no-op when nothing is
+  // pending or execution is still active.
+  try {
+    flushPendingRuntimeIdle();
+  } catch (error) {
+    if (thrown === noThrow) thrown = error;
   }
 
   return thrown;

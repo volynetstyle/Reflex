@@ -8,7 +8,7 @@ import {
   type ReactiveNode,
 } from "@volynets/reflex-runtime";
 import {
-  currentConsumer,
+  isTracking,
   disposeNode,
 } from "@volynets/reflex-runtime/internal";
 import { addCleanup } from "../ownership/ownership.cleanup";
@@ -94,7 +94,7 @@ function hasLease(lifetime: Lifetime, reader: OwnershipNode | null): boolean {
 function assertBorrow(lifetime: Lifetime): void {
   // Only tracked reads keep a live dependency; untracked snapshot reads are
   // always allowed.
-  if (currentConsumer === null) return;
+  if (!isTracking()) return;
 
   // G1/G2: a tracked read from another domain would create a hidden
   // cross-domain edge.

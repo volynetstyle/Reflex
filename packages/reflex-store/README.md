@@ -106,8 +106,9 @@ export default defineConfig({
 
 The plugin transforms stores while preserving application package resolution.
 `@volynets/reflex-store/runtime` exports the compiler's cell, scope and owned
-computed primitives. `/runtime/core` and `/runtime/internal` re-export the shared
-kernel. Application runtime setup and effect scheduling belong to the consumer;
+computed primitives. `/runtime/core` re-exports the public runtime;
+`/runtime/internal` holds only the compiled-store lowering target. Import kernel
+operations from `@volynets/reflex-runtime/internal`. Application runtime setup and effect scheduling belong to the consumer;
 the task-board example includes explicit kernel/scheduler wiring.
 
 The standalone compiler is exported from `@volynets/reflex-store/store`.

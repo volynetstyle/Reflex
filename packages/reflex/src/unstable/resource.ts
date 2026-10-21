@@ -1,7 +1,6 @@
 import {
-  Changed,
   disposeNode,
-  emitNodeInvalidated,
+  invalidateWatcher,
 } from "@volynets/reflex-runtime/internal";
 import type {
   ProducerNode,
@@ -350,8 +349,7 @@ class ResourceCore<T, E = unknown> {
     const watcher = this.watcher;
     if (this.disposed || watcher === null) return;
 
-    watcher.state = (watcher.state & ~Changed) | Changed;
-    emitNodeInvalidated(watcher);
+    invalidateWatcher(watcher);
   }
 
   refetch(): void {

@@ -1,12 +1,12 @@
 /// <reference lib="dom" preserve="true" />
 
 import {
-  Both,
   disposeWatcher,
   enterReactiveBatch,
   ExecutionDomainState,
   getActiveRuntimeContext,
   getExecutionDomain,
+  hasPendingValidation,
   leaveReactiveBatch,
   readConsumerLazy,
   readProducer,
@@ -128,7 +128,7 @@ export class AsyncCore<T> implements AsyncSource<T>, FreshnessDependency {
       throw new AsyncProtocolError("Cyclic async derivation dependency.");
     if (
       this.activeAttempt === undefined &&
-      (this.watcher.state & Both) === 0 &&
+      !hasPendingValidation(this.watcher) &&
       getActiveRuntimeContext() === this.runtime
     ) {
       // Clean committed reads avoid context closures, but still pull upstream,

@@ -6,7 +6,7 @@ Normative contract for `createPort` (`reflex-framework`). Companion to
 ## Model
 
 A port connects a **source** endpoint (domain A) to a **target** endpoint
-(domain B). The target owns one **mirror producer** (`port.local`) in B.
+(domain B). The target owns one **mirror producer** (internal; `port.peek()` reads its delivered value untracked) in B.
 Publishing in A never creates a reactive edge (P1); delivery enters B and
 writes the mirror.
 
