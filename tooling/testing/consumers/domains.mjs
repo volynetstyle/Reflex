@@ -51,10 +51,10 @@ assert.deepEqual(b.seen, [["b", 0]]);
 // A port mirrors a value into another domain without a reactive edge (P1).
 const port = createPort(a.root, b.root);
 a.root.run(() => port.publish({ x: 1, y: 2 }));
-assert.equal(port.local.payload, undefined);
+assert.equal(port.peek(), undefined);
 await tick();
 assert.deepEqual(
-  b.domain.run(() => core.readProducer(port.local)),
+  b.domain.run(() => port.read()),
   {
     x: 1,
     y: 2,
