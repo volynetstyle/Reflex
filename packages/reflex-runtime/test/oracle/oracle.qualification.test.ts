@@ -64,7 +64,7 @@ const MUTANTS: Mutant[] = [
   {
     id: "push-once-redeliver-scheduled",
     file: "src/kernel/stages/propagation/push_iterator_once.ts",
-    search: "if ((state & Scheduled) !== 0) {",
+    search: "if ((state & (Scheduled | Computing)) !== 0) {",
     replace: "if (false) {",
     expected: "killed",
   },
