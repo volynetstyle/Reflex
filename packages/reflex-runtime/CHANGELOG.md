@@ -1,5 +1,18 @@
 # @volynets/reflex-runtime
 
+## 1.2.0
+
+### Minor Changes
+
+- 72a60ca: Runtime integration contract. `@volynets/reflex-runtime/internal` adds semantic operations for sibling packages: `isTracking`, `isContextSettled`, `hasObservers`, `disposeNodeIfUnobserved`, `suspendConsumerIfUnobserved`, `hasPendingValidation`, `isWatcherDisposed`, `shouldRetryWatcherAfterFailure` and `invalidateWatcher`. Scheduler, Store, Framework, DOM, Async and Reflex use them instead of reading kernel registers, flags and edges.
+
+  Breaking: `@volynets/reflex-store/runtime/internal` no longer re-exports `@volynets/reflex-runtime/internal`; it exports only `createStoreCell`. Import kernel operations from `@volynets/reflex-runtime/internal`. `DomainPort` no longer exposes `local`; use `port.peek()` for an untracked read of the delivered value.
+
+### Patch Changes
+
+- 72a60ca: Execution domain entry is cheaper. `domain.batch(fn)` and `domain.run(fn)` invoke the callback directly and inline into their caller, so a callback closure such as `batch(() => write())` is no longer allocated per call; a public `batch` around one write costs about half as much. Behavior is unchanged. The `state`, `closed`, `signal` and `depth` accessors now live on the domain's prototype, so `Object.keys(domain)` no longer lists them; the operations remain own properties and work detached.
+- 72a60ca: A watcher is no longer handed to the host again while it validates itself. When a dependency recomputed during validation also feeds the watcher directly (for example, the watcher reads `fullName` before `firstName`), the watcher was queued a second time and ran an empty extra `runWatcher`; a validation failure in that pass failed twice per drain. The changed dependency is still recorded and consumed by the current run.
+
 ## 1.1.0
 
 ### Minor Changes

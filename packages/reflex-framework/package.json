@@ -1,6 +1,6 @@
 {
   "name": "@volynets/reflex-framework",
-  "version": "0.2.1",
+  "version": "1.0.0",
   "type": "module",
   "description": "Platform-agnostic JSX runtime and renderable model for Reflex",
   "license": "MIT",
