@@ -70,6 +70,15 @@ is delivered by `runWatcherCore` itself (`deliverRetainedValidation`,
 `retainAfterExecution`) unless `Scheduled` is held, because later pushes merge
 into a retained `Unknown` without notifying (contract L1).
 
+A host releases `Scheduled` before it runs the watcher, so during the run
+`Computing` is the ownership certificate. One-level push after a recompute
+records `Changed` into a watcher that holds `Scheduled` or `Computing` but
+does not deliver it. A running watcher already holds `Changed`, so this reaches
+only the validation epoch: a pull proof recomputed a node with a side edge
+into the validating watcher, and that same pass consumes the evidence (F17).
+The guard leaves the reentrant write path unchanged: a write during the epoch
+still goes through the computing-subscriber path and is delivered.
+
 Transitions: `src/kernel/stages/` and `src/kernel/engine/watcher.ts`; the
 transition table is characterized in
 [SEMANTIC_CHARACTERIZATION.md](./characterization/SEMANTIC_CHARACTERIZATION.md).

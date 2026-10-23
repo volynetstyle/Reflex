@@ -34,6 +34,12 @@ import {
  *   open), where liveness is not required. Accepted only if the first
  *   divergence is an extra candidate delivery and the candidate violates no
  *   invariant outside the known F1 liveness class.
+ * - F17. The baseline hands a watcher to the host while that watcher is
+ *   inside its own run, after the host released its claim: a pull proof
+ *   recomputed a node with a side edge into the validating watcher, whose
+ *   current pass already consumes that evidence. Accepted only if the first
+ *   divergence is such a baseline delivery and the candidate violates no
+ *   invariant.
  */
 const violations = (rt: RuntimeModule, program: Program): string[] =>
   interpret(rt, program, "strict", { invariants: true }).filter((entry) =>
@@ -64,7 +70,24 @@ const isF1DomainDelivery = (program: Program, level: ObservationLevel) =>
   ) &&
   violations(candidate, program).every(isLiveness);
 
-const corrected = { F13: 0, F15: 0, F1domain: 0 };
+const isF17OwnEpochDelivery = (
+  program: Program,
+  level: ObservationLevel,
+): boolean => {
+  const ownEpoch: number[] = [];
+  const mismatch = firstMismatch(
+    interpret(baseline, program, level, { ownEpochDeliveries: ownEpoch }),
+    interpret(candidate, program, level),
+  );
+  return (
+    mismatch !== null &&
+    isDelivery(mismatch.baseline) &&
+    ownEpoch.includes(mismatch.index) &&
+    violations(candidate, program).length === 0
+  );
+};
+
+const corrected = { F13: 0, F15: 0, F1domain: 0, F17: 0 };
 const candidate = candidateModule as unknown as RuntimeModule;
 const SEEDS = Number(process.env.ORACLE_SEEDS ?? 2_000);
 const FIRST_SEED = Number(process.env.ORACLE_SEED ?? 1);
@@ -99,6 +122,10 @@ function report(
     corrected.F1domain++;
     return null;
   }
+  if (isF17OwnEpochDelivery(program, level)) {
+    corrected.F17++;
+    return null;
+  }
   const minimal = shrink(program, fails);
   const mismatch = firstMismatch(
     interpret(baseline, minimal, level),
@@ -128,7 +155,7 @@ describe(`baseline differential oracle (${BASELINE_COMMIT.slice(0, 12)})`, () =>
   it.each<ObservationLevel>(["strict", "observable"])(
     "matches the baseline on generated programs (%s)",
     (level) => {
-      corrected.F13 = corrected.F15 = corrected.F1domain = 0;
+      corrected.F13 = corrected.F15 = corrected.F1domain = corrected.F17 = 0;
       const count = ONLY_ONE ? 1 : SEEDS;
       for (let seed = FIRST_SEED; seed < FIRST_SEED + count; seed++) {
         const failure = report(seed, level, generateProgram(seed));
