@@ -239,10 +239,8 @@ export async function execute(
         model.write(value);
       };
     } else if (program.source === "context") {
-      const owner = getActiveOwnerContext()!;
-      const node = owner.currentNode!;
-      provideContext(node, ValueContext, raw);
-      read = useContext(node, ValueContext)!;
+      provideContext(ValueContext, raw);
+      read = useContext(ValueContext)!;
     } else if (program.source === "ref") {
       const ref = useRef(0);
       read = () => {
@@ -296,7 +294,7 @@ export async function execute(
           by={(item) => item.id}
           fallback={<span data-state="off">off</span>}
         >
-          {(item) => <Row item={item} read={read} />}
+          {(item) => <Row item={item()} read={read} />}
         </For>
       );
     } else if (program.consumer === "portal") {

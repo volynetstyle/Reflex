@@ -3,7 +3,6 @@ import type { StyleValue } from "../types";
 import { applyManagedFormProp, isManagedFormProp } from "./forms";
 import { setAttr } from "./attr";
 import { applyStyle } from "./styles";
-import { normalizeAttr } from "./aliases";
 
 function applyClass(el: Element, value: unknown): unknown {
   if (value == null || value === false) {
@@ -41,6 +40,7 @@ function applyClass(el: Element, value: unknown): unknown {
 //
 // Both styles are officially supported: HTML-native for transparency,
 // and React-style for familiarity to migrants from the React ecosystem.
+/** Apply a normalized property name; bindings resolve aliases once at setup. */
 export function applyProp(
   el: Element,
   name: string,
@@ -48,13 +48,12 @@ export function applyProp(
   ns: Namespace,
   prev: unknown,
 ): unknown {
-  if (value === prev || name === "children" || name === "key") {
+  if (value === prev) {
     return prev;
   }
 
   switch (name) {
     case "class":
-    case "className":
       return applyClass(el, value);
 
     case "style":
@@ -65,6 +64,6 @@ export function applyProp(
     return applyManagedFormProp(el, name, value);
   }
 
-  setAttr(el, normalizeAttr(name), value, ns);
+  setAttr(el, name, value, ns);
   return value;
 }

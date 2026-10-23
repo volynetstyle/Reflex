@@ -1,12 +1,7 @@
 /** @jsxImportSource ../src */
 
 import { For, Portal, Show } from "../src";
-import {
-  createContext,
-  hasOwnContext,
-  provideContext,
-  useContext,
-} from "../src";
+import { createContext, Provider, provideContext, useContext } from "../src";
 import { useSignal } from "../src";
 import type { useAbortSignal, DOMRangeHandle } from "../src";
 
@@ -28,10 +23,22 @@ const rangeRef = { current: null as DOMRangeHandle | null };
 const abortSignal: AbortSignal = null! as ReturnType<typeof useAbortSignal>;
 void abortSignal;
 
-void createContext;
-void hasOwnContext;
-void provideContext;
-void useContext;
+const Theme = createContext("light");
+const OptionalTheme = createContext<string>();
+const theme: string = useContext(Theme);
+const optionalTheme: string | undefined = useContext(OptionalTheme);
+void theme;
+void optionalTheme;
+provideContext(Theme, "dark");
+// @ts-expect-error The value must match the context type.
+provideContext(Theme, 1);
+// @ts-expect-error The owner is resolved implicitly.
+useContext(null!, Theme);
+<Provider context={Theme} value="dark">
+  <span />
+</Provider>;
+// @ts-expect-error The value must match the context type.
+<Provider context={Theme} value={1} />;
 void useSignal;
 
 const buttonRef = { current: null as HTMLButtonElement | null };
@@ -131,7 +138,11 @@ const styleSheet = {} as CSSStyleSheet;
 <Show when={"ready"}>{(value) => <span>{value.toUpperCase()}</span>}</Show>;
 
 <For each={[{ id: "a", label: "A" }]} by={(item) => item.id}>
-  {(item, index) => <li data-index={index}>{item.label}</li>}
+  {(item, index) => <li data-index={index}>{() => item().label}</li>}
+</For>;
+<For each={[{ id: "a", label: "A" }]} by={(item) => item.id}>
+  {/* @ts-expect-error Rows receive accessors, not item values. */}
+  {(item) => <li>{item.label}</li>}
 </For>;
 
 const portalTarget = document.createElement("div");

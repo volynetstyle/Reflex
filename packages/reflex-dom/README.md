@@ -105,13 +105,27 @@ Server rendering and structure:
 - `renderToString()`
 - `For`, `Show`, `Switch`, and `Portal`
 
-Framework hooks:
+Hooks and state:
 
-- `useSignal`, `useComputed`, and `useMemo`
+- `useSignal`, `useComputed`, `useMemo`, and `untracked`
 - `useEffect`, `useEffectOnce`, and `useMountedEffect`
-- `useMount`, `useUnmount`, `useOwned`, and `useRef`
+- `useMount`, `useUnmount`, `useOwned`, `onCleanup`, and `useRef`
 - `useAbortSignal` and `getLifetimeSignal`
-- ownership context helpers
+- `createContext`, `useContext`, `provideContext`, and `Provider`
+- `useCallbackContext` for timers, observers and continuations after `await`
+- `useOwnedSignal`, `useOwnedComputed`, `useLease`, `useTransfer`, and `isReleased`
+
+Multiple applications:
+
+- `app.dispose()` / `renderer.dispose()`
+- `createPort`, `usePortEndpoint`, and the port error classes
+
+Types: `Accessor`, `MaybeAccessor`, `SignalAccessor`, `SetInput`, `Setter`,
+`Computed`, `Memo`, `Component`, `ComponentProps`, `Cleanup`, `EffectCallback`,
+`EffectCleanup`, `OwnershipContext`, `DisposableResource`, `OwnedSignal`,
+`OwnedValue`, and the port types. Explicit-owner forms (`useContext(target,
+Token)`, `bindManaged`, `createOwnedSignal(owner, …)`) remain in
+`@volynets/reflex-framework` for integrations that hold an owner.
 
 Reusable models:
 
@@ -315,6 +329,124 @@ actions do not replace it. Cancellation is cooperative: guard publication when a
 operation may ignore its signal. See the framework's
 [lifetime signal contract](../reflex-framework/docs/lifetime-signals.md).
 
+## Context
+
+`useContext(Token)` and `provideContext(Token, value)` use the component that is
+running; no owner is passed. `<Provider context={Token} value={value}>` scopes a
+value to its children.
+
+| Situation                       | Behavior                                                                                                       |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Nested providers                | The nearest one wins; siblings outside it keep the outer value.                                                |
+| `provideContext` in a component | Affects its descendants, not values the component itself already read.                                        |
+| Changing value                  | Providing again notifies nobody. Provide a signal or accessor once and read it reactively.                    |
+| Portal content                  | Uses the context of its source component, not of its DOM target.                                              |
+| Event handler of the component  | Sees the same context (see below).                                                                            |
+| Outside a component             | `useContext` returns the default value, or `undefined`; `provideContext` is ignored. Development builds warn. |
+| SSR and hydration               | Resolve the same values.                                                                                      |
+
+## Callbacks and cleanup
+
+DOM event handlers run inside the renderer's batch and under the ownership node
+that owns the listener. `useOwned`, `onCleanup` and `useContext` in a handler
+attach to its component, branch or `For` row and close with it.
+
+`useCallbackContext(fn)` gives other callbacks the same scope. Bind during setup
+and call the result later:
+
+```tsx
+function Clock() {
+  const now = useSignal(Date.now());
+  const tick = useCallbackContext(() => now(Date.now()));
+  const id = setInterval(tick, 1000);
+  onCleanup(() => clearInterval(id));
+  return <time>{() => new Date(now()).toISOString()}</time>;
+}
+```
+
+| Situation                                       | Behavior                                                                                          |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Arguments and result                            | Passed through.                                                                                   |
+| Writes inside one call                          | Grouped into one batch.                                                                           |
+| Error                                           | Rethrown; the renderer stays usable.                                                              |
+| After the component or application is disposed | The call is ignored and returns `undefined`.                                                      |
+| Async function                                  | Context does not cross `await`. Bind each continuation: `promise.then(useCallbackContext(next))`. |
+| Outside a DOM application                       | Restores the framework owner, if any, and calls `fn`.                                             |
+
+`onCleanup(fn)` registers a cleanup on the current ownership node; cleanups run
+once, in reverse order. Without an owner, for example inside another cleanup,
+it is ignored and development builds warn. Code that explicitly enters a node
+that is already closing runs the cleanup immediately.
+
+A listener object's `signal` is forwarded to `addEventListener`; an aborted
+signal never attaches the listener.
+
+## Owned values
+
+`useSignal` is ordinary component state with no release step.
+`useOwnedSignal` and `useOwnedComputed` create values whose lifetime is the
+current component:
+
+| Situation                                            | Behavior                                                                              |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Owner closes                                         | The value is released; reads and writes throw `ReleasedResourceError`.                |
+| `useLease(handle)` in another component              | Keeps the value alive until that component closes or the returned function is called. |
+| `useTransfer(handle)`                                | Moves ownership to the current component. Across applications it throws `BorrowError`. |
+| Tracked read from a scope the owner does not outlive | `BorrowError` in development builds.                                                  |
+| Writes (`value.set(next)`)                           | Deliver like `useSignal` writes under the application's effect strategy.              |
+| Called outside a component                           | Throws.                                                                               |
+
+## Multiple applications
+
+`createApp()` creates an isolated renderer and execution domain.
+`app.dispose()` disposes every root of the application, closes its domain and,
+when the application is the default renderer, clears the default. It is
+idempotent and may be called from the application's own event handler.
+Afterwards old root disposers and bound callbacks do nothing; `render`,
+`hydrate`, `mount` and `resume` throw; `renderer.run` and `renderer.batch` throw
+`ExecutionDomainClosedError`; `renderer.flush()` does nothing.
+
+Applications exchange state through ports, never through shared signals:
+
+```tsx
+let source!: PortEndpoint;
+function Publisher() {
+  source = usePortEndpoint();
+  return null;
+}
+function Reader() {
+  const port = createPort<number>(source, usePortEndpoint());
+  return <span>{() => port.read() ?? "waiting"}</span>;
+}
+```
+
+Publish on the source side; the reader sees the delivered snapshot. A port
+connects two different applications and closes when either endpoint's component
+closes; `usePortEndpoint()` throws outside an application. Versions, queue policy
+and payload rules are in [domain-ports.md](../../docs/architecture/domain-ports.md).
+
+## Lists
+
+`For` creates one row per key. Rows receive accessors:
+
+```tsx
+<For each={todos} by={(todo) => todo.id}>
+  {(todo, index) => <li>{() => `${index() + 1}. ${todo().title}`}</li>}
+</For>
+```
+
+| Change                | Row DOM, components and state   | `item()` / `index()` |
+| --------------------- | ------------------------------- | -------------------- |
+| Same key, same object | Kept                            | Unchanged            |
+| Same key, new object  | Kept                            | `item()` updates     |
+| Move                  | Kept, moved as a unit           | `index()` updates    |
+| Key removed           | Disposed with its row resources | —                    |
+
+`by` receives raw items. Hooks called in the row callback belong to the row.
+Read changing fields reactively; values read once during setup do not update.
+The fallback mounts once per empty state and stays mounted across repeated
+empty updates.
+
 ## Structural DOM refs
 
 DOM `Show` and `For` accept a `Ref<DOMRangeHandle>` without adding a wrapper element.
@@ -438,16 +570,26 @@ Replacing a complex dynamic branch disposes its owner, clears its range, and mou
 new content under a fresh owner. Text values update in place. Keyed moves preserve
 row identity and ownership; removed rows release effects, listeners and refs.
 
-`renderToString()` emits HTML with dynamic slot markers. `hydrate()` adopts matching
-DOM and remounts mismatches. `resume()` takes ownership of existing content without
-attaching JSX behavior. A portal belongs to its source component even when its DOM
-is in another document.
+`renderToString()` emits HTML with dynamic slot markers; each `For` row and the
+`For` fallback get their own slot. `hydrate()` activates the content of every
+dynamic slot: handlers, components and nested lists inside accessors, `Show`,
+`Switch` and `For` work after hydration, and `For` rows are adopted as keyed
+rows. A server text node in a text slot is kept and updated in place.
 
-Dynamic hydration currently adopts a marked slot as a whole; it does not provide
-full per-component activation inside every server-rendered dynamic branch.
+Any mismatch, including a different number of `For` rows or markup from a
+version without row markers, falls back to a client mount of the whole root.
+`resume()` takes ownership of existing content without attaching JSX behavior. A
+portal belongs to its source component even when its DOM is in another document.
 
 ## Migration
 
+- `For` rows receive accessors: `children(item: Accessor<T>, index: Accessor<number>)`.
+  Replace `item.field` with `item().field`, inside `() => …` where it changes.
+- `useContext(target, Token)` became `useContext(Token)`; `provideContext(target,
+  Token, value)` became `provideContext(Token, value)`. `hasOwnContext` is no
+  longer exported; the explicit forms stay in `@volynets/reflex-framework`.
+- Server HTML for `For` gained per-row markers; HTML rendered by an earlier
+  version hydrates through a client mount.
 - `useEffectRender` became `useMountedEffect`.
 - `renderer.renderEffectScheduler` became `renderer.mountEffects`.
 - Render effect phases and phase-based scheduler types were removed; the queue

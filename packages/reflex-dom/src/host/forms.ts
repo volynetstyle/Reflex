@@ -11,6 +11,19 @@ interface TextEntryControlState {
   pendingValue: string | null;
 }
 
+function startComposition(this: StatefulTextEntryControl): void {
+  this[TEXT_ENTRY_CONTROL_STATE]!.composing = true;
+}
+
+function endComposition(this: StatefulTextEntryControl): void {
+  const state = this[TEXT_ENTRY_CONTROL_STATE]!;
+  state.composing = false;
+  if (state.pendingValue !== null) {
+    writeTextControlValuePreservingSelection(this, state.pendingValue);
+    state.pendingValue = null;
+  }
+}
+
 function ensureTextEntryControlState(
   controlElement: TextEntryControl,
 ): TextEntryControlState {
@@ -30,20 +43,8 @@ function ensureTextEntryControlState(
     value: state,
   });
 
-  controlElement.addEventListener("compositionstart", () => {
-    state!.composing = true;
-  });
-  controlElement.addEventListener("compositionend", () => {
-    state!.composing = false;
-
-    if (state!.pendingValue !== null) {
-      writeTextControlValuePreservingSelection(
-        controlElement,
-        state!.pendingValue,
-      );
-      state!.pendingValue = null;
-    }
-  });
+  controlElement.addEventListener("compositionstart", startComposition);
+  controlElement.addEventListener("compositionend", endComposition);
 
   return state;
 }
@@ -168,67 +169,39 @@ function applyIndeterminateState(
   return value;
 }
 
-function normalizeSelectBoundValues(
-  value: unknown,
-  multiple: boolean,
-): readonly string[] {
-  if (value == null) {
-    return [];
-  }
-
-  if (Array.isArray(value)) {
-    return value.map((entry) => String(entry));
-  }
-
-  const single = String(value);
-  return multiple ? [single] : [single];
-}
-
-function applyMultipleSelectValue(
-  selectElement: HTMLSelectElement,
-  selectedValues: readonly string[],
-): void {
-  const selectedValueSet = new Set(selectedValues);
-
-  for (
-    let optionIndex = 0;
-    optionIndex < selectElement.options.length;
-    optionIndex++
-  ) {
-    const optionElement = selectElement.options[optionIndex]!;
-    optionElement.selected = selectedValueSet.has(optionElement.value);
-  }
-}
-
-function applySingleSelectValue(
-  selectElement: HTMLSelectElement,
-  selectedValues: readonly string[],
-): void {
-  const nextValue = selectedValues[0] ?? "";
-
-  if (nextValue === "") {
-    selectElement.selectedIndex = -1;
-    return;
-  }
-
-  selectElement.value = nextValue;
-}
-
 function applyControlledSelectValue(
   selectElement: HTMLSelectElement,
   value: unknown,
 ): unknown {
-  const selectedValues = normalizeSelectBoundValues(
-    value,
-    selectElement.multiple,
-  );
-
-  if (selectElement.multiple) {
-    applyMultipleSelectValue(selectElement, selectedValues);
-    return value;
+  const arrayValue = Array.isArray(value);
+  if (!selectElement.multiple) {
+    const nextValue =
+      value == null || (arrayValue && !(0 in value))
+        ? ""
+        : String(arrayValue ? value[0] : value);
+    if (nextValue === "") selectElement.selectedIndex = -1;
+    else selectElement.value = nextValue;
+  } else {
+    const options = selectElement.options;
+    const length = options.length;
+    if (arrayValue) {
+      const selected = new Set<string>();
+      const valueLength = value.length;
+      for (let i = 0; i < valueLength; i++) {
+        if (i in value) selected.add(String(value[i]));
+      }
+      for (let i = 0; i < length; i++) {
+        const option = options[i]!;
+        option.selected = selected.has(option.value);
+      }
+    } else {
+      const selected = value == null ? null : String(value);
+      for (let i = 0; i < length; i++) {
+        const option = options[i]!;
+        option.selected = option.value === selected;
+      }
+    }
   }
-
-  applySingleSelectValue(selectElement, selectedValues);
   return value;
 }
 

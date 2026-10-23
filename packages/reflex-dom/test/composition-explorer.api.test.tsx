@@ -60,21 +60,23 @@ function structureScenario() {
 
 function hooksContextScenario() {
   const Theme = api.createContext("default");
+  const Locale = api.createContext<string>();
   const app = api.createApp();
   const container = document.createElement("div");
   const events: string[] = [];
   let setCount!: (value: number) => void;
 
   function Child() {
-    const owner = getActiveOwnerContext()!;
-    expect(api.hasOwnContext(owner, Theme)).toBe(false);
-    return <span>{api.useContext(owner, Theme)}</span>;
+    return <span>{api.useContext(Theme)}</span>;
+  }
+
+  function LocaleLabel() {
+    return <i>{api.useContext(Locale) ?? "none"}</i>;
   }
 
   function View() {
-    const owner = getActiveOwnerContext()!;
-    api.provideContext(owner, Theme, "provided");
-    expect(api.hasOwnContext(owner, Theme)).toBe(true);
+    api.provideContext(Theme, "provided");
+    expect(api.useContext(Theme)).toBe("provided");
     const count = api.useSignal(1);
     setCount = count;
     const doubled = api.useComputed(() => count() * 2);
@@ -87,6 +89,10 @@ function hooksContextScenario() {
     api.useEffectOnce(() => events.push("once"));
     api.useMount(() => events.push("mount"));
     api.useUnmount(() => events.push("unmount"));
+    api.onCleanup(() => events.push("onCleanup"));
+    api.useEffect(() => {
+      events.push(`untracked:${api.untracked(count)}`);
+    });
     api.useEffect(() => {
       const value = memo();
       ref.current = value;
@@ -99,22 +105,31 @@ function hooksContextScenario() {
     return (
       <div>
         <Child />:{memo}
+        <api.Provider context={Locale} value="uk">
+          <LocaleLabel />
+        </api.Provider>
+        <LocaleLabel />
       </div>
     );
   }
 
   const dispose = app.render(<View />, container);
-  expect(container.textContent).toBe("provided:3");
+  expect(container.textContent).toBe("provided:3uknone");
   expect(events).toContain("once");
   expect(events).toContain("mount");
   expect(events).toContain("effect:3");
-  expect(events).toContain("mounted:provided:3");
+  expect(events).toContain("mounted:provided:3uknone");
   app.renderer.batch(() => setCount(2));
-  expect(container.textContent).toBe("provided:5");
+  expect(container.textContent).toBe("provided:5uknone");
   expect(events).toContain("cleanup:3");
   expect(events).toContain("effect:5");
+  expect(events.filter((event) => event.startsWith("untracked:"))).toEqual([
+    "untracked:1",
+  ]);
+  expect(events).not.toContain("onCleanup");
   dispose();
   expect(events).toContain("unmount");
+  expect(events.filter((event) => event === "onCleanup")).toHaveLength(1);
   expect(events).toContain("dispose:resource");
   expect(events).toContain("cleanup:5");
   expect(events.filter((event) => event === "once")).toHaveLength(1);
@@ -238,6 +253,71 @@ function cancellationRangeScenario() {
   expect(container.textContent).toBe("standalone");
 }
 
+function managedLifetimeScenario() {
+  const source = api.createApp();
+  const target = api.createApp();
+  const log: string[] = [];
+  let from!: api.PortEndpoint;
+  let port!: api.DomainPort<number>;
+  let later!: () => void;
+
+  function Publisher() {
+    from = api.usePortEndpoint();
+    const owned = api.useOwnedSignal(1);
+    const doubled = api.useOwnedComputed(() => owned() * 2);
+    owned.set(2);
+    expect(doubled()).toBe(4);
+    later = api.useCallbackContext(() => {
+      api.onCleanup(() => log.push(`released:${api.isReleased(owned)}`));
+    });
+    return null;
+  }
+
+  function Reader() {
+    port = api.createPort<number>(from, api.usePortEndpoint());
+    return <span>{() => port.read() ?? "none"}</span>;
+  }
+
+  function Borrower({ handle }: { handle: api.OwnedValue<number> }) {
+    api.useLease(handle);
+    return null;
+  }
+
+  function Adopter({ handle }: { handle: api.OwnedValue<number> }) {
+    api.useTransfer(handle);
+    return null;
+  }
+
+  const sourceContainer = document.createElement("div");
+  const targetContainer = document.createElement("div");
+  source.render(<Publisher />, sourceContainer);
+  target.render(<Reader />, targetContainer);
+  later();
+  port.publish(3);
+  port.flush();
+  expect(targetContainer.textContent).toBe("3");
+
+  function Owner() {
+    const handle = api.useOwnedSignal(0);
+    return (
+      <>
+        <Borrower handle={handle} />
+        <Adopter handle={api.useOwnedSignal(0)} />
+      </>
+    );
+  }
+  source.render(<Owner />, document.createElement("div"));
+  source.dispose();
+  target.dispose();
+  expect(log).toEqual(["released:false"]);
+  expect(port.closed).toBe(true);
+  expect(() => port.publish(4)).toThrow(api.PortClosedError);
+  expect(new api.PortOverflowError()).toBeInstanceOf(Error);
+  expect(new api.PortTopologyError()).toBeInstanceOf(Error);
+  expect(new api.ReleasedResourceError()).toBeInstanceOf(Error);
+  expect(new api.BorrowError("borrow")).toBeInstanceOf(Error);
+}
+
 const scenarioRegistry = {
   structure: structureScenario,
   hooksContext: hooksContextScenario,
@@ -245,6 +325,7 @@ const scenarioRegistry = {
   client: clientScenario,
   model: modelScenario,
   cancellationRange: cancellationRangeScenario,
+  managedLifetime: managedLifetimeScenario,
 } as const;
 
 // Each public runtime export points to a function that Vitest executes below.
@@ -255,7 +336,7 @@ const scenarios = {
   Show: scenarioRegistry.structure,
   Switch: scenarioRegistry.structure,
   createContext: scenarioRegistry.hooksContext,
-  hasOwnContext: scenarioRegistry.hooksContext,
+  Provider: scenarioRegistry.hooksContext,
   provideContext: scenarioRegistry.hooksContext,
   useComputed: scenarioRegistry.hooksContext,
   useContext: scenarioRegistry.hooksContext,
@@ -267,6 +348,21 @@ const scenarios = {
   useRef: scenarioRegistry.hooksContext,
   useSignal: scenarioRegistry.hooksContext,
   useUnmount: scenarioRegistry.hooksContext,
+  onCleanup: scenarioRegistry.hooksContext,
+  untracked: scenarioRegistry.hooksContext,
+  useCallbackContext: scenarioRegistry.managedLifetime,
+  useLease: scenarioRegistry.managedLifetime,
+  useOwnedComputed: scenarioRegistry.managedLifetime,
+  useOwnedSignal: scenarioRegistry.managedLifetime,
+  useTransfer: scenarioRegistry.managedLifetime,
+  usePortEndpoint: scenarioRegistry.managedLifetime,
+  createPort: scenarioRegistry.managedLifetime,
+  isReleased: scenarioRegistry.managedLifetime,
+  BorrowError: scenarioRegistry.managedLifetime,
+  PortClosedError: scenarioRegistry.managedLifetime,
+  PortOverflowError: scenarioRegistry.managedLifetime,
+  PortTopologyError: scenarioRegistry.managedLifetime,
+  ReleasedResourceError: scenarioRegistry.managedLifetime,
   useMountedEffect: scenarioRegistry.hooksContext,
   Fragment: scenarioRegistry.jsxRuntime,
   jsx: scenarioRegistry.jsxRuntime,

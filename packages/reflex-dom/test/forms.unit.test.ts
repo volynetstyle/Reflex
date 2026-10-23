@@ -2,6 +2,38 @@ import { describe, expect, it } from "vitest";
 import { applyManagedFormProp, isManagedFormProp } from "../src/host/forms";
 
 describe("managed form props", () => {
+  it.each([false, true])(
+    "coerces scalar, array and sparse select values (multiple=%s)",
+    (multiple) => {
+      const select = document.createElement("select");
+      select.multiple = multiple;
+      for (const value of ["", "0", "false", "null", "undefined", "a", "b"]) {
+        select.add(new Option(value, value));
+      }
+      const cases: [unknown, string[]][] = [
+        ["b", ["b"]],
+        [0, ["0"]],
+        [false, ["false"]],
+        [null, []],
+        [undefined, []],
+        [[], []],
+        [new Array(2), []],
+        [[undefined], ["undefined"]],
+        [[null], ["null"]],
+        [["a", "b"], multiple ? ["a", "b"] : ["a"]],
+        ["", multiple ? [""] : []],
+      ];
+      for (const [value, expected] of cases) {
+        applyManagedFormProp(select, "value", value);
+        expect(
+          Array.from(select.options)
+            .filter((option) => option.selected)
+            .map((option) => option.value),
+        ).toEqual(expected);
+      }
+    },
+  );
+
   it("recognizes managed and unmanaged form properties", () => {
     const textInput = document.createElement("input");
     const checkbox = document.createElement("input");
@@ -69,7 +101,9 @@ describe("managed form props", () => {
       },
     });
 
-    expect(() => applyManagedFormProp(unsupported, "value", "safe")).not.toThrow();
+    expect(() =>
+      applyManagedFormProp(unsupported, "value", "safe"),
+    ).not.toThrow();
     expect(unsupported.value).toBe("safe");
   });
 
@@ -107,10 +141,9 @@ describe("managed form props", () => {
 
     select.multiple = true;
     applyManagedFormProp(select, "value", ["a", "c"]);
-    expect(Array.from(select.selectedOptions).map((option) => option.value)).toEqual([
-      "a",
-      "c",
-    ]);
+    expect(
+      Array.from(select.selectedOptions).map((option) => option.value),
+    ).toEqual(["a", "c"]);
 
     const option = select.options[1]!;
     applyManagedFormProp(option, "selected", true);

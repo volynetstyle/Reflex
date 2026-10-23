@@ -53,10 +53,7 @@ export function setAttr(
   name: string,
   value: unknown,
   ns: Namespace,
-  prev?: unknown,
-): unknown {
-  if (value === prev) return prev;
-
+): void {
   const remove = value == null || value === false;
 
   if (name === "xlink:href") {
@@ -66,7 +63,7 @@ export function setAttr(
       el.setAttributeNS(XLINK_NS, "href", normalizeURLAttr(name, value) + "");
     }
 
-    return value;
+    return;
   }
 
   if (ns !== "svg" && !isAriaOrDataAttr(name) && name in el) {
@@ -77,7 +74,7 @@ export function setAttr(
       setProperty(el, name, value);
     }
 
-    return value;
+    return;
   }
 
   if (remove) {
@@ -85,6 +82,4 @@ export function setAttr(
   } else {
     setPlainAttribute(el, name, value);
   }
-
-  return value;
 }

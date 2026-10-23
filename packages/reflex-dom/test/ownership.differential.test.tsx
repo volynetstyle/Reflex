@@ -461,7 +461,7 @@ describe.each(["eager", "sab", "flush"] as const)(
       function List() {
         provideContext(getActiveOwnerContext()!, ListContext, "list");
         return <ul><For each={() => readProducer(source)} by={(item) => item.id} fallback={<Empty />}>
-          {(item) => <Row item={item} />}
+          {(item) => <Row item={item()} />}
         </For></ul>;
       }
 
@@ -489,10 +489,8 @@ describe.each(["eager", "sab", "flush"] as const)(
           nextItems.splice(next() % (nextItems.length + 1), 0, moved!);
         } else {
           const index = next() % nextItems.length;
-          const item = { id: nextItems[index]!.id };
-          nextItems[index] = item;
-          disposeOwnershipNode(referenceRows.get(item.id)!);
-          mountReferenceRow(item);
+          // A new object under the same key keeps its row and owner.
+          nextItems[index] = { id: nextItems[index]!.id };
         }
         items = nextItems;
         runtime.batch(() => writeProducer(source, nextItems));

@@ -72,7 +72,11 @@ describe("DOM renderer differential stress", () => {
                 by={(item) => item.id}
                 fallback={<li data-empty="true">empty</li>}
               >
-                {(item) => <li data-id={item.id} title={item.label}>{item.label}</li>}
+                {(item) => (
+                  <li data-id={item().id} title={() => item().label}>
+                    {() => item().label}
+                  </li>
+                )}
               </For>
             </ul>
           ) : <p data-hidden="true">hidden</p>}
