@@ -1,6 +1,6 @@
 {
   "name": "@volynets/reflex-scheduler",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
   "description": "Effect scheduler policies for Reflex runtimes",
   "license": "MIT",
