@@ -10,6 +10,7 @@ import {
 } from "@runtime/kernel/execution";
 import {
   Changed,
+  Computing,
   Scheduled,
   Unknown,
   Watcher,
@@ -66,10 +67,13 @@ function pushIteratorOnceCore(
         });
 
       if ((state & Watcher) !== 0 && nodeInvalidatedHook !== undefined) {
-        // Scheduled is an ownership certificate: the host queue must already
-        // execute this watcher. Preserve the stronger Changed evidence above,
-        // but do not redeliver the same queue obligation.
-        if ((state & Scheduled) !== 0) {
+        // Scheduled and Computing are ownership certificates: the host queue
+        // must already execute this watcher, or its own run is active. A
+        // running watcher keeps Changed, so Computing reaches here only in
+        // the validation epoch, after the host released Scheduled; that pass
+        // consumes the Changed evidence (F17). Preserve the stronger Changed
+        // evidence above, but do not redeliver the same obligation.
+        if ((state & (Scheduled | Computing)) !== 0) {
           if (__PROFILE__)
             observeRuntimeProjection?.(
               "projection.semantic.push-once.watcher.scheduled-delivery-skip",

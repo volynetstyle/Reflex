@@ -4,7 +4,7 @@ import {
   runWithOwnershipNode,
   type OwnershipNode,
 } from "@volynets/reflex-framework";
-import { getDOMContext, withDOMContext } from "./context";
+import { getDOMContext, swapDOMContext, withDOMContext } from "./context";
 import type { DOMContext } from "./context";
 import type { Cleanup } from "../types";
 
@@ -25,8 +25,9 @@ export function createDOMOwnedReaction<T>(
 ): Cleanup {
   let initialized = false;
 
-  return createOwnedEffect(context.owner, context.owner.currentNode, () =>
-    withDOMContext(context, () => {
+  return createOwnedEffect(context.owner, context.owner.currentNode, () => {
+    const previous = swapDOMContext(context);
+    try {
       const value = read();
 
       if (!initialized) {
@@ -35,8 +36,10 @@ export function createDOMOwnedReaction<T>(
       }
 
       return react(value);
-    }),
-  );
+    } finally {
+      swapDOMContext(previous);
+    }
+  });
 }
 
 export function registerDOMCleanup(

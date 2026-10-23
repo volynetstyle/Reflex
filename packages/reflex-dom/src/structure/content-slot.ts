@@ -1,5 +1,4 @@
 import { isDOMNode } from "../host/document";
-import { clearBetween } from "../host/mutations";
 import { createOwnedRange, type OwnedRange } from "./owned-range";
 import {
   isEmptyRenderableValue,
@@ -21,8 +20,7 @@ type ContentState =
   | { kind: "empty" }
   | { kind: "text"; node: Text; value: string }
   | { kind: "node"; node: Node }
-  | { kind: "mounted"; range: OwnedRange }
-  | { kind: "adopted" };
+  | { kind: "mounted"; range: OwnedRange };
 
 export interface ContentSlot {
   fragment: DocumentFragment;
@@ -98,17 +96,7 @@ function createSlotController(
         state = { kind: "empty" };
         range.clear();
         return;
-
-      case "adopted":
-        break;
     }
-
-    const parent = start.parentNode;
-    if (parent !== null && end.parentNode === parent) {
-      clearBetween(start, end);
-    }
-
-    state = { kind: "empty" };
   }
 
   return {
@@ -197,22 +185,60 @@ export function createContentSlot(
   }
 }
 
-export function adoptContentSlot(
+/**
+ * Takes over one server-rendered text node as text state, so later text
+ * values update it in place exactly like a client-mounted text slot.
+ */
+export function adoptTextContentSlot(
   doc: Document,
   mountUnknown: MountContent,
   start: Comment,
   end: Comment,
+  node: Text,
 ): ContentSlot {
-  const fragment = doc.createDocumentFragment();
-  const initialState: ContentState =
-    start.nextSibling === end ? { kind: "empty" } : { kind: "adopted" };
+  return createSlotController(
+    doc,
+    mountUnknown,
+    start,
+    end,
+    { kind: "text", node, value: node.data },
+    doc.createDocumentFragment(),
+  );
+}
+
+/**
+ * Takes over server-rendered content between `start` and `end`. `hydrate`
+ * activates it under its own ownership node, so the first update disposes
+ * the hydrated subtree exactly like a client-mounted one.
+ */
+export function hydrateContentSlot(
+  doc: Document,
+  mountUnknown: MountContent,
+  start: Comment,
+  end: Comment,
+  hydrate: (ownershipNode: OwnershipNode) => void,
+): ContentSlot {
+  const ownershipNode = createOwnershipNode();
+
+  try {
+    hydrate(ownershipNode);
+  } catch (error) {
+    disposeOwnershipNode(ownershipNode);
+    throw error;
+  }
 
   return createSlotController(
     doc,
     mountUnknown,
     start,
     end,
-    initialState,
-    fragment,
+    {
+      kind: "mounted",
+      range: createOwnedRange(ownershipNode, {
+        startAnchor: start,
+        endAnchor: end,
+      }),
+    },
+    doc.createDocumentFragment(),
   );
 }

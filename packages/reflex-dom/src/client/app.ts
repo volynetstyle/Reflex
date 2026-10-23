@@ -1,7 +1,7 @@
 import type { Cleanup, JSXRenderable } from "../types";
 import { createDOMRenderer, type DOMRenderer } from "./renderer";
 import type { DOMRuntimeOptions } from "../runtime/options";
-import { useDOMRenderer } from "./default";
+import { getDefaultDOMRenderer, useDOMRenderer } from "./default";
 
 export interface ReflexDOMApp {
   readonly renderer: DOMRenderer;
@@ -10,6 +10,13 @@ export interface ReflexDOMApp {
   mount(input: JSXRenderable, container: ParentNode & Node): Cleanup;
   resume(container: ParentNode & Node): Cleanup;
   use(): void;
+  /** `true` after `dispose()`. */
+  readonly disposed: boolean;
+  /**
+   * Disposes all roots of this application and closes its runtime. If it is
+   * the module's default renderer, the default is cleared.
+   */
+  dispose(): void;
 }
 
 /**
@@ -35,6 +42,13 @@ export function createApp(options?: DOMRuntimeOptions): ReflexDOMApp {
     resume: renderer.resume,
     use() {
       useDOMRenderer(renderer);
+    },
+    get disposed() {
+      return renderer.disposed;
+    },
+    dispose() {
+      if (getDefaultDOMRenderer() === renderer) useDOMRenderer(null);
+      renderer.dispose();
     },
   });
 }

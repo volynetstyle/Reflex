@@ -12,6 +12,10 @@ const getRenderer = (): DOMRenderer => {
   return defaultRenderer!;
 };
 
+export function getDefaultDOMRenderer(): DOMRenderer | null {
+  return defaultRenderer;
+}
+
 export function useDOMRenderer(renderer: DOMRenderer | null): void {
   defaultRenderer = renderer;
   setDefaultDOMRuntime(renderer?.execution.runtime ?? null);

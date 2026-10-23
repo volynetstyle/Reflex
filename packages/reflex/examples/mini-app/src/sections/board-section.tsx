@@ -52,36 +52,40 @@ export function BoardSection(props: { model: DemoModel }) {
 
       <div class="task-list">
         <For each={model.tasks} by={(task) => task.id}>
-          {(task) => (
-            <button
-              type="button"
-              class={() =>
-                `task-row ${model.isSelected(task.id) ? "task-row-selected" : ""}`
-              }
-              onClick={() => model.selectTask(task.id)}
-            >
-              <div class="task-main">
-                <div class="task-topline">
-                  <strong>{task.id}</strong>
-                  <StatusPill label={task.status} />
+          {(task) => {
+            // The key never changes for a row; the other fields can.
+            const id = task().id;
+            return (
+              <button
+                type="button"
+                class={() =>
+                  `task-row ${model.isSelected(id) ? "task-row-selected" : ""}`
+                }
+                onClick={() => model.selectTask(id)}
+              >
+                <div class="task-main">
+                  <div class="task-topline">
+                    <strong>{id}</strong>
+                    <StatusPill label={() => task().status} />
+                  </div>
+                  <h3>{() => task().title}</h3>
+                  <p>{() => task().summary}</p>
+                  <small class="task-meta">
+                    {() =>
+                      model.spotlightMetaById(id) ||
+                      `${task().owner} / ${task().points} pts`}
+                  </small>
                 </div>
-                <h3>{task.title}</h3>
-                <p>{task.summary}</p>
-                <small class="task-meta">
-                  {() =>
-                    model.spotlightMetaById(task.id) ||
-                    `${task.owner} / ${task.points} pts`}
-                </small>
-              </div>
-              <div class="task-aside">
-                <span class="task-owner">{task.owner}</span>
-                <span class="task-risk">{task.risk} risk</span>
-                <Show when={() => Boolean(model.spotlightTitleById(task.id))}>
-                  <span class="task-spotlight">Spotlighted</span>
-                </Show>
-              </div>
-            </button>
-          )}
+                <div class="task-aside">
+                  <span class="task-owner">{() => task().owner}</span>
+                  <span class="task-risk">{() => `${task().risk} risk`}</span>
+                  <Show when={() => Boolean(model.spotlightTitleById(id))}>
+                    <span class="task-spotlight">Spotlighted</span>
+                  </Show>
+                </div>
+              </button>
+            );
+          }}
         </For>
       </div>
     </article>

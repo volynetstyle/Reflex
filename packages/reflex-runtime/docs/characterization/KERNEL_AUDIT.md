@@ -94,6 +94,15 @@ the depth is 0 or 1 outside tests. See §12 H8.
 has `Computing`; a running watcher keeps `Changed` throughout execution, so
 the walk skips it (no self-delivery, F8/I8).
 
+**Correction (F17).** The argument above covers the execution epoch only. A
+watcher in `pull_frontier` holds `Watcher | Unknown | Computing` without
+`Changed`, and the host has already released `Scheduled`. An `advance` inside
+the proof whose node has a side edge into that watcher therefore reached the
+delivery branch. The owned parent edge excluded only the walker's own edge,
+so the old proof held for trees, not for DAGs. The delivery guard now tests
+`Scheduled | Computing`. The bit test sits inside the watcher-and-hook branch,
+so the computed path through this walk is unchanged.
+
 **Owned edge.** The pull walker passes the edge it owns; the walk marks all
 other subscribers. A foreign or unlinked `skip` is never matched, and every
 edge is visited. The three copies of the subscriber update (plain walk, and

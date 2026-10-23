@@ -31,6 +31,7 @@ export function createDOMSchedulerCoordinator(
   let draining = false;
   let flushingEffects = false;
   let hostRequest: HostToken | null = null;
+  const canCommitEffect = (): boolean => !scheduler.hasPending();
 
   const commitIfSettled = (): void => {
     if (flushingEffects) return;
@@ -43,7 +44,7 @@ export function createDOMSchedulerCoordinator(
         settled = false;
         // An effect can enqueue deferred reactive work. Later first runs wait
         // until that work settles, instead of observing stale DOM.
-        mountEffects?.flush(() => !scheduler.hasPending());
+        mountEffects?.flush(canCommitEffect);
       } while (
         settled &&
         batchDepth === 0 &&

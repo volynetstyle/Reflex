@@ -52,11 +52,13 @@ function getEventListenerOptions(
   const options = value as EventListenerObject & AddEventListenerOptions;
   return options.once === true ||
     options.capture === true ||
-    options.passive === true
+    options.passive === true ||
+    options.signal != null
     ? {
         once: options.once,
         capture: options.capture,
         passive: options.passive,
+        signal: options.signal,
       }
     : undefined;
 }
@@ -68,29 +70,33 @@ export function isEventProp(name: string, value: unknown): boolean {
   );
 }
 
-export function attachEventListener(
+export function attachEventListener<Context = undefined>(
   el: Element,
   name: string,
   handler: EventListenerOrEventListenerObject,
   dispatch?: (
+    context: Context,
     handler: EventListenerOrEventListenerObject,
     receiver: Element,
     event: Event,
   ) => void,
+  context?: Context,
 ): () => void {
   const event = resolveEventName(name);
   const options = getEventListenerOptions(handler);
+  // An aborted signal never attaches, independent of the host's support.
+  if (options?.signal?.aborted === true) return () => {};
   const listener =
     dispatch === undefined
       ? handler
       : isEventListenerObject(handler)
         ? {
             handleEvent(event: Event) {
-              dispatch(handler, el, event);
+              dispatch(context!, handler, el, event);
             },
           }
         : function (this: Element, event: Event) {
-            dispatch(handler, this, event);
+            dispatch(context!, handler, this, event);
           };
 
   el.addEventListener(event, listener, options);

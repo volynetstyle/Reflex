@@ -6,6 +6,7 @@ import {
   getActiveExecutionDomain,
   getActiveRuntimeContext,
   getExecutionDomain,
+  reactiveBatchDepth,
   readConsumer,
   readProducer,
   runWatcher,
@@ -208,6 +209,107 @@ describe("Reactive runtime - execution domains", () => {
 
     expect(onTeardownError).toHaveBeenCalledTimes(1);
     expect(order).toEqual(["second"]);
+  });
+
+  it("returns the callback value and leaves both batch boundaries closed", () => {
+    const { scheduler, log } = createQueueScheduler();
+    const domain = createExecutionDomain({ scheduler });
+
+    expect(domain.batch(() => 7)).toBe(7);
+    expect(log).toEqual(["enter", "leave"]);
+    expect(domain.run(() => reactiveBatchDepth)).toBe(0);
+    expect(domain.depth).toBe(0);
+  });
+
+  it("rethrows a scheduler exit error alone and still leaves the reactive batch", () => {
+    const leave = new Error("leave");
+    const domain = createExecutionDomain({
+      scheduler: {
+        leaveBatch() {
+          throw leave;
+        },
+      },
+    });
+
+    expect(() => domain.batch(() => 1)).toThrow(leave);
+    expect(domain.run(() => reactiveBatchDepth)).toBe(0);
+    expect(domain.depth).toBe(0);
+  });
+
+  it("undoes the managed entry when the scheduler entry throws", () => {
+    const outer = getActiveRuntimeContext();
+    const callback = vi.fn();
+    const domain = createExecutionDomain({
+      scheduler: {
+        enterBatch() {
+          throw new Error("enter");
+        },
+      },
+    });
+
+    expect(() => domain.batch(callback)).toThrow("enter");
+    expect(callback).not.toHaveBeenCalled();
+    expect(getActiveRuntimeContext()).toBe(outer);
+    expect(domain.depth).toBe(0);
+  });
+
+  it("switches into its context for a batch and restores the caller on every exit", () => {
+    const outer = getActiveRuntimeContext();
+    const { scheduler, log } = createQueueScheduler();
+    const domain = createExecutionDomain({ scheduler });
+
+    domain.batch(() => {
+      expect(getActiveRuntimeContext()).toBe(domain.context);
+      expect(domain.depth).toBe(1);
+    });
+    expect(getActiveRuntimeContext()).toBe(outer);
+
+    expect(() =>
+      domain.batch(() => {
+        throw new Error("body");
+      }),
+    ).toThrow("body");
+    expect(getActiveRuntimeContext()).toBe(outer);
+    expect(log).toEqual(["enter", "leave", "enter", "leave"]);
+    expect(domain.run(() => reactiveBatchDepth)).toBe(0);
+    expect(domain.depth).toBe(0);
+  });
+
+  it("uses a scheduler batch policy as the whole boundary inside the domain", () => {
+    const enterBatch = vi.fn();
+    const domain = createExecutionDomain({
+      scheduler: {
+        enterBatch,
+        batch: (fn) => fn(),
+      },
+    });
+
+    expect(
+      domain.batch(() => {
+        expect(getActiveRuntimeContext()).toBe(domain.context);
+        return domain.depth;
+      }),
+    ).toBe(1);
+    expect(enterBatch).not.toHaveBeenCalled();
+  });
+
+  it("keeps operations usable detached and reads live state through accessors", () => {
+    const { run, batch, flush, hasPending, close } = createExecutionDomain();
+    const domain = getExecutionDomain(run(() => getActiveRuntimeContext()))!;
+
+    expect(run(() => domain.depth)).toBe(1);
+    expect(batch(() => domain.state)).toBe(ExecutionDomainState.Open);
+    expect(hasPending()).toBe(false);
+    flush();
+
+    const signal = domain.signal;
+    expect(signal.aborted).toBe(false);
+    close();
+    expect(domain.closed).toBe(true);
+    expect(domain.state).toBe(ExecutionDomainState.Closed);
+    expect(signal.aborted).toBe(true);
+    expect(() => run(() => 0)).toThrow(ExecutionDomainClosedError);
+    expect(() => batch(() => 0)).toThrow(ExecutionDomainClosedError);
   });
 
   it("drains teardown at the outer exit when the body throws", () => {

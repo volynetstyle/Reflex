@@ -1,42 +1,154 @@
 import type { Namespace } from "../host/namespace";
-import { untracked } from "@volynets/reflex-runtime";
-import { runWithOwner } from "@volynets/reflex-framework";
+import {
+  createProducer,
+  readProducer,
+  untracked,
+  writeProducer,
+  type ProducerNode,
+} from "@volynets/reflex-runtime";
+import {
+  createOwnershipNode,
+  disposeOwnershipNode,
+  runWithOwner,
+  type OwnershipNode,
+} from "@volynets/reflex-framework";
 import { moveRangeBefore } from "../host/mutations";
 import type { ForRenderable } from "../operators";
-import { reconcileKeyedList, type KeyedItem } from "../reconcile/keyed";
-import { getDOMContext } from "../runtime/context";
+import {
+  reconcileKeyedList,
+  type KeyedItem,
+  type KeyedReconciliationHooks,
+} from "../reconcile/keyed";
+import { getDOMContext, type DOMContext } from "../runtime/context";
 import {
   createDOMOwnedReaction,
   registerDOMCleanup,
+  runInDOMOwnershipNode,
 } from "../runtime/lifetime";
 import type { ContentSlot } from "../structure/content-slot";
-import { createMountedSlot } from "../mount/slot";
+import { createOwnedRange, type OwnedRange } from "../structure/owned-range";
+import {
+  createHydratedSlot,
+  createMountedSlot,
+  type HydrateContent,
+} from "../mount/slot";
+import { consumeHydrationSlot } from "../hydrate/slots";
+import { failHydration } from "../hydrate/error";
+import { appendRenderableNodes } from "./append";
 import { bindDOMRangeRef } from "./range-ref";
 
+/**
+ * One keyed row. Its content is created once, under the row's own ownership
+ * node; later edits only write `item` and `index`, so DOM, component state and
+ * row resources survive replacement of the item object and moves.
+ */
 interface ForRow<T> extends KeyedItem<T> {
-  slot: ContentSlot;
+  range: OwnedRange;
+  item: ProducerNode<T>;
+  index: ProducerNode<number>;
 }
 
-export function mountFor(
+interface ForList {
+  hydrateRows(first: Node | null, boundary: Node, hydrate: HydrateContent): void;
+  reconcile(items: readonly unknown[] | null | undefined): void;
+  destroy(): void;
+}
+
+function createForList(
   renderable: ForRenderable<unknown>,
   ns: Namespace,
   doc: Document,
-): Node {
-  const context = getDOMContext();
-  const rowOwner = context.owner.currentNode;
-  const fragment = doc.createDocumentFragment();
-  const start = doc.createComment("");
-  const end = doc.createComment("");
-  fragment.appendChild(start);
-  fragment.appendChild(end);
-
+  end: Comment,
+  context: DOMContext,
+): ForList {
+  const listNode = context.owner.currentNode;
   let rows: ForRow<unknown>[] = [];
   let fallbackSlot: ContentSlot | null = null;
 
-  function destroyRows(currentRows: readonly ForRow<unknown>[]): void {
-    for (let i = 0; i < currentRows.length; i++) {
-      currentRows[i]!.slot.destroy();
+  function createRow(
+    item: unknown,
+    key: PropertyKey,
+    index: number,
+    start: Comment,
+    rowEnd: Comment,
+  ): ForRow<unknown> {
+    return {
+      key,
+      value: item,
+      range: createOwnedRange(createOwnershipNode(), {
+        startAnchor: start,
+        endAnchor: rowEnd,
+      }),
+      item: createProducer(item),
+      index: createProducer(index),
+    };
+  }
+
+  /** Runs the row callback and its hooks inside the row's ownership node. */
+  function inRow(row: ForRow<unknown>, fn: (content: unknown) => void): void {
+    const node: OwnershipNode = row.range.ownershipNode;
+
+    try {
+      runWithOwner(context.owner, listNode, () =>
+        runInDOMOwnershipNode(
+          node,
+          () =>
+            fn(
+              renderable.children(
+                () => readProducer(row.item),
+                () => readProducer(row.index),
+              ),
+            ),
+          context,
+        ),
+      );
+    } catch (error) {
+      disposeOwnershipNode(node);
+      throw error;
     }
+  }
+
+  function mountRow(
+    item: unknown,
+    key: PropertyKey,
+    index: number,
+    before: Node,
+  ): ForRow<unknown> {
+    const fragment = doc.createDocumentFragment();
+    const start = doc.createComment("");
+    const rowEnd = doc.createComment("");
+    const row = createRow(item, key, index, start, rowEnd);
+
+    fragment.appendChild(start);
+    inRow(row, (content) => appendRenderableNodes(fragment, content, ns));
+    fragment.appendChild(rowEnd);
+    before.parentNode!.insertBefore(fragment, before);
+    return row;
+  }
+
+  function updateRow(row: ForRow<unknown>, item: unknown, index: number): void {
+    row.value = item;
+    writeProducer(row.item, item);
+    writeProducer(row.index, index);
+  }
+
+  const hooks: KeyedReconciliationHooks<unknown, ForRow<unknown>> = {
+    endAnchor: end,
+    getKey: (item, index) => renderable.by(item, index),
+    getStart: (row) => row.range.startAnchor,
+    mount: mountRow,
+    update: updateRow,
+    move(row, before) {
+      moveRangeBefore(row.range.startAnchor, row.range.endAnchor, before);
+    },
+    remove(row) {
+      row.range.destroy();
+    },
+  };
+
+  function destroyRows(): void {
+    for (let i = 0; i < rows.length; i++) rows[i]!.range.destroy();
+    rows = [];
   }
 
   function destroyFallback(): void {
@@ -44,100 +156,139 @@ export function mountFor(
     fallbackSlot = null;
   }
 
-  function mountRow(
-    parent: Node,
-    item: unknown,
-    key: PropertyKey,
-    index: number,
-    before: Node,
-  ): ForRow<unknown> {
-    const row: ForRow<unknown> = {
-      key,
-      value: item,
-      slot: runWithOwner(context.owner, rowOwner, () =>
-        createMountedSlot(renderable.children(item, index), ns, doc),
-      ),
-    };
+  return {
+    hydrateRows(first, boundary, hydrate) {
+      const items = untracked(renderable.each) ?? [];
+      let cursor = first;
 
-    parent.insertBefore(row.slot.fragment, before);
-    return row;
-  }
+      if (items.length === 0) {
+        if (renderable.fallback != null) {
+          const slot = consumeHydrationSlot(cursor, boundary);
+          fallbackSlot = runWithOwner(context.owner, listNode, () =>
+            createHydratedSlot(
+              renderable.fallback,
+              slot.start,
+              slot.end,
+              ns,
+              hydrate,
+            ),
+          );
+          cursor = slot.next;
+        }
+      } else {
+        for (let index = 0; index < items.length; index++) {
+          const item = items[index];
+          const slot = consumeHydrationSlot(cursor, boundary);
+          const row = createRow(
+            item,
+            renderable.by(item, index),
+            index,
+            slot.start,
+            slot.end,
+          );
+          const rowFirst =
+            slot.start.nextSibling === slot.end ? null : slot.start.nextSibling;
+          inRow(row, (content) => hydrate(content, rowFirst, slot.end, ns));
+          rows.push(row);
+          cursor = slot.next;
+        }
+      }
 
-  function updateRow(row: ForRow<unknown>, item: unknown, index: number): void {
-    if (row.value === item) {
-      return;
-    }
+      if (cursor !== null) failHydration();
+    },
 
-    row.value = item;
-    runWithOwner(context.owner, rowOwner, () => {
-      row.slot.update(renderable.children(item, index));
-    });
-  }
+    reconcile(nextItemsRaw) {
+      const parent = end.parentNode;
+      if (parent === null) return;
 
-  function reconcile(
-    nextItemsRaw: readonly unknown[] | null | undefined,
-  ): void {
-    const parent = end.parentNode;
-    if (parent === null) {
-      return;
-    }
+      const nextItems = nextItemsRaw ?? [];
 
-    const nextItems = nextItemsRaw ?? [];
+      if (nextItems.length === 0) {
+        destroyRows();
 
-    if (nextItems.length === 0) {
-      destroyRows(rows);
-      rows = [];
-
-      if (renderable.fallback != null) {
-        if (fallbackSlot === null) {
-          fallbackSlot = runWithOwner(context.owner, rowOwner, () =>
+        if (renderable.fallback == null) {
+          destroyFallback();
+        } else if (fallbackSlot === null) {
+          // The fallback is a fixed renderable; it mounts once per empty state.
+          fallbackSlot = runWithOwner(context.owner, listNode, () =>
             createMountedSlot(renderable.fallback, ns, doc),
           );
           parent.insertBefore(fallbackSlot.fragment, end);
-        } else {
-          runWithOwner(context.owner, rowOwner, () => {
-            fallbackSlot!.update(renderable.fallback);
-          });
         }
-      } else {
-        destroyFallback();
+        return;
       }
 
-      return;
-    }
+      destroyFallback();
+      rows = reconcileKeyedList(rows, nextItems, hooks).rows;
+    },
 
-    destroyFallback();
+    destroy() {
+      destroyFallback();
+      destroyRows();
+    },
+  };
+}
 
-    rows = reconcileKeyedList(rows, nextItems, {
-      endAnchor: end,
-      getKey: (item, index) => renderable.by(item, index),
-      getStart: (row) => row.slot.start,
-      mount: (item, key, index, before) =>
-        mountRow(parent, item, key, index, before),
-      update: updateRow,
-      move: (row, before) => {
-        moveRangeBefore(row.slot.start, row.slot.end, before);
-      },
-      remove: (row) => {
-        row.slot.destroy();
-      },
-    }).rows;
-  }
-
-  // The list owns its dependency; mounting it inside another reactive slot
-  // must not subscribe that parent slot to the list as well.
-  untracked(() => reconcile(renderable.each()));
-
-  createDOMOwnedReaction(renderable.each, reconcile);
+function bindForLifecycle(
+  list: ForList,
+  renderable: ForRenderable<unknown>,
+  start: Comment,
+  end: Comment,
+): void {
+  // Rows are created untracked: the list depends only on `each`, never on
+  // values read while a row callback or its content runs.
+  createDOMOwnedReaction(renderable.each, (items) =>
+    untracked(() => list.reconcile(items)),
+  );
 
   registerDOMCleanup(() => {
-    destroyFallback();
-    destroyRows(rows);
+    list.destroy();
     start.parentNode?.removeChild(start);
     end.parentNode?.removeChild(end);
   });
 
   bindDOMRangeRef(renderable.ref, start, end);
+}
+
+export function mountFor(
+  renderable: ForRenderable<unknown>,
+  ns: Namespace,
+  doc: Document,
+): Node {
+  const fragment = doc.createDocumentFragment();
+  const start = doc.createComment("");
+  const end = doc.createComment("");
+  fragment.appendChild(start);
+  fragment.appendChild(end);
+
+  const list = createForList(renderable, ns, doc, end, getDOMContext());
+  // The list owns its dependency; mounting it inside another reactive slot
+  // must not subscribe that parent slot to the list as well.
+  untracked(() => list.reconcile(renderable.each()));
+  bindForLifecycle(list, renderable, start, end);
 
   return fragment;
+}
+
+/** Adopts server-rendered rows as keyed records instead of a generic slot. */
+export function hydrateFor(
+  renderable: ForRenderable<unknown>,
+  ns: Namespace,
+  start: Comment,
+  end: Comment,
+  hydrate: HydrateContent,
+): void {
+  const list = createForList(
+    renderable,
+    ns,
+    start.ownerDocument,
+    end,
+    getDOMContext(),
+  );
+  list.hydrateRows(
+    start.nextSibling === end ? null : start.nextSibling,
+    end,
+    hydrate,
+  );
+  bindForLifecycle(list, renderable, start, end);
 }

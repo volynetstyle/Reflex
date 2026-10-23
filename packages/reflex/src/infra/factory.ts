@@ -1,14 +1,12 @@
 import {
-  ReactiveNode as RuntimeReactiveNode,
-  PRODUCER_INITIAL_STATE,
-  WATCHER_INITIAL_STATE,
-  CONSUMER_INITIAL_STATE,
+  createConsumer,
+  createProducer,
+  createWatcher,
 } from "@volynets/reflex-runtime/internal";
 import type {
   ConsumerNode,
   ProducerNode,
   WatcherNode,
-  WatcherResult,
 } from "@volynets/reflex-runtime/internal";
 import { EventSource as RuntimeEventSource } from "./event";
 
@@ -17,34 +15,15 @@ export const createSource = <T>(): RuntimeEventSource<T> => {
 };
 
 export const createResourceStateNode = (): ProducerNode<number> =>
-  new RuntimeReactiveNode<number>(
-    0,
-    undefined,
-    PRODUCER_INITIAL_STATE,
-  ) as ProducerNode<number>;
+  createProducer(0);
 
 export const createAccumulator = <T>(payload: T): ProducerNode<T> =>
-  new RuntimeReactiveNode(
-    payload,
-    undefined,
-    PRODUCER_INITIAL_STATE,
-  ) as ProducerNode<T>;
+  createProducer(payload);
 
 export const createSignalNode = createAccumulator;
 
-export const createComputedNode = <T>(fn: () => T): ConsumerNode<T> => {
-  const node = new RuntimeReactiveNode<T>(
-    undefined as T,
-    fn,
-    CONSUMER_INITIAL_STATE,
-  );
-
-  return node as ConsumerNode<T>;
-};
+export const createComputedNode = <T>(fn: () => T): ConsumerNode<T> =>
+  createConsumer(fn);
 
 export const createWatcherNode = (compute: EffectFn): WatcherNode =>
-  new RuntimeReactiveNode<WatcherResult>(
-    undefined,
-    compute,
-    WATCHER_INITIAL_STATE,
-  ) as WatcherNode;
+  createWatcher(compute);

@@ -5,6 +5,7 @@ export * from "./useComponent";
 export * from "./useComputed";
 export * from "./useEffect";
 export * from "./useOwned";
+export * from "./onCleanup";
 export * from "./useRef";
 export * from "./useSignal";
 export * from "./useAbortSignal";

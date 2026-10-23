@@ -4,7 +4,7 @@ import {
   type SignalAccessor,
 } from "@volynets/reflex-framework";
 import { getActiveRuntimeContext } from "@volynets/reflex-runtime";
-import { currentConsumer } from "@volynets/reflex-runtime/internal";
+import { isTracking } from "@volynets/reflex-runtime/internal";
 import { getActiveDOMContext } from "../runtime/context";
 import { bindDOMWrite } from "../runtime/mutation";
 
@@ -32,7 +32,7 @@ export function useSignal<T>(initial: T): SignalAccessor<T> {
       const activeRuntime = getActiveRuntimeContext();
       if (
         activeRuntime !== ownerContext.runtime.execution &&
-        currentConsumer !== null
+        isTracking()
       ) {
         throw new Error(
           "A DOM signal cannot be read by a reactive computation in another runtime.",

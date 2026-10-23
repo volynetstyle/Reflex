@@ -16,7 +16,8 @@ import { resolveShowValue, resolveSwitchValue } from "../operators";
 import { RenderableKind } from "../renderable/kind";
 import { classifyRenderable } from "../renderable/classify";
 import { bindElementProps } from "../mount/element-binder";
-import { hydrateReactiveSlot } from "../mount/slot";
+import { hydrateReactiveSlot, type HydrateContent } from "../mount/slot";
+import { hydrateFor } from "../mount/for";
 import { mountPortal } from "../mount/portal";
 import { mountOwnedRange } from "../mount/range";
 import {
@@ -44,18 +45,15 @@ function identity<T>(value: T): T {
   return value;
 }
 
-function resolveForHydrationValue(
-  renderable: ForRenderable<unknown>,
-  items: readonly unknown[] | null | undefined,
-): JSXRenderable {
-  const nextItems = items ?? [];
-
-  if (nextItems.length === 0) {
-    return renderable.fallback;
+/** Dynamic slot content hydrates recursively, so nested handlers and components activate. */
+const hydrateSlotContent: HydrateContent = (value, first, boundary, ns) => {
+  if (
+    hydrateRenderableValue(value, ns, first, boundary, boundary.ownerDocument!) !==
+    null
+  ) {
+    failHydration();
   }
-
-  return nextItems.map((item, index) => renderable.children(item, index));
-}
+};
 
 function expectedNamespaceUri(namespace: Namespace): string | null {
   switch (namespace) {
@@ -138,6 +136,7 @@ function hydrateRenderableValue(
         slot.start,
         slot.end,
         parentNamespace,
+        hydrateSlotContent,
       );
       return slot.next;
     }
@@ -151,6 +150,7 @@ function hydrateRenderableValue(
         slot.start,
         slot.end,
         parentNamespace,
+        hydrateSlotContent,
         renderable.ref,
       );
       return slot.next;
@@ -165,20 +165,19 @@ function hydrateRenderableValue(
         slot.start,
         slot.end,
         parentNamespace,
+        hydrateSlotContent,
       );
       return slot.next;
     }
 
     case RenderableKind.For: {
-      const renderable = value as ForRenderable<unknown>;
       const slot = consumeHydrationSlot(currentNode, boundary);
-      hydrateReactiveSlot(
-        renderable.each,
-        (resolvedValue) => resolveForHydrationValue(renderable, resolvedValue),
+      hydrateFor(
+        value as ForRenderable<unknown>,
+        parentNamespace,
         slot.start,
         slot.end,
-        parentNamespace,
-        renderable.ref,
+        hydrateSlotContent,
       );
       return slot.next;
     }

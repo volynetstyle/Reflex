@@ -151,6 +151,30 @@ Reactive batches defer idle notification. Host work is requested separately;
 invalidation. A host combining scheduler and reactive batches closes scheduler
 policy before leaving the reactive batch.
 
+## Integration contract
+
+Sibling Reflex packages use a named subset of `/internal` and never read
+registers, state flags or edge fields. The subset is enforced by the
+repository's `check:package-boundaries`; the rationale is in
+[runtime-integration.md](../../../docs/architecture/runtime-integration.md).
+The semantic operations it adds:
+
+| Operation                              | Answer or effect                                                                                                                                    |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `isTracking()`                         | A reactive computation is collecting dependencies now; false inside `untracked`.                                                                    |
+| `activeTracking`                       | Live binding that is non-null exactly while `isTracking()` is true. For hot paths that cannot afford a call; compare it with `null` only.           |
+| `isContextSettled(context?)`           | The context is outside propagation and tracked evaluation, whether it is active or saved.                                                           |
+| `hasObservers(node)`                   | Some consumer depends on the node.                                                                                                                  |
+| `disposeNodeIfUnobserved(node)`        | Disposes the node when nothing observes it; returns whether it did.                                                                                 |
+| `suspendConsumerIfUnobserved(node)`    | Unlinks sources and drops the cached value of an unobserved consumer, keeping its computation; the next read evaluates.                             |
+| `hasPendingValidation(node)`           | The node holds an invalidation it has not validated.                                                                                                |
+| `takeScheduledWatcher(node)`           | Scheduler dequeue step: releases queue ownership and answers whether the watcher is still live; a watcher disposed while queued answers false.      |
+| `shouldRetryWatcherAfterFailure(node)` | After a throwing run: a failed dependency validation left the watcher dirty and it needs a later retry. Callback and cleanup failures answer false. |
+| `invalidateWatcher(node)`              | The next run executes the callback; the host is notified through `onNodeInvalidated`.                                                               |
+
+`flushPendingRuntimeIdle()` owns its own pending check; callers invoke it
+without inspecting runtime state.
+
 ## Example
 
 ```ts

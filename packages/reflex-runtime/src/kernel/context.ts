@@ -52,6 +52,37 @@ export function runWithRuntimeContext<T>(
   }
 }
 
+/**
+ * Opens the region of `runWithRuntimeContext(context, fn)` around a callback
+ * the caller invokes itself, so the callback is not passed through this call.
+ * Returns the context to restore, or `null` when `context` is already active.
+ * Every exit, including a throw, must pass the result to
+ * `leaveRuntimeContextRegion`.
+ */
+export function enterRuntimeContextRegion(
+  context: RuntimeContext,
+): RuntimeContext | null {
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.context.run");
+  const previous = getActiveRuntimeContext();
+  if (previous === context) return null;
+
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.context.switch");
+  switchRuntimeContext(context);
+  suspendedContexts.push(previous);
+  return previous;
+}
+
+/** Closes a region opened by `enterRuntimeContextRegion`. */
+export function leaveRuntimeContextRegion(
+  previous: RuntimeContext | null,
+): void {
+  if (previous === null) return;
+  suspendedContexts.pop();
+  switchRuntimeContext(previous);
+}
+
 /** Whether `context` has a continuation suspended by a nested context entry. */
 export function isRuntimeContextSuspended(context: RuntimeContext): boolean {
   return suspendedContexts.includes(context);

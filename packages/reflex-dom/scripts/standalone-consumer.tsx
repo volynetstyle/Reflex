@@ -34,7 +34,7 @@ const view: ProductionJSX.Element = (
       <span>Visible</span>
     </Show>
     <For each={[1, 2]} by={(value) => value}>
-      {(value) => <span>{value}</span>}
+      {(value) => <span>{value()}</span>}
     </For>
     <svg>
       <circle cx={1} />
