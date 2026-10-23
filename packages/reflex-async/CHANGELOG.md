@@ -1,5 +1,11 @@
 # @volynets/reflex-async
 
+## 0.2.1
+
+### Patch Changes
+
+- 03f4f9b: Internal peer dependencies now follow the released versions: the published floor is the workspace version at release time (`@volynets/reflex-runtime@^1.1.0`).
+
 ## 0.2.0
 
 ### Minor Changes

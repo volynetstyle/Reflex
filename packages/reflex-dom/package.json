@@ -1,6 +1,6 @@
 {
   "name": "@volynets/reflex-dom",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "type": "module",
   "description": "DOM renderer for Reflex",
   "license": "MIT",
@@ -101,9 +101,9 @@
     "playwright": "^1.62.1"
   },
   "peerDependencies": {
-    "@volynets/reflex-runtime": "^1.0.1",
-    "@volynets/reflex-framework": "^0.2.0",
-    "@volynets/reflex-scheduler": "^0.2.0"
+    "@volynets/reflex-runtime": "workspace:^",
+    "@volynets/reflex-framework": "workspace:^",
+    "@volynets/reflex-scheduler": "workspace:^"
   },
   "private": false
 }

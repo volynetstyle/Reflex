@@ -1,6 +1,6 @@
 {
   "name": "@volynets/reflex-runtime-mcp",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "description": "Official MCP protocol boundary for Reflex runtime diagnostics.",
   "license": "MIT",
@@ -41,7 +41,7 @@
     "@modelcontextprotocol/server": "2.0.0"
   },
   "peerDependencies": {
-    "@volynets/reflex-runtime": "^1.0.1"
+    "@volynets/reflex-runtime": "workspace:^"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "2.0.0",

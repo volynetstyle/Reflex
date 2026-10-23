@@ -1,5 +1,11 @@
 # @volynets/reflex-runtime-mcp
 
+## 1.0.2
+
+### Patch Changes
+
+- 03f4f9b: Internal peer dependencies now follow the released versions: the published floor is the workspace version at release time (`@volynets/reflex-runtime@^1.1.0`).
+
 ## 1.0.1
 
 ### Patch Changes
