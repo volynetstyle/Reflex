@@ -20,16 +20,16 @@ around it, never a property of nodes or edges.
 
 ## Layers
 
-| Layer             | Authority                                                  | Implementation                                       |
-| ----------------- | ---------------------------------------------------------- | ---------------------------------------------------- |
-| Reactive kernel   | Node value, flags, dependency graph, push/pull             | `reflex-runtime/src/kernel`, `src/protocol`          |
+| Layer             | Authority                                                    | Implementation                                     |
+| ----------------- | ------------------------------------------------------------ | -------------------------------------------------- |
+| Reactive kernel   | Node value, flags, dependency graph, push/pull               | `reflex-runtime/src/kernel`, `src/protocol`        |
 | Execution domain  | Register bank, hooks, scheduler identity, entry, safe points | `reflex-runtime/src/domain`, `src/kernel/context*` |
-| Scheduler policy  | Per-domain enqueue, flush, settlement                      | `reflex-scheduler` (`createSchedulerDomain`)         |
-| Owner/environment | Provider chain, nested ownership, per-run effect ownership | `reflex-framework/src/ownership`                     |
-| Lifetime          | Resource handles, cleanup, abort signals                   | `reflex-framework/src/ownership/lifecycle.ts`        |
-| Managed boundary  | Domain + owner entry, borrow rules, graph teardown         | `reflex-framework/src/domain`                        |
-| Communication     | Versioned snapshot ports                                   | `reflex-framework/src/domain/port.ts`                |
-| Async             | Attempt identity, commit authority, completion entry      | `reflex-async/src/async`                             |
+| Scheduler policy  | Per-domain enqueue, flush, settlement                        | `reflex-scheduler` (`createSchedulerDomain`)       |
+| Owner/environment | Provider chain, nested ownership, per-run effect ownership   | `reflex-framework/src/ownership`                   |
+| Lifetime          | Resource handles, cleanup, abort signals                     | `reflex-framework/src/ownership/lifecycle.ts`      |
+| Managed boundary  | Domain + owner entry, borrow rules, graph teardown           | `reflex-framework/src/domain`                      |
+| Communication     | Versioned snapshot ports                                     | `reflex-framework/src/domain/port.ts`              |
+| Async             | Attempt identity, commit authority, completion entry         | `reflex-async/src/async`                           |
 
 `reflex-runtime` never depends on `reflex-framework`.
 
@@ -48,7 +48,7 @@ singleton.
 | G1  | Independent domains have disjoint node sets.                                                                                              | Managed API discipline; DEV cross-domain read guard            |
 | G2  | Managed operations only create edges inside one domain.                                                                                   | Managed API; ports never link                                  |
 | G3  | Push/pull from `V_d` never reaches another domain (follows from G2).                                                                      | G2                                                             |
-| E1  | At every supported boundary the module registers reflect the active domain; inactive banks hold their last saved state.                    | `context.switch.ts`                                            |
+| E1  | At every supported boundary the module registers reflect the active domain; inactive banks hold their last saved state.                   | `context.switch.ts`                                            |
 | E2  | Nested A→B→A and every throw restore register banks, host hooks and diagnostic phase state.                                               | `runWithRuntimeContext` `finally`, execution-state save/load   |
 | E3  | Active push/pull continuation slices survive nested entries.                                                                              | Shared reentrant stacks with invocation slices                 |
 | S1  | A watcher is enqueued and executed by its own domain's scheduler, including microtask resume.                                             | Per-domain hooks; `domain.run` around every flush              |
@@ -83,18 +83,41 @@ managed entry points only.
   are rejected; the outer continuation keeps running to its natural exit.
 - `Closed`: teardown drained, `signal` aborted, scheduler queue released.
 
+### Managed entry cost
+
+`batch(fn)` is observably `run(() => scheduler.batch(fn))` when the scheduler
+supplies `batch`. Otherwise it is `run()` around the scheduler and reactive
+batch boundaries: enter reactive, enter scheduler, `fn`, leave scheduler,
+leave reactive. Exits restore the caller's context first, then uncount the
+entry and reach the safe point. Callback and boundary failures are collected
+in that order (`AggregateError` when more than one).
+
+The implementation is shaped by entry cost, from the cheapest case to the most
+expensive:
+
+- An open domain whose context is already active only counts the entry. A
+  context switch (`enterRuntimeContextRegion`), a pending safe point and every
+  failure path leave the straight line.
+- `run` and `batch` invoke the callback themselves and never pass it on, so
+  both stay small enough for the engine to inline. A caller's closure
+  (`batch(() => write())`) is then not allocated.
+- Operations are own data properties holding closures, so they work detached
+  (`const { batch } = domain`). The `state`, `closed`, `signal` and `depth`
+  accessors live on a shared prototype. Own accessors on the domain object
+  made every `domain.run(fn)` an uninlinable dynamic call.
+
 ## Support matrix
 
-| Scenario                                         | Status                         |
-| ------------------------------------------------ | ------------------------------ |
-| Several domains, one module format               | Supported                      |
-| Nested A→B→A entry, including throws             | Supported                      |
-| Owner changes inside one domain                  | Supported, no register reload  |
-| Async completion into captured domain            | Supported (explicit capture)   |
-| Implicit context propagation across `await`      | Not supported (A1)             |
-| Domains split across ESM and CJS module instances | Not supported                  |
-| Cross-domain reactive edge via managed API       | Rejected (DEV) / unsupported   |
-| Cross-domain value transfer                      | Ports only                     |
+| Scenario                                          | Status                        |
+| ------------------------------------------------- | ----------------------------- |
+| Several domains, one module format                | Supported                     |
+| Nested A→B→A entry, including throws              | Supported                     |
+| Owner changes inside one domain                   | Supported, no register reload |
+| Async completion into captured domain             | Supported (explicit capture)  |
+| Implicit context propagation across `await`       | Not supported (A1)            |
+| Domains split across ESM and CJS module instances | Not supported                 |
+| Cross-domain reactive edge via managed API        | Rejected (DEV) / unsupported  |
+| Cross-domain value transfer                       | Ports only                    |
 
 ## Ownership integration (PR-04)
 
@@ -102,7 +125,7 @@ managed entry points only.
   This is the only link; `OwnershipNode` is unchanged and runtime knows
   nothing about owners.
 - `runManaged(owner, node, fn)` = `domain.run(() => runWithOwner(owner, node,
-  fn))`. Owner changes inside one domain never reload the register bank, and
+fn))`. Owner changes inside one domain never reload the register bank, and
   `runWithOwner` never resets tracking.
 - Owned effects run, re-run and clean up in their owner's domain, with the
   run's owner/environment restored, wherever creation or disposal starts.
@@ -110,7 +133,7 @@ managed entry points only.
 - `bindManaged(fn)` captures domain + owner + node for callbacks invoked later
   from outside (events, timers, async continuations). Plain reactive
   callbacks are not wrapped and keep their cost.
-- Raw writes are attributed to the *active* domain: writing another domain's
+- Raw writes are attributed to the _active_ domain: writing another domain's
   node from a foreign context uses the foreign scheduler. Write through the
   owning domain's managed entry or a bound writer.
 
@@ -126,12 +149,12 @@ provided as an accessor (signal) and read reactively.
 Managed values (`createOwnedSignal`, `createOwnedComputed`) record their
 owner `OwnershipNode` on the handle, never on the reactive node.
 
-| Reader scope vs owner             | Without agreement | With `lease()` / `transfer()` |
-| --------------------------------- | ----------------- | ----------------------------- |
-| Same scope or descendant          | Allowed           | —                             |
-| Sibling                           | `BorrowError`     | Allowed                       |
-| Ancestor (longer-lived) of owner  | `BorrowError`     | Allowed                       |
-| Other execution domain            | Use a port        | `transfer()` rejected         |
+| Reader scope vs owner            | Without agreement | With `lease()` / `transfer()` |
+| -------------------------------- | ----------------- | ----------------------------- |
+| Same scope or descendant         | Allowed           | —                             |
+| Sibling                          | `BorrowError`     | Allowed                       |
+| Ancestor (longer-lived) of owner | `BorrowError`     | Allowed                       |
+| Other execution domain           | Use a port        | `transfer()` rejected         |
 
 - When the owner closes with no lease, the handle is released: reads and
   writes throw `ReleasedResourceError`, and the graph node is unlinked at the

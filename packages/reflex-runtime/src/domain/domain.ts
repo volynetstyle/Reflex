@@ -7,7 +7,9 @@ import type {
 import {
   configureRuntimeContext,
   createRuntimeContext,
+  enterRuntimeContextRegion,
   getActiveRuntimeContext,
+  leaveRuntimeContextRegion,
   runWithRuntimeContext,
   type RuntimeContext,
 } from "../kernel/context";
@@ -45,10 +47,15 @@ export interface ExecutionDomainOptions {
   onTeardownError?: (error: unknown) => void;
 }
 
+// Primitive states are inlined by the build; the exported object is the API.
+const OPEN = 0;
+const CLOSING = 1;
+const CLOSED = 2;
+
 export const ExecutionDomainState = {
-  Open: 0,
-  Closing: 1,
-  Closed: 2,
+  Open: OPEN,
+  Closing: CLOSING,
+  Closed: CLOSED,
 } as const;
 
 export type ExecutionDomainState =
@@ -121,10 +128,103 @@ function compose<A extends unknown[]>(
   };
 }
 
-function throwCollected(errors: unknown[] | undefined): void {
-  if (errors === undefined) return;
+function throwCollected(errors: unknown[]): never {
   if (errors.length === 1) throw errors[0];
   throw new AggregateError(errors, "Reactive batch failed");
+}
+
+/**
+ * Cold exit of a batch whose callback threw: both boundaries still close, in
+ * order, and every failure is reported, the callback's first.
+ */
+function leaveBatchAfterError(
+  scheduler: ExecutionDomainScheduler,
+  error: unknown,
+): never {
+  const errors = [error];
+  try {
+    scheduler.leaveBatch?.();
+  } catch (leaveError) {
+    errors.push(leaveError);
+  }
+  try {
+    leaveReactiveBatch();
+  } catch (leaveError) {
+    errors.push(leaveError);
+  }
+  return throwCollected(errors);
+}
+
+/** Cold exit when the scheduler boundary itself failed to close. */
+function leaveReactiveBatchAfterError(error: unknown): never {
+  const errors = [error];
+  try {
+    leaveReactiveBatch();
+  } catch (leaveError) {
+    errors.push(leaveError);
+  }
+  return throwCollected(errors);
+}
+
+/** Live per-domain state behind the prototype accessors. */
+interface DomainView {
+  state(): ExecutionDomainState;
+  depth(): number;
+  signal(): AbortSignal;
+}
+
+type DomainOperations = Pick<
+  ExecutionDomain,
+  "run" | "batch" | "flush" | "hasPending" | "teardown" | "close"
+>;
+
+/**
+ * Operations are own data properties holding closures, so they work detached
+ * (`const { batch } = domain`). The accessors live on this shared prototype:
+ * own accessors on an object literal kept V8 from treating `run` and
+ * `batch` as constant methods, so every `domain.run(fn)` was a dynamic call
+ * that could not inline.
+ */
+class ManagedExecutionDomain implements ExecutionDomain {
+  readonly context: RuntimeContext;
+  readonly run: ExecutionDomain["run"];
+  readonly batch: ExecutionDomain["batch"];
+  readonly flush: () => void;
+  readonly hasPending: () => boolean;
+  readonly teardown: (fn: () => void) => void;
+  readonly close: () => void;
+  readonly #view: DomainView;
+
+  constructor(
+    context: RuntimeContext,
+    view: DomainView,
+    operations: DomainOperations,
+  ) {
+    this.context = context;
+    this.run = operations.run;
+    this.batch = operations.batch;
+    this.flush = operations.flush;
+    this.hasPending = operations.hasPending;
+    this.teardown = operations.teardown;
+    this.close = operations.close;
+    this.#view = view;
+  }
+
+  get state(): ExecutionDomainState {
+    return this.#view.state();
+  }
+
+  get closed(): boolean {
+    return this.#view.state() !== OPEN;
+  }
+
+  get signal(): AbortSignal {
+    return this.#view.signal();
+  }
+
+  get depth(): number {
+    return this.#view.depth();
+  }
 }
 
 export function createExecutionDomain(
@@ -153,7 +253,7 @@ export function createExecutionDomain(
   );
   context.hostFlushHook = compose(scheduler.onHostFlush, undefined);
 
-  let state: ExecutionDomainState = ExecutionDomainState.Open;
+  let state: ExecutionDomainState = OPEN;
   let depth = 0;
   let controller: AbortController | undefined;
   const pendingTeardown: Array<() => void> = [];
@@ -185,7 +285,7 @@ export function createExecutionDomain(
 
   const finalize = (): void => {
     drain();
-    state = ExecutionDomainState.Closed;
+    state = CLOSED;
     // Stray raw writes after close must not reach the released scheduler.
     configureRuntimeContext(context, {
       hooks: {},
@@ -193,103 +293,153 @@ export function createExecutionDomain(
     });
   };
 
-  const run = <T>(fn: () => T): T => {
-    if (state === ExecutionDomainState.Closed) {
+  // Outermost managed exit: a safe point only does work when teardown is
+  // pending or close() was requested meanwhile.
+  const leaveSafePoint = (): void => {
+    if (pendingTeardown.length !== 0) drain();
+    if (state === CLOSING) finalize();
+  };
+
+  // Managed entries are ordered from the cheapest case to the most expensive.
+  // An open domain whose context is already active only counts the entry; a
+  // context switch, a pending safe point and failures leave the straight
+  // line. The callback is invoked by run() and batch() themselves and never
+  // passed on, so both stay small enough to inline and a caller's closure
+  // need not be allocated.
+  const enterManaged = (): RuntimeContext | null => {
+    if (state === CLOSED) {
       throw new ExecutionDomainClosedError();
     }
 
     ++depth;
+    return getActiveRuntimeContext() === context
+      ? null
+      : enterRuntimeContextRegion(context);
+  };
+
+  // Mirrors the nesting of runWithRuntimeContext inside run(): the context is
+  // restored first, then the entry is uncounted.
+  const leaveManaged = (previous: RuntimeContext | null): void => {
     try {
-      return enter(fn);
+      if (previous !== null) leaveRuntimeContextRegion(previous);
     } finally {
-      if (--depth === 0) {
-        if (pendingTeardown.length !== 0) drain();
-        if (state === ExecutionDomainState.Closing) finalize();
+      if (--depth === 0 && (pendingTeardown.length !== 0 || state === CLOSING))
+        leaveSafePoint();
+    }
+  };
+
+  const run = <T>(fn: () => T): T => {
+    const previous = enterManaged();
+    try {
+      return fn();
+    } finally {
+      leaveManaged(previous);
+    }
+  };
+
+  // A failure while opening leaves the boundaries as the unfused composition
+  // did: only the managed entry is undone.
+  const enterBatch = (): RuntimeContext | null => {
+    const previous = enterManaged();
+    try {
+      enterReactiveBatch();
+      scheduler.enterBatch?.();
+    } catch (error) {
+      leaveManaged(previous);
+      throw error;
+    }
+    return previous;
+  };
+
+  // Close scheduler policy before the reactive batch so a settled hook never
+  // observes the scheduler in its batching phase.
+  const leaveBatch = (previous: RuntimeContext | null): void => {
+    try {
+      try {
+        scheduler.leaveBatch?.();
+      } catch (error) {
+        leaveReactiveBatchAfterError(error);
       }
+      leaveReactiveBatch();
+    } finally {
+      leaveManaged(previous);
+    }
+  };
+
+  const leaveBatchFailed = (
+    previous: RuntimeContext | null,
+    error: unknown,
+  ): never => {
+    try {
+      return leaveBatchAfterError(scheduler, error);
+    } finally {
+      leaveManaged(previous);
     }
   };
 
   const defaultBatch = <T>(fn: () => T): T => {
-    // Close scheduler policy before the reactive batch so a settled hook never
-    // observes the scheduler in its batching phase.
-    enterReactiveBatch();
-    scheduler.enterBatch?.();
-
-    let errors: unknown[] | undefined;
+    const previous = enterBatch();
+    let result: T;
     try {
-      return fn();
+      result = fn();
     } catch (error) {
-      errors = [error];
-      throw error;
-    } finally {
-      try {
-        scheduler.leaveBatch?.();
-      } catch (error) {
-        (errors ??= []).push(error);
-      }
-      try {
-        leaveReactiveBatch();
-      } catch (error) {
-        (errors ??= []).push(error);
-      }
-      throwCollected(errors);
+      return leaveBatchFailed(previous, error);
     }
+    leaveBatch(previous);
+    return result;
   };
 
-  const batchImpl = scheduler.batch ?? defaultBatch;
+  const customBatch = scheduler.batch;
+  const batch =
+    customBatch === undefined
+      ? defaultBatch
+      : <T>(fn: () => T): T => run(() => customBatch(fn));
   const flushImpl = scheduler.flush;
 
-  const domain: ExecutionDomain = {
+  const domain = new ManagedExecutionDomain(
     context,
-    get state() {
-      return state;
+    {
+      state: () => state,
+      depth: () => depth,
+      signal(): AbortSignal {
+        if (controller === undefined) {
+          controller = new AbortController();
+          if (state !== OPEN) controller.abort();
+        }
+        return controller.signal;
+      },
     },
-    get closed() {
-      return state !== ExecutionDomainState.Open;
+    {
+      run,
+      batch,
+      flush(): void {
+        if (state === CLOSED || flushImpl === undefined) {
+          return;
+        }
+        run(flushImpl);
+      },
+      hasPending(): boolean {
+        return state !== CLOSED ? (scheduler.hasPending?.() ?? false) : false;
+      },
+      teardown(fn: () => void): void {
+        if (depth === 0 && !draining) {
+          enter(fn);
+          return;
+        }
+        pendingTeardown.push(fn);
+      },
+      close(): void {
+        if (state !== OPEN) return;
+        state = CLOSING;
+        try {
+          scheduler.release?.();
+        } finally {
+          controller?.abort();
+          if (depth === 0) finalize();
+        }
+      },
     },
-    get signal() {
-      if (controller === undefined) {
-        controller = new AbortController();
-        if (state !== ExecutionDomainState.Open) controller.abort();
-      }
-      return controller.signal;
-    },
-    get depth() {
-      return depth;
-    },
-    run,
-    batch<T>(fn: () => T): T {
-      return run(() => batchImpl(fn));
-    },
-    flush(): void {
-      if (state === ExecutionDomainState.Closed || flushImpl === undefined) {
-        return;
-      }
-      run(flushImpl);
-    },
-    hasPending(): boolean {
-      return state !== ExecutionDomainState.Closed
-        ? (scheduler.hasPending?.() ?? false)
-        : false;
-    },
-    teardown(fn: () => void): void {
-      if (depth === 0 && !draining) {
-        enter(fn);
-        return;
-      }
-      pendingTeardown.push(fn);
-    },
-    close(): void {
-      if (state !== ExecutionDomainState.Open) return;
-      state = ExecutionDomainState.Closing;
-      try {
-        scheduler.release?.();
-      } finally {
-        controller?.abort();
-        if (depth === 0) finalize();
-      }
-    },
-  };
+  );
 
   domains.set(context, domain);
   return domain;
