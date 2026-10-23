@@ -454,6 +454,65 @@ export const workloads = [
     },
   },
   {
+    id: "C.domain.batch-per-write",
+    level: "C",
+    mechanism:
+      "Managed batch boundary around a single write, called with a fresh closure as host adapters do.",
+    preconditions:
+      "Domain context active; scheduler with batch hooks; the written producer has a dirty computed subscriber.",
+    measured:
+      "domain.batch(() => write): entry, reactive and scheduler batch enter/leave, one write that hits an already-dirty subscriber.",
+    excluded: "Context switch, recompute, watcher execution.",
+    opsPerStep: 1,
+    setup(rt) {
+      bare(rt);
+      let phase = 0;
+      const domain = rt.createExecutionDomain({
+        scheduler: {
+          enterBatch: () => void phase++,
+          leaveBatch: () => void phase--,
+        },
+      });
+      rt.switchRuntimeContext(domain.context);
+      const p = rt.createProducer(0);
+      const c = rt.createConsumer(() => rt.readProducer(p) + 1);
+      rt.readConsumer(c);
+      return {
+        step: (i) => (
+          domain.batch(() => rt.writeProducer(p, i)),
+          rt.readProducer(p) + phase
+        ),
+      };
+    },
+    verify(rt) {
+      const { step } = this.setup(rt);
+      return fold(64, step);
+    },
+  },
+  {
+    id: "C.domain.run-per-read",
+    level: "C",
+    mechanism:
+      "Managed entry around a clean read, as framework enter() calls it: state check, then domain.run with a fresh closure.",
+    preconditions: "Domain context active; the computed is clean.",
+    measured: "domain.state + domain.run(() => readConsumer(c)).",
+    excluded: "Context switch, stabilization.",
+    opsPerStep: 1,
+    setup(rt) {
+      bare(rt);
+      const domain = rt.createExecutionDomain();
+      rt.switchRuntimeContext(domain.context);
+      const p = rt.createProducer(3);
+      const c = rt.createConsumer(() => rt.readProducer(p) * 2);
+      rt.readConsumer(c);
+      const closed = rt.ExecutionDomainState.Closed;
+      return {
+        step: () =>
+          domain.state !== closed ? domain.run(() => rt.readConsumer(c)) : 0,
+      };
+    },
+  },
+  {
     id: "C.watchers.wave-256",
     level: "C",
     mechanism:
