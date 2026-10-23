@@ -178,53 +178,46 @@ type DomainOperations = Pick<
   "run" | "batch" | "flush" | "hasPending" | "teardown" | "close"
 >;
 
+const VIEW: unique symbol = Symbol("ExecutionDomain.view");
+
+interface DomainInstance extends DomainOperations {
+  readonly context: RuntimeContext;
+  readonly [VIEW]: DomainView;
+}
+
+const viewOf = (domain: object): DomainView => (domain as DomainInstance)[VIEW];
+
 /**
  * Operations are own data properties holding closures, so they work detached
  * (`const { batch } = domain`). The accessors live on this shared prototype:
- * own accessors on an object literal kept V8 from treating `run` and
- * `batch` as constant methods, so every `domain.run(fn)` was a dynamic call
- * that could not inline.
+ * own accessors on the domain object kept V8 from treating `run` and `batch`
+ * as constant methods, so every `domain.run(fn)` was a dynamic call that
+ * could not inline. A class with a private field gave the same calls but
+ * shifted unrelated kernel workloads (fan-out) into a slower code shape.
  */
-class ManagedExecutionDomain implements ExecutionDomain {
-  readonly context: RuntimeContext;
-  readonly run: ExecutionDomain["run"];
-  readonly batch: ExecutionDomain["batch"];
-  readonly flush: () => void;
-  readonly hasPending: () => boolean;
-  readonly teardown: (fn: () => void) => void;
-  readonly close: () => void;
-  readonly #view: DomainView;
-
-  constructor(
-    context: RuntimeContext,
-    view: DomainView,
-    operations: DomainOperations,
-  ) {
-    this.context = context;
-    this.run = operations.run;
-    this.batch = operations.batch;
-    this.flush = operations.flush;
-    this.hasPending = operations.hasPending;
-    this.teardown = operations.teardown;
-    this.close = operations.close;
-    this.#view = view;
-  }
-
+const domainPrototype = {
   get state(): ExecutionDomainState {
-    return this.#view.state();
-  }
-
+    return viewOf(this).state();
+  },
   get closed(): boolean {
-    return this.#view.state() !== OPEN;
-  }
-
+    return viewOf(this).state() !== OPEN;
+  },
   get signal(): AbortSignal {
-    return this.#view.signal();
-  }
-
+    return viewOf(this).signal();
+  },
   get depth(): number {
-    return this.#view.depth();
-  }
+    return viewOf(this).depth();
+  },
+};
+
+function createDomainObject(
+  context: RuntimeContext,
+  view: DomainView,
+  operations: DomainOperations,
+): ExecutionDomain {
+  const domain = Object.create(domainPrototype) as DomainInstance;
+  Object.assign(domain, { context }, operations, { [VIEW]: view });
+  return domain as unknown as ExecutionDomain;
 }
 
 export function createExecutionDomain(
@@ -396,7 +389,7 @@ export function createExecutionDomain(
       : <T>(fn: () => T): T => run(() => customBatch(fn));
   const flushImpl = scheduler.flush;
 
-  const domain = new ManagedExecutionDomain(
+  const domain = createDomainObject(
     context,
     {
       state: () => state,
