@@ -44,7 +44,7 @@ function buildPass(options: {
   for (let i = 0; i < length; i++) {
     const edge = linkEdge(i === match ? producer : node(), consumer);
     // INV-T3: the prefix carries the pass stamp, the suffix older stamps.
-    edge.version =
+    edge.stamp =
       i < prefixLength
         ? stamp
         : stamp === 0

@@ -23,8 +23,8 @@ export function isEdgeInTrackedPrefix(
 ): boolean {
   if (cursor === consumer.lastIn) return true;
 
-  const stamp = cursor.version;
-  if (stamp !== 0) return edge.version === stamp;
+  const stamp = cursor.stamp;
+  if (stamp !== 0) return edge.stamp === stamp;
 
   for (
     let current: ReactiveEdge | null = cursor;

@@ -1,7 +1,7 @@
 import type ReactiveNode from "./node";
 
 export interface ReactiveEdge {
-  version: number;
+  stamp: number;
   from: ReactiveNode;
   to: ReactiveNode;
   prevOut: ReactiveEdge | null;
@@ -11,11 +11,11 @@ export interface ReactiveEdge {
 }
 
 export const createReactiveEdge = (
-  version: number,
+  stamp: number,
   from: ReactiveNode,
   to: ReactiveNode,
 ): ReactiveEdge => ({
-  version,
+  stamp,
   from,
   to,
   prevOut: null,

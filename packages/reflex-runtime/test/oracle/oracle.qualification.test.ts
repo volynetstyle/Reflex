@@ -80,7 +80,7 @@ const MUTANTS: Mutant[] = [
     // read moves it after the cursor and reorders the incoming list.
     id: "prefix-stamp-classification-false",
     file: "src/kernel/shape/tracking/prefix.ts",
-    search: "if (stamp !== 0) return edge.version === stamp;",
+    search: "if (stamp !== 0) return edge.stamp === stamp;",
     replace: "if (stamp !== 0) return false;",
     expected: "killed",
   },

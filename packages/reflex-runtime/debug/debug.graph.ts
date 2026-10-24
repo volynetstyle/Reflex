@@ -57,7 +57,7 @@ export function snapshotDebugGraphEdge(
     to: snapshotNode(edge.to),
     incomingIndex: incomingIndex(edge),
     outgoingIndex: outgoingIndex(edge),
-    version: edge.version,
+    stamp: edge.stamp,
   };
 }
 

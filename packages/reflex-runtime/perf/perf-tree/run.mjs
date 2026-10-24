@@ -686,7 +686,7 @@ function countIncomingRelinkWrites(counters, active, found, prev) {
 function moveFoundEdge(counters, active, found, prev, steps, version) {
   if (found.prevIn === prev) {
     counters.moveEdgeNoopOrAdjacent += 1;
-    found.version = version;
+    found.stamp = version;
     return found;
   }
 
@@ -697,7 +697,7 @@ function moveFoundEdge(counters, active, found, prev, steps, version) {
   countIncomingRelinkWrites(counters, active, found, prev);
   detachIncomingEdge(active, found);
   attachIncomingEdgeAfter(active, found, prev);
-  found.version = version;
+  found.stamp = version;
   return found;
 }
 

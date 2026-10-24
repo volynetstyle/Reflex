@@ -19,7 +19,7 @@ sequential path is resolved in three steps:
 3. **Reconcile**: duplicate, move the suffix edge after the cursor, or link
    a new edge: `reuseLocatedIncomingEdgeOrLink`, which never searches again.
 
-`edge.version` is a pass-membership stamp, not a value version.
+`edge.stamp` is a pass-membership stamp, not a value version.
 
 ## Code map
 

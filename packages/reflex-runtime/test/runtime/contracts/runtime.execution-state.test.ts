@@ -17,10 +17,10 @@ import {
 } from "../../../src/kernel/context.scope";
 import {
   currentConsumer,
-  keepNewestTrackingEpoch,
+  keepNewestTrackingStamp,
   propagationScopeDepth,
   setCurrentConsumer,
-  trackingEpoch,
+  trackingStamp,
 } from "../../../src/kernel/state";
 import { resetRuntimeContext } from "../../../src/kernel/context";
 import { createConsumer, resetRuntime } from "../../runtime.test_utils";
@@ -47,7 +47,7 @@ describe("execution state", () => {
       "setCurrentConsumer",
       "switchRuntimeContext",
       "syncRuntimeContext",
-      "trackingEpoch",
+      "trackingStamp",
     ]) {
       expect(publicRuntime).not.toHaveProperty(internalName);
     }
@@ -173,15 +173,15 @@ describe("execution state", () => {
     const context = createRuntimeContext();
 
     switchRuntimeContext(context);
-    const base = trackingEpoch;
-    keepNewestTrackingEpoch(base + 1);
+    const base = trackingStamp;
+    keepNewestTrackingStamp(base + 1);
     const snapshot = snapshotRuntimeContext(context);
 
-    keepNewestTrackingEpoch(base + 3);
+    keepNewestTrackingStamp(base + 3);
     restoreRuntimeContextSnapshot(context, snapshot);
 
-    expect(trackingEpoch).toBe(base + 3);
-    expect(context.trackingEpoch).toBe(base + 3);
+    expect(trackingStamp).toBe(base + 3);
+    expect(context.trackingStamp).toBe(base + 3);
   });
 
   it("resets active mirrors when active state is reset", () => {
@@ -191,14 +191,14 @@ describe("execution state", () => {
     switchRuntimeContext(context);
     setCurrentConsumer(consumer);
     enterPropagationScope();
-    const epoch = trackingEpoch + 2;
-    keepNewestTrackingEpoch(epoch);
+    const epoch = trackingStamp + 2;
+    keepNewestTrackingStamp(epoch);
 
     resetRuntimeContext(context);
 
     expect(currentConsumer).toBe(null);
     expect(propagationScopeDepth).toBe(0);
     // The clock is kernel-wide and never rewound (F13).
-    expect(trackingEpoch).toBe(epoch);
+    expect(trackingStamp).toBe(epoch);
   });
 });

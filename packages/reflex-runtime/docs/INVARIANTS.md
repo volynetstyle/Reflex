@@ -112,9 +112,9 @@ Head and expected-next hits advance the cursor. Recognized prefix duplicates
 do not. Reorders move an existing edge after the cursor; new dependencies link
 there. Cleanup removes the unmatched suffix.
 
-`edge.version` is a tracking stamp, not a source-value revision. Runtime reads
+`edge.stamp` is a tracking stamp, not a source-value revision. Runtime reads
 extending a prefix use its cursor edge's stamp, even after nested computation
-advances the global `trackingEpoch`. A first read uses the current epoch.
+advances the global `trackingStamp`. A first read uses the current epoch.
 `resolveTrackedRead` derives the stamp itself; callers cannot supply one.
 
 During a pass with a nonempty suffix, an incoming edge is in the tracked
@@ -183,11 +183,11 @@ context objects. `runWithRuntimeContext` restores the previous context in a
 finally block. Traversal storage remains shared and is protected by invocation
 slices.
 
-`trackingEpoch` is one kernel-wide clock, not a per-context register. Edges are
+`trackingStamp` is one kernel-wide clock, not a per-context register. Edges are
 shared and stamped with pass epochs, so the clock only moves forward and
 never repeats a value: a repeated stamp would let a stale edge pose as a
 current-pass membership proof and drop a dependency (F13). A context load
-keeps the newer epoch, `setTrackingEpoch` only moves it forward, a reset does
+keeps the newer epoch, `setTrackingStamp` only moves it forward, a reset does
 not rewind it, and it does not wrap (exact for 2^53 passes).
 
 `snapshotRuntimeContext` is a register-bank checkpoint. Restoring it is legal at
