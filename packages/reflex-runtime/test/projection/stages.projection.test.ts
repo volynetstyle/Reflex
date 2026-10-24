@@ -252,11 +252,13 @@ describe("Reflex stage projection", () => {
       expect(advance.cfg.exits).toHaveLength(3);
 
       // The computing-watcher Revalidate branch (F15) adds one two-outcome
-      // branch and one state transition to the push plan.
+      // branch and one state transition to the push plan. Watcher hook
+      // dispatch and its abort cleanup live in dispatchWatcherInvalidation,
+      // outside this plan.
       const pushPlan = createInstrumentationPlan(push);
       expect(
         pushPlan.points.filter((point) => point.kind === "branch-outcome"),
-      ).toHaveLength(56);
+      ).toHaveLength(48);
       expect(
         pushPlan.points.filter((point) => point.kind === "state-transition"),
       ).toHaveLength(6);
@@ -265,9 +267,10 @@ describe("Reflex stage projection", () => {
           (point) => point.kind === "stack-push" || point.kind === "stack-pop",
         ),
       ).toHaveLength(2);
+      // The only exit is the normal return; hook rethrows exit the helper.
       expect(
         pushPlan.points.filter((point) => point.kind === "function-exit"),
-      ).toHaveLength(3);
+      ).toHaveLength(1);
 
       const advancePlan = createInstrumentationPlan(advance);
       expect(

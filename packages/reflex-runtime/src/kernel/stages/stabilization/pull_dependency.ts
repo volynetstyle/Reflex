@@ -63,7 +63,8 @@ function pullDependencyDirty(
 
   if (__DEV__) devAssertRefreshEdge(dependency, edge);
 
-  return advance(dependency, edge);
+  // JIT: `=== true` pins the return type to boolean without a ToBoolean.
+  return advance(dependency, edge) === true;
 }
 
 /** Stabilize one causal dependency branch and return its edge-local proof. */
@@ -87,7 +88,8 @@ function pullDependencyCore(edge: ReactiveEdge): boolean {
     return false;
   }
 
-  return pullDependencyDirty(edge, dependency, state);
+  // JIT: boolean return, as above.
+  return pullDependencyDirty(edge, dependency, state) === true;
 }
 
 /**

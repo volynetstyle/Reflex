@@ -1,4 +1,8 @@
-import { defaultContext, readTrackingStrategy } from "@runtime/kernel/config";
+import {
+  DEFAULT_READ_TRACKING_STRATEGY,
+  defaultContext,
+  readTrackingStrategy,
+} from "@runtime/kernel/config";
 import { trackingEpoch } from "@runtime/kernel/state";
 import { devRecordTrackRead } from "@runtime/kernel/dev";
 import {
@@ -6,38 +10,55 @@ import {
   moveLastIncomingEdgeToFrontUnchecked,
   moveTrackedIncomingEdgeAfterCursorUnchecked,
 } from "@runtime/kernel/shape/graph/edgeList";
+import { findEdgeInLockstep } from "@runtime/kernel/shape/graph/findEdge";
 import {
   appendTrackedEdgeAfterCursorUnchecked,
   linkFirstTrackedEdgeUnchecked,
 } from "@runtime/kernel/shape/graph/linkEdge";
+import { reuseLocatedIncomingEdgeOrLink } from "@runtime/kernel/shape/graph/reuseEdge";
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
-import {
-  hasProducerInCompletedPrefix,
-  hasProducerInTrackedPrefix,
-} from "./prefix";
+import { isEdgeInTrackedPrefix } from "./prefix";
 
-/** Cold fallback shared by cursor and initial misses. */
-function resolveTrackedReadSlow(
+/**
+ * Commit a read that is not in the tracked prefix and that no locality tier
+ * resolved: reuse the located edge from the suffix or link a new one.
+ *
+ * `edge` is the exact lookup result. A configured strategy keeps its contract
+ * (it is called for exactly these reads, after the prefix test) and repeats
+ * its own search; the default strategy is applied to `edge` directly.
+ */
+function reconcileTrackedRead(
   producer: ReactiveNode,
   consumer: ReactiveNode,
   cursorEdge: ReactiveEdge | null,
-  nextExpectedEdge: ReactiveEdge | null,
+  suffixStartEdge: ReactiveEdge,
   producerVersion: number,
+  edge: ReactiveEdge | null,
 ): void {
   devRecordTrackRead(defaultContext, consumer, producer);
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.tracking.slow-path");
 
-  consumer.tailIn = readTrackingStrategy(
-    producer,
-    consumer,
-    cursorEdge,
-    nextExpectedEdge,
-    producerVersion,
-  );
+  consumer.tailIn =
+    readTrackingStrategy === DEFAULT_READ_TRACKING_STRATEGY
+      ? reuseLocatedIncomingEdgeOrLink(
+          producer,
+          consumer,
+          cursorEdge,
+          suffixStartEdge,
+          producerVersion,
+          edge,
+        )
+      : readTrackingStrategy(
+          producer,
+          consumer,
+          cursorEdge,
+          suffixStartEdge,
+          producerVersion,
+        );
 }
 
 /**
@@ -68,74 +89,48 @@ function resolveInitialTrackedReadMiss(
     }
   }
 
-  resolveTrackedReadSlow(
+  // The prefix is empty: whatever the lookup finds is in the suffix. The
+  // first incoming edge was compared by the caller.
+  reconcileTrackedRead(
     producer,
     consumer,
     null,
     firstIncomingEdge,
     producerVersion,
+    findEdgeInLockstep(producer, consumer, null, firstIncomingEdge.nextIn),
   );
 }
 
-/** Cursor miss handling: append, bounded reorder, duplicate, then slow path. */
-function resolveCursorTrackedReadMiss(
+/**
+ * Cursor miss at the physical tail (`cursorEdge.nextIn === null`): append
+ * locality and the completed-prefix guard.
+ *
+ * The suffix is empty, so every edge of the pair is in the prefix (INV-T2):
+ * the read is a duplicate exactly when the edge exists, and stamps are not
+ * consulted.
+ *
+ * JIT: kept apart from resolveCursorTrackedReadMiss. TurboFan charges a
+ * caller for a callee's bytecode plus everything already inlined into the
+ * callee's optimized code, against a 920-byte budget per compilation. As one
+ * 300-byte function, both miss kinds were inlined into resolveTrackedRead
+ * wherever either was hot, and resolveTrackedRead then no longer fit into
+ * runWatcherCore, advanceCore or executeComputation. Split, a call site pulls
+ * in only the miss kind that actually occurs there.
+ */
+function resolveTailTrackedReadMiss(
   producer: ReactiveNode,
   consumer: ReactiveNode,
   cursorEdge: ReactiveEdge,
-  expectedNextEdge: ReactiveEdge | null,
   producerVersion: number,
 ): void {
-  if (expectedNextEdge === null) {
-    const firstProducerEdge = producer.firstOut;
+  const firstProducerEdge = producer.firstOut;
 
-    // No outgoing edge, or one edge to another consumer, proves this is a new
-    // dependency without walking the tracked prefix.
-    if (
-      firstProducerEdge === null ||
-      (firstProducerEdge.nextOut === null && firstProducerEdge.to !== consumer)
-    ) {
-      appendTrackedEdgeAfterCursorUnchecked(
-        producer,
-        consumer,
-        cursorEdge,
-        producerVersion,
-      );
-
-      if (__PROFILE__)
-        observeRuntimeProjection?.(
-          "projection.semantic.tracking.cursor.append",
-        );
-      devRecordTrackRead(defaultContext, consumer, producer);
-      return;
-    }
-
-    // With the cursor at lastIn, a sole edge to this consumer is necessarily
-    // already in the tracked prefix.
-    if (firstProducerEdge.nextOut === null) {
-      if (__PROFILE__)
-        observeRuntimeProjection?.(
-          "projection.semantic.tracking.prefix.duplicate",
-        );
-      devRecordTrackRead(defaultContext, consumer, producer);
-      return;
-    }
-
-    if (
-      hasProducerInCompletedPrefix(
-        producer,
-        consumer,
-        cursorEdge,
-        producerVersion,
-      )
-    ) {
-      if (__PROFILE__)
-        observeRuntimeProjection?.(
-          "projection.semantic.tracking.prefix.duplicate",
-        );
-      devRecordTrackRead(defaultContext, consumer, producer);
-      return;
-    }
-
+  // No outgoing edge, or one edge to another consumer, proves this is a new
+  // dependency without walking the tracked prefix.
+  if (
+    firstProducerEdge === null ||
+    (firstProducerEdge.nextOut === null && firstProducerEdge.to !== consumer)
+  ) {
     appendTrackedEdgeAfterCursorUnchecked(
       producer,
       consumer,
@@ -149,6 +144,47 @@ function resolveCursorTrackedReadMiss(
     return;
   }
 
+  // With the cursor at lastIn, a sole edge to this consumer, or a newest
+  // outgoing edge to it (an edge appended earlier in this pass), is
+  // necessarily already in the tracked prefix. Otherwise the lockstep search
+  // decides existence; the cursor itself was compared by the caller.
+  // JIT: the search is not inlined, so its result is compared with `!==`.
+  if (
+    firstProducerEdge.nextOut === null ||
+    producer.lastOut!.to === consumer ||
+    findEdgeInLockstep(producer, consumer, cursorEdge.prevIn, null) !== null
+  ) {
+    if (__PROFILE__)
+      observeRuntimeProjection?.(
+        "projection.semantic.tracking.prefix.duplicate",
+      );
+    devRecordTrackRead(defaultContext, consumer, producer);
+    return;
+  }
+
+  appendTrackedEdgeAfterCursorUnchecked(
+    producer,
+    consumer,
+    cursorEdge,
+    producerVersion,
+  );
+
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.tracking.cursor.append");
+  devRecordTrackRead(defaultContext, consumer, producer);
+}
+
+/**
+ * Cursor miss inside the list: bounded reorder and tail locality, then one
+ * exact lookup that both detects a duplicate and finds a reusable edge.
+ */
+function resolveCursorTrackedReadMiss(
+  producer: ReactiveNode,
+  consumer: ReactiveNode,
+  cursorEdge: ReactiveEdge,
+  expectedNextEdge: ReactiveEdge,
+  producerVersion: number,
+): void {
   const lookahead1Edge = expectedNextEdge.nextIn;
 
   if (lookahead1Edge !== null) {
@@ -215,8 +251,24 @@ function resolveCursorTrackedReadMiss(
     }
   }
 
+  // Exact lookup. The newest outgoing edge is probed first: an edge linked
+  // earlier in this pass sits there. The cursor and the expected next edge
+  // were compared by the caller, so the search starts beside them.
+  const lastProducerEdge = producer.lastOut;
+  const edge =
+    lastProducerEdge !== null && lastProducerEdge.to === consumer
+      ? lastProducerEdge
+      : findEdgeInLockstep(
+          producer,
+          consumer,
+          cursorEdge.prevIn,
+          lookahead1Edge,
+        );
+
+  // JIT: boolean call result; see resolveTailTrackedReadMiss.
   if (
-    hasProducerInTrackedPrefix(producer, consumer, cursorEdge, producerVersion)
+    edge !== null &&
+    isEdgeInTrackedPrefix(consumer, cursorEdge, edge) === true
   ) {
     if (__PROFILE__)
       observeRuntimeProjection?.(
@@ -226,12 +278,13 @@ function resolveCursorTrackedReadMiss(
     return;
   }
 
-  resolveTrackedReadSlow(
+  reconcileTrackedRead(
     producer,
     consumer,
     cursorEdge,
     expectedNextEdge,
     producerVersion,
+    edge,
   );
 }
 
@@ -276,6 +329,16 @@ export function resolveTrackedRead(
       if (__PROFILE__)
         observeRuntimeProjection?.("projection.semantic.tracking.cursor.hit");
       devRecordTrackRead(defaultContext, consumer, producer);
+      return;
+    }
+
+    if (expectedNextEdge === null) {
+      /* @__NOINLINE__ */ resolveTailTrackedReadMiss(
+        producer,
+        consumer,
+        cursorEdge,
+        producerVersion,
+      );
       return;
     }
 

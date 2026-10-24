@@ -74,26 +74,28 @@ Resolver устроен как маленькая cache hierarchy. Он снач
 локальность уже существующего графа и только затем запускает ограниченное
 согласование suffix-а.
 
-| Уровень             | Счётчик                                                  | Условие и действие                                                        |
-| ------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------- |
-| L0 cursor           | `trackingCursorHit`                                      | `tailIn.from === producer`; повтор текущей позиции                        |
-| L1 sequential       | `trackingNextHit`                                        | `tailIn.nextIn.from === producer`; обычный стабильный порядок             |
-| L2 append           | `trackingAppendAfterCursor`                              | cursor уже на конце; создать новое ребро без scan                         |
-| L3 adjacent reorder | `trackingOneHopReorder`, `trackingTwoHopReorder`         | producer на одну/две позиции дальше; переставить ребро после cursor       |
-| L4 tail             | `trackingLastEdgeShortcut`                               | producer — `lastIn`; перенести известный tail без scan                    |
-| L5 prefix guard     | `trackingPrefixDuplicate`                                | producer уже прочитан в подтверждённом prefix; не создать дубль           |
-| L6 producer probe   | `trackingOutgoingProbeHit1`, `trackingOutgoingProbeMiss` | прямой `producer.firstOut` указывает на consumer                          |
-| L7 reconciliation   | `trackingSlowPath`                                       | bounded scan suffix-а; переиспользовать найденное или создать новое ребро |
+| Уровень             | Счётчик                                          | Условие и действие                                                  |
+| ------------------- | ------------------------------------------------ | ------------------------------------------------------------------- |
+| L0 cursor           | `trackingCursorHit`                              | `tailIn.from === producer`; повтор текущей позиции                  |
+| L1 sequential       | `trackingNextHit`                                | `tailIn.nextIn.from === producer`; обычный стабильный порядок       |
+| L2 append           | `trackingAppendAfterCursor`                      | cursor уже на конце; создать новое ребро без scan                   |
+| L3 adjacent reorder | `trackingOneHopReorder`, `trackingTwoHopReorder` | producer на одну/две позиции дальше; переставить ребро после cursor |
+| L4 tail             | `trackingLastEdgeShortcut`                       | producer — `lastIn`; перенести известный tail без scan              |
+| L5 pair lookup      | `trackingLocateSteps`                            | точный поиск ребра пары: lockstep по out(P) и in(C), O(min + 4)     |
+| L6 prefix guard     | `trackingPrefixDuplicate`                        | найденное ребро несёт штамп прохода (INV-T3); не создать дубль      |
+| L7 reconciliation   | `trackingSlowPath`                               | перенести найденное ребро suffix-а за cursor или создать новое      |
 
 Отдельные bootstrap-маршруты — `trackingInitialCreate`,
 `trackingInitialFirstHit` и `trackingInitialLastEdgeShortcut`.
 `trackingSlowPathBlocked` означает, что slow path запрещён текущим режимом.
 
-L6 намеренно является только прямой пробой, а не scan исходящих рёбер. L7 имеет
-ограниченный бюджет (в текущем churn harness максимум 32 ребра), поэтому
-патологический reorder не превращает каждое чтение в неограниченный поиск.
-После miss корректность сохраняется созданием нового ребра и удалением старого
-suffix-а в cleanup.
+Поиск пары идёт одновременно по исходящему списку producer-а и по входящему
+списку consumer-а (от cursor-а в обе стороны) и останавливается, как только
+одна сторона нашла ребро или закончилась, поэтому патологический reorder стоит
+O(min(out(P), in(C))) на чтение, а не до 32 + 32 звеньев плюс полные scan-ы
+исходящих рёбер. Порог eager detach (32 ребра suffix-а) сохранён как политика
+идентичности рёбер, а не как бюджет поиска. Подробности:
+[tracking README](../../packages/reflex-runtime/src/kernel/shape/tracking/README.md).
 
 ## Классы динамических топологий
 
@@ -158,12 +160,23 @@ Producer-side identity недостаточно для безопасного п
 сломал topology tests: ранняя producer probe могла вернуть edge из уже
 пройденного prefix и переместить duplicate read.
 
-Поэтому действующий порядок следует понимать так:
+Поэтому раньше порядок был таким:
 
 ```text
 consumer-side cursor/prefix reasoning
 -> подтверждение prefix safety
 -> producer-side probe внутри suffix reconciliation
+```
+
+С 2026-10-24 позицию даёт штамп прохода, а не обход списка (INV-T3): при
+непустом suffix ребро лежит в prefix тогда и только тогда, когда несёт штамп
+cursor-а. Ребро, найденное на любой стороне, классифицируется за O(1), поэтому
+producer-side probe больше не может переместить duplicate read:
+
+```text
+consumer-side cursor (next, cursor, hop, tail)
+-> точный поиск пары по обеим сторонам
+-> классификация по штампу: prefix (дубль) / suffix (перенос) / нет (новое)
 ```
 
 Это делит иерархию на две роли:
