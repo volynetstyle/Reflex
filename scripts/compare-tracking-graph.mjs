@@ -8,6 +8,7 @@ import { pathToFileURL } from "node:url";
 import replace from "@rollup/plugin-replace";
 import nodeResolve from "@rollup/plugin-node-resolve";
 import { rollup } from "rollup";
+import { longLong, longLongModes } from "./tracking-long-long.mjs";
 
 // Run build:ts before --save. Independent production bundles run in alternating
 // subprocesses to keep JIT feedback and node/edge shapes isolated.
@@ -215,17 +216,28 @@ const scenarios = {
   "reuse-first-out": (r) => reuse(r, 1),
   "reuse-scanned": (r) => reuse(r, 3),
   "runtime-reorder": runtimeReorder,
+  ...Object.fromEntries(
+    Object.entries(longLongModes).map(([name, options]) => [
+      name,
+      (r) => longLong(r, options),
+    ]),
+  ),
 };
 const median = (values) =>
   [...values].sort((a, b) => a - b)[values.length >> 1];
+// TRACKING_ONLY=<regex> limits the scenarios; TRACKING_ITERATIONS and
+// TRACKING_WARMUP shorten runs of the heavy wide x wide scenarios.
+const only = new RegExp(process.env.TRACKING_ONLY ?? ".*");
+const selected = Object.keys(scenarios).filter((name) => only.test(name));
 const samples = 9;
-const iterations = 20000;
-const warmup = 10000;
+const iterations = Number(process.env.TRACKING_ITERATIONS ?? 20000);
+const warmup = Number(process.env.TRACKING_WARMUP ?? 10000);
 if (first === "--measure") {
   const runtime = await import(pathToFileURL(bundlePath(second)).href);
   const timings = {};
   let sink = 0;
-  for (const [name, setup] of Object.entries(scenarios)) {
+  for (const name of selected) {
+    const setup = scenarios[name];
     const step = setup(runtime);
     for (let i = 0; i < warmup; i++) sink += step(i);
     const start = performance.now();
@@ -258,7 +270,7 @@ for (let sample = 0; sample < samples; sample++) {
   }
   console.log(`Completed pair ${sample + 1}/${samples}`);
 }
-for (const name of Object.keys(scenarios)) {
+for (const name of selected) {
   const timings = runs.map((run) => run.map((sample) => sample[name]));
   const before = median(timings[0]);
   const after = median(timings[1]);

@@ -190,6 +190,61 @@ Sources:
   Computation", ESOP 2012:
   https://software.imdea.org/~rleywild/publications/esop12/esop12.pdf
 
+## The joint tail and the producer slot
+
+Lockstep is expensive only for an edge whose two endpoints are both wide,
+`out(P) ≫ 1 ∧ in(C) ≫ 1`, and only when the read leaves the sequential path.
+A wide producer read by a narrow consumer, or a narrow producer read by a
+wide consumer, costs `min` links. The working hypothesis is that dependency
+graphs are sparse and skewed: most edges have a small endpoint, and a few
+hubs have a large fan-out or fan-in. Reported support: a study of about
+20,000 EUSES and Enron spreadsheets found an average fan-out below 5 for most
+spreadsheets beside a tail of hubs; Solid 2 diagnoses 2,000 subscribers as
+`HUGE_FAN_OUT` and wide fan-in separately; Vue treats one render reading
+100,000+ properties as a special case. None of these measures the joint
+distribution of `(in, out)` per edge, which is what lookup cost depends on.
+
+`perf/tracking-pair-lookup/analyze.mjs` measures it on the runtime, per read
+that reaches the lookup: `D = min(out(P), in(C))`, links compared, and the
+hit rate of a simulated single producer slot (`P.trackEdge`, a positive
+cache: a hit is verified by `edge.to === C` and liveness, a miss proves
+nothing and pays the lookup, so nesting cannot break correctness, only the
+hit rate). Results of 2026-10-24 (512 producers, fan-out 64, consumers read
+all 512 in a fresh order per pass):
+
+| Workload                             | Reads reaching lookup | Links/read | Slot hit: fill on lookup / every read / arm | Links/read, arm slot |
+| ------------------------------------ | --------------------: | ---------: | ------------------------------------------- | -------------------: |
+| 1 consumer                           |                   96% |         75 | 0.995 / 0.995 / 1                           |                  2.0 |
+| 8 consumers, fixed order             |                   95% |         75 | 0 / 0 / 1                                   |                  2.0 |
+| 64 consumers, shuffled order         |                   93% |         69 | 0 / 0 / 1                                   |                  1.9 |
+| 8 consumers, nested passes every 128 |                   96% |         75 | 0.03 / 0.03 / 0.85                          |                 13.0 |
+| all 25 timed workloads of `bench/`   |                    0% |          0 | -                                           |                    - |
+
+Timing (`compare-tracking-graph.mjs`, previous resolver → lockstep): the
+wide × wide modes improve 2.7–3.5×, but cost 290–370 ns per read against
+18 ns for a 512-read permutation at fan-out 3, so the joint tail stays about
+16–20× more expensive per read.
+
+Reading of the data:
+
+- A slot filled on use thrashes as soon as two consumers share producers.
+- A slot re-armed on the first lookup of a pass (write the slots of all of
+  `C`'s edges, `in(C)` stores) survives interleaving. It is the
+  prepare walk of Preact and Vue, done lazily and without a rollback.
+- The armed slot is therefore not a cache of the last pair but lazy
+  per-pass indexing: one generic miss writes Θ(in(C)) slots. For a pass of
+  `n` reads with a share `p` of lookups, lockstep does about `p·n·D` link
+  comparisons and the index about `n + p·n` operations, so it pays off only
+  when `p·D ≫ 1` (the stress test: `p ≈ 0.95`, `D = 64`, `p·D ≈ 61`).
+- No benchmark workload reaches the lookup at all; the cost exists only in
+  the joint tail, and no corpus of applications has shown that tail.
+
+Decision: lockstep is the architecture. The armed slot is the measured
+candidate if a profile of a real application shows a high lookup share with
+large `D` (`analyze.mjs` reports both). It costs a field on every node, and
+it changes the representation by adding an index, not the algorithm. Only a
+single slot is considered; a multi-way cache is out of scope.
+
 ## Verification
 
 - Graph-level differential fuzz against the previous resolver: random passes
