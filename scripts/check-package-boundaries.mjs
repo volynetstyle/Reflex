@@ -81,7 +81,7 @@ const FORBIDDEN_FIELDS = new Set([
   "nextOut",
   "prevOut",
   "currentConsumer",
-  "trackingEpoch",
+  "trackingStamp",
   "propagationScopeDepth",
   "runtimeState",
 ]);

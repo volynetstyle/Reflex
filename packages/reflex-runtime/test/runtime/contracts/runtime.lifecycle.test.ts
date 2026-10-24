@@ -8,7 +8,7 @@ import {
   disposeNode,
   disposeWatcher,
   getActiveRuntimeContext,
-  advanceTrackingEpoch,
+  advanceTrackingStamp,
   resetRuntimeContext,
   restoreRuntimeContextSnapshot,
   readConsumer,
@@ -246,32 +246,32 @@ describe("Reactive runtime - lifecycle and state characterization", () => {
     const consumer = createConsumer(() => 0);
 
     context.currentConsumer = consumer;
-    context.trackingEpoch = 2;
+    context.trackingStamp = 2;
     context.propagationScopeDepth = 1;
 
     const snapshot = snapshotRuntimeContext(context);
 
     context.currentConsumer = null;
-    context.trackingEpoch = 5;
+    context.trackingStamp = 5;
     context.propagationScopeDepth = 3;
 
     restoreRuntimeContextSnapshot(context, snapshot);
 
     expect(context.currentConsumer).toBe(consumer);
-    expect(context.trackingEpoch).toBe(5);
+    expect(context.trackingStamp).toBe(5);
     expect(context.propagationScopeDepth).toBe(1);
   });
 
   it("saves and restores the active runtime context snapshot", () => {
     const context = getActiveRuntimeContext();
     const snapshot = snapshotRuntimeContext();
-    const epoch = advanceTrackingEpoch();
+    const epoch = advanceTrackingStamp();
 
     setCurrentConsumer(createConsumer(() => 0));
 
     restoreRuntimeContextSnapshot(context, snapshot);
 
     expect(context.currentConsumer).toBe(null);
-    expect(context.trackingEpoch).toBe(epoch);
+    expect(context.trackingStamp).toBe(epoch);
   });
 });

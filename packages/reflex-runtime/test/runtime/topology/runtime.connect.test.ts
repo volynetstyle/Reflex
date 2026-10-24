@@ -18,7 +18,7 @@ import {
   moveMiddleIncomingEdgeAfterEdgeUnchecked,
   moveNonHeadIncomingEdgeToFrontUnchecked,
   reuseIncomingEdgeFromSuffixOrCreate,
-  keepNewestTrackingEpoch,
+  keepNewestTrackingStamp,
   trackRead,
   unlinkEdge,
 } from "../../../src/kernel";
@@ -551,7 +551,7 @@ describe("Reactive runtime - edge wiring", () => {
     const bb = linkEdge(b, target, ab, 1);
 
     target.tailIn = ab;
-    keepNewestTrackingEpoch(2);
+    keepNewestTrackingStamp(2);
 
     trackRead(b, target);
     trackRead(a, target);
@@ -572,10 +572,10 @@ describe("Reactive runtime - edge wiring", () => {
     const target = createNode(Consumer);
     const snapshot = snapshotRuntimeContext();
 
-    keepNewestTrackingEpoch(1);
+    keepNewestTrackingStamp(1);
     const staleSnapshot = snapshotRuntimeContext();
     const edge = linkEdge(a, target, null, 1);
-    keepNewestTrackingEpoch(2);
+    keepNewestTrackingStamp(2);
     restoreRuntimeContextSnapshot(getActiveRuntimeContext(), staleSnapshot);
     target.tailIn = null;
 

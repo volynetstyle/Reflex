@@ -29,7 +29,10 @@ export interface RuntimeModule {
   createRuntimeContext(options?: unknown): unknown;
   runWithRuntimeContext<T>(context: unknown, fn: () => T): T;
   getActiveRuntimeContext(): unknown;
-  setTrackingEpoch(epoch: number): void;
+  // `setTrackingEpoch` before the 2026-10-24 rename; the frozen baseline
+  // bundle still exports that name.
+  setTrackingStamp?(stamp: number): void;
+  setTrackingEpoch?(stamp: number): void;
   claimWatcherSchedule(node: Node): boolean;
   releaseWatcherSchedule(node: Node): void;
   currentConsumer: Node | null;
@@ -767,9 +770,7 @@ export function interpret(
           checkLiveness(true);
         return;
       case "run":
-        runWatcher(
-          nodes[spec.producers + spec.consumers.length + op.watcher]!,
-        );
+        runWatcher(nodes[spec.producers + spec.consumers.length + op.watcher]!);
         return;
       case "dispose":
         disposed.add(op.node);
@@ -793,7 +794,7 @@ export function interpret(
         return;
       }
       case "epoch":
-        rt.setTrackingEpoch(op.value);
+        (rt.setTrackingStamp ?? rt.setTrackingEpoch)!(op.value);
         return;
       case "snapshot":
         snapshot();

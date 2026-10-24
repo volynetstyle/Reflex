@@ -11,7 +11,7 @@ Reflex tracks dependencies as **identity-bearing edges in a bidirectional intrus
 
 The October 2026 rewrite does not introduce per-edge **value revisions** or an auxiliary hash index. It separates three previously entangled problems: **locate** the exact edge of `(P, C)`, **classify** it as already accepted / not yet accepted in this pass, and **reconcile** the incoming list. Location uses a two-sided search bounded by the shorter adjacency list; classification uses an existing **tracking-pass membership stamp**. Stable sequential reads remain constant time and bypass the search altogether. The same prefix classifier is also used for reentrant propagation.
 
-The central warning for readers of this design is simple: **`edge.version` records dependency membership in a tracking pass. It is not a producer value version, not a causal-change counter, and not sufficient evidence that a computed value is fresh.**
+The central warning for readers of this design is simple: **`edge.stamp` records dependency membership in a tracking pass. It is not a producer value version, not a causal-change counter, and not sufficient evidence that a computed value is fresh.** The field was named `version` until 24 October 2026 (and the clock `trackingEpoch`); code linked at the PR revision below still uses those names.
 
 ## 1. What subsystem is being described?
 
@@ -34,8 +34,8 @@ They interact, but their state and evidence must not be collapsed into one infor
 | `C.firstIn … C.lastIn`          | Physical doubly linked list of dependencies             | Only the currently accepted reads                                            |
 | `C.tailIn`                      | Inclusive cursor / accepted-prefix frontier             | Always the physical tail; outside normal passes it has other documented uses |
 | `P.firstOut … P.lastOut`        | Physical list of subscribers and their order            | A disposable set with no ordering consequences                               |
-| `edge.version`                  | Epoch stamp for **acceptance by a tracking pass**       | Producer value revision, value freshness, graph edit count                   |
-| `trackingEpoch`                 | Monotonically advancing clock that supplies pass stamps | Per-producer change counter                                                  |
+| `edge.stamp`                    | Epoch stamp for **acceptance by a tracking pass**       | Producer value revision, value freshness, graph edit count                   |
+| `trackingStamp`                 | Monotonically advancing clock that supplies pass stamps | Per-producer change counter                                                  |
 | `Unknown`, `Changed`, `Visited` | Execution/invalidation obligations                      | Alternative spellings for the edge stamp                                     |
 
 ## 2. The representation and the actual contract
@@ -64,7 +64,7 @@ See [`edge.ts`](https://github.com/volynetstyle/Reflex/blob/1cca2bc04aadfcb42bde
 
 ## 3. What a tracking pass actually does
 
-At the start of computation, `C.tailIn` is reset to `null`; the old incoming list is **not** immediately deleted. `enterConsumerTracking(C)` installs the active consumer and advances the global `trackingEpoch`. **The first actual read uses the then-current `trackingEpoch` as its stamp `S`**. This may be _later_ than the epoch at this consumer's entry if nested computations ran before its first read. After an edge becomes the cursor, later reads use **the cursor's stamp**, not a fresh read of the global clock. This distinction matters when nested computations increment the global epoch mid-pass.
+At the start of computation, `C.tailIn` is reset to `null`; the old incoming list is **not** immediately deleted. `enterConsumerTracking(C)` installs the active consumer and advances the global `trackingStamp`. **The first actual read uses the then-current `trackingStamp` as its stamp `S`**. This may be _later_ than the epoch at this consumer's entry if nested computations ran before its first read. After an edge becomes the cursor, later reads use **the cursor's stamp**, not a fresh read of the global clock. This distinction matters when nested computations increment the global epoch mid-pass.
 
 At any moment during the pass, the incoming list has this logical partition:
 
@@ -112,8 +112,8 @@ successful cleanup  [b d a x]          detach unmatched c
 **INV-T3 — Stamp classification.** During normal tracking with `S != 0` and a **nonempty suffix**, the following is exact for an edge belonging to `C.in`:
 
 ```text
-e ∈ acceptedPrefix(C)   ⇔   e.version === S
-                              where S = C.tailIn.version
+e ∈ acceptedPrefix(C)   ⇔   e.stamp === S
+                              where S = C.tailIn.stamp
 ```
 
 Why it is true: every accepted edge is stamped with `S`, and accepted edges are never moved behind the cursor. Unaccepted suffix edges were last stamped in strictly earlier passes of the same consumer; the epoch clock only advances and nested tracking cannot overwrite the outer cursor's stamp. The proof assumes valid graph operations and non-repeating pass stamps; `state.ts` documents exact integer uniqueness only while the epoch stays within JavaScript's safe-integer range.
@@ -126,7 +126,7 @@ The corresponding code is short enough to serve as an executable definition:
 function isEdgeInTrackedPrefix(C, cursor, e) {
   if (cursor === C.lastIn) return true;
   const S = cursor.version;
-  if (S !== 0) return e.version === S;
+  if (S !== 0) return e.stamp === S;
   for (let p = cursor; p !== null; p = p.prevIn) {
     if (p === e) return true;
   }
@@ -270,7 +270,7 @@ The hypothesis that many reactive graphs are sparse/skewed is plausible but **no
 
 The following statements are misleading or false for the scoped PR:
 
-1. **“`edge.version` tracks whether a producer value changed.”** False. It stamps read membership. Dirty-state transitions and pull validation address changes.
+1. **“`edge.stamp` tracks whether a producer value changed.”** False. It stamps read membership. Dirty-state transitions and pull validation address changes.
 2. **“The algorithm is a bounded 32-edge suffix scan.”** Outdated. The number 32 now governs eager detachment, not pair lookup.
 3. **“Every tracked read searches two lists.”** False. Sequential, duplicate, head, lookahead, and tail paths bypass generic lookup.
 4. **“A pair is represented by a fresh edge on each evaluation.”** False for normal reuse; exceptions exist for deliberately detached edges.

@@ -57,7 +57,7 @@ const NODE_FIELDS = [
   "payload",
 ];
 const EDGE_FIELDS = [
-  "version",
+  "stamp",
   "from",
   "to",
   "prevOut",

@@ -3,7 +3,7 @@ import {
   defaultContext,
   readTrackingStrategy,
 } from "@runtime/kernel/config";
-import { trackingEpoch } from "@runtime/kernel/state";
+import { trackingStamp } from "@runtime/kernel/state";
 import { devRecordTrackRead } from "@runtime/kernel/dev";
 import {
   moveLastIncomingEdgeAfterCursorUnchecked,
@@ -35,7 +35,7 @@ function reconcileTrackedRead(
   consumer: ReactiveNode,
   cursorEdge: ReactiveEdge | null,
   suffixStartEdge: ReactiveEdge,
-  producerVersion: number,
+  passStamp: number,
   edge: ReactiveEdge | null,
 ): void {
   devRecordTrackRead(defaultContext, consumer, producer);
@@ -49,7 +49,7 @@ function reconcileTrackedRead(
           consumer,
           cursorEdge,
           suffixStartEdge,
-          producerVersion,
+          passStamp,
           edge,
         )
       : readTrackingStrategy(
@@ -57,7 +57,7 @@ function reconcileTrackedRead(
           consumer,
           cursorEdge,
           suffixStartEdge,
-          producerVersion,
+          passStamp,
         );
 }
 
@@ -69,7 +69,7 @@ function resolveInitialTrackedReadMiss(
   producer: ReactiveNode,
   consumer: ReactiveNode,
   firstIncomingEdge: ReactiveEdge,
-  producerVersion: number,
+  passStamp: number,
 ): void {
   if (__TRACKING_LAST_EDGE__) {
     const lastIncomingEdge = consumer.lastIn!;
@@ -81,7 +81,7 @@ function resolveInitialTrackedReadMiss(
         );
       moveLastIncomingEdgeToFrontUnchecked(consumer, lastIncomingEdge);
 
-      lastIncomingEdge.version = producerVersion;
+      lastIncomingEdge.stamp = passStamp;
       consumer.tailIn = lastIncomingEdge;
 
       devRecordTrackRead(defaultContext, consumer, producer);
@@ -96,7 +96,7 @@ function resolveInitialTrackedReadMiss(
     consumer,
     null,
     firstIncomingEdge,
-    producerVersion,
+    passStamp,
     findEdgeInLockstep(producer, consumer, null, firstIncomingEdge.nextIn),
   );
 }
@@ -121,7 +121,7 @@ function resolveTailTrackedReadMiss(
   producer: ReactiveNode,
   consumer: ReactiveNode,
   cursorEdge: ReactiveEdge,
-  producerVersion: number,
+  passStamp: number,
 ): void {
   const firstProducerEdge = producer.firstOut;
 
@@ -135,7 +135,7 @@ function resolveTailTrackedReadMiss(
       producer,
       consumer,
       cursorEdge,
-      producerVersion,
+      passStamp,
     );
 
     if (__PROFILE__)
@@ -166,7 +166,7 @@ function resolveTailTrackedReadMiss(
     producer,
     consumer,
     cursorEdge,
-    producerVersion,
+    passStamp,
   );
 
   if (__PROFILE__)
@@ -183,7 +183,7 @@ function resolveCursorTrackedReadMiss(
   consumer: ReactiveNode,
   cursorEdge: ReactiveEdge,
   expectedNextEdge: ReactiveEdge,
-  producerVersion: number,
+  passStamp: number,
 ): void {
   const lookahead1Edge = expectedNextEdge.nextIn;
 
@@ -199,7 +199,7 @@ function resolveCursorTrackedReadMiss(
         consumer,
         cursorEdge,
         lookahead1Edge,
-        producerVersion,
+        passStamp,
       );
       return;
     }
@@ -218,7 +218,7 @@ function resolveCursorTrackedReadMiss(
           consumer,
           cursorEdge,
           lookahead2Edge,
-          producerVersion,
+          passStamp,
         );
         return;
       }
@@ -242,7 +242,7 @@ function resolveCursorTrackedReadMiss(
           expectedNextEdge,
           lastIncomingEdge,
           previousLastEdge,
-          producerVersion,
+          passStamp,
         );
 
         devRecordTrackRead(defaultContext, consumer, producer);
@@ -283,7 +283,7 @@ function resolveCursorTrackedReadMiss(
     consumer,
     cursorEdge,
     expectedNextEdge,
-    producerVersion,
+    passStamp,
     edge,
   );
 }
@@ -309,12 +309,12 @@ export function resolveTrackedRead(
   const cursorEdge = consumer.tailIn;
 
   if (cursorEdge !== null) {
-    const producerVersion = cursorEdge.version;
+    const passStamp = cursorEdge.stamp;
     const expectedNextEdge = cursorEdge.nextIn;
 
     // Stable traces overwhelmingly advance to the next existing edge.
     if (expectedNextEdge !== null && expectedNextEdge.from === producer) {
-      expectedNextEdge.version = producerVersion;
+      expectedNextEdge.stamp = passStamp;
       consumer.tailIn = expectedNextEdge;
 
       if (__PROFILE__)
@@ -337,7 +337,7 @@ export function resolveTrackedRead(
         producer,
         consumer,
         cursorEdge,
-        producerVersion,
+        passStamp,
       );
       return;
     }
@@ -347,16 +347,16 @@ export function resolveTrackedRead(
       consumer,
       cursorEdge,
       expectedNextEdge,
-      producerVersion,
+      passStamp,
     );
     return;
   }
 
-  const producerVersion = trackingEpoch;
+  const passStamp = trackingStamp;
   const firstIncomingEdge = consumer.firstIn;
 
   if (firstIncomingEdge === null) {
-    linkFirstTrackedEdgeUnchecked(producer, consumer, producerVersion);
+    linkFirstTrackedEdgeUnchecked(producer, consumer, passStamp);
 
     if (__PROFILE__)
       observeRuntimeProjection?.("projection.semantic.tracking.initial.create");
@@ -365,7 +365,7 @@ export function resolveTrackedRead(
   }
 
   if (firstIncomingEdge.from === producer) {
-    firstIncomingEdge.version = producerVersion;
+    firstIncomingEdge.stamp = passStamp;
     consumer.tailIn = firstIncomingEdge;
 
     if (__PROFILE__)
@@ -380,6 +380,6 @@ export function resolveTrackedRead(
     producer,
     consumer,
     firstIncomingEdge,
-    producerVersion,
+    passStamp,
   );
 }

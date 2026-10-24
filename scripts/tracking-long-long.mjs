@@ -57,7 +57,7 @@ export function longLong(
   const pass = (index, nested) => {
     const consumer = consumers[index];
     const order = orders[passSeed++ % orders.length];
-    r.advanceTrackingEpoch();
+    (r.advanceTrackingStamp ?? r.advanceTrackingEpoch)();
     consumer.tailIn = null;
     onPassStart?.(consumer);
     for (let i = 0; i < order.length; i++) {
@@ -74,7 +74,8 @@ export function longLong(
     }
     if (consumer.tailIn !== consumer.lastIn)
       r.cleanupUnvisitedSources(consumer);
-    return consumer.tailIn.version;
+    // `version` before the 2026-10-24 rename; baselines may be older builds.
+    return consumer.tailIn.stamp ?? consumer.tailIn.version;
   };
 
   // Half of the static subscribers precede the active consumers in every

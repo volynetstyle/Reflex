@@ -21,7 +21,7 @@ export interface RuntimeContextOptions extends RuntimeConfigurationOptions {
 export interface RuntimeContext extends RuntimeConfiguration {
   readonly [RUNTIME_CONTEXT_BRAND]: true;
   currentConsumer: ReactiveNode | null;
-  trackingEpoch: number;
+  trackingStamp: number;
   propagationScopeDepth: number;
   batchDepth: number;
   runtimeState: number;
@@ -40,7 +40,7 @@ export function createRuntimeContext(
   const context = {
     [RUNTIME_CONTEXT_BRAND]: true,
     currentConsumer: null,
-    trackingEpoch: 0,
+    trackingStamp: 0,
     propagationScopeDepth: 0,
     batchDepth: 0,
     runtimeState: 0,

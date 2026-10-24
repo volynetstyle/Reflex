@@ -48,6 +48,9 @@ if (first === "--save") {
   process.exit(0);
 }
 
+// Edges carry `stamp` since 2026-10-24 and `version` before; baselines may
+// be older builds.
+const stampOf = (edge) => (edge === null ? 0 : (edge.stamp ?? edge.version));
 const node = (r) => new r.ReactiveNode(undefined, undefined, 0);
 const range = (n) => Array.from({ length: n }, (_, i) => i);
 function shuffled(pass, count) {
@@ -84,12 +87,12 @@ function tracking(
   others(fanout - 1 - otherFirst);
   const orders = range(64).map((pass) => pattern(pass, count));
   return (pass) => {
-    r.advanceTrackingEpoch();
+    (r.advanceTrackingStamp ?? r.advanceTrackingEpoch)();
     target.tailIn = null;
     for (const index of orders[pass % orders.length])
       r.resolveTrackedRead(sources[index], target, pass + 1, true);
     r.cleanupUnvisitedSources(target);
-    return target.tailIn?.version ?? 0;
+    return stampOf(target.tailIn);
   };
 }
 function appendShared(r, fanout) {
@@ -100,10 +103,10 @@ function appendShared(r, fanout) {
   }
   const target = node(r);
   return (pass) => {
-    r.advanceTrackingEpoch();
+    (r.advanceTrackingStamp ?? r.advanceTrackingEpoch)();
     for (const source of sources)
       r.resolveTrackedRead(source, target, pass + 1, true);
-    const value = target.tailIn.version;
+    const value = stampOf(target.tailIn);
     r.unlinkAllSources(target);
     return value;
   };
@@ -124,7 +127,7 @@ function moves(r, kind) {
       else
         r.moveIncomingEdgeAfterUnchecked(target, target.firstIn, target.lastIn);
     }
-    return target.firstIn.version;
+    return stampOf(target.firstIn);
   };
 }
 function reuse(r, fanout) {
@@ -146,7 +149,7 @@ function reuse(r, fanout) {
         pass + 1,
       );
     }
-    return target.firstIn.version;
+    return stampOf(target.firstIn);
   };
 }
 function runtimeReorder(r) {

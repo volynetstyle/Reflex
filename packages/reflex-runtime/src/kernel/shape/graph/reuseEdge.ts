@@ -101,12 +101,12 @@ export function reuseLocatedIncomingEdgeOrLink(
   consumer: ReactiveNode,
   insertAfterEdge: ReactiveEdge | null,
   suffixStartEdge: ReactiveEdge | null,
-  producerVersion: number,
+  passStamp: number,
   edge: ReactiveEdge | null,
 ): ReactiveEdge {
   if (edge !== null) {
     moveIncomingEdgeToPosition(consumer, edge, insertAfterEdge);
-    edge.version = producerVersion;
+    edge.stamp = passStamp;
 
     if (__PROFILE__)
       observeRuntimeProjection?.("projection.semantic.tracking.suffix.reuse");
@@ -115,7 +115,7 @@ export function reuseLocatedIncomingEdgeOrLink(
 
   if (
     suffixStartEdge !== null &&
-    (producerVersion === 0 || producer.firstOut !== null) &&
+    (passStamp === 0 || producer.firstOut !== null) &&
     hasIncomingRun(suffixStartEdge, EAGER_STALE_SUFFIX_CLEANUP_MIN) === true
   ) {
     detachIncomingSuffix(consumer, insertAfterEdge, suffixStartEdge);
@@ -123,7 +123,7 @@ export function reuseLocatedIncomingEdgeOrLink(
 
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.tracking.suffix.link-new");
-  return linkEdge(producer, consumer, insertAfterEdge, producerVersion);
+  return linkEdge(producer, consumer, insertAfterEdge, passStamp);
 }
 
 /**
@@ -143,10 +143,10 @@ export function reuseIncomingEdgeFromSuffixOrLink(
   consumer: ReactiveNode,
   insertAfterEdge: ReactiveEdge | null,
   suffixStartEdge: ReactiveEdge | null,
-  producerVersion = 0,
+  passStamp = 0,
 ): ReactiveEdge {
   if (suffixStartEdge !== null && suffixStartEdge.from === producer) {
-    suffixStartEdge.version = producerVersion;
+    suffixStartEdge.stamp = passStamp;
     if (__PROFILE__)
       observeRuntimeProjection?.(
         "projection.semantic.tracking.suffix.head-hit",
@@ -166,7 +166,7 @@ export function reuseIncomingEdgeFromSuffixOrLink(
     consumer,
     insertAfterEdge,
     suffixStartEdge,
-    producerVersion,
+    passStamp,
     edge,
   );
 }

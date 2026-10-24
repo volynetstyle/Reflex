@@ -18,7 +18,7 @@ import {
   syncRuntimeContext,
 } from "./context.switch";
 import { resetRuntimeExecutionState } from "./execution";
-import { trackingEpoch } from "./state";
+import { trackingStamp } from "./state";
 
 export { createRuntimeContext, getActiveRuntimeContext };
 export type {
@@ -135,7 +135,7 @@ export function resetRuntimeContext(
   }
 
   context.currentConsumer = null;
-  context.trackingEpoch = 0;
+  context.trackingStamp = 0;
   context.propagationScopeDepth = 0;
   context.batchDepth = 0;
   context.runtimeState = 0;
@@ -161,7 +161,7 @@ export function snapshotRuntimeContext(
 
   const {
     currentConsumer,
-    trackingEpoch,
+    trackingStamp,
     propagationScopeDepth,
     batchDepth,
     runtimeState,
@@ -172,7 +172,7 @@ export function snapshotRuntimeContext(
   } = context;
   return {
     currentConsumer,
-    trackingEpoch,
+    trackingStamp,
     propagationScopeDepth,
     batchDepth,
     runtimeState,
@@ -195,7 +195,7 @@ export function restoreRuntimeContextSnapshot(
   snapshot: RuntimeContextSnapshot,
 ): void {
   const active = context === getActiveRuntimeContext();
-  if (active) context.trackingEpoch = trackingEpoch;
+  if (active) context.trackingStamp = trackingStamp;
   context.currentConsumer = snapshot.currentConsumer;
   context.propagationScopeDepth = snapshot.propagationScopeDepth;
   context.batchDepth = snapshot.batchDepth;
