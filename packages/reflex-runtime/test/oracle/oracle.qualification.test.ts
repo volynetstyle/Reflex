@@ -76,14 +76,22 @@ const MUTANTS: Mutant[] = [
     expected: "killed",
   },
   {
-    // Reachable only through a re-read after a tracked prefix longer than the
-    // 32-edge scan limit (wide family).
-    id: "prefix-version-fallback-false",
+    // A located current-pass edge is taken for a suffix edge, so a duplicate
+    // read moves it after the cursor and reorders the incoming list.
+    id: "prefix-stamp-classification-false",
     file: "src/kernel/shape/tracking/prefix.ts",
+    search: "if (stamp !== 0) return edge.version === stamp;",
+    replace: "if (stamp !== 0) return false;",
+    expected: "killed",
+  },
+  {
+    // The retained eager-detach policy decides which edge survives, and with
+    // it the order of the producer's outgoing list.
+    id: "reconcile-skip-eager-detach",
+    file: "src/kernel/shape/graph/reuseEdge.ts",
     search:
-      "for (let edge = producer.firstOut; edge !== null; edge = edge.nextOut) {",
-    replace:
-      "for (let edge: ReactiveEdge | null = null; edge !== null; edge = edge.nextOut) {",
+      "hasIncomingRun(suffixStartEdge, EAGER_STALE_SUFFIX_CLEANUP_MIN) === true",
+    replace: "false",
     expected: "killed",
   },
 ];

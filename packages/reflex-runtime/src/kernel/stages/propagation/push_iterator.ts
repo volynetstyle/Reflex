@@ -27,6 +27,7 @@ import {
   observeRuntimeProjection,
   observeRuntimeProjectionAmount,
 } from "@runtime/kernel/projection";
+import { isEdgeInTrackedPrefix } from "@runtime/kernel/shape/tracking/prefix";
 import { profilePushNode } from "@runtime/kernel/stages/profile";
 import { observeRuntimePropagate } from "@runtime/kernel/projection.propagate";
 
@@ -70,10 +71,12 @@ function dispatchWatcherInvalidation(
 }
 
 /**
- * Rare re-entrant tracking path. Keeping the backwards edge scan out of the
- * common clean/already-dirty loops leaves Maglev and TurboFan with a much
- * smaller hot control-flow graph. The scan stays a plain loop: unrolling a
- * cold path only grows its code.
+ * Rare re-entrant tracking path: a computing subscriber is marked only when
+ * the changed edge is in its tracked prefix, a dependency it has already read
+ * in this pass (or, during watcher validation, any committed dependency). The
+ * prefix test is O(1) through the pass stamp (isEdgeInTrackedPrefix). Keeping
+ * it out of the common clean/already-dirty loops leaves Maglev and TurboFan
+ * with a much smaller hot control-flow graph.
  *
  * JIT: both exits return a Smi (0 or the new state), never null or a boolean,
  * so `next` at the call sites stays a Word32 phi.
@@ -91,13 +94,9 @@ function markComputingSubscriber(
   const tail = sub.tailIn;
   if (tail === null) return 0;
 
-  if (edge !== tail) {
-    let current = edge.prevIn;
-
-    while (current !== null) {
-      if (current === tail) return 0;
-      current = current.prevIn;
-    }
+  // JIT: boolean call result, compared by reference against `true`.
+  if (edge !== tail && isEdgeInTrackedPrefix(sub, tail, edge) !== true) {
+    return 0;
   }
 
   return (sub.state = state | Visited | Unknown);

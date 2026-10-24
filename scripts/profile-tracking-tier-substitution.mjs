@@ -13,8 +13,7 @@ const ROUTES = [
   "trackingTwoHopReorder",
   "trackingInitialLastEdgeShortcut",
   "trackingLastEdgeShortcut",
-  "trackingOutgoingProbeHit1",
-  "trackingOutgoingProbeMiss",
+  "trackingLocateSteps",
   "trackingSlowPath",
 ];
 
