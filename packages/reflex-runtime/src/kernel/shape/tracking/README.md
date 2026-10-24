@@ -12,13 +12,14 @@ accepted in this pass and the suffix of older dependencies. A read off the
 sequential path is resolved in three steps:
 
 1. **Locate** the edge of `(P, C)`, in three levels:
-   - **L0, locality**: the cursor, its next edges, the physical tail, the
-     producer's newest outgoing edge (`resolve.ts`).
-   - **L1, outgoing hint**: past the four-link outgoing head start, the
-     producer's `tailIn` when it is a hint for exactly this pair (INV-H).
-   - **L2, lockstep**: `findEdgeInLockstep`, bounded by the shorter of
-     `P.out` and `C.in`; the only proof of absence. Its result refreshes
-     the hint.
+   - **L0, consumer-side locality** (`resolve.ts`): the cursor, its next
+     edges and the physical tail of `C.in`.
+   - **L1, producer-side probes** (`locate.ts`, then `findEdgeInLockstep`):
+     an empty `P.out`, its newest edge, a sole edge to another consumer,
+     the four-link head start, then the outgoing hint, `tailIn` of the idle
+     producer when it is an edge of exactly this pair (INV-H).
+   - **L2, lockstep**: bounded by the shorter of `P.out` and `C.in`; the
+     only general proof of absence. Its result refreshes the hint.
 2. **Classify** it: in the prefix exactly when it carries the cursor's
    nonzero stamp (INV-T3), or always when the cursor is `lastIn` (INV-T2):
    `isEdgeInTrackedPrefix`.
@@ -43,6 +44,7 @@ the lockstep bound.
 | File                    | Role                                                                            |
 | ----------------------- | ------------------------------------------------------------------------------- |
 | `resolve.ts`            | hot path (next edge, cursor, first read) and the initial, tail and inner misses |
+| `locate.ts`             | producer-side probes, then the graph lookup: one place for every miss kind      |
 | `prefix.ts`             | prefix classification, shared with `push_iterator.ts`                           |
 | `cleanup.ts`            | removal of the unvisited suffix after a successful pass                         |
 | `../graph/findEdge.ts`  | exact pair lookup: head start, outgoing hint, lockstep                          |
@@ -106,6 +108,13 @@ stable-tracking and generic-move controls.
 `perf/tracking-pair-lookup/analyze.mjs` reports, per read that reaches the
 lookup, `D = min(out(P), in(C))`, links compared and simulated slot hit rates
 (PROFILE build; link counts, not timings).
+
+Exactness is checked separately from timing. `scripts/fuzz-tracking-graph.mjs
+--baseline <commit>` runs seeded scripts of passes, nested passes, unlinks and
+disposals on production bundles of that commit and of the working tree,
+compares every frontier and the whole graph (edge identity, stamps) after
+every operation, and checks INV-H; `--qualify` requires every seeded mutant
+of the hint and of the locate stage to be caught.
 
 The repeated-pair case has its own scenarios, `hub-duplicates-16` and
 `hub-duplicates-256` in `compare-tracking-graph.mjs`, and a permanent

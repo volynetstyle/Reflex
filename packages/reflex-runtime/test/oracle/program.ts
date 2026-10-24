@@ -574,7 +574,8 @@ const OBSERVABLE_MASK = 0b0010_0011; // Unknown | Changed | Scheduled
  *
  * - tail (INV-H): a Computing node's tailIn is null or an incoming edge, also
  *   at the end of each of its callbacks; an idle node's is null, an incoming
- *   edge, or an attached outgoing hint that is not a self-edge.
+ *   edge, or an attached outgoing hint that is not a self-edge and is not on
+ *   a watcher.
  *
  * A violation is appended to the trace as `invariant:<detail>`; liveness
  * violations as `invariant:liveness:<detail>`.
@@ -594,6 +595,7 @@ export interface InterpretOptions {
 }
 
 const COMPUTING = 0b1000; // fixed by the baseline
+const WATCHER = 0b1_0000; // fixed by the baseline
 
 export function interpret(
   rt: RuntimeModule,
@@ -988,6 +990,10 @@ export function interpret(
     }
     if (tail.from !== node || tail.to === node) {
       trace.push(`invariant:${id}:idle tailIn is neither incoming nor a hint`);
+      return;
+    }
+    if ((node.state & WATCHER) !== 0) {
+      trace.push(`invariant:${id}:hint on a watcher`);
       return;
     }
     let outgoing = false;

@@ -1,5 +1,5 @@
 import type { ReactiveNode } from "@runtime/kernel";
-import { Computing, isOutgoingHint } from "@runtime/kernel/shape";
+import { Computing, Watcher, isOutgoingHint } from "@runtime/kernel/shape";
 
 import {
   type RuntimeDebugGraphEdgeSnapshot,
@@ -234,7 +234,7 @@ export function checkDebugGraphIntegrity(
     if (
       tail !== null &&
       !incoming.includes(tail) &&
-      ((node.state & Computing) !== 0 ||
+      ((node.state & (Computing | Watcher)) !== 0 ||
         !isOutgoingHint(node, tail) ||
         !outgoing.includes(tail))
     ) {

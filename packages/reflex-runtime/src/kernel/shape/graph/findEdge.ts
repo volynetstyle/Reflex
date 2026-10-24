@@ -48,16 +48,11 @@ export function findEdgeInLockstep(
   // A wide producer remembers the edge of its last expensive lookup. A
   // repeated read of the same pair, such as a broad producer re-read inside
   // a wide consumer, then costs one comparison instead of a walk. Under
-  // INV-H the slot holds null, an incoming edge of the producer, or one of
-  // its attached outgoing edges, so `to === consumer` with
-  // `from === producer` and `consumer !== producer` is exactly this pair.
+  // INV-H whatever the slot holds is attached, whichever reading it is in,
+  // and a pair has at most one edge: an edge from this producer to this
+  // consumer is the answer.
   const hint = producer.tailIn;
-  if (
-    hint !== null &&
-    hint.to === consumer &&
-    hint.from === producer &&
-    consumer !== producer
-  ) {
+  if (hint !== null && hint.to === consumer && hint.from === producer) {
     return hint;
   }
 
@@ -71,13 +66,10 @@ export function findEdgeInLockstep(
 
   // The slot is written only while the producer is not Computing, so it
   // never replaces a tracking frontier, and never on a watcher, whose slot
-  // pull_frontier saves and restores. A self-edge is never a hint: its
-  // incoming reading takes precedence.
-  if (
-    edge !== null &&
-    consumer !== producer &&
-    (producer.state & (Computing | Watcher)) === 0
-  ) {
+  // pull_frontier saves and restores. A self-read comes from the computing
+  // consumer itself, so no self-edge is written here; a self-edge in a slot
+  // would read as incoming in any case.
+  if (edge !== null && (producer.state & (Computing | Watcher)) === 0) {
     producer.tailIn = edge;
   }
 

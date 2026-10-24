@@ -1,6 +1,7 @@
 import { expect } from "vitest";
 import {
   Computing,
+  Watcher,
   isOutgoingHint,
   type ReactiveNode,
 } from "../../../src/internal";
@@ -104,8 +105,8 @@ export function expectNodeGraphIntegrity(node: ReactiveNode): void {
 
 /**
  * INV-H: a Computing node's tailIn is its frontier, null or incoming; an
- * idle node's may also be a hint, one of its own attached outgoing edges and
- * never a self-edge.
+ * idle node's may also be a hint, one of its own attached outgoing edges,
+ * never a self-edge and never on a watcher.
  */
 export function expectTailInvariant(
   node: ReactiveNode,
@@ -115,6 +116,7 @@ export function expectTailInvariant(
   const tail = node.tailIn;
   if (tail === null || incoming.includes(tail)) return;
   expect((node.state & Computing) === 0, "hint on a Computing node").toBe(true);
+  expect((node.state & Watcher) === 0, "hint on a watcher").toBe(true);
   expect(isOutgoingHint(node, tail), "tailIn is not a hint").toBe(true);
   expect(outgoing.includes(tail), "detached hint").toBe(true);
   expect(incomingEdges(tail.to).includes(tail), "half-detached hint").toBe(

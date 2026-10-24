@@ -14,13 +14,14 @@ import type ReactiveNode from "@runtime/kernel/shape/node";
  *
  * The readings are told apart by direction: an incoming edge has
  * `to === node`, a hint has `from === node && to !== node`. A self-edge
- * satisfies both endpoint tests, so it is never written as a hint and always
- * reads as incoming.
+ * satisfies both endpoint tests and always reads as incoming; the lookup
+ * never writes one, since a self-read comes from the computing node itself.
  *
  * Maintenance: a hint is written only while the node is neither Computing
  * nor a watcher, every unlink of an edge clears the hint that points to it,
- * and every computation clears the slot before it becomes a frontier. A
- * stale or missing hint is therefore never observed; a present one is a
+ * and every computation clears the slot before it becomes a frontier. So
+ * whatever the slot holds is attached, a stale hint is never observed, and
+ * the lookup may use any slot edge that matches its pair. A hint is a
  * positive answer only and proves nothing about absence.
  */
 export function isOutgoingHint(

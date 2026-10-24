@@ -117,23 +117,27 @@ describe("Reactive runtime - outgoing hint (INV-H)", () => {
     expect(hub.tailIn).toBe(edge);
   });
 
-  it("never holds a self-edge", () => {
+  it("never reads a self-edge as a hint", () => {
     const self = wideProducer();
     const loop = linkEdge(self, self);
 
-    expect(findEdgeInLockstep(self, self, null, self.firstIn)).toBe(loop);
-    expect(self.tailIn).toBeNull();
-    expect(isOutgoingHint(self, loop)).toBe(false);
-
-    // A self-edge in the slot reads as incoming and is never returned as a
-    // hint for another consumer.
+    // A computing consumer reading itself: the slot is its frontier.
+    self.state |= Computing;
     self.tailIn = loop;
+    expect(findEdgeInLockstep(self, self, null, self.firstIn)).toBe(loop);
+    expect(self.tailIn).toBe(loop);
+    self.state &= ~Computing;
+
+    // Whatever reading the slot is in, a self-edge reads as incoming and is
+    // never returned for another consumer.
+    expect(isOutgoingHint(self, loop)).toBe(false);
+    expectTailInvariant(self);
     const other = node(Consumer);
     linkEdge(self, other);
     expect(findEdgeInLockstep(self, other, null, other.firstIn)?.to).toBe(
       other,
     );
-    expect(self.tailIn).not.toBe(loop);
+    expectTailInvariant(self);
   });
 
   it.each([

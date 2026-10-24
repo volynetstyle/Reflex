@@ -10,7 +10,6 @@ import {
   moveLastIncomingEdgeToFrontUnchecked,
   moveTrackedIncomingEdgeAfterCursorUnchecked,
 } from "@runtime/kernel/shape/graph/edgeList";
-import { findEdgeInLockstep } from "@runtime/kernel/shape/graph/findEdge";
 import {
   appendTrackedEdgeAfterCursorUnchecked,
   linkFirstTrackedEdgeUnchecked,
@@ -20,6 +19,7 @@ import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
+import { locateTrackedEdge } from "./locate";
 import { isEdgeInTrackedPrefix } from "./prefix";
 
 /**
@@ -97,7 +97,7 @@ function resolveInitialTrackedReadMiss(
     null,
     firstIncomingEdge,
     passStamp,
-    findEdgeInLockstep(producer, consumer, null, firstIncomingEdge.nextIn),
+    locateTrackedEdge(producer, consumer, null, firstIncomingEdge.nextIn),
   );
 }
 
@@ -123,37 +123,10 @@ function resolveTailTrackedReadMiss(
   cursorEdge: ReactiveEdge,
   passStamp: number,
 ): void {
-  const firstProducerEdge = producer.firstOut;
-
-  // No outgoing edge, or one edge to another consumer, proves this is a new
-  // dependency without walking the tracked prefix.
-  if (
-    firstProducerEdge === null ||
-    (firstProducerEdge.nextOut === null && firstProducerEdge.to !== consumer)
-  ) {
-    appendTrackedEdgeAfterCursorUnchecked(
-      producer,
-      consumer,
-      cursorEdge,
-      passStamp,
-    );
-
-    if (__PROFILE__)
-      observeRuntimeProjection?.("projection.semantic.tracking.cursor.append");
-    devRecordTrackRead(defaultContext, consumer, producer);
-    return;
-  }
-
-  // With the cursor at lastIn, a sole edge to this consumer, or a newest
-  // outgoing edge to it (an edge appended earlier in this pass), is
-  // necessarily already in the tracked prefix. Otherwise the lockstep search
-  // decides existence; the cursor itself was compared by the caller.
-  // JIT: the search is not inlined, so its result is compared with `!==`.
-  if (
-    firstProducerEdge.nextOut === null ||
-    producer.lastOut!.to === consumer ||
-    findEdgeInLockstep(producer, consumer, cursorEdge.prevIn, null) !== null
-  ) {
+  // With the cursor at lastIn, any edge of the pair is in the tracked prefix
+  // (INV-T2): the read is a duplicate exactly when the edge exists. The
+  // cursor itself was compared by the caller.
+  if (locateTrackedEdge(producer, consumer, cursorEdge.prevIn, null) !== null) {
     if (__PROFILE__)
       observeRuntimeProjection?.(
         "projection.semantic.tracking.prefix.duplicate",
@@ -251,19 +224,14 @@ function resolveCursorTrackedReadMiss(
     }
   }
 
-  // Exact lookup. The newest outgoing edge is probed first: an edge linked
-  // earlier in this pass sits there. The cursor and the expected next edge
-  // were compared by the caller, so the search starts beside them.
-  const lastProducerEdge = producer.lastOut;
-  const edge =
-    lastProducerEdge !== null && lastProducerEdge.to === consumer
-      ? lastProducerEdge
-      : findEdgeInLockstep(
-          producer,
-          consumer,
-          cursorEdge.prevIn,
-          lookahead1Edge,
-        );
+  // Exact lookup. The cursor and the expected next edge were compared by
+  // the caller, so the incoming side starts beside them.
+  const edge = locateTrackedEdge(
+    producer,
+    consumer,
+    cursorEdge.prevIn,
+    lookahead1Edge,
+  );
 
   // JIT: boolean call result; see resolveTailTrackedReadMiss.
   if (
