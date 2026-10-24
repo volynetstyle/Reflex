@@ -270,6 +270,71 @@
      "valid": true
     }
    }
+  },
+  {
+   "sha": "190a09ef1fb5f228356bf4bffd34d54cf0e1cca0",
+   "measuredAt": "2026-10-24T17:08:45.252Z",
+   "commitTimestamp": "2026-10-24T20:07:35+03:00",
+   "runId": "40114699076:1",
+   "qualification": "screening-only",
+   "scenarios": {
+    "bench/reflex.bench.ts > reflex: Diamond / shared deps > reflex-signals": {
+     "logRatio": 0.02470571545820951,
+     "mad": 0.038030728103505176,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Dynamic deps > reflex-signals": {
+     "logRatio": 0.07943889419454558,
+     "mad": 0.03983402905832797,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Linear chain > reflex-signals": {
+     "logRatio": 0.03721267063623071,
+     "mad": 0.03112622763181913,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Many effects from one source > reflex-signals": {
+     "logRatio": 0.14705484392424412,
+     "mad": 0.05621601412157352,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Many sources into one computed -> effect > reflex-signals": {
+     "logRatio": 0.1326709499580459,
+     "mad": 0.10579676081892486,
+     "lower": null,
+     "upper": null,
+     "valid": false
+    },
+    "bench/reflex.bench.ts > reflex: Many sources into one computed/effect > reflex-signals": {
+     "logRatio": 0.1417536092904648,
+     "mad": 0.0879316108408747,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Many sources into one direct effect > reflex-signals": {
+     "logRatio": 0.11515993442637892,
+     "mad": 0.03980123221311149,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Wide fan-out > reflex-signals": {
+     "logRatio": -0.010675306513449171,
+     "mad": 0.06550488024458984,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    }
+   }
   }
  ],
  "daily": []
