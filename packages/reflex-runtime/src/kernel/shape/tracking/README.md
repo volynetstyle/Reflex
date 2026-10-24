@@ -71,7 +71,14 @@ lockstep: one outgoing link, then one incoming link on each side of the
 cursor. It stops when either side finds the edge or is exhausted, so a lookup
 costs `O(min(out(P), in(C)) + 4)` links. An exhausted list on either side is
 a proof of absence, because each side, together with the edges the caller
-already compared, covers its whole list.
+already compared, covers its whole list. Neither degree is known in
+advance: the two lists race, and the shorter one ends the search.
+
+The incoming side advances two links per round (one on each side of the
+cursor) against one outgoing link; the bound is unaffected. The four-link
+head start (`OUTGOING_HEAD_START`) is the one constant of the search that
+does not follow from an invariant: it is a workload heuristic, chosen from
+profiles at fan-out 1, 3 and 8.
 
 This is the limit of the representation, not of the search. For two
 unindexed, unsorted adjacency lists, when only traversal and identity
@@ -133,7 +140,11 @@ edges and the stamp is nonzero. Removing it is a separate, observable change.
 the same reads as before (not a duplicate, not resolved by a reorder tier),
 with the same arguments, and returns the new cursor. The default strategy is
 recognized by identity and applied to the edge the resolver has already
-located; called directly, it runs the same lookup itself.
+located; called directly, it runs the same lookup itself. A configured
+strategy pays two lookups per call: the resolver must locate the edge to
+classify a duplicate before the call, and the strategy searches again. This
+is the cost of the extension point, not redundant work: skipping the
+resolver lookup would hand duplicates to the strategy.
 
 ## Cost
 
@@ -146,8 +157,11 @@ located; called directly, it runs the same lookup itself.
 | distant reorder or duplicate   | ≤ 32 + 32 + 2·out(P)                | O(min(out(P), in(C)) + 4)                  |
 | new dependency inside the list | ≤ 32 + 32 + out(P), plus detachment | O(min(out(P), in(C)) + 4), plus detachment |
 
-A permutation of `n` dependencies whose producers have bounded fan-out now
-costs O(n) per pass instead of O(32·n).
+For bounded producer fan-out a permutation stays linear in the dependency
+count on both sides; what changes is the work per off-sequence read. The
+fixed prefix and suffix scan budget (up to 64 links) and the repeated
+outgoing scans are gone, and a read costs at most the shorter adjacency list
+plus four, independent of how far the edge moved.
 
 ## Research
 
