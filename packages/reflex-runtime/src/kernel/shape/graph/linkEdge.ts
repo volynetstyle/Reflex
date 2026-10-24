@@ -106,6 +106,9 @@ export function unlinkEdge(edge: ReactiveEdge): void {
   else to.lastIn = prevIn;
 
   if (to.tailIn === edge) to.tailIn = prevIn;
+  // A hint never outlives its edge (INV-H). After the incoming repair above,
+  // a self-edge is no longer in `from.tailIn`.
+  if (from.tailIn === edge) from.tailIn = null;
 
   edge.prevOut = null;
   edge.nextOut = null;

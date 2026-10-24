@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { loadBaseline, loadOracleBundle } from "./baseline";
 import {
   firstMismatch,
+  generateHubProgram,
   generateProgram,
   interpret,
   programSize,
@@ -23,6 +24,8 @@ interface Mutant {
   replace: string;
   /** Mutants the current generator cannot reach are documented gaps. */
   expected: "killed" | "gap";
+  /** Program family; the default generator unless the mutant needs hubs. */
+  generator?: "hub";
 }
 
 const MUTANTS: Mutant[] = [
@@ -94,6 +97,16 @@ const MUTANTS: Mutant[] = [
     replace: "false",
     expected: "killed",
   },
+  {
+    // A hint that outlives its edge (INV-H): after the consumer drops the
+    // dependency, a later lookup of the same pair returns the detached edge.
+    id: "hint-keep-on-unlink",
+    file: "src/kernel/shape/graph/sweepEdges.ts",
+    search: "if (from.tailIn === edge) from.tailIn = null;",
+    replace: "void 0;",
+    expected: "killed",
+    generator: "hub",
+  },
 ];
 
 const BUDGET = Number(process.env.ORACLE_QUALIFICATION_SEEDS ?? 2_000);
@@ -122,9 +135,11 @@ describe("baseline oracle qualification", () => {
           interpret(runtime, program),
         ) !== null;
 
+      const generate =
+        mutant.generator === "hub" ? generateHubProgram : generateProgram;
       let killedAt: number | undefined;
       for (let seed = 1; seed <= BUDGET; seed++) {
-        if (fails(generateProgram(seed))) {
+        if (fails(generate(seed))) {
           killedAt = seed;
           break;
         }
@@ -135,7 +150,7 @@ describe("baseline oracle qualification", () => {
         return;
       }
       expect(killedAt, `${mutant.id} survived ${BUDGET} seeds`).toBeDefined();
-      const original = generateProgram(killedAt!);
+      const original = generate(killedAt!);
       const minimal = shrink(original, fails);
       expect(fails(minimal)).toBe(true);
       expect(programSize(minimal)).toBeLessThanOrEqual(programSize(original));

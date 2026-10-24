@@ -104,9 +104,10 @@ retries a still-dirty watcher on a later drain (contract L5, W3).
 
 ## 4. Cursor and tracking stamp
 
-`lastIn` is the physical incoming tail. `tailIn` is the last accepted edge
-of the current tracked prefix. Computation resets the cursor to null while
-retaining the old list.
+`lastIn` is the physical incoming tail. While a node is `Computing`,
+`tailIn` is the last accepted edge of its current tracked prefix (the
+frontier). Computation resets the cursor to null while retaining the old
+list.
 
 Head and expected-next hits advance the cursor. Recognized prefix duplicates
 do not. Reorders move an existing edge after the cursor; new dependencies link
@@ -127,6 +128,24 @@ shorter of the producer's outgoing and the consumer's incoming lists, then
 classified by these rules. The eager suffix detachment threshold (32 edges)
 is a retained identity policy, not a search bound. Algorithm details:
 [tracking research](../src/kernel/shape/tracking/RESEARCH.md).
+
+The frontier reading of `tailIn` is required only while the node is
+`Computing`; outside that phase the slot is semantically inactive and is
+reused as the pair lookup's outgoing hint (INV-H). For a node that is not
+`Computing`, `tailIn` is null, the residual incoming edge of its last pass,
+or a hint: one of its own outgoing edges, attached to both lists. A hint
+satisfies `from === node && to !== node`; an incoming edge has
+`to === node`, so a self-edge always reads as incoming and is never written
+as a hint. The lookup writes a hint only past its four-link outgoing head
+start, only into a node that is neither `Computing` nor a watcher, and uses
+one only for exactly its pair; a missing or different hint proves nothing,
+and absence is still proved by the lockstep. Every unlink of an edge clears
+the hint that points to it, and every computation resets the slot to null
+before it becomes a frontier, so a stale hint is never observed. The idle
+uses of `tailIn` (unlink repair of the incoming cursor, the debug integrity
+check, watcher validation's save and restore, which only watchers reach)
+either accept a hint or never meet one. Source:
+`src/kernel/shape/graph/hint.ts`.
 
 ## 5. Disposal and cleanup
 

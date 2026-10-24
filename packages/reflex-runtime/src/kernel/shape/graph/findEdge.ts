@@ -1,4 +1,5 @@
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
+import { Computing, Watcher } from "@runtime/kernel/shape/meta";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
@@ -18,6 +19,12 @@ const OUTGOING_HEAD_START = 4;
  * follows `nextIn`. Together with the incoming edges the caller has already
  * compared, they must cover the whole incoming list: an exhausted incoming
  * side is then a proof of absence.
+ *
+ * Past the four-link head start, the producer's outgoing hint is consulted
+ * before the lockstep and refreshed after it (INV-H, see
+ * `isOutgoingHint`). A hint is a positive answer only: it is used when it is
+ * an attached edge of exactly this pair, and a miss proves nothing, so
+ * absence is still proved by the lockstep.
  */
 export function findEdgeInLockstep(
   producer: ReactiveNode,
@@ -38,9 +45,59 @@ export function findEdgeInLockstep(
     out = out.nextOut;
   }
 
-  // JIT: plain loops, not unrolled. This is the cold search behind every
-  // locality tier; its size counts against the inlining budget of each caller.
-  // PROFILE: one locate.step per link compared, on either side.
+  // A wide producer remembers the edge of its last expensive lookup. A
+  // repeated read of the same pair, such as a broad producer re-read inside
+  // a wide consumer, then costs one comparison instead of a walk. Under
+  // INV-H the slot holds null, an incoming edge of the producer, or one of
+  // its attached outgoing edges, so `to === consumer` with
+  // `from === producer` and `consumer !== producer` is exactly this pair.
+  const hint = producer.tailIn;
+  if (
+    hint !== null &&
+    hint.to === consumer &&
+    hint.from === producer &&
+    consumer !== producer
+  ) {
+    return hint;
+  }
+
+  const edge = findEdgeInLockstepPastHeadStart(
+    producer,
+    consumer,
+    out,
+    back,
+    ahead,
+  );
+
+  // The slot is written only while the producer is not Computing, so it
+  // never replaces a tracking frontier, and never on a watcher, whose slot
+  // pull_frontier saves and restores. A self-edge is never a hint: its
+  // incoming reading takes precedence.
+  if (
+    edge !== null &&
+    consumer !== producer &&
+    (producer.state & (Computing | Watcher)) === 0
+  ) {
+    producer.tailIn = edge;
+  }
+
+  return edge;
+}
+
+/**
+ * The lockstep proper, entered with `out` positioned after the head start.
+ *
+ * JIT: plain loops, not unrolled. This is the cold search behind every
+ * locality tier; its size counts against the inlining budget of each caller.
+ * PROFILE: one locate.step per link compared, on either side.
+ */
+function findEdgeInLockstepPastHeadStart(
+  producer: ReactiveNode,
+  consumer: ReactiveNode,
+  out: ReactiveEdge | null,
+  back: ReactiveEdge | null,
+  ahead: ReactiveEdge | null,
+): ReactiveEdge | null {
   for (;;) {
     if (out === null) return null;
     if (__PROFILE__)

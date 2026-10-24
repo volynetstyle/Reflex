@@ -3,7 +3,7 @@
 **Research note · 24 October 2026**  
 **Implementation examined:** [`volynetstyle/Reflex`, PR #52](https://github.com/volynetstyle/Reflex/pull/52), head [`1cca2bc04aadfcb42bde41d5c70df6ed202a16d7`](https://github.com/volynetstyle/Reflex/tree/1cca2bc04aadfcb42bde41d5c70df6ed202a16d7).  
 **Merged:** squashed into `main` as `190a09e`; the commit hashes below refer to the PR branch.  
-**Status:** description of a specific implementation, not a language-level specification or a claim about every version of Reflex.
+**Status:** description of a specific implementation, not a language-level specification or a claim about every version of Reflex. The last part of §9, _After PR #52: repeated pairs and the outgoing hint_, describes a follow-up branch (`perf/tracking-producer-hint`), not PR #52.
 
 ## Abstract
 
@@ -26,17 +26,17 @@ They interact, but their state and evidence must not be collapsed into one infor
 
 ### A vocabulary that should not be conflated
 
-| Term                            | Meaning in Reflex                                       | What it does **not** mean                                                    |
-| ------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `P`, producer                   | Node whose value is being read                          | The computation that is currently executing                                  |
-| `C`, consumer                   | Node currently collecting reads                         | Necessarily an effect; it may be a computed node                             |
-| `(P, C)`                        | Directed dependency relation, represented by an edge    | An ordered pair of read-site locations                                       |
-| `C.firstIn … C.lastIn`          | Physical doubly linked list of dependencies             | Only the currently accepted reads                                            |
-| `C.tailIn`                      | Inclusive cursor / accepted-prefix frontier             | Always the physical tail; outside normal passes it has other documented uses |
-| `P.firstOut … P.lastOut`        | Physical list of subscribers and their order            | A disposable set with no ordering consequences                               |
-| `edge.stamp`                    | Epoch stamp for **acceptance by a tracking pass**       | Producer value revision, value freshness, graph edit count                   |
-| `trackingStamp`                 | Monotonically advancing clock that supplies pass stamps | Per-producer change counter                                                  |
-| `Unknown`, `Changed`, `Visited` | Execution/invalidation obligations                      | Alternative spellings for the edge stamp                                     |
+| Term                            | Meaning in Reflex                                            | What it does **not** mean                                                                                                        |
+| ------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `P`, producer                   | Node whose value is being read                               | The computation that is currently executing                                                                                      |
+| `C`, consumer                   | Node currently collecting reads                              | Necessarily an effect; it may be a computed node                                                                                 |
+| `(P, C)`                        | Directed dependency relation, represented by an edge         | An ordered pair of read-site locations                                                                                           |
+| `C.firstIn … C.lastIn`          | Physical doubly linked list of dependencies                  | Only the currently accepted reads                                                                                                |
+| `C.tailIn`                      | Inclusive cursor / accepted-prefix frontier while C computes | Always the physical tail; outside a pass it holds a residual incoming edge or, on the follow-up branch, an outgoing hint (INV-H) |
+| `P.firstOut … P.lastOut`        | Physical list of subscribers and their order                 | A disposable set with no ordering consequences                                                                                   |
+| `edge.stamp`                    | Epoch stamp for **acceptance by a tracking pass**            | Producer value revision, value freshness, graph edit count                                                                       |
+| `trackingStamp`                 | Monotonically advancing clock that supplies pass stamps      | Per-producer change counter                                                                                                      |
+| `Unknown`, `Changed`, `Visited` | Execution/invalidation obligations                           | Alternative spellings for the edge stamp                                                                                         |
 
 ## 2. The representation and the actual contract
 
@@ -266,6 +266,67 @@ Marginal evidence for skewed graphs exists: a study of about 20,000 EUSES and En
 
 The hypothesis that many reactive graphs are sparse/skewed is plausible but **not established for the joint per-edge `(in, out)` distribution of real Reflex applications**. The normal benchmark suite's zero generic-lookups is a limitation of that suite, not proof that real applications have none. Any “effectively constant-time in practice” claim needs a representative trace of `P50/P95/P99 D_e`, the fraction of off-sequence reads, and actual traversed links per read.
 
+### After PR #52: repeated pairs and the outgoing hint
+
+_This part describes the follow-up branch `perf/tracking-producer-hint`, not PR #52._
+
+**The case the joint-tail study did not measure.** The study above shuffles reads. A more common way to reach the lookup with two wide endpoints is a _repeated_ pair: a wide consumer re-reads one broad producer between its other reads, as in `items.map((i) => f(i, theme()))`. Every re-read after the first is a duplicate. Its edge lies `i` reads behind the cursor in the accepted prefix and at rank ρ in `P.out`; when the consumer's edge sits in the middle of the producer's list, the newest-outgoing probe misses, each duplicate costs `O(min(ρ, i))` and a pass `Θ(n · min(ρ, n))`. On the PR #52 code, with 512 items and the consumer in the middle of 1,024 subscribers, one pass compared 329,713 links and took about 400 µs, against 2.9 µs for the same reads without the duplicates; with 16 subscribers it compared 8,664 links (15 µs). No `bench/` workload had this shape.
+
+**Why searching cannot do better on the PR #52 representation.** The stamp already classifies a duplicate in O(1) once the edge is in hand (INV-T3); the missing step is `P → e(P, C)`. In the PR #52 shape, without auxiliary state:
+
+- a pointer path from `P` to `e(P, C)` runs through `P.out`, one from `C` through `C.in`;
+- the writable state reachable from `P` without a search is `P`'s own fields, each under an existing contract, and the edge itself;
+- the stamps of idle consumers' edges could be rewritten, but integers cannot shorten a walk over a linked list; the order of `C`'s suffix is free in a successful pass, but it is reachable only from `C` and cannot be keyed by producer, since JavaScript objects have no order or hash without an auxiliary map.
+
+So any procedure that locates the edge, or merely certifies that the read is a duplicate, examines `Ω(min(ρ, δ))` links in the worst case, `δ` being the distance from the cursor in `C.in`. As in §5, this is a statement about this access model, not a universal lower bound.
+
+**INV-H: one slot, two lifetime-disjoint readings.** The model is changed by giving an existing slot a second reading, not by adding a field. The frontier reading of `tailIn` is required only while the node is `Computing`. Outside that phase the slot is semantically inactive, and the lookup reuses it as a producer-side hint:
+
+> For a node that is not `Computing`, `tailIn` is null, the residual incoming edge of its last pass, or a **hint**: one of its own outgoing edges, attached to both lists, with `from === node && to !== node`.
+
+An incoming edge has `to === node`. The graph does not forbid self-edges, so `from === node` alone would not tell the readings apart; with `to !== node`, a self-edge always reads as incoming and is never written as a hint. Maintenance keeps the reading exact:
+
+1. The lookup writes a hint only past its four-link outgoing head start, only into a node that is neither `Computing` nor a watcher, and only with the edge it has just located.
+2. Every unlink path (`unlinkEdge`, `unlinkDetachedIncomingEdgeSequence`, `unlinkAllSubscribers`) clears the hint that points to the unlinked edge.
+3. Every computation resets `tailIn` to null before its first read, so the slot is never a hint when it becomes a frontier.
+4. The idle uses of `tailIn` (repair of an incoming cursor on unlink, the debug integrity check, watcher validation's save and restore, which only watchers reach) either accept a hint or never meet one.
+
+The lookup uses a hint only for exactly its pair (`hint.to === C && hint.from === P && C !== P`). A hint is a positive answer only: a missing or foreign hint proves nothing, absence is still proved by the lockstep, and the hint carries no semantics of its own.
+
+**Three lookup levels.**
+
+| Level | Mechanism                                               | Memory        | Settles                                                                    |
+| ----- | ------------------------------------------------------- | ------------- | -------------------------------------------------------------------------- |
+| L0    | cursor, next edges, physical tail, newest outgoing edge | none          | stable and local reads                                                     |
+| L1    | producer hint, `tailIn` of an idle producer             | existing slot | a pair looked up before, until another lookup of that producer replaces it |
+| L2    | lockstep, `findEdgeInLockstep`                          | none          | every read; the only proof of absence                                      |
+
+After the first lookup of a pass, every further duplicate of the hub costs one comparison: `P → e(P, C)` in O(1). The hint is not an index: one slot per producer, written only by a lookup that has already paid L2, never prepared or restored around a pass (compare Preact's `_node` and Vue's `activeLink`, §8), never allocated. The lazily armed slot of the study above remains rejected: arming builds a temporary per-pass index; the hint remembers the last answer.
+
+**Evidence.**
+
+- _Exactness._ A graph-level property test runs two identical worlds through random passes with hub duplicates, passes without cleanup, unlinks and disposals; the reference scrubs every hint before each read, so each lookup is decided by the lockstep alone. Incoming and outgoing order and stamp classes stay identical, and INV-H holds after every operation. The test fails when any unlink path keeps its hint.
+- _Oracle._ The differential oracle now records the semantic tail of every running computation (its accepted prefix, `firstIn` through `tailIn`) and compares it with the baseline; an idle node's `tailIn` is not compared, since a hint may replace its residual edge. The invariant oracle checks INV-H after every operation: a Computing node's `tailIn` is incoming, an idle node's is incoming or an attached, non-self outgoing hint. A hub program family, kept out of the default generator so its pinned seeds are unchanged, re-reads a producer hub and a computed hub inside wide consumers under conditional reads, throws, disposal and context switches. The mutant `hint-keep-on-unlink` is killed. Over 2,000 default and 1,000 hub programs at both observation levels, the candidate's traces equal those of the pre-change commit `4c94e9c` entry for entry. In PROFILE builds the hub programs compare 66,650 lockstep links instead of 73,476, and the default programs 4,217 in both: bounded fan-out never passes the head start, so it never touches the slot.
+- _Machine code._ In the production bundle only `findEdgeInLockstep` (split into the head start, the hint and `findEdgeInLockstepPastHeadStart`) and the three unlink functions change; `resolveTrackedRead`, all miss handlers, `isEdgeInTrackedPrefix`, push, `advanceCore`, `executeComputation` and the link functions are byte-identical. Under Node 24.22 the TurboFan inlining decisions of ten benchmark workloads are unchanged; in the hub workload the bytecode charged to `resolveTrackedRead` grows from 779 to 799 bytes, over the per-root budget on both sides.
+- _Timing, local._ `compare-tracking-graph.mjs` (independent processes alternating, nine samples, medians; Windows laptop, not the CI runner): `hub-duplicates-16` 2,542 → 1,636 ns per pass (1.55×), `hub-duplicates-256` 15,164 → 1,743 ns (8.7×), `long-long-single` 9.2×, `long-long-8-nested` 1.36×, `permuted-fanout-8-mid` 1.13×; the interleaved long × long modes 0.94–1.09 at 300 iterations. Four scenarios measured 0.92–0.95: `runtime-reorder` and `reuse-first-out` never pass the head start, so they run no new code; `swap-pairs-fanout-3` is settled by locality tiers; `append-shared-64` pays one extra load per absence proof and per unlinked edge. These ratios are within the process-to-process drift this method is known for; they are mirrored as paired workloads (`A.track.reorder-128-shuffled`, `A.graph.*`) so the paired protocol, with its A/A control, decides. Paired CI verdict: pending.
+
+**What stays at the bound.**
+
+- _Interleaved dense-core churn._ Wide consumers that reorder their reads of the same wide producers in turn overwrite one another's hints, so their lookups stay at L2. Closing this needs per-pass arming of an index (`Θ(in(C))` writes and a trigger heuristic), which is not done.
+- _Absence._ A new dependency between two wide endpoints needs a proof of absence, which no positive hint gives; without a complete index this is the bound in any representation.
+
+For both the remaining cost is topological. Over a round in which every consumer re-tracks once, Chiba and Nishizeki's bound `Σ_e min(deg u, deg v) ≤ 2·α(G)·m` (α the arboricity, m the edge count) limits the lockstep to `2α` links per read on average. By Nash-Williams, arboricity is set by the densest subgraph: what keeps lookups expensive is a dense bipartite core, not a single wide hub, and such a core already holds `Θ(s·t)` edges. For the 64 × 512 core of the joint-tail study, the Nash-Williams ratio of the whole core, ⌈32768/575⌉ = 57, is a lower bound on α (its exactness would need that subgraph to be the maximizer, which is not claimed here); the measured 69–75 links per lookup are of that order. The bound is aggregate: one consumer that re-tracks often can still pay `Θ(n · min)` per pass in a graph of low arboricity, which is the repeated-pair case L1 closes as long as that consumer is the one looking those producers up.
+
+The landscape after the hint:
+
+| Read                               | Cost                                 | Level |
+| ---------------------------------- | ------------------------------------ | ----- |
+| stable or local                    | O(1)                                 | L0    |
+| repeated pair                      | O(1) after its first lookup          | L1    |
+| irregular pair between sparse ends | O(min(out, in))                      | L2    |
+| dense-core churn                   | representation bound, ≤ 2α amortized | L2    |
+| absence                            | representation bound                 | L2    |
+
 ## 10. Failure modes in _reading_ the implementation
 
 The following statements are misleading or false for the scoped PR:
@@ -282,12 +343,15 @@ The following statements are misleading or false for the scoped PR:
 10. **“The new algorithm proves all reactive graphs have small degrees.”** False. It avoids the large-degree cost unless **both endpoints** are wide on an off-sequence read; empirical joint-degree distributions remain unmeasured.
 11. **“The new resolver's improvements explain all Reflex benchmark results.”** False. General CI workloads often never invoke the new lookup at all.
 12. **“This design is the same as lite-signal's per-edge versioning experiment.”** False. The latter concerns value/dependency change information; Reflex's edge stamp concerns temporal membership.
+13. **“`tailIn` always belongs to the incoming list.”** True for PR #52. On the follow-up branch only while the node is `Computing`; outside that phase it may be an outgoing hint (INV-H), and a hint is a lookup answer, not a frontier.
 
 ## 11. Reproduction and falsifiable next questions
 
 **Pin the tested revision.** `main` carries the squash `190a09e`. On the PR branch, track separate changes: PR #52's preparatory JIT-hint baseline (`ee07a7b`), production tracking change (`e4af48e`), profiling/research tools (`1d10594`), and later documentation-only fixes (`752f7d7`, `1cca2bc`). Do not attribute every JIT-related edit in the PR to the lookup rewrite.
 
 **Run the targeted harness** according to [`tracking/README.md`](https://github.com/volynetstyle/Reflex/blob/1cca2bc04aadfcb42bde41d5c70df6ed202a16d7/packages/reflex-runtime/src/kernel/shape/tracking/README.md) and [`compare-tracking-graph.mjs`](https://github.com/volynetstyle/Reflex/blob/1cca2bc04aadfcb42bde41d5c70df6ed202a16d7/scripts/compare-tracking-graph.mjs). Separate PROFILE link counts from production timings: instrumentation changes traversal costs and must not be used for runtime-speed claims. [`analyze.mjs`](https://github.com/volynetstyle/Reflex/blob/1cca2bc04aadfcb42bde41d5c70df6ed202a16d7/packages/reflex-runtime/perf/tracking-pair-lookup/analyze.mjs) and [`tracking-long-long.mjs`](https://github.com/volynetstyle/Reflex/blob/1cca2bc04aadfcb42bde41d5c70df6ed202a16d7/scripts/tracking-long-long.mjs) document the joint-tail experiment.
+
+The repeated-pair case of the follow-up branch is measured by `hub-duplicates-16` and `hub-duplicates-256` in `compare-tracking-graph.mjs` and by the paired workload `A.track.hub-duplicate`.
 
 Good falsifiable questions for further research are: What are the **read-weighted** joint degrees in real applications? How often do conditional computations reorder reads beyond locality tiers? At what measured `p`, `D`, nesting level, and graph density does a lazily armed slot repay its memory and preparation costs? Can identity-changing eager detachment be revised **as a deliberately separate semantic change** with a new differential oracle, rather than smuggled into a search optimization?
 

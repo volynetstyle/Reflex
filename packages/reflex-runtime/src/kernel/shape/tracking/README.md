@@ -11,8 +11,14 @@ The cursor `consumer.tailIn` splits the incoming list into the prefix
 accepted in this pass and the suffix of older dependencies. A read off the
 sequential path is resolved in three steps:
 
-1. **Locate** the edge of `(P, C)`: `findEdgeInLockstep`, bounded by the
-   shorter of `P.out` and `C.in`.
+1. **Locate** the edge of `(P, C)`, in three levels:
+   - **L0, locality**: the cursor, its next edges, the physical tail, the
+     producer's newest outgoing edge (`resolve.ts`).
+   - **L1, outgoing hint**: past the four-link outgoing head start, the
+     producer's `tailIn` when it is a hint for exactly this pair (INV-H).
+   - **L2, lockstep**: `findEdgeInLockstep`, bounded by the shorter of
+     `P.out` and `C.in`; the only proof of absence. Its result refreshes
+     the hint.
 2. **Classify** it: in the prefix exactly when it carries the cursor's
    nonzero stamp (INV-T3), or always when the cursor is `lastIn` (INV-T2):
    `isEdgeInTrackedPrefix`.
@@ -21,6 +27,17 @@ sequential path is resolved in three steps:
 
 `edge.stamp` is a pass-membership stamp, not a value version.
 
+`tailIn` is one slot with two lifetime-disjoint readings (INV-H,
+`../graph/hint.ts`): while the node is Computing, its tracking frontier;
+otherwise null, the residual incoming edge, or a hint, one attached outgoing
+edge (`from === node && to !== node`, so never a self-edge). The hint costs
+no memory and closes the repeated pair: a broad producer re-read inside a
+wide consumer (`items.map((i) => f(i, theme()))`) pays one lockstep per pass
+instead of one per read. A hint is a positive answer only. It does not prove
+absence, and a single slot per producer is overwritten when several wide
+consumers interleave their lookups of the same producers; both cases stay at
+the lockstep bound.
+
 ## Code map
 
 | File                    | Role                                                                            |
@@ -28,10 +45,11 @@ sequential path is resolved in three steps:
 | `resolve.ts`            | hot path (next edge, cursor, first read) and the initial, tail and inner misses |
 | `prefix.ts`             | prefix classification, shared with `push_iterator.ts`                           |
 | `cleanup.ts`            | removal of the unvisited suffix after a successful pass                         |
-| `../graph/findEdge.ts`  | exact pair lookup                                                               |
+| `../graph/findEdge.ts`  | exact pair lookup: head start, outgoing hint, lockstep                          |
+| `../graph/hint.ts`      | INV-H: the two readings of `tailIn`                                             |
 | `../graph/reuseEdge.ts` | reconciliation, eager suffix detachment, the default strategy                   |
 
-Two rules to keep when changing this code:
+Rules to keep when changing this code:
 
 - **Eager suffix detachment (32 edges) is an identity policy, not a search
   bound.** It decides which edges survive and therefore subscriber order.
@@ -40,6 +58,12 @@ Two rules to keep when changing this code:
   resolver must locate the edge to reject duplicates before the call. This is
   the cost of the extension point; skipping the resolver lookup would hand
   duplicates to the strategy.
+- **A hint never outlives its edge, and never sits in a frontier.** Every
+  unlink path clears it (`unlinkEdge`, `unlinkDetachedIncomingEdgeSequence`,
+  `unlinkAllSubscribers`), every computation resets `tailIn` to null before
+  its first read, and the lookup writes one only into a node that is neither
+  Computing nor a watcher. A new edge-removal path must clear it too; the
+  oracle's tail invariant and the `hint-keep-on-unlink` mutant check this.
 
 ## JIT
 
@@ -51,7 +75,10 @@ function is inlined wherever the function is, and can push the hot read path
 `executeComputation`. For that reason the tail miss and the inner miss are
 separate functions: a call site inlines only the miss kind that occurs there.
 The lookup is a plain loop and is not unrolled. Its four-link outgoing head
-start (`OUTGOING_HEAD_START`) is a workload heuristic, not an invariant.
+start (`OUTGOING_HEAD_START`) is a workload heuristic, not an invariant. The
+hint is consulted only after it, so lookups that bounded fan-out settles
+never read or write `tailIn`; the lockstep proper is a separate function
+(`findEdgeInLockstepPastHeadStart`).
 
 ## Measuring
 
@@ -79,3 +106,7 @@ stable-tracking and generic-move controls.
 `perf/tracking-pair-lookup/analyze.mjs` reports, per read that reaches the
 lookup, `D = min(out(P), in(C))`, links compared and simulated slot hit rates
 (PROFILE build; link counts, not timings).
+
+The repeated-pair case has its own scenarios, `hub-duplicates-16` and
+`hub-duplicates-256` in `compare-tracking-graph.mjs`, and a permanent
+workload in the paired benchmark suite, `A.track.hub-duplicate`.

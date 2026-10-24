@@ -313,6 +313,119 @@ function deepSpec(random: () => number): GraphSpec {
   };
 }
 
+/**
+ * Hub family (generateHubProgram only, so the default distribution and its
+ * pinned seeds are unchanged): a producer hub (id 0) and a computed hub (the
+ * first consumer) with more subscribers than the lookup's outgoing head
+ * start, re-read by wide consumers between their other reads. This drives
+ * the outgoing hint (INV-H) through fills, hits, conditional drops and
+ * re-reads, disposal and throws.
+ */
+function hubSpec(random: () => number): GraphSpec {
+  const producers = 3 + int(random, 4);
+  const hub = producers;
+  const spec: GraphSpec = {
+    host: chance(random, 0.5) ? "claim" : "plain",
+    producers,
+    consumers: [],
+    watchers: [],
+  };
+  const watcherCount = 1 + int(random, 3);
+  spec.watchers = Array.from({ length: watcherCount }, () => ({ reads: [] }));
+  const gate = (): ReadStep["when"] => ({
+    producer: 1 + int(random, producers - 1),
+    parity: int(random, 2) as 0 | 1,
+  });
+  // Nested actions read, dispose and switch context but never write: a write
+  // from inside an evaluation reaches the baseline's known delivery defects
+  // (F1, F15, F17), whose acceptance rules this family would hit far more
+  // often than the default one without testing the hint any better.
+  const action = (readable: number): NestedAction => {
+    const r = random();
+    if (r < 0.5)
+      return {
+        kind: "read",
+        node: int(random, readable),
+        mode: genMode(random),
+      };
+    if (r < 0.8)
+      return { kind: "dispose", watcher: int(random, spec.watchers.length) };
+    return { kind: "foreign-read", node: int(random, readable) };
+  };
+  const extras = (callback: CallbackSpec, readable: number) => {
+    if (chance(random, 0.25))
+      callback.reverseWhen = { producer: 1, parity: int(random, 2) as 0 | 1 };
+    if (chance(random, 0.12)) callback.throwWhen = int(random, 5);
+    if (chance(random, 0.25)) {
+      callback.action = action(readable);
+      callback.actionWhen = int(random, 3);
+    }
+    return callback;
+  };
+
+  // The computed hub.
+  spec.consumers.push({
+    reads: [
+      { node: 0, mode: "lazy" },
+      { node: 1, mode: "lazy", when: gate() },
+    ],
+  });
+  // Plain subscribers of both hubs.
+  const fan = 5 + int(random, 5);
+  for (let i = 0; i < fan; i++) {
+    const readable = producers + spec.consumers.length;
+    const reads: ReadStep[] = [
+      {
+        node: 0,
+        mode: "lazy",
+        ...(chance(random, 0.2) ? { when: gate() } : {}),
+      },
+      { node: hub, mode: "lazy" },
+    ];
+    if (chance(random, 0.5)) reads.reverse();
+    spec.consumers.push(extras({ reads }, readable));
+  }
+  // Wide consumers: every other read re-reads a hub.
+  const subscribers = spec.consumers.length;
+  for (let w = 0; w < 2; w++) {
+    const readable = producers + spec.consumers.length;
+    const reads: ReadStep[] = [];
+    const count = 4 + int(random, 6);
+    for (let k = 0; k < count; k++) {
+      const other = chance(random, 0.7)
+        ? 1 + int(random, producers - 1)
+        : producers + 1 + int(random, subscribers - 1);
+      reads.push({
+        node: other,
+        mode: chance(random, 0.85) ? "lazy" : genMode(random),
+        ...(chance(random, 0.3) ? { when: gate() } : {}),
+      });
+      reads.push({ node: chance(random, 0.7) ? 0 : hub, mode: "lazy" });
+    }
+    spec.consumers.push(extras({ reads }, readable));
+  }
+  const readable = producers + spec.consumers.length;
+  spec.watchers = spec.watchers.map(() => {
+    const reads: ReadStep[] = [];
+    const count = 2 + int(random, 4);
+    for (let k = 0; k < count; k++) {
+      reads.push({ node: readable - 1 - int(random, 2), mode: "lazy" });
+      reads.push({
+        node: chance(random, 0.6) ? 0 : hub,
+        mode: "lazy",
+        ...(chance(random, 0.3) ? { when: gate() } : {}),
+      });
+    }
+    const watcher: WatcherSpec = extras({ reads }, readable);
+    if (chance(random, 0.3)) {
+      watcher.cleanup = {};
+      if (chance(random, 0.6)) watcher.cleanup.action = action(readable);
+    }
+    return watcher;
+  });
+  return spec;
+}
+
 export function generateSpec(random: () => number): GraphSpec {
   const family = random();
   if (family < 0.04) return wideSpec(random);
@@ -399,6 +512,17 @@ export function generateProgram(seed: number, maxOps = 40): Program {
   return { spec, ops };
 }
 
+/** A hub-family program (see hubSpec); seeds are independent of generateProgram. */
+export function generateHubProgram(seed: number, maxOps = 40): Program {
+  const random = prng(seed + 0x6a09e667);
+  const spec = hubSpec(random);
+  const ops: Op[] = [];
+  const length = 5 + int(random, maxOps);
+  for (let i = 0; i < length; i++) ops.push(genOp(random, spec, 0));
+  ops.push({ kind: "flush" }, { kind: "snapshot" });
+  return { spec, ops };
+}
+
 // ---------------------------------------------------------------------------
 // Interpreter
 
@@ -435,7 +559,9 @@ const OBSERVABLE_MASK = 0b0010_0011; // Unknown | Changed | Scheduled
  *   execution; a later read of a disposed producer links it again. A node
  *   disposed after its execution started has no incoming sources, except
  *   one disposed during its own execution: reads after the disposal link
- *   again and nothing unlinks them (F14, open), so it is not checked. A read is tracked when it runs with the
+ *   again and nothing unlinks them (F14, open), so it is not checked until a
+ *   later execution starts, whether the execution that saw the disposal
+ *   returned or threw. A read is tracked when it runs with the
  *   node as `currentConsumer`, outside `untracked`, and is not an eager
  *   consumer read. A failed execution leaves the set unspecified.
  * - liveness, for a live watcher whose last attempt executed and did not
@@ -446,8 +572,17 @@ const OBSERVABLE_MASK = 0b0010_0011; // Unknown | Changed | Scheduled
  *   that never ran or last failed are left to host retry policy, which this
  *   host does not implement.
  *
+ * - tail (INV-H): a Computing node's tailIn is null or an incoming edge, also
+ *   at the end of each of its callbacks; an idle node's is null, an incoming
+ *   edge, or an attached outgoing hint that is not a self-edge.
+ *
  * A violation is appended to the trace as `invariant:<detail>`; liveness
  * violations as `invariant:liveness:<detail>`.
+ *
+ * Every trace also records, at the end of each callback, the accepted prefix
+ * of the running node (`tail:<id>:[sources]`): the semantic tail, compared
+ * with the baseline. An idle node's tailIn is not compared, since a hint may
+ * replace its residual incoming edge.
  */
 export interface InterpretOptions {
   invariants?: boolean;
@@ -485,8 +620,12 @@ export function interpret(
     { reads: number[]; start: number; end: number }
   >();
   const goneAt = new Map<number, number>();
+  // Nodes whose latest disposal happened during their own execution (F14).
+  const disposedWhileRunning = new Set<number>();
   const dispose = (id: number) => {
     goneAt.set(id, ++clock);
+    if (tracked.has(nodes[id]!)) disposedWhileRunning.add(id);
+    else disposedWhileRunning.delete(id);
     for (const reads of tracked.values()) {
       const at = reads.indexOf(id);
       if (at !== -1) reads.splice(at, 1);
@@ -611,6 +750,30 @@ export function interpret(
     }
   };
 
+  /**
+   * The semantic tail of a running computation: the sources of its accepted
+   * prefix, `firstIn` through `tailIn`. While a node is Computing its tailIn
+   * is the tracking frontier and must agree with the baseline; while it is
+   * not, the slot may hold a hint (INV-H) and is not compared.
+   */
+  const recordFrontier = (id: number): void => {
+    const node = nodes[id]!;
+    const tail = node.tailIn;
+    const prefix: Array<number | undefined> = [];
+    let found = tail === null;
+    for (let e = node.firstIn; e !== null && !found; e = e.nextIn) {
+      prefix.push(ids.get(e.from));
+      if (e === tail) found = true;
+    }
+    if (!found) {
+      if (checking)
+        trace.push(`invariant:${id}:frontier is not an incoming edge`);
+      trace.push(`tail:${id}:detached`);
+      return;
+    }
+    trace.push(`tail:${id}:[${prefix}]`);
+  };
+
   const runCallback = (tag: string, id: number, callback: CallbackSpec) => {
     spend();
     trace.push(`${tag}:${id}`);
@@ -633,6 +796,7 @@ export function interpret(
     if (callback.action !== undefined && sum % 3 === callback.actionWhen) {
       performAction(callback.action);
     }
+    recordFrontier(id);
     if (callback.throwWhen !== undefined && sum % 5 === callback.throwWhen) {
       throw new Error(`${tag}${id}`);
     }
@@ -809,6 +973,32 @@ export function interpret(
     }
   };
 
+  /**
+   * INV-H, normalized: a Computing node's tailIn is null or an incoming edge;
+   * an idle node's is null, an incoming edge, or a hint: an outgoing edge of
+   * the node that is not a self-edge and is attached to both lists.
+   */
+  const checkTail = (node: Node, id: number): void => {
+    const tail = node.tailIn;
+    if (tail === null) return;
+    for (let e = node.firstIn; e !== null; e = e.nextIn) if (e === tail) return;
+    if ((node.state & COMPUTING) !== 0) {
+      trace.push(`invariant:${id}:Computing tailIn is not an incoming edge`);
+      return;
+    }
+    if (tail.from !== node || tail.to === node) {
+      trace.push(`invariant:${id}:idle tailIn is neither incoming nor a hint`);
+      return;
+    }
+    let outgoing = false;
+    for (let e = node.firstOut; e !== null; e = e.nextOut)
+      if (e === tail) outgoing = true;
+    let incoming = false;
+    for (let e = tail.to.firstIn; e !== null; e = e.nextIn)
+      if (e === tail) incoming = true;
+    if (!outgoing || !incoming) trace.push(`invariant:${id}:dangling hint`);
+  };
+
   const checkInvariants = (): void => {
     nodes.forEach((node, id) => {
       const sources: number[] = [];
@@ -829,15 +1019,17 @@ export function interpret(
       }
       if (new Set(sources).size !== sources.length)
         trace.push(`invariant:${id}:duplicate source in [${sources}]`);
+      checkTail(node, id);
       const last = committed.get(id);
       const removedAt = goneAt.get(id);
+      // F14: disposed during its own execution, whether that execution then
+      // returned or threw; checked again once a later execution starts.
       if (
         removedAt !== undefined &&
-        last !== undefined &&
-        removedAt > last.start &&
-        removedAt < last.end
+        disposedWhileRunning.has(id) &&
+        (last === undefined || last.start < removedAt)
       )
-        return; // F14
+        return;
       let expected: number[];
       if (
         removedAt !== undefined &&

@@ -3,6 +3,7 @@ import * as candidateModule from "../../src/internal";
 import { BASELINE_COMMIT, loadBaseline } from "./baseline";
 import {
   firstMismatch,
+  generateHubProgram,
   generateProgram,
   interpret,
   programSize,
@@ -92,6 +93,7 @@ const candidate = candidateModule as unknown as RuntimeModule;
 const SEEDS = Number(process.env.ORACLE_SEEDS ?? 2_000);
 const FIRST_SEED = Number(process.env.ORACLE_SEED ?? 1);
 const ONLY_ONE = process.env.ORACLE_SEED !== undefined;
+const HUB_SEEDS = Number(process.env.ORACLE_HUB_SEEDS ?? 1_000);
 
 let baseline: RuntimeModule;
 
@@ -162,6 +164,24 @@ describe(`baseline differential oracle (${BASELINE_COMMIT.slice(0, 12)})`, () =>
         if (failure !== null) throw new Error(failure);
       }
       console.info(`compatibility divergences (${level}):`, corrected);
+    },
+    600_000,
+  );
+
+  // Hub programs re-read wide producers inside wide consumers, so pair
+  // lookups pass the outgoing head start and use the hint (INV-H).
+  // Reproduce a failure with ORACLE_HUB_SEED=<seed>.
+  it.each<ObservationLevel>(["strict", "observable"])(
+    "matches the baseline on hub programs (%s)",
+    (level) => {
+      corrected.F13 = corrected.F15 = corrected.F1domain = corrected.F17 = 0;
+      const first = Number(process.env.ORACLE_HUB_SEED ?? 1);
+      const count = process.env.ORACLE_HUB_SEED !== undefined ? 1 : HUB_SEEDS;
+      for (let seed = first; seed < first + count; seed++) {
+        const failure = report(seed, level, generateHubProgram(seed));
+        if (failure !== null) throw new Error(`hub ${failure}`);
+      }
+      console.info(`hub compatibility divergences (${level}):`, corrected);
     },
     600_000,
   );
