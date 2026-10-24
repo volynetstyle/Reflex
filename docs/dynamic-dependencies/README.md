@@ -95,7 +95,7 @@ Resolver устроен как маленькая cache hierarchy. Он снач
 O(min(out(P), in(C))) на чтение, а не до 32 + 32 звеньев плюс полные scan-ы
 исходящих рёбер. Порог eager detach (32 ребра suffix-а) сохранён как политика
 идентичности рёбер, а не как бюджет поиска. Подробности:
-[tracking README](../../packages/reflex-runtime/src/kernel/shape/tracking/README.md).
+[tracking research](../../packages/reflex-runtime/src/kernel/shape/tracking/RESEARCH.md).
 
 ## Классы динамических топологий
 
