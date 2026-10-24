@@ -27,7 +27,7 @@ import {
   observeRuntimeProjection,
   observeRuntimeProjectionAmount,
 } from "@runtime/kernel/projection";
-import { isEdgeInTrackedPrefix } from "@runtime/kernel/shape/tracking/prefix";
+import { isEdgeInTrackedPrefix } from "@runtime/kernel/stages/tracking/prefix";
 import { profilePushNode } from "@runtime/kernel/stages/profile";
 import { observeRuntimePropagate } from "@runtime/kernel/projection.propagate";
 

@@ -23,13 +23,13 @@ sequential path is resolved in three steps:
 
 ## Code map
 
-| File                    | Role                                                                            |
-| ----------------------- | ------------------------------------------------------------------------------- |
-| `resolve.ts`            | hot path (next edge, cursor, first read) and the initial, tail and inner misses |
-| `prefix.ts`             | prefix classification, shared with `push_iterator.ts`                           |
-| `cleanup.ts`            | removal of the unvisited suffix after a successful pass                         |
-| `../graph/findEdge.ts`  | exact pair lookup                                                               |
-| `../graph/reuseEdge.ts` | reconciliation, eager suffix detachment, the default strategy                   |
+| File                             | Role                                                                            |
+| -------------------------------- | ------------------------------------------------------------------------------- |
+| `resolve.ts`                     | hot path (next edge, cursor, first read) and the initial, tail and inner misses |
+| `prefix.ts`                      | prefix classification, shared with `push_iterator.ts`                           |
+| `cleanup.ts`                     | removal of the unvisited suffix after a successful pass                         |
+| `../../shape/graph/findEdge.ts`  | exact pair lookup                                                               |
+| `../../shape/graph/reuseEdge.ts` | reconciliation, eager suffix detachment, the default strategy                   |
 
 Two rules to keep when changing this code:
 

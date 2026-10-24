@@ -53,7 +53,7 @@ execFileSync(
     "--out",
     outDir,
     "--mutate",
-    `src/kernel/shape/tracking/resolve.ts::${RESOLVE}::${RESOLVE.slice(0, -1)}, globalThis.__reflexTrackRead?.(producer, consumer);`,
+    `src/kernel/stages/tracking/resolve.ts::${RESOLVE}::${RESOLVE.slice(0, -1)}, globalThis.__reflexTrackRead?.(producer, consumer);`,
   ],
   { cwd: packageRoot, stdio: "pipe" },
 );

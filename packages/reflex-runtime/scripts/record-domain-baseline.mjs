@@ -54,7 +54,6 @@ const hotPath = [
   "src/protocol/read.consumer.ts",
   "src/protocol/write.producer.ts",
   "src/protocol/watcher.ts",
-  ...collect("src/kernel/shape/tracking"),
   ...collect("src/kernel/shape/graph"),
   ...collect("src/kernel/stages"),
   ...collect("src/kernel/engine"),

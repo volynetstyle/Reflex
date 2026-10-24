@@ -266,6 +266,75 @@ Marginal evidence for skewed graphs exists: a study of about 20,000 EUSES and En
 
 The hypothesis that many reactive graphs are sparse/skewed is plausible but **not established for the joint per-edge `(in, out)` distribution of real Reflex applications**. The normal benchmark suite's zero generic-lookups is a limitation of that suite, not proof that real applications have none. Any “effectively constant-time in practice” claim needs a representative trace of `P50/P95/P99 D_e`, the fraction of off-sequence reads, and actual traversed links per read.
 
+### After PR #52: the outgoing hint (INV-H)
+
+_This part describes the follow-up branch `perf/tracking-producer-hint`, not PR #52._
+
+**The case the joint-tail study missed.** The common way to reach the lookup with two wide endpoints is not a shuffle but a _repeated pair_: a wide consumer re-reads one broad producer between its other reads, as in `items.map((i) => f(i, theme()))`. Every re-read after the first is a duplicate. Its edge lies `i` reads behind the cursor and at rank ρ in `P.out`, so each duplicate costs `O(min(ρ, i))` and a pass `Θ(n · min(ρ, n))`. With 512 items and the consumer in the middle of 1,024 subscribers, one pass compared 329,713 links (~400 µs, against 2.9 µs without the duplicates).
+
+The stamp already classifies a duplicate in O(1) once the edge is in hand; the missing step is `P → e(P, C)`. Without writable state reachable from `P`, no search can do better than `Ω(min(ρ, δ))` in this representation (§5).
+
+**The trick: one slot, two lifetime-disjoint readings.** `tailIn` is needed as a frontier only while its node is `Computing`. Outside that phase the slot is semantically inactive, so the lookup reuses it as a producer-side memory of its last answer:
+
+```text
+            node is Computing                 node is idle
+          ┌───────────────────────┐   ┌──────────────────────────────────┐
+ tailIn = │ frontier: null or an   │   │ null                             │
+          │ incoming edge (to=node)│   │ residual incoming edge (to=node) │
+          └───────────────────────┘   │ HINT: own outgoing edge          │
+                                      │   (from=node && to≠node)         │
+                                      └──────────────────────────────────┘
+```
+
+A self-edge satisfies both endpoint tests and always reads as incoming. No field, allocation or per-pass preparation is added.
+
+**What a duplicate costs, before and after.** Hub `H` has 1,024 subscribers; `C` sits in the middle of `H.out`; `C` reads `[H, i0, H, i1, H, i2, …]`:
+
+```text
+H.out:  s0 s1 s2 s3 … s511 [C] s512 … s1023
+                            ▲
+C.in:   H  i0  i1  i2 … i_k  (cursor)
+        ▲───────────────────┘   back walk: k links
+
+PR #52, every duplicate of H:
+  head start s0..s3 → lockstep: H.out forward ‖ C.in back ‖ C.in ahead
+  cost ≈ min(rank of C in H.out, distance back to H)    → grows with k
+
+With the hint:
+  first duplicate:   head start → H.tailIn miss → lockstep → H.tailIn := e(H,C)
+  next duplicates:   head start → H.tailIn.to === C && .from === H → done
+                     ┌────────┐ tailIn ┌──────────┐
+                     │   H    │───────▶│ e(H, C)  │   one comparison
+                     └────────┘        └──────────┘
+```
+
+**Three lookup levels.**
+
+| Level | Where                                                                          | Settles                                                           |
+| ----- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| L0    | consumer side: cursor, next edges, `lastIn`                                    | stable and local reads                                            |
+| L1    | producer side: empty / newest / sole edge, four-link head start, then the hint | edges linked this pass, bounded fan-out, a pair looked up before  |
+| L2    | lockstep (`findEdgeInLockstep`)                                                | every read; the only general proof of absence; refreshes the hint |
+
+**INV-H maintenance.** Whatever the slot holds is attached, so any slot edge matching the pair is the answer:
+
+1. The lookup writes a hint only past its head start (bounded fan-out never touches the slot), only into a node that is neither `Computing` nor a watcher, only with the edge it just located.
+2. Every unlink path (`unlinkEdge`, `unlinkDetachedIncomingEdgeSequence`, `unlinkAllSubscribers`) clears the hint that points to the removed edge, so no detached edge, and no disposed consumer behind it, is retained.
+3. Every computation resets `tailIn` to null before its first read, so a hint never becomes a frontier.
+
+A hint is a positive answer only: a missing or foreign hint proves nothing and absence is still proved by L2.
+
+```text
+lifecycle of H.tailIn
+  null ──lookup past head start──▶ hint e(H,C) ──another lookup of H──▶ hint e(H,D)
+   ▲                                  │                                     │
+   └──── unlink of e / H recomputes ◀─┴─────────────────────────────────────┘
+```
+
+**Evidence.** Graph-level differential fuzz (`scripts/fuzz-tracking-graph.mjs`): 200,000 scenarios identical to the pre-change bundle (edge identity, stamps, every frontier), INV-H checked after every operation, nine seeded mutants killed. Oracle at 50,000 + 20,000 programs: 139,999 of 140,000 traces identical (one differs only in stack-overflow depth). Paired CI: `A.track.hub-duplicate` 66% faster, no workload slower; `D.subtree.mount-unmount` +2.3%, attributed to the exact unlink maintenance (rule 2), kept deliberately.
+
+**What stays at the bound.** Interleaved consumers of a dense core overwrite one another's single hint and stay at L2; proving absence needs a complete index. Over a round where every consumer re-tracks once, Chiba–Nishizeki gives `Σ_e min(deg u, deg v) ≤ 2·α(G)·m`, so that remaining cost is set by the arboricity of a dense bipartite core, not by a single wide hub.
+
 ## 10. Failure modes in _reading_ the implementation
 
 The following statements are misleading or false for the scoped PR:
