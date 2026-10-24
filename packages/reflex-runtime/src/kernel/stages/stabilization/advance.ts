@@ -93,7 +93,9 @@ function advanceCore(
 
   const prev = node.payload;
 
-  if (compare(prev, next)) {
+  // JIT: `compare` is Object.is and returns a boolean. `=== true` compiles to
+  // one reference compare instead of a generic ToBoolean on the call result.
+  if (compare(prev, next) === true) {
     node.state = resolvedState;
 
     if (__PROFILE__)

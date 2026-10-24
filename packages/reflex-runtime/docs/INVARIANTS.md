@@ -117,9 +117,15 @@ extending a prefix use its cursor edge's stamp, even after nested computation
 advances the global `trackingEpoch`. A first read uses the current epoch.
 `resolveTrackedRead` derives the stamp itself; callers cannot supply one.
 
-The 32-edge prefix limit bounds only that local scan. Incoming suffix and
-outgoing membership searches may traverse complete lists. The eager suffix
-threshold is not a global reconciliation work bound. Algorithm details:
+During a pass with a nonempty suffix, an incoming edge is in the tracked
+prefix exactly when it carries the cursor's nonzero stamp (INV-T3): accepted
+edges are stamped with the pass stamp, and suffix edges carry stamps of
+earlier passes, which the forward-only clock makes smaller. With the cursor
+at `lastIn` every edge is in the prefix (INV-T2). A read off the sequential
+path is resolved by one exact lookup of the pair's edge, bounded by the
+shorter of the producer's outgoing and the consumer's incoming lists, then
+classified by these rules. The eager suffix detachment threshold (32 edges)
+is a retained identity policy, not a search bound. Algorithm details:
 [tracking](../src/kernel/shape/tracking/README.md).
 
 ## 5. Disposal and cleanup

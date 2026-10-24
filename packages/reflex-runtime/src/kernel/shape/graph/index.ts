@@ -5,10 +5,12 @@ export {
   moveMiddleIncomingEdgeAfterEdgeUnchecked,
   moveNonHeadIncomingEdgeToFrontUnchecked,
 } from "./edgeList";
+export { findEdgeInLockstep } from "./findEdge";
 export { linkEdge, unlinkEdge } from "./linkEdge";
 export {
   reuseIncomingEdgeFromSuffixOrCreate,
   reuseIncomingEdgeFromSuffixOrLink,
+  reuseLocatedIncomingEdgeOrLink,
 } from "./reuseEdge";
 export {
   unlinkAllSources,

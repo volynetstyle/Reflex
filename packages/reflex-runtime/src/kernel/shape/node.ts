@@ -32,6 +32,9 @@ class ReactiveNode<T = unknown, C extends ComputeFn<T> = ComputeFn<T>> {
       );
     }
 
+    // JIT: seeds the `state` field with Smi representation for the node map.
+    // Not a correctness guard; every later store is an Int32 bit expression,
+    // so the field never generalizes to Double or Tagged.
     this.state = state | 0;
     this.compute = compute;
     this.payload = payload;
