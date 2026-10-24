@@ -18,18 +18,10 @@ export function scanProducerInTrackedPrefix(
 ): PrefixScanResult {
   let edge = cursorEdge.prevIn;
 
-  // Four links per iteration retain the exact 32-edge bound while reducing
-  // loop bookkeeping on dynamic reads with long visited prefixes.
-  for (let scanned = 0; scanned < PrefixScanLimit; scanned += 4) {
-    if (edge === null) return PrefixMiss;
-    if (edge.from === producer) return PrefixHit;
-    edge = edge.prevIn;
-    if (edge === null) return PrefixMiss;
-    if (edge.from === producer) return PrefixHit;
-    edge = edge.prevIn;
-    if (edge === null) return PrefixMiss;
-    if (edge.from === producer) return PrefixHit;
-    edge = edge.prevIn;
+  // JIT: a plain loop, not unrolled. This scan is a cold guard, and both
+  // prefix helpers inline it; its bytecode counts against the inlining budget
+  // of every caller that inlines them (see resolveTailTrackedReadMiss).
+  for (let scanned = 0; scanned < PrefixScanLimit; ++scanned) {
     if (edge === null) return PrefixMiss;
     if (edge.from === producer) return PrefixHit;
     edge = edge.prevIn;

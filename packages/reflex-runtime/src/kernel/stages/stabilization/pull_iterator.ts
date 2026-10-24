@@ -29,6 +29,8 @@ export function pull_iterator(
   node: ReactiveNode,
   edge: ReactiveEdge,
 ): boolean {
+  // JIT: keep the captured stack base Int32 for index and range analysis.
+  // `| 0` is type feedback, not a correctness guard; see pushIteratorCore.
   const base = high | 0;
   let top = base;
   let changed = false;

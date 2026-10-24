@@ -133,8 +133,9 @@ Before the bounded scan, structural proofs avoid unnecessary traversal:
   edge must belong to the visited prefix. Probe the outgoing tail first, then
   at most four outgoing edges. A complete probe without this consumer proves
   absence; an incomplete probe falls back to the original membership check.
-- The incoming scan visits four links per loop iteration but retains exactly
-  the same 32-edge limit and three-way result.
+- The incoming scan is a plain loop over at most 32 links with a three-way
+  result. It is not unrolled: the guard is cold, and its size counts against
+  the inlining budget of every caller that inlines the prefix helpers.
 
 Zero versions and inconclusive version checks still use bounded traversal.
 These shortcuts do not change the cursor, edge versions, tracking events,
@@ -224,6 +225,15 @@ pathological topologies. A full index, wide scan, or adaptive strategy should be
 treated as a separate specialized mode, justified by profiling data, and kept
 out of the default hot path until it proves that the graph itself cannot provide
 enough locality.
+
+Keep each tier's code where its frequency is. TurboFan charges a caller for a
+callee's bytecode plus everything already inlined into the callee's optimized
+code, against a fixed budget per compilation. A cold tier merged into a hot
+function is inlined wherever the function is, and can push the hot read path
+(`resolveTrackedRead`) out of `runWatcherCore`, `advanceCore` or
+`executeComputation`. For that reason the tail miss (append locality, L2) and
+the inner miss (L3 to L7) are separate functions: a call site inlines only the
+miss kind that occurs there.
 
 ## Comparing tracking and graph performance
 

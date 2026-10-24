@@ -28,8 +28,9 @@ export type {
 } from "./context.model";
 export type { RuntimeHooks, RuntimeHostHooks } from "./config";
 
-/** Contexts whose continuation is suspended below the active one. */
-const suspendedContexts: RuntimeContext[] = [];
+/** Reusable stack of suspended runtime contexts. */
+const suspendedContexts: (RuntimeContext | undefined)[] = [];
+let suspendedDepth = 0;
 
 export function runWithRuntimeContext<T>(
   context: RuntimeContext,
@@ -37,17 +38,20 @@ export function runWithRuntimeContext<T>(
 ): T {
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.context.run");
+
   const previous = getActiveRuntimeContext();
   if (previous === context) return fn();
 
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.context.switch");
+
   switchRuntimeContext(context);
-  suspendedContexts.push(previous);
+  suspendedContexts[suspendedDepth++] = previous;
+
   try {
     return fn();
   } finally {
-    suspendedContexts.pop();
+    suspendedContexts[--suspendedDepth] = undefined;
     switchRuntimeContext(previous);
   }
 }
@@ -70,7 +74,7 @@ export function enterRuntimeContextRegion(
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.context.switch");
   switchRuntimeContext(context);
-  suspendedContexts.push(previous);
+  suspendedContexts[suspendedDepth++] = previous;
   return previous;
 }
 
@@ -79,13 +83,17 @@ export function leaveRuntimeContextRegion(
   previous: RuntimeContext | null,
 ): void {
   if (previous === null) return;
-  suspendedContexts.pop();
+  suspendedContexts[--suspendedDepth] = undefined;
   switchRuntimeContext(previous);
 }
 
-/** Whether `context` has a continuation suspended by a nested context entry. */
+/** Whether a context has a suspended continuation. */
 export function isRuntimeContextSuspended(context: RuntimeContext): boolean {
-  return suspendedContexts.includes(context);
+  for (let i = suspendedDepth - 1; i >= 0; i--) {
+    if (suspendedContexts[i] === context) return true;
+  }
+
+  return false;
 }
 
 export function configureRuntimeContext(

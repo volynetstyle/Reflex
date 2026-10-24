@@ -30,26 +30,53 @@ import {
 import { profilePushNode } from "@runtime/kernel/stages/profile";
 import { observeRuntimePropagate } from "@runtime/kernel/projection.propagate";
 
+// JIT: a full-range fill() leaves the backing store PACKED_ELEMENTS (checked
+// with %HasHoleyElements on Node 24.22 and 25.2); `new Array(512)` alone is
+// HOLEY and every stack load would carry a hole check. Keep the fill. Pushes
+// only append at `top <= length` and pops clear with null, so the stack never
+// becomes holey later.
 const propagateStack: ReactiveEdge[] = new Array(512).fill(null);
 const MAX_RETAINED_PROPAGATE_STACK = 512;
 const propagateDepthStack: number[] | undefined = __PROFILE__
   ? new Array(512).fill(0)
   : undefined;
+// JIT: holds only Int32 stack indices. Never store a non-Smi value here; the
+// `| 0` at the read site in pushIteratorCore relies on it staying small.
 let propagateStackHigh = 0;
 
-function resetPropagateStackAfterAbort(
-  stack: ReactiveEdge[],
+/**
+ * Rare scheduler dispatch for an invalidated watcher, shared by both phases.
+ * The try/catch lives here, so pushIteratorCore's bytecode has no handler
+ * table and the Ignition, Sparkplug and Maglev tiers see a smaller CFG; the
+ * extra frame is paid only next to an external hook call. TurboFan inlines
+ * this into pushIteratorCore on watcher workloads, so its optimized code
+ * keeps the region (Node 24.22, --trace-turbo-inlining).
+ */
+function dispatchWatcherInvalidation(
+  sub: ReactiveNode<unknown>,
   base: number,
   top: number,
 ): void {
-  while (top !== base) stack[--top] = null!;
-  propagateStackHigh = base;
+  propagateStackHigh = top;
+
+  try {
+    if (__DEV__) emitNodeInvalidated(sub);
+    else nodeInvalidatedHook!(sub);
+  } catch (error) {
+    while (top !== base) propagateStack[--top] = null!;
+    propagateStackHigh = base;
+    throw error;
+  }
 }
 
 /**
  * Rare re-entrant tracking path. Keeping the backwards edge scan out of the
  * common clean/already-dirty loops leaves Maglev and TurboFan with a much
- * smaller hot control-flow graph.
+ * smaller hot control-flow graph. The scan stays a plain loop: unrolling a
+ * cold path only grows its code.
+ *
+ * JIT: both exits return a Smi (0 or the new state), never null or a boolean,
+ * so `next` at the call sites stays a Word32 phi.
  */
 function markComputingSubscriber(
   edge: ReactiveEdge,
@@ -66,16 +93,8 @@ function markComputingSubscriber(
 
   if (edge !== tail) {
     let current = edge.prevIn;
+
     while (current !== null) {
-      if (current === tail) return 0;
-      current = current.prevIn;
-      if (current === null) break;
-      if (current === tail) return 0;
-      current = current.prevIn;
-      if (current === null) break;
-      if (current === tail) return 0;
-      current = current.prevIn;
-      if (current === null) break;
       if (current === tail) return 0;
       current = current.prevIn;
     }
@@ -83,6 +102,7 @@ function markComputingSubscriber(
 
   return (sub.state = state | Visited | Unknown);
 }
+
 /**
  * Push invalidation iterator:
  * - direct subscribers get Changed
@@ -97,7 +117,16 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
   const stack = propagateStack;
   // [ outer live stack ][ nested live stack ][ free capacity ]
   // 0                  base                top
+  //
+  // JIT: keep the captured stack base Int32 for index and range analysis.
+  // `| 0` is not a correctness guard (the value is already an integer); it is
+  // the type feedback that lets V8 treat `base` and `top` as Word32 and drop
+  // Smi checks on push and pop. Removing it regresses the generated code:
+  // pushIteratorCore grows from 267 to 303 TurboFan instructions with two more
+  // Smi checks on B.chain, and from 120 to 157 on B.fanout (Node 24.22,
+  // perf/v8-shape/analyze.mjs).
   const base = propagateStackHigh | 0;
+  // JIT: derived only from `base` and ++/--, so `top` stays Int32 too.
   let top = base;
 
   /**
@@ -117,6 +146,8 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
     const sub: ReactiveNode<unknown> = edge.to;
     const state = sub.state;
 
+    // JIT: seeded with the Smi 0 and assigned only Int32 bit expressions, so
+    // the phi is Word32. Use 0 for "skip", never null or undefined.
     let next = 0;
 
     if ((state & (Both | Computing)) === 0) {
@@ -183,16 +214,8 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
 
       // Direct watchers always cut off descent. Production can omit the
       // no-op emitter when no hook is installed; development retains events.
-      if (__DEV__ || nodeInvalidatedHook !== undefined) {
-        propagateStackHigh = top;
-        try {
-          if (__DEV__) emitNodeInvalidated(sub);
-          if (!__DEV__) nodeInvalidatedHook!(sub);
-        } catch (error) {
-          resetPropagateStackAfterAbort(stack, base, top);
-          throw error;
-        }
-      }
+      if (__DEV__ || nodeInvalidatedHook !== undefined)
+        dispatchWatcherInvalidation(sub, base, top);
       continue;
     }
 
@@ -214,9 +237,10 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
    * Everything below direct level gets Unknown.
    */
   while (top !== base) {
-    const index = --top;
-    let edge: ReactiveEdge | null = stack[index]!;
-    stack[index] = null!;
+    let edge: ReactiveEdge | null = stack[--top]!;
+    // JIT: clear with null, never `delete` or shrink `length` mid-walk; a hole
+    // would turn the backing store HOLEY for the rest of the process.
+    stack[top] = null!;
     let depth = __PROFILE__ ? propagateDepthStack![top]! : 0;
 
     while (edge !== null) {
@@ -228,6 +252,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
       const sub: ReactiveNode<unknown> = edge.to;
       const state = sub.state;
 
+      // JIT: Word32 phi, as in phase 1.
       let next = 0;
 
       if ((state & (Both | Computing)) === 0) {
@@ -248,6 +273,8 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
         sub.state = next;
       }
 
+      const sibling: ReactiveEdge | null = edge.nextOut;
+
       if (next !== 0) {
         if (__PROFILE__) {
           if (__PROFILE__)
@@ -264,9 +291,11 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
             context: defaultContext,
           });
 
+        // Every non-zero `next` above inherits the Watcher bit from `state`,
+        // so `(next & Watcher) !== 0 && (state & Both) === 0` is one mask and
+        // compare on `state`.
         if (
-          (next & Watcher) !== 0 &&
-          (state & Both) === 0 &&
+          (state & (Watcher | Both)) === Watcher &&
           nodeInvalidatedHook !== undefined
         ) {
           if (__PROFILE__) {
@@ -277,20 +306,11 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
             profilePushNode("transitive.watcher", sub, depth, top - base);
           }
 
-          propagateStackHigh = top;
-          try {
-            if (__DEV__) emitNodeInvalidated(sub);
-            if (!__DEV__) nodeInvalidatedHook(sub);
-          } catch (error) {
-            resetPropagateStackAfterAbort(stack, base, top);
-            throw error;
-          }
+          dispatchWatcherInvalidation(sub, base, top);
         } else {
           const child = sub.firstOut;
 
           if (child !== null) {
-            const sibling = edge.nextOut;
-
             if (sibling !== null) {
               if (__PROFILE__)
                 observeRuntimeProjection?.(
@@ -317,7 +337,7 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
         }
       }
 
-      edge = edge.nextOut;
+      edge = sibling;
     }
   }
 
@@ -348,7 +368,8 @@ export const push_iterator: (firstOut: ReactiveEdge | null) => void = __DEV__
     }
   : pushIteratorCore;
 
-export const propagate = push_iterator;
+// A re-export, not `const propagate = push_iterator`: no second module binding.
+export { push_iterator as propagate };
 
 export function readPropagateStackStats(): {
   shouldRecompute: { current: number; peak: number; capacity: number };
