@@ -1,0 +1,20 @@
+commit e78f2542acf6, v25.2.0, median of 3
+┌──────────────────────┬──────────────┬──────────────────┬──────────────┬───────────────┐
+│ (index)              │ bytesPerPair │ bytesPerConsumer │ droppedAlive │ bytesPerCycle │
+├──────────────────────┼──────────────┼──────────────────┼──────────────┼───────────────┤
+│ node-size / cleanup  │ 368.793      │                  │              │               │
+│ node-size / identity │ 368.871      │                  │              │               │
+│ node-size / lazy     │ 384.8        │                  │              │               │
+│ node-size / strict   │ 384.858      │                  │              │               │
+│ node-size / neutral  │ 384.797      │                  │              │               │
+│ dormant / cleanup    │              │ 10846.512        │ 0            │               │
+│ dormant / identity   │              │ 20769.5          │ 1            │               │
+│ dormant / lazy       │              │ 20905.452        │ 1            │               │
+│ dormant / strict     │              │ 20905.48         │ 1            │               │
+│ dormant / neutral    │              │ 10920.9          │ 0            │               │
+│ churn / cleanup      │              │                  │              │ 60.804        │
+│ churn / identity     │              │                  │              │ 61.988        │
+│ churn / lazy         │              │                  │              │ 62.16         │
+│ churn / strict       │              │                  │              │ 62.128        │
+│ churn / neutral      │              │                  │              │ 63.244        │
+└──────────────────────┴──────────────┴──────────────────┴──────────────┴───────────────┘

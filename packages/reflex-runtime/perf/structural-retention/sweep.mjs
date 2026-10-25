@@ -33,6 +33,7 @@ import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
 
+import { workloads as benchWorkloads } from "../../bench/workloads.mjs";
 import { retentionVariants } from "./variants.mjs";
 
 const packageRoot = path.resolve(import.meta.dirname, "../..");
@@ -43,6 +44,12 @@ const option = (name, fallback) => {
 };
 
 function workload(rt, { kind, w, gap, rows }, counters) {
+  if (kind === "bench") {
+    // A benchmark workload of bench/workloads.mjs, one step per cycle.
+    const { step } = benchWorkloads.find((b) => b.id === gap).setup(rt);
+    let index = 0;
+    return () => step(index++);
+  }
   const queue = [];
   rt.resetRuntimeContext();
   rt.configureRuntimeContext({
@@ -123,9 +130,19 @@ function workload(rt, { kind, w, gap, rows }, counters) {
 }
 
 const cells = [];
-for (const kind of ["computed", "watcher"])
-  for (const gap of [1, 2, 4, "never"])
-    for (const w of [0, 1, 2, 4, 8, 16]) cells.push({ kind, gap, w });
+if (!args.includes("--no-synthetic"))
+  for (const kind of ["computed", "watcher"])
+    for (const gap of [1, 2, 4, "never"])
+      for (const w of [0, 1, 2, 4, 8, 16]) cells.push({ kind, gap, w });
+// --bench <ids>: benchmark workloads as extra cells (kind "bench", gap = id).
+for (const id of (args.includes("--bench")
+  ? args[args.indexOf("--bench") + 1]
+  : ""
+)
+  .split(",")
+  .filter(Boolean))
+  cells.push({ kind: "bench", gap: id, w: 0 });
+const rowsOf = (c, rows) => (c.kind === "bench" ? 1 : rows);
 
 if (args[0] === "--measure") {
   const [, bundle, encoded] = args;
@@ -169,11 +186,7 @@ function build(policy, mode) {
     `${sha.slice(0, 12)}-${policy}-${mode}`,
   );
   const mutations =
-    policy === "retain"
-      ? retentionVariants["retain-one-epoch"]
-      : policy === "identity"
-        ? retentionVariants["retain-identity"]
-        : [];
+    policy === "cleanup" ? [] : retentionVariants[POLICY_VARIANTS[policy]];
   execFileSync(
     process.execPath,
     [
@@ -190,7 +203,17 @@ function build(policy, mode) {
   return path.join(dir, "runtime.mjs");
 }
 
-const policies = ["cleanup", "retain", "identity"];
+const POLICY_VARIANTS = {
+  retain: "retain-one-epoch",
+  identity: "retain-identity",
+  lazy: "lazy-identity",
+  strict: "lazy-identity-strict",
+  neutral: "lazy-identity-neutral",
+};
+const policies = [
+  "cleanup",
+  ...option("--policies", "retain,identity,lazy,strict").split(","),
+];
 const LINKS = new Set([
   "projection.semantic.tracking.suffix.link-new",
   "projection.semantic.tracking.cursor.append",
@@ -205,13 +228,15 @@ for (const policy of policies) {
     const tally = { links: 0, unlinks: 0, lookupLinks: 0 };
     globalThis.__srRetained = 0;
     globalThis.__srReattached = 0;
+    globalThis.__srReactivated = 0;
     const counters = { executions: 0, whileAbsent: 0, deliveries: 0 };
     rt.setRuntimeProjectionObserver(undefined);
-    const step = workload(rt, { ...c, rows }, counters);
+    const step = workload(rt, { ...c, rows: rowsOf(c, rows) }, counters);
     step();
     for (const key of Object.keys(counters)) counters[key] = 0;
     globalThis.__srRetained = 0;
     globalThis.__srReattached = 0;
+    globalThis.__srReactivated = 0;
     rt.setRuntimeProjectionObserver(({ id }) => {
       if (LINKS.has(id)) tally.links++;
       else if (id === "projection.semantic.cleanup.edge.drop") tally.unlinks++;
@@ -223,7 +248,8 @@ for (const policy of policies) {
     rt.setRuntimeProjectionObserver(undefined);
     const retained = globalThis.__srRetained;
     const reattached = globalThis.__srReattached;
-    const per = (n) => Number((n / cycles / rows).toFixed(3));
+    const reactivated = globalThis.__srReactivated;
+    const per = (n) => Number((n / cycles / rowsOf(c, rows)).toFixed(3));
     counts[`${policy}|${c.kind}|${c.gap}|${c.w}`] = {
       links: per(tally.links),
       unlinks: per(tally.unlinks),
@@ -233,6 +259,7 @@ for (const policy of policies) {
       deliveries: per(counters.deliveries),
       retained: per(retained),
       reattached: per(reattached),
+      reactivated: per(reactivated),
     };
   }
 }
@@ -253,7 +280,7 @@ for (let s = 0; s < samples; s++) {
           import.meta.filename,
           "--measure",
           bundles[policy],
-          JSON.stringify({ ...c, rows, warmupMs, batchMs }),
+          JSON.stringify({ ...c, rows: rowsOf(c, rows), warmupMs, batchMs }),
         ],
         { encoding: "utf8" },
       );
@@ -271,11 +298,13 @@ const median = (xs) => {
   return s[s.length >> 1];
 };
 const rowsOut = [];
+const others = policies.slice(1);
+const initials = (ps) => ps.map((p) => p[0]).join("/");
 console.log(
-  `| consumer | gap | w | cleanup ns | retain/cleanup | identity/cleanup | links c/r/i | unlinks c/r/i | executions c/r/i | while absent c/r/i | reattached i |`,
+  `| consumer | gap | w | cleanup ns | ${others.map((p) => `${p}/cleanup`).join(" | ")} | links ${initials(policies)} | executions ${initials(policies)} | reused ${initials(others)} |`,
 );
 console.log(
-  `| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |`,
+  `| --- | ---: | ---: | ---: | ${others.map(() => "---:").join(" | ")} | ---: | ---: | ---: |`,
 );
 for (const c of cells) {
   const key = `${c.kind}|${c.gap}|${c.w}`;
@@ -287,24 +316,18 @@ for (const c of cells) {
       range: [Math.min(...ratios), Math.max(...ratios)],
     };
   };
-  const a = counts[`cleanup|${key}`];
-  const b = counts[`retain|${key}`];
-  const d = counts[`identity|${key}`];
-  const row = {
-    ...c,
-    cleanupNs: median(t.cleanup),
-    retainNs: median(t.retain),
-    identityNs: median(t.identity),
-    retain: ratioOf("retain"),
-    identity: ratioOf("identity"),
-    counts: { cleanup: a, retain: b, identity: d },
-  };
+  const row = { ...c, cleanupNs: median(t.cleanup), ratios: {}, counts: {} };
+  for (const p of policies) row.counts[p] = counts[`${p}|${key}`];
+  for (const p of others) row.ratios[p] = ratioOf(p);
   rowsOut.push(row);
-  const triple = (k) => `${a[k]}/${b[k]}/${d[k]}`;
+  const list = (k, ps) => ps.map((p) => row.counts[p][k]).join("/");
+  const reused = others
+    .map((p) => row.counts[p].reactivated || row.counts[p].reattached || 0)
+    .join("/");
   const ratio = (r) =>
     `${r.median.toFixed(3)} (${r.range[0].toFixed(2)}–${r.range[1].toFixed(2)})`;
   console.log(
-    `| ${c.kind} | ${c.gap} | ${c.w} | ${row.cleanupNs.toFixed(0)} | ${ratio(row.retain)} | ${ratio(row.identity)} | ${triple("links")} | ${triple("unlinks")} | ${triple("executions")} | ${triple("whileAbsent")} | ${d.reattached} |`,
+    `| ${c.kind} | ${c.gap} | ${c.w} | ${row.cleanupNs.toFixed(0)} | ${others.map((p) => ratio(row.ratios[p])).join(" | ")} | ${list("links", policies)} | ${list("executions", policies)} | ${reused} |`,
   );
 }
 if (out !== undefined)

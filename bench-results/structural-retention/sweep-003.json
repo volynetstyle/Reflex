@@ -1,0 +1,4472 @@
+{
+ "commit": "e78f2542acf62660e502e8c25618c9e90bf4eef0",
+ "rows": 64,
+ "samples": 7,
+ "node": "v25.2.0",
+ "cells": [
+  {
+   "kind": "computed",
+   "gap": 1,
+   "w": 0,
+   "cleanupNs": 68.25531413232737,
+   "ratios": {
+    "retain": {
+     "median": 0.6369377913623299,
+     "range": [
+      0.6087141776099414,
+      0.7015304504731286
+     ]
+    },
+    "identity": {
+     "median": 0.8666450379687914,
+     "range": [
+      0.7994051522267542,
+      1.3330513034290417
+     ]
+    },
+    "lazy": {
+     "median": 0.7689763810803593,
+     "range": [
+      0.7176180978971204,
+      0.7853580422913831
+     ]
+    },
+    "strict": {
+     "median": 0.7561090630572798,
+     "range": [
+      0.6985687372454809,
+      0.8331371402219697
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": 1,
+   "w": 1,
+   "cleanupNs": 80.50714132302406,
+   "ratios": {
+    "retain": {
+     "median": 1.3075597709404223,
+     "range": [
+      1.1747758735338554,
+      1.4158846531299367
+     ]
+    },
+    "identity": {
+     "median": 0.8303708745808903,
+     "range": [
+      0.807336569399532,
+      1.2690504948067178
+     ]
+    },
+    "lazy": {
+     "median": 0.8084265901671716,
+     "range": [
+      0.7608253791790646,
+      0.8406429314310552
+     ]
+    },
+    "strict": {
+     "median": 0.789151952190356,
+     "range": [
+      0.7486953028260395,
+      0.8169199332106263
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": 1,
+   "w": 2,
+   "cleanupNs": 92.72583514528564,
+   "ratios": {
+    "retain": {
+     "median": 1.1939993164110505,
+     "range": [
+      1.1231893206410357,
+      1.3189941965893348
+     ]
+    },
+    "identity": {
+     "median": 0.8381116432570339,
+     "range": [
+      0.7967114785835403,
+      0.8861951236678898
+     ]
+    },
+    "lazy": {
+     "median": 0.8051508058568765,
+     "range": [
+      0.7773419037341276,
+      0.9442601238576547
+     ]
+    },
+    "strict": {
+     "median": 0.8238920275320046,
+     "range": [
+      0.7979465958544893,
+      0.8672836800991321
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": 1,
+   "w": 4,
+   "cleanupNs": 111.28523397199692,
+   "ratios": {
+    "retain": {
+     "median": 1.2330289434891455,
+     "range": [
+      0.9552400074757282,
+      1.4481409166542445
+     ]
+    },
+    "identity": {
+     "median": 0.9094554593171442,
+     "range": [
+      0.684006802505497,
+      1.2399642408607698
+     ]
+    },
+    "lazy": {
+     "median": 0.8787080062440443,
+     "range": [
+      0.6426004960329658,
+      0.8928189963196561
+     ]
+    },
+    "strict": {
+     "median": 0.8794224928868933,
+     "range": [
+      0.6565294250212537,
+      1.0821033679971686
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": 1,
+   "w": 8,
+   "cleanupNs": 164.6464927098151,
+   "ratios": {
+    "retain": {
+     "median": 1.1077170426022616,
+     "range": [
+      1.0704129634249198,
+      2.733839742705084
+     ]
+    },
+    "identity": {
+     "median": 0.9129975311163759,
+     "range": [
+      0.8568312736090055,
+      0.9575446100688189
+     ]
+    },
+    "lazy": {
+     "median": 0.8843063708158528,
+     "range": [
+      0.8288014586636964,
+      0.9753956530396375
+     ]
+    },
+    "strict": {
+     "median": 0.8863623000154508,
+     "range": [
+      0.8442837767715702,
+      0.9330665695903436
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": 1,
+   "w": 16,
+   "cleanupNs": 261.19717304397443,
+   "ratios": {
+    "retain": {
+     "median": 1.0538569348719156,
+     "range": [
+      0.9937353747837827,
+      1.4177485966208558
+     ]
+    },
+    "identity": {
+     "median": 0.9455116691008926,
+     "range": [
+      0.9349653331778102,
+      1.010689238280163
+     ]
+    },
+    "lazy": {
+     "median": 0.9281984855528326,
+     "range": [
+      0.8690617373765772,
+      1.0058557722900536
+     ]
+    },
+    "strict": {
+     "median": 0.9063355581236697,
+     "range": [
+      0.8721013501790085,
+      1.1561242627596806
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": 2,
+   "w": 0,
+   "cleanupNs": 87.40067379182153,
+   "ratios": {
+    "retain": {
+     "median": 1.075180728557374,
+     "range": [
+      0.9714155966606662,
+      1.1643180643629405
+     ]
+    },
+    "identity": {
+     "median": 1.3240418778045893,
+     "range": [
+      1.2311358308260247,
+      1.993719819519608
+     ]
+    },
+    "lazy": {
+     "median": 0.8199906035423967,
+     "range": [
+      0.7678328410643364,
+      0.8568204669922718
+     ]
+    },
+    "strict": {
+     "median": 1.0797052993835683,
+     "range": [
+      0.985863299883317,
+      1.1168832444743615
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": 2,
+   "w": 1,
+   "cleanupNs": 102.95884524055343,
+   "ratios": {
+    "retain": {
+     "median": 1.1815637633329228,
+     "range": [
+      1.0942345861374672,
+      1.3159683681190868
+     ]
+    },
+    "identity": {
+     "median": 1.2513615518884784,
+     "range": [
+      1.1913074940131159,
+      1.360807759724447
+     ]
+    },
+    "lazy": {
+     "median": 0.7982829847071126,
+     "range": [
+      0.7710245007138106,
+      0.9035744811741533
+     ]
+    },
+    "strict": {
+     "median": 1.0282865427803805,
+     "range": [
+      0.9498664664435602,
+      1.0907392849805455
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 4,
+     "whileAbsent": 2,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": 2,
+   "w": 2,
+   "cleanupNs": 110.91839677047301,
+   "ratios": {
+    "retain": {
+     "median": 1.232612066019193,
+     "range": [
+      1.1438903441301969,
+      1.4064574446352212
+     ]
+    },
+    "identity": {
+     "median": 1.2816368468724877,
+     "range": [
+      1.201272527567594,
+      1.397660927941877
+     ]
+    },
+    "lazy": {
+     "median": 0.8386027746815216,
+     "range": [
+      0.7790560340058683,
+      0.9535625173096928
+     ]
+    },
+    "strict": {
+     "median": 1.0878852433325572,
+     "range": [
+      0.9733953067187356,
+      1.2221313791638766
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 4,
+     "whileAbsent": 2,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": 2,
+   "w": 4,
+   "cleanupNs": 137.5822368421054,
+   "ratios": {
+    "retain": {
+     "median": 1.1570079488015137,
+     "range": [
+      1.0903979953379686,
+      1.1898580046716882
+     ]
+    },
+    "identity": {
+     "median": 1.2453385138131645,
+     "range": [
+      1.1388310032392284,
+      1.2675383133991331
+     ]
+    },
+    "lazy": {
+     "median": 0.8877284094617968,
+     "range": [
+      0.8413932433251354,
+      1.108646131835524
+     ]
+    },
+    "strict": {
+     "median": 1.0078958797224498,
+     "range": [
+      0.9531050659567506,
+      1.0520407346887055
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 4,
+     "whileAbsent": 2,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": 2,
+   "w": 8,
+   "cleanupNs": 183.21536000763948,
+   "ratios": {
+    "retain": {
+     "median": 1.1385459339252249,
+     "range": [
+      1.012442699206864,
+      1.172566333479847
+     ]
+    },
+    "identity": {
+     "median": 1.1803541592013094,
+     "range": [
+      1.0512879041429581,
+      1.218364798607072
+     ]
+    },
+    "lazy": {
+     "median": 0.9055094975171194,
+     "range": [
+      0.8202834444030561,
+      0.9749455012944951
+     ]
+    },
+    "strict": {
+     "median": 1.0198289843183688,
+     "range": [
+      0.9043387540972188,
+      1.2079353763174825
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 4,
+     "whileAbsent": 2,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": 2,
+   "w": 16,
+   "cleanupNs": 276.84819833234087,
+   "ratios": {
+    "retain": {
+     "median": 1.0757540428139254,
+     "range": [
+      0.9786077236014182,
+      1.1530240685615198
+     ]
+    },
+    "identity": {
+     "median": 1.1208292919206535,
+     "range": [
+      1.0303856626350563,
+      1.1877159475645183
+     ]
+    },
+    "lazy": {
+     "median": 0.9526245193941723,
+     "range": [
+      0.8617150571139883,
+      0.9770445702125846
+     ]
+    },
+    "strict": {
+     "median": 1.0159765912064747,
+     "range": [
+      0.9679750060613699,
+      1.0631682976092187
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 4,
+     "whileAbsent": 2,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": 4,
+   "w": 0,
+   "cleanupNs": 125.34306047398516,
+   "ratios": {
+    "retain": {
+     "median": 1.1033140682803122,
+     "range": [
+      1.0304486468087404,
+      1.1522068517617408
+     ]
+    },
+    "identity": {
+     "median": 1.2803301404092429,
+     "range": [
+      1.176781571357469,
+      1.3045704430584635
+     ]
+    },
+    "lazy": {
+     "median": 0.9007612372054234,
+     "range": [
+      0.8630548204796632,
+      0.9142298446452874
+     ]
+    },
+    "strict": {
+     "median": 1.0451360208986293,
+     "range": [
+      1.01748338417234,
+      1.1124778886803306
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": 4,
+   "w": 1,
+   "cleanupNs": 136.3958759871307,
+   "ratios": {
+    "retain": {
+     "median": 1.1965684925501554,
+     "range": [
+      1.030430192490652,
+      1.2568702894401016
+     ]
+    },
+    "identity": {
+     "median": 1.2225602413189005,
+     "range": [
+      1.071838403859909,
+      1.3455571499164642
+     ]
+    },
+    "lazy": {
+     "median": 0.8757580395247528,
+     "range": [
+      0.8214990568986092,
+      0.955911433535827
+     ]
+    },
+    "strict": {
+     "median": 0.9823648051391666,
+     "range": [
+      0.8909411423123205,
+      1.1124497320263895
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": 4,
+   "w": 2,
+   "cleanupNs": 148.85995193774795,
+   "ratios": {
+    "retain": {
+     "median": 1.2149772176470388,
+     "range": [
+      1.113502568401908,
+      1.2725261395000673
+     ]
+    },
+    "identity": {
+     "median": 1.2247416723680746,
+     "range": [
+      1.1945668938818785,
+      1.3394856155330088
+     ]
+    },
+    "lazy": {
+     "median": 0.8992509867213688,
+     "range": [
+      0.8719838585357282,
+      0.9317220087349938
+     ]
+    },
+    "strict": {
+     "median": 1.0323994636153506,
+     "range": [
+      0.9841280676295775,
+      1.1289461671083716
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": 4,
+   "w": 4,
+   "cleanupNs": 170.8264948545067,
+   "ratios": {
+    "retain": {
+     "median": 1.1562994886153273,
+     "range": [
+      1.1295285540408955,
+      1.201063196013295
+     ]
+    },
+    "identity": {
+     "median": 1.2151519157043427,
+     "range": [
+      1.177832027893921,
+      1.2664570677547122
+     ]
+    },
+    "lazy": {
+     "median": 0.9235686062460514,
+     "range": [
+      0.8637699147699509,
+      1.0087080111501063
+     ]
+    },
+    "strict": {
+     "median": 1.0358035229536084,
+     "range": [
+      1.024741976241921,
+      1.103270642960579
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": 4,
+   "w": 8,
+   "cleanupNs": 224.3086542977924,
+   "ratios": {
+    "retain": {
+     "median": 1.070708579351207,
+     "range": [
+      0.6635594603007103,
+      1.1263634110904979
+     ]
+    },
+    "identity": {
+     "median": 1.1189869978203006,
+     "range": [
+      0.7087609873716259,
+      1.1932993295079422
+     ]
+    },
+    "lazy": {
+     "median": 0.8908702100756448,
+     "range": [
+      0.5597089423930178,
+      0.9590970560441516
+     ]
+    },
+    "strict": {
+     "median": 0.9621371510843526,
+     "range": [
+      0.6130443250807116,
+      1.0595451066157358
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": 4,
+   "w": 16,
+   "cleanupNs": 306.3185307017547,
+   "ratios": {
+    "retain": {
+     "median": 1.0884422162971281,
+     "range": [
+      1.0467240818174623,
+      1.1180322475823772
+     ]
+    },
+    "identity": {
+     "median": 1.1192631799382033,
+     "range": [
+      1.0600357918859764,
+      1.176225608907286
+     ]
+    },
+    "lazy": {
+     "median": 0.9509424145974862,
+     "range": [
+      0.9020205066277751,
+      1.5745998408648132
+     ]
+    },
+    "strict": {
+     "median": 1.0080008300288181,
+     "range": [
+      0.9869161689276964,
+      1.121053227397858
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": "never",
+   "w": 0,
+   "cleanupNs": 127.93554537298128,
+   "ratios": {
+    "retain": {
+     "median": 1.0634922508186242,
+     "range": [
+      0.998469837855095,
+      1.1164308063132495
+     ]
+    },
+    "identity": {
+     "median": 1.243286594903535,
+     "range": [
+      1.161859208104077,
+      1.3339568626078824
+     ]
+    },
+    "lazy": {
+     "median": 1.0155900735114205,
+     "range": [
+      0.9744530343988951,
+      1.090582693979847
+     ]
+    },
+    "strict": {
+     "median": 1.0177584960293553,
+     "range": [
+      0.96522556075195,
+      1.0526107068883597
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": "never",
+   "w": 1,
+   "cleanupNs": 144.98258659638557,
+   "ratios": {
+    "retain": {
+     "median": 1.1120130454456398,
+     "range": [
+      0.7246071243747281,
+      1.2528168259903922
+     ]
+    },
+    "identity": {
+     "median": 1.1982018182639833,
+     "range": [
+      0.8038146519538486,
+      1.2696150606800864
+     ]
+    },
+    "lazy": {
+     "median": 1.0127247750000763,
+     "range": [
+      0.6937156100570553,
+      1.086530940408891
+     ]
+    },
+    "strict": {
+     "median": 1.0022279148118196,
+     "range": [
+      0.6738170475056301,
+      1.093027012212492
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": "never",
+   "w": 2,
+   "cleanupNs": 152.92113409845976,
+   "ratios": {
+    "retain": {
+     "median": 1.1384301694000967,
+     "range": [
+      0.9121444494746498,
+      1.327819245002429
+     ]
+    },
+    "identity": {
+     "median": 1.243130350312669,
+     "range": [
+      1.0225469927918727,
+      1.2689453466957794
+     ]
+    },
+    "lazy": {
+     "median": 1.0723884456424873,
+     "range": [
+      0.7176474668425474,
+      1.1107476826658957
+     ]
+    },
+    "strict": {
+     "median": 1.0373049219687855,
+     "range": [
+      0.6917955454313353,
+      1.112115211388063
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": "never",
+   "w": 4,
+   "cleanupNs": 177.26778702318632,
+   "ratios": {
+    "retain": {
+     "median": 1.1333716557256202,
+     "range": [
+      0.6981850202025811,
+      1.3105866022237116
+     ]
+    },
+    "identity": {
+     "median": 1.1699329339348494,
+     "range": [
+      0.7576818350024974,
+      1.2443932418078991
+     ]
+    },
+    "lazy": {
+     "median": 1.0199300668838405,
+     "range": [
+      0.6369040198352588,
+      1.099050504703594
+     ]
+    },
+    "strict": {
+     "median": 0.9929720846646188,
+     "range": [
+      0.6446279078683874,
+      1.1640404366605002
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": "never",
+   "w": 8,
+   "cleanupNs": 222.8119338768115,
+   "ratios": {
+    "retain": {
+     "median": 1.090681831814205,
+     "range": [
+      1.0525311254956697,
+      1.1247269715446344
+     ]
+    },
+    "identity": {
+     "median": 1.1471825355172813,
+     "range": [
+      1.0984996268058556,
+      1.2410759019607083
+     ]
+    },
+    "lazy": {
+     "median": 1.0293662344251497,
+     "range": [
+      0.9564120953082879,
+      1.1244034994217653
+     ]
+    },
+    "strict": {
+     "median": 1.0232288886045724,
+     "range": [
+      0.9900756588498789,
+      1.1004844436815377
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "computed",
+   "gap": "never",
+   "w": 16,
+   "cleanupNs": 324.6799698795181,
+   "ratios": {
+    "retain": {
+     "median": 1.0110360889198844,
+     "range": [
+      0.86484259541249,
+      1.1147621931332485
+     ]
+    },
+    "identity": {
+     "median": 1.090357289494461,
+     "range": [
+      0.9560876998692323,
+      1.3648118520657675
+     ]
+    },
+    "lazy": {
+     "median": 0.9457415130654055,
+     "range": [
+      0.8527375809496892,
+      1.0759842824613903
+     ]
+    },
+    "strict": {
+     "median": 0.9637367710567489,
+     "range": [
+      0.8543192112046998,
+      1.0642000126204523
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 0,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": 1,
+   "w": 0,
+   "cleanupNs": 75.32277231711241,
+   "ratios": {
+    "retain": {
+     "median": 0.6777052576833579,
+     "range": [
+      0.6535795821220818,
+      0.8147174145687079
+     ]
+    },
+    "identity": {
+     "median": 0.8313252886304662,
+     "range": [
+      0.7101559102396275,
+      0.9395553618471849
+     ]
+    },
+    "lazy": {
+     "median": 0.808733255151649,
+     "range": [
+      0.6969127839448841,
+      0.8727183511815058
+     ]
+    },
+    "strict": {
+     "median": 0.8093915104584961,
+     "range": [
+      0.7214753964183168,
+      0.8890676093791858
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": 1,
+   "w": 1,
+   "cleanupNs": 91.93594609741184,
+   "ratios": {
+    "retain": {
+     "median": 1.2493616801903868,
+     "range": [
+      1.233468870738266,
+      1.3817232435897244
+     ]
+    },
+    "identity": {
+     "median": 0.8201897267190479,
+     "range": [
+      0.7725398924318448,
+      1.2566794569373032
+     ]
+    },
+    "lazy": {
+     "median": 0.8230892998699713,
+     "range": [
+      0.7760874355896545,
+      0.8714767372083606
+     ]
+    },
+    "strict": {
+     "median": 0.7836948289822855,
+     "range": [
+      0.7288433967183904,
+      1.039877969469139
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": 1,
+   "w": 2,
+   "cleanupNs": 103.64837680355154,
+   "ratios": {
+    "retain": {
+     "median": 1.228845325365938,
+     "range": [
+      1.181029074830677,
+      3.437920537818619
+     ]
+    },
+    "identity": {
+     "median": 0.8563508706569477,
+     "range": [
+      0.7940488614421183,
+      1.0090864013706937
+     ]
+    },
+    "lazy": {
+     "median": 0.8542980211382116,
+     "range": [
+      0.7372949542220716,
+      0.9285573678170165
+     ]
+    },
+    "strict": {
+     "median": 0.8521340998329857,
+     "range": [
+      0.708265195571711,
+      0.9432157938283809
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": 1,
+   "w": 4,
+   "cleanupNs": 121.72018725361367,
+   "ratios": {
+    "retain": {
+     "median": 1.2355996014097552,
+     "range": [
+      1.1664692092623388,
+      1.3879845737764964
+     ]
+    },
+    "identity": {
+     "median": 0.8715816103699162,
+     "range": [
+      0.7775251416972451,
+      0.925300895859181
+     ]
+    },
+    "lazy": {
+     "median": 0.8318958273415291,
+     "range": [
+      0.7753034449206951,
+      0.9547204853705387
+     ]
+    },
+    "strict": {
+     "median": 0.8359567319093854,
+     "range": [
+      0.7600748662360858,
+      0.9234843889628314
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": 1,
+   "w": 8,
+   "cleanupNs": 165.0529895939952,
+   "ratios": {
+    "retain": {
+     "median": 1.1631470318283592,
+     "range": [
+      1.1152982691603897,
+      1.2482006126210858
+     ]
+    },
+    "identity": {
+     "median": 0.9025587337646258,
+     "range": [
+      0.8136504840325871,
+      0.9280708944286067
+     ]
+    },
+    "lazy": {
+     "median": 0.9218426209143598,
+     "range": [
+      0.853010889799323,
+      1.1343748068317707
+     ]
+    },
+    "strict": {
+     "median": 0.9346522758353033,
+     "range": [
+      0.851485015058592,
+      0.9380645350164546
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": 1,
+   "w": 16,
+   "cleanupNs": 258.98012907608745,
+   "ratios": {
+    "retain": {
+     "median": 1.0373523820013777,
+     "range": [
+      1.0016667024051122,
+      1.1539166963958327
+     ]
+    },
+    "identity": {
+     "median": 0.9168925522500142,
+     "range": [
+      0.8530871195431943,
+      0.9815357386196626
+     ]
+    },
+    "lazy": {
+     "median": 0.9151750042817994,
+     "range": [
+      0.8656524521793655,
+      0.9598028315080755
+     ]
+    },
+    "strict": {
+     "median": 0.9053068512188578,
+     "range": [
+      0.8968396411184457,
+      0.9452405664173327
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 2,
+     "whileAbsent": 0,
+     "deliveries": 2,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": 2,
+   "w": 0,
+   "cleanupNs": 103.80947469746975,
+   "ratios": {
+    "retain": {
+     "median": 0.9808060183183636,
+     "range": [
+      0.9279548527655742,
+      1.1456670815662913
+     ]
+    },
+    "identity": {
+     "median": 1.2156224412880572,
+     "range": [
+      1.177973748027556,
+      1.403497360632635
+     ]
+    },
+    "lazy": {
+     "median": 0.9157609760065079,
+     "range": [
+      0.8402812161274525,
+      1.1048797732640145
+     ]
+    },
+    "strict": {
+     "median": 1.0535324064724434,
+     "range": [
+      0.9153295988387359,
+      1.2867067115914688
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": 2,
+   "w": 1,
+   "cleanupNs": 112.58917865707433,
+   "ratios": {
+    "retain": {
+     "median": 1.2943170034302691,
+     "range": [
+      1.1881258355563473,
+      1.519909122555452
+     ]
+    },
+    "identity": {
+     "median": 1.2485017596163437,
+     "range": [
+      1.0786482192928057,
+      1.3173371735557255
+     ]
+    },
+    "lazy": {
+     "median": 0.903921557366216,
+     "range": [
+      0.7613741141477522,
+      1.0494790447673288
+     ]
+    },
+    "strict": {
+     "median": 1.088069438574502,
+     "range": [
+      0.9822176196311015,
+      1.1914829906164783
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 4,
+     "whileAbsent": 2,
+     "deliveries": 4,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": 2,
+   "w": 2,
+   "cleanupNs": 121.85046453807902,
+   "ratios": {
+    "retain": {
+     "median": 1.2733299740572441,
+     "range": [
+      1.1834490283957062,
+      1.4042130381268731
+     ]
+    },
+    "identity": {
+     "median": 1.2791532331845268,
+     "range": [
+      1.179035383021862,
+      1.316024476167988
+     ]
+    },
+    "lazy": {
+     "median": 0.9192815402329396,
+     "range": [
+      0.8339357741110532,
+      1.0806506271600478
+     ]
+    },
+    "strict": {
+     "median": 1.0394992969827146,
+     "range": [
+      1.003316516969764,
+      1.1468893149011892
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 4,
+     "whileAbsent": 2,
+     "deliveries": 4,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": 2,
+   "w": 4,
+   "cleanupNs": 152.21694528875372,
+   "ratios": {
+    "retain": {
+     "median": 1.1709283739514849,
+     "range": [
+      1.0560879464348365,
+      1.2055780016440114
+     ]
+    },
+    "identity": {
+     "median": 1.12658987883463,
+     "range": [
+      1.0616659721953323,
+      1.2123972964055232
+     ]
+    },
+    "lazy": {
+     "median": 0.8544265029605199,
+     "range": [
+      0.7867919892874327,
+      0.871046664044132
+     ]
+    },
+    "strict": {
+     "median": 0.9991443520787364,
+     "range": [
+      0.9228762567475477,
+      1.0417275065648917
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 4,
+     "whileAbsent": 2,
+     "deliveries": 4,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": 2,
+   "w": 8,
+   "cleanupNs": 205.01375107851592,
+   "ratios": {
+    "retain": {
+     "median": 1.0904459644804911,
+     "range": [
+      1.0190572856575473,
+      1.1562535702194443
+     ]
+    },
+    "identity": {
+     "median": 1.0145322328930866,
+     "range": [
+      0.9947249852028526,
+      1.1966345329748602
+     ]
+    },
+    "lazy": {
+     "median": 0.8432266261350001,
+     "range": [
+      0.760101509253975,
+      0.8916581821465155
+     ]
+    },
+    "strict": {
+     "median": 0.9625696474244477,
+     "range": [
+      0.8573514824526944,
+      1.0328364171814017
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 4,
+     "whileAbsent": 2,
+     "deliveries": 4,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": 2,
+   "w": 16,
+   "cleanupNs": 265.44583090803224,
+   "ratios": {
+    "retain": {
+     "median": 1.096109148239463,
+     "range": [
+      1.028039108663685,
+      1.1627701560610382
+     ]
+    },
+    "identity": {
+     "median": 1.114792671928091,
+     "range": [
+      1.0457602938526758,
+      1.1709369755684427
+     ]
+    },
+    "lazy": {
+     "median": 0.935126468908086,
+     "range": [
+      0.8715955848549186,
+      1.0180431519829491
+     ]
+    },
+    "strict": {
+     "median": 1.0359218600202775,
+     "range": [
+      1.002939177052024,
+      1.082714693403394
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 4,
+     "whileAbsent": 2,
+     "deliveries": 4,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 3,
+     "whileAbsent": 1,
+     "deliveries": 3,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": 4,
+   "w": 0,
+   "cleanupNs": 148.33564020586405,
+   "ratios": {
+    "retain": {
+     "median": 1.028327826627018,
+     "range": [
+      0.9560666029821446,
+      1.0824688615176128
+     ]
+    },
+    "identity": {
+     "median": 1.1339522161433775,
+     "range": [
+      1.0130740392552307,
+      1.215673162957744
+     ]
+    },
+    "lazy": {
+     "median": 0.9347889549809976,
+     "range": [
+      0.850653787994951,
+      1.0454888057755893
+     ]
+    },
+    "strict": {
+     "median": 1.063678301301814,
+     "range": [
+      0.9121338251785657,
+      1.0803375420103345
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": 4,
+   "w": 1,
+   "cleanupNs": 164.7646604938272,
+   "ratios": {
+    "retain": {
+     "median": 1.132064305956649,
+     "range": [
+      1.0664641771400611,
+      1.2901587105049648
+     ]
+    },
+    "identity": {
+     "median": 1.0987224743097952,
+     "range": [
+      1.0473870799979186,
+      1.2818870637257456
+     ]
+    },
+    "lazy": {
+     "median": 0.8927346871096227,
+     "range": [
+      0.7940438758254128,
+      1.0084237085191676
+     ]
+    },
+    "strict": {
+     "median": 1.0714256269104372,
+     "range": [
+      0.9681966272728421,
+      1.1913011047327104
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 6,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": 4,
+   "w": 2,
+   "cleanupNs": 173.00005184570705,
+   "ratios": {
+    "retain": {
+     "median": 1.1597391322498025,
+     "range": [
+      0.9681257451646447,
+      1.2125475537994284
+     ]
+    },
+    "identity": {
+     "median": 1.1563529090605313,
+     "range": [
+      1.0637823057938285,
+      1.2377301366769375
+     ]
+    },
+    "lazy": {
+     "median": 0.9308191307547652,
+     "range": [
+      0.8254615680174291,
+      1.017520120196393
+     ]
+    },
+    "strict": {
+     "median": 1.016946893684382,
+     "range": [
+      0.9739505374470223,
+      1.0429672262393759
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 6,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": 4,
+   "w": 4,
+   "cleanupNs": 187.70668316831674,
+   "ratios": {
+    "retain": {
+     "median": 1.1173544259274275,
+     "range": [
+      1.1056065256477938,
+      1.1997052046608236
+     ]
+    },
+    "identity": {
+     "median": 1.1086210928818903,
+     "range": [
+      1.0798796123241352,
+      1.2780056740329802
+     ]
+    },
+    "lazy": {
+     "median": 0.9543020432097639,
+     "range": [
+      0.8456599229838181,
+      1.0002640936639937
+     ]
+    },
+    "strict": {
+     "median": 1.068615507594892,
+     "range": [
+      0.9591457749569493,
+      1.1306777982258542
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 6,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": 4,
+   "w": 8,
+   "cleanupNs": 236.5132389162562,
+   "ratios": {
+    "retain": {
+     "median": 1.0695802818562798,
+     "range": [
+      0.9607752766288532,
+      1.1755603812047501
+     ]
+    },
+    "identity": {
+     "median": 1.0973096812540817,
+     "range": [
+      1.0600627909168965,
+      1.3222671481830932
+     ]
+    },
+    "lazy": {
+     "median": 0.8833123577933673,
+     "range": [
+      0.8447844002608127,
+      0.9876052205808036
+     ]
+    },
+    "strict": {
+     "median": 1.0322380264051905,
+     "range": [
+      0.9787117213514319,
+      1.1089327169797407
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 6,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": 4,
+   "w": 16,
+   "cleanupNs": 319.9011457615435,
+   "ratios": {
+    "retain": {
+     "median": 1.1173078566298769,
+     "range": [
+      1.0316738663240104,
+      1.1386223281359644
+     ]
+    },
+    "identity": {
+     "median": 1.096495357175393,
+     "range": [
+      1.0362684122461898,
+      1.1480614427590747
+     ]
+    },
+    "lazy": {
+     "median": 0.9395285327800055,
+     "range": [
+      0.8470396314995005,
+      1.0350287191077068
+     ]
+    },
+    "strict": {
+     "median": 1.0505803112562215,
+     "range": [
+      0.8952531019540496,
+      1.0792557662360065
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 6,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 0,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 1
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": "never",
+   "w": 0,
+   "cleanupNs": 144.1192193389388,
+   "ratios": {
+    "retain": {
+     "median": 1.0693542560161426,
+     "range": [
+      0.9597302854271911,
+      1.167632291423763
+     ]
+    },
+    "identity": {
+     "median": 1.1177722125931695,
+     "range": [
+      1.107860116118366,
+      1.242293584831607
+     ]
+    },
+    "lazy": {
+     "median": 1.092115402618975,
+     "range": [
+      0.9434742465449748,
+      1.179829541752998
+     ]
+    },
+    "strict": {
+     "median": 1.0511841143446827,
+     "range": [
+      0.9916169548094692,
+      1.2009752948268675
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": "never",
+   "w": 1,
+   "cleanupNs": 162.81867845993742,
+   "ratios": {
+    "retain": {
+     "median": 1.2019167346331505,
+     "range": [
+      1.1120252695889072,
+      1.384313261207812
+     ]
+    },
+    "identity": {
+     "median": 1.1664472750945776,
+     "range": [
+      1.0118086177816321,
+      1.2592952134793252
+     ]
+    },
+    "lazy": {
+     "median": 1.0329111104534627,
+     "range": [
+      0.9285666751685931,
+      1.2172518274324027
+     ]
+    },
+    "strict": {
+     "median": 1.0093010915733078,
+     "range": [
+      1.0021455069288474,
+      1.1021280187532896
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 6,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": "never",
+   "w": 2,
+   "cleanupNs": 179.2270281456953,
+   "ratios": {
+    "retain": {
+     "median": 1.202291276879694,
+     "range": [
+      1.0423083083860067,
+      1.3247858874736635
+     ]
+    },
+    "identity": {
+     "median": 1.1152455770300604,
+     "range": [
+      1.0315109279057904,
+      1.35073302908181
+     ]
+    },
+    "lazy": {
+     "median": 1.090721880385086,
+     "range": [
+      0.9161732443327898,
+      1.6779812995634198
+     ]
+    },
+    "strict": {
+     "median": 1.0338057151235827,
+     "range": [
+      0.9243529284785169,
+      1.2427574917553101
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 6,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": "never",
+   "w": 4,
+   "cleanupNs": 193.88607357357378,
+   "ratios": {
+    "retain": {
+     "median": 1.1737594109035039,
+     "range": [
+      1.0263970284943893,
+      1.3217679878545985
+     ]
+    },
+    "identity": {
+     "median": 1.118044069987575,
+     "range": [
+      1.0386745855270845,
+      1.2611325357110321
+     ]
+    },
+    "lazy": {
+     "median": 1.017225051546376,
+     "range": [
+      0.9402073308759581,
+      1.1188233488520254
+     ]
+    },
+    "strict": {
+     "median": 1.0845219988165322,
+     "range": [
+      1.009305259773914,
+      1.134596900083805
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 6,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": "never",
+   "w": 8,
+   "cleanupNs": 248.21181470743292,
+   "ratios": {
+    "retain": {
+     "median": 1.108015166054804,
+     "range": [
+      1.012110772292261,
+      1.2755767245107645
+     ]
+    },
+    "identity": {
+     "median": 1.1053803672575073,
+     "range": [
+      1.0138649729556874,
+      1.253136558211666
+     ]
+    },
+    "lazy": {
+     "median": 0.9953268750551509,
+     "range": [
+      0.9306967170297876,
+      1.1236846788392747
+     ]
+    },
+    "strict": {
+     "median": 0.9830079635335088,
+     "range": [
+      0.9239590373735005,
+      1.1469675194099058
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 6,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  },
+  {
+   "kind": "watcher",
+   "gap": "never",
+   "w": 16,
+   "cleanupNs": 321.76849011588325,
+   "ratios": {
+    "retain": {
+     "median": 1.085506412862214,
+     "range": [
+      0.9893791001245891,
+      1.4978470573193792
+     ]
+    },
+    "identity": {
+     "median": 1.0942469469633302,
+     "range": [
+      1.043458516500565,
+      1.2410116111525973
+     ]
+    },
+    "lazy": {
+     "median": 1.0199711532855296,
+     "range": [
+      0.9962217123827004,
+      1.106089862681385
+     ]
+    },
+    "strict": {
+     "median": 1.0372861307469998,
+     "range": [
+      0.9272913709952596,
+      1.061780298450446
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "retain": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 6,
+     "whileAbsent": 4,
+     "deliveries": 6,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "identity": {
+     "links": 1,
+     "unlinks": 1,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 1,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "strict": {
+     "links": 1,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 5,
+     "whileAbsent": 3,
+     "deliveries": 5,
+     "retained": 1,
+     "reattached": 0,
+     "reactivated": 0
+    }
+   }
+  }
+ ]
+}

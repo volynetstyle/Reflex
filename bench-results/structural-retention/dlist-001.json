@@ -1,0 +1,83 @@
+{
+ "commit": "e78f2542acf62660e502e8c25618c9e90bf4eef0",
+ "rows": 64,
+ "samples": 7,
+ "node": "v25.2.0",
+ "cells": [
+  {
+   "kind": "bench",
+   "gap": "D.list.filter-select",
+   "w": 0,
+   "cleanupNs": 11460.562788744224,
+   "ratios": {
+    "lazy": {
+     "median": 0.9283471827001605,
+     "range": [
+      0.8775557264668135,
+      0.9789684339536896
+     ]
+    },
+    "neutral": {
+     "median": 0.9203418863675423,
+     "range": [
+      0.8307056238118845,
+      0.9725056639293055
+     ]
+    },
+    "strict": {
+     "median": 0.9139778504829852,
+     "range": [
+      0.8832795997875773,
+      0.9612312025452941
+     ]
+    }
+   },
+   "counts": {
+    "cleanup": {
+     "links": 33.375,
+     "unlinks": 33.313,
+     "lookupLinks": 0,
+     "executions": 0,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 0,
+     "reattached": 0,
+     "reactivated": 0
+    },
+    "lazy": {
+     "links": 4.188,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 0,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 33.313,
+     "reattached": 0,
+     "reactivated": 29.188
+    },
+    "neutral": {
+     "links": 4.188,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 0,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 33.313,
+     "reattached": 0,
+     "reactivated": 29.188
+    },
+    "strict": {
+     "links": 4.188,
+     "unlinks": 0,
+     "lookupLinks": 0,
+     "executions": 0,
+     "whileAbsent": 0,
+     "deliveries": 0,
+     "retained": 33.313,
+     "reattached": 0,
+     "reactivated": 29.188
+    }
+   }
+  }
+ ]
+}
