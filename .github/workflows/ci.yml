@@ -244,7 +244,9 @@ jobs:
   required:
     # Keep the former required status name while making it cover the entire matrix.
     name: fast checks
-    if: always()
+    # Runs when a required job failed or was skipped, so the status reports
+    # it; not in a run cancelled as superseded, whose successor reports.
+    if: ${{ !cancelled() }}
     needs: [registry, workflows, static, quality, consumer, runtime-bundle, dependency-review]
     runs-on: ubuntu-latest
     timeout-minutes: 10
