@@ -196,7 +196,7 @@
       "id": "dom-compiler",
       "name": "@volynets/reflex-dom-compiler",
       "phase": "pr",
-      "buildDependencies": false,
+      "buildDependencies": true,
       "checks": [
         {
           "id": "lint",

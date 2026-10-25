@@ -139,6 +139,7 @@ jobs:
             curl -fsS http://localhost:8080/ls > "$RUNNER_TEMP/ls.json" && break
             sleep 2
           done
+          # shellcheck disable=SC2016 # a JavaScript template literal, not a shell expansion
           node -e '
             const listed = new Set(require(process.argv[1]).map((f) => `${f.type}/${f.directory}`));
             const missing = process.argv[2].split(" ").filter((f) => !listed.has(f));
@@ -150,13 +151,14 @@ jobs:
         env:
           CHROME: ${{ steps.chrome.outputs.path }}
         run: |
-          args=(--chromeBinary "$CHROME" --framework $FRAMEWORKS)
+          read -ra frameworks <<< "$FRAMEWORKS"
+          args=(--chromeBinary "$CHROME" --framework "${frameworks[@]}")
           [[ -n "$COUNT" ]] && args+=(--count "$COUNT")
           [[ "$HEADLESS" == true ]] && args+=(--headless)
           # Failures of single benchmarks are reported by the runner and leave
           # the other result files in place; the rank job uses what exists.
           npm run bench -- "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/bench.log" || true
-          ls webdriver-ts/results | wc -l
+          find webdriver-ts/results -maxdepth 1 -type f | wc -l
 
       - name: Upload results
         if: always()
