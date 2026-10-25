@@ -1,11 +1,13 @@
 // Tracking ladder accounting: which tier answers each read of every rung of
 // scripts/tracking-ladder.mjs, and what the answer costs in compared links.
 //
-//   node perf/tracking-ladder/analyze.mjs [--rungs <regex>] [--fanouts 3,128]
+//   node perf/tracking-ladder/analyze.mjs [--rungs <parts>] [--fanouts 3,128]
 //        [--deps 128] [--passes 200] [--commit <ref>] [--variant <name>]
-//        [--workloads <regex>] [--out <file.json>]
+//        [--workloads <parts>] [--out <file.json>]
 //
-// `--workloads` adds the timed workloads of bench/workloads.mjs that match,
+// `--rungs` and `--workloads` take comma-separated name parts (see `selects`
+// in scripts/tracking-ladder.mjs; `all` for every workload). `--workloads`
+// adds the timed workloads of bench/workloads.mjs that match,
 // one step per pass, so the ladder can be read against the reads of the
 // benchmark suite.
 //
@@ -54,7 +56,11 @@ import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { ladder, ladderCases } from "../../../../scripts/tracking-ladder.mjs";
+import {
+  ladder,
+  ladderCases,
+  selects,
+} from "../../../../scripts/tracking-ladder.mjs";
 import { workloads } from "../../bench/workloads.mjs";
 import { variants } from "./variants.mjs";
 
@@ -64,19 +70,11 @@ const option = (name, fallback) => {
   const at = args.indexOf(name);
   return at === -1 ? fallback : args[at + 1];
 };
-const parseRegexOption = (name, fallback) => {
-  const source = option(name, fallback);
-  try {
-    return new RegExp(source);
-  } catch {
-    throw new Error(`invalid regex for ${name}: ${source}`);
-  }
-};
 const PASSES = Number(option("--passes", 200));
 const WARMUP = 64;
 const out = option("--out");
 const cases = ladderCases({
-  rungs: parseRegexOption("--rungs", ".*"),
+  rungs: option("--rungs", ""),
   fanouts: option("--fanouts", "3,128").split(",").map(Number),
   deps: Number(option("--deps", 128)),
 });
@@ -427,7 +425,9 @@ const measured = [
     ? []
     : workloads
         .filter(
-          (w) => w.level !== "E" && new RegExp(workloadPattern).test(w.id),
+          (w) =>
+            w.level !== "E" &&
+            (workloadPattern === "all" || selects(workloadPattern, w.id)),
         )
         .map((w) => ({ id: w.id, make: () => w.setup(rt).step }))),
 ];
