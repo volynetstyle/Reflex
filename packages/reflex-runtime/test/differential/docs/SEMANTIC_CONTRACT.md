@@ -177,6 +177,31 @@ enough: the obligation must reach a later run.
   committed dependency leaves the watcher retryable; the host retries it on a
   later drain, never recursively within the failing one.
 
+### Semantic and representation equivalence
+
+Sibling watcher invalidation/delivery order is deterministic for a given
+implementation but not part of the public semantic contract unless separately
+specified. The same holds for the order of a node's incoming and outgoing
+edges and for edge identity. Callbacks have side effects, so these orders are
+observable; the contract simply does not choose between them, and two
+implementations that differ only there belong to one public semantics.
+
+Differential comparison therefore has three outcomes
+(`classifyTraceDifference` in `test/oracle/program.ts`):
+
+- **semantic-equivalent:** identical traces;
+- **representation-different:** equal once adjacency lists are compared as
+  sets (`list-order`), or, in addition, once entries of different nodes may
+  interleave differently between two observations (`event-order`). Every
+  snapshot and read still agrees in content and order, the entries between
+  two observations agree as a multiset, and each node's own entries keep
+  their order (a cleanup still precedes its rerun);
+- **semantic-different:** anything else.
+
+The baseline oracle fails only on semantic differences and counts
+representation differences. Exact representation remains a diagnostic: the
+tracking ladder, graph fuzzers and oracle qualification still compare it.
+
 Open region: a computed invalidated during its own evaluation (F1) commits a
 value computed before the write and stays clean, so watchers reading it may
 miss the write. Its semantics (rejection, convergence or a bounded policy) is

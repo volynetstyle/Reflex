@@ -1087,6 +1087,106 @@ export function firstMismatch(a: string[], b: string[]): Mismatch | null {
   return null;
 }
 
+/**
+ * How two traces of one program differ, at the first level where they agree
+ * (test/differential/docs/SEMANTIC_CONTRACT.md, "Semantic and representation
+ * equivalence"):
+ *
+ * - `identical`: byte-equal.
+ * - `list-order`: equal once every snapshot's in[] and out[] are sorted. Only
+ *   the order of adjacency lists differs: representation.
+ * - `event-order`: in addition, entries of different nodes interleave
+ *   differently, while every observation (snapshot, read) agrees in content
+ *   and order, the entries between two observations agree as a multiset, and
+ *   each node's own entries keep their order. This is sibling delivery and
+ *   execution order, which the contract does not fix: representation.
+ * - `semantic`: anything else.
+ */
+export type TraceDifference =
+  | "identical"
+  | "list-order"
+  | "event-order"
+  | "semantic";
+
+function sortAdjacency(entry: string): string {
+  if (!entry.startsWith("snap:")) return entry;
+  return entry.replace(
+    /(in|out)\[([^\]]*)\]/g,
+    (_, side: string, list: string) => {
+      const items = list === "" ? [] : list.split(",");
+      items.sort((x, y) => Number(x) - Number(y));
+      return `${side}[${items.join(",")}]`;
+    },
+  );
+}
+
+const isObservation = (entry: string): boolean =>
+  entry.startsWith("snap:") || entry.startsWith("read:");
+
+/** The node an entry belongs to (inv:A:3, tail:3:[..], w:3, cl:3), if any. */
+function entryNode(entry: string): string | undefined {
+  if (isObservation(entry)) return undefined;
+  return /^[a-z-]+:(?:[AB]:)?(\d+)(?::|$)/.exec(entry)?.[1];
+}
+
+function segments(trace: string[]): {
+  observations: string[];
+  between: string[][];
+} {
+  const observations: string[] = [];
+  const between: string[][] = [[]];
+  for (const entry of trace) {
+    if (isObservation(entry)) {
+      observations.push(entry);
+      between.push([]);
+    } else {
+      between.at(-1)!.push(entry);
+    }
+  }
+  return { observations, between };
+}
+
+function byNode(trace: string[]): Map<string, string[]> {
+  const nodes = new Map<string, string[]>();
+  for (const entry of trace) {
+    const node = entryNode(entry);
+    if (node === undefined) continue;
+    const list = nodes.get(node);
+    if (list === undefined) nodes.set(node, [entry]);
+    else list.push(entry);
+  }
+  return nodes;
+}
+
+const sameList = (x: readonly string[], y: readonly string[]): boolean =>
+  x.length === y.length && x.every((entry, i) => entry === y[i]);
+
+export function classifyTraceDifference(
+  a: string[],
+  b: string[],
+): TraceDifference {
+  if (sameList(a, b)) return "identical";
+  const sa = a.map(sortAdjacency);
+  const sb = b.map(sortAdjacency);
+  if (sameList(sa, sb)) return "list-order";
+  const ga = segments(sa);
+  const gb = segments(sb);
+  if (!sameList(ga.observations, gb.observations)) return "semantic";
+  for (let i = 0; i < ga.between.length; i++) {
+    const x = [...ga.between[i]!].sort();
+    const y = [...gb.between[i]!].sort();
+    if (!sameList(x, y)) return "semantic";
+  }
+  const na = byNode(sa);
+  const nb = byNode(sb);
+  if (na.size !== nb.size) return "semantic";
+  for (const [node, entries] of na) {
+    const other = nb.get(node);
+    if (other === undefined || !sameList(entries, other)) return "semantic";
+  }
+  return "event-order";
+}
+
 function opCount(ops: Op[]): number {
   let count = 0;
   for (const op of ops) {
