@@ -44,7 +44,7 @@ the lockstep bound.
 | File                             | Role                                                                            |
 | -------------------------------- | ------------------------------------------------------------------------------- |
 | `resolve.ts`                     | hot path (next edge, cursor, first read) and the initial, tail and inner misses |
-| `locate.ts`                      | producer-side probes, then the graph lookup: one place for every miss kind      |
+| `locate.ts`                      | producer-side probes, then the graph lookup; the reorder path keeps only newest |
 | `prefix.ts`                      | prefix classification, shared with `push_iterator.ts`                           |
 | `cleanup.ts`                     | removal of the unvisited suffix after a successful pass                         |
 | `../../shape/graph/findEdge.ts`  | exact pair lookup: outgoing hint, head start, lockstep                          |

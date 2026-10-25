@@ -52,7 +52,7 @@
 // edge); L1 producer side (empty, newest, sole, head start); L1h hint; L2+
 // lockstep, edge found; L2- lockstep, absence proved.
 import { execFileSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -86,6 +86,23 @@ if (variant === "hint-after")
 if (variant !== undefined && !(variant in variants))
   throw new Error(`unknown variant ${variant}`);
 const LOCATE = "const newest = producer.lastOut;";
+// The cursor miss's entry point (locateReorderedEdge) has the newest probe
+// only; revisions before it have no such function.
+const REORDERED =
+  "if (newest !== null && newest.to === consumer) return newest;";
+const locateSource = commit
+  ? execFileSync(
+      "git",
+      [
+        "show",
+        `${commit}:packages/reflex-runtime/src/kernel/stages/tracking/locate.ts`,
+      ],
+      { cwd: packageRoot, encoding: "utf8" },
+    )
+  : readFileSync(
+      path.join(packageRoot, "src/kernel/stages/tracking/locate.ts"),
+      "utf8",
+    );
 const outDir = path.join(
   packageRoot,
   ".cache/oracle/tracking-ladder-profile",
@@ -101,6 +118,12 @@ execFileSync(
     outDir,
     "--mutate",
     `src/kernel/stages/tracking/locate.ts::${LOCATE}::globalThis.__reflexLadderLocate?.(producer, consumer, back, ahead); ${LOCATE}`,
+    ...(locateSource.includes(REORDERED)
+      ? [
+          "--mutate",
+          `src/kernel/stages/tracking/locate.ts::${REORDERED}::globalThis.__reflexLadderLocate?.(producer, consumer, back, ahead, true); ${REORDERED}`,
+        ]
+      : []),
     ...(variant ? variants[variant].flatMap((m) => ["--mutate", m]) : []),
   ],
   { cwd: packageRoot, stdio: "pipe" },
@@ -175,7 +198,7 @@ function pairWalk(C, out, back, ahead, found, aheadFirst) {
 }
 
 /** locateTrackedEdge + findEdgeInLockstep, on the graph as the hook sees it. */
-function replay(P, C, back, ahead) {
+function replay(P, C, back, ahead, reordered = false) {
   const r = {
     route: "",
     found: null,
@@ -194,9 +217,14 @@ function replay(P, C, back, ahead) {
     hintAfterProbe: 0,
   };
   const newest = P.lastOut;
-  if (newest === null) return { ...r, route: "empty" };
-  if (newest.to === C) return { ...r, route: "newest", found: newest };
-  if (newest === P.firstOut) return { ...r, route: "sole" };
+  if (reordered) {
+    if (newest !== null && newest.to === C)
+      return { ...r, route: "newest", found: newest };
+  } else {
+    if (newest === null) return { ...r, route: "empty" };
+    if (newest.to === C) return { ...r, route: "newest", found: newest };
+    if (newest === P.firstOut) return { ...r, route: "sole" };
+  }
 
   const slot = P.tailIn;
   const hintMatches = slot !== null && slot.to === C && slot.from === P;
@@ -381,9 +409,9 @@ function account(step) {
     read = null;
   };
 
-  globalThis.__reflexLadderLocate = (P, C, back, ahead) => {
+  globalThis.__reflexLadderLocate = (P, C, back, ahead, reordered) => {
     if (read.locate) throw new Error("two lookups in one read");
-    read.locate = replay(P, C, back, ahead);
+    read.locate = replay(P, C, back, ahead, reordered === true);
   };
   rt.setRuntimeProjectionObserver(({ id }) => {
     if (id === "projection.semantic.tracking.resolve") {

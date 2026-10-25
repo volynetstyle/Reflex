@@ -33,3 +33,28 @@ export function locateTrackedEdge(
 
   return findEdgeInLockstep(producer, consumer, back, ahead);
 }
+
+/**
+ * Locate the edge `producer -> consumer` for a cursor miss inside the list:
+ * the newest outgoing edge, then findEdgeInLockstep.
+ *
+ * A cursor miss inside the list is a reorder, and its read usually finds an
+ * edge, so the empty-list and sole-edge probes, which settle only absence,
+ * are left to the lookup (both are answered there as well, by the hint miss
+ * and the head start).
+ *
+ * JIT: separate from locateTrackedEdge on purpose. With the two absence
+ * probes this path compiled to more code inside the miss handler and cost
+ * A.track.reorder-128-shuffled +8.7% (paired CI on the locate stage).
+ */
+export function locateReorderedEdge(
+  producer: ReactiveNode,
+  consumer: ReactiveNode,
+  back: ReactiveEdge | null,
+  ahead: ReactiveEdge | null,
+): ReactiveEdge | null {
+  const newest = producer.lastOut;
+  if (newest !== null && newest.to === consumer) return newest;
+
+  return findEdgeInLockstep(producer, consumer, back, ahead);
+}
