@@ -99,7 +99,7 @@
     "@volynets/reflex-framework": "workspace:*",
     "@volynets/reflex-runtime": "workspace:*",
     "@volynets/reflex-scheduler": "workspace:*",
-    "playwright": "^1.62.1"
+    "playwright": "^1.64.1"
   },
   "peerDependencies": {
     "@volynets/reflex-runtime": "workspace:^",
