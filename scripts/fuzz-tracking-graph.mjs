@@ -341,7 +341,7 @@ if (!qualify) {
 const F = "src/kernel/shape/graph/findEdge.ts";
 const S = "src/kernel/shape/graph/sweepEdges.ts";
 const L = "src/kernel/shape/graph/linkEdge.ts";
-const T = "src/kernel/shape/tracking/locate.ts";
+const T = "src/kernel/stages/tracking/locate.ts";
 const ONLY = process.env.FUZZ_MUTANT;
 const MUTANTS = [
   [

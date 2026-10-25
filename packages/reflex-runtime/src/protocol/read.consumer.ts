@@ -18,7 +18,7 @@ import {
   type ConsumerNode,
   type ReactiveEdge,
 } from "@runtime/kernel/shape";
-import { resolveTrackedRead } from "@runtime/kernel/shape/tracking";
+import { resolveTrackedRead } from "@runtime/kernel/stages/tracking";
 import { advance } from "@runtime/kernel/stages/stabilization/advance";
 import { should_recompute } from "@runtime/kernel/stages/stabilization/pull_dependency";
 import {

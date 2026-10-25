@@ -127,7 +127,7 @@ path is resolved by one exact lookup of the pair's edge, bounded by the
 shorter of the producer's outgoing and the consumer's incoming lists, then
 classified by these rules. The eager suffix detachment threshold (32 edges)
 is a retained identity policy, not a search bound. Algorithm details:
-[tracking research](../src/kernel/shape/tracking/RESEARCH.md).
+[tracking research](../src/kernel/stages/tracking/RESEARCH.md).
 
 The frontier reading of `tailIn` is required only while the node is
 `Computing`; outside that phase the slot is semantically inactive and is

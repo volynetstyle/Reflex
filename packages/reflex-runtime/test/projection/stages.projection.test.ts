@@ -102,10 +102,10 @@ function project(file: string, name: string): AlgorithmProjection {
 describe("Reflex stage projection", () => {
   it(
     "projects every named stage function with a self-contained CFG and matching syntax facts",
-    { timeout: 30_000 },
+    { timeout: 60_000 },
     () => {
       const functions = stageFunctions();
-      expect(functions).toHaveLength(27);
+      expect(functions).toHaveLength(36);
       for (const fn of functions) {
         const projection = analyzeFile(fn.file, fn.name, { tsconfig });
         const expected = syntaxCounts(fn);
@@ -205,7 +205,10 @@ describe("Reflex stage projection", () => {
         }),
       ]);
 
-      const pull = project("stabilization/pull_dependency.ts", "shouldRecomputeCore");
+      const pull = project(
+        "stabilization/pull_dependency.ts",
+        "shouldRecomputeCore",
+      );
       expect(pull.loops.map((loop) => loop.condition)).toEqual(["true"]);
       expect(pull.structures.stackCandidates).toEqual([]);
       expect(pull.stateTransitions.map((transition) => transition.to)).toEqual([
@@ -220,7 +223,10 @@ describe("Reflex stage projection", () => {
       expect(pullDependency.structures.stackCandidates).toEqual([]);
       expect(pullDependency.stateTransitions).toEqual([]);
 
-      const pull_iterator = project("stabilization/pull_iterator.ts", "pull_iterator");
+      const pull_iterator = project(
+        "stabilization/pull_iterator.ts",
+        "pull_iterator",
+      );
       expect(pull_iterator.loops.map((loop) => loop.condition)).toEqual([
         "true",
         "true",

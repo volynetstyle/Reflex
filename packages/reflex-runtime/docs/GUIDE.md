@@ -13,7 +13,7 @@ checks a change must pass. Contracts are not repeated here; the
 4. This guide's source map, then the local design notes next to the code:
    [stages](../src/kernel/stages/README.md),
    [stabilization](../src/kernel/stages/stabilization/README.md),
-   [tracking](../src/kernel/shape/tracking/README.md).
+   [tracking](../src/kernel/stages/tracking/README.md).
 
 ## Source map
 

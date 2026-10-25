@@ -10,7 +10,7 @@ import {
   moveLastIncomingEdgeToFrontUnchecked,
   moveNonHeadIncomingEdgeToFrontUnchecked,
 } from "../../../src/kernel";
-import { isEdgeInTrackedPrefix } from "../../../src/kernel/shape/tracking/prefix";
+import { isEdgeInTrackedPrefix } from "../../../src/kernel/stages/tracking/prefix";
 import {
   expectGraphIntegrity,
   expectIncomingEdges,

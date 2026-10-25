@@ -82,7 +82,7 @@ const MUTANTS: Mutant[] = [
     // A located current-pass edge is taken for a suffix edge, so a duplicate
     // read moves it after the cursor and reorders the incoming list.
     id: "prefix-stamp-classification-false",
-    file: "src/kernel/shape/tracking/prefix.ts",
+    file: "src/kernel/stages/tracking/prefix.ts",
     search: "if (stamp !== 0) return edge.stamp === stamp;",
     replace: "if (stamp !== 0) return false;",
     expected: "killed",

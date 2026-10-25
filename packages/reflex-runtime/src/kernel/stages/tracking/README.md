@@ -29,7 +29,7 @@ sequential path is resolved in three steps:
 `edge.stamp` is a pass-membership stamp, not a value version.
 
 `tailIn` is one slot with two lifetime-disjoint readings (INV-H,
-`../graph/hint.ts`): while the node is Computing, its tracking frontier;
+`../../shape/graph/hint.ts`): while the node is Computing, its tracking frontier;
 otherwise null, the residual incoming edge, or a hint, one attached outgoing
 edge (`from === node && to !== node`, so never a self-edge). The hint costs
 no memory and closes the repeated pair: a broad producer re-read inside a
@@ -41,15 +41,15 @@ the lockstep bound.
 
 ## Code map
 
-| File                    | Role                                                                            |
-| ----------------------- | ------------------------------------------------------------------------------- |
-| `resolve.ts`            | hot path (next edge, cursor, first read) and the initial, tail and inner misses |
-| `locate.ts`             | producer-side probes, then the graph lookup: one place for every miss kind      |
-| `prefix.ts`             | prefix classification, shared with `push_iterator.ts`                           |
-| `cleanup.ts`            | removal of the unvisited suffix after a successful pass                         |
-| `../graph/findEdge.ts`  | exact pair lookup: head start, outgoing hint, lockstep                          |
-| `../graph/hint.ts`      | INV-H: the two readings of `tailIn`                                             |
-| `../graph/reuseEdge.ts` | reconciliation, eager suffix detachment, the default strategy                   |
+| File                             | Role                                                                            |
+| -------------------------------- | ------------------------------------------------------------------------------- |
+| `resolve.ts`                     | hot path (next edge, cursor, first read) and the initial, tail and inner misses |
+| `locate.ts`                      | producer-side probes, then the graph lookup: one place for every miss kind      |
+| `prefix.ts`                      | prefix classification, shared with `push_iterator.ts`                           |
+| `cleanup.ts`                     | removal of the unvisited suffix after a successful pass                         |
+| `../../shape/graph/findEdge.ts`  | exact pair lookup: head start, outgoing hint, lockstep                          |
+| `../../shape/graph/hint.ts`      | INV-H: the two readings of `tailIn`                                             |
+| `../../shape/graph/reuseEdge.ts` | reconciliation, eager suffix detachment, the default strategy                   |
 
 Rules to keep when changing this code:
 
