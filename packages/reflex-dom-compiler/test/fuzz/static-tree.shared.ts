@@ -16,7 +16,22 @@ const HEADER =
 
 const CHARS = ["a", "b", " ", "&", "<", ">", '"', "'", "\n", "\r", "\t", " ", "é", "😀", "="];
 const text = fc.array(fc.constantFrom(...CHARS), { maxLength: 5 }).map((chars) => chars.join(""));
-const str = text.map((value) => JSON.stringify(value));
+const escapeUnsafeForJsCode = (value: string): string =>
+  value.replace(/[<>\u2028\u2029]/g, (ch) => {
+    switch (ch) {
+      case "<":
+        return "\\u003C";
+      case ">":
+        return "\\u003E";
+      case "\u2028":
+        return "\\u2028";
+      case "\u2029":
+        return "\\u2029";
+      default:
+        return ch;
+    }
+  });
+const str = text.map((value) => escapeUnsafeForJsCode(JSON.stringify(value)));
 const num = fc.constantFrom("0", "1", "-0", "3.5", "1e21", "2n");
 const bool = fc.constantFrom("true", "false");
 const nil = fc.constantFrom("null", "undefined", "void 0");
