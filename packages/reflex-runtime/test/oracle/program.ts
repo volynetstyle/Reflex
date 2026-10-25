@@ -984,6 +984,18 @@ export function interpret(
     const tail = node.tailIn;
     if (tail === null) return;
     for (let e = node.firstIn; e !== null; e = e.nextIn) if (e === tail) return;
+    // Research (perf/structural-retention, retain-identity): an idle slot may
+    // hold the head of the retained identity chain, an incoming edge of the
+    // node detached from both lists and marked with stamp -1.
+    const retained = tail as Edge & { stamp?: number; prevOut?: Edge | null };
+    if (
+      (node.state & COMPUTING) === 0 &&
+      retained.stamp === -1 &&
+      tail.to === node &&
+      retained.prevOut === null &&
+      tail.nextOut === null
+    )
+      return;
     if ((node.state & COMPUTING) !== 0) {
       trace.push(`invariant:${id}:Computing tailIn is not an incoming edge`);
       return;

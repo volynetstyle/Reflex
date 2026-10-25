@@ -36,7 +36,10 @@ import {
   interpret,
   prng,
 } from "../../test/oracle/program.ts";
-import { variants } from "../tracking-ladder/variants.mjs";
+import { variants as ladderVariants } from "../tracking-ladder/variants.mjs";
+import { retentionVariants } from "./variants.mjs";
+
+const variants = { ...ladderVariants, ...retentionVariants };
 
 const packageRoot = path.resolve(import.meta.dirname, "../..");
 const args = process.argv.slice(2);
