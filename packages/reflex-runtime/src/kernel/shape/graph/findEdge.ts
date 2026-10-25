@@ -20,11 +20,11 @@ const OUTGOING_HEAD_START = 4;
  * compared, they must cover the whole incoming list: an exhausted incoming
  * side is then a proof of absence.
  *
- * Past the four-link head start, the producer's outgoing hint is consulted
- * before the lockstep and refreshed after it (INV-H, see
- * `isOutgoingHint`). A hint is a positive answer only: it is used when it is
- * an attached edge of exactly this pair, and a miss proves nothing, so
- * absence is still proved by the lockstep.
+ * The producer's outgoing hint is consulted first and refreshed only after
+ * the lockstep, past the four-link head start (INV-H, see `isOutgoingHint`).
+ * A hint is a positive answer only: it is used when it is an attached edge of
+ * exactly this pair, and a miss proves nothing, so absence is still proved by
+ * the head start or the lockstep.
  */
 export function findEdgeInLockstep(
   producer: ReactiveNode,
@@ -32,6 +32,19 @@ export function findEdgeInLockstep(
   back: ReactiveEdge | null,
   ahead: ReactiveEdge | null,
 ): ReactiveEdge | null {
+  // A wide producer remembers the edge of its last expensive lookup. A
+  // repeated read of the same pair, such as a broad producer re-read inside
+  // a wide consumer, then costs one comparison instead of a walk. Under
+  // INV-H whatever the slot holds is attached, whichever reading it is in,
+  // and a pair has at most one edge: an edge from this producer to this
+  // consumer is the answer. The probe comes before the head start, which a
+  // hit would otherwise walk first; a producer of bounded fan-out pays one
+  // load and compare here and never fills its slot.
+  const hint = producer.tailIn;
+  if (hint !== null && hint.to === consumer && hint.from === producer) {
+    return hint;
+  }
+
   let out = producer.firstOut;
 
   // Most producers have a few subscribers, and their outgoing list alone
@@ -43,17 +56,6 @@ export function findEdgeInLockstep(
       observeRuntimeProjection?.("projection.semantic.tracking.locate.step");
     if (out.to === consumer) return out;
     out = out.nextOut;
-  }
-
-  // A wide producer remembers the edge of its last expensive lookup. A
-  // repeated read of the same pair, such as a broad producer re-read inside
-  // a wide consumer, then costs one comparison instead of a walk. Under
-  // INV-H whatever the slot holds is attached, whichever reading it is in,
-  // and a pair has at most one edge: an edge from this producer to this
-  // consumer is the answer.
-  const hint = producer.tailIn;
-  if (hint !== null && hint.to === consumer && hint.from === producer) {
-    return hint;
   }
 
   const edge = findEdgeInLockstepPastHeadStart(

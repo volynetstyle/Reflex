@@ -16,8 +16,8 @@ sequential path is resolved in three steps:
      edges and the physical tail of `C.in`.
    - **L1, producer-side probes** (`locate.ts`, then `findEdgeInLockstep`):
      an empty `P.out`, its newest edge, a sole edge to another consumer,
-     the four-link head start, then the outgoing hint, `tailIn` of the idle
-     producer when it is an edge of exactly this pair (INV-H).
+     the outgoing hint, `tailIn` of the idle producer when it is an edge of
+     exactly this pair (INV-H), then the four-link head start.
    - **L2, lockstep**: bounded by the shorter of `P.out` and `C.in`; the
      only general proof of absence. Its result refreshes the hint.
 2. **Classify** it: in the prefix exactly when it carries the cursor's
@@ -47,7 +47,7 @@ the lockstep bound.
 | `locate.ts`                      | producer-side probes, then the graph lookup: one place for every miss kind      |
 | `prefix.ts`                      | prefix classification, shared with `push_iterator.ts`                           |
 | `cleanup.ts`                     | removal of the unvisited suffix after a successful pass                         |
-| `../../shape/graph/findEdge.ts`  | exact pair lookup: head start, outgoing hint, lockstep                          |
+| `../../shape/graph/findEdge.ts`  | exact pair lookup: outgoing hint, head start, lockstep                          |
 | `../../shape/graph/hint.ts`      | INV-H: the two readings of `tailIn`                                             |
 | `../../shape/graph/reuseEdge.ts` | reconciliation, eager suffix detachment, the default strategy                   |
 
@@ -78,9 +78,9 @@ function is inlined wherever the function is, and can push the hot read path
 separate functions: a call site inlines only the miss kind that occurs there.
 The lookup is a plain loop and is not unrolled. Its four-link outgoing head
 start (`OUTGOING_HEAD_START`) is a workload heuristic, not an invariant. The
-hint is consulted only after it, so lookups that bounded fan-out settles
-never read or write `tailIn`; the lockstep proper is a separate function
-(`findEdgeInLockstepPastHeadStart`).
+hint is consulted before it and written only past it, so a lookup that
+bounded fan-out settles reads `tailIn` once and never writes it; the lockstep
+proper is a separate function (`findEdgeInLockstepPastHeadStart`).
 
 ## Measuring
 

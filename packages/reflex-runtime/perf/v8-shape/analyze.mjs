@@ -2,6 +2,11 @@
 //
 //   node perf/v8-shape/analyze.mjs --bundle <runtime.mjs> [--node <node>]
 //        [--workloads <regex>] [--out <file.json>] [--compare <other.json>]
+//        [--ladder <regex> [--fanouts 3,128]]
+//
+// `--ladder` analyzes the rungs of scripts/tracking-ladder.mjs instead of the
+// benchmark workloads, each in perf/tracking-ladder/time.mjs's measuring
+// process.
 //
 // For every timed workload of bench/workloads.mjs, runs bench/worker.mjs in
 // `time` mode under --print-opt-code --trace-deopt and records, per optimized
@@ -16,6 +21,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { workloads } from "../../bench/workloads.mjs";
+import { ladderCases } from "../../../../scripts/tracking-ladder.mjs";
 
 const args = process.argv.slice(2);
 const option = (name, fallback) => {
@@ -29,7 +35,13 @@ const out = option("--out");
 const compareTo = option("--compare");
 const packageRoot = path.resolve(import.meta.dirname, "../..");
 
-const timed = workloads.filter((w) => w.level !== "E" && pattern.test(w.id));
+const ladder = option("--ladder");
+const timed = ladder
+  ? ladderCases({
+      rungs: new RegExp(ladder),
+      fanouts: option("--fanouts", "3,128").split(",").map(Number),
+    })
+  : workloads.filter((w) => w.level !== "E" && pattern.test(w.id));
 
 /** Parses --print-opt-code / --trace-deopt output into per-function records. */
 function parse(text) {
@@ -106,10 +118,14 @@ function analyze(workload) {
       "--print-opt-code",
       "--code-comments",
       "--trace-deopt",
-      path.join(packageRoot, "bench/worker.mjs"),
-      bundle,
-      workload.id,
-      "time",
+      ...(ladder
+        ? [
+            path.join(packageRoot, "perf/tracking-ladder/time.mjs"),
+            "--measure",
+            bundle,
+            JSON.stringify({ ...workload, warmupMs: 150, batchMs: 30 }),
+          ]
+        : [path.join(packageRoot, "bench/worker.mjs"), bundle, workload.id, "time"]),
     ],
     { encoding: "utf8", maxBuffer: 1 << 30 },
   );
