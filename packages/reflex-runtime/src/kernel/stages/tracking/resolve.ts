@@ -19,7 +19,7 @@ import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
-import { locateTrackedEdge } from "./locate";
+import { locateReorderedEdge, locateTrackedEdge } from "./locate";
 import { isEdgeInTrackedPrefix } from "./prefix";
 
 /**
@@ -226,7 +226,7 @@ function resolveCursorTrackedReadMiss(
 
   // Exact lookup. The cursor and the expected next edge were compared by
   // the caller, so the incoming side starts beside them.
-  const edge = locateTrackedEdge(
+  const edge = locateReorderedEdge(
     producer,
     consumer,
     cursorEdge.prevIn,
