@@ -530,6 +530,71 @@
      "valid": true
     }
    }
+  },
+  {
+   "sha": "3b8d4891edf60a61a0c3a5eb101a3412e40c72fc",
+   "measuredAt": "2026-10-25T14:10:59.143Z",
+   "commitTimestamp": "2026-10-25T16:09:54+02:00",
+   "runId": "40200948581:1",
+   "qualification": "screening-only",
+   "scenarios": {
+    "bench/reflex.bench.ts > reflex: Diamond / shared deps > reflex-signals": {
+     "logRatio": 0.07398969620879237,
+     "mad": 0.07254699947497961,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Dynamic deps > reflex-signals": {
+     "logRatio": 0.071705442434736,
+     "mad": 0.006210103321569904,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Linear chain > reflex-signals": {
+     "logRatio": 0.029585457256098766,
+     "mad": 0.03524201168683189,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Many effects from one source > reflex-signals": {
+     "logRatio": 0.009523195515273072,
+     "mad": 0.036720643479105794,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Many sources into one computed -> effect > reflex-signals": {
+     "logRatio": 0.08947713043416355,
+     "mad": 0.03607025401741193,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Many sources into one computed/effect > reflex-signals": {
+     "logRatio": 0.04305684584021993,
+     "mad": 0.03419595955492909,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Many sources into one direct effect > reflex-signals": {
+     "logRatio": 0.0363601592193548,
+     "mad": 0.009874730513937979,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/reflex.bench.ts > reflex: Wide fan-out > reflex-signals": {
+     "logRatio": -0.014830795408551515,
+     "mad": 0.029662007343509357,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    }
+   }
   }
  ],
  "daily": []
