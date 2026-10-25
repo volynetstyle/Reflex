@@ -64,11 +64,19 @@ const option = (name, fallback) => {
   const at = args.indexOf(name);
   return at === -1 ? fallback : args[at + 1];
 };
+const parseRegexOption = (name, fallback) => {
+  const source = option(name, fallback);
+  try {
+    return new RegExp(source);
+  } catch {
+    throw new Error(`invalid regex for ${name}: ${source}`);
+  }
+};
 const PASSES = Number(option("--passes", 200));
 const WARMUP = 64;
 const out = option("--out");
 const cases = ladderCases({
-  rungs: new RegExp(option("--rungs", ".*")),
+  rungs: parseRegexOption("--rungs", ".*"),
   fanouts: option("--fanouts", "3,128").split(",").map(Number),
   deps: Number(option("--deps", 128)),
 });
