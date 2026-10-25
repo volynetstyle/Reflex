@@ -148,10 +148,11 @@ suffix-head hit (R0) of the default strategy is unreachable through the
 resolver (F5) but reachable through the public strategy API; kept.
 
 **Heuristics that touch identity, not semantics.** The default strategy
-detaches the whole stale suffix after a 32-edge miss. Later reads that would
-have matched it link new edges instead of reusing old ones; the oracle pins
-this at the strict level. Its comment overstated it ("cannot contribute");
-the effect is a different edge identity, never a lost dependency.
+detached the whole stale suffix after a 32-edge miss. Later reads that would
+have matched it linked new edges instead of reusing old ones; the effect was
+a different edge identity, never a lost dependency. _Removed (2026-10-25):_
+the suffix now survives until cleanup; the oracle compares adjacency order
+and sibling delivery order as representation (SEMANTIC_CONTRACT).
 
 ## 5. Consumer read and stabilization (`protocol/read.consumer.ts`)
 

@@ -49,13 +49,18 @@ the lockstep bound.
 | `cleanup.ts`                     | removal of the unvisited suffix after a successful pass                         |
 | `../../shape/graph/findEdge.ts`  | exact pair lookup: outgoing hint, head start, lockstep                          |
 | `../../shape/graph/hint.ts`      | INV-H: the two readings of `tailIn`                                             |
-| `../../shape/graph/reuseEdge.ts` | reconciliation, eager suffix detachment, the default strategy                   |
+| `../../shape/graph/reuseEdge.ts` | reconciliation (move or link), the default strategy                             |
 
 Rules to keep when changing this code:
 
-- **Eager suffix detachment (32 edges) is an identity policy, not a search
-  bound.** It decides which edges survive and therefore subscriber order.
-  Changing it is an observable change.
+- **The unvisited suffix survives until cleanup.** Reconciliation moves or
+  links, never unlinks; `cleanupUnvisitedSources` alone removes what a
+  successful pass did not read. During the pass suffix edges are attached but
+  carry no causal authority (`Computing` plus prefix membership). Which edges
+  survive decides edge identity and subscriber order: representation, not
+  semantics (SEMANTIC_CONTRACT, "Semantic and representation equivalence").
+  The 32-edge eager detachment removed on 2026-10-25 is kept as the
+  `eager-detach` counterfactual in `perf/tracking-ladder/variants.mjs`.
 - **A configured `readTrackingStrategy` pays two lookups per call.** The
   resolver must locate the edge to reject duplicates before the call. This is
   the cost of the extension point; skipping the resolver lookup would hand

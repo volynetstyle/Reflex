@@ -74,7 +74,6 @@
     "projection.semantic.tracking.reorder.two-hop",
     "projection.semantic.tracking.resolve",
     "projection.semantic.tracking.slow-path",
-    "projection.semantic.tracking.suffix.detach",
     "projection.semantic.tracking.suffix.link-new",
     "projection.semantic.tracking.suffix.reuse",
     "projection.semantic.watcher.clean.skip",

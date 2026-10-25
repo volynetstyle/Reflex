@@ -198,6 +198,8 @@ After location, `reuseLocatedIncomingEdgeOrLink` performs **structural reconcili
 
 ### Eager suffix detachment is an identity policy
 
+_Removed (2026-10-25)._ Reconciliation no longer detaches; the unvisited suffix survives until `cleanupUnvisitedSources`. On the tracking ladder a new dependency in the middle or in front had relinked every retained dependency behind it (65 or 128 new edges per pass instead of 1); without detachment those reads move their edges, 17–25× faster at fanout 128, and the guard walk of up to 32 links per new edge disappears. Only a truly dead suffix (branch replaced at the end) pays: about 13% more links per absence proof, 3–7% per pass. Paired TurboFan shape on the benchmark workloads is unchanged in every hot function; only `reuseLocatedIncomingEdgeOrLink`, now small, is inlined into its callers. Over 40,000 differential programs the two policies differ only in edge identity, adjacency order and sibling delivery order, which the contract treats as representation (test/differential/docs/SEMANTIC_CONTRACT.md). The old rule remains as the `eager-detach` counterfactual of `perf/tracking-ladder/variants.mjs`. The text below describes the policy as it was.
+
 When introducing a genuinely new dependency ahead of an unmatched suffix of at least **32** edges, the resolver may detach that suffix immediately. There is a retained exception: no eager detachment when the producer's outgoing list is empty and the current pass stamp is nonzero. Later reads can recreate some detached pairs, changing their edge identities and positions in producer outgoing lists. This behavior existed before PR #52; it remains to preserve observable order and differential equivalence.
 
 Thus **32 is no longer a search budget** and must never be reported as a bound on off-sequence lookup. It governs a specific structural commitment with ordering consequences. The new exact lookup and the old identity-changing policy are separate decisions.
@@ -340,7 +342,7 @@ The landscape after the hint:
 The following statements are misleading or false for the scoped PR:
 
 1. **“`edge.stamp` tracks whether a producer value changed.”** False. It stamps read membership. Dirty-state transitions and pull validation address changes.
-2. **“The algorithm is a bounded 32-edge suffix scan.”** Outdated. The number 32 now governs eager detachment, not pair lookup.
+2. **“The algorithm is a bounded 32-edge suffix scan.”** Outdated. The number 32 now governs eager detachment, not pair lookup. (Eager detachment itself was removed on 2026-10-25.)
 3. **“Every tracked read searches two lists.”** False. Sequential, duplicate, head, lookahead, and tail paths bypass generic lookup.
 4. **“A pair is represented by a fresh edge on each evaluation.”** False for normal reuse; exceptions exist for deliberately detached edges.
 5. **“Edge identity is always preserved.”** Also false. Eager detachment and later relinking can replace an edge, changing outgoing order.

@@ -4,9 +4,6 @@ import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 import { findEdgeInLockstep } from "./findEdge";
 import { linkEdge } from "./linkEdge";
-import { unlinkDetachedIncomingEdgeSequence } from "./sweepEdges";
-
-const EAGER_STALE_SUFFIX_CLEANUP_MIN = 32;
 
 function moveIncomingEdgeToPosition(
   consumer: ReactiveNode,
@@ -47,38 +44,6 @@ function moveIncomingEdgeToPosition(
   insertAfterEdge.nextIn = edge;
 }
 
-/** Whether `edge` and its successors hold at least `count` incoming edges. */
-function hasIncomingRun(edge: ReactiveEdge, count: number): boolean {
-  let current: ReactiveEdge | null = edge;
-
-  for (let seen = 0; seen < count; ++seen) {
-    if (current === null) return false;
-    current = current.nextIn;
-  }
-
-  return true;
-}
-
-function detachIncomingSuffix(
-  consumer: ReactiveNode,
-  insertAfterEdge: ReactiveEdge | null,
-  suffixStartEdge: ReactiveEdge,
-): void {
-  if (__PROFILE__)
-    observeRuntimeProjection?.("projection.semantic.tracking.suffix.detach");
-
-  if (insertAfterEdge === null) {
-    consumer.firstIn = null;
-    consumer.lastIn = null;
-  } else {
-    insertAfterEdge.nextIn = null;
-    consumer.lastIn = insertAfterEdge;
-  }
-
-  suffixStartEdge.prevIn = null;
-  unlinkDetachedIncomingEdgeSequence(suffixStartEdge);
-}
-
 /**
  * Commit a read whose edge has already been located.
  *
@@ -87,14 +52,13 @@ function detachIncomingSuffix(
  * and is moved after `insertAfterEdge`; `null` means the pair has no edge and
  * a new one is linked there.
  *
- * Eager suffix detachment is a retained policy, not a search bound. When a new
- * dependency is linked in front of a suffix of at least 32 edges, the suffix
- * is unlinked at once and later reads of its producers link new edges at the
- * end of their outgoing lists. Which edge survives decides subscriber order,
- * so the rule reproduces the earlier scan-based reconciliation exactly: that
- * scan detached after missing on 32 suffix edges, except when its outgoing
- * probe had already proved absence from an empty outgoing list with a nonzero
- * stamp.
+ * The unvisited suffix is never unlinked here. Its edges keep their identity
+ * until cleanupUnvisitedSources removes whatever the pass did not read, so a
+ * later read of a suffix producer moves its existing edge instead of linking
+ * a new one. While the pass runs, suffix edges carry no causal authority:
+ * propagation marks a computing consumer only through its tracked prefix.
+ * `suffixStartEdge` no longer takes part; it stays in the signature of this
+ * internal export.
  */
 export function reuseLocatedIncomingEdgeOrLink(
   producer: ReactiveNode,
@@ -111,14 +75,6 @@ export function reuseLocatedIncomingEdgeOrLink(
     if (__PROFILE__)
       observeRuntimeProjection?.("projection.semantic.tracking.suffix.reuse");
     return edge;
-  }
-
-  if (
-    suffixStartEdge !== null &&
-    (passStamp === 0 || producer.firstOut !== null) &&
-    hasIncomingRun(suffixStartEdge, EAGER_STALE_SUFFIX_CLEANUP_MIN) === true
-  ) {
-    detachIncomingSuffix(consumer, insertAfterEdge, suffixStartEdge);
   }
 
   if (__PROFILE__)

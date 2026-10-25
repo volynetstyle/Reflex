@@ -88,16 +88,6 @@ const MUTANTS: Mutant[] = [
     expected: "killed",
   },
   {
-    // The retained eager-detach policy decides which edge survives, and with
-    // it the order of the producer's outgoing list.
-    id: "reconcile-skip-eager-detach",
-    file: "src/kernel/shape/graph/reuseEdge.ts",
-    search:
-      "hasIncomingRun(suffixStartEdge, EAGER_STALE_SUFFIX_CLEANUP_MIN) === true",
-    replace: "false",
-    expected: "killed",
-  },
-  {
     // A hint that outlives its edge (INV-H): after the consumer drops the
     // dependency, a later lookup of the same pair returns the detached edge.
     id: "hint-keep-on-unlink",
