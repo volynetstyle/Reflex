@@ -60,9 +60,11 @@ function createFrontier(
   let max = 0;
 
   for (let i = 0; i < entries.length; ++i) {
-    const state = entries[i]![FRONTIER_STATE];
-    if (state.min < min) min = state.min;
-    if (state.max > max) max = state.max;
+    const state = entries[i]![FRONTIER_STATE],
+      mn = state.min,
+      mx = state.max;
+    if (mn < min) min = mn;
+    if (mx > max) max = mx;
   }
 
   return {
@@ -108,19 +110,26 @@ function beginWalk(): Walk {
 }
 
 function visitState(state: FrontierState, walk: Walk): boolean {
-  if (state.visit === walk) return false;
+  const sv = state.visit;
+  if (sv === walk) {
+    return false;
+  }
+
   if (depth > 1) {
     visitedStates[visitedHigh] = state;
-    previousVisits[visitedHigh++] = state.visit;
+    previousVisits[visitedHigh++] = sv;
   }
+
   state.visit = walk;
   return true;
 }
 
 function releaseWalk(base: number, top: number, visitedBase: number): void {
   // Release references on success, early search exit and callback failure.
-  while (top !== base) stack[--top] = undefined;
-
+  while (top !== base) {
+    stack[--top] = undefined;
+  }
+  
   high = base;
 
   while (visitedHigh !== visitedBase) {
@@ -136,6 +145,7 @@ function releaseWalk(base: number, top: number, visitedBase: number): void {
       stack.length = STACK_TRIM_FLOOR;
       cursors.length = STACK_TRIM_FLOOR;
     }
+
     if (visitedStates.length > MAX_RETAINED_STACK) {
       visitedStates.length = STACK_TRIM_FLOOR;
       previousVisits.length = STACK_TRIM_FLOOR;
@@ -160,42 +170,64 @@ function walkFrontier(
   try {
     while (true) {
       let entry: EvaluationFrontier;
-      if (next !== entries.length) entry = entries[next++]!;
-      else {
-        if (top === base) break;
+
+      if (next !== entries.length) {
+        entry = entries[next++]!;
+      } else {
+        if (top === base) {
+          break;
+        }
+
         const saved = stack[--top]!;
         stack[top] = undefined;
         const cursor = cursors[top]!;
-        if (cursor === SIBLING) entry = saved as EvaluationFrontier;
-        else {
+
+        if (cursor === SIBLING) {
+          entry = saved as EvaluationFrontier;
+        } else {
           entries = saved as readonly EvaluationFrontier[];
           next = cursor;
           continue;
         }
       }
       const state = entry[FRONTIER_STATE];
-      if (!visitState(state, walk)) continue;
-      if (state.bits === Leaf) {
+
+      if (!visitState(state, walk)) {
+        continue;
+      }
+
+      const sb = state.bits;
+
+      if (sb === Leaf) {
         const dependency = entry as FreshnessDependency;
-        if (dependencies !== undefined) dependencies.push(dependency);
-        else if (callback !== undefined) {
+
+        if (dependencies !== undefined) {
+          dependencies.push(dependency);
+        } else if (callback !== undefined) {
           high = top;
           callback(dependency);
         }
-      } else if (state.bits & Direct) {
+      } else if (sb & Direct) {
         const leaves = (entry as FrontierNode)
           .entries as readonly FreshnessDependency[];
+
         for (let i = 0; i < leaves.length; ++i) {
           const dependency = leaves[i]!;
-          if (!visitState(dependency[FRONTIER_STATE], walk)) continue;
-          if (dependencies !== undefined) dependencies.push(dependency);
-          else if (callback !== undefined) {
+
+          if (!visitState(dependency[FRONTIER_STATE], walk)) {
+            continue;
+          }
+
+          if (dependencies !== undefined) {
+            dependencies.push(dependency);
+          } else if (callback !== undefined) {
             high = top;
             callback(dependency);
           }
         }
-      } else if (state.bits & Composite) {
+      } else if (sb & Composite) {
         const remaining = entries.length - next;
+
         if (remaining === 1) {
           stack[top] = entries[next]!;
           cursors[top++] = SIBLING;
@@ -203,6 +235,7 @@ function walkFrontier(
           stack[top] = entries;
           cursors[top++] = next;
         }
+
         entries = (entry as FrontierNode).entries;
         next = 0;
       }
@@ -219,15 +252,20 @@ export function containsDependency(
   if (
     frontier === target ||
     frontier[FRONTIER_STATE] === target[FRONTIER_STATE]
-  )
+  ) {
     return true;
+  }
 
   const id = target[FRONTIER_STATE].min;
   const rootState = frontier[FRONTIER_STATE];
 
-  if (id < rootState.min || id > rootState.max || !isFrontierNode(frontier))
+  if (id < rootState.min || id > rootState.max || !isFrontierNode(frontier)) {
     return false;
-  if (rootState.bits & Direct) return containsSource(frontier.entries, target);
+  }
+
+  if (rootState.bits & Direct) {
+    return containsSource(frontier.entries, target);
+  }
 
   const base = high;
   let top = base;
@@ -240,34 +278,49 @@ export function containsDependency(
   try {
     while (true) {
       let entry: EvaluationFrontier;
-      if (next !== entries.length) entry = entries[next++]!;
-      else {
-        if (top === base) break;
+
+      if (next !== entries.length) {
+        entry = entries[next++]!;
+      } else {
+        if (top === base) {
+          break;
+        }
+
         const saved = stack[--top]!;
         stack[top] = undefined;
         const cursor = cursors[top]!;
-        if (cursor === SIBLING) entry = saved as EvaluationFrontier;
-        else {
+
+        if (cursor === SIBLING) {
+          entry = saved as EvaluationFrontier;
+        } else {
           entries = saved as readonly EvaluationFrontier[];
           next = cursor;
           continue;
         }
       }
+
       const state = entry[FRONTIER_STATE];
-      if (state === targetState) return true;
+
+      if (state === targetState) {
+        return true;
+      }
       // Leaves of other sources and out-of-range proofs are pruned unvisited.
       if (
         state.bits === Leaf ||
         id < state.min ||
         id > state.max ||
         !visitState(state, walk)
-      )
+      ) {
         continue;
+      }
+
       if (state.bits & Direct) {
-        if (containsSource((entry as FrontierNode).entries, target))
+        if (containsSource((entry as FrontierNode).entries, target)) {
           return true;
+        }
       } else if (state.bits & Composite) {
         const remaining = entries.length - next;
+
         if (remaining === 1) {
           stack[top] = entries[next]!;
           cursors[top++] = SIBLING;
@@ -275,6 +328,7 @@ export function containsDependency(
           stack[top] = entries;
           cursors[top++] = next;
         }
+
         entries = (entry as FrontierNode).entries;
         next = 0;
       }
@@ -291,8 +345,12 @@ function containsSource(
   target: FreshnessDependency,
 ): boolean {
   const state = target[FRONTIER_STATE];
-  for (let i = 0; i < entries.length; ++i)
-    if (entries[i]![FRONTIER_STATE] === state) return true;
+
+  for (let i = 0; i < entries.length; ++i) {
+    if (entries[i]![FRONTIER_STATE] === state) {
+      return true;
+    }
+  }
   return false;
 }
 
@@ -300,14 +358,24 @@ function containsSource(
 export function materializeFrontier(
   frontier: EvaluationFrontier,
 ): PublicationFrontier {
-  if (frontier === EMPTY_FRONTIER) return EMPTY_PUBLICATION_FRONTIER;
-  if (!isFrontierNode(frontier)) return [frontier];
+  if (frontier === EMPTY_FRONTIER) {
+    return EMPTY_PUBLICATION_FRONTIER;
+  }
+
+  if (!isFrontierNode(frontier)) {
+    return [frontier];
+  }
+
   if (frontier[FRONTIER_STATE].bits & Direct) {
     const entries = frontier.entries as readonly FreshnessDependency[];
     // Frozen arrays take the generic slice path in V8. Copy by index while
     // keeping the publication vector private to its consumer.
     const dependencies = new Array<FreshnessDependency>(entries.length);
-    for (let i = 0; i < entries.length; ++i) dependencies[i] = entries[i]!;
+
+    for (let i = 0; i < entries.length; ++i) {
+      dependencies[i] = entries[i]!;
+    }
+
     return dependencies;
   }
 
@@ -321,7 +389,10 @@ export function forEachDependency(
   frontier: EvaluationFrontier,
   callback: (dependency: FreshnessDependency) => void,
 ): void {
-  if (frontier === EMPTY_FRONTIER) return;
+  if (frontier === EMPTY_FRONTIER) {
+    return;
+  }
+
   if (!isFrontierNode(frontier)) {
     callback(frontier);
     return;
@@ -329,9 +400,14 @@ export function forEachDependency(
 
   if (frontier[FRONTIER_STATE].bits & Direct) {
     const entries = frontier.entries as readonly FreshnessDependency[];
-    for (let i = 0; i < entries.length; ++i) callback(entries[i]!);
+
+    for (let i = 0; i < entries.length; ++i) {
+      callback(entries[i]!);
+    }
+
     return;
   }
+
   walkFrontier(frontier, undefined, callback);
 }
 
@@ -340,16 +416,31 @@ export function sameFrontierShape(
   left: EvaluationFrontier,
   right: EvaluationFrontier,
 ): boolean {
-  if (left === right) return true;
-  if (!isFrontierNode(left) || !isFrontierNode(right)) return false;
-  if (left[FRONTIER_STATE].bits !== right[FRONTIER_STATE].bits) return false;
+  if (left === right) {
+    return true;
+  }
+
+  if (!isFrontierNode(left) || !isFrontierNode(right)) {
+    return false;
+  }
+
+  if (left[FRONTIER_STATE].bits !== right[FRONTIER_STATE].bits) {
+    return false;
+  }
 
   const a = left.entries;
   const b = right.entries;
 
-  if (a.length !== b.length) return false;
+  if (a.length !== b.length) {
+    return false;
+  }
 
-  for (let i = 0; i < a.length; ++i) if (a[i] !== b[i]) return false;
+  for (let i = 0; i < a.length; ++i) {
+    if (a[i] !== b[i]) {
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -372,8 +463,10 @@ export class FrontierBuilder {
 
   /** `dependency` is the source's canonical handle; `observation` its witness. */
   add(dependency: FreshnessDependency, observation = dependency): void {
-    if (dependency === this.owner)
+    if (dependency === this.owner) {
       throw new AsyncProtocolError("Cyclic async derivation dependency.");
+    }
+
     if (
       observation === dependency &&
       !this.aliased &&
@@ -382,44 +475,69 @@ export class FrontierBuilder {
       // While every direct entry is a canonical handle, state equality is
       // reference equality and the builtin search stays exact.
       const direct = (this.direct ??= []);
-      if (direct.includes(observation)) return;
+
+      if (direct.includes(observation)) {
+        return;
+      }
+
       if (direct.length < 16) {
         direct.push(observation);
         this.parts?.push(observation);
         return;
       }
     }
+
     this.record(observation, observation === dependency);
   }
 
   private record(observation: FreshnessDependency, canonical: boolean): void {
     const state = observation[FRONTIER_STATE];
     const directSet = this.directSet;
+
     if (directSet !== undefined) {
       const size = directSet.size;
       directSet.add(state);
-      if (directSet.size === size) return;
+
+      if (directSet.size === size) {
+        return;
+      }
+
       this.direct!.push(observation);
     } else {
       const direct = (this.direct ??= []);
-      for (let i = 0; i < direct.length; ++i)
-        if (direct[i]![FRONTIER_STATE] === state) return;
+
+      for (let i = 0; i < direct.length; ++i) {
+        if (direct[i]![FRONTIER_STATE] === state) {
+          return;
+        }
+      }
+
       // Linear lookup wins for small packed vectors; promote only when the
       // frontier is wide enough to amortize a Set allocation.
       if (direct.length >= 16) {
         const states = new Set<FrontierState>();
-        for (let i = 0; i < direct.length; ++i)
+
+        for (let i = 0; i < direct.length; ++i) {
           states.add(direct[i]![FRONTIER_STATE]);
+        }
+
         this.directSet = states.add(state);
       }
       direct.push(observation);
     }
-    if (!canonical) this.aliased = true;
+
+    if (!canonical) {
+      this.aliased = true;
+    }
+
     this.parts?.push(observation);
   }
 
   merge(frontier: EvaluationFrontier): void {
-    if (frontier === EMPTY_FRONTIER) return;
+    if (frontier === EMPTY_FRONTIER) {
+      return;
+    }
+
     const owner = this.owner;
     if (!isFrontierNode(frontier)) {
       // A singleton proof is one observation: capture deduplicates it, and
@@ -427,8 +545,10 @@ export class FrontierBuilder {
       if (
         owner !== undefined &&
         frontier[FRONTIER_STATE] === owner[FRONTIER_STATE]
-      )
+      ) {
         throw new AsyncProtocolError("Cyclic async derivation dependency.");
+      }
+
       this.record(frontier, false);
       return;
     }
@@ -436,7 +556,11 @@ export class FrontierBuilder {
     // Repeated reads of one cached evaluation inherit the same immutable
     // proof. A ⋆ A = A, and its owner search has already passed.
     const parts = this.parts;
-    if (parts !== undefined && parts[parts.length - 1] === frontier) return;
+
+    if (parts !== undefined && parts[parts.length - 1] === frontier) {
+      return;
+    }
+
     if (owner !== undefined && containsDependency(frontier, owner)) {
       throw new AsyncProtocolError("Cyclic async derivation dependency.");
     }
@@ -448,13 +572,21 @@ export class FrontierBuilder {
   snapshot(): EvaluationFrontier {
     if (this.parts === undefined) {
       const direct = this.direct;
-      if (direct === undefined || direct.length === 0) return EMPTY_FRONTIER;
-      if (direct.length === 1) return direct[0]!;
+
+      if (direct === undefined || direct.length === 0) {
+        return EMPTY_FRONTIER;
+      }
+
+      if (direct.length === 1) {
+        return direct[0]!;
+      }
+
       return createFrontier(Direct, direct.slice());
     }
 
-    if (this.direct === undefined && this.inheritedCount === 1)
+    if (this.direct === undefined && this.inheritedCount === 1) {
       return this.parts[0]!;
+    }
 
     return createFrontier(Composite, this.parts.slice());
   }
@@ -473,6 +605,7 @@ export function withFrontierCollector<T>(
 ): T {
   const parent = activeFrontierCollector;
   activeFrontierCollector = collector;
+
   try {
     return expression();
   } finally {

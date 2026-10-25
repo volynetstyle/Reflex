@@ -1,0 +1,4 @@
+{
+  "$comment": "Reference frameworks run next to reflex-dom on the same runner. Every shard always runs keyed/vanillajs and keyed/reflex-dom; list further frameworks of the release's build.zip here to add anchors (one array per parallel shard).",
+  "shards": [[]]
+}

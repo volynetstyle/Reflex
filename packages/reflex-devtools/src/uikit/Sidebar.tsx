@@ -100,7 +100,7 @@ export const Sidebar = () => {
         onClick={toggleExpanded}
         title={expanded() ? "Collapse sidebar" : "Expand sidebar"}
         aria-label={expanded() ? "Collapse sidebar" : "Expand sidebar"}
-        aria-expanded={expanded()}
+        aria-expanded={expanded() ? "true" : "false"}
       >
         {expanded() ? "‹" : "›"}
       </button>

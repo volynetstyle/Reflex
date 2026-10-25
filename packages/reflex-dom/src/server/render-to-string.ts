@@ -1,6 +1,5 @@
 import type {
   ComponentRenderable,
-  ElementProps,
   ElementRenderable,
   ElementTag,
   JSXRenderable,
@@ -11,12 +10,20 @@ import type {
   SwitchRenderable,
 } from "../operators";
 import { resolveShowValue, resolveSwitchValue } from "../operators";
+import { ENUMERATED_BOOLEAN_ATTRS, isAriaAttr } from "../host/attr";
 import { isEventProp } from "../host/events";
+import { isContentProp, isTextOnlyElement } from "../host/content";
 import { normalizeAttr } from "../host/aliases";
-import { resolveNamespace, type Namespace, URL_ATTRS } from "../host/namespace";
+import {
+  resolveChildNamespace,
+  resolveNamespace,
+  type Namespace,
+  URL_ATTRS,
+} from "../host/namespace";
 import { sanitizeURL } from "../host/sanitize";
 import { isVoidTag } from "../host/tags";
-import { RenderableKind } from "../renderable/kind";
+import { RenderableKind, isTextRenderableValue } from "../renderable/kind";
+import type { CompiledDOMRenderable } from "../renderable/compiled";
 import { wrapHydrationSlotMarkup } from "../renderable/markers";
 import type { StyleValue } from "../types";
 import { classifyRenderable } from "../renderable/classify";
@@ -40,6 +47,43 @@ const PLATFORM_PROPS = new Set<string>([
   "shadowRootRef",
 ]);
 
+/** Client-side properties with no content attribute; never serialized. */
+const PROPERTY_ONLY_PROPS = new Set<string>([
+  "currentTime",
+  "defaultPlaybackRate",
+  "indeterminate",
+  "playbackRate",
+  "preservesPitch",
+  "scrollLeft",
+  "scrollTop",
+  "selectedIndex",
+  "selectionDirection",
+  "selectionEnd",
+  "selectionStart",
+  "valueAsNumber",
+  "volume",
+]);
+
+/**
+ * Properties that reflect a differently named content attribute. The
+ * controlled prop of the same attribute (`value`, `checked`, ...) wins.
+ */
+const REFLECTED_DEFAULT_PROPS: Record<string, string | undefined> = {
+  defaultChecked: "checked",
+  defaultMuted: "muted",
+  defaultSelected: "selected",
+  defaultValue: "value",
+};
+
+interface SelectFrame {
+  readonly values: ReadonlySet<string>;
+  readonly multiple: boolean;
+  matched: boolean;
+}
+
+/** The `<select>` whose options are being serialized, if it has a `value`. */
+let activeSelect: SelectFrame | null = null;
+
 function escapeHtml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
@@ -49,6 +93,48 @@ function escapeHtml(value: string): string {
 
 function escapeAttribute(value: string): string {
   return escapeHtml(value).replaceAll('"', "&quot;");
+}
+
+/**
+ * Raw text of a `<script>` or `<style>`, which the parser does not unescape.
+ * An end tag in the text would close the element early, and `<!--<script>`
+ * would keep a later `</script>` from closing it; both are rewritten with
+ * escapes that keep the meaning: `\u0073` in JavaScript strings, regular
+ * expressions and JSON, and `\/` in CSS.
+ */
+function escapeRawText(tag: string, text: string): string {
+  return tag === "script"
+    ? text.replace(
+        /(<\/?)(s)(cript)/gi,
+        (_match, open: string, s: string, rest: string) =>
+          `${open}${s === "s" ? "\\u0073" : "\\u0053"}${rest}`,
+      )
+    : text.replace(/<\/(style)/gi, "<\\/$1");
+}
+
+/**
+ * CSS property name for a style key: custom and dashed names are kept, and
+ * CSSOM camel-cased (`backgroundColor`), vendor-cased (`webkitLineClamp`,
+ * `msTransform`, `MozAppearance`) and `cssFloat` names are converted to their dashed form.
+ */
+function toCSSPropertyName(key: string): string {
+  if (key.charCodeAt(0) === 45) return key;
+  if (key === "cssFloat") return "float";
+
+  const dashed = key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+  return dashed.startsWith("webkit-") || dashed.startsWith("ms-")
+    ? `-${dashed}`
+    : dashed;
+}
+
+/** `aria-*` attribute name for an ARIA reflection property (`ariaLabel`). */
+function toAriaAttributeName(name: string): string | null {
+  return name.length > 4 &&
+    name.startsWith("aria") &&
+    name.charCodeAt(4) >= 65 &&
+    name.charCodeAt(4) <= 90
+    ? `aria-${name.slice(4).toLowerCase()}`
+    : null;
 }
 
 function stringifyStyleValue(style: StyleValue): string {
@@ -66,12 +152,7 @@ function stringifyStyleValue(style: StyleValue): string {
       continue;
     }
 
-    const cssName =
-      key.charCodeAt(0) === 45 && key.charCodeAt(1) === 45
-        ? key
-        : key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-
-    entries.push(`${cssName}:${String(currentValue)}`);
+    entries.push(`${toCSSPropertyName(key)}:${String(currentValue)}`);
   }
 
   return entries.join(";");
@@ -137,7 +218,27 @@ function renderAttributes(
     }
 
     const resolvedValue = resolveServerValue(name, props[name]);
+
+    if (typeof resolvedValue === "boolean" && isAriaAttr(name)) {
+      attributes += ` ${name}="${resolvedValue ? "true" : "false"}"`;
+      continue;
+    }
+
+    if (namespace !== "svg") {
+      const enumerated = ENUMERATED_BOOLEAN_ATTRS[name];
+
+      if (enumerated !== undefined && typeof resolvedValue === "boolean") {
+        attributes += ` ${name}="${enumerated[resolvedValue ? 0 : 1]}"`;
+        continue;
+      }
+    }
+
     if (resolvedValue == null || resolvedValue === false) {
+      continue;
+    }
+
+    // The client assigns these as properties; they are serialized as content.
+    if (namespace !== "svg" && isContentProp(name)) {
       continue;
     }
 
@@ -159,7 +260,29 @@ function renderAttributes(
       continue;
     }
 
-    const attributeName = normalizeAttr(name);
+    let attributeName: string;
+
+    if (namespace === "svg") {
+      attributeName = normalizeAttr(name);
+    } else {
+      // `<select>` has no value attribute; options are marked instead.
+      if (PROPERTY_ONLY_PROPS.has(name) || (tag === "select" && name === "value")) {
+        continue;
+      }
+
+      const reflected = REFLECTED_DEFAULT_PROPS[name];
+
+      if (reflected !== undefined) {
+        if (resolveServerValue(reflected, props[reflected]) != null) {
+          continue;
+        }
+
+        attributeName = reflected;
+      } else {
+        attributeName = toAriaAttributeName(name) ?? normalizeAttr(name);
+      }
+    }
+
     const normalizedValue =
       URL_ATTRS.has(attributeName) && typeof resolvedValue === "string"
         ? sanitizeURL(resolvedValue)
@@ -192,6 +315,108 @@ function resolveTextareaContent(props: Record<string, unknown>): string | null {
   return value == null ? null : String(value);
 }
 
+/**
+ * Content set through `innerHTML`, `textContent` or `innerText`, in prop
+ * order: each assignment replaces the previous content, as on the client.
+ */
+function renderContentProps(
+  props: Record<string, unknown>,
+  namespace: Namespace,
+): string {
+  let html = "";
+
+  if (namespace === "svg") return html;
+
+  for (const name in props) {
+    if (!isContentProp(name)) continue;
+
+    const value = resolveServerValue(name, props[name]);
+
+    if (value == null || value === false) {
+      html = "";
+    } else {
+      html = name === "innerHTML" ? String(value) : escapeHtml(String(value));
+    }
+  }
+
+  return html;
+}
+
+/**
+ * Text that the children of a text-only element produce on the client,
+ * without hydration markers. Elements contribute no text.
+ */
+function renderTextContent(value: JSXRenderable | unknown): string {
+  switch (classifyRenderable(value)) {
+    case RenderableKind.Text:
+      return String(value);
+
+    case RenderableKind.Array: {
+      const items = Array.isArray(value)
+        ? value
+        : Array.from(value as Iterable<unknown>);
+      let text = "";
+
+      for (let index = 0; index < items.length; index++) {
+        text += renderTextContent(items[index]);
+      }
+
+      return text;
+    }
+
+    case RenderableKind.Accessor:
+      return renderTextContent((value as () => unknown)());
+
+    case RenderableKind.Show: {
+      const renderable = value as ShowRenderable<unknown>;
+      return renderTextContent(resolveShowValue(renderable, renderable.when()));
+    }
+
+    case RenderableKind.Switch: {
+      const renderable = value as SwitchRenderable<unknown>;
+      return renderTextContent(
+        resolveSwitchValue(renderable, renderable.value()),
+      );
+    }
+
+    case RenderableKind.For:
+      return renderTextContent(forServerRows(value as ForRenderable<unknown>));
+
+    case RenderableKind.Component: {
+      const renderable = value as ComponentRenderable<unknown>;
+      return runComponentRenderable(
+        renderable,
+        { owner: getActiveOwnerContext()! },
+        renderTextContent,
+      );
+    }
+
+    case RenderableKind.Compiled:
+      return renderTextContent((value as CompiledDOMRenderable).fallback());
+
+    case RenderableKind.Node: {
+      const node = value as Node;
+      return node.nodeType === 3 ? (node as Text).data : "";
+    }
+
+    default:
+      return "";
+  }
+}
+
+/** The renderables a `For` produces on the server: its rows, or the fallback. */
+function forServerRows(renderable: ForRenderable<unknown>): unknown {
+  const items = renderable.each() ?? [];
+  if (items.length === 0) return renderable.fallback;
+
+  return items.map((item, index) =>
+    renderable.children(
+      () => item,
+      () => index,
+    ),
+  );
+}
+
 /** Each row, or the fallback, gets its own slot so hydration can adopt it as a keyed record. */
 function renderForToString(
   renderable: ForRenderable<unknown>,
@@ -220,29 +445,138 @@ function renderForToString(
 }
 
 function renderElementToString(
-  renderable: ElementRenderable<ElementTag, ElementProps<ElementTag>>,
+  renderable: ElementRenderable<ElementTag, Record<string, unknown>>,
   parentNamespace: Namespace,
 ): string {
   const namespace = resolveNamespace(renderable.tag, parentNamespace);
+  const childNamespace = resolveChildNamespace(renderable.tag, namespace);
   const props = renderable.props as Record<string, unknown>;
-  const attributes = renderAttributes(renderable.tag, props, namespace);
+  let attributes = renderAttributes(renderable.tag, props, namespace);
+
+  if (
+    namespace === "html" &&
+    renderable.tag === "option" &&
+    activeSelect !== null &&
+    !/ selected(?:[ =]|$)/.test(attributes) &&
+    selectsOption(activeSelect, props)
+  ) {
+    attributes += " selected";
+  }
+
+  if (namespace === "html" && renderable.tag === "select") {
+    const previousSelect = activeSelect;
+    activeSelect = createSelectFrame(props);
+
+    try {
+      const childrenHtml = renderRenderableToString(
+        props.children,
+        childNamespace,
+      );
+      return `<select${attributes}>${childrenHtml}</select>`;
+    } finally {
+      activeSelect = previousSelect;
+    }
+  }
 
   if (isVoidTag(renderable.tag)) {
     return `<${renderable.tag}${attributes}>`;
   }
 
-  if (renderable.tag === "textarea") {
-    const textareaContent = resolveTextareaContent(props);
-    const childrenHtml =
-      textareaContent !== null
-        ? escapeHtml(textareaContent)
-        : renderRenderableToString(props.children, namespace);
+  // As on the client, a static scalar child replaces content props.
+  const content = isTextRenderableValue(props.children)
+    ? ""
+    : renderContentProps(props, namespace);
 
-    return `<${renderable.tag}${attributes}>${childrenHtml}</${renderable.tag}>`;
+  if (isTextOnlyElement(renderable.tag, namespace)) {
+    const text =
+      (renderable.tag === "textarea" ? resolveTextareaContent(props) : null) ??
+      renderTextContent(props.children);
+    const textHtml =
+      renderable.tag === "script" || renderable.tag === "style"
+        ? escapeRawText(renderable.tag, text)
+        : escapeHtml(text);
+
+    return `<${renderable.tag}${attributes}>${content}${textHtml}</${renderable.tag}>`;
   }
 
-  const childrenHtml = renderRenderableToString(props.children, namespace);
-  return `<${renderable.tag}${attributes}>${childrenHtml}</${renderable.tag}>`;
+  const childrenHtml = renderRenderableToString(props.children, childNamespace);
+  return `<${renderable.tag}${attributes}>${content}${childrenHtml}</${renderable.tag}>`;
+}
+
+/** Mirrors `applyControlledSelectValue` in `host/forms.ts`. */
+function createSelectFrame(props: Record<string, unknown>): SelectFrame | null {
+  const value = resolveServerValue("value", props.value);
+
+  if (value == null) {
+    return null;
+  }
+
+  const multiple = resolveServerValue("multiple", props.multiple) === true;
+  const values = Array.isArray(value)
+    ? value.map((entry) => String(entry))
+    : [String(value)];
+
+  return {
+    values: new Set(multiple || values[0] !== "" ? values : []),
+    multiple,
+    matched: false,
+  };
+}
+
+function collectOptionText(children: unknown): string | null {
+  const resolved = resolveServerValue("children", children);
+
+  if (resolved == null || typeof resolved === "boolean") return "";
+  if (typeof resolved === "string") return resolved;
+  if (typeof resolved === "number" || typeof resolved === "bigint") {
+    return String(resolved);
+  }
+
+  if (Array.isArray(resolved)) {
+    let text = "";
+
+    for (const child of resolved) {
+      const childText = collectOptionText(child);
+      if (childText === null) return null;
+      text += childText;
+    }
+
+    return text;
+  }
+
+  return null;
+}
+
+/** An option's value: its `value`, else its text with whitespace collapsed. */
+function resolveOptionValue(props: Record<string, unknown>): string | null {
+  const value = resolveServerValue("value", props.value);
+
+  if (value != null) {
+    return String(value);
+  }
+
+  const text = collectOptionText(props.children);
+  return text === null
+    ? null
+    : text.replace(/[\t\n\f\r ]+/g, " ").trim();
+}
+
+function selectsOption(
+  frame: SelectFrame,
+  props: Record<string, unknown>,
+): boolean {
+  if (!frame.multiple && frame.matched) {
+    return false;
+  }
+
+  const optionValue = resolveOptionValue(props);
+
+  if (optionValue === null || !frame.values.has(optionValue)) {
+    return false;
+  }
+
+  frame.matched = true;
+  return true;
 }
 
 function renderDynamicSlot(
@@ -318,7 +652,13 @@ function renderRenderableToString(
 
     case RenderableKind.Element:
       return renderElementToString(
-        value as ElementRenderable<ElementTag, ElementProps<ElementTag>>,
+        value as ElementRenderable<ElementTag, Record<string, unknown>>,
+        parentNamespace,
+      );
+
+    case RenderableKind.Compiled:
+      return renderRenderableToString(
+        (value as CompiledDOMRenderable).fallback(),
         parentNamespace,
       );
   }

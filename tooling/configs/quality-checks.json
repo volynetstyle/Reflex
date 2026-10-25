@@ -193,6 +193,31 @@
       "requiresBrowser": true
     },
     {
+      "id": "dom-compiler",
+      "name": "@volynets/reflex-dom-compiler",
+      "phase": "pr",
+      "buildDependencies": true,
+      "checks": [
+        {
+          "id": "lint",
+          "script": "lint"
+        },
+        {
+          "id": "typecheck",
+          "script": "typecheck"
+        },
+        {
+          "id": "test",
+          "script": "test"
+        },
+        {
+          "id": "test:browser",
+          "script": "test:browser"
+        }
+      ],
+      "requiresBrowser": true
+    },
+    {
       "id": "store",
       "name": "@volynets/reflex-store",
       "phase": "pr",

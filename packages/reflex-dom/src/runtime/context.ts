@@ -132,7 +132,7 @@ export function runInDOMCallbackScope<T>(
 export function dispatchDOMEvent(
   scope: DOMCallbackScope,
   handler: EventListenerOrEventListenerObject,
-  receiver: Element,
+  receiver: EventTarget,
   event: Event,
 ): void {
   runInDOMCallbackScope(scope, () => {
