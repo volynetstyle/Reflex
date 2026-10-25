@@ -111,16 +111,12 @@ export const legacyCounterProjection = {
   "projection.semantic.tracking.initial.first-hit": "trackingInitialFirstHit",
   "projection.semantic.tracking.initial.last-edge-shortcut":
     "trackingInitialLastEdgeShortcut",
-  "projection.semantic.tracking.outgoing.probe-hit":
-    "trackingOutgoingProbeHit1",
-  "projection.semantic.tracking.outgoing.probe-miss":
-    "trackingOutgoingProbeMiss",
   "projection.semantic.tracking.suffix.head-hit": "trackingSuffixHeadHit",
   "projection.semantic.tracking.suffix.reuse": "trackingSuffixReuseHit",
   "projection.semantic.tracking.suffix.link-new": "trackingSuffixLinkNew",
-  "projection.semantic.tracking.suffix.edge-scan": "trackingSuffixEdgesScanned",
   "projection.semantic.tracking.edge.move": "trackingEdgeMoved",
   "projection.semantic.tracking.suffix.detach": "trackingSuffixEagerDetach",
+  "projection.semantic.tracking.locate.step": "trackingLocateSteps",
   "projection.semantic.cleanup.invoke": "cleanupCalls",
   "projection.semantic.cleanup.skip": "cleanupSkipped",
   "projection.semantic.cleanup.edge.drop": "cleanupEdgesDropped",

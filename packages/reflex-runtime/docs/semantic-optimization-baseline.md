@@ -51,7 +51,7 @@ Baseline in-memory trace `selector, alternatingDependency, stable[0..63]`: on th
 
 **Observed:** Caller reads `tailIn` to derive version; resolver reads it again. Cursor duplicate writes supplied version back to the same edge.
 
-**Invariant / proof:** Protocol argument is `consumer.tailIn?.version ?? trackingEpoch`. With non-null cursor, version equals cursor version; there is no intervening production callback. Cursor-hit assignment writes existing value.
+**Invariant / proof:** Protocol argument is `consumer.tailIn?.version ?? trackingStamp`. With non-null cursor, version equals cursor version; there is no intervening production callback. Cursor-hit assignment writes existing value.
 
 **Counterexample:** Direct internal resolver call may supply another version; global removal invalid.
 

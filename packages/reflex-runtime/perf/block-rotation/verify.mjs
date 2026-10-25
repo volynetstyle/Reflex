@@ -97,7 +97,7 @@ for (const variant of ["move", "rotate"]) {
         }
         assert.deepEqual(incoming(consumer), expected);
         assert.equal(consumer.tailIn, requested);
-        assert.equal(requested.version, 77);
+        assert.equal(requested.stamp, 77);
         sources.forEach((x, i) =>
           assert.deepEqual(
             [x.firstOut, x.lastOut, x.firstOut.nextOut, x.lastOut.prevOut],

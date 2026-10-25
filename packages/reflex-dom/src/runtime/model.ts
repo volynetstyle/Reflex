@@ -17,7 +17,7 @@ import { untracked } from "@volynets/reflex-runtime";
 import {
   getActiveDOMContext,
   getDefaultDOMRuntime,
-  withDOMContext,
+  swapDOMContext,
 } from "./context";
 
 const READABLE_TYPE: unique symbol = Symbol("reflex.model.readable");
@@ -418,18 +418,22 @@ export function defineModel<Args extends unknown[], Shape extends object>(
       action(fn) {
         assertOpen();
         const action = function (this: unknown, ...actionArgs: unknown[]) {
-          assertOpen();
-          if (isShuttingDown(node)) return undefined as ReturnType<typeof fn>;
+          if (isShuttingDown(node)) {
+            assertOpen();
+            return undefined as ReturnType<typeof fn>;
+          }
           return runBatch(() =>
-            untracked(() =>
-              runWithOwner(owner, node, () =>
-                domContext === null
-                  ? assertSynchronous(Reflect.apply(fn, this, actionArgs))
-                  : withDOMContext(domContext, () =>
-                      assertSynchronous(Reflect.apply(fn, this, actionArgs)),
-                    ),
-              ),
-            ),
+            untracked(() => {
+              const previousContext =
+                domContext === null ? null : swapDOMContext(domContext);
+              try {
+                return runWithOwner(owner, node, () =>
+                  assertSynchronous(Reflect.apply(fn, this, actionArgs)),
+                );
+              } finally {
+                if (domContext !== null) swapDOMContext(previousContext);
+              }
+            }),
           );
         };
         markCapability(action, ACTION_TYPE);

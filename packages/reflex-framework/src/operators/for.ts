@@ -10,9 +10,8 @@ export interface ForProps<T, Host = never> {
   /** Stable, unique row identity used to preserve nodes and ownership across edits. */
   by: (item: T, index: number) => PropertyKey;
   /**
-   * Creates the renderable for one row, once per key. `item` and `index`
-   * are accessors: a new item object with the same key, or a new position,
-   * updates what reads them instead of recreating the row.
+   * Creates a row once per key. `item` and `index` are accessors: a new item
+   * object with the same key or a move updates them without recreating the row.
    */
   children: (item: Accessor<T>, index: Accessor<number>) => JSXRenderable<Host>;
   /** Content rendered when the list is empty. */

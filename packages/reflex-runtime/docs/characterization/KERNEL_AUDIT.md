@@ -80,7 +80,7 @@ nodes after a wave; capacity is trimmed back to 512 at the outermost exit.
 
 **Slow paths.** `markComputingSubscriber` (backward scan to decide whether
 the edge lies in the tracked prefix) is isolated. Replacing the scan with a
-stamp comparison (`edge.version === sub.tailIn.version`) was considered and
+stamp comparison (`edge.stamp === sub.tailIn.stamp`) was considered and
 rejected: it is exact only modulo epoch wraparound, and watcher validation
 sets `tailIn = lastIn`, where stamps do not describe the prefix.
 
@@ -93,6 +93,15 @@ the depth is 0 or 1 outside tests. See §12 H8.
 **Reachable states.** Same as §2 plus a running reader: a computed reader
 has `Computing`; a running watcher keeps `Changed` throughout execution, so
 the walk skips it (no self-delivery, F8/I8).
+
+**Correction (F17).** The argument above covers the execution epoch only. A
+watcher in `pull_frontier` holds `Watcher | Unknown | Computing` without
+`Changed`, and the host has already released `Scheduled`. An `advance` inside
+the proof whose node has a side edge into that watcher therefore reached the
+delivery branch. The owned parent edge excluded only the walker's own edge,
+so the old proof held for trees, not for DAGs. The delivery guard now tests
+`Scheduled | Computing`. The bit test sits inside the watcher-and-hook branch,
+so the computed path through this walk is unchanged.
 
 **Owned edge.** The pull walker passes the edge it owns; the walk marks all
 other subscribers. A foreign or unlinked `skip` is never matched, and every
@@ -114,7 +123,7 @@ holds the previous dependencies.
 
 **Stamp.** The pass stamp is the cursor edge's stamp, or the current epoch
 for the first read (INVARIANTS §4). Before H2 every caller computed it
-(`consumer.tailIn?.version ?? trackingEpoch`) and `resolveTrackedRead`
+(`consumer.tailIn?.version ?? trackingStamp`) and `resolveTrackedRead`
 reloaded `tailIn`; the resolver now derives it (§12 H2). The cursor-hit
 store `cursorEdge.version = producerVersion` wrote the value it had just read
 and is gone. F10: edge creation stored `version | 0`, reuse stored the uint32
@@ -124,6 +133,12 @@ epoch; past 2^31 one pass carried two stamps (fixed).
 duplicate), first hit, empty list; cold: append, one-hop and two-hop
 reorder, last-edge shortcut, prefix duplicate (bounded 32-edge scan with a
 version fallback), slow strategy. Their measured frequencies are in §11.
+
+_Superseded (2026-10-24):_ the prefix duplicate test and the default
+strategy's suffix scan are replaced by one exact pair lookup
+(`findEdgeInLockstep`, bounded by the shorter adjacency list) and a stamp
+classification (INV-T3, `isEdgeInTrackedPrefix`). The produced graph is
+identical, including eager detachment; see the tracking README.
 
 **Unreachable or dead.** `allowSlowPath = false` had no runtime caller (F3,
 removed with H2). The empty-suffix exit of `cleanupUnvisitedSources` is
@@ -231,7 +246,7 @@ both sides of every comparison: no growth.
 
 ## 10. Execution registers and settlement (`state.ts`, `context.scope.ts`, `batch.ts`)
 
-**Registers.** `currentConsumer`, `trackingEpoch`, `propagationScopeDepth`,
+**Registers.** `currentConsumer`, `trackingStamp`, `propagationScopeDepth`,
 `reactiveBatchDepth` and `runtimeState` are exported module bindings; each
 access goes through a module variable cell. The `Tracking` bit of
 `runtimeState` is redundant with `currentConsumer !== null` (every writer
@@ -445,7 +460,8 @@ loses its tail entirely, an inlining effect of the microbenchmark.
 | `runtimeState & Tracking` ⇔ `currentConsumer !== null`                                    | every writer of `currentConsumer` updates the bit in step; a context load restores both from one save | derive the bit; −3…−9% on graph workloads         | implemented and tested (H9), deferred |
 | propagation depth ∈ {0, 1}; `Propagating` ⇔ depth ≠ 0                                     | only `writeProducer` opens a scope, only at depth 0; snapshots restore only at quiescent boundaries   | specialize enter and leave                        | no gain beyond H9; rejected           |
 | INV-T1: with a cursor, `firstIn` is in the tracked prefix                                 | the prefix runs from `firstIn` to the cursor                                                          | `firstIn.from === P` alone proves a duplicate     | candidate, part of the F13 fix        |
-| INV-T2: with the cursor at `lastIn`, every edge P→C is in the prefix                      | the suffix is empty; at most one edge per pair                                                        | duplicate test = existence of P→C, without stamps | candidate, part of the F13 fix        |
+| INV-T2: with the cursor at `lastIn`, every edge P→C is in the prefix                      | the suffix is empty; at most one edge per pair                                                        | duplicate test = existence of P→C, without stamps | implemented (tail miss, 2026-10-24)   |
+| INV-T3: with a nonempty suffix and stamp S ≠ 0, an edge is in the prefix iff it carries S | accepts stamp S; suffix stamps come from earlier passes; the clock only moves forward (F13 fixed)     | O(1) prefix test for any located edge             | implemented (tracking README)         |
 | At rest, the incoming edges of a consumer carry its last pass stamp, unless a pass failed | each pass stamps what it accepts and cleanup removes the rest; a failed pass skips cleanup            | an O(1) collision test in the cold fallback       | candidate, part of the F13 fix        |
 
 **Hypotheses falsified.**
@@ -465,13 +481,13 @@ a suffix edge, the version fallback of the duplicate test (after the
 32-edge prefix scan misses) takes the stale edge for an accepted one. The
 read is dropped, cleanup unlinks the edge, and the dependency is lost:
 later writes to that producer leave the consumer stale. Reproduced on the
-shipped code: 40 sources, the epoch rewound with `setTrackingEpoch` so the
+shipped code: 40 sources, the epoch rewound with `setTrackingStamp` so the
 next pass repeats the previous stamp, a reorder that defeats the next,
 one-hop, two-hop and last-edge tiers; after a write to the dropped source
 the consumer returns 633 instead of 1595. Natural occurrence needs the
 epoch to wrap exactly onto the previous stamp of the consumer (about 2^−32
 per recompute of a consumer idle for at least 2^32 passes);
-`setTrackingEpoch` makes it deterministic. The baseline shares the defect,
+`setTrackingStamp` makes it deterministic. The baseline shares the defect,
 so the oracle cannot see it.
 
 **Conclusion.** Within the current model and its observable contract

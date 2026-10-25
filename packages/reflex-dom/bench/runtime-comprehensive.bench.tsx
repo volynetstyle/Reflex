@@ -131,7 +131,7 @@ describe("End-to-end DOM regression", () => {
     return (
       <ul>
         <For each={items} by={(item) => item.id}>
-          {(item) => <li>{() => item().label}</li>}
+          {(item) => <li>{item().label}</li>}
         </For>
       </ul>
     );

@@ -239,10 +239,8 @@ export async function execute(
         model.write(value);
       };
     } else if (program.source === "context") {
-      const owner = getActiveOwnerContext()!;
-      const node = owner.currentNode!;
-      provideContext(node, ValueContext, raw);
-      read = useContext(node, ValueContext)!;
+      provideContext(ValueContext, raw);
+      read = useContext(ValueContext)!;
     } else if (program.source === "ref") {
       const ref = useRef(0);
       read = () => {

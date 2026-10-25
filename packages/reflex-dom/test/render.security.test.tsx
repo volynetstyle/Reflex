@@ -81,7 +81,10 @@ describe("renderToString security and server behavior", () => {
     );
     expect(html).toContain("<!--reflex-slot-start-->B<!--reflex-slot-end-->");
     expect(html).toContain(
-      "<!--reflex-slot-start--><em>1</em><em>2</em><!--reflex-slot-end-->",
+      "<!--reflex-slot-start-->" +
+        "<!--reflex-slot-start--><em>1</em><!--reflex-slot-end-->" +
+        "<!--reflex-slot-start--><em>2</em><!--reflex-slot-end-->" +
+        "<!--reflex-slot-end-->",
     );
     expect(html).not.toContain("ignored");
   });

@@ -150,16 +150,13 @@ export function setAttr(
   name: string,
   value: unknown,
   ns: Namespace,
-  prev?: unknown,
-): unknown {
-  if (value === prev) return prev;
-
+): void {
   if (typeof value === "boolean") {
     // ARIA true/false states are the tokens "true"/"false"; an empty or
     // missing attribute means "not set", not false.
     if (isAriaAttr(name)) {
       el.setAttribute(name, value ? "true" : "false");
-      return value;
+      return;
     }
 
     if (ns !== "svg") {
@@ -167,7 +164,7 @@ export function setAttr(
 
       if (tokens !== undefined) {
         el.setAttribute(name, tokens[value ? 0 : 1]);
-        return value;
+        return;
       }
     }
   }
@@ -181,7 +178,7 @@ export function setAttr(
       el.setAttributeNS(XLINK_NS, "href", normalizeURLAttr(name, value) + "");
     }
 
-    return value;
+    return;
   }
 
   if (
@@ -197,7 +194,7 @@ export function setAttr(
       setProperty(el, name, value);
     }
 
-    return value;
+    return;
   }
 
   if (remove) {
@@ -205,6 +202,4 @@ export function setAttr(
   } else {
     setPlainAttribute(el, name, value);
   }
-
-  return value;
 }

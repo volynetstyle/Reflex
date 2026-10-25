@@ -980,8 +980,7 @@ const trackingRouteCounters = [
   "trackingInitialLastEdgeShortcut",
   "trackingSlowPath",
   "trackingSlowPathBlocked",
-  "trackingOutgoingProbeHit1",
-  "trackingOutgoingProbeMiss",
+  "trackingLocateSteps",
 ] as const satisfies readonly (keyof RuntimeProfileCounters)[];
 
 const profileScenarios: ProfileScenario[] = [
@@ -1512,11 +1511,8 @@ function formatTrackingRow(
     "ns/slowPath": formatNs(
       elapsedPer(row.elapsedNs, counters.trackingSlowPath),
     ),
-    "ns/outgoingProbe": formatNs(
-      elapsedPer(
-        row.elapsedNs,
-        counters.trackingOutgoingProbeHit1 + counters.trackingOutgoingProbeMiss,
-      ),
+    "ns/locateStep": formatNs(
+      elapsedPer(row.elapsedNs, counters.trackingLocateSteps),
     ),
   };
 

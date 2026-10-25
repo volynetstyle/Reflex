@@ -7,7 +7,7 @@ import {
   type ProducerNode,
 } from "@volynets/reflex-runtime";
 import {
-  currentConsumer,
+  isTracking,
   disposeNode,
   enterReactiveBatch,
   leaveReactiveBatch,
@@ -40,8 +40,6 @@ export interface PortOptions {
 }
 
 export interface DomainPort<T> {
-  /** The mirror producer, owned by the target domain. */
-  readonly local: ProducerNode<T | undefined>;
   /** Last delivered version; 0 before the first delivery. */
   readonly version: number;
   /** Last published version. */
@@ -49,12 +47,25 @@ export interface DomainPort<T> {
   readonly closed: boolean;
   /** Managed mirror read. */
   read(): T | undefined;
+  /** Last delivered value, read without tracking. */
+  peek(): T | undefined;
   publish(value: T): void;
   /** Applies an externally transported message (same version rule). */
   deliver(message: PortMessage<T>): boolean;
   /** Delivers pending messages synchronously. */
   flush(): void;
   close(): void;
+}
+
+const portMirrors = new WeakMap<DomainPort<unknown>, ProducerNode<unknown>>();
+
+/** The target-domain mirror producer; for this package and its tests only. */
+export function portMirror<T>(
+  port: DomainPort<T>,
+): ProducerNode<T | undefined> {
+  return portMirrors.get(port as DomainPort<unknown>) as ProducerNode<
+    T | undefined
+  >;
 }
 
 export class PortClosedError extends Error {
@@ -182,7 +193,6 @@ export function createPort<T>(
   };
 
   const port: DomainPort<T> = {
-    local,
     get version() {
       return version;
     },
@@ -195,7 +205,7 @@ export function createPort<T>(
     read() {
       if (
         __DEV__ &&
-        currentConsumer !== null &&
+        isTracking() &&
         getActiveRuntimeContext() !== target.domain.context
       ) {
         throw new Error(
@@ -203,6 +213,9 @@ export function createPort<T>(
         );
       }
       return readProducer(local);
+    },
+    peek() {
+      return local.payload;
     },
     publish(value) {
       if (closed) throw new PortClosedError();
@@ -252,5 +265,6 @@ export function createPort<T>(
     );
   }
 
+  portMirrors.set(port as DomainPort<unknown>, local as ProducerNode<unknown>);
   return port;
 }

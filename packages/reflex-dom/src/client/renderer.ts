@@ -25,14 +25,39 @@ export interface DOMRenderer {
   render(input: JSXRenderable, container: Container): Cleanup;
   mount(input: JSXRenderable, container: Container): Cleanup;
   resume(container: Container): Cleanup;
+  /** `true` after `dispose()`. */
+  readonly disposed: boolean;
+  /**
+   * Disposes every root this renderer still owns, then closes its execution
+   * domain. Later render, hydrate, mount and resume calls throw.
+   */
+  dispose(): void;
 }
 
 export function createDOMRenderer(options?: DOMRuntimeOptions): DOMRenderer {
   const execution = createDOMContext(options);
-  const operation = (fn: () => Cleanup): Cleanup => {
+  // The latest disposer per container; replacing a root retires the old one.
+  const roots = new Map<Container, Cleanup>();
+  let disposed = false;
+  const track = (container: Container, dispose: Cleanup): Cleanup => {
+    const tracked = (() => {
+      // dispose() already released this root and closed the domain.
+      if (disposed) return;
+      if (roots.get(container) === tracked) roots.delete(container);
+      dispose();
+    }) as Cleanup;
+    tracked.dispose = tracked;
+    roots.set(container, tracked);
+    return tracked;
+  };
+  const operation = (container: Container, fn: () => Cleanup): Cleanup => {
+    if (disposed) throw new Error("The DOM renderer is disposed.");
     let dispose: Cleanup | undefined;
     try {
-      return runDOMOperation(execution, () => (dispose = fn()));
+      return track(
+        container,
+        runDOMOperation(execution, () => (dispose = fn())),
+      );
     } catch (error) {
       // Mounted effects can fail while the public operation's batch closes.
       dispose?.();
@@ -40,7 +65,7 @@ export function createDOMRenderer(options?: DOMRuntimeOptions): DOMRenderer {
     }
   };
   const render = (input: JSXRenderable, container: Container) =>
-    operation(() =>
+    operation(container, () =>
       replaceRoot(execution, container, (anchors) =>
         mountOwnedRange(
           container,
@@ -58,7 +83,7 @@ export function createDOMRenderer(options?: DOMRuntimeOptions): DOMRenderer {
     batch: (fn) => execution.runtime.batch(fn),
     flush: () => execution.runtime.flush(),
     hydrate(input, container) {
-      return operation(() =>
+      return operation(container, () =>
         replaceRoot(
           execution,
           container,
@@ -71,6 +96,7 @@ export function createDOMRenderer(options?: DOMRuntimeOptions): DOMRenderer {
     mount: render,
     resume(container) {
       return operation(
+        container,
         () =>
           existingRootCleanup(execution, container) ??
           replaceRoot(
@@ -80,6 +106,20 @@ export function createDOMRenderer(options?: DOMRuntimeOptions): DOMRenderer {
             true,
           ),
       );
+    },
+    get disposed() {
+      return disposed;
+    },
+    dispose() {
+      if (disposed) return;
+      const owned = Array.from(roots.values());
+      try {
+        for (const dispose of owned) dispose();
+      } finally {
+        disposed = true;
+        roots.clear();
+        execution.runtime.domain.close();
+      }
     },
   };
 }

@@ -34,9 +34,9 @@ describe("host security and DOM helpers", () => {
     const input = document.createElement("input");
 
     setAttr(button, "disabled", true, "html");
-    setAttr(button, "disabled", false, "html", true);
+    setAttr(button, "disabled", false, "html");
     setAttr(input, "value", "hello", "html");
-    setAttr(input, "value", null, "html", "hello");
+    setAttr(input, "value", null, "html");
 
     expect(button.disabled).toBe(false);
     expect(button.hasAttribute("disabled")).toBe(false);

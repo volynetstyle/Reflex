@@ -380,9 +380,7 @@ function renderTextContent(value: JSXRenderable | unknown): string {
     }
 
     case RenderableKind.For:
-      return renderTextContent(
-        resolveForServerValue(value as ForRenderable<unknown>),
-      );
+      return renderTextContent(forServerRows(value as ForRenderable<unknown>));
 
     case RenderableKind.Component: {
       const renderable = value as ComponentRenderable<unknown>;
@@ -406,14 +404,10 @@ function renderTextContent(value: JSXRenderable | unknown): string {
   }
 }
 
-function resolveForServerValue(
-  renderable: ForRenderable<unknown>,
-): JSXRenderable {
+/** The renderables a `For` produces on the server: its rows, or the fallback. */
+function forServerRows(renderable: ForRenderable<unknown>): unknown {
   const items = renderable.each() ?? [];
-
-  if (items.length === 0) {
-    return renderable.fallback;
-  }
+  if (items.length === 0) return renderable.fallback;
 
   return items.map((item, index) =>
     renderable.children(
@@ -421,6 +415,33 @@ function resolveForServerValue(
       () => index,
     ),
   );
+}
+
+/** Each row, or the fallback, gets its own slot so hydration can adopt it as a keyed record. */
+function renderForToString(
+  renderable: ForRenderable<unknown>,
+  namespace: Namespace,
+): string {
+  const items = renderable.each() ?? [];
+
+  if (items.length === 0) {
+    return renderable.fallback == null
+      ? ""
+      : renderDynamicSlot(renderable.fallback, namespace);
+  }
+
+  let html = "";
+  for (let index = 0; index < items.length; index++) {
+    const item = items[index];
+    html += renderDynamicSlot(
+      renderable.children(
+        () => item,
+        () => index,
+      ),
+      namespace,
+    );
+  }
+  return html;
 }
 
 function renderElementToString(
@@ -613,9 +634,8 @@ function renderRenderableToString(
     }
 
     case RenderableKind.For:
-      return renderDynamicSlot(
-        resolveForServerValue(value as ForRenderable<unknown>),
-        parentNamespace,
+      return wrapHydrationSlotMarkup(
+        renderForToString(value as ForRenderable<unknown>, parentNamespace),
       );
 
     case RenderableKind.Portal:

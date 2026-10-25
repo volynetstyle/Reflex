@@ -2,6 +2,7 @@ import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
+import { findEdgeInLockstep } from "./findEdge";
 import { linkEdge } from "./linkEdge";
 import { unlinkDetachedIncomingEdgeSequence } from "./sweepEdges";
 
@@ -46,15 +47,16 @@ function moveIncomingEdgeToPosition(
   insertAfterEdge.nextIn = edge;
 }
 
-function findOutgoingEdgeToConsumer(
-  producer: ReactiveNode,
-  consumer: ReactiveNode,
-): ReactiveEdge | null {
-  for (let edge = producer.firstOut; edge !== null; edge = edge.nextOut) {
-    if (edge.to === consumer) return edge;
+/** Whether `edge` and its successors hold at least `count` incoming edges. */
+function hasIncomingRun(edge: ReactiveEdge, count: number): boolean {
+  let current: ReactiveEdge | null = edge;
+
+  for (let seen = 0; seen < count; ++seen) {
+    if (current === null) return false;
+    current = current.nextIn;
   }
 
-  return null;
+  return true;
 }
 
 function detachIncomingSuffix(
@@ -78,46 +80,73 @@ function detachIncomingSuffix(
 }
 
 /**
+ * Commit a read whose edge has already been located.
+ *
+ * `edge` is the result of an exact lookup of `producer -> consumer` that is
+ * known not to lie in the tracked prefix: an existing edge is in the suffix
+ * and is moved after `insertAfterEdge`; `null` means the pair has no edge and
+ * a new one is linked there.
+ *
+ * Eager suffix detachment is a retained policy, not a search bound. When a new
+ * dependency is linked in front of a suffix of at least 32 edges, the suffix
+ * is unlinked at once and later reads of its producers link new edges at the
+ * end of their outgoing lists. Which edge survives decides subscriber order,
+ * so the rule reproduces the earlier scan-based reconciliation exactly: that
+ * scan detached after missing on 32 suffix edges, except when its outgoing
+ * probe had already proved absence from an empty outgoing list with a nonzero
+ * stamp.
+ */
+export function reuseLocatedIncomingEdgeOrLink(
+  producer: ReactiveNode,
+  consumer: ReactiveNode,
+  insertAfterEdge: ReactiveEdge | null,
+  suffixStartEdge: ReactiveEdge | null,
+  passStamp: number,
+  edge: ReactiveEdge | null,
+): ReactiveEdge {
+  if (edge !== null) {
+    moveIncomingEdgeToPosition(consumer, edge, insertAfterEdge);
+    edge.stamp = passStamp;
+
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.tracking.suffix.reuse");
+    return edge;
+  }
+
+  if (
+    suffixStartEdge !== null &&
+    (passStamp === 0 || producer.firstOut !== null) &&
+    hasIncomingRun(suffixStartEdge, EAGER_STALE_SUFFIX_CLEANUP_MIN) === true
+  ) {
+    detachIncomingSuffix(consumer, insertAfterEdge, suffixStartEdge);
+  }
+
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.tracking.suffix.link-new");
+  return linkEdge(producer, consumer, insertAfterEdge, passStamp);
+}
+
+/**
  * Resolve a producer -> consumer incoming edge relative to a known insertion
- * position.
+ * position: the default read tracking strategy.
  *
- * The function tries to reuse an existing edge from the remaining incoming
- * suffix. If no such edge exists, it links a new edge after `insertAfterEdge`.
+ * Precondition: `producer` was not read earlier in this pass, so any existing
+ * edge of the pair lies in the suffix that starts at `suffixStartEdge` (the
+ * whole incoming list when it is `null`).
  *
- * This is the general reconciliation helper used after optimistic fast paths
- * fail or by a selected read tracking strategy.
- *
- * Levels:
- *
- * R0: suffix head hit
- *     The expected suffix edge already points from the producer.
- *
- * R0.5: first outgoing edge hit
- *     Before scanning the consumer suffix, check the producer's first outgoing
- *     edge as the cheapest existing graph lookup.
- *
- * R1: suffix scan and reuse
- *     Search the remaining suffix for an existing producer edge and move it
- *     after the insertion point if needed.
- *
- * R2: suffix miss
- *     No reusable edge exists, so link a new incoming edge.
+ * The suffix head is compared directly. Otherwise the edge is located by a
+ * lockstep walk of the producer's outgoing list and the rest of the suffix,
+ * and reused or linked by `reuseLocatedIncomingEdgeOrLink`.
  */
 export function reuseIncomingEdgeFromSuffixOrLink(
   producer: ReactiveNode,
   consumer: ReactiveNode,
   insertAfterEdge: ReactiveEdge | null,
   suffixStartEdge: ReactiveEdge | null,
-  producerVersion = 0,
+  passStamp = 0,
 ): ReactiveEdge {
-  /**
-   * R0: Suffix head hit.
-   *
-   * The first candidate in the suffix already matches the producer.
-   * No list mutation is needed.
-   */
   if (suffixStartEdge !== null && suffixStartEdge.from === producer) {
-    suffixStartEdge.version = producerVersion;
+    suffixStartEdge.stamp = passStamp;
     if (__PROFILE__)
       observeRuntimeProjection?.(
         "projection.semantic.tracking.suffix.head-hit",
@@ -125,146 +154,21 @@ export function reuseIncomingEdgeFromSuffixOrLink(
     return suffixStartEdge;
   }
 
-  /**
-   * R0.5: First outgoing edge hit.
-   *
-   * This is not an index and does not scan the producer's outgoing list.
-   * It only reuses the first outgoing edge when it already points to this
-   * consumer, which covers the fanout-1 pathological reorder cases cheaply.
-   */
-  if (producerVersion !== 0) {
-    const edge = producer.firstOut;
-    if (edge === null) {
-      // No outgoing edges proves absence from this consumer. Keep the suffix:
-      // subsequent reads may still reuse it before final stale cleanup.
-      if (__PROFILE__)
-        observeRuntimeProjection?.(
-          "projection.semantic.tracking.outgoing.probe-miss",
-        );
-      if (__PROFILE__)
-        observeRuntimeProjection?.(
-          "projection.semantic.tracking.suffix.link-new",
-        );
-      return linkEdge(producer, consumer, insertAfterEdge, producerVersion);
-    }
-    if (edge.to !== consumer) {
-      if (__PROFILE__)
-        observeRuntimeProjection?.(
-          "projection.semantic.tracking.outgoing.probe-miss",
-        );
-    } else if (edge.version !== producerVersion) {
-      moveIncomingEdgeToPosition(consumer, edge, insertAfterEdge);
-      edge.version = producerVersion;
-      if (__PROFILE__)
-        observeRuntimeProjection?.(
-          "projection.semantic.tracking.outgoing.probe-hit",
-        );
-      return edge;
-    }
-  }
+  const edge = findEdgeInLockstep(
+    producer,
+    consumer,
+    null,
+    suffixStartEdge === null ? consumer.firstIn : suffixStartEdge.nextIn,
+  );
 
-  return /* @__NOINLINE__ */ reconcileIncomingSuffix(
+  return reuseLocatedIncomingEdgeOrLink(
     producer,
     consumer,
     insertAfterEdge,
     suffixStartEdge,
-    producerVersion,
+    passStamp,
+    edge,
   );
-}
-
-/** Full scans and eager detachment stay out of the direct-reuse hot path. */
-function reconcileIncomingSuffix(
-  producer: ReactiveNode,
-  consumer: ReactiveNode,
-  insertAfterEdge: ReactiveEdge | null,
-  suffixStartEdge: ReactiveEdge | null,
-  producerVersion: number,
-): ReactiveEdge {
-  /**
-   * R1: Suffix scan.
-   *
-   * Start after the suffix head if it exists, otherwise scan from the
-   * beginning of the incoming list.
-   */
-  let scannedSuffixEdges = suffixStartEdge === null ? 0 : 1;
-  const outgoingProbeAt =
-    suffixStartEdge !== null && producerVersion !== 0
-      ? EAGER_STALE_SUFFIX_CLEANUP_MIN
-      : -1;
-
-  for (
-    let candidateEdge =
-      suffixStartEdge === null ? consumer.firstIn : suffixStartEdge.nextIn;
-    candidateEdge !== null;
-    candidateEdge = candidateEdge.nextIn
-  ) {
-    scannedSuffixEdges += 1;
-    if (__PROFILE__)
-      observeRuntimeProjection?.(
-        "projection.semantic.tracking.suffix.edge-scan",
-      );
-
-    if (candidateEdge.from !== producer) {
-      if (scannedSuffixEdges === outgoingProbeAt) {
-        const producerEdge = findOutgoingEdgeToConsumer(producer, consumer);
-
-        if (producerEdge === null) {
-          detachIncomingSuffix(consumer, insertAfterEdge, suffixStartEdge!);
-          if (__PROFILE__)
-            observeRuntimeProjection?.(
-              "projection.semantic.tracking.suffix.link-new",
-            );
-          return linkEdge(producer, consumer, insertAfterEdge, producerVersion);
-        }
-
-        if (producerEdge.version !== producerVersion) {
-          if (producerEdge.prevIn !== insertAfterEdge) {
-            moveIncomingEdgeToPosition(consumer, producerEdge, insertAfterEdge);
-          }
-
-          producerEdge.version = producerVersion;
-          return producerEdge;
-        }
-      }
-
-      continue;
-    }
-
-    /**
-     * Reuse the existing edge.
-     *
-     * If it is not already after the requested insertion point,
-     * move it into the current tracked order.
-     */
-    if (candidateEdge.prevIn !== insertAfterEdge) {
-      moveIncomingEdgeToPosition(consumer, candidateEdge, insertAfterEdge);
-    }
-
-    candidateEdge.version = producerVersion;
-    if (__PROFILE__)
-      observeRuntimeProjection?.("projection.semantic.tracking.suffix.reuse");
-    return candidateEdge;
-  }
-
-  /**
-   * R2: Suffix miss.
-   *
-   * The producer was not found in the reusable suffix, so this read introduces
-   * a new dependency edge. Once a full suffix scan misses, the previous suffix
-   * cannot contribute to the current tracked order anymore. Detach it eagerly
-   * so branch-swap/churn patterns pay one stale-suffix scan instead of one scan
-   * per newly introduced dependency.
-   */
-  if (
-    suffixStartEdge !== null &&
-    scannedSuffixEdges >= EAGER_STALE_SUFFIX_CLEANUP_MIN
-  ) {
-    detachIncomingSuffix(consumer, insertAfterEdge, suffixStartEdge);
-  }
-
-  if (__PROFILE__)
-    observeRuntimeProjection?.("projection.semantic.tracking.suffix.link-new");
-  return linkEdge(producer, consumer, insertAfterEdge, producerVersion);
 }
 
 export const reuseIncomingEdgeFromSuffixOrCreate =

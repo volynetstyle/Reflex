@@ -1,6 +1,8 @@
 import {
   createOwnerContext,
+  runWithOwner,
   type OwnerContext,
+  type OwnershipNode,
 } from "@volynets/reflex-framework";
 import {
   createRendererRuntime,
@@ -14,15 +16,6 @@ export interface DOMContext {
   readonly runtime: RuntimeInstance;
   readonly owner: OwnerContext;
   readonly mountEffects: MountEffects;
-  /**
-   * Runs an element's event listener as a DOM operation of this context. One
-   * function per context, shared by every listener the context binds.
-   */
-  readonly dispatchEvent: (
-    handler: EventListenerOrEventListenerObject,
-    receiver: EventTarget,
-    event: Event,
-  ) => void;
 }
 
 let activeContext: DOMContext | null = null;
@@ -57,8 +50,6 @@ export function createDOMContext(options?: DOMRuntimeOptions): DOMContext {
     // switch domains.
     owner: createOwnerContext(runtime.domain),
     mountEffects,
-    dispatchEvent: (handler, receiver, event) =>
-      dispatchDOMEvent(context, handler, receiver, event),
   };
   return context;
 }
@@ -70,6 +61,13 @@ export function getDOMContext(): DOMContext {
 
 export function getActiveDOMContext(): DOMContext | null {
   return activeContext;
+}
+
+/** Low-level scope entry; callers restore the returned context in finally. */
+export function swapDOMContext(context: DOMContext | null): DOMContext | null {
+  const previous = activeContext;
+  activeContext = context;
+  return previous;
 }
 
 export function withDOMContext<T>(context: DOMContext, fn: () => T): T {
@@ -90,18 +88,54 @@ export function runDOMOperation<A extends unknown[], T>(
   fn: (...args: A) => T,
   ...args: A
 ): T {
-  return context.runtime.batch(() =>
-    withDOMContext(context, () => fn(...args)),
-  );
+  return context.runtime.batch(() => {
+    const previous = swapDOMContext(context);
+    try {
+      return fn(...args);
+    } finally {
+      swapDOMContext(previous);
+    }
+  });
+}
+
+/**
+ * Where a deferred callback belongs: the renderer plus the ownership node that
+ * was current when it was bound. Resources it creates close with that node.
+ */
+export interface DOMCallbackScope {
+  readonly context: DOMContext;
+  readonly node: OwnershipNode | null;
+}
+
+export function captureDOMCallbackScope(
+  context: DOMContext = getDOMContext(),
+): DOMCallbackScope {
+  return { context, node: context.owner.currentNode };
+}
+
+/** Re-enters a captured scope: runtime batch, DOM context, then owner/node. */
+export function runInDOMCallbackScope<T>(
+  scope: DOMCallbackScope,
+  fn: () => T,
+): T {
+  const context = scope.context;
+  return context.runtime.batch(() => {
+    const previous = swapDOMContext(context);
+    try {
+      return runWithOwner(context.owner, scope.node, fn);
+    } finally {
+      swapDOMContext(previous);
+    }
+  });
 }
 
 export function dispatchDOMEvent(
-  context: DOMContext,
+  scope: DOMCallbackScope,
   handler: EventListenerOrEventListenerObject,
   receiver: EventTarget,
   event: Event,
 ): void {
-  runDOMOperation(context, () => {
+  runInDOMCallbackScope(scope, () => {
     if (typeof handler === "function") handler.call(receiver, event);
     else handler.handleEvent(event);
   });

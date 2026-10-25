@@ -30,6 +30,7 @@
     "qualify": "node tooling/testing/qualify.mjs",
     "test:consumer": "node tooling/testing/qualify.mjs",
     "check:artifacts": "node tooling/build/verify-artifacts.mjs",
+    "check:package-boundaries": "node scripts/check-package-boundaries.mjs",
     "check:active-divergences": "node tooling/testing/check-active-divergences.mjs",
     "quality:check": "node tooling/configs/run-checks.mjs",
     "quality:registry": "node tooling/configs/run-checks.mjs --list",

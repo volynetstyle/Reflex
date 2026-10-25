@@ -101,7 +101,7 @@ function environment(r, mode) {
       edges: edges.map((edge) => [
         add(edge.from),
         add(edge.to),
-        edge.version,
+        edge.stamp ?? edge.version,
         edgeId(edge.prevIn),
         edgeId(edge.nextIn),
         edgeId(edge.prevOut),
@@ -122,7 +122,7 @@ function environment(r, mode) {
     );
     return {
       consumer: add(r.currentConsumer),
-      epoch: r.trackingEpoch,
+      epoch: r.trackingStamp ?? r.trackingEpoch,
       state: r.runtimeState,
       phase: r.readRuntimePhase(),
       pull: r.readShouldRecomputeStackStats(),

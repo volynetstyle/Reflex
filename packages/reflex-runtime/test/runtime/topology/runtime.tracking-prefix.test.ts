@@ -1,129 +1,150 @@
-﻿import fc from "fast-check";
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
   Consumer,
   Producer,
   ReactiveNode,
+  findEdgeInLockstep,
   linkEdge,
   moveLastIncomingEdgeAfterEdgeUnchecked,
   moveLastIncomingEdgeToFrontUnchecked,
   moveNonHeadIncomingEdgeToFrontUnchecked,
 } from "../../../src/kernel";
-import {
-  hasProducerInCompletedPrefix,
-  hasProducerInTrackedPrefix,
-  scanProducerInTrackedPrefix,
-  PrefixHit,
-  PrefixMiss,
-  PrefixScanLimitReached,
-} from "../../../src/kernel/shape/tracking/prefix";
+import { isEdgeInTrackedPrefix } from "../../../src/kernel/shape/tracking/prefix";
 import {
   expectGraphIntegrity,
   expectIncomingEdges,
   expectOutgoingEdges,
 } from "../../runtime.test_utils";
+import { incomingEdges } from "../../tools/graph/graph-inspector";
 
 const node = (kind = Producer) => new ReactiveNode(undefined, undefined, kind);
 
-describe("Reactive runtime - optimized prefix membership", () => {
-  it("matches bounded traversal with arbitrary versions and subscriber positions", () => {
-    fc.assert(
-      fc.property(
-        fc.record({
-          length: fc.integer({ min: 0, max: 96 }),
-          suffixLength: fc.constantFrom(0, 1, 2, 33, 64),
-          matches: fc.array(fc.nat({ max: 95 }), { maxLength: 4 }),
-          before: fc.integer({ min: 0, max: 8 }),
-          after: fc.integer({ min: 0, max: 8 }),
-          version: fc.constantFrom(0, 1, 17, -1, 0x80000000),
-          edgeVersion: fc.constantFrom(0, 1, 17, -1, 0x80000000),
-        }),
-        ({
-          length,
-          suffixLength,
-          matches,
-          before,
-          after,
-          version,
-          edgeVersion,
-        }) => {
-          const producer = node();
-          const consumer = node(Consumer);
-          for (let i = 0; i < before; i++) linkEdge(producer, node(Consumer));
-          for (let i = 0; i < length; i++) {
-            const edge = linkEdge(
-              matches.includes(i) ? producer : node(),
-              consumer,
-            );
-            edge.version = edgeVersion;
-          }
-          // The completed-prefix helper is entered only after a cursor miss.
-          const cursor = linkEdge(node(), consumer);
-          consumer.tailIn = cursor;
-          for (let i = 0; i < suffixLength; i++) {
-            const edge = linkEdge(
-              matches.includes(i) ? producer : node(),
-              consumer,
-            );
-            edge.version = edgeVersion;
-          }
-          for (let i = 0; i < after; i++) linkEdge(producer, node(Consumer));
+/**
+ * A consumer in the middle of a pass: `prefixLength` accepted edges ending at
+ * the cursor, then `suffixLength` edges from earlier passes. Positions listed
+ * in `matches` (over the whole list) read `producer`; at most one edge per
+ * pair, so only the first listed position is used. The producer also has
+ * unrelated subscribers before and after the matching edge.
+ */
+function buildPass(options: {
+  prefixLength: number;
+  suffixLength: number;
+  match: number | null;
+  before: number;
+  after: number;
+  stamp: number;
+  staleStamps: readonly number[];
+}) {
+  const { prefixLength, suffixLength, match, before, after, stamp } = options;
+  const producer = node();
+  const consumer = node(Consumer);
+  for (let i = 0; i < before; i++) linkEdge(producer, node(Consumer));
+  const length = prefixLength + suffixLength;
+  for (let i = 0; i < length; i++) {
+    const edge = linkEdge(i === match ? producer : node(), consumer);
+    // INV-T3: the prefix carries the pass stamp, the suffix older stamps.
+    edge.stamp =
+      i < prefixLength
+        ? stamp
+        : stamp === 0
+          ? 0
+          : options.staleStamps[i % options.staleStamps.length]! % stamp;
+  }
+  for (let i = 0; i < after; i++) linkEdge(producer, node(Consumer));
+  const edges = incomingEdges(consumer);
+  const cursor = prefixLength === 0 ? null : edges[prefixLength - 1]!;
+  consumer.tailIn = cursor;
+  return { producer, consumer, edges, cursor };
+}
 
-          let edge = cursor.prevIn;
-          let visited = 0;
-          let hit = false;
-          while (edge !== null && visited < 32) {
-            if (edge.from === producer) {
-              hit = true;
-              break;
-            }
-            edge = edge.prevIn;
-            visited++;
-          }
-          const result = hit
-            ? PrefixHit
-            : edge === null
-              ? PrefixMiss
-              : PrefixScanLimitReached;
-          let expected = hit;
-          if (!hit && result === PrefixScanLimitReached && version !== 0) {
-            for (let out = producer.firstOut; out !== null; out = out.nextOut) {
-              if (out.to === consumer && out.version === version)
-                expected = true;
-            }
-          }
-          expect(scanProducerInTrackedPrefix(producer, cursor)).toBe(result);
-          expect(
-            hasProducerInTrackedPrefix(producer, consumer, cursor, version),
-          ).toBe(expected);
-          if (suffixLength === 0) {
-            expect(
-              hasProducerInCompletedPrefix(producer, consumer, cursor, version),
-            ).toBe(expected);
-          }
-        },
-      ),
-      { numRuns: 1000, seed: 20260910 },
+const passShape = fc.record({
+  prefixLength: fc.integer({ min: 1, max: 80 }),
+  suffixLength: fc.constantFrom(0, 1, 2, 31, 32, 33, 64),
+  match: fc.option(fc.nat({ max: 150 }), { nil: null }),
+  before: fc.integer({ min: 0, max: 40 }),
+  after: fc.integer({ min: 0, max: 40 }),
+  stamp: fc.constantFrom(0, 1, 17, 0x7fffffff, 2 ** 40),
+  staleStamps: fc.array(fc.nat(), { minLength: 1, maxLength: 4 }),
+});
+
+describe("Reactive runtime - exact pair lookup and prefix classification", () => {
+  it("finds the pair edge or proves its absence from any covering start", () => {
+    fc.assert(
+      fc.property(passShape, (shape) => {
+        const { producer, consumer, edges, cursor } = buildPass(shape);
+        const expected = edges.find((edge) => edge.from === producer) ?? null;
+        const index = edges.indexOf(cursor!);
+        const comparedCursor = cursor!.from === producer ? cursor : null;
+
+        // Outward from the cursor, as the resolver searches: the cursor itself
+        // is compared by the caller.
+        const outward = findEdgeInLockstep(
+          producer,
+          consumer,
+          cursor!.prevIn,
+          cursor!.nextIn,
+        );
+        expect(comparedCursor ?? outward).toBe(expected);
+
+        // Forward over the whole list, as the default strategy searches.
+        expect(
+          findEdgeInLockstep(producer, consumer, null, consumer.firstIn),
+        ).toBe(expected);
+        // Backward from the tail, as the end-of-list guard searches.
+        expect(
+          findEdgeInLockstep(producer, consumer, consumer.lastIn, null),
+        ).toBe(expected);
+        expect(index).toBe(shape.prefixLength - 1);
+      }),
+      { numRuns: 1000, seed: 20261024 },
     );
   });
 
-  it.each([31, 32, 33, 34, 65])(
-    "preserves the zero-version boundary at distance %i",
-    (distance) => {
-      const producer = node();
-      const consumer = node(Consumer);
-      linkEdge(producer, consumer, null, 0);
-      for (let i = 1; i < distance; i++) linkEdge(node(), consumer);
-      const cursor = linkEdge(node(), consumer);
-      consumer.tailIn = cursor;
-      expect(hasProducerInCompletedPrefix(producer, consumer, cursor, 0)).toBe(
-        distance <= 32,
-      );
-      expect(scanProducerInTrackedPrefix(producer, cursor)).toBe(
-        distance <= 32 ? PrefixHit : PrefixScanLimitReached,
-      );
-    },
-  );
+  it("classifies an edge into the tracked prefix by stamp or position", () => {
+    fc.assert(
+      fc.property(passShape, (shape) => {
+        const { consumer, edges, cursor } = buildPass(shape);
+        edges.forEach((edge, index) => {
+          expect(isEdgeInTrackedPrefix(consumer, cursor!, edge)).toBe(
+            index < shape.prefixLength,
+          );
+        });
+      }),
+      { numRuns: 1000, seed: 20261025 },
+    );
+  });
+
+  it("treats every edge as prefix when the cursor is at lastIn (INV-T2)", () => {
+    const consumer = node(Consumer);
+    const edges = Array.from({ length: 5 }, (_, i) =>
+      linkEdge(node(), consumer, consumer.lastIn, i + 1),
+    );
+    // Watcher validation spans committed edges with unrelated stamps.
+    consumer.tailIn = consumer.lastIn;
+    for (const edge of edges)
+      expect(isEdgeInTrackedPrefix(consumer, consumer.tailIn, edge)).toBe(true);
+  });
+
+  it("proves absence from whichever list ends first", () => {
+    const wide = node(Consumer);
+    for (let i = 0; i < 1000; i++) linkEdge(node(), wide);
+    const narrowProducer = node();
+    linkEdge(narrowProducer, node(Consumer));
+    expect(
+      findEdgeInLockstep(narrowProducer, wide, wide.lastIn, null),
+    ).toBeNull();
+
+    const shared = node();
+    for (let i = 0; i < 1000; i++) linkEdge(shared, node(Consumer));
+    const narrow = node(Consumer);
+    linkEdge(node(), narrow);
+    expect(findEdgeInLockstep(shared, narrow, narrow.lastIn, null)).toBeNull();
+    const narrowEdge = linkEdge(shared, narrow);
+    expect(findEdgeInLockstep(shared, narrow, narrow.lastIn, null)).toBe(
+      narrowEdge,
+    );
+  });
 });
 
 describe("Reactive runtime - specialized incoming moves", () => {

@@ -81,40 +81,29 @@ export const attributeAliases = {
   ...SVG_ATTRIBUTE_ALIASES,
 } as const;
 
-const cache = Object.assign(
-  Object.create(null),
-  attributeAliases,
-) as Record<string, string>;
+const aliases = Object.assign(Object.create(null), attributeAliases) as Record<
+  string,
+  string
+>;
 
 export function normalizeAttr(name: string): string {
   switch (name) {
     case "class":
     case "className":
       return "class";
-
     case "for":
     case "htmlFor":
       return "for";
-
     case "accept-charset":
     case "acceptCharset":
       return "accept-charset";
-
     case "http-equiv":
     case "httpEquiv":
       return "http-equiv";
-
     case "crossorigin":
     case "crossOrigin":
       return "crossorigin";
   }
-
-  const cached = cache[name];
-
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  cache[name] = name;
-  return name;
+  // Keep arbitrary data-* and custom attribute names out of the alias table.
+  return aliases[name] ?? name;
 }

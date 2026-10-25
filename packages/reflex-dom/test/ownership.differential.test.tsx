@@ -489,7 +489,7 @@ describe.each(["eager", "sab", "flush"] as const)(
           nextItems.splice(next() % (nextItems.length + 1), 0, moved!);
         } else {
           const index = next() % nextItems.length;
-          // A new object with the same key keeps the row and its owner.
+          // A new object under the same key keeps its row and owner.
           nextItems[index] = { id: nextItems[index]!.id };
         }
         items = nextItems;

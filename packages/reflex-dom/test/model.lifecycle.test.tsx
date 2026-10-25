@@ -2,6 +2,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import {
+  createDOMRenderer,
   createApp,
   defineModel,
   isModel,
@@ -9,8 +10,74 @@ import {
   isModelReadableValue,
   useSignal,
 } from "../src";
+import {
+  createProducer,
+  createWatcher,
+  disposeWatcher,
+  readProducer,
+  runWatcher,
+  writeProducer,
+} from "@volynets/reflex-runtime";
+import { getActiveOwnerContext } from "@volynets/reflex-framework";
+import { getActiveDOMContext, withDOMContext } from "../src/runtime/context";
 
 describe("model lifecycle in reflex-dom", () => {
+  it("restores tracking and renderer context after nested and throwing actions", () => {
+    const left = createDOMRenderer();
+    const right = createDOMRenderer();
+    const cause = new Error("action failed");
+    const source = left.batch(() => createProducer(0));
+    const trigger = right.batch(() => createProducer(0));
+    const receiver = { value: 7 };
+    const model = withDOMContext(left.execution, () =>
+      defineModel((ctx) => {
+        const nested = ctx.action(function (
+          this: typeof receiver,
+          value: number,
+        ) {
+          expect(getActiveDOMContext()).toBe(left.execution);
+          expect(getActiveOwnerContext()?.currentNode).not.toBeNull();
+          readProducer(source);
+          return this.value + value;
+        });
+        return {
+          fail: ctx.action(function (this: typeof receiver, value: number) {
+            expect(nested.call(this, value)).toBe(this.value + value);
+            expect(getActiveDOMContext()).toBe(left.execution);
+            throw cause;
+          }),
+        };
+      })(),
+    );
+    let runs = 0;
+
+    const watcher = right.batch(() =>
+      createWatcher(() => {
+        runs++;
+        const previousOwner = getActiveOwnerContext();
+        expect(() => model.fail.call(receiver, 3)).toThrow(cause);
+        expect(getActiveDOMContext()).toBe(right.execution);
+        expect(getActiveOwnerContext()).toBe(previousOwner);
+        readProducer(trigger);
+      }),
+    );
+    const runRight = (fn: () => void) =>
+      withDOMContext(right.execution, () => right.batch(fn));
+    try {
+      runRight(() => runWatcher(watcher));
+      expect(runs).toBe(1);
+      left.batch(() => writeProducer(source, 1));
+      expect(runs).toBe(1);
+      runRight(() => writeProducer(trigger, 1));
+      expect(runs).toBe(2);
+      expect(getActiveDOMContext()).toBeNull();
+      expect(getActiveOwnerContext()).toBeNull();
+    } finally {
+      right.batch(() => disposeWatcher(watcher));
+      model.dispose();
+    }
+  });
+
   it("owns nested models and resources until their component unmounts", () => {
     const app = createApp();
     const container = document.createElement("div");

@@ -1,11 +1,10 @@
 import {
-  CONSUMER_INITIAL_STATE,
   createConsumer,
-  currentConsumer,
+  disposeNodeIfUnobserved,
+  activeTracking,
   disposeNode,
   readConsumerLazy,
-  setCurrentConsumer,
-  unlinkAllSources,
+  suspendConsumerIfUnobserved,
   untracked,
   type ConsumerNode,
 } from "@volynets/reflex-runtime/internal";
@@ -29,10 +28,7 @@ export class Demand<T> {
 
   collect(): void {
     const node = this.node;
-    if (!node || node.firstOut !== null) return;
-    unlinkAllSources(node);
-    node.state = CONSUMER_INITIAL_STATE;
-    node.payload = undefined as T;
+    if (node) suspendConsumerIfUnobserved(node);
   }
 
   dispose(): void {
@@ -40,6 +36,21 @@ export class Demand<T> {
     if (this.node) disposeNode(this.node);
     this.node = undefined;
   }
+}
+
+// Kept out of `Observations.read`: a closure there would context-allocate its
+// locals on every read, including reads that never compare keys.
+function canonicalKey<K>(
+  entries: Map<K, unknown>,
+  keyEquals: (a: K, b: K) => boolean,
+  key: K,
+): K {
+  return untracked(() => {
+    for (const known of entries.keys()) {
+      if (keyEquals(known, key)) return known;
+    }
+    return key;
+  });
 }
 
 /** Retain tracked semantic locations until their owner's next collection boundary. */
@@ -52,24 +63,12 @@ export class Observations<K, T> {
   ) {}
 
   read(key: K): T {
-    if (this.keyEquals && this.entries) {
-      const previous = currentConsumer;
-      setCurrentConsumer(null);
-      try {
-        for (const known of this.entries.keys()) {
-          if (this.keyEquals(known, key)) {
-            key = known;
-            break;
-          }
-        }
-      } finally {
-        setCurrentConsumer(previous);
-      }
-    }
+    if (this.keyEquals && this.entries)
+      key = canonicalKey(this.entries, this.keyEquals, key);
     let node = this.entries?.get(key);
 
     if (!node) {
-      if (currentConsumer === null) return this.compute(key);
+      if (activeTracking === null) return this.compute(key);
       let initialized = false;
       let previous: T;
 
@@ -93,9 +92,8 @@ export class Observations<K, T> {
   collect(): void {
     if (!this.entries) return;
     for (const [key, node] of this.entries) {
-      if (node.firstOut !== null) continue;
+      if (!disposeNodeIfUnobserved(node)) continue;
       this.entries.delete(key);
-      disposeNode(node);
     }
   }
 

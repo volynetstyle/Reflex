@@ -53,6 +53,7 @@ export function BoardSection(props: { model: DemoModel }) {
       <div class="task-list">
         <For each={model.tasks} by={(task) => task.id}>
           {(task) => {
+            // The key never changes for a row; the other fields can.
             const id = task().id;
             return (
               <button
@@ -65,7 +66,7 @@ export function BoardSection(props: { model: DemoModel }) {
                 <div class="task-main">
                   <div class="task-topline">
                     <strong>{id}</strong>
-                    {() => <StatusPill label={task().status} />}
+                    <StatusPill label={() => task().status} />
                   </div>
                   <h3>{() => task().title}</h3>
                   <p>{() => task().summary}</p>
@@ -77,7 +78,7 @@ export function BoardSection(props: { model: DemoModel }) {
                 </div>
                 <div class="task-aside">
                   <span class="task-owner">{() => task().owner}</span>
-                  <span class="task-risk">{() => task().risk} risk</span>
+                  <span class="task-risk">{() => `${task().risk} risk`}</span>
                   <Show when={() => Boolean(model.spotlightTitleById(id))}>
                     <span class="task-spotlight">Spotlighted</span>
                   </Show>

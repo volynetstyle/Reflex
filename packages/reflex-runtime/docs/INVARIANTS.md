@@ -70,6 +70,15 @@ is delivered by `runWatcherCore` itself (`deliverRetainedValidation`,
 `retainAfterExecution`) unless `Scheduled` is held, because later pushes merge
 into a retained `Unknown` without notifying (contract L1).
 
+A host releases `Scheduled` before it runs the watcher, so during the run
+`Computing` is the ownership certificate. One-level push after a recompute
+records `Changed` into a watcher that holds `Scheduled` or `Computing` but
+does not deliver it. A running watcher already holds `Changed`, so this reaches
+only the validation epoch: a pull proof recomputed a node with a side edge
+into the validating watcher, and that same pass consumes the evidence (F17).
+The guard leaves the reentrant write path unchanged: a write during the epoch
+still goes through the computing-subscriber path and is delivered.
+
 Transitions: `src/kernel/stages/` and `src/kernel/engine/watcher.ts`; the
 transition table is characterized in
 [SEMANTIC_CHARACTERIZATION.md](./characterization/SEMANTIC_CHARACTERIZATION.md).
@@ -103,15 +112,21 @@ Head and expected-next hits advance the cursor. Recognized prefix duplicates
 do not. Reorders move an existing edge after the cursor; new dependencies link
 there. Cleanup removes the unmatched suffix.
 
-`edge.version` is a tracking stamp, not a source-value revision. Runtime reads
+`edge.stamp` is a tracking stamp, not a source-value revision. Runtime reads
 extending a prefix use its cursor edge's stamp, even after nested computation
-advances the global `trackingEpoch`. A first read uses the current epoch.
+advances the global `trackingStamp`. A first read uses the current epoch.
 `resolveTrackedRead` derives the stamp itself; callers cannot supply one.
 
-The 32-edge prefix limit bounds only that local scan. Incoming suffix and
-outgoing membership searches may traverse complete lists. The eager suffix
-threshold is not a global reconciliation work bound. Algorithm details:
-[tracking](../src/kernel/shape/tracking/README.md).
+During a pass with a nonempty suffix, an incoming edge is in the tracked
+prefix exactly when it carries the cursor's nonzero stamp (INV-T3): accepted
+edges are stamped with the pass stamp, and suffix edges carry stamps of
+earlier passes, which the forward-only clock makes smaller. With the cursor
+at `lastIn` every edge is in the prefix (INV-T2). A read off the sequential
+path is resolved by one exact lookup of the pair's edge, bounded by the
+shorter of the producer's outgoing and the consumer's incoming lists, then
+classified by these rules. The eager suffix detachment threshold (32 edges)
+is a retained identity policy, not a search bound. Algorithm details:
+[tracking research](../src/kernel/shape/tracking/RESEARCH.md).
 
 ## 5. Disposal and cleanup
 
@@ -168,11 +183,11 @@ context objects. `runWithRuntimeContext` restores the previous context in a
 finally block. Traversal storage remains shared and is protected by invocation
 slices.
 
-`trackingEpoch` is one kernel-wide clock, not a per-context register. Edges are
+`trackingStamp` is one kernel-wide clock, not a per-context register. Edges are
 shared and stamped with pass epochs, so the clock only moves forward and
 never repeats a value: a repeated stamp would let a stale edge pose as a
 current-pass membership proof and drop a dependency (F13). A context load
-keeps the newer epoch, `setTrackingEpoch` only moves it forward, a reset does
+keeps the newer epoch, `setTrackingStamp` only moves it forward, a reset does
 not rewind it, and it does not wrap (exact for 2^53 passes).
 
 `snapshotRuntimeContext` is a register-bank checkpoint. Restoring it is legal at

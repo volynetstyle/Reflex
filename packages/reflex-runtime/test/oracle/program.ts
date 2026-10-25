@@ -29,7 +29,10 @@ export interface RuntimeModule {
   createRuntimeContext(options?: unknown): unknown;
   runWithRuntimeContext<T>(context: unknown, fn: () => T): T;
   getActiveRuntimeContext(): unknown;
-  setTrackingEpoch(epoch: number): void;
+  // `setTrackingEpoch` before the 2026-10-24 rename; the frozen baseline
+  // bundle still exports that name.
+  setTrackingStamp?(stamp: number): void;
+  setTrackingEpoch?(stamp: number): void;
   claimWatcherSchedule(node: Node): boolean;
   releaseWatcherSchedule(node: Node): void;
   currentConsumer: Node | null;
@@ -448,7 +451,14 @@ const OBSERVABLE_MASK = 0b0010_0011; // Unknown | Changed | Scheduled
  */
 export interface InterpretOptions {
   invariants?: boolean;
+  /**
+   * Receives the trace index of every host delivery made while the watcher
+   * was inside its own run (`Computing`, F17). Never affects the trace.
+   */
+  ownEpochDeliveries?: number[];
 }
+
+const COMPUTING = 0b1000; // fixed by the baseline
 
 export function interpret(
   rt: RuntimeModule,
@@ -493,6 +503,8 @@ export function interpret(
     rt.configureRuntimeContext(context, {
       hooks: {
         onNodeInvalidated(node: Node) {
+          if ((node.state & COMPUTING) !== 0)
+            options.ownEpochDeliveries?.push(trace.length);
           if (name === "A" && spec.hook !== undefined) {
             hookCalls += 1;
             if (hookCalls % spec.hook.every === 0) {
@@ -758,9 +770,7 @@ export function interpret(
           checkLiveness(true);
         return;
       case "run":
-        runWatcher(
-          nodes[spec.producers + spec.consumers.length + op.watcher]!,
-        );
+        runWatcher(nodes[spec.producers + spec.consumers.length + op.watcher]!);
         return;
       case "dispose":
         disposed.add(op.node);
@@ -784,7 +794,7 @@ export function interpret(
         return;
       }
       case "epoch":
-        rt.setTrackingEpoch(op.value);
+        (rt.setTrackingStamp ?? rt.setTrackingEpoch)!(op.value);
         return;
       case "snapshot":
         snapshot();

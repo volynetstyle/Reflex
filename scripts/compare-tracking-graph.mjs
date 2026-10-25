@@ -8,6 +8,7 @@ import { pathToFileURL } from "node:url";
 import replace from "@rollup/plugin-replace";
 import nodeResolve from "@rollup/plugin-node-resolve";
 import { rollup } from "rollup";
+import { longLong, longLongModes } from "./tracking-long-long.mjs";
 
 // Run build:ts before --save. Independent production bundles run in alternating
 // subprocesses to keep JIT feedback and node/edge shapes isolated.
@@ -47,6 +48,9 @@ if (first === "--save") {
   process.exit(0);
 }
 
+// Edges carry `stamp` since 2026-10-24 and `version` before; baselines may
+// be older builds.
+const stampOf = (edge) => (edge === null ? 0 : (edge.stamp ?? edge.version));
 const node = (r) => new r.ReactiveNode(undefined, undefined, 0);
 const range = (n) => Array.from({ length: n }, (_, i) => i);
 function shuffled(pass, count) {
@@ -59,21 +63,36 @@ function shuffled(pass, count) {
   }
   return order;
 }
-function tracking(r, pattern, count = 128, fanout = 1) {
+// Every pass takes a fresh stamp from the clock, as enterConsumerTracking does;
+// without it all passes would share stamp 0, which no real pass uses.
+// `otherFirst` subscribers of each source precede the target in its outgoing
+// list, the remaining `fanout - 1 - otherFirst` follow it.
+function tracking(
+  r,
+  pattern,
+  count = 128,
+  fanout = 1,
+  otherFirst = fanout - 1,
+) {
   const sources = range(count).map(() => node(r));
-  for (let i = 1; i < fanout; i++) {
-    const other = node(r);
-    for (const source of sources) r.linkEdge(source, other);
-  }
+  const others = (n) => {
+    for (let i = 0; i < n; i++) {
+      const other = node(r);
+      for (const source of sources) r.linkEdge(source, other);
+    }
+  };
+  others(otherFirst);
   const target = node(r);
   for (const source of sources) r.linkEdge(source, target);
+  others(fanout - 1 - otherFirst);
   const orders = range(64).map((pass) => pattern(pass, count));
   return (pass) => {
+    (r.advanceTrackingStamp ?? r.advanceTrackingEpoch)();
     target.tailIn = null;
     for (const index of orders[pass % orders.length])
       r.resolveTrackedRead(sources[index], target, pass + 1, true);
     r.cleanupUnvisitedSources(target);
-    return target.tailIn?.version ?? 0;
+    return stampOf(target.tailIn);
   };
 }
 function appendShared(r, fanout) {
@@ -84,9 +103,10 @@ function appendShared(r, fanout) {
   }
   const target = node(r);
   return (pass) => {
+    (r.advanceTrackingStamp ?? r.advanceTrackingEpoch)();
     for (const source of sources)
       r.resolveTrackedRead(source, target, pass + 1, true);
-    const value = target.tailIn.version;
+    const value = stampOf(target.tailIn);
     r.unlinkAllSources(target);
     return value;
   };
@@ -107,7 +127,7 @@ function moves(r, kind) {
       else
         r.moveIncomingEdgeAfterUnchecked(target, target.firstIn, target.lastIn);
     }
-    return target.firstIn.version;
+    return stampOf(target.firstIn);
   };
 }
 function reuse(r, fanout) {
@@ -129,7 +149,7 @@ function reuse(r, fanout) {
         pass + 1,
       );
     }
-    return target.firstIn.version;
+    return stampOf(target.firstIn);
   };
 }
 function runtimeReorder(r) {
@@ -166,6 +186,30 @@ const scenarios = {
     tracking(r, (p, n) => range(n).map((i) => (i - p + n) % n)),
   "permuted-fanout-1": (r) => tracking(r, shuffled),
   "permuted-fanout-3": (r) => tracking(r, shuffled, 128, 3),
+  "permuted-fanout-8-mid": (r) => tracking(r, shuffled, 128, 8, 4),
+  "permuted-fanout-8-first": (r) => tracking(r, shuffled, 128, 8, 0),
+  "permuted-512-fanout-3": (r) => tracking(r, shuffled, 512, 3, 1),
+  "reverse-fanout-3": (r) =>
+    tracking(r, (_p, n) => range(n).map((i) => n - 1 - i), 128, 3, 1),
+  "swap-pairs-fanout-3": (r) =>
+    tracking(
+      r,
+      (p, n) => range(n).map((i) => (p % 2 === 0 ? i : i ^ 1)),
+      128,
+      3,
+      1,
+    ),
+  "distant-duplicates-mid": (r) =>
+    tracking(r, (_p, n) => [...range(n), ...range(n)], 128, 8, 4),
+  "branch-swap-mid": (r) =>
+    tracking(
+      r,
+      (p, n) =>
+        range(n).filter((i) => (i < 48 || i >= 80 ? true : i % 2 === p % 2)),
+      128,
+      3,
+      1,
+    ),
   "append-shared-2": (r) => appendShared(r, 2),
   "append-shared-4": (r) => appendShared(r, 4),
   "append-shared-64": (r) => appendShared(r, 64),
@@ -175,17 +219,28 @@ const scenarios = {
   "reuse-first-out": (r) => reuse(r, 1),
   "reuse-scanned": (r) => reuse(r, 3),
   "runtime-reorder": runtimeReorder,
+  ...Object.fromEntries(
+    Object.entries(longLongModes).map(([name, options]) => [
+      name,
+      (r) => longLong(r, options),
+    ]),
+  ),
 };
 const median = (values) =>
   [...values].sort((a, b) => a - b)[values.length >> 1];
+// TRACKING_ONLY=<regex> limits the scenarios; TRACKING_ITERATIONS and
+// TRACKING_WARMUP shorten runs of the heavy wide x wide scenarios.
+const only = new RegExp(process.env.TRACKING_ONLY ?? ".*");
+const selected = Object.keys(scenarios).filter((name) => only.test(name));
 const samples = 9;
-const iterations = 20000;
-const warmup = 10000;
+const iterations = Number(process.env.TRACKING_ITERATIONS ?? 20000);
+const warmup = Number(process.env.TRACKING_WARMUP ?? 10000);
 if (first === "--measure") {
   const runtime = await import(pathToFileURL(bundlePath(second)).href);
   const timings = {};
   let sink = 0;
-  for (const [name, setup] of Object.entries(scenarios)) {
+  for (const name of selected) {
+    const setup = scenarios[name];
     const step = setup(runtime);
     for (let i = 0; i < warmup; i++) sink += step(i);
     const start = performance.now();
@@ -218,7 +273,7 @@ for (let sample = 0; sample < samples; sample++) {
   }
   console.log(`Completed pair ${sample + 1}/${samples}`);
 }
-for (const name of Object.keys(scenarios)) {
+for (const name of selected) {
   const timings = runs.map((run) => run.map((sample) => sample[name]));
   const before = median(timings[0]);
   const after = median(timings[1]);

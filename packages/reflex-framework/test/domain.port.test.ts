@@ -18,6 +18,7 @@ import {
   PortTopologyError,
   type ManagedRoot,
 } from "../src";
+import { portMirror } from "../src/domain/port";
 
 const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
@@ -54,7 +55,7 @@ describe("domain ports (P1, P2)", () => {
     const seen = observe(b, () => port.read());
 
     a.run(() => port.publish(1));
-    expect(port.local.payload).toBeUndefined();
+    expect(port.peek()).toBeUndefined();
     await tick();
     expect(seen).toEqual([undefined, 1]);
     expect(port.version).toBe(1);
@@ -109,7 +110,7 @@ describe("domain ports (P1, P2)", () => {
     expect(port.deliver({ version: 2, value: "again" })).toBe(false);
     expect(port.deliver({ version: 3, value: "three" })).toBe(true);
 
-    expect(port.local.payload).toBe("three");
+    expect(port.peek()).toBe("three");
     expect(port.version).toBe(3);
   });
 
@@ -123,7 +124,7 @@ describe("domain ports (P1, P2)", () => {
     port.close();
     await tick();
 
-    expect(port.local.payload).toBeUndefined();
+    expect(port.peek()).toBeUndefined();
     expect(() => port.publish(2)).toThrow(PortClosedError);
   });
 
@@ -142,7 +143,7 @@ describe("domain ports (P1, P2)", () => {
     b.domain.close();
     await tick();
     expect(fromTarget.closed).toBe(true);
-    expect(fromTarget.local.payload).toBeUndefined();
+    expect(fromTarget.peek()).toBeUndefined();
   });
 
   it("keeps ports a DAG unless feedback is explicit", () => {
@@ -171,7 +172,7 @@ describe("domain ports (P1, P2)", () => {
     value.items.push(2);
     await tick();
 
-    expect(port.local.payload).toEqual({ items: [1] });
+    expect(port.peek()).toEqual({ items: [1] });
   });
 
   it("never exposes a partial pair through one snapshot port (litmus 8)", async () => {
@@ -218,8 +219,8 @@ describe("domain ports (P1, P2)", () => {
 
     // Only the source's own watcher depends on it; the mirror has no writer edge.
     expect(source.firstOut?.nextOut ?? null).toBeNull();
-    expect(port.local.firstIn).toBeNull();
-    expect(port.local.firstOut?.to).toBe(mirror);
+    expect(portMirror(port).firstIn).toBeNull();
+    expect(portMirror(port).firstOut?.to).toBe(mirror);
     publisher();
   });
 

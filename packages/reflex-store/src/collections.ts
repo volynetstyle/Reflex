@@ -1,6 +1,7 @@
 import {
   createProducer,
-  currentConsumer,
+  disposeNodeIfUnobserved,
+  activeTracking,
   disposeNode,
   enterReactiveBatch,
   getActiveRuntimeContext,
@@ -42,7 +43,7 @@ class Cells<K, V> {
     { node: ProducerNode<number>; value: V }
   >();
   read(key: K, value: V): V {
-    if (currentConsumer === null) return value;
+    if (activeTracking === null) return value;
     let entry = this.nodes.get(key);
     if (!entry) {
       entry = { node: createProducer(0), value };
@@ -66,9 +67,8 @@ class Cells<K, V> {
   }
   collect(): void {
     for (const [key, { node }] of this.nodes) {
-      if (node.firstOut !== null) continue;
+      if (!disposeNodeIfUnobserved(node)) continue;
       this.nodes.delete(key);
-      disposeNode(node);
     }
   }
   dispose(): void {
@@ -122,7 +122,7 @@ export class ReactiveMap<K, V> implements Iterable<[K, V]> {
 
   get size(): number {
     const size = this.backing().size;
-    if (currentConsumer !== null)
+    if (activeTracking !== null)
       readProducer((this.sizeNode ??= createProducer(size)));
     return size;
   }
@@ -202,19 +202,19 @@ export class ReactiveMap<K, V> implements Iterable<[K, V]> {
 
   keys(): MapIterator<K> {
     const data = this.backing();
-    if (currentConsumer !== null)
+    if (activeTracking !== null)
       readProducer((this.keysNode ??= createProducer(0)));
     return data.keys();
   }
   values(): MapIterator<V> {
     const data = this.backing();
-    if (currentConsumer !== null)
+    if (activeTracking !== null)
       readProducer((this.valuesNode ??= createProducer(0)));
     return data.values();
   }
   entries(): MapIterator<[K, V]> {
     const data = this.backing();
-    if (currentConsumer !== null)
+    if (activeTracking !== null)
       readProducer((this.valuesNode ??= createProducer(0)));
     return data.entries();
   }
@@ -226,7 +226,7 @@ export class ReactiveMap<K, V> implements Iterable<[K, V]> {
     thisArg?: unknown,
   ): void {
     const data = this.backing();
-    if (currentConsumer !== null)
+    if (activeTracking !== null)
       readProducer((this.valuesNode ??= createProducer(0)));
     data.forEach((value, key) => callback.call(thisArg, value, key, this));
   }
@@ -234,16 +234,13 @@ export class ReactiveMap<K, V> implements Iterable<[K, V]> {
   collect(): void {
     this.valuesByKey.collect();
     this.existsByKey.collect();
-    if (this.sizeNode?.firstOut === null) {
-      disposeNode(this.sizeNode);
+    if (this.sizeNode && disposeNodeIfUnobserved(this.sizeNode)) {
       this.sizeNode = undefined;
     }
-    if (this.keysNode?.firstOut === null) {
-      disposeNode(this.keysNode);
+    if (this.keysNode && disposeNodeIfUnobserved(this.keysNode)) {
       this.keysNode = undefined;
     }
-    if (this.valuesNode?.firstOut === null) {
-      disposeNode(this.valuesNode);
+    if (this.valuesNode && disposeNodeIfUnobserved(this.valuesNode)) {
       this.valuesNode = undefined;
     }
   }

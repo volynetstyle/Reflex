@@ -5,8 +5,8 @@ import {
   readConsumer,
   readProducer,
   resetRuntimeContext,
-  setTrackingEpoch,
-  trackingEpoch,
+  setTrackingStamp,
+  trackingStamp,
   writeProducer,
 } from "../../src/internal";
 
@@ -17,18 +17,18 @@ describe("generation witness limits", () => {
     const source = createProducer(1);
     const derived = createConsumer(() => readProducer(source));
 
-    setTrackingEpoch(0xfffffffe);
-    const start = trackingEpoch;
+    setTrackingStamp(0xfffffffe);
+    const start = trackingStamp;
     expect(readConsumer(derived)).toBe(1);
     const edge = derived.firstIn!;
-    expect(edge.version).toBe(start + 1);
+    expect(edge.stamp).toBe(start + 1);
 
     // A write changes the value, not the stamp; the next pass restamps.
     writeProducer(source, 2);
-    expect(edge.version).toBe(start + 1);
+    expect(edge.stamp).toBe(start + 1);
     expect(readConsumer(derived)).toBe(2);
-    expect(trackingEpoch).toBe(start + 2);
-    expect(edge.version).toBe(start + 2);
+    expect(trackingStamp).toBe(start + 2);
+    expect(edge.stamp).toBe(start + 2);
   });
 
   it("keeps the outer tracking stamp across nested computation", () => {
@@ -42,12 +42,12 @@ describe("generation witness limits", () => {
     });
 
     expect(readConsumer(outer)).toBe(8);
-    const outerStamp = outer.firstIn!.version;
-    expect(outer.firstIn!.nextIn!.version).toBe(outerStamp);
+    const outerStamp = outer.firstIn!.stamp;
+    expect(outer.firstIn!.nextIn!.stamp).toBe(outerStamp);
 
     writeProducer(source, 3);
     expect(readConsumer(outer)).toBe(12);
-    expect(outer.firstIn!.version).toBe(outer.firstIn!.nextIn!.version);
+    expect(outer.firstIn!.stamp).toBe(outer.firstIn!.nextIn!.stamp);
   });
 
   // A pass that both reuses an edge and links a new one must stamp both
@@ -71,7 +71,7 @@ describe("generation witness limits", () => {
       readConsumer(createConsumer(() => readProducer(shared)));
       readConsumer(derived);
 
-      setTrackingEpoch(epoch);
+      setTrackingStamp(epoch);
       addDependency = true;
       writeProducer(sources[5]!, 100);
       readConsumer(derived);
@@ -82,7 +82,7 @@ describe("generation witness limits", () => {
       }
       expect(edges).toHaveLength(42);
       expect(new Set(edges.map((edge) => edge.from)).size).toBe(42);
-      expect(new Set(edges.map((edge) => edge.version)).size).toBe(1);
+      expect(new Set(edges.map((edge) => edge.stamp)).size).toBe(1);
     },
   );
 });

@@ -4,7 +4,7 @@ import {
   reactiveBatchDepth,
   RuntimeState,
   runtimeState,
-  trackingEpoch,
+  trackingStamp,
 } from "@runtime/kernel/state";
 import { nodeInvalidatedHook, runtimeIdleHook } from "@runtime/kernel/config";
 import type { ReactiveNode } from "@runtime/kernel";
@@ -325,7 +325,7 @@ export function createRuntimeDiagnostics(
               .length,
             profiled: profiling ? counters.advanceComputeRuns : null,
           },
-          trackingEpoch,
+          trackingStamp,
         });
       },
     },

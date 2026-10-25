@@ -9,10 +9,7 @@ export type {
 
 export {
   createContext,
-  hasOwnContext,
-  provideContext,
   useComputed,
-  useContext,
   useEffect,
   useEffectOnce,
   useMemo,
@@ -22,9 +19,56 @@ export {
   useUnmount,
   useAbortSignal,
   getLifetimeSignal,
+  onCleanup,
 } from "@volynets/reflex-framework";
-export type { UseEffectFn } from "@volynets/reflex-framework";
+export type {
+  Accessor,
+  Cleanup,
+  Computed,
+  DisposableResource,
+  EffectCallback,
+  EffectCleanup,
+  MaybeAccessor,
+  Memo,
+  OwnershipContext,
+  SetInput,
+  Setter,
+  SignalAccessor,
+  UseEffectFn,
+} from "@volynets/reflex-framework";
+export { untracked } from "@volynets/reflex-runtime";
 
+export {
+  Provider,
+  provideContext,
+  useContext,
+  type ProviderProps,
+} from "./hooks/use-context";
+export { useCallbackContext } from "./hooks/use-callback-context";
+export {
+  useLease,
+  useOwnedComputed,
+  useOwnedSignal,
+  useTransfer,
+} from "./hooks/use-owned-value";
+export { usePortEndpoint } from "./hooks/use-port-endpoint";
+export {
+  BorrowError,
+  createPort,
+  isReleased,
+  PortClosedError,
+  PortOverflowError,
+  PortTopologyError,
+  ReleasedResourceError,
+} from "@volynets/reflex-framework";
+export type {
+  DomainPort,
+  OwnedSignal,
+  OwnedValue,
+  PortEndpoint,
+  PortMessage,
+  PortOptions,
+} from "@volynets/reflex-framework";
 export { useMountedEffect } from "./hooks/use-mounted-effect";
 export { useSignal } from "./hooks/use-signal";
 export { Fragment, jsx, jsxDEV, jsxs } from "./runtime/jsx";
@@ -45,7 +89,6 @@ export { createDOMRangeHandle, type DOMRangeHandle } from "./host/range-handle";
 
 export type { JSX } from "./types/jsx";
 export type {
-  Accessor,
   AriaAttributes,
   AriaAttributeValueMap,
   AriaRole,
@@ -88,7 +131,6 @@ export type {
   MathMLElementProps,
   MathMLIntrinsicElements,
   MathMLProps,
-  MaybeAccessor,
   OptionProps,
   PlatformProps,
   PropsWithChildren,

@@ -61,7 +61,7 @@ export function enterConsumerTracking(
   const previousConsumer = currentConsumer;
   currentConsumer = consumer;
   runtimeState |= RuntimeState.Tracking;
-  trackingEpoch++;
+  trackingStamp++;
   return previousConsumer;
 }
 
@@ -92,28 +92,28 @@ export function restoreConsumerTracking(
  * never a pass stamp. Exactness holds for 2^53 passes (Number.MAX_SAFE_INTEGER),
  * beyond any realistic process lifetime.
  */
-export var trackingEpoch = 0;
+export var trackingStamp = 0;
 
 /**
  * Move the clock forward to `epoch`. A value at or below the current epoch is
  * ignored: rewinding would let a stale stamp pose as a current-pass proof.
  */
-export function setTrackingEpoch(epoch: number): void {
-  if (epoch > trackingEpoch) trackingEpoch = epoch;
+export function setTrackingStamp(epoch: number): void {
+  if (epoch > trackingStamp) trackingStamp = epoch;
 }
 
 /**
  * Advance the tracking epoch and return the new value.
  */
-export function advanceTrackingEpoch(): number {
-  return ++trackingEpoch;
+export function advanceTrackingStamp(): number {
+  return ++trackingStamp;
 }
 
 /**
  * Keep the newest of the current epoch and `epoch` (context loads).
  */
-export function keepNewestTrackingEpoch(epoch: number): void {
-  if (epoch > trackingEpoch) trackingEpoch = epoch;
+export function keepNewestTrackingStamp(epoch: number): void {
+  if (epoch > trackingStamp) trackingStamp = epoch;
 }
 
 /**

@@ -113,7 +113,42 @@ describe("render", () => {
     expect(container.querySelectorAll("b")).toHaveLength(2);
   });
 
+  it("preserves order through deep arrays, empty children and iterables", () => {
+    const container = document.createElement("div");
+    const node = document.createElement("b");
+    node.textContent = "node";
+    let nested: unknown = new Set(["middle", 1n]);
+    for (let i = 0; i < 10_000; i++) nested = [nested];
+
+    const dispose = render(
+      ["first", [null, [], false, nested], node, ["last"]] as JSXRenderable,
+      container,
+    );
+    try {
+      expect(container.textContent).toBe("firstmiddle1nodelast");
+      expect(container.querySelector("b")).toBe(node);
+    } finally {
+      dispose();
+    }
+  });
+
   // --- Props ---
+
+  it("updates aliased SVG attributes and removes undefined values", () => {
+    const container = document.createElement("div");
+    const [width, setWidth] = signal<number | undefined>(2);
+    const dispose = render(<svg><path strokeWidth={width} /></svg>, container);
+    const path = container.querySelector("path")!;
+    try {
+      expect(path.getAttribute("stroke-width")).toBe("2");
+      setWidth(undefined);
+      expect(path.hasAttribute("stroke-width")).toBe(false);
+      setWidth(3);
+      expect(path.getAttribute("stroke-width")).toBe("3");
+    } finally {
+      dispose();
+    }
+  });
 
   it("sets boolean attribute (disabled)", () => {
     const container = document.createElement("div");

@@ -4,11 +4,7 @@ import {
   type Synchronous,
 } from "@volynets/reflex-framework";
 import { transaction as batch } from "../collections";
-import {
-  currentConsumer,
-  setCurrentConsumer,
-  untracked,
-} from "@volynets/reflex-runtime/internal";
+import { untracked } from "@volynets/reflex-runtime/internal";
 
 import type { StoreCell } from "./cell";
 
@@ -50,15 +46,8 @@ export function createStoreScope<T extends object>(
     writer<T>(cell: StoreCell<T>): (value: T) => T {
       assertOpen();
       let pending!: T;
-      const commit = () => {
-        const previous = currentConsumer;
-        setCurrentConsumer(null);
-        try {
-          cell.set(pending);
-        } finally {
-          setCurrentConsumer(previous);
-        }
-      };
+      const set = () => cell.set(pending);
+      const commit = () => untracked(set);
       return (value) => {
         assertOpen();
         if (Object.is(cell.peek(), value)) return value;

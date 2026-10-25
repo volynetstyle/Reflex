@@ -5,7 +5,7 @@ import {
   type OwnershipNode,
 } from "@volynets/reflex-framework";
 import { untracked } from "@volynets/reflex-runtime";
-import { getDOMContext, withDOMContext } from "./context";
+import { getDOMContext, swapDOMContext, withDOMContext } from "./context";
 import type { DOMContext } from "./context";
 import type { Cleanup } from "../types";
 
@@ -37,8 +37,9 @@ export function createDOMOwnedReaction<T>(
   let pending: T;
   const reactPending = () => react(pending);
 
-  return createOwnedEffect(context.owner, context.owner.currentNode, () =>
-    withDOMContext(context, () => {
+  return createOwnedEffect(context.owner, context.owner.currentNode, () => {
+    const previous = swapDOMContext(context);
+    try {
       const value = read();
 
       if (!initialized) {
@@ -48,8 +49,10 @@ export function createDOMOwnedReaction<T>(
 
       pending = value;
       return untracked(reactPending);
-    }),
-  );
+    } finally {
+      swapDOMContext(previous);
+    }
+  });
 }
 
 /**

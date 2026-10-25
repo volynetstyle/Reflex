@@ -1,7 +1,8 @@
 import {
-  Both,
   createWatcher,
-  currentConsumer,
+  disposeNodeIfUnobserved,
+  hasPendingValidation,
+  activeTracking,
   disposeNode,
   disposeWatcher,
   readProducer,
@@ -66,7 +67,7 @@ export function createSelector<T>(
 
   const read = (key: T): boolean => {
     if (disposed) throw new Error("Cannot read a disposed selector");
-    if (currentConsumer === null)
+    if (activeTracking === null)
       return identityEquality
         ? Object.is(source(), key)
         : untracked(() => equals(source(), key));
@@ -79,7 +80,7 @@ export function createSelector<T>(
         watcher = undefined;
         throw error;
       }
-    } else if ((watcher.state & Both) !== 0) {
+    } else if (hasPendingValidation(watcher)) {
       sync(untracked(source));
     }
 
@@ -103,9 +104,8 @@ export function createSelector<T>(
     Object.assign(read, {
       collect() {
         for (const [key, entry] of entries) {
-          if (entry.node.firstOut !== null) continue;
+          if (!disposeNodeIfUnobserved(entry.node)) continue;
           entries.delete(key);
-          disposeNode(entry.node);
         }
         if (entries.size === 0 && watcher) {
           disposeWatcher(watcher);

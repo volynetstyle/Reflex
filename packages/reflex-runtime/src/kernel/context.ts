@@ -18,7 +18,7 @@ import {
   syncRuntimeContext,
 } from "./context.switch";
 import { resetRuntimeExecutionState } from "./execution";
-import { trackingEpoch } from "./state";
+import { trackingStamp } from "./state";
 
 export { createRuntimeContext, getActiveRuntimeContext };
 export type {
@@ -28,8 +28,9 @@ export type {
 } from "./context.model";
 export type { RuntimeHooks, RuntimeHostHooks } from "./config";
 
-/** Contexts whose continuation is suspended below the active one. */
-const suspendedContexts: RuntimeContext[] = [];
+/** Reusable stack of suspended runtime contexts. */
+const suspendedContexts: (RuntimeContext | undefined)[] = [];
+let suspendedDepth = 0;
 
 export function runWithRuntimeContext<T>(
   context: RuntimeContext,
@@ -37,24 +38,62 @@ export function runWithRuntimeContext<T>(
 ): T {
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.context.run");
+
   const previous = getActiveRuntimeContext();
   if (previous === context) return fn();
 
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.context.switch");
+
   switchRuntimeContext(context);
-  suspendedContexts.push(previous);
+  suspendedContexts[suspendedDepth++] = previous;
+
   try {
     return fn();
   } finally {
-    suspendedContexts.pop();
+    suspendedContexts[--suspendedDepth] = undefined;
     switchRuntimeContext(previous);
   }
 }
 
-/** Whether `context` has a continuation suspended by a nested context entry. */
+/**
+ * Opens the region of `runWithRuntimeContext(context, fn)` around a callback
+ * the caller invokes itself, so the callback is not passed through this call.
+ * Returns the context to restore, or `null` when `context` is already active.
+ * Every exit, including a throw, must pass the result to
+ * `leaveRuntimeContextRegion`.
+ */
+export function enterRuntimeContextRegion(
+  context: RuntimeContext,
+): RuntimeContext | null {
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.context.run");
+  const previous = getActiveRuntimeContext();
+  if (previous === context) return null;
+
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.context.switch");
+  switchRuntimeContext(context);
+  suspendedContexts[suspendedDepth++] = previous;
+  return previous;
+}
+
+/** Closes a region opened by `enterRuntimeContextRegion`. */
+export function leaveRuntimeContextRegion(
+  previous: RuntimeContext | null,
+): void {
+  if (previous === null) return;
+  suspendedContexts[--suspendedDepth] = undefined;
+  switchRuntimeContext(previous);
+}
+
+/** Whether a context has a suspended continuation. */
 export function isRuntimeContextSuspended(context: RuntimeContext): boolean {
-  return suspendedContexts.includes(context);
+  for (let i = suspendedDepth - 1; i >= 0; i--) {
+    if (suspendedContexts[i] === context) return true;
+  }
+
+  return false;
 }
 
 export function configureRuntimeContext(
@@ -96,7 +135,7 @@ export function resetRuntimeContext(
   }
 
   context.currentConsumer = null;
-  context.trackingEpoch = 0;
+  context.trackingStamp = 0;
   context.propagationScopeDepth = 0;
   context.batchDepth = 0;
   context.runtimeState = 0;
@@ -122,7 +161,7 @@ export function snapshotRuntimeContext(
 
   const {
     currentConsumer,
-    trackingEpoch,
+    trackingStamp,
     propagationScopeDepth,
     batchDepth,
     runtimeState,
@@ -133,7 +172,7 @@ export function snapshotRuntimeContext(
   } = context;
   return {
     currentConsumer,
-    trackingEpoch,
+    trackingStamp,
     propagationScopeDepth,
     batchDepth,
     runtimeState,
@@ -156,7 +195,7 @@ export function restoreRuntimeContextSnapshot(
   snapshot: RuntimeContextSnapshot,
 ): void {
   const active = context === getActiveRuntimeContext();
-  if (active) context.trackingEpoch = trackingEpoch;
+  if (active) context.trackingStamp = trackingStamp;
   context.currentConsumer = snapshot.currentConsumer;
   context.propagationScopeDepth = snapshot.propagationScopeDepth;
   context.batchDepth = snapshot.batchDepth;
