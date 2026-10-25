@@ -20,6 +20,7 @@ export const packageRegistry = Object.freeze([
   { name: "@reflex-examples/mini-app", path: "packages/reflex/examples/mini-app", role: "app", publish: false },
   { name: "reflex-devtools", path: "packages/reflex-devtools", role: "app", publish: false },
   { name: "@reflex-lab/reactivity-bench", path: "lab/reactivity-bench", role: "research", publish: false },
+  { name: "@volynets/reflex-dom-compiler", path: "packages/reflex-dom-compiler", role: "research", publish: false },
 ]);
 
 export function packagesInScope(scope) {

@@ -1,7 +1,6 @@
 import { isTextNode, isElementNode } from "../host/document";
 import type {
   ComponentRenderable,
-  ElementProps,
   ElementRenderable,
   ElementTag,
   JSXRenderable,
@@ -14,8 +13,12 @@ import type {
 } from "../operators";
 import { resolveShowValue, resolveSwitchValue } from "../operators";
 import { RenderableKind } from "../renderable/kind";
+import type { CompiledDOMRenderable } from "../renderable/compiled";
 import { classifyRenderable } from "../renderable/classify";
 import { bindElementProps } from "../mount/element-binder";
+import { appendRenderableNodes } from "../mount/append";
+import { hasContentProp, isTextOnlyElement } from "../host/content";
+import { isTextRenderableValue } from "../renderable/kind";
 import { hydrateReactiveSlot, type HydrateContent } from "../mount/slot";
 import { hydrateFor } from "../mount/for";
 import { mountPortal } from "../mount/portal";
@@ -35,6 +38,8 @@ import {
 import { getDOMContext } from "../runtime/context";
 import { runInDOMOwnershipNode } from "../runtime/lifetime";
 import {
+  resolveChildNamespace,
+  resolveContainerNamespace,
   resolveNamespace,
   SVG_NS,
   MATHML_NS,
@@ -82,6 +87,32 @@ function shouldHydrateLightDomChildren(
   props: Record<string, unknown>,
 ): boolean {
   return !(tag === "textarea" && ("value" in props || "defaultValue" in props));
+}
+
+/**
+ * Children that are mounted again instead of adopted: after a content prop
+ * (`innerHTML`, ...) has replaced the server content, and in text-only
+ * elements, whose server text carries no hydration markers. As in
+ * `mountElement`, a static scalar child replaces the content and other
+ * children are appended to it.
+ */
+function remountElementChildren(
+  element: Element,
+  props: Record<string, unknown>,
+  childNamespace: Namespace,
+  replacesContent: boolean,
+  doc: Document,
+): void {
+  const children = props.children;
+
+  if (isTextRenderableValue(children)) {
+    const text = String(children);
+    if (element.textContent !== text) element.textContent = text;
+    return;
+  }
+
+  if (!replacesContent) element.textContent = "";
+  appendRenderableNodes(element, children, childNamespace, doc);
 }
 
 function hydrateRenderableValue(
@@ -209,10 +240,7 @@ function hydrateRenderableValue(
         failHydration();
       }
 
-      const renderable = value as ElementRenderable<
-        ElementTag,
-        ElementProps<ElementTag>
-      >;
+      const renderable = value as ElementRenderable<ElementTag, Record<string, unknown>>;
       const elementNamespace = resolveNamespace(
         renderable.tag,
         parentNamespace,
@@ -225,12 +253,30 @@ function hydrateRenderableValue(
       }
 
       const props = renderable.props as Record<string, unknown>;
+      const childNamespace = resolveChildNamespace(
+        renderable.tag,
+        elementNamespace,
+      );
+      const replacesContent = hasContentProp(props, elementNamespace);
       bindElementProps(currentNode, props, elementNamespace, "initial");
 
-      if (shouldHydrateLightDomChildren(renderable.tag, props)) {
+      if (!shouldHydrateLightDomChildren(renderable.tag, props)) {
+        // The value props own the textarea content.
+      } else if (
+        replacesContent ||
+        isTextOnlyElement(renderable.tag, elementNamespace)
+      ) {
+        remountElementChildren(
+          currentNode,
+          props,
+          childNamespace,
+          replacesContent,
+          doc,
+        );
+      } else {
         const remainingChild = hydrateRenderableValue(
           props.children,
-          elementNamespace,
+          childNamespace,
           currentNode.firstChild,
           null,
           doc,
@@ -248,6 +294,17 @@ function hydrateRenderableValue(
 
     case RenderableKind.Node:
       failHydration();
+
+    // Hydration adopts server nodes instead of creating them, so a compiled
+    // region hydrates through its source tree.
+    case RenderableKind.Compiled:
+      return hydrateRenderableValue(
+        (value as CompiledDOMRenderable).fallback(),
+        parentNamespace,
+        currentNode,
+        boundary,
+        doc,
+      );
   }
 }
 
@@ -262,7 +319,7 @@ export function hydrateRange(
     runInDOMOwnershipNode(ownershipNode, () => {
       const remainingNode = hydrateRenderableValue(
         renderable,
-        "html",
+        resolveContainerNamespace(container),
         anchors.startAnchor.nextSibling === anchors.endAnchor
           ? null
           : anchors.startAnchor.nextSibling,
@@ -285,6 +342,11 @@ export function hydrateRange(
       throw error;
     }
 
-    return mountOwnedRange(container, renderable, "html", anchors);
+    return mountOwnedRange(
+      container,
+      renderable,
+      resolveContainerNamespace(container),
+      anchors,
+    );
   }
 }

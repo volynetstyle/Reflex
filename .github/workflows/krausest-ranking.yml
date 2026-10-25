@@ -1,0 +1,206 @@
+name: krausest ranking
+
+# Places reflex-dom in the official js-framework-benchmark tables
+# (packages/reflex-dom/bench/krausest/README.md).
+#
+# The official harness of a tagged release runs reflex-dom next to vanillajs
+# from that release's prebuilt build.zip, plus any anchor frameworks listed in
+# anchors.json (none by default), on macOS arm64 runners with the release's
+# Chrome. Nothing is sent to the official repository. The rank job maps the
+# local measurements onto the official results of the release through the
+# measured reference frameworks and computes the places in the CPU, memory and
+# size tables.
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: js-framework-benchmark release tag (also the Chrome milestone)
+        default: chrome154
+      count:
+        description: CPU iterations per benchmark (empty = official 15)
+        required: false
+        default: ""
+      headless:
+        description: Run Chrome headless (the official runs are headed)
+        type: boolean
+        default: false
+  # workflow_dispatch needs the file on the default branch; a push to this
+  # branch runs it with the defaults before that.
+  push:
+    branches: [bench/krausest-ranking]
+    paths:
+      - .github/workflows/krausest-ranking.yml
+      - packages/reflex-dom/bench/krausest/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: krausest-ranking-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  RELEASE: ${{ inputs.release || 'chrome154' }}
+
+jobs:
+  shards:
+    name: resolve shards
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.shards.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+          sparse-checkout: packages/reflex-dom/bench/krausest
+      - id: shards
+        run: |
+          matrix=$(node -e '
+            const { shards } = require("./packages/reflex-dom/bench/krausest/anchors.json");
+            const include = shards.map((frameworks, index) => ({
+              shard: index + 1,
+              frameworks: ["keyed/vanillajs", "keyed/reflex-dom", ...frameworks].join(" "),
+            }));
+            process.stdout.write(JSON.stringify({ include }));
+          ')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  bench:
+    name: shard ${{ matrix.shard }}
+    needs: shards
+    runs-on: macos-15
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.shards.outputs.matrix) }}
+    env:
+      FRAMEWORKS: ${{ matrix.frameworks }}
+      COUNT: ${{ inputs.count }}
+      HEADLESS: ${{ inputs.headless || false }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+
+      - name: Build reflex-dom
+        run: pnpm --filter "@volynets/reflex-dom..." build
+
+      - name: Check out js-framework-benchmark ${{ env.RELEASE }}
+        run: git clone --depth 1 --branch "$RELEASE" https://github.com/krausest/js-framework-benchmark.git "$RUNNER_TEMP/jfb"
+
+      - name: Install the harness
+        working-directory: ${{ runner.temp }}/jfb
+        run: |
+          # The root lock carries lint plugins with conflicting eslint peers;
+          # the harness only needs cross-env from it.
+          npm ci --legacy-peer-deps
+          npm run install-webdriver-ts
+          npm run install-server
+
+      - name: Unpack the prebuilt anchors
+        working-directory: ${{ runner.temp }}/jfb
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$RELEASE" -R krausest/js-framework-benchmark -p build.zip
+          patterns=()
+          for framework in $FRAMEWORKS; do
+            [[ "$framework" == keyed/reflex-dom ]] || patterns+=("frameworks/$framework/*")
+          done
+          unzip -q -o build.zip "${patterns[@]}"
+          rm build.zip
+
+      - name: Add reflex-dom
+        run: node packages/reflex-dom/bench/krausest/build.mjs "$RUNNER_TEMP/jfb/frameworks/keyed/reflex-dom"
+
+      - name: Install Chrome ${{ env.RELEASE }}
+        id: chrome
+        working-directory: ${{ runner.temp }}
+        run: |
+          milestone=${RELEASE#chrome}
+          # Prints "chrome@<build> <path>"; the path contains spaces on macOS.
+          path=$(npx --yes @puppeteer/browsers@2.10.10 install "chrome@$milestone" --path "$RUNNER_TEMP/browsers" | tail -n 1 | cut -d ' ' -f 2-)
+          "$path" --version
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+          echo "version=$("$path" --version)" >> "$GITHUB_OUTPUT"
+
+      - name: Start the benchmark server
+        working-directory: ${{ runner.temp }}/jfb
+        run: |
+          nohup npm start > "$RUNNER_TEMP/server.log" 2>&1 &
+          for _ in $(seq 60); do
+            curl -fsS http://localhost:8080/ls > "$RUNNER_TEMP/ls.json" && break
+            sleep 2
+          done
+          # shellcheck disable=SC2016 # a JavaScript template literal, not a shell expansion
+          node -e '
+            const listed = new Set(require(process.argv[1]).map((f) => `${f.type}/${f.directory}`));
+            const missing = process.argv[2].split(" ").filter((f) => !listed.has(f));
+            if (missing.length) { console.error("not served:", missing.join(", ")); process.exit(1); }
+          ' "$RUNNER_TEMP/ls.json" "$FRAMEWORKS"
+
+      - name: Benchmark
+        working-directory: ${{ runner.temp }}/jfb
+        env:
+          CHROME: ${{ steps.chrome.outputs.path }}
+        run: |
+          read -ra frameworks <<< "$FRAMEWORKS"
+          args=(--chromeBinary "$CHROME" --framework "${frameworks[@]}")
+          [[ -n "$COUNT" ]] && args+=(--count "$COUNT")
+          [[ "$HEADLESS" == true ]] && args+=(--headless)
+          # Failures of single benchmarks are reported by the runner and leave
+          # the other result files in place; the rank job uses what exists.
+          npm run bench -- "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/bench.log" || true
+          find webdriver-ts/results -maxdepth 1 -type f | wc -l
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: krausest-shard-${{ matrix.shard }}
+          path: |
+            ${{ runner.temp }}/jfb/webdriver-ts/results/*.json
+          if-no-files-found: warn
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: krausest-logs-${{ matrix.shard }}
+          path: |
+            ${{ runner.temp }}/bench.log
+            ${{ runner.temp }}/server.log
+          if-no-files-found: ignore
+
+  rank:
+    name: rank
+    needs: bench
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+          sparse-checkout: packages/reflex-dom/bench/krausest
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: krausest-shard-*
+          path: results
+      - name: Official results of ${{ env.RELEASE }}
+        run: curl -fsSL -o official.ts "https://raw.githubusercontent.com/krausest/js-framework-benchmark/$RELEASE/webdriver-ts-results/src/results.ts"
+      - name: Rank
+        run: |
+          node packages/reflex-dom/bench/krausest/rank.mjs --official official.ts --results results --out ranking
+          cat ranking/ranking.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: krausest-ranking
+          path: ranking

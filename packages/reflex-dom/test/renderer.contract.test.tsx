@@ -252,7 +252,7 @@ describe("renderer ownership and document boundaries", () => {
       return (
         <ul>
           <For each={rows} by={(value) => value}>
-            {(value) => <li>{value}</li>}
+            {(value) => <li>{value()}</li>}
           </For>
         </ul>
       );

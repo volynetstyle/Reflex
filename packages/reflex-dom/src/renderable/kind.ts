@@ -6,6 +6,7 @@ import {
   SHOW_RENDERABLE,
   SWITCH_RENDERABLE,
 } from "../operators";
+import { COMPILED_DOM_RENDERABLE } from "./compiled";
 
 export const enum RenderableKind {
   Empty = 0,
@@ -19,6 +20,7 @@ export const enum RenderableKind {
   For = 8,
   Portal = 9,
   Text = 10,
+  Compiled = 11,
 }
 
 export function isEmptyRenderableValue(value: unknown): boolean {
@@ -56,6 +58,8 @@ export function getTaggedRenderableKind(
       return RenderableKind.For;
     case PORTAL_RENDERABLE:
       return RenderableKind.Portal;
+    case COMPILED_DOM_RENDERABLE:
+      return RenderableKind.Compiled;
     default:
       return undefined;
   }

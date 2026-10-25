@@ -7,16 +7,19 @@ import type {
 } from "../operators";
 import type {
   ComponentRenderable,
-  ElementProps,
   ElementRenderable,
   ElementTag,
   JSXRenderable,
 } from "../types";
 import type { Namespace } from "../host/namespace";
+import type { CompiledDOMRenderable } from "../renderable/compiled";
 import { RenderableKind } from "../renderable/kind";
 import { classifyRenderable } from "../renderable/classify";
 import { mountComponent } from "./component";
 import { mountReactiveSlot } from "./reactive";
+import { mountElementChildAccessor } from "./text-binding";
+import { mountCompiledHole } from "./compiled-hole";
+import { compiledDOMMount } from "./compiled-bindings";
 import { mountElement } from "./element";
 import { mountFor } from "./for";
 import { mountPortal } from "./portal";
@@ -30,10 +33,10 @@ export function appendRenderableNodes(
   parent: Node,
   value: JSXRenderable | unknown,
   ns: Namespace,
+  doc: Document = ownerDocument(parent),
 ): void {
   if (value == null || typeof value === "boolean") return;
 
-  const doc = ownerDocument(parent);
   if (
     typeof value === "string" ||
     typeof value === "number" ||
@@ -76,9 +79,20 @@ function appendComplexNodes(
         continue;
       }
       case RenderableKind.Accessor:
-        parent.appendChild(
-          mountReactiveSlot(current as () => unknown, identity, ns, doc),
-        );
+        // An element parent binds the accessor in place; other parents need
+        // a slot with its own boundary.
+        if (parent.nodeType === 1) {
+          mountElementChildAccessor(
+            parent as Element,
+            current as () => unknown,
+            ns,
+            doc,
+          );
+        } else {
+          parent.appendChild(
+            mountReactiveSlot(current as () => unknown, identity, ns, doc),
+          );
+        }
         break;
       case RenderableKind.Node:
         parent.appendChild(current as Node);
@@ -86,7 +100,7 @@ function appendComplexNodes(
       case RenderableKind.Element: {
         const el = current as ElementRenderable<
           ElementTag,
-          ElementProps<ElementTag>
+          Record<string, unknown>
         >;
         parent.appendChild(mountElement(el.tag, el.props, ns, doc));
         break;
@@ -122,6 +136,17 @@ function appendComplexNodes(
       case RenderableKind.Component:
         mountComponent(parent, current as ComponentRenderable<unknown>, ns);
         break;
+      case RenderableKind.Compiled: {
+        const r = current as CompiledDOMRenderable;
+        // Compiled regions are HTML-only; other namespaces mount the source tree.
+        const node =
+          ns === "html"
+            ? r.create(doc, mountCompiledHole, compiledDOMMount)
+            : null;
+        if (node !== null) parent.appendChild(node);
+        else appendRenderableNodes(parent, r.fallback(), ns, doc);
+        break;
+      }
     }
 
     if (top === 0) return;

@@ -75,12 +75,12 @@ export function ResourceSection(props: { model: DemoModel }) {
                   <p>Latency: {insight.latencyMs} ms</p>
                   <ul class="list">
                     <For each={insight.checklist} by={(item) => item}>
-                      {(item) => <li>{item}</li>}
+                      {(item) => <li>{item()}</li>}
                     </For>
                   </ul>
                   <div class="note-grid">
                     <For each={insight.notes} by={(item) => item}>
-                      {(note) => <p class="info-card">{note}</p>}
+                      {(note) => <p class="info-card">{note()}</p>}
                     </For>
                   </div>
                 </div>
