@@ -8,7 +8,7 @@
 // <spec> is a runtime.mjs path, or `@<ref>` / `@source` (a production bundle
 // of that commit or of the working tree, built by
 // scripts/build-baseline-oracle.mjs --production), optionally followed by
-// `+<variant>` mutations from ./variants.mjs: `@HEAD+hint-first`.
+// `+<variant>` mutations from ./variants.mjs: `@HEAD+rotate`.
 //
 // Every (sample, case, bundle) runs in its own process, so no JIT feedback
 // or inlining decision crosses rungs or bundles; within a sample the bundle

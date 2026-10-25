@@ -2,10 +2,9 @@
 // scripts/build-baseline-oracle.mjs --mutate to an archived copy of the
 // sources; the checked-out sources are never changed.
 //
-//   hint-first  consult the producer's hint before the four-link outgoing
-//               head start instead of after it. Same answers and the same
-//               slot fills (the fill stays past the head start), so only the
-//               order of existing probes changes.
+//   hint-after  consult the producer's hint after the four-link outgoing
+//               head start, as before 2026-10-25. Same answers and the same
+//               slot fills, so only the order of existing probes changes.
 //   no-detach   never detach the stale suffix eagerly
 //               (reuseLocatedIncomingEdgeOrLink). Changes which edge survives
 //               and therefore subscriber order, which the oracle pins: not a
@@ -28,10 +27,9 @@ const ROTATE = [
 ].join(" ");
 
 export const variants = {
-  "hint-first": [
-    "src/kernel/shape/graph/findEdge.ts::  let out = producer.firstOut;::  const earlyHint = producer.tailIn; if (earlyHint !== null && earlyHint.to === consumer && earlyHint.from === producer) return earlyHint; let out = producer.firstOut;",
-    "src/kernel/shape/graph/findEdge.ts::const hint = producer.tailIn;::",
-    "src/kernel/shape/graph/findEdge.ts::if (hint !== null && hint.to === consumer && hint.from === producer) {::if (false) {",
+  "hint-after": [
+    "src/kernel/shape/graph/findEdge.ts::  const hint = producer.tailIn;::  const hint = null;",
+    "src/kernel/shape/graph/findEdge.ts::  const edge = findEdgeInLockstepPastHeadStart(::  const lateHint = producer.tailIn; if (lateHint !== null && lateHint.to === consumer && lateHint.from === producer) return lateHint; const edge = findEdgeInLockstepPastHeadStart(",
   ],
   "no-detach": [
     "src/kernel/shape/graph/reuseEdge.ts::hasIncomingRun(suffixStartEdge, EAGER_STALE_SUFFIX_CLEANUP_MIN) === true::false",

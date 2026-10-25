@@ -27,10 +27,11 @@
 //              the ahead side); for an absence, min(|P.out|, the uncompared
 //              part of C.in). What an oracle choosing the right side for free
 //              would compare, with no new state.
-//   hint-first the links and probes of the same lookup with the hint
-//              consulted before the head start instead of after it. The
-//              order changes no state (the slot is filled only past the head
-//              start, in both orders), so the counterfactual is exact.
+//   hint-after the links and probes of the same lookup with the hint
+//              consulted after the four-link head start instead of before it
+//              (the order before 2026-10-25). The order changes no state (the
+//              slot is filled only past the head start, in both orders), so
+//              the counterfactual is exact.
 //   out-only, in-only
 //              for a lookup that reaches the lockstep, the links of the same
 //              head start followed by a walk of P.out alone, or of the two
@@ -43,8 +44,7 @@
 //              per step instead of three.
 //
 // `--variant` adds an attribution mutation from ./variants.mjs whose lookup
-// the replay still models (not `hint-first`, which is the counterfactual
-// above).
+// the replay still models.
 //
 // Tiers: L0 consumer side (next, first edge, cursor, one/two hop, last
 // edge); L1 producer side (empty, newest, sole, head start); L1h hint; L2+
@@ -75,8 +75,8 @@ const cases = ladderCases({
 
 const commit = option("--commit");
 const variant = option("--variant");
-if (variant === "hint-first")
-  throw new Error("hint-first is reported as a counterfactual of every run");
+if (variant === "hint-after")
+  throw new Error("hint-after is reported as a counterfactual of every run");
 if (variant !== undefined && !(variant in variants))
   throw new Error(`unknown variant ${variant}`);
 const LOCATE = "const newest = producer.lastOut;";
@@ -184,8 +184,8 @@ function replay(P, C, back, ahead) {
     inOnly: 0,
     pairAhead: 0,
     pairBack: 0,
-    hintFirstLinks: 0,
-    hintFirstProbe: 0,
+    hintAfterLinks: 0,
+    hintAfterProbe: 0,
   };
   const newest = P.lastOut;
   if (newest === null) return { ...r, route: "empty" };
@@ -217,11 +217,22 @@ function replay(P, C, back, ahead) {
             distance(back, prevIn, found),
             distance(ahead, nextIn, found),
           );
-    r.hintFirstProbe = 1;
-    r.hintFirstLinks = hintMatches ? 0 : r.head + r.out + r.back + r.ahead;
+    // Hint after the head start: a hit costs the head start up to the
+    // edge's rank first; a miss costs the same links, and the probe only
+    // when the head start did not settle the lookup.
+    if (route === "hint") {
+      const rank = distance(P.firstOut, nextOut, slot);
+      r.hintAfterLinks = Math.min(rank, HEAD_START);
+      r.hintAfterProbe = rank > HEAD_START ? 1 : 0;
+    } else {
+      r.hintAfterLinks = r.head + r.out + r.back + r.ahead;
+      r.hintAfterProbe = route === "lock+" || route === "lock-" ? 1 : 0;
+    }
     return r;
   };
 
+  r.hintProbe = 1;
+  if (hintMatches) return finish("hint", slot);
   let o = P.firstOut;
   for (let k = 0; k < HEAD_START; k++) {
     if (o === null) return finish("head-absent", null);
@@ -230,8 +241,6 @@ function replay(P, C, back, ahead) {
     o = o.nextOut;
   }
   const afterHead = o;
-  r.hintProbe = 1;
-  if (hintMatches) return finish("hint", slot);
   for (let b = back, a = ahead; ; ) {
     if (o === null) return finish("lock-", null);
     r.out++;
@@ -293,7 +302,7 @@ function account(step) {
     levels: { L0: 0, L1: 0, L1h: 0, "L2+": 0, "L2-": 0 },
     links: { head: 0, out: 0, back: 0, ahead: 0 },
     hintProbes: 0,
-    hintFirst: { links: 0, probes: 0 },
+    hintAfter: { links: 0, probes: 0 },
     lockFound: {
       n: 0,
       links: 0,
@@ -342,12 +351,12 @@ function account(step) {
       s.links.back += l.back;
       s.links.ahead += l.ahead;
       s.hintProbes += l.hintProbe;
-      if (l.hintFirstProbe) {
-        s.hintFirst.links += l.hintFirstLinks;
-        s.hintFirst.probes += l.hintFirstProbe;
+      if (l.hintProbe) {
+        s.hintAfter.links += l.hintAfterLinks;
+        s.hintAfter.probes += l.hintAfterProbe;
       } else {
         // Settled before findEdgeInLockstep: identical in both orders.
-        s.hintFirst.links += replayed;
+        s.hintAfter.links += replayed;
       }
       // Totals per lookup, head start included, so that they compare with
       // `opt` and the counterfactual walks.
@@ -484,9 +493,9 @@ for (const c of measured) {
     cleanupDropsPerPass: fixed(s.cleanupDrops / PASSES, 2),
     detachesPerPass: fixed(s.detaches / PASSES, 2),
     movesPerPass: fixed((s.moves + l0cMoves) / PASSES, 2),
-    hintFirst: {
-      linksPerRead: fixed(s.hintFirst.links / s.reads, 3),
-      probesPerRead: fixed(s.hintFirst.probes / s.reads, 3),
+    hintAfter: {
+      linksPerRead: fixed(s.hintAfter.links / s.reads, 3),
+      probesPerRead: fixed(s.hintAfter.probes / s.reads, 3),
       currentProbesPerRead: fixed(s.hintProbes / s.reads, 3),
     },
   };
@@ -494,7 +503,7 @@ for (const c of measured) {
 
 const pct = (x) => (x === 0 ? "·" : `${(x * 100).toFixed(x < 0.01 ? 1 : 0)}`);
 console.log(
-  "| case | reads/pass | L0 % | L1 % | L1h % | L2+ % | L2− % | links/read | L2+ links/edge (opt) | L2− links/proof (opt) | new edges/pass (cleanup) | moves/pass | hint-first links/read, probes/read (now) |",
+  "| case | reads/pass | L0 % | L1 % | L1h % | L2+ % | L2− % | links/read | L2+ links/edge (opt) | L2− links/proof (opt) | new edges/pass (cleanup) | moves/pass | hint-after links/read, probes/read (now) |",
 );
 console.log(
   "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
@@ -502,7 +511,7 @@ console.log(
 for (const [id, r] of Object.entries(results)) {
   const lv = r.levels;
   console.log(
-    `| ${id} | ${r.readsPerPass} | ${pct(lv.L0)} | ${pct(lv.L1)} | ${pct(lv.L1h)} | ${pct(lv["L2+"])} | ${pct(lv["L2-"])} | ${r.linksPerRead} | ${r.lockFound ? `${r.lockFound.linksPerEdge} (${r.lockFound.optPerEdge})` : "·"} | ${r.lockAbsent ? `${r.lockAbsent.linksPerProof} (${r.lockAbsent.optPerProof})` : "·"} | ${r.newEdgesPerPass} (${r.cleanupDropsPerPass}) | ${r.movesPerPass} | ${r.hintFirst.linksPerRead}, ${r.hintFirst.probesPerRead} (${r.hintFirst.currentProbesPerRead}) |`,
+    `| ${id} | ${r.readsPerPass} | ${pct(lv.L0)} | ${pct(lv.L1)} | ${pct(lv.L1h)} | ${pct(lv["L2+"])} | ${pct(lv["L2-"])} | ${r.linksPerRead} | ${r.lockFound ? `${r.lockFound.linksPerEdge} (${r.lockFound.optPerEdge})` : "·"} | ${r.lockAbsent ? `${r.lockAbsent.linksPerProof} (${r.lockAbsent.optPerProof})` : "·"} | ${r.newEdgesPerPass} (${r.cleanupDropsPerPass}) | ${r.movesPerPass} | ${r.hintAfter.linksPerRead}, ${r.hintAfter.probesPerRead} (${r.hintAfter.currentProbesPerRead}) |`,
   );
 }
 console.log(

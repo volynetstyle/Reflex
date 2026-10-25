@@ -13,8 +13,8 @@ import type ReactiveNode from "@runtime/kernel/shape/node";
  *   in this pass, or is the producer's only edge;
  * - a single outgoing edge to another consumer proves absence.
  *
- * Otherwise findEdgeInLockstep decides: its four-link outgoing head start,
- * then the producer's outgoing hint (L1, INV-H), then the lockstep (L2),
+ * Otherwise findEdgeInLockstep decides: the producer's outgoing hint (L1,
+ * INV-H), then its four-link outgoing head start, then the lockstep (L2),
  * which is the only general proof of absence. `back` and `ahead` follow its
  * coverage contract: with the incoming edges the caller has compared, they
  * cover the consumer's whole incoming list.
