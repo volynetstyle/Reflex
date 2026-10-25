@@ -1,0 +1,13 @@
+commit 7858d1c4751e (+ uncommitted shared-at-drop rename), v25.2.0, median of 3
+│ (index)                    │ bytesPerConsumer │ droppedAlive │
+├────────────────────────────┼──────────────────┼──────────────┤
+│ dormant / cleanup          │ 10851.212        │ 0            │
+│ dormant / lazy             │ 20911.232        │ 1            │
+│ dormant / shared           │ 10926.68         │ 0            │
+│ orphaned-drop / cleanup    │ 1529.516         │ 0            │
+│ orphaned-drop / lazy       │ 12187.764        │ 1            │
+│ orphaned-drop / shared     │ 11548.196        │ 1            │
+│ orphaned-dispose / cleanup │ 1038.512         │ 0            │
+│ orphaned-dispose / lazy    │ 11043.024        │ 1            │
+│ orphaned-dispose / shared  │ 11043.524        │ 1            │
+└────────────────────────────┴──────────────────┴──────────────┘

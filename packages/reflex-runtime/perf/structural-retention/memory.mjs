@@ -14,6 +14,12 @@
 //               computed again. The test keeps only WeakRefs to the first
 //               producers: after GC, heap bytes per dormant consumer and the
 //               share of dropped producers still alive.
+//   orphaned-drop, orphaned-dispose
+//               2,000 pairs of computeds share 8 producers (1 KiB payload).
+//               C1 drops them while C2 still reads them, then sleeps; C2
+//               then drops them (or is disposed). Share of the shared
+//               producers alive after GC: whether retention decided at drop
+//               time can extend a lifetime later.
 //   churn       E.retention.subtree-churn of bench/workloads.mjs: 2,000 mount,
 //               update and dispose cycles, heap delta after GC (should be ~0).
 import { execFileSync, spawnSync } from "node:child_process";
@@ -89,6 +95,56 @@ if (args[0] === "--measure") {
       droppedAlive: alive / refs.length,
     };
     if (consumers.length !== n) throw new Error();
+  } else if (scenario === "orphaned-drop" || scenario === "orphaned-dispose") {
+    // 8 producers shared by C1 and C2. C1 drops them while C2 still reads
+    // them (shared-at-drop retention keeps C1's edges), then sleeps; C2
+    // then drops them too (or is disposed). Are they collected?
+    const before = settle();
+    const n = 2000;
+    const refs = [];
+    const keep = [];
+    const switch1 = rt.createProducer(0);
+    const switch2 = rt.createProducer(0);
+    const second = [];
+    for (let i = 0; i < n; i++) {
+      const shared = Array.from({ length: 8 }, () => {
+        const p = rt.createProducer(new Array(128).fill(i));
+        refs.push(new WeakRef(p));
+        return p;
+      });
+      const alt1 = [rt.createProducer(i)];
+      const alt2 = [rt.createProducer(-i)];
+      const reader = (toggle, alt) => () => {
+        let sum = 0;
+        for (const p of rt.readProducer(toggle) === 0 ? shared : alt)
+          sum += rt.readProducer(p).length ?? 1;
+        return sum;
+      };
+      const c1 = rt.createConsumer(reader(switch1, alt1));
+      const c2 = rt.createConsumer(reader(switch2, alt2));
+      rt.readConsumer(c1);
+      rt.readConsumer(c2);
+      keep.push(c1);
+      second.push(c2);
+      shared.length = 0;
+    }
+    rt.writeProducer(switch1, 1);
+    for (const c1 of keep) rt.readConsumer(c1);
+    if (scenario === "orphaned-drop") {
+      rt.writeProducer(switch2, 1);
+      for (const c2 of second) rt.readConsumer(c2);
+    } else {
+      for (const c2 of second) rt.disposeNode(c2);
+    }
+    second.length = 0;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const after = settle();
+    const alive = refs.filter((r) => r.deref() !== undefined).length;
+    result = {
+      bytesPerConsumer: (after - before) / n,
+      droppedAlive: alive / refs.length,
+    };
+    if (keep.length !== n) throw new Error();
   } else if (scenario === "churn") {
     const { workloads } = await import(
       pathToFileURL(path.join(packageRoot, "bench/workloads.mjs")).href
@@ -113,7 +169,7 @@ const POLICY_VARIANTS = {
   identity: "retain-identity",
   lazy: "lazy-identity",
   strict: "lazy-identity-strict",
-  neutral: "lazy-identity-neutral",
+  shared: "lazy-identity-shared-at-drop",
 };
 const policies = [
   "cleanup",
@@ -151,7 +207,11 @@ function build(policy) {
 const bundles = Object.fromEntries(policies.map((p) => [p, build(p)]));
 const median = (xs) => [...xs].sort((a, b) => a - b)[xs.length >> 1];
 const rows = {};
-for (const scenario of ["node-size", "dormant", "churn"]) {
+const scenarios = option(
+  "--scenarios",
+  "node-size,dormant,orphaned-drop,orphaned-dispose,churn",
+).split(",");
+for (const scenario of scenarios) {
   for (const policy of policies) {
     const samples = [];
     for (let r = 0; r < repeats; r++) {

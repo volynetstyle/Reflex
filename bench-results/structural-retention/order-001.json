@@ -1,0 +1,381 @@
+{
+ "commit": "7858d1c4751e03d7f3e52b0f299a9a7e2ce2aef4",
+ "variant": "lazy-identity-shared-at-drop",
+ "ladder": {
+  "same/n16": {
+   "passesWithChain": 1,
+   "retainedAtStart": 16,
+   "available": 16,
+   "hit": 16,
+   "deeper": 0,
+   "abandoned": 0,
+   "unexpected": 0,
+   "abandons": 0,
+   "thrown": 0,
+   "missedLookupLinks": 0,
+   "deeperDepth": {},
+   "eta": 1
+  },
+  "rotate-left-1/n16": {
+   "passesWithChain": 1,
+   "retainedAtStart": 16,
+   "available": 16,
+   "hit": 0,
+   "deeper": 1,
+   "abandoned": 15,
+   "unexpected": 0,
+   "abandons": 1,
+   "thrown": 16,
+   "missedLookupLinks": 0,
+   "deeperDepth": {
+    "1": 1
+   },
+   "eta": 0
+  },
+  "rotate-right-1/n16": {
+   "passesWithChain": 1,
+   "retainedAtStart": 16,
+   "available": 16,
+   "hit": 0,
+   "deeper": 1,
+   "abandoned": 15,
+   "unexpected": 0,
+   "abandons": 1,
+   "thrown": 16,
+   "missedLookupLinks": 0,
+   "deeperDepth": {
+    "8+": 1
+   },
+   "eta": 0
+  },
+  "mid-to-front/n16": {
+   "passesWithChain": 1,
+   "retainedAtStart": 16,
+   "available": 16,
+   "hit": 0,
+   "deeper": 1,
+   "abandoned": 15,
+   "unexpected": 0,
+   "abandons": 1,
+   "thrown": 16,
+   "missedLookupLinks": 0,
+   "deeperDepth": {
+    "8+": 1
+   },
+   "eta": 0
+  },
+  "swap-adjacent/n16": {
+   "passesWithChain": 1,
+   "retainedAtStart": 16,
+   "available": 16,
+   "hit": 0,
+   "deeper": 1,
+   "abandoned": 15,
+   "unexpected": 0,
+   "abandons": 1,
+   "thrown": 16,
+   "missedLookupLinks": 0,
+   "deeperDepth": {
+    "1": 1
+   },
+   "eta": 0
+  },
+  "reverse/n16": {
+   "passesWithChain": 1,
+   "retainedAtStart": 16,
+   "available": 16,
+   "hit": 0,
+   "deeper": 1,
+   "abandoned": 15,
+   "unexpected": 0,
+   "abandons": 1,
+   "thrown": 16,
+   "missedLookupLinks": 0,
+   "deeperDepth": {
+    "8+": 1
+   },
+   "eta": 0
+  },
+  "random/n16": {
+   "passesWithChain": 5,
+   "retainedAtStart": 80,
+   "available": 80,
+   "hit": 0,
+   "deeper": 5,
+   "abandoned": 75,
+   "unexpected": 0,
+   "abandons": 5,
+   "thrown": 80,
+   "missedLookupLinks": 0,
+   "deeperDepth": {
+    "2-3": 1,
+    "8+": 2,
+    "4-7": 2
+   },
+   "eta": 0
+  },
+  "subset-same/n16": {
+   "passesWithChain": 1,
+   "retainedAtStart": 16,
+   "available": 8,
+   "hit": 1,
+   "deeper": 1,
+   "abandoned": 6,
+   "unexpected": 0,
+   "abandons": 1,
+   "thrown": 15,
+   "missedLookupLinks": 0,
+   "deeperDepth": {
+    "1": 1
+   },
+   "eta": 0.125
+  },
+  "subset-permuted/n16": {
+   "passesWithChain": 5,
+   "retainedAtStart": 80,
+   "available": 40,
+   "hit": 0,
+   "deeper": 5,
+   "abandoned": 35,
+   "unexpected": 0,
+   "abandons": 5,
+   "thrown": 80,
+   "missedLookupLinks": 0,
+   "deeperDepth": {
+    "8+": 3,
+    "2-3": 1,
+    "4-7": 1
+   },
+   "eta": 0
+  },
+  "novel-front/n16": {
+   "passesWithChain": 1,
+   "retainedAtStart": 16,
+   "available": 16,
+   "hit": 0,
+   "deeper": 0,
+   "abandoned": 16,
+   "unexpected": 0,
+   "abandons": 1,
+   "thrown": 16,
+   "missedLookupLinks": 0,
+   "deeperDepth": {},
+   "eta": 0
+  },
+  "novel-mid/n16": {
+   "passesWithChain": 1,
+   "retainedAtStart": 16,
+   "available": 16,
+   "hit": 8,
+   "deeper": 0,
+   "abandoned": 8,
+   "unexpected": 0,
+   "abandons": 1,
+   "thrown": 8,
+   "missedLookupLinks": 0,
+   "deeperDepth": {},
+   "eta": 0.5
+  },
+  "same/n64": {
+   "passesWithChain": 1,
+   "retainedAtStart": 64,
+   "available": 64,
+   "hit": 64,
+   "deeper": 0,
+   "abandoned": 0,
+   "unexpected": 0,
+   "abandons": 0,
+   "thrown": 0,
+   "missedLookupLinks": 0,
+   "deeperDepth": {},
+   "eta": 1
+  },
+  "rotate-left-1/n64": {
+   "passesWithChain": 1,
+   "retainedAtStart": 64,
+   "available": 64,
+   "hit": 0,
+   "deeper": 1,
+   "abandoned": 63,
+   "unexpected": 0,
+   "abandons": 1,
+   "thrown": 64,
+   "missedLookupLinks": 0,
+   "deeperDepth": {
+    "1": 1
+   },
+   "eta": 0
+  },
+  "rotate-right-1/n64": {
+   "passesWithChain": 1,
+   "retainedAtStart": 64,
+   "available": 64,
+   "hit": 0,
+   "deeper": 1,
+   "abandoned": 63,
+   "unexpected": 0,
+   "abandons": 1,
+   "thrown": 64,
+   "missedLookupLinks": 0,
+   "deeperDepth": {
+    "8+": 1
+   },
+   "eta": 0
+  },
+  "mid-to-front/n64": {
+   "passesWithChain": 1,
+   "retainedAtStart": 64,
+   "available": 64,
+   "hit": 0,
+   "deeper": 1,
+   "abandoned": 63,
+   "unexpected": 0,
+   "abandons": 1,
+   "thrown": 64,
+   "missedLookupLinks": 0,
+   "deeperDepth": {
+    "8+": 1
+   },
+   "eta": 0
+  },
+  "swap-adjacent/n64": {
+   "passesWithChain": 1,
+   "retainedAtStart": 64,
+   "available": 64,
+   "hit": 0,
+   "deeper": 1,
+   "abandoned": 63,
+   "unexpected": 0,
+   "abandons": 1,
+   "thrown": 64,
+   "missedLookupLinks": 0,
+   "deeperDepth": {
+    "1": 1
+   },
+   "eta": 0
+  },
+  "reverse/n64": {
+   "passesWithChain": 1,
+   "retainedAtStart": 64,
+   "available": 64,
+   "hit": 0,
+   "deeper": 1,
+   "abandoned": 63,
+   "unexpected": 0,
+   "abandons": 1,
+   "thrown": 64,
+   "missedLookupLinks": 0,
+   "deeperDepth": {
+    "8+": 1
+   },
+   "eta": 0
+  },
+  "random/n64": {
+   "passesWithChain": 5,
+   "retainedAtStart": 320,
+   "available": 320,
+   "hit": 0,
+   "deeper": 5,
+   "abandoned": 315,
+   "unexpected": 0,
+   "abandons": 5,
+   "thrown": 320,
+   "missedLookupLinks": 0,
+   "deeperDepth": {
+    "8+": 5
+   },
+   "eta": 0
+  },
+  "subset-same/n64": {
+   "passesWithChain": 1,
+   "retainedAtStart": 64,
+   "available": 32,
+   "hit": 1,
+   "deeper": 1,
+   "abandoned": 30,
+   "unexpected": 0,
+   "abandons": 1,
+   "thrown": 63,
+   "missedLookupLinks": 0,
+   "deeperDepth": {
+    "1": 1
+   },
+   "eta": 0.031
+  },
+  "subset-permuted/n64": {
+   "passesWithChain": 5,
+   "retainedAtStart": 320,
+   "available": 160,
+   "hit": 0,
+   "deeper": 5,
+   "abandoned": 155,
+   "unexpected": 0,
+   "abandons": 5,
+   "thrown": 320,
+   "missedLookupLinks": 0,
+   "deeperDepth": {
+    "8+": 4,
+    "4-7": 1
+   },
+   "eta": 0
+  },
+  "novel-front/n64": {
+   "passesWithChain": 1,
+   "retainedAtStart": 64,
+   "available": 64,
+   "hit": 0,
+   "deeper": 0,
+   "abandoned": 64,
+   "unexpected": 0,
+   "abandons": 1,
+   "thrown": 64,
+   "missedLookupLinks": 0,
+   "deeperDepth": {},
+   "eta": 0
+  },
+  "novel-mid/n64": {
+   "passesWithChain": 1,
+   "retainedAtStart": 64,
+   "available": 64,
+   "hit": 32,
+   "deeper": 0,
+   "abandoned": 32,
+   "unexpected": 0,
+   "abandons": 1,
+   "thrown": 32,
+   "missedLookupLinks": 0,
+   "deeperDepth": {},
+   "eta": 0.5
+  }
+ },
+ "oracle": {
+  "passesWithChain": 2134,
+  "retainedAtStart": 2170,
+  "available": 694,
+  "hit": 664,
+  "deeper": 2,
+  "abandoned": 28,
+  "unexpected": 0,
+  "abandons": 91,
+  "thrown": 95,
+  "missedLookupLinks": 24,
+  "deeperDepth": {
+   "1": 2
+  },
+  "eta": 0.957
+ },
+ "dlist": {
+  "passesWithChain": 6533,
+  "retainedAtStart": 6533,
+  "available": 6533,
+  "hit": 6533,
+  "deeper": 0,
+  "abandoned": 0,
+  "unexpected": 0,
+  "abandons": 0,
+  "thrown": 0,
+  "missedLookupLinks": 0,
+  "deeperDepth": {},
+  "eta": 1
+ }
+}

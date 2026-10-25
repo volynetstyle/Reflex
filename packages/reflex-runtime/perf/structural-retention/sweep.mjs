@@ -208,7 +208,7 @@ const POLICY_VARIANTS = {
   identity: "retain-identity",
   lazy: "lazy-identity",
   strict: "lazy-identity-strict",
-  neutral: "lazy-identity-neutral",
+  shared: "lazy-identity-shared-at-drop",
 };
 const policies = [
   "cleanup",

@@ -73,22 +73,29 @@ exact-dependency invariant by design.
   - `lazy-identity-strict` expires the chain at the end of every computation
     (one store on the exit path), so identity outlives membership by exactly
     one consumer epoch.
-  - `lazy-identity-neutral` retains a dropped edge only when its producer
-    keeps another subscriber after the unlink. Retention then never extends a
-    node's lifetime; it costs the edge object alone.
+  - `lazy-identity-shared-at-drop` (first called `-neutral`) retains a
+    dropped edge only when its producer keeps another subscriber after the
+    unlink. At that moment retention extends no lifetime; later it can (see
+    Memory).
+
+**Decisions so far (owner, 25 October 2026).** Plain horizon; strict stays
+only as a control: it loses the gap-2 and gap-4 reuse and does not bound
+dormant retention either, because its expiry waits for a computation that
+may never come. The representation is (c)'s dedicated field. No deeper
+retained lookup until measured (see Out-of-order resurrection).
 
 ## Semantics
 
 `differential.mjs --base HEAD --candidate HEAD+<variant>`, 40,000 programs
 (oracle, hub, and targeted wide consumers), invariant checks on both sides.
 
-| variant                   |               identical traces | other                                                                |
-| ------------------------- | -----------------------------: | -------------------------------------------------------------------- |
-| (a) retain-one-epoch      | 5,236 of 8,000 (a smaller run) | 2,763 semantic divergences: its retained edges are real dependencies |
-| (b) retain-identity       |                         39,998 | a stack-overflow depth; the nested self-recompute (8688)             |
-| (c) lazy-identity         |                     **40,000** | none                                                                 |
-| (c) lazy-identity-strict  |                     **40,000** | none                                                                 |
-| (c) lazy-identity-neutral |                     **40,000** | none                                                                 |
+| variant                          |               identical traces | other                                                                |
+| -------------------------------- | -----------------------------: | -------------------------------------------------------------------- |
+| (a) retain-one-epoch             | 5,236 of 8,000 (a smaller run) | 2,763 semantic divergences: its retained edges are real dependencies |
+| (b) retain-identity              |                         39,998 | a stack-overflow depth; the nested self-recompute (8688)             |
+| (c) lazy-identity                |                     **40,000** | none                                                                 |
+| (c) lazy-identity-strict         |                     **40,000** | none                                                                 |
+| (c) lazy-identity-shared-at-drop |                     **40,000** | none                                                                 |
 
 The identical count is not vacuous: in 20,000 oracle programs
 `lazy-identity` reactivates 1,155 of 5,182 retained edges, in 840 programs.
@@ -128,14 +135,17 @@ consumer kinds):
 On the real workload `D.list.filter-select` (bench/workloads.mjs, 7 samples,
 `bench-results/structural-retention/dlist-001.json`):
 
-| policy      | links per step | reactivations per step | time per step / cleanup |
-| ----------- | -------------: | ---------------------: | ----------------------- |
-| cleanup     |           33.4 |                      0 | 1                       |
-| (c) lazy    |            4.2 |                   29.2 | 0.93 (0.88–0.98)        |
-| (c) neutral |            4.2 |                   29.2 | 0.92 (0.83–0.97)        |
-| (c) strict  |            4.2 |                   29.2 | 0.91 (0.88–0.96)        |
+| policy             | links per step | reactivations per step | time per step / cleanup |
+| ------------------ | -------------: | ---------------------: | ----------------------- |
+| cleanup            |           33.4 |                      0 | 1                       |
+| (c) lazy           |            4.2 |                   29.2 | 0.93 (0.88–0.98)        |
+| (c) shared-at-drop |            4.2 |                   29.2 | 0.92 (0.83–0.97)        |
+| (c) strict         |            4.2 |                   29.2 | 0.91 (0.88–0.96)        |
 
 The whole step (writes, recomputes, watcher runs) is 7–9% faster.
+
+Reports produced before the rename (`sweep-003.json`, `dlist-001.json`,
+`memory-001.txt`) label shared-at-drop as `neutral`.
 
 ### Memory
 
@@ -148,16 +158,36 @@ The whole step (writes, recomputes, watcher runs) is 7–9% faster.
 | (b) retain-identity |                              368.9 |                     20,770 |                    100% |                    62 |
 | (c) lazy            |                              384.8 |                     20,905 |                    100% |                    62 |
 | (c) strict          |                              384.9 |                     20,905 |                    100% |                    62 |
-| (c) neutral         |                              384.8 |                 **10,921** |                  **0%** |                    63 |
+| (c) shared-at-drop  |                              384.8 |                 **10,921** |                  **0%** |                    63 |
 
 - **"Dormant" setup.** 2,000 live computeds each drop 8 producers with a
   1 KiB payload and never compute again.
 - **"One epoch" means one consumer epoch, not wall time.** A consumer that
   never computes again keeps its retained producers as long as it lives, and
   strict expiry does not help.
-- **The lifetime-neutral rule removes that cost.** It retains only edges whose
-  producer stays reachable through another subscriber; the rest is the field
-  (+8 bytes per node).
+- **Shared-at-drop removes that cost for the dormant case.** It retains only
+  edges whose producer stays reachable through another subscriber at drop
+  time; what remains is the field (+8 bytes per node).
+- **It is not lifetime-neutral afterwards.** If the other subscribers later
+  drop the producer too, the retained edge, absent from the producer's
+  outgoing list, still keeps it alive. `memory.mjs` orphaned-\*: 2,000
+  pairs of computeds share 8 producers (1 KiB payload). C1 drops them while C2
+  still reads them, then sleeps; C2 then drops them or is disposed
+  (`memory-002.txt`):
+
+  | scenario                                          | cleanup   | lazy         | shared-at-drop   |
+  | ------------------------------------------------- | --------- | ------------ | ---------------- |
+  | C2 drops: bytes per C1, shared producers alive    | 1,530, 0% | 12,188, 100% | 11,548, **100%** |
+  | C2 disposed: bytes per C1, shared producers alive | 1,039, 0% | 11,043, 100% | 11,044, **100%** |
+
+  The producer cannot know that a cold identity still points to it. The leak
+  is bounded: each dormant consumer holds at most the edges of its last
+  cleanup, and disposing it releases them. Making retention neutral for the
+  whole lifetime needs one of: a producer-side back-reference to its retained
+  edges (cold, but a second adjacency), expiry tied to a global quiescence
+  generation instead of the consumer's next computation, or accepting the
+  bound as a memory policy. Not decided.
+
 - **Disposal releases everything.** The churn workload
   (`E.retention.subtree-churn`) is unchanged under every policy.
 
@@ -183,14 +213,56 @@ a lockstep absence proof, need little. The microworkload's `never` cells put
 the residual cost at about 2–4%: chaining, the field, the abandon store on
 links, and the head check on miss paths.
 
+## Out-of-order resurrection
+
+`order.mjs` builds the candidate (`lazy-identity-shared-at-drop`, plain
+horizon) as a PROFILE bundle with analysis-only probes. For every
+computation it records R0, the retained set at its start. A read is
+_available_ when it is the pass's first read of a producer in R0. Each
+available read ends as one of:
+
+- a head hit: reactivated;
+- a deeper miss: the chain was live, but its head was another producer;
+- a miss after abandonment: an earlier link in the pass had dropped the chain.
+
+η = hits / available. Report: `bench-results/structural-retention/order-001.json`.
+
+| corpus                          | available | head hits |      deeper | after abandonment |         η |
+| ------------------------------- | --------: | --------: | ----------: | ----------------: | --------: |
+| oracle, 20,000 programs         |       694 |       664 | 2 (depth 1) |                28 | **0.957** |
+| D.list.filter-select, 200 steps |     6,533 |     6,533 |           0 |                 0 | **1.000** |
+
+The cross-epoch ladder isolates the order: a consumer reads an anchor and N
+producers (16 or 64, each with another subscriber), drops all N for one
+computation, then reads them in another order.
+
+| next trace                                                                  | η         |
+| --------------------------------------------------------------------------- | --------- |
+| same                                                                        | 1         |
+| rotate left or right by 1, one mid to front, swap adjacent, reverse, random | 0         |
+| every other, same order                                                     | 1 / (N/2) |
+| every other, permuted                                                       | 0         |
+| new dependency in front                                                     | 0         |
+| new dependency in the middle                                                | 0.5       |
+
+- **Head-only depends entirely on order.** The first read that misses the head
+  links a new edge, the link abandons the chain, and the rest of the pass
+  relinks.
+- **A miss costs what cleanup already costs:** the ordinary link, and no
+  lockstep steps in these graphs. The mechanism therefore never does worse
+  than the baseline.
+- **Head-only stays.** In the oracle corpus and in `D.list` the old trace
+  order predicts the next one: 96–100% of available identity is reused.
+  Following the agreed rule, no deeper search is added. A latent search
+  would cost O(|R_C|) against the lockstep's O(min(out(P), in(C))), and it
+  only pays where |R_C| is much smaller, or where some cheaper evidence
+  exists.
+
 ## Open
 
-- **Out-of-order resurrection.** Only the chain head is checked (an O(1)
-  locality tier), and any new link abandons the chain. A consumer whose next
-  pass first links something new loses its chain. Whether a bounded search
-  would pay is not measured.
-- **Horizon.** Plain (c) keeps a chain until the next cleanup; strict (c) for
-  exactly one epoch. Both are measured; neither is chosen.
+- **Lifetime neutrality after drop.** See Memory: decide between a
+  producer-side back-reference, a quiescence-generation expiry, or the
+  bounded leak as policy.
 - **Field cost.** +8 bytes per node, and the cold-path checks; a production
   candidate needs the paired CI gate and the shape check.
 - **`p₁` prediction.** Deferred until the mechanism above is settled, as
@@ -199,8 +271,9 @@ links, and the head check on miss paths.
 ## Reproduce
 
 ```sh
-node perf/structural-retention/differential.mjs --base HEAD --candidate HEAD+lazy-identity-neutral
+node perf/structural-retention/differential.mjs --base HEAD --candidate HEAD+lazy-identity-shared-at-drop
 node perf/structural-retention/sweep.mjs --ref HEAD --samples 7 --out <report.json>
-node perf/structural-retention/sweep.mjs --ref HEAD --policies lazy,neutral,strict --no-synthetic --bench D.list.filter-select --out <report.json>
-node perf/structural-retention/memory.mjs --ref HEAD --policies identity,lazy,strict,neutral
+node perf/structural-retention/sweep.mjs --ref HEAD --policies lazy,shared,strict --no-synthetic --bench D.list.filter-select --out <report.json>
+node perf/structural-retention/memory.mjs --ref HEAD --policies identity,lazy,strict,shared
+node perf/structural-retention/order.mjs --programs 20000 --out <report.json>
 ```

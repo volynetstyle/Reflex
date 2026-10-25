@@ -54,11 +54,14 @@
 //               lazy-identity with expiry at the end of every computation
 //               (one store on the computation's exit path), so identity
 //               outlives membership by exactly one consumer epoch.
-//   lazy-identity-neutral
+//   lazy-identity-shared-at-drop
 //               lazy-identity that retains a dropped edge only when its
-//               producer keeps another subscriber after the unlink, so a
-//               dormant consumer never keeps an otherwise unreachable producer
-//               alive; the retained cost is the edge object alone.
+//               producer keeps another subscriber after the unlink. At that
+//               moment retention extends no lifetime, but not afterwards: if
+//               the other subscribers later drop the producer too, the
+//               retained edge, absent from the producer's outgoing list, still
+//               keeps it alive (memory.mjs orphaned-*). Formerly called
+//               lazy-identity-neutral.
 const RETAIN_CLEANUP =
   'let retainedHead = null; let retainedLast = null; for (let current = edge; current !== null; ) {   const next = current.nextIn; const from = current.from; const prevOut = current.prevOut; const nextOut = current.nextOut;   if (from.tailIn === current) from.tailIn = null;   if (prevOut !== null) prevOut.nextOut = nextOut; else from.firstOut = nextOut;   if (nextOut !== null) nextOut.prevOut = prevOut; else from.lastOut = prevOut;   current.prevOut = null; current.nextOut = null; current.prevIn = null; current.nextIn = null;   if (current.stamp === -1) { if (__PROFILE__) observeRuntimeProjection?.("projection.semantic.cleanup.edge.drop"); }   else { current.stamp = -1; if (retainedLast === null) retainedHead = current; else retainedLast.nextIn = current; retainedLast = current; if (__PROFILE__) globalThis.__srRetained = (globalThis.__srRetained | 0) + 1; }   current = next; } if (retainedHead !== null) node.tailIn = retainedHead;';
 const REATTACH =
@@ -94,8 +97,8 @@ const LAZY = [
   "src/kernel/shape/graph/sweepEdges.ts::    else to.lastIn = prevIn;::    else to.lastIn = prevIn; if (to.firstIn === null) to.retainedIn = null;",
   "src/kernel/shape/graph/sweepEdges.ts::export function unlinkAllSources(node: ReactiveNode): void {::export function unlinkAllSources(node: ReactiveNode): void { node.retainedIn = null;",
 ];
-// Lifetime-neutral retention: keep a dropped edge only while its producer
-// still has another subscriber, so retention never extends a node's life.
+// Shared-at-drop retention: keep a dropped edge only while its producer still
+// has another subscriber, so retention extends no lifetime at that moment.
 const LAZY_NEUTRAL_CLEANUP = LAZY_CLEANUP.replace(
   "if (tail !== null) {",
   "if (tail !== null && from.firstOut !== null) {",
@@ -124,7 +127,7 @@ export const retentionVariants = {
     `src/kernel/stages/stabilization/advance.ts::  if (node.tailIn !== node.lastIn) {::  ${STRICT_EXPIRY} if (node.tailIn !== node.lastIn) {`,
     `src/kernel/engine/watcher.execution.ts::  if (node.tailIn !== node.lastIn) {::  ${STRICT_EXPIRY} if (node.tailIn !== node.lastIn) {`,
   ],
-  "lazy-identity-neutral": LAZY.map((m) =>
+  "lazy-identity-shared-at-drop": LAZY.map((m) =>
     m.includes(LAZY_CLEANUP)
       ? m.replace(LAZY_CLEANUP, LAZY_NEUTRAL_CLEANUP)
       : m,
