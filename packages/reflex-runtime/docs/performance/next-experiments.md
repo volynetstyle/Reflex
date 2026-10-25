@@ -41,7 +41,7 @@ Investigate the proof of value freshness and of membership separately; run
 static, branch switch, reorder, duplicate read, nested tracking,
 exception/retry and epoch wraparound. Count walks, branches and bytes/node.
 
-**Entry point.** `src/kernel/shape/tracking/`,
+**Entry point.** `src/kernel/stages/tracking/`,
 `src/kernel/shape/graph/reuseEdge.ts`, `src/kernel/state.ts`.
 
 **Decision.** Accept an extension only with an invariant proven for all the

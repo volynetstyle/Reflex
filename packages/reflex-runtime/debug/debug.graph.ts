@@ -1,4 +1,5 @@
 import type { ReactiveNode } from "@runtime/kernel";
+import { Computing, Watcher, isOutgoingHint } from "@runtime/kernel/shape";
 
 import {
   type RuntimeDebugGraphEdgeSnapshot,
@@ -227,12 +228,22 @@ export function checkDebugGraphIntegrity(
       });
     }
 
-    if (node.tailIn !== null && !incoming.includes(node.tailIn)) {
+    // INV-H: a Computing node's tailIn is its frontier (incoming); an idle
+    // node's may also be a hint, one of its own attached outgoing edges.
+    const tail = node.tailIn;
+    if (
+      tail !== null &&
+      !incoming.includes(tail) &&
+      ((node.state & (Computing | Watcher)) !== 0 ||
+        !isOutgoingHint(node, tail) ||
+        !outgoing.includes(tail))
+    ) {
       issues.push({
         code: "unknown-last-in-tail",
         node: nodeSnapshot,
-        edge: snapshotDebugGraphEdge(node.tailIn, snapshotNode),
-        message: "tailIn does not belong to the incoming edge list.",
+        edge: snapshotDebugGraphEdge(tail, snapshotNode),
+        message:
+          "tailIn is neither an incoming edge nor, on an idle node, an attached outgoing hint.",
       });
     }
 

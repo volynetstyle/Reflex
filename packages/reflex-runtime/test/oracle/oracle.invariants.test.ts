@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import * as candidateModule from "../../src/internal";
 import { BASELINE_COMMIT, loadBaseline } from "./baseline";
 import {
+  generateHubProgram,
   generateProgram,
   interpret,
   programSize,
@@ -25,6 +26,7 @@ const candidate = candidateModule as unknown as RuntimeModule;
 const SEEDS = Number(process.env.ORACLE_SEEDS ?? 2_000);
 const FIRST_SEED = Number(process.env.ORACLE_SEED ?? 1);
 const ONLY_ONE = process.env.ORACLE_SEED !== undefined;
+const HUB_SEEDS = Number(process.env.ORACLE_HUB_SEEDS ?? 1_000);
 
 const violations = (rt: RuntimeModule, program: Program): string[] =>
   interpret(rt, program, "strict", { invariants: true }).filter((entry) =>
@@ -68,6 +70,27 @@ describe("algorithm-independent invariants", () => {
     }
     // Recorded, not asserted: a fix for F1 should drive this to zero.
     if (knownF1 !== 0) console.info(`known F1 liveness programs: ${knownF1}`);
+  }, 600_000);
+
+  // Hub programs exercise the outgoing hint (INV-H): fills, hits, unlinks
+  // under cleanup and disposal, recomputation of a hinted computed producer.
+  it("hold on every generated hub program", () => {
+    for (let seed = 1; seed <= HUB_SEEDS; seed++) {
+      const program = generateHubProgram(seed);
+      if (unexplained(candidate, program).length === 0) continue;
+      const minimal = shrink(
+        program,
+        (p) => unexplained(candidate, p).length !== 0,
+      );
+      throw new Error(
+        [
+          `Invariant violation, hub seed ${seed}.`,
+          `Minimized program (size ${programSize(minimal)} from ${programSize(program)}):`,
+          JSON.stringify(minimal),
+          unexplained(candidate, minimal)[0],
+        ].join("\n"),
+      );
+    }
   }, 600_000);
 
   // The checker must see a lost dependency: the baseline drops one through

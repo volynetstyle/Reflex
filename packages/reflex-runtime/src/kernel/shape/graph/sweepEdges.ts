@@ -8,6 +8,10 @@ export function unlinkDetachedIncomingEdgeSequence(
     const nextIn = edge.nextIn;
     const { from, prevOut, nextOut } = edge;
 
+    // A hint never outlives its edge (INV-H). The consumer's own cursor is
+    // never in a detached sequence: callers detach after it or clear it.
+    if (from.tailIn === edge) from.tailIn = null;
+
     if (prevOut !== null) prevOut.nextOut = nextOut;
     else from.firstOut = nextOut;
 
@@ -43,6 +47,13 @@ export function unlinkAllSources(node: ReactiveNode): void {
  */
 export function unlinkAllSubscribers(node: ReactiveNode): void {
   let edge = node.firstOut;
+  const hint = node.tailIn;
+
+  // Every outgoing edge goes, so a hint goes with them (INV-H). A self-edge
+  // in the slot is incoming and is repaired by the loop below.
+  if (hint !== null && hint.from === node && hint.to !== node) {
+    node.tailIn = null;
+  }
 
   node.firstOut = null;
   node.lastOut = null;

@@ -152,6 +152,33 @@ function reuse(r, fanout) {
     return stampOf(target.firstIn);
   };
 }
+// A wide consumer re-reads one broad producer after every other read
+// (items.map((item) => f(item, hub()))). The consumer's edge sits in the
+// middle of the hub's outgoing list, so each duplicate passes the newest-
+// outgoing probe and the outgoing head start and reaches the pair lookup.
+function hubDuplicates(r, items, hubFanout) {
+  const hub = node(r);
+  const sources = range(items).map(() => node(r));
+  const target = node(r);
+  const others = (n) => {
+    for (let i = 0; i < n; i++) r.linkEdge(hub, node(r));
+  };
+  others(hubFanout >> 1);
+  r.linkEdge(hub, target);
+  for (const source of sources) r.linkEdge(source, target);
+  others(hubFanout - (hubFanout >> 1));
+  return () => {
+    (r.advanceTrackingStamp ?? r.advanceTrackingEpoch)();
+    target.tailIn = null;
+    r.resolveTrackedRead(hub, target);
+    for (const source of sources) {
+      r.resolveTrackedRead(source, target);
+      r.resolveTrackedRead(hub, target);
+    }
+    r.cleanupUnvisitedSources(target);
+    return stampOf(target.tailIn);
+  };
+}
 function runtimeReorder(r) {
   const phase = r.createProducer(-1);
   const sources = range(128).map((i) => r.createProducer(i));
@@ -219,6 +246,8 @@ const scenarios = {
   "reuse-first-out": (r) => reuse(r, 1),
   "reuse-scanned": (r) => reuse(r, 3),
   "runtime-reorder": runtimeReorder,
+  "hub-duplicates-16": (r) => hubDuplicates(r, 128, 16),
+  "hub-duplicates-256": (r) => hubDuplicates(r, 128, 256),
   ...Object.fromEntries(
     Object.entries(longLongModes).map(([name, options]) => [
       name,

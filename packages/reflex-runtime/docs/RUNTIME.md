@@ -71,7 +71,7 @@ which writes a source it already read converges, and currently commits a value
 computed before that write (F1, open).
 
 Dependency tracking, reordering and pruning: [INVARIANTS.md §4](./INVARIANTS.md#4-cursor-and-tracking-stamp)
-and [tracking](../src/kernel/shape/tracking/README.md).
+and [tracking](../src/kernel/stages/tracking/README.md).
 
 ## Watchers and host scheduling
 

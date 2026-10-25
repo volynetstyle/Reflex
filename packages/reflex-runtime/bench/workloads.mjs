@@ -43,6 +43,38 @@ function fold(n, fn) {
   return String(acc);
 }
 
+/** Deterministic permutation of 0..count-1 for pass `pass`. */
+function shuffled(pass, count) {
+  const order = range(count);
+  let seed = pass + 1;
+  for (let i = count - 1; i > 0; i--) {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    const j = seed % (i + 1);
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return order;
+}
+
+// Set while a kernel-level workload verifies: its step then also returns the
+// incoming order, which timing steps skip.
+let verifying = false;
+
+// Kernel-level workloads (A.graph.*) drive the tracking primitives of the
+// internal entry directly, as scripts/compare-tracking-graph.mjs does; each
+// pass takes a fresh stamp from the clock, as a computation does.
+function advanceStamp(rt) {
+  (rt.advanceTrackingStamp ?? rt.advanceTrackingEpoch)();
+}
+
+/** Checksum of a node's incoming order, by source index. */
+function incomingOrder(target, sources) {
+  const index = new Map(sources.map((source, i) => [source, i]));
+  let acc = 0;
+  for (let edge = target.firstIn; edge !== null; edge = edge.nextIn)
+    acc = (acc * 31 + (index.get(edge.from) ?? -1)) | 0;
+  return acc;
+}
+
 export const workloads = [
   // ---------------------------------------------------------------- A
   {
@@ -169,6 +201,205 @@ export const workloads = [
     verify(rt) {
       const { step } = this.setup(rt);
       return fold(64, step);
+    },
+  },
+  {
+    id: "A.track.hub-duplicate",
+    level: "A",
+    mechanism:
+      "Duplicate reads of one broad producer inside a wide consumer (items.map(i => f(i, hub()))): the pair lookup past the outgoing head start.",
+    preconditions:
+      "Hub with 64 other subscribers, the consumer's edge in the middle of the hub's outgoing list; 64 items read in a stable order, each followed by a hub read.",
+    measured:
+      "Write one item + read (Changed → advance with 64 item cursor hits and 64 hub duplicates).",
+    excluded: "Graph creation; the hub's other subscribers are not recomputed.",
+    opsPerStep: 128,
+    setup(rt) {
+      bare(rt);
+      const hub = rt.createProducer(1);
+      const subscriber = () => {
+        const s = rt.createConsumer(() => rt.readProducer(hub));
+        rt.readConsumer(s);
+        return s;
+      };
+      const before = range(32).map(subscriber);
+      const items = range(64).map((i) => rt.createProducer(i));
+      const c = rt.createConsumer(() => {
+        let sum = 0;
+        for (const item of items)
+          sum += rt.readProducer(item) * rt.readProducer(hub);
+        return sum;
+      });
+      rt.readConsumer(c);
+      const after = range(32).map(subscriber);
+      return {
+        step(i) {
+          rt.writeProducer(items[i & 63], i);
+          return rt.readConsumer(c) + before.length + after.length;
+        },
+      };
+    },
+    verify(rt) {
+      const { step } = this.setup(rt);
+      return fold(64, step);
+    },
+  },
+  {
+    id: "A.track.reorder-128-shuffled",
+    level: "A",
+    mechanism:
+      "Recompute reading 128 single-subscriber sources in a new shuffled order: generic lookups settled inside the outgoing head start.",
+    preconditions:
+      "64 precomputed permutations; every source has one subscriber.",
+    measured:
+      "Write the phase producer + read (advance with 128 reordered reads).",
+    excluded: "Order generation.",
+    opsPerStep: 128,
+    setup(rt) {
+      bare(rt);
+      const phase = rt.createProducer(-1);
+      const sources = range(128).map((i) => rt.createProducer(i));
+      const orders = range(64).map((p) => shuffled(p, 128));
+      const c = rt.createConsumer(() => {
+        const pass = rt.readProducer(phase);
+        let sum = 0;
+        for (const index of orders[(pass + 64) % 64])
+          sum += rt.readProducer(sources[index]);
+        return sum;
+      });
+      rt.readConsumer(c);
+      return {
+        step(i) {
+          rt.writeProducer(phase, i);
+          return rt.readConsumer(c);
+        },
+      };
+    },
+    verify(rt) {
+      const { step } = this.setup(rt);
+      return fold(64, step);
+    },
+  },
+  {
+    id: "A.graph.append-shared-64",
+    level: "A",
+    mechanism:
+      "Kernel tracking: 128 tail appends whose producers have 64 other subscribers (absence proved past the head start), then the incoming list is unlinked.",
+    preconditions:
+      "Kernel API of the internal entry; every pass takes a fresh stamp.",
+    measured: "One pass of 128 resolveTrackedRead appends + unlinkAllSources.",
+    excluded: "Graph preparation.",
+    opsPerStep: 128,
+    setup(rt) {
+      const node = () => new rt.ReactiveNode(undefined, undefined, 0);
+      const sources = range(128).map(node);
+      for (let i = 0; i < 64; i++) {
+        const other = node();
+        for (const source of sources) rt.linkEdge(source, other);
+      }
+      const target = node();
+      let order = 0;
+      return {
+        step() {
+          advanceStamp(rt);
+          for (const source of sources) rt.resolveTrackedRead(source, target);
+          if (verifying) order = incomingOrder(target, sources);
+          rt.unlinkAllSources(target);
+          return order;
+        },
+      };
+    },
+    verify(rt) {
+      verifying = true;
+      try {
+        const { step } = this.setup(rt);
+        return fold(16, step);
+      } finally {
+        verifying = false;
+      }
+    },
+  },
+  {
+    id: "A.graph.swap-pairs-fanout-3",
+    level: "A",
+    mechanism:
+      "Kernel tracking: 128 sources with fan-out 3 read with adjacent pairs swapped on every other pass (one-hop reorders).",
+    preconditions:
+      "Kernel API of the internal entry; every pass takes a fresh stamp.",
+    measured: "One tracking pass of 128 reads + cleanup.",
+    excluded: "Graph preparation.",
+    opsPerStep: 128,
+    setup(rt) {
+      const node = () => new rt.ReactiveNode(undefined, undefined, 0);
+      const sources = range(128).map(node);
+      const others = (n) => {
+        for (let i = 0; i < n; i++) {
+          const other = node();
+          for (const source of sources) rt.linkEdge(source, other);
+        }
+      };
+      others(1);
+      const target = node();
+      for (const source of sources) rt.linkEdge(source, target);
+      others(1);
+      return {
+        step(i) {
+          advanceStamp(rt);
+          target.tailIn = null;
+          for (let k = 0; k < 128; k++)
+            rt.resolveTrackedRead(sources[i & 1 ? k ^ 1 : k], target);
+          rt.cleanupUnvisitedSources(target);
+          return verifying ? incomingOrder(target, sources) : 0;
+        },
+      };
+    },
+    verify(rt) {
+      verifying = true;
+      try {
+        const { step } = this.setup(rt);
+        return fold(16, step);
+      } finally {
+        verifying = false;
+      }
+    },
+  },
+  {
+    id: "A.graph.reuse-first-out",
+    level: "A",
+    mechanism:
+      "Kernel reconciliation: the default read-tracking strategy reuses 128 suffix edges in shuffled order, each found at the head of a one-edge outgoing list.",
+    preconditions: "Kernel API of the internal entry; fan-out 1.",
+    measured: "128 reuseIncomingEdgeFromSuffixOrLink calls.",
+    excluded: "Order generation.",
+    opsPerStep: 128,
+    setup(rt) {
+      const node = () => new rt.ReactiveNode(undefined, undefined, 0);
+      const target = node();
+      const sources = range(128).map(node);
+      for (const source of sources) rt.linkEdge(source, target);
+      const orders = range(64).map((p) => shuffled(p, 128));
+      return {
+        step(i) {
+          for (const index of orders[i & 63])
+            rt.reuseIncomingEdgeFromSuffixOrLink(
+              sources[index],
+              target,
+              null,
+              target.firstIn,
+              i + 1,
+            );
+          return verifying ? incomingOrder(target, sources) : 0;
+        },
+      };
+    },
+    verify(rt) {
+      verifying = true;
+      try {
+        const { step } = this.setup(rt);
+        return fold(16, step);
+      } finally {
+        verifying = false;
+      }
     },
   },
   {

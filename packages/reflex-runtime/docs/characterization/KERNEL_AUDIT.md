@@ -114,7 +114,7 @@ passes no owned edge and marks an `Unknown`-entered computing reader
 instead was analysed and rejected: an unmarked reader would later take b2
 instead of b3 on a direct write (§2), changing transitive marks.
 
-## 4. Dependency tracking (`shape/tracking/`, `shape/graph/`)
+## 4. Dependency tracking (`stages/tracking/`, `shape/graph/`)
 
 **Reachable states.** During a pass `tailIn` is null (nothing accepted yet)
 or an edge of the consumer's incoming list; the prefix up to `tailIn` holds
