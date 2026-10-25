@@ -5,6 +5,26 @@ Research branch `research/tracking-retained-identity`, 25 October 2026, base
 candidate. The analysis variants live in `variants.mjs` and are applied to an
 archived copy of the sources; the checked-out runtime is unchanged.
 
+## Conclusion (closed, 25 October 2026)
+
+The study is finished at commit 04622e3; (c) is not productionized.
+
+- **CPU: lazy retention works.** Lazy reactivation keeps exact semantics
+  (40,000 of 40,000 differential traces), adds nothing to the push, pull or
+  tracking hot paths, and never does worse than cleanup. It reuses 96–100%
+  of available retained identity in the oracle corpus and in
+  D.list.filter-select, cutting that workload from 33.4 to 4.2 links per
+  step (0.91–0.93× per step).
+- **Production blocker: memory ownership and global representation cost.**
+  A retained edge holds its producer from outside the producer's outgoing
+  list. Retention that is neutral at drop time can still extend a lifetime
+  later (orphaned-\*). Making it neutral for the whole lifetime needs a
+  producer-side latent list on top of the consumer-side field: a second
+  adjacency and +8 bytes on every node, paid by all graphs for a gain
+  confined to conditional dependencies that flip back.
+- **The runtime keeps only PR #67** (preserve the unvisited suffix until
+  cleanup). Everything on this branch is analysis-only.
+
 ## The arc
 
 1. **Eager detach → preserve until cleanup (PR #67, merged).** Unlinking the
