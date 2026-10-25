@@ -2,11 +2,12 @@
 //
 //   node perf/v8-shape/analyze.mjs --bundle <runtime.mjs> [--node <node>]
 //        [--workloads <regex>] [--out <file.json>] [--compare <other.json>]
-//        [--ladder <regex> [--fanouts 3,128]]
+//        [--ladder <parts> [--fanouts 3,128]]
 //
 // `--ladder` analyzes the rungs of scripts/tracking-ladder.mjs instead of the
 // benchmark workloads, each in perf/tracking-ladder/time.mjs's measuring
-// process.
+// process; <parts> selects rungs by comma-separated name parts (`all` for
+// every rung).
 //
 // For every timed workload of bench/workloads.mjs, runs bench/worker.mjs in
 // `time` mode under --print-opt-code --trace-deopt and records, per optimized
@@ -38,7 +39,7 @@ const packageRoot = path.resolve(import.meta.dirname, "../..");
 const ladder = option("--ladder");
 const timed = ladder
   ? ladderCases({
-      rungs: new RegExp(ladder),
+      rungs: ladder === "all" ? "" : ladder,
       fanouts: option("--fanouts", "3,128").split(",").map(Number),
     })
   : workloads.filter((w) => w.level !== "E" && pattern.test(w.id));

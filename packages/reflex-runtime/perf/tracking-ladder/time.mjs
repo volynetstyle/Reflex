@@ -2,7 +2,7 @@
 // scripts/tracking-ladder.mjs, for several production bundles.
 //
 //   node perf/tracking-ladder/time.mjs --bundle <name>=<spec> [--bundle ...]
-//        [--rungs <regex>] [--fanouts 3,128] [--deps 128] [--samples 7]
+//        [--rungs <parts>] [--fanouts 3,128] [--deps 128] [--samples 7]
 //        [--warmup-ms 150] [--batch-ms 30] [--node <path>] [--out <file.json>]
 //
 // <spec> is a runtime.mjs path, or `@<ref>` / `@source` (a production bundle
@@ -67,7 +67,7 @@ const warmupMs = Number(option("--warmup-ms", 150));
 const batchMs = Number(option("--batch-ms", 30));
 const out = option("--out");
 const cases = ladderCases({
-  rungs: new RegExp(option("--rungs", ".*")),
+  rungs: option("--rungs", ""),
   fanouts: option("--fanouts", "3,128").split(",").map(Number),
   deps: Number(option("--deps", 128)),
 });

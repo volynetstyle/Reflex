@@ -266,11 +266,20 @@ export function ladder(r, name, { deps = 128, fanout = 3, onPassStart } = {}) {
   return step;
 }
 
-/** Every (rung, fanout) case selected by a rung regex and a fan-out list. */
-export function ladderCases({ rungs = /.*/, fanouts = [3, 128], deps = 128 }) {
+/**
+ * Whether `id` is selected by `spec`: a comma-separated list of name parts
+ * (`"01.,09."`), any of which `id` contains; an empty spec selects all.
+ */
+export function selects(spec, id) {
+  const parts = spec.split(",").filter((part) => part !== "");
+  return parts.length === 0 || parts.some((part) => id.includes(part));
+}
+
+/** Every (rung, fanout) case selected by a rung spec and a fan-out list. */
+export function ladderCases({ rungs = "", fanouts = [3, 128], deps = 128 }) {
   const cases = [];
   for (const name of Object.keys(ladderRungs)) {
-    if (!rungs.test(name)) continue;
+    if (!selects(rungs, name)) continue;
     for (const fanout of fanouts)
       cases.push({ id: `${name}/f${fanout}`, name, deps, fanout });
   }
