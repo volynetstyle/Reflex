@@ -7,8 +7,8 @@ import {
   configureRuntimeContext,
   linkEdge,
   resolveTrackedRead,
-  setTrackingEpoch,
-  trackingEpoch,
+  setTrackingStamp,
+  trackingStamp,
 } from "../../../src/kernel";
 import {
   expectGraphIntegrity,
@@ -64,7 +64,7 @@ describe("Reactive runtime - tracking resolver matrix", () => {
 
     // The cursor was accepted in this pass, so it carries the pass stamp.
     target.tailIn = firstEdge!;
-    firstEdge!.version = 17;
+    firstEdge!.stamp = 17;
 
     resolveTrackedRead(sources[3]!, target);
     expectIncomingEdges(target, [
@@ -75,7 +75,7 @@ describe("Reactive runtime - tracking resolver matrix", () => {
       lastEdge!,
     ]);
     expecttailIn(target, movedEdge!);
-    expect(movedEdge!.version).toBe(17);
+    expect(movedEdge!.stamp).toBe(17);
     expectOutgoingEdges(sources[3]!, [movedEdge!]);
     expectGraphIntegrity([...sources, target]);
   });
@@ -92,8 +92,8 @@ describe("Reactive runtime - tracking resolver matrix", () => {
 
     expecttailIn(target, null);
     // A first read stamps with the current epoch.
-    const epoch = trackingEpoch + 23;
-    setTrackingEpoch(epoch);
+    const epoch = trackingStamp + 23;
+    setTrackingStamp(epoch);
 
     resolveTrackedRead(sources[3]!, target);
     expectIncomingEdges(target, [
@@ -103,7 +103,7 @@ describe("Reactive runtime - tracking resolver matrix", () => {
       thirdEdge!,
     ]);
     expecttailIn(target, movedEdge!);
-    expect(movedEdge!.version).toBe(epoch);
+    expect(movedEdge!.stamp).toBe(epoch);
     expectOutgoingEdges(sources[3]!, [movedEdge!]);
     expectGraphIntegrity([...sources, target]);
   });
@@ -126,7 +126,7 @@ describe("Reactive runtime - tracking resolver matrix", () => {
         : null;
 
       target.tailIn = retainedEdge;
-      retainedEdge.version = 29;
+      retainedEdge.stamp = 29;
 
       resolveTrackedRead(appended, target);
 
@@ -134,7 +134,7 @@ describe("Reactive runtime - tracking resolver matrix", () => {
       expect(appendedEdge).not.toBe(retainedEdge);
       expect(appendedEdge.from).toBe(appended);
       expect(appendedEdge.to).toBe(target);
-      expect(appendedEdge.version).toBe(29);
+      expect(appendedEdge.stamp).toBe(29);
       expectIncomingEdges(target, [retainedEdge, appendedEdge]);
       expecttailIn(target, appendedEdge);
       expectOutgoingEdges(
@@ -153,8 +153,8 @@ describe("Reactive runtime - tracking resolver matrix", () => {
     const target = createConsumerNode();
     const repeatedEdge = linkEdge(repeated, target, null, 7);
     const trailingEdge = linkEdge(trailing, target, repeatedEdge, 7);
-    const currentVersion = trackingEpoch + 37;
-    setTrackingEpoch(currentVersion);
+    const currentVersion = trackingStamp + 37;
+    setTrackingStamp(currentVersion);
 
     resolveTrackedRead(repeated, target);
     resolveTrackedRead(trailing, target);
@@ -165,7 +165,7 @@ describe("Reactive runtime - tracking resolver matrix", () => {
     resolveTrackedRead(repeated, target);
     expectIncomingEdges(target, [repeatedEdge, trailingEdge]);
     expecttailIn(target, trailingEdge);
-    expect(repeatedEdge.version).toBe(currentVersion);
+    expect(repeatedEdge.stamp).toBe(currentVersion);
     expectOutgoingEdges(repeated, [repeatedEdge]);
     expectGraphIntegrity([repeated, trailing, target]);
   });
@@ -183,20 +183,20 @@ describe("Reactive runtime - tracking resolver matrix", () => {
       linkEdge(source, target, target.lastIn, 5),
     );
     const initialEdges = [repeatedEdge, ...middleEdges];
-    const currentVersion = trackingEpoch + 41;
-    setTrackingEpoch(currentVersion);
+    const currentVersion = trackingStamp + 41;
+    setTrackingStamp(currentVersion);
 
     resolveTrackedRead(repeated, target);
     for (const source of middleSources) resolveTrackedRead(source, target);
 
     const trackedTail = middleEdges.at(-1)!;
     expecttailIn(target, trackedTail);
-    expect(repeatedEdge.version).toBe(currentVersion);
+    expect(repeatedEdge.stamp).toBe(currentVersion);
 
     resolveTrackedRead(repeated, target);
     expectIncomingEdges(target, initialEdges);
     expecttailIn(target, trackedTail);
-    expect(repeatedEdge.version).toBe(currentVersion);
+    expect(repeatedEdge.stamp).toBe(currentVersion);
     expectOutgoingEdges(repeated, [unrelatedEdge, repeatedEdge]);
     expectGraphIntegrity([repeated, otherTarget, target, ...middleSources]);
   });

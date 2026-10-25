@@ -6,6 +6,7 @@ export {
   moveNonHeadIncomingEdgeToFrontUnchecked,
 } from "./edgeList";
 export { findEdgeInLockstep } from "./findEdge";
+export { isOutgoingHint } from "./hint";
 export { linkEdge, unlinkEdge } from "./linkEdge";
 export {
   reuseIncomingEdgeFromSuffixOrCreate,

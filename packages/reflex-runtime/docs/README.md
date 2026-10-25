@@ -40,7 +40,7 @@ updates the document in the same commit.
 | ------------------------------------------------------------- | ------------------------------------------------------- |
 | [stages](../src/kernel/stages/README.md)                      | propagation and stabilization stages, their projections |
 | [stabilization](../src/kernel/stages/stabilization/README.md) | the layered pull machine                                |
-| [tracking](../src/kernel/shape/tracking/README.md)            | dependency resolution and reconciliation strategies     |
+| [tracking](../src/kernel/stages/tracking/README.md)           | dependency resolution and reconciliation strategies     |
 | [differential testkit](../test/differential/README.md)        | spec/Reflex machines and test languages                 |
 
 ## Evidence (historical)

@@ -104,17 +104,18 @@ retries a still-dirty watcher on a later drain (contract L5, W3).
 
 ## 4. Cursor and tracking stamp
 
-`lastIn` is the physical incoming tail. `tailIn` is the last accepted edge
-of the current tracked prefix. Computation resets the cursor to null while
-retaining the old list.
+`lastIn` is the physical incoming tail. While a node is `Computing`,
+`tailIn` is the last accepted edge of its current tracked prefix (the
+frontier). Computation resets the cursor to null while retaining the old
+list.
 
 Head and expected-next hits advance the cursor. Recognized prefix duplicates
 do not. Reorders move an existing edge after the cursor; new dependencies link
 there. Cleanup removes the unmatched suffix.
 
-`edge.version` is a tracking stamp, not a source-value revision. Runtime reads
+`edge.stamp` is a tracking stamp, not a source-value revision. Runtime reads
 extending a prefix use its cursor edge's stamp, even after nested computation
-advances the global `trackingEpoch`. A first read uses the current epoch.
+advances the global `trackingStamp`. A first read uses the current epoch.
 `resolveTrackedRead` derives the stamp itself; callers cannot supply one.
 
 During a pass with a nonempty suffix, an incoming edge is in the tracked
@@ -126,7 +127,25 @@ path is resolved by one exact lookup of the pair's edge, bounded by the
 shorter of the producer's outgoing and the consumer's incoming lists, then
 classified by these rules. The eager suffix detachment threshold (32 edges)
 is a retained identity policy, not a search bound. Algorithm details:
-[tracking research](../src/kernel/shape/tracking/RESEARCH.md).
+[tracking research](../src/kernel/stages/tracking/RESEARCH.md).
+
+The frontier reading of `tailIn` is required only while the node is
+`Computing`; outside that phase the slot is semantically inactive and is
+reused as the pair lookup's outgoing hint (INV-H). For a node that is not
+`Computing`, `tailIn` is null, the residual incoming edge of its last pass,
+or a hint: one of its own outgoing edges, attached to both lists. A hint
+satisfies `from === node && to !== node`; an incoming edge has
+`to === node`, so a self-edge always reads as incoming and is never written
+as a hint. The lookup writes a hint only past its four-link outgoing head
+start, only into a node that is neither `Computing` nor a watcher, and uses
+one only for exactly its pair; a missing or different hint proves nothing,
+and absence is still proved by the lockstep. Every unlink of an edge clears
+the hint that points to it, and every computation resets the slot to null
+before it becomes a frontier, so a stale hint is never observed. The idle
+uses of `tailIn` (unlink repair of the incoming cursor, the debug integrity
+check, watcher validation's save and restore, which only watchers reach)
+either accept a hint or never meet one. Source:
+`src/kernel/shape/graph/hint.ts`.
 
 ## 5. Disposal and cleanup
 
@@ -183,11 +202,11 @@ context objects. `runWithRuntimeContext` restores the previous context in a
 finally block. Traversal storage remains shared and is protected by invocation
 slices.
 
-`trackingEpoch` is one kernel-wide clock, not a per-context register. Edges are
+`trackingStamp` is one kernel-wide clock, not a per-context register. Edges are
 shared and stamped with pass epochs, so the clock only moves forward and
 never repeats a value: a repeated stamp would let a stale edge pose as a
 current-pass membership proof and drop a dependency (F13). A context load
-keeps the newer epoch, `setTrackingEpoch` only moves it forward, a reset does
+keeps the newer epoch, `setTrackingStamp` only moves it forward, a reset does
 not rewind it, and it does not wrap (exact for 2^53 passes).
 
 `snapshotRuntimeContext` is a register-bank checkpoint. Restoring it is legal at

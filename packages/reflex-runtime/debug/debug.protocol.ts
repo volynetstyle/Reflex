@@ -22,7 +22,7 @@ export interface RuntimeDebugGraphEdgeSnapshot {
   to: RuntimeDebugNodeSnapshot;
   incomingIndex: number;
   outgoingIndex: number;
-  version: number;
+  stamp: number;
 }
 
 export interface RuntimeDebugGraphSnapshot {

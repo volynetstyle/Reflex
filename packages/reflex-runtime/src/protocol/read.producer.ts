@@ -5,7 +5,7 @@ import {
 } from "@runtime/kernel";
 import { devRecordReadProducer } from "@runtime/kernel/dev";
 import { devAssertNoRuntimeHookReactiveRead } from "@runtime/kernel/execution";
-import { resolveTrackedRead } from "@runtime/kernel/shape/tracking";
+import { resolveTrackedRead } from "@runtime/kernel/stages/tracking";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 /**

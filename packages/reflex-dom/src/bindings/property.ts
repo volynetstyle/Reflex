@@ -2,7 +2,7 @@ import type { Accessor } from "../types";
 import type { Namespace } from "../host/namespace";
 import { applyProp } from "../host/props";
 import { normalizeAttr } from "../host/aliases";
-import { createDOMOwnedReaction } from "../runtime/lifetime";
+import { createDOMOwnedBinding } from "../runtime/lifetime";
 
 export function bindReactiveProp(
   el: Element,
@@ -11,9 +11,9 @@ export function bindReactiveProp(
   ns: Namespace,
 ) {
   name = normalizeAttr(name);
-  let previousValue = applyProp(el, name, acc(), ns, undefined);
+  let previousValue: unknown;
 
-  createDOMOwnedReaction(acc, (nextValue) => {
+  createDOMOwnedBinding(acc, (nextValue) => {
     previousValue = applyProp(el, name, nextValue, ns, previousValue);
   });
 }

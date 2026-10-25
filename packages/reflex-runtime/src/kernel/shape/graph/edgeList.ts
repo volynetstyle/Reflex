@@ -138,14 +138,14 @@ export function moveLastIncomingEdgeAfterCursorUnchecked(
   expectedNextEdge: ReactiveEdge,
   lastIncomingEdge: ReactiveEdge,
   previousLastEdge: ReactiveEdge,
-  producerVersion: number,
+  passStamp: number,
 ): void {
   previousLastEdge.nextIn = null;
   consumer.lastIn = previousLastEdge;
 
   lastIncomingEdge.prevIn = cursorEdge;
   lastIncomingEdge.nextIn = expectedNextEdge;
-  lastIncomingEdge.version = producerVersion;
+  lastIncomingEdge.stamp = passStamp;
 
   cursorEdge.nextIn = lastIncomingEdge;
   expectedNextEdge.prevIn = lastIncomingEdge;
@@ -200,7 +200,7 @@ export function moveTrackedIncomingEdgeAfterCursorUnchecked(
   consumer: ReactiveNode,
   cursorEdge: ReactiveEdge,
   movedEdge: ReactiveEdge,
-  producerVersion: number,
+  passStamp: number,
 ): true {
   const expectedNextEdge = cursorEdge.nextIn!;
   const previousMovedEdge = movedEdge.prevIn!;
@@ -220,7 +220,7 @@ export function moveTrackedIncomingEdgeAfterCursorUnchecked(
   cursorEdge.nextIn = movedEdge;
   expectedNextEdge.prevIn = movedEdge;
 
-  movedEdge.version = producerVersion;
+  movedEdge.stamp = passStamp;
   consumer.tailIn = movedEdge;
 
   return true;

@@ -20,6 +20,15 @@ class ReactiveNode<T = unknown, C extends ComputeFn<T> = ComputeFn<T>> {
 
   firstIn: ReactiveEdge | null = null;
   lastIn: ReactiveEdge | null = null;
+  /**
+   * While Computing: the tracking frontier, null or an incoming edge. While
+   * not: null, the residual incoming edge of the last pass, or an outgoing
+   * hint for the pair lookup (INV-H, graph/hint.ts).
+   *
+   * Phase-dependent tracking edge:
+   * Computing -> accepted incoming frontier
+   * idle      -> retained incoming edge or outgoing lookup hint
+   */
   tailIn: ReactiveEdge | null = null;
 
   compute: C;

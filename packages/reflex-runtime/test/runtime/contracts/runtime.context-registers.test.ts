@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  advanceTrackingEpoch,
+  advanceTrackingStamp,
   configureRuntimeContext,
   createRuntimeContext,
   currentConsumer,
@@ -16,9 +16,9 @@ import {
   resetRuntimeContext,
   restoreRuntimeContextSnapshot,
   runWithRuntimeContext,
-  setTrackingEpoch,
+  setTrackingStamp,
   snapshotRuntimeContext,
-  trackingEpoch,
+  trackingStamp,
   writeProducer,
 } from "../../runtime.test_utils";
 import {
@@ -100,12 +100,12 @@ describe("Reactive runtime - execution register bank contract", () => {
     });
 
     it("does not rewind the tracking epoch", () => {
-      for (let i = 0; i < 5; i++) advanceTrackingEpoch();
-      const epoch = trackingEpoch;
+      for (let i = 0; i < 5; i++) advanceTrackingStamp();
+      const epoch = trackingStamp;
 
       configureRuntimeContext({ hooks: { onRuntimeIdle: () => {} } });
 
-      expect(trackingEpoch).toBe(epoch);
+      expect(trackingStamp).toBe(epoch);
     });
 
     it("applies new hooks immediately", () => {
@@ -121,32 +121,32 @@ describe("Reactive runtime - execution register bank contract", () => {
 
   describe("tracking epoch", () => {
     it("passes 2^32 without wrapping or repeating a value", () => {
-      setTrackingEpoch(0xffffffff);
-      const epoch = trackingEpoch;
+      setTrackingStamp(0xffffffff);
+      const epoch = trackingStamp;
 
-      expect(advanceTrackingEpoch()).toBe(epoch + 1);
-      expect(trackingEpoch).toBeGreaterThan(0xffffffff);
+      expect(advanceTrackingStamp()).toBe(epoch + 1);
+      expect(trackingStamp).toBeGreaterThan(0xffffffff);
     });
 
-    it("never moves backwards through setTrackingEpoch", () => {
-      const epoch = advanceTrackingEpoch();
+    it("never moves backwards through setTrackingStamp", () => {
+      const epoch = advanceTrackingStamp();
 
-      setTrackingEpoch(epoch - 1);
-      setTrackingEpoch(0);
+      setTrackingStamp(epoch - 1);
+      setTrackingStamp(0);
 
-      expect(trackingEpoch).toBe(epoch);
+      expect(trackingStamp).toBe(epoch);
     });
 
     it("is never rewound by entering a fresh context", () => {
-      for (let i = 0; i < 5; i++) advanceTrackingEpoch();
-      const epoch = trackingEpoch;
+      for (let i = 0; i < 5; i++) advanceTrackingStamp();
+      const epoch = trackingStamp;
 
       runWithRuntimeContext(createRuntimeContext(), () => {
-        expect(trackingEpoch).toBe(epoch);
-        advanceTrackingEpoch();
+        expect(trackingStamp).toBe(epoch);
+        advanceTrackingStamp();
       });
 
-      expect(trackingEpoch).toBe(epoch + 1);
+      expect(trackingStamp).toBe(epoch + 1);
     });
 
     it("is never rewound by returning to a suspended context", () => {
@@ -154,24 +154,24 @@ describe("Reactive runtime - execution register bank contract", () => {
       const b = createRuntimeContext();
 
       runWithRuntimeContext(a, () => {
-        const before = trackingEpoch;
+        const before = trackingStamp;
         runWithRuntimeContext(b, () => {
-          advanceTrackingEpoch();
-          advanceTrackingEpoch();
+          advanceTrackingStamp();
+          advanceTrackingStamp();
         });
-        expect(trackingEpoch).toBe(before + 2);
+        expect(trackingStamp).toBe(before + 2);
       });
     });
 
     it("keeps the newer epoch when a context saved an older one", () => {
       const stale = createRuntimeContext();
-      stale.trackingEpoch = trackingEpoch;
-      advanceTrackingEpoch();
-      advanceTrackingEpoch();
-      const current = trackingEpoch;
+      stale.trackingStamp = trackingStamp;
+      advanceTrackingStamp();
+      advanceTrackingStamp();
+      const current = trackingStamp;
 
       runWithRuntimeContext(stale, () => {
-        expect(trackingEpoch).toBe(current);
+        expect(trackingStamp).toBe(current);
       });
     });
 
@@ -179,13 +179,13 @@ describe("Reactive runtime - execution register bank contract", () => {
       const context = getActiveRuntimeContext();
       const snapshot = snapshotRuntimeContext(context);
 
-      advanceTrackingEpoch();
-      advanceTrackingEpoch();
-      const current = trackingEpoch;
+      advanceTrackingStamp();
+      advanceTrackingStamp();
+      const current = trackingStamp;
 
       restoreRuntimeContextSnapshot(context, snapshot);
 
-      expect(trackingEpoch).toBe(current);
+      expect(trackingStamp).toBe(current);
     });
 
     it("keeps dependencies when two contexts would reach the same epoch", () => {
@@ -214,12 +214,12 @@ describe("Reactive runtime - execution register bank contract", () => {
       });
 
       runWithRuntimeContext(a, () => {
-        for (let i = 0; i < 3; i++) advanceTrackingEpoch();
+        for (let i = 0; i < 3; i++) advanceTrackingStamp();
         expect(readConsumer(computed)).toBe(3);
       });
 
       runWithRuntimeContext(b, () => {
-        for (let i = 0; i < 3; i++) advanceTrackingEpoch();
+        for (let i = 0; i < 3; i++) advanceTrackingStamp();
         writeProducer(flip, true);
         expect(readConsumer(computed)).toBe(3);
       });
@@ -391,12 +391,12 @@ describe("Reactive runtime - execution register bank contract", () => {
       const snapshot = snapshotRuntimeContext(a);
 
       enterPropagationScope();
-      advanceTrackingEpoch();
-      const epoch = trackingEpoch;
+      advanceTrackingStamp();
+      const epoch = trackingStamp;
       restoreRuntimeContextSnapshot(b, snapshot);
 
       expect(propagationScopeDepth).toBe(1);
-      expect(trackingEpoch).toBe(epoch);
+      expect(trackingStamp).toBe(epoch);
       expect(b.runtimeIdleHook).toBe(idle);
       leavePropagationScope();
 
@@ -413,14 +413,14 @@ describe("Reactive runtime - execution register bank contract", () => {
       runWithRuntimeContext(getActiveRuntimeContext(), () => {
         enterPropagationScope();
         enterReactiveBatch();
-        advanceTrackingEpoch();
-        const epoch = trackingEpoch;
+        advanceTrackingStamp();
+        const epoch = trackingStamp;
 
         restoreRuntimeContextSnapshot(getActiveRuntimeContext(), snapshot);
 
         expect(propagationScopeDepth).toBe(0);
         expect(reactiveBatchDepth).toBe(0);
-        expect(trackingEpoch).toBe(epoch);
+        expect(trackingStamp).toBe(epoch);
       });
 
       expect(currentConsumer).toBe(null);
@@ -429,14 +429,14 @@ describe("Reactive runtime - execution register bank contract", () => {
 
   describe("resetRuntimeContext", () => {
     it("does not rewind the tracking epoch", () => {
-      advanceTrackingEpoch();
-      const epoch = advanceTrackingEpoch();
+      advanceTrackingStamp();
+      const epoch = advanceTrackingStamp();
 
       // Nodes and edges survive a reset; a rewound clock would let their
       // stamps pose as current-pass proofs (F13).
       resetRuntimeContext();
 
-      expect(trackingEpoch).toBe(epoch);
+      expect(trackingStamp).toBe(epoch);
     });
   });
 });

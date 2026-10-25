@@ -95,7 +95,7 @@ Resolver устроен как маленькая cache hierarchy. Он снач
 O(min(out(P), in(C))) на чтение, а не до 32 + 32 звеньев плюс полные scan-ы
 исходящих рёбер. Порог eager detach (32 ребра suffix-а) сохранён как политика
 идентичности рёбер, а не как бюджет поиска. Подробности:
-[tracking research](../../packages/reflex-runtime/src/kernel/shape/tracking/RESEARCH.md).
+[tracking research](../../packages/reflex-runtime/src/kernel/stages/tracking/RESEARCH.md).
 
 ## Классы динамических топологий
 
@@ -363,13 +363,13 @@ Marginal latency effect factorial-прогона (`disabled/enabled - 1`, пол
   `packages/reflex/tests/reflex.dynamic.test.ts`.
 - Facade churn и scan instrumentation:
   `packages/reflex/bench/dependency-churn.bench.ts`.
-- Read entry point: `packages/reflex-runtime/src/kernel/shape/tracking/read.ts`.
+- Read entry point: `packages/reflex-runtime/src/kernel/stages/tracking/read.ts`.
 - Cache hierarchy и reconciliation:
-  `packages/reflex-runtime/src/kernel/shape/tracking/resolve.ts`.
+  `packages/reflex-runtime/src/kernel/stages/tracking/resolve.ts`.
 - Prefix membership:
-  `packages/reflex-runtime/src/kernel/shape/tracking/prefix.ts`.
+  `packages/reflex-runtime/src/kernel/stages/tracking/prefix.ts`.
 - Stale suffix cleanup:
-  `packages/reflex-runtime/src/kernel/shape/tracking/cleanup.ts`.
+  `packages/reflex-runtime/src/kernel/stages/tracking/cleanup.ts`.
 - Edge list invariants:
   `packages/reflex-runtime/src/kernel/shape/graph/edgeList.ts`.
 - Resolver correctness:

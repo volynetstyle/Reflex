@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { subtle } from "../../../src/debug";
 import { observeDebugContext } from "../../../debug/debug.impl";
 import { defaultContext } from "../../../src/kernel/config";
-import { cleanupUnvisitedSources, linkEdge } from "../../../src/kernel/shape";
+import { linkEdge } from "../../../src/kernel/shape";
+import { cleanupUnvisitedSources } from "../../../src/kernel/stages";
 import { profileRuntime } from "../../../src/profiling";
 import { readConsumer, readProducer, writeProducer } from "../../../src";
 import {

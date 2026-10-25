@@ -118,25 +118,25 @@ function reuseWithBoundedOutgoingProbe(
     consumer: ReactiveNode,
     insertAfterEdge: ReactiveEdge | null,
     suffixStartEdge: ReactiveEdge | null,
-    producerVersion = 0,
+    passStamp = 0,
   ): ReactiveEdge {
     // R0: suffix head hit.
     if (suffixStartEdge !== null && suffixStartEdge.from === producer) {
-      suffixStartEdge.version = producerVersion;
+      suffixStartEdge.stamp = passStamp;
       stats.edgesReused += 1;
       return suffixStartEdge;
     }
 
     // R0.5: first outgoing edge hit.
-    if (producerVersion !== 0) {
+    if (passStamp !== 0) {
       const edge = producer.firstOut;
 
-      if (edge !== null && edge.to === consumer && edge.version !== producerVersion) {
+      if (edge !== null && edge.to === consumer && edge.stamp !== passStamp) {
         if (edge.prevIn !== insertAfterEdge) {
           moveIncomingEdgeToPosition(consumer, edge, insertAfterEdge);
         }
 
-        edge.version = producerVersion;
+        edge.stamp = passStamp;
         stats.edgesReused += 1;
         return edge;
       }
@@ -156,7 +156,7 @@ function reuseWithBoundedOutgoingProbe(
       if (candidateEdge.from !== producer) {
         if (
           suffixStartEdge !== null &&
-          producerVersion !== 0 &&
+          passStamp !== 0 &&
           scannedSuffixEdges === staleSuffixCleanupMin
         ) {
           stats.outgoingProbes += 1;
@@ -172,15 +172,15 @@ function reuseWithBoundedOutgoingProbe(
           if (producerEdge === null) {
             detachIncomingSuffix(consumer, insertAfterEdge, suffixStartEdge);
             stats.edgesCreated += 1;
-            return linkEdge(producer, consumer, insertAfterEdge, producerVersion);
+            return linkEdge(producer, consumer, insertAfterEdge, passStamp);
           }
 
-          if (producerEdge.version !== producerVersion) {
+          if (producerEdge.stamp !== passStamp) {
             if (producerEdge.prevIn !== insertAfterEdge) {
               moveIncomingEdgeToPosition(consumer, producerEdge, insertAfterEdge);
             }
 
-            producerEdge.version = producerVersion;
+            producerEdge.stamp = passStamp;
             stats.edgesReused += 1;
             return producerEdge;
           }
@@ -193,7 +193,7 @@ function reuseWithBoundedOutgoingProbe(
         moveIncomingEdgeToPosition(consumer, candidateEdge, insertAfterEdge);
       }
 
-      candidateEdge.version = producerVersion;
+      candidateEdge.stamp = passStamp;
       stats.edgesReused += 1;
       return candidateEdge;
     }
@@ -207,7 +207,7 @@ function reuseWithBoundedOutgoingProbe(
     }
 
     stats.edgesCreated += 1;
-    return linkEdge(producer, consumer, insertAfterEdge, producerVersion);
+    return linkEdge(producer, consumer, insertAfterEdge, passStamp);
   };
 }
 

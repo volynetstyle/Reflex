@@ -1,5 +1,10 @@
 import { expect } from "vitest";
-import type { ReactiveNode } from "../../../src/internal";
+import {
+  Computing,
+  Watcher,
+  isOutgoingHint,
+  type ReactiveNode,
+} from "../../../src/internal";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type TestReactiveEdge = any;
@@ -95,9 +100,28 @@ export function expectNodeGraphIntegrity(node: ReactiveNode): void {
     expect(edge.to).toBeTruthy();
   }
 
-  if (node.tailIn !== null) {
-    expect(incoming.includes(node.tailIn)).toBe(true);
-  }
+  expectTailInvariant(node, incoming, outgoing);
+}
+
+/**
+ * INV-H: a Computing node's tailIn is its frontier, null or incoming; an
+ * idle node's may also be a hint, one of its own attached outgoing edges,
+ * never a self-edge and never on a watcher.
+ */
+export function expectTailInvariant(
+  node: ReactiveNode,
+  incoming = incomingEdges(node),
+  outgoing = outgoingEdges(node),
+): void {
+  const tail = node.tailIn;
+  if (tail === null || incoming.includes(tail)) return;
+  expect((node.state & Computing) === 0, "hint on a Computing node").toBe(true);
+  expect((node.state & Watcher) === 0, "hint on a watcher").toBe(true);
+  expect(isOutgoingHint(node, tail), "tailIn is not a hint").toBe(true);
+  expect(outgoing.includes(tail), "detached hint").toBe(true);
+  expect(incomingEdges(tail.to).includes(tail), "half-detached hint").toBe(
+    true,
+  );
 }
 
 export function expectGraphIntegrity(nodes: Iterable<ReactiveNode>): void {

@@ -20,7 +20,7 @@ import {
   type ComputeFn,
   type ReactiveNode,
 } from "@runtime/kernel/shape";
-import { cleanupUnvisitedSources } from "@runtime/kernel/shape/tracking";
+import { cleanupUnvisitedSources } from "@runtime/kernel/stages/tracking";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 export const executeKnownNodeComputation = !__DEV__

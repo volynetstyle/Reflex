@@ -22,7 +22,7 @@ const table = collectConstants(sources, testDefines);
 
 describe("build-time constant inlining", () => {
   it("evaluates every exported constant to the value the module exports", async () => {
-    let checked = 0;
+    const checkedNames = new Set<string>();
     for (const file of sources) {
       if (!/export const /.test(file.code)) continue;
       const module = (await import(pathToFileURL(file.path).href)) as Record<
@@ -34,14 +34,17 @@ describe("build-time constant inlining", () => {
           expect(value, `${path.relative(SOURCES, file.path)}: ${name}`).toBe(
             table.get(name),
           );
-          checked++;
+          checkedNames.add(name);
         }
     }
-    expect(checked).toBeGreaterThan(25);
+    expect([...checkedNames]).toEqual(expect.arrayContaining(STATE_FLAG_NAMES));
+    // Exercise non-state constants without depending on a historical export count.
+    expect(checkedNames.size).toBeGreaterThan(STATE_FLAG_NAMES.length);
   });
 
   it("covers every node state flag", () => {
-    for (const name of STATE_FLAG_NAMES) expect(table.has(name), name).toBe(true);
+    for (const name of STATE_FLAG_NAMES)
+      expect(table.has(name), name).toBe(true);
   });
 
   it("follows the compile-time defines of the build", () => {
@@ -78,11 +81,17 @@ describe("build-time constant inlining", () => {
     ].join("\n");
     const local = new Map([...table, ["MASK", 260]]);
     const result = inlineConstants(source, "mod.ts", local)!;
-    expect(result.code).toContain('import { Visited, Revalidate as R, type Both }');
-    expect(result.code).toContain("const MASK = 4 /* Visited */ | 256 /* R */;");
+    expect(result.code).toContain(
+      "import { Visited, Revalidate as R, type Both }",
+    );
+    expect(result.code).toContain(
+      "const MASK = 4 /* Visited */ | 256 /* R */;",
+    );
     expect(result.code).toContain("export { Visited };");
     expect(result.code).toContain("type Mask = typeof Visited;");
-    expect(result.code).toContain("{ Visited: 4, other: node.Visited, [256 /* R */]: 1 }");
+    expect(result.code).toContain(
+      "{ Visited: 4, other: node.Visited, [256 /* R */]: 1 }",
+    );
     expect(result.code).toContain("class A { Visited = 0; }");
     expect(result.code).toContain(
       "(s & 260 /* MASK */) !== 0 && ~256 /* R */ && Elsewhere",

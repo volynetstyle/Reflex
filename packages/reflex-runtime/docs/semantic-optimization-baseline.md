@@ -47,11 +47,11 @@ Baseline in-memory trace `selector, alternatingDependency, stable[0..63]`: on th
 
 ### 2. INFERENCE: repeated cursor handling and unchanged version writes
 
-**Location:** `protocol/read.producer.ts`, `protocol/read.consumer.ts`, `shape/tracking/resolve.ts`.
+**Location:** `protocol/read.producer.ts`, `protocol/read.consumer.ts`, `stages/tracking/resolve.ts`.
 
 **Observed:** Caller reads `tailIn` to derive version; resolver reads it again. Cursor duplicate writes supplied version back to the same edge.
 
-**Invariant / proof:** Protocol argument is `consumer.tailIn?.version ?? trackingEpoch`. With non-null cursor, version equals cursor version; there is no intervening production callback. Cursor-hit assignment writes existing value.
+**Invariant / proof:** Protocol argument is `consumer.tailIn?.version ?? trackingStamp`. With non-null cursor, version equals cursor version; there is no intervening production callback. Cursor-hit assignment writes existing value.
 
 **Counterexample:** Direct internal resolver call may supply another version; global removal invalid.
 
@@ -65,7 +65,7 @@ Baseline in-memory trace `selector, alternatingDependency, stable[0..63]`: on th
 
 ### 3. INFERENCE: last-edge adjacency guard always true
 
-**Location:** `shape/tracking/resolve.ts`, `previousLastEdge !== cursorEdge` in last-edge shortcut.
+**Location:** `stages/tracking/resolve.ts`, `previousLastEdge !== cursorEdge` in last-edge shortcut.
 
 **Proof:** Expected next-edge producer match already failed; expected edge is non-null. Last-edge producer now matches. If last.prevIn equalled cursor, last would equal expected, contradicting the rejected match.
 
@@ -75,7 +75,7 @@ Baseline in-memory trace `selector, alternatingDependency, stable[0..63]`: on th
 
 ### 4. INFERENCE: callers prove nonempty stale cleanup
 
-**Location:** `stages/stabilization/advance.ts`, `engine/watcher.execution.ts`, `shape/tracking/cleanup.ts`.
+**Location:** `stages/stabilization/advance.ts`, `engine/watcher.execution.ts`, `stages/tracking/cleanup.ts`.
 
 **Proof:** Callers require `tailIn !== lastIn`. Null tail then implies nonempty list; non-null non-last tail has non-null nextIn. Cleanup's empty-edge test is false.
 

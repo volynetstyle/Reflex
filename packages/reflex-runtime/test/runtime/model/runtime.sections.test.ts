@@ -31,8 +31,8 @@ import {
   runWatcher,
   snapshotRuntimeContext,
   setCurrentConsumer,
-  keepNewestTrackingEpoch,
-  trackingEpoch,
+  keepNewestTrackingStamp,
+  trackingStamp,
   unlinkEdge,
   writeProducer,
   branchSwapPatterns,
@@ -329,14 +329,14 @@ describe("Reactive runtime - section model coverage", () => {
       {
         name: "context restore does not roll tracking epoch backwards",
         run() {
-          const base = trackingEpoch;
-          keepNewestTrackingEpoch(base + 1);
+          const base = trackingStamp;
+          keepNewestTrackingStamp(base + 1);
           const snapshot = snapshotRuntimeContext();
 
-          keepNewestTrackingEpoch(base + 3);
+          keepNewestTrackingStamp(base + 3);
           restoreRuntimeContextSnapshot(getActiveRuntimeContext(), snapshot);
 
-          expect(trackingEpoch).toBe(base + 3);
+          expect(trackingStamp).toBe(base + 3);
           expectRuntimeSectionHealthy([]);
         },
       },

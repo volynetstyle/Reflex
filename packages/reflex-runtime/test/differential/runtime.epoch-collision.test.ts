@@ -8,8 +8,8 @@ import {
   readProducer,
   resetRuntimeContext,
   runWatcher,
-  setTrackingEpoch,
-  trackingEpoch,
+  setTrackingStamp,
+  trackingStamp,
   writeProducer,
   configureRuntimeContext,
 } from "../runtime.test_utils";
@@ -51,9 +51,9 @@ const routes: Array<[string, Route]> = [
     },
   ],
   [
-    "setTrackingEpoch rewinds the clock",
+    "setTrackingStamp rewinds the clock",
     (stale) => {
-      setTrackingEpoch(stale - 1);
+      setTrackingStamp(stale - 1);
     },
   ],
   [
@@ -61,9 +61,9 @@ const routes: Array<[string, Route]> = [
     (stale, clock) => {
       // 16 below the next multiple of 2^32: 15 passes reach it, where a uint32
       // clock restarts at 1 and meets `stale` again `stale mod 2^32` later.
-      let wrap = 2 ** 32 * (Math.floor(trackingEpoch / 2 ** 32) + 1);
-      if (wrap - trackingEpoch < 64) wrap += 2 ** 32;
-      setTrackingEpoch(wrap - 16);
+      let wrap = 2 ** 32 * (Math.floor(trackingStamp / 2 ** 32) + 1);
+      if (wrap - trackingStamp < 64) wrap += 2 ** 32;
+      setTrackingStamp(wrap - 16);
       clock.advanceBy(15 + (stale % 2 ** 32) - 1);
     },
   ],
@@ -98,7 +98,7 @@ function scenario(route: Route) {
   runWatcher(watcher);
   expect(seen).toEqual([780]);
   // Every edge accepted by the consumer's pass carries that pass's stamp.
-  const stale = consumer.firstIn!.version;
+  const stale = consumer.firstIn!.stamp;
 
   // Each unrelated recompute is exactly one tracking pass.
   let tick = 0;
@@ -111,7 +111,7 @@ function scenario(route: Route) {
       for (let i = 0; i < passes; i++) pass();
     },
     advanceTo(epoch) {
-      while (trackingEpoch < epoch) pass();
+      while (trackingStamp < epoch) pass();
     },
   });
   configureRuntimeContext({

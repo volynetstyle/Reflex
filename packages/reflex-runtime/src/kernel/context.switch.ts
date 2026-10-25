@@ -7,13 +7,13 @@ import {
 } from "./execution";
 import {
   currentConsumer,
-  keepNewestTrackingEpoch,
+  keepNewestTrackingStamp,
   propagationScopeDepth,
   reactiveBatchDepth,
   setCurrentConsumer,
   setPropagationScopeDepth,
   setReactiveBatchState,
-  trackingEpoch,
+  trackingStamp,
   runtimeState,
 } from "./state";
 
@@ -32,7 +32,7 @@ export function syncRuntimeContext(
       setCurrentConsumer(context.currentConsumer);
       // One kernel-wide clock: edges are shared by every context and stamped
       // with pass epochs, so a load may only move the epoch forward.
-      keepNewestTrackingEpoch(context.trackingEpoch);
+      keepNewestTrackingStamp(context.trackingStamp);
       setPropagationScopeDepth(context.propagationScopeDepth);
       setReactiveBatchState(context.batchDepth, context.runtimeState);
       loadRuntimeConfiguration(context);
@@ -40,7 +40,7 @@ export function syncRuntimeContext(
     }
     case "save": {
       context.currentConsumer = currentConsumer;
-      context.trackingEpoch = trackingEpoch;
+      context.trackingStamp = trackingStamp;
       context.propagationScopeDepth = propagationScopeDepth;
       context.batchDepth = reactiveBatchDepth;
       context.runtimeState = runtimeState;

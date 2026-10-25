@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { loadBaseline, loadOracleBundle } from "./baseline";
 import {
   firstMismatch,
+  generateHubProgram,
   generateProgram,
   interpret,
   programSize,
@@ -23,6 +24,8 @@ interface Mutant {
   replace: string;
   /** Mutants the current generator cannot reach are documented gaps. */
   expected: "killed" | "gap";
+  /** Program family; the default generator unless the mutant needs hubs. */
+  generator?: "hub";
 }
 
 const MUTANTS: Mutant[] = [
@@ -79,8 +82,8 @@ const MUTANTS: Mutant[] = [
     // A located current-pass edge is taken for a suffix edge, so a duplicate
     // read moves it after the cursor and reorders the incoming list.
     id: "prefix-stamp-classification-false",
-    file: "src/kernel/shape/tracking/prefix.ts",
-    search: "if (stamp !== 0) return edge.version === stamp;",
+    file: "src/kernel/stages/tracking/prefix.ts",
+    search: "if (stamp !== 0) return edge.stamp === stamp;",
     replace: "if (stamp !== 0) return false;",
     expected: "killed",
   },
@@ -93,6 +96,16 @@ const MUTANTS: Mutant[] = [
       "hasIncomingRun(suffixStartEdge, EAGER_STALE_SUFFIX_CLEANUP_MIN) === true",
     replace: "false",
     expected: "killed",
+  },
+  {
+    // A hint that outlives its edge (INV-H): after the consumer drops the
+    // dependency, a later lookup of the same pair returns the detached edge.
+    id: "hint-keep-on-unlink",
+    file: "src/kernel/shape/graph/sweepEdges.ts",
+    search: "if (from.tailIn === edge) from.tailIn = null;",
+    replace: "void 0;",
+    expected: "killed",
+    generator: "hub",
   },
 ];
 
@@ -122,9 +135,11 @@ describe("baseline oracle qualification", () => {
           interpret(runtime, program),
         ) !== null;
 
+      const generate =
+        mutant.generator === "hub" ? generateHubProgram : generateProgram;
       let killedAt: number | undefined;
       for (let seed = 1; seed <= BUDGET; seed++) {
-        if (fails(generateProgram(seed))) {
+        if (fails(generate(seed))) {
           killedAt = seed;
           break;
         }
@@ -135,7 +150,7 @@ describe("baseline oracle qualification", () => {
         return;
       }
       expect(killedAt, `${mutant.id} survived ${BUDGET} seeds`).toBeDefined();
-      const original = generateProgram(killedAt!);
+      const original = generate(killedAt!);
       const minimal = shrink(original, fails);
       expect(fails(minimal)).toBe(true);
       expect(programSize(minimal)).toBeLessThanOrEqual(programSize(original));

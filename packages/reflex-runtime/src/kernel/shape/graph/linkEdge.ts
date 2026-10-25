@@ -5,13 +5,13 @@ export function linkEdge(
   from: ReactiveNode,
   to: ReactiveNode,
   after: ReactiveEdge | null = to.lastIn,
-  version = 0,
+  stamp = 0,
 ): ReactiveEdge {
   const prevOut = from.lastOut;
   const nextIn = after === null ? to.firstIn : after.nextIn;
 
   const edge: ReactiveEdge = {
-    version,
+    stamp,
     from,
     to,
     prevOut,
@@ -38,12 +38,12 @@ export function linkEdge(
 export function linkFirstTrackedEdgeUnchecked(
   from: ReactiveNode,
   to: ReactiveNode,
-  version = 0,
+  stamp = 0,
 ): ReactiveEdge {
   const prevOut = from.lastOut;
 
   const edge: ReactiveEdge = {
-    version,
+    stamp,
     from,
     to,
     prevOut,
@@ -66,12 +66,12 @@ export function appendTrackedEdgeAfterCursorUnchecked(
   from: ReactiveNode,
   to: ReactiveNode,
   cursor: ReactiveEdge,
-  version = 0,
+  stamp = 0,
 ): ReactiveEdge {
   const prevOut = from.lastOut;
 
   const edge: ReactiveEdge = {
-    version,
+    stamp,
     from,
     to,
     prevOut,
@@ -106,6 +106,9 @@ export function unlinkEdge(edge: ReactiveEdge): void {
   else to.lastIn = prevIn;
 
   if (to.tailIn === edge) to.tailIn = prevIn;
+  // A hint never outlives its edge (INV-H). After the incoming repair above,
+  // a self-edge is no longer in `from.tailIn`.
+  if (from.tailIn === edge) from.tailIn = null;
 
   edge.prevOut = null;
   edge.nextOut = null;
