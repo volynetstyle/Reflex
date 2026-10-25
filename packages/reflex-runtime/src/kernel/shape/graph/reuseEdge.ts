@@ -134,7 +134,8 @@ export function reuseLocatedIncomingEdgeOrLink(
  * edge of the pair lies in the suffix that starts at `suffixStartEdge` (the
  * whole incoming list when it is `null`).
  *
- * The suffix head is compared directly. Otherwise the edge is located by a
+ * The suffix head is compared directly, then the producer's newest edge.
+ * Otherwise the edge is located by a
  * lockstep walk of the producer's outgoing list and the rest of the suffix,
  * and reused or linked by `reuseLocatedIncomingEdgeOrLink`.
  */
@@ -154,12 +155,18 @@ export function reuseIncomingEdgeFromSuffixOrLink(
     return suffixStartEdge;
   }
 
-  const edge = findEdgeInLockstep(
-    producer,
-    consumer,
-    null,
-    suffixStartEdge === null ? consumer.firstIn : suffixStartEdge.nextIn,
-  );
+  // The producer's newest edge answers a pair linked or relinked last, and
+  // every pair of a producer with one subscriber, without the lookup.
+  const newest = producer.lastOut;
+  const edge =
+    newest !== null && newest.to === consumer
+      ? newest
+      : findEdgeInLockstep(
+          producer,
+          consumer,
+          null,
+          suffixStartEdge === null ? consumer.firstIn : suffixStartEdge.nextIn,
+        );
 
   return reuseLocatedIncomingEdgeOrLink(
     producer,
