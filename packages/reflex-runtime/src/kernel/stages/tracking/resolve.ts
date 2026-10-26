@@ -271,8 +271,10 @@ export function resolveTrackedRead(
   producer: ReactiveNode,
   consumer: ReactiveNode,
 ): void {
-  if (__PROFILE__)
-    observeRuntimeProjection?.("projection.semantic.tracking.resolve");
+  {
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.tracking.resolve");
+  }
 
   const cursorEdge = consumer.tailIn;
 
@@ -284,19 +286,22 @@ export function resolveTrackedRead(
     if (expectedNextEdge !== null && expectedNextEdge.from === producer) {
       expectedNextEdge.stamp = passStamp;
       consumer.tailIn = expectedNextEdge;
-
-      if (__PROFILE__)
-        observeRuntimeProjection?.("projection.semantic.tracking.next.hit");
-      devRecordTrackRead(defaultContext, consumer, producer);
+      {
+        if (__PROFILE__)
+          observeRuntimeProjection?.("projection.semantic.tracking.next.hit");
+        devRecordTrackRead(defaultContext, consumer, producer);
+      }
       return;
     }
 
     // Consecutive duplicate reads remain represented by the current cursor,
     // which already carries this pass's stamp.
     if (cursorEdge.from === producer) {
-      if (__PROFILE__)
-        observeRuntimeProjection?.("projection.semantic.tracking.cursor.hit");
-      devRecordTrackRead(defaultContext, consumer, producer);
+      {
+        if (__PROFILE__)
+          observeRuntimeProjection?.("projection.semantic.tracking.cursor.hit");
+        devRecordTrackRead(defaultContext, consumer, producer);
+      }
       return;
     }
 
@@ -326,21 +331,26 @@ export function resolveTrackedRead(
   if (firstIncomingEdge === null) {
     linkFirstTrackedEdgeUnchecked(producer, consumer, passStamp);
 
-    if (__PROFILE__)
-      observeRuntimeProjection?.("projection.semantic.tracking.initial.create");
-    devRecordTrackRead(defaultContext, consumer, producer);
+    {
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.tracking.initial.create",
+        );
+      devRecordTrackRead(defaultContext, consumer, producer);
+    }
     return;
   }
 
   if (firstIncomingEdge.from === producer) {
     firstIncomingEdge.stamp = passStamp;
     consumer.tailIn = firstIncomingEdge;
-
-    if (__PROFILE__)
-      observeRuntimeProjection?.(
-        "projection.semantic.tracking.initial.first-hit",
-      );
-    devRecordTrackRead(defaultContext, consumer, producer);
+    {
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.tracking.initial.first-hit",
+        );
+      devRecordTrackRead(defaultContext, consumer, producer);
+    }
     return;
   }
 

@@ -146,7 +146,7 @@ export function devRecordReadConsumer(
   mode: "eager" | "lazy",
   value: unknown,
   context: RuntimeDebugContext,
-  consumer?: ReactiveNode,
+  consumer?: ReactiveNode | null,
 ): void {
   if (!__DEV__) return;
 

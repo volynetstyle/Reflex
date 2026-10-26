@@ -28,7 +28,13 @@ import {
 import { cleanupUnvisitedSources } from "@runtime/kernel/stages/tracking";
 import { push_iterator_once } from "@runtime/kernel/stages/propagation";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
-import { compare } from "@runtime/protocol";
+
+/**
+ * Recompute equality, `Object.is`. Writes compare with their own copy
+ * (`sameWrittenValue`, protocol/write.producer.ts), so the two sites keep
+ * separate type feedback.
+ */
+export const compare = Object.is;
 
 /**
  * Advance to next value

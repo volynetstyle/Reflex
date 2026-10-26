@@ -14,6 +14,7 @@ import {
   Changed,
   Both,
   Computing,
+  Unknown,
   Visited,
   type ConsumerNode,
   type ReactiveEdge,
@@ -28,18 +29,13 @@ import {
 
 import { LAZY, type ConsumerReadModeValue } from "./utils/constants";
 
+// Consumer reads. Observable behavior: docs/RUNTIME.md, "Computed consumers
+// and reads". Both modes stabilize a dirty node before its payload is
+// observed; a lazy read then records the edge into the active computation.
+
 /**
- * Read a consumer in tracking mode.
- *
- * This is the common read path for computed values:
- *
- * 1. Assert that the current state may be stabilized
- * 2. Fast-path clean nodes by returning `node.payload` directly
- * 3. Stabilize dirty nodes before observing the value
- * 4. Register the read in the active reactive context
- *
- * The fast-path intentionally stays here, with dirty stabilization isolated in
- * a local slow path so clean reads do not bounce through helper layers.
+ * Lazy read: stabilize, then record the dependency in the active computation.
+ * Called with the node as `this`, so a facade binds it once per node.
  */
 export function readConsumerLazy<T>(this: ConsumerNode<T>): T {
   devAssertNoRuntimeHookReactiveRead();
@@ -50,57 +46,141 @@ export function readConsumerLazy<T>(this: ConsumerNode<T>): T {
     observeRuntimeProjection?.("projection.semantic.read.consumer.lazy");
 
   // eslint-disable-next-line @typescript-eslint/no-this-alias
-  const producer = this;
-  const state = producer.state;
-  const isDirty = (state & Both) !== 0;
+  const node = this;
+  const state = node.state;
 
-  if (__PROFILE__) observeRuntimeReadConsumerPath?.(isDirty);
+  if (__PROFILE__) observeRuntimeReadConsumerPath?.((state & Both) !== 0);
 
-  const value = isDirty
-    ? stabilizeDirtyConsumer(producer, state)
-    : producer.payload;
+  if ((state & Both) !== 0) stabilizeDirtyConsumer(node, state);
 
+  // Tracking never changes the payload. The local keeps the DEV record's
+  // argument a plain name, which the production build erases with the call.
   const consumer = currentConsumer;
+  const payload = node.payload;
 
-  if (consumer === null) return value;
+  if (consumer !== null) {
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.read.consumer.track");
+    resolveTrackedRead(node, consumer);
+  }
 
-  if (__PROFILE__)
-    observeRuntimeProjection?.("projection.semantic.read.consumer.track");
-  resolveTrackedRead(producer, consumer);
-  devRecordReadConsumer(producer, "lazy", value, defaultContext, consumer);
+  devRecordReadConsumer(node, "lazy", payload, defaultContext, consumer);
 
-  return value;
+  return payload;
 }
 
-/**
- * Read a consumer without tracking the final dependency edge.
- *
- * Clean nodes return immediately. Dirty nodes are stabilized without binding
- * the current `currentConsumer` to this read.
- */
+/** Eager read: stabilize without recording a dependency. */
 export function readConsumerEager<T>(node: ConsumerNode<T>): T {
   devAssertNoRuntimeHookReactiveRead();
+
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.read.consumer.invoke");
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.read.consumer.eager");
 
   const state = node.state;
-  const isDirty = (state & Both) !== 0;
 
-  if (__PROFILE__) observeRuntimeReadConsumerPath?.(isDirty);
-  return isDirty ? stabilizeDirtyConsumer(node, state) : node.payload;
+  if (__PROFILE__) observeRuntimeReadConsumerPath?.((state & Both) !== 0);
+
+  if ((state & Both) !== 0) stabilizeDirtyConsumer(node, state);
+
+  const payload = node.payload;
+
+  devRecordReadConsumer(node, "eager", payload, defaultContext);
+
+  return payload;
 }
 
+/**
+ * Read in the given mode; lazy by default.
+ *
+ * The lazy body repeats `readConsumerLazy` instead of calling it: the
+ * benchmarks read through this function, and a call level here moves
+ * TurboFan's inlining boundaries in every caller that reads a computed.
+ */
+export function readConsumer<T>(
+  node: ConsumerNode<T>,
+  mode: ConsumerReadModeValue = LAZY,
+): T {
+  if (mode !== LAZY) return readConsumerEager(node);
+
+  devAssertNoRuntimeHookReactiveRead();
+
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.read.consumer.invoke");
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.read.consumer.lazy");
+
+  const state = node.state;
+
+  if (__PROFILE__) observeRuntimeReadConsumerPath?.((state & Both) !== 0);
+
+  if ((state & Both) !== 0) stabilizeDirtyConsumer(node, state);
+
+  const consumer = currentConsumer;
+  const payload = node.payload;
+
+  if (consumer !== null) {
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.read.consumer.track");
+    resolveTrackedRead(node, consumer);
+  }
+
+  devRecordReadConsumer(node, "lazy", payload, defaultContext, consumer);
+
+  return payload;
+}
+
+/** A computed never rests with `Visited` (I3): for valid states, `Changed`. */
 const FORCE_RECOMPUTE_STATE = Changed | Visited;
 
 /**
- * Return the committed edge whose delivery is owned by the active tracking
- * continuation, but only when it is the exact stable next read.
+ * Bring a dirty consumer up to date.
  *
- * This is a read-only proof: it does not advance the tracking cursor or commit
- * a dependency before producer stabilization succeeds. Dynamic append,
- * reorder and duplicate cases conservatively fall back to generic propagation.
+ * `Changed` is execution evidence: recompute. `Unknown` alone is validated
+ * first and recomputed only when a dependency changed; a fully stable
+ * validation clears `Unknown` itself, and a recompute leaves a resolved state
+ * on either result. An `Unknown` consumer without inputs has nothing to
+ * validate and is clean as a root (F9).
+ */
+function stabilizeDirtyConsumer<T>(node: ConsumerNode<T>, state: number): void {
+  devAssertConsumerCanStabilize(state);
+
+  if ((state & FORCE_RECOMPUTE_STATE) !== 0) {
+    if (__PROFILE__)
+      observeRuntimeProjection?.(
+        "projection.semantic.read.stabilize.force-advance",
+      );
+    advance(node, ownedParentEdgeForStableRead(node));
+  } else {
+    const edge = node.firstIn;
+    if (__PROFILE__)
+      observeRuntimeProjection?.(
+        "projection.semantic.read.stabilize.pull-advance",
+      );
+
+    if (edge === null) {
+      node.state &= ~Unknown;
+    } else if (should_recompute(node, edge) === true) {
+      advance(node);
+    }
+  }
+
+  if ((runtimeState & RuntimeState.IdlePending) !== RuntimeState.Idle) {
+    flushPendingRuntimeIdle();
+  }
+}
+
+/**
+ * The edge `producer -> currentConsumer` when it is exactly the next read of
+ * the active tracking pass; otherwise null.
+ *
+ * `advance` receives it as the owned edge: the reader learns the new value
+ * from this read, so the one-step push skips its edge. The proof only looks.
+ * The cursor moves and the dependency commits in `resolveTrackedRead`, after
+ * stabilization succeeds; append, reorder and duplicate reads fall back to
+ * the full push. `Computing` is what makes `tailIn` the tracking frontier
+ * (INV-H); outside it the slot may hold a producer hint.
  */
 function ownedParentEdgeForStableRead(
   producer: ConsumerNode<unknown>,
@@ -119,129 +199,4 @@ function ownedParentEdgeForStableRead(
   const candidate = cursor === null ? consumer.firstIn : cursor.nextIn;
 
   return candidate !== null && candidate.from === producer ? candidate : null;
-}
-
-function stabilizeDirtyConsumer<T>(node: ConsumerNode<T>, state: number): T {
-  devAssertConsumerCanStabilize(state);
-
-  let stabilized: boolean;
-
-  if ((state & FORCE_RECOMPUTE_STATE) !== 0) {
-    if (__PROFILE__)
-      observeRuntimeProjection?.(
-        "projection.semantic.read.stabilize.force-advance",
-      );
-    stabilized = advance(node, ownedParentEdgeForStableRead(node)) === true;
-  } else {
-    const edge = node.firstIn;
-    if (__PROFILE__)
-      observeRuntimeProjection?.(
-        "projection.semantic.read.stabilize.pull-advance",
-      );
-    // A node is considered newest if it:
-    // - has producers,
-    // - all top-level dependencies are checked,... and
-    // - its eigenvalue is updated to the newest one.
-    stabilized =
-      edge !== null &&
-      should_recompute(node, edge) === true &&
-      advance(node) === true;
-  }
-
-  if (!stabilized) node.state &= ~Both;
-  if ((runtimeState & RuntimeState.IdlePending) !== RuntimeState.Idle) {
-    flushPendingRuntimeIdle();
-  }
-
-  return node.payload;
-}
-
-/**
- * Read the value of a consumer (computed) node.
- * 
- * A consumer is a pure derived computation that caches its result and re-executes
- * when dependencies change. This function:
- * 
- * 1. Synchronizes the node to reflect all upstream changes (eager or lazy)
- * 2. Returns the current payload value
- * 3. If lazy mode (default), registers this read as a dependency of the active
- *    consumer (if any). This allows the calling code to be notified if this
- *    computed node's value changes.
- * 
- * Two modes are available:
- * - **Lazy** (default): Stabilization happens in the current context, preserving
- *   dependency tracking. Use when the computed value is a real dependency.
- * - **Eager**: Stabilization happens without the final dependency registration.
- *   Use for probing the value without creating a dependency edge.
- * @template T - The type of value stored in the node
- * @param {ReactiveNode<T>} node - The consumer node to read from
- * @param {ConsumerReadMode} mode - How to read the node (lazy or eager)
- * @returns {T} The current, up-to-date payload value
- * @example const signal = createProducer(1)
-const doubled = createConsumer(() => readProducer(signal) * 2)
-
-// Lazy read: synchronize and register dependency
-const computed = createConsumer(() => {
-  return readConsumer(doubled)  // Depends on doubled
-})
-
-// Eager read: synchronize without dependency
-const debugValue = readConsumer(doubled, ConsumerReadMode.eager)
- * @invariant Returns node.payload after stabilization
- * @invariant In lazy mode, if called during compute, registers edge to active consumer
- * @invariant In eager mode, no dependency edge is created
- * @cost O(1) + stabilization cost (depends on upstream changes)
- */
-export function readConsumer<T>(
-  node: ConsumerNode<T>,
-  mode: ConsumerReadModeValue = LAZY,
-): T {
-  devAssertNoRuntimeHookReactiveRead();
-
-  if (__PROFILE__)
-    observeRuntimeProjection?.("projection.semantic.read.consumer.invoke");
-
-  if (mode !== LAZY) {
-    if (__PROFILE__)
-      observeRuntimeProjection?.("projection.semantic.read.consumer.eager");
-
-    const state = node.state;
-    const isDirty = (state & Both) !== 0;
-
-    if (__PROFILE__) observeRuntimeReadConsumerPath?.(isDirty);
-
-    const value = !isDirty ? node.payload : stabilizeDirtyConsumer(node, state);
-
-    devRecordReadConsumer(node, "eager", value, defaultContext);
-
-    return value;
-  }
-
-  if (__PROFILE__)
-    observeRuntimeProjection?.("projection.semantic.read.consumer.lazy");
-
-  const state = node.state;
-  const isDirty = (state & Both) !== 0;
-
-  if (__PROFILE__) observeRuntimeReadConsumerPath?.(isDirty);
-
-  const value = !isDirty ? node.payload : stabilizeDirtyConsumer(node, state);
-
-  const consumer = currentConsumer;
-  if (consumer !== null) {
-    if (__PROFILE__)
-      observeRuntimeProjection?.("projection.semantic.read.consumer.track");
-
-    resolveTrackedRead(node, consumer);
-  }
-
-  devRecordReadConsumer(
-    node,
-    "lazy",
-    value,
-    defaultContext,
-    consumer ?? undefined,
-  );
-
-  return value;
 }
