@@ -136,10 +136,13 @@ reused as the pair lookup's outgoing hint (INV-H). For a node that is not
 or a hint: one of its own outgoing edges, attached to both lists. A hint
 satisfies `from === node && to !== node`; an incoming edge has
 `to === node`, so a self-edge always reads as incoming and is never written
-as a hint. The lookup writes a hint only past its four-link outgoing head
-start, only into a node that is neither `Computing` nor a watcher, and uses
-one only for exactly its pair; a missing or different hint proves nothing,
-and absence is still proved by the lockstep. Every unlink of an edge clears
+as a hint. The lookup writes a hint only with an edge it has located past
+its constant probes, only into a node that is neither `Computing` nor a
+watcher. It uses a slot edge from the node as the answer for exactly its
+pair, and any other one as an outgoing finger, the centre of a walk of at
+most eight outgoing links raced against the lockstep; a missing or
+different hint proves nothing, and absence is still proved by exhausting
+the outgoing or the covered incoming walk. Every unlink of an edge clears
 the hint that points to it, and every computation resets the slot to null
 before it becomes a frontier, so a stale hint is never observed. The idle
 uses of `tailIn` (unlink repair of the incoming cursor, the debug integrity

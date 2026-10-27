@@ -7,6 +7,8 @@
 //   node scripts/build-baseline-oracle.mjs --commit <sha>  any commit
 //   node scripts/build-baseline-oracle.mjs --source        current working tree (sanity)
 //   ... --mutate "<file>::<search>::<replace>"             seeded mutant (oracle qualification)
+//   ... --overlay "<file>=<path>"                          replace an archived source file by
+//                                                          the file at <path> (research variants)
 //   ... --production                                       production flags, minified like dist
 //   ... --readable                                         production without identifier mangling
 //   ... --profile                                          PROFILE build exposing
@@ -51,6 +53,17 @@ const mutations = args
   .map((spec) => {
     const [file, search, replace] = spec.split("::");
     return { file, search, replace };
+  });
+
+// Applied before the mutations, so a mutation may target an overlaid file.
+const overlays = args
+  .map((arg, index) => (arg === "--overlay" ? args[index + 1] : undefined))
+  .filter(Boolean)
+  .map((spec) => {
+    const at = spec.indexOf("=");
+    const file = spec.slice(0, at);
+    const contents = readFileSync(path.resolve(spec.slice(at + 1)), "utf8");
+    return { file, contents };
   });
 
 const pinned = readFileSync(
@@ -106,11 +119,11 @@ const label =
   (profile ? "-profile" : "") +
   (production ? "-production" : "") +
   (readable ? "-readable" : "") +
-  (mutations.length === 0
+  (mutations.length === 0 && overlays.length === 0
     ? ""
     : "-mutant-" +
       createHash("sha256")
-        .update(JSON.stringify(mutations))
+        .update(JSON.stringify([mutations, overlays]))
         .digest("hex")
         .slice(0, 8));
 const target = path.resolve(
@@ -148,6 +161,13 @@ try {
       ),
     );
     execFileSync("tar", ["-xf", "baseline.tar"], { cwd: work });
+  }
+
+  for (const { file, contents } of overlays) {
+    const target = path.join(archived, file);
+    if (!existsSync(target))
+      throw new Error(`Overlay target not found in the archive: ${file}`);
+    writeFileSync(target, contents);
   }
 
   for (const { file, search, replace } of mutations) {
@@ -284,6 +304,10 @@ try {
       {
         commit: resolvedCommit,
         mutations,
+        overlays: overlays.map(({ file, contents }) => ({
+          file,
+          sha256: createHash("sha256").update(contents).digest("hex"),
+        })),
         profile,
         production,
         flags,
