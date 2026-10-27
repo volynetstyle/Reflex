@@ -352,6 +352,34 @@ const MUTANTS = [
     "probe-any-producer",
     `${F}::hint.to === consumer && hint.from === producer::hint.to === consumer`,
   ],
+  // The finger race (findEdgeInLockstepFromFinger, which precedes the base
+  // lockstep in the file, so a search text shared by both loops mutates the
+  // race): only an edge from the producer may start the ring, a finger miss
+  // proves nothing, the race hands every walker on to the base lockstep, and
+  // nothing but the base guard writes the slot. Where the ring looks and how
+  // the walkers interleave decide cost and slot content only, which the trace
+  // does not compare; the replay of perf/outgoing-finger/analyze.mjs checks
+  // those (README there, "Qualification").
+  [
+    "finger-any-slot-edge",
+    `${F}::    hint !== null && hint.from === producer::    hint !== null`,
+  ],
+  [
+    "finger-incoming-overclaims",
+    `${F}::    } else if (back === null) {::    } else {`,
+  ],
+  [
+    "finger-base-hit-dropped",
+    `${F}::      if (out.to === consumer) return out;::      if (out.to === consumer) return null;`,
+  ],
+  [
+    "finger-handoff-drops-base-walk",
+    `${F}::  return findEdgeInLockstepPastHeadStart(producer, consumer, out, back, ahead);::  return findEdgeInLockstepPastHeadStart(producer, consumer, null, back, ahead);`,
+  ],
+  [
+    "finger-slot-written-early",
+    `${F}::      after = after.nextOut ?? producer.firstOut!;::      after = after.nextOut ?? producer.firstOut!; producer.tailIn = after;`,
+  ],
   [
     "fill-into-computing",
     `${F}::(producer.state & (Computing | Watcher)) === 0::(producer.state & Watcher) === 0`,
