@@ -9,7 +9,7 @@ import {
   moveLastIncomingEdgeAfterCursorUnchecked,
   moveLastIncomingEdgeToFrontUnchecked,
   moveTrackedIncomingEdgeAfterCursorUnchecked,
-} from "@runtime/kernel/shape/graph/edgeList";
+} from "@runtime/kernel/shape/graph/cursorMoves";
 import {
   appendTrackedEdgeAfterCursorUnchecked,
   linkFirstTrackedEdgeUnchecked,
