@@ -57,6 +57,9 @@ describe("runtime projection compatibility", () => {
       // Retired: the tracking slow path can no longer be blocked (F3), so the
       // counter stays 0. Kept for RuntimeProfileCounters compatibility.
       "trackingSlowPathBlocked",
+      // Retired: reconciliation no longer detaches the unvisited suffix, so
+      // the counter stays 0. Kept for RuntimeProfileCounters compatibility.
+      "trackingSuffixEagerDetach",
     ]);
     expect(adapted).toEqual(new Set(Object.keys(runtimeProfileCounters)));
   });

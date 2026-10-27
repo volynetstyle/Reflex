@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import * as candidateModule from "../../src/internal";
 import { BASELINE_COMMIT, loadBaseline } from "./baseline";
 import {
+  classifyTraceDifference,
   firstMismatch,
   generateHubProgram,
   generateProgram,
@@ -88,7 +89,36 @@ const isF17OwnEpochDelivery = (
   );
 };
 
-const corrected = { F13: 0, F15: 0, F1domain: 0, F17: 0 };
+/**
+ * Representation differences (SEMANTIC_CONTRACT, "Semantic and representation
+ * equivalence"): the traces agree once adjacency order (list-order) or,
+ * additionally, sibling delivery and execution order (event-order) is not
+ * compared, and the candidate violates no invariant the baseline does not.
+ * Counted, not failed: the baseline's representation is not a specification.
+ */
+const isRepresentationDifference = (
+  program: Program,
+  level: ObservationLevel,
+): "list-order" | "event-order" | null => {
+  const kind = classifyTraceDifference(
+    interpret(baseline, program, level),
+    interpret(candidate, program, level),
+  );
+  if (kind !== "list-order" && kind !== "event-order") return null;
+  const accepted = new Set(violations(baseline, program));
+  return violations(candidate, program).every((entry) => accepted.has(entry))
+    ? kind
+    : null;
+};
+
+const corrected = {
+  F13: 0,
+  F15: 0,
+  F1domain: 0,
+  F17: 0,
+  "list-order": 0,
+  "event-order": 0,
+};
 const candidate = candidateModule as unknown as RuntimeModule;
 const SEEDS = Number(process.env.ORACLE_SEEDS ?? 2_000);
 const FIRST_SEED = Number(process.env.ORACLE_SEED ?? 1);
@@ -128,6 +158,11 @@ function report(
     corrected.F17++;
     return null;
   }
+  const representation = isRepresentationDifference(program, level);
+  if (representation !== null) {
+    corrected[representation]++;
+    return null;
+  }
   const minimal = shrink(program, fails);
   const mismatch = firstMismatch(
     interpret(baseline, minimal, level),
@@ -157,7 +192,8 @@ describe(`baseline differential oracle (${BASELINE_COMMIT.slice(0, 12)})`, () =>
   it.each<ObservationLevel>(["strict", "observable"])(
     "matches the baseline on generated programs (%s)",
     (level) => {
-      corrected.F13 = corrected.F15 = corrected.F1domain = corrected.F17 = 0;
+      for (const key of Object.keys(corrected))
+        corrected[key as keyof typeof corrected] = 0;
       const count = ONLY_ONE ? 1 : SEEDS;
       for (let seed = FIRST_SEED; seed < FIRST_SEED + count; seed++) {
         const failure = report(seed, level, generateProgram(seed));
@@ -174,7 +210,8 @@ describe(`baseline differential oracle (${BASELINE_COMMIT.slice(0, 12)})`, () =>
   it.each<ObservationLevel>(["strict", "observable"])(
     "matches the baseline on hub programs (%s)",
     (level) => {
-      corrected.F13 = corrected.F15 = corrected.F1domain = corrected.F17 = 0;
+      for (const key of Object.keys(corrected))
+        corrected[key as keyof typeof corrected] = 0;
       const first = Number(process.env.ORACLE_HUB_SEED ?? 1);
       const count = process.env.ORACLE_HUB_SEED !== undefined ? 1 : HUB_SEEDS;
       for (let seed = first; seed < first + count; seed++) {

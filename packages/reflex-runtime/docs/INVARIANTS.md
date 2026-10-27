@@ -85,11 +85,11 @@ transition table is characterized in
 
 ## 3. Pruning and failure
 
-Successful computation removes the incoming suffix after `tailIn`.
-Reconciliation may eagerly abandon a suffix during a read, before computation
-succeeds. Later reads may recreate abandoned dependencies.
+Successful computation removes the incoming suffix after `tailIn`. That
+cleanup is the only removal of stale dependencies: reconciliation during a
+read moves or links edges and never unlinks the unvisited suffix.
 
-Throws do not undo links, moves, stamps, or eager removal. Final stale cleanup
+Throws do not undo links, moves or stamps. Final stale cleanup
 is skipped on callback failure. The remaining graph is not an old-plus-new
 dependency transaction. Recovery restores flags only:
 
@@ -125,8 +125,8 @@ earlier passes, which the forward-only clock makes smaller. With the cursor
 at `lastIn` every edge is in the prefix (INV-T2). A read off the sequential
 path is resolved by one exact lookup of the pair's edge, bounded by the
 shorter of the producer's outgoing and the consumer's incoming lists, then
-classified by these rules. The eager suffix detachment threshold (32 edges)
-is a retained identity policy, not a search bound. Algorithm details:
+classified by these rules. The unvisited suffix keeps its edges until
+cleanup, so a reread suffix producer moves its existing edge. Algorithm details:
 [tracking research](../src/kernel/stages/tracking/RESEARCH.md).
 
 The frontier reading of `tailIn` is required only while the node is

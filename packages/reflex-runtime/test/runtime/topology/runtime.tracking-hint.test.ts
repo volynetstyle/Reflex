@@ -163,14 +163,16 @@ describe("Reactive runtime - outgoing hint (INV-H)", () => {
         ({ consumer, items }) => pass(consumer, items),
       ],
       [
-        "eager detachment ahead of a long suffix",
+        "cleanup of a long suffix behind a new dependency",
         ({ consumer, hub }) => {
           const long = Array.from({ length: 40 }, () => node());
           pass(consumer, [hub, ...long]);
           expect(hub.tailIn).toBe(edgeOf(hub, consumer));
-          // A new dependency with subscribers, read first, detaches the
-          // 41-edge suffix (an empty outgoing list is the retained exception).
+          // A new dependency with subscribers, read first, keeps the 41-edge
+          // suffix attached for the rest of the pass; cleanup removes it.
           pass(consumer, [wideProducer()], { cleanup: false });
+          expect(edgeOf(hub, consumer)).not.toBeNull();
+          cleanupUnvisitedSources(consumer);
           expect(edgeOf(hub, consumer)).toBeNull();
         },
       ],
