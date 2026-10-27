@@ -43,7 +43,7 @@
 // start); L1h exact hint; L1f a fixed finger probe; L2+/L2− lockstep found /
 // absent; F+/F− the finger-anchored lockstep (cyclic, bidir) found / absent.
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
