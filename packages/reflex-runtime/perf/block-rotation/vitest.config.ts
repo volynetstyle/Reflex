@@ -31,7 +31,8 @@ export default {
             throw new Error("Policy assertion not found exactly once");
           return normalizedCode.replace(oldOrder, newOrder);
         }
-        if (!normalized.endsWith("/src/kernel/shape/graph/edgeList.ts")) return;
+        if (!normalized.endsWith("/src/kernel/shape/graph/cursorMoves.ts"))
+          return;
         const pattern =
           /(export function moveTrackedIncomingEdgeAfterCursorUnchecked\([\s\S]*?\): true \{)[\s\S]*?\n\}/;
         if (!pattern.test(code)) throw new Error("Rotation helper not found");

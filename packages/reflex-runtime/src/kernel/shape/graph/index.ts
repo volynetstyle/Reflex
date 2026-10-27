@@ -1,10 +1,10 @@
 export {
   moveIncomingEdgeAfterUnchecked,
   moveLastIncomingEdgeAfterEdgeUnchecked,
-  moveLastIncomingEdgeToFrontUnchecked,
   moveMiddleIncomingEdgeAfterEdgeUnchecked,
   moveNonHeadIncomingEdgeToFrontUnchecked,
 } from "./edgeList";
+export { moveLastIncomingEdgeToFrontUnchecked } from "./cursorMoves";
 export { findEdgeInLockstep } from "./findEdge";
 export { isOutgoingHint } from "./hint";
 export { linkEdge, unlinkEdge } from "./linkEdge";

@@ -51,15 +51,20 @@ finger does not help; both cases stay at the lockstep bound.
 
 ## Code map
 
-| File                             | Role                                                                            |
-| -------------------------------- | ------------------------------------------------------------------------------- |
-| `resolve.ts`                     | hot path (next edge, cursor, first read) and the initial, tail and inner misses |
-| `locate.ts`                      | producer-side probes, then the graph lookup; the reorder path keeps only newest |
-| `prefix.ts`                      | prefix classification, shared with `push_iterator.ts`                           |
-| `cleanup.ts`                     | removal of the unvisited suffix after a successful pass                         |
-| `../../shape/graph/findEdge.ts`  | exact pair lookup: outgoing hint, head start, lockstep raced by the finger      |
-| `../../shape/graph/hint.ts`      | INV-H: the two readings of `tailIn`                                             |
-| `../../shape/graph/reuseEdge.ts` | reconciliation (move or link), the default strategy                             |
+| File                               | Role                                                                            |
+| ---------------------------------- | ------------------------------------------------------------------------------- |
+| `resolve.ts`                       | hot path (next edge, cursor, first read) and the initial, tail and inner misses |
+| `locate.ts`                        | producer-side probes, then the graph lookup; the reorder path keeps only newest |
+| `prefix.ts`                        | prefix classification, shared with `push_iterator.ts`                           |
+| `cleanup.ts`                       | removal of the unvisited suffix after a successful pass                         |
+| `read.ts`                          | `trackRead`, an entry for tests and tools                                       |
+| `../../shape/graph/findEdge.ts`    | exact pair lookup: outgoing hint, head start, lockstep raced by the finger      |
+| `../../shape/graph/hint.ts`        | INV-H: the two readings of `tailIn`                                             |
+| `../../shape/graph/reuseEdge.ts`   | reconciliation (move or link), the default strategy                             |
+| `../../shape/graph/cursorMoves.ts` | the tiers' incoming-list moves next to the cursor                               |
+| `../../shape/graph/edgeList.ts`    | generic incoming-list moves, for tests and tools                                |
+| `../../shape/graph/linkEdge.ts`    | link (outgoing lists are append-only), the tiers' links, unlink                 |
+| `../../shape/graph/sweepEdges.ts`  | unlink of detached sequences and of whole lists (cleanup, disposal)             |
 
 Rules to keep when changing this code:
 
@@ -91,11 +96,16 @@ function is inlined wherever the function is, and can push the hot read path
 (`resolveTrackedRead`) out of `runWatcherCore`, `advanceCore` or
 `executeComputation`. For that reason the tail miss and the inner miss are
 separate functions: a call site inlines only the miss kind that occurs there.
-The lookup is a plain loop and is not unrolled. Its four-link outgoing head
-start (`OUTGOING_HEAD_START`) is a workload heuristic, not an invariant. The
-hint is consulted before it and written only past it, so a lookup that
-bounded fan-out settles reads `tailIn` once and never writes it; the lockstep
-proper is a separate function (`findEdgeInLockstepPastHeadStart`).
+The lookup loops are plain loops, not unrolled. Its two-link outgoing head
+start is a workload heuristic, not an invariant. The hint is consulted before
+it and written only past it, so a lookup that bounded fan-out settles reads
+`tailIn` once and never writes it. Past the head start there are two loops,
+the lockstep proper (`findEdgeInLockstepPastHeadStart`) and the lockstep raced
+by the finger (`findEdgeInLockstepFromFinger`, `OUTGOING_FINGER_BUDGET`), so
+a call site that never meets a finger inlines only the first. Equivalent
+shapes of both (unrolled, split, switch) were measured on 2026-10-27 and
+changed nothing beyond noise: the loops are memory-bound (RESEARCH.md §9.5;
+the shapes are on the research branch `perf/tracking-lookup-shapes`).
 
 ## Measuring
 
@@ -122,14 +132,21 @@ stable-tracking and generic-move controls.
 
 `perf/tracking-pair-lookup/analyze.mjs` reports, per read that reaches the
 lookup, `D = min(out(P), in(C))`, links compared and simulated slot hit rates
-(PROFILE build; link counts, not timings).
+(PROFILE build; link counts, not timings). `perf/outgoing-finger/analyze.mjs`
+replays every lookup with a model of the code and fails on any difference in
+compared links; it also reports routes and runs the end-to-end lab mirror
+(`scripts/tracking-lab-long-long.mjs`). `perf/tracking-ladder/analyze.mjs`
+models the earlier four-link head start and needs updating before use. The
+research branch `perf/tracking-lookup-shapes` adds reconciliation counters,
+links by route, the window-slide pattern and `--touch`, the distinct and cold
+edges and nodes each read touches.
 
 Exactness is checked separately from timing. `scripts/fuzz-tracking-graph.mjs
 --baseline <commit>` runs seeded scripts of passes, nested passes, unlinks and
 disposals on production bundles of that commit and of the working tree,
 compares every frontier and the whole graph (edge identity, stamps) after
 every operation, and checks INV-H; `--qualify` requires every seeded mutant
-of the hint and of the locate stage to be caught.
+of the hint, of the finger race and of the locate stage to be caught.
 
 The repeated-pair case has its own scenarios, `hub-duplicates-16` and
 `hub-duplicates-256` in `compare-tracking-graph.mjs`, and a permanent

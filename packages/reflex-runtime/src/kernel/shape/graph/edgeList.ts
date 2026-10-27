@@ -1,13 +1,21 @@
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 
+// Generic moves within one node's incoming list: internal exports for tests,
+// benchmarks and graph tools; the runtime does not call them. The moves of
+// the tracking tiers are in ./cursorMoves.ts. Outgoing lists are never
+// reordered.
+//
+// "Unchecked": the preconditions listed on each function are the caller's
+// responsibility and are not verified.
+
 /**
- * Generic incoming-edge move.
+ * Move `edge` after `after` in the incoming list of `to`, or to its head
+ * when `after` is null. A no-op when the edge is already there.
  *
  * Preconditions:
- * - edge belongs to to.in list
- * - after is null or belongs to the same to.in list
- * - after !== edge
+ * - `edge` is in the incoming list of `to`
+ * - `after` is null or in the same list
  */
 export function moveIncomingEdgeAfterUnchecked(
   to: ReactiveNode,
@@ -38,7 +46,7 @@ export function moveIncomingEdgeAfterUnchecked(
 }
 
 /**
- * Move a middle incoming edge after another edge.
+ * Move an incoming edge that is neither head nor tail after another edge.
  *
  * Preconditions:
  * - edge.prevIn !== null
@@ -70,11 +78,11 @@ export function moveMiddleIncomingEdgeAfterEdgeUnchecked(
 }
 
 /**
- * Move a non-head incoming edge to the front.
+ * Move a non-head incoming edge to the head.
  *
  * Preconditions:
  * - edge.prevIn !== null
- * - edge belongs to to.in list
+ * - `edge` is in the incoming list of `to`
  */
 export function moveNonHeadIncomingEdgeToFrontUnchecked(
   to: ReactiveNode,
@@ -98,7 +106,8 @@ export function moveNonHeadIncomingEdgeToFrontUnchecked(
 }
 
 /**
- * Move the last incoming edge after another edge.
+ * Move the last incoming edge after another edge; a no-op when it is already
+ * there.
  *
  * Preconditions:
  * - edge.nextIn === null
@@ -126,102 +135,4 @@ export function moveLastIncomingEdgeAfterEdgeUnchecked(
   insertNext.prevIn = edge;
 
   after.nextIn = edge;
-}
-
-/**
- * Moves the physical incoming tail after the tracking cursor and advances it.
- * All structural checks must be performed by the caller.
- */
-export function moveLastIncomingEdgeAfterCursorUnchecked(
-  consumer: ReactiveNode,
-  cursorEdge: ReactiveEdge,
-  expectedNextEdge: ReactiveEdge,
-  lastIncomingEdge: ReactiveEdge,
-  previousLastEdge: ReactiveEdge,
-  passStamp: number,
-): void {
-  previousLastEdge.nextIn = null;
-  consumer.lastIn = previousLastEdge;
-
-  lastIncomingEdge.prevIn = cursorEdge;
-  lastIncomingEdge.nextIn = expectedNextEdge;
-  lastIncomingEdge.stamp = passStamp;
-
-  cursorEdge.nextIn = lastIncomingEdge;
-  expectedNextEdge.prevIn = lastIncomingEdge;
-  consumer.tailIn = lastIncomingEdge;
-}
-
-/**
- * Move the last incoming edge to the front.
- *
- * Preconditions:
- * - edge.nextIn === null
- * - edge.prevIn !== null
- */
-export function moveLastIncomingEdgeToFrontUnchecked(
-  to: ReactiveNode,
-  edge: ReactiveEdge,
-): void {
-  const prev = edge.prevIn!;
-
-  prev.nextIn = null;
-  to.lastIn = prev;
-
-  const first = to.firstIn!;
-
-  edge.prevIn = null;
-  edge.nextIn = first;
-  first.prevIn = edge;
-
-  to.firstIn = edge;
-}
-
-/**
- * Moves an already-known lookahead edge directly after the tracking cursor.
- *
- * Used ONLY by L3/L4 bounded reorder paths:
- *
- *   cursor -> expectedNext -> ... -> movedEdge
- *
- * becomes:
- *
- *   cursor -> movedEdge -> expectedNext -> ...
- *
- * Preconditions:
- * - cursorEdge.nextIn !== null
- * - movedEdge.prevIn !== null
- * - movedEdge appears after cursorEdge
- * - movedEdge !== cursorEdge.nextIn
- * - all edges belong to consumer's incoming list
- *
- */
-export function moveTrackedIncomingEdgeAfterCursorUnchecked(
-  consumer: ReactiveNode,
-  cursorEdge: ReactiveEdge,
-  movedEdge: ReactiveEdge,
-  passStamp: number,
-): true {
-  const expectedNextEdge = cursorEdge.nextIn!;
-  const previousMovedEdge = movedEdge.prevIn!;
-  const afterMovedEdge = movedEdge.nextIn;
-
-  previousMovedEdge.nextIn = afterMovedEdge;
-
-  if (afterMovedEdge !== null) {
-    afterMovedEdge.prevIn = previousMovedEdge;
-  } else {
-    consumer.lastIn = previousMovedEdge;
-  }
-
-  movedEdge.prevIn = cursorEdge;
-  movedEdge.nextIn = expectedNextEdge;
-
-  cursorEdge.nextIn = movedEdge;
-  expectedNextEdge.prevIn = movedEdge;
-
-  movedEdge.stamp = passStamp;
-  consumer.tailIn = movedEdge;
-
-  return true;
 }

@@ -6,9 +6,12 @@ import type ReactiveNode from "@runtime/kernel/shape/node";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 /**
- * Suffix cleanup over the consumer's incoming edges after recompute.
+ * Remove the unvisited suffix after a successful pass.
  *
- * Everything after tailIn belongs to the old dependency list and is unlinked.
+ * Every incoming edge after the cursor `tailIn` belongs to the previous
+ * dependency list and was not read by this pass, so it is cut from the
+ * incoming list and unlinked from its producer. This is the only place where
+ * a pass removes edges: reconciliation moves or links and never unlinks.
  */
 export function cleanupUnvisitedSources(node: ReactiveNode): void {
   if (__PROFILE__)
@@ -33,16 +36,16 @@ export function cleanupUnvisitedSources(node: ReactiveNode): void {
 
   devRecordCleanupStaleSources(node, edge, defaultContext);
 
-  // Preserve the existing counter without making the shared graph sweep
-  // interpret why its caller removed this sequence. Absent in production.
+  // One cleanup.edge.drop per removed edge, counted here rather than in the
+  // shared sweep, which does not know why its caller removes a sequence.
+  // PROFILE only.
   if (__PROFILE__) {
     for (
       let current: ReactiveEdge | null = edge;
       current !== null;
       current = current.nextIn
     ) {
-      if (__PROFILE__)
-        observeRuntimeProjection?.("projection.semantic.cleanup.edge.drop");
+      observeRuntimeProjection?.("projection.semantic.cleanup.edge.drop");
     }
   }
   unlinkDetachedIncomingEdgeSequence(edge);

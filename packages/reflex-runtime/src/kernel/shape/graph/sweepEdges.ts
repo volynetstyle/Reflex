@@ -1,6 +1,14 @@
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 
+/**
+ * Unlink a sequence of incoming edges, from `edge` along `nextIn`, from the
+ * outgoing lists of their producers, and clear their links.
+ *
+ * Precondition: the caller has already cut the sequence out of its
+ * consumer's incoming list (`firstIn`/`lastIn` and the edge before it are
+ * repaired), so only the producer side is left.
+ */
 export function unlinkDetachedIncomingEdgeSequence(
   edge: ReactiveEdge | null,
 ): void {
@@ -28,8 +36,8 @@ export function unlinkDetachedIncomingEdgeSequence(
 }
 
 /**
- * Full incoming-edge sweep used by disposal paths.
- * Cold-path traversal that tears down every source connection.
+ * Unlink every incoming edge of `node` and clear its cursor: the source side
+ * of disposal. Cold path.
  */
 export function unlinkAllSources(node: ReactiveNode): void {
   const edge = node.firstIn;
@@ -42,8 +50,9 @@ export function unlinkAllSources(node: ReactiveNode): void {
 }
 
 /**
- * Full outgoing-edge sweep used by producer disposal paths.
- * Cold-path traversal that tears down every subscriber connection.
+ * Unlink every outgoing edge of `node` and clear its hint: the subscriber
+ * side of disposal. A subscriber whose cursor is on a removed edge gets the
+ * edge before it. Cold path.
  */
 export function unlinkAllSubscribers(node: ReactiveNode): void {
   let edge = node.firstOut;

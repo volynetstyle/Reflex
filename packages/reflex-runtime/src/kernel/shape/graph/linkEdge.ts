@@ -1,6 +1,14 @@
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 
+/**
+ * Link a new edge `from -> to` and return it.
+ *
+ * The edge is appended to the outgoing list of `from`: outgoing lists are
+ * append-only, so they hold subscribers in the order they were linked. In
+ * the incoming list of `to` it is inserted after `after`, at the head when
+ * `after` is null; by default at the tail.
+ */
 export function linkEdge(
   from: ReactiveNode,
   to: ReactiveNode,
@@ -34,7 +42,10 @@ export function linkEdge(
   return edge;
 }
 
-/** Links the first incoming edge during dependency tracking. */
+/**
+ * Link the first incoming edge of `to` during a tracking pass and make it the
+ * cursor. Precondition: `to` has no incoming edge.
+ */
 export function linkFirstTrackedEdgeUnchecked(
   from: ReactiveNode,
   to: ReactiveNode,
@@ -61,7 +72,10 @@ export function linkFirstTrackedEdgeUnchecked(
   return edge;
 }
 
-/** Appends an incoming edge after a non-null tracking cursor at list tail. */
+/**
+ * Link a new edge after the tracking cursor at the incoming tail of `to` and
+ * make it the cursor. Precondition: `cursor` is `to.lastIn`.
+ */
 export function appendTrackedEdgeAfterCursorUnchecked(
   from: ReactiveNode,
   to: ReactiveNode,
@@ -90,6 +104,10 @@ export function appendTrackedEdgeAfterCursorUnchecked(
   return edge;
 }
 
+/**
+ * Unlink one edge from both of its lists. A cursor on the edge moves back to
+ * its predecessor, and a hint on it is cleared (INV-H).
+ */
 export function unlinkEdge(edge: ReactiveEdge): void {
   const { from, to, prevOut, nextOut, prevIn, nextIn } = edge;
 

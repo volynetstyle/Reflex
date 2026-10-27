@@ -55,7 +55,7 @@ export const variants = {
     `src/kernel/shape/graph/reuseEdge.ts::  return linkEdge(producer, consumer, insertAfterEdge, passStamp);::  ${EAGER_DETACH} return linkEdge(producer, consumer, insertAfterEdge, passStamp);`,
   ],
   rotate: [
-    `src/kernel/shape/graph/reuseEdge.ts::function moveIncomingEdgeToPosition(::${ROTATE} function moveIncomingEdgeToPosition(`,
-    "src/kernel/shape/graph/reuseEdge.ts::    moveIncomingEdgeToPosition(consumer, edge, insertAfterEdge);::    rotateUnvisitedBlockBehindTail(consumer, edge, insertAfterEdge);",
+    `src/kernel/shape/graph/reuseEdge.ts::function moveSuffixEdgeAfterCursor(::${ROTATE} function moveSuffixEdgeAfterCursor(`,
+    "src/kernel/shape/graph/reuseEdge.ts::    moveSuffixEdgeAfterCursor(consumer, edge, insertAfterEdge);::    rotateUnvisitedBlockBehindTail(consumer, edge, insertAfterEdge);",
   ],
 };

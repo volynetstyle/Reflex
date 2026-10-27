@@ -5,7 +5,12 @@ import { observeRuntimeProjection } from "@runtime/kernel/projection";
 import { findEdgeInLockstep } from "./findEdge";
 import { linkEdge } from "./linkEdge";
 
-function moveIncomingEdgeToPosition(
+/**
+ * Move a suffix edge after `insertAfterEdge`, the tracking cursor, or to the
+ * head when it is null; a no-op when the edge is already there. The same move
+ * as moveIncomingEdgeAfterUnchecked, written for this caller.
+ */
+function moveSuffixEdgeAfterCursor(
   consumer: ReactiveNode,
   edge: ReactiveEdge,
   insertAfterEdge: ReactiveEdge | null,
@@ -29,7 +34,7 @@ function moveIncomingEdgeToPosition(
     consumer.firstIn = edge;
     return;
   }
-  // Preserve the generic primitive's head self-move no-op.
+  // An edge moved after itself stays, as in moveIncomingEdgeAfterUnchecked.
   if (prev === null && edge === insertAfterEdge) return;
   if (prev !== null) prev.nextIn = next;
   else consumer.firstIn = next;
@@ -69,7 +74,7 @@ export function reuseLocatedIncomingEdgeOrLink(
   edge: ReactiveEdge | null,
 ): ReactiveEdge {
   if (edge !== null) {
-    moveIncomingEdgeToPosition(consumer, edge, insertAfterEdge);
+    moveSuffixEdgeAfterCursor(consumer, edge, insertAfterEdge);
     edge.stamp = passStamp;
 
     if (__PROFILE__)
@@ -90,10 +95,14 @@ export function reuseLocatedIncomingEdgeOrLink(
  * edge of the pair lies in the suffix that starts at `suffixStartEdge` (the
  * whole incoming list when it is `null`).
  *
- * The suffix head is compared directly, then the producer's newest edge.
- * Otherwise the edge is located by a
- * lockstep walk of the producer's outgoing list and the rest of the suffix,
- * and reused or linked by `reuseLocatedIncomingEdgeOrLink`.
+ * The suffix head is compared directly, then the producer's newest edge;
+ * otherwise findEdgeInLockstep locates the edge over the producer's outgoing
+ * list and the rest of the suffix. The result is reused or linked by
+ * reuseLocatedIncomingEdgeOrLink.
+ *
+ * The resolver never calls it: while it is the configured strategy, the
+ * resolver applies reuseLocatedIncomingEdgeOrLink to its own lookup result.
+ * Benchmarks and tools call it directly.
  */
 export function reuseIncomingEdgeFromSuffixOrLink(
   producer: ReactiveNode,
@@ -134,5 +143,6 @@ export function reuseIncomingEdgeFromSuffixOrLink(
   );
 }
 
+/** Earlier name of reuseIncomingEdgeFromSuffixOrLink, kept as an export. */
 export const reuseIncomingEdgeFromSuffixOrCreate =
   reuseIncomingEdgeFromSuffixOrLink;

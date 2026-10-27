@@ -15,7 +15,7 @@ const rotation = fs.readFileSync(
   path.join(here, "rotation-body.ts.txt"),
   "utf8",
 );
-const target = path.join(root, "src/kernel/shape/graph/edgeList.ts");
+const target = path.join(root, "src/kernel/shape/graph/cursorMoves.ts");
 function overlay(code, id, variant) {
   if (id !== target || variant !== "rotate") return code;
   const sf = ts.createSourceFile(
@@ -235,7 +235,7 @@ export async function build() {
                 code +=
                   '\nexport { currentConsumer, runtimeState } from "../kernel/state";\nexport { ' +
                   helper +
-                  ' } from "../kernel/shape/graph/edgeList";\n';
+                  ' } from "../kernel/shape/graph/cursorMoves";\n';
               return structural ? instrument(code, id, variant) : code;
             },
           },
