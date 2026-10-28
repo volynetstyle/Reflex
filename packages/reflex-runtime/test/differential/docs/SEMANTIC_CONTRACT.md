@@ -107,7 +107,7 @@ computed was independently stabilized earlier in the operation trace.
 - **W1** A watcher's previous cleanup is consumed before reevaluation starts.
 - **W2** A failed watcher computation does not install partially collected semantic dependencies or a new cleanup; partial reads live only in a separate retry-trigger set.
 - **W3** A watcher whose cleanup or computation failed is not retried by a plain flush, but remains retryable after a conservative retry trigger changes. A write performed by the failing cleanup or computation is such a change (L5).
-- **Open (F18)** Whether a computed read that throws is retry evidence. Today it is not: it is no observation (C1), so a watcher whose attempt failed on the first read of that computed keeps no trigger for it and is not retried after the cause is repaired. "Conservative" in W2 and W3 does not cover this case; `SEMANTIC_CHARACTERIZATION.md` F18 records the witnesses.
+- **C4** A computed read that throws is not a committed dependency and creates no execution obligation, but it is causal retry evidence: the enclosing failed attempt retains that computed, with the computed's own failure-time evidence, in its retry-trigger set (W2, W3). A repair of the cause therefore permits another attempt. Decided 2026-10-28 (F18); the runtime does not follow it yet (`catalog/active.ts`).
 - **V1** Failed dependency validation does not make the watcher clean and remains retryable by an explicit flush.
 - **V2** Validation retry behavior is independent of prior reads and pull traversal history.
 - **V3** Validation covers the complete committed dependency snapshot before watcher lifecycle begins.
@@ -302,8 +302,10 @@ An active-divergence test passing means that the known mismatch was reproduced;
 it does not declare the production behavior correct. After a runtime fix, the
 entry moves to historical-faults.ts and its active count must disappear.
 
-The active catalog is currently empty. The 776-program adversarial corpus has no
-post-fix mismatch in this bound.
+The active catalog holds F18 (C4): two witnesses, recognized in generated
+programs only when Reflex agrees at every operation with the spec under the
+previous rule 4. The 776-program adversarial corpus has no mismatch in this
+bound; it does not reach C4.
 
 After failed watcher validation or computation, confirmed `Changed` evidence
 must survive cold recovery. A watcher with a committed dependency change cannot

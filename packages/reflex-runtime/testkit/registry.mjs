@@ -486,7 +486,7 @@ export const SUITES = [
     id: "self.spec-model",
     layer: "self",
     technique:
-      "metamorphic self-check of the executable spec: optimized and direct models agree",
+      "self-checks of the executable spec: optimized and direct models agree; rule 4 (C4) changes only the repair",
     owner: "test/differential/internal/machine/spec-runtime.ts",
     files: ["test/differential/runtime.spec-self-consistency.test.ts"],
     runner: source,

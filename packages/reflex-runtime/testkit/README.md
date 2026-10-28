@@ -158,7 +158,7 @@ under `pnpm rt run`; a budget no test reads does nothing. `pnpm rt doctor`
 and the self-test fail on either (see Inventory).
 
 **Pinned is not correct.** A test that pins behavior the contract leaves
-open (F1, watcher disposal from a host hook, F18) records a fact, not a
+open (F1, watcher disposal from a host hook) records a fact, not a
 requirement; if it gated CI, every fix of that behavior would first have to
 break a test. Such tests form the `characterization` layer
 (`vite.characterization.config.ts`, excluded from `vitest run`). The layer is

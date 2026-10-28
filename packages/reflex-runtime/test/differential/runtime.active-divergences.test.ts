@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resetRuntimeContext } from "../../src";
-import { activeDivergences } from "./catalog/active";
+import { activeDivergenceOf, activeDivergences } from "./catalog/active";
 import { DifferentialError, executeDifferential } from "./harness";
 
 describe("active differential divergences", () => {
@@ -27,6 +27,10 @@ describe("active differential divergences", () => {
         expected: divergence.expected,
         actual: divergence.actual,
       });
+      // The evidence that names the class still holds for its witness.
+      expect(activeDivergenceOf(divergence.program)).toBe(
+        divergence.id.split("-")[0],
+      );
     });
   }
 });

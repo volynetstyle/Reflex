@@ -1,7 +1,14 @@
 import { describe, it } from "vitest";
 import fc from "fast-check";
 import { resetRuntimeContext } from "../../src";
-import { executeDifferential, type Expr, type Op, type Value } from "./harness";
+import { activeDivergenceOf } from "./catalog/active";
+import {
+  DifferentialError,
+  executeDifferential,
+  type Expr,
+  type Op,
+  type Value,
+} from "./harness";
 
 const read = (id: string): Expr => ({ type: "read", id });
 const constant = (value: Value): Expr => ({ type: "constant", value });
@@ -58,13 +65,27 @@ type World = {
 
 describe("state-aware differential program generation", () => {
   it("targets high-value graph families while emitting only valid operations", () => {
+    let active = 0;
     fc.assert(
       fc.property(scenarioArbitrary, (scenario) => {
         resetRuntimeContext();
-        executeDifferential(buildScenario(scenario));
+        const program = buildScenario(scenario);
+        try {
+          executeDifferential(program);
+        } catch (error) {
+          // A known active divergence, recognized by its own evidence
+          // (catalog/active.ts), is counted; anything else fails.
+          if (
+            !(error instanceof DifferentialError) ||
+            activeDivergenceOf(program) === undefined
+          )
+            throw error;
+          active += 1;
+        }
       }),
       { numRuns: 2_000 },
     );
+    if (active > 0) console.info(`active divergence programs (F18): ${active}`);
   });
 });
 

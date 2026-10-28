@@ -153,12 +153,12 @@ export interface SpecWatcher extends DependencyState {
  *    frontier.
  * 3. A computed is a semantic boundary: downstream commits only the computed's
  *    semantic version, never versions of its internal leaves.
- * 4. A computed read is observed only after successful stabilization. A
- *    first-time computed read that throws is therefore not a semantic
- *    dependency and is not retained as retry evidence either. This rule
- *    follows the runtime rather than following from rules 1-3: it is the open
- *    region F18 (SEMANTIC_CHARACTERIZATION.md), where a repaired failure is
- *    never retried. Agreement with Reflex here proves nothing either way.
+ * 4. A computed read is observed only after successful stabilization: a
+ *    computed read that throws is not a semantic dependency. It is causal
+ *    retry evidence (F18): the computed and its own failure-time evidence join
+ *    the retry set of the enclosing failed attempt, so a later repair of the
+ *    cause permits another attempt. Evidence of a failed read never enters a
+ *    committed frontier and never creates an execution obligation.
  * 5. Watcher validation and execution are independent obligations.
  * 6. The complete committed watcher frontier must validate before irreversible
  *    watcher lifecycle begins, even when execution is already pending.
@@ -182,13 +182,26 @@ export interface SpecRuntimeOptions {
    * (runtime.spec-self-consistency.test.ts).
    */
   readonly validationCache?: boolean;
+
+  /**
+   * Retain a failed computed read as causal retry evidence (rule 4, F18;
+   * default true). `false` is the rule before 2026-10-28, which the runtime
+   * still follows: catalog/active.ts uses it to recognize the F18 divergence
+   * and nothing else.
+   */
+  readonly failedReadEvidence?: boolean;
 }
 
 export class SpecRuntime {
   private readonly validationCache: boolean;
+  private readonly failedReadEvidence: boolean;
 
-  constructor({ validationCache = true }: SpecRuntimeOptions = {}) {
+  constructor({
+    validationCache = true,
+    failedReadEvidence = true,
+  }: SpecRuntimeOptions = {}) {
     this.validationCache = validationCache;
+    this.failedReadEvidence = failedReadEvidence;
   }
 
   /**
@@ -205,6 +218,13 @@ export class SpecRuntime {
    * `undefined` means reads are intentionally untracked, for example cleanup.
    */
   private collector: DependencySnapshot | undefined;
+
+  /**
+   * Computeds whose read failed during the current tentative attempt (rule 4).
+   * Causal evidence only: consulted when the attempt fails, never committed.
+   * `undefined` exactly when `collector` is.
+   */
+  private failedReads: Set<SpecComputed<unknown>> | undefined;
 
   createProducer<T>(value: T): SpecProducer<T> {
     return {
@@ -259,12 +279,17 @@ export class SpecRuntime {
      * yields a stable semantic value. If stabilization throws, no semantic read
      * occurred and no direct dependency is recorded.
      *
-     * Open region F18 (rule 4): a failed first-time read is also not retained
-     * as retry evidence, matching the runtime. A watcher that failed here is
-     * not retried after the computed's cause is repaired. Changing this is a
-     * contract decision, then an active divergence until the runtime follows.
+     * A failed read is still causal evidence (rule 4, F18): it is recorded for
+     * the enclosing attempt, which this failure is about to abort, so that a
+     * repair of the computed's cause can wake that attempt again.
      */
-    this.stabilize(node);
+    try {
+      this.stabilize(node);
+    } catch (error) {
+      if (this.failedReadEvidence)
+        this.failedReads?.add(node as SpecComputed<unknown>);
+      throw error;
+    }
     this.track(node);
 
     return node.value as T;
@@ -310,9 +335,14 @@ export class SpecRuntime {
 
     // Semantic reads of this attempt stay tentative until successful completion.
     const nextDependencies: DependencySnapshot = new Map();
+    const failedReads = new Set<SpecComputed<unknown>>();
 
     try {
-      const cleanup = this.withCollector(nextDependencies, compute);
+      const cleanup = this.withCollector(
+        nextDependencies,
+        compute,
+        failedReads,
+      );
 
       /**
        * Successful watcher computation is the commit point:
@@ -335,7 +365,7 @@ export class SpecRuntime {
        * The execution obligation remains pending because the justified watcher
        * run did not complete successfully.
        */
-      this.markRetry(node, nextDependencies);
+      this.markRetry(node, nextDependencies, failedReads);
       throw error;
     }
   }
@@ -485,9 +515,14 @@ export class SpecRuntime {
 
     // Recompute against a fresh tentative direct dependency frontier.
     const nextDependencies: DependencySnapshot = new Map();
+    const failedReads = new Set<SpecComputed<unknown>>();
 
     try {
-      const nextValue = this.withCollector(nextDependencies, node.compute);
+      const nextValue = this.withCollector(
+        nextDependencies,
+        node.compute,
+        failedReads,
+      );
 
       /**
        * Re-evaluation is not semantic change. Only a successfully computed value
@@ -509,7 +544,7 @@ export class SpecRuntime {
        * not semantic dependencies, but they may be retained as causal retry
        * evidence for an enclosing failed attempt.
        */
-      this.markRetry(node, nextDependencies);
+      this.markRetry(node, nextDependencies, failedReads);
       throw error;
     }
   }
@@ -558,8 +593,13 @@ export class SpecRuntime {
   private markRetry(
     node: Pick<DependencyState, "dependencies" | "retryDependencies">,
     partial?: DependencySnapshot,
+    failed?: ReadonlySet<SpecComputed<unknown>>,
   ): void {
-    node.retryDependencies = this.retrySnapshot(node.dependencies, partial);
+    node.retryDependencies = this.retrySnapshot(
+      node.dependencies,
+      partial,
+      failed,
+    );
   }
 
   /**
@@ -580,6 +620,7 @@ export class SpecRuntime {
   private retrySnapshot(
     committed: DependencySnapshot,
     partial?: DependencySnapshot,
+    failed?: ReadonlySet<SpecComputed<unknown>>,
   ): DependencySnapshot {
     const snapshot: DependencySnapshot = new Map();
 
@@ -611,6 +652,15 @@ export class SpecRuntime {
       }
     }
 
+    // A computed whose read failed is not observed, but its own failure-time
+    // evidence names what may repair it (rule 4, F18). Visiting it follows
+    // that evidence, set when its stabilization failed.
+    if (failed !== undefined) {
+      for (const dependency of failed) {
+        visit(dependency);
+      }
+    }
+
     return snapshot;
   }
 
@@ -627,15 +677,19 @@ export class SpecRuntime {
   private withCollector<T>(
     collector: DependencySnapshot | undefined,
     computation: SpecComputation<T>,
+    failed?: Set<SpecComputed<unknown>>,
   ): T {
     const previous = this.collector;
+    const previousFailed = this.failedReads;
     this.collector = collector;
+    this.failedReads = collector === undefined ? undefined : failed;
 
     try {
       return computation();
     } finally {
       // Nested evaluation always restores the outer tentative frontier.
       this.collector = previous;
+      this.failedReads = previousFailed;
     }
   }
 }
