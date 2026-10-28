@@ -7,13 +7,13 @@ import { describe, it } from "vitest";
 import { allSweepConfigs, WARMUP_ITERATIONS, type SweepConfig } from "./configs";
 
 /**
- * Timing run: wall-clock ns/op only, deliberately run under vite.config.ts
+ * Timing run: wall-clock ns/op only, deliberately run under profile cost-attribution-timing
  * (__PROFILE__: false) so profileRuntimeCounter's `if (__PROFILE__ && ...)`
  * checks are dead-code-eliminated at build time rather than merely disabled
  * at runtime — a disabled-but-present branch at every hot-path call site can
  * still perturb inlining/JIT behavior, so this file intentionally does not
  * import profiling.ts at all. Structural counters come from structural.sweep.ts
- * under vite.dev.config.ts instead; the two are joined by `key` in analysis.
+ * under profile cost-attribution-structural instead; the two are joined by `key` in analysis.
  */
 
 const TRIALS = 5;

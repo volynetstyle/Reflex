@@ -52,14 +52,14 @@ enforces the direction and the debug boundary (`check:architecture`).
 
 ## Checks by change kind
 
-| Change                                    | Required before commit                                                                                                                                                 |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Documentation, comments, types, renames   | `check:bundle-identity` (production bundle byte-identical), `check:rules`, `format`                                                                                    |
-| Refactor meant to keep behavior and shape | `check:bundle-identity`; if the bundle changes, treat it as one of the rows below                                                                                      |
-| Semantic change                           | `test`, `test:dev`, `test:projection`, `typecheck`, `check:rules`, the `reflex` package tests including the liveness oracle, and a contract update (owner doc + RULES) |
-| Hot-path performance change               | all semantic checks, `perf/v8-shape/analyze.mjs` before/after on the CI Node version, and the paired CI comparison against the base commit                             |
-| Build pipeline (`rollup/`, inlining)      | `build`, `test:e2e`, `check:artifacts`, the `rollup/` contract tests, and the paired CI comparison                                                                     |
-| Benchmark harness (`bench/`)              | a paired run that reproduces a known result, and [BENCHMARK_PROTOCOL.md](./performance/BENCHMARK_PROTOCOL.md) updated                                                  |
+| Change                                      | Required before commit                                                                                                                                                 |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Documentation, comments, types, renames     | `check:bundle-identity` (production bundle byte-identical), `check:rules`, `format`                                                                                    |
+| Refactor meant to keep behavior and shape   | `check:bundle-identity`; if the bundle changes, treat it as one of the rows below                                                                                      |
+| Semantic change                             | `test`, `test:dev`, `test:projection`, `typecheck`, `check:rules`, the `reflex` package tests including the liveness oracle, and a contract update (owner doc + RULES) |
+| Hot-path performance change                 | all semantic checks, `perf/v8-shape/analyze.mjs` before/after on the CI Node version, and the paired CI comparison against the base commit                             |
+| Build pipeline (`config/rollup/`, inlining) | `build`, `test:e2e`, `check:artifacts`, the `config/rollup/` contract tests, and the paired CI comparison                                                              |
+| Benchmark harness (`bench/`)                | a paired run that reproduces a known result, and [BENCHMARK_PROTOCOL.md](./performance/BENCHMARK_PROTOCOL.md) updated                                                  |
 
 `pnpm rt gate <kind>` (`docs`, `refactor`, `semantic`, `hot-path`, `build`,
 `bench-harness`) runs the automatable checks of a row and prints the others as
@@ -88,7 +88,7 @@ candidate's toolchain, so it measures source changes, not build changes.
 - **Disposal is not liveness.** There is no terminal bit; post-disposal reads
   and writes are not guaranteed inert.
 - **Constants are build-time.** Module-level `const` primitives are inlined as
-  literals in production (`rollup/inline-constants.ts`); the build fails if an
+  literals in production (`config/rollup/inline-constants.ts`); the build fails if an
   inlined name is shadowed or written. Mutable kernel state must be `let`.
 
 ## Evidence and research

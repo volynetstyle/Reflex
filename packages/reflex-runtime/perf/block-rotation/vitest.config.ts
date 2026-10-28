@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
-import base from "../../vite.config";
+import { vitestProfile } from "../../config/index.ts";
+const base = vitestProfile("source");
 const rotation = fs.readFileSync(
   new URL("./rotation-body.ts.txt", import.meta.url),
   "utf8",

@@ -7,7 +7,7 @@ import { parseDuration, UsageError } from "../lib/args.mjs";
 import { loadOracle } from "../lib/engine.mjs";
 import { instrument } from "../lib/mutation.mjs";
 import { cacheRoot, packageRelative, packageRoot } from "../lib/paths.mjs";
-import { vitestCli } from "../lib/process.mjs";
+import { vitestArgs, vitestCli } from "../lib/process.mjs";
 import {
   formatMs,
   printReportPath,
@@ -81,10 +81,11 @@ function plan(tier) {
   );
   const steps = new Map();
   for (const item of suites) {
-    let step = steps.get(item.runner.config);
+    const profile = item.runner.profile;
+    let step = steps.get(profile);
     if (step === undefined) {
-      step = { config: item.runner.config, files: [], env: {}, suites: [] };
-      steps.set(item.runner.config, step);
+      step = { profile, files: [], env: {}, suites: [] };
+      steps.set(profile, step);
     }
     step.suites.push(item);
     step.files.push(...(item.files ?? []));
@@ -111,8 +112,7 @@ function runVitest(step, env, outputFile, timeoutMs) {
       [
         vitestCli(),
         "run",
-        "--config",
-        step.config,
+        ...vitestArgs({ profile: step.profile }),
         ...step.files,
         "--reporter=json",
         `--outputFile=${outputFile}`,
@@ -163,7 +163,12 @@ async function runAll(steps, mutation, label, timeoutMs) {
       output,
       timeoutMs,
     );
-    outcomes.push({ config: step.config, code, timedOut, ms: Math.round(ms) });
+    outcomes.push({
+      profile: step.profile,
+      code,
+      timedOut,
+      ms: Math.round(ms),
+    });
     const hits = new Map();
     if (existsSync(reach))
       for (const line of readFileSync(reach, "utf8").split("\n"))
@@ -173,7 +178,7 @@ async function runAll(steps, mutation, label, timeoutMs) {
           hits.set(key, (hits.get(key) ?? 0) + count);
         }
     if (timedOut || !existsSync(output)) {
-      files.set(`<${step.config}>`, {
+      files.set(`<${step.profile}>`, {
         status: timedOut ? "timeout" : "crashed",
         ms,
       });

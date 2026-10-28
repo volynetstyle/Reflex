@@ -29,15 +29,13 @@ function walk(directory, found = []) {
 
 // Which vitest config may own which files (the configs' include/exclude).
 const CONFIG_SCOPE = {
-  "vite.config.ts": (file) =>
+  source: (file) =>
     !file.startsWith("test/dev/") &&
     !file.startsWith("test/projection/") &&
     !file.startsWith("test/characterization/"),
-  "vite.dev.config.ts": (file) =>
-    file.startsWith("test/dev/") && file.endsWith(".dev.test.ts"),
-  "vite.projection.config.ts": (file) => file.startsWith("test/projection/"),
-  "vite.characterization.config.ts": (file) =>
-    file.startsWith("test/characterization/"),
+  dev: (file) => file.startsWith("test/dev/") && file.endsWith(".dev.test.ts"),
+  projection: (file) => file.startsWith("test/projection/"),
+  characterization: (file) => file.startsWith("test/characterization/"),
 };
 
 /** Returns { errors, warnings, notes }: strings, one finding each. */
@@ -73,11 +71,11 @@ export function inventory() {
         owners.get(file).push(item.id);
         const scope =
           item.runner.type === "vitest" && item.runner.cwd === undefined
-            ? CONFIG_SCOPE[item.runner.config]
+            ? CONFIG_SCOPE[item.runner.profile]
             : undefined;
         if (scope !== undefined && !scope(file))
           errors.push(
-            `suite ${item.id} runs ${file} with ${item.runner.config}, which does not include it`,
+            `suite ${item.id} runs ${file} with profile ${item.runner.profile}, which does not include it`,
           );
       }
     }

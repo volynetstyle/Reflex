@@ -11,10 +11,7 @@ export const INDEX_AND_DEBUG_INPUT = {
   debug: "build/esm/debug/index.js",
 } as const;
 
-export const EXTERNALS = [
-  "vitest",
-  "expect-type",
-] as const;
+export const EXTERNALS = ["vitest", "expect-type"] as const;
 
 export const TARGETS: readonly BuildTarget[] = [
   {

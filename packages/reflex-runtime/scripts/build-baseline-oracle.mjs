@@ -220,17 +220,17 @@ try {
   };
 
   // The published production build inlines compile-time constants
-  // (rollup/inline-constants.ts). Benchmark bundles must run the code that
+  // (config/rollup/inline-constants.ts). Benchmark bundles must run the code that
   // ships, so production builds apply the same transform to every revision,
   // each with the constants of its own sources and the defines above.
   const plugins = [aliasPlugin];
   let inlinedConstants = 0;
   if (production) {
     const { collectConstants, inlineConstants } = await import(
-      pathToFileURL(path.join(packageRoot, "rollup/inline-constants.ts")).href
+      pathToFileURL(path.join(packageRoot, "config/rollup/inline-constants.ts")).href
     );
     const { readRuntimeSources } = await import(
-      pathToFileURL(path.join(packageRoot, "rollup/plugins/inline-constants.ts"))
+      pathToFileURL(path.join(packageRoot, "config/rollup/plugins/inline-constants.ts"))
         .href
     );
     const table = collectConstants(readRuntimeSources(sources), flags);
@@ -278,11 +278,11 @@ try {
     throw new Error("inline-constants: no constant reference was inlined");
 
   if (production) {
-    // The published build minifies with Terser (rollup/terser-options.ts),
+    // The published build minifies with Terser (config/rollup/terser-options.ts),
     // whose pure_funcs list removes DEV assertion calls that esbuild keeps.
     // Benchmark bundles must run the code that ships.
     const { createRuntimeTerserOptions } = await import(
-      pathToFileURL(path.join(packageRoot, "rollup/terser-options.ts")).href
+      pathToFileURL(path.join(packageRoot, "config/rollup/terser-options.ts")).href
     );
     const { minify } = createRequire(require.resolve("@rollup/plugin-terser"))(
       "terser",
@@ -312,7 +312,7 @@ try {
         production,
         flags,
         esbuild: esbuild.version,
-        minifier: production ? "terser (rollup/terser-options.ts)" : "none",
+        minifier: production ? "terser (config/rollup/terser-options.ts)" : "none",
         inlinedConstants,
         bundleSha256: createHash("sha256").update(bundle).digest("hex"),
       },

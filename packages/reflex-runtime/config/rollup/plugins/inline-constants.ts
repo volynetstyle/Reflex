@@ -9,7 +9,7 @@ import {
   type SourceFile,
 } from "../inline-constants.ts";
 
-const SOURCES = fileURLToPath(new URL("../../src", import.meta.url));
+const SOURCES = fileURLToPath(new URL("../../../src", import.meta.url));
 
 /** Reads every runtime source module (the constant declarations). */
 export function readRuntimeSources(root: string): SourceFile[] {

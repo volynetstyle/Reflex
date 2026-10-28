@@ -1,2 +1,2 @@
-export * from "../build/esm/internal/index.js";
-export { profileRuntime } from "../build/esm/profiling.js";
+export * from "../build/esm/src/internal/index.js";
+export { profileRuntime } from "../build/esm/src/profiling.js";

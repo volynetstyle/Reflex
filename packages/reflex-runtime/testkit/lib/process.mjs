@@ -57,6 +57,20 @@ export function run(command, args, { cwd = packageRoot, env } = {}) {
   });
 }
 
+/** The package's single vitest entry point (config/vitest.ts owns the profiles). */
+export const VITEST_CONFIG = "config/vitest.config.ts";
+
+/**
+ * The `--config` and `--mode` arguments of a vitest runner of the catalog:
+ * `{ profile }` selects a profile of this package, `{ config }` names another
+ * package's config file (cwd relative).
+ */
+export function vitestArgs(runner) {
+  return runner.profile === undefined
+    ? ["--config", runner.config]
+    : ["--config", VITEST_CONFIG, "--mode", runner.profile];
+}
+
 /** Renders a command for logs and `--dry-run`. */
 export function render(command, args, env) {
   const quote = (text) => (/[\s"']/.test(text) ? JSON.stringify(text) : text);

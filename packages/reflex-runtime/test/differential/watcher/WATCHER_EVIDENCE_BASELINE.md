@@ -62,7 +62,7 @@ The new directory is presently scaffolding only:
 | `watcher-evidence-exhaustive.ts`               | Empty                                                        | No canonical case enumeration exists.                |
 | `runtime.watcher-evidence-exhaustive.test.ts`  | Empty                                                        | No differential assertion runs.                      |
 | `runtime.watcher-evidence-metamorphic.test.ts` | Empty                                                        | No permutation or wrapper relation runs.             |
-| `vite.config.ts`                               | Explicitly excludes `runtime.watcher-evidence-*.test.ts`     | Adding tests alone will not put them in CI.          |
+| `config/vitest.ts` (profile `source`)          | Explicitly excludes `runtime.watcher-evidence-*.test.ts`     | Adding tests alone will not put them in CI.          |
 
 The production state representation is a bitmask in
 `src/kernel/shape/meta.ts`; it documents `Both`, but deliberately exports no

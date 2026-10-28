@@ -12,7 +12,8 @@ import {
   legacyCounterProjection,
 } from "@runtime/kernel/projection";
 
-const runtimeSourceRoot = join(process.cwd(), "src");
+// From this file, not the working directory: the root workspace runs it too.
+const runtimeSourceRoot = join(__dirname, "../../src");
 
 function instrumentedFiles(directory = runtimeSourceRoot): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {

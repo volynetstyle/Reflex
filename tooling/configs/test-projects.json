@@ -3,15 +3,21 @@
   "scope": "maintained source tests",
   "projects": [
     {
-      "config": "packages/reflex-runtime/vite.config.ts",
+      "config": "packages/reflex-runtime/config/vitest.config.ts",
+      "mode": "test",
+      "baseline": "packages/reflex-runtime/vite.config.ts",
       "root": "packages/reflex-runtime"
     },
     {
-      "config": "packages/reflex-runtime/vite.dev.config.ts",
+      "config": "packages/reflex-runtime/config/vitest.config.ts",
+      "mode": "dev",
+      "baseline": "packages/reflex-runtime/vite.dev.config.ts",
       "root": "packages/reflex-runtime"
     },
     {
-      "config": "packages/reflex-runtime/vite.projection.config.ts",
+      "config": "packages/reflex-runtime/config/vitest.config.ts",
+      "mode": "projection",
+      "baseline": "packages/reflex-runtime/vite.projection.config.ts",
       "root": "packages/reflex-runtime"
     },
     {

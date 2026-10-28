@@ -8,7 +8,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 
 import { packageRoot } from "./paths.mjs";
-import { pnpmCliPath, render, run, vitestCli } from "./process.mjs";
+import { pnpmCliPath, render, run, vitestArgs, vitestCli } from "./process.mjs";
 import { formatMs, table } from "./report.mjs";
 
 const require = createRequire(path.join(packageRoot, "package.json"));
@@ -59,7 +59,7 @@ export async function plan(suites, tier) {
     const cwd = path.resolve(packageRoot, item.runner.cwd ?? ".");
     const advisory = item.advisory === true;
     if (item.runner.type === "vitest") {
-      const key = JSON.stringify([item.runner.config, cwd, env, advisory]);
+      const key = JSON.stringify([vitestArgs(item.runner), cwd, env, advisory]);
       let step = groups.get(key);
       if (step === undefined) {
         step = {
@@ -67,7 +67,7 @@ export async function plan(suites, tier) {
           cwd,
           env,
           exe: process.execPath,
-          args: [vitestCli(), "run", "--config", item.runner.config],
+          args: [vitestCli(), "run", ...vitestArgs(item.runner)],
           advisory,
         };
         groups.set(key, step);

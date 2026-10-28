@@ -161,7 +161,7 @@ and the self-test fail on either (see Inventory).
 open (F1, watcher disposal from a host hook) records a fact, not a
 requirement; if it gated CI, every fix of that behavior would first have to
 break a test. Such tests form the `characterization` layer
-(`vite.characterization.config.ts`, excluded from `vitest run`). The layer is
+(profile `characterization` of `config/vitest.ts`, excluded from `vitest run`). The layer is
 `advisory`: `pnpm rt run` reports its failure as `changed` and passes. A
 `changed` is decided in the owner document, then the pin is updated.
 

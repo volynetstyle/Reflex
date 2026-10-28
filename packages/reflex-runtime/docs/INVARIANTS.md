@@ -26,7 +26,7 @@ reconciliation and pruning occur.
 ## 2. State flags
 
 Defined in `src/kernel/shape/meta.ts`; production builds inline them as
-literals (`rollup/inline-constants.ts`).
+literals (`config/rollup/inline-constants.ts`).
 
 | Flag         | Meaning                                                                                                             |
 | ------------ | ------------------------------------------------------------------------------------------------------------------- |

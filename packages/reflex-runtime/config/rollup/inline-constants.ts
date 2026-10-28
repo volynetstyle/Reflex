@@ -186,7 +186,9 @@ export function collectConstants(
     changed = false;
     for (const { name, init } of declarations) {
       if (ambiguous.has(name)) continue;
-      const value = evaluateWith((n) => (ambiguous.has(n) ? undefined : values.get(n)))(init);
+      const value = evaluateWith((n) =>
+        ambiguous.has(n) ? undefined : values.get(n),
+      )(init);
       if (value === UNEVALUABLE) continue;
       const known = values.get(name);
       if (known === undefined) {

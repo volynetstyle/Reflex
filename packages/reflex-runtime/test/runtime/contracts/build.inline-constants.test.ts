@@ -5,8 +5,8 @@ import {
   STATE_FLAG_NAMES,
   collectConstants,
   inlineConstants,
-} from "../../../rollup/inline-constants";
-import { readRuntimeSources } from "../../../rollup/plugins/inline-constants";
+} from "../../../config/rollup/inline-constants";
+import { readRuntimeSources } from "../../../config/rollup/plugins/inline-constants";
 
 const SOURCES = path.resolve(__dirname, "../../../src");
 const sources = readRuntimeSources(SOURCES);

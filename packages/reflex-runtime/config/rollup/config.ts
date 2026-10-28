@@ -1,5 +1,5 @@
 import type { RollupOptions } from "rollup";
-import { reportRollupWarning } from "../../../scripts/rollup-build-reporter.ts";
+import { reportRollupWarning } from "../../../../scripts/rollup-build-reporter.ts";
 import { SAFE_TREESHAKE_OPTIONS } from "./optimization.ts";
 import { createOutput } from "./output.ts";
 import { createPlugins } from "./plugins/index.ts";

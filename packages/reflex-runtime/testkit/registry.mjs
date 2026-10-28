@@ -11,7 +11,9 @@
 //   technique  what kind of evidence the suite produces
 //   owner      the document that owns the facts the suite checks
 //   files      test files or directories the suite owns (vitest path filters)
-//   runner     { type: "vitest", config, cwd? } | { type: "node", args }
+//   runner     { type: "vitest", profile } (config/vitest.ts)
+//              | { type: "vitest", config, cwd } (another package)
+//              | { type: "node", args }
 //              | { type: "tsc", project? } | { type: "testkit", args }
 //              | { type: "pnpm", args } | { type: "prettier" | "eslint" }
 //   tiers      smoke | ci | deep: the tiers whose `run` includes the suite
@@ -49,7 +51,7 @@ const ORACLE_BUDGETS = {
   smoke: { ORACLE_SEEDS: "300", ORACLE_HUB_SEEDS: "150" },
   deep: { ORACLE_SEEDS: "20000", ORACLE_HUB_SEEDS: "10000" },
 };
-const source = { type: "vitest", config: "vite.config.ts" };
+const source = { type: "vitest", profile: "source" };
 
 export const SUITES = [
   // static ------------------------------------------------------------------
@@ -193,7 +195,7 @@ export const SUITES = [
     technique: "DEV policy, diagnostics and regression examples",
     owner: "docs/RUNTIME.md",
     files: ["test/dev/"],
-    runner: { type: "vitest", config: "vite.dev.config.ts" },
+    runner: { type: "vitest", profile: "dev" },
     tiers: ["ci", "deep"],
   },
   {
@@ -202,7 +204,7 @@ export const SUITES = [
     technique: "structural projections of the stages",
     owner: "src/kernel/stages/README.md",
     files: ["test/projection/"],
-    runner: { type: "vitest", config: "vite.projection.config.ts" },
+    runner: { type: "vitest", profile: "projection" },
     tiers: ["ci", "deep"],
   },
 
@@ -349,7 +351,7 @@ export const SUITES = [
       "pinned behavior outside the contract (F1, disposal from a host hook)",
     owner: "docs/characterization/SEMANTIC_CHARACTERIZATION.md",
     files: ["test/characterization/"],
-    runner: { type: "vitest", config: "vite.characterization.config.ts" },
+    runner: { type: "vitest", profile: "characterization" },
     tiers: ["ci", "deep"],
     advisory: true,
   },
@@ -367,7 +369,7 @@ export const SUITES = [
     id: "integration.build",
     layer: "integration",
     technique: "full package build with projection-erasure and identity checks",
-    owner: "rollup.config.ts",
+    owner: "config/rollup.ts",
     runner: { type: "pnpm", args: ["build"] },
     tiers: [],
   },
@@ -563,7 +565,7 @@ export const GATES = {
     ],
   },
   build: {
-    summary: "build pipeline (rollup/, inlining)",
+    summary: "build pipeline (config/rollup/, inlining)",
     suites: [
       "integration.build",
       "integration.e2e",

@@ -20,7 +20,7 @@ const normalize = (value, root) => {
   if (typeof value === "string") return value.replaceAll("\\", "/").replaceAll(root.replaceAll("\\", "/"), "<repo>").replace(/\/$/, "");
   return value;
 };
-async function snapshot(root, configFile) {
+async function snapshot(root, configFile, mode = "test") {
   const full = resolve(root, configFile);
   // Keep package-local dependencies anchored to the config's original location.
   // Bundling into the workspace .vite-temp directory loses that resolution scope.
@@ -28,7 +28,7 @@ async function snapshot(root, configFile) {
   // provide. Vite's bundler supplies these globals for those legacy configs.
   const source = await readFile(full, "utf8");
   const loader = /\b(__dirname|__filename)\b/.test(source) ? "bundle" : "runner";
-  const loaded = await loadConfigFromFile({ command: "serve", mode: "test" }, full, dirname(full), "silent", undefined, loader);
+  const loaded = await loadConfigFromFile({ command: "serve", mode }, full, dirname(full), "silent", undefined, loader);
   if (!loaded) throw new Error("Config did not load: " + full);
   const config = loaded.config;
   const test = { ...config.test };
@@ -72,23 +72,27 @@ function compare(name, before, after) {
   checks.push({ name, passed, beforeSha256: createHash("sha256").update(JSON.stringify(before)).digest("hex"), afterSha256: createHash("sha256").update(JSON.stringify(after)).digest("hex") });
   if (!passed) differences.push({ name, before, after });
 }
+// A project is a config file and a vite mode; `baseline` names the file the
+// baseline tree had for it, when a config moved (one file, several modes).
 for (const project of registry.projects) {
-  const after = await snapshot(headRoot, project.config);
-  if (!existsSync(resolve(baseRoot, project.config))) {
-    checks.push({ name: project.config + ":added-project", passed: true, afterCount: after.files.length, added: after.files });
+  const name = project.mode === undefined ? project.config : project.config + "#" + project.mode;
+  const after = await snapshot(headRoot, project.config, project.mode);
+  const baselineConfig = existsSync(resolve(baseRoot, project.config)) ? project.config : project.baseline;
+  if (baselineConfig === undefined || !existsSync(resolve(baseRoot, baselineConfig))) {
+    checks.push({ name: name + ":added-project", passed: true, afterCount: after.files.length, added: after.files });
     continue;
   }
-  const before = await snapshot(baseRoot, project.config);
+  const before = await snapshot(baseRoot, baselineConfig, existsSync(resolve(baseRoot, project.config)) ? project.mode : "test");
   // CI screenshot artifacts add no test semantics and are an explicit override.
   if (project.config === "packages/reflex-dom/vite.browser.config.ts") {
     if (after.test.browser) after.test.browser.screenshotFailures = before.test.browser?.screenshotFailures;
   }
-  const missing = unapprovedMissing(project.config, before.files.filter((file) => !after.files.includes(file)));
+  const missing = unapprovedMissing(name, before.files.filter((file) => !after.files.includes(file)));
   const added = after.files.filter((file) => !before.files.includes(file));
-  checks.push({ name: project.config + ":discovery", passed: missing.length === 0, beforeCount: before.files.length, afterCount: after.files.length, added, missing });
-  if (missing.length) differences.push({ name: project.config + ":discovery", missing });
+  checks.push({ name: name + ":discovery", passed: missing.length === 0, beforeCount: before.files.length, afterCount: after.files.length, added, missing });
+  if (missing.length) differences.push({ name: name + ":discovery", missing });
   delete before.files; delete after.files;
-  compare(project.config, before, after);
+  compare(name, before, after);
 }
 for (const directory of ["reflex", "reflex-async", "reflex-devtools", "reflex-dom", "reflex-framework", "reflex-runtime", "reflex-runtime-mcp", "reflex-scheduler", "reflex-store"]) {
   const file = "packages/" + directory + "/tsconfig.json";
