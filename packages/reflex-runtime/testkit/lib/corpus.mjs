@@ -2,7 +2,7 @@
 // found by `mutate` is stored minimized, with the provenance needed to
 // reproduce it (family, seed, level, policy, both sides with SHAs). `replay`
 // reads these files; test/oracle/oracle.corpus.test.ts replays the committed
-// corpus (test/oracle/corpus) on every test run, so a fixed fault stays fixed
+// corpus (testkit/oracle/corpus) on every test run, so a fixed fault stays fixed
 // (the regression corpus of coverage-guided fuzzers, Zeller et al., "The
 // Fuzzing Book", "Greybox Fuzzing").
 //

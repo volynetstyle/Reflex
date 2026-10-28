@@ -63,7 +63,7 @@ async function catalog(what, values) {
     }
     case "mutants": {
       const { MUTANTS } = await import(
-        pathToFileURL(path.join(packageRoot, "test/oracle/mutants.ts")).href
+        pathToFileURL(path.join(packageRoot, "testkit/oracle/mutants.ts")).href
       );
       return MUTANTS.map((mutant) => ({
         mutant: mutant.id,

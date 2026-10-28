@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as source from "../../src/internal";
-import { family } from "./families";
+import { family } from "../../testkit/oracle/families";
 import {
   classifyTraceDifference,
   firstMismatch,
@@ -8,8 +8,8 @@ import {
   type Node,
   type ObservationLevel,
   type RuntimeModule,
-} from "./program";
-import { judge, VERDICT_POLICIES } from "./verdict";
+} from "../../testkit/oracle/program";
+import { judge, VERDICT_POLICIES } from "../../testkit/oracle/verdict";
 
 /**
  * Negative controls of the program oracle. An A/A run (self.aa-control) shows

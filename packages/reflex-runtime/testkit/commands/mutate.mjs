@@ -24,7 +24,7 @@ import { existsSync } from "node:fs";
 
 export const synopsis = "[options]";
 export const description = [
-  "Mutation analysis of the program oracle. Every mutant (test/oracle/mutants.ts,",
+  "Mutation analysis of the program oracle. Every mutant (testkit/oracle/mutants.ts,",
   "or ad-hoc with --mutate) is built from the reference side and searched for",
   "the first seed whose traces differ under the policy; a found program is",
   "minimized and is the mutant's witness. Prints the kill matrix and the",
@@ -91,7 +91,7 @@ export default async function mutateCommand(values, positionals) {
       `unknown level "${values.level}" (strict | observable)`,
     );
   const { MUTANTS, mutationArgument } = await import(
-    pathToFileURL(path.join(packageRoot, "test/oracle/mutants.ts")).href
+    pathToFileURL(path.join(packageRoot, "testkit/oracle/mutants.ts")).href
   );
   const policy = values.against === "baseline" ? "baseline" : "exact";
   let selected = MUTANTS;

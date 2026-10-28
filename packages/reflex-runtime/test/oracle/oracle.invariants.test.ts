@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import * as candidateModule from "../../src/internal";
 import { BASELINE_COMMIT, loadBaseline } from "./baseline";
-import { family } from "./families";
+import { family } from "../../testkit/oracle/families";
 import {
   generateHubProgram,
   generateProgram,
@@ -11,7 +11,7 @@ import {
   shrink,
   type Program,
   type RuntimeModule,
-} from "./program";
+} from "../../testkit/oracle/program";
 
 /**
  * Algorithm-independent oracle: integrity and exact dependency sets checked

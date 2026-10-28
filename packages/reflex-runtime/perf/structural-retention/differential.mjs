@@ -13,7 +13,7 @@
 // checks that the counterfactual reproduces the old policy exactly.
 //
 // Every program runs on both sides with invariant checks. Trace pairs are
-// classified by classifyTraceDifference (test/oracle/program.ts; see
+// classified by classifyTraceDifference (testkit/oracle/program.ts; see
 // SEMANTIC_CONTRACT "Semantic and representation equivalence"):
 // identical, list-order, event-order (representation) or semantic. Semantic
 // differences, and candidate invariant violations the base does not have,
@@ -22,7 +22,7 @@
 // Programs come from the oracle generators and from a targeted generator of
 // wide consumers (>= 32 dependencies) whose conditional reads insert a
 // dependency in front, in the middle or at the end, with sibling watchers on
-// shared producers (test/oracle/families.ts, family `targeted`): the stock
+// shared producers (testkit/oracle/families.ts, family `targeted`): the stock
 // generator reaches a long unvisited suffix behind a new dependency in about
 // 1 program in 8,000. `pnpm rt diff --policy representation` runs the same
 // comparison over any families.
@@ -36,8 +36,8 @@ import {
   generateHubProgram,
   generateProgram,
   interpret,
-} from "../../test/oracle/program.ts";
-import { generateTargetedProgram } from "../../test/oracle/families.ts";
+} from "../../testkit/oracle/program.ts";
+import { generateTargetedProgram } from "../../testkit/oracle/families.ts";
 import { variants } from "../tracking-ladder/variants.mjs";
 
 const packageRoot = path.resolve(import.meta.dirname, "../..");

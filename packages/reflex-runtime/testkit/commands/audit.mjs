@@ -20,7 +20,7 @@ import { SUITES, TIERS } from "../registry.mjs";
 export const synopsis = "[options]";
 export const description = [
   "Cross-suite fault audit. Every mutant of the fault-model inventory",
-  "(test/oracle/faults.ts) is applied to `src` and run against every gating",
+  "(testkit/oracle/faults.ts) is applied to `src` and run against every gating",
   "vitest suite of the tier and the advisory characterization layer, after a",
   "control run without mutation. Each mutant is traced through four stages:",
   "",
@@ -285,7 +285,7 @@ export default async function auditCommand(values, positionals) {
     throw new UsageError(`unknown role "${values.role}"`);
   const timeoutMs = parseDuration(values.timeout);
   const { AUDIT_MUTANTS, FAULT_MODELS, inventoryErrors } = await import(
-    pathToFileURL(path.join(packageRoot, "test/oracle/faults.ts")).href
+    pathToFileURL(path.join(packageRoot, "testkit/oracle/faults.ts")).href
   );
   const errors = inventoryErrors();
   if (errors.length > 0)

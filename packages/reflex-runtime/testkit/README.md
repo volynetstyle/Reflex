@@ -24,7 +24,7 @@ pnpm rt <command> --help        options of one command
 
 `pnpm rt` runs `node testkit/cli.mjs` in this package. It needs Node with
 TypeScript type stripping (22.18 or later): the oracle modules in
-`test/oracle/*.ts` load without a build step.
+`testkit/oracle/*.ts` load without a build step.
 
 ## Architecture
 
@@ -36,14 +36,14 @@ testkit/lib/engine.mjs      sharded pairwise comparison, worker threads, time bo
 testkit/lib/executor.mjs    suites -> processes (vitest suites with one config share a process)
 testkit/lib/inventory.mjs   the catalog checked against the tree
 testkit/lib/corpus.mjs      counterexample files
-test/oracle/program.ts      program language, interpreter, invariants (unchanged owner)
-test/oracle/families.ts     program families: default, hub, targeted, swarm
-test/oracle/verdict.ts      verdict policies and accepted difference classes
-test/oracle/reduce.ts       hierarchical minimization
-test/oracle/mutants.ts      oracle mutant catalog
-test/oracle/faults.ts       fault-model inventory: claims, development and holdout mutants
+testkit/oracle/program.ts      program language, interpreter, invariants (unchanged owner)
+testkit/oracle/families.ts     program families: default, hub, targeted, swarm
+testkit/oracle/verdict.ts      verdict policies and accepted difference classes
+testkit/oracle/reduce.ts       hierarchical minimization
+testkit/oracle/mutants.ts      oracle mutant catalog
+testkit/oracle/faults.ts       fault-model inventory: claims, development and holdout mutants
 testkit/lib/mutation.mjs    source mutation of the vitest suites (vite plugin, reach probe)
-test/oracle/corpus/         committed regression corpus
+testkit/oracle/corpus/         committed regression corpus
 ```
 
 The vitest suites and the CLI share these modules, so a rule exists once:
@@ -100,7 +100,7 @@ decorrelated by an avalanche mix (`mixSeed`, MurmurHash3 fmix32), so seeds
 1 to 300 already give the 6% wide or deep share `generateSpec` describes,
 and a seed still names one program. On its first 10,000 seeds it found four
 differences from the baseline that no accepted class explains
-(`test/oracle/corpus/general-*`, open); it joins the vitest oracle once they
+(`testkit/oracle/corpus/general-*`, open); it joins the vitest oracle once they
 are classified.
 
 **Vary the feature mix (swarm testing).** A uniform generator puts nearly
@@ -127,7 +127,7 @@ the generator was developed against (`spec` layer). `pnpm rt mutate` prints
 the kill matrix and the mutation score.
 
 **Every found failure becomes a regression test.** Minimized programs go to
-`test/oracle/corpus/` and replay on every test run (the corpus of
+`testkit/oracle/corpus/` and replay on every test run (the corpus of
 coverage-guided fuzzers: Zeller et al., _The Fuzzing Book_, "Greybox
 Fuzzing"). Mutant witnesses are a seed corpus: `mutate` tries them first, so a
 qualified oracle re-qualifies in one program per mutant.
@@ -169,7 +169,7 @@ break a test. Such tests form the `characterization` layer
 
 `pnpm rt audit` answers, per test file, "which fault passes CI if this file
 goes?". It is mutation analysis across suites (Papadakis et al., 2019): every
-mutant of `test/oracle/faults.ts` is applied to `src` by a vite transform
+mutant of `testkit/oracle/faults.ts` is applied to `src` by a vite transform
 (`testkit/lib/mutation.mjs`, inert without `REFLEX_MUTATIONS`), and every
 gating vitest suite of the tier runs against it, after a control run in which
 every file must pass. Qualification suites are excluded: they test the
@@ -217,7 +217,7 @@ alone; it supplies the evidence.
 | `representation` | list-order and event-order differences without new violations                 | a refactor or policy change against HEAD     |
 | `baseline`       | `representation`, plus the baseline corrections F13, F15, F1 domain, F17, F16 | the working tree against the pinned baseline |
 
-The classes and their evidence are documented in `test/oracle/verdict.ts`.
+The classes and their evidence are documented in `testkit/oracle/verdict.ts`.
 `inconclusive` (both sides exhaust the stack) applies under every policy.
 
 The independent invariant checker requires successful, non-reentrant
@@ -285,12 +285,12 @@ Files disabled by their name (`*.no_test.ts`) are listed as notes.
 
 - **A test file:** add it to the suite whose layer and technique it shares in
   `registry.mjs`, or add a suite; `pnpm rt doctor` fails until it is owned.
-- **A program family:** add it to `families` in `test/oracle/families.ts`; it
+- **A program family:** add it to `families` in `testkit/oracle/families.ts`; it
   is available to `diff`, `replay` and `mutate` at once. Keep `default` and
   `hub` unchanged: their seeds are pinned.
-- **A mutant:** add it to `test/oracle/mutants.ts`, run
+- **A mutant:** add it to `testkit/oracle/mutants.ts`, run
   `pnpm rt mutate --mutants <id> --record` to store its witness.
-- **A fault model or audit mutant:** add it to `test/oracle/faults.ts`. A
+- **A fault model or audit mutant:** add it to `testkit/oracle/faults.ts`. A
   mutant of the oracle catalog is `development` and needs a fault model; a
   new mutant that no reduction was decided from is `holdout`. A reverted fix
   of a documented finding is the strongest holdout: it is a real fault.

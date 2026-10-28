@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { loadBaseline, loadOracleBundle } from "./baseline";
+import { loadBaseline, loadSource } from "./baseline";
 import {
   firstMismatch,
   generateHubProgram,
@@ -9,8 +9,8 @@ import {
   shrink,
   type Program,
   type RuntimeModule,
-} from "./program";
-import { MUTANTS, mutationArgument } from "./mutants";
+} from "../../testkit/oracle/program";
+import { MUTANTS, mutationArgument } from "../../testkit/oracle/mutants";
 
 /**
  * Oracle qualification: each seeded mutant changes one kernel decision. The
@@ -30,11 +30,9 @@ describe("baseline oracle qualification", () => {
   it.each(MUTANTS)(
     "$id is $expected",
     async (mutant) => {
-      const label = `mutant-${mutant.id}`;
-      const runtime = await loadOracleBundle(
-        ["--source", "--mutate", mutationArgument(mutant)],
-        label,
-      );
+      const runtime = await loadSource({
+        mutations: [mutationArgument(mutant)],
+      });
       const fails = (program: Program) =>
         firstMismatch(
           interpret(baseline, program),

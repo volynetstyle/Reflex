@@ -15,7 +15,7 @@ import { bundleHash, parseSide, recordedSideSpec } from "./lib/sides.mjs";
 import { GATES, select, SUITES, TIERS } from "./registry.mjs";
 
 const oracle = (file) =>
-  import(pathToFileURL(path.join(packageRoot, "test/oracle", file)).href);
+  import(pathToFileURL(path.join(packageRoot, "testkit/oracle", file)).href);
 
 describe("catalog", () => {
   it("owns every test file exactly once, with existing owners and live budgets", () => {

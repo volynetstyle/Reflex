@@ -14,7 +14,9 @@ let oracle;
 export async function loadOracle() {
   if (oracle === undefined) {
     const load = (file) =>
-      import(pathToFileURL(path.join(packageRoot, "test/oracle", file)).href);
+      import(
+        pathToFileURL(path.join(packageRoot, "testkit/oracle", file)).href
+      );
     const [program, families, verdict, reduce] = await Promise.all([
       load("program.ts"),
       load("families.ts"),

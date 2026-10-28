@@ -64,7 +64,7 @@ export default async function doctorCommand(values) {
 
   try {
     const { families } = await import(
-      pathToFileURL(path.join(packageRoot, "test/oracle/families.ts")).href
+      pathToFileURL(path.join(packageRoot, "testkit/oracle/families.ts")).href
     );
     const first = families.default.generate(1);
     say("✓", `oracle modules load (default seed 1: ${first.ops.length} ops)`);

@@ -1,8 +1,18 @@
-import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { loadOracleBundle } from "./baseline";
-import { generateProgram, interpret, type RuntimeModule } from "./program";
+import { loadSource } from "./baseline";
+import {
+  generateProgram,
+  interpret,
+  type RuntimeModule,
+} from "../../testkit/oracle/program";
 
 /**
  * Branch coverage of the generated corpus, measured on a PROFILE build of the
@@ -11,7 +21,7 @@ import { generateProgram, interpret, type RuntimeModule } from "./program";
  * are reported so the record can be updated deliberately.
  */
 const packageRoot = path.resolve(__dirname, "../..");
-const RECORD = path.join(__dirname, "branch-coverage.json");
+const RECORD = path.join(packageRoot, "testkit/oracle/branch-coverage.json");
 const SEEDS = Number(process.env.ORACLE_COVERAGE_SEEDS ?? 3_000);
 
 function sourceEvents(directory: string, found = new Set<string>()) {
@@ -30,10 +40,9 @@ function sourceEvents(directory: string, found = new Set<string>()) {
 
 describe("oracle corpus branch coverage", () => {
   it("does not lose previously covered kernel branches", async () => {
-    const runtime = (await loadOracleBundle(
-      ["--source", "--profile"],
-      "coverage-source",
-    )) as RuntimeModule & {
+    const runtime = (await loadSource({
+      flavor: "profile",
+    })) as RuntimeModule & {
       setRuntimeProjectionObserver(
         fn: ((o: { id: string }) => void) | undefined,
       ): void;
@@ -57,8 +66,10 @@ describe("oracle corpus branch coverage", () => {
       uncovered,
       hits: Object.fromEntries([...hits].sort()),
     };
+    const reports = path.join(packageRoot, ".cache/testkit/reports");
+    mkdirSync(reports, { recursive: true });
     writeFileSync(
-      path.join(packageRoot, ".cache/oracle/branch-coverage.report.json"),
+      path.join(reports, "branch-coverage.report.json"),
       `${JSON.stringify(report, null, 2)}\n`,
     );
 

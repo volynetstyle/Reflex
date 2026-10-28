@@ -8,8 +8,8 @@ import {
   type ObservationLevel,
   type Program,
   type RuntimeModule,
-} from "./program";
-import { judge, type AcceptedClass } from "./verdict";
+} from "../../testkit/oracle/program";
+import { judge, type AcceptedClass } from "../../testkit/oracle/verdict";
 
 /**
  * Regression corpus (./corpus, README there): every committed program is
@@ -28,7 +28,7 @@ interface Entry {
   program: Program;
 }
 
-const directory = path.join(__dirname, "corpus");
+const directory = path.join(__dirname, "../../testkit/oracle/corpus");
 const entries: [string, Entry][] = readdirSync(directory)
   .filter((file) => file.endsWith(".json"))
   .sort()
@@ -59,7 +59,7 @@ describe(`regression corpus against baseline ${BASELINE_COMMIT.slice(0, 12)}`, (
     if (entry.expect === "agree")
       expect(
         ["identical", "accepted"],
-        `replay: pnpm rt replay test/oracle/corpus/${entry.id}.json --policy baseline --reference baseline --candidate source`,
+        `replay: pnpm rt replay testkit/oracle/corpus/${entry.id}.json --policy baseline --reference baseline --candidate source`,
       ).toContain(verdict.kind);
     else
       expect(

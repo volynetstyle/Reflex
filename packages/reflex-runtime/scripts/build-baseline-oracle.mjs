@@ -3,7 +3,7 @@
 // import to the archived baseline sources, so it shares no code with the
 // implementation under test.
 //
-//   node scripts/build-baseline-oracle.mjs                 baseline from test/oracle/baseline-commit.txt
+//   node scripts/build-baseline-oracle.mjs                 baseline from testkit/oracle/baseline-commit.txt
 //   node scripts/build-baseline-oracle.mjs --commit <sha>  any commit
 //   node scripts/build-baseline-oracle.mjs --source        current working tree (sanity)
 //   ... --mutate "<file>::<search>::<replace>"             seeded mutant (oracle qualification)
@@ -67,7 +67,7 @@ const overlays = args
   });
 
 const pinned = readFileSync(
-  path.join(packageRoot, "test/oracle/baseline-commit.txt"),
+  path.join(packageRoot, "testkit/oracle/baseline-commit.txt"),
   "utf8",
 ).trim();
 const commit = fromSource ? "working-tree" : (option("--commit") ?? pinned);

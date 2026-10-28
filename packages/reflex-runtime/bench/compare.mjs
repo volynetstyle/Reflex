@@ -40,6 +40,7 @@ import {
   median,
   medianInterval,
 } from "../../../tooling/benchmarks/statistics.mjs";
+import { pinnedBaseline } from "../testkit/lib/paths.mjs";
 import { workloads } from "./workloads.mjs";
 
 const packageRoot = path.resolve(import.meta.dirname, "..");
@@ -58,12 +59,7 @@ const quick = args.includes("--quick");
 // default concurrent configuration instead.
 const v8Flags = args.includes("--no-predictable") ? [] : ["--predictable"];
 const randomizeLayout = !args.includes("--no-layout");
-const baselineRef =
-  option("--baseline") ??
-  readFileSync(
-    path.join(packageRoot, "test/oracle/baseline-commit.txt"),
-    "utf8",
-  ).trim();
+const baselineRef = option("--baseline") ?? pinnedBaseline();
 const candidateRef = option("--candidate", "source");
 const pattern = new RegExp(option("--workloads", ".*"));
 const replicates = Number(option("--replicates", quick ? 12 : 24));

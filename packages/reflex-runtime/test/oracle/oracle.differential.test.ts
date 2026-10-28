@@ -10,14 +10,14 @@ import {
   type ObservationLevel,
   type Program,
   type RuntimeModule,
-} from "./program";
-import { minimize } from "./reduce";
+} from "../../testkit/oracle/program";
+import { minimize } from "../../testkit/oracle/reduce";
 import {
   ACCEPTED_CLASSES,
   judge,
   rejects,
   type AcceptedClass,
-} from "./verdict";
+} from "../../testkit/oracle/verdict";
 
 /**
  * Baseline differential oracle: the implementation under test must produce the

@@ -188,7 +188,7 @@ observable; the contract simply does not choose between them, and two
 implementations that differ only there belong to one public semantics.
 
 Differential comparison therefore has three outcomes
-(`classifyTraceDifference` in `test/oracle/program.ts`):
+(`classifyTraceDifference` in `testkit/oracle/program.ts`):
 
 - **semantic-equivalent:** identical traces;
 - **representation-different:** equal once adjacency lists are compared as

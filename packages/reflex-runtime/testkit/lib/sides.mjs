@@ -2,11 +2,11 @@
 //
 //   side      := base ("+" modifier)*
 //   base      := "source"            the working tree
-//              | "baseline"          the oracle's pinned commit (test/oracle/baseline-commit.txt)
+//              | "baseline"          the oracle's pinned commit (testkit/oracle/baseline-commit.txt)
 //              | <git ref>           any commit, branch or tag (HEAD, HEAD^, main, 4efa8cc)
 //              | "bundle:" <path>    a prebuilt runtime.mjs, loaded as is
 //   modifier  := <variant>           a research variant of perf/tracking-ladder/variants.mjs
-//              | "mutant:" <id>      a seeded mutant of test/oracle/mutants.ts
+//              | "mutant:" <id>      a seeded mutant of testkit/oracle/mutants.ts
 //
 // Every built side goes through scripts/build-baseline-oracle.mjs, so all
 // sides of one run share a toolchain and differ only in sources. The flavor
@@ -110,7 +110,7 @@ async function mutationsOf(parsed) {
   }
   if (parsed.mutants.length > 0) {
     const { MUTANTS, mutationArgument } = await import(
-      pathToFileURL(path.join(packageRoot, "test/oracle/mutants.ts")).href
+      pathToFileURL(path.join(packageRoot, "testkit/oracle/mutants.ts")).href
     );
     for (const id of parsed.mutants) {
       const mutant = MUTANTS.find((item) => item.id === id);
