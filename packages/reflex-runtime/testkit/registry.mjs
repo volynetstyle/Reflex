@@ -7,7 +7,7 @@
 // Suite fields:
 //   id         layer.name, unique
 //   layer      static | unit | model | dev | projection | spec | oracle |
-//              qualification | integration | fuzz | self
+//              qualification | characterization | integration | fuzz | self
 //   technique  what kind of evidence the suite produces
 //   owner      the document that owns the facts the suite checks
 //   files      test files or directories the suite owns (vitest path filters)
@@ -17,6 +17,8 @@
 //   tiers      smoke | ci | deep: the tiers whose `run` includes the suite
 //   budgets    { <tier>: { ENV: value } }: the budget a tier runs it with
 //   requires   what must exist before it runs (informational)
+//   advisory   true: a failure is reported as `changed` and does not fail the
+//              run (behavior the contract leaves open; never a correctness gate)
 import { availableParallelism } from "node:os";
 
 /** Tiers, cheapest first. A tier's budgets apply to every suite it runs. */
@@ -35,6 +37,8 @@ export const LAYERS = {
   spec: "differential testing against the executable spec (SpecMachine)",
   oracle: "differential testing against the frozen baseline bundle",
   qualification: "adequacy of the oracles: mutants, holdouts, branch coverage",
+  characterization:
+    "pinned behavior the contract leaves open: reported, never a correctness verdict",
   integration: "the facade package and the packed artifacts",
   fuzz: "long randomized comparisons across revisions",
   self: "the testkit itself and its controls",
@@ -146,6 +150,34 @@ export const SUITES = [
     runner: source,
     tiers: ["smoke", "ci", "deep"],
   },
+  // Kernel tests that live under test/differential (its typecheck gate) but
+  // do not compare against SpecMachine: their oracle is outside its DSL.
+  {
+    id: "unit.host-protocol",
+    layer: "unit",
+    technique:
+      "host protocol: batching, settlement and reentrant writes against small independent reference traces",
+    owner: "docs/RULES.md",
+    files: [
+      "test/differential/runtime.batch-boundary.test.ts",
+      "test/differential/runtime.reentrant-write.test.ts",
+    ],
+    runner: source,
+    tiers: ["smoke", "ci", "deep"],
+  },
+  {
+    id: "unit.tracking-representation",
+    layer: "unit",
+    technique:
+      "tracking clock and stamps: rewind, wrap and collision, with graph integrity",
+    owner: "docs/INVARIANTS.md",
+    files: [
+      "test/differential/runtime.epoch-collision.test.ts",
+      "test/differential/runtime.tracking-stamp.test.ts",
+    ],
+    runner: source,
+    tiers: ["smoke", "ci", "deep"],
+  },
   {
     id: "model.recomputation",
     layer: "model",
@@ -184,10 +216,6 @@ export const SUITES = [
       "test/differential/runtime.differential.test.ts",
       "test/differential/runtime.stateful-differential.test.ts",
       "test/differential/runtime.lifecycle-semantics.differential.test.ts",
-      "test/differential/runtime.batch-boundary.test.ts",
-      "test/differential/runtime.reentrant-write.test.ts",
-      "test/differential/runtime.epoch-collision.test.ts",
-      "test/differential/runtime.tracking-stamp.test.ts",
       "test/differential/runtime.next-experiments.test.ts",
       "test/differential/runtime.rules-state-space.test.ts",
     ],
@@ -294,12 +322,34 @@ export const SUITES = [
     budgets: { deep: { ORACLE_COVERAGE_SEEDS: "10000" } },
   },
   {
+    id: "qualification.cross-suite-audit",
+    layer: "qualification",
+    technique:
+      "every fault-model mutant against every gating suite: reach, infect, propagate, observe; holdout check",
+    owner: "test/oracle/faults.ts",
+    runner: { type: "testkit", args: ["audit"] },
+    tiers: ["deep"],
+  },
+  {
     id: "qualification.mutation-matrix",
     layer: "qualification",
     technique: "kill matrix of every oracle mutant against its own source",
     owner: "test/oracle/mutants.ts",
     runner: { type: "testkit", args: ["mutate", "--budget", "5000"] },
     tiers: ["deep"],
+  },
+
+  // characterization: what the runtime does where the contract is silent ----
+  {
+    id: "characterization.open-regions",
+    layer: "characterization",
+    technique:
+      "pinned behavior outside the contract (F1, disposal from a host hook)",
+    owner: "docs/characterization/SEMANTIC_CHARACTERIZATION.md",
+    files: ["test/characterization/"],
+    runner: { type: "vitest", config: "vite.characterization.config.ts" },
+    tiers: ["ci", "deep"],
+    advisory: true,
   },
 
   // integration -------------------------------------------------------------
@@ -418,6 +468,36 @@ export const SUITES = [
     technique: "unit tests of the testkit, catalog inventory",
     owner: "testkit/README.md",
     runner: { type: "node", args: ["--test", "testkit/testkit.selftest.mjs"] },
+    tiers: ["smoke", "ci", "deep"],
+  },
+  {
+    id: "self.spec-arbiter",
+    layer: "self",
+    technique:
+      "properties of the spec verdict's comparator: equivalence relation, sensitivity to every field",
+    owner: "test/differential/README.md",
+    files: ["test/differential/runtime.observation-comparator.test.ts"],
+    runner: source,
+    tiers: ["smoke", "ci", "deep"],
+  },
+  {
+    id: "self.spec-model",
+    layer: "self",
+    technique:
+      "metamorphic self-check of the executable spec: optimized and direct models agree",
+    owner: "test/differential/internal/machine/spec-runtime.ts",
+    files: ["test/differential/runtime.spec-self-consistency.test.ts"],
+    runner: source,
+    tiers: ["ci", "deep"],
+  },
+  {
+    id: "self.oracle-controls",
+    layer: "self",
+    technique:
+      "A/B negative controls: candidates wrong in one observable class must be rejected by every policy",
+    owner: "test/oracle/verdict.ts",
+    files: ["test/oracle/oracle.controls.test.ts"],
+    runner: source,
     tiers: ["smoke", "ci", "deep"],
   },
   {

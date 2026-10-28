@@ -6,5 +6,9 @@
     "declarationMap": false,
     "noEmit": true
   },
-  "include": ["./**/*.ts", "../../src/globals.d.ts"]
+  "include": [
+    "./**/*.ts",
+    "../characterization/**/*.ts",
+    "../../src/globals.d.ts"
+  ]
 }

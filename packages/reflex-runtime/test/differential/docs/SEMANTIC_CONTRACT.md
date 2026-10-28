@@ -107,6 +107,7 @@ computed was independently stabilized earlier in the operation trace.
 - **W1** A watcher's previous cleanup is consumed before reevaluation starts.
 - **W2** A failed watcher computation does not install partially collected semantic dependencies or a new cleanup; partial reads live only in a separate retry-trigger set.
 - **W3** A watcher whose cleanup or computation failed is not retried by a plain flush, but remains retryable after a conservative retry trigger changes. A write performed by the failing cleanup or computation is such a change (L5).
+- **Open (F18)** Whether a computed read that throws is retry evidence. Today it is not: it is no observation (C1), so a watcher whose attempt failed on the first read of that computed keeps no trigger for it and is not retried after the cause is repaired. "Conservative" in W2 and W3 does not cover this case; `SEMANTIC_CHARACTERIZATION.md` F18 records the witnesses.
 - **V1** Failed dependency validation does not make the watcher clean and remains retryable by an explicit flush.
 - **V2** Validation retry behavior is independent of prior reads and pull traversal history.
 - **V3** Validation covers the complete committed dependency snapshot before watcher lifecycle begins.

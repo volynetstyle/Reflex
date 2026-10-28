@@ -152,6 +152,15 @@ export function selfInvalidates(spec: GraphSpec): boolean {
 // ---------------------------------------------------------------------------
 // Generator
 
+/**
+ * xorshift32. A small integer seed draws a tiny first number (seed 1:
+ * 0.0001, seed 1000: 0.062), and `generateSpec` spends that draw on the
+ * family choice: every default seed below 960 builds a wide or deep spec, so
+ * the smoke budget (300 seeds) runs wide programs only and the ci budget
+ * (2,000) is 49% wide or deep instead of 6%. The default and hub seeds are
+ * pinned (corpus, documented seeds), so the generator is left as is; a run
+ * that needs the general distribution starts past seed 960 (`pnpm rt audit`).
+ */
 export function prng(seed: number): () => number {
   let state = seed >>> 0 || 0x9e3779b9;
   return () => {

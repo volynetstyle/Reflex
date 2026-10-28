@@ -13,7 +13,9 @@ oracle to production flags, graph shape, queues, or walker internals.
   case provenance such as `family` and `faultModel`.
 - `compareTransformation(...)` compares both base programs against Spec and
   compares explicitly aligned Spec/Reflex operation boundaries. Alignment may
-  skip inserted setup operations; it never sorts events or removes errors.
+  skip inserted setup operations; it never sorts events or removes errors. It
+  must be non-empty and strictly increasing on both sides, and the result
+  counts `informativePairs`, the aligned boundaries that observed anything.
 
 Run the independent TypeScript gate with:
 
@@ -22,6 +24,15 @@ pnpm typecheck:differential
 ```
 
 The package `typecheck` command includes this gate.
+
+## Files here that are not spec comparisons
+
+`runtime.batch-boundary`, `runtime.reentrant-write`, `runtime.epoch-collision`
+and `runtime.tracking-stamp` test the kernel directly: host batching and
+reentrant writes against small reference traces, tracking stamps against graph
+integrity. The SpecMachine DSL cannot express their conditions. They stay here
+for this directory's typecheck gate; the testkit catalogs them as
+`unit.host-protocol` and `unit.tracking-representation`, not as `spec`.
 
 ## Languages and fault lifecycle
 

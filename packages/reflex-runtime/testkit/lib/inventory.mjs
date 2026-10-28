@@ -30,10 +30,14 @@ function walk(directory, found = []) {
 // Which vitest config may own which files (the configs' include/exclude).
 const CONFIG_SCOPE = {
   "vite.config.ts": (file) =>
-    !file.startsWith("test/dev/") && !file.startsWith("test/projection/"),
+    !file.startsWith("test/dev/") &&
+    !file.startsWith("test/projection/") &&
+    !file.startsWith("test/characterization/"),
   "vite.dev.config.ts": (file) =>
     file.startsWith("test/dev/") && file.endsWith(".dev.test.ts"),
   "vite.projection.config.ts": (file) => file.startsWith("test/projection/"),
+  "vite.characterization.config.ts": (file) =>
+    file.startsWith("test/characterization/"),
 };
 
 /** Returns { errors, warnings, notes }: strings, one finding each. */

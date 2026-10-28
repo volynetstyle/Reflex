@@ -14,6 +14,7 @@ const COMMANDS = {
   diff: "compare two runtime builds over generated programs",
   replay: "re-run one program or counterexample and show the trace diff",
   mutate: "mutation analysis of the program oracle: kill matrix",
+  audit: "cross-suite fault audit: every mutant against every suite",
   doctor: "environment and catalog inventory checks",
 };
 
@@ -35,6 +36,7 @@ function usage() {
     "  pnpm rt diff --reference HEAD --policy representation --time 2m --jobs 4",
     "  pnpm rt replay --family hub --seed 42 --candidate HEAD",
     "  pnpm rt mutate --mutants hint-keep-on-unlink",
+    "  pnpm rt audit --role holdout          which suites detect the holdout faults",
     "",
     "principles and reference: testkit/README.md",
   ].join("\n");

@@ -6,14 +6,14 @@ import {
   readProducer,
   runWatcher,
   writeProducer,
-} from "../../../src/internal";
-import type { ReactiveNode } from "../../../src/kernel";
+} from "../../src/internal";
+import type { WatcherNode } from "../../src/kernel";
 import {
   createConsumer,
   createProducer,
   createWatcher,
   resetRuntime,
-} from "../../runtime.test_utils";
+} from "../runtime.test_utils";
 
 /**
  * Characterization, outside the contract: watcher disposal from
@@ -40,14 +40,14 @@ describe("Reactive runtime - watcher disposal from onNodeInvalidated (characteri
 
   /** producer -> computed -> three watchers; returns the notified indices. */
   function notifiedWhen(
-    onNotify: (index: number, watchers: ReactiveNode[]) => void,
+    onNotify: (index: number, watchers: WatcherNode[]) => void,
   ): number[] {
     const notified: number[] = [];
-    let watchers: ReactiveNode[] = [];
+    let watchers: WatcherNode[] = [];
     configureRuntimeContext({
       hooks: {
         onNodeInvalidated(node) {
-          const index = watchers.indexOf(node);
+          const index = watchers.indexOf(node as WatcherNode);
           notified.push(index);
           onNotify(index, watchers);
         },

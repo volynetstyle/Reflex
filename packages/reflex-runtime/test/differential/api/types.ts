@@ -99,4 +99,9 @@ export interface TransformationResult {
   readonly specEquivalent: boolean;
   readonly reflexEquivalent: boolean;
   readonly mismatches: readonly TransformationMismatch[];
+  /**
+   * Aligned pairs where some side observed a value, an error or an effect.
+   * Zero means the relation compared only empty observations.
+   */
+  readonly informativePairs: number;
 }

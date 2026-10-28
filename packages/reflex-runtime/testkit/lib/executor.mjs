@@ -2,7 +2,8 @@
 // share a config, a working directory and a budget run in one vitest process
 // (one transform and import of the sources instead of one per suite); every
 // other runner is its own process. Steps run in catalog order, so cheap
-// layers fail first.
+// layers fail first. An advisory suite's failure is `changed`: reported, but
+// it neither fails the run nor stops it.
 import { createRequire } from "node:module";
 import path from "node:path";
 
@@ -56,8 +57,9 @@ export async function plan(suites, tier) {
   for (const item of suites) {
     const env = item.budgets?.[tier] ?? {};
     const cwd = path.resolve(packageRoot, item.runner.cwd ?? ".");
+    const advisory = item.advisory === true;
     if (item.runner.type === "vitest") {
-      const key = JSON.stringify([item.runner.config, cwd, env]);
+      const key = JSON.stringify([item.runner.config, cwd, env, advisory]);
       let step = groups.get(key);
       if (step === undefined) {
         step = {
@@ -66,6 +68,7 @@ export async function plan(suites, tier) {
           env,
           exe: process.execPath,
           args: [vitestCli(), "run", "--config", item.runner.config],
+          advisory,
         };
         groups.set(key, step);
         steps.push(step);
@@ -75,7 +78,7 @@ export async function plan(suites, tier) {
       continue;
     }
     const [exe, args] = await command(item.runner);
-    steps.push({ suites: [item.id], cwd, env, exe, args });
+    steps.push({ suites: [item.id], cwd, env, exe, args, advisory });
   }
   return steps;
 }
@@ -117,7 +120,7 @@ export async function execute(
       cwd: step.cwd,
       env: step.env,
     });
-    const status = code === 0 ? "passed" : "failed";
+    const status = code === 0 ? "passed" : step.advisory ? "changed" : "failed";
     if (status === "failed") failed = true;
     results.push({
       suites: step.suites,
@@ -135,12 +138,19 @@ export async function execute(
 }
 
 export function summarize(outcome) {
-  return table(
-    outcome.steps.map((step) => ({
-      status: step.status,
-      time: step.ms === undefined ? "" : formatMs(step.ms),
-      suites: step.suites.join(", "),
-    })),
-    ["status", "time", "suites"],
+  const changed = outcome.steps.some((step) => step.status === "changed");
+  const note = changed
+    ? "\nchanged: an advisory suite no longer reproduces pinned behavior outside" +
+      "\nthe contract. Decide it in the suite's owner document, then update the pin."
+    : "";
+  return (
+    table(
+      outcome.steps.map((step) => ({
+        status: step.status,
+        time: step.ms === undefined ? "" : formatMs(step.ms),
+        suites: step.suites.join(", "),
+      })),
+      ["status", "time", "suites"],
+    ) + note
   );
 }

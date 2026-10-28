@@ -1,12 +1,15 @@
 // Self-test of the testkit (suite self.testkit): the parts whose failure would
 // silently weaken every other check. Run with `node --test testkit/testkit.selftest.mjs`.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, it } from "node:test";
 import { pathToFileURL } from "node:url";
 
 import { parseArgs, parseDuration, UsageError } from "./lib/args.mjs";
+import { execute } from "./lib/executor.mjs";
 import { inventory } from "./lib/inventory.mjs";
+import { instrument, PROBE, REACH_MARKER } from "./lib/mutation.mjs";
 import { packageRoot } from "./lib/paths.mjs";
 import { bundleHash, parseSide, recordedSideSpec } from "./lib/sides.mjs";
 import { GATES, select, SUITES, TIERS } from "./registry.mjs";
@@ -51,6 +54,40 @@ describe("catalog", () => {
       ["static.bundle-identity"],
     );
     assert.throws(() => select(["nothing"], "ci"));
+  });
+
+  it("keeps advisory suites out of correctness verdicts", async () => {
+    // Only the characterization layer may be advisory, and it always is: a
+    // pin of uncontracted behavior must never block a fix of it.
+    for (const item of SUITES)
+      assert.equal(
+        item.advisory === true,
+        item.layer === "characterization",
+        item.id,
+      );
+    const steps = [
+      {
+        suites: ["a"],
+        exe: process.execPath,
+        args: ["-e", "process.exit(1)"],
+        cwd: packageRoot,
+        env: {},
+        advisory: true,
+      },
+      {
+        suites: ["b"],
+        exe: process.execPath,
+        args: ["-e", ""],
+        cwd: packageRoot,
+        env: {},
+      },
+    ];
+    const outcome = await execute(steps);
+    assert.equal(outcome.status, "passed");
+    assert.deepEqual(
+      outcome.steps.map((step) => step.status),
+      ["changed", "passed"],
+    );
   });
 });
 
@@ -263,5 +300,63 @@ describe("program families and reduction", () => {
     assert.ok(fails(minimal));
     assert.ok(nodeCount(minimal) < nodeCount(program));
     assert.equal(minimal.ops.length, 1);
+  });
+});
+
+describe("fault audit", () => {
+  it("maps every oracle mutant to a known fault model", async () => {
+    const { AUDIT_MUTANTS, inventoryErrors } = await oracle("faults.ts");
+    const { MUTANTS } = await oracle("mutants.ts");
+    assert.deepEqual(inventoryErrors(), []);
+    for (const mutant of MUTANTS)
+      assert.ok(
+        AUDIT_MUTANTS.some(
+          (m) => m.id === mutant.id && m.role === "development",
+        ),
+        mutant.id,
+      );
+  });
+
+  it("applies every inventory mutant to the current sources", async () => {
+    const { AUDIT_MUTANTS } = await oracle("faults.ts");
+    for (const mutant of AUDIT_MUTANTS) {
+      const source = readFileSync(path.join(packageRoot, mutant.file), "utf8");
+      const { code, probed } = instrument(source, mutant);
+      assert.notEqual(code, source, mutant.id);
+      assert.ok(probed, `${mutant.id}: no position for the reach probe`);
+    }
+  });
+
+  it("puts the reach probe only where a statement may start", () => {
+    const mutation = (search, replace) => ({ file: "f.ts", search, replace });
+    const probed = (code, search, replace = "y();") =>
+      instrument(code, mutation(search, replace));
+    assert.equal(probed("a();\nx();", "x();").probed, true);
+    assert.equal(probed("{\n  // note\n  x();", "x();").probed, true);
+    assert.equal(probed("if (a) x();", "x();").probed, false);
+    assert.equal(probed("if (a) b();\nelse x();", "else x();").probed, false);
+    const marked = probed("if (a) x();", "x();", `${REACH_MARKER}y();`);
+    assert.equal(marked.probed, true);
+    assert.equal(marked.code, `if (a) ${PROBE}y();`);
+    // First occurrence, as the oracle bundle builder replaces.
+    const twice = probed("x(); x();", "x();", "y();");
+    assert.equal(twice.occurrences, 2);
+    assert.ok(twice.code.endsWith(" x();"));
+    assert.throws(() => probed("a();", "x();"));
+  });
+
+  it("finds the cheapest cover and nothing more", async () => {
+    const { cheapestCover } = await import("./commands/audit.mjs");
+    const kills = new Map([
+      ["slow", new Set(["m1", "m2"])],
+      ["a", new Set(["m1"])],
+      ["b", new Set(["m2"])],
+      ["none", new Set()],
+    ]);
+    const cost = (file) => ({ slow: 100, a: 1, b: 1, none: 1 })[file];
+    assert.deepEqual(cheapestCover(new Set(["m1", "m2"]), kills, cost).sort(), [
+      "a",
+      "b",
+    ]);
   });
 });

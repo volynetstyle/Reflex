@@ -1,10 +1,13 @@
 import { runtimeFlags } from "../../tooling/configs/runtime-flags";
 import { sourceAliases, configRoot } from "../../tooling/configs/source-aliases";
 import { defineConfig } from "vitest/config";
+import { mutantPlugin } from "./testkit/lib/mutation.mjs";
 
 export default defineConfig({
   root: configRoot(import.meta.url),
   plugins: [
+    // `pnpm rt audit` only: applies REFLEX_MUTATIONS, a no-op otherwise.
+    mutantPlugin(),
     {
       name: "runtime-walker-test-state",
       enforce: "pre",
@@ -38,6 +41,8 @@ export default defineConfig({
       "**/node_modules/**",
       "test/dev/**/*.dev.test.ts",
       "test/projection/**/*.test.ts",
+      // Pinned behavior outside the contract: vite.characterization.config.ts.
+      "test/characterization/**",
     ],
     isolate: false,
     pool: "forks",

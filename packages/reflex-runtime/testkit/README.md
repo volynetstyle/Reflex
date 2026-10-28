@@ -17,6 +17,7 @@ pnpm rt gate refactor           the checks a change kind requires
 pnpm rt diff ...                compare two builds over generated programs
 pnpm rt replay <file>           re-run one program, show where traces part
 pnpm rt mutate                  kill matrix of the oracle mutants
+pnpm rt audit                   every fault-model mutant against every suite
 pnpm rt doctor                  environment and catalog inventory
 pnpm rt <command> --help        options of one command
 ```
@@ -40,6 +41,8 @@ test/oracle/families.ts     program families: default, hub, targeted, swarm
 test/oracle/verdict.ts      verdict policies and accepted difference classes
 test/oracle/reduce.ts       hierarchical minimization
 test/oracle/mutants.ts      oracle mutant catalog
+test/oracle/faults.ts       fault-model inventory: claims, development and holdout mutants
+testkit/lib/mutation.mjs    source mutation of the vitest suites (vite plugin, reach probe)
 test/oracle/corpus/         committed regression corpus
 ```
 
@@ -86,6 +89,14 @@ an accepted class (MacIver and Donaldson, "Test-Case Reduction via Test-Case
 Generation", ECOOP 2020). A deep-chain witness of size 1,763 (1,054
 consumers) reduces to 161 in under a second; the operation-level shrinker
 alone, given ten times the steps, stopped at 1,531 after 20 s.
+
+**Know what the generator generates.** The default family's xorshift,
+seeded with small integers, draws a tiny first number, which picks the spec
+shape: default seeds 1 to 959 are all wide or deep specs, with no cleanup,
+throw or hook. The smoke budget (300 seeds) therefore runs one shape only,
+the ci budget (2,000) about half; `self.oracle-controls` takes its cleanup
+control from `hub`, and the audit's corpus starts at seed 1,000. The seeds
+are pinned, so changing the generator is a decision, not a fix.
 
 **Vary the feature mix (swarm testing).** A uniform generator puts nearly
 every feature in nearly every program, so a feature that masks a failure is
@@ -140,6 +151,58 @@ runs the same oracle with fewer seeds.
 **The catalog is checked against the tree.** A test no suite owns never runs
 under `pnpm rt run`; a budget no test reads does nothing. `pnpm rt doctor`
 and the self-test fail on either (see Inventory).
+
+**Pinned is not correct.** A test that pins behavior the contract leaves
+open (F1, watcher disposal from a host hook, F18) records a fact, not a
+requirement; if it gated CI, every fix of that behavior would first have to
+break a test. Such tests form the `characterization` layer
+(`vite.characterization.config.ts`, excluded from `vitest run`). The layer is
+`advisory`: `pnpm rt run` reports its failure as `changed` and passes. A
+`changed` is decided in the owner document, then the pin is updated.
+
+## Audit
+
+`pnpm rt audit` answers, per test file, "which fault passes CI if this file
+goes?". It is mutation analysis across suites (Papadakis et al., 2019): every
+mutant of `test/oracle/faults.ts` is applied to `src` by a vite transform
+(`testkit/lib/mutation.mjs`, inert without `REFLEX_MUTATIONS`), and every
+gating vitest suite of the tier runs against it, after a control run in which
+every file must pass. Qualification suites are excluded: they test the
+oracles, not the kernel.
+
+Each mutant is traced through the stages of the RIPR model (Ammann and
+Offutt, _Introduction to Software Testing_, 2nd ed., 2016): **reach** (a probe
+at the mutated site counts executions per test file), **infect** (the strict
+oracle trace of a generated program differs: state bits, graph), **propagate**
+(its public projection differs: reads, watcher runs, cleanups and errors, or
+host calls) and **observe** (a test file fails). A mutant that infects but
+never propagates is the structural oracle's to catch; one that propagates in
+the corpus but survives the suites is a test gap.
+
+Fault models belong to three contracts that need different oracles:
+`semantic` (values, dependencies, failure; SpecMachine), `host` (delivery and
+ownership; the liveness invariant, host examples) and `representation`
+(lists, stamps, hints; structural invariants). The matrix "fault model x
+layer" shows which layer defends which claim.
+
+Removing a test needs more than a covered kill set. Coverage and mutation
+score are weak predictors of the faults a reduced suite misses (Inozemtseva
+and Holmes, ICSE 2014; Shi et al., "Evaluating Test-Suite Reduction in Real
+Software Evolution", ISSTA 2018), so the audit:
+
+- uses `development` mutants to compute a cheapest cover of their kills and
+  evaluates it on `holdout` mutants it was not chosen from: four are real
+  faults, reverted fixes of F13, F15, F16 and F17;
+- lists sole witnesses (the only gating file that kills a mutant) and
+  stubborn mutants (at most two killers): these files stay;
+- reports files that kill nothing in the inventory as a gap of the inventory
+  as much as of the file, never as deletion candidates.
+
+A file is a candidate for removal only when its kills are covered by other
+files for development and holdout mutants alike, it is no sole witness of a
+contract boundary the inventory lacks, and the faster check it would leave
+still reproduces a minimal counterexample. The audit decides none of this
+alone; it supplies the evidence.
 
 ## Verdict policies
 
@@ -222,6 +285,10 @@ Files disabled by their name (`*.no_test.ts`) are listed as notes.
   `hub` unchanged: their seeds are pinned.
 - **A mutant:** add it to `test/oracle/mutants.ts`, run
   `pnpm rt mutate --mutants <id> --record` to store its witness.
+- **A fault model or audit mutant:** add it to `test/oracle/faults.ts`. A
+  mutant of the oracle catalog is `development` and needs a fault model; a
+  new mutant that no reduction was decided from is `holdout`. A reverted fix
+  of a documented finding is the strongest holdout: it is a real fault.
 - **An accepted difference class:** only for a documented finding
   (SEMANTIC_CHARACTERIZATION.md), with evidence that the baseline is wrong and
   the candidate violates nothing; add it to `verdict.ts` and commit the case

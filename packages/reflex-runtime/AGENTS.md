@@ -77,6 +77,7 @@ pnpm --filter @volynets/reflex test   # facade, includes the liveness oracle
 pnpm rt run --tier smoke     # testkit: the catalog at a budget (smoke | ci | deep)
 pnpm rt gate <kind>          # the checks a change kind requires (docs/GUIDE.md)
 pnpm rt doctor               # every test file owned by one suite
+pnpm rt audit                # which suites detect which fault (before removing a test)
 ```
 
 Shape analysis and paired timing: [docs/GUIDE.md](./docs/GUIDE.md#checks-by-change-kind).

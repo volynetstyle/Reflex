@@ -9,7 +9,7 @@ import {
   Unknown,
   Visited,
   writeProducer,
-} from "../../runtime.test_utils";
+} from "../runtime.test_utils";
 
 /**
  * Characterization of baseline behavior that the semantic contract leaves
