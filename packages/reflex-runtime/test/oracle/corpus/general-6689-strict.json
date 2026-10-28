@@ -1,0 +1,121 @@
+{
+  "schema": "testkit.counterexample",
+  "schemaVersion": 1,
+  "id": "general-6689-strict",
+  "expect": "diverge",
+  "level": "strict",
+  "policy": "baseline",
+  "origin": {
+    "command": "replay",
+    "family": "general",
+    "seed": 6689,
+    "reference": {
+      "spec": "baseline",
+      "flavor": "oracle",
+      "commit": "9b21f58a35e047559099a74cb8074b18b1782fa8",
+      "bundleSha256": "34aea5b4ed0a40064576f0ab5a1fbddfc1f6048ca981b40f3f6fb89bc0536a26"
+    },
+    "candidate": {
+      "spec": "source",
+      "flavor": "oracle",
+      "commit": "working-tree",
+      "head": "0098883d8b8bd6992f01b950c90217ea3fc760b9",
+      "dirty": false,
+      "bundleSha256": "5d120a8246b007c227caefe3377e9970f71bca9d69d7df1aedfcde8846ada671"
+    },
+    "foundAt": "2026-10-28T12:55:22.860Z"
+  },
+  "size": {
+    "original": 262,
+    "minimized": 21
+  },
+  "mismatch": {
+    "index": 66,
+    "baseline": "snap:0{s0 v24 in[] out[3,4,1]} 1{s0 v22 in[0] out[4,2]} 2{s2 v20 in[1] out[]} 3{s2 v22 in[0] out[4]} 4{s16 vundefined in[3,0,1] out[]}",
+    "candidate": "snap:0{s0 v24 in[] out[3,4,1]} 1{s0 v22 in[0] out[4,2]} 2{s2 v20 in[1] out[]} 3{s2 v22 in[0] out[4]} 4{s19 vundefined in[3,0,1] out[]}"
+  },
+  "program": {
+    "spec": {
+      "host": "plain",
+      "producers": 1,
+      "consumers": [
+        {
+          "reads": [
+            {
+              "node": 0,
+              "mode": "lazy"
+            }
+          ],
+          "action": {
+            "kind": "write",
+            "producer": 0,
+            "delta": 2
+          },
+          "actionWhen": 1
+        },
+        {
+          "reads": [
+            {
+              "node": 1,
+              "mode": "lazy"
+            }
+          ],
+          "action": {
+            "kind": "write",
+            "producer": 0,
+            "delta": 2
+          },
+          "actionWhen": 2
+        },
+        {
+          "reads": [
+            {
+              "node": 0,
+              "mode": "lazy"
+            }
+          ],
+          "action": {
+            "kind": "write",
+            "producer": 0,
+            "delta": 2
+          },
+          "actionWhen": 0
+        }
+      ],
+      "watchers": [
+        {
+          "reads": [
+            {
+              "node": 3,
+              "mode": "lazy"
+            },
+            {
+              "node": 0,
+              "mode": "eager"
+            },
+            {
+              "node": 1,
+              "mode": "lazy"
+            },
+            {
+              "node": 2,
+              "mode": "untracked"
+            }
+          ],
+          "cleanup": {
+            "throwWhen": 3
+          }
+        }
+      ]
+    },
+    "ops": [
+      {
+        "kind": "run",
+        "watcher": 0
+      },
+      {
+        "kind": "flush"
+      }
+    ]
+  }
+}

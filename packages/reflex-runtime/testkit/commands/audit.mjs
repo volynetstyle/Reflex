@@ -202,10 +202,9 @@ const same = (a, b) =>
   a.length === b.length && a.every((entry, index) => entry === b[index]);
 
 // The same programs for every mutant, so stage counts compare across mutants.
-// Seeds start past the region where the default generator's xorshift, seeded
-// with a small integer, draws a tiny first number and builds only wide or deep
-// specs (every default seed below 960).
-const CORPUS_FAMILIES = ["default", "hub", "swarm", "targeted"];
+// `general` instead of the frozen `default`, whose low seeds are wide or deep
+// specs only; seeds start at 1,000 for `swarm`, which is built on `default`.
+const CORPUS_FAMILIES = ["general", "hub", "swarm", "targeted"];
 const CORPUS_FIRST_SEED = 1000;
 
 /** Infect and propagate over generated programs: counts and first programs. */

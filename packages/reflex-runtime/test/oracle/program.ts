@@ -158,8 +158,8 @@ export function selfInvalidates(spec: GraphSpec): boolean {
  * family choice: every default seed below 960 builds a wide or deep spec, so
  * the smoke budget (300 seeds) runs wide programs only and the ci budget
  * (2,000) is 49% wide or deep instead of 6%. The default and hub seeds are
- * pinned (corpus, documented seeds), so the generator is left as is; a run
- * that needs the general distribution starts past seed 960 (`pnpm rt audit`).
+ * pinned (corpus, documented seeds), so the generator is left as is: the
+ * `general` family (families.ts) seeds it through `mixSeed` instead.
  */
 export function prng(seed: number): () => number {
   let state = seed >>> 0 || 0x9e3779b9;
@@ -169,6 +169,22 @@ export function prng(seed: number): () => number {
     state ^= state << 5;
     return (state >>> 0) / 0x100000000;
   };
+}
+
+/**
+ * MurmurHash3 fmix32: an avalanche over the 32 bits of `seed`, so adjacent
+ * seed identifiers do not give adjacent xorshift states. Over seeds 1 to 300,
+ * 2,000 and 10,000, `prng(mixSeed(seed))` draws a first number below 0.06 for
+ * 5.3%, 6.4% and 6.2% of the seeds, against 100%, 49% and 9.8% unmixed.
+ */
+export function mixSeed(seed: number): number {
+  let x = seed >>> 0;
+  x ^= x >>> 16;
+  x = Math.imul(x, 0x85ebca6b);
+  x ^= x >>> 13;
+  x = Math.imul(x, 0xc2b2ae35);
+  x ^= x >>> 16;
+  return x >>> 0;
 }
 
 const int = (random: () => number, n: number) => Math.floor(random() * n);

@@ -1,0 +1,115 @@
+{
+  "schema": "testkit.counterexample",
+  "schemaVersion": 1,
+  "id": "general-1555-strict",
+  "expect": "diverge",
+  "level": "strict",
+  "policy": "baseline",
+  "origin": {
+    "command": "replay",
+    "family": "general",
+    "seed": 1555,
+    "reference": {
+      "spec": "baseline",
+      "flavor": "oracle",
+      "commit": "9b21f58a35e047559099a74cb8074b18b1782fa8",
+      "bundleSha256": "34aea5b4ed0a40064576f0ab5a1fbddfc1f6048ca981b40f3f6fb89bc0536a26"
+    },
+    "candidate": {
+      "spec": "source",
+      "flavor": "oracle",
+      "commit": "working-tree",
+      "head": "0098883d8b8bd6992f01b950c90217ea3fc760b9",
+      "dirty": false,
+      "bundleSha256": "5d120a8246b007c227caefe3377e9970f71bca9d69d7df1aedfcde8846ada671"
+    },
+    "foundAt": "2026-10-28T12:53:30.831Z"
+  },
+  "size": {
+    "original": 148,
+    "minimized": 26
+  },
+  "mismatch": {
+    "index": 13,
+    "baseline": "inv:A:5",
+    "candidate": "idle:A"
+  },
+  "program": {
+    "spec": {
+      "host": "claim",
+      "producers": 3,
+      "consumers": [
+        {
+          "reads": [
+            {
+              "node": 2,
+              "mode": "lazy"
+            },
+            {
+              "node": 1,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 3,
+              "mode": "lazy"
+            }
+          ]
+        }
+      ],
+      "watchers": [
+        {
+          "reads": [
+            {
+              "node": 4,
+              "mode": "lazy"
+            },
+            {
+              "node": 2,
+              "mode": "lazy"
+            },
+            {
+              "node": 1,
+              "mode": "eager"
+            }
+          ],
+          "cleanup": {
+            "action": {
+              "kind": "write",
+              "producer": 2,
+              "delta": 1
+            },
+            "throwWhen": 1
+          }
+        }
+      ]
+    },
+    "ops": [
+      {
+        "kind": "run",
+        "watcher": 0
+      },
+      {
+        "kind": "batch",
+        "ops": [
+          {
+            "kind": "write",
+            "producer": 1,
+            "value": 3
+          },
+          {
+            "kind": "flush"
+          },
+          {
+            "kind": "write",
+            "producer": 2,
+            "value": 1
+          }
+        ]
+      }
+    ]
+  }
+}

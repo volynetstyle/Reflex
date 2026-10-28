@@ -243,6 +243,22 @@ describe("program families and reduction", () => {
     }
   });
 
+  it("samples the general distribution from the first seeds", async () => {
+    // default seeds below 960 are wide or deep specs only (program.ts prng);
+    // general must give generateSpec's 6% at a smoke-sized budget.
+    const { families } = await oracle("families.ts");
+    const { prng, mixSeed } = await oracle("program.ts");
+    let shaped = 0;
+    let cleanups = 0;
+    for (let seed = 1; seed <= 300; seed++) {
+      if (prng(mixSeed(seed))() < 0.06) shaped++;
+      if (families.general.generate(seed).spec.watchers.some((w) => w.cleanup))
+        cleanups++;
+    }
+    assert.ok(shaped >= 6 && shaped <= 36, `wide or deep: ${shaped}/300`);
+    assert.ok(cleanups > 50, `programs with a cleanup: ${cleanups}/300`);
+  });
+
   it("swarm only removes features", async () => {
     const { generateSwarmProgram, swarmConfiguration } =
       await oracle("families.ts");

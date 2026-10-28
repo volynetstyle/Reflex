@@ -29,6 +29,19 @@ working tree under the `baseline` policy of `../verdict.ts`:
   `default-4326-observable.json` covers the F16 recovery that also preserves
   a scheduler claim; `default-12735-strict.json` covers a redundant F17
   notification rejected by a host that already owns the watcher.
+- `general-259-strict.json`, `general-1555-strict.json`,
+  `general-6689-strict.json` and `general-9748-strict.json` (`expect:
+diverge`): what the `general` family found on its first 10,000 seeds on
+  2026-10-28, beyond every accepted class. 259 has the F17 signature (an
+  own-epoch baseline delivery) in a self-invalidating program whose shared F1
+  liveness violation the F17 rule does not allow. 1555 is the F16 correction
+  inside a batch: the delivery differs before the snapshot the F16 rule
+  reads; the facade's hosts retry that watcher (L5), the oracle's host does
+  not. 6689 (fewer host deliveries in the candidate) and 9748 (a self-reading
+  computed left `Unknown` by the baseline, clean in the candidate) are in the
+  F1 domain but are neither an extra candidate delivery nor retention flags.
+  None is classified yet: each needs its own acceptance evidence or is a
+  defect.
 - `hub-2301-reentry.json` and `default-13348-reentry.json` cover recursive
   evaluation through cleanup and a host hook; `hook-aborted-wave.json` checks
   the invariant checker's boundary after a throwing host hook. Structural

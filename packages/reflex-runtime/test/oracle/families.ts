@@ -4,12 +4,19 @@
  * program; seeds are independent between families, and the `default` and
  * `hub` distributions are the pinned generators of program.ts.
  *
+ * `default` is a frozen historical corpus, skewed by its seeding: below seed
+ * 960 it builds only wide or deep specs (program.ts, `prng`). `general` is the
+ * same generator with decorrelated seeds, the distribution `generateSpec`
+ * describes; use it where a seed budget must mean a sample of that
+ * distribution.
+ *
  * Imports carry the `.ts` extension so Node runs this file with type
  * stripping, without a build step.
  */
 import {
   generateHubProgram,
   generateProgram,
+  mixSeed,
   prng,
   type CallbackSpec,
   type GraphSpec,
@@ -188,6 +195,11 @@ export const families: Readonly<Record<string, ProgramFamily>> = {
     id: "default",
     summary: "pinned default distribution (program.ts generateProgram)",
     generate: (seed) => generateProgram(seed),
+  },
+  general: {
+    id: "general",
+    summary: "the default generator with decorrelated seeds (mixSeed)",
+    generate: (seed) => generateProgram(mixSeed(seed)),
   },
   hub: {
     id: "hub",

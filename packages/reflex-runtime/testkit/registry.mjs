@@ -276,7 +276,9 @@ export const SUITES = [
     files: ["test/oracle/oracle.invariants.test.ts"],
     runner: source,
     tiers: ["ci", "deep"],
-    budgets: { deep: ORACLE_BUDGETS.deep },
+    budgets: {
+      deep: { ...ORACLE_BUDGETS.deep, ORACLE_GENERAL_SEEDS: "20000" },
+    },
   },
   {
     id: "oracle.corpus",
@@ -400,7 +402,7 @@ export const SUITES = [
         "--policy",
         "representation",
         "--families",
-        "default,hub,targeted,swarm",
+        "default,general,hub,targeted,swarm",
         "--programs",
         "20000",
         "--max-failures",
@@ -516,7 +518,7 @@ export const SUITES = [
         "--policy",
         "exact",
         "--families",
-        "default,hub,targeted,swarm",
+        "default,general,hub,targeted,swarm",
         "--programs",
         "300",
       ],

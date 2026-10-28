@@ -94,9 +94,14 @@ alone, given ten times the steps, stopped at 1,531 after 20 s.
 seeded with small integers, draws a tiny first number, which picks the spec
 shape: default seeds 1 to 959 are all wide or deep specs, with no cleanup,
 throw or hook. The smoke budget (300 seeds) therefore runs one shape only,
-the ci budget (2,000) about half; `self.oracle-controls` takes its cleanup
-control from `hub`, and the audit's corpus starts at seed 1,000. The seeds
-are pinned, so changing the generator is a decision, not a fix.
+the ci budget (2,000) about half. `default` stays as it is: a frozen
+historical corpus. The `general` family is the same generator with seeds
+decorrelated by an avalanche mix (`mixSeed`, MurmurHash3 fmix32), so seeds
+1 to 300 already give the 6% wide or deep share `generateSpec` describes,
+and a seed still names one program. On its first 10,000 seeds it found four
+differences from the baseline that no accepted class explains
+(`test/oracle/corpus/general-*`, open); it joins the vitest oracle once they
+are classified.
 
 **Vary the feature mix (swarm testing).** A uniform generator puts nearly
 every feature in nearly every program, so a feature that masks a failure is
