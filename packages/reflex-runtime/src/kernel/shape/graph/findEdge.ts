@@ -8,7 +8,7 @@ import { observeRuntimeProjection } from "@runtime/kernel/projection";
  * before its outgoing side is the base walk alone. The finger's whole cost
  * when it does not help: see findEdgeInLockstepFromFinger.
  */
-const OUTGOING_FINGER_BUDGET = 8;
+// const OUTGOING_FINGER_BUDGET = 8;
 
 /**
  * Find the edge `producer -> consumer`, or prove that there is none.
@@ -100,6 +100,9 @@ export function findEdgeInLockstep(
   return edge;
 }
 
+const FIRST_WALK = 1 << 0;
+const SECOND_WALK = 1 << 1;
+
 /**
  * The lockstep past the head start, raced against the finger: for its first
  * 2 × OUTGOING_FINGER_BUDGET steps the outgoing link alternates between the
@@ -132,36 +135,63 @@ function findEdgeInLockstepFromFinger(
   let after = finger.nextOut ?? producer.firstOut!;
   let before = finger.prevOut ?? producer.lastOut!;
 
-  for (let step = 0; step < 2 * OUTGOING_FINGER_BUDGET; step++) {
-    if (__PROFILE__)
-      observeRuntimeProjection?.("projection.semantic.tracking.locate.step");
-
-    if ((step & 1) === 1) {
+  for (let step = 0; step < 16 /**2 * OUTGOING_FINGER_BUDGET*/; step++) {
+    {
+      if (__PROFILE__)
+        observeRuntimeProjection?.("projection.semantic.tracking.locate.step");
+    }
+    if ((step & FIRST_WALK) === 1) {
       // The base outgoing walk, at half its usual pace.
-      if (out === null) return null;
-      if (out.to === consumer) return out;
+      if (out === null) {
+        return null;
+      }
+
+      if (out.to === consumer) {
+        return out;
+      }
+
       out = out.nextOut;
-    } else if ((step & 2) === 0) {
-      if (after.to === consumer) return after;
+    } else if ((step & SECOND_WALK) === 0) {
+      if (after.to === consumer) {
+        return after;
+      }
+
       after = after.nextOut ?? producer.firstOut!;
     } else {
-      if (before.to === consumer) return before;
+      if (before.to === consumer) {
+        return before;
+      }
+
       before = before.prevOut ?? producer.lastOut!;
     }
 
     if (back !== null) {
-      if (__PROFILE__)
-        observeRuntimeProjection?.("projection.semantic.tracking.locate.step");
+      {
+        if (__PROFILE__)
+          observeRuntimeProjection?.(
+            "projection.semantic.tracking.locate.step",
+          );
+      }
 
-      if (back.from === producer) return back;
+      if (back.from === producer) {
+        return back;
+      }
+
       back = back.prevIn;
     }
 
     if (ahead !== null) {
-      if (__PROFILE__)
-        observeRuntimeProjection?.("projection.semantic.tracking.locate.step");
+      {
+        if (__PROFILE__)
+          observeRuntimeProjection?.(
+            "projection.semantic.tracking.locate.step",
+          );
+      }
 
-      if (ahead.from === producer) return ahead;
+      if (ahead.from === producer) {
+        return ahead;
+      }
+
       ahead = ahead.nextIn;
     } else if (back === null) {
       return null;
@@ -186,25 +216,41 @@ function findEdgeInLockstepPastHeadStart(
   ahead: ReactiveEdge | null,
 ): ReactiveEdge | null {
   while (out !== null) {
-    if (__PROFILE__)
-      observeRuntimeProjection?.("projection.semantic.tracking.locate.step");
+    {
+      if (__PROFILE__)
+        observeRuntimeProjection?.("projection.semantic.tracking.locate.step");
+    }
+    if (out.to === consumer) {
+      return out;
+    }
 
-    if (out.to === consumer) return out;
     out = out.nextOut;
 
     if (back !== null) {
-      if (__PROFILE__)
-        observeRuntimeProjection?.("projection.semantic.tracking.locate.step");
+      {
+        if (__PROFILE__)
+          observeRuntimeProjection?.(
+            "projection.semantic.tracking.locate.step",
+          );
+      }
+      if (back.from === producer) {
+        return back;
+      }
 
-      if (back.from === producer) return back;
       back = back.prevIn;
     }
 
     if (ahead !== null) {
-      if (__PROFILE__)
-        observeRuntimeProjection?.("projection.semantic.tracking.locate.step");
+      {
+        if (__PROFILE__)
+          observeRuntimeProjection?.(
+            "projection.semantic.tracking.locate.step",
+          );
+      }
+      if (ahead.from === producer) {
+        return ahead;
+      }
 
-      if (ahead.from === producer) return ahead;
       ahead = ahead.nextIn;
     } else if (back === null) {
       return null;

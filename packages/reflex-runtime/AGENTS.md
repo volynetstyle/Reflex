@@ -57,6 +57,7 @@ A change that trades a higher priority for a lower one is rejected.
 | Source map, change workflow, checks per change kind            | [docs/GUIDE.md](./docs/GUIDE.md)                                                                           |
 | Benchmark method and gate                                      | [docs/performance/BENCHMARK_PROTOCOL.md](./docs/performance/BENCHMARK_PROTOCOL.md)                         |
 | Findings register (F-numbers), open defects                    | [docs/characterization/SEMANTIC_CHARACTERIZATION.md](./docs/characterization/SEMANTIC_CHARACTERIZATION.md) |
+| Test catalog, tiers, gates, verdict policies, testing method   | [testkit/README.md](./testkit/README.md)                                                                   |
 
 Open: F1, a computed invalidated during its own evaluation, is an owner
 decision. Do not change computed reentrancy semantics without one.
@@ -73,6 +74,9 @@ pnpm check:rules             # rule citations exist
 pnpm check:architecture      # layering and debug boundary
 pnpm check:bundle-identity   # production bundle unchanged vs HEAD
 pnpm --filter @volynets/reflex test   # facade, includes the liveness oracle
+pnpm rt run --tier smoke     # testkit: the catalog at a budget (smoke | ci | deep)
+pnpm rt gate <kind>          # the checks a change kind requires (docs/GUIDE.md)
+pnpm rt doctor               # every test file owned by one suite
 ```
 
 Shape analysis and paired timing: [docs/GUIDE.md](./docs/GUIDE.md#checks-by-change-kind).

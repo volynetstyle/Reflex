@@ -7,6 +7,7 @@
     "build": "pnpm build:product",
     "test": "pnpm test:product",
     "test:e2e:runtime": "pnpm --filter @volynets/reflex-runtime test:e2e",
+    "rt": "node packages/reflex-runtime/testkit/cli.mjs",
     "bench": "pnpm -r bench",
     "bench:runtime": "pnpm --filter @volynets/reflex-runtime bench:runtime",
     "bench:runtime:json": "node tooling/benchmarks/collect.mjs",

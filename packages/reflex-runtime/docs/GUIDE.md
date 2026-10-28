@@ -61,6 +61,10 @@ enforces the direction and the debug boundary (`check:architecture`).
 | Build pipeline (`rollup/`, inlining)      | `build`, `test:e2e`, `check:artifacts`, the `rollup/` contract tests, and the paired CI comparison                                                                     |
 | Benchmark harness (`bench/`)              | a paired run that reproduces a known result, and [BENCHMARK_PROTOCOL.md](./performance/BENCHMARK_PROTOCOL.md) updated                                                  |
 
+`pnpm rt gate <kind>` (`docs`, `refactor`, `semantic`, `hot-path`, `build`,
+`bench-harness`) runs the automatable checks of a row and prints the others as
+obligations; the [testkit](../testkit/README.md) catalogs every suite.
+
 The paired comparison is `.github/workflows/runtime-paired-benchmarks.yml`
 (`workflow_dispatch`, `baseline=<commit>`). It builds both sides with the
 candidate's toolchain, so it measures source changes, not build changes.

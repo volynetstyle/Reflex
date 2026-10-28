@@ -102,7 +102,7 @@ describe("algorithm-independent invariants", () => {
   // The checker must see a lost delivery: the baseline leaves a dirty watcher
   // undelivered (F15) on this generated program, outside the F1 domain.
   it(`detects F15 in the baseline ${BASELINE_COMMIT.slice(0, 12)}`, () => {
-    const program = generateProgram(994);
+    const program = generateProgram(1276);
     expect(selfInvalidates(program.spec)).toBe(false);
     expect(
       violations(baseline, program).some((entry) =>

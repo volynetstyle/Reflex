@@ -22,8 +22,10 @@
 // Programs come from the oracle generators and from a targeted generator of
 // wide consumers (>= 32 dependencies) whose conditional reads insert a
 // dependency in front, in the middle or at the end, with sibling watchers on
-// shared producers: the stock generator reaches a long unvisited suffix
-// behind a new dependency in about 1 program in 8,000.
+// shared producers (test/oracle/families.ts, family `targeted`): the stock
+// generator reaches a long unvisited suffix behind a new dependency in about
+// 1 program in 8,000. `pnpm rt diff --policy representation` runs the same
+// comparison over any families.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
@@ -34,8 +36,8 @@ import {
   generateHubProgram,
   generateProgram,
   interpret,
-  prng,
 } from "../../test/oracle/program.ts";
+import { generateTargetedProgram } from "../../test/oracle/families.ts";
 import { variants } from "../tracking-ladder/variants.mjs";
 
 const packageRoot = path.resolve(import.meta.dirname, "../..");
@@ -85,66 +87,6 @@ function build(spec) {
 
 const base = await build(BASE);
 const candidate = await build(CANDIDATE);
-
-/**
- * Wide consumers over `width` producers. Each reads a toggle-dependent extra
- * producer in front, in the middle or at the end, so a toggle write makes the
- * next pass meet a new dependency before (or after) a long unvisited suffix.
- * Watchers read the wide consumers and some of the same producers directly,
- * so subscriber order on shared producers is observable.
- */
-function generateTargetedProgram(seed) {
-  const random = prng(seed);
-  const int = (n) => Math.floor(random() * n);
-  const width = 34 + int(14);
-  const producers = width + 4; // data, then a toggle and three extras
-  const toggle = width;
-  const extras = [width + 1, width + 2, width + 3];
-  const consumers = [];
-  const wide = 1 + int(3);
-  for (let c = 0; c < wide; c++) {
-    const reads = [];
-    for (let k = 0; k < width; k++) reads.push({ node: k, mode: "lazy" });
-    const where = int(3);
-    const extra = {
-      node: extras[int(3)],
-      mode: "lazy",
-      when: { producer: toggle, parity: int(2) },
-    };
-    if (where === 0) reads.unshift(extra);
-    else if (where === 1) reads.splice(int(width), 0, extra);
-    else reads.push(extra);
-    consumers.push({
-      reads,
-      ...(random() < 0.3
-        ? { reverseWhen: { producer: extras[int(3)], parity: int(2) } }
-        : {}),
-    });
-  }
-  const watchers = [];
-  const nWatchers = 2 + int(3);
-  for (let w = 0; w < nWatchers; w++) {
-    const reads = [{ node: producers + int(wide), mode: "lazy" }];
-    for (let k = 0; k < 2; k++)
-      reads.push({ node: int(producers), mode: "lazy" });
-    watchers.push({ reads });
-  }
-  const ops = [];
-  const total = 20 + int(20);
-  for (let i = 0; i < total; i++) {
-    const r = random();
-    if (r < 0.3) ops.push({ kind: "write", producer: toggle, value: int(4) });
-    else if (r < 0.55)
-      ops.push({ kind: "write", producer: int(producers), value: int(5) });
-    else if (r < 0.75) ops.push({ kind: "flush" });
-    else if (r < 0.85)
-      ops.push({ kind: "read", node: producers + int(wide), mode: "lazy" });
-    else if (r < 0.92) ops.push({ kind: "run", watcher: int(nWatchers) });
-    else ops.push({ kind: "snapshot" });
-  }
-  ops.push({ kind: "flush" }, { kind: "snapshot" });
-  return { spec: { host: "claim", producers, consumers, watchers }, ops };
-}
 
 const results = {};
 const shown = [];

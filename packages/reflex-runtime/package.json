@@ -74,6 +74,8 @@
     "bench:core": "pnpm build:perf && node --expose-gc dist/perf.js",
     "perf:tree": "pnpm build:ts && pnpm build:perf && node --expose-gc dist/perf-tree.js",
     "test": "vitest run",
+    "rt": "node testkit/cli.mjs",
+    "test:testkit": "node testkit/cli.mjs run self",
     "test:projection": "vitest run --config vite.projection.config.ts",
     "test:coverage": "vitest run --coverage",
     "test:dev": "vitest run --config vite.dev.config.ts",

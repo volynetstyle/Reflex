@@ -124,12 +124,13 @@ export function touchesEpoch(ops: readonly Op[]): boolean {
 }
 
 /**
- * F1 domain: some consumer's nested action writes a producer that consumer
- * reads, directly or through other consumers. Such a consumer can be
+ * F1 domain: a consumer or watcher's nested action writes a producer it
+ * reads, directly or through other consumers. Such a node can be
  * invalidated during its own evaluation (F1, open), so liveness is not
  * required of the program.
  */
 export function selfInvalidates(spec: GraphSpec): boolean {
+  const callbacks = [...spec.consumers, ...spec.watchers];
   const memo = new Map<number, Set<number>>();
   const reach = (id: number): Set<number> => {
     if (id < spec.producers) return new Set([id]);
@@ -137,11 +138,11 @@ export function selfInvalidates(spec: GraphSpec): boolean {
     if (known !== undefined) return known;
     const out = new Set<number>();
     memo.set(id, out); // cycle guard
-    for (const read of spec.consumers[id - spec.producers]?.reads ?? [])
+    for (const read of callbacks[id - spec.producers]?.reads ?? [])
       for (const producer of reach(read.node)) out.add(producer);
     return out;
   };
-  return spec.consumers.some(
+  return callbacks.some(
     (consumer, index) =>
       consumer.action?.kind === "write" &&
       reach(spec.producers + index).has(consumer.action.producer),
@@ -553,7 +554,7 @@ const OBSERVABLE_MASK = 0b0010_0011; // Unknown | Changed | Scheduled
  *
  * - integrity: every incoming edge is in its source's outgoing list and the
  *   reverse, and no source appears twice in a node's incoming list;
- * - exact dependencies: a node whose last execution returned has exactly the
+ * - exact dependencies: a node whose last non-reentrant execution returned has exactly the
  *   incoming sources it read with tracking during that execution, in order of
  *   first read. Disposing a node unlinks its edges, during or after that
  *   execution; a later read of a disposed producer links it again. A node
@@ -563,12 +564,17 @@ const OBSERVABLE_MASK = 0b0010_0011; // Unknown | Changed | Scheduled
  *   later execution starts, whether the execution that saw the disposal
  *   returned or threw. A read is tracked when it runs with the
  *   node as `currentConsumer`, outside `untracked`, and is not an eager
- *   consumer read. A failed execution leaves the set unspecified.
+ *   consumer read. A failed or recursively reentered execution leaves the
+ *   exact set unspecified; integrity and tail checks still apply. Reentry
+ *   resets the same node's tracking frontier while its outer callback runs,
+ *   outside the acyclic evaluation domain of this read-set oracle.
  * - liveness, for a live watcher whose last attempt executed and did not
  *   throw: after every operation, a dirty one is in a host queue (delivery,
  *   F15); at quiescence (a flush op drained both queues), a clean one has no
  *   dirty source (reachability: push stops at a dirty node, F16). A flush
- *   cap drops host deliveries and ends liveness checking. Watchers
+ *   cap drops host deliveries and ends liveness checking. A throwing host
+ *   invalidation hook also ends it: the committed write need not finish its
+ *   aborted wave (docs/RUNTIME.md, "Producers"). Watchers
  *   that never ran or last failed are left to host retry policy, which this
  *   host does not implement.
  *
@@ -614,7 +620,9 @@ export function interpret(
   const checking = options.invariants === true;
   // Invariant bookkeeping only; never affects the trace otherwise.
   // Expected incoming sources of each running execution, in first-read order.
-  const tracked = new Map<Node, number[]>();
+  // Reentrant evaluation of the same node must preserve the outer frame.
+  const tracked = new Map<Node, number[][]>();
+  const reentered = new Set<Node>();
   // Event clock ordering executions against disposals.
   let clock = 0;
   const committed = new Map<
@@ -628,15 +636,17 @@ export function interpret(
     goneAt.set(id, ++clock);
     if (tracked.has(nodes[id]!)) disposedWhileRunning.add(id);
     else disposedWhileRunning.delete(id);
-    for (const reads of tracked.values()) {
-      const at = reads.indexOf(id);
-      if (at !== -1) reads.splice(at, 1);
-    }
+    for (const frames of tracked.values())
+      for (const reads of frames) {
+        const at = reads.indexOf(id);
+        if (at !== -1) reads.splice(at, 1);
+      }
   };
 
   rt.resetRuntimeContext();
   const contextA = rt.getActiveRuntimeContext();
   const contextB = rt.createRuntimeContext();
+  let abortedDelivery = false;
   for (const [name, context] of [
     ["A", contextA],
     ["B", contextB],
@@ -650,7 +660,12 @@ export function interpret(
             hookCalls += 1;
             if (hookCalls % spec.hook.every === 0) {
               trace.push(`hook-action:${hookCalls}`);
-              performAction(spec.hook.action);
+              try {
+                performAction(spec.hook.action);
+              } catch (error) {
+                abortedDelivery = true;
+                throw error;
+              }
             }
           }
           if (spec.host === "claim" && !rt.claimWatcherSchedule(node)) {
@@ -690,7 +705,7 @@ export function interpret(
       mode !== "untracked" &&
       (id < spec.producers || mode !== "eager")
     ) {
-      const reads = tracked.get(reader);
+      const reads = tracked.get(reader)?.at(-1);
       if (reads !== undefined && !reads.includes(id)) reads.push(id);
     }
     return value;
@@ -717,17 +732,26 @@ export function interpret(
     const node = nodes[id]!;
     const reads: number[] = [];
     const start = ++clock;
-    tracked.set(node, reads);
+    const frames = tracked.get(node) ?? [];
+    if (frames.length !== 0) reentered.add(node);
+    frames.push(reads);
+    tracked.set(node, frames);
     try {
       const result = compute();
-      committed.set(id, { reads, start, end: ++clock });
+      const end = ++clock;
+      if (reentered.has(node)) committed.delete(id);
+      else committed.set(id, { reads, start, end });
       executed.add(id);
       return result;
     } catch (error) {
       committed.delete(id);
       throw error;
     } finally {
-      tracked.delete(node);
+      frames.pop();
+      if (frames.length === 0) {
+        tracked.delete(node);
+        reentered.delete(node);
+      }
     }
   };
 
@@ -864,7 +888,7 @@ export function interpret(
   // the runtime's obligation for the rest of the program.
   let capped = false;
   const checkLiveness = (quiescent: boolean): void => {
-    if (capped) return;
+    if (capped || abortedDelivery) return;
     nodes.forEach((node, id) => {
       if (!isWatcher(id) || disposed.has(id)) return;
       if (!executed.has(id) || failed.has(id)) return;

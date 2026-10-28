@@ -129,6 +129,10 @@ packages/*.lab/
 !/tooling/build/
 !/tooling/build/**
 
+# Runtime testkit helpers are authored sources, not build outputs.
+!/packages/reflex-runtime/testkit/lib/
+!/packages/reflex-runtime/testkit/lib/**
+
 # Qualification and isolated audit outputs
 /artifacts/
 /.tmp/
