@@ -68,6 +68,7 @@ export interface RuntimeProfileCounters {
   trackingEdgeMoved: number;
   trackingSuffixEagerDetach: number;
   trackingLocateSteps: number;
+  trackingLocateBirthProofs: number;
   cleanupCalls: number;
   cleanupSkipped: number;
   cleanupEdgesDropped: number;
@@ -219,6 +220,7 @@ const COUNTER_NAMES = [
   "trackingEdgeMoved",
   "trackingSuffixEagerDetach",
   "trackingLocateSteps",
+  "trackingLocateBirthProofs",
   "cleanupCalls",
   "cleanupSkipped",
   "cleanupEdgesDropped",

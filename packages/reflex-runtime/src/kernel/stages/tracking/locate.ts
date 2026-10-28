@@ -1,6 +1,39 @@
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import { findEdgeInLockstep } from "@runtime/kernel/shape/graph/findEdge";
+import { BirthUnordered } from "@runtime/kernel/shape/meta";
 import type ReactiveNode from "@runtime/kernel/shape/node";
+import { trackingBound, trackingBoundConsumer } from "@runtime/kernel/state";
+import { observeRuntimeProjection } from "@runtime/kernel/projection";
+
+/**
+ * Birth-order proof of absence (INV-T4), in constant time.
+ *
+ * Any edge of the pair that existed when the consumer's activation entered
+ * was born no later than the bound taken then: born <= stamp, and the head
+ * of the incoming list carries its largest stamp. While the bound still
+ * names this consumer, no activation has entered since, so nothing but this
+ * pass appended to the producer's outgoing list, and an edge this pass
+ * linked for the pair is the newest one, already compared by the caller. So
+ * when the outgoing list is sorted by birth and its first edge is born after
+ * the bound, the pair has no edge.
+ */
+function isAbsentByBirth(
+  producer: ReactiveNode,
+  consumer: ReactiveNode,
+): boolean {
+  const bound = trackingBound;
+  if (
+    trackingBoundConsumer === consumer &&
+    bound !== 0 &&
+    (producer.state & BirthUnordered) === 0 &&
+    producer.firstOut!.born > bound
+  ) {
+    if (__PROFILE__)
+      observeRuntimeProjection?.("projection.semantic.tracking.locate.birth");
+    return true;
+  }
+  return false;
+}
 
 /**
  * Locate the edge `producer -> consumer` for a read that no locality tier
@@ -32,6 +65,8 @@ export function locateTrackedEdge(
   if (newest.to === consumer) return newest;
   if (newest === producer.firstOut) return null;
 
+  if (isAbsentByBirth(producer, consumer) === true) return null;
+
   return findEdgeInLockstep(producer, consumer, back, ahead);
 }
 
@@ -55,7 +90,10 @@ export function locateReorderedEdge(
   ahead: ReactiveEdge | null,
 ): ReactiveEdge | null {
   const newest = producer.lastOut;
-  if (newest !== null && newest.to === consumer) return newest;
+  if (newest !== null) {
+    if (newest.to === consumer) return newest;
+    if (isAbsentByBirth(producer, consumer) === true) return null;
+  }
 
   return findEdgeInLockstep(producer, consumer, back, ahead);
 }

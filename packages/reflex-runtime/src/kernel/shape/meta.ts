@@ -84,6 +84,13 @@ export const WatcherCleanupPending = 1 << 7; // 128
  */
 export const Revalidate = 1 << 8; // 256
 
+/**
+ * The producer's outgoing list is not sorted by edge birth: an edge was
+ * appended after a younger-born one, which nesting does (an outer pass reads
+ * the producer after a nested pass with a later stamp did). Sticky; the birth-order absence proof skips such a producer (INV-T4).
+ */
+export const BirthUnordered = 1 << 9; // 512
+
 // <!-- Watcher end -->
 
 // ...

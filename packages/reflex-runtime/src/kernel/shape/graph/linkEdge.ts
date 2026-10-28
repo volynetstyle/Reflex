@@ -1,4 +1,5 @@
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
+import { BirthUnordered } from "@runtime/kernel/shape/meta";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 
 /**
@@ -16,10 +17,14 @@ export function linkEdge(
   stamp = 0,
 ): ReactiveEdge {
   const prevOut = from.lastOut;
+  // Appending a younger-born edge keeps the outgoing list sorted by birth;
+  // an older one marks the producer for good (INV-T4).
+  if (prevOut !== null && prevOut.born > stamp) from.state |= BirthUnordered;
   const nextIn = after === null ? to.firstIn : after.nextIn;
 
   const edge: ReactiveEdge = {
     stamp,
+    born: stamp,
     from,
     to,
     prevOut,
@@ -52,9 +57,13 @@ export function linkFirstTrackedEdgeUnchecked(
   stamp = 0,
 ): ReactiveEdge {
   const prevOut = from.lastOut;
+  // Appending a younger-born edge keeps the outgoing list sorted by birth;
+  // an older one marks the producer for good (INV-T4).
+  if (prevOut !== null && prevOut.born > stamp) from.state |= BirthUnordered;
 
   const edge: ReactiveEdge = {
     stamp,
+    born: stamp,
     from,
     to,
     prevOut,
@@ -83,9 +92,13 @@ export function appendTrackedEdgeAfterCursorUnchecked(
   stamp = 0,
 ): ReactiveEdge {
   const prevOut = from.lastOut;
+  // Appending a younger-born edge keeps the outgoing list sorted by birth;
+  // an older one marks the producer for good (INV-T4).
+  if (prevOut !== null && prevOut.born > stamp) from.state |= BirthUnordered;
 
   const edge: ReactiveEdge = {
     stamp,
+    born: stamp,
     from,
     to,
     prevOut,

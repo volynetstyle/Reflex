@@ -62,6 +62,13 @@ export function enterConsumerTracking(
   currentConsumer = consumer;
   runtimeState |= RuntimeState.Tracking;
   trackingStamp++;
+  // Birth bound (INV-T4), read before the pass restamps anything: the head
+  // of the incoming list carries the largest stamp on it. Not restored on
+  // exit: after a nested activation it names another consumer, and the
+  // outer pass falls back to the lockstep.
+  const head = consumer.firstIn;
+  trackingBound = head !== null ? head.stamp : 0;
+  trackingBoundConsumer = consumer;
   return previousConsumer;
 }
 
@@ -95,17 +102,28 @@ export function restoreConsumerTracking(
 export var trackingStamp = 0;
 
 /**
+ * Birth bound of the last activation that entered tracking, for
+ * `trackingBoundConsumer` only: no edge that consumer held when the
+ * activation entered was born later (INV-T4). 0 disables the proof.
+ */
+export var trackingBound = 0;
+export var trackingBoundConsumer: ReactiveNode | null = null;
+
+/**
  * Move the clock forward to `epoch`. A value at or below the current epoch is
  * ignored: rewinding would let a stale stamp pose as a current-pass proof.
  */
 export function setTrackingStamp(epoch: number): void {
   if (epoch > trackingStamp) trackingStamp = epoch;
+  trackingBoundConsumer = null;
 }
 
 /**
  * Advance the tracking epoch and return the new value.
  */
 export function advanceTrackingStamp(): number {
+  // A hand-driven pass enters without a birth bound.
+  trackingBoundConsumer = null;
   return ++trackingStamp;
 }
 

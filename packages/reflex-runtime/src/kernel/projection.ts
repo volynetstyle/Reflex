@@ -116,6 +116,7 @@ export const legacyCounterProjection = {
   "projection.semantic.tracking.suffix.link-new": "trackingSuffixLinkNew",
   "projection.semantic.tracking.edge.move": "trackingEdgeMoved",
   "projection.semantic.tracking.locate.step": "trackingLocateSteps",
+  "projection.semantic.tracking.locate.birth": "trackingLocateBirthProofs",
   "projection.semantic.cleanup.invoke": "cleanupCalls",
   "projection.semantic.cleanup.skip": "cleanupSkipped",
   "projection.semantic.cleanup.edge.drop": "cleanupEdgesDropped",
