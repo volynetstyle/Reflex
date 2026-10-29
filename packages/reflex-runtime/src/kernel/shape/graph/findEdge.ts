@@ -269,8 +269,8 @@ function findEdgeInLockstepPastHeadStart(
 
 // Substituted per variant by build.mjs. PREPARE_STRIKES = 0 never prepares
 // (the scaffold: every hook present, the tape never addressed).
-const PREPARE_STRIKES: number = 0;
-const CERTIFY_ABSENCE: boolean = false;
+const PREPARE_STRIKES: number = 2;
+const CERTIFY_ABSENCE: boolean = true;
 
 /*
  * No frame stack. A tracking pass is named by (consumer, pass stamp); the
