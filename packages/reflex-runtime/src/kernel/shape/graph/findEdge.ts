@@ -153,19 +153,19 @@ function findEdgeInLockstepFromFinger(
       }
 
       if (out.to === consumer) {
-        return out;
+        return fingerHit(out, consumer, step);
       }
 
       out = out.nextOut;
     } else if ((step & SECOND_WALK) === 0) {
       if (after.to === consumer) {
-        return after;
+        return fingerHit(after, consumer, step);
       }
 
       after = after.nextOut ?? producer.firstOut!;
     } else {
       if (before.to === consumer) {
-        return before;
+        return fingerHit(before, consumer, step);
       }
 
       before = before.prevOut ?? producer.lastOut!;
@@ -180,7 +180,7 @@ function findEdgeInLockstepFromFinger(
       }
 
       if (back.from === producer) {
-        return back;
+        return fingerHit(back, consumer, step);
       }
 
       back = back.prevIn;
@@ -195,7 +195,7 @@ function findEdgeInLockstepFromFinger(
       }
 
       if (ahead.from === producer) {
-        return ahead;
+        return fingerHit(ahead, consumer, step);
       }
 
       ahead = ahead.nextIn;
@@ -269,8 +269,38 @@ function findEdgeInLockstepPastHeadStart(
 
 // Substituted per variant by build.mjs. PREPARE_STRIKES = 0 never prepares
 // (the scaffold: every hook present, the tape never addressed).
-const PREPARE_STRIKES: number = 0;
-const CERTIFY_ABSENCE: boolean = false;
+const PREPARE_STRIKES: number = 1;
+const CERTIFY_ABSENCE: boolean = true;
+// #region finger
+// Far-finger study (wired into the finger loop only by finger/histogram
+// builds): a lookup the finger race settles after more than this many
+// finger probes also strikes. The window holds 8 probes (4 after, 4 before).
+const FINGER_STRIKE_PROBES: number = 2;
+const HISTOGRAM: boolean = false;
+
+/**
+ * Research: finger-loop outcomes by finger probes made (1..8); index 9
+ * counts lookups entering the plain lockstep (no finger or window spent).
+ */
+export const fingerHistogram: number[] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+/** Every return of a found edge inside the finger race goes through here. */
+export function fingerHit(
+  edge: ReactiveEdge,
+  consumer: ReactiveNode,
+  step: number,
+): ReactiveEdge {
+  // Finger probes are the even steps; this many have run by `step`.
+  const probes = (step >> 1) + 1;
+  if (HISTOGRAM) fingerHistogram[probes] = fingerHistogram[probes]! + 1;
+  if (PREPARE_STRIKES !== 0 && probes > FINGER_STRIKE_PROBES) {
+    // Found, but expensively: the implicit index has degraded. The answer
+    // stands; a prepare, if this strike completes K, serves later reads.
+    strikeReachesPrepare(consumer);
+  }
+  return edge;
+}
+// #endregion finger
 
 /*
  * No frame stack. A tracking pass is named by (consumer, pass stamp); the
@@ -391,6 +421,7 @@ export function findEdgeAfterLocality(
   back: ReactiveEdge | null,
   ahead: ReactiveEdge | null,
 ): ReactiveEdge | null {
+  if (HISTOGRAM) fingerHistogram[9] = fingerHistogram[9]! + 1; // #finger
   if (PREPARE_STRIKES !== 0 && strikeReachesPrepare(consumer) === true) {
     const cell = producer.tailIn;
     if (cell !== null && cell.to === consumer && cell.from === producer) {
@@ -515,4 +546,5 @@ export function resetPreparedStats(): void {
   for (const key of Object.keys(preparedStats) as (keyof typeof preparedStats)[]) {
     preparedStats[key] = 0;
   }
+  fingerHistogram.fill(0); // #finger
 }

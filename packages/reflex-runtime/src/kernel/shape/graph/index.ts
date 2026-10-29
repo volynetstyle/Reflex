@@ -21,3 +21,4 @@ export {
 export { disposeNode, disposeNodeEvent } from "./disposeNode";
 
 export { preparedStats, preparedTrackingState, resetPreparedStats } from "./findEdge";
+export { fingerHistogram } from "./findEdge";
