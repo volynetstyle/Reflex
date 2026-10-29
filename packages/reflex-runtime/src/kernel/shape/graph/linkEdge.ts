@@ -1,3 +1,4 @@
+import { notePreparedLink, preparedOwner } from "./findEdge";
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 
@@ -39,6 +40,7 @@ export function linkEdge(
   if (nextIn === null) to.lastIn = edge;
   else nextIn.prevIn = edge;
 
+  if (to === preparedOwner) notePreparedLink(edge);
   return edge;
 }
 
@@ -69,6 +71,7 @@ export function linkFirstTrackedEdgeUnchecked(
   from.lastOut = edge;
   to.firstIn = to.lastIn = to.tailIn = edge;
 
+  if (to === preparedOwner) notePreparedLink(edge);
   return edge;
 }
 
@@ -101,6 +104,7 @@ export function appendTrackedEdgeAfterCursorUnchecked(
   cursor.nextIn = edge;
   to.lastIn = to.tailIn = edge;
 
+  if (to === preparedOwner) notePreparedLink(edge);
   return edge;
 }
 

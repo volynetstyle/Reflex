@@ -1,3 +1,4 @@
+import { holdsPreparedCell, preparedOwner } from "./findEdge";
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 
@@ -44,7 +45,7 @@ export function unlinkAllSources(node: ReactiveNode): void {
 
   node.firstIn = null;
   node.lastIn = null;
-  node.tailIn = null;
+  if (preparedOwner === null || holdsPreparedCell(node) === false) node.tailIn = null;
 
   unlinkDetachedIncomingEdgeSequence(edge);
 }

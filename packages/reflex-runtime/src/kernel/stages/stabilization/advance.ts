@@ -1,3 +1,4 @@
+import { keepPreparedCell, preparedOwner, restorePreparedCell } from "@runtime/kernel/shape/graph/findEdge";
 import { defaultContext } from "@runtime/kernel/config";
 import {
   enterConsumerTracking,
@@ -54,6 +55,7 @@ function advanceCore(
   devAssertExecutableNode(node);
 
   const compute = node.compute as NonNullable<typeof node.compute>;
+  const preparedCell = preparedOwner === null ? null : keepPreparedCell(node);
   node.tailIn = null;
 
   const computingState = (node.state & ~Visited) | Computing;
@@ -77,6 +79,7 @@ function advanceCore(
     node.state = (computingState & ~(Computing | Unknown)) | Changed;
 
     devRecordComputeError(node, error, defaultContext);
+    if (preparedCell !== null) restorePreparedCell(node, preparedCell);
 
     throw error;
   }
@@ -95,6 +98,7 @@ function advanceCore(
     cleanupUnvisitedSources(node);
   }
 
+  if (preparedCell !== null) restorePreparedCell(node, preparedCell);
   devRecordComputeFinish(node, next, defaultContext);
 
   const prev = node.payload;

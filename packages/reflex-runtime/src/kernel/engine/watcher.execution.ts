@@ -1,3 +1,4 @@
+import { keepPreparedCell, preparedOwner, restorePreparedCell } from "@runtime/kernel/shape/graph/findEdge";
 import { defaultContext } from "@runtime/kernel/config";
 import {
   enterConsumerTracking,
@@ -38,6 +39,7 @@ function executeComputation<T>(
   node: ReactiveNode<T>,
   compute: ComputeFn<T>,
 ): T {
+  const preparedCell = preparedOwner === null ? null : keepPreparedCell(node);
   node.tailIn = null;
   node.state = (node.state & ~Visited) | Computing;
   const prevActive = enterConsumerTracking(node);
@@ -57,6 +59,7 @@ function executeComputation<T>(
     node.state &= ~Computing;
 
     devRecordComputeError(node, error, defaultContext);
+    if (preparedCell !== null) restorePreparedCell(node, preparedCell);
 
     throw error;
   }
@@ -77,6 +80,7 @@ function executeComputation<T>(
   //   observeGraphReductionRun(node, graphReductionPolicy, reductionEnabled);
   // }
 
+  if (preparedCell !== null) restorePreparedCell(node, preparedCell);
   devRecordComputeFinish(node, result, defaultContext);
 
   return result;

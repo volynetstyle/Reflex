@@ -19,3 +19,5 @@ export {
   unlinkDetachedIncomingEdgeSequence,
 } from "./sweepEdges";
 export { disposeNode, disposeNodeEvent } from "./disposeNode";
+
+export { preparedStats, preparedTrackingState, resetPreparedStats } from "./findEdge";
