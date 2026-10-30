@@ -370,7 +370,7 @@ const MUTANTS = [
   ],
   [
     "finger-base-hit-dropped",
-    `${F}::      if (out.to === consumer) return out;::      if (out.to === consumer) return null;`,
+    `${F}::        return out;::        return null;`,
   ],
   [
     "finger-handoff-drops-base-walk",

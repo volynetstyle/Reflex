@@ -109,6 +109,31 @@ export function moveNonHeadIncomingEdgeToFrontUnchecked(
 }
 
 /**
+ * Move the last incoming edge to the head.
+ *
+ * Preconditions:
+ * - lastIncomingEdge.nextIn === null
+ * - lastIncomingEdge.prevIn !== null
+ */
+export function moveLastIncomingEdgeToFrontUnchecked(
+  consumer: ReactiveNode,
+  lastIncomingEdge: ReactiveEdge,
+): void {
+  const previousLastEdge = lastIncomingEdge.prevIn!;
+
+  previousLastEdge.nextIn = null;
+  consumer.lastIn = previousLastEdge;
+
+  const firstIncomingEdge = consumer.firstIn!;
+
+  lastIncomingEdge.prevIn = null;
+  lastIncomingEdge.nextIn = firstIncomingEdge;
+  firstIncomingEdge.prevIn = lastIncomingEdge;
+
+  consumer.firstIn = lastIncomingEdge;
+}
+
+/**
  * Move the last incoming edge after another edge; a no-op when it is already
  * there.
  *

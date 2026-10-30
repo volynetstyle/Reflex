@@ -340,7 +340,7 @@ describe("prepared tape (INV-P)", () => {
     p.compute = () => {
       resolveTrackedRead(p, consumer);
     };
-    advance(p);
+    advance(p, null);
     p.compute = undefined;
     expect(pairs(consumer, p)).toBe(1);
     end(consumer, previous);
