@@ -37,6 +37,7 @@ literals (`config/rollup/inline-constants.ts`).
 | `Computing`  | Callback active; propagation interprets the active incoming prefix accordingly.                                     |
 | `Watcher`    | Watcher role.                                                                                                       |
 | `Scheduled`  | Host queue ownership, claimed and released separately from execution.                                               |
+| `Leased`     | May have an edge to the prepared tape's owner (INV-P); a stale bit costs a lookup, never an answer.                 |
 
 `Both = Unknown | Changed` is the dirty mask. Normal inactive computed nodes are
 clean, `Unknown`, or `Changed`. `Changed` forces computation; `Unknown`
@@ -149,6 +150,31 @@ uses of `tailIn` (unlink repair of the incoming cursor, the debug integrity
 check, watcher validation's save and restore, which only watchers reach)
 either accept a hint or never meet one. Source:
 `src/kernel/shape/graph/hint.ts`.
+
+The prepared tape (INV-P) makes a hint the address of a cell of one
+consumer's incoming list. A tracking pass is named by its consumer and pass
+stamp. A lookup by a computing consumer strikes when it enters the plain
+lockstep or its finger race settles past six finger probes; the second
+strike of a pass prepares the tape: one walk of the consumer's incoming list
+writes every producer's slot to its own edge (a hint, under the rules
+above) and sets `Leased` on it. Nothing is linked, moved or unlinked, and
+stamps are untouched, so a failure at any point leaves the graph the lookup
+would have left. The consumer then holds the lease, at most one at a time;
+the lease is live while its owner is `Computing` with a frontier carrying
+the prepared stamp, and is released (bits cleared over the owner's current
+list) by the owner's next miss past a dead lease or by the next prepare.
+While the lease is recorded, every edge linked to its owner gives its
+producer the cell and the bit, or, for a producer that is `Computing` or a
+watcher, withdraws the certificate; the prepare does the same for such a
+producer. Coverage therefore holds under a live lease: every producer of an
+attached incoming edge of the owner has `Leased`, because computations
+derive `state` from itself and only the release clears the bit. A miss of
+the owner's hint, at the entry of the lookup's continuations past the head
+start, on an idle producer without the bit is a certificate of absence. A
+bit is only a maybe: a producer whose cell was lost (its own computation,
+another lookup's hint, a raw kernel frame) or that left the list keeps
+taking the exact search, so a lost or stale cell costs a lookup, never a
+second edge for a pair. Source: `src/kernel/shape/graph/tape.ts`.
 
 ## 5. Disposal and cleanup
 

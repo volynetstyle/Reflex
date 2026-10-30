@@ -35,6 +35,7 @@ export const STATE_FLAG_NAMES = [
   "Disposed",
   "WatcherCleanupPending",
   "Revalidate",
+  "Leased",
 ] as const;
 
 export type ConstantValue = number | boolean;

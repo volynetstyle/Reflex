@@ -3,6 +3,13 @@ import { Computing, Watcher } from "@runtime/kernel/shape/meta";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
+import {
+  preparedMissIsAbsent,
+  preparedOwner,
+  settleOnPreparedTape,
+  strikeOnFarFingerHit,
+} from "./tape";
+
 /**
  * Outgoing links the lookup may take from around the producer's finger
  * before its outgoing side is the base walk alone. The finger's whole cost
@@ -38,7 +45,20 @@ import { observeRuntimeProjection } from "@runtime/kernel/projection";
  *
  * Hint and finger are positive answers only: a miss proves nothing, and
  * absence is established only by exhausting the outgoing or the covered
- * incoming search.
+ * incoming search, or, for the owner of a live prepared tape, by the tape's
+ * certificate (INV-P, graph/tape.ts).
+ *
+ * Prepared tape. When the finger race settles only in its far end, or the
+ * lookup enters the plain lockstep, a computing consumer strikes; enough
+ * strikes in one pass prepare its incoming list as a tape whose cells are
+ * the producers' slots, so the hint probe above answers its existing pairs.
+ * The tape is consulted only at the entries of the two continuations below.
+ *
+ * JIT: this function is byte-identical without the tape. Its bytecode is
+ * charged to every caller that inlines the read chain, and those callers
+ * have about 20 bytes of TurboFan inlining budget left (A.track.hub-
+ * duplicate, Node 24); the continuations are inlined only where lookups
+ * reach them.
  */
 export function findEdgeInLockstep(
   producer: ReactiveNode,
@@ -104,6 +124,15 @@ const FIRST_WALK = 1 << 0;
 const SECOND_WALK = 1 << 1;
 
 /**
+ * Steps of the finger race (2 × OUTGOING_FINGER_BUDGET = 16) after which a
+ * hit strikes: past 6 finger probes. A hit that far costs the lookup more
+ * than a prepared tape would; measured, every split from 2 to 12 gives the
+ * same tape timing on window and mount traces, and the late end keeps
+ * ordered fan-out from preparing.
+ */
+const FAR_FINGER_STEP = 12;
+
+/**
  * The lockstep past the head start, raced against the finger: for its first
  * 2 × OUTGOING_FINGER_BUDGET steps the outgoing link alternates between the
  * base walk from `out` and the producer's outgoing list read as a ring
@@ -120,6 +149,10 @@ const SECOND_WALK = 1 << 1;
  * OUTGOING_FINGER_BUDGET more steps. The ring compares only edges of this
  * producer, so a finger hit is exact; a finger miss proves nothing.
  *
+ * The race stops at FAR_FINGER_STEP and continues in
+ * findEdgeInLockstepFarFinger, whose hits strike (graph/tape.ts). The owner
+ * of a prepared tape first asks the tape whether the miss proves absence.
+ *
  * JIT: a separate loop, not a flag in findEdgeInLockstepPastHeadStart, so a
  * call site that never meets a finger inlines only the base lockstep.
  * PROFILE: one locate.step per link compared, on either side.
@@ -132,10 +165,17 @@ function findEdgeInLockstepFromFinger(
   back: ReactiveEdge | null,
   ahead: ReactiveEdge | null,
 ): ReactiveEdge | null {
+  if (
+    preparedOwner === consumer &&
+    preparedMissIsAbsent(producer, consumer) === true
+  ) {
+    return null;
+  }
+
   let after = finger.nextOut ?? producer.firstOut!;
   let before = finger.prevOut ?? producer.lastOut!;
 
-  for (let step = 0; step < 16 /**2 * OUTGOING_FINGER_BUDGET*/; step++) {
+  for (let step = 0; step < FAR_FINGER_STEP; step++) {
     {
       if (__PROFILE__)
         observeRuntimeProjection?.("projection.semantic.tracking.locate.step");
@@ -198,11 +238,85 @@ function findEdgeInLockstepFromFinger(
     }
   }
 
+  return findEdgeInLockstepFarFinger(
+    producer,
+    consumer,
+    after,
+    before,
+    out,
+    back,
+    ahead,
+  );
+}
+
+/**
+ * The far end of the finger race, steps FAR_FINGER_STEP to 15: the same
+ * walk in the same order, but every hit is a strike of the consumer's pass
+ * (strikeOnFarFingerHit), then the base lockstep as before.
+ *
+ * JIT: a separate function, so the near race keeps its shape and this one
+ * is compiled only where fingers run long.
+ * PROFILE: one locate.step per link compared, on either side.
+ */
+function findEdgeInLockstepFarFinger(
+  producer: ReactiveNode,
+  consumer: ReactiveNode,
+  after: ReactiveEdge,
+  before: ReactiveEdge,
+  out: ReactiveEdge | null,
+  back: ReactiveEdge | null,
+  ahead: ReactiveEdge | null,
+): ReactiveEdge | null {
+  for (let step = FAR_FINGER_STEP; step < 16; step++) {
+    {
+      if (__PROFILE__)
+        observeRuntimeProjection?.("projection.semantic.tracking.locate.step");
+    }
+    if ((step & FIRST_WALK) === 1) {
+      if (out === null) return null;
+      if (out.to === consumer) return strikeOnFarFingerHit(out, consumer);
+      out = out.nextOut;
+    } else if ((step & SECOND_WALK) === 0) {
+      if (after.to === consumer) return strikeOnFarFingerHit(after, consumer);
+      after = after.nextOut ?? producer.firstOut!;
+    } else {
+      if (before.to === consumer) return strikeOnFarFingerHit(before, consumer);
+      before = before.prevOut ?? producer.lastOut!;
+    }
+
+    if (back !== null) {
+      {
+        if (__PROFILE__)
+          observeRuntimeProjection?.(
+            "projection.semantic.tracking.locate.step",
+          );
+      }
+      if (back.from === producer) return strikeOnFarFingerHit(back, consumer);
+      back = back.prevIn;
+    }
+
+    if (ahead !== null) {
+      {
+        if (__PROFILE__)
+          observeRuntimeProjection?.(
+            "projection.semantic.tracking.locate.step",
+          );
+      }
+      if (ahead.from === producer) return strikeOnFarFingerHit(ahead, consumer);
+      ahead = ahead.nextIn;
+    } else if (back === null) {
+      return null;
+    }
+  }
+
   return findEdgeInLockstepPastHeadStart(producer, consumer, out, back, ahead);
 }
 
 /**
  * The lockstep proper, entered with `out` positioned after the head start.
+ * A computing consumer entering it has left the locality tiers: its owner
+ * asks the prepared tape, any other consumer strikes, and a strike that
+ * prepares the tape answers from it (settleOnPreparedTape).
  *
  * JIT: plain loops, not unrolled. This is the cold search behind every
  * locality tier; its size counts against the inlining budget of each caller.
@@ -215,6 +329,11 @@ function findEdgeInLockstepPastHeadStart(
   back: ReactiveEdge | null,
   ahead: ReactiveEdge | null,
 ): ReactiveEdge | null {
+  if ((consumer.state & Computing) !== 0) {
+    const settled = settleOnPreparedTape(producer, consumer);
+    if (settled !== undefined) return settled;
+  }
+
   while (out !== null) {
     {
       if (__PROFILE__)
