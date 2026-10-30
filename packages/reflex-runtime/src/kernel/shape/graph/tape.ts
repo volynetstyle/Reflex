@@ -19,7 +19,7 @@ import { trackingStamp } from "@runtime/kernel/state";
  *
  * Trigger. A lookup that leaves the locality tiers for the plain lockstep,
  * or whose finger race settles only in the far end of its window, is a
- * strike of its tracking pass. The PREPARE_STRIKES-th strike of a pass
+ * strike of its tracking pass. The second strike of a pass
  * prepares the tape. A tracking pass is named by (consumer, pass stamp);
  * the stamp alone is not unique across consumers. Another pass striking in
  * between restarts the count, so nesting only ever delays a prepare.
@@ -38,9 +38,6 @@ import { trackingStamp } from "@runtime/kernel/state";
  * search, so a lost cell costs a lookup, never a twin.
  */
 
-/** Strikes of a tracking pass that prepare its tape. */
-const PREPARE_STRIKES = 2;
-
 /**
  * The lease owner, read on every continuation entry of a lookup and on
  * every link, so a `var` (no hole check), as the registers in state.ts.
@@ -52,7 +49,6 @@ var preparedCovered = false;
 
 var strikeConsumer: ReactiveNode | null = null;
 var strikeStamp = 0;
-var strikeCount = 0;
 
 /** The stamp the resolver gives the next read of a computing consumer. */
 function passStampOf(consumer: ReactiveNode): number {
@@ -134,19 +130,22 @@ export function strikeOnFarFingerHit(
   edge: ReactiveEdge,
   consumer: ReactiveNode,
 ): ReactiveEdge {
-  if ((consumer.state & Computing) !== 0) strikeReachesPrepare(consumer);
+  if ((consumer.state & Computing) !== 0) void strikeReachesPrepare(consumer);
   return edge;
 }
 
-/** Counts a strike; prepares on the PREPARE_STRIKES-th. True when prepared. */
+/** Records the first strike; prepares from the second. True when prepared. */
 function strikeReachesPrepare(consumer: ReactiveNode): boolean {
   const stamp = passStampOf(consumer);
+
   if (strikeConsumer !== consumer || strikeStamp !== stamp) {
     strikeConsumer = consumer;
     strikeStamp = stamp;
-    strikeCount = 0;
+    return false;
   }
-  if (++strikeCount < PREPARE_STRIKES) return false;
+
+  // The pass identity records its first strike. Later strikes need no count,
+  // including retries while another live lease prevents preparation.
 
   const owner = preparedOwner;
   if (owner !== null) {
