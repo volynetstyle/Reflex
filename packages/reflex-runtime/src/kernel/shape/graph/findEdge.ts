@@ -1,3 +1,4 @@
+import { trackingStamp } from "@runtime/kernel/state";
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import { Computing, Watcher } from "@runtime/kernel/shape/meta";
 import type ReactiveNode from "@runtime/kernel/shape/node";
@@ -132,6 +133,7 @@ function findEdgeInLockstepFromFinger(
   back: ReactiveEdge | null,
   ahead: ReactiveEdge | null,
 ): ReactiveEdge | null {
+  if (preparedOwner === consumer && ownerMissIsAbsent(producer, consumer) === true) return null;
   let after = finger.nextOut ?? producer.firstOut!;
   let before = finger.prevOut ?? producer.lastOut!;
 
@@ -215,6 +217,7 @@ function findEdgeInLockstepPastHeadStart(
   back: ReactiveEdge | null,
   ahead: ReactiveEdge | null,
 ): ReactiveEdge | null {
+  if (preparedOwner === consumer && ownerMissIsAbsent(producer, consumer) === true) return null;
   while (out !== null) {
     {
       if (__PROFILE__)
@@ -258,4 +261,255 @@ function findEdgeInLockstepPastHeadStart(
   }
 
   return null;
+}
+
+
+/*
+ * Lean v3 = lean v2 (membership bit) with findEdgeInLockstep byte-identical:
+ * the owner test sits at the entry of the two continuations, which the
+ * baseline only reaches past the head start. Measured: findEdgeInLockstep
+ * has ~20 bytes of cumulative budget in A.track.hub-duplicate, and the owner
+ * line cost 31; the continuations are not inlined there.
+ *
+ * Lean v2 notes follow.
+ *
+ * Lean v2: the frameless prepared tape with membership carried by a state
+ * bit instead of by the cell surviving in its slot.
+ *
+ * Measured on Node 24 (inlining.mjs): advanceCore has 2-6 bytes of
+ * cumulative inlining budget left in fan-out callers, so no keep/restore can
+ * live there in any form. Here nothing does: a producer's computation may
+ * clear its cell; the bit, which every computation preserves (state is
+ * always derived from itself), still says "edge to the owner may exist".
+ *
+ * Invariant under a live lease with coverage: every producer of an attached
+ * incoming edge of the owner has LEASED set. Hence an idle producer without
+ * the bit has no edge to the owner: a hint miss on it certifies absence. A
+ * bit is only a "maybe": a miss on a producer with the bit takes the exact
+ * lookup, which rewrites the cell or, on absence, clears the stale bit. A
+ * cell is a fast positive only, so overwriting one (nested hint writes, a
+ * computation entry, the raw kernel API) costs a lookup, never a twin.
+ */
+
+// Substituted per variant by build.mjs. PREPARE_STRIKES = 0 never prepares.
+const PREPARE_STRIKES: number = 0;
+const CERTIFY_ABSENCE: boolean = false;
+// Substituted by build.mjs: 2 x FINGER_STRIKE_PROBES.
+const FINGER_SPLIT: number = 12;
+/** Free state bit (meta.ts: 0..8 used; 29, 30 dev-only). */
+const LEASED = 1 << 9;
+
+let strikeOwner: ReactiveNode | null = null;
+let strikeStamp = 0;
+let strikeCount = 0;
+
+export let preparedOwner: ReactiveNode | null = null;
+let preparedStamp = 0;
+let preparedCovered = false;
+
+/** Research counters; incremented on cold paths only. */
+export const preparedStats = {
+  strikes: 0,
+  prepares: 0,
+  cells: 0,
+  uncovered: 0,
+  fallbacks: 0,
+  certified: 0,
+  kept: 0,
+  released: 0,
+};
+
+function passStampOf(consumer: ReactiveNode): number {
+  const cursor = consumer.tailIn;
+  return cursor !== null ? cursor.stamp : trackingStamp;
+}
+
+function leaseIsLive(): boolean {
+  const owner = preparedOwner!;
+  return (
+    (owner.state & Computing) !== 0 && passStampOf(owner) === preparedStamp
+  );
+}
+
+/** Ends the lease: clears the bits of the owner's current producers. */
+function releaseLease(): void {
+  const owner = preparedOwner!;
+  for (let edge = owner.firstIn; edge !== null; edge = edge.nextIn) {
+    edge.from.state &= ~LEASED;
+  }
+  preparedOwner = null;
+  preparedStats.released++;
+}
+
+/**
+ * Continuation entry (finger race or plain lockstep) of a lookup by the
+ * recorded owner: true when the miss certifies absence; false to continue
+ * the exact walk (whose hint write puts a found cell back, and whose link,
+ * on absence, puts the producer on the tape through notePreparedLink).
+ */
+export function ownerMissIsAbsent(
+  producer: ReactiveNode,
+  consumer: ReactiveNode,
+): boolean {
+  if (
+    (consumer.state & Computing) === 0 ||
+    passStampOf(consumer) !== preparedStamp
+  ) {
+    releaseLease();
+    return false;
+  }
+  const state = producer.state;
+  if (
+    CERTIFY_ABSENCE &&
+    preparedCovered &&
+    (state & (Computing | Watcher | LEASED)) === 0 &&
+    producer !== consumer
+  ) {
+    preparedStats.certified++;
+    return true;
+  }
+  preparedStats.fallbacks++;
+  return false;
+}
+
+/**
+ * Plain-lockstep entry of a computing consumer: the owner's certificate,
+ * then a strike. Returns the answer when the tape settles it (cell hit or
+ * certified absence), undefined to run the lockstep.
+ */
+export function lockstepEntry(
+  producer: ReactiveNode,
+  consumer: ReactiveNode,
+): ReactiveEdge | null | undefined {
+  if (preparedOwner === consumer) {
+    return ownerMissIsAbsent(producer, consumer) === true ? null : undefined;
+  }
+  if (PREPARE_STRIKES === 0 || strikeReachesPrepare(consumer) === false) {
+    return undefined;
+  }
+  const cell = producer.tailIn;
+  if (cell !== null && cell.to === consumer && cell.from === producer) {
+    return cell;
+  }
+  return ownerMissIsAbsent(producer, consumer) === true ? null : undefined;
+}
+
+/** The finger window's last probes; a hit here strikes (far-finger rule). */
+export function findEdgeFingerTail(
+  producer: ReactiveNode,
+  consumer: ReactiveNode,
+  after: ReactiveEdge,
+  before: ReactiveEdge,
+  out: ReactiveEdge | null,
+  back: ReactiveEdge | null,
+  ahead: ReactiveEdge | null,
+): ReactiveEdge | null {
+  for (let step = FINGER_SPLIT; step < 16; step++) {
+    if ((step & 1) === 1) {
+      if (out === null) return null;
+      if (out.to === consumer) return farHit(out, consumer);
+      out = out.nextOut;
+    } else if ((step & 2) === 0) {
+      if (after.to === consumer) return farHit(after, consumer);
+      after = after.nextOut ?? producer.firstOut!;
+    } else {
+      if (before.to === consumer) return farHit(before, consumer);
+      before = before.prevOut ?? producer.lastOut!;
+    }
+    if (back !== null) {
+      if (back.from === producer) return farHit(back, consumer);
+      back = back.prevIn;
+    }
+    if (ahead !== null) {
+      if (ahead.from === producer) return farHit(ahead, consumer);
+      ahead = ahead.nextIn;
+    } else if (back === null) {
+      return null;
+    }
+  }
+  return findEdgeInLockstepPastHeadStart(producer, consumer, out, back, ahead);
+}
+
+function farHit(edge: ReactiveEdge, consumer: ReactiveNode): ReactiveEdge {
+  if (PREPARE_STRIKES !== 0 && (consumer.state & Computing) !== 0) {
+    strikeReachesPrepare(consumer);
+  }
+  return edge;
+}
+
+function strikeReachesPrepare(consumer: ReactiveNode): boolean {
+  const stamp = passStampOf(consumer);
+  if (strikeOwner !== consumer || strikeStamp !== stamp) {
+    strikeOwner = consumer;
+    strikeStamp = stamp;
+    strikeCount = 0;
+  }
+  preparedStats.strikes++;
+  if (++strikeCount < PREPARE_STRIKES) return false;
+
+  if (preparedOwner !== null) {
+    if (preparedOwner === consumer && preparedStamp === stamp) return false;
+    if (leaseIsLive() === true) return false;
+    releaseLease();
+  }
+
+  prepareIncomingTape(consumer, stamp);
+  return true;
+}
+
+function prepareIncomingTape(consumer: ReactiveNode, stamp: number): void {
+  let covered = true;
+  let cells = 0;
+  for (
+    let edge: ReactiveEdge | null = consumer.firstIn;
+    edge !== null;
+    edge = edge.nextIn
+  ) {
+    const producer = edge.from;
+    if ((producer.state & (Computing | Watcher)) === 0) {
+      producer.state |= LEASED;
+      producer.tailIn = edge;
+      cells++;
+    } else {
+      covered = false;
+    }
+  }
+  preparedOwner = consumer;
+  preparedStamp = stamp;
+  preparedCovered = covered;
+  preparedStats.prepares++;
+  preparedStats.cells += cells;
+  if (!covered) preparedStats.uncovered++;
+}
+
+/** A new edge into the recorded owner: its producer joins the tape. */
+export function notePreparedLink(edge: ReactiveEdge): void {
+  const producer = edge.from;
+  if ((producer.state & (Computing | Watcher)) === 0) {
+    producer.state |= LEASED;
+    producer.tailIn = edge;
+  } else {
+    preparedCovered = false;
+  }
+}
+
+/** Read-only research inspection; never called by runtime paths. */
+export function preparedTrackingState(): {
+  owner: ReactiveNode | null;
+  stamp: number;
+  live: boolean;
+  covered: boolean;
+} {
+  return {
+    owner: preparedOwner,
+    stamp: preparedStamp,
+    live: preparedOwner !== null && leaseIsLive(),
+    covered: preparedCovered,
+  };
+}
+
+export function resetPreparedStats(): void {
+  for (const key of Object.keys(preparedStats) as (keyof typeof preparedStats)[]) {
+    preparedStats[key] = 0;
+  }
 }
