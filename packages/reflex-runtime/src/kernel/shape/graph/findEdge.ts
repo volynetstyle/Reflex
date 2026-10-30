@@ -137,7 +137,7 @@ function findEdgeInLockstepFromFinger(
   let after = finger.nextOut ?? producer.firstOut!;
   let before = finger.prevOut ?? producer.lastOut!;
 
-  for (let step = 0; step < 16 /**2 * OUTGOING_FINGER_BUDGET*/; step++) {
+  for (let step = 0; step < 12; step++) {
     {
       if (__PROFILE__)
         observeRuntimeProjection?.("projection.semantic.tracking.locate.step");
@@ -200,7 +200,7 @@ function findEdgeInLockstepFromFinger(
     }
   }
 
-  return findEdgeInLockstepPastHeadStart(producer, consumer, out, back, ahead);
+  return findEdgeFingerTail(producer, consumer, after, before, out, back, ahead);
 }
 
 /**
@@ -217,7 +217,10 @@ function findEdgeInLockstepPastHeadStart(
   back: ReactiveEdge | null,
   ahead: ReactiveEdge | null,
 ): ReactiveEdge | null {
-  if (preparedOwner === consumer && ownerMissIsAbsent(producer, consumer) === true) return null;
+  if ((consumer.state & Computing) !== 0) {
+    const settled = lockstepEntry(producer, consumer);
+    if (settled !== undefined) return settled;
+  }
   while (out !== null) {
     {
       if (__PROFILE__)
@@ -292,8 +295,8 @@ function findEdgeInLockstepPastHeadStart(
  */
 
 // Substituted per variant by build.mjs. PREPARE_STRIKES = 0 never prepares.
-const PREPARE_STRIKES: number = 0;
-const CERTIFY_ABSENCE: boolean = false;
+const PREPARE_STRIKES: number = 2;
+const CERTIFY_ABSENCE: boolean = true;
 // Substituted by build.mjs: 2 x FINGER_STRIKE_PROBES.
 const FINGER_SPLIT: number = 12;
 /** Free state bit (meta.ts: 0..8 used; 29, 30 dev-only). */
