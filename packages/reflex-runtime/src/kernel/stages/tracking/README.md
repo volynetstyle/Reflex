@@ -18,20 +18,33 @@ sequential path is resolved in three steps:
      an empty `P.out`, its newest edge, a sole edge to another consumer,
      the outgoing hint, `tailIn` of the idle producer when it is an edge of
      exactly this pair (INV-H).
-   - **L2, lockstep**: bounded by the shorter of `P.out` and `C.in`; the
-     only general proof of absence, past a two-link head start at
-     `firstOut`. With another hint in the slot (an outgoing finger), its
+   - **L2, lockstep**: bounded by the shorter of `P.out` and `C.in`, past a
+     two-link head start at `firstOut`. With another hint in the slot (an
+     outgoing finger), its
      first 16 steps alternate the outgoing link between the walk from the
      head and up to 8 links of `P.out` around the finger, read as a ring;
      the incoming walkers advance on every step. Its result refreshes the
      hint.
+   - **Prepared tape** (INV-P, `../../shape/graph/tape.ts`): repeated costly
+     lookups can prepare one consumer's incoming list. Its cells can answer a
+     pair lookup, and a covered live lease can certify that a producer has no
+     edge to the owner. Otherwise the lookup continues its exact search.
 2. **Classify** it: in the prefix exactly when it carries the cursor's
    nonzero stamp (INV-T3), or always when the cursor is `lastIn` (INV-T2):
    `isEdgeInTrackedPrefix`.
-3. **Reconcile**: duplicate, move the suffix edge after the cursor, or link
-   a new edge: `reuseLocatedIncomingEdgeOrLink`, which never searches again.
+3. **Reconcile**: duplicate, move the suffix edge after the cursor (to the
+   head while the prefix is empty), or link a new edge there:
+   `reconcileLocatedRead`, which never searches again. The locality tiers
+   and the located edge share the same two moves
+   (`../../shape/graph/cursorMoves.ts`).
 
 `edge.stamp` is a pass-membership stamp, not a value version.
+
+`resolveTrackedRead` handles sequential reads directly. On a miss,
+`reconcileLocatedRead` commits a located suffix edge or a new link after the
+duplicate check; a configured strategy is called at that same boundary. The
+default strategy (`../../shape/graph/reuseEdge.ts`) is never called by the
+resolver; it serves benchmarks and tools with positions of their own.
 
 `tailIn` is one slot with two lifetime-disjoint readings (INV-H,
 `../../shape/graph/hint.ts`): while the node is Computing, its tracking frontier;
@@ -51,20 +64,14 @@ finger does not help; both cases stay at the lockstep bound.
 
 ## Code map
 
-| File                               | Role                                                                            |
-| ---------------------------------- | ------------------------------------------------------------------------------- |
-| `resolve.ts`                       | hot path (next edge, cursor, first read) and the initial, tail and inner misses |
-| `locate.ts`                        | producer-side probes, then the graph lookup; the reorder path keeps only newest |
-| `prefix.ts`                        | prefix classification, shared with `push_iterator.ts`                           |
-| `cleanup.ts`                       | removal of the unvisited suffix after a successful pass                         |
-| `read.ts`                          | `trackRead`, an entry for tests and tools                                       |
-| `../../shape/graph/findEdge.ts`    | exact pair lookup: outgoing hint, head start, lockstep raced by the finger      |
-| `../../shape/graph/hint.ts`        | INV-H: the two readings of `tailIn`                                             |
-| `../../shape/graph/reuseEdge.ts`   | reconciliation (move or link), the default strategy                             |
-| `../../shape/graph/cursorMoves.ts` | the tiers' incoming-list moves next to the cursor                               |
-| `../../shape/graph/edgeList.ts`    | generic incoming-list moves, for tests and tools                                |
-| `../../shape/graph/linkEdge.ts`    | link (outgoing lists are append-only), the tiers' links, unlink                 |
-| `../../shape/graph/sweepEdges.ts`  | unlink of detached sequences and of whole lists (cleanup, disposal)             |
+| File                                                | Role                                                                            |
+| --------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `resolve.ts`                                        | hot path (next edge, cursor, first read) and the initial, tail and inner misses |
+| `locate.ts`                                         | producer-side probes, then the graph lookup; the reorder path keeps only newest |
+| `prefix.ts`                                         | prefix classification, shared with `push_iterator.ts`                           |
+| `cleanup.ts`                                        | removal of the unvisited suffix after a successful pass                         |
+| `read.ts`                                           | `trackRead`, an entry for tests and tools                                       |
+| [`../../shape/graph/`](../../shape/graph/README.md) | exact lookup and graph mutations used by tracking                               |
 
 Rules to keep when changing this code:
 
@@ -96,6 +103,11 @@ function is inlined wherever the function is, and can push the hot read path
 (`resolveTrackedRead`) out of `runWatcherCore`, `advanceCore` or
 `executeComputation`. For that reason the tail miss and the inner miss are
 separate functions: a call site inlines only the miss kind that occurs there.
+For the same reason a miss handler takes only the cursor and re-reads the
+stamp and the expected next edge from it, the three locality tiers of the
+inner miss share one move call, and the tracking link and move helpers have
+no parameter defaults: every argument move and default branch is bytecode
+each inlining caller pays for.
 The lookup loops are plain loops, not unrolled. Its two-link outgoing head
 start is a workload heuristic, not an invariant. The hint is consulted before
 it and written only past it, so a lookup that bounded fan-out settles reads

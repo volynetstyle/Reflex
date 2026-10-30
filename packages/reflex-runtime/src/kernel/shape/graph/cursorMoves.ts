@@ -2,73 +2,55 @@ import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 
 // Incoming-list moves of the tracking tiers (stages/tracking/resolve.ts):
-// each moves an edge next to the tracking cursor `tailIn` of a computing
-// consumer. Generic moves are in ./edgeList.ts.
+// each moves an unvisited suffix edge next to the tracking cursor `tailIn` of
+// a computing consumer, stamps it with the pass stamp and makes it the
+// cursor. A pass needs exactly two: to the head while the prefix is empty,
+// right after the cursor otherwise. Generic moves are in ./edgeList.ts.
 //
 // "Unchecked": the preconditions listed on each function are the caller's
 // responsibility and are not verified.
 
 /**
- * Move the incoming tail of `consumer` right after the tracking cursor, stamp
- * it with the pass stamp and make it the cursor: the last-edge tier of
- * resolveCursorTrackedReadMiss.
+ * Move a non-head incoming edge to the head, stamp it with the pass stamp
+ * and make it the cursor: the first read of a pass that found its edge
+ * elsewhere in the list.
  *
  * Preconditions:
- * - `lastIncomingEdge` is `consumer.lastIn`, `previousLastEdge` its `prevIn`
- * - `expectedNextEdge` is `cursorEdge.nextIn`, not null
- * - `previousLastEdge !== cursorEdge` (the tail is not already next)
+ * - `movedEdge` is in the incoming list of `consumer`
+ * - movedEdge.prevIn !== null
  */
-export function moveLastIncomingEdgeAfterCursorUnchecked(
+export function moveTrackedIncomingEdgeToFrontUnchecked(
   consumer: ReactiveNode,
-  cursorEdge: ReactiveEdge,
-  expectedNextEdge: ReactiveEdge,
-  lastIncomingEdge: ReactiveEdge,
-  previousLastEdge: ReactiveEdge,
+  movedEdge: ReactiveEdge,
   passStamp: number,
 ): void {
-  previousLastEdge.nextIn = null;
-  consumer.lastIn = previousLastEdge;
+  const previousMovedEdge = movedEdge.prevIn!;
+  const afterMovedEdge = movedEdge.nextIn;
 
-  lastIncomingEdge.prevIn = cursorEdge;
-  lastIncomingEdge.nextIn = expectedNextEdge;
-  lastIncomingEdge.stamp = passStamp;
+  previousMovedEdge.nextIn = afterMovedEdge;
 
-  cursorEdge.nextIn = lastIncomingEdge;
-  expectedNextEdge.prevIn = lastIncomingEdge;
-  consumer.tailIn = lastIncomingEdge;
+  if (afterMovedEdge !== null) {
+    afterMovedEdge.prevIn = previousMovedEdge;
+  } else {
+    consumer.lastIn = previousMovedEdge;
+  }
+
+  const firstIncomingEdge = consumer.firstIn!;
+
+  movedEdge.prevIn = null;
+  movedEdge.nextIn = firstIncomingEdge;
+  firstIncomingEdge.prevIn = movedEdge;
+  consumer.firstIn = movedEdge;
+
+  movedEdge.stamp = passStamp;
+  consumer.tailIn = movedEdge;
 }
 
 /**
- * Move the last incoming edge to the head: the last-edge shortcut of the
- * initial read (resolveInitialTrackedReadMiss), which also stamps it and
- * makes it the cursor.
- *
- * Preconditions:
- * - edge.nextIn === null
- * - edge.prevIn !== null
- */
-export function moveLastIncomingEdgeToFrontUnchecked(
-  to: ReactiveNode,
-  edge: ReactiveEdge,
-): void {
-  const prev = edge.prevIn!;
-
-  prev.nextIn = null;
-  to.lastIn = prev;
-
-  const first = to.firstIn!;
-
-  edge.prevIn = null;
-  edge.nextIn = first;
-  first.prevIn = edge;
-
-  to.firstIn = edge;
-}
-
-/**
- * Move a lookahead edge right after the tracking cursor, stamp it with the
- * pass stamp and make it the cursor: the one-hop and two-hop tiers of
- * resolveCursorTrackedReadMiss.
+ * Move a suffix edge right after the tracking cursor, stamp it with the
+ * cursor's stamp, the pass stamp (INV-T3), and make it the cursor: every
+ * reorder of an inner cursor miss (one-hop, two-hop, the physical tail, a
+ * located suffix edge).
  *
  *   cursor -> expectedNext -> ... -> movedEdge
  *
@@ -88,7 +70,6 @@ export function moveTrackedIncomingEdgeAfterCursorUnchecked(
   consumer: ReactiveNode,
   cursorEdge: ReactiveEdge,
   movedEdge: ReactiveEdge,
-  passStamp: number,
 ): true {
   const expectedNextEdge = cursorEdge.nextIn!;
   const previousMovedEdge = movedEdge.prevIn!;
@@ -108,7 +89,7 @@ export function moveTrackedIncomingEdgeAfterCursorUnchecked(
   cursorEdge.nextIn = movedEdge;
   expectedNextEdge.prevIn = movedEdge;
 
-  movedEdge.stamp = passStamp;
+  movedEdge.stamp = cursorEdge.stamp;
   consumer.tailIn = movedEdge;
 
   return true;

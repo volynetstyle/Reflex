@@ -43,7 +43,7 @@ describe("Reactive runtime - direct protocol helpers", () => {
       return 42;
     });
 
-    expect(advance(consumer)).toBe(true);
+    expect(advance(consumer, null)).toBe(true);
     expect(consumer.payload).toBe(42);
   });
 });

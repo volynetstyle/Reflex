@@ -245,6 +245,7 @@ describe("Reflex stage projection", () => {
         pull_iterator.stateTransitions.map((transition) => transition.to),
       ).toEqual(["node.state & ~Unknown"]);
 
+      // One resolved-state write serves the changed and unchanged outcomes.
       const advance = project("stabilization/advance.ts", "advanceCore");
       expect(
         advance.stateTransitions.map((transition) => transition.to),
@@ -252,7 +253,6 @@ describe("Reflex stage projection", () => {
         "(node.state & ~Visited) | Computing",
         "(computingState & ~(Computing | Unknown)) | Changed",
         "computingState & ~Computing",
-        "computingState & ~(Computing | Both)",
         "computingState & ~(Computing | Both)",
       ]);
       expect(advance.cfg.exits).toHaveLength(3);
@@ -281,7 +281,7 @@ describe("Reflex stage projection", () => {
       const advancePlan = createInstrumentationPlan(advance);
       expect(
         advancePlan.points.filter((point) => point.kind === "state-transition"),
-      ).toHaveLength(5);
+      ).toHaveLength(4);
       expect(
         advancePlan.points.filter((point) => point.kind === "function-exit"),
       ).toHaveLength(3);

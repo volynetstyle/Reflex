@@ -3,11 +3,10 @@
   "compilerOptions": {
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "plugins": [{ "name": "@tsslint/typescript-plugin" }],
     "baseUrl": ".",
     "paths": {
-      "@runtime/*": [
-        "src/*"
-      ]
+      "@runtime/*": ["src/*"]
     },
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
@@ -28,12 +27,6 @@
     "exactOptionalPropertyTypes": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": [
-    "src",
-    "debug",
-    "alien"
-  ],
-  "exclude": [
-    "dist"
-  ]
+  "include": ["src", "debug", "alien"],
+  "exclude": ["dist"]
 }

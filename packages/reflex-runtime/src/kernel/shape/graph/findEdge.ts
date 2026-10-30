@@ -253,6 +253,8 @@ function findEdgeInLockstepFromFinger(
  * The far end of the finger race, steps FAR_FINGER_STEP to 15: the same
  * walk in the same order, but every hit is a strike of the consumer's pass
  * (strikeOnFarFingerHit), then the base lockstep as before.
+ * These four steps probe each finger once; neither finger advances, since
+ * only the base and incoming walkers continue beyond this window.
  *
  * JIT: a separate function, so the near race keeps its shape and this one
  * is compiled only where fingers run long.
@@ -278,10 +280,8 @@ function findEdgeInLockstepFarFinger(
       out = out.nextOut;
     } else if ((step & SECOND_WALK) === 0) {
       if (after.to === consumer) return strikeOnFarFingerHit(after, consumer);
-      after = after.nextOut ?? producer.firstOut!;
     } else {
       if (before.to === consumer) return strikeOnFarFingerHit(before, consumer);
-      before = before.prevOut ?? producer.lastOut!;
     }
 
     if (back !== null) {

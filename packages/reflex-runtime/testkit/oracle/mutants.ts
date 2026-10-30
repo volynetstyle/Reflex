@@ -76,8 +76,8 @@ export const MUTANTS: readonly Mutant[] = [
     // read moves it after the cursor and reorders the incoming list.
     id: "prefix-stamp-classification-false",
     file: "src/kernel/stages/tracking/prefix.ts",
-    search: "if (stamp !== 0) return edge.stamp === stamp;",
-    replace: "if (stamp !== 0) return false;",
+    search: "if (passStamp !== 0) return edge.stamp === passStamp;",
+    replace: "if (passStamp !== 0) return false;",
     expected: "killed",
   },
   {

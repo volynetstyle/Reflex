@@ -53,7 +53,7 @@ export function linkEdge(
 export function linkFirstTrackedEdgeUnchecked(
   from: ReactiveNode,
   to: ReactiveNode,
-  stamp = 0,
+  stamp: number,
 ): ReactiveEdge {
   const prevOut = from.lastOut;
 
@@ -86,7 +86,7 @@ export function appendTrackedEdgeAfterCursorUnchecked(
   from: ReactiveNode,
   to: ReactiveNode,
   cursor: ReactiveEdge,
-  stamp = 0,
+  stamp: number,
 ): ReactiveEdge {
   const prevOut = from.lastOut;
 

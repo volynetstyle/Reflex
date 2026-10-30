@@ -137,3 +137,4 @@ packages/*.lab/
 /artifacts/
 /.tmp/
 /.cache/
+/research/

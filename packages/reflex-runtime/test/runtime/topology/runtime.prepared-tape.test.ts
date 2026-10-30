@@ -156,6 +156,35 @@ describe("prepared tape (INV-P)", () => {
     expectUniquePairs(consumer);
   });
 
+  it("another pass's strike restarts the two-strike threshold", () => {
+    const outer = wideGraph();
+    const inner = wideGraph();
+    const previous = begin(outer.consumer);
+    resolveTrackedRead(outer.sources[128]!, outer.consumer);
+
+    const saved = begin(inner.consumer);
+    resolveTrackedRead(inner.sources[128]!, inner.consumer);
+    end(inner.consumer, saved);
+
+    resolveTrackedRead(outer.sources[200]!, outer.consumer);
+    expect(outer.sources.some(leased), "only one strike since nesting").toBe(
+      false,
+    );
+    resolveTrackedRead(outer.sources[64]!, outer.consumer);
+    expect(outer.sources.every(leased), "second strike since nesting").toBe(
+      true,
+    );
+    end(outer.consumer, previous);
+
+    expectUniquePairs(outer.consumer);
+    expectGraphIntegrity([
+      ...outer.sources,
+      ...inner.sources,
+      outer.consumer,
+      inner.consumer,
+    ]);
+  });
+
   it("certifies a covered miss as absent without searching, then finds the link", () => {
     const { sources, consumer } = wideGraph();
     const { novel, reads } = countedNovel(97);
@@ -311,7 +340,7 @@ describe("prepared tape (INV-P)", () => {
     p.compute = () => {
       resolveTrackedRead(p, consumer);
     };
-    advance(p);
+    advance(p, null);
     p.compute = undefined;
     expect(pairs(consumer, p)).toBe(1);
     end(consumer, previous);

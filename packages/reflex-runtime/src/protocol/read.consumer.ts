@@ -162,7 +162,7 @@ function stabilizeDirtyConsumer<T>(node: ConsumerNode<T>, state: number): void {
     if (edge === null) {
       node.state &= ~Unknown;
     } else if (should_recompute(node, edge) === true) {
-      advance(node);
+      advance(node, null);
     }
   }
 

@@ -13,40 +13,41 @@ import { observeRuntimeProjection } from "@runtime/kernel/projection";
  * incoming list and unlinked from its producer. This is the only place where
  * a pass removes edges: reconciliation moves or links and never unlinks.
  */
-export function cleanupUnvisitedSources(node: ReactiveNode): void {
+export function cleanupUnvisitedSources(consumer: ReactiveNode): void {
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.cleanup.invoke");
 
-  const tail = node.tailIn;
-  const edge = tail === null ? node.firstIn : tail.nextIn;
+  const cursorEdge = consumer.tailIn;
+  const firstUnvisitedEdge =
+    cursorEdge === null ? consumer.firstIn : cursorEdge.nextIn;
 
-  if (edge === null) {
+  if (firstUnvisitedEdge === null) {
     if (__PROFILE__)
       observeRuntimeProjection?.("projection.semantic.cleanup.skip");
     return;
   }
 
-  if (tail === null) {
-    node.firstIn = null;
-    node.lastIn = null;
+  if (cursorEdge === null) {
+    consumer.firstIn = null;
+    consumer.lastIn = null;
   } else {
-    tail.nextIn = null;
-    node.lastIn = tail;
+    cursorEdge.nextIn = null;
+    consumer.lastIn = cursorEdge;
   }
 
-  devRecordCleanupStaleSources(node, edge, defaultContext);
+  devRecordCleanupStaleSources(consumer, firstUnvisitedEdge, defaultContext);
 
   // One cleanup.edge.drop per removed edge, counted here rather than in the
   // shared sweep, which does not know why its caller removes a sequence.
   // PROFILE only.
   if (__PROFILE__) {
     for (
-      let current: ReactiveEdge | null = edge;
-      current !== null;
-      current = current.nextIn
+      let unvisitedEdge: ReactiveEdge | null = firstUnvisitedEdge;
+      unvisitedEdge !== null;
+      unvisitedEdge = unvisitedEdge.nextIn
     ) {
       observeRuntimeProjection?.("projection.semantic.cleanup.edge.drop");
     }
   }
-  unlinkDetachedIncomingEdgeSequence(edge);
+  unlinkDetachedIncomingEdgeSequence(firstUnvisitedEdge);
 }

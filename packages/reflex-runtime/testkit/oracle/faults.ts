@@ -168,8 +168,10 @@ const HOLDOUT: readonly AuditMutant[] = [
     // unlinked from its producer while the consumer still lists it.
     id: "cleanup-cut-at-cursor",
     file: "src/kernel/stages/tracking/cleanup.ts",
-    search: "const edge = tail === null ? node.firstIn : tail.nextIn;",
-    replace: "const edge = tail === null ? node.firstIn : tail;",
+    search:
+      "const firstUnvisitedEdge =\n    cursorEdge === null ? consumer.firstIn : cursorEdge.nextIn;",
+    replace:
+      "const firstUnvisitedEdge =\n    cursorEdge === null ? consumer.firstIn : cursorEdge;",
     fault: "cleanup-suffix",
     role: "holdout",
   },
