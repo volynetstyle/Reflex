@@ -1,6 +1,8 @@
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 
+import { notePreparedLink, preparedOwner } from "./tape";
+
 /**
  * Link a new edge `from -> to` and return it.
  *
@@ -39,6 +41,8 @@ export function linkEdge(
   if (nextIn === null) to.lastIn = edge;
   else nextIn.prevIn = edge;
 
+  // A link to the prepared-tape owner puts its producer on the tape.
+  if (to === preparedOwner) notePreparedLink(edge);
   return edge;
 }
 
@@ -69,6 +73,8 @@ export function linkFirstTrackedEdgeUnchecked(
   from.lastOut = edge;
   to.firstIn = to.lastIn = to.tailIn = edge;
 
+  // A link to the prepared-tape owner puts its producer on the tape.
+  if (to === preparedOwner) notePreparedLink(edge);
   return edge;
 }
 
@@ -101,6 +107,8 @@ export function appendTrackedEdgeAfterCursorUnchecked(
   cursor.nextIn = edge;
   to.lastIn = to.tailIn = edge;
 
+  // A link to the prepared-tape owner puts its producer on the tape.
+  if (to === preparedOwner) notePreparedLink(edge);
   return edge;
 }
 

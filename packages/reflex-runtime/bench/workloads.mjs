@@ -403,6 +403,110 @@ export const workloads = [
     },
   },
   {
+    id: "A.track.shared-chaotic-64",
+    level: "A",
+    mechanism:
+      "Tracking passes of 64 consumers over the same 64 sources, each consumer in its own shuffled order, visited in an order that changes every round: neither list keeps locality, so pair lookups leave the locality tiers (the case the prepared tape addresses, INV-P).",
+    preconditions:
+      "Kernel API of the internal entry; every pass is a computing frame with a fresh stamp.",
+    measured: "One consumer pass: 64 reads with lookups and reorders.",
+    excluded: "Graph construction.",
+    opsPerStep: 64,
+    setup(rt) {
+      const node = () => new rt.ReactiveNode(undefined, undefined, 0);
+      const sources = range(64).map(node);
+      const consumers = range(64).map(node);
+      const orders = range(61).map((p) => shuffled(p, 64));
+      const pass = (target, order) => {
+        target.tailIn = null;
+        target.state |= rt.Computing;
+        const previous = rt.enterConsumerTracking(target);
+        for (const index of order)
+          rt.resolveTrackedRead(sources[index], target);
+        rt.restoreConsumerTracking(previous);
+        target.state &= ~rt.Computing;
+        if (target.tailIn !== target.lastIn) rt.cleanupUnvisitedSources(target);
+      };
+      consumers.forEach((target, k) => pass(target, orders[k % 61]));
+      return {
+        step(i) {
+          const round = Math.floor(i / 64);
+          // 37 is odd: an affine permutation of the 64 consumers per round.
+          const k = ((i % 64) * 37 + round * 11) % 64;
+          const target = consumers[k];
+          pass(target, orders[(round + 7 * k) % 61]);
+          return verifying ? incomingOrder(target, sources) : 0;
+        },
+      };
+    },
+    verify(rt) {
+      verifying = true;
+      try {
+        const { step } = this.setup(rt);
+        return fold(256, step);
+      } finally {
+        verifying = false;
+      }
+    },
+  },
+  {
+    id: "A.track.far-one-wide-1024",
+    level: "A",
+    mechanism:
+      "One far read per pass of a wide consumer: 1024 sources read in order except one far source read first, whose hint points to another subscriber (another consumer looked it up last). One lookup per pass leaves the locality tiers; a single strike must not prepare the tape (INV-P).",
+    preconditions:
+      "Kernel API of the internal entry; computing frames; every source has 16 subscribers before the consumer and 16 after.",
+    measured:
+      "One pass of 1024 reads: one far lookup, one-hop reorders, cursor hits.",
+    excluded: "Graph construction.",
+    opsPerStep: 1024,
+    setup(rt) {
+      const node = () => new rt.ReactiveNode(undefined, undefined, 0);
+      const sources = range(1024).map(node);
+      const target = node();
+      const others = (count) => {
+        for (let k = 0; k < count; k++) {
+          const other = node();
+          for (const source of sources) rt.linkEdge(source, other);
+        }
+      };
+      others(16);
+      for (const source of sources) rt.linkEdge(source, target);
+      others(16);
+      const pass = (far) => {
+        target.tailIn = null;
+        target.state |= rt.Computing;
+        const previous = rt.enterConsumerTracking(target);
+        if (far >= 0) rt.resolveTrackedRead(sources[far], target);
+        for (let j = 0; j < 1024; j++)
+          if (j !== far) rt.resolveTrackedRead(sources[j], target);
+        rt.restoreConsumerTracking(previous);
+        target.state &= ~rt.Computing;
+        if (target.tailIn !== target.lastIn) rt.cleanupUnvisitedSources(target);
+      };
+      pass(-1);
+      return {
+        step(i) {
+          const far = 64 + ((i * 389) % 960);
+          const source = sources[far];
+          // An idle slot may hold any attached outgoing edge (INV-H).
+          source.tailIn = source.firstOut.nextOut.nextOut;
+          pass(far);
+          return verifying ? incomingOrder(target, sources) : 0;
+        },
+      };
+    },
+    verify(rt) {
+      verifying = true;
+      try {
+        const { step } = this.setup(rt);
+        return fold(16, step);
+      } finally {
+        verifying = false;
+      }
+    },
+  },
+  {
     id: "A.watcher.rerun",
     level: "A",
     mechanism: "Watcher invalidation, host enqueue and rerun with cleanup.",
