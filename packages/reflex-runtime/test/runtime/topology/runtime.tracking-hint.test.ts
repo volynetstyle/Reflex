@@ -252,6 +252,46 @@ describe("Reactive runtime - outgoing hint (INV-H)", () => {
   });
 });
 
+describe("Reactive runtime - outgoing finger coverage", () => {
+  it("finds every pair or proves absence from every finger, including ring wraps", () => {
+    for (let degree = 3; degree <= 40; degree++) {
+      const producer = node();
+      const consumers = Array.from({ length: degree + 1 }, () =>
+        node(Consumer),
+      );
+      const pairs: (ReactiveEdge | null)[] = [];
+      for (let i = 0; i < consumers.length; i++) {
+        const consumer = consumers[i]!;
+        // Keep either incoming walk beyond the entire finger window, so
+        // the outgoing probes and the continuation must cover every pair.
+        for (let j = 0; j < 24; j++) linkEdge(node(), consumer);
+        pairs.push(i < degree ? linkEdge(producer, consumer) : null);
+        for (let j = 0; j < 24; j++) linkEdge(node(), consumer);
+      }
+
+      for (let finger = 0; finger < degree; finger++) {
+        for (let target = 0; target < consumers.length; target++) {
+          const consumer = consumers[target]!;
+          for (const backward of [false, true]) {
+            producer.tailIn = pairs[finger]!;
+            const found = findEdgeInLockstep(
+              producer,
+              consumer,
+              backward ? consumer.lastIn : null,
+              backward ? null : consumer.firstIn,
+            );
+            expect(
+              found === pairs[target],
+              `degree=${degree}, finger=${finger}, target=${target}, backward=${backward}`,
+            ).toBe(true);
+          }
+        }
+      }
+      expectGraphIntegrity([producer, ...consumers]);
+    }
+  });
+});
+
 describe("Reactive runtime - outgoing hint against the lockstep alone", () => {
   /**
    * Two identical worlds take the same random operations: passes with hub
