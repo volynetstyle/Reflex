@@ -98,11 +98,14 @@
     "bench:work-amplification": "pnpm bench:work-amplification:sweep && pnpm bench:work-amplification:analyze",
     "bench:lifetime-churn": "vitest run --config config/vitest.config.ts --mode lifetime-churn",
     "test:watch": "vitest --config config/vitest.config.ts",
-    "lint": "eslint .",
+    "lint": "eslint . && pnpm lint:tsslint",
+    "lint:tsslint": "tsslint --project tsconfig.json --force",
+    "check:jit-shape": "node scripts/check-jit-contract-shape.mjs",
     "lint:fix": "eslint . --fix",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
-    "typecheck": "tsc --noEmit && pnpm typecheck:differential",
+    "typecheck": "tsc --noEmit && pnpm typecheck:differential && pnpm typecheck:tsslint",
+    "typecheck:tsslint": "tsc --noEmit -p config/tsslint/tsconfig.json",
     "typecheck:differential": "tsc --noEmit -p test/differential/tsconfig.json",
     "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm check:architecture && pnpm check:artifacts",
     "release": "changeset version && pnpm install && changeset publish",
@@ -117,6 +120,9 @@
     "build:tracking-tier-profile": "rollup --silent -c config/rollup.config.ts --configPlugin @rollup/plugin-swc --configTarget tracking-tier-profile"
   },
   "devDependencies": {
+    "@tsslint/cli": "3",
+    "@tsslint/config": "3",
+    "@tsslint/typescript-plugin": "3",
     "@types/node": "^26.1.2",
     "@volynets/algorithm-projection": "workspace:*",
     "typescript": "^5.6.0"

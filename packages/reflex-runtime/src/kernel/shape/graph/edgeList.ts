@@ -10,99 +10,102 @@ import type ReactiveNode from "@runtime/kernel/shape/node";
 // responsibility and are not verified.
 
 /**
- * Move `edge` after `after` in the incoming list of `to`, or to its head
- * when `after` is null. A no-op when the edge is already there.
+ * Move `movedEdge` after `insertAfterEdge` in the incoming list of `consumer`,
+ * or to its head when `insertAfterEdge` is null. A no-op when already there.
  *
  * Preconditions:
- * - `edge` is in the incoming list of `to`
- * - `after` is null or in the same list
+ * - `movedEdge` is in the incoming list of `consumer`
+ * - `insertAfterEdge` is null or in the same list
  */
 export function moveIncomingEdgeAfterUnchecked(
-  to: ReactiveNode,
-  edge: ReactiveEdge,
-  after: ReactiveEdge | null,
+  consumer: ReactiveNode,
+  movedEdge: ReactiveEdge,
+  insertAfterEdge: ReactiveEdge | null,
 ): void {
-  if (edge === after || edge.prevIn === after) return;
+  if (movedEdge === insertAfterEdge || movedEdge.prevIn === insertAfterEdge)
+    return;
 
-  const prev = edge.prevIn;
-  const next = edge.nextIn;
+  const previousIncomingEdge = movedEdge.prevIn;
+  const nextIncomingEdge = movedEdge.nextIn;
 
-  if (prev !== null) prev.nextIn = next;
-  else to.firstIn = next;
+  if (previousIncomingEdge !== null)
+    previousIncomingEdge.nextIn = nextIncomingEdge;
+  else consumer.firstIn = nextIncomingEdge;
 
-  if (next !== null) next.prevIn = prev;
-  else to.lastIn = prev;
+  if (nextIncomingEdge !== null) nextIncomingEdge.prevIn = previousIncomingEdge;
+  else consumer.lastIn = previousIncomingEdge;
 
-  const insertNext = after !== null ? after.nextIn : to.firstIn;
+  const nextEdgeAtInsertion =
+    insertAfterEdge !== null ? insertAfterEdge.nextIn : consumer.firstIn;
 
-  edge.prevIn = after;
-  edge.nextIn = insertNext;
+  movedEdge.prevIn = insertAfterEdge;
+  movedEdge.nextIn = nextEdgeAtInsertion;
 
-  if (insertNext !== null) insertNext.prevIn = edge;
-  else to.lastIn = edge;
+  if (nextEdgeAtInsertion !== null) nextEdgeAtInsertion.prevIn = movedEdge;
+  else consumer.lastIn = movedEdge;
 
-  if (after !== null) after.nextIn = edge;
-  else to.firstIn = edge;
+  if (insertAfterEdge !== null) insertAfterEdge.nextIn = movedEdge;
+  else consumer.firstIn = movedEdge;
 }
 
 /**
  * Move an incoming edge that is neither head nor tail after another edge.
  *
  * Preconditions:
- * - edge.prevIn !== null
- * - edge.nextIn !== null
- * - after !== edge
- * - after belongs to the same incoming list
- * - edge.prevIn !== after
+ * - movedEdge.prevIn !== null
+ * - movedEdge.nextIn !== null
+ * - insertAfterEdge !== movedEdge
+ * - insertAfterEdge belongs to the same incoming list
+ * - movedEdge.prevIn !== insertAfterEdge
  */
 export function moveMiddleIncomingEdgeAfterEdgeUnchecked(
-  to: ReactiveNode,
-  edge: ReactiveEdge,
-  after: ReactiveEdge,
+  consumer: ReactiveNode,
+  movedEdge: ReactiveEdge,
+  insertAfterEdge: ReactiveEdge,
 ): void {
-  const prev = edge.prevIn!;
-  const next = edge.nextIn!;
+  const previousIncomingEdge = movedEdge.prevIn!;
+  const nextIncomingEdge = movedEdge.nextIn!;
 
-  prev.nextIn = next;
-  next.prevIn = prev;
+  previousIncomingEdge.nextIn = nextIncomingEdge;
+  nextIncomingEdge.prevIn = previousIncomingEdge;
 
-  const insertNext = after.nextIn;
+  const nextEdgeAtInsertion = insertAfterEdge.nextIn;
 
-  edge.prevIn = after;
-  edge.nextIn = insertNext;
+  movedEdge.prevIn = insertAfterEdge;
+  movedEdge.nextIn = nextEdgeAtInsertion;
 
-  if (insertNext !== null) insertNext.prevIn = edge;
-  else to.lastIn = edge;
+  if (nextEdgeAtInsertion !== null) nextEdgeAtInsertion.prevIn = movedEdge;
+  else consumer.lastIn = movedEdge;
 
-  after.nextIn = edge;
+  insertAfterEdge.nextIn = movedEdge;
 }
 
 /**
  * Move a non-head incoming edge to the head.
  *
  * Preconditions:
- * - edge.prevIn !== null
- * - `edge` is in the incoming list of `to`
+ * - movedEdge.prevIn !== null
+ * - `movedEdge` is in the incoming list of `consumer`
  */
 export function moveNonHeadIncomingEdgeToFrontUnchecked(
-  to: ReactiveNode,
-  edge: ReactiveEdge,
+  consumer: ReactiveNode,
+  movedEdge: ReactiveEdge,
 ): void {
-  const prev = edge.prevIn!;
-  const next = edge.nextIn;
+  const previousIncomingEdge = movedEdge.prevIn!;
+  const nextIncomingEdge = movedEdge.nextIn;
 
-  prev.nextIn = next;
+  previousIncomingEdge.nextIn = nextIncomingEdge;
 
-  if (next !== null) next.prevIn = prev;
-  else to.lastIn = prev;
+  if (nextIncomingEdge !== null) nextIncomingEdge.prevIn = previousIncomingEdge;
+  else consumer.lastIn = previousIncomingEdge;
 
-  const first = to.firstIn!;
+  const firstIncomingEdge = consumer.firstIn!;
 
-  edge.prevIn = null;
-  edge.nextIn = first;
-  first.prevIn = edge;
+  movedEdge.prevIn = null;
+  movedEdge.nextIn = firstIncomingEdge;
+  firstIncomingEdge.prevIn = movedEdge;
 
-  to.firstIn = edge;
+  consumer.firstIn = movedEdge;
 }
 
 /**
@@ -110,29 +113,29 @@ export function moveNonHeadIncomingEdgeToFrontUnchecked(
  * there.
  *
  * Preconditions:
- * - edge.nextIn === null
- * - edge.prevIn !== null
- * - after !== edge
- * - after belongs to the same incoming list
+ * - movedEdge.nextIn === null
+ * - movedEdge.prevIn !== null
+ * - insertAfterEdge !== movedEdge
+ * - insertAfterEdge belongs to the same incoming list
  */
 export function moveLastIncomingEdgeAfterEdgeUnchecked(
-  to: ReactiveNode,
-  edge: ReactiveEdge,
-  after: ReactiveEdge,
+  consumer: ReactiveNode,
+  movedEdge: ReactiveEdge,
+  insertAfterEdge: ReactiveEdge,
 ): void {
-  if (edge.prevIn === after) return;
+  if (movedEdge.prevIn === insertAfterEdge) return;
 
-  const prev = edge.prevIn!;
+  const previousIncomingEdge = movedEdge.prevIn!;
 
-  prev.nextIn = null;
-  to.lastIn = prev;
+  previousIncomingEdge.nextIn = null;
+  consumer.lastIn = previousIncomingEdge;
 
-  const insertNext = after.nextIn!;
+  const nextEdgeAtInsertion = insertAfterEdge.nextIn!;
 
-  edge.prevIn = after;
-  edge.nextIn = insertNext;
+  movedEdge.prevIn = insertAfterEdge;
+  movedEdge.nextIn = nextEdgeAtInsertion;
 
-  insertNext.prevIn = edge;
+  nextEdgeAtInsertion.prevIn = movedEdge;
 
-  after.nextIn = edge;
+  insertAfterEdge.nextIn = movedEdge;
 }

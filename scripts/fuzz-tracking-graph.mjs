@@ -392,10 +392,7 @@ const MUTANTS = [
     "keep-on-sequence-unlink",
     `${S}::    if (from.tailIn === edge) from.tailIn = null;::    void 0;`,
   ],
-  [
-    "keep-on-subscriber-sweep",
-    `${S}::  if (hint !== null && hint.from === node && hint.to !== node) {::  if (false) {`,
-  ],
+  ["keep-on-subscriber-sweep", `${S}::slotEdge.from === producer::false`],
   [
     "keep-on-unlink-edge",
     `${L}::  if (from.tailIn === edge) from.tailIn = null;::  void 0;`,

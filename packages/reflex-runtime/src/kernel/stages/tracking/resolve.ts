@@ -26,17 +26,17 @@ import { isEdgeInTrackedPrefix } from "./prefix";
  * Commit a read that is not in the tracked prefix and that no locality tier
  * resolved: reuse the located edge from the suffix or link a new one.
  *
- * `edge` is the exact lookup result. A configured strategy keeps its contract
+ * `locatedEdge` is the exact lookup result. A configured strategy keeps its contract
  * (it is called for exactly these reads, after the prefix test) and repeats
- * its own search; the default strategy is applied to `edge` directly.
+ * its own search; the default strategy is applied to `locatedEdge` directly.
  */
-function reconcileTrackedRead(
+function reconcileLocatedRead(
   producer: ReactiveNode,
   consumer: ReactiveNode,
   cursorEdge: ReactiveEdge | null,
   suffixStartEdge: ReactiveEdge,
   passStamp: number,
-  edge: ReactiveEdge | null,
+  locatedEdge: ReactiveEdge | null,
 ): void {
   devRecordTrackRead(defaultContext, consumer, producer);
   if (__PROFILE__)
@@ -50,7 +50,7 @@ function reconcileTrackedRead(
           cursorEdge,
           suffixStartEdge,
           passStamp,
-          edge,
+          locatedEdge,
         )
       : readTrackingStrategy(
           producer,
@@ -91,7 +91,7 @@ function resolveInitialTrackedReadMiss(
 
   // The prefix is empty: whatever the lookup finds is in the suffix. The
   // first incoming edge was compared by the caller.
-  reconcileTrackedRead(
+  reconcileLocatedRead(
     producer,
     consumer,
     null,
@@ -226,7 +226,7 @@ function resolveCursorTrackedReadMiss(
 
   // Exact lookup. The cursor and the expected next edge were compared by
   // the caller, so the incoming side starts beside them.
-  const edge = locateReorderedEdge(
+  const locatedEdge = locateReorderedEdge(
     producer,
     consumer,
     cursorEdge.prevIn,
@@ -235,8 +235,8 @@ function resolveCursorTrackedReadMiss(
 
   // JIT: boolean call result; see resolveTailTrackedReadMiss.
   if (
-    edge !== null &&
-    isEdgeInTrackedPrefix(consumer, cursorEdge, edge) === true
+    locatedEdge !== null &&
+    isEdgeInTrackedPrefix(consumer, cursorEdge, locatedEdge) === true
   ) {
     if (__PROFILE__)
       observeRuntimeProjection?.(
@@ -246,13 +246,13 @@ function resolveCursorTrackedReadMiss(
     return;
   }
 
-  reconcileTrackedRead(
+  reconcileLocatedRead(
     producer,
     consumer,
     cursorEdge,
     expectedNextEdge,
     passStamp,
-    edge,
+    locatedEdge,
   );
 }
 

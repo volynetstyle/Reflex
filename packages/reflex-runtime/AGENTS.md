@@ -52,6 +52,7 @@ A change that trades a higher priority for a lower one is rejected.
 | State flags, transitions, failure recovery, tracking, contexts | [docs/INVARIANTS.md](./docs/INVARIANTS.md)                                                                 |
 | Teardown and cleanup ordering                                  | [docs/DISPOSE.md](./docs/DISPOSE.md)                                                                       |
 | Formal watcher lifecycle rules (C, W, V, L, M)                 | [test/differential/docs/SEMANTIC_CONTRACT.md](./test/differential/docs/SEMANTIC_CONTRACT.md)               |
+| JIT source contracts and engine evidence                       | [docs/JIT_CONTRACTS.md](./docs/JIT_CONTRACTS.md)                                                           |
 | Rule-to-code-to-check index                                    | [docs/RULES.md](./docs/RULES.md)                                                                           |
 | Layering and the debug boundary                                | [docs/architecture-contract.md](./docs/architecture-contract.md)                                           |
 | Source map, change workflow, checks per change kind            | [docs/GUIDE.md](./docs/GUIDE.md)                                                                           |
@@ -70,6 +71,8 @@ pnpm test:dev                # development policy and debug events
 pnpm test:projection         # structural projections of the stages
 pnpm typecheck
 pnpm lint
+pnpm lint:tsslint          # annotated JIT source contracts
+pnpm check:jit-shape       # optional V8 evidence for annotated sites
 pnpm check:rules             # rule citations exist
 pnpm check:architecture      # layering and debug boundary
 pnpm check:bundle-identity   # production bundle unchanged vs HEAD

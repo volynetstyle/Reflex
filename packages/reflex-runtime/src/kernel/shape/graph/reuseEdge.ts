@@ -15,36 +15,38 @@ function moveSuffixEdgeAfterCursor(
   edge: ReactiveEdge,
   insertAfterEdge: ReactiveEdge | null,
 ): void {
-  const prev = edge.prevIn;
-  if (prev === insertAfterEdge) return;
+  const previousIncomingEdge = edge.prevIn;
+  if (previousIncomingEdge === insertAfterEdge) return;
 
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.tracking.edge.move");
-  const next = edge.nextIn;
+  const nextIncomingEdge = edge.nextIn;
 
   if (insertAfterEdge === null) {
-    // prev is non-null: an existing head already returned above.
-    prev!.nextIn = next;
-    if (next !== null) next.prevIn = prev;
-    else consumer.lastIn = prev;
-    const first = consumer.firstIn!;
+    // The previous edge is non-null: an existing head already returned above.
+    previousIncomingEdge!.nextIn = nextIncomingEdge;
+    if (nextIncomingEdge !== null)
+      nextIncomingEdge.prevIn = previousIncomingEdge;
+    else consumer.lastIn = previousIncomingEdge;
+    const firstIncomingEdge = consumer.firstIn!;
     edge.prevIn = null;
-    edge.nextIn = first;
-    first.prevIn = edge;
+    edge.nextIn = firstIncomingEdge;
+    firstIncomingEdge.prevIn = edge;
     consumer.firstIn = edge;
     return;
   }
   // An edge moved after itself stays, as in moveIncomingEdgeAfterUnchecked.
-  if (prev === null && edge === insertAfterEdge) return;
-  if (prev !== null) prev.nextIn = next;
-  else consumer.firstIn = next;
-  if (next !== null) next.prevIn = prev;
-  else consumer.lastIn = prev;
+  if (previousIncomingEdge === null && edge === insertAfterEdge) return;
+  if (previousIncomingEdge !== null)
+    previousIncomingEdge.nextIn = nextIncomingEdge;
+  else consumer.firstIn = nextIncomingEdge;
+  if (nextIncomingEdge !== null) nextIncomingEdge.prevIn = previousIncomingEdge;
+  else consumer.lastIn = previousIncomingEdge;
 
-  const insertNext = insertAfterEdge.nextIn;
+  const nextEdgeAtInsertion = insertAfterEdge.nextIn;
   edge.prevIn = insertAfterEdge;
-  edge.nextIn = insertNext;
-  if (insertNext !== null) insertNext.prevIn = edge;
+  edge.nextIn = nextEdgeAtInsertion;
+  if (nextEdgeAtInsertion !== null) nextEdgeAtInsertion.prevIn = edge;
   else consumer.lastIn = edge;
   insertAfterEdge.nextIn = edge;
 }

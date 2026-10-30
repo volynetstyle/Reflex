@@ -36,42 +36,46 @@ export function unlinkDetachedIncomingEdgeSequence(
 }
 
 /**
- * Unlink every incoming edge of `node` and clear its cursor: the source side
+ * Unlink every incoming edge of `consumer` and clear its cursor: the source side
  * of disposal. Cold path.
  */
-export function unlinkAllSources(node: ReactiveNode): void {
-  const edge = node.firstIn;
+export function unlinkAllSources(consumer: ReactiveNode): void {
+  const firstIncomingEdge = consumer.firstIn;
 
-  node.firstIn = null;
-  node.lastIn = null;
-  node.tailIn = null;
+  consumer.firstIn = null;
+  consumer.lastIn = null;
+  consumer.tailIn = null;
 
-  unlinkDetachedIncomingEdgeSequence(edge);
+  unlinkDetachedIncomingEdgeSequence(firstIncomingEdge);
 }
 
 /**
- * Unlink every outgoing edge of `node` and clear its hint: the subscriber
+ * Unlink every outgoing edge of `producer` and clear its hint: the subscriber
  * side of disposal. A subscriber whose cursor is on a removed edge gets the
  * edge before it. Cold path.
  */
-export function unlinkAllSubscribers(node: ReactiveNode): void {
-  let edge = node.firstOut;
-  const hint = node.tailIn;
+export function unlinkAllSubscribers(producer: ReactiveNode): void {
+  let outgoingEdge = producer.firstOut;
+  const slotEdge = producer.tailIn;
 
   // Every outgoing edge goes, so a hint goes with them (INV-H). A self-edge
   // in the slot is incoming and is repaired by the loop below.
-  if (hint !== null && hint.from === node && hint.to !== node) {
-    node.tailIn = null;
+  if (
+    slotEdge !== null &&
+    slotEdge.from === producer &&
+    slotEdge.to !== producer
+  ) {
+    producer.tailIn = null;
   }
 
-  node.firstOut = null;
-  node.lastOut = null;
+  producer.firstOut = null;
+  producer.lastOut = null;
 
-  while (edge !== null) {
-    const nextOut = edge.nextOut;
-    const { to, prevIn, nextIn } = edge;
+  while (outgoingEdge !== null) {
+    const nextOut = outgoingEdge.nextOut;
+    const { to, prevIn, nextIn } = outgoingEdge;
 
-    if (to.tailIn === edge) {
+    if (to.tailIn === outgoingEdge) {
       to.tailIn = prevIn;
     }
 
@@ -81,11 +85,11 @@ export function unlinkAllSubscribers(node: ReactiveNode): void {
     if (nextIn !== null) nextIn.prevIn = prevIn;
     else to.lastIn = prevIn;
 
-    edge.prevOut = null;
-    edge.nextOut = null;
-    edge.prevIn = null;
-    edge.nextIn = null;
+    outgoingEdge.prevOut = null;
+    outgoingEdge.nextOut = null;
+    outgoingEdge.prevIn = null;
+    outgoingEdge.nextIn = null;
 
-    edge = nextOut;
+    outgoingEdge = nextOut;
   }
 }

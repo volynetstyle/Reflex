@@ -94,7 +94,8 @@ function markComputingSubscriber(
   const tail = sub.tailIn;
   if (tail === null) return 0;
 
-  // JIT: boolean call result, compared by reference against `true`.
+  // JIT: the prefix call returns a primitive boolean, compared strictly with
+  // `true`; the representation of that comparison is engine-specific.
   if (edge !== tail && isEdgeInTrackedPrefix(sub, tail, edge) !== true) {
     return 0;
   }
@@ -125,7 +126,8 @@ function pushIteratorCore(firstOut: ReactiveEdge | null): void {
   // Smi checks on B.chain, and from 120 to 157 on B.fanout (Node 24.22,
   // perf/v8-shape/analyze.mjs).
   const base = propagateStackHigh | 0;
-  // JIT: derived only from `base` and ++/--, so `top` stays Int32 too.
+  // JIT: source provenance and writes are checked; range and lowering are not.
+  // @jit int32-provenance(base)
   let top = base;
 
   /**

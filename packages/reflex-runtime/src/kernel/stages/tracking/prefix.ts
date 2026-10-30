@@ -3,7 +3,7 @@ import type ReactiveNode from "@runtime/kernel/shape/node";
 
 /**
  * Whether `edge`, an incoming edge of `consumer`, lies in the tracked prefix
- * `firstIn..cursor`, the part of the list the current pass has accepted.
+ * `firstIn..cursorEdge`, the part of the list the current pass has accepted.
  *
  * With the cursor at `lastIn` the suffix is empty, so every edge is in the
  * prefix (INV-T2). This also covers watcher validation, which spans the
@@ -18,20 +18,20 @@ import type ReactiveNode from "@runtime/kernel/shape/node";
  */
 export function isEdgeInTrackedPrefix(
   consumer: ReactiveNode,
-  cursor: ReactiveEdge,
+  cursorEdge: ReactiveEdge,
   edge: ReactiveEdge,
 ): boolean {
-  if (cursor === consumer.lastIn) return true;
+  if (cursorEdge === consumer.lastIn) return true;
 
-  const stamp = cursor.stamp;
-  if (stamp !== 0) return edge.stamp === stamp;
+  const passStamp = cursorEdge.stamp;
+  if (passStamp !== 0) return edge.stamp === passStamp;
 
   for (
-    let current: ReactiveEdge | null = cursor;
-    current !== null;
-    current = current.prevIn
+    let prefixEdge: ReactiveEdge | null = cursorEdge;
+    prefixEdge !== null;
+    prefixEdge = prefixEdge.prevIn
   ) {
-    if (current === edge) return true;
+    if (prefixEdge === edge) return true;
   }
 
   return false;

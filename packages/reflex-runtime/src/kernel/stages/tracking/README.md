@@ -18,13 +18,17 @@ sequential path is resolved in three steps:
      an empty `P.out`, its newest edge, a sole edge to another consumer,
      the outgoing hint, `tailIn` of the idle producer when it is an edge of
      exactly this pair (INV-H).
-   - **L2, lockstep**: bounded by the shorter of `P.out` and `C.in`; the
-     only general proof of absence, past a two-link head start at
-     `firstOut`. With another hint in the slot (an outgoing finger), its
+   - **L2, lockstep**: bounded by the shorter of `P.out` and `C.in`, past a
+     two-link head start at `firstOut`. With another hint in the slot (an
+     outgoing finger), its
      first 16 steps alternate the outgoing link between the walk from the
      head and up to 8 links of `P.out` around the finger, read as a ring;
      the incoming walkers advance on every step. Its result refreshes the
      hint.
+   - **Prepared tape** (INV-P, `../../shape/graph/tape.ts`): repeated costly
+     lookups can prepare one consumer's incoming list. Its cells can answer a
+     pair lookup, and a covered live lease can certify that a producer has no
+     edge to the owner. Otherwise the lookup continues its exact search.
 2. **Classify** it: in the prefix exactly when it carries the cursor's
    nonzero stamp (INV-T3), or always when the cursor is `lastIn` (INV-T2):
    `isEdgeInTrackedPrefix`.
@@ -32,6 +36,10 @@ sequential path is resolved in three steps:
    a new edge: `reuseLocatedIncomingEdgeOrLink`, which never searches again.
 
 `edge.stamp` is a pass-membership stamp, not a value version.
+
+`resolveTrackedRead` handles sequential reads directly. On a miss,
+`reconcileLocatedRead` commits a located suffix edge or a new link after the
+duplicate check; a configured strategy is called at that same boundary.
 
 `tailIn` is one slot with two lifetime-disjoint readings (INV-H,
 `../../shape/graph/hint.ts`): while the node is Computing, its tracking frontier;
@@ -51,20 +59,14 @@ finger does not help; both cases stay at the lockstep bound.
 
 ## Code map
 
-| File                               | Role                                                                            |
-| ---------------------------------- | ------------------------------------------------------------------------------- |
-| `resolve.ts`                       | hot path (next edge, cursor, first read) and the initial, tail and inner misses |
-| `locate.ts`                        | producer-side probes, then the graph lookup; the reorder path keeps only newest |
-| `prefix.ts`                        | prefix classification, shared with `push_iterator.ts`                           |
-| `cleanup.ts`                       | removal of the unvisited suffix after a successful pass                         |
-| `read.ts`                          | `trackRead`, an entry for tests and tools                                       |
-| `../../shape/graph/findEdge.ts`    | exact pair lookup: outgoing hint, head start, lockstep raced by the finger      |
-| `../../shape/graph/hint.ts`        | INV-H: the two readings of `tailIn`                                             |
-| `../../shape/graph/reuseEdge.ts`   | reconciliation (move or link), the default strategy                             |
-| `../../shape/graph/cursorMoves.ts` | the tiers' incoming-list moves next to the cursor                               |
-| `../../shape/graph/edgeList.ts`    | generic incoming-list moves, for tests and tools                                |
-| `../../shape/graph/linkEdge.ts`    | link (outgoing lists are append-only), the tiers' links, unlink                 |
-| `../../shape/graph/sweepEdges.ts`  | unlink of detached sequences and of whole lists (cleanup, disposal)             |
+| File                                                | Role                                                                            |
+| --------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `resolve.ts`                                        | hot path (next edge, cursor, first read) and the initial, tail and inner misses |
+| `locate.ts`                                         | producer-side probes, then the graph lookup; the reorder path keeps only newest |
+| `prefix.ts`                                         | prefix classification, shared with `push_iterator.ts`                           |
+| `cleanup.ts`                                        | removal of the unvisited suffix after a successful pass                         |
+| `read.ts`                                           | `trackRead`, an entry for tests and tools                                       |
+| [`../../shape/graph/`](../../shape/graph/README.md) | exact lookup and graph mutations used by tracking                               |
 
 Rules to keep when changing this code:
 

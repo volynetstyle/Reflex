@@ -80,6 +80,23 @@ export const SUITES = [
     tiers: ["smoke", "ci", "deep"],
   },
   {
+    id: "static.jit-contracts",
+    layer: "static",
+    technique: "type-aware checks of annotated JIT source premises",
+    owner: "docs/JIT_CONTRACTS.md",
+    runner: {
+      type: "node",
+      args: [
+        "--experimental-strip-types",
+        "node_modules/@tsslint/cli/bin/tsslint.js",
+        "--project",
+        "tsconfig.json",
+        "--force",
+      ],
+    },
+    tiers: ["smoke", "ci", "deep"],
+  },
+  {
     id: "static.architecture",
     layer: "static",
     technique: "layering and debug-boundary contract",

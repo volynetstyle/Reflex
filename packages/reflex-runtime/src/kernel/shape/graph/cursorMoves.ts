@@ -44,25 +44,25 @@ export function moveLastIncomingEdgeAfterCursorUnchecked(
  * makes it the cursor.
  *
  * Preconditions:
- * - edge.nextIn === null
- * - edge.prevIn !== null
+ * - lastIncomingEdge.nextIn === null
+ * - lastIncomingEdge.prevIn !== null
  */
 export function moveLastIncomingEdgeToFrontUnchecked(
-  to: ReactiveNode,
-  edge: ReactiveEdge,
+  consumer: ReactiveNode,
+  lastIncomingEdge: ReactiveEdge,
 ): void {
-  const prev = edge.prevIn!;
+  const previousLastEdge = lastIncomingEdge.prevIn!;
 
-  prev.nextIn = null;
-  to.lastIn = prev;
+  previousLastEdge.nextIn = null;
+  consumer.lastIn = previousLastEdge;
 
-  const first = to.firstIn!;
+  const firstIncomingEdge = consumer.firstIn!;
 
-  edge.prevIn = null;
-  edge.nextIn = first;
-  first.prevIn = edge;
+  lastIncomingEdge.prevIn = null;
+  lastIncomingEdge.nextIn = firstIncomingEdge;
+  firstIncomingEdge.prevIn = lastIncomingEdge;
 
-  to.firstIn = edge;
+  consumer.firstIn = lastIncomingEdge;
 }
 
 /**

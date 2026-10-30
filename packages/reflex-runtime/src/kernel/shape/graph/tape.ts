@@ -43,33 +43,34 @@ import { trackingStamp } from "@runtime/kernel/state";
  * every link, so a `var` (no hole check), as the registers in state.ts.
  */
 export var preparedOwner: ReactiveNode | null = null;
-var preparedStamp = 0;
+var preparedPassStamp = 0;
 /** Every producer could take its cell and bit: the certificate's premise. */
-var preparedCovered = false;
+var hasFullTapeCoverage = false;
 
-var strikeConsumer: ReactiveNode | null = null;
-var strikeStamp = 0;
+var lastStrikeConsumer: ReactiveNode | null = null;
+var lastStrikePassStamp = 0;
 
 /** The stamp the resolver gives the next read of a computing consumer. */
-function passStampOf(consumer: ReactiveNode): number {
-  const cursor = consumer.tailIn;
-  return cursor !== null ? cursor.stamp : trackingStamp;
+function getTrackingPassStamp(consumer: ReactiveNode): number {
+  const cursorEdge = consumer.tailIn;
+  return cursorEdge !== null ? cursorEdge.stamp : trackingStamp;
 }
 
 function isLeaseLive(owner: ReactiveNode): boolean {
   return (
-    (owner.state & Computing) !== 0 && passStampOf(owner) === preparedStamp
+    (owner.state & Computing) !== 0 &&
+    getTrackingPassStamp(owner) === preparedPassStamp
   );
 }
 
 /** Ends the lease: clears the bits of the owner's current producers. */
 function releaseLease(owner: ReactiveNode): void {
   for (
-    let edge: ReactiveEdge | null = owner.firstIn;
-    edge !== null;
-    edge = edge.nextIn
+    let incomingEdge: ReactiveEdge | null = owner.firstIn;
+    incomingEdge !== null;
+    incomingEdge = incomingEdge.nextIn
   ) {
-    edge.from.state &= ~Leased;
+    incomingEdge.from.state &= ~Leased;
   }
   preparedOwner = null;
 }
@@ -92,7 +93,7 @@ export function preparedMissIsAbsent(
 
   // A self-edge, a frontier slot or a watcher's saved slot carries no cell.
   return (
-    preparedCovered &&
+    hasFullTapeCoverage &&
     (producer.state & (Computing | Watcher | Leased)) === 0 &&
     producer !== consumer
   );
@@ -112,11 +113,15 @@ export function settleOnPreparedTape(
     return preparedMissIsAbsent(producer, consumer) === true ? null : undefined;
   }
 
-  if (strikeReachesPrepare(consumer) === false) return undefined;
+  if (recordStrikeAndMaybePrepareTape(consumer) === false) return undefined;
 
-  const cell = producer.tailIn;
-  if (cell !== null && cell.to === consumer && cell.from === producer) {
-    return cell;
+  const slotEdge = producer.tailIn;
+  if (
+    slotEdge !== null &&
+    slotEdge.to === consumer &&
+    slotEdge.from === producer
+  ) {
+    return slotEdge;
   }
   return preparedMissIsAbsent(producer, consumer) === true ? null : undefined;
 }
@@ -130,59 +135,61 @@ export function strikeOnFarFingerHit(
   edge: ReactiveEdge,
   consumer: ReactiveNode,
 ): ReactiveEdge {
-  if ((consumer.state & Computing) !== 0) void strikeReachesPrepare(consumer);
+  if ((consumer.state & Computing) !== 0)
+    void recordStrikeAndMaybePrepareTape(consumer);
   return edge;
 }
 
 /** Records the first strike; prepares from the second. True when prepared. */
-function strikeReachesPrepare(consumer: ReactiveNode): boolean {
-  const stamp = passStampOf(consumer);
+function recordStrikeAndMaybePrepareTape(consumer: ReactiveNode): boolean {
+  const passStamp = getTrackingPassStamp(consumer);
 
-  if (strikeConsumer !== consumer || strikeStamp !== stamp) {
-    strikeConsumer = consumer;
-    strikeStamp = stamp;
+  if (lastStrikeConsumer !== consumer || lastStrikePassStamp !== passStamp) {
+    lastStrikeConsumer = consumer;
+    lastStrikePassStamp = passStamp;
     return false;
   }
 
   // The pass identity records its first strike. Later strikes need no count,
   // including retries while another live lease prevents preparation.
 
-  const owner = preparedOwner;
-  if (owner !== null) {
+  const currentOwner = preparedOwner;
+  if (currentOwner !== null) {
     // This pass is prepared already, or another lease is live: one owner.
-    if (owner === consumer && preparedStamp === stamp) return false;
-    if (isLeaseLive(owner) === true) return false;
-    releaseLease(owner);
+    if (currentOwner === consumer && preparedPassStamp === passStamp)
+      return false;
+    if (isLeaseLive(currentOwner) === true) return false;
+    releaseLease(currentOwner);
   }
 
-  prepareTape(consumer, stamp);
+  prepareTape(consumer, passStamp);
   return true;
 }
 
 /** One pass over the consumer's incoming list: cells and bits. */
-function prepareTape(consumer: ReactiveNode, stamp: number): void {
-  let covered = true;
+function prepareTape(consumer: ReactiveNode, passStamp: number): void {
+  let allProducersCovered = true;
 
   for (
-    let edge: ReactiveEdge | null = consumer.firstIn;
-    edge !== null;
-    edge = edge.nextIn
+    let incomingEdge: ReactiveEdge | null = consumer.firstIn;
+    incomingEdge !== null;
+    incomingEdge = incomingEdge.nextIn
   ) {
-    const producer = edge.from;
-    const state = producer.state;
+    const producer = incomingEdge.from;
+    const producerState = producer.state;
     // INV-H: a Computing node's slot is a frontier, a watcher's is saved
     // and restored by validation. A self-edge comes from the consumer.
-    if ((state & (Computing | Watcher)) === 0) {
-      producer.state = state | Leased;
-      producer.tailIn = edge;
+    if ((producerState & (Computing | Watcher)) === 0) {
+      producer.state = producerState | Leased;
+      producer.tailIn = incomingEdge;
     } else {
-      covered = false;
+      allProducersCovered = false;
     }
   }
 
   preparedOwner = consumer;
-  preparedStamp = stamp;
-  preparedCovered = covered;
+  preparedPassStamp = passStamp;
+  hasFullTapeCoverage = allProducersCovered;
 }
 
 /**
@@ -191,11 +198,11 @@ function prepareTape(consumer: ReactiveNode, stamp: number): void {
  */
 export function notePreparedLink(edge: ReactiveEdge): void {
   const producer = edge.from;
-  const state = producer.state;
-  if ((state & (Computing | Watcher)) === 0) {
-    producer.state = state | Leased;
+  const producerState = producer.state;
+  if ((producerState & (Computing | Watcher)) === 0) {
+    producer.state = producerState | Leased;
     producer.tailIn = edge;
   } else {
-    preparedCovered = false;
+    hasFullTapeCoverage = false;
   }
 }
