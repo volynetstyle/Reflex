@@ -17,9 +17,10 @@ import { trackingStamp } from "@runtime/kernel/state";
  * existing edges. Nothing is created, moved or unlinked, so a throw at any
  * point leaves the graph the lookup would have left.
  *
- * Trigger. A lookup that leaves the locality tiers for the plain lockstep,
- * or whose finger race settles only in the far end of its window, is a
- * strike of its tracking pass. The second strike of a pass
+ * Trigger. A lookup whose plain lockstep is still running after a fixed
+ * number of steps, or whose finger race settles only in the far end of its
+ * window, is a strike of its tracking pass: a strike is evidence of cost,
+ * not of a lost locality tier. The second strike of a pass
  * prepares the tape. A tracking pass is named by (consumer, pass stamp);
  * the stamp alone is not unique across consumers. Another pass striking in
  * between restarts the count, so nesting only ever delays a prepare.
@@ -100,19 +101,15 @@ export function preparedMissIsAbsent(
 }
 
 /**
- * Entry of the plain lockstep for a computing consumer: the owner's
- * certificate, otherwise a strike. Returns the answer when the tape
- * settles the lookup (a cell, or certified absence), undefined to run the
+ * A plain lockstep of a computing consumer that has run long: a strike.
+ * Returns the answer when the strike prepares the tape and the tape settles
+ * the lookup (a cell, or certified absence), undefined to continue the
  * lockstep.
  */
-export function settleOnPreparedTape(
+export function settleOnCostlyLockstep(
   producer: ReactiveNode,
   consumer: ReactiveNode,
 ): ReactiveEdge | null | undefined {
-  if (preparedOwner === consumer) {
-    return preparedMissIsAbsent(producer, consumer) === true ? null : undefined;
-  }
-
   if (recordStrikeAndMaybePrepareTape(consumer) === false) return undefined;
 
   const slotEdge = producer.tailIn;

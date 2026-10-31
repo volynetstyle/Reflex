@@ -6,7 +6,7 @@ import { observeRuntimeProjection } from "@runtime/kernel/projection";
 import {
   preparedMissIsAbsent,
   preparedOwner,
-  settleOnPreparedTape,
+  settleOnCostlyLockstep,
   strikeOnFarFingerHit,
 } from "./tape";
 
@@ -49,7 +49,7 @@ import {
  * certificate (INV-P, graph/tape.ts).
  *
  * Prepared tape. When the finger race settles only in its far end, or the
- * lookup enters the plain lockstep, a computing consumer strikes; enough
+ * plain lockstep runs long, a computing consumer strikes; enough
  * strikes in one pass prepare its incoming list as a tape whose cells are
  * the producers' slots, so the hint probe above answers its existing pairs.
  * The tape is consulted only at the entries of the two continuations below.
@@ -313,10 +313,19 @@ function findEdgeInLockstepFarFinger(
 }
 
 /**
+ * Lockstep steps after which a lookup of a computing consumer strikes. A
+ * lookup that settles sooner cost less than its share of a prepare, which
+ * reads the whole incoming list: on a narrow producer the outgoing side
+ * proves the answer within a few steps however long that list is.
+ */
+const COSTLY_LOCKSTEP_STEP = 16;
+
+/**
  * The lockstep proper, entered with `out` positioned after the head start.
- * A computing consumer entering it has left the locality tiers: its owner
- * asks the prepared tape, any other consumer strikes, and a strike that
- * prepares the tape answers from it (settleOnPreparedTape).
+ * A computing consumer entering it has left the locality tiers: the owner of
+ * a prepared tape first asks the tape whether the miss proves absence. A
+ * lookup still running after COSTLY_LOCKSTEP_STEP steps strikes, and a strike
+ * that prepares the tape answers from it (settleOnCostlyLockstep).
  *
  * JIT: plain loops, not unrolled. This is the cold search behind every
  * locality tier; its size counts against the inlining budget of each caller.
@@ -329,12 +338,23 @@ function findEdgeInLockstepPastHeadStart(
   back: ReactiveEdge | null,
   ahead: ReactiveEdge | null,
 ): ReactiveEdge | null {
-  if ((consumer.state & Computing) !== 0) {
-    const settled = settleOnPreparedTape(producer, consumer);
-    if (settled !== undefined) return settled;
+  if (
+    preparedOwner === consumer &&
+    preparedMissIsAbsent(producer, consumer) === true
+  ) {
+    return null;
   }
 
+  let step = 0;
+
   while (out !== null) {
+    if (
+      ++step === COSTLY_LOCKSTEP_STEP &&
+      (consumer.state & Computing) !== 0
+    ) {
+      const settled = settleOnCostlyLockstep(producer, consumer);
+      if (settled !== undefined) return settled;
+    }
     {
       if (__PROFILE__)
         observeRuntimeProjection?.("projection.semantic.tracking.locate.step");
