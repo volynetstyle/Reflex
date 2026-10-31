@@ -10,14 +10,14 @@ import { verifyArchive } from "../build/verify-artifacts.mjs";
 
 function options(argv) {
  const result={skipBuild:false,packOnly:false,outputDir:resolve(repoRoot,"artifacts/qualification"),keepFixture:false,offline:false};
- for(let i=0;i<argv.length;i++){const arg=argv[i];if(arg==="--")continue;if(arg==="--offline")result.offline=true;else if(arg==="--skip-build")result.skipBuild=true;else if(arg==="--pack-only")result.packOnly=true;else if(arg==="--keep-fixture")result.keepFixture=true;else if(arg==="--output-dir"){if(!argv[++i])throw new Error("--output-dir requires a path");result.outputDir=resolve(argv[i]);}else throw new Error("Unknown qualification argument: "+arg);}
+ for(let i=0;i<argv.length;i++){const arg=argv[i];if(arg==="--")continue;if(arg==="--offline")result.offline=true;else if(arg==="--skip-build")result.skipBuild=true;else if(arg==="--pack-only")result.packOnly=true;else if(arg==="--keep-fixture")result.keepFixture=true;else if(arg==="--catalogued-divergences")result.cataloguedDivergences=true;else if(arg==="--output-dir"){if(!argv[++i])throw new Error("--output-dir requires a path");result.outputDir=resolve(argv[i]);}else throw new Error("Unknown qualification argument: "+arg);}
  return result;
 }
 const config=options(process.argv.slice(2));
 const runId=new Date().toISOString().replaceAll(":","-")+"-"+process.pid;
 const output=join(config.outputDir,runId);
 await mkdir(output,{recursive:true});
-const summary={schemaVersion:1,kind:"release-qualification",runId,node:process.version,startedAt:new Date().toISOString(),status:"running",buildSkipped:config.skipBuild,packOnly:config.packOnly,packages:[],checks:[]};
+const summary={schemaVersion:1,kind:"release-qualification",runId,node:process.version,startedAt:new Date().toISOString(),status:"running",buildSkipped:config.skipBuild,packOnly:config.packOnly,cataloguedDivergences:Boolean(config.cataloguedDivergences),packages:[],checks:[]};
 const summaryPath=join(output,"qualification.json");
 const save=()=>writeFile(summaryPath,JSON.stringify(summary,null,2)+"\n");
 async function command(id,exe,args,cwd,env=process.env){
@@ -77,7 +77,7 @@ try{
   await command("consumer.mcp.graph",process.execPath,[fileURLToPath(new URL("./run-mcp.mjs",import.meta.url)),fixture,"graph"],repoRoot);
   await command("consumer.mcp.bin",process.execPath,[fileURLToPath(new URL("./run-mcp.mjs",import.meta.url)),fixture,"bin"],repoRoot);
   await command("consumer.browser",process.execPath,[fileURLToPath(new URL("./run-browser.mjs",import.meta.url)),fixture,output],repoRoot);
-  await command("consumer.active-divergences",process.execPath,[fileURLToPath(new URL("./check-active-divergences.mjs",import.meta.url))],repoRoot);
+  await command("consumer.active-divergences",process.execPath,[fileURLToPath(new URL("./check-active-divergences.mjs",import.meta.url)),...(config.cataloguedDivergences?["--catalogued"]:[])],repoRoot);
   summary.status="passed";summary.consumerQualification="passed";
  }
 }catch(error){summary.status="failed";summary.error=error.stack??error.message;process.exitCode=1;console.error(error.message);}

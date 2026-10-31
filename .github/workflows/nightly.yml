@@ -1,0 +1,43 @@
+name: Nightly
+
+# Starts CI on dev in the deep phase. A dispatch runs with dev's own workflow
+# file and in dev's cache scope; a scheduled run would execute dev's code in the
+# default branch's context, whose caches the release reads.
+#
+#   Mon-Sat   reuses evidence: free when dev did not change since the last run
+#   Sunday    fresh: nothing reused, plus the Windows consumer, so environment
+#             rot (runner images, registries, browsers) and flaky tests surface
+#
+# CI reports a failed nightly as a "Nightly CI is failing" issue.
+
+on:
+  schedule:
+    - cron: '20 1 * * 1-6'
+    - cron: '20 1 * * 0'
+  workflow_dispatch:
+    inputs:
+      fresh:
+        description: Execute every check even when evidence for the same inputs exists
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    name: deep CI on dev
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          SCHEDULE: ${{ github.event.schedule }}
+          INPUT_FRESH: ${{ inputs.fresh }}
+        run: |
+          fresh=false
+          if [[ "$SCHEDULE" == '20 1 * * 0' || "$INPUT_FRESH" == true ]]; then fresh=true; fi
+          gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref dev -f phase=deep -f fresh="$fresh" -f nightly=true
+          echo "Dispatched deep CI on dev (fresh=$fresh)"

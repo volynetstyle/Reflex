@@ -4,6 +4,9 @@ updates:
   # pins current with their version comments.
   - package-ecosystem: github-actions
     directories: ["/", "/.github/actions/*"]
+    # Changes enter through dev like every other change; main receives them
+    # with the next release candidate.
+    target-branch: dev
     schedule:
       interval: weekly
     groups:
@@ -14,6 +17,7 @@ updates:
 
   - package-ecosystem: npm
     directory: /
+    target-branch: dev
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
