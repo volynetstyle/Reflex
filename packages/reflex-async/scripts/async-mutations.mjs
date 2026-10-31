@@ -10,23 +10,23 @@ export const asyncMutations = [
   {
     id: "reverse-frontier-capture-order",
     target: "/src/async/frontier.ts",
-    from: "if (next !== entries.length) entry = entries[next++]!;",
-    to: "if (next !== entries.length) entry = entries[entries.length - 1 - next++]!;",
+    from: "entry = entries[next++]!;",
+    to: "entry = entries[entries.length - 1 - next++]!;",
     occurrences: 2,
     tests: ["tests/reflex.async.frontier.test.ts"],
   },
   {
     id: "duplicate-frontier-leaves",
     target: "/src/async/frontier.ts",
-    from: "if (!visitState(dependency[FRONTIER_STATE], walk)) continue;",
-    to: "// mutation: shared direct leaves are visited more than once",
+    from: "if (!visitState(dependency[FRONTIER_STATE], walk)) {",
+    to: "if (false) { // mutation: shared direct leaves are visited more than once",
     tests: ["tests/reflex.async.frontier.test.ts"],
   },
   {
     id: "false-positive-frontier-shape",
     target: "/src/async/frontier.ts",
-    from: "for (let i = 0; i < a.length; ++i) if (a[i] !== b[i]) return false;",
-    to: "// mutation: length alone is insufficient for shape equality",
+    from: "if (a[i] !== b[i]) {",
+    to: "if (false) { // mutation: length alone is insufficient for shape equality",
     tests: ["tests/reflex.async.frontier.test.ts"],
   },
   {
@@ -68,8 +68,8 @@ export const asyncMutations = [
   {
     id: "reference-keyed-direct-capture",
     target: "/src/async/frontier.ts",
-    from: "if (direct[i]![FRONTIER_STATE] === state) return;",
-    to: "if (direct[i] === observation) return;",
+    from: "if (direct[i]![FRONTIER_STATE] === state) {",
+    to: "if (direct[i] === observation) {",
     tests: ["tests/reflex.async.frontier.test.ts"],
   },
   {
