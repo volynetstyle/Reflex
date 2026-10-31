@@ -148,6 +148,16 @@
         "<repo>/packages/reflex-runtime/src/kernel/shape/tracking/resolve.ts"
       ],
       "reason": "The tracking stage moved from src/kernel/shape/tracking to src/kernel/stages/tracking (ddae993); the planned constants.ts was deleted (a8aa89f)."
+    },
+    {
+      "config": "packages/reflex-runtime/tsconfig.json",
+      "path": "options.plugins",
+      "to": [
+        {
+          "name": "@tsslint/typescript-plugin"
+        }
+      ],
+      "reason": "The TSSLint language-service plugin checks the JIT source contracts in the editor (32fa5b7); tsc ignores language-service plugins, so compilation and emitted code are unchanged."
     }
   ]
 }
