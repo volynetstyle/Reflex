@@ -13,6 +13,8 @@ const filename = resolve(qualification), directory = dirname(filename);
 const report = JSON.parse(await readFile(filename, "utf8"));
 if (report.schemaVersion !== 1 || report.kind !== "release-qualification" || report.status !== "passed" || report.consumerQualification !== "passed" || report.packOnly || !report.completedAt) throw new Error("Full successful consumer qualification is required.");
 if (!Array.isArray(report.checks) || report.checks.length === 0 || report.checks.some((check) => check.status !== "passed" || check.exitCode !== 0)) throw new Error("Qualification contains incomplete or failed checks.");
+// Pull-request qualification tolerates catalogued divergences; a release never does.
+if (report.cataloguedDivergences) throw new Error("Qualification accepted catalogued semantic divergences; publication needs a strict run.");
 const expected = packagesInScope("publish").map((entry) => entry.name).sort();
 const released = new Set(packagesInScope("release").map((entry) => entry.name));
 const actual = report.packages.map((entry) => entry.name).sort();

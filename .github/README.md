@@ -29,6 +29,11 @@ repeats the first answer at full price.
   and the trend compare source trees per suite (`tooling/benchmarks/suites.json`),
   the paired run compares production bundles. Every verdict is a screening
   verdict; none blocks.
+- **Active semantic divergences** (`packages/reflex-runtime/test/differential/catalog/active.ts`)
+  may stay catalogued in the `pr` phase: the runtime tests require each to
+  reproduce exactly, and the differential suites reject any other divergence.
+  The `deep` phase and publication require an empty catalog, so a known
+  divergence never reaches main or npm.
 - **Runtime bundle identity** is judged where a change enters: a PR into dev, or
   straight into main, needs the `runtime-bundle-change` label when the bundle
   changes. The dev -> main PR, pushes and the nightly carry changes already
