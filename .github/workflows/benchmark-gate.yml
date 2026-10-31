@@ -98,8 +98,8 @@ jobs:
         run: |
           plan=$(node tooling/benchmarks/plan.mjs --base "$BASE" --head "$HEAD")
           echo "$plan" | tee -a "$GITHUB_OUTPUT"
-          skipped=$(sed -n 's/^skipped=//p' <<< "$plan")
-          for suite in $skipped; do
+          read -ra skipped <<< "$(sed -n 's/^skipped=//p' <<< "$plan")"
+          for suite in "${skipped[@]}"; do
             echo "::notice title=$suite benchmarks skipped::No measured source differs between base and head (tooling/benchmarks/suites.json); timing identical code would only report noise."
           done
 
@@ -126,7 +126,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ needs.plan.outputs.head }}
+          # The run's own commit (the plan's head), so no foreign ref is executed.
           path: head
 
       - name: Read head commit timestamp

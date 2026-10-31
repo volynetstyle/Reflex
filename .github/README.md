@@ -37,6 +37,7 @@ repeats the first answer at full price.
 | Workflow | Purpose |
 | --- | --- |
 | [CI](workflows/ci.yml) | Every registered quality check, config parity, workflow lint, installed-package qualification, runtime bundle identity |
+| [Nightly](workflows/nightly.yml) | Dispatches deep CI on dev; fresh on Sunday |
 | [Release](workflows/release.yml) | Version pull request; qualification and npm publication of new versions |
 | [Benchmark gate](workflows/benchmark-gate.yml) | Vitest bench suites, base against head; screening verdicts as warnings |
 | [Runtime paired benchmarks](workflows/runtime-paired-benchmarks.yml) | Paired production-bundle comparison in balanced shards; A/A calibration on dispatch |
@@ -51,9 +52,13 @@ fails when any job failed or any registered check produced no evidence, so
 adding a package to `tooling/configs/quality-checks.json` needs no branch
 protection change.
 
-The nightly verifies dev (the scheduled workflow file still comes from main, so
-a change to the schedule takes effect once it reaches main). When it fails it
-opens or comments on a "Nightly CI is failing" issue.
+The nightly ([nightly.yml](workflows/nightly.yml)) dispatches CI on dev rather
+than running on a schedule itself: a scheduled run executes in the default
+branch's context, so checking out dev there would let dev's code write the
+caches the release reads. The dispatched run uses dev's own workflow file and
+cache scope. Schedules are read from the default branch, so a change to the
+cron times takes effect once nightly.yml reaches main. A failed nightly opens
+or comments on a "Nightly CI is failing" issue.
 
 ## Delivery
 

@@ -64,7 +64,8 @@ jobs:
           if [[ -n "$BEFORE" && ! "$BEFORE" =~ ^0+$ ]] && git fetch -q --depth=1 origin "$BEFORE"; then args=(--base "$BEFORE" --head "$GITHUB_SHA"); fi
           plan=$(node tooling/benchmarks/plan.mjs "${args[@]}")
           echo "$plan" | tee -a "$GITHUB_OUTPUT"
-          for suite in $(sed -n 's/^skipped=//p' <<< "$plan"); do
+          read -ra skipped <<< "$(sed -n 's/^skipped=//p' <<< "$plan")"
+          for suite in "${skipped[@]}"; do
             echo "::notice title=$suite trend skipped::No measured source changed since the previous main head; the point would repeat the last one."
           done
 

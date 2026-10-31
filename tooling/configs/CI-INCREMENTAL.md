@@ -44,7 +44,7 @@ verdict also depends on labels, so it is never adopted.
 
 ## Fresh runs
 
-The Sunday schedule and a dispatch with `fresh` set read no evidence and adopt
+The Sunday nightly and any dispatch with `fresh` set read no evidence and adopt
 no verdict; they execute everything and still publish their evidence. That is
 where environment rot (runner images, registries, browsers) and flaky tests
 surface. OS, architecture, Node major and pnpm version are part of every

@@ -12,6 +12,10 @@ name: CI
 #                                          Windows consumer, so environment rot
 #                                          and flaky tests still surface
 #
+# The nightly is a dispatch of this workflow on dev (nightly.yml), so it runs
+# with dev's workflow file and in dev's cache scope: no job checks out a ref
+# other than the one the run was started for.
+#
 # Nothing runs twice on the same inputs. Each package check is keyed by its
 # input fingerprint (tooling/configs/ci-fingerprints.mjs) and a whole run by
 # (phase, tree, base tree); a key that already passed in this repository is
@@ -29,16 +33,16 @@ on:
         description: Execute every check even when evidence for the same inputs exists
         type: boolean
         default: false
+      nightly:
+        description: Started by nightly.yml; a fresh nightly adds the Windows consumer, a failure opens an issue
+        type: boolean
+        default: false
   pull_request:
     # Labels gate overrides such as runtime-bundle-change, so re-check on them.
     types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches: [dev, main]
   merge_group:
-  schedule:
-    - cron: '20 1 * * 1-6'
-    # The fresh run; keep in sync with FRESH_CRON below.
-    - cron: '20 1 * * 0'
 
 permissions:
   contents: read
@@ -70,7 +74,6 @@ jobs:
       matrix: ${{ steps.matrix.outputs.matrix }}
       phase: ${{ steps.plan.outputs.phase }}
       consumer: ${{ steps.matrix.outputs.consumer }}
-      ref: ${{ steps.plan.outputs.ref }}
       base: ${{ steps.plan.outputs.base }}
       fresh: ${{ steps.plan.outputs.fresh }}
       key: ${{ steps.plan.outputs.key }}
@@ -79,8 +82,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # The schedule runs on the default branch; it verifies dev instead.
-          ref: ${{ github.event_name == 'schedule' && 'dev' || '' }}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
@@ -90,8 +91,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT_NAME: ${{ github.event_name }}
-          SCHEDULE: ${{ github.event.schedule }}
-          FRESH_CRON: '20 1 * * 0'
           INPUT_PHASE: ${{ inputs.phase }}
           INPUT_FRESH: ${{ inputs.fresh }}
           PR_BASE_REF: ${{ github.base_ref }}
@@ -111,12 +110,11 @@ jobs:
           if [[ -z "$base" || "$base" =~ ^0+$ ]]; then base=$head; fi
 
           case "$EVENT_NAME" in
-            schedule) phase=deep ;;
             workflow_dispatch) phase=$INPUT_PHASE ;;
-            *) if [[ "$target" == main ]]; then phase=deep; else phase=pr; fi ;;
+            *) if [[ "$target" == main ]]; then phase="deep"; else phase="pr"; fi ;;
           esac
           fresh=false
-          if [[ "$INPUT_FRESH" == true || ( "$EVENT_NAME" == schedule && "$SCHEDULE" == "$FRESH_CRON" ) ]]; then fresh=true; fi
+          if [[ "$INPUT_FRESH" == true ]]; then fresh=true; fi
 
           # A run's verdict is a function of its phase, its tree and the tree it
           # is compared with (config parity, dependency review), so that tuple
@@ -127,17 +125,11 @@ jobs:
           else base_tree=$(gh api "repos/$GITHUB_REPOSITORY/git/commits/$base" --jq .tree.sha) || base_tree="unknown-$GITHUB_RUN_ID"; fi
           key=$(printf '%s\n' "$EVIDENCE_VERSION" "$phase" "$head_tree" "$base_tree" | sha256sum | cut -c1-64)
 
-          # Every job checks out the same commit, even if dev moves meanwhile;
-          # other events check out their own commit by default.
-          ref=
-          if [[ "$EVENT_NAME" == schedule ]]; then ref=$head; fi
-
           {
             echo "phase=$phase"
             echo "base=$base"
             echo "fresh=$fresh"
             echo "key=$key"
-            echo "ref=$ref"
           } >> "$GITHUB_OUTPUT"
           echo "event=$EVENT_NAME target=$target phase=$phase fresh=$fresh head=$head base=$base"
       - id: matrix
@@ -166,7 +158,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ needs.registry.outputs.ref }}
       - name: actionlint
         env:
           ACTIONLINT_VERSION: 1.7.12
@@ -184,12 +175,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ needs.registry.outputs.ref }}
       - uses: ./.github/actions/setup-workspace
       - name: Checkout comparison baseline
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ needs.registry.outputs.base }}
+          # The same commit the registry keyed the run by (its base input).
+          ref: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || github.sha }}
           path: .quality-baseline
           persist-credentials: false
       - name: Install comparison baseline dependencies
@@ -224,7 +215,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ needs.registry.outputs.ref }}
       - name: Restore successful CI evidence
         id: evidence
         if: needs.registry.outputs.fresh != 'true'
@@ -272,7 +262,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ needs.registry.outputs.ref }}
       - name: Restore successful CI evidence
         id: evidence
         if: needs.registry.outputs.fresh != 'true'
@@ -380,7 +369,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ needs.registry.outputs.ref }}
       # The aggregator uses only Node built-ins; no workspace install needed.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -454,14 +442,13 @@ jobs:
   platform:
     name: clean consumer on Windows
     needs: registry
-    if: github.event_name == 'schedule' && needs.registry.outputs.fresh == 'true'
+    if: inputs.nightly && needs.registry.outputs.fresh == 'true'
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ needs.registry.outputs.ref }}
       - uses: ./.github/actions/setup-workspace
         with:
           chromium: "true"
@@ -479,7 +466,7 @@ jobs:
     name: report nightly failure
     needs: [required, platform]
     if: >-
-      always() && github.event_name == 'schedule' &&
+      always() && inputs.nightly &&
       (needs.required.result != 'success' || !contains(fromJSON('["success", "skipped"]'), needs.platform.result))
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -495,5 +482,5 @@ jobs:
           if [[ -n "$number" ]]; then
             gh issue comment "$number" --repo "$GITHUB_REPOSITORY" --body "Still failing: $RUN_URL"
           else
-            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "The scheduled deep run of dev failed: $RUN_URL"
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "The nightly deep run of dev failed: $RUN_URL"
           fi
