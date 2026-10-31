@@ -6,15 +6,14 @@ import {
 import { trackingStamp } from "@runtime/kernel/state";
 import { devRecordTrackRead } from "@runtime/kernel/dev";
 import {
-  moveLastIncomingEdgeAfterCursorUnchecked,
-  moveLastIncomingEdgeToFrontUnchecked,
   moveTrackedIncomingEdgeAfterCursorUnchecked,
+  moveTrackedIncomingEdgeToFrontUnchecked,
 } from "@runtime/kernel/shape/graph/cursorMoves";
 import {
   appendTrackedEdgeAfterCursorUnchecked,
+  linkEdge,
   linkFirstTrackedEdgeUnchecked,
 } from "@runtime/kernel/shape/graph/linkEdge";
-import { reuseLocatedIncomingEdgeOrLink } from "@runtime/kernel/shape/graph/reuseEdge";
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
@@ -24,11 +23,13 @@ import { isEdgeInTrackedPrefix } from "./prefix";
 
 /**
  * Commit a read that is not in the tracked prefix and that no locality tier
- * resolved: reuse the located edge from the suffix or link a new one.
+ * resolved: move the located suffix edge after the cursor, to the head when
+ * the prefix is empty (`cursorEdge` null), or link a new edge there.
  *
- * `locatedEdge` is the exact lookup result. A configured strategy keeps its contract
- * (it is called for exactly these reads, after the prefix test) and repeats
- * its own search; the default strategy is applied to `locatedEdge` directly.
+ * `locatedEdge` is the exact lookup result. It is not the first suffix edge,
+ * which the caller compared, so a move is never a no-op. A configured
+ * strategy keeps its contract (it is called for exactly these reads, after
+ * the prefix test) and repeats its own search.
  */
 function reconcileLocatedRead(
   producer: ReactiveNode,
@@ -42,47 +43,67 @@ function reconcileLocatedRead(
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.tracking.slow-path");
 
-  consumer.tailIn =
-    readTrackingStrategy === DEFAULT_READ_TRACKING_STRATEGY
-      ? reuseLocatedIncomingEdgeOrLink(
-          producer,
-          consumer,
-          cursorEdge,
-          suffixStartEdge,
-          passStamp,
-          locatedEdge,
-        )
-      : readTrackingStrategy(
-          producer,
-          consumer,
-          cursorEdge,
-          suffixStartEdge,
-          passStamp,
-        );
+  if (readTrackingStrategy !== DEFAULT_READ_TRACKING_STRATEGY) {
+    consumer.tailIn = readTrackingStrategy(
+      producer,
+      consumer,
+      cursorEdge,
+      suffixStartEdge,
+      passStamp,
+    );
+    return;
+  }
+
+  if (locatedEdge === null) {
+    if (__PROFILE__)
+      observeRuntimeProjection?.(
+        "projection.semantic.tracking.suffix.link-new",
+      );
+    consumer.tailIn = linkEdge(producer, consumer, cursorEdge, passStamp);
+    return;
+  }
+
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.tracking.edge.move");
+  if (cursorEdge === null) {
+    moveTrackedIncomingEdgeToFrontUnchecked(consumer, locatedEdge, passStamp);
+  } else {
+    moveTrackedIncomingEdgeAfterCursorUnchecked(
+      consumer,
+      cursorEdge,
+      locatedEdge,
+    );
+  }
+  if (__PROFILE__)
+    observeRuntimeProjection?.("projection.semantic.tracking.suffix.reuse");
 }
 
 /**
- * Cold initial-order miss. The common empty-list and first-edge hits stay in
+ * Cold initial-order miss: the first read of a pass did not match the first
+ * incoming edge. The common empty-list and first-edge hits stay in
  * resolveTrackedRead so its generated hot path remains small.
  */
 function resolveInitialTrackedReadMiss(
   producer: ReactiveNode,
   consumer: ReactiveNode,
   firstIncomingEdge: ReactiveEdge,
-  passStamp: number,
 ): void {
+  const passStamp = trackingStamp;
+
   if (__TRACKING_LAST_EDGE__) {
     const lastIncomingEdge = consumer.lastIn!;
 
+    // Not the first edge, which the caller compared.
     if (lastIncomingEdge.from === producer) {
       if (__PROFILE__)
         observeRuntimeProjection?.(
           "projection.semantic.tracking.initial.last-edge-shortcut",
         );
-      moveLastIncomingEdgeToFrontUnchecked(consumer, lastIncomingEdge);
-
-      lastIncomingEdge.stamp = passStamp;
-      consumer.tailIn = lastIncomingEdge;
+      moveTrackedIncomingEdgeToFrontUnchecked(
+        consumer,
+        lastIncomingEdge,
+        passStamp,
+      );
 
       devRecordTrackRead(defaultContext, consumer, producer);
       return;
@@ -121,7 +142,6 @@ function resolveTailTrackedReadMiss(
   producer: ReactiveNode,
   consumer: ReactiveNode,
   cursorEdge: ReactiveEdge,
-  passStamp: number,
 ): void {
   // With the cursor at lastIn, any edge of the pair is in the tracked prefix
   // (INV-T2): the read is a duplicate exactly when the edge exists. The
@@ -139,7 +159,7 @@ function resolveTailTrackedReadMiss(
     producer,
     consumer,
     cursorEdge,
-    passStamp,
+    cursorEdge.stamp,
   );
 
   if (__PROFILE__)
@@ -150,15 +170,20 @@ function resolveTailTrackedReadMiss(
 /**
  * Cursor miss inside the list: bounded reorder and tail locality, then one
  * exact lookup that both detects a duplicate and finds a reusable edge.
+ *
+ * Every edge the locality tiers find lies after the expected next edge,
+ * which the caller compared: one or two hops past it, or the physical tail.
+ * The tail's predecessor is never the cursor, since that would make the
+ * tail the expected next edge. All three take the same move.
  */
 function resolveCursorTrackedReadMiss(
   producer: ReactiveNode,
   consumer: ReactiveNode,
   cursorEdge: ReactiveEdge,
-  expectedNextEdge: ReactiveEdge,
-  passStamp: number,
 ): void {
+  const expectedNextEdge = cursorEdge.nextIn!;
   const lookahead1Edge = expectedNextEdge.nextIn;
+  let movedEdge: ReactiveEdge | null = null;
 
   if (lookahead1Edge !== null) {
     if (__TRACKING_ONE_HOP__ && lookahead1Edge.from === producer) {
@@ -166,18 +191,8 @@ function resolveCursorTrackedReadMiss(
         observeRuntimeProjection?.(
           "projection.semantic.tracking.reorder.one-hop",
         );
-      devRecordTrackRead(defaultContext, consumer, producer);
-
-      moveTrackedIncomingEdgeAfterCursorUnchecked(
-        consumer,
-        cursorEdge,
-        lookahead1Edge,
-        passStamp,
-      );
-      return;
-    }
-
-    if (__TRACKING_TWO_HOP__) {
+      movedEdge = lookahead1Edge;
+    } else if (__TRACKING_TWO_HOP__) {
       const lookahead2Edge = lookahead1Edge.nextIn;
 
       if (lookahead2Edge !== null && lookahead2Edge.from === producer) {
@@ -185,43 +200,31 @@ function resolveCursorTrackedReadMiss(
           observeRuntimeProjection?.(
             "projection.semantic.tracking.reorder.two-hop",
           );
-        devRecordTrackRead(defaultContext, consumer, producer);
-
-        moveTrackedIncomingEdgeAfterCursorUnchecked(
-          consumer,
-          cursorEdge,
-          lookahead2Edge,
-          passStamp,
-        );
-        return;
+        movedEdge = lookahead2Edge;
       }
     }
   }
 
-  if (__TRACKING_LAST_EDGE__) {
+  if (__TRACKING_LAST_EDGE__ && movedEdge === null) {
     const lastIncomingEdge = consumer.lastIn!;
 
     if (lastIncomingEdge.from === producer) {
-      const previousLastEdge = lastIncomingEdge.prevIn!;
-
-      if (previousLastEdge !== cursorEdge) {
-        if (__PROFILE__)
-          observeRuntimeProjection?.(
-            "projection.semantic.tracking.last-edge.shortcut",
-          );
-        moveLastIncomingEdgeAfterCursorUnchecked(
-          consumer,
-          cursorEdge,
-          expectedNextEdge,
-          lastIncomingEdge,
-          previousLastEdge,
-          passStamp,
+      if (__PROFILE__)
+        observeRuntimeProjection?.(
+          "projection.semantic.tracking.last-edge.shortcut",
         );
-
-        devRecordTrackRead(defaultContext, consumer, producer);
-        return;
-      }
+      movedEdge = lastIncomingEdge;
     }
+  }
+
+  if (movedEdge !== null) {
+    moveTrackedIncomingEdgeAfterCursorUnchecked(
+      consumer,
+      cursorEdge,
+      movedEdge,
+    );
+    devRecordTrackRead(defaultContext, consumer, producer);
+    return;
   }
 
   // Exact lookup. The cursor and the expected next edge were compared by
@@ -233,7 +236,8 @@ function resolveCursorTrackedReadMiss(
     lookahead1Edge,
   );
 
-  // JIT: boolean call result; see resolveTailTrackedReadMiss.
+  // JIT: `=== true` keeps a non-inlined boolean result a single compare
+  // (docs/JIT_CONTRACTS.md, canonical-boolean).
   if (
     locatedEdge !== null &&
     isEdgeInTrackedPrefix(consumer, cursorEdge, locatedEdge) === true
@@ -251,7 +255,7 @@ function resolveCursorTrackedReadMiss(
     consumer,
     cursorEdge,
     expectedNextEdge,
-    passStamp,
+    cursorEdge.stamp,
     locatedEdge,
   );
 }
@@ -259,13 +263,17 @@ function resolveCursorTrackedReadMiss(
 /**
  * Record a read of `producer` by the tracking consumer `consumer`.
  *
- * The pass stamp is derived here, not supplied: a read extending the tracked
+ * The pass stamp is derived, not supplied: a read extending the tracked
  * prefix uses the cursor edge's stamp (nested computation may have advanced
  * the epoch since), and the first read of a pass uses the current epoch.
  *
  * Stable dependency traces stay entirely in this small function. Dynamic
  * append/reorder/duplicate reconciliation is isolated in cold helpers so V8
  * can optimize and inline the dominant sequential path independently.
+ *
+ * JIT: a miss handler receives only what it cannot derive with one load
+ * (the stamp and the expected next edge are read again from the cursor);
+ * every argument here costs bytecode that each inlining caller is charged.
  */
 export function resolveTrackedRead(
   producer: ReactiveNode,
@@ -279,12 +287,11 @@ export function resolveTrackedRead(
   const cursorEdge = consumer.tailIn;
 
   if (cursorEdge !== null) {
-    const passStamp = cursorEdge.stamp;
     const expectedNextEdge = cursorEdge.nextIn;
 
     // Stable traces overwhelmingly advance to the next existing edge.
     if (expectedNextEdge !== null && expectedNextEdge.from === producer) {
-      expectedNextEdge.stamp = passStamp;
+      expectedNextEdge.stamp = cursorEdge.stamp;
       consumer.tailIn = expectedNextEdge;
       {
         if (__PROFILE__)
@@ -310,26 +317,21 @@ export function resolveTrackedRead(
         producer,
         consumer,
         cursorEdge,
-        passStamp,
       );
-      return;
+    } else {
+      /* @__NOINLINE__ */ resolveCursorTrackedReadMiss(
+        producer,
+        consumer,
+        cursorEdge,
+      );
     }
-
-    /* @__NOINLINE__ */ resolveCursorTrackedReadMiss(
-      producer,
-      consumer,
-      cursorEdge,
-      expectedNextEdge,
-      passStamp,
-    );
     return;
   }
 
-  const passStamp = trackingStamp;
   const firstIncomingEdge = consumer.firstIn;
 
   if (firstIncomingEdge === null) {
-    linkFirstTrackedEdgeUnchecked(producer, consumer, passStamp);
+    linkFirstTrackedEdgeUnchecked(producer, consumer, trackingStamp);
 
     {
       if (__PROFILE__)
@@ -342,7 +344,7 @@ export function resolveTrackedRead(
   }
 
   if (firstIncomingEdge.from === producer) {
-    firstIncomingEdge.stamp = passStamp;
+    firstIncomingEdge.stamp = trackingStamp;
     consumer.tailIn = firstIncomingEdge;
     {
       if (__PROFILE__)
@@ -358,6 +360,5 @@ export function resolveTrackedRead(
     producer,
     consumer,
     firstIncomingEdge,
-    passStamp,
   );
 }

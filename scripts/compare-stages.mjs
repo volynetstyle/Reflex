@@ -194,7 +194,7 @@ function advancing(r, width, unchanged, skip) {
   const source = r.createConsumer(() => value);
   const subscribers = range(width).map(() => node(r));
   for (const n of subscribers) r.linkEdge(source, n);
-  r.advance(source);
+  r.advance(source, null);
   const skipEdge = skip ? source.firstOut : null;
   return (pass) => {
     value = unchanged ? 0 : pass;

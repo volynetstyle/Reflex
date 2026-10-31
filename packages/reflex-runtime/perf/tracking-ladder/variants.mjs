@@ -37,8 +37,8 @@ const EAGER_DETACH = [
   "  while (run !== null && seen < 32) { run = run.nextIn; seen++; }",
   "  if (seen === 32) {",
   '    if (__PROFILE__) observeRuntimeProjection?.("projection.semantic.tracking.suffix.detach");',
-  "    if (insertAfterEdge === null) { consumer.firstIn = null; consumer.lastIn = null; }",
-  "    else { insertAfterEdge.nextIn = null; consumer.lastIn = insertAfterEdge; }",
+  "    if (cursorEdge === null) { consumer.firstIn = null; consumer.lastIn = null; }",
+  "    else { cursorEdge.nextIn = null; consumer.lastIn = cursorEdge; }",
   "    suffixStartEdge.prevIn = null;",
   "    unlinkDetachedIncomingEdgeSequence(suffixStartEdge);",
   "  }",
@@ -50,12 +50,14 @@ export const variants = {
     "src/kernel/shape/graph/findEdge.ts::  const hint = producer.tailIn;::  const hint = null;",
     "src/kernel/shape/graph/findEdge.ts::  const edge = findEdgeInLockstepPastHeadStart(::  const lateHint = producer.tailIn; if (lateHint !== null && lateHint.to === consumer && lateHint.from === producer) return lateHint; const edge = findEdgeInLockstepPastHeadStart(",
   ],
+  // Both reconciliation counterfactuals patch the resolver's own
+  // reconciliation (reconcileLocatedRead in stages/tracking/resolve.ts).
   "eager-detach": [
-    'src/kernel/shape/graph/reuseEdge.ts::import { linkEdge } from "./linkEdge";::import { linkEdge } from "./linkEdge"; import { unlinkDetachedIncomingEdgeSequence } from "./sweepEdges";',
-    `src/kernel/shape/graph/reuseEdge.ts::  return linkEdge(producer, consumer, insertAfterEdge, passStamp);::  ${EAGER_DETACH} return linkEdge(producer, consumer, insertAfterEdge, passStamp);`,
+    'src/kernel/stages/tracking/resolve.ts::import { observeRuntimeProjection } from "@runtime/kernel/projection";::import { observeRuntimeProjection } from "@runtime/kernel/projection"; import { unlinkDetachedIncomingEdgeSequence } from "@runtime/kernel/shape/graph/sweepEdges";',
+    `src/kernel/stages/tracking/resolve.ts::    consumer.tailIn = linkEdge(producer, consumer, cursorEdge, passStamp);::    ${EAGER_DETACH} consumer.tailIn = linkEdge(producer, consumer, cursorEdge, passStamp);`,
   ],
   rotate: [
-    `src/kernel/shape/graph/reuseEdge.ts::function moveSuffixEdgeAfterCursor(::${ROTATE} function moveSuffixEdgeAfterCursor(`,
-    "src/kernel/shape/graph/reuseEdge.ts::    moveSuffixEdgeAfterCursor(consumer, edge, insertAfterEdge);::    rotateUnvisitedBlockBehindTail(consumer, edge, insertAfterEdge);",
+    `src/kernel/stages/tracking/resolve.ts::function reconcileLocatedRead(::${ROTATE} function reconcileLocatedRead(`,
+    "src/kernel/stages/tracking/resolve.ts::  if (cursorEdge === null) {::  if (true) { rotateUnvisitedBlockBehindTail(consumer, locatedEdge, cursorEdge); locatedEdge.stamp = passStamp; consumer.tailIn = locatedEdge; } else if (cursorEdge === null) {",
   ],
 };

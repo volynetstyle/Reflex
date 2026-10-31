@@ -5,10 +5,17 @@ import { observeRuntimeProjection } from "@runtime/kernel/projection";
 import { findEdgeInLockstep } from "./findEdge";
 import { linkEdge } from "./linkEdge";
 
+// The default read-tracking strategy (kernel/config.ts) and its
+// reconciliation step. The resolver never calls them: while the default is
+// configured, it reconciles its own lookup result with the tracking moves
+// (stages/tracking/resolve.ts, shape/graph/cursorMoves.ts). Benchmarks and
+// tools call them directly, with insertion and suffix positions of their own.
+
 /**
- * Move a suffix edge after `insertAfterEdge`, the tracking cursor, or to the
- * head when it is null; a no-op when the edge is already there. The same move
- * as moveIncomingEdgeAfterUnchecked, written for this caller.
+ * Move a suffix edge after `insertAfterEdge`, or to the head when it is null;
+ * a no-op when the edge is already there. The same move as
+ * moveIncomingEdgeAfterUnchecked, kept here so the strategy's callers inline
+ * it (A.graph.reuse-first-out).
  */
 function moveSuffixEdgeAfterCursor(
   consumer: ReactiveNode,
@@ -101,10 +108,6 @@ export function reuseLocatedIncomingEdgeOrLink(
  * otherwise findEdgeInLockstep locates the edge over the producer's outgoing
  * list and the rest of the suffix. The result is reused or linked by
  * reuseLocatedIncomingEdgeOrLink.
- *
- * The resolver never calls it: while it is the configured strategy, the
- * resolver applies reuseLocatedIncomingEdgeOrLink to its own lookup result.
- * Benchmarks and tools call it directly.
  */
 export function reuseIncomingEdgeFromSuffixOrLink(
   producer: ReactiveNode,

@@ -32,14 +32,19 @@ sequential path is resolved in three steps:
 2. **Classify** it: in the prefix exactly when it carries the cursor's
    nonzero stamp (INV-T3), or always when the cursor is `lastIn` (INV-T2):
    `isEdgeInTrackedPrefix`.
-3. **Reconcile**: duplicate, move the suffix edge after the cursor, or link
-   a new edge: `reuseLocatedIncomingEdgeOrLink`, which never searches again.
+3. **Reconcile**: duplicate, move the suffix edge after the cursor (to the
+   head while the prefix is empty), or link a new edge there:
+   `reconcileLocatedRead`, which never searches again. The locality tiers
+   and the located edge share the same two moves
+   (`../../shape/graph/cursorMoves.ts`).
 
 `edge.stamp` is a pass-membership stamp, not a value version.
 
 `resolveTrackedRead` handles sequential reads directly. On a miss,
 `reconcileLocatedRead` commits a located suffix edge or a new link after the
-duplicate check; a configured strategy is called at that same boundary.
+duplicate check; a configured strategy is called at that same boundary. The
+default strategy (`../../shape/graph/reuseEdge.ts`) is never called by the
+resolver; it serves benchmarks and tools with positions of their own.
 
 `tailIn` is one slot with two lifetime-disjoint readings (INV-H,
 `../../shape/graph/hint.ts`): while the node is Computing, its tracking frontier;
@@ -98,6 +103,11 @@ function is inlined wherever the function is, and can push the hot read path
 (`resolveTrackedRead`) out of `runWatcherCore`, `advanceCore` or
 `executeComputation`. For that reason the tail miss and the inner miss are
 separate functions: a call site inlines only the miss kind that occurs there.
+For the same reason a miss handler takes only the cursor and re-reads the
+stamp and the expected next edge from it, the three locality tiers of the
+inner miss share one move call, and the tracking link and move helpers have
+no parameter defaults: every argument move and default branch is bytecode
+each inlining caller pays for.
 The lookup loops are plain loops, not unrolled. Its two-link outgoing head
 start is a workload heuristic, not an invariant. The hint is consulted before
 it and written only past it, so a lookup that bounded fan-out settles reads

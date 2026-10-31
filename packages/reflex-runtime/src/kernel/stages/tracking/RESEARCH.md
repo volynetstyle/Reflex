@@ -198,7 +198,7 @@ New fast paths are judged against these three before they are measured: which lo
 
 **Inner miss** (an expected next edge exists and did not match): one-hop, two-hop and the physical tail first; then `locateReorderedEdge` (newest edge, then `findEdgeInLockstep`). A found edge in the prefix (INV-T3) is a duplicate; one in the suffix is moved; no edge means a link.
 
-`reuseLocatedIncomingEdgeOrLink` reconciles **without searching again**: it moves the located suffix edge after the cursor or links a new one, and never unlinks. A configured `readTrackingStrategy` keeps its call contract and repeats its own search, since the resolver must locate the edge first to reject duplicates; that is the cost of the extension point.
+`reconcileLocatedRead` reconciles **without searching again**: it moves the located suffix edge after the cursor (to the head while the prefix is empty) or links a new one, and never unlinks. A configured `readTrackingStrategy` keeps its call contract and repeats its own search, since the resolver must locate the edge first to reject duplicates; that is the cost of the extension point.
 
 ## 7. Prefix evidence in reentrant propagation
 
@@ -301,8 +301,9 @@ Link counts come from PROFILE builds and are deterministic; timings come from pr
 - [`cleanup.ts`](./cleanup.ts): removal of the unvisited suffix.
 - [`findEdge.ts`](../../shape/graph/findEdge.ts): hint, head start, lockstep, finger race.
 - [`hint.ts`](../../shape/graph/hint.ts): INV-H.
-- [`reuseEdge.ts`](../../shape/graph/reuseEdge.ts): reconciliation and the default strategy.
-- [`cursorMoves.ts`](../../shape/graph/cursorMoves.ts), [`linkEdge.ts`](../../shape/graph/linkEdge.ts), [`sweepEdges.ts`](../../shape/graph/sweepEdges.ts): list operations.
+- [`reuseEdge.ts`](../../shape/graph/reuseEdge.ts): the default strategy, for benchmarks and tools.
+- [`cursorMoves.ts`](../../shape/graph/cursorMoves.ts): the two tracking moves (to the head, after the cursor).
+- [`linkEdge.ts`](../../shape/graph/linkEdge.ts), [`sweepEdges.ts`](../../shape/graph/sweepEdges.ts): list operations.
 - [`INVARIANTS.md`](../../../../docs/INVARIANTS.md), [`RULES.md`](../../../../docs/RULES.md), [`SEMANTIC_CONTRACT.md`](../../../../test/differential/docs/SEMANTIC_CONTRACT.md): contracts.
 
 **One-sentence model:** Reflex locates the unique edge of a read through a ladder of constant-time guesses on both sides of an intrusive graph, each cheap when wrong, backed by one exact lockstep that the producer's finger may race but never stop, classifies it with a pass-membership stamp, and reconciles the incoming list without ever unlinking before the pass has succeeded.

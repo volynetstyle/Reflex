@@ -15,8 +15,8 @@ that select these operations during a pass.
 | `hint.ts`        | Recognize an outgoing hint in the node's shared `tailIn` slot.                            |
 | `tape.ts`        | Prepare one consumer's incoming list for direct lookup and, when covered, certify misses. |
 | `linkEdge.ts`    | Link or unlink one pair; provide specialized links for tracking.                          |
-| `reuseEdge.ts`   | Reuse a located suffix edge or link a new one at the cursor.                              |
-| `cursorMoves.ts` | Move and stamp edges for tracking's specialized reorder paths.                            |
+| `reuseEdge.ts`   | The default read-tracking strategy; the resolver never calls it.                          |
+| `cursorMoves.ts` | The two tracking moves: a suffix edge to the head or right after the cursor.              |
 | `edgeList.ts`    | General incoming-list moves used by tests, benchmarks and graph tools.                    |
 | `sweepEdges.ts`  | Unlink detached incoming sequences or all edges on one side of a node.                    |
 | `disposeNode.ts` | Dispose a node by clearing its graph connections.                                         |
