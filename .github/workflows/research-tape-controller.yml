@@ -1,0 +1,75 @@
+name: Research - tape controller timing
+
+# Timing for the prepared-tape admission study (packages/reflex-runtime/perf/
+# tape-controller). Runs only when its research branch is pushed; one runner
+# per experiment, so compare bundles within a job, never across jobs.
+on:
+  push:
+    branches: [research/cost-sensitive-strike]
+    paths:
+      - packages/reflex-runtime/perf/tape-controller/**
+      - .github/workflows/research-tape-controller.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-tape-controller-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  timing:
+    name: ${{ matrix.experiment }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - experiment: frozen
+            run: node perf/tape-controller/frozen.mjs --samples 9
+          - experiment: foreign
+            run: node perf/tape-controller/time.mjs --bundles base,nf-rec,nf-live,nf-ns --samples 9
+          - experiment: kgrid
+            run: node perf/tape-controller/time.mjs --bundles base,k1,k8,k12,k16,k24,k32,e8,e16 --samples 9
+    steps:
+      # Shallow: build-baseline-oracle.mjs fetches each built commit itself.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-workspace
+
+      - name: Build bundles
+        working-directory: packages/reflex-runtime
+        run: bash perf/tape-controller/build.sh ${{ matrix.experiment }} | tee "$RUNNER_TEMP/bundles.txt"
+
+      - name: Time
+        working-directory: packages/reflex-runtime
+        env:
+          RUN: ${{ matrix.run }}
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          $RUN > "$GITHUB_WORKSPACE/out/${{ matrix.experiment }}.md" 2> >(tee "$GITHUB_WORKSPACE/out/${{ matrix.experiment }}.log" >&2)
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## ${{ matrix.experiment }}"
+            echo
+            echo "Node $(node --version), $(lscpu | sed -n 's/^Model name: *//p')"
+            echo
+            echo '```'; cat "$RUNNER_TEMP/bundles.txt"; echo '```'
+            echo
+            cat "out/${{ matrix.experiment }}.md" || true
+          } >> "$GITHUB_STEP_SUMMARY"
+          cp "$RUNNER_TEMP/bundles.txt" out/ || true
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: tape-controller-${{ matrix.experiment }}
+          path: out/
+          if-no-files-found: warn
+          retention-days: 30
