@@ -33,22 +33,26 @@ jobs:
           - experiment: kgrid
             run: node perf/tape-controller/time.mjs --bundles base,k1,k8,k12,k16,k24,k32,e8,e16 --samples 9
     steps:
-      # Shallow: build-baseline-oracle.mjs fetches each built commit itself.
+      # Full history: build.sh archives fixed commits (dev, the gate commit).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - uses: ./.github/actions/setup-workspace
 
       - name: Build bundles
         working-directory: packages/reflex-runtime
-        run: bash perf/tape-controller/build.sh ${{ matrix.experiment }} | tee "$RUNNER_TEMP/bundles.txt"
+        run: |
+          set -o pipefail
+          bash perf/tape-controller/build.sh ${{ matrix.experiment }} | tee "$RUNNER_TEMP/bundles.txt"
 
       - name: Time
         working-directory: packages/reflex-runtime
         env:
           RUN: ${{ matrix.run }}
         run: |
+          set -o pipefail
           mkdir -p "$GITHUB_WORKSPACE/out"
           $RUN > "$GITHUB_WORKSPACE/out/${{ matrix.experiment }}.md" 2> >(tee "$GITHUB_WORKSPACE/out/${{ matrix.experiment }}.log" >&2)
 
