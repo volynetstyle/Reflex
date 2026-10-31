@@ -11,6 +11,7 @@ import { buildHistory } from "./history.mjs";
 import { protocolManifest } from "./protocol.mjs";
 import { transplantProtocol } from "./migrate-protocol.mjs";
 import { writeJson } from "./io.mjs";
+import { plan, suites } from "./plan.mjs";
 
 const env = { node: "v24.1", v8: "13", platform: "linux", arch: "x64", cpu: "fixture" };
 const normalized = (benchmarks = [{ id: "a", meanMs: 1, p99Ms: 2, samples: 30, work: { reads: 1 } }]) => ({ schemaVersion: 1, suite: "fixture", env, benchmarks });
@@ -118,4 +119,19 @@ test("exact interval remains finite and conservative beyond probability underflo
   const interval = medianInterval(Array.from({ length: 2000 }, (_, i) => i));
   assert.ok(interval.lower < 980 && interval.upper > 1020);
   assert.throws(() => evaluatePairs([raw(), raw()], [raw(), raw()], { confidence: 1.2 }), /Confidence/);
+});
+
+test("plan drops suites whose subjects are identical and keeps dependents of a changed one", () => {
+  const ids = { base: { "packages/reflex-runtime/src": "a" }, head: { "packages/reflex-runtime/src": "a" } };
+  const objectId = (path, side) => ids[side][path] ?? "same";
+  assert.deepEqual(plan(suites, objectId).include, []);
+  ids.head["packages/reflex-runtime/src"] = "b";
+  assert.deepEqual(plan(suites, objectId).include.map(entry => entry.suite), ["reflex-runtime", "reflex-scheduler", "reflex"]);
+  ids.head = { ...ids.base, "packages/reflex/src": "c" };
+  const result = plan(suites, objectId);
+  assert.deepEqual(result.include.map(entry => entry.suite), ["reflex"]);
+  assert.deepEqual(result.skipped, ["reflex-runtime", "reflex-scheduler"]);
+  // Without revisions every suite is planned (the trend measures each one).
+  assert.equal(plan(suites, null).include.length, suites.length);
+  for (const suite of suites) assert.ok(suite.protocol.every(path => !suite.subjects.includes(path)), suite.suite + ": a protocol file is not a subject");
 });

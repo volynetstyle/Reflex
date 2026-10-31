@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "note": "Vitest bench suites shared by benchmark-gate.yml and benchmark-trend.yml. protocol: the files that define the measurement (benchmarks, harness, test config). subjects: the sources whose code is measured, with their workspace dependencies and build inputs; when none differs between two revisions the comparison times identical code and plan.mjs drops the suite. Err on the side of listing too much: an extra subject costs one run, a missing one hides a regression.",
+  "suites": [
+    {
+      "suite": "reflex-runtime",
+      "package": "@volynets/reflex-runtime",
+      "files": ["test/perf/runtime-taxonomy.bench.ts"],
+      "protocol": [
+        "packages/reflex-runtime/test/perf/runtime-taxonomy.bench.ts",
+        "packages/reflex-runtime/test/runtime.test_utils.ts",
+        "packages/reflex-runtime/config/vitest.config.ts"
+      ],
+      "subjects": [
+        "pnpm-lock.yaml",
+        "tooling/build",
+        "third-party/algorithm-projection/src",
+        "third-party/algorithm-projection/package.json",
+        "packages/reflex-runtime/src",
+        "packages/reflex-runtime/config",
+        "packages/reflex-runtime/package.json",
+        "packages/reflex-runtime/tsconfig.json",
+        "packages/reflex-runtime/tsconfig.build.json"
+      ]
+    },
+    {
+      "suite": "reflex-scheduler",
+      "package": "@volynets/reflex-scheduler",
+      "files": ["bench/hot-path.bench.ts", "bench/full-graph.bench.ts"],
+      "protocol": [
+        "packages/reflex-scheduler/bench/hot-path.bench.ts",
+        "packages/reflex-scheduler/bench/full-graph.bench.ts",
+        "packages/reflex-scheduler/vite.config.ts"
+      ],
+      "subjects": [
+        "pnpm-lock.yaml",
+        "tooling/build",
+        "third-party/algorithm-projection/src",
+        "third-party/algorithm-projection/package.json",
+        "packages/reflex-runtime/src",
+        "packages/reflex-runtime/config",
+        "packages/reflex-runtime/package.json",
+        "packages/reflex-runtime/tsconfig.json",
+        "packages/reflex-runtime/tsconfig.build.json",
+        "packages/reflex-scheduler/src",
+        "packages/reflex-scheduler/package.json",
+        "packages/reflex-scheduler/tsconfig.json",
+        "packages/reflex-scheduler/tsconfig.build.json"
+      ]
+    },
+    {
+      "suite": "reflex",
+      "package": "@volynets/reflex",
+      "files": ["bench/reflex.bench.ts"],
+      "protocol": [
+        "packages/reflex/bench/reflex.bench.ts",
+        "packages/reflex/bench/shared.ts",
+        "packages/reflex/bench/harnesses.ts",
+        "packages/reflex/vite.config.ts"
+      ],
+      "subjects": [
+        "pnpm-lock.yaml",
+        "tooling/build",
+        "third-party/algorithm-projection/src",
+        "third-party/algorithm-projection/package.json",
+        "packages/reflex-runtime/src",
+        "packages/reflex-runtime/config",
+        "packages/reflex-runtime/package.json",
+        "packages/reflex-runtime/tsconfig.json",
+        "packages/reflex-runtime/tsconfig.build.json",
+        "packages/reflex-scheduler/src",
+        "packages/reflex-scheduler/package.json",
+        "packages/reflex-scheduler/tsconfig.json",
+        "packages/reflex-scheduler/tsconfig.build.json",
+        "packages/reflex/src",
+        "packages/reflex/package.json",
+        "packages/reflex/rollup.config.ts",
+        "packages/reflex/rollup.dts.config.ts",
+        "packages/reflex/tsconfig.json",
+        "packages/reflex/tsconfig.build.json"
+      ]
+    }
+  ]
+}

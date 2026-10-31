@@ -111,10 +111,23 @@ are never multiplied into a purported fixed-anchor trend.
 ## Anchored trend
 
 `trend.mjs` keeps a long-lived history on the `bench-data` branch and publishes
-it to GitHub Pages (`.github/workflows/benchmark-trend.yml`). Every main push and
-pull request measures HEAD against the fixed anchor in `anchor.json` in one job,
-so a point is a same-machine median paired process log-ratio and stays
-comparable when hosted-runner hardware changes. Edge ratios are never chained.
+it to GitHub Pages (`.github/workflows/benchmark-trend.yml`). Every main push
+measures HEAD against the fixed anchor in `anchor.json` in one job, so a point
+is a same-machine median paired process log-ratio and stays comparable when
+hosted-runner hardware changes. Edge ratios are never chained. Pull requests are
+measured by the gate against their base only.
+
+## Which suites run
+
+`suites.json` defines each suite once for both workflows: its bench files, its
+protocol (the files that define the measurement) and its subjects (the sources
+whose code is measured, with their workspace dependencies and build inputs).
+`plan.mjs --base A --head B` keeps a suite only when one of its subjects differs
+between the two revisions, compared by git object id; the gate compares a pull
+request with its base, the trend a main push with the previous main head. A
+suite whose subjects are identical would time the same code twice, so it is
+skipped with a notice. List a path as a subject when in doubt: an extra subject
+costs one run, a missing one hides a regression.
 
 ```sh
 node tooling/benchmarks/trend.mjs judge  --store DIR --summary summary.json

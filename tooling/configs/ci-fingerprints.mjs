@@ -49,7 +49,8 @@ export function fingerprintInputs({ entries, manifests, files, phase }) {
 }
 async function main() {
   await validateRegistry();
-  const phase = process.env.EVENT_NAME === "schedule" ? "deep" : "pr";
+  // The workflow derives the phase from where the change goes (ci.yml, registry job).
+  const phase = process.env.QUALITY_PHASE ?? "pr";
   const paths = execFileSync("git", ["ls-files", "-z"], { cwd: repoRoot, encoding: "utf8" }).split("\0").filter(Boolean);
   const files = await Promise.all(paths.map(async path => {
     const stat = await lstat(resolve(repoRoot, path));
@@ -60,6 +61,5 @@ async function main() {
   console.log("matrix=" + JSON.stringify({ include: selectedPackages(phase).map(entry => ({ id: entry.id, package: entry.name, browser: Boolean(entry.requiresBrowser), fingerprint: fingerprints.packages[entry.name] })) }));
   console.log("phase=" + phase);
   console.log("consumer=" + fingerprints.consumer);
-  console.log("reuse=" + !["schedule", "workflow_dispatch"].includes(process.env.EVENT_NAME));
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();

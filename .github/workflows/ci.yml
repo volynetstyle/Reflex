@@ -1,22 +1,52 @@
 name: CI
 
+# Correctness for every change, scaled by where it goes (.github/README.md):
+#
+#   pull request into dev     pr phase     the change itself
+#   push to dev               pr phase     the integrated tip; free when the
+#                                          merged pull request was up to date
+#   pull request into main    deep phase   the release candidate
+#   push to main              deep phase   free after the dev -> main pull request
+#   nightly (Mon-Sat)         deep phase   dev; free when dev did not change
+#   weekly (Sunday)           deep phase   dev, fresh: nothing reused, plus the
+#                                          Windows consumer, so environment rot
+#                                          and flaky tests still surface
+#
+# Nothing runs twice on the same inputs. Each package check is keyed by its
+# input fingerprint (tooling/configs/ci-fingerprints.mjs) and a whole run by
+# (phase, tree, base tree); a key that already passed in this repository is
+# reused from its artifact instead of being executed again.
+
 on:
   workflow_dispatch:
+    inputs:
+      phase:
+        description: Quality phase
+        type: choice
+        options: [pr, deep]
+        default: pr
+      fresh:
+        description: Execute every check even when evidence for the same inputs exists
+        type: boolean
+        default: false
   pull_request:
     # Labels gate overrides such as runtime-bundle-change, so re-check on them.
     types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
-    branches: [main]
+    branches: [dev, main]
   merge_group:
   schedule:
-    - cron: '20 1 * * *'
+    - cron: '20 1 * * 1-6'
+    # The fresh run; keep in sync with FRESH_CRON below.
+    - cron: '20 1 * * 0'
 
 permissions:
   contents: read
+  actions: read # find and download evidence of earlier runs
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  # Superseded PR runs are noise; main and nightly runs are evidence.
+  # Superseded PR runs are noise; branch and nightly runs are evidence.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
@@ -24,8 +54,12 @@ defaults:
     shell: bash
 
 env:
-  # Part of every evidence cache key: bump to invalidate all retained evidence.
-  EVIDENCE_CACHE_VERSION: v1
+  # Part of every evidence name: bump to invalidate all retained evidence.
+  EVIDENCE_VERSION: v2
+  EVIDENCE_PLATFORM: linux-x64-node24-pnpm9
+  # The release candidate: dev of this repository into main. Keep in sync with
+  # the runtime-bundle job condition (env is not available there).
+  DEV_TO_MAIN: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && github.head_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository }}
 
 jobs:
   registry:
@@ -34,31 +68,105 @@ jobs:
     timeout-minutes: 5
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
-      phase: ${{ steps.matrix.outputs.phase }}
+      phase: ${{ steps.plan.outputs.phase }}
       consumer: ${{ steps.matrix.outputs.consumer }}
-      reuse: ${{ steps.matrix.outputs.reuse }}
+      ref: ${{ steps.plan.outputs.ref }}
+      base: ${{ steps.plan.outputs.base }}
+      fresh: ${{ steps.plan.outputs.fresh }}
+      key: ${{ steps.plan.outputs.key }}
+      verified: ${{ steps.verified.outputs.run-id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # The schedule runs on the default branch; it verifies dev instead.
+          ref: ${{ github.event_name == 'schedule' && 'dev' || '' }}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           # No pnpm in this job; setup-node would otherwise cache it from packageManager.
           package-manager-cache: false
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          FRESH_CRON: '20 1 * * 0'
+          INPUT_PHASE: ${{ inputs.phase }}
+          INPUT_FRESH: ${{ inputs.fresh }}
+          PR_BASE_REF: ${{ github.base_ref }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          QUEUE_BASE_REF: ${{ github.event.merge_group.base_ref }}
+          QUEUE_BASE_SHA: ${{ github.event.merge_group.base_sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          head=$(git rev-parse HEAD)
+          target=$GITHUB_REF_NAME base=$head
+          case "$EVENT_NAME" in
+            pull_request) target=$PR_BASE_REF base=$PR_BASE_SHA ;;
+            merge_group) target=${QUEUE_BASE_REF#refs/heads/} base=$QUEUE_BASE_SHA ;;
+            push) base=$PUSH_BEFORE ;;
+          esac
+          # A new branch or a force push has no comparable predecessor.
+          if [[ -z "$base" || "$base" =~ ^0+$ ]]; then base=$head; fi
+
+          case "$EVENT_NAME" in
+            schedule) phase=deep ;;
+            workflow_dispatch) phase=$INPUT_PHASE ;;
+            *) if [[ "$target" == main ]]; then phase=deep; else phase=pr; fi ;;
+          esac
+          fresh=false
+          if [[ "$INPUT_FRESH" == true || ( "$EVENT_NAME" == schedule && "$SCHEDULE" == "$FRESH_CRON" ) ]]; then fresh=true; fi
+
+          # A run's verdict is a function of its phase, its tree and the tree it
+          # is compared with (config parity, dependency review), so that tuple
+          # names the evidence. The runtime bundle verdict also depends on
+          # labels; that job is never reused.
+          head_tree=$(git rev-parse 'HEAD^{tree}')
+          if [[ "$base" == "$head" ]]; then base_tree=$head_tree
+          else base_tree=$(gh api "repos/$GITHUB_REPOSITORY/git/commits/$base" --jq .tree.sha) || base_tree="unknown-$GITHUB_RUN_ID"; fi
+          key=$(printf '%s\n' "$EVIDENCE_VERSION" "$phase" "$head_tree" "$base_tree" | sha256sum | cut -c1-64)
+
+          # Every job checks out the same commit, even if dev moves meanwhile;
+          # other events check out their own commit by default.
+          ref=
+          if [[ "$EVENT_NAME" == schedule ]]; then ref=$head; fi
+
+          {
+            echo "phase=$phase"
+            echo "base=$base"
+            echo "fresh=$fresh"
+            echo "key=$key"
+            echo "ref=$ref"
+          } >> "$GITHUB_OUTPUT"
+          echo "event=$EVENT_NAME target=$target phase=$phase fresh=$fresh head=$head base=$base"
       - id: matrix
         env:
-          EVENT_NAME: ${{ github.event_name }}
+          QUALITY_PHASE: ${{ steps.plan.outputs.phase }}
         run: node tooling/configs/ci-fingerprints.mjs >> "$GITHUB_OUTPUT"
+      - id: verified
+        if: steps.plan.outputs.fresh != 'true'
+        uses: ./.github/actions/restore-evidence
+        with:
+          name: ci-verified-${{ steps.plan.outputs.key }}
+          token: ${{ github.token }}
+      - name: Report reuse
+        if: steps.verified.outputs.run-id != ''
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ steps.verified.outputs.run-id }}
+        run: echo "::notice title=Verified inputs::The same phase, tree and base already passed in $RUN_URL; only checks that depend on more than the tree run again."
 
   workflows:
     name: workflow lint
+    needs: registry
+    if: needs.registry.outputs.verified == ''
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ needs.registry.outputs.ref }}
       - name: actionlint
         env:
           ACTIONLINT_VERSION: 1.7.12
@@ -68,17 +176,20 @@ jobs:
 
   static:
     name: tooling and config contracts
+    needs: registry
+    if: needs.registry.outputs.verified == ''
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ needs.registry.outputs.ref }}
       - uses: ./.github/actions/setup-workspace
       - name: Checkout comparison baseline
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || github.sha }}
+          ref: ${{ needs.registry.outputs.base }}
           path: .quality-baseline
           persist-credentials: false
       - name: Install comparison baseline dependencies
@@ -102,6 +213,7 @@ jobs:
   quality:
     name: ${{ matrix.id }} checks
     needs: registry
+    if: needs.registry.outputs.verified == ''
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -112,30 +224,34 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ needs.registry.outputs.ref }}
       - name: Restore successful CI evidence
         id: evidence
-        if: needs.registry.outputs.reuse == 'true'
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: needs.registry.outputs.fresh != 'true'
+        uses: ./.github/actions/restore-evidence
         with:
+          name: evidence-${{ env.EVIDENCE_VERSION }}-${{ env.EVIDENCE_PLATFORM }}-${{ matrix.id }}-${{ needs.registry.outputs.phase }}-${{ matrix.fingerprint }}
           path: artifacts/checks
-          key: ci-evidence-${{ env.EVIDENCE_CACHE_VERSION }}-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-${{ matrix.id }}-${{ needs.registry.outputs.phase }}-${{ matrix.fingerprint }}
+          token: ${{ github.token }}
       - uses: ./.github/actions/setup-workspace
-        if: steps.evidence.outputs.cache-hit != 'true'
+        if: steps.evidence.outputs.hit != 'true'
         with:
           chromium: ${{ matrix.browser && 'true' || 'false' }}
       - name: Run every registered prerequisite and check
-        if: steps.evidence.outputs.cache-hit != 'true'
+        if: steps.evidence.outputs.hit != 'true'
         env:
           QUALITY_PACKAGE: ${{ matrix.package }}
           QUALITY_PHASE: ${{ needs.registry.outputs.phase }}
           QUALITY_FINGERPRINT: ${{ matrix.fingerprint }}
         run: pnpm quality:check -- --package "$QUALITY_PACKAGE" --phase "$QUALITY_PHASE" --output-dir artifacts/checks
       - name: Retain successful CI evidence
-        if: success() && needs.registry.outputs.reuse == 'true' && steps.evidence.outputs.cache-hit != 'true'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: success() && steps.evidence.outputs.hit != 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
+          name: evidence-${{ env.EVIDENCE_VERSION }}-${{ env.EVIDENCE_PLATFORM }}-${{ matrix.id }}-${{ needs.registry.outputs.phase }}-${{ matrix.fingerprint }}
           path: artifacts/checks
-          key: ci-evidence-${{ env.EVIDENCE_CACHE_VERSION }}-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-${{ matrix.id }}-${{ needs.registry.outputs.phase }}-${{ matrix.fingerprint }}
+          if-no-files-found: error
+          retention-days: 90
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -149,32 +265,37 @@ jobs:
   consumer:
     name: installed package composition
     needs: registry
+    if: needs.registry.outputs.verified == ''
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ needs.registry.outputs.ref }}
       - name: Restore successful CI evidence
         id: evidence
-        if: needs.registry.outputs.reuse == 'true'
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: needs.registry.outputs.fresh != 'true'
+        uses: ./.github/actions/restore-evidence
         with:
+          name: evidence-${{ env.EVIDENCE_VERSION }}-${{ env.EVIDENCE_PLATFORM }}-consumer-${{ needs.registry.outputs.consumer }}
           path: artifacts/qualification
-          key: ci-evidence-${{ env.EVIDENCE_CACHE_VERSION }}-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-consumer-${{ needs.registry.outputs.consumer }}
+          token: ${{ github.token }}
       - uses: ./.github/actions/setup-workspace
-        if: steps.evidence.outputs.cache-hit != 'true'
+        if: steps.evidence.outputs.hit != 'true'
         with:
           chromium: "true"
       - name: Build, pack, install and qualify declared exports
-        if: steps.evidence.outputs.cache-hit != 'true'
+        if: steps.evidence.outputs.hit != 'true'
         run: pnpm test:consumer -- --output-dir artifacts/qualification
       - name: Retain successful CI evidence
-        if: success() && needs.registry.outputs.reuse == 'true' && steps.evidence.outputs.cache-hit != 'true'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: success() && steps.evidence.outputs.hit != 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
+          name: evidence-${{ env.EVIDENCE_VERSION }}-${{ env.EVIDENCE_PLATFORM }}-consumer-${{ needs.registry.outputs.consumer }}
           path: artifacts/qualification
-          key: ci-evidence-${{ env.EVIDENCE_CACHE_VERSION }}-${{ runner.os }}-${{ runner.arch }}-node24-pnpm9-consumer-${{ needs.registry.outputs.consumer }}
+          if-no-files-found: error
+          retention-days: 90
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -185,8 +306,15 @@ jobs:
 
   # The core's machine code is the accepted performance baseline: the production
   # runtime bundle must stay byte-identical unless a reviewer approves a change.
+  # Approval happens where a change enters: a pull request into dev (label) or
+  # straight into main. Pushes, the dev -> main pull request and the nightly
+  # carry changes that were already judged here, so they do not run it.
   runtime-bundle:
     name: runtime bundle identity
+    if: >-
+      github.event_name == 'merge_group' ||
+      (github.event_name == 'pull_request' &&
+       !(github.base_ref == 'main' && github.head_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -200,20 +328,14 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
-          PUSH_BASE: ${{ github.event.before }}
           APPROVED: ${{ contains(github.event.pull_request.labels.*.name, 'runtime-bundle-change') }}
         run: |
           case "$EVENT_NAME" in
             pull_request) base=$PR_BASE ;;
             merge_group) base=$QUEUE_BASE ;;
-            push) base=$PUSH_BASE ;;
-            *) base=$(git rev-parse HEAD~1) ;;
           esac
-          # A new branch or a force push has no comparable predecessor.
-          if [[ -z "$base" || "$base" =~ ^0+$ ]] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then base=$(git rev-parse HEAD~1); fi
           flags=()
-          # Pushes to main already passed this check, approved or not, as a pull request.
-          if [[ "$APPROVED" == "true" || "$EVENT_NAME" == "push" ]]; then flags+=(--allow-change); fi
+          if [[ "$APPROVED" == "true" ]]; then flags+=(--allow-change); fi
           mkdir -p artifacts
           node tooling/configs/runtime-bundle-identity.mjs --base "$base" --head "$(git rev-parse HEAD)" --output artifacts/runtime-bundle.json "${flags[@]}"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -227,6 +349,8 @@ jobs:
   # license fail the pull request.
   dependency-review:
     name: dependency review
+    needs: registry
+    if: needs.registry.outputs.verified == ''
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -250,29 +374,74 @@ jobs:
     needs: [registry, workflows, static, quality, consumer, runtime-bundle, dependency-review]
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      VERIFIED: ${{ needs.registry.outputs.verified }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ needs.registry.outputs.ref }}
       # The aggregator uses only Node built-ins; no workspace install needed.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           # No pnpm in this job; setup-node would otherwise cache it from packageManager.
           package-manager-cache: false
+
+      - name: Adopt the verdict of the identical run
+        if: env.VERIFIED != ''
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ci-verified-${{ needs.registry.outputs.key }}
+          path: artifacts
+          run-id: ${{ env.VERIFIED }}
+          github-token: ${{ github.token }}
+      - name: Check the adopted verdict
+        if: env.VERIFIED != ''
+        env:
+          QUALITY_PHASE: ${{ needs.registry.outputs.phase }}
+        run: |
+          node -e '
+            const summary = require("./artifacts/quality-summary.json");
+            if (summary.status !== "passed" || summary.phase !== process.env.QUALITY_PHASE) throw new Error("The adopted verdict is not a passed " + process.env.QUALITY_PHASE + " run");
+          '
+          echo "Adopted $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$VERIFIED"
+
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: env.VERIFIED == ''
         with:
           pattern: checks-*
           path: artifacts/checks
           merge-multiple: true
       - name: Enforce complete evidence and successful required jobs
+        if: env.VERIFIED == ''
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
           QUALITY_PHASE: ${{ needs.registry.outputs.phase || 'pr' }}
         run: |
           mkdir -p artifacts
-          printf '%s' "$NEEDS_JSON" > artifacts/needs.json
+          # The bundle verdict depends on labels, not only on the tree, so it is
+          # judged below and kept out of the verdict that identical runs adopt.
+          jq 'del(.["runtime-bundle"])' <<< "$NEEDS_JSON" > artifacts/needs.json
           node tooling/configs/aggregate-checks.mjs --phase "$QUALITY_PHASE" --input-dir artifacts/checks --needs-json artifacts/needs.json --output artifacts/quality-summary.json
+      - name: Retain the verdict for identical inputs
+        if: success() && env.VERIFIED == ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ci-verified-${{ needs.registry.outputs.key }}
+          path: artifacts/quality-summary.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Runtime bundle identity
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RESULT: ${{ needs.runtime-bundle.result }}
+        run: |
+          expected=success
+          if [[ ( "$EVENT_NAME" != pull_request && "$EVENT_NAME" != merge_group ) || "$DEV_TO_MAIN" == true ]]; then expected=skipped; fi
+          if [[ "$RESULT" != "$expected" ]]; then echo "::error::runtime bundle identity: $RESULT (expected $expected)"; exit 1; fi
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -280,16 +449,19 @@ jobs:
           path: artifacts/quality-summary.json
           if-no-files-found: error
 
-  # Release publication qualifies Windows too; nightly keeps it from rotting.
+  # Release publication qualifies Windows too; the weekly fresh run keeps it
+  # from rotting.
   platform:
     name: clean consumer on Windows
-    if: github.event_name == 'schedule'
+    needs: registry
+    if: github.event_name == 'schedule' && needs.registry.outputs.fresh == 'true'
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ needs.registry.outputs.ref }}
       - uses: ./.github/actions/setup-workspace
         with:
           chromium: "true"
@@ -306,7 +478,9 @@ jobs:
   nightly-report:
     name: report nightly failure
     needs: [required, platform]
-    if: always() && github.event_name == 'schedule' && (needs.required.result != 'success' || needs.platform.result != 'success')
+    if: >-
+      always() && github.event_name == 'schedule' &&
+      (needs.required.result != 'success' || !contains(fromJSON('["success", "skipped"]'), needs.platform.result))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -321,5 +495,5 @@ jobs:
           if [[ -n "$number" ]]; then
             gh issue comment "$number" --repo "$GITHUB_REPOSITORY" --body "Still failing: $RUN_URL"
           else
-            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "The scheduled deep run failed: $RUN_URL"
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "The scheduled deep run of dev failed: $RUN_URL"
           fi

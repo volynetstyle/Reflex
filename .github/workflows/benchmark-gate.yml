@@ -3,6 +3,13 @@ name: Benchmark gate
 # Vitest bench suites, base against head, in one job per suite (B1 H1 H2 B2).
 # Hosted runners give a screening verdict: reported, never blocking; see
 # tooling/benchmarks/enforce-gate.mjs. Not a required check.
+#
+# A measurement answers one question: did this change move the subject? It
+# runs where a change enters a long-lived branch (a pull request into dev, or
+# the dev -> main release candidate), never again on the push that merges it,
+# and not at all for a suite whose subject sources are identical on both sides
+# (only its benchmarks, tests or docs changed): that would time the same code
+# twice and report noise.
 
 on:
   workflow_dispatch:
@@ -12,6 +19,7 @@ on:
         required: false
         default: main
   pull_request:
+    branches: [dev, main]
     paths:
       - .github/workflows/benchmark-gate.yml
       - package.json
@@ -19,22 +27,10 @@ on:
       - pnpm-workspace.yaml
       - scripts/benchmark-quality-gate.ts
       - scripts/benchmark-history.ts
+      - tooling/build/**
       - tooling/configs/**
       - tooling/benchmarks/**
-      - packages/reflex-runtime/**
-      - packages/reflex-scheduler/**
-      - packages/reflex/**
-  push:
-    branches: [main]
-    paths:
-      - .github/workflows/benchmark-gate.yml
-      - package.json
-      - pnpm-lock.yaml
-      - pnpm-workspace.yaml
-      - scripts/benchmark-quality-gate.ts
-      - scripts/benchmark-history.ts
-      - tooling/configs/**
-      - tooling/benchmarks/**
+      - third-party/algorithm-projection/**
       - packages/reflex-runtime/**
       - packages/reflex-scheduler/**
       - packages/reflex/**
@@ -52,29 +48,22 @@ defaults:
     shell: bash
 
 jobs:
-  benchmark:
-    name: ${{ matrix.suite }}
-    # Pinned image: history charts compare runs over time.
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - suite: reflex-runtime
-            package: "@volynets/reflex-runtime"
-            files: test/perf/runtime-taxonomy.bench.ts
-            protocol: packages/reflex-runtime/test/perf/runtime-taxonomy.bench.ts packages/reflex-runtime/test/runtime.test_utils.ts packages/reflex-runtime/vite.config.ts
-          - suite: reflex-scheduler
-            package: "@volynets/reflex-scheduler"
-            files: bench/hot-path.bench.ts bench/full-graph.bench.ts
-            protocol: packages/reflex-scheduler/bench/hot-path.bench.ts packages/reflex-scheduler/bench/full-graph.bench.ts packages/reflex-scheduler/vite.config.ts
-          - suite: reflex
-            package: "@volynets/reflex"
-            files: bench/reflex.bench.ts
-            protocol: packages/reflex/bench/reflex.bench.ts packages/reflex/bench/shared.ts packages/reflex/bench/harnesses.ts packages/reflex/vite.config.ts
-
+  plan:
+    name: plan suites
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      base: ${{ steps.revisions.outputs.base }}
+      head: ${{ steps.revisions.outputs.head }}
+      scope: ${{ steps.revisions.outputs.scope }}
+      head_repository_id: ${{ steps.revisions.outputs.head_repository_id }}
+      matrix: ${{ steps.suites.outputs.matrix }}
+      any: ${{ steps.suites.outputs.any }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Resolve revisions
         id: revisions
         env:
@@ -82,21 +71,18 @@ jobs:
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_HEAD_REPOSITORY_ID: ${{ github.event.pull_request.head.repo.id }}
-          PUSH_BASE: ${{ github.event.before }}
           DISPATCH_BASE: ${{ inputs.base }}
           REPOSITORY_ID: ${{ github.repository_id }}
         run: |
           head=$GITHUB_SHA
           if [[ "$EVENT_NAME" == "pull_request" ]]; then
             base=$PR_BASE scope="$PR_HEAD_REPOSITORY_ID:pr-$PR_NUMBER" head_repository_id=$PR_HEAD_REPOSITORY_ID
-          elif [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            base=$DISPATCH_BASE scope="$REPOSITORY_ID:branch-$GITHUB_REF_NAME" head_repository_id=$REPOSITORY_ID
-          elif [[ "$EVENT_NAME" == "push" && ! "$PUSH_BASE" =~ ^0+$ ]]; then
-            base=$PUSH_BASE scope="$REPOSITORY_ID:branch-$GITHUB_REF_NAME" head_repository_id=$REPOSITORY_ID
           else
-            echo "Cannot determine a baseline for event $EVENT_NAME"
-            exit 1
+            base=$DISPATCH_BASE scope="$REPOSITORY_ID:branch-$GITHUB_REF_NAME" head_repository_id=$REPOSITORY_ID
           fi
+          # The shallow checkout holds only the head; plan.mjs compares trees, not files.
+          git fetch -q --depth=1 origin "$base"
+          base=$(git rev-parse --verify 'FETCH_HEAD^{commit}')
           {
             echo "base=$base"
             echo "head=$head"
@@ -104,18 +90,43 @@ jobs:
             echo "head_repository_id=$head_repository_id"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Keep the suites whose subjects differ
+        id: suites
+        env:
+          BASE: ${{ steps.revisions.outputs.base }}
+          HEAD: ${{ steps.revisions.outputs.head }}
+        run: |
+          plan=$(node tooling/benchmarks/plan.mjs --base "$BASE" --head "$HEAD")
+          echo "$plan" | tee -a "$GITHUB_OUTPUT"
+          skipped=$(sed -n 's/^skipped=//p' <<< "$plan")
+          for suite in $skipped; do
+            echo "::notice title=$suite benchmarks skipped::No measured source differs between base and head (tooling/benchmarks/suites.json); timing identical code would only report noise."
+          done
+
+  benchmark:
+    name: ${{ matrix.suite }}
+    needs: plan
+    if: needs.plan.outputs.any == 'true'
+    # Pinned image: history charts compare runs over time.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+
+    steps:
       - name: Checkout base
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ steps.revisions.outputs.base }}
+          ref: ${{ needs.plan.outputs.base }}
           path: base
 
       - name: Checkout head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ steps.revisions.outputs.head }}
+          ref: ${{ needs.plan.outputs.head }}
           path: head
 
       - name: Read head commit timestamp
@@ -229,11 +240,11 @@ jobs:
         run: >-
           pnpm bench:quality-gate --
           --suite '${{ matrix.suite }}'
-          --base-commit '${{ steps.revisions.outputs.base }}'
-          --head-commit '${{ steps.revisions.outputs.head }}'
+          --base-commit '${{ needs.plan.outputs.base }}'
+          --head-commit '${{ needs.plan.outputs.head }}'
           --head-timestamp '${{ steps.commit.outputs.timestamp }}'
           --workflow-run-id '${{ github.run_id }}'
-          --scope '${{ steps.revisions.outputs.scope }}'
+          --scope '${{ needs.plan.outputs.scope }}'
           --protocol-hash '${{ steps.protocol.outputs.hash }}'
           --vitest-version '${{ steps.tools.outputs.vitest }}'
           --pnpm-version '${{ steps.tools.outputs.pnpm }}'
@@ -261,7 +272,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ARTIFACT_PREFIX: benchmarks-${{ matrix.suite }}-
           CURRENT_BRANCH: ${{ github.head_ref || github.ref_name }}
-          CURRENT_HEAD_REPOSITORY_ID: ${{ steps.revisions.outputs.head_repository_id }}
+          CURRENT_HEAD_REPOSITORY_ID: ${{ needs.plan.outputs.head_repository_id }}
         run: |
           mkdir -p ../history
           gh api --paginate "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" \
@@ -279,7 +290,7 @@ jobs:
         run: >-
           pnpm bench:history --
           --suite '${{ matrix.suite }}'
-          --scope '${{ steps.revisions.outputs.scope }}'
+          --scope '${{ needs.plan.outputs.scope }}'
           --current '../artifacts/${{ matrix.suite }}/summary.json'
           --history-dir '../history'
           --json '../artifacts/${{ matrix.suite }}/history.json'
@@ -290,7 +301,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: benchmarks-${{ matrix.suite }}-${{ steps.revisions.outputs.head }}
+          name: benchmarks-${{ matrix.suite }}-${{ needs.plan.outputs.head }}
           path: artifacts/${{ matrix.suite }}/
           if-no-files-found: error
           retention-days: 30

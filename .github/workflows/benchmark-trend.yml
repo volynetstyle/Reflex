@@ -2,11 +2,14 @@ name: Benchmark trend
 
 # Performance history against a fixed anchor (tooling/benchmarks/anchor.json).
 #
-#   measure   Every main push and pull request measures HEAD against the anchor
-#             in one job (B1 H1 H2 B2), so each point is a same-machine ratio
-#             that stays comparable across hosted-runner hardware. The result is
+#   measure   Every main push measures HEAD against the anchor in one job per
+#             suite (B1 H1 H2 B2), so each point is a same-machine ratio that
+#             stays comparable across hosted-runner hardware. The result is
 #             judged against the history boundary; verdicts are reported, never
-#             blocking.
+#             blocking. A suite whose subjects did not change since the previous
+#             main head is skipped: its point would repeat the last one. Pull
+#             requests are measured by benchmark-gate.yml against their base;
+#             a second, anchored measurement of the same change adds nothing.
 #   record    Main pushes append the point to the bench-data branch. Commits of
 #             the last 14 days stay individual; older days compact to medians.
 #   pages     The trend page is rebuilt from bench-data and deployed to Pages.
@@ -15,20 +18,14 @@ name: Benchmark trend
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - .github/workflows/benchmark-trend.yml
-      - pnpm-lock.yaml
-      - tooling/benchmarks/**
-      - packages/reflex-runtime/**
-      - packages/reflex-scheduler/**
-      - packages/reflex/**
   push:
     branches: [main]
     paths:
       - .github/workflows/benchmark-trend.yml
       - pnpm-lock.yaml
+      - tooling/build/**
       - tooling/benchmarks/**
+      - third-party/algorithm-projection/**
       - packages/reflex-runtime/**
       - packages/reflex-scheduler/**
       - packages/reflex/**
@@ -37,37 +34,51 @@ permissions:
   contents: read
 
 concurrency:
-  group: benchmark-trend-${{ github.event.pull_request.number || github.ref }}
-  # Every main commit is a history point; only superseded PR runs are dropped.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: benchmark-trend-${{ github.ref }}
+  # Every main commit is a history point.
+  cancel-in-progress: false
 
 defaults:
   run:
     shell: bash
 
 jobs:
+  plan:
+    name: plan suites
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.suites.outputs.matrix }}
+      any: ${{ steps.suites.outputs.any }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: suites
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          args=()
+          # A push is compared with the previous main head; a dispatch, a new
+          # branch or a force push measures every suite.
+          if [[ -n "$BEFORE" && ! "$BEFORE" =~ ^0+$ ]] && git fetch -q --depth=1 origin "$BEFORE"; then args=(--base "$BEFORE" --head "$GITHUB_SHA"); fi
+          plan=$(node tooling/benchmarks/plan.mjs "${args[@]}")
+          echo "$plan" | tee -a "$GITHUB_OUTPUT"
+          for suite in $(sed -n 's/^skipped=//p' <<< "$plan"); do
+            echo "::notice title=$suite trend skipped::No measured source changed since the previous main head; the point would repeat the last one."
+          done
+
   measure:
     name: ${{ matrix.suite }}
+    needs: plan
+    if: needs.plan.outputs.any == 'true'
     # Pinned image: the anchor is re-measured in every job, but the toolchain
     # around it should still change only deliberately.
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - suite: reflex-runtime
-            package: "@volynets/reflex-runtime"
-            files: test/perf/runtime-taxonomy.bench.ts
-            protocol: packages/reflex-runtime/test/perf/runtime-taxonomy.bench.ts packages/reflex-runtime/test/runtime.test_utils.ts packages/reflex-runtime/vite.config.ts
-          - suite: reflex-scheduler
-            package: "@volynets/reflex-scheduler"
-            files: bench/hot-path.bench.ts bench/full-graph.bench.ts
-            protocol: packages/reflex-scheduler/bench/hot-path.bench.ts packages/reflex-scheduler/bench/full-graph.bench.ts packages/reflex-scheduler/vite.config.ts
-          - suite: reflex
-            package: "@volynets/reflex"
-            files: bench/reflex.bench.ts
-            protocol: packages/reflex/bench/reflex.bench.ts packages/reflex/bench/shared.ts packages/reflex/bench/harnesses.ts packages/reflex/vite.config.ts
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     env:
       OUT: ${{ github.workspace }}/artifacts/${{ matrix.suite }}
     steps:
@@ -81,18 +92,11 @@ jobs:
         id: revisions
         working-directory: head
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_HEAD_REPOSITORY_ID: ${{ github.event.pull_request.head.repo.id }}
           REPOSITORY_ID: ${{ github.repository_id }}
         run: |
           anchor=$(node -p 'require("./tooling/benchmarks/anchor.json").commit')
           head=$(git rev-parse HEAD)
-          if [[ "$EVENT_NAME" == "pull_request" ]]; then
-            scope="$PR_HEAD_REPOSITORY_ID:pr-$PR_NUMBER"
-          else
-            scope="$REPOSITORY_ID:branch-$GITHUB_REF_NAME"
-          fi
+          scope="$REPOSITORY_ID:branch-$GITHUB_REF_NAME"
           {
             echo "anchor=$anchor"
             echo "head=$head"
@@ -228,8 +232,10 @@ jobs:
   record:
     name: record history
     needs: measure
-    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: always() && needs.measure.result != 'skipped' && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    outputs:
+      recorded: ${{ steps.ingest.outputs.recorded }}
     timeout-minutes: 10
     # One writer at a time; a queued record is never cancelled.
     concurrency:
@@ -262,6 +268,7 @@ jobs:
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           if git fetch -q --depth 1 origin bench-data; then git checkout -q -b bench-data FETCH_HEAD; else git checkout -q --orphan bench-data; fi
       - name: Ingest, compact and push
+        id: ingest
         run: |
           shopt -s nullglob
           summaries=(points/*/summary.json)
@@ -274,11 +281,13 @@ jobs:
           if git diff --cached --quiet; then exit 0; fi
           git commit -q -m "bench: record ${GITHUB_SHA::12}"
           git push -q origin bench-data
+          echo "recorded=true" >> "$GITHUB_OUTPUT"
 
   pages:
     name: deploy trend page
     needs: record
-    if: always() && needs.record.result == 'success'
+    # The page changes only when the history does.
+    if: always() && needs.record.result == 'success' && needs.record.outputs.recorded == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:

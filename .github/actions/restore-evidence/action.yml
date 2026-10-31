@@ -1,0 +1,53 @@
+name: Restore evidence
+description: >-
+  Finds a successful evidence artifact that an earlier run of this repository
+  uploaded under the same content-addressed name and, given a path, downloads
+  it. Artifacts are repository-wide, unlike caches (scoped to a branch, its
+  base and the default branch), so evidence produced by a pull request into
+  dev is visible to the push that merges it and to the dev -> main pull
+  request. Runs from forks are never trusted.
+
+inputs:
+  name:
+    description: Artifact name; it must encode every input of the evidence.
+    required: true
+  path:
+    description: Where to extract the artifact; empty only looks it up.
+    default: ""
+  token:
+    description: Token with actions read permission.
+    required: true
+
+outputs:
+  run-id:
+    description: The run that produced the evidence, empty on a miss.
+    value: ${{ steps.find.outputs.run-id }}
+  hit:
+    description: "'true' when the evidence was found (and downloaded, given a path)."
+    value: ${{ steps.find.outputs.run-id != '' && (inputs.path == '' || steps.download.outcome == 'success') }}
+
+runs:
+  using: composite
+  steps:
+    - id: find
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        NAME: ${{ inputs.name }}
+      run: |
+        # An API failure is a miss: the checks then run instead of being reused.
+        run_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=$NAME&per_page=20" \
+          --jq "[.artifacts[] | select(.expired | not) | select(.workflow_run.head_repository_id == $GITHUB_REPOSITORY_ID)] | .[0].workflow_run.id // empty") || run_id=
+        echo "run-id=$run_id" >> "$GITHUB_OUTPUT"
+        if [[ -n "$run_id" ]]; then echo "Evidence $NAME found in run $run_id"; else echo "No evidence $NAME"; fi
+
+    - id: download
+      if: steps.find.outputs.run-id != '' && inputs.path != ''
+      # A failed download is a miss as well.
+      continue-on-error: true
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        run-id: ${{ steps.find.outputs.run-id }}
+        github-token: ${{ inputs.token }}
