@@ -63,9 +63,12 @@ export function protocolManifest(root, entries, { subjects = defaultSubject } = 
       }
     }
   }
-  for (const entry of entries) visit(entry);
+  // An entry the base lacks (a moved config) is recorded, not fatal: the
+  // migration copies head's closure in, and the hash still differs until it does.
+  const absentEntries = entries.filter(entry => !existsSync(resolve(base, entry))).map(slash).sort();
+  for (const entry of entries) if (existsSync(resolve(base, entry))) visit(entry);
   files.sort((a, b) => a.path.localeCompare(b.path));
-  const protocol = { schemaVersion: 1, resolverVersion: ts.version, entries: [...entries].map(slash).sort(), files, subjectBoundaries: [...subjectImports].sort(), externalSpecifiers: [...externalImports].sort(), policy: "transitive static local imports + tsconfig chain; subject implementation excluded; provider versions checked independently" };
+  const protocol = { schemaVersion: 1, ...(absentEntries.length ? { absentEntries } : {}), resolverVersion: ts.version, entries: [...entries].map(slash).sort(), files, subjectBoundaries: [...subjectImports].sort(), externalSpecifiers: [...externalImports].sort(), policy: "transitive static local imports + tsconfig chain; subject implementation excluded; provider versions checked independently" };
   return { ...protocol, protocolHash: fingerprint(protocol) };
 }
 export function main(argv = process.argv.slice(2)) {

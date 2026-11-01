@@ -68,8 +68,10 @@ const unapprovedMissing = (name, missing) => {
 };
 function compare(name, before, after) {
   applyApprovals(name, before, after);
-  const passed = JSON.stringify(before) === JSON.stringify(after);
-  checks.push({ name, passed, beforeSha256: createHash("sha256").update(JSON.stringify(before)).digest("hex"), afterSha256: createHash("sha256").update(JSON.stringify(after)).digest("hex") });
+  // An approval may add a key the baseline lacked; re-sort so order cannot differ.
+  const text = (value) => JSON.stringify(normalize(value, headRoot));
+  const passed = text(before) === text(after);
+  checks.push({ name, passed, beforeSha256: createHash("sha256").update(text(before)).digest("hex"), afterSha256: createHash("sha256").update(text(after)).digest("hex") });
   if (!passed) differences.push({ name, before, after });
 }
 // A project is a config file and a vite mode; `baseline` names the file the

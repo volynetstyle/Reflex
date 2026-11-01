@@ -58,8 +58,8 @@ jobs:
         include:
           - suite: reflex-runtime
             package: "@volynets/reflex-runtime"
-            files: test/perf/runtime-taxonomy.bench.ts
-            protocol: packages/reflex-runtime/test/perf/runtime-taxonomy.bench.ts packages/reflex-runtime/test/runtime.test_utils.ts packages/reflex-runtime/vite.config.ts
+            files: test/perf/runtime-taxonomy.bench.ts --config config/vitest.config.ts
+            protocol: packages/reflex-runtime/test/perf/runtime-taxonomy.bench.ts packages/reflex-runtime/test/runtime.test_utils.ts packages/reflex-runtime/config/vitest.config.ts
           - suite: reflex-scheduler
             package: "@volynets/reflex-scheduler"
             files: bench/hot-path.bench.ts bench/full-graph.bench.ts
