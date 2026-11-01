@@ -99,3 +99,22 @@ every compilation unit, so read the pairs at equal budget.
 Prediction: `npr@1500/cur@1500` ≈ `npr/cur` on replace-half x16 (the gap is
 work); `cur@1500/cur` < 1 mainly where finger calls dominate (shuffle and
 shared-shuffle x128: ~6k–30k finger lookups per transition).
+
+### Result (CI run 41296455535)
+
+- Prediction 1 held: on replace-half 64x16 `npr/cur` 0.927 and
+  `npr@1500/cur@1500` 0.926. The x16 gap is work, not the finger call.
+- Prediction 2 was too narrow: the larger budget speeds up almost every
+  miss-heavy case for both `cur` and `npr` (`cur@1500/cur`: shuffle and
+  shared-shuffle x128 0.83–0.89, value-sort 0.76–0.79, hub 0.87–0.95,
+  replace-half and window 0.91–0.95; `stable` 0.98–0.99, it never misses).
+  Inlining trees (inlining.mjs, Node 24.22.2) place the gain at the outer
+  boundary: at 1500 readProducer or advanceCore inline the whole resolve
+  chain (resolveTrackedRead → resolveCursorTrackedReadMiss →
+  findEdgeInLockstep → reconcileLocatedRead), while at 920 resolveTrackedRead
+  or the cursor miss stays a call. On shuffle 256x128 the cursor miss inlines
+  FromFinger even at 920.
+
+So the shape target is the cumulative size of the read-miss chain under
+readProducer/advanceCore (upper bound 5–25% on miss-heavy shapes), not the
+finger continuation.
