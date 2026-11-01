@@ -32,8 +32,8 @@ export const MUTANTS: readonly Mutant[] = [
   {
     id: "advance-skip-stale-cleanup",
     file: "src/kernel/stages/stabilization/advance.ts",
-    search: "cleanupUnvisitedSources(node);",
-    replace: "void cleanupUnvisitedSources;",
+    search: "    cleanupUnvisitedSources(node);",
+    replace: "    void cleanupUnvisitedSources;",
     expected: "killed",
   },
   {

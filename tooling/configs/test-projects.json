@@ -158,6 +158,59 @@
         }
       ],
       "reason": "The TSSLint language-service plugin checks the JIT source contracts in the editor (32fa5b7); tsc ignores language-service plugins, so compilation and emitted code are unchanged."
+    },
+    {
+      "config": "packages/reflex-runtime/config/vitest.config.ts#test",
+      "path": "plugins",
+      "to": [
+        {
+          "name": "reflex-testkit-mutant"
+        },
+        {
+          "enforce": "pre",
+          "name": "runtime-walker-test-state"
+        }
+      ],
+      "reason": "The testkit mutant plugin is inert without REFLEX_MUTATIONS/REFLEX_REACH_FILE (it only names itself); it lets pnpm rt instrument sources (0098883)."
+    },
+    {
+      "config": "packages/reflex-runtime/config/vitest.config.ts#dev",
+      "path": "plugins",
+      "to": [
+        {
+          "name": "reflex-testkit-mutant"
+        }
+      ],
+      "reason": "The testkit mutant plugin is inert without REFLEX_MUTATIONS/REFLEX_REACH_FILE (it only names itself); it lets pnpm rt instrument sources (0098883)."
+    },
+    {
+      "config": "packages/reflex-runtime/config/vitest.config.ts#projection",
+      "path": "plugins",
+      "to": [
+        {
+          "name": "reflex-testkit-mutant"
+        }
+      ],
+      "reason": "The testkit mutant plugin is inert without REFLEX_MUTATIONS/REFLEX_REACH_FILE (it only names itself); it lets pnpm rt instrument sources (0098883)."
+    },
+    {
+      "config": "packages/reflex-runtime/config/vitest.config.ts#test",
+      "path": "test.exclude",
+      "to": [
+        "**/node_modules/**",
+        "test/dev/**/*.dev.test.ts",
+        "test/projection/**/*.test.ts",
+        "test/characterization/**"
+      ],
+      "reason": "Pinned out-of-contract behavior runs in its own characterization profile (config/vitest.ts), not the correctness verdict."
+    },
+    {
+      "config": "packages/reflex-runtime/config/vitest.config.ts#test",
+      "missing": [
+        "test/runtime/contracts/runtime.characterization.test.ts",
+        "test/runtime/contracts/runtime.hook-disposal-characterization.test.ts"
+      ],
+      "reason": "Pinned out-of-contract behavior moved to test/characterization/, run by the characterization profile (1c48b93)."
     }
   ]
 }

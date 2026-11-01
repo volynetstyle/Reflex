@@ -5,8 +5,6 @@ import {
   type ComponentRenderable,
 } from "../types/renderable";
 
-export { COMPONENT_RENDERABLE };
-
 export function createComponentRenderable<P, Host>(
   type: Component<P, Host>,
   props: P,
