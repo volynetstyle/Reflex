@@ -1,0 +1,200 @@
+{
+ "schemaVersion": 1,
+ "id": "1a55357ec54ce166",
+ "identity": {
+  "suite": "reflex-scheduler",
+  "protocolHash": "f7871d6e300ca4a618babcd2161942fdb3ce9a591381a25ecd4507246f836e74",
+  "anchorCommit": "138b1eba407b83f7d1a9ffad0cc2c36e0522c635",
+  "node": "24",
+  "vitest": "vitest/4.1.5 linux-x64 node-v24.22.1"
+ },
+ "createdAt": "2026-11-01T19:46:58.103Z",
+ "bridge": null,
+ "recent": [
+  {
+   "sha": "df6edd53696b1968e85f1052b6775ff765106e35",
+   "measuredAt": "2026-11-01T19:46:58.103Z",
+   "commitTimestamp": "2026-11-01T21:45:13+02:00",
+   "runId": "41343313086:1",
+   "qualification": "screening-only",
+   "scenarios": {
+    "bench/full-graph.bench.ts > scheduler full graph > A writes only no batch": {
+     "logRatio": -0.02217303847691181,
+     "mad": 0.03423443640507037,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/full-graph.bench.ts > scheduler full graph > B writes only outer batch": {
+     "logRatio": -0.0035548617885958157,
+     "mad": 0.00009106305286774312,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/full-graph.bench.ts > scheduler full graph > C writes only batch per iteration": {
+     "logRatio": -0.021186771530503763,
+     "mad": 0.025448250246365857,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/full-graph.bench.ts > scheduler full graph > D final read only after dirty writes": {
+     "logRatio": -0.008032141534073516,
+     "mad": 0.02918493190152526,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/full-graph.bench.ts > scheduler full graph > E batch enter exit empty": {
+     "logRatio": 0.05275373040625166,
+     "mad": 0.06999972118905379,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/full-graph.bench.ts > scheduler full graph > F batch enter exit on dirty graph": {
+     "logRatio": 0.018248242940894888,
+     "mad": 0.051813554362110936,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/full-graph.bench.ts > scheduler full graph > pattern no batch, rotating 32 sources": {
+     "logRatio": -0.007404727279758071,
+     "mad": 0.054480892054101004,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/full-graph.bench.ts > scheduler full graph > pattern no batch, rotating 4 sources": {
+     "logRatio": -0.03546219560332184,
+     "mad": 0.03771805793246978,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/full-graph.bench.ts > scheduler full graph > pattern no batch, same source": {
+     "logRatio": -0.017881085469079336,
+     "mad": 0.05184501375489188,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/full-graph.bench.ts > scheduler full graph > pattern outer batch, rotating 32 sources": {
+     "logRatio": 0.0016948178978332153,
+     "mad": 0.03972070400427022,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/full-graph.bench.ts > scheduler full graph > pattern outer batch, rotating 4 sources": {
+     "logRatio": -0.03157878934436233,
+     "mad": 0.017503133307802638,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/full-graph.bench.ts > scheduler full graph > pattern outer batch, same source": {
+     "logRatio": -0.028245000012268682,
+     "mad": 0.021385117990456424,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/hot-path.bench.ts > scheduler hot path > SAB batch enqueue+flush / 1024": {
+     "logRatio": 0.063341645469292,
+     "mad": 0.008430882378037807,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/hot-path.bench.ts > scheduler hot path > acceptClaimed stable capacity / 1024": {
+     "logRatio": -0.03068160188095405,
+     "mad": 0.021040697394653314,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/hot-path.bench.ts > scheduler hot path > disposed queue drain / 1024": {
+     "logRatio": 0.056536898381206985,
+     "mad": 0.001537283541147589,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/hot-path.bench.ts > scheduler hot path > eager defer+cancel while propagation active / 1024": {
+     "logRatio": 0.004789193153689714,
+     "mad": 0.06186542700856912,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/hot-path.bench.ts > scheduler hot path > eager enqueue+flush idle / 1024": {
+     "logRatio": 0.017741710807447623,
+     "mad": 0.0717987791789918,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/hot-path.bench.ts > scheduler hot path > empty batch / 1024": {
+     "logRatio": 0.03212926659760797,
+     "mad": 0.02106025197531534,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/hot-path.bench.ts > scheduler hot path > empty flush / 1024": {
+     "logRatio": 0.005624468888024127,
+     "mad": 0.06879919059298406,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/hot-path.bench.ts > scheduler hot path > explicit enqueue+flush / 1024": {
+     "logRatio": 0.04798200804526835,
+     "mad": 0.014719804676026349,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/hot-path.bench.ts > scheduler hot path > ring push+shift / 1024": {
+     "logRatio": 0.10670933077908162,
+     "mad": 0.03534358796771858,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/hot-path.bench.ts > scheduler hot path > runWatcher direct / 1024": {
+     "logRatio": 0.07263180325647137,
+     "mad": 0.03678602580402809,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/hot-path.bench.ts > scheduler hot path > runWatcher scheduler entry / 1024": {
+     "logRatio": 0.06752067409187057,
+     "mad": 0.043580326335287294,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/hot-path.bench.ts > scheduler hot path > tryEnqueue duplicate guard / 1024": {
+     "logRatio": 0.030726942002110853,
+     "mad": 0.02931743540000442,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    },
+    "bench/hot-path.bench.ts > scheduler hot path > tryEnqueue unique stable capacity / 1024": {
+     "logRatio": 0.0333930800636502,
+     "mad": 0.014706383002416243,
+     "lower": null,
+     "upper": null,
+     "valid": true
+    }
+   }
+  }
+ ],
+ "daily": []
+}
