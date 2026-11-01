@@ -39,5 +39,20 @@ case "${1:?set}" in
       build "fz-$v" --commit "$BASE" --overlay "$T=$here/overlays/tape.ts.txt" --overlay "$F=$here/overlays/findEdge.$v.ts.txt"
     done
     ;;
+  schedule)
+    # Frozen-controller schedule variants (overlays/schedule, generate.py), and
+    # the constraint that findEdgeInLockstep stays dev's bytecode in each.
+    variants="half half-early rounds rounds-early rounds2-early ffrounds-early"
+    for v in $variants; do
+      build "s-$v" --commit "$BASE" --overlay "$T=$here/overlays/schedule/tape.ts.txt" --overlay "$F=$here/overlays/schedule/findEdge.$v.ts.txt"
+    done
+    node scripts/build-baseline-oracle.mjs --commit "$BASE" --readable --out "$here/bundles/r-base" >/dev/null
+    readable=()
+    for v in $variants; do
+      node scripts/build-baseline-oracle.mjs --commit "$BASE" --readable --overlay "$T=$here/overlays/schedule/tape.ts.txt" --overlay "$F=$here/overlays/schedule/findEdge.$v.ts.txt" --out "$here/bundles/r-$v" >/dev/null
+      readable+=("$here/bundles/r-$v")
+    done
+    node "$here/bytecode-check.mjs" "$here/bundles/r-base" "${readable[@]}"
+    ;;
   *) echo "unknown set $1" >&2; exit 2 ;;
 esac

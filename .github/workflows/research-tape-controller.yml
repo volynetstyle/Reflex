@@ -18,20 +18,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Only the experiments listed in perf/tape-controller/ci.json run: a finished
+  # experiment is removed from the list instead of being timed again.
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.read.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: packages/reflex-runtime/perf/tape-controller/ci.json
+          sparse-checkout-cone-mode: false
+      - id: read
+        run: echo "matrix=$(jq -c '{include: .}' packages/reflex-runtime/perf/tape-controller/ci.json)" >> "$GITHUB_OUTPUT"
+
   timing:
     name: ${{ matrix.experiment }}
+    needs: plan
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - experiment: frozen
-            run: node perf/tape-controller/frozen.mjs --samples 9
-          - experiment: foreign
-            run: node perf/tape-controller/time.mjs --bundles base,nf-rec,nf-live,nf-ns --samples 9
-          - experiment: kgrid
-            run: node perf/tape-controller/time.mjs --bundles base,k1,k8,k12,k16,k24,k32,e8,e16 --samples 9
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       # Full history: build.sh archives fixed commits (dev, the gate commit).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

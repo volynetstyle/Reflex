@@ -1,0 +1,6 @@
+[
+  {
+    "experiment": "schedule",
+    "run": "node perf/tape-controller/schedule.mjs time --bundles s-half,s-half-early,s-rounds,s-rounds-early,s-rounds2-early,s-ffrounds-early --samples 9"
+  }
+]
