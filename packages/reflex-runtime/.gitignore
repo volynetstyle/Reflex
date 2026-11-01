@@ -22,3 +22,4 @@ drafts/
 *.draft.*
 *-lock.json
 .npm-cache
+perf/pathology/bundle/

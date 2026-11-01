@@ -1,0 +1,73 @@
+name: Research - pathology sentinels
+
+# Clinical workloads of the runtime (packages/reflex-runtime/perf/pathology):
+# cost per step and growth exponent across sizes. Runs only on its research
+# branch. Each job times one bundle on one runner: read exponents and
+# per-read costs, compare the two bundles only as ratios of magnitude.
+on:
+  push:
+    branches: [research/pathology-sentinels]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-pathology-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  timing:
+    name: ${{ matrix.bundle }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - bundle: current
+            mutate: ""
+          - bundle: no-tape
+            mutate: "src/kernel/shape/graph/tape.ts::  prepareTape(consumer, passStamp);::  return false;"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-workspace
+
+      - name: Build bundle
+        working-directory: packages/reflex-runtime
+        env:
+          MUTATE: ${{ matrix.mutate }}
+        run: |
+          if [ -n "$MUTATE" ]; then
+            node scripts/build-baseline-oracle.mjs --source --production --mutate "$MUTATE" --out perf/pathology/bundle
+          else
+            node scripts/build-baseline-oracle.mjs --source --production --out perf/pathology/bundle
+          fi
+          sha256sum perf/pathology/bundle/runtime.mjs
+
+      - name: Time
+        working-directory: packages/reflex-runtime
+        run: |
+          set -o pipefail
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          node perf/pathology/run.mjs --bundle perf/pathology/bundle --json "$GITHUB_WORKSPACE/out/${{ matrix.bundle }}.json" | tee "$GITHUB_WORKSPACE/out/${{ matrix.bundle }}.md"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## ${{ matrix.bundle }}"
+            echo
+            echo "Node $(node --version), $(lscpu | sed -n 's/^Model name: *//p')"
+            echo
+            cat "out/${{ matrix.bundle }}.md" || true
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: pathology-${{ matrix.bundle }}
+          path: out/
