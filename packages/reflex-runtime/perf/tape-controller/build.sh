@@ -69,5 +69,11 @@ case "${1:?set}" in
     build k16r --commit ae2fdd0 --overlay "$T=$here/overlays/rounds/tape.k16.ts.txt" --overlay "$F=$here/overlays/rounds/findEdge.k16.ts.txt"
     build npr --commit ae2fdd0 --mutate "$NOPREP"
     ;;
+  budget)
+    # Same bundles, V8 inlining budget raised per run (time.mjs <dir>@<n>):
+    # an upper bound on what inlining the finger path can buy.
+    build cur --commit ae2fdd0
+    build npr --commit ae2fdd0 --mutate "$T::  prepareTape(consumer, passStamp);::  return false;"
+    ;;
   *) echo "unknown set $1" >&2; exit 2 ;;
 esac

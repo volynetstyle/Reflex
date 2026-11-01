@@ -5,6 +5,9 @@
 //   node time.mjs --bundles base,k8,... --cases <regex> --samples 5 --node <exe>
 //     --pairs a/b,c/d   extra table: median per-sample ratio of a to b
 //     --json <file>     raw ns per (case, bundle, sample)
+// A bundle name `<dir>@<n>` runs bundles/<dir> with V8's cumulative inlining
+// budget raised to n bytes (--max-inlined-bytecode-size-cumulative, default
+// 920): same code and work, a different compiler decision.
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
@@ -17,7 +20,8 @@ const args = process.argv.slice(2);
 const opt = (n, f) => (args.includes(n) ? args[args.indexOf(n) + 1] : f);
 
 if (args[0] === "--measure") {
-  const [, bundle, shape, d, k, warmupMs, batchMs] = args;
+  const [, named, shape, d, k, warmupMs, batchMs] = args;
+  const bundle = named.split("@")[0];
   const rt = await import(pathToFileURL(path.join(here, "bundles", bundle, "runtime.mjs")).href);
   const patterns = shapes[shape](+d, +k);
   const period = patterns.length;
@@ -82,7 +86,9 @@ for (let sm = 0; sm < samples; sm++) {
     const order = bundles.map((_, i) => bundles[(i + sm) % bundles.length]);
     for (const b of order) {
       const big = c.d * c.k >= 256 * 128;
-      const r = spawnSync(node, [import.meta.filename, "--measure", b, c.s, c.d, c.k, big ? 300 : 150, big ? 60 : 30], { encoding: "utf8" });
+      const budget = b.split("@")[1];
+      const flags = budget ? [`--max-inlined-bytecode-size-cumulative=${budget}`] : [];
+      const r = spawnSync(node, [...flags, import.meta.filename, "--measure", b, c.s, c.d, c.k, big ? 300 : 150, big ? 60 : 30], { encoding: "utf8" });
       if (r.status !== 0) throw new Error(r.stderr);
       ((res[c.id] ??= {})[b] ??= []).push(JSON.parse(r.stdout).ns);
     }

@@ -10,7 +10,10 @@ const [dir, shapesPath, ...names] = process.argv.slice(2);
 const { shapes, range } = await import(pathToFileURL(shapesPath).href);
 const at = (src, fn, code) => {
   const re = new RegExp("^(function " + fn + "[(][^)]*[)] [{])$", "m");
-  if (!re.test(src)) throw new Error("no " + fn);
+  if (!re.test(src)) {
+    if (fn === "prepareTape") return src; // tree-shaken where nothing prepares
+    throw new Error("no " + fn);
+  }
   return src.replace(re, `$1 ${code}`);
 };
 function instrument(src) {

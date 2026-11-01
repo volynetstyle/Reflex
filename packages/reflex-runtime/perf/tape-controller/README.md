@@ -83,3 +83,19 @@ whether the rounds changed the controller's own dynamics.
 
 Next lever: the per-lookup fixed cost of the finger path (inline budget of
 resolveCursorTrackedReadMiss), not admission.
+
+## `budget`: does the finger path's call boundary matter? (prediction, 2026-11-01)
+
+On replace-half 64x16 the counters give `cur` 384 calls of
+findEdgeInLockstepFromFinger plus 42 of PastHeadStart per transition, and
+`npr` 416 calls of PastHeadStart: the same number of out-of-line lookups,
+and `cur` takes fewer steps (2447 vs 2912). The `npr`/`cur` gap there is
+therefore different work (finger probes into other consumers' edges, the
+prepare and its release), not compiler shape. With
+`--max-inlined-bytecode-size-cumulative=1500` V8 inlines FromFinger into
+resolveCursorTrackedReadMiss (inlining.mjs; 952 bytes). The flag changes
+every compilation unit, so read the pairs at equal budget.
+
+Prediction: `npr@1500/cur@1500` ≈ `npr/cur` on replace-half x16 (the gap is
+work); `cur@1500/cur` < 1 mainly where finger calls dominate (shuffle and
+shared-shuffle x128: ~6k–30k finger lookups per transition).
