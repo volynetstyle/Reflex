@@ -101,9 +101,9 @@ computed was independently stabilized earlier in the operation trace.
 
 ## Failed computations
 
-- **C1** A failed computed evaluation does not commit its partially collected dependencies.
+- **C1** A failed computed evaluation commits no dependency set: neither its partially collected dependencies nor the previous snapshot stay committed.
 - **C2** A failed computed evaluation does not commit a value or increment its semantic version.
-- **C3** A failed computed evaluation remains retryable through its previously committed dependency snapshot.
+- **C3** A failed computed evaluation leaves the node `Changed`. Its next demand executes the callback exactly once, whatever the node's incoming relation holds and however many upstream writes happened in between. While the node is `Changed` after a failure, its incoming relation is failure-time retry evidence, not a committed dependency snapshot, and it may hold only dependencies the failed attempt observed. The next successful evaluation commits a dependency set again. Revised 2026-11-01: C3 used to keep the previous snapshot as the retry path; a `Changed` node needs none, and keeping it let a series of failures accumulate the union of all their reads.
 - **W1** A watcher's previous cleanup is consumed before reevaluation starts.
 - **W2** A failed watcher computation does not install partially collected semantic dependencies or a new cleanup; partial reads live only in a separate retry-trigger set.
 - **W3** A watcher whose cleanup or computation failed is not retried by a plain flush, but remains retryable after a conservative retry trigger changes. A write performed by the failing cleanup or computation is such a change (L5).
@@ -198,6 +198,14 @@ Differential comparison therefore has three outcomes
   two observations agree as a multiset, and each node's own entries keep
   their order (a cleanup still precedes its rerun);
 - **semantic-different:** anything else.
+
+One more representation class concerns a failed computed (C1, C3):
+`failed-computed`, in `testkit/oracle/verdict.ts`. While a computed node is
+`Changed` and its last evaluation threw, its incoming relation is not a
+dependency snapshot. Two traces belong to one semantics if they agree, up to
+`list-order` or `event-order`, once every snapshot omits exactly the edges
+incident to such nodes. Every other edge, value, state, read and event must
+still agree.
 
 The baseline oracle fails only on semantic differences and counts
 representation differences. Exact representation remains a diagnostic: the

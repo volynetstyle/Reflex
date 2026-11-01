@@ -400,7 +400,7 @@ describe("prepared tape (INV-P)", () => {
     expectGraphIntegrity(mids);
   });
 
-  it("a throw in a prepared pass leaves every edge, and the retry reuses them", () => {
+  it("a throw in a prepared pass keeps the edges it read, and the retry reuses them", () => {
     const { sources } = wideGraph();
     let order = range(256);
     let fail = false;
@@ -418,8 +418,10 @@ describe("prepared tape (INV-P)", () => {
     fail = true;
     c.state |= 2; // Changed
     expect(() => readConsumer(c)).toThrow(failure);
-    expect(incomingEdges(c).length).toBe(256);
+    // A failed computed drops its residual suffix, and the lease with it.
+    expect(sourcesOf(c, sources)).toEqual(order);
     expect(incomingEdges(c).every((e) => before.has(e))).toBe(true);
+    expect(sources.filter(leased).length).toBe(0);
     fail = false;
     expect(readConsumer(c)).toBe(3);
     expect(sourcesOf(c, sources)).toEqual(order);

@@ -7,8 +7,9 @@
  * Policies, from strictest:
  *
  * - `exact`: traces must be byte-equal.
- * - `representation`: traces may differ in adjacency order (list-order) or
- *   sibling delivery order (event-order), and the candidate may not violate
+ * - `representation`: traces may differ in adjacency order (list-order),
+ *   sibling delivery order (event-order) or the incoming edges of a failed
+ *   computed (failed-computed), and the candidate may not violate
  *   an invariant the reference does not (SEMANTIC_CONTRACT, "Semantic and
  *   representation equivalence"). For two builds that are both meant to be
  *   correct, as a refactor or a policy change against its parent.
@@ -45,7 +46,8 @@ export type AcceptedClass =
   | "F17"
   | "F16"
   | "list-order"
-  | "event-order";
+  | "event-order"
+  | "failed-computed";
 
 export const ACCEPTED_CLASSES: readonly AcceptedClass[] = [
   "F13",
@@ -55,6 +57,7 @@ export const ACCEPTED_CLASSES: readonly AcceptedClass[] = [
   "F16",
   "list-order",
   "event-order",
+  "failed-computed",
 ];
 
 export type Verdict =
@@ -66,6 +69,24 @@ export type Verdict =
 const STACK_OVERFLOW = "RangeError:Maximum call stack size exceeded";
 const overflows = (trace: readonly string[]) =>
   trace.some((entry) => entry.includes(STACK_OVERFLOW));
+
+/**
+ * A run's trace; with `masked`, its snapshots omit the incoming edges of
+ * failed `Changed` computeds (see failedComputedClass).
+ */
+function observe(
+  rt: RuntimeModule,
+  program: Program,
+  level: ObservationLevel,
+  masked: boolean,
+  options: { ownEpochDeliveries?: number[] } = {},
+): string[] {
+  if (!masked) return interpret(rt, program, level, options);
+  const maskedSnapshots = new Map<number, string>();
+  return interpret(rt, program, level, { ...options, maskedSnapshots }).map(
+    (entry, i) => maskedSnapshots.get(i) ?? entry,
+  );
+}
 
 const violations = (rt: RuntimeModule, program: Program): string[] =>
   interpret(rt, program, "strict", { invariants: true }).filter((entry) =>
@@ -116,13 +137,17 @@ const isDelivery = (entry: string | undefined): boolean =>
  *   `Unknown` or `Changed` added (and a host claim retained), and only if the candidate violates no
  *   invariant. Found by the swarm family (`pnpm rt diff --families swarm`).
  *
- * The checks run in this order; the first that holds names the class.
+ * The checks run in this order; the first that holds names the class. With
+ * `masked`, every trace comparison omits the incoming edges of failed
+ * `Changed` computeds (failedComputedClass), so a correction is still
+ * recognized next to such a difference; invariants are checked unmasked.
  */
 export function compatibilityClass(
   baseline: RuntimeModule,
   candidate: RuntimeModule,
   program: Program,
   level: ObservationLevel,
+  masked = false,
 ): "F13" | "F15" | "F1domain" | "F17" | "F16" | null {
   if (
     touchesEpoch(program.ops) &&
@@ -141,14 +166,14 @@ export function compatibilityClass(
   ) {
     // Observe each operation before accepting a later extra delivery. Otherwise
     // a changed producer payload can cause that delivery and be excused as F1.
-    const mismatch = checkpointMismatch(baseline, candidate, program);
+    const mismatch = checkpointMismatch(baseline, candidate, program, masked);
     if (isDelivery(mismatch?.candidate) || isF1Retention(program, mismatch))
       return "F1domain";
   }
   const ownEpoch: number[] = [];
   const mismatch = firstMismatch(
-    interpret(baseline, program, level, { ownEpochDeliveries: ownEpoch }),
-    interpret(candidate, program, level),
+    observe(baseline, program, level, masked, { ownEpochDeliveries: ownEpoch }),
+    observe(candidate, program, level, masked),
   );
   if (
     mismatch !== null &&
@@ -158,7 +183,7 @@ export function compatibilityClass(
   )
     return "F17";
   if (
-    isF16(baseline, candidate, program) &&
+    isF16(baseline, candidate, program, masked) &&
     violations(candidate, program).length === 0
   )
     return "F16";
@@ -195,14 +220,15 @@ function checkpointMismatch(
   baseline: RuntimeModule,
   candidate: RuntimeModule,
   program: Program,
+  masked: boolean,
 ): Mismatch | null {
   const observed: Program = {
     spec: program.spec,
     ops: program.ops.flatMap((op): Op[] => [op, { kind: "snapshot" }]),
   };
   return firstMismatch(
-    interpret(baseline, observed, "strict"),
-    interpret(candidate, observed, "strict"),
+    observe(baseline, observed, "strict", masked),
+    observe(candidate, observed, "strict", masked),
   );
 }
 
@@ -239,6 +265,7 @@ function isF16(
   baseline: RuntimeModule,
   candidate: RuntimeModule,
   program: Program,
+  masked: boolean,
 ): boolean {
   const { spec } = program;
   if (
@@ -249,7 +276,7 @@ function isF16(
     )
   )
     return false;
-  const mismatch = checkpointMismatch(baseline, candidate, program);
+  const mismatch = checkpointMismatch(baseline, candidate, program, masked);
   if (mismatch === null) return false;
   const before = parseSnapshot(mismatch.baseline ?? "");
   const after = parseSnapshot(mismatch.candidate ?? "");
@@ -306,6 +333,44 @@ export function representationClass(
     : null;
 }
 
+/**
+ * A failed computed's incoming relation (SEMANTIC_CONTRACT C1, C3): while a
+ * computed node is `Changed` and its last evaluation threw, its incoming
+ * edges are retry evidence, not a dependency snapshot, so implementations may
+ * keep different ones. The traces must agree, up to the representation
+ * classes above, once every snapshot omits exactly those edges (in each run,
+ * of the nodes that are failed and `Changed` in that run), and the candidate
+ * violates no invariant the reference does not. Every other edge, every
+ * value, state, read, execution and delivery is still compared.
+ */
+export function failedComputedClass(
+  reference: RuntimeModule,
+  candidate: RuntimeModule,
+  program: Program,
+  level: ObservationLevel,
+): "failed-computed" | null {
+  // Both readings of each side come from one run, so a candidate that
+  // differs between runs cannot pass by agreeing on a rerun.
+  const run = (rt: RuntimeModule) => {
+    const maskedSnapshots = new Map<number, string>();
+    const trace = interpret(rt, program, level, { maskedSnapshots });
+    return {
+      trace,
+      masked: trace.map((entry, i) => maskedSnapshots.get(i) ?? entry),
+    };
+  };
+  const expected = run(reference);
+  const actual = run(candidate);
+  if (classifyTraceDifference(expected.trace, actual.trace) !== "semantic")
+    return null;
+  if (classifyTraceDifference(expected.masked, actual.masked) === "semantic")
+    return null;
+  const accepted = new Set(violations(reference, program));
+  return violations(candidate, program).every((entry) => accepted.has(entry))
+    ? "failed-computed"
+    : null;
+}
+
 /** Whether the two traces of `program` differ at all (the shrink predicate). */
 export function differs(
   reference: RuntimeModule,
@@ -355,6 +420,26 @@ export function judge(
     );
     if (representation !== null)
       return { kind: "accepted", class: representation };
+    const failedComputed = failedComputedClass(
+      reference,
+      candidate,
+      program,
+      level,
+    );
+    if (failedComputed !== null)
+      return { kind: "accepted", class: failedComputed };
+  }
+  if (policy === "baseline") {
+    // A correction of the baseline in a program whose failed computeds also
+    // keep different incoming edges: the correction must hold without them.
+    const correction = compatibilityClass(
+      reference,
+      candidate,
+      program,
+      level,
+      true,
+    );
+    if (correction !== null) return { kind: "accepted", class: correction };
   }
   return { kind: "divergent", mismatch };
 }

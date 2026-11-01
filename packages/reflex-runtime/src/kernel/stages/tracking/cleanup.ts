@@ -7,7 +7,9 @@ import type ReactiveNode from "@runtime/kernel/shape/node";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 /**
- * Remove the unvisited suffix after a successful pass.
+ * Remove the unvisited suffix after a successful pass, and after a failed
+ * pass of a computed node (stabilization/advance.ts); a failed watcher keeps
+ * it as a retry set.
  *
  * Every incoming edge after the cursor `tailIn` belongs to the previous
  * dependency list and was not read by this pass, so it is cut from the

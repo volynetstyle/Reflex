@@ -37,6 +37,27 @@ import { observeRuntimeProjection } from "@runtime/kernel/projection";
 export const compare = Object.is;
 
 /**
+ * A computation threw. Cold path, kept out of `advanceCore`'s bytecode.
+ *
+ * The node becomes Changed: a failed pull-bubble computation may have entered
+ * as Unknown after its dependencies already stabilized, and retrying must
+ * execute the callback. A Changed node's incoming edges wake nothing (push
+ * skips a Changed subscriber) and its next read recomputes without
+ * validation, so they serve only as reconciliation material for the retry.
+ * The pass keeps what it read and drops the residual suffix, as a successful
+ * pass does; otherwise a series of failures with different reads would
+ * accumulate the union of all of them until the first success. Watchers keep
+ * theirs as a retry set (engine/watcher.ts).
+ */
+function settleFailedComputation(
+  node: ReactiveNode,
+  computingState: number,
+): void {
+  node.state = (computingState & ~(Computing | Unknown)) | Changed;
+  if (node.tailIn !== node.lastIn) cleanupUnvisitedSources(node);
+}
+
+/**
  * Advance to next value
  *
  * Recompute `node` and, if it changed, propagate dirtiness to its outgoing users.
@@ -76,9 +97,7 @@ function advanceCore(
     next = compute();
   } catch (error) {
     restoreConsumerTracking(prevActive);
-    // A failed pull-bubble computation may have entered as Unknown after its
-    // dependencies already stabilized. Retrying must execute the callback.
-    node.state = (computingState & ~(Computing | Unknown)) | Changed;
+    settleFailedComputation(node, computingState);
 
     if (__DEV__) devRecordComputeError(node, error, defaultContext);
 

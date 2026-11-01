@@ -88,7 +88,7 @@ Each read of `P` asks one question, **where is the unique edge of `(P, C)`?**, a
 | edge in the suffix | known dependency, new place | move the **same** edge right after the cursor, stamp it `S` |
 | no edge            | new dependency              | link a new edge after the cursor, stamp it `S`              |
 
-After a **successful** pass, `cleanupUnvisitedSources` ([`cleanup.ts`](./cleanup.ts)) unlinks the suffix: the dependencies this pass did not read. This is the only place where tracking removes edges. A pass that throws keeps its moves, links and stamps and skips cleanup, so its suffix survives; a retry takes a new stamp and reconciles against that graph.
+After a **successful** pass, `cleanupUnvisitedSources` ([`cleanup.ts`](./cleanup.ts)) unlinks the suffix: the dependencies this pass did not read. This is the only place where tracking removes edges. A pass that throws keeps its moves, links and stamps. A computed node's failed pass then cleans up too: the node becomes `Changed`, push skips a `Changed` subscriber and its next read recomputes without validation, so its incoming edges are only reconciliation material, and a kept suffix would grow into the union of every failed retry's reads until the first success. A watcher's failed pass skips cleanup: the watcher returns to idle and its dependency set stays a conservative retry set ([`watcher.ts`](../../engine/watcher.ts)). Either way a retry takes a new stamp and reconciles against that graph.
 
 ### Worked trace
 

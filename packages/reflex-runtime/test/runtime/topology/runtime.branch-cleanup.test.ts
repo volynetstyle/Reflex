@@ -7,11 +7,14 @@ import {
 import {
   createConsumer,
   createProducer,
+  createWatcher,
+  disposeWatcher,
   expectGraphIntegrity,
   expectNoSubscriber,
   expectSources,
   expectSubscriber,
   resetRuntime,
+  runWatcher,
 } from "../../runtime.test_utils";
 
 function createBranchCase(initialGate: boolean) {
@@ -199,6 +202,58 @@ describe("Reactive runtime - branch cleanup matrix", () => {
     expect(readConsumer(selected)).toBe(20);
     expect(calls).toBe(callsAfterRecovery + 1);
     expectGraphIntegrity([useRight, left, right, selected]);
+  });
+
+  it("a failed computed keeps only what it read: failures do not accumulate", () => {
+    const phase = createProducer(0);
+    const sources = Array.from({ length: 40 }, (_, index) =>
+      createProducer(index),
+    );
+    const window = (k: number) => sources.slice(k * 10, k * 10 + 10);
+    const total = createConsumer(() => {
+      const k = readProducer(phase);
+      let sum = 0;
+      for (const source of window(k)) sum += readProducer(source);
+      if (k < 3) throw new Error(`failed phase ${k}`);
+      return sum;
+    });
+
+    for (let k = 0; k < 3; k += 1) {
+      writeProducer(phase, k);
+      expect(() => readConsumer(total)).toThrow(`failed phase ${k}`);
+      expectSources(total, [phase, ...window(k)]);
+      for (const source of sources.slice(0, k * 10))
+        expectNoSubscriber(source, total);
+    }
+
+    writeProducer(phase, 3);
+    expect(readConsumer(total)).toBe(345);
+    expectSources(total, [phase, ...window(3)]);
+    expectGraphIntegrity([phase, total, ...sources]);
+  });
+
+  it("a failed watcher keeps its earlier dependencies as a retry set", () => {
+    const failing = createProducer(false);
+    const late = createProducer(0);
+    let runs = 0;
+    const watcher = createWatcher(() => {
+      runs += 1;
+      if (readProducer(failing)) throw new Error("failed watcher");
+      readProducer(late);
+    });
+
+    runWatcher(watcher);
+    writeProducer(failing, true);
+    expect(() => runWatcher(watcher)).toThrow("failed watcher");
+    // The failed pass never read `late`; the watcher still depends on it.
+    expectSources(watcher, [failing, late]);
+
+    writeProducer(failing, false);
+    writeProducer(late, 1);
+    runWatcher(watcher);
+    expect(runs).toBe(3);
+    expectSources(watcher, [failing, late]);
+    disposeWatcher(watcher);
   });
 
   it("reorders retained dependencies while cleaning stale subscriptions", () => {
