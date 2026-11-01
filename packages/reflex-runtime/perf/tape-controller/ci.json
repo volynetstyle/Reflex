@@ -1,6 +1,6 @@
 [
   {
-    "experiment": "schedule",
-    "run": "node perf/tape-controller/schedule.mjs time --bundles s-half,s-ffrounds-early,s-nofinger-call,s-nofinger-inline --samples 9"
+    "experiment": "port",
+    "run": "node perf/tape-controller/time.mjs --bundles base,port-rounds --samples 9"
   }
 ]

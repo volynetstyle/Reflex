@@ -54,5 +54,9 @@ case "${1:?set}" in
     done
     node "$here/bytecode-check.mjs" "$here/bundles/r-base" "${readable[@]}"
     ;;
+  port)
+    # Production candidates with the live tape controller, against dev.
+    build port-rounds --commit ae2fdd0   # perf/tracking-finger-rounds: finger-first race rounds
+    ;;
   *) echo "unknown set $1" >&2; exit 2 ;;
 esac
