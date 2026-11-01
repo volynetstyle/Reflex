@@ -33,16 +33,18 @@ sequential path is resolved in three steps:
    nonzero stamp (INV-T3), or always when the cursor is `lastIn` (INV-T2):
    `isEdgeInTrackedPrefix`.
 3. **Reconcile**: duplicate, move the suffix edge after the cursor (to the
-   head while the prefix is empty), or link a new edge there:
-   `reconcileLocatedRead`, which never searches again. The locality tiers
+   head while the prefix is empty), or link a new edge there, without
+   searching again (the end of `resolveTrackedReadMiss`). The locality tiers
    and the located edge share the same two moves
    (`../../shape/graph/cursorMoves.ts`).
 
 `edge.stamp` is a pass-membership stamp, not a value version.
 
-`resolveTrackedRead` handles sequential reads directly. On a miss,
-`reconcileLocatedRead` commits a located suffix edge or a new link after the
-duplicate check; a configured strategy is called at that same boundary. The
+`resolveTrackedRead` handles sequential reads directly. Every other read goes
+to one handler, `resolveTrackedReadMiss`, kept above V8's single-inlining
+size so that it stays a call and `resolveTrackedRead` stays small enough to
+inline into its readers. It commits a located suffix edge or a new link after
+the duplicate check; a configured strategy is called at that same boundary. The
 default strategy (`../../shape/graph/reuseEdge.ts`) is never called by the
 resolver; it serves benchmarks and tools with positions of their own.
 
