@@ -1,5 +1,11 @@
 # @volynets/reflex-framework
 
+## 1.0.1
+
+### Patch Changes
+
+- Update internal peer dependency versions.
+
 ## 1.0.0
 
 ### Major Changes

@@ -1,5 +1,11 @@
 # @volynets/reflex
 
+## 3.0.3
+
+### Patch Changes
+
+- Update internal peer dependency versions.
+
 ## 3.0.2
 
 ### Patch Changes

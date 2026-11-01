@@ -1,5 +1,11 @@
 # @volynets/reflex-runtime-mcp
 
+## 1.0.3
+
+### Patch Changes
+
+- Update internal peer dependency versions.
+
 ## 1.0.2
 
 ### Patch Changes
