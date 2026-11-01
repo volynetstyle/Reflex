@@ -1,5 +1,11 @@
 # @volynets/reflex-store
 
+## 2.0.1
+
+### Patch Changes
+
+- Update internal peer dependency versions.
+
 ## 2.0.0
 
 ### Major Changes

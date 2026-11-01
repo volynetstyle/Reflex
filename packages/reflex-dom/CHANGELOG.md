@@ -1,5 +1,11 @@
 # @volynets/reflex-dom
 
+## 3.0.1
+
+### Patch Changes
+
+- Update internal peer dependency versions.
+
 ## 3.0.0
 
 ### Major Changes

@@ -1,5 +1,11 @@
 # @volynets/reflex-async
 
+## 0.2.3
+
+### Patch Changes
+
+- Update internal peer dependency versions.
+
 ## 0.2.2
 
 ### Patch Changes
