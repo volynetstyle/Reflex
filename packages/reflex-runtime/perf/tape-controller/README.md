@@ -58,3 +58,28 @@ If `k16r/cur` stays near 0.85, the harm lives elsewhere: exact-hint eviction,
 the strike/prepare feedback loop, the prepare itself, or code shape. Counters
 from `count.mjs` (prepares, strikes, foreign-cell finger lookups, steps) show
 whether the rounds changed the controller's own dynamics.
+
+### Result (CI run 41294654148, Node 24, 9 samples; noise: `stable` is bimodal 0.73–1.35, read ±5% as nothing)
+
+| case | k16/base | np/base | k16r/cur | npr/cur | cur/base |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| replace-half 64x16 | 0.868 | 0.872 | 0.908 | 0.916 | 0.923 |
+| replace-half 256x16 | 0.876 | 0.878 | 0.934 | 0.951 | 0.920 |
+| replace-half 256x128 | 1.038 | 4.610 | 1.046 | 4.677 | 0.981 |
+| window-slide 256x16 | 1.092 | 1.127 | 1.027 | 1.069 | 0.948 |
+| window-slide 256x128 | 1.043 | 4.639 | 1.054 | 4.841 | 0.987 |
+| hub-duplicate 256x128 | 1.004 | 1.068 | 0.999 | 0.994 | 1.029 |
+
+- x16 external tax of the tape: 12–13% before, 5–9% after the rounds. Halved,
+  not gone. The no-tape floor did not move (`k16r/base` 0.875 ≈ `k16/base`
+  0.868); the taped path got cheaper (`cur/base` 0.92). The counters agree:
+  without a tape replace-half x16 has no finger lookups and more lockstep
+  steps, so the remaining harm is the fixed cost of entering the finger path
+  plus the prepare, not race length (the rounds never bounded anything here).
+- x128: the tape still pays 2.7–4.8x. Prediction held.
+- window-slide x16: the tape helps in both (foreign cells as useful fingers).
+- hub-duplicate: the rounds raised prepares 8x (counters) at ~+3% (256x128).
+- K=16 still loses 4–10% on x128 and window-slide: no admission rule wins.
+
+Next lever: the per-lookup fixed cost of the finger path (inline budget of
+resolveCursorTrackedReadMiss), not admission.
