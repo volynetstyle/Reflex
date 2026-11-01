@@ -24,6 +24,9 @@ t = rep(
     """// SCHEDULE RESEARCH: frozen controller. globalThis.__fz = { mode: 0 record | 2 replay, bits, n, i, h, prepares, releases }.
 const FZ: any = ((globalThis as any).__fz ??= { mode: 0, bits: new Uint8Array(1 << 16), n: 0, i: 0, h: 0, prepares: 0, releases: 0 });
 export const fzRecording: boolean = FZ.mode === 0;
+/** Boundary control padding: a consumer that never occurs, and a sink terser cannot drop. */
+export var fzNever: ReactiveNode | null = null;
+export const fzBox: any = FZ;
 export var fzStrikeCalls = 0;
 const fzMix = (x: number): void => { FZ.h = Math.imul(FZ.h ^ x, 0x9e3779b1) >>> 0; };
 /** Record mode: a finger lookup finished; whether it struck. */
@@ -70,6 +73,8 @@ f = rep(
   fzStrikeCalls,
   fzNoteFinger,
   fzReplayFinger,
+  fzNever,
+  fzBox,
 } from "./tape";""",
 )
 # Dev's finger continuation becomes the record-mode path; the owner's
@@ -338,6 +343,32 @@ def race_staged():
     )
 
 
+def race_none(padded):
+    # Control for the call boundary: no finger at all, the plain lockstep
+    # from the head start. `padded` adds a branch that never runs (consumer
+    # is never fzNever) whose bytecode pushes the function past the caller's
+    # remaining TurboFan inlining budget, so the same executed loop stays a
+    # call; unpadded, it is small enough to inline.
+    pad = ""
+    if padded:
+        pad = "  if (consumer === fzNever) {\n" + "".join(
+            f"    fzBox.sink = (fzBox.sink + producer.state + {i}) | 0;\n" for i in range(24)
+        ) + "    return null;\n  }\n"
+    name = "raceNoneCall" if padded else "raceNoneInline"
+    return (
+        f"/** Boundary control: no finger, plain lockstep{', padded to stay a call' if padded else ''}. */\nfunction {name}"
+        + SIGNATURE
+        + pad
+        + """  while (out !== null) {
+    if (out.to === consumer) return out;
+    out = out.nextOut;
+""" + INCOMING + """  }
+  return null;
+}
+"""
+    )
+
+
 variants = {
     "half": ("raceHalf", race_half(False)),
     "half-early": ("raceHalf", race_half(True)),
@@ -348,6 +379,8 @@ variants = {
     "pre4": ("racePrelude", race_prelude(4)),
     "pre8": ("racePrelude", race_prelude(8)),
     "staged": ("raceStaged", race_staged()),
+    "nofinger-inline": ("raceNoneInline", race_none(False)),
+    "nofinger-call": ("raceNoneCall", race_none(True)),
 }
 anchor = "/**\n * The far end of the finger race"
 for name, (fn, body) in variants.items():

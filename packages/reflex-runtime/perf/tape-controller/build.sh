@@ -42,7 +42,7 @@ case "${1:?set}" in
   schedule)
     # Frozen-controller schedule variants (overlays/schedule, generate.py), and
     # the constraint that findEdgeInLockstep stays dev's bytecode in each.
-    variants="${SCHEDULE_VARIANTS:-half ffrounds-early pre4 pre8 staged}"
+    variants="${SCHEDULE_VARIANTS:-half ffrounds-early nofinger-call nofinger-inline}"
     for v in $variants; do
       build "s-$v" --commit "$BASE" --overlay "$T=$here/overlays/schedule/tape.ts.txt" --overlay "$F=$here/overlays/schedule/findEdge.$v.ts.txt"
     done

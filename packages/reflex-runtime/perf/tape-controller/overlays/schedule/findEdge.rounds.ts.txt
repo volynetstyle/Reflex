@@ -12,6 +12,8 @@ import {
   fzStrikeCalls,
   fzNoteFinger,
   fzReplayFinger,
+  fzNever,
+  fzBox,
 } from "./tape";
 
 /**
