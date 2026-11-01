@@ -1,6 +1,6 @@
 [
   {
-    "experiment": "budget",
-    "run": "node perf/tape-controller/time.mjs --bundles cur,cur@1500,npr,npr@1500 --samples 9 --pairs cur@1500/cur,npr@1500/npr,npr/cur,npr@1500/cur@1500 --json ../../out/budget.json"
+    "experiment": "shape",
+    "run": "node perf/tape-controller/time.mjs --bundles cur,m2,cur@1500 --samples 9 --pairs m2/cur,cur@1500/cur,m2/cur@1500 --json ../../out/shape.json"
   }
 ]

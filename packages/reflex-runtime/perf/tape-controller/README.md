@@ -118,3 +118,13 @@ shared-shuffle x128: ~6k–30k finger lookups per transition).
 So the shape target is the cumulative size of the read-miss chain under
 readProducer/advanceCore (upper bound 5–25% on miss-heavy shapes), not the
 finger continuation.
+
+## `shape`: one never-inlined miss handler (prediction, 2026-11-01)
+
+`m2` (523f550, perf/tracking-finger-shape) merges the three miss handlers and
+the reconciliation into one function above V8's single-inlining limit, so
+resolveTrackedRead stops absorbing them and inlines into its readers. Same
+work (exact differential, identical counters). Prediction: `m2/cur` < 1 on
+the miss-heavy shapes, part of `cur@1500/cur` (0.77–0.89 on shuffle,
+shared-shuffle and value-sort), and ≈ 1 on `stable`; `m2/cur@1500` tells how
+much of the budget bound the new shape keeps.

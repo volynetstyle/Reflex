@@ -75,5 +75,11 @@ case "${1:?set}" in
     build cur --commit ae2fdd0
     build npr --commit ae2fdd0 --mutate "$T::  prepareTape(consumer, passStamp);::  return false;"
     ;;
+  shape)
+    # Same work, different compiler shape (perf/tracking-finger-shape):
+    # one never-inlined miss handler keeps resolveTrackedRead inlinable.
+    build cur --commit ae2fdd0
+    build m2 --commit 523f550
+    ;;
   *) echo "unknown set $1" >&2; exit 2 ;;
 esac
