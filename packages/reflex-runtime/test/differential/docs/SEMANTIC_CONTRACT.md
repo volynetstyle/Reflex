@@ -107,7 +107,7 @@ computed was independently stabilized earlier in the operation trace.
 - **W1** A watcher's previous cleanup is consumed before reevaluation starts.
 - **W2** A failed watcher computation does not install partially collected semantic dependencies or a new cleanup; partial reads live only in a separate retry-trigger set.
 - **W3** A watcher whose cleanup or computation failed is not retried by a plain flush, but remains retryable after a conservative retry trigger changes. A write performed by the failing cleanup or computation is such a change (L5).
-- **C4** A computed read that throws is not a committed dependency and creates no execution obligation, but it is causal retry evidence: the enclosing failed attempt retains that computed, with the computed's own failure-time evidence, in its retry-trigger set (W2, W3). A repair of the cause therefore permits another attempt. Decided 2026-10-28 (F18); the runtime does not follow it yet (`catalog/active.ts`).
+- **C4** A computed read that throws is no observation: it is not a committed dependency, creates no execution obligation and is not a retry trigger (R3). A watcher whose attempt failed on the first read of that computed is not re-entered when the cause is repaired; re-entry is the host's decision. Decided 2026-11-01 (F18 boundary, `catalog/boundaries.ts`), replacing the 2026-10-28 rule that made the failed read causal retry evidence.
 - **V1** Failed dependency validation does not make the watcher clean and remains retryable by an explicit flush.
 - **V2** Validation retry behavior is independent of prior reads and pull traversal history.
 - **V3** Validation covers the complete committed dependency snapshot before watcher lifecycle begins.
@@ -120,7 +120,35 @@ computed was independently stabilized earlier in the operation trace.
 
 and therefore merge is commutative, associative and idempotent.
 These rules express the transaction boundary: evaluation and validation are not
-commitment. Errors are compared by normalized `name` and `message`. Stack traces
+commitment.
+
+### Failure boundary
+
+The kernel survives userspace failure; it does not decide what the failure
+means. Three rules bound its responsibility:
+
+- **R1** Failure cannot corrupt runtime state: the current consumer, phase,
+  tracking context, edge lists and scheduler ownership are restored, and the
+  error escapes to the caller.
+- **R2** Failure cannot erase committed reactive evidence: a committed
+  dependency and an obligation established before the failure (`Changed`,
+  `Unknown`, `Visited`) survive it until a successful run discharges them
+  (C3, W3, V1, V4, V6).
+- **R3** Failure does not create new reactive evidence: a read that threw was
+  never observed, so it leaves no edge and no retry trigger (C4). The
+  retry-trigger set of W2/W3 holds only reads that succeeded.
+
+Retry after a failure is policy (transient or permanent error, delay, auth,
+reconnect, user-visible error, disposal) and belongs to the host or a
+framework layer. Automatic causal recovery would need a third kind of kernel
+knowledge, failed-but-causally-relevant reads, beside committed and tentative
+ones; no use case justifies it in the kernel. A blocker/pending protocol of an
+async layer is the place for it.
+
+Witnesses: `runtime.failure-boundary.test.ts` (first attempt throws, graph
+valid, no `c -> w` edge, the repair alone runs nothing, re-entry succeeds and
+commits `c -> w`, later changes wake it) and `catalog/boundaries.ts` (spec and
+Reflex agree, pinned). Errors are compared by normalized `name` and `message`. Stack traces
 and object identity are deliberately not observable.
 
 ## Values and effects
@@ -310,10 +338,10 @@ An active-divergence test passing means that the known mismatch was reproduced;
 it does not declare the production behavior correct. After a runtime fix, the
 entry moves to historical-faults.ts and its active count must disappear.
 
-The active catalog holds F18 (C4): two witnesses, recognized in generated
-programs only when Reflex agrees at every operation with the spec under the
-previous rule 4. The 776-program adversarial corpus has no mismatch in this
-bound; it does not reach C4.
+The active catalog is currently empty. F18 left it on 2026-11-01 as a contract
+boundary (R3), not as a fix: the runtime was unchanged and the spec returned
+to its rule. The 776-program adversarial corpus has no post-fix mismatch in
+this bound.
 
 After failed watcher validation or computation, confirmed `Changed` evidence
 must survive cold recovery. A watcher with a committed dependency change cannot
