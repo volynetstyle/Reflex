@@ -1170,7 +1170,7 @@ export function firstMismatch(a: string[], b: string[]): Mismatch | null {
 
 /**
  * How two traces of one program differ, at the first level where they agree
- * (test/differential/docs/SEMANTIC_CONTRACT.md, "Semantic and representation
+ * (docs/SEMANTIC_CONTRACT.md, "Semantic and representation
  * equivalence"):
  *
  * - `identical`: byte-equal.

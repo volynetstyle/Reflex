@@ -78,9 +78,9 @@ otherwise it returns to idle and the next source change schedules it.
 
 ### Hooks
 
-| Hook                | Runs                                                   | May                                                                                                  |
-| ------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| `onNodeInvalidated` | during propagation, once per newly dirty watcher       | enqueue only: no `runWatcher`, `readProducer`, `readConsumer`, `writeProducer` or `disposeWatcher`   |
+| Hook                | Runs                                                  | May                                                                                                  |
+| ------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `onNodeInvalidated` | during propagation, once per newly dirty watcher      | enqueue only: no `runWatcher`, `readProducer`, `readConsumer`, `writeProducer` or `disposeWatcher`   |
 | `onRuntimeIdle`     | after propagation, pull and watcher work have settled | drain the queue synchronously, or schedule it (`queueMicrotask`, `requestAnimationFrame`, host task) |
 
 If a drain inside `onRuntimeIdle` creates work, the runtime delivers another
@@ -91,13 +91,13 @@ rethrows; the next write starts clean.
 With `__DEV__ && __PROFILE__` the runtime reports a broken host contract
 where it happens; production adds no checks.
 
-| Code                                     | Cause                                                            |
-| ---------------------------------------- | ---------------------------------------------------------------- |
-| `REFLEX_SCHEDULER_REENTRANT_FLUSH`       | `runWatcher` called from `onNodeInvalidated`                     |
-| `REFLEX_SCHEDULER_REACTIVE_READ_IN_HOOK` | `readProducer` or `readConsumer` called from a hook              |
-| `REFLEX_NESTED_PULL`                     | a pull walk started directly inside another                      |
-| `REFLEX_NESTED_PROPAGATION`              | a write started propagation inside another propagation           |
-| `REFLEX_HOST_HOOK_REENTERED_RUNTIME`     | a hook returned with the runtime's phase or depth changed        |
+| Code                                     | Cause                                                     |
+| ---------------------------------------- | --------------------------------------------------------- |
+| `REFLEX_SCHEDULER_REENTRANT_FLUSH`       | `runWatcher` called from `onNodeInvalidated`              |
+| `REFLEX_SCHEDULER_REACTIVE_READ_IN_HOOK` | `readProducer` or `readConsumer` called from a hook       |
+| `REFLEX_NESTED_PULL`                     | a pull walk started directly inside another               |
+| `REFLEX_NESTED_PROPAGATION`              | a write started propagation inside another propagation    |
+| `REFLEX_HOST_HOOK_REENTERED_RUNTIME`     | a hook returned with the runtime's phase or depth changed |
 
 Pull through an intervening recomputation and watcher execution at the idle
 boundary are allowed.
@@ -167,19 +167,19 @@ Sibling Reflex packages use a named subset of `/internal` and never read
 registers, state bits or edge fields; `check:package-boundaries` enforces it
 ([runtime-integration.md](../../../docs/architecture/runtime-integration.md)).
 
-| Operation                              | Answer or effect                                                                                                                              |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `isTracking()`                         | a computation is collecting dependencies now; false inside `untracked`                                                                        |
-| `activeTracking`                       | live binding, non-null exactly while `isTracking()`; compare with `null` only                                                                 |
-| `isContextSettled(context?)`           | the context is outside propagation and tracked evaluation                                                                                     |
-| `hasObservers(node)`                   | some consumer depends on the node                                                                                                             |
-| `disposeNodeIfUnobserved(node)`        | disposes the node when nothing observes it; returns whether it did                                                                            |
-| `suspendConsumerIfUnobserved(node)`    | unlinks the sources of an unobserved consumer and drops its value, keeping its computation                                                    |
-| `hasPendingValidation(node)`           | the node holds an invalidation it has not validated                                                                                           |
-| `takeScheduledWatcher(node)`           | dequeue step: releases queue ownership, answers whether the watcher is still live                                                             |
+| Operation                              | Answer or effect                                                                                                                                   |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `isTracking()`                         | a computation is collecting dependencies now; false inside `untracked`                                                                             |
+| `activeTracking`                       | live binding, non-null exactly while `isTracking()`; compare with `null` only                                                                      |
+| `isContextSettled(context?)`           | the context is outside propagation and tracked evaluation                                                                                          |
+| `hasObservers(node)`                   | some consumer depends on the node                                                                                                                  |
+| `disposeNodeIfUnobserved(node)`        | disposes the node when nothing observes it; returns whether it did                                                                                 |
+| `suspendConsumerIfUnobserved(node)`    | unlinks the sources of an unobserved consumer and drops its value, keeping its computation                                                         |
+| `hasPendingValidation(node)`           | the node holds an invalidation it has not validated                                                                                                |
+| `takeScheduledWatcher(node)`           | dequeue step: releases queue ownership, answers whether the watcher is still live                                                                  |
 | `shouldRetryWatcherAfterFailure(node)` | after a throwing run: a failed dependency validation left the watcher dirty and it needs a later retry; callback and cleanup failures answer false |
-| `invalidateWatcher(node)`              | the next run executes the callback; the host is notified                                                                                      |
-| `flushPendingRuntimeIdle()`            | delivers a pending idle notification; checks for one itself                                                                                   |
+| `invalidateWatcher(node)`              | the next run executes the callback; the host is notified                                                                                           |
+| `flushPendingRuntimeIdle()`            | delivers a pending idle notification; checks for one itself                                                                                        |
 
 ## Debugging
 

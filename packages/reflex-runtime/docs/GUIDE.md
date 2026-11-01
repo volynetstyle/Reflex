@@ -58,14 +58,14 @@ and why it cannot live in the debug layer.
 
 ## Checks by change kind
 
-| Change                                    | Required before commit                                                                                                                                 |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Documentation, comments, types, renames   | `check:bundle-identity` (production bundle byte-identical), `check:rules`, `format`                                                                    |
-| Refactor meant to keep behavior and shape | `check:bundle-identity`; if the bundle changes, one of the rows below                                                                                  |
+| Change                                    | Required before commit                                                                                                                                  |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Documentation, comments, types, renames   | `check:bundle-identity` (production bundle byte-identical), `check:rules`, `format`                                                                     |
+| Refactor meant to keep behavior and shape | `check:bundle-identity`; if the bundle changes, one of the rows below                                                                                   |
 | Semantic change                           | `test`, `test:dev`, `test:projection`, `typecheck`, `check:rules`, the `reflex` package tests (liveness oracle), and the owner document + RULES updated |
-| Hot-path performance change               | all semantic checks, `perf/v8-shape/analyze.mjs` before and after on the CI Node version, and the paired CI comparison against the base commit         |
-| Build pipeline (`config/rollup/`)         | `build`, `test:e2e`, `check:artifacts`, the `config/rollup/` contract tests, and the paired CI comparison                                              |
-| Benchmark harness (`bench/`)              | a paired run that reproduces a known result, and [PERFORMANCE.md](./PERFORMANCE.md) updated                                                            |
+| Hot-path performance change               | all semantic checks, `perf/v8-shape/analyze.mjs` before and after on the CI Node version, and the paired CI comparison against the base commit          |
+| Build pipeline (`config/rollup/`)         | `build`, `test:e2e`, `check:artifacts`, the `config/rollup/` contract tests, and the paired CI comparison                                               |
+| Benchmark harness (`bench/`)              | a paired run that reproduces a known result, and [PERFORMANCE.md](./PERFORMANCE.md) updated                                                             |
 
 `pnpm rt gate <kind>` (`docs`, `refactor`, `semantic`, `hot-path`, `build`,
 `bench-harness`) runs the automatable checks of a row and prints the rest as

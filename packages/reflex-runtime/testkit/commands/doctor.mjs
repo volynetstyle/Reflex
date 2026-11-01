@@ -40,7 +40,7 @@ export default async function doctorCommand(values) {
   if (major !== CI_NODE_MAJOR)
     say(
       "!",
-      `CI runs Node ${CI_NODE_MAJOR}; shape and timing results from Node ${major} do not transfer (docs/PERFORMANCE_RULES.md)`,
+      `CI runs Node ${CI_NODE_MAJOR}; shape and timing results from Node ${major} do not transfer (docs/PERFORMANCE.md)`,
     );
 
   const baseline = pinnedBaseline();

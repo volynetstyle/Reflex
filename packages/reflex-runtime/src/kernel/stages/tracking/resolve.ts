@@ -237,7 +237,7 @@ function resolveCursorTrackedReadMiss(
   );
 
   // JIT: `=== true` keeps a non-inlined boolean result a single compare
-  // (docs/JIT_CONTRACTS.md, canonical-boolean).
+  // (docs/PERFORMANCE.md, canonical-boolean).
   if (
     locatedEdge !== null &&
     isEdgeInTrackedPrefix(consumer, cursorEdge, locatedEdge) === true

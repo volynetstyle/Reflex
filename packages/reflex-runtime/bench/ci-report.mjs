@@ -2,7 +2,7 @@
 //
 //   node bench/ci-report.mjs <report.json> --title <text> [--mode compare|calibrate]
 //
-// Hosted runners are a screening tier (docs/performance/BENCHMARK_PROTOCOL.md,
+// Hosted runners are a screening tier (docs/PERFORMANCE.md,
 // "CI tiers"): verdicts are reported, never enforced. In compare mode a
 // `slower`, `invalid` or `error` verdict becomes a warning and `faster` a
 // notice. In calibrate mode (A/A, identical sources) any `faster`, `slower`

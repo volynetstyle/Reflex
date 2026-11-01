@@ -1,7 +1,7 @@
 name: Runtime paired benchmarks
 
 # Paired in-process comparison of two production runtime bundles
-# (packages/reflex-runtime/docs/performance/BENCHMARK_PROTOCOL.md).
+# (packages/reflex-runtime/docs/PERFORMANCE.md).
 #
 # Hosted runners are the screening tier of the protocol: every verdict is
 # reported in the job summary, as annotations and as JSON artifacts, and none

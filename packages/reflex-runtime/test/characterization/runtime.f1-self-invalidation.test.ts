@@ -13,7 +13,7 @@ import {
 
 /**
  * Characterization of baseline behavior that the semantic contract leaves
- * open (docs/characterization/SEMANTIC_CHARACTERIZATION.md). These tests pin
+ * open (docs/MODEL.md). These tests pin
  * what the runtime does; they do not declare it correct.
  */
 describe("Reactive runtime - characterization of open contract regions", () => {

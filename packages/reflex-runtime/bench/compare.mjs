@@ -8,7 +8,7 @@
 //        [--no-layout]  keep a build's placement fixed across processes
 //        [--fail-on slower,invalid,error|none]  verdicts that set exit code 1
 //
-// Protocol (docs/performance/BENCHMARK_PROTOCOL.md):
+// Protocol (docs/PERFORMANCE.md):
 //  1. Build both sides as production bundles with the same toolchain/flags.
 //  2. Verify: each workload must produce identical deterministic results on
 //     both sides, otherwise it is invalid (a semantic change, not a speedup).
@@ -382,7 +382,7 @@ function measureMemory(w) {
 const report = {
   schemaVersion: 1,
   protocol:
-    "reflex-runtime in-process paired A/B + A/A' (docs/performance/BENCHMARK_PROTOCOL.md)",
+    "reflex-runtime in-process paired A/B + A/A' (docs/PERFORMANCE.md)",
   measuredAt: new Date().toISOString(),
   environment: {
     node: process.version,

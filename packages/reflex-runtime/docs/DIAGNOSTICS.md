@@ -2,7 +2,7 @@
 
 Diagnostics live behind `@volynets/reflex-runtime/debug` and never change
 production behavior; the boundary is enforced by
-[architecture-contract.md](./architecture-contract.md). Import the debug entry
+[GUIDE.md](./GUIDE.md#layering-and-the-debug-boundary). Import the debug entry
 point before the regular runtime entry point when a process needs live debug
 events: it installs the development flag and the debug implementation.
 

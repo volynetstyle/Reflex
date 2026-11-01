@@ -26,16 +26,16 @@ between the incoming cut and the outgoing unlink. Graph mutations live in
 
 Defined in `src/kernel/shape/meta.ts`, inlined as literals in production.
 
-| Bit          | Meaning                                                                                                     |
-| ------------ | ----------------------------------------------------------------------------------------------------------- |
-| `Unknown`    | upstream may have changed: validate before recomputing                                                      |
-| `Changed`    | recompute or execute without proving an upstream change                                                     |
-| `Visited`    | direct invalidation during execution; on a watcher, execution evidence that may outlive the run             |
-| `Revalidate` | watcher only: transitive invalidation during its validation or execution; a validation obligation only      |
-| `Computing`  | a callback (or watcher validation) is active; changes how push reads the incoming prefix                    |
-| `Watcher`    | watcher role                                                                                                |
-| `Scheduled`  | host queue ownership, claimed and released apart from execution                                             |
-| `Leased`     | may have an edge to the prepared tape's owner (§5.5); a stale bit costs a lookup, never an answer            |
+| Bit          | Meaning                                                                                                |
+| ------------ | ------------------------------------------------------------------------------------------------------ |
+| `Unknown`    | upstream may have changed: validate before recomputing                                                 |
+| `Changed`    | recompute or execute without proving an upstream change                                                |
+| `Visited`    | direct invalidation during execution; on a watcher, execution evidence that may outlive the run        |
+| `Revalidate` | watcher only: transitive invalidation during its validation or execution; a validation obligation only |
+| `Computing`  | a callback (or watcher validation) is active; changes how push reads the incoming prefix               |
+| `Watcher`    | watcher role                                                                                           |
+| `Scheduled`  | host queue ownership, claimed and released apart from execution                                        |
+| `Leased`     | may have an edge to the prepared tape's owner (§5.5); a stale bit costs a lookup, never an answer      |
 
 `Both = Unknown | Changed` is the dirty mask. At rest a computed is clean,
 `Unknown` or `Changed`; a producer carries no evidence bits. Dirty bits are
@@ -153,14 +153,14 @@ resolver's own lookup, so it pays two lookups per call.
 
 Constant-time guesses first, each cheap when wrong, then one exact proof:
 
-| Level | Where                     | Settles the read with                                                                  |
-| ----- | ------------------------- | -------------------------------------------------------------------------------------- |
-| L0    | `resolve.ts`, consumer    | the next edge, the cursor, the first edge, one- and two-hop lookahead, `lastIn`        |
-| L1    | `locate.ts`, producer     | empty `out(P)`, the newest edge `lastOut`, a sole edge to another consumer             |
-| L1h   | `findEdge.ts`             | the hint, when it is this pair's edge (§5.5)                                           |
-| L1    | `findEdge.ts`             | a two-link head start at `firstOut`                                                    |
-| L2    | `findEdge.ts`             | the lockstep, raced by the outgoing finger when the slot holds one                     |
-| tape  | `tape.ts`                 | a prepared cell, or a certificate of absence under a covered live lease (§5.6)         |
+| Level | Where                  | Settles the read with                                                           |
+| ----- | ---------------------- | ------------------------------------------------------------------------------- |
+| L0    | `resolve.ts`, consumer | the next edge, the cursor, the first edge, one- and two-hop lookahead, `lastIn` |
+| L1    | `locate.ts`, producer  | empty `out(P)`, the newest edge `lastOut`, a sole edge to another consumer      |
+| L1h   | `findEdge.ts`          | the hint, when it is this pair's edge (§5.5)                                    |
+| L1    | `findEdge.ts`          | a two-link head start at `firstOut`                                             |
+| L2    | `findEdge.ts`          | the lockstep, raced by the outgoing finger when the slot holds one              |
+| tape  | `tape.ts`              | a prepared cell, or a certificate of absence under a covered live lease (§5.6)  |
 
 The **lockstep** walks `out(P)` forward and `in(C)` outward from the cursor in
 both directions, one link of each per step, and stops when one side finds the
@@ -267,12 +267,12 @@ one; traversal storage stays shared, protected by invocation slices.
 
 ## 8. Build modes
 
-| Behavior                                           | Production | DEV                                | PROFILE |
-| -------------------------------------------------- | ---------- | ---------------------------------- | ------- |
-| phase stacks, hook reentry checks, cycle detection | off        | on (scheduler policy with PROFILE) | —       |
-| producer/consumer role bits                        | 0          | set                                | 0       |
-| debug events                                       | off        | on                                 | —       |
-| projection counters                                | off        | —                                  | on      |
+| Behavior                                           | Production | DEV                                | PROFILE   |
+| -------------------------------------------------- | ---------- | ---------------------------------- | --------- |
+| phase stacks, hook reentry checks, cycle detection | off        | on (scheduler policy with PROFILE) | —         |
+| producer/consumer role bits                        | 0          | set                                | 0         |
+| debug events                                       | off        | on                                 | —         |
+| projection counters                                | off        | —                                  | on        |
 | kernel decisions                                   | identical  | identical except policy throws     | identical |
 
 Graphs are assumed acyclic; cycles are detected only in DEV.

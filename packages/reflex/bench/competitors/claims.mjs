@@ -206,7 +206,7 @@ export const CLAIMS = [
     kind: "semantic",
     evidence: [
       "packages/reflex-runtime/test/differential/internal/machine/SpecMachine.ts",
-      "packages/reflex-runtime/test/differential/README.md",
+      "packages/reflex-runtime/testkit/README.md",
     ],
     falsifier:
       "The oracle shares production traversal/state machinery or cannot detect historical faults.",

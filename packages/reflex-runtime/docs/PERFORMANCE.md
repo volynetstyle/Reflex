@@ -48,10 +48,10 @@ an assumption into a check over the TypeScript program (`pnpm lint:tsslint`,
 rule `config/tsslint/jit-contracts.ts`). Unknown or misplaced directives are
 errors; code without a directive is not checked.
 
-| Contract                    | Requires                                                                                                                                                                                                                       |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `int32-provenance(base)`    | one function-local `let` initialized from `base`, a `const` that is an int32 literal or `expr \| 0` with a number type; the `let` is written only by `++`/`--`; no direct `eval` or `with` in the function |
-| `canonical-boolean`         | an `if`/`while` whose whole condition is a call compared `=== true`, whose return type is only `boolean` or boolean literals (`strictNullChecks` on)                                                                          |
+| Contract                 | Requires                                                                                                                                                                                                   |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `int32-provenance(base)` | one function-local `let` initialized from `base`, a `const` that is an int32 literal or `expr \| 0` with a number type; the `let` is written only by `++`/`--`; no direct `eval` or `with` in the function |
+| `canonical-boolean`      | an `if`/`while` whose whole condition is a call compared `=== true`, whose return type is only `boolean` or boolean literals (`strictNullChecks` on)                                                       |
 
 The checks prove source-level premises only: not a range after the first
 update, not engine representation, inlining or absence of deopts. There is no

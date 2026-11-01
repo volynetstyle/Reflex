@@ -22,11 +22,11 @@ or code shape under a stated protocol. _Hypothesis_: untested.
 
 ## 1. Domains
 
-| Domain | Contains                                                                                                                                            | Guarantee                                                       |
-| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| **M**  | managed factories, read/write/runWatcher, a claiming host, enqueue-only hooks, pure callbacks, disposal only by `disposeWatcher`, monotonic clock  | every safety and minimal-state conclusion                       |
-| **L**  | M plus writes inside watcher bodies and cleanups (contract L1–L5)                                                                                    | the same; watcher reentrancy is contractual                     |
-| **X**  | plain host, actions in hooks, writes inside computeds (F1), raw `disposeNode`, `setTrackingStamp`, custom tracking strategies, manual link/unlink   | described, not guaranteed; X counterexamples are not M/L defects |
+| Domain | Contains                                                                                                                                          | Guarantee                                                        |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| **M**  | managed factories, read/write/runWatcher, a claiming host, enqueue-only hooks, pure callbacks, disposal only by `disposeWatcher`, monotonic clock | every safety and minimal-state conclusion                        |
+| **L**  | M plus writes inside watcher bodies and cleanups (contract L1–L5)                                                                                 | the same; watcher reentrancy is contractual                      |
+| **X**  | plain host, actions in hooks, writes inside computeds (F1), raw `disposeNode`, `setTrackingStamp`, custom tracking strategies, manual link/unlink | described, not guaranteed; X counterexamples are not M/L defects |
 
 ## 2. Semantics
 
@@ -48,13 +48,13 @@ different means:
 Goals, for consumer `n` and attempt `e`: `V(n,e)` validate, `X(n,e)` execute,
 `N(w,e)` the host must run watcher `w` (computeds are pulled, not delivered).
 
-| Rule           | Content                                                                                                                                                         |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| G1 birth       | a committed change of `p` gives each `n` with an accepted edge `p→n` goal `X` if direct, else `V`; on a computed `X` absorbs `V`, on a watcher they are independent |
-| G2 absorption  | a goal born at `t` is discharged by an execution that reads the affected dependency after `t`; a write to a not-yet-read dependency births nothing                |
-| G3 delivery    | while a watcher has an outstanding goal no live continuation will discharge, the host owns running it; under claiming, ownership is `Scheduled`                   |
-| G4 barrier     | `X(w,e)` starts only after `V(w,e)` is discharged                                                                                                                |
-| G5 discharge   | `V` by a complete stable validation, `X` by a successful execution, `N` by dequeue                                                                               |
+| Rule          | Content                                                                                                                                                             |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G1 birth      | a committed change of `p` gives each `n` with an accepted edge `p→n` goal `X` if direct, else `V`; on a computed `X` absorbs `V`, on a watcher they are independent |
+| G2 absorption | a goal born at `t` is discharged by an execution that reads the affected dependency after `t`; a write to a not-yet-read dependency births nothing                  |
+| G3 delivery   | while a watcher has an outstanding goal no live continuation will discharge, the host owns running it; under claiming, ownership is `Scheduled`                     |
+| G4 barrier    | `X(w,e)` starts only after `V(w,e)` is discharged                                                                                                                   |
+| G5 discharge  | `V` by a complete stable validation, `X` by a successful execution, `N` by dequeue                                                                                  |
 
 Push rules, the prefix filter, deferred `Revalidate` delivery and the
 different quantifiers of pull and validation follow from G1–G5 (§4). F1 is
@@ -84,15 +84,15 @@ one case: watcher validation after a failed execution (S6).
 `tailIn` is one slot with several owners (R₁: seven reachable readings, two
 anomalous; R₃: specializations of one lease):
 
-| Owner's phase                          | Meaning of `tailIn`                                                 |
-| -------------------------------------- | ------------------------------------------------------------------- |
-| tracked callback                       | accepted frontier                                                   |
-| suspended outer callback               | the same frontier, frame saved                                      |
-| watcher validation                     | the whole span (`lastIn`)                                           |
-| callback returned, cleanup pending     | the cut boundary                                                    |
-| idle after success or failure          | residual history or null                                            |
-| idle producer                          | outgoing hint (INV-H) or prepared cell (INV-P)                      |
-| anomalies (X)                          | a detached edge after restore (S1); edges of a disposed watcher (S2) |
+| Owner's phase                      | Meaning of `tailIn`                                                  |
+| ---------------------------------- | -------------------------------------------------------------------- |
+| tracked callback                   | accepted frontier                                                    |
+| suspended outer callback           | the same frontier, frame saved                                       |
+| watcher validation                 | the whole span (`lastIn`)                                            |
+| callback returned, cleanup pending | the cut boundary                                                     |
+| idle after success or failure      | residual history or null                                             |
+| idle producer                      | outgoing hint (INV-H) or prepared cell (INV-P)                       |
+| anomalies (X)                      | a detached edge after restore (S1); edges of a disposed watcher (S2) |
 
 A slot may be reused after its last authorized consumer, not after its phase
 bit is cleared (R₃, lemma C).
@@ -102,12 +102,12 @@ bit is cleared (R₃, lemma C).
 The runtime is built from four kinds of entity and three operations on them
 (R₃):
 
-| Kind             | What it is                                                          | Copy and merge                   |
-| ---------------- | ------------------------------------------------------------------- | -------------------------------- |
-| `Fact(φ)`        | an observed statement (`edge.from = p`, `Object.is` was false)      | copyable while its scope holds   |
-| `Debt(g, R)`     | an undischarged goal (validate, execute, deliver)                   | merge is union                   |
-| `Own(r, ω)`      | an exclusive right to consume a resource (a cleanup, a queue entry) | not copyable; transferred        |
-| `Lease(φ, ω, λ)` | a continuation's right to use a fact until it changes               | expires without making φ false   |
+| Kind             | What it is                                                          | Copy and merge                 |
+| ---------------- | ------------------------------------------------------------------- | ------------------------------ |
+| `Fact(φ)`        | an observed statement (`edge.from = p`, `Object.is` was false)      | copyable while its scope holds |
+| `Debt(g, R)`     | an undischarged goal (validate, execute, deliver)                   | merge is union                 |
+| `Own(r, ω)`      | an exclusive right to consume a resource (a cleanup, a queue entry) | not copyable; transferred      |
+| `Lease(φ, ω, λ)` | a continuation's right to use a fact until it changes               | expires without making φ false |
 
 The operations are **accumulate knowledge**, **discharge work** and **transfer
 responsibility**. Mixing them explains most of the flag complexity: one int32
@@ -137,18 +137,18 @@ reacts to, because push addresses nodes, not frames.
 
 ## 5. Mechanisms as consequences
 
-| Mechanism                      | Goal and evidence                                                                                                  | Consequence                                                                         |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| full push                      | a commit is known, intermediate values are not: direct receiver `X`, transitive `V` (G1)                           | emission only from a clean watcher: "dirty and idle ⇒ delivered" (G3)               |
-| push into an active pass       | edge in the accepted prefix: goal for `e+1`; outside it: nothing (G2)                                              | for computeds the record is erased at commit (F1)                                   |
-| one-step push                  | after a changed recompute: `X` to direct subscribers except the owner's route                                      | no prefix classification; `Scheduled` and `Computing` suppress redelivery (F17)     |
-| pull                           | existential: the first change suffices; "no" needs the whole remainder stable                                      | the stack is a serialized continuation                                              |
-| watcher validation             | universal barrier before lifecycle (V3), even with `X` already known                                               | in M and L no `Visited`/`Revalidate` is written during validation (0 of 17,982)     |
-| tracking                       | record each successfully read source exactly once                                                                  | moves keep identity; cleanup removes only the proven-unread suffix                  |
-| scheduling                     | debt and delivery are separate: claim hands responsibility to the host, take to the execution                      | `Scheduled` is not derivable from dirty bits (LB3)                                  |
-| cleanup callback               | the resource sits in one shared slot or one local; the owner is cleared before the call                            | a throw discharges the used right, not the next body's goal                         |
-| failure recovery               | rolling back control is compatible with keeping positive progress                                                  | a failed read leaves no edge (C4, R3)                                               |
-| batch, context, domain         | idle notice waits for an allowed point; a bank switch moves the right to execute; teardown waits for continuations | neither batch nor snapshot rolls back values or the graph                           |
+| Mechanism                | Goal and evidence                                                                                                  | Consequence                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| full push                | a commit is known, intermediate values are not: direct receiver `X`, transitive `V` (G1)                           | emission only from a clean watcher: "dirty and idle ⇒ delivered" (G3)           |
+| push into an active pass | edge in the accepted prefix: goal for `e+1`; outside it: nothing (G2)                                              | for computeds the record is erased at commit (F1)                               |
+| one-step push            | after a changed recompute: `X` to direct subscribers except the owner's route                                      | no prefix classification; `Scheduled` and `Computing` suppress redelivery (F17) |
+| pull                     | existential: the first change suffices; "no" needs the whole remainder stable                                      | the stack is a serialized continuation                                          |
+| watcher validation       | universal barrier before lifecycle (V3), even with `X` already known                                               | in M and L no `Visited`/`Revalidate` is written during validation (0 of 17,982) |
+| tracking                 | record each successfully read source exactly once                                                                  | moves keep identity; cleanup removes only the proven-unread suffix              |
+| scheduling               | debt and delivery are separate: claim hands responsibility to the host, take to the execution                      | `Scheduled` is not derivable from dirty bits (LB3)                              |
+| cleanup callback         | the resource sits in one shared slot or one local; the owner is cleared before the call                            | a throw discharges the used right, not the next body's goal                     |
+| failure recovery         | rolling back control is compatible with keeping positive progress                                                  | a failed read leaves no edge (C4, R3)                                           |
+| batch, context, domain   | idle notice waits for an allowed point; a bank switch moves the right to execute; teardown waits for continuations | neither batch nor snapshot rolls back values or the graph                       |
 
 ### 5.1 Method of the state quotient (R₄)
 
@@ -164,14 +164,14 @@ every run.
 
 ### 5.2 Result
 
-| Phase            | Reachable in L | M/eff | L/eff | Predicted by G1–G5                                   |
-| ---------------- | -------------- | ----- | ----- | ---------------------------------------------------- |
-| computed idle    | 3              | 3     | 3     | `{∅, V, X}`                                          |
-| computed exec    | 2              | 1     | 1     | a pure computation creates no goal during itself     |
-| watcher idle     | 12             | 8     | 8     | `(v, x, q)`; delivery ≡ `v ∨ x`                      |
-| watcher validate | 4              | 4     | 4     | current `x` × `q`                                    |
-| watcher exec     | 9              | 2     | 6     | register for `e+1` `{∅, R, V}` × `q`, `V ⊒ R`        |
-| watcher cleanup  | 4              | 2     | 2     | `q`                                                  |
+| Phase            | Reachable in L | M/eff | L/eff | Predicted by G1–G5                               |
+| ---------------- | -------------- | ----- | ----- | ------------------------------------------------ |
+| computed idle    | 3              | 3     | 3     | `{∅, V, X}`                                      |
+| computed exec    | 2              | 1     | 1     | a pure computation creates no goal during itself |
+| watcher idle     | 12             | 8     | 8     | `(v, x, q)`; delivery ≡ `v ∨ x`                  |
+| watcher validate | 4              | 4     | 4     | current `x` × `q`                                |
+| watcher exec     | 9              | 2     | 6     | register for `e+1` `{∅, R, V}` × `q`, `V ⊒ R`    |
+| watcher cleanup  | 4              | 2     | 2     | `q`                                              |
 
 All twelve counts match the prediction. Merging every indistinguishable state
 at once is closed: 0 differences on 23,554 programs in M and L in every
@@ -181,14 +181,14 @@ transitions was not built).
 Redundant distinctions of the runtime (representational; no code change
 needed):
 
-| Merge                                 | Rewritten programs → differences                                     | Condition                                                                               |
-| ------------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| idle `Visited` ≡ `Changed`            | L 163 → 0; X 156 → 5 in `host` (3 plain-host, 2 at the budget limit) | claiming host only; under a plain host `Visited` itself carries "already delivered"     |
-| `Visited` absorbs `Revalidate` in exec | L 53 → 0; X 43 → 0                                                   | —                                                                                       |
-| `Unknown` dead in exec                | L 336 → 0; X 366 → 4 (all at budget or stack limit)                  | —                                                                                       |
-| `Unknown` dead in cleanup             | L 114 → 0; X 110 → 0                                                 | —                                                                                       |
-| bits of a computing computed          | M/L/X ≈ 2,400 → 0                                                    | in X (F1) `Unknown` is live for `host` only: a false redelivery through a dropped edge |
-| `Changed` during validation           | M 6,228 → 51: **not redundant**                                      | 46 of 51 are thrown validations; 16 are one-step evidence along a side path             |
+| Merge                                  | Rewritten programs → differences                                     | Condition                                                                              |
+| -------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| idle `Visited` ≡ `Changed`             | L 163 → 0; X 156 → 5 in `host` (3 plain-host, 2 at the budget limit) | claiming host only; under a plain host `Visited` itself carries "already delivered"    |
+| `Visited` absorbs `Revalidate` in exec | L 53 → 0; X 43 → 0                                                   | —                                                                                      |
+| `Unknown` dead in exec                 | L 336 → 0; X 366 → 4 (all at budget or stack limit)                  | —                                                                                      |
+| `Unknown` dead in cleanup              | L 114 → 0; X 110 → 0                                                 | —                                                                                      |
+| bits of a computing computed           | M/L/X ≈ 2,400 → 0                                                    | in X (F1) `Unknown` is live for `host` only: a false redelivery through a dropped edge |
+| `Changed` during validation            | M 6,228 → 51: **not redundant**                                      | 46 of 51 are thrown validations; 16 are one-step evidence along a side path            |
 
 **Direction.** Adding an obligation is almost always invisible, removing one
 is visible (idle watcher, M/eff: `C→UC` 0 of 320 contexts, `UC→C` 2;
@@ -220,13 +220,13 @@ rejection needs nothing. Hint (R₁, P15): `Visited` at the end of
 
 ## 6. Information bounds
 
-| Bound | Statement                                                                                                                                                                 | Consequence                                                                                                       |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Bound | Statement                                                                                                                                                                | Consequence                                                                                                       |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
 | LB1   | over unordered incidence lists with no extra index, exact pair absence needs Ω(min(r_out, r_in)) probes of not-yet-excluded positions                                    | any zero-field O(1) absence shortcut narrows the domain, relies on an unstated invariant, or has a counterexample |
 | LB2   | after arbitrary failed passes that rewrite stamps, the exact committed subset of `m` retained edges needs Ω(m) bits; the last successful pass number is not enough (E15) | exact retry costs memory; the conservative union is the least safe envelope once provenance is lost               |
-| LB3   | ownership (`Scheduled`, pending cleanup) and freshness are not derivable from each other                                                                                  | they are independent coordinates; moving them to an external owner moves the information too                     |
-| LB4   | a disposed producer cannot be told from a new one holding `undefined`; freshness cannot be read from stamps                                                               | no universal dead-node detector without a tombstone; no freshness by stamp                                        |
-| —     | for a duplicated hub pair (long × long) under "no new entities", the search cannot shrink: reaching `e(P, C)` from `P` needs writable state reachable from `P`            | add state (hint, finger, born order, tape) or accept the cost                                                     |
+| LB3   | ownership (`Scheduled`, pending cleanup) and freshness are not derivable from each other                                                                                 | they are independent coordinates; moving them to an external owner moves the information too                      |
+| LB4   | a disposed producer cannot be told from a new one holding `undefined`; freshness cannot be read from stamps                                                              | no universal dead-node detector without a tombstone; no freshness by stamp                                        |
+| —     | for a duplicated hub pair (long × long) under "no new entities", the search cannot shrink: reaching `e(P, C)` from `P` needs writable state reachable from `P`           | add state (hint, finger, born order, tape) or accept the cost                                                     |
 
 ## 7. Cost
 
@@ -250,30 +250,30 @@ and optimizing one alone gives false wins.
 
 ### 7.2 Experiments and verdicts
 
-| Candidate                                                 | Basis                                       | Result                                                                                                                                          | Verdict                    |
-| --------------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| exact lookup + pass stamp (#52)                           | LB1                                         | permutations 2.7–5.1× faster locally; paired CI nothing slower                                                                                  | in `dev`                   |
-| producer hint, hint-first (#57)                           | positive guess with a cheap miss            | `A.track.hub-duplicate` −66%, then −19% more                                                                                                     | in `dev`                   |
-| preserve the unread suffix (#67/#69)                      | change structure only when semantics needs  | window-slide 256×128 30 → 6.75 ms; ladder rungs 17–25× faster                                                                                   | in `dev`                   |
-| outgoing finger, budget 8 (#68)                           | append-only `out(P)` aligns schedules       | lab shuffle 256×128 ~14 → 1.0 ms; an unbounded ring cost 169× more links on head-far → bounded regret                                          | in `dev`                   |
-| prepared tape, frameless (INV-P)                          | LB1: add state where locality fails         | chaotic shapes 0.16×, cert mount 0.075×; a framed version cost +7–25%, the frameless one removed it                                            | in `dev` (#75)             |
-| finger-first rounds (#75)                                 | bound the race by the lockstep's own rounds | probes per finger lookup −45% on replace-half ×16; tape tax on ×16 12–13% → 5–9%                                                                | in `dev`                   |
-| K-gated strike (strike when lockstep reaches K)           | measure cost instead of counting strikes    | no K wins; K=16 loses 4–10% on ×128 and window-slide                                                                                           | rejected                   |
-| foreign recorded cell is no finger                        | prepared cells pollute other lookups        | confirms pollution, but shared-shuffle ×128 +10–15%                                                                                            | rejected                   |
-| inlining budget 1500 (flag)                               | inline the whole read-miss chain            | miss-heavy shapes 5–25% faster for every build; the lever is the outer chain under `readProducer`/`advanceCore`                                | lever, not a change        |
-| one never-inlined miss handler (m2)                       | keep miss handlers out of the read path     | hub-duplicate +34%, lab stable +40%; mechanism unexplained                                                                                      | rejected                   |
-| lockstep code shapes (unrolled, split, switch)            | code shape                                  | identical lookups, geomean 0.979–1.010: the loops are memory-bound                                                                              | rejected                   |
-| block rotation of the skipped suffix                      | one rotation instead of D moves             | window-slide 73 → 95 links per read                                                                                                             | rejected                   |
-| `edge.born` + pass bound                                  | LB1, a new distinction                      | replace_half 12.6 → 1.5 ms; +36 instructions in every inlined `advanceCore`                                                                     | branch, decision open      |
-| lazy identity retention after cleanup                     | keep evidence across passes                 | wins CPU; blocked by memory ownership (producers live until the next cleanup)                                                                   | closed by owner            |
-| retaining the validation cursor                           | evidence flow                               | 78 of 363,858 pull visits in 3,000 adversarial programs, 0 in benchmarks; would cost 140,100 writes                                             | rejected                   |
-| liveness pruning / suspension of unobserved computeds     | lifetime vs liveness                        | at most −0.7% of work, only after hundreds of dormant writes; break-even `W·S_w > C_d + C_r` rarely met                                        | closed                     |
-| V3: full validation frontier                              | universal goal                              | `O(D)` root scan is semantically required; repeated push into a shared root removed by "a continuation owns its stable edge"                   | kept                       |
-| batch boundary check (R₅)                                 | discharge only with debt                    | premise false: `IdlePending` is checked first; −1.7%, below threshold                                                                           | rejected                   |
-| C1: carry a negative lookup proof (R₃)                    | principle 3                                 | exact; +22.4% (inlining lost), C1b +2.9–3.2%                                                                                                     | rejected                   |
-| D1: push decision order by frequency (R₅)                 | decision tree from the quotient             | exact; ≤ −0.8%                                                                                                                                  | rejected                   |
-| edges as a class                                          | object shape                                | +6–10% on three workloads (call-target checks)                                                                                                  | rejected                   |
-| C2 success cut as cleanup argument; C3 hint repair on unlink | principles 2, 3                           | not built                                                                                                                                       | hypothesis                 |
+| Candidate                                                    | Basis                                       | Result                                                                                                                       | Verdict               |
+| ------------------------------------------------------------ | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| exact lookup + pass stamp (#52)                              | LB1                                         | permutations 2.7–5.1× faster locally; paired CI nothing slower                                                               | in `dev`              |
+| producer hint, hint-first (#57)                              | positive guess with a cheap miss            | `A.track.hub-duplicate` −66%, then −19% more                                                                                 | in `dev`              |
+| preserve the unread suffix (#67/#69)                         | change structure only when semantics needs  | window-slide 256×128 30 → 6.75 ms; ladder rungs 17–25× faster                                                                | in `dev`              |
+| outgoing finger, budget 8 (#68)                              | append-only `out(P)` aligns schedules       | lab shuffle 256×128 ~14 → 1.0 ms; an unbounded ring cost 169× more links on head-far → bounded regret                        | in `dev`              |
+| prepared tape, frameless (INV-P)                             | LB1: add state where locality fails         | chaotic shapes 0.16×, cert mount 0.075×; a framed version cost +7–25%, the frameless one removed it                          | in `dev` (#75)        |
+| finger-first rounds (#75)                                    | bound the race by the lockstep's own rounds | probes per finger lookup −45% on replace-half ×16; tape tax on ×16 12–13% → 5–9%                                             | in `dev`              |
+| K-gated strike (strike when lockstep reaches K)              | measure cost instead of counting strikes    | no K wins; K=16 loses 4–10% on ×128 and window-slide                                                                         | rejected              |
+| foreign recorded cell is no finger                           | prepared cells pollute other lookups        | confirms pollution, but shared-shuffle ×128 +10–15%                                                                          | rejected              |
+| inlining budget 1500 (flag)                                  | inline the whole read-miss chain            | miss-heavy shapes 5–25% faster for every build; the lever is the outer chain under `readProducer`/`advanceCore`              | lever, not a change   |
+| one never-inlined miss handler (m2)                          | keep miss handlers out of the read path     | hub-duplicate +34%, lab stable +40%; mechanism unexplained                                                                   | rejected              |
+| lockstep code shapes (unrolled, split, switch)               | code shape                                  | identical lookups, geomean 0.979–1.010: the loops are memory-bound                                                           | rejected              |
+| block rotation of the skipped suffix                         | one rotation instead of D moves             | window-slide 73 → 95 links per read                                                                                          | rejected              |
+| `edge.born` + pass bound                                     | LB1, a new distinction                      | replace_half 12.6 → 1.5 ms; +36 instructions in every inlined `advanceCore`                                                  | branch, decision open |
+| lazy identity retention after cleanup                        | keep evidence across passes                 | wins CPU; blocked by memory ownership (producers live until the next cleanup)                                                | closed by owner       |
+| retaining the validation cursor                              | evidence flow                               | 78 of 363,858 pull visits in 3,000 adversarial programs, 0 in benchmarks; would cost 140,100 writes                          | rejected              |
+| liveness pruning / suspension of unobserved computeds        | lifetime vs liveness                        | at most −0.7% of work, only after hundreds of dormant writes; break-even `W·S_w > C_d + C_r` rarely met                      | closed                |
+| V3: full validation frontier                                 | universal goal                              | `O(D)` root scan is semantically required; repeated push into a shared root removed by "a continuation owns its stable edge" | kept                  |
+| batch boundary check (R₅)                                    | discharge only with debt                    | premise false: `IdlePending` is checked first; −1.7%, below threshold                                                        | rejected              |
+| C1: carry a negative lookup proof (R₃)                       | principle 3                                 | exact; +22.4% (inlining lost), C1b +2.9–3.2%                                                                                 | rejected              |
+| D1: push decision order by frequency (R₅)                    | decision tree from the quotient             | exact; ≤ −0.8%                                                                                                               | rejected              |
+| edges as a class                                             | object shape                                | +6–10% on three workloads (call-target checks)                                                                               | rejected              |
+| C2 success cut as cleanup argument; C3 hint repair on unlink | principles 2, 3                             | not built                                                                                                                    | hypothesis            |
 
 What remains at the bound: schedules unrelated to `out(P)` get nothing from
 the finger; proofs of absence between two wide endpoints need the lockstep or
@@ -313,36 +313,36 @@ selector. That is graph shape, fixed in the framework, not the kernel.
 F-numbers are stable identifiers used by tests, the oracle's verdict classes
 and commit messages. A new finding takes the next free number.
 
-| Id  | Status                       | Finding                                                                                                                                                         | Resolution                                                                                         |
-| --- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| F1  | open, owner decision         | a write to an already-read dependency during a computed's own evaluation is lost; the computed stays clean and stale                                            | rejection, convergence or a bounded policy (§5.3); pinned by `test/characterization/`              |
-| F2  | removed                      | unused `Disposed` bit                                                                                                                                           | —                                                                                                  |
-| F3  | removed                      | dead `allowSlowPath` parameter                                                                                                                                  | —                                                                                                  |
-| F4  | open, cosmetic               | empty-suffix exit in `cleanupUnvisitedSources` is unreachable                                                                                                   | could become a DEV assertion                                                                       |
-| F5  | kept                         | the default strategy's suffix-head hit is unreachable through the resolver                                                                                      | strategies are public                                                                              |
-| F6  | recorded                     | DEV: direct-phase watcher invalidation emits a debug event without a hook; transitive needs one                                                                 | DEV only                                                                                           |
-| F7  | open, cosmetic               | `countIn`/`countOut` duplicated (PROFILE)                                                                                                                       | —                                                                                                  |
-| F8  | superseded by F17            | "validation never redelivers its own watcher" held only for trees                                                                                               | —                                                                                                  |
-| F9  | open, recorded               | an `Unknown` consumer without inputs is recomputed as a dependency but treated as clean as a root; reachable only after disposing a live upstream producer     | pinned by the oracle                                                                               |
-| F10 | fixed `9b21f58`              | edge creation coerced the stamp to int32 while reuse stored uint32: from epoch 2³¹ a pass carried two stamps and could link duplicates                         | `>>> 0`; regression in `runtime.tracking-stamp.test.ts`                                            |
-| F12 | fixed `bb5fc5f`              | DEV `stackStats().propagate.peak` was always 0                                                                                                                  | —                                                                                                  |
-| F13 | fixed `190a09e` (#52)        | a pass stamp equal to a stale suffix stamp (rewound or wrapped clock) dropped a dependency                                                                      | forward-only clock, INV-T3; oracle class F13                                                       |
-| F15 | fixed                        | a watcher invalidated transitively during its own run kept `Unknown` without `Scheduled` and never ran again                                                   | `Revalidate` plus self-delivery (R9)                                                               |
-| F16 | fixed `ab5ec15`              | a cleanup that wrote through a dependency and threw was recovered to idle behind a dirty computed                                                              | cleanup failures scan dependencies like callback failures                                          |
-| F17 | fixed                        | a watcher was redelivered during its own validation through a side edge; the queued copy ran as a clean skip                                                    | `Computing` joins `Scheduled` as the delivery guard (R10); oracle class own-epoch delivery         |
-| F18 | contract boundary 2026-11-01 | a watcher that failed on the first read of a throwing computed is not re-entered when the cause is repaired                                                   | no runtime change; C4 and R3 state it; witnesses in `test/differential/catalog/boundaries.ts`      |
+| Id  | Status                       | Finding                                                                                                                                                    | Resolution                                                                                    |
+| --- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| F1  | open, owner decision         | a write to an already-read dependency during a computed's own evaluation is lost; the computed stays clean and stale                                       | rejection, convergence or a bounded policy (§5.3); pinned by `test/characterization/`         |
+| F2  | removed                      | unused `Disposed` bit                                                                                                                                      | —                                                                                             |
+| F3  | removed                      | dead `allowSlowPath` parameter                                                                                                                             | —                                                                                             |
+| F4  | open, cosmetic               | empty-suffix exit in `cleanupUnvisitedSources` is unreachable                                                                                              | could become a DEV assertion                                                                  |
+| F5  | kept                         | the default strategy's suffix-head hit is unreachable through the resolver                                                                                 | strategies are public                                                                         |
+| F6  | recorded                     | DEV: direct-phase watcher invalidation emits a debug event without a hook; transitive needs one                                                            | DEV only                                                                                      |
+| F7  | open, cosmetic               | `countIn`/`countOut` duplicated (PROFILE)                                                                                                                  | —                                                                                             |
+| F8  | superseded by F17            | "validation never redelivers its own watcher" held only for trees                                                                                          | —                                                                                             |
+| F9  | open, recorded               | an `Unknown` consumer without inputs is recomputed as a dependency but treated as clean as a root; reachable only after disposing a live upstream producer | pinned by the oracle                                                                          |
+| F10 | fixed `9b21f58`              | edge creation coerced the stamp to int32 while reuse stored uint32: from epoch 2³¹ a pass carried two stamps and could link duplicates                     | `>>> 0`; regression in `runtime.tracking-stamp.test.ts`                                       |
+| F12 | fixed `bb5fc5f`              | DEV `stackStats().propagate.peak` was always 0                                                                                                             | —                                                                                             |
+| F13 | fixed `190a09e` (#52)        | a pass stamp equal to a stale suffix stamp (rewound or wrapped clock) dropped a dependency                                                                 | forward-only clock, INV-T3; oracle class F13                                                  |
+| F15 | fixed                        | a watcher invalidated transitively during its own run kept `Unknown` without `Scheduled` and never ran again                                               | `Revalidate` plus self-delivery (R9)                                                          |
+| F16 | fixed `ab5ec15`              | a cleanup that wrote through a dependency and threw was recovered to idle behind a dirty computed                                                          | cleanup failures scan dependencies like callback failures                                     |
+| F17 | fixed                        | a watcher was redelivered during its own validation through a side edge; the queued copy ran as a clean skip                                               | `Computing` joins `Scheduled` as the delivery guard (R10); oracle class own-epoch delivery    |
+| F18 | contract boundary 2026-11-01 | a watcher that failed on the first read of a throwing computed is not re-entered when the cause is repaired                                                | no runtime change; C4 and R3 state it; witnesses in `test/differential/catalog/boundaries.ts` |
 
 Gaps found by the model, not yet closed:
 
 | #   | Finding                                                                                                                                                         | Kind             | Action                                                                     |
 | --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | -------------------------------------------------------------------------- |
 | 1   | disposing a source mid-pass of its consumer: the mutant "rewind the cursor to null instead of `prevIn`" yields a stale value and survives 80,000 programs (S7c) | test gap         | a unit test for S7c; dispose actions for producers in the oracle generator |
-| 2   | mutant M10 "transitive invalidation as execution evidence" survives every suite, though the quotient separates R from V                                        | test gap         | turn the 106 separated L/eff pairs into merge mutants (`pnpm rt audit`)    |
-| 3   | save/restore of `tailIn` in `pull_frontier` is a dead write and may restore a detached edge holding a disposed node (S1, X)                                    | harm in X        | drop the restore (bundle change, needs approval)                           |
-| 4   | a watcher that disposes itself and then reads keeps edges; deliveries go to a disposed node (S2, X)                                                            | leak in X        | `unlinkAllSources` after execution when `compute === undefined`            |
-| 5   | a custom `readTrackingStrategy` must restamp the returned edge or the dependency is silently lost (S3)                                                         | unstated duty    | stamp in the resolver, or document it in `config.ts`                       |
+| 2   | mutant M10 "transitive invalidation as execution evidence" survives every suite, though the quotient separates R from V                                         | test gap         | turn the 106 separated L/eff pairs into merge mutants (`pnpm rt audit`)    |
+| 3   | save/restore of `tailIn` in `pull_frontier` is a dead write and may restore a detached edge holding a disposed node (S1, X)                                     | harm in X        | drop the restore (bundle change, needs approval)                           |
+| 4   | a watcher that disposes itself and then reads keeps edges; deliveries go to a disposed node (S2, X)                                                             | leak in X        | `unlinkAllSources` after execution when `compute === undefined`            |
+| 5   | a custom `readTrackingStrategy` must restamp the returned edge or the dependency is silently lost (S3)                                                          | unstated duty    | stamp in the resolver, or document it in `config.ts`                       |
 | 6   | the suffix carries causal authority when a computed entered with `Unknown`: the "Unknown and not Watcher" push branch precedes `Computing` (S8)                 | comment mismatch | fix the comment in `reuseEdge.ts`                                          |
-| 7   | the paired benchmarks read through `readConsumer`, the facade through `readConsumerLazy`/`Eager`: the facade entry is unmeasured                               | measurement gap  | a workload through the facade entry                                        |
+| 7   | the paired benchmarks read through `readConsumer`, the facade through `readConsumerLazy`/`Eager`: the facade entry is unmeasured                                | measurement gap  | a workload through the facade entry                                        |
 | 8   | four `general` family programs diverge from the baseline beyond every accepted class (`testkit/oracle/corpus/general-*`)                                        | unclassified     | classify each or fix                                                       |
 
 ## 10. Open owner decisions

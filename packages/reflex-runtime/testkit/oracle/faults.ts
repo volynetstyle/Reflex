@@ -11,7 +11,7 @@
  *   be decided from their kills.
  * - `holdout`: never used to decide a reduction, only to evaluate one. Four
  *   are real faults: the fix of a documented finding reverted
- *   (SEMANTIC_CHARACTERIZATION.md §6). A reduction that keeps every
+ *   (docs/MODEL.md §9). A reduction that keeps every
  *   development kill and loses a holdout kill is overfitted to the
  *   development set (Shi et al., "Evaluating Test-Suite Reduction in Real
  *   Software Evolution", ISSTA 2018).

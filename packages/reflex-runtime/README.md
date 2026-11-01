@@ -9,9 +9,7 @@ side-effect execution and scheduling. **The runtime owns graph semantics. The
 host owns execution policy.**
 
 The exact contract is [docs/RUNTIME.md](./docs/RUNTIME.md); all documentation
-is indexed in the [documentation map](./docs/README.md). Branch switching,
-read-tracking routes and dynamic topology across packages are described in the
-[dynamic dependencies guide](../../docs/dynamic-dependencies/README.md).
+is indexed in the [documentation map](./docs/README.md).
 
 ## Installation
 
@@ -36,7 +34,7 @@ when nothing observes it and the application has dropped its handle. Its
 sources keep it reachable, so a forgotten consumer is retained rather than
 garbage-collected. Release raw consumers with `disposeNode` from
 `@volynets/reflex-runtime/internal`, or create them under an owner that does it
-(see [Dependency retention](./docs/RUNTIME.md#dependency-retention)).
+(see [dependency retention](./docs/RUNTIME.md#dependency-retention)).
 
 ## Minimal example
 
@@ -144,8 +142,8 @@ Host scheduler executed runWatcher() synchronously from onNodeInvalidated.
 
 Other policy errors: `REFLEX_SCHEDULER_REACTIVE_READ_IN_HOOK`,
 `REFLEX_NESTED_PULL`, `REFLEX_NESTED_PROPAGATION`,
-`REFLEX_HOST_HOOK_REENTERED_RUNTIME`. The full scheduler contract is in
-[docs/runtime/scheduler-contract.md](../../docs/runtime/scheduler-contract.md).
+`REFLEX_HOST_HOOK_REENTERED_RUNTIME`. The full hook contract is in
+[docs/RUNTIME.md](./docs/RUNTIME.md#hooks).
 
 ## Execution domains
 

@@ -67,7 +67,7 @@ export const SUITES = [
     id: "static.typecheck-differential",
     layer: "static",
     technique: "type checking of the differential testkit",
-    owner: "test/differential/README.md",
+    owner: "testkit/README.md",
     runner: { type: "tsc", project: "test/differential/tsconfig.json" },
     tiers: ["ci", "deep"],
   },
@@ -83,7 +83,7 @@ export const SUITES = [
     id: "static.jit-contracts",
     layer: "static",
     technique: "type-aware checks of annotated JIT source premises",
-    owner: "docs/JIT_CONTRACTS.md",
+    owner: "docs/PERFORMANCE.md",
     runner: {
       type: "node",
       args: [
@@ -100,7 +100,7 @@ export const SUITES = [
     id: "static.architecture",
     layer: "static",
     technique: "layering and debug-boundary contract",
-    owner: "docs/architecture-contract.md",
+    owner: "docs/GUIDE.md#layering-and-the-debug-boundary",
     runner: { type: "node", args: ["scripts/check-architecture-contract.mjs"] },
     tiers: ["smoke", "ci", "deep"],
   },
@@ -164,7 +164,7 @@ export const SUITES = [
     id: "unit.debug",
     layer: "unit",
     technique: "debug trace and subtle API examples",
-    owner: "docs/architecture-contract.md",
+    owner: "docs/GUIDE.md#layering-and-the-debug-boundary",
     files: ["test/runtime/debug/"],
     runner: source,
     tiers: ["smoke", "ci", "deep"],
@@ -219,7 +219,7 @@ export const SUITES = [
     id: "projection.stages",
     layer: "projection",
     technique: "structural projections of the stages",
-    owner: "src/kernel/stages/README.md",
+    owner: "docs/INVARIANTS.md",
     files: ["test/projection/"],
     runner: { type: "vitest", profile: "projection" },
     tiers: ["ci", "deep"],
@@ -230,7 +230,7 @@ export const SUITES = [
     id: "spec.differential",
     layer: "spec",
     technique: "differential and stateful testing against SpecMachine",
-    owner: "test/differential/docs/SEMANTIC_CONTRACT.md",
+    owner: "docs/SEMANTIC_CONTRACT.md",
     files: [
       "test/differential/runtime.differential.test.ts",
       "test/differential/runtime.stateful-differential.test.ts",
@@ -245,7 +245,7 @@ export const SUITES = [
     id: "spec.exhaustive",
     layer: "spec",
     technique: "bounded-exhaustive enumeration of small languages",
-    owner: "test/differential/docs/BOUNDED_BASELINE.md",
+    owner: "testkit/README.md",
     files: [
       "test/differential/runtime.bounded-exhaustive.test.ts",
       "test/differential/runtime.recovery-exhaustive.test.ts",
@@ -258,7 +258,7 @@ export const SUITES = [
     id: "spec.watcher",
     layer: "spec",
     technique: "watcher algebra, metamorphic relations, differential",
-    owner: "test/differential/watcher/WATCHER_EVIDENCE_BASELINE.md",
+    owner: "testkit/README.md",
     files: ["test/differential/watcher/"],
     runner: source,
     tiers: ["ci", "deep"],
@@ -268,7 +268,7 @@ export const SUITES = [
     layer: "spec",
     technique:
       "active and historical divergence catalogs; contract boundaries (R1-R3 under failure)",
-    owner: "test/differential/README.md",
+    owner: "testkit/README.md",
     files: [
       "test/differential/runtime.active-divergences.test.ts",
       "test/differential/runtime.historical-faults.test.ts",
@@ -305,7 +305,7 @@ export const SUITES = [
     id: "oracle.corpus",
     layer: "oracle",
     technique: "regression corpus replay (minimized witnesses)",
-    owner: "testkit/oracle/corpus/README.md",
+    owner: "testkit/README.md",
     files: ["test/oracle/oracle.corpus.test.ts"],
     runner: source,
     tiers: ["smoke", "ci", "deep"],
@@ -316,7 +316,7 @@ export const SUITES = [
     id: "qualification.spec-mutants",
     layer: "qualification",
     technique: "mutation analysis of the spec differential, holdout mutants",
-    owner: "test/differential/docs/HOLDOUT_BASELINE.md",
+    owner: "testkit/README.md",
     files: [
       "test/differential/runtime.mutation-qualification.test.ts",
       "test/differential/runtime.holdout-qualification.test.ts",
@@ -368,7 +368,7 @@ export const SUITES = [
     layer: "characterization",
     technique:
       "pinned behavior outside the contract (F1, disposal from a host hook)",
-    owner: "docs/characterization/SEMANTIC_CHARACTERIZATION.md",
+    owner: "docs/MODEL.md",
     files: ["test/characterization/"],
     runner: { type: "vitest", profile: "characterization" },
     tiers: ["ci", "deep"],
@@ -409,7 +409,7 @@ export const SUITES = [
     layer: "fuzz",
     technique:
       "working tree against HEAD, production builds, representation policy",
-    owner: "test/differential/docs/SEMANTIC_CONTRACT.md",
+    owner: "docs/SEMANTIC_CONTRACT.md",
     runner: {
       type: "testkit",
       args: [
@@ -498,7 +498,7 @@ export const SUITES = [
     layer: "self",
     technique:
       "properties of the spec verdict's comparator: equivalence relation, sensitivity to every field",
-    owner: "test/differential/README.md",
+    owner: "testkit/README.md",
     files: ["test/differential/runtime.observation-comparator.test.ts"],
     runner: source,
     tiers: ["smoke", "ci", "deep"],
@@ -600,7 +600,7 @@ export const GATES = {
     suites: [],
     manual: [
       "A paired run that reproduces a known result (node bench/compare.mjs).",
-      "Update docs/performance/BENCHMARK_PROTOCOL.md.",
+      "Update docs/PERFORMANCE.md.",
     ],
   },
 };

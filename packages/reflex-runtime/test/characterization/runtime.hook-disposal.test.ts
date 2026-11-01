@@ -19,7 +19,7 @@ import {
  * Characterization, outside the contract: watcher disposal from
  * `onNodeInvalidated`.
  *
- * DISPOSE.md forbids it, because push holds edge continuations and
+ * docs/RUNTIME.md (Disposal) forbids it, because push holds edge continuations and
  * `unlinkEdge` clears them. The development policy rejects it (the dev test
  * config does not run this file); production does not specify it. These tests pin what production does today so that a change
  * of the walk's continuation model is a visible decision, not an accident.
