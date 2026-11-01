@@ -125,7 +125,7 @@
     "@tsslint/typescript-plugin": "3",
     "@types/node": "^26.1.2",
     "@volynets/algorithm-projection": "workspace:*",
-    "typescript": "^5.6.0"
+    "typescript": "^6.0.3"
   },
   "private": false
 }
