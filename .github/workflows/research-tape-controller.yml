@@ -31,7 +31,8 @@ jobs:
           sparse-checkout: packages/reflex-runtime/perf/tape-controller/ci.json
           sparse-checkout-cone-mode: false
       - id: read
-        run: echo "matrix=$(jq -c '{include: .}' packages/reflex-runtime/perf/tape-controller/ci.json)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "matrix=$(jq -c '{include: .}' packages/reflex-runtime/perf/tape-controller/ci.json)" >> "$GITHUB_OUTPUT"
 
   timing:
     name: ${{ matrix.experiment }}
