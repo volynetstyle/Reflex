@@ -28,12 +28,15 @@ export const shapes = {
     return [a, b].map((p) => range(k).map(() => p));
   },
   "window-slide": (d, k) => {
-    const pool = d * 2, stride = Math.max(1, Math.floor(d / P));
+    const pool = d * 2,
+      stride = Math.max(1, Math.floor(d / P));
     return range(P).map((ph) =>
       range(k).map((c) => {
         const s = (ph * stride + (c % P) * stride) % pool;
         const w = range(d).map((i) => (s + i) % pool);
-        const h = d >> 1, head = w.slice(0, h), tail = w.slice(h).reverse();
+        const h = d >> 1,
+          head = w.slice(0, h),
+          tail = w.slice(h).reverse();
         const out = [];
         for (let i = 0; i < h; i++) out.push(tail[i], head[i]);
         if (tail.length > h) out.push(tail[h]);
@@ -44,7 +47,9 @@ export const shapes = {
   shuffle: (d, k) => {
     const r = prng(0x5eed + d * 31 + k);
     const perms = range(P + 3).map(() => shuffle(range(d), r));
-    return range(P).map((ph) => range(k).map((c) => perms[(ph + c) % perms.length]));
+    return range(P).map((ph) =>
+      range(k).map((c) => perms[(ph + c) % perms.length]),
+    );
   },
   "shared-shuffle": (d, k) => {
     const r = prng(0x5ead + d * 31 + k);
@@ -78,7 +83,6 @@ export const shapes = {
   stable: (d, k) => range(P).map(() => range(k).map(() => range(d))),
 };
 
-
 /** Builds the graph (selector + sources + consumers + one summing consumer) on a runtime bundle. */
 export function buildGraph(rt, shape, d, k) {
   const patterns = shapes[shape](d, k);
@@ -101,18 +105,24 @@ export function buildGraph(rt, shape, d, k) {
     return t;
   });
   rt.readConsumer(sum);
-  const expected = patterns.map((ph) => ph.reduce((t, pat) => t + pat.reduce((u, i) => u + i, 0), 0));
+  const expected = patterns.map((ph) =>
+    ph.reduce((t, pat) => t + pat.reduce((u, i) => u + i, 0), 0),
+  );
   let step = 0;
   return {
     period,
     /** One transition; returns the sum. */
-    next: () => { rt.writeProducer(sel, ++step); return rt.readConsumer(sum); },
+    next: () => {
+      rt.writeProducer(sel, ++step);
+      return rt.readConsumer(sum);
+    },
     /** One checked period. */
     verify: () => {
       for (let t = 0; t < period; t++) {
         rt.writeProducer(sel, ++step);
         const got = rt.readConsumer(sum);
-        if (got !== expected[step % period]) throw new Error(`wrong sum ${got} at step ${step}`);
+        if (got !== expected[step % period])
+          throw new Error(`wrong sum ${got} at step ${step}`);
       }
     },
   };
