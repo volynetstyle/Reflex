@@ -68,7 +68,7 @@
     "lint-staged": "^15.0.0",
     "prettier": "^3.3.0",
     "rollup": "^4.54.0",
-    "rollup-plugin-const-enum": "^1.1.5",
+    "rollup-plugin-const-enum": "^2.0.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.0",
     "typescript-eslint": "^8.0.0",
