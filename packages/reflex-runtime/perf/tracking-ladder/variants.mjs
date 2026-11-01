@@ -51,14 +51,13 @@ export const variants = {
     "src/kernel/shape/graph/findEdge.ts::  const edge = findEdgeInLockstepPastHeadStart(::  const lateHint = producer.tailIn; if (lateHint !== null && lateHint.to === consumer && lateHint.from === producer) return lateHint; const edge = findEdgeInLockstepPastHeadStart(",
   ],
   // Both reconciliation counterfactuals patch the resolver's own
-  // reconciliation (the end of resolveTrackedReadMiss in
-  // stages/tracking/resolve.ts).
+  // reconciliation (reconcileLocatedRead in stages/tracking/resolve.ts).
   "eager-detach": [
     'src/kernel/stages/tracking/resolve.ts::import { observeRuntimeProjection } from "@runtime/kernel/projection";::import { observeRuntimeProjection } from "@runtime/kernel/projection"; import { unlinkDetachedIncomingEdgeSequence } from "@runtime/kernel/shape/graph/sweepEdges";',
     `src/kernel/stages/tracking/resolve.ts::    consumer.tailIn = linkEdge(producer, consumer, cursorEdge, passStamp);::    ${EAGER_DETACH} consumer.tailIn = linkEdge(producer, consumer, cursorEdge, passStamp);`,
   ],
   rotate: [
-    `src/kernel/stages/tracking/resolve.ts::function resolveTrackedReadMiss(::${ROTATE} function resolveTrackedReadMiss(`,
-    "src/kernel/stages/tracking/resolve.ts::  if (cursorEdge === null) {\n    moveTrackedIncomingEdgeToFrontUnchecked(consumer, locatedEdge, passStamp);::  if (true) { rotateUnvisitedBlockBehindTail(consumer, locatedEdge, cursorEdge); locatedEdge.stamp = passStamp; consumer.tailIn = locatedEdge; } else if (cursorEdge === null) {\n    moveTrackedIncomingEdgeToFrontUnchecked(consumer, locatedEdge, passStamp);",
+    `src/kernel/stages/tracking/resolve.ts::function reconcileLocatedRead(::${ROTATE} function reconcileLocatedRead(`,
+    "src/kernel/stages/tracking/resolve.ts::  if (cursorEdge === null) {::  if (true) { rotateUnvisitedBlockBehindTail(consumer, locatedEdge, cursorEdge); locatedEdge.stamp = passStamp; consumer.tailIn = locatedEdge; } else if (cursorEdge === null) {",
   ],
 };
