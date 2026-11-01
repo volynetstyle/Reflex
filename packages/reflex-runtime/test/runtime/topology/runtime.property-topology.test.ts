@@ -1,11 +1,16 @@
 import fc from "fast-check";
 import { beforeEach, describe, expect, it } from "vitest";
-import { readConsumer, readProducer, writeProducer } from "../../runtime.test_utils";
+import {
+  readConsumer,
+  readProducer,
+  writeProducer,
+} from "../../runtime.test_utils";
 import {
   createComputeCounter,
   createConsumer,
   createProducer,
   expectGraphIntegrity,
+  expectSources,
   resetRuntime,
 } from "../../runtime.test_utils";
 
@@ -78,7 +83,92 @@ describe("Reactive runtime - generated topology properties", () => {
       { numRuns: 50 },
     );
   });
+
+  // SEMANTIC_CONTRACT C1, C3: a failed computed is Changed, so its next demand
+  // executes it exactly once, whatever its retained incoming relation and
+  // however many upstream writes came in between; that relation holds only
+  // what the failed attempt read.
+  it("a failed computed runs once on the next demand, whatever was written in between", () => {
+    const pattern = fc.record({
+      order: fc.uniqueArray(fc.integer({ min: 0, max: 7 }), { maxLength: 8 }),
+      failAt: fc.integer({ min: 0, max: 8 }),
+    });
+    fc.assert(
+      fc.property(
+        fc.uniqueArray(fc.integer({ min: 0, max: 7 }), { minLength: 1 }),
+        fc.array(pattern, { minLength: 1, maxLength: 3 }),
+        fc.array(
+          fc.tuple(
+            fc.integer({ min: 0, max: 7 }),
+            fc.integer({ min: 0, max: 3 }),
+          ),
+          { maxLength: 6 },
+        ),
+        (committed, failing, writes) => {
+          resetRuntime();
+
+          const sources = Array.from({ length: 8 }, (_, index) =>
+            createProducer(index),
+          );
+          const phase = createProducer(-1);
+          const sibling = createConsumer(() =>
+            sources.reduce((sum, source) => sum + readProducer(source), 0),
+          );
+          let runs = 0;
+          const computed = createConsumer(() => {
+            runs += 1;
+            const index = readProducer(phase);
+            const { order, failAt } =
+              index < 0 ? { order: committed, failAt: 8 } : failing[index]!;
+            let sum = 0;
+            for (let i = 0; i < order.length; i += 1) {
+              if (i === failAt) throw new Error("failed attempt");
+              sum += readProducer(sources[order[i]!]!);
+            }
+            if (index >= 0) throw new Error("failed attempt");
+            return sum;
+          });
+          const demand = () => {
+            const before = runs;
+            let threw = false;
+            try {
+              readConsumer(computed);
+            } catch {
+              threw = true;
+            }
+            return { executions: runs - before, threw };
+          };
+
+          readConsumer(sibling);
+          expect(demand()).toEqual({ executions: 1, threw: false });
+
+          for (let index = 0; index < failing.length; index += 1) {
+            writeProducer(phase, index);
+            expect(demand()).toEqual({ executions: 1, threw: true });
+            const { order, failAt } = failing[index]!;
+            expectSources(computed, [
+              phase,
+              ...order.slice(0, failAt).map((i) => sources[i]!),
+            ]);
+          }
+
+          for (const [source, value] of writes)
+            writeProducer(sources[source]!, value);
+          expect(demand()).toEqual({ executions: 1, threw: true });
+          // Still failed, so still Changed: the next demand runs it again.
+          expect(demand()).toEqual({ executions: 1, threw: true });
+
+          writeProducer(phase, -1);
+          expect(demand()).toEqual({ executions: 1, threw: false });
+          expect(demand()).toEqual({ executions: 0, threw: false });
+          expectSources(computed, [
+            phase,
+            ...committed.map((i) => sources[i]!),
+          ]);
+          expectGraphIntegrity([...sources, phase, sibling, computed]);
+        },
+      ),
+      { numRuns: 300 },
+    );
+  });
 });
-
-
-

@@ -27,7 +27,9 @@ import { trackingStamp } from "@runtime/kernel/state";
  * Lease. The prepared consumer and its pass stamp: at most one at a time.
  * Live(C, s) holds while C is Computing and its frontier carries s. A dead
  * lease needs no eager cleanup: its cells are hints, the next prepare
- * replaces it, the owner's next miss past the hint releases it.
+ * replaces it, the owner's next miss past the hint releases it. Only a
+ * removal of the owner's edges releases it first, while the list still
+ * names every producer with a bit.
  *
  * Certificate. Under a live lease with coverage, every producer of an
  * attached incoming edge of the owner carries `Leased` (set by the prepare
@@ -63,8 +65,12 @@ function isLeaseLive(owner: ReactiveNode): boolean {
   );
 }
 
-/** Ends the lease: clears the bits of the owner's current producers. */
-function releaseLease(owner: ReactiveNode): void {
+/**
+ * Ends the lease: clears the bits of the owner's current producers. Whatever
+ * removes edges from the owner's list (cleanup, disposal) calls it first, so
+ * a producer never leaves the list with its bit.
+ */
+export function releaseLease(owner: ReactiveNode): void {
   for (
     let incomingEdge: ReactiveEdge | null = owner.firstIn;
     incomingEdge !== null;
