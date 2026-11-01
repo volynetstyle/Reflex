@@ -263,6 +263,81 @@ def race_finger_first_rounds():
     )
 
 
+AUTHORITATIVE_ROUND = """    if (out === null) return null;
+    if (out.to === consumer) return out;
+    out = out.nextOut;
+    if (out === null) return null;
+""" + INCOMING
+
+# The escalated race: finger-first rounds (as ffrounds-early) continuing from
+# walkers a prelude already moved. `before` is created here, on escalation.
+ESCALATED = """/** Escalated race: finger-first rounds from `firstRound`; the backward finger is created here. */
+function raceEscalated(
+  producer: ReactiveNode,
+  consumer: ReactiveNode,
+  finger: ReactiveEdge,
+  after: ReactiveEdge,
+  before: ReactiveEdge | null,
+  firstRound: number,
+  out: ReactiveEdge | null,
+  back: ReactiveEdge | null,
+  ahead: ReactiveEdge | null,
+): ReactiveEdge | null {
+  let behind = before ?? finger.prevOut ?? producer.lastOut!;
+  for (let round = firstRound; round < 8; round++) {
+    if ((round & 1) === 0) {
+      if (after.to === consumer) return after;
+      after = after.nextOut ?? producer.firstOut!;
+    } else {
+      if (behind.to === consumer) return behind;
+      behind = behind.prevOut ?? producer.lastOut!;
+    }
+""" + AUTHORITATIVE_ROUND.replace("\n    ", "\n    ") + """  }
+  return findEdgeInLockstepQuiet(producer, consumer, out, back, ahead);
+}
+"""
+
+
+def race_prelude(rounds):
+    # Lazy escalation: one forward finger probe; then `rounds` authoritative
+    # rounds (base with early certificate, incoming) so a short proof ends
+    # before any further finger walker exists; then the escalated race.
+    return (
+        f"/** Lazy escalation: forward finger probe, {rounds} authoritative rounds, then the escalated race. */\nfunction racePrelude"
+        + SIGNATURE
+        + """  let after = finger.nextOut ?? producer.firstOut!;
+  if (after.to === consumer) return after;
+  after = after.nextOut ?? producer.firstOut!;
+  for (let round = 0; round < """ + str(rounds) + """; round++) {
+""" + AUTHORITATIVE_ROUND + """  }
+  return raceEscalated(producer, consumer, finger, after, null, 1, out, back, ahead);
+}
+""" + "\n" + ESCALATED
+    )
+
+
+def race_staged():
+    # Staged escalation: each finger miss doubles the authoritative rounds
+    # that follow it (1, 2, 4), then the escalated race.
+    def rounds(n):
+        return "  for (let round = 0; round < " + str(n) + "; round++) {\n" + AUTHORITATIVE_ROUND + "  }\n"
+    return (
+        "/** Staged escalation: finger probe, 1 round, finger probe, 2 rounds, finger probe, 4 rounds, then the escalated race. */\nfunction raceStaged"
+        + SIGNATURE
+        + """  let after = finger.nextOut ?? producer.firstOut!;
+  if (after.to === consumer) return after;
+  after = after.nextOut ?? producer.firstOut!;
+""" + rounds(1) + """  let before = finger.prevOut ?? producer.lastOut!;
+  if (before.to === consumer) return before;
+  before = before.prevOut ?? producer.lastOut!;
+""" + rounds(2) + """  if (after.to === consumer) return after;
+  after = after.nextOut ?? producer.firstOut!;
+""" + rounds(4) + """  return raceEscalated(producer, consumer, finger, after, before, 3, out, back, ahead);
+}
+""" + "\n" + ESCALATED
+    )
+
+
 variants = {
     "half": ("raceHalf", race_half(False)),
     "half-early": ("raceHalf", race_half(True)),
@@ -270,6 +345,9 @@ variants = {
     "rounds-early": ("raceRounds", race_rounds(True, False)),
     "rounds2-early": ("raceRounds", race_rounds(True, True)),
     "ffrounds-early": ("raceRounds", race_finger_first_rounds()),
+    "pre4": ("racePrelude", race_prelude(4)),
+    "pre8": ("racePrelude", race_prelude(8)),
+    "staged": ("raceStaged", race_staged()),
 }
 anchor = "/**\n * The far end of the finger race"
 for name, (fn, body) in variants.items():

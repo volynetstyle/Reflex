@@ -138,4 +138,21 @@ if (command === "time") {
       console.log(`| ${c.id} | ${b} | ${plan[c.id].ctl.lookups} | ${cols.map(([, f]) => ((100 * z(f)) / n).toFixed(1)).join(" | ")} | ${probes.map(([, f]) => (z(f) / n).toFixed(1)).join(" / ")} |`);
     }
   }
+  // Counterfactual distribution (instrument.py --dist): after a first forward
+  // finger miss, authoritative rounds to settle and the ring's later hits.
+  const distBundles = bundles.filter((b) => cases.some((c) => res[c.id][b][0].sc.f1Hit !== undefined || res[c.id][b][0].sc.f1Miss !== undefined));
+  if (distBundles.length > 0) {
+    const buckets = ["1", "2", "4", "8", "16", ">16"];
+    const hows = ["out", "out0", "back", "ahead", "in0"];
+    console.log(`\n| case | f1 hit % | proof rounds after f1 miss: ${buckets.map((k) => `≤${k}`).join(" / ")} (% of misses) | settled by: ${hows.join(" / ")} | ring hit later % | ring late if prelude 4 / 8 (% of misses) |`);
+    console.log("| --- | ---: | ---: | ---: | ---: | ---: |");
+    for (const c of cases) {
+      for (const b of distBundles) {
+        const s = new Proxy(res[c.id][b][0].sc, { get: (o, k) => o[k] ?? 0 });
+        const all = s.f1Hit + s.f1Miss || 1, miss = s.f1Miss || 1;
+        const pc = (x, d) => ((100 * x) / d).toFixed(0);
+        console.log(`| ${c.id} | ${pc(s.f1Hit, all)} | ${buckets.map((k) => pc(s["d" + k], miss)).join(" / ")} | ${hows.map((h) => pc(s["how_" + h], miss)).join(" / ")} | ${pc(s.ringHit, miss)} | ${pc(s.ringLate4, miss)} / ${pc(s.ringLate8, miss)} |`);
+      }
+    }
+  }
 }

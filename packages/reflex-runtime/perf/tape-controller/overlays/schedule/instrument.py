@@ -65,6 +65,52 @@ cert = "preparedMissIsAbsent(producer, consumer) === true\n  ) {\n    return nul
 at = text.index(cert, entry)
 text = text[:at] + cert.replace("return null;", "SC.certEntry++; return null;") + text[at + len(cert):]
 assert re.search(r"SC\.byOut", text) and "SC.tail++" in text
+
+# --dist: before every replayed race, a read-only counterfactual: does the
+# first forward finger probe hit; if not, how many authoritative rounds (base
+# with early certificate, then incoming) a plain lockstep needs to settle and
+# how, and at which ring probe (2..8, after/before alternately) the finger
+# would have hit.
+if len(sys.argv) > 3 and sys.argv[3] == "--dist":
+    DIST = r'''
+function scBucket(rounds: number): string {
+  return rounds <= 1 ? "1" : rounds <= 2 ? "2" : rounds <= 4 ? "4" : rounds <= 8 ? "8" : rounds <= 16 ? "16" : ">16";
+}
+function scDist(producer: ReactiveNode, consumer: ReactiveNode, finger: ReactiveEdge, out: ReactiveEdge | null, back: ReactiveEdge | null, ahead: ReactiveEdge | null): void {
+  let after = finger.nextOut ?? producer.firstOut!;
+  if (after.to === consumer) { SC.f1Hit++; return; }
+  SC.f1Miss++;
+  let ringAt = 0;
+  let before = finger.prevOut ?? producer.lastOut!;
+  after = after.nextOut ?? producer.firstOut!;
+  for (let probe = 2; probe <= 8 && ringAt === 0; probe++) {
+    if ((probe & 1) === 0) { if (before.to === consumer) ringAt = probe; before = before.prevOut ?? producer.lastOut!; }
+    else { if (after.to === consumer) ringAt = probe; after = after.nextOut ?? producer.firstOut!; }
+  }
+  let rounds = 0;
+  let how = "";
+  for (;;) {
+    rounds++;
+    if (out === null) { how = "out0"; break; }
+    if (out.to === consumer) { how = "out"; break; }
+    out = out.nextOut;
+    if (out === null) { how = "out0"; break; }
+    if (back !== null) { if (back.from === producer) { how = "back"; break; } back = back.prevIn; }
+    if (ahead !== null) { if (ahead.from === producer) { how = "ahead"; break; } ahead = ahead.nextIn; }
+    else if (back === null) { how = "in0"; break; }
+  }
+  const kd = "d" + scBucket(rounds);
+  SC[kd] = (SC[kd] | 0) + 1;
+  const kh = "how_" + how;
+  SC[kh] = (SC[kh] | 0) + 1;
+  // A ring hit that a prelude of P rounds would delay (the proof needs more).
+  if (ringAt !== 0) { SC.ringHit++; if (rounds > 4) SC.ringLate4++; if (rounds > 8) SC.ringLate8++; }
+}
+'''
+    text = text.replace(header, header + DIST, 1)
+    call = "  const edge = raceHalf(producer, consumer, finger, out, back, ahead);"
+    assert call in text, "--dist expects the half variant"
+    text = text.replace(call, "  scDist(producer, consumer, finger, out, back, ahead);\n" + call, 1)
 # Counters start undefined: increment as integers.
 text = re.sub(r"SC\.(\w+)\+\+", lambda m: f"(SC.{m.group(1)} = (SC.{m.group(1)} | 0) + 1)", text)
 open(out, "w", encoding="utf8", newline="\n").write(text)
