@@ -9,6 +9,11 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+    ignore:
+      # changesets/action v2 requires Changesets CLI v3; the repo is on v2.
+      # Lift together with the @changesets/cli major.
+      - dependency-name: changesets/action
+        update-types: [version-update:semver-major]
     commit-message:
       prefix: ci
 
