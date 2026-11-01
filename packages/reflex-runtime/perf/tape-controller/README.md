@@ -15,6 +15,7 @@ order rotated per sample; a ratio is the median of per-sample ratios.
 | `kgrid` | `k<K>`: strike when the plain lockstep reaches step K (commit 613d231); `e<K>`: a strike every K steps | does lookup cost separate useful from wasted prepares? |
 | `foreign` | `nf-rec`: a foreign recorded cell is no finger; `nf-live`: only while its lease is live; `nf-ns`: plain lockstep without strike instead | total effect of refusing prepared cells as fingers |
 | `schedule` | `s-<v>` from `overlays/schedule` (`generate.py`): `half` = dev's 50/50 race; `rounds` = base + one finger probe + incoming per round; `rounds2` = incoming twice; `ffrounds` = finger probe first; `-early` = return on the outgoing certificate as soon as `out` becomes null | finger-race schedule, controller frozen for every finger lookup |
+| `rounds` | live controller; `base`/`k16`/`np` = dev a7858fa, the K=16 gate (613d231), no prepare; `cur`/`k16r`/`npr` = the same three on ae2fdd0 (finger-first rounds, K=16 ported in `overlays/rounds`) | does bounding the finger race shrink the tape's external harm? |
 | `frozen` | `fz-a` (dev search) and `fz-b` (no race on a foreign recorded cell), both under the strike history recorded from `fz-a` | controlled direct effect of the finger race, controller frozen |
 
 Frozen controller. The producer slot changes only by the final hint write,
@@ -40,3 +41,20 @@ overlays, `node schedule.mjs count` prints them.
 CI runs only the experiments listed in `ci.json`.
 
 Build locally: `bash perf/tape-controller/build.sh <set>` (bundles only; no timing).
+
+## `rounds`: prediction, recorded before the run (2026-11-01)
+
+The earlier x16 regression of the current admission (K=16/current ≈ 0.85 on
+replace-half x16, run 41252710453) was attributed to prepared cells becoming
+fingers of other consumers' absence lookups. Finger-first rounds bound a
+foreign finger's cost to the lockstep's own rounds plus a constant. If that
+was the main channel of external harm:
+
+- x16: `k16r/cur` → ≈ 1 (from ≈ 0.85 for `k16/base` in the same job), and
+  `npr/cur` closer to 1 than `np/base`;
+- x128: `cur < npr` still (the tape pays for itself where lists are long).
+
+If `k16r/cur` stays near 0.85, the harm lives elsewhere: exact-hint eviction,
+the strike/prepare feedback loop, the prepare itself, or code shape. Counters
+from `count.mjs` (prepares, strikes, foreign-cell finger lookups, steps) show
+whether the rounds changed the controller's own dynamics.

@@ -1,6 +1,6 @@
 [
   {
-    "experiment": "port",
-    "run": "node perf/tape-controller/time.mjs --bundles base,port-rounds --samples 9"
+    "experiment": "rounds",
+    "run": "node perf/tape-controller/time.mjs --bundles base,k16,np,cur,k16r,npr --samples 9 --pairs k16/base,np/base,k16r/cur,npr/cur,cur/base --json ../../out/rounds.json"
   }
 ]

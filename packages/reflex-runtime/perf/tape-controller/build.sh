@@ -58,5 +58,16 @@ case "${1:?set}" in
     # Production candidates with the live tape controller, against dev.
     build port-rounds --commit ae2fdd0   # perf/tracking-finger-rounds: finger-first race rounds
     ;;
+  rounds)
+    # Live controller, old (dev a7858fa) and new (ae2fdd0, finger-first
+    # rounds) search: current admission, the K=16 gate, and no prepare at all.
+    # Does bounding the finger race shrink the tape's external harm on x16?
+    NOPREP="$T::  prepareTape(consumer, passStamp);::  return false;"
+    build k16 --commit "$GATE"
+    build np --commit "$BASE" --mutate "$NOPREP"
+    build cur --commit ae2fdd0
+    build k16r --commit ae2fdd0 --overlay "$T=$here/overlays/rounds/tape.k16.ts.txt" --overlay "$F=$here/overlays/rounds/findEdge.k16.ts.txt"
+    build npr --commit ae2fdd0 --mutate "$NOPREP"
+    ;;
   *) echo "unknown set $1" >&2; exit 2 ;;
 esac

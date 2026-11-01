@@ -3,6 +3,8 @@
 // bundle), bundle order rotated per sample; ratio = median of per-sample
 // ratios to the first bundle.
 //   node time.mjs --bundles base,k8,... --cases <regex> --samples 5 --node <exe>
+//     --pairs a/b,c/d   extra table: median per-sample ratio of a to b
+//     --json <file>     raw ns per (case, bundle, sample)
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
@@ -96,3 +98,16 @@ for (const c of cases) {
   const ratios = bundles.slice(1).map((b) => med(r[b].map((v, i) => v / r[bundles[0]][i])).toFixed(3));
   console.log(`| ${c.id} | ${fmt(med(r[bundles[0]]))} | ${ratios.join(" | ")} |`);
 }
+const pairs = opt("--pairs", "").split(",").filter(Boolean).map((p) => p.split("/"));
+if (pairs.length > 0) {
+  console.log(`
+| case | ${pairs.map(([a, b]) => `${a}/${b}`).join(" | ")} |`);
+  console.log(`| --- | ${pairs.map(() => "---:").join(" | ")} |`);
+  for (const c of cases) {
+    const r = res[c.id];
+    const ratios = pairs.map(([a, b]) => med(r[a].map((v, i) => v / r[b][i])).toFixed(3));
+    console.log(`| ${c.id} | ${ratios.join(" | ")} |`);
+  }
+}
+const jsonOut = opt("--json", "");
+if (jsonOut) (await import("node:fs")).writeFileSync(jsonOut, JSON.stringify({ bundles, samples, res }));
