@@ -128,3 +128,20 @@ work (exact differential, identical counters). Prediction: `m2/cur` < 1 on
 the miss-heavy shapes, part of `cur@1500/cur` (0.77–0.89 on shuffle,
 shared-shuffle and value-sort), and ≈ 1 on `stable`; `m2/cur@1500` tells how
 much of the budget bound the new shape keeps.
+
+### Result (lab run 41298442717; paired production run 41298416431, baseline ae2fdd0)
+
+Rejected. Lab `m2/cur`: stable 1.37–1.40 (all 9 samples 1.31–1.41, not
+noise), hub-duplicate 1.08–1.09, shuffle and shared-shuffle 256 0.89, others
+≈ 1; `cur@1500/cur` reproduced (0.77–0.97). Paired: hub-duplicate +34%,
+append-shared-64 +21%, fanin-100/1000 +6%, mount-unmount +5%;
+reorder-128-shuffled −5%, swap-pairs-fanout-3 −4%; rest equivalent.
+
+What the shape shows on stable 256x16 (Node 24.22.2, readable builds): no
+deopt difference; in `cur` advanceCore inlines the callback and calls
+readProducer (inner loop 75 instructions + call); in `m2` it inlines
+readProducer → resolveTrackedRead (inner loop 269 instructions, 125 memory
+operands, no call); at budget 1500 the inner loop is 600 instructions and
+not slower. So neither the call per read nor loop size explains the +40%;
+the mechanism of the budget gains is not "keep the read path free of miss
+handlers". Not explained yet.
