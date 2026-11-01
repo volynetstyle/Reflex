@@ -14,10 +14,11 @@ import type ReactiveNode from "@runtime/kernel/shape/node";
  * - a single outgoing edge to another consumer proves absence.
  *
  * Otherwise findEdgeInLockstep decides: the producer's outgoing hint (L1,
- * INV-H), then its four-link outgoing head start, then the lockstep (L2),
- * which is the only general proof of absence. `back` and `ahead` follow its
- * coverage contract: with the incoming edges the caller has compared, they
- * cover the consumer's whole incoming list.
+ * INV-H), its two-link outgoing head start, then the lockstep (L2), raced by
+ * the outgoing finger when the producer holds one. The lockstep is the only
+ * general proof of absence. `back` and `ahead` follow its coverage contract:
+ * with the incoming edges the caller has compared, they cover the consumer's
+ * whole incoming list.
  */
 export function locateTrackedEdge(
   producer: ReactiveNode,

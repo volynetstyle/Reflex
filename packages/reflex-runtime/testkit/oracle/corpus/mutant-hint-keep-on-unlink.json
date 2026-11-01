@@ -1,0 +1,138 @@
+{
+  "schema": "testkit.counterexample",
+  "schemaVersion": 1,
+  "id": "mutant-hint-keep-on-unlink",
+  "expect": "agree",
+  "level": "strict",
+  "policy": "exact",
+  "origin": {
+    "command": "mutate",
+    "mutantId": "hint-keep-on-unlink",
+    "family": "hub",
+    "seed": 1948,
+    "reference": {
+      "spec": "source",
+      "flavor": "oracle",
+      "commit": "working-tree",
+      "head": "7d3ffca6ea8b617b33613b3d06debe291115b150",
+      "dirty": true,
+      "bundleSha256": "c1f1c12366cc8a02a0609b8b14ae10cfba41c1f4e4abfbd2b8487f39ef6da6f2"
+    },
+    "mutant": {
+      "spec": "source+mutant:hint-keep-on-unlink",
+      "flavor": "oracle",
+      "commit": "working-tree",
+      "head": "7d3ffca6ea8b617b33613b3d06debe291115b150",
+      "dirty": true,
+      "bundleSha256": "1927541442ae3f9f2f6cc0f69abbb28efc1636639fce9db67a6f3fab59cfff93"
+    },
+    "foundAt": "2026-10-27T21:14:28.834Z"
+  },
+  "size": {
+    "original": 134,
+    "minimized": 24
+  },
+  "mismatch": {
+    "index": 13,
+    "baseline": "tail:7:[6,0]",
+    "candidate": "tail:7:[6]"
+  },
+  "program": {
+    "spec": {
+      "host": "plain",
+      "producers": 2,
+      "consumers": [
+        {
+          "reads": [
+            {
+              "node": 0,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 2,
+              "mode": "lazy"
+            },
+            {
+              "node": 0,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [],
+          "action": {
+            "kind": "dispose",
+            "watcher": 0
+          },
+          "actionWhen": 0
+        },
+        {
+          "reads": [
+            {
+              "node": 0,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 4,
+              "mode": "lazy"
+            }
+          ]
+        }
+      ],
+      "watchers": [
+        {
+          "reads": [
+            {
+              "node": 0,
+              "mode": "lazy"
+            },
+            {
+              "node": 6,
+              "mode": "lazy"
+            },
+            {
+              "node": 0,
+              "mode": "lazy"
+            },
+            {
+              "node": 5,
+              "mode": "lazy"
+            },
+            {
+              "node": 0,
+              "mode": "lazy"
+            }
+          ],
+          "reverseWhen": {
+            "producer": 1,
+            "parity": 0
+          }
+        }
+      ]
+    },
+    "ops": [
+      {
+        "kind": "write",
+        "producer": 1,
+        "value": 0
+      },
+      {
+        "kind": "read",
+        "node": 3,
+        "mode": "lazy"
+      },
+      {
+        "kind": "run",
+        "watcher": 0
+      }
+    ]
+  }
+}

@@ -148,10 +148,11 @@ suffix-head hit (R0) of the default strategy is unreachable through the
 resolver (F5) but reachable through the public strategy API; kept.
 
 **Heuristics that touch identity, not semantics.** The default strategy
-detaches the whole stale suffix after a 32-edge miss. Later reads that would
-have matched it link new edges instead of reusing old ones; the oracle pins
-this at the strict level. Its comment overstated it ("cannot contribute");
-the effect is a different edge identity, never a lost dependency.
+detached the whole stale suffix after a 32-edge miss. Later reads that would
+have matched it linked new edges instead of reusing old ones; the effect was
+a different edge identity, never a lost dependency. _Removed (2026-10-25):_
+the suffix now survives until cleanup; the oracle compares adjacency order
+and sibling delivery order as representation (SEMANTIC_CONTRACT).
 
 ## 5. Consumer read and stabilization (`protocol/read.consumer.ts`)
 
@@ -455,14 +456,14 @@ loses its tail entirely, an inlining effect of the microbenchmark.
 
 **Hidden invariants, proved, with what they allow.**
 
-| Invariant                                                                                 | Proof sketch                                                                                          | Allows                                            | Status                                |
-| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------- |
-| `runtimeState & Tracking` ⇔ `currentConsumer !== null`                                    | every writer of `currentConsumer` updates the bit in step; a context load restores both from one save | derive the bit; −3…−9% on graph workloads         | implemented and tested (H9), deferred |
-| propagation depth ∈ {0, 1}; `Propagating` ⇔ depth ≠ 0                                     | only `writeProducer` opens a scope, only at depth 0; snapshots restore only at quiescent boundaries   | specialize enter and leave                        | no gain beyond H9; rejected           |
-| INV-T1: with a cursor, `firstIn` is in the tracked prefix                                 | the prefix runs from `firstIn` to the cursor                                                          | `firstIn.from === P` alone proves a duplicate     | candidate, part of the F13 fix        |
-| INV-T2: with the cursor at `lastIn`, every edge P→C is in the prefix                      | the suffix is empty; at most one edge per pair                                                        | duplicate test = existence of P→C, without stamps | implemented (tail miss, 2026-10-24)   |
-| INV-T3: with a nonempty suffix and stamp S ≠ 0, an edge is in the prefix iff it carries S | accepts stamp S; suffix stamps come from earlier passes; the clock only moves forward (F13 fixed)     | O(1) prefix test for any located edge             | implemented (tracking README)         |
-| At rest, the incoming edges of a consumer carry its last pass stamp, unless a pass failed | each pass stamps what it accepts and cleanup removes the rest; a failed pass skips cleanup            | an O(1) collision test in the cold fallback       | candidate, part of the F13 fix        |
+| Invariant                                                                                         | Proof sketch                                                                                            | Allows                                            | Status                                |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------- |
+| `runtimeState & Tracking` ⇔ `currentConsumer !== null`                                            | every writer of `currentConsumer` updates the bit in step; a context load restores both from one save   | derive the bit; −3…−9% on graph workloads         | implemented and tested (H9), deferred |
+| propagation depth ∈ {0, 1}; `Propagating` ⇔ depth ≠ 0                                             | only `writeProducer` opens a scope, only at depth 0; snapshots restore only at quiescent boundaries     | specialize enter and leave                        | no gain beyond H9; rejected           |
+| INV-T1: with a cursor, `firstIn` is in the tracked prefix                                         | the prefix runs from `firstIn` to the cursor                                                            | `firstIn.from === P` alone proves a duplicate     | candidate, part of the F13 fix        |
+| INV-T2: with the cursor at `lastIn`, every edge P→C is in the prefix                              | the suffix is empty; at most one edge per pair                                                          | duplicate test = existence of P→C, without stamps | implemented (tail miss, 2026-10-24)   |
+| INV-T3: with a nonempty suffix and stamp S ≠ 0, an edge is in the prefix iff it carries S         | accepts stamp S; suffix stamps come from earlier passes; the clock only moves forward (F13 fixed)       | O(1) prefix test for any located edge             | implemented (tracking README)         |
+| At rest, the incoming edges of a consumer carry its last pass stamp, unless a watcher pass failed | each pass stamps what it accepts and cleanup removes the rest; only a failed watcher pass skips cleanup | an O(1) collision test in the cold fallback       | candidate, part of the F13 fix        |
 
 **Hypotheses falsified.**
 

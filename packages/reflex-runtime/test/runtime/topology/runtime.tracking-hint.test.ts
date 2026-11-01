@@ -163,14 +163,16 @@ describe("Reactive runtime - outgoing hint (INV-H)", () => {
         ({ consumer, items }) => pass(consumer, items),
       ],
       [
-        "eager detachment ahead of a long suffix",
+        "cleanup of a long suffix behind a new dependency",
         ({ consumer, hub }) => {
           const long = Array.from({ length: 40 }, () => node());
           pass(consumer, [hub, ...long]);
           expect(hub.tailIn).toBe(edgeOf(hub, consumer));
-          // A new dependency with subscribers, read first, detaches the
-          // 41-edge suffix (an empty outgoing list is the retained exception).
+          // A new dependency with subscribers, read first, keeps the 41-edge
+          // suffix attached for the rest of the pass; cleanup removes it.
           pass(consumer, [wideProducer()], { cleanup: false });
+          expect(edgeOf(hub, consumer)).not.toBeNull();
+          cleanupUnvisitedSources(consumer);
           expect(edgeOf(hub, consumer)).toBeNull();
         },
       ],
@@ -247,6 +249,46 @@ describe("Reactive runtime - outgoing hint (INV-H)", () => {
     expect(hub.tailIn).toBe(edge);
     expect(edgeOf(hub, wide)).toBe(edge);
     expectGraphIntegrity([hub, wide, ...subscribers, ...items]);
+  });
+});
+
+describe("Reactive runtime - outgoing finger coverage", () => {
+  it("finds every pair or proves absence from every finger, including ring wraps", () => {
+    for (let degree = 3; degree <= 40; degree++) {
+      const producer = node();
+      const consumers = Array.from({ length: degree + 1 }, () =>
+        node(Consumer),
+      );
+      const pairs: (ReactiveEdge | null)[] = [];
+      for (let i = 0; i < consumers.length; i++) {
+        const consumer = consumers[i]!;
+        // Keep either incoming walk beyond the entire finger window, so
+        // the outgoing probes and the continuation must cover every pair.
+        for (let j = 0; j < 24; j++) linkEdge(node(), consumer);
+        pairs.push(i < degree ? linkEdge(producer, consumer) : null);
+        for (let j = 0; j < 24; j++) linkEdge(node(), consumer);
+      }
+
+      for (let finger = 0; finger < degree; finger++) {
+        for (let target = 0; target < consumers.length; target++) {
+          const consumer = consumers[target]!;
+          for (const backward of [false, true]) {
+            producer.tailIn = pairs[finger]!;
+            const found = findEdgeInLockstep(
+              producer,
+              consumer,
+              backward ? consumer.lastIn : null,
+              backward ? null : consumer.firstIn,
+            );
+            expect(
+              found === pairs[target],
+              `degree=${degree}, finger=${finger}, target=${target}, backward=${backward}`,
+            ).toBe(true);
+          }
+        }
+      }
+      expectGraphIntegrity([producer, ...consumers]);
+    }
   });
 });
 

@@ -26,7 +26,7 @@ reconciliation and pruning occur.
 ## 2. State flags
 
 Defined in `src/kernel/shape/meta.ts`; production builds inline them as
-literals (`rollup/inline-constants.ts`).
+literals (`config/rollup/inline-constants.ts`).
 
 | Flag         | Meaning                                                                                                             |
 | ------------ | ------------------------------------------------------------------------------------------------------------------- |
@@ -37,6 +37,7 @@ literals (`rollup/inline-constants.ts`).
 | `Computing`  | Callback active; propagation interprets the active incoming prefix accordingly.                                     |
 | `Watcher`    | Watcher role.                                                                                                       |
 | `Scheduled`  | Host queue ownership, claimed and released separately from execution.                                               |
+| `Leased`     | May have an edge to the prepared tape's owner (INV-P); a stale bit costs a lookup, never an answer.                 |
 
 `Both = Unknown | Changed` is the dirty mask. Normal inactive computed nodes are
 clean, `Unknown`, or `Changed`. `Changed` forces computation; `Unknown`
@@ -85,11 +86,11 @@ transition table is characterized in
 
 ## 3. Pruning and failure
 
-Successful computation removes the incoming suffix after `tailIn`.
-Reconciliation may eagerly abandon a suffix during a read, before computation
-succeeds. Later reads may recreate abandoned dependencies.
+Successful computation removes the incoming suffix after `tailIn`. That
+cleanup is the only removal of stale dependencies: reconciliation during a
+read moves or links edges and never unlinks the unvisited suffix.
 
-Throws do not undo links, moves, stamps, or eager removal. Final stale cleanup
+Throws do not undo links, moves or stamps. Final stale cleanup
 is skipped on callback failure. The remaining graph is not an old-plus-new
 dependency transaction. Recovery restores flags only:
 
@@ -125,8 +126,8 @@ earlier passes, which the forward-only clock makes smaller. With the cursor
 at `lastIn` every edge is in the prefix (INV-T2). A read off the sequential
 path is resolved by one exact lookup of the pair's edge, bounded by the
 shorter of the producer's outgoing and the consumer's incoming lists, then
-classified by these rules. The eager suffix detachment threshold (32 edges)
-is a retained identity policy, not a search bound. Algorithm details:
+classified by these rules. The unvisited suffix keeps its edges until
+cleanup, so a reread suffix producer moves its existing edge. Algorithm details:
 [tracking research](../src/kernel/stages/tracking/RESEARCH.md).
 
 The frontier reading of `tailIn` is required only while the node is
@@ -136,16 +137,46 @@ reused as the pair lookup's outgoing hint (INV-H). For a node that is not
 or a hint: one of its own outgoing edges, attached to both lists. A hint
 satisfies `from === node && to !== node`; an incoming edge has
 `to === node`, so a self-edge always reads as incoming and is never written
-as a hint. The lookup writes a hint only past its four-link outgoing head
-start, only into a node that is neither `Computing` nor a watcher, and uses
-one only for exactly its pair; a missing or different hint proves nothing,
-and absence is still proved by the lockstep. Every unlink of an edge clears
+as a hint. The lookup writes a hint only with an edge it has located past
+its constant probes, only into a node that is neither `Computing` nor a
+watcher. It uses a slot edge from the node as the answer for exactly its
+pair, and any other one as an outgoing finger, the centre of a walk of at
+most eight outgoing links raced against the lockstep; a missing or
+different hint proves nothing, and absence is still proved by exhausting
+the outgoing or the covered incoming walk. Every unlink of an edge clears
 the hint that points to it, and every computation resets the slot to null
 before it becomes a frontier, so a stale hint is never observed. The idle
 uses of `tailIn` (unlink repair of the incoming cursor, the debug integrity
 check, watcher validation's save and restore, which only watchers reach)
 either accept a hint or never meet one. Source:
 `src/kernel/shape/graph/hint.ts`.
+
+The prepared tape (INV-P) makes a hint the address of a cell of one
+consumer's incoming list. A tracking pass is named by its consumer and pass
+stamp. A lookup by a computing consumer strikes when it enters the plain
+lockstep or its finger race settles past six finger probes; the second
+strike of a pass prepares the tape: one walk of the consumer's incoming list
+writes every producer's slot to its own edge (a hint, under the rules
+above) and sets `Leased` on it. Nothing is linked, moved or unlinked, and
+stamps are untouched, so a failure at any point leaves the graph the lookup
+would have left. The consumer then holds the lease, at most one at a time;
+the lease is live while its owner is `Computing` with a frontier carrying
+the prepared stamp, and is released (bits cleared over the owner's current
+list) by the owner's next miss past a dead lease, by the next prepare, or
+before cleanup or disposal removes edges from the owner's list, so no
+producer leaves the list with its bit.
+While the lease is recorded, every edge linked to its owner gives its
+producer the cell and the bit, or, for a producer that is `Computing` or a
+watcher, withdraws the certificate; the prepare does the same for such a
+producer. Coverage therefore holds under a live lease: every producer of an
+attached incoming edge of the owner has `Leased`, because computations
+derive `state` from itself and only the release clears the bit. A miss of
+the owner's hint, at the entry of the lookup's continuations past the head
+start, on an idle producer without the bit is a certificate of absence. A
+bit is only a maybe: a producer whose cell was lost (its own computation,
+another lookup's hint, a raw kernel frame) or that left the list keeps
+taking the exact search, so a lost or stale cell costs a lookup, never a
+second edge for a pair. Source: `src/kernel/shape/graph/tape.ts`.
 
 ## 5. Disposal and cleanup
 

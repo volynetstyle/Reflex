@@ -33,6 +33,10 @@
           "script": "test:projection"
         },
         {
+          "id": "test:testkit",
+          "script": "test:testkit"
+        },
+        {
           "id": "check:architecture",
           "script": "check:architecture"
         },
@@ -253,11 +257,7 @@
       "checks": [
         {
           "id": "lint",
-          "args": [
-            "exec",
-            "eslint",
-            "packages/reflex-runtime-mcp"
-          ]
+          "args": ["exec", "eslint", "packages/reflex-runtime-mcp"]
         },
         {
           "id": "typecheck",
@@ -277,11 +277,7 @@
       "checks": [
         {
           "id": "lint",
-          "args": [
-            "exec",
-            "eslint",
-            "plugins/@vite/reflex-vite-plugin"
-          ]
+          "args": ["exec", "eslint", "plugins/@vite/reflex-vite-plugin"]
         },
         {
           "id": "typecheck",
@@ -297,11 +293,7 @@
       "checks": [
         {
           "id": "lint",
-          "args": [
-            "exec",
-            "eslint",
-            "third-party/algorithm-projection"
-          ]
+          "args": ["exec", "eslint", "third-party/algorithm-projection"]
         },
         {
           "id": "typecheck",
@@ -321,11 +313,7 @@
       "checks": [
         {
           "id": "lint",
-          "args": [
-            "exec",
-            "eslint",
-            "packages/reflex-devtools"
-          ]
+          "args": ["exec", "eslint", "packages/reflex-devtools"]
         },
         {
           "id": "typecheck",

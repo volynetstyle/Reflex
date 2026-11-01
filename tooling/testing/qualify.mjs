@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { packagesInScope, repoRoot, readPackage } from "../build/package-registry.mjs";
 import { resolvePnpmCli } from "../build/pnpm.mjs";
 import { verifyArchive } from "../build/verify-artifacts.mjs";
+import { verifyPackedPeers } from "../build/packed-peers.mjs";
 
 function options(argv) {
  const result={skipBuild:false,packOnly:false,outputDir:resolve(repoRoot,"artifacts/qualification"),keepFixture:false,offline:false};
@@ -32,6 +33,8 @@ summary.fixture=fixture;await save();
 try{
  const pnpm=await resolvePnpmCli();
  const packages=packagesInScope("publish");
+ const manifests=await Promise.all(packages.map(readPackage));
+ const versions=new Map(manifests.map(manifest=>[manifest.name,manifest.version]));
  if(!config.skipBuild)await command("build.publish",process.execPath,[fileURLToPath(new URL("../build/run.mjs",import.meta.url)),"--scope","publish","build"],repoRoot);
  const tarballs=join(output,"tarballs");await mkdir(tarballs,{recursive:true});
  const dependencies={};
@@ -42,6 +45,7 @@ try{
   const additions=(await readdir(tarballs)).filter(file=>file.endsWith(".tgz")&&!previous.has(file));
   if(additions.length!==1)throw new Error("Expected exactly one new archive for "+sourceManifest.name);
   const archive=join(tarballs,additions[0]);const verified=await verifyArchive(archive,{expectedName:sourceManifest.name});
+  verifyPackedPeers(sourceManifest,verified.manifest,versions);
   const bytes=await readFile(archive);dependencies[sourceManifest.name]="file:"+archive.replaceAll("\\","/");
   summary.packages.push({name:sourceManifest.name,version:sourceManifest.version,archive:relative(output,archive).replaceAll("\\","/"),sha256:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length,verification:verified});await save();
  }

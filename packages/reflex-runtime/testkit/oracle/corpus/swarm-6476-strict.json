@@ -1,0 +1,99 @@
+{
+  "schema": "testkit.counterexample",
+  "schemaVersion": 1,
+  "id": "swarm-6476-strict",
+  "expect": "agree",
+  "level": "strict",
+  "policy": "baseline",
+  "origin": {
+    "command": "diff",
+    "family": "swarm",
+    "seed": 6476,
+    "reference": {
+      "spec": "baseline",
+      "flavor": "oracle",
+      "commit": "9b21f58a35e047559099a74cb8074b18b1782fa8",
+      "bundleSha256": "34aea5b4ed0a40064576f0ab5a1fbddfc1f6048ca981b40f3f6fb89bc0536a26"
+    },
+    "candidate": {
+      "spec": "source",
+      "flavor": "oracle",
+      "commit": "working-tree",
+      "head": "7d3ffca6ea8b617b33613b3d06debe291115b150",
+      "dirty": true,
+      "bundleSha256": "c1f1c12366cc8a02a0609b8b14ae10cfba41c1f4e4abfbd2b8487f39ef6da6f2"
+    },
+    "foundAt": "2026-10-27T21:17:34.573Z"
+  },
+  "size": {
+    "original": 171,
+    "minimized": 26
+  },
+  "mismatch": {
+    "index": 13,
+    "baseline": "end:consumer=null:active=A",
+    "candidate": "c:1"
+  },
+  "program": {
+    "spec": {
+      "host": "plain",
+      "producers": 1,
+      "consumers": [
+        {
+          "reads": [
+            {
+              "node": 0,
+              "mode": "lazy"
+            }
+          ]
+        }
+      ],
+      "watchers": [
+        {
+          "reads": [
+            {
+              "node": 1,
+              "mode": "lazy"
+            }
+          ],
+          "cleanup": {
+            "action": {
+              "kind": "write",
+              "producer": 0,
+              "delta": 2
+            },
+            "throwWhen": 0
+          }
+        }
+      ]
+    },
+    "ops": [
+      {
+        "kind": "run",
+        "watcher": 0
+      },
+      {
+        "kind": "write",
+        "producer": 0,
+        "value": 2
+      },
+      {
+        "kind": "context",
+        "ops": [
+          {
+            "kind": "read",
+            "node": 1,
+            "mode": "eager"
+          }
+        ]
+      },
+      {
+        "kind": "run",
+        "watcher": 0
+      },
+      {
+        "kind": "flush"
+      }
+    ]
+  }
+}

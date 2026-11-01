@@ -1,6 +1,15 @@
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import type ReactiveNode from "@runtime/kernel/shape/node";
+import { preparedOwner, releaseLease } from "./tape";
 
+/**
+ * Unlink a sequence of incoming edges, from `edge` along `nextIn`, from the
+ * outgoing lists of their producers, and clear their links.
+ *
+ * Precondition: the caller has already cut the sequence out of its
+ * consumer's incoming list (`firstIn`/`lastIn` and the edge before it are
+ * repaired), so only the producer side is left.
+ */
 export function unlinkDetachedIncomingEdgeSequence(
   edge: ReactiveEdge | null,
 ): void {
@@ -28,41 +37,49 @@ export function unlinkDetachedIncomingEdgeSequence(
 }
 
 /**
- * Full incoming-edge sweep used by disposal paths.
- * Cold-path traversal that tears down every source connection.
+ * Unlink every incoming edge of `consumer` and clear its cursor: the source side
+ * of disposal. Cold path.
  */
-export function unlinkAllSources(node: ReactiveNode): void {
-  const edge = node.firstIn;
+export function unlinkAllSources(consumer: ReactiveNode): void {
+  // Its producers must not leave with their bits (INV-P).
+  if (preparedOwner === consumer) releaseLease(consumer);
 
-  node.firstIn = null;
-  node.lastIn = null;
-  node.tailIn = null;
+  const firstIncomingEdge = consumer.firstIn;
 
-  unlinkDetachedIncomingEdgeSequence(edge);
+  consumer.firstIn = null;
+  consumer.lastIn = null;
+  consumer.tailIn = null;
+
+  unlinkDetachedIncomingEdgeSequence(firstIncomingEdge);
 }
 
 /**
- * Full outgoing-edge sweep used by producer disposal paths.
- * Cold-path traversal that tears down every subscriber connection.
+ * Unlink every outgoing edge of `producer` and clear its hint: the subscriber
+ * side of disposal. A subscriber whose cursor is on a removed edge gets the
+ * edge before it. Cold path.
  */
-export function unlinkAllSubscribers(node: ReactiveNode): void {
-  let edge = node.firstOut;
-  const hint = node.tailIn;
+export function unlinkAllSubscribers(producer: ReactiveNode): void {
+  let outgoingEdge = producer.firstOut;
+  const slotEdge = producer.tailIn;
 
   // Every outgoing edge goes, so a hint goes with them (INV-H). A self-edge
   // in the slot is incoming and is repaired by the loop below.
-  if (hint !== null && hint.from === node && hint.to !== node) {
-    node.tailIn = null;
+  if (
+    slotEdge !== null &&
+    slotEdge.from === producer &&
+    slotEdge.to !== producer
+  ) {
+    producer.tailIn = null;
   }
 
-  node.firstOut = null;
-  node.lastOut = null;
+  producer.firstOut = null;
+  producer.lastOut = null;
 
-  while (edge !== null) {
-    const nextOut = edge.nextOut;
-    const { to, prevIn, nextIn } = edge;
+  while (outgoingEdge !== null) {
+    const nextOut = outgoingEdge.nextOut;
+    const { to, prevIn, nextIn } = outgoingEdge;
 
-    if (to.tailIn === edge) {
+    if (to.tailIn === outgoingEdge) {
       to.tailIn = prevIn;
     }
 
@@ -72,11 +89,11 @@ export function unlinkAllSubscribers(node: ReactiveNode): void {
     if (nextIn !== null) nextIn.prevIn = prevIn;
     else to.lastIn = prevIn;
 
-    edge.prevOut = null;
-    edge.nextOut = null;
-    edge.prevIn = null;
-    edge.nextIn = null;
+    outgoingEdge.prevOut = null;
+    outgoingEdge.nextOut = null;
+    outgoingEdge.prevIn = null;
+    outgoingEdge.nextIn = null;
 
-    edge = nextOut;
+    outgoingEdge = nextOut;
   }
 }

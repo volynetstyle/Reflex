@@ -1,0 +1,90 @@
+{
+  "schema": "testkit.counterexample",
+  "schemaVersion": 1,
+  "id": "default-3339-strict",
+  "expect": "agree",
+  "invariants": true,
+  "class": "F1domain",
+  "level": "strict",
+  "policy": "baseline",
+  "origin": {
+    "command": "completion-regression",
+    "family": "default",
+    "seed": 3339,
+    "reference": {
+      "spec": "baseline",
+      "flavor": "oracle",
+      "commit": "9b21f58a35e047559099a74cb8074b18b1782fa8",
+      "bundleSha256": "34aea5b4ed0a40064576f0ab5a1fbddfc1f6048ca981b40f3f6fb89bc0536a26"
+    },
+    "candidate": {
+      "spec": "source",
+      "flavor": "oracle",
+      "commit": "working-tree",
+      "head": "7d3ffca6ea8b617b33613b3d06debe291115b150",
+      "dirty": true,
+      "bundleSha256": "a0c0b940931a4a25178a2ee7ccdf7fb3cf3bf2304e1d9acc692c94bb6ef7c7a6"
+    },
+    "foundAt": "2026-10-27T21:37:28.364Z"
+  },
+  "size": {
+    "original": 252,
+    "minimized": 16
+  },
+  "program": {
+    "spec": {
+      "host": "claim",
+      "producers": 1,
+      "consumers": [
+        {
+          "reads": [
+            {
+              "node": 0,
+              "mode": "eager"
+            },
+            {
+              "node": 0,
+              "mode": "lazy"
+            },
+            {
+              "node": 0,
+              "mode": "lazy"
+            }
+          ]
+        }
+      ],
+      "watchers": [
+        {
+          "reads": [
+            {
+              "node": 1,
+              "mode": "eager"
+            },
+            {
+              "node": 1,
+              "mode": "lazy"
+            }
+          ],
+          "throwWhen": 3,
+          "action": {
+            "kind": "write",
+            "producer": 0,
+            "delta": 1
+          },
+          "actionWhen": 0
+        }
+      ]
+    },
+    "ops": [
+      {
+        "kind": "write",
+        "producer": 0,
+        "value": 3
+      },
+      {
+        "kind": "run",
+        "watcher": 0
+      }
+    ]
+  }
+}

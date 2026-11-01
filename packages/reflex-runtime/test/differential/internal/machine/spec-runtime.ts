@@ -153,12 +153,11 @@ export interface SpecWatcher extends DependencyState {
  *    frontier.
  * 3. A computed is a semantic boundary: downstream commits only the computed's
  *    semantic version, never versions of its internal leaves.
- * 4. A computed read is observed only after successful stabilization. A
- *    first-time computed read that throws is therefore not a semantic
- *    dependency and, under the current Reflex contract, is not separately
- *    retained as retry evidence. Retaining such failed reads would be a
- *    deliberate future semantic extension, not a clarification of current
- *    behavior.
+ * 4. A computed read is observed only after successful stabilization: a
+ *    computed read that throws is not a semantic dependency and not retry
+ *    evidence. Failure creates no reactive evidence (R3, F18 boundary): a
+ *    later repair of that computed's cause does not wake the enclosing failed
+ *    attempt; re-entry is the host's decision.
  * 5. Watcher validation and execution are independent obligations.
  * 6. The complete committed watcher frontier must validate before irreversible
  *    watcher lifecycle begins, even when execution is already pending.
@@ -173,7 +172,24 @@ export interface SpecWatcher extends DependencyState {
  * execution, scheduler ownership and cycle semantics are outside this oracle's
  * current boundary and must not be inferred from this implementation.
  */
+export interface SpecRuntimeOptions {
+  /**
+   * Skip re-validating a computed when no producer changed since its last
+   * successful validation (default true). The cache is an optimization of the
+   * model and adds a hypothesis to it, so the direct model (`false`) must
+   * agree with the cached one on every program
+   * (runtime.spec-self-consistency.test.ts).
+   */
+  readonly validationCache?: boolean;
+}
+
 export class SpecRuntime {
+  private readonly validationCache: boolean;
+
+  constructor({ validationCache = true }: SpecRuntimeOptions = {}) {
+    this.validationCache = validationCache;
+  }
+
   /**
    * Monotone count of semantic producer writes.
    *
@@ -240,13 +256,7 @@ export class SpecRuntime {
      *
      * The outer computation observes a computed only if that computed actually
      * yields a stable semantic value. If stabilization throws, no semantic read
-     * occurred and no direct dependency is recorded.
-     *
-     * Important current-boundary decision:
-     * a failed first-time read is also not retained as a separate recovery edge.
-     * Adding such evidence could improve liveness for a newly entered failing
-     * dynamic branch, but production Reflex does not currently create that edge;
-     * doing so belongs in an explicit contract extension plus active divergence.
+     * occurred: no direct dependency and no retry evidence is recorded (rule 4).
      */
     this.stabilize(node);
     this.track(node);
@@ -434,7 +444,11 @@ export class SpecRuntime {
   private stabilize<T>(node: SpecComputed<T>): void {
     // If no producer anywhere changed since this node's last validation, its
     // committed frontier cannot have become stale.
-    if (node.initialized && node.validatedAt === this.revision) {
+    if (
+      this.validationCache &&
+      node.initialized &&
+      node.validatedAt === this.revision
+    ) {
       return;
     }
 

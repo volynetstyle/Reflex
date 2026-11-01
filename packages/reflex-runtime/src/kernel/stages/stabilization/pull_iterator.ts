@@ -32,6 +32,7 @@ export function pull_iterator(
   // JIT: keep the captured stack base Int32 for index and range analysis.
   // `| 0` is type feedback, not a correctness guard; see pushIteratorCore.
   const base = high | 0;
+  // @jit int32-provenance(base)
   let top = base;
   let changed = false;
 
@@ -157,6 +158,7 @@ export function pull_iterator(
                 devAssertRefreshEdge(dep, edge);
               }
             }
+            // @jit canonical-boolean
             if (advance(dep, edge) === true) {
               changed = true;
               break descend;

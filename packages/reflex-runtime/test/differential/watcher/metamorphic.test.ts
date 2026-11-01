@@ -33,24 +33,89 @@ describe("watcher evidence metamorphic relations", () => {
     const result = compareTransformation({
       base,
       transformed,
-      alignment: [
-        { base: 0, transformed: 0 },
-        { base: 1, transformed: 1 },
-        { base: 2, transformed: 3 },
-        { base: 3, transformed: 4 },
-        { base: 4, transformed: 5 },
-        { base: 5, transformed: 6 },
-        { base: 6, transformed: 7 },
-        { base: 7, transformed: 8 },
-      ],
+      alignment: identityAlignment,
     });
 
     expect(result.base.equivalent).toBe(true);
     expect(result.transformed.equivalent).toBe(true);
     expect(result.specEquivalent).toBe(true);
     expect(result.reflexEquivalent).toBe(true);
+    expect(result.informativePairs).toBeGreaterThan(0);
   });
 });
+
+describe("transformation comparison controls", () => {
+  const base = identityProgram(false);
+  const transformed = identityProgram(true);
+
+  it("rejects an empty alignment instead of reporting vacuous equivalence", () => {
+    expect(() =>
+      compareTransformation({ base, transformed, alignment: [] }),
+    ).toThrow(RangeError);
+  });
+
+  it("rejects an alignment that is not strictly increasing on both sides", () => {
+    for (const alignment of [
+      [
+        { base: 1, transformed: 1 },
+        { base: 0, transformed: 2 },
+      ],
+      [
+        { base: 0, transformed: 1 },
+        { base: 1, transformed: 1 },
+      ],
+    ])
+      expect(() =>
+        compareTransformation({ base, transformed, alignment }),
+      ).toThrow(RangeError);
+  });
+
+  it("detects a transformation that changes the observed value (negative control)", () => {
+    // Wrapping the direct source in `identity + 1` is not an identity: the
+    // relation must report it on both targets, or it cannot fail at all.
+    const shifted = defineProgram("identity/shifted", [
+      op.signal("direct", 0),
+      op.signal("failGate", false),
+      op.computed("identity", expr.add(expr.read("direct"), expr.value(1))),
+      op.computed(
+        "failing",
+        expr.when(
+          expr.read("failGate"),
+          expr.fail("validation failure"),
+          expr.value(0),
+        ),
+      ),
+      op.watcher(
+        "watcher",
+        expr.add(expr.read("identity"), expr.read("failing")),
+        { cleanup: expr.value("cleanup") },
+      ),
+      op.flush(),
+      op.set("direct", 1),
+      op.set("failGate", true),
+      op.flush(),
+    ]);
+    const result = compareTransformation({
+      base,
+      transformed: shifted,
+      alignment: identityAlignment,
+    });
+
+    expect(result.specEquivalent).toBe(false);
+    expect(result.reflexEquivalent).toBe(false);
+  });
+});
+
+const identityAlignment: OperationAlignment[] = [
+  { base: 0, transformed: 0 },
+  { base: 1, transformed: 1 },
+  { base: 2, transformed: 3 },
+  { base: 3, transformed: 4 },
+  { base: 4, transformed: 5 },
+  { base: 5, transformed: 6 },
+  { base: 6, transformed: 7 },
+  { base: 7, transformed: 8 },
+];
 
 function groupCases(
   key: (candidate: (typeof watcherEvidenceCases)[number]) => string,
@@ -82,6 +147,7 @@ function assertProgramsEquivalent(programs: readonly Program[]): void {
     expect(result.transformed.equivalent, transformed.id).toBe(true);
     expect(result.specEquivalent, transformed.id).toBe(true);
     expect(result.reflexEquivalent, transformed.id).toBe(true);
+    expect(result.informativePairs, transformed.id).toBeGreaterThan(0);
   }
 }
 

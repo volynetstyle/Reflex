@@ -28,7 +28,34 @@ import {
 import { cleanupUnvisitedSources } from "@runtime/kernel/stages/tracking";
 import { push_iterator_once } from "@runtime/kernel/stages/propagation";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
-import { compare } from "@runtime/protocol";
+
+/**
+ * Recompute equality, `Object.is`. Writes compare with their own copy
+ * (`sameWrittenValue`, protocol/write.producer.ts), so the two sites keep
+ * separate type feedback.
+ */
+export const compare = Object.is;
+
+/**
+ * A computation threw. Cold path, kept out of `advanceCore`'s bytecode.
+ *
+ * The node becomes Changed: a failed pull-bubble computation may have entered
+ * as Unknown after its dependencies already stabilized, and retrying must
+ * execute the callback. A Changed node's incoming edges wake nothing (push
+ * skips a Changed subscriber) and its next read recomputes without
+ * validation, so they serve only as reconciliation material for the retry.
+ * The pass keeps what it read and drops the residual suffix, as a successful
+ * pass does; otherwise a series of failures with different reads would
+ * accumulate the union of all of them until the first success. Watchers keep
+ * theirs as a retry set (engine/watcher.ts).
+ */
+function settleFailedComputation(
+  node: ReactiveNode,
+  computingState: number,
+): void {
+  node.state = (computingState & ~(Computing | Unknown)) | Changed;
+  if (node.tailIn !== node.lastIn) cleanupUnvisitedSources(node);
+}
 
 /**
  * Advance to next value
@@ -36,16 +63,20 @@ import { compare } from "@runtime/protocol";
  * Recompute `node` and, if it changed, propagate dirtiness to its outgoing users.
  *
  * The active pull walker owns the current parent edge; this only propagates
- * side-fanout that existed before recompute.
+ * side-fanout that existed before recompute. `skipOutEdge` is that owned
+ * edge, or null.
+ *
+ * JIT: no parameter default. A default copies the parameters to registers
+ * and adds a branch to the bytecode every inlining caller is charged for.
  */
 function advanceCore(
   node: ReactiveNode,
-  skipOutEdge: ReactiveEdge | null = null,
+  skipOutEdge: ReactiveEdge | null,
 ): boolean {
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.advance.invoke");
 
-  devAssertExecutableNode(node);
+  if (__DEV__) devAssertExecutableNode(node);
 
   const compute = node.compute as NonNullable<typeof node.compute>;
   node.tailIn = null;
@@ -55,7 +86,7 @@ function advanceCore(
 
   const prevActive = enterConsumerTracking(node);
 
-  devRecordComputeStart(node, defaultContext);
+  if (__DEV__) devRecordComputeStart(node, defaultContext);
 
   let next: unknown;
 
@@ -66,18 +97,14 @@ function advanceCore(
     next = compute();
   } catch (error) {
     restoreConsumerTracking(prevActive);
-    // A failed pull-bubble computation may have entered as Unknown after its
-    // dependencies already stabilized. Retrying must execute the callback.
-    node.state = (computingState & ~(Computing | Unknown)) | Changed;
+    settleFailedComputation(node, computingState);
 
-    devRecordComputeError(node, error, defaultContext);
+    if (__DEV__) devRecordComputeError(node, error, defaultContext);
 
     throw error;
   }
 
   restoreConsumerTracking(prevActive);
-
-  const resolvedState = computingState & ~(Computing | Both);
 
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.advance.cleanup.check");
@@ -89,15 +116,17 @@ function advanceCore(
     cleanupUnvisitedSources(node);
   }
 
-  devRecordComputeFinish(node, next, defaultContext);
+  if (__DEV__) devRecordComputeFinish(node, next, defaultContext);
+
+  // Either outcome resolves the node, and nothing observes it before the
+  // outcome's DEV record, so the state is written once, ahead of the compare.
+  node.state = computingState & ~(Computing | Both);
 
   const prev = node.payload;
 
   // JIT: `compare` is Object.is and returns a boolean. `=== true` compiles to
   // one reference compare instead of a generic ToBoolean on the call result.
   if (compare(prev, next) === true) {
-    node.state = resolvedState;
-
     if (__PROFILE__)
       observeRuntimeProjection?.("projection.semantic.advance.value.unchanged");
 
@@ -106,7 +135,6 @@ function advanceCore(
   }
 
   node.payload = next;
-  node.state = resolvedState;
 
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.advance.value.changed");
@@ -121,11 +149,11 @@ function advanceCore(
         "projection.semantic.advance.propagate.invoke",
       );
 
-    devAssertRefreshEdge(node, firstOut);
-    if (skipOutEdge === null) {
-      push_iterator_once(firstOut, null);
-    } else if (firstOut !== skipOutEdge || skipOutEdge.nextOut !== null) {
-      if (__PROFILE__)
+    if (__DEV__) devAssertRefreshEdge(node, firstOut);
+    // One push serves both cases: a null `skipOutEdge` never equals
+    // `firstOut`. Only an owned edge that is the whole fan-out needs none.
+    if (firstOut !== skipOutEdge || firstOut.nextOut !== null) {
+      if (__PROFILE__ && skipOutEdge !== null)
         observeRuntimeProjection?.(
           "projection.semantic.advance.propagate.skip-edge",
         );
@@ -142,9 +170,9 @@ function advanceCore(
 
 export const advance: (
   node: ReactiveNode,
-  skipOutEdge?: ReactiveEdge | null,
+  skipOutEdge: ReactiveEdge | null,
 ) => boolean = __DEV__
-  ? function advanceDev(node, skipOutEdge = null): boolean {
+  ? function advanceDev(node, skipOutEdge): boolean {
       enterRuntimePhase(RuntimePhase.Recomputing);
 
       try {

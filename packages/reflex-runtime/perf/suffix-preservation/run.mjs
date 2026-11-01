@@ -169,13 +169,13 @@ function productionMinifier() {
     return exports;
   }
   const optimization = evaluate(
-    path.join(root, "rollup/optimization.ts"),
+    path.join(root, "config/rollup/optimization.ts"),
     () => {
       throw new Error("Unexpected optimization import");
     },
   );
   const policy = evaluate(
-    path.join(root, "rollup/plugins/terser.ts"),
+    path.join(root, "config/rollup/plugins/terser.ts"),
     (name) =>
       name === "@rollup/plugin-terser"
         ? { default: terser }

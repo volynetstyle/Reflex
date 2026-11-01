@@ -12,4 +12,8 @@ export interface ActiveDivergence {
   program: readonly Op[];
 }
 
+/**
+ * Known, unfixed SpecRuntime/Reflex mismatches. Empty: F18 was reclassified
+ * as a contract boundary on 2026-11-01 (catalog/boundaries.ts).
+ */
 export const activeDivergences: readonly ActiveDivergence[] = [];

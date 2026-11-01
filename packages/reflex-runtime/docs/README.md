@@ -31,6 +31,7 @@ updates the document in the same commit.
 | ------------------------------------------------------------ | --------------------------------------------------------- |
 | [GUIDE.md](./GUIDE.md)                                       | which checks a change kind requires                       |
 | [PERFORMANCE_RULES.md](./PERFORMANCE_RULES.md)               | evidence and shape discipline for hot-path work           |
+| [JIT_CONTRACTS.md](./JIT_CONTRACTS.md)                       | checked JIT source premises and the optional engine probe |
 | [BENCHMARK_PROTOCOL.md](./performance/BENCHMARK_PROTOCOL.md) | paired benchmark method, verdicts, CI gate                |
 | [DIAGNOSTICS.md](./DIAGNOSTICS.md)                           | debug entry point, protocol, diagnostics and MCP surfaces |
 

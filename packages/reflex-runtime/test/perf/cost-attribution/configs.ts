@@ -12,8 +12,8 @@ import {
 
 /**
  * Sweep configuration shared verbatim by the structural run (counters, under
- * vite.dev.config.ts / __PROFILE__: true) and the timing run (wall-clock,
- * under vite.config.ts / __PROFILE__: false). Both runners import this file
+ * profile cost-attribution-structural / __PROFILE__: true) and the timing run (wall-clock,
+ * profile cost-attribution-timing / __PROFILE__: false). Both runners import this file
  * and must build the *same* case for the same `key`, so structural and
  * timing records can be joined by `key` in analysis.
  */

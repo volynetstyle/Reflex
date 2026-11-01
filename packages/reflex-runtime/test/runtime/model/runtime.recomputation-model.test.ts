@@ -45,6 +45,8 @@ describe("Reactive runtime - incremental/full recomputation equivalence", () => 
     resetRuntime();
   });
 
+  // CPU-bound property run, ~1.5 s alone: the 5 s default is too tight next
+  // to the oracle suites in one forked worker pool (30 s below).
   it("matches a fresh recomputation after every generated state transition", () => {
     fc.assert(
       fc.property(
@@ -63,7 +65,7 @@ describe("Reactive runtime - incremental/full recomputation equivalence", () => 
       ),
       { numRuns: 100 },
     );
-  });
+  }, 30_000);
 
   it("replaces deleted extrema and restores late rows in deterministic order", () => {
     const model = createRecomputationModel([

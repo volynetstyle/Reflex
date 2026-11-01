@@ -105,7 +105,7 @@ describe("Reflex stage projection", () => {
     { timeout: 60_000 },
     () => {
       const functions = stageFunctions();
-      expect(functions).toHaveLength(37);
+      expect(functions).toHaveLength(38);
       for (const fn of functions) {
         const projection = analyzeFile(fn.file, fn.name, { tsconfig });
         const expected = syntaxCounts(fn);
@@ -245,17 +245,24 @@ describe("Reflex stage projection", () => {
         pull_iterator.stateTransitions.map((transition) => transition.to),
       ).toEqual(["node.state & ~Unknown"]);
 
+      // One resolved-state write serves the changed and unchanged outcomes.
+      // A throw is settled out of line (C3: the node becomes Changed).
       const advance = project("stabilization/advance.ts", "advanceCore");
       expect(
         advance.stateTransitions.map((transition) => transition.to),
       ).toEqual([
         "(node.state & ~Visited) | Computing",
-        "(computingState & ~(Computing | Unknown)) | Changed",
         "computingState & ~Computing",
-        "computingState & ~(Computing | Both)",
         "computingState & ~(Computing | Both)",
       ]);
       expect(advance.cfg.exits).toHaveLength(3);
+      const failed = project(
+        "stabilization/advance.ts",
+        "settleFailedComputation",
+      );
+      expect(
+        failed.stateTransitions.map((transition) => transition.to),
+      ).toEqual(["(computingState & ~(Computing | Unknown)) | Changed"]);
 
       // The computing-watcher Revalidate branch (F15) adds one two-outcome
       // branch and one state transition to the push plan. Watcher hook
@@ -281,7 +288,7 @@ describe("Reflex stage projection", () => {
       const advancePlan = createInstrumentationPlan(advance);
       expect(
         advancePlan.points.filter((point) => point.kind === "state-transition"),
-      ).toHaveLength(5);
+      ).toHaveLength(3);
       expect(
         advancePlan.points.filter((point) => point.kind === "function-exit"),
       ).toHaveLength(3);

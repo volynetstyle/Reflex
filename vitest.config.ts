@@ -1,4 +1,5 @@
 import { defineConfig } from "vitest/config";
+import { vitestProfile } from "./packages/reflex-runtime/config/index.ts";
 import { configRoot } from "./tooling/configs/source-aliases";
 
 /** Explicit projects keep research sweeps and compiler mutations opt-in. */
@@ -6,9 +7,10 @@ export default defineConfig({
   root: configRoot(import.meta.url),
   test: {
     projects: [
-      "packages/reflex-runtime/vite.config.ts",
-      "packages/reflex-runtime/vite.dev.config.ts",
-      "packages/reflex-runtime/vite.projection.config.ts",
+      // One config file, profiles selected inline (packages/reflex-runtime/config).
+      vitestProfile("source"),
+      vitestProfile("dev"),
+      vitestProfile("projection"),
       "packages/reflex-scheduler/vite.config.ts",
       "packages/reflex/vite.config.ts",
       "packages/reflex-framework/vite.config.ts",

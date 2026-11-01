@@ -13,22 +13,12 @@ import { defaultContext } from "@runtime/kernel/config";
 import { devRecordNodeCreated } from "@runtime/kernel/dev";
 
 /**
- * Callback function for a reactive effect (watcher).
- * Can optionally return a cleanup function that executes before the next run or upon node destruction.
+ * A watcher callback. It may return a cleanup, run before the next run or on
+ * disposal.
  */
 export type WatcherFn = () => void | WatcherCleanup;
 
-/**
- * Creates a Signal node containing a mutable value.
- * Acts as a primary data source (Producer) in the reactivity graph.
- *
- * @template T The type of value stored within the signal.
- * @param payload The initial state/value of the signal.
- * @returns A `ReactiveNode` instance configured as a pure Producer.
- *
- * @example
- * const count = createProducer(0);
- */
+/** A producer: a mutable source holding `payload`. */
 export const createProducer = <T>(payload: T): ProducerNode<T> => {
   const node = new ReactiveNode<T>(
     payload,
@@ -40,16 +30,9 @@ export const createProducer = <T>(payload: T): ProducerNode<T> => {
 };
 
 /**
- * Creates a Computed node whose value depends on other reactive nodes.
- * Acts as both a Consumer (for upstream dependencies) and a Producer (for downstream dependents).
- * Caches the value and lazily recomputes it only when its dependencies change.
- *
- * @template T The type of value returned by the computation function.
- * @param fn A side-effect-free function that computes the value.
- * @returns A `ReactiveNode` instance configured as a lazy Consumer/Producer.
- *
- * @example
- * const doubled = createConsumer(() => count.get() * 2);
+ * A computed consumer over `callback`, a side-effect-free derivation. It
+ * computes on its first read, caches the result and recomputes only when a
+ * dependency changed.
  */
 export const createConsumer = <T>(callback: () => T): ConsumerNode<T> => {
   const node = new ReactiveNode<T>(
@@ -62,15 +45,8 @@ export const createConsumer = <T>(callback: () => T): ConsumerNode<T> => {
 };
 
 /**
- * Creates a Watcher node (Effect) used to execute side effects.
- * Acts as a terminal Consumer in the reactivity graph. Automatically schedules and
- * re-runs whenever any reactive nodes accessed inside the `compute` function change.
- *
- * @param compute The side-effect function to execute when dependencies change.
- * @returns A `ReactiveNode` instance configured as an active Consumer (Watcher).
- *
- * @example
- * const logger = createWatcher(() => console.log(count.get()));
+ * A watcher: a terminal consumer for side effects. The runtime marks it dirty
+ * and notifies the host; the host decides when `runWatcher` executes it.
  */
 export const createWatcher = (callback: WatcherFn): WatcherNode => {
   const node = new ReactiveNode<WatcherResult>(

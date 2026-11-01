@@ -45,8 +45,8 @@ on:
       - packages/reflex-runtime/src/**
       - packages/reflex-runtime/bench/**
       - packages/reflex-runtime/scripts/build-baseline-oracle.mjs
-      - packages/reflex-runtime/rollup/terser-options.ts
-      - packages/reflex-runtime/rollup/optimization.ts
+      - packages/reflex-runtime/config/rollup/terser-options.ts
+      - packages/reflex-runtime/config/rollup/optimization.ts
   push:
     branches: [main]
     paths: *runtime-paths

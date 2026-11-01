@@ -1,0 +1,124 @@
+{
+  "schema": "testkit.counterexample",
+  "schemaVersion": 1,
+  "id": "default-13348-reentry",
+  "expect": "agree",
+  "invariants": true,
+  "level": "strict",
+  "policy": "baseline",
+  "origin": {
+    "command": "completion-regression",
+    "family": "default",
+    "seed": 13348,
+    "reference": {
+      "spec": "baseline",
+      "flavor": "oracle",
+      "commit": "9b21f58a35e047559099a74cb8074b18b1782fa8",
+      "bundleSha256": "34aea5b4ed0a40064576f0ab5a1fbddfc1f6048ca981b40f3f6fb89bc0536a26"
+    },
+    "candidate": {
+      "spec": "source",
+      "flavor": "oracle",
+      "commit": "working-tree",
+      "head": "7d3ffca6ea8b617b33613b3d06debe291115b150",
+      "dirty": true,
+      "bundleSha256": "a0c0b940931a4a25178a2ee7ccdf7fb3cf3bf2304e1d9acc692c94bb6ef7c7a6"
+    },
+    "foundAt": "2026-10-27T21:37:28.372Z"
+  },
+  "size": {
+    "original": 184,
+    "minimized": 25
+  },
+  "program": {
+    "spec": {
+      "host": "claim",
+      "producers": 2,
+      "consumers": [
+        {
+          "reads": [
+            {
+              "node": 1,
+              "mode": "lazy"
+            },
+            {
+              "node": 0,
+              "mode": "lazy",
+              "when": {
+                "producer": 0,
+                "parity": 1
+              }
+            },
+            {
+              "node": 1,
+              "mode": "lazy"
+            }
+          ],
+          "action": {
+            "kind": "write",
+            "producer": 0,
+            "delta": 1
+          },
+          "actionWhen": 1
+        },
+        {
+          "reads": [
+            {
+              "node": 1,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 2,
+              "mode": "untracked"
+            }
+          ]
+        }
+      ],
+      "watchers": [
+        {
+          "reads": [
+            {
+              "node": 0,
+              "mode": "eager"
+            },
+            {
+              "node": 3,
+              "mode": "lazy"
+            }
+          ]
+        }
+      ],
+      "hook": {
+        "action": {
+          "kind": "read",
+          "node": 2,
+          "mode": "untracked"
+        },
+        "every": 2
+      }
+    },
+    "ops": [
+      {
+        "kind": "run",
+        "watcher": 0
+      },
+      {
+        "kind": "write",
+        "producer": 1,
+        "value": 2
+      },
+      {
+        "kind": "flush"
+      },
+      {
+        "kind": "read",
+        "node": 4,
+        "mode": "lazy"
+      }
+    ]
+  }
+}

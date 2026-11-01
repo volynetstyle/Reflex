@@ -19,6 +19,12 @@ export class DifferentialError extends Error {
   }
 }
 
+/**
+ * Observation equality: the arbiter of every differential verdict. It is an
+ * equivalence relation (reflexive, symmetric, transitive) that distinguishes
+ * a change of any observed field, including the presence of `value` and
+ * `error` (runtime.observation-comparator.test.ts).
+ */
 export function observationsEqual(
   left: Observation,
   right: Observation,
@@ -31,11 +37,10 @@ export function observationsEqual(
 
   if ("error" in left !== "error" in right) return false;
 
+  // Both sides are read, so an error on either side alone is a difference.
   if (
-    left.error !== undefined &&
-    (right.error === undefined ||
-      left.error.name !== right.error.name ||
-      left.error.message !== right.error.message)
+    left.error?.name !== right.error?.name ||
+    left.error?.message !== right.error?.message
   ) {
     return false;
   }

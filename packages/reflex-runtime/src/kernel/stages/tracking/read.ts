@@ -4,8 +4,11 @@ import type ReactiveNode from "@runtime/kernel/shape/node";
 import { resolveTrackedRead } from "./resolve";
 
 /**
- * Track read for the current active consumer.
- * For test, but not prod
+ * Record a read of `source` by `consumer`, the active consumer by default;
+ * outside a computation the read is not tracked.
+ *
+ * An entry for tests and tools: the protocol read paths call
+ * resolveTrackedRead directly.
  */
 export function trackRead(
   source: ReactiveNode,

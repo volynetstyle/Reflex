@@ -420,7 +420,9 @@ describe("Reactive runtime - edge wiring", () => {
     expectGraphIntegrity([target, fresh, ...staleSources]);
   });
 
-  it("eagerly detaches large stale suffixes after a suffix miss", () => {
+  // Reconciliation never unlinks the unvisited suffix, however long, and
+  // whether or not the new producer has subscribers: only cleanup removes it.
+  it("keeps large stale suffixes attached after a suffix miss", () => {
     const target = createNode(Consumer);
     const staleSources = Array.from({ length: 32 }, () => createNode(Producer));
     const fresh = createNode(Producer);
@@ -441,14 +443,17 @@ describe("Reactive runtime - edge wiring", () => {
       1,
     );
 
-    expectIncomingEdges(target, [freshEdge]);
+    expectIncomingEdges(target, [
+      freshEdge,
+      ...staleSources.map((source) => source.firstOut),
+    ]);
     for (const source of staleSources) {
-      expectOutgoingEdges(source, []);
+      expectOutgoingEdges(source, [source.firstOut]);
     }
     expectGraphIntegrity([target, fresh, other, ...staleSources]);
   });
 
-  it("eagerly detaches only the stale suffix after a retained prefix", () => {
+  it("keeps the stale suffix behind a retained prefix and a new edge", () => {
     const target = createNode(Consumer);
     const retained = createNode(Producer);
     const staleSources = Array.from({ length: 32 }, () => createNode(Producer));
@@ -473,10 +478,14 @@ describe("Reactive runtime - edge wiring", () => {
       1,
     );
 
-    expectIncomingEdges(target, [retainedEdge, freshEdge]);
+    expectIncomingEdges(target, [
+      retainedEdge,
+      freshEdge,
+      ...staleSources.map((source) => source.firstOut),
+    ]);
     expectOutgoingEdges(retained, [retainedEdge]);
     for (const source of staleSources) {
-      expectOutgoingEdges(source, []);
+      expectOutgoingEdges(source, [source.firstOut]);
     }
     expectGraphIntegrity([target, retained, fresh, other, ...staleSources]);
   });

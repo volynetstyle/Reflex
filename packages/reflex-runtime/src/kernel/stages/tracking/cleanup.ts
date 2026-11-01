@@ -2,48 +2,59 @@ import { defaultContext } from "@runtime/kernel/config";
 import { devRecordCleanupStaleSources } from "@runtime/kernel/dev";
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import { unlinkDetachedIncomingEdgeSequence } from "@runtime/kernel/shape/graph/sweepEdges";
+import { preparedOwner, releaseLease } from "@runtime/kernel/shape/graph/tape";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 /**
- * Suffix cleanup over the consumer's incoming edges after recompute.
+ * Remove the unvisited suffix after a successful pass, and after a failed
+ * pass of a computed node (stabilization/advance.ts); a failed watcher keeps
+ * it as a retry set.
  *
- * Everything after tailIn belongs to the old dependency list and is unlinked.
+ * Every incoming edge after the cursor `tailIn` belongs to the previous
+ * dependency list and was not read by this pass, so it is cut from the
+ * incoming list and unlinked from its producer. This is the only place where
+ * a pass removes edges: reconciliation moves or links and never unlinks.
  */
-export function cleanupUnvisitedSources(node: ReactiveNode): void {
+export function cleanupUnvisitedSources(consumer: ReactiveNode): void {
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.cleanup.invoke");
 
-  const tail = node.tailIn;
-  const edge = tail === null ? node.firstIn : tail.nextIn;
+  const cursorEdge = consumer.tailIn;
+  const firstUnvisitedEdge =
+    cursorEdge === null ? consumer.firstIn : cursorEdge.nextIn;
 
-  if (edge === null) {
+  if (firstUnvisitedEdge === null) {
     if (__PROFILE__)
       observeRuntimeProjection?.("projection.semantic.cleanup.skip");
     return;
   }
 
-  if (tail === null) {
-    node.firstIn = null;
-    node.lastIn = null;
+  // The suffix's producers must not leave with their bits (INV-P). A pass
+  // has ended, so the lease is dead.
+  if (preparedOwner === consumer) releaseLease(consumer);
+
+  if (cursorEdge === null) {
+    consumer.firstIn = null;
+    consumer.lastIn = null;
   } else {
-    tail.nextIn = null;
-    node.lastIn = tail;
+    cursorEdge.nextIn = null;
+    consumer.lastIn = cursorEdge;
   }
 
-  devRecordCleanupStaleSources(node, edge, defaultContext);
+  devRecordCleanupStaleSources(consumer, firstUnvisitedEdge, defaultContext);
 
-  // Preserve the existing counter without making the shared graph sweep
-  // interpret why its caller removed this sequence. Absent in production.
+  // One cleanup.edge.drop per removed edge, counted here rather than in the
+  // shared sweep, which does not know why its caller removes a sequence.
+  // PROFILE only.
   if (__PROFILE__) {
     for (
-      let current: ReactiveEdge | null = edge;
-      current !== null;
-      current = current.nextIn
+      let unvisitedEdge: ReactiveEdge | null = firstUnvisitedEdge;
+      unvisitedEdge !== null;
+      unvisitedEdge = unvisitedEdge.nextIn
     ) {
-      if (__PROFILE__)
-        observeRuntimeProjection?.("projection.semantic.cleanup.edge.drop");
+      observeRuntimeProjection?.("projection.semantic.cleanup.edge.drop");
     }
   }
-  unlinkDetachedIncomingEdgeSequence(edge);
+  unlinkDetachedIncomingEdgeSequence(firstUnvisitedEdge);
 }

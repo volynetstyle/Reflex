@@ -1,0 +1,19 @@
+probe-any-consumer         killed at seed 1 (op 15 pass: idle tailIn of 15 is neither incoming nor a hint)
+probe-any-producer         killed at seed 1 (trace difference {"index":76,"baseline":"r0:1/12","candidate":"r0:0/8"})
+finger-any-slot-edge       killed at seed 2 (trace difference {"index":353,"baseline":"r1:6/14","candidate":"r1:6/4"})
+finger-incoming-overclaims killed at seed 1 (trace difference {"index":454,"baseline":"r1:12/6","candidate":"r1:13/2"})
+finger-base-hit-dropped    killed at seed 1 (trace difference {"index":371,"baseline":"op16:|s,s,s,13,14,15;|s,s,s,s,s,s,s,s,13,14,15,12;|s,s,s,s,12,13,14,15;|14,15,13;|13,12,14;|13,14,15;|13,15,14;|12,15,13,14;|14,15;|13,15,14;|13,14;|13,14,15;2#48@16,1#97@16,15#52@16,14#51@16,13#56@16,4#55@16,7#59@16|14,13;1#66@15,7#93@15,3#94@15,9#68@15,10#95@15,2#70@15,15#)
+finger-handoff-drops-base-walk killed at seed 177 (trace difference {"index":484,"baseline":"r1:14/17","candidate":"r1:15/2"})
+finger-slot-written-early  killed at seed 15 (op 20 pass read 13: Computing node 16 has a non-incoming tailIn)
+fill-into-computing        killed at seed 4 (trace difference {"index":347,"baseline":"r3:10/2","candidate":"r3:6/15"})
+fill-into-watcher          killed at seed 25 (op 29 pass: hint on watcher 12)
+keep-on-sequence-unlink    killed at seed 1 (op 25 sources: dangling hint on 0)
+keep-on-subscriber-sweep   killed at seed 2 (op 10 subscribers: dangling hint on 2)
+keep-on-unlink-edge        killed at seed 27 (op 10 unlink: dangling hint on 1)
+locate-overclaims-absence  killed at seed 1 (trace difference {"index":155,"baseline":"r2:9/13","candidate":"r2:10/5"})
+locate-newest-any-consumer killed at seed 1 (op 17 pass read 10: Computing node 15 has a non-incoming tailIn)
+
+real	0m20.079s
+user	0m0.015s
+sys	0m0.000s
+EXIT 0

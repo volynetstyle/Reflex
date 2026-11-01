@@ -361,7 +361,7 @@ function valueCase(r, mode) {
   for (const value of values) {
     next = value;
     subscriber.state = r.Watcher;
-    trace.push(e.capture("advance value", () => r.advance(node)));
+    trace.push(e.capture("advance value", () => r.advance(node, null)));
   }
   const failure = { thrown: "original object" };
   node.compute = () => {
@@ -370,7 +370,7 @@ function valueCase(r, mode) {
   trace.push(
     e.capture("original thrown value", () => {
       try {
-        r.advance(node);
+        r.advance(node, null);
       } catch (error) {
         assert.equal(error, failure);
         throw error;

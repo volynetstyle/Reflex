@@ -3,10 +3,12 @@
 // import to the archived baseline sources, so it shares no code with the
 // implementation under test.
 //
-//   node scripts/build-baseline-oracle.mjs                 baseline from test/oracle/baseline-commit.txt
+//   node scripts/build-baseline-oracle.mjs                 baseline from testkit/oracle/baseline-commit.txt
 //   node scripts/build-baseline-oracle.mjs --commit <sha>  any commit
 //   node scripts/build-baseline-oracle.mjs --source        current working tree (sanity)
 //   ... --mutate "<file>::<search>::<replace>"             seeded mutant (oracle qualification)
+//   ... --overlay "<file>=<path>"                          replace an archived source file by
+//                                                          the file at <path> (research variants)
 //   ... --production                                       production flags, minified like dist
 //   ... --readable                                         production without identifier mangling
 //   ... --profile                                          PROFILE build exposing
@@ -53,8 +55,19 @@ const mutations = args
     return { file, search, replace };
   });
 
+// Applied before the mutations, so a mutation may target an overlaid file.
+const overlays = args
+  .map((arg, index) => (arg === "--overlay" ? args[index + 1] : undefined))
+  .filter(Boolean)
+  .map((spec) => {
+    const at = spec.indexOf("=");
+    const file = spec.slice(0, at);
+    const contents = readFileSync(path.resolve(spec.slice(at + 1)), "utf8");
+    return { file, contents };
+  });
+
 const pinned = readFileSync(
-  path.join(packageRoot, "test/oracle/baseline-commit.txt"),
+  path.join(packageRoot, "testkit/oracle/baseline-commit.txt"),
   "utf8",
 ).trim();
 const commit = fromSource ? "working-tree" : (option("--commit") ?? pinned);
@@ -106,11 +119,11 @@ const label =
   (profile ? "-profile" : "") +
   (production ? "-production" : "") +
   (readable ? "-readable" : "") +
-  (mutations.length === 0
+  (mutations.length === 0 && overlays.length === 0
     ? ""
     : "-mutant-" +
       createHash("sha256")
-        .update(JSON.stringify(mutations))
+        .update(JSON.stringify([mutations, overlays]))
         .digest("hex")
         .slice(0, 8));
 const target = path.resolve(
@@ -148,6 +161,13 @@ try {
       ),
     );
     execFileSync("tar", ["-xf", "baseline.tar"], { cwd: work });
+  }
+
+  for (const { file, contents } of overlays) {
+    const target = path.join(archived, file);
+    if (!existsSync(target))
+      throw new Error(`Overlay target not found in the archive: ${file}`);
+    writeFileSync(target, contents);
   }
 
   for (const { file, search, replace } of mutations) {
@@ -200,17 +220,17 @@ try {
   };
 
   // The published production build inlines compile-time constants
-  // (rollup/inline-constants.ts). Benchmark bundles must run the code that
+  // (config/rollup/inline-constants.ts). Benchmark bundles must run the code that
   // ships, so production builds apply the same transform to every revision,
   // each with the constants of its own sources and the defines above.
   const plugins = [aliasPlugin];
   let inlinedConstants = 0;
   if (production) {
     const { collectConstants, inlineConstants } = await import(
-      pathToFileURL(path.join(packageRoot, "rollup/inline-constants.ts")).href
+      pathToFileURL(path.join(packageRoot, "config/rollup/inline-constants.ts")).href
     );
     const { readRuntimeSources } = await import(
-      pathToFileURL(path.join(packageRoot, "rollup/plugins/inline-constants.ts"))
+      pathToFileURL(path.join(packageRoot, "config/rollup/plugins/inline-constants.ts"))
         .href
     );
     const table = collectConstants(readRuntimeSources(sources), flags);
@@ -258,11 +278,11 @@ try {
     throw new Error("inline-constants: no constant reference was inlined");
 
   if (production) {
-    // The published build minifies with Terser (rollup/terser-options.ts),
+    // The published build minifies with Terser (config/rollup/terser-options.ts),
     // whose pure_funcs list removes DEV assertion calls that esbuild keeps.
     // Benchmark bundles must run the code that ships.
     const { createRuntimeTerserOptions } = await import(
-      pathToFileURL(path.join(packageRoot, "rollup/terser-options.ts")).href
+      pathToFileURL(path.join(packageRoot, "config/rollup/terser-options.ts")).href
     );
     const { minify } = createRequire(require.resolve("@rollup/plugin-terser"))(
       "terser",
@@ -284,11 +304,15 @@ try {
       {
         commit: resolvedCommit,
         mutations,
+        overlays: overlays.map(({ file, contents }) => ({
+          file,
+          sha256: createHash("sha256").update(contents).digest("hex"),
+        })),
         profile,
         production,
         flags,
         esbuild: esbuild.version,
-        minifier: production ? "terser (rollup/terser-options.ts)" : "none",
+        minifier: production ? "terser (config/rollup/terser-options.ts)" : "none",
         inlinedConstants,
         bundleSha256: createHash("sha256").update(bundle).digest("hex"),
       },

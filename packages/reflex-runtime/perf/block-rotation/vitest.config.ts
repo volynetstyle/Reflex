@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
-import base from "../../vite.config";
+import { vitestProfile } from "../../config/index.ts";
+const base = vitestProfile("source");
 const rotation = fs.readFileSync(
   new URL("./rotation-body.ts.txt", import.meta.url),
   "utf8",
@@ -31,7 +32,8 @@ export default {
             throw new Error("Policy assertion not found exactly once");
           return normalizedCode.replace(oldOrder, newOrder);
         }
-        if (!normalized.endsWith("/src/kernel/shape/graph/edgeList.ts")) return;
+        if (!normalized.endsWith("/src/kernel/shape/graph/cursorMoves.ts"))
+          return;
         const pattern =
           /(export function moveTrackedIncomingEdgeAfterCursorUnchecked\([\s\S]*?\): true \{)[\s\S]*?\n\}/;
         if (!pattern.test(code)) throw new Error("Rotation helper not found");

@@ -1,0 +1,1204 @@
+{
+  "schema": "testkit.counterexample",
+  "schemaVersion": 1,
+  "id": "mutant-pull-keep-unknown-on-stable-pop",
+  "expect": "agree",
+  "level": "strict",
+  "policy": "exact",
+  "origin": {
+    "command": "mutate",
+    "mutantId": "pull-keep-unknown-on-stable-pop",
+    "family": "default",
+    "seed": 641,
+    "reference": {
+      "spec": "source",
+      "flavor": "oracle",
+      "commit": "working-tree",
+      "head": "7d3ffca6ea8b617b33613b3d06debe291115b150",
+      "dirty": true,
+      "bundleSha256": "c1f1c12366cc8a02a0609b8b14ae10cfba41c1f4e4abfbd2b8487f39ef6da6f2"
+    },
+    "mutant": {
+      "spec": "source+mutant:pull-keep-unknown-on-stable-pop",
+      "flavor": "oracle",
+      "commit": "working-tree",
+      "head": "7d3ffca6ea8b617b33613b3d06debe291115b150",
+      "dirty": true,
+      "bundleSha256": "2cd3777f97a6009d6e4a384ca0fe3ac1d2dd2259bbe35ca590fcf7749f330e45"
+    },
+    "foundAt": "2026-10-27T21:14:24.804Z"
+  },
+  "size": {
+    "original": 1763,
+    "minimized": 161
+  },
+  "mismatch": {
+    "index": 290,
+    "baseline": "snap:0{s0 v2 in[] out[1]} 1{s0 v2 in[0] out[2]} 2{s0 v2 in[1] out[3]} 3{s0 v2 in[2] out[4]} 4{s0 v2 in[3] out[5]} 5{s0 v2 in[4] out[6]} 6{s0 v2 in[5] out[7]} 7{s0 v2 in[6] out[8]} 8{s0 v2 in[7] out[9]} 9{s0 v2 in[8] out[10]} 10{s0 v2 in[9] out[11]} 11{s0 v2 in[10] out[12]} 12{s0 v2 in[11] out[13]} 13{s0 v2 in[12] out[14]} 14{s0 v2 in[13] out[15]} 15{s0 v2 in[14] out[16]} 16{s0 v2 in[15] out[17]} 17{s0 v2 in[16] out[18]} 18{s0 v2 in[17] out[19]} 19{s0 v2 in[18] out[20]} 20{s0 v2 in[19] out[21]} 21{s0 v2 in[20] out[22]} 22{s0 v2 in[21] out[23]} 23{s0 v2 in[22] out[24]} 24{s0 v2 in[23] out[25]} 25{s0 v2 in[24] out[26]} 26{s0 v2 in[25] out[27]} 27{s0 v2 in[26] out[28]} 28{s0 v2 in[27] out[29]} 29{s0 v2 in[28] out[30]} 30{s0 v2 in[29] out[31]} 31{s0 v2 in[30] out[32]} 32{s0 v2 in[31] out[33]} 33{s0 v2 in[32] out[34]} 34{s0 v2 in[33] out[35]} 35{s0 v2 in[34] out[36]} 36{s0 v2 in[35] out[37]} 37{s0 v2 in[36] out[38]} 38{s0 v2 in[37] out[39]} 39{s0 v2 in[38] out[40]} 40{s0 v2 in[39] out[41]} 41{s0 v2 in[40] out[42]} 42{s0 v2 in[41] out[43]} 43{s0 v2 in[42] out[44]} 44{s0 v2 in[43] out[45]} 45{s0 v2 in[44] out[46]} 46{s0 v2 in[45] out[47]} 47{s0 v2 in[46] out[48]} 48{s0 v2 in[47] out[49]} 49{s0 v2 in[48] out[50]} 50{s0 v2 in[49] out[51]} 51{s0 v2 in[50] out[52]} 52{s0 v2 in[51] out[53]} 53{s0 v2 in[52] out[54]} 54{s0 v2 in[53] out[55]} 55{s0 v2 in[54] out[56]} 56{s0 v2 in[55] out[57]} 57{s0 v2 in[56] out[58]} 58{s0 v2 in[57] out[59]} 59{s0 v2 in[58] out[60]} 60{s0 v2 in[59] out[61]} 61{s0 v2 in[60] out[62]} 62{s0 v2 in[61] out[63]} 63{s0 v2 in[62] out[64]} 64{s0 v2 in[63] out[65]} 65{s0 v2 in[64] out[66]} 66{s0 v2 in[65] out[67]} 67{s0 v2 in[66] out[68]} 68{s0 v2 in[67] out[69]} 69{s0 v2 in[68] out[70]} 70{s0 v2 in[69] out[71]} 71{s0 v2 in[70] out[72]} 72{s0 v2 in[71] out[73]} 73{s0 v2 in[72] out[74]} 74{s0 v2 in[73] out[75]} 75{s0 v2 in[74] out[76]} 76{s0 v2 in[75] out[77]} 77{s0 v2 in[76] out[78]} 78{s0 v2 in[77] out[79]} 79{s0 v2 in[78] out[80]} 80{s0 v2 in[79] out[81]} 81{s0 v2 in[80] out[82]} 82{s0 v2 in[81] out[83]} 83{s0 v2 in[82] out[84]} 84{s0 v2 in[83] out[85]} 85{s0 v2 in[84] out[86]} 86{s0 v2 in[85] out[87]} 87{s0 v2 in[86] out[88]} 88{s0 v2 in[87] out[89]} 89{s0 v2 in[88] out[90]} 90{s0 v2 in[89] out[91]} 91{s0 v2 in[90] out[92]} 92{s0 v2 in[91] out[93]} 93{s0 v2 in[92] out[94]} 94{s0 v2 in[93] out[95]} 95{s0 v2 in[94] out[96]} 96{s0 v2 in[95] out[97]} 97{s0 v2 in[96] out[98]} 98{s0 v2 in[97] out[99]} 99{s0 v2 in[98] out[100]} 100{s0 v2 in[99] out[101]} 101{s0 v2 in[100] out[102]} 102{s0 v2 in[101] out[103]} 103{s0 v2 in[102] out[104]} 104{s0 v2 in[103] out[105]} 105{s0 v2 in[104] out[106]} 106{s0 v2 in[105] out[107]} 107{s0 v2 in[106] out[108]} 108{s0 v2 in[107] out[109]} 109{s0 v2 in[108] out[110]} 110{s0 v2 in[109] out[111]} 111{s0 v2 in[110] out[112]} 112{s0 v2 in[111] out[113]} 113{s0 v2 in[112] out[114]} 114{s0 v2 in[113] out[115]} 115{s0 v2 in[114] out[116]} 116{s0 v2 in[115] out[117]} 117{s0 v2 in[116] out[118]} 118{s0 v2 in[117] out[119]} 119{s0 v2 in[118] out[120]} 120{s0 v2 in[119] out[121]} 121{s0 v2 in[120] out[122]} 122{s0 v2 in[121] out[123]} 123{s0 v2 in[122] out[124]} 124{s0 v2 in[123] out[125]} 125{s0 v2 in[124] out[126]} 126{s0 v2 in[125] out[127]} 127{s0 v2 in[126] out[128]} 128{s0 v2 in[127] out[129]} 129{s0 v2 in[128] out[130]} 130{s0 v2 in[129] out[131]} 131{s0 v2 in[130] out[132]} 132{s0 v2 in[131] out[133]} 133{s0 v2 in[132] out[134]} 134{s0 v2 in[133] out[135]} 135{s0 v2 in[134] out[136]} 136{s0 v2 in[135] out[137]} 137{s0 v2 in[136] out[138]} 138{s0 v2 in[137] out[139]} 139{s0 v2 in[138] out[140]} 140{s0 v2 in[139] out[141]} 141{s0 v2 in[140] out[]}",
+    "candidate": "snap:0{s0 v2 in[] out[1]} 1{s0 v2 in[0] out[2]} 2{s1 v2 in[1] out[3]} 3{s1 v2 in[2] out[4]} 4{s1 v2 in[3] out[5]} 5{s1 v2 in[4] out[6]} 6{s1 v2 in[5] out[7]} 7{s1 v2 in[6] out[8]} 8{s1 v2 in[7] out[9]} 9{s1 v2 in[8] out[10]} 10{s1 v2 in[9] out[11]} 11{s1 v2 in[10] out[12]} 12{s1 v2 in[11] out[13]} 13{s1 v2 in[12] out[14]} 14{s1 v2 in[13] out[15]} 15{s1 v2 in[14] out[16]} 16{s1 v2 in[15] out[17]} 17{s1 v2 in[16] out[18]} 18{s1 v2 in[17] out[19]} 19{s1 v2 in[18] out[20]} 20{s1 v2 in[19] out[21]} 21{s1 v2 in[20] out[22]} 22{s1 v2 in[21] out[23]} 23{s1 v2 in[22] out[24]} 24{s1 v2 in[23] out[25]} 25{s1 v2 in[24] out[26]} 26{s1 v2 in[25] out[27]} 27{s1 v2 in[26] out[28]} 28{s1 v2 in[27] out[29]} 29{s1 v2 in[28] out[30]} 30{s1 v2 in[29] out[31]} 31{s1 v2 in[30] out[32]} 32{s1 v2 in[31] out[33]} 33{s1 v2 in[32] out[34]} 34{s1 v2 in[33] out[35]} 35{s1 v2 in[34] out[36]} 36{s1 v2 in[35] out[37]} 37{s1 v2 in[36] out[38]} 38{s1 v2 in[37] out[39]} 39{s1 v2 in[38] out[40]} 40{s1 v2 in[39] out[41]} 41{s1 v2 in[40] out[42]} 42{s1 v2 in[41] out[43]} 43{s1 v2 in[42] out[44]} 44{s1 v2 in[43] out[45]} 45{s1 v2 in[44] out[46]} 46{s1 v2 in[45] out[47]} 47{s1 v2 in[46] out[48]} 48{s1 v2 in[47] out[49]} 49{s1 v2 in[48] out[50]} 50{s1 v2 in[49] out[51]} 51{s1 v2 in[50] out[52]} 52{s1 v2 in[51] out[53]} 53{s1 v2 in[52] out[54]} 54{s1 v2 in[53] out[55]} 55{s1 v2 in[54] out[56]} 56{s1 v2 in[55] out[57]} 57{s1 v2 in[56] out[58]} 58{s1 v2 in[57] out[59]} 59{s1 v2 in[58] out[60]} 60{s1 v2 in[59] out[61]} 61{s1 v2 in[60] out[62]} 62{s1 v2 in[61] out[63]} 63{s1 v2 in[62] out[64]} 64{s1 v2 in[63] out[65]} 65{s0 v2 in[64] out[66]} 66{s0 v2 in[65] out[67]} 67{s0 v2 in[66] out[68]} 68{s0 v2 in[67] out[69]} 69{s0 v2 in[68] out[70]} 70{s0 v2 in[69] out[71]} 71{s0 v2 in[70] out[72]} 72{s0 v2 in[71] out[73]} 73{s0 v2 in[72] out[74]} 74{s0 v2 in[73] out[75]} 75{s0 v2 in[74] out[76]} 76{s0 v2 in[75] out[77]} 77{s0 v2 in[76] out[78]} 78{s0 v2 in[77] out[79]} 79{s0 v2 in[78] out[80]} 80{s0 v2 in[79] out[81]} 81{s0 v2 in[80] out[82]} 82{s0 v2 in[81] out[83]} 83{s0 v2 in[82] out[84]} 84{s0 v2 in[83] out[85]} 85{s0 v2 in[84] out[86]} 86{s0 v2 in[85] out[87]} 87{s0 v2 in[86] out[88]} 88{s0 v2 in[87] out[89]} 89{s0 v2 in[88] out[90]} 90{s0 v2 in[89] out[91]} 91{s0 v2 in[90] out[92]} 92{s0 v2 in[91] out[93]} 93{s0 v2 in[92] out[94]} 94{s0 v2 in[93] out[95]} 95{s0 v2 in[94] out[96]} 96{s0 v2 in[95] out[97]} 97{s0 v2 in[96] out[98]} 98{s0 v2 in[97] out[99]} 99{s0 v2 in[98] out[100]} 100{s0 v2 in[99] out[101]} 101{s0 v2 in[100] out[102]} 102{s0 v2 in[101] out[103]} 103{s0 v2 in[102] out[104]} 104{s0 v2 in[103] out[105]} 105{s0 v2 in[104] out[106]} 106{s0 v2 in[105] out[107]} 107{s0 v2 in[106] out[108]} 108{s0 v2 in[107] out[109]} 109{s0 v2 in[108] out[110]} 110{s0 v2 in[109] out[111]} 111{s0 v2 in[110] out[112]} 112{s0 v2 in[111] out[113]} 113{s0 v2 in[112] out[114]} 114{s0 v2 in[113] out[115]} 115{s0 v2 in[114] out[116]} 116{s0 v2 in[115] out[117]} 117{s0 v2 in[116] out[118]} 118{s0 v2 in[117] out[119]} 119{s0 v2 in[118] out[120]} 120{s0 v2 in[119] out[121]} 121{s0 v2 in[120] out[122]} 122{s0 v2 in[121] out[123]} 123{s0 v2 in[122] out[124]} 124{s0 v2 in[123] out[125]} 125{s0 v2 in[124] out[126]} 126{s0 v2 in[125] out[127]} 127{s0 v2 in[126] out[128]} 128{s0 v2 in[127] out[129]} 129{s0 v2 in[128] out[130]} 130{s0 v2 in[129] out[131]} 131{s0 v2 in[130] out[132]} 132{s0 v2 in[131] out[133]} 133{s0 v2 in[132] out[134]} 134{s0 v2 in[133] out[135]} 135{s0 v2 in[134] out[136]} 136{s0 v2 in[135] out[137]} 137{s0 v2 in[136] out[138]} 138{s0 v2 in[137] out[139]} 139{s0 v2 in[138] out[140]} 140{s0 v2 in[139] out[141]} 141{s0 v2 in[140] out[]}"
+  },
+  "program": {
+    "spec": {
+      "host": "plain",
+      "producers": 1,
+      "consumers": [
+        {
+          "reads": [
+            {
+              "node": 0,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 1,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 2,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 3,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 4,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 5,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 6,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 7,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 8,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 9,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 10,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 11,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 12,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 13,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 14,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 15,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 16,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 17,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 18,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 19,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 20,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 21,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 22,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 23,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 24,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 25,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 26,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 27,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 28,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 29,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 30,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 31,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 32,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 33,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 34,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 35,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 36,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 37,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 38,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 39,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 40,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 41,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 42,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 43,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 44,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 45,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 46,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 47,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 48,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 49,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 50,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 51,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 52,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 53,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 54,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 55,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 56,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 57,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 58,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 59,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 60,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 61,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 62,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 63,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 64,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 65,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 66,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 67,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 68,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 69,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 70,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 71,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 72,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 73,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 74,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 75,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 76,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 77,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 78,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 79,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 80,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 81,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 82,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 83,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 84,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 85,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 86,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 87,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 88,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 89,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 90,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 91,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 92,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 93,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 94,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 95,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 96,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 97,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 98,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 99,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 100,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 101,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 102,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 103,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 104,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 105,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 106,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 107,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 108,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 109,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 110,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 111,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 112,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 113,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 114,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 115,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 116,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 117,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 118,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 119,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 120,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 121,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 122,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 123,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 124,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 125,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 126,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 127,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 128,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 129,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 130,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 131,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 132,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 133,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 134,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 135,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 136,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 137,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 138,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 139,
+              "mode": "lazy"
+            }
+          ]
+        },
+        {
+          "reads": [
+            {
+              "node": 140,
+              "mode": "lazy"
+            }
+          ]
+        }
+      ],
+      "watchers": []
+    },
+    "ops": [
+      {
+        "kind": "write",
+        "producer": 0,
+        "value": 2
+      },
+      {
+        "kind": "read",
+        "node": 65,
+        "mode": "lazy"
+      },
+      {
+        "kind": "write",
+        "producer": 0,
+        "value": 1
+      },
+      {
+        "kind": "write",
+        "producer": 0,
+        "value": 2
+      },
+      {
+        "kind": "read",
+        "node": 141,
+        "mode": "eager"
+      }
+    ]
+  }
+}

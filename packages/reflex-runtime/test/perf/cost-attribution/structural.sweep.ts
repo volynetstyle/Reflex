@@ -13,7 +13,7 @@ import { allSweepConfigs, WARMUP_ITERATIONS, type SweepConfig } from "./configs"
 
 /**
  * Structural run: captures full RuntimeProfileCounters + topology per config.
- * Must run under vite.dev.config.ts (__PROFILE__: true) so profileRuntime is
+ * Must run under profile cost-attribution-structural (__PROFILE__: true) so profileRuntime is
  * live. Wall-clock timing from *this* run is not trustworthy (see
  * timing.sweep.ts) — this file writes counters/topology only.
  */

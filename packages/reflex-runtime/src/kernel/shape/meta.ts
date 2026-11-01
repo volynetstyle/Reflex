@@ -84,6 +84,16 @@ export const WatcherCleanupPending = 1 << 7; // 128
  */
 export const Revalidate = 1 << 8; // 256
 
+/**
+ * Prepared-tape membership (graph/tape.ts): the node may have an edge to
+ * the consumer that holds the tape lease. Set for every producer when the
+ * tape is prepared and for the producer of every edge linked to the owner
+ * while the lease is recorded; cleared when the lease is released. It only
+ * ever says "maybe": a stale bit costs one exact lookup, never an answer.
+ * Every computation derives `state` from itself, so the bit survives them.
+ */
+export const Leased = 1 << 9; // 512
+
 // <!-- Watcher end -->
 
 // ...

@@ -4,79 +4,58 @@ import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
 import { findEdgeInLockstep } from "./findEdge";
 import { linkEdge } from "./linkEdge";
-import { unlinkDetachedIncomingEdgeSequence } from "./sweepEdges";
 
-const EAGER_STALE_SUFFIX_CLEANUP_MIN = 32;
+// The default read-tracking strategy (kernel/config.ts) and its
+// reconciliation step. The resolver never calls them: while the default is
+// configured, it reconciles its own lookup result with the tracking moves
+// (stages/tracking/resolve.ts, shape/graph/cursorMoves.ts). Benchmarks and
+// tools call them directly, with insertion and suffix positions of their own.
 
-function moveIncomingEdgeToPosition(
+/**
+ * Move a suffix edge after `insertAfterEdge`, or to the head when it is null;
+ * a no-op when the edge is already there. The same move as
+ * moveIncomingEdgeAfterUnchecked, kept here so the strategy's callers inline
+ * it (A.graph.reuse-first-out).
+ */
+function moveSuffixEdgeAfterCursor(
   consumer: ReactiveNode,
   edge: ReactiveEdge,
   insertAfterEdge: ReactiveEdge | null,
 ): void {
-  const prev = edge.prevIn;
-  if (prev === insertAfterEdge) return;
+  const previousIncomingEdge = edge.prevIn;
+  if (previousIncomingEdge === insertAfterEdge) return;
 
   if (__PROFILE__)
     observeRuntimeProjection?.("projection.semantic.tracking.edge.move");
-  const next = edge.nextIn;
+  const nextIncomingEdge = edge.nextIn;
 
   if (insertAfterEdge === null) {
-    // prev is non-null: an existing head already returned above.
-    prev!.nextIn = next;
-    if (next !== null) next.prevIn = prev;
-    else consumer.lastIn = prev;
-    const first = consumer.firstIn!;
+    // The previous edge is non-null: an existing head already returned above.
+    previousIncomingEdge!.nextIn = nextIncomingEdge;
+    if (nextIncomingEdge !== null)
+      nextIncomingEdge.prevIn = previousIncomingEdge;
+    else consumer.lastIn = previousIncomingEdge;
+    const firstIncomingEdge = consumer.firstIn!;
     edge.prevIn = null;
-    edge.nextIn = first;
-    first.prevIn = edge;
+    edge.nextIn = firstIncomingEdge;
+    firstIncomingEdge.prevIn = edge;
     consumer.firstIn = edge;
     return;
   }
-  // Preserve the generic primitive's head self-move no-op.
-  if (prev === null && edge === insertAfterEdge) return;
-  if (prev !== null) prev.nextIn = next;
-  else consumer.firstIn = next;
-  if (next !== null) next.prevIn = prev;
-  else consumer.lastIn = prev;
+  // An edge moved after itself stays, as in moveIncomingEdgeAfterUnchecked.
+  if (previousIncomingEdge === null && edge === insertAfterEdge) return;
+  if (previousIncomingEdge !== null)
+    previousIncomingEdge.nextIn = nextIncomingEdge;
+  else consumer.firstIn = nextIncomingEdge;
+  if (nextIncomingEdge !== null) nextIncomingEdge.prevIn = previousIncomingEdge;
+  else consumer.lastIn = previousIncomingEdge;
 
-  const insertNext = insertAfterEdge.nextIn;
+  const nextEdgeAtInsertion = insertAfterEdge.nextIn;
   edge.prevIn = insertAfterEdge;
-  edge.nextIn = insertNext;
-  if (insertNext !== null) insertNext.prevIn = edge;
+  edge.nextIn = nextEdgeAtInsertion;
+  if (nextEdgeAtInsertion !== null) nextEdgeAtInsertion.prevIn = edge;
   else consumer.lastIn = edge;
   insertAfterEdge.nextIn = edge;
-}
-
-/** Whether `edge` and its successors hold at least `count` incoming edges. */
-function hasIncomingRun(edge: ReactiveEdge, count: number): boolean {
-  let current: ReactiveEdge | null = edge;
-
-  for (let seen = 0; seen < count; ++seen) {
-    if (current === null) return false;
-    current = current.nextIn;
-  }
-
-  return true;
-}
-
-function detachIncomingSuffix(
-  consumer: ReactiveNode,
-  insertAfterEdge: ReactiveEdge | null,
-  suffixStartEdge: ReactiveEdge,
-): void {
-  if (__PROFILE__)
-    observeRuntimeProjection?.("projection.semantic.tracking.suffix.detach");
-
-  if (insertAfterEdge === null) {
-    consumer.firstIn = null;
-    consumer.lastIn = null;
-  } else {
-    insertAfterEdge.nextIn = null;
-    consumer.lastIn = insertAfterEdge;
-  }
-
-  suffixStartEdge.prevIn = null;
-  unlinkDetachedIncomingEdgeSequence(suffixStartEdge);
 }
 
 /**
@@ -87,14 +66,13 @@ function detachIncomingSuffix(
  * and is moved after `insertAfterEdge`; `null` means the pair has no edge and
  * a new one is linked there.
  *
- * Eager suffix detachment is a retained policy, not a search bound. When a new
- * dependency is linked in front of a suffix of at least 32 edges, the suffix
- * is unlinked at once and later reads of its producers link new edges at the
- * end of their outgoing lists. Which edge survives decides subscriber order,
- * so the rule reproduces the earlier scan-based reconciliation exactly: that
- * scan detached after missing on 32 suffix edges, except when its outgoing
- * probe had already proved absence from an empty outgoing list with a nonzero
- * stamp.
+ * The unvisited suffix is never unlinked here. Its edges keep their identity
+ * until cleanupUnvisitedSources removes whatever the pass did not read, so a
+ * later read of a suffix producer moves its existing edge instead of linking
+ * a new one. While the pass runs, suffix edges carry no causal authority:
+ * propagation marks a computing consumer only through its tracked prefix.
+ * `suffixStartEdge` no longer takes part; it stays in the signature of this
+ * internal export.
  */
 export function reuseLocatedIncomingEdgeOrLink(
   producer: ReactiveNode,
@@ -105,20 +83,12 @@ export function reuseLocatedIncomingEdgeOrLink(
   edge: ReactiveEdge | null,
 ): ReactiveEdge {
   if (edge !== null) {
-    moveIncomingEdgeToPosition(consumer, edge, insertAfterEdge);
+    moveSuffixEdgeAfterCursor(consumer, edge, insertAfterEdge);
     edge.stamp = passStamp;
 
     if (__PROFILE__)
       observeRuntimeProjection?.("projection.semantic.tracking.suffix.reuse");
     return edge;
-  }
-
-  if (
-    suffixStartEdge !== null &&
-    (passStamp === 0 || producer.firstOut !== null) &&
-    hasIncomingRun(suffixStartEdge, EAGER_STALE_SUFFIX_CLEANUP_MIN) === true
-  ) {
-    detachIncomingSuffix(consumer, insertAfterEdge, suffixStartEdge);
   }
 
   if (__PROFILE__)
@@ -134,10 +104,10 @@ export function reuseLocatedIncomingEdgeOrLink(
  * edge of the pair lies in the suffix that starts at `suffixStartEdge` (the
  * whole incoming list when it is `null`).
  *
- * The suffix head is compared directly, then the producer's newest edge.
- * Otherwise the edge is located by a
- * lockstep walk of the producer's outgoing list and the rest of the suffix,
- * and reused or linked by `reuseLocatedIncomingEdgeOrLink`.
+ * The suffix head is compared directly, then the producer's newest edge;
+ * otherwise findEdgeInLockstep locates the edge over the producer's outgoing
+ * list and the rest of the suffix. The result is reused or linked by
+ * reuseLocatedIncomingEdgeOrLink.
  */
 export function reuseIncomingEdgeFromSuffixOrLink(
   producer: ReactiveNode,
@@ -178,5 +148,6 @@ export function reuseIncomingEdgeFromSuffixOrLink(
   );
 }
 
+/** Earlier name of reuseIncomingEdgeFromSuffixOrLink, kept as an export. */
 export const reuseIncomingEdgeFromSuffixOrCreate =
   reuseIncomingEdgeFromSuffixOrLink;

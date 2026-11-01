@@ -1,0 +1,6 @@
+200000 scenarios (30 operations each) identical to 14e8fdb, INV-H held; 196148 scenarios ended with a live hint; 242.7s
+
+real	4m5.977s
+user	0m0.015s
+sys	0m0.000s
+EXIT 0
