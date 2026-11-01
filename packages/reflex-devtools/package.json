@@ -17,7 +17,7 @@
     "@volynets/reflex-dom": "workspace:*",
     "@volynets/reflex-vite-plugin": "workspace:*",
     "@tailwindcss/vite": "^4.2.4",
-    "cytoscape": "^3.33.2",
+    "cytoscape": "^3.34.4",
     "tailwindcss": "^4.2.4"
   },
   "private": true
