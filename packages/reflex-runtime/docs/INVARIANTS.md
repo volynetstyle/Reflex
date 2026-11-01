@@ -1,288 +1,278 @@
 # Runtime invariants
 
-The internal state model of the intrusive graph and its execution: what the
-kernel maintains at operation boundaries, independent of the public API. The
-public contract is [RUNTIME.md](./RUNTIME.md); observable lifecycle rules are
-formalized in
-[SEMANTIC_CONTRACT.md](../test/differential/docs/SEMANTIC_CONTRACT.md);
-[RULES.md](./RULES.md) links the load-bearing rules to code and checks.
-Source and executable characterization take precedence over this text.
+The state the kernel maintains at operation boundaries. The public contract is
+[RUNTIME.md](./RUNTIME.md); [RULES.md](./RULES.md) ties the load-bearing rules
+to code and tests. When this text and the code disagree, the disagreement is a
+finding ([MODEL.md](./MODEL.md) §9), not a license to pick either side.
 
-## 1. Bidirectional edges
+## 1. Graph
 
-At graph-operation boundaries, each dependency edge occurs in its producer's
-outgoing list and its consumer's incoming list. Neighbor links are reciprocal,
-endpoints have null boundary links, and tracking represents each
-producer/consumer pair once.
+A `ReactiveEdge` is one object linked into its producer's outgoing list
+(`firstOut … lastOut`) and its consumer's incoming list (`firstIn … lastIn`).
+At operation boundaries:
 
-Moves change incoming order without changing outgoing membership. Pointer
-updates inside an operation are not atomic. In particular, the debug event in
-`cleanupUnvisitedSources` occurs after the incoming suffix is cut but before
-its outgoing memberships are removed. It observes an intermediate state.
+- **Reciprocity.** `e ∈ in(e.to) ⇔ e ∈ out(e.from)`; neighbor links are
+  mutual, ends have null links.
+- **One edge per pair.** At most one edge per `(producer, consumer)`. A link
+  happens only after its absence was proven.
+- **`out(P)` is append-only.** Tracking moves edges only inside `in(C)`, so
+  `out(P)` lists subscribers in the order they first linked.
 
-Graph operations live in `src/kernel/shape/graph/`. Tracking chooses when
-reconciliation and pruning occur.
+Inside an operation the lists may be one-sided. The cleanup debug event fires
+between the incoming cut and the outgoing unlink. Graph mutations live in
+`src/kernel/shape/graph/`; use them rather than editing links directly.
 
-## 2. State flags
+## 2. State bits
 
-Defined in `src/kernel/shape/meta.ts`; production builds inline them as
-literals (`config/rollup/inline-constants.ts`).
+Defined in `src/kernel/shape/meta.ts`, inlined as literals in production.
 
-| Flag         | Meaning                                                                                                             |
-| ------------ | ------------------------------------------------------------------------------------------------------------------- |
-| `Unknown`    | Upstream may have changed; validate before recomputing.                                                             |
-| `Changed`    | Recompute or execute without first proving an upstream change.                                                      |
-| `Visited`    | Direct invalidation during execution; on a watcher, execution evidence that may survive completion.                 |
-| `Revalidate` | Watcher only: transitive invalidation during its validation or execution; survives as a validation obligation only. |
-| `Computing`  | Callback active; propagation interprets the active incoming prefix accordingly.                                     |
-| `Watcher`    | Watcher role.                                                                                                       |
-| `Scheduled`  | Host queue ownership, claimed and released separately from execution.                                               |
-| `Leased`     | May have an edge to the prepared tape's owner (INV-P); a stale bit costs a lookup, never an answer.                 |
+| Bit          | Meaning                                                                                                     |
+| ------------ | ----------------------------------------------------------------------------------------------------------- |
+| `Unknown`    | upstream may have changed: validate before recomputing                                                      |
+| `Changed`    | recompute or execute without proving an upstream change                                                     |
+| `Visited`    | direct invalidation during execution; on a watcher, execution evidence that may outlive the run             |
+| `Revalidate` | watcher only: transitive invalidation during its validation or execution; a validation obligation only      |
+| `Computing`  | a callback (or watcher validation) is active; changes how push reads the incoming prefix                    |
+| `Watcher`    | watcher role                                                                                                |
+| `Scheduled`  | host queue ownership, claimed and released apart from execution                                             |
+| `Leased`     | may have an edge to the prepared tape's owner (§5.5); a stale bit costs a lookup, never an answer            |
 
-`Both = Unknown | Changed` is the dirty mask. Normal inactive computed nodes are
-clean, `Unknown`, or `Changed`. `Changed` forces computation; `Unknown`
-normally requires lazy validation. An unchanged derived value can suppress
-downstream recomputation.
-
-The dirty bits are not globally exclusive. A watcher starts with
-`Changed | Unknown | Watcher | Consumer`. Computing invalidation can also
-combine both dirty bits. Producer/consumer DEV role constants share a bit and
-are zero in production; do not infer a role from them. There is no terminal
-disposal bit.
+`Both = Unknown | Changed` is the dirty mask. At rest a computed is clean,
+`Unknown` or `Changed`; a producer carries no evidence bits. Dirty bits are
+not exclusive in general: a new watcher starts `Changed | Unknown`, and
+computing invalidation can set both. Producer/consumer role constants exist
+only in DEV and are 0 in production. There is no disposal bit.
 
 `Visited` and `Revalidate` are the two kinds of reentrant evidence.
-Stabilization uses `Changed | Visited` as its force mask; this is not a general
-DFS visited set. `Revalidate` is never part of the force mask: the next pass
-validates, and equality cutoff decides whether to execute. A validation pass
-discharges an entry `Revalidate`; only invalidation recorded during that pass
-requests another.
+Stabilization forces on `Changed | Visited`; `Revalidate` is never forced:
+the next pass validates and equality decides. A validation pass discharges an
+entry `Revalidate`; only invalidation recorded during that pass requests
+another.
 
-`Computing` marks callback evaluation and changes the interpretation of the
-incoming prefix. The computing-subscriber path ignores an empty prefix and
-edges beyond `tailIn`; accepted invalidation adds `Visited | Unknown`, or
-`Revalidate | Unknown` for a watcher reached transitively. Preserve push branch
-order: direct promotion of an unknown non-watcher is checked before the
-computing-subscriber branch.
+`Scheduled` is independent of freshness. A watcher that keeps `Unknown` after
+a run or a stable validation is delivered by `runWatcherCore` itself
+(`deliverRetainedValidation`, `retainAfterExecution`) unless `Scheduled` is
+held, because later pushes merge into a retained `Unknown` without notifying
+(L1). The host releases `Scheduled` before running a watcher, so during the
+run `Computing` is the ownership certificate: one-step push after a recompute
+records `Changed` into a watcher holding `Scheduled` or `Computing` but does
+not deliver it (F17). A reentrant write still takes the computing-subscriber
+path and is delivered.
 
-`Scheduled` represents host queue ownership. It is independent of freshness;
-successful execution does not automatically release a claim. `Unknown` is not
-`Scheduled`: a watcher that keeps `Unknown` after a run or a stable validation
-is delivered by `runWatcherCore` itself (`deliverRetainedValidation`,
-`retainAfterExecution`) unless `Scheduled` is held, because later pushes merge
-into a retained `Unknown` without notifying (contract L1).
+## 3. Push
 
-A host releases `Scheduled` before it runs the watcher, so during the run
-`Computing` is the ownership certificate. One-level push after a recompute
-records `Changed` into a watcher that holds `Scheduled` or `Computing` but
-does not deliver it. A running watcher already holds `Changed`, so this reaches
-only the validation epoch: a pull proof recomputed a node with a side edge
-into the validating watcher, and that same pass consumes the evidence (F17).
-The guard leaves the reentrant write path unchanged: a write during the epoch
-still goes through the computing-subscriber path and is delivered.
+`writeProducer` compares with `Object.is`, commits, then invalidates.
 
-Transitions: `src/kernel/stages/` and `src/kernel/engine/watcher.ts`; the
-transition table is characterized in
-[SEMANTIC_CHARACTERIZATION.md](./characterization/SEMANTIC_CHARACTERIZATION.md).
+- All direct edges are handled first, in list order; transitive branches are
+  then walked depth-first, children before the next sibling.
+- A clean direct subscriber becomes `Changed`; an `Unknown` non-watcher is
+  promoted to `Changed` **before** the `Computing` branch is considered. A
+  clean transitive subscriber becomes `Unknown`. Dirty subscribers stop
+  descent. This is not a topological sort.
+- A computing subscriber is marked only through an edge in its tracked prefix
+  (at or before `tailIn`): `Visited | Unknown`, or `Revalidate | Unknown` for a
+  watcher reached transitively. Other edges are ignored.
+- A direct watcher stops descent; a transitive watcher stops it when a hook is
+  installed. Hooks run synchronously and see the partially updated graph;
+  continuation links are read after each hook.
+- `push_iterator_once`, after a recompute that changed the value, marks direct
+  subscribers lacking `Changed` and walks no further. It skips the edge owned
+  by the active pull walker.
 
-## 3. Pruning and failure
+## 4. Pull and recompute
 
-Successful computation removes the incoming suffix after `tailIn`. That
-cleanup is the only removal of stale dependencies: reconciliation during a
-read moves or links edges and never unlinks the unvisited suffix.
+Pull has three layers whose boundary is an invariant; a specialization may
+optimize inside a layer but must not merge them.
 
-Throws do not undo links, moves or stamps. Final stale cleanup
-is skipped on callback failure. The remaining graph is not an old-plus-new
-dependency transaction. Recovery restores flags only:
+1. **Root policy** (`shouldRecomputeCore`, `pull_frontier`). Root `Changed` is
+   execution evidence. Root `Unknown` is discharged only after every incoming
+   edge produced a stable proof. A watcher validates its **whole** committed
+   frontier before any lifecycle work (V3).
+2. **Edge proof** (`pullDependencyDirty`). Answers "did this dependency
+   change?" for one edge, from the state its caller loaded once. `Changed` →
+   recompute; `Unknown` leaf → recompute; `Unknown` with inputs → descend.
+3. **Continuation machine** (`pullDependencyDeep`). An explicit stack of edge
+   continuations, safe under reentrant pull. The first change found ends the
+   scan; a stable branch resumes its next sibling.
 
-| Failure                     | Resulting state                                                                                                |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Computed callback           | `Changed`, so the next read retries, also after a failure during pull bubbling.                                |
-| Watcher validation          | `Unknown` plus the retained `Changed`, `Visited` and `Scheduled`; a later run retries validation.              |
-| Watcher callback or cleanup | As validation failure when a dependency is still dirty (the failing step may have written it); otherwise idle. |
+Effects decide where barriers go. Reading a clean edge runs no user code. A
+dirty proof may call `advance` and is a reentrancy barrier: the caller
+re-reads root evidence and continuation links after it. `advance`, cleanup,
+watcher execution and hooks are barriers unless proven otherwise.
 
-A failed watcher is never retried recursively inside the failing drain; a host
-retries a still-dirty watcher on a later drain (contract L5, W3).
+`advance` (recompute) resets the cursor, clears `Visited`, sets `Computing`,
+enters tracking and calls `compute`. The previous consumer is restored before
+anything else happens on exit.
 
-## 4. Cursor and tracking stamp
+- **Success.** Remove the unread suffix (§5.4), compare with `Object.is`,
+  publish only a changed value, clear computing and dirty bits, then
+  `push_iterator_once` if the value changed. The final state derives from the
+  evidence present **before** the callback; marks set during it are dropped
+  (this is F1).
+- **Failure.** Keep the old payload, clear `Computing | Unknown`, set
+  `Changed`, rethrow. A failed computed also removes its unread suffix (C3).
 
-`lastIn` is the physical incoming tail. While a node is `Computing`,
-`tailIn` is the last accepted edge of its current tracked prefix (the
-frontier). Computation resets the cursor to null while retaining the old
-list.
+## 5. Tracking
 
-Head and expected-next hits advance the cursor. Recognized prefix duplicates
-do not. Reorders move an existing edge after the cursor; new dependencies link
-there. Cleanup removes the unmatched suffix.
+### 5.1 Pass and stamp
 
-`edge.stamp` is a tracking stamp, not a source-value revision. Runtime reads
-extending a prefix use its cursor edge's stamp, even after nested computation
-advances the global `trackingStamp`. A first read uses the current epoch.
-`resolveTrackedRead` derives the stamp itself; callers cannot supply one.
+At the start of a computation `tailIn` is reset to null and the old incoming
+list stays. While the node is `Computing`, `firstIn … tailIn` is the prefix
+accepted in this pass and the rest is the suffix of older dependencies
+(INV-T1). `edge.stamp` is a tracking stamp, not a value version: it records
+which pass last accepted the edge.
 
-During a pass with a nonempty suffix, an incoming edge is in the tracked
-prefix exactly when it carries the cursor's nonzero stamp (INV-T3): accepted
-edges are stamped with the pass stamp, and suffix edges carry stamps of
-earlier passes, which the forward-only clock makes smaller. With the cursor
-at `lastIn` every edge is in the prefix (INV-T2). A read off the sequential
-path is resolved by one exact lookup of the pair's edge, bounded by the
-shorter of the producer's outgoing and the consumer's incoming lists, then
-classified by these rules. The unvisited suffix keeps its edges until
-cleanup, so a reread suffix producer moves its existing edge. Algorithm details:
-[tracking research](../src/kernel/stages/tracking/RESEARCH.md).
+- The first read of a pass takes the current `trackingStamp`; every later read
+  takes the cursor's stamp, even after nested computations advance the clock.
+  Callers cannot supply a stamp.
+- **INV-T2.** With `tailIn === lastIn` every incoming edge is in the prefix.
+  Watcher validation relies on it.
+- **INV-T3.** With a nonzero cursor stamp `S` and a nonempty suffix, an
+  incoming edge is in the prefix exactly when it carries `S`: accepted edges
+  are stamped `S`, suffix edges carry earlier, smaller stamps.
+- The clock is kernel-wide, only moves forward and never repeats a value
+  (exact for 2^53 passes). A repeated stamp would let a stale edge pass as a
+  prefix member and drop a dependency (F13).
 
-The frontier reading of `tailIn` is required only while the node is
-`Computing`; outside that phase the slot is semantically inactive and is
-reused as the pair lookup's outgoing hint (INV-H). For a node that is not
-`Computing`, `tailIn` is null, the residual incoming edge of its last pass,
-or a hint: one of its own outgoing edges, attached to both lists. A hint
-satisfies `from === node && to !== node`; an incoming edge has
-`to === node`, so a self-edge always reads as incoming and is never written
-as a hint. The lookup writes a hint only with an edge it has located past
-its constant probes, only into a node that is neither `Computing` nor a
-watcher. It uses a slot edge from the node as the answer for exactly its
-pair, and any other one as an outgoing finger, the centre of a walk of at
-most eight outgoing links raced against the lockstep; a missing or
-different hint proves nothing, and absence is still proved by exhausting
-the outgoing or the covered incoming walk. Every unlink of an edge clears
-the hint that points to it, and every computation resets the slot to null
-before it becomes a frontier, so a stale hint is never observed. The idle
-uses of `tailIn` (unlink repair of the incoming cursor, the debug integrity
-check, watcher validation's save and restore, which only watchers reach)
-either accept a hint or never meet one. Source:
-`src/kernel/shape/graph/hint.ts`.
+Executable definition: `isEdgeInTrackedPrefix` in
+`src/kernel/stages/tracking/prefix.ts`.
 
-The prepared tape (INV-P) makes a hint the address of a cell of one
-consumer's incoming list. A tracking pass is named by its consumer and pass
-stamp. A lookup by a computing consumer strikes when it enters the plain
-lockstep or its finger race settles past six finger probes; the second
-strike of a pass prepares the tape: one walk of the consumer's incoming list
-writes every producer's slot to its own edge (a hint, under the rules
-above) and sets `Leased` on it. Nothing is linked, moved or unlinked, and
-stamps are untouched, so a failure at any point leaves the graph the lookup
-would have left. The consumer then holds the lease, at most one at a time;
-the lease is live while its owner is `Computing` with a frontier carrying
-the prepared stamp, and is released (bits cleared over the owner's current
-list) by the owner's next miss past a dead lease, by the next prepare, or
-before cleanup or disposal removes edges from the owner's list, so no
-producer leaves the list with its bit.
-While the lease is recorded, every edge linked to its owner gives its
-producer the cell and the bit, or, for a producer that is `Computing` or a
-watcher, withdraws the certificate; the prepare does the same for such a
-producer. Coverage therefore holds under a live lease: every producer of an
-attached incoming edge of the owner has `Leased`, because computations
-derive `state` from itself and only the release clears the bit. A miss of
-the owner's hint, at the entry of the lookup's continuations past the head
-start, on an idle producer without the bit is a certificate of absence. A
-bit is only a maybe: a producer whose cell was lost (its own computation,
-another lookup's hint, a raw kernel frame) or that left the list keeps
-taking the exact search, so a lost or stale cell costs a lookup, never a
-second edge for a pair. Source: `src/kernel/shape/graph/tape.ts`.
+### 5.2 A read
 
-## 5. Disposal and cleanup
+1. **Locate** the edge of `(P, C)` or prove there is none (§5.3).
+2. **Classify**: in the prefix → duplicate, nothing moves; in the suffix → move
+   the same edge right after the cursor and stamp it; absent → link a new edge
+   after the cursor.
+3. **Reconcile** without searching again (`reconcileLocatedRead`).
+   Reconciliation moves and links; it never unlinks.
 
-Teardown and cleanup ordering are owned by [DISPOSE.md](./DISPOSE.md). The
-invariants it maintains: disposal removes both adjacency directions and clears
-executable data without a terminal bit; old cleanup precedes a rerun and runs
-untracked; a captured cleanup cannot run twice.
+A configured `readTrackingStrategy` is called at the reconcile step after the
+resolver's own lookup, so it pays two lookups per call.
 
-## 6. Push and lazy pull
+### 5.3 Locate
 
-Source writes use `Object.is`, commit synchronously, then invalidate. Equal
-writes return without propagation.
+Constant-time guesses first, each cheap when wrong, then one exact proof:
 
-Push first handles immediate outgoing edges, then transitive DFS continuations.
-Direct consumers become `Changed`; newly invalidated descendants become
-`Unknown`. Dirty state suppresses repeated descendant expansion. This is not
-a general topological sort across all edges in a DAG.
+| Level | Where                     | Settles the read with                                                                  |
+| ----- | ------------------------- | -------------------------------------------------------------------------------------- |
+| L0    | `resolve.ts`, consumer    | the next edge, the cursor, the first edge, one- and two-hop lookahead, `lastIn`        |
+| L1    | `locate.ts`, producer     | empty `out(P)`, the newest edge `lastOut`, a sole edge to another consumer             |
+| L1h   | `findEdge.ts`             | the hint, when it is this pair's edge (§5.5)                                           |
+| L1    | `findEdge.ts`             | a two-link head start at `firstOut`                                                    |
+| L2    | `findEdge.ts`             | the lockstep, raced by the outgoing finger when the slot holds one                     |
+| tape  | `tape.ts`                 | a prepared cell, or a certificate of absence under a covered live lease (§5.6)         |
 
-Pull descends through unknown dependencies and advances dirty dependencies.
-Confirmed changes bubble; stable branches resume incoming siblings. Changed
-derived results promote immediate subscribers through one-level push. The
-active pull edge may be skipped because its continuation is already owned by
-the walker. Layering of the pull machine:
-[stabilization](../src/kernel/stages/stabilization/README.md).
+The **lockstep** walks `out(P)` forward and `in(C)` outward from the cursor in
+both directions, one link of each per step, and stops when one side finds the
+pair or is exhausted. It costs `O(min(|out(P)|, |in(C)|))` and is the only
+general proof of absence. Only exhausting a covering walk may return null.
 
-An exception does not roll back source commits or completed recomputations, and
-does not defer or transactionally complete the aborted propagation wave.
+The **outgoing finger** is a hint of another consumer. For
+`OUTGOING_FINGER_BUDGET` (8) rounds, each round probes the ring of `out(P)`
+around the finger once and then takes one plain lockstep step; then the
+plain lockstep continues. The race adds at most one probe per round, so it
+never delays the proof by more than the budget.
 
-## 7. Nested execution and stack lifetime
+### 5.4 Cleanup
 
-Push and pull retain explicit reusable stacks. `base` is the invocation entry
-slice, `top` its live continuation frontier, and `high` publishes occupied
-storage before reentrant calls. Every exit restores the entry base and releases
-only this invocation's abandoned references, preserving outer continuations.
+`cleanupUnvisitedSources` is the only place tracking removes edges: after a
+successful pass, and after a failed pass of a computed, it unlinks the suffix.
+A failed watcher keeps its suffix as a conservative retry set. During a pass
+suffix edges are attached but carry no causal authority (push requires
+`Computing` plus prefix membership). Which edges survive decides edge
+identity and subscriber order: representation, not semantics.
 
-Producer writes that open propagation scopes own their abort path. A nested
-write borrows the existing scope; if its exception is caught by the outer
-callback, it must not clear that outer scope.
+Throws undo no links, moves or stamps. Recovery restores bits only:
 
-Nested computation restores the active consumer. Cleanup and `untracked`
-temporarily clear it and restore it on throws. Production nested writes are
-synchronous, not queued behind the outer wave; the DEV scheduler policy that
-rejects some nestings is part of the host contract in
-[RUNTIME.md](./RUNTIME.md#development-scheduler-policy). Phase restoration is
-distinct from stack/register restoration.
+| Failure                     | State after                                                                                      |
+| --------------------------- | ------------------------------------------------------------------------------------------------ |
+| computed callback           | `Changed`: the next read retries                                                                 |
+| watcher validation          | `Unknown` plus the retained `Changed`, `Visited` and `Scheduled`; a later run retries validation |
+| watcher callback or cleanup | as a validation failure when a dependency is still dirty, otherwise idle                         |
 
-## 8. Execution contexts
+A failed watcher is never retried inside the failing drain (L5, W3).
 
-Contexts isolate runtime registers/configuration, not graph ownership. Several
-contexts can access the same node flags, payloads, and edges.
+### 5.5 INV-H: one slot, two readings
 
-Context switching copies live module registers and configuration to/from saved
-context objects. `runWithRuntimeContext` restores the previous context in a
-finally block. Traversal storage remains shared and is protected by invocation
-slices.
+The frontier reading of `tailIn` is needed only while the node is
+`Computing`. Otherwise the slot is null, the residual incoming edge of the
+last pass, or a **hint**: an attached outgoing edge with
+`from === node && to !== node`. A self-edge always reads as incoming.
 
-`trackingStamp` is one kernel-wide clock, not a per-context register. Edges are
-shared and stamped with pass epochs, so the clock only moves forward and
-never repeats a value: a repeated stamp would let a stale edge pose as a
-current-pass membership proof and drop a dependency (F13). A context load
-keeps the newer epoch, `setTrackingStamp` only moves it forward, a reset does
-not rewind it, and it does not wrap (exact for 2^53 passes).
+1. The lookup writes a hint only with an edge it located past its constant
+   probes, and only into a node that is neither `Computing` nor a watcher.
+2. Every unlink clears a hint pointing to the removed edge (`unlinkEdge`,
+   `unlinkDetachedIncomingEdgeSequence`, `unlinkAllSubscribers`).
+3. Every computation resets the slot to null before its first read.
 
-`snapshotRuntimeContext` is a register-bank checkpoint. Restoring it is legal at
-a quiescent boundary of that context, or to unwind to a checkpoint taken by an
-enclosing frame still on the stack. Restore never touches the epoch, which
-only moves forward.
+So the slot holds only attached edges (outside raw kernel use; MODEL.md §3
+lists the two anomalies). A hint of this pair is the answer; any
+other is a finger. A hint never proves absence. A new edge-removal path must
+clear hints too. Source: `src/kernel/shape/graph/hint.ts`.
 
-`configureRuntimeContext` on the active context reloads configuration only. It
-never reloads execution registers (`currentConsumer`, depths, `runtimeState`)
-from the saved object, whose copies are stale while the context is active.
+### 5.6 INV-P: the prepared tape
 
-DEV+PROFILE diagnostic state (phase stack, active hook stack, recompute depth)
-belongs to the context that entered it. A switch saves it into the outgoing
-context's `executionFrame` and loads the incoming one, so independent contexts
-never see each other's phases or hooks. Production builds skip this entirely.
+A tracking pass is named by (consumer, pass stamp). A lookup of a computing
+consumer **strikes** when it enters the plain lockstep or its finger race
+settles past six probes. The second strike of a pass **prepares** the tape:
+one walk of the consumer's incoming list writes each idle producer's slot to
+its own edge and sets `Leased`. Nothing is linked, moved, unlinked or
+restamped, so a throw anywhere leaves the graph the lookup would have left.
 
-`resetRuntimeContext` rejects a context whose continuation is suspended below
-the active one by `runWithRuntimeContext`. Resetting the active context is a
-recovery tool; the caller asserts none of its continuations will resume.
+- **Lease.** One owner at a time, live while the owner is `Computing` with a
+  frontier carrying the prepared stamp. Released (bits cleared over the
+  owner's current list) by the owner's next miss past a dead lease, by the
+  next prepare, and before cleanup or disposal remove the owner's edges.
+- **Coverage.** While a lease is recorded, every link to its owner gives the
+  producer a cell and the bit; a producer that is `Computing` or a watcher
+  withdraws the certificate instead, as it does during the prepare.
+- **Certificate.** Under a covered live lease, a hint miss on an idle producer
+  without `Leased` proves it has no edge to the owner.
+- **Safety.** `Leased` is only a maybe. A lost cell (the producer's own
+  computation, another lookup's hint) sends the lookup to the exact search: it
+  costs a lookup, never a second edge for a pair.
 
-Contracts: `test/runtime/contracts/runtime.context-registers.test.ts`,
-`test/runtime/topology/runtime.domain-walkers.test.ts`,
-`test/dev/runtime/runtime.domain-isolation.dev.test.ts`. Implementation:
-`src/kernel/context*.ts`, `src/kernel/state.ts`, and `src/kernel/config.ts`.
+Disposal also drops the consumer from the strike register, so the register
+never retains a disposed node. Source: `src/kernel/shape/graph/tape.ts`.
 
-## 9. Host scheduling
+## 6. Stacks and nesting
 
-Push updates watcher state before calling `onNodeInvalidated`. The runtime
-does not own a watcher queue or asynchronous timing. The host claims, queues,
-releases, and runs watchers. Unknown-to-changed promotion can notify again;
-queue deduplication is the host's responsibility. Invalidation is distinct
-from `onRuntimeIdle` and requested `onHostFlush` delivery. Batching defers idle
-delivery, not commits. The host-facing rules are in
-[RUNTIME.md](./RUNTIME.md#watchers-and-host-scheduling).
+Push and pull keep explicit reusable stacks. Each invocation owns the slice
+from its entry `base` to `top`; `high` publishes occupied storage before a
+reentrant call. Every exit, including throws, restores the entry base and
+clears only its own slots. Trimming happens only at the outermost boundary:
+push keeps 512 slots, pull at most 256.
 
-## Validation
+Nested computation restores the active consumer; cleanup and `untracked`
+clear it and restore it on throw. A write that opens a propagation scope owns
+its abort path; a nested write borrows the scope and must not clear it.
 
-Use `test/runtime/contracts/` for state, cleanup, hooks, recovery, and contexts;
-`test/runtime/topology/` for reciprocal lists, duplicate reads, dynamic
-branches, stabilization, and continuation lifetime; and `test/dev/runtime/`
-for development policy and debug observation order. The algorithm-independent
-oracle (`test/oracle`) checks edge integrity, exact dependency sets and
-liveness after every generated operation.
+## 7. Contexts
 
-Run production and development configurations separately. Shared debug test
-imports may set `__DEV__`; production-branch tests must account for that.
-Use non-profile production timing for performance claims; structural profiling
-adds work to traversal.
+Contexts isolate registers and configuration, not graph ownership. A switch
+copies live module registers to the outgoing context and loads the incoming
+one; traversal storage stays shared, protected by invocation slices.
+
+- `trackingStamp` is not per context: a load keeps the newer epoch,
+  `setTrackingStamp` only moves it forward, reset does not rewind it.
+- `snapshotRuntimeContext` restores at a quiescent boundary of that context,
+  or to a checkpoint of an enclosing frame still on the stack. It never
+  touches the epoch.
+- `configureRuntimeContext` on the active context reloads configuration only,
+  never execution registers.
+- DEV+PROFILE diagnostic state (phase stack, hook stack, recompute depth)
+  belongs to the context that entered it and is switched with it.
+- `resetRuntimeContext` rejects a context suspended below the active one;
+  resetting the active context asserts none of its continuations will resume.
+
+## 8. Build modes
+
+| Behavior                                           | Production | DEV                                | PROFILE |
+| -------------------------------------------------- | ---------- | ---------------------------------- | ------- |
+| phase stacks, hook reentry checks, cycle detection | off        | on (scheduler policy with PROFILE) | —       |
+| producer/consumer role bits                        | 0          | set                                | 0       |
+| debug events                                       | off        | on                                 | —       |
+| projection counters                                | off        | —                                  | on      |
+| kernel decisions                                   | identical  | identical except policy throws     | identical |
+
+Graphs are assumed acyclic; cycles are detected only in DEV.

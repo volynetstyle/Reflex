@@ -1,70 +1,32 @@
 # Documentation map
 
-Every fact about `@volynets/reflex-runtime` has one owner. Other documents
-summarize and link to it. Documents are grouped by how binding they are.
+Every fact has one owner; other documents link to it. Git history is the
+archive: documents describe the current state, not how it was reached.
 
-## Entry points
+| Document                                                    | Kind        | Owns                                                                                  |
+| ----------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------- |
+| [../README.md](../README.md)                                | tutorial    | concepts, first example, host scheduling, domains (published to npm)                  |
+| [RUNTIME.md](./RUNTIME.md)                                  | reference   | public operations and behavior, hooks, disposal, retention, contexts, integration API |
+| [SEMANTIC_CONTRACT.md](./SEMANTIC_CONTRACT.md)              | reference   | observable rules C, W, V, R, L, M; equivalence classes; open regions                  |
+| [INVARIANTS.md](./INVARIANTS.md)                            | reference   | state bits, push, pull, tracking (INV-T, INV-H, INV-P), stacks, contexts              |
+| [RULES.md](./RULES.md)                                      | reference   | rule → code → test → contract, checked by `check:rules`                               |
+| [DIAGNOSTICS.md](./DIAGNOSTICS.md)                          | reference   | debug entry point, protocol, diagnostics, MCP                                         |
+| [GUIDE.md](./GUIDE.md)                                      | how-to      | source map, layering, checks per change kind, tools, pitfalls                         |
+| [PERFORMANCE.md](./PERFORMANCE.md)                          | how-to      | hot-path rules, JIT facts and source contracts, benchmark protocol                    |
+| [MODEL.md](./MODEL.md)                                      | explanation | why the runtime is shaped this way; findings F1–F18; experiments and their verdicts   |
+| [tracking/README.md](../src/kernel/stages/tracking/README.md) | how-to      | code map of tracking and graph files, where each tier's code lives                    |
+| [testkit/README.md](../testkit/README.md)                   | how-to      | test catalog, tiers, oracles, verdict policies, corpus                                |
+| [perf/README.md](../perf/README.md)                         | how-to      | experiment tools and how to run them                                                  |
 
-| Document                  | For                      | Contains                                                           |
-| ------------------------- | ------------------------ | ------------------------------------------------------------------ |
-| [README.md](../README.md) | users (published to npm) | concepts, example, host scheduling, domains; links to the contract |
-| [AGENTS.md](../AGENTS.md) | coding agents            | priorities, hard rules, fact owners, commands                      |
-| [GUIDE.md](./GUIDE.md)    | maintainers              | source map, one write end to end, checks per change kind, pitfalls |
+Agents start at [AGENTS.md](../AGENTS.md). Repository-level documents
+(execution domains, runtime integration) live in [../../../docs](../../../docs).
 
-## Contract (normative)
+## Keeping it true
 
-A change that contradicts one of these documents is a semantic change and
-updates the document in the same commit.
-
-| Document                                                               | Owns                                                                                                        |
-| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| [RUNTIME.md](./RUNTIME.md)                                             | public API, producer/computed/watcher behavior, host scheduling, DEV policy, contexts, dependency retention |
-| [INVARIANTS.md](./INVARIANTS.md)                                       | state flags and transitions, failure recovery, tracking cursor and stamps, stacks, context registers        |
-| [DISPOSE.md](./DISPOSE.md)                                             | teardown, cleanup ordering                                                                                  |
-| [SEMANTIC_CONTRACT.md](../test/differential/docs/SEMANTIC_CONTRACT.md) | formal observable rules C1-C3, W1-W3, V1-V6, L1-L5, M1-M3; differential oracle boundary                     |
-| [RULES.md](./RULES.md)                                                 | index of load-bearing rules with checked citations to code, tests and contract (`check:rules`)              |
-| [architecture-contract.md](./architecture-contract.md)                 | layer direction and the debug/MCP boundary (`check:architecture`)                                           |
-
-## Guides (normative for process)
-
-| Document                                                     | Owns                                                      |
-| ------------------------------------------------------------ | --------------------------------------------------------- |
-| [GUIDE.md](./GUIDE.md)                                       | which checks a change kind requires                       |
-| [PERFORMANCE_RULES.md](./PERFORMANCE_RULES.md)               | evidence and shape discipline for hot-path work           |
-| [JIT_CONTRACTS.md](./JIT_CONTRACTS.md)                       | checked JIT source premises and the optional engine probe |
-| [BENCHMARK_PROTOCOL.md](./performance/BENCHMARK_PROTOCOL.md) | paired benchmark method, verdicts, CI gate                |
-| [DIAGNOSTICS.md](./DIAGNOSTICS.md)                           | debug entry point, protocol, diagnostics and MCP surfaces |
-
-## Design notes next to the code
-
-| Document                                                      | Describes                                               |
-| ------------------------------------------------------------- | ------------------------------------------------------- |
-| [stages](../src/kernel/stages/README.md)                      | propagation and stabilization stages, their projections |
-| [stabilization](../src/kernel/stages/stabilization/README.md) | the layered pull machine                                |
-| [tracking](../src/kernel/stages/tracking/README.md)           | dependency resolution and reconciliation strategies     |
-| [differential testkit](../test/differential/README.md)        | spec/Reflex machines and test languages                 |
-
-## Evidence (historical)
-
-These record what was audited, measured or proven at a commit. They are not
-the current contract; they are extended, not rewritten.
-
-| Document                                                                                         | Records                                                                                       |
-| ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| [SEMANTIC_CHARACTERIZATION.md](./characterization/SEMANTIC_CHARACTERIZATION.md)                  | audited baseline, transition table, findings register (F-numbers)                             |
-| [KERNEL_AUDIT.md](./characterization/KERNEL_AUDIT.md)                                            | per-invariant audit answers for the characterized commit                                      |
-| [semantic-optimization-baseline.md](./semantic-optimization-baseline.md)                         | static analysis behind the tracking optimizations                                             |
-| [performance/](./performance/)                                                                   | measured studies (callbacks, V3 frontier cost, lifetime vs liveness) and the experiment queue |
-| `test/differential/docs/*_BASELINE.md`, `test/differential/watcher/WATCHER_EVIDENCE_BASELINE.md` | frozen oracle and mutation baselines                                                          |
-| `perf/*/README.md`, `perf/*/results/`, `test/perf/*/README.md`                                   | isolated performance experiments and their results                                            |
-
-Repository-level documents outside this package: execution domains, the
-scheduler contract and dynamic dependencies live in [../../../docs](../../../docs).
-
-## Keeping the documentation true
-
-- State a fact once, in its owner; elsewhere, summarize in a sentence and link.
-- Cite code by path and exported name; `check:rules` fails on a missing citation.
-- A documentation-only change keeps the production bundle byte-identical
-  (`check:bundle-identity`) and passes `format`.
-- When a fact moves, update this map in the same commit.
+- A semantic change updates its owner document and, for load-bearing rules,
+  RULES.md in the same commit.
+- A finding gets the next free F-number in MODEL.md §9.
+- An experiment's verdict goes into MODEL.md §7.2 as one row; raw results stay
+  in the CI run or the research branch, not in the tree.
+- Documentation changes keep the production bundle byte-identical
+  (`check:bundle-identity`) and pass `pnpm format`.
