@@ -400,7 +400,7 @@ describe("prepared tape (INV-P)", () => {
     expectGraphIntegrity(mids);
   });
 
-  it("a throw in a prepared pass leaves every edge, and the retry reuses them", () => {
+  it("a throw in a prepared pass keeps the edges it read, and the retry reuses them", () => {
     const { sources } = wideGraph();
     let order = range(256);
     let fail = false;
@@ -418,12 +418,44 @@ describe("prepared tape (INV-P)", () => {
     fail = true;
     c.state |= 2; // Changed
     expect(() => readConsumer(c)).toThrow(failure);
-    expect(incomingEdges(c).length).toBe(256);
+    // A failed computed drops its residual suffix, and the lease with it.
+    expect(sourcesOf(c, sources)).toEqual(order);
     expect(incomingEdges(c).every((e) => before.has(e))).toBe(true);
+    expect(sources.filter(leased).length).toBe(0);
     fail = false;
     expect(readConsumer(c)).toBe(3);
     expect(sourcesOf(c, sources)).toEqual(order);
     expect(incomingEdges(c).every((e) => before.has(e))).toBe(true);
     expectGraphIntegrity([...sources, c]);
+  });
+
+  it("a producer that leaves the owner's list loses its bit with the lease", () => {
+    const { sources, consumer } = wideGraph();
+    const { novel } = countedNovel(97);
+    let previous = begin(consumer);
+    prepare(sources, consumer);
+    expect(sources.every(leased)).toBe(true);
+    // The pass reads two producers: cleanup unlinks the other 254.
+    end(consumer, previous);
+    expect(sourcesOf(consumer, sources)).toEqual([128, 200]);
+    // The next pass's stale miss releases the lease, if nothing did before.
+    previous = begin(consumer);
+    resolveTrackedRead(novel, consumer);
+    resolveTrackedRead(sources[128]!, consumer);
+    resolveTrackedRead(sources[200]!, consumer);
+    end(consumer, previous);
+    expect(range(256).filter((j) => leased(sources[j]!))).toEqual([]);
+    expectGraphIntegrity([...sources, novel, consumer]);
+  });
+
+  it("disposing the owner clears the bits of its producers", () => {
+    const { sources, consumer } = wideGraph();
+    const previous = begin(consumer);
+    prepare(sources, consumer);
+    for (const s of sources) resolveTrackedRead(s, consumer);
+    end(consumer, previous);
+    unlinkAllSources(consumer);
+    expect(sources.filter(leased).length).toBe(0);
+    expectGraphIntegrity([...sources, consumer]);
   });
 });

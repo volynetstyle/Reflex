@@ -6,6 +6,10 @@
 | [Release](workflows/release.yml) | push to main | no | Version pull request; qualification and npm publication of new versions |
 | [Benchmark gate](workflows/benchmark-gate.yml) | pull request, push to main (bench-relevant paths) | no | Vitest bench suites, base against head; screening verdicts as warnings |
 | [Runtime paired benchmarks](workflows/runtime-paired-benchmarks.yml) | pull request, push to main (runtime paths), dispatch | no | Paired production-bundle comparison in balanced shards; A/A calibration on dispatch |
+| [Benchmark trend](workflows/benchmark-trend.yml) | pull request, push to main (bench-relevant paths), dispatch | no | Fixed-anchor history and GitHub Pages report |
+| [Krausest ranking](workflows/krausest-ranking.yml) | dispatch, benchmark branch push | no | Compare reflex-dom with the js-framework-benchmark results |
+| [CodeQL](workflows/codeql.yml) | pull request, push to main, weekly | no | Static security analysis |
+| [OpenSSF Scorecard](workflows/scorecard.yml) | push to main, weekly, dispatch | no | Supply-chain posture and code-scanning report |
 
 ## Merging
 
@@ -23,10 +27,13 @@ opens or comments on a "Nightly CI is failing" issue.
 1. A pull request adds a changeset (`pnpm changeset`).
 2. On merge, Release opens or updates `chore(release): version packages` and
    dispatches CI for it (pushes by `GITHUB_TOKEN` start no workflows).
-3. Merging the version pull request puts new versions on main. Release sees
+3. Versioning also schedules patch releases for internal peer dependents,
+   including transitive dependents. `workspace:^` is resolved to the peer's
+   workspace version when the archives are packed and qualified.
+4. Merging the version pull request puts new versions on main. Release sees
    versions npm does not have, qualifies the exact tarballs on Linux and
    Windows, then waits for approval in the `npm` environment.
-4. On approval it publishes those archives byte for byte with provenance and
+5. On approval it publishes those archives byte for byte with provenance and
    tags `name@version`. Versions already on npm are skipped, so rerunning a
    failed publish job resumes the release.
 
@@ -41,8 +48,8 @@ These live outside the repository and must be set once:
 - **Actions → General → Workflow permissions:** allow GitHub Actions to create
   and approve pull requests (for the version pull request).
 - **Environment `npm`:** required reviewers; deployment branches limited to
-  `main`; secret `NPM_TOKEN` (an npm automation or granular token with
-  publish rights on `@volynets`).
+  `main`. Configure npm trusted publishing for each released package with this
+  repository, the Release workflow and the `npm` environment.
 
 ## Conventions
 

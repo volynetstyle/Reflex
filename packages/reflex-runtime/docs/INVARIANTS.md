@@ -162,7 +162,9 @@ stamps are untouched, so a failure at any point leaves the graph the lookup
 would have left. The consumer then holds the lease, at most one at a time;
 the lease is live while its owner is `Computing` with a frontier carrying
 the prepared stamp, and is released (bits cleared over the owner's current
-list) by the owner's next miss past a dead lease or by the next prepare.
+list) by the owner's next miss past a dead lease, by the next prepare, or
+before cleanup or disposal removes edges from the owner's list, so no
+producer leaves the list with its bit.
 While the lease is recorded, every edge linked to its owner gives its
 producer the cell and the bit, or, for a producer that is `Computing` or a
 watcher, withdraws the certificate; the prepare does the same for such a

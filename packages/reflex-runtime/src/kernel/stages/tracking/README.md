@@ -69,7 +69,7 @@ finger does not help; both cases stay at the lockstep bound.
 | `resolve.ts`                                        | hot path (next edge, cursor, first read) and the initial, tail and inner misses |
 | `locate.ts`                                         | producer-side probes, then the graph lookup; the reorder path keeps only newest |
 | `prefix.ts`                                         | prefix classification, shared with `push_iterator.ts`                           |
-| `cleanup.ts`                                        | removal of the unvisited suffix after a successful pass                         |
+| `cleanup.ts`                                        | removal of the unvisited suffix after a pass (computed: also a failed one)      |
 | `read.ts`                                           | `trackRead`, an entry for tests and tools                                       |
 | [`../../shape/graph/`](../../shape/graph/README.md) | exact lookup and graph mutations used by tracking                               |
 
@@ -77,7 +77,10 @@ Rules to keep when changing this code:
 
 - **The unvisited suffix survives until cleanup.** Reconciliation moves or
   links, never unlinks; `cleanupUnvisitedSources` alone removes what a
-  successful pass did not read. During the pass suffix edges are attached but
+  successful pass, or a failed pass of a computed node, did not read. A failed
+  computed is Changed, so its incoming edges wake nothing; keeping its suffix
+  would accumulate the reads of every failed retry. A failed watcher keeps
+  its suffix as a retry set. During the pass suffix edges are attached but
   carry no causal authority (`Computing` plus prefix membership). Which edges
   survive decides edge identity and subscriber order: representation, not
   semantics (SEMANTIC_CONTRACT, "Semantic and representation equivalence").

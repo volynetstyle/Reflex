@@ -1,5 +1,6 @@
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import type ReactiveNode from "@runtime/kernel/shape/node";
+import { preparedOwner, releaseLease } from "./tape";
 
 /**
  * Unlink a sequence of incoming edges, from `edge` along `nextIn`, from the
@@ -40,6 +41,9 @@ export function unlinkDetachedIncomingEdgeSequence(
  * of disposal. Cold path.
  */
 export function unlinkAllSources(consumer: ReactiveNode): void {
+  // Its producers must not leave with their bits (INV-P).
+  if (preparedOwner === consumer) releaseLease(consumer);
+
   const firstIncomingEdge = consumer.firstIn;
 
   consumer.firstIn = null;

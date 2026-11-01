@@ -623,9 +623,19 @@ export interface InterpretOptions {
    * was inside its own run (`Computing`, F17). Never affects the trace.
    */
   ownEpochDeliveries?: number[];
+  /**
+   * Receives, by trace index, every snapshot as it reads without the incoming
+   * edges of each computed node that is `Changed` and whose last evaluation
+   * threw: its `in[]` reads `in[~]` and it leaves its sources' `out[]`. Such
+   * a relation is failure-time retry evidence, not a dependency snapshot
+   * (SEMANTIC_CONTRACT C1, C3); every other edge is kept. Never affects the
+   * trace. For the `failed-computed` verdict class.
+   */
+  maskedSnapshots?: Map<number, string>;
 }
 
 const COMPUTING = 0b1000; // fixed by the baseline
+const CHANGED = 0b10; // fixed by the baseline
 const WATCHER = 0b1_0000; // fixed by the baseline
 
 export function interpret(
@@ -859,11 +869,20 @@ export function interpret(
     ids.set(node, nodes.length);
     nodes.push(node);
   }
+  // Computed nodes whose last evaluation threw; never affects the trace.
+  const failedComputeds = new Set<number>();
   spec.consumers.forEach((consumer, index) => {
     const id = spec.producers + index;
-    const node = rt.createConsumer(() =>
-      execution(id, () => runCallback("c", id, consumer)),
-    );
+    const node = rt.createConsumer(() => {
+      try {
+        const value = execution(id, () => runCallback("c", id, consumer));
+        failedComputeds.delete(id);
+        return value;
+      } catch (error) {
+        failedComputeds.add(id);
+        throw error;
+      }
+    });
     ids.set(node, id);
     nodes.push(node);
   });
@@ -933,22 +952,35 @@ export function interpret(
 
   const snapshot = () => {
     const mask = level === "strict" ? STRICT_MASK : OBSERVABLE_MASK;
-    const parts: string[] = [];
-    nodes.forEach((node, id) => {
-      const sources: Array<number | undefined> = [];
-      for (let e = node.firstIn; e !== null; e = e.nextIn)
-        sources.push(ids.get(e.from));
-      const targets: Array<number | undefined> = [];
-      for (let e = node.firstOut; e !== null; e = e.nextOut)
-        targets.push(ids.get(e.to));
-      const payload = isWatcher(id)
-        ? typeof node.payload
-        : JSON.stringify(node.payload);
-      parts.push(
-        `${id}{s${node.state & mask} v${payload} in[${sources}] out[${targets}]}`,
-      );
-    });
-    trace.push(`snap:${parts.join(" ")}`);
+    const render = (masked: ReadonlySet<number>): string => {
+      const parts: string[] = [];
+      nodes.forEach((node, id) => {
+        const sources: Array<number | string | undefined> = [];
+        if (masked.has(id)) sources.push("~");
+        else
+          for (let e = node.firstIn; e !== null; e = e.nextIn)
+            sources.push(ids.get(e.from));
+        const targets: Array<number | undefined> = [];
+        for (let e = node.firstOut; e !== null; e = e.nextOut) {
+          const target = ids.get(e.to);
+          if (target === undefined || !masked.has(target)) targets.push(target);
+        }
+        const payload = isWatcher(id)
+          ? typeof node.payload
+          : JSON.stringify(node.payload);
+        parts.push(
+          `${id}{s${node.state & mask} v${payload} in[${sources}] out[${targets}]}`,
+        );
+      });
+      return `snap:${parts.join(" ")}`;
+    };
+    if (options.maskedSnapshots !== undefined) {
+      const masked = new Set<number>();
+      for (const id of failedComputeds)
+        if ((nodes[id]!.state & CHANGED) !== 0) masked.add(id);
+      options.maskedSnapshots.set(trace.length, render(masked));
+    }
+    trace.push(render(new Set()));
   };
 
   const targets = (op: Op): number | undefined => {

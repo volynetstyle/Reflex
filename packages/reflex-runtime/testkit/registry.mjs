@@ -266,11 +266,13 @@ export const SUITES = [
   {
     id: "spec.catalog",
     layer: "spec",
-    technique: "active and historical divergence catalogs",
+    technique:
+      "active and historical divergence catalogs; contract boundaries (R1-R3 under failure)",
     owner: "test/differential/README.md",
     files: [
       "test/differential/runtime.active-divergences.test.ts",
       "test/differential/runtime.historical-faults.test.ts",
+      "test/differential/runtime.failure-boundary.test.ts",
     ],
     runner: source,
     tiers: ["smoke", "ci", "deep"],
@@ -505,7 +507,7 @@ export const SUITES = [
     id: "self.spec-model",
     layer: "self",
     technique:
-      "self-checks of the executable spec: optimized and direct models agree; rule 4 (C4) changes only the repair",
+      "self-checks of the executable spec: optimized and direct models agree",
     owner: "test/differential/internal/machine/spec-runtime.ts",
     files: ["test/differential/runtime.spec-self-consistency.test.ts"],
     runner: source,

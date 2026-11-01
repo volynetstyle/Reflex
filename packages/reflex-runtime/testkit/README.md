@@ -211,11 +211,11 @@ alone; it supplies the evidence.
 
 ## Verdict policies
 
-| Policy           | Accepts                                                                       | For                                          |
-| ---------------- | ----------------------------------------------------------------------------- | -------------------------------------------- |
-| `exact`          | nothing: traces byte-equal                                                    | A/A controls, mutants against source         |
-| `representation` | list-order and event-order differences without new violations                 | a refactor or policy change against HEAD     |
-| `baseline`       | `representation`, plus the baseline corrections F13, F15, F1 domain, F17, F16 | the working tree against the pinned baseline |
+| Policy           | Accepts                                                                        | For                                          |
+| ---------------- | ------------------------------------------------------------------------------ | -------------------------------------------- |
+| `exact`          | nothing: traces byte-equal                                                     | A/A controls, mutants against source         |
+| `representation` | list-order, event-order and failed-computed differences without new violations | a refactor or policy change against HEAD     |
+| `baseline`       | `representation`, plus the baseline corrections F13, F15, F1 domain, F17, F16  | the working tree against the pinned baseline |
 
 The classes and their evidence are documented in `testkit/oracle/verdict.ts`.
 `inconclusive` (both sides exhaust the stack) applies under every policy.
