@@ -2,6 +2,7 @@ import { defaultContext } from "@runtime/kernel/config";
 import { devRecordCleanupStaleSources } from "@runtime/kernel/dev";
 import type { ReactiveEdge } from "@runtime/kernel/shape/edge";
 import { unlinkDetachedIncomingEdgeSequence } from "@runtime/kernel/shape/graph/sweepEdges";
+import { preparedOwner, releaseLease } from "@runtime/kernel/shape/graph/tape";
 import type ReactiveNode from "@runtime/kernel/shape/node";
 import { observeRuntimeProjection } from "@runtime/kernel/projection";
 
@@ -26,6 +27,10 @@ export function cleanupUnvisitedSources(consumer: ReactiveNode): void {
       observeRuntimeProjection?.("projection.semantic.cleanup.skip");
     return;
   }
+
+  // The suffix's producers must not leave with their bits (INV-P). A pass
+  // has ended, so the lease is dead.
+  if (preparedOwner === consumer) releaseLease(consumer);
 
   if (cursorEdge === null) {
     consumer.firstIn = null;

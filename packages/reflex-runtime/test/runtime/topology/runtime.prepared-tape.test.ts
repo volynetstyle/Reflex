@@ -426,4 +426,34 @@ describe("prepared tape (INV-P)", () => {
     expect(incomingEdges(c).every((e) => before.has(e))).toBe(true);
     expectGraphIntegrity([...sources, c]);
   });
+
+  it("a producer that leaves the owner's list loses its bit with the lease", () => {
+    const { sources, consumer } = wideGraph();
+    const { novel } = countedNovel(97);
+    let previous = begin(consumer);
+    prepare(sources, consumer);
+    expect(sources.every(leased)).toBe(true);
+    // The pass reads two producers: cleanup unlinks the other 254.
+    end(consumer, previous);
+    expect(sourcesOf(consumer, sources)).toEqual([128, 200]);
+    // The next pass's stale miss releases the lease, if nothing did before.
+    previous = begin(consumer);
+    resolveTrackedRead(novel, consumer);
+    resolveTrackedRead(sources[128]!, consumer);
+    resolveTrackedRead(sources[200]!, consumer);
+    end(consumer, previous);
+    expect(range(256).filter((j) => leased(sources[j]!))).toEqual([]);
+    expectGraphIntegrity([...sources, novel, consumer]);
+  });
+
+  it("disposing the owner clears the bits of its producers", () => {
+    const { sources, consumer } = wideGraph();
+    const previous = begin(consumer);
+    prepare(sources, consumer);
+    for (const s of sources) resolveTrackedRead(s, consumer);
+    end(consumer, previous);
+    unlinkAllSources(consumer);
+    expect(sources.filter(leased).length).toBe(0);
+    expectGraphIntegrity([...sources, consumer]);
+  });
 });
