@@ -52,6 +52,11 @@ var hasFullTapeCoverage = false;
 var lastStrikeConsumer: ReactiveNode | null = null;
 var lastStrikePassStamp = 0;
 
+/** Disposal of `consumer`: the strike register must not retain it. */
+export function forgetStrikeConsumer(consumer: ReactiveNode): void {
+  if (lastStrikeConsumer === consumer) lastStrikeConsumer = null;
+}
+
 /** The stamp the resolver gives the next read of a computing consumer. */
 function getTrackingPassStamp(consumer: ReactiveNode): number {
   const cursorEdge = consumer.tailIn;

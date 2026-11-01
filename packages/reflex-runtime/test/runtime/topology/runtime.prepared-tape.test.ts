@@ -1,3 +1,5 @@
+import { setFlagsFromString } from "node:v8";
+import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -97,6 +99,16 @@ function wideGraph() {
 function prepare(sources: ReactiveNode[], consumer: ReactiveNode): void {
   resolveTrackedRead(sources[128]!, consumer);
   resolveTrackedRead(sources[200]!, consumer);
+}
+
+/** A full collection; WeakRef targets survive until the job ends, so yield. */
+async function collect(): Promise<void> {
+  setFlagsFromString("--expose-gc");
+  const gc = runInNewContext("gc") as () => void;
+  for (let i = 0; i < 3; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    gc();
+  }
 }
 
 /** A producer with `count` subscribers that counts reads of `edge.to`. */
@@ -457,5 +469,29 @@ describe("prepared tape (INV-P)", () => {
     unlinkAllSources(consumer);
     expect(sources.filter(leased).length).toBe(0);
     expectGraphIntegrity([...sources, consumer]);
+  });
+
+  it("disposing a consumer that struck releases it to the collector", async () => {
+    const sources = range(256).map(() => node());
+    // One far read: the strike register names the consumer, no tape.
+    const strike = () => {
+      const consumer = node(Consumer);
+      for (let i = 0; i < 96; i++) {
+        const other = node(Consumer);
+        for (const source of sources) linkEdge(source, other);
+      }
+      for (const source of sources) linkEdge(source, consumer);
+      const after = node(Consumer);
+      for (const source of sources) linkEdge(source, after);
+      const previous = begin(consumer);
+      resolveTrackedRead(sources[128]!, consumer);
+      for (const s of sources) resolveTrackedRead(s, consumer);
+      end(consumer, previous);
+      unlinkAllSources(consumer);
+      return new WeakRef(consumer);
+    };
+    const ref = strike();
+    await collect();
+    expect(ref.deref() === undefined, "consumer retained").toBe(true);
   });
 });
