@@ -41,7 +41,7 @@ jobs:
       - uses: ./.github/actions/setup-workspace
       - name: Open or update the version pull request
         id: changesets
-        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
           # The lockfile refresh keeps workspace ranges consistent with new versions.
           version: pnpm release:version:ci
@@ -188,6 +188,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # The checkout has no tags; without them an existing tag is recreated
+          # on HEAD and the push is rejected.
+          git fetch --quiet --tags origin
           node tooling/configs/release-tags.mjs artifacts/publication
           git push origin --tags
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
