@@ -170,15 +170,11 @@ For two unsorted, unindexed lists with pointer traversal and identity comparison
 
 Incoming locality is what L0 exploits: the next read is near the cursor. A dense reorder, a fresh permutation of a wide consumer's reads per pass, destroys it, and every read becomes a lookup between two wide endpoints. But `P.out` is append-only (§2): its subscribers are in the order they first ran. When consumers re-run in that order, as they do when the same watcher pulls them or the same write notifies them, the producer is read by `C₀, C₁, C₂, …`, which are neighbours in `P.out`, **however each consumer orders its own reads**. Incoming locality can be zero while outgoing locality is one; any schedule that repeats itself is aligned with `P.out` by construction.
 
-The producer's slot already holds the edge of its last expensive lookup, the previous consumer's. When that edge is not the pair's, it is a finger. Past the head start, [`findEdgeInLockstepFromFinger`](../../shape/graph/findEdge.ts) runs the lockstep for `2 × OUTGOING_FINGER_BUDGET` (16) steps with the outgoing link alternating between the base walk from the head and the ring around the finger (after, before, after, …; past `lastOut` comes `firstOut`), the incoming walkers advancing on every step; then the plain lockstep continues from where every walker stands. The edge found becomes the hint.
+The producer's slot already holds the edge of its last expensive lookup, the previous consumer's. When that edge is not the pair's, it is a finger. Past the head start, [`findEdgeInLockstepFromFinger`](../../shape/graph/findEdge.ts) runs `OUTGOING_FINGER_BUDGET` (8) rounds; each probes the ring around the finger once (after, before, after, …; past `lastOut` comes `firstOut`) and then takes one step of the plain lockstep, the base outgoing walk and the incoming walkers; then the plain lockstep continues from where every walker stands. The edge found becomes the hint.
 
-Against the plain lockstep on the same slot state, the race costs:
+Against the plain lockstep on the same slot state, the race costs at most one finger probe per round on top of it: an edge either walk of the plain lockstep finds, and absence either side proves, is reached in the same number of rounds, with at most `min(rounds, B)` extra comparisons. So `W ≤ W_lockstep + B`, with a constant independent of `D` and `K`, while a structured dense reorder saves `Θ(min(d⁺, d⁻))` per lookup.
 
-- nothing for an edge the incoming side finds: it reaches it in the same number of steps;
-- at most `min(j, B)` extra steps for an edge the base outgoing walk would find as its `j`-th link;
-- at most `B` extra steps for absence proved by the outgoing side; nothing for absence proved by the incoming side.
-
-So `W ≤ W_lockstep + O(B)`, with a constant independent of `D` and `K`, while a structured dense reorder saves `Θ(min(d⁺, d⁻))` per lookup.
+Until 2026-11-01 the race ran 16 steps that alternated the outgoing link between the base walk and the ring, so the base walk advanced at half pace and an absence proof by a short `P.out` paid up to `B` extra steps plus the incoming steps taken meanwhile. Measured under a frozen tape controller (`perf/tape-controller`, branch `research/cost-sensitive-strike`), the finger-first rounds cut probes per finger lookup by ~45% on `replace-half ×16` and time by 2–7% on the narrow-producer churn shapes, neutral elsewhere; the remaining cost of that path is the call into the race (TurboFan's cumulative inlining budget of `resolveCursorTrackedReadMiss`), not its probes.
 
 ### 5.4 The regret principle
 

@@ -120,36 +120,30 @@ export function findEdgeInLockstep(
   return edge;
 }
 
-const FIRST_WALK = 1 << 0;
-const SECOND_WALK = 1 << 1;
-
 /**
- * Steps of the finger race (2 × OUTGOING_FINGER_BUDGET = 16) after which a
- * hit strikes: past 6 finger probes. A hit that far costs the lookup more
- * than a prepared tape would; measured, every split from 2 to 12 gives the
- * same tape timing on window and mount traces, and the late end keeps
- * ordered fan-out from preparing.
+ * Rounds of the finger race (OUTGOING_FINGER_BUDGET = 8) after which a hit
+ * strikes: past 6 finger probes. A hit that far costs the lookup more than a
+ * prepared tape would; the late end keeps ordered fan-out from preparing.
  */
-const FAR_FINGER_STEP = 12;
+const FAR_FINGER_ROUND = 6;
 
 /**
  * The lockstep past the head start, raced against the finger: for its first
- * 2 × OUTGOING_FINGER_BUDGET steps the outgoing link alternates between the
- * base walk from `out` and the producer's outgoing list read as a ring
- * around `finger` (past `lastOut` comes `firstOut`), alternately after and
- * before it; then the base lockstep continues from where every walker
- * stands. The incoming walkers advance on every step, as in the base
- * lockstep.
+ * OUTGOING_FINGER_BUDGET rounds, each round probes the producer's outgoing
+ * list read as a ring around `finger` (past `lastOut` comes `firstOut`),
+ * alternately after and before it, then takes one step of the base
+ * lockstep: the base outgoing walk from `out` and the incoming walkers. Then
+ * the base lockstep continues from where every walker stands.
  *
- * Nothing the base lockstep proves is given up or postponed by more than a
- * constant: an edge the incoming side reaches costs the same steps; an edge
- * the base outgoing walk reaches as its j-th link costs at most
- * min(j, OUTGOING_FINGER_BUDGET) more steps; an exhausted incoming side
- * still proves absence at once, an exhausted base walk after at most
- * OUTGOING_FINGER_BUDGET more steps. The ring compares only edges of this
- * producer, so a finger hit is exact; a finger miss proves nothing.
+ * The finger never takes a step from the base lockstep: every round advances
+ * both of its walks, so each costs at most one finger probe per round more
+ * than the base lockstep alone, OUTGOING_FINGER_BUDGET in all. The finger
+ * probe comes first in the round, so a finger that lands at once costs one
+ * comparison. An exhausted base walk proves absence as soon as `out` becomes
+ * null, before the next probe. The ring compares only edges of this producer,
+ * so a finger hit is exact; a finger miss proves nothing.
  *
- * The race stops at FAR_FINGER_STEP and continues in
+ * The race stops at FAR_FINGER_ROUND and continues in
  * findEdgeInLockstepFarFinger, whose hits strike (graph/tape.ts). The owner
  * of a prepared tape first asks the tape whether the miss proves absence.
  *
@@ -175,23 +169,12 @@ function findEdgeInLockstepFromFinger(
   let after = finger.nextOut ?? producer.firstOut!;
   let before = finger.prevOut ?? producer.lastOut!;
 
-  for (let step = 0; step < FAR_FINGER_STEP; step++) {
+  for (let round = 0; round < FAR_FINGER_ROUND; round++) {
     {
       if (__PROFILE__)
         observeRuntimeProjection?.("projection.semantic.tracking.locate.step");
     }
-    if ((step & FIRST_WALK) === 1) {
-      // The base outgoing walk, at half its usual pace.
-      if (out === null) {
-        return null;
-      }
-
-      if (out.to === consumer) {
-        return out;
-      }
-
-      out = out.nextOut;
-    } else if ((step & SECOND_WALK) === 0) {
+    if ((round & 1) === 0) {
       if (after.to === consumer) {
         return after;
       }
@@ -205,6 +188,24 @@ function findEdgeInLockstepFromFinger(
       before = before.prevOut ?? producer.lastOut!;
     }
 
+    {
+      if (__PROFILE__)
+        observeRuntimeProjection?.("projection.semantic.tracking.locate.step");
+    }
+    if (out === null) {
+      return null;
+    }
+
+    if (out.to === consumer) {
+      return out;
+    }
+
+    out = out.nextOut;
+
+    if (out === null) {
+      return null;
+    }
+
     if (back !== null) {
       {
         if (__PROFILE__)
@@ -212,7 +213,6 @@ function findEdgeInLockstepFromFinger(
             "projection.semantic.tracking.locate.step",
           );
       }
-
       if (back.from === producer) {
         return back;
       }
@@ -227,7 +227,6 @@ function findEdgeInLockstepFromFinger(
             "projection.semantic.tracking.locate.step",
           );
       }
-
       if (ahead.from === producer) {
         return ahead;
       }
@@ -250,11 +249,11 @@ function findEdgeInLockstepFromFinger(
 }
 
 /**
- * The far end of the finger race, steps FAR_FINGER_STEP to 15: the same
- * walk in the same order, but every hit is a strike of the consumer's pass
- * (strikeOnFarFingerHit), then the base lockstep as before.
- * These four steps probe each finger once; neither finger advances, since
- * only the base and incoming walkers continue beyond this window.
+ * The far end of the finger race, rounds FAR_FINGER_ROUND to 7: the same
+ * rounds in the same order, but every hit is a strike of the consumer's pass
+ * (strikeOnFarFingerHit), then the base lockstep as before. These two rounds
+ * probe each finger once; neither finger advances, since only the base and
+ * incoming walkers continue beyond this window.
  *
  * JIT: a separate function, so the near race keeps its shape and this one
  * is compiled only where fingers run long.
@@ -269,20 +268,25 @@ function findEdgeInLockstepFarFinger(
   back: ReactiveEdge | null,
   ahead: ReactiveEdge | null,
 ): ReactiveEdge | null {
-  for (let step = FAR_FINGER_STEP; step < 16; step++) {
+  for (let round = FAR_FINGER_ROUND; round < 8; round++) {
     {
       if (__PROFILE__)
         observeRuntimeProjection?.("projection.semantic.tracking.locate.step");
     }
-    if ((step & FIRST_WALK) === 1) {
-      if (out === null) return null;
-      if (out.to === consumer) return strikeOnFarFingerHit(out, consumer);
-      out = out.nextOut;
-    } else if ((step & SECOND_WALK) === 0) {
+    if ((round & 1) === 0) {
       if (after.to === consumer) return strikeOnFarFingerHit(after, consumer);
     } else {
       if (before.to === consumer) return strikeOnFarFingerHit(before, consumer);
     }
+
+    {
+      if (__PROFILE__)
+        observeRuntimeProjection?.("projection.semantic.tracking.locate.step");
+    }
+    if (out === null) return null;
+    if (out.to === consumer) return strikeOnFarFingerHit(out, consumer);
+    out = out.nextOut;
+    if (out === null) return null;
 
     if (back !== null) {
       {
