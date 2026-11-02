@@ -1,8 +1,15 @@
-// Hot-path shape of two readable bundles under one driver workload (not
-// timing): Ignition bytecode (length and opcode sequence) of every listed
-// function, and the TurboFan inlining of every optimized unit that inlines
-// or calls a listed function. A difference outside the expected set fails.
-//   node perf/pathology/oracle/shape.mjs <base dir> <candidate dir> [--expect fn,fn]
+// Hot-path shape of two bundles (not timing). Build both sides with
+// `--production --readable`: the code that ships, names kept (`--readable`
+// alone is the unminified test build, whose constants are loads).
+//  1. Ignition bytecode (length and opcode sequence) of every listed function
+//     under the driver below. A difference outside --expect fails.
+//  2. Per workload of bench/workloads.mjs (--workloads) and the driver: every
+//     TurboFan unit, all its inlined functions and its machine code size. A
+//     difference fails, unless the workload is listed in --report (its tape
+//     runs, so its tape units differ by design).
+//   node perf/pathology/oracle/shape.mjs <base dir> <candidate dir>
+//     [--expect fn,fn] [--pair candidateFn=baseFn,...]
+//     [--workloads id,id] [--report id,id]
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -35,14 +42,30 @@ const FUNCTIONS = [
   "pushIteratorCore",
   "pull_iterator",
   "shouldRecomputeCore",
+  "getTrackingPassStamp",
+  "isLeaseLive",
   "preparedMissIsAbsent",
   "settleOnPreparedTape",
   "strikeOnFarFingerHit",
   "notePreparedLink",
   "releaseLease",
   "recordStrikeAndMaybePrepareTape",
-  "acquireTape",
+  "prepareTape",
+  "forgetStrikeConsumer",
 ];
+
+if (process.argv[2] === "--drive-workload") {
+  const rt = await import(pathToFileURL(process.argv[3]).href);
+  const { findWorkload } = await import(
+    pathToFileURL(path.join(import.meta.dirname, "../../../bench/workloads.mjs"))
+      .href
+  );
+  const { step } = findWorkload(process.argv[4]).setup(rt);
+  let sink = 0;
+  for (let i = 0; i < 40_000; i++) sink ^= step(i) | 0;
+  process.stdout.write(`sink ${sink}\n`);
+  process.exit(0);
+}
 
 if (process.argv[2] === "--drive") {
   const rt = await import(pathToFileURL(process.argv[3]).href);
@@ -107,15 +130,36 @@ if (process.argv[2] === "--drive") {
   process.exit(0);
 }
 
+const args = process.argv.slice(4);
+const list = (name) =>
+  (args.includes(name) ? args[args.indexOf(name) + 1] : "")
+    .split(",")
+    .filter(Boolean);
+const expected = new Set(list("--expect"));
+/** Candidate function -> the base function it stands for. */
+const pairs = new Map(list("--pair").map((p) => p.split("=")));
+const workloads = list("--workloads");
+const reportOnly = new Set(list("--report"));
+const canonical = (side, name) =>
+  side === "candidate" ? (pairs.get(name) ?? name) : name;
+
+const driverArgs = (dir, workload) =>
+  workload === "driver"
+    ? [import.meta.filename, "--drive", path.join(dir, "runtime.mjs")]
+    : [
+        import.meta.filename,
+        "--drive-workload",
+        path.join(dir, "runtime.mjs"),
+        workload,
+      ];
+
 function bytecode(dir, fn) {
   const r = spawnSync(
     process.execPath,
     [
       "--print-bytecode",
       `--print-bytecode-filter=${fn}`,
-      import.meta.filename,
-      "--drive",
-      path.join(dir, "runtime.mjs"),
+      ...driverArgs(dir, "driver"),
     ],
     { encoding: "utf8", maxBuffer: 1 << 28 },
   );
@@ -128,23 +172,22 @@ function bytecode(dir, fn) {
   return size ? `${size}:${ops.join(" ")}` : "not compiled";
 }
 
-/** Per optimized unit: the set of inlined listed functions. */
-function inlining(dir) {
+/** Per TurboFan unit under one workload: inlined functions and code size. */
+function units(dir, workload, side) {
   const r = spawnSync(
     process.execPath,
     [
       "--no-concurrent-recompilation",
       "--trace-turbo-inlining",
       "--trace-opt",
-      import.meta.filename,
-      "--drive",
-      path.join(dir, "runtime.mjs"),
+      "--print-opt-code",
+      ...driverArgs(dir, workload),
     ],
-    { encoding: "utf8", maxBuffer: 1 << 28 },
+    { encoding: "utf8", maxBuffer: 1 << 30 },
   );
-  const units = new Map();
+  const out = new Map();
   let unit = null;
-  const listed = new RegExp(`\\b(${FUNCTIONS.join("|")})\\b`);
+  let code = null;
   for (const line of r.stdout.split("\n")) {
     if (/compiling method/.test(line) && !/target TURBOFAN/.test(line)) {
       unit = null;
@@ -152,55 +195,84 @@ function inlining(dir) {
     }
     const start = /compiling method .*?<JSFunction (\w+)/.exec(line);
     if (start) {
-      unit = start[1];
-      if (!units.has(unit)) units.set(unit, new Set());
+      unit = canonical(side, start[1]);
+      out.set(unit, { inlined: new Set(), size: "?" });
       continue;
     }
+    const name = /^name = (\w+)/.exec(line);
+    if (name) code = canonical(side, name[1]);
+    const size = /^Instructions \(size = (\d+)\)/.exec(line);
+    if (size && code !== null && out.has(code)) out.get(code).size = size[1];
     if (unit === null) continue;
     const inl = /Inlining .*?<SharedFunctionInfo (\w+)>/.exec(line);
-    if (inl && listed.test(inl[1])) units.get(unit).add(inl[1]);
+    if (inl) out.get(unit).inlined.add(canonical(side, inl[1]));
   }
-  const out = new Map();
-  for (const [name, set] of units)
-    if (listed.test(name) || set.size > 0)
-      out.set(name, [...set].sort().join(","));
   return out;
 }
 
 const [base, candidate] = process.argv.slice(2, 4).map((d) => path.resolve(d));
-const args = process.argv.slice(4);
-const expected = new Set(
-  (args.includes("--expect") ? args[args.indexOf("--expect") + 1] : "").split(
-    ",",
-  ),
-);
 let failures = 0;
 console.log(`Node ${process.version}`);
 console.log("\n| function | bytecode | verdict |\n|---|---|---|");
-for (const fn of FUNCTIONS) {
+const rows = [
+  ...FUNCTIONS.map((fn) => [fn, fn]),
+  ...[...pairs].map(([c, b]) => [c, b]),
+];
+for (const [cand, fn] of rows) {
   const a = bytecode(base, fn);
-  const b = bytecode(candidate, fn);
+  const b = bytecode(candidate, cand);
   const same = a === b;
   const verdict = same
     ? "identical"
-    : expected.has(fn)
-      ? "changed (expected)"
+    : expected.has(cand)
+      ? "changed (declared)"
       : "**CHANGED**";
-  if (!same && !expected.has(fn)) failures++;
+  if (!same && !expected.has(cand)) failures++;
   const size = (s) => s.split(":")[0];
-  console.log(`| ${fn} | ${size(a)} → ${size(b)} | ${verdict} |`);
+  const label = cand === fn ? fn : `${cand} ≙ ${fn}`;
+  console.log(`| ${label} | ${size(a)} → ${size(b)} | ${verdict} |`);
 }
-const ia = inlining(base);
-const ib = inlining(candidate);
-console.log(
-  "\n| optimized unit | inlined (base) | inlined (candidate) | verdict |\n|---|---|---|---|",
-);
-for (const name of new Set([...ia.keys(), ...ib.keys()])) {
-  const a = ia.get(name) ?? "(not optimized)";
-  const b = ib.get(name) ?? "(not optimized)";
-  if (a !== b) failures++;
-  console.log(
-    `| ${name} | ${a || "—"} | ${b || "—"} | ${a === b ? "same" : "**DIFFERENT**"} |`,
-  );
+
+for (const workload of ["driver", ...workloads]) {
+  const gate = workload !== "driver" && !reportOnly.has(workload);
+  const ua = units(base, workload, "base");
+  const ub = units(candidate, workload, "candidate");
+  let differing = 0;
+  let declared = 0;
+  const lines = [];
+  for (const name of [...new Set([...ua.keys(), ...ub.keys()])].sort()) {
+    const fmt = (u) =>
+      u === undefined
+        ? "(not optimized)"
+        : `${[...u.inlined].sort().join(",") || "—"} [${u.size} B]`;
+    const x = ua.get(name);
+    const y = ub.get(name);
+    const a = fmt(x);
+    const b = fmt(y);
+    // The same inlining, a different code size, and a declared bytecode
+    // change inlined: the difference is that change's, not the layout's.
+    const tree = (u) => [...u.inlined].sort().join(",");
+    const explained =
+      a !== b &&
+      x !== undefined &&
+      y !== undefined &&
+      tree(x) === tree(y) &&
+      [name, ...x.inlined].some((fn) => expected.has(fn));
+    if (explained) declared++;
+    else if (a !== b) differing++;
+    const mark = a === b ? name : explained ? `${name} (declared)` : `**${name}**`;
+    lines.push(`| ${mark} | ${a} | ${a === b ? "same" : b} |`);
+  }
+  if (gate && differing > 0) failures++;
+  const extra = declared > 0 ? `, ${declared} by a declared change` : "";
+  const verdict =
+    differing === 0
+      ? `identical${extra}`
+      : gate
+        ? `**${differing} units differ**${extra}`
+        : `${differing} units differ (tape runs: reported)${extra}`;
+  console.log(`\n### ${workload}: ${verdict}\n`);
+  console.log("| unit | base: inlined [code] | candidate |\n|---|---|---|");
+  for (const line of lines) console.log(line);
 }
 process.exitCode = failures === 0 ? 0 : 1;

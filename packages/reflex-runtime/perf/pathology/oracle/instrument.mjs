@@ -134,16 +134,17 @@ if (marked) {
   );
   edits.push([
     `  return (
-    (state & (Computing | Watcher)) === 0 &&
-    (state & preparedLaneMask) !== preparedLaneTag &&
+    hasFullTapeCoverage &&
+    (producer.state & preparedAbsenceMask) === 0 &&
     producer !== consumer
   );`,
-    `  const r =
-    (state & (Computing | Watcher)) === 0 &&
-    (state & preparedLaneMask) !== preparedLaneTag &&
+    `  const state = producer.state;
+  const r =
+    hasFullTapeCoverage &&
+    (state & preparedAbsenceMask) === 0 &&
     producer !== consumer;
 ` +
-      `  ev(r ? "cert-absent" : (state & preparedLaneMask) === preparedLaneTag ? "exact-fallback" : "busy-fallback", consumer, preparedPassStamp, producer);
+      `  ev(r ? "cert-absent" : !hasFullTapeCoverage ? "uncovered-fallback" : (state & (Computing | Watcher)) === 0 && (state & preparedLaneTag) !== 0 ? "exact-fallback" : "busy-fallback", consumer, preparedPassStamp, producer);
 ` +
       `  return r;`,
   ]);

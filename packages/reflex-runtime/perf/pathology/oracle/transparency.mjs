@@ -177,8 +177,13 @@ const scenarios = {
   },
 };
 
-/** Cost of the lane directory's materialization: reported, not a decision. */
-const COST = new Set(["cover", "revoke", "reclaim", "resume"]);
+/**
+ * Cost of the lane directory's materialization: reported, not a decision.
+ * `retire` frees a lane whose pass ended; under generations it revokes
+ * nothing, and which path frees it (its owner's cleanup, or the next strike
+ * that finds it dead) changes no answer.
+ */
+const COST = new Set(["cover", "revoke", "reclaim", "resume", "retire"]);
 
 /** The pass's decisions, in the dev tape's vocabulary. */
 function traceOf(node) {

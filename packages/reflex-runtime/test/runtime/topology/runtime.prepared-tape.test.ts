@@ -21,7 +21,10 @@ import {
   createConsumer,
   createProducer,
 } from "../../../src/protocol/create.node";
-import { preparedOwner } from "../../../src/kernel/shape/graph/tape";
+import {
+  holdsTapeLane,
+  preparedOwner,
+} from "../../../src/kernel/shape/graph/tape";
 import { readConsumer } from "../../../src/protocol/read.consumer";
 import { readProducer } from "../../../src/protocol/read.producer";
 import { writeProducer } from "../../../src/protocol/write.producer";
@@ -175,16 +178,18 @@ describe("prepared tape (INV-P)", () => {
     resolveTrackedRead(sources[128]!, consumer);
     // One strike: only the found pair's own hint (INV-H), no tape.
     expect(sources.filter((s) => isCell(s, consumer)).length).toBe(1);
-    expect(preparedOwner === consumer, "no lane yet").toBe(false);
+    expect(holdsTapeLane(consumer), "no lane yet").toBe(false);
     resolveTrackedRead(sources[200]!, consumer);
-    expect(preparedOwner === consumer, "armed").toBe(true);
-    // The arming request came before 200 was accepted: it covered the
-    // prefix (128) and the first suffix chunk.
+    expect(holdsTapeLane(consumer), "armed").toBe(true);
+    // The arming strike came before 200 was accepted: it covered the prefix
+    // (128) and the first suffix chunk, and left the lane unpublished.
+    expect(preparedOwner === consumer, "not covered yet").toBe(false);
     expect(sources.filter(leased).length).toBe(1 + 32);
     resolveTrackedRead(sources[64]!, consumer);
     expect(sources.filter(leased).length).toBe(2 + 32 + 64);
     resolveTrackedRead(sources[32]!, consumer);
     expect(sources.every((s) => isCell(s, consumer) && leased(s))).toBe(true);
+    expect(preparedOwner === consumer, "covered, published").toBe(true);
 
     for (const j of shuffled(range(256), 7))
       resolveTrackedRead(sources[j]!, consumer);
@@ -230,7 +235,7 @@ describe("prepared tape (INV-P)", () => {
     // The outer pass's first strike survived the nested one: this is its
     // second, and it arms a lane.
     resolveTrackedRead(outer.sources[200]!, outer.consumer);
-    expect(preparedOwner === outer.consumer, "second strike of the pass").toBe(
+    expect(holdsTapeLane(outer.consumer), "second strike of the pass").toBe(
       true,
     );
     end(outer.consumer, previous);
@@ -315,7 +320,7 @@ describe("prepared tape (INV-P)", () => {
       const previous = begin(consumer);
       resolveTrackedRead(producers[30]!, consumer);
       resolveTrackedRead(producers[20]!, consumer);
-      const tape = preparedOwner === consumer;
+      const tape = holdsTapeLane(consumer);
       end(consumer, previous);
       // 4 links after the finger is its 7th probe (step 12): far.
       expect(tape, `offset ${offset}`).toBe(offset === 4);

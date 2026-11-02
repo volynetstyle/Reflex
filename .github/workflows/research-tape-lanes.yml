@@ -21,7 +21,7 @@ env:
 jobs:
   shape:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -30,13 +30,24 @@ jobs:
       - uses: ./.github/actions/setup-workspace
       - name: Shape
         working-directory: packages/reflex-runtime
+        # The code that ships, names kept: --readable alone is the test build.
+        # Every paired workload's TurboFan units must match the base, except
+        # the two whose tape runs (reported) and changes of the declared
+        # functions; a difference fails the job.
         run: |
           set -o pipefail
-          node scripts/build-baseline-oracle.mjs --commit "$BASE" --readable --out .cache/lanes/base
-          node scripts/build-baseline-oracle.mjs --source --readable --out .cache/lanes/lanes
+          node scripts/build-baseline-oracle.mjs --commit "$BASE" --production --readable --out .cache/lanes/base
+          node scripts/build-baseline-oracle.mjs --source --production --readable --out .cache/lanes/lanes
+          ids=$(node -e 'import("./bench/workloads.mjs").then((m) => console.log(m.workloads.map((w) => w.id).join(",")))')
           node perf/pathology/oracle/shape.mjs .cache/lanes/base .cache/lanes/lanes \
-            --expect preparedMissIsAbsent,settleOnPreparedTape,strikeOnFarFingerHit,notePreparedLink,releaseLease,recordStrikeAndMaybePrepareTape,acquireTape \
-            | tee "$RUNNER_TEMP/shape.md" || true
+            --expect preparedMissIsAbsent,notePreparedLink,recordStrikeAndMaybePrepareTape,recordFingerStrike,releaseLease,prepareTape,forgetStrikeConsumer \
+            --pair recordFingerStrike=recordStrikeAndMaybePrepareTape \
+            --workloads "$ids" --report A.track.shared-chaotic-64,A.track.far-one-wide-1024 \
+            | tee "$RUNNER_TEMP/shape.md"
+      - name: Shape summary
+        if: always()
+        working-directory: packages/reflex-runtime
+        run: |
           { echo "## Shape"; echo; cat "$RUNNER_TEMP/shape.md"; } >> "$GITHUB_STEP_SUMMARY"
 
   sentinels:
