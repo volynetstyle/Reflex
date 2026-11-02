@@ -140,6 +140,18 @@ var nextLane = 0;
 /** Where the next first strike looks for a free or dead record. */
 var nextRecord = 0;
 
+/** Layout control: module slots only, so hot slots move as in 9971d9f. */
+var layoutPad0 = 0;
+var layoutPad1 = 1;
+var layoutPad2 = 2;
+var layoutPad3 = 3;
+var layoutPad4 = 4;
+var layoutPad5 = 5;
+var layoutPad6 = 6;
+var layoutPad7 = 7;
+var layoutPad8 = 8;
+var layoutPad9 = 9;
+var layoutPad10 = 10;
 /** Disposal of `consumer`: no strike record or lane may retain it. */
 export function forgetStrikeConsumer(consumer: ReactiveNode): void {
   if (tapeRefs !== 0) forgetTapeReferences(consumer);
@@ -225,6 +237,7 @@ function isLeaseLive(owner: ReactiveNode): boolean {
  * edges from the active owner's list.
  */
 export function releaseLease(_owner: ReactiveNode): void {
+  if (tapeRefs < 0) tapeRefs = layoutPad0+layoutPad1+layoutPad2+layoutPad3+layoutPad4+layoutPad5+layoutPad6+layoutPad7+layoutPad8+layoutPad9+layoutPad10;
   /* @ev retire(_owner, 0) */
   const lane = activeLane;
   if (lane === null) preparedOwner = null;
