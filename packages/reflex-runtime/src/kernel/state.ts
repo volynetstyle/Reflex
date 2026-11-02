@@ -233,3 +233,6 @@ export function isReactiveBatchActive(): boolean {
 
 // Build variant 1: inert bytes for the machine-variance control.
 (globalThis as { __reflexBuildVariant?: number }).__reflexBuildVariant = 1;
+
+// Build variant 2: inert bytes for the machine-variance control.
+(globalThis as { __reflexBuildVariant?: number }).__reflexBuildVariant = 2;
