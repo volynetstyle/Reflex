@@ -1,0 +1,71 @@
+name: Research - tape ablation
+
+# Which stage of the lane directory should production stop at? Base,
+# stage 1 (lanes), stage 2 (lazy cover), stage 3 (generations) on the same
+# runner; six independent runners, the runner being the unit of
+# replication (an effect counts when its sign holds across CPU models).
+# Sentinels: one process per bundle per round, context layout randomized
+# per process (perf/pathology/run.mjs). Paired: the tape-heavy workloads.
+on:
+  push:
+    branches: [research/tape-ablation]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-tape-ablation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  machine:
+    name: machine ${{ matrix.machine }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        machine: [1, 2, 3, 4, 5, 6]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+      - name: Build
+        working-directory: packages/reflex-runtime
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          lscpu | sed -n 's/^Model name: *//p' | tee "$GITHUB_WORKSPACE/out/cpu.txt"
+          for c in bf71877 f59ab9c 8bf7cfc ef64de7; do
+            node scripts/build-baseline-oracle.mjs --commit $c --production --out .cache/ab/$c
+          done
+      - name: Sentinels
+        working-directory: packages/reflex-runtime
+        continue-on-error: true
+        run: |
+          B=.cache/ab
+          run() {
+            node perf/pathology/compare.mjs --suite "$1" --cases "$2" \
+              --bundles $B/bf71877,$B/f59ab9c,$B/8bf7cfc,$B/ef64de7 --names base,s1,s2,s3 \
+              --json "$GITHUB_WORKSPACE/out/$1.json" | tee "$GITHUB_WORKSPACE/out/$1.md"
+          }
+          run clinical '^(wide-narrow|replace-half)$'
+          run consequences '^(list-mount|mount-fanout|nested-mount|sequential-mount)$'
+          run discovery '^(suspend-resume|branch-toggle-wide)$'
+      - name: Paired
+        working-directory: packages/reflex-runtime
+        continue-on-error: true
+        run: |
+          W='^A\.(track\.shared-chaotic-64|track\.far-one-wide-1024|graph\.swap-pairs-fanout-3)$'
+          for c in f59ab9c 8bf7cfc ef64de7; do
+            node bench/compare.mjs --baseline bf71877 --candidate $c \
+              --workloads "$W" --family 3 --replicates 12 --fail-on none \
+              --out "$GITHUB_WORKSPACE/out/paired-$c.json"
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: machine-${{ matrix.machine }}
+          path: out/

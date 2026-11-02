@@ -3,7 +3,8 @@
 // 2 = quadratic). One process per (case, size).
 //   node perf/pathology/run.mjs --bundle <dir with runtime.mjs> [--cases <regex>] [--json <file>]
 import { spawnSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
@@ -20,9 +21,18 @@ const opt = (n, f) => (args.includes(n) ? args[args.indexOf(n) + 1] : f);
 if (args[0] === "--measure") {
   const [, bundle, name, size, suite = "clinical"] = args;
   const cases = suites[suite];
-  const rt = await import(
-    pathToFileURL(path.resolve(bundle, "runtime.mjs")).href
-  );
+  // Context layout (bench/worker.mjs): the bundle opens with a random
+  // number of captured declarations, so hot module variables sit at random
+  // ModuleContext offsets in every process instead of the build's own.
+  const slots = Math.floor(Math.random() * 64);
+  let pad = "";
+  for (let i = 0; i < slots; i++) pad += `var __layoutSlot${i} = ${i};
+`;
+  pad += `export function __layoutKeep() { return [${Array.from({ length: slots }, (_, i) => `__layoutSlot${i}`).join(", ")}]; }
+`;
+  const copy = path.join(mkdtempSync(path.join(tmpdir(), "reflex-pathology-")), "runtime.mjs");
+  writeFileSync(copy, pad + readFileSync(path.resolve(bundle, "runtime.mjs"), "utf8"));
+  const rt = await import(pathToFileURL(copy).href);
   const n = +size;
   const t0 = performance.now();
   const { op, reads, check } = cases[name].build(rt, n);
