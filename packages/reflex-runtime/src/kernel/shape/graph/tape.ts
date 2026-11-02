@@ -11,7 +11,7 @@ import { trackingStamp } from "@runtime/kernel/state";
  *
  * The incoming list of a consumer C is an ordered tape of edges. Covering an
  * edge writes its producer's slot to its own cell, `P.tailIn = edge(P -> C)`
- * (an ordinary outgoing hint under INV-H), and sets the membership bit of
+ * (an ordinary outgoing hint under INV-H), and sets the membership tag of
  * C's lane on P. The hint probe then answers C's covered pairs in one
  * comparison. Nothing is created, moved or unlinked, so a throw at any point
  * leaves the graph the lookup would have left.
@@ -31,31 +31,40 @@ import { trackingStamp } from "@runtime/kernel/state";
  * passes not read yet) is covered from `lastIn` towards the head, down to the
  * first edge with this pass's stamp (INV-T3), in chunks that double; after
  * UNCOVERED_MISSES requests answered by exact search, the rest of the suffix
- * is covered at once. A producer that cannot take the bit (Computing,
+ * is covered at once. A producer that cannot take the tag (Computing,
  * Watcher) stops coverage there; it is rechecked on the next request.
  *
  * Certify. While the active lane is live (its owner Computing, its frontier
  * carrying the lane's stamp) and covered, every producer of an attached
- * incoming edge of the owner carries the lane's bit, so a hint miss on an
- * idle producer without it proves absence. A bit without a cell sends the
+ * incoming edge of the owner carries the lane's current tag, so a hint miss on an
+ * idle producer without it proves absence. A tag without a cell sends the
  * lookup on to the exact search: a lost cell costs a lookup, never a twin.
  *
- * Lanes. Up to LANE_COUNT passes hold a lane at once, each with its own bit
- * (`Leased << lane`), so nested passes never share or clear each other's
- * bits. One lane is active: `preparedOwner` names its owner, and links to
- * it record their producer at once. A suspended owner is reactivated when
- * its own lookup next reaches the tape and covers its prefix from its
- * frontier. A pass that finds every lane live does not adapt.
+ * Lanes. Up to LANE_COUNT passes hold a lane at once, each with its own
+ * three-bit field of `state` (from `Leased` up), so nested passes never share
+ * or clear each other's membership. One lane is active: `preparedOwner`
+ * names its owner, and links to it record their producer at once. A
+ * suspended owner is reactivated when its own lookup next reaches the tape
+ * and covers its prefix from its frontier. A pass that finds every lane
+ * live does not adapt.
  *
- * Revoke. A lane's bits are removed where they were set: over the prefix,
- * and over the covered run at the tail of the suffix. A lane whose owner has
- * started a new pass is revoked over its whole current list. A bit left on a
- * producer whose edge was dropped while its owner was suspended is stale: it
- * costs the lane's next owner one exact search, then is legitimate or
- * revoked with that owner's lane.
+ * Generations. A producer is a member of a lane when its field holds the
+ * lane's current generation (1 to 7; 0 is never current). Arming a lane
+ * moves its generation, so every tag of earlier owners stops being current
+ * at once: nothing is revoked, by release, cleanup, disposal or reuse. A
+ * tag left from seven generations back aliases the current one, and lanes
+ * are armed round robin, so that is 28 arms that did not refresh it: a false
+ * "maybe", answered by one exact search; the link that follows reveals
+ * the alias (the producer had the tag and no edge), and the lane moves to
+ * its next generation and covers again, so the rest of the aliased set
+ * costs a recover, not a search each.
  */
 
 const LANE_COUNT = 4;
+/** Bits of `state` per lane, from `Leased` up. */
+const LANE_BITS = 3;
+/** Generations of a lane: 1 to 7; 0 is never current. */
+const GENERATIONS = 7;
 const STRIKE_RECORDS = 5;
 /** The first suffix chunk; each next one doubles. */
 const SUFFIX_CHUNK = 32;
@@ -65,18 +74,23 @@ const UNCOVERED_MISSES = 2;
 interface Lane {
   owner: ReactiveNode | null;
   stamp: number;
-  bit: number;
+  /** The lane's LANE_BITS bits of `state`. */
+  mask: number;
+  /** The current generation in place: 1 to GENERATIONS times the field's unit. */
+  tag: number;
   /** Covered: the certificate's premise, saved while the lane is suspended. */
   complete: boolean;
-  /** Last prefix edge known to carry the bit; null: none yet. */
+  /** Last prefix edge known to carry the tag; null: none yet. */
   coveredUpTo: ReactiveEdge | null;
   /** Next suffix edge to cover, towards the head; null: start at `lastIn`. */
   suffixNext: ReactiveEdge | null;
   suffixCovered: boolean;
-  /** A producer could not take the bit; rechecked on the next request. */
+  /** A producer could not take the tag; rechecked on the next request. */
   blocked: boolean;
   misses: number;
   chunk: number;
+  /** Generations this pass moved past after finding an aliased tag. */
+  regenerations: number;
 }
 
 const lanes: Lane[] = [];
@@ -84,13 +98,15 @@ for (let i = 0; i < LANE_COUNT; i++)
   lanes.push({
     owner: null,
     stamp: 0,
-    bit: Leased << i,
+    mask: (Leased * GENERATIONS) << (LANE_BITS * i),
+    tag: 0,
     complete: false,
     coveredUpTo: null,
     suffixNext: null,
     suffixCovered: false,
     blocked: false,
     misses: 0,
+    regenerations: 0,
     chunk: SUFFIX_CHUNK,
   });
 
@@ -107,7 +123,8 @@ for (let i = 0; i < STRIKE_RECORDS; i++) {
  */
 export var preparedOwner: ReactiveNode | null = null;
 var preparedPassStamp = 0;
-var preparedLaneBit = Leased;
+var preparedLaneMask = Leased * GENERATIONS;
+var preparedLaneTag = Leased;
 /** The active lane is covered: the certificate's premise. */
 var hasFullTapeCoverage = false;
 var activeLane: Lane | null = null;
@@ -118,6 +135,8 @@ var tapeRefs = 0;
 var lanesHeld = 0;
 /** The most recent first strike, the usual partner of a second one. */
 var lastRecord = 0;
+/** Where the next arm looks for a free or dead lane. */
+var nextLane = 0;
 /** Where the next first strike looks for a free or dead record. */
 var nextRecord = 0;
 
@@ -128,8 +147,8 @@ export function forgetStrikeConsumer(consumer: ReactiveNode): void {
 
 /**
  * Drops the consumer's records and lanes, and every dead one: a disposed
- * node is not live, so nothing it held is still needed. A dropped lane is
- * revoked over its owner's list, still attached here.
+ * node is not live, so nothing it held is still needed. A dropped lane's
+ * tags stop being current when the lane is armed again.
  */
 function forgetTapeReferences(consumer: ReactiveNode): void {
   for (let i = 0; i < STRIKE_RECORDS; i++) {
@@ -149,8 +168,6 @@ function forgetTapeReferences(consumer: ReactiveNode): void {
       owner !== null &&
       (owner === consumer || isPassLive(owner, lane.stamp) === false)
     ) {
-      const _revoked = revokeLane(lane, owner);
-      /* @ev revoke(owner, _revoked) */
       freeLane(lane);
     }
   }
@@ -168,7 +185,7 @@ function clearRecord(i: number): void {
   tapeRefs--;
 }
 
-/** Frees a lane whose bits are revoked or deliberately left stale. */
+/** Frees a lane; its tags stop being current when it is armed again. */
 function freeLane(lane: Lane): void {
   if (lane.owner !== null) {
     lane.owner = null;
@@ -203,62 +220,15 @@ function isLeaseLive(owner: ReactiveNode): boolean {
 }
 
 /**
- * Removes the lane's bits where they were set. While the owner's frontier
- * still carries the lane's stamp, that is the prefix up to it and the
- * covered run at the tail; otherwise (a new pass began) the whole list.
- * Returns the edges visited.
+ * Ends the active lane of `owner`, in O(1): its tags stop being current when
+ * the lane is armed again. Cleanup and disposal call it before they remove
+ * edges from the active owner's list.
  */
-function revokeLane(lane: Lane, owner: ReactiveNode): number {
-  const bit = lane.bit;
-  let visited = 0;
-  const cursor = owner.tailIn;
-  if (cursor === null || cursor.stamp !== lane.stamp) {
-    for (
-      let incomingEdge: ReactiveEdge | null = owner.firstIn;
-      incomingEdge !== null;
-      incomingEdge = incomingEdge.nextIn
-    ) {
-      incomingEdge.from.state &= ~bit;
-      visited++;
-    }
-    return visited;
-  }
-  for (
-    let incomingEdge: ReactiveEdge | null = owner.firstIn;
-    incomingEdge !== null;
-    incomingEdge = incomingEdge.nextIn
-  ) {
-    incomingEdge.from.state &= ~bit;
-    visited++;
-    if (incomingEdge === cursor) break;
-  }
-  for (
-    let incomingEdge: ReactiveEdge | null = owner.lastIn;
-    incomingEdge !== null &&
-    incomingEdge.stamp !== lane.stamp &&
-    (incomingEdge.from.state & bit) !== 0;
-    incomingEdge = incomingEdge.prevIn
-  ) {
-    incomingEdge.from.state &= ~bit;
-    visited++;
-  }
-  return visited;
-}
-
-/**
- * Ends the active lane of `owner`: revokes its bits. Whatever removes edges
- * from the active owner's list (cleanup, disposal) calls it first, so a
- * producer never leaves the list with its bit.
- */
-export function releaseLease(owner: ReactiveNode): void {
+export function releaseLease(_owner: ReactiveNode): void {
+  /* @ev retire(_owner, 0) */
   const lane = activeLane;
-  if (lane === null) {
-    preparedOwner = null;
-    return;
-  }
-  const _revoked = revokeLane(lane, owner);
-  /* @ev revoke(owner, _revoked) */
-  freeLane(lane);
+  if (lane === null) preparedOwner = null;
+  else freeLane(lane);
 }
 
 /**
@@ -279,8 +249,10 @@ export function preparedMissIsAbsent(
   if (hasFullTapeCoverage === false) return coverAndCertify(producer, consumer);
 
   // A self-edge, a frontier slot or a watcher's saved slot carries no cell.
+  const state = producer.state;
   return (
-    (producer.state & (Computing | Watcher | preparedLaneBit)) === 0 &&
+    (state & (Computing | Watcher)) === 0 &&
+    (state & preparedLaneMask) !== preparedLaneTag &&
     producer !== consumer
   );
 }
@@ -311,8 +283,10 @@ function coverAndCertify(
   }
   lane.complete = true;
   hasFullTapeCoverage = true;
+  const state = producer.state;
   const r =
-    (producer.state & (Computing | Watcher | lane.bit)) === 0 &&
+    (state & (Computing | Watcher)) === 0 &&
+    (state & lane.mask) !== lane.tag &&
     producer !== consumer;
   /* @ev certify-after-cover(consumer, r ? 1 : 0) */
   return r;
@@ -320,7 +294,7 @@ function coverAndCertify(
 
 /**
  * Covers the prefix from its frontier up to the cursor. True when it stopped
- * at a producer that cannot take the bit.
+ * at a producer that cannot take the tag.
  */
 function coverPrefix(lane: Lane, consumer: ReactiveNode): boolean {
   const cursor = consumer.tailIn;
@@ -334,7 +308,8 @@ function coverPrefix(lane: Lane, consumer: ReactiveNode): boolean {
   ) {
     from = null;
   }
-  const bit = lane.bit;
+  const mask = lane.mask;
+  const tag = lane.tag;
   let blocked = false;
   let _covered = 0;
   for (
@@ -350,7 +325,7 @@ function coverPrefix(lane: Lane, consumer: ReactiveNode): boolean {
       blocked = true;
       break;
     }
-    producer.state = producerState | bit;
+    producer.state = (producerState & ~mask) | tag;
     producer.tailIn = incomingEdge;
     lane.coveredUpTo = incomingEdge;
     _covered++;
@@ -363,7 +338,7 @@ function coverPrefix(lane: Lane, consumer: ReactiveNode): boolean {
 /**
  * Covers up to `budget` suffix edges (all for a negative budget), from the
  * saved boundary towards the head, down to the first edge of this pass. True
- * when it stopped at a producer that cannot take the bit.
+ * when it stopped at a producer that cannot take the tag.
  */
 function coverSuffix(
   lane: Lane,
@@ -371,7 +346,8 @@ function coverSuffix(
   budget: number,
 ): boolean {
   const stamp = lane.stamp;
-  const bit = lane.bit;
+  const mask = lane.mask;
+  const tag = lane.tag;
   let incomingEdge = lane.suffixNext;
   // The saved boundary may have been read into the prefix or detached:
   // restart from the tail, passing over the edges already covered.
@@ -387,18 +363,20 @@ function coverSuffix(
   }
   let blocked = false;
   let covered = 0;
+  // The budget counts edges visited: a tag that is already current (covered
+  // before a restart, or an aliased generation) still costs its step, and
+  // still gets its cell, so the hint answers it.
   while (incomingEdge !== null && incomingEdge.stamp !== stamp) {
     const producer = incomingEdge.from;
     const producerState = producer.state;
-    if ((producerState & bit) === 0) {
-      if ((producerState & (Computing | Watcher)) !== 0) {
-        blocked = true;
-        break;
-      }
-      producer.state = producerState | bit;
+    if ((producerState & (Computing | Watcher)) === 0) {
+      producer.state = (producerState & ~mask) | tag;
       producer.tailIn = incomingEdge;
-      covered++;
+    } else if ((producerState & mask) !== tag) {
+      blocked = true;
+      break;
     }
+    covered++;
     incomingEdge = incomingEdge.prevIn;
     if (budget >= 0 && covered >= budget) break;
   }
@@ -530,7 +508,7 @@ function suspendActiveLane(): void {
   const lane = activeLane;
   if (lane === null) return;
   lane.complete = hasFullTapeCoverage;
-  // A covered lane carries the bit on every edge up to its owner's frontier
+  // A covered lane carries its tag on every edge up to its owner's frontier
   // (links while active were recorded at once).
   if (hasFullTapeCoverage)
     lane.coveredUpTo = (lane.owner as ReactiveNode).tailIn;
@@ -542,40 +520,36 @@ function activateLane(lane: Lane): void {
   activeLane = lane;
   preparedOwner = lane.owner;
   preparedPassStamp = lane.stamp;
-  preparedLaneBit = lane.bit;
+  preparedLaneMask = lane.mask;
+  preparedLaneTag = lane.tag;
   hasFullTapeCoverage = lane.complete;
 }
 
-/** Arms a free lane, or one whose owner's pass ended, for this pass: O(1). */
+/**
+ * Arms a free lane, or one whose owner's pass ended, for this pass, in O(1):
+ * a new generation, nothing to clear.
+ */
 function armLane(consumer: ReactiveNode, passStamp: number): boolean {
+  // Round robin over free lanes and lanes whose owner's pass ended, so
+  // every lane's generation moves once per LANE_COUNT arms: a tag aliases
+  // only after GENERATIONS * LANE_COUNT arms that did not refresh it.
   let lane: Lane | null = null;
-  for (let i = 0; i < LANE_COUNT; i++) {
+  for (let k = 0; k < LANE_COUNT; k++) {
+    const i = (nextLane + k) % LANE_COUNT;
     const candidate = lanes[i] as Lane;
-    if (candidate.owner === null) {
+    const owner = candidate.owner;
+    if (owner === null || isPassLive(owner, candidate.stamp) === false) {
       lane = candidate;
+      nextLane = (i + 1) % LANE_COUNT;
       break;
-    }
-  }
-  if (lane === null) {
-    for (let i = 0; i < LANE_COUNT; i++) {
-      const candidate = lanes[i] as Lane;
-      if (
-        isPassLive(candidate.owner as ReactiveNode, candidate.stamp) === false
-      ) {
-        lane = candidate;
-        break;
-      }
     }
   }
   if (lane === null) return false;
 
-  const previous = lane.owner;
-  if (previous !== null) {
-    const _reclaimed = revokeLane(lane, previous);
-    /* @ev reclaim(consumer, _reclaimed) */
-  }
   freeLane(lane);
   suspendActiveLane();
+
+  nextGeneration(lane);
 
   lane.owner = consumer;
   lane.stamp = passStamp;
@@ -585,12 +559,40 @@ function armLane(consumer: ReactiveNode, passStamp: number): boolean {
   lane.suffixCovered = false;
   lane.blocked = false;
   lane.misses = 0;
+  lane.regenerations = 0;
   lane.chunk = SUFFIX_CHUNK;
   tapeRefs++;
   lanesHeld++;
   activateLane(lane);
   /* @ev arm(consumer, passStamp) */
   return true;
+}
+
+/** A new generation: every earlier owner's tag stops being current. */
+function nextGeneration(lane: Lane): void {
+  const unit = lane.mask / GENERATIONS;
+  const generation = lane.tag / unit;
+  lane.tag = (generation === GENERATIONS ? 1 : generation + 1) * unit;
+}
+
+/**
+ * The active owner links a producer whose tag is already current: it had
+ * no edge to the owner, so the tag was left by an owner GENERATIONS
+ * generations back (an alias). Every other such producer would cost an
+ * exact search; moving to the next generation costs a recover instead.
+ * Bounded per pass, so a run of aliases cannot cycle.
+ */
+function regenerateActiveLane(): void {
+  const lane = activeLane as Lane;
+  if (lane.regenerations === GENERATIONS - 1) return;
+  lane.regenerations++;
+  /* @ev regenerate(lane.owner as ReactiveNode, lane.regenerations) */
+  nextGeneration(lane);
+  lane.complete = false;
+  lane.coveredUpTo = null;
+  lane.suffixNext = null;
+  lane.suffixCovered = false;
+  activateLane(lane);
 }
 
 /**
@@ -607,13 +609,16 @@ function resumeLane(lane: Lane, consumer: ReactiveNode): void {
 /**
  * An edge was linked to the active owner: its producer joins the tape, or,
  * when its slot cannot hold a cell, the certificate is withdrawn until the
- * next request rechecks it.
+ * next request rechecks it. A producer that already carried the current
+ * tag had no edge: an aliased generation, replaced by the next one.
  */
 export function notePreparedLink(edge: ReactiveEdge): void {
   const producer = edge.from;
   const producerState = producer.state;
   if ((producerState & (Computing | Watcher)) === 0) {
-    producer.state = producerState | preparedLaneBit;
+    if ((producerState & preparedLaneMask) === preparedLaneTag)
+      regenerateActiveLane();
+    producer.state = (producerState & ~preparedLaneMask) | preparedLaneTag;
     producer.tailIn = edge;
   } else {
     /* @ev coverage-drop(edge.to, 0) */

@@ -132,6 +132,41 @@ function countedNovel(count: number) {
   return { novel, reads: () => reads };
 }
 
+/**
+ * After an owner's lane ended, a fresh owner mounting over the same
+ * producers still certifies absence: of 32 probes read after arming, at most
+ * one lookup searches instead of stopping after the hint and the head start.
+ * Earlier membership is never cleared (lanes move their generation); a tag
+ * that aliases the fresh generation costs one search, then the lane moves
+ * on.
+ */
+function freshOwnerCertifies(producers: ReactiveNode[]): boolean {
+  const fresh = node(Consumer);
+  const saved = begin(fresh);
+  // Read until the fresh pass holds a lane: below about eight incoming
+  // edges the finger race settles absence without striking.
+  let next = 0;
+  while (preparedOwner !== fresh && next < 64)
+    resolveTrackedRead(producers[next++]!, fresh);
+  let searched = 0;
+  for (let j = 100; j < 132; j++) {
+    const probe = producers[j]!;
+    let reads = 0;
+    for (const edge of outgoingEdges(probe)) {
+      const to = edge.to;
+      Object.defineProperty(edge, "to", {
+        get: () => (reads++, to),
+        configurable: true,
+      });
+    }
+    resolveTrackedRead(probe, fresh);
+    // A certified miss reads the hint and the head start; a search reads on.
+    if (reads > 8) searched++;
+  }
+  end(fresh, saved);
+  return preparedOwner !== null && searched <= 1;
+}
+
 describe("prepared tape (INV-P)", () => {
   it("arms on the second strike of a pass and covers on demand", () => {
     const { sources, consumer } = wideGraph();
@@ -379,7 +414,7 @@ describe("prepared tape (INV-P)", () => {
     expectGraphIntegrity([...sources, consumer]);
   });
 
-  it("a lease dies with its pass: the next pass searches, and the bits are cleared", () => {
+  it("a lease dies with its pass: the next pass searches, and its tags stand in no one's way", () => {
     const { sources, consumer } = wideGraph();
     const { novel, reads } = countedNovel(97);
     let previous = begin(consumer);
@@ -389,14 +424,13 @@ describe("prepared tape (INV-P)", () => {
     previous = begin(consumer);
     resolveTrackedRead(novel, consumer);
     expect(reads() > 3, "a new stamp is a new pass: no certificate").toBe(true);
-    // The stale miss released the lease.
-    expect(leased(sources[128]!) || leased(sources[200]!)).toBe(false);
     for (let j = 0; j < 256; j++) resolveTrackedRead(sources[j]!, consumer);
     end(consumer, previous);
     expect(sourcesOf(consumer, [...sources, novel])).toEqual([
       256,
       ...range(256),
     ]);
+    expect(freshOwnerCertifies(sources)).toBe(true);
     expectGraphIntegrity([...sources, novel, consumer]);
   });
 
@@ -451,15 +485,15 @@ describe("prepared tape (INV-P)", () => {
     // A failed computed drops its residual suffix, and the lease with it.
     expect(sourcesOf(c, sources)).toEqual(order);
     expect(incomingEdges(c).every((e) => before.has(e))).toBe(true);
-    expect(sources.filter(leased).length).toBe(0);
     fail = false;
     expect(readConsumer(c)).toBe(3);
     expect(sourcesOf(c, sources)).toEqual(order);
     expect(incomingEdges(c).every((e) => before.has(e))).toBe(true);
+    expect(freshOwnerCertifies(sources)).toBe(true);
     expectGraphIntegrity([...sources, c]);
   });
 
-  it("a producer that leaves the owner's list loses its bit with the lease", () => {
+  it("a producer that leaves the owner's list keeps no current tag", () => {
     const { sources, consumer } = wideGraph();
     const { novel } = countedNovel(97);
     let previous = begin(consumer);
@@ -474,18 +508,18 @@ describe("prepared tape (INV-P)", () => {
     resolveTrackedRead(sources[128]!, consumer);
     resolveTrackedRead(sources[200]!, consumer);
     end(consumer, previous);
-    expect(range(256).filter((j) => leased(sources[j]!))).toEqual([]);
+    expect(freshOwnerCertifies(sources)).toBe(true);
     expectGraphIntegrity([...sources, novel, consumer]);
   });
 
-  it("disposing the owner clears the bits of its producers", () => {
+  it("disposing the owner leaves no current tag on its producers", () => {
     const { sources, consumer } = wideGraph();
     const previous = begin(consumer);
     prepare(sources, consumer);
     for (const s of sources) resolveTrackedRead(s, consumer);
     end(consumer, previous);
     unlinkAllSources(consumer);
-    expect(sources.filter(leased).length).toBe(0);
+    expect(freshOwnerCertifies(sources)).toBe(true);
     expectGraphIntegrity([...sources, consumer]);
   });
 
