@@ -88,20 +88,72 @@ var preparedLaneBit = Leased;
 var hasFullTapeCoverage = false;
 var activeLane: Lane | null = null;
 
+/** Strike records and lanes that name a consumer: disposal's O(1) exit. */
+var tapeRefs = 0;
+/** Lanes with an owner. */
+var lanesHeld = 0;
+/** The most recent first strike, the usual partner of a second one. */
+var lastRecord = 0;
+/** Where the next first strike looks for a free or dead record. */
+var nextRecord = 0;
+
 /** Disposal of `consumer`: no strike record or lane may retain it. */
 export function forgetStrikeConsumer(consumer: ReactiveNode): void {
-  for (let i = 0; i < STRIKE_RECORDS; i++)
-    if (strikeConsumers[i] === consumer) strikeConsumers[i] = null;
-  for (const lane of lanes) {
-    if (lane.owner !== consumer) continue;
-    // Its list is still attached here: its bits go with the lane.
-    clearLaneBits(consumer, lane.bit);
+  if (tapeRefs !== 0) forgetTapeReferences(consumer);
+}
+
+/**
+ * Drops the consumer's records and lanes, and every dead one: a disposed
+ * node is not live, so nothing it held is still needed. A dropped lane's
+ * bits are cleared over its owner's list, still attached here.
+ */
+function forgetTapeReferences(consumer: ReactiveNode): void {
+  for (let i = 0; i < STRIKE_RECORDS; i++) {
+    const recorded = strikeConsumers[i] as ReactiveNode | null;
+    if (
+      recorded !== null &&
+      (recorded === consumer ||
+        isPassLive(recorded, strikeStamps[i] as number) === false)
+    ) {
+      clearRecord(i);
+    }
+  }
+  for (let i = 0; i < LANE_COUNT; i++) {
+    const lane = lanes[i] as Lane;
+    const owner = lane.owner;
+    if (
+      owner !== null &&
+      (owner === consumer || isPassLive(owner, lane.stamp) === false)
+    ) {
+      clearLaneBits(owner, lane.bit);
+      freeLane(lane);
+    }
+  }
+}
+
+function setRecord(i: number, consumer: ReactiveNode, stamp: number): void {
+  if (strikeConsumers[i] === null) tapeRefs++;
+  strikeConsumers[i] = consumer;
+  strikeStamps[i] = stamp;
+}
+
+function clearRecord(i: number): void {
+  if (strikeConsumers[i] === null) return;
+  strikeConsumers[i] = null;
+  tapeRefs--;
+}
+
+/** Frees a lane whose bits are already cleared or deliberately left stale. */
+function freeLane(lane: Lane): void {
+  if (lane.owner !== null) {
     lane.owner = null;
     lane.coveredUpTo = null;
-    if (lane === activeLane) {
-      activeLane = null;
-      preparedOwner = null;
-    }
+    tapeRefs--;
+    lanesHeld--;
+  }
+  if (lane === activeLane) {
+    activeLane = null;
+    preparedOwner = null;
   }
 }
 
@@ -143,12 +195,8 @@ function clearLaneBits(owner: ReactiveNode, bit: number): void {
 export function releaseLease(owner: ReactiveNode): void {
   clearLaneBits(owner, preparedLaneBit);
   const lane = activeLane;
-  if (lane !== null) {
-    lane.owner = null;
-    lane.coveredUpTo = null;
-  }
-  activeLane = null;
-  preparedOwner = null;
+  if (lane !== null) freeLane(lane);
+  else preparedOwner = null;
 }
 
 /**
@@ -225,35 +273,52 @@ function acquireTape(consumer: ReactiveNode): boolean {
   if (preparedOwner === consumer && preparedPassStamp === passStamp)
     return false;
 
-  for (const lane of lanes) {
-    if (lane.owner === consumer && lane.stamp === passStamp) {
-      resumeLane(lane, consumer);
-      return true;
+  if (lanesHeld !== 0) {
+    for (let i = 0; i < LANE_COUNT; i++) {
+      const lane = lanes[i] as Lane;
+      if (lane.owner === consumer && lane.stamp === passStamp) {
+        resumeLane(lane, consumer);
+        return true;
+      }
     }
   }
 
-  let free = -1;
-  for (let i = 0; i < STRIKE_RECORDS; i++) {
-    const recorded = strikeConsumers[i];
-    if (recorded === consumer && strikeStamps[i] === passStamp) {
-      // The second strike of this pass; later ones retry while every lane
-      // is live.
-      if (armLane(consumer, passStamp) === false) return false;
-      strikeConsumers[i] = null;
-      return true;
-    }
-    if (
-      free < 0 &&
-      (recorded === null ||
-        isPassLive(recorded as ReactiveNode, strikeStamps[i] as number) ===
-          false)
-    ) {
-      free = i;
+  // The second strike of this pass: its record is usually the latest one.
+  let found = -1;
+  if (
+    strikeConsumers[lastRecord] === consumer &&
+    strikeStamps[lastRecord] === passStamp
+  ) {
+    found = lastRecord;
+  } else {
+    for (let i = 0; i < STRIKE_RECORDS; i++) {
+      if (strikeConsumers[i] === consumer && strikeStamps[i] === passStamp) {
+        found = i;
+        break;
+      }
     }
   }
-  if (free >= 0) {
-    strikeConsumers[free] = consumer;
-    strikeStamps[free] = passStamp;
+  if (found >= 0) {
+    // Later strikes retry while every lane is live.
+    if (armLane(consumer, passStamp) === false) return false;
+    clearRecord(found);
+    return true;
+  }
+
+  // The first strike: a free record, or one of a pass that ended. A live
+  // pass's record is never evicted; with none free, this pass does not adapt.
+  for (let k = 0; k < STRIKE_RECORDS; k++) {
+    const i = (nextRecord + k) % STRIKE_RECORDS;
+    const recorded = strikeConsumers[i] as ReactiveNode | null;
+    if (
+      recorded === null ||
+      isPassLive(recorded, strikeStamps[i] as number) === false
+    ) {
+      setRecord(i, consumer, passStamp);
+      lastRecord = i;
+      nextRecord = (i + 1) % STRIKE_RECORDS;
+      return false;
+    }
   }
   return false;
 }
@@ -281,14 +346,16 @@ function activateLane(lane: Lane): void {
 /** Arms a free lane, or one whose owner's pass ended, for this pass. */
 function armLane(consumer: ReactiveNode, passStamp: number): boolean {
   let lane: Lane | null = null;
-  for (const candidate of lanes) {
+  for (let i = 0; i < LANE_COUNT; i++) {
+    const candidate = lanes[i] as Lane;
     if (candidate.owner === null) {
       lane = candidate;
       break;
     }
   }
   if (lane === null) {
-    for (const candidate of lanes) {
+    for (let i = 0; i < LANE_COUNT; i++) {
+      const candidate = lanes[i] as Lane;
       if (
         isPassLive(candidate.owner as ReactiveNode, candidate.stamp) === false
       ) {
@@ -299,11 +366,9 @@ function armLane(consumer: ReactiveNode, passStamp: number): boolean {
   }
   if (lane === null) return false;
 
-  if (lane === activeLane) {
-    activeLane = null;
-    preparedOwner = null;
-  }
-  if (lane.owner !== null) clearLaneBits(lane.owner, lane.bit);
+  const previous = lane.owner;
+  if (previous !== null) clearLaneBits(previous, lane.bit);
+  freeLane(lane);
   suspendActiveLane();
 
   const bit = lane.bit;
@@ -329,6 +394,8 @@ function armLane(consumer: ReactiveNode, passStamp: number): boolean {
   lane.stamp = passStamp;
   lane.covered = allProducersCovered;
   lane.coveredUpTo = null;
+  tapeRefs++;
+  lanesHeld++;
   activateLane(lane);
   return true;
 }

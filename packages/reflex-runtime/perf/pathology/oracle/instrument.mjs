@@ -95,33 +95,39 @@ const edits = tape.includes("function acquireTape(")
         `  if (preparedOwner === consumer && preparedPassStamp === passStamp)
     return false;
 
-  for (const lane of lanes) {`,
+  if (lanesHeld !== 0) {`,
         `  if (preparedOwner === consumer && preparedPassStamp === passStamp)
     return false;
   ev("strike", consumer, passStamp);
 
-  for (const lane of lanes) {`,
+  if (lanesHeld !== 0) {`,
       ],
       [
-        `      resumeLane(lane, consumer);
-      return true;`,
-        `      resumeLane(lane, consumer);
-      ev("resume", consumer, passStamp);
-      return true;`,
+        `        resumeLane(lane, consumer);
+        return true;`,
+        `        resumeLane(lane, consumer);
+        ev("resume", consumer, passStamp);
+        return true;`,
       ],
       [
-        `      if (armLane(consumer, passStamp) === false) return false;`,
-        `      if (armLane(consumer, passStamp) === false) {
-        ev("lease-denied", consumer, passStamp);
-        return false;
-      }`,
+        `    if (armLane(consumer, passStamp) === false) return false;`,
+        `    if (armLane(consumer, passStamp) === false) {
+      ev("lease-denied", consumer, passStamp);
+      return false;
+    }`,
       ],
       [
-        `  if (free >= 0) {
-    strikeConsumers[free] = consumer;`,
-        `  if (free < 0) ev("strike-table-full", consumer, passStamp);
-  if (free >= 0) {
-    strikeConsumers[free] = consumer;`,
+        `      return false;
+    }
+  }
+  return false;
+}`,
+        `      return false;
+    }
+  }
+  ev("strike-table-full", consumer, passStamp);
+  return false;
+}`,
       ],
       [
         `  lane.owner = consumer;
