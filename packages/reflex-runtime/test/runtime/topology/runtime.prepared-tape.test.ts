@@ -21,6 +21,7 @@ import {
   createConsumer,
   createProducer,
 } from "../../../src/protocol/create.node";
+import { preparedOwner } from "../../../src/kernel/shape/graph/tape";
 import { readConsumer } from "../../../src/protocol/read.consumer";
 import { readProducer } from "../../../src/protocol/read.producer";
 import { writeProducer } from "../../../src/protocol/write.producer";
@@ -95,10 +96,15 @@ function wideGraph() {
   return { sources, consumer };
 }
 
-/** Two far reads: two strikes of the pass, so the tape is prepared. */
+/**
+ * Four far reads of a wide graph's sources: the second strike arms a lane
+ * and asks for a certificate (the prefix and a 32-edge suffix chunk are
+ * covered), the next two ask again (a 64-edge chunk, then the rest of the
+ * suffix, UNCOVERED_MISSES being 2): the tape is covered.
+ */
+const PREPARED = [128, 200, 64, 32];
 function prepare(sources: ReactiveNode[], consumer: ReactiveNode): void {
-  resolveTrackedRead(sources[128]!, consumer);
-  resolveTrackedRead(sources[200]!, consumer);
+  for (const j of PREPARED) resolveTrackedRead(sources[j]!, consumer);
 }
 
 /** A full collection; WeakRef targets survive until the job ends, so yield. */
@@ -127,14 +133,22 @@ function countedNovel(count: number) {
 }
 
 describe("prepared tape (INV-P)", () => {
-  it("prepares on the second strike of a pass: a cell and a bit per producer", () => {
+  it("arms on the second strike of a pass and covers on demand", () => {
     const { sources, consumer } = wideGraph();
     const before = new Map(incomingEdges(consumer).map((e) => [e.from, e]));
     const previous = begin(consumer);
     resolveTrackedRead(sources[128]!, consumer);
     // One strike: only the found pair's own hint (INV-H), no tape.
     expect(sources.filter((s) => isCell(s, consumer)).length).toBe(1);
+    expect(preparedOwner === consumer, "no lane yet").toBe(false);
     resolveTrackedRead(sources[200]!, consumer);
+    expect(preparedOwner === consumer, "armed").toBe(true);
+    // The arming request came before 200 was accepted: it covered the
+    // prefix (128) and the first suffix chunk.
+    expect(sources.filter(leased).length).toBe(1 + 32);
+    resolveTrackedRead(sources[64]!, consumer);
+    expect(sources.filter(leased).length).toBe(2 + 32 + 64);
+    resolveTrackedRead(sources[32]!, consumer);
     expect(sources.every((s) => isCell(s, consumer) && leased(s))).toBe(true);
 
     for (const j of shuffled(range(256), 7))
@@ -181,7 +195,9 @@ describe("prepared tape (INV-P)", () => {
     // The outer pass's first strike survived the nested one: this is its
     // second, and it arms a lane.
     resolveTrackedRead(outer.sources[200]!, outer.consumer);
-    expect(outer.sources.every(leased), "second strike of the pass").toBe(true);
+    expect(preparedOwner === outer.consumer, "second strike of the pass").toBe(
+      true,
+    );
     end(outer.consumer, previous);
 
     expectUniquePairs(outer.consumer);
@@ -216,7 +232,9 @@ describe("prepared tape (INV-P)", () => {
     end(consumer, previous);
 
     expect(sourcesOf(consumer, [...sources, novel])).toEqual([
-      128, 200, 256, 5,
+      ...PREPARED,
+      256,
+      5,
     ]);
     expectGraphIntegrity([...sources, novel, consumer]);
   });
@@ -233,7 +251,10 @@ describe("prepared tape (INV-P)", () => {
     sources[9]!.state &= ~Computing;
     expect(reads() > 3, "searched").toBe(true);
     end(consumer, previous);
-    expect(sourcesOf(consumer, [...sources, novel])).toEqual([128, 200, 256]);
+    expect(sourcesOf(consumer, [...sources, novel])).toEqual([
+      ...PREPARED,
+      256,
+    ]);
     expectGraphIntegrity([...sources, novel, consumer]);
   });
 
@@ -259,7 +280,7 @@ describe("prepared tape (INV-P)", () => {
       const previous = begin(consumer);
       resolveTrackedRead(producers[30]!, consumer);
       resolveTrackedRead(producers[20]!, consumer);
-      const tape = producers.every((p) => isCell(p, consumer));
+      const tape = preparedOwner === consumer;
       end(consumer, previous);
       // 4 links after the finger is its 7th probe (step 12): far.
       expect(tape, `offset ${offset}`).toBe(offset === 4);
@@ -267,7 +288,7 @@ describe("prepared tape (INV-P)", () => {
     }
   });
 
-  it("a nested consumer neither takes the lease nor makes a twin", () => {
+  it("a nested consumer takes its own lane and leaves the outer certificate whole", () => {
     const sources = range(256).map(() => node());
     const add = (count: number) => {
       for (let i = 0; i < count; i++) {
@@ -291,8 +312,9 @@ describe("prepared tape (INV-P)", () => {
     for (const j of shuffled(range(256), 11))
       resolveTrackedRead(sources[j]!, inner);
     end(inner, saved);
-    // The inner pass struck often and wrote hints over the outer cells, but
-    // the lease is still the outer pass's: its covered miss certifies.
+    // The inner pass armed its own lane and wrote its cells over the outer
+    // ones; the outer lane was suspended, not revoked: its covered miss
+    // certifies once it is resumed.
     resolveTrackedRead(novel, outer);
     expect(reads() <= 3, `reads ${reads()}`).toBe(true);
     for (const j of shuffled(range(256), 13))
@@ -352,8 +374,8 @@ describe("prepared tape (INV-P)", () => {
     p.compute = undefined;
     expect(pairs(consumer, p)).toBe(1);
     end(consumer, previous);
-    expect(sourcesOf(consumer, sources)).toEqual([128, 200, 60]);
-    expect(incomingEdges(consumer)[2] === cell).toBe(true);
+    expect(sourcesOf(consumer, sources)).toEqual([...PREPARED, 60]);
+    expect(incomingEdges(consumer)[PREPARED.length] === cell).toBe(true);
     expectGraphIntegrity([...sources, consumer]);
   });
 
@@ -443,9 +465,9 @@ describe("prepared tape (INV-P)", () => {
     let previous = begin(consumer);
     prepare(sources, consumer);
     expect(sources.every(leased)).toBe(true);
-    // The pass reads two producers: cleanup unlinks the other 254.
+    // The pass reads four producers: cleanup unlinks the other 252.
     end(consumer, previous);
-    expect(sourcesOf(consumer, sources)).toEqual([128, 200]);
+    expect(sourcesOf(consumer, sources)).toEqual(PREPARED);
     // The next pass's stale miss releases the lease, if nothing did before.
     previous = begin(consumer);
     resolveTrackedRead(novel, consumer);

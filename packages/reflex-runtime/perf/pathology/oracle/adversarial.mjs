@@ -24,11 +24,18 @@ const inLength = (c) => {
   for (let e = c.firstIn; e !== null; e = e.nextIn) n++;
   return n;
 };
-globalThis.__ev = (kind, consumer, stamp) => {
+// The dev tape reports a prepare (it covers the whole list); the lane
+// directory reports each cover, revoke and reclaim with its edge count.
+globalThis.__ev = (kind, consumer, value) => {
   if (!recording) return;
   const walked =
-    kind === "prepare" || kind === "prepare-uncovered" ? inLength(consumer) : 0;
-  events.push({ kind, consumer, stamp, walked });
+    kind === "prepare" || kind === "prepare-uncovered"
+      ? inLength(consumer)
+      : kind === "cover"
+        ? value
+        : 0;
+  const revoked = kind === "revoke" || kind === "reclaim" ? value : 0;
+  events.push({ kind, consumer, stamp: value, walked, revoked });
 };
 function record(fn) {
   events.length = 0;
@@ -42,6 +49,14 @@ function record(fn) {
 const of = (node) => events.filter((e) => e.consumer === node);
 const n = (node, kind) => of(node).filter((e) => e.kind === kind).length;
 const walkedBy = (node) => of(node).reduce((t, e) => t + e.walked, 0);
+const revokedBy = (node) => of(node).reduce((t, e) => t + e.revoked, 0);
+/** Lanes armed (lane directory) or tapes prepared (dev). */
+const arms = (node) =>
+  n(node, "prepare") + n(node, "prepare-uncovered") + n(node, "arm");
+const certified = (node) =>
+  n(node, "cert-absent") +
+  of(node).filter((e) => e.kind === "certify-after-cover" && e.stamp === 1)
+    .length;
 
 const range = (k) => Array.from({ length: k }, (_, i) => i);
 function permutation(k, seed) {
@@ -127,7 +142,7 @@ add(
     const value = record(() => rt.readConsumer(make(0)));
     const expected = sets.reduce((t, s) => t + sumOf(s), 0);
     const per = levels.map((c) => ({
-      prepare: n(c, "prepare"),
+      prepare: arms(c),
       denied: n(c, "lease-denied"),
       stolen: n(c, "register-stolen"),
     }));
@@ -155,7 +170,7 @@ add(
       const c = reader(P, permutation(N, 5 + i));
       mounts.push(c);
       value += record(() => rt.readConsumer(c));
-      certs.push(n(c, "cert-absent"));
+      certs.push(certified(c));
     }
     const ok = certs[63] >= 0.9 * certs[0] && certs[0] > 0;
     return {
@@ -225,11 +240,11 @@ add(
     });
     const value = record(() => rt.readConsumer(outer));
     return {
-      ok: n(inner, "prepare") >= 1 && n(inner, "lease-denied") === 0,
+      ok: arms(inner) >= 1 && n(inner, "lease-denied") === 0,
       value,
       expected: 2 * sumOf(S),
       nodes: [outer, inner],
-      detail: `inner: prepare ${n(inner, "prepare")}, denied ${n(inner, "lease-denied")}, strikes ${n(inner, "strike")}`,
+      detail: `inner: prepare ${arms(inner)}, denied ${n(inner, "lease-denied")}, strikes ${n(inner, "strike")}`,
     };
   },
 );
@@ -295,7 +310,7 @@ for (const [name, where] of [
       value,
       expected: sumOf(S) + sumOf(T),
       nodes: [outer, inner],
-      detail: `first attempt threw: ${threw}; retry prepares ${n(outer, "prepare")}`,
+      detail: `first attempt threw: ${threw}; retry prepares ${arms(outer)}`,
     };
   });
 }
@@ -328,7 +343,7 @@ add(
       value,
       expected: sumOf(ab),
       nodes: [c],
-      detail: `walked ${walked} of ${D}`,
+      detail: `walked ${walked} of ${D}; revoked or reclaimed ${revokedBy(c)}`,
     };
   },
 );
@@ -367,7 +382,7 @@ add(
       value,
       expected: sumOf(fresh, range(7)) + sumOf(P, boundary),
       nodes: [c],
-      detail: `walked ${walked}, uncovered fallbacks ${uncovered}, prepares ${n(c, "prepare")}`,
+      detail: `walked ${walked}, uncovered fallbacks ${uncovered}, arms ${arms(c)}, revoked ${revokedBy(c)}`,
     };
   },
 );
@@ -400,7 +415,7 @@ add(
       value: threw ? "threw" : typeof value,
       expected: threw ? "threw" : typeof value,
       nodes: [a],
-      detail: `threw ${threw} (production rejects the read: case not reached); coverage drops ${n(a, "coverage-drop") + n(a, "prepare-uncovered")}, certified ${n(a, "cert-absent")}`,
+      detail: `threw ${threw} (production rejects the read: case not reached); coverage drops ${n(a, "coverage-drop") + n(a, "prepare-uncovered")}, certified ${certified(a)}`,
     };
   },
 );
@@ -439,10 +454,17 @@ add(
       value += record(() => rt.readConsumer(c));
       let prepared = false;
       for (const e of of(c)) {
-        if (e.kind === "prepare" || e.kind === "prepare-uncovered")
+        if (
+          e.kind === "prepare" ||
+          e.kind === "prepare-uncovered" ||
+          e.kind === "arm"
+        )
           prepared = true;
         if (e.kind === "lease-dead") dead++;
-        if (e.kind === "cert-absent" && !prepared) early++;
+        const cert =
+          e.kind === "cert-absent" ||
+          (e.kind === "certify-after-cover" && e.stamp === 1);
+        if (cert && !prepared) early++;
       }
     }
     return {

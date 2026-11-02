@@ -17,8 +17,15 @@ const rt = await import(
 
 const log = [];
 let recording = false;
-globalThis.__ev = (kind, consumer, stamp) => {
-  if (recording) log.push({ kind, consumer, stamp });
+globalThis.__ev = (kind, consumer, value, producer) => {
+  if (!recording) return;
+  log.push({ kind, consumer, value });
+  if (process.env.SEQ && kind === "exact-fallback") {
+    const slot = producer.tailIn;
+    const owners = [];
+    for (let e = producer.firstOut; e !== null; e = e.nextOut) owners.push(e.to === consumer ? "π" : "x");
+    console.error("exact-fallback: slot", slot === null ? "null" : slot.from === producer ? (slot.to === consumer ? "π's edge" : "another consumer's edge") : "an incoming edge", "| bits", (producer.state >> 9) & 15, "| edge to π at out index", owners.indexOf("π"), "of", owners.length);
+  }
 };
 
 const range = (n) => Array.from({ length: n }, (_, i) => i);
@@ -170,8 +177,22 @@ const scenarios = {
   },
 };
 
+/** Cost of the lane directory's materialization: reported, not a decision. */
+const COST = new Set(["cover", "revoke", "reclaim", "resume"]);
+
+/** The pass's decisions, in the dev tape's vocabulary. */
 function traceOf(node) {
-  return log.filter((e) => e.consumer === node).map((e) => e.kind);
+  return log
+    .filter((e) => e.consumer === node && !COST.has(e.kind))
+    .map((e) =>
+      e.kind === "arm"
+        ? "prepare"
+        : e.kind === "certify-after-cover"
+          ? e.value === 1
+            ? "cert-absent"
+            : "busy-fallback"
+          : e.kind,
+    );
 }
 
 function run(build, mode) {
@@ -185,6 +206,8 @@ function run(build, mode) {
   const traces = {};
   for (const [name, node] of Object.entries(s.subjects))
     traces[name] = traceOf(node);
+  if (process.env.SEQ)
+    console.error(mode, log.filter((e) => e.consumer === s.subjects.pi && e.kind !== "hint-hit").map((e) => e.kind + (e.kind === "cover" ? "=" + e.value : "")).join(" "));
   return { value, traces };
 }
 
@@ -208,6 +231,10 @@ for (const [name, build] of Object.entries(scenarios)) {
   for (const subject of Object.keys(n.traces)) {
     const x = n.traces[subject];
     const y = h.traces[subject];
+    if (process.env.SEQ && !same(normalize(x), normalize(y))) {
+      const a = normalize(x).filter((k) => k !== "hint-hit"), b = normalize(y).filter((k) => k !== "hint-hit");
+      console.error(name, subject, "nested:", a.join(" "), "| hoisted:", b.join(" "), "| hint-hits", normalize(x).filter((k) => k === "hint-hit").length, normalize(y).filter((k) => k === "hint-hit").length);
+    }
     const verdict = same(x, y)
       ? "transparent"
       : same(normalize(x), normalize(y))

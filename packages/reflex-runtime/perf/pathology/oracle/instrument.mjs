@@ -30,7 +30,7 @@ const IMPORT = [
 `,
   `import { trackingStamp } from "@runtime/kernel/state";
 ` +
-    `const ev = (k: string, c: ReactiveNode, s: number): void => (globalThis as any).__ev?.(k, c, s);
+    `const ev = (k: string, c: ReactiveNode, s: number, p?: ReactiveNode): void => (globalThis as any).__ev?.(k, c, s, p);
 `,
 ];
 const RELEASE = [
@@ -82,63 +82,12 @@ const DROP = [
   }
 }`,
 ];
-// The single-lease tape (dev) and the lane directory (research/tape-lanes).
-const edits = tape.includes("function acquireTape(")
-  ? [
-      IMPORT,
-      RELEASE,
-      DEAD,
-      certify("preparedLaneBit"),
-      CELL,
-      DROP,
-      [
-        `  if (preparedOwner === consumer && preparedPassStamp === passStamp)
-    return false;
-
-  if (lanesHeld !== 0) {`,
-        `  if (preparedOwner === consumer && preparedPassStamp === passStamp)
-    return false;
-  ev("strike", consumer, passStamp);
-
-  if (lanesHeld !== 0) {`,
-      ],
-      [
-        `        resumeLane(lane, consumer);
-        return true;`,
-        `        resumeLane(lane, consumer);
-        ev("resume", consumer, passStamp);
-        return true;`,
-      ],
-      [
-        `    if (armLane(consumer, passStamp) === false) return false;`,
-        `    if (armLane(consumer, passStamp) === false) {
-      ev("lease-denied", consumer, passStamp);
-      return false;
-    }`,
-      ],
-      [
-        `      return false;
-    }
-  }
-  return false;
-}`,
-        `      return false;
-    }
-  }
-  ev("strike-table-full", consumer, passStamp);
-  return false;
-}`,
-      ],
-      [
-        `  lane.owner = consumer;
-  lane.stamp = passStamp;
-  lane.covered = allProducersCovered;`,
-        `  ev(allProducersCovered ? "prepare" : "prepare-uncovered", consumer, passStamp);
-  lane.owner = consumer;
-  lane.stamp = passStamp;
-  lane.covered = allProducersCovered;`,
-      ],
-    ]
+// A source with `/* @ev kind(consumer, value) */` markers (research/tape-lanes)
+// gets one ev() call per marker; the single-lease tape of dev gets the edits
+// below.
+const marked = tape.includes("/* @ev ");
+const edits = marked
+  ? [IMPORT]
   : [
       IMPORT,
       RELEASE,
@@ -176,6 +125,28 @@ const edits = tape.includes("function acquireTape(")
   preparedPassStamp = passStamp;`,
       ],
     ];
+if (marked) {
+  // Markers are statements of the lane directory; the certificate's outcome
+  // is reported where the dev tape reports it.
+  tape = tape.replace(
+    /\/\* @ev ([a-z-]+)\((.+?)\) \*\//g,
+    (_, kind, args) => `ev("${kind}", ${args});`,
+  );
+  edits.push([
+    `  return (
+    (producer.state & (Computing | Watcher | preparedLaneBit)) === 0 &&
+    producer !== consumer
+  );`,
+    `  const r =
+    (producer.state & (Computing | Watcher | preparedLaneBit)) === 0 &&
+    producer !== consumer;
+` +
+      `  ev(r ? "cert-absent" : (producer.state & preparedLaneBit) !== 0 ? "exact-fallback" : "busy-fallback", consumer, preparedPassStamp, producer);
+` +
+      `  return r;`,
+  ]);
+  edits.push(DEAD);
+}
 for (const [a, b] of edits) tape = replaceOnce(tape, a, b);
 
 const find = replaceOnce(
