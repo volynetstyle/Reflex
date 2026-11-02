@@ -27,6 +27,9 @@
 //     each side tiers up alone behind an independent random shift of code
 //     and heap, so a build's placement effect becomes variance across
 //     replicates instead of a fixed bias that replication would narrow.
+//     Each side's bundle also opens with a random number of captured
+//     declarations, so its ModuleContext slot offsets move too (a build that
+//     only adds declarations otherwise measures up to 7% apart).
 //     Under --predictable two builds with identical machine code otherwise
 //     measure several percent apart on the CI runner.
 //  7. A worker that crashes or times out is retried once; a second failure

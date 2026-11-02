@@ -15,6 +15,9 @@
 // cancels. Each side gets its own instance of the runtime bundle and of the
 // workload module (distinct module URLs), so no closure, feedback vector or
 // hidden class is shared between the sides; only the heap and the CPU are.
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { PerformanceObserver } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
 
@@ -69,10 +72,37 @@ function shiftLayout(side) {
   layoutBallast.push(ballast);
 }
 
+/**
+ * Context layout: a bundle's module-level declarations share one
+ * ModuleContext, so a build that adds or removes declarations moves every
+ * hot module variable to other slot offsets. That is a fixed bias of the
+ * build the shifts above do not reach: two builds with identical machine
+ * code but for those offsets measured 6-7% apart on the CI runner
+ * (A.track.hub-duplicate, 2026-11-02). Each side therefore loads a copy of
+ * its bundle that opens with a random number of captured declarations, so
+ * its context slots start at a random offset too.
+ */
+function padContext(bundlePath, side) {
+  if (layoutSeed === 0) return bundlePath;
+  const slots = Math.floor(layoutRandom() * 64);
+  let pad = "";
+  for (let i = 0; i < slots; i++) pad += `var __layoutSlot${i} = ${i};
+`;
+  const keep = Array.from({ length: slots }, (_, i) => `__layoutSlot${i}`);
+  pad += `export function __layoutKeep() { return [${keep.join(", ")}]; }
+`;
+  const dir = mkdtempSync(path.join(tmpdir(), `reflex-layout-${side}-`));
+  const copy = path.join(dir, "runtime.mjs");
+  writeFileSync(copy, pad + readFileSync(bundlePath, "utf8"));
+  return copy;
+}
+
 /** Load a runtime bundle and a private workload module instance for one side. */
 async function loadSide(bundlePath, side) {
   shiftLayout(side);
-  const rt = await import(`${pathToFileURL(bundlePath).href}?side=${side}`);
+  const rt = await import(
+    `${pathToFileURL(padContext(bundlePath, side)).href}?side=${side}`
+  );
   const { findWorkload } = await import(
     new URL(`./workloads.mjs?side=${side}`, import.meta.url).href
   );
