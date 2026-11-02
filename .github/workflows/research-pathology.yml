@@ -37,24 +37,13 @@ jobs:
             --mutate "src/kernel/shape/graph/tape.ts::    hasFullTapeCoverage &&::    false &&"
           sha256sum $B/*/runtime.mjs | tee "$RUNNER_TEMP/bundles.txt"
 
-      - name: Consequences
+      - name: Discovery
         working-directory: packages/reflex-runtime
         run: |
           set -o pipefail
           mkdir -p "$GITHUB_WORKSPACE/out"
           B=perf/pathology/bundles
-          node perf/pathology/compare.mjs --suite consequences \
-            --bundles $B/current,$B/no-tape,$B/no-cert --names current,no-tape,no-cert \
-            --json "$GITHUB_WORKSPACE/out/consequences.json" | tee "$GITHUB_WORKSPACE/out/consequences.md"
-
-      - name: Clinical cases, paired
-        working-directory: packages/reflex-runtime
-        run: |
-          set -o pipefail
-          B=perf/pathology/bundles
-          node perf/pathology/compare.mjs --suite clinical --cases "^(wide-narrow|replace-half|mount-dispose-wide)$" \
-            --bundles $B/current,$B/no-tape,$B/no-cert --names current,no-tape,no-cert \
-            --json "$GITHUB_WORKSPACE/out/clinical.json" | tee "$GITHUB_WORKSPACE/out/clinical.md"
+          node perf/pathology/compare.mjs --suite discovery             --bundles $B/current,$B/no-tape,$B/no-cert --names current,no-tape,no-cert             --json "$GITHUB_WORKSPACE/out/discovery.json" | tee "$GITHUB_WORKSPACE/out/discovery.md"
 
       - name: Summary
         if: always()
@@ -63,10 +52,8 @@ jobs:
             echo "Node $(node --version), $(lscpu | sed -n 's/^Model name: *//p')"
             echo
             echo '```'; cat "$RUNNER_TEMP/bundles.txt"; echo '```'
-            echo; echo "## Consequences"; echo
-            cat out/consequences.md || true
-            echo; echo "## Clinical, paired"; echo
-            cat out/clinical.md || true
+            echo; echo "## Discovery"; echo
+            cat out/discovery.md || true
           } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

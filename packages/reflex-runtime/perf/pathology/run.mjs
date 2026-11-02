@@ -10,8 +10,9 @@ import { pathToFileURL } from "node:url";
 
 import { cases as clinical } from "./cases.mjs";
 import { cases as consequences } from "./consequences.mjs";
+import { cases as discovery } from "./discovery.mjs";
 
-export const suites = { clinical, consequences };
+export const suites = { clinical, consequences, discovery };
 
 const args = process.argv.slice(2);
 const opt = (n, f) => (args.includes(n) ? args[args.indexOf(n) + 1] : f);

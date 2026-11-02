@@ -9,11 +9,12 @@ import path from "node:path";
 
 import { cases as clinical } from "./cases.mjs";
 import { cases as consequences } from "./consequences.mjs";
+import { cases as discovery } from "./discovery.mjs";
 
 const args = process.argv.slice(2);
 const opt = (n, f) => (args.includes(n) ? args[args.indexOf(n) + 1] : f);
 const suite = opt("--suite", "consequences");
-const cases = { clinical, consequences }[suite];
+const cases = { clinical, consequences, discovery }[suite];
 const bundles = opt("--bundles").split(",").map((b) => path.resolve(b));
 const names = (opt("--names") ?? bundles.map((b) => path.basename(b)).join(",")).split(",");
 const only = new RegExp(opt("--cases", "."));
