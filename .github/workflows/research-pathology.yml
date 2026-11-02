@@ -1,9 +1,8 @@
 name: Research - pathology sentinels
 
-# Clinical workloads of the runtime (packages/reflex-runtime/perf/pathology):
-# cost per step and growth exponent across sizes. Runs only on its research
-# branch. Each job times one bundle on one runner: read exponents and
-# per-read costs, compare the two bundles only as ratios of magnitude.
+# Workloads of the runtime (packages/reflex-runtime/perf/pathology). One job,
+# three bundles timed alternately on the same runner: the current runtime,
+# no tape prepare, and prepare without the absence certificate.
 on:
   push:
     branches: [research/pathology-sentinels]
@@ -17,18 +16,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  timing:
-    name: ${{ matrix.bundle }}
+  paired:
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - bundle: current
-            mutate: ""
-          - bundle: no-tape
-            mutate: "src/kernel/shape/graph/tape.ts::  prepareTape(consumer, passStamp);::  return false;"
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -36,38 +26,51 @@ jobs:
 
       - uses: ./.github/actions/setup-workspace
 
-      - name: Build bundle
+      - name: Build bundles
         working-directory: packages/reflex-runtime
-        env:
-          MUTATE: ${{ matrix.mutate }}
         run: |
-          if [ -n "$MUTATE" ]; then
-            node scripts/build-baseline-oracle.mjs --source --production --mutate "$MUTATE" --out perf/pathology/bundle
-          else
-            node scripts/build-baseline-oracle.mjs --source --production --out perf/pathology/bundle
-          fi
-          sha256sum perf/pathology/bundle/runtime.mjs
+          B=perf/pathology/bundles
+          node scripts/build-baseline-oracle.mjs --source --production --out $B/current
+          node scripts/build-baseline-oracle.mjs --source --production --out $B/no-tape \
+            --mutate "src/kernel/shape/graph/tape.ts::  prepareTape(consumer, passStamp);::  return false;"
+          node scripts/build-baseline-oracle.mjs --source --production --out $B/no-cert \
+            --mutate "src/kernel/shape/graph/tape.ts::    hasFullTapeCoverage &&::    false &&"
+          sha256sum $B/*/runtime.mjs | tee "$RUNNER_TEMP/bundles.txt"
 
-      - name: Time
+      - name: Consequences
         working-directory: packages/reflex-runtime
         run: |
           set -o pipefail
           mkdir -p "$GITHUB_WORKSPACE/out"
-          node perf/pathology/run.mjs --bundle perf/pathology/bundle --json "$GITHUB_WORKSPACE/out/${{ matrix.bundle }}.json" | tee "$GITHUB_WORKSPACE/out/${{ matrix.bundle }}.md"
+          B=perf/pathology/bundles
+          node perf/pathology/compare.mjs --suite consequences \
+            --bundles $B/current,$B/no-tape,$B/no-cert --names current,no-tape,no-cert \
+            --json "$GITHUB_WORKSPACE/out/consequences.json" | tee "$GITHUB_WORKSPACE/out/consequences.md"
+
+      - name: Clinical cases, paired
+        working-directory: packages/reflex-runtime
+        run: |
+          set -o pipefail
+          B=perf/pathology/bundles
+          node perf/pathology/compare.mjs --suite clinical --cases "^(wide-narrow|replace-half|mount-dispose-wide)$" \
+            --bundles $B/current,$B/no-tape,$B/no-cert --names current,no-tape,no-cert \
+            --json "$GITHUB_WORKSPACE/out/clinical.json" | tee "$GITHUB_WORKSPACE/out/clinical.md"
 
       - name: Summary
         if: always()
         run: |
           {
-            echo "## ${{ matrix.bundle }}"
-            echo
             echo "Node $(node --version), $(lscpu | sed -n 's/^Model name: *//p')"
             echo
-            cat "out/${{ matrix.bundle }}.md" || true
+            echo '```'; cat "$RUNNER_TEMP/bundles.txt"; echo '```'
+            echo; echo "## Consequences"; echo
+            cat out/consequences.md || true
+            echo; echo "## Clinical, paired"; echo
+            cat out/clinical.md || true
           } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
-          name: pathology-${{ matrix.bundle }}
+          name: pathology-paired
           path: out/

@@ -8,13 +8,17 @@ import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
 
-import { cases } from "./cases.mjs";
+import { cases as clinical } from "./cases.mjs";
+import { cases as consequences } from "./consequences.mjs";
+
+export const suites = { clinical, consequences };
 
 const args = process.argv.slice(2);
 const opt = (n, f) => (args.includes(n) ? args[args.indexOf(n) + 1] : f);
 
 if (args[0] === "--measure") {
-  const [, bundle, name, size] = args;
+  const [, bundle, name, size, suite = "clinical"] = args;
+  const cases = suites[suite];
   const rt = await import(
     pathToFileURL(path.resolve(bundle, "runtime.mjs")).href
   );
@@ -52,6 +56,10 @@ if (args[0] === "--measure") {
   process.exit(0);
 }
 
+if (!import.meta.main) {
+  // imported by compare.mjs
+} else {
+const cases = clinical;
 const bundle = path.resolve(opt("--bundle", "perf/pathology/bundle"));
 const only = new RegExp(opt("--cases", "."));
 const results = {};
@@ -106,3 +114,4 @@ for (const [name, spec] of Object.entries(cases)) {
 }
 const json = opt("--json");
 if (json) writeFileSync(json, JSON.stringify(results, null, 2));
+}
