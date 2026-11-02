@@ -1,0 +1,85 @@
+name: Research - tape lanes
+
+# Stage 1 of the lane directory (docs/MODEL.md §10.2): hot-path shape on the
+# CI Node version, and the pathology sentinels for the base tape against the
+# lanes, both sides alternated on one runner.
+on:
+  push:
+    branches: [research/tape-lanes]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-tape-lanes-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BASE: bf71877
+
+jobs:
+  shape:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+      - name: Shape
+        working-directory: packages/reflex-runtime
+        run: |
+          set -o pipefail
+          node scripts/build-baseline-oracle.mjs --commit "$BASE" --readable --out .cache/lanes/base
+          node scripts/build-baseline-oracle.mjs --source --readable --out .cache/lanes/lanes
+          node perf/pathology/oracle/shape.mjs .cache/lanes/base .cache/lanes/lanes \
+            --expect preparedMissIsAbsent,settleOnPreparedTape,strikeOnFarFingerHit,notePreparedLink,releaseLease,recordStrikeAndMaybePrepareTape,acquireTape \
+            | tee "$RUNNER_TEMP/shape.md" || true
+          { echo "## Shape"; echo; cat "$RUNNER_TEMP/shape.md"; } >> "$GITHUB_STEP_SUMMARY"
+
+  sentinels:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+      - name: Build bundles
+        working-directory: packages/reflex-runtime
+        run: |
+          B=perf/pathology/bundles
+          node scripts/build-baseline-oracle.mjs --commit "$BASE" --production --out $B/base
+          node scripts/build-baseline-oracle.mjs --source --production --out $B/lanes
+          sha256sum $B/*/runtime.mjs
+      - name: Time
+        working-directory: packages/reflex-runtime
+        run: |
+          set -o pipefail
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          B=perf/pathology/bundles
+          run() {
+            node perf/pathology/compare.mjs --suite "$1" --cases "$2" \
+              --bundles $B/base,$B/lanes --names base,lanes \
+              --json "$GITHUB_WORKSPACE/out/$1.json" | tee "$GITHUB_WORKSPACE/out/$1.md"
+          }
+          run consequences '^(nested-mount|sequential-mount|mount-fanout|list-mount|shuffle-private)$'
+          run discovery '^(suspend-resume|branch-toggle-wide|shuffle-over-clean|shuffle-over-dirty|nested-shuffle|sequential-shuffle)$'
+          run clinical '^(shared-thrash|shared-shuffle-ordered|replace-half|hub-duplicate|wide-narrow|reverse-shared)$'
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "Node $(node --version), $(lscpu | sed -n 's/^Model name: *//p')"
+            for s in consequences discovery clinical; do
+              echo; echo "## $s"; echo; cat "out/$s.md" || true
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: tape-lanes
+          path: out/

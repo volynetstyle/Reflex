@@ -10,7 +10,9 @@ import path from "node:path";
 const argv = process.argv;
 const opt = (n, f) => (argv.includes(n) ? argv[argv.indexOf(n) + 1] : f);
 // --root: the runtime package to build from (default: this checkout).
-const root = path.resolve(opt("--root", path.join(import.meta.dirname, "../../..")));
+const root = path.resolve(
+  opt("--root", path.join(import.meta.dirname, "../../..")),
+);
 const out = opt("--out");
 const TAPE = "src/kernel/shape/graph/tape.ts";
 const FIND = "src/kernel/shape/graph/findEdge.ts";
@@ -23,49 +25,151 @@ function replaceOnce(source, search, replace) {
 }
 
 let tape = readFileSync(path.join(root, TAPE), "utf8");
-const edits = [
-  [
-    `import { trackingStamp } from "@runtime/kernel/state";\n`,
-    `import { trackingStamp } from "@runtime/kernel/state";\n` +
-      `const ev = (k: string, c: ReactiveNode, s: number): void => (globalThis as any).__ev?.(k, c, s);\n`,
-  ],
-  [
-    `export function releaseLease(owner: ReactiveNode): void {\n`,
-    `export function releaseLease(owner: ReactiveNode): void {\n  ev("release", owner, preparedPassStamp);\n`,
-  ],
-  [
-    `  if (isLeaseLive(consumer) === false) {\n    releaseLease(consumer);`,
-    `  if (isLeaseLive(consumer) === false) {\n    ev("lease-dead", consumer, preparedPassStamp);\n    releaseLease(consumer);`,
-  ],
-  [
-    `  return (\n    hasFullTapeCoverage &&\n    (producer.state & (Computing | Watcher | Leased)) === 0 &&\n    producer !== consumer\n  );`,
-    `  const r =\n    hasFullTapeCoverage &&\n    (producer.state & (Computing | Watcher | Leased)) === 0 &&\n    producer !== consumer;\n` +
-      `  ev(r ? "cert-absent" : !hasFullTapeCoverage ? "uncovered-fallback" : (producer.state & Leased) !== 0 ? "exact-fallback" : "busy-fallback", consumer, preparedPassStamp);\n` +
-      `  return r;`,
-  ],
-  [
-    `    slotEdge.from === producer\n  ) {\n    return slotEdge;`,
-    `    slotEdge.from === producer\n  ) {\n    ev("cell-hit", consumer, preparedPassStamp);\n    return slotEdge;`,
-  ],
-  [
-    `  const passStamp = getTrackingPassStamp(consumer);\n\n  if (lastStrikeConsumer !== consumer || lastStrikePassStamp !== passStamp) {\n`,
-    `  const passStamp = getTrackingPassStamp(consumer);\n  ev("strike", consumer, passStamp);\n\n  if (lastStrikeConsumer !== consumer || lastStrikePassStamp !== passStamp) {\n` +
-      `    const prev = lastStrikeConsumer;\n` +
-      `    if (prev !== null && prev !== consumer && (prev.state & Computing) !== 0 && getTrackingPassStamp(prev) === lastStrikePassStamp) ev("register-stolen", prev, lastStrikePassStamp);\n`,
-  ],
-  [
-    `    if (isLeaseLive(currentOwner) === true) return false;`,
-    `    if (isLeaseLive(currentOwner) === true) {\n      ev("lease-denied", consumer, passStamp);\n      return false;\n    }`,
-  ],
-  [
-    `  preparedOwner = consumer;\n  preparedPassStamp = passStamp;`,
-    `  ev(allProducersCovered ? "prepare" : "prepare-uncovered", consumer, passStamp);\n  preparedOwner = consumer;\n  preparedPassStamp = passStamp;`,
-  ],
-  [
-    `  } else {\n    hasFullTapeCoverage = false;\n  }\n}`,
-    `  } else {\n    if (hasFullTapeCoverage) ev("coverage-drop", preparedOwner as ReactiveNode, preparedPassStamp);\n    hasFullTapeCoverage = false;\n  }\n}`,
-  ],
+const IMPORT = [
+  `import { trackingStamp } from "@runtime/kernel/state";
+`,
+  `import { trackingStamp } from "@runtime/kernel/state";
+` +
+    `const ev = (k: string, c: ReactiveNode, s: number): void => (globalThis as any).__ev?.(k, c, s);
+`,
 ];
+const RELEASE = [
+  `export function releaseLease(owner: ReactiveNode): void {
+`,
+  `export function releaseLease(owner: ReactiveNode): void {
+  ev("release", owner, preparedPassStamp);
+`,
+];
+const DEAD = [
+  `  if (isLeaseLive(consumer) === false) {
+    releaseLease(consumer);`,
+  `  if (isLeaseLive(consumer) === false) {
+    ev("lease-dead", consumer, preparedPassStamp);
+    releaseLease(consumer);`,
+];
+const certify = (mask) => [
+  `  return (
+    hasFullTapeCoverage &&
+    (producer.state & (Computing | Watcher | ${mask})) === 0 &&
+    producer !== consumer
+  );`,
+  `  const r =
+    hasFullTapeCoverage &&
+    (producer.state & (Computing | Watcher | ${mask})) === 0 &&
+    producer !== consumer;
+` +
+    `  ev(r ? "cert-absent" : !hasFullTapeCoverage ? "uncovered-fallback" : (producer.state & ${mask}) !== 0 ? "exact-fallback" : "busy-fallback", consumer, preparedPassStamp);
+` +
+    `  return r;`,
+];
+const CELL = [
+  `    slotEdge.from === producer
+  ) {
+    return slotEdge;`,
+  `    slotEdge.from === producer
+  ) {
+    ev("cell-hit", consumer, preparedPassStamp);
+    return slotEdge;`,
+];
+const DROP = [
+  `  } else {
+    hasFullTapeCoverage = false;
+  }
+}`,
+  `  } else {
+    if (hasFullTapeCoverage) ev("coverage-drop", preparedOwner as ReactiveNode, preparedPassStamp);
+    hasFullTapeCoverage = false;
+  }
+}`,
+];
+// The single-lease tape (dev) and the lane directory (research/tape-lanes).
+const edits = tape.includes("function acquireTape(")
+  ? [
+      IMPORT,
+      RELEASE,
+      DEAD,
+      certify("preparedLaneBit"),
+      CELL,
+      DROP,
+      [
+        `  if (preparedOwner === consumer && preparedPassStamp === passStamp)
+    return false;
+
+  for (const lane of lanes) {`,
+        `  if (preparedOwner === consumer && preparedPassStamp === passStamp)
+    return false;
+  ev("strike", consumer, passStamp);
+
+  for (const lane of lanes) {`,
+      ],
+      [
+        `      resumeLane(lane, consumer);
+      return true;`,
+        `      resumeLane(lane, consumer);
+      ev("resume", consumer, passStamp);
+      return true;`,
+      ],
+      [
+        `      if (armLane(consumer, passStamp) === false) return false;`,
+        `      if (armLane(consumer, passStamp) === false) {
+        ev("lease-denied", consumer, passStamp);
+        return false;
+      }`,
+      ],
+      [
+        `  if (free >= 0) {
+    strikeConsumers[free] = consumer;`,
+        `  if (free < 0) ev("strike-table-full", consumer, passStamp);
+  if (free >= 0) {
+    strikeConsumers[free] = consumer;`,
+      ],
+      [
+        `  lane.owner = consumer;
+  lane.stamp = passStamp;
+  lane.covered = allProducersCovered;`,
+        `  ev(allProducersCovered ? "prepare" : "prepare-uncovered", consumer, passStamp);
+  lane.owner = consumer;
+  lane.stamp = passStamp;
+  lane.covered = allProducersCovered;`,
+      ],
+    ]
+  : [
+      IMPORT,
+      RELEASE,
+      DEAD,
+      certify("Leased"),
+      CELL,
+      DROP,
+      [
+        `  const passStamp = getTrackingPassStamp(consumer);
+
+  if (lastStrikeConsumer !== consumer || lastStrikePassStamp !== passStamp) {
+`,
+        `  const passStamp = getTrackingPassStamp(consumer);
+  ev("strike", consumer, passStamp);
+
+  if (lastStrikeConsumer !== consumer || lastStrikePassStamp !== passStamp) {
+` +
+          `    const prev = lastStrikeConsumer;
+` +
+          `    if (prev !== null && prev !== consumer && (prev.state & Computing) !== 0 && getTrackingPassStamp(prev) === lastStrikePassStamp) ev("register-stolen", prev, lastStrikePassStamp);
+`,
+      ],
+      [
+        `    if (isLeaseLive(currentOwner) === true) return false;`,
+        `    if (isLeaseLive(currentOwner) === true) {
+      ev("lease-denied", consumer, passStamp);
+      return false;
+    }`,
+      ],
+      [
+        `  preparedOwner = consumer;
+  preparedPassStamp = passStamp;`,
+        `  ev(allProducersCovered ? "prepare" : "prepare-uncovered", consumer, passStamp);
+  preparedOwner = consumer;
+  preparedPassStamp = passStamp;`,
+      ],
+    ];
 for (const [a, b] of edits) tape = replaceOnce(tape, a, b);
 
 const find = replaceOnce(

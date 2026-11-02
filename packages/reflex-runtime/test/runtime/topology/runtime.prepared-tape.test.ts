@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   Computing,
   Consumer,
-  Leased,
+  LeasedLanes,
   Producer,
   ReactiveNode,
   advance,
@@ -68,7 +68,7 @@ const sourcesOf = (consumer: ReactiveNode, pool: readonly ReactiveNode[]) =>
   incomingEdges(consumer).map((edge) => pool.indexOf(edge.from));
 const isCell = (producer: ReactiveNode, consumer: ReactiveNode) =>
   producer.tailIn !== null && producer.tailIn === edgeOf(producer, consumer);
-const leased = (producer: ReactiveNode) => (producer.state & Leased) !== 0;
+const leased = (producer: ReactiveNode) => (producer.state & LeasedLanes) !== 0;
 
 function expectUniquePairs(consumer: ReactiveNode): void {
   const froms = incomingEdges(consumer).map((edge) => edge.from);
@@ -168,7 +168,7 @@ describe("prepared tape (INV-P)", () => {
     expectUniquePairs(consumer);
   });
 
-  it("another pass's strike restarts the two-strike threshold", () => {
+  it("a nested pass's strike does not restart the outer pass's count", () => {
     const outer = wideGraph();
     const inner = wideGraph();
     const previous = begin(outer.consumer);
@@ -178,14 +178,10 @@ describe("prepared tape (INV-P)", () => {
     resolveTrackedRead(inner.sources[128]!, inner.consumer);
     end(inner.consumer, saved);
 
+    // The outer pass's first strike survived the nested one: this is its
+    // second, and it arms a lane.
     resolveTrackedRead(outer.sources[200]!, outer.consumer);
-    expect(outer.sources.some(leased), "only one strike since nesting").toBe(
-      false,
-    );
-    resolveTrackedRead(outer.sources[64]!, outer.consumer);
-    expect(outer.sources.every(leased), "second strike since nesting").toBe(
-      true,
-    );
+    expect(outer.sources.every(leased), "second strike of the pass").toBe(true);
     end(outer.consumer, previous);
 
     expectUniquePairs(outer.consumer);

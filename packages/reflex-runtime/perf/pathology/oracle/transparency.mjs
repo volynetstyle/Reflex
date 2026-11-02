@@ -90,7 +90,11 @@ function nestedScenario({ at, context, quiet }) {
       const p = rt.createProducer(1);
       const c = rt.createConsumer(() => rt.readProducer(p) + 1);
       rt.readConsumer(c);
-      return { main: c, tick: rt.createProducer(0), pass: () => rt.readConsumer(c) };
+      return {
+        main: c,
+        tick: rt.createProducer(0),
+        pass: () => rt.readConsumer(c),
+      };
     });
     const nu = () => inB(B.pass);
     const A = world(7, at, mode === "nested" ? nu : null);
@@ -167,9 +171,7 @@ const scenarios = {
 };
 
 function traceOf(node) {
-  return log
-    .filter((e) => e.consumer === node)
-    .map((e) => e.kind);
+  return log.filter((e) => e.consumer === node).map((e) => e.kind);
 }
 
 function run(build, mode) {

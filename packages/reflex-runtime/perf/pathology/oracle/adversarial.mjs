@@ -199,8 +199,7 @@ add(
     const v2 = record(() => rt.readConsumer(m2));
     const f2 = n(m2, "exact-fallback");
     value += v1 + v2;
-    const expected =
-      sumOf(S, range(N >> 1)) + sumOf(T) + 2 * sumOf(dropped);
+    const expected = sumOf(S, range(N >> 1)) + sumOf(T) + 2 * sumOf(dropped);
     return {
       ok: f1 <= N >> 1 && f2 === 0,
       value,
@@ -288,7 +287,8 @@ for (const [name, where] of [
     // C4: a read that threw is no observation, so after an inner failure the
     // outer consumer keeps its value; the inner one is read on its own.
     const value = record(
-      () => rt.readConsumer(outer) + (who === "inner" ? rt.readConsumer(inner) : 0),
+      () =>
+        rt.readConsumer(outer) + (who === "inner" ? rt.readConsumer(inner) : 0),
     );
     return {
       ok: true,
@@ -424,7 +424,8 @@ add(
       // Pass k reads the fresh sets 1..k first, so no pass drops an edge
       // (no cleanup releases the lease) and each starts with absent pairs
       // whose lookups reach the tape while preparedOwner names the last pass.
-      for (let j = 1; j <= k; j++) for (const f of F[j]) t += rt.readProducer(f);
+      for (let j = 1; j <= k; j++)
+        for (const f of F[j]) t += rt.readProducer(f);
       for (const i of perms[k & 3]) t += rt.readProducer(S[i]);
       return t;
     });
@@ -466,7 +467,8 @@ for (const { name, target, run } of cases) {
     failures++;
     continue;
   }
-  const semantic = r.value === r.expected ? "ok" : `FAIL ${r.value} ≠ ${r.expected}`;
+  const semantic =
+    r.value === r.expected ? "ok" : `FAIL ${r.value} ≠ ${r.expected}`;
   const problems = integrity(r.nodes.filter(Boolean));
   const sound = problems.length === 0 ? "ok" : `FAIL ${problems.join(", ")}`;
   if (semantic !== "ok" || sound !== "ok") failures++;
