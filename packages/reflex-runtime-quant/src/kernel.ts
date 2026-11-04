@@ -5,12 +5,14 @@
 // One node shape serves sources and consumers. A relation is one edge object
 // threaded through two doubly linked lists: the consumer's `deps` (in the
 // order of its last read sequence) and the source's `subs` (birth order).
+// Push and pull are loops over explicit stacks; the only recursion left is
+// the user's: a computation that reads a computed runs it inside its pass.
 
 declare const __QUANT_STATS__: boolean;
 
 /** May be out of date: some transitive source changed. Push sets it. */
 export const STALE = 1;
-/** Must execute: never succeeded, or the last attempt failed. */
+/** Must execute: never succeeded, the last attempt failed, or a direct source changed. */
 export const DIRTY = 2;
 /** A tracking pass of this node is on the stack. */
 export const RUNNING = 4;
@@ -52,6 +54,8 @@ export interface Edge {
 
 const UNREAD = -1;
 const VERSION_MASK = 0x3fffffff;
+/** Scan budget before indexing: any constant keeps a pass linear. */
+const SCAN = 8;
 
 export const stats = {
   reads: 0,
@@ -73,15 +77,19 @@ export const stats = {
 let active: Node | null = null;
 /** (source, cell) pairs an indexed pass displaced from an enclosing pass. */
 const displaced: (Node | Edge)[] = [];
+/** Push: subscriber lists to resume after a descent. */
+const siblings: Edge[] = [];
+/** Pull: the relation each validating node was descended through. */
+const descent: Edge[] = [];
 let deliver: (root: Node) => void = () => {};
 
 export function setDeliver(hook: (root: Node) => void): void {
   deliver = hook;
 }
 
-/** No pass on the stack and no displaced cell outstanding (tests). */
+/** No pass on the stack and nothing left on a work stack (tests). */
 export function atRest(): boolean {
-  return active === null && displaced.length === 0;
+  return active === null && displaced.length === 0 && siblings.length === 0 && descent.length === 0;
 }
 
 export function node(fn: Node["fn"], value: unknown, flags: number): Node {
@@ -99,8 +107,6 @@ export function node(fn: Node["fn"], value: unknown, flags: number): Node {
   };
 }
 
-const nextGen = (gen: number) => (gen + 1) & VERSION_MASK;
-
 // ------------------------------------------------------------------ write
 
 export function write(source: Node, value: unknown): void {
@@ -111,73 +117,171 @@ export function write(source: Node, value: unknown): void {
     // A direct subscriber read the old version, so it must execute; one
     // whose pass is running may not have read it yet: versions decide.
     const sub = e.to;
-    if ((sub.flags & RUNNING) === 0) sub.flags |= DIRTY;
-    mark(sub);
+    let flags = sub.flags;
+    if ((flags & RUNNING) === 0) flags |= DIRTY;
+    if (__QUANT_STATS__) stats.invalidations++;
+    if ((flags & STALE) !== 0) {
+      sub.flags = flags;
+    } else {
+      sub.flags = flags | STALE;
+      if ((flags & WATCH) !== 0) deliver(sub);
+      else if (sub.subs !== null) propagate(sub.subs);
+    }
   }
 }
 
-function mark(n: Node): void {
-  const flags = n.flags;
-  if (__QUANT_STATS__) stats.invalidations++;
-  if ((flags & WATCH) !== 0) {
-    n.flags = flags | STALE;
-    deliver(n);
-    return;
+/**
+ * Mark everything below the subscriber list `first` STALE: depth first, no
+ * recursion; `siblings` holds where to resume after a descent. A node that
+ * is already STALE has STALE subscribers, or is a watcher already handed to
+ * the host: skip it. A watcher becoming STALE is handed to the host.
+ */
+function propagate(first: Edge): void {
+  const base = siblings.length;
+  let e: Edge | null = first;
+  for (;;) {
+    while (e !== null) {
+      const n: Node = e.to;
+      const flags = n.flags;
+      if (__QUANT_STATS__) stats.invalidations++;
+      if ((flags & STALE) !== 0) {
+        // already marked
+      } else if ((flags & WATCH) !== 0) {
+        n.flags = flags | STALE;
+        deliver(n);
+      } else {
+        n.flags = flags | STALE;
+        const subs = n.subs;
+        if (subs !== null) {
+          if (e.nextSub !== null) siblings.push(e.nextSub);
+          e = subs;
+          continue;
+        }
+      }
+      e = e.nextSub;
+    }
+    if (siblings.length === base) return;
+    e = siblings.pop()!;
   }
-  if ((flags & STALE) !== 0) return;
-  n.flags = flags | STALE;
-  for (let e = n.subs; e !== null; e = e.nextSub) mark(e.to);
 }
 
 // ------------------------------------------------------------------- read
 
+/** Read a computed: bring it up to date, then track it. */
 export function read(n: Node): unknown {
   if ((n.flags & (STALE | DIRTY | RUNNING)) !== 0) refresh(n);
-  if (active !== null) track(active, n);
+  const c = active;
+  if (c !== null) {
+    // Hot path: the next relation in read order is this source's.
+    const cursor = c.cursor;
+    const next = cursor === null ? c.deps : cursor.nextDep;
+    if (__QUANT_STATS__) stats.reads++;
+    if (next !== null && next.from === n) {
+      if (__QUANT_STATS__) stats.hits++;
+      c.cursor = next;
+      next.version = n.version;
+    } else trackMiss(c, n, cursor, next);
+  }
   return n.value;
 }
 
-/** Bring a computed up to date: execute if it must, else validate first. */
-export function refresh(n: Node): void {
-  const flags = n.flags;
-  if ((flags & RUNNING) !== 0) throw new Error("Cycle detected");
-  if ((flags & DIRTY) === 0) {
-    if ((flags & STALE) === 0) return;
-    n.flags = flags & ~STALE;
-    if (!changed(n)) return;
+/** Read a signal: never out of date, so only the tracking half of `read`. */
+export function readSignal(n: Node): unknown {
+  const c = active;
+  if (c !== null) {
+    const cursor = c.cursor;
+    const next = cursor === null ? c.deps : cursor.nextDep;
+    if (__QUANT_STATS__) stats.reads++;
+    if (next !== null && next.from === n) {
+      if (__QUANT_STATS__) stats.hits++;
+      c.cursor = next;
+      next.version = n.version;
+    } else trackMiss(c, n, cursor, next);
   }
-  execute(n);
+  return n.value;
 }
 
-/** Existential: the first changed source proves execution is needed. */
-function changed(n: Node): boolean {
+/**
+ * Bring a computed up to date, without recursion. Existential, in read
+ * order: a node's sources are checked first to last and the first changed
+ * one makes it execute. A STALE source is descended into (`descent` holds
+ * the relation to come back through), a DIRTY one executes. Execution runs
+ * user code, which may refresh other nodes on the same stack above `base`.
+ * A throw leaves every node still validating DIRTY.
+ */
+export function refresh(root: Node): void {
+  const flags = root.flags;
+  if ((flags & RUNNING) !== 0) throw new Error("Cycle detected");
+  if ((flags & DIRTY) !== 0) {
+    execute(root);
+    return;
+  }
+  if ((flags & STALE) === 0) return;
+  root.flags = flags & ~STALE;
+  const base = descent.length;
+  let n = root;
+  let e = root.deps;
   try {
-    for (let e = n.deps; e !== null; e = e.nextDep) {
-      const source = e.from;
-      if (__QUANT_STATS__) stats.validations++;
-      if ((source.flags & (STALE | DIRTY)) !== 0) refresh(source);
-      if (source.version !== e.version) return true;
+    for (;;) {
+      let changed = false;
+      while (e !== null) {
+        const source: Node = e.from;
+        const f = source.flags;
+        if (__QUANT_STATS__) stats.validations++;
+        if ((f & (STALE | DIRTY)) !== 0) {
+          if ((f & RUNNING) !== 0) throw new Error("Cycle detected");
+          if ((f & DIRTY) === 0) {
+            source.flags = f & ~STALE;
+            descent.push(e);
+            n = source;
+            e = source.deps;
+            continue;
+          }
+          execute(source);
+        }
+        if (source.version !== e.version) {
+          changed = true;
+          break;
+        }
+        e = e.nextDep;
+      }
+      if (changed) execute(n);
+      // Ascend; a parent whose child changed executes as well.
+      for (;;) {
+        if (descent.length === base) return;
+        const up = descent.pop()!;
+        n = up.to;
+        if (up.from.version === up.version) {
+          e = up.nextDep;
+          break;
+        }
+        execute(n);
+      }
     }
   } catch (error) {
     n.flags |= DIRTY;
+    while (descent.length > base) descent.pop()!.to.flags |= DIRTY;
     throw error;
   }
-  return false;
 }
 
 /**
  * Universal: refresh every committed source before deciding, so a throwing
  * source is found before any irreversible step of the caller. Marks DIRTY on
- * change. Tentative relations (reads of a failed attempt) only wake.
+ * change. Tentative relations (reads of a failed attempt) only wake; they
+ * exist only while an execution is owed, so versions need no check then.
  */
 export function validateAll(n: Node): void {
-  const tentative = nextGen(n.gen);
+  const tentative = (n.gen + 1) & VERSION_MASK;
+  let owed = (n.flags & DIRTY) !== 0;
   for (let e = n.deps; e !== null; e = e.nextDep) {
-    if (e.gen === tentative) continue;
     const source = e.from;
     if (__QUANT_STATS__) stats.validations++;
-    if ((source.flags & (STALE | DIRTY)) !== 0) refresh(source);
-    if (source.version !== e.version) n.flags |= DIRTY;
+    if ((source.flags & (STALE | DIRTY)) !== 0 && e.gen !== tentative) refresh(source);
+    if (!owed && source.version !== e.version) {
+      owed = true;
+      n.flags |= DIRTY;
+    }
   }
 }
 
@@ -202,47 +306,63 @@ export function execute(n: Node): void {
   n.flags = (n.flags & ~(STALE | DIRTY)) | RUNNING;
   n.cursor = null;
   active = n;
-  let ok = false;
   let value: unknown;
   try {
     value = n.fn!(n.value);
-    ok = true;
-  } finally {
+  } catch (error) {
     active = previous;
-    finish(n, ok, base);
+    abort(n, base);
+    throw error;
   }
-  if (!Object.is(value, n.value) && n.fn !== null) {
+  active = previous;
+  const flags = n.flags;
+  if ((flags & INDEXED) !== 0) release(n, base);
+  n.flags = flags & ~(RUNNING | INDEXED);
+  if (n.fn === null) {
+    teardown(n);
+    return;
+  }
+  // Commit: drop the unread suffix, close the generation, publish the value.
+  // (The pass moved the cursor; the reset above does not narrow it.)
+  const cursor = n.cursor as Edge | null;
+  if ((cursor === null ? n.deps : cursor.nextDep) !== null) cut(n, cursor);
+  n.gen = (n.gen + 1) & VERSION_MASK;
+  if (!Object.is(value, n.value)) {
     n.value = value;
     n.version = (n.version + 1) & VERSION_MASK;
   }
 }
 
-function finish(n: Node, ok: boolean, base: number): void {
-  if ((n.flags & INDEXED) !== 0) {
-    for (let e = n.deps; e !== null; e = e.nextDep) e.from.slot = null;
-    for (let i = displaced.length - 2; i >= base; i -= 2)
-      (displaced[i] as Node).slot = displaced[i + 1] as Edge;
-    displaced.length = base;
-  }
+/** Clear the pass's slot cells and give back the ones it displaced. */
+function release(n: Node, base: number): void {
+  for (let e = n.deps; e !== null; e = e.nextDep) e.from.slot = null;
+  for (let i = displaced.length - 2; i >= base; i -= 2)
+    (displaced[i] as Node).slot = displaced[i + 1] as Edge;
+  displaced.length = base;
+}
+
+/** Disposed during its own pass: the teardown was deferred to here. */
+function teardown(n: Node): void {
+  cut(n, null);
+  n.flags &= ~(STALE | DIRTY);
+}
+
+/**
+ * A failed pass: keep committed ∪ this attempt's reads as the wake set, drop
+ * the unread relations earlier failed attempts left behind, owe an execution.
+ */
+function abort(n: Node, base: number): void {
+  if ((n.flags & INDEXED) !== 0) release(n, base);
   n.flags &= ~(RUNNING | INDEXED);
   if (n.fn === null) {
-    // Disposed during its own pass: teardown was deferred to here.
-    cut(n, null);
-    n.flags &= ~(STALE | DIRTY);
+    teardown(n);
     return;
   }
-  if (ok) {
-    cut(n, n.cursor);
-    n.gen = nextGen(n.gen);
-    return;
-  }
-  // Failed: keep committed ∪ this attempt's reads as the wake set; drop the
-  // unread relations earlier failed attempts left behind.
   n.flags |= DIRTY;
-  const tentative = nextGen(n.gen);
+  const tentative = (n.gen + 1) & VERSION_MASK;
   const last = n.cursor;
   for (let e = last === null ? n.deps : last.nextDep; e !== null; ) {
-    const after = e.nextDep;
+    const after: Edge | null = e.nextDep;
     if (e.gen === tentative) {
       const before = e.prevDep;
       if (before !== null) before.nextDep = after;
@@ -256,41 +376,33 @@ function finish(n: Node, ok: boolean, base: number): void {
 
 // --------------------------------------------------------------- tracking
 
-function track(c: Node, source: Node): void {
-  const cursor = c.cursor;
-  const next = cursor === null ? c.deps : cursor.nextDep;
-  if (__QUANT_STATS__) stats.reads++;
-  if (next !== null && next.from === source) {
-    if (__QUANT_STATS__) stats.hits++;
-    c.cursor = next;
-    next.version = source.version;
-    return;
-  }
-  trackMiss(c, source, cursor, next);
-}
-
-function trackMiss(
-  c: Node,
-  source: Node,
-  cursor: Edge | null,
-  next: Edge | null,
-): void {
+function trackMiss(c: Node, source: Node, cursor: Edge | null, next: Edge | null): void {
   if (cursor !== null && cursor.from === source) {
     if (__QUANT_STATS__) stats.repeats++;
     cursor.version = source.version;
     return;
   }
   if ((c.flags & INDEXED) === 0) {
-    // Cheap exact answers before indexing. A relation found in the unread
-    // suffix is the pair's unique relation; only absence needs a proof.
-    const skipped = next !== null ? next.nextDep : null;
-    if (skipped !== null && skipped.from === source) {
+    // Bounded exact scans before indexing. A relation found anywhere is the
+    // pair's unique relation; absence needs one side scanned completely.
+    let e = next !== null ? next.nextDep : null;
+    let budget = SCAN;
+    while (e !== null && e.from !== source && --budget !== 0) e = e.nextDep;
+    if (e !== null && e.from === source) {
       if (__QUANT_STATS__) stats.skips++;
-      moveToCursor(c, skipped, cursor, next!);
-      skipped.version = source.version;
+      moveToCursor(c, e, cursor, next!);
+      e.version = source.version;
       return;
     }
-    if (unsubscribed(source, c)) {
+    let p = cursor !== null ? cursor.prevDep : null;
+    budget = SCAN;
+    while (p !== null && p.from !== source && --budget !== 0) p = p.prevDep;
+    if (p !== null && p.from === source) {
+      if (__QUANT_STATS__) stats.duplicates++;
+      p.version = source.version;
+      return;
+    }
+    if ((e === null && p === null) || unsubscribed(source, c)) {
       link(c, source, cursor, next, false);
       return;
     }
@@ -315,7 +427,7 @@ function trackMiss(
 
 /** Absence proof from the source's side, bounded: no relation of `c` among few subscribers. */
 function unsubscribed(source: Node, c: Node): boolean {
-  let budget = 8;
+  let budget = SCAN;
   for (let e = source.subs; e !== null; e = e.nextSub) {
     if (e.to === c || --budget === 0) return false;
   }
@@ -344,7 +456,7 @@ function link(c: Node, source: Node, cursor: Edge | null, next: Edge | null, ind
     from: source,
     to: c,
     version: source.version,
-    gen: nextGen(c.gen),
+    gen: (c.gen + 1) & VERSION_MASK,
     prevDep: cursor,
     nextDep: next,
     prevSub: tail,

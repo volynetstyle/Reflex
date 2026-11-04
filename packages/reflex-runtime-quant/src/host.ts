@@ -16,6 +16,8 @@ import {
 /** Scheduled by this host; unscheduled watchers are run by their owner. */
 const SCHEDULED = 32;
 const QUEUED = 64;
+/** Validation threw: run() validates again although no push re-marked it (V1). */
+const RETRY = 128;
 
 type Body = () => unknown;
 
@@ -44,12 +46,12 @@ export function watcher(body: Body, scheduled: boolean): Node {
  */
 export function run(w: Node): void {
   // Precondition: w's own pass is not on the stack (flush is not reentrant).
-  if (w.fn === null || (w.flags & STALE) === 0) return;
-  w.flags &= ~STALE;
+  if (w.fn === null || (w.flags & (STALE | RETRY)) === 0) return;
+  w.flags &= ~(STALE | RETRY);
   try {
     validateAll(w);
   } catch (error) {
-    w.flags |= STALE;
+    w.flags |= RETRY;
     throw error;
   }
   if ((w.flags & DIRTY) === 0 || w.fn === null) return;

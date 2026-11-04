@@ -16,16 +16,16 @@
     ]
   },
   {
-    "id": "no-skip",
-    "mechanism": "O1: one-step lookahead before indexing (optimization)",
+    "id": "no-suffix-scan",
+    "mechanism": "O1: bounded scan of the unread suffix before indexing (optimization)",
     "killed": true,
     "failed": [
       "structure.test.ts > O1: rotation and adjacent swaps are resolved without indexing"
     ]
   },
   {
-    "id": "no-absence-scan",
-    "mechanism": "O1: bounded subscriber-side absence proof (optimization)",
+    "id": "no-absence-proof",
+    "mechanism": "O1: bounded absence proofs, consumer or source side, before indexing (optimization)",
     "killed": true,
     "failed": [
       "structure.test.ts > O1: new private sources are proven absent without indexing"
@@ -45,9 +45,7 @@
     "killed": true,
     "failed": [
       "structure.test.ts > random reorder of wide sources: one linear index walk per pass, no allocation",
-      "tracking.test.ts > reorder A B C D E -> E A B C D reuses every relation, allocates none",
       "tracking.test.ts > random permutations of 64 shared sources: exact, no allocation, linear work",
-      "tracking.test.ts > prefix/suffix edits: insert in the middle, drop a prefix",
       "tracking.test.ts > nested passes that index the same sources do not corrupt the outer index",
       "tracking.test.ts > a nested indexed pass restores the outer pass's cells (re-read after nesting)"
     ]
@@ -86,6 +84,7 @@
     "killed": true,
     "failed": [
       "semantics.test.ts > an effect writing a source it read converges",
+      "semantics.test.ts > after a failed validation the effect is re-delivered when its cause changes",
       "semantics.test.ts > a computed that writes a source it already read converges on the next read (F1)"
     ]
   },
@@ -98,11 +97,21 @@
     ]
   },
   {
-    "id": "deliver-once",
-    "mechanism": "watchers re-delivered on every push",
+    "id": "retry-as-stale",
+    "mechanism": "a watcher whose validation threw is marked RETRY, not left STALE (re-delivery)",
     "killed": true,
     "failed": [
       "semantics.test.ts > after a failed validation the effect is re-delivered when its cause changes"
+    ]
+  },
+  {
+    "id": "no-retry",
+    "mechanism": "a watcher whose validation threw stays runnable by a plain run (V1)",
+    "killed": true,
+    "failed": [
+      "differential.test.ts > historical faults and contract boundaries",
+      "differential.test.ts > recovery exhaustive language",
+      "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal"
     ]
   },
   {
@@ -142,9 +151,12 @@
   },
   {
     "id": "no-repeat-check",
-    "mechanism": "immediate repeat recognised before indexing",
+    "mechanism": "immediate repeat recognised before the scans",
     "killed": true,
     "failed": [
+      "differential.test.ts > phase 0 probes pin their classification",
+      "differential.test.ts > bounded exhaustive language",
+      "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal",
       "tracking.test.ts > A A (immediate repeat) is recognised without indexing"
     ]
   },
@@ -153,7 +165,6 @@
     "mechanism": "effects run inside the host's drain loop",
     "killed": true,
     "failed": [
-      "semantics.test.ts > an effect writing a source it read converges",
       "semantics.test.ts > effects created inside a batch or another effect run after it"
     ]
   },

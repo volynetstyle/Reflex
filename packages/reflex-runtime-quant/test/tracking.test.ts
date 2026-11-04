@@ -76,7 +76,7 @@ describe("tracking", () => {
     expect(indices(deps(c), [tick, ...ps])).toEqual([0, 5, 1, 2, 3, 4]);
     expect(stats.allocations).toBe(0);
     expect(stats.removals).toBe(0);
-    expect(stats.moves).toBe(1);
+    expect(stats.moves + stats.skips).toBe(1);
     expect(edges(c).every((e) => before.has(e))).toBe(true);
     checkGraph([c]);
   });
@@ -293,6 +293,30 @@ describe("tracking", () => {
     expect(indices(deps(c), all)).toEqual([7, 0, 1, 2, 3]);
     for (const p of [x, y, z]) expect(subs(p!).length).toBe(0);
     checkGraph([c]);
+  });
+
+  it("push and pull are not bounded by the call stack (20,000-deep chain)", () => {
+    // Built bottom-up and read as it grows, so no first evaluation is deep;
+    // only the later write must travel the whole chain both ways.
+    const depth = 20_000;
+    const s = signal(0);
+    let tip: Node = s;
+    for (let i = 0; i < depth; i++) {
+      const below = tip;
+      tip = computed(() => (read(below) as number) + 1);
+      read(tip);
+    }
+    const leaf = tip;
+    let seen = -1;
+    const w = node(() => void (seen = read(leaf) as number), undefined, 16 | 1 | DIRTY);
+    write(s, 5);
+    expect(read(leaf)).toBe(depth + 5);
+    write(s, 6);
+    // A watcher's universal validation refreshes the same chain.
+    expect(seen).toBe(-1);
+    expect(read(leaf)).toBe(depth + 6);
+    expect(w.flags & 1).toBe(1);
+    expect(atRest()).toBe(true);
   });
 
   it("repeated identical failures do not grow the graph", () => {

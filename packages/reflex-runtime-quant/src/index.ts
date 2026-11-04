@@ -1,5 +1,5 @@
 // Public API: signal, computed, effect, batch, untracked.
-import { DIRTY, dispose, node, read, write, type Node } from "./kernel";
+import { DIRTY, dispose, node, read, readSignal, write, type Node } from "./kernel";
 import { flush, schedule, stop, watcher } from "./host";
 
 export { batch } from "./host";
@@ -19,7 +19,7 @@ export interface Computed<T> {
 class SignalRef<T> implements Signal<T> {
   constructor(private readonly n: Node) {}
   get(): T {
-    return read(this.n) as T;
+    return readSignal(this.n) as T;
   }
   set(value: T): void {
     write(this.n, value);
