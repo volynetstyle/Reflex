@@ -123,7 +123,7 @@
     "@tsslint/cli": "3",
     "@tsslint/config": "3",
     "@tsslint/typescript-plugin": "3",
-    "@types/node": "^26.1.2",
+    "@types/node": "^26.6.6",
     "@volynets/algorithm-projection": "workspace:*",
     "typescript": "^5.6.0"
   },
